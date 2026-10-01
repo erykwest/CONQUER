@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CONQUER — Settlement Builder</title>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.1';
+window.__createSupabaseClient = createClient;
+</script>
+<style>
+:root{
+  --bg:#1b130f;--panel:#261b15;--card:#211712;--sunken:#170f0c;--field:#24271c;
+  --btn:#33251d;--btn-hover:#3e2d23;--line:#3d2d24;--line-strong:#5b4637;
+  --text:#f2e6d3;--text-2:#e2d3bd;--muted:#b9a690;--accent:#e08a3c;--good:#8fbf73;--bad:#c96e5b;
+  --sidebar:310px;
+}
+*{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,system-ui,sans-serif;overflow:hidden}
+body{display:flex;flex-direction:column}
+header{height:58px;display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--sunken);border-bottom:1px solid var(--line);flex:0 0 auto}
+.brand{font:900 24px/1 Impact,Arial Narrow,sans-serif;letter-spacing:.06em}.sub{font-size:12px;color:var(--muted)}
+#resources{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.res{padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:12px;white-space:nowrap}
+#wrap{position:relative;flex:1;min-height:0;background:var(--field)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none;background:#202419}
+.panel{position:absolute;top:10px;bottom:10px;width:var(--sidebar);background:rgba(38,27,21,.96);border:1px solid var(--line-strong);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.32);overflow:auto;z-index:5}
+#builder{left:10px;padding:12px}#policy{right:10px;padding:12px}
+h2{margin:0 0 10px;font-size:15px}h3{font-size:12px;margin:14px 0 7px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+button,select,input{font:inherit}button{border:1px solid var(--line-strong);background:var(--btn);color:var(--text);padding:8px;border-radius:8px;cursor:pointer}button:hover{background:var(--btn-hover)}button.active{background:var(--accent);color:#1b130f;border-color:var(--accent)}
+.small{font-size:11px}.full{width:100%}.row{display:flex;gap:6px;align-items:center}.row>*{flex:1}
+.badge{font-size:11px;padding:4px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+#status{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:6;background:rgba(23,15,12,.9);border:1px solid var(--line-strong);border-radius:999px;padding:8px 12px;font-size:12px;pointer-events:none;max-width:50vw;text-align:center}
+#saveState{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;background:rgba(23,15,12,.9);border:1px solid var(--line-strong);border-radius:999px;padding:7px 10px;font-size:11px}
+.legend{font-size:11px;line-height:1.5;color:var(--muted)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px;font-size:12px;margin:5px 0}.policy{display:flex;align-items:center;gap:8px;margin:7px 0}.policy input{width:100%}
+hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+@media(max-width:980px){:root{--sidebar:240px}#resources{display:none}}
+</style>
+</head>
+<body>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.1</div><div id="resources"></div></header>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <aside id="builder" class="panel">
+    <h2>Builder</h2>
+    <div class="grid"><button data-tool="select" class="active">↖ Select</button><button data-tool="delete">⌫ Delete</button></div>
+    <h3>Square towers</h3>
+    <div class="grid3"><button data-tower="square" data-size="1">1U</button><button data-tower="square" data-size="1.5">1.5U</button><button data-tower="square" data-size="2">2U</button></div>
+    <h3>Round towers</h3>
+    <div class="grid3"><button data-tower="round" data-size="0.5">R .5</button><button data-tower="round" data-size="0.75">R .75</button><button data-tower="round" data-size="1">R 1</button></div>
+    <h3>Linear castle</h3>
+    <div class="grid"><button data-linear="wall">Wall</button><button data-linear="built">Built section</button></div>
+    <h3>Gate</h3><button class="full" data-gate>Gate 1.5×1.5U</button>
+    <hr/>
+    <div class="legend">Wall: 0.5U wide · 1–8U long<br>Built section: 0.5U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.</div>
+    <hr/>
+    <div class="grid"><button id="undoBtn">↶ Undo</button><button id="clearBtn">Clear all</button></div>
+  </aside>
+  <aside id="policy" class="panel">
+    <h2>Settlement</h2>
+    <div class="kv"><span>World cell</span><b id="cellLabel">0, 0</b></div>
+    <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
+    <div class="kv"><span>Build area</span><b>100×100U</b></div>
+    <div class="kv"><span>World buffer</span><b>200×200U</b></div>
+    <h3>Policies</h3>
+    <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
+    <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
+    <div class="policy"><span>Levy</span><input id="levy" type="range" min="0" max="100" value="10"></div>
+    <h3>Persistence</h3>
+    <button class="full" id="saveBtn">Save settlement</button>
+    <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
+  </aside>
+  <div id="saveState">local</div><div id="status">Select a build tool</div>
+</div>
+<script>
+(() => {
+'use strict';
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d'),wrap=document.getElementById('wrap');
+const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
+const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
+const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
+const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
+const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},dirty:false,supabase:null,user:null};
+const TYPES={wall:{width:.5,min:1,max:8},built:{width:.5,min:1,max:4}};
+const uid=()=>crypto.randomUUID?.()||('id-'+Date.now()+'-'+Math.random());
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const snapGrid=v=>Math.round(v/GRID)*GRID;
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const status=t=>document.getElementById('status').textContent=t;
+function resize(){const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
+function w2s(p){return{x:State.view.x+p.x*U*State.view.scale,y:State.view.y+p.y*U*State.view.scale}}
+function s2w(x,y){return{x:(x-State.view.x)/(U*State.view.scale),y:(y-State.view.y)/(U*State.view.scale)}}
+function fit(){const r=wrap.getBoundingClientRect(),availW=Math.max(250,r.width-640),availH=r.height-30;State.view.scale=Math.min(availW/(WORLD*U),availH/(WORLD*U));State.view.scale=clamp(State.view.scale,.25,3);const size=WORLD*U*State.view.scale;State.view.x=(r.width-size)/2;State.view.y=(r.height-size)/2;draw()}
+function seedRand(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
+function drawTerrain(){const rnd=seedRand(State.seed),p0=w2s({x:0,y:0}),p1=w2s({x:WORLD,y:WORLD});ctx.fillStyle='#24291b';ctx.fillRect(p0.x,p0.y,p1.x-p0.x,p1.y-p0.y);for(let i=0;i<360;i++){const x=rnd()*WORLD,y=rnd()*WORLD,r=(.4+rnd()*2.4)*U*State.view.scale;const p=w2s({x,y});ctx.fillStyle=rnd()>.55?'rgba(84,105,55,.13)':'rgba(137,120,70,.08)';ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill()}}
+function drawGrid(){if(State.view.scale<.5)return;ctx.save();ctx.strokeStyle='rgba(255,255,255,.035)';ctx.lineWidth=1;for(let i=0;i<=WORLD;i+=5){let a=w2s({x:i,y:0}),b=w2s({x:i,y:WORLD});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();a=w2s({x:0,y:i});b=w2s({x:WORLD,y:i});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}ctx.restore()}
+function drawBuildArea(){const a=w2s({x:BUILD_MIN,y:BUILD_MIN}),b=w2s({x:BUILD_MAX,y:BUILD_MAX});ctx.save();ctx.fillStyle='rgba(224,138,60,.025)';ctx.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.strokeStyle='rgba(224,138,60,.9)';ctx.lineWidth=2;ctx.setLineDash([8,7]);ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.setLineDash([]);ctx.fillStyle='rgba(242,230,211,.65)';ctx.font='11px system-ui';ctx.fillText('BUILDABLE 100×100U',a.x+8,a.y+16);ctx.restore()}
+function boundaryPoint(s,target){if(!s||!['tower','gate'].includes(s.type))return target;const dx=target.x-s.x,dy=target.y-s.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;if(s.shape==='round'){return{x:s.x+ux*s.r,y:s.y+uy*s.r}}const h=s.size/2;const tx=Math.abs(ux)>1e-6?h/Math.abs(ux):Infinity,ty=Math.abs(uy)>1e-6?h/Math.abs(uy):Infinity,t=Math.min(tx,ty);return{x:s.x+ux*t,y:s.y+uy*t}}
+function snapAnchor(p){let best=null,bestD=.9;for(const s of State.structures){if(!['tower','gate'].includes(s.type))continue;const d=dist(p,{x:s.x,y:s.y});const reach=(s.shape==='round'?s.r:s.size*.72)+1; if(d<reach&&d<bestD+reach){best=s;bestD=d}}return best?{point:boundaryPoint(best,p),structureId:best.id}:{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null}}
+function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
+function linePoly(s){const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;return[{x:s.a.x+nx,y:s.a.y+ny},{x:s.b.x+nx,y:s.b.y+ny},{x:s.b.x-nx,y:s.b.y-ny},{x:s.a.x-nx,y:s.a.y-ny}]}
+function drawStructure(s,preview=false){ctx.save();const alpha=preview?.55:1;ctx.globalAlpha=alpha;if(s.type==='tower'||s.type==='gate'){const p=w2s({x:s.x,y:s.y});ctx.fillStyle=s.type==='gate'?'#9a744f':'#766658';ctx.strokeStyle=State.selectedId===s.id?'#f4b76f':'#d5c2aa';ctx.lineWidth=2;if(s.shape==='round'){ctx.beginPath();ctx.arc(p.x,p.y,s.r*U*State.view.scale,0,Math.PI*2);ctx.fill();ctx.stroke()}else{const z=s.size*U*State.view.scale;ctx.fillRect(p.x-z/2,p.y-z/2,z,z);ctx.strokeRect(p.x-z/2,p.y-z/2,z,z)}}else{const pts=linePoly(s).map(w2s);ctx.fillStyle=s.type==='wall'?'#6e6258':'#8a684d';ctx.strokeStyle=State.selectedId===s.id?'#f4b76f':'#d8c8b4';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.stroke()}ctx.restore()}
+function draw(){const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawBuildArea();State.structures.forEach(s=>drawStructure(s));if(State.draft?.preview)drawStructure(State.draft.preview,true)}
+function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX}
+function structureAt(p){for(let i=State.structures.length-1;i>=0;i--){const s=State.structures[i];if(s.type==='tower'||s.type==='gate'){if(s.shape==='round'&&dist(p,s)<=s.r)return s;if(s.shape!=='round'&&Math.abs(p.x-s.x)<=s.size/2&&Math.abs(p.y-s.y)<=s.size/2)return s}else{const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/L2,0,1),q={x:ax+t*dx,y:ay+t*dy};if(dist(p,q)<=Math.max(.45,s.width))return s}}return null}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function markDirty(){State.dirty=true;document.getElementById('saveState').textContent='unsaved';saveLocal()}
+function addStructure(s){State.structures.push(s);State.selectedId=s.id;markDirty();draw()}
+function pointerWorld(e){const r=canvas.getBoundingClientRect();return s2w(e.clientX-r.left,e.clientY-r.top)}
+let pan=null;
+canvas.addEventListener('pointerdown',e=>{if(e.button===1||e.button===2){pan={x:e.clientX,y:e.clientY,vx:State.view.x,vy:State.view.y};canvas.setPointerCapture(e.pointerId);return}const p=pointerWorld(e);if(State.tool.kind==='select'){const hit=structureAt(p);State.selectedId=hit?.id||null;draw();return}if(State.tool.kind==='delete'){const hit=structureAt(p);if(hit){State.structures=State.structures.filter(s=>s.id!==hit.id);markDirty();draw()}return}if(!inBuild(p)){status('Build only inside the central 100×100U area');return}if(State.tool.kind==='tower'){const q={x:snapGrid(p.x),y:snapGrid(p.y)};addStructure({id:uid(),type:'tower',shape:State.tool.shape,x:q.x,y:q.y,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size})});return}if(State.tool.kind==='gate'){const q={x:snapGrid(p.x),y:snapGrid(p.y)};addStructure({id:uid(),type:'gate',shape:'square',size:1.5,x:q.x,y:q.y});return}if(State.tool.kind==='linear'){if(!State.draft){const s=snapAnchor(p);State.draft={a:s.point,aSnap:s.structureId,preview:null};status('Point A set — choose point B');draw()}else{const e2=snapAnchor(p),spec=TYPES[State.tool.linear],n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}}});
+canvas.addEventListener('pointermove',e=>{if(pan){State.view.x=pan.vx+e.clientX-pan.x;State.view.y=pan.vy+e.clientY-pan.y;draw();return}if(State.tool.kind==='linear'&&State.draft){const p=pointerWorld(e),snap=snapAnchor(p),spec=TYPES[State.tool.linear],n=normalizeLinear(State.draft.a,snap.point,spec);if(n){State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length};status(`${State.tool.label}: ${n.length.toFixed(2)}U`);draw()}}});
+canvas.addEventListener('pointerup',()=>pan=null);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,6);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;draw()},{passive:false});
+for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>setTool({kind:'tower',shape:b.dataset.tower,size:Number(b.dataset.size),label:`${b.dataset.tower} tower ${b.dataset.size}U`,el:b});
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>setTool({kind:'linear',linear:b.dataset.linear,label:b.dataset.linear==='wall'?'Wall':'Built section',el:b});
+document.querySelector('[data-gate]').onclick=e=>setTool({kind:'gate',label:'Gate 1.5×1.5U',el:e.currentTarget});
+document.getElementById('undoBtn').onclick=()=>{State.structures.pop();markDirty();draw()};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear all castle structures?')){State.structures=[];markDirty();draw()}};
+['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
+function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,structures:State.structures,resources:State.resources,policies:State.policies,view:State.view}))}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=x.structures||[];State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else{document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=data.structures||[];State.resources={...State.resources,...data.resources};State.policies={...State.policies,...data.policies};saveLocal();renderUI();draw()}}
+async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:'plains',neighbor_biomes:{},resources:State.resources,policies:State.policies,structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
+document.getElementById('saveBtn').onclick=saveCloud;
+function renderUI(){document.getElementById('seedLabel').textContent=State.seed;const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){State.draft=null;setTool({kind:'select',label:'Select'});draw()}if(e.key==='Delete'&&State.selectedId){State.structures=State.structures.filter(s=>s.id!==State.selectedId);State.selectedId=null;markDirty();draw()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCloud()}});
+window.addEventListener('resize',resize);loadLocal();renderUI();resize();fit();initSupabase();
+})();
+</script>
+</body>
+</html>
