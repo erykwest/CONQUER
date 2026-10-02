@@ -39,12 +39,19 @@ select{width:100%;border:1px solid var(--line-strong);background:var(--sunken);c
 .legend{font-size:11px;line-height:1.5;color:var(--muted)}
 .kv{display:grid;grid-template-columns:1fr auto;gap:5px;font-size:12px;margin:5px 0}.policy{display:flex;align-items:center;gap:8px;margin:7px 0}.policy input{width:100%}
 hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.modal-backdrop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(12,9,7,.72);z-index:30}
+.modal-backdrop.open{display:flex}
+.modal-card{width:min(430px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line-strong);border-radius:16px;padding:18px;box-shadow:0 22px 70px rgba(0,0,0,.55)}
+.modal-card h2{font-size:20px;margin-bottom:8px}.modal-card p{font-size:12px;color:var(--muted);line-height:1.5}
+.modal-card input{width:100%;border:1px solid var(--line-strong);background:var(--sunken);color:var(--text);padding:11px 12px;border-radius:9px;margin:8px 0 12px}
+.cost-line{margin-top:8px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--sunken);font-size:11px;color:var(--text-2)}
+.village-name{font-weight:800;color:var(--accent)}
 @media(max-width:1180px){#functionPanel{right:10px;top:76px;width:300px;z-index:9}#policy{display:none}}
 @media(max-width:980px){:root{--sidebar:240px}#resources{display:none}#functionPanel{width:260px}}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.2</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.3</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -57,8 +64,9 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
     <h3>Linear castle</h3>
     <div class="grid"><button data-linear="wall">Wall</button><button data-linear="built">Built section</button></div>
     <h3>Gate</h3><button class="full" data-gate>Gate 1.5×1.5U</button>
+    <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <hr/>
-    <div class="legend">Wall: 0.5U wide · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.</div>
+    <div class="legend">Wall: 0.5U wide · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
     <hr/>
     <div class="grid"><button id="undoBtn">↶ Undo</button><button id="clearBtn">Clear all</button></div>
   </aside>
@@ -71,6 +79,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 
   <aside id="policy" class="panel">
     <h2>Settlement</h2>
+    <div class="kv"><span>Village</span><b id="villageLabel">—</b></div>
     <div class="kv"><span>World cell</span><b id="cellLabel">0, 0</b></div>
     <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
     <div class="kv"><span>Build area</span><b>100×100U</b></div>
@@ -83,6 +92,14 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
     <button class="full" id="saveBtn">Save settlement</button>
     <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
   </aside>
+  <div id="foundVillageModal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2>Found a village</h2>
+      <p>The well fixes the settlement core. Naming the village will generate the first road grid, houses and surrounding fields using the persistent settlement seed.</p>
+      <input id="villageNameInput" maxlength="40" autocomplete="off" placeholder="Village name">
+      <div class="row"><button id="cancelVillageBtn">Cancel</button><button id="confirmVillageBtn" class="active">Found village</button></div>
+    </div>
+  </div>
   <div id="saveState">local</div><div id="status">Select a build tool</div>
 </div>
 <script>
@@ -93,8 +110,15 @@ const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},dirty:false,supabase:null,user:null};
+const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false},dirty:false,supabase:null,user:null};
 const TYPES={wall:{width:.5,min:1,max:8},built:{width:1,min:1,max:4}};
+const COSTS={
+  tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
+  wallPerU:{gold:6,stone:18,wood:2},
+  builtPerU:{gold:12,stone:16,wood:18},
+  gate:{gold:95,stone:90,wood:38,metal:10},
+  well:{gold:50,stone:35,wood:10}
+};
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','workshop','prison'];
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Storage',quarters:'Quarters',workshop:'Workshop',prison:'Prison'};
 const uid=()=>crypto.randomUUID?.()||('id-'+Date.now()+'-'+Math.random());
@@ -102,6 +126,103 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const snapGrid=v=>Math.round(v/GRID)*GRID;
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
+const RES_ORDER=['gold','stone','wood','metal'];
+function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
+function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?2:span>=1.49?1:0}
+function constructionCost(s){
+  if(!s||s.auto)return{};
+  if(s.type==='tower')return {...COSTS.tower[towerTier(s)]};
+  if(s.type==='gate')return {...COSTS.gate};
+  if(s.type==='well')return {...COSTS.well};
+  if(s.type==='wall')return roundCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])));
+  if(s.type==='built')return roundCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])));
+  return{};
+}
+function costText(cost){const icons={gold:'🪙',stone:'🪨',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
+function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v)}
+function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
+function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
+function pointRadius(s){
+  if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
+  if(s.type==='gate')return Math.SQRT2*s.size/2;
+  if(s.type==='well')return .75;
+  if(s.type==='house'||s.type==='field')return Math.hypot(s.w,s.h)/2;
+  return .5;
+}
+function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return dist(p,a);const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return dist(p,{x:a.x+t*dx,y:a.y+t*dy})}
+function segmentsIntersect(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);const a1=cr(a,b,c),a2=cr(a,b,d),a3=cr(c,d,a),a4=cr(c,d,b);return ((a1>0&&a2<0)||(a1<0&&a2>0))&&((a3>0&&a4<0)||(a3<0&&a4>0))}
+function autoOverlapsManual(auto,manual){
+  const linear=['wall','built'].includes(manual.type);
+  if(auto.type==='road'){
+    if(linear)return segmentsIntersect(auto.a,auto.b,manual.a,manual.b)||pointSegmentDistance(manual.a,auto.a,auto.b)<=manual.width/2+auto.width/2||pointSegmentDistance(manual.b,auto.a,auto.b)<=manual.width/2+auto.width/2;
+    return pointSegmentDistance({x:manual.x,y:manual.y},auto.a,auto.b)<=pointRadius(manual)+auto.width/2;
+  }
+  const p={x:auto.x,y:auto.y},r=pointRadius(auto);
+  if(linear)return pointSegmentDistance(p,manual.a,manual.b)<=r+manual.width/2+.15;
+  return dist(p,{x:manual.x,y:manual.y})<=r+pointRadius(manual)+.15;
+}
+function removeOverlappingAuto(manual){let removed=0;State.structures=State.structures.filter(s=>{const hit=s.auto&&autoOverlapsManual(s,manual);if(hit)removed++;return !hit});return removed}
+function nearestRoadInfo(p,roads){let best={d:Infinity,angle:0};for(const r of roads){const d=pointSegmentDistance(p,r.a,r.b);if(d<best.d)best={d,angle:Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}}return best}
+function autoBlocked(candidate,placed,manual,margin=.2){
+  const p={x:candidate.x,y:candidate.y},r=pointRadius(candidate)+margin;
+  for(const s of manual){if(['wall','built'].includes(s.type)){if(pointSegmentDistance(p,s.a,s.b)<=r+s.width/2)return true}else if(s.x!=null&&dist(p,s)<=r+pointRadius(s))return true}
+  for(const s of placed){if(s.type==='road')continue;if(dist(p,s)<=r+pointRadius(s)+margin)return true}
+  return false;
+}
+function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
+function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
+function generateVillage(well){
+  State.structures=State.structures.filter(s=>!s.auto);
+  const rnd=seedRand(villageSeed(well)),angle=(rnd()-.5)*.5,roads=[],radius=20,spacing=5;
+  for(let off=-15;off<=15;off+=spacing){
+    for(const axis of [0,1]){
+      let a0=axis===0?rotPoint(well.x,well.y,-radius,off,angle):rotPoint(well.x,well.y,off,-radius,angle);
+      let b0=axis===0?rotPoint(well.x,well.y,radius,off,angle):rotPoint(well.x,well.y,off,radius,angle);
+      a0={x:clamp(a0.x,BUILD_MIN,BUILD_MAX),y:clamp(a0.y,BUILD_MIN,BUILD_MAX)};
+      b0={x:clamp(b0.x,BUILD_MIN,BUILD_MAX),y:clamp(b0.y,BUILD_MIN,BUILD_MAX)};
+      if(dist(a0,b0)>2)roads.push({id:uid(),type:'road',auto:true,a:a0,b:b0,width:Math.abs(off)<.1?.7:.34,appeal:1});
+    }
+  }
+  State.structures.push(...roads);
+  const manual=State.structures.filter(s=>!s.auto);
+  const houseCandidates=[];
+  for(let i=0;i<360;i++){
+    const d=3+rnd()*16,th=rnd()*Math.PI*2,p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
+    if(!inBuild(p))continue;
+    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-8,2)/(2*5*5)),score=ring*1.1+Math.exp(-road.d/1.8)*.8+rnd()*.22;
+    houseCandidates.push({p,road,score});
+  }
+  houseCandidates.sort((a,b)=>b.score-a.score);
+  const houses=[];
+  for(const c of houseCandidates){
+    if(houses.length>=28)break;
+    const h={id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.72?2:1.5,h:1,angle:c.road.angle,appeal:c.score};
+    if(!autoBlocked(h,houses,manual,.35))houses.push(h);
+  }
+  State.structures.push(...houses);
+  const fieldCandidates=[];
+  for(let i=0;i<420;i++){
+    const d=13+rnd()*22,th=rnd()*Math.PI*2,p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
+    if(!inBuild(p))continue;
+    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-24,2)/(2*7*7)),score=ring+Math.exp(-road.d/4)*.28+rnd()*.18;
+    fieldCandidates.push({p,road,score});
+  }
+  fieldCandidates.sort((a,b)=>b.score-a.score);
+  const fields=[];
+  const blockers=[...manual,...houses];
+  for(const c of fieldCandidates){
+    if(fields.length>=18)break;
+    const f={id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:3+rnd()*1.5,h:2+rnd()*1.2,angle:angle,appeal:c.score};
+    if(!autoBlocked(f,fields,blockers,.7))fields.push(f);
+  }
+  State.structures.push(...fields);
+  status(`${State.village.name}: ${houses.length} houses · ${fields.length} fields · ${roads.length} road segments`);
+}
+function openVillageModal(well){
+  State.pendingWellId=well.id;const modal=document.getElementById('foundVillageModal'),input=document.getElementById('villageNameInput');
+  modal.classList.add('open');input.value=State.village.name||'';setTimeout(()=>input.focus(),0);
+}
+function closeVillageModal(){document.getElementById('foundVillageModal').classList.remove('open');State.pendingWellId=null}
 function resize(){const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
 function w2s(p){return{x:State.view.x+p.x*U*State.view.scale,y:State.view.y+p.y*U*State.view.scale}}
 function s2w(x,y){return{x:(x-State.view.x)/(U*State.view.scale),y:(y-State.view.y)/(U*State.view.scale)}}
@@ -125,7 +246,7 @@ function functionCapacity(s){
   return 0;
 }
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
-function structureLabel(s){if(!s)return'';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U`;return`Wall ${s.length.toFixed(2)}U`}
+function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U`;return`Wall ${s.length.toFixed(2)}U`}
 function drawLinearBase(s,preview=false){
   const pts=linePoly(s).map(w2s);ctx.save();ctx.globalAlpha=preview?.55:1;ctx.fillStyle=s.type==='wall'?'#6e6258':'#8a684d';ctx.strokeStyle=State.selectedId===s.id?'#f4b76f':'#d8c8b4';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
 }
@@ -150,41 +271,82 @@ function drawBuiltDetails(s,preview=false){
   ctx.restore();
 }
 function drawPointStructure(s,preview=false){
-  const p=w2s({x:s.x,y:s.y});ctx.save();ctx.globalAlpha=preview?.55:1;ctx.fillStyle=s.type==='gate'?'#9a744f':'#766658';ctx.strokeStyle=State.selectedId===s.id?'#f4b76f':'#d5c2aa';ctx.lineWidth=2;
-  if(s.shape==='round'){ctx.beginPath();ctx.arc(p.x,p.y,s.r*U*State.view.scale,0,Math.PI*2);ctx.fill();ctx.stroke()}else{const z=s.size*U*State.view.scale;ctx.fillRect(p.x-z/2,p.y-z/2,z,z);ctx.strokeRect(p.x-z/2,p.y-z/2,z,z)}
+  const p=w2s({x:s.x,y:s.y});ctx.save();ctx.globalAlpha=preview?.55:1;ctx.strokeStyle=State.selectedId===s.id?'#f4b76f':'#d5c2aa';ctx.lineWidth=2;
+  if(s.type==='well'){
+    const rr=.62*U*State.view.scale;ctx.fillStyle='#6d655b';ctx.beginPath();ctx.arc(p.x,p.y,rr,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#171f22';ctx.beginPath();ctx.arc(p.x,p.y,rr*.52,0,Math.PI*2);ctx.fill();
+    if(State.village.founded&&State.village.name){ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-rr-7)}
+  }else{
+    ctx.fillStyle=s.type==='gate'?'#9a744f':'#766658';
+    if(s.shape==='round'){ctx.beginPath();ctx.arc(p.x,p.y,s.r*U*State.view.scale,0,Math.PI*2);ctx.fill();ctx.stroke()}else{const z=s.size*U*State.view.scale;ctx.fillRect(p.x-z/2,p.y-z/2,z,z);ctx.strokeRect(p.x-z/2,p.y-z/2,z,z)}
+  }
   ctx.restore();
 }
-function drawStructure(s,preview=false){if(s.type==='tower'||s.type==='gate')drawPointStructure(s,preview);else{drawLinearBase(s,preview);drawBuiltDetails(s,preview)}}
+function drawAutoRect(s,fill,stroke){
+  const p=w2s(s),w=s.w*U*State.view.scale,h=s.h*U*State.view.scale;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.fillRect(-w/2,-h/2,w,h);ctx.strokeRect(-w/2,-h/2,w,h);ctx.restore();
+}
+function drawAutoStructure(s){
+  if(s.type==='field'){
+    drawAutoRect(s,'rgba(133,111,55,.5)','rgba(190,168,95,.55)');
+    const p=w2s(s),w=s.w*U*State.view.scale,h=s.h*U*State.view.scale;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);ctx.strokeStyle='rgba(222,197,112,.38)';ctx.lineWidth=1;for(let x=-w/2+4;x<w/2;x+=6){ctx.beginPath();ctx.moveTo(x,-h/2);ctx.lineTo(x,h/2);ctx.stroke()}ctx.restore();
+  }else if(s.type==='road'){
+    const a=w2s(s.a),b=w2s(s.b);ctx.save();ctx.strokeStyle='rgba(126,106,82,.58)';ctx.lineWidth=Math.max(2,s.width*U*State.view.scale);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
+  }else if(s.type==='house'){
+    drawAutoRect(s,'#8f6d4e','#d0b18b');
+    const p=w2s(s),w=s.w*U*State.view.scale;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);ctx.strokeStyle='#5c3d2e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-w/2,0);ctx.lineTo(w/2,0);ctx.stroke();ctx.restore();
+  }
+}
+function drawStructure(s,preview=false){if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);else{drawLinearBase(s,preview);drawBuiltDetails(s,preview)}}
 function draw(){
   const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawBuildArea();
-  // Architectural layering: linear elements first, towers and gates always foreground.
-  State.structures.filter(s=>!['tower','gate'].includes(s.type)).forEach(s=>drawStructure(s));
+  State.structures.filter(s=>s.auto&&s.type==='field').forEach(drawAutoStructure);
+  State.structures.filter(s=>s.auto&&s.type==='road').forEach(drawAutoStructure);
+  State.structures.filter(s=>s.auto&&s.type==='house').forEach(drawAutoStructure);
+  State.structures.filter(s=>!s.auto&&!['tower','gate','well'].includes(s.type)).forEach(s=>drawStructure(s));
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
-  State.structures.filter(s=>['tower','gate'].includes(s.type)).forEach(s=>drawStructure(s));
+  State.structures.filter(s=>!s.auto&&s.type==='well').forEach(s=>drawStructure(s));
+  // Towers and gates are always the top architectural layer.
+  State.structures.filter(s=>!s.auto&&['tower','gate'].includes(s.type)).forEach(s=>drawStructure(s));
 }
 function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX}
-function pointHit(s,p){if(s.shape==='round')return dist(p,s)<=s.r;return Math.abs(p.x-s.x)<=s.size/2&&Math.abs(p.y-s.y)<=s.size/2}
+function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;return Math.abs(p.x-s.x)<=s.size/2&&Math.abs(p.y-s.y)<=s.size/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
   // Hit testing follows visual layering: towers/gates win over walls beneath them.
-  const points=State.structures.filter(s=>['tower','gate'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
-  const linear=State.structures.filter(s=>!['tower','gate'].includes(s.type));
+  const linear=State.structures.filter(s=>!s.auto&&['wall','built'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate],[data-well]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(){State.dirty=true;document.getElementById('saveState').textContent='unsaved';saveLocal()}
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;renderFunctionPanel();draw()}
-function addStructure(s){normalizeFunctions(s);State.structures.push(s);selectStructure(s);markDirty();draw()}
-function deleteStructure(id){State.structures=State.structures.filter(s=>s.id!==id);if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()}
+function addStructure(s){
+  if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
+  if(!s.auto){
+    const cost=constructionCost(s);
+    if(!canAfford(cost)){status('Insufficient resources — '+costText(cost));return false}
+    s.buildCost=cost;spendCost(cost);
+    const removed=removeOverlappingAuto(s);if(removed)status(`Construction cleared ${removed} auto-spawned element${removed===1?'':'s'}`);
+  }
+  State.structures.push(s);selectStructure(s);markDirty();draw();return true
+}
+function deleteStructure(id){
+  const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(!target.auto&&target.buildCost)refundCost(target.buildCost);
+  if(target.type==='well'){
+    State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
+    State.village={name:null,wellId:null,founded:false};
+  }else State.structures=State.structures.filter(s=>s.id!==id);
+  if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
+}
 function pointerWorld(e){const r=canvas.getBoundingClientRect();return s2w(e.clientX-r.left,e.clientY-r.top)}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(!s||!['tower','gate','built'].includes(s.type)){panel.classList.remove('open');return}
   normalizeFunctions(s);const cap=functionCapacity(s);panel.classList.add('open');
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div>${s.type==='built'?`<div class="legend">Capacity by length: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity by length: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
   if(cap===0){slots.innerHTML='<div class="slot"><div class="legend">This structure is too small to host a function.</div></div>';return}
   slots.innerHTML=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
@@ -198,31 +360,44 @@ canvas.addEventListener('pointerdown',e=>{
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='tower'){const q={x:snapGrid(p.x),y:snapGrid(p.y)};addStructure({id:uid(),type:'tower',shape:State.tool.shape,x:q.x,y:q.y,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size}),functions:[]});return}
   if(State.tool.kind==='gate'){const q={x:snapGrid(p.x),y:snapGrid(p.y)};addStructure({id:uid(),type:'gate',shape:'square',size:1.5,x:q.x,y:q.y,functions:[]});return}
+  if(State.tool.kind==='well'){
+    if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',x:q.x,y:q.y};
+    if(addStructure(well))openVillageModal(well);return
+  }
   if(State.tool.kind==='linear'){
     if(!State.draft){const s=snapAnchor(p);State.draft={a:s.point,aSnap:s.structureId,preview:null};status('Point A set — choose point B');draw()}
     else{const e2=snapAnchor(p),spec=TYPES[State.tool.linear],n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,functions:[]});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}
   }
 });
-canvas.addEventListener('pointermove',e=>{if(pan){State.view.x=pan.vx+e.clientX-pan.x;State.view.y=pan.vy+e.clientY-pan.y;draw();return}if(State.tool.kind==='linear'&&State.draft){const p=pointerWorld(e),snap=snapAnchor(p),spec=TYPES[State.tool.linear],n=normalizeLinear(State.draft.a,snap.point,spec);if(n){State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length};status(`${State.tool.label}: ${n.length.toFixed(2)}U`);draw()}}});
+canvas.addEventListener('pointermove',e=>{if(pan){State.view.x=pan.vx+e.clientX-pan.x;State.view.y=pan.vy+e.clientY-pan.y;draw();return}if(State.tool.kind==='linear'&&State.draft){const p=pointerWorld(e),snap=snapAnchor(p),spec=TYPES[State.tool.linear],n=normalizeLinear(State.draft.a,snap.point,spec);if(n){State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length};status(`${State.tool.label}: ${n.length.toFixed(2)}U · ${costText(constructionCost({type:State.tool.linear,length:n.length}))}`);draw()}}});
 canvas.addEventListener('pointerup',()=>pan=null);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,6);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;draw()},{passive:false});
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>setTool({kind:'tower',shape:b.dataset.tower,size:Number(b.dataset.size),label:`${b.dataset.tower} tower ${b.dataset.size}U`,el:b});
-for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>setTool({kind:'linear',linear:b.dataset.linear,label:b.dataset.linear==='wall'?'Wall':'Built section',el:b});
-document.querySelector('[data-gate]').onclick=e=>setTool({kind:'gate',label:'Gate 1.5×1.5U',el:e.currentTarget});
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const dummy={type:'tower',shape:b.dataset.tower,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',shape:b.dataset.tower,size:Number(b.dataset.size),label:`${b.dataset.tower} tower ${b.dataset.size}U · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>setTool({kind:'linear',linear:b.dataset.linear,label:b.dataset.linear==='wall'?'Wall — choose point A':'Built section — choose point A',el:b});
+document.querySelector('[data-gate]').onclick=e=>setTool({kind:'gate',label:'Gate 1.5×1.5U · '+costText(COSTS.gate),el:e.currentTarget});
+document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · '+costText(COSTS.well),el:e.currentTarget});
+document.getElementById('confirmVillageBtn').onclick=()=>{
+  const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
+  if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
+  State.village={name,wellId:well.id,founded:true};closeVillageModal();generateVillage(well);markDirty();renderUI();draw();
+};
+document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
+document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
-document.getElementById('undoBtn').onclick=()=>{const s=State.structures.pop();if(s?.id===State.selectedId)State.selectedId=null;renderFunctionPanel();markDirty();draw()};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear all castle structures?')){State.structures=[];State.selectedId=null;renderFunctionPanel();markDirty();draw()}};
+document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
 function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b)}if(s.type==='wall')s.width=.5;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
-function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,structures:State.structures,resources:State.resources,policies:State.policies,view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,view:State.view}))}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};State.village={...State.village,...x.village};['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};State.policies={...State.policies,...data.policies};saveLocal();renderUI();renderFunctionPanel();draw()}}
-async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:'plains',neighbor_biomes:{},resources:State.resources,policies:State.policies,structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.village={...State.village,...(cloudPolicies.village||{})};saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:'plains',neighbor_biomes:{},resources:State.resources,policies:{...State.policies,village:State.village},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
-function renderUI(){document.getElementById('seedLabel').textContent=State.seed;const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
-window.addEventListener('keydown',e=>{if(e.key==='Escape'){State.draft=null;State.selectedId=null;renderFunctionPanel();setTool({kind:'select',label:'Select'});draw()}if(e.key==='Delete'&&State.selectedId)deleteStructure(State.selectedId);if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCloud()}});
+function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.getElementById('foundVillageModal').classList.contains('open')){document.getElementById('cancelVillageBtn').click();return}State.draft=null;State.selectedId=null;renderFunctionPanel();setTool({kind:'select',label:'Select'});draw()}if(e.key==='Delete'&&State.selectedId)deleteStructure(State.selectedId);if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCloud()}});
 window.addEventListener('resize',resize);loadLocal();renderUI();resize();fit();initSupabase();
 })();
 </script>
