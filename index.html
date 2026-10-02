@@ -250,7 +250,7 @@ function spawnRoad(step){
   if(dist(a,b)<1.8)return false;
   const road=beginConstruction({id:uid(),type:'road',auto:true,a,b,width:roads.length<2?.58:.32,appeal:1});
   // Do not grow a road through a player-built structure.
-  if(State.structures.some(s=>!s.auto&&autoOverlapsManual(road,s)))return false;
+  if(State.structures.some(s=>!s.auto&&s.id!==State.village.wellId&&autoOverlapsManual(road,s)))return false;
   State.structures.push(road);return true;
 }
 function spawnHouse(step){
