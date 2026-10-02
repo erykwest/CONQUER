@@ -36,6 +36,12 @@ select{width:100%;border:1px solid var(--line-strong);background:var(--sunken);c
 .slot{padding:9px;margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:9px}.slot-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
 #status{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:6;background:rgba(23,15,12,.9);border:1px solid var(--line-strong);border-radius:999px;padding:8px 12px;font-size:12px;pointer-events:none;max-width:50vw;text-align:center}
 #saveState{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;background:rgba(23,15,12,.9);border:1px solid var(--line-strong);border-radius:999px;padding:7px 10px;font-size:11px}
+#timePanel{position:absolute;left:50%;top:46px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:5px;padding:6px;background:rgba(23,15,12,.92);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 5px 18px rgba(0,0,0,.3)}
+#timePanel button{width:auto;min-width:38px;padding:6px 8px;font-size:11px}
+#timePanel .time-readout{min-width:76px;text-align:center;font-size:11px;color:var(--text-2)}
+.progress{height:5px;margin-top:7px;border-radius:999px;overflow:hidden;background:rgba(0,0,0,.35)}
+.progress>i{display:block;height:100%;background:var(--accent)}
+.site-label{font-size:10px;color:var(--accent);font-weight:800;letter-spacing:.05em;text-transform:uppercase}
 .legend{font-size:11px;line-height:1.5;color:var(--muted)}
 .kv{display:grid;grid-template-columns:1fr auto;gap:5px;font-size:12px;margin:5px 0}.policy{display:flex;align-items:center;gap:8px;margin:7px 0}.policy input{width:100%}
 hr{border:0;border-top:1px solid var(--line);margin:12px 0}
@@ -51,7 +57,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.3</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.4</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -84,6 +90,8 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
     <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
     <div class="kv"><span>Build area</span><b>100×100U</b></div>
     <div class="kv"><span>World buffer</span><b>200×200U</b></div>
+    <div class="kv"><span>Growth pulse</span><b>~2.5 days</b></div>
+    <div class="kv"><span>Time</span><b>paused on load</b></div>
     <h3>Policies</h3>
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
     <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
@@ -100,7 +108,15 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
       <div class="row"><button id="cancelVillageBtn">Cancel</button><button id="confirmVillageBtn" class="active">Found village</button></div>
     </div>
   </div>
-  <div id="saveState">local</div><div id="status">Select a build tool</div>
+  <div id="saveState">local</div>
+  <div id="timePanel">
+    <span id="dayLabel" class="time-readout">Day 0.0</span>
+    <button data-speed="0" class="active">⏸</button>
+    <button data-speed="1">▶</button>
+    <button data-speed="4">×4</button>
+    <button data-speed="16">×16</button>
+  </div>
+  <div id="status">Select a build tool</div>
 </div>
 <script>
 (() => {
@@ -110,7 +126,7 @@ const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false},dirty:false,supabase:null,user:null};
+const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null},clock:{day:0,speed:0},dirty:false,supabase:null,user:null};
 const TYPES={wall:{width:.5,min:1,max:8},built:{width:1,min:1,max:4}};
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
@@ -119,6 +135,9 @@ const COSTS={
   gate:{gold:95,stone:90,wood:38,metal:10},
   well:{gold:50,stone:35,wood:10}
 };
+const BUILD_DAYS={tower:[4,7,11],gate:9,well:2,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const GROWTH_INTERVAL_DAYS=2.5;
+const BASE_DAYS_PER_SECOND=.25;
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','workshop','prison'];
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Storage',quarters:'Quarters',workshop:'Workshop',prison:'Prison'};
 const uid=()=>crypto.randomUUID?.()||('id-'+Date.now()+'-'+Math.random());
@@ -142,6 +161,29 @@ function costText(cost){const icons={gold:'🪙',stone:'🪨',wood:'🪵',metal:
 function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v)}
 function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
 function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
+function buildDuration(s){
+  if(s.type==='tower')return BUILD_DAYS.tower[towerTier(s)];
+  if(s.type==='gate')return BUILD_DAYS.gate;
+  if(s.type==='well')return BUILD_DAYS.well;
+  if(s.type==='wall')return BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length;
+  if(s.type==='built')return BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length;
+  if(s.type==='road')return BUILD_DAYS.road;
+  if(s.type==='house')return BUILD_DAYS.house;
+  if(s.type==='field')return BUILD_DAYS.field;
+  return 0;
+}
+function beginConstruction(s,delay=0){
+  const d=buildDuration(s);if(d<=0)return s;
+  s.construction={startedDay:State.clock.day+delay,completeDay:State.clock.day+delay+d};return s;
+}
+function constructionProgress(s){
+  if(!s?.construction)return 1;
+  const a=s.construction.startedDay,b=s.construction.completeDay;
+  if(State.clock.day<=a)return 0;if(State.clock.day>=b)return 1;
+  return clamp((State.clock.day-a)/(b-a),0,1);
+}
+function underConstruction(s){return constructionProgress(s)<1}
+function remainingDays(s){return s?.construction?Math.max(0,s.construction.completeDay-State.clock.day):0}
 function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate')return Math.SQRT2*s.size/2;
@@ -171,52 +213,112 @@ function autoBlocked(candidate,placed,manual,margin=.2){
 }
 function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
 function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
-function generateVillage(well){
-  State.structures=State.structures.filter(s=>!s.auto);
-  const rnd=seedRand(villageSeed(well)),angle=(rnd()-.5)*.5,roads=[],radius=20,spacing=5;
-  for(let off=-15;off<=15;off+=spacing){
-    for(const axis of [0,1]){
-      let a0=axis===0?rotPoint(well.x,well.y,-radius,off,angle):rotPoint(well.x,well.y,off,-radius,angle);
-      let b0=axis===0?rotPoint(well.x,well.y,radius,off,angle):rotPoint(well.x,well.y,off,radius,angle);
-      a0={x:clamp(a0.x,BUILD_MIN,BUILD_MAX),y:clamp(a0.y,BUILD_MIN,BUILD_MAX)};
-      b0={x:clamp(b0.x,BUILD_MIN,BUILD_MAX),y:clamp(b0.y,BUILD_MIN,BUILD_MAX)};
-      if(dist(a0,b0)>2)roads.push({id:uid(),type:'road',auto:true,a:a0,b:b0,width:Math.abs(off)<.1?.7:.34,appeal:1});
+function roadList(){return State.structures.filter(s=>s.auto&&s.type==='road')}
+function autoList(type){return State.structures.filter(s=>s.auto&&(!type||s.type===type))}
+function currentGrowthRadius(){
+  const step=State.village.growthStep||0;
+  return Math.min(19,5.5+step*.38);
+}
+function growthRng(step,salt=0){
+  const well=State.structures.find(s=>s.id===State.village.wellId)||{x:100,y:100};
+  return seedRand((villageSeed(well)^Math.imul(step+1,2654435761)^salt)>>>0);
+}
+function previousRoadHeading(road,atB=true){return Math.atan2(road.b.y-road.a.y,road.b.x-road.a.x)+(atB?0:Math.PI)}
+function spawnRoad(step){
+  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return false;
+  const rnd=growthRng(step,101),roads=roadList(),radius=currentGrowthRadius();
+  let a,heading;
+  if(!roads.length){
+    if(State.village.baseRoadAngle==null)State.village.baseRoadAngle=(rnd()*Math.PI*2);
+    a={x:well.x,y:well.y};heading=State.village.baseRoadAngle+(rnd()-.5)*.25;
+  }else{
+    // Usually extend one of the newest road ends; sometimes branch from an older one.
+    const pool=roads.slice(Math.max(0,roads.length-5));
+    const base=pool[Math.floor(rnd()*pool.length)];
+    const fromB=rnd()>.18;
+    a=fromB?{...base.b}:{...base.a};
+    heading=previousRoadHeading(base,fromB)+(rnd()-.5)*(Math.PI/2.8);
+    if(rnd()<.16)heading+=(rnd()<.5?-1:1)*(Math.PI/3+ rnd()*.35);
+  }
+  const len=3.1+rnd()*2.1;
+  let b={x:a.x+Math.cos(heading)*len,y:a.y+Math.sin(heading)*len};
+  const dx=b.x-well.x,dy=b.y-well.y,d=Math.hypot(dx,dy);
+  if(d>radius){const k=radius/d;b={x:well.x+dx*k,y:well.y+dy*k}}
+  b={x:clamp(b.x,BUILD_MIN+.5,BUILD_MAX-.5),y:clamp(b.y,BUILD_MIN+.5,BUILD_MAX-.5)};
+  if(dist(a,b)<1.8)return false;
+  const road=beginConstruction({id:uid(),type:'road',auto:true,a,b,width:roads.length<2?.58:.32,appeal:1});
+  // Do not grow a road through a player-built structure.
+  if(State.structures.some(s=>!s.auto&&autoOverlapsManual(road,s)))return false;
+  State.structures.push(road);return true;
+}
+function spawnHouse(step){
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList();if(!well||!roads.length)return false;
+  const rnd=growthRng(step,211),radius=currentGrowthRadius(),manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
+  const candidates=[];
+  for(let i=0;i<90;i++){
+    const road=roads[Math.floor(rnd()*roads.length)],t=.12+rnd()*.76;
+    const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
+    const ang=Math.atan2(road.b.y-road.a.y,road.b.x-road.a.x),side=rnd()<.5?-1:1,offset=1.15+rnd()*1.35;
+    const p={x:q.x-Math.sin(ang)*offset*side,y:q.y+Math.cos(ang)*offset*side};
+    const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p))continue;
+    const core=Math.exp(-Math.pow(d-Math.min(7,radius*.62),2)/(2*3.2*3.2));
+    const score=core*1.15+(1-offset/3)*.65+rnd()*.25;
+    candidates.push({p,ang,score});
+  }
+  candidates.sort((a,b)=>b.score-a.score);
+  for(const c of candidates.slice(0,24)){
+    const h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:c.ang,appeal:c.score});
+    if(!autoBlocked(h,placed,manual,.38)){State.structures.push(h);return true}
+  }
+  return false;
+}
+function spawnField(step){
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList();if(!well)return false;
+  const rnd=growthRng(step,307),radius=currentGrowthRadius()+4,manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
+  const houses=autoList('house');if(houses.length<5)return false;
+  const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(23,radius+4),candidates=[];
+  for(let i=0;i<110;i++){
+    const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2,p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
+    if(!inBuild(p))continue;
+    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-(inner+outer)*.5,2)/(2*4.5*4.5));
+    const score=ring+.18*Math.exp(-road.d/4)+rnd()*.22;candidates.push({p,road,score});
+  }
+  candidates.sort((a,b)=>b.score-a.score);
+  for(const c of candidates.slice(0,28)){
+    const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:(State.village.baseRoadAngle||0)+(rnd()-.5)*.25,appeal:c.score});
+    if(!autoBlocked(f,placed,manual,.65)){State.structures.push(f);return true}
+  }
+  return false;
+}
+function processVillageGrowth(){
+  if(!State.village.founded)return;
+  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return;
+  if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
+  let guard=0;
+  while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
+    const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
+    let kind;
+    if(roads===0)kind='road';
+    else if(houses<2)kind='house';
+    else if(step<5&&roads<2)kind='road';
+    else{
+      const rnd=growthRng(step,509)();
+      if(houses>=5&&fields<Math.ceil(houses*.55)&&rnd<.20)kind='field';
+      else if(roads<Math.ceil(houses/4)+1&&rnd<.40)kind='road';
+      else kind='house';
     }
+    let ok=kind==='road'?spawnRoad(step):kind==='field'?spawnField(step):spawnHouse(step);
+    if(!ok&&kind!=='house')ok=spawnHouse(step);
+    if(!ok&&kind!=='road')ok=spawnRoad(step);
+    State.village.growthStep=step+1;
+    State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
+    if(ok)markDirty();
   }
-  State.structures.push(...roads);
-  const manual=State.structures.filter(s=>!s.auto);
-  const houseCandidates=[];
-  for(let i=0;i<360;i++){
-    const d=3+rnd()*16,th=rnd()*Math.PI*2,p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
-    if(!inBuild(p))continue;
-    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-8,2)/(2*5*5)),score=ring*1.1+Math.exp(-road.d/1.8)*.8+rnd()*.22;
-    houseCandidates.push({p,road,score});
-  }
-  houseCandidates.sort((a,b)=>b.score-a.score);
-  const houses=[];
-  for(const c of houseCandidates){
-    if(houses.length>=28)break;
-    const h={id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.72?2:1.5,h:1,angle:c.road.angle,appeal:c.score};
-    if(!autoBlocked(h,houses,manual,.35))houses.push(h);
-  }
-  State.structures.push(...houses);
-  const fieldCandidates=[];
-  for(let i=0;i<420;i++){
-    const d=13+rnd()*22,th=rnd()*Math.PI*2,p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
-    if(!inBuild(p))continue;
-    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-24,2)/(2*7*7)),score=ring+Math.exp(-road.d/4)*.28+rnd()*.18;
-    fieldCandidates.push({p,road,score});
-  }
-  fieldCandidates.sort((a,b)=>b.score-a.score);
-  const fields=[];
-  const blockers=[...manual,...houses];
-  for(const c of fieldCandidates){
-    if(fields.length>=18)break;
-    const f={id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:3+rnd()*1.5,h:2+rnd()*1.2,angle:angle,appeal:c.score};
-    if(!autoBlocked(f,fields,blockers,.7))fields.push(f);
-  }
-  State.structures.push(...fields);
-  status(`${State.village.name}: ${houses.length} houses · ${fields.length} fields · ${roads.length} road segments`);
+}
+function resetLegacyVillageGrowth(){
+  if(!State.village.founded||State.village.growthVersion===2)return;
+  State.structures=State.structures.filter(s=>!s.auto);
+  State.village.growthVersion=2;State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.baseRoadAngle=null;
 }
 function openVillageModal(well){
   State.pendingWellId=well.id;const modal=document.getElementById('foundVillageModal'),input=document.getElementById('villageNameInput');
@@ -285,6 +387,7 @@ function drawAutoRect(s,fill,stroke){
   const p=w2s(s),w=s.w*U*State.view.scale,h=s.h*U*State.view.scale;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.fillRect(-w/2,-h/2,w,h);ctx.strokeRect(-w/2,-h/2,w,h);ctx.restore();
 }
 function drawAutoStructure(s){
+  ctx.save();if(underConstruction(s))ctx.globalAlpha=.38;
   if(s.type==='field'){
     drawAutoRect(s,'rgba(133,111,55,.5)','rgba(190,168,95,.55)');
     const p=w2s(s),w=s.w*U*State.view.scale,h=s.h*U*State.view.scale;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);ctx.strokeStyle='rgba(222,197,112,.38)';ctx.lineWidth=1;for(let x=-w/2+4;x<w/2;x+=6){ctx.beginPath();ctx.moveTo(x,-h/2);ctx.lineTo(x,h/2);ctx.stroke()}ctx.restore();
@@ -294,8 +397,18 @@ function drawAutoStructure(s){
     drawAutoRect(s,'#8f6d4e','#d0b18b');
     const p=w2s(s),w=s.w*U*State.view.scale;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);ctx.strokeStyle='#5c3d2e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-w/2,0);ctx.lineTo(w/2,0);ctx.stroke();ctx.restore();
   }
+  ctx.restore();
+  if(underConstruction(s))drawConstructionProgress(s);
 }
-function drawStructure(s,preview=false){if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);else{drawLinearBase(s,preview);drawBuiltDetails(s,preview)}}
+function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};return{x:0,y:0}}
+function drawConstructionProgress(s){
+  const p=w2s(structureCenter(s)),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
+}
+function drawStructure(s,preview=false){
+  ctx.save();if(!preview&&underConstruction(s))ctx.globalAlpha=.42;
+  if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
+  ctx.restore();if(!preview&&underConstruction(s))drawConstructionProgress(s);
+}
 function draw(){
   const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawBuildArea();
   State.structures.filter(s=>s.auto&&s.type==='field').forEach(drawAutoStructure);
@@ -327,7 +440,7 @@ function addStructure(s){
   if(!s.auto){
     const cost=constructionCost(s);
     if(!canAfford(cost)){status('Insufficient resources — '+costText(cost));return false}
-    s.buildCost=cost;spendCost(cost);
+    s.buildCost=cost;spendCost(cost);beginConstruction(s);
     const removed=removeOverlappingAuto(s);if(removed)status(`Construction cleared ${removed} auto-spawned element${removed===1?'':'s'}`);
   }
   State.structures.push(s);selectStructure(s);markDirty();draw();return true
@@ -337,7 +450,7 @@ function deleteStructure(id){
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
-    State.village={name:null,wellId:null,founded:false};
+    State.village={name:null,wellId:null,founded:false,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};
   }else State.structures=State.structures.filter(s=>s.id!==id);
   if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
 }
@@ -346,7 +459,9 @@ function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(!s||!['tower','gate','built'].includes(s.type)){panel.classList.remove('open');return}
   normalizeFunctions(s);const cap=functionCapacity(s);panel.classList.add('open');
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity by length: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
+  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100);
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity by length: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
+  if(building){slots.innerHTML='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';return}
   if(cap===0){slots.innerHTML='<div class="slot"><div class="legend">This structure is too small to host a function.</div></div>';return}
   slots.innerHTML=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
@@ -381,22 +496,35 @@ document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Vil
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
-  State.village={name,wellId:well.id,founded:true};closeVillageModal();generateVillage(well);markDirty();renderUI();draw();
+  State.village={name,wellId:well.id,founded:true,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};closeVillageModal();markDirty();renderUI();status(`${name} founded — growth begins when the well is complete`);draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
 function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b)}if(s.type==='wall')s.width=.5;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
-function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};State.village={...State.village,...x.village};['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};State.village={...State.village,...x.village};State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;resetLegacyVillageGrowth();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.village={...State.village,...(cloudPolicies.village||{})};saveLocal();renderUI();renderFunctionPanel();draw()}}
-async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:'plains',neighbor_biomes:{},resources:State.resources,policies:{...State.policies,village:State.village},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.village={...State.village,...(cloudPolicies.village||{})};State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:'plains',neighbor_biomes:{},resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
-function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{State.clock.speed=Number(b.dataset.speed);document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',x===b));status(State.clock.speed===0?'Time paused':`Time ×${State.clock.speed}`)});
+let simLast=performance.now(),simPersistAt=performance.now();
+function simulationFrame(now){
+  const dt=Math.min(.25,(now-simLast)/1000);simLast=now;
+  if(State.clock.speed>0){
+    const before=State.clock.day;State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
+    processVillageGrowth();
+    if(Math.floor(before*4)!==Math.floor(State.clock.day*4)){renderUI();draw()}
+    if(now-simPersistAt>1000){saveLocal();simPersistAt=now}
+  }
+  requestAnimationFrame(simulationFrame);
+}
+requestAnimationFrame(simulationFrame);
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.getElementById('foundVillageModal').classList.contains('open')){document.getElementById('cancelVillageBtn').click();return}State.draft=null;State.selectedId=null;renderFunctionPanel();setTool({kind:'select',label:'Select'});draw()}if(e.key==='Delete'&&State.selectedId)deleteStructure(State.selectedId);if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCloud()}});
 window.addEventListener('resize',resize);loadLocal();renderUI();resize();fit();initSupabase();
 })();
