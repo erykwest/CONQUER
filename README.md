@@ -2,14 +2,16 @@
 
 Settlement builder / manager prototype.
 
-## V0.3 scope
+## V0.4 scope
 - 200×200U persistent seeded world buffer
 - 100×100U central buildable area
 - Castle builder: square/round towers, walls, built wall-sections, gates
 - Construction economy using gold, stone, wood and metal
+- Timed player construction with visible work-in-progress state
 - Function slots on towers, gates and built sections
 - Village founding through a player-placed well
-- Deterministic auto-spawn of roads, houses and fields around the village core
+- Progressive deterministic village growth instead of instant batch generation
+- Organic branching road network, houses and fields driven by attractiveness gradients
 - Resource and policy UI shell
 - Supabase persistence target: project `fwpmcyxggvdtsuatovzo`
 
@@ -29,6 +31,20 @@ Settlement builder / manager prototype.
 - Built section <2U: 0 slots
 - Built section 2–<3U: 1 slot
 - Built section 3–4U: 2 slots
+- Functions are assignable only after construction completes
+
+## Construction timing
+Current values are provisional for simulation testing.
+- Small / medium / large tower: 4 / 7 / 11 days
+- Gate: 9 days
+- Well: 2 days
+- Walls: 0.7d base + 0.45d per U
+- Built sections: 2d base + 1.5d per U
+- Auto road: 1 day
+- Auto house: 2.2 days
+- Auto field: 1.5 days
+- Simulation loads paused; test speeds: ×1 / ×4 / ×16
+- ×1 currently advances 0.25 game days per real second
 
 ## Construction economy
 Current values are provisional balancing values.
@@ -38,12 +54,16 @@ Current values are provisional balancing values.
 - Placement is blocked when resources are insufficient
 - Removing a player-built structure refunds its stored construction cost during the current builder/prototype phase
 
-## Village generation
+## Village growth V2
 - Placing the well opens the village naming popup
-- Confirming the name founds the village
-- A deterministic road grid is generated from the settlement seed + well position
-- Houses use an attractiveness gradient favouring the core and proximity to roads
-- Fields use an outer-ring attractiveness gradient with weaker road preference
+- The village is named immediately, but organic growth waits for the well to finish construction
+- Growth occurs as one event roughly every 2.5 game days
+- The growth radius starts small and expands gradually with growth steps
+- Roads are short branching segments with angular drift instead of a complete orthogonal grid
+- Houses favour road frontage and the compact inner settlement
+- Fields become eligible only after a small housing nucleus exists and favour the outer ring
+- Auto-generated elements have their own short construction times
 - Auto-generated structures are tagged `auto:true`
 - Player-built structures remove overlapping auto-generated houses, fields and road segments
 - Removed auto-spawn does not regenerate on reload; the edited settlement state is persisted
+- V0.3 instant-grid saves are migrated by removing the old auto-spawn and restarting growth in V2, preserving player-built structures
