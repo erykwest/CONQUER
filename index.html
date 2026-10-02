@@ -36,9 +36,11 @@ select{width:100%;border:1px solid var(--line-strong);background:var(--sunken);c
 .slot{padding:9px;margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:9px}.slot-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
 #status{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:6;background:rgba(23,15,12,.9);border:1px solid var(--line-strong);border-radius:999px;padding:8px 12px;font-size:12px;pointer-events:none;max-width:50vw;text-align:center}
 #saveState{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;background:rgba(23,15,12,.9);border:1px solid var(--line-strong);border-radius:999px;padding:7px 10px;font-size:11px}
-#timePanel{position:absolute;left:50%;top:46px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:5px;padding:6px;background:rgba(23,15,12,.92);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 5px 18px rgba(0,0,0,.3)}
-#timePanel button{width:auto;min-width:38px;padding:6px 8px;font-size:11px}
-#timePanel .time-readout{min-width:76px;text-align:center;font-size:11px;color:var(--text-2)}
+#timePanel{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(23,15,12,.94);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 5px 18px rgba(0,0,0,.3)}
+#timePanel button{width:48px;height:42px;padding:0;border-radius:10px;font-size:13px;font-weight:800;background:var(--btn)}
+#timePanel button:first-of-type{font-size:20px}
+#timePanel button.active{background:var(--accent);color:#1b130f;border-color:var(--accent)}
+#timePanel .time-readout{min-width:76px;text-align:center;font-size:11px;color:var(--text-2);padding:0 4px}
 .progress{height:5px;margin-top:7px;border-radius:999px;overflow:hidden;background:rgba(0,0,0,.35)}
 .progress>i{display:block;height:100%;background:var(--accent)}
 .site-label{font-size:10px;color:var(--accent);font-weight:800;letter-spacing:.05em;text-transform:uppercase}
@@ -111,10 +113,10 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
   <div id="saveState">local</div>
   <div id="timePanel">
     <span id="dayLabel" class="time-readout">Day 0.0</span>
-    <button data-speed="0" class="active">⏸</button>
-    <button data-speed="1">▶</button>
-    <button data-speed="4">×4</button>
-    <button data-speed="16">×16</button>
+    <button data-speed="0" class="active" title="Pause">⏸</button>
+    <button data-speed="1" title="1× speed">1×</button>
+    <button data-speed="3" title="3× speed">3×</button>
+    <button data-speed="10" title="10× speed">10×</button>
   </div>
   <div id="status">Select a build tool</div>
 </div>
