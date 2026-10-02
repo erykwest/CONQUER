@@ -2,7 +2,7 @@
 
 Settlement builder / manager prototype.
 
-## V0.4 scope
+## V0.5 scope
 - 200×200U persistent seeded world buffer
 - 100×100U central buildable area
 - Castle builder: square/round towers, walls, built wall-sections, gates
@@ -11,7 +11,8 @@ Settlement builder / manager prototype.
 - Function slots on towers, gates and built sections
 - Village founding through a player-placed well
 - Progressive deterministic village growth instead of instant batch generation
-- Organic branching road network, houses and fields driven by attractiveness gradients
+- Border-linked radial road network using global goals + local constraints
+- Organic houses and fields driven by attractiveness gradients
 - Resource and policy UI shell
 - Supabase persistence target: project `fwpmcyxggvdtsuatovzo`
 
@@ -54,16 +55,19 @@ Current values are provisional balancing values.
 - Placement is blocked when resources are insufficient
 - Removing a player-built structure refunds its stored construction cost during the current builder/prototype phase
 
-## Village growth V2
+## Village growth V3
 - Placing the well opens the village naming popup
 - The village is named immediately, but organic growth waits for the well to finish construction
 - Growth occurs as one event roughly every 2.5 game days
 - The growth radius starts small and expands gradually with growth steps
-- Roads are short branching segments with angular drift instead of a complete orthogonal grid
+- Two seeded arterial routes grow progressively from the well toward opposite practical borders, eventually forming a through-route across the settlement
+- Secondary roads remain radial-biased, branch at non-orthogonal angles, and obey minimum node/parallel-road spacing
+- Candidate roads snap to nearby nodes, stop at intersections to form T-junctions, and are rejected when local spacing/angle constraints fail
+- The practical-border hook currently treats all four build-area edges as traversable; later it can consume world-cell terrain and neighbour contracts
 - Houses favour road frontage and the compact inner settlement
 - Fields become eligible only after a small housing nucleus exists and favour the outer ring
 - Auto-generated elements have their own short construction times
 - Auto-generated structures are tagged `auto:true`
 - Player-built structures remove overlapping auto-generated houses, fields and road segments
 - Removed auto-spawn does not regenerate on reload; the edited settlement state is persisted
-- V0.3 instant-grid saves are migrated by removing the old auto-spawn and restarting growth in V2, preserving player-built structures
+- Pre-V0.5 auto-road saves are migrated by removing old auto-spawn and restarting growth in V3, preserving player-built structures
