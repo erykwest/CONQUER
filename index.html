@@ -59,7 +59,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.5</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.6</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -90,6 +90,17 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
     <div class="kv"><span>Village</span><b id="villageLabel">—</b></div>
     <div class="kv"><span>World cell</span><b id="cellLabel">0, 0</b></div>
     <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
+    <div class="kv"><span>Biome</span><b id="biomeLabel">Pianura</b></div>
+    <select id="biomeSelect" aria-label="Biome">
+      <option value="plains">Pianura</option>
+      <option value="hills">Colline</option>
+      <option value="valley">Vallata</option>
+      <option value="river">Fiume</option>
+      <option value="forest">Foresta</option>
+      <option value="mountains">Montagne</option>
+      <option value="village">Villaggio</option>
+      <option value="sea">Mare</option>
+    </select>
     <div class="kv"><span>Build area</span><b>100×100U</b></div>
     <div class="kv"><span>World buffer</span><b>200×200U</b></div>
     <div class="kv"><span>Growth pulse</span><b>~2.5 days</b></div>
@@ -129,7 +140,7 @@ const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0},dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0},dirty:false,supabase:null,user:null};
 const TYPES={wall:{width:.5,min:1,max:8},built:{width:1,min:1,max:4}};
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
@@ -147,6 +158,16 @@ const ROAD_RULES={
   minParallelSpacing:2.2,minNodeSpacing:1.25,minJunctionAngle:25*Math.PI/180,
   branchSpawnSpacing:1.6,snapNodeDistance:1.15
 };
+const BIOMES=Object.freeze({
+  plains:{label:'Pianura',field:'#2a2818'},
+  hills:{label:'Colline',field:'#2f2a19'},
+  valley:{label:'Vallata',field:'#28271a'},
+  river:{label:'Fiume',field:'#24271c'},
+  forest:{label:'Foresta',field:'#1f2516'},
+  mountains:{label:'Montagne',field:'#2b2620'},
+  village:{label:'Villaggio',field:'#2f271b'},
+  sea:{label:'Mare',field:'#2a2818'}
+});
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','workshop','prison'];
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Storage',quarters:'Quarters',workshop:'Workshop',prison:'Prison'};
 const uid=()=>crypto.randomUUID?.()||('id-'+Date.now()+'-'+Math.random());
@@ -216,9 +237,101 @@ function removeOverlappingAuto(manual){let removed=0;State.structures=State.stru
 function nearestRoadInfo(p,roads){let best={d:Infinity,angle:0};for(const r of roads){const d=pointSegmentDistance(p,r.a,r.b);if(d<best.d)best={d,angle:Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}}return best}
 function autoBlocked(candidate,placed,manual,margin=.2){
   const p={x:candidate.x,y:candidate.y},r=pointRadius(candidate)+margin;
+  if(environmentBlocksPoint(p,'settlement'))return true;
   for(const s of manual){if(['wall','built'].includes(s.type)){if(pointSegmentDistance(p,s.a,s.b)<=r+s.width/2)return true}else if(s.x!=null&&dist(p,s)<=r+pointRadius(s))return true}
   for(const s of placed){if(s.type==='road')continue;if(dist(p,s)<=r+pointRadius(s)+margin)return true}
   return false;
+}
+function biomeHash(name){let h=2166136261>>>0;for(const ch of name){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function makeEnvBlob(rnd,type,x,y,rx,ry,fill,edge,count=22,jitter=.16){
+  const points=[];for(let i=0;i<count;i++){const a=Math.PI*2*i/count,j=1+(rnd()-.5)*2*jitter;points.push({x:x+Math.cos(a)*rx*j,y:y+Math.sin(a)*ry*j})}
+  return{id:'env-'+type+'-'+Math.round(x*10)+'-'+Math.round(y*10),type,points,fill,edge,x,y,rx,ry};
+}
+function makeEnvEllipse(type,x,y,rx,ry,angle,fill,edge){return{id:'env-'+type+'-'+Math.round(x*10)+'-'+Math.round(y*10),type,x,y,rx,ry,angle,fill,edge}}
+function makeEnvWater(rnd,type){
+  const horizontal=rnd()>.30,pts=[],n=7;
+  if(horizontal){
+    const y0=70+rnd()*60;
+    for(let i=0;i<n;i++){const t=i/(n-1);pts.push({x:t*WORLD,y:clamp(y0+(rnd()-.5)*(type==='river'?16:22),8,WORLD-8)})}
+  }else{
+    const x0=70+rnd()*60;
+    for(let i=0;i<n;i++){const t=i/(n-1);pts.push({x:clamp(x0+(rnd()-.5)*(type==='river'?16:22),8,WORLD-8),y:t*WORLD})}
+  }
+  return{id:'env-'+type,type,points,width:type==='river'?3.2:1.25,fill:type==='river'?'#3a7684':'#4f8d95',edge:type==='river'?'#88b4b8':'#9cc6c6'};
+}
+function makeEnvSea(rnd){
+  const sides=['north','east','south','west'],side=sides[Math.floor(rnd()*sides.length)],coast=[],n=14,depth=58+rnd()*28;
+  for(let i=0;i<=n;i++){
+    const t=i/n,wave=Math.sin(t*Math.PI*2+rnd()*1.2)*5+(rnd()-.5)*5;
+    if(side==='north')coast.push({x:t*WORLD,y:depth+wave});
+    if(side==='south')coast.push({x:t*WORLD,y:WORLD-depth-wave});
+    if(side==='west')coast.push({x:depth+wave,y:t*WORLD});
+    if(side==='east')coast.push({x:WORLD-depth-wave,y:t*WORLD});
+  }
+  let points;
+  if(side==='north')points=[{x:0,y:0},{x:WORLD,y:0},...coast.slice().reverse()];
+  else if(side==='south')points=[...coast,{x:WORLD,y:WORLD},{x:0,y:WORLD}];
+  else if(side==='west')points=[{x:0,y:0},...coast,{x:0,y:WORLD}];
+  else points=[{x:WORLD,y:0},{x:WORLD,y:WORLD},...coast.slice().reverse()];
+  return{id:'env-sea',type:'sea',side,points,coastline:coast,fill:'#23505a',edge:'#86b3b5'};
+}
+function randomEnvPoint(rnd,margin=12){return{x:margin+rnd()*(WORLD-margin*2),y:margin+rnd()*(WORLD-margin*2)}}
+function generateEnvironment(){
+  const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[];
+  const addBlob=(type,count,small=false)=>{for(let i=0;i<count;i++){const p=randomEnvPoint(rnd,18),rx=small?4+rnd()*3:7+rnd()*4,ry=small?3+rnd()*2:4+rnd()*3;if(type==='forest')env.push(makeEnvBlob(rnd,'forest',p.x,p.y,rx,ry,'#2e3c1d','#5c7438',28,.10));else if(type==='mountain')env.push(makeEnvBlob(rnd,'mountain',p.x,p.y,rx,ry,'#56493c','#968470',24,.11));else if(type==='pond')env.push(makeEnvBlob(rnd,'pond',p.x,p.y,rx,ry,'#3f7f8a','#8ab9bd',20,.20))}};
+  const addEllipse=(type,count)=>{for(let i=0;i<count;i++){const p=randomEnvPoint(rnd,18);if(type==='hill')env.push(makeEnvEllipse('hill',p.x,p.y,7+rnd()*4,4+rnd()*2,(rnd()-.5)*1.4,'#5c5235','#927b4f'));else env.push(makeEnvEllipse('rough',p.x,p.y,4.5+rnd()*2.5,3+rnd()*1.5,(rnd()-.5)*1.4,'rgba(105,92,54,.45)','rgba(155,132,79,.55)'))}};
+  if(State.biome==='sea')env.push(makeEnvSea(rnd));
+  if(State.biome==='valley'||State.biome==='mountains'){
+    const count=State.biome==='mountains'?5+Math.floor(rnd()*3):3+Math.floor(rnd()*3);
+    const side=rnd()<.5?'west':'east';
+    for(let i=0;i<count;i++){
+      const t=(i+1)/(count+1),x=side==='west'?52+rnd()*15:148-rnd()*15,y=50+t*100+(rnd()-.5)*10;
+      env.push(makeEnvBlob(rnd,'mountain',x,y,8+rnd()*4,5+rnd()*3,'#56493c','#968470',24,.11));
+    }
+  }
+  if(State.biome==='plains'){
+    addEllipse('rough',1+Math.floor(rnd()*2));if(rnd()<.45)env.push(makeEnvWater(rnd,'stream'));if(rnd()<.55)addBlob('forest',1,true);
+  }else if(State.biome==='hills'){
+    addEllipse('hill',3+Math.floor(rnd()*2));addEllipse('rough',1+Math.floor(rnd()*2));if(rnd()<.55)addBlob('forest',1,true);
+  }else if(State.biome==='valley'){
+    env.push(makeEnvWater(rnd,'stream'));addEllipse('rough',1);
+  }else if(State.biome==='river'){
+    env.push(makeEnvWater(rnd,'river'));addBlob('forest',1+Math.floor(rnd()*2),true);if(rnd()<.55)addEllipse('hill',1);
+  }else if(State.biome==='forest'){
+    addBlob('forest',4+Math.floor(rnd()*3),true);env.push(makeEnvWater(rnd,'stream'));if(rnd()<.65)addBlob('pond',1,true);
+  }else if(State.biome==='mountains'){
+    env.push(makeEnvWater(rnd,'stream'));addEllipse('hill',1+Math.floor(rnd()*2));
+  }else if(State.biome==='village'){
+    addBlob('forest',1+Math.floor(rnd()*2),true);if(rnd()<.55)addEllipse('hill',1);
+  }else if(State.biome==='sea'){
+    addEllipse('rough',1);if(rnd()<.55)addBlob('forest',1,true);
+  }
+  State.environment=env;
+}
+function pointInPolygon(point,pts){
+  let inside=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}return inside;
+}
+function environmentContains(f,p,pad=0){
+  if(['forest','mountain','pond','sea'].includes(f.type))return pointInPolygon(p,f.points);
+  if(['hill','rough'].includes(f.type)){const ca=Math.cos(-(f.angle||0)),sa=Math.sin(-(f.angle||0)),dx=p.x-f.x,dy=p.y-f.y,x=dx*ca-dy*sa,y=dx*sa+dy*ca;return x*x/((f.rx+pad)*(f.rx+pad))+y*y/((f.ry+pad)*(f.ry+pad))<=1}
+  if(['stream','river'].includes(f.type)){for(let i=0;i<f.points.length-1;i++)if(pointSegmentDistance(p,f.points[i],f.points[i+1])<=f.width/2+pad)return true}
+  return false;
+}
+function environmentBlocksPoint(p,mode='settlement'){
+  for(const f of State.environment){
+    if(mode==='road'&&['sea','mountain','pond'].includes(f.type)&&environmentContains(f,p,.25))return true;
+    if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
+  }
+  return false;
+}
+function roadEnvironmentConflict(road){
+  const len=dist(road.a,road.b),steps=Math.max(6,Math.ceil(len/.35));
+  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if(environmentBlocksPoint(p,'road'))return true}
+  return false;
+}
+function edgeSample(edge,t){
+  const v=BUILD_MIN+t*(BUILD_MAX-BUILD_MIN);
+  if(edge==='north')return{x:v,y:BUILD_MIN};if(edge==='south')return{x:v,y:BUILD_MAX};if(edge==='west')return{x:BUILD_MIN,y:v};return{x:BUILD_MAX,y:v};
 }
 function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
 function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
@@ -233,9 +346,11 @@ function growthRng(step,salt=0){
   return seedRand((villageSeed(well)^Math.imul(step+1,2654435761)^salt)>>>0);
 }
 function practicalEdges(){
-  // V0.5: every side of the 100×100U build area is considered traversable.
-  // Later this hook will filter edges using world-cell terrain / neighbour contracts.
-  return ['north','east','south','west'];
+  const sides=['north','east','south','west'];
+  return sides.filter(side=>{
+    let free=0,total=11;for(let i=0;i<total;i++){const p=edgeSample(side,(i+.5)/total);if(!environmentBlocksPoint(p,'road'))free++}
+    return free>=Math.ceil(total*.55);
+  });
 }
 function portalOnEdge(edge,rnd){
   const inset=10+rnd()*80;
@@ -282,6 +397,7 @@ function nearestRoadNode(p,excludeIds=[]){
 }
 function constrainRoadCandidate(candidate){
   if(dist(candidate.a,candidate.b)<1.7)return null;
+  if(roadEnvironmentConflict(candidate))return null;
   const manual=State.structures.filter(s=>!s.auto&&s.id!==State.village.wellId);
   if(manual.some(s=>autoOverlapsManual(candidate,s)))return null;
 
@@ -449,7 +565,31 @@ function w2s(p){return{x:State.view.x+p.x*U*State.view.scale,y:State.view.y+p.y*
 function s2w(x,y){return{x:(x-State.view.x)/(U*State.view.scale),y:(y-State.view.y)/(U*State.view.scale)}}
 function fit(){const r=wrap.getBoundingClientRect(),availW=Math.max(250,r.width-640),availH=r.height-30;State.view.scale=Math.min(availW/(WORLD*U),availH/(WORLD*U));State.view.scale=clamp(State.view.scale,.25,3);const size=WORLD*U*State.view.scale;State.view.x=(r.width-size)/2;State.view.y=(r.height-size)/2;draw()}
 function seedRand(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
-function drawTerrain(){const rnd=seedRand(State.seed),p0=w2s({x:0,y:0}),p1=w2s({x:WORLD,y:WORLD});ctx.fillStyle='#24291b';ctx.fillRect(p0.x,p0.y,p1.x-p0.x,p1.y-p0.y);for(let i=0;i<360;i++){const x=rnd()*WORLD,y=rnd()*WORLD,r=(.4+rnd()*2.4)*U*State.view.scale;const p=w2s({x,y});ctx.fillStyle=rnd()>.55?'rgba(84,105,55,.13)':'rgba(137,120,70,.08)';ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill()}}
+function drawTerrain(){
+  const rnd=seedRand((State.seed^0x45d9f3b)>>>0),p0=w2s({x:0,y:0}),p1=w2s({x:WORLD,y:WORLD});
+  ctx.fillStyle=BIOMES[State.biome]?.field||'#24291b';ctx.fillRect(p0.x,p0.y,p1.x-p0.x,p1.y-p0.y);
+  for(let i=0;i<320;i++){const x=rnd()*WORLD,y=rnd()*WORLD,r=(.35+rnd()*2.2)*U*State.view.scale,p=w2s({x,y});ctx.fillStyle=rnd()>.55?'rgba(84,105,55,.10)':'rgba(137,120,70,.07)';ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill()}
+}
+function drawEnvironment(){
+  for(const f of State.environment){
+    ctx.save();
+    if(['stream','river'].includes(f.type)){
+      const pts=f.points.map(w2s);ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.strokeStyle=f.edge;ctx.lineWidth=(f.width+.35)*U*State.view.scale;ctx.stroke();ctx.strokeStyle=f.fill;ctx.lineWidth=f.width*U*State.view.scale;ctx.stroke();
+    }else if(['forest','mountain','pond','sea'].includes(f.type)){
+      const pts=f.points.map(w2s);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fillStyle=f.fill;ctx.strokeStyle=f.edge;ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+      if(f.type==='forest'){
+        const rnd=seedRand((State.seed^biomeHash(f.id))>>>0);ctx.fillStyle='rgba(25,42,20,.60)';for(let i=0;i<16;i++){const p={x:f.x+(rnd()-.5)*f.rx*1.5,y:f.y+(rnd()-.5)*f.ry*1.5};if(environmentContains(f,p)){const s=w2s(p);ctx.beginPath();ctx.arc(s.x,s.y,Math.max(1.5,2.5*State.view.scale),0,Math.PI*2);ctx.fill()}}
+      }else if(f.type==='mountain'){
+        const p=w2s({x:f.x,y:f.y});ctx.strokeStyle='rgba(230,220,200,.25)';ctx.lineWidth=1.3;for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(p.x+i*10,p.y+8);ctx.lineTo(p.x+i*10+7,p.y-9);ctx.lineTo(p.x+i*10+14,p.y+8);ctx.stroke()}
+      }else if(f.type==='sea'&&f.coastline){
+        const coast=f.coastline.map(w2s);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
+      }
+    }else if(['hill','rough'].includes(f.type)){
+      const p=w2s({x:f.x,y:f.y});ctx.translate(p.x,p.y);ctx.rotate(f.angle||0);ctx.beginPath();ctx.ellipse(0,0,f.rx*U*State.view.scale,f.ry*U*State.view.scale,0,0,Math.PI*2);ctx.fillStyle=f.fill;ctx.strokeStyle=f.edge;ctx.lineWidth=1.3;ctx.fill();ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
 function drawGrid(){if(State.view.scale<.5)return;ctx.save();ctx.strokeStyle='rgba(255,255,255,.035)';ctx.lineWidth=1;for(let i=0;i<=WORLD;i+=5){let a=w2s({x:i,y:0}),b=w2s({x:i,y:WORLD});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();a=w2s({x:0,y:i});b=w2s({x:WORLD,y:i});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}ctx.restore()}
 function drawBuildArea(){const a=w2s({x:BUILD_MIN,y:BUILD_MIN}),b=w2s({x:BUILD_MAX,y:BUILD_MAX});ctx.save();ctx.fillStyle='rgba(224,138,60,.025)';ctx.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.strokeStyle='rgba(224,138,60,.9)';ctx.lineWidth=2;ctx.setLineDash([8,7]);ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.setLineDash([]);ctx.fillStyle='rgba(242,230,211,.65)';ctx.font='11px system-ui';ctx.fillText('BUILDABLE 100×100U',a.x+8,a.y+16);ctx.restore()}
 function boundaryPoint(s,target){if(!s||!['tower','gate'].includes(s.type))return target;const dx=target.x-s.x,dy=target.y-s.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;let edge;if(s.shape==='round')edge=s.r;else{const h=s.size/2,tx=Math.abs(ux)>1e-6?h/Math.abs(ux):Infinity,ty=Math.abs(uy)>1e-6?h/Math.abs(uy):Infinity;edge=Math.min(tx,ty)}const penetration=Math.min(.5,edge*.7),t=Math.max(0,edge-penetration);return{x:s.x+ux*t,y:s.y+uy*t}}
@@ -529,7 +669,7 @@ function drawStructure(s,preview=false){
   ctx.restore();if(!preview&&underConstruction(s))drawConstructionProgress(s);
 }
 function draw(){
-  const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawBuildArea();
+  const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawEnvironment();drawBuildArea();
   State.structures.filter(s=>s.auto&&s.type==='field').forEach(drawAutoStructure);
   State.structures.filter(s=>s.auto&&s.type==='road').forEach(drawAutoStructure);
   State.structures.filter(s=>s.auto&&s.type==='house').forEach(drawAutoStructure);
@@ -624,13 +764,19 @@ document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].re
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
 function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b)}if(s.type==='wall')s.width=.5;if(s.type==='well')delete s.construction;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
-function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;resetLegacyVillageGrowth();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;resetLegacyVillageGrowth();generateEnvironment();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();saveLocal();renderUI();renderFunctionPanel();draw()}}
-async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:'plains',neighbor_biomes:{},resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
-function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+document.getElementById('biomeSelect').onchange=e=>{
+  State.biome=BIOMES[e.target.value]?e.target.value:'plains';generateEnvironment();
+  State.structures=State.structures.filter(s=>!s.auto);
+  if(State.village.founded){State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.baseRoadAngle=null}
+  markDirty();renderUI();status('Biome: '+BIOMES[State.biome].label+' — automatic settlement growth reset');draw();
+};
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{State.clock.speed=Number(b.dataset.speed);document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',x===b));status(State.clock.speed===0?'Time paused':`Time ×${State.clock.speed}`)});
 let simLast=performance.now(),simPersistAt=performance.now();
 function simulationFrame(now){
@@ -645,7 +791,7 @@ function simulationFrame(now){
 }
 requestAnimationFrame(simulationFrame);
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.getElementById('foundVillageModal').classList.contains('open')){document.getElementById('cancelVillageBtn').click();return}State.draft=null;State.selectedId=null;renderFunctionPanel();setTool({kind:'select',label:'Select'});draw()}if(e.key==='Delete'&&State.selectedId)deleteStructure(State.selectedId);if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCloud()}});
-window.addEventListener('resize',resize);loadLocal();renderUI();resize();fit();initSupabase();
+window.addEventListener('resize',resize);loadLocal();if(!State.environment.length)generateEnvironment();renderUI();resize();fit();initSupabase();
 })();
 </script>
 </body>
