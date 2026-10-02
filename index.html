@@ -590,10 +590,13 @@ function drawGrid(){if(State.view.scale<.5)return;ctx.save();ctx.strokeStyle='rg
 function drawBuildArea(){const a=w2s({x:BUILD_MIN,y:BUILD_MIN}),b=w2s({x:BUILD_MAX,y:BUILD_MAX});ctx.save();ctx.fillStyle='rgba(224,138,60,.025)';ctx.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.strokeStyle='rgba(224,138,60,.9)';ctx.lineWidth=2;ctx.setLineDash([8,7]);ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.setLineDash([]);ctx.fillStyle='rgba(242,230,211,.65)';ctx.font='11px system-ui';ctx.fillText('BUILDABLE 100×100U',a.x+8,a.y+16);ctx.restore()}
 function rotateVec(x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:x*ca-y*sa,y:x*sa+y*ca}}
 function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);return v}
+function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
 function placementAngle(center,p){return Math.atan2(p.y-center.y,p.x-center.x)}
 function orientedToolSpec(){
   if(State.tool.kind==='tower'&&State.tool.shape==='square')return{type:'tower',shape:'square',size:State.tool.size,functions:[]};
   if(State.tool.kind==='gate')return{type:'gate',shape:'square',size:1.5,functions:[]};
+  // Future point-buildings can pass a placementSpec without adding another interaction path.
+  if(State.tool.placementSpec&&State.tool.placementSpec.shape!=='round')return{...State.tool.placementSpec};
   return null;
 }
 function makePlacementPreview(q,angle=0){
@@ -602,19 +605,26 @@ function makePlacementPreview(q,angle=0){
   if(State.tool.kind==='tower'&&State.tool.shape==='round')return{type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,previewOnly:true,functions:[]};
   return null;
 }
+function commitOrientedPlacement(center,angle){
+  const spec=orientedToolSpec();if(!spec)return false;
+  const s={id:uid(),...spec,x:center.x,y:center.y,angle,functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  State.draft=null;const ok=addStructure(s);
+  if(ok)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
+  return ok;
+}
 function boundaryPoint(s,target){
   if(!s||!['tower','gate'].includes(s.type))return target;
   const dx=target.x-s.x,dy=target.y-s.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;let edge;
   if(s.shape==='round')edge=s.r;
   else{
-    const local=rotateVec(ux,uy,-(s.angle||0)),h=s.size/2;
-    const tx=Math.abs(local.x)>1e-6?h/Math.abs(local.x):Infinity,ty=Math.abs(local.y)>1e-6?h/Math.abs(local.y):Infinity;
+    const local=rotateVec(ux,uy,-(s.angle||0)),d=rectDims(s),hx=d.w/2,hy=d.h/2;
+    const tx=Math.abs(local.x)>1e-6?hx/Math.abs(local.x):Infinity,ty=Math.abs(local.y)>1e-6?hy/Math.abs(local.y):Infinity;
     edge=Math.min(tx,ty);
   }
   const penetration=Math.min(.5,edge*.7),t=Math.max(0,edge-penetration);
   return{x:s.x+ux*t,y:s.y+uy*t}
 }
-function snapAnchor(p){let best=null,bestScore=Infinity;for(const s of State.structures){if(!['tower','gate'].includes(s.type))continue;const d=dist(p,{x:s.x,y:s.y}),reach=(s.shape==='round'?s.r:s.size*.72)+1;if(d<=reach&&d<bestScore){best=s;bestScore=d}}return best?{point:boundaryPoint(best,p),structureId:best.id}:{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null}}
+function snapAnchor(p){let best=null,bestScore=Infinity;for(const s of State.structures){if(!['tower','gate'].includes(s.type))continue;const d=dist(p,{x:s.x,y:s.y}),rd=rectDims(s),reach=(s.shape==='round'?s.r:Math.hypot(rd.w,rd.h)/2)+1;if(d<=reach&&d<bestScore){best=s;bestScore=d}}return best?{point:boundaryPoint(best,p),structureId:best.id}:{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null}}
 function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
 function linePoly(s){const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;return[{x:s.a.x+nx,y:s.a.y+ny},{x:s.b.x+nx,y:s.b.y+ny},{x:s.b.x-nx,y:s.b.y-ny},{x:s.a.x-nx,y:s.a.y-ny}]}
 function functionCapacity(s){
@@ -661,11 +671,11 @@ function drawPointStructure(s,preview=false){
     ctx.fillStyle=s.type==='gate'?'#9a744f':'#766658';
     if(s.shape==='round'){ctx.beginPath();ctx.arc(p.x,p.y,s.r*U*State.view.scale,0,Math.PI*2);ctx.fill();ctx.stroke()}
     else{
-      const z=s.size*U*State.view.scale;ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);
-      ctx.fillRect(-z/2,-z/2,z,z);ctx.strokeRect(-z/2,-z/2,z,z);
-      // subtle orientation tick so square rotation is readable even on a perfect square
+      const d=rectDims(s),w=d.w*U*State.view.scale,h=d.h*U*State.view.scale;ctx.translate(p.x,p.y);ctx.rotate(s.angle||0);
+      ctx.fillRect(-w/2,-h/2,w,h);ctx.strokeRect(-w/2,-h/2,w,h);
+      // orientation tick keeps rotation readable even on a perfect square.
       ctx.strokeStyle=preview?'rgba(244,183,111,.95)':'rgba(245,226,202,.55)';ctx.lineWidth=1.4;
-      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(z*.38,0);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(w*.38,0);ctx.stroke();
     }
   }
   ctx.restore();
@@ -707,9 +717,14 @@ function draw(){
   State.structures.filter(s=>!s.auto&&['tower','gate'].includes(s.type)).forEach(s=>drawStructure(s));
   // Placement preview is always drawn last.
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
+  if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
+    const a=w2s(State.draft.center),len=3.2*U*State.view.scale;
+    ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(a.x+Math.cos(State.draft.angle)*len,a.y+Math.sin(State.draft.angle)*len);ctx.stroke();ctx.restore();
+  }
 }
 function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX}
-function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p);return Math.abs(q.x)<=s.size/2&&Math.abs(q.y)<=s.size/2}
+function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
   // Hit testing follows visual layering: towers/gates win over walls beneath them.
@@ -760,33 +775,26 @@ canvas.addEventListener('pointerdown',e=>{
   const p=pointerWorld(e);
   if(State.tool.kind==='select'){selectStructure(structureAt(p));return}
   if(State.tool.kind==='delete'){const hit=structureAt(p);if(hit)deleteStructure(hit.id);return}
+
+  // Once the centre is fixed, the second click only defines orientation.
+  // It may be anywhere on screen; only the building centre must lie in the build area.
+  if(State.draft?.mode==='orient'&&orientedToolSpec()){
+    const angle=placementAngle(State.draft.center,p);commitOrientedPlacement(State.draft.center,angle);return
+  }
+
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='tower'){
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
     if(State.tool.shape==='round'){
       State.draft=null;addStructure({id:uid(),type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,functions:[]});return
     }
-    if(!State.draft||State.draft.mode==='hover'){
-      State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
-      status('Position fixed — move cursor to rotate, click to confirm');draw();return
-    }
-    if(State.draft.mode==='orient'){
-      const center=State.draft.center,angle=placementAngle(center,p);
-      const s={id:uid(),type:'tower',shape:'square',size:State.tool.size,x:center.x,y:center.y,angle,functions:[]};
-      State.draft=null;addStructure(s);status('Square tower placed — choose next position');return
-    }
+    State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
+    status('Position fixed — move cursor to rotate, click to confirm');draw();return
   }
   if(State.tool.kind==='gate'){
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-    if(!State.draft||State.draft.mode==='hover'){
-      State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
-      status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
-    }
-    if(State.draft.mode==='orient'){
-      const center=State.draft.center,angle=placementAngle(center,p);
-      const s={id:uid(),type:'gate',shape:'square',size:1.5,x:center.x,y:center.y,angle,functions:[]};
-      State.draft=null;addStructure(s);status('Gate placed — choose next position');return
-    }
+    State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
+    status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
   if(State.tool.kind==='well'){
     if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
