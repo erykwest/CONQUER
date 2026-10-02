@@ -137,7 +137,7 @@ const COSTS={
   gate:{gold:95,stone:90,wood:38,metal:10},
   well:{gold:50,stone:35,wood:10}
 };
-const BUILD_DAYS={tower:[4,7,11],gate:9,well:2,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','workshop','prison'];
@@ -494,11 +494,11 @@ for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({k
 for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const dummy={type:'tower',shape:b.dataset.tower,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',shape:b.dataset.tower,size:Number(b.dataset.size),label:`${b.dataset.tower} tower ${b.dataset.size}U · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>setTool({kind:'linear',linear:b.dataset.linear,label:b.dataset.linear==='wall'?'Wall — choose point A':'Built section — choose point A',el:b});
 document.querySelector('[data-gate]').onclick=e=>setTool({kind:'gate',label:'Gate 1.5×1.5U · '+BUILD_DAYS.gate+'d · '+costText(COSTS.gate),el:e.currentTarget});
-document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · '+BUILD_DAYS.well+'d · '+costText(COSTS.well),el:e.currentTarget});
+document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
-  State.village={name,wellId:well.id,founded:true,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};closeVillageModal();markDirty();renderUI();status(`${name} founded — growth begins when the well is complete`);draw();
+  State.village={name,wellId:well.id,founded:true,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};closeVillageModal();markDirty();renderUI();status(`${name} founded — village growth has begun`);processVillageGrowth();draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
