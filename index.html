@@ -145,7 +145,7 @@ const ROAD_RULES={
   arterialSegmentMin:4.2,arterialSegmentMax:5.4,
   localSegmentMin:2.8,localSegmentMax:4.2,
   minParallelSpacing:2.2,minNodeSpacing:1.25,minJunctionAngle:25*Math.PI/180,
-  branchSpawnSpacing:4.0,snapNodeDistance:1.15
+  branchSpawnSpacing:1.6,snapNodeDistance:1.15
 };
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','workshop','prison'];
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Storage',quarters:'Quarters',workshop:'Workshop',prison:'Prison'};
@@ -238,7 +238,7 @@ function practicalEdges(){
   return ['north','east','south','west'];
 }
 function portalOnEdge(edge,rnd){
-  const inset=10+rnd()*30;
+  const inset=10+rnd()*80;
   if(edge==='north')return{x:BUILD_MIN+inset,y:BUILD_MIN,edge};
   if(edge==='south')return{x:BUILD_MIN+inset,y:BUILD_MAX,edge};
   if(edge==='west')return{x:BUILD_MIN,y:BUILD_MIN+inset,edge};
@@ -304,7 +304,10 @@ function constrainRoadCandidate(candidate){
     }
 
     if(startShared&&!sameRoute){
-      const d=Math.min(angleDiff(ca,ra),angleDiff(ca,ra+Math.PI));
+      // Junction angle is measured between the two rays leaving the shared node.
+      // Near-180° is a valid through-road; only near-collinear same-direction branches are rejected.
+      const existingOut=dist(candidate.a,r.a)<.24?ra:ra+Math.PI;
+      const d=angleDiff(ca,existingOut);
       if(d<ROAD_RULES.minJunctionAngle)return null;
     }
 
