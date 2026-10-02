@@ -59,7 +59,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.4</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.5</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -93,6 +93,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
     <div class="kv"><span>Build area</span><b>100×100U</b></div>
     <div class="kv"><span>World buffer</span><b>200×200U</b></div>
     <div class="kv"><span>Growth pulse</span><b>~2.5 days</b></div>
+    <div class="kv"><span>Road model</span><b>radial / border-linked</b></div>
     <div class="kv"><span>Time</span><b>paused on load</b></div>
     <h3>Policies</h3>
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
@@ -128,7 +129,7 @@ const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null},clock:{day:0,speed:0},dirty:false,supabase:null,user:null};
+const State={structures:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0},dirty:false,supabase:null,user:null};
 const TYPES={wall:{width:.5,min:1,max:8},built:{width:1,min:1,max:4}};
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
@@ -140,6 +141,12 @@ const COSTS={
 const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
+const ROAD_RULES={
+  arterialSegmentMin:4.2,arterialSegmentMax:5.4,
+  localSegmentMin:2.8,localSegmentMax:4.2,
+  minParallelSpacing:2.2,minNodeSpacing:1.25,minJunctionAngle:25*Math.PI/180,
+  branchSpawnSpacing:4.0,snapNodeDistance:1.15
+};
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','workshop','prison'];
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Storage',quarters:'Quarters',workshop:'Workshop',prison:'Prison'};
 const uid=()=>crypto.randomUUID?.()||('id-'+Date.now()+'-'+Math.random());
@@ -215,56 +222,163 @@ function autoBlocked(candidate,placed,manual,margin=.2){
 }
 function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
 function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
-function roadList(){return State.structures.filter(s=>s.auto&&s.type==='road')}
+function roadList(completedOnly=false){return State.structures.filter(s=>s.auto&&s.type==='road'&&(!completedOnly||!underConstruction(s)))}
 function autoList(type){return State.structures.filter(s=>s.auto&&(!type||s.type===type))}
 function currentGrowthRadius(){
   const step=State.village.growthStep||0;
-  return Math.min(19,5.5+step*.38);
+  return Math.min(18,5.2+step*.30);
 }
 function growthRng(step,salt=0){
   const well=State.structures.find(s=>s.id===State.village.wellId)||{x:100,y:100};
   return seedRand((villageSeed(well)^Math.imul(step+1,2654435761)^salt)>>>0);
 }
-function previousRoadHeading(road,atB=true){return Math.atan2(road.b.y-road.a.y,road.b.x-road.a.x)+(atB?0:Math.PI)}
-function spawnRoad(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return false;
-  const rnd=growthRng(step,101),roads=roadList(),radius=currentGrowthRadius();
-  let a,heading;
-  if(!roads.length){
-    if(State.village.baseRoadAngle==null)State.village.baseRoadAngle=(rnd()*Math.PI*2);
-    a={x:well.x,y:well.y};heading=State.village.baseRoadAngle+(rnd()-.5)*.25;
-  }else{
-    // Usually extend one of the newest road ends; sometimes branch from an older one.
-    const pool=roads.slice(Math.max(0,roads.length-5));
-    const base=pool[Math.floor(rnd()*pool.length)];
-    const fromB=rnd()>.18;
-    a=fromB?{...base.b}:{...base.a};
-    heading=previousRoadHeading(base,fromB)+(rnd()-.5)*(Math.PI/2.8);
-    if(rnd()<.16)heading+=(rnd()<.5?-1:1)*(Math.PI/3+ rnd()*.35);
+function practicalEdges(){
+  // V0.5: every side of the 100×100U build area is considered traversable.
+  // Later this hook will filter edges using world-cell terrain / neighbour contracts.
+  return ['north','east','south','west'];
+}
+function portalOnEdge(edge,rnd){
+  const inset=10+rnd()*30;
+  if(edge==='north')return{x:BUILD_MIN+inset,y:BUILD_MIN,edge};
+  if(edge==='south')return{x:BUILD_MIN+inset,y:BUILD_MAX,edge};
+  if(edge==='west')return{x:BUILD_MIN,y:BUILD_MIN+inset,edge};
+  return{x:BUILD_MAX,y:BUILD_MIN+inset,edge};
+}
+function oppositeEdge(edge){return({north:'south',south:'north',east:'west',west:'east'})[edge]}
+function ensureRoadPlan(){
+  if(Array.isArray(State.village.roadPlan)&&State.village.roadPlan.length)return State.village.roadPlan;
+  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return[];
+  const rnd=seedRand((villageSeed(well)^0x51f15e)>>>0),edges=practicalEdges();
+  if(edges.length<2)return[];
+  const first=edges[Math.floor(rnd()*edges.length)];
+  const preferred=oppositeEdge(first),second=edges.includes(preferred)?preferred:edges.find(e=>e!==first);
+  const chosen=[first,second];
+  State.village.roadPlan=chosen.map((edge,i)=>({id:'arterial-'+i,edge,target:portalOnEdge(edge,rnd),connected:false}));
+  State.village.baseRoadAngle=Math.atan2(State.village.roadPlan[0].target.y-well.y,State.village.roadPlan[0].target.x-well.x);
+  return State.village.roadPlan;
+}
+function routeRoads(routeId){return roadList().filter(r=>r.routeId===routeId).sort((a,b)=>(a.routeSeq||0)-(b.routeSeq||0))}
+function roadAngle(r){return Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}
+function angleDiff(a,b){let d=Math.abs(a-b)%(Math.PI*2);return d>Math.PI?Math.PI*2-d:d}
+function sharesPoint(a,b,eps=.22){return dist(a.a,b.a)<eps||dist(a.a,b.b)<eps||dist(a.b,b.a)<eps||dist(a.b,b.b)<eps}
+function segmentIntersectionPoint(a,b,c,d){
+  const r={x:b.x-a.x,y:b.y-a.y},s={x:d.x-c.x,y:d.y-c.y},den=r.x*s.y-r.y*s.x;
+  if(Math.abs(den)<1e-8)return null;
+  const q={x:c.x-a.x,y:c.y-a.y},t=(q.x*s.y-q.y*s.x)/den,u=(q.x*r.y-q.y*r.x)/den;
+  if(t>1e-5&&t<.99999&&u>1e-5&&u<.99999)return{x:a.x+t*r.x,y:a.y+t*r.y};
+  return null;
+}
+function segmentDistance(a,b,c,d){
+  if(segmentIntersectionPoint(a,b,c,d))return 0;
+  return Math.min(pointSegmentDistance(a,c,d),pointSegmentDistance(b,c,d),pointSegmentDistance(c,a,b),pointSegmentDistance(d,a,b));
+}
+function nearestRoadNode(p,excludeIds=[]){
+  let best=null,bestD=Infinity;
+  for(const r of roadList()){
+    if(excludeIds.includes(r.id))continue;
+    for(const q of [r.a,r.b]){const d=dist(p,q);if(d<bestD){bestD=d;best=q}}
   }
-  const len=3.1+rnd()*2.1;
-  let b={x:a.x+Math.cos(heading)*len,y:a.y+Math.sin(heading)*len};
-  const dx=b.x-well.x,dy=b.y-well.y,d=Math.hypot(dx,dy);
-  if(d>radius){const k=radius/d;b={x:well.x+dx*k,y:well.y+dy*k}}
-  b={x:clamp(b.x,BUILD_MIN+.5,BUILD_MAX-.5),y:clamp(b.y,BUILD_MIN+.5,BUILD_MAX-.5)};
-  if(dist(a,b)<1.8)return false;
-  const road=beginConstruction({id:uid(),type:'road',auto:true,a,b,width:roads.length<2?.58:.32,appeal:1});
-  // Do not grow a road through a player-built structure.
-  if(State.structures.some(s=>!s.auto&&s.id!==State.village.wellId&&autoOverlapsManual(road,s)))return false;
-  State.structures.push(road);return true;
+  return bestD<=ROAD_RULES.snapNodeDistance?{point:{...best},distance:bestD}:null;
+}
+function constrainRoadCandidate(candidate){
+  if(dist(candidate.a,candidate.b)<1.7)return null;
+  const manual=State.structures.filter(s=>!s.auto&&s.id!==State.village.wellId);
+  if(manual.some(s=>autoOverlapsManual(candidate,s)))return null;
+
+  // Snap candidate end to a nearby network vertex.
+  const node=nearestRoadNode(candidate.b,[candidate.parentRoadId].filter(Boolean));
+  if(node&&dist(candidate.a,node.point)>=1.7)candidate.b=node.point;
+
+  for(const r of roadList()){
+    const startShared=dist(candidate.a,r.a)<.24||dist(candidate.a,r.b)<.24;
+    const endShared=dist(candidate.b,r.a)<.24||dist(candidate.b,r.b)<.24;
+    const sameRoute=candidate.routeId&&candidate.routeId===r.routeId;
+    const ca=roadAngle(candidate),ra=roadAngle(r);
+
+    // Crossings become T-junctions by shortening the candidate to the crossing.
+    const ip=segmentIntersectionPoint(candidate.a,candidate.b,r.a,r.b);
+    if(ip&&!startShared&&!endShared){
+      if(dist(candidate.a,ip)<1.7)return null;
+      candidate.b=ip;
+      return candidate;
+    }
+
+    if(startShared&&!sameRoute){
+      const d=Math.min(angleDiff(ca,ra),angleDiff(ca,ra+Math.PI));
+      if(d<ROAD_RULES.minJunctionAngle)return null;
+    }
+
+    if(!startShared&&!endShared){
+      const dAngle=Math.min(angleDiff(ca,ra),angleDiff(ca,ra+Math.PI));
+      if(dAngle<ROAD_RULES.minJunctionAngle&&segmentDistance(candidate.a,candidate.b,r.a,r.b)<ROAD_RULES.minParallelSpacing)return null;
+    }
+  }
+  return dist(candidate.a,candidate.b)>=1.7?candidate:null;
+}
+function spawnArterial(step){
+  const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();if(!well||!plan.length)return false;
+  const open=plan.filter(p=>!p.connected);if(!open.length)return false;
+  // Alternate progress across the two border routes by choosing the one with fewer accepted segments.
+  open.sort((p,q)=>routeRoads(p.id).length-routeRoads(q.id).length);
+  const route=open[0],existing=routeRoads(route.id),a=existing.length?{...existing[existing.length-1].b}:{x:well.x,y:well.y};
+  const target=route.target,remaining=dist(a,target);if(remaining<.35){route.connected=true;return false}
+  const rnd=growthRng(step,401+existing.length),len=Math.min(remaining,ROAD_RULES.arterialSegmentMin+rnd()*(ROAD_RULES.arterialSegmentMax-ROAD_RULES.arterialSegmentMin));
+  const desired=Math.atan2(target.y-a.y,target.x-a.x);
+  // Global goal = radial/portal direction, with only gentle noise; this keeps the route organic without becoming a grid.
+  const curvature=(rnd()-.5)*.26*(remaining>8?1:.45),heading=desired+curvature;
+  let b=remaining<=ROAD_RULES.arterialSegmentMax?{x:target.x,y:target.y}:{x:a.x+Math.cos(heading)*len,y:a.y+Math.sin(heading)*len};
+  const road=constrainRoadCandidate(beginConstruction({id:uid(),type:'road',auto:true,roadClass:'arterial',routeId:route.id,routeSeq:existing.length,a,b,width:.62,appeal:1,parentRoadId:existing.at(-1)?.id||null}));
+  if(!road)return false;
+  State.structures.push(road);
+  if(dist(road.b,target)<.35)route.connected=true;
+  return true;
+}
+function candidateBranchOrigins(rnd){
+  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return[];
+  const roads=roadList(true).filter(r=>dist({x:(r.a.x+r.b.x)/2,y:(r.a.y+r.b.y)/2},well)<=currentGrowthRadius()+1.5);
+  const out=[];
+  for(const r of roads){
+    const t=.24+rnd()*.52,p={x:r.a.x+(r.b.x-r.a.x)*t,y:r.a.y+(r.b.y-r.a.y)*t};
+    let nearest=Infinity;
+    for(const other of roadList())for(const q of [other.a,other.b])nearest=Math.min(nearest,dist(p,q));
+    if(nearest>=ROAD_RULES.branchSpawnSpacing)out.push({road:r,p});
+  }
+  return out;
+}
+function spawnLocalRoad(step){
+  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return false;
+  const rnd=growthRng(step,503),origins=candidateBranchOrigins(rnd);if(!origins.length)return false;
+  for(let attempt=0;attempt<Math.min(8,origins.length);attempt++){
+    const o=origins[Math.floor(rnd()*origins.length)],radial=Math.atan2(o.p.y-well.y,o.p.x-well.x);
+    // Secondary streets still follow the radial field: ±25–55° from outward, never a forced 90° grid branch.
+    const side=rnd()<.5?-1:1,heading=radial+side*(.44+rnd()*.52),len=ROAD_RULES.localSegmentMin+rnd()*(ROAD_RULES.localSegmentMax-ROAD_RULES.localSegmentMin);
+    let b={x:o.p.x+Math.cos(heading)*len,y:o.p.y+Math.sin(heading)*len};
+    const radius=currentGrowthRadius(),d=dist(b,well);
+    if(d>radius){const k=radius/d;b={x:well.x+(b.x-well.x)*k,y:well.y+(b.y-well.y)*k}}
+    if(!inBuild(b)||dist(o.p,b)<1.8)continue;
+    const road=constrainRoadCandidate(beginConstruction({id:uid(),type:'road',auto:true,roadClass:'local',a:{...o.p},b,width:.30,appeal:.8,parentRoadId:o.road.id}));
+    if(road){State.structures.push(road);return true}
+  }
+  return false;
+}
+function spawnRoad(step){
+  const plan=ensureRoadPlan(),incomplete=plan.some(p=>!p.connected),houses=autoList('house').length;
+  // Main border connections get priority, but local streets begin once a small nucleus exists.
+  if(incomplete&&(houses<5||step%3===0))return spawnArterial(step);
+  return spawnLocalRoad(step)||spawnArterial(step);
 }
 function spawnHouse(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList();if(!well||!roads.length)return false;
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList(true);if(!well||!roads.length)return false;
   const rnd=growthRng(step,211),radius=currentGrowthRadius(),manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
   const candidates=[];
   for(let i=0;i<90;i++){
     const road=roads[Math.floor(rnd()*roads.length)],t=.12+rnd()*.76;
     const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
-    const ang=Math.atan2(road.b.y-road.a.y,road.b.x-road.a.x),side=rnd()<.5?-1:1,offset=1.15+rnd()*1.35;
+    const ang=roadAngle(road),side=rnd()<.5?-1:1,offset=1.15+rnd()*1.35;
     const p={x:q.x-Math.sin(ang)*offset*side,y:q.y+Math.cos(ang)*offset*side};
     const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p))continue;
-    const core=Math.exp(-Math.pow(d-Math.min(7,radius*.62),2)/(2*3.2*3.2));
-    const score=core*1.15+(1-offset/3)*.65+rnd()*.25;
+    const core=Math.exp(-Math.pow(d-Math.min(6.5,radius*.62),2)/(2*3.0*3.0));
+    const score=core*1.2+(1-offset/3)*.65+rnd()*.20;
     candidates.push({p,ang,score});
   }
   candidates.sort((a,b)=>b.score-a.score);
@@ -275,19 +389,19 @@ function spawnHouse(step){
   return false;
 }
 function spawnField(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList();if(!well)return false;
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList(true);if(!well)return false;
   const rnd=growthRng(step,307),radius=currentGrowthRadius()+4,manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
   const houses=autoList('house');if(houses.length<5)return false;
-  const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(23,radius+4),candidates=[];
+  const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(22,radius+4),candidates=[];
   for(let i=0;i<110;i++){
     const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2,p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
     if(!inBuild(p))continue;
-    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-(inner+outer)*.5,2)/(2*4.5*4.5));
-    const score=ring+.18*Math.exp(-road.d/4)+rnd()*.22;candidates.push({p,road,score});
+    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-(inner+outer)*.5,2)/(2*4.2*4.2));
+    const score=ring+.18*Math.exp(-road.d/4)+rnd()*.20;candidates.push({p,road,score});
   }
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,28)){
-    const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:(State.village.baseRoadAngle||0)+(rnd()-.5)*.25,appeal:c.score});
+    const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
     if(!autoBlocked(f,placed,manual,.65)){State.structures.push(f);return true}
   }
   return false;
@@ -295,6 +409,7 @@ function spawnField(step){
 function processVillageGrowth(){
   if(!State.village.founded)return;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return;
+  ensureRoadPlan();
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
   let guard=0;
   while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
@@ -302,11 +417,10 @@ function processVillageGrowth(){
     let kind;
     if(roads===0)kind='road';
     else if(houses<2)kind='house';
-    else if(step<5&&roads<2)kind='road';
     else{
       const rnd=growthRng(step,509)();
-      if(houses>=5&&fields<Math.ceil(houses*.55)&&rnd<.20)kind='field';
-      else if(roads<Math.ceil(houses/4)+1&&rnd<.40)kind='road';
+      if(houses>=5&&fields<Math.ceil(houses*.50)&&rnd<.17)kind='field';
+      else if(rnd<.38)kind='road';
       else kind='house';
     }
     let ok=kind==='road'?spawnRoad(step):kind==='field'?spawnField(step):spawnHouse(step);
@@ -318,9 +432,9 @@ function processVillageGrowth(){
   }
 }
 function resetLegacyVillageGrowth(){
-  if(!State.village.founded||State.village.growthVersion===2)return;
+  if(!State.village.founded||State.village.growthVersion===3)return;
   State.structures=State.structures.filter(s=>!s.auto);
-  State.village.growthVersion=2;State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.baseRoadAngle=null;
+  State.village.growthVersion=3;State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.baseRoadAngle=null;
 }
 function openVillageModal(well){
   State.pendingWellId=well.id;const modal=document.getElementById('foundVillageModal'),input=document.getElementById('villageNameInput');
@@ -452,7 +566,7 @@ function deleteStructure(id){
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
-    State.village={name:null,wellId:null,founded:false,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};
+    State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};
   }else State.structures=State.structures.filter(s=>s.id!==id);
   if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
 }
@@ -498,19 +612,19 @@ document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Vil
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
-  State.village={name,wellId:well.id,founded:true,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};closeVillageModal();markDirty();renderUI();status(`${name} founded — village growth has begun`);processVillageGrowth();draw();
+  State.village={name,wellId:well.id,founded:true,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};closeVillageModal();markDirty();renderUI();status(`${name} founded — village growth has begun`);processVillageGrowth();draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:2,growthStep:0,nextGrowthDay:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
 function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b)}if(s.type==='wall')s.width=.5;if(s.type==='well')delete s.construction;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==2;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;resetLegacyVillageGrowth();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;resetLegacyVillageGrowth();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==2;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();saveLocal();renderUI();renderFunctionPanel();draw()}}
 async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:'plains',neighbor_biomes:{},resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
 function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
