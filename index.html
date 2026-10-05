@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.18</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.19</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -82,6 +82,12 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
     <div class="grid"><button data-wall-level="1" class="active">1 level</button><button data-wall-level="2">2 levels</button></div>
     <h3>Gate</h3><button class="full" data-gate>Gate 1.5×1.5U</button>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
+    <h3>Settlement buildings</h3>
+    <div class="grid3">
+      <button data-civic="market">Market<br><span class="small">4×4U</span></button>
+      <button data-civic="tavern">Tavern<br><span class="small">Double T</span></button>
+      <button data-civic="church">Church<br><span class="small">Large</span></button>
+    </div>
     <hr/>
     <div class="legend">Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
     <hr/>
@@ -163,9 +169,12 @@ const COSTS={
   wallPerU:{gold:6,stone:18,wood:2},
   builtPerU:{gold:12,stone:16,wood:18},
   gate:{gold:95,stone:90,wood:38,metal:10},
-  well:{gold:50,stone:35,wood:10}
+  well:{gold:50,stone:35,wood:10},
+  market:{gold:120,stone:70,wood:85},
+  tavern:{gold:190,stone:65,wood:145},
+  church:{gold:320,stone:360,wood:110,metal:18}
 };
-const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,market:4,tavern:6,church:10,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const PEASANT_VISUAL_SPEED=.20;
@@ -247,6 +256,35 @@ function houseFootprintParts(s){
 }
 function houseBodyHeight(s){return houseLevel(s)===1?.95:1.72}
 function houseRidgeHeight(s){return houseLevel(s)===1?1.45:2.26}
+const CIVIC_TYPES=Object.freeze(['market','tavern','church']);
+function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
+function civicLocalParts(s){
+  if(s.type==='market')return[{cx:0,cy:0,w:4,h:4,role:'plaza',roofTurn:0}];
+  if(s.type==='tavern')return[
+    {cx:0,cy:0,w:2.2,h:5.0,role:'spine',roofTurn:Math.PI/2},
+    {cx:0,cy:-1.72,w:4.6,h:1.55,role:'wing',roofTurn:0},
+    {cx:0,cy:1.72,w:4.6,h:1.55,role:'wing',roofTurn:0}
+  ];
+  if(s.type==='church')return[
+    {cx:0,cy:.25,w:2.9,h:6.2,role:'nave',roofTurn:Math.PI/2},
+    {cx:0,cy:.35,w:5.2,h:1.65,role:'transept',roofTurn:0},
+    {cx:0,cy:-2.65,w:1.85,h:1.85,role:'tower',roofTurn:0}
+  ];
+  return[];
+}
+function civicParts(s){
+  return civicLocalParts(s).map(p=>{
+    const q=houseLocalToWorld(s,p.cx,p.cy);
+    return{...p,center:q,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)};
+  });
+}
+function civicRadius(s){
+  let r=.5;
+  for(const p of civicLocalParts(s)){
+    r=Math.max(r,Math.hypot(p.cx,p.cy)+Math.hypot(p.w,p.h)/2);
+  }
+  return r;
+}
 function levelCostFactor(s){const l=structureLevel(s);return s?.type==='tower'?[1,1.65,2.3][l-1]:[1,1.8][l-1]}
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
 function constructionCost(s){
@@ -254,6 +292,7 @@ function constructionCost(s){
   if(s.type==='tower')return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
   if(s.type==='gate')return {...COSTS.gate};
   if(s.type==='well')return {...COSTS.well};
+  if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   return{};
@@ -266,6 +305,7 @@ function buildDuration(s){
   if(s.type==='tower')return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   if(s.type==='gate')return BUILD_DAYS.gate;
   if(s.type==='well')return BUILD_DAYS.well;
+  if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='road')return BUILD_DAYS.road;
@@ -290,6 +330,7 @@ function pointRadius(s){
   if(s.type==='gate')return Math.SQRT2*s.size/2;
   if(s.type==='well')return .75;
   if(s.type==='house'||s.type==='field')return Math.hypot(s.w,s.h)/2;
+  if(isCivic(s))return civicRadius(s);
   return .5;
 }
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return dist(p,a);const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return dist(p,{x:a.x+t*dx,y:a.y+t*dy})}
@@ -675,6 +716,9 @@ function structureHeight(s){
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
   if(s.type==='house')return houseRidgeHeight(s);
+  if(s.type==='market')return .78;
+  if(s.type==='tavern')return 2.15;
+  if(s.type==='church')return 3.35;
   return 0;
 }
 function footprintPoints(s){
@@ -690,6 +734,12 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   if(s.type==='field')return rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0);
+  if(isCivic(s)){
+    const pts=civicParts(s).flatMap(p=>p.points);
+    if(!pts.length)return[];
+    const cx=pts.reduce((a,p)=>a+p.x,0)/pts.length,cy=pts.reduce((a,p)=>a+p.y,0)/pts.length;
+    return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
+  }
   return[];
 }
 function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
@@ -831,10 +881,12 @@ function pointInScreenPolygon(p,poly){
   }return inside;
 }
 function screenHitStructure(s,p){
-  if(s.type==='house'){
+  if(s.type==='house'||isCivic(s)){
+    const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
     const h=structureHeight(s);
-    for(const part of houseFootprintParts(s)){
-      const fp=part.points,base=projectPath(fp,0),top=projectPath(fp,h);
+    for(const part of parts){
+      const ph=part.role==='plaza'?.78:part.role==='tower'?h:Math.min(h,s.type==='church'?2.52:h);
+      const fp=part.points,base=projectPath(fp,0),top=projectPath(fp,ph);
       if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
       for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length;if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true}
     }
@@ -973,7 +1025,7 @@ function functionCapacity(s){
   return 0;
 }
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
-function structureLabel(s){if(!s)return'';if(s.type==='house')return `House · L${houseLevel(s)}${houseLevel(s)===3?' · '+housePlanType(s)+' plan':''}`;if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='house')return `House · L${houseLevel(s)}${houseLevel(s)===3?' · '+housePlanType(s)+' plan':''}`;if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -1314,6 +1366,58 @@ function drawChimneysAndSmoke(){
     else smoke();
   }
 }
+function drawCivicGabledPart(s,part,wallH,ridgeH,wallA,wallB,roofAColor,roofBColor,gableColor,stroke){
+  const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=part.center;
+  const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
+  const local=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
+  const c0=local(-rw/2,-rh/2),c1=local(rw/2,-rh/2),c2=local(rw/2,rh/2),c3=local(-rw/2,rh/2);
+  const r0=local(-rw/2,0),r1=local(rw/2,0);
+  extrudePolygon(part.points,wallH,{top:gableColor,sideA:wallA,sideB:wallB,stroke});
+  const faces=[
+    {screen:[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:roofAColor},
+    {screen:[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:roofBColor},
+    {screen:[w2s(c0,wallH),w2s(c3,wallH),w2s(r0,ridgeH)],fill:gableColor},
+    {screen:[w2s(c1,wallH),w2s(c2,wallH),w2s(r1,ridgeH)],fill:gableColor}
+  ];
+  faces.forEach(f=>f.depth=f.screen.reduce((sum,p)=>sum+p.y,0)/f.screen.length);
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.screen,f.fill,stroke,1);
+}
+function drawMarket(s,preview=false){
+  const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'#b8a98f';
+  const plaza=civicParts(s)[0];
+  extrudePolygonAt(plaza.points,0,.12,{top:'#9a876b',sideA:'#665847',sideB:'#756451',stroke});
+  const stalls=[
+    {x:-1.05,y:-1.0,c:'#8c4f37'},{x:1.05,y:-1.0,c:'#b18a3f'},
+    {x:-1.05,y:1.0,c:'#536d76'},{x:1.05,y:1.0,c:'#6f6941'}
+  ];
+  for(const st of stalls){
+    const q=houseLocalToWorld(s,st.x,st.y),pts=rectWorldPoints(q.x,q.y,1.15,.72,s.angle||0);
+    extrudePolygonAt(pts,.12,.46,{top:'#654b34',sideA:'#49382a',sideB:'#584331',stroke:null});
+    const canopy=rectWorldPoints(q.x,q.y,1.38,.92,s.angle||0);
+    extrudePolygonAt(canopy,.58,.66,{top:st.c,sideA:st.c,sideB:st.c,stroke:'rgba(235,218,186,.35)'});
+  }
+}
+function drawTavern(s,preview=false){
+  const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'#9a765d';
+  const parts=civicParts(s).map(p=>({...p,depth:viewDepthPoint(p.center)})).sort((a,b)=>a.depth-b.depth);
+  for(const part of parts)drawCivicGabledPart(s,part,1.48,2.08,'#684f3d','#7b5e48','#3b302b','#493930','#80624a',stroke);
+}
+function drawChurch(s,preview=false){
+  const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'#aaa8a1';
+  const parts=civicParts(s).map(p=>({...p,depth:viewDepthPoint(p.center)})).sort((a,b)=>a.depth-b.depth);
+  for(const part of parts){
+    if(part.role==='tower'){
+      extrudePolygon(part.points,2.72,{top:'#676a6c',sideA:'#66635f',sideB:'#77736e',stroke});
+      drawCivicGabledPart(s,part,2.72,3.35,'#66635f','#77736e','#3d4145','#484c50','#85817a',stroke);
+    }else drawCivicGabledPart(s,part,1.88,2.52,'#6b6863','#7d7973','#41454a','#4c5054','#85817a',stroke);
+  }
+}
+function drawCivicStructure(s,preview=false){
+  if(s.type==='market')drawMarket(s,preview);
+  else if(s.type==='tavern')drawTavern(s,preview);
+  else if(s.type==='church')drawChurch(s,preview);
+}
 function drawPointStructure(s,preview=false){
   const selected=State.selectedId===s.id,h=structureHeight(s),stroke=selected?'#f4b76f':'#d8c8b4';
   if(s.type==='well'){
@@ -1506,7 +1610,7 @@ function convexHull(points){
   lower.pop();upper.pop();return lower.concat(upper);
 }
 function drawStructureShadow(s,sun){
-  if(!s||underConstruction(s)||!['house','tower','gate','wall','built'].includes(s.type))return;
+  if(!s||underConstruction(s)||!['house','tower','gate','wall','built','market','tavern','church'].includes(s.type))return;
   const fp=isCastlePart(s)?unionFootprintPoints(s):footprintPoints(s);
   const h=shadowStructureHeight(s);
   if(!fp?.length||h<=0)return;
@@ -1525,7 +1629,7 @@ function drawStructureShadow(s,sun){
 }
 function drawDynamicShadows(){
   const sun=sunShadowState();if(!sun)return;
-  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','built'].includes(s.type));
+  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','built','market','tavern','church'].includes(s.type));
   for(const s of casters)drawStructureShadow(s,sun);
 }
 function fieldWorkAssignments(houses,fields){
@@ -1548,7 +1652,7 @@ const PEASANT_PATH_STEP=.5,PEASANT_CLEARANCE=.22;
 const PEASANT_ROAD_COST=.38,PEASANT_ROADSIDE_COST=.68,PEASANT_ROADSIDE_RANGE=.85;
 let peasantPathCache=new Map(),peasantPathSignature='';
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','built','well','road'].includes(s.type)).map(s=>{
+  return State.structures.filter(s=>['house','tower','gate','wall','built','well','road','market','tavern','church'].includes(s.type)).map(s=>{
     if(['wall','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,underConstruction(s)?1:0].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel].join(',');
   }).join('|');
@@ -1560,15 +1664,16 @@ function syncPeasantPathCache(){
 function pointBlockedForPeasant(p,sourceHouseId){
   for(const s of State.structures){
     if(s.id===sourceHouseId)continue;
-    if(!['house','tower','gate','wall','built','well'].includes(s.type))continue;
+    if(!['house','tower','gate','wall','built','well','market','tavern','church'].includes(s.type))continue;
     if(['wall','built'].includes(s.type)){
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
       continue;
     }
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
-    if(s.type==='house'){
-      for(const part of houseFootprintParts(s)){
+    if(s.type==='house'||isCivic(s)){
+      const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
+      for(const part of parts){
         if(pointInPolygon(p,part.points))return true;
         for(let i=0;i<part.points.length;i++){const j=(i+1)%part.points.length;if(pointSegmentDistance(p,part.points[i],part.points[j])<=PEASANT_CLEARANCE)return true}
       }
@@ -1957,7 +2062,9 @@ function drawConstructionProgress(s){
 }
 function drawStructure(s,preview=false){
   ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
-  if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
+  if(isCivic(s))drawCivicStructure(s,preview);
+  else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
+  else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
   ctx.restore();if(!preview&&underConstruction(s))drawConstructionProgress(s);
 }
 function draw(){
@@ -1997,7 +2104,7 @@ function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
-  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
   const linear=State.structures.filter(s=>!s.auto&&['wall','built'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
@@ -2008,7 +2115,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate],[data-well]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate],[data-well],[data-civic]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(){State.dirty=true;document.getElementById('saveState').textContent='unsaved';saveLocal()}
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;renderFunctionPanel();draw()}
@@ -2035,10 +2142,11 @@ function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clie
 function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
-  if(!s||!['tower','gate','built','wall','house'].includes(s.type)){panel.classList.remove('open');return}
-  if(s.type!=='house')normalizeFunctions(s);const cap=s.type==='house'?0:functionCapacity(s);panel.classList.add('open');
+  if(!s||!['tower','gate','built','wall','house','market','tavern','church'].includes(s.type)){panel.classList.remove('open');return}
+  const simpleCivic=isCivic(s);
+  if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s);panel.classList.add('open');
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','wall','built'].includes(s.type),maxLevel=s.type==='tower'?3:2,canTier=['tower','wall'].includes(s.type);
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?'<div class="cost-line">Temporary prototype controls for social-tier testing.</div>':`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?'<div class="cost-line">Temporary prototype controls for social-tier testing.</div>':simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
   let html='';
   if(s.type==='house'){
     const level=houseLevel(s);
@@ -2055,7 +2163,7 @@ function renderFunctionPanel(){
     const flipLegend=s.type==='wall'?'Battlements are rendered only on the exterior side.':'Exterior windows: upper level only. Interior windows: every level.';
     html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
   }
-  if(s.type!=='house'){
+  if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
     else html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
@@ -2101,6 +2209,11 @@ canvas.addEventListener('pointerdown',e=>{
     State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
     status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
+  if(State.tool.kind==='civic'){
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
+    status(structureLabel(State.draft.preview)+' position fixed — move cursor to rotate, click to confirm');draw();return
+  }
   if(State.tool.kind==='well'){
     if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
     const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',x:q.x,y:q.y};
@@ -2140,6 +2253,10 @@ document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&State.tool.linear==='wall'){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status('Wall tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
 document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.buildLevels.wall=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'){State.tool.level=State.buildLevels.wall;State.draft=null;status('Wall height: '+State.buildLevels.wall+' level'+(State.buildLevels.wall>1?'s':''));draw()}});
 document.querySelector('[data-gate]').onclick=e=>setTool({kind:'gate',label:'Gate 1.5×1.5U · '+BUILD_DAYS.gate+'d · '+costText(COSTS.gate),el:e.currentTarget});
+for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
+  const type=b.dataset.civic,spec={type,shape:'civic'};
+  setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(COSTS[type]),el:b});
+};
 document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
