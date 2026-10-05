@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.16</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.17</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -219,6 +219,27 @@ function applyStructureTier(s,tier){
   normalizeFunctions(s);return s
 }
 function structureLevel(s){return clamp(Math.round(Number(s?.level)||1),1,s?.type==='tower'?3:2)}
+function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,3)}
+function housePlanType(s){return (peasantHash(s?.id||'house')&1)?'L':'T'}
+function houseLocalToWorld(s,x,y){
+  const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+  return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
+}
+function houseFootprintParts(s){
+  const parts=[{cx:0,cy:0,w:Number(s.w)||1.5,h:Number(s.h)||1}];
+  if(houseLevel(s)>=3){
+    const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s),w=Number(s.w)||1.5,h=Number(s.h)||1;
+    if(plan==='L'){
+      parts.push({cx:sign*w*.38,cy:h*.56,w:w*.55,h:h*.95});
+    }else{
+      parts.push({cx:0,cy:h*.62,w:w*1.18,h:h*.48});
+      parts.push({cx:0,cy:h*.92,w:w*.46,h:h*.34});
+    }
+  }
+  return parts.map(p=>({...p,points:rectWorldPoints(...Object.values(houseLocalToWorld(s,p.cx,p.cy)),p.w,p.h,s.angle||0)}));
+}
+function houseBodyHeight(s){return houseLevel(s)===1?.95:1.72}
+function houseRidgeHeight(s){return houseLevel(s)===1?1.45:2.26}
 function levelCostFactor(s){const l=structureLevel(s);return s?.type==='tower'?[1,1.65,2.3][l-1]:[1,1.8][l-1]}
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
 function constructionCost(s){
@@ -646,7 +667,7 @@ function structureHeight(s){
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
-  if(s.type==='house')return 1.05;
+  if(s.type==='house')return houseRidgeHeight(s);
   return 0;
 }
 function footprintPoints(s){
@@ -655,7 +676,13 @@ function footprintPoints(s){
   if(['tower','gate'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
   if(['wall','built'].includes(s.type))return linePoly(s);
-  if(['house','field'].includes(s.type))return rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0);
+  if(s.type==='house'){
+    const parts=houseFootprintParts(s),pts=parts.flatMap(p=>p.points);
+    if(parts.length===1)return pts;
+    const cx=pts.reduce((a,p)=>a+p.x,0)/pts.length,cy=pts.reduce((a,p)=>a+p.y,0)/pts.length;
+    return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
+  }
+  if(s.type==='field')return rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0);
   return[];
 }
 function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
@@ -797,6 +824,15 @@ function pointInScreenPolygon(p,poly){
   }return inside;
 }
 function screenHitStructure(s,p){
+  if(s.type==='house'){
+    const h=structureHeight(s);
+    for(const part of houseFootprintParts(s)){
+      const fp=part.points,base=projectPath(fp,0),top=projectPath(fp,h);
+      if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
+      for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length;if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true}
+    }
+    return false;
+  }
   const fp=footprintPoints(s);if(fp.length<3)return false;const h=structureHeight(s),base=projectPath(fp,0),top=projectPath(fp,h);
   if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
   for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length;if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true}
@@ -930,7 +966,7 @@ function functionCapacity(s){
   return 0;
 }
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
-function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='house')return `House · L${houseLevel(s)}${houseLevel(s)===3?' · '+housePlanType(s)+' plan':''}`;if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -1315,16 +1351,31 @@ function drawField(field){
   }
   ctx.restore();
 }
-function drawHouse(s){
-  const fp=rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0),wallH=.95;
-  extrudePolygon(fp,wallH,{top:'#7d5b43',sideA:'#4e392d',sideB:'#654936',stroke:'#b89575'});
-  const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
-  const local=(x,y)=>({x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca});
-  const c0=local(-s.w/2,-s.h/2),c1=local(s.w/2,-s.h/2),c2=local(s.w/2,s.h/2),c3=local(-s.w/2,s.h/2);
-  const r0=local(-s.w/2,0),r1=local(s.w/2,0),ridgeH=1.45;
+function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false){
+  const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),center=houseLocalToWorld(s,part.cx,part.cy);
+  const local=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
+  const c0=local(-part.w/2,-part.h/2),c1=local(part.w/2,-part.h/2),c2=local(part.w/2,part.h/2),c3=local(-part.w/2,part.h/2);
+  const r0=local(-part.w/2,0),r1=local(part.w/2,0);
   const roofA=[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)];
   const roofB=[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)];
-  pathPolygon(roofA,'#5b3d30','#8c6752',1);pathPolygon(roofB,'#6b4938','#8c6752',1);
+  if(anthracite){
+    pathPolygon(roofA,'#303237','#55585e',1);pathPolygon(roofB,'#3a3d42','#55585e',1);
+  }else{
+    pathPolygon(roofA,'#5b3d30','#8c6752',1);pathPolygon(roofB,'#6b4938','#8c6752',1);
+  }
+}
+function drawHouse(s){
+  const level=houseLevel(s),wallH=houseBodyHeight(s),ridgeH=houseRidgeHeight(s),selected=State.selectedId===s.id;
+  const parts=houseFootprintParts(s);
+  for(const part of parts){
+    extrudePolygon(part.points,wallH,{
+      top:level===1?'#7d5b43':'#77716a',
+      sideA:level===1?'#4e392d':'#59534d',
+      sideB:level===1?'#654936':'#6c655d',
+      stroke:selected?'#f4b76f':level===1?'#b89575':'#aaa199'
+    });
+  }
+  for(const part of parts)drawHouseRoofPart(s,part,wallH,ridgeH,level>=2);
   if(!underConstruction(s))drawHouseChimneys(s);
 }
 function closestPointOnSegment(p,a,b){
@@ -1417,7 +1468,7 @@ function sunShadowState(){
   };
 }
 function shadowStructureHeight(s){
-  if(s?.type==='house')return 1.45;
+  if(s?.type==='house')return houseRidgeHeight(s);
   if(s?.type==='built'){const g=builtRoofGeometry(s);return g?.ridgeH||structureHeight(s)}
   return structureHeight(s);
 }
@@ -1493,6 +1544,13 @@ function pointBlockedForPeasant(p,sourceHouseId){
     }
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
+    if(s.type==='house'){
+      for(const part of houseFootprintParts(s)){
+        if(pointInPolygon(p,part.points))return true;
+        for(let i=0;i<part.points.length;i++){const j=(i+1)%part.points.length;if(pointSegmentDistance(p,part.points[i],part.points[j])<=PEASANT_CLEARANCE)return true}
+      }
+      continue;
+    }
     const q=toLocalPoint(s,p),d=rectDims(s);
     if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
   }
@@ -1767,7 +1825,8 @@ function drawFacadeWindows(lit=false,nf=1){
   for(const s of State.structures){
     if(underConstruction(s))continue;
     if(s.type==='house'){
-      for(const edge of visibleFacadeEdges(s))drawWindowOnEdge(edge,.48,lit,nf,0);
+      const rows=houseLevel(s)>=2?[.52,1.34]:[.48];
+      for(const edge of visibleFacadeEdges(s))for(const z of rows)drawWindowOnEdge(edge,z,lit,nf,0);
     }else if(s.type==='built'){
       drawBuiltWindows(s,lit,nf);
     }else if(s.type==='tower'){
@@ -1852,7 +1911,7 @@ function structureAt(p){
   return null;
 }
 function structureAtScreen(p){
-  const manual=State.structures.filter(s=>!s.auto).slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
+  const manual=State.structures.filter(s=>!s.auto||s.type==='house').slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
@@ -1883,11 +1942,15 @@ function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clie
 function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
-  if(!s||!['tower','gate','built','wall'].includes(s.type)){panel.classList.remove('open');return}
-  normalizeFunctions(s);const cap=functionCapacity(s);panel.classList.add('open');
+  if(!s||!['tower','gate','built','wall','house'].includes(s.type)){panel.classList.remove('open');return}
+  if(s.type!=='house')normalizeFunctions(s);const cap=s.type==='house'?0:functionCapacity(s);panel.classList.add('open');
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','wall','built'].includes(s.type),maxLevel=s.type==='tower'?3:2,canTier=['tower','wall'].includes(s.type);
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?'<div class="cost-line">Temporary prototype controls for social-tier testing.</div>':`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
   let html='';
+  if(s.type==='house'){
+    const level=houseLevel(s);
+    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=3?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 1 floor · L2: 2 floors, anthracite roof · L3: 2 floors, extended ${housePlanType(s)} plan.</div></div>`;
+  }
   if(canTier){
     const current=s.type==='wall'?wallTier(s):towerTier(s);
     const labels=s.type==='wall'?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U']);
@@ -1899,10 +1962,14 @@ function renderFunctionPanel(){
     const flipLegend=s.type==='wall'?'Battlements are rendered only on the exterior side.':'Exterior windows: upper level only. Interior windows: every level.';
     html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
   }
-  if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
-  else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
-  else html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
+  if(s.type!=='house'){
+    if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
+    else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
+    else html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
+  }
   slots.innerHTML=html;
+  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)+1,1,3);markDirty();renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
+  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,3);markDirty();renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(!target)return;
     applyStructureTier(target,Number(btn.dataset.structureTier));
@@ -1992,7 +2059,7 @@ document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;ren
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
-function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='wall'){s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;s.tier=wallTier(s);s.width=wallWidthForTier(s.tier);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='tower'){s.level=clamp(Math.round(Number(s.level)||1),1,3);s.tier=towerTier(s);applyStructureTier(s,s.tier)}if(s.type==='well')delete s.construction;if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
+function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='house')s.houseLevel=houseLevel(s);if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='wall'){s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;s.tier=wallTier(s);s.width=wallWidthForTier(s.tier);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='tower'){s.level=clamp(Math.round(Number(s.level)||1),1,3);s.tier=towerTier(s);applyStructureTier(s,s.tier)}if(s.type==='well')delete s.construction;if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
 function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
