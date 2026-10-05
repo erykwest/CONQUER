@@ -1617,7 +1617,8 @@ function towerRoofFootprintPoints(s){
   return rectWorldPoints(s.x,s.y,d.w+overhang*2,d.h+overhang*2,s.angle||0);
 }
 function gateRoofRise(s){
-  return s?.type==='gate'&&gateRoofStyle(s)==='pitched'?.66:0;
+  if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return 0;
+  return .66;
 }
 function gateRoofGeometry(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return null;
