@@ -2328,24 +2328,22 @@ function towerDoorSpecs(tower){
   if(!tower||tower.type!=='tower'||underConstruction(tower))return[];
   const specs=[];
 
-  // Primary ground-floor entrance.
-  // Normal towers use their placement/front direction. Attached subtowers
-  // face away from the parent so the ground entrance cannot be buried inside
-  // the parent volume.
-  const a=tower.angle||0;
-  let frontContact;
-  const parent=tower.parentTowerId&&State.structures.find(s=>s.id===tower.parentTowerId&&['tower','gate'].includes(s.type));
-  if(parent){
-    let dx=tower.x-parent.x,dy=tower.y-parent.y,L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
-    frontContact=boundaryPoint(tower,{x:tower.x+dx*4,y:tower.y+dy*4});
-  }else if(tower.shape==='round'){
-    frontContact={x:tower.x+Math.cos(a)*tower.r,y:tower.y+Math.sin(a)*tower.r};
-  }else{
-    const fp=footprintPoints(tower);
-    frontContact=fp.length>=4?{x:(fp[1].x+fp[2].x)/2,y:(fp[1].y+fp[2].y)/2}:boundaryPoint(tower,{x:tower.x+Math.cos(a),y:tower.y+Math.sin(a)});
+  // Primary ground-floor entrance exists only on independent towers.
+  // Attached subtowers deliberately have NO ground-floor door.
+  if(!tower.parentTowerId){
+    const a=tower.angle||0;
+    let frontContact;
+    if(tower.shape==='round'){
+      frontContact={x:tower.x+Math.cos(a)*tower.r,y:tower.y+Math.sin(a)*tower.r};
+    }else{
+      const fp=footprintPoints(tower);
+      frontContact=fp.length>=4
+        ?{x:(fp[1].x+fp[2].x)/2,y:(fp[1].y+fp[2].y)/2}
+        :boundaryPoint(tower,{x:tower.x+Math.cos(a),y:tower.y+Math.sin(a)});
+    }
+    const front=towerDoorContactSpec(tower,frontContact,null,'front');
+    if(front)specs.push(front);
   }
-  const front=towerDoorContactSpec(tower,frontContact,null,'front');
-  if(front)specs.push(front);
 
   // Additional doors at every true wall socket connected to this tower.
   for(const wall of State.structures){
@@ -2372,6 +2370,20 @@ function towerDoorVisible(tower,spec){
   // the camera is rotated.
   return viewDepthPoint(spec.contact)>=viewDepthPoint({x:tower.x,y:tower.y})-.015;
 }
+function towerDoorOccluders(tower,spec,apexZ){
+  const ownerDepth=worldDepth(tower);
+  return State.structures.filter(o=>{
+    if(o.id===tower.id||underConstruction(o)||!isCastlePart(o))return false;
+    if(structureVisualTopHeight(o)<=spec.baseZ+.025)return false;
+
+    // Connected/overlapping structures always mask the doorway where their
+    // actual volume crosses the tower facade.
+    if(structuresOverlapInPlan(tower,o))return true;
+
+    // Otherwise ordinary camera depth determines foreground masking.
+    return worldDepth(o)>ownerDepth+1e-4;
+  });
+}
 function drawTowerDoorSpec(tower,spec){
   if(!towerDoorVisible(tower,spec))return;
 
@@ -2396,12 +2408,10 @@ function drawTowerDoorSpec(tower,spec){
     ctx.restore();
   };
 
-  // Do not let unrelated taller castle volumes paint through the door. The
-  // linked wall itself is excluded because this doorway intentionally opens
-  // onto that wall-walk.
-  const occluders=structureDetailOccluders(tower,spec.apexZ).filter(o=>
-    o.id!==spec.wallId && !(spec.kind==='front'&&tower.parentTowerId&&o.id===tower.parentTowerId)
-  );
+  // Door hierarchy is lower than every other castle element. In particular,
+  // the linked wall is an occluder too: its silhouette hides the lower part
+  // of a wall-walk doorway instead of letting the door paint over masonry.
+  const occluders=towerDoorOccluders(tower,spec,apexZ);
   if(!occluders.length){drawDoor();return}
 
   const rr=wrap.getBoundingClientRect();
@@ -2701,10 +2711,13 @@ function draw(){
   if(!unionOk){
     const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of fallback)drawStructure(s);
+    drawTowerDoors();
   }else{
+    // Door openings belong to the masonry facade itself, so they are painted
+    // before every architectural/detail layer that may legitimately cover them.
+    drawTowerDoors();
     drawCastleUnionDetails();
   }
-  drawTowerDoors();
   drawTowerRoofs();
   drawGateRoofs();
   drawCastleSelection();
