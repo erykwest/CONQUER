@@ -2544,7 +2544,7 @@ function drawChimney(spec){
   extrudePolygonAt(pts,spec.z0,spec.z1,{top:'#3b302c',sideA:'#332824',sideB:'#493732',stroke:'#6a5148'});
 }
 function drawSmoke(spec,id,now){
-  if(!worldPointVisible(spec.p,spec.z||0,80))return;
+  if(!worldPointVisible(spec.center,spec.z1||0,80))return;
   const p=w2s(spec.center,spec.z1),seed=(biomeHash(String(id||''))%997)/997;
   const scale=Math.max(.55,State.view.scale);
   ctx.save();
@@ -3452,6 +3452,7 @@ function drawVillagerFigure(dot){
   drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex);
 }
 function worldPointVisible(p,z=0,pad=48){
+  if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))return false;
   const s=w2s(p,z),r=wrap.getBoundingClientRect();
   return s.x>=-pad&&s.y>=-pad&&s.x<=r.width+pad&&s.y<=r.height+pad;
 }
