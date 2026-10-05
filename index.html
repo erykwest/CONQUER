@@ -181,7 +181,6 @@ const CHIMNEY_SPACING=1.5;
 const LINEAR_POINT_MAGNET=.90;
 const TOWER_WALL_MAGNET=.78;
 const SUBTOWER_MAGNET=1.0;
-const SUBTOWER_OVERLAP=.12;
 const WALL_BREAK_MIN=.10;
 
 // Builder Geometry V2 — visual variants are data, not separate structure types.
@@ -1000,19 +999,13 @@ function towerToolPrototype(angle=0){
 function subtowerChildren(parentId){
   return State.structures.filter(s=>s.type==='tower'&&s.parentTowerId===parentId);
 }
-function subtowerSupportRadius(child,ux,uy,angle=child.angle||0){
-  if(child.shape==='round')return Number(child.r)||.5;
-  const d=rectDims(child),local=rotateVec(ux,uy,-angle);
-  return Math.abs(local.x)*d.w/2+Math.abs(local.y)*d.h/2;
-}
 function squareParentSubtowerAttachment(parent,child,cornerIndex){
   const fp=footprintPoints(parent);if(fp.length<4)return null;
   const i=((Number(cornerIndex)||0)%4+4)%4,corner=fp[i];
-  let ux=corner.x-parent.x,uy=corner.y-parent.y,L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
   const angle=child.shape==='square'?(parent.angle||0):0;
-  const support=subtowerSupportRadius(child,ux,uy,angle);
   return{
-    point:{x:corner.x+ux*Math.max(.02,support-SUBTOWER_OVERLAP),y:corner.y+uy*Math.max(.02,support-SUBTOWER_OVERLAP)},
+    // The node represents the CHILD CENTER, regardless of child shape/size.
+    point:{x:corner.x,y:corner.y},
     angle,
     subtowerSocket:'corner:'+i,
     subtowerAngle:null
@@ -1021,24 +1014,40 @@ function squareParentSubtowerAttachment(parent,child,cornerIndex){
 function roundParentSubtowerAttachment(parent,child,radialAngle){
   const a=Number.isFinite(radialAngle)?radialAngle:0,ux=Math.cos(a),uy=Math.sin(a);
   const angle=child.shape==='square'?a-Math.PI/2:0;
-  const support=subtowerSupportRadius(child,ux,uy,angle);
-  const d=(Number(parent.r)||.5)+Math.max(.02,support-SUBTOWER_OVERLAP);
+  const d=Number(parent.r)||.5;
   return{
+    // Radial socket is on the parent perimeter and is the CHILD CENTER.
     point:{x:parent.x+ux*d,y:parent.y+uy*d},
     angle,
     subtowerSocket:'radial',
     subtowerAngle:a
   };
 }
+function gateSubtowerAttachment(parent,child,frontIndex){
+  const fp=footprintPoints(parent);if(fp.length<4)return null;
+  // Gate "front" is facade fp[1] -> fp[2], therefore it has exactly two sockets.
+  const i=Number(frontIndex)===2?2:1,corner=fp[i];
+  const angle=child.shape==='square'?(parent.angle||0):0;
+  return{
+    point:{x:corner.x,y:corner.y},
+    angle,
+    subtowerSocket:'gate-front:'+i,
+    subtowerAngle:null
+  };
+}
 function subtowerAttachmentAtSocket(parent,child,socket,radialAngle){
-  if(!parent||parent.type!=='tower'||!child||child.type!=='tower')return null;
+  if(!parent||!['tower','gate'].includes(parent.type)||!child||child.type!=='tower')return null;
+  if(parent.type==='gate'){
+    const m=String(socket||'').match(/^gate-front:(1|2)$/);
+    return gateSubtowerAttachment(parent,child,m?Number(m[1]):1);
+  }
   if(parent.shape==='round')return roundParentSubtowerAttachment(parent,child,radialAngle);
   const m=String(socket||'').match(/^corner:(\d)$/);
   return squareParentSubtowerAttachment(parent,child,m?Number(m[1]):0);
 }
 function subtowerAttachmentAvailable(parent,child,attachment){
   const children=subtowerChildren(parent.id);
-  if(parent.shape!=='round'){
+  if(parent.type==='gate'||parent.shape!=='round'){
     return !children.some(s=>s.id!==child.id&&s.subtowerSocket===attachment.subtowerSocket);
   }
   const own=Math.max(.2,child.shape==='round'?Number(child.r)||.5:(Number(child.size)||1)/2);
@@ -1055,15 +1064,30 @@ function nearestSubtowerPlacementSnap(p){
   let best=null,bestScore=Infinity;
 
   for(const parent of State.structures){
-    if(parent.auto||parent.type!=='tower'||underConstruction(parent))continue;
-    if(towerTier(parent)<=childTier)continue;
+    if(parent.auto||!['tower','gate'].includes(parent.type)||underConstruction(parent))continue;
+
+    // Tower parent: classic hierarchy, child must be strictly smaller.
+    if(parent.type==='tower'&&towerTier(parent)<=childTier)continue;
+
+    // Gate parent: exactly two front-corner nodes; child size is unrestricted.
+    if(parent.type==='gate'){
+      for(const i of [1,2]){
+        const attachment=gateSubtowerAttachment(parent,child,i);if(!attachment)continue;
+        const score=dist(p,attachment.point);
+        if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
+          best={...attachment,parentTowerId:parent.id,parentType:'gate',distance:score,wallId:null};
+          bestScore=score;
+        }
+      }
+      continue;
+    }
 
     if(parent.shape==='round'){
       const a=Math.atan2(p.y-parent.y,p.x-parent.x);
       const attachment=roundParentSubtowerAttachment(parent,child,a);
       const score=dist(p,attachment.point);
       if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
-        best={...attachment,parentTowerId:parent.id,distance:score,wallId:null};
+        best={...attachment,parentTowerId:parent.id,parentType:'tower',distance:score,wallId:null};
         bestScore=score;
       }
       continue;
@@ -1073,7 +1097,7 @@ function nearestSubtowerPlacementSnap(p){
       const attachment=squareParentSubtowerAttachment(parent,child,i);if(!attachment)continue;
       const score=dist(p,attachment.point);
       if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
-        best={...attachment,parentTowerId:parent.id,distance:score,wallId:null};
+        best={...attachment,parentTowerId:parent.id,parentType:'tower',distance:score,wallId:null};
         bestScore=score;
       }
     }
@@ -1082,9 +1106,9 @@ function nearestSubtowerPlacementSnap(p){
 }
 function repositionSubtower(child){
   if(!child?.parentTowerId)return false;
-  const parent=State.structures.find(s=>s.id===child.parentTowerId&&s.type==='tower');
-  if(!parent||towerTier(child)>=towerTier(parent)){
-    delete child.parentTowerId;delete child.subtowerSocket;delete child.subtowerAngle;
+  const parent=State.structures.find(s=>s.id===child.parentTowerId&&['tower','gate'].includes(s.type));
+  if(!parent||(parent.type==='tower'&&towerTier(child)>=towerTier(parent))){
+    delete child.parentTowerId;delete child.subtowerSocket;delete child.subtowerAngle;delete child.parentType;
     return false;
   }
   const attachment=subtowerAttachmentAtSocket(parent,child,child.subtowerSocket,child.subtowerAngle);
@@ -1106,7 +1130,7 @@ function syncSubtowerTree(parentId,seen=new Set()){
 }
 function detachSubtowerChildren(parentId){
   for(const child of subtowerChildren(parentId)){
-    delete child.parentTowerId;delete child.subtowerSocket;delete child.subtowerAngle;
+    delete child.parentTowerId;delete child.subtowerSocket;delete child.subtowerAngle;delete child.parentType;
   }
 }
 function nearestWallPlacementSnap(p){
@@ -1184,9 +1208,11 @@ function breakWallForTower(wallId,tower){
 }
 function addTowerWithPlacement(tower,snap={}){
   if(snap.parentTowerId){
-    const parent=State.structures.find(s=>s.id===snap.parentTowerId&&s.type==='tower');
-    if(!parent||towerTier(tower)>=towerTier(parent)){status('Subtower must be smaller than its parent tower');return false}
+    const parent=State.structures.find(s=>s.id===snap.parentTowerId&&['tower','gate'].includes(s.type));
+    if(!parent){status('Subtower parent is no longer available');return false}
+    if(parent.type==='tower'&&towerTier(tower)>=towerTier(parent)){status('Subtower must be smaller than its parent tower');return false}
     tower.parentTowerId=parent.id;
+    tower.parentType=parent.type;
     tower.subtowerSocket=snap.subtowerSocket||null;
     tower.subtowerAngle=Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null;
   }
@@ -1195,7 +1221,8 @@ function addTowerWithPlacement(tower,snap={}){
   if(!ok)return false;
 
   if(snap.parentTowerId){
-    status('Subtower attached to '+(State.structures.find(s=>s.id===snap.parentTowerId)?.shape==='round'?'tower perimeter':'tower corner'));
+    const parent=State.structures.find(s=>s.id===snap.parentTowerId);
+    status(parent?.type==='gate'?'Subtower attached to gate front corner':'Subtower attached to '+(parent?.shape==='round'?'tower perimeter':'tower corner'));
     return true;
   }
 
@@ -2400,7 +2427,7 @@ function addStructure(s){
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
-  if(target.type==='tower')detachSubtowerChildren(target.id);
+  if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
@@ -2427,7 +2454,7 @@ function renderFunctionPanel(){
     const roof=towerRoofStyle(s);
     if(s.parentTowerId){
       const parent=State.structures.find(x=>x.id===s.parentTowerId);
-      html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent tower'}.</div></div>`;
+      html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent structure'}.</div></div>`;
     }
     html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
   }
@@ -2646,9 +2673,11 @@ function migrateStructures(list){
   for(const s of migrated){
     if(s.type!=='tower'||!s.parentTowerId)continue;
     const parent=byId.get(s.parentTowerId);
-    if(!parent||parent.type!=='tower'||towerTier(s)>=towerTier(parent)){
-      delete s.parentTowerId;delete s.subtowerSocket;delete s.subtowerAngle;
+    if(!parent||!['tower','gate'].includes(parent.type)||(parent.type==='tower'&&towerTier(s)>=towerTier(parent))){
+      delete s.parentTowerId;delete s.subtowerSocket;delete s.subtowerAngle;delete s.parentType;
+      continue;
     }
+    s.parentType=parent.type;
   }
   return migrated;
 }
