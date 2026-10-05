@@ -236,7 +236,7 @@ function houseFootprintParts(s){
       parts.push({cx:0,cy:h*.92,w:w*.46,h:h*.34});
     }
   }
-  return parts.map(p=>({...p,points:rectWorldPoints(...Object.values(houseLocalToWorld(s,p.cx,p.cy)),p.w,p.h,s.angle||0)}));
+  return parts.map(p=>{const q=houseLocalToWorld(s,p.cx,p.cy);return{...p,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)}});
 }
 function houseBodyHeight(s){return houseLevel(s)===1?.95:1.72}
 function houseRidgeHeight(s){return houseLevel(s)===1?1.45:2.26}
@@ -1246,14 +1246,14 @@ function chimneySpecs(s){
   const specs=[];
 
   if(s.type==='house'){
-    const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+    const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),ridgeH=houseRidgeHeight(s);
     const ridgeLength=Math.max(.5,Number(s.w)||1.5);
     const count=Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
     for(let i=0;i<count;i++){
       const t=(i+1)/(count+1),along=(t-.5)*ridgeLength*.86;
       specs.push({
         center:{x:s.x+ca*along,y:s.y+sa*along},
-        angle:s.angle||0,z0:1.40,z1:1.88,index:i
+        angle:s.angle||0,z0:ridgeH-.05,z1:ridgeH+.43,index:i
       });
     }
     return specs;
@@ -1710,14 +1710,17 @@ function drawPeasants(){
   ctx.restore();
 }
 function visibleFacadeEdges(s){
-  const fp=footprintPoints(s);if(fp.length<4)return[];
+  const rings=s.type==='house'?houseFootprintParts(s).map(p=>p.points):[footprintPoints(s)];
   const edges=[];
-  for(let i=0;i<fp.length;i++){
-    const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);
-    edges.push({a:fp[i],b:fp[j],depth:(a.y+b.y)/2});
+  for(const fp of rings){
+    if(fp.length<4)continue;
+    for(let i=0;i<fp.length;i++){
+      const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);
+      edges.push({a:fp[i],b:fp[j],depth:(a.y+b.y)/2});
+    }
   }
   edges.sort((a,b)=>b.depth-a.depth);
-  return edges.slice(0,2);
+  return edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
 }
 function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
   const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;
