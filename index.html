@@ -180,6 +180,8 @@ const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
 const LINEAR_POINT_MAGNET=.90;
 const TOWER_WALL_MAGNET=.78;
+const SUBTOWER_MAGNET=1.0;
+const SUBTOWER_OVERLAP=.12;
 const WALL_BREAK_MIN=.10;
 
 // Builder Geometry V2 — visual variants are data, not separate structure types.
@@ -950,12 +952,17 @@ function makePlacementPreview(q,angle=0){
 }
 function commitOrientedPlacement(center,angle){
   const spec=orientedToolSpec();if(!spec)return false;
-  const wallId=spec.type==='tower'?State.draft?.wallSnapId:null;
+  const snap=spec.type==='tower'?{
+    wallId:State.draft?.wallSnapId||null,
+    parentTowerId:State.draft?.parentTowerId||null,
+    subtowerSocket:State.draft?.subtowerSocket||null,
+    subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
+  }:{};
   const finalAngle=Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle;
   const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
   State.draft=null;
-  const ok=s.type==='tower'?addTowerWithWallBreak(s,wallId):addStructure(s);
-  if(ok&&!wallId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
+  const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
+  if(ok&&!snap.wallId&&!snap.parentTowerId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
   return ok;
 }
 function boundaryPoint(s,target){
@@ -980,6 +987,128 @@ function snapAnchor(p){
     ?{point:bestPoint,structureId:best.id,magnet:true}
     :{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null,magnet:false};
 }
+function towerToolPrototype(angle=0){
+  if(State.tool.kind!=='tower')return null;
+  return{
+    type:'tower',
+    shape:State.tool.shape,
+    level:State.tool.level||State.buildLevels.tower,
+    angle,
+    ...(State.tool.shape==='round'?{r:Number(State.tool.size)}:{size:Number(State.tool.size)})
+  };
+}
+function subtowerChildren(parentId){
+  return State.structures.filter(s=>s.type==='tower'&&s.parentTowerId===parentId);
+}
+function subtowerSupportRadius(child,ux,uy,angle=child.angle||0){
+  if(child.shape==='round')return Number(child.r)||.5;
+  const d=rectDims(child),local=rotateVec(ux,uy,-angle);
+  return Math.abs(local.x)*d.w/2+Math.abs(local.y)*d.h/2;
+}
+function squareParentSubtowerAttachment(parent,child,cornerIndex){
+  const fp=footprintPoints(parent);if(fp.length<4)return null;
+  const i=((Number(cornerIndex)||0)%4+4)%4,corner=fp[i];
+  let ux=corner.x-parent.x,uy=corner.y-parent.y,L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
+  const angle=child.shape==='square'?(parent.angle||0):0;
+  const support=subtowerSupportRadius(child,ux,uy,angle);
+  return{
+    point:{x:corner.x+ux*Math.max(.02,support-SUBTOWER_OVERLAP),y:corner.y+uy*Math.max(.02,support-SUBTOWER_OVERLAP)},
+    angle,
+    subtowerSocket:'corner:'+i,
+    subtowerAngle:null
+  };
+}
+function roundParentSubtowerAttachment(parent,child,radialAngle){
+  const a=Number.isFinite(radialAngle)?radialAngle:0,ux=Math.cos(a),uy=Math.sin(a);
+  const angle=child.shape==='square'?a-Math.PI/2:0;
+  const support=subtowerSupportRadius(child,ux,uy,angle);
+  const d=(Number(parent.r)||.5)+Math.max(.02,support-SUBTOWER_OVERLAP);
+  return{
+    point:{x:parent.x+ux*d,y:parent.y+uy*d},
+    angle,
+    subtowerSocket:'radial',
+    subtowerAngle:a
+  };
+}
+function subtowerAttachmentAtSocket(parent,child,socket,radialAngle){
+  if(!parent||parent.type!=='tower'||!child||child.type!=='tower')return null;
+  if(parent.shape==='round')return roundParentSubtowerAttachment(parent,child,radialAngle);
+  const m=String(socket||'').match(/^corner:(\d)$/);
+  return squareParentSubtowerAttachment(parent,child,m?Number(m[1]):0);
+}
+function subtowerAttachmentAvailable(parent,child,attachment){
+  const children=subtowerChildren(parent.id);
+  if(parent.shape!=='round'){
+    return !children.some(s=>s.id!==child.id&&s.subtowerSocket===attachment.subtowerSocket);
+  }
+  const own=Math.max(.2,child.shape==='round'?Number(child.r)||.5:(Number(child.size)||1)/2);
+  for(const other of children){
+    if(other.id===child.id)continue;
+    const otherR=Math.max(.2,other.shape==='round'?Number(other.r)||.5:(Number(other.size)||1)/2);
+    if(dist(attachment.point,other)<(own+otherR)*.88)return false;
+  }
+  return true;
+}
+function nearestSubtowerPlacementSnap(p){
+  const child=towerToolPrototype();if(!child)return null;
+  const childTier=towerTier(child);
+  let best=null,bestScore=Infinity;
+
+  for(const parent of State.structures){
+    if(parent.auto||parent.type!=='tower'||underConstruction(parent))continue;
+    if(towerTier(parent)<=childTier)continue;
+
+    if(parent.shape==='round'){
+      const a=Math.atan2(p.y-parent.y,p.x-parent.x);
+      const attachment=roundParentSubtowerAttachment(parent,child,a);
+      const score=dist(p,attachment.point);
+      if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
+        best={...attachment,parentTowerId:parent.id,distance:score,wallId:null};
+        bestScore=score;
+      }
+      continue;
+    }
+
+    for(let i=0;i<4;i++){
+      const attachment=squareParentSubtowerAttachment(parent,child,i);if(!attachment)continue;
+      const score=dist(p,attachment.point);
+      if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
+        best={...attachment,parentTowerId:parent.id,distance:score,wallId:null};
+        bestScore=score;
+      }
+    }
+  }
+  return best;
+}
+function repositionSubtower(child){
+  if(!child?.parentTowerId)return false;
+  const parent=State.structures.find(s=>s.id===child.parentTowerId&&s.type==='tower');
+  if(!parent||towerTier(child)>=towerTier(parent)){
+    delete child.parentTowerId;delete child.subtowerSocket;delete child.subtowerAngle;
+    return false;
+  }
+  const attachment=subtowerAttachmentAtSocket(parent,child,child.subtowerSocket,child.subtowerAngle);
+  if(!attachment)return false;
+  child.x=attachment.point.x;child.y=attachment.point.y;
+  if(child.shape==='square')child.angle=attachment.angle;
+  child.subtowerSocket=attachment.subtowerSocket;
+  child.subtowerAngle=attachment.subtowerAngle;
+  return true;
+}
+function syncSubtowerTree(parentId,seen=new Set()){
+  if(!parentId||seen.has(parentId))return;
+  seen.add(parentId);
+  for(const child of subtowerChildren(parentId)){
+    repositionSubtower(child);
+    syncSubtowerTree(child.id,seen);
+  }
+  castleUnionCache.key=null;
+}
+function detachSubtowerChildren(parentId){
+  for(const child of subtowerChildren(parentId)){
+    delete child.parentTowerId;delete child.subtowerSocket;delete child.subtowerAngle;
+  }
+}
 function nearestWallPlacementSnap(p){
   let best=null,bestPoint=null,bestD=Infinity;
   for(const s of State.structures){
@@ -997,9 +1126,11 @@ function nearestWallPlacementSnap(p){
   };
 }
 function towerPlacementSnap(p){
-  if(State.tool.kind!=='tower')return{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,angle:0};
+  if(State.tool.kind!=='tower')return{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
+  const subtower=nearestSubtowerPlacementSnap(p);
+  if(subtower)return subtower;
   const wall=nearestWallPlacementSnap(p);
-  return wall||{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,angle:0};
+  return wall||{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
 }
 function towerHalfSpanAlongWall(tower,wall){
   if(tower.shape==='round')return Number(tower.r)||.5;
@@ -1051,10 +1182,24 @@ function breakWallForTower(wallId,tower){
   castleUnionCache.key=null;
   return true;
 }
-function addTowerWithWallBreak(tower,wallId){
+function addTowerWithPlacement(tower,snap={}){
+  if(snap.parentTowerId){
+    const parent=State.structures.find(s=>s.id===snap.parentTowerId&&s.type==='tower');
+    if(!parent||towerTier(tower)>=towerTier(parent)){status('Subtower must be smaller than its parent tower');return false}
+    tower.parentTowerId=parent.id;
+    tower.subtowerSocket=snap.subtowerSocket||null;
+    tower.subtowerAngle=Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null;
+  }
+
   const ok=addStructure(tower);
   if(!ok)return false;
-  if(wallId&&breakWallForTower(wallId,tower)){
+
+  if(snap.parentTowerId){
+    status('Subtower attached to '+(State.structures.find(s=>s.id===snap.parentTowerId)?.shape==='round'?'tower perimeter':'tower corner'));
+    return true;
+  }
+
+  if(snap.wallId&&breakWallForTower(snap.wallId,tower)){
     markDirty();draw();
     status('Tower snapped to wall — wall split automatically');
   }
@@ -1088,7 +1233,7 @@ function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -2255,6 +2400,7 @@ function addStructure(s){
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(target.type==='tower')detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
@@ -2279,6 +2425,10 @@ function renderFunctionPanel(){
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
   if(s.type==='tower'){
     const roof=towerRoofStyle(s);
+    if(s.parentTowerId){
+      const parent=State.structures.find(x=>x.id===s.parentTowerId);
+      html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent tower'}.</div></div>`;
+    }
     html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
   }
   if(s.type==='gate'){
@@ -2296,9 +2446,28 @@ function renderFunctionPanel(){
   slots.innerHTML=html;
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(!target)return;
-    applyStructureTier(target,Number(btn.dataset.structureTier));
+    const requested=Number(btn.dataset.structureTier);
+
+    if(target.type==='tower'){
+      const parent=target.parentTowerId&&State.structures.find(s=>s.id===target.parentTowerId&&s.type==='tower');
+      if(parent&&requested>=towerTier(parent)){
+        status('Subtower must remain smaller than its parent tower');return;
+      }
+      const children=subtowerChildren(target.id);
+      if(children.some(child=>towerTier(child)>=requested)){
+        status('Parent tower must remain larger than all attached subtorri');return;
+      }
+    }
+
+    applyStructureTier(target,requested);
     target.tier=target.type==='wall'?wallTier(target):towerTier(target);
     target.buildCost=constructionCost(target);
+
+    if(target.type==='tower'){
+      repositionSubtower(target);
+      syncSubtowerTree(target.id);
+    }
+
     markDirty();renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
@@ -2326,13 +2495,23 @@ canvas.addEventListener('pointerdown',e=>{
     const snap=towerPlacementSnap(p),q=snap.point;
     if(State.tool.shape==='round'){
       State.draft=null;
-      addTowerWithWallBreak({id:uid(),type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]},snap.wallId);
+      addTowerWithPlacement(
+        {id:uid(),type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]},
+        snap
+      );
       return
     }
-    const lockedAngle=snap.wallId?snap.angle:null;
+    const lockedAngle=(snap.parentTowerId||snap.wallId)?snap.angle:null;
     const angle=Number.isFinite(lockedAngle)?lockedAngle:0;
-    State.draft={mode:'orient',center:q,angle,lockedAngle,wallSnapId:snap.wallId,preview:makePlacementPreview(q,angle)};
-    status(snap.wallId?'Tower magnetized to wall — click to confirm':'Position fixed — move cursor to rotate, click to confirm');
+    State.draft={
+      mode:'orient',center:q,angle,lockedAngle,
+      wallSnapId:snap.wallId||null,
+      parentTowerId:snap.parentTowerId||null,
+      subtowerSocket:snap.subtowerSocket||null,
+      subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
+      preview:makePlacementPreview(q,angle)
+    };
+    status(snap.parentTowerId?'Subtower magnetized — click to confirm':snap.wallId?'Tower magnetized to wall — click to confirm':'Position fixed — move cursor to rotate, click to confirm');
     draw();return
   }
   if(State.tool.kind==='gate'){
@@ -2368,8 +2547,16 @@ canvas.addEventListener('pointermove',e=>{
       draw();return
     }
     if(State.tool.kind==='tower'){
-      const snap=towerPlacementSnap(p),angle=snap.wallId?snap.angle:0;
-      State.draft={mode:'hover',wallSnapId:snap.wallId,preview:makePlacementPreview(snap.point,angle)};
+      const snap=towerPlacementSnap(p),angle=(snap.parentTowerId||snap.wallId)?snap.angle:0;
+      State.draft={
+        mode:'hover',
+        wallSnapId:snap.wallId||null,
+        parentTowerId:snap.parentTowerId||null,
+        subtowerSocket:snap.subtowerSocket||null,
+        subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
+        preview:makePlacementPreview(snap.point,angle)
+      };
+      if(snap.parentTowerId)status('Subtower socket');
     }else{
       const q={x:snapGrid(p.x),y:snapGrid(p.y)};
       State.draft={mode:'hover',preview:makePlacementPreview(q,0)};
@@ -2378,7 +2565,15 @@ canvas.addEventListener('pointermove',e=>{
   }
   if(State.tool.kind==='tower'&&State.tool.shape==='round'){
     const snap=towerPlacementSnap(p);
-    State.draft={mode:'hover',wallSnapId:snap.wallId,preview:makePlacementPreview(snap.point,0)};
+    State.draft={
+      mode:'hover',
+      wallSnapId:snap.wallId||null,
+      parentTowerId:snap.parentTowerId||null,
+      subtowerSocket:snap.subtowerSocket||null,
+      subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
+      preview:makePlacementPreview(snap.point,0)
+    };
+    if(snap.parentTowerId)status('Subtower socket');
     draw();return
   }
 });
@@ -2417,7 +2612,7 @@ document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].re
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
 function migrateStructures(list){
-  return(list||[]).map(s=>{
+  const migrated=(list||[]).map(s=>{
     if(s.type==='built'){
       s.width=1;
       if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);
@@ -2446,6 +2641,16 @@ function migrateStructures(list){
     if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
     return s;
   });
+
+  const byId=new Map(migrated.map(s=>[s.id,s]));
+  for(const s of migrated){
+    if(s.type!=='tower'||!s.parentTowerId)continue;
+    const parent=byId.get(s.parentTowerId);
+    if(!parent||parent.type!=='tower'||towerTier(s)>=towerTier(parent)){
+      delete s.parentTowerId;delete s.subtowerSocket;delete s.subtowerAngle;
+    }
+  }
+  return migrated;
 }
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
 function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
