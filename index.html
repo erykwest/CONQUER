@@ -1050,14 +1050,22 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
   };
 }
 function towerBattlementOccluders(piece){
-  if(piece.ownerType!=='tower'||!piece.ownerId)return[];
+  if(!piece.ownerId||!['tower','wall'].includes(piece.ownerType))return[];
   return State.structures.filter(s=>{
     if(s.id===piece.ownerId||s.type!=='tower'||underConstruction(s))return false;
     const h=structureHeight(s);
-    // Only a genuinely taller tower may hide the battlements of this owner.
-    if(h<=Number(piece.ownerTop||piece.z0)+.04)return false;
-    // Larger worldDepth is nearer to the camera in this isometric projection.
-    return worldDepth(s)>Number(piece.ownerDepth??piece.depth)+1e-4;
+
+    if(piece.ownerType==='tower'){
+      // A tower battlement is hidden only by a genuinely taller tower in front.
+      if(h<=Number(piece.ownerTop||piece.z0)+.04)return false;
+      return worldDepth(s)>Number(piece.ownerDepth??piece.depth)+1e-4;
+    }
+
+    // Wall battlements must always sit visually below towers:
+    // if a tower rises above this merlon and is in front of this local piece,
+    // its screen silhouette masks the merlon.
+    if(h<=Number(piece.z0)+.04)return false;
+    return worldDepth(s)>Number(piece.depth)+1e-4;
   });
 }
 function withTowerBattlementOcclusion(piece,drawFn){
