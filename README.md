@@ -2,7 +2,7 @@
 
 Settlement builder / manager prototype.
 
-## V0.9 scope
+## V0.11 scope
 - 200×200U persistent seeded world buffer
 - 100×100U central buildable area
 - Castle builder: square/round towers, walls, built wall-sections, gates
@@ -110,3 +110,14 @@ Current values are provisional balancing values.
 - Wall upgrades preserve endpoints, length and height level
 - Height remains independent from tier: towers use 1–3 levels, walls/built sections 1–2 levels
 - Function capacity recalculates after tower tier or height changes
+
+
+## Boolean castle renderer
+- Completed castle geometry is no longer drawn as independent overlapping prisms
+- Tower, gate, wall and built-section footprints are unioned with polygon-clipping 0.15.7
+- The castle is rendered in horizontal height bands, so short walls merge into taller towers below wall height while towers continue above
+- Polygon holes are preserved with even-odd top filling, so closed courtyards remain open
+- Wall/built footprints get a tiny union-only overlap at snapped tower endpoints to guarantee a real boolean intersection, including round towers
+- Logical endpoints, construction lengths, costs and persistence remain unchanged
+- Under-construction pieces and placement previews remain individual geometry
+- If polygon union fails or the library is not yet ready, rendering falls back to the individual-prism renderer
