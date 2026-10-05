@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.25</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.26</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -160,7 +160,7 @@ const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 const TYPES={wall:{min:1,max:8},built:{width:1,min:1,max:4}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
 const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
@@ -721,6 +721,76 @@ function nearestRoadProjection(p,excludeAccessFor=null){
   }
   return best;
 }
+function nearestPrimaryRoadProjection(p){
+  let best=null,bestD=Infinity;
+  for(const r of primaryRoadList(true)){
+    const q=closestPointOnSegment(p,r.a,r.b),d=dist(p,q);
+    if(d<bestD){best={road:r,point:q,d};bestD=d}
+  }
+  return best;
+}
+function fieldRoadAccessPoint(field,target){
+  const q=toLocalPoint(field,target),hw=Math.max(.1,(Number(field.w)||2)/2),hh=Math.max(.1,(Number(field.h)||2)/2);
+  let x=clamp(q.x,-hw,hw),y=clamp(q.y,-hh,hh);
+  const nx=Math.abs(q.x)/hw,ny=Math.abs(q.y)/hh;
+  if(nx>=ny)x=(q.x>=0?1:-1)*hw;
+  else y=(q.y>=0?1:-1)*hh;
+  const edge=houseLocalToWorld(field,x,y),center={x:field.x,y:field.y};
+  const dx=edge.x-center.x,dy=edge.y-center.y,L=Math.hypot(dx,dy)||1;
+  return{x:edge.x+dx/L*.28,y:edge.y+dy/L*.28};
+}
+function settlementRoadAccessPoint(s,target){
+  if(s.type==='house')return houseDoorInfo(s).outside;
+  if(s.type==='field')return fieldRoadAccessPoint(s,target);
+  if(s.type==='market')return marketRoadAccessPoint(s,target);
+  if(s.type==='tavern'||s.type==='church')return civicEntranceInfo(s)?.outside||structureCenter(s);
+  return structureCenter(s);
+}
+function settlementAccessTargets(){
+  return State.structures.filter(s=>
+    !underConstruction(s)&&(
+      s.type==='house'||s.type==='field'||isCivic(s)
+    )
+  );
+}
+function clearLegacySecondaryRoads(){
+  if((State.village.accessRoadVersion||0)>=1)return 0;
+  let removed=0;
+  State.structures=State.structures.filter(s=>{
+    if(s.type==='road'&&!s.routeId){removed++;return false}
+    return true;
+  });
+  State.village.accessRoadVersion=1;
+  refreshStaleHouseRoadRefs();
+  return removed;
+}
+function ensureSettlementRoadAccess(s){
+  if(!s||underConstruction(s))return 0;
+  if(State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))return 0;
+  const nearest=nearestPrimaryRoadProjection(structureCenter(s));if(!nearest)return 0;
+  const start=settlementRoadAccessPoint(s,nearest.point),goal=nearest.point;
+  if(!start||dist(start,goal)<.58)return 0;
+  const width=s.type==='market'?.34:s.type==='field'?.26:.30;
+  const ignore=[s.id];
+  let path;
+  if(roadRepairSegmentClear(start,goal,width,ignore))path=[start,goal];
+  else path=findRoadRepairPath(start,goal,width,10,ignore,45000);
+  if(!path||path.length<2)return 0;
+  return addReactiveRoadPolyline(path,{width,parentRoadId:nearest.road.id},{
+    accessFor:s.id,roadClass:'access-primary',ignoreIds:ignore
+  });
+}
+function reconcileSettlementAccessRoads(limit=Infinity){
+  let changed=0,done=0;
+  for(const s of settlementAccessTargets()){
+    if(done>=limit)break;
+    if(State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))continue;
+    const n=ensureSettlementRoadAccess(s);
+    if(n){changed+=n;done++}
+  }
+  if(changed){peasantPathSignature='';peasantPathCache.clear()}
+  return changed;
+}
 function marketRoadAccessPoint(s,target){
   const q=toLocalPoint(s,target),m=Math.max(Math.abs(q.x),Math.abs(q.y),.001),scale=2.04/m;
   return houseLocalToWorld(s,q.x*scale,q.y*scale);
@@ -730,14 +800,7 @@ function civicRoadAccessPoint(s,roadPoint){
   return civicEntranceInfo(s)?.outside||structureCenter(s);
 }
 function ensureCivicRoadAccess(s){
-  if(!isCivic(s)||State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))return 0;
-  const roads=roadList(true);if(!roads.length)return 0;
-  const center=structureCenter(s),nearest=nearestRoadProjection(center,s.id);if(!nearest)return 0;
-  const start=civicRoadAccessPoint(s,nearest.point);
-  if(dist(start,nearest.point)<.70)return 0;
-  const path=findRoadRepairPath(start,nearest.point,.30,10,[]);
-  if(!path)return 0;
-  return addReactiveRoadPolyline(path,{width:.30,parentRoadId:nearest.road.id},{accessFor:s.id,roadClass:'access'});
+  return isCivic(s)?ensureSettlementRoadAccess(s):0;
 }
 function roadEndpointDegree(p){
   let degree=0;
@@ -772,11 +835,9 @@ function repairExistingCivicRoadGap(s){
 }
 function reconcileReactiveRoadNetwork(){
   let changed=0;
+  changed+=clearLegacySecondaryRoads();
   changed+=reconcileArterialRoutes();
-  for(const s of State.structures.filter(isCivic)){
-    changed+=repairExistingCivicRoadGap(s);
-    changed+=ensureCivicRoadAccess(s);
-  }
+  changed+=reconcileSettlementAccessRoads();
   if(changed){peasantPathSignature='';peasantPathCache.clear()}
   return changed;
 }
@@ -880,6 +941,7 @@ function edgeSample(edge,t){
 function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
 function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
 function roadList(completedOnly=false){return State.structures.filter(s=>s.auto&&s.type==='road'&&(!completedOnly||!underConstruction(s)))}
+function primaryRoadList(completedOnly=false){return roadList(completedOnly).filter(r=>!!r.routeId)}
 function autoList(type){return State.structures.filter(s=>s.auto&&(!type||s.type===type))}
 function currentGrowthRadius(){
   const step=State.village.growthStep||0;
@@ -1012,29 +1074,15 @@ function candidateBranchOrigins(rnd){
   return out;
 }
 function spawnLocalRoad(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return false;
-  const rnd=growthRng(step,503),origins=candidateBranchOrigins(rnd);if(!origins.length)return false;
-  for(let attempt=0;attempt<Math.min(8,origins.length);attempt++){
-    const o=origins[Math.floor(rnd()*origins.length)],radial=Math.atan2(o.p.y-well.y,o.p.x-well.x);
-    // Secondary streets still follow the radial field: ±25–55° from outward, never a forced 90° grid branch.
-    const side=rnd()<.5?-1:1,heading=radial+side*(.44+rnd()*.52),len=ROAD_RULES.localSegmentMin+rnd()*(ROAD_RULES.localSegmentMax-ROAD_RULES.localSegmentMin);
-    let b={x:o.p.x+Math.cos(heading)*len,y:o.p.y+Math.sin(heading)*len};
-    const radius=currentGrowthRadius(),d=dist(b,well);
-    if(d>radius){const k=radius/d;b={x:well.x+(b.x-well.x)*k,y:well.y+(b.y-well.y)*k}}
-    if(!inBuild(b)||dist(o.p,b)<1.8)continue;
-    const road=constrainRoadCandidate(beginConstruction({id:uid(),type:'road',auto:true,roadClass:'local',a:{...o.p},b,width:.30,appeal:.8,parentRoadId:o.road.id}));
-    if(road){State.structures.push(road);return true}
-  }
-  return false;
+  return reconcileSettlementAccessRoads(1)>0;
 }
 function spawnRoad(step){
-  const plan=ensureRoadPlan(),incomplete=plan.some(p=>!p.connected),houses=autoList('house').length;
-  // Main border connections get priority, but local streets begin once a small nucleus exists.
-  if(incomplete&&(houses<5||step%3===0))return spawnArterial(step);
-  return spawnLocalRoad(step)||spawnArterial(step);
+  const plan=ensureRoadPlan(),incomplete=plan.some(p=>!p.connected);
+  if(incomplete)return spawnArterial(step);
+  return spawnLocalRoad(step);
 }
 function spawnHouse(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList(true);if(!well||!roads.length)return false;
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);if(!well||!roads.length)return false;
   const rnd=growthRng(step,211),radius=currentGrowthRadius(),manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
   const candidates=[];
   for(let i=0;i<90;i++){
@@ -1050,12 +1098,12 @@ function spawnHouse(step){
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,24)){
     const h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:c.ang,appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
-    if(!autoBlocked(h,placed,manual,.38)){State.structures.push(h);return true}
+    if(!autoBlocked(h,placed,manual,.38)){State.structures.push(h);ensureSettlementRoadAccess(h);return true}
   }
   return false;
 }
 function spawnField(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId),roads=roadList(true);if(!well)return false;
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);if(!well||!roads.length)return false;
   const rnd=growthRng(step,307),radius=currentGrowthRadius()+4,manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
   const houses=autoList('house');if(houses.length<5)return false;
   const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(22,radius+4),candidates=[];
@@ -1068,7 +1116,7 @@ function spawnField(step){
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,28)){
     const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
-    if(!autoBlocked(f,placed,manual,.65)){State.structures.push(f);return true}
+    if(!autoBlocked(f,placed,manual,.65)){State.structures.push(f);ensureSettlementRoadAccess(f);return true}
   }
   return false;
 }
@@ -1076,6 +1124,7 @@ function processVillageGrowth(){
   if(!State.village.founded)return;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return;
   ensureRoadPlan();
+  reconcileSettlementAccessRoads(2);
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
   let guard=0;
   while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
@@ -1100,7 +1149,7 @@ function processVillageGrowth(){
 function resetLegacyVillageGrowth(){
   if(!State.village.founded||State.village.growthVersion===3)return;
   State.structures=State.structures.filter(s=>!s.auto);
-  State.village.growthVersion=3;State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.baseRoadAngle=null;
+  State.village.growthVersion=3;State.village.accessRoadVersion=0;State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.baseRoadAngle=null;
 }
 function openVillageModal(well){
   State.pendingWellId=well.id;const modal=document.getElementById('foundVillageModal'),input=document.getElementById('villageNameInput');
@@ -3632,7 +3681,7 @@ function addStructure(s){
   let reactive=0;
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
-    if(isCivic(s))reactive+=ensureCivicRoadAccess(s);
+    if(isCivic(s))reactive+=ensureSettlementRoadAccess(s);
     if(displaced.removed||reactive){
       const bits=[];
       if(displaced.removed)bits.push(`${displaced.removed} auto element${displaced.removed===1?'':'s'} cleared`);
@@ -3649,7 +3698,7 @@ function deleteStructure(id){
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
-    State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};
+    State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};
   }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id);
   if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
 }
