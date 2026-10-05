@@ -177,6 +177,30 @@ const NIGHT_OVERLAY_MAX=.48;
 const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
+
+// Builder Geometry V2 — visual variants are data, not separate structure types.
+// Geometry/cost/functions stay on the structure; appearance is selected here.
+const STRUCTURE_VARIANT_VERSION=1;
+const STRUCTURE_VARIANTS=Object.freeze({
+  tower:Object.freeze({
+    roofStyle:Object.freeze(['battlement','pitched'])
+  }),
+  gate:Object.freeze({
+    roofStyle:Object.freeze(['battlement','pitched'])
+  }),
+  wall:Object.freeze({
+    skin:Object.freeze(['standard','hoarding'])
+  }),
+  built:Object.freeze({
+    skin:Object.freeze(['standard','arcade'])
+  })
+});
+const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
+  tower:Object.freeze({roofStyle:'battlement'}),
+  gate:Object.freeze({roofStyle:'battlement'}),
+  wall:Object.freeze({skin:'standard'}),
+  built:Object.freeze({skin:'standard'})
+});
 const PEASANT_PALETTE=Object.freeze([
   '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
   '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
@@ -205,6 +229,34 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
 const RES_ORDER=['gold','stone','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
+function variantSchema(s){return s&&STRUCTURE_VARIANTS[s.type]||null}
+function variantDefaults(s){return s&&STRUCTURE_VARIANT_DEFAULTS[s.type]||null}
+function structureVariant(s,key){
+  const schema=variantSchema(s),defs=variantDefaults(s);
+  if(!schema||!schema[key])return undefined;
+  return schema[key].includes(s?.[key])?s[key]:defs[key];
+}
+function normalizeStructureVariants(s){
+  const schema=variantSchema(s),defs=variantDefaults(s);
+  if(!schema||!defs)return s;
+  for(const [key,allowed] of Object.entries(schema)){
+    if(!allowed.includes(s[key]))s[key]=defs[key];
+  }
+  s.variantVersion=STRUCTURE_VARIANT_VERSION;
+  return s;
+}
+function setStructureVariant(s,key,value){
+  const schema=variantSchema(s);
+  if(!schema||!schema[key]||!schema[key].includes(value))return false;
+  s[key]=value;
+  s.variantVersion=STRUCTURE_VARIANT_VERSION;
+  return true;
+}
+function towerRoofStyle(s){return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined}
+function gateRoofStyle(s){return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined}
+function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
+function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
+
 function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
 function wallTier(s){const w=Number(s?.width)||.5;return w>=.75?3:w>=.35?2:1}
 function wallWidthForTier(t){return WALL_TIERS[clamp(Math.round(Number(t)||2),1,3)]}
@@ -930,6 +982,11 @@ function functionCapacity(s){
   return 0;
 }
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
+// Variant contract:
+ // tower/gate -> roofStyle
+ // wall/built -> skin
+ // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
+ // than creating duplicate structure types.
 function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
@@ -1861,6 +1918,7 @@ function markDirty(){State.dirty=true;document.getElementById('saveState').textC
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;renderFunctionPanel();draw()}
 function addStructure(s){
+  normalizeStructureVariants(s);
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
   if(!s.auto){
     const cost=constructionCost(s);
@@ -1992,7 +2050,34 @@ document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;ren
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
-function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='wall'){s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;s.tier=wallTier(s);s.width=wallWidthForTier(s.tier);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='tower'){s.level=clamp(Math.round(Number(s.level)||1),1,3);s.tier=towerTier(s);applyStructureTier(s,s.tier)}if(s.type==='well')delete s.construction;if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
+function migrateStructures(list){
+  return(list||[]).map(s=>{
+    if(s.type==='built'){
+      s.width=1;
+      if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);
+      s.level=clamp(Math.round(Number(s.level)||1),1,2);
+    }
+    if(s.type==='wall'){
+      s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;
+      s.tier=wallTier(s);
+      s.width=wallWidthForTier(s.tier);
+      s.level=clamp(Math.round(Number(s.level)||1),1,2);
+    }
+    if(s.type==='tower'){
+      s.level=clamp(Math.round(Number(s.level)||1),1,3);
+      s.tier=towerTier(s);
+      applyStructureTier(s,s.tier);
+    }
+    if(s.type==='well')delete s.construction;
+    if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;
+
+    // V1 visual-variant migration. Legacy structures keep today's appearance.
+    normalizeStructureVariants(s);
+
+    if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
+    return s;
+  });
+}
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
 function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
