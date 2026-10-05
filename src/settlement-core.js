@@ -4,9 +4,9 @@ const canvas=document.getElementById('c'),wrap=document.getElementById('wrap');
 let ctx=canvas.getContext('2d');
 const screenCtx=ctx;
 const sceneCache={
-  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true},
-  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true},
-  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true}
+  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
+  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
+  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null}
 };
 for(const layer of Object.values(sceneCache))layer.ctx=layer.canvas.getContext('2d');
 function invalidateSceneCache(layer='all'){
@@ -25,11 +25,33 @@ function prepareSceneCache(layer){
   }
   entry.ctx.setTransform(d,0,0,d,0,0);
   entry.ctx.clearRect(0,0,r.width,r.height);
+  // Snapshot the exact camera used to rasterize this screen-space layer.
+  entry.view={
+    x:State.view.x,y:State.view.y,scale:State.view.scale,
+    rotation:State.view.rotation||0,width:r.width,height:r.height,dpr:d
+  };
   return entry;
+}
+function sceneCacheProjectionCompatible(entry){
+  const v=entry?.view,r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;
+  return !!v
+    &&Math.abs(v.scale-State.view.scale)<1e-9
+    &&v.rotation===(State.view.rotation||0)
+    &&Math.abs(v.width-r.width)<.5
+    &&Math.abs(v.height-r.height)<.5
+    &&Math.abs(v.dpr-d)<1e-9;
 }
 function blitSceneCache(layer){
   const r=wrap.getBoundingClientRect(),entry=sceneCache[layer];
-  screenCtx.drawImage(entry.canvas,0,0,entry.canvas.width,entry.canvas.height,0,0,r.width,r.height);
+  if(!entry.view)return;
+  // Pure pan does not require rerasterizing static geometry. All projected
+  // points shift by exactly the camera delta, so translate the cached bitmap.
+  const dx=State.view.x-entry.view.x,dy=State.view.y-entry.view.y;
+  screenCtx.drawImage(
+    entry.canvas,
+    0,0,entry.canvas.width,entry.canvas.height,
+    dx,dy,r.width,r.height
+  );
 }
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
