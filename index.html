@@ -946,51 +946,69 @@ function drawBuiltDetails(s,preview=false){
   pathPolygon(roofA,preview?'rgba(58,61,66,.62)':'#34363a','#5d6066',1);
   pathPolygon(roofB,preview?'rgba(70,73,78,.62)':'#42454a','#5d6066',1);
 }
-function merlonBlock(center,angle,z,w=.28,d=.24,h=.24){
-  const pts=rectWorldPoints(center.x,center.y,w,d,angle);
-  extrudePolygonAt(pts,z,z+h,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+function battlementPiece(center,angle,z,w=.28,d=.24,h=.24){
+  const pts=rectWorldPoints(center.x,center.y,w,d,angle),rp=rotateViewPoint(center);
+  return{pts,z0:z,z1:z+h,depth:rp.x+rp.y};
 }
-function drawWallBattlements(s){
-  if(s.type!=='wall'||underConstruction(s))return;
+function drawBattlementPiece(piece){
+  extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+}
+function renderBattlementPieces(pieces){
+  pieces.sort((a,b)=>a.depth-b.depth);
+  for(const piece of pieces)drawBattlementPiece(piece);
+}
+function wallExteriorSide(s){return s?.flip?-1:1}
+function wallBattlementPieces(s){
+  if(s.type!=='wall'||underConstruction(s))return[];
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
-  const angle=Math.atan2(dy,dx),z=structureHeight(s),spacing=.66;
-  const count=Math.max(2,Math.min(36,Math.floor(L/spacing)+1));
+  const angle=Math.atan2(dy,dx),z=structureHeight(s);
   const depth=Math.min(.28,Math.max(.18,(Number(s.width)||.5)*.46));
   const edgeOffset=Math.max(0,(Number(s.width)||.5)/2-depth*.44);
-  for(const side of [-1,1]){
-    for(let i=0;i<count;i++){
-      const t=count===1?.5:i/(count-1);
-      const c={x:s.a.x+dx*t+nx*edgeOffset*side,y:s.a.y+dy*t+ny*edgeOffset*side};
-      merlonBlock(c,angle,z,.28,depth,.24);
-    }
+  const side=wallExteriorSide(s);
+  const endPad=Math.min(.42,L*.16),t0=endPad/L,t1=1-endPad/L,usable=Math.max(.2,L-endPad*2);
+  const count=Math.max(2,Math.min(28,Math.floor(usable/.68)+1)),pieces=[];
+  for(let i=0;i<count;i++){
+    const tt=count===1?.5:i/(count-1),t=t0+(t1-t0)*tt;
+    const center={x:s.a.x+dx*t+nx*edgeOffset*side,y:s.a.y+dy*t+ny*edgeOffset*side};
+    pieces.push(battlementPiece(center,angle,z,.28,depth,.24));
   }
+  return pieces;
 }
-function drawSquareTowerBattlements(s){
-  const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return;
+function squareTowerBattlementPieces(s){
+  const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
+  const pieces=[];
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
-    const angle=Math.atan2(dy,dx),count=Math.max(2,Math.min(8,Math.floor(L/.48)+1));
+    const angle=Math.atan2(dy,dx),cornerPad=Math.min(.18,L*.18),t0=cornerPad/L,t1=1-cornerPad/L;
+    const usable=Math.max(.18,L-cornerPad*2),count=Math.max(2,Math.min(7,Math.floor(usable/.54)+1));
     for(let i=0;i<count;i++){
-      const t=(i+.5)/count;
-      merlonBlock({x:a.x+dx*t,y:a.y+dy*t},angle,z,.26,.24,.25);
+      const tt=(i+.5)/count,t=t0+(t1-t0)*tt;
+      pieces.push(battlementPiece({x:a.x+dx*t,y:a.y+dy*t},angle,z,.25,.22,.24));
     }
   }
+  return pieces;
 }
-function drawRoundTowerBattlements(s){
-  const z=structureHeight(s),r=Math.max(.18,(Number(s.r)||.5)-.08);
-  const count=Math.max(8,Math.min(18,Math.round(r*Math.PI*5.2)));
+function roundTowerBattlementPieces(s){
+  const z=structureHeight(s),r=Math.max(.16,(Number(s.r)||.5)-.09);
+  const count=Math.max(8,Math.min(16,Math.round(r*Math.PI*4.4))),pieces=[];
   for(let i=0;i<count;i++){
-    const a=i/count*Math.PI*2,c={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
-    merlonBlock(c,a+Math.PI/2,z,.24,.20,.25);
+    const a=i/count*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
+    pieces.push(battlementPiece(center,a+Math.PI/2,z,.23,.18,.23));
   }
+  return pieces;
 }
-function drawTowerBattlements(s){
-  if(s.type!=='tower'||underConstruction(s))return;
-  if(s.shape==='round')drawRoundTowerBattlements(s);else drawSquareTowerBattlements(s);
+function towerBattlementPieces(s){
+  if(s.type!=='tower'||underConstruction(s))return[];
+  return s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s);
 }
 function drawCastleBattlements(){
-  const parts=State.structures.filter(s=>!underConstruction(s)&&(s.type==='tower'||s.type==='wall')).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of parts){if(s.type==='tower')drawTowerBattlements(s);else drawWallBattlements(s)}
+  const pieces=[];
+  for(const s of State.structures){
+    if(underConstruction(s))continue;
+    if(s.type==='tower')pieces.push(...towerBattlementPieces(s));
+    else if(s.type==='wall')pieces.push(...wallBattlementPieces(s));
+  }
+  renderBattlementPieces(pieces);
 }
 function chimneySpec(s){
   if(!s||underConstruction(s))return null;
@@ -1381,6 +1399,7 @@ function renderFunctionPanel(){
     html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="grid3">${labels.map((label,i)=>`<button data-structure-tier="${i+1}" class="${current===i+1?'active':''}">${label}</button>`).join('')}</div></div>`;
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
+  if(s.type==='wall')html+=`<div class="slot"><div class="slot-label">Exterior side / battlements</div><button data-wall-flip class="active">⇄ Flip</button><div class="legend">Battlements are rendered only on the exterior side.</div></div>`;
   if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
   else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
   else html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
@@ -1393,6 +1412,7 @@ function renderFunctionPanel(){
     markDirty();renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-wall-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status('Wall exterior flipped')});
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
 }
 let pan=null;
@@ -1429,7 +1449,7 @@ canvas.addEventListener('pointerdown',e=>{
   }
   if(State.tool.kind==='linear'){
     if(!State.draft){const s=snapAnchor(p);State.draft={a:s.point,aSnap:s.structureId,preview:null};status('Point A set — choose point B');draw()}
-    else{const e2=snapAnchor(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:State.tool.linear==='wall'?(State.tool.tier||State.buildLevels.wallTier):undefined,functions:[]});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}
+    else{const e2=snapAnchor(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:State.tool.linear==='wall'?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:State.tool.linear==='wall'?false:undefined,functions:[]});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}
   }
 });
 canvas.addEventListener('pointermove',e=>{
