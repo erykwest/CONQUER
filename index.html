@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.13</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.14</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -1214,14 +1214,17 @@ function houseDoorInfo(house){
   if(!Number.isFinite(Number(house.doorSide)))house.doorSide=inferHouseDoorSide(house);
   const side=Number(house.doorSide)>=0?1:-1,ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0);
   const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=(Number(house.h)||1)/2;
-  const surface={x:house.x+normal.x*half,y:house.y+normal.y*half};
+  const lateralSign=(peasantHash(house.id)&2)?1:-1;
+  const lateralOffset=(Number(house.w)||1.5)*.24*lateralSign;
+  const surface={
+    x:house.x+normal.x*half+tangent.x*lateralOffset,
+    y:house.y+normal.y*half+tangent.y*lateralOffset
+  };
   const outside={x:surface.x+normal.x*.28,y:surface.y+normal.y*.28};
-  return{surface,outside,tangent,normal,side};
+  return{surface,outside,tangent,normal,side,lateralSign};
 }
 function drawHouseDoor(house){
-  const d=houseDoorInfo(house),halfW=Math.min(.24,(Number(house.w)||1.5)*.16);
-  const edgeA={x:d.surface.x-d.tangent.x*(house.w/2),y:d.surface.y-d.tangent.y*(house.w/2)};
-  const edgeB={x:d.surface.x+d.tangent.x*(house.w/2),y:d.surface.y+d.tangent.y*(house.w/2)};
+  const d=houseDoorInfo(house),halfW=Math.min(.08,(Number(house.w)||1.5)*.0533);
   const visible=visibleFacadeEdges(house).some(e=>pointSegmentDistance(d.surface,e.a,e.b)<.08);
   if(!visible)return;
   const l={x:d.surface.x-d.tangent.x*halfW,y:d.surface.y-d.tangent.y*halfW};
