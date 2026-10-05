@@ -2,7 +2,7 @@
 
 Settlement builder / manager prototype.
 
-## V0.5 scope
+## V0.7 scope
 - 200×200U persistent seeded world buffer
 - 100×100U central buildable area
 - Castle builder: square/round towers, walls, built wall-sections, gates
@@ -71,3 +71,15 @@ Current values are provisional balancing values.
 - Player-built structures remove overlapping auto-generated houses, fields and road segments
 - Removed auto-spawn does not regenerate on reload; the edited settlement state is persisted
 - Pre-V0.5 auto-road saves are migrated by removing old auto-spawn and restarting growth in V3, preserving player-built structures
+
+
+## 2.5D renderer
+- The simulation and persistence model remain strictly 2D in world units (U)
+- Rendering uses a dimetric/isometric projection only at presentation time
+- Ground picking uses the inverse projection, so placement still writes normal world X/Y coordinates
+- Towers, gates, walls, built sections, wells and houses are rendered as extruded Canvas 2D geometry
+- Roads, fields, water and biome footprints remain ground-plane layers
+- Mountains and forests receive lightweight vertical treatment for depth
+- Raised settlement elements use painter-order sorting by world depth
+- Manual structures use screen-space projected hit testing so elevated faces remain selectable
+- No Three.js/WebGL/build system dependency has been introduced
