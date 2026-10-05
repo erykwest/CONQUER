@@ -140,6 +140,162 @@ function fieldWorkAssignments(houses,fields){
 const PEASANT_PATH_STEP=.5,PEASANT_CLEARANCE=.22;
 const PEASANT_ROAD_COST=.38,PEASANT_ROADSIDE_COST=.68,PEASANT_ROADSIDE_RANGE=.85;
 let peasantPathCache=new Map(),peasantPathSignature='';
+let roadNavGraphCache={dirty:true,nodes:new Map(),roads:[],version:0};
+const navPerf={graphBuilds:0,graphRoutes:0,gridFallbacks:0,gridMisses:0};
+window.__conquerPerf=navPerf;
+function invalidateNavigation(hard=true){
+  // New roads/houses only extend the topology: existing road-following paths
+  // remain valid. Hard invalidation is reserved for moved/removed blockers or
+  // rebuilt routes.
+  roadNavGraphCache.dirty=true;
+  if(!hard)return;
+  peasantPathSignature='';
+  peasantPathCache.clear();
+}
+function roadNavNodeKey(p){
+  return (Math.round(p.x*100)/100).toFixed(2)+','+(Math.round(p.y*100)/100).toFixed(2);
+}
+function roadNavAddNode(nodes,p){
+  const key=roadNavNodeKey(p);
+  if(!nodes.has(key))nodes.set(key,{key,p:{x:Number(p.x),y:Number(p.y)},edges:new Map()});
+  return nodes.get(key);
+}
+function roadNavConnect(a,b,cost){
+  if(!a||!b||a.key===b.key)return;
+  const prevA=a.edges.get(b.key),prevB=b.edges.get(a.key);
+  if(prevA==null||cost<prevA)a.edges.set(b.key,cost);
+  if(prevB==null||cost<prevB)b.edges.set(a.key,cost);
+}
+function rebuildRoadNavGraph(){
+  const roads=roadList(true).filter(r=>r.a&&r.b&&dist(r.a,r.b)>.05);
+  const nodes=new Map(),split=roads.map(r=>({road:r,pts:[{t:0,p:{...r.a}},{t:1,p:{...r.b}}]}));
+
+  // Access spurs commonly terminate in the middle of a primary segment.
+  // Insert every nearby road endpoint as a split node on that segment.
+  for(let i=0;i<roads.length;i++){
+    const r=roads[i],dx=r.b.x-r.a.x,dy=r.b.y-r.a.y,L2=dx*dx+dy*dy||1;
+    for(let j=0;j<roads.length;j++){
+      if(i===j)continue;
+      for(const p of [roads[j].a,roads[j].b]){
+        if(pointSegmentDistance(p,r.a,r.b)>.08)continue;
+        const t=clamp(((p.x-r.a.x)*dx+(p.y-r.a.y)*dy)/L2,0,1);
+        if(t>.0001&&t<.9999)split[i].pts.push({t,p:{x:r.a.x+dx*t,y:r.a.y+dy*t}});
+      }
+    }
+  }
+
+  // True road crossings are graph junctions too.
+  for(let i=0;i<roads.length;i++)for(let j=i+1;j<roads.length;j++){
+    const p=segmentIntersectionPoint(roads[i].a,roads[i].b,roads[j].a,roads[j].b);
+    if(!p)continue;
+    for(const k of [i,j]){
+      const r=roads[k],dx=r.b.x-r.a.x,dy=r.b.y-r.a.y,L2=dx*dx+dy*dy||1;
+      const t=clamp(((p.x-r.a.x)*dx+(p.y-r.a.y)*dy)/L2,0,1);
+      split[k].pts.push({t,p:{...p}});
+    }
+  }
+
+  for(const item of split){
+    item.pts.sort((a,b)=>a.t-b.t);
+    const clean=[];
+    for(const q of item.pts){
+      if(!clean.length||Math.abs(q.t-clean.at(-1).t)>.002)clean.push(q);
+    }
+    item.nodes=clean.map(q=>({t:q.t,node:roadNavAddNode(nodes,q.p)}));
+    for(let i=0;i<item.nodes.length-1;i++){
+      const a=item.nodes[i].node,b=item.nodes[i+1].node;
+      roadNavConnect(a,b,dist(a.p,b.p));
+    }
+  }
+
+  roadNavGraphCache={dirty:false,nodes,roads:split,version:roadNavGraphCache.version+1};
+  navPerf.graphBuilds++;
+  return roadNavGraphCache;
+}
+function roadNavGraph(){
+  return roadNavGraphCache.dirty?rebuildRoadNavGraph():roadNavGraphCache;
+}
+function nearestRoadNavAnchor(p){
+  const graph=roadNavGraph();let best=null,bestD=Infinity;
+  for(const item of graph.roads){
+    const r=item.road,q=closestPointOnSegment(p,r.a,r.b),d=dist(p,q);
+    if(d>=bestD)continue;
+    const dx=r.b.x-r.a.x,dy=r.b.y-r.a.y,L2=dx*dx+dy*dy||1;
+    const t=clamp(((q.x-r.a.x)*dx+(q.y-r.a.y)*dy)/L2,0,1);
+    let left=item.nodes[0],right=item.nodes.at(-1);
+    for(let i=0;i<item.nodes.length-1;i++){
+      if(t>=item.nodes[i].t-.0001&&t<=item.nodes[i+1].t+.0001){
+        left=item.nodes[i];right=item.nodes[i+1];break;
+      }
+    }
+    best={item,point:q,t,d,left,right};
+    bestD=d;
+  }
+  return best;
+}
+class RoadNavHeap{
+  constructor(){this.a=[]}
+  push(n){const a=this.a;a.push(n);let i=a.length-1;while(i>0){const p=(i-1)>>1;if(a[p].d<=n.d)break;a[i]=a[p];i=p}a[i]=n}
+  pop(){const a=this.a;if(!a.length)return null;const root=a[0],last=a.pop();if(a.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=a.length)break;let m=r<a.length&&a[r].d<a[l].d?r:l;if(a[m].d>=last.d)break;a[i]=a[m];i=m}a[i]=last}return root}
+  get length(){return this.a.length}
+}
+function roadNetworkPath(start,goal,sourceHouseId){
+  const graph=roadNavGraph();if(!graph.nodes.size)return null;
+  const a=nearestRoadNavAnchor(start),b=nearestRoadNavAnchor(goal);
+  if(!a||!b||a.d>4.5||b.d>4.5)return null;
+
+  // Short connectors from doors/plazas/field cells to the road are validated
+  // against the physical obstacle map.
+  if(!peasantSegmentClear(start,a.point,sourceHouseId))return null;
+  if(!peasantSegmentClear(b.point,goal,sourceHouseId))return null;
+
+  const seeds=[],goals=new Map();
+  for(const q of [a.left,a.right]){
+    if(!q?.node)continue;
+    seeds.push({key:q.node.key,d:dist(a.point,q.node.p)});
+  }
+  for(const q of [b.left,b.right]){
+    if(!q?.node)continue;
+    goals.set(q.node.key,dist(b.point,q.node.p));
+  }
+
+  // Same-road direct travel avoids unnecessary graph work.
+  if(a.item===b.item){
+    const direct=[start,a.point,b.point,goal].filter((p,i,arr)=>i===0||dist(p,arr[i-1])>.02);
+    navPerf.graphRoutes++;
+    return direct;
+  }
+
+  const heap=new RoadNavHeap(),dScore=new Map(),came=new Map();
+  for(const s of seeds){
+    const prev=dScore.get(s.key);
+    if(prev==null||s.d<prev){dScore.set(s.key,s.d);heap.push({key:s.key,d:s.d})}
+  }
+  let endKey=null,endCost=Infinity,guard=0;
+  while(heap.length&&guard++<12000){
+    const cur=heap.pop();
+    if(cur.d!==(dScore.get(cur.key)??Infinity))continue;
+    const goalTail=goals.get(cur.key);
+    if(goalTail!=null&&cur.d+goalTail<endCost){endCost=cur.d+goalTail;endKey=cur.key}
+    if(cur.d>=endCost)break;
+    const node=graph.nodes.get(cur.key);if(!node)continue;
+    for(const [nextKey,w] of node.edges){
+      const nd=cur.d+w;
+      if(nd<(dScore.get(nextKey)??Infinity)){
+        dScore.set(nextKey,nd);came.set(nextKey,cur.key);heap.push({key:nextKey,d:nd});
+      }
+    }
+  }
+  if(!endKey)return null;
+
+  const rev=[];let k=endKey;
+  while(k){const node=graph.nodes.get(k);if(node)rev.push(node.p);k=came.get(k)}
+  rev.reverse();
+  const out=[start,a.point,...rev,b.point,goal],clean=[];
+  for(const p of out)if(p&&(!clean.length||dist(p,clean.at(-1))>.02))clean.push(p);
+  navPerf.graphRoutes++;
+  return clean;
+}
 function peasantObstacleSignature(){
   return State.structures.filter(s=>['house','tower','gate','wall','built','well','road','market','tavern','church','training'].includes(s.type)).map(s=>{
     if(['wall','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
@@ -289,9 +445,13 @@ function peasantPath(house,assignment){
   const field=assignment.field,cell=assignment.cell,key=house.id+'>'+field.id+':'+cell.index;
   if(peasantPathCache.has(key))return peasantPathCache.get(key);
   const start=houseDoorInfo(house).outside,goal={...cell.world};
-  let path=findPeasantPath(start,goal,house.id,8);
-  if(!path)path=findPeasantPath(start,goal,house.id,18);
-  if(!path)path=[start];
+  let path=roadNetworkPath(start,goal,house.id);
+  if(!path){
+    navPerf.gridFallbacks++;
+    path=findPeasantPath(start,goal,house.id,8);
+    if(!path)path=findPeasantPath(start,goal,house.id,14);
+  }
+  if(!path){navPerf.gridMisses++;path=[start]}
   peasantPathCache.set(key,path);return path;
 }
 function nearestCompletedStructure(type,from){
@@ -357,9 +517,14 @@ function villagerPathBetween(house,start,goal,tag){
   syncPeasantPathCache();
   const key='routine:'+house.id+':'+tag+':'+start.x.toFixed(2)+','+start.y.toFixed(2)+'>'+goal.x.toFixed(2)+','+goal.y.toFixed(2);
   if(peasantPathCache.has(key))return peasantPathCache.get(key);
-  let path=findPeasantPath(start,goal,house.id,8);
-  if(!path)path=findPeasantPath(start,goal,house.id,18);
-  if(!path)path=[start,goal];
+  let path=roadNetworkPath(start,goal,house.id);
+  if(!path&&peasantSegmentClear(start,goal,house.id))path=[start,goal];
+  if(!path){
+    navPerf.gridFallbacks++;
+    path=findPeasantPath(start,goal,house.id,8);
+    if(!path)path=findPeasantPath(start,goal,house.id,14);
+  }
+  if(!path){navPerf.gridMisses++;path=[start]}
   peasantPathCache.set(key,path);
   return path;
 }
