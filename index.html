@@ -795,6 +795,16 @@ function fillMultiPolygonTop(multi,z,fill,stroke){
   if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.15;ctx.stroke()}
   ctx.restore();
 }
+function castleSideShade(a,b){
+  // Use the real edge orientation, not projected screen dx. Opposite faces
+  // share a tone while perpendicular faces receive the other tone, exactly
+  // like sideA/sideB on the battlement blocks. This stays stable through all
+  // four camera rotations and also gives round towers readable faceting.
+  const qa=rotateViewPoint(a),qb=rotateViewPoint(b);
+  const angle=Math.atan2(qb.y-qa.y,qb.x-qa.x);
+  const light=Math.cos(2*(angle-Math.PI/6));
+  return light>=0?'#635951':'#514a44';
+}
 function drawMultiPolygonBand(multi,z0,z1){
   if(!multi?.length)return;
   const faces=[];
@@ -806,7 +816,7 @@ function drawMultiPolygonBand(multi,z0,z1){
     const pts=cleanClipRing(ring);if(pts.length<3)continue;
     for(let i=0;i<pts.length;i++){
       const j=(i+1)%pts.length,b0=w2s(pts[i],baseZ),b1=w2s(pts[j],baseZ),t1=w2s(pts[j],z1),t0=w2s(pts[i],z1);
-      const dx=b1.x-b0.x,shade=dx>=0?'#49443f':'#686057';
+      const shade=castleSideShade(pts[i],pts[j]);
       faces.push({poly:[b0,b1,t1,t0],depth:(b0.y+b1.y)/2,shade});
     }
   }
@@ -816,7 +826,7 @@ function drawMultiPolygonBand(multi,z0,z1){
 }
 function drawExposedTop(multi,z){
   if(!multi?.length)return;
-  fillMultiPolygonTop(multi,z,'#9a8e82','#6f675f');
+  fillMultiPolygonTop(multi,z,'#9a8e82','#635951');
 }
 function drawCastleUnion(){
   const bands=castleUnionBands();if(!bands)return false;
