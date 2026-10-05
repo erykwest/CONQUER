@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.24</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.25</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -397,7 +397,7 @@ function removeOverlappingAuto(manual){
   return{removed,roads};
 }
 function roadRepairPointClear(p,width=.30,ignoreIds=[]){
-  if(environmentBlocksPoint(p,'road'))return false;
+  if(!inBuild(p)||environmentBlocksPoint(p,'road'))return false;
   const clearance=width/2+.16;
   for(const s of State.structures){
     if(ignoreIds.includes(s.id)||s.type==='road')continue;
@@ -432,7 +432,7 @@ function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[]){
   }
   return true;
 }
-function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[]){
+function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24000){
   const step=.5;
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -452,7 +452,7 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[]){
   open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   let found=null,guard=0;
-  while(open.length&&guard++<24000){
+  while(open.length&&guard++<maxGuard){
     const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
     if(cur.x===g.x&&cur.y===g.y){found=cur;break}
     const cp=pos(cur.x,cur.y);
@@ -508,9 +508,144 @@ function addReactiveRoadPolyline(points,template={},meta={}){
   }
   return added;
 }
+function arterialRoutePlan(routeId){
+  return ensureRoadPlan().find(r=>r.id===routeId)||null;
+}
+function arterialSegmentOrderValue(r){
+  return Number.isFinite(Number(r.routeSeq))?Number(r.routeSeq):0;
+}
+function arterialRouteContinuous(routeId){
+  const well=State.structures.find(s=>s.id===State.village.wellId),plan=arterialRoutePlan(routeId);
+  const roads=routeRoads(routeId);if(!well||!plan||!roads.length)return false;
+  let cursor={x:well.x,y:well.y};
+  for(const r of roads){
+    if(dist(cursor,r.a)<=.42)cursor={...r.b};
+    else if(dist(cursor,r.b)<=.42)cursor={...r.a};
+    else return false;
+  }
+  return !plan.connected||dist(cursor,plan.target)<=.65;
+}
+function arterialSourceSegments(routeId,displaced=[]){
+  const map=new Map();
+  for(const r of [...routeRoads(routeId),...(displaced||[])]){
+    if(r.routeId!==routeId)continue;
+    const key=(Number.isFinite(Number(r.routeSeq))?Number(r.routeSeq).toFixed(5):r.id);
+    // Prefer the displaced/original segment when duplicate metadata exists.
+    map.set(key,r);
+  }
+  return [...map.values()].sort((a,b)=>arterialSegmentOrderValue(a)-arterialSegmentOrderValue(b));
+}
+function arterialSafeWaypoints(routeId,displaced=[]){
+  const well=State.structures.find(s=>s.id===State.village.wellId),plan=arterialRoutePlan(routeId);
+  if(!well||!plan)return[];
+  const source=arterialSourceSegments(routeId,displaced),width=.62,ignore=[well.id];
+  const pts=[{x:well.x,y:well.y}];
+
+  // Preserve the established arterial geometry wherever it is still valid.
+  for(const r of source){
+    const p={...r.b};
+    if(dist(p,pts.at(-1))<.45)continue;
+    if(roadRepairPointClear(p,width,ignore))pts.push(p);
+  }
+
+  if(plan.connected){
+    if(dist(pts.at(-1),plan.target)>.35)pts.push({...plan.target});
+  }else if(source.length){
+    // An incomplete route should only be rebuilt to its previous frontier,
+    // never be magically completed to the border.
+    const frontier={...source.at(-1).b};
+    if(dist(pts.at(-1),frontier)>.35)pts.push(frontier);
+  }
+  return pts;
+}
+function buildArterialRepairPolyline(routeId,displaced=[]){
+  const well=State.structures.find(s=>s.id===State.village.wellId),waypoints=arterialSafeWaypoints(routeId,displaced);
+  if(!well||waypoints.length<2)return null;
+  const width=.62,ignore=[well.id],full=[waypoints[0]];
+  for(let i=0;i<waypoints.length-1;i++){
+    const a=full.at(-1),b=waypoints[i+1];let leg=null;
+    if(roadRepairSegmentClear(a,b,width,ignore))leg=[a,b];
+    else leg=findRoadRepairPath(a,b,width,12,ignore,60000);
+    if(!leg||leg.length<2)return null;
+    for(let j=1;j<leg.length;j++){
+      const p=leg[j];if(dist(full.at(-1),p)>.08)full.push(p);
+    }
+  }
+  return simplifyRoadRepairPath(full,width,ignore);
+}
+function subdivideRoadPolyline(points,maxLen=5.0){
+  if(!points||points.length<2)return points||[];
+  const out=[{...points[0]}];
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i],b=points[i+1],L=dist(a,b),n=Math.max(1,Math.ceil(L/maxLen));
+    for(let k=1;k<=n;k++){
+      const t=k/n;out.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    }
+  }
+  return out;
+}
+function refreshStaleHouseRoadRefs(){
+  const roads=roadList(true);if(!roads.length)return;
+  for(const h of autoList('house')){
+    if(h.roadId&&State.structures.some(r=>r.id===h.roadId&&r.type==='road'))continue;
+    let best=null,bestD=Infinity;
+    for(const r of roads){
+      const d=pointSegmentDistance(h,r.a,r.b);
+      if(d<bestD){best=r;bestD=d}
+    }
+    if(best)h.roadId=best.id;
+  }
+}
+function rebuildArterialRoute(routeId,displaced=[]){
+  const plan=arterialRoutePlan(routeId),path=buildArterialRepairPolyline(routeId,displaced);
+  if(!plan||!path||path.length<2)return 0;
+
+  // Only replace the route after a complete valid path has been found.
+  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId));
+  const pts=subdivideRoadPolyline(path,ROAD_RULES.arterialSegmentMax);
+  let added=0,parent=null;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1];if(dist(a,b)<.18)continue;
+    const road={
+      id:uid(),type:'road',auto:true,roadClass:'arterial',routeId,routeSeq:added,
+      a:{...a},b:{...b},width:.62,appeal:1,parentRoadId:parent,
+      reactive:true,arterialRebuilt:true
+    };
+    // Route repair is topology restoration, not a new growth event: it becomes usable immediately.
+    State.structures.push(road);parent=road.id;added++;
+  }
+  refreshStaleHouseRoadRefs();
+  peasantPathSignature='';peasantPathCache.clear();
+  return added;
+}
+function reconcileArterialRoutes(){
+  let changed=0;
+  for(const route of ensureRoadPlan()){
+    const roads=routeRoads(route.id);
+    if(roads.length&&!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
+  }
+  return changed;
+}
 function repairDisplacedRoads(displaced,manual){
   let added=0;
-  for(const old of displaced||[]){
+  const all=displaced||[],arterialIds=[...new Set(all.filter(r=>r.routeId).map(r=>r.routeId))];
+
+  // Primary roads are repaired as complete ordered routes, not as isolated deleted pieces.
+  for(const routeId of arterialIds){
+    const affected=all.filter(r=>r.routeId===routeId);
+    const rebuilt=rebuildArterialRoute(routeId,affected);
+    if(rebuilt)added+=rebuilt;
+    else{
+      // Conservative fallback: if a full route cannot be resolved, at least try each missing span.
+      for(const old of affected){
+        const well=State.structures.find(s=>s.id===State.village.wellId),ignore=well?[well.id]:[];
+        const path=findRoadRepairPath(old.a,old.b,Number(old.width)||.62,12,ignore,50000);
+        if(path)added+=addReactiveRoadPolyline(path,old,{repairFor:manual.id,roadClass:'arterial-repair'});
+      }
+    }
+  }
+
+  for(const old of all.filter(r=>!r.routeId)){
     const path=findRoadRepairPath(old.a,old.b,Number(old.width)||.30,10,[]);
     if(path)added+=addReactiveRoadPolyline(path,old,{repairFor:manual.id,roadClass:old.roadClass||'repair'});
   }
@@ -576,6 +711,7 @@ function repairExistingCivicRoadGap(s){
 }
 function reconcileReactiveRoadNetwork(){
   let changed=0;
+  changed+=reconcileArterialRoutes();
   for(const s of State.structures.filter(isCivic)){
     changed+=repairExistingCivicRoadGap(s);
     changed+=ensureCivicRoadAccess(s);
@@ -783,6 +919,9 @@ function constrainRoadCandidate(candidate){
 }
 function spawnArterial(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();if(!well||!plan.length)return false;
+  for(const route of plan){
+    if(routeRoads(route.id).length&&!arterialRouteContinuous(route.id))rebuildArterialRoute(route.id,[]);
+  }
   const open=plan.filter(p=>!p.connected);if(!open.length)return false;
   // Alternate progress across the two border routes by choosing the one with fewer accepted segments.
   open.sort((p,q)=>routeRoads(p.id).length-routeRoads(q.id).length);
