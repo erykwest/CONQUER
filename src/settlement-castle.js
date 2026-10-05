@@ -623,7 +623,7 @@ function invalidateCastleColliderGeometry(...structures){
     s.colliderRevision=(Number(s.colliderRevision)||0)+1;
   }
   castleUnionCache={key:null,bands:null};
-  peasantPathSignature='';peasantPathCache.clear();
+  invalidateNavigation();
 }
 function regenerateTowerWallPair(tower,wall,end,anchor=null){
   if(!tower||tower.type!=='tower'||!wall||wall.type!=='wall')return false;
@@ -691,7 +691,7 @@ function syncCompletedTowerWallColliders(force=false){
   }
   if(changed){
     castleUnionCache={key:null,bands:null};
-    peasantPathSignature='';peasantPathCache.clear();
+    invalidateNavigation();
   }
   return changed;
 }
