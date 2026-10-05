@@ -59,7 +59,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.9</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.10</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -163,10 +163,6 @@ const COSTS={
 const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
-const PEASANT_PALETTE=Object.freeze([
-  '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
-  '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
-]);
 const ROAD_RULES={
   arterialSegmentMin:4.2,arterialSegmentMax:5.4,
   localSegmentMin:2.8,localSegmentMax:4.2,
@@ -644,22 +640,16 @@ function footprintPoints(s){
   if(['house','field'].includes(s.type))return rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0);
   return[];
 }
-function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4',skipFaces=[],skipTopEdges=[]}={}){
+function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
   if(!worldPts?.length)return;
   const base=projectPath(worldPts,0),topPts=projectPath(worldPts,height),faces=[];
   for(let i=0;i<worldPts.length;i++){
-    if(skipFaces.includes(i))continue;
     const j=(i+1)%worldPts.length,quad=[base[i],base[j],topPts[j],topPts[i]],depth=(base[i].y+base[j].y)/2;
     faces.push({quad,depth,i});
   }
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,null);
-  pathPolygon(topPts,topColor,null);
-  if(stroke){
-    ctx.save();ctx.strokeStyle=stroke;ctx.lineWidth=1.2;ctx.beginPath();
-    for(let i=0;i<topPts.length;i++){if(skipTopEdges.includes(i))continue;const j=(i+1)%topPts.length;ctx.moveTo(topPts[i].x,topPts[i].y);ctx.lineTo(topPts[j].x,topPts[j].y)}
-    ctx.stroke();ctx.restore();
-  }
+  pathPolygon(topPts,topColor,stroke,1.2);
 }
 function worldDepth(s){const p=rotateViewPoint(structureCenter(s));return p.x+p.y;}
 function pointInScreenPolygon(p,poly){
@@ -785,63 +775,24 @@ function currentLinearSpec(){
 function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
 function snappedStructure(id){
   if(!id)return null;
-  const s=State.structures.find(x=>x.id===id);
-  return s&&['tower','gate'].includes(s.type)?s:null;
+  const target=State.structures.find(x=>x.id===id);
+  return target&&['tower','gate'].includes(target.type)?target:null;
 }
-function rayCircleSocket(origin,dir,target){
-  const ox=origin.x-target.x,oy=origin.y-target.y,r=target.r;
-  const b=ox*dir.x+oy*dir.y,c=ox*ox+oy*oy-r*r,disc=b*b-c;
-  if(disc<0)return null;
-  const root=Math.sqrt(Math.max(0,disc)),t1=-b-root,t2=-b+root;
-  const t=t1>=0?t1:(t2>=0?t2:null);if(t==null)return null;
-  return{x:origin.x+dir.x*t,y:origin.y+dir.y*t};
+function socketOverlap(s){
+  const w=Number(s.width)||.5;
+  return clamp(.08+w*.32,.12,.42);
 }
-function rayRectSocket(origin,dir,target){
-  const a=-(target.angle||0),o=rotateVec(origin.x-target.x,origin.y-target.y,a),d=rotateVec(dir.x,dir.y,a),dims=rectDims(target),hx=dims.w/2,hy=dims.h/2;
-  let tmin=-Infinity,tmax=Infinity;
-  for(const [ov,dv,minv,maxv] of [[o.x,d.x,-hx,hx],[o.y,d.y,-hy,hy]]){
-    if(Math.abs(dv)<1e-9){if(ov<minv||ov>maxv)return null;continue}
-    let t1=(minv-ov)/dv,t2=(maxv-ov)/dv;if(t1>t2){const q=t1;t1=t2;t2=q}
-    tmin=Math.max(tmin,t1);tmax=Math.min(tmax,t2);if(tmin>tmax)return null;
-  }
-  const t=tmin>=0?tmin:(tmax>=0?tmax:null);if(t==null)return null;
-  const local={x:o.x+d.x*t,y:o.y+d.y*t},world=rotateVec(local.x,local.y,target.angle||0);
-  return{x:target.x+world.x,y:target.y+world.y};
+function renderedLinearEndpoints(s){
+  let a={...s.a},b={...s.b};
+  const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L},overlap=socketOverlap(s);
+  if(snappedStructure(s.aSnap))a={x:a.x-u.x*overlap,y:a.y-u.y*overlap};
+  if(snappedStructure(s.bSnap))b={x:b.x+u.x*overlap,y:b.y+u.y*overlap};
+  return{a,b};
 }
-function rayStructureSocket(origin,dir,target){
-  if(!target)return null;
-  return target.shape==='round'?rayCircleSocket(origin,dir,target):rayRectSocket(origin,dir,target);
+function linePoly(s){
+  const e=renderedLinearEndpoints(s),a=e.a,b=e.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
+  return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
-function socketLinearGeometry(s){
-  const a={...s.a},b={...s.b},dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L},n={x:-u.y,y:u.x},hw=s.width/2,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-  let ap={x:a.x+n.x*hw,y:a.y+n.y*hw},am={x:a.x-n.x*hw,y:a.y-n.y*hw};
-  let bp={x:b.x+n.x*hw,y:b.y+n.y*hw},bm={x:b.x-n.x*hw,y:b.y-n.y*hw};
-  const sa=snappedStructure(s.aSnap),sb=snappedStructure(s.bSnap),eps=.035;
-  let aSurface=null,bSurface=null;
-  if(sa){
-    const dir={x:-u.x,y:-u.y},hp=rayStructureSocket({x:mid.x+n.x*hw,y:mid.y+n.y*hw},dir,sa),hm=rayStructureSocket({x:mid.x-n.x*hw,y:mid.y-n.y*hw},dir,sa);
-    if(hp&&hm){
-      aSurface={plus:hp,minus:hm,into:dir,target:sa};
-      ap={x:hp.x+dir.x*eps,y:hp.y+dir.y*eps};
-      am={x:hm.x+dir.x*eps,y:hm.y+dir.y*eps};
-    }
-  }
-  if(sb){
-    const dir={x:u.x,y:u.y},hp=rayStructureSocket({x:mid.x+n.x*hw,y:mid.y+n.y*hw},dir,sb),hm=rayStructureSocket({x:mid.x-n.x*hw,y:mid.y-n.y*hw},dir,sb);
-    if(hp&&hm){
-      bSurface={plus:hp,minus:hm,into:dir,target:sb};
-      bp={x:hp.x+dir.x*eps,y:hp.y+dir.y*eps};
-      bm={x:hm.x+dir.x*eps,y:hm.y+dir.y*eps};
-    }
-  }
-  return{
-    poly:[ap,bp,bm,am],u,n,
-    aCenter:{x:(ap.x+am.x)/2,y:(ap.y+am.y)/2},
-    bCenter:{x:(bp.x+bm.x)/2,y:(bp.y+bm.y)/2},
-    socketA:!!aSurface,socketB:!!bSurface,aSurface,bSurface
-  };
-}
-function linePoly(s){return socketLinearGeometry(s).poly;}
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return 1;
@@ -858,41 +809,19 @@ function functionCapacity(s){
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
 function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
-  const h=structureHeight(s),selected=State.selectedId===s.id,g=socketLinearGeometry(s),colors=linearColors(s,selected);
-  const skip=[];if(g.socketB)skip.push(1);if(g.socketA)skip.push(3);
-  extrudePolygon(g.poly,h,{...colors,skipFaces:skip,skipTopEdges:skip});
-}
-function linearColors(s,selected=false){
-  return s.type==='wall'
+  const h=structureHeight(s),selected=State.selectedId===s.id;
+  const colors=s.type==='wall'
     ?{top:'#8d8175',sideA:'#514a44',sideB:'#635951',stroke:selected?'#f4b76f':'#d8c8b4'}
     :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
-}
-function drawSocketJoint(s,end){
-  if(!['wall','built'].includes(s.type))return;
-  const g=socketLinearGeometry(s),surf=end==='a'?g.aSurface:g.bSurface;if(!surf)return;
-  const into=surf.into,out={x:-into.x,y:-into.y},outside=Math.max(.10,Math.min(.22,s.width*.22)),inside=Math.max(.08,Math.min(.16,s.width*.16+.05));
-  const p1={x:surf.plus.x+out.x*outside,y:surf.plus.y+out.y*outside};
-  const p2={x:surf.plus.x+into.x*inside,y:surf.plus.y+into.y*inside};
-  const m2={x:surf.minus.x+into.x*inside,y:surf.minus.y+into.y*inside};
-  const m1={x:surf.minus.x+out.x*outside,y:surf.minus.y+out.y*outside};
-  const h=Math.min(structureHeight(s),Math.max(.2,structureHeight(surf.target)-.02)),colors=linearColors(s,State.selectedId===s.id);
-  extrudePolygon([p1,p2,m2,m1],h,{...colors,skipFaces:[1],skipTopEdges:[1]});
-  if(s.type==='built'){
-    const c1={x:(p1.x+m1.x)/2,y:(p1.y+m1.y)/2},c2={x:(p2.x+m2.x)/2,y:(p2.y+m2.y)/2},a=w2s(c1,h+.16),b=w2s(c2,h+.16);
-    ctx.save();ctx.strokeStyle='rgba(58,39,28,.92)';ctx.lineWidth=Math.max(1.2,1.6*State.view.scale);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
-  }
-}
-function drawLinearSockets(s){
-  if(!['wall','built'].includes(s.type))return;
-  const g=socketLinearGeometry(s);if(g.socketA)drawSocketJoint(s,'a');if(g.socketB)drawSocketJoint(s,'b');
+  extrudePolygon(linePoly(s),h,colors);
 }
 function drawBuiltDetails(s,preview=false){
   if(s.type!=='built')return;
-  const h=structureHeight(s),g=socketLinearGeometry(s),ca=g.aCenter,cb=g.bCenter,a=w2s(ca,h+.28),b=w2s(cb,h+.28);
+  const e=renderedLinearEndpoints(s),ra=e.a,rb=e.b,h=structureHeight(s),a=w2s(ra,h+.28),b=w2s(rb,h+.28);
   ctx.save();ctx.strokeStyle='rgba(58,39,28,.92)';ctx.lineWidth=Math.max(1.5,2*State.view.scale);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  const renderLength=dist(ca,cb),count=Math.max(2,Math.floor(renderLength/.7));
+  const renderLength=dist(ra,rb),count=Math.max(2,Math.floor(renderLength/.7));
   ctx.fillStyle='#c9b79f';
-  for(let i=0;i<=count;i++){const t=i/count,p={x:ca.x+(cb.x-ca.x)*t,y:ca.y+(cb.y-ca.y)*t},q=w2s(p,h+.15);ctx.fillRect(q.x-2,q.y-3,4,4)}
+  for(let i=0;i<=count;i++){const t=i/count,p={x:ra.x+(rb.x-ra.x)*t,y:ra.y+(rb.y-ra.y)*t},q=w2s(p,h+.15);ctx.fillRect(q.x-2,q.y-3,4,4)}
   ctx.restore();
 }
 function drawPointStructure(s,preview=false){
@@ -935,56 +864,6 @@ function drawAutoStructure(s){
   ctx.restore();if(underConstruction(s))drawConstructionProgress(s);
 }
 function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};return{x:0,y:0}}
-function peasantHash(id){return biomeHash(String(id||'peasant'))}
-function completedSettlement(type){return State.structures.filter(s=>s.type===type&&!underConstruction(s))}
-function assignedField(house,fields){
-  let best=null,bestD=Infinity;
-  for(const field of fields){const d=dist(house,field);if(d<bestD){bestD=d;best=field}}
-  return best;
-}
-function peasantPosition(house,field,day){
-  const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.035;
-  const leave0=.20+stagger,leave1=.32+stagger,return0=.70+stagger,return1=.82+stagger;
-  if(frac<leave0||frac>return1)return null;
-  const home={x:house.x,y:house.y},work={x:field.x,y:field.y};
-  const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
-  if(frac<leave1){
-    const t=smooth((frac-leave0)/(leave1-leave0));
-    return{x:home.x+(work.x-home.x)*t,y:home.y+(work.y-home.y)*t};
-  }
-  if(frac<return0){
-    const span=Math.max(.001,return0-leave1),t=(frac-leave1)/span;
-    const a=(h%6283)/1000,ca=Math.cos(field.angle||0),sa=Math.sin(field.angle||0);
-    const lx=Math.sin(t*Math.PI*4+a)*Math.min(.38,field.w*.18);
-    const ly=Math.cos(t*Math.PI*3+a*.73)*Math.min(.28,field.h*.18);
-    return{x:work.x+lx*ca-ly*sa,y:work.y+lx*sa+ly*ca};
-  }
-  const t=smooth((frac-return0)/(return1-return0));
-  return{x:work.x+(home.x-work.x)*t,y:work.y+(home.y-work.y)*t};
-}
-function peasantAnimationActive(){
-  const frac=State.clock.day-Math.floor(State.clock.day);
-  return frac>=.18&&frac<=.85&&completedSettlement('house').length>0&&completedSettlement('field').length>0;
-}
-function drawPeasants(){
-  const houses=completedSettlement('house'),fields=completedSettlement('field');
-  if(!houses.length||!fields.length)return;
-  const dots=[];
-  for(const house of houses){
-    const field=assignedField(house,fields),p=field&&peasantPosition(house,field,State.clock.day);
-    if(p)dots.push({p,color:PEASANT_PALETTE[peasantHash(house.id)%PEASANT_PALETTE.length]});
-  }
-  dots.sort((a,b)=>{const aa=rotateViewPoint(a.p),bb=rotateViewPoint(b.p);return aa.x+aa.y-(bb.x+bb.y)});
-  const radius=clamp(2.8*State.view.scale,1.7,4.1);
-  ctx.save();
-  for(const dot of dots){
-    const p=w2s(dot.p,.10);
-    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);
-    ctx.fillStyle=dot.color;ctx.fill();
-    ctx.strokeStyle='rgba(33,24,16,.78)';ctx.lineWidth=Math.max(.8,radius*.28);ctx.stroke();
-  }
-  ctx.restore();
-}
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
 }
@@ -999,19 +878,12 @@ function draw(){
   // Ground-level settlement layers.
   State.structures.filter(s=>s.auto&&['field','road'].includes(s.type)).forEach(drawAutoStructure);
 
-  // Raised settlement elements use painter order in world depth.
+  // Linear castle elements are always behind their endpoint towers/gates.
   const raised=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type)));
-  const normalRaised=raised.filter(s=>!['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  const foregroundCastle=raised.filter(s=>!s.auto&&['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of normalRaised){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
-  drawPeasants();
-  // Towers/gates remain foreground. Linear elements terminate in geometric
-  // sockets on the real tower perimeter; the tiny overlap only hides hairlines.
-  for(const s of foregroundCastle)drawStructure(s)
-
-  // Local boolean-style socket patches reopen the tower face exactly where a
-  // connected wall/built section enters it, without drawing the full wall over the tower.
-  for(const s of normalRaised)if(!s.auto&&['wall','built'].includes(s.type))drawLinearSockets(s)
+  const linearAndOther=raised.filter(s=>!['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  const castleCaps=raised.filter(s=>!s.auto&&['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const s of linearAndOther){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  for(const s of castleCaps)drawStructure(s)
 
   // Placement preview always wins the visual stack.
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
@@ -1189,9 +1061,7 @@ function simulationFrame(now){
   if(State.clock.speed>0){
     const before=State.clock.day;State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
     processVillageGrowth();
-    const quarterChanged=Math.floor(before*4)!==Math.floor(State.clock.day*4);
-    if(quarterChanged)renderUI();
-    if(quarterChanged||peasantAnimationActive())draw();
+    if(Math.floor(before*4)!==Math.floor(State.clock.day*4)){renderUI();draw()}
     if(now-simPersistAt>1000){saveLocal();simPersistAt=now}
   }
   requestAnimationFrame(simulationFrame);
