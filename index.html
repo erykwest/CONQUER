@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.21</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.22</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -1398,10 +1398,41 @@ function drawMarket(s,preview=false){
     extrudePolygonAt(canopy,.58,.66,{top:st.c,sideA:st.c,sideB:st.c,stroke:'rgba(235,218,186,.35)'});
   }
 }
+function civicEntranceInfo(s){
+  if(!s||!['tavern','church'].includes(s.type))return null;
+  const localY=s.type==='tavern'?(-1.72-1.55/2):(-2.65-1.85/2);
+  const width=s.type==='tavern'?.42:.68;
+  const height=s.type==='tavern'?.92:1.22;
+  const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+  const tangent={x:ca,y:sa};
+  const normal={x:sa,y:-ca}; // local -Y = designated front
+  const surface=houseLocalToWorld(s,0,localY);
+  const outside={x:surface.x+normal.x*.48,y:surface.y+normal.y*.48};
+  const inside={x:surface.x-normal.x*.18,y:surface.y-normal.y*.18};
+  return{surface,outside,inside,tangent,normal,width,height};
+}
+function drawCivicEntrance(s){
+  const d=civicEntranceInfo(s);if(!d)return;
+  // Only draw the door when its facade faces the current camera.
+  if(viewDepthPoint(d.outside)<=viewDepthPoint(d.inside))return;
+  const half=d.width/2;
+  const l={x:d.surface.x-d.tangent.x*half,y:d.surface.y-d.tangent.y*half};
+  const r={x:d.surface.x+d.tangent.x*half,y:d.surface.y+d.tangent.y*half};
+  const poly=[w2s(l,.03),w2s(r,.03),w2s(r,d.height),w2s(l,d.height)];
+  if(s.type==='church'){
+    pathPolygon(poly,'#292725','#9c978e',1.05);
+    const arch=w2s(d.surface,d.height+.05);
+    ctx.save();ctx.strokeStyle='rgba(185,181,172,.72)';ctx.lineWidth=Math.max(1,1.05*State.view.scale);
+    ctx.beginPath();ctx.arc(arch.x,arch.y,Math.max(2.4,d.width*U*State.view.scale*.18),Math.PI,0);ctx.stroke();ctx.restore();
+  }else{
+    pathPolygon(poly,'#3a261b','#9b7658',.9);
+  }
+}
 function drawTavern(s,preview=false){
   const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'#9a765d';
   const parts=civicParts(s).map(p=>({...p,depth:viewDepthPoint(p.center)})).sort((a,b)=>a.depth-b.depth);
   for(const part of parts)drawCivicGabledPart(s,part,1.48,2.08,'#684f3d','#7b5e48','#3b302b','#493930','#80624a',stroke);
+  if(!preview&&!underConstruction(s))drawCivicEntrance(s);
 }
 function drawChurch(s,preview=false){
   const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'#aaa8a1';
@@ -1412,6 +1443,7 @@ function drawChurch(s,preview=false){
       drawCivicGabledPart(s,part,2.72,3.35,'#66635f','#77736e','#3d4145','#484c50','#85817a',stroke);
     }else drawCivicGabledPart(s,part,1.88,2.52,'#6b6863','#7d7973','#41454a','#4c5054','#85817a',stroke);
   }
+  if(!preview&&!underConstruction(s))drawCivicEntrance(s);
 }
 function drawCivicStructure(s,preview=false){
   if(s.type==='market')drawMarket(s,preview);
@@ -1829,6 +1861,10 @@ function structureAccessPoint(target,from,visitorId=''){
     ];
     const spot=spots[h%spots.length];
     return houseLocalToWorld(target,spot.x,spot.y);
+  }
+
+  if(target.type==='tavern'||target.type==='church'){
+    return civicEntranceInfo(target)?.outside||structureCenter(target);
   }
 
   if(['wall','built'].includes(target.type)){
