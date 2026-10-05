@@ -737,10 +737,14 @@ function fillMultiPolygonTop(multi,z,fill,stroke){
 function drawMultiPolygonBand(multi,z0,z1){
   if(!multi?.length)return;
   const faces=[];
+  // A tiny downward overlap makes adjacent height bands paint over the
+  // antialiased edge of the band below, removing false horizontal rings.
+  const seamOverlap=z0>0?Math.min(.018,(z1-z0)*.08):0;
+  const baseZ=Math.max(0,z0-seamOverlap);
   for(const poly of multi)for(const ring of poly){
     const pts=cleanClipRing(ring);if(pts.length<3)continue;
     for(let i=0;i<pts.length;i++){
-      const j=(i+1)%pts.length,b0=w2s(pts[i],z0),b1=w2s(pts[j],z0),t1=w2s(pts[j],z1),t0=w2s(pts[i],z1);
+      const j=(i+1)%pts.length,b0=w2s(pts[i],baseZ),b1=w2s(pts[j],baseZ),t1=w2s(pts[j],z1),t0=w2s(pts[i],z1);
       const dx=b1.x-b0.x,shade=dx>=0?'#514a44':'#635951';
       faces.push({poly:[b0,b1,t1,t0],depth:(b0.y+b1.y)/2,shade});
     }
@@ -748,7 +752,6 @@ function drawMultiPolygonBand(multi,z0,z1){
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.poly,f.shade,null);
   // Important: do NOT draw a top face for every height band.
-  // Doing so leaves anti-aliased horizontal seams even when the footprint continues unchanged above.
 }
 function drawExposedTop(multi,z){
   if(!multi?.length)return;
@@ -1181,10 +1184,10 @@ function squareTowerBattlementPieces(s){
 }
 function roundTowerBattlementPieces(s){
   const z=structureHeight(s),r=Math.max(.16,(Number(s.r)||.5)-.09);
-  const circumference=Math.PI*2*r,intervals=Math.max(8,battlementIntervalCount(circumference));
+  const count=[0,6,8,12][towerTier(s)]||6;
   const pieces=[];
-  for(let i=0;i<intervals;i++){
-    const a=i/intervals*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
+  for(let i=0;i<count;i++){
+    const a=i/count*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
     pieces.push(battlementPiece(center,a+Math.PI/2,z,.23,.18,.23,s));
   }
   return pieces;
@@ -1682,13 +1685,13 @@ function towerLevelHeight(s,level){
   return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
 }
 function towerWindowRows(s){
-  const level=structureLevel(s),rows=[];
+  const level=structureLevel(s),rows=[],drop=.42;
   if(level>=2){
-    const z=(towerLevelHeight(s,1)+towerLevelHeight(s,2))/2;
+    const z=(towerLevelHeight(s,1)+towerLevelHeight(s,2))/2-drop;
     rows.push({z,count:1});
   }
   if(level>=3){
-    const z=(towerLevelHeight(s,2)+towerLevelHeight(s,3))/2;
+    const z=(towerLevelHeight(s,2)+towerLevelHeight(s,3))/2-drop;
     rows.push({z,count:2});
   }
   return rows;
