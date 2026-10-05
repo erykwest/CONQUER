@@ -2328,10 +2328,17 @@ function towerDoorSpecs(tower){
   if(!tower||tower.type!=='tower'||underConstruction(tower))return[];
   const specs=[];
 
-  // Primary ground-floor entrance on the placement/front direction.
+  // Primary ground-floor entrance.
+  // Normal towers use their placement/front direction. Attached subtowers
+  // face away from the parent so the ground entrance cannot be buried inside
+  // the parent volume.
   const a=tower.angle||0;
   let frontContact;
-  if(tower.shape==='round'){
+  const parent=tower.parentTowerId&&State.structures.find(s=>s.id===tower.parentTowerId&&['tower','gate'].includes(s.type));
+  if(parent){
+    let dx=tower.x-parent.x,dy=tower.y-parent.y,L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
+    frontContact=boundaryPoint(tower,{x:tower.x+dx*4,y:tower.y+dy*4});
+  }else if(tower.shape==='round'){
     frontContact={x:tower.x+Math.cos(a)*tower.r,y:tower.y+Math.sin(a)*tower.r};
   }else{
     const fp=footprintPoints(tower);
@@ -2367,11 +2374,15 @@ function towerDoorVisible(tower,spec){
 }
 function drawTowerDoorSpec(tower,spec){
   if(!towerDoorVisible(tower,spec))return;
-  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54),half=width/2;
+
+  // Architectural scale reduction: both width and height are one third of
+  // the previous tower-door size. These are now single-leaf doors.
+  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54)/3,half=width/2;
   const tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact;
-  const springZ=spec.baseZ+(spec.apexZ-spec.baseZ)*.66;
+  const fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),apexZ=spec.baseZ+fullHeight/3;
+  const springZ=spec.baseZ+(apexZ-spec.baseZ)*.66;
   const l={x:c.x-tx*half,y:c.y-ty*half},r={x:c.x+tx*half,y:c.y+ty*half};
-  const lb=w2s(l,spec.baseZ),rb=w2s(r,spec.baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),apex=w2s(c,spec.apexZ);
+  const lb=w2s(l,spec.baseZ),rb=w2s(r,spec.baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),apex=w2s(c,apexZ);
 
   const drawDoor=()=>{
     ctx.save();
@@ -2381,19 +2392,16 @@ function drawTowerDoorSpec(tower,spec){
     ctx.quadraticCurveTo((ls.x+apex.x)/2,apex.y,ls.x,ls.y);
     ctx.lineTo(lb.x,lb.y);ctx.closePath();
     ctx.fillStyle='#211713';ctx.fill();
-    ctx.strokeStyle='#9a7458';ctx.lineWidth=1;ctx.stroke();
-
-    // A subtle central seam makes it read as a timber door rather than a hole.
-    const bottom=w2s(c,spec.baseZ);
-    ctx.strokeStyle='rgba(120,78,52,.72)';ctx.lineWidth=.7;
-    ctx.beginPath();ctx.moveTo(bottom.x,bottom.y);ctx.lineTo(apex.x,apex.y);ctx.stroke();
+    ctx.strokeStyle='#9a7458';ctx.lineWidth=.8;ctx.stroke();
     ctx.restore();
   };
 
   // Do not let unrelated taller castle volumes paint through the door. The
   // linked wall itself is excluded because this doorway intentionally opens
   // onto that wall-walk.
-  const occluders=structureDetailOccluders(tower,spec.apexZ).filter(o=>o.id!==spec.wallId);
+  const occluders=structureDetailOccluders(tower,spec.apexZ).filter(o=>
+    o.id!==spec.wallId && !(spec.kind==='front'&&tower.parentTowerId&&o.id===tower.parentTowerId)
+  );
   if(!occluders.length){drawDoor();return}
 
   const rr=wrap.getBoundingClientRect();
@@ -2696,12 +2704,12 @@ function draw(){
   }else{
     drawCastleUnionDetails();
   }
+  drawTowerDoors();
   drawTowerRoofs();
   drawGateRoofs();
   drawCastleSelection();
   drawCastleBattlements();
   drawFacadeWindows(false,1);
-  drawTowerDoors();
   drawGatePortals();
   for(const house of completedSettlement('house'))drawHouseDoor(house);
   drawChimneysAndSmoke();
