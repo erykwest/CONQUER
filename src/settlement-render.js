@@ -523,6 +523,12 @@ function drawCastleFrontStaticScene(){
   entry.dirty=false;
 }
 function ensureStaticSceneCaches(){
+  // Scale/rotation/viewport changes alter the projection and require a rebuild.
+  // X/Y camera changes are pure screen translations and are handled cheaply
+  // by blitSceneCache() until pan ends.
+  for(const entry of Object.values(sceneCache)){
+    if(!entry.dirty&&!sceneCacheProjectionCompatible(entry))entry.dirty=true;
+  }
   if(sceneCache.base.dirty)drawBaseStaticScene();
   if(sceneCache.castleBody.dirty)drawCastleBodyStaticScene();
   if(sceneCache.castleFront.dirty)drawCastleFrontStaticScene();
