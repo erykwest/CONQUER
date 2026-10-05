@@ -650,6 +650,34 @@ function houseResidents(house){
   }
   return out;
 }
+const VISIBLE_RESIDENTS_BY_LEVEL=Object.freeze({1:2,2:3,3:4,4:5});
+function houseVisibleResidents(house){
+  const all=houseResidents(house),level=houseLevel(house),limit=VISIBLE_RESIDENTS_BY_LEVEL[level]||2;
+  if(all.length<=limit)return all;
+
+  const males=all.filter(r=>r.age==='adult'&&r.sex==='male');
+  const females=all.filter(r=>r.age==='adult'&&r.sex==='female');
+  const children=all.filter(r=>r.age==='child');
+  const out=[],used=new Set(),flip=(peasantHash(house.id+'-visible-sex')&1)!==0;
+
+  const take=r=>{if(r&&!used.has(r.id)&&out.length<limit){used.add(r.id);out.push(r)}};
+
+  // Small houses show one adult + one child; across houses the adult sex alternates.
+  // Larger houses add the other adult first, then fill deterministically.
+  take(flip?females[0]:males[0]);
+  take(children[0]);
+  if(limit>=3)take(flip?males[0]:females[0]);
+  if(limit>=4)take(children[1]||males[1]||females[1]);
+  if(limit>=5)take(males[1]||females[1]||children[2]);
+
+  if(out.length<limit){
+    const rest=all
+      .filter(r=>!used.has(r.id))
+      .sort((a,b)=>peasantHash(a.id+'-visible')-peasantHash(b.id+'-visible'));
+    for(const r of rest){take(r);if(out.length>=limit)break}
+  }
+  return out;
+}
 function residentTimeOffset(id){
   return (((peasantHash(id+'-time')>>>8)%1000)/1000-.5)*.055;
 }
@@ -774,12 +802,14 @@ function drawPeasants(){
   const houses=completedSettlement('house'),fields=completedSettlement('field');
   if(!houses.length)return;
   const day=peasantVisualDay(),dots=[];
+  let representedPopulation=0,activeAgents=0;
   const peasantHouses=houses.filter(h=>houseLevel(h)===1);
   const assignments=fieldWorkAssignments(peasantHouses,fields);
 
   for(const house of houses){
+    representedPopulation+=housePopulationCapacity(house).total;
     const kind=villagerClass(house),assignment=assignments.get(house.id);
-    for(const resident of houseResidents(house)){
+    for(const resident of houseVisibleResidents(house)){
       let p=residentClassPosition(house,resident,day,assignment);
       if(!p)continue;
       p=residentScatter(p,resident.id,resident.age==='child');
@@ -788,9 +818,14 @@ function drawPeasants(){
         p,id:resident.id,kind,sex:resident.sex,age:resident.age,
         colors:villagerBodyColors(resident.id,kind)
       });
+      activeAgents++;
     }
   }
   dots.sort((a,b)=>{const aa=rotateViewPoint(a.p),bb=rotateViewPoint(b.p);return aa.x+aa.y-(bb.x+bb.y)});
+  if(window.__conquerPerf){
+    window.__conquerPerf.representedPopulation=representedPopulation;
+    window.__conquerPerf.visibleVillagers=activeAgents;
+  }
   for(const dot of dots)drawVillagerFigure(dot);
 }
 function militaryScale(){
