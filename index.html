@@ -806,7 +806,7 @@ function drawMultiPolygonBand(multi,z0,z1){
     const pts=cleanClipRing(ring);if(pts.length<3)continue;
     for(let i=0;i<pts.length;i++){
       const j=(i+1)%pts.length,b0=w2s(pts[i],baseZ),b1=w2s(pts[j],baseZ),t1=w2s(pts[j],z1),t0=w2s(pts[i],z1);
-      const dx=b1.x-b0.x,shade=dx>=0?'#514a44':'#635951';
+      const dx=b1.x-b0.x,shade=dx>=0?'#49443f':'#686057';
       faces.push({poly:[b0,b1,t1,t0],depth:(b0.y+b1.y)/2,shade});
     }
   }
@@ -816,7 +816,7 @@ function drawMultiPolygonBand(multi,z0,z1){
 }
 function drawExposedTop(multi,z){
   if(!multi?.length)return;
-  fillMultiPolygonTop(multi,z,'#8d8175','#635951');
+  fillMultiPolygonTop(multi,z,'#9a8e82','#6f675f');
 }
 function drawCastleUnion(){
   const bands=castleUnionBands();if(!bands)return false;
@@ -1026,10 +1026,20 @@ function roundParentSubtowerAttachment(parent,child,radialAngle){
 function gateSubtowerAttachment(parent,child,frontIndex){
   const fp=footprintPoints(parent);if(fp.length<4)return null;
   // Gate "front" is facade fp[1] -> fp[2], therefore it has exactly two sockets.
+  // Exception to normal subtowers: here the socket marks the CONTACT point,
+  // not the child centre. The child is pushed out along the corner ray until
+  // its own perimeter touches the gate perimeter, keeping the portal clear.
   const i=Number(frontIndex)===2?2:1,corner=fp[i];
+  let ux=corner.x-parent.x,uy=corner.y-parent.y,L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
   const angle=child.shape==='square'?(parent.angle||0):0;
+  let support;
+  if(child.shape==='round')support=Number(child.r)||.5;
+  else{
+    const d=rectDims(child),local=rotateVec(ux,uy,-angle);
+    support=Math.abs(local.x)*d.w/2+Math.abs(local.y)*d.h/2;
+  }
   return{
-    point:{x:corner.x,y:corner.y},
+    point:{x:corner.x+ux*support,y:corner.y+uy*support},
     angle,
     subtowerSocket:'gate-front:'+i,
     subtowerAngle:null
@@ -1264,7 +1274,7 @@ function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
-    ?{top:'#8d8175',sideA:'#514a44',sideB:'#635951',stroke:selected?'#f4b76f':'#d8c8b4'}
+    ?{top:'#9a8e82',sideA:'#49443f',sideB:'#686057',stroke:selected?'#f4b76f':'#d8c8b4'}
     :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
   extrudePolygon(linePoly(s),h,colors);
 }
@@ -1784,8 +1794,10 @@ function drawPointStructure(s,preview=false){
   }
   const tower=s.type==='tower',gate=s.type==='gate';
   extrudePolygon(footprintPoints(s),h,{
-    top:gate?'#a07a58':tower?'#88796b':'#88796b',
-    sideA:gate?'#5e4535':'#4e4740',sideB:gate?'#735441':'#62584f',stroke
+    top:(tower||gate)?'#9a8e82':'#88796b',
+    sideA:(tower||gate)?'#49443f':'#4e4740',
+    sideB:(tower||gate)?'#686057':'#62584f',
+    stroke
   });
   const c=w2s({x:s.x,y:s.y},h+.03),dir={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},d=w2s(dir,h+.03);
   ctx.strokeStyle=preview?'rgba(244,183,111,.95)':'rgba(245,226,202,.52)';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(d.x,d.y);ctx.stroke();
