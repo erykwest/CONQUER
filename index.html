@@ -774,7 +774,26 @@ function currentLinearSpec(){
   return TYPES.built;
 }
 function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
-function linePoly(s){const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;return[{x:s.a.x+nx,y:s.a.y+ny},{x:s.b.x+nx,y:s.b.y+ny},{x:s.b.x-nx,y:s.b.y-ny},{x:s.a.x-nx,y:s.a.y-ny}]}
+function snappedStructure(id){
+  if(!id)return null;
+  const s=State.structures.find(x=>x.id===id);
+  return s&&['tower','gate'].includes(s.type)?s:null;
+}
+function renderedLinearEndpoints(s){
+  let a={...s.a},b={...s.b};
+  // Render-only penetration: connected walls continue to the centre of the
+  // snapped tower/gate. Logical endpoints, lengths and costs remain unchanged.
+  if(s.type==='wall'){
+    const sa=snappedStructure(s.aSnap),sb=snappedStructure(s.bSnap);
+    if(sa)a={x:sa.x,y:sa.y};
+    if(sb)b={x:sb.x,y:sb.y};
+  }
+  return{a,b};
+}
+function linePoly(s){
+  const e=renderedLinearEndpoints(s),a=e.a,b=e.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
+  return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
+}
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return 1;
@@ -861,12 +880,13 @@ function draw(){
   State.structures.filter(s=>s.auto&&['field','road'].includes(s.type)).forEach(drawAutoStructure);
 
   // Raised settlement elements use painter order in world depth.
-  const raised=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type))).slice().sort((a,b)=>{
-    const d=worldDepth(a)-worldDepth(b);if(Math.abs(d)>.01)return d;
-    const rank=x=>['tower','gate'].includes(x.type)?3:x.type==='built'?2:x.type==='wall'?1:0;
-    return rank(a)-rank(b);
-  });
-  for(const s of raised){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  const raised=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type)));
+  const normalRaised=raised.filter(s=>!['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  const foregroundCastle=raised.filter(s=>!s.auto&&['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const s of normalRaised){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  // Towers/gates are the foreground architectural layer. Connected walls are
+  // deliberately rendered underneath them and penetrate their footprint.
+  for(const s of foregroundCastle)drawStructure(s)
 
   // Placement preview always wins the visual stack.
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
