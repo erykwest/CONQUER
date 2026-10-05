@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.12</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.13</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -536,11 +536,11 @@ function spawnHouse(step){
     const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p))continue;
     const core=Math.exp(-Math.pow(d-Math.min(6.5,radius*.62),2)/(2*3.0*3.0));
     const score=core*1.2+(1-offset/3)*.65+rnd()*.20;
-    candidates.push({p,ang,score});
+    candidates.push({p,ang,score,roadId:road.id,doorSide:-side});
   }
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,24)){
-    const h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:c.ang,appeal:c.score});
+    const h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:c.ang,appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
     if(!autoBlocked(h,placed,manual,.38)){State.structures.push(h);return true}
   }
   return false;
@@ -1186,6 +1186,46 @@ function drawHouse(s){
   const roofB=[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)];
   pathPolygon(roofA,'#5b3d30','#8c6752',1);pathPolygon(roofB,'#6b4938','#8c6752',1);
 }
+function closestPointOnSegment(p,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return{x:a.x,y:a.y};
+  const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return{x:a.x+t*dx,y:a.y+t*dy};
+}
+function inferHouseDoorSide(house){
+  const ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0),localY={x:-sa,y:ca};
+  let best=null,bestD=Infinity;
+  const preferred=house.roadId&&State.structures.find(s=>s.id===house.roadId&&s.type==='road');
+  const roads=preferred?[preferred]:roadList(true);
+  for(const road of roads){
+    const q=closestPointOnSegment(house,road.a,road.b),d=dist(house,q);
+    if(d<bestD){bestD=d;best=q}
+  }
+  if(best){
+    const dot=(best.x-house.x)*localY.x+(best.y-house.y)*localY.y;
+    return dot>=0?1:-1;
+  }
+  return (peasantHash(house.id)&1)?1:-1;
+}
+function houseDoorInfo(house){
+  if(!Number.isFinite(Number(house.doorSide)))house.doorSide=inferHouseDoorSide(house);
+  const side=Number(house.doorSide)>=0?1:-1,ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0);
+  const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=(Number(house.h)||1)/2;
+  const surface={x:house.x+normal.x*half,y:house.y+normal.y*half};
+  const outside={x:surface.x+normal.x*.28,y:surface.y+normal.y*.28};
+  return{surface,outside,tangent,normal,side};
+}
+function drawHouseDoor(house){
+  const d=houseDoorInfo(house),halfW=Math.min(.24,(Number(house.w)||1.5)*.16);
+  const edgeA={x:d.surface.x-d.tangent.x*(house.w/2),y:d.surface.y-d.tangent.y*(house.w/2)};
+  const edgeB={x:d.surface.x+d.tangent.x*(house.w/2),y:d.surface.y+d.tangent.y*(house.w/2)};
+  const visible=visibleFacadeEdges(house).some(e=>pointSegmentDistance(d.surface,e.a,e.b)<.08);
+  if(!visible)return;
+  const l={x:d.surface.x-d.tangent.x*halfW,y:d.surface.y-d.tangent.y*halfW};
+  const r={x:d.surface.x+d.tangent.x*halfW,y:d.surface.y+d.tangent.y*halfW};
+  const poly=[w2s(l,.04),w2s(r,.04),w2s(r,.68),w2s(l,.68)];
+  pathPolygon(poly,'#39271e','rgba(170,139,96,.50)',.7);
+  const knob=w2s({x:d.surface.x+d.tangent.x*halfW*.48,y:d.surface.y+d.tangent.y*halfW*.48},.34);
+  ctx.save();ctx.fillStyle='rgba(198,155,79,.85)';ctx.beginPath();ctx.arc(knob.x,knob.y,Math.max(1,1.2*State.view.scale),0,Math.PI*2);ctx.fill();ctx.restore();
+}
 function drawAutoStructure(s){
   ctx.save();if(underConstruction(s))ctx.globalAlpha=.38;
   if(s.type==='field'){
@@ -1275,25 +1315,132 @@ function assignedField(house,fields){
   for(const field of fields){const d=dist(house,field);if(d<bestD){bestD=d;best=field}}
   return best;
 }
+const PEASANT_PATH_STEP=.5,PEASANT_CLEARANCE=.22;
+let peasantPathCache=new Map(),peasantPathSignature='';
+function peasantObstacleSignature(){
+  return State.structures.filter(s=>['house','tower','gate','wall','built','well'].includes(s.type)).map(s=>{
+    if(['wall','built'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width].join(',');
+    return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle].join(',');
+  }).join('|');
+}
+function syncPeasantPathCache(){
+  const sig=peasantObstacleSignature();
+  if(sig!==peasantPathSignature){peasantPathSignature=sig;peasantPathCache.clear()}
+}
+function pointBlockedForPeasant(p,sourceHouseId){
+  for(const s of State.structures){
+    if(s.id===sourceHouseId)continue;
+    if(!['house','tower','gate','wall','built','well'].includes(s.type))continue;
+    if(['wall','built'].includes(s.type)){
+      if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
+      continue;
+    }
+    if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
+    if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
+    const q=toLocalPoint(s,p),d=rectDims(s);
+    if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
+  }
+  return false;
+}
+function peasantSegmentClear(a,b,sourceHouseId){
+  const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.22));
+  for(let i=1;i<steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
+  return true;
+}
+function smoothPeasantPath(points,sourceHouseId){
+  if(points.length<=2)return points;
+  const out=[points[0]];let i=0;
+  while(i<points.length-1){
+    let j=points.length-1;
+    while(j>i+1&&!peasantSegmentClear(points[i],points[j],sourceHouseId))j--;
+    out.push(points[j]);i=j;
+  }
+  return out;
+}
+class PeasantMinHeap{
+  constructor(){this.a=[]}
+  push(n){const a=this.a;a.push(n);let i=a.length-1;while(i>0){const p=(i-1)>>1;if(a[p].f<=n.f)break;a[i]=a[p];i=p}a[i]=n}
+  pop(){const a=this.a;if(!a.length)return null;const root=a[0],last=a.pop();if(a.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=a.length)break;let m=r<a.length&&a[r].f<a[l].f?r:l;if(a[m].f>=last.f)break;a[i]=a[m];i=m}a[i]=last}return root}
+  get length(){return this.a.length}
+}
+function findPeasantPath(start,goal,sourceHouseId,pad=8){
+  if(peasantSegmentClear(start,goal,sourceHouseId))return[start,goal];
+  const step=PEASANT_PATH_STEP;
+  const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
+  const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
+  const key=(x,y)=>x+','+y,pos=(x,y)=>({x:x*step,y:y*step});
+  function nearestFree(p){
+    const cx=Math.round(p.x/step),cy=Math.round(p.y/step);let best=null,bestD=Infinity;
+    for(let r=0;r<=4;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
+      const x=cx+dx,y=cy+dy,q=pos(x,y);if(x<minX||x>maxX||y<minY||y>maxY||pointBlockedForPeasant(q,sourceHouseId))continue;
+      if(!peasantSegmentClear(p,q,sourceHouseId))continue;
+      const d=dist(p,q);if(d<bestD){best={x,y,q};bestD=d}
+    }
+    return best;
+  }
+  const s=nearestFree(start),g=nearestFree(goal);if(!s||!g)return null;
+  const open=new PeasantMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
+  open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  let found=null,guard=0;
+  while(open.length&&guard++<30000){
+    const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
+    if(cur.x===g.x&&cur.y===g.y){found=cur;break}
+    for(const [dx,dy] of dirs){
+      const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
+      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId))continue;
+      if(dx&&dy){
+        const q1=pos(cur.x+dx,cur.y),q2=pos(cur.x,cur.y+dy);
+        if(pointBlockedForPeasant(q1,sourceHouseId)||pointBlockedForPeasant(q2,sourceHouseId))continue;
+      }
+      const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
+      if(tentative<(gScore.get(nk)??Infinity)){
+        gScore.set(nk,tentative);came.set(nk,ck);
+        open.push({x:nx,y:ny,f:tentative+dist(q,g.q)});
+      }
+    }
+  }
+  if(!found)return null;
+  const rev=[],startKey=key(s.x,s.y);let k=key(g.x,g.y);
+  while(true){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));if(k===startKey)break;k=came.get(k);if(!k)return null}
+  rev.reverse();return smoothPeasantPath([start,...rev,goal],sourceHouseId);
+}
+function peasantPath(house,field){
+  syncPeasantPathCache();const key=house.id+'>'+field.id;
+  if(peasantPathCache.has(key))return peasantPathCache.get(key);
+  const start=houseDoorInfo(house).outside,goal={x:field.x,y:field.y};
+  let path=findPeasantPath(start,goal,house.id,8);
+  if(!path)path=findPeasantPath(start,goal,house.id,18);
+  if(!path)path=[start];
+  peasantPathCache.set(key,path);return path;
+}
+function pointAlongPath(path,t){
+  if(!path?.length)return null;if(path.length===1)return path[0];
+  t=clamp(t,0,1);const lens=[];let total=0;
+  for(let i=0;i<path.length-1;i++){const L=dist(path[i],path[i+1]);lens.push(L);total+=L}
+  if(total<=1e-6)return path[0];
+  let target=t*total;
+  for(let i=0;i<lens.length;i++){
+    if(target<=lens[i]){const u=lens[i]?target/lens[i]:0;return{x:path[i].x+(path[i+1].x-path[i].x)*u,y:path[i].y+(path[i+1].y-path[i].y)*u}}
+    target-=lens[i];
+  }
+  return path.at(-1);
+}
 function peasantPosition(house,field,day){
   const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.035;
   const leave0=.20+stagger,leave1=.32+stagger,return0=.70+stagger,return1=.82+stagger;
   if(frac<leave0||frac>return1)return null;
-  const home={x:house.x,y:house.y},work={x:field.x,y:field.y};
+  const path=peasantPath(house,field),work={x:field.x,y:field.y};
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
-  if(frac<leave1){
-    const t=smooth((frac-leave0)/(leave1-leave0));
-    return{x:home.x+(work.x-home.x)*t,y:home.y+(work.y-home.y)*t};
-  }
+  if(frac<leave1)return pointAlongPath(path,smooth((frac-leave0)/(leave1-leave0)));
   if(frac<return0){
     const span=Math.max(.001,return0-leave1),t=(frac-leave1)/span;
     const a=(h%6283)/1000,ca=Math.cos(field.angle||0),sa=Math.sin(field.angle||0);
-    const lx=Math.sin(t*Math.PI*4+a)*Math.min(.38,field.w*.18);
-    const ly=Math.cos(t*Math.PI*3+a*.73)*Math.min(.28,field.h*.18);
+    const lx=Math.sin(t*Math.PI*4+a)*Math.min(.38,field.w*.18),ly=Math.cos(t*Math.PI*3+a*.73)*Math.min(.28,field.h*.18);
     return{x:work.x+lx*ca-ly*sa,y:work.y+lx*sa+ly*ca};
   }
-  const t=smooth((frac-return0)/(return1-return0));
-  return{x:work.x+(home.x-work.x)*t,y:work.y+(home.y-work.y)*t};
+  return pointAlongPath(path,1-smooth((frac-return0)/(return1-return0)));
 }
 function peasantAnimationActive(){
   const day=peasantVisualDay(),frac=day-Math.floor(day);
@@ -1442,6 +1589,7 @@ function draw(){
   }
   drawCastleBattlements();
   drawFacadeWindows(false,1);
+  for(const house of completedSettlement('house'))drawHouseDoor(house);
   drawChimneysAndSmoke();
 
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
