@@ -81,6 +81,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
     <h3>Wall height</h3>
     <div class="grid"><button data-wall-level="1" class="active">1 level</button><button data-wall-level="2">2 levels</button></div>
     <h3>Gate</h3><button class="full" data-gate>Gate 1.5×1.5U</button>
+    <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <hr/>
     <div class="legend">Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
@@ -153,7 +154,7 @@ const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 const TYPES={wall:{min:1,max:8},built:{width:1,min:1,max:4}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
 const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
@@ -177,6 +178,9 @@ const NIGHT_OVERLAY_MAX=.48;
 const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
+const LINEAR_POINT_MAGNET=.90;
+const TOWER_WALL_MAGNET=.78;
+const WALL_BREAK_MIN=.10;
 
 // Builder Geometry V2 — visual variants are data, not separate structure types.
 // Geometry/cost/functions stay on the structure; appearance is selected here.
@@ -270,13 +274,17 @@ function applyStructureTier(s,tier){
   }
   normalizeFunctions(s);return s
 }
-function structureLevel(s){return clamp(Math.round(Number(s?.level)||1),1,s?.type==='tower'?3:2)}
-function levelCostFactor(s){const l=structureLevel(s);return s?.type==='tower'?[1,1.65,2.3][l-1]:[1,1.8][l-1]}
+function structureLevel(s){return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)}
+function levelCostFactor(s){
+  const l=structureLevel(s);
+  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3][l-1];
+  return[1,1.8][l-1];
+}
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
 function constructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower')return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
-  if(s.type==='gate')return {...COSTS.gate};
+  if(s.type==='gate')return scaleCost(COSTS.gate,levelCostFactor(s));
   if(s.type==='well')return {...COSTS.well};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -288,7 +296,7 @@ function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resou
 function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
 function buildDuration(s){
   if(s.type==='tower')return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
-  if(s.type==='gate')return BUILD_DAYS.gate;
+  if(s.type==='gate')return BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length)*(.75+.25*structureLevel(s));
@@ -694,7 +702,7 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12}
-  if(s.type==='gate')return 2.8;
+  if(s.type==='gate')return [2.8,4.0,5.2][structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
@@ -929,7 +937,7 @@ function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);ret
 function placementAngle(center,p){return Math.atan2(p.y-center.y,p.x-center.x)}
 function orientedToolSpec(){
   if(State.tool.kind==='tower'&&State.tool.shape==='square')return{type:'tower',shape:'square',size:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]};
-  if(State.tool.kind==='gate')return{type:'gate',shape:'square',size:1.5,functions:[]};
+  if(State.tool.kind==='gate')return{type:'gate',shape:'square',size:1.5,level:State.tool.level||State.buildLevels.gate,functions:[]};
   // Future point-buildings can pass a placementSpec without adding another interaction path.
   if(State.tool.placementSpec&&State.tool.placementSpec.shape!=='round')return{...State.tool.placementSpec};
   return null;
@@ -942,9 +950,12 @@ function makePlacementPreview(q,angle=0){
 }
 function commitOrientedPlacement(center,angle){
   const spec=orientedToolSpec();if(!spec)return false;
-  const s={id:uid(),...spec,x:center.x,y:center.y,angle,functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
-  State.draft=null;const ok=addStructure(s);
-  if(ok)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
+  const wallId=spec.type==='tower'?State.draft?.wallSnapId:null;
+  const finalAngle=Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle;
+  const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  State.draft=null;
+  const ok=s.type==='tower'?addTowerWithWallBreak(s,wallId):addStructure(s);
+  if(ok&&!wallId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
   return ok;
 }
 function boundaryPoint(s,target){
@@ -958,7 +969,97 @@ function boundaryPoint(s,target){
   }
   return{x:s.x+ux*edge,y:s.y+uy*edge}
 }
-function snapAnchor(p){let best=null,bestScore=Infinity;for(const s of State.structures){if(!['tower','gate'].includes(s.type))continue;const d=dist(p,{x:s.x,y:s.y}),rd=rectDims(s),reach=(s.shape==='round'?s.r:Math.hypot(rd.w,rd.h)/2)+1;if(d<=reach&&d<bestScore){best=s;bestScore=d}}return best?{point:boundaryPoint(best,p),structureId:best.id}:{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null}}
+function snapAnchor(p){
+  let best=null,bestPoint=null,bestScore=Infinity;
+  for(const s of State.structures){
+    if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;
+    const q=boundaryPoint(s,p),score=dist(p,q);
+    if(score<=LINEAR_POINT_MAGNET&&score<bestScore){best=s;bestPoint=q;bestScore=score}
+  }
+  return best
+    ?{point:bestPoint,structureId:best.id,magnet:true}
+    :{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null,magnet:false};
+}
+function nearestWallPlacementSnap(p){
+  let best=null,bestPoint=null,bestD=Infinity;
+  for(const s of State.structures){
+    if(s.auto||s.type!=='wall')continue;
+    const q=closestPointOnSegment(p,s.a,s.b),d=dist(p,q);
+    const reach=TOWER_WALL_MAGNET+(Number(s.width)||.5)/2;
+    if(d<=reach&&d<bestD){best=s;bestPoint=q;bestD=d}
+  }
+  if(!best)return null;
+  return{
+    point:bestPoint,
+    wallId:best.id,
+    angle:Math.atan2(best.b.y-best.a.y,best.b.x-best.a.x),
+    distance:bestD
+  };
+}
+function towerPlacementSnap(p){
+  if(State.tool.kind!=='tower')return{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,angle:0};
+  const wall=nearestWallPlacementSnap(p);
+  return wall||{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,angle:0};
+}
+function towerHalfSpanAlongWall(tower,wall){
+  if(tower.shape==='round')return Number(tower.r)||.5;
+  const dirA=Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x),rel=dirA-(tower.angle||0);
+  const d=rectDims(tower),hx=d.w/2,hy=d.h/2;
+  return Math.abs(Math.cos(rel))*hx+Math.abs(Math.sin(rel))*hy;
+}
+function proportionalBuildCost(cost,ratio){
+  if(!cost)return undefined;
+  const out={};
+  for(const [k,v] of Object.entries(cost))out[k]=Math.max(0,Math.round(Number(v||0)*ratio));
+  return out;
+}
+function wallFragmentFrom(source,a,b,aSnap,bSnap,ratio){
+  const fragment={
+    ...source,
+    id:uid(),
+    a:{...a},b:{...b},
+    aSnap:aSnap||null,bSnap:bSnap||null,
+    length:dist(a,b),
+    buildCost:proportionalBuildCost(source.buildCost,ratio)
+  };
+  if(source.construction)fragment.construction={...source.construction};
+  normalizeStructureVariants(fragment);
+  return fragment;
+}
+function breakWallForTower(wallId,tower){
+  const wall=State.structures.find(s=>s.id===wallId&&s.type==='wall');
+  if(!wall||!tower||tower.type!=='tower')return false;
+  const dx=wall.b.x-wall.a.x,dy=wall.b.y-wall.a.y,L=Math.hypot(dx,dy);
+  if(L<=1e-6)return false;
+  const ux=dx/L,uy=dy/L;
+  const tc=clamp((tower.x-wall.a.x)*ux+(tower.y-wall.a.y)*uy,0,L);
+  const half=towerHalfSpanAlongWall(tower,wall)+.025;
+  const cut0=clamp(tc-half,0,L),cut1=clamp(tc+half,0,L);
+  const p0={x:wall.a.x+ux*cut0,y:wall.a.y+uy*cut0};
+  const p1={x:wall.a.x+ux*cut1,y:wall.a.y+uy*cut1};
+
+  const fragments=[];
+  if(cut0>=WALL_BREAK_MIN){
+    fragments.push(wallFragmentFrom(wall,wall.a,p0,wall.aSnap,tower.id,cut0/L));
+  }
+  if(L-cut1>=WALL_BREAK_MIN){
+    fragments.push(wallFragmentFrom(wall,p1,wall.b,tower.id,wall.bSnap,(L-cut1)/L));
+  }
+
+  const idx=State.structures.findIndex(s=>s.id===wall.id);
+  if(idx>=0)State.structures.splice(idx,1,...fragments);
+  castleUnionCache.key=null;
+  return true;
+}
+function addTowerWithWallBreak(tower,wallId){
+  const ok=addStructure(tower);
+  if(!ok)return false;
+  if(wallId&&breakWallForTower(wallId,tower)){
+    markDirty();draw();
+    status('Tower snapped to wall — wall split automatically');
+  }
+  return true;
+}
 function currentLinearSpec(){
   if(State.tool.linear==='wall')return{...TYPES.wall,width:wallWidthForTier(State.tool.tier||State.buildLevels.wallTier)};
   return TYPES.built;
@@ -970,7 +1071,7 @@ function linePoly(s){
 }
 function functionCapacity(s){
   if(!s)return 0;
-  if(s.type==='gate')return 1;
+  if(s.type==='gate')return structureLevel(s);
   if(s.type==='tower'){
     const base=towerTier(s)===3?2:towerTier(s)===2?1:0;
     return base*structureLevel(s);
@@ -987,7 +1088,7 @@ function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -1911,12 +2012,20 @@ function drawGatePortals(){
     }
   }
 }
+function gateWindowRows(s){
+  const level=structureLevel(s),rows=[1.95];
+  if(level>=2)rows.push(3.15);
+  if(level>=3)rows.push(4.35);
+  return rows.filter(z=>z<structureHeight(s)-.35);
+}
 function drawGateWindows(s,lit=false,nf=1){
   for(const edge of gateFacadeEdges(s)){
-    const a=w2s(edge.a,1.95),b=w2s(edge.b,1.95),L=Math.hypot(b.x-a.x,b.y-a.y);
-    const gap=Math.min(clamp(8*State.view.scale,5,11),L*.28);
-    drawWindowOnEdge(edge,1.95,lit,nf,-gap/2);
-    drawWindowOnEdge(edge,1.95,lit,nf,gap/2);
+    for(const z of gateWindowRows(s)){
+      const a=w2s(edge.a,z),b=w2s(edge.b,z),L=Math.hypot(b.x-a.x,b.y-a.y);
+      const gap=Math.min(clamp(8*State.view.scale,5,11),L*.28);
+      drawWindowOnEdge(edge,z,lit,nf,-gap/2);
+      drawWindowOnEdge(edge,z,lit,nf,gap/2);
+    }
   }
 }
 function visibleFacadeEdges(s){
@@ -2159,7 +2268,7 @@ function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(!s||!['tower','gate','built','wall'].includes(s.type)){panel.classList.remove('open');return}
   normalizeFunctions(s);const cap=functionCapacity(s);panel.classList.add('open');
-  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','wall','built'].includes(s.type),maxLevel=s.type==='tower'?3:2,canTier=['tower','wall'].includes(s.type);
+  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','gate','wall','built'].includes(s.type),maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall'].includes(s.type);
   info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
   let html='';
   if(canTier){
@@ -2208,17 +2317,23 @@ canvas.addEventListener('pointerdown',e=>{
   // Once the centre is fixed, the second click only defines orientation.
   // It may be anywhere on screen; only the building centre must lie in the build area.
   if(State.draft?.mode==='orient'&&orientedToolSpec()){
-    const angle=placementAngle(State.draft.center,p);commitOrientedPlacement(State.draft.center,angle);return
+    const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
+    commitOrientedPlacement(State.draft.center,angle);return
   }
 
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='tower'){
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    const snap=towerPlacementSnap(p),q=snap.point;
     if(State.tool.shape==='round'){
-      State.draft=null;addStructure({id:uid(),type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]});return
+      State.draft=null;
+      addTowerWithWallBreak({id:uid(),type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]},snap.wallId);
+      return
     }
-    State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
-    status('Position fixed — move cursor to rotate, click to confirm');draw();return
+    const lockedAngle=snap.wallId?snap.angle:null;
+    const angle=Number.isFinite(lockedAngle)?lockedAngle:0;
+    State.draft={mode:'orient',center:q,angle,lockedAngle,wallSnapId:snap.wallId,preview:makePlacementPreview(q,angle)};
+    status(snap.wallId?'Tower magnetized to wall — click to confirm':'Position fixed — move cursor to rotate, click to confirm');
+    draw();return
   }
   if(State.tool.kind==='gate'){
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
@@ -2246,13 +2361,25 @@ canvas.addEventListener('pointermove',e=>{
   const oriented=orientedToolSpec();
   if(oriented){
     if(State.draft?.mode==='orient'){
-      const angle=placementAngle(State.draft.center,p);State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
-      let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;status(`Rotate: ${deg}° — click to confirm`);draw();return
+      const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
+      State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
+      let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
+      status(State.draft.wallSnapId?`Wall snap · aligned ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      draw();return
     }
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};State.draft={mode:'hover',preview:makePlacementPreview(q,0)};draw();return
+    if(State.tool.kind==='tower'){
+      const snap=towerPlacementSnap(p),angle=snap.wallId?snap.angle:0;
+      State.draft={mode:'hover',wallSnapId:snap.wallId,preview:makePlacementPreview(snap.point,angle)};
+    }else{
+      const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+      State.draft={mode:'hover',preview:makePlacementPreview(q,0)};
+    }
+    draw();return
   }
   if(State.tool.kind==='tower'&&State.tool.shape==='round'){
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};State.draft={mode:'hover',preview:makePlacementPreview(q,0)};draw();return
+    const snap=towerPlacementSnap(p);
+    State.draft={mode:'hover',wallSnapId:snap.wallId,preview:makePlacementPreview(snap.point,0)};
+    draw();return
   }
 });
 canvas.addEventListener('pointerup',()=>pan=null);canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -2263,7 +2390,20 @@ for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const l
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&State.tool.linear==='wall'){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status('Wall tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
 document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.buildLevels.wall=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'){State.tool.level=State.buildLevels.wall;State.draft=null;status('Wall height: '+State.buildLevels.wall+' level'+(State.buildLevels.wall>1?'s':''));draw()}});
-document.querySelector('[data-gate]').onclick=e=>setTool({kind:'gate',label:'Gate 1.5×1.5U · '+BUILD_DAYS.gate+'d · '+costText(COSTS.gate),el:e.currentTarget});
+document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
+  State.buildLevels.gate=Number(b.dataset.gateLevel);
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
+  if(State.tool.kind==='gate'){
+    State.tool.level=State.buildLevels.gate;State.draft=null;
+    const dummy={type:'gate',level:State.buildLevels.gate};
+    status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
+    draw();
+  }
+});
+document.querySelector('[data-gate]').onclick=e=>{
+  const level=State.buildLevels.gate,dummy={type:'gate',level};
+  setTool({kind:'gate',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+};
 document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
@@ -2293,6 +2433,9 @@ function migrateStructures(list){
       s.level=clamp(Math.round(Number(s.level)||1),1,3);
       s.tier=towerTier(s);
       applyStructureTier(s,s.tier);
+    }
+    if(s.type==='gate'){
+      s.level=clamp(Math.round(Number(s.level)||1),1,3);
     }
     if(s.type==='well')delete s.construction;
     if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;
