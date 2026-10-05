@@ -730,11 +730,31 @@ function drawMultiPolygonBand(multi,z0,z1){
   }
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.poly,f.shade,null);
-  fillMultiPolygonTop(multi,z1,'#8d8175','#d8c8b4');
+  // No bright perimeter here: otherwise each height band reads like a separate stacked box.
+  fillMultiPolygonTop(multi,z1,'#8d8175',null);
+}
+function strokeExposedTop(multi,z){
+  if(!multi?.length)return;
+  ctx.save();ctx.strokeStyle='rgba(38,31,27,.42)';ctx.lineWidth=.75;
+  ctx.beginPath();
+  for(const poly of multi)for(const ring of poly){
+    const pts=cleanClipRing(ring).map(p=>w2s(p,z));if(pts.length<3)continue;
+    ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();
+  }
+  ctx.stroke();ctx.restore();
 }
 function drawCastleUnion(){
   const bands=castleUnionBands();if(!bands)return false;
   for(const band of bands)drawMultiPolygonBand(band.geometry,band.z0,band.z1);
+  const pc=window.__polygonClipping;
+  for(let i=0;i<bands.length;i++){
+    const band=bands[i],next=bands[i+1];
+    let exposed=band.geometry;
+    if(next&&pc){
+      try{exposed=pc.difference(band.geometry,next.geometry)}catch(err){exposed=band.geometry}
+    }
+    strokeExposedTop(exposed,band.z1);
+  }
   return true;
 }
 function drawCastleUnionDetails(){
