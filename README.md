@@ -2,7 +2,7 @@
 
 Settlement builder / manager prototype.
 
-## V0.8 scope
+## V0.9 scope
 - 200×200U persistent seeded world buffer
 - 100×100U central buildable area
 - Castle builder: square/round towers, walls, built wall-sections, gates
@@ -96,3 +96,17 @@ Current values are provisional balancing values.
 - Height affects 2.5D extrusion, construction time and construction cost
 - Builder height selectors set the level for new structures; selected structures expose the level in the structure panel for rapid prototype testing
 - Test resources are initialized to 10,000 each; existing saves are raised to at least 10,000 on load during this testing phase
+
+
+## Structure tiers
+- Wall T1: 0.2U thick
+- Wall T2: 0.5U thick (normal)
+- Wall T3: 1U thick
+- Square tower tiers: 1U / 1.5U / 2U
+- Round tower tiers: R0.5U / R0.75U / R1U
+- Wall thickness tier is selectable before placement
+- Selecting an existing wall or tower exposes T1 / T2 / T3 controls for direct upgrade/downgrade during prototype testing
+- Tower upgrades preserve shape and height level
+- Wall upgrades preserve endpoints, length and height level
+- Height remains independent from tier: towers use 1–3 levels, walls/built sections 1–2 levels
+- Function capacity recalculates after tower tier or height changes
