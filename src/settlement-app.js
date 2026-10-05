@@ -16,12 +16,13 @@ function structureAtScreen(p){
   return null;
 }
 function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate],[data-well],[data-civic]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
-function markDirty(hardNavigation=true){
+function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   invalidateNavigation(hardNavigation);
   fieldWorkAssignmentCache={key:null,map:new Map()};
-  invalidateSceneCache();
-  document.getElementById('saveState').textContent='unsaved';saveLocal();
+  if(staticChanged)invalidateSceneCache();
+  document.getElementById('saveState').textContent='unsaved';
+  if(scheduleSave)scheduleLocalSave();
 }
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
@@ -347,7 +348,16 @@ function migrateStructures(list){
   }
   return migrated;
 }
-function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
+let localSaveTimer=null;
+function saveLocal(){
+  const t0=performance.now();
+  localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}));
+  if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
+}
+function scheduleLocalSave(delay=700){
+  if(localSaveTimer)return;
+  localSaveTimer=setTimeout(()=>{localSaveTimer=null;saveLocal()},delay);
+}
 function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
 async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();saveLocal();renderUI();renderFunctionPanel();draw()}}
@@ -396,36 +406,81 @@ document.getElementById('biomeSelect').onchange=e=>{
 };
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(Number(b.dataset.speed)));
 document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
-let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceQuarter=null;
+let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0;
 const VISUAL_FRAME_MS=1000/30;
-function runSettlementMaintenance(force=false){
-  const quarter=Math.floor(State.clock.day*4);
-  if(!force&&quarter===simMaintenanceQuarter)return 0;
-  simMaintenanceQuarter=quarter;
+const MAINTENANCE_WATCHDOG_MS=2500;
+const LOCAL_AUTOSAVE_MS=5000;
+function constructionCompletionCrossed(beforeDay,afterDay){
+  for(const s of State.structures){
+    const d=Number(s?.construction?.completeDay);
+    if(Number.isFinite(d)&&d>beforeDay&&d<=afterDay)return true;
+  }
+  return false;
+}
+function runSettlementMaintenance(reason='watchdog'){
+  const t0=performance.now();
   let changed=0;
   changed+=syncCompletedTowerWallColliders(false);
   changed+=reconcileGateMainConnections(false);
   changed+=reconcileSettlementAccessRoads();
-  // Construction completion and sun position may have changed even without
-  // topology edits; rebuild static layers once per maintenance tick.
-  invalidateSceneCache();
+
+  if(reason==='completion'){
+    // A completed road/building has entered the static world and/or navigation graph.
+    invalidateNavigation(false);
+    fieldWorkAssignmentCache={key:null,map:new Map()};
+    invalidateSceneCache();
+  }else if(changed){
+    // Watchdog repairs only invalidate when they actually mutate topology.
+    invalidateSceneCache();
+  }
+
+  if(window.__conquerPerf){
+    window.__conquerPerf.lastMaintenanceMs=performance.now()-t0;
+    window.__conquerPerf.maintenanceRuns=(window.__conquerPerf.maintenanceRuns||0)+1;
+  }
   return changed;
 }
 function simulationFrame(now){
   const dt=Math.min(.25,(now-simLast)/1000);simLast=now;
   if(State.clock.speed>0){
-    const before=State.clock.day;State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
+    const before=State.clock.day;
+    State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
+
     processVillageGrowth();
-    const quarterChanged=Math.floor(before*4)!==Math.floor(State.clock.day*4);
-    if(quarterChanged){
-      runSettlementMaintenance(true);
-      renderUI();
+
+    // Maintenance follows actual topology events, NOT simulated quarter-days.
+    const completed=constructionCompletionCrossed(before,State.clock.day);
+    if(completed){
+      runSettlementMaintenance('completion');
+      simMaintenanceAt=now;
+    }else if(now-simMaintenanceAt>=MAINTENANCE_WATCHDOG_MS){
+      runSettlementMaintenance('watchdog');
+      simMaintenanceAt=now;
     }
+
+    if(now-simUiAt>=250){
+      renderUI();
+      simUiAt=now;
+    }
+
     if(now-simDrawAt>=VISUAL_FRAME_MS){
+      const t0=performance.now();
       draw();
+      const drawMs=performance.now()-t0;
+      if(window.__conquerPerf){
+        window.__conquerPerf.lastDrawMs=drawMs;
+        window.__conquerPerf.maxDrawMs=Math.max(window.__conquerPerf.maxDrawMs||0,drawMs);
+        if(drawMs>50)window.__conquerPerf.longDraws=(window.__conquerPerf.longDraws||0)+1;
+      }
       simDrawAt=now;
     }
-    if(now-simPersistAt>1000){saveLocal();simPersistAt=now}
+
+    // JSON.stringify + localStorage are synchronous. Keep them far away from
+    // the 10× growth cadence instead of blocking every second.
+    if(now-simPersistAt>=LOCAL_AUTOSAVE_MS){
+      saveLocal();
+      simPersistAt=now;
+    }
   }
   requestAnimationFrame(simulationFrame);
 }
