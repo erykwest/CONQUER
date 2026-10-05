@@ -1039,27 +1039,63 @@ function drawBuiltDetails(s,preview=false){
     for(const spec of chimneySpecs(s))drawChimney(spec);
   });
 }
-function battlementPiece(center,angle,z,w=.28,d=.24,h=.24){
+function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
   const pts=rectWorldPoints(center.x,center.y,w,d,angle),rp=rotateViewPoint(center);
-  return{pts,z0:z,z1:z+h,depth:rp.x+rp.y};
+  return{
+    pts,z0:z,z1:z+h,depth:rp.x+rp.y,
+    ownerId:owner?.id||null,
+    ownerType:owner?.type||null,
+    ownerDepth:owner?worldDepth(owner):null,
+    ownerTop:owner?structureHeight(owner):null
+  };
+}
+function towerBattlementOccluders(piece){
+  if(piece.ownerType!=='tower'||!piece.ownerId)return[];
+  return State.structures.filter(s=>{
+    if(s.id===piece.ownerId||s.type!=='tower'||underConstruction(s))return false;
+    const h=structureHeight(s);
+    // Only a genuinely taller tower may hide the battlements of this owner.
+    if(h<=Number(piece.ownerTop||piece.z0)+.04)return false;
+    // Larger worldDepth is nearer to the camera in this isometric projection.
+    return worldDepth(s)>Number(piece.ownerDepth??piece.depth)+1e-4;
+  });
+}
+function withTowerBattlementOcclusion(piece,drawFn){
+  const occluders=towerBattlementOccluders(piece);
+  if(!occluders.length){drawFn();return}
+  const r=wrap.getBoundingClientRect();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-48,-48,r.width+96,r.height+96);
+  for(const tower of occluders){
+    const hull=structureScreenSilhouette(tower);if(hull.length<3)continue;
+    ctx.moveTo(hull[0].x,hull[0].y);
+    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+    ctx.closePath();
+  }
+  ctx.clip('evenodd');
+  drawFn();
+  ctx.restore();
 }
 function drawBattlementPiece(piece){
-  if(piece.wallCrest){
-    const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
-    const H=Math.max(2000,wrap.getBoundingClientRect().height*3);
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(a.x,a.y+1);
-    ctx.lineTo(b.x,b.y+1);
-    ctx.lineTo(b.x,b.y-H);
-    ctx.lineTo(a.x,a.y-H);
-    ctx.closePath();
-    ctx.clip();
+  withTowerBattlementOcclusion(piece,()=>{
+    if(piece.wallCrest){
+      const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
+      const H=Math.max(2000,wrap.getBoundingClientRect().height*3);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y+1);
+      ctx.lineTo(b.x,b.y+1);
+      ctx.lineTo(b.x,b.y-H);
+      ctx.lineTo(a.x,a.y-H);
+      ctx.closePath();
+      ctx.clip();
+      extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+      ctx.restore();
+      return;
+    }
     extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
-    ctx.restore();
-    return;
-  }
-  extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+  });
 }
 function renderBattlementPieces(pieces){
   pieces.sort((a,b)=>a.depth-b.depth);
@@ -1095,7 +1131,7 @@ function wallBattlementPieces(s){
     const along=startPad+step*i;
     const t=clamp(along/L,0,1);
     const center={x:s.a.x+dx*t+nx*edgeOffset*side,y:s.a.y+dy*t+ny*edgeOffset*side};
-    const piece=battlementPiece(center,angle,z,.28,depth,.24);
+    const piece=battlementPiece(center,angle,z,.28,depth,.24,s);
     piece.wallCrest=crest;
     pieces.push(piece);
   }
@@ -1113,7 +1149,7 @@ function squareTowerBattlementPieces(s){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;
     pieces.push(battlementPiece(
       {x:corner.x+dx/L*inset,y:corner.y+dy/L*inset},
-      cornerAngle,z,.27,.23,.25
+      cornerAngle,z,.27,.23,.25,s
     ));
   }
 
@@ -1129,7 +1165,7 @@ function squareTowerBattlementPieces(s){
       const t=i/intervals;
       pieces.push(battlementPiece(
         {x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset},
-        angle,z,.25,.22,.24
+        angle,z,.25,.22,.24,s
       ));
     }
   }
@@ -1141,7 +1177,7 @@ function roundTowerBattlementPieces(s){
   const pieces=[];
   for(let i=0;i<intervals;i++){
     const a=i/intervals*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
-    pieces.push(battlementPiece(center,a+Math.PI/2,z,.23,.18,.23));
+    pieces.push(battlementPiece(center,a+Math.PI/2,z,.23,.18,.23,s));
   }
   return pieces;
 }
