@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.14</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.15</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -169,6 +169,8 @@ const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,wallBase:.7,wallPerU:.45,builtBas
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const PEASANT_VISUAL_SPEED=.20;
+const FIELD_CELL_TARGET=.75;
+const FIELD_CELL_MARGIN=.12;
 const VISUAL_DAYLIGHT_RATIO=16/24;
 const VISUAL_NIGHT_RATIO=8/24;
 const NIGHT_OVERLAY_MAX=.48;
@@ -1188,6 +1190,31 @@ function drawPointStructure(s,preview=false){
 function drawFlatRect(s,fill,stroke){
   pathPolygon(projectPath(rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0)),fill,stroke,1);
 }
+function fieldGrid(field){
+  const usableW=Math.max(.2,Number(field.w)-FIELD_CELL_MARGIN*2),usableH=Math.max(.2,Number(field.h)-FIELD_CELL_MARGIN*2);
+  const cols=Math.max(1,Math.floor(usableW/FIELD_CELL_TARGET)),rows=Math.max(1,Math.floor(usableH/FIELD_CELL_TARGET));
+  const cellW=usableW/cols,cellH=usableH/rows,ca=Math.cos(field.angle||0),sa=Math.sin(field.angle||0);
+  const localToWorld=(x,y)=>({x:field.x+x*ca-y*sa,y:field.y+x*sa+y*ca});
+  const cells=[];
+  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+    const x=-usableW/2+(col+.5)*cellW,y=-usableH/2+(row+.5)*cellH;
+    cells.push({index:row*cols+col,row,col,x,y,world:localToWorld(x,y)});
+  }
+  return{usableW,usableH,cols,rows,cellW,cellH,cells,localToWorld};
+}
+function drawField(field){
+  drawFlatRect(field,'rgba(133,111,55,.52)','rgba(190,168,95,.58)');
+  const g=fieldGrid(field);ctx.save();ctx.strokeStyle='rgba(218,195,118,.28)';ctx.lineWidth=.7;
+  for(let i=1;i<g.cols;i++){
+    const x=-g.usableW/2+i*g.cellW,a=w2s(g.localToWorld(x,-g.usableH/2),.012),b=w2s(g.localToWorld(x,g.usableH/2),.012);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  for(let i=1;i<g.rows;i++){
+    const y=-g.usableH/2+i*g.cellH,a=w2s(g.localToWorld(-g.usableW/2,y),.012),b=w2s(g.localToWorld(g.usableW/2,y),.012);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawHouse(s){
   const fp=rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0),wallH=.95;
   extrudePolygon(fp,wallH,{top:'#7d5b43',sideA:'#4e392d',sideB:'#654936',stroke:'#b89575'});
@@ -1245,7 +1272,7 @@ function drawHouseDoor(house){
 function drawAutoStructure(s){
   ctx.save();if(underConstruction(s))ctx.globalAlpha=.38;
   if(s.type==='field'){
-    drawFlatRect(s,'rgba(133,111,55,.52)','rgba(190,168,95,.58)');
+    drawField(s);
   }else if(s.type==='road'){
     const a=w2s(s.a),b=w2s(s.b);ctx.strokeStyle='rgba(126,106,82,.70)';ctx.lineWidth=Math.max(2,s.width*U*State.view.scale*.72);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
   }else if(s.type==='house')drawHouse(s);
@@ -1326,11 +1353,22 @@ function drawDynamicShadows(){
   const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','built'].includes(s.type));
   for(const s of casters)drawStructureShadow(s,sun);
 }
-function assignedField(house,fields){
-  let best=null,bestD=Infinity;
-  for(const field of fields){const d=dist(house,field);if(d<bestD){bestD=d;best=field}}
-  return best;
+function fieldWorkAssignments(houses,fields){
+  const slots=[];
+  for(const field of fields)for(const cell of fieldGrid(field).cells)slots.push({field,cell,used:false});
+  const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id));
+  for(const house of ordered){
+    const door=houseDoorInfo(house).outside;let best=null,bestScore=Infinity;
+    for(const slot of slots){
+      if(slot.used)continue;
+      const score=dist(door,slot.cell.world);
+      if(score<bestScore){bestScore=score;best=slot}
+    }
+    if(best){best.used=true;assignments.set(house.id,{field:best.field,cell:best.cell})}
+  }
+  return assignments;
 }
+
 const PEASANT_PATH_STEP=.5,PEASANT_CLEARANCE=.22;
 let peasantPathCache=new Map(),peasantPathSignature='';
 function peasantObstacleSignature(){
@@ -1422,10 +1460,11 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8){
   while(true){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));if(k===startKey)break;k=came.get(k);if(!k)return null}
   rev.reverse();return smoothPeasantPath([start,...rev,goal],sourceHouseId);
 }
-function peasantPath(house,field){
-  syncPeasantPathCache();const key=house.id+'>'+field.id;
+function peasantPath(house,assignment){
+  syncPeasantPathCache();
+  const field=assignment.field,cell=assignment.cell,key=house.id+'>'+field.id+':'+cell.index;
   if(peasantPathCache.has(key))return peasantPathCache.get(key);
-  const start=houseDoorInfo(house).outside,goal={x:field.x,y:field.y};
+  const start=houseDoorInfo(house).outside,goal={...cell.world};
   let path=findPeasantPath(start,goal,house.id,8);
   if(!path)path=findPeasantPath(start,goal,house.id,18);
   if(!path)path=[start];
@@ -1443,33 +1482,26 @@ function pointAlongPath(path,t){
   }
   return path.at(-1);
 }
-function peasantPosition(house,field,day){
+function peasantPosition(house,assignment,day){
   const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.025;
-  // Daily routine is anchored to daylight: villagers leave shortly after dawn
-  // and finish the return trip before the visual night starts at 16/24.
   const leave0=.06+stagger,leave1=.14+stagger,return0=.52+stagger,return1=.62+stagger;
   if(frac<leave0||frac>return1)return null;
-  const path=peasantPath(house,field),work={x:field.x,y:field.y};
+  const path=peasantPath(house,assignment),work=assignment.cell.world;
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   if(frac<leave1)return pointAlongPath(path,smooth((frac-leave0)/(leave1-leave0)));
-  if(frac<return0){
-    const span=Math.max(.001,return0-leave1),t=(frac-leave1)/span;
-    const a=(h%6283)/1000,ca=Math.cos(field.angle||0),sa=Math.sin(field.angle||0);
-    const lx=Math.sin(t*Math.PI*4+a)*Math.min(.38,field.w*.18),ly=Math.cos(t*Math.PI*3+a*.73)*Math.min(.28,field.h*.18);
-    return{x:work.x+lx*ca-ly*sa,y:work.y+lx*sa+ly*ca};
-  }
+  if(frac<return0)return{x:work.x,y:work.y};
   return pointAlongPath(path,1-smooth((frac-return0)/(return1-return0)));
 }
 function peasantAnimationActive(){
   const day=peasantVisualDay(),frac=day-Math.floor(day);
-  return frac>=.18&&frac<=.85&&completedSettlement('house').length>0&&completedSettlement('field').length>0;
+  return frac>=.035&&frac<=.65&&completedSettlement('house').length>0&&completedSettlement('field').length>0;
 }
 function drawPeasants(){
   const houses=completedSettlement('house'),fields=completedSettlement('field');
   if(!houses.length||!fields.length)return;
-  const day=peasantVisualDay(),dots=[];
+  const day=peasantVisualDay(),dots=[],assignments=fieldWorkAssignments(houses,fields);
   for(const house of houses){
-    const field=assignedField(house,fields),p=field&&peasantPosition(house,field,day);
+    const assignment=assignments.get(house.id),p=assignment&&peasantPosition(house,assignment,day);
     if(p)dots.push({p,color:PEASANT_PALETTE[peasantHash(house.id)%PEASANT_PALETTE.length]});
   }
   dots.sort((a,b)=>{const aa=rotateViewPoint(a.p),bb=rotateViewPoint(b.p);return aa.x+aa.y-(bb.x+bb.y)});
