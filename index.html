@@ -1322,6 +1322,51 @@ function roofOccluderStructures(s){
   }
   return out;
 }
+function worldPolygonsOverlap(a,b){
+  if(!a?.length||!b?.length)return false;
+  if(a.some(p=>pointInScreenPolygon(p,b)))return true;
+  if(b.some(p=>pointInScreenPolygon(p,a)))return true;
+  for(let i=0;i<a.length;i++){
+    const a2=a[(i+1)%a.length];
+    for(let j=0;j<b.length;j++){
+      const b2=b[(j+1)%b.length];
+      if(segmentsIntersect(a[i],a2,b[j],b2))return true;
+    }
+  }
+  return false;
+}
+function structuresOverlapInPlan(a,b){
+  return !!a&&!!b&&worldPolygonsOverlap(unionFootprintPoints(a),unionFootprintPoints(b));
+}
+function structureDetailOccluders(owner,z){
+  if(!owner)return[];
+  const ownerDepth=worldDepth(owner);
+  return State.structures.filter(o=>{
+    if(o.id===owner.id||underConstruction(o)||!isCastlePart(o))return false;
+    if(structureVisualTopHeight(o)<=z+.035)return false;
+    // Real 3D overlap wins over painter-order heuristics.
+    if(structuresOverlapInPlan(owner,o))return true;
+    // Otherwise normal camera depth decides whether the silhouette is in front.
+    return worldDepth(o)>ownerDepth+1e-4;
+  });
+}
+function withStructureDetailOcclusion(owner,z,drawFn){
+  const occluders=structureDetailOccluders(owner,z);
+  if(!occluders.length){drawFn();return}
+  const r=wrap.getBoundingClientRect();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-48,-48,r.width+96,r.height+96);
+  for(const o of occluders){
+    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
+    ctx.moveTo(hull[0].x,hull[0].y);
+    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+    ctx.closePath();
+  }
+  ctx.clip('evenodd');
+  drawFn();
+  ctx.restore();
+}
 function structureScreenSilhouette(s){
   const fp=footprintPoints(s);if(!fp?.length)return[];
   const h=structureHeight(s),cloud=[];
@@ -1395,18 +1440,20 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
 }
 function castleBattlementOccluders(piece){
   if(!piece.ownerId||!['tower','wall','gate'].includes(piece.ownerType))return[];
+  const owner=State.structures.find(s=>s.id===piece.ownerId);
   return State.structures.filter(s=>{
-    if(s.id===piece.ownerId||!['tower','gate'].includes(s.type)||underConstruction(s))return false;
+    if(s.id===piece.ownerId||!isCastlePart(s)||underConstruction(s))return false;
     const h=structureVisualTopHeight(s);
-
-    if(['tower','gate'].includes(piece.ownerType)){
-      if(h<=Number(piece.ownerTop||piece.z0)+.04)return false;
-      return worldDepth(s)>Number(piece.ownerDepth??piece.depth)+1e-4;
-    }
-
-    // Wall battlements sit visually below towers and gatehouses in front.
     if(h<=Number(piece.z0)+.04)return false;
-    return worldDepth(s)>Number(piece.depth)+1e-4;
+
+    // Attached/subtower geometry can overlap even when structure-center depth
+    // says the opposite. If this merlon footprint enters the taller volume,
+    // that volume must mask it unconditionally.
+    const fp=unionFootprintPoints(s);
+    if(worldPolygonsOverlap(piece.pts,fp))return true;
+
+    const ownerDepth=owner?worldDepth(owner):Number(piece.ownerDepth??piece.depth);
+    return worldDepth(s)>ownerDepth+1e-4;
   });
 }
 function withTowerBattlementOcclusion(piece,drawFn){
@@ -1539,8 +1586,9 @@ function pointRoofOccluders(s){
   const d=worldDepth(s),base=structureHeight(s);
   return State.structures.filter(o=>{
     if(o.id===s.id||!['tower','gate'].includes(o.type)||underConstruction(o))return false;
-    if(worldDepth(o)<=d+1e-4)return false;
-    return structureVisualTopHeight(o)>base+.04;
+    if(structureVisualTopHeight(o)<=base+.04)return false;
+    if(structuresOverlapInPlan(s,o))return true;
+    return worldDepth(o)>d+1e-4;
   });
 }
 function withPointRoofOcclusion(s,drawFn){
@@ -2179,9 +2227,11 @@ function drawGatePortalOnEdge(edge){
 function drawGatePortals(){
   for(const s of State.structures){
     if(s.type!=='gate'||underConstruction(s))continue;
-    for(const edge of gateFacadeEdges(s)){
-      if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge);
-    }
+    withStructureDetailOcclusion(s,1.38,()=>{
+      for(const edge of gateFacadeEdges(s)){
+        if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge);
+      }
+    });
   }
 }
 function gateWindowRows(s){
@@ -2191,13 +2241,15 @@ function gateWindowRows(s){
   return rows.filter(z=>z<structureHeight(s)-.35);
 }
 function drawGateWindows(s,lit=false,nf=1){
-  for(const edge of gateFacadeEdges(s)){
-    for(const z of gateWindowRows(s)){
-      const a=w2s(edge.a,z),b=w2s(edge.b,z),L=Math.hypot(b.x-a.x,b.y-a.y);
-      const gap=Math.min(clamp(8*State.view.scale,5,11),L*.28);
-      drawWindowOnEdge(edge,z,lit,nf,-gap/2);
-      drawWindowOnEdge(edge,z,lit,nf,gap/2);
-    }
+  for(const z of gateWindowRows(s)){
+    withStructureDetailOcclusion(s,z,()=>{
+      for(const edge of gateFacadeEdges(s)){
+        const a=w2s(edge.a,z),b=w2s(edge.b,z),L=Math.hypot(b.x-a.x,b.y-a.y);
+        const gap=Math.min(clamp(8*State.view.scale,5,11),L*.28);
+        drawWindowOnEdge(edge,z,lit,nf,-gap/2);
+        drawWindowOnEdge(edge,z,lit,nf,gap/2);
+      }
+    });
   }
 }
 function visibleFacadeEdges(s){
@@ -2324,19 +2376,21 @@ function drawFacadeWindows(lit=false,nf=1){
     }else if(s.type==='tower'){
       const rows=towerWindowRows(s);if(!rows.length)continue;
       if(s.shape==='round'){
-        for(const row of rows)drawRoundTowerWindowRow(s,row,lit,nf);
+        for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
       }else{
         const edges=visibleFacadeEdges(s);
         for(const row of rows){
-          for(const edge of edges){
-            if(row.count===1)drawWindowOnEdge(edge,row.z,lit,nf,0);
-            else{
-              const a=w2s(edge.a,row.z),b=w2s(edge.b,row.z),L=Math.hypot(b.x-a.x,b.y-a.y);
-              const spacing=Math.min(clamp(9*State.view.scale,5,12),L*.34);
-              drawWindowOnEdge(edge,row.z,lit,nf,-spacing/2);
-              drawWindowOnEdge(edge,row.z,lit,nf,spacing/2);
+          withStructureDetailOcclusion(s,row.z,()=>{
+            for(const edge of edges){
+              if(row.count===1)drawWindowOnEdge(edge,row.z,lit,nf,0);
+              else{
+                const a=w2s(edge.a,row.z),b=w2s(edge.b,row.z),L=Math.hypot(b.x-a.x,b.y-a.y);
+                const spacing=Math.min(clamp(9*State.view.scale,5,12),L*.34);
+                drawWindowOnEdge(edge,row.z,lit,nf,-spacing/2);
+                drawWindowOnEdge(edge,row.z,lit,nf,spacing/2);
+              }
             }
-          }
+          });
         }
       }
     }
