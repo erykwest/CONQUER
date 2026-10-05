@@ -187,7 +187,8 @@ function addReactiveRoadPolyline(points,template={},meta={}){
     if(Number.isFinite(template.routeSeq))road.routeSeq=template.routeSeq+i/total;
     if(meta.repairFor)road.repairFor=meta.repairFor;
     if(meta.accessFor)road.accessFor=meta.accessFor;
-    beginConstruction(road);State.structures.push(road);added++;
+    if(!meta.instant)beginConstruction(road);
+    State.structures.push(road);added++;
   }
   return added;
 }
@@ -298,7 +299,7 @@ function rebuildArterialRoute(routeId,displaced=[]){
     State.structures.push(road);parent=road.id;added++;
   }
   refreshStaleHouseRoadRefs();
-  peasantPathSignature='';peasantPathCache.clear();
+  invalidateNavigation();
   return added;
 }
 function reconcileArterialRoutes(){
@@ -389,7 +390,7 @@ function buildGateMainConnection(gate,force=false){
     State.structures.push(road);parent=road.id;added++;
   }
   refreshStaleHouseRoadRefs();
-  peasantPathSignature='';peasantPathCache.clear();
+  invalidateNavigation();
   return added;
 }
 function reconcileGateMainConnections(force=false){
@@ -458,10 +459,10 @@ function rebuildSecondaryRoadsOnLoad(){
   });
   State.village.accessRoadVersion=2;
   refreshStaleHouseRoadRefs();
-  peasantPathSignature='';peasantPathCache.clear();
+  invalidateNavigation();
   return removed;
 }
-function ensureSettlementRoadAccess(s){
+function ensureSettlementRoadAccess(s,instant=false){
   if(!s||underConstruction(s))return 0;
   if(State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))return 0;
   const nearest=nearestPrimaryRoadProjection(structureCenter(s));if(!nearest)return 0;
@@ -474,18 +475,18 @@ function ensureSettlementRoadAccess(s){
   else path=findRoadRepairPath(start,goal,width,10,ignore,45000);
   if(!path||path.length<2)return 0;
   return addReactiveRoadPolyline(path,{width,parentRoadId:nearest.road.id},{
-    accessFor:s.id,roadClass:'access-primary',ignoreIds:ignore
+    accessFor:s.id,roadClass:'access-primary',ignoreIds:ignore,instant
   });
 }
-function reconcileSettlementAccessRoads(limit=Infinity){
+function reconcileSettlementAccessRoads(limit=Infinity,instant=false){
   let changed=0,done=0;
   for(const s of settlementAccessTargets()){
     if(done>=limit)break;
     if(State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))continue;
-    const n=ensureSettlementRoadAccess(s);
+    const n=ensureSettlementRoadAccess(s,instant);
     if(n){changed+=n;done++}
   }
-  if(changed){peasantPathSignature='';peasantPathCache.clear()}
+  if(changed)invalidateNavigation(false);
   return changed;
 }
 function marketRoadAccessPoint(s,target){
@@ -535,7 +536,7 @@ function reconcileReactiveRoadNetwork(){
   changed+=reconcileArterialRoutes();
   changed+=reconcileGateMainConnections(false);
   changed+=reconcileSettlementAccessRoads();
-  if(changed){peasantPathSignature='';peasantPathCache.clear()}
+  if(changed)invalidateNavigation(false);
   return changed;
 }
 function nearestRoadInfo(p,roads){let best={d:Infinity,angle:0};for(const r of roads){const d=pointSegmentDistance(p,r.a,r.b);if(d<best.d)best={d,angle:Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}}return best}
@@ -839,7 +840,7 @@ function processVillageGrowth(){
     if(!ok&&kind!=='road')ok=spawnRoad(step);
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
-    if(ok)markDirty();
+    if(ok)markDirty(false);
   }
 }
 function resetLegacyVillageGrowth(){
