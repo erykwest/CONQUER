@@ -1525,34 +1525,35 @@ function wallExteriorSide(s){return s?.flip?-1:1}
 function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
   return Math.max(1,Math.round(Math.max(.001,length)/spacing));
 }
-function wallBattlementPieces(s){
-  if(s.type!=='wall'||underConstruction(s)||wallSkin(s)==='hoarding')return[];
+function wallExteriorLayout(s){
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
-  const angle=Math.atan2(dy,dx),z=structureHeight(s),width=Number(s.width)||.5;
-  const depth=Math.min(.28,Math.max(.18,width*.46));
-  // Keep the whole merlon footprint on the wall cap; the exterior side is still
-  // defined by flip, but no block is allowed to hang over the facade.
-  const edgeOffset=Math.max(0,width/2-depth/2-.012);
-  const side=wallExteriorSide(s),pieces=[];
-
-  // Snapped ends need a full visual socket around towers/gates.
+  const angle=Math.atan2(dy,dx),z=structureHeight(s),width=Number(s.width)||.5,side=wallExteriorSide(s);
   const startPad=s.aSnap?Math.min(BATTLEMENT_SPACING*.72,L*.24):0;
   const endPad=s.bSnap?Math.min(BATTLEMENT_SPACING*.72,L*.24):0;
   const usable=Math.max(.01,L-startPad-endPad);
-  const intervals=battlementIntervalCount(usable);
-  const step=usable/intervals;
-  const crest={
-    a:{x:s.a.x+nx*(width/2)*side,y:s.a.y+ny*(width/2)*side},
-    b:{x:s.b.x+nx*(width/2)*side,y:s.b.y+ny*(width/2)*side},
-    z
+  return{
+    dx,dy,L,ux,uy,nx,ny,angle,z,width,side,startPad,endPad,usable,
+    crest:{
+      a:{x:s.a.x+nx*(width/2)*side,y:s.a.y+ny*(width/2)*side},
+      b:{x:s.b.x+nx*(width/2)*side,y:s.b.y+ny*(width/2)*side},
+      z
+    }
   };
+}
+function wallBattlementPieces(s){
+  if(s.type!=='wall'||underConstruction(s)||wallSkin(s)==='hoarding')return[];
+  const g=wallExteriorLayout(s),depth=Math.min(.28,Math.max(.18,g.width*.46));
+  // Keep the whole merlon footprint on the wall cap; the exterior side is still
+  // defined by flip, but no block is allowed to hang over the facade.
+  const edgeOffset=Math.max(0,g.width/2-depth/2-.012),pieces=[];
+  const intervals=battlementIntervalCount(g.usable),step=g.usable/intervals;
 
   for(let i=0;i<=intervals;i++){
-    const along=startPad+step*i;
-    const t=clamp(along/L,0,1);
-    const center={x:s.a.x+dx*t+nx*edgeOffset*side,y:s.a.y+dy*t+ny*edgeOffset*side};
-    const piece=battlementPiece(center,angle,z,.28,depth,.24,s);
-    piece.wallCrest=crest;
+    const along=g.startPad+step*i;
+    const t=clamp(along/g.L,0,1);
+    const center={x:s.a.x+g.dx*t+g.nx*edgeOffset*g.side,y:s.a.y+g.dy*t+g.ny*edgeOffset*g.side};
+    const piece=battlementPiece(center,g.angle,g.z,.28,depth,.24,s);
+    piece.wallCrest=g.crest;
     pieces.push(piece);
   }
   return pieces;
@@ -2288,6 +2289,129 @@ function visibleFacadeEdges(s){
   edges.sort((a,b)=>b.depth-a.depth);
   return edges.slice(0,2);
 }
+function closestFootprintEdge(s,p){
+  const fp=footprintPoints(s);if(fp.length<2)return null;
+  let best=null,bestD=Infinity;
+  for(let i=0;i<fp.length;i++){
+    const a=fp[i],b=fp[(i+1)%fp.length],q=closestPointOnSegment(p,a,b),d=dist(p,q);
+    if(d<bestD){bestD=d;best={a,b,point:q,index:i}}
+  }
+  return best;
+}
+function towerDoorContactSpec(tower,contact,wall=null,kind='wall'){
+  const rx=contact.x-tower.x,ry=contact.y-tower.y,RL=Math.hypot(rx,ry)||1;
+  const outward={x:rx/RL,y:ry/RL};
+  let tangent,anchor={x:contact.x+outward.x*.006,y:contact.y+outward.y*.006};
+
+  if(tower.shape==='round'){
+    tangent={x:-outward.y,y:outward.x};
+  }else{
+    const edge=closestFootprintEdge(tower,contact);if(!edge)return null;
+    const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1;
+    tangent={x:dx/L,y:dy/L};
+    anchor={x:edge.point.x+outward.x*.006,y:edge.point.y+outward.y*.006};
+  }
+
+  let baseZ=.035,apexZ=.98;
+  if(wall){
+    // Wall-linked doors sit at the wall walk level. This keeps the opening
+    // readable and architecturally useful instead of burying it behind masonry.
+    const towerH=structureHeight(tower),wallH=structureHeight(wall);
+    baseZ=clamp(wallH-.02,.08,Math.max(.08,towerH-.98));
+    apexZ=Math.min(towerH-.16,baseZ+.92);
+    if(apexZ-baseZ<.48)return null;
+  }
+
+  return{kind,contact:anchor,tangent,outward,baseZ,apexZ,wallId:wall?.id||null};
+}
+function towerDoorSpecs(tower){
+  if(!tower||tower.type!=='tower'||underConstruction(tower))return[];
+  const specs=[];
+
+  // Primary ground-floor entrance on the placement/front direction.
+  const a=tower.angle||0;
+  let frontContact;
+  if(tower.shape==='round'){
+    frontContact={x:tower.x+Math.cos(a)*tower.r,y:tower.y+Math.sin(a)*tower.r};
+  }else{
+    const fp=footprintPoints(tower);
+    frontContact=fp.length>=4?{x:(fp[1].x+fp[2].x)/2,y:(fp[1].y+fp[2].y)/2}:boundaryPoint(tower,{x:tower.x+Math.cos(a),y:tower.y+Math.sin(a)});
+  }
+  const front=towerDoorContactSpec(tower,frontContact,null,'front');
+  if(front)specs.push(front);
+
+  // Additional doors at every true wall socket connected to this tower.
+  for(const wall of State.structures){
+    if(wall.type!=='wall'||underConstruction(wall))continue;
+    let contact=null;
+    if(wall.aSnap===tower.id)contact=wall.a;
+    else if(wall.bSnap===tower.id)contact=wall.b;
+    if(!contact)continue;
+    const spec=towerDoorContactSpec(tower,contact,wall,'wall');
+    if(!spec)continue;
+
+    // Avoid drawing the wall-walk door on top of an almost identical front
+    // entrance direction when the two happen to coincide.
+    const duplicate=specs.some(x=>{
+      const da=Math.atan2(x.outward.y,x.outward.x),db=Math.atan2(spec.outward.y,spec.outward.x);
+      return Math.abs(Math.atan2(Math.sin(da-db),Math.cos(da-db)))<.12&&Math.abs(x.baseZ-spec.baseZ)<.18;
+    });
+    if(!duplicate)specs.push(spec);
+  }
+  return specs;
+}
+function towerDoorVisible(tower,spec){
+  // Near half of the tower only; the body naturally hides rear doors until
+  // the camera is rotated.
+  return viewDepthPoint(spec.contact)>=viewDepthPoint({x:tower.x,y:tower.y})-.015;
+}
+function drawTowerDoorSpec(tower,spec){
+  if(!towerDoorVisible(tower,spec))return;
+  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54),half=width/2;
+  const tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact;
+  const springZ=spec.baseZ+(spec.apexZ-spec.baseZ)*.66;
+  const l={x:c.x-tx*half,y:c.y-ty*half},r={x:c.x+tx*half,y:c.y+ty*half};
+  const lb=w2s(l,spec.baseZ),rb=w2s(r,spec.baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),apex=w2s(c,spec.apexZ);
+
+  const drawDoor=()=>{
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(lb.x,lb.y);ctx.lineTo(rb.x,rb.y);ctx.lineTo(rs.x,rs.y);
+    ctx.quadraticCurveTo((rs.x+apex.x)/2,apex.y,apex.x,apex.y);
+    ctx.quadraticCurveTo((ls.x+apex.x)/2,apex.y,ls.x,ls.y);
+    ctx.lineTo(lb.x,lb.y);ctx.closePath();
+    ctx.fillStyle='#211713';ctx.fill();
+    ctx.strokeStyle='#9a7458';ctx.lineWidth=1;ctx.stroke();
+
+    // A subtle central seam makes it read as a timber door rather than a hole.
+    const bottom=w2s(c,spec.baseZ);
+    ctx.strokeStyle='rgba(120,78,52,.72)';ctx.lineWidth=.7;
+    ctx.beginPath();ctx.moveTo(bottom.x,bottom.y);ctx.lineTo(apex.x,apex.y);ctx.stroke();
+    ctx.restore();
+  };
+
+  // Do not let unrelated taller castle volumes paint through the door. The
+  // linked wall itself is excluded because this doorway intentionally opens
+  // onto that wall-walk.
+  const occluders=structureDetailOccluders(tower,spec.apexZ).filter(o=>o.id!==spec.wallId);
+  if(!occluders.length){drawDoor();return}
+
+  const rr=wrap.getBoundingClientRect();
+  ctx.save();ctx.beginPath();ctx.rect(-48,-48,rr.width+96,rr.height+96);
+  for(const o of occluders){
+    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
+    ctx.moveTo(hull[0].x,hull[0].y);
+    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+    ctx.closePath();
+  }
+  ctx.clip('evenodd');drawDoor();ctx.restore();
+}
+function drawTowerDoors(){
+  for(const tower of State.structures){
+    if(tower.type!=='tower'||underConstruction(tower))continue;
+    for(const spec of towerDoorSpecs(tower))drawTowerDoorSpec(tower,spec);
+  }
+}
 function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
   const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;
   const base=w2s({x:mx,y:my},z),a=w2s(edge.a,z),b=w2s(edge.b,z);
@@ -2412,80 +2536,40 @@ function drawBuiltArcade(s){
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   });
 }
-function hoardingSegment(s){
-  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const width=Number(s.width)||.5;
-
-  // Only a small overlap is needed. The snapped tower/gate will explicitly
-  // mask this overlap in screen space, which avoids both gaps and bleed-through.
-  const overlapFor=id=>hasCastleSnap(id)?clamp(.08+width*.10,.10,.18):.02;
-  const startOverlap=overlapFor(s.aSnap),endOverlap=overlapFor(s.bSnap);
-
-  return{
-    a:{x:s.a.x-ux*startOverlap,y:s.a.y-uy*startOverlap},
-    b:{x:s.b.x+ux*endOverlap,y:s.b.y+uy*endOverlap},
-    length:L+startOverlap+endOverlap
-  };
-}
-function hoardingOccluders(s,z){
-  const out=[];
-  const add=o=>{if(o&&!underConstruction(o)&&!out.includes(o))out.push(o)};
-
-  // Snapped endpoint structures are hard occluders for the hoarding.
-  // This is the key exception that makes the gallery disappear into towers
-  // even though hoarding is rendered in a later detail pass.
-  for(const id of [s.aSnap,s.bSnap]){
-    if(!id)continue;
-    const target=State.structures.find(x=>x.id===id&&['tower','gate'].includes(x.type));
-    add(target);
-  }
-
-  // Preserve ordinary camera/height occlusion for other castle structures.
-  for(const o of structureDetailOccluders(s,z))add(o);
-  return out;
-}
-function withHoardingOcclusionClip(s,z,drawFn){
-  const occluders=hoardingOccluders(s,z);
-  if(!occluders.length){drawFn();return}
-
-  const r=wrap.getBoundingClientRect();
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(-64,-64,r.width+128,r.height+128);
-  for(const o of occluders){
-    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-  ctx.clip('evenodd');
-  drawFn();
-  ctx.restore();
-}
 function drawWallHoarding(s){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
-  const seg=hoardingSegment(s),dx=seg.b.x-seg.a.x,dy=seg.b.y-seg.a.y,L=Math.hypot(dx,dy)||1;
-  const ux=dx/L,uy=dy/L,nx=-uy,ny=ux,side=wallExteriorSide(s),width=Number(s.width)||.5,h=structureHeight(s);
-  const innerOff=Math.max(.02,width/2-.02),outerOff=width/2+.42;
-  const point=(p,off)=>({x:p.x+nx*off*side,y:p.y+ny*off*side});
-  const innerA=point(seg.a,innerOff),innerB=point(seg.b,innerOff),outerA=point(seg.a,outerOff),outerB=point(seg.b,outerOff);
-  const platform=[innerA,innerB,outerB,outerA];
-  const exteriorVisible=linearFrontSide(s)===side;
+  const g=wallExteriorLayout(s),h=g.z;
+  const innerOff=Math.max(.02,g.width/2-.02),outerOff=g.width/2+.42;
+  const point=(p,off)=>({x:p.x+g.nx*off*g.side,y:p.y+g.ny*off*g.side});
 
-  withHoardingOcclusionClip(s,h+.66,()=>{
-    // Projecting timber fighting gallery.
+  // Same longitudinal limits as the battlement crest: the gallery reaches the
+  // wall sockets exactly, never extends through a tower and never pulls back.
+  const seg={a:s.a,b:s.b,length:g.L};
+  const innerA=point(seg.a,innerOff),innerB=point(seg.b,innerOff);
+  const outerA=point(seg.a,outerOff),outerB=point(seg.b,outerOff);
+  const platform=[innerA,innerB,outerB,outerA];
+  const roofInnerA=point(seg.a,Math.max(0,g.width/2-.08)),roofInnerB=point(seg.b,Math.max(0,g.width/2-.08));
+  const roofOuterA=point(seg.a,outerOff+.07),roofOuterB=point(seg.b,outerOff+.07);
+  const exteriorVisible=linearFrontSide(s)===g.side;
+
+  // Reuse the battlement occlusion path itself. This is intentionally a
+  // pseudo-merlon covering the whole gallery footprint so towers/gates mask
+  // hoarding with the exact same owner/depth/overlap rules as wall merlons.
+  const maskPiece={
+    pts:[roofInnerA,roofInnerB,roofOuterB,roofOuterA],
+    z0:Math.max(.02,h-.58),z1:h+.66,
+    depth:worldDepth(s),ownerId:s.id,ownerType:'wall',
+    ownerDepth:worldDepth(s),ownerTop:h
+  };
+
+  withTowerBattlementOcclusion(maskPiece,()=>{
     extrudePolygonAt(platform,h-.045,h+.055,{
       top:'#74533a',sideA:'#493423',sideB:'#5d432e',stroke:'#927155'
     });
 
-    // Lean-to timber roof: high at the stone wall, low over the exterior gallery.
-    const roofInnerA=point(seg.a,Math.max(0,width/2-.08)),roofInnerB=point(seg.b,Math.max(0,width/2-.08));
-    const roofOuterA=point(seg.a,outerOff+.07),roofOuterB=point(seg.b,outerOff+.07);
     const roof=[w2s(roofInnerA,h+.66),w2s(roofInnerB,h+.66),w2s(roofOuterB,h+.47),w2s(roofOuterA,h+.47)];
     pathPolygon(roof,'#4b382a','#806047',1);
 
-    // The hanging outer timber face is visible only when it is genuinely
-    // camera-facing; on the rear side the masonry wall itself occludes it.
     if(exteriorVisible){
       const low=h-.03,high=h+.43;
       pathPolygon(
@@ -2493,21 +2577,26 @@ function drawWallHoarding(s){
         '#654832','#8d694d',1
       );
 
-      const bays=Math.max(2,Math.round(seg.length/.75));
+      // Use the same snapped-end padding as the battlements for posts/braces:
+      // continuous roof/face reaches the socket, repeated timber details do not
+      // collide visually with the receiving tower/gate.
+      const bays=Math.max(2,Math.round(g.usable/.75));
+      const start=g.startPad,end=g.L-g.endPad,span=Math.max(.01,end-start);
       ctx.save();
       ctx.strokeStyle='#3f2c20';
       ctx.lineWidth=Math.max(1,1.25*State.view.scale);
       for(let i=0;i<=bays;i++){
-        const t=i/bays,p={x:outerA.x+(outerB.x-outerA.x)*t,y:outerA.y+(outerB.y-outerA.y)*t};
-        const a=w2s(p,low),b=w2s(p,high);
+        const along=start+span*(i/bays);
+        const base={x:s.a.x+g.ux*along,y:s.a.y+g.uy*along};
+        const outer=point(base,outerOff);
+        const a=w2s(outer,low),b=w2s(outer,high);
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
       }
 
-      // Diagonal braces below the projecting gallery.
       for(let i=0;i<=bays;i+=2){
-        const t=i/bays;
-        const outer={x:outerA.x+(outerB.x-outerA.x)*t,y:outerA.y+(outerB.y-outerA.y)*t};
-        const wall={x:innerA.x+(innerB.x-innerA.x)*t,y:innerA.y+(innerB.y-innerA.y)*t};
+        const along=start+span*(i/bays);
+        const base={x:s.a.x+g.ux*along,y:s.a.y+g.uy*along};
+        const outer=point(base,outerOff),wall=point(base,innerOff);
         const a=w2s(outer,h-.02),b=w2s(wall,Math.max(.12,h-.58));
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
       }
@@ -2612,6 +2701,7 @@ function draw(){
   drawCastleSelection();
   drawCastleBattlements();
   drawFacadeWindows(false,1);
+  drawTowerDoors();
   drawGatePortals();
   for(const house of completedSettlement('house'))drawHouseDoor(house);
   drawChimneysAndSmoke();
