@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.15</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.16</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -1371,10 +1371,11 @@ function fieldWorkAssignments(houses,fields){
 }
 
 const PEASANT_PATH_STEP=.5,PEASANT_CLEARANCE=.22;
+const PEASANT_ROAD_COST=.38,PEASANT_ROADSIDE_COST=.68,PEASANT_ROADSIDE_RANGE=.85;
 let peasantPathCache=new Map(),peasantPathSignature='';
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','built','well'].includes(s.type)).map(s=>{
-    if(['wall','built'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width].join(',');
+  return State.structures.filter(s=>['house','tower','gate','wall','built','well','road'].includes(s.type)).map(s=>{
+    if(['wall','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,underConstruction(s)?1:0].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle].join(',');
   }).join('|');
 }
@@ -1397,6 +1398,31 @@ function pointBlockedForPeasant(p,sourceHouseId){
   }
   return false;
 }
+function peasantRoadDistance(p){
+  let best=Infinity,width=0;
+  for(const road of roadList(true)){
+    const d=pointSegmentDistance(p,road.a,road.b);
+    if(d<best){best=d;width=Number(road.width)||.3}
+  }
+  return{d:best,width};
+}
+function peasantTerrainCost(p){
+  const road=peasantRoadDistance(p);
+  if(!Number.isFinite(road.d))return 1;
+  const edge=Math.max(.10,road.width/2);
+  if(road.d<=edge+.18)return PEASANT_ROAD_COST;
+  if(road.d<=edge+PEASANT_ROADSIDE_RANGE)return PEASANT_ROADSIDE_COST;
+  return 1;
+}
+function peasantSegmentTravelCost(a,b){
+  const L=dist(a,b);if(L<=1e-6)return 0;
+  const steps=Math.max(2,Math.ceil(L/.25));let sum=0;
+  for(let i=0;i<steps;i++){
+    const t=(i+.5)/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+    sum+=peasantTerrainCost(p);
+  }
+  return L*sum/steps;
+}
 function peasantSegmentClear(a,b,sourceHouseId){
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.22));
   for(let i=1;i<steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
@@ -1404,11 +1430,18 @@ function peasantSegmentClear(a,b,sourceHouseId){
 }
 function smoothPeasantPath(points,sourceHouseId){
   if(points.length<=2)return points;
+  const prefix=[0];
+  for(let i=0;i<points.length-1;i++)prefix.push(prefix.at(-1)+peasantSegmentTravelCost(points[i],points[i+1]));
   const out=[points[0]];let i=0;
   while(i<points.length-1){
-    let j=points.length-1;
-    while(j>i+1&&!peasantSegmentClear(points[i],points[j],sourceHouseId))j--;
-    out.push(points[j]);i=j;
+    let chosen=i+1;
+    for(let j=points.length-1;j>i+1;j--){
+      if(!peasantSegmentClear(points[i],points[j],sourceHouseId))continue;
+      const originalCost=prefix[j]-prefix[i],shortcutCost=peasantSegmentTravelCost(points[i],points[j]);
+      // Only simplify if the shortcut preserves the road preference found by A*.
+      if(shortcutCost<=originalCost*1.06){chosen=j;break}
+    }
+    out.push(points[chosen]);i=chosen;
   }
   return out;
 }
@@ -1419,7 +1452,6 @@ class PeasantMinHeap{
   get length(){return this.a.length}
 }
 function findPeasantPath(start,goal,sourceHouseId,pad=8){
-  if(peasantSegmentClear(start,goal,sourceHouseId))return[start,goal];
   const step=PEASANT_PATH_STEP;
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -1436,7 +1468,7 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8){
   }
   const s=nearestFree(start),g=nearestFree(goal);if(!s||!g)return null;
   const open=new PeasantMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
-  open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
+  open.push({x:s.x,y:s.y,f:dist(s.q,g.q)*PEASANT_ROAD_COST});
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   let found=null,guard=0;
   while(open.length&&guard++<30000){
@@ -1449,10 +1481,13 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8){
         const q1=pos(cur.x+dx,cur.y),q2=pos(cur.x,cur.y+dy);
         if(pointBlockedForPeasant(q1,sourceHouseId)||pointBlockedForPeasant(q2,sourceHouseId))continue;
       }
-      const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
+      const baseStep=Math.hypot(dx,dy)*step;
+      const from=pos(cur.x,cur.y),moveCost=baseStep*(peasantTerrainCost(from)+peasantTerrainCost(q))*.5;
+      const tentative=(gScore.get(ck)??Infinity)+moveCost;
       if(tentative<(gScore.get(nk)??Infinity)){
         gScore.set(nk,tentative);came.set(nk,ck);
-        open.push({x:nx,y:ny,f:tentative+dist(q,g.q)});
+        // Minimum terrain multiplier keeps the heuristic admissible while roads remain attractive.
+        open.push({x:nx,y:ny,f:tentative+dist(q,g.q)*PEASANT_ROAD_COST});
       }
     }
   }
