@@ -1078,28 +1078,29 @@ function wallBattlementPieces(s){
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0;
+  const perSide=[0,3,4,5][towerTier(s)]||3;
+  const intervals=perSide-1;
+  const inset=.115;
 
-  // Corner merlons remain visually anchored to every corner, but their footprint
-  // is pulled slightly inward so no face hangs over the tower facade.
+  // Exactly one merlon per corner; shared by the two adjacent sides.
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;
-    const inset=.115;
     pieces.push(battlementPiece(
       {x:corner.x+dx/L*inset,y:corner.y+dy/L*inset},
       cornerAngle,z,.27,.23,.25
     ));
   }
 
-  // Intermediate merlons use the same spacing rule and sit fully on the top slab.
+  // Fixed count per side, including the two corner merlons:
+  // T1 = 3, T2 = 4, T3 = 5.
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
-    const angle=Math.atan2(dy,dx),intervals=battlementIntervalCount(L),step=L/intervals;
-    const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    const angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;
     ix/=IL;iy/=IL;
-    const inset=.115;
+
     for(let i=1;i<intervals;i++){
-      const t=(step*i)/L;
+      const t=i/intervals;
       pieces.push(battlementPiece(
         {x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset},
         angle,z,.25,.22,.24
