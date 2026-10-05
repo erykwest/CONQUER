@@ -173,6 +173,7 @@ const VISUAL_DAYLIGHT_RATIO=16/24;
 const VISUAL_NIGHT_RATIO=8/24;
 const NIGHT_OVERLAY_MAX=.48;
 const VISUAL_TWILIGHT=1/24;
+const BATTLEMENT_SPACING=.62;
 const PEASANT_PALETTE=Object.freeze([
   '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
   '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
@@ -958,17 +959,27 @@ function renderBattlementPieces(pieces){
   for(const piece of pieces)drawBattlementPiece(piece);
 }
 function wallExteriorSide(s){return s?.flip?-1:1}
+function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
+  return Math.max(1,Math.round(Math.max(.001,length)/spacing));
+}
 function wallBattlementPieces(s){
   if(s.type!=='wall'||underConstruction(s))return[];
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
   const angle=Math.atan2(dy,dx),z=structureHeight(s);
   const depth=Math.min(.28,Math.max(.18,(Number(s.width)||.5)*.46));
   const edgeOffset=Math.max(0,(Number(s.width)||.5)/2-depth*.44);
-  const side=wallExteriorSide(s);
-  const endPad=Math.min(.42,L*.16),t0=endPad/L,t1=1-endPad/L,usable=Math.max(.2,L-endPad*2);
-  const count=Math.max(2,Math.min(28,Math.floor(usable/.68)+1)),pieces=[];
-  for(let i=0;i<count;i++){
-    const tt=count===1?.5:i/(count-1),t=t0+(t1-t0)*tt;
+  const side=wallExteriorSide(s),pieces=[];
+
+  // Preserve a clean junction where the wall is snapped into a tower/gate.
+  const startPad=s.aSnap?Math.min(BATTLEMENT_SPACING*.5,L*.18):0;
+  const endPad=s.bSnap?Math.min(BATTLEMENT_SPACING*.5,L*.18):0;
+  const usable=Math.max(.01,L-startPad-endPad);
+  const intervals=battlementIntervalCount(usable);
+  const step=usable/intervals;
+
+  for(let i=0;i<=intervals;i++){
+    const along=startPad+step*i;
+    const t=clamp(along/L,0,1);
     const center={x:s.a.x+dx*t+nx*edgeOffset*side,y:s.a.y+dy*t+ny*edgeOffset*side};
     pieces.push(battlementPiece(center,angle,z,.28,depth,.24));
   }
@@ -977,12 +988,18 @@ function wallBattlementPieces(s){
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[];
+  const cornerAngle=s.angle||0;
+
+  // Corners are architectural anchors: always exactly one merlon at every corner.
+  for(const corner of fp)pieces.push(battlementPiece(corner,cornerAngle,z,.27,.23,.25));
+
+  // Then fill each side at the same canonical spacing, excluding endpoints so
+  // corner merlons are never duplicated by adjacent edges.
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
-    const angle=Math.atan2(dy,dx),cornerPad=Math.min(.18,L*.18),t0=cornerPad/L,t1=1-cornerPad/L;
-    const usable=Math.max(.18,L-cornerPad*2),count=Math.max(2,Math.min(7,Math.floor(usable/.54)+1));
-    for(let i=0;i<count;i++){
-      const tt=(i+.5)/count,t=t0+(t1-t0)*tt;
+    const angle=Math.atan2(dy,dx),intervals=battlementIntervalCount(L),step=L/intervals;
+    for(let i=1;i<intervals;i++){
+      const t=(step*i)/L;
       pieces.push(battlementPiece({x:a.x+dx*t,y:a.y+dy*t},angle,z,.25,.22,.24));
     }
   }
@@ -990,9 +1007,10 @@ function squareTowerBattlementPieces(s){
 }
 function roundTowerBattlementPieces(s){
   const z=structureHeight(s),r=Math.max(.16,(Number(s.r)||.5)-.09);
-  const count=Math.max(8,Math.min(16,Math.round(r*Math.PI*4.4))),pieces=[];
-  for(let i=0;i<count;i++){
-    const a=i/count*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
+  const circumference=Math.PI*2*r,intervals=Math.max(8,battlementIntervalCount(circumference));
+  const pieces=[];
+  for(let i=0;i<intervals;i++){
+    const a=i/intervals*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
     pieces.push(battlementPiece(center,a+Math.PI/2,z,.23,.18,.23));
   }
   return pieces;
