@@ -2,7 +2,7 @@
 
 Settlement builder / manager prototype.
 
-## V0.7 scope
+## V0.8 scope
 - 200×200U persistent seeded world buffer
 - 100×100U central buildable area
 - Castle builder: square/round towers, walls, built wall-sections, gates
@@ -83,3 +83,16 @@ Current values are provisional balancing values.
 - Raised settlement elements use painter-order sorting by world depth
 - Manual structures use screen-space projected hit testing so elevated faces remain selectable
 - No Three.js/WebGL/build system dependency has been introduced
+
+
+## Camera rotation and height levels
+- The 2.5D camera can rotate in 90° increments with ↺ / ↻ controls in the top bar
+- Rotation is view-only: world coordinates, roads, settlement state and persistence remain unchanged
+- Tower height: 1 / 2 / 3 levels
+- Wall and built-section height: 1 / 2 levels
+- Tower function capacity = footprint capacity × height levels
+- Built-section function capacity = length capacity × height levels
+- Small towers retain zero function capacity regardless of height
+- Height affects 2.5D extrusion, construction time and construction cost
+- Builder height selectors set the level for new structures; selected structures expose the level in the structure panel for rapid prototype testing
+- Test resources are initialized to 10,000 each; existing saves are raised to at least 10,000 on load during this testing phase
