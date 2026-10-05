@@ -781,7 +781,7 @@ function reconcileSettlementAccessRoads(limit=Infinity,instant=false){
     const n=ensureSettlementRoadAccess(s,instant);
     if(n){changed+=n;done++}
   }
-  if(changed){peasantPathSignature='';peasantPathCache.clear()}
+  if(changed)invalidateNavigation(false);
   return changed;
 }
 function marketRoadAccessPoint(s,target){
@@ -831,7 +831,7 @@ function reconcileReactiveRoadNetwork(){
   changed+=reconcileArterialRoutes();
   changed+=reconcileGateMainConnections(false);
   changed+=reconcileSettlementAccessRoads();
-  if(changed){peasantPathSignature='';peasantPathCache.clear()}
+  if(changed)invalidateNavigation(false);
   return changed;
 }
 function nearestRoadInfo(p,roads){let best={d:Infinity,angle:0};for(const r of roads){const d=pointSegmentDistance(p,r.a,r.b);if(d<best.d)best={d,angle:Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}}return best}
@@ -1135,7 +1135,7 @@ function processVillageGrowth(){
     if(!ok&&kind!=='road')ok=spawnRoad(step);
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
-    if(ok)markDirty();
+    if(ok)markDirty(false);
   }
 }
 function resetLegacyVillageGrowth(){
@@ -2995,10 +2995,14 @@ let peasantPathCache=new Map(),peasantPathSignature='';
 let roadNavGraphCache={dirty:true,nodes:new Map(),roads:[],version:0};
 const navPerf={graphBuilds:0,graphRoutes:0,gridFallbacks:0,gridMisses:0};
 window.__conquerPerf=navPerf;
-function invalidateNavigation(){
+function invalidateNavigation(hard=true){
+  // New roads/houses only extend the topology: existing road-following paths
+  // remain valid. Hard invalidation is reserved for moved/removed blockers or
+  // rebuilt routes.
+  roadNavGraphCache.dirty=true;
+  if(!hard)return;
   peasantPathSignature='';
   peasantPathCache.clear();
-  roadNavGraphCache.dirty=true;
 }
 function roadNavNodeKey(p){
   return (Math.round(p.x*100)/100).toFixed(2)+','+(Math.round(p.y*100)/100).toFixed(2);
@@ -4342,9 +4346,9 @@ function structureAtScreen(p){
   return null;
 }
 function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate],[data-well],[data-civic]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
-function markDirty(){
+function markDirty(hardNavigation=true){
   State.dirty=true;
-  invalidateNavigation();
+  invalidateNavigation(hardNavigation);
   fieldWorkAssignmentCache={key:null,map:new Map()};
   invalidateSceneCache();
   document.getElementById('saveState').textContent='unsaved';saveLocal();
@@ -4373,8 +4377,7 @@ function addStructure(s){
       status(bits.join(' · '));
     }
   }
-  invalidateNavigation();
-  selectStructure(s);markDirty();draw();return true
+  selectStructure(s);markDirty(true);draw();return true
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
