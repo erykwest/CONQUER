@@ -665,8 +665,18 @@ function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',
 }
 let castleUnionCache={key:null,bands:null};
 function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)}
+function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
+function unionFootprintPoints(s){
+  if(!['wall','built'].includes(s.type))return footprintPoints(s);
+  let a={...s.a},b={...s.b},dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L};
+  const overlap=clamp(.06+(Number(s.width)||.5)*.22,.09,.28);
+  if(hasCastleSnap(s.aSnap))a={x:a.x-u.x*overlap,y:a.y-u.y*overlap};
+  if(hasCastleSnap(s.bSnap))b={x:b.x+u.x*overlap,y:b.y+u.y*overlap};
+  dx=b.x-a.x;dy=b.y-a.y;const LL=Math.hypot(dx,dy)||1,nx=-dy/LL*s.width/2,ny=dx/LL*s.width/2;
+  return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
+}
 function polygonGeomForStructure(s){
-  const pts=footprintPoints(s);if(!pts||pts.length<3)return null;
+  const pts=unionFootprintPoints(s);if(!pts||pts.length<3)return null;
   return [pts.map(p=>[p.x,p.y])];
 }
 function castleUnionBands(){
