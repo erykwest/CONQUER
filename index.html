@@ -6,7 +6,10 @@
 <title>CONQUER — Settlement Builder</title>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.1';
+import polygonClipping from 'https://esm.sh/polygon-clipping@0.15.7';
 window.__createSupabaseClient = createClient;
+window.__polygonClipping = polygonClipping;
+window.dispatchEvent(new Event('polygon-clipping-ready'));
 </script>
 <style>
 :root{
@@ -59,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.10</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.11</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -660,6 +663,86 @@ function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',
   for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,null);
   pathPolygon(topPts,topColor,stroke,1.2);
 }
+let castleUnionCache={key:null,bands:null};
+function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)}
+function polygonGeomForStructure(s){
+  const pts=footprintPoints(s);if(!pts||pts.length<3)return null;
+  return [pts.map(p=>[p.x,p.y])];
+}
+function castleUnionBands(){
+  const pc=window.__polygonClipping;if(!pc)return null;
+  const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s));
+  if(!items.length)return[];
+  const descriptors=items.map(s=>({id:s.id,h:+structureHeight(s).toFixed(4),geom:polygonGeomForStructure(s)})).filter(x=>x.geom);
+  const key=JSON.stringify(descriptors);
+  if(castleUnionCache.key===key)return castleUnionCache.bands;
+  const heights=[...new Set(descriptors.map(x=>x.h))].sort((a,b)=>a-b),bands=[];let z0=0;
+  try{
+    for(const z1 of heights){
+      const active=descriptors.filter(x=>x.h>=z1-1e-6).map(x=>x.geom);
+      if(!active.length){z0=z1;continue}
+      const geometry=pc.union(...active);
+      bands.push({z0,z1,geometry});
+      z0=z1;
+    }
+  }catch(err){
+    console.warn('Castle polygon union failed',err);
+    castleUnionCache={key,bands:null};return null;
+  }
+  castleUnionCache={key,bands};return bands;
+}
+function cleanClipRing(ring){
+  if(!ring||ring.length<3)return[];
+  const pts=ring.map(([x,y])=>({x,y}));
+  if(pts.length>1&&Math.abs(pts[0].x-pts.at(-1).x)<1e-8&&Math.abs(pts[0].y-pts.at(-1).y)<1e-8)pts.pop();
+  return pts;
+}
+function fillMultiPolygonTop(multi,z,fill,stroke){
+  ctx.save();ctx.beginPath();
+  for(const poly of multi||[])for(const ring of poly||[]){
+    const pts=cleanClipRing(ring).map(p=>w2s(p,z));if(pts.length<3)continue;
+    ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();
+  }
+  ctx.fillStyle=fill;ctx.fill('evenodd');
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.15;ctx.stroke()}
+  ctx.restore();
+}
+function drawMultiPolygonBand(multi,z0,z1){
+  if(!multi?.length)return;
+  const faces=[];
+  for(const poly of multi)for(const ring of poly){
+    const pts=cleanClipRing(ring);if(pts.length<3)continue;
+    for(let i=0;i<pts.length;i++){
+      const j=(i+1)%pts.length,b0=w2s(pts[i],z0),b1=w2s(pts[j],z0),t1=w2s(pts[j],z1),t0=w2s(pts[i],z1);
+      const dx=b1.x-b0.x,shade=dx>=0?'#514a44':'#635951';
+      faces.push({poly:[b0,b1,t1,t0],depth:(b0.y+b1.y)/2,shade});
+    }
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.poly,f.shade,null);
+  fillMultiPolygonTop(multi,z1,'#8d8175','#d8c8b4');
+}
+function drawCastleUnion(){
+  const bands=castleUnionBands();if(!bands)return false;
+  for(const band of bands)drawMultiPolygonBand(band.geometry,band.z0,band.z1);
+  return true;
+}
+function drawCastleUnionDetails(){
+  for(const s of State.structures){
+    if(!isCastlePart(s)||underConstruction(s))continue;
+    if(s.type==='built')drawBuiltDetails(s,false);
+    if(['tower','gate'].includes(s.type)){
+      const h=structureHeight(s),a=w2s({x:s.x,y:s.y},h+.03),q={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},b=w2s(q,h+.03);
+      ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
+    }
+  }
+}
+function drawCastleSelection(){
+  const s=selectedStructure();if(!s||!isCastlePart(s)||underConstruction(s))return;
+  const pts=projectPath(footprintPoints(s),structureHeight(s));if(pts.length<3)return;
+  ctx.save();ctx.strokeStyle='#f4b76f';ctx.lineWidth=2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
+}
+
 function worldDepth(s){const p=rotateViewPoint(structureCenter(s));return p.x+p.y;}
 function pointInScreenPolygon(p,poly){
   let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){
@@ -782,24 +865,8 @@ function currentLinearSpec(){
   return TYPES.built;
 }
 function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
-function snappedStructure(id){
-  if(!id)return null;
-  const target=State.structures.find(x=>x.id===id);
-  return target&&['tower','gate'].includes(target.type)?target:null;
-}
-function socketOverlap(s){
-  const w=Number(s.width)||.5;
-  return clamp(.08+w*.32,.12,.42);
-}
-function renderedLinearEndpoints(s){
-  let a={...s.a},b={...s.b};
-  const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L},overlap=socketOverlap(s);
-  if(snappedStructure(s.aSnap))a={x:a.x-u.x*overlap,y:a.y-u.y*overlap};
-  if(snappedStructure(s.bSnap))b={x:b.x+u.x*overlap,y:b.y+u.y*overlap};
-  return{a,b};
-}
 function linePoly(s){
-  const e=renderedLinearEndpoints(s),a=e.a,b=e.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
+  const a=s.a,b=s.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
 function functionCapacity(s){
@@ -826,11 +893,11 @@ function drawLinearBase(s,preview=false){
 }
 function drawBuiltDetails(s,preview=false){
   if(s.type!=='built')return;
-  const e=renderedLinearEndpoints(s),ra=e.a,rb=e.b,h=structureHeight(s),a=w2s(ra,h+.28),b=w2s(rb,h+.28);
+  const h=structureHeight(s),a=w2s(s.a,h+.28),b=w2s(s.b,h+.28);
   ctx.save();ctx.strokeStyle='rgba(58,39,28,.92)';ctx.lineWidth=Math.max(1.5,2*State.view.scale);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  const renderLength=dist(ra,rb),count=Math.max(2,Math.floor(renderLength/.7));
+  const count=Math.max(2,Math.floor(s.length/.7));
   ctx.fillStyle='#c9b79f';
-  for(let i=0;i<=count;i++){const t=i/count,p={x:ra.x+(rb.x-ra.x)*t,y:ra.y+(rb.y-ra.y)*t},q=w2s(p,h+.15);ctx.fillRect(q.x-2,q.y-3,4,4)}
+  for(let i=0;i<=count;i++){const t=i/count,p={x:s.a.x+(s.b.x-s.a.x)*t,y:s.a.y+(s.b.y-s.a.y)*t},q=w2s(p,h+.15);ctx.fillRect(q.x-2,q.y-3,4,4)}
   ctx.restore();
 }
 function drawPointStructure(s,preview=false){
@@ -1009,19 +1076,24 @@ function drawStructure(s,preview=false){
 function draw(){
   const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawEnvironment();drawBuildArea();
 
-  // Ground-level settlement layers.
   State.structures.filter(s=>s.auto&&['field','road'].includes(s.type)).forEach(drawAutoStructure);
 
-  // Linear castle elements are always behind their endpoint towers/gates.
-  const raised=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type)));
-  const linearAndOther=raised.filter(s=>!['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  const castleCaps=raised.filter(s=>!s.auto&&['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of linearAndOther){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  // Non-castle raised objects and castle elements still under construction.
+  const others=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type))&&(!isCastlePart(s)||underConstruction(s))).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const s of others){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
   drawPeasants();
-  for(const s of castleCaps)drawStructure(s)
+
+  // Completed castle = true footprint union rendered in horizontal height bands.
+  const unionOk=drawCastleUnion();
+  if(!unionOk){
+    const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+    for(const s of fallback)drawStructure(s);
+  }else{
+    drawCastleUnionDetails();
+    drawCastleSelection();
+  }
   drawFacadeWindows(false,1);
 
-  // Placement preview always wins the visual stack.
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
@@ -1208,6 +1280,7 @@ function simulationFrame(now){
 }
 requestAnimationFrame(simulationFrame);
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.getElementById('foundVillageModal').classList.contains('open')){document.getElementById('cancelVillageBtn').click();return}State.draft=null;State.selectedId=null;renderFunctionPanel();setTool({kind:'select',label:'Select'});draw()}if(e.key==='Delete'&&State.selectedId)deleteStructure(State.selectedId);if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCloud()}});
+window.addEventListener('polygon-clipping-ready',()=>draw());
 window.addEventListener('resize',resize);loadLocal();if(!State.environment.length)generateEnvironment();renderUI();resize();fit();initSupabase();
 })();
 </script>
