@@ -1436,10 +1436,8 @@ function drawHouseDoor(house){
   if(!visible)return;
   const l={x:d.surface.x-d.tangent.x*halfW,y:d.surface.y-d.tangent.y*halfW};
   const r={x:d.surface.x+d.tangent.x*halfW,y:d.surface.y+d.tangent.y*halfW};
-  const poly=[w2s(l,.04),w2s(r,.04),w2s(r,.68),w2s(l,.68)];
+  const poly=[w2s(l,.04),w2s(r,.04),w2s(r,.552),w2s(l,.552)];
   pathPolygon(poly,'#39271e','rgba(170,139,96,.50)',.7);
-  const knob=w2s({x:d.surface.x+d.tangent.x*halfW*.48,y:d.surface.y+d.tangent.y*halfW*.48},.34);
-  ctx.save();ctx.fillStyle='rgba(198,155,79,.85)';ctx.beginPath();ctx.arc(knob.x,knob.y,Math.max(1,1.2*State.view.scale),0,Math.PI*2);ctx.fill();ctx.restore();
 }
 function drawAutoStructure(s){
   ctx.save();if(underConstruction(s))ctx.globalAlpha=.38;
