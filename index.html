@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.29</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.30</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -1498,6 +1498,7 @@ function commitOrientedPlacement(center,angle){
   const spec=orientedToolSpec();if(!spec)return false;
   const snap=spec.type==='tower'?{
     wallId:State.draft?.wallSnapId||null,
+    wallEnd:State.draft?.wallSnapEnd||null,
     parentTowerId:State.draft?.parentTowerId||null,
     subtowerSocket:State.draft?.subtowerSocket||null,
     subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
@@ -1688,21 +1689,32 @@ function detachSubtowerChildren(parentId){
     delete child.parentTowerId;delete child.subtowerSocket;delete child.subtowerAngle;delete child.parentType;
   }
 }
+function wallEndpointSnapOccupied(wall,end){
+  const snapId=end==='a'?wall.aSnap:wall.bSnap;
+  if(!snapId)return false;
+  return State.structures.some(s=>s.id===snapId&&['tower','gate'].includes(s.type));
+}
 function nearestWallPlacementSnap(p){
-  let best=null,bestPoint=null,bestD=Infinity;
-  for(const s of State.structures){
-    if(s.auto||s.type!=='wall')continue;
-    const q=closestPointOnSegment(p,s.a,s.b),d=dist(p,q);
-    const reach=TOWER_WALL_MAGNET+(Number(s.width)||.5)/2;
-    if(d<=reach&&d<bestD){best=s;bestPoint=q;bestD=d}
+  let best=null,bestD=Infinity;
+  for(const wall of State.structures){
+    if(wall.auto||wall.type!=='wall')continue;
+    const reach=TOWER_WALL_MAGNET+(Number(wall.width)||.5)/2;
+    for(const end of ['a','b']){
+      if(wallEndpointSnapOccupied(wall,end))continue;
+      const q=wall[end],d=dist(p,q);
+      if(d<=reach&&d<bestD){
+        best={
+          point:{x:q.x,y:q.y},
+          wallId:wall.id,
+          wallEnd:end,
+          angle:Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x),
+          distance:d
+        };
+        bestD=d;
+      }
+    }
   }
-  if(!best)return null;
-  return{
-    point:bestPoint,
-    wallId:best.id,
-    angle:Math.atan2(best.b.y-best.a.y,best.b.x-best.a.x),
-    distance:bestD
-  };
+  return best;
 }
 function towerPlacementSnap(p){
   if(State.tool.kind!=='tower')return{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
@@ -1735,6 +1747,119 @@ function wallFragmentFrom(source,a,b,aSnap,bSnap,ratio){
   if(source.construction)fragment.construction={...source.construction};
   normalizeStructureVariants(fragment);
   return fragment;
+}
+function towerWallConnectionRecords(tower){
+  if(!tower||tower.type!=='tower')return[];
+  const records=[],seen=new Set();
+
+  for(const link of Array.isArray(tower.wallConnections)?tower.wallConnections:[]){
+    const wall=State.structures.find(s=>s.id===link.wallId&&s.type==='wall');if(!wall)continue;
+    const end=link.end==='b'?'b':'a',key=wall.id+':'+end;if(seen.has(key))continue;
+    records.push({
+      wallId:wall.id,end,
+      anchor:link.anchor&&Number.isFinite(link.anchor.x)&&Number.isFinite(link.anchor.y)
+        ?{x:link.anchor.x,y:link.anchor.y}
+        :{x:tower.x,y:tower.y}
+    });
+    seen.add(key);
+  }
+
+  // Legacy/persisted walls may already point to the tower without reciprocal metadata.
+  for(const wall of State.structures){
+    if(wall.type!=='wall')continue;
+    for(const end of ['a','b']){
+      const snapId=end==='a'?wall.aSnap:wall.bSnap;
+      if(snapId!==tower.id)continue;
+      const key=wall.id+':'+end;if(seen.has(key))continue;
+      records.push({wallId:wall.id,end,anchor:{x:tower.x,y:tower.y}});
+      seen.add(key);
+    }
+  }
+  return records;
+}
+function setTowerWallConnection(tower,wall,end,anchor){
+  if(!tower||!wall||tower.type!=='tower'||wall.type!=='wall')return;
+  const list=towerWallConnectionRecords(tower).filter(x=>!(x.wallId===wall.id&&x.end===end));
+  list.push({wallId:wall.id,end,anchor:{x:anchor.x,y:anchor.y}});
+  tower.wallConnections=list;
+}
+function invalidateCastleColliderGeometry(...structures){
+  for(const s of structures){
+    if(!s)continue;
+    s.colliderRevision=(Number(s.colliderRevision)||0)+1;
+  }
+  castleUnionCache={key:null,bands:null};
+  peasantPathSignature='';peasantPathCache.clear();
+}
+function regenerateTowerWallPair(tower,wall,end,anchor=null){
+  if(!tower||tower.type!=='tower'||!wall||wall.type!=='wall')return false;
+  end=end==='b'?'b':'a';
+  const other=end==='a'?wall.b:wall.a;
+  if(!other)return false;
+
+  // Exact ray/footprint intersection. This is the actual tower collider,
+  // unlike the old projected half-span approximation.
+  const contact=boundaryPoint(tower,other);
+  wall[end]={x:contact.x,y:contact.y};
+  wall.length=dist(wall.a,wall.b);
+  if(end==='a')wall.aSnap=tower.id;else wall.bSnap=tower.id;
+
+  const original=anchor||{x:tower.x,y:tower.y};
+  setTowerWallConnection(tower,wall,end,original);
+  normalizeStructureVariants(wall);
+  normalizeFunctions(tower);
+  invalidateCastleColliderGeometry(tower,wall);
+  return dist(wall[end],boundaryPoint(tower,other))<=.015;
+}
+function attachTowerToWallEndpoint(wallId,end,tower,anchor){
+  const wall=State.structures.find(s=>s.id===wallId&&s.type==='wall');
+  if(!wall||!tower||tower.type!=='tower'||!['a','b'].includes(end))return false;
+  if(wallEndpointSnapOccupied(wall,end))return false;
+  return regenerateTowerWallPair(tower,wall,end,anchor||wall[end]);
+}
+function restoreTowerWallConnections(tower){
+  if(!tower||tower.type!=='tower')return;
+  for(const link of towerWallConnectionRecords(tower)){
+    const wall=State.structures.find(s=>s.id===link.wallId&&s.type==='wall');if(!wall)continue;
+    const end=link.end==='b'?'b':'a';
+    wall[end]={...link.anchor};
+    if(end==='a'&&wall.aSnap===tower.id)wall.aSnap=null;
+    if(end==='b'&&wall.bSnap===tower.id)wall.bSnap=null;
+    wall.length=dist(wall.a,wall.b);
+    invalidateCastleColliderGeometry(wall);
+  }
+}
+function syncCompletedTowerWallColliders(force=false){
+  let changed=0;
+  for(const tower of State.structures){
+    if(tower.type!=='tower'||underConstruction(tower))continue;
+    const links=towerWallConnectionRecords(tower);
+    if(!links.length)continue;
+
+    const signature=links.map(l=>{
+      const wall=State.structures.find(s=>s.id===l.wallId&&s.type==='wall');
+      return wall?l.wallId+':'+l.end+':'+(underConstruction(wall)?'0':'1'):'missing';
+    }).join('|');
+    if(!force&&tower.wallColliderSyncSignature===signature)continue;
+
+    let allReady=true,localChanged=0;
+    for(const link of links){
+      const wall=State.structures.find(s=>s.id===link.wallId&&s.type==='wall');
+      if(!wall){allReady=false;continue}
+      if(underConstruction(wall)){allReady=false;continue}
+      if(regenerateTowerWallPair(tower,wall,link.end,link.anchor))localChanged++;
+    }
+    if(allReady){
+      tower.wallColliderSyncSignature=signature;
+      tower.wallColliderSyncedDay=State.clock.day;
+    }
+    changed+=localChanged;
+  }
+  if(changed){
+    castleUnionCache={key:null,bands:null};
+    peasantPathSignature='';peasantPathCache.clear();
+  }
+  return changed;
 }
 function breakWallForTower(wallId,tower){
   const wall=State.structures.find(s=>s.id===wallId&&s.type==='wall');
@@ -1781,9 +1906,17 @@ function addTowerWithPlacement(tower,snap={}){
     return true;
   }
 
-  if(snap.wallId&&breakWallForTower(snap.wallId,tower)){
-    markDirty();draw();
-    status('Tower snapped to wall — wall split automatically');
+  if(snap.wallId){
+    const wall=State.structures.find(s=>s.id===snap.wallId&&s.type==='wall');
+    const anchor=wall&&snap.wallEnd?{...wall[snap.wallEnd]}:{x:tower.x,y:tower.y};
+    const attached=snap.wallEnd
+      ?attachTowerToWallEndpoint(snap.wallId,snap.wallEnd,tower,anchor)
+      :breakWallForTower(snap.wallId,tower); // legacy draft fallback
+    if(attached){
+      tower.wallColliderSyncSignature=null;
+      markDirty();draw();
+      status(snap.wallEnd?'Tower snapped to wall endpoint — collider linked':'Tower snapped to wall');
+    }
   }
   return true;
 }
@@ -4026,6 +4159,7 @@ function addStructure(s){
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(target.type==='tower')restoreTowerWallConnections(target);
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
   if(target.type==='well'){
@@ -4151,12 +4285,13 @@ canvas.addEventListener('pointerdown',e=>{
     State.draft={
       mode:'orient',center:q,angle,lockedAngle,
       wallSnapId:snap.wallId||null,
+      wallSnapEnd:snap.wallEnd||null,
       parentTowerId:snap.parentTowerId||null,
       subtowerSocket:snap.subtowerSocket||null,
       subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
       preview:makePlacementPreview(q,angle)
     };
-    status(snap.parentTowerId?'Subtower magnetized — click to confirm':snap.wallId?'Tower magnetized to wall — click to confirm':'Position fixed — move cursor to rotate, click to confirm');
+    status(snap.parentTowerId?'Subtower magnetized — click to confirm':snap.wallId?'Tower magnetized to wall endpoint — click to confirm':'Position fixed — move cursor to rotate, click to confirm');
     draw();return
   }
   if(State.tool.kind==='gate'){
@@ -4201,6 +4336,7 @@ canvas.addEventListener('pointermove',e=>{
       State.draft={
         mode:'hover',
         wallSnapId:snap.wallId||null,
+        wallSnapEnd:snap.wallEnd||null,
         parentTowerId:snap.parentTowerId||null,
         subtowerSocket:snap.subtowerSocket||null,
         subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -4283,6 +4419,7 @@ function migrateStructures(list){
       s.level=clamp(Math.round(Number(s.level)||1),1,3);
       s.tier=towerTier(s);
       applyStructureTier(s,s.tier);
+      s.wallColliderSyncSignature=null;
     }
     if(s.type==='gate'){
       s.level=clamp(Math.round(Number(s.level)||1),1,3);
@@ -4319,9 +4456,9 @@ function migrateStructures(list){
   return migrated;
 }
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);saveLocal();renderUI();renderFunctionPanel();draw()}}
 async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
 function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
@@ -4373,6 +4510,7 @@ function simulationFrame(now){
   if(State.clock.speed>0){
     const before=State.clock.day;State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
     processVillageGrowth();
+    syncCompletedTowerWallColliders(false);
     const quarterChanged=Math.floor(before*4)!==Math.floor(State.clock.day*4);
     if(quarterChanged)renderUI();
     draw();
