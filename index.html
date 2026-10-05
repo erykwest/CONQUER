@@ -226,14 +226,14 @@ function houseLocalToWorld(s,x,y){
   return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
 }
 function houseFootprintParts(s){
-  const parts=[{cx:0,cy:0,w:Number(s.w)||1.5,h:Number(s.h)||1}];
+  const parts=[{cx:0,cy:0,w:Number(s.w)||1.5,h:Number(s.h)||1,roofTurn:0}];
   if(houseLevel(s)>=3){
     const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s),w=Number(s.w)||1.5,h=Number(s.h)||1;
     if(plan==='L'){
-      parts.push({cx:sign*w*.38,cy:h*.56,w:w*.55,h:h*.95});
+      parts.push({cx:sign*w*.38,cy:h*.56,w:w*.55,h:h*.95,roofTurn:Math.PI/2});
     }else{
-      parts.push({cx:0,cy:h*.62,w:w*1.18,h:h*.48});
-      parts.push({cx:0,cy:h*.92,w:w*.46,h:h*.34});
+      parts.push({cx:0,cy:h*.62,w:w*1.18,h:h*.48,roofTurn:Math.PI/2});
+      parts.push({cx:0,cy:h*.92,w:w*.46,h:h*.34,roofTurn:Math.PI/2});
     }
   }
   return parts.map(p=>{const q=houseLocalToWorld(s,p.cx,p.cy);return{...p,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)}});
@@ -1351,13 +1351,20 @@ function drawField(field){
   }
   ctx.restore();
 }
-function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false){
-  const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),center=houseLocalToWorld(s,part.cx,part.cy);
+function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
+  const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=houseLocalToWorld(s,part.cx,part.cy);
+  const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
   const local=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
-  const c0=local(-part.w/2,-part.h/2),c1=local(part.w/2,-part.h/2),c2=local(part.w/2,part.h/2),c3=local(-part.w/2,part.h/2);
-  const r0=local(-part.w/2,0),r1=local(part.w/2,0);
+  const c0=local(-rw/2,-rh/2),c1=local(rw/2,-rh/2),c2=local(rw/2,rh/2),c3=local(-rw/2,rh/2);
+  const r0=local(-rw/2,0),r1=local(rw/2,0);
   const roofA=[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)];
   const roofB=[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)];
+  const gableA=[w2s(c0,wallH),w2s(c3,wallH),w2s(r0,ridgeH)];
+  const gableB=[w2s(c1,wallH),w2s(c2,wallH),w2s(r1,ridgeH)];
+  if(gableFill){
+    pathPolygon(gableA,gableFill,'rgba(126,116,102,.55)',.75);
+    pathPolygon(gableB,gableFill,'rgba(126,116,102,.55)',.75);
+  }
   if(anthracite){
     pathPolygon(roofA,'#303237','#55585e',1);pathPolygon(roofB,'#3a3d42','#55585e',1);
   }else{
@@ -1366,16 +1373,23 @@ function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false){
 }
 function drawHouse(s){
   const level=houseLevel(s),wallH=houseBodyHeight(s),ridgeH=houseRidgeHeight(s),selected=State.selectedId===s.id;
-  const parts=houseFootprintParts(s);
-  for(const part of parts){
-    extrudePolygon(part.points,wallH,{
-      top:level===1?'#7d5b43':'#77716a',
-      sideA:level===1?'#4e392d':'#59534d',
-      sideB:level===1?'#654936':'#6c655d',
-      stroke:selected?'#f4b76f':level===1?'#b89575':'#aaa199'
-    });
+  const parts=houseFootprintParts(s),stroke=selected?'#f4b76f':'#aaa199';
+  if(level===1){
+    for(const part of parts){
+      extrudePolygon(part.points,wallH,{top:'#7d5b43',sideA:'#4e392d',sideB:'#654936',stroke:selected?'#f4b76f':'#b89575'});
+    }
+    for(const part of parts)drawHouseRoofPart(s,part,wallH,ridgeH,false,null);
+  }else{
+    const floorBreak=wallH*.50;
+    for(const part of parts){
+      // Ground floor remains grey.
+      extrudePolygonAt(part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
+      // Upper floor is cream.
+      extrudePolygonAt(part.points,floorBreak,wallH,{top:'#d8ccb2',sideA:'#c9bda4',sideB:'#ddd1b7',stroke});
+    }
+    // Cream gable triangles, anthracite roof. L3 extension ridges are rotated 90°.
+    for(const part of parts)drawHouseRoofPart(s,part,wallH,ridgeH,true,'#d8ccb2');
   }
-  for(const part of parts)drawHouseRoofPart(s,part,wallH,ridgeH,level>=2);
   if(!underConstruction(s))drawHouseChimneys(s);
 }
 function closestPointOnSegment(p,a,b){
