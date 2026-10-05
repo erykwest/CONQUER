@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.20</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.21</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -1665,6 +1665,10 @@ function pointBlockedForPeasant(p,sourceHouseId){
   for(const s of State.structures){
     if(s.id===sourceHouseId)continue;
     if(!['house','tower','gate','wall','built','well','market','tavern','church'].includes(s.type))continue;
+
+    // Market ground is intentionally traversable so routines visibly enter the plaza.
+    if(s.type==='market')continue;
+
     if(['wall','built'].includes(s.type)){
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
       continue;
@@ -1815,6 +1819,18 @@ function nearestWorkshop(from){
 function structureAccessPoint(target,from,visitorId=''){
   if(!target)return null;
   const h=peasantHash(String(visitorId)+'>'+target.id),jitter=(((h>>>5)%7)-3)*.12;
+
+  // The market is a walkable plaza, not a solid building.
+  // Visitors occupy deterministic positions inside the 4×4U square, between stalls.
+  if(target.type==='market'){
+    const spots=[
+      {x:0,y:0},{x:.72,y:0},{x:-.72,y:0},
+      {x:0,y:.72},{x:0,y:-.72},{x:.48,y:.48},{x:-.48,y:-.48}
+    ];
+    const spot=spots[h%spots.length];
+    return houseLocalToWorld(target,spot.x,spot.y);
+  }
+
   if(['wall','built'].includes(target.type)){
     const mid={x:(target.a.x+target.b.x)/2,y:(target.a.y+target.b.y)/2};
     const dx=target.b.x-target.a.x,dy=target.b.y-target.a.y,L=Math.hypot(dx,dy)||1;
@@ -1872,8 +1888,8 @@ function artisanPosition(house,day){
   if(!primary)return null;
   let secondary=market&&market.id!==primary.structure?.id?{structure:market,point:structureAccessPoint(market,primary.point,house.id+'-market')}:null;
 
-  const leave0=.08+stagger,arriveWork=.15+stagger,leaveWork=.38+stagger;
-  const arriveSecond=.45+stagger,leaveSecond=.54+stagger,homeAt=.63+stagger;
+  const leave0=.08+stagger,arriveWork=.15+stagger,leaveWork=.37+stagger;
+  const arriveSecond=.44+stagger,leaveSecond=.55+stagger,homeAt=.63+stagger;
   if(frac<leave0||frac>homeAt)return null;
   if(frac<arriveWork)return routineTravel(house,home,primary.point,frac,leave0,arriveWork,'artisan-home-work');
   if(frac<leaveWork)return primary.point;
@@ -1894,8 +1910,8 @@ function merchantPosition(house,day){
   const tavern=nearestCompletedStructure('tavern',first.point);
   const second=tavern&&tavern.id!==first.structure?.id?{structure:tavern,point:structureAccessPoint(tavern,first.point,house.id+'-tavern')}:null;
 
-  const leave0=.11+stagger,arriveFirst=.18+stagger,leaveFirst=.39+stagger;
-  const arriveSecond=.46+stagger,leaveSecond=.56+stagger,homeAt=.65+stagger;
+  const leave0=.10+stagger,arriveFirst=.17+stagger,leaveFirst=.43+stagger;
+  const arriveSecond=.49+stagger,leaveSecond=.57+stagger,homeAt=.65+stagger;
   if(frac<leave0||frac>homeAt)return null;
   if(frac<arriveFirst)return routineTravel(house,home,first.point,frac,leave0,arriveFirst,'merchant-home-market');
   if(frac<leaveFirst)return first.point;
