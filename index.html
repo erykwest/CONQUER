@@ -977,6 +977,62 @@ function nightFactor(){
   if(t<dawnStart)return 1;
   return 1-clamp((t-dawnStart)/VISUAL_TWILIGHT,0,1);
 }
+function sunShadowState(){
+  const t=visualCycleFrac();
+  if(t<0||t>=VISUAL_DAYLIGHT_RATIO)return null;
+  const phase=clamp(t/VISUAL_DAYLIGHT_RATIO,0,1);
+  const arc=Math.max(0,Math.sin(Math.PI*phase));
+  const edgeFade=clamp(arc*4,0,1);
+  if(edgeFade<=.001)return null;
+
+  // Visual sun path only: low sun = long/darker shadows, noon = short/lighter.
+  const altitude=(12+58*arc)*Math.PI/180;
+  const lengthPerHeight=clamp(1/Math.tan(altitude),.32,4.6);
+  const angle=Math.PI/4+phase*Math.PI;
+  const alpha=(.10+.15*(1-arc))*edgeFade;
+  const softness=clamp(.8+1.8*(1-arc),.8,2.6);
+  return{
+    phase,arc,alpha,softness,lengthPerHeight,
+    dx:Math.cos(angle),dy:Math.sin(angle)
+  };
+}
+function shadowStructureHeight(s){
+  if(s?.type==='house')return 1.45;
+  return structureHeight(s);
+}
+function convexHull(points){
+  if(points.length<=3)return points.slice();
+  const pts=points.slice().sort((a,b)=>a.x===b.x?a.y-b.y:a.x-b.x);
+  const cross=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);
+  const lower=[];
+  for(const p of pts){while(lower.length>=2&&cross(lower.at(-2),lower.at(-1),p)<=0)lower.pop();lower.push(p)}
+  const upper=[];
+  for(let i=pts.length-1;i>=0;i--){const p=pts[i];while(upper.length>=2&&cross(upper.at(-2),upper.at(-1),p)<=0)upper.pop();upper.push(p)}
+  lower.pop();upper.pop();return lower.concat(upper);
+}
+function drawStructureShadow(s,sun){
+  if(!s||underConstruction(s)||!['house','tower','gate','wall','built'].includes(s.type))return;
+  const fp=isCastlePart(s)?unionFootprintPoints(s):footprintPoints(s);
+  const h=shadowStructureHeight(s);
+  if(!fp?.length||h<=0)return;
+  const len=h*sun.lengthPerHeight;
+  const ox=sun.dx*len,oy=sun.dy*len;
+  const cloud=[];
+  for(const p of fp){
+    cloud.push(w2s(p,0));
+    cloud.push(w2s({x:p.x+ox,y:p.y+oy},0));
+  }
+  const hull=convexHull(cloud);if(hull.length<3)return;
+  ctx.save();
+  ctx.filter='blur('+sun.softness.toFixed(2)+'px)';
+  pathPolygon(hull,'rgba(4,5,7,'+sun.alpha.toFixed(3)+')',null);
+  ctx.restore();
+}
+function drawDynamicShadows(){
+  const sun=sunShadowState();if(!sun)return;
+  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','built'].includes(s.type));
+  for(const s of casters)drawStructureShadow(s,sun);
+}
 function assignedField(house,fields){
   let best=null,bestD=Infinity;
   for(const field of fields){const d=dist(house,field);if(d<bestD){bestD=d;best=field}}
@@ -1131,6 +1187,7 @@ function draw(){
   const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawEnvironment();drawBuildArea();
 
   State.structures.filter(s=>s.auto&&['field','road'].includes(s.type)).forEach(drawAutoStructure);
+  drawDynamicShadows();
 
   // Non-castle raised objects and castle elements still under construction.
   const others=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type))&&(!isCastlePart(s)||underConstruction(s))).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
