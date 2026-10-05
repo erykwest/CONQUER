@@ -176,6 +176,7 @@ const VISUAL_NIGHT_RATIO=8/24;
 const NIGHT_OVERLAY_MAX=.48;
 const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
+const CHIMNEY_SPACING=1.5;
 const PEASANT_PALETTE=Object.freeze([
   '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
   '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
@@ -1035,6 +1036,7 @@ function drawBuiltDetails(s,preview=false){
     for(const face of [faceA,faceB].sort((a,b)=>a.depth-b.depth)){
       pathPolygon(face.poly,face.fill,'#5d6066',1);
     }
+    for(const spec of chimneySpecs(s))drawChimney(spec);
   });
 }
 function battlementPiece(center,angle,z,w=.28,d=.24,h=.24){
@@ -1132,18 +1134,39 @@ function drawCastleBattlements(){
   }
   renderBattlementPieces(pieces);
 }
-function chimneySpec(s){
-  if(!s||underConstruction(s))return null;
+function chimneySpecs(s){
+  if(!s||underConstruction(s))return[];
+  const specs=[];
+
   if(s.type==='house'){
-    const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),off=Math.min(.30,s.w*.18);
-    return{center:{x:s.x+ca*off,y:s.y+sa*off},angle:s.angle||0,z0:1.40,z1:1.88};
+    const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+    const ridgeLength=Math.max(.5,Number(s.w)||1.5);
+    const count=Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
+    for(let i=0;i<count;i++){
+      const t=(i+1)/(count+1),along=(t-.5)*ridgeLength*.86;
+      specs.push({
+        center:{x:s.x+ca*along,y:s.y+sa*along},
+        angle:s.angle||0,z0:1.40,z1:1.88,index:i
+      });
+    }
+    return specs;
   }
+
   if(s.type==='built'){
-    const g=builtRoofGeometry(s);if(!g)return null;
-    const t=.28,center={x:g.ridgeA.x+(g.ridgeB.x-g.ridgeA.x)*t,y:g.ridgeA.y+(g.ridgeB.y-g.ridgeA.y)*t};
-    return{center,angle:Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x),z0:g.ridgeH-.02,z1:g.ridgeH+.48};
+    const g=builtRoofGeometry(s);if(!g)return[];
+    const dx=g.ridgeB.x-g.ridgeA.x,dy=g.ridgeB.y-g.ridgeA.y;
+    const ridgeLength=Math.hypot(dx,dy);
+    const count=Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
+    for(let i=0;i<count;i++){
+      const t=(i+1)/(count+1);
+      specs.push({
+        center:{x:g.ridgeA.x+dx*t,y:g.ridgeA.y+dy*t},
+        angle:Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x),
+        z0:g.ridgeH-.02,z1:g.ridgeH+.48,index:i
+      });
+    }
   }
-  return null;
+  return specs;
 }
 function drawChimney(spec){
   const pts=rectWorldPoints(spec.center.x,spec.center.y,.22,.20,spec.angle||0);
@@ -1164,12 +1187,17 @@ function drawSmoke(spec,id,now){
   }
   ctx.restore();
 }
+function drawHouseChimneys(s){
+  for(const spec of chimneySpecs(s))drawChimney(spec);
+}
 function drawChimneysAndSmoke(){
   const now=performance.now()/1000;
   const sources=State.structures.filter(s=>!underConstruction(s)&&(s.type==='house'||s.type==='built'));
   for(const s of sources){
-    const spec=chimneySpec(s);if(!spec)continue;
-    drawChimney(spec);drawSmoke(spec,s.id,now);
+    const specs=chimneySpecs(s);if(!specs.length)continue;
+    const smoke=()=>specs.forEach(spec=>drawSmoke(spec,s.id+':'+spec.index,now));
+    if(s.type==='built')withBuiltRoofOcclusionClip(s,smoke);
+    else smoke();
   }
 }
 function drawPointStructure(s,preview=false){
@@ -1226,6 +1254,7 @@ function drawHouse(s){
   const roofA=[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)];
   const roofB=[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)];
   pathPolygon(roofA,'#5b3d30','#8c6752',1);pathPolygon(roofB,'#6b4938','#8c6752',1);
+  if(!underConstruction(s))drawHouseChimneys(s);
 }
 function closestPointOnSegment(p,a,b){
   const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return{x:a.x,y:a.y};
@@ -1610,11 +1639,46 @@ function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
   }
   ctx.restore();
 }
+function linearFacadeEdge(s,side){
+  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
+  const off=(Number(s.width)||1)/2+.006;
+  return{
+    a:{x:s.a.x+nx*off*side,y:s.a.y+ny*off*side},
+    b:{x:s.b.x+nx*off*side,y:s.b.y+ny*off*side}
+  };
+}
+function linearFacadeVisible(s,side){
+  const edge=linearFacadeEdge(s,side),mid={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};
+  return viewDepthPoint(mid)>=viewDepthPoint(structureCenter(s))-1e-5;
+}
+function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1){
+  if(!linearFacadeVisible(s,side))return;
+  const edge=linearFacadeEdge(s,side);
+  const pa=w2s(edge.a,z),pb=w2s(edge.b,z),screenLength=Math.hypot(pb.x-pa.x,pb.y-pa.y);
+  const count=Math.max(1,Math.round(Math.max(.5,Number(s.length)||1)*density));
+  for(let i=0;i<count;i++){
+    const t=(i+.5)/count;
+    drawWindowOnEdge(edge,z,lit,nf,(t-.5)*screenLength);
+  }
+}
+function drawBuiltWindows(s,lit=false,nf=1){
+  const level=structureLevel(s),outside=wallExteriorSide(s),inside=-outside;
+  const lowerZ=.84,upperZ=(1.75+2.80)/2;
+
+  // Courtyard/interior side: two windows per U on every existing level.
+  drawBuiltWindowRow(s,inside,lowerZ,2,lit,nf);
+  if(level>=2)drawBuiltWindowRow(s,inside,upperZ,2,lit,nf);
+
+  // Exterior side: only the upper level, one window per U.
+  if(level>=2)drawBuiltWindowRow(s,outside,upperZ,1,lit,nf);
+}
 function drawFacadeWindows(lit=false,nf=1){
   for(const s of State.structures){
     if(underConstruction(s))continue;
     if(s.type==='house'){
       for(const edge of visibleFacadeEdges(s))drawWindowOnEdge(edge,.48,lit,nf,0);
+    }else if(s.type==='built'){
+      drawBuiltWindows(s,lit,nf);
     }else if(s.type==='tower'){
       const rows=towerWindowRows(s);if(!rows.length)continue;
       if(s.shape==='round'){
@@ -1739,7 +1803,11 @@ function renderFunctionPanel(){
     html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="grid3">${labels.map((label,i)=>`<button data-structure-tier="${i+1}" class="${current===i+1?'active':''}">${label}</button>`).join('')}</div></div>`;
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
-  if(s.type==='wall')html+=`<div class="slot"><div class="slot-label">Exterior side / battlements</div><button data-wall-flip class="active">⇄ Flip</button><div class="legend">Battlements are rendered only on the exterior side.</div></div>`;
+  if(['wall','built'].includes(s.type)){
+    const flipLabel=s.type==='wall'?'Exterior side / battlements':'Exterior side / windows';
+    const flipLegend=s.type==='wall'?'Battlements are rendered only on the exterior side.':'Exterior windows: upper level only. Interior windows: every level.';
+    html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
+  }
   if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
   else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
   else html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
@@ -1752,7 +1820,7 @@ function renderFunctionPanel(){
     markDirty();renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
-  slots.querySelectorAll('[data-wall-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status('Wall exterior flipped')});
+  slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','built'].includes(target.type))return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status((target.type==='wall'?'Wall':'Built section')+' exterior flipped')});
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
 }
 let pan=null;
@@ -1789,7 +1857,7 @@ canvas.addEventListener('pointerdown',e=>{
   }
   if(State.tool.kind==='linear'){
     if(!State.draft){const s=snapAnchor(p);State.draft={a:s.point,aSnap:s.structureId,preview:null};status('Point A set — choose point B');draw()}
-    else{const e2=snapAnchor(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:State.tool.linear==='wall'?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:State.tool.linear==='wall'?false:undefined,functions:[]});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}
+    else{const e2=snapAnchor(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:State.tool.linear==='wall'?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:false,functions:[]});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}
   }
 });
 canvas.addEventListener('pointermove',e=>{
