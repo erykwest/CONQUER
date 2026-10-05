@@ -59,7 +59,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.7</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.8</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -123,6 +123,8 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
   </div>
   <div id="saveState">local</div>
   <div id="timePanel">
+    <button id="rotateLeft" title="Rotate view 90° counter-clockwise">↺</button>
+    <button id="rotateRight" title="Rotate view 90° clockwise">↻</button>
     <span id="dayLabel" class="time-readout">Day 0.0</span>
     <button data-speed="0" class="active" title="Pause">⏸</button>
     <button data-speed="1" title="1× speed">1×</button>
@@ -140,7 +142,7 @@ const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0},resources:{gold:1000,population:100,food:500,wood:300,stone:500,metal:100,equipment:50},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0},dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,wall:1},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0},dirty:false,supabase:null,user:null};
 const TYPES={wall:{width:.5,min:1,max:8},built:{width:1,min:1,max:4}};
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
@@ -177,13 +179,16 @@ const status=t=>document.getElementById('status').textContent=t;
 const RES_ORDER=['gold','stone','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
 function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?2:span>=1.49?1:0}
+function structureLevel(s){return clamp(Math.round(Number(s?.level)||1),1,s?.type==='tower'?3:2)}
+function levelCostFactor(s){const l=structureLevel(s);return s?.type==='tower'?[1,1.65,2.3][l-1]:[1,1.8][l-1]}
+function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
 function constructionCost(s){
   if(!s||s.auto)return{};
-  if(s.type==='tower')return {...COSTS.tower[towerTier(s)]};
+  if(s.type==='tower')return scaleCost(COSTS.tower[towerTier(s)],levelCostFactor(s));
   if(s.type==='gate')return {...COSTS.gate};
   if(s.type==='well')return {...COSTS.well};
-  if(s.type==='wall')return roundCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])));
-  if(s.type==='built')return roundCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])));
+  if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
+  if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   return{};
 }
 function costText(cost){const icons={gold:'🪙',stone:'🪨',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
@@ -191,11 +196,11 @@ function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.r
 function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
 function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
 function buildDuration(s){
-  if(s.type==='tower')return BUILD_DAYS.tower[towerTier(s)];
+  if(s.type==='tower')return BUILD_DAYS.tower[towerTier(s)]*(.7+.3*structureLevel(s));
   if(s.type==='gate')return BUILD_DAYS.gate;
   if(s.type==='well')return BUILD_DAYS.well;
-  if(s.type==='wall')return BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length;
-  if(s.type==='built')return BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length;
+  if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
+  if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='road')return BUILD_DAYS.road;
   if(s.type==='house')return BUILD_DAYS.house;
   if(s.type==='field')return BUILD_DAYS.field;
@@ -558,18 +563,21 @@ function openVillageModal(well){
 }
 function closeVillageModal(){document.getElementById('foundVillageModal').classList.remove('open');State.pendingWellId=null}
 function resize(){const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
+function rotateViewPoint(p,turns=State.view.rotation||0){
+  const q=((turns%4)+4)%4,c=WORLD/2,dx=p.x-c,dy=p.y-c;
+  if(q===1)return{x:c-dy,y:c+dx};
+  if(q===2)return{x:c-dx,y:c-dy};
+  if(q===3)return{x:c+dy,y:c-dx};
+  return{x:p.x,y:p.y};
+}
+function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
 function w2s(p,z=0){
-  const s=U*State.view.scale;
-  return{
-    x:State.view.x+(p.x-p.y)*s*ISO_X,
-    y:State.view.y+(p.x+p.y)*s*ISO_Y-z*s*ISO_Z
-  };
+  const q=rotateViewPoint(p),s=U*State.view.scale;
+  return{x:State.view.x+(q.x-q.y)*s*ISO_X,y:State.view.y+(q.x+q.y)*s*ISO_Y-z*s*ISO_Z};
 }
 function s2w(x,y){
-  const s=U*State.view.scale||1;
-  const a=(x-State.view.x)/(s*ISO_X);
-  const b=(y-State.view.y)/(s*ISO_Y);
-  return{x:(a+b)/2,y:(b-a)/2};
+  const s=U*State.view.scale||1,a=(x-State.view.x)/(s*ISO_X),b=(y-State.view.y)/(s*ISO_Y);
+  return unrotateViewPoint({x:(a+b)/2,y:(b-a)/2});
 }
 function fit(){
   const r=wrap.getBoundingClientRect(),availW=Math.max(260,r.width-610),availH=Math.max(220,r.height-90);
@@ -594,10 +602,10 @@ function rectWorldPoints(cx,cy,w,h,angle=0){
 function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const a=i/n*Math.PI*2;pts.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r})}return pts}
 function structureHeight(s){
   if(!s)return 0;
-  if(s.type==='tower'){const t=towerTier(s);return[2.35,3.15,4.05][t]||2.35}
+  if(s.type==='tower'){const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+t*.12}
   if(s.type==='gate')return 2.8;
-  if(s.type==='wall')return 1.15;
-  if(s.type==='built')return 1.75;
+  if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
+  if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
   if(s.type==='house')return 1.05;
   return 0;
@@ -622,9 +630,7 @@ function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',
   for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,null);
   pathPolygon(topPts,topColor,stroke,1.2);
 }
-function worldDepth(s){
-  const p=structureCenter(s);return p.x+p.y;
-}
+function worldDepth(s){const p=rotateViewPoint(structureCenter(s));return p.x+p.y;}
 function pointInScreenPolygon(p,poly){
   let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){
     const a=poly[i],b=poly[j],hit=((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside;
@@ -748,10 +754,13 @@ function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return 1;
   if(s.type==='tower'){
-    if(s.shape==='round')return s.r>=.99?2:s.r>=.74?1:0;
-    return s.size>=1.99?2:s.size>=1.49?1:0;
+    const base=s.shape==='round'?(s.r>=.99?2:s.r>=.74?1:0):(s.size>=1.99?2:s.size>=1.49?1:0);
+    return base*structureLevel(s);
   }
-  if(s.type==='built')return s.length>=3?2:s.length>=2?1:0;
+  if(s.type==='built'){
+    const base=s.length>=3?2:s.length>=2?1:0;
+    return base*structureLevel(s);
+  }
   return 0;
 }
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
@@ -967,7 +976,7 @@ document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;ren
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
-function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b)}if(s.type==='wall')s.width=.5;if(s.type==='well')delete s.construction;if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
+function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='wall'){s.width=.5;s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='tower')s.level=clamp(Math.round(Number(s.level)||1),1,3);if(s.type==='well')delete s.construction;if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
 function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;resetLegacyVillageGrowth();generateEnvironment();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
