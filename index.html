@@ -848,7 +848,11 @@ function drawCastleUnion(){
 function drawCastleUnionDetails(){
   for(const s of State.structures){
     if(!isCastlePart(s)||underConstruction(s))continue;
-    if(s.type==='built')drawBuiltDetails(s,false);
+    if(s.type==='built'){
+      drawBuiltDetails(s,false);
+      if(builtSkin(s)==='arcade')drawBuiltArcade(s);
+    }
+    if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s);
     if(['tower','gate'].includes(s.type)){
       const h=structureHeight(s),a=w2s({x:s.x,y:s.y},h+.03),q={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},b=w2s(q,h+.03);
       ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
@@ -1522,7 +1526,7 @@ function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
   return Math.max(1,Math.round(Math.max(.001,length)/spacing));
 }
 function wallBattlementPieces(s){
-  if(s.type!=='wall'||underConstruction(s))return[];
+  if(s.type!=='wall'||underConstruction(s)||wallSkin(s)==='hoarding')return[];
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
   const angle=Math.atan2(dy,dx),z=structureHeight(s),width=Number(s.width)||.5;
   const depth=Math.min(.28,Math.max(.18,width*.46));
@@ -2363,6 +2367,104 @@ function linearFacadeEdge(s,side){
     length:seg.length
   };
 }
+function drawBuiltArcade(s){
+  if(!s||s.type!=='built'||builtSkin(s)!=='arcade'||underConstruction(s))return;
+  const inside=-wallExteriorSide(s);
+  // The portico exists only on the courtyard side; if that facade is behind
+  // the building body, let the body hide it instead of painting through.
+  if(inside!==linearFrontSide(s))return;
+
+  const edge=linearFacadeEdge(s,inside);
+  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const count=Math.max(1,Math.round(edge.length/1.05));
+  const cell=L/count;
+  const openingW=Math.min(.74,cell*.70);
+  const baseZ=.04,apexZ=Math.min(1.27,structureHeight(s)-.24),springZ=Math.max(.62,apexZ-.46);
+
+  withStructureDetailOcclusion(s,apexZ,()=>{
+    for(let i=0;i<count;i++){
+      const along=(i+.5)*cell,half=openingW/2;
+      const l={x:edge.a.x+ux*(along-half),y:edge.a.y+uy*(along-half)};
+      const r={x:edge.a.x+ux*(along+half),y:edge.a.y+uy*(along+half)};
+      const m={x:edge.a.x+ux*along,y:edge.a.y+uy*along};
+      const lb=w2s(l,baseZ),rb=w2s(r,baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),apex=w2s(m,apexZ);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(lb.x,lb.y);
+      ctx.lineTo(rb.x,rb.y);
+      ctx.lineTo(rs.x,rs.y);
+      ctx.quadraticCurveTo((rs.x+apex.x)/2,apex.y,apex.x,apex.y);
+      ctx.quadraticCurveTo((ls.x+apex.x)/2,apex.y,ls.x,ls.y);
+      ctx.lineTo(lb.x,lb.y);
+      ctx.closePath();
+      ctx.fillStyle='#241f1b';
+      ctx.fill();
+      ctx.strokeStyle='#86796d';
+      ctx.lineWidth=1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // A continuous impost line makes the arcade read as one architectural system.
+    const a=w2s(edge.a,springZ),b=w2s(edge.b,springZ);
+    ctx.save();ctx.strokeStyle='rgba(178,162,146,.45)';ctx.lineWidth=.8;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
+  });
+}
+function drawWallHoarding(s){
+  if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
+  const seg=builtWindowSegment(s),dx=seg.b.x-seg.a.x,dy=seg.b.y-seg.a.y,L=Math.hypot(dx,dy)||1;
+  const ux=dx/L,uy=dy/L,nx=-uy,ny=ux,side=wallExteriorSide(s),width=Number(s.width)||.5,h=structureHeight(s);
+  const innerOff=Math.max(.02,width/2-.02),outerOff=width/2+.42;
+  const point=(p,off)=>({x:p.x+nx*off*side,y:p.y+ny*off*side});
+  const innerA=point(seg.a,innerOff),innerB=point(seg.b,innerOff),outerA=point(seg.a,outerOff),outerB=point(seg.b,outerOff);
+  const platform=[innerA,innerB,outerB,outerA];
+  const exteriorVisible=linearFrontSide(s)===side;
+
+  withStructureDetailOcclusion(s,h+.66,()=>{
+    // Projecting timber fighting gallery.
+    extrudePolygonAt(platform,h-.045,h+.055,{
+      top:'#74533a',sideA:'#493423',sideB:'#5d432e',stroke:'#927155'
+    });
+
+    // Lean-to timber roof: high at the stone wall, low over the exterior gallery.
+    const roofInnerA=point(seg.a,Math.max(0,width/2-.08)),roofInnerB=point(seg.b,Math.max(0,width/2-.08));
+    const roofOuterA=point(seg.a,outerOff+.07),roofOuterB=point(seg.b,outerOff+.07);
+    const roof=[w2s(roofInnerA,h+.66),w2s(roofInnerB,h+.66),w2s(roofOuterB,h+.47),w2s(roofOuterA,h+.47)];
+    pathPolygon(roof,'#4b382a','#806047',1);
+
+    // The hanging outer timber face is visible only when it is genuinely
+    // camera-facing; on the rear side the masonry wall itself occludes it.
+    if(exteriorVisible){
+      const low=h-.03,high=h+.43;
+      pathPolygon(
+        [w2s(outerA,low),w2s(outerB,low),w2s(outerB,high),w2s(outerA,high)],
+        '#654832','#8d694d',1
+      );
+
+      const bays=Math.max(2,Math.round(seg.length/.75));
+      ctx.save();
+      ctx.strokeStyle='#3f2c20';
+      ctx.lineWidth=Math.max(1,1.25*State.view.scale);
+      for(let i=0;i<=bays;i++){
+        const t=i/bays,p={x:outerA.x+(outerB.x-outerA.x)*t,y:outerA.y+(outerB.y-outerA.y)*t};
+        const a=w2s(p,low),b=w2s(p,high);
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      }
+
+      // Diagonal braces below the projecting gallery.
+      for(let i=0;i<=bays;i+=2){
+        const t=i/bays;
+        const outer={x:outerA.x+(outerB.x-outerA.x)*t,y:outerA.y+(outerB.y-outerA.y)*t};
+        const wall={x:innerA.x+(innerB.x-innerA.x)*t,y:innerA.y+(innerB.y-innerA.y)*t};
+        const a=w2s(outer,h-.02),b=w2s(wall,Math.max(.12,h-.58));
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      }
+      ctx.restore();
+    }
+  });
+}
 function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1){
   if(side!==linearFrontSide(s))return;
   const edge=linearFacadeEdge(s,side);
@@ -2376,13 +2478,14 @@ function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1){
 function drawBuiltWindows(s,lit=false,nf=1){
   const level=structureLevel(s),outside=wallExteriorSide(s),inside=-outside;
   const lowerZ=.84,upperZ=(1.75+2.80)/2;
+  const arcade=builtSkin(s)==='arcade';
 
   withBuiltRoofOcclusionClip(s,()=>{
-    // Interior/courtyard side: 2 windows per U at every existing level.
-    drawBuiltWindowRow(s,inside,lowerZ,2,lit,nf);
+    // Interior/courtyard side: the arcade replaces ground-floor windows only.
+    if(!arcade)drawBuiltWindowRow(s,inside,lowerZ,2,lit,nf);
     if(level>=2)drawBuiltWindowRow(s,inside,upperZ,2,lit,nf);
 
-    // Exterior side: only level 2, 1 window per U.
+    // Exterior side stays completely unchanged by the arcade skin.
     if(level>=2)drawBuiltWindowRow(s,outside,upperZ,1,lit,nf);
   });
 }
@@ -2538,9 +2641,17 @@ function renderFunctionPanel(){
     const roof=gateRoofStyle(s);
     html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
   }
+  if(s.type==='built'){
+    const skin=builtSkin(s);
+    html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">Porticato affects only the interior ground floor.</div></div>`;
+  }
+  if(s.type==='wall'){
+    const skin=wallSkin(s);
+    html+=`<div class="slot"><div class="slot-label">Wall skin</div><div class="grid"><button data-wall-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-wall-skin="hoarding" class="${skin==='hoarding'?'active':''}">Hoarding</button></div><div class="legend">Hoarding replaces the exterior battlement treatment with a timber fighting gallery.</div></div>`;
+  }
   if(['wall','built'].includes(s.type)){
-    const flipLabel=s.type==='wall'?'Exterior side / battlements':'Exterior side / windows';
-    const flipLegend=s.type==='wall'?'Battlements are rendered only on the exterior side.':'Exterior windows: upper level only. Interior windows: every level.';
+    const flipLabel=s.type==='wall'?'Exterior side':'Exterior side / windows';
+    const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
     html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
   }
   if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
@@ -2576,6 +2687,8 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markDirty();renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
   slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markDirty();renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
+  slots.querySelectorAll('[data-built-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='built')return;if(!setStructureVariant(target,'skin',btn.dataset.builtSkin))return;markDirty();renderFunctionPanel();draw();status('Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'))});
+  slots.querySelectorAll('[data-wall-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;if(!setStructureVariant(target,'skin',btn.dataset.wallSkin))return;markDirty();renderFunctionPanel();draw();status('Wall skin: '+target.skin)});
   slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','built'].includes(target.type))return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status((target.type==='wall'?'Wall':'Built section')+' exterior flipped')});
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
 }
