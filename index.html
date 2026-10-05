@@ -1044,6 +1044,21 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24){
   return{pts,z0:z,z1:z+h,depth:rp.x+rp.y};
 }
 function drawBattlementPiece(piece){
+  if(piece.wallCrest){
+    const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
+    const H=Math.max(2000,wrap.getBoundingClientRect().height*3);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y+1);
+    ctx.lineTo(b.x,b.y+1);
+    ctx.lineTo(b.x,b.y-H);
+    ctx.lineTo(a.x,a.y-H);
+    ctx.closePath();
+    ctx.clip();
+    extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+    ctx.restore();
+    return;
+  }
   extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
 }
 function renderBattlementPieces(pieces){
@@ -1057,23 +1072,32 @@ function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
 function wallBattlementPieces(s){
   if(s.type!=='wall'||underConstruction(s))return[];
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
-  const angle=Math.atan2(dy,dx),z=structureHeight(s);
-  const depth=Math.min(.28,Math.max(.18,(Number(s.width)||.5)*.46));
-  const edgeOffset=Math.max(0,(Number(s.width)||.5)/2-depth*.44);
+  const angle=Math.atan2(dy,dx),z=structureHeight(s),width=Number(s.width)||.5;
+  const depth=Math.min(.28,Math.max(.18,width*.46));
+  // Keep the whole merlon footprint on the wall cap; the exterior side is still
+  // defined by flip, but no block is allowed to hang over the facade.
+  const edgeOffset=Math.max(0,width/2-depth/2-.012);
   const side=wallExteriorSide(s),pieces=[];
 
-  // Preserve a clean junction where the wall is snapped into a tower/gate.
-  const startPad=s.aSnap?Math.min(BATTLEMENT_SPACING*.5,L*.18):0;
-  const endPad=s.bSnap?Math.min(BATTLEMENT_SPACING*.5,L*.18):0;
+  // Snapped ends need a full visual socket around towers/gates.
+  const startPad=s.aSnap?Math.min(BATTLEMENT_SPACING*.72,L*.24):0;
+  const endPad=s.bSnap?Math.min(BATTLEMENT_SPACING*.72,L*.24):0;
   const usable=Math.max(.01,L-startPad-endPad);
   const intervals=battlementIntervalCount(usable);
   const step=usable/intervals;
+  const crest={
+    a:{x:s.a.x+nx*(width/2)*side,y:s.a.y+ny*(width/2)*side},
+    b:{x:s.b.x+nx*(width/2)*side,y:s.b.y+ny*(width/2)*side},
+    z
+  };
 
   for(let i=0;i<=intervals;i++){
     const along=startPad+step*i;
     const t=clamp(along/L,0,1);
     const center={x:s.a.x+dx*t+nx*edgeOffset*side,y:s.a.y+dy*t+ny*edgeOffset*side};
-    pieces.push(battlementPiece(center,angle,z,.28,depth,.24));
+    const piece=battlementPiece(center,angle,z,.28,depth,.24);
+    piece.wallCrest=crest;
+    pieces.push(piece);
   }
   return pieces;
 }
@@ -1639,23 +1663,41 @@ function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
   }
   ctx.restore();
 }
-function linearFacadeEdge(s,side){
+function linearFrontSide(s){
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-  const off=(Number(s.width)||1)/2+.006;
+  const mid={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2},off=(Number(s.width)||1)/2;
+  const plus={x:mid.x+nx*off,y:mid.y+ny*off},minus={x:mid.x-nx*off,y:mid.y-ny*off};
+  const delta=viewDepthPoint(plus)-viewDepthPoint(minus);
+  // At an almost edge-on angle neither long facade should receive windows.
+  if(Math.abs(delta)<1e-4)return 0;
+  return delta>0?1:-1;
+}
+function builtWindowSegment(s){
+  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const startPad=s.aSnap?Math.min(.20,L*.12):.04;
+  const endPad=s.bSnap?Math.min(.20,L*.12):.04;
+  const usable=Math.max(.05,L-startPad-endPad);
   return{
-    a:{x:s.a.x+nx*off*side,y:s.a.y+ny*off*side},
-    b:{x:s.b.x+nx*off*side,y:s.b.y+ny*off*side}
+    a:{x:s.a.x+ux*startPad,y:s.a.y+uy*startPad},
+    b:{x:s.b.x-ux*endPad,y:s.b.y-uy*endPad},
+    length:usable
   };
 }
-function linearFacadeVisible(s,side){
-  const edge=linearFacadeEdge(s,side),mid={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};
-  return viewDepthPoint(mid)>=viewDepthPoint(structureCenter(s))-1e-5;
+function linearFacadeEdge(s,side){
+  const seg=builtWindowSegment(s),dx=seg.b.x-seg.a.x,dy=seg.b.y-seg.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
+  // Tiny outward epsilon prevents z-fighting with the castle-union face.
+  const off=(Number(s.width)||1)/2+.004;
+  return{
+    a:{x:seg.a.x+nx*off*side,y:seg.a.y+ny*off*side},
+    b:{x:seg.b.x+nx*off*side,y:seg.b.y+ny*off*side},
+    length:seg.length
+  };
 }
 function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1){
-  if(!linearFacadeVisible(s,side))return;
+  if(side!==linearFrontSide(s))return;
   const edge=linearFacadeEdge(s,side);
   const pa=w2s(edge.a,z),pb=w2s(edge.b,z),screenLength=Math.hypot(pb.x-pa.x,pb.y-pa.y);
-  const count=Math.max(1,Math.round(Math.max(.5,Number(s.length)||1)*density));
+  const count=Math.max(1,Math.round(edge.length*density));
   for(let i=0;i<count;i++){
     const t=(i+.5)/count;
     drawWindowOnEdge(edge,z,lit,nf,(t-.5)*screenLength);
@@ -1665,12 +1707,14 @@ function drawBuiltWindows(s,lit=false,nf=1){
   const level=structureLevel(s),outside=wallExteriorSide(s),inside=-outside;
   const lowerZ=.84,upperZ=(1.75+2.80)/2;
 
-  // Courtyard/interior side: two windows per U on every existing level.
-  drawBuiltWindowRow(s,inside,lowerZ,2,lit,nf);
-  if(level>=2)drawBuiltWindowRow(s,inside,upperZ,2,lit,nf);
+  withBuiltRoofOcclusionClip(s,()=>{
+    // Interior/courtyard side: 2 windows per U at every existing level.
+    drawBuiltWindowRow(s,inside,lowerZ,2,lit,nf);
+    if(level>=2)drawBuiltWindowRow(s,inside,upperZ,2,lit,nf);
 
-  // Exterior side: only the upper level, one window per U.
-  if(level>=2)drawBuiltWindowRow(s,outside,upperZ,1,lit,nf);
+    // Exterior side: only level 2, 1 window per U.
+    if(level>=2)drawBuiltWindowRow(s,outside,upperZ,1,lit,nf);
+  });
 }
 function drawFacadeWindows(lit=false,nf=1){
   for(const s of State.structures){
