@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.26</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.27</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -3035,6 +3035,54 @@ function peasantAnimationActive(){
   const day=peasantVisualDay(),frac=day-Math.floor(day);
   return frac>=.035&&frac<=.67&&completedSettlement('house').length>0;
 }
+function housePopulationCapacity(house){
+  const level=houseLevel(house);
+  return{male:level,female:level,children:level*2,total:level*4};
+}
+function houseResidents(house){
+  const cap=housePopulationCapacity(house),out=[];
+  for(let i=0;i<cap.male;i++)out.push({id:house.id+':m:'+i,sex:'male',age:'adult',index:i});
+  for(let i=0;i<cap.female;i++)out.push({id:house.id+':f:'+i,sex:'female',age:'adult',index:i});
+  for(let i=0;i<cap.children;i++){
+    const id=house.id+':c:'+i;
+    out.push({id,sex:(peasantHash(id)&1)?'female':'male',age:'child',index:i});
+  }
+  return out;
+}
+function residentTimeOffset(id){
+  return (((peasantHash(id+'-time')>>>8)%1000)/1000-.5)*.055;
+}
+function residentScatter(p,id,child=false){
+  if(!p)return null;
+  const h=peasantHash(id+'-scatter'),a=(h%360)*Math.PI/180;
+  const r=(child?.10:.075)+(((h>>>9)%1000)/1000)*(child?.08:.07);
+  return{x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r};
+}
+function familyPosition(house,day){
+  const frac=day-Math.floor(day),hash=peasantHash(house.id+'-family'),stagger=(((hash>>>8)%1000)/1000-.5)*.022;
+  const home=houseDoorInfo(house).outside;
+  const market=nearestCompletedStructure('market',home);
+  const church=nearestCompletedStructure('church',home);
+  const well=nearestCompletedStructure('well',home);
+  const tavern=nearestCompletedStructure('tavern',home);
+  const target=market||church||well||tavern;
+  if(!target)return null;
+  const dest=structureAccessPoint(target,home,house.id+'-family');
+  const leave0=.17+stagger,arrive=.24+stagger,leave=.48+stagger,homeAt=.58+stagger;
+  if(frac<leave0||frac>homeAt)return null;
+  if(frac<arrive)return routineTravel(house,home,dest,frac,leave0,arrive,'family-out');
+  if(frac<leave)return dest;
+  return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
+}
+function residentClassPosition(house,resident,day,assignment){
+  const level=houseLevel(house),shiftedDay=day+residentTimeOffset(resident.id);
+  if(resident.age==='child')return familyPosition(house,shiftedDay);
+  if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
+  if(level===1)return assignment?peasantPosition(house,assignment,shiftedDay):null;
+  if(level===2)return artisanPosition(house,shiftedDay);
+  if(level===3)return merchantPosition(house,shiftedDay);
+  return elitePosition(house,shiftedDay);
+}
 function villagerClass(house){
   const level=houseLevel(house);
   if(level>=4)return'elite';
@@ -3086,14 +3134,22 @@ function drawSplitVillagerBody(kind,x,y,w,h,topColor,bottomColor){
   ctx.beginPath();ctx.moveTo(x-w/2,y);ctx.lineTo(x+w/2,y);ctx.stroke();
   ctx.restore();
 }
-function drawVillagerHead(id,x,y,r){
+function drawVillagerHead(id,x,y,r,sex='male'){
   const hair=villagerHair(id);
   ctx.save();
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
 
   if(hair!=='bald'){
+    const hc=HAIR_COLORS[hair];
     ctx.beginPath();ctx.arc(x,y,r,Math.PI,Math.PI*2);ctx.lineTo(x-r,y);ctx.closePath();
-    ctx.fillStyle=HAIR_COLORS[hair];ctx.fill();
+    ctx.fillStyle=hc;ctx.fill();
+
+    // Female adults/girls keep the same deterministic hair colour but get visible side locks.
+    if(sex==='female'){
+      ctx.fillStyle=hc;
+      ctx.beginPath();ctx.ellipse(x-r*.72,y+r*.48,r*.34,r*.80,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(x+r*.72,y+r*.48,r*.34,r*.80,0,0,Math.PI*2);ctx.fill();
+    }
   }
 
   ctx.strokeStyle='rgba(67,42,30,.80)';ctx.lineWidth=Math.max(.65,r*.20);
@@ -3102,11 +3158,11 @@ function drawVillagerHead(id,x,y,r){
 }
 function drawVillagerFigure(dot){
   const base=w2s(dot.p,.10),scale=clamp(State.view.scale,.55,1.45);
-  const kind=dot.kind;
-  const bodyW=clamp(6.0*scale,4.2,8.2),bodyH=clamp(8.0*scale,5.5,10.6);
-  const headR=clamp(2.35*scale,1.8,3.15),bodyY=base.y-bodyH*.16;
+  const kind=dot.kind,sizeFactor=dot.age==='child'?.5:1;
+  const bodyW=clamp(6.0*scale,4.2,8.2)*sizeFactor,bodyH=clamp(8.0*scale,5.5,10.6)*sizeFactor;
+  const headR=clamp(2.35*scale,1.8,3.15)*sizeFactor,bodyY=base.y-bodyH*.16;
   drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
-  drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR);
+  drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex);
 }
 function drawPeasants(){
   const houses=completedSettlement('house'),fields=completedSettlement('field');
@@ -3116,16 +3172,16 @@ function drawPeasants(){
   const assignments=fieldWorkAssignments(peasantHouses,fields);
 
   for(const house of houses){
-    const level=houseLevel(house),kind=villagerClass(house);
-    let p=null;
-    if(level===1){
-      const assignment=assignments.get(house.id);
-      p=assignment&&peasantPosition(house,assignment,day);
-    }else if(level===2)p=artisanPosition(house,day);
-    else if(level===3)p=merchantPosition(house,day);
-    else p=elitePosition(house,day);
-    if(!p)continue;
-    dots.push({p,id:house.id,kind,colors:villagerBodyColors(house.id,kind)});
+    const kind=villagerClass(house),assignment=assignments.get(house.id);
+    for(const resident of houseResidents(house)){
+      let p=residentClassPosition(house,resident,day,assignment);
+      if(!p)continue;
+      p=residentScatter(p,resident.id,resident.age==='child');
+      dots.push({
+        p,id:resident.id,kind,sex:resident.sex,age:resident.age,
+        colors:villagerBodyColors(resident.id,kind)
+      });
+    }
   }
   dots.sort((a,b)=>{const aa=rotateViewPoint(a.p),bb=rotateViewPoint(b.p);return aa.x+aa.y-(bb.x+bb.y)});
   for(const dot of dots)drawVillagerFigure(dot);
@@ -3710,11 +3766,11 @@ function renderFunctionPanel(){
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s);panel.classList.add('open');
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','gate','wall','built'].includes(s.type),maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall'].includes(s.type);
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?'<div class="cost-line">Temporary prototype controls for social-tier testing.</div>':simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
   let html='';
   if(s.type==='house'){
     const level=houseLevel(s);
-    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 1 floor · L2: 2 floors · L3: extended ${housePlanType(s)} plan · L4: elite house with ${houseTurretType(s)} turret.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 4 residents · L2: 8 · L3: 12 · L4: 16. L3: extended ${housePlanType(s)} plan · L4: elite house with ${houseTurretType(s)} turret.</div></div>`;
   }
   if(canTier){
     const current=s.type==='wall'?wallTier(s):towerTier(s);
