@@ -1053,6 +1053,10 @@ function structureScreenSilhouette(s){
   const fp=footprintPoints(s);if(!fp?.length)return[];
   const h=structureHeight(s),cloud=[];
   for(const p of fp){cloud.push(w2s(p,0));cloud.push(w2s(p,h))}
+  if(s.type==='tower'&&towerRoofStyle(s)==='pitched'){
+    for(const p of towerRoofFootprintPoints(s))cloud.push(w2s(p,h));
+    cloud.push(w2s({x:s.x,y:s.y},towerVisualTopHeight(s)));
+  }
   return convexHull(cloud);
 }
 function withBuiltRoofOcclusionClip(s,drawFn){
@@ -1113,7 +1117,7 @@ function towerBattlementOccluders(piece){
   if(!piece.ownerId||!['tower','wall'].includes(piece.ownerType))return[];
   return State.structures.filter(s=>{
     if(s.id===piece.ownerId||s.type!=='tower'||underConstruction(s))return false;
-    const h=structureHeight(s);
+    const h=s.type==='tower'?towerVisualTopHeight(s):structureHeight(s);
 
     if(piece.ownerType==='tower'){
       // A tower battlement is hidden only by a genuinely taller tower in front.
@@ -1250,8 +1254,74 @@ function roundTowerBattlementPieces(s){
   return pieces;
 }
 function towerBattlementPieces(s){
-  if(s.type!=='tower'||underConstruction(s))return[];
+  if(s.type!=='tower'||underConstruction(s)||towerRoofStyle(s)!=='battlement')return[];
   return s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s);
+}
+function towerRoofOccluders(s){
+  if(!s||s.type!=='tower')return[];
+  const d=worldDepth(s),top=towerVisualTopHeight(s);
+  return State.structures.filter(o=>{
+    if(o.id===s.id||o.type!=='tower'||underConstruction(o))return false;
+    if(worldDepth(o)<=d+1e-4)return false;
+    return towerVisualTopHeight(o)>structureHeight(s)+.04||structureHeight(o)>structureHeight(s)+.04;
+  });
+}
+function withTowerRoofOcclusion(s,drawFn){
+  const occluders=towerRoofOccluders(s);
+  if(!occluders.length){drawFn();return}
+  const r=wrap.getBoundingClientRect();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-48,-48,r.width+96,r.height+96);
+  for(const o of occluders){
+    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
+    ctx.moveTo(hull[0].x,hull[0].y);
+    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+    ctx.closePath();
+  }
+  ctx.clip('evenodd');
+  drawFn();
+  ctx.restore();
+}
+function drawSquareTowerRoof(s){
+  const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
+  if(fp.length<4)return;
+  const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
+  for(let i=0;i<4;i++){
+    const j=(i+1)%4,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
+    faces.push({
+      poly:[a,b,apex],
+      depth:(a.y+b.y)/2,
+      fill:i%2?'#34363a':'#42454a'
+    });
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.poly,f.fill,'#5d6066',1);
+}
+function drawRoundTowerRoof(s){
+  const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
+  if(fp.length<3)return;
+  const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
+  for(let i=0;i<fp.length;i++){
+    const j=(i+1)%fp.length,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
+    const shade=i%3===0?'#303236':i%3===1?'#3a3d42':'#44474c';
+    faces.push({poly:[a,b,apex],depth:(a.y+b.y)/2,fill:shade});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.poly,f.fill,null);
+  const rim=projectPath(fp,baseZ);
+  ctx.save();ctx.strokeStyle='#5d6066';ctx.lineWidth=1;ctx.beginPath();
+  rim.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
+}
+function drawTowerRoof(s){
+  if(!s||s.type!=='tower'||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
+  withTowerRoofOcclusion(s,()=>s.shape==='round'?drawRoundTowerRoof(s):drawSquareTowerRoof(s));
+}
+function drawTowerRoofs(){
+  const towers=State.structures
+    .filter(s=>s.type==='tower'&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
+    .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const s of towers)drawTowerRoof(s);
 }
 function drawCastleBattlements(){
   const pieces=[];
@@ -1473,9 +1543,26 @@ function sunShadowState(){
     dx:Math.cos(angle),dy:Math.sin(angle)
   };
 }
+function towerRoofRise(s){
+  if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
+  const span=s.shape==='round'?Number(s.r||.5)*2:Number(s.size||1);
+  return clamp(span*.45,.48,.92);
+}
+function towerVisualTopHeight(s){
+  if(!s||s.type!=='tower')return structureHeight(s);
+  return structureHeight(s)+towerRoofRise(s);
+}
+function towerRoofFootprintPoints(s){
+  if(!s||s.type!=='tower')return[];
+  const overhang=.07;
+  if(s.shape==='round')return circleWorldPoints(s.x,s.y,Number(s.r||.5)+overhang,24);
+  const d=rectDims(s);
+  return rectWorldPoints(s.x,s.y,d.w+overhang*2,d.h+overhang*2,s.angle||0);
+}
 function shadowStructureHeight(s){
   if(s?.type==='house')return 1.45;
   if(s?.type==='built'){const g=builtRoofGeometry(s);return g?.ridgeH||structureHeight(s)}
+  if(s?.type==='tower'&&towerRoofStyle(s)==='pitched')return towerVisualTopHeight(s);
   return structureHeight(s);
 }
 function convexHull(points){
@@ -1883,8 +1970,9 @@ function draw(){
     for(const s of fallback)drawStructure(s);
   }else{
     drawCastleUnionDetails();
-    drawCastleSelection();
   }
+  drawTowerRoofs();
+  drawCastleSelection();
   drawCastleBattlements();
   drawFacadeWindows(false,1);
   for(const house of completedSettlement('house'))drawHouseDoor(house);
@@ -1952,6 +2040,10 @@ function renderFunctionPanel(){
     html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="grid3">${labels.map((label,i)=>`<button data-structure-tier="${i+1}" class="${current===i+1?'active':''}">${label}</button>`).join('')}</div></div>`;
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
+  if(s.type==='tower'){
+    const roof=towerRoofStyle(s);
+    html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
+  }
   if(['wall','built'].includes(s.type)){
     const flipLabel=s.type==='wall'?'Exterior side / battlements':'Exterior side / windows';
     const flipLegend=s.type==='wall'?'Battlements are rendered only on the exterior side.':'Exterior windows: upper level only. Interior windows: every level.';
@@ -1969,6 +2061,7 @@ function renderFunctionPanel(){
     markDirty();renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markDirty();renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
   slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','built'].includes(target.type))return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status((target.type==='wall'?'Wall':'Built section')+' exterior flipped')});
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
 }
