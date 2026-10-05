@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.27</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.28</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -88,6 +88,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
       <button data-civic="market">Market<br><span class="small">4×4U</span></button>
       <button data-civic="tavern">Tavern<br><span class="small">Double T</span></button>
       <button data-civic="church">Church<br><span class="small">Large</span></button>
+      <button data-civic="training">Training field<br><span class="small">5×4U</span></button>
     </div>
     <hr/>
     <div class="legend">Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
@@ -173,9 +174,10 @@ const COSTS={
   well:{gold:50,stone:35,wood:10},
   market:{gold:120,stone:70,wood:85},
   tavern:{gold:190,stone:65,wood:145},
-  church:{gold:320,stone:360,wood:110,metal:18}
+  church:{gold:320,stone:360,wood:110,metal:18},
+  training:{gold:90,stone:24,wood:70}
 };
-const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,market:4,tavern:6,church:10,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const PEASANT_VISUAL_SPEED=.20;
@@ -330,7 +332,7 @@ function houseFootprintParts(s){
 function houseBodyHeight(s){return houseLevel(s)===1?.95:1.72}
 function houseRidgeHeight(s){return houseLevel(s)===1?1.45:2.26}
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
-const CIVIC_TYPES=Object.freeze(['market','tavern','church']);
+const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
 function civicLocalParts(s){
   if(s.type==='market')return[{cx:0,cy:0,w:4,h:4,role:'plaza',roofTurn:0}];
@@ -344,6 +346,7 @@ function civicLocalParts(s){
     {cx:0,cy:.35,w:5.2,h:1.65,role:'transept',roofTurn:0},
     {cx:0,cy:-2.65,w:1.85,h:1.85,role:'tower',roofTurn:0}
   ];
+  if(s.type==='training')return[{cx:0,cy:0,w:5,h:4,role:'training',roofTurn:0}];
   return[];
 }
 function civicParts(s){
@@ -743,6 +746,7 @@ function settlementRoadAccessPoint(s,target){
   if(s.type==='house')return houseDoorInfo(s).outside;
   if(s.type==='field')return fieldRoadAccessPoint(s,target);
   if(s.type==='market')return marketRoadAccessPoint(s,target);
+  if(s.type==='training')return fieldRoadAccessPoint({...s,w:5,h:4},target);
   if(s.type==='tavern'||s.type==='church')return civicEntranceInfo(s)?.outside||structureCenter(s);
   return structureCenter(s);
 }
@@ -1205,6 +1209,7 @@ function structureHeight(s){
   if(s.type==='market')return .78;
   if(s.type==='tavern')return 2.15;
   if(s.type==='church')return 3.35;
+  if(s.type==='training')return .10;
   return 0;
 }
 function footprintPoints(s){
@@ -1804,7 +1809,7 @@ function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -2398,10 +2403,30 @@ function drawChurch(s,preview=false){
   }
   if(!preview&&!underConstruction(s))drawCivicEntrance(s);
 }
+function drawTrainingField(s,preview=false){
+  const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'rgba(189,153,105,.72)';
+  const part=civicParts(s)[0];if(!part)return;
+  extrudePolygonAt(part.points,0,.10,{
+    top:preview?'rgba(116,82,49,.48)':'rgba(112,78,46,.82)',
+    sideA:'#5b432f',sideB:'#6a4c34',stroke
+  });
+
+  // Worn central lane + four corner posts, enough to read as a dedicated training yard.
+  const a=houseLocalToWorld(s,-1.75,0),b=houseLocalToWorld(s,1.75,0);
+  const sa=w2s(a,.115),sb=w2s(b,.115);
+  ctx.save();ctx.strokeStyle='rgba(205,171,117,.30)';ctx.lineWidth=Math.max(1,3.5*State.view.scale);
+  ctx.lineCap='round';ctx.beginPath();ctx.moveTo(sa.x,sa.y);ctx.lineTo(sb.x,sb.y);ctx.stroke();ctx.restore();
+
+  for(const [x,y] of [[-2.18,-1.68],[2.18,-1.68],[2.18,1.68],[-2.18,1.68]]){
+    const q=houseLocalToWorld(s,x,y),pts=rectWorldPoints(q.x,q.y,.14,.14,s.angle||0);
+    extrudePolygonAt(pts,.10,.58,{top:'#8b6847',sideA:'#59412e',sideB:'#6d5037',stroke:null});
+  }
+}
 function drawCivicStructure(s,preview=false){
   if(s.type==='market')drawMarket(s,preview);
   else if(s.type==='tavern')drawTavern(s,preview);
   else if(s.type==='church')drawChurch(s,preview);
+  else if(s.type==='training')drawTrainingField(s,preview);
 }
 function drawPointStructure(s,preview=false){
   const selected=State.selectedId===s.id,h=structureHeight(s),stroke=selected?'#f4b76f':'#d8c8b4';
@@ -2714,7 +2739,7 @@ const PEASANT_PATH_STEP=.5,PEASANT_CLEARANCE=.22;
 const PEASANT_ROAD_COST=.38,PEASANT_ROADSIDE_COST=.68,PEASANT_ROADSIDE_RANGE=.85;
 let peasantPathCache=new Map(),peasantPathSignature='';
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','built','well','road','market','tavern','church'].includes(s.type)).map(s=>{
+  return State.structures.filter(s=>['house','tower','gate','wall','built','well','road','market','tavern','church','training'].includes(s.type)).map(s=>{
     if(['wall','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
   }).join('|');
@@ -2726,7 +2751,7 @@ function syncPeasantPathCache(){
 function pointBlockedForPeasant(p,sourceHouseId){
   for(const s of State.structures){
     if(s.id===sourceHouseId)continue;
-    if(!['house','tower','gate','wall','built','well','market','tavern','church'].includes(s.type))continue;
+    if(!['house','tower','gate','wall','built','well','market','tavern','church','training'].includes(s.type))continue;
 
     // Market ground is intentionally traversable so routines visibly enter the plaza.
     if(s.type==='market')continue;
@@ -3185,6 +3210,101 @@ function drawPeasants(){
   }
   dots.sort((a,b)=>{const aa=rotateViewPoint(a.p),bb=rotateViewPoint(b.p);return aa.x+aa.y-(bb.x+bb.y)});
   for(const dot of dots)drawVillagerFigure(dot);
+}
+function militaryScale(){
+  return clamp(State.view.scale,.55,1.45);
+}
+function drawSoldierFigure(p,z,type,id,phase=0){
+  const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
+  const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72;
+
+  ctx.save();
+
+  // Armoured torso.
+  ctx.fillStyle=type==='archer'?'#58654a':type==='knight'?'#59677a':'#676b6d';
+  ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);
+  ctx.beginPath();
+  ctx.moveTo(base.x-bodyW*.42,top);ctx.lineTo(base.x+bodyW*.42,top);
+  ctx.lineTo(base.x+bodyW*.50,bodyY+bodyH*.50);ctx.lineTo(base.x-bodyW*.50,bodyY+bodyH*.50);ctx.closePath();
+  ctx.fill();ctx.stroke();
+
+  // Head + steel cap.
+  ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#70777c';ctx.beginPath();ctx.arc(base.x,headY,headR,Math.PI,Math.PI*2);ctx.lineTo(base.x-headR,headY);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(30,30,30,.75)';ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.stroke();
+
+  if(type==='spearman'){
+    const x=base.x+bodyW*.55;
+    ctx.strokeStyle='#7a5937';ctx.lineWidth=Math.max(1,1.05*scale);
+    ctx.beginPath();ctx.moveTo(x,bodyY+bodyH*.43);ctx.lineTo(x-1.0*scale,headY-13*scale);ctx.stroke();
+    ctx.fillStyle='#b8bcc0';ctx.beginPath();
+    ctx.moveTo(x-1.0*scale,headY-16*scale);ctx.lineTo(x-3.0*scale,headY-11.5*scale);ctx.lineTo(x+1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+  }else if(type==='archer'){
+    const bx=base.x+bodyW*.62,by=bodyY-bodyH*.04,r=5.3*scale;
+    ctx.strokeStyle='#9b7243';ctx.lineWidth=Math.max(.8,.85*scale);
+    ctx.beginPath();ctx.arc(bx,by,r,-Math.PI*.55,Math.PI*.55);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+Math.cos(-Math.PI*.55)*r,by+Math.sin(-Math.PI*.55)*r);
+    ctx.lineTo(bx-r*.18,by);
+    ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
+  }else{
+    const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
+    // Shield.
+    ctx.fillStyle='#425d78';ctx.strokeStyle='#b7aa8f';ctx.lineWidth=Math.max(.8,.9*scale);
+    ctx.beginPath();ctx.ellipse(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    // Sword.
+    ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
+    ctx.beginPath();ctx.moveTo(base.x+bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();
+    ctx.strokeStyle='#76563b';ctx.lineWidth=Math.max(1,1.2*scale);
+    ctx.beginPath();ctx.moveTo(base.x+bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x+bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
+  }
+
+  ctx.restore();
+}
+function wallPatrolPoint(wall,day){
+  const L=Math.max(.001,dist(wall.a,wall.b)),seed=(peasantHash(wall.id+'-patrol')%1000)/1000;
+  let t=(day*.72+seed)%2;t=t<=1?t:2-t;
+  const margin=Math.min(.65,L*.18),u=margin/L+t*Math.max(0,1-2*margin/L);
+  return{x:wall.a.x+(wall.b.x-wall.a.x)*u,y:wall.a.y+(wall.b.y-wall.a.y)*u};
+}
+function drawCastleSoldiers(){
+  const day=peasantVisualDay();
+
+  // Spearmen walk the wall-walk.
+  for(const wall of State.structures){
+    if(wall.type!=='wall'||underConstruction(wall))continue;
+    const p=wallPatrolPoint(wall,day);
+    drawSoldierFigure(p,structureHeight(wall)+.10,'spearman',wall.id,day);
+  }
+
+  // One archer lookout on every completed crenellated tower.
+  for(const tower of State.structures){
+    if(tower.type!=='tower'||underConstruction(tower)||towerRoofStyle(tower)!=='battlement')continue;
+    const hash=peasantHash(tower.id+'-archer'),a=(hash%360)*Math.PI/180;
+    const radius=tower.shape==='round'?tower.r*.26:(tower.size||1)*.18;
+    const p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius};
+    drawSoldierFigure(p,structureHeight(tower)+.08,'archer',tower.id,day);
+  }
+}
+function drawTrainingSoldiers(){
+  const day=peasantVisualDay(),dots=[];
+  for(const yard of State.structures){
+    if(yard.type!=='training'||underConstruction(yard))continue;
+    const seed=(peasantHash(yard.id+'-training')%1000)/1000;
+    const pulse=day*.80+seed;
+    const spots=[
+      {x:-1.15,y:-.62,pair:0},{x:1.15,y:-.62,pair:0},
+      {x:-1.15,y:.72,pair:1},{x:1.15,y:.72,pair:1}
+    ];
+    for(let i=0;i<spots.length;i++){
+      const s=spots[i],side=i%2===0?1:-1;
+      const advance=Math.sin((pulse+s.pair*.37)*Math.PI*2)*.20*side;
+      const local={x:s.x+advance,y:s.y};
+      const p=houseLocalToWorld(yard,local.x,local.y);
+      dots.push({p,z:.13,id:yard.id+':knight:'+i,phase:pulse+i*.17});
+    }
+  }
+  dots.sort((a,b)=>viewDepthPoint(a.p)-viewDepthPoint(b.p));
+  for(const d of dots)drawSoldierFigure(d.p,d.z,'knight',d.id,d.phase);
 }
 function gateFacadeEdges(s){
   const fp=footprintPoints(s);if(fp.length<4)return[];
@@ -3674,6 +3794,7 @@ function draw(){
   const others=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type))&&(!isCastlePart(s)||underConstruction(s))).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of others){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
   drawPeasants();
+  drawTrainingSoldiers();
 
   // Completed castle = true footprint union rendered in horizontal height bands.
   const unionOk=drawCastleUnion();
@@ -3690,6 +3811,7 @@ function draw(){
   drawTowerRoofs();
   drawGateRoofs();
   drawCastleSelection();
+  drawCastleSoldiers();
   drawCastleBattlements();
   drawFacadeWindows(false,1);
   drawGatePortals();
@@ -3708,7 +3830,7 @@ function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
-  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
   const linear=State.structures.filter(s=>!s.auto&&['wall','built'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
@@ -3762,7 +3884,7 @@ function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clie
 function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
-  if(!s||!['tower','gate','built','wall','house','market','tavern','church'].includes(s.type)){panel.classList.remove('open');return}
+  if(!s||!['tower','gate','built','wall','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s);panel.classList.add('open');
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','gate','wall','built'].includes(s.type),maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall'].includes(s.type);
