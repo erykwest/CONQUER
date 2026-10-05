@@ -1373,22 +1373,28 @@ function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
 }
 function drawHouse(s){
   const level=houseLevel(s),wallH=houseBodyHeight(s),ridgeH=houseRidgeHeight(s),selected=State.selectedId===s.id;
-  const parts=houseFootprintParts(s),stroke=selected?'#f4b76f':'#aaa199';
+  const stroke=selected?'#f4b76f':'#aaa199';
+  const parts=houseFootprintParts(s).map(part=>{
+    const center=houseLocalToWorld(s,part.cx,part.cy);
+    return{...part,depth:viewDepthPoint(center)};
+  }).sort((a,b)=>a.depth-b.depth);
+
   if(level===1){
     for(const part of parts){
       extrudePolygon(part.points,wallH,{top:'#7d5b43',sideA:'#4e392d',sideB:'#654936',stroke:selected?'#f4b76f':'#b89575'});
+      drawHouseRoofPart(s,part,wallH,ridgeH,false,null);
     }
-    for(const part of parts)drawHouseRoofPart(s,part,wallH,ridgeH,false,null);
   }else{
     const floorBreak=wallH*.50;
+    const creamTop='#d6bf82',creamA='#c8ae70',creamB='#e0ca91',creamGable='#d9c184';
+
+    // Painter order is per complete volume, not per global floor band:
+    // far extension/body first, nearest one last.
     for(const part of parts){
-      // Ground floor remains grey.
       extrudePolygonAt(part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
-      // Upper floor is cream.
-      extrudePolygonAt(part.points,floorBreak,wallH,{top:'#d8ccb2',sideA:'#c9bda4',sideB:'#ddd1b7',stroke});
+      extrudePolygonAt(part.points,floorBreak,wallH,{top:creamTop,sideA:creamA,sideB:creamB,stroke});
+      drawHouseRoofPart(s,part,wallH,ridgeH,true,creamGable);
     }
-    // Cream gable triangles, anthracite roof. L3 extension ridges are rotated 90°.
-    for(const part of parts)drawHouseRoofPart(s,part,wallH,ridgeH,true,'#d8ccb2');
   }
   if(!underConstruction(s))drawHouseChimneys(s);
 }
