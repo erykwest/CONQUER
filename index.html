@@ -1054,16 +1054,27 @@ function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
   }else pathPolygon(corners,'rgba(35,29,24,.82)','rgba(170,139,96,.38)',.7);
   ctx.restore();
 }
-function towerWindowCount(s){
-  const level=structureLevel(s);
-  return level<=1?0:level===2?1:2;
+function towerLevelHeight(s,level){
+  const t=towerTier(s);
+  return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
 }
-function drawRoundTowerWindows(s,lit=false,nf=1,count=towerWindowCount(s)){
-  if(count<=0)return;
-  const h=structureHeight(s),z=Math.max(.65,h*.58),p=w2s({x:s.x,y:s.y},z);
+function towerWindowRows(s){
+  const level=structureLevel(s),rows=[];
+  if(level>=2){
+    const z=(towerLevelHeight(s,1)+towerLevelHeight(s,2))/2;
+    rows.push({z,count:1});
+  }
+  if(level>=3){
+    const z=(towerLevelHeight(s,2)+towerLevelHeight(s,3))/2;
+    rows.push({z,count:2});
+  }
+  return rows;
+}
+function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
+  const p=w2s({x:s.x,y:s.y},row.z);
   const ww=clamp(3.3*State.view.scale,2,4.2),wh=clamp(7*State.view.scale,3.8,8.5);
   const gap=clamp(8*State.view.scale,5,11);
-  const xs=count===1?[p.x]:[p.x-gap/2,p.x+gap/2];
+  const xs=row.count===1?[p.x]:[p.x-gap/2,p.x+gap/2];
   ctx.save();
   for(const x of xs){
     if(lit){ctx.shadowColor='rgba(255,190,80,'+(.72*nf)+')';ctx.shadowBlur=clamp(9*State.view.scale,4,12);ctx.fillStyle='rgba(255,213,118,'+(.92*nf)+')'}
@@ -1079,17 +1090,20 @@ function drawFacadeWindows(lit=false,nf=1){
     if(s.type==='house'){
       for(const edge of visibleFacadeEdges(s))drawWindowOnEdge(edge,.48,lit,nf,0);
     }else if(s.type==='tower'){
-      const count=towerWindowCount(s);if(count<=0)continue;
-      if(s.shape==='round')drawRoundTowerWindows(s,lit,nf,count);
-      else{
-        const z=Math.max(.65,structureHeight(s)*.58);
-        for(const edge of visibleFacadeEdges(s)){
-          if(count===1)drawWindowOnEdge(edge,z,lit,nf,0);
-          else{
-            const a=w2s(edge.a,z),b=w2s(edge.b,z),L=Math.hypot(b.x-a.x,b.y-a.y);
-            const spacing=Math.min(clamp(9*State.view.scale,5,12),L*.34);
-            drawWindowOnEdge(edge,z,lit,nf,-spacing/2);
-            drawWindowOnEdge(edge,z,lit,nf,spacing/2);
+      const rows=towerWindowRows(s);if(!rows.length)continue;
+      if(s.shape==='round'){
+        for(const row of rows)drawRoundTowerWindowRow(s,row,lit,nf);
+      }else{
+        const edges=visibleFacadeEdges(s);
+        for(const row of rows){
+          for(const edge of edges){
+            if(row.count===1)drawWindowOnEdge(edge,row.z,lit,nf,0);
+            else{
+              const a=w2s(edge.a,row.z),b=w2s(edge.b,row.z),L=Math.hypot(b.x-a.x,b.y-a.y);
+              const spacing=Math.min(clamp(9*State.view.scale,5,12),L*.34);
+              drawWindowOnEdge(edge,row.z,lit,nf,-spacing/2);
+              drawWindowOnEdge(edge,row.z,lit,nf,spacing/2);
+            }
           }
         }
       }
