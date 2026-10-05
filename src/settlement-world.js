@@ -819,11 +819,11 @@ function spawnField(step){
   return false;
 }
 function processVillageGrowth(){
-  if(!State.village.founded)return;
-  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return;
+  if(!State.village.founded)return 0;
+  const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
   ensureRoadPlan();
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
-  let guard=0;
+  let guard=0,changed=0;
   while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
     const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
     let kind;
@@ -840,8 +840,14 @@ function processVillageGrowth(){
     if(!ok&&kind!=='road')ok=spawnRoad(step);
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
-    if(ok)markDirty(false);
+    if(ok){
+      changed++;
+      // New growth starts under construction and is rendered dynamically.
+      // Do not rebuild static scene / route caches or synchronously persist here.
+      markDirty(false,false,false);
+    }
   }
+  return changed;
 }
 function resetLegacyVillageGrowth(){
   if(!State.village.founded||State.village.growthVersion===3)return;
