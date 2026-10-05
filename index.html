@@ -958,11 +958,31 @@ function builtRoofGeometry(s){
   const ridgeB={x:(p[1].x+p[2].x)/2,y:(p[1].y+p[2].y)/2};
   return{p,h,rise,ridgeA,ridgeB,ridgeH:h+rise};
 }
+function viewDepthPoint(p){
+  const q=rotateViewPoint(p);
+  return q.x+q.y;
+}
 function roofOccluderStructures(s){
-  const ids=[s.aSnap,s.bSnap].filter(Boolean),out=[];
-  for(const id of ids){
-    const target=State.structures.find(x=>x.id===id);
-    if(target&&['tower','gate'].includes(target.type)&&!underConstruction(target)&&!out.includes(target))out.push(target);
+  const out=[];
+  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const probe=Math.min(.45,Math.max(.18,L*.12));
+
+  const checks=[
+    {id:s.aSnap,anchor:s.a,inside:{x:s.a.x+ux*probe,y:s.a.y+uy*probe}},
+    {id:s.bSnap,anchor:s.b,inside:{x:s.b.x-ux*probe,y:s.b.y-uy*probe}}
+  ];
+
+  for(const check of checks){
+    if(!check.id)continue;
+    const target=State.structures.find(x=>x.id===check.id);
+    if(!target||!['tower','gate'].includes(target.type)||underConstruction(target))continue;
+
+    // In this isometric projection larger x+y means visually nearer/lower.
+    // Only let the snapped tower/gate occlude the roof when the built section
+    // continues away from the viewer from that connection point.
+    const anchorDepth=viewDepthPoint(check.anchor);
+    const insideDepth=viewDepthPoint(check.inside);
+    if(insideDepth<anchorDepth-1e-4&&!out.includes(target))out.push(target);
   }
   return out;
 }
