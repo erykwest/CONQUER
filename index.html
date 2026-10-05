@@ -1444,8 +1444,10 @@ function pointAlongPath(path,t){
   return path.at(-1);
 }
 function peasantPosition(house,field,day){
-  const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.035;
-  const leave0=.20+stagger,leave1=.32+stagger,return0=.70+stagger,return1=.82+stagger;
+  const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.025;
+  // Daily routine is anchored to daylight: villagers leave shortly after dawn
+  // and finish the return trip before the visual night starts at 16/24.
+  const leave0=.06+stagger,leave1=.14+stagger,return0=.52+stagger,return1=.62+stagger;
   if(frac<leave0||frac>return1)return null;
   const path=peasantPath(house,field),work={x:field.x,y:field.y};
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
