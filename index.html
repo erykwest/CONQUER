@@ -164,6 +164,10 @@ const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,wallBase:.7,wallPerU:.45,builtBas
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const PEASANT_VISUAL_SPEED=.20;
+const VISUAL_DAYLIGHT_RATIO=16/24;
+const VISUAL_NIGHT_RATIO=8/24;
+const NIGHT_OVERLAY_MAX=.48;
+const VISUAL_TWILIGHT=1/24;
 const PEASANT_PALETTE=Object.freeze([
   '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
   '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
@@ -872,6 +876,16 @@ function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{
 function peasantHash(id){return biomeHash(String(id||'peasant'))}
 function completedSettlement(type){return State.structures.filter(s=>s.type===type&&!underConstruction(s))}
 function peasantVisualDay(){return State.clock.day*PEASANT_VISUAL_SPEED}
+function visualCycleDay(){return peasantVisualDay()}
+function visualCycleFrac(){const d=visualCycleDay();return d-Math.floor(d)}
+function nightFactor(){
+  const t=visualCycleFrac(),nightStart=VISUAL_DAYLIGHT_RATIO;
+  const duskEnd=nightStart+VISUAL_TWILIGHT,dawnStart=1-VISUAL_TWILIGHT;
+  if(t<nightStart)return 0;
+  if(t<duskEnd)return clamp((t-nightStart)/VISUAL_TWILIGHT,0,1);
+  if(t<dawnStart)return 1;
+  return 1-clamp((t-dawnStart)/VISUAL_TWILIGHT,0,1);
+}
 function assignedField(house,fields){
   let best=null,bestD=Infinity;
   for(const field of fields){const d=dist(house,field);if(d<bestD){bestD=d;best=field}}
@@ -920,6 +934,70 @@ function drawPeasants(){
   }
   ctx.restore();
 }
+function visibleFacadeEdges(s){
+  const fp=footprintPoints(s);if(fp.length<4)return[];
+  const edges=[];
+  for(let i=0;i<fp.length;i++){
+    const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);
+    edges.push({a:fp[i],b:fp[j],depth:(a.y+b.y)/2});
+  }
+  edges.sort((a,b)=>b.depth-a.depth);
+  return edges.slice(0,2);
+}
+function drawWindowOnEdge(edge,z=.48,lit=false,nf=1){
+  const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;
+  const base=w2s({x:mx,y:my},z),a=w2s(edge.a,z),b=w2s(edge.b,z);
+  const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const ww=clamp(4.2*State.view.scale,2.2,5.2),wh=clamp(6.5*State.view.scale,3.2,7.4);
+  const nx=-uy,ny=ux;
+  const corners=[
+    {x:base.x-ux*ww/2-nx*wh/2,y:base.y-uy*ww/2-ny*wh/2},
+    {x:base.x+ux*ww/2-nx*wh/2,y:base.y+uy*ww/2-ny*wh/2},
+    {x:base.x+ux*ww/2+nx*wh/2,y:base.y+uy*ww/2+ny*wh/2},
+    {x:base.x-ux*ww/2+nx*wh/2,y:base.y-uy*ww/2+ny*wh/2}
+  ];
+  ctx.save();
+  if(lit){
+    ctx.shadowColor='rgba(255,190,80,'+(.72*nf)+')';ctx.shadowBlur=clamp(9*State.view.scale,4,12);
+    pathPolygon(corners,'rgba(255,213,118,'+(.92*nf)+')','rgba(90,58,24,.72)',.8);
+  }else pathPolygon(corners,'rgba(35,29,24,.82)','rgba(170,139,96,.38)',.7);
+  ctx.restore();
+}
+function drawRoundTowerWindows(s,lit=false,nf=1){
+  const h=structureHeight(s),z=Math.max(.65,h*.58),p=w2s({x:s.x,y:s.y},z);
+  const ww=clamp(3.3*State.view.scale,2,4.2),wh=clamp(7*State.view.scale,3.8,8.5),gap=clamp(6*State.view.scale,4,8);
+  ctx.save();
+  for(const x of [p.x-gap,p.x+gap]){
+    if(lit){ctx.shadowColor='rgba(255,190,80,'+(.72*nf)+')';ctx.shadowBlur=clamp(9*State.view.scale,4,12);ctx.fillStyle='rgba(255,213,118,'+(.92*nf)+')'}
+    else ctx.fillStyle='rgba(35,29,24,.82)';
+    ctx.fillRect(x-ww/2,p.y-wh/2,ww,wh);
+    ctx.strokeStyle=lit?'rgba(90,58,24,.72)':'rgba(170,139,96,.38)';ctx.lineWidth=.8;ctx.strokeRect(x-ww/2,p.y-wh/2,ww,wh);
+  }
+  ctx.restore();
+}
+function drawFacadeWindows(lit=false,nf=1){
+  for(const s of State.structures){
+    if(underConstruction(s))continue;
+    if(s.type==='house'){
+      for(const edge of visibleFacadeEdges(s))drawWindowOnEdge(edge,.48,lit,nf);
+    }else if(s.type==='tower'){
+      if(s.shape==='round')drawRoundTowerWindows(s,lit,nf);
+      else{
+        const z=Math.max(.65,structureHeight(s)*.58);
+        for(const edge of visibleFacadeEdges(s))drawWindowOnEdge(edge,z,lit,nf);
+      }
+    }
+  }
+}
+function drawDayNightOverlay(){
+  const nf=nightFactor();if(nf<=0)return;
+  const r=wrap.getBoundingClientRect();
+  ctx.save();ctx.fillStyle='rgba(6,10,18,'+(NIGHT_OVERLAY_MAX*nf).toFixed(3)+')';ctx.fillRect(0,0,r.width,r.height);ctx.restore();
+}
+function drawNightLights(){
+  const nf=nightFactor();if(nf<=.01)return;
+  drawFacadeWindows(true,nf);
+}
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
 }
@@ -941,6 +1019,7 @@ function draw(){
   for(const s of linearAndOther){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
   drawPeasants();
   for(const s of castleCaps)drawStructure(s)
+  drawFacadeWindows(false,1);
 
   // Placement preview always wins the visual stack.
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
@@ -948,6 +1027,8 @@ function draw(){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   }
+  drawDayNightOverlay();
+  drawNightLights();
 }
 function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX}
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
@@ -1120,7 +1201,7 @@ function simulationFrame(now){
     processVillageGrowth();
     const quarterChanged=Math.floor(before*4)!==Math.floor(State.clock.day*4);
     if(quarterChanged)renderUI();
-    if(quarterChanged||peasantAnimationActive())draw();
+    draw();
     if(now-simPersistAt>1000){saveLocal();simPersistAt=now}
   }
   requestAnimationFrame(simulationFrame);
