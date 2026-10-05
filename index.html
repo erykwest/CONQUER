@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.23</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.24</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -352,17 +352,237 @@ function pointRadius(s){
 }
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return dist(p,a);const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return dist(p,{x:a.x+t*dx,y:a.y+t*dy})}
 function segmentsIntersect(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);const a1=cr(a,b,c),a2=cr(a,b,d),a3=cr(c,d,a),a4=cr(c,d,b);return ((a1>0&&a2<0)||(a1<0&&a2>0))&&((a3>0&&a4<0)||(a3<0&&a4>0))}
+function roadTouchesPolygon(road,poly,pad=.08){
+  if(!poly?.length)return false;
+  const clearance=(Number(road.width)||.3)/2+pad;
+  if(pointInPolygon(road.a,poly)||pointInPolygon(road.b,poly))return true;
+  for(let i=0;i<poly.length;i++){
+    const j=(i+1)%poly.length;
+    if(segmentsIntersect(road.a,road.b,poly[i],poly[j]))return true;
+    if(segmentDistance(road.a,road.b,poly[i],poly[j])<=clearance)return true;
+  }
+  return false;
+}
+function manualRoadConflict(road,manual){
+  if(!manual)return false;
+  // The market is a paved public square: roads may terminate at or continue beneath it.
+  if(manual.type==='market')return false;
+  if(['wall','built'].includes(manual.type)){
+    return segmentsIntersect(road.a,road.b,manual.a,manual.b)||
+      pointSegmentDistance(manual.a,road.a,road.b)<=manual.width/2+(road.width||.3)/2||
+      pointSegmentDistance(manual.b,road.a,road.b)<=manual.width/2+(road.width||.3)/2;
+  }
+  if(manual.type==='tower'&&manual.shape==='round'){
+    return pointSegmentDistance(manual,road.a,road.b)<=manual.r+(road.width||.3)/2+.08;
+  }
+  const rings=manual.type==='house'?houseFootprintParts(manual).map(p=>p.points):
+    isCivic(manual)?civicParts(manual).map(p=>p.points):
+    [footprintPoints(manual)];
+  return rings.some(poly=>roadTouchesPolygon(road,poly,.10));
+}
 function autoOverlapsManual(auto,manual){
   const linear=['wall','built'].includes(manual.type);
-  if(auto.type==='road'){
-    if(linear)return segmentsIntersect(auto.a,auto.b,manual.a,manual.b)||pointSegmentDistance(manual.a,auto.a,auto.b)<=manual.width/2+auto.width/2||pointSegmentDistance(manual.b,auto.a,auto.b)<=manual.width/2+auto.width/2;
-    return pointSegmentDistance({x:manual.x,y:manual.y},auto.a,auto.b)<=pointRadius(manual)+auto.width/2;
-  }
+  if(auto.type==='road')return manualRoadConflict(auto,manual);
   const p={x:auto.x,y:auto.y},r=pointRadius(auto);
   if(linear)return pointSegmentDistance(p,manual.a,manual.b)<=r+manual.width/2+.15;
   return dist(p,{x:manual.x,y:manual.y})<=r+pointRadius(manual)+.15;
 }
-function removeOverlappingAuto(manual){let removed=0;State.structures=State.structures.filter(s=>{const hit=s.auto&&autoOverlapsManual(s,manual);if(hit)removed++;return !hit});return removed}
+function removeOverlappingAuto(manual){
+  let removed=0;const roads=[];
+  State.structures=State.structures.filter(s=>{
+    const hit=s.auto&&autoOverlapsManual(s,manual);
+    if(hit){removed++;if(s.type==='road')roads.push({...s,a:{...s.a},b:{...s.b}})}
+    return !hit;
+  });
+  return{removed,roads};
+}
+function roadRepairPointClear(p,width=.30,ignoreIds=[]){
+  if(environmentBlocksPoint(p,'road'))return false;
+  const clearance=width/2+.16;
+  for(const s of State.structures){
+    if(ignoreIds.includes(s.id)||s.type==='road')continue;
+    if(s.type==='market')continue;
+    if(['wall','built'].includes(s.type)){
+      if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+clearance)return false;
+      continue;
+    }
+    if(s.type==='well'){if(dist(p,s)<=.62+clearance)return false;continue}
+    if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+clearance)return false;continue}
+    let rings=[];
+    if(s.type==='house')rings=houseFootprintParts(s).map(q=>q.points);
+    else if(isCivic(s))rings=civicParts(s).map(q=>q.points);
+    else if(s.type==='field')rings=[rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0)];
+    else if(s.x!=null)rings=[footprintPoints(s)];
+    for(const poly of rings){
+      if(!poly?.length)continue;
+      if(pointInPolygon(p,poly))return false;
+      for(let i=0;i<poly.length;i++){
+        const j=(i+1)%poly.length;
+        if(pointSegmentDistance(p,poly[i],poly[j])<=clearance)return false;
+      }
+    }
+  }
+  return true;
+}
+function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[]){
+  const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+    if(!roadRepairPointClear(p,width,ignoreIds))return false;
+  }
+  return true;
+}
+function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[]){
+  const step=.5;
+  const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
+  const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
+  const key=(x,y)=>x+','+y,pos=(x,y)=>({x:x*step,y:y*step});
+  function nearestFree(p){
+    const cx=Math.round(p.x/step),cy=Math.round(p.y/step);let best=null,bestD=Infinity;
+    for(let r=0;r<=6;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
+      const x=cx+dx,y=cy+dy,q=pos(x,y);
+      if(x<minX||x>maxX||y<minY||y>maxY||!roadRepairPointClear(q,width,ignoreIds))continue;
+      const d=dist(p,q);if(d<bestD){best={x,y,q};bestD=d}
+    }
+    return best;
+  }
+  const s=nearestFree(start),g=nearestFree(goal);if(!s||!g)return null;
+  const open=new PeasantMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
+  open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  let found=null,guard=0;
+  while(open.length&&guard++<24000){
+    const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
+    if(cur.x===g.x&&cur.y===g.y){found=cur;break}
+    const cp=pos(cur.x,cur.y);
+    for(const [dx,dy] of dirs){
+      const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
+      const nk=key(nx,ny),np=pos(nx,ny);if(closed.has(nk)||!roadRepairPointClear(np,width,ignoreIds))continue;
+      if(!roadRepairSegmentClear(cp,np,width,ignoreIds))continue;
+      const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
+      if(tentative>=(gScore.get(nk)??Infinity))continue;
+      gScore.set(nk,tentative);came.set(nk,ck);
+      open.push({x:nx,y:ny,f:tentative+dist(np,g.q)});
+    }
+  }
+  if(!found)return null;
+  const rev=[];let k=key(found.x,found.y);
+  while(k){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));k=came.get(k)}
+  rev.reverse();
+  if(roadRepairPointClear(start,width,ignoreIds))rev[0]={...start};
+  if(roadRepairPointClear(goal,width,ignoreIds))rev[rev.length-1]={...goal};
+  return rev;
+}
+function simplifyRoadRepairPath(points,width=.30,ignoreIds=[]){
+  if(!points||points.length<=2)return points||[];
+  const out=[points[0]];let i=0;
+  while(i<points.length-1){
+    let chosen=i+1;
+    for(let j=points.length-1;j>i+1;j--){
+      if(roadRepairSegmentClear(points[i],points[j],width,ignoreIds)){chosen=j;break}
+    }
+    out.push(points[chosen]);i=chosen;
+  }
+  return out;
+}
+function reactiveRoadExists(a,b,eps=.24){
+  return roadList().some(r=>(dist(r.a,a)<eps&&dist(r.b,b)<eps)||(dist(r.a,b)<eps&&dist(r.b,a)<eps));
+}
+function addReactiveRoadPolyline(points,template={},meta={}){
+  if(!points||points.length<2)return 0;
+  const width=Number(template.width)||.30,clean=simplifyRoadRepairPath(points,width,meta.ignoreIds||[]);
+  let added=0,total=Math.max(1,clean.length-1);
+  for(let i=0;i<clean.length-1;i++){
+    const a=clean[i],b=clean[i+1];if(dist(a,b)<.24||reactiveRoadExists(a,b))continue;
+    const road={
+      id:uid(),type:'road',auto:true,roadClass:meta.roadClass||'reactive',
+      a:{...a},b:{...b},width,appeal:.95,reactive:true,
+      parentRoadId:template.parentRoadId||null
+    };
+    if(template.routeId)road.routeId=template.routeId;
+    if(Number.isFinite(template.routeSeq))road.routeSeq=template.routeSeq+i/total;
+    if(meta.repairFor)road.repairFor=meta.repairFor;
+    if(meta.accessFor)road.accessFor=meta.accessFor;
+    beginConstruction(road);State.structures.push(road);added++;
+  }
+  return added;
+}
+function repairDisplacedRoads(displaced,manual){
+  let added=0;
+  for(const old of displaced||[]){
+    const path=findRoadRepairPath(old.a,old.b,Number(old.width)||.30,10,[]);
+    if(path)added+=addReactiveRoadPolyline(path,old,{repairFor:manual.id,roadClass:old.roadClass||'repair'});
+  }
+  return added;
+}
+function nearestRoadProjection(p,excludeAccessFor=null){
+  let best=null,bestD=Infinity;
+  for(const r of roadList(true)){
+    if(excludeAccessFor&&r.accessFor===excludeAccessFor)continue;
+    const q=closestPointOnSegment(p,r.a,r.b),d=dist(p,q);
+    if(d<bestD){best={road:r,point:q,d};bestD=d}
+  }
+  return best;
+}
+function marketRoadAccessPoint(s,target){
+  const q=toLocalPoint(s,target),m=Math.max(Math.abs(q.x),Math.abs(q.y),.001),scale=2.04/m;
+  return houseLocalToWorld(s,q.x*scale,q.y*scale);
+}
+function civicRoadAccessPoint(s,roadPoint){
+  if(s.type==='market')return marketRoadAccessPoint(s,roadPoint);
+  return civicEntranceInfo(s)?.outside||structureCenter(s);
+}
+function ensureCivicRoadAccess(s){
+  if(!isCivic(s)||State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))return 0;
+  const roads=roadList(true);if(!roads.length)return 0;
+  const center=structureCenter(s),nearest=nearestRoadProjection(center,s.id);if(!nearest)return 0;
+  const start=civicRoadAccessPoint(s,nearest.point);
+  if(dist(start,nearest.point)<.70)return 0;
+  const path=findRoadRepairPath(start,nearest.point,.30,10,[]);
+  if(!path)return 0;
+  return addReactiveRoadPolyline(path,{width:.30,parentRoadId:nearest.road.id},{accessFor:s.id,roadClass:'access'});
+}
+function roadEndpointDegree(p){
+  let degree=0;
+  for(const r of roadList(true)){
+    if(dist(p,r.a)<.28||dist(p,r.b)<.28)degree++;
+    else if(pointSegmentDistance(p,r.a,r.b)<.18)degree++;
+  }
+  return degree;
+}
+function repairExistingCivicRoadGap(s){
+  if(!isCivic(s)||State.structures.some(r=>r.type==='road'&&r.repairFor===s.id))return 0;
+  const center=structureCenter(s),radius=civicRadius(s)+5.5,endpoints=[];
+  for(const r of roadList(true)){
+    for(const p of [r.a,r.b]){
+      if(dist(p,center)>radius||roadEndpointDegree(p)!==1)continue;
+      if(Math.min(Math.abs(p.x-BUILD_MIN),Math.abs(p.x-BUILD_MAX),Math.abs(p.y-BUILD_MIN),Math.abs(p.y-BUILD_MAX))<.7)continue;
+      endpoints.push({p:{...p},road:r});
+    }
+  }
+  let best=null,bestScore=Infinity;
+  for(let i=0;i<endpoints.length;i++)for(let j=i+1;j<endpoints.length;j++){
+    const a=endpoints[i],b=endpoints[j],d=dist(a.p,b.p);if(d<1.2||d>13)continue;
+    const probe={type:'road',a:a.p,b:b.p,width:Math.max(a.road.width||.3,b.road.width||.3)};
+    if(s.type!=='market'&&!manualRoadConflict(probe,s))continue;
+    const score=d+dist({x:(a.p.x+b.p.x)/2,y:(a.p.y+b.p.y)/2},center)*.4;
+    if(score<bestScore){best={a,b,probe};bestScore=score}
+  }
+  if(!best)return 0;
+  const path=findRoadRepairPath(best.a.p,best.b.p,best.probe.width,10,[]);
+  if(!path)return 0;
+  return addReactiveRoadPolyline(path,best.a.road,{repairFor:s.id,roadClass:'repair'});
+}
+function reconcileReactiveRoadNetwork(){
+  let changed=0;
+  for(const s of State.structures.filter(isCivic)){
+    changed+=repairExistingCivicRoadGap(s);
+    changed+=ensureCivicRoadAccess(s);
+  }
+  if(changed){peasantPathSignature='';peasantPathCache.clear()}
+  return changed;
+}
 function nearestRoadInfo(p,roads){let best={d:Infinity,angle:0};for(const r of roads){const d=pointSegmentDistance(p,r.a,r.b);if(d<best.d)best={d,angle:Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}}return best}
 function autoBlocked(candidate,placed,manual,margin=.2){
   const p={x:candidate.x,y:candidate.y},r=pointRadius(candidate)+margin;
@@ -1547,14 +1767,18 @@ function drawHouseTurretRoof(s,turret,selected=false){
   for(const f of faces)pathPolygon(f.poly,f.i%2?'#303943':'#394550',stroke,.75);
 }
 function drawHouseTurret(s,turret,selected=false){
-  const stroke=selected?'#f4b76f':'#918d86';
-  extrudePolygon(turret.points,turret.bodyH,{
-    top:'#777775',sideA:'#5c5c5a',sideB:'#6a6966',stroke
+  const stroke=selected?'#f4b76f':'#918d86',breakZ=1.02;
+  // L4 turret follows the elite-house language: grey lower floor, warm cream upper floors.
+  extrudePolygonAt(turret.points,0,breakZ,{
+    top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null
+  });
+  extrudePolygonAt(turret.points,breakZ,turret.bodyH,{
+    top:'#d6bf82',sideA:'#c8ae70',sideB:'#e0ca91',stroke
   });
   drawHouseTurretRoof(s,turret,selected);
 
   // Small high window so the tower reads immediately as inhabited rather than defensive.
-  const p=w2s(turret.center,turret.bodyH*.68);
+  const p=w2s(turret.center,breakZ+(turret.bodyH-breakZ)*.55);
   const ww=clamp(3.5*State.view.scale,2.2,4.8),wh=clamp(5.6*State.view.scale,3.4,7.2);
   ctx.save();ctx.fillStyle='rgba(31,29,28,.86)';ctx.fillRect(p.x-ww/2,p.y-wh/2,ww,wh);
   ctx.strokeStyle='rgba(190,178,155,.42)';ctx.lineWidth=.7;ctx.strokeRect(p.x-ww/2,p.y-wh/2,ww,wh);ctx.restore();
@@ -2363,13 +2587,27 @@ function selectedStructure(){return State.structures.find(s=>s.id===State.select
 function selectStructure(s){State.selectedId=s?.id||null;renderFunctionPanel();draw()}
 function addStructure(s){
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
+  let displaced={removed:0,roads:[]};
   if(!s.auto){
     const cost=constructionCost(s);
     if(!canAfford(cost)){status('Insufficient resources — '+costText(cost));return false}
     s.buildCost=cost;spendCost(cost);beginConstruction(s);
-    const removed=removeOverlappingAuto(s);if(removed)status(`Construction cleared ${removed} auto-spawned element${removed===1?'':'s'}`);
+    displaced=removeOverlappingAuto(s);
   }
-  State.structures.push(s);selectStructure(s);markDirty();draw();return true
+  State.structures.push(s);
+  let reactive=0;
+  if(!s.auto){
+    reactive+=repairDisplacedRoads(displaced.roads,s);
+    if(isCivic(s))reactive+=ensureCivicRoadAccess(s);
+    if(displaced.removed||reactive){
+      const bits=[];
+      if(displaced.removed)bits.push(`${displaced.removed} auto element${displaced.removed===1?'':'s'} cleared`);
+      if(reactive)bits.push(`${reactive} road segment${reactive===1?'':'s'} adapted`);
+      status(bits.join(' · '));
+    }
+  }
+  peasantPathSignature='';peasantPathCache.clear();
+  selectStructure(s);markDirty();draw();return true
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
@@ -2377,7 +2615,7 @@ function deleteStructure(id){
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
     State.village={name:null,wellId:null,founded:false,growthVersion:3,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};
-  }else State.structures=State.structures.filter(s=>s.id!==id);
+  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id);
   if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
 }
 function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
@@ -2513,9 +2751,9 @@ document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlemen
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
 function migrateStructures(list){return(list||[]).map(s=>{if(s.type==='house')s.houseLevel=houseLevel(s);if(s.type==='built'){s.width=1;if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='wall'){s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;s.tier=wallTier(s);s.width=wallWidthForTier(s.tier);s.level=clamp(Math.round(Number(s.level)||1),1,2)}if(s.type==='tower'){s.level=clamp(Math.round(Number(s.level)||1),1,3);s.tier=towerTier(s);applyStructureTier(s,s.tier)}if(s.type==='well')delete s.construction;if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);return s})}
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();saveLocal();renderUI();renderFunctionPanel();draw()}}
 async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
 function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
