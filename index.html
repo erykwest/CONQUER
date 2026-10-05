@@ -730,18 +730,12 @@ function drawMultiPolygonBand(multi,z0,z1){
   }
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.poly,f.shade,null);
-  // No bright perimeter here: otherwise each height band reads like a separate stacked box.
-  fillMultiPolygonTop(multi,z1,'#8d8175',null);
+  // Important: do NOT draw a top face for every height band.
+  // Doing so leaves anti-aliased horizontal seams even when the footprint continues unchanged above.
 }
-function strokeExposedTop(multi,z){
+function drawExposedTop(multi,z){
   if(!multi?.length)return;
-  ctx.save();ctx.strokeStyle='rgba(38,31,27,.42)';ctx.lineWidth=.75;
-  ctx.beginPath();
-  for(const poly of multi)for(const ring of poly){
-    const pts=cleanClipRing(ring).map(p=>w2s(p,z));if(pts.length<3)continue;
-    ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();
-  }
-  ctx.stroke();ctx.restore();
+  fillMultiPolygonTop(multi,z,'#8d8175','#635951');
 }
 function drawCastleUnion(){
   const bands=castleUnionBands();if(!bands)return false;
@@ -753,7 +747,7 @@ function drawCastleUnion(){
     if(next&&pc){
       try{exposed=pc.difference(band.geometry,next.geometry)}catch(err){exposed=band.geometry}
     }
-    strokeExposedTop(exposed,band.z1);
+    drawExposedTop(exposed,band.z1);
   }
   return true;
 }
