@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.30</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.31</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -1987,26 +1987,28 @@ function viewDepthPoint(p){
   return q.x+q.y;
 }
 function roofOccluderStructures(s){
-  const out=[];
-  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const probe=Math.min(.45,Math.max(.18,L*.12));
+  const out=[],seen=new Set();
+  const add=target=>{
+    if(!target||!['tower','gate'].includes(target.type)||underConstruction(target)||seen.has(target.id))return;
+    seen.add(target.id);out.push(target);
+  };
 
-  const checks=[
-    {id:s.aSnap,anchor:s.a,inside:{x:s.a.x+ux*probe,y:s.a.y+uy*probe}},
-    {id:s.bSnap,anchor:s.b,inside:{x:s.b.x-ux*probe,y:s.b.y-uy*probe}}
-  ];
+  // Architectural rule: a roof connected to a tower/gate terminates at that
+  // masonry volume. The connected mass ALWAYS masks the roof where their
+  // screen silhouettes overlap. Do not decide this from painter depth:
+  // elevated roof faces can otherwise paint across the tower facade.
+  for(const id of [s.aSnap,s.bSnap]){
+    if(!id)continue;
+    add(State.structures.find(x=>x.id===id));
+  }
 
-  for(const check of checks){
-    if(!check.id)continue;
-    const target=State.structures.find(x=>x.id===check.id);
-    if(!target||!['tower','gate'].includes(target.type)||underConstruction(target))continue;
-
-    // In this isometric projection larger x+y means visually nearer/lower.
-    // Only let the snapped tower/gate occlude the roof when the built section
-    // continues away from the viewer from that connection point.
-    const anchorDepth=viewDepthPoint(check.anchor);
-    const insideDepth=viewDepthPoint(check.inside);
-    if(insideDepth<anchorDepth-1e-4&&!out.includes(target))out.push(target);
+  // Non-connected tower/gate volumes can still stand in front of this roof.
+  // For those, normal camera depth is appropriate.
+  const ownerDepth=worldDepth(s),g=builtRoofGeometry(s),roofBase=g?.h??structureHeight(s);
+  for(const target of State.structures){
+    if(target.id===s.id||!['tower','gate'].includes(target.type)||underConstruction(target)||seen.has(target.id))continue;
+    if(structureVisualTopHeight(target)<=roofBase+.04)continue;
+    if(worldDepth(target)>ownerDepth+1e-4)add(target);
   }
   return out;
 }
