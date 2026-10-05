@@ -2416,29 +2416,51 @@ function hoardingSegment(s){
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
   const width=Number(s.width)||.5;
 
-  // Windows/arcades pull back from snapped towers. Hoarding must do the
-  // opposite: overlap into the socket so the receiving tower/gate masks it
-  // and the timber gallery reads as structurally continuous.
-  const overlapFor=id=>{
-    if(!hasCastleSnap(id))return .02;
-    const target=State.structures.find(x=>x.id===id);
-    if(!target)return .02;
-
-    let span=.24;
-    if(target.type==='tower'&&target.shape==='round')span=Number(target.r)||.5;
-    else{
-      const d=rectDims(target),wallAngle=Math.atan2(dy,dx),rel=wallAngle-(target.angle||0);
-      span=Math.abs(Math.cos(rel))*d.w/2+Math.abs(Math.sin(rel))*d.h/2;
-    }
-    return clamp(.16+span*.28+width*.08,.20,.48);
-  };
-
+  // Only a small overlap is needed. The snapped tower/gate will explicitly
+  // mask this overlap in screen space, which avoids both gaps and bleed-through.
+  const overlapFor=id=>hasCastleSnap(id)?clamp(.08+width*.10,.10,.18):.02;
   const startOverlap=overlapFor(s.aSnap),endOverlap=overlapFor(s.bSnap);
+
   return{
     a:{x:s.a.x-ux*startOverlap,y:s.a.y-uy*startOverlap},
     b:{x:s.b.x+ux*endOverlap,y:s.b.y+uy*endOverlap},
     length:L+startOverlap+endOverlap
   };
+}
+function hoardingOccluders(s,z){
+  const out=[];
+  const add=o=>{if(o&&!underConstruction(o)&&!out.includes(o))out.push(o)};
+
+  // Snapped endpoint structures are hard occluders for the hoarding.
+  // This is the key exception that makes the gallery disappear into towers
+  // even though hoarding is rendered in a later detail pass.
+  for(const id of [s.aSnap,s.bSnap]){
+    if(!id)continue;
+    const target=State.structures.find(x=>x.id===id&&['tower','gate'].includes(x.type));
+    add(target);
+  }
+
+  // Preserve ordinary camera/height occlusion for other castle structures.
+  for(const o of structureDetailOccluders(s,z))add(o);
+  return out;
+}
+function withHoardingOcclusionClip(s,z,drawFn){
+  const occluders=hoardingOccluders(s,z);
+  if(!occluders.length){drawFn();return}
+
+  const r=wrap.getBoundingClientRect();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-64,-64,r.width+128,r.height+128);
+  for(const o of occluders){
+    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
+    ctx.moveTo(hull[0].x,hull[0].y);
+    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+    ctx.closePath();
+  }
+  ctx.clip('evenodd');
+  drawFn();
+  ctx.restore();
 }
 function drawWallHoarding(s){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
@@ -2450,7 +2472,7 @@ function drawWallHoarding(s){
   const platform=[innerA,innerB,outerB,outerA];
   const exteriorVisible=linearFrontSide(s)===side;
 
-  withStructureDetailOcclusion(s,h+.66,()=>{
+  withHoardingOcclusionClip(s,h+.66,()=>{
     // Projecting timber fighting gallery.
     extrudePolygonAt(platform,h-.045,h+.055,{
       top:'#74533a',sideA:'#493423',sideB:'#5d432e',stroke:'#927155'
