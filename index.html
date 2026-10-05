@@ -611,16 +611,16 @@ function footprintPoints(s){
   if(['house','field'].includes(s.type))return rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0);
   return[];
 }
-function extrudePolygon(worldPts,height,{top='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
+function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
   if(!worldPts?.length)return;
-  const base=projectPath(worldPts,0),top=projectPath(worldPts,height),faces=[];
+  const base=projectPath(worldPts,0),topPts=projectPath(worldPts,height),faces=[];
   for(let i=0;i<worldPts.length;i++){
-    const j=(i+1)%worldPts.length,quad=[base[i],base[j],top[j],top[i]],depth=(base[i].y+base[j].y)/2;
+    const j=(i+1)%worldPts.length,quad=[base[i],base[j],topPts[j],topPts[i]],depth=(base[i].y+base[j].y)/2;
     faces.push({quad,depth,i});
   }
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,null);
-  pathPolygon(top,top,stroke,1.2);
+  pathPolygon(topPts,topColor,stroke,1.2);
 }
 function worldDepth(s){
   const p=structureCenter(s);return p.x+p.y;
