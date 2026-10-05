@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.31</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.32</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -420,6 +420,32 @@ function pointRadius(s){
   if(isCivic(s))return civicRadius(s);
   return .5;
 }
+function gatePassageInfo(gate,reference=null){
+  if(!gate||gate.type!=='gate')return null;
+  const d=rectDims(gate),a=gate.angle||0,ux=Math.cos(a),uy=Math.sin(a),vx=-uy,vy=ux;
+  const halfLength=d.w/2,halfWidth=Math.min(d.h*.40,.52);
+  const sideA={x:gate.x-ux*(halfLength+.20),y:gate.y-uy*(halfLength+.20)};
+  const sideB={x:gate.x+ux*(halfLength+.20),y:gate.y+uy*(halfLength+.20)};
+  let near=sideA,far=sideB;
+  if(reference&&dist(reference,sideB)<dist(reference,sideA)){near=sideB;far=sideA}
+  return{
+    center:{x:gate.x,y:gate.y},ux,uy,vx,vy,halfLength,halfWidth,
+    sideA,sideB,near,far
+  };
+}
+function gatePointInPassage(gate,p,pad=.04){
+  const info=gatePassageInfo(gate);if(!info)return false;
+  const q=toLocalPoint(gate,p);
+  return Math.abs(q.x)<=info.halfLength+pad&&Math.abs(q.y)<=info.halfWidth+pad;
+}
+function roadUsesGatePassage(road,gate){
+  if(!road||!gate||gate.type!=='gate')return false;
+  const info=gatePassageInfo(gate),mid=closestPointOnSegment(info.center,road.a,road.b);
+  if(dist(mid,info.center)>info.halfWidth*.82)return false;
+  const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
+  const dot=Math.abs((dx/L)*info.ux+(dy/L)*info.uy);
+  return dot>=Math.cos(32*Math.PI/180);
+}
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return dist(p,a);const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return dist(p,{x:a.x+t*dx,y:a.y+t*dy})}
 function segmentsIntersect(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);const a1=cr(a,b,c),a2=cr(a,b,d),a3=cr(c,d,a),a4=cr(c,d,b);return ((a1>0&&a2<0)||(a1<0&&a2>0))&&((a3>0&&a4<0)||(a3<0&&a4>0))}
 function roadTouchesPolygon(road,poly,pad=.08){
@@ -435,8 +461,9 @@ function roadTouchesPolygon(road,poly,pad=.08){
 }
 function manualRoadConflict(road,manual){
   if(!manual)return false;
-  // The market is a paved public square: roads may terminate at or continue beneath it.
+  // The market is a paved public square; castle gates contain a real traversable passage.
   if(manual.type==='market')return false;
+  if(manual.type==='gate'&&roadUsesGatePassage(road,manual))return false;
   if(['wall','built'].includes(manual.type)){
     return segmentsIntersect(road.a,road.b,manual.a,manual.b)||
       pointSegmentDistance(manual.a,road.a,road.b)<=manual.width/2+(road.width||.3)/2||
@@ -472,6 +499,12 @@ function roadRepairPointClear(p,width=.30,ignoreIds=[]){
   for(const s of State.structures){
     if(ignoreIds.includes(s.id)||s.type==='road')continue;
     if(s.type==='market')continue;
+    if(s.type==='gate'){
+      if(gatePointInPassage(s,p,Math.max(.05,width*.10)))continue;
+      const q=toLocalPoint(s,p),d=rectDims(s);
+      if(Math.abs(q.x)<=d.w/2+clearance&&Math.abs(q.y)<=d.h/2+clearance)return false;
+      continue;
+    }
     if(['wall','built'].includes(s.type)){
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+clearance)return false;
       continue;
@@ -721,6 +754,77 @@ function repairDisplacedRoads(displaced,manual){
   }
   return added;
 }
+function gateMainRouteId(gate){return 'gate-main:'+gate.id}
+function gateMainRouteContinuous(gate){
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=routeRoads(gateMainRouteId(gate));
+  if(!well||!roads.length)return false;
+  const passage=gatePassageInfo(gate,well);if(!passage)return false;
+  let cursor={x:well.x,y:well.y};
+  for(const r of roads){
+    if(dist(cursor,r.a)<=.48)cursor={...r.b};
+    else if(dist(cursor,r.b)<=.48)cursor={...r.a};
+    else return false;
+  }
+  return dist(cursor,passage.far)<=.72;
+}
+function buildGateMainConnection(gate,force=false){
+  const well=State.structures.find(s=>s.id===State.village.wellId);
+  if(!gate||gate.type!=='gate'||underConstruction(gate)||!well||underConstruction(well))return 0;
+  const routeId=gateMainRouteId(gate);
+  if(!force&&gateMainRouteContinuous(gate))return 0;
+
+  const passage=gatePassageInfo(gate,well);if(!passage)return 0;
+  const ignore=[well.id],width=.62;
+  let approach;
+  if(roadRepairSegmentClear({x:well.x,y:well.y},passage.near,width,ignore)){
+    approach=[{x:well.x,y:well.y},{...passage.near}];
+  }else{
+    approach=findRoadRepairPath({x:well.x,y:well.y},passage.near,width,16,ignore,80000);
+  }
+  if(!approach||approach.length<2)return 0;
+
+  const full=approach.slice();
+  for(const p of [passage.center,passage.far]){
+    if(dist(full.at(-1),p)>.08)full.push({...p});
+  }
+  // Validate the explicit passage itself. Gate corridor is transparent, while
+  // neighboring walls/towers remain true blockers.
+  if(!roadRepairSegmentClear(passage.near,passage.center,width,ignore)||
+     !roadRepairSegmentClear(passage.center,passage.far,width,ignore))return 0;
+
+  const clean=simplifyRoadRepairPath(full,width,ignore),pts=subdivideRoadPolyline(clean,ROAD_RULES.arterialSegmentMax);
+  if(pts.length<2)return 0;
+
+  // Atomic replacement: the previous gate artery remains until a valid new path exists.
+  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId));
+  let added=0,parent=null;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1];if(dist(a,b)<.16)continue;
+    const road={
+      id:uid(),type:'road',auto:true,roadClass:'arterial-gate',
+      routeId,routeSeq:added,a:{...a},b:{...b},width,appeal:1,
+      parentRoadId:parent,gateFor:gate.id,reactive:true
+    };
+    // A gate becomes part of the primary network as soon as it is completed.
+    State.structures.push(road);parent=road.id;added++;
+  }
+  refreshStaleHouseRoadRefs();
+  peasantPathSignature='';peasantPathCache.clear();
+  return added;
+}
+function reconcileGateMainConnections(force=false){
+  let changed=0;
+  const liveGateIds=new Set();
+  for(const gate of State.structures){
+    if(gate.type!=='gate'||underConstruction(gate))continue;
+    liveGateIds.add(gate.id);
+    changed+=buildGateMainConnection(gate,force);
+  }
+  const before=State.structures.length;
+  State.structures=State.structures.filter(s=>!s.gateFor||liveGateIds.has(s.gateFor));
+  changed+=before-State.structures.length;
+  return changed;
+}
 function nearestRoadProjection(p,excludeAccessFor=null){
   let best=null,bestD=Infinity;
   for(const r of roadList(true)){
@@ -847,6 +951,7 @@ function reconcileReactiveRoadNetwork(){
   let changed=0;
   changed+=clearLegacySecondaryRoads();
   changed+=reconcileArterialRoutes();
+  changed+=reconcileGateMainConnections(false);
   changed+=reconcileSettlementAccessRoads();
   if(changed){peasantPathSignature='';peasantPathCache.clear()}
   return changed;
@@ -3019,8 +3124,14 @@ function pointBlockedForPeasant(p,sourceHouseId){
     if(s.id===sourceHouseId)continue;
     if(!['house','tower','gate','wall','built','well','market','tavern','church','training'].includes(s.type))continue;
 
-    // Market ground is intentionally traversable so routines visibly enter the plaza.
+    // Market ground and the actual castle gate passage are traversable.
     if(s.type==='market')continue;
+    if(s.type==='gate'){
+      if(gatePointInPassage(s,p,.08))continue;
+      const q=toLocalPoint(s,p),d=rectDims(s);
+      if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
+      continue;
+    }
 
     if(['wall','built'].includes(s.type)){
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
@@ -4167,7 +4278,7 @@ function deleteStructure(id){
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};
-  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id);
+  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id);
   if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
 }
 function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
@@ -4458,9 +4569,9 @@ function migrateStructures(list){
   return migrated;
 }
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);saveLocal();renderUI();renderFunctionPanel();draw()}}
 async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
 function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
@@ -4513,6 +4624,7 @@ function simulationFrame(now){
     const before=State.clock.day;State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
     processVillageGrowth();
     syncCompletedTowerWallColliders(false);
+    reconcileGateMainConnections(false);
     const quarterChanged=Math.floor(before*4)!==Math.floor(State.clock.day*4);
     if(quarterChanged)renderUI();
     draw();
