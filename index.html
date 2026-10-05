@@ -932,8 +932,27 @@ function drawLinearBase(s,preview=false){
     :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
   extrudePolygon(linePoly(s),h,colors);
 }
+function builtRoofFootprintPoints(s){
+  let a={...s.a},b={...s.b};
+  let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const inset=clamp((Number(s.width)||1)*.11,.08,.16);
+
+  // The castle-body union deliberately overlaps snapped towers/gates.
+  // Roofs must not: pull the roof slightly back from those sockets.
+  if(hasCastleSnap(s.aSnap))a={x:a.x+ux*inset,y:a.y+uy*inset};
+  if(hasCastleSnap(s.bSnap))b={x:b.x-ux*inset,y:b.y-uy*inset};
+
+  dx=b.x-a.x;dy=b.y-a.y;L=Math.hypot(dx,dy)||1;
+  const nx=-dy/L*(Number(s.width)||1)/2,ny=dx/L*(Number(s.width)||1)/2;
+  return[
+    {x:a.x+nx,y:a.y+ny},
+    {x:b.x+nx,y:b.y+ny},
+    {x:b.x-nx,y:b.y-ny},
+    {x:a.x-nx,y:a.y-ny}
+  ];
+}
 function builtRoofGeometry(s){
-  const p=unionFootprintPoints(s);if(!p||p.length<4)return null;
+  const p=builtRoofFootprintPoints(s);if(!p||p.length<4)return null;
   const h=structureHeight(s),rise=clamp((Number(s.width)||1)*.46,.32,.56);
   const ridgeA={x:(p[0].x+p[3].x)/2,y:(p[0].y+p[3].y)/2};
   const ridgeB={x:(p[1].x+p[2].x)/2,y:(p[1].y+p[2].y)/2};
@@ -942,10 +961,21 @@ function builtRoofGeometry(s){
 function drawBuiltDetails(s,preview=false){
   if(s.type!=='built')return;
   const g=builtRoofGeometry(s);if(!g)return;
-  const roofA=[w2s(g.p[0],g.h),w2s(g.p[1],g.h),w2s(g.ridgeB,g.ridgeH),w2s(g.ridgeA,g.ridgeH)];
-  const roofB=[w2s(g.p[3],g.h),w2s(g.p[2],g.h),w2s(g.ridgeB,g.ridgeH),w2s(g.ridgeA,g.ridgeH)];
-  pathPolygon(roofA,preview?'rgba(58,61,66,.62)':'#34363a','#5d6066',1);
-  pathPolygon(roofB,preview?'rgba(70,73,78,.62)':'#42454a','#5d6066',1);
+
+  const faceA={
+    poly:[w2s(g.p[0],g.h),w2s(g.p[1],g.h),w2s(g.ridgeB,g.ridgeH),w2s(g.ridgeA,g.ridgeH)],
+    fill:preview?'rgba(58,61,66,.62)':'#34363a',
+    depth:(w2s(g.p[0],g.h).y+w2s(g.p[1],g.h).y)/2
+  };
+  const faceB={
+    poly:[w2s(g.p[3],g.h),w2s(g.p[2],g.h),w2s(g.ridgeB,g.ridgeH),w2s(g.ridgeA,g.ridgeH)],
+    fill:preview?'rgba(70,73,78,.62)':'#42454a',
+    depth:(w2s(g.p[3],g.h).y+w2s(g.p[2],g.h).y)/2
+  };
+
+  for(const face of [faceA,faceB].sort((a,b)=>a.depth-b.depth)){
+    pathPolygon(face.poly,face.fill,'#5d6066',1);
+  }
 }
 function battlementPiece(center,angle,z,w=.28,d=.24,h=.24){
   const pts=rectWorldPoints(center.x,center.y,w,d,angle),rp=rotateViewPoint(center);
