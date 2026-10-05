@@ -2412,9 +2412,37 @@ function drawBuiltArcade(s){
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   });
 }
+function hoardingSegment(s){
+  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const width=Number(s.width)||.5;
+
+  // Windows/arcades pull back from snapped towers. Hoarding must do the
+  // opposite: overlap into the socket so the receiving tower/gate masks it
+  // and the timber gallery reads as structurally continuous.
+  const overlapFor=id=>{
+    if(!hasCastleSnap(id))return .02;
+    const target=State.structures.find(x=>x.id===id);
+    if(!target)return .02;
+
+    let span=.24;
+    if(target.type==='tower'&&target.shape==='round')span=Number(target.r)||.5;
+    else{
+      const d=rectDims(target),wallAngle=Math.atan2(dy,dx),rel=wallAngle-(target.angle||0);
+      span=Math.abs(Math.cos(rel))*d.w/2+Math.abs(Math.sin(rel))*d.h/2;
+    }
+    return clamp(.16+span*.28+width*.08,.20,.48);
+  };
+
+  const startOverlap=overlapFor(s.aSnap),endOverlap=overlapFor(s.bSnap);
+  return{
+    a:{x:s.a.x-ux*startOverlap,y:s.a.y-uy*startOverlap},
+    b:{x:s.b.x+ux*endOverlap,y:s.b.y+uy*endOverlap},
+    length:L+startOverlap+endOverlap
+  };
+}
 function drawWallHoarding(s){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
-  const seg=builtWindowSegment(s),dx=seg.b.x-seg.a.x,dy=seg.b.y-seg.a.y,L=Math.hypot(dx,dy)||1;
+  const seg=hoardingSegment(s),dx=seg.b.x-seg.a.x,dy=seg.b.y-seg.a.y,L=Math.hypot(dx,dy)||1;
   const ux=dx/L,uy=dy/L,nx=-uy,ny=ux,side=wallExteriorSide(s),width=Number(s.width)||.5,h=structureHeight(s);
   const innerOff=Math.max(.02,width/2-.02),outerOff=width/2+.42;
   const point=(p,off)=>({x:p.x+nx*off*side,y:p.y+ny*off*side});
