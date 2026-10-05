@@ -771,8 +771,7 @@ function boundaryPoint(s,target){
     const tx=Math.abs(local.x)>1e-6?hx/Math.abs(local.x):Infinity,ty=Math.abs(local.y)>1e-6?hy/Math.abs(local.y):Infinity;
     edge=Math.min(tx,ty);
   }
-  const penetration=Math.min(.5,edge*.7),t=Math.max(0,edge-penetration);
-  return{x:s.x+ux*t,y:s.y+uy*t}
+  return{x:s.x+ux*edge,y:s.y+uy*edge}
 }
 function snapAnchor(p){let best=null,bestScore=Infinity;for(const s of State.structures){if(!['tower','gate'].includes(s.type))continue;const d=dist(p,{x:s.x,y:s.y}),rd=rectDims(s),reach=(s.shape==='round'?s.r:Math.hypot(rd.w,rd.h)/2)+1;if(d<=reach&&d<bestScore){best=s;bestScore=d}}return best?{point:boundaryPoint(best,p),structureId:best.id}:{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null}}
 function currentLinearSpec(){
@@ -813,22 +812,29 @@ function socketLinearGeometry(s){
   const a={...s.a},b={...s.b},dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L},n={x:-u.y,y:u.x},hw=s.width/2,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
   let ap={x:a.x+n.x*hw,y:a.y+n.y*hw},am={x:a.x-n.x*hw,y:a.y-n.y*hw};
   let bp={x:b.x+n.x*hw,y:b.y+n.y*hw},bm={x:b.x-n.x*hw,y:b.y-n.y*hw};
-  const sa=snappedStructure(s.aSnap),sb=snappedStructure(s.bSnap),eps=.045;
+  const sa=snappedStructure(s.aSnap),sb=snappedStructure(s.bSnap),eps=.035;
+  let aSurface=null,bSurface=null;
   if(sa){
     const dir={x:-u.x,y:-u.y},hp=rayStructureSocket({x:mid.x+n.x*hw,y:mid.y+n.y*hw},dir,sa),hm=rayStructureSocket({x:mid.x-n.x*hw,y:mid.y-n.y*hw},dir,sa);
-    if(hp)ap={x:hp.x+dir.x*eps,y:hp.y+dir.y*eps};
-    if(hm)am={x:hm.x+dir.x*eps,y:hm.y+dir.y*eps};
+    if(hp&&hm){
+      aSurface={plus:hp,minus:hm,into:dir,target:sa};
+      ap={x:hp.x+dir.x*eps,y:hp.y+dir.y*eps};
+      am={x:hm.x+dir.x*eps,y:hm.y+dir.y*eps};
+    }
   }
   if(sb){
     const dir={x:u.x,y:u.y},hp=rayStructureSocket({x:mid.x+n.x*hw,y:mid.y+n.y*hw},dir,sb),hm=rayStructureSocket({x:mid.x-n.x*hw,y:mid.y-n.y*hw},dir,sb);
-    if(hp)bp={x:hp.x+dir.x*eps,y:hp.y+dir.y*eps};
-    if(hm)bm={x:hm.x+dir.x*eps,y:hm.y+dir.y*eps};
+    if(hp&&hm){
+      bSurface={plus:hp,minus:hm,into:dir,target:sb};
+      bp={x:hp.x+dir.x*eps,y:hp.y+dir.y*eps};
+      bm={x:hm.x+dir.x*eps,y:hm.y+dir.y*eps};
+    }
   }
   return{
-    poly:[ap,bp,bm,am],
+    poly:[ap,bp,bm,am],u,n,
     aCenter:{x:(ap.x+am.x)/2,y:(ap.y+am.y)/2},
     bCenter:{x:(bp.x+bm.x)/2,y:(bp.y+bm.y)/2},
-    socketA:!!sa,socketB:!!sb
+    socketA:!!aSurface,socketB:!!bSurface,aSurface,bSurface
   };
 }
 function linePoly(s){return socketLinearGeometry(s).poly;}
@@ -848,12 +854,33 @@ function functionCapacity(s){
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
 function structureLabel(s){if(!s)return'';if(s.type==='well')return'Village well';if(s.type==='gate')return'Gate 1.5×1.5U';if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`;if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
 function drawLinearBase(s,preview=false){
-  const h=structureHeight(s),selected=State.selectedId===s.id,g=socketLinearGeometry(s);
-  const colors=s.type==='wall'
-    ?{top:'#8d8175',sideA:'#514a44',sideB:'#635951',stroke:selected?'#f4b76f':'#d8c8b4'}
-    :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
+  const h=structureHeight(s),selected=State.selectedId===s.id,g=socketLinearGeometry(s),colors=linearColors(s,selected);
   const skip=[];if(g.socketB)skip.push(1);if(g.socketA)skip.push(3);
   extrudePolygon(g.poly,h,{...colors,skipFaces:skip,skipTopEdges:skip});
+}
+function linearColors(s,selected=false){
+  return s.type==='wall'
+    ?{top:'#8d8175',sideA:'#514a44',sideB:'#635951',stroke:selected?'#f4b76f':'#d8c8b4'}
+    :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
+}
+function drawSocketJoint(s,end){
+  if(!['wall','built'].includes(s.type))return;
+  const g=socketLinearGeometry(s),surf=end==='a'?g.aSurface:g.bSurface;if(!surf)return;
+  const into=surf.into,out={x:-into.x,y:-into.y},outside=Math.max(.10,Math.min(.22,s.width*.22)),inside=Math.max(.08,Math.min(.16,s.width*.16+.05));
+  const p1={x:surf.plus.x+out.x*outside,y:surf.plus.y+out.y*outside};
+  const p2={x:surf.plus.x+into.x*inside,y:surf.plus.y+into.y*inside};
+  const m2={x:surf.minus.x+into.x*inside,y:surf.minus.y+into.y*inside};
+  const m1={x:surf.minus.x+out.x*outside,y:surf.minus.y+out.y*outside};
+  const h=Math.min(structureHeight(s),Math.max(.2,structureHeight(surf.target)-.02)),colors=linearColors(s,State.selectedId===s.id);
+  extrudePolygon([p1,p2,m2,m1],h,{...colors,skipFaces:[1],skipTopEdges:[1]});
+  if(s.type==='built'){
+    const c1={x:(p1.x+m1.x)/2,y:(p1.y+m1.y)/2},c2={x:(p2.x+m2.x)/2,y:(p2.y+m2.y)/2},a=w2s(c1,h+.16),b=w2s(c2,h+.16);
+    ctx.save();ctx.strokeStyle='rgba(58,39,28,.92)';ctx.lineWidth=Math.max(1.2,1.6*State.view.scale);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
+  }
+}
+function drawLinearSockets(s){
+  if(!['wall','built'].includes(s.type))return;
+  const g=socketLinearGeometry(s);if(g.socketA)drawSocketJoint(s,'a');if(g.socketB)drawSocketJoint(s,'b');
 }
 function drawBuiltDetails(s,preview=false){
   if(s.type!=='built')return;
@@ -926,6 +953,10 @@ function draw(){
   // Towers/gates remain foreground. Linear elements terminate in geometric
   // sockets on the real tower perimeter; the tiny overlap only hides hairlines.
   for(const s of foregroundCastle)drawStructure(s)
+
+  // Local boolean-style socket patches reopen the tower face exactly where a
+  // connected wall/built section enters it, without drawing the full wall over the tower.
+  for(const s of normalRaised)if(!s.auto&&['wall','built'].includes(s.type))drawLinearSockets(s)
 
   // Placement preview always wins the visual stack.
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
