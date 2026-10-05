@@ -62,7 +62,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </style>
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.28</div><div id="resources"></div></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.29</div><div id="resources"></div></header>
 <div id="wrap">
   <canvas id="c"></canvas>
   <aside id="builder" class="panel">
@@ -228,6 +228,12 @@ const HAIR_COLORS=Object.freeze({
   blonde:'#d5b65a',brown:'#65452f',black:'#262321',gray:'#9a9891',red:'#9b4a2d'
 });
 const VILLAGER_SKIN='#d99a83';
+const REIGN_COLOR_1='#b53636';
+const REIGN_COLOR_2='#355fb8';
+const REIGN_COLOR_1_DARK='#7f2323';
+const REIGN_COLOR_2_DARK='#243f79';
+const FIRE_GOLD='#f2b14a';
+const FIRE_CORE='#ffe08a';
 const ROAD_RULES={
   arterialSegmentMin:4.2,arterialSegmentMax:5.4,
   localSegmentMin:2.8,localSegmentMax:4.2,
@@ -2222,6 +2228,131 @@ function drawGateRoofs(){
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of gates)drawGateRoof(s);
 }
+function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
+function drawQuarteredTowerFlag(tower){
+  if(!tower||underConstruction(tower)||tower.type!=='tower'||towerRoofStyle(tower)!=='pitched')return;
+  const scale=clamp(State.view.scale,.55,1.45),base=w2s({x:tower.x,y:tower.y},towerVisualTopHeight(tower));
+  const seed=(peasantHash(tower.id+'-flag')%1000)/1000;
+  const mastH=clamp(20*scale,13,28),clothW=clamp(15*scale,10,21),clothH=clamp(10*scale,7,14);
+  const wave=Math.sin(visualCycleDay()*18+seed*Math.PI*2)*1.4*scale;
+  const mastTop={x:base.x,y:base.y-mastH};
+  const tl={x:mastTop.x,y:mastTop.y+2*scale},tr={x:tl.x+clothW,y:tl.y+wave};
+  const br={x:tr.x,y:tr.y+clothH},bl={x:tl.x,y:tl.y+clothH};
+  const tm=midpoint2(tl,tr),rm=midpoint2(tr,br),bm=midpoint2(bl,br),lm=midpoint2(tl,bl);
+  const center={x:(tl.x+tr.x+br.x+bl.x)/4,y:(tl.y+tr.y+br.y+bl.y)/4};
+
+  ctx.save();
+  ctx.strokeStyle='#745538';ctx.lineWidth=Math.max(1,1.15*scale);
+  ctx.beginPath();ctx.moveTo(base.x,base.y+1);ctx.lineTo(mastTop.x,mastTop.y);ctx.stroke();
+
+  pathPolygon([tl,tm,center,lm],REIGN_COLOR_1,null);
+  pathPolygon([tm,tr,rm,center],REIGN_COLOR_2,null);
+  pathPolygon([lm,center,bm,bl],REIGN_COLOR_2,null);
+  pathPolygon([center,rm,br,bm],REIGN_COLOR_1,null);
+  pathPolygon([tl,tr,br,bl],null,'rgba(236,222,200,.72)',Math.max(.7,.8*scale));
+
+  ctx.fillStyle='#c6a461';ctx.beginPath();ctx.arc(mastTop.x,mastTop.y,Math.max(1.1,1.25*scale),0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+function drawTowerFlags(){
+  const towers=State.structures
+    .filter(s=>s.type==='tower'&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
+    .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const tower of towers)drawQuarteredTowerFlag(tower);
+}
+function towerTorchSources(){
+  const out=[];
+  for(const tower of State.structures){
+    if(tower.type!=='tower'||underConstruction(tower))continue;
+    for(const spec of towerDoorSpecs(tower)){
+      if(spec.kind!=='front'||!towerDoorVisible(tower,spec))continue;
+      const fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),doorTop=spec.baseZ+fullHeight/3;
+      const lateral=.18,outward=.035,z=doorTop+.10;
+      for(const side of [-1,1]){
+        out.push({
+          kind:'torch',id:tower.id+':torch:'+side,
+          p:{
+            x:spec.contact.x+spec.tangent.x*lateral*side+spec.outward.x*outward,
+            y:spec.contact.y+spec.tangent.y*lateral*side+spec.outward.y*outward
+          },
+          z
+        });
+      }
+    }
+  }
+  return out;
+}
+function battlementBrazierSources(){
+  const out=[];
+  for(const s of State.structures){
+    if(underConstruction(s))continue;
+    if(s.type==='tower'&&towerRoofStyle(s)==='battlement'){
+      const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
+      const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
+      out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10});
+    }else if(s.type==='gate'&&gateRoofStyle(s)==='battlement'){
+      const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43;
+      for(const side of [-1,1]){
+        out.push({kind:'brazier',id:s.id+':brazier:'+side,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10});
+      }
+    }
+  }
+  return out;
+}
+function fireSources(){return towerTorchSources().concat(battlementBrazierSources())}
+function fireFlicker(id){
+  const seed=(peasantHash(String(id)+'-fire')%1000)/1000;
+  return .88+Math.sin(visualCycleDay()*31+seed*Math.PI*2)*.10+Math.sin(visualCycleDay()*53+seed*9)*.04;
+}
+function drawScreenFlame(p,scale,id,big=false){
+  const f=fireFlicker(id),h=(big?7.0:5.2)*scale*f,w=(big?3.7:2.8)*scale;
+  ctx.save();
+  ctx.fillStyle=FIRE_GOLD;ctx.beginPath();
+  ctx.moveTo(p.x,p.y-h);ctx.quadraticCurveTo(p.x+w,p.y-h*.45,p.x,p.y+.4*scale);
+  ctx.quadraticCurveTo(p.x-w,p.y-h*.45,p.x,p.y-h);ctx.fill();
+  ctx.fillStyle=FIRE_CORE;ctx.beginPath();
+  ctx.moveTo(p.x,p.y-h*.72);ctx.quadraticCurveTo(p.x+w*.45,p.y-h*.30,p.x,p.y);
+  ctx.quadraticCurveTo(p.x-w*.45,p.y-h*.30,p.x,p.y-h*.72);ctx.fill();
+  ctx.restore();
+}
+function drawTorchFixture(src){
+  const p=w2s(src.p,src.z),scale=clamp(State.view.scale,.55,1.45);
+  ctx.save();
+  ctx.strokeStyle='#6b5440';ctx.lineWidth=Math.max(1,1.0*scale);
+  ctx.beginPath();ctx.moveTo(p.x-3.0*scale,p.y+2.2*scale);ctx.lineTo(p.x,p.y);ctx.stroke();
+  ctx.fillStyle='#463a32';ctx.beginPath();
+  ctx.moveTo(p.x-1.6*scale,p.y+.5*scale);ctx.lineTo(p.x+1.6*scale,p.y+.5*scale);
+  ctx.lineTo(p.x+1.0*scale,p.y+2.4*scale);ctx.lineTo(p.x-1.0*scale,p.y+2.4*scale);ctx.closePath();ctx.fill();
+  ctx.restore();
+  drawScreenFlame({x:p.x,y:p.y-.3*scale},scale,src.id,false);
+}
+function drawBrazierFixture(src){
+  const scale=clamp(State.view.scale,.55,1.45);
+  const pts=rectWorldPoints(src.p.x,src.p.y,.20,.20,0);
+  extrudePolygonAt(pts,src.z-.08,src.z+.03,{top:'#5d4b3d',sideA:'#39312b',sideB:'#493d34',stroke:'#7b654f'});
+  const p=w2s(src.p,src.z+.08);
+  drawScreenFlame(p,scale,src.id,true);
+}
+function drawCastleFireFixtures(){
+  for(const src of towerTorchSources())drawTorchFixture(src);
+  for(const src of battlementBrazierSources())drawBrazierFixture(src);
+}
+function drawFireGlows(nf){
+  if(nf<=.01)return;
+  const scale=clamp(State.view.scale,.55,1.45);
+  ctx.save();ctx.globalCompositeOperation='screen';
+  for(const src of fireSources()){
+    const p=w2s(src.p,src.z+(src.kind==='brazier'?.08:0));
+    const r=(src.kind==='brazier'?12:9)*scale,n=Math.max(.1,nf)*fireFlicker(src.id);
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+    g.addColorStop(0,'rgba(255,198,88,'+(.42*n).toFixed(3)+')');
+    g.addColorStop(.45,'rgba(242,145,48,'+(.20*n).toFixed(3)+')');
+    g.addColorStop(1,'rgba(242,145,48,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+    drawScreenFlame(p,scale,src.id,src.kind==='brazier');
+  }
+  ctx.restore();
+}
 function gateBattlementPieces(s){
   if(s.type!=='gate'||underConstruction(s)||gateRoofStyle(s)!=='battlement')return[];
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
@@ -3214,19 +3345,41 @@ function drawPeasants(){
 function militaryScale(){
   return clamp(State.view.scale,.55,1.45);
 }
-function drawSoldierFigure(p,z,type,id,phase=0){
-  const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
-  const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72;
-
-  ctx.save();
-
-  // Armoured torso.
-  ctx.fillStyle=type==='archer'?'#58654a':type==='knight'?'#59677a':'#676b6d';
-  ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);
+function soldierLivery(id){
+  const flip=(peasantHash(String(id)+'-livery')&1)!==0;
+  return flip
+    ?{main:REIGN_COLOR_2,alt:REIGN_COLOR_1,mainDark:REIGN_COLOR_2_DARK,altDark:REIGN_COLOR_1_DARK}
+    :{main:REIGN_COLOR_1,alt:REIGN_COLOR_2,mainDark:REIGN_COLOR_1_DARK,altDark:REIGN_COLOR_2_DARK};
+}
+function soldierBodyPath(base,bodyW,bodyH,top,bodyY){
   ctx.beginPath();
   ctx.moveTo(base.x-bodyW*.42,top);ctx.lineTo(base.x+bodyW*.42,top);
   ctx.lineTo(base.x+bodyW*.50,bodyY+bodyH*.50);ctx.lineTo(base.x-bodyW*.50,bodyY+bodyH*.50);ctx.closePath();
-  ctx.fill();ctx.stroke();
+}
+function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale){
+  ctx.save();
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.clip();
+  ctx.fillStyle=livery.main;ctx.fillRect(cx-rx,cy-ry,rx,ry);
+  ctx.fillStyle=livery.alt;ctx.fillRect(cx,cy-ry,rx,ry);
+  ctx.fillStyle=livery.alt;ctx.fillRect(cx-rx,cy,rx,ry);
+  ctx.fillStyle=livery.main;ctx.fillRect(cx,cy,rx,ry);
+  ctx.restore();
+  ctx.save();ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(.8,.9*scale);
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+}
+function drawSoldierFigure(p,z,type,id,phase=0){
+  const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
+  const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,livery=soldierLivery(id);
+
+  ctx.save();
+
+  // Realm livery: every soldier carries both current reign colours.
+  soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.save();ctx.clip();
+  ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH*.52);
+  ctx.fillStyle=livery.alt;ctx.fillRect(base.x-bodyW,top+bodyH*.52,bodyW*2,bodyH);
+  ctx.restore();
+  soldierBodyPath(base,bodyW,bodyH,top,bodyY);
+  ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
 
   // Head + steel cap.
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
@@ -3248,9 +3401,7 @@ function drawSoldierFigure(p,z,type,id,phase=0){
     ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
   }else{
     const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
-    // Shield.
-    ctx.fillStyle='#425d78';ctx.strokeStyle='#b7aa8f';ctx.lineWidth=Math.max(.8,.9*scale);
-    ctx.beginPath();ctx.ellipse(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale);
     // Sword.
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
     ctx.beginPath();ctx.moveTo(base.x+bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();
@@ -3773,6 +3924,7 @@ function drawDayNightOverlay(){
 function drawNightLights(){
   const nf=nightFactor();if(nf<=.01)return;
   drawFacadeWindows(true,nf);
+  drawFireGlows(nf);
 }
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
@@ -3810,9 +3962,11 @@ function draw(){
   }
   drawTowerRoofs();
   drawGateRoofs();
+  drawTowerFlags();
   drawCastleSelection();
   drawCastleSoldiers();
   drawCastleBattlements();
+  drawCastleFireFixtures();
   drawFacadeWindows(false,1);
   drawGatePortals();
   for(const house of completedSettlement('house'))drawHouseDoor(house);
