@@ -163,6 +163,11 @@ const COSTS={
 const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
+const PEASANT_VISUAL_SPEED=.20;
+const PEASANT_PALETTE=Object.freeze([
+  '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
+  '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
+]);
 const ROAD_RULES={
   arterialSegmentMin:4.2,arterialSegmentMax:5.4,
   localSegmentMin:2.8,localSegmentMax:4.2,
@@ -864,6 +869,57 @@ function drawAutoStructure(s){
   ctx.restore();if(underConstruction(s))drawConstructionProgress(s);
 }
 function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};return{x:0,y:0}}
+function peasantHash(id){return biomeHash(String(id||'peasant'))}
+function completedSettlement(type){return State.structures.filter(s=>s.type===type&&!underConstruction(s))}
+function peasantVisualDay(){return State.clock.day*PEASANT_VISUAL_SPEED}
+function assignedField(house,fields){
+  let best=null,bestD=Infinity;
+  for(const field of fields){const d=dist(house,field);if(d<bestD){bestD=d;best=field}}
+  return best;
+}
+function peasantPosition(house,field,day){
+  const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.035;
+  const leave0=.20+stagger,leave1=.32+stagger,return0=.70+stagger,return1=.82+stagger;
+  if(frac<leave0||frac>return1)return null;
+  const home={x:house.x,y:house.y},work={x:field.x,y:field.y};
+  const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+  if(frac<leave1){
+    const t=smooth((frac-leave0)/(leave1-leave0));
+    return{x:home.x+(work.x-home.x)*t,y:home.y+(work.y-home.y)*t};
+  }
+  if(frac<return0){
+    const span=Math.max(.001,return0-leave1),t=(frac-leave1)/span;
+    const a=(h%6283)/1000,ca=Math.cos(field.angle||0),sa=Math.sin(field.angle||0);
+    const lx=Math.sin(t*Math.PI*4+a)*Math.min(.38,field.w*.18);
+    const ly=Math.cos(t*Math.PI*3+a*.73)*Math.min(.28,field.h*.18);
+    return{x:work.x+lx*ca-ly*sa,y:work.y+lx*sa+ly*ca};
+  }
+  const t=smooth((frac-return0)/(return1-return0));
+  return{x:work.x+(home.x-work.x)*t,y:work.y+(home.y-work.y)*t};
+}
+function peasantAnimationActive(){
+  const day=peasantVisualDay(),frac=day-Math.floor(day);
+  return frac>=.18&&frac<=.85&&completedSettlement('house').length>0&&completedSettlement('field').length>0;
+}
+function drawPeasants(){
+  const houses=completedSettlement('house'),fields=completedSettlement('field');
+  if(!houses.length||!fields.length)return;
+  const day=peasantVisualDay(),dots=[];
+  for(const house of houses){
+    const field=assignedField(house,fields),p=field&&peasantPosition(house,field,day);
+    if(p)dots.push({p,color:PEASANT_PALETTE[peasantHash(house.id)%PEASANT_PALETTE.length]});
+  }
+  dots.sort((a,b)=>{const aa=rotateViewPoint(a.p),bb=rotateViewPoint(b.p);return aa.x+aa.y-(bb.x+bb.y)});
+  const radius=clamp(2.8*State.view.scale,1.7,4.1);
+  ctx.save();
+  for(const dot of dots){
+    const p=w2s(dot.p,.10);
+    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);
+    ctx.fillStyle=dot.color;ctx.fill();
+    ctx.strokeStyle='rgba(33,24,16,.78)';ctx.lineWidth=Math.max(.8,radius*.28);ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
 }
@@ -883,6 +939,7 @@ function draw(){
   const linearAndOther=raised.filter(s=>!['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   const castleCaps=raised.filter(s=>!s.auto&&['tower','gate'].includes(s.type)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of linearAndOther){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  drawPeasants();
   for(const s of castleCaps)drawStructure(s)
 
   // Placement preview always wins the visual stack.
@@ -1061,7 +1118,9 @@ function simulationFrame(now){
   if(State.clock.speed>0){
     const before=State.clock.day;State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
     processVillageGrowth();
-    if(Math.floor(before*4)!==Math.floor(State.clock.day*4)){renderUI();draw()}
+    const quarterChanged=Math.floor(before*4)!==Math.floor(State.clock.day*4);
+    if(quarterChanged)renderUI();
+    if(quarterChanged||peasantAnimationActive())draw();
     if(now-simPersistAt>1000){saveLocal();simPersistAt=now}
   }
   requestAnimationFrame(simulationFrame);
