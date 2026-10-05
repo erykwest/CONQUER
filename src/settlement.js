@@ -1,6 +1,36 @@
 (() => {
 'use strict';
-const canvas=document.getElementById('c'),ctx=canvas.getContext('2d'),wrap=document.getElementById('wrap');
+const canvas=document.getElementById('c'),wrap=document.getElementById('wrap');
+let ctx=canvas.getContext('2d');
+const screenCtx=ctx;
+const sceneCache={
+  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true},
+  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true},
+  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true}
+};
+for(const layer of Object.values(sceneCache))layer.ctx=layer.canvas.getContext('2d');
+function invalidateSceneCache(layer='all'){
+  if(layer==='all'){for(const item of Object.values(sceneCache))item.dirty=true;return}
+  if(sceneCache[layer])sceneCache[layer].dirty=true;
+}
+function withRenderContext(next,fn){
+  const prev=ctx;ctx=next;
+  try{return fn()}finally{ctx=prev}
+}
+function prepareSceneCache(layer){
+  const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1,entry=sceneCache[layer];
+  const w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
+  if(entry.canvas.width!==w||entry.canvas.height!==h){
+    entry.canvas.width=w;entry.canvas.height=h;entry.dirty=true;
+  }
+  entry.ctx.setTransform(d,0,0,d,0,0);
+  entry.ctx.clearRect(0,0,r.width,r.height);
+  return entry;
+}
+function blitSceneCache(layer){
+  const r=wrap.getBoundingClientRect(),entry=sceneCache[layer];
+  screenCtx.drawImage(entry.canvas,0,0,entry.canvas.width,entry.canvas.height,0,0,r.width,r.height);
+}
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
@@ -1117,7 +1147,7 @@ function openVillageModal(well){
   modal.classList.add('open');input.value=State.village.name||'';setTimeout(()=>input.focus(),0);
 }
 function closeVillageModal(){document.getElementById('foundVillageModal').classList.remove('open');State.pendingWellId=null}
-function resize(){const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
+function resize(){const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';screenCtx.setTransform(d,0,0,d,0,0);invalidateSceneCache();draw()}
 function rotateViewPoint(p,turns=State.view.rotation||0){
   const q=((turns%4)+4)%4,c=WORLD/2,dx=p.x-c,dy=p.y-c;
   if(q===1)return{x:c-dy,y:c+dx};
@@ -1141,7 +1171,7 @@ function fit(){
   const h=worldH*State.view.scale;
   State.view.x=r.width/2-12;
   State.view.y=Math.max(38,(r.height-h)/2+20);
-  draw();
+  invalidateSceneCache();draw();
 }
 function projectPath(points,z=0){
   return points.map(p=>w2s(p,z));
@@ -2514,6 +2544,7 @@ function drawChimney(spec){
   extrudePolygonAt(pts,spec.z0,spec.z1,{top:'#3b302c',sideA:'#332824',sideB:'#493732',stroke:'#6a5148'});
 }
 function drawSmoke(spec,id,now){
+  if(!worldPointVisible(spec.p,spec.z||0,80))return;
   const p=w2s(spec.center,spec.z1),seed=(biomeHash(String(id||''))%997)/997;
   const scale=Math.max(.55,State.view.scale);
   ctx.save();
@@ -2936,7 +2967,11 @@ function drawDynamicShadows(){
   const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','built','market','tavern','church'].includes(s.type));
   for(const s of casters)drawStructureShadow(s,sun);
 }
+let fieldWorkAssignmentCache={key:null,map:new Map()};
 function fieldWorkAssignments(houses,fields){
+  const key=houses.map(h=>h.id).sort().join(',')+'|'+fields.map(f=>[f.id,f.x,f.y,f.w,f.h,f.angle].join(':')).sort().join(',');
+  if(fieldWorkAssignmentCache.key===key)return fieldWorkAssignmentCache.map;
+
   const slots=[];
   for(const field of fields)for(const cell of fieldGrid(field).cells)slots.push({field,cell,used:false});
   const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id));
@@ -2949,6 +2984,7 @@ function fieldWorkAssignments(houses,fields){
     }
     if(best){best.used=true;assignments.set(house.id,{field:best.field,cell:best.cell})}
   }
+  fieldWorkAssignmentCache={key,map:assignments};
   return assignments;
 }
 
@@ -2962,8 +2998,11 @@ function peasantObstacleSignature(){
   }).join('|');
 }
 function syncPeasantPathCache(){
-  const sig=peasantObstacleSignature();
-  if(sig!==peasantPathSignature){peasantPathSignature=sig;peasantPathCache.clear()}
+  // Topology mutations explicitly reset peasantPathSignature to ''. Avoid
+  // serializing every obstacle again for every resident/path lookup.
+  if(peasantPathSignature)return;
+  peasantPathSignature=peasantObstacleSignature()||'empty';
+  peasantPathCache.clear();
 }
 function pointBlockedForPeasant(p,sourceHouseId){
   for(const s of State.structures){
@@ -3412,6 +3451,10 @@ function drawVillagerFigure(dot){
   drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
   drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex);
 }
+function worldPointVisible(p,z=0,pad=48){
+  const s=w2s(p,z),r=wrap.getBoundingClientRect();
+  return s.x>=-pad&&s.y>=-pad&&s.x<=r.width+pad&&s.y<=r.height+pad;
+}
 function drawPeasants(){
   const houses=completedSettlement('house'),fields=completedSettlement('field');
   if(!houses.length)return;
@@ -3425,6 +3468,7 @@ function drawPeasants(){
       let p=residentClassPosition(house,resident,day,assignment);
       if(!p)continue;
       p=residentScatter(p,resident.id,resident.age==='child');
+      if(!worldPointVisible(p,0,40))continue;
       dots.push({
         p,id:resident.id,kind,sex:resident.sex,age:resident.age,
         colors:villagerBodyColors(resident.id,kind)
@@ -3515,8 +3559,8 @@ function drawCastleSoldiers(){
   // Spearmen walk the wall-walk.
   for(const wall of State.structures){
     if(wall.type!=='wall'||underConstruction(wall))continue;
-    const p=wallPatrolPoint(wall,day);
-    drawSoldierFigure(p,structureHeight(wall)+.10,'spearman',wall.id,day);
+    const p=wallPatrolPoint(wall,day),z=structureHeight(wall)+.10;
+    if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',wall.id,day);
   }
 
   // One archer lookout on every completed crenellated tower.
@@ -3524,8 +3568,8 @@ function drawCastleSoldiers(){
     if(tower.type!=='tower'||underConstruction(tower)||towerRoofStyle(tower)!=='battlement')continue;
     const hash=peasantHash(tower.id+'-archer'),a=(hash%360)*Math.PI/180;
     const radius=tower.shape==='round'?tower.r*.26:(tower.size||1)*.18;
-    const p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius};
-    drawSoldierFigure(p,structureHeight(tower)+.08,'archer',tower.id,day);
+    const p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius},z=structureHeight(tower)+.08;
+    if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'archer',tower.id,day);
   }
 }
 function drawTrainingSoldiers(){
@@ -3543,6 +3587,7 @@ function drawTrainingSoldiers(){
       const advance=Math.sin((pulse+s.pair*.37)*Math.PI*2)*.20*side;
       const local={x:s.x+advance,y:s.y};
       const p=houseLocalToWorld(yard,local.x,local.y);
+      if(!worldPointVisible(p,.13,48))continue;
       dots.push({p,z:.13,id:yard.id+':knight:'+i,phase:pulse+i*.17});
     }
   }
@@ -4028,37 +4073,83 @@ function drawStructure(s,preview=false){
   else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
   ctx.restore();if(!preview&&underConstruction(s))drawConstructionProgress(s);
 }
+function drawBaseStaticScene(){
+  const entry=prepareSceneCache('base');
+  withRenderContext(entry.ctx,()=>{
+    drawTerrain();drawGrid();drawEnvironment();drawBuildArea();
+
+    // Completed terrain-level auto geometry is immutable between topology changes.
+    State.structures
+      .filter(s=>s.auto&&['field','road'].includes(s.type)&&!underConstruction(s))
+      .forEach(drawAutoStructure);
+
+    // Shadows are expensive; update them with the static layer at maintenance
+    // ticks rather than recomputing every visual frame.
+    drawDynamicShadows();
+
+    const completedOthers=State.structures
+      .filter(s=>!(s.auto&&['field','road'].includes(s.type))&&!isCastlePart(s)&&!underConstruction(s))
+      .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+    for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  });
+  entry.dirty=false;
+}
+function drawCastleBodyStaticScene(){
+  const entry=prepareSceneCache('castleBody');
+  withRenderContext(entry.ctx,()=>{
+    const unionOk=drawCastleUnion();
+    if(!unionOk){
+      const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+      for(const s of fallback)drawStructure(s);
+      drawTowerDoors();
+    }else{
+      drawTowerDoors();
+      drawCastleUnionDetails();
+    }
+    drawTowerRoofs();
+    drawGateRoofs();
+  });
+  entry.dirty=false;
+}
+function drawCastleFrontStaticScene(){
+  const entry=prepareSceneCache('castleFront');
+  withRenderContext(entry.ctx,()=>drawCastleBattlements());
+  entry.dirty=false;
+}
+function ensureStaticSceneCaches(){
+  if(sceneCache.base.dirty)drawBaseStaticScene();
+  if(sceneCache.castleBody.dirty)drawCastleBodyStaticScene();
+  if(sceneCache.castleFront.dirty)drawCastleFrontStaticScene();
+}
 function draw(){
-  const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawTerrain();drawGrid();drawEnvironment();drawBuildArea();
+  const r=wrap.getBoundingClientRect();
+  ctx=screenCtx;
+  screenCtx.clearRect(0,0,r.width,r.height);
+  ensureStaticSceneCaches();
+  blitSceneCache('base');
 
-  State.structures.filter(s=>s.auto&&['field','road'].includes(s.type)).forEach(drawAutoStructure);
-  drawDynamicShadows();
+  // Only construction sites remain fully dynamic at ground/building depth.
+  State.structures
+    .filter(s=>s.auto&&['field','road'].includes(s.type)&&underConstruction(s))
+    .forEach(drawAutoStructure);
+  const dynamicSites=State.structures
+    .filter(s=>!(s.auto&&['field','road'].includes(s.type))&&underConstruction(s))
+    .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
 
-  // Non-castle raised objects and castle elements still under construction.
-  const others=State.structures.filter(s=>!(s.auto&&['field','road'].includes(s.type))&&(!isCastlePart(s)||underConstruction(s))).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of others){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  // Population remains between settlement massing and completed castle massing,
+  // preserving the existing occlusion behaviour.
   drawPeasants();
   drawTrainingSoldiers();
+  blitSceneCache('castleBody');
 
-  // Completed castle = true footprint union rendered in horizontal height bands.
-  const unionOk=drawCastleUnion();
-  if(!unionOk){
-    const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of fallback)drawStructure(s);
-    drawTowerDoors();
-  }else{
-    // Door openings belong to the masonry facade itself, so they are painted
-    // before every architectural/detail layer that may legitimately cover them.
-    drawTowerDoors();
-    drawCastleUnionDetails();
-  }
-  drawTowerRoofs();
-  drawGateRoofs();
   drawTowerFlags();
   drawCastleSelection();
   drawCastleSoldiers();
-  drawCastleBattlements();
+  blitSceneCache('castleFront');
   drawCastleFireFixtures();
+
+  // Small facade/details stay dynamic for night lighting and selection semantics.
   drawFacadeWindows(false,1);
   drawGatePortals();
   for(const house of completedSettlement('house'))drawHouseDoor(house);
@@ -4088,9 +4179,15 @@ function structureAtScreen(p){
   return null;
 }
 function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-linear],[data-gate],[data-well],[data-civic]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
-function markDirty(){State.dirty=true;document.getElementById('saveState').textContent='unsaved';saveLocal()}
+function markDirty(){
+  State.dirty=true;
+  peasantPathSignature='';peasantPathCache.clear();
+  fieldWorkAssignmentCache={key:null,map:new Map()};
+  invalidateSceneCache();
+  document.getElementById('saveState').textContent='unsaved';saveLocal();
+}
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
-function selectStructure(s){State.selectedId=s?.id||null;renderFunctionPanel();draw()}
+function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
 function addStructure(s){
   normalizeStructureVariants(s);
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
@@ -4323,7 +4420,7 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 canvas.addEventListener('pointerup',()=>pan=null);canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,6);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;draw()},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,6);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;invalidateSceneCache();draw()},{passive:false});
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
 for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const level=State.buildLevels.wall,tier=State.buildLevels.wallTier;setTool({kind:'linear',linear:b.dataset.linear,level,tier,label:(b.dataset.linear==='wall'?`Wall T${tier}`:'Built section')+` L${level} — choose point A`,el:b})};
@@ -4415,9 +4512,9 @@ function migrateStructures(list){
   return migrated;
 }
 function saveLocal(){localStorage.setItem('conquer.settlement.0.0',JSON.stringify({seed:State.seed,biome:State.biome,neighborBiomes:State.neighborBiomes,structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}))}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
+function loadLocal(){try{const x=JSON.parse(localStorage.getItem('conquer.settlement.0.0')||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.neighborBiomes=x.neighborBiomes||{};State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();generateEnvironment();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads();invalidateSceneCache();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch{}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads();saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads();invalidateSceneCache();saveLocal();renderUI();renderFunctionPanel();draw()}}
 async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
 function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
@@ -4430,10 +4527,10 @@ function rotateCamera(delta){
   State.view.rotation=((State.view.rotation||0)+delta+4)%4;
   const after=w2s(anchor);
   State.view.x+=pivot.x-after.x;State.view.y+=pivot.y-after.y;
-  State.draft=null;saveLocal();draw();status('View rotation: '+(State.view.rotation*90)+'°');
+  State.draft=null;invalidateSceneCache();saveLocal();draw();status('View rotation: '+(State.view.rotation*90)+'°');
 }
 function panCamera(dx,dy){
-  State.view.x+=dx;State.view.y+=dy;saveLocal();draw();
+  State.view.x+=dx;State.view.y+=dy;invalidateSceneCache();saveLocal();draw();
 }
 function setTimeSpeed(speed){
   speed=Number(speed)||0;
@@ -4473,6 +4570,9 @@ function runSettlementMaintenance(force=false){
   changed+=syncCompletedTowerWallColliders(false);
   changed+=reconcileGateMainConnections(false);
   changed+=reconcileSettlementAccessRoads();
+  // Construction completion and sun position may have changed even without
+  // topology edits; rebuild static layers once per maintenance tick.
+  invalidateSceneCache();
   return changed;
 }
 function simulationFrame(now){
