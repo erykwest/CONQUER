@@ -739,10 +739,13 @@ function drawExposedTop(multi,z){
 }
 function drawCastleUnion(){
   const bands=castleUnionBands();if(!bands)return false;
-  for(const band of bands)drawMultiPolygonBand(band.geometry,band.z0,band.z1);
   const pc=window.__polygonClipping;
+  // Correct painter order: finish one vertical band, draw only its exposed
+  // horizontal surface, then continue with the taller band above it.
+  // Drawing all tops at the end makes lower terraces paint over taller walls.
   for(let i=0;i<bands.length;i++){
     const band=bands[i],next=bands[i+1];
+    drawMultiPolygonBand(band.geometry,band.z0,band.z1);
     let exposed=band.geometry;
     if(next&&pc){
       try{exposed=pc.difference(band.geometry,next.geometry)}catch(err){exposed=band.geometry}
