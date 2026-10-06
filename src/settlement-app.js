@@ -69,11 +69,40 @@ function deleteStructure(id){
   if(target.type==='well'){
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null};
-  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id);
+  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id);
+  reconcileTowerSecondaryBranches(Infinity,true);
   if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
 }
 function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
 function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
+function normalizeTowerAngle(a){
+  const tau=Math.PI*2;
+  return((Number(a)||0)%tau+tau)%tau;
+}
+function turnTower(target,delta,label){
+  if(!target||target.type!=='tower')return false;
+
+  target.angle=normalizeTowerAngle((Number(target.angle)||0)+delta);
+  if(target.parentTowerId&&target.shape==='square'){
+    target.orientationOffset=normalizeTowerAngle((Number(target.orientationOffset)||0)+delta);
+  }
+
+  // A parent rotation carries its attached subtorri; wall sockets are rebuilt
+  // against the new tower footprint/facing using the existing collider protocol.
+  syncSubtowerTree(target.id);
+  target.wallColliderSyncSignature=null;
+  syncCompletedTowerWallColliders(true);
+
+  // Service roads are derived from the actual tower entrance/facing.
+  rebuildTowerSecondaryBranch(target,true);
+
+  invalidateCastleColliderGeometry(target);
+  markDirty();
+  renderFunctionPanel();
+  draw();
+  status(label);
+  return true;
+}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
@@ -93,6 +122,8 @@ function renderFunctionPanel(){
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
   if(s.type==='tower'){
+    const deg=Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360;
+    html+=`<div class="slot"><div class="slot-label">Tower orientation · ${deg}°</div><div class="grid"><button data-tower-flip>⇄ Flip</button><button data-tower-rotate90>↻ Rotate 90°</button></div><div class="legend">Flip reverses the tower front by 180°. Secondary service branches follow the new entrance.</div></div>`;
     if(isWoodTower(s)){
       html+=`<div class="slot"><div class="legend">Wooden tower · fixed H1. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
       if(woodTowerStyle(s)==='palisadeTower'){
@@ -160,6 +191,8 @@ function renderFunctionPanel(){
     markDirty();renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
+  slots.querySelectorAll('[data-tower-rotate90]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI/2,'Tower rotated 90°')});
   slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markDirty();renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
   slots.querySelectorAll('[data-wood-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return;target.woodRoof=btn.dataset.woodRoof==='pitched'?'pitched':'open';markDirty();renderFunctionPanel();draw();status('Wood tower roof: '+target.woodRoof)});
   slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markDirty();renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
@@ -349,6 +382,7 @@ function migrateStructures(list){
     }
     if(s.type==='tower'){
       s.material=s.material==='wood'?'wood':'stone';
+      if(!Number.isFinite(Number(s.orientationOffset)))s.orientationOffset=0;
       if(s.material==='wood'){
         s.woodStyle=s.woodStyle==='watchtower'?'watchtower':'palisadeTower';
         s.shape='square';s.level=1;
@@ -628,6 +662,7 @@ function runSettlementMaintenance(reason='watchdog'){
   let changed=0;
   changed+=syncCompletedTowerWallColliders(false);
   changed+=reconcileGateMainConnections(false);
+  changed+=reconcileTowerSecondaryBranches();
   changed+=reconcileSettlementAccessRoads();
 
   if(reason==='completion'){
