@@ -632,7 +632,9 @@ function reconcileReactiveRoadNetwork(){
   let changed=0;
   changed+=reconcileArterialRoutes();
   changed+=reconcileGateMainConnections(false);
-  changed+=reconcileTowerSecondaryBranches(Infinity,false);
+  // This entry point is used after load, when derived branches must be restored
+  // as existing geometry rather than re-enter construction.
+  changed+=reconcileTowerSecondaryBranches(Infinity,true);
   changed+=reconcileSettlementAccessRoads();
   if(changed)invalidateNavigation(false);
   return changed;
