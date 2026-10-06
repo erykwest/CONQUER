@@ -385,6 +385,50 @@ function slopePoint(band,u,v){
   const outer=mixWorld(band.oa,band.ob,u),inner=mixWorld(band.a,band.b,u);
   return mixWorld(outer,inner,v);
 }
+const LANDSCAPE_RENDER_BUDGET=Object.freeze({
+  terrainMarks:120,
+  rockDensity:2.35,
+  rockCrestDensity:.95,
+  forestDensity:.95,
+  forestMin:14,
+  forestMax:40,
+  flowerClusters:520
+});
+let landscapeRenderCacheSeed=null;
+const steepRockLayoutCache=new Map();
+const forestTreeLayoutCache=new Map();
+let springFlowerLayoutCache=null;
+const springFlowerSprites=new Map();
+function ensureLandscapeRenderCaches(){
+  if(landscapeRenderCacheSeed===State.seed)return;
+  landscapeRenderCacheSeed=State.seed;
+  steepRockLayoutCache.clear();
+  forestTreeLayoutCache.clear();
+  springFlowerLayoutCache=null;
+}
+function screenPointVisibleRaw(p,z=0,pad=72){
+  const q=w2sRaw(p,z),r=wrap.getBoundingClientRect();
+  return q.x>=-pad&&q.y>=-pad&&q.x<=r.width+pad&&q.y<=r.height+pad;
+}
+function screenPolygonVisible(poly,pad=72){
+  if(!poly?.length)return false;
+  const r=wrap.getBoundingClientRect();
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of poly){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
+  return maxX>=-pad&&maxY>=-pad&&minX<=r.width+pad&&minY<=r.height+pad;
+}
+function terrainBandScreenPolygon(band){
+  return[
+    w2sRaw(band.oa,band.z0),w2sRaw(band.ob,band.z0),
+    w2sRaw(band.b,band.z1),w2sRaw(band.a,band.z1)
+  ];
+}
+function landscapeDetailTier(){
+  const s=State.view.scale;
+  if(s<.30)return 0;
+  if(s<.58)return 1;
+  return 2;
+}
 function drawGentleSlopeBand(band,winter){
   const strips=4;
   const fills=winter
