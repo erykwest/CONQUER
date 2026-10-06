@@ -476,6 +476,7 @@ function drawStructure(s,preview=false){
   ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
   if(isCivic(s))drawCivicStructure(s,preview);
   else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
+  else if(s.type==='palisade')drawPalisade(s,preview);
   else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
   ctx.restore();if(!preview&&underConstruction(s))drawConstructionProgress(s);
 }
