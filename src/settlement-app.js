@@ -496,6 +496,49 @@ function ensureSeasonControls(){
     b.classList.toggle('active',b.dataset.season===State.seasonOverride);
   });
 }
+function freshLandscapeSeed(){
+  if(window.crypto?.getRandomValues){
+    const n=new Uint32Array(1);crypto.getRandomValues(n);
+    return Math.max(1,n[0]&0x7fffffff);
+  }
+  return Math.max(1,Math.floor(Math.random()*2147483647));
+}
+function generateNewMap(){
+  State.clock.speed=0;
+  State.draft=null;State.selectedId=null;
+  State.seed=freshLandscapeSeed();
+  localStorage.setItem('conquer.seed.0.0',String(State.seed));
+
+  // Hard reset ONLY the generated landscape and auto-growth geometry.
+  // Player-built structures remain available for regression testing.
+  State.relief=null;
+  State.environment=[];
+  State.structures=State.structures.filter(s=>!s.auto);
+  if(State.village.founded){
+    State.village.growthStep=0;
+    State.village.nextGrowthDay=State.clock.day+.75;
+    State.village.roadPlan=null;
+    State.village.baseRoadAngle=null;
+    State.village.accessRoadVersion=0;
+  }
+
+  clearReliefBandCache();
+  generateRelief();
+  generateEnvironment();
+  invalidateNavigation(false);
+  fieldWorkAssignmentCache={key:null,map:new Map()};
+  invalidateSceneCache();
+  saveLocal();
+  markDirty();
+  renderUI();
+  renderFunctionPanel();
+  draw();
+
+  const stats=State.relief?.stats||reliefStats();
+  const pct=n=>Math.round((Number(n)||0)*100);
+  status(`Nuova mappa · seed ${State.seed} · colline ${pct(stats.coverage)}% · ripidi ${pct(stats.steepRatio)}% · multilivello ${pct(stats.multiRatio)}% · H${stats.maxHeight}`);
+}
+document.getElementById('newMapBtn').onclick=generateNewMap;
 document.getElementById('rotateLeft').onclick=()=>rotateCamera(-1);
 document.getElementById('rotateRight').onclick=()=>rotateCamera(1);
 document.getElementById('biomeSelect').onchange=e=>{
