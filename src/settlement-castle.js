@@ -264,20 +264,63 @@ function drawRaisedFan(f,height){
   faces.sort((a,b)=>a.depth-b.depth);
   for(const q of faces)pathPolygon(q.poly,q.i%2?'#55493d':'#66584a','rgba(170,150,125,.35)',.8);
 }
-const FOREST_TREE_SPRITE=new Image();
-let forestTreeSpriteReady=false;
-FOREST_TREE_SPRITE.onload=()=>{
-  forestTreeSpriteReady=true;
-  invalidateSceneCache('base');
-  if(typeof draw==='function')draw();
-};
-FOREST_TREE_SPRITE.src='./src/assets/tree-svgrepo-com.svg';
+const FOREST_TREE_ASSETS=[
+  './src/assets/forest/tree_01_tonda.svg',
+  './src/assets/forest/tree_02_affusolata.svg',
+  './src/assets/forest/tree_03_conica.svg',
+  './src/assets/forest/tree_04_ombrello.svg',
+  './src/assets/forest/tree_05_goccia.svg',
+  './src/assets/forest/tree_06_stratificata.svg',
+  './src/assets/forest/tree_07_asimmetrica.svg'
+];
+const FOREST_CANOPY_PALETTE=['#355f2f','#3f6b35','#49783b','#557f43','#628b4c'];
+const forestTreeSprites=[];
+let forestTreeSpritesReady=false;
+async function loadForestTreeSprites(){
+  try{
+    const sources=await Promise.all(FOREST_TREE_ASSETS.map(path=>fetch(path).then(r=>{
+      if(!r.ok)throw new Error('Forest SVG '+r.status+' '+path);
+      return r.text();
+    })));
+    const jobs=[];
+    for(let shape=0;shape<sources.length;shape++){
+      forestTreeSprites[shape]=[];
+      for(let color=0;color<FOREST_CANOPY_PALETTE.length;color++){
+        const svg=sources[shape].replace(/fill="#3B5174"/gi,`fill="${FOREST_CANOPY_PALETTE[color]}" fill-opacity="0.8"`);
+        const img=new Image();
+        forestTreeSprites[shape][color]=img;
+        jobs.push(new Promise((resolve,reject)=>{
+          img.onload=resolve;
+          img.onerror=reject;
+          img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+        }));
+      }
+    }
+    await Promise.all(jobs);
+    forestTreeSpritesReady=true;
+    invalidateSceneCache('base');
+    if(typeof draw==='function')draw();
+  }catch(err){
+    console.warn('Forest SVG load failed',err);
+  }
+}
+loadForestTreeSprites();
 
-function drawTree(p,scale=1){
-  if(!forestTreeSpriteReady)return;
-  const base=w2s(p,0);
-  const size=Math.max(10,U*State.view.scale*2.25*scale);
-  ctx.drawImage(FOREST_TREE_SPRITE,base.x-size*.5,base.y-size*.94,size,size);
+function drawTree(tree){
+  if(!forestTreeSpritesReady)return;
+  const img=forestTreeSprites[tree.shapeIndex]?.[tree.colorIndex];
+  if(!img)return;
+  const base=w2s(tree.p,0);
+  const size=Math.max(10,U*State.view.scale*2.25*tree.scale);
+  ctx.save();
+  if(tree.flip){
+    ctx.translate(base.x,0);
+    ctx.scale(-1,1);
+    ctx.drawImage(img,-size*.5,base.y-size*.94,size,size);
+  }else{
+    ctx.drawImage(img,base.x-size*.5,base.y-size*.94,size,size);
+  }
+  ctx.restore();
 }
 let forestGroundPatternCanvas=null;
 function getForestGroundPattern(){
@@ -306,6 +349,12 @@ function drawForestGround(f){
   const pts=projectPath(f.points);
   if(!pts.length)return;
   ctx.save();
+  // Forest masks may extend beyond the map; only the in-world portion is visible.
+  const world=projectPath([{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}]);
+  ctx.beginPath();
+  world.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath();
+  ctx.clip();
   ctx.beginPath();
   pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
@@ -323,14 +372,20 @@ function drawForestMask(f){
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0);
   const trees=[],target=forestTreeCount(f);
   let attempts=0;
-  while(trees.length<target&&attempts<target*12){
+  while(trees.length<target&&attempts<target*14){
     attempts++;
     const p={x:f.x+(rnd()-.5)*f.rx*1.9,y:f.y+(rnd()-.5)*f.ry*1.9};
-    if(!environmentContains(f,p))continue;
-    trees.push({p,scale:.72+rnd()*.48});
+    if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
+    trees.push({
+      p,
+      shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
+      colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTE.length),
+      flip:rnd()<.5,
+      scale:.8+rnd()*.4
+    });
   }
   trees.sort((a,b)=>w2s(a.p,0).y-w2s(b.p,0).y);
-  for(const tree of trees)drawTree(tree.p,tree.scale);
+  for(const tree of trees)drawTree(tree);
 }
 function ellipseWorldPoints(f,n=28){
   const pts=[],ca=Math.cos(f.angle||0),sa=Math.sin(f.angle||0);
