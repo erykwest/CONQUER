@@ -374,7 +374,37 @@ async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i
 async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.season=['summer','autumn','winter','spring'].includes(cloudPolicies.season)?cloudPolicies.season:'summer';const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();generateEnvironment();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();saveLocal();renderUI();renderFunctionPanel();draw()}}
 async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,season:State.season,village:State.village,clock:{day:State.clock.day}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
-function renderUI(){document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent='Day '+State.clock.day.toFixed(1);document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.season));const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+const CALENDAR_MONTHS=[
+  {name:'Gen',days:31},{name:'Feb',days:28},{name:'Mar',days:31},{name:'Apr',days:30},
+  {name:'Mag',days:31},{name:'Giu',days:30},{name:'Lug',days:31},{name:'Ago',days:31},
+  {name:'Set',days:30},{name:'Ott',days:31},{name:'Nov',days:30},{name:'Dic',days:31}
+];
+const CALENDAR_EPOCH_DAY_OF_YEAR=151; // Day 0 = 1 June, Year 1.
+function calendarDateFromDay(day=State.clock.day){
+  const absolute=Math.max(0,Math.floor(Number(day)||0))+CALENDAR_EPOCH_DAY_OF_YEAR;
+  const year=Math.floor(absolute/365)+1;
+  let dayOfYear=absolute%365,month=0;
+  while(month<CALENDAR_MONTHS.length-1&&dayOfYear>=CALENDAR_MONTHS[month].days){
+    dayOfYear-=CALENDAR_MONTHS[month].days;
+    month++;
+  }
+  return{year,month,day:dayOfYear+1,name:CALENDAR_MONTHS[month].name};
+}
+function seasonForMonth(month){
+  if(month===11||month<=1)return'winter';
+  if(month<=4)return'spring';
+  if(month<=7)return'summer';
+  return'autumn';
+}
+function syncSeasonToCalendar(){
+  const next=seasonForMonth(calendarDateFromDay().month);
+  if(State.season===next)return false;
+  State.season=next;
+  document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.season));
+  invalidateSceneCache('base');
+  return true;
+}
+function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${cal.day} ${cal.name} · Y${cal.year} · Day ${State.clock.day.toFixed(1)}`;document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.season));const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
 function visibleCanvasCenter(){
   const r=canvas.getBoundingClientRect();
   return{x:r.width/2,y:r.height/2};
@@ -409,13 +439,10 @@ function setLightOverride(mode){
 }
 function setSeason(season){
   if(!['summer','autumn','winter','spring'].includes(season))return;
-  State.season=season;
-  document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.season));
-  invalidateSceneCache('base');
-  saveLocal();
   const labels={summer:'Estate',autumn:'Autunno',winter:'Inverno',spring:'Primavera'};
-  status('Stagione: '+labels[season]);
-  draw();
+  const months={summer:'Giu–Ago',autumn:'Set–Nov',winter:'Dic–Feb',spring:'Mar–Mag'};
+  const current=seasonForMonth(calendarDateFromDay().month);
+  status(season===current?`${labels[season]} attiva · ${months[season]}`:`${labels[season]} · attiva automaticamente ${months[season]}`);
 }
 function ensureSeasonControls(){
   const panel=document.getElementById('timePanel');
@@ -499,6 +526,7 @@ function simulationFrame(now){
   if(State.clock.speed>0){
     const before=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
+    if(syncSeasonToCalendar())scheduleLocalSave(100);
 
     processVillageGrowth();
 

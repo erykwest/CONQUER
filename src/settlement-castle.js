@@ -261,7 +261,7 @@ function drawTerrain(){
   if(State.season==='spring'){
     const flowers=seedRand((State.seed^0x6b8f4a2d)>>>0);
     const palette=['#f7d7e8','#f3e37b','#f4f1dc','#d9b3ef','#e7a6b8'];
-    for(let i=0;i<520;i++){
+    for(let i=0;i<5200;i++){
       const p=w2s({x:flowers()*WORLD,y:flowers()*WORLD});
       const size=clamp((.65+flowers()*1.25)*State.view.scale,1,2.4);
       ctx.fillStyle=palette[Math.floor(flowers()*palette.length)];
