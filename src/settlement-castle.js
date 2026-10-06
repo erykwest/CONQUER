@@ -279,6 +279,43 @@ function drawTree(p,scale=1){
   const size=Math.max(10,U*State.view.scale*2.25*scale);
   ctx.drawImage(FOREST_TREE_SPRITE,base.x-size*.5,base.y-size*.94,size,size);
 }
+let forestGroundPatternCanvas=null;
+function getForestGroundPattern(){
+  if(!forestGroundPatternCanvas){
+    const off=document.createElement('canvas');
+    off.width=72;off.height=72;
+    const p=off.getContext('2d');
+    p.fillStyle='#1d3218';
+    p.fillRect(0,0,72,72);
+    const rnd=seedRand(0x4f6a3b21);
+    for(let i=0;i<110;i++){
+      const x=rnd()*72,y=rnd()*72,rx=1.5+rnd()*5.5,ry=.8+rnd()*3.2;
+      p.fillStyle=rnd()>.52?'rgba(53,88,39,.30)':'rgba(10,25,10,.24)';
+      p.beginPath();p.ellipse(x,y,rx,ry,rnd()*Math.PI,0,Math.PI*2);p.fill();
+    }
+    for(let i=0;i<90;i++){
+      const x=rnd()*72,y=rnd()*72,r=.35+rnd()*.85;
+      p.fillStyle=rnd()>.5?'rgba(98,124,69,.13)':'rgba(6,17,7,.20)';
+      p.beginPath();p.arc(x,y,r,0,Math.PI*2);p.fill();
+    }
+    forestGroundPatternCanvas=off;
+  }
+  return ctx.createPattern(forestGroundPatternCanvas,'repeat');
+}
+function drawForestGround(f){
+  const pts=projectPath(f.points);
+  if(!pts.length)return;
+  ctx.save();
+  ctx.beginPath();
+  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath();
+  ctx.fillStyle=getForestGroundPattern()||'#1d3218';
+  ctx.fill();
+  ctx.strokeStyle='rgba(82,116,59,.58)';
+  ctx.lineWidth=1.15;
+  ctx.stroke();
+  ctx.restore();
+}
 function forestTreeCount(f){
   return clamp(Math.round((f.rx||5)*(f.ry||4)*1.55),22,58);
 }
@@ -308,6 +345,7 @@ function drawEnvironment(){
       ctx.strokeStyle=f.edge;ctx.lineWidth=Math.max(2,(f.width+.35)*U*State.view.scale*.72);ctx.stroke();ctx.strokeStyle=f.fill;ctx.lineWidth=Math.max(1.4,f.width*U*State.view.scale*.72);ctx.stroke();
     }else if(['forest','pond','sea'].includes(f.type)){
       if(f.type==='forest'){
+        drawForestGround(f);
         drawForestMask(f);
       }else{
         const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);
