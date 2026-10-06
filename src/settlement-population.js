@@ -611,7 +611,8 @@ function wellRoutineTravel(house,well,frac,t0,t1,reverse=false){
   const nominalSpeed=6;
   const needed=length/Math.max(.001,nominalSpeed);
   const duration=Math.max(scheduled,needed);
-  const t=routineSmooth((frac-t0)/duration);
+  const effectiveT0=t1-duration;
+  const t=routineSmooth((frac-effectiveT0)/duration);
   return pointAlongPath(path,reverse?1-t:t);
 }
 function structureAccessPoint(target,from,visitorId=''){
@@ -701,7 +702,8 @@ function routineTravel(house,start,goal,frac,t0,t1,tag){
   const nominalSpeed=6;
   const needed=length/nominalSpeed;
   const duration=Math.max(scheduled,needed);
-  const t=routineSmooth((frac-t0)/duration);
+  const effectiveT0=t1-duration;
+  const t=routineSmooth((frac-effectiveT0)/duration);
   return pointAlongPath(path,t);
 }
 function residentIdlePoint(anchor,id,day,radius=.16){
