@@ -580,20 +580,48 @@ function makeEnvSea(rnd){
   else points=[{x:WORLD,y:0},{x:WORLD,y:WORLD},...coast.slice().reverse()];
   return{id:'env-sea',type:'sea',side,points,coastline:coast,fill:'#23505a',edge:'#86b3b5'};
 }
-const LANDSCAPE_GENERATION_VERSION=2;
+const LANDSCAPE_GENERATION_VERSION=3;
 function reliefShuffle(list,rnd){
   for(let i=list.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[list[i],list[j]]=[list[j],list[i]]}
   return list;
 }
 function reliefEdgeWidth(kind){return kind==='steep'?.5:2}
+const STEEP_RATIO_BY_LEVEL=Object.freeze({1:.20,2:.30,3:.40,4:.50,5:.60});
+const RELIEF_MAX_EDGE=4;
+function resampleClosedPolygonMaxEdge(points,maxLen=RELIEF_MAX_EDGE){
+  const out=[];
+  for(let i=0;i<points.length;i++){
+    const a=points[i],b=points[(i+1)%points.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/maxLen));
+    for(let j=0;j<steps;j++){
+      const t=j/steps;
+      out.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    }
+  }
+  return out;
+}
+function assignSteepEdgesByLevel(relief,rnd){
+  const groups=new Map();
+  for(const hill of relief.hills||[])for(const level of hill.levels||[]){
+    level.edgeKinds=Array(level.top?.length||0).fill('gentle');
+    const h=level.z1;
+    if(!groups.has(h))groups.set(h,[]);
+    for(let i=0;i<level.edgeKinds.length;i++)groups.get(h).push({level,index:i});
+  }
+  for(const [h,refs] of groups){
+    reliefShuffle(refs,rnd);
+    const ratio=STEEP_RATIO_BY_LEVEL[h]??.20;
+    const count=Math.min(refs.length,Math.round(refs.length*ratio));
+    for(let i=0;i<count;i++)refs[i].level.edgeKinds[refs[i].index]='steep';
+  }
+}
 function makeProceduralHill(rnd,index){
-  const n=12+Math.floor(rnd()*5),maxHeight=index===0?5:2+Math.floor(rnd()*4);
+  const controlCount=12+Math.floor(rnd()*5),maxHeight=index===0?5:2+Math.floor(rnd()*4);
   const center={x:-18+rnd()*(WORLD+36),y:-18+rnd()*(WORLD+36)};
   const rx=22+rnd()*16,ry=15+rnd()*13,angle=rnd()*Math.PI;
   const ca=Math.cos(angle),sa=Math.sin(angle),angles=[];
   const phaseA=rnd()*Math.PI*2,phaseB=rnd()*Math.PI*2;
-  for(let i=0;i<n;i++)angles.push(i/n*Math.PI*2+(rnd()-.5)*.055);
-  const base=angles.map((a,i)=>{
+  for(let i=0;i<controlCount;i++)angles.push(i/controlCount*Math.PI*2+(rnd()-.5)*.055);
+  const control=angles.map(a=>{
     const rr=1
       +Math.sin(a*2+phaseA)*(.055+rnd()*.025)
       +Math.sin(a*3+phaseB)*(.035+rnd()*.018)
@@ -601,16 +629,12 @@ function makeProceduralHill(rnd,index){
     const x=Math.cos(a)*rx*rr,y=Math.sin(a)*ry*rr;
     return{x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca};
   });
+  const base=resampleClosedPolygonMaxEdge(control,RELIEF_MAX_EDGE),n=base.length;
   const levels=Array.from({length:maxHeight},(_,i)=>({
     id:`hill-${index+1}-l${i+1}`,hillId:`hill-${index+1}`,level:i+1,z0:i,z1:i+1,
     center:{x:center.x,y:center.y},
     gentleBase:2,steepBase:.5,edgeKinds:Array(n).fill('gentle'),multiEdges:[],top:[]
   }));
-  const steepRefs=[];
-  for(let l=0;l<maxHeight;l++)for(let e=0;e<n;e++)steepRefs.push([l,e]);
-  reliefShuffle(steepRefs,rnd);
-  const steepNeed=Math.ceil(steepRefs.length*.34);
-  for(let i=0;i<steepNeed;i++){const [l,e]=steepRefs[i];levels[l].edgeKinds[e]='steep'}
   const multiRefs=[];
   for(let l=0;l<maxHeight-1;l++)for(let e=0;e<n;e++)multiRefs.push([l,e]);
   reliefShuffle(multiRefs,rnd);
@@ -621,9 +645,8 @@ function makeProceduralHill(rnd,index){
     const prev=levels[l-1],cur=levels[l],multi=new Set(prev.multiEdges);
     cur.top=prev.top.map((p,i)=>{
       const d=dist(p,center)||1,prevEdge=(i-1+n)%n;
-      const width=(reliefEdgeWidth(cur.edgeKinds[i])+reliefEdgeWidth(cur.edgeKinds[prevEdge]))*.5;
       const stacked=multi.has(i)||multi.has(prevEdge);
-      let inset=stacked?width*(1.02+rnd()*.10):3.6+rnd()*1.8;
+      let inset=stacked?.9+rnd()*.35:3.6+rnd()*1.8;
       inset=Math.min(inset,d*.20);
       const factor=Math.max(.48,(d-inset)/d),vx=p.x-center.x,vy=p.y-center.y;
       return{x:center.x+vx*factor,y:center.y+vy*factor};
@@ -654,20 +677,29 @@ function estimateReliefCoverage(samples=72){
   return covered/total;
 }
 function reliefStats(){
-  let edges=0,steep=0,multi=0,maxHeight=0;
+  let edges=0,steep=0,multi=0,maxHeight=0,maxEdge=0;
+  const steepByLevel={};
   for(const hill of State.relief?.hills||[]){
     maxHeight=Math.max(maxHeight,hill.maxHeight||0);
     for(const level of hill.levels||[]){
-      edges+=level.edgeKinds?.length||0;
-      steep+=(level.edgeKinds||[]).filter(k=>k==='steep').length;
-      multi+=level.multiEdges?.length||0;
+      const kinds=level.edgeKinds||[],h=level.z1;
+      edges+=kinds.length;
+      const levelSteep=kinds.filter(k=>k==='steep').length;
+      steep+=levelSteep;multi+=level.multiEdges?.length||0;
+      if(!steepByLevel[h])steepByLevel[h]={edges:0,steep:0,ratio:0};
+      steepByLevel[h].edges+=kinds.length;steepByLevel[h].steep+=levelSteep;
+      for(let i=0;i<(level.top?.length||0);i++)maxEdge=Math.max(maxEdge,dist(level.top[i],level.top[(i+1)%level.top.length]));
     }
+  }
+  for(const h of Object.keys(steepByLevel)){
+    const s=steepByLevel[h];s.ratio=s.edges?s.steep/s.edges:0;
   }
   return{
     coverage:estimateReliefCoverage(80),
     steepRatio:edges?steep/edges:0,
+    steepByLevel,
     multiRatio:edges?multi/edges:0,
-    maxHeight,
+    maxHeight,maxEdge,
     hillCount:State.relief?.hills?.length||0
   };
 }
@@ -685,6 +717,8 @@ function generateRelief(){
     clearReliefBandCache();
     coverage=estimateReliefCoverage(64);
   }
+  assignSteepEdgesByLevel(State.relief,seedRand((reliefSeed^0x735a2d97)>>>0));
+  clearReliefBandCache();
   State.relief.stats=reliefStats();
   State.relief.forestTerrainRuleVersion=FOREST_TERRAIN_RULE_VERSION;
   clearReliefBandCache();
