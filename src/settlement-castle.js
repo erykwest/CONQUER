@@ -931,11 +931,20 @@ function withPalisadeConnectionOcclusion(s,drawFn){
   }
   ctx.clip('evenodd');drawFn();ctx.restore();
 }
+function palisadePostOffsetAt(g,along){
+  let factor=1;
+  const taper=Math.min(.48,g.L*.35);
+  if(taper>1e-5){
+    if(palisadePassThroughTarget(g.aTarget))factor=Math.min(factor,clamp(along/taper,0,1));
+    if(palisadePassThroughTarget(g.bTarget))factor=Math.min(factor,clamp((g.L-along)/taper,0,1));
+  }
+  return g.postOffset*factor;
+}
 function drawPalisadePostLine(s,g){
   const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),bodyZ=.93,tipZ=1.15;
   for(let i=0;i<=count;i++){
-    const t=i/count,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
-    const center=g.point(p,g.postOffset);
+    const t=i/count,along=g.L*t,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
+    const center=g.point(p,palisadePostOffsetAt(g,along));
     drawPalisadePost(center,g.postR,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
   }
 }
@@ -952,15 +961,71 @@ function drawPalisade(s,preview=false){
     pathPolygon(fp,null,'#f4b76f',2);
   }
 }
-function drawPalisadeForeground(){
-  for(const s of State.structures){
-    if(s.type!=='palisade'||underConstruction(s))continue;
-    const g=palisadeLayout(s);
-    // Patrols walk on the interior. Only an exterior stake line facing the
-    // camera can legitimately hide them.
-    if(linearFrontSide(s)!==g.side)continue;
-    withPalisadeConnectionOcclusion(s,()=>drawPalisadePostLine(s,g));
+function frontItemBase(owner,pts,z0,z1,kind,extra={}){
+  const c=pts.reduce((a,p)=>({x:a.x+p.x/pts.length,y:a.y+p.y/pts.length}),{x:0,y:0});
+  return{
+    kind,pts,z0,z1,depth:viewDepthPoint(c),
+    ownerId:owner?.id||null,ownerType:owner?.type||null,
+    ownerDepth:owner?worldDepth(owner):null,ownerTop:owner?structureHeight(owner):null,
+    ...extra
+  };
+}
+function palisadeFrontPieces(s){
+  if(s.type!=='palisade'||underConstruction(s))return[];
+  const g=palisadeLayout(s);
+  if(linearFrontSide(s)!==g.side)return[];
+  const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),pieces=[];
+  for(let i=0;i<=count;i++){
+    const t=i/count,along=g.L*t,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
+    const center=g.point(p,palisadePostOffsetAt(g,along)),angle=Math.atan2(g.dy,g.dx);
+    pieces.push(frontItemBase(
+      s,palisadeOctagon(center,g.postR,angle),0,1.15,'palisadePost',
+      {center,angle,r:g.postR,bodyZ:.93,tipZ:1.15}
+    ));
   }
+  return pieces;
+}
+function squareFrontEdges(s){
+  const fp=footprintPoints(s),center={x:s.x,y:s.y},out=[];
+  if(fp.length<4)return out;
+  const cd=viewDepthPoint(center);
+  for(let i=0;i<4;i++){
+    const a=fp[i],b=fp[(i+1)%4],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    if(viewDepthPoint(mid)>cd+1e-4)out.push({a,b});
+  }
+  return out;
+}
+function woodTowerFrontPieces(s){
+  if(!isWoodTower(s)||underConstruction(s))return[];
+  const pieces=[],angle=s.angle||0;
+  if(woodTowerStyle(s)==='watchtower'){
+    // Front rail posts are part of the same post-patrol protocol as wall merlons.
+    for(const edge of squareFrontEdges(s)){
+      const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1;
+      const steps=Math.max(2,Math.ceil(L/.34));
+      for(let i=0;i<=steps;i++){
+        const t=i/steps,center={x:edge.a.x+dx*t,y:edge.a.y+dy*t};
+        pieces.push(frontItemBase(
+          s,palisadeOctagon(center,.045,angle),1.46,1.72,'woodPost',
+          {center,r:.045,angle}
+        ));
+      }
+    }
+    return pieces;
+  }
+
+  for(const edge of squareFrontEdges(s)){
+    const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1;
+    const count=Math.max(1,Math.ceil(L/.245));
+    for(let i=0;i<=count;i++){
+      const t=i/count,center={x:edge.a.x+dx*t,y:edge.a.y+dy*t};
+      pieces.push(frontItemBase(
+        s,palisadeOctagon(center,.072,angle),1.82,2.22,'palisadePost',
+        {center,r:.072,angle,bodyZ:2.03,tipZ:2.22,zBase:1.82}
+      ));
+    }
+  }
+  return pieces;
 }
 function woodTowerLocal(s,x,y){
   const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
@@ -1224,16 +1289,18 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
   };
 }
 function castleBattlementOccluders(piece){
-  if(!piece.ownerId||!['tower','wall','gate'].includes(piece.ownerType))return[];
+  if(!piece.ownerId||!['tower','wall','gate','palisade'].includes(piece.ownerType))return[];
   const owner=State.structures.find(s=>s.id===piece.ownerId);
   return State.structures.filter(s=>{
-    if(s.id===piece.ownerId||!isCastlePart(s)||underConstruction(s))return false;
+    if(s.id===piece.ownerId||underConstruction(s))return false;
+    const candidate=isCastlePart(s)||(s.type==='tower'&&isWoodTower(s));
+    if(!candidate)return false;
+
+    // A watchtower is intentionally transparent to a connected palisade.
+    if(piece.ownerType==='palisade'&&palisadePassThroughTarget(s))return false;
+
     const h=structureVisualTopHeight(s);
     if(h<=Number(piece.z0)+.04)return false;
-
-    // Attached/subtower geometry can overlap even when structure-center depth
-    // says the opposite. If this merlon footprint enters the taller volume,
-    // that volume must mask it unconditionally.
     const fp=unionFootprintPoints(s);
     if(worldPolygonsOverlap(piece.pts,fp))return true;
 
@@ -1260,6 +1327,17 @@ function withTowerBattlementOcclusion(piece,drawFn){
 }
 function drawBattlementPiece(piece){
   withTowerBattlementOcclusion(piece,()=>{
+    if(piece.kind==='palisadePost'){
+      drawPalisadePostAt(
+        piece.center,piece.r,Number(piece.zBase??0),
+        piece.bodyZ,piece.tipZ,piece.angle||0
+      );
+      return;
+    }
+    if(piece.kind==='woodPost'){
+      drawWoodPost(piece.center,piece.r,piece.z0,piece.z1,piece.angle||0);
+      return;
+    }
     if(piece.wallCrest){
       const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
       const H=Math.max(2000,wrap.getBoundingClientRect().height*3);
@@ -1516,7 +1594,13 @@ function battlementBrazierSources(){
   const out=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
-    if(s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='battlement'){
+    if(s.type==='tower'&&isWoodTower(s)){
+      const style=woodTowerStyle(s),half=(Number(s.size)||1)/2;
+      const local=style==='watchtower'?{x:.22,y:.22}:{x:.42,y:.42};
+      const p=woodTowerLocal(s,local.x,local.y);
+      const z=style==='watchtower'?1.53:1.90;
+      out.push({kind:'brazier',id:s.id+':wood-brazier',p,z});
+    }else if(s.type==='tower'&&towerRoofStyle(s)==='battlement'){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10});
@@ -1613,9 +1697,12 @@ function drawCastleBattlements(){
   const pieces=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
-    if(s.type==='tower')pieces.push(...towerBattlementPieces(s));
-    else if(s.type==='gate')pieces.push(...gateBattlementPieces(s));
+    if(s.type==='tower'){
+      pieces.push(...towerBattlementPieces(s));
+      if(isWoodTower(s))pieces.push(...woodTowerFrontPieces(s));
+    }else if(s.type==='gate')pieces.push(...gateBattlementPieces(s));
     else if(s.type==='wall')pieces.push(...wallBattlementPieces(s));
+    else if(s.type==='palisade')pieces.push(...palisadeFrontPieces(s));
   }
   renderBattlementPieces(pieces);
 }
