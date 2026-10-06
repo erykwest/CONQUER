@@ -92,11 +92,21 @@ function environmentConflictsTestRelief(f){
   if(Number.isFinite(f.x)&&Number.isFinite(f.y))return terrainElevation(f)>.05;
   return false;
 }
+let structureProjectionGroundZ=null;
 function w2sRaw(p,z=0){
   const q=rotateViewPoint(p),s=U*State.view.scale;
   return{x:State.view.x+(q.x-q.y)*s*ISO_X,y:State.view.y+(q.x+q.y)*s*ISO_Y-z*s*ISO_Z};
 }
-function w2s(p,z=0){return w2sRaw(p,z+terrainElevation(p))}
+function w2s(p,z=0){
+  const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
+  return w2sRaw(p,z+ground);
+}
+function withProjectionGroundZ(groundZ,drawFn){
+  if(!Number.isFinite(groundZ))return drawFn();
+  const prev=structureProjectionGroundZ;
+  structureProjectionGroundZ=groundZ;
+  try{return drawFn()}finally{structureProjectionGroundZ=prev}
+}
 function s2wAtElevation(x,y,z=0){
   const s=U*State.view.scale||1,a=(x-State.view.x)/(s*ISO_X),b=(y-State.view.y+z*s*ISO_Z)/(s*ISO_Y);
   return unrotateViewPoint({x:(a+b)/2,y:(b-a)/2});
@@ -170,6 +180,82 @@ function footprintPoints(s){
   }
   return[];
 }
+const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church']);
+function isPlacementFoundationBuilding(s){
+  return !!s&&!s.auto&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
+}
+function placementFoundationProfile(s){
+  if(!isPlacementFoundationBuilding(s))return null;
+  const samples=structureTerrainSamples(s);
+  if(!samples.length){
+    const z=terrainElevation(structureCenter(s));
+    return{baseZ:z,minZ:z,maxZ:z,depth:0};
+  }
+  let minZ=Infinity,maxZ=-Infinity;
+  for(const p of samples){
+    const z=terrainElevation(p);
+    minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
+  }
+  if(!Number.isFinite(minZ)||!Number.isFinite(maxZ))return null;
+  return{baseZ:maxZ,minZ,maxZ,depth:Math.max(0,maxZ-minZ)};
+}
+function placementGroundZ(s){
+  if(!isPlacementFoundationBuilding(s))return null;
+  if(s.parentTowerId){
+    const parent=State.structures.find(o=>o.id===s.parentTowerId);
+    if(parent&&isPlacementFoundationBuilding(parent)){
+      const pz=placementGroundZ(parent);
+      if(Number.isFinite(pz))return pz;
+    }
+  }
+  if(s.foundationVersion===1&&Number.isFinite(s.groundZ))return Number(s.groundZ);
+  return placementFoundationProfile(s)?.baseZ??terrainElevation(structureCenter(s));
+}
+function placementFoundationDepth(s){
+  if(!isPlacementFoundationBuilding(s))return 0;
+  const baseZ=placementGroundZ(s),samples=structureTerrainSamples(s);
+  if(!Number.isFinite(baseZ)||!samples.length)return 0;
+  let minZ=baseZ;
+  for(const p of samples)minZ=Math.min(minZ,terrainElevation(p));
+  return Math.max(0,baseZ-minZ);
+}
+function usesRaisedPlacementFoundation(s){
+  return isPlacementFoundationBuilding(s)&&placementFoundationDepth(s)>.015;
+}
+function isRaisedPlacementCastlePoint(s){
+  return !!s&&['tower','gate'].includes(s.type)&&usesRaisedPlacementFoundation(s)&&!(s.type==='tower'&&isWoodTower(s));
+}
+function withStructureGroundPlane(s,drawFn){
+  return withProjectionGroundZ(placementGroundZ(s),drawFn);
+}
+function drawPlacementFoundation(s,preview=false){
+  if(!isPlacementFoundationBuilding(s))return;
+  const baseZ=placementGroundZ(s),fp=footprintPoints(s);
+  if(!Number.isFinite(baseZ)||!fp?.length||placementFoundationDepth(s)<=.015)return;
+
+  const faces=[];
+  for(let i=0;i<fp.length;i++){
+    const a=fp[i],b=fp[(i+1)%fp.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/.24));
+    for(let j=0;j<steps;j++){
+      const t0=j/steps,t1=(j+1)/steps;
+      const p0={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0};
+      const p1={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};
+      const z0=Math.min(baseZ,terrainElevation(p0)),z1=Math.min(baseZ,terrainElevation(p1));
+      if(baseZ-Math.min(z0,z1)<=.01)continue;
+      const poly=[w2sRaw(p0,z0),w2sRaw(p1,z1),w2sRaw(p1,baseZ),w2sRaw(p0,baseZ)];
+      const q=rotateViewPoint({x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2});
+      faces.push({poly,depth:q.x+q.y,shade:castleSideShade(p0,p1)});
+    }
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  ctx.save();
+  if(preview)ctx.globalAlpha*=.62;
+  for(const face of faces){
+    const fill=preview?'rgba(105,96,85,.82)':face.shade;
+    pathPolygon(face.poly,fill,preview?'rgba(244,183,111,.72)':'#83786d',.8);
+  }
+  ctx.restore();
+}
 function structureTerrainSamples(s){
   const fp=footprintPoints(s);if(!fp?.length)return[];
   const out=[];
@@ -215,7 +301,7 @@ function extrudePolygonAt(worldPts,z0,z1,{top:topColor='#8c7b69',sideA='#554b42'
   pathPolygon(topPts,topColor,stroke,1);
 }
 let castleUnionCache={key:null,bands:null};
-function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))}
+function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
 function unionFootprintPoints(s){
   if(!['wall','built'].includes(s.type))return footprintPoints(s);
@@ -1535,7 +1621,7 @@ function structureDetailOccluders(owner,z){
   if(!owner)return[];
   const ownerDepth=worldDepth(owner);
   return State.structures.filter(o=>{
-    if(o.id===owner.id||underConstruction(o)||!isCastlePart(o))return false;
+    if(o.id===owner.id||underConstruction(o)||(!isCastlePart(o)&&!isRaisedPlacementCastlePoint(o)))return false;
     if(structureVisualTopHeight(o)<=z+.035)return false;
     // Real 3D overlap wins over painter-order heuristics.
     if(structuresOverlapInPlan(owner,o))return true;
@@ -1561,21 +1647,23 @@ function withStructureDetailOcclusion(owner,z,drawFn){
   ctx.restore();
 }
 function structureScreenSilhouette(s){
-  const fp=footprintPoints(s);if(!fp?.length)return[];
-  const h=structureHeight(s),cloud=[];
-  for(const p of fp){cloud.push(w2s(p,0));cloud.push(w2s(p,h))}
-  if(s.type==='tower'&&towerRoofStyle(s)==='pitched'){
-    for(const p of towerRoofFootprintPoints(s))cloud.push(w2s(p,h));
-    cloud.push(w2s({x:s.x,y:s.y},towerVisualTopHeight(s)));
-  }
-  if(s.type==='gate'&&gateRoofStyle(s)==='pitched'){
-    const g=gateRoofGeometry(s);
-    if(g){
-      for(const p of g.footprint)cloud.push(w2s(p,g.h));
-      cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
+  return withStructureGroundPlane(s,()=>{
+    const fp=footprintPoints(s);if(!fp?.length)return[];
+    const h=structureHeight(s),cloud=[];
+    for(const p of fp){cloud.push(w2s(p,0));cloud.push(w2s(p,h))}
+    if(s.type==='tower'&&towerRoofStyle(s)==='pitched'){
+      for(const p of towerRoofFootprintPoints(s))cloud.push(w2s(p,h));
+      cloud.push(w2s({x:s.x,y:s.y},towerVisualTopHeight(s)));
     }
-  }
-  return convexHull(cloud);
+    if(s.type==='gate'&&gateRoofStyle(s)==='pitched'){
+      const g=gateRoofGeometry(s);
+      if(g){
+        for(const p of g.footprint)cloud.push(w2s(p,g.h));
+        cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
+      }
+    }
+    return convexHull(cloud);
+  });
 }
 function withBuiltRoofOcclusionClip(s,drawFn){
   const occluders=roofOccluderStructures(s);
@@ -1628,7 +1716,8 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
     ownerId:owner?.id||null,
     ownerType:owner?.type||null,
     ownerDepth:owner?worldDepth(owner):null,
-    ownerTop:owner?structureHeight(owner):null
+    ownerTop:owner?structureHeight(owner):null,
+    groundZ:owner?placementGroundZ(owner):null
   };
 }
 function castleBattlementOccluders(piece){
@@ -1636,7 +1725,7 @@ function castleBattlementOccluders(piece){
   const owner=State.structures.find(s=>s.id===piece.ownerId);
   return State.structures.filter(s=>{
     if(s.id===piece.ownerId||underConstruction(s))return false;
-    const candidate=isCastlePart(s)||(piece.ownerType==='palisade'&&['tower','gate'].includes(s.type));
+    const candidate=isCastlePart(s)||isRaisedPlacementCastlePoint(s)||(piece.ownerType==='palisade'&&['tower','gate'].includes(s.type));
     if(!candidate)return false;
     if(piece.ownerType==='palisade'&&palisadePassThroughTarget(s))return false;
 
@@ -1667,7 +1756,7 @@ function withTowerBattlementOcclusion(piece,drawFn){
   ctx.restore();
 }
 function drawBattlementPiece(piece){
-  withTowerBattlementOcclusion(piece,()=>{
+  return withProjectionGroundZ(piece.groundZ,()=>withTowerBattlementOcclusion(piece,()=>{
     if(piece.kind==='palisadePost'){
       drawPalisadePostAt(piece.center,piece.r,piece.z0,piece.bodyZ,piece.tipZ,piece.angle||0);
       return;
@@ -1692,7 +1781,7 @@ function drawBattlementPiece(piece){
       return;
     }
     extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
-  });
+  }));
 }
 function renderBattlementPieces(pieces){
   pieces.sort((a,b)=>a.depth-b.depth);
@@ -1842,7 +1931,7 @@ function drawRoundTowerRoof(s){
 }
 function drawTowerRoof(s){
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
-  withPointRoofOcclusion(s,()=>s.shape==='round'?drawRoundTowerRoof(s):drawSquareTowerRoof(s));
+  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
 }
 function drawTowerRoofs(){
   const towers=State.structures
@@ -1853,7 +1942,7 @@ function drawTowerRoofs(){
 function drawGateRoof(s){
   if(!s||s.type!=='gate'||underConstruction(s)||gateRoofStyle(s)!=='pitched')return;
   const g=gateRoofGeometry(s);if(!g)return;
-  withPointRoofOcclusion(s,()=>{
+  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>{
     const rearGable=[w2s(g.c3,g.h),w2s(g.c0,g.h),w2s(g.ridgeA,g.ridgeH)];
     const frontGable=[w2s(g.c1,g.h),w2s(g.c2,g.h),w2s(g.ridgeB,g.ridgeH)];
     const roofA=[w2s(g.c0,g.h),w2s(g.c1,g.h),w2s(g.ridgeB,g.ridgeH),w2s(g.ridgeA,g.ridgeH)];
@@ -1866,7 +1955,7 @@ function drawGateRoof(s){
     ];
     faces.sort((a,b)=>a.depth-b.depth);
     for(const face of faces)pathPolygon(face.poly,face.fill,'#5d6066',1);
-  });
+  }));
 }
 function drawGateRoofs(){
   const gates=State.structures
@@ -1904,7 +1993,7 @@ function drawTowerFlags(){
   const towers=State.structures
     .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const tower of towers)drawQuarteredTowerFlag(tower);
+  for(const tower of towers)withStructureGroundPlane(tower,()=>drawQuarteredTowerFlag(tower));
 }
 function towerTorchSources(){
   const out=[];
@@ -1921,7 +2010,7 @@ function towerTorchSources(){
             x:spec.contact.x+spec.tangent.x*lateral*side+spec.outward.x*outward,
             y:spec.contact.y+spec.tangent.y*lateral*side+spec.outward.y*outward
           },
-          z
+          z,groundZ:placementGroundZ(tower)
         });
       }
     }
@@ -1933,15 +2022,15 @@ function battlementBrazierSources(){
   for(const s of State.structures){
     if(underConstruction(s))continue;
     if(s.type==='tower'&&isWoodTower(s)&&woodTowerStyle(s)==='palisadeTower'&&woodTowerRoof(s)==='open'){
-      out.push({kind:'brazier',id:s.id+':wood-brazier',p:woodTowerLocal(s,.28,.24),z:1.90});
+      out.push({kind:'brazier',id:s.id+':wood-brazier',p:woodTowerLocal(s,.28,.24),z:1.90,groundZ:placementGroundZ(s)});
     }else if(s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='battlement'){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
-      out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10});
+      out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
     }else if(s.type==='gate'&&gateRoofStyle(s)==='battlement'){
       const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43;
       for(const side of [-1,1]){
-        out.push({kind:'brazier',id:s.id+':brazier:'+side,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10});
+        out.push({kind:'brazier',id:s.id+':brazier:'+side,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
       }
     }
   }
@@ -1964,7 +2053,7 @@ function drawScreenFlame(p,scale,id,big=false){
   ctx.restore();
 }
 function drawTorchFixture(src){
-  const p=w2s(src.p,src.z),scale=clamp(State.view.scale,.55,1.45);
+  const p=Number.isFinite(src.groundZ)?w2sRaw(src.p,src.z+src.groundZ):w2s(src.p,src.z),scale=clamp(State.view.scale,.55,1.45);
   ctx.save();
   ctx.strokeStyle='#6b5440';ctx.lineWidth=Math.max(1,1.0*scale);
   ctx.beginPath();ctx.moveTo(p.x-3.0*scale,p.y+2.2*scale);ctx.lineTo(p.x,p.y);ctx.stroke();
@@ -1986,7 +2075,7 @@ function drawFireGlows(nf){
   const scale=clamp(State.view.scale,.55,1.45);
   ctx.save();ctx.globalCompositeOperation='screen';
   for(const src of fireSources()){
-    const p=w2s(src.p,src.z+(src.kind==='brazier'?.08:0));
+    const localZ=src.z+(src.kind==='brazier'?.08:0),p=Number.isFinite(src.groundZ)?w2sRaw(src.p,localZ+src.groundZ):w2s(src.p,localZ);
     const r=(src.kind==='brazier'?12:9)*scale,n=Math.max(.1,nf)*fireFlicker(src.id);
     const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
     g.addColorStop(0,'rgba(255,198,88,'+(.42*n).toFixed(3)+')');
@@ -2029,6 +2118,7 @@ function fortificationFrontPiece(owner,kind,center,r,angle,z0,bodyZ,tipZ){
   return{
     kind,pts,z0,z1:tipZ,depth:q.x+q.y,
     ownerId:owner.id,ownerType:owner.type,ownerDepth:worldDepth(owner),ownerTop:structureHeight(owner),
+    groundZ:placementGroundZ(owner),
     center,r,angle,bodyZ,tipZ
   };
 }
