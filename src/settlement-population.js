@@ -606,7 +606,12 @@ function wellApproachPath(house,well){
 }
 function wellRoutineTravel(house,well,frac,t0,t1,reverse=false){
   const path=wellApproachPath(house,well);
-  const t=routineSmooth((frac-t0)/Math.max(.001,t1-t0));
+  const length=pathLength(path);
+  const scheduled=Math.max(.001,t1-t0);
+  const nominalSpeed=6;
+  const needed=length/Math.max(.001,nominalSpeed);
+  const duration=Math.max(scheduled,needed);
+  const t=routineSmooth((frac-t0)/duration);
   return pointAlongPath(path,reverse?1-t:t);
 }
 function structureAccessPoint(target,from,visitorId=''){
@@ -681,10 +686,23 @@ function villagerPathBetween(house,start,goal,tag){
   peasantPathCache.set(key,path);
   return path;
 }
+function pathLength(path){
+  if(!path?.length)return 0;
+  let total=0;
+  for(let i=0;i<path.length-1;i++)total+=dist(path[i],path[i+1]);
+  return total;
+}
 function routineSmooth(t){t=clamp(t,0,1);return t*t*(3-2*t)}
 function routineTravel(house,start,goal,frac,t0,t1,tag){
   const path=villagerPathBetween(house,start,goal,tag);
-  return pointAlongPath(path,routineSmooth((frac-t0)/Math.max(.001,t1-t0)));
+  const length=pathLength(path);
+  if(length<=1e-6)return path?.[0]||start;
+  const scheduled=Math.max(.001,t1-t0);
+  const nominalSpeed=6;
+  const needed=length/nominalSpeed;
+  const duration=Math.max(scheduled,needed);
+  const t=routineSmooth((frac-t0)/duration);
+  return pointAlongPath(path,t);
 }
 function residentIdlePoint(anchor,id,day,radius=.16){
   if(!anchor)return null;
