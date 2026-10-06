@@ -364,6 +364,30 @@ function screenHitStructure(s,p){
 }
 function seedRand(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
 function mixWorld(a,b,t){return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}}
+function clipTerrainPolygon(vertices){
+  let out=vertices.map(v=>({x:v.x,y:v.y,z:v.z||0}));
+  const cuts=[
+    {inside:v=>v.x>=0,intersect:(a,b)=>{const t=(0-a.x)/((b.x-a.x)||1e-9);return{x:0,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t}}},
+    {inside:v=>v.x<=WORLD,intersect:(a,b)=>{const t=(WORLD-a.x)/((b.x-a.x)||1e-9);return{x:WORLD,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t}}},
+    {inside:v=>v.y>=0,intersect:(a,b)=>{const t=(0-a.y)/((b.y-a.y)||1e-9);return{x:a.x+(b.x-a.x)*t,y:0,z:a.z+(b.z-a.z)*t}}},
+    {inside:v=>v.y<=WORLD,intersect:(a,b)=>{const t=(WORLD-a.y)/((b.y-a.y)||1e-9);return{x:a.x+(b.x-a.x)*t,y:WORLD,z:a.z+(b.z-a.z)*t}}}
+  ];
+  for(const cut of cuts){
+    if(!out.length)break;
+    const next=[];
+    for(let i=0;i<out.length;i++){
+      const a=out[i],b=out[(i+1)%out.length],ain=cut.inside(a),bin=cut.inside(b);
+      if(ain&&bin)next.push(b);
+      else if(ain&&!bin)next.push(cut.intersect(a,b));
+      else if(!ain&&bin){next.push(cut.intersect(a,b));next.push(b)}
+    }
+    out=next;
+  }
+  return out;
+}
+function projectClippedTerrain(vertices){
+  return clipTerrainPolygon(vertices).map(v=>w2sRaw(v,v.z));
+}
 function slopePoint(band,u,v){
   const outer=mixWorld(band.oa,band.ob,u),inner=mixWorld(band.a,band.b,u);
   return mixWorld(outer,inner,v);
@@ -377,9 +401,9 @@ function drawGentleSlopeBand(band,winter){
     const v0=i/strips,v1=(i+1)/strips;
     const a0=slopePoint(band,0,v0),b0=slopePoint(band,1,v0),b1=slopePoint(band,1,v1),a1=slopePoint(band,0,v1);
     const z0=band.z0+(band.z1-band.z0)*v0,z1=band.z0+(band.z1-band.z0)*v1;
-    const poly=[w2sRaw(a0,z0),w2sRaw(b0,z0),w2sRaw(b1,z1),w2sRaw(a1,z1)];
-    pathPolygon(poly,fills[i%fills.length],null);
-    if(i>0){
+    const poly=projectClippedTerrain([{...a0,z:z0},{...b0,z:z0},{...b1,z:z1},{...a1,z:z1}]);
+    if(poly.length>=3)pathPolygon(poly,fills[i%fills.length],null);
+    if(i>0&&a0.x>=0&&a0.x<=WORLD&&a0.y>=0&&a0.y<=WORLD&&b0.x>=0&&b0.x<=WORLD&&b0.y>=0&&b0.y<=WORLD){
       const seamA=w2sRaw(a0,z0+.008),seamB=w2sRaw(b0,z0+.008);
       ctx.save();ctx.strokeStyle=winter?'rgba(116,124,119,.24)':'rgba(173,156,103,.20)';ctx.lineWidth=.75;
       ctx.beginPath();ctx.moveTo(seamA.x,seamA.y);ctx.lineTo(seamB.x,seamB.y);ctx.stroke();ctx.restore();
@@ -421,30 +445,34 @@ function drawSteepSlopeRocks(level,band,winter){
     const v=Math.pow(rnd(),1.75); // dense scree toward the foot.
     const p=slopePoint(band,u,v),z=band.z0+(band.z1-band.z0)*v;
     const size=.18+rnd()*.38,height=.12+rnd()*.48;
-    rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
+    if(p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD)rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
   }
   for(let i=0;i<crestCount;i++){
     const u=clamp((i+.18+rnd()*.64)/crestCount,.02,.98),v=.73+rnd()*.25;
     const p=slopePoint(band,u,v),z=band.z0+(band.z1-band.z0)*v;
     const size=.16+rnd()*.30,height=.10+rnd()*.34;
-    rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
+    if(p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD)rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
   }
   rocks.sort((a,b)=>a.depth-b.depth);
   for(const rock of rocks)drawLowPolyRock(rock.p,rock.z,rock.size,rock.height,rock.seed,winter);
 }
-function drawTestRelief(){
+function drawRelief(){
   const winter=State.season==='winter',baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
-  for(const level of TEST_RELIEF.levels){
+  const levels=reliefLevels().slice().sort((a,b)=>a.z1-b.z1);
+  for(const level of levels){
     const bands=reliefEdgeBands(level).map(b=>({...b,depth:[b.oa,b.ob,b.b,b.a].map(p=>w2sRaw(p,b.z0)).reduce((s,p)=>s+p.y,0)/4})).sort((a,b)=>a.depth-b.depth);
     for(const band of bands){
       if(band.kind==='gentle')drawGentleSlopeBand(band,winter);
       else{
-        const poly=[w2sRaw(band.oa,band.z0),w2sRaw(band.ob,band.z0),w2sRaw(band.b,band.z1),w2sRaw(band.a,band.z1)];
-        pathPolygon(poly,winter?'#969ca0':'#6f7477',winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
+        const poly=projectClippedTerrain([
+          {...band.oa,z:band.z0},{...band.ob,z:band.z0},{...band.b,z:band.z1},{...band.a,z:band.z1}
+        ]);
+        if(poly.length>=3)pathPolygon(poly,winter?'#969ca0':'#6f7477',winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
         drawSteepSlopeRocks(level,band,winter);
       }
     }
-    pathPolygon(level.top.map(p=>w2sRaw(p,level.z1)),baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
+    const top=projectClippedTerrain(level.top.map(p=>({...p,z:level.z1})));
+    if(top.length>=3)pathPolygon(top,baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
   }
 }
 function drawTerrain(){
@@ -453,7 +481,7 @@ function drawTerrain(){
   const terrainFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
   const terrainEdge=winter?'rgba(101,112,105,.34)':'rgba(225,214,190,.12)';
   pathPolygon(corners,terrainFill,terrainEdge,1);
-  drawTestRelief();
+  drawRelief();
   const rnd=seedRand((State.seed^0x45d9f3b)>>>0);
   ctx.save();
   for(let i=0;i<260;i++){
