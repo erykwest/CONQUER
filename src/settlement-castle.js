@@ -279,13 +279,6 @@ function drawTree(p,scale=1){
   const size=Math.max(10,U*State.view.scale*2.25*scale);
   ctx.drawImage(FOREST_TREE_SPRITE,base.x-size*.5,base.y-size*.94,size,size);
 }
-function clipEnvironmentPolygon(points){
-  const pts=projectPath(points);
-  ctx.beginPath();
-  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.closePath();
-  ctx.clip();
-}
 function forestTreeCount(f){
   return clamp(Math.round((f.rx||5)*(f.ry||4)*1.55),22,58);
 }
@@ -300,10 +293,7 @@ function drawForestMask(f){
     trees.push({p,scale:.72+rnd()*.48});
   }
   trees.sort((a,b)=>w2s(a.p,0).y-w2s(b.p,0).y);
-  ctx.save();
-  clipEnvironmentPolygon(f.points);
   for(const tree of trees)drawTree(tree.p,tree.scale);
-  ctx.restore();
 }
 function ellipseWorldPoints(f,n=28){
   const pts=[],ca=Math.cos(f.angle||0),sa=Math.sin(f.angle||0);
@@ -317,10 +307,12 @@ function drawEnvironment(){
       const pts=f.points.map(p=>w2s(p));ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
       ctx.strokeStyle=f.edge;ctx.lineWidth=Math.max(2,(f.width+.35)*U*State.view.scale*.72);ctx.stroke();ctx.strokeStyle=f.fill;ctx.lineWidth=Math.max(1.4,f.width*U*State.view.scale*.72);ctx.stroke();
     }else if(['forest','pond','sea'].includes(f.type)){
-      const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);
       if(f.type==='forest'){
         drawForestMask(f);
-      }else if(f.type==='sea'&&f.coastline){
+      }else{
+        const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);
+      }
+      if(f.type==='sea'&&f.coastline){
         const coast=projectPath(f.coastline);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
       }
     }else if(f.type==='mountain'){
