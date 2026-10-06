@@ -9,13 +9,101 @@ function rotateViewPoint(p,turns=State.view.rotation||0){
   return{x:p.x,y:p.y};
 }
 function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
-function w2s(p,z=0){
+const TEST_RELIEF=Object.freeze({
+  center:Object.freeze({x:100,y:100}),
+  levels:Object.freeze([
+    Object.freeze({
+      id:'terrace-1',z0:0,z1:1,gentleBase:2,steepBase:.5,southEdges:Object.freeze([7,8]),
+      top:Object.freeze([
+        Object.freeze({x:90.2,y:97.0}),Object.freeze({x:92.2,y:93.5}),Object.freeze({x:97.0,y:92.1}),
+        Object.freeze({x:103.0,y:92.3}),Object.freeze({x:108.3,y:94.5}),Object.freeze({x:110.0,y:99.0}),
+        Object.freeze({x:109.2,y:104.0}),Object.freeze({x:105.5,y:106.8}),Object.freeze({x:100.0,y:107.4}),
+        Object.freeze({x:94.5,y:106.6}),Object.freeze({x:90.8,y:103.0})
+      ])
+    }),
+    Object.freeze({
+      id:'terrace-2',z0:1,z1:2,gentleBase:2,steepBase:.5,southEdges:Object.freeze([5,6]),
+      top:Object.freeze([
+        Object.freeze({x:95.2,y:102.0}),Object.freeze({x:97.0,y:100.6}),Object.freeze({x:101.0,y:100.3}),
+        Object.freeze({x:104.6,y:101.5}),Object.freeze({x:105.0,y:104.0}),Object.freeze({x:104.5,y:106.2}),
+        Object.freeze({x:100.5,y:106.6}),Object.freeze({x:96.5,y:106.0}),Object.freeze({x:95.0,y:104.2})
+      ])
+    })
+  ])
+});
+const reliefBandCache=new Map();
+function reliefEdgeBands(level){
+  if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
+  const pts=level.top,cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length,bands=[];
+  for(let i=0;i<pts.length;i++){
+    const j=(i+1)%pts.length,a=pts[i],b=pts[j],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+    const kind=level.southEdges.includes(i)?'steep':'gentle',width=kind==='steep'?level.steepBase:level.gentleBase;
+    let nx=dy/L,ny=-dx/L;
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+    if(Math.hypot(mx+nx-cx,my+ny-cy)<Math.hypot(mx-cx,my-cy)){nx=-nx;ny=-ny}
+    const oa={x:a.x+nx*width,y:a.y+ny*width},ob={x:b.x+nx*width,y:b.y+ny*width};
+    bands.push({levelId:level.id,index:i,kind,width,z0:level.z0,z1:level.z1,a,b,oa,ob,poly:[oa,ob,b,a]});
+  }
+  reliefBandCache.set(level.id,bands);return bands;
+}
+function reliefBandAt(p){
+  let gentle=null;
+  for(const level of TEST_RELIEF.levels)for(const band of reliefEdgeBands(level)){
+    if(!pointInPolygon(p,band.poly))continue;
+    if(band.kind==='steep')return band;
+    gentle=band;
+  }
+  return gentle;
+}
+function terrainSlopeKind(p){return reliefBandAt(p)?.kind||null}
+function terrainElevation(p){
+  let z=0;
+  for(const level of TEST_RELIEF.levels){
+    if(pointInPolygon(p,level.top)){z=Math.max(z,level.z1);continue}
+    for(const band of reliefEdgeBands(level)){
+      if(!pointInPolygon(p,band.poly))continue;
+      const dOuter=pointSegmentDistance(p,band.oa,band.ob),dInner=pointSegmentDistance(p,band.a,band.b);
+      const t=clamp(dOuter/Math.max(1e-6,dOuter+dInner),0,1);
+      z=Math.max(z,band.z0+(band.z1-band.z0)*t);
+    }
+  }
+  return z;
+}
+function terrainPlateauElevation(p){
+  if(terrainSlopeKind(p))return null;
+  let z=0;for(const level of TEST_RELIEF.levels)if(pointInPolygon(p,level.top))z=Math.max(z,level.z1);
+  return z;
+}
+function environmentConflictsTestRelief(f){
+  const center=TEST_RELIEF.center,reserve=15.5;
+  if(['stream','river'].includes(f.type)){
+    for(let i=0;i<f.points.length-1;i++)if(pointSegmentDistance(center,f.points[i],f.points[i+1])<=reserve+(f.width||0)/2)return true;
+    return false;
+  }
+  if(f.points?.length&&(pointInPolygon(center,f.points)||f.points.some(p=>dist(p,center)<=reserve)))return true;
+  if(Number.isFinite(f.x)&&Number.isFinite(f.y)){
+    const reach=Math.max(Number(f.rx)||0,Number(f.ry)||0);
+    if(dist(f,center)<=reserve+reach)return true;
+  }
+  return false;
+}
+function w2sRaw(p,z=0){
   const q=rotateViewPoint(p),s=U*State.view.scale;
   return{x:State.view.x+(q.x-q.y)*s*ISO_X,y:State.view.y+(q.x+q.y)*s*ISO_Y-z*s*ISO_Z};
 }
-function s2w(x,y){
-  const s=U*State.view.scale||1,a=(x-State.view.x)/(s*ISO_X),b=(y-State.view.y)/(s*ISO_Y);
+function w2s(p,z=0){return w2sRaw(p,z+terrainElevation(p))}
+function s2wAtElevation(x,y,z=0){
+  const s=U*State.view.scale||1,a=(x-State.view.x)/(s*ISO_X),b=(y-State.view.y+z*s*ISO_Z)/(s*ISO_Y);
   return unrotateViewPoint({x:(a+b)/2,y:(b-a)/2});
+}
+function s2w(x,y){
+  let p=s2wAtElevation(x,y,0);
+  for(let i=0;i<5;i++){
+    const next=s2wAtElevation(x,y,terrainElevation(p));
+    if(dist(next,p)<.0005){p=next;break}
+    p=next;
+  }
+  return p;
 }
 function fit(){
   const r=wrap.getBoundingClientRect(),availW=Math.max(260,r.width-610),availH=Math.max(220,r.height-90);
@@ -72,6 +160,28 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   return[];
+}
+function structureTerrainSamples(s){
+  const fp=footprintPoints(s);if(!fp?.length)return[];
+  const out=[];
+  for(let i=0;i<fp.length;i++){
+    const a=fp[i],b=fp[(i+1)%fp.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/.35));
+    for(let j=0;j<=steps;j++){const t=j/steps;out.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t})}
+  }
+  const minX=Math.min(...fp.map(p=>p.x)),maxX=Math.max(...fp.map(p=>p.x)),minY=Math.min(...fp.map(p=>p.y)),maxY=Math.max(...fp.map(p=>p.y));
+  for(let y=minY+.25;y<maxY;y+=.5)for(let x=minX+.25;x<maxX;x+=.5)if(pointInPolygon({x,y},fp))out.push({x,y});
+  const center=structureCenter(s);if(center)out.push({x:center.x,y:center.y});
+  return out;
+}
+function buildableTerrainElevationForStructure(s){
+  const samples=structureTerrainSamples(s);if(!samples.length)return 0;
+  let level=null;
+  for(const p of samples){
+    if(terrainSlopeKind(p))return null;
+    const z=terrainPlateauElevation(p);if(z==null)return null;
+    if(level==null)level=z;else if(Math.abs(z-level)>.001)return null;
+  }
+  return level??0;
 }
 function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
   if(!worldPts?.length)return;
@@ -243,12 +353,27 @@ function screenHitStructure(s,p){
   return false;
 }
 function seedRand(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
+function drawTestRelief(){
+  const winter=State.season==='winter',baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
+  for(const level of TEST_RELIEF.levels){
+    const faces=reliefEdgeBands(level).map(b=>{
+      const poly=[w2sRaw(b.oa,b.z0),w2sRaw(b.ob,b.z0),w2sRaw(b.b,b.z1),w2sRaw(b.a,b.z1)];
+      return{poly,depth:poly.reduce((s,p)=>s+p.y,0)/poly.length,kind:b.kind};
+    }).sort((a,b)=>a.depth-b.depth);
+    for(const face of faces){
+      const fill=face.kind==='steep'?(winter?'#969ca0':'#6f7477'):(winter?'#d0d6d1':'#494733');
+      pathPolygon(face.poly,fill,face.kind==='steep'?'rgba(205,211,214,.55)':'rgba(126,116,82,.42)',.8);
+    }
+    pathPolygon(level.top.map(p=>w2sRaw(p,level.z1)),baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
+  }
+}
 function drawTerrain(){
   const corners=projectPath([{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}],0);
   const winter=State.season==='winter';
   const terrainFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
   const terrainEdge=winter?'rgba(101,112,105,.34)':'rgba(225,214,190,.12)';
   pathPolygon(corners,terrainFill,terrainEdge,1);
+  drawTestRelief();
   const rnd=seedRand((State.seed^0x45d9f3b)>>>0);
   ctx.save();
   for(let i=0;i<260;i++){
@@ -261,12 +386,17 @@ function drawTerrain(){
   if(State.season==='spring'){
     const flowers=seedRand((State.seed^0x6b8f4a2d)>>>0);
     const palette=['#f7d7e8','#f3e37b','#f4f1dc','#d9b3ef','#e7a6b8'];
-    for(let i=0;i<52000;i++){
-      const p=w2s({x:flowers()*WORLD,y:flowers()*WORLD});
-      const size=clamp((.65+flowers()*1.25)*State.view.scale,1,2.4);
+    const clusterCount=520,flowersPerCluster=100;
+    for(let cluster=0;cluster<clusterCount;cluster++){
+      const center={x:flowers()*WORLD,y:flowers()*WORLD},radius=.65+flowers()*.95;
       ctx.fillStyle=palette[Math.floor(flowers()*palette.length)];
-      ctx.globalAlpha=.62+flowers()*.30;
-      ctx.fillRect(Math.round(p.x),Math.round(p.y),size,size);
+      for(let i=0;i<flowersPerCluster;i++){
+        const a=flowers()*Math.PI*2,r=Math.sqrt(flowers())*radius;
+        const world={x:clamp(center.x+Math.cos(a)*r,0,WORLD),y:clamp(center.y+Math.sin(a)*r,0,WORLD)};
+        const p=w2s(world),size=clamp((.65+flowers()*1.25)*State.view.scale,1,2.4);
+        ctx.globalAlpha=.62+flowers()*.30;
+        ctx.fillRect(Math.round(p.x),Math.round(p.y),size,size);
+      }
     }
     ctx.globalAlpha=1;
   }
