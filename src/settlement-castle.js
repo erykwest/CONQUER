@@ -638,14 +638,16 @@ function regenerateTowerWallPair(tower,wall,end,anchor=null){
   const other=end==='a'?wall.b:wall.a;
   if(!other)return false;
 
-  // Exact ray/footprint intersection. This is the actual tower collider,
-  // unlike the old projected half-span approximation.
-  const contact=boundaryPoint(tower,other);
+  const original=anchor||{x:tower.x,y:tower.y};
+  // Watchtowers stand astride a palisade: the timber line continues through
+  // their four open legs to the original node. Every solid tower/gate still
+  // uses the exact ray/footprint boundary contact.
+  const passThrough=wall.type==='palisade'&&palisadePassThroughTarget(tower);
+  const contact=passThrough?original:boundaryPoint(tower,other);
   wall[end]={x:contact.x,y:contact.y};
   wall.length=dist(wall.a,wall.b);
   if(end==='a')wall.aSnap=tower.id;else wall.bSnap=tower.id;
 
-  const original=anchor||{x:tower.x,y:tower.y};
   setTowerWallConnection(tower,wall,end,original);
   normalizeStructureVariants(wall);
   normalizeFunctions(tower);
@@ -673,7 +675,7 @@ function restoreTowerWallConnections(tower){
 function syncCompletedTowerWallColliders(force=false){
   let changed=0;
   for(const tower of State.structures){
-    if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))continue;
+    if(tower.type!=='tower'||underConstruction(tower))continue;
     const links=towerWallConnectionRecords(tower);
     if(!links.length)continue;
 
@@ -790,6 +792,26 @@ function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
 function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;return s.type}
+function palisadeSnapTarget(id){
+  return id?State.structures.find(o=>o.id===id&&['tower','gate'].includes(o.type))||null:null;
+}
+function palisadePassThroughTarget(target){
+  return !!target&&isWoodTower(target)&&woodTowerStyle(target)==='watchtower';
+}
+function palisadeSolidSnapTarget(id){
+  const target=palisadeSnapTarget(id);
+  return target&&!palisadePassThroughTarget(target)?target:null;
+}
+function palisadeJointVisualAnchor(s,end,target,ux,uy){
+  const original=end==='a'?s.a:s.b;
+  if(!target||palisadePassThroughTarget(target))return{...original};
+  const other=end==='a'?s.b:s.a;
+  // Recompute against the CURRENT footprint, not the persisted endpoint.
+  const contact=boundaryPoint(target,other);
+  const dir=end==='a'?1:-1;
+  const pad=Math.max(.13,Math.min(.24,(Number(s.width)||.5)*.16+.11));
+  return{x:contact.x+ux*pad*dir,y:contact.y+uy*pad*dir};
+}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -802,17 +824,16 @@ function palisadeLayout(s){
   const ux=rawDx/rawL,uy=rawDy/rawL,nx=-uy,ny=ux,side=wallExteriorSide(s);
   const width=Number(s.width)||wallWidthForTier(wallTier(s)),tier=wallTier(s),postR=.10;
   const exterior=width/2,postOffset=tier===1?0:Math.max(0,exterior-postR);
+  const aTarget=palisadeSnapTarget(s.aSnap),bTarget=palisadeSnapTarget(s.bSnap);
 
-  // The collider terminates exactly on the snapped boundary. Visual timber
-  // must stop slightly before it so the final octagonal post and its point
-  // never climb onto the connected tower/gate facade.
-  const jointPad=Math.min(.16,rawL*.20);
-  const startPad=s.aSnap?jointPad:0,endPad=s.bSnap?jointPad:0;
-  const maxPad=Math.max(0,(rawL-.02)/2),sa=Math.min(startPad,maxPad),sb=Math.min(endPad,maxPad);
-  const a={x:s.a.x+ux*sa,y:s.a.y+uy*sa},b={x:s.b.x-ux*sb,y:s.b.y-uy*sb};
-  const dx=b.x-a.x,dy=b.y-a.y,L=Math.max(.01,Math.hypot(dx,dy));
+  // Solid towers/gates terminate the visual palisade at their real current
+  // footprint. Watchtowers are deliberately pass-through and do not trim it.
+  let a=palisadeJointVisualAnchor(s,'a',aTarget,ux,uy);
+  let b=palisadeJointVisualAnchor(s,'b',bTarget,ux,uy);
+  let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);
+  if(L<.02){a={...s.a};b={...s.b};dx=b.x-a.x;dy=b.y-a.y;L=Math.max(.01,Math.hypot(dx,dy))}
   const point=(p,offset)=>({x:p.x+nx*offset*side,y:p.y+ny*offset*side});
-  return{a,b,dx,dy,L,rawL,ux,uy,nx,ny,side,width,tier,postR,postOffset,startPad:sa,endPad:sb,point};
+  return{a,b,dx,dy,L,rawL,ux,uy,nx,ny,side,width,tier,postR,postOffset,aTarget,bTarget,point};
 }
 function palisadeOctagon(center,r,angle=0){
   const pts=[];
@@ -879,11 +900,21 @@ function palisadePatrolSurface(s){
   return{z:earthH+.10,offset:(crestOuter+crestInner)/2,spread:Math.min(.07,Math.abs(crestOuter-crestInner)*.30)};
 }
 function palisadeConnectionOccluders(s){
-  const ids=[s.aSnap,s.bSnap].filter(Boolean),seen=new Set(),out=[];
-  for(const id of ids){
-    if(seen.has(id))continue;seen.add(id);
-    const target=State.structures.find(o=>o.id===id&&['tower','gate'].includes(o.type));
-    if(target&&!underConstruction(target))out.push(target);
+  const out=[],seen=new Set(),palisadePoly=linePoly(s);
+  const add=target=>{
+    if(!target||underConstruction(target)||palisadePassThroughTarget(target)||seen.has(target.id))return;
+    seen.add(target.id);out.push(target);
+  };
+
+  // Explicit connections first.
+  add(palisadeSnapTarget(s.aSnap));
+  add(palisadeSnapTarget(s.bSnap));
+
+  // Geometric fallback fixes legacy/stale connections and painter-order cases:
+  // a solid tower/gate occupying the palisade footprint always masks timber.
+  for(const target of State.structures){
+    if(!['tower','gate'].includes(target.type)||underConstruction(target)||palisadePassThroughTarget(target))continue;
+    if(worldPolygonsOverlap(palisadePoly,footprintPoints(target)))add(target);
   }
   return out;
 }
@@ -900,23 +931,35 @@ function withPalisadeConnectionOcclusion(s,drawFn){
   }
   ctx.clip('evenodd');drawFn();ctx.restore();
 }
+function drawPalisadePostLine(s,g){
+  const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),bodyZ=.93,tipZ=1.15;
+  for(let i=0;i<=count;i++){
+    const t=i/count,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
+    const center=g.point(p,g.postOffset);
+    drawPalisadePost(center,g.postR,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
+  }
+}
 function drawPalisade(s,preview=false){
   const g=palisadeLayout(s),selected=State.selectedId===s.id;
   withPalisadeConnectionOcclusion(s,()=>{
     if(g.tier===2)drawPalisadeWalkway(s,g);
     else if(g.tier===3)drawPalisadeEarthwork(s,g);
-
-    const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),bodyZ=.93,tipZ=1.15;
-    for(let i=0;i<=count;i++){
-      const t=i/count,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
-      const center=g.point(p,g.postOffset);
-      drawPalisadePost(center,g.postR,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
-    }
+    drawPalisadePostLine(s,g);
   });
 
   if(selected){
     const fp=projectPath(linePoly(s),.025);
     pathPolygon(fp,null,'#f4b76f',2);
+  }
+}
+function drawPalisadeForeground(){
+  for(const s of State.structures){
+    if(s.type!=='palisade'||underConstruction(s))continue;
+    const g=palisadeLayout(s);
+    // Patrols walk on the interior. Only an exterior stake line facing the
+    // camera can legitimately hide them.
+    if(linearFrontSide(s)!==g.side)continue;
+    withPalisadeConnectionOcclusion(s,()=>drawPalisadePostLine(s,g));
   }
 }
 function woodTowerLocal(s,x,y){
