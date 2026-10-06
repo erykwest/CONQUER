@@ -419,9 +419,11 @@ function drawCastleUnionDetails(){
   }
 }
 function drawCastleSelection(){
-  const s=selectedStructure();if(!s||!isCastlePart(s)||underConstruction(s))return;
-  const pts=projectPath(footprintPoints(s),structureHeight(s));if(pts.length<3)return;
-  ctx.save();ctx.strokeStyle='#f4b76f';ctx.lineWidth=2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
+  const s=selectedStructure();if(!s||(!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s))||underConstruction(s))return;
+  withStructureGroundPlane(s,()=>{
+    const pts=projectPath(footprintPoints(s),structureHeight(s));if(pts.length<3)return;
+    ctx.save();ctx.strokeStyle='#f4b76f';ctx.lineWidth=2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
+  });
 }
 
 function worldDepth(s){const p=rotateViewPoint(structureCenter(s));return p.x+p.y;}
@@ -430,7 +432,7 @@ function pointInScreenPolygon(p,poly){
     const a=poly[i],b=poly[j],hit=((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside;
   }return inside;
 }
-function screenHitStructure(s,p){
+function screenHitStructureBody(s,p){
   if(s.type==='house'||isCivic(s)){
     const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
     const h=structureHeight(s);
@@ -446,6 +448,11 @@ function screenHitStructure(s,p){
   if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
   for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length;if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true}
   return false;
+}
+function screenHitStructure(s,p){
+  return isPlacementFoundationBuilding(s)
+    ?withStructureGroundPlane(s,()=>screenHitStructureBody(s,p))
+    :screenHitStructureBody(s,p);
 }
 function seedRand(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
 function mixWorld(a,b,t){return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}}
@@ -2064,7 +2071,7 @@ function drawTorchFixture(src){
 }
 function drawBrazierFixture(src){
   const pts=rectWorldPoints(src.p.x,src.p.y,.20,.20,0);
-  extrudePolygonAt(pts,src.z-.08,src.z+.03,{top:'#5d4b3d',sideA:'#39312b',sideB:'#493d34',stroke:'#7b654f'});
+  withProjectionGroundZ(src.groundZ,()=>extrudePolygonAt(pts,src.z-.08,src.z+.03,{top:'#5d4b3d',sideA:'#39312b',sideB:'#493d34',stroke:'#7b654f'}));
 }
 function drawCastleFireFixtures(){
   for(const src of towerTorchSources())drawTorchFixture(src);
