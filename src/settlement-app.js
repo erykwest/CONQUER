@@ -566,7 +566,8 @@ function generateNewMap(){
     .filter(h=>stats.steepByLevel?.[h])
     .map(h=>`H${h} ${pct(stats.steepByLevel[h].ratio)}%`)
     .join(' · ');
-  status(`Nuova mappa · seed ${State.seed} · colline ${pct(stats.coverage)}% · ${steepLevels} · multi ${pct(stats.multiRatio)}% · edge max ${Number(stats.maxEdge||0).toFixed(1)}U`);
+  const l1Gap=stats.minL1Gap==null?'—':Number(stats.minL1Gap).toFixed(1)+'U';
+  status(`Nuova mappa · seed ${State.seed} · colline ${pct(stats.coverage)}% · ${steepLevels} · multi ${pct(stats.multiRatio)}% · edge max ${Number(stats.maxEdge||0).toFixed(1)}U · L1 gap ${l1Gap}`);
 }
 document.getElementById('newMapBtn').onclick=generateNewMap;
 document.getElementById('rotateLeft').onclick=()=>rotateCamera(-1);
