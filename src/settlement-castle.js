@@ -430,7 +430,9 @@ function landscapeDetailTier(){
   return 2;
 }
 function drawGentleSlopeBand(band,winter){
-  const strips=4;
+  const preview=terrainBandScreenPolygon(band);
+  if(!screenPolygonVisible(preview,96))return;
+  const strips=landscapeDetailTier()===0?2:3;
   const fills=winter
     ?['#d6dbd7','#cfd5d0','#d9deda','#ccd2cd']
     :['#454430','#4b4934','#474631','#514e37'];
@@ -448,49 +450,69 @@ function drawGentleSlopeBand(band,winter){
   }
 }
 function drawLowPolyRock(p,z,size,height,seed,winter=false){
-  const rnd=seedRand(seed>>>0),n=5+Math.floor(rnd()*3),rot=rnd()*Math.PI*2,base=[],top=[];
-  const sx=size*(.72+rnd()*.42),sy=size*(.55+rnd()*.36);
-  for(let i=0;i<n;i++){
-    const a=rot+i/n*Math.PI*2+(rnd()-.5)*.18,rr=.72+rnd()*.34;
-    const q={x:p.x+Math.cos(a)*sx*rr,y:p.y+Math.sin(a)*sy*rr};
-    const bz=terrainElevation(q)+.012,shrink=.44+rnd()*.22;
-    base.push({p:q,z:bz});
-    top.push({p:{x:p.x+(q.x-p.x)*shrink,y:p.y+(q.y-p.y)*shrink},z:bz+height*(.72+rnd()*.34)});
-  }
+  if(!screenPointVisibleRaw(p,z,36))return;
+  const tier=landscapeDetailTier(),rnd=seedRand(seed>>>0);
   const sidePalette=winter?['#8b9092','#9ca1a2','#777d80','#a8acad']:['#5e6263','#727677','#505455','#838787'];
   const topPalette=winter?['#b4b8b9','#a8adae','#c0c3c4']:['#8a8e8d','#989b99','#777b7a'];
+
+  if(tier===0){
+    const base=w2sRaw(p,z+.01),top=w2sRaw(p,z+height*.75),px=Math.max(1.25,size*U*State.view.scale*.78);
+    pathPolygon([
+      {x:base.x-px,y:base.y+.35*px},
+      {x:base.x+px,y:base.y+.35*px},
+      {x:top.x+px*.42,y:top.y},
+      {x:top.x-px*.38,y:top.y-px*.12}
+    ],sidePalette[seed%sidePalette.length],null);
+    return;
+  }
+
+  const n=tier===1?4:5+Math.floor(rnd()*2),rot=rnd()*Math.PI*2,base=[],top=[];
+  const sx=size*(.72+rnd()*.42),sy=size*(.55+rnd()*.36);
+  for(let i=0;i<n;i++){
+    const a=rot+i/n*Math.PI*2+(rnd()-.5)*.16,rr=.74+rnd()*.28;
+    const q={x:p.x+Math.cos(a)*sx*rr,y:p.y+Math.sin(a)*sy*rr};
+    const bz=z+.012,shrink=.46+rnd()*.18;
+    base.push({p:q,z:bz});
+    top.push({p:{x:p.x+(q.x-p.x)*shrink,y:p.y+(q.y-p.y)*shrink},z:bz+height*(.76+rnd()*.22)});
+  }
   const faces=[];
   for(let i=0;i<n;i++){
     const j=(i+1)%n,quad=[w2sRaw(base[i].p,base[i].z),w2sRaw(base[j].p,base[j].z),w2sRaw(top[j].p,top[j].z),w2sRaw(top[i].p,top[i].z)];
     faces.push({poly:quad,depth:(quad[0].y+quad[1].y)/2,fill:sidePalette[(i+Math.floor(rnd()*sidePalette.length))%sidePalette.length]});
   }
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const face of faces)pathPolygon(face.poly,face.fill,null);
-  const center={x:top.reduce((s,q)=>s+q.p.x,0)/n,y:top.reduce((s,q)=>s+q.p.y,0)/n};
-  const cz=top.reduce((s,q)=>s+q.z,0)/n+.015;
-  for(let i=0;i<n;i++){
-    const j=(i+1)%n;
-    pathPolygon([w2sRaw(top[i].p,top[i].z),w2sRaw(top[j].p,top[j].z),w2sRaw(center,cz)],
-      topPalette[(i+Math.floor(rnd()*topPalette.length))%topPalette.length],null);
-  }
+  const visibleFaces=tier===1?faces.slice(-3):faces;
+  for(const face of visibleFaces)pathPolygon(face.poly,face.fill,null);
+  const topPoly=top.map(q=>w2sRaw(q.p,q.z));
+  if(topPoly.length>=3)pathPolygon(topPoly,topPalette[Math.floor(rnd()*topPalette.length)],null);
 }
-function drawSteepSlopeRocks(level,band,winter){
+function steepSlopeRockLayout(level,band){
+  ensureLandscapeRenderCaches();
+  const key=level.id+':'+band.index;
+  if(steepRockLayoutCache.has(key))return steepRockLayoutCache.get(key);
   const edgeLength=dist(band.a,band.b),rnd=seedRand((State.seed^Math.imul(level.z1*131+band.index+17,2654435761))>>>0);
-  const count=Math.max(8,Math.round(edgeLength*4.2)),crestCount=Math.max(4,Math.round(edgeLength*2.2)),rocks=[];
+  const count=Math.max(4,Math.round(edgeLength*LANDSCAPE_RENDER_BUDGET.rockDensity));
+  const crestCount=Math.max(2,Math.round(edgeLength*LANDSCAPE_RENDER_BUDGET.rockCrestDensity));
+  const rocks=[];
   for(let i=0;i<count;i++){
-    const u=clamp((i+rnd()*.82)/count,.025,.975);
-    const v=Math.pow(rnd(),1.75); // dense scree toward the foot.
+    const u=clamp((i+rnd()*.82)/count,.025,.975),v=Math.pow(rnd(),1.68);
     const p=slopePoint(band,u,v),z=band.z0+(band.z1-band.z0)*v;
-    const size=.18+rnd()*.38,height=.12+rnd()*.48;
-    if(p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD)rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
+    if(p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD)rocks.push({p,z,size:.20+rnd()*.36,height:.14+rnd()*.42,seed:Math.floor(rnd()*0xffffffff)});
   }
   for(let i=0;i<crestCount;i++){
-    const u=clamp((i+.18+rnd()*.64)/crestCount,.02,.98),v=.73+rnd()*.25;
+    const u=clamp((i+.18+rnd()*.64)/crestCount,.02,.98),v=.76+rnd()*.22;
     const p=slopePoint(band,u,v),z=band.z0+(band.z1-band.z0)*v;
-    const size=.16+rnd()*.30,height=.10+rnd()*.34;
-    if(p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD)rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
+    if(p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD)rocks.push({p,z,size:.18+rnd()*.28,height:.12+rnd()*.30,seed:Math.floor(rnd()*0xffffffff)});
   }
-  rocks.sort((a,b)=>a.depth-b.depth);
+  steepRockLayoutCache.set(key,rocks);
+  return rocks;
+}
+function drawSteepSlopeRocks(level,band,winter){
+  const tier=landscapeDetailTier(),rocks=steepSlopeRockLayout(level,band)
+    .filter((_,i)=>tier===0?i%2===0:true)
+    .map(r=>({...r,depth:w2sRaw(r.p,r.z).y}))
+    .sort((a,b)=>a.depth-b.depth);
+  if(window.__conquerPerf)window.__conquerPerf.landscapeRocks=(window.__conquerPerf.landscapeRocks||0)+rocks.length;
   for(const rock of rocks)drawLowPolyRock(rock.p,rock.z,rock.size,rock.height,rock.seed,winter);
 }
 function drawRelief(){
