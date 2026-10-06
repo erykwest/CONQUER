@@ -629,21 +629,21 @@ function makeProceduralHill(rnd,index){
     const x=Math.cos(a)*rx*rr,y=Math.sin(a)*ry*rr;
     return{x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca};
   });
-  const base=resampleClosedPolygonMaxEdge(control,RELIEF_MAX_EDGE),n=base.length;
+  const base=resampleClosedPolygonMaxEdge(control,RELIEF_MAX_EDGE);
   const levels=Array.from({length:maxHeight},(_,i)=>({
     id:`hill-${index+1}-l${i+1}`,hillId:`hill-${index+1}`,level:i+1,z0:i,z1:i+1,
     center:{x:center.x,y:center.y},
-    gentleBase:2,steepBase:.5,edgeKinds:Array(n).fill('gentle'),multiEdges:[],top:[]
+    gentleBase:2,steepBase:.5,edgeKinds:[],multiEdges:[],top:[]
   }));
-  const multiRefs=[];
-  for(let l=0;l<maxHeight-1;l++)for(let e=0;e<n;e++)multiRefs.push([l,e]);
-  reliefShuffle(multiRefs,rnd);
-  const multiNeed=Math.min(multiRefs.length,Math.ceil(n*maxHeight*.34));
-  for(let i=0;i<multiNeed;i++){const [l,e]=multiRefs[i];levels[l].multiEdges.push(e)}
   levels[0].top=base;
+  levels[0].edgeKinds=Array(base.length).fill('gentle');
+  const multiEligibleRatio=maxHeight>1?Math.min(.92,.36*maxHeight/(maxHeight-1)):0;
   for(let l=1;l<maxHeight;l++){
-    const prev=levels[l-1],cur=levels[l],multi=new Set(prev.multiEdges);
-    cur.top=prev.top.map((p,i)=>{
+    const prev=levels[l-1],cur=levels[l],n=prev.top.length,refs=Array.from({length:n},(_,i)=>i);
+    reliefShuffle(refs,rnd);
+    prev.multiEdges=refs.slice(0,Math.min(n,Math.round(n*multiEligibleRatio)));
+    const multi=new Set(prev.multiEdges);
+    const raw=prev.top.map((p,i)=>{
       const d=dist(p,center)||1,prevEdge=(i-1+n)%n;
       const stacked=multi.has(i)||multi.has(prevEdge);
       let inset=stacked?.9+rnd()*.35:3.6+rnd()*1.8;
@@ -651,6 +651,8 @@ function makeProceduralHill(rnd,index){
       const factor=Math.max(.48,(d-inset)/d),vx=p.x-center.x,vy=p.y-center.y;
       return{x:center.x+vx*factor,y:center.y+vy*factor};
     });
+    cur.top=resampleClosedPolygonMaxEdge(raw,RELIEF_MAX_EDGE);
+    cur.edgeKinds=Array(cur.top.length).fill('gentle');
   }
   return{id:`hill-${index+1}`,center,rx,ry,maxHeight,levels};
 }
