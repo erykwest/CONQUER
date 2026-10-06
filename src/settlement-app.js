@@ -417,6 +417,38 @@ function setSeason(season){
   status('Stagione: '+labels[season]);
   draw();
 }
+function ensureSeasonControls(){
+  const panel=document.getElementById('timePanel');
+  if(!panel)return;
+  let group=panel.querySelector('.season-group');
+  if(!group){
+    group=document.createElement('div');
+    group.className='season-group';
+    group.setAttribute('aria-label','Season');
+    group.style.cssText='display:flex;gap:4px;padding-left:4px;border-left:1px solid var(--line-strong)';
+    const specs=[
+      ['summer','☀️','Summer'],
+      ['autumn','🍁','Autumn'],
+      ['winter','❄️','Winter'],
+      ['spring','🌸','Spring']
+    ];
+    for(const [season,icon,title] of specs){
+      const b=document.createElement('button');
+      b.type='button';
+      b.dataset.season=season;
+      b.title=title;
+      b.textContent=icon;
+      b.style.cssText='width:40px;height:36px;padding:0;border-radius:9px;font-size:17px';
+      group.appendChild(b);
+    }
+    const day=document.getElementById('dayLabel');
+    panel.insertBefore(group,day||panel.children[2]||null);
+  }
+  group.querySelectorAll('[data-season]').forEach(b=>{
+    b.onclick=()=>setSeason(b.dataset.season);
+    b.classList.toggle('active',b.dataset.season===State.season);
+  });
+}
 document.getElementById('rotateLeft').onclick=()=>rotateCamera(-1);
 document.getElementById('rotateRight').onclick=()=>rotateCamera(1);
 document.getElementById('biomeSelect').onchange=e=>{
@@ -427,7 +459,7 @@ document.getElementById('biomeSelect').onchange=e=>{
 };
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(Number(b.dataset.speed)));
 document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
-document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));
+ensureSeasonControls();
 let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0;
 const VISUAL_FRAME_MS=1000/30;
 const MAINTENANCE_WATCHDOG_MS=2500;
