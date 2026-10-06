@@ -44,7 +44,7 @@ function manualRoadConflict(road,manual){
   // The market is a paved public square; castle gates contain a real traversable passage.
   if(manual.type==='market')return false;
   if(manual.type==='gate'&&roadUsesGatePassage(road,manual))return false;
-  if(['wall','built'].includes(manual.type)){
+  if(['wall','palisade','built'].includes(manual.type)){
     return segmentsIntersect(road.a,road.b,manual.a,manual.b)||
       pointSegmentDistance(manual.a,road.a,road.b)<=manual.width/2+(road.width||.3)/2||
       pointSegmentDistance(manual.b,road.a,road.b)<=manual.width/2+(road.width||.3)/2;
@@ -58,7 +58,7 @@ function manualRoadConflict(road,manual){
   return rings.some(poly=>roadTouchesPolygon(road,poly,.10));
 }
 function autoOverlapsManual(auto,manual){
-  const linear=['wall','built'].includes(manual.type);
+  const linear=['wall','palisade','built'].includes(manual.type);
   if(auto.type==='road')return manualRoadConflict(auto,manual);
   const p={x:auto.x,y:auto.y},r=pointRadius(auto);
   if(linear)return pointSegmentDistance(p,manual.a,manual.b)<=r+manual.width/2+.15;
@@ -85,7 +85,7 @@ function roadRepairPointClear(p,width=.30,ignoreIds=[]){
       if(Math.abs(q.x)<=d.w/2+clearance&&Math.abs(q.y)<=d.h/2+clearance)return false;
       continue;
     }
-    if(['wall','built'].includes(s.type)){
+    if(['wall','palisade','built'].includes(s.type)){
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+clearance)return false;
       continue;
     }
@@ -543,7 +543,7 @@ function nearestRoadInfo(p,roads){let best={d:Infinity,angle:0};for(const r of r
 function autoBlocked(candidate,placed,manual,margin=.2){
   const p={x:candidate.x,y:candidate.y},r=pointRadius(candidate)+margin;
   if(environmentBlocksPoint(p,'settlement'))return true;
-  for(const s of manual){if(['wall','built'].includes(s.type)){if(pointSegmentDistance(p,s.a,s.b)<=r+s.width/2)return true}else if(s.x!=null&&dist(p,s)<=r+pointRadius(s))return true}
+  for(const s of manual){if(['wall','palisade','built'].includes(s.type)){if(pointSegmentDistance(p,s.a,s.b)<=r+s.width/2)return true}else if(s.x!=null&&dist(p,s)<=r+pointRadius(s))return true}
   for(const s of placed){if(s.type==='road')continue;if(dist(p,s)<=r+pointRadius(s)+margin)return true}
   return false;
 }
