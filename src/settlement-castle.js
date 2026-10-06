@@ -798,12 +798,21 @@ function drawLinearBase(s,preview=false){
   extrudePolygon(linePoly(s),h,colors);
 }
 function palisadeLayout(s){
-  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1;
-  const ux=dx/L,uy=dy/L,nx=-uy,ny=ux,side=wallExteriorSide(s);
+  const rawDx=s.b.x-s.a.x,rawDy=s.b.y-s.a.y,rawL=Math.hypot(rawDx,rawDy)||1;
+  const ux=rawDx/rawL,uy=rawDy/rawL,nx=-uy,ny=ux,side=wallExteriorSide(s);
   const width=Number(s.width)||wallWidthForTier(wallTier(s)),tier=wallTier(s),postR=.10;
   const exterior=width/2,postOffset=tier===1?0:Math.max(0,exterior-postR);
+
+  // The collider terminates exactly on the snapped boundary. Visual timber
+  // must stop slightly before it so the final octagonal post and its point
+  // never climb onto the connected tower/gate facade.
+  const jointPad=Math.min(.16,rawL*.20);
+  const startPad=s.aSnap?jointPad:0,endPad=s.bSnap?jointPad:0;
+  const maxPad=Math.max(0,(rawL-.02)/2),sa=Math.min(startPad,maxPad),sb=Math.min(endPad,maxPad);
+  const a={x:s.a.x+ux*sa,y:s.a.y+uy*sa},b={x:s.b.x-ux*sb,y:s.b.y-uy*sb};
+  const dx=b.x-a.x,dy=b.y-a.y,L=Math.max(.01,Math.hypot(dx,dy));
   const point=(p,offset)=>({x:p.x+nx*offset*side,y:p.y+ny*offset*side});
-  return{dx,dy,L,ux,uy,nx,ny,side,width,tier,postR,postOffset,point};
+  return{a,b,dx,dy,L,rawL,ux,uy,nx,ny,side,width,tier,postR,postOffset,startPad:sa,endPad:sb,point};
 }
 function palisadeOctagon(center,r,angle=0){
   const pts=[];
@@ -813,9 +822,9 @@ function palisadeOctagon(center,r,angle=0){
   }
   return pts;
 }
-function drawPalisadePost(center,r,bodyZ,tipZ,angle){
+function drawPalisadePostAt(center,r,z0,bodyZ,tipZ,angle){
   const base=palisadeOctagon(center,r,angle);
-  extrudePolygonAt(base,0,bodyZ,{top:'#765238',sideA:'#51341f',sideB:'#65452b',stroke:'#8b6547'});
+  extrudePolygonAt(base,z0,bodyZ,{top:'#765238',sideA:'#51341f',sideB:'#65452b',stroke:'#8b6547'});
   const apex=w2s(center,tipZ),top=projectPath(base,bodyZ),faces=[];
   for(let i=0;i<8;i++){
     const j=(i+1)%8,depth=(top[i].y+top[j].y)/2;
@@ -824,14 +833,17 @@ function drawPalisadePost(center,r,bodyZ,tipZ,angle){
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.poly,f.fill,'rgba(90,59,35,.55)',.65);
 }
+function drawPalisadePost(center,r,bodyZ,tipZ,angle){
+  drawPalisadePostAt(center,r,0,bodyZ,tipZ,angle);
+}
 function drawPalisadeWalkway(s,g){
   const innerOuter=g.postOffset-.05,innerEdge=-g.width/2+.035,z0=.66,z1=.74;
-  const a0=g.point(s.a,innerOuter),b0=g.point(s.b,innerOuter);
-  const a1=g.point(s.a,innerEdge),b1=g.point(s.b,innerEdge);
+  const a0=g.point(g.a,innerOuter),b0=g.point(g.b,innerOuter);
+  const a1=g.point(g.a,innerEdge),b1=g.point(g.b,innerEdge);
   extrudePolygonAt([a0,b0,b1,a1],z0,z1,{top:'#8b6845',sideA:'#4f3927',sideB:'#65492f',stroke:'#a27b54'});
   const bays=Math.max(1,Math.floor(g.L/.72));
   for(let i=0;i<=bays;i++){
-    const t=i/bays,p={x:s.a.x+g.dx*t,y:s.a.y+g.dy*t};
+    const t=i/bays,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
     const q0=w2s(g.point(p,innerOuter),z1+.008),q1=w2s(g.point(p,innerEdge),z1+.008);
     ctx.save();ctx.strokeStyle='rgba(69,46,29,.48)';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(q0.x,q0.y);ctx.lineTo(q1.x,q1.y);ctx.stroke();ctx.restore();
   }
@@ -840,9 +852,9 @@ function drawPalisadeEarthwork(s,g){
   const crestOuter=g.postOffset-.055,crestInner=crestOuter-.18;
   const earthH=Math.max(.28,Math.min(.70,crestInner+g.width/2));
   const toe=crestInner-earthH;
-  const ao=g.point(s.a,crestOuter),bo=g.point(s.b,crestOuter);
-  const ac=g.point(s.a,crestInner),bc=g.point(s.b,crestInner);
-  const at=g.point(s.a,toe),bt=g.point(s.b,toe);
+  const ao=g.point(g.a,crestOuter),bo=g.point(g.b,crestOuter);
+  const ac=g.point(g.a,crestInner),bc=g.point(g.b,crestInner);
+  const at=g.point(g.a,toe),bt=g.point(g.b,toe);
 
   // Retained outer face behind the stakes.
   pathPolygon([w2s(ao,0),w2s(bo,0),w2s(bo,earthH),w2s(ao,earthH)],'#5a4128','#765738',.8);
@@ -866,17 +878,41 @@ function palisadePatrolSurface(s){
   const earthH=Math.max(.28,Math.min(.70,crestInner+g.width/2));
   return{z:earthH+.10,offset:(crestOuter+crestInner)/2,spread:Math.min(.07,Math.abs(crestOuter-crestInner)*.30)};
 }
+function palisadeConnectionOccluders(s){
+  const ids=[s.aSnap,s.bSnap].filter(Boolean),seen=new Set(),out=[];
+  for(const id of ids){
+    if(seen.has(id))continue;seen.add(id);
+    const target=State.structures.find(o=>o.id===id&&['tower','gate'].includes(o.type));
+    if(target&&!underConstruction(target))out.push(target);
+  }
+  return out;
+}
+function withPalisadeConnectionOcclusion(s,drawFn){
+  const occluders=palisadeConnectionOccluders(s);
+  if(!occluders.length){drawFn();return}
+  const r=wrap.getBoundingClientRect();
+  ctx.save();ctx.beginPath();ctx.rect(-48,-48,r.width+96,r.height+96);
+  for(const o of occluders){
+    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
+    ctx.moveTo(hull[0].x,hull[0].y);
+    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+    ctx.closePath();
+  }
+  ctx.clip('evenodd');drawFn();ctx.restore();
+}
 function drawPalisade(s,preview=false){
   const g=palisadeLayout(s),selected=State.selectedId===s.id;
-  if(g.tier===2)drawPalisadeWalkway(s,g);
-  else if(g.tier===3)drawPalisadeEarthwork(s,g);
+  withPalisadeConnectionOcclusion(s,()=>{
+    if(g.tier===2)drawPalisadeWalkway(s,g);
+    else if(g.tier===3)drawPalisadeEarthwork(s,g);
 
-  const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),bodyZ=.93,tipZ=1.15;
-  for(let i=0;i<=count;i++){
-    const t=i/count,p={x:s.a.x+g.dx*t,y:s.a.y+g.dy*t};
-    const center=g.point(p,g.postOffset);
-    drawPalisadePost(center,g.postR,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
-  }
+    const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),bodyZ=.93,tipZ=1.15;
+    for(let i=0;i<=count;i++){
+      const t=i/count,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
+      const center=g.point(p,g.postOffset);
+      drawPalisadePost(center,g.postR,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
+    }
+  });
 
   if(selected){
     const fp=projectPath(linePoly(s),.025);
@@ -930,21 +966,37 @@ function drawWatchtowerWood(s){
   drawWoodHipRoof(s,eaveZ,apexZ,.14);
 }
 function drawMediumWoodTower(s){
-  const size=1.5,half=size/2-.07,bodyZ=2.07,tipZ=2.32,angle=s.angle||0,spacing=.205;
+  const size=1.5,half=size/2-.07,angle=s.angle||0,spacing=.205;
+  const deck0=1.72,deck1=1.82,parapetBody=2.03,parapetTip=2.22;
   const corners=[[-half,-half],[half,-half],[half,half],[-half,half]];
+
+  // Closed palisade-like lower body, deliberately ending at the fighting deck.
+  // Keeping this section flat-topped creates a strong horizontal break instead
+  // of reading as one giant pointed panel.
   for(let edge=0;edge<4;edge++){
     const a=corners[edge],b=corners[(edge+1)%4],L=Math.hypot(b[0]-a[0],b[1]-a[1]),count=Math.max(1,Math.ceil(L/spacing));
     for(let i=0;i<=count;i++){
       const t=i/count,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
-      drawPalisadePost(woodTowerLocal(s,x,y),.095,bodyZ,tipZ,angle);
+      drawWoodPost(woodTowerLocal(s,x,y),.09,0,deck0,angle);
     }
   }
-  // H1 fighting deck: open platform sits just below the pointed palisade crown.
-  drawWoodPlatform(s,size-.12,2.00,2.12);
+
+  drawWoodPlatform(s,size-.10,deck0,deck1);
+
+  // Open fighting top: only a low pointed parapet remains above the deck.
+  for(let edge=0;edge<4;edge++){
+    const a=corners[edge],b=corners[(edge+1)%4],L=Math.hypot(b[0]-a[0],b[1]-a[1]),count=Math.max(1,Math.ceil(L/.245));
+    for(let i=0;i<=count;i++){
+      const t=i/count,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
+      drawPalisadePostAt(woodTowerLocal(s,x,y),.072,deck1,parapetBody,parapetTip,angle);
+    }
+  }
+
   if(woodTowerRoof(s)==='pitched'){
+    // The roof is genuinely open: four structural posts only, no wall band.
     const roofHalf=.61,eaveZ=2.55,apexZ=2.95;
     for(const [x,y] of [[-roofHalf,-roofHalf],[roofHalf,-roofHalf],[roofHalf,roofHalf],[-roofHalf,roofHalf]]){
-      drawWoodPost(woodTowerLocal(s,x,y),.055,2.12,eaveZ,angle);
+      drawWoodPost(woodTowerLocal(s,x,y),.055,deck1,eaveZ,angle);
     }
     drawWoodHipRoof(s,eaveZ,apexZ,.10);
   }
