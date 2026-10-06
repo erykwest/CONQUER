@@ -1296,7 +1296,7 @@ function processVillageGrowth(){
 function resetLegacyVillageGrowth(){
   if(!State.village.founded||State.village.growthVersion===3)return;
   State.structures=State.structures.filter(s=>!s.auto);
-  State.village.growthVersion=3;State.village.accessRoadVersion=0;State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.baseRoadAngle=null;
+  State.village.growthVersion=3;State.village.accessRoadVersion=0;State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.roadPlanVersion=0;State.village.baseRoadAngle=null;
 }
 function openVillageModal(well){
   State.pendingWellId=well.id;const modal=document.getElementById('foundVillageModal'),input=document.getElementById('villageNameInput');
