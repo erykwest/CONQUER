@@ -866,7 +866,7 @@ function ensureStaticSceneCaches(){
     // During wheel zoom keep the previous raster alive and reproject it in
     // blitSceneCache(). This removes the expensive terrain/castle rebuild from
     // every wheel event. Dirty topology still rebuilds immediately.
-    if(!sceneCacheZoomPreview&&!entry.dirty&&!sceneCacheProjectionCompatible(entry))entry.dirty=true;
+    if(!sceneCacheZoomPreview&&!sceneCachePanPreview&&!entry.dirty&&!sceneCacheProjectionCompatible(entry))entry.dirty=true;
   }
   if(sceneCache.base.dirty)drawBaseStaticScene();
   if(sceneCache.castleBody.dirty)drawCastleBodyStaticScene();
