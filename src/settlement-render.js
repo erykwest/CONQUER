@@ -696,6 +696,7 @@ function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
 }
 function drawStructure(s,preview=false){
+  if(s?.type==='road'){drawAutoStructure(s,preview);return}
   const render=()=>{
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
@@ -718,7 +719,7 @@ function drawBaseStaticScene(){
 
     // Completed terrain-level auto geometry is immutable between topology changes.
     State.structures
-      .filter(s=>s.auto&&['field','road'].includes(s.type)&&!underConstruction(s))
+      .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&!underConstruction(s))
       .forEach(drawAutoStructure);
 
     // Shadows are expensive; update them with the static layer at maintenance
@@ -726,7 +727,7 @@ function drawBaseStaticScene(){
     drawDynamicShadows();
 
     const completedOthers=State.structures
-      .filter(s=>!(s.auto&&['field','road'].includes(s.type))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
+      .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
   });
@@ -781,10 +782,10 @@ function draw(){
 
   // Only construction sites remain fully dynamic at ground/building depth.
   State.structures
-    .filter(s=>s.auto&&['field','road'].includes(s.type)&&underConstruction(s))
+    .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .forEach(drawAutoStructure);
   const dynamicSites=State.structures
-    .filter(s=>!(s.auto&&['field','road'].includes(s.type))&&underConstruction(s))
+    .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
 
