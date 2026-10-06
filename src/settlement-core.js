@@ -37,6 +37,7 @@ function prepareSceneCache(layer){
   };
   return entry;
 }
+let sceneCacheZoomPreview=false;
 function sceneCacheProjectionCompatible(entry){
   const v=entry?.view,r=wrap.getBoundingClientRect(),d=staticCacheDpr();
   if(!v
@@ -52,11 +53,16 @@ function blitSceneCache(layer){
   const r=wrap.getBoundingClientRect(),entry=sceneCache[layer],v=entry.view;
   if(!v)return;
   const m=Number(v.overscan)||0;
-  const dx=State.view.x-v.x,dy=State.view.y-v.y;
+  const ratio=(Number(State.view.scale)||1)/(Number(v.scale)||1);
+  // Cached layers may temporarily use a different scale while the wheel is
+  // active. Reproject the raster around the same screen-space camera origin;
+  // the exact vector scene is rebuilt once the gesture settles.
+  const dx=State.view.x+(-m-v.x)*ratio;
+  const dy=State.view.y+(-m-v.y)*ratio;
   screenCtx.drawImage(
     entry.canvas,
     0,0,entry.canvas.width,entry.canvas.height,
-    dx-m,dy-m,r.width+m*2,r.height+m*2
+    dx,dy,(r.width+m*2)*ratio,(r.height+m*2)*ratio
   );
 }
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
