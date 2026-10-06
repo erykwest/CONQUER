@@ -1009,7 +1009,7 @@ function drawCastleSoldiers(){
 
   // One archer lookout on every completed crenellated tower.
   for(const tower of State.structures){
-    if(tower.type!=='tower'||underConstruction(tower)||towerRoofStyle(tower)!=='battlement')continue;
+    if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower)||towerRoofStyle(tower)!=='battlement')continue;
     const hash=peasantHash(tower.id+'-archer'),a=(hash%360)*Math.PI/180;
     const radius=tower.shape==='round'?tower.r*.26:(tower.size||1)*.18;
     const p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius},z=structureHeight(tower)+.08;
