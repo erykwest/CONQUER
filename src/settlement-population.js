@@ -974,19 +974,33 @@ function drawSoldierFigure(p,z,type,id,phase=0){
   ctx.restore();
 }
 function wallPatrolPoint(wall,day,index=0,count=1){
-  const L=Math.max(.001,dist(wall.a,wall.b)),seed=(peasantHash(wall.id+'-patrol')%1000)/1000;
-  const phase=count>1?index:0;
+  const pg=wall.type==='palisade'?palisadeLayout(wall):null;
+  const a=pg?pg.a:wall.a,b=pg?pg.b:wall.b;
+  const dx=b.x-a.x,dy=b.y-a.y,L=Math.max(.001,Math.hypot(dx,dy));
+  const seed=(peasantHash(wall.id+'-patrol')%1000)/1000,phase=count>1?index:0;
   let t=(day*.72+seed+phase)%2;t=t<=1?t:2-t;
-  const margin=Math.min(.65,L*.18),u=margin/L+t*Math.max(0,1-2*margin/L);
-  const p={x:wall.a.x+(wall.b.x-wall.a.x)*u,y:wall.a.y+(wall.b.y-wall.a.y)*u};
+
+  // Normal patrol margin plus an explicit tower/gate safety zone on snapped
+  // ends. Palisades are already visually trimmed, so this produces an
+  // additional clearance from the actual junction.
+  const normal=Math.min(.65,L*.18);
+  const snapSafe=Math.min(.46,L*.30);
+  let startPad=Math.max(normal,wall.aSnap?snapSafe:0);
+  let endPad=Math.max(normal,wall.bSnap?snapSafe:0);
+  const maxTotal=Math.max(0,L-.08);
+  if(startPad+endPad>maxTotal){
+    const scale=maxTotal/Math.max(.001,startPad+endPad);
+    startPad*=scale;endPad*=scale;
+  }
+  const usable=Math.max(0,L-startPad-endPad),along=startPad+t*usable;
+  const p={x:a.x+dx*(along/L),y:a.y+dy*(along/L)};
 
   if(wall.type==='palisade'){
-    const g=palisadeLayout(wall),surface=palisadePatrolSurface(wall);
+    const surface=palisadePatrolSurface(wall);
     const lane=count>1?(index===0?-surface.spread:surface.spread):0;
-    const off=(surface.offset+lane)*g.side;
-    p.x+=g.nx*off;p.y+=g.ny*off;
+    const off=(surface.offset+lane)*pg.side;
+    p.x+=pg.nx*off;p.y+=pg.ny*off;
   }else if(count>1){
-    const dx=wall.b.x-wall.a.x,dy=wall.b.y-wall.a.y;
     const nx=-dy/L,ny=dx/L,lane=Math.min(.22,Math.max(.10,(Number(wall.width)||1)*.22));
     const side=index===0?-1:1;
     p.x+=nx*lane*side;p.y+=ny*lane*side;
