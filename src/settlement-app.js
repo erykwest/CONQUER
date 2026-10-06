@@ -419,9 +419,14 @@ document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','palisade'].includes(State.tool.linear)){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status((State.tool.linear==='palisade'?'Palisade':'Wall')+' tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
 document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.buildLevels.wall=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=State.buildLevels.wall;State.draft=null;status('Wall height: '+State.buildLevels.wall+' level'+(State.buildLevels.wall>1?'s':''));draw()}});
 document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
+  if(State.tool.kind==='gate'&&State.tool.material==='wood'){
+    document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x.dataset.gateLevel==='1'));
+    status('Wood gate height is fixed at H1');
+    draw();return;
+  }
   State.buildLevels.gate=Number(b.dataset.gateLevel);
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
-  if(State.tool.kind==='gate'&&State.tool.material!=='wood'){
+  if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
     const dummy={type:'gate',material:'stone',level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
@@ -430,10 +435,12 @@ document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
 });
 document.querySelector('[data-gate]').onclick=e=>{
   const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',level};
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
   setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 document.querySelector('[data-wood-gate]').onclick=e=>{
   const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x.dataset.gateLevel==='1'));
   setTool({kind:'gate',material:'wood',level:1,label:'Wood gate 1.5×1U · H1 · flat roof · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
