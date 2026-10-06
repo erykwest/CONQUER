@@ -31,11 +31,11 @@ function drawGatePortalOnEdge(edge){
 function drawGatePortals(){
   for(const s of State.structures){
     if(s.type!=='gate'||underConstruction(s))continue;
-    withStructureDetailOcclusion(s,1.38,()=>{
+    withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
       for(const edge of gateFacadeEdges(s)){
         if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge);
       }
-    });
+    }));
   }
 }
 function gateWindowRows(s){
@@ -207,7 +207,9 @@ function drawTowerDoorSpec(tower,spec){
 function drawTowerDoors(){
   for(const tower of State.structures){
     if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))continue;
-    for(const spec of towerDoorSpecs(tower))drawTowerDoorSpec(tower,spec);
+    withStructureGroundPlane(tower,()=>{
+      for(const spec of towerDoorSpecs(tower))drawTowerDoorSpec(tower,spec);
+    });
   }
 }
 function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
@@ -435,28 +437,30 @@ function drawFacadeWindows(lit=false,nf=1){
     }else if(s.type==='built'){
       drawBuiltWindows(s,lit,nf);
     }else if(s.type==='gate'){
-      drawGateWindows(s,lit,nf);
+      withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf));
     }else if(s.type==='tower'){
       if(isWoodTower(s))continue;
-      const rows=towerWindowRows(s);if(!rows.length)continue;
-      if(s.shape==='round'){
-        for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
-      }else{
-        const edges=visibleFacadeEdges(s);
-        for(const row of rows){
-          withStructureDetailOcclusion(s,row.z,()=>{
-            for(const edge of edges){
-              if(row.count===1)drawWindowOnEdge(edge,row.z,lit,nf,0);
-              else{
-                const a=w2s(edge.a,row.z),b=w2s(edge.b,row.z),L=Math.hypot(b.x-a.x,b.y-a.y);
-                const spacing=Math.min(clamp(9*State.view.scale,5,12),L*.34);
-                drawWindowOnEdge(edge,row.z,lit,nf,-spacing/2);
-                drawWindowOnEdge(edge,row.z,lit,nf,spacing/2);
+      withStructureGroundPlane(s,()=>{
+        const rows=towerWindowRows(s);if(!rows.length)return;
+        if(s.shape==='round'){
+          for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
+        }else{
+          const edges=visibleFacadeEdges(s);
+          for(const row of rows){
+            withStructureDetailOcclusion(s,row.z,()=>{
+              for(const edge of edges){
+                if(row.count===1)drawWindowOnEdge(edge,row.z,lit,nf,0);
+                else{
+                  const a=w2s(edge.a,row.z),b=w2s(edge.b,row.z),L=Math.hypot(b.x-a.x,b.y-a.y);
+                  const spacing=Math.min(clamp(9*State.view.scale,5,12),L*.34);
+                  drawWindowOnEdge(edge,row.z,lit,nf,-spacing/2);
+                  drawWindowOnEdge(edge,row.z,lit,nf,spacing/2);
+                }
               }
-            }
-          });
+            });
+          }
         }
-      }
+      });
     }
   }
 }
@@ -689,12 +693,20 @@ function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
 }
 function drawStructure(s,preview=false){
-  ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
-  if(isCivic(s))drawCivicStructure(s,preview);
-  else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
-  else if(s.type==='palisade')drawPalisade(s,preview);
-  else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
-  ctx.restore();if(!preview&&underConstruction(s))drawConstructionProgress(s);
+  const render=()=>{
+    ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
+    if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
+    if(isCivic(s))drawCivicStructure(s,preview);
+    else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
+    else if(s.type==='palisade')drawPalisade(s,preview);
+    else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
+    ctx.restore();
+  };
+  if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,render);else render();
+  if(!preview&&underConstruction(s)){
+    if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
+    else drawConstructionProgress(s);
+  }
 }
 function drawBaseStaticScene(){
   const entry=prepareSceneCache('base');
@@ -711,7 +723,7 @@ function drawBaseStaticScene(){
     drawDynamicShadows();
 
     const completedOthers=State.structures
-      .filter(s=>!(s.auto&&['field','road'].includes(s.type))&&!isCastlePart(s)&&!underConstruction(s))
+      .filter(s=>!(s.auto&&['field','road'].includes(s.type))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
   });
@@ -724,11 +736,18 @@ function drawCastleBodyStaticScene(){
     if(!unionOk){
       const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
       for(const s of fallback)drawStructure(s);
-      drawTowerDoors();
     }else{
-      drawTowerDoors();
       drawCastleUnionDetails();
     }
+
+    // Point fortifications on slopes are intentionally kept out of the wall
+    // boolean union: draw them as rigid volumes on their own level-0 plane.
+    const raised=State.structures
+      .filter(s=>isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
+      .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+    for(const s of raised)drawStructure(s);
+
+    drawTowerDoors();
     drawTowerRoofs();
     drawGateRoofs();
   });
