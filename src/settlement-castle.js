@@ -638,19 +638,21 @@ function regenerateTowerWallPair(tower,wall,end,anchor=null){
   const other=end==='a'?wall.b:wall.a;
   if(!other)return false;
 
-  // Exact ray/footprint intersection. This is the actual tower collider,
-  // unlike the old projected half-span approximation.
-  const contact=boundaryPoint(tower,other);
+  const original=anchor||{x:tower.x,y:tower.y};
+  const passThrough=wall.type==='palisade'&&palisadePassThroughTarget(tower);
+
+  // Watchtower = open frame: palisade keeps the original endpoint beneath it.
+  // Solid towers/gates use the exact footprint boundary.
+  const contact=passThrough?original:boundaryPoint(tower,other);
   wall[end]={x:contact.x,y:contact.y};
   wall.length=dist(wall.a,wall.b);
   if(end==='a')wall.aSnap=tower.id;else wall.bSnap=tower.id;
 
-  const original=anchor||{x:tower.x,y:tower.y};
   setTowerWallConnection(tower,wall,end,original);
   normalizeStructureVariants(wall);
   normalizeFunctions(tower);
   invalidateCastleColliderGeometry(tower,wall);
-  return dist(wall[end],boundaryPoint(tower,other))<=.015;
+  return passThrough||dist(wall[end],boundaryPoint(tower,other))<=.015;
 }
 function attachTowerToWallEndpoint(wallId,end,tower,anchor){
   const wall=State.structures.find(s=>s.id===wallId&&['wall','palisade'].includes(s.type));
@@ -673,7 +675,7 @@ function restoreTowerWallConnections(tower){
 function syncCompletedTowerWallColliders(force=false){
   let changed=0;
   for(const tower of State.structures){
-    if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))continue;
+    if(tower.type!=='tower'||underConstruction(tower))continue;
     const links=towerWallConnectionRecords(tower);
     if(!links.length)continue;
 
@@ -797,22 +799,33 @@ function drawLinearBase(s,preview=false){
     :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
   extrudePolygon(linePoly(s),h,colors);
 }
+function palisadeSnapTarget(id){
+  return id?State.structures.find(o=>o.id===id&&['tower','gate'].includes(o.type))||null:null;
+}
+function palisadePassThroughTarget(target){
+  return !!target&&isWoodTower(target)&&woodTowerStyle(target)==='watchtower';
+}
+function palisadeSolidSnapTarget(id){
+  const target=palisadeSnapTarget(id);
+  return target&&!palisadePassThroughTarget(target)?target:null;
+}
 function palisadeLayout(s){
   const rawDx=s.b.x-s.a.x,rawDy=s.b.y-s.a.y,rawL=Math.hypot(rawDx,rawDy)||1;
   const ux=rawDx/rawL,uy=rawDy/rawL,nx=-uy,ny=ux,side=wallExteriorSide(s);
   const width=Number(s.width)||wallWidthForTier(wallTier(s)),tier=wallTier(s),postR=.10;
   const exterior=width/2,postOffset=tier===1?0:Math.max(0,exterior-postR);
+  const aTarget=palisadeSnapTarget(s.aSnap),bTarget=palisadeSnapTarget(s.bSnap);
 
-  // The collider terminates exactly on the snapped boundary. Visual timber
-  // must stop slightly before it so the final octagonal post and its point
-  // never climb onto the connected tower/gate facade.
-  const jointPad=Math.min(.16,rawL*.20);
-  const startPad=s.aSnap?jointPad:0,endPad=s.bSnap?jointPad:0;
-  const maxPad=Math.max(0,(rawL-.02)/2),sa=Math.min(startPad,maxPad),sb=Math.min(endPad,maxPad);
-  const a={x:s.a.x+ux*sa,y:s.a.y+uy*sa},b={x:s.b.x-ux*sb,y:s.b.y-uy*sb};
-  const dx=b.x-a.x,dy=b.y-a.y,L=Math.max(.01,Math.hypot(dx,dy));
+  // Endpoint itself is already on the solid tower boundary. Pull timber farther
+  // back according to its lateral offset. Watchtowers are pass-through: zero trim.
+  const jointPad=clamp(.16+Math.abs(postOffset)*.42,.16,.34);
+  const aPad=aTarget&&!palisadePassThroughTarget(aTarget)?Math.min(jointPad,rawL*.25):0;
+  const bPad=bTarget&&!palisadePassThroughTarget(bTarget)?Math.min(jointPad,rawL*.25):0;
+  const maxPad=Math.max(0,(rawL-.02)/2),sa=Math.min(aPad,maxPad),sb=Math.min(bPad,maxPad);
+  const aa={x:s.a.x+ux*sa,y:s.a.y+uy*sa},bb={x:s.b.x-ux*sb,y:s.b.y-uy*sb};
+  const dx=bb.x-aa.x,dy=bb.y-aa.y,L=Math.max(.01,Math.hypot(dx,dy));
   const point=(p,offset)=>({x:p.x+nx*offset*side,y:p.y+ny*offset*side});
-  return{a,b,dx,dy,L,rawL,ux,uy,nx,ny,side,width,tier,postR,postOffset,startPad:sa,endPad:sb,point};
+  return{a:aa,b:bb,dx,dy,L,rawL,ux,uy,nx,ny,side,width,tier,postR,postOffset,startPad:sa,endPad:sb,aTarget,bTarget,point};
 }
 function palisadeOctagon(center,r,angle=0){
   const pts=[];
@@ -879,11 +892,17 @@ function palisadePatrolSurface(s){
   return{z:earthH+.10,offset:(crestOuter+crestInner)/2,spread:Math.min(.07,Math.abs(crestOuter-crestInner)*.30)};
 }
 function palisadeConnectionOccluders(s){
-  const ids=[s.aSnap,s.bSnap].filter(Boolean),seen=new Set(),out=[];
-  for(const id of ids){
-    if(seen.has(id))continue;seen.add(id);
-    const target=State.structures.find(o=>o.id===id&&['tower','gate'].includes(o.type));
-    if(target&&!underConstruction(target))out.push(target);
+  const out=[],seen=new Set(),poly=linePoly(s);
+  const add=target=>{
+    if(!target||underConstruction(target)||palisadePassThroughTarget(target)||seen.has(target.id))return;
+    seen.add(target.id);out.push(target);
+  };
+  add(palisadeSnapTarget(s.aSnap));add(palisadeSnapTarget(s.bSnap));
+
+  // Fallback for stale/legacy links and all painter-order edge cases.
+  for(const target of State.structures){
+    if(!['tower','gate'].includes(target.type)||underConstruction(target)||palisadePassThroughTarget(target))continue;
+    if(worldPolygonsOverlap(poly,footprintPoints(target)))add(target);
   }
   return out;
 }
@@ -900,18 +919,48 @@ function withPalisadeConnectionOcclusion(s,drawFn){
   }
   ctx.clip('evenodd');drawFn();ctx.restore();
 }
+function palisadePostOffsetAt(g,along){
+  let factor=1;
+  const taper=Math.min(.48,g.L*.35);
+  if(taper>1e-5){
+    if(palisadePassThroughTarget(g.aTarget))factor=Math.min(factor,clamp(along/taper,0,1));
+    if(palisadePassThroughTarget(g.bTarget))factor=Math.min(factor,clamp((g.L-along)/taper,0,1));
+  }
+  return g.postOffset*factor;
+}
+function drawPalisadePostLine(s,g,z0=0,bodyZ=.93,tipZ=1.15,r=g.postR){
+  const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing));
+  for(let i=0;i<=count;i++){
+    const t=i/count,along=g.L*t,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
+    const center=g.point(p,palisadePostOffsetAt(g,along));
+    drawPalisadePostAt(center,r,z0,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
+  }
+}
+function drawWatchtowerPalisadeJunction(s,g){
+  const targets=[];
+  if(palisadePassThroughTarget(g.aTarget))targets.push(g.aTarget);
+  if(palisadePassThroughTarget(g.bTarget)&&g.bTarget!==g.aTarget)targets.push(g.bTarget);
+  if(!targets.length)return;
+
+  for(const tower of targets){
+    if(g.tier===2){
+      const pts=rectWorldPoints(tower.x,tower.y,.78,.78,tower.angle||0);
+      extrudePolygonAt(pts,.66,.74,{top:'#8b6845',sideA:'#4f3927',sideB:'#65492f',stroke:'#a27b54'});
+    }else if(g.tier===3){
+      const crestOuter=g.postOffset-.055,crestInner=crestOuter-.18;
+      const earthH=Math.max(.28,Math.min(.70,crestInner+g.width/2));
+      const pts=rectWorldPoints(tower.x,tower.y,.82,.82,tower.angle||0);
+      pathPolygon(projectPath(pts,earthH),'#76603a','#8f7650',.8);
+    }
+  }
+}
 function drawPalisade(s,preview=false){
   const g=palisadeLayout(s),selected=State.selectedId===s.id;
   withPalisadeConnectionOcclusion(s,()=>{
     if(g.tier===2)drawPalisadeWalkway(s,g);
     else if(g.tier===3)drawPalisadeEarthwork(s,g);
-
-    const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),bodyZ=.93,tipZ=1.15;
-    for(let i=0;i<=count;i++){
-      const t=i/count,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
-      const center=g.point(p,g.postOffset);
-      drawPalisadePost(center,g.postR,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
-    }
+    drawWatchtowerPalisadeJunction(s,g);
+    drawPalisadePostLine(s,g);
   });
 
   if(selected){
@@ -967,12 +1016,10 @@ function drawWatchtowerWood(s){
 }
 function drawMediumWoodTower(s){
   const size=1.5,half=size/2-.07,angle=s.angle||0,spacing=.205;
-  const deck0=1.72,deck1=1.82,parapetBody=2.03,parapetTip=2.22;
+  const deck0=1.72,deck1=1.82,openTop=woodTowerRoof(s)==='open';
   const corners=[[-half,-half],[half,-half],[half,half],[-half,half]];
 
-  // Closed palisade-like lower body, deliberately ending at the fighting deck.
-  // Keeping this section flat-topped creates a strong horizontal break instead
-  // of reading as one giant pointed panel.
+  // Closed palisade-like lower body.
   for(let edge=0;edge<4;edge++){
     const a=corners[edge],b=corners[(edge+1)%4],L=Math.hypot(b[0]-a[0],b[1]-a[1]),count=Math.max(1,Math.ceil(L/spacing));
     for(let i=0;i<=count;i++){
@@ -980,20 +1027,21 @@ function drawMediumWoodTower(s){
       drawWoodPost(woodTowerLocal(s,x,y),.09,0,deck0,angle);
     }
   }
-
   drawWoodPlatform(s,size-.10,deck0,deck1);
 
-  // Open fighting top: only a low pointed parapet remains above the deck.
-  for(let edge=0;edge<4;edge++){
-    const a=corners[edge],b=corners[(edge+1)%4],L=Math.hypot(b[0]-a[0],b[1]-a[1]),count=Math.max(1,Math.ceil(L/.245));
-    for(let i=0;i<=count;i++){
-      const t=i/count,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
-      drawPalisadePostAt(woodTowerLocal(s,x,y),.072,deck1,parapetBody,parapetTip,angle);
+  if(openTop){
+    // Open-top tower: pointed palisade parapet.
+    const parapetBody=2.03,parapetTip=2.22;
+    for(let edge=0;edge<4;edge++){
+      const a=corners[edge],b=corners[(edge+1)%4],L=Math.hypot(b[0]-a[0],b[1]-a[1]),count=Math.max(1,Math.ceil(L/.245));
+      for(let i=0;i<=count;i++){
+        const t=i/count,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
+        drawPalisadePostAt(woodTowerLocal(s,x,y),.072,deck1,parapetBody,parapetTip,angle);
+      }
     }
-  }
-
-  if(woodTowerRoof(s)==='pitched'){
-    // The roof is genuinely open: four structural posts only, no wall band.
+  }else{
+    // Roofed variant: genuinely open gallery under the roof, with a low timber rail.
+    drawWoodRail(s,size-.08,deck1,2.02);
     const roofHalf=.61,eaveZ=2.55,apexZ=2.95;
     for(const [x,y] of [[-roofHalf,-roofHalf],[roofHalf,-roofHalf],[roofHalf,roofHalf],[-roofHalf,roofHalf]]){
       drawWoodPost(woodTowerLocal(s,x,y),.055,deck1,eaveZ,angle);
@@ -1181,16 +1229,16 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
   };
 }
 function castleBattlementOccluders(piece){
-  if(!piece.ownerId||!['tower','wall','gate'].includes(piece.ownerType))return[];
+  if(!piece.ownerId||!['tower','wall','gate','palisade'].includes(piece.ownerType))return[];
   const owner=State.structures.find(s=>s.id===piece.ownerId);
   return State.structures.filter(s=>{
-    if(s.id===piece.ownerId||!isCastlePart(s)||underConstruction(s))return false;
+    if(s.id===piece.ownerId||underConstruction(s))return false;
+    const candidate=isCastlePart(s)||(piece.ownerType==='palisade'&&['tower','gate'].includes(s.type));
+    if(!candidate)return false;
+    if(piece.ownerType==='palisade'&&palisadePassThroughTarget(s))return false;
+
     const h=structureVisualTopHeight(s);
     if(h<=Number(piece.z0)+.04)return false;
-
-    // Attached/subtower geometry can overlap even when structure-center depth
-    // says the opposite. If this merlon footprint enters the taller volume,
-    // that volume must mask it unconditionally.
     const fp=unionFootprintPoints(s);
     if(worldPolygonsOverlap(piece.pts,fp))return true;
 
@@ -1217,6 +1265,14 @@ function withTowerBattlementOcclusion(piece,drawFn){
 }
 function drawBattlementPiece(piece){
   withTowerBattlementOcclusion(piece,()=>{
+    if(piece.kind==='palisadePost'){
+      drawPalisadePostAt(piece.center,piece.r,piece.z0,piece.bodyZ,piece.tipZ,piece.angle||0);
+      return;
+    }
+    if(piece.kind==='woodRailPost'){
+      drawWoodPost(piece.center,piece.r,piece.z0,piece.tipZ,piece.angle||0);
+      return;
+    }
     if(piece.wallCrest){
       const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
       const H=Math.max(2000,wrap.getBoundingClientRect().height*3);
@@ -1473,7 +1529,9 @@ function battlementBrazierSources(){
   const out=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
-    if(s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='battlement'){
+    if(s.type==='tower'&&isWoodTower(s)&&woodTowerStyle(s)==='palisadeTower'&&woodTowerRoof(s)==='open'){
+      out.push({kind:'brazier',id:s.id+':wood-brazier',p:woodTowerLocal(s,.28,.24),z:1.90});
+    }else if(s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='battlement'){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10});
@@ -1566,13 +1624,71 @@ function gateBattlementPieces(s){
   }
   return pieces;
 }
+function fortificationFrontPiece(owner,kind,center,r,angle,z0,bodyZ,tipZ){
+  const pts=palisadeOctagon(center,r,angle);
+  const q=rotateViewPoint(center);
+  return{
+    kind,pts,z0,z1:tipZ,depth:q.x+q.y,
+    ownerId:owner.id,ownerType:owner.type,ownerDepth:worldDepth(owner),ownerTop:structureHeight(owner),
+    center,r,angle,bodyZ,tipZ
+  };
+}
+function palisadeFrontPieces(s){
+  if(s.type!=='palisade'||underConstruction(s))return[];
+  const g=palisadeLayout(s);
+  if(linearFrontSide(s)!==g.side)return[];
+  const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),pieces=[];
+  for(let i=0;i<=count;i++){
+    const t=i/count,along=g.L*t,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
+    const center=g.point(p,palisadePostOffsetAt(g,along));
+    pieces.push(fortificationFrontPiece(s,'palisadePost',center,g.postR,Math.atan2(g.dy,g.dx),0,.93,1.15));
+  }
+  return pieces;
+}
+function woodTowerFrontEdges(s){
+  const fp=footprintPoints(s),center={x:s.x,y:s.y},cd=viewDepthPoint(center),edges=[];
+  for(let i=0;i<fp.length;i++){
+    const a=fp[i],b=fp[(i+1)%fp.length],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    if(viewDepthPoint(mid)>cd+1e-4)edges.push({a,b});
+  }
+  return edges;
+}
+function woodTowerFrontPieces(s){
+  if(!isWoodTower(s)||underConstruction(s))return[];
+  const pieces=[],angle=s.angle||0;
+  if(woodTowerStyle(s)==='watchtower'){
+    for(const edge of woodTowerFrontEdges(s)){
+      const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,steps=Math.max(2,Math.ceil(L/.34));
+      for(let i=0;i<=steps;i++){
+        const t=i/steps,center={x:edge.a.x+dx*t,y:edge.a.y+dy*t};
+        pieces.push(fortificationFrontPiece(s,'woodRailPost',center,.045,angle,1.46,1.64,1.72));
+      }
+    }
+    return pieces;
+  }
+
+  const openTop=woodTowerRoof(s)==='open';
+  for(const edge of woodTowerFrontEdges(s)){
+    const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1;
+    const count=Math.max(2,Math.ceil(L/(openTop?.245:.34)));
+    for(let i=0;i<=count;i++){
+      const t=i/count,center={x:edge.a.x+dx*t,y:edge.a.y+dy*t};
+      if(openTop)pieces.push(fortificationFrontPiece(s,'palisadePost',center,.072,angle,1.82,2.03,2.22));
+      else pieces.push(fortificationFrontPiece(s,'woodRailPost',center,.045,angle,1.82,1.94,2.02));
+    }
+  }
+  return pieces;
+}
 function drawCastleBattlements(){
   const pieces=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
-    if(s.type==='tower')pieces.push(...towerBattlementPieces(s));
-    else if(s.type==='gate')pieces.push(...gateBattlementPieces(s));
+    if(s.type==='tower'){
+      pieces.push(...towerBattlementPieces(s));
+      if(isWoodTower(s))pieces.push(...woodTowerFrontPieces(s));
+    }else if(s.type==='gate')pieces.push(...gateBattlementPieces(s));
     else if(s.type==='wall')pieces.push(...wallBattlementPieces(s));
+    else if(s.type==='palisade')pieces.push(...palisadeFrontPieces(s));
   }
   renderBattlementPieces(pieces);
 }
