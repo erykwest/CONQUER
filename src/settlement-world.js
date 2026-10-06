@@ -1010,7 +1010,7 @@ function edgeSample(edge,t){
 }
 function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
 function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
-function roadList(completedOnly=false){return State.structures.filter(s=>s.auto&&s.type==='road'&&(!completedOnly||!underConstruction(s)))}
+function roadList(completedOnly=false){return State.structures.filter(s=>s.type==='road'&&(!completedOnly||!underConstruction(s)))}
 function primaryRoadList(completedOnly=false){return roadList(completedOnly).filter(r=>!!r.routeId)}
 function autoList(type){return State.structures.filter(s=>s.auto&&(!type||s.type===type))}
 function currentGrowthRadius(){
@@ -1021,32 +1021,104 @@ function growthRng(step,salt=0){
   const well=State.structures.find(s=>s.id===State.village.wellId)||{x:100,y:100};
   return seedRand((villageSeed(well)^Math.imul(step+1,2654435761)^salt)>>>0);
 }
-function practicalEdges(){
-  const sides=['north','east','south','west'];
-  return sides.filter(side=>{
-    let free=0,total=11;for(let i=0;i<total;i++){const p=edgeSample(side,(i+.5)/total);if(!environmentBlocksPoint(p,'road'))free++}
-    return free>=Math.ceil(total*.55);
-  });
+const BORDER_ENTRY_SIDES=['north','east','south','west'];
+const BORDER_ENTRY_FRACTIONS=[.25,.50,.75];
+const ROAD_PLAN_VERSION=2;
+function borderEntryCandidates(){
+  const out=[];
+  for(const edge of BORDER_ENTRY_SIDES){
+    BORDER_ENTRY_FRACTIONS.forEach((t,index)=>{
+      const p=edgeSample(edge,t);
+      out.push({id:`border-${edge}-${index}`,edge,index,t,x:p.x,y:p.y});
+    });
+  }
+  return out;
 }
-function portalOnEdge(edge,rnd){
-  const inset=10+rnd()*80;
-  if(edge==='north')return{x:BUILD_MIN+inset,y:BUILD_MIN,edge};
-  if(edge==='south')return{x:BUILD_MIN+inset,y:BUILD_MAX,edge};
-  if(edge==='west')return{x:BUILD_MIN,y:BUILD_MIN+inset,edge};
-  return{x:BUILD_MAX,y:BUILD_MIN+inset,edge};
+function validBorderEntrySelection(entries){
+  return Array.isArray(entries)&&entries.length===4&&BORDER_ENTRY_SIDES.every(edge=>
+    entries.some(e=>e?.edge===edge&&Number.isFinite(e.x)&&Number.isFinite(e.y))
+  );
 }
-function oppositeEdge(edge){return({north:'south',south:'north',east:'west',west:'east'})[edge]}
+function ensureBorderEntrySelection(){
+  if(validBorderEntrySelection(State.village.borderEntries))return State.village.borderEntries;
+
+  const all=borderEntryCandidates(),rnd=seedRand((State.seed^0x6d2b79f5)>>>0),selected=[];
+  for(const edge of BORDER_ENTRY_SIDES){
+    const options=all.filter(e=>e.edge===edge);
+    const start=Math.floor(rnd()*options.length);
+    const ordered=options.map((_,i)=>options[(start+i)%options.length]);
+    const choice=ordered.find(e=>!environmentBlocksPoint(e,'road'))||ordered[0];
+    selected.push({...choice});
+  }
+  State.village.borderEntries=selected;
+  return selected;
+}
+function selectedBorderEntry(edge){
+  return ensureBorderEntrySelection().find(e=>e.edge===edge)||null;
+}
 function ensureRoadPlan(){
-  if(Array.isArray(State.village.roadPlan)&&State.village.roadPlan.length)return State.village.roadPlan;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return[];
-  const rnd=seedRand((villageSeed(well)^0x51f15e)>>>0),edges=practicalEdges();
-  if(edges.length<2)return[];
-  const first=edges[Math.floor(rnd()*edges.length)];
-  const preferred=oppositeEdge(first),second=edges.includes(preferred)?preferred:edges.find(e=>e!==first);
-  const chosen=[first,second];
-  State.village.roadPlan=chosen.map((edge,i)=>({id:'arterial-'+i,edge,target:portalOnEdge(edge,rnd),connected:false}));
+  const entries=ensureBorderEntrySelection();
+
+  if(State.village.roadPlanVersion===ROAD_PLAN_VERSION&&Array.isArray(State.village.roadPlan)&&State.village.roadPlan.length===4){
+    return State.village.roadPlan;
+  }
+
+  State.village.roadPlan=entries.map((entry,i)=>({
+    id:'arterial-'+i,
+    edge:entry.edge,
+    entryId:entry.id,
+    target:{x:entry.x,y:entry.y,edge:entry.edge},
+    connected:false
+  }));
+  State.village.roadPlanVersion=ROAD_PLAN_VERSION;
   State.village.baseRoadAngle=Math.atan2(State.village.roadPlan[0].target.y-well.y,State.village.roadPlan[0].target.x-well.x);
   return State.village.roadPlan;
+}
+function connectSelectedBorderMainRoads(){
+  const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();
+  if(!well||plan.length!==4)return 0;
+  let changed=0;
+  for(const route of plan){
+    route.connected=true;
+    if(!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
+  }
+  if(changed)invalidateNavigation(false);
+  return changed;
+}
+function mainRoadSnapAnchor(p){
+  let best={point:{x:snapGrid(p.x),y:snapGrid(p.y)},distance:Infinity};
+
+  const consider=q=>{
+    if(!q)return;
+    const d=dist(p,q);
+    if(d<=ROAD_RULES.snapNodeDistance&&d<best.distance)best={point:{x:q.x,y:q.y},distance:d};
+  };
+
+  for(const entry of ensureBorderEntrySelection())consider(entry);
+  const well=State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
+  if(well)consider(well);
+
+  for(const road of roadList()){
+    consider(road.a);consider(road.b);
+    const q=closestPointOnSegment(p,road.a,road.b),d=dist(p,q);
+    if(d<=ROAD_RULES.snapNodeDistance&&d<best.distance)best={point:q,distance:d};
+  }
+  return{point:best.point,magnet:Number.isFinite(best.distance)};
+}
+function addManualMainRoad(a,b){
+  if(!a||!b)return false;
+  const L=dist(a,b);if(L<TYPES.road.min-.001)return false;
+  const id=uid(),road={
+    id,type:'road',auto:false,manualMain:true,roadClass:'arterial-manual',
+    routeId:'manual-main:'+id,routeSeq:0,
+    a:{...a},b:{...b},length:L,width:TYPES.road.width,appeal:1
+  };
+  State.structures.push(road);
+  invalidateNavigation(false);
+  markDirty(false,true,true);
+  selectStructure(road);
+  return true;
 }
 function routeRoads(routeId){return roadList().filter(r=>r.routeId===routeId).sort((a,b)=>(a.routeSeq||0)-(b.routeSeq||0))}
 function roadAngle(r){return Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}
