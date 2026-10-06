@@ -1,0 +1,79 @@
+name: Smoke test main Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start local server
+        run: |
+          python3 -m http.server 4173 >/tmp/conquer-http.log 2>&1 &
+          sleep 2
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Compare main HEAD with Pages root
+        shell: bash
+        run: |
+          cat > diagnose.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const targets=[
+            ['local-main','http://127.0.0.1:4173/'],
+            ['pages-main','https://erykwest.github.io/CONQUER/']
+          ];
+          const browser=await chromium.launch({headless:true});
+          const results=[];
+          for(const [name,url] of targets){
+            const context=await browser.newContext({viewport:{width:1440,height:1000}});
+            const page=await context.newPage();
+            const errors=[],failed=[],consoleLog=[];
+            page.on('pageerror',e=>errors.push(String(e.stack||e)));
+            page.on('requestfailed',r=>failed.push(r.url()+' :: '+(r.failure()?.errorText||'failed')));
+            page.on('response',r=>{if(r.status()>=400)failed.push(r.status()+' '+r.url())});
+            page.on('console',m=>consoleLog.push(m.type()+': '+m.text()));
+            const res=await page.goto(url,{waitUntil:'networkidle',timeout:60000});
+            await page.waitForTimeout(1800);
+            const snapshot=await page.evaluate(()=>{
+              const canvas=document.getElementById('c'),rect=canvas?.getBoundingClientRect();
+              let runtime={};
+              try{
+                runtime=eval('({drawType:typeof draw,fitType:typeof fit,resizeType:typeof resize,tool:State?.tool?JSON.parse(JSON.stringify(State.tool)):null,view:State?.view?JSON.parse(JSON.stringify(State.view)):null,structures:State?.structures?.length??null,environment:State?.environment?.length??null})');
+              }catch(e){runtime={evalError:String(e)}}
+              return{
+                href:location.href,title:document.title,
+                towerButtons:document.querySelectorAll('[data-tower]').length,
+                canvas:rect?{w:rect.width,h:rect.height,width:canvas.width,height:canvas.height}:null,
+                runtime
+              };
+            });
+            let towerTest={};
+            try{
+              await page.locator('[data-tower="square"][data-size="1"]').click();
+              const target=await page.evaluate(()=>eval('(()=>{const p=w2s({x:75,y:75});return{x:p.x,y:p.y,before:State.structures.length}})()'));
+              await page.mouse.click(target.x,target.y);
+              await page.mouse.move(target.x+45,target.y+15);
+              await page.mouse.click(target.x+45,target.y+15);
+              await page.waitForTimeout(250);
+              towerTest=await page.evaluate(()=>eval('({after:State.structures.length,status:document.getElementById("status")?.textContent})'));
+              towerTest.before=target.before;
+            }catch(e){towerTest={error:String(e)}}
+            results.push({name,status:res?.status(),snapshot,towerTest,errors,failed,consoleLog});
+            await context.close();
+          }
+          console.log(JSON.stringify(results,null,2));
+          if(results.some(r=>r.errors.length||r.failed.length||r.towerTest.error||r.towerTest.after!==r.towerTest.before+1))process.exit(1);
+          await browser.close();
+          JS
+          node diagnose.mjs
