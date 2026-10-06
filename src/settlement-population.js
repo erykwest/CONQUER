@@ -3,7 +3,7 @@
 function peasantHash(id){return biomeHash(String(id||'peasant'))}
 function completedSettlement(type){return State.structures.filter(s=>s.type===type&&!underConstruction(s))}
 function peasantVisualDay(){return State.clock.day*PEASANT_VISUAL_SPEED}
-function visualCycleDay(){return State.clock.day*VISUAL_CYCLE_SPEED}
+function visualCycleDay(){return peasantVisualDay()}
 function visualCycleFrac(){
   if(State.daylightOverride==='day')return VISUAL_DAYLIGHT_RATIO*.5;
   if(State.daylightOverride==='night')return VISUAL_DAYLIGHT_RATIO+(1-VISUAL_DAYLIGHT_RATIO)*.5;
@@ -690,7 +690,7 @@ function residentIdlePoint(anchor,id,day,radius=.16){
   if(!anchor)return null;
   const h=peasantHash(String(id)+'-idle');
   const phase=((h>>>7)%1000)/1000*Math.PI*2;
-  const speed=.65+((h>>>18)%1000)/1000*.45;
+  const speed=(.65+((h>>>18)%1000)/1000*.45)/3;
   const a=phase+day*Math.PI*2*speed*12;
   const b=phase*.71+day*Math.PI*2*(speed*.63)*12;
   return{
@@ -706,7 +706,7 @@ function childHomePosition(house,resident,day){
   const nL=Math.hypot(nx,ny)||1;nx/=nL;ny/=nL;
   const tx=-ny,ty=nx,h=peasantHash(resident.id+'-child-idle');
   const phase=((h>>>6)%1000)/1000*Math.PI*2;
-  const pace=.75+((h>>>17)%1000)/1000*.55;
+  const pace=(.75+((h>>>17)%1000)/1000*.55)/3;
   const t=phase+day*Math.PI*2*pace*18;
   const side=Math.sin(t)*(.45+((h>>>10)%1000)/1000*.42);
   const outward=.12+.12*(.5+.5*Math.sin(t*.61+phase));
