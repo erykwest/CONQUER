@@ -1,0 +1,89 @@
+name: Publish branch previews to GitHub Pages
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout all branches
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build multi-branch static site
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site _branch_tmp
+          mkdir -p _site _branch_tmp
+
+          mapfile -t branches < <(
+            git for-each-ref --format='%(refname:short)' refs/remotes/origin/               | sed 's#^origin/##'               | grep -v '^HEAD$'               | sort -u
+          )
+
+          for branch in "${branches[@]}"; do
+            [ -n "$branch" ] || continue
+            safe="${branch//\//-}"
+            rm -rf _branch_tmp/*
+            git archive "origin/$branch" | tar -x -C _branch_tmp
+
+            rm -rf "_branch_tmp/.github"
+
+            mkdir -p "_site/$safe"
+            cp -a _branch_tmp/. "_site/$safe/"
+
+            if [ "$branch" = "main" ]; then
+              cp -a _branch_tmp/. _site/
+            fi
+          done
+
+          cat > _site/branches.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>CONQUER branch previews</title>
+          <style>
+            body{font:16px system-ui;background:#17130f;color:#eee;padding:32px}
+            a{color:#e99a4b;display:block;margin:10px 0}
+          </style>
+          <h1>CONQUER branch previews</h1>
+          HTML
+
+          for branch in "${branches[@]}"; do
+            safe="${branch//\//-}"
+            printf '<a href="./%s/">%s</a>\n' "$safe" "$branch" >> _site/branches.html
+          done
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
