@@ -536,7 +536,11 @@ function generateNewMap(){
 
   const stats=State.relief?.stats||reliefStats();
   const pct=n=>Math.round((Number(n)||0)*100);
-  status(`Nuova mappa · seed ${State.seed} · colline ${pct(stats.coverage)}% · ripidi ${pct(stats.steepRatio)}% · multilivello ${pct(stats.multiRatio)}% · H${stats.maxHeight}`);
+  const steepLevels=[1,2,3,4,5]
+    .filter(h=>stats.steepByLevel?.[h])
+    .map(h=>`H${h} ${pct(stats.steepByLevel[h].ratio)}%`)
+    .join(' · ');
+  status(`Nuova mappa · seed ${State.seed} · colline ${pct(stats.coverage)}% · ${steepLevels} · multi ${pct(stats.multiRatio)}% · edge max ${Number(stats.maxEdge||0).toFixed(1)}U`);
 }
 document.getElementById('newMapBtn').onclick=generateNewMap;
 document.getElementById('rotateLeft').onclick=()=>rotateCamera(-1);
