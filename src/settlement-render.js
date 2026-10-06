@@ -560,9 +560,6 @@ function draw(){
   drawTowerFlags();
   drawCastleSelection();
   drawCastleSoldiers();
-
-  // Unified fortification-front protocol: wall merlons, palisade stakes and
-  // wooden tower parapets all live in the same cached post-patrol layer.
   blitSceneCache('castleFront');
   drawCastleFireFixtures();
 
