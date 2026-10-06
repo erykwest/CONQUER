@@ -275,8 +275,22 @@ canvas.addEventListener('pointerdown',e=>{
     }
   }
 });
+let panFrame=0,panPending=null;
+function flushCanvasPan(){
+  panFrame=0;
+  if(!pan||!panPending)return;
+  const {clientX,clientY}=panPending;
+  panPending=null;
+  State.view.x=pan.vx+clientX-pan.x;
+  State.view.y=pan.vy+clientY-pan.y;
+  draw();
+}
 canvas.addEventListener('pointermove',e=>{
-  if(pan){State.view.x=pan.vx+e.clientX-pan.x;State.view.y=pan.vy+e.clientY-pan.y;draw();return}
+  if(pan){
+    panPending={clientX:e.clientX,clientY:e.clientY};
+    if(!panFrame)panFrame=requestAnimationFrame(flushCanvasPan);
+    return
+  }
   const p=pointerWorld(e);
   if(State.tool.kind==='linear'&&State.draft){
     const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,snap.point,spec);
@@ -334,6 +348,12 @@ canvas.addEventListener('pointermove',e=>{
 });
 function finishCanvasPan(){
   if(!pan)return;
+  if(panPending){
+    State.view.x=pan.vx+panPending.clientX-pan.x;
+    State.view.y=pan.vy+panPending.clientY-pan.y;
+    panPending=null;
+  }
+  if(panFrame){cancelAnimationFrame(panFrame);panFrame=0}
   pan=null;
   // During drag the static bitmap is translated cheaply. Rasterize once at
   // the final camera so subsequent frames have full coverage and zero offset.
