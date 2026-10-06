@@ -153,7 +153,7 @@ function towerDoorVisible(tower,spec){
 function towerDoorOccluders(tower,spec,apexZ){
   const ownerDepth=worldDepth(tower);
   return State.structures.filter(o=>{
-    if(o.id===tower.id||underConstruction(o)||!isCastlePart(o))return false;
+    if(o.id===tower.id||underConstruction(o)||(!isCastlePart(o)&&!isRaisedPlacementCastlePoint(o)))return false;
     if(structureVisualTopHeight(o)<=spec.baseZ+.025)return false;
 
     // Connected/overlapping structures always mask the doorway where their
