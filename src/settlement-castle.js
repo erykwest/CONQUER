@@ -673,7 +673,7 @@ function restoreTowerWallConnections(tower){
 function syncCompletedTowerWallColliders(force=false){
   let changed=0;
   for(const tower of State.structures){
-    if(tower.type!=='tower'||underConstruction(tower))continue;
+    if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))continue;
     const links=towerWallConnectionRecords(tower);
     if(!links.length)continue;
 
@@ -1364,7 +1364,7 @@ function drawGateRoofs(){
 }
 function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function drawQuarteredTowerFlag(tower){
-  if(!tower||underConstruction(tower)||tower.type!=='tower'||towerRoofStyle(tower)!=='pitched')return;
+  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower'||towerRoofStyle(tower)!=='pitched')return;
   const scale=clamp(State.view.scale,.55,1.45),base=w2s({x:tower.x,y:tower.y},towerVisualTopHeight(tower));
   const seed=(peasantHash(tower.id+'-flag')%1000)/1000;
   const mastH=clamp(20*scale,13,28),clothW=clamp(15*scale,10,21),clothH=clamp(10*scale,7,14);
@@ -1390,7 +1390,7 @@ function drawQuarteredTowerFlag(tower){
 }
 function drawTowerFlags(){
   const towers=State.structures
-    .filter(s=>s.type==='tower'&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
+    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const tower of towers)drawQuarteredTowerFlag(tower);
 }
@@ -1420,7 +1420,7 @@ function battlementBrazierSources(){
   const out=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
-    if(s.type==='tower'&&towerRoofStyle(s)==='battlement'){
+    if(s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='battlement'){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10});
