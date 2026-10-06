@@ -344,7 +344,42 @@ function finishCanvasPan(){
 canvas.addEventListener('pointerup',finishCanvasPan);
 canvas.addEventListener('pointercancel',finishCanvasPan);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,10);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;invalidateSceneCache();draw();if(State.view.scale>=WEATHER_ZOOM_THRESHOLD)clearWeatherCloudLayer();drawWeatherOverlay()},{passive:false});
+let zoomFrame=0,zoomSettleTimer=0,zoomWheelDelta=0,zoomAnchor=null;
+function flushWheelZoom(){
+  zoomFrame=0;
+  if(!zoomAnchor||!zoomWheelDelta)return;
+  const {sx,sy,before}=zoomAnchor;
+  const steps=clamp(zoomWheelDelta/100,-3,3);
+  const factor=Math.pow(1.12,-steps);
+  zoomWheelDelta=0;
+  State.view.scale=clamp(State.view.scale*factor,.2,10);
+  const after=w2s(before);
+  State.view.x+=sx-after.x;State.view.y+=sy-after.y;
+  sceneCacheZoomPreview=true;
+  draw();
+  if(State.view.scale>=WEATHER_ZOOM_THRESHOLD)clearWeatherCloudLayer();
+  clearTimeout(zoomSettleTimer);
+  zoomSettleTimer=setTimeout(()=>{
+    sceneCacheZoomPreview=false;
+    zoomAnchor=null;
+    invalidateSceneCache();
+    draw();
+    drawWeatherOverlay();
+    scheduleLocalSave(500);
+  },120);
+}
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
+  if(!sceneCacheZoomPreview||!zoomAnchor)zoomAnchor={sx,sy,before:s2w(sx,sy)};
+  else{
+    // Keep the world point under the latest cursor position stable even when
+    // a trackpad changes direction during one continuous gesture.
+    zoomAnchor={sx,sy,before:s2w(sx,sy)};
+  }
+  zoomWheelDelta+=e.deltaY;
+  if(!zoomFrame)zoomFrame=requestAnimationFrame(flushWheelZoom);
+},{passive:false});
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
 for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
