@@ -1011,6 +1011,10 @@ function woodTowerFrontPieces(s){
         ));
       }
     }
+    pieces.push(frontItemBase(
+      s,rectWorldPoints(s.x,s.y,1.28,1.28,s.angle||0),1.98,2.35,'woodRoof',
+      {tower:s,eaveZ:1.98,apexZ:2.35,overhang:.14}
+    ));
     return pieces;
   }
 
@@ -1024,6 +1028,12 @@ function woodTowerFrontPieces(s){
         {center,r:.072,angle,bodyZ:2.03,tipZ:2.22,zBase:1.82}
       ));
     }
+  }
+  if(woodTowerRoof(s)==='pitched'){
+    pieces.push(frontItemBase(
+      s,rectWorldPoints(s.x,s.y,1.70,1.70,s.angle||0),2.55,2.95,'woodRoof',
+      {tower:s,eaveZ:2.55,apexZ:2.95,overhang:.10}
+    ));
   }
   return pieces;
 }
@@ -1336,6 +1346,10 @@ function drawBattlementPiece(piece){
     }
     if(piece.kind==='woodPost'){
       drawWoodPost(piece.center,piece.r,piece.z0,piece.z1,piece.angle||0);
+      return;
+    }
+    if(piece.kind==='woodRoof'){
+      drawWoodHipRoof(piece.tower,piece.eaveZ,piece.apexZ,piece.overhang);
       return;
     }
     if(piece.wallCrest){
