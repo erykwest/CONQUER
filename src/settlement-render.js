@@ -561,11 +561,8 @@ function draw(){
   drawCastleSelection();
   drawCastleSoldiers();
 
-  // Only the camera-facing palisade stake line is redrawn in front of patrols.
-  // This gives the timber parapet real occlusion without flattening soldiers
-  // behind the rear/interior side.
-  drawPalisadeForeground();
-
+  // Unified fortification-front protocol: wall merlons, palisade stakes and
+  // wooden tower parapets all live in the same cached post-patrol layer.
   blitSceneCache('castleFront');
   drawCastleFireFixtures();
 
