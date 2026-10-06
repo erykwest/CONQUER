@@ -245,13 +245,30 @@ function screenHitStructure(s,p){
 function seedRand(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
 function drawTerrain(){
   const corners=projectPath([{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}],0);
-  pathPolygon(corners,BIOMES[State.biome]?.field||'#24291b','rgba(225,214,190,.12)',1);
+  const winter=State.season==='winter';
+  const terrainFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
+  const terrainEdge=winter?'rgba(101,112,105,.34)':'rgba(225,214,190,.12)';
+  pathPolygon(corners,terrainFill,terrainEdge,1);
   const rnd=seedRand((State.seed^0x45d9f3b)>>>0);
   ctx.save();
   for(let i=0;i<260;i++){
     const p=w2s({x:rnd()*WORLD,y:rnd()*WORLD}),r=(.5+rnd()*1.7)*Math.max(.45,State.view.scale);
-    ctx.fillStyle=rnd()>.55?'rgba(84,105,55,.12)':'rgba(137,120,70,.08)';
+    ctx.fillStyle=winter
+      ?(rnd()>.55?'rgba(173,183,177,.14)':'rgba(255,255,255,.22)')
+      :(rnd()>.55?'rgba(84,105,55,.12)':'rgba(137,120,70,.08)');
     ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r,0,0,Math.PI*2);ctx.fill();
+  }
+  if(State.season==='spring'){
+    const flowers=seedRand((State.seed^0x6b8f4a2d)>>>0);
+    const palette=['#f7d7e8','#f3e37b','#f4f1dc','#d9b3ef','#e7a6b8'];
+    for(let i=0;i<520;i++){
+      const p=w2s({x:flowers()*WORLD,y:flowers()*WORLD});
+      const size=clamp((.65+flowers()*1.25)*State.view.scale,1,2.4);
+      ctx.fillStyle=palette[Math.floor(flowers()*palette.length)];
+      ctx.globalAlpha=.62+flowers()*.30;
+      ctx.fillRect(Math.round(p.x),Math.round(p.y),size,size);
+    }
+    ctx.globalAlpha=1;
   }
   ctx.restore();
 }
@@ -273,9 +290,16 @@ const FOREST_TREE_ASSETS=[
   './src/assets/forest/tree_06_stratificata.svg',
   './src/assets/forest/tree_07_asimmetrica.svg'
 ];
-const FOREST_CANOPY_PALETTE=['#355f2f','#3f6b35','#49783b','#557f43','#628b4c'];
-const forestTreeSprites=[];
+const FOREST_CANOPY_PALETTES={
+  summer:['#355f2f','#3f6b35','#49783b','#557f43','#628b4c'],
+  autumn:['#65452d','#754c2b','#85552d','#965f31','#a76b36']
+};
+const forestTreeSprites={summer:[],autumn:[],winter:[]};
 let forestTreeSpritesReady=false;
+function buildForestSvg(source,canopyColor=null,canopyVisible=true){
+  if(!canopyVisible)return source.replace(/fill="#3B5174"/gi,'fill="#3B5174" fill-opacity="0"');
+  return source.replace(/fill="#3B5174"/gi,`fill="${canopyColor}" fill-opacity="0.8"`);
+}
 async function loadForestTreeSprites(){
   try{
     const sources=await Promise.all(FOREST_TREE_ASSETS.map(path=>fetch(path).then(r=>{
@@ -283,18 +307,24 @@ async function loadForestTreeSprites(){
       return r.text();
     })));
     const jobs=[];
+    const makeSprite=(season,shape,colorIndex,svg)=>{
+      const img=new Image();
+      if(!forestTreeSprites[season][shape])forestTreeSprites[season][shape]=[];
+      forestTreeSprites[season][shape][colorIndex]=img;
+      jobs.push(new Promise((resolve,reject)=>{
+        img.onload=resolve;
+        img.onerror=reject;
+        img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      }));
+    };
     for(let shape=0;shape<sources.length;shape++){
-      forestTreeSprites[shape]=[];
-      for(let color=0;color<FOREST_CANOPY_PALETTE.length;color++){
-        const svg=sources[shape].replace(/fill="#3B5174"/gi,`fill="${FOREST_CANOPY_PALETTE[color]}" fill-opacity="0.8"`);
-        const img=new Image();
-        forestTreeSprites[shape][color]=img;
-        jobs.push(new Promise((resolve,reject)=>{
-          img.onload=resolve;
-          img.onerror=reject;
-          img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
-        }));
+      for(const season of ['summer','autumn']){
+        const palette=FOREST_CANOPY_PALETTES[season];
+        for(let color=0;color<palette.length;color++){
+          makeSprite(season,shape,color,buildForestSvg(sources[shape],palette[color],true));
+        }
       }
+      makeSprite('winter',shape,0,buildForestSvg(sources[shape],null,false));
     }
     await Promise.all(jobs);
     forestTreeSpritesReady=true;
@@ -308,7 +338,9 @@ loadForestTreeSprites();
 
 function drawTree(tree){
   if(!forestTreeSpritesReady)return;
-  const img=forestTreeSprites[tree.shapeIndex]?.[tree.colorIndex];
+  const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+  const colorIndex=season==='winter'?0:tree.colorIndex;
+  const img=forestTreeSprites[season]?.[tree.shapeIndex]?.[colorIndex];
   if(!img)return;
   const base=w2s(tree.p,0);
   const size=Math.max(10,U*State.view.scale*2.25*tree.scale);
@@ -322,34 +354,39 @@ function drawTree(tree){
   }
   ctx.restore();
 }
-let forestGroundPatternCanvas=null;
+const forestGroundPatternCanvases={};
 function getForestGroundPattern(){
-  if(!forestGroundPatternCanvas){
+  const key=State.season==='winter'?'winter':'green';
+  if(!forestGroundPatternCanvases[key]){
     const off=document.createElement('canvas');
     off.width=72;off.height=72;
     const p=off.getContext('2d');
-    p.fillStyle='#1d3218';
+    const winter=key==='winter';
+    p.fillStyle=winter?'#dfe5e0':'#1d3218';
     p.fillRect(0,0,72,72);
-    const rnd=seedRand(0x4f6a3b21);
+    const rnd=seedRand(winter?0x72a4c8e1:0x4f6a3b21);
     for(let i=0;i<110;i++){
       const x=rnd()*72,y=rnd()*72,rx=1.5+rnd()*5.5,ry=.8+rnd()*3.2;
-      p.fillStyle=rnd()>.52?'rgba(53,88,39,.30)':'rgba(10,25,10,.24)';
+      p.fillStyle=winter
+        ?(rnd()>.52?'rgba(255,255,255,.25)':'rgba(153,164,157,.16)')
+        :(rnd()>.52?'rgba(53,88,39,.30)':'rgba(10,25,10,.24)');
       p.beginPath();p.ellipse(x,y,rx,ry,rnd()*Math.PI,0,Math.PI*2);p.fill();
     }
     for(let i=0;i<90;i++){
       const x=rnd()*72,y=rnd()*72,r=.35+rnd()*.85;
-      p.fillStyle=rnd()>.5?'rgba(98,124,69,.13)':'rgba(6,17,7,.20)';
+      p.fillStyle=winter
+        ?(rnd()>.5?'rgba(255,255,255,.28)':'rgba(125,138,130,.14)')
+        :(rnd()>.5?'rgba(98,124,69,.13)':'rgba(6,17,7,.20)');
       p.beginPath();p.arc(x,y,r,0,Math.PI*2);p.fill();
     }
-    forestGroundPatternCanvas=off;
+    forestGroundPatternCanvases[key]=off;
   }
-  return ctx.createPattern(forestGroundPatternCanvas,'repeat');
+  return ctx.createPattern(forestGroundPatternCanvases[key],'repeat');
 }
 function drawForestGround(f){
   const pts=projectPath(f.points);
   if(!pts.length)return;
   ctx.save();
-  // Forest masks may extend beyond the map; only the in-world portion is visible.
   const world=projectPath([{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}]);
   ctx.beginPath();
   world.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
@@ -358,9 +395,9 @@ function drawForestGround(f){
   ctx.beginPath();
   pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
-  ctx.fillStyle=getForestGroundPattern()||'#1d3218';
+  ctx.fillStyle=getForestGroundPattern()||(State.season==='winter'?'#dfe5e0':'#1d3218');
   ctx.fill();
-  ctx.strokeStyle='rgba(82,116,59,.58)';
+  ctx.strokeStyle=State.season==='winter'?'rgba(126,139,130,.45)':'rgba(82,116,59,.58)';
   ctx.lineWidth=1.15;
   ctx.stroke();
   ctx.restore();
@@ -379,7 +416,7 @@ function drawForestMask(f){
     trees.push({
       p,
       shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
-      colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTE.length),
+      colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),
       flip:rnd()<.5,
       scale:.8+rnd()*.4
     });
