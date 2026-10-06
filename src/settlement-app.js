@@ -15,7 +15,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-linear],[data-main-road],[data-gate],[data-well],[data-civic]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-linear],[data-main-road],[data-gate],[data-wood-gate],[data-well],[data-civic]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   invalidateNavigation(hardNavigation);
@@ -110,7 +110,7 @@ function renderFunctionPanel(){
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s);panel.classList.add('open');
-  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower,maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
+  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate,maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
   info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
   let html='';
   if(s.type==='house'){
@@ -142,8 +142,12 @@ function renderFunctionPanel(){
     }
   }
   if(s.type==='gate'){
-    const roof=gateRoofStyle(s);
-    html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
+    if(woodGate){
+      html+=`<div class="slot"><div class="legend">Wood gate · fixed H1 · 1.5×1U · flat timber roof.</div></div>`;
+    }else{
+      const roof=gateRoofStyle(s);
+      html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
+    }
   }
   if(s.type==='built'){
     const skin=builtSkin(s);
@@ -417,16 +421,20 @@ document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.b
 document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
   State.buildLevels.gate=Number(b.dataset.gateLevel);
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
-  if(State.tool.kind==='gate'){
+  if(State.tool.kind==='gate'&&State.tool.material!=='wood'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
 document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',level};
-  setTool({kind:'gate',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',level};
+  setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+};
+document.querySelector('[data-wood-gate]').onclick=e=>{
+  const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};
+  setTool({kind:'gate',material:'wood',level:1,label:'Wood gate 1.5×1U · H1 · flat roof · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   const type=b.dataset.civic,spec={type,shape:'civic'};
@@ -488,7 +496,13 @@ function migrateStructures(list){
       s.wallColliderSyncSignature=null;
     }
     if(s.type==='gate'){
-      s.level=clamp(Math.round(Number(s.level)||1),1,3);
+      s.material=s.material==='wood'?'wood':'stone';
+      if(s.material==='wood'){
+        s.shape='square';s.level=1;s.size=1.5;s.w=1;s.h=1.5;s.roofStyle='flat';
+      }else{
+        s.level=clamp(Math.round(Number(s.level)||1),1,3);
+        delete s.w;delete s.h;
+      }
     }
     if(s.type==='road'&&s.a&&s.b&&!Number.isFinite(Number(s.length)))s.length=dist(s.a,s.b);
     if(s.type==='well')delete s.construction;
@@ -505,7 +519,7 @@ function migrateStructures(list){
   for(const s of migrated){
     if(s.type!=='tower'||!s.parentTowerId)continue;
     const parent=byId.get(s.parentTowerId);
-    if(!parent||!['tower','gate'].includes(parent.type)||(parent.type==='tower'&&towerTier(s)>=towerTier(parent))){
+    if(!parent||!['tower','gate'].includes(parent.type)||isWoodGate(parent)||(parent.type==='tower'&&towerTier(s)>=towerTier(parent))){
       delete s.parentTowerId;delete s.subtowerSocket;delete s.subtowerAngle;delete s.parentType;
       continue;
     }
