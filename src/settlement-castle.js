@@ -2298,6 +2298,7 @@ function drawHouseChimneys(s){
   for(const spec of chimneySpecs(s))drawChimney(spec);
 }
 function drawChimneysAndSmoke(){
+  if(State.view.scale<.32)return;
   const now=performance.now()/1000;
   const sources=State.structures.filter(s=>!underConstruction(s)&&(s.type==='house'||s.type==='built'));
   for(const s of sources){
