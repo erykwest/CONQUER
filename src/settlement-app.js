@@ -518,35 +518,8 @@ function syncSeasonToCalendar(){
   if(State.season===next)return false;
   State.season=next;
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
-  invalidateSceneCache('base');
+  invalidateSceneCache();
   return true;
-}
-function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${cal.day} ${cal.name} · Y${cal.year} · Day ${State.clock.day.toFixed(1)}`;document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
-function visibleCanvasCenter(){
-  const r=canvas.getBoundingClientRect();
-  return{x:r.width/2,y:r.height/2};
-}
-function rotateCamera(delta){
-  const pivot=visibleCanvasCenter(),anchor=s2w(pivot.x,pivot.y);
-  State.view.rotation=((State.view.rotation||0)+delta+4)%4;
-  const after=w2s(anchor);
-  State.view.x+=pivot.x-after.x;State.view.y+=pivot.y-after.y;
-  State.draft=null;invalidateSceneCache();saveLocal();draw();status('View rotation: '+(State.view.rotation*90)+'°');
-}
-function panCamera(dx,dy){
-  State.view.x+=dx;State.view.y+=dy;invalidateSceneCache();saveLocal();draw();
-}
-function setTimeSpeed(speed){
-  speed=Number(speed)||0;
-  if(speed>0)State.clock.lastSpeed=speed;
-  else if(State.clock.speed>0)State.clock.lastSpeed=State.clock.speed;
-  State.clock.speed=speed;
-  document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',Number(x.dataset.speed)===speed));
-  status(speed===0?'Time paused':`Time ×${speed}`);
-}
-function togglePause(){
-  if(State.clock.speed>0)setTimeSpeed(0);
-  else setTimeSpeed(State.clock.lastSpeed||1);
 }
 function syncDevButtons(){
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
@@ -587,10 +560,12 @@ function setLightOverride(mode){
   draw();
 }
 function setWeatherOverride(kind){
-  if(!['rain','snow','storm','wind'].includes(kind))return;
+  if(!['rain','snow','storm','wind','fog'].includes(kind))return;
   State.weatherOverride=State.weatherOverride===kind?null:kind;
-  weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';
+  weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
   syncDevButtons();
+  invalidateSceneCache('base');
+  draw();
   status(State.weatherOverride?('FORCE METEO: '+State.weatherOverride):'Meteo: procedurale');
   drawWeatherOverlay();
 }
@@ -600,8 +575,8 @@ function setSeason(season){
   State.seasonOverride=State.seasonOverride===season?null:season;
   State.season=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
   syncDevButtons();
-  weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';
-  invalidateSceneCache('base');saveLocal();draw();
+  weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
+  invalidateSceneCache();saveLocal();draw();
   drawWeatherOverlay();
   status(State.seasonOverride?'FORCE SEASON: '+labels[State.seasonOverride]+' — clicca di nuovo per tornare al calendario':'Stagione: calendario automatico');
 }
@@ -677,7 +652,7 @@ document.getElementById('biomeSelect').onchange=e=>{
 };
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(Number(b.dataset.speed)));
 ensureDevControls();
-let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,weatherDrawAt=0,weatherLayerActive=false;
+let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,weatherDrawAt=0,weatherLayerActive=false,lastWorldWeatherKey='';
 const VISUAL_FRAME_MS=1000/30;
 const WEATHER_FRAME_MS=1000/24;
 const MAINTENANCE_WATCHDOG_MS=2500;
@@ -757,7 +732,14 @@ function simulationFrame(now){
     }
   }
   const weather=currentWeather();
-  const weatherActive=State.view.scale<WEATHER_ZOOM_THRESHOLD||weather.wind>.15||weather.rain>0||weather.snow>0||weather.lightning>0;
+  const worldWeatherKey=Math.floor(State.clock.day)+'|'+weather.kind;
+  if(worldWeatherKey!==lastWorldWeatherKey){
+    const previousWasWet=/\|(rain|storm)$/.test(lastWorldWeatherKey),nowWet=weather.rain>0;
+    lastWorldWeatherKey=worldWeatherKey;
+    puddleCacheKey='';
+    if(previousWasWet||nowWet)invalidateSceneCache('base');
+  }
+  const weatherActive=State.view.scale<WEATHER_ZOOM_THRESHOLD||weather.wind>.15||weather.rain>0||weather.snow>0||weather.lightning>0||weather.fog>0||State.season==='autumn'||((weather.kind==='clear'||weather.kind==='wind')&&State.season!=='winter');
   if(weatherActive&&now-weatherDrawAt>=WEATHER_FRAME_MS){
     drawWeatherOverlay(now);
     weatherDrawAt=now;
