@@ -590,6 +590,7 @@ function polygonGap(a,b){
   return best;
 }
 function forestBlobCanPlace(candidate,env,minGap=3){
+  if(environmentConflictsTestRelief(candidate))return false;
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
 function makeForestCandidate(rnd,small=false){
@@ -661,6 +662,7 @@ function generateEnvironment(){
   }else if(State.biome==='sea'){
     addEllipse('rough',1);if(rnd()<.55)addBlob('forest',1,true);
   }
+  for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i]))env.splice(i,1);
   ensureForestCoverage(env,rnd,.20);
   State.environment=env;
 }
@@ -674,6 +676,9 @@ function environmentContains(f,p,pad=0){
   return false;
 }
 function environmentBlocksPoint(p,mode='settlement'){
+  const slope=terrainSlopeKind(p);
+  if(mode==='road'&&slope==='steep')return true;
+  if(mode==='settlement'&&slope)return true;
   for(const f of State.environment){
     if(mode==='road'&&['sea','mountain','pond'].includes(f.type)&&environmentContains(f,p,.25))return true;
     if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
