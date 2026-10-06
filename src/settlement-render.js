@@ -560,6 +560,12 @@ function draw(){
   drawTowerFlags();
   drawCastleSelection();
   drawCastleSoldiers();
+
+  // Only the camera-facing palisade stake line is redrawn in front of patrols.
+  // This gives the timber parapet real occlusion without flattening soldiers
+  // behind the rear/interior side.
+  drawPalisadeForeground();
+
   blitSceneCache('castleFront');
   drawCastleFireFixtures();
 
