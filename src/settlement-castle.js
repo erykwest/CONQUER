@@ -1966,14 +1966,10 @@ function drawTorchFixture(src){
   ctx.moveTo(p.x-1.6*scale,p.y+.5*scale);ctx.lineTo(p.x+1.6*scale,p.y+.5*scale);
   ctx.lineTo(p.x+1.0*scale,p.y+2.4*scale);ctx.lineTo(p.x-1.0*scale,p.y+2.4*scale);ctx.closePath();ctx.fill();
   ctx.restore();
-  drawScreenFlame({x:p.x,y:p.y-.3*scale},scale,src.id,false);
 }
 function drawBrazierFixture(src){
-  const scale=clamp(State.view.scale,.55,1.45);
   const pts=rectWorldPoints(src.p.x,src.p.y,.20,.20,0);
   extrudePolygonAt(pts,src.z-.08,src.z+.03,{top:'#5d4b3d',sideA:'#39312b',sideB:'#493d34',stroke:'#7b654f'});
-  const p=w2s(src.p,src.z+.08);
-  drawScreenFlame(p,scale,src.id,true);
 }
 function drawCastleFireFixtures(){
   for(const src of towerTorchSources())drawTorchFixture(src);
