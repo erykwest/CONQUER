@@ -32,18 +32,44 @@ const TEST_RELIEF=Object.freeze({
   ])
 });
 const reliefBandCache=new Map();
+function reliefOffsetJoin(vertex,prev,next,maxMiter){
+  const p1={x:vertex.x+prev.nx*prev.width,y:vertex.y+prev.ny*prev.width};
+  const p2={x:vertex.x+next.nx*next.width,y:vertex.y+next.ny*next.width};
+  const d1={x:prev.dx,y:prev.dy},d2={x:next.dx,y:next.dy};
+  const cross=d1.x*d2.y-d1.y*d2.x;
+  let q;
+  if(Math.abs(cross)>1e-6){
+    const rx=p2.x-p1.x,ry=p2.y-p1.y,t=(rx*d2.y-ry*d2.x)/cross;
+    q={x:p1.x+d1.x*t,y:p1.y+d1.y*t};
+  }else{
+    q={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2};
+  }
+  const dx=q.x-vertex.x,dy=q.y-vertex.y,L=Math.hypot(dx,dy);
+  if(!Number.isFinite(L)||L>maxMiter){
+    const ax=prev.nx*prev.width+next.nx*next.width,ay=prev.ny*prev.width+next.ny*next.width,A=Math.hypot(ax,ay)||1;
+    return{x:vertex.x+ax/A*Math.min(maxMiter,Math.max(prev.width,next.width)*1.15),y:vertex.y+ay/A*Math.min(maxMiter,Math.max(prev.width,next.width)*1.15)};
+  }
+  return q;
+}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
-  const pts=level.top,cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length,bands=[];
-  for(let i=0;i<pts.length;i++){
-    const j=(i+1)%pts.length,a=pts[i],b=pts[j],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+  const pts=level.top,cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+  const edges=pts.map((a,i)=>{
+    const b=pts[(i+1)%pts.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
     const kind=level.southEdges.includes(i)?'steep':'gentle',width=kind==='steep'?level.steepBase:level.gentleBase;
     let nx=dy/L,ny=-dx/L;
     const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
     if(Math.hypot(mx+nx-cx,my+ny-cy)<Math.hypot(mx-cx,my-cy)){nx=-nx;ny=-ny}
-    const oa={x:a.x+nx*width,y:a.y+ny*width},ob={x:b.x+nx*width,y:b.y+ny*width};
-    bands.push({levelId:level.id,index:i,kind,width,z0:level.z0,z1:level.z1,a,b,oa,ob,poly:[oa,ob,b,a]});
-  }
+    return{a,b,dx:dx/L,dy:dy/L,nx,ny,kind,width};
+  });
+  const outer=pts.map((vertex,i)=>{
+    const prev=edges[(i-1+edges.length)%edges.length],next=edges[i],maxMiter=Math.max(prev.width,next.width)*2.25;
+    return reliefOffsetJoin(vertex,prev,next,maxMiter);
+  });
+  const bands=edges.map((edge,i)=>{
+    const oa=outer[i],ob=outer[(i+1)%outer.length];
+    return{levelId:level.id,index:i,kind:edge.kind,width:edge.width,z0:level.z0,z1:level.z1,a:edge.a,b:edge.b,oa,ob,poly:[oa,ob,edge.b,edge.a]};
+  });
   reliefBandCache.set(level.id,bands);return bands;
 }
 function reliefBandAt(p){
@@ -405,12 +431,18 @@ function drawLowPolyRock(p,z,size,height,seed,winter=false){
 }
 function drawSteepSlopeRocks(level,band,winter){
   const edgeLength=dist(band.a,band.b),rnd=seedRand((State.seed^Math.imul(level.z1*131+band.index+17,2654435761))>>>0);
-  const count=Math.max(8,Math.round(edgeLength*4.2)),rocks=[];
+  const count=Math.max(8,Math.round(edgeLength*4.2)),crestCount=Math.max(4,Math.round(edgeLength*2.2)),rocks=[];
   for(let i=0;i<count;i++){
     const u=clamp((i+rnd()*.82)/count,.025,.975);
-    const v=Math.pow(rnd(),1.75); // scree is denser toward the foot.
+    const v=Math.pow(rnd(),1.75); // dense scree toward the foot.
     const p=slopePoint(band,u,v),z=band.z0+(band.z1-band.z0)*v;
     const size=.18+rnd()*.38,height=.12+rnd()*.48;
+    rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
+  }
+  for(let i=0;i<crestCount;i++){
+    const u=clamp((i+.18+rnd()*.64)/crestCount,.02,.98),v=.73+rnd()*.25;
+    const p=slopePoint(band,u,v),z=band.z0+(band.z1-band.z0)*v;
+    const size=.16+rnd()*.30,height=.10+rnd()*.34;
     rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
   }
   rocks.sort((a,b)=>a.depth-b.depth);
