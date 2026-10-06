@@ -185,11 +185,17 @@ function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefine
 function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
 
 function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
-function wallTier(s){const w=Number(s?.width)||.5;return w>=.75?3:w>=.35?2:1}
+function wallTier(s){
+  const explicit=Math.round(Number(s?.tier));
+  if(explicit>=1&&explicit<=3)return explicit;
+  const w=Number(s?.width)||.5;
+  return w>=.75?3:w>=.35?2:1;
+}
 function wallWidthForTier(t){return WALL_TIERS[clamp(Math.round(Number(t)||2),1,3)]}
 function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,3);return shape==='round'?ROUND_TOWER_TIERS[t]:SQUARE_TOWER_TIERS[t]}
 function applyStructureTier(s,tier){
   tier=clamp(Math.round(Number(tier)||1),1,3);
+  s.tier=tier;
   if(s.type==='wall'){s.width=wallWidthForTier(tier)}
   else if(s.type==='tower'){
     if(s.shape==='round')s.r=towerSizeForTier('round',tier);
