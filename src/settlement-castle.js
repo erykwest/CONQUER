@@ -353,16 +353,80 @@ function screenHitStructure(s,p){
   return false;
 }
 function seedRand(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
+function mixWorld(a,b,t){return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}}
+function slopePoint(band,u,v){
+  const outer=mixWorld(band.oa,band.ob,u),inner=mixWorld(band.a,band.b,u);
+  return mixWorld(outer,inner,v);
+}
+function drawGentleSlopeBand(band,winter){
+  const strips=4;
+  const fills=winter
+    ?['#d6dbd7','#cfd5d0','#d9deda','#ccd2cd']
+    :['#454430','#4b4934','#474631','#514e37'];
+  for(let i=0;i<strips;i++){
+    const v0=i/strips,v1=(i+1)/strips;
+    const a0=slopePoint(band,0,v0),b0=slopePoint(band,1,v0),b1=slopePoint(band,1,v1),a1=slopePoint(band,0,v1);
+    const z0=band.z0+(band.z1-band.z0)*v0,z1=band.z0+(band.z1-band.z0)*v1;
+    const poly=[w2sRaw(a0,z0),w2sRaw(b0,z0),w2sRaw(b1,z1),w2sRaw(a1,z1)];
+    pathPolygon(poly,fills[i%fills.length],null);
+    if(i>0){
+      const seamA=w2sRaw(a0,z0+.008),seamB=w2sRaw(b0,z0+.008);
+      ctx.save();ctx.strokeStyle=winter?'rgba(116,124,119,.24)':'rgba(173,156,103,.20)';ctx.lineWidth=.75;
+      ctx.beginPath();ctx.moveTo(seamA.x,seamA.y);ctx.lineTo(seamB.x,seamB.y);ctx.stroke();ctx.restore();
+    }
+  }
+}
+function drawLowPolyRock(p,z,size,height,seed,winter=false){
+  const rnd=seedRand(seed>>>0),n=5+Math.floor(rnd()*3),rot=rnd()*Math.PI*2,base=[],top=[];
+  const sx=size*(.72+rnd()*.42),sy=size*(.55+rnd()*.36);
+  for(let i=0;i<n;i++){
+    const a=rot+i/n*Math.PI*2+(rnd()-.5)*.18,rr=.72+rnd()*.34;
+    const q={x:p.x+Math.cos(a)*sx*rr,y:p.y+Math.sin(a)*sy*rr};
+    const bz=terrainElevation(q)+.012,shrink=.44+rnd()*.22;
+    base.push({p:q,z:bz});
+    top.push({p:{x:p.x+(q.x-p.x)*shrink,y:p.y+(q.y-p.y)*shrink},z:bz+height*(.72+rnd()*.34)});
+  }
+  const sidePalette=winter?['#8b9092','#9ca1a2','#777d80','#a8acad']:['#5e6263','#727677','#505455','#838787'];
+  const topPalette=winter?['#b4b8b9','#a8adae','#c0c3c4']:['#8a8e8d','#989b99','#777b7a'];
+  const faces=[];
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n,quad=[w2sRaw(base[i].p,base[i].z),w2sRaw(base[j].p,base[j].z),w2sRaw(top[j].p,top[j].z),w2sRaw(top[i].p,top[i].z)];
+    faces.push({poly:quad,depth:(quad[0].y+quad[1].y)/2,fill:sidePalette[(i+Math.floor(rnd()*sidePalette.length))%sidePalette.length]});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const face of faces)pathPolygon(face.poly,face.fill,null);
+  const center={x:top.reduce((s,q)=>s+q.p.x,0)/n,y:top.reduce((s,q)=>s+q.p.y,0)/n};
+  const cz=top.reduce((s,q)=>s+q.z,0)/n+.015;
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n;
+    pathPolygon([w2sRaw(top[i].p,top[i].z),w2sRaw(top[j].p,top[j].z),w2sRaw(center,cz)],
+      topPalette[(i+Math.floor(rnd()*topPalette.length))%topPalette.length],null);
+  }
+}
+function drawSteepSlopeRocks(level,band,winter){
+  const edgeLength=dist(band.a,band.b),rnd=seedRand((State.seed^Math.imul(level.z1*131+band.index+17,2654435761))>>>0);
+  const count=Math.max(8,Math.round(edgeLength*4.2)),rocks=[];
+  for(let i=0;i<count;i++){
+    const u=clamp((i+rnd()*.82)/count,.025,.975);
+    const v=Math.pow(rnd(),1.75); // scree is denser toward the foot.
+    const p=slopePoint(band,u,v),z=band.z0+(band.z1-band.z0)*v;
+    const size=.18+rnd()*.38,height=.12+rnd()*.48;
+    rocks.push({p,z,size,height,seed:Math.floor(rnd()*0xffffffff),depth:w2sRaw(p,z).y});
+  }
+  rocks.sort((a,b)=>a.depth-b.depth);
+  for(const rock of rocks)drawLowPolyRock(rock.p,rock.z,rock.size,rock.height,rock.seed,winter);
+}
 function drawTestRelief(){
   const winter=State.season==='winter',baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
   for(const level of TEST_RELIEF.levels){
-    const faces=reliefEdgeBands(level).map(b=>{
-      const poly=[w2sRaw(b.oa,b.z0),w2sRaw(b.ob,b.z0),w2sRaw(b.b,b.z1),w2sRaw(b.a,b.z1)];
-      return{poly,depth:poly.reduce((s,p)=>s+p.y,0)/poly.length,kind:b.kind};
-    }).sort((a,b)=>a.depth-b.depth);
-    for(const face of faces){
-      const fill=face.kind==='steep'?(winter?'#969ca0':'#6f7477'):(winter?'#d0d6d1':'#494733');
-      pathPolygon(face.poly,fill,face.kind==='steep'?'rgba(205,211,214,.55)':'rgba(126,116,82,.42)',.8);
+    const bands=reliefEdgeBands(level).map(b=>({...b,depth:[b.oa,b.ob,b.b,b.a].map(p=>w2sRaw(p,b.z0)).reduce((s,p)=>s+p.y,0)/4})).sort((a,b)=>a.depth-b.depth);
+    for(const band of bands){
+      if(band.kind==='gentle')drawGentleSlopeBand(band,winter);
+      else{
+        const poly=[w2sRaw(band.oa,band.z0),w2sRaw(band.ob,band.z0),w2sRaw(band.b,band.z1),w2sRaw(band.a,band.z1)];
+        pathPolygon(poly,winter?'#969ca0':'#6f7477',winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
+        drawSteepSlopeRocks(level,band,winter);
+      }
     }
     pathPolygon(level.top.map(p=>w2sRaw(p,level.z1)),baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
   }
