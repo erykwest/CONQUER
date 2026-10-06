@@ -12,7 +12,10 @@ header{height:58px;display:flex;align-items:center;gap:18px;padding:0 16px;backg
 #newMapBtn{flex:0 0 auto;padding:8px 11px;border-color:#7d5b3d;background:#3a281d;font-size:12px;font-weight:800;white-space:nowrap}
 #newMapBtn:hover{background:#4a3222}
 #wrap{position:relative;flex:1;min-height:0;background:var(--field)}
-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none;background:#202419}
+#c,#weatherCanvas,#weatherCloudLayer{position:absolute;inset:0;width:100%;height:100%;display:block}
+#c{cursor:crosshair;touch-action:none;background:#202419;z-index:0}
+#weatherCloudLayer{pointer-events:none;overflow:visible;z-index:1}
+#weatherCanvas{pointer-events:none;background:transparent;z-index:2}
 .panel{position:absolute;top:10px;bottom:10px;width:var(--sidebar);background:rgba(38,27,21,.96);border:1px solid var(--line-strong);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.32);overflow:auto;z-index:5}
 #builder{left:10px;padding:12px}#policy{right:10px;padding:12px}
 #functionPanel{display:none;right:330px;top:76px;bottom:auto;width:280px;max-height:calc(100% - 96px);padding:12px;z-index:8}
@@ -30,10 +33,20 @@ select{width:100%;border:1px solid var(--line-strong);background:var(--sunken);c
 #timePanel{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(23,15,12,.94);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 5px 18px rgba(0,0,0,.3)}
 #timePanel button{width:48px;height:42px;padding:0;border-radius:10px;font-size:13px;font-weight:800;background:var(--btn)}
 #rotateLeft,#rotateRight{font-size:20px;line-height:1}
-#timePanel .season-group{display:flex;gap:4px;padding-left:4px;border-left:1px solid var(--line-strong)}
-#timePanel .season-group button{width:40px;height:36px;font-size:17px;border-radius:9px}
 #timePanel button.active{background:var(--accent);color:#1b130f;border-color:var(--accent)}
 #timePanel .time-readout{min-width:76px;text-align:center;font-size:11px;color:var(--text-2);padding:0 4px}
+#devTools{position:absolute;right:12px;top:12px;z-index:9;width:246px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+#devToggle{min-width:74px;height:34px;padding:0 10px;border-radius:9px;font-size:12px;font-weight:900;letter-spacing:.08em;background:rgba(23,15,12,.94)}
+#devPanel{width:100%;padding:10px;background:rgba(23,15,12,.96);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.32);backdrop-filter:blur(8px)}
+#devPanel[hidden]{display:none}
+.dev-section+.dev-section{margin-top:10px;padding-top:9px;border-top:1px solid var(--line-strong)}
+.dev-label{display:block;margin-bottom:6px;font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--text-2)}
+.dev-row{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.dev-row-4{grid-template-columns:repeat(4,1fr)}
+#devPanel button{min-width:0;height:34px;padding:0 6px;border-radius:8px;font-size:12px;background:var(--btn)}
+#devPanel .dev-row-4 button{font-size:17px}
+#devPanel button.active{background:var(--accent);color:#1b130f;border-color:var(--accent)}
+.dev-hint{display:block;margin-top:6px;font-size:9px;color:var(--text-2);text-align:center}
 .progress{height:5px;margin-top:7px;border-radius:999px;overflow:hidden;background:rgba(0,0,0,.35)}
 .progress>i{display:block;height:100%;background:var(--accent)}
 .site-label{font-size:10px;color:var(--accent);font-weight:800;letter-spacing:.05em;text-transform:uppercase}

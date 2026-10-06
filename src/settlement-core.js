@@ -1,8 +1,9 @@
 'use strict';
 // CONQUER settlement core module — classic-script shared runtime.
-const canvas=document.getElementById('c'),wrap=document.getElementById('wrap');
+const canvas=document.getElementById('c'),weatherCanvas=document.getElementById('weatherCanvas'),weatherCloudLayer=document.getElementById('weatherCloudLayer'),wrap=document.getElementById('wrap');
 let ctx=canvas.getContext('2d');
 const screenCtx=ctx;
+const weatherCtx=weatherCanvas?weatherCanvas.getContext('2d'):null;
 const sceneCache={
   base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
@@ -55,10 +56,11 @@ function blitSceneCache(layer){
 }
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
+const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',season:'summer',seasonOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
 const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
