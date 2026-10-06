@@ -94,7 +94,7 @@ function convexHull(points){
   lower.pop();upper.pop();return lower.concat(upper);
 }
 function drawStructureShadow(s,sun){
-  if(!s||underConstruction(s)||!['house','tower','gate','wall','built','market','tavern','church'].includes(s.type))return;
+  if(!s||underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type))return;
   const fp=isCastlePart(s)?unionFootprintPoints(s):footprintPoints(s);
   const h=shadowStructureHeight(s);
   if(!fp?.length||h<=0)return;
@@ -113,7 +113,7 @@ function drawStructureShadow(s,sun){
 }
 function drawDynamicShadows(){
   const sun=sunShadowState();if(!sun)return;
-  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','built','market','tavern','church'].includes(s.type));
+  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type));
   for(const s of casters)drawStructureShadow(s,sun);
 }
 let fieldWorkAssignmentCache={key:null,map:new Map()};
@@ -322,8 +322,8 @@ function roadNetworkPath(start,goal,sourceHouseId){
   return out;
 }
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','built','well','road','market','tavern','church','training'].includes(s.type)).map(s=>{
-    if(['wall','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
+  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training'].includes(s.type)).map(s=>{
+    if(['wall','palisade','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
   }).join('|');
 }
@@ -337,7 +337,7 @@ function syncPeasantPathCache(){
 function pointBlockedForPeasant(p,sourceHouseId){
   for(const s of State.structures){
     if(s.id===sourceHouseId)continue;
-    if(!['house','tower','gate','wall','built','well','market','tavern','church','training'].includes(s.type))continue;
+    if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training'].includes(s.type))continue;
 
     // Market ground and the actual castle gate passage are traversable.
     if(s.type==='market')continue;
@@ -348,7 +348,7 @@ function pointBlockedForPeasant(p,sourceHouseId){
       continue;
     }
 
-    if(['wall','built'].includes(s.type)){
+    if(['wall','palisade','built'].includes(s.type)){
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
       continue;
     }
@@ -975,14 +975,17 @@ function drawSoldierFigure(p,z,type,id,phase=0){
 }
 function wallPatrolPoint(wall,day,index=0,count=1){
   const L=Math.max(.001,dist(wall.a,wall.b)),seed=(peasantHash(wall.id+'-patrol')%1000)/1000;
-  // On T3 walls the second patrol is phase-shifted by half a cycle, so the
-  // two guards alternate directions instead of marching as a single pair.
   const phase=count>1?index:0;
   let t=(day*.72+seed+phase)%2;t=t<=1?t:2-t;
   const margin=Math.min(.65,L*.18),u=margin/L+t*Math.max(0,1-2*margin/L);
   const p={x:wall.a.x+(wall.b.x-wall.a.x)*u,y:wall.a.y+(wall.b.y-wall.a.y)*u};
 
-  if(count>1){
+  if(wall.type==='palisade'){
+    const g=palisadeLayout(wall),surface=palisadePatrolSurface(wall);
+    const lane=count>1?(index===0?-surface.spread:surface.spread):0;
+    const off=(surface.offset+lane)*g.side;
+    p.x+=g.nx*off;p.y+=g.ny*off;
+  }else if(count>1){
     const dx=wall.b.x-wall.a.x,dy=wall.b.y-wall.a.y;
     const nx=-dy/L,ny=dx/L,lane=Math.min(.22,Math.max(.10,(Number(wall.width)||1)*.22));
     const side=index===0?-1:1;
@@ -993,11 +996,11 @@ function wallPatrolPoint(wall,day,index=0,count=1){
 function drawCastleSoldiers(){
   const day=peasantVisualDay();
 
-  // Wall patrol density follows wall depth:
-  // T1 narrow = none, T2 medium = one, T3 wide = two alternating patrols.
+  // Wall and palisade patrol density follows tier: T1=0, T2=1, T3=2.
   for(const wall of State.structures){
-    if(wall.type!=='wall'||underConstruction(wall))continue;
-    const tier=wallTier(wall),count=tier===1?0:tier===3?2:1,z=structureHeight(wall)+.10;
+    if(!['wall','palisade'].includes(wall.type)||underConstruction(wall))continue;
+    const tier=wallTier(wall),count=tier===1?0:tier===3?2:1;
+    const z=wall.type==='palisade'?palisadePatrolSurface(wall).z:structureHeight(wall)+.10;
     for(let i=0;i<count;i++){
       const p=wallPatrolPoint(wall,day,i,count);
       if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',wall.id+':patrol:'+i,day+i*.5);
