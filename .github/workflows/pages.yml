@@ -56,36 +56,28 @@ jobs:
             fi
 
             mkdir -p "_site/$safe"
+            printf '%s\n' \
+              '<!doctype html>' \
+              '<meta charset="utf-8">' \
+              '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">' \
+              '<meta http-equiv="Pragma" content="no-cache">' \
+              '<meta http-equiv="Expires" content="0">' \
+              "<title>CONQUER — loading $branch</title>" \
+              '<style>body{font:16px system-ui;background:#17130f;color:#eee;padding:32px}</style>' \
+              "<p>Loading latest <b>$branch</b> preview…</p>" \
+              "<script>fetch('./version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(v=>location.replace(v.path+'?v='+v.build)).catch(e=>document.body.insertAdjacentHTML('beforeend','<pre>'+e+'</pre>'));</script>" \
+              > "_site/$safe/index.html"
+
             printf '{"build":"%s","path":"../_builds/%s/%s/"}\n' "$short" "$safe" "$short" > "_site/$safe/version.json"
-            cat > "_site/$safe/index.html" <<HTML
-            <!doctype html>
-            <meta charset="utf-8">
-            <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-            <meta http-equiv="Pragma" content="no-cache">
-            <meta http-equiv="Expires" content="0">
-            <title>CONQUER — loading $branch</title>
-            <style>body{font:16px system-ui;background:#17130f;color:#eee;padding:32px}</style>
-            <p>Loading latest <b>$branch</b> preview…</p>
-            <script>
-            fetch('./version.json?t='+Date.now(),{cache:'no-store'})
-              .then(r=>r.json())
-              .then(v=>location.replace(v.path+'?v='+v.build))
-              .catch(e=>document.body.insertAdjacentHTML('beforeend','<pre>'+e+'</pre>'));
-            </script>
-            HTML
 
             if [ "$branch" = "main" ]; then
-              cat > "_site/index.html" <<HTML
-            <!doctype html>
-            <meta charset="utf-8">
-            <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-            <title>CONQUER</title>
-            <script>
-            fetch('./main/version.json?t='+Date.now(),{cache:'no-store'})
-              .then(r=>r.json())
-              .then(v=>location.replace('./_builds/main/'+v.build+'/?v='+v.build));
-            </script>
-            HTML
+              printf '%s\n' \
+                '<!doctype html>' \
+                '<meta charset="utf-8">' \
+                '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">' \
+                '<title>CONQUER</title>' \
+                "<script>fetch('./main/version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(v=>location.replace('./_builds/main/'+v.build+'/?v='+v.build));</script>" \
+                > "_site/index.html"
             fi
           done
 
