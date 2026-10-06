@@ -31,9 +31,17 @@ function addStructure(s){
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
   let displaced={removed:0,roads:[]};
   if(!s.auto){
-    const groundZ=buildableTerrainElevationForStructure(s);
-    if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable yet');return false}
-    s.groundZ=groundZ;
+    if(isPlacementFoundationBuilding(s)){
+      const profile=placementFoundationProfile(s);
+      if(!profile){status('Unable to resolve terrain under this building');return false}
+      s.groundZ=placementGroundZ(s);
+      s.foundationMinZ=profile.minZ;
+      s.foundationVersion=1;
+    }else{
+      const groundZ=buildableTerrainElevationForStructure(s);
+      if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
+      s.groundZ=groundZ;
+    }
     const cost=constructionCost(s);
     if(!canAfford(cost)){status('Insufficient resources — '+costText(cost));return false}
     s.buildCost=cost;spendCost(cost);beginConstruction(s);
