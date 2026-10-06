@@ -6,7 +6,7 @@ function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by
 function structureAt(p){
   const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
-  const linear=State.structures.filter(s=>!s.auto&&['wall','built'].includes(s.type));
+  const linear=State.structures.filter(s=>!s.auto&&['wall','palisade','built'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
   return null;
 }
@@ -65,10 +65,10 @@ function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clie
 function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
-  if(!s||!['tower','gate','built','wall','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s);panel.classList.add('open');
-  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','gate','wall','built'].includes(s.type),maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall'].includes(s.type);
+  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),canHeight=['tower','gate','wall','built'].includes(s.type),maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall','palisade'].includes(s.type);
   info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
   let html='';
   if(s.type==='house'){
@@ -76,8 +76,8 @@ function renderFunctionPanel(){
     html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 3 residents · L2: 6 · L3: 9 · L4: 12. L3: extended ${housePlanType(s)} plan · L4: elite house with ${houseTurretType(s)} turret.</div></div>`;
   }
   if(canTier){
-    const current=s.type==='wall'?wallTier(s):towerTier(s);
-    const labels=s.type==='wall'?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U']);
+    const current=['wall','palisade'].includes(s.type)?wallTier(s):towerTier(s);
+    const labels=['wall','palisade'].includes(s.type)?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U']);
     html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="grid3">${labels.map((label,i)=>`<button data-structure-tier="${i+1}" class="${current===i+1?'active':''}">${label}</button>`).join('')}</div></div>`;
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
@@ -101,9 +101,9 @@ function renderFunctionPanel(){
     const skin=wallSkin(s);
     html+=`<div class="slot"><div class="slot-label">Wall skin</div><div class="grid"><button data-wall-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-wall-skin="hoarding" class="${skin==='hoarding'?'active':''}">Hoarding</button></div><div class="legend">Hoarding replaces the exterior battlement treatment with a timber fighting gallery.</div></div>`;
   }
-  if(['wall','built'].includes(s.type)){
-    const flipLabel=s.type==='wall'?'Exterior side':'Exterior side / windows';
-    const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
+  if(['wall','palisade','built'].includes(s.type)){
+    const flipLabel=s.type==='built'?'Exterior side / windows':'Exterior side';
+    const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':s.type==='palisade'?'Defines which side is exterior; walkway and earthwork are generated inward.':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
     html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
   }
   if(s.type!=='house'&&!simpleCivic){
@@ -130,7 +130,7 @@ function renderFunctionPanel(){
     }
 
     applyStructureTier(target,requested);
-    target.tier=target.type==='wall'?wallTier(target):towerTier(target);
+    target.tier=['wall','palisade'].includes(target.type)?wallTier(target):towerTier(target);
     target.buildCost=constructionCost(target);
 
     if(target.type==='tower'){
@@ -145,7 +145,7 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markDirty();renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
   slots.querySelectorAll('[data-built-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='built')return;if(!setStructureVariant(target,'skin',btn.dataset.builtSkin))return;markDirty();renderFunctionPanel();draw();status('Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'))});
   slots.querySelectorAll('[data-wall-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;if(!setStructureVariant(target,'skin',btn.dataset.wallSkin))return;markDirty();renderFunctionPanel();draw();status('Wall skin: '+target.skin)});
-  slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','built'].includes(target.type))return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status((target.type==='wall'?'Wall':'Built section')+' exterior flipped')});
+  slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','palisade','built'].includes(target.type))return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped')});
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
 }
 let pan=null;
@@ -204,7 +204,7 @@ canvas.addEventListener('pointerdown',e=>{
   }
   if(State.tool.kind==='linear'){
     if(!State.draft){const s=snapAnchor(p);State.draft={a:s.point,aSnap:s.structureId,preview:null};status('Point A set — choose point B');draw()}
-    else{const e2=snapAnchor(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:State.tool.linear==='wall'?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:false,functions:[]});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}
+    else{const e2=snapAnchor(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec);if(n&&n.length>=spec.min-.001){addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:false,functions:[]});State.draft=null;status(State.tool.label+' ready for next segment')}else status('Segment too short')}
   }
 });
 canvas.addEventListener('pointermove',e=>{
@@ -212,7 +212,7 @@ canvas.addEventListener('pointermove',e=>{
   const p=pointerWorld(e);
   if(State.tool.kind==='linear'&&State.draft){
     const snap=snapAnchor(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,snap.point,spec);
-    if(n){State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:State.tool.linear==='wall'?(State.tool.tier||State.buildLevels.wallTier):undefined};status(`${State.tool.label}: ${n.length.toFixed(2)}U · L${State.tool.level||State.buildLevels.wall} · ${buildDuration({type:State.tool.linear,length:n.length,level:State.tool.level||State.buildLevels.wall}).toFixed(1)}d · ${costText(constructionCost({type:State.tool.linear,length:n.length,level:State.tool.level||State.buildLevels.wall}))}`);draw()}
+    if(n){State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};status(`${State.tool.label}: ${n.length.toFixed(2)}U · L${State.tool.level||State.buildLevels.wall} · ${buildDuration({type:State.tool.linear,length:n.length,level:State.tool.level||State.buildLevels.wall}).toFixed(1)}d · ${costText(constructionCost({type:State.tool.linear,length:n.length,level:State.tool.level||State.buildLevels.wall}))}`);draw()}
     return
   }
   const oriented=orientedToolSpec();
@@ -271,10 +271,10 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,6);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;invalidateSceneCache();draw()},{passive:false});
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
 for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
-for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const level=State.buildLevels.wall,tier=State.buildLevels.wallTier;setTool({kind:'linear',linear:b.dataset.linear,level,tier,label:(b.dataset.linear==='wall'?`Wall T${tier}`:'Built section')+` L${level} — choose point A`,el:b})};
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,isPalisade=b.dataset.linear==='palisade',level=isPalisade?1:State.buildLevels.wall;setTool({kind:'linear',linear:b.dataset.linear,level,tier,label:(b.dataset.linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
-document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&State.tool.linear==='wall'){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status('Wall tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
-document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.buildLevels.wall=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'){State.tool.level=State.buildLevels.wall;State.draft=null;status('Wall height: '+State.buildLevels.wall+' level'+(State.buildLevels.wall>1?'s':''));draw()}});
+document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','palisade'].includes(State.tool.linear)){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status((State.tool.linear==='palisade'?'Palisade':'Wall')+' tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
+document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.buildLevels.wall=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&State.tool.linear!=='palisade'){State.tool.level=State.buildLevels.wall;State.draft=null;status('Wall height: '+State.buildLevels.wall+' level'+(State.buildLevels.wall>1?'s':''));draw()}});
 document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
   State.buildLevels.gate=Number(b.dataset.gateLevel);
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
@@ -318,6 +318,13 @@ function migrateStructures(list){
       s.tier=wallTier(s);
       s.width=wallWidthForTier(s.tier);
       s.level=clamp(Math.round(Number(s.level)||1),1,2);
+    }
+    if(s.type==='palisade'){
+      s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;
+      s.tier=wallTier(s);
+      s.width=wallWidthForTier(s.tier);
+      s.level=1;
+      s.flip=!!s.flip;
     }
     if(s.type==='tower'){
       s.level=clamp(Math.round(Number(s.level)||1),1,3);
