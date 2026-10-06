@@ -849,6 +849,18 @@ function drawPalisadePostAt(center,r,z0,bodyZ,tipZ,angle){
 function drawPalisadePost(center,r,bodyZ,tipZ,angle){
   drawPalisadePostAt(center,r,0,bodyZ,tipZ,angle);
 }
+function drawOpaquePolygon(points,fill,stroke,lineWidth=1){
+  if(!points?.length)return;
+  ctx.save();
+  ctx.globalAlpha=1;
+  ctx.globalCompositeOperation='source-over';
+  ctx.beginPath();
+  points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill()}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke()}
+  ctx.restore();
+}
 function drawPalisadeWalkway(s,g){
   const innerOuter=g.postOffset-.05,innerEdge=-g.width/2+.035,z0=.66,z1=.74;
   const a0=g.point(g.a,innerOuter),b0=g.point(g.b,innerOuter);
@@ -869,15 +881,13 @@ function drawPalisadeEarthwork(s,g){
   const ac=g.point(g.a,crestInner),bc=g.point(g.b,crestInner);
   const at=g.point(g.a,toe),bt=g.point(g.b,toe);
 
-  // Retained outer face behind the stakes.
-  pathPolygon([w2s(ao,0),w2s(bo,0),w2s(bo,earthH),w2s(ao,earthH)],'#5a4128','#765738',.8);
-  // Flat crest gives the two patrols a usable top strip.
-  pathPolygon([w2s(ao,earthH),w2s(bo,earthH),w2s(bc,earthH),w2s(ac,earthH)],'#76603a','#8f7650',.8);
-  // 45° inner earth slope: vertical drop equals horizontal run.
-  pathPolygon([w2s(ac,earthH),w2s(bc,earthH),w2s(bt,0),w2s(at,0)],'#655033','#7d6744',.8);
-  // End caps keep the wedge readable at open ends.
-  pathPolygon([w2s(ao,0),w2s(ao,earthH),w2s(ac,earthH),w2s(at,0)],'#544128','#755b38',.7);
-  pathPolygon([w2s(bo,0),w2s(bo,earthH),w2s(bc,earthH),w2s(bt,0)],'#5d492d','#806542',.7);
+  // Earth is structural mass, never an overlay: force fully opaque source-over
+  // rendering regardless of any canvas state left by terrain/shadow passes.
+  drawOpaquePolygon([w2s(ao,0),w2s(bo,0),w2s(bo,earthH),w2s(ao,earthH)],'#5a4128','#765738',.8);
+  drawOpaquePolygon([w2s(ao,earthH),w2s(bo,earthH),w2s(bc,earthH),w2s(ac,earthH)],'#76603a','#8f7650',.8);
+  drawOpaquePolygon([w2s(ac,earthH),w2s(bc,earthH),w2s(bt,0),w2s(at,0)],'#655033','#7d6744',.8);
+  drawOpaquePolygon([w2s(ao,0),w2s(ao,earthH),w2s(ac,earthH),w2s(at,0)],'#544128','#755b38',.7);
+  drawOpaquePolygon([w2s(bo,0),w2s(bo,earthH),w2s(bc,earthH),w2s(bt,0)],'#5d492d','#806542',.7);
   return{earthH,crestOuter,crestInner,toe};
 }
 function palisadePatrolSurface(s){
@@ -950,7 +960,7 @@ function drawWatchtowerPalisadeJunction(s,g){
       const crestOuter=g.postOffset-.055,crestInner=crestOuter-.18;
       const earthH=Math.max(.28,Math.min(.70,crestInner+g.width/2));
       const pts=rectWorldPoints(tower.x,tower.y,.82,.82,tower.angle||0);
-      pathPolygon(projectPath(pts,earthH),'#76603a','#8f7650',.8);
+      drawOpaquePolygon(projectPath(pts,earthH),'#76603a','#8f7650',.8);
     }
   }
 }
