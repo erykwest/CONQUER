@@ -94,13 +94,14 @@ const COSTS={
   palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
   gate:{gold:95,stone:90,wood:38,metal:10},
+  woodGate:{gold:35,wood:90,metal:4},
   well:{gold:50,stone:35,wood:10},
   market:{gold:120,stone:70,wood:85},
   tavern:{gold:190,stone:65,wood:145},
   church:{gold:320,stone:360,wood:110,metal:18},
   training:{gold:90,stone:24,wood:70}
 };
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const PEASANT_VISUAL_SPEED=.05;
@@ -213,7 +214,11 @@ function woodTowerRoof(s){
   if(woodTowerStyle(s)==='watchtower')return'pitched';
   return s.woodRoof==='pitched'?'pitched':'open';
 }
-function gateRoofStyle(s){return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined}
+function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
+function gateRoofStyle(s){
+  if(isWoodGate(s))return'flat';
+  return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined
+}
 function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
 function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
 
@@ -317,7 +322,7 @@ function constructionCost(s){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
   }
-  if(s.type==='gate')return scaleCost(COSTS.gate,levelCostFactor(s));
+  if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
   if(s.type==='well')return {...COSTS.well};
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -334,7 +339,7 @@ function buildDuration(s){
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
     return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   }
-  if(s.type==='gate')return BUILD_DAYS.gate*(.7+.3*structureLevel(s));
+  if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
@@ -359,7 +364,7 @@ function underConstruction(s){return constructionProgress(s)<1}
 function remainingDays(s){return s?.construction?Math.max(0,s.construction.completeDay-State.clock.day):0}
 function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
-  if(s.type==='gate')return Math.SQRT2*s.size/2;
+  if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
   if(s.type==='well')return .75;
   if(s.type==='house'||s.type==='field')return Math.hypot(s.w,s.h)/2;
   if(isCivic(s))return civicRadius(s);
