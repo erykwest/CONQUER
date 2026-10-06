@@ -187,6 +187,7 @@ function addReactiveRoadPolyline(points,template={},meta={}){
     if(Number.isFinite(template.routeSeq))road.routeSeq=template.routeSeq+i/total;
     if(meta.repairFor)road.repairFor=meta.repairFor;
     if(meta.accessFor)road.accessFor=meta.accessFor;
+    if(meta.branchTargetId)road.branchTargetId=meta.branchTargetId;
     if(!meta.instant)beginConstruction(road);
     State.structures.push(road);added++;
   }
@@ -448,6 +449,102 @@ function settlementAccessTargets(){
     )
   );
 }
+function towerSecondaryBranchAccessPoint(tower,target){
+  if(!tower||tower.type!=='tower'||tower.parentTowerId)return null;
+
+  // Masonry towers use their real ground-floor front door. Timber towers do
+  // not have a masonry door, so their facing direction defines the service entrance.
+  if(!isWoodTower(tower)&&typeof towerDoorSpecs==='function'){
+    const front=towerDoorSpecs(tower).find(spec=>spec.kind==='front');
+    if(front){
+      return{
+        x:front.contact.x+front.outward.x*.30,
+        y:front.contact.y+front.outward.y*.30
+      };
+    }
+  }
+
+  const a=Number(tower.angle)||0,ray={x:tower.x+Math.cos(a)*4,y:tower.y+Math.sin(a)*4};
+  const edge=typeof boundaryPoint==='function'?boundaryPoint(tower,ray):{x:tower.x,y:tower.y};
+  return{x:edge.x+Math.cos(a)*.30,y:edge.y+Math.sin(a)*.30};
+}
+function towerSecondaryBranchCandidates(tower){
+  const out=[];
+  for(const gate of State.structures){
+    if(gate.type!=='gate'||underConstruction(gate))continue;
+    const passage=gatePassageInfo(gate,tower);if(!passage)continue;
+    out.push({id:gate.id,type:'gate',point:{...passage.near},distance:dist(tower,passage.near)});
+  }
+  const well=State.structures.find(s=>s.type==='well'&&!underConstruction(s));
+  if(well)out.push({id:well.id,type:'well',point:{x:well.x,y:well.y},distance:dist(tower,well)});
+  return out.sort((a,b)=>a.distance-b.distance);
+}
+function towerSecondaryRoads(towerId){
+  return State.structures.filter(r=>r.type==='road'&&r.roadClass==='secondary-tower'&&r.accessFor===towerId);
+}
+function removeTowerSecondaryBranch(towerId){
+  const before=State.structures.length;
+  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.roadClass==='secondary-tower'&&r.accessFor===towerId));
+  const removed=before-State.structures.length;
+  if(removed)invalidateNavigation(false);
+  return removed;
+}
+function ensureTowerSecondaryBranch(tower,instant=false){
+  if(!tower||tower.type!=='tower'||tower.parentTowerId||underConstruction(tower))return 0;
+  if(towerSecondaryRoads(tower.id).length)return 0;
+
+  const width=.28,candidates=towerSecondaryBranchCandidates(tower);
+  for(const target of candidates){
+    const start=towerSecondaryBranchAccessPoint(tower,target.point),goal=target.point;
+    if(!start||dist(start,goal)<.58)continue;
+    const ignore=[tower.id];
+    if(target.type==='well')ignore.push(target.id);
+
+    let path;
+    if(roadRepairSegmentClear(start,goal,width,ignore))path=[start,goal];
+    else path=findRoadRepairPath(start,goal,width,14,ignore,60000);
+    if(!path||path.length<2)continue;
+
+    const added=addReactiveRoadPolyline(path,{width},{
+      accessFor:tower.id,
+      branchTargetId:target.id,
+      roadClass:'secondary-tower',
+      ignoreIds:ignore,
+      instant
+    });
+    if(added)return added;
+  }
+  return 0;
+}
+function rebuildTowerSecondaryBranch(tower,instant=true){
+  if(!tower||tower.type!=='tower')return 0;
+  const removed=removeTowerSecondaryBranch(tower.id);
+  const added=ensureTowerSecondaryBranch(tower,instant);
+  return removed+added;
+}
+function reconcileTowerSecondaryBranches(limit=Infinity,instant=false){
+  let changed=0,done=0;
+  const liveTargets=new Set(
+    State.structures
+      .filter(s=>(s.type==='gate'||s.type==='well')&&!underConstruction(s))
+      .map(s=>s.id)
+  );
+
+  for(const tower of State.structures){
+    if(done>=limit)break;
+    if(tower.type!=='tower'||tower.parentTowerId||underConstruction(tower))continue;
+
+    const existing=towerSecondaryRoads(tower.id);
+    const stale=existing.some(r=>r.branchTargetId&&!liveTargets.has(r.branchTargetId));
+    if(existing.length&&!stale)continue;
+    if(stale)changed+=removeTowerSecondaryBranch(tower.id);
+
+    const n=ensureTowerSecondaryBranch(tower,instant);
+    if(n){changed+=n;done++}
+  }
+  if(changed)invalidateNavigation(false);
+  return changed;
+}
 function rebuildSecondaryRoadsOnLoad(){
   let removed=0;
   State.structures=State.structures.filter(s=>{
@@ -535,6 +632,7 @@ function reconcileReactiveRoadNetwork(){
   let changed=0;
   changed+=reconcileArterialRoutes();
   changed+=reconcileGateMainConnections(false);
+  changed+=reconcileTowerSecondaryBranches(Infinity,false);
   changed+=reconcileSettlementAccessRoads();
   if(changed)invalidateNavigation(false);
   return changed;
