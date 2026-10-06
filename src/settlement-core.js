@@ -59,13 +59,14 @@ const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
 const State={structures:[],environment:[],tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
-const TYPES={wall:{min:1,max:8},built:{width:1,min:1,max:4}};
+const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
 const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
 const ROUND_TOWER_TIERS=Object.freeze({1:.5,2:.75,3:1});
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
   wallPerU:{gold:6,stone:18,wood:2},
+  palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
   gate:{gold:95,stone:90,wood:38,metal:10},
   well:{gold:50,stone:35,wood:10},
@@ -74,7 +75,7 @@ const COSTS={
   church:{gold:320,stone:360,wood:110,metal:18},
   training:{gold:90,stone:24,wood:70}
 };
-const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11],gate:9,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const PEASANT_VISUAL_SPEED=.20;
@@ -196,7 +197,7 @@ function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,3);return 
 function applyStructureTier(s,tier){
   tier=clamp(Math.round(Number(tier)||1),1,3);
   s.tier=tier;
-  if(s.type==='wall'){s.width=wallWidthForTier(tier)}
+  if(['wall','palisade'].includes(s.type)){s.width=wallWidthForTier(tier)}
   else if(s.type==='tower'){
     if(s.shape==='round')s.r=towerSizeForTier('round',tier);
     else s.size=towerSizeForTier('square',tier);
@@ -285,6 +286,7 @@ function constructionCost(s){
   if(s.type==='well')return {...COSTS.well};
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
+  if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   return{};
 }
@@ -298,6 +300,7 @@ function buildDuration(s){
   if(s.type==='well')return BUILD_DAYS.well;
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
+  if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='road')return BUILD_DAYS.road;
   if(s.type==='house')return BUILD_DAYS.house;
