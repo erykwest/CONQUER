@@ -44,8 +44,14 @@ jobs:
             cp -a _branch_tmp/. "_site/$safe/"
 
             sha="$(git rev-parse "origin/$branch")"
+            short="${sha:0:12}"
             if [ -f "_site/$safe/index.html" ]; then
-              python3 -c 'from pathlib import Path; import re,sys; p=Path(sys.argv[1]); sha=sys.argv[2][:12]; h=p.read_text(encoding="utf-8"); h=re.sub(r"((?:src|href)=\"\\./src/[^\"?]+)(?:\\?[^\"]*)?(\")", rf"\\1?v={sha}\\2", h); h=h.replace("</body>", f"<div id=\"buildStamp\" style=\"position:fixed;right:8px;bottom:6px;z-index:9999;font:10px monospace;color:#aaa;opacity:.65;pointer-events:none\">build {sha}</div></body>"); p.write_text(h,encoding="utf-8")' "_site/$safe/index.html" "$sha"
+              page="_site/$safe/index.html"
+              sed -i "s#href=\"./src/settlement.css\"#href=\"./src/settlement.css?v=$short\"#g" "$page"
+              for asset in settlement-core.js settlement-world.js settlement-castle.js settlement-population.js settlement-render.js settlement-app.js; do
+                sed -i "s#src=\"./src/$asset\"#src=\"./src/$asset?v=$short\"#g" "$page"
+              done
+              sed -i "s#</body>#<div id=\"buildStamp\" style=\"position:fixed;right:8px;bottom:6px;z-index:9999;font:10px monospace;color:#aaa;opacity:.65;pointer-events:none\">build $short</div></body>#" "$page"
             fi
 
             if [ "$branch" = "main" ]; then
