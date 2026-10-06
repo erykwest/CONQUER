@@ -239,15 +239,36 @@ class RoadNavHeap{
   pop(){const a=this.a;if(!a.length)return null;const root=a[0],last=a.pop();if(a.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=a.length)break;let m=r<a.length&&a[r].d<a[l].d?r:l;if(a[m].d>=last.d)break;a[i]=a[m];i=m}a[i]=last}return root}
   get length(){return this.a.length}
 }
+function localRoadConnectorPath(point,anchor,sourceHouseId){
+  if(!point||!anchor)return null;
+  if(dist(point,anchor)<=.03)return[{...point}];
+  if(peasantSegmentClear(point,anchor,sourceHouseId))return[{...point},{...anchor}];
+
+  // Grid A* is now strictly local: only bridge a building/plaza access point
+  // to its nearest road. It never searches the full origin→destination trip.
+  navPerf.localConnectorSearches=(navPerf.localConnectorSearches||0)+1;
+  let path=findPeasantPath(point,anchor,sourceHouseId,2.5);
+  if(!path&&dist(point,anchor)<=3.8)path=findPeasantPath(point,anchor,sourceHouseId,4);
+  if(!path){
+    navPerf.localConnectorMisses=(navPerf.localConnectorMisses||0)+1;
+    return null;
+  }
+  return path;
+}
+function appendRoutePoints(out,points){
+  for(const p of points||[]){
+    if(p&&(!out.length||dist(p,out.at(-1))>.02))out.push({...p});
+  }
+  return out;
+}
 function roadNetworkPath(start,goal,sourceHouseId){
   const graph=roadNavGraph();if(!graph.nodes.size)return null;
   const a=nearestRoadNavAnchor(start),b=nearestRoadNavAnchor(goal);
   if(!a||!b||a.d>4.5||b.d>4.5)return null;
 
-  // Short connectors from doors/plazas/field cells to the road are validated
-  // against the physical obstacle map.
-  if(dist(start,a.point)>.03&&!peasantSegmentClear(start,a.point,sourceHouseId))return null;
-  if(dist(b.point,goal)>.03&&!peasantSegmentClear(b.point,goal,sourceHouseId))return null;
+  const startConnector=localRoadConnectorPath(start,a.point,sourceHouseId);
+  const goalConnector=localRoadConnectorPath(goal,b.point,sourceHouseId);
+  if(!startConnector||!goalConnector)return null;
 
   const seeds=[],goals=new Map();
   for(const q of [a.left,a.right]){
@@ -259,11 +280,15 @@ function roadNetworkPath(start,goal,sourceHouseId){
     goals.set(q.node.key,dist(b.point,q.node.p));
   }
 
-  // Same-road direct travel avoids unnecessary graph work.
+  const out=[];
+  appendRoutePoints(out,startConnector);
+
+  // Same-road travel needs no graph search at all.
   if(a.item===b.item){
-    const direct=[start,a.point,b.point,goal].filter((p,i,arr)=>i===0||dist(p,arr[i-1])>.02);
+    appendRoutePoints(out,[b.point]);
+    appendRoutePoints(out,goalConnector.slice().reverse());
     navPerf.graphRoutes++;
-    return direct;
+    return out;
   }
 
   const heap=new RoadNavHeap(),dScore=new Map(),came=new Map();
@@ -291,10 +316,10 @@ function roadNetworkPath(start,goal,sourceHouseId){
   const rev=[];let k=endKey;
   while(k){const node=graph.nodes.get(k);if(node)rev.push(node.p);k=came.get(k)}
   rev.reverse();
-  const out=[start,a.point,...rev,b.point,goal],clean=[];
-  for(const p of out)if(p&&(!clean.length||dist(p,clean.at(-1))>.02))clean.push(p);
+  appendRoutePoints(out,[a.point,...rev,b.point]);
+  appendRoutePoints(out,goalConnector.slice().reverse());
   navPerf.graphRoutes++;
-  return clean;
+  return out;
 }
 function peasantObstacleSignature(){
   return State.structures.filter(s=>['house','tower','gate','wall','built','well','road','market','tavern','church','training'].includes(s.type)).map(s=>{
@@ -446,12 +471,8 @@ function peasantPath(house,assignment){
   if(peasantPathCache.has(key))return peasantPathCache.get(key);
   const start=houseDoorInfo(house).outside,goal={...cell.world};
   let path=roadNetworkPath(start,goal,house.id);
-  if(!path){
-    navPerf.gridFallbacks++;
-    path=findPeasantPath(start,goal,house.id,8);
-    if(!path)path=findPeasantPath(start,goal,house.id,14);
-  }
-  if(!path){navPerf.gridMisses++;path=[start]}
+  if(!path&&peasantSegmentClear(start,goal,house.id))path=[start,goal];
+  if(!path){navPerf.routeMisses=(navPerf.routeMisses||0)+1;path=[start]}
   peasantPathCache.set(key,path);return path;
 }
 function nearestCompletedStructure(type,from){
@@ -514,16 +535,10 @@ function wellApproachPath(house,well){
     path=trimPathBeforeCircle(path,center,.62+PEASANT_CLEARANCE+.16);
     navPerf.wellGraphRoutes=(navPerf.wellGraphRoutes||0)+1;
   }else{
-    // Rare fallback: target a deterministic point on the safe perimeter.
-    const angle=Math.atan2(start.y-center.y,start.x-center.x);
-    const goal={
-      x:center.x+Math.cos(angle)*(.62+PEASANT_CLEARANCE+.18),
-      y:center.y+Math.sin(angle)*(.62+PEASANT_CLEARANCE+.18)
-    };
-    navPerf.wellGridFallbacks=(navPerf.wellGridFallbacks||0)+1;
-    path=findPeasantPath(start,goal,house.id,8);
-    if(!path)path=findPeasantPath(start,goal,house.id,14);
-    if(!path)path=[start,goal];
+    // No global A* fallback for well trips. The access road is the contract:
+    // if the road graph is temporarily unavailable, keep the resident home.
+    navPerf.wellRouteMisses=(navPerf.wellRouteMisses||0)+1;
+    path=[start];
   }
 
   peasantPathCache.set(key,path);
@@ -586,16 +601,23 @@ function structureAccessPoint(target,from,visitorId=''){
 function villagerPathBetween(house,start,goal,tag){
   if(!start||!goal)return start?[start]:[];
   syncPeasantPathCache();
-  const key='routine:'+house.id+':'+tag+':'+start.x.toFixed(2)+','+start.y.toFixed(2)+'>'+goal.x.toFixed(2)+','+goal.y.toFixed(2);
+  const pkey=p=>p.x.toFixed(2)+','+p.y.toFixed(2);
+  const key='route:'+house.id+':'+pkey(start)+'>'+pkey(goal);
+  const reverseKey='route:'+house.id+':'+pkey(goal)+'>'+pkey(start);
   if(peasantPathCache.has(key))return peasantPathCache.get(key);
+  if(peasantPathCache.has(reverseKey)){
+    const path=peasantPathCache.get(reverseKey).slice().reverse();
+    peasantPathCache.set(key,path);
+    navPerf.reverseRouteHits=(navPerf.reverseRouteHits||0)+1;
+    return path;
+  }
+
   let path=roadNetworkPath(start,goal,house.id);
   if(!path&&peasantSegmentClear(start,goal,house.id))path=[start,goal];
   if(!path){
-    navPerf.gridFallbacks++;
-    path=findPeasantPath(start,goal,house.id,8);
-    if(!path)path=findPeasantPath(start,goal,house.id,14);
+    navPerf.routeMisses=(navPerf.routeMisses||0)+1;
+    path=[start];
   }
-  if(!path){navPerf.gridMisses++;path=[start]}
   peasantPathCache.set(key,path);
   return path;
 }
@@ -709,7 +731,7 @@ function peasantAnimationActive(){
 }
 function housePopulationCapacity(house){
   const level=houseLevel(house);
-  return{male:level,female:level,children:level*2,total:level*4};
+  return{male:level,female:level,children:level,total:level*3};
 }
 function houseResidents(house){
   const cap=housePopulationCapacity(house),out=[];
@@ -718,34 +740,6 @@ function houseResidents(house){
   for(let i=0;i<cap.children;i++){
     const id=house.id+':c:'+i;
     out.push({id,sex:(peasantHash(id)&1)?'female':'male',age:'child',index:i});
-  }
-  return out;
-}
-const VISIBLE_RESIDENTS_BY_LEVEL=Object.freeze({1:2,2:3,3:4,4:5});
-function houseVisibleResidents(house){
-  const all=houseResidents(house),level=houseLevel(house),limit=VISIBLE_RESIDENTS_BY_LEVEL[level]||2;
-  if(all.length<=limit)return all;
-
-  const males=all.filter(r=>r.age==='adult'&&r.sex==='male');
-  const females=all.filter(r=>r.age==='adult'&&r.sex==='female');
-  const children=all.filter(r=>r.age==='child');
-  const out=[],used=new Set(),flip=(peasantHash(house.id+'-visible-sex')&1)!==0;
-
-  const take=r=>{if(r&&!used.has(r.id)&&out.length<limit){used.add(r.id);out.push(r)}};
-
-  // Small houses show one adult + one child; across houses the adult sex alternates.
-  // Larger houses add the other adult first, then fill deterministically.
-  take(flip?females[0]:males[0]);
-  take(children[0]);
-  if(limit>=3)take(flip?males[0]:females[0]);
-  if(limit>=4)take(children[1]||males[1]||females[1]);
-  if(limit>=5)take(males[1]||females[1]||children[2]);
-
-  if(out.length<limit){
-    const rest=all
-      .filter(r=>!used.has(r.id))
-      .sort((a,b)=>peasantHash(a.id+'-visible')-peasantHash(b.id+'-visible'));
-    for(const r of rest){take(r);if(out.length>=limit)break}
   }
   return out;
 }
@@ -891,7 +885,7 @@ function drawPeasants(){
   for(const house of houses){
     representedPopulation+=housePopulationCapacity(house).total;
     const kind=villagerClass(house),assignment=assignments.get(house.id);
-    for(const resident of houseVisibleResidents(house)){
+    for(const resident of houseResidents(house)){
       let p=residentClassPosition(house,resident,day,assignment);
       if(!p)continue;
       p=residentScatter(p,resident.id,resident.age==='child');
