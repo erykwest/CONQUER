@@ -246,8 +246,8 @@ function roadNetworkPath(start,goal,sourceHouseId){
 
   // Short connectors from doors/plazas/field cells to the road are validated
   // against the physical obstacle map.
-  if(!peasantSegmentClear(start,a.point,sourceHouseId))return null;
-  if(!peasantSegmentClear(b.point,goal,sourceHouseId))return null;
+  if(dist(start,a.point)>.03&&!peasantSegmentClear(start,a.point,sourceHouseId))return null;
+  if(dist(b.point,goal)>.03&&!peasantSegmentClear(b.point,goal,sourceHouseId))return null;
 
   const seeds=[],goals=new Map();
   for(const q of [a.left,a.right]){
@@ -474,6 +474,66 @@ function nearestWorkshop(from){
   }
   return best;
 }
+function trimPathBeforeCircle(path,center,radius){
+  if(!path?.length)return path;
+  const out=path.map(p=>({...p}));
+  // Walk backward until we find the first segment entering the exclusion circle.
+  for(let i=out.length-1;i>0;i--){
+    const insideB=dist(out[i],center)<=radius;
+    const insideA=dist(out[i-1],center)<=radius;
+    if(!insideB&&!insideA)continue;
+    const a=out[i-1],b=out[i],dx=b.x-a.x,dy=b.y-a.y;
+    const fx=a.x-center.x,fy=a.y-center.y;
+    const A=dx*dx+dy*dy;
+    if(A<=1e-9)continue;
+    const B=2*(fx*dx+fy*dy),C=fx*fx+fy*fy-radius*radius;
+    const disc=B*B-4*A*C;
+    if(disc<0)continue;
+    const roots=[(-B-Math.sqrt(disc))/(2*A),(-B+Math.sqrt(disc))/(2*A)]
+      .filter(t=>t>=0&&t<=1).sort((x,y)=>x-y);
+    if(!roots.length)continue;
+    const t=roots[0];
+    const hit={x:a.x+dx*t,y:a.y+dy*t};
+    out.splice(i);
+    if(!out.length||dist(out.at(-1),hit)>.02)out.push(hit);
+    return out;
+  }
+  return out;
+}
+function wellApproachPath(house,well){
+  if(!house||!well)return[];
+  syncPeasantPathCache();
+  const key='well:'+house.id+'>'+well.id;
+  if(peasantPathCache.has(key))return peasantPathCache.get(key);
+
+  const start=houseDoorInfo(house).outside,center=structureCenter(well);
+  let path=roadNetworkPath(start,center,house.id);
+  if(path){
+    // Stop outside the physical well collider while still using the central
+    // road junction as the graph destination.
+    path=trimPathBeforeCircle(path,center,.62+PEASANT_CLEARANCE+.16);
+    navPerf.wellGraphRoutes=(navPerf.wellGraphRoutes||0)+1;
+  }else{
+    // Rare fallback: target a deterministic point on the safe perimeter.
+    const angle=Math.atan2(start.y-center.y,start.x-center.x);
+    const goal={
+      x:center.x+Math.cos(angle)*(.62+PEASANT_CLEARANCE+.18),
+      y:center.y+Math.sin(angle)*(.62+PEASANT_CLEARANCE+.18)
+    };
+    navPerf.wellGridFallbacks=(navPerf.wellGridFallbacks||0)+1;
+    path=findPeasantPath(start,goal,house.id,8);
+    if(!path)path=findPeasantPath(start,goal,house.id,14);
+    if(!path)path=[start,goal];
+  }
+
+  peasantPathCache.set(key,path);
+  return path;
+}
+function wellRoutineTravel(house,well,frac,t0,t1,reverse=false){
+  const path=wellApproachPath(house,well);
+  const t=routineSmooth((frac-t0)/Math.max(.001,t1-t0));
+  return pointAlongPath(path,reverse?1-t:t);
+}
 function structureAccessPoint(target,from,visitorId=''){
   if(!target)return null;
   const h=peasantHash(String(visitorId)+'>'+target.id),jitter=(((h>>>5)%7)-3)*.12;
@@ -502,9 +562,20 @@ function structureAccessPoint(target,from,visitorId=''){
     return{x:mid.x+ux*along+nx*off*side,y:mid.y+uy*along+ny*off*side};
   }
   const center=structureCenter(target);
+  if(target.type==='well'){
+    const graphPath=roadNetworkPath(from,center,String(visitorId||'well-access'));
+    if(graphPath?.length){
+      const trimmed=trimPathBeforeCircle(graphPath,center,.62+PEASANT_CLEARANCE+.16);
+      if(trimmed?.length)return trimmed.at(-1);
+    }
+    const angle=Math.atan2(from.y-center.y,from.x-center.x);
+    return{
+      x:center.x+Math.cos(angle)*(.62+PEASANT_CLEARANCE+.18),
+      y:center.y+Math.sin(angle)*(.62+PEASANT_CLEARANCE+.18)
+    };
+  }
   let radius=.9;
   if(isCivic(target))radius=civicRadius(target)+.5;
-  else if(target.type==='well')radius=1.0;
   else if(target.type==='tower')radius=(target.shape==='round'?target.r:Math.hypot(...Object.values(rectDims(target)))/2)+.45;
   else if(target.type==='gate')radius=Math.hypot(...Object.values(rectDims(target)))/2+.45;
   else if(target.w&&target.h)radius=Math.hypot(target.w,target.h)/2+.45;
@@ -696,9 +767,20 @@ function familyPosition(house,day){
   const tavern=nearestCompletedStructure('tavern',home);
   const target=market||church||well||tavern;
   if(!target)return null;
-  const dest=structureAccessPoint(target,home,house.id+'-family');
   const leave0=.17+stagger,arrive=.24+stagger,leave=.48+stagger,homeAt=.58+stagger;
   if(frac<leave0||frac>homeAt)return null;
+
+  // The well is a road-network hub but also a physical obstacle. Route to its
+  // graph node once per house, then stop on the perimeter. This prevents the
+  // synchronized family outing from triggering a burst of grid A* searches.
+  if(target.type==='well'){
+    const path=wellApproachPath(house,target),dest=path?.at(-1)||home;
+    if(frac<arrive)return wellRoutineTravel(house,target,frac,leave0,arrive,false);
+    if(frac<leave)return dest;
+    return wellRoutineTravel(house,target,frac,leave,homeAt,true);
+  }
+
+  const dest=structureAccessPoint(target,home,house.id+'-family');
   if(frac<arrive)return routineTravel(house,home,dest,frac,leave0,arrive,'family-out');
   if(frac<leave)return dest;
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
