@@ -19,21 +19,24 @@ function withRenderContext(next,fn){
   try{return fn()}finally{ctx=prev}
 }
 const STATIC_CACHE_DPR_CAP=1.5;
-const STATIC_CACHE_OVERSCAN=240;
 function staticCacheDpr(){return Math.min(devicePixelRatio||1,STATIC_CACHE_DPR_CAP)}
 function prepareSceneCache(layer){
-  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),entry=sceneCache[layer],m=STATIC_CACHE_OVERSCAN;
-  const logicalW=r.width+m*2,logicalH=r.height+m*2;
+  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),entry=sceneCache[layer];
+  // Cache a full 3×3 viewport: the live viewport occupies the central tile,
+  // leaving one complete viewport of raster margin on every side.
+  const ox=r.width,oy=r.height;
+  const logicalW=r.width*3,logicalH=r.height*3;
   const w=Math.max(1,Math.round(logicalW*d)),h=Math.max(1,Math.round(logicalH*d));
   if(entry.canvas.width!==w||entry.canvas.height!==h){
     entry.canvas.width=w;entry.canvas.height=h;entry.dirty=true;
   }
   entry.ctx.setTransform(1,0,0,1,0,0);
   entry.ctx.clearRect(0,0,entry.canvas.width,entry.canvas.height);
-  entry.ctx.setTransform(d,0,0,d,m*d,m*d);
+  entry.ctx.setTransform(d,0,0,d,ox*d,oy*d);
   entry.view={
     x:State.view.x,y:State.view.y,scale:State.view.scale,
-    rotation:State.view.rotation||0,width:r.width,height:r.height,dpr:d,overscan:m
+    rotation:State.view.rotation||0,width:r.width,height:r.height,dpr:d,
+    overscanX:ox,overscanY:oy
   };
   return entry;
 }
@@ -47,34 +50,35 @@ function sceneCacheProjectionCompatible(entry){
     ||Math.abs(v.width-r.width)>=.5
     ||Math.abs(v.height-r.height)>=.5
     ||Math.abs(v.dpr-d)>=1e-9)return false;
-  const m=Number(v.overscan)||0,limit=m*.78;
-  return Math.abs(State.view.x-v.x)<=limit&&Math.abs(State.view.y-v.y)<=limit;
+  const ox=Number(v.overscanX)||v.width||0,oy=Number(v.overscanY)||v.height||0;
+  // Rebuild before the viewport actually reaches the edge of the 3×3 raster.
+  return Math.abs(State.view.x-v.x)<=ox*.92&&Math.abs(State.view.y-v.y)<=oy*.92;
 }
 function blitSceneCache(layer){
   const r=wrap.getBoundingClientRect(),entry=sceneCache[layer],v=entry.view;
   if(!v)return;
-  const m=Number(v.overscan)||0;
+  const ox=Number(v.overscanX)||v.width||0,oy=Number(v.overscanY)||v.height||0;
 
-  // Pan keeps the original 1:1 cache translation. This preserves the overscan
-  // envelope and avoids exposing/clipping the cached bitmap at the viewport edge.
+  // Pan keeps the 3×3 cache at 1:1 scale and simply moves the central viewport
+  // across it. No clipping can occur until roughly one full viewport of travel.
   if(!sceneCacheZoomPreview){
     const dx=State.view.x-v.x,dy=State.view.y-v.y;
     screenCtx.drawImage(
       entry.canvas,
       0,0,entry.canvas.width,entry.canvas.height,
-      dx-m,dy-m,r.width+m*2,r.height+m*2
+      dx-ox,dy-oy,r.width+ox*2,r.height+oy*2
     );
     return;
   }
 
   // Only an active wheel gesture may temporarily reproject a stale-scale cache.
   const ratio=(Number(State.view.scale)||1)/(Number(v.scale)||1);
-  const dx=State.view.x+(-m-v.x)*ratio;
-  const dy=State.view.y+(-m-v.y)*ratio;
+  const dx=State.view.x+(-ox-v.x)*ratio;
+  const dy=State.view.y+(-oy-v.y)*ratio;
   screenCtx.drawImage(
     entry.canvas,
     0,0,entry.canvas.width,entry.canvas.height,
-    dx,dy,(r.width+m*2)*ratio,(r.height+m*2)*ratio
+    dx,dy,(r.width+ox*2)*ratio,(r.height+oy*2)*ratio
   );
 }
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
