@@ -1202,7 +1202,10 @@ function repositionSubtower(child){
   const attachment=subtowerAttachmentAtSocket(parent,child,child.subtowerSocket,child.subtowerAngle);
   if(!attachment)return false;
   child.x=attachment.point.x;child.y=attachment.point.y;
-  if(child.shape==='square')child.angle=attachment.angle;
+  if(child.shape==='square'){
+    const offset=Number.isFinite(Number(child.orientationOffset))?Number(child.orientationOffset):0;
+    child.angle=attachment.angle+offset;
+  }
   child.subtowerSocket=attachment.subtowerSocket;
   child.subtowerAngle=attachment.subtowerAngle;
   return true;
