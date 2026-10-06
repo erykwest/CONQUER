@@ -401,6 +401,47 @@ const forestGroundLayoutCache=new Map();
 let terrainMarkLayoutCache=null;
 let springFlowerLayoutCache=null;
 const springFlowerSprites=new Map();
+const steepSlopePatternCanvases={};
+const steepSlopePatternsByContext=new WeakMap();
+function getSteepSlopePattern(winter=false){
+  const key=winter?'winter':'gray';
+  if(!steepSlopePatternCanvases[key]){
+    const off=document.createElement('canvas');off.width=72;off.height=72;
+    const p=off.getContext('2d'),rnd=seedRand(winter?0x4d7b91c3:0x6b6f7377);
+    p.clearRect(0,0,72,72);
+    for(let i=0;i<70;i++){
+      const x=rnd()*72,y=rnd()*72,rx=.7+rnd()*3.8,ry=.35+rnd()*1.8;
+      p.fillStyle=winter
+        ?(rnd()>.5?'rgba(255,255,255,.12)':'rgba(102,111,116,.13)')
+        :(rnd()>.5?'rgba(180,185,185,.11)':'rgba(32,36,38,.14)');
+      p.beginPath();p.ellipse(x,y,rx,ry,rnd()*Math.PI,0,Math.PI*2);p.fill();
+    }
+    for(let i=0;i<16;i++){
+      const x=rnd()*72,y=rnd()*72,L=5+rnd()*12,a=rnd()*Math.PI;
+      p.strokeStyle=winter?'rgba(112,121,125,.10)':'rgba(215,218,216,.08)';
+      p.lineWidth=.5+rnd()*.65;
+      p.beginPath();p.moveTo(x,y);p.lineTo(x+Math.cos(a)*L,y+Math.sin(a)*L*.55);p.stroke();
+    }
+    steepSlopePatternCanvases[key]=off;
+  }
+  let patterns=steepSlopePatternsByContext.get(ctx);
+  if(!patterns){patterns={};steepSlopePatternsByContext.set(ctx,patterns)}
+  if(!patterns[key])patterns[key]=ctx.createPattern(steepSlopePatternCanvases[key],'repeat');
+  return patterns[key];
+}
+function drawSteepSlopeSurface(poly,winter=false){
+  if(!poly?.length)return;
+  const base=winter?'#969ca0':'#6f7477';
+  pathPolygon(poly,base,winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
+  const pattern=getSteepSlopePattern(winter);if(!pattern)return;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of poly){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
+  ctx.save();
+  ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip();
+  ctx.globalAlpha=winter?.72:.82;
+  ctx.fillStyle=pattern;ctx.fillRect(minX-2,minY-2,maxX-minX+4,maxY-minY+4);
+  ctx.restore();
+}
 function ensureLandscapeRenderCaches(){
   if(landscapeRenderCacheSeed===State.seed)return;
   landscapeRenderCacheSeed=State.seed;
@@ -535,7 +576,7 @@ function drawRelief(){
         const poly=projectClippedTerrain([
           {...band.oa,z:band.z0},{...band.ob,z:band.z0},{...band.b,z:band.z1},{...band.a,z:band.z1}
         ]);
-        if(poly.length>=3)pathPolygon(poly,winter?'#969ca0':'#6f7477',winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
+        if(poly.length>=3)drawSteepSlopeSurface(poly,winter);
         drawSteepSlopeRocks(level,band,winter);
       }
     }
