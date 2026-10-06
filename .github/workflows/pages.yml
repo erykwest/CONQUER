@@ -47,11 +47,11 @@ jobs:
             short="${sha:0:12}"
             if [ -f "_site/$safe/index.html" ]; then
               page="_site/$safe/index.html"
-              sed -i "s#href=\"./src/settlement.css\"#href=\"./src/settlement.css?v=$short\"#g" "$page"
+              sed -i "s@href=\"./src/settlement.css\"@href=\"./src/settlement.css?v=$short\"@g" "$page"
               for asset in settlement-core.js settlement-world.js settlement-castle.js settlement-population.js settlement-render.js settlement-app.js; do
-                sed -i "s#src=\"./src/$asset\"#src=\"./src/$asset?v=$short\"#g" "$page"
+                sed -i "s@src=\"./src/$asset\"@src=\"./src/$asset?v=$short\"@g" "$page"
               done
-              sed -i "s#</body>#<div id=\"buildStamp\" style=\"position:fixed;right:8px;bottom:6px;z-index:9999;font:10px monospace;color:#aaa;opacity:.65;pointer-events:none\">build $short</div></body>#" "$page"
+              sed -i "s@</body>@<div id=\"buildStamp\" style=\"position:fixed;right:8px;bottom:6px;z-index:9999;font:10px monospace;color:#aaa;opacity:.65;pointer-events:none\">build $short</div></body>@" "$page"
             fi
 
             if [ "$branch" = "main" ]; then
