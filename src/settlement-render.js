@@ -863,7 +863,10 @@ function ensureStaticSceneCaches(){
   // X/Y camera changes are pure screen translations and are handled cheaply
   // by blitSceneCache() until pan ends.
   for(const entry of Object.values(sceneCache)){
-    if(!entry.dirty&&!sceneCacheProjectionCompatible(entry))entry.dirty=true;
+    // During wheel zoom keep the previous raster alive and reproject it in
+    // blitSceneCache(). This removes the expensive terrain/castle rebuild from
+    // every wheel event. Dirty topology still rebuilds immediately.
+    if(!sceneCacheZoomPreview&&!entry.dirty&&!sceneCacheProjectionCompatible(entry))entry.dirty=true;
   }
   if(sceneCache.base.dirty)drawBaseStaticScene();
   if(sceneCache.castleBody.dirty)drawCastleBodyStaticScene();
