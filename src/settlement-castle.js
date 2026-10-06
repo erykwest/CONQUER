@@ -41,7 +41,7 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){
-    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:2.47;
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
   }
   if(s.type==='gate')return [2.8,4.0,5.2][structureLevel(s)-1];
@@ -930,7 +930,7 @@ function drawWatchtowerWood(s){
   drawWoodHipRoof(s,eaveZ,apexZ,.14);
 }
 function drawMediumWoodTower(s){
-  const size=1.5,half=size/2-.07,bodyZ=1.32,tipZ=1.57,angle=s.angle||0,spacing=.205;
+  const size=1.5,half=size/2-.07,bodyZ=2.07,tipZ=2.32,angle=s.angle||0,spacing=.205;
   const corners=[[-half,-half],[half,-half],[half,half],[-half,half]];
   for(let edge=0;edge<4;edge++){
     const a=corners[edge],b=corners[(edge+1)%4],L=Math.hypot(b[0]-a[0],b[1]-a[1]),count=Math.max(1,Math.ceil(L/spacing));
@@ -939,11 +939,12 @@ function drawMediumWoodTower(s){
       drawPalisadePost(woodTowerLocal(s,x,y),.095,bodyZ,tipZ,angle);
     }
   }
-  drawWoodPlatform(s,size-.12,1.27,1.38);
+  // H1 fighting deck: open platform sits just below the pointed palisade crown.
+  drawWoodPlatform(s,size-.12,2.00,2.12);
   if(woodTowerRoof(s)==='pitched'){
-    const roofHalf=.61,eaveZ=2.04,apexZ=2.47;
+    const roofHalf=.61,eaveZ=2.55,apexZ=2.95;
     for(const [x,y] of [[-roofHalf,-roofHalf],[roofHalf,-roofHalf],[roofHalf,roofHalf],[-roofHalf,roofHalf]]){
-      drawWoodPost(woodTowerLocal(s,x,y),.055,1.38,eaveZ,angle);
+      drawWoodPost(woodTowerLocal(s,x,y),.055,2.12,eaveZ,angle);
     }
     drawWoodHipRoof(s,eaveZ,apexZ,.10);
   }
