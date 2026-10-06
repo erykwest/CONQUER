@@ -310,6 +310,7 @@ function syncPeasantPathCache(){
   peasantPathCache.clear();
 }
 function pointBlockedForPeasant(p,sourceHouseId){
+  if(terrainSlopeKind(p)==='steep')return true;
   for(const s of State.structures){
     if(s.id===sourceHouseId)continue;
     if(!['house','tower','gate','wall','built','well','market','tavern','church','training'].includes(s.type))continue;
