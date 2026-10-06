@@ -686,6 +686,7 @@ function generateRelief(){
     coverage=estimateReliefCoverage(64);
   }
   State.relief.stats=reliefStats();
+  State.relief.forestTerrainRuleVersion=FOREST_TERRAIN_RULE_VERSION;
   clearReliefBandCache();
   return State.relief;
 }
@@ -709,8 +710,48 @@ function polygonGap(a,b){
   for(const p of b)for(let i=0;i<a.length;i++)best=Math.min(best,pointSegmentDistance(p,a[i],a[(i+1)%a.length]));
   return best;
 }
+const FOREST_TERRAIN_RULE_VERSION=1;
+function polygonsOverlapSimple(a,b){
+  if(!a?.length||!b?.length)return false;
+  if(a.some(p=>pointInPolygon(p,b))||b.some(p=>pointInPolygon(p,a)))return true;
+  for(let i=0;i<a.length;i++){
+    const a2=a[(i+1)%a.length];
+    for(let j=0;j<b.length;j++){
+      const b2=b[(j+1)%b.length];
+      if(segmentsIntersect(a[i],a2,b[j],b2))return true;
+    }
+  }
+  return false;
+}
+function forestIntersectsSteepRelief(forest){
+  const pts=forest?.points;if(!pts?.length||!State.relief?.hills?.length)return false;
+  for(const level of reliefLevels()){
+    for(const band of reliefEdgeBands(level)){
+      if(band.kind!=='steep')continue;
+      if(polygonsOverlapSimple(pts,band.poly))return true;
+    }
+  }
+  return false;
+}
+function repairForestsAgainstSteepSlopes(){
+  if(!State.relief?.hills?.length||!Array.isArray(State.environment))return false;
+  const already=State.relief.forestTerrainRuleVersion===FOREST_TERRAIN_RULE_VERSION;
+  let removed=0;
+  State.environment=State.environment.filter(f=>{
+    if(f.type!=='forest')return true;
+    if(!forestIntersectsSteepRelief(f))return true;
+    removed++;return false;
+  });
+  if(removed){
+    const rnd=seedRand((State.seed^biomeHash(State.biome)^0x2d6f5b1d)>>>0);
+    ensureForestCoverage(State.environment,rnd,.20);
+  }
+  State.relief.forestTerrainRuleVersion=FOREST_TERRAIN_RULE_VERSION;
+  return removed>0||!already;
+}
+
 function forestBlobCanPlace(candidate,env,minGap=3){
-  if(environmentConflictsTestRelief(candidate))return false;
+  if(forestIntersectsSteepRelief(candidate))return false;
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
 function makeForestCandidate(rnd,small=false){
