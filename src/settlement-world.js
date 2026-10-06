@@ -666,14 +666,22 @@ function hillSpacingOk(hill,hills,relax=false){
   const r=Math.sqrt(hill.rx*hill.ry),factor=relax?.62:.78;
   return hills.every(other=>dist(hill.center,other.center)>(r+Math.sqrt(other.rx*other.ry))*factor);
 }
-function estimateReliefCoverage(samples=72){
+function reliefFootprintContains(p){
+  for(const hill of State.relief?.hills||[]){
+    const level=hill.levels?.[0];if(!level?.top?.length)continue;
+    if(pointInPolygon(p,level.top))return true;
+    for(const band of reliefEdgeBands(level))if(pointInPolygon(p,band.poly))return true;
+  }
+  return false;
+}
+function estimateReliefCoverage(samples=56){
   if(!State.relief?.hills?.length)return 0;
   let covered=0,total=samples*samples;
   for(let iy=0;iy<samples;iy++){
     const y=(iy+.5)/samples*WORLD;
     for(let ix=0;ix<samples;ix++){
       const x=(ix+.5)/samples*WORLD;
-      if(terrainElevation({x,y})>.001)covered++;
+      if(reliefFootprintContains({x,y}))covered++;
     }
   }
   return covered/total;
@@ -697,7 +705,7 @@ function reliefStats(){
     const s=steepByLevel[h];s.ratio=s.edges?s.steep/s.edges:0;
   }
   return{
-    coverage:estimateReliefCoverage(80),
+    coverage:estimateReliefCoverage(64),
     steepRatio:edges?steep/edges:0,
     steepByLevel,
     multiRatio:edges?multi/edges:0,
@@ -717,7 +725,7 @@ function generateRelief(){
     if(!hillIntersectsWorld(candidate)||!hillSpacingOk(candidate,State.relief.hills,relax))continue;
     State.relief.hills.push(candidate);
     clearReliefBandCache();
-    coverage=estimateReliefCoverage(64);
+    coverage=estimateReliefCoverage(44);
   }
   assignSteepEdgesByLevel(State.relief,seedRand((reliefSeed^0x735a2d97)>>>0));
   clearReliefBandCache();
