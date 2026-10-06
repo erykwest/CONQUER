@@ -1043,7 +1043,9 @@ function drawCastleSoldiers(){
       z=structureHeight(tower)+.08;
     }
 
-    if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'archer',tower.id,day);
+    withStructureGroundPlane(tower,()=>{
+      if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'archer',tower.id,day);
+    });
   }
 }
 function drawTrainingSoldiers(){
