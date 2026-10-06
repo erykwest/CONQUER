@@ -451,16 +451,17 @@ function ensureLandscapeRenderCaches(){
   terrainMarkLayoutCache=null;
   springFlowerLayoutCache=null;
 }
+function staticCullOverscan(){return ctx!==screenCtx?STATIC_CACHE_OVERSCAN:0}
 function screenPointVisibleRaw(p,z=0,pad=72){
-  const q=w2sRaw(p,z),r=wrap.getBoundingClientRect();
-  return q.x>=-pad&&q.y>=-pad&&q.x<=r.width+pad&&q.y<=r.height+pad;
+  const q=w2sRaw(p,z),r=wrap.getBoundingClientRect(),extra=staticCullOverscan(),m=pad+extra;
+  return q.x>=-m&&q.y>=-m&&q.x<=r.width+m&&q.y<=r.height+m;
 }
 function screenPolygonVisible(poly,pad=72){
   if(!poly?.length)return false;
-  const r=wrap.getBoundingClientRect();
+  const r=wrap.getBoundingClientRect(),m=pad+staticCullOverscan();
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   for(const p of poly){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
-  return maxX>=-pad&&maxY>=-pad&&minX<=r.width+pad&&minY<=r.height+pad;
+  return maxX>=-m&&maxY>=-m&&minX<=r.width+m&&minY<=r.height+m;
 }
 function terrainBandScreenPolygon(band){
   return[
@@ -843,7 +844,7 @@ function forestTreeLayout(f){
 }
 function forestLikelyVisible(f,pad=100){
   const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();
-  const extent=Math.max(f.rx||5,f.ry||4)*U*State.view.scale*1.55+pad;
+  const extent=Math.max(f.rx||5,f.ry||4)*U*State.view.scale*1.55+pad+staticCullOverscan();
   return s.x>=-extent&&s.y>=-extent&&s.x<=r.width+extent&&s.y<=r.height+extent;
 }
 function drawForestMask(f){
