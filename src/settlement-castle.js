@@ -1532,6 +1532,15 @@ function drawCivicStructure(s,preview=false){
 function drawPointStructure(s,preview=false){
   const selected=State.selectedId===s.id,h=structureHeight(s),stroke=selected?'#f4b76f':'#d8c8b4';
   if(s.type==='well'){
+    // 3×3U paved civic square around the well. The square is walkable;
+    // only the well body itself remains a physical obstacle.
+    const plaza=rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0);
+    extrudePolygonAt(plaza,0,.055,{top:'#8d816e',sideA:'#655b4f',sideB:'#74695a',stroke:selected?'#f4b76f':'rgba(198,184,160,.65)'});
+    const p0=w2s({x:s.x-WELL_PLAZA_SIZE/2,y:s.y},.058),p1=w2s({x:s.x+WELL_PLAZA_SIZE/2,y:s.y},.058);
+    const p2=w2s({x:s.x,y:s.y-WELL_PLAZA_SIZE/2},.058),p3=w2s({x:s.x,y:s.y+WELL_PLAZA_SIZE/2},.058);
+    ctx.save();ctx.strokeStyle='rgba(70,62,52,.28)';ctx.lineWidth=.7;
+    ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);ctx.moveTo(p2.x,p2.y);ctx.lineTo(p3.x,p3.y);ctx.stroke();ctx.restore();
+
     extrudePolygon(footprintPoints(s),h,{top:'#84796d',sideA:'#4e4740',sideB:'#5d554d',stroke});
     const p=w2s({x:s.x,y:s.y},h+.04),r=Math.max(2.5,.28*U*State.view.scale);ctx.fillStyle='#172023';ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r,0,0,Math.PI*2);ctx.fill();
     if(State.village.founded&&State.village.name){ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12)}
