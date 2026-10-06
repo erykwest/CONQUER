@@ -128,7 +128,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched'])
   }),
   gate:Object.freeze({
-    roofStyle:Object.freeze(['battlement','pitched'])
+    roofStyle:Object.freeze(['battlement','pitched','flat'])
   }),
   wall:Object.freeze({
     skin:Object.freeze(['standard','hoarding'])
@@ -242,7 +242,10 @@ function applyStructureTier(s,tier){
   }
   normalizeFunctions(s);return s
 }
-function structureLevel(s){return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)}
+function structureLevel(s){
+  if(isWoodGate(s))return 1;
+  return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)
+}
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
 function housePlanType(s){return (peasantHash(s?.id||'house')&1)?'L':'T'}
 function houseTurretType(s){return (peasantHash((s?.id||'house')+'-turret')&1)?'round':'square'}
