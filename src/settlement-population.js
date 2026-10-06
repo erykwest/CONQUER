@@ -883,10 +883,12 @@ function drawPeasants(){
   const peasantHouses=houses.filter(h=>houseLevel(h)===1);
   const assignments=fieldWorkAssignments(peasantHouses,fields);
 
+  const residentStride=State.view.scale<.30?3:State.view.scale<.55?2:1;
   for(const house of houses){
     representedPopulation+=housePopulationCapacity(house).total;
     const kind=villagerClass(house),assignment=assignments.get(house.id);
     for(const resident of houseResidents(house)){
+      if(residentStride>1&&(peasantHash(resident.id+'-lod')%residentStride)!==0)continue;
       let p=residentClassPosition(house,resident,day,assignment);
       if(!p)continue;
       p=residentScatter(p,resident.id,resident.age==='child');
