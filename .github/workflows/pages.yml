@@ -43,8 +43,22 @@ jobs:
             mkdir -p "_site/$safe"
             cp -a _branch_tmp/. "_site/$safe/"
 
+            sha="$(git rev-parse "origin/$branch")"
+            if [ -f "_site/$safe/index.html" ]; then
+              python3 - "_site/$safe/index.html" "$sha" <<'PY'
+from pathlib import Path
+import re, sys
+path=Path(sys.argv[1])
+sha=sys.argv[2][:12]
+html=path.read_text(encoding='utf-8')
+html=re.sub(r'((?:src|href)="\.\/src\/[^"?]+)(?:\?[^"]*)?(")', rf'\1?v={sha}\2', html)
+html=html.replace('</body>', f'<div id="buildStamp" style="position:fixed;right:8px;bottom:6px;z-index:9999;font:10px monospace;color:#aaa;opacity:.65;pointer-events:none">build {sha}</div></body>')
+path.write_text(html, encoding='utf-8')
+PY
+            fi
+
             if [ "$branch" = "main" ]; then
-              cp -a _branch_tmp/. _site/
+              cp -a "_site/$safe/." _site/
             fi
           done
 
