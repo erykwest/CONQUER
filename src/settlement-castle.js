@@ -12,39 +12,28 @@ function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoin
 const reliefBandCache=new Map();
 function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
 function clearReliefBandCache(){reliefBandCache.clear()}
-function reliefOffsetJoin(vertex,prev,next,maxMiter){
-  const p1={x:vertex.x+prev.nx*prev.width,y:vertex.y+prev.ny*prev.width};
-  const p2={x:vertex.x+next.nx*next.width,y:vertex.y+next.ny*next.width};
-  const d1={x:prev.dx,y:prev.dy},d2={x:next.dx,y:next.dy};
-  const cross=d1.x*d2.y-d1.y*d2.x;
-  let q;
-  if(Math.abs(cross)>1e-6){
-    const rx=p2.x-p1.x,ry=p2.y-p1.y,t=(rx*d2.y-ry*d2.x)/cross;
-    q={x:p1.x+d1.x*t,y:p1.y+d1.y*t};
-  }else q={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2};
-  const dx=q.x-vertex.x,dy=q.y-vertex.y,L=Math.hypot(dx,dy);
-  if(!Number.isFinite(L)||L>maxMiter){
-    const ax=prev.nx*prev.width+next.nx*next.width,ay=prev.ny*prev.width+next.ny*next.width,A=Math.hypot(ax,ay)||1;
-    return{x:vertex.x+ax/A*Math.min(maxMiter,Math.max(prev.width,next.width)*1.15),y:vertex.y+ay/A*Math.min(maxMiter,Math.max(prev.width,next.width)*1.15)};
-  }
-  return q;
-}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
   const pts=level.top||[];if(pts.length<3)return[];
-  const cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+  const center=level.center||{
+    x:pts.reduce((s,p)=>s+p.x,0)/pts.length,
+    y:pts.reduce((s,p)=>s+p.y,0)/pts.length
+  };
   const kinds=Array.isArray(level.edgeKinds)?level.edgeKinds:[];
   const edges=pts.map((a,i)=>{
-    const b=pts[(i+1)%pts.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
-    const kind=kinds[i]==='steep'?'steep':'gentle',width=kind==='steep'?(level.steepBase??.5):(level.gentleBase??2);
-    let nx=dy/L,ny=-dx/L;
-    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-    if(Math.hypot(mx+nx-cx,my+ny-cy)<Math.hypot(mx-cx,my-cy)){nx=-nx;ny=-ny}
-    return{a,b,dx:dx/L,dy:dy/L,nx,ny,kind,width};
+    const b=pts[(i+1)%pts.length];
+    const kind=kinds[i]==='steep'?'steep':'gentle';
+    const width=kind==='steep'?(level.steepBase??.5):(level.gentleBase??2);
+    return{a,b,kind,width};
   });
+  // Procedural hills are polar/star-shaped. Build the lower edge by moving
+  // each shared vertex radially outward. This keeps every slope ring ordered
+  // and prevents miter spikes/self-intersections on concave organic outlines.
   const outer=pts.map((vertex,i)=>{
-    const prev=edges[(i-1+edges.length)%edges.length],next=edges[i],maxMiter=Math.max(prev.width,next.width)*2.25;
-    return reliefOffsetJoin(vertex,prev,next,maxMiter);
+    const prev=edges[(i-1+edges.length)%edges.length],next=edges[i];
+    const width=(prev.width+next.width)*.5;
+    const vx=vertex.x-center.x,vy=vertex.y-center.y,L=Math.hypot(vx,vy)||1;
+    return{x:vertex.x+vx/L*width,y:vertex.y+vy/L*width};
   });
   const bands=edges.map((edge,i)=>{
     const oa=outer[i],ob=outer[(i+1)%outer.length];
