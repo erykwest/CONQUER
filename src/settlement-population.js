@@ -699,6 +699,8 @@ function residentIdlePoint(anchor,id,day,radius=.16){
   };
 }
 function childHomePosition(house,resident,day){
+  const frac=day-Math.floor(day);
+  if(frac<.06||frac>.64)return null;
   const center=structureCenter(house),door=houseDoorInfo(house).outside;
   let nx=door.x-center.x,ny=door.y-center.y;
   const nL=Math.hypot(nx,ny)||1;nx/=nL;ny/=nL;
@@ -710,7 +712,7 @@ function childHomePosition(house,resident,day){
   const outward=.12+.12*(.5+.5*Math.sin(t*.61+phase));
   let p={x:door.x+tx*side+nx*outward,y:door.y+ty*side+ny*outward};
   const dx=p.x-center.x,dy=p.y-center.y,d=Math.hypot(dx,dy);
-  if(d>1.95)p={x:center.x+dx/d*1.95,y:center.y+dy/d*1.95};
+  if(d>1.72)p={x:center.x+dx/d*1.72,y:center.y+dy/d*1.72};
   return p;
 }
 function fallbackSocialTarget(house,from,visitorId){
@@ -767,7 +769,7 @@ function merchantPosition(house,day){
     if(frac<leaveSecond)return residentIdlePoint(second.point,house.id+'-merchant-second',day,.20);
     return routineTravel(house,second.point,home,frac,leaveSecond,homeAt,'merchant-tavern-home');
   }
-  if(frac<leaveSecond)return first.point;
+  if(frac<leaveSecond)return residentIdlePoint(first.point,house.id+'-merchant-primary',day,.20);
   return routineTravel(house,first.point,home,frac,leaveSecond,homeAt,'merchant-market-home');
 }
 function elitePosition(house,day){
