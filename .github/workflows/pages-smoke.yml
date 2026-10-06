@@ -23,7 +23,7 @@ jobs:
       - name: Run browser diagnostics
         shell: bash
         run: |
-          cat > /tmp/diagnose.mjs <<'JS'
+          cat > diagnose.mjs <<'JS'
           import { chromium } from 'playwright';
 
           const targets = [
@@ -105,4 +105,4 @@ jobs:
 
           await browser.close();
           JS
-          node /tmp/diagnose.mjs
+          node diagnose.mjs
