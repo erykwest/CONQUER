@@ -264,9 +264,46 @@ function drawRaisedFan(f,height){
   faces.sort((a,b)=>a.depth-b.depth);
   for(const q of faces)pathPolygon(q.poly,q.i%2?'#55493d':'#66584a','rgba(170,150,125,.35)',.8);
 }
+const FOREST_TREE_SPRITE=new Image();
+let forestTreeSpriteReady=false;
+FOREST_TREE_SPRITE.onload=()=>{
+  forestTreeSpriteReady=true;
+  invalidateSceneCache('base');
+  if(typeof draw==='function')draw();
+};
+FOREST_TREE_SPRITE.src='./src/assets/tree-svgrepo-com.svg';
+
 function drawTree(p,scale=1){
-  const a=w2s(p,0),b=w2s(p,1.25*scale);ctx.strokeStyle='rgba(73,52,32,.85)';ctx.lineWidth=Math.max(1,1.4*State.view.scale);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  ctx.fillStyle='rgba(42,66,31,.92)';ctx.beginPath();ctx.arc(b.x,b.y,Math.max(2.2,4.2*State.view.scale*scale),0,Math.PI*2);ctx.fill();
+  if(!forestTreeSpriteReady)return;
+  const base=w2s(p,0);
+  const size=Math.max(10,U*State.view.scale*2.25*scale);
+  ctx.drawImage(FOREST_TREE_SPRITE,base.x-size*.5,base.y-size*.94,size,size);
+}
+function clipEnvironmentPolygon(points){
+  const pts=projectPath(points);
+  ctx.beginPath();
+  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath();
+  ctx.clip();
+}
+function forestTreeCount(f){
+  return clamp(Math.round((f.rx||5)*(f.ry||4)*1.55),22,58);
+}
+function drawForestMask(f){
+  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0);
+  const trees=[],target=forestTreeCount(f);
+  let attempts=0;
+  while(trees.length<target&&attempts<target*12){
+    attempts++;
+    const p={x:f.x+(rnd()-.5)*f.rx*1.9,y:f.y+(rnd()-.5)*f.ry*1.9};
+    if(!environmentContains(f,p))continue;
+    trees.push({p,scale:.72+rnd()*.48});
+  }
+  trees.sort((a,b)=>w2s(a.p,0).y-w2s(b.p,0).y);
+  ctx.save();
+  clipEnvironmentPolygon(f.points);
+  for(const tree of trees)drawTree(tree.p,tree.scale);
+  ctx.restore();
 }
 function ellipseWorldPoints(f,n=28){
   const pts=[],ca=Math.cos(f.angle||0),sa=Math.sin(f.angle||0);
@@ -282,8 +319,7 @@ function drawEnvironment(){
     }else if(['forest','pond','sea'].includes(f.type)){
       const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);
       if(f.type==='forest'){
-        const rnd=seedRand((State.seed^biomeHash(f.id))>>>0);
-        for(let i=0;i<18;i++){const p={x:f.x+(rnd()-.5)*f.rx*1.55,y:f.y+(rnd()-.5)*f.ry*1.55};if(environmentContains(f,p))drawTree(p,.75+rnd()*.45)}
+        drawForestMask(f);
       }else if(f.type==='sea'&&f.coastline){
         const coast=projectPath(f.coastline);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
       }
