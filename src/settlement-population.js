@@ -3,7 +3,7 @@
 function peasantHash(id){return biomeHash(String(id||'peasant'))}
 function completedSettlement(type){return State.structures.filter(s=>s.type===type&&!underConstruction(s))}
 function peasantVisualDay(){return State.clock.day*PEASANT_VISUAL_SPEED}
-function visualCycleDay(){return peasantVisualDay()}
+function visualCycleDay(){return State.clock.day*VISUAL_CYCLE_SPEED}
 function visualCycleFrac(){
   if(State.daylightOverride==='day')return VISUAL_DAYLIGHT_RATIO*.5;
   if(State.daylightOverride==='night')return VISUAL_DAYLIGHT_RATIO+(1-VISUAL_DAYLIGHT_RATIO)*.5;
@@ -686,6 +686,33 @@ function routineTravel(house,start,goal,frac,t0,t1,tag){
   const path=villagerPathBetween(house,start,goal,tag);
   return pointAlongPath(path,routineSmooth((frac-t0)/Math.max(.001,t1-t0)));
 }
+function residentIdlePoint(anchor,id,day,radius=.16){
+  if(!anchor)return null;
+  const h=peasantHash(String(id)+'-idle');
+  const phase=((h>>>7)%1000)/1000*Math.PI*2;
+  const speed=.65+((h>>>18)%1000)/1000*.45;
+  const a=phase+day*Math.PI*2*speed*12;
+  const b=phase*.71+day*Math.PI*2*(speed*.63)*12;
+  return{
+    x:anchor.x+Math.cos(a)*radius,
+    y:anchor.y+Math.sin(b)*radius*.72
+  };
+}
+function childHomePosition(house,resident,day){
+  const center=structureCenter(house),door=houseDoorInfo(house).outside;
+  let nx=door.x-center.x,ny=door.y-center.y;
+  const nL=Math.hypot(nx,ny)||1;nx/=nL;ny/=nL;
+  const tx=-ny,ty=nx,h=peasantHash(resident.id+'-child-idle');
+  const phase=((h>>>6)%1000)/1000*Math.PI*2;
+  const pace=.75+((h>>>17)%1000)/1000*.55;
+  const t=phase+day*Math.PI*2*pace*18;
+  const side=Math.sin(t)*(.45+((h>>>10)%1000)/1000*.42);
+  const outward=.12+.12*(.5+.5*Math.sin(t*.61+phase));
+  let p={x:door.x+tx*side+nx*outward,y:door.y+ty*side+ny*outward};
+  const dx=p.x-center.x,dy=p.y-center.y,d=Math.hypot(dx,dy);
+  if(d>1.95)p={x:center.x+dx/d*1.95,y:center.y+dy/d*1.95};
+  return p;
+}
 function fallbackSocialTarget(house,from,visitorId){
   const market=nearestCompletedStructure('market',from);
   if(market)return{structure:market,point:structureAccessPoint(market,from,visitorId)};
@@ -712,13 +739,13 @@ function artisanPosition(house,day){
   const arriveSecond=.44+stagger,leaveSecond=.55+stagger,homeAt=.63+stagger;
   if(frac<leave0||frac>homeAt)return null;
   if(frac<arriveWork)return routineTravel(house,home,primary.point,frac,leave0,arriveWork,'artisan-home-work');
-  if(frac<leaveWork)return primary.point;
+  if(frac<leaveWork)return residentIdlePoint(primary.point,house.id+'-artisan-work',day,.18);
   if(secondary){
     if(frac<arriveSecond)return routineTravel(house,primary.point,secondary.point,frac,leaveWork,arriveSecond,'artisan-work-market');
-    if(frac<leaveSecond)return secondary.point;
+    if(frac<leaveSecond)return residentIdlePoint(secondary.point,house.id+'-artisan-second',day,.18);
     return routineTravel(house,secondary.point,home,frac,leaveSecond,homeAt,'artisan-market-home');
   }
-  if(frac<leaveSecond)return primary.point;
+  if(frac<leaveSecond)return residentIdlePoint(primary.point,house.id+'-artisan-primary',day,.18);
   return routineTravel(house,primary.point,home,frac,leaveSecond,homeAt,'artisan-work-home');
 }
 function merchantPosition(house,day){
@@ -734,10 +761,10 @@ function merchantPosition(house,day){
   const arriveSecond=.49+stagger,leaveSecond=.57+stagger,homeAt=.65+stagger;
   if(frac<leave0||frac>homeAt)return null;
   if(frac<arriveFirst)return routineTravel(house,home,first.point,frac,leave0,arriveFirst,'merchant-home-market');
-  if(frac<leaveFirst)return first.point;
+  if(frac<leaveFirst)return residentIdlePoint(first.point,house.id+'-merchant-first',day,.20);
   if(second){
     if(frac<arriveSecond)return routineTravel(house,first.point,second.point,frac,leaveFirst,arriveSecond,'merchant-market-tavern');
-    if(frac<leaveSecond)return second.point;
+    if(frac<leaveSecond)return residentIdlePoint(second.point,house.id+'-merchant-second',day,.20);
     return routineTravel(house,second.point,home,frac,leaveSecond,homeAt,'merchant-tavern-home');
   }
   if(frac<leaveSecond)return first.point;
@@ -756,11 +783,11 @@ function elitePosition(house,day){
   const a=points[0],b=points[1]||a,d=points[2]||b;
   if(frac<t0||frac>t7)return null;
   if(frac<t1)return routineTravel(house,home,a,frac,t0,t1,'elite-home-a');
-  if(frac<t2)return a;
+  if(frac<t2)return residentIdlePoint(a,house.id+'-elite-a',day,.16);
   if(frac<t3)return routineTravel(house,a,b,frac,t2,t3,'elite-a-b');
-  if(frac<t4)return b;
+  if(frac<t4)return residentIdlePoint(b,house.id+'-elite-b',day,.16);
   if(frac<t5)return routineTravel(house,b,d,frac,t4,t5,'elite-b-c');
-  if(frac<t6)return d;
+  if(frac<t6)return residentIdlePoint(d,house.id+'-elite-c',day,.16);
   return routineTravel(house,d,home,frac,t6,t7,'elite-home');
 }
 function pointAlongPath(path,t){
@@ -782,7 +809,7 @@ function peasantPosition(house,assignment,day){
   const path=peasantPath(house,assignment),work=assignment.cell.world;
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   if(frac<leave1)return pointAlongPath(path,smooth((frac-leave0)/(leave1-leave0)));
-  if(frac<return0)return{x:work.x,y:work.y};
+  if(frac<return0)return residentIdlePoint(work,house.id+'-field-work',day,.16);
   return pointAlongPath(path,1-smooth((frac-return0)/(return1-return0)));
 }
 function peasantAnimationActive(){
@@ -830,18 +857,18 @@ function familyPosition(house,day){
   if(target.type==='well'){
     const path=wellApproachPath(house,target),dest=path?.at(-1)||home;
     if(frac<arrive)return wellRoutineTravel(house,target,frac,leave0,arrive,false);
-    if(frac<leave)return dest;
+    if(frac<leave)return residentIdlePoint(dest,house.id+'-family-well',day,.16);
     return wellRoutineTravel(house,target,frac,leave,homeAt,true);
   }
 
   const dest=structureAccessPoint(target,home,house.id+'-family');
   if(frac<arrive)return routineTravel(house,home,dest,frac,leave0,arrive,'family-out');
-  if(frac<leave)return dest;
+  if(frac<leave)return residentIdlePoint(dest,house.id+'-family-dest',day,.16);
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
 }
 function residentClassPosition(house,resident,day,assignment){
   const level=houseLevel(house),shiftedDay=day+residentTimeOffset(resident.id);
-  if(resident.age==='child')return familyPosition(house,shiftedDay);
+  if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
   if(level===1)return assignment?peasantPosition(house,assignment,shiftedDay):null;
   if(level===2)return artisanPosition(house,shiftedDay);
