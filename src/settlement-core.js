@@ -38,6 +38,7 @@ function prepareSceneCache(layer){
   return entry;
 }
 let sceneCacheZoomPreview=false;
+let sceneCachePanPreview=false;
 function sceneCacheProjectionCompatible(entry){
   const v=entry?.view,r=wrap.getBoundingClientRect(),d=staticCacheDpr();
   if(!v
