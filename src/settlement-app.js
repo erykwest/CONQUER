@@ -452,7 +452,7 @@ function syncSeasonToCalendar(){
   if(State.season===next)return false;
   State.season=next;
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
-  invalidateSceneCache('base');
+  invalidateSceneCache();
   return true;
 }
 function syncDevButtons(){
@@ -510,7 +510,7 @@ function setSeason(season){
   State.season=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
   syncDevButtons();
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
-  invalidateSceneCache('base');saveLocal();draw();
+  invalidateSceneCache();saveLocal();draw();
   drawWeatherOverlay();
   status(State.seasonOverride?'FORCE SEASON: '+labels[State.seasonOverride]+' — clicca di nuovo per tornare al calendario':'Stagione: calendario automatico');
 }

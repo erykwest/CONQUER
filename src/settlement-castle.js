@@ -383,9 +383,18 @@ function drawMultiPolygonBand(multi,z0,z1){
   for(const f of faces)pathPolygon(f.poly,f.shade,null);
   // Important: do NOT draw a top face for every height band.
 }
+const WINTER_SNOW_TOP='#edf1ed';
+const WINTER_SNOW_A='#e7ece8';
+const WINTER_SNOW_B='#dce3de';
+const WINTER_SNOW_STROKE='rgba(112,124,116,.58)';
+function winterSnowColor(normal,snow=WINTER_SNOW_TOP){return State.season==='winter'?snow:normal}
 function drawExposedTop(multi,z){
   if(!multi?.length)return;
-  fillMultiPolygonTop(multi,z,'#9a8e82','#635951');
+  fillMultiPolygonTop(
+    multi,z,
+    winterSnowColor('#9a8e82',WINTER_SNOW_TOP),
+    State.season==='winter'?WINTER_SNOW_STROKE:'#635951'
+  );
 }
 function drawCastleUnion(){
   const bands=castleUnionBands();if(!bands)return false;
@@ -1281,8 +1290,8 @@ function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLeve
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
-    ?{top:'#9a8e82',sideA:'#49443f',sideB:'#686057',stroke:selected?'#f4b76f':'#d8c8b4'}
-    :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
+    ?{top:winterSnowColor('#9a8e82'),sideA:'#49443f',sideB:'#686057',stroke:selected?'#f4b76f':'#d8c8b4'}
+    :{top:winterSnowColor('#9b7457'),sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
   extrudePolygon(linePoly(s),h,colors);
 }
 function palisadeSnapTarget(id){
@@ -1481,13 +1490,15 @@ function drawWoodPlatform(s,size,z0,z1){
 function drawWoodHipRoof(s,eaveZ,apexZ,overhang=.14){
   const size=(Number(s.size)||1)+overhang*2,fp=rectWorldPoints(s.x,s.y,size,size,s.angle||0);
   const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
-  const fills=['#4d3427','#5a3d2e','#654535','#56392b'];
+  const fills=State.season==='winter'
+    ?[WINTER_SNOW_A,WINTER_SNOW_TOP,WINTER_SNOW_B,'#e3e8e4']
+    :['#4d3427','#5a3d2e','#654535','#56392b'];
   for(let i=0;i<4;i++){
     const j=(i+1)%4,a=w2s(fp[i],eaveZ),b=w2s(fp[j],eaveZ);
     faces.push({poly:[a,b,apex],depth:(a.y+b.y)/2,fill:fills[i]});
   }
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const f of faces)pathPolygon(f.poly,f.fill,'#7b5942',1);
+  for(const f of faces)pathPolygon(f.poly,f.fill,State.season==='winter'?WINTER_SNOW_STROKE:'#7b5942',1);
 }
 function drawWoodRail(s,size,z0,z1){
   const half=size/2-.055,r=.045,angle=s.angle||0;
@@ -1698,20 +1709,21 @@ function drawBuiltDetails(s,preview=false){
 
   const a0=w2s(g.p[0],g.h),a1=w2s(g.p[1],g.h),b0=w2s(g.p[3],g.h),b1=w2s(g.p[2],g.h);
   const ra=w2s(g.ridgeA,g.ridgeH),rb=w2s(g.ridgeB,g.ridgeH);
+  const winter=State.season==='winter';
   const faceA={
     poly:[a0,a1,rb,ra],
-    fill:preview?'rgba(58,61,66,.62)':'#34363a',
+    fill:preview?'rgba(58,61,66,.62)':(winter?WINTER_SNOW_A:'#34363a'),
     depth:(a0.y+a1.y)/2
   };
   const faceB={
     poly:[b0,b1,rb,ra],
-    fill:preview?'rgba(70,73,78,.62)':'#42454a',
+    fill:preview?'rgba(70,73,78,.62)':(winter?WINTER_SNOW_B:'#42454a'),
     depth:(b0.y+b1.y)/2
   };
 
   withBuiltRoofOcclusionClip(s,()=>{
     for(const face of [faceA,faceB].sort((a,b)=>a.depth-b.depth)){
-      pathPolygon(face.poly,face.fill,'#5d6066',1);
+      pathPolygon(face.poly,face.fill,winter?WINTER_SNOW_STROKE:'#5d6066',1);
     }
     for(const spec of chimneySpecs(s))drawChimney(spec);
   });
@@ -1915,11 +1927,11 @@ function drawSquareTowerRoof(s){
     faces.push({
       poly:[a,b,apex],
       depth:(a.y+b.y)/2,
-      fill:i%2?'#34363a':'#42454a'
+      fill:State.season==='winter'?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a')
     });
   }
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const f of faces)pathPolygon(f.poly,f.fill,'#5d6066',1);
+  for(const f of faces)pathPolygon(f.poly,f.fill,State.season==='winter'?WINTER_SNOW_STROKE:'#5d6066',1);
 }
 function drawRoundTowerRoof(s){
   const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
@@ -1927,13 +1939,15 @@ function drawRoundTowerRoof(s){
   const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
   for(let i=0;i<fp.length;i++){
     const j=(i+1)%fp.length,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
-    const shade=i%3===0?'#303236':i%3===1?'#3a3d42':'#44474c';
+    const shade=State.season==='winter'
+      ?(i%3===0?WINTER_SNOW_B:i%3===1?WINTER_SNOW_A:WINTER_SNOW_TOP)
+      :(i%3===0?'#303236':i%3===1?'#3a3d42':'#44474c');
     faces.push({poly:[a,b,apex],depth:(a.y+b.y)/2,fill:shade});
   }
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.poly,f.fill,null);
   const rim=projectPath(fp,baseZ);
-  ctx.save();ctx.strokeStyle='#5d6066';ctx.lineWidth=1;ctx.beginPath();
+  ctx.save();ctx.strokeStyle=State.season==='winter'?WINTER_SNOW_STROKE:'#5d6066';ctx.lineWidth=1;ctx.beginPath();
   rim.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
 }
 function drawTowerRoof(s){
@@ -1957,11 +1971,11 @@ function drawGateRoof(s){
     const faces=[
       {poly:rearGable,fill:'#514a44',depth:(rearGable[0].y+rearGable[1].y)/2},
       {poly:frontGable,fill:'#62584f',depth:(frontGable[0].y+frontGable[1].y)/2},
-      {poly:roofA,fill:'#34363a',depth:(roofA[0].y+roofA[1].y)/2},
-      {poly:roofB,fill:'#42454a',depth:(roofB[0].y+roofB[1].y)/2}
+      {poly:roofA,fill:State.season==='winter'?WINTER_SNOW_A:'#34363a',depth:(roofA[0].y+roofA[1].y)/2},
+      {poly:roofB,fill:State.season==='winter'?WINTER_SNOW_B:'#42454a',depth:(roofB[0].y+roofB[1].y)/2}
     ];
     faces.sort((a,b)=>a.depth-b.depth);
-    for(const face of faces)pathPolygon(face.poly,face.fill,'#5d6066',1);
+    for(const face of faces)pathPolygon(face.poly,face.fill,(State.season==='winter'&&face.poly.length===4)?WINTER_SNOW_STROKE:'#5d6066',1);
   }));
 }
 function drawGateRoofs(){
@@ -2379,7 +2393,7 @@ function drawPointStructure(s,preview=false){
   }
   const tower=s.type==='tower',gate=s.type==='gate';
   extrudePolygon(footprintPoints(s),h,{
-    top:(tower||gate)?'#9a8e82':'#88796b',
+    top:(tower||gate)?winterSnowColor('#9a8e82'):'#88796b',
     sideA:(tower||gate)?'#49443f':'#4e4740',
     sideB:(tower||gate)?'#686057':'#62584f',
     stroke
@@ -2403,8 +2417,13 @@ function fieldGrid(field){
   return{usableW,usableH,cols,rows,cellW,cellH,cells,localToWorld};
 }
 function drawField(field){
-  drawFlatRect(field,'rgba(133,111,55,.52)','rgba(190,168,95,.58)');
-  const g=fieldGrid(field);ctx.save();ctx.strokeStyle='rgba(218,195,118,.28)';ctx.lineWidth=.7;
+  const winter=State.season==='winter';
+  drawFlatRect(
+    field,
+    winter?'rgba(237,241,237,.88)':'rgba(133,111,55,.52)',
+    winter?'rgba(126,139,130,.52)':'rgba(190,168,95,.58)'
+  );
+  const g=fieldGrid(field);ctx.save();ctx.strokeStyle=winter?'rgba(151,163,155,.22)':'rgba(218,195,118,.28)';ctx.lineWidth=.7;
   for(let i=1;i<g.cols;i++){
     const x=-g.usableW/2+i*g.cellW,a=w2s(g.localToWorld(x,-g.usableH/2),.012),b=w2s(g.localToWorld(x,g.usableH/2),.012);
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
@@ -2421,9 +2440,10 @@ function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
   const local=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
   const c0=local(-rw/2,-rh/2),c1=local(rw/2,-rh/2),c2=local(rw/2,rh/2),c3=local(-rw/2,rh/2);
   const r0=local(-rw/2,0),r1=local(rw/2,0);
+  const winter=State.season==='winter';
   const faces=[
-    {kind:'roof',screen:[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:anthracite?'#303237':'#5b3d30',stroke:anthracite?'#55585e':'#8c6752',lw:1},
-    {kind:'roof',screen:[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:anthracite?'#3a3d42':'#6b4938',stroke:anthracite?'#55585e':'#8c6752',lw:1},
+    {kind:'roof',screen:[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_A:(anthracite?'#303237':'#5b3d30'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':'#8c6752'),lw:1},
+    {kind:'roof',screen:[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_B:(anthracite?'#3a3d42':'#6b4938'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':'#8c6752'),lw:1},
     {kind:'gable',screen:[w2s(c0,wallH),w2s(c3,wallH),w2s(r0,ridgeH)],fill:gableFill||'#654936',stroke:anthracite?'rgba(126,116,102,.55)':'#8c6752',lw:.75},
     {kind:'gable',screen:[w2s(c1,wallH),w2s(c2,wallH),w2s(r1,ridgeH)],fill:gableFill||'#654936',stroke:anthracite?'rgba(126,116,102,.55)':'#8c6752',lw:.75}
   ];
@@ -2448,7 +2468,12 @@ function drawHouseTurretRoof(s,turret,selected=false){
     faces.push({poly:[a,b,apex],depth:(a.y+b.y+apex.y)/3,i});
   }
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const f of faces)pathPolygon(f.poly,f.i%2?'#303943':'#394550',stroke,.75);
+  for(const f of faces)pathPolygon(
+    f.poly,
+    State.season==='winter'?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#303943':'#394550'),
+    State.season==='winter'?(selected?'#f4b76f':WINTER_SNOW_STROKE):stroke,
+    .75
+  );
 }
 function drawHouseTurret(s,turret,selected=false){
   const stroke=selected?'#f4b76f':'#918d86',breakZ=1.02;
