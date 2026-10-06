@@ -437,6 +437,7 @@ function drawFacadeWindows(lit=false,nf=1){
     }else if(s.type==='gate'){
       drawGateWindows(s,lit,nf);
     }else if(s.type==='tower'){
+      if(isWoodTower(s))continue;
       const rows=towerWindowRows(s);if(!rows.length)continue;
       if(s.shape==='round'){
         for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
