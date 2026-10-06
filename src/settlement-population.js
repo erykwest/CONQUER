@@ -141,13 +141,18 @@ const PEASANT_PATH_STEP=.5,PEASANT_CLEARANCE=.22;
 const PEASANT_ROAD_COST=.38,PEASANT_ROADSIDE_COST=.68,PEASANT_ROADSIDE_RANGE=.85;
 let peasantPathCache=new Map(),peasantPathSignature='';
 let roadNavGraphCache={dirty:true,nodes:new Map(),roads:[],version:0};
-const navPerf={graphBuilds:0,graphRoutes:0,gridFallbacks:0,gridMisses:0};
+let roadDestinationTreeCache=new Map();
+const ROAD_DESTINATION_TREE_CACHE_MAX=96;
+const navPerf={
+  graphBuilds:0,graphRoutes:0,gridFallbacks:0,gridMisses:0,
+  destinationTreesBuilt:0,destinationTreeHits:0,destinationTreeRoutes:0
+};
 window.__conquerPerf=navPerf;
 function invalidateNavigation(hard=true){
-  // New roads/houses only extend the topology: existing road-following paths
-  // remain valid. Hard invalidation is reserved for moved/removed blockers or
-  // rebuilt routes.
+  // Destination trees depend on the exact road graph, so any topology change
+  // drops them. Individual resident routes survive soft extensions.
   roadNavGraphCache.dirty=true;
+  roadDestinationTreeCache.clear();
   if(!hard)return;
   peasantPathSignature='';
   peasantPathCache.clear();
@@ -209,6 +214,7 @@ function rebuildRoadNavGraph(){
   }
 
   roadNavGraphCache={dirty:false,nodes,roads:split,version:roadNavGraphCache.version+1};
+  roadDestinationTreeCache.clear();
   navPerf.graphBuilds++;
   return roadNavGraphCache;
 }
@@ -238,6 +244,97 @@ class RoadNavHeap{
   push(n){const a=this.a;a.push(n);let i=a.length-1;while(i>0){const p=(i-1)>>1;if(a[p].d<=n.d)break;a[i]=a[p];i=p}a[i]=n}
   pop(){const a=this.a;if(!a.length)return null;const root=a[0],last=a.pop();if(a.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=a.length)break;let m=r<a.length&&a[r].d<a[l].d?r:l;if(a[m].d>=last.d)break;a[i]=a[m];i=m}a[i]=last}return root}
   get length(){return this.a.length}
+}
+function roadDestinationTreeKey(anchor,graph){
+  const roadId=anchor?.item?.road?.id||'road';
+  return graph.version+'|'+roadId+'|'+anchor.t.toFixed(4)+'|'+roadNavNodeKey(anchor.point);
+}
+function cacheRoadDestinationTree(key,tree){
+  if(roadDestinationTreeCache.size>=ROAD_DESTINATION_TREE_CACHE_MAX){
+    const oldest=roadDestinationTreeCache.keys().next().value;
+    if(oldest!=null)roadDestinationTreeCache.delete(oldest);
+  }
+  roadDestinationTreeCache.set(key,tree);
+}
+function buildRoadDestinationTree(goalAnchor){
+  const graph=roadNavGraph();
+  if(!goalAnchor||!graph.nodes.size)return null;
+  const key=roadDestinationTreeKey(goalAnchor,graph);
+  const cached=roadDestinationTreeCache.get(key);
+  if(cached){
+    navPerf.destinationTreeHits++;
+    return cached;
+  }
+
+  const heap=new RoadNavHeap(),distance=new Map(),next=new Map();
+  const seeds=[];
+  for(const q of [goalAnchor.left,goalAnchor.right]){
+    if(!q?.node)continue;
+    const d=dist(goalAnchor.point,q.node.p);
+    if(!seeds.some(s=>s.key===q.node.key&&Math.abs(s.d-d)<1e-6))seeds.push({key:q.node.key,d});
+  }
+
+  for(const seed of seeds){
+    if(seed.d<(distance.get(seed.key)??Infinity)){
+      distance.set(seed.key,seed.d);
+      next.set(seed.key,null);
+      heap.push({key:seed.key,d:seed.d});
+    }
+  }
+
+  let guard=0;
+  while(heap.length&&guard++<50000){
+    const cur=heap.pop();
+    if(cur.d!==(distance.get(cur.key)??Infinity))continue;
+    const node=graph.nodes.get(cur.key);if(!node)continue;
+    for(const [neighborKey,w] of node.edges){
+      const nd=cur.d+w;
+      if(nd<(distance.get(neighborKey)??Infinity)){
+        distance.set(neighborKey,nd);
+        // From neighbor, the next hop toward the destination is cur.
+        next.set(neighborKey,cur.key);
+        heap.push({key:neighborKey,d:nd});
+      }
+    }
+  }
+
+  const tree={key,graphVersion:graph.version,goalAnchor,distance,next};
+  cacheRoadDestinationTree(key,tree);
+  navPerf.destinationTreesBuilt++;
+  return tree;
+}
+function roadTreePathFromAnchor(startAnchor,goalAnchor){
+  const graph=roadNavGraph();
+  if(!startAnchor||!goalAnchor||!graph.nodes.size)return null;
+
+  // Same-road travel is cheaper than consulting the tree.
+  if(startAnchor.item===goalAnchor.item)return[startAnchor.point,goalAnchor.point];
+
+  const tree=buildRoadDestinationTree(goalAnchor);
+  if(!tree)return null;
+
+  let bestKey=null,bestCost=Infinity;
+  for(const q of [startAnchor.left,startAnchor.right]){
+    if(!q?.node)continue;
+    const tail=tree.distance.get(q.node.key);
+    if(tail==null)continue;
+    const cost=dist(startAnchor.point,q.node.p)+tail;
+    if(cost<bestCost){bestCost=cost;bestKey=q.node.key}
+  }
+  if(!bestKey)return null;
+
+  const out=[{...startAnchor.point}],seen=new Set();
+  let key=bestKey,guard=0;
+  while(key&&guard++<graph.nodes.size+4){
+    if(seen.has(key))return null;
+    seen.add(key);
+    const node=graph.nodes.get(key);if(!node)return null;
+    if(dist(out.at(-1),node.p)>.02)out.push({...node.p});
+    key=tree.next.get(key)??null;
+  }
+  if(dist(out.at(-1),goalAnchor.point)>.02)out.push({...goalAnchor.point});
+  navPerf.destinationTreeRoutes++;
+  return out;
 }
 function localRoadConnectorPath(point,anchor,sourceHouseId){
   if(!point||!anchor)return null;
@@ -270,53 +367,15 @@ function roadNetworkPath(start,goal,sourceHouseId){
   const goalConnector=localRoadConnectorPath(goal,b.point,sourceHouseId);
   if(!startConnector||!goalConnector)return null;
 
-  const seeds=[],goals=new Map();
-  for(const q of [a.left,a.right]){
-    if(!q?.node)continue;
-    seeds.push({key:q.node.key,d:dist(a.point,q.node.p)});
-  }
-  for(const q of [b.left,b.right]){
-    if(!q?.node)continue;
-    goals.set(q.node.key,dist(b.point,q.node.p));
-  }
+  // One reverse Dijkstra tree per destination anchor. Every origin heading to
+  // the same well/market/church/tavern then performs only a few Map lookups and
+  // follows parent pointers toward the target.
+  const network=roadTreePathFromAnchor(a,b);
+  if(!network)return null;
 
   const out=[];
   appendRoutePoints(out,startConnector);
-
-  // Same-road travel needs no graph search at all.
-  if(a.item===b.item){
-    appendRoutePoints(out,[b.point]);
-    appendRoutePoints(out,goalConnector.slice().reverse());
-    navPerf.graphRoutes++;
-    return out;
-  }
-
-  const heap=new RoadNavHeap(),dScore=new Map(),came=new Map();
-  for(const s of seeds){
-    const prev=dScore.get(s.key);
-    if(prev==null||s.d<prev){dScore.set(s.key,s.d);heap.push({key:s.key,d:s.d})}
-  }
-  let endKey=null,endCost=Infinity,guard=0;
-  while(heap.length&&guard++<12000){
-    const cur=heap.pop();
-    if(cur.d!==(dScore.get(cur.key)??Infinity))continue;
-    const goalTail=goals.get(cur.key);
-    if(goalTail!=null&&cur.d+goalTail<endCost){endCost=cur.d+goalTail;endKey=cur.key}
-    if(cur.d>=endCost)break;
-    const node=graph.nodes.get(cur.key);if(!node)continue;
-    for(const [nextKey,w] of node.edges){
-      const nd=cur.d+w;
-      if(nd<(dScore.get(nextKey)??Infinity)){
-        dScore.set(nextKey,nd);came.set(nextKey,cur.key);heap.push({key:nextKey,d:nd});
-      }
-    }
-  }
-  if(!endKey)return null;
-
-  const rev=[];let k=endKey;
-  while(k){const node=graph.nodes.get(k);if(node)rev.push(node.p);k=came.get(k)}
-  rev.reverse();
-  appendRoutePoints(out,[a.point,...rev,b.point]);
+  appendRoutePoints(out,network);
   appendRoutePoints(out,goalConnector.slice().reverse());
   navPerf.graphRoutes++;
   return out;
