@@ -9,29 +9,9 @@ function rotateViewPoint(p,turns=State.view.rotation||0){
   return{x:p.x,y:p.y};
 }
 function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
-const TEST_RELIEF=Object.freeze({
-  center:Object.freeze({x:100,y:100}),
-  levels:Object.freeze([
-    Object.freeze({
-      id:'terrace-1',z0:0,z1:1,gentleBase:2,steepBase:.5,southEdges:Object.freeze([7,8]),
-      top:Object.freeze([
-        Object.freeze({x:90.2,y:97.0}),Object.freeze({x:92.2,y:93.5}),Object.freeze({x:97.0,y:92.1}),
-        Object.freeze({x:103.0,y:92.3}),Object.freeze({x:108.3,y:94.5}),Object.freeze({x:110.0,y:99.0}),
-        Object.freeze({x:109.2,y:104.0}),Object.freeze({x:105.5,y:106.8}),Object.freeze({x:100.0,y:107.4}),
-        Object.freeze({x:94.5,y:106.6}),Object.freeze({x:90.8,y:103.0})
-      ])
-    }),
-    Object.freeze({
-      id:'terrace-2',z0:1,z1:2,gentleBase:2,steepBase:.5,southEdges:Object.freeze([5,6]),
-      top:Object.freeze([
-        Object.freeze({x:95.2,y:102.0}),Object.freeze({x:97.0,y:100.6}),Object.freeze({x:101.0,y:100.3}),
-        Object.freeze({x:104.6,y:101.5}),Object.freeze({x:105.0,y:104.0}),Object.freeze({x:104.5,y:106.2}),
-        Object.freeze({x:100.5,y:106.6}),Object.freeze({x:96.5,y:106.0}),Object.freeze({x:95.0,y:104.2})
-      ])
-    })
-  ])
-});
 const reliefBandCache=new Map();
+function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
+function clearReliefBandCache(){reliefBandCache.clear()}
 function reliefOffsetJoin(vertex,prev,next,maxMiter){
   const p1={x:vertex.x+prev.nx*prev.width,y:vertex.y+prev.ny*prev.width};
   const p2={x:vertex.x+next.nx*next.width,y:vertex.y+next.ny*next.width};
@@ -41,9 +21,7 @@ function reliefOffsetJoin(vertex,prev,next,maxMiter){
   if(Math.abs(cross)>1e-6){
     const rx=p2.x-p1.x,ry=p2.y-p1.y,t=(rx*d2.y-ry*d2.x)/cross;
     q={x:p1.x+d1.x*t,y:p1.y+d1.y*t};
-  }else{
-    q={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2};
-  }
+  }else q={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2};
   const dx=q.x-vertex.x,dy=q.y-vertex.y,L=Math.hypot(dx,dy);
   if(!Number.isFinite(L)||L>maxMiter){
     const ax=prev.nx*prev.width+next.nx*next.width,ay=prev.ny*prev.width+next.ny*next.width,A=Math.hypot(ax,ay)||1;
@@ -53,10 +31,12 @@ function reliefOffsetJoin(vertex,prev,next,maxMiter){
 }
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
-  const pts=level.top,cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+  const pts=level.top||[];if(pts.length<3)return[];
+  const cx=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+  const kinds=Array.isArray(level.edgeKinds)?level.edgeKinds:[];
   const edges=pts.map((a,i)=>{
     const b=pts[(i+1)%pts.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
-    const kind=level.southEdges.includes(i)?'steep':'gentle',width=kind==='steep'?level.steepBase:level.gentleBase;
+    const kind=kinds[i]==='steep'?'steep':'gentle',width=kind==='steep'?(level.steepBase??.5):(level.gentleBase??2);
     let nx=dy/L,ny=-dx/L;
     const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
     if(Math.hypot(mx+nx-cx,my+ny-cy)<Math.hypot(mx-cx,my-cy)){nx=-nx;ny=-ny}
@@ -74,7 +54,7 @@ function reliefEdgeBands(level){
 }
 function reliefBandAt(p){
   let gentle=null;
-  for(const level of TEST_RELIEF.levels)for(const band of reliefEdgeBands(level)){
+  for(const level of reliefLevels())for(const band of reliefEdgeBands(level)){
     if(!pointInPolygon(p,band.poly))continue;
     if(band.kind==='steep')return band;
     gentle=band;
@@ -84,7 +64,7 @@ function reliefBandAt(p){
 function terrainSlopeKind(p){return reliefBandAt(p)?.kind||null}
 function terrainElevation(p){
   let z=0;
-  for(const level of TEST_RELIEF.levels){
+  for(const level of reliefLevels()){
     if(pointInPolygon(p,level.top)){z=Math.max(z,level.z1);continue}
     for(const band of reliefEdgeBands(level)){
       if(!pointInPolygon(p,band.poly))continue;
@@ -97,20 +77,24 @@ function terrainElevation(p){
 }
 function terrainPlateauElevation(p){
   if(terrainSlopeKind(p))return null;
-  let z=0;for(const level of TEST_RELIEF.levels)if(pointInPolygon(p,level.top))z=Math.max(z,level.z1);
+  let z=0;for(const level of reliefLevels())if(pointInPolygon(p,level.top))z=Math.max(z,level.z1);
   return z;
 }
 function environmentConflictsTestRelief(f){
-  const center=TEST_RELIEF.center,reserve=15.5;
+  if(!State.relief?.hills?.length||f.type==='forest'||f.type==='rough')return false;
   if(['stream','river'].includes(f.type)){
-    for(let i=0;i<f.points.length-1;i++)if(pointSegmentDistance(center,f.points[i],f.points[i+1])<=reserve+(f.width||0)/2)return true;
+    for(let i=0;i<f.points.length-1;i++){
+      const a=f.points[i],b=f.points[i+1],steps=Math.max(3,Math.ceil(dist(a,b)/1.5));
+      for(let j=0;j<=steps;j++){const t=j/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(terrainElevation(p)>.05)return true}
+    }
     return false;
   }
-  if(f.points?.length&&(pointInPolygon(center,f.points)||f.points.some(p=>dist(p,center)<=reserve)))return true;
-  if(Number.isFinite(f.x)&&Number.isFinite(f.y)){
-    const reach=Math.max(Number(f.rx)||0,Number(f.ry)||0);
-    if(dist(f,center)<=reserve+reach)return true;
+  if(f.points?.length){
+    if(f.points.some(p=>terrainElevation(p)>.05))return true;
+    const cx=f.points.reduce((s,p)=>s+p.x,0)/f.points.length,cy=f.points.reduce((s,p)=>s+p.y,0)/f.points.length;
+    return terrainElevation({x:cx,y:cy})>.05;
   }
+  if(Number.isFinite(f.x)&&Number.isFinite(f.y))return terrainElevation(f)>.05;
   return false;
 }
 function w2sRaw(p,z=0){
