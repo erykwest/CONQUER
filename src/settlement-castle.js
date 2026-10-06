@@ -800,7 +800,13 @@ function forestTreeLayout(f){
   }
   forestTreeLayoutCache.set(f.id,trees);return trees;
 }
+function forestLikelyVisible(f,pad=100){
+  const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();
+  const extent=Math.max(f.rx||5,f.ry||4)*U*State.view.scale*1.55+pad;
+  return s.x>=-extent&&s.y>=-extent&&s.x<=r.width+extent&&s.y<=r.height+extent;
+}
 function drawForestMask(f){
+  if(!forestLikelyVisible(f))return;
   const tier=landscapeDetailTier();
   const trees=forestTreeLayout(f)
     .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
@@ -818,6 +824,7 @@ function ellipseWorldPoints(f,n=28){
   return pts;
 }
 function drawEnvironment(){
+  if(window.__conquerPerf)window.__conquerPerf.forestTrees=0;
   for(const f of State.environment){
     ctx.save();
     if(['stream','river'].includes(f.type)){
@@ -825,6 +832,7 @@ function drawEnvironment(){
       ctx.strokeStyle=f.edge;ctx.lineWidth=Math.max(2,(f.width+.35)*U*State.view.scale*.72);ctx.stroke();ctx.strokeStyle=f.fill;ctx.lineWidth=Math.max(1.4,f.width*U*State.view.scale*.72);ctx.stroke();
     }else if(['forest','pond','sea'].includes(f.type)){
       if(f.type==='forest'){
+        if(!forestLikelyVisible(f)){ctx.restore();continue}
         drawForestGround(f);
         drawForestMask(f);
       }else{
