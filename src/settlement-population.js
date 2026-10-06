@@ -973,20 +973,35 @@ function drawSoldierFigure(p,z,type,id,phase=0){
 
   ctx.restore();
 }
-function wallPatrolPoint(wall,day){
+function wallPatrolPoint(wall,day,index=0,count=1){
   const L=Math.max(.001,dist(wall.a,wall.b)),seed=(peasantHash(wall.id+'-patrol')%1000)/1000;
-  let t=(day*.72+seed)%2;t=t<=1?t:2-t;
+  // On T3 walls the second patrol is phase-shifted by half a cycle, so the
+  // two guards alternate directions instead of marching as a single pair.
+  const phase=count>1?index:0;
+  let t=(day*.72+seed+phase)%2;t=t<=1?t:2-t;
   const margin=Math.min(.65,L*.18),u=margin/L+t*Math.max(0,1-2*margin/L);
-  return{x:wall.a.x+(wall.b.x-wall.a.x)*u,y:wall.a.y+(wall.b.y-wall.a.y)*u};
+  const p={x:wall.a.x+(wall.b.x-wall.a.x)*u,y:wall.a.y+(wall.b.y-wall.a.y)*u};
+
+  if(count>1){
+    const dx=wall.b.x-wall.a.x,dy=wall.b.y-wall.a.y;
+    const nx=-dy/L,ny=dx/L,lane=Math.min(.22,Math.max(.10,(Number(wall.width)||1)*.22));
+    const side=index===0?-1:1;
+    p.x+=nx*lane*side;p.y+=ny*lane*side;
+  }
+  return p;
 }
 function drawCastleSoldiers(){
   const day=peasantVisualDay();
 
-  // Spearmen walk the wall-walk.
+  // Wall patrol density follows wall depth:
+  // T1 narrow = none, T2 medium = one, T3 wide = two alternating patrols.
   for(const wall of State.structures){
     if(wall.type!=='wall'||underConstruction(wall))continue;
-    const p=wallPatrolPoint(wall,day),z=structureHeight(wall)+.10;
-    if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',wall.id,day);
+    const tier=wallTier(wall),count=tier===1?0:tier===3?2:1,z=structureHeight(wall)+.10;
+    for(let i=0;i<count;i++){
+      const p=wallPatrolPoint(wall,day,i,count);
+      if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',wall.id+':patrol:'+i,day+i*.5);
+    }
   }
 
   // One archer lookout on every completed crenellated tower.
