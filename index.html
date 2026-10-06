@@ -94,6 +94,12 @@ window.dispatchEvent(new Event('polygon-clipping-ready'));
   <div id="timePanel">
     <button id="rotateLeft" title="Rotate view 90° counter-clockwise">⟲</button>
     <button id="rotateRight" title="Rotate view 90° clockwise">⟳</button>
+    <div class="season-group" aria-label="Season">
+      <button data-season="summer" class="active" title="Summer">☀️</button>
+      <button data-season="autumn" title="Autumn">🍁</button>
+      <button data-season="winter" title="Winter">❄️</button>
+      <button data-season="spring" title="Spring">🌸</button>
+    </div>
     <span id="dayLabel" class="time-readout">Day 0.0</span>
     <button data-speed="0" class="active" title="Pause">⏸</button>
     <button data-speed="1" title="1× speed">1×</button>
