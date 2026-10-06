@@ -1,4 +1,4 @@
-name: Browser diff Pages vs Vercel
+name: Browser diff Pages vs branch HEAD
 
 on:
   workflow_dispatch:
@@ -11,8 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
       - name: Wait for preview publishing
         run: sleep 35
+
+      - name: Start local static server
+        run: |
+          python3 -m http.server 4173 >/tmp/conquer-http.log 2>&1 &
+          echo $! > /tmp/conquer-http.pid
+          sleep 2
 
       - name: Install Playwright
         run: |
@@ -27,8 +36,8 @@ jobs:
           import { chromium } from 'playwright';
 
           const targets = [
-            ['pages', 'https://erykwest.github.io/CONQUER/landscape/'],
-            ['vercel', 'https://conquer-git-landscape-erykwests-projects.vercel.app/']
+            ['local-head', 'http://127.0.0.1:4173/'],
+            ['pages', 'https://erykwest.github.io/CONQUER/landscape/']
           ];
 
           const browser = await chromium.launch({ headless: true });
@@ -86,7 +95,11 @@ jobs:
               });
               if (!target.error) {
                 await page.mouse.click(target.x, target.y);
-                await page.waitForTimeout(250);
+                await page.waitForTimeout(120);
+                await page.mouse.move(target.x + 45, target.y + 15);
+                await page.waitForTimeout(80);
+                await page.mouse.click(target.x + 45, target.y + 15);
+                await page.waitForTimeout(300);
               }
               const after = await page.evaluate(() => {
                 try {
