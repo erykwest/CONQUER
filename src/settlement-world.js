@@ -581,6 +581,30 @@ function makeEnvSea(rnd){
   return{id:'env-sea',type:'sea',side,points,coastline:coast,fill:'#23505a',edge:'#86b3b5'};
 }
 function randomEnvPoint(rnd,margin=12){return{x:margin+rnd()*(WORLD-margin*2),y:margin+rnd()*(WORLD-margin*2)}}
+function estimateForestCoverage(env,samples=72){
+  let covered=0,total=0;
+  const forests=env.filter(f=>f.type==='forest');
+  if(!forests.length)return 0;
+  for(let iy=0;iy<samples;iy++){
+    const y=(iy+.5)/samples*WORLD;
+    for(let ix=0;ix<samples;ix++){
+      const x=(ix+.5)/samples*WORLD;
+      total++;
+      if(forests.some(f=>pointInPolygon({x,y},f.points)))covered++;
+    }
+  }
+  return total?covered/total:0;
+}
+function ensureForestCoverage(env,rnd,target=.20){
+  let coverage=estimateForestCoverage(env),guard=0;
+  while(coverage<target&&guard++<80){
+    const p=randomEnvPoint(rnd,10);
+    const rx=8+rnd()*7,ry=6+rnd()*6;
+    env.push(makeEnvBlob(rnd,'forest',p.x,p.y,rx,ry,'#2e3c1d','#5c7438',32,.14));
+    coverage=estimateForestCoverage(env);
+  }
+  return coverage;
+}
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[];
   const addBlob=(type,count,small=false)=>{for(let i=0;i<count;i++){const p=randomEnvPoint(rnd,18),rx=small?4+rnd()*3:7+rnd()*4,ry=small?3+rnd()*2:4+rnd()*3;if(type==='forest')env.push(makeEnvBlob(rnd,'forest',p.x,p.y,rx,ry,'#2e3c1d','#5c7438',28,.10));else if(type==='mountain')env.push(makeEnvBlob(rnd,'mountain',p.x,p.y,rx,ry,'#56493c','#968470',24,.11));else if(type==='pond')env.push(makeEnvBlob(rnd,'pond',p.x,p.y,rx,ry,'#3f7f8a','#8ab9bd',20,.20))}};
@@ -609,6 +633,7 @@ function generateEnvironment(){
   }else if(State.biome==='sea'){
     addEllipse('rough',1);if(rnd()<.55)addBlob('forest',1,true);
   }
+  ensureForestCoverage(env,rnd,.20);
   State.environment=env;
 }
 function pointInPolygon(point,pts){
