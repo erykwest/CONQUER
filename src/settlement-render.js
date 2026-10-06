@@ -469,6 +469,125 @@ function drawNightLights(){
   drawFacadeWindows(true,nf);
   drawFireGlows(nf);
 }
+
+const WEATHER_PROFILES=Object.freeze({
+  spring:[['clear',.18],['wind',.22],['rain',.42],['storm',.18]],
+  summer:[['clear',.46],['wind',.23],['rain',.16],['storm',.15]],
+  autumn:[['clear',.12],['wind',.34],['rain',.38],['storm',.16]],
+  winter:[['clear',.12],['wind',.28],['snow',.55],['storm',.05]]
+});
+const WEATHER_STYLE=Object.freeze({
+  clear:{wind:.10,rain:0,snow:0,lightning:0},
+  wind:{wind:.90,rain:0,snow:0,lightning:0},
+  rain:{wind:.38,rain:1,snow:0,lightning:0},
+  storm:{wind:1,rain:1.18,snow:0,lightning:1},
+  snow:{wind:.30,rain:0,snow:1,lightning:0}
+});
+let weatherCacheKey='',weatherCacheValue=null;
+function weatherHash01(value){
+  let x=((value>>>0)+0x6D2B79F5)>>>0;
+  x=Math.imul(x^(x>>>15),x|1);
+  x^=x+Math.imul(x^(x>>>7),x|61);
+  return((x^(x>>>14))>>>0)/4294967296;
+}
+function currentWeather(){
+  const day=Math.floor(State.clock.day);
+  const season=WEATHER_PROFILES[State.season]?State.season:'summer';
+  const key=State.seed+'|'+day+'|'+season;
+  if(weatherCacheKey===key&&weatherCacheValue)return weatherCacheValue;
+  const salts={spring:0x13579bdf,summer:0x2468ace0,autumn:0x51f15e5d,winter:0x7f4a7c15};
+  const seed=(State.seed^Math.imul(day+1,0x9e3779b1)^salts[season])>>>0;
+  let roll=weatherHash01(seed),kind='clear';
+  for(const [candidate,weight] of WEATHER_PROFILES[season]){
+    roll-=weight;
+    if(roll<=0){kind=candidate;break}
+  }
+  weatherCacheKey=key;
+  weatherCacheValue={kind,seed,...WEATHER_STYLE[kind]};
+  return weatherCacheValue;
+}
+function weatherNoise(seed,index){return weatherHash01(seed^Math.imul(index+1,0x85ebca6b))}
+function clearWeatherOverlay(){
+  if(!weatherCtx||!weatherCanvas)return;
+  const r=wrap.getBoundingClientRect();
+  weatherCtx.clearRect(0,0,r.width,r.height);
+}
+function drawWindLayer(g,w,h,t,weather){
+  if(weather.wind<=.15)return;
+  const count=Math.round(8+10*weather.wind);
+  g.save();g.lineCap='round';g.lineWidth=1.15;g.strokeStyle='rgba(232,238,229,.20)';
+  for(let i=0;i<count;i++){
+    const a=weatherNoise(weather.seed,i*3),b=weatherNoise(weather.seed,i*3+1),c=weatherNoise(weather.seed,i*3+2);
+    const speed=55+95*c;
+    const x=((a*(w+260)+t*speed)%(w+260))-130;
+    const y=20+b*Math.max(1,h-40)+Math.sin(t*.8+i)*8;
+    const len=45+95*c;
+    g.globalAlpha=.18+.28*c;
+    g.beginPath();g.moveTo(x,y);g.bezierCurveTo(x+len*.28,y-5-c*7,x+len*.72,y+6+c*5,x+len,y);g.stroke();
+  }
+  g.restore();
+}
+function drawRainLayer(g,w,h,t,weather){
+  if(!weather.rain)return;
+  const count=Math.round(72*weather.rain);
+  g.save();g.lineWidth=1;g.strokeStyle='rgba(190,218,232,.52)';g.beginPath();
+  for(let i=0;i<count;i++){
+    const a=weatherNoise(weather.seed,400+i*3),b=weatherNoise(weather.seed,401+i*3),c=weatherNoise(weather.seed,402+i*3);
+    const speed=260+210*c;
+    const y=((b*(h+120)+t*speed)%(h+120))-60;
+    const x=((a*(w+120)+t*speed*.20)%(w+120))-60;
+    const len=10+16*c;
+    g.moveTo(x,y);g.lineTo(x+len*.30,y+len);
+  }
+  g.stroke();g.restore();
+}
+function drawSnowLayer(g,w,h,t,weather){
+  if(!weather.snow)return;
+  const count=78;
+  g.save();g.fillStyle='rgba(245,248,244,.78)';
+  for(let i=0;i<count;i++){
+    const a=weatherNoise(weather.seed,800+i*4),b=weatherNoise(weather.seed,801+i*4),c=weatherNoise(weather.seed,802+i*4),d=weatherNoise(weather.seed,803+i*4);
+    const speed=22+38*c;
+    const y=((b*(h+50)+t*speed)%(h+50))-25;
+    const drift=Math.sin(t*(.45+.5*d)+i)*18*(.45+c);
+    const x=(a*w+drift+w)%w;
+    const r=.8+1.7*d;
+    g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();
+  }
+  g.restore();
+}
+function drawLightningLayer(g,w,h,t,weather){
+  if(!weather.lightning)return;
+  const period=7+weatherNoise(weather.seed,1201)*7;
+  const phase=(t+weatherNoise(weather.seed,1202)*period)%period;
+  const flash=phase<.09?1:(phase>.16&&phase<.22?.55:0);
+  if(!flash)return;
+  g.save();
+  g.fillStyle='rgba(235,244,255,'+(.12*flash)+')';g.fillRect(0,0,w,h);
+  const startX=w*(.18+.64*weatherNoise(weather.seed,1203));
+  const endY=h*(.44+.28*weatherNoise(weather.seed,1204));
+  g.strokeStyle='rgba(244,249,255,'+(.92*flash)+')';
+  g.shadowColor='rgba(210,230,255,.95)';g.shadowBlur=16;g.lineWidth=1.8;g.beginPath();g.moveTo(startX,-10);
+  let x=startX,y=-10;
+  for(let i=0;i<7;i++){y+=(endY+10)/7;x+=(weatherNoise(weather.seed,1210+i)-.5)*42;g.lineTo(x,y)}
+  g.stroke();g.restore();
+}
+function drawWeatherOverlay(now=performance.now()){
+  if(!weatherCtx||!weatherCanvas)return;
+  const r=wrap.getBoundingClientRect(),w=r.width,h=r.height;
+  weatherCtx.clearRect(0,0,w,h);
+  if(State.view.scale>=WEATHER_ZOOM_THRESHOLD)return;
+  const weather=currentWeather(),t=now/1000;
+  const fade=clamp((WEATHER_ZOOM_THRESHOLD-State.view.scale)/.10,0,1);
+  if(fade<=0)return;
+  weatherCtx.save();weatherCtx.globalAlpha=.35+.65*fade;
+  drawWindLayer(weatherCtx,w,h,t,weather);
+  drawRainLayer(weatherCtx,w,h,t,weather);
+  drawSnowLayer(weatherCtx,w,h,t,weather);
+  drawLightningLayer(weatherCtx,w,h,t,weather);
+  weatherCtx.restore();
+}
+
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
 }

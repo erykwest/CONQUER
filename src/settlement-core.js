@@ -1,8 +1,9 @@
 'use strict';
 // CONQUER settlement core module — classic-script shared runtime.
-const canvas=document.getElementById('c'),wrap=document.getElementById('wrap');
+const canvas=document.getElementById('c'),weatherCanvas=document.getElementById('weatherCanvas'),wrap=document.getElementById('wrap');
 let ctx=canvas.getContext('2d');
 const screenCtx=ctx;
+const weatherCtx=weatherCanvas?weatherCanvas.getContext('2d'):null;
 const sceneCache={
   base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
@@ -54,6 +55,7 @@ function blitSceneCache(layer){
   );
 }
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
+const WEATHER_ZOOM_THRESHOLD=.5;
 const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
