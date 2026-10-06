@@ -52,6 +52,7 @@ function addStructure(s){
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
     if(isCivic(s))reactive+=ensureSettlementRoadAccess(s);
+    if(s.type==='well')reactive+=reconcileTowerSecondaryBranches(Infinity,true);
     if(displaced.removed||reactive){
       const bits=[];
       if(displaced.removed)bits.push(`${displaced.removed} auto element${displaced.removed===1?'':'s'} cleared`);
