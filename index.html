@@ -24,6 +24,8 @@ window.dispatchEvent(new Event('polygon-clipping-ready'));
     <div class="grid3"><button data-tower="square" data-size="1">1U</button><button data-tower="square" data-size="1.5">1.5U</button><button data-tower="square" data-size="2">2U</button></div>
     <h3>Round towers</h3>
     <div class="grid3"><button data-tower="round" data-size="0.5">R .5</button><button data-tower="round" data-size="0.75">R .75</button><button data-tower="round" data-size="1">R 1</button></div>
+    <h3>Wooden towers</h3>
+    <div class="grid"><button data-wood-tower="watchtower">Watchtower<br><span class="small">1×1 · H1</span></button><button data-wood-tower="palisadeTower">Wood tower<br><span class="small">1.5×1.5 · H1</span></button></div>
     <h3>Tower height</h3>
     <div class="grid3"><button data-tower-level="1" class="active">1 level</button><button data-tower-level="2">2 levels</button><button data-tower-level="3">3 levels</button></div>
     <h3>Linear castle</h3>
@@ -43,7 +45,7 @@ window.dispatchEvent(new Event('polygon-clipping-ready'));
       <button data-civic="training">Training field<br><span class="small">5×4U</span></button>
     </div>
     <hr/>
-    <div class="legend">Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Palisade: T1 stakes · T2 inner walkway · T3 inner 45° earthwork · fixed height · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
+    <div class="legend">Wood towers: watchtower 1×1 H1 · medium 1.5×1.5 H1 with open/pitched roof variant.<br>Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Palisade: T1 stakes · T2 inner walkway · T3 inner 45° earthwork · fixed height · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
     <hr/>
     <div class="grid"><button id="undoBtn">↶ Undo</button><button id="clearBtn">Clear all</button></div>
   </aside>
