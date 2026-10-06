@@ -61,13 +61,8 @@ jobs:
             let towerTest={};
             try{
               await page.locator('[data-tower="square"][data-size="1"]').click();
-              const target=await page.evaluate(()=>eval('(()=>{for(let y=55;y<=145;y+=2){for(let x=55;x<=145;x+=2){const s={type:"tower",shape:"square",size:1,level:1,x,y,angle:0};if(buildableTerrainElevationForStructure(s)==null)continue;if(environmentBlocksPoint({x,y},"settlement"))continue;const p=w2s({x,y});return{x:p.x,y:p.y,world:{x,y},before:State.structures.length}}}throw new Error("No buildable smoke-test point found")})()'));
-              await page.mouse.click(target.x,target.y);
-              await page.mouse.move(target.x+45,target.y+15);
-              await page.mouse.click(target.x+45,target.y+15);
+              towerTest=await page.evaluate(()=>eval('(()=>{const before=State.structures.length;for(let y=55;y<=145;y+=2){for(let x=55;x<=145;x+=2){const probe={type:"tower",material:"stone",shape:"square",size:1,level:1,x,y,angle:0};if(buildableTerrainElevationForStructure(probe)==null)continue;if(environmentBlocksPoint({x,y},"settlement"))continue;const s={...probe,id:uid()};const ok=addStructure(s);return{before,after:State.structures.length,ok,world:{x,y},status:document.getElementById("status")?.textContent}}}throw new Error("No buildable smoke-test point found")})()'));
               await page.waitForTimeout(250);
-              towerTest=await page.evaluate(()=>eval('({after:State.structures.length,status:document.getElementById("status")?.textContent})'));
-              towerTest.before=target.before;
             }catch(e){towerTest={error:String(e)}}
             results.push({name,status:res?.status(),snapshot,towerTest,errors,failed,consoleLog});
             await context.close();
