@@ -422,7 +422,12 @@ function syncSeasonToCalendar(){
   invalidateSceneCache('base');
   return true;
 }
-function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${cal.day} ${cal.name} · Y${cal.year} · Day ${State.clock.day.toFixed(1)}`;document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+function syncDevButtons(){
+  document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
+  document.querySelectorAll('[data-light-override]').forEach(b=>b.classList.toggle('active',b.dataset.lightOverride===State.daylightOverride));
+  document.querySelectorAll('[data-weather-override]').forEach(b=>b.classList.toggle('active',b.dataset.weatherOverride===State.weatherOverride));
+}
+function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${cal.day} ${cal.name} · Y${cal.year} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
 function visibleCanvasCenter(){
   const r=canvas.getBoundingClientRect();
   return{x:r.width/2,y:r.height/2};
@@ -451,50 +456,42 @@ function togglePause(){
 }
 function setLightOverride(mode){
   State.daylightOverride=State.daylightOverride===mode?null:mode;
-  document.querySelectorAll('[data-light-override]').forEach(b=>b.classList.toggle('active',b.dataset.lightOverride===State.daylightOverride));
-  status(State.daylightOverride?('Lighting: '+State.daylightOverride):'Lighting: automatic');
+  syncDevButtons();
+  status(State.daylightOverride?('FORCE LIGHT: '+State.daylightOverride):'Luce: procedurale');
   draw();
+}
+function setWeatherOverride(kind){
+  if(!['rain','snow','storm','wind'].includes(kind))return;
+  State.weatherOverride=State.weatherOverride===kind?null:kind;
+  weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';
+  syncDevButtons();
+  status(State.weatherOverride?('FORCE METEO: '+State.weatherOverride):'Meteo: procedurale');
+  if(State.view.scale<WEATHER_ZOOM_THRESHOLD)drawWeatherOverlay();
+  else clearWeatherOverlay();
 }
 function setSeason(season){
   if(!['summer','autumn','winter','spring'].includes(season))return;
   const labels={summer:'Estate',autumn:'Autunno',winter:'Inverno',spring:'Primavera'};
   State.seasonOverride=State.seasonOverride===season?null:season;
   State.season=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
-  document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
+  syncDevButtons();
+  weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';
   invalidateSceneCache('base');saveLocal();draw();
+  if(State.view.scale<WEATHER_ZOOM_THRESHOLD)drawWeatherOverlay();
   status(State.seasonOverride?'FORCE SEASON: '+labels[State.seasonOverride]+' — clicca di nuovo per tornare al calendario':'Stagione: calendario automatico');
 }
-function ensureSeasonControls(){
-  const panel=document.getElementById('timePanel');
-  if(!panel)return;
-  let group=panel.querySelector('.season-group');
-  if(!group){
-    group=document.createElement('div');
-    group.className='season-group';
-    group.setAttribute('aria-label','Season');
-    group.style.cssText='display:flex;gap:4px;padding-left:4px;border-left:1px solid var(--line-strong)';
-    const specs=[
-      ['summer','☀️','Summer'],
-      ['autumn','🍁','Autumn'],
-      ['winter','❄️','Winter'],
-      ['spring','🌸','Spring']
-    ];
-    for(const [season,icon,title] of specs){
-      const b=document.createElement('button');
-      b.type='button';
-      b.dataset.season=season;
-      b.title=title;
-      b.textContent=icon;
-      b.style.cssText='width:40px;height:36px;padding:0;border-radius:9px;font-size:17px';
-      group.appendChild(b);
-    }
-    const day=document.getElementById('dayLabel');
-    panel.insertBefore(group,day||panel.children[2]||null);
-  }
-  group.querySelectorAll('[data-season]').forEach(b=>{
-    b.onclick=()=>setSeason(b.dataset.season);
-    b.classList.toggle('active',b.dataset.season===State.seasonOverride);
-  });
+function ensureDevControls(){
+  document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));
+  document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
+  document.querySelectorAll('[data-weather-override]').forEach(b=>b.onclick=()=>setWeatherOverride(b.dataset.weatherOverride));
+  const toggle=document.getElementById('devToggle'),panel=document.getElementById('devPanel');
+  if(toggle&&panel)toggle.onclick=()=>{
+    const open=panel.hidden;
+    panel.hidden=!open;
+    toggle.setAttribute('aria-expanded',String(open));
+    toggle.textContent=open?'DEV ▴':'DEV ▾';
+  };
+  syncDevButtons();
 }
 function freshLandscapeSeed(){
   if(window.crypto?.getRandomValues){
@@ -553,8 +550,7 @@ document.getElementById('biomeSelect').onchange=e=>{
   markDirty();renderUI();status('Biome: '+BIOMES[State.biome].label+' — automatic settlement growth reset');draw();
 };
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(Number(b.dataset.speed)));
-document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
-ensureSeasonControls();
+ensureDevControls();
 let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,weatherDrawAt=0,weatherLayerActive=false;
 const VISUAL_FRAME_MS=1000/30;
 const WEATHER_FRAME_MS=1000/24;

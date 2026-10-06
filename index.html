@@ -23,9 +23,10 @@
 <link rel="stylesheet" href="./src/settlement.css">
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.40</div><div id="resources"></div><button id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.41</div><div id="resources"></div><button id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></header>
 <div id="wrap">
   <canvas id="c"></canvas>
+  <svg id="weatherCloudLayer" aria-hidden="true" preserveAspectRatio="none"></svg>
   <canvas id="weatherCanvas" aria-hidden="true"></canvas>
   <aside id="builder" class="panel">
     <h2>Builder</h2>
@@ -104,19 +105,42 @@
   <div id="timePanel">
     <button id="rotateLeft" title="Rotate view 90° counter-clockwise">⟲</button>
     <button id="rotateRight" title="Rotate view 90° clockwise">⟳</button>
-    <div class="season-group" aria-label="Season">
-      <button data-season="summer" class="active" title="Summer">☀️</button>
-      <button data-season="autumn" title="Autumn">🍁</button>
-      <button data-season="winter" title="Winter">❄️</button>
-      <button data-season="spring" title="Spring">🌸</button>
-    </div>
     <span id="dayLabel" class="time-readout">Day 0.0</span>
     <button data-speed="0" class="active" title="Pause">⏸</button>
     <button data-speed="1" title="1× speed">1×</button>
     <button data-speed="3" title="3× speed">3×</button>
     <button data-speed="10" title="10× speed">10×</button>
-    <button data-light-override="night" title="Force night">☾</button>
-    <button data-light-override="day" title="Force day">☀︎</button>
+  </div>
+  <div id="devTools">
+    <button id="devToggle" type="button" aria-expanded="false">DEV ▾</button>
+    <div id="devPanel" hidden>
+      <div class="dev-section">
+        <span class="dev-label">LUCE</span>
+        <div class="dev-row">
+          <button data-light-override="day" title="Force day">☀︎ Giorno</button>
+          <button data-light-override="night" title="Force night">☾ Notte</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">STAGIONE</span>
+        <div class="dev-row dev-row-4">
+          <button data-season="summer" title="Estate">☀️</button>
+          <button data-season="autumn" title="Autunno">🍁</button>
+          <button data-season="winter" title="Inverno">❄️</button>
+          <button data-season="spring" title="Primavera">🌸</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">METEO</span>
+        <div class="dev-row dev-row-4">
+          <button data-weather-override="rain" title="Force rain">🌧️</button>
+          <button data-weather-override="snow" title="Force snow">🌨️</button>
+          <button data-weather-override="storm" title="Force thunderstorm">🌩️</button>
+          <button data-weather-override="wind" title="Force wind">🍃</button>
+        </div>
+        <span class="dev-hint">Nessuna selezione = procedurale</span>
+      </div>
+    </div>
   </div>
   <div id="status">Select a build tool</div>
 </div>
