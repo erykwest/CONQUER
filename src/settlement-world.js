@@ -693,7 +693,7 @@ function estimateReliefCoverage(samples=56){
   return covered/total;
 }
 function reliefStats(){
-  let edges=0,steep=0,multi=0,maxHeight=0,maxEdge=0;
+  let edges=0,steep=0,multi=0,maxHeight=0,maxEdge=0,minL1Gap=Infinity;
   const steepByLevel={};
   for(const hill of State.relief?.hills||[]){
     maxHeight=Math.max(maxHeight,hill.maxHeight||0);
@@ -710,13 +710,16 @@ function reliefStats(){
   for(const h of Object.keys(steepByLevel)){
     const s=steepByLevel[h];s.ratio=s.edges?s.steep/s.edges:0;
   }
+  const hills=State.relief?.hills||[];
+  for(let i=0;i<hills.length;i++)for(let j=i+1;j<hills.length;j++)minL1Gap=Math.min(minL1Gap,hillL1Gap(hills[i],hills[j]));
   return{
     coverage:estimateReliefCoverage(64),
     steepRatio:edges?steep/edges:0,
     steepByLevel,
     multiRatio:edges?multi/edges:0,
     maxHeight,maxEdge,
-    hillCount:State.relief?.hills?.length||0
+    minL1Gap:Number.isFinite(minL1Gap)?minL1Gap:null,
+    hillCount:hills.length
   };
 }
 function generateRelief(){
