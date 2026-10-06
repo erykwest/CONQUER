@@ -606,14 +606,7 @@ function wellApproachPath(house,well){
 }
 function wellRoutineTravel(house,well,frac,t0,t1,reverse=false){
   const path=wellApproachPath(house,well);
-  const length=pathLength(path);
-  const scheduled=Math.max(.001,t1-t0);
-  const nominalSpeed=6;
-  const needed=length/Math.max(.001,nominalSpeed);
-  const duration=Math.max(scheduled,needed);
-  const effectiveT0=t1-duration;
-  const t=routineSmooth((frac-effectiveT0)/duration);
-  return pointAlongPath(path,reverse?1-t:t);
+  return pathTravelPosition(path,frac,t0,t1,reverse);
 }
 function structureAccessPoint(target,from,visitorId=''){
   if(!target)return null;
@@ -693,18 +686,23 @@ function pathLength(path){
   for(let i=0;i<path.length-1;i++)total+=dist(path[i],path[i+1]);
   return total;
 }
+const VILLAGER_TRAVEL_SPEED=6;
 function routineSmooth(t){t=clamp(t,0,1);return t*t*(3-2*t)}
+function travelWindow(path,t0,t1){
+  const length=pathLength(path),scheduled=Math.max(.001,t1-t0);
+  const duration=Math.max(scheduled,length/Math.max(.001,VILLAGER_TRAVEL_SPEED));
+  return{start:t1-duration,end:t1,duration,length};
+}
+function pathTravelPosition(path,frac,t0,t1,reverse=false){
+  if(!path?.length)return null;
+  const w=travelWindow(path,t0,t1);
+  if(w.length<=1e-6)return path[0];
+  const u=routineSmooth((frac-w.start)/w.duration);
+  return pointAlongPath(path,reverse?1-u:u);
+}
 function routineTravel(house,start,goal,frac,t0,t1,tag){
   const path=villagerPathBetween(house,start,goal,tag);
-  const length=pathLength(path);
-  if(length<=1e-6)return path?.[0]||start;
-  const scheduled=Math.max(.001,t1-t0);
-  const nominalSpeed=6;
-  const needed=length/nominalSpeed;
-  const duration=Math.max(scheduled,needed);
-  const effectiveT0=t1-duration;
-  const t=routineSmooth((frac-effectiveT0)/duration);
-  return pointAlongPath(path,t);
+  return pathTravelPosition(path,frac,t0,t1,false)||start;
 }
 function residentIdlePoint(anchor,id,day,radius=.16){
   if(!anchor)return null;
@@ -827,12 +825,15 @@ function pointAlongPath(path,t){
 function peasantPosition(house,assignment,day){
   const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.025;
   const leave0=.06+stagger,leave1=.14+stagger,return0=.52+stagger,return1=.62+stagger;
-  if(frac<leave0||frac>return1)return null;
   const path=peasantPath(house,assignment),work=assignment.cell.world;
-  const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
-  if(frac<leave1)return pointAlongPath(path,smooth((frac-leave0)/(leave1-leave0)));
-  if(frac<return0)return residentIdlePoint(work,house.id+'-field-work',day,.16);
-  return pointAlongPath(path,1-smooth((frac-return0)/(return1-return0)));
+  const outbound=travelWindow(path,leave0,leave1);
+  const inbound=travelWindow(path,return0,return1);
+  const depart=Math.min(leave0,outbound.start);
+  const returnStart=Math.min(return0,inbound.start);
+  if(frac<depart||frac>return1)return null;
+  if(frac<leave1)return pathTravelPosition(path,frac,leave0,leave1,false);
+  if(frac<returnStart)return residentIdlePoint(work,house.id+'-field-work',day,.16);
+  return pathTravelPosition(path,frac,return0,return1,true);
 }
 function peasantAnimationActive(){
   const day=peasantVisualDay(),frac=day-Math.floor(day);
