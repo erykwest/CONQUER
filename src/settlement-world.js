@@ -581,6 +581,34 @@ function makeEnvSea(rnd){
   return{id:'env-sea',type:'sea',side,points,coastline:coast,fill:'#23505a',edge:'#86b3b5'};
 }
 function randomEnvPoint(rnd,margin=12){return{x:margin+rnd()*(WORLD-margin*2),y:margin+rnd()*(WORLD-margin*2)}}
+function polygonGap(a,b){
+  if(!a?.length||!b?.length)return Infinity;
+  if(a.some(p=>pointInPolygon(p,b))||b.some(p=>pointInPolygon(p,a)))return 0;
+  let best=Infinity;
+  for(const p of a)for(let i=0;i<b.length;i++)best=Math.min(best,pointSegmentDistance(p,b[i],b[(i+1)%b.length]));
+  for(const p of b)for(let i=0;i<a.length;i++)best=Math.min(best,pointSegmentDistance(p,a[i],a[(i+1)%a.length]));
+  return best;
+}
+function forestBlobCanPlace(candidate,env,minGap=3){
+  return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
+}
+function makeForestCandidate(rnd,small=false){
+  // Forest centres may sit directly on the world boundary; their masks can
+  // therefore enter the map from outside instead of always forming islands.
+  const p=randomEnvPoint(rnd,0);
+  const rx=small?4+rnd()*3:8+rnd()*7;
+  const ry=small?3+rnd()*2:6+rnd()*6;
+  return makeEnvBlob(rnd,'forest',p.x,p.y,rx,ry,'#2e3c1d','#5c7438',small?28:32,small?.10:.14);
+}
+function addForestBlob(env,rnd,small=false,minGap=3,maxAttempts=120){
+  for(let attempt=0;attempt<maxAttempts;attempt++){
+    const candidate=makeForestCandidate(rnd,small);
+    if(!forestBlobCanPlace(candidate,env,minGap))continue;
+    env.push(candidate);
+    return candidate;
+  }
+  return null;
+}
 function estimateForestCoverage(env,samples=72){
   let covered=0,total=0;
   const forests=env.filter(f=>f.type==='forest');
@@ -596,18 +624,18 @@ function estimateForestCoverage(env,samples=72){
   return total?covered/total:0;
 }
 function ensureForestCoverage(env,rnd,target=.20){
-  let coverage=estimateForestCoverage(env),guard=0;
-  while(coverage<target&&guard++<80){
-    const p=randomEnvPoint(rnd,10);
-    const rx=8+rnd()*7,ry=6+rnd()*6;
-    env.push(makeEnvBlob(rnd,'forest',p.x,p.y,rx,ry,'#2e3c1d','#5c7438',32,.14));
-    coverage=estimateForestCoverage(env);
+  let coverage=estimateForestCoverage(env),guard=0,failures=0;
+  while(coverage<target&&guard++<320&&failures<24){
+    if(addForestBlob(env,rnd,false,3,80)){
+      coverage=estimateForestCoverage(env);
+      failures=0;
+    }else failures++;
   }
   return coverage;
 }
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[];
-  const addBlob=(type,count,small=false)=>{for(let i=0;i<count;i++){const p=randomEnvPoint(rnd,18),rx=small?4+rnd()*3:7+rnd()*4,ry=small?3+rnd()*2:4+rnd()*3;if(type==='forest')env.push(makeEnvBlob(rnd,'forest',p.x,p.y,rx,ry,'#2e3c1d','#5c7438',28,.10));else if(type==='mountain')env.push(makeEnvBlob(rnd,'mountain',p.x,p.y,rx,ry,'#56493c','#968470',24,.11));else if(type==='pond')env.push(makeEnvBlob(rnd,'pond',p.x,p.y,rx,ry,'#3f7f8a','#8ab9bd',20,.20))}};
+  const addBlob=(type,count,small=false)=>{for(let i=0;i<count;i++){if(type==='forest'){addForestBlob(env,rnd,small,3);continue}const p=randomEnvPoint(rnd,18),rx=small?4+rnd()*3:7+rnd()*4,ry=small?3+rnd()*2:4+rnd()*3;if(type==='mountain')env.push(makeEnvBlob(rnd,'mountain',p.x,p.y,rx,ry,'#56493c','#968470',24,.11));else if(type==='pond')env.push(makeEnvBlob(rnd,'pond',p.x,p.y,rx,ry,'#3f7f8a','#8ab9bd',20,.20))}};
   const addEllipse=(type,count)=>{for(let i=0;i<count;i++){const p=randomEnvPoint(rnd,18);if(type==='hill')env.push(makeEnvEllipse('hill',p.x,p.y,7+rnd()*4,4+rnd()*2,(rnd()-.5)*1.4,'#5c5235','#927b4f'));else env.push(makeEnvEllipse('rough',p.x,p.y,4.5+rnd()*2.5,3+rnd()*1.5,(rnd()-.5)*1.4,'rgba(105,92,54,.45)','rgba(155,132,79,.55)'))}};
   if(State.biome==='sea')env.push(makeEnvSea(rnd));
   if(State.biome==='valley'||State.biome==='mountains'){
