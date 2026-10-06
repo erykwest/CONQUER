@@ -1,22 +1,20 @@
-name: Publish branch previews to GitHub Pages
+name: Publish branch previews
 
 on:
   push:
-    branches:
-      - '**'
+    branches-ignore:
+      - gh-pages
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: github-pages
+  group: branch-previews
   cancel-in-progress: false
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout all branches
@@ -32,7 +30,7 @@ jobs:
           mkdir -p _site _branch_tmp
 
           mapfile -t branches < <(
-            git for-each-ref --format='%(refname:short)' refs/remotes/origin/               | sed 's#^origin/##'               | grep -v '^HEAD$'               | sort -u
+            git for-each-ref --format='%(refname:short)' refs/remotes/origin/               | sed 's#^origin/##'               | grep -Ev '^(HEAD|gh-pages)$'               | sort -u
           )
 
           for branch in "${branches[@]}"; do
@@ -40,7 +38,6 @@ jobs:
             safe="${branch//\//-}"
             rm -rf _branch_tmp/*
             git archive "origin/$branch" | tar -x -C _branch_tmp
-
             rm -rf "_branch_tmp/.github"
 
             mkdir -p "_site/$safe"
@@ -50,6 +47,8 @@ jobs:
               cp -a _branch_tmp/. _site/
             fi
           done
+
+          touch _site/.nojekyll
 
           cat > _site/branches.html <<'HTML'
           <!doctype html>
@@ -67,23 +66,16 @@ jobs:
             printf '<a href="./%s/">%s</a>\n' "$safe" "$branch" >> _site/branches.html
           done
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish gh-pages branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a _site /tmp/conquer-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan gh-pages
+          git rm -rf . >/dev/null 2>&1 || true
+          cp -a /tmp/conquer-pages/. .
+          git add -A
+          git commit -m "deploy: branch previews from ${GITHUB_SHA}"
+          git push --force origin gh-pages
