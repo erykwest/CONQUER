@@ -985,8 +985,10 @@ function wallPatrolPoint(wall,day,index=0,count=1){
   // additional clearance from the actual junction.
   const normal=Math.min(.65,L*.18);
   const snapSafe=Math.min(.46,L*.30);
-  let startPad=Math.max(normal,wall.aSnap?snapSafe:0);
-  let endPad=Math.max(normal,wall.bSnap?snapSafe:0);
+  const aBlocks=wall.type==='palisade'?!!palisadeSolidSnapTarget(wall.aSnap):!!wall.aSnap;
+  const bBlocks=wall.type==='palisade'?!!palisadeSolidSnapTarget(wall.bSnap):!!wall.bSnap;
+  let startPad=Math.max(normal,aBlocks?snapSafe:0);
+  let endPad=Math.max(normal,bBlocks?snapSafe:0);
   const maxTotal=Math.max(0,L-.08);
   if(startPad+endPad>maxTotal){
     const scale=maxTotal/Math.max(.001,startPad+endPad);
