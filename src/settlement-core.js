@@ -18,41 +18,48 @@ function withRenderContext(next,fn){
   try{return fn()}finally{ctx=prev}
 }
 const STATIC_CACHE_DPR_CAP=1.5;
+const STATIC_CACHE_OVERSCAN=240;
 function staticCacheDpr(){return Math.min(devicePixelRatio||1,STATIC_CACHE_DPR_CAP)}
 function prepareSceneCache(layer){
-  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),entry=sceneCache[layer];
-  const w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
+  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),entry=sceneCache[layer],m=STATIC_CACHE_OVERSCAN;
+  const logicalW=r.width+m*2,logicalH=r.height+m*2;
+  const w=Math.max(1,Math.round(logicalW*d)),h=Math.max(1,Math.round(logicalH*d));
   if(entry.canvas.width!==w||entry.canvas.height!==h){
     entry.canvas.width=w;entry.canvas.height=h;entry.dirty=true;
   }
-  entry.ctx.setTransform(d,0,0,d,0,0);
-  entry.ctx.clearRect(0,0,r.width,r.height);
-  // Snapshot the exact camera used to rasterize this screen-space layer.
+  entry.ctx.setTransform(1,0,0,1,0,0);
+  entry.ctx.clearRect(0,0,entry.canvas.width,entry.canvas.height);
+  // World projection still uses viewport coordinates. Shift the offscreen
+  // raster so it also contains an invisible border around the viewport.
+  entry.ctx.setTransform(d,0,0,d,m*d,m*d);
   entry.view={
     x:State.view.x,y:State.view.y,scale:State.view.scale,
-    rotation:State.view.rotation||0,width:r.width,height:r.height,dpr:d
+    rotation:State.view.rotation||0,width:r.width,height:r.height,dpr:d,overscan:m
   };
   return entry;
 }
 function sceneCacheProjectionCompatible(entry){
   const v=entry?.view,r=wrap.getBoundingClientRect(),d=staticCacheDpr();
-  return !!v
-    &&Math.abs(v.scale-State.view.scale)<1e-9
-    &&v.rotation===(State.view.rotation||0)
-    &&Math.abs(v.width-r.width)<.5
-    &&Math.abs(v.height-r.height)<.5
-    &&Math.abs(v.dpr-d)<1e-9;
+  if(!v
+    ||Math.abs(v.scale-State.view.scale)>=1e-9
+    ||v.rotation!==(State.view.rotation||0)
+    ||Math.abs(v.width-r.width)>=.5
+    ||Math.abs(v.height-r.height)>=.5
+    ||Math.abs(v.dpr-d)>=1e-9)return false;
+  // Pan can reuse the bitmap while it stays inside the prerendered border.
+  // Recenter before the hidden margin is exhausted, so no blank strip can enter.
+  const m=Number(v.overscan)||0,limit=m*.78;
+  return Math.abs(State.view.x-v.x)<=limit&&Math.abs(State.view.y-v.y)<=limit;
 }
 function blitSceneCache(layer){
-  const r=wrap.getBoundingClientRect(),entry=sceneCache[layer];
-  if(!entry.view)return;
-  // Pure pan does not require rerasterizing static geometry. All projected
-  // points shift by exactly the camera delta, so translate the cached bitmap.
-  const dx=State.view.x-entry.view.x,dy=State.view.y-entry.view.y;
+  const r=wrap.getBoundingClientRect(),entry=sceneCache[layer],v=entry.view;
+  if(!v)return;
+  const m=Number(v.overscan)||0;
+  const dx=State.view.x-v.x,dy=State.view.y-v.y;
   screenCtx.drawImage(
     entry.canvas,
     0,0,entry.canvas.width,entry.canvas.height,
-    dx,dy,r.width,r.height
+    dx-m,dy-m,r.width+m*2,r.height+m*2
   );
 }
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
