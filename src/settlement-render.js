@@ -206,7 +206,7 @@ function drawTowerDoorSpec(tower,spec){
 }
 function drawTowerDoors(){
   for(const tower of State.structures){
-    if(tower.type!=='tower'||underConstruction(tower))continue;
+    if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))continue;
     for(const spec of towerDoorSpecs(tower))drawTowerDoorSpec(tower,spec);
   }
 }
