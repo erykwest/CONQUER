@@ -429,8 +429,11 @@ function drawBuiltWindows(s,lit=false,nf=1){
   });
 }
 function drawFacadeWindows(lit=false,nf=1){
+  if(State.view.scale<.24)return;
   for(const s of State.structures){
     if(underConstruction(s))continue;
+    const center=structureCenter(s);
+    if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
     if(s.type==='house'){
       const rows=houseLevel(s)>=2?[.52,1.34]:[.48];
       for(const edge of visibleFacadeEdges(s))for(const z of rows)drawWindowOnEdge(edge,z,lit,nf,0);
