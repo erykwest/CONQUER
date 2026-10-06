@@ -985,10 +985,8 @@ function wallPatrolPoint(wall,day,index=0,count=1){
   // additional clearance from the actual junction.
   const normal=Math.min(.65,L*.18);
   const snapSafe=Math.min(.46,L*.30);
-  const aBlocks=wall.type==='palisade'?!!palisadeSolidSnapTarget(wall.aSnap):!!wall.aSnap;
-  const bBlocks=wall.type==='palisade'?!!palisadeSolidSnapTarget(wall.bSnap):!!wall.bSnap;
-  let startPad=Math.max(normal,aBlocks?snapSafe:0);
-  let endPad=Math.max(normal,bBlocks?snapSafe:0);
+  let startPad=Math.max(normal,wall.aSnap?snapSafe:0);
+  let endPad=Math.max(normal,wall.bSnap?snapSafe:0);
   const maxTotal=Math.max(0,L-.08);
   if(startPad+endPad>maxTotal){
     const scale=maxTotal/Math.max(.001,startPad+endPad);
@@ -1023,25 +1021,12 @@ function drawCastleSoldiers(){
     }
   }
 
-  // One archer lookout on every completed fighting tower, stone or timber.
+  // One archer lookout on every completed crenellated tower.
   for(const tower of State.structures){
-    if(tower.type!=='tower'||underConstruction(tower))continue;
-
-    let p,z;
-    if(isWoodTower(tower)){
-      const style=woodTowerStyle(tower);
-      // Timber towers have real open fighting decks below their roof/parapet.
-      const local=style==='watchtower'?{x:0,y:.03}:{x:0,y:.05};
-      p=woodTowerLocal(tower,local.x,local.y);
-      z=style==='watchtower'?1.51:1.88;
-    }else{
-      if(towerRoofStyle(tower)!=='battlement')continue;
-      const hash=peasantHash(tower.id+'-archer'),a=(hash%360)*Math.PI/180;
-      const radius=tower.shape==='round'?tower.r*.26:(tower.size||1)*.18;
-      p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius};
-      z=structureHeight(tower)+.08;
-    }
-
+    if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower)||towerRoofStyle(tower)!=='battlement')continue;
+    const hash=peasantHash(tower.id+'-archer'),a=(hash%360)*Math.PI/180;
+    const radius=tower.shape==='round'?tower.r*.26:(tower.size||1)*.18;
+    const p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius},z=structureHeight(tower)+.08;
     if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'archer',tower.id,day);
   }
 }
