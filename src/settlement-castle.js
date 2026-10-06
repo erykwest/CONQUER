@@ -40,7 +40,10 @@ function rectWorldPoints(cx,cy,w,h,angle=0){
 function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const a=i/n*Math.PI*2;pts.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r})}return pts}
 function structureHeight(s){
   if(!s)return 0;
-  if(s.type==='tower'){const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12}
+  if(s.type==='tower'){
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:2.47;
+    const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
+  }
   if(s.type==='gate')return [2.8,4.0,5.2][structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
@@ -97,7 +100,7 @@ function extrudePolygonAt(worldPts,z0,z1,{top:topColor='#8c7b69',sideA='#554b42'
   pathPolygon(topPts,topColor,stroke,1);
 }
 let castleUnionCache={key:null,bands:null};
-function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)}
+function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
 function unionFootprintPoints(s){
   if(!['wall','built'].includes(s.type))return footprintPoints(s);
@@ -317,7 +320,7 @@ function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);
 function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
 function placementAngle(center,p){return Math.atan2(p.y-center.y,p.x-center.x)}
 function orientedToolSpec(){
-  if(State.tool.kind==='tower'&&State.tool.shape==='square')return{type:'tower',shape:'square',size:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]};
+  if(State.tool.kind==='tower'&&State.tool.shape==='square')return{type:'tower',shape:'square',size:State.tool.size,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,functions:[]};
   if(State.tool.kind==='gate')return{type:'gate',shape:'square',size:1.5,level:State.tool.level||State.buildLevels.gate,functions:[]};
   // Future point-buildings can pass a placementSpec without adding another interaction path.
   if(State.tool.placementSpec&&State.tool.placementSpec.shape!=='round')return{...State.tool.placementSpec};
@@ -373,6 +376,9 @@ function towerToolPrototype(angle=0){
     type:'tower',
     shape:State.tool.shape,
     level:State.tool.level||State.buildLevels.tower,
+    material:State.tool.material||'stone',
+    woodStyle:State.tool.woodStyle,
+    woodRoof:State.tool.woodRoof,
     angle,
     ...(State.tool.shape==='round'?{r:Number(State.tool.size)}:{size:Number(State.tool.size)})
   };
@@ -450,12 +456,12 @@ function subtowerAttachmentAvailable(parent,child,attachment){
   return true;
 }
 function nearestSubtowerPlacementSnap(p){
-  const child=towerToolPrototype();if(!child)return null;
+  const child=towerToolPrototype();if(!child||isWoodTower(child))return null;
   const childTier=towerTier(child);
   let best=null,bestScore=Infinity;
 
   for(const parent of State.structures){
-    if(parent.auto||!['tower','gate'].includes(parent.type)||underConstruction(parent))continue;
+    if(parent.auto||!['tower','gate'].includes(parent.type)||underConstruction(parent)||(parent.type==='tower'&&isWoodTower(parent)))continue;
 
     // Tower parent: classic hierarchy, child must be strictly smaller.
     if(parent.type==='tower'&&towerTier(parent)<=childTier)continue;
@@ -783,7 +789,7 @@ function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -875,6 +881,78 @@ function drawPalisade(s,preview=false){
   if(selected){
     const fp=projectPath(linePoly(s),.025);
     pathPolygon(fp,null,'#f4b76f',2);
+  }
+}
+function woodTowerLocal(s,x,y){
+  const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+  return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
+}
+function drawWoodPost(center,r,z0,z1,angle=0){
+  extrudePolygonAt(palisadeOctagon(center,r,angle),z0,z1,{
+    top:'#7b5739',sideA:'#4b301d',sideB:'#654329',stroke:'#8e6848'
+  });
+}
+function drawWoodPlatform(s,size,z0,z1){
+  extrudePolygonAt(rectWorldPoints(s.x,s.y,size,size,s.angle||0),z0,z1,{
+    top:'#8b6845',sideA:'#4f3927',sideB:'#65492f',stroke:'#a27b54'
+  });
+}
+function drawWoodHipRoof(s,eaveZ,apexZ,overhang=.14){
+  const size=(Number(s.size)||1)+overhang*2,fp=rectWorldPoints(s.x,s.y,size,size,s.angle||0);
+  const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
+  const fills=['#4d3427','#5a3d2e','#654535','#56392b'];
+  for(let i=0;i<4;i++){
+    const j=(i+1)%4,a=w2s(fp[i],eaveZ),b=w2s(fp[j],eaveZ);
+    faces.push({poly:[a,b,apex],depth:(a.y+b.y)/2,fill:fills[i]});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.poly,f.fill,'#7b5942',1);
+}
+function drawWoodRail(s,size,z0,z1){
+  const half=size/2-.055,r=.045,angle=s.angle||0;
+  const corners=[[-half,-half],[half,-half],[half,half],[-half,half]];
+  for(const [x,y] of corners)drawWoodPost(woodTowerLocal(s,x,y),r,z0,z1,angle);
+  for(let edge=0;edge<4;edge++){
+    const a=corners[edge],b=corners[(edge+1)%4];
+    const steps=Math.max(2,Math.ceil(size/.34));
+    for(let i=1;i<steps;i++){
+      const t=i/steps,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
+      drawWoodPost(woodTowerLocal(s,x,y),.032,z0,z1-.08,angle);
+    }
+  }
+}
+function drawWatchtowerWood(s){
+  const size=1,half=.39,platformZ=.0,deck0=1.34,deck1=1.46,eaveZ=1.98,apexZ=2.35,angle=s.angle||0;
+  const corners=[[-half,-half],[half,-half],[half,half],[-half,half]];
+  for(const [x,y] of corners)drawWoodPost(woodTowerLocal(s,x,y),.075,platformZ,eaveZ,angle);
+  drawWoodPlatform(s,size,deck0,deck1);
+  drawWoodRail(s,size,deck1,1.72);
+  drawWoodHipRoof(s,eaveZ,apexZ,.14);
+}
+function drawMediumWoodTower(s){
+  const size=1.5,half=size/2-.07,bodyZ=1.32,tipZ=1.57,angle=s.angle||0,spacing=.205;
+  const corners=[[-half,-half],[half,-half],[half,half],[-half,half]];
+  for(let edge=0;edge<4;edge++){
+    const a=corners[edge],b=corners[(edge+1)%4],L=Math.hypot(b[0]-a[0],b[1]-a[1]),count=Math.max(1,Math.ceil(L/spacing));
+    for(let i=0;i<=count;i++){
+      const t=i/count,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
+      drawPalisadePost(woodTowerLocal(s,x,y),.095,bodyZ,tipZ,angle);
+    }
+  }
+  drawWoodPlatform(s,size-.12,1.27,1.38);
+  if(woodTowerRoof(s)==='pitched'){
+    const roofHalf=.61,eaveZ=2.04,apexZ=2.47;
+    for(const [x,y] of [[-roofHalf,-roofHalf],[roofHalf,-roofHalf],[roofHalf,roofHalf],[-roofHalf,roofHalf]]){
+      drawWoodPost(woodTowerLocal(s,x,y),.055,1.38,eaveZ,angle);
+    }
+    drawWoodHipRoof(s,eaveZ,apexZ,.10);
+  }
+}
+function drawWoodTower(s,preview=false){
+  if(woodTowerStyle(s)==='watchtower')drawWatchtowerWood(s);
+  else drawMediumWoodTower(s);
+  if(State.selectedId===s.id){
+    pathPolygon(projectPath(footprintPoints(s),.025),null,'#f4b76f',2);
   }
 }
 function builtRoofFootprintPoints(s){
@@ -1190,7 +1268,7 @@ function roundTowerBattlementPieces(s){
   return pieces;
 }
 function towerBattlementPieces(s){
-  if(s.type!=='tower'||underConstruction(s)||towerRoofStyle(s)!=='battlement')return[];
+  if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='battlement')return[];
   return s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s);
 }
 function pointRoofOccluders(s){
@@ -1251,12 +1329,12 @@ function drawRoundTowerRoof(s){
   rim.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
 }
 function drawTowerRoof(s){
-  if(!s||s.type!=='tower'||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
+  if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
   withPointRoofOcclusion(s,()=>s.shape==='round'?drawRoundTowerRoof(s):drawSquareTowerRoof(s));
 }
 function drawTowerRoofs(){
   const towers=State.structures
-    .filter(s=>s.type==='tower'&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
+    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of towers)drawTowerRoof(s);
 }
@@ -1618,6 +1696,7 @@ function drawCivicStructure(s,preview=false){
 }
 function drawPointStructure(s,preview=false){
   const selected=State.selectedId===s.id,h=structureHeight(s),stroke=selected?'#f4b76f':'#d8c8b4';
+  if(isWoodTower(s)){drawWoodTower(s,preview);return}
   if(s.type==='well'){
     // 3×3U paved civic square around the well. The square is walkable;
     // only the well body itself remains a physical obstacle.
