@@ -53,10 +53,21 @@ function blitSceneCache(layer){
   const r=wrap.getBoundingClientRect(),entry=sceneCache[layer],v=entry.view;
   if(!v)return;
   const m=Number(v.overscan)||0;
+
+  // Pan keeps the original 1:1 cache translation. This preserves the overscan
+  // envelope and avoids exposing/clipping the cached bitmap at the viewport edge.
+  if(!sceneCacheZoomPreview){
+    const dx=State.view.x-v.x,dy=State.view.y-v.y;
+    screenCtx.drawImage(
+      entry.canvas,
+      0,0,entry.canvas.width,entry.canvas.height,
+      dx-m,dy-m,r.width+m*2,r.height+m*2
+    );
+    return;
+  }
+
+  // Only an active wheel gesture may temporarily reproject a stale-scale cache.
   const ratio=(Number(State.view.scale)||1)/(Number(v.scale)||1);
-  // Cached layers may temporarily use a different scale while the wheel is
-  // active. Reproject the raster around the same screen-space camera origin;
-  // the exact vector scene is rebuilt once the gesture settles.
   const dx=State.view.x+(-m-v.x)*ratio;
   const dy=State.view.y+(-m-v.y)*ratio;
   screenCtx.drawImage(
