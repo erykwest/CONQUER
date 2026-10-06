@@ -17,8 +17,10 @@ function withRenderContext(next,fn){
   const prev=ctx;ctx=next;
   try{return fn()}finally{ctx=prev}
 }
+const STATIC_CACHE_DPR_CAP=1.5;
+function staticCacheDpr(){return Math.min(devicePixelRatio||1,STATIC_CACHE_DPR_CAP)}
 function prepareSceneCache(layer){
-  const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1,entry=sceneCache[layer];
+  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),entry=sceneCache[layer];
   const w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
   if(entry.canvas.width!==w||entry.canvas.height!==h){
     entry.canvas.width=w;entry.canvas.height=h;entry.dirty=true;
@@ -33,7 +35,7 @@ function prepareSceneCache(layer){
   return entry;
 }
 function sceneCacheProjectionCompatible(entry){
-  const v=entry?.view,r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;
+  const v=entry?.view,r=wrap.getBoundingClientRect(),d=staticCacheDpr();
   return !!v
     &&Math.abs(v.scale-State.view.scale)<1e-9
     &&v.rotation===(State.view.rotation||0)
