@@ -580,7 +580,7 @@ function makeEnvSea(rnd){
   else points=[{x:WORLD,y:0},{x:WORLD,y:WORLD},...coast.slice().reverse()];
   return{id:'env-sea',type:'sea',side,points,coastline:coast,fill:'#23505a',edge:'#86b3b5'};
 }
-const LANDSCAPE_GENERATION_VERSION=1;
+const LANDSCAPE_GENERATION_VERSION=2;
 function reliefShuffle(list,rnd){
   for(let i=list.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[list[i],list[j]]=[list[j],list[i]]}
   return list;
@@ -591,13 +591,19 @@ function makeProceduralHill(rnd,index){
   const center={x:-18+rnd()*(WORLD+36),y:-18+rnd()*(WORLD+36)};
   const rx=22+rnd()*16,ry=15+rnd()*13,angle=rnd()*Math.PI;
   const ca=Math.cos(angle),sa=Math.sin(angle),angles=[];
-  for(let i=0;i<n;i++)angles.push(i/n*Math.PI*2+(rnd()-.5)*.10);
-  const base=angles.map(a=>{
-    const rr=.84+rnd()*.30,x=Math.cos(a)*rx*rr,y=Math.sin(a)*ry*rr;
+  const phaseA=rnd()*Math.PI*2,phaseB=rnd()*Math.PI*2;
+  for(let i=0;i<n;i++)angles.push(i/n*Math.PI*2+(rnd()-.5)*.055);
+  const base=angles.map((a,i)=>{
+    const rr=1
+      +Math.sin(a*2+phaseA)*(.055+rnd()*.025)
+      +Math.sin(a*3+phaseB)*(.035+rnd()*.018)
+      +(rnd()-.5)*.035;
+    const x=Math.cos(a)*rx*rr,y=Math.sin(a)*ry*rr;
     return{x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca};
   });
   const levels=Array.from({length:maxHeight},(_,i)=>({
     id:`hill-${index+1}-l${i+1}`,hillId:`hill-${index+1}`,level:i+1,z0:i,z1:i+1,
+    center:{x:center.x,y:center.y},
     gentleBase:2,steepBase:.5,edgeKinds:Array(n).fill('gentle'),multiEdges:[],top:[]
   }));
   const steepRefs=[];
@@ -617,15 +623,10 @@ function makeProceduralHill(rnd,index){
       const d=dist(p,center)||1,prevEdge=(i-1+n)%n;
       const width=(reliefEdgeWidth(cur.edgeKinds[i])+reliefEdgeWidth(cur.edgeKinds[prevEdge]))*.5;
       const stacked=multi.has(i)||multi.has(prevEdge);
-      let inset=stacked?width*(.92+rnd()*.18):3.2+rnd()*2.5;
-      inset=Math.min(inset,d*.24);
-      const factor=Math.max(.42,(d-inset)/d),vx=p.x-center.x,vy=p.y-center.y;
-      let x=center.x+vx*factor,y=center.y+vy*factor;
-      if(!stacked){
-        const L=Math.hypot(vx,vy)||1,jitter=(rnd()-.5)*.34;
-        x+=-vy/L*jitter;y+=vx/L*jitter;
-      }
-      return{x,y};
+      let inset=stacked?width*(1.02+rnd()*.10):3.6+rnd()*1.8;
+      inset=Math.min(inset,d*.20);
+      const factor=Math.max(.48,(d-inset)/d),vx=p.x-center.x,vy=p.y-center.y;
+      return{x:center.x+vx*factor,y:center.y+vy*factor};
     });
   }
   return{id:`hill-${index+1}`,center,rx,ry,maxHeight,levels};
@@ -637,9 +638,8 @@ function hillIntersectsWorld(hill){
   return maxX>=0&&minX<=WORLD&&maxY>=0&&minY<=WORLD;
 }
 function hillSpacingOk(hill,hills,relax=false){
-  if(relax)return true;
-  const r=Math.sqrt(hill.rx*hill.ry);
-  return hills.every(other=>dist(hill.center,other.center)>(r+Math.sqrt(other.rx*other.ry))*.48);
+  const r=Math.sqrt(hill.rx*hill.ry),factor=relax?.62:.78;
+  return hills.every(other=>dist(hill.center,other.center)>(r+Math.sqrt(other.rx*other.ry))*factor);
 }
 function estimateReliefCoverage(samples=72){
   if(!State.relief?.hills?.length)return 0;
