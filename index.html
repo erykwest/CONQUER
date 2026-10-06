@@ -4,12 +4,21 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CONQUER — Settlement Builder</title>
-<script type="module">
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.1';
-import polygonClipping from 'https://esm.sh/polygon-clipping@0.15.7';
-window.__createSupabaseClient = createClient;
-window.__polygonClipping = polygonClipping;
-window.dispatchEvent(new Event('polygon-clipping-ready'));
+<script>
+(() => {
+  import('https://esm.sh/@supabase/supabase-js@2.117.1')
+    .then(mod => { window.__createSupabaseClient = mod.createClient; })
+    .catch(err => console.warn('Supabase unavailable; local persistence remains active.', err));
+
+  import('https://esm.sh/polygon-clipping@0.15.7')
+    .then(mod => {
+      window.__polygonClipping = mod.default;
+      window.dispatchEvent(new Event('polygon-clipping-ready'));
+      if (typeof invalidateSceneCache === 'function') invalidateSceneCache();
+      if (typeof draw === 'function') draw();
+    })
+    .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
+})();
 </script>
 <link rel="stylesheet" href="./src/settlement.css">
 </head>
