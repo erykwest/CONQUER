@@ -30,7 +30,7 @@ function drawGatePortalOnEdge(edge){
 }
 function drawGatePortals(){
   for(const s of State.structures){
-    if(s.type!=='gate'||underConstruction(s))continue;
+    if(s.type!=='gate'||isWoodGate(s)||underConstruction(s))continue;
     withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
       for(const edge of gateFacadeEdges(s)){
         if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge);
@@ -440,6 +440,7 @@ function drawFacadeWindows(lit=false,nf=1){
     }else if(s.type==='built'){
       drawBuiltWindows(s,lit,nf);
     }else if(s.type==='gate'){
+      if(isWoodGate(s))continue;
       withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf));
     }else if(s.type==='tower'){
       if(isWoodTower(s))continue;
