@@ -271,7 +271,7 @@ function finishCanvasPan(){
 canvas.addEventListener('pointerup',finishCanvasPan);
 canvas.addEventListener('pointercancel',finishCanvasPan);
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,10);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;invalidateSceneCache();draw();if(State.view.scale>=WEATHER_ZOOM_THRESHOLD)clearWeatherOverlay()},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,before=s2w(sx,sy),factor=e.deltaY<0?1.12:.89;State.view.scale=clamp(State.view.scale*factor,.2,10);const after=w2s(before);State.view.x+=sx-after.x;State.view.y+=sy-after.y;invalidateSceneCache();draw();if(State.view.scale>=WEATHER_ZOOM_THRESHOLD)clearWeatherCloudLayer();drawWeatherOverlay()},{passive:false});
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
 for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const level=State.buildLevels.wall,tier=State.buildLevels.wallTier;setTool({kind:'linear',linear:b.dataset.linear,level,tier,label:(b.dataset.linear==='wall'?`Wall T${tier}`:'Built section')+` L${level} — choose point A`,el:b})};
@@ -466,8 +466,7 @@ function setWeatherOverride(kind){
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';
   syncDevButtons();
   status(State.weatherOverride?('FORCE METEO: '+State.weatherOverride):'Meteo: procedurale');
-  if(State.view.scale<WEATHER_ZOOM_THRESHOLD)drawWeatherOverlay();
-  else clearWeatherOverlay();
+  drawWeatherOverlay();
 }
 function setSeason(season){
   if(!['summer','autumn','winter','spring'].includes(season))return;
@@ -477,7 +476,7 @@ function setSeason(season){
   syncDevButtons();
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';
   invalidateSceneCache('base');saveLocal();draw();
-  if(State.view.scale<WEATHER_ZOOM_THRESHOLD)drawWeatherOverlay();
+  drawWeatherOverlay();
   status(State.seasonOverride?'FORCE SEASON: '+labels[State.seasonOverride]+' — clicca di nuovo per tornare al calendario':'Stagione: calendario automatico');
 }
 function ensureDevControls(){
@@ -629,9 +628,16 @@ function simulationFrame(now){
       simPersistAt=now;
     }
   }
-  const weatherActive=State.view.scale<WEATHER_ZOOM_THRESHOLD;
-  if(weatherActive&&now-weatherDrawAt>=WEATHER_FRAME_MS){drawWeatherOverlay(now);weatherDrawAt=now;weatherLayerActive=true}
-  else if(!weatherActive&&weatherLayerActive){clearWeatherOverlay();weatherLayerActive=false}
+  const weather=currentWeather();
+  const weatherActive=State.view.scale<WEATHER_ZOOM_THRESHOLD||weather.wind>.15||weather.rain>0||weather.snow>0||weather.lightning>0;
+  if(weatherActive&&now-weatherDrawAt>=WEATHER_FRAME_MS){
+    drawWeatherOverlay(now);
+    weatherDrawAt=now;
+    weatherLayerActive=true;
+  }else if(!weatherActive&&weatherLayerActive){
+    clearWeatherOverlay();
+    weatherLayerActive=false;
+  }
   requestAnimationFrame(simulationFrame);
 }
 requestAnimationFrame(simulationFrame);

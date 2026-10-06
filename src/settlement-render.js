@@ -512,15 +512,18 @@ function currentWeather(){
 }
 function weatherNoise(seed,index){return weatherHash01(seed^Math.imul(index+1,0x85ebca6b))}
 let cloudLayerKey='';
+function clearWeatherCloudLayer(){
+  if(!weatherCloudLayer)return;
+  weatherCloudLayer.replaceChildren();
+  weatherCloudLayer.style.opacity='0';
+  cloudLayerKey='';
+}
 function clearWeatherOverlay(){
   if(weatherCtx&&weatherCanvas){
     const r=wrap.getBoundingClientRect();
     weatherCtx.clearRect(0,0,r.width,r.height);
   }
-  if(weatherCloudLayer){
-    weatherCloudLayer.replaceChildren();
-    cloudLayerKey='';
-  }
+  clearWeatherCloudLayer();
 }
 function buildCloudLayer(weather,w,h){
   if(!weatherCloudLayer)return;
@@ -565,7 +568,7 @@ function drawCloudLayer(weather,w,h,t){
 }
 function drawWindLayer(g,w,h,t,weather){
   if(weather.wind<=.15)return;
-  const count=Math.round(12+16*weather.wind);
+  const count=Math.round(24+32*weather.wind);
   g.save();g.lineCap='round';g.lineWidth=1.05;g.strokeStyle='rgba(232,235,231,.30)';
   for(let i=0;i<count;i++){
     const a=weatherNoise(weather.seed,i*3),b=weatherNoise(weather.seed,i*3+1),c=weatherNoise(weather.seed,i*3+2);
@@ -580,7 +583,7 @@ function drawWindLayer(g,w,h,t,weather){
 }
 function drawRainLayer(g,w,h,t,weather){
   if(!weather.rain)return;
-  const count=Math.round(72*weather.rain);
+  const count=Math.round(144*weather.rain);
   g.save();g.lineWidth=1;g.strokeStyle='rgba(190,218,232,.52)';g.beginPath();
   for(let i=0;i<count;i++){
     const a=weatherNoise(weather.seed,400+i*3),b=weatherNoise(weather.seed,401+i*3),c=weatherNoise(weather.seed,402+i*3);
@@ -594,7 +597,7 @@ function drawRainLayer(g,w,h,t,weather){
 }
 function drawSnowLayer(g,w,h,t,weather){
   if(!weather.snow)return;
-  const count=78;
+  const count=156;
   g.save();g.fillStyle='rgba(245,248,244,.78)';
   for(let i=0;i<count;i++){
     const a=weatherNoise(weather.seed,800+i*4),b=weatherNoise(weather.seed,801+i*4),c=weatherNoise(weather.seed,802+i*4),d=weatherNoise(weather.seed,803+i*4);
@@ -609,33 +612,53 @@ function drawSnowLayer(g,w,h,t,weather){
 }
 function drawLightningLayer(g,w,h,t,weather){
   if(!weather.lightning)return;
-  const period=7+weatherNoise(weather.seed,1201)*7;
+  const period=4.5+weatherNoise(weather.seed,1201)*4.5;
   const phase=(t+weatherNoise(weather.seed,1202)*period)%period;
-  const flash=phase<.09?1:(phase>.16&&phase<.22?.55:0);
+  let flash=0;
+  if(phase<.12)flash=1;
+  else if(phase>=.18&&phase<.30)flash=.72;
+  else if(phase>=.36&&phase<.46)flash=.48;
   if(!flash)return;
+
   g.save();
-  g.fillStyle='rgba(235,244,255,'+(.12*flash)+')';g.fillRect(0,0,w,h);
+  const night=clamp(nightFactor(),0,1);
+  const skyFlash=(.12+night*.55)*flash;
+  g.globalCompositeOperation='screen';
+  g.fillStyle='rgba(225,242,255,'+skyFlash.toFixed(3)+')';
+  g.fillRect(0,0,w,h);
+  g.globalCompositeOperation='source-over';
+
   const startX=w*(.18+.64*weatherNoise(weather.seed,1203));
-  const endY=h*(.44+.28*weatherNoise(weather.seed,1204));
-  g.strokeStyle='rgba(220,246,255,'+(.96*flash)+')';
-  g.shadowColor='rgba(190,235,255,.98)';g.shadowBlur=18;g.lineWidth=1.9;
+  const endY=h*(.48+.32*weatherNoise(weather.seed,1204));
+  g.strokeStyle='rgba(220,246,255,'+(.98*flash)+')';
+  g.shadowColor='rgba(190,235,255,1)';
+  g.shadowBlur=24;
+  g.lineWidth=2.2;
+
   const trunk=[{x:startX,y:-10}];
   let x=startX,y=-10;
-  for(let i=0;i<8;i++){
-    y+=(endY+10)/8;
-    x+=(weatherNoise(weather.seed,1210+i)-.5)*42;
+  for(let i=0;i<9;i++){
+    y+=(endY+10)/9;
+    x+=(weatherNoise(weather.seed,1210+i)-.5)*50;
     trunk.push({x,y});
   }
+
   g.beginPath();g.moveTo(trunk[0].x,trunk[0].y);
   for(let i=1;i<trunk.length;i++)g.lineTo(trunk[i].x,trunk[i].y);
   g.stroke();
-  g.lineWidth=1.15;
+
+  g.lineWidth=1.25;
   for(let i=2;i<trunk.length-1;i+=2){
     const p=trunk[i],dir=weatherNoise(weather.seed,1240+i)<.5?-1:1;
-    const length=22+weatherNoise(weather.seed,1250+i)*34;
-    const mid={x:p.x+dir*length*.58,y:p.y+length*.28};
+    const length=28+weatherNoise(weather.seed,1250+i)*42;
+    const mid={x:p.x+dir*length*.54,y:p.y+length*.24};
     const end={x:p.x+dir*length,y:p.y+length*.58};
     g.beginPath();g.moveTo(p.x,p.y);g.lineTo(mid.x,mid.y);g.lineTo(end.x,end.y);g.stroke();
+
+    if(weatherNoise(weather.seed,1270+i)>.48){
+      const sub={x:mid.x-dir*length*.34,y:mid.y+length*.30};
+      g.beginPath();g.moveTo(mid.x,mid.y);g.lineTo(sub.x,sub.y);g.stroke();
+    }
   }
   g.restore();
 }
@@ -643,13 +666,18 @@ function drawWeatherOverlay(now=performance.now()){
   if(!weatherCtx||!weatherCanvas)return;
   const r=wrap.getBoundingClientRect(),w=r.width,h=r.height;
   weatherCtx.clearRect(0,0,w,h);
-  if(State.view.scale>=WEATHER_ZOOM_THRESHOLD)return;
   const weather=currentWeather(),t=now/1000;
-  const fade=clamp((WEATHER_ZOOM_THRESHOLD-State.view.scale)/.10,0,1);
-  if(fade<=0)return;
-  drawCloudLayer(weather,w,h,t);
-  if(weatherCloudLayer)weatherCloudLayer.style.opacity=String(.30+.70*fade);
-  weatherCtx.save();weatherCtx.globalAlpha=.35+.65*fade;
+
+  if(State.view.scale<WEATHER_ZOOM_THRESHOLD){
+    const cloudFade=clamp((WEATHER_ZOOM_THRESHOLD-State.view.scale)/.10,0,1);
+    drawCloudLayer(weather,w,h,t);
+    if(weatherCloudLayer)weatherCloudLayer.style.opacity=String(.30+.70*cloudFade);
+  }else{
+    clearWeatherCloudLayer();
+  }
+
+  weatherCtx.save();
+  weatherCtx.globalAlpha=1;
   drawWindLayer(weatherCtx,w,h,t,weather);
   drawRainLayer(weatherCtx,w,h,t,weather);
   drawSnowLayer(weatherCtx,w,h,t,weather);
