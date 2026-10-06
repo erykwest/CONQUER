@@ -580,7 +580,7 @@ function makeEnvSea(rnd){
   else points=[{x:WORLD,y:0},{x:WORLD,y:WORLD},...coast.slice().reverse()];
   return{id:'env-sea',type:'sea',side,points,coastline:coast,fill:'#23505a',edge:'#86b3b5'};
 }
-const LANDSCAPE_GENERATION_VERSION=3;
+const LANDSCAPE_GENERATION_VERSION=4;
 function reliefShuffle(list,rnd){
   for(let i=list.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[list[i],list[j]]=[list[j],list[i]]}
   return list;
@@ -588,6 +588,7 @@ function reliefShuffle(list,rnd){
 function reliefEdgeWidth(kind){return kind==='steep'?.5:2}
 const STEEP_RATIO_BY_LEVEL=Object.freeze({1:.20,2:.30,3:.40,4:.50,5:.60});
 const RELIEF_MAX_EDGE=4;
+const RELIEF_L1_MIN_GAP=3;
 function resampleClosedPolygonMaxEdge(points,maxLen=RELIEF_MAX_EDGE){
   const out=[];
   for(let i=0;i<points.length;i++){
@@ -662,9 +663,14 @@ function hillIntersectsWorld(hill){
   const minY=Math.min(...pts.map(p=>p.y))-2,maxY=Math.max(...pts.map(p=>p.y))+2;
   return maxX>=0&&minX<=WORLD&&maxY>=0&&minY<=WORLD;
 }
-function hillSpacingOk(hill,hills,relax=false){
-  const r=Math.sqrt(hill.rx*hill.ry),factor=relax?.62:.78;
-  return hills.every(other=>dist(hill.center,other.center)>(r+Math.sqrt(other.rx*other.ry))*factor);
+function hillL1Gap(a,b){
+  const pa=a?.levels?.[0]?.top||[],pb=b?.levels?.[0]?.top||[];
+  if(pa.length<3||pb.length<3)return Infinity;
+  if(polygonsOverlapSimple(pa,pb))return 0;
+  return polygonGap(pa,pb);
+}
+function hillSpacingOk(hill,hills){
+  return hills.every(other=>hillL1Gap(hill,other)>=RELIEF_L1_MIN_GAP-.001);
 }
 function reliefFootprintContains(p){
   for(const hill of State.relief?.hills||[]){
@@ -718,11 +724,10 @@ function generateRelief(){
   State.relief={version:LANDSCAPE_GENERATION_VERSION,seed:reliefSeed,hills:[],stats:null};
   clearReliefBandCache();
   let coverage=0,attempts=0;
-  while(coverage<.20&&State.relief.hills.length<14&&attempts<220){
+  while(coverage<.20&&State.relief.hills.length<14&&attempts<320){
     const candidate=makeProceduralHill(rnd,State.relief.hills.length);
-    const relax=attempts>140;
     attempts++;
-    if(!hillIntersectsWorld(candidate)||!hillSpacingOk(candidate,State.relief.hills,relax))continue;
+    if(!hillIntersectsWorld(candidate)||!hillSpacingOk(candidate,State.relief.hills))continue;
     State.relief.hills.push(candidate);
     clearReliefBandCache();
     coverage=estimateReliefCoverage(44);
