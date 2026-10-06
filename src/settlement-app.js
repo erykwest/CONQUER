@@ -509,24 +509,25 @@ function generateNewMap(){
   State.seed=freshLandscapeSeed();
   localStorage.setItem('conquer.seed.0.0',String(State.seed));
 
-  // Hard reset ONLY the generated landscape and auto-growth geometry.
-  // Player-built structures remain available for regression testing.
+  // True new-map reset: nothing from the previous settlement survives.
   State.relief=null;
   State.environment=[];
-  State.structures=State.structures.filter(s=>!s.auto);
-  if(State.village.founded){
-    State.village.growthStep=0;
-    State.village.nextGrowthDay=State.clock.day+.75;
-    State.village.roadPlan=null;
-    State.village.baseRoadAngle=null;
-    State.village.accessRoadVersion=0;
-  }
+  State.structures=[];
+  State.pendingWellId=null;
+  State.selectedId=null;
+  State.draft=null;
+  State.village={
+    name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,
+    growthStep:0,nextGrowthDay:null,roadPlan:null,baseRoadAngle:null
+  };
+  peasantPathCache.clear();
+  peasantPathSignature='';
+  fieldWorkAssignmentCache={key:null,map:new Map()};
 
   clearReliefBandCache();
   generateRelief();
   generateEnvironment();
   invalidateNavigation(false);
-  fieldWorkAssignmentCache={key:null,map:new Map()};
   invalidateSceneCache();
   saveLocal();
   markDirty();
