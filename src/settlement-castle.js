@@ -43,6 +43,7 @@ function structureHeight(s){
   if(s.type==='tower'){const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12}
   if(s.type==='gate')return [2.8,4.0,5.2][structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
+  if(s.type==='palisade')return 1.15;
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
   if(s.type==='house')return houseStructureHeight(s);
@@ -57,7 +58,7 @@ function footprintPoints(s){
   if(s.type==='tower'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
   if(['tower','gate'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
-  if(['wall','built'].includes(s.type))return linePoly(s);
+  if(['wall','palisade','built'].includes(s.type))return linePoly(s);
   if(s.type==='house'){
     const parts=houseFootprintParts(s),pts=parts.flatMap(p=>p.points);
     if(parts.length===1)return pts;
@@ -531,7 +532,7 @@ function wallEndpointSnapOccupied(wall,end){
 function nearestWallPlacementSnap(p){
   let best=null,bestD=Infinity;
   for(const wall of State.structures){
-    if(wall.auto||wall.type!=='wall')continue;
+    if(wall.auto||!['wall','palisade'].includes(wall.type))continue;
     const reach=TOWER_WALL_MAGNET+(Number(wall.width)||.5)/2;
     for(const end of ['a','b']){
       if(wallEndpointSnapOccupied(wall,end))continue;
@@ -587,7 +588,7 @@ function towerWallConnectionRecords(tower){
   const records=[],seen=new Set();
 
   for(const link of Array.isArray(tower.wallConnections)?tower.wallConnections:[]){
-    const wall=State.structures.find(s=>s.id===link.wallId&&s.type==='wall');if(!wall)continue;
+    const wall=State.structures.find(s=>s.id===link.wallId&&['wall','palisade'].includes(s.type));if(!wall)continue;
     const end=link.end==='b'?'b':'a',key=wall.id+':'+end;if(seen.has(key))continue;
     records.push({
       wallId:wall.id,end,
@@ -600,7 +601,7 @@ function towerWallConnectionRecords(tower){
 
   // Legacy/persisted walls may already point to the tower without reciprocal metadata.
   for(const wall of State.structures){
-    if(wall.type!=='wall')continue;
+    if(!['wall','palisade'].includes(wall.type))continue;
     for(const end of ['a','b']){
       const snapId=end==='a'?wall.aSnap:wall.bSnap;
       if(snapId!==tower.id)continue;
@@ -612,7 +613,7 @@ function towerWallConnectionRecords(tower){
   return records;
 }
 function setTowerWallConnection(tower,wall,end,anchor){
-  if(!tower||!wall||tower.type!=='tower'||wall.type!=='wall')return;
+  if(!tower||!wall||tower.type!=='tower'||!['wall','palisade'].includes(wall.type))return;
   const list=towerWallConnectionRecords(tower).filter(x=>!(x.wallId===wall.id&&x.end===end));
   list.push({wallId:wall.id,end,anchor:{x:anchor.x,y:anchor.y}});
   tower.wallConnections=list;
@@ -626,7 +627,7 @@ function invalidateCastleColliderGeometry(...structures){
   invalidateNavigation();
 }
 function regenerateTowerWallPair(tower,wall,end,anchor=null){
-  if(!tower||tower.type!=='tower'||!wall||wall.type!=='wall')return false;
+  if(!tower||tower.type!=='tower'||!wall||!['wall','palisade'].includes(wall.type))return false;
   end=end==='b'?'b':'a';
   const other=end==='a'?wall.b:wall.a;
   if(!other)return false;
@@ -646,7 +647,7 @@ function regenerateTowerWallPair(tower,wall,end,anchor=null){
   return dist(wall[end],boundaryPoint(tower,other))<=.015;
 }
 function attachTowerToWallEndpoint(wallId,end,tower,anchor){
-  const wall=State.structures.find(s=>s.id===wallId&&s.type==='wall');
+  const wall=State.structures.find(s=>s.id===wallId&&['wall','palisade'].includes(s.type));
   if(!wall||!tower||tower.type!=='tower'||!['a','b'].includes(end))return false;
   if(wallEndpointSnapOccupied(wall,end))return false;
   return regenerateTowerWallPair(tower,wall,end,anchor||wall[end]);
@@ -654,7 +655,7 @@ function attachTowerToWallEndpoint(wallId,end,tower,anchor){
 function restoreTowerWallConnections(tower){
   if(!tower||tower.type!=='tower')return;
   for(const link of towerWallConnectionRecords(tower)){
-    const wall=State.structures.find(s=>s.id===link.wallId&&s.type==='wall');if(!wall)continue;
+    const wall=State.structures.find(s=>s.id===link.wallId&&['wall','palisade'].includes(s.type));if(!wall)continue;
     const end=link.end==='b'?'b':'a';
     wall[end]={...link.anchor};
     if(end==='a'&&wall.aSnap===tower.id)wall.aSnap=null;
@@ -671,14 +672,14 @@ function syncCompletedTowerWallColliders(force=false){
     if(!links.length)continue;
 
     const signature=links.map(l=>{
-      const wall=State.structures.find(s=>s.id===l.wallId&&s.type==='wall');
+      const wall=State.structures.find(s=>s.id===l.wallId&&['wall','palisade'].includes(s.type));
       return wall?l.wallId+':'+l.end+':'+(underConstruction(wall)?'0':'1'):'missing';
     }).join('|');
     if(!force&&tower.wallColliderSyncSignature===signature)continue;
 
     let allReady=true,localChanged=0;
     for(const link of links){
-      const wall=State.structures.find(s=>s.id===link.wallId&&s.type==='wall');
+      const wall=State.structures.find(s=>s.id===link.wallId&&['wall','palisade'].includes(s.type));
       if(!wall){allReady=false;continue}
       if(underConstruction(wall)){allReady=false;continue}
       if(regenerateTowerWallPair(tower,wall,link.end,link.anchor))localChanged++;
@@ -696,7 +697,7 @@ function syncCompletedTowerWallColliders(force=false){
   return changed;
 }
 function breakWallForTower(wallId,tower){
-  const wall=State.structures.find(s=>s.id===wallId&&s.type==='wall');
+  const wall=State.structures.find(s=>s.id===wallId&&['wall','palisade'].includes(s.type));
   if(!wall||!tower||tower.type!=='tower')return false;
   const dx=wall.b.x-wall.a.x,dy=wall.b.y-wall.a.y,L=Math.hypot(dx,dy);
   if(L<=1e-6)return false;
@@ -741,7 +742,7 @@ function addTowerWithPlacement(tower,snap={}){
   }
 
   if(snap.wallId){
-    const wall=State.structures.find(s=>s.id===snap.wallId&&s.type==='wall');
+    const wall=State.structures.find(s=>s.id===snap.wallId&&['wall','palisade'].includes(s.type));
     const anchor=wall&&snap.wallEnd?{...wall[snap.wallEnd]}:{x:tower.x,y:tower.y};
     const attached=snap.wallEnd
       ?attachTowerToWallEndpoint(snap.wallId,snap.wallEnd,tower,anchor)
@@ -755,7 +756,7 @@ function addTowerWithPlacement(tower,snap={}){
   return true;
 }
 function currentLinearSpec(){
-  if(State.tool.linear==='wall')return{...TYPES.wall,width:wallWidthForTier(State.tool.tier||State.buildLevels.wallTier)};
+  if(['wall','palisade'].includes(State.tool.linear))return{...TYPES[State.tool.linear],width:wallWidthForTier(State.tool.tier||State.buildLevels.wallTier)};
   return TYPES.built;
 }
 function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
@@ -782,13 +783,99 @@ function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower')return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
     ?{top:'#9a8e82',sideA:'#49443f',sideB:'#686057',stroke:selected?'#f4b76f':'#d8c8b4'}
     :{top:'#9b7457',sideA:'#5c4436',sideB:'#715441',stroke:selected?'#f4b76f':'#d8c8b4'};
   extrudePolygon(linePoly(s),h,colors);
+}
+function palisadeLayout(s){
+  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1;
+  const ux=dx/L,uy=dy/L,nx=-uy,ny=ux,side=wallExteriorSide(s);
+  const width=Number(s.width)||wallWidthForTier(wallTier(s)),tier=wallTier(s),postR=.10;
+  const exterior=width/2,postOffset=tier===1?0:Math.max(0,exterior-postR);
+  const point=(p,offset)=>({x:p.x+nx*offset*side,y:p.y+ny*offset*side});
+  return{dx,dy,L,ux,uy,nx,ny,side,width,tier,postR,postOffset,point};
+}
+function palisadeOctagon(center,r,angle=0){
+  const pts=[];
+  for(let i=0;i<8;i++){
+    const a=angle+Math.PI/8+i*Math.PI/4;
+    pts.push({x:center.x+Math.cos(a)*r,y:center.y+Math.sin(a)*r});
+  }
+  return pts;
+}
+function drawPalisadePost(center,r,bodyZ,tipZ,angle){
+  const base=palisadeOctagon(center,r,angle);
+  extrudePolygonAt(base,0,bodyZ,{top:'#765238',sideA:'#51341f',sideB:'#65452b',stroke:'#8b6547'});
+  const apex=w2s(center,tipZ),top=projectPath(base,bodyZ),faces=[];
+  for(let i=0;i<8;i++){
+    const j=(i+1)%8,depth=(top[i].y+top[j].y)/2;
+    faces.push({poly:[top[i],top[j],apex],depth,fill:i%2?'#c29a6b':'#b68a5e'});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.poly,f.fill,'rgba(90,59,35,.55)',.65);
+}
+function drawPalisadeWalkway(s,g){
+  const innerOuter=g.postOffset-.05,innerEdge=-g.width/2+.035,z0=.66,z1=.74;
+  const a0=g.point(s.a,innerOuter),b0=g.point(s.b,innerOuter);
+  const a1=g.point(s.a,innerEdge),b1=g.point(s.b,innerEdge);
+  extrudePolygonAt([a0,b0,b1,a1],z0,z1,{top:'#8b6845',sideA:'#4f3927',sideB:'#65492f',stroke:'#a27b54'});
+  const bays=Math.max(1,Math.floor(g.L/.72));
+  for(let i=0;i<=bays;i++){
+    const t=i/bays,p={x:s.a.x+g.dx*t,y:s.a.y+g.dy*t};
+    const q0=w2s(g.point(p,innerOuter),z1+.008),q1=w2s(g.point(p,innerEdge),z1+.008);
+    ctx.save();ctx.strokeStyle='rgba(69,46,29,.48)';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(q0.x,q0.y);ctx.lineTo(q1.x,q1.y);ctx.stroke();ctx.restore();
+  }
+}
+function drawPalisadeEarthwork(s,g){
+  const crestOuter=g.postOffset-.055,crestInner=crestOuter-.18;
+  const earthH=Math.max(.28,Math.min(.70,crestInner+g.width/2));
+  const toe=crestInner-earthH;
+  const ao=g.point(s.a,crestOuter),bo=g.point(s.b,crestOuter);
+  const ac=g.point(s.a,crestInner),bc=g.point(s.b,crestInner);
+  const at=g.point(s.a,toe),bt=g.point(s.b,toe);
+
+  // Retained outer face behind the stakes.
+  pathPolygon([w2s(ao,0),w2s(bo,0),w2s(bo,earthH),w2s(ao,earthH)],'#5a4128','#765738',.8);
+  // Flat crest gives the two patrols a usable top strip.
+  pathPolygon([w2s(ao,earthH),w2s(bo,earthH),w2s(bc,earthH),w2s(ac,earthH)],'#76603a','#8f7650',.8);
+  // 45° inner earth slope: vertical drop equals horizontal run.
+  pathPolygon([w2s(ac,earthH),w2s(bc,earthH),w2s(bt,0),w2s(at,0)],'#655033','#7d6744',.8);
+  // End caps keep the wedge readable at open ends.
+  pathPolygon([w2s(ao,0),w2s(ao,earthH),w2s(ac,earthH),w2s(at,0)],'#544128','#755b38',.7);
+  pathPolygon([w2s(bo,0),w2s(bo,earthH),w2s(bc,earthH),w2s(bt,0)],'#5d492d','#806542',.7);
+  return{earthH,crestOuter,crestInner,toe};
+}
+function palisadePatrolSurface(s){
+  const g=palisadeLayout(s);
+  if(g.tier===1)return{z:structureHeight(s)+.10,offset:0,spread:0};
+  if(g.tier===2){
+    const outer=g.postOffset-.05,inner=-g.width/2+.035;
+    return{z:.84,offset:(outer+inner)/2,spread:Math.min(.10,Math.abs(outer-inner)*.28)};
+  }
+  const crestOuter=g.postOffset-.055,crestInner=crestOuter-.18;
+  const earthH=Math.max(.28,Math.min(.70,crestInner+g.width/2));
+  return{z:earthH+.10,offset:(crestOuter+crestInner)/2,spread:Math.min(.07,Math.abs(crestOuter-crestInner)*.30)};
+}
+function drawPalisade(s,preview=false){
+  const g=palisadeLayout(s),selected=State.selectedId===s.id;
+  if(g.tier===2)drawPalisadeWalkway(s,g);
+  else if(g.tier===3)drawPalisadeEarthwork(s,g);
+
+  const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),bodyZ=.93,tipZ=1.15;
+  for(let i=0;i<=count;i++){
+    const t=i/count,p={x:s.a.x+g.dx*t,y:s.a.y+g.dy*t};
+    const center=g.point(p,g.postOffset);
+    drawPalisadePost(center,g.postR,bodyZ,tipZ,Math.atan2(g.dy,g.dx));
+  }
+
+  if(selected){
+    const fp=projectPath(linePoly(s),.025);
+    pathPolygon(fp,null,'#f4b76f',2);
+  }
 }
 function builtRoofFootprintPoints(s){
   let a={...s.a},b={...s.b};
