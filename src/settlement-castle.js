@@ -698,12 +698,12 @@ async function loadForestTreeSprites(){
 loadForestTreeSprites();
 
 function drawTree(tree){
-  if(!forestTreeSpritesReady)return;
+  if(!forestTreeSpritesReady||!screenPointVisibleRaw(tree.p,tree.z||0,44))return false;
   const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
   const colorIndex=season==='winter'?0:tree.colorIndex;
   const img=forestTreeSprites[season]?.[tree.shapeIndex]?.[colorIndex];
-  if(!img)return;
-  const base=w2s(tree.p,0);
+  if(!img)return false;
+  const base=w2sRaw(tree.p,tree.z||0);
   const size=Math.max(10,U*State.view.scale*2.25*tree.scale);
   ctx.save();
   if(tree.flip){
@@ -713,9 +713,10 @@ function drawTree(tree){
   }else{
     ctx.drawImage(img,base.x-size*.5,base.y-size*.94,size,size);
   }
-  ctx.restore();
+  ctx.restore();return true;
 }
 const forestGroundPatternCanvases={};
+const forestGroundPatternsByContext=new WeakMap();
 function getForestGroundPattern(){
   const key=State.season==='winter'?'winter':'green';
   if(!forestGroundPatternCanvases[key]){
@@ -742,13 +743,27 @@ function getForestGroundPattern(){
     }
     forestGroundPatternCanvases[key]=off;
   }
-  return ctx.createPattern(forestGroundPatternCanvases[key],'repeat');
+  let patterns=forestGroundPatternsByContext.get(ctx);
+  if(!patterns){patterns={};forestGroundPatternsByContext.set(ctx,patterns)}
+  if(!patterns[key])patterns[key]=ctx.createPattern(forestGroundPatternCanvases[key],'repeat');
+  return patterns[key];
+}
+function forestGroundLayout(f){
+  ensureLandscapeRenderCaches();
+  if(forestGroundLayoutCache.has(f.id))return forestGroundLayoutCache.get(f.id);
+  const pts=(f.points||[]).map(p=>({x:p.x,y:p.y,z:terrainElevation(p)}));
+  forestGroundLayoutCache.set(f.id,pts);return pts;
 }
 function drawForestGround(f){
-  const pts=projectPath(f.points);
-  if(!pts.length)return;
+  const layout=forestGroundLayout(f),pts=layout.map(p=>w2sRaw(p,p.z));
+  if(!pts.length||!screenPolygonVisible(pts,72))return;
   ctx.save();
-  const world=projectPath([{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}]);
+  const world=[
+    w2sRaw({x:0,y:0},terrainElevation({x:0,y:0})),
+    w2sRaw({x:WORLD,y:0},terrainElevation({x:WORLD,y:0})),
+    w2sRaw({x:WORLD,y:WORLD},terrainElevation({x:WORLD,y:WORLD})),
+    w2sRaw({x:0,y:WORLD},terrainElevation({x:0,y:WORLD}))
+  ];
   ctx.beginPath();
   world.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
@@ -764,26 +779,37 @@ function drawForestGround(f){
   ctx.restore();
 }
 function forestTreeCount(f){
-  return clamp(Math.round((f.rx||5)*(f.ry||4)*1.55),22,58);
+  return clamp(Math.round((f.rx||5)*(f.ry||4)*LANDSCAPE_RENDER_BUDGET.forestDensity),LANDSCAPE_RENDER_BUDGET.forestMin,LANDSCAPE_RENDER_BUDGET.forestMax);
 }
-function drawForestMask(f){
-  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0);
-  const trees=[],target=forestTreeCount(f);
+function forestTreeLayout(f){
+  ensureLandscapeRenderCaches();
+  if(forestTreeLayoutCache.has(f.id))return forestTreeLayoutCache.get(f.id);
+  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),trees=[],target=forestTreeCount(f);
   let attempts=0;
-  while(trees.length<target&&attempts<target*14){
+  while(trees.length<target&&attempts<target*12){
     attempts++;
     const p={x:f.x+(rnd()-.5)*f.rx*1.9,y:f.y+(rnd()-.5)*f.ry*1.9};
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
     trees.push({
-      p,
+      p,z:terrainElevation(p),
       shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
       colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),
       flip:rnd()<.5,
       scale:.8+rnd()*.4
     });
   }
-  trees.sort((a,b)=>w2s(a.p,0).y-w2s(b.p,0).y);
-  for(const tree of trees)drawTree(tree);
+  forestTreeLayoutCache.set(f.id,trees);return trees;
+}
+function drawForestMask(f){
+  const tier=landscapeDetailTier();
+  const trees=forestTreeLayout(f)
+    .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
+    .filter(tree=>screenPointVisibleRaw(tree.p,tree.z,50))
+    .slice()
+    .sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y);
+  let drawn=0;
+  for(const tree of trees)if(drawTree(tree))drawn++;
+  if(window.__conquerPerf)window.__conquerPerf.forestTrees=(window.__conquerPerf.forestTrees||0)+drawn;
 }
 
 function ellipseWorldPoints(f,n=28){
