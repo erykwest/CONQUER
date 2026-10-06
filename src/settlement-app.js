@@ -205,7 +205,12 @@ function renderFunctionPanel(){
 }
 let pan=null;
 canvas.addEventListener('pointerdown',e=>{
-  if(e.button===1||e.button===2){pan={x:e.clientX,y:e.clientY,vx:State.view.x,vy:State.view.y};canvas.setPointerCapture(e.pointerId);return}
+  if(e.button===1||e.button===2){
+    pan={x:e.clientX,y:e.clientY,vx:State.view.x,vy:State.view.y};
+    sceneCachePanPreview=true;
+    canvas.setPointerCapture(e.pointerId);
+    return
+  }
   const sp=pointerScreen(e),p=s2w(sp.x,sp.y);
   if(State.tool.kind==='select'){selectStructure(structureAtScreen(sp)||structureAt(p));return}
   if(State.tool.kind==='delete'){const hit=structureAtScreen(sp)||structureAt(p);if(hit)deleteStructure(hit.id);return}
@@ -355,6 +360,7 @@ function finishCanvasPan(){
   }
   if(panFrame){cancelAnimationFrame(panFrame);panFrame=0}
   pan=null;
+  sceneCachePanPreview=false;
   // During drag the static bitmap is translated cheaply. Rasterize once at
   // the final camera so subsequent frames have full coverage and zero offset.
   invalidateSceneCache();
