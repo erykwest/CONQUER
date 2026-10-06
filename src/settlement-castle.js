@@ -490,6 +490,7 @@ function drawTerrain(){
       for(let i=0;i<flowersPerCluster;i++){
         const a=flowers()*Math.PI*2,r=Math.sqrt(flowers())*radius;
         const world={x:clamp(center.x+Math.cos(a)*r,0,WORLD),y:clamp(center.y+Math.sin(a)*r,0,WORLD)};
+        if(terrainSlopeKind(world)==='steep')continue;
         const p=w2s(world),size=clamp((.65+flowers()*1.25)*State.view.scale,1,2.4);
         ctx.globalAlpha=.62+flowers()*.30;
         ctx.fillRect(Math.round(p.x),Math.round(p.y),size,size);
