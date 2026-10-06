@@ -698,6 +698,7 @@ function ensureStaticLandscape(){
   if(!Array.isArray(State.environment)||!State.environment.length){
     generateEnvironment();generated=true;
   }
+  if(repairForestsAgainstSteepSlopes())generated=true;
   return generated;
 }
 
