@@ -18,8 +18,11 @@ function withRenderContext(next,fn){
   const prev=ctx;ctx=next;
   try{return fn()}finally{ctx=prev}
 }
-const STATIC_CACHE_DPR_CAP=1.5;
-function staticCacheDpr(){return Math.min(devicePixelRatio||1,STATIC_CACHE_DPR_CAP)}
+// Static caches cover 3×3 viewports. Keep them at CSS-pixel resolution:
+// multiplying a 3×3 surface by devicePixelRatio can exceed browser canvas/GPU
+// allocation limits and make the whole scene disappear.
+const STATIC_CACHE_DPR=1;
+function staticCacheDpr(){return STATIC_CACHE_DPR}
 function prepareSceneCache(layer){
   const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),entry=sceneCache[layer];
   // Cache a full 3×3 viewport: the live viewport occupies the central tile,
