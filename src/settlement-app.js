@@ -234,7 +234,7 @@ function renderFunctionPanel(){
 
     markStructureDirty(target);renderFunctionPanel();draw();
   });
-  slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
   slots.querySelectorAll('[data-tower-rotate90]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI/2,'Tower rotated 90°')});
@@ -254,7 +254,7 @@ function renderFunctionPanel(){
 
     target.wallColliderSyncSignature=null;
     invalidateCastleColliderGeometry(target);
-    markDirty();
+    markStructureDirty(target,true);
     renderFunctionPanel();
     draw();
     status('Tower base: '+(target.baseStyle==='buttress'?'buttressed':target.baseStyle==='splayed'?'splayed 10°':'standard'));
@@ -515,7 +515,7 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   State.village={...State.village,name,wellId:well.id,founded:true,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   closeVillageModal();
   const mainSegments=connectSelectedBorderMainRoads();
-  markDirty();
+  markDirty(true,['ground','base']);
   renderUI();
   status(`${name} founded — 4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
   processVillageGrowth();draw();
@@ -524,7 +524,7 @@ document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingW
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,['ground','base','castleBody','castleFront']);renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
 function migrateStructures(list){
   const migrated=(list||[]).map(s=>{
@@ -717,7 +717,7 @@ function setWeatherOverride(kind){
   State.weatherOverride=State.weatherOverride===kind?null:kind;
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
   syncDevButtons();
-  invalidateSceneCache('base');
+  invalidateSceneCache('ground');
   draw();
   status(State.weatherOverride?('FORCE METEO: '+State.weatherOverride):'Meteo: procedurale');
   drawWeatherOverlay();
@@ -801,7 +801,7 @@ document.getElementById('biomeSelect').onchange=e=>{
   State.biome=BIOMES[e.target.value]?e.target.value:'plains';State.environment=[];generateEnvironment();
   State.structures=State.structures.filter(s=>!s.auto);
   if(State.village.founded){State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.baseRoadAngle=null}
-  markDirty();renderUI();status('Biome: '+BIOMES[State.biome].label+' — automatic settlement growth reset');draw();
+  markDirty(true,'all');renderUI();status('Biome: '+BIOMES[State.biome].label+' — automatic settlement growth reset');draw();
 };
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(Number(b.dataset.speed)));
 ensureDevControls();
