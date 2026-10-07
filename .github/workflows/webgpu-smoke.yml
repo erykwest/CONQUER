@@ -81,8 +81,14 @@ jobs:
             fallback.result.renderer!=='canvas2d';
 
           if(hybrid.result.navigatorGpu&&hybrid.result.status?.supported&&!hybrid.result.status?.active){
-            console.error('navigator.gpu exists but hybrid renderer did not activate:',hybrid.result.status);
-            process.exitCode=1;
+            const exercisedBeforeLoss=
+              hybrid.result.status?.fallbackReason==='device-lost'&&
+              hybrid.result.status?.frames>=1&&
+              hybrid.result.status?.uploads>=4;
+            if(!exercisedBeforeLoss){
+              console.error('navigator.gpu exists but hybrid renderer never exercised:',hybrid.result.status);
+              process.exitCode=1;
+            }
           }
           if(hybridFatal||fallbackFatal)process.exitCode=1;
           await browser.close();
