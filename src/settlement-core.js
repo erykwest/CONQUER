@@ -11,6 +11,8 @@ const sceneCache={
 };
 for(const layer of Object.values(sceneCache))layer.ctx=layer.canvas.getContext('2d');
 function invalidateSceneCache(layer='all'){
+  const perf=window.__conquerPerf||(window.__conquerPerf={});
+  perf.cacheInvalidations=(perf.cacheInvalidations||0)+1;
   if(layer==='all'){for(const item of Object.values(sceneCache))item.dirty=true;return}
   if(sceneCache[layer])sceneCache[layer].dirty=true;
 }
