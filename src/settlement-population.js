@@ -833,14 +833,33 @@ function housePopulationCapacity(house){
   const level=houseLevel(house);
   return{male:level,female:level,children:level,total:level*3};
 }
+const houseResidentCache=new Map();
 function houseResidents(house){
-  const cap=housePopulationCapacity(house),out=[];
-  for(let i=0;i<cap.male;i++)out.push({id:house.id+':m:'+i,sex:'male',age:'adult',index:i});
-  for(let i=0;i<cap.female;i++)out.push({id:house.id+':f:'+i,sex:'female',age:'adult',index:i});
+  const level=houseLevel(house),key=house.id+'|'+level;
+  const cached=houseResidentCache.get(key);
+  if(cached)return cached;
+
+  const cap=housePopulationCapacity(house),kind=villagerClass(house),out=[];
+  const make=(id,sex,age,index)=>{
+    const scatterHash=peasantHash(id+'-scatter'),a=(scatterHash%360)*Math.PI/180;
+    const scatterR=(age==='child'?.10:.075)+(((scatterHash>>>9)%1000)/1000)*(age==='child'?.08:.07);
+    return{
+      id,sex,age,index,
+      timeOffset:(((peasantHash(id+'-time')>>>8)%1000)/1000-.5)*.055,
+      lodHash:peasantHash(id+'-lod'),
+      scatterX:Math.cos(a)*scatterR,
+      scatterY:Math.sin(a)*scatterR,
+      hair:villagerHair(id),
+      colors:villagerBodyColors(id,kind)
+    };
+  };
+  for(let i=0;i<cap.male;i++)out.push(make(house.id+':m:'+i,'male','adult',i));
+  for(let i=0;i<cap.female;i++)out.push(make(house.id+':f:'+i,'female','adult',i));
   for(let i=0;i<cap.children;i++){
     const id=house.id+':c:'+i;
-    out.push({id,sex:(peasantHash(id)&1)?'female':'male',age:'child',index:i});
+    out.push(make(id,(peasantHash(id)&1)?'female':'male','child',i));
   }
+  houseResidentCache.set(key,out);
   return out;
 }
 function residentTimeOffset(id){
@@ -880,7 +899,7 @@ function familyPosition(house,day){
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
 }
 function residentClassPosition(house,resident,day,assignment){
-  const level=houseLevel(house),shiftedDay=day+residentTimeOffset(resident.id);
+  const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
   if(level===1)return assignment?peasantPosition(house,assignment,shiftedDay):null;
@@ -939,8 +958,8 @@ function drawSplitVillagerBody(kind,x,y,w,h,topColor,bottomColor){
   ctx.beginPath();ctx.moveTo(x-w/2,y);ctx.lineTo(x+w/2,y);ctx.stroke();
   ctx.restore();
 }
-function drawVillagerHead(id,x,y,r,sex='male'){
-  const hair=villagerHair(id);
+function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
+  const hair=cachedHair||villagerHair(id);
   ctx.save();
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
 
@@ -967,11 +986,15 @@ function drawVillagerFigure(dot){
   const bodyW=clamp(6.0*scale,4.2,8.2)*sizeFactor,bodyH=clamp(8.0*scale,5.5,10.6)*sizeFactor;
   const headR=clamp(2.35*scale,1.8,3.15)*sizeFactor,bodyY=base.y-bodyH*.16;
   drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
-  drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex);
+  drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex,dot.hair);
+}
+let populationFrameBounds=null;
+function setPopulationFrameBounds(r){
+  populationFrameBounds=r?{width:r.width,height:r.height}:null;
 }
 function worldPointVisible(p,z=0,pad=48){
   if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))return false;
-  const s=w2s(p,z),r=wrap.getBoundingClientRect();
+  const s=w2s(p,z),r=populationFrameBounds||wrap.getBoundingClientRect();
   return s.x>=-pad&&s.y>=-pad&&s.x<=r.width+pad&&s.y<=r.height+pad;
 }
 function drawPeasants(){
@@ -987,19 +1010,20 @@ function drawPeasants(){
     representedPopulation+=housePopulationCapacity(house).total;
     const kind=villagerClass(house),assignment=assignments.get(house.id);
     for(const resident of houseResidents(house)){
-      if(residentStride>1&&(peasantHash(resident.id+'-lod')%residentStride)!==0)continue;
+      if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
       let p=residentClassPosition(house,resident,day,assignment);
       if(!p)continue;
-      p=residentScatter(p,resident.id,resident.age==='child');
+      p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       if(!worldPointVisible(p,0,40))continue;
+      const rp=rotateViewPoint(p);
       dots.push({
-        p,id:resident.id,kind,sex:resident.sex,age:resident.age,
-        colors:villagerBodyColors(resident.id,kind)
+        p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
+        hair:resident.hair,colors:resident.colors
       });
       activeAgents++;
     }
   }
-  dots.sort((a,b)=>{const aa=rotateViewPoint(a.p),bb=rotateViewPoint(b.p);return aa.x+aa.y-(bb.x+bb.y)});
+  dots.sort((a,b)=>a.depth-b.depth);
   if(window.__conquerPerf){
     window.__conquerPerf.representedPopulation=representedPopulation;
     window.__conquerPerf.visibleVillagers=activeAgents;
