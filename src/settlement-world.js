@@ -306,7 +306,6 @@ function rebuildArterialRoute(routeId,displaced=[]){
 function reconcileArterialRoutes(){
   let changed=0;
   for(const route of ensureRoadPlan()){
-    if(Array.isArray(route.deletedSegments)&&route.deletedSegments.length)continue;
     const roads=routeRoads(route.id);
     if(roads.length&&!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
   }
@@ -1082,7 +1081,6 @@ function connectSelectedBorderMainRoads(){
   let changed=0;
   for(const route of plan){
     route.connected=true;
-    if(Array.isArray(route.deletedSegments)&&route.deletedSegments.length)continue;
     if(!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
   }
   if(changed)invalidateNavigation(false);
@@ -1187,7 +1185,6 @@ function constrainRoadCandidate(candidate){
 function spawnArterial(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();if(!well||!plan.length)return false;
   for(const route of plan){
-    if(Array.isArray(route.deletedSegments)&&route.deletedSegments.length)continue;
     if(routeRoads(route.id).length&&!arterialRouteContinuous(route.id))rebuildArterialRoute(route.id,[]);
   }
   const open=plan.filter(p=>!p.connected);if(!open.length)return false;
