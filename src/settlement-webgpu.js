@@ -27,6 +27,19 @@
     p.webgpuLastUploadMs=state.lastUploadMs;
     p.webgpuUploadMs=state.totalUploadMs;
     p.webgpuFallbackReason=state.fallbackReason;
+
+    const el=document.getElementById('rendererReadout');
+    if(el){
+      if(state.active){
+        el.textContent='Renderer: WebGPU · '+state.frames+' frame GPU · '+state.uploads+' upload';
+      }else if(state.fallbackReason){
+        el.textContent='Renderer: Canvas2D · fallback '+state.fallbackReason;
+      }else if(state.supported){
+        el.textContent='Renderer: WebGPU inizializzazione…';
+      }else{
+        el.textContent='Renderer: Canvas2D · WebGPU non disponibile';
+      }
+    }
   }
   function setActive(active,reason=null){
     state.active=!!active&&state.ready;
