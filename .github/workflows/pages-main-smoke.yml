@@ -71,11 +71,22 @@ jobs:
               towerTest=await page.evaluate(()=>eval('(()=>{const before=State.structures.length;for(let y=55;y<=145;y+=2){for(let x=55;x<=145;x+=2){const probe={type:"tower",material:"stone",shape:"square",size:1,level:1,x,y,angle:0};if(buildableTerrainElevationForStructure(probe)==null)continue;if(environmentBlocksPoint({x,y},"settlement"))continue;const s={...probe,id:uid()};const ok=addStructure(s);return{before,after:State.structures.length,ok,world:{x,y},status:document.getElementById("status")?.textContent}}}throw new Error("No buildable smoke-test point found")})()'));
               await page.waitForTimeout(250);
             }catch(e){towerTest={error:String(e)}}
-            results.push({name,status:res?.status(),snapshot,towerTest,errors,failed,consoleLog});
+
+            let perfTest={};
+            if(name==='local-main'){
+              try{
+                perfTest=await page.evaluate(()=>eval('(()=>{const t0=performance.now();runSettlementMaintenance("watchdog");const elapsed=performance.now()-t0;const steps=window.__conquerPerf?.lastMaintenanceSteps||{};return{elapsed,steps,reported:window.__conquerPerf?.lastMaintenanceMs||0,hasGateMain:Object.prototype.hasOwnProperty.call(steps,"gateMain")}})()'));
+              }catch(e){perfTest={error:String(e)}}
+            }
+
+            results.push({name,status:res?.status(),snapshot,towerTest,perfTest,errors,failed,consoleLog});
             await context.close();
           }
           console.log(JSON.stringify(results,null,2));
-          if(results.some(r=>r.errors.length||r.failed.length||r.towerTest.error||r.towerTest.after!==r.towerTest.before+1))process.exit(1);
+          if(results.some(r=>
+            r.errors.length||r.failed.length||r.towerTest.error||r.towerTest.after!==r.towerTest.before+1||
+            (r.name==='local-main'&&(r.perfTest?.error||r.perfTest?.hasGateMain||r.perfTest?.elapsed>100))
+          ))process.exit(1);
           await browser.close();
           JS
           node diagnose.mjs
