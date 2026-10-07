@@ -482,6 +482,15 @@ function pointRadius(s){
         (sample.cache?.deltaLandscapeRebuilds||0)+(sample.cache?.deltaGroundRebuilds||0)+
         (sample.cache?.deltaShadowRebuilds||0)+(sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+
         (sample.cache?.deltaCastleFrontRebuilds||0),
+      asset_cache_entries:sample.assetCache?.entries||0,
+      asset_cache_mb:sample.assetCache?.estimatedMb||0,
+      asset_cache_hits_delta:sample.assetCache?.deltaHits||0,
+      asset_cache_misses_delta:sample.assetCache?.deltaMisses||0,
+      asset_cache_evictions_delta:sample.assetCache?.deltaEvictions||0,
+      asset_prerender_ms:sample.assetCache?.lastPrerenderMs||0,
+      castle_body_bitmap_hits_delta:sample.assetCache?.deltaCastleBodyHits||0,
+      castle_body_bitmap_misses_delta:sample.assetCache?.deltaCastleBodyMisses||0,
+      castle_body_bitmap_ms:sample.assetCache?.castleBodyMs||0,
       recent_events:recentEvents
     };
     fetch(SUPABASE_URL+'/rest/v1/simulation_telemetry',{
@@ -540,6 +549,18 @@ function pointRadius(s){
         castleBodyRebuilds:finite(p.cacheCastleBodyRebuilds),deltaCastleBodyRebuilds:delta('cacheCastleBodyRebuilds',p),
         castleFrontRebuilds:finite(p.cacheCastleFrontRebuilds),deltaCastleFrontRebuilds:delta('cacheCastleFrontRebuilds',p)
       },
+      assetCache:{
+        entries:finite(p.assetCacheEntries),estimatedMb:+finite(p.assetCacheEstimatedMb).toFixed(2),
+        hits:finite(p.assetCacheHits),deltaHits:delta('assetCacheHits',p),
+        misses:finite(p.assetCacheMisses),deltaMisses:delta('assetCacheMisses',p),
+        evictions:finite(p.assetCacheEvictions),deltaEvictions:delta('assetCacheEvictions',p),
+        lastPrerenderMs:+finite(p.assetPrerenderMs).toFixed(2),
+        castleBodyHits:finite(p.castleBodyBitmapHits),deltaCastleBodyHits:delta('castleBodyBitmapHits',p),
+        castleBodyMisses:finite(p.castleBodyBitmapMisses),deltaCastleBodyMisses:delta('castleBodyBitmapMisses',p),
+        castleBodyMs:+finite(p.castleBodyBitmapMs).toFixed(2),
+        castleBodyMode:p.lastCastleBodyCacheMode||'—',
+        castleBodyRebuildMs:+finite(p.lastCastleBodyRebuildMs).toFixed(2)
+      },
       population:{represented:finite(p.representedPopulation),visible:finite(p.visibleVillagers)},
       scene:{
         structures:all.length,
@@ -569,6 +590,8 @@ function pointRadius(s){
       s.cache.deltaLandscapeRebuilds+s.cache.deltaGroundRebuilds+s.cache.deltaShadowRebuilds+s.cache.deltaBaseRebuilds+
       s.cache.deltaCastleBodyRebuilds+s.cache.deltaCastleFrontRebuilds
     )>3)issues.push('CACHE_REBUILD: repeated static rebuilds');
+    if(max(s=>s.assetCache.deltaEvictions)>8)issues.push('ASSET_CACHE: eviction churn');
+    if(avg(s=>s.assetCache.deltaMisses)>avg(s=>s.assetCache.deltaHits)*1.5&&max(s=>s.assetCache.deltaMisses)>3)issues.push('ASSET_CACHE: low hit rate');
     if(events.slice(-100).some(e=>e.type==='LONG_TASK'&&finite(e.data?.durationMs)>80))issues.push('LONG_TASK: browser main-thread task >80ms');
     return{level:issues.length?'warning':'ok',issues};
   }
@@ -590,7 +613,7 @@ function pointRadius(s){
   function updateReadout(s){
     const el=document.getElementById('analyticsReadout');if(!el)return;
     const d=diagnose(20);
-    el.textContent=(d.level==='ok'?'OK':'⚠')+' · frame '+s.frame.avgMs+'ms / '+s.frame.maxMs+'ms · draw '+s.draw.lastMs+'ms · '+s.population.visible+' pop';
+    el.textContent=(d.level==='ok'?'OK':'⚠')+' · frame '+s.frame.avgMs+'ms / '+s.frame.maxMs+'ms · draw '+s.draw.lastMs+'ms · '+s.population.visible+' pop · asset '+s.assetCache.estimatedMb+'MB';
     el.title=d.issues.join('\n')||'No diagnostic warnings';
   }
   try{
