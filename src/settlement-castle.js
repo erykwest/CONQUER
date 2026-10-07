@@ -2019,33 +2019,77 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
     groundZ:owner?placementGroundZ(owner):null
   };
 }
-function castleBattlementOccluders(piece){
-  if(!piece.ownerId||!['tower','wall','gate','palisade'].includes(piece.ownerType))return[];
-  const owner=State.structures.find(s=>s.id===piece.ownerId);
-  return State.structures.filter(s=>{
-    if(s.id===piece.ownerId||underConstruction(s))return false;
-    const candidate=isCastlePart(s)||isRaisedPlacementCastlePoint(s)||(piece.ownerType==='palisade'&&['tower','gate'].includes(s.type));
-    if(!candidate)return false;
-    if(piece.ownerType==='palisade'&&palisadePassThroughTarget(s))return false;
-
-    const h=structureVisualTopHeight(s);
-    if(h<=Number(piece.z0)+.04)return false;
-    const fp=unionFootprintPoints(s);
-    if(worldPolygonsOverlap(piece.pts,fp))return true;
-
-    const ownerDepth=owner?worldDepth(owner):Number(piece.ownerDepth??piece.depth);
-    return worldDepth(s)>ownerDepth+1e-4;
-  });
+function buildBattlementOcclusionFrame(){
+  const entries=[],byId=new Map();
+  for(const s of State.structures){
+    if(underConstruction(s))continue;
+    const castle=isCastlePart(s),raised=isRaisedPlacementCastlePoint(s),towerGate=['tower','gate'].includes(s.type);
+    if(!castle&&!raised&&!towerGate)continue;
+    const entry={
+      s,
+      id:s.id,
+      castle,
+      raised,
+      towerGate,
+      h:structureVisualTopHeight(s),
+      depth:worldDepth(s),
+      fp:unionFootprintPoints(s),
+      hull:null
+    };
+    entries.push(entry);
+    byId.set(s.id,entry);
+  }
+  return{entries,byId,queryCache:new Map(),viewportH:Math.max(2000,wrap.getBoundingClientRect().height*3)};
 }
-function withTowerBattlementOcclusion(piece,drawFn){
-  const occluders=castleBattlementOccluders(piece);
+function battlementOcclusionCandidates(piece,frame){
+  if(!piece.ownerId||!['tower','wall','gate','palisade'].includes(piece.ownerType))return{always:[],overlap:[]};
+  const key=piece.ownerId+'|'+piece.ownerType+'|'+Number(piece.z0).toFixed(3);
+  const cached=frame.queryCache.get(key);
+  if(cached)return cached;
+
+  const owner=frame.byId.get(piece.ownerId);
+  const ownerDepth=owner?.depth??Number(piece.ownerDepth??piece.depth);
+  const always=[],overlap=[];
+  for(const entry of frame.entries){
+    if(entry.id===piece.ownerId)continue;
+    const candidate=entry.castle||entry.raised||(piece.ownerType==='palisade'&&entry.towerGate);
+    if(!candidate)continue;
+    if(piece.ownerType==='palisade'&&palisadePassThroughTarget(entry.s))continue;
+    if(entry.h<=Number(piece.z0)+.04)continue;
+
+    // Anything strictly in front of the owner occludes every piece belonging
+    // to that owner/z band. Near/equal-depth structures need the precise
+    // footprint overlap test for each individual merlon/post.
+    if(entry.depth>ownerDepth+1e-4)always.push(entry);
+    else overlap.push(entry);
+  }
+  const result={always,overlap};
+  frame.queryCache.set(key,result);
+  return result;
+}
+function castleBattlementOccluders(piece,frame){
+  const {always,overlap}=battlementOcclusionCandidates(piece,frame);
+  if(!always.length&&!overlap.length)return always;
+
+  const out=always.slice();
+  for(const entry of overlap){
+    if(entry.fp?.length&&worldPolygonsOverlap(piece.pts,entry.fp))out.push(entry);
+  }
+  return out;
+}
+function battlementOccluderHull(entry){
+  if(entry.hull)return entry.hull;
+  entry.hull=structureScreenSilhouette(entry.s);
+  return entry.hull;
+}
+function withTowerBattlementOcclusion(piece,frame,drawFn){
+  const occluders=castleBattlementOccluders(piece,frame);
   if(!occluders.length){drawFn();return}
-  const r=wrap.getBoundingClientRect();
   ctx.save();
   ctx.beginPath();
-  ctx.rect(-48,-48,r.width+96,r.height+96);
-  for(const tower of occluders){
-    const hull=structureScreenSilhouette(tower);if(hull.length<3)continue;
+  ctx.rect(-48,-48,wrap.getBoundingClientRect().width+96,wrap.getBoundingClientRect().height+96);
+  for(const entry of occluders){
+    const hull=battlementOccluderHull(entry);if(hull.length<3)continue;
     ctx.moveTo(hull[0].x,hull[0].y);
     for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
     ctx.closePath();
@@ -2054,8 +2098,8 @@ function withTowerBattlementOcclusion(piece,drawFn){
   drawFn();
   ctx.restore();
 }
-function drawBattlementPiece(piece){
-  return withProjectionGroundZ(piece.groundZ,()=>withTowerBattlementOcclusion(piece,()=>{
+function drawBattlementPiece(piece,frame){
+  return withProjectionGroundZ(piece.groundZ,()=>withTowerBattlementOcclusion(piece,frame,()=>{
     if(piece.kind==='palisadePost'){
       drawPalisadePostAt(piece.center,piece.r,piece.z0,piece.bodyZ,piece.tipZ,piece.angle||0);
       return;
@@ -2066,7 +2110,7 @@ function drawBattlementPiece(piece){
     }
     if(piece.wallCrest){
       const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
-      const H=Math.max(2000,wrap.getBoundingClientRect().height*3);
+      const H=frame.viewportH;
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(a.x,a.y+1);
@@ -2082,9 +2126,9 @@ function drawBattlementPiece(piece){
     extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
   }));
 }
-function renderBattlementPieces(pieces){
+function renderBattlementPieces(pieces,frame){
   pieces.sort((a,b)=>a.depth-b.depth);
-  for(const piece of pieces)drawBattlementPiece(piece);
+  for(const piece of pieces)drawBattlementPiece(piece,frame);
 }
 function wallExteriorSide(s){return s?.flip?-1:1}
 function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
@@ -2478,7 +2522,8 @@ function drawCastleBattlements(){
     else if(s.type==='wall')pieces.push(...wallBattlementPieces(s));
     else if(s.type==='palisade')pieces.push(...palisadeFrontPieces(s));
   }
-  renderBattlementPieces(pieces);
+  const frame=buildBattlementOcclusionFrame();
+  renderBattlementPieces(pieces,frame);
 }
 function chimneySpecs(s){
   if(!s||underConstruction(s))return[];
