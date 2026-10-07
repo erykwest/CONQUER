@@ -1,6 +1,12 @@
+const buffer=globalThis.__conquerTelemetryBuffer||(globalThis.__conquerTelemetryBuffer=[]);
+
 export default async function handler(req,res){
+  if(req.method==='GET'){
+    res.setHeader('cache-control','no-store, max-age=0');
+    return res.status(200).json({ok:true,count:buffer.length,samples:buffer.slice(-120)});
+  }
   if(req.method!=='POST'){
-    res.setHeader('Allow','POST');
+    res.setHeader('Allow','GET, POST');
     return res.status(405).json({ok:false,error:'method_not_allowed'});
   }
   let body=req.body;
@@ -33,6 +39,8 @@ export default async function handler(req,res){
       data:e?.data&&typeof e.data==='object'?e.data:{}
     }))
   };
+  buffer.push(safe);
+  if(buffer.length>120)buffer.splice(0,buffer.length-120);
   console.log('CONQUER_TELEMETRY '+JSON.stringify(safe));
   return res.status(204).end();
 }
