@@ -106,6 +106,21 @@ function turnTower(target,delta,label){
   status(label);
   return true;
 }
+function flipGate(target){
+  if(!target||target.type!=='gate')return false;
+  target.angle=normalizeTowerAngle((Number(target.angle)||0)+Math.PI);
+
+  // Gate front is semantic: flipping swaps exterior/interior. Attached front
+  // subtorri must move with the new facade.
+  syncSubtowerTree(target.id);
+
+  invalidateCastleColliderGeometry(target);
+  markDirty();
+  renderFunctionPanel();
+  draw();
+  status('Gate front flipped');
+  return true;
+}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
@@ -144,6 +159,8 @@ function renderFunctionPanel(){
     }
   }
   if(s.type==='gate'){
+    const deg=Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360;
+    html+=`<div class="slot"><div class="slot-label">Gate front · ${deg}°</div><button data-gate-flip class="active">⇄ Flip</button><div class="legend">Swaps exterior and interior by 180°. Guards and the wooden gate door follow the exterior side.</div></div>`;
     if(woodGate){
       html+=`<div class="slot"><div class="legend">Wood gate · fixed H1 · 1.5×1U · front timber door · flat fighting deck with timber battlements.</div></div>`;
     }else{
@@ -200,6 +217,7 @@ function renderFunctionPanel(){
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
+  slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
   slots.querySelectorAll('[data-tower-rotate90]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI/2,'Tower rotated 90°')});
   slots.querySelectorAll('[data-tower-base]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();
