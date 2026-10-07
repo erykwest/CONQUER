@@ -1184,7 +1184,7 @@ function addManualMainRoad(a,b){
   };
   State.structures.push(road);
   invalidateNavigation(false);
-  markDirty(false,true,true);
+  markDirty(false,['ground'],true);
   selectStructure(road);
   return true;
 }
