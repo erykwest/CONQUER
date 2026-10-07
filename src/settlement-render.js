@@ -806,22 +806,44 @@ function drawStructure(s,preview=false){
     else drawConstructionProgress(s);
   }
 }
-function drawBaseStaticScene(){
+function drawLandscapeStaticScene(){
   const analyticsT0=performance.now();
-  const entry=prepareSceneCache('base');
+  const entry=prepareSceneCache('landscape');
   withRenderContext(entry.ctx,()=>{
-    drawTerrain();drawGrid();drawEnvironment();drawBuildArea();
-
-    // Completed terrain-level auto geometry is immutable between topology changes.
+    drawTerrain();
+    drawGrid();
+    drawEnvironment();
+    drawBuildArea();
+  });
+  entry.dirty=false;
+  const perf=window.__conquerPerf||(window.__conquerPerf={});
+  perf.cacheLandscapeRebuilds=(perf.cacheLandscapeRebuilds||0)+1;
+  window.__conquerAnalytics?.measure('CACHE_LANDSCAPE',performance.now()-analyticsT0);
+}
+function drawGroundStaticScene(){
+  const analyticsT0=performance.now();
+  const entry=prepareSceneCache('ground');
+  withRenderContext(entry.ctx,()=>{
+    // Ground network changes frequently during growth/completion but must never
+    // force terrain/environment rasterization.
     State.structures
       .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&!underConstruction(s))
       .forEach(drawAutoStructure);
 
-    // Rain puddles are world-space detail and only appear when zoomed in (>80%).
+    // Weather-ground detail is isolated here. Wet/dry transitions invalidate
+    // only this cheap layer instead of terrain + every building.
     drawPuddleLayer();
-
-    // Shadows are expensive; update them with the static layer at maintenance
-    // ticks rather than recomputing every visual frame.
+  });
+  entry.dirty=false;
+  const perf=window.__conquerPerf||(window.__conquerPerf={});
+  perf.cacheGroundRebuilds=(perf.cacheGroundRebuilds||0)+1;
+  window.__conquerAnalytics?.measure('CACHE_GROUND',performance.now()-analyticsT0);
+}
+function drawBaseStaticScene(){
+  const analyticsT0=performance.now();
+  const entry=prepareSceneCache('base');
+  withRenderContext(entry.ctx,()=>{
+    // Shadows + non-castle massing are settlement topology, not landscape.
     drawDynamicShadows();
 
     const completedOthers=State.structures
@@ -830,7 +852,8 @@ function drawBaseStaticScene(){
     for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
   });
   entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheBaseRebuilds=(perf.cacheBaseRebuilds||0)+1;
+  const perf=window.__conquerPerf||(window.__conquerPerf={});
+  perf.cacheBaseRebuilds=(perf.cacheBaseRebuilds||0)+1;
   window.__conquerAnalytics?.measure('CACHE_BASE',performance.now()-analyticsT0,{structures:State.structures.length});
 }
 function drawCastleBodyStaticScene(){
@@ -869,24 +892,51 @@ function drawCastleFrontStaticScene(){
   window.__conquerAnalytics?.measure('CACHE_CASTLE_FRONT',performance.now()-analyticsT0);
 }
 function ensureStaticSceneCaches(){
-  // Scale/rotation/viewport changes alter the projection and require a rebuild.
-  // X/Y camera changes are pure screen translations and are handled cheaply
-  // by blitSceneCache() until pan ends.
-  for(const entry of Object.values(sceneCache)){
-    // During wheel zoom keep the previous raster alive and reproject it in
-    // blitSceneCache(). This removes the expensive terrain/castle rebuild from
-    // every wheel event. Dirty topology still rebuilds immediately.
-    if(!sceneCacheZoomPreview&&!sceneCachePanPreview&&!entry.dirty&&!sceneCacheProjectionCompatible(entry))entry.dirty=true;
+  const builders=[
+    ['landscape',drawLandscapeStaticScene],
+    ['ground',drawGroundStaticScene],
+    ['base',drawBaseStaticScene],
+    ['castleBody',drawCastleBodyStaticScene],
+    ['castleFront',drawCastleFrontStaticScene]
+  ];
+
+  // A projection mismatch cannot safely reuse the old raster. Content-only
+  // invalidations can: keep showing the previous bitmap for one or two frames
+  // while expensive layers rebuild individually.
+  let projectionMismatch=false,coldStart=false;
+  for(const [name] of builders){
+    const entry=sceneCache[name];
+    if(!entry.view)coldStart=true;
+    if(!sceneCacheZoomPreview&&!sceneCachePanPreview&&entry.view&&!sceneCacheProjectionCompatible(entry)){
+      entry.dirty=true;
+      projectionMismatch=true;
+    }
   }
-  if(sceneCache.base.dirty)drawBaseStaticScene();
-  if(sceneCache.castleBody.dirty)drawCastleBodyStaticScene();
-  if(sceneCache.castleFront.dirty)drawCastleFrontStaticScene();
+
+  const dirty=builders.filter(([name])=>sceneCache[name].dirty);
+  if(!dirty.length)return;
+
+  // Initial load, pause/edit mode and camera projection changes favor immediate
+  // correctness. During running simulation, topology-only rebuilds are staged
+  // one cache per visual frame to prevent 100–200ms combined long tasks.
+  if(coldStart||projectionMismatch||State.clock.speed<=0){
+    for(const [,build] of dirty)build();
+    return;
+  }
+
+  const [name,build]=dirty[0];
+  const t0=performance.now();
+  build();
+  const ms=performance.now()-t0;
+  window.__conquerAnalytics?.measure('CACHE_STAGE',ms,{layer:name,remaining:dirty.length-1});
 }
 function draw(){
   const r=wrap.getBoundingClientRect();
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
   ensureStaticSceneCaches();
+  blitSceneCache('landscape');
+  blitSceneCache('ground');
   blitSceneCache('base');
 
   // Only construction sites remain fully dynamic at ground/building depth.
