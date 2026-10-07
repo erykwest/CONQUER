@@ -2563,19 +2563,36 @@ function drawChimney(spec){
   const pts=rectWorldPoints(spec.center.x,spec.center.y,.22,.20,spec.angle||0);
   extrudePolygonAt(pts,spec.z0,spec.z1,{top:'#3b302c',sideA:'#332824',sideB:'#493732',stroke:'#6a5148'});
 }
+let smokeParticleSprite=null;
+const smokeSeedCache=new Map();
+function getSmokeParticleSprite(){
+  if(smokeParticleSprite)return smokeParticleSprite;
+  const off=document.createElement('canvas');off.width=64;off.height=64;
+  const g=off.getContext('2d'),grad=g.createRadialGradient(32,32,2,32,32,30);
+  grad.addColorStop(0,'rgba(180,178,172,.34)');
+  grad.addColorStop(.38,'rgba(180,178,172,.23)');
+  grad.addColorStop(.72,'rgba(180,178,172,.09)');
+  grad.addColorStop(1,'rgba(180,178,172,0)');
+  g.fillStyle=grad;g.fillRect(0,0,64,64);
+  smokeParticleSprite=off;
+  return off;
+}
+function smokeSeed(id){
+  const key=String(id||'');
+  if(smokeSeedCache.has(key))return smokeSeedCache.get(key);
+  const seed=(biomeHash(key)%997)/997;smokeSeedCache.set(key,seed);return seed;
+}
 function drawSmoke(spec,id,now){
   if(!worldPointVisible(spec.center,spec.z1||0,80))return;
-  const p=w2s(spec.center,spec.z1),seed=(biomeHash(String(id||''))%997)/997;
-  const scale=Math.max(.55,State.view.scale);
+  const p=w2s(spec.center,spec.z1),seed=smokeSeed(id),scale=Math.max(.55,State.view.scale),sprite=getSmokeParticleSprite();
   ctx.save();
   for(let i=0;i<4;i++){
     const phase=(now*.13+seed+i/4)%1;
     const fade=Math.pow(1-phase,1.7);
     const drift=Math.sin((phase*5.2+seed*8+i)*1.35)*3.2*scale+phase*5*scale;
-    const y=p.y-phase*34*scale,x=p.x+drift,r=(2.2+phase*5.8)*scale;
-    ctx.filter='blur('+(1.0+phase*2.2).toFixed(1)+'px)';
-    ctx.fillStyle='rgba(180,178,172,'+(fade*.24).toFixed(3)+')';
-    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    const y=p.y-phase*34*scale,x=p.x+drift,r=(2.2+phase*5.8)*scale,size=r*2.9;
+    ctx.globalAlpha=fade*.72;
+    ctx.drawImage(sprite,x-size/2,y-size/2,size,size);
   }
   ctx.restore();
 }
