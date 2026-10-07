@@ -18,11 +18,22 @@ function structureAtScreen(p){
 function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-linear],[data-main-road],[data-gate],[data-wood-gate],[data-well],[data-civic]').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
-  invalidateNavigation(hardNavigation);
-  fieldWorkAssignmentCache={key:null,map:new Map()};
-  if(staticChanged)invalidateSceneCache();
+  if(hardNavigation){
+    invalidateNavigation(true);
+    fieldWorkAssignmentCache={key:null,map:new Map()};
+  }else if(hardNavigation===false){
+    // Callers that only alter roads may request a soft graph invalidation
+    // explicitly before markDirty; pure data/UI changes should do neither.
+  }
+
+  if(staticChanged===true)invalidateSettlementScene(true);
+  else if(staticChanged)invalidateSceneCache(staticChanged);
+
   document.getElementById('saveState').textContent='unsaved';
   if(scheduleSave)scheduleLocalSave();
+}
+function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
+  markDirty(hardNavigation,structureSceneLayers(s),scheduleSave);
 }
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
@@ -60,7 +71,11 @@ function addStructure(s){
       status(bits.join(' · '));
     }
   }
-  selectStructure(s);markDirty(true);draw();return true
+  selectStructure(s);
+  const changedLayers=new Set(structureSceneLayers(s));
+  if(displaced.removed||reactive){changedLayers.add('ground');changedLayers.add('base')}
+  markDirty(true,[...changedLayers]);
+  draw();return true
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
@@ -74,7 +89,11 @@ function deleteStructure(id){
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id);
   reconcileTowerSecondaryBranches(Infinity,true);
-  if(State.selectedId===id)State.selectedId=null;renderFunctionPanel();markDirty();draw()
+  if(State.selectedId===id)State.selectedId=null;
+  renderFunctionPanel();
+  const deletedLayers=new Set([...structureSceneLayers(target),'ground','base']);
+  markDirty(true,[...deletedLayers]);
+  draw()
 }
 function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
 function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
@@ -100,7 +119,7 @@ function turnTower(target,delta,label){
   rebuildTowerSecondaryBranch(target,true);
 
   invalidateCastleColliderGeometry(target);
-  markDirty();
+  markStructureDirty(target);
   renderFunctionPanel();
   draw();
   status(label);
@@ -115,7 +134,7 @@ function flipGate(target){
   syncSubtowerTree(target.id);
 
   invalidateCastleColliderGeometry(target);
-  markDirty();
+  markStructureDirty(target);
   renderFunctionPanel();
   draw();
   status('Gate front flipped');
@@ -187,8 +206,8 @@ function renderFunctionPanel(){
     else html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
   }
   slots.innerHTML=html;
-  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)+1,1,4);markDirty();renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
-  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);markDirty();renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
+  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)+1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
+  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(!target)return;
     const requested=Number(btn.dataset.structureTier);
@@ -213,7 +232,7 @@ function renderFunctionPanel(){
       syncSubtowerTree(target.id);
     }
 
-    markDirty();renderFunctionPanel();draw();
+    markStructureDirty(target);renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
@@ -240,13 +259,13 @@ function renderFunctionPanel(){
     draw();
     status('Tower base: '+(target.baseStyle==='buttress'?'buttressed':target.baseStyle==='splayed'?'splayed 10°':'standard'));
   });
-  slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markDirty();renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
-  slots.querySelectorAll('[data-wood-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return;target.woodRoof=btn.dataset.woodRoof==='pitched'?'pitched':'open';markDirty();renderFunctionPanel();draw();status('Wood tower roof: '+target.woodRoof)});
-  slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markDirty();renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
-  slots.querySelectorAll('[data-built-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='built')return;if(!setStructureVariant(target,'skin',btn.dataset.builtSkin))return;markDirty();renderFunctionPanel();draw();status('Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'))});
-  slots.querySelectorAll('[data-wall-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;if(!setStructureVariant(target,'skin',btn.dataset.wallSkin))return;markDirty();renderFunctionPanel();draw();status('Wall skin: '+target.skin)});
-  slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','palisade','built'].includes(target.type))return;target.flip=!target.flip;markDirty();renderFunctionPanel();draw();status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped')});
-  slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markDirty();draw()});
+  slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markStructureDirty(target);renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
+  slots.querySelectorAll('[data-wood-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return;target.woodRoof=btn.dataset.woodRoof==='pitched'?'pitched':'open';markStructureDirty(target);renderFunctionPanel();draw();status('Wood tower roof: '+target.woodRoof)});
+  slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markStructureDirty(target);renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
+  slots.querySelectorAll('[data-built-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='built')return;if(!setStructureVariant(target,'skin',btn.dataset.builtSkin))return;markStructureDirty(target);renderFunctionPanel();draw();status('Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'))});
+  slots.querySelectorAll('[data-wall-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;if(!setStructureVariant(target,'skin',btn.dataset.wallSkin))return;markStructureDirty(target);renderFunctionPanel();draw();status('Wall skin: '+target.skin)});
+  slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','palisade','built'].includes(target.type))return;target.flip=!target.flip;markStructureDirty(target);renderFunctionPanel();draw();status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped')});
+  slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markStructureDirty(target);draw()});
 }
 let pan=null;
 canvas.addEventListener('pointerdown',e=>{
@@ -506,7 +525,7 @@ document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty();renderUI();draw()}};
-['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty()});
+['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
 function migrateStructures(list){
   const migrated=(list||[]).map(s=>{
     if(s.type==='house')s.houseLevel=houseLevel(s);
@@ -797,14 +816,15 @@ let adaptiveVisualFrameMs=VISUAL_FRAME_FAST_MS,simDrawEmaMs=0;
 const WEATHER_FRAME_MS=1000/24;
 const MAINTENANCE_WATCHDOG_MS=2500;
 const LOCAL_AUTOSAVE_MS=5000;
-function constructionCompletionCrossed(beforeDay,afterDay){
+function constructionCompletionsCrossed(beforeDay,afterDay){
+  const out=[];
   for(const s of State.structures){
     const d=Number(s?.construction?.completeDay);
-    if(Number.isFinite(d)&&d>beforeDay&&d<=afterDay)return true;
+    if(Number.isFinite(d)&&d>beforeDay&&d<=afterDay)out.push(s);
   }
-  return false;
+  return out;
 }
-function runSettlementMaintenance(reason='watchdog'){
+function runSettlementMaintenance(reason='watchdog',completedStructures=[]){
   const t0=performance.now();
   let changed=0;
   const steps={};
@@ -830,12 +850,17 @@ function runSettlementMaintenance(reason='watchdog'){
   }
 
   if(reason==='completion'){
-    // A completed road/building has entered the static world and/or navigation graph.
+    // Promote only the layers that actually gained completed geometry. Reactive
+    // road reconciliation adds ground geometry; it must not dirty landscape.
     invalidateNavigation(false);
     fieldWorkAssignmentCache={key:null,map:new Map()};
-    invalidateSceneCache();
+    const layers=new Set();
+    for(const item of completedStructures)for(const layer of structureSceneLayers(item))layers.add(layer);
+    if(changed)layers.add('ground');
+    if(layers.size)invalidateSceneCache([...layers]);
   }else if(changed){
-    invalidateSceneCache();
+    // Watchdog changes are tower/wall collider corrections: castle/base only.
+    invalidateSceneCache(['base','castleBody','castleFront']);
   }
 
   const maintenanceMs=performance.now()-t0;
@@ -857,17 +882,17 @@ function simulationFrame(now){
 
     // Time itself remains frame-continuous, but expensive simulation decisions
     // do not need 60 Hz. Growth and completion detection run at 10 Hz.
-    let completed=false;
+    let completed=[];
     if(now-simLogicAt>=SIM_LOGIC_FRAME_MS){
       processVillageGrowth();
-      completed=constructionCompletionCrossed(simLogicDay,State.clock.day);
+      completed=constructionCompletionsCrossed(simLogicDay,State.clock.day);
       simLogicDay=State.clock.day;
       simLogicAt=now;
     }
 
     // Maintenance follows actual topology events, NOT render frames.
-    if(completed){
-      runSettlementMaintenance('completion');
+    if(completed.length){
+      runSettlementMaintenance('completion',completed);
       simMaintenanceAt=now;
     }else if(now-simMaintenanceAt>=MAINTENANCE_WATCHDOG_MS){
       runSettlementMaintenance('watchdog');
@@ -918,7 +943,7 @@ function simulationFrame(now){
     const previousWasWet=/\|(rain|storm)$/.test(lastWorldWeatherKey),nowWet=weather.rain>0;
     lastWorldWeatherKey=worldWeatherKey;
     puddleCacheKey='';
-    if(previousWasWet||nowWet)invalidateSceneCache('base');
+    if(previousWasWet||nowWet)invalidateSceneCache('ground');
   }
   const weatherActive=State.view.scale<WEATHER_ZOOM_THRESHOLD||weather.wind>.15||weather.rain>0||weather.snow>0||weather.lightning>0||weather.fog>0||State.season==='autumn'||((weather.kind==='clear'||weather.kind==='wind')&&State.season!=='winter');
   if(weatherActive&&now-weatherDrawAt>=WEATHER_FRAME_MS){
