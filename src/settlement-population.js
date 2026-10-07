@@ -147,10 +147,12 @@ const navPerf={
   graphBuilds:0,graphRoutes:0,gridFallbacks:0,gridMisses:0,
   destinationTreesBuilt:0,destinationTreeHits:0,destinationTreeRoutes:0
 };
-window.__conquerPerf=navPerf;
+window.__conquerPerf=Object.assign(window.__conquerPerf||{},navPerf);
 function invalidateNavigation(hard=true){
   // Destination trees depend on the exact road graph, so any topology change
   // drops them. Individual resident routes survive soft extensions.
+  navPerf.navInvalidations=(navPerf.navInvalidations||0)+1;
+  if(window.__conquerPerf)window.__conquerPerf.navInvalidations=navPerf.navInvalidations;
   roadNavGraphCache.dirty=true;
   roadDestinationTreeCache.clear();
   if(!hard)return;
@@ -216,6 +218,7 @@ function rebuildRoadNavGraph(){
   roadNavGraphCache={dirty:false,nodes,roads:split,version:roadNavGraphCache.version+1};
   roadDestinationTreeCache.clear();
   navPerf.graphBuilds++;
+  if(window.__conquerPerf)window.__conquerPerf.graphBuilds=navPerf.graphBuilds;
   return roadNavGraphCache;
 }
 function roadNavGraph(){
