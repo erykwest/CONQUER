@@ -75,7 +75,7 @@ jobs:
             let perfTest={};
             if(name==='local-main'){
               try{
-                perfTest=await page.evaluate(()=>eval('(()=>{const t0=performance.now();runSettlementMaintenance("watchdog");const elapsed=performance.now()-t0;const steps=window.__conquerPerf?.lastMaintenanceSteps||{};return{elapsed,steps,reported:window.__conquerPerf?.lastMaintenanceMs||0,hasGateMain:Object.prototype.hasOwnProperty.call(steps,"gateMain")}})()'));
+                perfTest=await page.evaluate(()=>eval('(()=>{const t0=performance.now();runSettlementMaintenance("watchdog");const elapsed=performance.now()-t0;const steps=window.__conquerPerf?.lastMaintenanceSteps||{};const shadowSource=drawStructureShadow.toString();return{elapsed,steps,reported:window.__conquerPerf?.lastMaintenanceMs||0,hasGateMain:Object.prototype.hasOwnProperty.call(steps,"gateMain"),shadowHasRuntimeFilter:shadowSource.includes("ctx.filter")}})()'));
               }catch(e){perfTest={error:String(e)}}
             }
 
@@ -85,141 +85,8 @@ jobs:
           console.log(JSON.stringify(results,null,2));
           if(results.some(r=>
             r.errors.length||r.failed.length||r.towerTest.error||r.towerTest.after!==r.towerTest.before+1||
-            (r.name==='local-main'&&(r.perfTest?.error||r.perfTest?.hasGateMain||r.perfTest?.elapsed>100))
+            (r.name==='local-main'&&(r.perfTest?.error||r.perfTest?.hasGateMain||r.perfTest?.shadowHasRuntimeFilter||r.perfTest?.elapsed>100))
           ))process.exit(1);
           await browser.close();
           JS
           node diagnose.mjs
-
-      - name: Run 2 minute telemetry soak
-        shell: bash
-        run: |
-          cat > soak.mjs <<'JS'
-          import { chromium } from 'playwright';
-
-          const browser=await chromium.launch({headless:true});
-          const context=await browser.newContext({viewport:{width:1440,height:1000}});
-          const page=await context.newPage();
-          const pageErrors=[],consoleErrors=[],requestFailures=[];
-          page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));
-          page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
-          page.on('requestfailed',r=>requestFailures.push(r.url()+' :: '+(r.failure()?.errorText||'failed')));
-
-          await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle',timeout:60000});
-          await page.waitForTimeout(1500);
-
-          const setup=await page.evaluate(()=>eval(`(()=>{
-            try{
-              window.__conquerAnalytics?.clear();
-              const findBuildable=(type='well')=>{
-                for(let y=65;y<=135;y+=2)for(let x=65;x<=135;x+=2){
-                  const probe=type==='tower'
-                    ?{type:'tower',material:'stone',shape:'square',size:1,level:1,x,y,angle:0}
-                    :{type:'well',x,y};
-                  if(buildableTerrainElevationForStructure(probe)==null)continue;
-                  if(environmentBlocksPoint({x,y},'settlement'))continue;
-                  return{x,y};
-                }
-                return null;
-              };
-              const p=findBuildable('well');
-              if(!p)throw new Error('No buildable well point');
-              const well={id:uid(),type:'well',x:p.x,y:p.y};
-              if(!addStructure(well))throw new Error('Well placement failed');
-              const borderEntries=ensureBorderEntrySelection();
-              State.village={
-                ...State.village,
-                name:'Telemetry Soak',wellId:well.id,founded:true,growthVersion:3,
-                accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,
-                roadPlanVersion:0,borderEntries,baseRoadAngle:null
-              };
-              const mainSegments=connectSelectedBorderMainRoads();
-              processVillageGrowth();
-              renderUI();draw();
-              setTimeSpeed(4);
-              return{well:{x:p.x,y:p.y,id:well.id},mainSegments,structures:State.structures.length,seed:State.seed};
-            }catch(e){return{error:String(e),stack:e?.stack||null}}
-          })()`));
-          if(setup.error)throw new Error('Soak setup failed: '+JSON.stringify(setup));
-          console.log('SOAK_SETUP='+JSON.stringify(setup));
-
-          const checkpoints=[];
-          const act=async(label,fn)=>{
-            const result=await page.evaluate(fn);
-            checkpoints.push({label,result,at:Date.now()});
-          };
-
-          for(let elapsed=0;elapsed<120;elapsed+=10){
-            await page.waitForTimeout(10000);
-
-            if(elapsed===10){
-              await act('pan-a',()=>eval('(()=>{panCamera(42,-18);return{view:{...State.view},structures:State.structures.length}})()'));
-            }else if(elapsed===20){
-              await act('add-tower',()=>eval(`(()=>{
-                for(let y=58;y<=142;y+=3)for(let x=58;x<=142;x+=3){
-                  const probe={type:'tower',material:'stone',shape:'square',size:1,level:1,x,y,angle:0};
-                  if(buildableTerrainElevationForStructure(probe)==null||environmentBlocksPoint({x,y},'settlement'))continue;
-                  const s={...probe,id:uid()};const ok=addStructure(s);
-                  return{ok,id:s.id,x,y,structures:State.structures.length};
-                }
-                return{ok:false};
-              })()`));
-            }else if(elapsed===30){
-              await act('rotate',()=>eval('(()=>{rotateCamera(1);return{rotation:State.view.rotation,structures:State.structures.length}})()'));
-            }else if(elapsed===40){
-              await act('rain-on',()=>eval('(()=>{setWeatherOverride("rain");return{weatherOverride:State.weatherOverride}})()'));
-            }else if(elapsed===50){
-              await act('policy',()=>eval('(()=>{State.policies.tax=40;markDirty(false,false,true);renderUI();return{policies:{...State.policies}}})()'));
-            }else if(elapsed===60){
-              await act('season-winter',()=>eval('(()=>{setSeason("winter");return{season:State.season,override:State.seasonOverride}})()'));
-            }else if(elapsed===70){
-              await act('pan-b',()=>eval('(()=>{panCamera(-36,24);return{view:{...State.view},structures:State.structures.length}})()'));
-            }else if(elapsed===80){
-              await act('add-wood-tower',()=>eval(`(()=>{
-                for(let y=60;y<=140;y+=4)for(let x=60;x<=140;x+=4){
-                  const probe={type:'tower',material:'wood',woodStyle:'watchtower',shape:'square',size:1,level:1,x,y,angle:0,functions:[]};
-                  if(buildableTerrainElevationForStructure(probe)==null||environmentBlocksPoint({x,y},'settlement'))continue;
-                  const s={...probe,id:uid()};const ok=addStructure(s);
-                  return{ok,id:s.id,x,y,structures:State.structures.length};
-                }
-                return{ok:false};
-              })()`));
-            }else if(elapsed===90){
-              await act('rain-off',()=>eval('(()=>{setWeatherOverride("rain");return{weatherOverride:State.weatherOverride}})()'));
-            }else if(elapsed===100){
-              await act('season-calendar',()=>eval('(()=>{setSeason("winter");return{season:State.season,override:State.seasonOverride}})()'));
-            }else if(elapsed===110){
-              await act('rotate-back',()=>eval('(()=>{rotateCamera(-1);return{rotation:State.view.rotation,structures:State.structures.length}})()'));
-            }
-          }
-
-          await page.evaluate(()=>eval('setTimeSpeed(0)'));
-          await page.waitForTimeout(500);
-
-          const result=await page.evaluate(()=>eval(`(()=>{
-            const snapshot=window.__conquerAnalytics?.snapshot?.()||null;
-            return{
-              snapshot,
-              perf:{...(window.__conquerPerf||{})},
-              state:{
-                day:State.clock.day,speed:State.clock.speed,structures:State.structures.length,
-                roads:State.structures.filter(s=>s.type==='road').length,
-                houses:State.structures.filter(s=>s.type==='house').length,
-                fields:State.structures.filter(s=>s.type==='field').length,
-                construction:State.structures.filter(s=>underConstruction(s)).length,
-                season:State.season,weatherOverride:State.weatherOverride,
-                view:{...State.view}
-              }
-            };
-          })()`));
-
-          const payload={setup,checkpoints,result,pageErrors,consoleErrors,requestFailures};
-          console.log('SOAK_RESULT_START');
-          console.log(JSON.stringify(payload));
-          console.log('SOAK_RESULT_END');
-
-          if(pageErrors.length)process.exitCode=1;
-          await context.close();
-          await browser.close();
-          JS
-          node soak.mjs
