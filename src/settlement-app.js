@@ -133,12 +133,13 @@ function renderFunctionPanel(){
         html+=`<div class="slot"><div class="slot-label">Wood roof</div><div class="grid"><button data-wood-roof="open" class="${roof==='open'?'active':''}">Open platform</button><button data-wood-roof="pitched" class="${roof==='pitched'?'active':''}">Pitched · 4 posts</button></div></div>`;
       }
     }else{
-      const roof=towerRoofStyle(s);
+      const roof=towerRoofStyle(s),base=towerBaseStyle(s);
       if(s.parentTowerId){
         const parent=State.structures.find(x=>x.id===s.parentTowerId);
         html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent structure'}.</div></div>`;
       }
       html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Stone base · H0.5</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Basamento sopra quota 0. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
     }
   }
   if(s.type==='gate'){
@@ -199,6 +200,27 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markDirty();renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-tower-rotate90]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI/2,'Tower rotated 90°')});
+  slots.querySelectorAll('[data-tower-base]').forEach(btn=>btn.onclick=()=>{
+    const target=selectedStructure();
+    if(!target||target.type!=='tower'||isWoodTower(target))return;
+    if(!setStructureVariant(target,'baseStyle',btn.dataset.towerBase))return;
+
+    // Base style can enlarge the actual ground-contact footprint. Recompute
+    // the rigid placement plane so its foundations never float or cut into terrain.
+    const profile=placementFoundationProfile(target);
+    if(profile){
+      target.groundZ=profile.baseZ;
+      target.foundationMinZ=profile.minZ;
+      target.foundationVersion=1;
+    }
+
+    target.wallColliderSyncSignature=null;
+    invalidateCastleColliderGeometry(target);
+    markDirty();
+    renderFunctionPanel();
+    draw();
+    status('Tower base: '+(target.baseStyle==='buttress'?'buttressed':target.baseStyle==='splayed'?'splayed 10°':'standard'));
+  });
   slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markDirty();renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
   slots.querySelectorAll('[data-wood-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return;target.woodRoof=btn.dataset.woodRoof==='pitched'?'pitched':'open';markDirty();renderFunctionPanel();draw();status('Wood tower roof: '+target.woodRoof)});
   slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markDirty();renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
