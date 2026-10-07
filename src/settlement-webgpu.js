@@ -157,7 +157,7 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
         label:'conquer-'+name+'-texture',
         size:{width:w,height:h,depthOrArrayLayers:1},
         format:'rgba8unorm',
-        usage:GPUTextureUsage.TEXTURE_BINDING|GPUTextureUsage.COPY_DST
+        usage:GPUTextureUsage.TEXTURE_BINDING|GPUTextureUsage.COPY_DST|GPUTextureUsage.RENDER_ATTACHMENT
       });
       rec={
         width:w,height:h,texture,
@@ -175,11 +175,22 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
       state.layerGpu.set(name,rec);
     }
 
+    // Chrome/Dawn may implement external-image copies through a render path,
+    // so external-source textures carry RENDER_ATTACHMENT as well as COPY_DST.
+    // Keep a validation scope around the copy so a failed upload can never leave
+    // the compositor "active" while sampling an all-zero texture.
+    state.device.pushErrorScope('validation');
     state.device.queue.copyExternalImageToTexture(
-      {source:entry.canvas},
+      {source:entry.canvas,flipY:false},
       {texture:rec.texture,premultipliedAlpha:true},
       {width:w,height:h}
     );
+    state.device.popErrorScope().then(err=>{
+      if(err){
+        console.error('CONQUER WebGPU texture upload validation failed:',name,err.message);
+        fallback('texture-upload-validation',err);
+      }
+    });
     entry.gpuDirty=false;
     const ms=performance.now()-t0;
     state.uploads++;
