@@ -1,7 +1,13 @@
 'use strict';
 // CONQUER settlement population module — classic-script shared runtime.
 function peasantHash(id){return biomeHash(String(id||'peasant'))}
-function completedSettlement(type){return State.structures.filter(s=>s.type===type&&!underConstruction(s))}
+let populationFrameCompletedCache=null;
+function completedSettlement(type){
+  if(populationFrameCompletedCache?.has(type))return populationFrameCompletedCache.get(type);
+  const result=State.structures.filter(s=>s.type===type&&!underConstruction(s));
+  if(populationFrameCompletedCache)populationFrameCompletedCache.set(type,result);
+  return result;
+}
 function peasantVisualDay(){return State.clock.day*PEASANT_VISUAL_SPEED}
 function visualCycleDay(){return peasantVisualDay()}
 function visualCycleFrac(){
@@ -989,8 +995,13 @@ function drawVillagerFigure(dot){
   drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex,dot.hair);
 }
 let populationFrameBounds=null;
-function setPopulationFrameBounds(r){
+function beginPopulationFrame(r){
   populationFrameBounds=r?{width:r.width,height:r.height}:null;
+  populationFrameCompletedCache=new Map();
+}
+function endPopulationFrame(){
+  populationFrameBounds=null;
+  populationFrameCompletedCache=null;
 }
 function worldPointVisible(p,z=0,pad=48){
   if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))return false;
