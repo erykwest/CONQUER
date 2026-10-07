@@ -379,3 +379,122 @@ function pointRadius(s){
   if(isCivic(s))return civicRadius(s);
   return .5;
 }
+
+
+// CONQUER diagnostics — bounded in-memory telemetry, no persistent background writes.
+(function(){
+  const SAMPLE_MS=1000,MAX_SAMPLES=900,MAX_EVENTS=500,FRAME_SPIKE_MS=55;
+  const samples=[],events=[];
+  let lastSampleAt=performance.now(),lastEventAtByType=new Map(),lastPerf={},frameCount=0,frameSum=0,frameMax=0,frameOverBudget=0;
+
+  const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
+  const trim=(list,max)=>{if(list.length>max)list.splice(0,list.length-max)};
+  const perf=()=>window.__conquerPerf||(window.__conquerPerf={});
+  const simDay=()=>finite(State?.clock?.day);
+  const clockSpeed=()=>finite(State?.clock?.speed);
+  const structures=()=>Array.isArray(State?.structures)?State.structures:[];
+
+  function event(type,data={},severity='info',cooldownMs=0){
+    const now=performance.now(),last=lastEventAtByType.get(type)||-Infinity;
+    if(cooldownMs&&now-last<cooldownMs)return;
+    lastEventAtByType.set(type,now);
+    events.push({atMs:Math.round(now),wall:new Date().toISOString(),day:simDay(),type,severity,data});
+    trim(events,MAX_EVENTS);
+  }
+  function delta(name,p){return Math.max(0,finite(p[name])-finite(lastPerf[name]))}
+  function frame(now,rawDtMs){
+    const dt=finite(rawDtMs);
+    frameCount++;frameSum+=dt;frameMax=Math.max(frameMax,dt);
+    if(dt>34)frameOverBudget++;
+    if(dt>=FRAME_SPIKE_MS)event('FRAME_SPIKE',{dtMs:+dt.toFixed(2),speed:clockSpeed()},dt>=100?'error':'warn',250);
+    if(now-lastSampleAt>=SAMPLE_MS)sample(now);
+  }
+  function measure(name,ms,data={}){
+    const v=finite(ms),limits={DRAW:34,CACHE_BASE:24,CACHE_CASTLE_BODY:24,CACHE_CASTLE_FRONT:18,MAINTENANCE:22,SAVE:20,NAV_GRAPH:20,GROWTH:20};
+    const limit=limits[name]??30;
+    if(v>=limit)event(name+'_SLOW',{ms:+v.toFixed(2),...data},v>=limit*2?'error':'warn',250);
+  }
+  function sample(now=performance.now()){
+    const p=perf(),all=structures(),day=simDay();
+    const s={
+      atMs:Math.round(now),wall:new Date().toISOString(),day:+day.toFixed(4),speed:clockSpeed(),
+      frame:{count:frameCount,avgMs:+(frameCount?frameSum/frameCount:0).toFixed(2),maxMs:+frameMax.toFixed(2),over34:frameOverBudget},
+      draw:{lastMs:+finite(p.lastDrawMs).toFixed(2),maxMs:+finite(p.maxDrawMs).toFixed(2),longDraws:finite(p.longDraws)},
+      maintenance:{lastMs:+finite(p.lastMaintenanceMs).toFixed(2),runs:finite(p.maintenanceRuns),deltaRuns:delta('maintenanceRuns',p)},
+      save:{lastMs:+finite(p.lastSaveMs).toFixed(2)},
+      navigation:{
+        graphBuilds:finite(p.graphBuilds),deltaGraphBuilds:delta('graphBuilds',p),
+        graphRoutes:finite(p.graphRoutes),deltaGraphRoutes:delta('graphRoutes',p),
+        gridFallbacks:finite(p.gridFallbacks),deltaGridFallbacks:delta('gridFallbacks',p),
+        gridMisses:finite(p.gridMisses),deltaGridMisses:delta('gridMisses',p),
+        destinationTreesBuilt:finite(p.destinationTreesBuilt),deltaTreesBuilt:delta('destinationTreesBuilt',p),
+        destinationTreeHits:finite(p.destinationTreeHits),deltaTreeHits:delta('destinationTreeHits',p),
+        navInvalidations:finite(p.navInvalidations),deltaNavInvalidations:delta('navInvalidations',p)
+      },
+      cache:{
+        invalidations:finite(p.cacheInvalidations),deltaInvalidations:delta('cacheInvalidations',p),
+        baseRebuilds:finite(p.cacheBaseRebuilds),deltaBaseRebuilds:delta('cacheBaseRebuilds',p),
+        castleBodyRebuilds:finite(p.cacheCastleBodyRebuilds),deltaCastleBodyRebuilds:delta('cacheCastleBodyRebuilds',p),
+        castleFrontRebuilds:finite(p.cacheCastleFrontRebuilds),deltaCastleFrontRebuilds:delta('cacheCastleFrontRebuilds',p)
+      },
+      population:{represented:finite(p.representedPopulation),visible:finite(p.visibleVillagers)},
+      scene:{
+        structures:all.length,
+        roads:all.reduce((n,x)=>n+(x?.type==='road'?1:0),0),
+        construction:all.reduce((n,x)=>n+(x?.construction&&finite(x.construction.completeDay)>day?1:0),0)
+      }
+    };
+    samples.push(s);trim(samples,MAX_SAMPLES);
+    lastPerf={...p};frameCount=0;frameSum=0;frameMax=0;frameOverBudget=0;lastSampleAt=now;
+    updateReadout(s);
+    return s;
+  }
+  function diagnose(windowSamples=30){
+    const recent=samples.slice(-Math.max(1,windowSamples)),issues=[];
+    if(!recent.length)return{level:'unknown',issues:['No samples yet']};
+    const max=fn=>Math.max(0,...recent.map(fn)),avg=fn=>recent.reduce((a,s)=>a+fn(s),0)/recent.length;
+    if(max(s=>s.frame.maxMs)>=100)issues.push('MAIN_THREAD: frame gap >=100ms');
+    else if(avg(s=>s.frame.avgMs)>40)issues.push('FRAME_PACING: average frame interval >40ms');
+    if(max(s=>s.draw.lastMs)>50)issues.push('DRAW: slow render');
+    if(max(s=>s.maintenance.lastMs)>35)issues.push('MAINTENANCE: watchdog blocking');
+    if(max(s=>s.save.lastMs)>30)issues.push('SAVE: synchronous save blocking');
+    if(max(s=>s.navigation.deltaGraphBuilds)>1)issues.push('NAVIGATION: repeated graph rebuilds');
+    if(max(s=>s.navigation.deltaTreesBuilt)>25)issues.push('NAVIGATION: destination-tree churn');
+    if(max(s=>s.cache.deltaInvalidations)>8)issues.push('CACHE: frequent invalidations');
+    if(max(s=>s.cache.deltaBaseRebuilds+s.cache.deltaCastleBodyRebuilds+s.cache.deltaCastleFrontRebuilds)>3)issues.push('CACHE_REBUILD: repeated static rebuilds');
+    if(events.slice(-100).some(e=>e.type==='LONG_TASK'&&finite(e.data?.durationMs)>80))issues.push('LONG_TASK: browser main-thread task >80ms');
+    return{level:issues.length?'warning':'ok',issues};
+  }
+  function snapshot(){
+    return{schema:1,generatedAt:new Date().toISOString(),userAgent:navigator.userAgent,
+      viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio||1},
+      diagnosis:diagnose(60),samples:samples.slice(),events:events.slice(),perf:{...perf()}};
+  }
+  function exportJson(){
+    const blob=new Blob([JSON.stringify(snapshot(),null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='conquer-analytics-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function clear(){
+    samples.length=0;events.length=0;lastPerf={...perf()};lastSampleAt=performance.now();
+    frameCount=0;frameSum=0;frameMax=0;frameOverBudget=0;event('ANALYTICS_CLEARED');
+  }
+  function updateReadout(s){
+    const el=document.getElementById('analyticsReadout');if(!el)return;
+    const d=diagnose(20);
+    el.textContent=(d.level==='ok'?'OK':'⚠')+' · frame '+s.frame.avgMs+'ms / '+s.frame.maxMs+'ms · draw '+s.draw.lastMs+'ms · '+s.population.visible+' pop';
+    el.title=d.issues.join('\n')||'No diagnostic warnings';
+  }
+  try{
+    if('PerformanceObserver'in window&&PerformanceObserver.supportedEntryTypes?.includes('longtask')){
+      const observer=new PerformanceObserver(list=>{
+        for(const e of list.getEntries())event('LONG_TASK',{durationMs:+e.duration.toFixed(2),startMs:+e.startTime.toFixed(2)},e.duration>=100?'error':'warn',100);
+      });
+      observer.observe({entryTypes:['longtask']});
+    }
+  }catch(err){event('ANALYTICS_OBSERVER_ERROR',{message:String(err)})}
+
+  window.__conquerAnalytics={frame,measure,event,sample,diagnose,snapshot,exportJson,clear,samples,events};
+  event('ANALYTICS_READY',{sampleMs:SAMPLE_MS,maxSamples:MAX_SAMPLES});
+})();
