@@ -917,7 +917,7 @@ async function loadForestTreeSprites(){
     }
     await Promise.all(jobs);
     forestTreeSpritesReady=true;
-    invalidateSceneCache('base');
+    invalidateSceneCache('landscape');
     if(typeof draw==='function')draw();
   }catch(err){
     console.warn('Forest SVG load failed',err);
