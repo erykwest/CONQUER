@@ -190,6 +190,10 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
         console.error('CONQUER WebGPU texture upload validation failed:',name,err.message);
         fallback('texture-upload-validation',err);
       }
+    }).catch(err=>{
+      // A device may disappear while an async validation scope is resolving
+      // (notably SwiftShader/headless). device.lost owns that fallback path.
+      if(!state.deviceLost&&state.ready)console.warn('WebGPU validation scope ended:',err);
     });
     entry.gpuDirty=false;
     const ms=performance.now()-t0;
