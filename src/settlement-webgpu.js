@@ -11,7 +11,8 @@
     adapter:null,device:null,context:null,format:null,pipeline:null,sampler:null,
     vertexBuffer:null,layerGpu:new Map(),width:0,height:0,dpr:1,
     frames:0,uploads:0,lastFrameMs:0,lastUploadMs:0,totalUploadMs:0,
-    fallbackReason:null,deviceLost:false
+    fallbackReason:null,deviceLost:false,
+    visualCheckStarted:false,visualVerified:false,visualCheckResult:null
   };
 
   function rendererForcedCanvas(){
@@ -74,7 +75,8 @@
     state.context.configure({
       device:state.device,
       format:state.format,
-      alphaMode:'premultiplied'
+      alphaMode:'premultiplied',
+      usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.COPY_SRC
     });
     return true;
   }
@@ -264,10 +266,11 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
       const t0=performance.now();
       state.device.queue.writeBuffer(state.vertexBuffer,0,vertices);
       const encoder=state.device.createCommandEncoder({label:'conquer-static-compositor-encoder'});
+      const targetTexture=state.context.getCurrentTexture();
       const pass=encoder.beginRenderPass({
         label:'conquer-static-compositor-pass',
         colorAttachments:[{
-          view:state.context.getCurrentTexture().createView(),
+          view:targetTexture.createView(),
           clearValue:{r:32/255,g:36/255,b:25/255,a:1},
           loadOp:'clear',storeOp:'store'
         }]
@@ -279,7 +282,59 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
         pass.draw(4,1,0,0);
       }
       pass.end();
+
+      let visualReadback=null;
+      if(!state.visualCheckStarted&&state.width>=64&&state.height>=64){
+        state.visualCheckStarted=true;
+        const size=64,bytesPerRow=256;
+        const buffer=state.device.createBuffer({
+          label:'conquer-webgpu-visual-probe',
+          size:bytesPerRow*size,
+          usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ
+        });
+        const ox=Math.max(0,Math.floor((state.width-size)/2));
+        const oy=Math.max(0,Math.floor((state.height-size)/2));
+        encoder.copyTextureToBuffer(
+          {texture:targetTexture,origin:{x:ox,y:oy,z:0}},
+          {buffer,bytesPerRow,rowsPerImage:size},
+          {width:size,height:size,depthOrArrayLayers:1}
+        );
+        visualReadback={buffer,size,bytesPerRow};
+      }
+
       state.device.queue.submit([encoder.finish()]);
+
+      if(visualReadback){
+        const {buffer,size,bytesPerRow}=visualReadback;
+        buffer.mapAsync(GPUMapMode.READ).then(()=>{
+          const bytes=new Uint8Array(buffer.getMappedRange());
+          const clear=state.format?.startsWith('bgra')?[25,36,32,255]:[32,36,25,255];
+          let changed=0,sampled=0;
+          for(let y=0;y<size;y+=4){
+            const row=y*bytesPerRow;
+            for(let x=0;x<size;x+=4){
+              const i=row+x*4;sampled++;
+              if(
+                Math.abs(bytes[i]-clear[0])>2||
+                Math.abs(bytes[i+1]-clear[1])>2||
+                Math.abs(bytes[i+2]-clear[2])>2||
+                Math.abs(bytes[i+3]-clear[3])>2
+              )changed++;
+            }
+          }
+          state.visualCheckResult={changed,sampled};
+          state.visualVerified=changed>0;
+          buffer.unmap();buffer.destroy();
+          publishPerf();
+          if(!state.visualVerified){
+            console.error('CONQUER WebGPU visual probe detected an empty compositor frame');
+            fallback('blank-frame');
+          }
+        }).catch(err=>{
+          try{buffer.destroy()}catch{}
+          if(!state.deviceLost&&state.ready)console.warn('WebGPU visual probe unavailable:',err);
+        });
+      }
 
       state.frames++;
       state.lastFrameMs=performance.now()-t0;
@@ -362,6 +417,8 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
       format:state.format,frames:state.frames,uploads:state.uploads,
       lastFrameMs:+state.lastFrameMs.toFixed(3),
       lastUploadMs:+state.lastUploadMs.toFixed(3),
+      visualVerified:state.visualVerified,
+      visualCheckResult:state.visualCheckResult,
       fallbackReason:state.fallbackReason,deviceLost:state.deviceLost
     };
   }
