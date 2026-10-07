@@ -249,9 +249,8 @@ class RoadNavHeap{
   pop(){const a=this.a;if(!a.length)return null;const root=a[0],last=a.pop();if(a.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=a.length)break;let m=r<a.length&&a[r].d<a[l].d?r:l;if(a[m].d>=last.d)break;a[i]=a[m];i=m}a[i]=last}return root}
   get length(){return this.a.length}
 }
-function roadDestinationTreeKey(anchor,graph){
-  const roadId=anchor?.item?.road?.id||'road';
-  return graph.version+'|'+roadId+'|'+anchor.t.toFixed(4)+'|'+roadNavNodeKey(anchor.point);
+function roadNodeTreeKey(nodeKey,graph){
+  return graph.version+'|node|'+nodeKey;
 }
 function cacheRoadDestinationTree(key,tree){
   if(roadDestinationTreeCache.size>=ROAD_DESTINATION_TREE_CACHE_MAX){
@@ -260,10 +259,9 @@ function cacheRoadDestinationTree(key,tree){
   }
   roadDestinationTreeCache.set(key,tree);
 }
-function buildRoadDestinationTree(goalAnchor){
-  const graph=roadNavGraph();
-  if(!goalAnchor||!graph.nodes.size)return null;
-  const key=roadDestinationTreeKey(goalAnchor,graph);
+function buildRoadNodeTree(goalNodeKey,graph=roadNavGraph()){
+  if(!goalNodeKey||!graph.nodes.size||!graph.nodes.has(goalNodeKey))return null;
+  const key=roadNodeTreeKey(goalNodeKey,graph);
   const cached=roadDestinationTreeCache.get(key);
   if(cached){
     navPerf.destinationTreeHits++;
@@ -271,20 +269,9 @@ function buildRoadDestinationTree(goalAnchor){
   }
 
   const heap=new RoadNavHeap(),distance=new Map(),next=new Map();
-  const seeds=[];
-  for(const q of [goalAnchor.left,goalAnchor.right]){
-    if(!q?.node)continue;
-    const d=dist(goalAnchor.point,q.node.p);
-    if(!seeds.some(s=>s.key===q.node.key&&Math.abs(s.d-d)<1e-6))seeds.push({key:q.node.key,d});
-  }
-
-  for(const seed of seeds){
-    if(seed.d<(distance.get(seed.key)??Infinity)){
-      distance.set(seed.key,seed.d);
-      next.set(seed.key,null);
-      heap.push({key:seed.key,d:seed.d});
-    }
-  }
+  distance.set(goalNodeKey,0);
+  next.set(goalNodeKey,null);
+  heap.push({key:goalNodeKey,d:0});
 
   let guard=0;
   while(heap.length&&guard++<50000){
@@ -295,46 +282,62 @@ function buildRoadDestinationTree(goalAnchor){
       const nd=cur.d+w;
       if(nd<(distance.get(neighborKey)??Infinity)){
         distance.set(neighborKey,nd);
-        // From neighbor, the next hop toward the destination is cur.
+        // From neighbor, the next hop toward this cached goal node is cur.
         next.set(neighborKey,cur.key);
         heap.push({key:neighborKey,d:nd});
       }
     }
   }
 
-  const tree={key,graphVersion:graph.version,goalAnchor,distance,next};
+  const tree={key,graphVersion:graph.version,goalNodeKey,distance,next};
   cacheRoadDestinationTree(key,tree);
   navPerf.destinationTreesBuilt++;
   return tree;
+}
+function uniqueAnchorNodes(anchor){
+  const out=[],seen=new Set();
+  for(const q of [anchor?.left,anchor?.right]){
+    if(!q?.node||seen.has(q.node.key))continue;
+    seen.add(q.node.key);out.push(q);
+  }
+  return out;
 }
 function roadTreePathFromAnchor(startAnchor,goalAnchor){
   const graph=roadNavGraph();
   if(!startAnchor||!goalAnchor||!graph.nodes.size)return null;
 
-  // Same-road travel is cheaper than consulting the tree.
+  // Same-road travel never needs the network graph.
   if(startAnchor.item===goalAnchor.item)return[startAnchor.point,goalAnchor.point];
 
-  const tree=buildRoadDestinationTree(goalAnchor);
-  if(!tree)return null;
+  const starts=uniqueAnchorNodes(startAnchor),goals=uniqueAnchorNodes(goalAnchor);
+  if(!starts.length||!goals.length)return null;
 
-  let bestKey=null,bestCost=Infinity;
-  for(const q of [startAnchor.left,startAnchor.right]){
-    if(!q?.node)continue;
-    const tail=tree.distance.get(q.node.key);
-    if(tail==null)continue;
-    const cost=dist(startAnchor.point,q.node.p)+tail;
-    if(cost<bestCost){bestCost=cost;bestKey=q.node.key}
+  let best=null,bestCost=Infinity;
+  for(const goal of goals){
+    const tree=buildRoadNodeTree(goal.node.key,graph);
+    if(!tree)continue;
+    const goalLeg=dist(goalAnchor.point,goal.node.p);
+
+    for(const start of starts){
+      const networkCost=tree.distance.get(start.node.key);
+      if(networkCost==null)continue;
+      const cost=dist(startAnchor.point,start.node.p)+networkCost+goalLeg;
+      if(cost<bestCost){
+        bestCost=cost;
+        best={startKey:start.node.key,tree};
+      }
+    }
   }
-  if(!bestKey)return null;
+  if(!best)return null;
 
   const out=[{...startAnchor.point}],seen=new Set();
-  let key=bestKey,guard=0;
+  let key=best.startKey,guard=0;
   while(key&&guard++<graph.nodes.size+4){
     if(seen.has(key))return null;
     seen.add(key);
     const node=graph.nodes.get(key);if(!node)return null;
     if(dist(out.at(-1),node.p)>.02)out.push({...node.p});
-    key=tree.next.get(key)??null;
+    key=best.tree.next.get(key)??null;
   }
   if(dist(out.at(-1),goalAnchor.point)>.02)out.push({...goalAnchor.point});
   navPerf.destinationTreeRoutes++;
