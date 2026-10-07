@@ -489,13 +489,15 @@ function drawCastleUnion(){
   return true;
 }
 function drawCastleUnionDetails(){
+  const hoardingFrame=State.structures.some(s=>isCastlePart(s)&&!underConstruction(s)&&s.type==='wall'&&wallSkin(s)==='hoarding')
+    ?buildBattlementOcclusionFrame():null;
   for(const s of State.structures){
     if(!isCastlePart(s)||underConstruction(s))continue;
     if(s.type==='built'){
       drawBuiltDetails(s,false);
       if(builtSkin(s)==='arcade')drawBuiltArcade(s);
     }
-    if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s);
+    if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s,hoardingFrame);
     if(s.type==='tower'&&isStoneTowerStructure(s)){
       withStructureGroundPlane(s,()=>drawStoneTowerBase(s,false));
     }
