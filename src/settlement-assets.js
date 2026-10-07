@@ -44,7 +44,7 @@ function assetLinearBase(type,length,extra={}){
   return{id:'asset-'+type,type,auto:false,length,width:type==='built'?1:.5,groundZ:0,...extra};
 }
 function findHouseAssetId(level,plan=null,turret=null,doorSide=1,width=1.5){
-  for(let i=0;i<4096;i++){
+  for(let i=0;i<65536;i++){
     const id='asset-house-'+level+'-'+(plan||'x')+'-'+(turret||'x')+'-'+doorSide+'-'+width+'-'+i;
     const s={id,type:'house',houseLevel:level};
     if(plan&&housePlanType(s)!==plan)continue;
