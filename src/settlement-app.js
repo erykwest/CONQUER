@@ -667,9 +667,19 @@ function panCamera(dx,dy){
 }
 function setTimeSpeed(speed){
   speed=Number(speed)||0;
+  const wasRunning=State.clock.speed>0;
   if(speed>0)State.clock.lastSpeed=speed;
   else if(State.clock.speed>0)State.clock.lastSpeed=State.clock.speed;
   State.clock.speed=speed;
+
+  // Restart the discrete simulation clock from the exact current day when
+  // leaving pause. Otherwise a stale logic cursor could rescan a large time span.
+  if(speed>0&&!wasRunning){
+    simLogicDay=State.clock.day;
+    simLogicAt=performance.now();
+    simDrawAt=0;
+  }
+
   document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',Number(x.dataset.speed)===speed));
   status(speed===0?'Time paused':`Time ×${speed}`);
 }
@@ -778,8 +788,12 @@ document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(
 ensureDevControls();
 document.getElementById('analyticsExportBtn')?.addEventListener('click',()=>window.__conquerAnalytics?.exportJson());
 document.getElementById('analyticsClearBtn')?.addEventListener('click',()=>window.__conquerAnalytics?.clear());
-let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,weatherDrawAt=0,weatherLayerActive=false,lastWorldWeatherKey='';
-const VISUAL_FRAME_MS=1000/30;
+let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,simLogicAt=0,simLogicDay=State.clock.day,weatherDrawAt=0,weatherLayerActive=false,lastWorldWeatherKey='';
+const SIM_LOGIC_FRAME_MS=100; // topology/growth/completion checks: 10 Hz is plenty
+const VISUAL_FRAME_FAST_MS=1000/24;
+const VISUAL_FRAME_MEDIUM_MS=1000/18;
+const VISUAL_FRAME_HEAVY_MS=1000/12;
+let adaptiveVisualFrameMs=VISUAL_FRAME_FAST_MS,simDrawEmaMs=0;
 const WEATHER_FRAME_MS=1000/24;
 const MAINTENANCE_WATCHDOG_MS=2500;
 const LOCAL_AUTOSAVE_MS=5000;
@@ -837,14 +851,20 @@ function simulationFrame(now){
   window.__conquerAnalytics?.frame(now,rawDtMs);
   const dt=Math.min(.25,rawDtMs/1000);simLast=now;
   if(State.clock.speed>0){
-    const before=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
     if(syncSeasonToCalendar())scheduleLocalSave(100);
 
-    processVillageGrowth();
+    // Time itself remains frame-continuous, but expensive simulation decisions
+    // do not need 60 Hz. Growth and completion detection run at 10 Hz.
+    let completed=false;
+    if(now-simLogicAt>=SIM_LOGIC_FRAME_MS){
+      processVillageGrowth();
+      completed=constructionCompletionCrossed(simLogicDay,State.clock.day);
+      simLogicDay=State.clock.day;
+      simLogicAt=now;
+    }
 
-    // Maintenance follows actual topology events, NOT simulated quarter-days.
-    const completed=constructionCompletionCrossed(before,State.clock.day);
+    // Maintenance follows actual topology events, NOT render frames.
     if(completed){
       runSettlementMaintenance('completion');
       simMaintenanceAt=now;
@@ -858,21 +878,34 @@ function simulationFrame(now){
       simUiAt=now;
     }
 
-    if(now-simDrawAt>=VISUAL_FRAME_MS){
+    if(now-simDrawAt>=adaptiveVisualFrameMs){
       const t0=performance.now();
       draw();
       const drawMs=performance.now()-t0;
-      window.__conquerAnalytics?.measure('DRAW',drawMs,{visible:window.__conquerPerf?.visibleVillagers||0});
+
+      // Leave main-thread headroom instead of forcing 30 FPS when one full
+      // dynamic draw is already expensive. Fast scenes stay at 24 FPS;
+      // overloaded scenes automatically fall back to 18 or 12 FPS.
+      simDrawEmaMs=simDrawEmaMs?simDrawEmaMs*.82+drawMs*.18:drawMs;
+      adaptiveVisualFrameMs=simDrawEmaMs>42?VISUAL_FRAME_HEAVY_MS:
+        simDrawEmaMs>24?VISUAL_FRAME_MEDIUM_MS:VISUAL_FRAME_FAST_MS;
+
+      window.__conquerAnalytics?.measure('DRAW',drawMs,{
+        visible:window.__conquerPerf?.visibleVillagers||0,
+        targetFrameMs:+adaptiveVisualFrameMs.toFixed(1),
+        emaMs:+simDrawEmaMs.toFixed(1)
+      });
       if(window.__conquerPerf){
         window.__conquerPerf.lastDrawMs=drawMs;
+        window.__conquerPerf.drawEmaMs=simDrawEmaMs;
+        window.__conquerPerf.visualFrameMs=adaptiveVisualFrameMs;
         window.__conquerPerf.maxDrawMs=Math.max(window.__conquerPerf.maxDrawMs||0,drawMs);
         if(drawMs>50)window.__conquerPerf.longDraws=(window.__conquerPerf.longDraws||0)+1;
       }
       simDrawAt=now;
     }
 
-    // JSON.stringify + localStorage are synchronous. Keep them far away from
-    // the 10× growth cadence instead of blocking every second.
+    // JSON.stringify + localStorage are synchronous and remain off the hot path.
     if(now-simPersistAt>=LOCAL_AUTOSAVE_MS){
       saveLocal();
       simPersistAt=now;
