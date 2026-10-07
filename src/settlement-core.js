@@ -385,9 +385,9 @@ function pointRadius(s){
 
 // CONQUER diagnostics — bounded in-memory telemetry, no persistent background writes.
 (function(){
-  const SAMPLE_MS=1000,MAX_SAMPLES=900,MAX_EVENTS=500,FRAME_SPIKE_MS=55;
-  const samples=[],events=[];
-  let lastSampleAt=performance.now(),lastEventAtByType=new Map(),lastPerf={},frameCount=0,frameSum=0,frameMax=0,frameOverBudget=0;
+  const SAMPLE_MS=1000,MAX_SAMPLES=900,MAX_EVENTS=500,FRAME_SPIKE_MS=55,REMOTE_MS=10000;
+  const samples=[],events=[],sessionId=crypto.randomUUID?.()||('diag-'+Math.random().toString(36).slice(2));
+  let lastSampleAt=performance.now(),lastRemoteAt=0,lastEventAtByType=new Map(),lastPerf={},frameCount=0,frameSum=0,frameMax=0,frameOverBudget=0;
 
   const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
   const trim=(list,max)=>{if(list.length>max)list.splice(0,list.length-max)};
@@ -404,6 +404,19 @@ function pointRadius(s){
     trim(events,MAX_EVENTS);
   }
   function delta(name,p){return Math.max(0,finite(p[name])-finite(lastPerf[name]))}
+  function sendRemote(sample){
+    const now=performance.now();
+    if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
+    lastRemoteAt=now;
+    const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
+    fetch('/api/telemetry',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({sessionId,sample,events:recentEvents}),
+      keepalive:true,
+      cache:'no-store'
+    }).catch(err=>event('REMOTE_TELEMETRY_ERROR',{message:String(err)},'warn',30000));
+  }
   function frame(now,rawDtMs){
     const dt=finite(rawDtMs);
     frameCount++;frameSum+=dt;frameMax=Math.max(frameMax,dt);
@@ -449,6 +462,7 @@ function pointRadius(s){
     samples.push(s);trim(samples,MAX_SAMPLES);
     lastPerf={...p};frameCount=0;frameSum=0;frameMax=0;frameOverBudget=0;lastSampleAt=now;
     updateReadout(s);
+    sendRemote(s);
     return s;
   }
   function diagnose(windowSamples=30){
@@ -497,6 +511,6 @@ function pointRadius(s){
     }
   }catch(err){event('ANALYTICS_OBSERVER_ERROR',{message:String(err)})}
 
-  window.__conquerAnalytics={frame,measure,event,sample,diagnose,snapshot,exportJson,clear,samples,events};
+  window.__conquerAnalytics={frame,measure,event,sample,diagnose,snapshot,exportJson,clear,samples,events,sessionId};
   event('ANALYTICS_READY',{sampleMs:SAMPLE_MS,maxSamples:MAX_SAMPLES});
 })();
