@@ -930,7 +930,12 @@ function ensureStaticSceneCaches(){
     }
   }
 
-  const dirty=builders.filter(([name])=>sceneCache[name].dirty);
+  const stagePriority=new Map([
+    ['ground',0],['base',1],['castleBody',2],['castleFront',3],['shadow',4],['landscape',5]
+  ]);
+  const dirty=builders
+    .filter(([name])=>sceneCache[name].dirty)
+    .sort((a,b)=>(stagePriority.get(a[0])??99)-(stagePriority.get(b[0])??99));
   if(!dirty.length)return;
 
   // Initial load, pause/edit mode and camera projection changes favor immediate
