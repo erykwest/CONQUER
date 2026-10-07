@@ -147,7 +147,7 @@ function structureHeight(s){
     if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
   }
-  if(s.type==='gate')return isWoodGate(s)?1.62:[2.8,4.0,5.2][structureLevel(s)-1];
+  if(s.type==='gate')return isWoodGate(s)?1.94:[2.8,4.0,5.2][structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
@@ -2656,6 +2656,73 @@ function woodGateLocal(s,x,y){
   const q=rotateVec(x,y,s.angle||0);
   return{x:s.x+q.x,y:s.y+q.y};
 }
+function drawWoodGateDoor(s){
+  const d=rectDims(s),halfX=d.w/2,doorHalf=Math.min(.34,d.h*.32);
+  const x=halfX+.012,z0=.035,z1=1.08;
+  const center={x:s.x,y:s.y};
+  const front=woodGateLocal(s,x,0);
+
+  // Front leaf is only visible from the exterior side. From the rear, the
+  // gatehouse mass hides it instead of letting a late canvas draw leak through.
+  if(viewDepthPoint(front)<viewDepthPoint(center)-.01)return;
+
+  const a=woodGateLocal(s,x,-doorHalf),b=woodGateLocal(s,x,doorHalf);
+  const poly=[w2s(a,z0),w2s(b,z0),w2s(b,z1),w2s(a,z1)];
+  pathPolygon(poly,'#4a2f1d','#8d6747',1);
+
+  // Vertical planks + central meeting seam give the opening a readable gate leaf.
+  const plankCount=6;
+  ctx.save();
+  ctx.strokeStyle='rgba(142,104,72,.70)';
+  ctx.lineWidth=.75;
+  for(let i=1;i<plankCount;i++){
+    const t=i/plankCount,y=-doorHalf+(doorHalf*2)*t;
+    const p0=w2s(woodGateLocal(s,x+.002,y),z0+.03);
+    const p1=w2s(woodGateLocal(s,x+.002,y),z1-.035);
+    ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);ctx.stroke();
+  }
+
+  const seam0=w2s(woodGateLocal(s,x+.004,0),z0+.02);
+  const seam1=w2s(woodGateLocal(s,x+.004,0),z1-.02);
+  ctx.strokeStyle='rgba(35,23,16,.88)';ctx.lineWidth=1.1;
+  ctx.beginPath();ctx.moveTo(seam0.x,seam0.y);ctx.lineTo(seam1.x,seam1.y);ctx.stroke();
+
+  // Two iron straps across the double leaf.
+  ctx.strokeStyle='rgba(44,42,39,.82)';ctx.lineWidth=Math.max(1,.75*State.view.scale);
+  for(const z of [.34,.78]){
+    const p0=w2s(woodGateLocal(s,x+.006,-doorHalf+.035),z);
+    const p1=w2s(woodGateLocal(s,x+.006,doorHalf-.035),z);
+    ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawWoodGateBattlements(s,roofTop){
+  const d=rectDims(s),angle=s.angle||0;
+  const halfX=d.w/2+.015,halfY=d.h/2+.015;
+  const z0=roofTop,z1=roofTop+.32;
+  const merlonW=.18,merlonD=.16;
+  const items=[];
+
+  // Corners anchor the crenellation; long and short sides receive evenly spaced merlons.
+  for(const x of [-halfX,halfX])for(const y of [-halfY,halfY]){
+    items.push({x,y,w:merlonW,h:merlonD});
+  }
+  for(const y of [-halfY,halfY]){
+    for(const x of [-halfX*.34,halfX*.34])items.push({x,y,w:merlonW,h:merlonD});
+  }
+  for(const x of [-halfX,halfX]){
+    items.push({x,y:0,w:merlonD,h:merlonW});
+  }
+
+  for(const m of items){
+    const c=woodGateLocal(s,m.x,m.y);
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,m.w,m.h,angle),z0,z1,{
+      top:State.season==='winter'?WINTER_SNOW_TOP:'#805b3d',
+      sideA:'#49321f',sideB:'#62432a',
+      stroke:'#916946'
+    });
+  }
+}
 function drawWoodGate(s,preview=false){
   const d=rectDims(s),angle=s.angle||0;
   const halfX=d.w/2,halfY=d.h/2;
@@ -2691,6 +2758,9 @@ function drawWoodGate(s,preview=false){
     const pts=rectWorldPoints(c.x,c.y,.10,d.h-.10,angle);
     extrudePolygonAt(pts,1.18,1.32,{top:'#80603f',sideA:'#49331f',sideB:'#62462c',stroke:'#95704c'});
   }
+
+  drawWoodGateDoor(s);
+  drawWoodGateBattlements(s,roofTop);
 
   if(selected){
     pathPolygon(projectPath(footprintPoints(s),.025),null,'#f4b76f',2);
