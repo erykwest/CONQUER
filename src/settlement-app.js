@@ -604,6 +604,7 @@ function saveLocal(){
   const t0=performance.now();
   localStorage.setItem(localStorageKey(),JSON.stringify({schema:LOCAL_STORAGE_SCHEMA,seed:State.seed,biome:State.biome,season:State.season,seasonOverride:State.seasonOverride||null,neighborBiomes:State.neighborBiomes,landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment},structures:State.structures,resources:State.resources,policies:State.policies,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view}));
   if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
+  window.__conquerAnalytics?.measure('SAVE',performance.now()-t0);
 }
 function scheduleLocalSave(delay=700){
   if(localSaveTimer)return;
@@ -775,6 +776,8 @@ document.getElementById('biomeSelect').onchange=e=>{
 };
 document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(Number(b.dataset.speed)));
 ensureDevControls();
+document.getElementById('analyticsExportBtn')?.addEventListener('click',()=>window.__conquerAnalytics?.exportJson());
+document.getElementById('analyticsClearBtn')?.addEventListener('click',()=>window.__conquerAnalytics?.clear());
 let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,weatherDrawAt=0,weatherLayerActive=false,lastWorldWeatherKey='';
 const VISUAL_FRAME_MS=1000/30;
 const WEATHER_FRAME_MS=1000/24;
@@ -805,14 +808,18 @@ function runSettlementMaintenance(reason='watchdog'){
     invalidateSceneCache();
   }
 
+  const maintenanceMs=performance.now()-t0;
+  window.__conquerAnalytics?.measure('MAINTENANCE',maintenanceMs,{reason,changed});
   if(window.__conquerPerf){
-    window.__conquerPerf.lastMaintenanceMs=performance.now()-t0;
+    window.__conquerPerf.lastMaintenanceMs=maintenanceMs;
     window.__conquerPerf.maintenanceRuns=(window.__conquerPerf.maintenanceRuns||0)+1;
   }
   return changed;
 }
 function simulationFrame(now){
-  const dt=Math.min(.25,(now-simLast)/1000);simLast=now;
+  const rawDtMs=now-simLast;
+  window.__conquerAnalytics?.frame(now,rawDtMs);
+  const dt=Math.min(.25,rawDtMs/1000);simLast=now;
   if(State.clock.speed>0){
     const before=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
@@ -839,6 +846,7 @@ function simulationFrame(now){
       const t0=performance.now();
       draw();
       const drawMs=performance.now()-t0;
+      window.__conquerAnalytics?.measure('DRAW',drawMs,{visible:window.__conquerPerf?.visibleVillagers||0});
       if(window.__conquerPerf){
         window.__conquerPerf.lastDrawMs=drawMs;
         window.__conquerPerf.maxDrawMs=Math.max(window.__conquerPerf.maxDrawMs||0,drawMs);
