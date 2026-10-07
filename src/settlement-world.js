@@ -306,6 +306,7 @@ function rebuildArterialRoute(routeId,displaced=[]){
 function reconcileArterialRoutes(){
   let changed=0;
   for(const route of ensureRoadPlan()){
+    if(route.disabled)continue;
     const roads=routeRoads(route.id);
     if(roads.length&&!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
   }
@@ -1069,7 +1070,8 @@ function ensureRoadPlan(){
     edge:entry.edge,
     entryId:entry.id,
     target:{x:entry.x,y:entry.y,edge:entry.edge},
-    connected:false
+    connected:false,
+    disabled:false
   }));
   State.village.roadPlanVersion=ROAD_PLAN_VERSION;
   State.village.baseRoadAngle=Math.atan2(State.village.roadPlan[0].target.y-well.y,State.village.roadPlan[0].target.x-well.x);
@@ -1080,6 +1082,7 @@ function connectSelectedBorderMainRoads(){
   if(!well||plan.length!==4)return 0;
   let changed=0;
   for(const route of plan){
+    if(route.disabled)continue;
     route.connected=true;
     if(!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
   }
@@ -1185,9 +1188,10 @@ function constrainRoadCandidate(candidate){
 function spawnArterial(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();if(!well||!plan.length)return false;
   for(const route of plan){
+    if(route.disabled)continue;
     if(routeRoads(route.id).length&&!arterialRouteContinuous(route.id))rebuildArterialRoute(route.id,[]);
   }
-  const open=plan.filter(p=>!p.connected);if(!open.length)return false;
+  const open=plan.filter(p=>!p.connected&&!p.disabled);if(!open.length)return false;
   // Alternate progress across the two border routes by choosing the one with fewer accepted segments.
   open.sort((p,q)=>routeRoads(p.id).length-routeRoads(q.id).length);
   const route=open[0],existing=routeRoads(route.id),a=existing.length?{...existing[existing.length-1].b}:{x:well.x,y:well.y};
