@@ -180,6 +180,80 @@ function footprintPoints(s){
   }
   return[];
 }
+const STONE_TOWER_BASE_HEIGHT=.50;
+const STONE_TOWER_SPLAY_ANGLE=10*Math.PI/180;
+const STONE_TOWER_SPLAY_OFFSET=STONE_TOWER_BASE_HEIGHT*Math.tan(STONE_TOWER_SPLAY_ANGLE);
+
+function isStoneTowerStructure(s){
+  return !!s&&s.type==='tower'&&!isWoodTower(s);
+}
+function stoneTowerSplayedFootprint(s){
+  if(!isStoneTowerStructure(s))return footprintPoints(s);
+  if(s.shape==='round'){
+    return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+STONE_TOWER_SPLAY_OFFSET,24);
+  }
+  const d=rectDims(s);
+  return rectWorldPoints(
+    s.x,s.y,
+    d.w+STONE_TOWER_SPLAY_OFFSET*2,
+    d.h+STONE_TOWER_SPLAY_OFFSET*2,
+    s.angle||0
+  );
+}
+function stoneTowerButtressFootprints(s){
+  if(!isStoneTowerStructure(s))return[];
+  const depth=.16,width=.16,out=[];
+  if(s.shape==='round'){
+    const r=Number(s.r)||.5;
+    for(let i=0;i<8;i++){
+      const a=i*Math.PI/4,ux=Math.cos(a),uy=Math.sin(a);
+      const c={x:s.x+ux*(r+depth/2-.018),y:s.y+uy*(r+depth/2-.018)};
+      out.push(rectWorldPoints(c.x,c.y,depth,width,a));
+    }
+    return out;
+  }
+
+  const fp=footprintPoints(s),center={x:s.x,y:s.y};
+  for(let i=0;i<fp.length;i++){
+    const a=fp[i],b=fp[(i+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+    const tx=dx/L,ty=dy/L,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    let nx=mid.x-center.x,ny=mid.y-center.y,NL=Math.hypot(nx,ny)||1;nx/=NL;ny/=NL;
+    const normalAngle=Math.atan2(ny,nx);
+    for(const t of [1/3,2/3]){
+      const edge={x:a.x+dx*t,y:a.y+dy*t};
+      const c={x:edge.x+nx*(depth/2-.018),y:edge.y+ny*(depth/2-.018)};
+      out.push(rectWorldPoints(c.x,c.y,depth,width,normalAngle));
+    }
+  }
+  return out;
+}
+function structureGroundContactPolygons(s){
+  if(isStoneTowerStructure(s)){
+    const style=towerBaseStyle(s);
+    if(style==='splayed')return[stoneTowerSplayedFootprint(s)];
+    if(style==='buttress')return[footprintPoints(s),...stoneTowerButtressFootprints(s)];
+  }
+  const fp=footprintPoints(s);
+  return fp?.length?[fp]:[];
+}
+function unionGroundContactRings(polys){
+  if(!polys?.length)return[];
+  if(polys.length===1)return polys;
+  const pc=window.__polygonClipping;
+  if(!pc)return polys;
+  try{
+    const geom=pc.union(...polys.map(poly=>[poly.map(p=>[p.x,p.y])]));
+    const rings=[];
+    for(const polygon of geom||[])for(const ring of polygon||[]){
+      const pts=cleanClipRing(ring);
+      if(pts.length>=3)rings.push(pts);
+    }
+    return rings.length?rings:polys;
+  }catch(err){
+    console.warn('Foundation footprint union failed',err);
+    return polys;
+  }
+}
 const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church']);
 function isPlacementFoundationBuilding(s){
   return !!s&&!s.auto&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
@@ -231,21 +305,23 @@ function withStructureGroundPlane(s,drawFn){
 }
 function drawPlacementFoundation(s,preview=false){
   if(!isPlacementFoundationBuilding(s))return;
-  const baseZ=placementGroundZ(s),fp=footprintPoints(s);
-  if(!Number.isFinite(baseZ)||!fp?.length||placementFoundationDepth(s)<=.015)return;
+  const baseZ=placementGroundZ(s),rings=unionGroundContactRings(structureGroundContactPolygons(s));
+  if(!Number.isFinite(baseZ)||!rings.length||placementFoundationDepth(s)<=.015)return;
 
   const faces=[];
-  for(let i=0;i<fp.length;i++){
-    const a=fp[i],b=fp[(i+1)%fp.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/.24));
-    for(let j=0;j<steps;j++){
-      const t0=j/steps,t1=(j+1)/steps;
-      const p0={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0};
-      const p1={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};
-      const z0=Math.min(baseZ,terrainElevation(p0)),z1=Math.min(baseZ,terrainElevation(p1));
-      if(baseZ-Math.min(z0,z1)<=.01)continue;
-      const poly=[w2sRaw(p0,z0),w2sRaw(p1,z1),w2sRaw(p1,baseZ),w2sRaw(p0,baseZ)];
-      const q=rotateViewPoint({x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2});
-      faces.push({poly,depth:q.x+q.y,shade:castleSideShade(p0,p1)});
+  for(const fp of rings){
+    for(let i=0;i<fp.length;i++){
+      const a=fp[i],b=fp[(i+1)%fp.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/.24));
+      for(let j=0;j<steps;j++){
+        const t0=j/steps,t1=(j+1)/steps;
+        const p0={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0};
+        const p1={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};
+        const z0=Math.min(baseZ,terrainElevation(p0)),z1=Math.min(baseZ,terrainElevation(p1));
+        if(baseZ-Math.min(z0,z1)<=.01)continue;
+        const poly=[w2sRaw(p0,z0),w2sRaw(p1,z1),w2sRaw(p1,baseZ),w2sRaw(p0,baseZ)];
+        const q=rotateViewPoint({x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2});
+        faces.push({poly,depth:q.x+q.y,shade:castleSideShade(p0,p1)});
+      }
     }
   }
   faces.sort((a,b)=>a.depth-b.depth);
@@ -258,14 +334,16 @@ function drawPlacementFoundation(s,preview=false){
   ctx.restore();
 }
 function structureTerrainSamples(s){
-  const fp=footprintPoints(s);if(!fp?.length)return[];
+  const polys=structureGroundContactPolygons(s);if(!polys.length)return[];
   const out=[];
-  for(let i=0;i<fp.length;i++){
-    const a=fp[i],b=fp[(i+1)%fp.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/.35));
-    for(let j=0;j<=steps;j++){const t=j/steps;out.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t})}
+  for(const fp of polys){
+    for(let i=0;i<fp.length;i++){
+      const a=fp[i],b=fp[(i+1)%fp.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/.35));
+      for(let j=0;j<=steps;j++){const t=j/steps;out.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t})}
+    }
+    const minX=Math.min(...fp.map(p=>p.x)),maxX=Math.max(...fp.map(p=>p.x)),minY=Math.min(...fp.map(p=>p.y)),maxY=Math.max(...fp.map(p=>p.y));
+    for(let y=minY+.25;y<maxY;y+=.5)for(let x=minX+.25;x<maxX;x+=.5)if(pointInPolygon({x,y},fp))out.push({x,y});
   }
-  const minX=Math.min(...fp.map(p=>p.x)),maxX=Math.max(...fp.map(p=>p.x)),minY=Math.min(...fp.map(p=>p.y)),maxY=Math.max(...fp.map(p=>p.y));
-  for(let y=minY+.25;y<maxY;y+=.5)for(let x=minX+.25;x<maxX;x+=.5)if(pointInPolygon({x,y},fp))out.push({x,y});
   const center=structureCenter(s);if(center)out.push({x:center.x,y:center.y});
   return out;
 }
