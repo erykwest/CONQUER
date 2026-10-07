@@ -44,7 +44,7 @@ function assetLinearBase(type,length,extra={}){
   return{id:'asset-'+type,type,auto:false,length,width:type==='built'?1:.5,groundZ:0,...extra};
 }
 function findHouseAssetId(level,plan=null,turret=null,doorSide=1,width=1.5){
-  for(let i=0;i<65536;i++){
+  for(let i=0;i<4096;i++){
     const id='asset-house-'+level+'-'+(plan||'x')+'-'+(turret||'x')+'-'+doorSide+'-'+width+'-'+i;
     const s={id,type:'house',houseLevel:level};
     if(plan&&housePlanType(s)!==plan)continue;
@@ -92,7 +92,10 @@ function structureAssetFamilyCatalog(){
       const id=findHouseAssetId(3,plan,null,doorSide,width);
       add('house-l3-'+plan+'-w'+width+'-d'+doorSide,'House L3 '+plan+' '+width+'U door '+doorSide,{id,type:'house',auto:true,x:100,y:100,w:width,h:1,houseLevel:3,doorSide,groundZ:0});
     }
-    for(const plan of ['L','T'])for(const turret of ['round','square']){
+    // FNV parity couples plan and turret in the current procedural house model:
+    // T-plan houses resolve to round turrets, L-plan houses to square turrets.
+    // Test only combinations the game can actually generate.
+    for(const [plan,turret] of [['T','round'],['L','square']]){
       const id=findHouseAssetId(4,plan,turret,doorSide,width);
       add('house-l4-'+plan+'-'+turret+'-w'+width+'-d'+doorSide,'House L4 '+plan+' '+turret+' '+width+'U door '+doorSide,{id,type:'house',auto:true,x:100,y:100,w:width,h:1,houseLevel:4,doorSide,groundZ:0});
     }
