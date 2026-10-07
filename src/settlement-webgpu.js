@@ -42,11 +42,30 @@
       }
     }
   }
+  function applyCanvasStack(){
+    if(!gpuCanvas||!canvas)return;
+    // Runtime styles are intentional: branch previews and static hosts may serve
+    // a stale settlement.css while the JS/HTML are already updated. An opaque
+    // legacy #c background would completely cover a healthy WebGPU surface.
+    Object.assign(gpuCanvas.style,{
+      position:'absolute',inset:'0px',width:'100%',height:'100%',display:'block',
+      pointerEvents:'none',zIndex:'0',background:'#202419',
+      visibility:state.active?'visible':'hidden'
+    });
+    Object.assign(canvas.style,{
+      position:'absolute',inset:'0px',width:'100%',height:'100%',display:'block',
+      zIndex:state.active?'1':'0',
+      background:state.active?'transparent':'#202419'
+    });
+    if(weatherCloudLayer)weatherCloudLayer.style.zIndex='2';
+    if(weatherCanvas)weatherCanvas.style.zIndex='3';
+  }
   function setActive(active,reason=null){
     state.active=!!active&&state.ready;
     state.fallbackReason=reason;
     wrap.classList.toggle('webgpu-active',state.active);
     document.documentElement.dataset.renderer=state.active?'webgpu':'canvas2d';
+    applyCanvasStack();
     publishPerf();
   }
   function destroyLayerTextures(){
@@ -419,7 +438,13 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
       lastUploadMs:+state.lastUploadMs.toFixed(3),
       visualVerified:state.visualVerified,
       visualCheckResult:state.visualCheckResult,
-      fallbackReason:state.fallbackReason,deviceLost:state.deviceLost
+      fallbackReason:state.fallbackReason,deviceLost:state.deviceLost,
+      stack:{
+        gpuVisibility:getComputedStyle(gpuCanvas).visibility,
+        gpuZ:getComputedStyle(gpuCanvas).zIndex,
+        canvasBackground:getComputedStyle(canvas).backgroundColor,
+        canvasZ:getComputedStyle(canvas).zIndex
+      }
     };
   }
 
