@@ -306,11 +306,11 @@ function updateStructureAssetReadout(report=structureAssetLastReport){
   syncAssetPerf();
   const p=assetPerf(),hits=p.assetCacheHits||0,misses=p.assetCacheMisses||0,total=hits+misses,rate=total?Math.round(hits/total*100):0;
   const runtime='cache '+p.assetCacheEntries+' · ~'+(p.assetCacheEstimatedMb||0)+' MB · hit '+rate+'%';
+  const castle=document.getElementById('castleCacheReadout');
+  if(castle)castle.textContent='Castle bitmap: '+(p.castleBodyBitmapEntries||0)+' entry · '+(p.castleBodyBitmapHits||0)+' hit / '+(p.castleBodyBitmapMisses||0)+' miss · last '+Number(p.castleBodyBitmapMs||0).toFixed(1)+' ms';
   if(structureAssetCompileRunning){el.textContent='Prerender/test in corso… '+runtime;return}
   if(!report){el.textContent='Non compilato · '+runtime;return}
   el.textContent=(report.ok?'PASS':'FAIL')+' · '+report.passed+'/'+report.jobs+' viste · '+report.failed+' fail · '+runtime;
-  const castle=document.getElementById('castleCacheReadout');
-  if(castle)castle.textContent='Castle bitmap: '+(p.castleBodyBitmapEntries||0)+' entry · '+(p.castleBodyBitmapHits||0)+' hit / '+(p.castleBodyBitmapMisses||0)+' miss · last '+Number(p.castleBodyBitmapMs||0).toFixed(1)+' ms';
 }
 async function compileAllStructureAssets({retain=true,yieldEvery=12}={}){
   if(structureAssetCompileRunning)return structureAssetCompileRunning;
