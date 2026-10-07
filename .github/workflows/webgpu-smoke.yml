@@ -21,7 +21,7 @@ jobs:
       - name: Install Playwright
         run: |
           npm init -y >/dev/null 2>&1
-          npm install playwright@1.55.0 >/dev/null
+          npm install playwright@1.55.0 pngjs@7.0.0 >/dev/null
           npx playwright install --with-deps chromium >/dev/null
 
       - name: Exercise hybrid renderer and fallback
@@ -29,6 +29,7 @@ jobs:
         run: |
           cat > webgpu-smoke.mjs <<'JS'
           import { chromium } from 'playwright';
+          import { PNG } from 'pngjs';
 
           const browser=await chromium.launch({
             headless:true,
@@ -44,7 +45,28 @@ jobs:
             const errors=[];
             page.on('pageerror',e=>errors.push(String(e.stack||e)));
             await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-            await page.waitForTimeout(3000);
+            await page.waitForFunction(()=>{
+              const s=window.ConquerWebGPU?.status?.();
+              return !s||s.frames>=1||!!s.fallbackReason;
+            },{timeout:10000}).catch(()=>{});
+
+            let gpuPixels=null;
+            const earlyStatus=await page.evaluate(()=>window.ConquerWebGPU?.status?.()||null);
+            if(earlyStatus?.frames>=1){
+              const png=PNG.sync.read(await page.locator('#gpuCanvas').screenshot({type:'png'}));
+              const unique=new Set();
+              let samples=0,nonClear=0;
+              for(let y=0;y<png.height;y+=12)for(let x=0;x<png.width;x+=12){
+                const i=(y*png.width+x)*4;
+                const r=png.data[i],g=png.data[i+1],b=png.data[i+2],a=png.data[i+3];
+                unique.add(`${r},${g},${b},${a}`);
+                if(Math.abs(r-32)>3||Math.abs(g-36)>3||Math.abs(b-25)>3)nonClear++;
+                samples++;
+              }
+              gpuPixels={uniqueColors:unique.size,nonClear,samples,width:png.width,height:png.height};
+            }
+
+            await page.waitForTimeout(1000);
 
             const result=await page.evaluate(()=>{
               const before=performance.now();
@@ -67,7 +89,7 @@ jobs:
             });
 
             await context.close();
-            return{url,result,errors};
+            return{url,result,gpuPixels,errors};
           }
 
           const hybrid=await probe('http://127.0.0.1:4173/');
@@ -89,6 +111,13 @@ jobs:
               console.error('navigator.gpu exists but hybrid renderer never exercised:',hybrid.result.status);
               process.exitCode=1;
             }
+          }
+          if(hybrid.gpuPixels&&(
+            hybrid.gpuPixels.uniqueColors<4||
+            hybrid.gpuPixels.nonClear<Math.max(10,hybrid.gpuPixels.samples*.01)
+          )){
+            console.error('WebGPU canvas is effectively blank:',hybrid.gpuPixels);
+            process.exitCode=1;
           }
           if(hybridFatal||fallbackFatal)process.exitCode=1;
           await browser.close();
