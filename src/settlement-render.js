@@ -1,32 +1,103 @@
 'use strict';
 // CONQUER settlement render module — classic-script shared runtime.
+ // PNG architectural facade assets. Source art stays detailed; images are
+ // downsampled and white-keyed once at load time so facade drawing remains cheap.
+const ARCHITECTURE_ASSET_PATHS=Object.freeze({
+  gatePortal:'./src/assets/architecture/gate_portal.png',
+  towerDoor:'./src/assets/architecture/tower_door.png',
+  arrowSlit:'./src/assets/architecture/arrow_slit.png',
+  gothicL1:'./src/assets/architecture/gothic_l1.png',
+  gothicL2:'./src/assets/architecture/gothic_l2.png',
+  gothicL3:'./src/assets/architecture/gothic_l3.png',
+  arcade2:'./src/assets/architecture/arcade_2.png',
+  arcade3:'./src/assets/architecture/arcade_3.png'
+});
+const architectureSprites={};
+function prepareArchitectureSprite(img){
+  const maxDim=256,scale=Math.min(1,maxDim/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+  const w=Math.max(1,Math.round((img.naturalWidth||1)*scale)),h=Math.max(1,Math.round((img.naturalHeight||1)*scale));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,w,h);
+  const data=g.getImageData(0,0,w,h),p=data.data;
+  for(let i=0;i<p.length;i+=4){
+    const r=p[i],gg=p[i+1],b=p[i+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);
+    if(r>247&&gg>247&&b>247)p[i+3]=0;
+    else if(r>238&&gg>238&&b>238&&mx-mn<8)p[i+3]=Math.min(p[i+3],Math.max(0,Math.min(255,(247-mx)*28)));
+  }
+  g.putImageData(data,0,0);return c;
+}
+async function loadArchitectureSprites(){
+  const jobs=Object.entries(ARCHITECTURE_ASSET_PATHS).map(([key,path])=>new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{try{architectureSprites[key]=prepareArchitectureSprite(img)}catch(err){console.warn('Architecture PNG prep failed',path,err);architectureSprites[key]=img}resolve(true)};
+    img.onerror=()=>{console.warn('Architecture PNG load failed',path);resolve(false)};
+    img.src=path;
+  }));
+  await Promise.all(jobs);
+  if(typeof invalidateSceneCache==='function')invalidateSceneCache();
+  if(typeof draw==='function')draw();
+}
+loadArchitectureSprites();
+function architectureSprite(key){const img=architectureSprites[key];return img&&img.width>0&&img.height>0?img:null}
+function facadeAssetWorldSpan(edge,width,offsetWorld=0){
+  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const mx=(edge.a.x+edge.b.x)/2+ux*offsetWorld,my=(edge.a.y+edge.b.y)/2+uy*offsetWorld;
+  return{a:{x:mx-ux*width/2,y:my-uy*width/2},b:{x:mx+ux*width/2,y:my+uy*width/2}};
+}
+function drawFacadeAssetBackdrop(edge,centerZ,width,height,offsetWorld=0,fill='#211f1d'){
+  const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
+  pathPolygon([w2s(span.a,z0),w2s(span.b,z0),w2s(span.b,z1),w2s(span.a,z1)],fill,null);
+}
+function drawArchitectureAssetOnEdge(edge,centerZ,width,height,key,offsetWorld=0,lit=false,nf=1){
+  const img=architectureSprite(key);if(!img)return false;
+  const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
+  const lt=w2s(span.a,z1),rt=w2s(span.b,z1),lb=w2s(span.a,z0),iw=img.width,ih=img.height;
+  ctx.save();
+  ctx.transform((rt.x-lt.x)/iw,(rt.y-lt.y)/iw,(lb.x-lt.x)/ih,(lb.y-lt.y)/ih,lt.x,lt.y);
+  ctx.imageSmoothingEnabled=true;ctx.drawImage(img,0,0);
+  if(lit){ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(.50,.20+.28*nf);ctx.filter='sepia(1) saturate(2) hue-rotate(330deg) brightness(1.45)';ctx.drawImage(img,0,0)}
+  ctx.restore();return true;
+}
+function structureInteriorVector(s){
+  let vx=0,vy=0,hits=0;
+  for(const link of State.structures){
+    if(!link||underConstruction(link)||!['wall','built'].includes(link.type))continue;
+    if(link.aSnap!==s.id&&link.bSnap!==s.id)continue;
+    const dx=link.b.x-link.a.x,dy=link.b.y-link.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L,side=wallExteriorSide(link);
+    vx-=nx*side;vy-=ny*side;hits++;
+  }
+  let L=Math.hypot(vx,vy);
+  if(!hits||L<1e-4){const a=s.angle||0;vx=Math.cos(a);vy=Math.sin(a);L=1}
+  return{x:vx/L,y:vy/L};
+}
+function interiorFacadeEdgeIndex(s){
+  const fp=footprintPoints(s);if(fp.length<2)return-1;
+  const iv=structureInteriorVector(s),center=structureCenter(s);let best=-1,bestScore=-Infinity;
+  for(let i=0;i<fp.length;i++){
+    const a=fp[i],b=fp[(i+1)%fp.length],mx=(a.x+b.x)/2-center.x,my=(a.y+b.y)/2-center.y,L=Math.hypot(mx,my)||1;
+    const score=mx/L*iv.x+my/L*iv.y;if(score>bestScore){bestScore=score;best=i}
+  }
+  return best;
+}
+function isInteriorFacadeEdge(s,edge){return Number.isFinite(edge?.index)&&edge.index===interiorFacadeEdgeIndex(s)}
+function gothicAssetForLevel(s){return structureLevel(s)>=3?'gothicL3':structureLevel(s)>=2?'gothicL2':'gothicL1'}
+function gothicAssetSizeForLevel(s){const l=structureLevel(s);return l>=3?{w:.82,h:.84}:l>=2?{w:.68,h:.78}:{w:.54,h:.70}}
+function roundTowerFacadeEdges(s){
+  const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x),r=Math.max(.2,Number(s.r)||.5)+.006,span=Math.min(.54,r*.95);
+  const centerDepth=viewDepthPoint({x:s.x,y:s.y}),out=[];
+  for(let i=0;i<4;i++){const a=base+i*Math.PI/2,ox=Math.cos(a),oy=Math.sin(a),tx=-oy,ty=ox,c={x:s.x+ox*r,y:s.y+oy*r};if(viewDepthPoint(c)<centerDepth-.015)continue;out.push({a:{x:c.x-tx*span/2,y:c.y-ty*span/2},b:{x:c.x+tx*span/2,y:c.y+ty*span/2},index:i,interior:i===0})}
+  return out;
+}
+
 function gateFacadeEdges(s){
   const fp=footprintPoints(s);if(fp.length<4)return[];
-  const defs=[
-    {a:fp[0],b:fp[1],role:'side'},
-    {a:fp[1],b:fp[2],role:'front'},
-    {a:fp[2],b:fp[3],role:'side'},
-    {a:fp[3],b:fp[0],role:'rear'}
-  ];
-  for(const e of defs){
-    const a=w2s(e.a,0),b=w2s(e.b,0);
-    e.depth=(a.y+b.y)/2;
-  }
-  defs.sort((a,b)=>b.depth-a.depth);
-  return defs.slice(0,2);
+  const defs=[{a:fp[0],b:fp[1],role:'side',index:0},{a:fp[1],b:fp[2],role:'front',index:1},{a:fp[2],b:fp[3],role:'side',index:2},{a:fp[3],b:fp[0],role:'rear',index:3}];
+  for(const e of defs){const a=w2s(e.a,0),b=w2s(e.b,0);e.depth=(a.y+b.y)/2}defs.sort((a,b)=>b.depth-a.depth);return defs.slice(0,2);
 }
 function drawGatePortalOnEdge(edge){
-  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const cx=(edge.a.x+edge.b.x)/2,cy=(edge.a.y+edge.b.y)/2,half=.39;
-  const l={x:cx-ux*half,y:cy-uy*half},r={x:cx+ux*half,y:cy+uy*half};
-  const lb=w2s(l,.03),rb=w2s(r,.03),ls=w2s(l,1.05),rs=w2s(r,1.05),apex=w2s({x:cx,y:cy},1.38);
-  const poly=[lb,rb,rs,apex,ls];
-  ctx.save();
-  pathPolygon(poly,'#241a16','#9a7458',1);
-  const bottom=w2s({x:cx,y:cy},.03);
-  ctx.strokeStyle='rgba(145,104,76,.72)';ctx.lineWidth=.8;
-  ctx.beginPath();ctx.moveTo(bottom.x,bottom.y);ctx.lineTo(apex.x,apex.y);ctx.stroke();
-  ctx.restore();
+  if(drawArchitectureAssetOnEdge(edge,.705,.90,1.35,'gatePortal'))return;
+  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,cx=(edge.a.x+edge.b.x)/2,cy=(edge.a.y+edge.b.y)/2,half=.39;
+  const l={x:cx-ux*half,y:cy-uy*half},r={x:cx+ux*half,y:cy+uy*half};pathPolygon([w2s(l,.03),w2s(r,.03),w2s(r,1.05),w2s({x:cx,y:cy},1.38),w2s(l,1.05)],'#241a16','#9a7458',1);
 }
 function drawGatePortals(){
   for(const s of State.structures){
@@ -38,36 +109,15 @@ function drawGatePortals(){
     }));
   }
 }
-function gateWindowRows(s){
-  const level=structureLevel(s),rows=[1.95];
-  if(level>=2)rows.push(3.15);
-  if(level>=3)rows.push(4.35);
-  return rows.filter(z=>z<structureHeight(s)-.35);
-}
+function gateWindowRows(s){const l=structureLevel(s),rows=[1.72];if(l>=2)rows.push(2.92);if(l>=3)rows.push(4.12);return rows.filter(z=>z<structureHeight(s)-.28)}
 function drawGateWindows(s,lit=false,nf=1){
-  for(const z of gateWindowRows(s)){
-    withStructureDetailOcclusion(s,z,()=>{
-      for(const edge of gateFacadeEdges(s)){
-        const a=w2s(edge.a,z),b=w2s(edge.b,z),L=Math.hypot(b.x-a.x,b.y-a.y);
-        const gap=Math.min(clamp(8*State.view.scale,5,11),L*.28);
-        drawWindowOnEdge(edge,z,lit,nf,-gap/2);
-        drawWindowOnEdge(edge,z,lit,nf,gap/2);
-      }
-    });
-  }
+  const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
+  for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{for(const edge of gateFacadeEdges(s)){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit')}})
 }
 function visibleFacadeEdges(s){
-  const rings=s.type==='house'?houseFootprintParts(s).filter(p=>p.kind!=='turret').map(p=>p.points):[footprintPoints(s)];
-  const edges=[];
-  for(const fp of rings){
-    if(fp.length<4)continue;
-    for(let i=0;i<fp.length;i++){
-      const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);
-      edges.push({a:fp[i],b:fp[j],depth:(a.y+b.y)/2});
-    }
-  }
-  edges.sort((a,b)=>b.depth-a.depth);
-  return edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
+  const rings=s.type==='house'?houseFootprintParts(s).filter(p=>p.kind!=='turret').map(p=>p.points):[footprintPoints(s)],edges=[];
+  for(const fp of rings){if(fp.length<4)continue;for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);edges.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2})}}
+  edges.sort((a,b)=>b.depth-a.depth);return edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
 }
 function closestFootprintEdge(s,p){
   const fp=footprintPoints(s);if(fp.length<2)return null;
@@ -166,42 +216,12 @@ function towerDoorOccluders(tower,spec,apexZ){
 }
 function drawTowerDoorSpec(tower,spec){
   if(!towerDoorVisible(tower,spec))return;
-
-  // Architectural scale reduction: both width and height are one third of
-  // the previous tower-door size. These are now single-leaf doors.
-  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54)/3,half=width/2;
-  const tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact;
-  const fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),apexZ=spec.baseZ+fullHeight/3;
-  const springZ=spec.baseZ+(apexZ-spec.baseZ)*.66;
-  const l={x:c.x-tx*half,y:c.y-ty*half},r={x:c.x+tx*half,y:c.y+ty*half};
-  const lb=w2s(l,spec.baseZ),rb=w2s(r,spec.baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),apex=w2s(c,apexZ);
-
-  const drawDoor=()=>{
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(lb.x,lb.y);ctx.lineTo(rb.x,rb.y);ctx.lineTo(rs.x,rs.y);
-    ctx.quadraticCurveTo((rs.x+apex.x)/2,apex.y,apex.x,apex.y);
-    ctx.quadraticCurveTo((ls.x+apex.x)/2,apex.y,ls.x,ls.y);
-    ctx.lineTo(lb.x,lb.y);ctx.closePath();
-    ctx.fillStyle='#211713';ctx.fill();
-    ctx.strokeStyle='#9a7458';ctx.lineWidth=.8;ctx.stroke();
-    ctx.restore();
-  };
-
-  // Door hierarchy is lower than every other castle element. In particular,
-  // the linked wall is an occluder too: its silhouette hides the lower part
-  // of a wall-walk doorway instead of letting the door paint over masonry.
-  const occluders=towerDoorOccluders(tower,spec,apexZ);
-  if(!occluders.length){drawDoor();return}
-
-  const rr=wrap.getBoundingClientRect();
-  ctx.save();ctx.beginPath();ctx.rect(-48,-48,rr.width+96,rr.height+96);
-  for(const o of occluders){
-    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
+  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54)/3,fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),height=fullHeight/3,centerZ=spec.baseZ+height/2,tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact,half=width/2;
+  const edge={a:{x:c.x-tx*half,y:c.y-ty*half},b:{x:c.x+tx*half,y:c.y+ty*half}},apexZ=spec.baseZ+height;
+  const drawDoor=()=>{if(!drawArchitectureAssetOnEdge(edge,centerZ,width,height,'towerDoor'))drawFacadeAssetBackdrop(edge,centerZ,width,height,0,'#211713')};
+  const occ=towerDoorOccluders(tower,spec,apexZ);if(!occ.length){drawDoor();return}
+  const rr=wrap.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(-48,-48,rr.width+96,rr.height+96);
+  for(const o of occ){const hull=structureScreenSilhouette(o);if(hull.length<3)continue;ctx.moveTo(hull[0].x,hull[0].y);for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);ctx.closePath()}
   ctx.clip('evenodd');drawDoor();ctx.restore();
 }
 function drawTowerDoors(){
@@ -235,31 +255,9 @@ function towerLevelHeight(s,level){
   const t=towerTier(s);
   return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
 }
-function towerWindowRows(s){
-  const level=structureLevel(s),rows=[],drop=.42;
-  if(level>=2){
-    const z=(towerLevelHeight(s,1)+towerLevelHeight(s,2))/2-drop;
-    rows.push({z,count:1});
-  }
-  if(level>=3){
-    const z=(towerLevelHeight(s,2)+towerLevelHeight(s,3))/2-drop;
-    rows.push({z,count:2});
-  }
-  return rows;
-}
+function towerWindowRows(s){const l=structureLevel(s),rows=[{z:1.34}];if(l>=2)rows.push({z:2.48});if(l>=3)rows.push({z:3.62});return rows.filter(r=>r.z<structureHeight(s)-.28)}
 function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
-  const p=w2s({x:s.x,y:s.y},row.z);
-  const ww=clamp(3.3*State.view.scale,2,4.2),wh=clamp(7*State.view.scale,3.8,8.5);
-  const gap=clamp(8*State.view.scale,5,11);
-  const xs=row.count===1?[p.x]:[p.x-gap/2,p.x+gap/2];
-  ctx.save();
-  for(const x of xs){
-    if(lit){ctx.shadowColor='rgba(255,190,80,'+(.72*nf)+')';ctx.shadowBlur=clamp(9*State.view.scale,4,12);ctx.fillStyle='rgba(255,213,118,'+(.92*nf)+')'}
-    else ctx.fillStyle='rgba(35,29,24,.82)';
-    ctx.fillRect(x-ww/2,p.y-wh/2,ww,wh);
-    ctx.strokeStyle=lit?'rgba(90,58,24,.72)':'rgba(170,139,96,.38)';ctx.lineWidth=.8;ctx.strokeRect(x-ww/2,p.y-wh/2,ww,wh);
-  }
-  ctx.restore();
+  const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);for(const edge of roundTowerFacadeEdges(s)){if(edge.interior)drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}
 }
 function linearFrontSide(s){
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
@@ -292,49 +290,9 @@ function linearFacadeEdge(s,side){
   };
 }
 function drawBuiltArcade(s){
-  if(!s||s.type!=='built'||builtSkin(s)!=='arcade'||underConstruction(s))return;
-  const inside=-wallExteriorSide(s);
-  // The portico exists only on the courtyard side; if that facade is behind
-  // the building body, let the body hide it instead of painting through.
-  if(inside!==linearFrontSide(s))return;
-
-  const edge=linearFacadeEdge(s,inside);
-  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const count=Math.max(1,Math.round(edge.length/1.05));
-  const cell=L/count;
-  const openingW=Math.min(.74,cell*.70);
-  const baseZ=.04,apexZ=Math.min(1.27,structureHeight(s)-.24),springZ=Math.max(.62,apexZ-.46);
-
-  withStructureDetailOcclusion(s,apexZ,()=>{
-    for(let i=0;i<count;i++){
-      const along=(i+.5)*cell,half=openingW/2;
-      const l={x:edge.a.x+ux*(along-half),y:edge.a.y+uy*(along-half)};
-      const r={x:edge.a.x+ux*(along+half),y:edge.a.y+uy*(along+half)};
-      const m={x:edge.a.x+ux*along,y:edge.a.y+uy*along};
-      const lb=w2s(l,baseZ),rb=w2s(r,baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),apex=w2s(m,apexZ);
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(lb.x,lb.y);
-      ctx.lineTo(rb.x,rb.y);
-      ctx.lineTo(rs.x,rs.y);
-      ctx.quadraticCurveTo((rs.x+apex.x)/2,apex.y,apex.x,apex.y);
-      ctx.quadraticCurveTo((ls.x+apex.x)/2,apex.y,ls.x,ls.y);
-      ctx.lineTo(lb.x,lb.y);
-      ctx.closePath();
-      ctx.fillStyle='#241f1b';
-      ctx.fill();
-      ctx.strokeStyle='#86796d';
-      ctx.lineWidth=1;
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // A continuous impost line makes the arcade read as one architectural system.
-    const a=w2s(edge.a,springZ),b=w2s(edge.b,springZ);
-    ctx.save();ctx.strokeStyle='rgba(178,162,146,.45)';ctx.lineWidth=.8;
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
-  });
+  if(!s||s.type!=='built'||underConstruction(s))return;const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
+  const edge=linearFacadeEdge(s,inside),count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,h=Math.min(1.46,structureHeight(s)-.16),centerZ=.04+h/2,key=cell<2.25?'arcade2':'arcade3';
+  withStructureDetailOcclusion(s,centerZ+h/2,()=>{for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2,w=cell*.96;drawFacadeAssetBackdrop(edge,centerZ,w,h*.86,off,'#24211f');drawArchitectureAssetOnEdge(edge,centerZ,w,h,key,off)}})
 }
 function drawWallHoarding(s,occlusionFrame=null){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
@@ -404,29 +362,13 @@ function drawWallHoarding(s,occlusionFrame=null){
     }
   });
 }
-function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1){
-  if(side!==linearFrontSide(s))return;
-  const edge=linearFacadeEdge(s,side);
-  const pa=w2s(edge.a,z),pb=w2s(edge.b,z),screenLength=Math.hypot(pb.x-pa.x,pb.y-pa.y);
-  const count=Math.max(1,Math.round(edge.length*density));
-  for(let i=0;i<count;i++){
-    const t=(i+.5)/count;
-    drawWindowOnEdge(edge,z,lit,nf,(t-.5)*screenLength);
-  }
+function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60){
+  if(side!==linearFrontSide(s))return;const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count;
+  for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf)}
 }
 function drawBuiltWindows(s,lit=false,nf=1){
-  const level=structureLevel(s),outside=wallExteriorSide(s),inside=-outside;
-  const lowerZ=.84,upperZ=(1.75+2.80)/2;
-  const arcade=builtSkin(s)==='arcade';
-
-  withBuiltRoofOcclusionClip(s,()=>{
-    // Interior/courtyard side: the arcade replaces ground-floor windows only.
-    if(!arcade)drawBuiltWindowRow(s,inside,lowerZ,2,lit,nf);
-    if(level>=2)drawBuiltWindowRow(s,inside,upperZ,2,lit,nf);
-
-    // Exterior side stays completely unchanged by the arcade skin.
-    if(level>=2)drawBuiltWindowRow(s,outside,upperZ,1,lit,nf);
-  });
+  const l=structureLevel(s),outside=wallExteriorSide(s),inside=-outside,lowerZ=.86,upperZ=2.22;
+  withBuiltRoofOcclusionClip(s,()=>{if(l>=2)drawBuiltWindowRow(s,inside,upperZ,.42,lit,nf,'gothicL3',.92,.78);drawBuiltWindowRow(s,outside,lowerZ,.72,false,nf,'arrowSlit',.23,.58);if(l>=2)drawBuiltWindowRow(s,outside,upperZ,.72,false,nf,'arrowSlit',.23,.58)})
 }
 function drawHouseFacadeWindows(s,lit=false,nf=1){
   const rows=houseLevel(s)>=2?[.52,1.34]:[.48];
@@ -440,41 +382,11 @@ function drawStaticHouseFacadeDetails(){
 }
 function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
   if(State.view.scale<.24)return;
-  for(const s of State.structures){
-    if(underConstruction(s))continue;
-    const center=structureCenter(s);
-    if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
-    if(s.type==='house'){
-      if(includeHouses)drawHouseFacadeWindows(s,lit,nf);
-    }else if(s.type==='built'){
-      drawBuiltWindows(s,lit,nf);
-    }else if(s.type==='gate'){
-      if(isWoodGate(s))continue;
-      withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf));
-    }else if(s.type==='tower'){
-      if(isWoodTower(s))continue;
-      withStructureGroundPlane(s,()=>{
-        const rows=towerWindowRows(s);if(!rows.length)return;
-        if(s.shape==='round'){
-          for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
-        }else{
-          const edges=visibleFacadeEdges(s);
-          for(const row of rows){
-            withStructureDetailOcclusion(s,row.z,()=>{
-              for(const edge of edges){
-                if(row.count===1)drawWindowOnEdge(edge,row.z,lit,nf,0);
-                else{
-                  const a=w2s(edge.a,row.z),b=w2s(edge.b,row.z),L=Math.hypot(b.x-a.x,b.y-a.y);
-                  const spacing=Math.min(clamp(9*State.view.scale,5,12),L*.34);
-                  drawWindowOnEdge(edge,row.z,lit,nf,-spacing/2);
-                  drawWindowOnEdge(edge,row.z,lit,nf,spacing/2);
-                }
-              }
-            });
-          }
-        }
-      });
-    }
+  for(const s of State.structures){if(underConstruction(s))continue;const center=structureCenter(s);if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
+    if(s.type==='house'){if(includeHouses)drawHouseFacadeWindows(s,lit,nf)}
+    else if(s.type==='built')drawBuiltWindows(s,lit,nf);
+    else if(s.type==='gate'){if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf))}
+    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}})}})}
   }
 }
 function drawDayNightOverlay(){

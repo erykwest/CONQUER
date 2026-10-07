@@ -220,7 +220,7 @@ function drawStaticStructureAsset(s){
   if(s.type==='house')drawAutoStructure(s);
   else drawStructure(s);
   if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s,buildBattlementOcclusionFrame());
-  if(s.type==='built'&&builtSkin(s)==='arcade')drawBuiltArcade(s);
+  if(s.type==='built')drawBuiltArcade(s);
   drawTowerDoors();
   drawTowerRoofs();
   drawGateRoofs();

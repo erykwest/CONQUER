@@ -495,7 +495,7 @@ function drawCastleUnionDetails(){
     if(!isCastlePart(s)||underConstruction(s))continue;
     if(s.type==='built'){
       drawBuiltDetails(s,false);
-      if(builtSkin(s)==='arcade')drawBuiltArcade(s);
+      drawBuiltArcade(s);
     }
     if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s,hoardingFrame);
     if(s.type==='tower'&&isStoneTowerStructure(s)){
