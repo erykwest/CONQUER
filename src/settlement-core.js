@@ -5,6 +5,11 @@ let ctx=canvas.getContext('2d');
 const screenCtx=ctx;
 const weatherCtx=weatherCanvas?weatherCanvas.getContext('2d'):null;
 const sceneCache={
+  // Keep immutable world art completely separate from settlement topology.
+  // Terrain/environment is expensive (hundreds of rocks/relief bands) but only
+  // changes with landscape/season/projection, not when a house or road completes.
+  landscape:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
+  ground:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null}
@@ -13,8 +18,23 @@ for(const layer of Object.values(sceneCache))layer.ctx=layer.canvas.getContext('
 function invalidateSceneCache(layer='all'){
   const perf=window.__conquerPerf||(window.__conquerPerf={});
   perf.cacheInvalidations=(perf.cacheInvalidations||0)+1;
-  if(layer==='all'){for(const item of Object.values(sceneCache))item.dirty=true;return}
-  if(sceneCache[layer])sceneCache[layer].dirty=true;
+  const layers=Array.isArray(layer)?layer:[layer];
+  if(layers.includes('all')){for(const item of Object.values(sceneCache))item.dirty=true;return}
+  for(const name of layers)if(sceneCache[name])sceneCache[name].dirty=true;
+}
+function invalidateSettlementScene(includeCastle=true){
+  invalidateSceneCache(includeCastle?['ground','base','castleBody','castleFront']:['ground','base']);
+}
+function structureSceneLayers(s){
+  if(!s)return['ground','base','castleBody','castleFront'];
+  if(s.type==='road'||(s.auto&&s.type==='field'))return['ground'];
+  if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return['castleBody','castleFront'];
+  // Palisades and timber fortifications are rendered in the non-union base layer.
+  if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return['base','castleFront'];
+  return['base'];
+}
+function invalidateStructureScene(s){
+  invalidateSceneCache(structureSceneLayers(s));
 }
 function withRenderContext(next,fn){
   const prev=ctx;ctx=next;
