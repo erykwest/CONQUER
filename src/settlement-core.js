@@ -494,6 +494,16 @@ function pointRadius(s){
       draw:{lastMs:+finite(p.lastDrawMs).toFixed(2),maxMs:+finite(p.maxDrawMs).toFixed(2),longDraws:finite(p.longDraws)},
       maintenance:{lastMs:+finite(p.lastMaintenanceMs).toFixed(2),runs:finite(p.maintenanceRuns),deltaRuns:delta('maintenanceRuns',p)},
       save:{lastMs:+finite(p.lastSaveMs).toFixed(2)},
+      renderer:{
+        mode:p.webgpuActive?'webgpu':'canvas2d',
+        webgpuSupported:!!p.webgpuSupported,
+        webgpuActive:!!p.webgpuActive,
+        webgpuFrames:finite(p.webgpuFrames),
+        webgpuUploads:finite(p.webgpuUploads),
+        webgpuLastFrameMs:+finite(p.webgpuLastFrameMs).toFixed(3),
+        webgpuLastUploadMs:+finite(p.webgpuLastUploadMs).toFixed(3),
+        fallbackReason:p.webgpuFallbackReason||null
+      },
       navigation:{
         graphBuilds:finite(p.graphBuilds),deltaGraphBuilds:delta('graphBuilds',p),
         graphRoutes:finite(p.graphRoutes),deltaGraphRoutes:delta('graphRoutes',p),
