@@ -1,0 +1,40 @@
+name: Cleanup obsolete branches
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cleanup-obsolete-branches.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Delete obsolete branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            "ARCHI"
+            "angle"
+            "feature/png-architectural-facades"
+            "gh-pages"
+            "landscape"
+            "meteo"
+            "perf/map-render-refactor"
+            "performance-map"
+            "webgpu"
+          )
+          for branch in "${branches[@]}"; do
+            echo "Deleting $branch"
+            git push origin --delete "$branch"
+          done
