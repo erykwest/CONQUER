@@ -125,7 +125,8 @@ const WALL_BREAK_MIN=.10;
 const STRUCTURE_VARIANT_VERSION=1;
 const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
-    roofStyle:Object.freeze(['battlement','pitched'])
+    roofStyle:Object.freeze(['battlement','pitched']),
+    baseStyle:Object.freeze(['standard','buttress','splayed'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat'])
@@ -138,7 +139,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard'}),
   gate:Object.freeze({roofStyle:'battlement'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -208,6 +209,10 @@ function setStructureVariant(s,key,value){
   return true;
 }
 function towerRoofStyle(s){return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined}
+function towerBaseStyle(s){
+  if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
+  return structureVariant(s,'baseStyle')||'standard';
+}
 function isWoodTower(s){return !!s&&s.type==='tower'&&s.material==='wood'}
 function woodTowerStyle(s){return isWoodTower(s)?(s.woodStyle==='watchtower'?'watchtower':'palisadeTower'):undefined}
 function woodTowerRoof(s){
