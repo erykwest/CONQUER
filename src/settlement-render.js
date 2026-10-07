@@ -932,6 +932,7 @@ function ensureStaticSceneCaches(){
 }
 function draw(){
   const r=wrap.getBoundingClientRect();
+  setPopulationFrameBounds(r);
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
   ensureStaticSceneCaches();
