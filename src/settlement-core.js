@@ -409,11 +409,6 @@ function pointRadius(s){
     if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
     lastRemoteAt=now;
     const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
-    const client=State?.supabase;
-    if(!client){
-      event('REMOTE_TELEMETRY_WAITING',{reason:'supabase_not_ready'},'info',30000);
-      return;
-    }
     const row={
       session_id:sessionId,
       day:sample.day,
@@ -435,8 +430,17 @@ function pointRadius(s){
       cache_rebuilds_delta:(sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+(sample.cache?.deltaCastleFrontRebuilds||0),
       recent_events:recentEvents
     };
-    client.from('simulation_telemetry').insert(row).then(({error})=>{
-      if(error)event('REMOTE_TELEMETRY_ERROR',{message:error.message||String(error)},'warn',30000);
+    fetch(SUPABASE_URL+'/rest/v1/simulation_telemetry',{
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'apikey':SUPABASE_KEY,
+        'authorization':'Bearer '+SUPABASE_KEY,
+        'prefer':'return=minimal'
+      },
+      body:JSON.stringify(row),
+      keepalive:true,
+      cache:'no-store'
     }).catch(err=>event('REMOTE_TELEMETRY_ERROR',{message:String(err)},'warn',30000));
   }
   function frame(now,rawDtMs){
