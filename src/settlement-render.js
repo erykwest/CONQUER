@@ -807,6 +807,7 @@ function drawStructure(s,preview=false){
   }
 }
 function drawBaseStaticScene(){
+  const analyticsT0=performance.now();
   const entry=prepareSceneCache('base');
   withRenderContext(entry.ctx,()=>{
     drawTerrain();drawGrid();drawEnvironment();drawBuildArea();
@@ -829,8 +830,11 @@ function drawBaseStaticScene(){
     for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
   });
   entry.dirty=false;
+  const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheBaseRebuilds=(perf.cacheBaseRebuilds||0)+1;
+  window.__conquerAnalytics?.measure('CACHE_BASE',performance.now()-analyticsT0,{structures:State.structures.length});
 }
 function drawCastleBodyStaticScene(){
+  const analyticsT0=performance.now();
   const entry=prepareSceneCache('castleBody');
   withRenderContext(entry.ctx,()=>{
     const unionOk=drawCastleUnion();
@@ -853,11 +857,16 @@ function drawCastleBodyStaticScene(){
     drawGateRoofs();
   });
   entry.dirty=false;
+  const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheCastleBodyRebuilds=(perf.cacheCastleBodyRebuilds||0)+1;
+  window.__conquerAnalytics?.measure('CACHE_CASTLE_BODY',performance.now()-analyticsT0);
 }
 function drawCastleFrontStaticScene(){
+  const analyticsT0=performance.now();
   const entry=prepareSceneCache('castleFront');
   withRenderContext(entry.ctx,()=>drawCastleBattlements());
   entry.dirty=false;
+  const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheCastleFrontRebuilds=(perf.cacheCastleFrontRebuilds||0)+1;
+  window.__conquerAnalytics?.measure('CACHE_CASTLE_FRONT',performance.now()-analyticsT0);
 }
 function ensureStaticSceneCaches(){
   // Scale/rotation/viewport changes alter the projection and require a rebuild.
