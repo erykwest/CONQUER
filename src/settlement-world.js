@@ -184,6 +184,27 @@ function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[],spatialIndex=null){
 function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24000){
   const analyticsT0=performance.now();
   const spatialIndex=buildRoadRepairSpatialIndex(ignoreIds);
+  const pointMemo=new Map(),segmentMemo=new Map();
+  let pointHits=0,segmentHits=0;
+  const pointKey=p=>(Math.round(p.x*1000)/1000)+','+(Math.round(p.y*1000)/1000);
+  const pointClear=p=>{
+    const k=pointKey(p);
+    if(pointMemo.has(k)){pointHits++;return pointMemo.get(k)}
+    const ok=roadRepairPointClear(p,width,ignoreIds,spatialIndex);
+    pointMemo.set(k,ok);return ok;
+  };
+  const segmentClear=(a,b)=>{
+    const ak=pointKey(a),bk=pointKey(b),k=ak<bk?ak+'|'+bk:bk+'|'+ak;
+    if(segmentMemo.has(k)){segmentHits++;return segmentMemo.get(k)}
+    const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
+    let ok=true;
+    for(let i=0;i<=steps;i++){
+      const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+      if(!pointClear(p)){ok=false;break}
+    }
+    segmentMemo.set(k,ok);return ok;
+  };
+
   const step=.5;
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -193,16 +214,20 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
     for(let r=0;r<=6;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
       if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
       const x=cx+dx,y=cy+dy,q=pos(x,y);
-      if(x<minX||x>maxX||y<minY||y>maxY||!roadRepairPointClear(q,width,ignoreIds,spatialIndex))continue;
+      if(x<minX||x>maxX||y<minY||y>maxY||!pointClear(q))continue;
       const d=dist(p,q);if(d<bestD){best={x,y,q};bestD=d}
     }
     return best;
   }
   const s=nearestFree(start),g=nearestFree(goal);
   if(!s||!g){
-    window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:false,reason:'endpoint',blockers:spatialIndex.entries.length});
+    window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{
+      found:false,reason:'endpoint',blockers:spatialIndex.entries.length,
+      pointMemo:pointMemo.size,pointHits,segmentMemo:segmentMemo.size,segmentHits
+    });
     return null;
   }
+
   const open=new PeasantMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
   open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
@@ -214,24 +239,30 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
     for(const [dx,dy] of dirs){
       const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
       const nk=key(nx,ny),np=pos(nx,ny);
-      if(closed.has(nk)||!roadRepairPointClear(np,width,ignoreIds,spatialIndex))continue;
-      if(!roadRepairSegmentClear(cp,np,width,ignoreIds,spatialIndex))continue;
+      if(closed.has(nk)||!pointClear(np))continue;
+      if(!segmentClear(cp,np))continue;
       const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
       if(tentative>=(gScore.get(nk)??Infinity))continue;
       gScore.set(nk,tentative);came.set(nk,ck);
       open.push({x:nx,y:ny,f:tentative+dist(np,g.q)});
     }
   }
+
+  const telemetry={
+    guard,blockers:spatialIndex.entries.length,
+    pointMemo:pointMemo.size,pointHits,
+    segmentMemo:segmentMemo.size,segmentHits
+  };
   if(!found){
-    window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:false,guard,blockers:spatialIndex.entries.length});
+    window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:false,...telemetry});
     return null;
   }
   const rev=[];let k=key(found.x,found.y);
   while(k){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));k=came.get(k)}
   rev.reverse();
-  if(roadRepairPointClear(start,width,ignoreIds,spatialIndex))rev[0]={...start};
-  if(roadRepairPointClear(goal,width,ignoreIds,spatialIndex))rev[rev.length-1]={...goal};
-  window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:true,guard,points:rev.length,blockers:spatialIndex.entries.length});
+  if(pointClear(start))rev[0]={...start};
+  if(pointClear(goal))rev[rev.length-1]={...goal};
+  window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:true,points:rev.length,...telemetry});
   return rev;
 }
 function simplifyRoadRepairPath(points,width=.30,ignoreIds=[]){
