@@ -3,6 +3,7 @@ name: WebGPU branch smoke
 on:
   push:
     branches:
+      - main
       - webgpu
   workflow_dispatch:
 
