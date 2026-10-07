@@ -3,15 +3,18 @@
 function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX}
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
+function selectableGeneratedMainRoad(s){
+  return !!(s&&s.type==='road'&&s.auto&&s.routeId&&String(s.routeId).startsWith('arterial-'));
+}
 function structureAt(p){
   const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
-  const linear=State.structures.filter(s=>!s.auto&&['wall','palisade','built','road'].includes(s.type));
+  const linear=State.structures.filter(s=>(!s.auto||selectableGeneratedMainRoad(s))&&['wall','palisade','built','road'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
   return null;
 }
 function structureAtScreen(p){
-  const manual=State.structures.filter(s=>!s.auto||s.type==='house').slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
+  const manual=State.structures.filter(s=>!s.auto||s.type==='house'||selectableGeneratedMainRoad(s)).slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
@@ -64,6 +67,16 @@ function addStructure(s){
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(selectableGeneratedMainRoad(target)){
+    const routeId=target.routeId;
+    State.structures=State.structures.filter(s=>!(s.type==='road'&&s.routeId===routeId));
+    const plan=ensureRoadPlan().find(r=>r.id===routeId);
+    if(plan){plan.connected=false;plan.disabled=true}
+    refreshStaleHouseRoadRefs();
+    if(State.selectedId===id)State.selectedId=null;
+    renderFunctionPanel();markDirty();draw();status('Main road removed');
+    return;
+  }
   if(target.type==='tower')restoreTowerWallConnections(target);
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
