@@ -837,13 +837,33 @@ function runSettlementMaintenance(reason='watchdog',completedStructures=[]){
     return n;
   };
 
-  // The periodic watchdog must remain O(cheap). Gate-main reconciliation
-  // can enter an 80k-node repair search when a route is missing/invalid, so it
-  // is strictly event-driven. Telemetry showed ~1.73s stalls every watchdog
-  // even when changed===0.
+  // The periodic watchdog must remain O(cheap). Heavy road reconciliation is
+  // scoped to the exact topology class that just completed instead of rescanning
+  // every access target on every completion.
   measureStep('towerCollider',()=>syncCompletedTowerWallColliders(false));
 
-  if(reason!=='watchdog'){
+  if(reason==='completion'){
+    const completedTypes=new Set(completedStructures.map(s=>s?.type).filter(Boolean));
+
+    if(completedTypes.has('gate')){
+      measureStep('gateMain',()=>reconcileGateMainConnections(false));
+    }
+
+    if(completedTypes.has('tower')||completedTypes.has('gate')||completedTypes.has('well')){
+      measureStep('towerSecondary',()=>reconcileTowerSecondaryBranches());
+    }
+
+    const accessTargets=completedStructures.filter(s=>
+      s&&!underConstruction(s)&&(s.type==='house'||s.type==='field'||isCivic(s))
+    );
+    if(accessTargets.length){
+      measureStep('settlementAccess',()=>{
+        let n=0;
+        for(const target of accessTargets)n+=ensureSettlementRoadAccess(target);
+        return n;
+      });
+    }
+  }else if(reason!=='watchdog'){
     measureStep('gateMain',()=>reconcileGateMainConnections(false));
     measureStep('towerSecondary',()=>reconcileTowerSecondaryBranches());
     measureStep('settlementAccess',()=>reconcileSettlementAccessRoads());
@@ -938,7 +958,9 @@ function simulationFrame(now){
     }
   }
   const shadowState=sunShadowState();
-  const shadowPhaseKey=shadowState?Math.round(shadowState.phase*96):-1;
+  // 32 shadow poses per daylight arc are visually smooth at settlement scale
+  // and avoid rebuilding the full shadow cache several times per second at ×4.
+  const shadowPhaseKey=shadowState?Math.round(shadowState.phase*32):-1;
   if(shadowPhaseKey!==lastShadowPhaseKey){
     lastShadowPhaseKey=shadowPhaseKey;
     invalidateSceneCache('shadow');
