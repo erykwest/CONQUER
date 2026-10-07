@@ -2039,7 +2039,12 @@ function buildBattlementOcclusionFrame(){
     entries.push(entry);
     byId.set(s.id,entry);
   }
-  return{entries,byId,queryCache:new Map(),viewportH:Math.max(2000,wrap.getBoundingClientRect().height*3)};
+  const viewport=wrap.getBoundingClientRect();
+  return{
+    entries,byId,queryCache:new Map(),
+    viewportW:viewport.width,viewportH:viewport.height,
+    crestClipH:Math.max(2000,viewport.height*3)
+  };
 }
 function battlementOcclusionCandidates(piece,frame){
   if(!piece.ownerId||!['tower','wall','gate','palisade'].includes(piece.ownerType))return{always:[],overlap:[]};
@@ -2087,7 +2092,7 @@ function withTowerBattlementOcclusion(piece,frame,drawFn){
   if(!occluders.length){drawFn();return}
   ctx.save();
   ctx.beginPath();
-  ctx.rect(-48,-48,wrap.getBoundingClientRect().width+96,wrap.getBoundingClientRect().height+96);
+  ctx.rect(-48,-48,frame.viewportW+96,frame.viewportH+96);
   for(const entry of occluders){
     const hull=battlementOccluderHull(entry);if(hull.length<3)continue;
     ctx.moveTo(hull[0].x,hull[0].y);
@@ -2110,7 +2115,7 @@ function drawBattlementPiece(piece,frame){
     }
     if(piece.wallCrest){
       const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
-      const H=frame.viewportH;
+      const H=frame.crestClipH;
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(a.x,a.y+1);
