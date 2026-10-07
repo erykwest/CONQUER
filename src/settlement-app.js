@@ -68,10 +68,19 @@ function addStructure(s){
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
   if(selectableGeneratedMainRoad(target)){
-    const routeId=target.routeId;
+    const routeId=target.routeId,seq=Number(target.routeSeq);
     State.structures=State.structures.filter(s=>s.id!==id);
     const plan=ensureRoadPlan().find(r=>r.id===routeId);
-    if(plan)plan.disabled=true;
+    if(plan){
+      plan.deletedSegments=Array.isArray(plan.deletedSegments)?plan.deletedSegments:[];
+      if(!plan.deletedSegments.some(x=>Number(x.routeSeq)===seq)){
+        plan.deletedSegments.push({
+          routeSeq:seq,
+          a:{x:Number(target.a.x),y:Number(target.a.y)},
+          b:{x:Number(target.b.x),y:Number(target.b.y)}
+        });
+      }
+    }
     refreshStaleHouseRoadRefs();
     if(State.selectedId===id)State.selectedId=null;
     renderFunctionPanel();markDirty();draw();status('Main road segment removed');
