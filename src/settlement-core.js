@@ -8,12 +8,12 @@ const sceneCache={
   // Keep immutable world art completely separate from settlement topology.
   // Terrain/environment is expensive (hundreds of rocks/relief bands) but only
   // changes with landscape/season/projection, not when a house or road completes.
-  landscape:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  ground:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  shadow:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null}
+  landscape:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  ground:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  shadow:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true}
 };
 for(const layer of Object.values(sceneCache))layer.ctx=layer.canvas.getContext('2d');
 function invalidateSceneCache(layer='all'){
@@ -54,6 +54,7 @@ function prepareSceneCache(layer){
   }
   entry.ctx.setTransform(1,0,0,1,0,0);
   entry.ctx.clearRect(0,0,entry.canvas.width,entry.canvas.height);
+  entry.gpuDirty=true;
   entry.ctx.setTransform(d,0,0,d,m*d,m*d);
   entry.view={
     x:State.view.x,y:State.view.y,scale:State.view.scale,
