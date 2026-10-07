@@ -1100,8 +1100,34 @@ function wallPatrolPoint(wall,day,index=0,count=1){
   }
   return p;
 }
+function gateGuardPositions(gate){
+  if(!gate||gate.type!=='gate')return[];
+  const d=rectDims(gate),a=Number(gate.angle)||0;
+  const ux=Math.cos(a),uy=Math.sin(a),vx=-uy,vy=ux;
+  const halfLength=d.w/2;
+  const passageHalf=Math.min(d.h*.40,.52);
+  const lateral=Math.min(Math.max(.20,d.h/2-.08),passageHalf+.10);
+  const outward=halfLength+.28;
+  return[-1,1].map(side=>({
+    x:gate.x+ux*outward+vx*lateral*side,
+    y:gate.y+uy*outward+vy*lateral*side
+  }));
+}
+
 function drawCastleSoldiers(){
   const day=peasantVisualDay();
+
+  // Two stationary spearmen guard the exterior mouth of every completed gate.
+  // Their ground Z deliberately follows terrain instead of the gate foundation
+  // plane, so guards remain planted correctly on sloped approaches.
+  for(const gate of State.structures){
+    if(gate.type!=='gate'||underConstruction(gate))continue;
+    const guards=gateGuardPositions(gate);
+    for(let i=0;i<guards.length;i++){
+      const p=guards[i],z=.08;
+      if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',gate.id+':gate-guard:'+i,day+i*.5);
+    }
+  }
 
   // Wall and palisade patrol density follows tier: T1=0, T2=1, T3=2.
   for(const wall of State.structures){
