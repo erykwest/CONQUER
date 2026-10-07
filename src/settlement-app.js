@@ -78,6 +78,50 @@ function addStructure(s){
   markDirty(true,[...changedLayers]);
   draw();return true
 }
+function aggregateConstructionCost(structures){
+  const total={};
+  for(const s of structures)for(const [k,v] of Object.entries(constructionCost(s)||{}))total[k]=(total[k]||0)+v;
+  return roundCost(total);
+}
+function linearRouteStructures(route,endSnapId,spec){
+  if(!route?.segments?.length)return[];
+  const groupId=route.segments.length>1?uid():null,jointId=route.joint?uid():null;
+  return route.segments.map((seg,i)=>{
+    const s={
+      id:uid(),type:State.tool.linear,width:spec.width,
+      a:{...seg.a},b:{...seg.b},length:seg.length,rotationStep:seg.rotationStep,
+      level:State.tool.level||State.buildLevels.wall,
+      tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,
+      flip:false,functions:[]
+    };
+    if(i===0&&State.draft?.aSnap)s.aSnap=State.draft.aSnap;
+    if(i===route.segments.length-1&&endSnapId)s.bSnap=endSnapId;
+    if(groupId)s.routeGroupId=groupId;
+    if(jointId&&i===0)s.bJoint=jointId;
+    if(jointId&&i===route.segments.length-1)s.aJoint=jointId;
+    return s;
+  });
+}
+function commitStructuralLinearRoute(route,endSnapId,spec){
+  const structures=linearRouteStructures(route,endSnapId,spec);
+  if(!structures.length)return false;
+
+  // Preflight the whole dogleg before mutating state, so a two-leg wall is atomic
+  // from the player's point of view.
+  for(const s of structures){
+    if(buildableTerrainElevationForStructure(s)==null){
+      status('Route crosses incompatible terrain — choose another joint or endpoint');
+      return false;
+    }
+  }
+  const totalCost=aggregateConstructionCost(structures);
+  if(!canAfford(totalCost)){
+    status('Insufficient resources — '+costText(totalCost));
+    return false;
+  }
+  for(const s of structures)if(!addStructure(s))return false;
+  return true;
+}
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
 
@@ -329,17 +373,28 @@ canvas.addEventListener('pointerdown',e=>{
     const mainRoad=State.tool.linear==='road',snapFn=mainRoad?mainRoadSnapAnchor:snapAnchor;
     if(!State.draft){
       const s=snapFn(p);
-      State.draft={a:s.point,aSnap:s.structureId||null,preview:null};
+      State.draft={a:s.point,aSnap:s.structureId||null,preview:null,previewSegments:null};
       status(mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
       draw();
     }else{
-      const e2=snapFn(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec,!mainRoad&&!e2.structureId);
-      if(n&&n.length>=spec.min-.001){
-        if(mainRoad)addManualMainRoad(n.a,n.b);
-        else addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,rotationStep:n.rotationStep,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:false,functions:[]});
-        State.draft=null;
-        status(mainRoad?'Main road added — choose next segment':State.tool.label+' ready for next segment');
-      }else status('Segment too short');
+      const e2=snapFn(p),spec=currentLinearSpec();
+      if(mainRoad){
+        const n=normalizeLinear(State.draft.a,e2.point,spec,false);
+        if(n&&n.length>=spec.min-.001){
+          addManualMainRoad(n.a,n.b);
+          State.draft=null;
+          status('Main road added — choose next segment');
+        }else status('Segment too short');
+      }else{
+        const route=normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!e2.structureId);
+        if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
+          const legs=route.segments.length;
+          if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
+            State.draft=null;
+            status(legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment');
+          }
+        }else status(e2.structureId?'No valid two-segment 15° route to this magnet':'Segment too short');
+      }
     }
   }
 });
@@ -361,16 +416,31 @@ canvas.addEventListener('pointermove',e=>{
   }
   const p=pointerWorld(e);
   if(State.tool.kind==='linear'&&State.draft){
-    const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,snap.point,spec,!mainRoad&&!snap.structureId);
-    if(n){
-      State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,rotationStep:n.rotationStep,manualMain:mainRoad};
-      if(!mainRoad){
-        State.draft.preview.level=State.tool.level||State.buildLevels.wall;
-        State.draft.preview.tier=['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined;
+    const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec();
+    if(mainRoad){
+      const n=normalizeLinear(State.draft.a,snap.point,spec,false);
+      if(n){
+        State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:true};
+        State.draft.previewSegments=null;
+        status(`Main road: ${n.length.toFixed(2)}U — click to confirm`);
+        draw();
       }
-      status(mainRoad?`Main road: ${n.length.toFixed(2)}U — click to confirm`:`${State.tool.label}: ${n.length.toFixed(2)}U · L${State.tool.level||State.buildLevels.wall} · ${buildDuration({type:State.tool.linear,length:n.length,level:State.tool.level||State.buildLevels.wall}).toFixed(1)}d · ${costText(constructionCost({type:State.tool.linear,length:n.length,level:State.tool.level||State.buildLevels.wall}))}`);
-      draw();
+      return;
     }
+
+    const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!snap.structureId);
+    if(route){
+      const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
+      State.draft.preview=null;
+      State.draft.previewSegments=route.segments.map(seg=>({...base,a:seg.a,b:seg.b,length:seg.length,rotationStep:seg.rotationStep}));
+      const previewCost=aggregateConstructionCost(State.draft.previewSegments);
+      const legs=route.segments.length,total=route.length;
+      status(`${State.tool.label}: ${total.toFixed(2)}U · ${legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
+    }else{
+      State.draft.preview=null;State.draft.previewSegments=null;
+      status(snap.structureId?'No valid two-segment 15° route to this magnet':'Segment too short');
+    }
+    draw();
     return
   }
   const oriented=orientedToolSpec();
