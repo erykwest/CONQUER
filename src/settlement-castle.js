@@ -1096,7 +1096,7 @@ function drawBuildArea(){
 function rotateVec(x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:x*ca-y*sa,y:x*sa+y*ca}}
 function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);return v}
 function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
-function placementAngle(center,p){return Math.atan2(p.y-center.y,p.x-center.x)}
+function placementAngle(center,p){return snapStructureAngle(Math.atan2(p.y-center.y,p.x-center.x))}
 function orientedToolSpec(){
   if(State.tool.kind==='tower'&&State.tool.shape==='square')return{type:'tower',shape:'square',size:State.tool.size,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,functions:[]};
   if(State.tool.kind==='gate'){
@@ -1108,9 +1108,9 @@ function orientedToolSpec(){
   return null;
 }
 function makePlacementPreview(q,angle=0){
-  const spec=orientedToolSpec();
-  if(spec)return{...spec,x:q.x,y:q.y,angle,previewOnly:true};
-  if(State.tool.kind==='tower'&&State.tool.shape==='round')return{type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,previewOnly:true,functions:[]};
+  const spec=orientedToolSpec(),snapped=snapStructureAngle(angle),rotationStep=structureRotationStep(snapped);
+  if(spec)return{...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
+  if(State.tool.kind==='tower'&&State.tool.shape==='round')return{type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,angle:0,rotationStep:0,previewOnly:true,functions:[]};
   return null;
 }
 function commitOrientedPlacement(center,angle){
@@ -1122,8 +1122,8 @@ function commitOrientedPlacement(center,angle){
     subtowerSocket:State.draft?.subtowerSocket||null,
     subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
   }:{};
-  const finalAngle=Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle;
-  const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
+  const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
   State.draft=null;
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
   if(ok&&!snap.wallId&&!snap.parentTowerId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
@@ -1160,7 +1160,8 @@ function towerToolPrototype(angle=0){
     material:State.tool.material||'stone',
     woodStyle:State.tool.woodStyle,
     woodRoof:State.tool.woodRoof,
-    angle,
+    angle:snapStructureAngle(angle),
+    rotationStep:structureRotationStep(angle),
     ...(State.tool.shape==='round'?{r:Number(State.tool.size)}:{size:Number(State.tool.size)})
   };
 }
@@ -1180,7 +1181,7 @@ function squareParentSubtowerAttachment(parent,child,cornerIndex){
   };
 }
 function roundParentSubtowerAttachment(parent,child,radialAngle){
-  const a=Number.isFinite(radialAngle)?radialAngle:0,ux=Math.cos(a),uy=Math.sin(a);
+  const a=snapStructureAngle(Number.isFinite(radialAngle)?radialAngle:0),ux=Math.cos(a),uy=Math.sin(a);
   const angle=child.shape==='square'?a-Math.PI/2:0;
   const d=Number(parent.r)||.5;
   return{
@@ -1261,7 +1262,7 @@ function nearestSubtowerPlacementSnap(p){
     }
 
     if(parent.shape==='round'){
-      const a=Math.atan2(p.y-parent.y,p.x-parent.x);
+      const a=snapStructureAngle(Math.atan2(p.y-parent.y,p.x-parent.x));
       const attachment=roundParentSubtowerAttachment(parent,child,a);
       const score=dist(p,attachment.point);
       if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
@@ -1293,8 +1294,9 @@ function repositionSubtower(child){
   if(!attachment)return false;
   child.x=attachment.point.x;child.y=attachment.point.y;
   if(child.shape==='square'){
-    const offset=Number.isFinite(Number(child.orientationOffset))?Number(child.orientationOffset):0;
-    child.angle=attachment.angle+offset;
+    const offset=snapStructureAngle(Number.isFinite(Number(child.orientationOffset))?Number(child.orientationOffset):0);
+    child.orientationOffset=offset;
+    applyStructureRotation(child,attachment.angle+offset);
   }
   child.subtowerSocket=attachment.subtowerSocket;
   child.subtowerAngle=attachment.subtowerAngle;
@@ -1332,7 +1334,7 @@ function nearestWallPlacementSnap(p){
           point:{x:q.x,y:q.y},
           wallId:wall.id,
           wallEnd:end,
-          angle:Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x),
+          angle:snapStructureAngle(Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x)),
           distance:d
         };
         bestD=d;
@@ -1552,7 +1554,7 @@ function currentLinearSpec(){
   if(['wall','palisade'].includes(State.tool.linear))return{...TYPES[State.tool.linear],width:wallWidthForTier(State.tool.tier||State.buildLevels.wallTier)};
   return TYPES.built;
 }
-function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
+function normalizeLinear(a,b,spec,snapAngle=false){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),rawAngle=Math.atan2(dy,dx),angle=snapAngle?snapStructureAngle(rawAngle):rawAngle,ux=Math.cos(angle),uy=Math.sin(angle);return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target,angle,rotationStep:snapAngle?structureRotationStep(angle):null}}
 function linePoly(s){
   const a=s.a,b=s.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
