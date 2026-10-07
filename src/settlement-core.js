@@ -480,7 +480,7 @@ function pointRadius(s){
       DRAW:34,
       CACHE_LANDSCAPE:40,CACHE_GROUND:18,CACHE_SHADOW:18,CACHE_BASE:24,
       CACHE_CASTLE_BODY:24,CACHE_CASTLE_FRONT:18,CACHE_STAGE:34,
-      MAINTENANCE:22,SAVE:20,NAV_GRAPH:20,NAV_TREE:12,GROWTH:20
+      MAINTENANCE:22,SAVE:20,NAV_GRAPH:20,NAV_TREE:12,ROAD_REPAIR:15,GROWTH:20
     };
     const limit=limits[name]??30;
     if(v>=limit)event(name+'_SLOW',{ms:+v.toFixed(2),...data},v>=limit*2?'error':'warn',250);
