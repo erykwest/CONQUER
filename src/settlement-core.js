@@ -10,6 +10,7 @@ const sceneCache={
   // changes with landscape/season/projection, not when a house or road completes.
   landscape:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   ground:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
+  shadow:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
   castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null}
@@ -23,15 +24,16 @@ function invalidateSceneCache(layer='all'){
   for(const name of layers)if(sceneCache[name])sceneCache[name].dirty=true;
 }
 function invalidateSettlementScene(includeCastle=true){
-  invalidateSceneCache(includeCastle?['ground','base','castleBody','castleFront']:['ground','base']);
+  invalidateSceneCache(includeCastle?['ground','shadow','base','castleBody','castleFront']:['ground','shadow','base']);
 }
 function structureSceneLayers(s){
-  if(!s)return['ground','base','castleBody','castleFront'];
+  if(!s)return['ground','shadow','base','castleBody','castleFront'];
   if(s.type==='road'||(s.auto&&s.type==='field'))return['ground'];
-  if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return['castleBody','castleFront'];
+  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
+  if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
   // Palisades and timber fortifications are rendered in the non-union base layer.
-  if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return['base','castleFront'];
-  return['base'];
+  if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return[...shadow,'base','castleFront'];
+  return[...shadow,'base'];
 }
 function invalidateStructureScene(s){
   invalidateSceneCache(structureSceneLayers(s));
