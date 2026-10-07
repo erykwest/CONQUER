@@ -496,6 +496,9 @@ function drawCastleUnionDetails(){
       if(builtSkin(s)==='arcade')drawBuiltArcade(s);
     }
     if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s);
+    if(s.type==='tower'&&isStoneTowerStructure(s)){
+      withStructureGroundPlane(s,()=>drawStoneTowerBase(s,false));
+    }
     if(['tower','gate'].includes(s.type)){
       const h=structureHeight(s),a=w2s({x:s.x,y:s.y},h+.03),q={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},b=w2s(q,h+.03);
       ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
@@ -2693,6 +2696,42 @@ function drawWoodGate(s,preview=false){
     pathPolygon(projectPath(footprintPoints(s),.025),null,'#f4b76f',2);
   }
 }
+function drawStoneTowerBase(s,preview=false){
+  if(!isStoneTowerStructure(s))return;
+  const style=towerBaseStyle(s);
+  if(style==='standard')return;
+
+  const stroke=State.selectedId===s.id?'#f4b76f':'#9f9285';
+  if(style==='buttress'){
+    for(const pts of stoneTowerButtressFootprints(s)){
+      extrudePolygonAt(pts,0,STONE_TOWER_BASE_HEIGHT,{
+        top:winterSnowColor('#948779'),
+        sideA:'#4b4540',sideB:'#625a52',stroke
+      });
+    }
+    return;
+  }
+
+  if(style==='splayed'){
+    const bottom=stoneTowerSplayedFootprint(s),top=footprintPoints(s);
+    if(bottom.length!==top.length||bottom.length<3)return;
+    const faces=[];
+    for(let i=0;i<bottom.length;i++){
+      const j=(i+1)%bottom.length;
+      const b0=w2s(bottom[i],0),b1=w2s(bottom[j],0);
+      const t1=w2s(top[j],STONE_TOWER_BASE_HEIGHT),t0=w2s(top[i],STONE_TOWER_BASE_HEIGHT);
+      const mid={x:(bottom[i].x+bottom[j].x)/2,y:(bottom[i].y+bottom[j].y)/2};
+      const q=rotateViewPoint(mid);
+      faces.push({
+        poly:[b0,b1,t1,t0],
+        depth:q.x+q.y,
+        fill:castleSideShade(bottom[i],bottom[j])
+      });
+    }
+    faces.sort((a,b)=>a.depth-b.depth);
+    for(const face of faces)pathPolygon(face.poly,face.fill,stroke,.85);
+  }
+}
 function drawPointStructure(s,preview=false){
   const selected=State.selectedId===s.id,h=structureHeight(s),stroke=selected?'#f4b76f':'#d8c8b4';
   if(isWoodTower(s)){drawWoodTower(s,preview);return}
@@ -2719,6 +2758,7 @@ function drawPointStructure(s,preview=false){
     sideB:(tower||gate)?'#686057':'#62584f',
     stroke
   });
+  if(tower)drawStoneTowerBase(s,preview);
   const c=w2s({x:s.x,y:s.y},h+.03),dir={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},d=w2s(dir,h+.03);
   ctx.strokeStyle=preview?'rgba(244,183,111,.95)':'rgba(245,226,202,.52)';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(d.x,d.y);ctx.stroke();
 }
