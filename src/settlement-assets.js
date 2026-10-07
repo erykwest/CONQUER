@@ -219,6 +219,8 @@ function withStructureAssetSandbox(s,canvas,drawFn){
 function drawStaticStructureAsset(s){
   if(s.type==='house')drawAutoStructure(s);
   else drawStructure(s);
+  if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s,buildBattlementOcclusionFrame());
+  if(s.type==='built'&&builtSkin(s)==='arcade')drawBuiltArcade(s);
   drawTowerDoors();
   drawTowerRoofs();
   drawGateRoofs();
