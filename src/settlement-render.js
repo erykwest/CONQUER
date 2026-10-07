@@ -336,7 +336,7 @@ function drawBuiltArcade(s){
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   });
 }
-function drawWallHoarding(s){
+function drawWallHoarding(s,occlusionFrame=null){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
   const g=wallExteriorLayout(s),h=g.z;
   const innerOff=Math.max(.02,g.width/2-.02),outerOff=g.width/2+.42;
@@ -362,7 +362,7 @@ function drawWallHoarding(s){
     ownerDepth:worldDepth(s),ownerTop:h
   };
 
-  withTowerBattlementOcclusion(maskPiece,()=>{
+  withTowerBattlementOcclusion(maskPiece,occlusionFrame||buildBattlementOcclusionFrame(),()=>{
     extrudePolygonAt(platform,h-.045,h+.055,{
       top:'#74533a',sideA:'#493423',sideB:'#5d432e',stroke:'#927155'
     });
