@@ -793,10 +793,26 @@ function constructionCompletionCrossed(beforeDay,afterDay){
 function runSettlementMaintenance(reason='watchdog'){
   const t0=performance.now();
   let changed=0;
-  changed+=syncCompletedTowerWallColliders(false);
-  changed+=reconcileGateMainConnections(false);
-  changed+=reconcileTowerSecondaryBranches();
-  changed+=reconcileSettlementAccessRoads();
+  const steps={};
+
+  const measureStep=(name,fn)=>{
+    const s0=performance.now();
+    const n=fn()||0;
+    steps[name]=+(performance.now()-s0).toFixed(2);
+    changed+=n;
+    return n;
+  };
+
+  // The periodic watchdog must remain cheap. Expensive road-repair searches
+  // are event-driven only: running 45k/60k-node A* probes every watchdog
+  // caused multi-second main-thread stalls even when changed===0.
+  measureStep('towerCollider',()=>syncCompletedTowerWallColliders(false));
+  measureStep('gateMain',()=>reconcileGateMainConnections(false));
+
+  if(reason!=='watchdog'){
+    measureStep('towerSecondary',()=>reconcileTowerSecondaryBranches());
+    measureStep('settlementAccess',()=>reconcileSettlementAccessRoads());
+  }
 
   if(reason==='completion'){
     // A completed road/building has entered the static world and/or navigation graph.
@@ -804,14 +820,14 @@ function runSettlementMaintenance(reason='watchdog'){
     fieldWorkAssignmentCache={key:null,map:new Map()};
     invalidateSceneCache();
   }else if(changed){
-    // Watchdog repairs only invalidate when they actually mutate topology.
     invalidateSceneCache();
   }
 
   const maintenanceMs=performance.now()-t0;
-  window.__conquerAnalytics?.measure('MAINTENANCE',maintenanceMs,{reason,changed});
+  window.__conquerAnalytics?.measure('MAINTENANCE',maintenanceMs,{reason,changed,steps});
   if(window.__conquerPerf){
     window.__conquerPerf.lastMaintenanceMs=maintenanceMs;
+    window.__conquerPerf.lastMaintenanceSteps=steps;
     window.__conquerPerf.maintenanceRuns=(window.__conquerPerf.maintenanceRuns||0)+1;
   }
   return changed;
