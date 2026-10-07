@@ -817,13 +817,14 @@ function runSettlementMaintenance(reason='watchdog'){
     return n;
   };
 
-  // The periodic watchdog must remain cheap. Expensive road-repair searches
-  // are event-driven only: running 45k/60k-node A* probes every watchdog
-  // caused multi-second main-thread stalls even when changed===0.
+  // The periodic watchdog must remain O(cheap). Gate-main reconciliation
+  // can enter an 80k-node repair search when a route is missing/invalid, so it
+  // is strictly event-driven. Telemetry showed ~1.73s stalls every watchdog
+  // even when changed===0.
   measureStep('towerCollider',()=>syncCompletedTowerWallColliders(false));
-  measureStep('gateMain',()=>reconcileGateMainConnections(false));
 
   if(reason!=='watchdog'){
+    measureStep('gateMain',()=>reconcileGateMainConnections(false));
     measureStep('towerSecondary',()=>reconcileTowerSecondaryBranches());
     measureStep('settlementAccess',()=>reconcileSettlementAccessRoads());
   }
