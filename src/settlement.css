@@ -11,11 +11,13 @@ header{height:58px;display:flex;align-items:center;gap:18px;padding:0 16px;backg
 #resources{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.res{padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:12px;white-space:nowrap}
 #newMapBtn{flex:0 0 auto;padding:8px 11px;border-color:#7d5b3d;background:#3a281d;font-size:12px;font-weight:800;white-space:nowrap}
 #newMapBtn:hover{background:#4a3222}
-#wrap{position:relative;flex:1;min-height:0;background:var(--field)}
-#c,#weatherCanvas,#weatherCloudLayer{position:absolute;inset:0;width:100%;height:100%;display:block}
-#c{cursor:crosshair;touch-action:none;background:#202419;z-index:0}
-#weatherCloudLayer{pointer-events:none;overflow:visible;z-index:1}
-#weatherCanvas{pointer-events:none;background:transparent;z-index:2}
+#wrap{position:relative;flex:1;min-height:0;background:#202419}
+#gpuCanvas,#c,#weatherCanvas,#weatherCloudLayer{position:absolute;inset:0;width:100%;height:100%;display:block}
+#gpuCanvas{pointer-events:none;background:#202419;z-index:0;visibility:hidden}
+#wrap.webgpu-active #gpuCanvas{visibility:visible}
+#c{cursor:crosshair;touch-action:none;background:transparent;z-index:1}
+#weatherCloudLayer{pointer-events:none;overflow:visible;z-index:2}
+#weatherCanvas{pointer-events:none;background:transparent;z-index:3}
 .panel{position:absolute;top:10px;bottom:10px;width:var(--sidebar);background:rgba(38,27,21,.96);border:1px solid var(--line-strong);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.32);overflow:auto;z-index:5}
 #builder{left:10px;padding:12px}#policy{right:10px;padding:12px}
 #functionPanel{display:none;right:330px;top:76px;bottom:auto;width:280px;max-height:calc(100% - 96px);padding:12px;z-index:8}
