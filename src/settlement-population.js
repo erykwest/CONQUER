@@ -175,6 +175,7 @@ function roadNavConnect(a,b,cost){
   if(prevB==null||cost<prevB)b.edges.set(a.key,cost);
 }
 function rebuildRoadNavGraph(){
+  const analyticsT0=performance.now();
   const roads=roadList(true).filter(r=>r.a&&r.b&&dist(r.a,r.b)>.05);
   const nodes=new Map(),split=roads.map(r=>({road:r,pts:[{t:0,p:{...r.a}},{t:1,p:{...r.b}}]}));
 
@@ -220,6 +221,7 @@ function rebuildRoadNavGraph(){
   roadDestinationTreeCache.clear();
   navPerf.graphBuilds++;
   if(window.__conquerPerf)window.__conquerPerf.graphBuilds=navPerf.graphBuilds;
+  window.__conquerAnalytics?.measure('NAV_GRAPH',performance.now()-analyticsT0,{roads:roads.length,nodes:nodes.size});
   return roadNavGraphCache;
 }
 function roadNavGraph(){
@@ -268,6 +270,7 @@ function buildRoadNodeTree(goalNodeKey,graph=roadNavGraph()){
     return cached;
   }
 
+  const analyticsT0=performance.now();
   const heap=new RoadNavHeap(),distance=new Map(),next=new Map();
   distance.set(goalNodeKey,0);
   next.set(goalNodeKey,null);
@@ -292,6 +295,7 @@ function buildRoadNodeTree(goalNodeKey,graph=roadNavGraph()){
   const tree={key,graphVersion:graph.version,goalNodeKey,distance,next};
   cacheRoadDestinationTree(key,tree);
   navPerf.destinationTreesBuilt++;
+  window.__conquerAnalytics?.measure('NAV_TREE',performance.now()-analyticsT0,{nodes:graph.nodes.size});
   return tree;
 }
 function uniqueAnchorNodes(anchor){
