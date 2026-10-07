@@ -809,9 +809,9 @@ document.getElementById('analyticsExportBtn')?.addEventListener('click',()=>wind
 document.getElementById('analyticsClearBtn')?.addEventListener('click',()=>window.__conquerAnalytics?.clear());
 let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,simLogicAt=0,simLogicDay=State.clock.day,weatherDrawAt=0,weatherLayerActive=false,lastWorldWeatherKey='',lastShadowPhaseKey=null;
 const SIM_LOGIC_FRAME_MS=100; // topology/growth/completion checks: 10 Hz is plenty
-const VISUAL_FRAME_FAST_MS=1000/24;
-const VISUAL_FRAME_MEDIUM_MS=1000/18;
-const VISUAL_FRAME_HEAVY_MS=1000/12;
+const VISUAL_FRAME_FAST_MS=1000/30;
+const VISUAL_FRAME_MEDIUM_MS=1000/24;
+const VISUAL_FRAME_HEAVY_MS=1000/15;
 let adaptiveVisualFrameMs=VISUAL_FRAME_FAST_MS,simDrawEmaMs=0;
 const WEATHER_FRAME_MS=1000/24;
 const MAINTENANCE_WATCHDOG_MS=2500;
@@ -909,12 +909,12 @@ function simulationFrame(now){
       draw();
       const drawMs=performance.now()-t0;
 
-      // Leave main-thread headroom instead of forcing 30 FPS when one full
-      // dynamic draw is already expensive. Fast scenes stay at 24 FPS;
-      // overloaded scenes automatically fall back to 18 or 12 FPS.
+      // Target a visibly fluid 30 FPS while preserving headroom. Scenes that
+      // exceed the steady-state budget automatically fall back to 24 or 15 FPS
+      // instead of saturating the main thread and producing irregular stalls.
       simDrawEmaMs=simDrawEmaMs?simDrawEmaMs*.82+drawMs*.18:drawMs;
-      adaptiveVisualFrameMs=simDrawEmaMs>42?VISUAL_FRAME_HEAVY_MS:
-        simDrawEmaMs>24?VISUAL_FRAME_MEDIUM_MS:VISUAL_FRAME_FAST_MS;
+      adaptiveVisualFrameMs=simDrawEmaMs>34?VISUAL_FRAME_HEAVY_MS:
+        simDrawEmaMs>20?VISUAL_FRAME_MEDIUM_MS:VISUAL_FRAME_FAST_MS;
 
       window.__conquerAnalytics?.measure('DRAW',drawMs,{
         visible:window.__conquerPerf?.visibleVillagers||0,
