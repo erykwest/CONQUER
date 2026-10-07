@@ -38,6 +38,7 @@ function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
 function addStructure(s){
+  normalizeStructureRotation(s);
   normalizeStructureVariants(s);
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
   let displaced={removed:0,roads:[]};
@@ -97,16 +98,13 @@ function deleteStructure(id){
 }
 function pointerScreen(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
 function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
-function normalizeTowerAngle(a){
-  const tau=Math.PI*2;
-  return((Number(a)||0)%tau+tau)%tau;
-}
+function normalizeTowerAngle(a){return normalizeStructureAngle(a)}
 function turnTower(target,delta,label){
   if(!target||target.type!=='tower')return false;
 
-  target.angle=normalizeTowerAngle((Number(target.angle)||0)+delta);
+  applyStructureRotation(target,(Number(target.angle)||0)+delta);
   if(target.parentTowerId&&target.shape==='square'){
-    target.orientationOffset=normalizeTowerAngle((Number(target.orientationOffset)||0)+delta);
+    target.orientationOffset=snapStructureAngle((Number(target.orientationOffset)||0)+delta);
   }
 
   // A parent rotation carries its attached subtorri; wall sockets are rebuilt
@@ -125,21 +123,21 @@ function turnTower(target,delta,label){
   status(label);
   return true;
 }
-function flipGate(target){
+function turnGate(target,delta,label='Gate rotated'){
   if(!target||target.type!=='gate')return false;
-  target.angle=normalizeTowerAngle((Number(target.angle)||0)+Math.PI);
+  applyStructureRotation(target,(Number(target.angle)||0)+delta);
 
-  // Gate front is semantic: flipping swaps exterior/interior. Attached front
-  // subtorri must move with the new facade.
+  // Gate front is semantic: rotation carries its attached front subtorri.
   syncSubtowerTree(target.id);
 
   invalidateCastleColliderGeometry(target);
   markStructureDirty(target);
   renderFunctionPanel();
   draw();
-  status('Gate front flipped');
+  status(label);
   return true;
 }
+function flipGate(target){return turnGate(target,Math.PI,'Gate front flipped')}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
@@ -160,7 +158,7 @@ function renderFunctionPanel(){
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
   if(s.type==='tower'){
     const deg=Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360;
-    html+=`<div class="slot"><div class="slot-label">Tower orientation · ${deg}°</div><div class="grid"><button data-tower-flip>⇄ Flip</button><button data-tower-rotate90>↻ Rotate 90°</button></div><div class="legend">Flip reverses the tower front by 180°. Secondary service branches follow the new entrance.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Tower orientation · ${deg}° · step ${structureRotationStep(s.angle)}/23</div><div class="grid3"><button data-tower-rotate="-1">↺ 15°</button><button data-tower-flip>⇄ 180°</button><button data-tower-rotate="1">↻ 15°</button></div><div class="legend">Structural rotation is quantized to 24 positions. Attached subtorri and wall sockets follow the same angle model.</div></div>`;
     if(isWoodTower(s)){
       html+=`<div class="slot"><div class="legend">Wooden tower · fixed H1. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
       if(woodTowerStyle(s)==='palisadeTower'){
@@ -179,7 +177,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='gate'){
     const deg=Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360;
-    html+=`<div class="slot"><div class="slot-label">Gate front · ${deg}°</div><button data-gate-flip class="active">⇄ Flip</button><div class="legend">Swaps exterior and interior by 180°. Guards and the wooden gate door follow the exterior side.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Gate front · ${deg}° · step ${structureRotationStep(s.angle)}/23</div><div class="grid3"><button data-gate-rotate="-1">↺ 15°</button><button data-gate-flip class="active">⇄ 180°</button><button data-gate-rotate="1">↻ 15°</button></div><div class="legend">Gate rotation uses the same 15° structural grid; guards, door and attached subtorri follow the facade.</div></div>`;
     if(woodGate){
       html+=`<div class="slot"><div class="legend">Wood gate · fixed H1 · 1.5×1U · front timber door · flat fighting deck with timber battlements.</div></div>`;
     }else{
@@ -236,8 +234,9 @@ function renderFunctionPanel(){
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
+  slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
-  slots.querySelectorAll('[data-tower-rotate90]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI/2,'Tower rotated 90°')});
+  slots.querySelectorAll('[data-gate-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.gateRotate)||1;turnGate(target,STRUCTURE_ANGLE_STEP*dir,`Gate rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-tower-base]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();
     if(!target||target.type!=='tower'||isWoodTower(target))return;
@@ -334,10 +333,10 @@ canvas.addEventListener('pointerdown',e=>{
       status(mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
       draw();
     }else{
-      const e2=snapFn(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec);
+      const e2=snapFn(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,e2.point,spec,!mainRoad&&!e2.structureId);
       if(n&&n.length>=spec.min-.001){
         if(mainRoad)addManualMainRoad(n.a,n.b);
-        else addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:false,functions:[]});
+        else addStructure({id:uid(),type:State.tool.linear,width:spec.width,a:n.a,b:n.b,aSnap:State.draft.aSnap,bSnap:e2.structureId,length:n.length,rotationStep:n.rotationStep,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,flip:false,functions:[]});
         State.draft=null;
         status(mainRoad?'Main road added — choose next segment':State.tool.label+' ready for next segment');
       }else status('Segment too short');
@@ -362,9 +361,9 @@ canvas.addEventListener('pointermove',e=>{
   }
   const p=pointerWorld(e);
   if(State.tool.kind==='linear'&&State.draft){
-    const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,snap.point,spec);
+    const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec(),n=normalizeLinear(State.draft.a,snap.point,spec,!mainRoad&&!snap.structureId);
     if(n){
-      State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:mainRoad};
+      State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,rotationStep:n.rotationStep,manualMain:mainRoad};
       if(!mainRoad){
         State.draft.preview.level=State.tool.level||State.buildLevels.wall;
         State.draft.preview.tier=['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined;
@@ -550,6 +549,7 @@ function migrateStructures(list){
     if(s.type==='tower'){
       s.material=s.material==='wood'?'wood':'stone';
       if(!Number.isFinite(Number(s.orientationOffset)))s.orientationOffset=0;
+      s.orientationOffset=snapStructureAngle(s.orientationOffset);
       if(s.material==='wood'){
         s.woodStyle=s.woodStyle==='watchtower'?'watchtower':'palisadeTower';
         s.shape='square';s.level=1;
@@ -574,6 +574,12 @@ function migrateStructures(list){
     if(s.type==='road'&&s.a&&s.b&&!Number.isFinite(Number(s.length)))s.length=dist(s.a,s.b);
     if(s.type==='well')delete s.construction;
     if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;
+    if(structureUsesDiscreteAngle(s))normalizeStructureRotation(s);
+    if(['wall','palisade','built'].includes(s.type)&&s.a&&s.b){
+      const rawAngle=Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x),snapped=snapStructureAngle(rawAngle);
+      const delta=Math.abs(Math.atan2(Math.sin(rawAngle-snapped),Math.cos(rawAngle-snapped)));
+      s.rotationStep=delta<1e-6?structureRotationStep(snapped):null;
+    }
 
     // V1 visual-variant migration. Legacy structures keep today's appearance.
     normalizeStructureVariants(s);
