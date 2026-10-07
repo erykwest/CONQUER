@@ -130,7 +130,15 @@ function withStructureAssetSandbox(s,canvas,drawFn){
   const g=canvas.getContext('2d');
   g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,canvas.width,canvas.height);
   State.structures=[s];State.selectedId=null;
-  State.view={...prevView,scale:STRUCTURE_ASSET_RENDER_SCALE,x:STRUCTURE_ASSET_CANVAS_SIZE/2,y:STRUCTURE_ASSET_CANVAS_SIZE*.63,rotation:0};
+  const assetScale=STRUCTURE_ASSET_RENDER_SCALE,assetWorldScale=U*assetScale;
+  const assetGroundY=STRUCTURE_ASSET_CANVAS_SIZE*.74;
+  State.view={
+    ...prevView,
+    scale:assetScale,
+    x:STRUCTURE_ASSET_CANVAS_SIZE/2,
+    y:assetGroundY-(STRUCTURE_ASSET_CENTER.x+STRUCTURE_ASSET_CENTER.y)*assetWorldScale*ISO_Y,
+    rotation:0
+  };
   State.village={...prevVillage,founded:false,name:null};
   try{return withRenderContext(g,()=>withProjectionGroundZ(0,drawFn))}
   finally{State.structures=prevStructures;State.selectedId=prevSelected;State.view=prevView;State.village=prevVillage}
