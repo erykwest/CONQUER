@@ -8,20 +8,20 @@ const sceneCache={
   // Keep immutable world art completely separate from settlement topology.
   // Terrain/environment is expensive (hundreds of rocks/relief bands) but only
   // changes with landscape/season/projection, not when a house or road completes.
-  landscape:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  ground:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  shadow:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null},
-  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null}
+  landscape:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  ground:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  shadow:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
+  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true}
 };
 for(const layer of Object.values(sceneCache))layer.ctx=layer.canvas.getContext('2d');
 function invalidateSceneCache(layer='all'){
   const perf=window.__conquerPerf||(window.__conquerPerf={});
   perf.cacheInvalidations=(perf.cacheInvalidations||0)+1;
   const layers=Array.isArray(layer)?layer:[layer];
-  if(layers.includes('all')){for(const item of Object.values(sceneCache))item.dirty=true;return}
-  for(const name of layers)if(sceneCache[name])sceneCache[name].dirty=true;
+  if(layers.includes('all')){for(const item of Object.values(sceneCache)){item.dirty=true;item.gpuDirty=true}return}
+  for(const name of layers)if(sceneCache[name]){sceneCache[name].dirty=true;sceneCache[name].gpuDirty=true}
 }
 function invalidateSettlementScene(includeCastle=true){
   invalidateSceneCache(includeCastle?['ground','shadow','base','castleBody','castleFront']:['ground','shadow','base']);
@@ -54,6 +54,7 @@ function prepareSceneCache(layer){
   }
   entry.ctx.setTransform(1,0,0,1,0,0);
   entry.ctx.clearRect(0,0,entry.canvas.width,entry.canvas.height);
+  entry.gpuDirty=true;
   entry.ctx.setTransform(d,0,0,d,m*d,m*d);
   entry.view={
     x:State.view.x,y:State.view.y,scale:State.view.scale,
@@ -531,6 +532,16 @@ function pointRadius(s){
       draw:{lastMs:+finite(p.lastDrawMs).toFixed(2),maxMs:+finite(p.maxDrawMs).toFixed(2),longDraws:finite(p.longDraws)},
       maintenance:{lastMs:+finite(p.lastMaintenanceMs).toFixed(2),runs:finite(p.maintenanceRuns),deltaRuns:delta('maintenanceRuns',p)},
       save:{lastMs:+finite(p.lastSaveMs).toFixed(2)},
+      renderer:{
+        mode:p.webgpuActive?'webgpu':'canvas2d',
+        webgpuSupported:!!p.webgpuSupported,
+        webgpuActive:!!p.webgpuActive,
+        webgpuFrames:finite(p.webgpuFrames),
+        webgpuUploads:finite(p.webgpuUploads),
+        webgpuLastFrameMs:+finite(p.webgpuLastFrameMs).toFixed(3),
+        webgpuLastUploadMs:+finite(p.webgpuLastUploadMs).toFixed(3),
+        fallbackReason:p.webgpuFallbackReason||null
+      },
       navigation:{
         graphBuilds:finite(p.graphBuilds),deltaGraphBuilds:delta('graphBuilds',p),
         graphRoutes:finite(p.graphRoutes),deltaGraphRoutes:delta('graphRoutes',p),

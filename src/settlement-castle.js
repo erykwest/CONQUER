@@ -3,6 +3,7 @@
 function resize(){
   const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1,w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
   canvas.width=w;canvas.height=h;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';screenCtx.setTransform(d,0,0,d,0,0);
+  window.ConquerWebGPU?.resize?.(r.width,r.height,d);
   if(weatherCanvas&&weatherCtx){weatherCanvas.width=w;weatherCanvas.height=h;weatherCanvas.style.width=r.width+'px';weatherCanvas.style.height=r.height+'px';weatherCtx.setTransform(d,0,0,d,0,0)}
   if(weatherCloudLayer)weatherCloudLayer.setAttribute('viewBox','0 0 '+r.width+' '+r.height);
   invalidateSceneCache();draw();clearWeatherOverlay();

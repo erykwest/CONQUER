@@ -986,10 +986,13 @@ function draw(){
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
   ensureStaticSceneCaches();
-  blitSceneCache('landscape');
-  blitSceneCache('ground');
-  blitSceneCache('shadow');
-  blitSceneCache('base');
+  const gpuStatic=window.ConquerWebGPU?.renderStaticLayers?.(r)===true;
+  if(!gpuStatic){
+    blitSceneCache('landscape');
+    blitSceneCache('ground');
+    blitSceneCache('shadow');
+    blitSceneCache('base');
+  }
 
   // Only construction sites remain fully dynamic at ground/building depth.
   State.structures

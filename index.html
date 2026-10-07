@@ -20,11 +20,12 @@
     .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
 })();
 </script>
-<link rel="stylesheet" href="./src/settlement.css">
+<link rel="stylesheet" href="./src/settlement.css?v=webgpu-2">
 </head>
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></header>
 <div id="wrap">
+  <canvas id="gpuCanvas" aria-hidden="true"></canvas>
   <canvas id="c"></canvas>
   <svg id="weatherCloudLayer" aria-hidden="true" preserveAspectRatio="none"></svg>
   <canvas id="weatherCanvas" aria-hidden="true"></canvas>
@@ -136,6 +137,7 @@
       </div>
       <div class="dev-section">
         <span class="dev-label">DIAGNOSTICA</span>
+        <div id="rendererReadout" class="dev-hint" title="Active rendering backend">Renderer in avvio…</div>
         <div id="analyticsReadout" class="dev-hint" title="Background simulation analytics">Analytics in avvio…</div>
         <div class="dev-row">
           <button id="analyticsExportBtn" type="button" title="Export simulation diagnostics as JSON">Export JSON</button>
@@ -175,6 +177,7 @@
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
 <script src="./src/settlement-core.js"></script>
+<script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js"></script>
 <script src="./src/settlement-castle.js"></script>
 <script src="./src/settlement-population.js"></script>
