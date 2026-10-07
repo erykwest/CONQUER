@@ -213,7 +213,25 @@ function rebuildRoadNavGraph(){
     }
   }
 
-  roadNavGraphCache={dirty:false,nodes,roads:split,version:roadNavGraphCache.version+1};
+  const componentByNode=new Map();
+  let componentId=0;
+  for(const node of nodes.values()){
+    if(componentByNode.has(node.key))continue;
+    componentId++;
+    const stack=[node.key];
+    componentByNode.set(node.key,componentId);
+    while(stack.length){
+      const key=stack.pop(),cur=nodes.get(key);
+      if(!cur)continue;
+      for(const neighborKey of cur.edges.keys()){
+        if(componentByNode.has(neighborKey))continue;
+        componentByNode.set(neighborKey,componentId);
+        stack.push(neighborKey);
+      }
+    }
+  }
+
+  roadNavGraphCache={dirty:false,nodes,roads:split,componentByNode,version:roadNavGraphCache.version+1};
   roadDestinationTreeCache.clear();
   navPerf.graphBuilds++;
   return roadNavGraphCache;
@@ -309,6 +327,31 @@ function roadTreePathFromAnchor(startAnchor,goalAnchor){
 
   // Same-road travel is cheaper than consulting the tree.
   if(startAnchor.item===goalAnchor.item)return[startAnchor.point,goalAnchor.point];
+
+  // A manually removed main-road segment can split the road graph. Detect
+  // disconnected components before building a destination Dijkstra tree;
+  // otherwise every resident on the opposite side of the gap pays for a full
+  // graph search even though no route can exist.
+  const startComponents=new Set(
+    [startAnchor.left,startAnchor.right]
+      .map(q=>q?.node?.key)
+      .filter(Boolean)
+      .map(key=>graph.componentByNode?.get(key))
+      .filter(Boolean)
+  );
+  const goalComponents=new Set(
+    [goalAnchor.left,goalAnchor.right]
+      .map(q=>q?.node?.key)
+      .filter(Boolean)
+      .map(key=>graph.componentByNode?.get(key))
+      .filter(Boolean)
+  );
+  let sharesComponent=false;
+  for(const id of startComponents)if(goalComponents.has(id)){sharesComponent=true;break}
+  if(!sharesComponent){
+    navPerf.disconnectedRouteSkips=(navPerf.disconnectedRouteSkips||0)+1;
+    return null;
+  }
 
   const tree=buildRoadDestinationTree(goalAnchor);
   if(!tree)return null;
