@@ -157,7 +157,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='gate'){
     if(woodGate){
-      html+=`<div class="slot"><div class="legend">Wood gate · fixed H1 · 1.5×1U · flat timber roof.</div></div>`;
+      html+=`<div class="slot"><div class="legend">Wood gate · fixed H1 · 1.5×1U · front timber door · flat fighting deck with timber battlements.</div></div>`;
     }else{
       const roof=gateRoofStyle(s);
       html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
@@ -476,7 +476,7 @@ document.querySelector('[data-gate]').onclick=e=>{
 document.querySelector('[data-wood-gate]').onclick=e=>{
   const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x.dataset.gateLevel==='1'));
-  setTool({kind:'gate',material:'wood',level:1,label:'Wood gate 1.5×1U · H1 · flat roof · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+  setTool({kind:'gate',material:'wood',level:1,label:'Wood gate 1.5×1U · H1 · door + battlements · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   const type=b.dataset.civic,spec={type,shape:'civic'};
