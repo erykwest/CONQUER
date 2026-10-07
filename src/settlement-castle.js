@@ -2773,8 +2773,9 @@ function drawStoneTowerBase(s,preview=false){
 
   const stroke=State.selectedId===s.id?'#f4b76f':'#9f9285';
   if(style==='buttress'){
+    const buttressTop=2.35+(towerTier(s)-1)*.12;
     for(const pts of stoneTowerButtressFootprints(s)){
-      extrudePolygonAt(pts,0,STONE_TOWER_BASE_HEIGHT,{
+      extrudePolygonAt(pts,0,buttressTop,{
         top:winterSnowColor('#948779'),
         sideA:'#4b4540',sideB:'#625a52',stroke
       });
