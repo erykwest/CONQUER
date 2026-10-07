@@ -20,7 +20,7 @@
     .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
 })();
 </script>
-<link rel="stylesheet" href="./src/settlement.css">
+<link rel="stylesheet" href="./src/settlement.css?v=webgpu-2">
 </head>
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></header>
@@ -161,7 +161,7 @@
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
 <script src="./src/settlement-core.js"></script>
-<script src="./src/settlement-webgpu.js"></script>
+<script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js"></script>
 <script src="./src/settlement-castle.js"></script>
 <script src="./src/settlement-population.js"></script>
