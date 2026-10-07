@@ -337,49 +337,110 @@ function repairDisplacedRoads(displaced,manual){
   return added;
 }
 function gateMainRouteId(gate){return 'gate-main:'+gate.id}
+function gateMainTrunkProjection(gate,point){
+  const ownRoute=gateMainRouteId(gate);
+  let best=null,bestD=Infinity;
+  for(const r of primaryRoadList(true)){
+    if(r.routeId===ownRoute||r.roadClass==='arterial-gate')continue;
+    const q=closestPointOnSegment(point,r.a,r.b),d=dist(point,q);
+    if(d<bestD){best={road:r,point:q,d};bestD=d}
+  }
+  return best;
+}
+function gateMainTopologyKey(gate){
+  const d=rectDims(gate),parts=[
+    gate.id,
+    Number(gate.x).toFixed(2),Number(gate.y).toFixed(2),
+    Number(gate.angle||0).toFixed(3),
+    Number(d.w).toFixed(2),Number(d.h).toFixed(2)
+  ];
+  const trunks=primaryRoadList(true)
+    .filter(r=>r.routeId!==gateMainRouteId(gate)&&r.roadClass!=='arterial-gate')
+    .map(r=>[
+      r.routeId||r.id,
+      Number(r.a.x).toFixed(1),Number(r.a.y).toFixed(1),
+      Number(r.b.x).toFixed(1),Number(r.b.y).toFixed(1)
+    ].join(':'))
+    .sort();
+  parts.push(trunks.join('|'));
+  return parts.join('#');
+}
 function gateMainRouteContinuous(gate){
-  const well=State.structures.find(s=>s.id===State.village.wellId),roads=routeRoads(gateMainRouteId(gate));
-  if(!well||!roads.length)return false;
-  const passage=gatePassageInfo(gate,well);if(!passage)return false;
-  let cursor={x:well.x,y:well.y};
+  const roads=routeRoads(gateMainRouteId(gate));
+  if(!roads.length)return false;
+
+  const passage=gatePassageInfo(gate);if(!passage)return false;
+  const endpoints=[passage.sideA,passage.sideB];
+  const trunk=gateMainTrunkProjection(gate,{x:gate.x,y:gate.y});
+  if(!trunk)return false;
+
+  // Follow the stored route from the trunk-side endpoint through the gate.
+  let cursor={...trunk.point};
   for(const r of roads){
-    if(dist(cursor,r.a)<=.48)cursor={...r.b};
-    else if(dist(cursor,r.b)<=.48)cursor={...r.a};
+    if(dist(cursor,r.a)<=.72)cursor={...r.b};
+    else if(dist(cursor,r.b)<=.72)cursor={...r.a};
     else return false;
   }
-  return dist(cursor,passage.far)<=.72;
+  return Math.min(dist(cursor,endpoints[0]),dist(cursor,endpoints[1]))<=.90;
 }
 function buildGateMainConnection(gate,force=false){
-  const well=State.structures.find(s=>s.id===State.village.wellId);
-  if(!gate||gate.type!=='gate'||underConstruction(gate)||!well||underConstruction(well))return 0;
-  const routeId=gateMainRouteId(gate);
-  if(!force&&gateMainRouteContinuous(gate))return 0;
+  if(!gate||gate.type!=='gate'||underConstruction(gate))return 0;
+  const routeId=gateMainRouteId(gate),attemptKey=gateMainTopologyKey(gate);
 
-  const passage=gatePassageInfo(gate,well);if(!passage)return 0;
-  const ignore=[well.id],width=.62;
-  let approach;
-  if(roadRepairSegmentClear({x:well.x,y:well.y},passage.near,width,ignore)){
-    approach=[{x:well.x,y:well.y},{...passage.near}];
-  }else{
-    approach=findRoadRepairPath({x:well.x,y:well.y},passage.near,width,16,ignore,80000);
+  if(!force&&gateMainRouteContinuous(gate)){
+    gate.gateMainAttemptKey=attemptKey;
+    gate.gateMainBlocked=false;
+    return 0;
   }
-  if(!approach||approach.length<2)return 0;
+  // A failed path search is deterministic for the same gate + primary-road
+  // topology. Never repeat it on maintenance/completion until topology changes.
+  if(!force&&gate.gateMainBlocked&&gate.gateMainAttemptKey===attemptKey)return 0;
+
+  const trunk=gateMainTrunkProjection(gate,{x:gate.x,y:gate.y});
+  if(!trunk){
+    gate.gateMainAttemptKey=attemptKey;
+    gate.gateMainBlocked=true;
+    return 0;
+  }
+
+  // The trunk projection determines which mouth is inside. The generated route
+  // runs from the primary network, through the gate, to the exterior mouth.
+  const passage=gatePassageInfo(gate,trunk.point);if(!passage)return 0;
+  const width=.62,ignore=[];
+  let approach;
+  if(roadRepairSegmentClear(trunk.point,passage.near,width,ignore)){
+    approach=[{...trunk.point},{...passage.near}];
+  }else{
+    // This is intentionally a short local repair search, not a settlement-wide
+    // well→gate A*. The primary road already provides global connectivity.
+    approach=findRoadRepairPath(trunk.point,passage.near,width,10,ignore,18000);
+  }
+  if(!approach||approach.length<2){
+    gate.gateMainAttemptKey=attemptKey;
+    gate.gateMainBlocked=true;
+    return 0;
+  }
 
   const full=approach.slice();
   for(const p of [passage.center,passage.far]){
     if(dist(full.at(-1),p)>.08)full.push({...p});
   }
-  // Validate the explicit passage itself. Gate corridor is transparent, while
-  // neighboring walls/towers remain true blockers.
   if(!roadRepairSegmentClear(passage.near,passage.center,width,ignore)||
-     !roadRepairSegmentClear(passage.center,passage.far,width,ignore))return 0;
+     !roadRepairSegmentClear(passage.center,passage.far,width,ignore)){
+    gate.gateMainAttemptKey=attemptKey;
+    gate.gateMainBlocked=true;
+    return 0;
+  }
 
   const clean=simplifyRoadRepairPath(full,width,ignore),pts=subdivideRoadPolyline(clean,ROAD_RULES.arterialSegmentMax);
-  if(pts.length<2)return 0;
+  if(pts.length<2){
+    gate.gateMainAttemptKey=attemptKey;
+    gate.gateMainBlocked=true;
+    return 0;
+  }
 
-  // Atomic replacement: the previous gate artery remains until a valid new path exists.
   State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId));
-  let added=0,parent=null;
+  let added=0,parent=trunk.road.id;
   for(let i=0;i<pts.length-1;i++){
     const a=pts[i],b=pts[i+1];if(dist(a,b)<.16)continue;
     const road={
@@ -387,9 +448,16 @@ function buildGateMainConnection(gate,force=false){
       routeId,routeSeq:added,a:{...a},b:{...b},width,appeal:1,
       parentRoadId:parent,gateFor:gate.id,reactive:true
     };
-    // A gate becomes part of the primary network as soon as it is completed.
     State.structures.push(road);parent=road.id;added++;
   }
+  if(!added){
+    gate.gateMainAttemptKey=attemptKey;
+    gate.gateMainBlocked=true;
+    return 0;
+  }
+
+  gate.gateMainAttemptKey=attemptKey;
+  gate.gateMainBlocked=false;
   refreshStaleHouseRoadRefs();
   invalidateNavigation();
   return added;
