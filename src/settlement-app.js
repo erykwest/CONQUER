@@ -69,12 +69,12 @@ function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
   if(selectableGeneratedMainRoad(target)){
     const routeId=target.routeId;
-    State.structures=State.structures.filter(s=>!(s.type==='road'&&s.routeId===routeId));
+    State.structures=State.structures.filter(s=>s.id!==id);
     const plan=ensureRoadPlan().find(r=>r.id===routeId);
-    if(plan){plan.connected=false;plan.disabled=true}
+    if(plan)plan.disabled=true;
     refreshStaleHouseRoadRefs();
     if(State.selectedId===id)State.selectedId=null;
-    renderFunctionPanel();markDirty();draw();status('Main road removed');
+    renderFunctionPanel();markDirty();draw();status('Main road segment removed');
     return;
   }
   if(target.type==='tower')restoreTowerWallConnections(target);
