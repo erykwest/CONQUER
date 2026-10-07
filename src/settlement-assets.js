@@ -7,6 +7,8 @@ const STRUCTURE_ASSET_PIPELINE_VERSION=1;
 const STRUCTURE_ASSET_CANVAS_SIZE=256;
 const STRUCTURE_ASSET_RENDER_SCALE=1.6;
 const STRUCTURE_ASSET_CACHE_LIMIT=192;
+const STRUCTURE_COMPOSITE_CACHE_LIMIT_BYTES=32*1024*1024;
+const STRUCTURE_COMPOSITE_MAX_ENTRY_BYTES=16*1024*1024;
 const STRUCTURE_ASSET_CENTER=Object.freeze({x:100,y:100});
 const STRUCTURE_ASSET_TEST_LENGTHS=Object.freeze({
   wall:Object.freeze([1,4,8]),
@@ -15,27 +17,98 @@ const STRUCTURE_ASSET_TEST_LENGTHS=Object.freeze({
 });
 const STRUCTURE_SHADOW_TEST_STEPS=8;
 const structureAssetBitmapCache=new Map();
+const structureCompositeBitmapCache=new Map();
 let structureAssetCompileRunning=null;
 let structureAssetLastReport=null;
+let structureAssetCacheBytes=0,structureCompositeCacheBytes=0;
+
+function assetPerf(){
+  return window.__conquerPerf||(window.__conquerPerf={});
+}
+function syncAssetPerf(){
+  const p=assetPerf();
+  p.assetCacheEntries=structureAssetBitmapCache.size+structureCompositeBitmapCache.size;
+  p.assetCacheEstimatedBytes=structureAssetCacheBytes+structureCompositeCacheBytes;
+  p.assetCacheEstimatedMb=+(p.assetCacheEstimatedBytes/1048576).toFixed(2);
+  p.castleBodyBitmapEntries=structureCompositeBitmapCache.size;
+  p.castleBodyBitmapBytes=structureCompositeCacheBytes;
+}
+function canvasEstimatedBytes(canvas){return Math.max(0,(canvas?.width||0)*(canvas?.height||0)*4)}
+function markAssetHit(kind='asset'){
+  const p=assetPerf();p.assetCacheHits=(p.assetCacheHits||0)+1;
+  if(kind==='castleBody')p.castleBodyBitmapHits=(p.castleBodyBitmapHits||0)+1;
+}
+function markAssetMiss(kind='asset'){
+  const p=assetPerf();p.assetCacheMisses=(p.assetCacheMisses||0)+1;
+  if(kind==='castleBody')p.castleBodyBitmapMisses=(p.castleBodyBitmapMisses||0)+1;
+}
+function markAssetEviction(kind='asset'){
+  const p=assetPerf();p.assetCacheEvictions=(p.assetCacheEvictions||0)+1;
+  if(kind==='castleBody')p.castleBodyBitmapEvictions=(p.castleBodyBitmapEvictions||0)+1;
+}
 
 function assetCachePut(key,value){
-  if(structureAssetBitmapCache.has(key))structureAssetBitmapCache.delete(key);
-  structureAssetBitmapCache.set(key,value);
+  const prior=structureAssetBitmapCache.get(key);
+  if(prior){structureAssetCacheBytes-=canvasEstimatedBytes(prior.canvas);structureAssetBitmapCache.delete(key)}
+  structureAssetBitmapCache.set(key,value);structureAssetCacheBytes+=canvasEstimatedBytes(value.canvas);
   while(structureAssetBitmapCache.size>STRUCTURE_ASSET_CACHE_LIMIT){
-    const oldest=structureAssetBitmapCache.keys().next().value;
-    structureAssetBitmapCache.delete(oldest);
+    const oldest=structureAssetBitmapCache.keys().next().value,entry=structureAssetBitmapCache.get(oldest);
+    structureAssetCacheBytes-=canvasEstimatedBytes(entry?.canvas);structureAssetBitmapCache.delete(oldest);markAssetEviction('asset');
   }
-  return value;
+  syncAssetPerf();return value;
 }
 function assetCacheGet(key){
   const value=structureAssetBitmapCache.get(key);
-  if(!value)return null;
-  structureAssetBitmapCache.delete(key);structureAssetBitmapCache.set(key,value);
+  if(!value){markAssetMiss('asset');return null}
+  markAssetHit('asset');structureAssetBitmapCache.delete(key);structureAssetBitmapCache.set(key,value);
   return value;
 }
+function clearStructureCompositeCache(){
+  structureCompositeBitmapCache.clear();structureCompositeCacheBytes=0;syncAssetPerf();updateStructureAssetReadout();
+}
 function clearStructureAssetCache(){
-  structureAssetBitmapCache.clear();
+  structureAssetBitmapCache.clear();structureAssetCacheBytes=0;clearStructureCompositeCache();syncAssetPerf();updateStructureAssetReadout();
+}
+function compositeCacheGet(key){
+  const value=structureCompositeBitmapCache.get(key);
+  if(!value){markAssetMiss('castleBody');return null}
+  markAssetHit('castleBody');structureCompositeBitmapCache.delete(key);structureCompositeBitmapCache.set(key,value);
+  return value;
+}
+function compositeCachePut(key,value){
+  const bytes=canvasEstimatedBytes(value.canvas);
+  if(bytes>STRUCTURE_COMPOSITE_MAX_ENTRY_BYTES)return null;
+  const prior=structureCompositeBitmapCache.get(key);
+  if(prior){structureCompositeCacheBytes-=canvasEstimatedBytes(prior.canvas);structureCompositeBitmapCache.delete(key)}
+  structureCompositeBitmapCache.set(key,value);structureCompositeCacheBytes+=bytes;
+  while(structureCompositeCacheBytes>STRUCTURE_COMPOSITE_CACHE_LIMIT_BYTES&&structureCompositeBitmapCache.size>1){
+    const oldest=structureCompositeBitmapCache.keys().next().value,entry=structureCompositeBitmapCache.get(oldest);
+    structureCompositeCacheBytes-=canvasEstimatedBytes(entry?.canvas);structureCompositeBitmapCache.delete(oldest);markAssetEviction('castleBody');
+  }
+  syncAssetPerf();return value;
+}
+function renderCachedComposite(kind,key,bounds,drawFn){
+  const cached=compositeCacheGet(key);
+  if(cached){
+    const dx=(State.view.x-cached.viewX),dy=(State.view.y-cached.viewY);
+    ctx.drawImage(cached.canvas,cached.x+dx,cached.y+dy,cached.w,cached.h);
+    return{ok:true,hit:true,ms:0,bytes:canvasEstimatedBytes(cached.canvas)};
+  }
+  const x=Math.floor(bounds.minX),y=Math.floor(bounds.minY),w=Math.max(1,Math.ceil(bounds.maxX-x)),h=Math.max(1,Math.ceil(bounds.maxY-y));
+  const d=staticCacheDpr(),pixelW=Math.max(1,Math.ceil(w*d)),pixelH=Math.max(1,Math.ceil(h*d));
+  if(pixelW*pixelH*4>STRUCTURE_COMPOSITE_MAX_ENTRY_BYTES)return{ok:false,hit:false,reason:'entry-too-large'};
+  const canvas=document.createElement('canvas');canvas.width=pixelW;canvas.height=pixelH;
+  const g=canvas.getContext('2d'),t0=performance.now();
+  g.setTransform(d,0,0,d,-x*d,-y*d);g.clearRect(x,y,w,h);
+  try{withRenderContext(g,drawFn)}catch(err){return{ok:false,hit:false,reason:String(err?.message||err)}}
+  const ms=performance.now()-t0,p=assetPerf();
+  p.assetPrerenderMs=ms;p.assetPrerenderTotalMs=(p.assetPrerenderTotalMs||0)+ms;
+  if(kind==='castleBody')p.castleBodyBitmapMs=ms;
+  const entry=compositeCachePut(key,{canvas,x,y,w,h,viewX:State.view.x,viewY:State.view.y,kind});
+  if(!entry)return{ok:false,hit:false,reason:'entry-too-large'};
+  ctx.drawImage(canvas,x,y,w,h);
   updateStructureAssetReadout();
+  return{ok:true,hit:false,ms,bytes:canvasEstimatedBytes(canvas)};
 }
 function assetPointBase(type,extra={}){
   return{id:'asset-'+type,type,auto:false,x:STRUCTURE_ASSET_CENTER.x,y:STRUCTURE_ASSET_CENTER.y,groundZ:0,foundationMinZ:0,foundationVersion:1,...extra};
@@ -230,9 +303,14 @@ function structureAssetJobs(){
 }
 function updateStructureAssetReadout(report=structureAssetLastReport){
   const el=document.getElementById('assetCompileReadout');if(!el)return;
-  if(structureAssetCompileRunning){el.textContent='Prerender/test in corso… cache '+structureAssetBitmapCache.size+'/'+STRUCTURE_ASSET_CACHE_LIMIT;return}
-  if(!report){el.textContent='Non compilato · cache '+structureAssetBitmapCache.size+'/'+STRUCTURE_ASSET_CACHE_LIMIT;return}
-  el.textContent=(report.ok?'PASS':'FAIL')+' · '+report.passed+'/'+report.jobs+' viste · '+report.failed+' fail · '+report.clipped+' clipped · shadow '+report.shadowFailed+'/'+report.shadowTests+' · '+Math.round(report.ms)+' ms';
+  syncAssetPerf();
+  const p=assetPerf(),hits=p.assetCacheHits||0,misses=p.assetCacheMisses||0,total=hits+misses,rate=total?Math.round(hits/total*100):0;
+  const runtime='cache '+p.assetCacheEntries+' · ~'+(p.assetCacheEstimatedMb||0)+' MB · hit '+rate+'%';
+  if(structureAssetCompileRunning){el.textContent='Prerender/test in corso… '+runtime;return}
+  if(!report){el.textContent='Non compilato · '+runtime;return}
+  el.textContent=(report.ok?'PASS':'FAIL')+' · '+report.passed+'/'+report.jobs+' viste · '+report.failed+' fail · '+runtime;
+  const castle=document.getElementById('castleCacheReadout');
+  if(castle)castle.textContent='Castle bitmap: '+(p.castleBodyBitmapEntries||0)+' entry · '+(p.castleBodyBitmapHits||0)+' hit / '+(p.castleBodyBitmapMisses||0)+' miss · last '+Number(p.castleBodyBitmapMs||0).toFixed(1)+' ms';
 }
 async function compileAllStructureAssets({retain=true,yieldEvery=12}={}){
   if(structureAssetCompileRunning)return structureAssetCompileRunning;
@@ -282,9 +360,19 @@ window.__conquerAssetCompiler={
   jobs:structureAssetJobs,
   compileAll:compileAllStructureAssets,
   prerender:prerenderStructureAsset,
+  renderComposite:renderCachedComposite,
   clear:clearStructureAssetCache,
+  clearComposite:clearStructureCompositeCache,
   report:()=>structureAssetLastReport,
-  cache:structureAssetBitmapCache
+  cache:structureAssetBitmapCache,
+  compositeCache:structureCompositeBitmapCache,
+  stats:()=>({
+    entries:assetPerf().assetCacheEntries||0,
+    estimatedMb:assetPerf().assetCacheEstimatedMb||0,
+    hits:assetPerf().assetCacheHits||0,
+    misses:assetPerf().assetCacheMisses||0,
+    evictions:assetPerf().assetCacheEvictions||0
+  })
 };
 
 const assetCompileBtn=document.getElementById('assetCompileBtn');
