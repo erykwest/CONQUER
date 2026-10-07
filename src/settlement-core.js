@@ -451,7 +451,7 @@ function pointRadius(s){
       cache_invalidations_delta:sample.cache?.deltaInvalidations||0,
       cache_rebuilds_delta:
         (sample.cache?.deltaLandscapeRebuilds||0)+(sample.cache?.deltaGroundRebuilds||0)+
-        (sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+
+        (sample.cache?.deltaShadowRebuilds||0)+(sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+
         (sample.cache?.deltaCastleFrontRebuilds||0),
       recent_events:recentEvents
     };
@@ -478,7 +478,7 @@ function pointRadius(s){
   function measure(name,ms,data={}){
     const v=finite(ms),limits={
       DRAW:34,
-      CACHE_LANDSCAPE:40,CACHE_GROUND:18,CACHE_BASE:24,
+      CACHE_LANDSCAPE:40,CACHE_GROUND:18,CACHE_SHADOW:18,CACHE_BASE:24,
       CACHE_CASTLE_BODY:24,CACHE_CASTLE_FRONT:18,CACHE_STAGE:34,
       MAINTENANCE:22,SAVE:20,NAV_GRAPH:20,NAV_TREE:12,GROWTH:20
     };
@@ -506,6 +506,7 @@ function pointRadius(s){
         invalidations:finite(p.cacheInvalidations),deltaInvalidations:delta('cacheInvalidations',p),
         landscapeRebuilds:finite(p.cacheLandscapeRebuilds),deltaLandscapeRebuilds:delta('cacheLandscapeRebuilds',p),
         groundRebuilds:finite(p.cacheGroundRebuilds),deltaGroundRebuilds:delta('cacheGroundRebuilds',p),
+        shadowRebuilds:finite(p.cacheShadowRebuilds),deltaShadowRebuilds:delta('cacheShadowRebuilds',p),
         baseRebuilds:finite(p.cacheBaseRebuilds),deltaBaseRebuilds:delta('cacheBaseRebuilds',p),
         castleBodyRebuilds:finite(p.cacheCastleBodyRebuilds),deltaCastleBodyRebuilds:delta('cacheCastleBodyRebuilds',p),
         castleFrontRebuilds:finite(p.cacheCastleFrontRebuilds),deltaCastleFrontRebuilds:delta('cacheCastleFrontRebuilds',p)
@@ -536,7 +537,7 @@ function pointRadius(s){
     if(max(s=>s.navigation.deltaTreesBuilt)>25)issues.push('NAVIGATION: destination-tree churn');
     if(max(s=>s.cache.deltaInvalidations)>8)issues.push('CACHE: frequent invalidations');
     if(max(s=>
-      s.cache.deltaLandscapeRebuilds+s.cache.deltaGroundRebuilds+s.cache.deltaBaseRebuilds+
+      s.cache.deltaLandscapeRebuilds+s.cache.deltaGroundRebuilds+s.cache.deltaShadowRebuilds+s.cache.deltaBaseRebuilds+
       s.cache.deltaCastleBodyRebuilds+s.cache.deltaCastleFrontRebuilds
     )>3)issues.push('CACHE_REBUILD: repeated static rebuilds');
     if(events.slice(-100).some(e=>e.type==='LONG_TASK'&&finite(e.data?.durationMs)>80))issues.push('LONG_TASK: browser main-thread task >80ms');
