@@ -99,10 +99,25 @@ function convexHull(points){
   for(let i=pts.length-1;i>=0;i--){const p=pts[i];while(upper.length>=2&&cross(upper.at(-2),upper.at(-1),p)<=0)upper.pop();upper.push(p)}
   lower.pop();upper.pop();return lower.concat(upper);
 }
-function drawStructureShadow(s,sun){
-  if(!s||underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type))return;
+const shadowCasterGeometryCache=new Map();
+function shadowCasterSignature(s){
+  return[
+    s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.baseStyle,s.material,s.woodStyle,s.woodRoof
+  ].join('|');
+}
+function shadowCasterGeometry(s){
+  const key=shadowCasterSignature(s),cached=shadowCasterGeometryCache.get(s.id);
+  if(cached?.key===key)return cached;
   const fp=isCastlePart(s)?unionFootprintPoints(s):footprintPoints(s);
   const h=shadowStructureHeight(s);
+  const value={key,fp,h};
+  shadowCasterGeometryCache.set(s.id,value);
+  return value;
+}
+function drawStructureShadow(s,sun){
+  if(!s||underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type))return;
+  const {fp,h}=shadowCasterGeometry(s);
   if(!fp?.length||h<=0)return;
   const len=h*sun.lengthPerHeight;
   const ox=sun.dx*len,oy=sun.dy*len;
@@ -112,10 +127,12 @@ function drawStructureShadow(s,sun){
     cloud.push(w2s({x:p.x+ox,y:p.y+oy},0));
   }
   const hull=convexHull(cloud);if(hull.length<3)return;
-  ctx.save();
-  ctx.filter='blur('+sun.softness.toFixed(2)+'px)';
-  pathPolygon(hull,'rgba(4,5,7,'+sun.alpha.toFixed(3)+')',null);
-  ctx.restore();
+
+  // Canvas blur on a full-screen offscreen cache is catastrophically expensive
+  // on software rasterizers and the deferred cost is paid later during blit.
+  // A crisp low-alpha polygon reads as a soft ground shadow at settlement scale
+  // without forcing a filtered full-canvas resolve every shadow refresh.
+  pathPolygon(hull,'rgba(4,5,7,'+(sun.alpha*.82).toFixed(3)+')',null);
 }
 function drawDynamicShadows(){
   const sun=sunShadowState();if(!sun)return;
