@@ -1,0 +1,33 @@
+{
+  "pipelineVersion": 1,
+  "branch": "angle",
+  "commit": "cadb3d1818eaa76609ff5f7d9f1baca8188f4bbd",
+  "testedAt": "2026-10-07T12:55:05.528Z",
+  "families": 204,
+  "prerenders": 4873,
+  "passed": 4873,
+  "failed": 0,
+  "clipped": 0,
+  "empty": 0,
+  "shadowTests": 38784,
+  "shadowFailed": 0,
+  "runtimeMs": 15868.693978,
+  "castleBodySyntheticBenchmark": {
+    "structures": 8,
+    "includesHoarding": true,
+    "directMs": 28.79,
+    "coldCacheMs": 22.09,
+    "warmCacheMs": 0.13,
+    "warmSpeedup": 225.8,
+    "pixelDiffRatio": 0,
+    "estimatedCompositeMb": 0.27
+  },
+  "environment": "Vercel Sandbox / Node canvas runtime",
+  "notes": [
+    "Rotatable structural families tested at all 24 x 15-degree steps.",
+    "Continuous linear assets sampled at min/mid/max lengths; arbitrary lengths remain lazy-rendered by the runtime cache.",
+    "Hoarding and built arcade overlays are now explicitly included in isolated asset QA.",
+    "Castle-body benchmark is a synthetic regression benchmark; live scene performance is reported separately by simulation telemetry.",
+    "Forest SVG fetch warning is specific to the Node QA harness relative-URL loader and is outside the structure asset batch."
+  ]
+}

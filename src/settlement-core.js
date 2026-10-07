@@ -108,6 +108,35 @@ const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
 const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const STRUCTURE_ANGLE_STEP_DEG=15;
+const STRUCTURE_ANGLE_STEPS=360/STRUCTURE_ANGLE_STEP_DEG;
+const STRUCTURE_ANGLE_STEP=Math.PI*2/STRUCTURE_ANGLE_STEPS;
+function normalizeStructureAngle(angle){
+  const tau=Math.PI*2;
+  return((Number(angle)||0)%tau+tau)%tau;
+}
+function structureRotationStep(angle){
+  return((Math.round(normalizeStructureAngle(angle)/STRUCTURE_ANGLE_STEP)%STRUCTURE_ANGLE_STEPS)+STRUCTURE_ANGLE_STEPS)%STRUCTURE_ANGLE_STEPS;
+}
+function structureAngleFromStep(step){
+  const n=((Math.round(Number(step)||0)%STRUCTURE_ANGLE_STEPS)+STRUCTURE_ANGLE_STEPS)%STRUCTURE_ANGLE_STEPS;
+  return n*STRUCTURE_ANGLE_STEP;
+}
+function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
+function structureUsesDiscreteAngle(s){
+  return !!s&&['tower','gate','house','market','tavern','church','training'].includes(s.type);
+}
+function applyStructureRotation(s,angle=s?.angle||0){
+  if(!s)return 0;
+  const step=structureRotationStep(angle);
+  s.rotationStep=step;
+  s.angle=structureAngleFromStep(step);
+  return s.angle;
+}
+function normalizeStructureRotation(s){
+  if(structureUsesDiscreteAngle(s))applyStructureRotation(s,Number.isFinite(Number(s.angle))?Number(s.angle):0);
+  return s;
+}
 const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4},road:{width:.62,min:1,max:160}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
 const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
@@ -453,6 +482,15 @@ function pointRadius(s){
         (sample.cache?.deltaLandscapeRebuilds||0)+(sample.cache?.deltaGroundRebuilds||0)+
         (sample.cache?.deltaShadowRebuilds||0)+(sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+
         (sample.cache?.deltaCastleFrontRebuilds||0),
+      asset_cache_entries:sample.assetCache?.entries||0,
+      asset_cache_mb:sample.assetCache?.estimatedMb||0,
+      asset_cache_hits_delta:sample.assetCache?.deltaHits||0,
+      asset_cache_misses_delta:sample.assetCache?.deltaMisses||0,
+      asset_cache_evictions_delta:sample.assetCache?.deltaEvictions||0,
+      asset_prerender_ms:sample.assetCache?.lastPrerenderMs||0,
+      castle_body_bitmap_hits_delta:sample.assetCache?.deltaCastleBodyHits||0,
+      castle_body_bitmap_misses_delta:sample.assetCache?.deltaCastleBodyMisses||0,
+      castle_body_bitmap_ms:sample.assetCache?.castleBodyMs||0,
       recent_events:recentEvents
     };
     fetch(SUPABASE_URL+'/rest/v1/simulation_telemetry',{
@@ -511,6 +549,18 @@ function pointRadius(s){
         castleBodyRebuilds:finite(p.cacheCastleBodyRebuilds),deltaCastleBodyRebuilds:delta('cacheCastleBodyRebuilds',p),
         castleFrontRebuilds:finite(p.cacheCastleFrontRebuilds),deltaCastleFrontRebuilds:delta('cacheCastleFrontRebuilds',p)
       },
+      assetCache:{
+        entries:finite(p.assetCacheEntries),estimatedMb:+finite(p.assetCacheEstimatedMb).toFixed(2),
+        hits:finite(p.assetCacheHits),deltaHits:delta('assetCacheHits',p),
+        misses:finite(p.assetCacheMisses),deltaMisses:delta('assetCacheMisses',p),
+        evictions:finite(p.assetCacheEvictions),deltaEvictions:delta('assetCacheEvictions',p),
+        lastPrerenderMs:+finite(p.assetPrerenderMs).toFixed(2),
+        castleBodyHits:finite(p.castleBodyBitmapHits),deltaCastleBodyHits:delta('castleBodyBitmapHits',p),
+        castleBodyMisses:finite(p.castleBodyBitmapMisses),deltaCastleBodyMisses:delta('castleBodyBitmapMisses',p),
+        castleBodyMs:+finite(p.castleBodyBitmapMs).toFixed(2),
+        castleBodyMode:p.lastCastleBodyCacheMode||'—',
+        castleBodyRebuildMs:+finite(p.lastCastleBodyRebuildMs).toFixed(2)
+      },
       population:{represented:finite(p.representedPopulation),visible:finite(p.visibleVillagers)},
       scene:{
         structures:all.length,
@@ -540,6 +590,8 @@ function pointRadius(s){
       s.cache.deltaLandscapeRebuilds+s.cache.deltaGroundRebuilds+s.cache.deltaShadowRebuilds+s.cache.deltaBaseRebuilds+
       s.cache.deltaCastleBodyRebuilds+s.cache.deltaCastleFrontRebuilds
     )>3)issues.push('CACHE_REBUILD: repeated static rebuilds');
+    if(max(s=>s.assetCache.deltaEvictions)>8)issues.push('ASSET_CACHE: eviction churn');
+    if(avg(s=>s.assetCache.deltaMisses)>avg(s=>s.assetCache.deltaHits)*1.5&&max(s=>s.assetCache.deltaMisses)>3)issues.push('ASSET_CACHE: low hit rate');
     if(events.slice(-100).some(e=>e.type==='LONG_TASK'&&finite(e.data?.durationMs)>80))issues.push('LONG_TASK: browser main-thread task >80ms');
     return{level:issues.length?'warning':'ok',issues};
   }
@@ -561,7 +613,7 @@ function pointRadius(s){
   function updateReadout(s){
     const el=document.getElementById('analyticsReadout');if(!el)return;
     const d=diagnose(20);
-    el.textContent=(d.level==='ok'?'OK':'⚠')+' · frame '+s.frame.avgMs+'ms / '+s.frame.maxMs+'ms · draw '+s.draw.lastMs+'ms · '+s.population.visible+' pop';
+    el.textContent=(d.level==='ok'?'OK':'⚠')+' · frame '+s.frame.avgMs+'ms / '+s.frame.maxMs+'ms · draw '+s.draw.lastMs+'ms · '+s.population.visible+' pop · asset '+s.assetCache.estimatedMb+'MB';
     el.title=d.issues.join('\n')||'No diagnostic warnings';
   }
   try{

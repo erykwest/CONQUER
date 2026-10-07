@@ -489,13 +489,15 @@ function drawCastleUnion(){
   return true;
 }
 function drawCastleUnionDetails(){
+  const hoardingFrame=State.structures.some(s=>isCastlePart(s)&&!underConstruction(s)&&s.type==='wall'&&wallSkin(s)==='hoarding')
+    ?buildBattlementOcclusionFrame():null;
   for(const s of State.structures){
     if(!isCastlePart(s)||underConstruction(s))continue;
     if(s.type==='built'){
       drawBuiltDetails(s,false);
       if(builtSkin(s)==='arcade')drawBuiltArcade(s);
     }
-    if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s);
+    if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s,hoardingFrame);
     if(s.type==='tower'&&isStoneTowerStructure(s)){
       withStructureGroundPlane(s,()=>drawStoneTowerBase(s,false));
     }
@@ -1096,7 +1098,7 @@ function drawBuildArea(){
 function rotateVec(x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:x*ca-y*sa,y:x*sa+y*ca}}
 function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);return v}
 function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
-function placementAngle(center,p){return Math.atan2(p.y-center.y,p.x-center.x)}
+function placementAngle(center,p){return snapStructureAngle(Math.atan2(p.y-center.y,p.x-center.x))}
 function orientedToolSpec(){
   if(State.tool.kind==='tower'&&State.tool.shape==='square')return{type:'tower',shape:'square',size:State.tool.size,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,functions:[]};
   if(State.tool.kind==='gate'){
@@ -1108,9 +1110,9 @@ function orientedToolSpec(){
   return null;
 }
 function makePlacementPreview(q,angle=0){
-  const spec=orientedToolSpec();
-  if(spec)return{...spec,x:q.x,y:q.y,angle,previewOnly:true};
-  if(State.tool.kind==='tower'&&State.tool.shape==='round')return{type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,previewOnly:true,functions:[]};
+  const spec=orientedToolSpec(),snapped=snapStructureAngle(angle),rotationStep=structureRotationStep(snapped);
+  if(spec)return{...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
+  if(State.tool.kind==='tower'&&State.tool.shape==='round')return{type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,angle:0,rotationStep:0,previewOnly:true,functions:[]};
   return null;
 }
 function commitOrientedPlacement(center,angle){
@@ -1122,8 +1124,8 @@ function commitOrientedPlacement(center,angle){
     subtowerSocket:State.draft?.subtowerSocket||null,
     subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
   }:{};
-  const finalAngle=Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle;
-  const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
+  const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
   State.draft=null;
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
   if(ok&&!snap.wallId&&!snap.parentTowerId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
@@ -1160,7 +1162,8 @@ function towerToolPrototype(angle=0){
     material:State.tool.material||'stone',
     woodStyle:State.tool.woodStyle,
     woodRoof:State.tool.woodRoof,
-    angle,
+    angle:snapStructureAngle(angle),
+    rotationStep:structureRotationStep(angle),
     ...(State.tool.shape==='round'?{r:Number(State.tool.size)}:{size:Number(State.tool.size)})
   };
 }
@@ -1180,7 +1183,7 @@ function squareParentSubtowerAttachment(parent,child,cornerIndex){
   };
 }
 function roundParentSubtowerAttachment(parent,child,radialAngle){
-  const a=Number.isFinite(radialAngle)?radialAngle:0,ux=Math.cos(a),uy=Math.sin(a);
+  const a=snapStructureAngle(Number.isFinite(radialAngle)?radialAngle:0),ux=Math.cos(a),uy=Math.sin(a);
   const angle=child.shape==='square'?a-Math.PI/2:0;
   const d=Number(parent.r)||.5;
   return{
@@ -1261,7 +1264,7 @@ function nearestSubtowerPlacementSnap(p){
     }
 
     if(parent.shape==='round'){
-      const a=Math.atan2(p.y-parent.y,p.x-parent.x);
+      const a=snapStructureAngle(Math.atan2(p.y-parent.y,p.x-parent.x));
       const attachment=roundParentSubtowerAttachment(parent,child,a);
       const score=dist(p,attachment.point);
       if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
@@ -1293,8 +1296,9 @@ function repositionSubtower(child){
   if(!attachment)return false;
   child.x=attachment.point.x;child.y=attachment.point.y;
   if(child.shape==='square'){
-    const offset=Number.isFinite(Number(child.orientationOffset))?Number(child.orientationOffset):0;
-    child.angle=attachment.angle+offset;
+    const offset=snapStructureAngle(Number.isFinite(Number(child.orientationOffset))?Number(child.orientationOffset):0);
+    child.orientationOffset=offset;
+    applyStructureRotation(child,attachment.angle+offset);
   }
   child.subtowerSocket=attachment.subtowerSocket;
   child.subtowerAngle=attachment.subtowerAngle;
@@ -1332,7 +1336,7 @@ function nearestWallPlacementSnap(p){
           point:{x:q.x,y:q.y},
           wallId:wall.id,
           wallEnd:end,
-          angle:Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x),
+          angle:snapStructureAngle(Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x)),
           distance:d
         };
         bestD=d;
@@ -1552,7 +1556,59 @@ function currentLinearSpec(){
   if(['wall','palisade'].includes(State.tool.linear))return{...TYPES[State.tool.linear],width:wallWidthForTier(State.tool.tier||State.buildLevels.wallTier)};
   return TYPES.built;
 }
-function normalizeLinear(a,b,spec){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),ux=dx/L,uy=dy/L;return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target}}
+function normalizeLinear(a,b,spec,snapAngle=false){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),rawAngle=Math.atan2(dy,dx),angle=snapAngle?snapStructureAngle(rawAngle):rawAngle,ux=Math.cos(angle),uy=Math.sin(angle);return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target,angle,rotationStep:snapAngle?structureRotationStep(angle):null}}
+function structureAngleDelta(a,b){return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))}
+function discreteLinearSegment(a,b){
+  const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
+  if(length<1e-6)return null;
+  const angle=snapStructureAngle(Math.atan2(dy,dx));
+  return{a:{x:a.x,y:a.y},b:{x:b.x,y:b.y},length,angle,rotationStep:structureRotationStep(angle)};
+}
+function normalizeStructuralLinearRoute(a,b,spec,exactEnd=false){
+  if(!exactEnd){
+    const single=normalizeLinear(a,b,spec,true);
+    return single?{segments:[single],joint:null,length:single.length,exactEnd:false}:null;
+  }
+
+  const vx=b.x-a.x,vy=b.y-a.y,direct=Math.hypot(vx,vy);
+  if(direct<1e-6)return null;
+  const rawAngle=Math.atan2(vy,vx),snapped=snapStructureAngle(rawAngle);
+  if(structureAngleDelta(rawAngle,snapped)<1e-7&&direct<=spec.max+1e-6){
+    const single=discreteLinearSegment(a,b);
+    return single?{segments:[single],joint:null,length:single.length,exactEnd:true}:null;
+  }
+
+  // Exact magnet + forced structural angles: solve A -> joint -> B using
+  // two vectors from the 24-direction lattice. The score strongly favours a
+  // joint near the middle, then minimal detour and a gentle change of heading.
+  const minLeg=Math.min(.5,Math.max(.25,(Number(spec.min)||1)*.35));
+  const maxLeg=Number(spec.max)||Infinity;
+  let best=null;
+  for(let i=0;i<STRUCTURE_ANGLE_STEPS;i++){
+    const a1=structureAngleFromStep(i),d1x=Math.cos(a1),d1y=Math.sin(a1);
+    for(let j=0;j<STRUCTURE_ANGLE_STEPS;j++){
+      const a2=structureAngleFromStep(j),d2x=Math.cos(a2),d2y=Math.sin(a2);
+      const det=d1x*d2y-d1y*d2x;
+      if(Math.abs(det)<1e-8)continue;
+      const t=(vx*d2y-vy*d2x)/det;
+      const u=(d1x*vy-d1y*vx)/det;
+      if(t<minLeg||u<minLeg||t>maxLeg+1e-6||u>maxLeg+1e-6)continue;
+      const turn=structureAngleDelta(a2,a1);
+      if(turn>Math.PI/2+1e-6)continue;
+      const total=t+u,balance=Math.abs(t-u)/Math.max(total,1e-6);
+      const inflation=Math.max(0,total/direct-1);
+      const headingFit=structureAngleDelta(a1,rawAngle)+structureAngleDelta(a2,rawAngle);
+      const score=balance*4+inflation*3+turn*.45+headingFit*.18;
+      if(!best||score<best.score){
+        best={score,joint:{x:a.x+d1x*t,y:a.y+d1y*t},a1,a2,t,u,total};
+      }
+    }
+  }
+  if(!best)return null;
+  const first=discreteLinearSegment(a,best.joint),second=discreteLinearSegment(best.joint,b);
+  if(!first||!second)return null;
+  return{segments:[first,second],joint:best.joint,length:best.total,exactEnd:true};
+}
 function linePoly(s){
   const a=s.a,b=s.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];

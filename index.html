@@ -143,6 +143,22 @@
         </div>
       </div>
       <div class="dev-section">
+        <span class="dev-label">ASSET PIPELINE</span>
+        <div id="assetCompileReadout" class="dev-hint">Non compilato</div>
+        <div id="castleCacheReadout" class="dev-hint">Castle bitmap: —</div>
+        <div class="dev-row">
+          <button id="assetCompileBtn" type="button" title="Prerender and validate every structural asset at all 24 angles">Prerender + test</button>
+          <button id="assetExportBtn" type="button" title="Export the latest asset QA report">Export QA</button>
+        </div>
+        <div class="dev-row">
+          <button id="castleCacheToggle" type="button" title="Enable or disable the castle body composite bitmap cache">Castle cache ON</button>
+          <button id="castleCacheBenchmark" type="button" title="Benchmark direct castle rendering against a warm bitmap cache">A/B benchmark</button>
+        </div>
+        <div class="dev-row">
+          <button id="assetCacheClearBtn" type="button" title="Clear structural and composite bitmap caches">Clear asset cache</button>
+        </div>
+      </div>
+      <div class="dev-section">
         <span class="dev-label">METEO</span>
         <div class="dev-row dev-row-weather">
           <button data-weather-override="rain" title="Force rain">🌧️</button>
@@ -163,6 +179,7 @@
 <script src="./src/settlement-castle.js"></script>
 <script src="./src/settlement-population.js"></script>
 <script src="./src/settlement-render.js"></script>
+<script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-app.js"></script>
 </body>
 </html>

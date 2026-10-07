@@ -336,7 +336,7 @@ function drawBuiltArcade(s){
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   });
 }
-function drawWallHoarding(s){
+function drawWallHoarding(s,occlusionFrame=null){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
   const g=wallExteriorLayout(s),h=g.z;
   const innerOff=Math.max(.02,g.width/2-.02),outerOff=g.width/2+.42;
@@ -362,7 +362,7 @@ function drawWallHoarding(s){
     ownerDepth:worldDepth(s),ownerTop:h
   };
 
-  withTowerBattlementOcclusion(maskPiece,()=>{
+  withTowerBattlementOcclusion(maskPiece,occlusionFrame||buildBattlementOcclusionFrame(),()=>{
     extrudePolygonAt(platform,h-.045,h+.055,{
       top:'#74533a',sideA:'#493423',sideB:'#5d432e',stroke:'#927155'
     });
@@ -872,32 +872,138 @@ function drawBaseStaticScene(){
   perf.cacheBaseRebuilds=(perf.cacheBaseRebuilds||0)+1;
   window.__conquerAnalytics?.measure('CACHE_BASE',performance.now()-analyticsT0,{structures:State.structures.length});
 }
+let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!=='0';
+function renderCastleBodyContent(){
+  const unionOk=drawCastleUnion();
+  if(!unionOk){
+    const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+    for(const s of fallback)drawStructure(s);
+  }else{
+    drawCastleUnionDetails();
+  }
+
+  // Point fortifications on slopes are intentionally kept out of the wall
+  // boolean union: draw them as rigid volumes on their own level-0 plane.
+  const raised=State.structures
+    .filter(s=>isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
+    .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const s of raised)drawStructure(s);
+
+  drawTowerDoors();
+  drawTowerRoofs();
+  drawGateRoofs();
+}
+function castleBodyRenderableStructures(){
+  return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));
+}
+function castleBodyCompositeBounds(){
+  const parts=castleBodyRenderableStructures();if(!parts.length)return null;
+  const cloud=[];
+  for(const s of parts){
+    const hull=structureScreenSilhouette(s);
+    if(hull?.length)cloud.push(...hull);
+  }
+  if(!cloud.length)return null;
+  const pad=Math.max(56,72*State.view.scale);
+  return{
+    minX:Math.min(...cloud.map(p=>p.x))-pad,
+    minY:Math.min(...cloud.map(p=>p.y))-pad,
+    maxX:Math.max(...cloud.map(p=>p.x))+pad,
+    maxY:Math.max(...cloud.map(p=>p.y))+pad
+  };
+}
+function castleBodyVisualSignature(){
+  const num=v=>Number.isFinite(Number(v))?+Number(v).toFixed(4):null;
+  const point=p=>p?[num(p.x),num(p.y)]:null;
+  const items=castleBodyRenderableStructures().map(s=>[
+    s.id||'',s.type||'',s.shape||'',s.material||'',s.woodStyle||'',s.woodRoof||'',
+    s.roofStyle||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
+    point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
+    s.level??null,s.tier??null,!!s.flip,s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
+    num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
+  ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  return JSON.stringify([
+    1,State.season||'summer',num(State.view.scale),State.view.rotation||0,staticCacheDpr(),
+    !!window.__polygonClipping,items
+  ]);
+}
+function drawCastleBodyBitmap(){
+  const api=window.__conquerAssetCompiler,bounds=castleBodyCompositeBounds();
+  if(!castleBodyBitmapEnabled||!api?.renderComposite||!bounds){renderCastleBodyContent();return{mode:'direct',hit:false}}
+  const key='castleBody|'+castleBodyVisualSignature();
+  const result=api.renderComposite('castleBody',key,bounds,renderCastleBodyContent);
+  if(!result?.ok){renderCastleBodyContent();return{mode:'fallback',hit:false,reason:result?.reason||'cache-failed'}}
+  return{mode:result.hit?'hit':'miss',hit:!!result.hit,ms:result.ms||0,bytes:result.bytes||0};
+}
+function updateCastleCacheControls(){
+  const btn=document.getElementById('castleCacheToggle');
+  if(btn){btn.textContent='Castle cache '+(castleBodyBitmapEnabled?'ON':'OFF');btn.classList.toggle('active',castleBodyBitmapEnabled)}
+  window.__conquerAssetCompiler?.stats?.();
+}
+function setCastleBodyBitmapEnabled(enabled){
+  castleBodyBitmapEnabled=!!enabled;
+  localStorage.setItem('conquer.castleBodyBitmap.v1',castleBodyBitmapEnabled?'1':'0');
+  window.__conquerAssetCompiler?.clearComposite?.();
+  invalidateSceneCache('castleBody');updateCastleCacheControls();draw();
+}
+function makeCastleBenchmarkCanvas(){
+  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(r.width*d));canvas.height=Math.max(1,Math.round(r.height*d));
+  const g=canvas.getContext('2d');g.setTransform(d,0,0,d,0,0);
+  return{canvas,g,d,r};
+}
+function castleBenchmarkPixelDiff(a,b){
+  try{
+    const da=a.getContext('2d').getImageData(0,0,a.width,a.height).data;
+    const db=b.getContext('2d').getImageData(0,0,b.width,b.height).data;
+    let checked=0,different=0,sum=0,max=0;
+    for(let i=0;i<da.length;i+=16){
+      const d=Math.max(Math.abs(da[i]-db[i]),Math.abs(da[i+1]-db[i+1]),Math.abs(da[i+2]-db[i+2]),Math.abs(da[i+3]-db[i+3]));
+      checked++;sum+=d;if(d>8)different++;if(d>max)max=d;
+    }
+    return{ratio:checked?different/checked:0,mean:checked?sum/checked:0,max};
+  }catch{return null}
+}
+function benchmarkCastleBodyCache(iterations=3){
+  const api=window.__conquerAssetCompiler;if(!api?.renderComposite)return null;
+  const loops=Math.max(1,Math.min(6,Math.round(iterations)||3)),directTimes=[],hitTimes=[];
+  const direct=makeCastleBenchmarkCanvas();
+  for(let i=0;i<loops;i++){
+    direct.g.clearRect(0,0,direct.r.width,direct.r.height);
+    const t0=performance.now();withRenderContext(direct.g,renderCastleBodyContent);directTimes.push(performance.now()-t0);
+  }
+  api.clearComposite();
+  const cached=makeCastleBenchmarkCanvas(),bounds=castleBodyCompositeBounds(),key='castleBody|'+castleBodyVisualSignature();
+  const coldT0=performance.now();
+  let cold;
+  withRenderContext(cached.g,()=>{cold=api.renderComposite('castleBody',key,bounds,renderCastleBodyContent)});
+  const coldMs=performance.now()-coldT0;
+  for(let i=0;i<loops;i++){
+    cached.g.clearRect(0,0,cached.r.width,cached.r.height);
+    const t0=performance.now();withRenderContext(cached.g,()=>api.renderComposite('castleBody',key,bounds,renderCastleBodyContent));hitTimes.push(performance.now()-t0);
+  }
+  const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length),diff=castleBenchmarkPixelDiff(direct.canvas,cached.canvas);
+  const result={
+    iterations:loops,directMs:+avg(directTimes).toFixed(2),coldMs:+coldMs.toFixed(2),hitMs:+avg(hitTimes).toFixed(2),
+    speedup:+(avg(directTimes)/Math.max(.01,avg(hitTimes))).toFixed(2),
+    pixelDiffRatio:diff?+diff.ratio.toFixed(6):null,pixelDiffMean:diff?+diff.mean.toFixed(3):null,pixelDiffMax:diff?.max??null
+  };
+  window.__conquerAnalytics?.event('CASTLE_BODY_AB',result,diff&&diff.ratio>.002?'warn':'info');
+  const el=document.getElementById('castleCacheReadout');
+  if(el)el.textContent='A/B direct '+result.directMs+' ms · hit '+result.hitMs+' ms · ×'+result.speedup+' · diff '+(result.pixelDiffRatio==null?'—':(result.pixelDiffRatio*100).toFixed(2)+'%');
+  return result;
+}
 function drawCastleBodyStaticScene(){
   const analyticsT0=performance.now();
   const entry=prepareSceneCache('castleBody');
-  withRenderContext(entry.ctx,()=>{
-    const unionOk=drawCastleUnion();
-    if(!unionOk){
-      const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-      for(const s of fallback)drawStructure(s);
-    }else{
-      drawCastleUnionDetails();
-    }
-
-    // Point fortifications on slopes are intentionally kept out of the wall
-    // boolean union: draw them as rigid volumes on their own level-0 plane.
-    const raised=State.structures
-      .filter(s=>isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
-      .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of raised)drawStructure(s);
-
-    drawTowerDoors();
-    drawTowerRoofs();
-    drawGateRoofs();
-  });
+  let cacheResult={mode:'direct',hit:false};
+  withRenderContext(entry.ctx,()=>{cacheResult=drawCastleBodyBitmap()});
   entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheCastleBodyRebuilds=(perf.cacheCastleBodyRebuilds||0)+1;
-  window.__conquerAnalytics?.measure('CACHE_CASTLE_BODY',performance.now()-analyticsT0);
+  const perf=window.__conquerPerf||(window.__conquerPerf={});
+  perf.cacheCastleBodyRebuilds=(perf.cacheCastleBodyRebuilds||0)+1;
+  perf.lastCastleBodyCacheMode=cacheResult.mode;
+  perf.lastCastleBodyRebuildMs=performance.now()-analyticsT0;
+  window.__conquerAnalytics?.measure('CACHE_CASTLE_BODY',perf.lastCastleBodyRebuildMs,{bitmap:cacheResult.mode});
 }
 function drawCastleFrontStaticScene(){
   const analyticsT0=performance.now();
@@ -907,6 +1013,16 @@ function drawCastleFrontStaticScene(){
   const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheCastleFrontRebuilds=(perf.cacheCastleFrontRebuilds||0)+1;
   window.__conquerAnalytics?.measure('CACHE_CASTLE_FRONT',performance.now()-analyticsT0);
 }
+window.__conquerCastleBodyCache={
+  enabled:()=>castleBodyBitmapEnabled,
+  setEnabled:setCastleBodyBitmapEnabled,
+  benchmark:benchmarkCastleBodyCache,
+  signature:castleBodyVisualSignature
+};
+document.getElementById('castleCacheToggle')?.addEventListener('click',()=>setCastleBodyBitmapEnabled(!castleBodyBitmapEnabled));
+document.getElementById('castleCacheBenchmark')?.addEventListener('click',()=>benchmarkCastleBodyCache(3));
+updateCastleCacheControls();
+
 function ensureStaticSceneCaches(){
   const builders=[
     ['landscape',drawLandscapeStaticScene],
@@ -989,7 +1105,8 @@ function draw(){
   drawGatePortals();
   drawChimneysAndSmoke();
 
-  if(State.draft?.preview)drawStructure(State.draft.preview,true);
+  if(State.draft?.previewSegments?.length)for(const segment of State.draft.previewSegments)drawStructure(segment,true);
+  else if(State.draft?.preview)drawStructure(State.draft.preview,true);
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
