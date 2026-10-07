@@ -848,13 +848,19 @@ function drawGroundStaticScene(){
   perf.cacheGroundRebuilds=(perf.cacheGroundRebuilds||0)+1;
   window.__conquerAnalytics?.measure('CACHE_GROUND',performance.now()-analyticsT0);
 }
+function drawShadowStaticScene(){
+  const analyticsT0=performance.now();
+  const entry=prepareSceneCache('shadow');
+  withRenderContext(entry.ctx,()=>drawDynamicShadows());
+  entry.dirty=false;
+  const perf=window.__conquerPerf||(window.__conquerPerf={});
+  perf.cacheShadowRebuilds=(perf.cacheShadowRebuilds||0)+1;
+  window.__conquerAnalytics?.measure('CACHE_SHADOW',performance.now()-analyticsT0);
+}
 function drawBaseStaticScene(){
   const analyticsT0=performance.now();
   const entry=prepareSceneCache('base');
   withRenderContext(entry.ctx,()=>{
-    // Shadows + non-castle massing are settlement topology, not landscape.
-    drawDynamicShadows();
-
     const completedOthers=State.structures
       .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
@@ -905,6 +911,7 @@ function ensureStaticSceneCaches(){
   const builders=[
     ['landscape',drawLandscapeStaticScene],
     ['ground',drawGroundStaticScene],
+    ['shadow',drawShadowStaticScene],
     ['base',drawBaseStaticScene],
     ['castleBody',drawCastleBodyStaticScene],
     ['castleFront',drawCastleFrontStaticScene]
@@ -948,6 +955,7 @@ function draw(){
   ensureStaticSceneCaches();
   blitSceneCache('landscape');
   blitSceneCache('ground');
+  blitSceneCache('shadow');
   blitSceneCache('base');
 
   // Only construction sites remain fully dynamic at ground/building depth.
