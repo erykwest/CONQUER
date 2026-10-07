@@ -147,7 +147,8 @@ const navPerf={
   graphBuilds:0,graphRoutes:0,gridFallbacks:0,gridMisses:0,
   destinationTreesBuilt:0,destinationTreeHits:0,destinationTreeRoutes:0
 };
-window.__conquerPerf=Object.assign(window.__conquerPerf||{},navPerf);
+Object.assign(navPerf,window.__conquerPerf||{});
+window.__conquerPerf=navPerf;
 function invalidateNavigation(hard=true){
   // Destination trees depend on the exact road graph, so any topology change
   // drops them. Individual resident routes survive soft extensions.
