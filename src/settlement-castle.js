@@ -556,14 +556,7 @@ function ensureLandscapeRenderCaches(){
   terrainMarkLayoutCache=null;
   springFlowerLayoutCache=null;
 }
-function staticCullOverscan(){
-  if(ctx===screenCtx)return 0;
-  // Static scene caches are 3×3 viewports, centered on the live viewport.
-  // Expand culling by one full viewport so the entire offscreen raster is
-  // actually populated instead of rendering only the central 1×1 region.
-  const r=wrap.getBoundingClientRect();
-  return Math.max(r.width,r.height);
-}
+function staticCullOverscan(){return ctx!==screenCtx?STATIC_CACHE_OVERSCAN:0}
 function screenPointVisibleRaw(p,z=0,pad=72){
   const q=w2sRaw(p,z),r=wrap.getBoundingClientRect(),extra=staticCullOverscan(),m=pad+extra;
   return q.x>=-m&&q.y>=-m&&q.x<=r.width+m&&q.y<=r.height+m;
