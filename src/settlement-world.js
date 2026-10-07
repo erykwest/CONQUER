@@ -73,49 +73,117 @@ function removeOverlappingAuto(manual){
   });
   return{removed,roads};
 }
-function roadRepairPointClear(p,width=.30,ignoreIds=[]){
+const ROAD_REPAIR_INDEX_CELL=4;
+const ROAD_REPAIR_INDEX_PAD=1;
+function roadRepairEntryBounds(entry){
+  if(entry.kind==='linear'){
+    const pad=(Number(entry.s.width)||0)/2+ROAD_REPAIR_INDEX_PAD;
+    return{
+      minX:Math.min(entry.s.a.x,entry.s.b.x)-pad,maxX:Math.max(entry.s.a.x,entry.s.b.x)+pad,
+      minY:Math.min(entry.s.a.y,entry.s.b.y)-pad,maxY:Math.max(entry.s.a.y,entry.s.b.y)+pad
+    };
+  }
+  if(entry.kind==='circle'){
+    const r=entry.r+ROAD_REPAIR_INDEX_PAD;
+    return{minX:entry.s.x-r,maxX:entry.s.x+r,minY:entry.s.y-r,maxY:entry.s.y+r};
+  }
+  const pts=entry.rings.flat();
+  if(!pts.length)return{minX:0,maxX:0,minY:0,maxY:0};
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const p of pts){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
+  return{
+    minX:minX-ROAD_REPAIR_INDEX_PAD,maxX:maxX+ROAD_REPAIR_INDEX_PAD,
+    minY:minY-ROAD_REPAIR_INDEX_PAD,maxY:maxY+ROAD_REPAIR_INDEX_PAD
+  };
+}
+function roadRepairBlockerEntry(s){
+  if(!s||s.type==='road'||s.type==='market')return null;
+  if(['wall','palisade','built'].includes(s.type))return{kind:'linear',s};
+  if(s.type==='well')return{kind:'circle',s,r:.62};
+  if(s.type==='tower'&&s.shape==='round')return{kind:'circle',s,r:Number(s.r)||.5};
+
+  let rings=[];
+  if(s.type==='house')rings=houseFootprintParts(s).map(q=>q.points);
+  else if(isCivic(s))rings=civicParts(s).map(q=>q.points);
+  else if(s.type==='field')rings=[rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0)];
+  else if(s.x!=null)rings=[footprintPoints(s)];
+  if(!rings.some(poly=>poly?.length))return null;
+  return{kind:s.type==='gate'?'gate':'rings',s,rings};
+}
+function buildRoadRepairSpatialIndex(ignoreIds=[]){
+  const ignored=new Set(ignoreIds||[]),cells=new Map(),entries=[];
+  const key=(x,y)=>x+','+y;
+  for(const s of State.structures){
+    if(ignored.has(s.id))continue;
+    const entry=roadRepairBlockerEntry(s);if(!entry)continue;
+    entries.push(entry);
+    const b=roadRepairEntryBounds(entry);
+    const x0=Math.floor(b.minX/ROAD_REPAIR_INDEX_CELL),x1=Math.floor(b.maxX/ROAD_REPAIR_INDEX_CELL);
+    const y0=Math.floor(b.minY/ROAD_REPAIR_INDEX_CELL),y1=Math.floor(b.maxY/ROAD_REPAIR_INDEX_CELL);
+    for(let cy=y0;cy<=y1;cy++)for(let cx=x0;cx<=x1;cx++){
+      const k=key(cx,cy),list=cells.get(k);
+      if(list)list.push(entry);else cells.set(k,[entry]);
+    }
+  }
+  return{cells,entries,cell:ROAD_REPAIR_INDEX_CELL};
+}
+function roadRepairIndexedCandidates(index,p){
+  if(!index)return null;
+  return index.cells.get(Math.floor(p.x/index.cell)+','+Math.floor(p.y/index.cell))||[];
+}
+function roadRepairEntryBlocksPoint(entry,p,clearance,width){
+  const s=entry.s;
+  if(entry.kind==='gate'){
+    if(gatePointInPassage(s,p,Math.max(.05,width*.10)))return false;
+    const q=toLocalPoint(s,p),d=rectDims(s);
+    return Math.abs(q.x)<=d.w/2+clearance&&Math.abs(q.y)<=d.h/2+clearance;
+  }
+  if(entry.kind==='linear'){
+    return pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+clearance;
+  }
+  if(entry.kind==='circle'){
+    return dist(p,s)<=entry.r+clearance;
+  }
+  for(const poly of entry.rings){
+    if(!poly?.length)continue;
+    if(pointInPolygon(p,poly))return true;
+    for(let i=0;i<poly.length;i++){
+      const j=(i+1)%poly.length;
+      if(pointSegmentDistance(p,poly[i],poly[j])<=clearance)return true;
+    }
+  }
+  return false;
+}
+function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null){
   if(!inBuild(p)||environmentBlocksPoint(p,'road'))return false;
   const clearance=width/2+.16;
+
+  if(spatialIndex){
+    for(const entry of roadRepairIndexedCandidates(spatialIndex,p)){
+      if(roadRepairEntryBlocksPoint(entry,p,clearance,width))return false;
+    }
+    return true;
+  }
+
+  const ignored=new Set(ignoreIds||[]);
   for(const s of State.structures){
-    if(ignoreIds.includes(s.id)||s.type==='road')continue;
-    if(s.type==='market')continue;
-    if(s.type==='gate'){
-      if(gatePointInPassage(s,p,Math.max(.05,width*.10)))continue;
-      const q=toLocalPoint(s,p),d=rectDims(s);
-      if(Math.abs(q.x)<=d.w/2+clearance&&Math.abs(q.y)<=d.h/2+clearance)return false;
-      continue;
-    }
-    if(['wall','palisade','built'].includes(s.type)){
-      if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+clearance)return false;
-      continue;
-    }
-    if(s.type==='well'){if(dist(p,s)<=.62+clearance)return false;continue}
-    if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+clearance)return false;continue}
-    let rings=[];
-    if(s.type==='house')rings=houseFootprintParts(s).map(q=>q.points);
-    else if(isCivic(s))rings=civicParts(s).map(q=>q.points);
-    else if(s.type==='field')rings=[rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0)];
-    else if(s.x!=null)rings=[footprintPoints(s)];
-    for(const poly of rings){
-      if(!poly?.length)continue;
-      if(pointInPolygon(p,poly))return false;
-      for(let i=0;i<poly.length;i++){
-        const j=(i+1)%poly.length;
-        if(pointSegmentDistance(p,poly[i],poly[j])<=clearance)return false;
-      }
-    }
+    if(ignored.has(s.id))continue;
+    const entry=roadRepairBlockerEntry(s);if(!entry)continue;
+    if(roadRepairEntryBlocksPoint(entry,p,clearance,width))return false;
   }
   return true;
 }
-function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[]){
+function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[],spatialIndex=null){
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
   for(let i=0;i<=steps;i++){
     const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
-    if(!roadRepairPointClear(p,width,ignoreIds))return false;
+    if(!roadRepairPointClear(p,width,ignoreIds,spatialIndex))return false;
   }
   return true;
 }
 function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24000){
+  const analyticsT0=performance.now();
+  const spatialIndex=buildRoadRepairSpatialIndex(ignoreIds);
   const step=.5;
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -125,12 +193,16 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
     for(let r=0;r<=6;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
       if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
       const x=cx+dx,y=cy+dy,q=pos(x,y);
-      if(x<minX||x>maxX||y<minY||y>maxY||!roadRepairPointClear(q,width,ignoreIds))continue;
+      if(x<minX||x>maxX||y<minY||y>maxY||!roadRepairPointClear(q,width,ignoreIds,spatialIndex))continue;
       const d=dist(p,q);if(d<bestD){best={x,y,q};bestD=d}
     }
     return best;
   }
-  const s=nearestFree(start),g=nearestFree(goal);if(!s||!g)return null;
+  const s=nearestFree(start),g=nearestFree(goal);
+  if(!s||!g){
+    window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:false,reason:'endpoint',blockers:spatialIndex.entries.length});
+    return null;
+  }
   const open=new PeasantMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
   open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
@@ -141,20 +213,25 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
     const cp=pos(cur.x,cur.y);
     for(const [dx,dy] of dirs){
       const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
-      const nk=key(nx,ny),np=pos(nx,ny);if(closed.has(nk)||!roadRepairPointClear(np,width,ignoreIds))continue;
-      if(!roadRepairSegmentClear(cp,np,width,ignoreIds))continue;
+      const nk=key(nx,ny),np=pos(nx,ny);
+      if(closed.has(nk)||!roadRepairPointClear(np,width,ignoreIds,spatialIndex))continue;
+      if(!roadRepairSegmentClear(cp,np,width,ignoreIds,spatialIndex))continue;
       const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
       if(tentative>=(gScore.get(nk)??Infinity))continue;
       gScore.set(nk,tentative);came.set(nk,ck);
       open.push({x:nx,y:ny,f:tentative+dist(np,g.q)});
     }
   }
-  if(!found)return null;
+  if(!found){
+    window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:false,guard,blockers:spatialIndex.entries.length});
+    return null;
+  }
   const rev=[];let k=key(found.x,found.y);
   while(k){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));k=came.get(k)}
   rev.reverse();
-  if(roadRepairPointClear(start,width,ignoreIds))rev[0]={...start};
-  if(roadRepairPointClear(goal,width,ignoreIds))rev[rev.length-1]={...goal};
+  if(roadRepairPointClear(start,width,ignoreIds,spatialIndex))rev[0]={...start};
+  if(roadRepairPointClear(goal,width,ignoreIds,spatialIndex))rev[rev.length-1]={...goal};
+  window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:true,guard,points:rev.length,blockers:spatialIndex.entries.length});
   return rev;
 }
 function simplifyRoadRepairPath(points,width=.30,ignoreIds=[]){
