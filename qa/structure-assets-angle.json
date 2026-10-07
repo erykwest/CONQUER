@@ -1,0 +1,22 @@
+{
+  "pipelineVersion": 1,
+  "branch": "angle",
+  "commit": "28b51d60ac0f33b0f882e346f8ed0ef0228b3e04",
+  "testedAt": "2026-10-07T12:14:50.425Z",
+  "families": 204,
+  "prerenders": 4873,
+  "passed": 4873,
+  "failed": 0,
+  "clipped": 0,
+  "empty": 0,
+  "shadowTests": 38784,
+  "shadowFailed": 0,
+  "runtimeMs": 15458.894835000001,
+  "environment": "Vercel Sandbox / Node canvas runtime",
+  "notes": [
+    "Rotatable structural families tested at all 24 x 15-degree steps.",
+    "Continuous linear assets sampled at min/mid/max lengths; arbitrary lengths remain lazy-rendered by the runtime cache.",
+    "L4 house catalog contains only realizable procedural combinations: T+round turret and L+square turret.",
+    "Forest SVG fetch warning is specific to the Node QA harness relative-URL loader and is outside the structure asset batch."
+  ]
+}
