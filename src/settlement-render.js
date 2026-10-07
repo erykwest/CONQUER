@@ -428,15 +428,24 @@ function drawBuiltWindows(s,lit=false,nf=1){
     if(level>=2)drawBuiltWindowRow(s,outside,upperZ,1,lit,nf);
   });
 }
-function drawFacadeWindows(lit=false,nf=1){
+function drawHouseFacadeWindows(s,lit=false,nf=1){
+  const rows=houseLevel(s)>=2?[.52,1.34]:[.48];
+  for(const edge of visibleFacadeEdges(s))for(const z of rows)drawWindowOnEdge(edge,z,lit,nf,0);
+}
+function drawStaticHouseFacadeDetails(){
+  for(const house of completedSettlement('house')){
+    drawHouseFacadeWindows(house,false,1);
+    drawHouseDoor(house);
+  }
+}
+function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
   if(State.view.scale<.24)return;
   for(const s of State.structures){
     if(underConstruction(s))continue;
     const center=structureCenter(s);
     if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
     if(s.type==='house'){
-      const rows=houseLevel(s)>=2?[.52,1.34]:[.48];
-      for(const edge of visibleFacadeEdges(s))for(const z of rows)drawWindowOnEdge(edge,z,lit,nf,0);
+      if(includeHouses)drawHouseFacadeWindows(s,lit,nf);
     }else if(s.type==='built'){
       drawBuiltWindows(s,lit,nf);
     }else if(s.type==='gate'){
@@ -850,6 +859,7 @@ function drawBaseStaticScene(){
       .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+    drawStaticHouseFacadeDetails();
   });
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});
@@ -962,9 +972,8 @@ function draw(){
   drawCastleFireFixtures();
 
   // Small facade/details stay dynamic for night lighting and selection semantics.
-  drawFacadeWindows(false,1);
+  drawFacadeWindows(false,1,false);
   drawGatePortals();
-  for(const house of completedSettlement('house'))drawHouseDoor(house);
   drawChimneysAndSmoke();
 
   if(State.draft?.preview)drawStructure(State.draft.preview,true);
