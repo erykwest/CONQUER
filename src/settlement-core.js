@@ -409,12 +409,34 @@ function pointRadius(s){
     if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
     lastRemoteAt=now;
     const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
-    fetch('/api/telemetry',{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({sessionId,sample,events:recentEvents}),
-      keepalive:true,
-      cache:'no-store'
+    const client=State?.supabase;
+    if(!client){
+      event('REMOTE_TELEMETRY_WAITING',{reason:'supabase_not_ready'},'info',30000);
+      return;
+    }
+    const row={
+      session_id:sessionId,
+      day:sample.day,
+      speed:sample.speed,
+      frame_avg_ms:sample.frame?.avgMs||0,
+      frame_max_ms:sample.frame?.maxMs||0,
+      frame_over_34:sample.frame?.over34||0,
+      draw_ms:sample.draw?.lastMs||0,
+      maintenance_ms:sample.maintenance?.lastMs||0,
+      save_ms:sample.save?.lastMs||0,
+      visible_population:sample.population?.visible||0,
+      represented_population:sample.population?.represented||0,
+      structures:sample.scene?.structures||0,
+      roads:sample.scene?.roads||0,
+      nav_graph_builds_delta:sample.navigation?.deltaGraphBuilds||0,
+      nav_trees_delta:sample.navigation?.deltaTreesBuilt||0,
+      nav_invalidations_delta:sample.navigation?.deltaNavInvalidations||0,
+      cache_invalidations_delta:sample.cache?.deltaInvalidations||0,
+      cache_rebuilds_delta:(sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+(sample.cache?.deltaCastleFrontRebuilds||0),
+      recent_events:recentEvents
+    };
+    client.from('simulation_telemetry').insert(row).then(({error})=>{
+      if(error)event('REMOTE_TELEMETRY_ERROR',{message:error.message||String(error)},'warn',30000);
     }).catch(err=>event('REMOTE_TELEMETRY_ERROR',{message:String(err)},'warn',30000));
   }
   function frame(now,rawDtMs){
