@@ -807,7 +807,7 @@ document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>setTimeSpeed(
 ensureDevControls();
 document.getElementById('analyticsExportBtn')?.addEventListener('click',()=>window.__conquerAnalytics?.exportJson());
 document.getElementById('analyticsClearBtn')?.addEventListener('click',()=>window.__conquerAnalytics?.clear());
-let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,simLogicAt=0,simLogicDay=State.clock.day,weatherDrawAt=0,weatherLayerActive=false,lastWorldWeatherKey='';
+let simLast=performance.now(),simPersistAt=performance.now(),simDrawAt=0,simMaintenanceAt=0,simUiAt=0,simLogicAt=0,simLogicDay=State.clock.day,weatherDrawAt=0,weatherLayerActive=false,lastWorldWeatherKey='',lastShadowPhaseKey=null;
 const SIM_LOGIC_FRAME_MS=100; // topology/growth/completion checks: 10 Hz is plenty
 const VISUAL_FRAME_FAST_MS=1000/24;
 const VISUAL_FRAME_MEDIUM_MS=1000/18;
@@ -937,6 +937,13 @@ function simulationFrame(now){
       simPersistAt=now;
     }
   }
+  const shadowState=sunShadowState();
+  const shadowPhaseKey=shadowState?Math.round(shadowState.phase*96):-1;
+  if(shadowPhaseKey!==lastShadowPhaseKey){
+    lastShadowPhaseKey=shadowPhaseKey;
+    invalidateSceneCache('shadow');
+  }
+
   const weather=currentWeather();
   const worldWeatherKey=Math.floor(State.clock.day)+'|'+weather.kind;
   if(worldWeatherKey!==lastWorldWeatherKey){
