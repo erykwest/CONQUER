@@ -108,6 +108,35 @@ const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
 const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const STRUCTURE_ANGLE_STEP_DEG=15;
+const STRUCTURE_ANGLE_STEPS=360/STRUCTURE_ANGLE_STEP_DEG;
+const STRUCTURE_ANGLE_STEP=Math.PI*2/STRUCTURE_ANGLE_STEPS;
+function normalizeStructureAngle(angle){
+  const tau=Math.PI*2;
+  return((Number(angle)||0)%tau+tau)%tau;
+}
+function structureRotationStep(angle){
+  return((Math.round(normalizeStructureAngle(angle)/STRUCTURE_ANGLE_STEP)%STRUCTURE_ANGLE_STEPS)+STRUCTURE_ANGLE_STEPS)%STRUCTURE_ANGLE_STEPS;
+}
+function structureAngleFromStep(step){
+  const n=((Math.round(Number(step)||0)%STRUCTURE_ANGLE_STEPS)+STRUCTURE_ANGLE_STEPS)%STRUCTURE_ANGLE_STEPS;
+  return n*STRUCTURE_ANGLE_STEP;
+}
+function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
+function structureUsesDiscreteAngle(s){
+  return !!s&&['tower','gate','house','market','tavern','church','training'].includes(s.type);
+}
+function applyStructureRotation(s,angle=s?.angle||0){
+  if(!s)return 0;
+  const step=structureRotationStep(angle);
+  s.rotationStep=step;
+  s.angle=structureAngleFromStep(step);
+  return s.angle;
+}
+function normalizeStructureRotation(s){
+  if(structureUsesDiscreteAngle(s))applyStructureRotation(s,Number.isFinite(Number(s.angle))?Number(s.angle):0);
+  return s;
+}
 const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4},road:{width:.62,min:1,max:160}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
 const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
