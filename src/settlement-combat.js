@@ -44,7 +44,7 @@
     memory.fill(0);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
-    residentMotion.clear();residentLastPosition.clear();
+    clearCivilianMotions();
     zoneSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
   }
@@ -127,36 +127,134 @@
     return{allowed,yellow,green};
   }
   function closestSafe(p){
-    const safe=circles().filter(s=>s.mode==='green')
+    const zones=circles().filter(s=>s.mode==='green')
       .concat(combat.strokes.filter(s=>s.mode==='green'));
-    if(!safe.length)return activeWell();
-    safe.sort((a,b)=>dist(a,p)-dist(b,p));
-    return safe.find(s=>areaState(s).allowed)||activeWell();
+    return zones.sort((a,b)=>dist(a,p)-dist(b,p));
+  }
+  const civilianRouteCache=new Map();
+  function pathLength(path){
+    let n=0;
+    for(let i=1;i<path.length;i++)n+=dist(path[i-1],path[i]);
+    return n;
+  }
+  function findCivilianRoute(start,target,house){
+    if(dist(start,target)<.07)return[start,target];
+    if(peasantSegmentClear(start,target,house.id))return[start,target];
+    const key=[house.id,Math.round(start.x*2),Math.round(start.y*2),Math.round(target.x*2),Math.round(target.y*2)].join(':');
+    const cached=civilianRouteCache.get(key);
+    if(cached){
+      const route=[start,...cached.slice(1,-1),target];
+      if(peasantSegmentClear(start,route[1],house.id)&&
+         peasantSegmentClear(route.at(-2),target,house.id))return route;
+    }
+    // Reuse CONQUER's actual pedestrian routing rather than interpolating
+    // through buildings, walls or steep slopes. Prefer roads, then grid A*.
+    const route=roadNetworkPath(start,target,house.id)
+      ||findPeasantPath(start,target,house.id,12);
+    if(route?.length>1){
+      if(civilianRouteCache.size>600)civilianRouteCache.clear();
+      civilianRouteCache.set(key,route);
+      return route;
+    }
+    return[start]; // No valid route: stay put. Never cross walls as fallback.
+  }
+  function recallDestination(house,resident,origin){
+    const zones=closestSafe(origin);
+    const seed=peasantHash(resident.id+'-recall');
+    for(const zone of zones){
+      for(let i=0;i<12;i++){
+        const a=((seed%360)/180)*Math.PI+i*Math.PI*2/12;
+        const r=Math.min(Math.max(1.5,zone.r*.33),2.9);
+        const candidate=point(zone.x+Math.cos(a)*r,zone.y+Math.sin(a)*r);
+        const state=areaState(candidate);
+        if(state.allowed&&state.green&&!pointBlockedForPeasant(candidate,house.id))return candidate;
+      }
+    }
+    return null;
+  }
+  function motionPosition(motion,now){
+    if(!motion.path||motion.path.length<2)return motion.start;
+    const progress=clamp((now-motion.startedAt)/Math.max(1,motion.duration),0,1);
+    return pointAlongPath(motion.path,progress)||motion.start;
+  }
+  function runningCivilianMotions(){
+    const now=performance.now();
+    for(const motion of residentMotion.values()){
+      if(now<motion.startedAt+motion.duration)return true;
+    }
+    return false;
+  }
+  function animateCivilianPaths(now){
+    transitionFrame=0;
+    if(!combat||!runningCivilianMotions())return;
+    if(now-transitLastFrame>=50){
+      transitLastFrame=now;
+      draw();
+    }
+    transitionFrame=requestAnimationFrame(animateCivilianPaths);
+  }
+  function requestCivilianAnimation(){
+    if(!transitionFrame&&runningCivilianMotions())
+      transitionFrame=requestAnimationFrame(animateCivilianPaths);
+  }
+  function clearCivilianMotions(){
+    residentMotion.clear();residentLastPosition.clear();civilianRouteCache.clear();
+    if(transitionFrame)cancelAnimationFrame(transitionFrame);
+    transitionFrame=0;
+  }
+  function civilianLegalPosition(p,house){
+    if(!p||areaState(p).allowed)return p;
+    // Permission zones constrain civilian autonomy, independently of recalls.
+    // Find the last permitted position along this proposed routine journey.
+    const anchor=areaState(house).allowed?house:activeWell();
+    if(!anchor)return p;
+    let low=0,high=1;
+    for(let i=0;i<10;i++){
+      const t=(low+high)/2,q={x:anchor.x+(p.x-anchor.x)*t,y:anchor.y+(p.y-anchor.y)*t};
+      if(areaState(q).allowed)low=t;else high=t;
+    }
+    return{x:anchor.x+(p.x-anchor.x)*low,y:anchor.y+(p.y-anchor.y)*low};
   }
   function civilPosition(p,house,resident){
     if(!activeWell())return p;
-    let next=p;
-    if(!areaState(next).allowed){
-      const anchor=areaState(house).allowed?house:activeWell();
-      if(anchor){
-        let low=0,high=1;
-        for(let i=0;i<9;i++){
-          const mid=(low+high)/2,q={x:anchor.x+(p.x-anchor.x)*mid,y:anchor.y+(p.y-anchor.y)*mid};
-          if(areaState(q).allowed)low=mid;else high=mid;
-        }
-        next={x:anchor.x+(p.x-anchor.x)*low,y:anchor.y+(p.y-anchor.y)*low};
+    const desired=civilianLegalPosition(p,house);
+    const id=resident.id,now=performance.now();
+    const prior=residentMotion.get(id),mode=combat.recall?'recall':'release';
+    // Residents not outside have nothing to flee from until they emerge.
+    if(!desired&&!prior&&!combat.recall)return null;
+    if(!desired&&!prior&&combat.recall)return null;
+    let motion=prior;
+    if(!motion||motion.mode!==mode){
+      const origin=prior?motionPosition(prior,now):residentLastPosition.get(id)||desired;
+      const home=typeof houseDoorInfo==='function'?houseDoorInfo(house)?.outside:null;
+      const destination=combat.recall
+        ?recallDestination(house,resident,origin)
+        :(desired||home||origin);
+      if(origin&&destination){
+        const path=findCivilianRoute(origin,destination,house);
+        const length=pathLength(path);
+        motion={
+          mode,homeId:house.id,start:origin,target:destination,path,startedAt:now,
+          duration:path.length<2?0:Math.max(450,length*550)
+        };
+        residentMotion.set(id,motion);
+      }else{
+        residentMotion.delete(id);
+        if(desired)residentLastPosition.set(id,desired);
+        return desired;
       }
     }
-    if(combat.recall){
-      const safe=closestSafe(house)||activeWell();
-      if(safe){
-        const jitter=peasantHash(resident.id)%1000/1000,angle=jitter*Math.PI*2;
-        const target={x:safe.x+Math.cos(angle)*Math.min(1.1,safe.r||1),y:safe.y+Math.sin(angle)*Math.min(1.1,safe.r||1)};
-        const t=clamp((performance.now()-recallStartedAt)/2400,0,1);
-        next={x:next.x+(target.x-next.x)*t,y:next.y+(target.y-next.y)*t};
-      }
+    const position=motionPosition(motion,now);
+    if(mode==='release'&&now>=motion.startedAt+motion.duration){
+      residentMotion.delete(id);
+      if(desired)residentLastPosition.set(id,desired);
+      else residentLastPosition.delete(id);
+      return desired;
     }
-    return next;
+    residentLastPosition.set(id,position);
+    if(residentLastPosition.size>5000)residentLastPosition.clear();
+    requestCivilianAnimation();
+    return position;
   }
   function terrainCache(){
     if(State.relief!==terrainRef||State.environment!==forestRef){
@@ -497,14 +595,10 @@
   $('combatFog').onclick=()=>{combat.fog=!combat.fog;changed();draw()};
   $('combatZones').onclick=()=>{combat.zones=!combat.zones;changed();draw()};
   $('combatRecall').onclick=()=>{
-    combat.recall=!combat.recall;recallStartedAt=performance.now()-50;
+    combat.recall=!combat.recall;
     changed();draw();
-    if(combat.recall){
-      if(transitionFrame)cancelAnimationFrame(transitionFrame);
-      const animate=()=>{if(!combat.recall||performance.now()-recallStartedAt>=2500){transitionFrame=0;return}draw();transitionFrame=requestAnimationFrame(animate)};
-      transitionFrame=requestAnimationFrame(animate);
-    }
-    status(combat.recall?'Civilian recall to green zone activated':'Civilian recall released');
+    requestCivilianAnimation();
+    status(combat.recall?'Civilian recall — pathfinding toward green zone':'Release — civilians route back to their routines');
   };
   document.querySelectorAll('[data-combat-brush]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-brush',combatBrush:b.dataset.combatBrush,label:'Brush: '+b.textContent});
