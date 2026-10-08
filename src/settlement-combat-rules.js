@@ -61,6 +61,16 @@
     }
     return best;
   }
+  function traceBoundaryIndices(points,center,direction=1){
+    if(!points.length)return[];
+    const trace=[0],visited=new Set(trace);let previous=null,current=0;
+    for(let i=1;i<points.length;i++){
+      const next=nextBoundaryIndex(points,current,previous,direction,center);
+      if(next<0||visited.has(next))break;
+      trace.push(next);visited.add(next);previous=current;current=next;
+    }
+    return trace;
+  }
   function nearestLiving(origin,units,visibleFn=()=>true){
     let target=null,best=Infinity;
     for(const unit of units||[]){
@@ -195,6 +205,6 @@
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
   }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,ensure,living,nearestLiving,enemyIntent,meleePair,shooterRange,update,visualEffects:()=>({shots,meleeFlashes,elapsed}),
+  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,ensure,living,nearestLiving,enemyIntent,meleePair,shooterRange,update,visualEffects:()=>({shots,meleeFlashes,elapsed}),
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0}};
 })();

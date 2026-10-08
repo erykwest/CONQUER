@@ -615,15 +615,29 @@
     for(const unit of combat.units)if(unit.kind==='patrol'){
       unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
     }
+    spacePatrols(points);
     return points;
+  }
+  function spacePatrols(boundary=whiteBoundaryPoints()){
+    const patrols=combat.units.filter(u=>u.kind==='patrol'&&!u.defeated);
+    if(!patrols.length||!boundary.length)return;
+    const center=activeWell()||{x:WORLD/2,y:WORLD/2};
+    const loop=window.ConquerCombatRules.traceBoundaryIndices(boundary,center,1);
+    if(!loop.length)return;
+    patrols.forEach((unit,i)=>{
+      unit.patrolAnchorIndex=loop[Math.floor(i*loop.length/patrols.length)%loop.length];
+      unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;unit.patrolDirection=1;
+      unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;
+    });
   }
   function patrolDestination(unit){
     const boundary=whiteBoundaryPoints();if(!boundary.length)return null;
     let current=Number.isInteger(unit.patrolBoundaryIndex)?unit.patrolBoundaryIndex:-1;
     if(current<0||!boundary[current]||dist(unit,boundary[current])>3){
-      current=0;
-      for(let i=1;i<boundary.length;i++)if(dist(unit,boundary[i])<dist(unit,boundary[current]))current=i;
+      current=Number.isInteger(unit.patrolAnchorIndex)&&boundary[unit.patrolAnchorIndex]?unit.patrolAnchorIndex:0;
+      if(!Number.isInteger(unit.patrolAnchorIndex))for(let i=1;i<boundary.length;i++)if(dist(unit,boundary[i])<dist(unit,boundary[current]))current=i;
       unit.patrolBoundaryIndex=current;unit.patrolPreviousIndex=null;
+      unit.patrolAnchorIndex=null;
       return boundary[current];
     }
     const direction=unit.patrolDirection||1,center=activeWell()||{x:WORLD/2,y:WORLD/2};
@@ -648,7 +662,8 @@
     const angle=index*Math.PI*.77,radius=2.4+(index%3)*.45;
     let spawn=point(well.x+Math.cos(angle)*radius,well.y+Math.sin(angle)*radius);
     if(!areaState(spawn).allowed||pointBlockedForPeasant(spawn,'combat-patrol'))spawn={x:well.x,y:well.y};
-    combat.units.push({id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolDirection:index%2?1:-1});
+    combat.units.push({id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolDirection:1});
+    spacePatrols();
     visibilityDirty=true;changed();status('White Zone patrol added · 2 pikemen');draw();
   }
   function removePatrol(){
@@ -656,6 +671,7 @@
     if(index<0){status('No White Zone patrol to remove');return}
     const [removed]=combat.units.splice(index,1);
     if(selected===removed.id)selected=null;
+    spacePatrols();
     visibilityDirty=true;changed();status('White Zone patrol removed');draw();
   }
   function updateEnemyAI(now,rules){
@@ -751,6 +767,10 @@
     }
     appendStroke({x:q.x,y:q.y,r,mode});
     if(combat.strokes.length>2500){combat.strokes.splice(0,combat.strokes.length-2500);indexedStrokes=-1;}
+    if(['allow','deny'].includes(mode)){
+      whiteBoundarySignature='';
+      for(const unit of combat.units)if(unit.kind==='patrol'){unit.target=null;unit.path=null;unit.nextPatrolAt=0}
+    }
     lastPaint=q;civilianRouteCache.clear();changed(true);
   }
   let queuedToolDraw=false;

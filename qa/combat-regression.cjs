@@ -26,6 +26,11 @@ for(let i=0;i<60;i++){
   previousIndex=boundaryIndex;boundaryIndex=next;visited.add(next);
 }
 assert.ok(visited.size>40,'a patrol must make visible progress around the perimeter');
+const tracedLoop=rules.traceBoundaryIndices(circleBoundary,{x:100,y:100});
+assert.ok(tracedLoop.length>40,'the perimeter exposes a stable ordered loop for patrol spacing');
+const quarterAnchors=Array.from({length:4},(_,i)=>Math.floor(i*tracedLoop.length/4));
+const quarterGaps=quarterAnchors.map((anchor,i)=>(i===quarterAnchors.length-1?tracedLoop.length:quarterAnchors[i+1])-anchor);
+assert.ok(Math.max(...quarterGaps)-Math.min(...quarterGaps)<=1,'four patrol anchors are equidistant along the perimeter arc');
 
 const raider={id:'raider',x:10,y:10,combatKind:'infantry'};
 const knight={id:'knight',x:15,y:10,kind:'knight'};
@@ -57,6 +62,8 @@ assert.match(runtimeSource,/patrolBoundaryIndex/,'patrols retain continuity alon
 assert.match(rulesSource,/!isAllowed\(\{x:x\+dx,y:y\+dy\}\)/,'perimeter cells border forbidden territory');
 assert.match(runtimeSource,/unit\.nextPatrolAt=target\?now:now\+300/,'successful perimeter legs chain without an idle pause');
 assert.match(runtimeSource,/u\.kind==='patrol'\?1\.15/,'perimeter patrols use a visibly readable walking speed');
+assert.match(runtimeSource,/Math\.floor\(i\*loop\.length\/patrols\.length\)/,'multiple patrols are spaced by equal perimeter arc');
+assert.match(runtimeSource,/whiteBoundarySignature=''/,'White Zone edits invalidate patrol spacing immediately');
 assert.match(runtimeSource,/rules\.enemyIntent/,'runtime delegates hostile decisions to combat rules');
 assert.match(runtimeSource,/safeMilitarySegment\(unit,nextPos/,'hostile and friendly movement share terrain collision checks');
 assert.doesNotMatch(rulesSource,/getContext\(|drawImage\(|fillRect\(/,'rules stay independent of canvas rendering');
