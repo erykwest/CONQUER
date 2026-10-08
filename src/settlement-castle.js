@@ -58,6 +58,28 @@ function reliefBandAt(p){
   return gentle;
 }
 function terrainSlopeKind(p){return reliefBandAt(p)?.kind||null}
+// A cliff is an impassable STEEP band, not just a large elevation delta.
+// Gentle ascent remains traversable, including different H plateaux reached
+// by a ramp. Sampling the segment prevents tunnelling through thin cliff bands.
+const cliffSampleCache=new Map();
+let cliffSampleRelief=null;
+function cliffSampleAt(p){
+  if(cliffSampleRelief!==State.relief){cliffSampleRelief=State.relief;cliffSampleCache.clear()}
+  const gx=Math.round(p.x*10),gy=Math.round(p.y*10),key=gx+','+gy;
+  if(cliffSampleCache.has(key))return cliffSampleCache.get(key);
+  const blocked=terrainSlopeKind({x:gx/10,y:gy/10})==='steep';
+  if(cliffSampleCache.size>120000)cliffSampleCache.clear();
+  cliffSampleCache.set(key,blocked);
+  return blocked;
+}
+function terrainSegmentCrossesCliff(a,b){
+  const len=dist(a,b),steps=Math.max(1,Math.ceil(len/.12));
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+    if(cliffSampleAt(p))return true;
+  }
+  return false;
+}
 function terrainElevation(p){
   let z=0;
   for(const level of reliefLevels()){

@@ -982,6 +982,15 @@ function ensureStaticSceneCaches(){
 }
 function draw(){
   const r=wrap.getBoundingClientRect();
+  const phaseStart=performance.now(),phaseStats={};
+  let phaseAt=phaseStart;
+  function markPhase(name){
+    const now=performance.now(),ms=now-phaseAt;
+    phaseStats[name]=ms;phaseAt=now;
+    if(ms>20)window.__conquerAnalytics?.event('RENDER_PHASE_SLOW',{
+      phase:name,ms:+ms.toFixed(1),structures:State.structures.length
+    },'warn',5000);
+  }
   beginPopulationFrame(r);
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
@@ -1003,15 +1012,18 @@ function draw(){
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
 
+  markPhase('scene-caches');
   // Population remains between settlement massing and completed castle massing,
   // preserving the existing occlusion behaviour.
   drawPeasants();
+  markPhase('population');
   drawTrainingSoldiers();
   blitSceneCache('castleBody');
 
   drawTowerFlags();
   drawCastleSelection();
   drawCastleSoldiers();
+  markPhase('castle-units');
   blitSceneCache('castleFront');
   drawCastleFireFixtures();
 
@@ -1029,4 +1041,6 @@ function draw(){
   drawDayNightOverlay();
   drawNightLights();
   endPopulationFrame();
+  markPhase('castle-facades-effects');
+  if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
 }
