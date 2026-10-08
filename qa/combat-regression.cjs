@@ -43,11 +43,13 @@ assert.match(runtimeSource,/gateGuardPositions\(s\)/,'gate guards participate in
 assert.match(runtimeSource,/function addPatrol\(\)/,'White Zone patrols can be added from the combat controls');
 assert.match(runtimeSource,/function removePatrol\(\)/,'White Zone patrols can be removed from the combat controls');
 assert.match(runtimeSource,/unit\.kind==='patrol'\?patrolRoute/,'patrol movement uses the White Zone constrained route');
-assert.match(runtimeSource,/areaState\(p\)\.allowed/,'patrol destinations stay inside allowed territory');
+assert.match(runtimeSource,/function whiteBoundaryPoints\(\)/,'patrol waypoints are generated from the White Zone perimeter');
+assert.match(runtimeSource,/patrolBoundaryIndex/,'patrols retain continuity along the perimeter contour');
+assert.match(runtimeSource,/!areaState\(\{x:x\+dx,y:y\+dy\}\)\.allowed/,'perimeter cells border forbidden territory');
 assert.match(runtimeSource,/rules\.enemyIntent/,'runtime delegates hostile decisions to combat rules');
 assert.match(runtimeSource,/safeMilitarySegment\(unit,nextPos/,'hostile and friendly movement share terrain collision checks');
 assert.doesNotMatch(rulesSource,/getContext\(|drawImage\(|fillRect\(/,'rules stay independent of canvas rendering');
 assert.match(renderSource,/ConquerCombatRules\?\.visualEffects/,'renderer only consumes combat visual effects');
 assert.match(renderSource,/u\.kind==='patrol'\?2:5/,'a patrol renders exactly two pikemen');
 
-console.log('combat regression: 22 assertions passed');
+console.log('combat regression: 24 assertions passed');

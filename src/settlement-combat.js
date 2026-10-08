@@ -39,6 +39,7 @@
   const archerCache=new Map();
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
   let tacticalRuleAccum=0;
+  let whiteBoundaryCache=[],whiteBoundarySignature='';
 
   function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
   function restore(raw){
@@ -68,6 +69,7 @@
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
+    whiteBoundaryCache=[];whiteBoundarySignature='';
     window.ConquerCombatRules?.reset();
     zoneSignature='';backdropSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
@@ -601,16 +603,55 @@
     }
     return moved;
   }
-  function patrolDestination(unit){
-    unit.patrolLeg=(unit.patrolLeg||0)+1;
-    const seed=peasantHash(unit.id+':'+unit.patrolLeg);
-    for(let i=0;i<20;i++){
-      const angle=((seed+i*137)%360)*Math.PI/180,radius=3+((seed>>>((i%4)*8))%800)/100;
-      const p=point(unit.x+Math.cos(angle)*radius,unit.y+Math.sin(angle)*radius);
-      if(!areaState(p).allowed||pointBlockedForPeasant(p,unit.id))continue;
-      if(patrolRoute(unit,p,unit.id))return p;
+  function whiteBoundaryPoints(){
+    const automatic=circles().filter(c=>c.mode==='allow');
+    const last=combat.strokes.at(-1);
+    const signature=automatic.map(c=>[c.x,c.y,c.r].join(':')).join('|')+'|'+combat.strokes.length+'|'+
+      (last?[last.x,last.y,last.r,last.mode].join(':'):'');
+    if(signature===whiteBoundarySignature)return whiteBoundaryCache;
+    whiteBoundarySignature=signature;
+    const step=1.25,edge=.72,points=[];
+    for(let y=step/2;y<WORLD;y+=step)for(let x=step/2;x<WORLD;x+=step){
+      const p={x,y};if(!areaState(p).allowed)continue;
+      if([[edge,0],[-edge,0],[0,edge],[0,-edge]].some(([dx,dy])=>!areaState({x:x+dx,y:y+dy}).allowed))points.push(p);
     }
-    return null;
+    whiteBoundaryCache=points;
+    for(const unit of combat.units)if(unit.kind==='patrol'){
+      unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
+    }
+    return points;
+  }
+  function patrolDestination(unit){
+    const boundary=whiteBoundaryPoints();if(!boundary.length)return null;
+    let current=Number.isInteger(unit.patrolBoundaryIndex)?unit.patrolBoundaryIndex:-1;
+    if(current<0||!boundary[current]||dist(unit,boundary[current])>3){
+      current=0;
+      for(let i=1;i<boundary.length;i++)if(dist(unit,boundary[i])<dist(unit,boundary[current]))current=i;
+      unit.patrolBoundaryIndex=current;unit.patrolPreviousIndex=null;
+      return boundary[current];
+    }
+    const origin=boundary[current],previous=Number.isInteger(unit.patrolPreviousIndex)?boundary[unit.patrolPreviousIndex]:null;
+    const direction=unit.patrolDirection||1,center=activeWell()||{x:WORLD/2,y:WORLD/2};
+    const baseAngle=Math.atan2(origin.y-center.y,origin.x-center.x);
+    let best=-1,bestScore=-Infinity;
+    for(let i=0;i<boundary.length;i++){
+      if(i===current||i===unit.patrolPreviousIndex)continue;
+      const d=dist(origin,boundary[i]);if(d>.01&&d<=1.9){
+        let score=-d;
+        if(previous){
+          const ax=origin.x-previous.x,ay=origin.y-previous.y,bx=boundary[i].x-origin.x,by=boundary[i].y-origin.y;
+          score+=(ax*bx+ay*by)/Math.max(.01,Math.hypot(ax,ay)*Math.hypot(bx,by))*3;
+        }else{
+          let delta=Math.atan2(boundary[i].y-center.y,boundary[i].x-center.x)-baseAngle;
+          while(delta>Math.PI)delta-=Math.PI*2;while(delta<-Math.PI)delta+=Math.PI*2;
+          score+=delta*direction*4;
+        }
+        if(score>bestScore){bestScore=score;best=i}
+      }
+    }
+    if(best<0){unit.patrolBoundaryIndex=null;return null}
+    unit.patrolPreviousIndex=current;unit.patrolBoundaryIndex=best;
+    return boundary[best];
   }
   function updatePatrols(now){
     for(const unit of combat.units){
@@ -628,7 +669,7 @@
     const angle=index*Math.PI*.77,radius=2.4+(index%3)*.45;
     let spawn=point(well.x+Math.cos(angle)*radius,well.y+Math.sin(angle)*radius);
     if(!areaState(spawn).allowed||pointBlockedForPeasant(spawn,'combat-patrol'))spawn={x:well.x,y:well.y};
-    combat.units.push({id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolLeg:index});
+    combat.units.push({id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolDirection:index%2?1:-1});
     visibilityDirty=true;changed();status('White Zone patrol added · 2 pikemen');draw();
   }
   function removePatrol(){
