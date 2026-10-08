@@ -2468,6 +2468,36 @@ function drawBuiltDetails(s,preview=false){
     for(const spec of chimneySpecs(s))drawChimney(spec);
   });
 }
+function machicolationFloorPolygon(s){
+  if(!hasMachicolation(s))return null;
+  if(s.type==='wall'){
+    const g=wallExteriorLayout(s),inner=g.width/2-.035,outer=g.width/2+.145;
+    return{pts:[
+      {x:s.a.x+g.nx*inner*g.side,y:s.a.y+g.ny*inner*g.side},
+      {x:s.b.x+g.nx*inner*g.side,y:s.b.y+g.ny*inner*g.side},
+      {x:s.b.x+g.nx*outer*g.side,y:s.b.y+g.ny*outer*g.side},
+      {x:s.a.x+g.nx*outer*g.side,y:s.a.y+g.ny*outer*g.side}
+    ],z:structureHeight(s)};
+  }
+  if(s.type==='tower'){
+    const z=structureHeight(s);
+    if(s.shape==='round')return{pts:circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+.115,24),z};
+    const d=rectDims(s);return{pts:rectWorldPoints(s.x,s.y,d.w+.22,d.h+.22,s.angle||0),z};
+  }
+  return null;
+}
+function drawMachicolationFloor(s){
+  const spec=machicolationFloorPolygon(s);if(!spec)return;
+  const draw=()=>extrudePolygonAt(spec.pts,spec.z-.055,spec.z+.035,{
+    top:winterSnowColor('#918579'),sideA:'#4a443e',sideB:'#605750',stroke:'#b3a596'
+  });
+  if(s.type==='tower')withStructureGroundPlane(s,draw);else draw();
+}
+function drawMachicolationFloors(){
+  const items=State.structures.filter(s=>!underConstruction(s)&&hasMachicolation(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  for(const s of items)drawMachicolationFloor(s);
+}
+
 function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
   const pts=rectWorldPoints(center.x,center.y,w,d,angle),rp=rotateViewPoint(center);
   return{
@@ -2478,6 +2508,10 @@ function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
     ownerTop:owner?structureHeight(owner):null,
     groundZ:owner?placementGroundZ(owner):null
   };
+}
+function battlementPolygonPiece(kind,pts,z0,z1,owner=null){
+  const center={x:pts.reduce((sum,p)=>sum+p.x,0)/Math.max(1,pts.length),y:pts.reduce((sum,p)=>sum+p.y,0)/Math.max(1,pts.length)},rp=rotateViewPoint(center);
+  return{kind,pts,z0,z1,depth:rp.x+rp.y,ownerId:owner?.id||null,ownerType:owner?.type||null,ownerDepth:owner?worldDepth(owner):null,ownerTop:owner?structureHeight(owner):null,groundZ:owner?placementGroundZ(owner):null};
 }
 function buildBattlementOcclusionFrame(){
   const entries=[],byId=new Map();
@@ -2573,6 +2607,10 @@ function drawBattlementPiece(piece,frame){
       drawWoodPost(piece.center,piece.r,piece.z0,piece.tipZ,piece.angle||0);
       return;
     }
+    if(piece.kind==='machicolationCorbel'){
+      extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:winterSnowColor('#887d72'),sideA:'#403b36',sideB:'#554d46',stroke:'#9f9183'});
+      return;
+    }
     if(piece.wallCrest){
       const a=w2s(piece.wallCrest.a,piece.wallCrest.z),b=w2s(piece.wallCrest.b,piece.wallCrest.z);
       const H=frame.crestClipH;
@@ -2616,68 +2654,63 @@ function wallExteriorLayout(s){
 }
 function wallBattlementPieces(s){
   if(s.type!=='wall'||underConstruction(s)||wallSkin(s)==='hoarding')return[];
-  const g=wallExteriorLayout(s),depth=Math.min(.28,Math.max(.18,g.width*.46));
-  // Keep the whole merlon footprint on the wall cap; the exterior side is still
-  // defined by flip, but no block is allowed to hang over the facade.
-  const edgeOffset=Math.max(0,g.width/2-depth/2-.012),pieces=[];
+  const g=wallExteriorLayout(s),depth=Math.min(.28,Math.max(.18,g.width*.46)),mach=hasMachicolation(s),pieces=[];
+  const edgeOffset=mach?g.width/2+depth/2+.045:Math.max(0,g.width/2-depth/2-.012);
   const intervals=battlementIntervalCount(g.usable),step=g.usable/intervals;
-
   for(let i=0;i<=intervals;i++){
-    const along=g.startPad+step*i;
-    const t=clamp(along/g.L,0,1);
+    const along=g.startPad+step*i,t=clamp(along/g.L,0,1);
     const center={x:s.a.x+g.dx*t+g.nx*edgeOffset*g.side,y:s.a.y+g.dy*t+g.ny*edgeOffset*g.side};
+    if(mach){
+      const cc={x:center.x-g.nx*.10*g.side,y:center.y-g.ny*.10*g.side};
+      pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.115,.16,g.angle),g.z-.23,g.z+.015,s));
+    }
     const piece=battlementPiece(center,g.angle,g.z,.28,depth,.24,s);
-    piece.wallCrest=g.crest;
+    if(!mach)piece.wallCrest=g.crest;
     pieces.push(piece);
   }
   return pieces;
 }
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
-  const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0;
-  const perSide=[0,3,4,5][towerTier(s)]||3;
-  const intervals=perSide-1;
-  const inset=.115;
-
-  // Exactly one merlon per corner; shared by the two adjacent sides.
+  const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s);
+  const perSide=[0,3,4,5][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115;
   for(const corner of fp){
-    const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;
-    pieces.push(battlementPiece(
-      {x:corner.x+dx/L*inset,y:corner.y+dy/L*inset},
-      cornerAngle,z,.27,.23,.25,s
-    ));
+    const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1,mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
+    if(mach){
+      const ML=Math.hypot(center.x-mc.x,center.y-mc.y)||1,cc={x:mc.x+(center.x-mc.x)/ML*.09,y:mc.y+(center.y-mc.y)/ML*.09};
+      pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.115,.15,cornerAngle),z-.23,z+.015,s));
+    }
+    pieces.push(battlementPiece(mc,cornerAngle,z,.27,.23,.25,s));
   }
-
-  // Fixed count per side, including the two corner merlons:
-  // T1 = 3, T2 = 4, T3 = 5.
   for(let e=0;e<fp.length;e++){
-    const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
-    const angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-    let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;
-    ix/=IL;iy/=IL;
-
+    const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
     for(let i=1;i<intervals;i++){
-      const t=i/intervals;
-      pieces.push(battlementPiece(
-        {x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset},
-        angle,z,.25,.22,.24,s
-      ));
+      const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
+      if(mach){
+        const cc={x:mc.x+ix*.09,y:mc.y+iy*.09};
+        pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.11,.15,angle),z-.23,z+.015,s));
+      }
+      pieces.push(battlementPiece(mc,angle,z,.25,.22,.24,s));
     }
   }
   return pieces;
 }
 function roundTowerBattlementPieces(s){
-  const z=structureHeight(s),r=Math.max(.16,(Number(s.r)||.5)-.09);
-  const count=[0,6,8,12][towerTier(s)]||6;
-  const pieces=[];
+  const z=structureHeight(s),mach=hasMachicolation(s),baseR=Number(s.r)||.5,r=Math.max(.16,baseR+(mach?.075:-.09));
+  const count=[0,6,8,12][towerTier(s)]||6,pieces=[];
   for(let i=0;i<count;i++){
     const a=i/count*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
+    if(mach){
+      const cr=baseR+.005,cc={x:s.x+Math.cos(a)*cr,y:s.y+Math.sin(a)*cr};
+      pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.105,.15,a+Math.PI/2),z-.23,z+.015,s));
+    }
     pieces.push(battlementPiece(center,a+Math.PI/2,z,.23,.18,.23,s));
   }
   return pieces;
 }
 function towerBattlementPieces(s){
-  if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='battlement')return[];
+  if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
   return s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s);
 }
 function pointRoofOccluders(s){
@@ -2836,7 +2869,7 @@ function battlementBrazierSources(){
     if(underConstruction(s))continue;
     if(s.type==='tower'&&isWoodTower(s)&&woodTowerStyle(s)==='palisadeTower'&&woodTowerRoof(s)==='open'){
       out.push({kind:'brazier',id:s.id+':wood-brazier',p:woodTowerLocal(s,.28,.24),z:1.90,groundZ:placementGroundZ(s)});
-    }else if(s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='battlement'){
+    }else if(s.type==='tower'&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
@@ -3305,7 +3338,7 @@ function drawStoneTowerBase(s,preview=false){
 
   const stroke=State.selectedId===s.id?'#f4b76f':'#9f9285';
   if(style==='buttress'){
-    const buttressTop=2.35+(towerTier(s)-1)*.12;
+    const buttressTop=(2.35+(towerTier(s)-1)*.12)*.5;
     for(const pts of stoneTowerButtressFootprints(s)){
       extrudePolygonAt(pts,0,buttressTop,{
         top:winterSnowColor('#948779'),
