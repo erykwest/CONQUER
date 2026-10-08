@@ -14,6 +14,17 @@
   let terrainRef=null,forestRef=null,lastVision=0,maskDirty=true,visibilityDirty=true;
   let circleCache=[],circleCacheBucket=-1;
   const strokeBuckets=new Map();let indexedStrokes=-1;
+  // Masks are raster unions of auto-generated regions and manual brush marks.
+  // They are projected as a single surface per color: no overlapping circle
+  // outlines, no doubling alpha, and subtractive strokes cut real holes.
+  const ZONE_PIXELS=2, ZONE_SIZE=WORLD*ZONE_PIXELS;
+  const zoneImages={};
+  for(const mode of ['allow','yellow','green']){
+    const surface=document.createElement('canvas'),outline=document.createElement('canvas');
+    surface.width=outline.width=ZONE_SIZE;surface.height=outline.height=ZONE_SIZE;
+    zoneImages[mode]={surface,outline,ctx:surface.getContext('2d'),outlineCtx:outline.getContext('2d')};
+  }
+  let zoneSignature='';
   let lastObserverSig='',lastAreaSig='',selected=null,painting=false,lastPaint=null;
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
   const residentMotion=new Map(),residentLastPosition=new Map();
@@ -285,6 +296,52 @@
     g.closePath();
     if(!strokeOnly)g.fill();g.stroke();
   }
+
+  function updateZoneUnion(){
+    const automatic=circles(),brushes=combat.strokes;
+    const signature=automatic.map(c=>[c.x,c.y,c.r,c.mode,c.id].join(':')).join('|')+
+      '|brush:'+brushes.length+':'+(brushes.at(-1)?Object.values(brushes.at(-1)).join(':'):'');
+    if(signature===zoneSignature)return;
+    zoneSignature=signature;
+    for(const region of Object.values(zoneImages)){
+      region.ctx.clearRect(0,0,ZONE_SIZE,ZONE_SIZE);
+      region.ctx.globalCompositeOperation='source-over';
+    }
+    for(const stroke of automatic.concat(brushes)){
+      const type=stroke.mode;
+      const erase=type==='deny'||type==='eraseYellow'||type==='eraseGreen';
+      const layer=erase?(type==='deny'?'allow':type==='eraseYellow'?'yellow':'green'):type;
+      const region=zoneImages[layer];if(!region)continue;
+      const z=region.ctx;z.globalCompositeOperation=erase?'destination-out':'source-over';
+      z.fillStyle=erase?'#000':COLORS[layer];
+      z.beginPath();z.arc(stroke.x*ZONE_PIXELS,stroke.y*ZONE_PIXELS,stroke.r*ZONE_PIXELS,0,Math.PI*2);z.fill();
+    }
+    for(const {surface,ctx,outlineCtx} of Object.values(zoneImages)){
+      ctx.globalCompositeOperation='source-over';
+      outlineCtx.clearRect(0,0,ZONE_SIZE,ZONE_SIZE);
+      for(const [x,y] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]]){
+        outlineCtx.drawImage(surface,x,y);
+      }
+      outlineCtx.globalCompositeOperation='destination-out';
+      outlineCtx.drawImage(surface,0,0);
+      outlineCtx.globalCompositeOperation='source-over';
+    }
+  }
+  function renderMergedZones(pixelRatio){
+    updateZoneUnion();
+    const a=w2sRaw({x:0,y:0},0),bx=w2sRaw({x:1/ZONE_PIXELS,y:0},0),by=w2sRaw({x:0,y:1/ZONE_PIXELS},0);
+    g.save();
+    g.setTransform(pixelRatio*(bx.x-a.x),pixelRatio*(bx.y-a.y),pixelRatio*(by.x-a.x),pixelRatio*(by.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
+    g.imageSmoothingEnabled=true;
+    for(const mode of ['allow','yellow','green']){
+      const image=zoneImages[mode];
+      g.globalAlpha=mode==='allow'?.09:mode==='yellow'?.12:.19;
+      g.drawImage(image.surface,0,0);
+      g.globalAlpha=.85;
+      g.drawImage(image.outline,0,0);
+    }
+    g.restore();
+  }
   function renderOverlay(){
     if(!combat)return;
     const rect=wrap.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
@@ -299,19 +356,7 @@
       g.save();g.setTransform(d*(b.x-a.x),d*(b.y-a.y),d*(c.x-a.x),d*(c.y-a.y),d*a.x,d*a.y);
       g.imageSmoothingEnabled=false;g.drawImage(fog,0,0);g.restore();
     }
-    if(combat.zones){
-      for(const c of circles().concat(combat.strokes)){
-        let mode=c.mode;
-        if(mode==='deny'||mode==='eraseYellow'||mode==='eraseGreen'){
-          g.strokeStyle=mode==='deny'?'#d4d0c3':mode==='eraseYellow'?'#b59961':'#719c87';
-          g.fillStyle='rgba(10,16,18,.23)';g.lineWidth=1.2;g.setLineDash([2,4]);drawMapCircle(c);continue;
-        }
-        const color=COLORS[mode];if(!color)continue;
-        g.strokeStyle=color;g.fillStyle=mode==='green'?'rgba(101,188,131,.12)':mode==='yellow'?'rgba(230,184,69,.07)':'rgba(230,226,207,.05)';
-        g.lineWidth=mode==='green'?1.1:.8;g.setLineDash(c.id?[5,5]:[]);drawMapCircle(c);
-      }
-      g.setLineDash([]);
-    }
+    if(combat.zones)renderMergedZones(d);
     const king=combat.units.find(u=>u.kind==='knight');
     if(king){
       g.strokeStyle='rgba(255,211,116,.7)';g.fillStyle='rgba(255,211,116,.045)';
