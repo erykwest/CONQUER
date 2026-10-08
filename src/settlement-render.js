@@ -48,14 +48,16 @@ function drawFacadeAssetBackdrop(edge,centerZ,width,height,offsetWorld=0,fill='#
   const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
   pathPolygon([w2s(span.a,z0),w2s(span.b,z0),w2s(span.b,z1),w2s(span.a,z1)],fill,null);
 }
-function drawArchitectureAssetOnEdge(edge,centerZ,width,height,key,offsetWorld=0,lit=false,nf=1){
+function drawArchitectureAssetOnEdge(edge,centerZ,width,height,key,offsetWorld=0,lit=false,nf=1,opacity=1){
   const img=architectureSprite(key);if(!img)return false;
   const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
   const lt=w2s(span.a,z1),rt=w2s(span.b,z1),lb=w2s(span.a,z0),iw=img.width,ih=img.height;
   ctx.save();
+  const baseAlpha=ctx.globalAlpha*clamp(Number(opacity)||0,0,1);
+  ctx.globalAlpha=baseAlpha;
   ctx.transform((rt.x-lt.x)/iw,(rt.y-lt.y)/iw,(lb.x-lt.x)/ih,(lb.y-lt.y)/ih,lt.x,lt.y);
   ctx.imageSmoothingEnabled=true;ctx.drawImage(img,0,0);
-  if(lit){ctx.globalCompositeOperation='screen';ctx.globalAlpha=Math.min(.50,.20+.28*nf);ctx.filter='sepia(1) saturate(2) hue-rotate(330deg) brightness(1.45)';ctx.drawImage(img,0,0)}
+  if(lit){ctx.globalCompositeOperation='screen';ctx.globalAlpha=baseAlpha*Math.min(.50,.20+.28*nf);ctx.filter='sepia(1) saturate(2) hue-rotate(330deg) brightness(1.45)';ctx.drawImage(img,0,0)}
   ctx.restore();return true;
 }
 function structureInteriorVector(s){
@@ -138,6 +140,7 @@ function cutawayOpenEdgeIndexes(s){
 function cutawayEdgeIsOpen(s,index){
   return !!cutawayOpenEdgeIndexes(s)?.has(index);
 }
+function cutawayFacadeOpacity(s){return structureCutaway(s)?.20:1}
 function closestFootprintEdge(s,p){
   const fp=footprintPoints(s);if(fp.length<2)return null;
   let best=null,bestD=Infinity;
@@ -215,13 +218,8 @@ function towerDoorSpecs(tower){
   return specs;
 }
 function towerDoorVisible(tower,spec){
-  // A door cannot float on a facade that the cutaway has removed.
-  if(structureCutaway(tower)){
-    const edge=closestFootprintEdge(tower,spec.contact);
-    if(edge&&cutawayEdgeIsOpen(tower,edge.index))return false;
-  }
-  // Near half of the tower only; the body naturally hides rear doors until
-  // the camera is rotated.
+  // Cutaway keeps doors as 20% ghosted architectural references instead of
+  // removing them together with the opened shell.
   return viewDepthPoint(spec.contact)>=viewDepthPoint({x:tower.x,y:tower.y})-.015;
 }
 function towerDoorOccluders(tower,spec,apexZ){
@@ -241,8 +239,11 @@ function towerDoorOccluders(tower,spec,apexZ){
 function drawTowerDoorSpec(tower,spec){
   if(!towerDoorVisible(tower,spec))return;
   const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54),fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),height=fullHeight/3,centerZ=spec.baseZ+height/2,tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact,half=width/2;
-  const edge={a:{x:c.x-tx*half,y:c.y-ty*half},b:{x:c.x+tx*half,y:c.y+ty*half}},apexZ=spec.baseZ+height;
-  const drawDoor=()=>{if(!drawArchitectureAssetOnEdge(edge,centerZ,width,height,'towerDoor'))drawFacadeAssetBackdrop(edge,centerZ,width,height,0,'#211713')};
+  const edge={a:{x:c.x-tx*half,y:c.y-ty*half},b:{x:c.x+tx*half,y:c.y+ty*half}},apexZ=spec.baseZ+height,opacity=cutawayFacadeOpacity(tower);
+  const drawDoor=()=>{
+    if(drawArchitectureAssetOnEdge(edge,centerZ,width,height,'towerDoor',0,false,1,opacity))return;
+    ctx.save();ctx.globalAlpha*=opacity;drawFacadeAssetBackdrop(edge,centerZ,width,height,0,'#211713');ctx.restore();
+  };
   const occ=towerDoorOccluders(tower,spec,apexZ);if(!occ.length){drawDoor();return}
   const rr=wrap.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(-48,-48,rr.width+96,rr.height+96);
   for(const o of occ){const hull=structureScreenSilhouette(o);if(hull.length<3)continue;ctx.moveTo(hull[0].x,hull[0].y);for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);ctx.closePath()}
@@ -287,10 +288,10 @@ function towerWindowRows(s){
   return rows.filter(r=>r.z<structureHeight(s)-.28);
 }
 function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
-  const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)return;
+  const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row),opacity=cutawayFacadeOpacity(s);if(!key)return;
   for(const edge of roundTowerFacadeEdges(s)){
-    if(edge.interior)drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf);
-    else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit');
+    if(edge.interior)drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
+    else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
   }
 }
 function linearFrontSide(s){
@@ -398,10 +399,8 @@ function drawWallHoarding(s,occlusionFrame=null){
 }
 function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60){
   if(side!==linearFrontSide(s))return;
-  // linePoly edge 0 = +normal long facade, edge 2 = -normal long facade.
-  if(structureCutaway(s)&&cutawayEdgeIsOpen(s,side>0?0:2))return;
-  const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count;
-  for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf)}
+  const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count,opacity=cutawayFacadeOpacity(s);
+  for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf,opacity)}
 }
 function drawBuiltWindows(s,lit=false,nf=1){
   const l=structureLevel(s),outside=wallExteriorSide(s),inside=-outside,lowerZ=.86,upperZ=2.22;
@@ -423,7 +422,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
     if(s.type==='house'){if(includeHouses)drawHouseFacadeWindows(s,lit,nf)}
     else if(s.type==='built')drawBuiltWindows(s,lit,nf);
     else if(s.type==='gate'){if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf))}
-    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){if(structureCutaway(s))return;for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s).filter(edge=>!cutawayEdgeIsOpen(s,edge.index));for(const row of rows){const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)continue;withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}})}}})}
+    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s),opacity=cutawayFacadeOpacity(s);for(const row of rows){const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)continue;withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity)}})}}})}
   }
 }
 function drawDayNightOverlay(){
