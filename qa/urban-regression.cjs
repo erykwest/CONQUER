@@ -171,4 +171,33 @@ test('a failed paid building placement does not clear a lot',()=>{
  assert.equal(run("State.structures.some(s=>s.id==='home')"),true);
  assert.equal(run("urbanLots().length"),1);
 });
+test('minimum parcel holds a real 2x2 square, including rotated lots, and rejects thin large-area slivers',()=>{
+ assert.equal(run('urbanLotHasMinimumSize([{x:0,y:0},{x:2,y:0},{x:2,y:2},{x:0,y:2}])'),true);
+ assert.equal(run('urbanLotHasMinimumSize([{x:0,y:0},{x:10,y:0},{x:10,y:1.9},{x:0,y:1.9}])'),false);
+ assert.equal(run('urbanLotHasMinimumSize(rectWorldPoints(100,100,2,2,.73))'),true);
+});
+test('friendly and hostile units block a new parcel, even in its yard; existing parcels remain visible',()=>{
+ zoningFixture();
+ run("globalThis.candidate={id:'new-home',type:'house',auto:true,x:106,y:104,w:1.5,h:1,angle:0};globalThis.lot=urbanLotFor(candidate,[candidate]);State.combat.units=[{id:'knight',kind:'knight',x:lot.points[0].x,y:lot.points[0].y}];State.combat.enemy=[]");
+ assert.equal(run('urbanHouseFitsLots(candidate)'),false);
+ run("State.combat.units=[];State.combat.enemy=[{id:'enemy',x:106,y:104}]");
+ assert.equal(run('urbanHouseFitsLots(candidate)'),false);
+ run("State.structures.push(candidate);invalidateNavigation()");
+ assert.equal(run('urbanLots().length'),1);
+ run("State.structures=State.structures.filter(s=>s.id!=='new-home');State.combat.enemy=[];State.combat.units=[];invalidateNavigation()");
+ assert.equal(run('urbanHouseFitsLots(candidate)'),true);
+});
+test('squad members and clearance radii are included in occupied parcel checks',()=>{
+ zoningFixture();
+ run("State.combat.units=[{id:'squad',kind:'squad',x:103.6,y:104}];State.combat.enemy=[];globalThis.lot={points:[{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}]}");
+ assert.equal(run('urbanLotUnitConflict(lot)'),true);
+ assert.equal(run("urbanLotUnitConflict(lot,[{x:103.9,y:104,r:.22}])"),true);
+ assert.equal(run("urbanLotUnitConflict(lot,[{x:102,y:104,r:.22}])"),false);
+});
+test('active civilians block spawning without changing their routines or movement state',()=>{
+ zoningFixture();
+ run("State.combat.units=[];State.combat.enemy=[];State.structures.push({id:'resident-home',type:'house',auto:true,x:104,y:104,w:1.5,h:1,angle:0});State.clock.day=10;invalidateNavigation();globalThis.positions=urbanSpawnOccupants()");
+ assert.ok(run('positions.length>0'));
+ assert.equal(run("urbanLotUnitConflict({points:[{x:90,y:90},{x:113,y:90},{x:113,y:113},{x:90,y:113}]})"),true);
+});
 console.log(passed+' urban regression checks passed.');

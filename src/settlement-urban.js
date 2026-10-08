@@ -112,6 +112,41 @@ function urbanLotsOverlappingBuilding(building){
   const footprints=urbanBuildingPolygons(building);if(!footprints.length)return[];
   return urbanLots().filter(lot=>footprints.some(poly=>urbanPolygonsOverlap(lot.points,poly)));
 }
+const URBAN_MIN_LOT_SIZE=2;
+function urbanLotHasMinimumSize(poly,preferredAngle=0){
+  if(poly.length!==4)return false;
+  const sign=urbanArea(poly)>=0?1:-1,half=URBAN_MIN_LOT_SIZE/2;
+  const angles=[preferredAngle,...poly.map((a,i)=>Math.atan2(poly[(i+1)%4].y-a.y,poly[(i+1)%4].x-a.x))];
+  // Feasible centers of an inscribed 2x2 square: offset each half-plane by
+  // the square's support distance. This rejects thin slivers with large area.
+  return angles.some(angle=>{
+    const ux=Math.cos(angle),uy=Math.sin(angle),vx=-uy,vy=ux;let centers=poly.slice();
+    for(let i=0;i<4;i++){
+      const a=poly[i],b=poly[(i+1)%4],nx=sign*(b.y-a.y),ny=sign*(a.x-b.x);
+      const support=half*(Math.abs(nx*ux+ny*uy)+Math.abs(nx*vx+ny*vy));
+      centers=urbanClip(centers,nx,ny,nx*a.x+ny*a.y-support);
+      if(!centers.length)return false;
+    }
+    return centers.length>0;
+  });
+}
+function urbanSpawnOccupants(){
+  const out=window.ConquerCombat?.spawnOccupants?.()||[];
+  const houses=completedSettlement('house'),fields=completedSettlement('field');
+  const assignments=fieldWorkAssignments(houses.filter(h=>houseLevel(h)===1),fields),day=peasantVisualDay();
+  for(const house of houses)for(const resident of houseResidents(house)){
+    let p=residentClassPosition(house,resident,day,assignments.get(house.id));
+    if(p)p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
+    p=window.ConquerCombat?.civilSpawnPosition?.(p,house,resident)??p;
+    if(p)out.push({x:p.x,y:p.y,r:resident.age==='child'?.12:.22});
+  }
+  return out;
+}
+function urbanLotUnitConflict(lot,occupants=urbanSpawnOccupants()){
+  const poly=lot.points;
+  return occupants.some(unit=>pointInPolygon(unit,poly)||poly.some((a,i)=>
+    pointSegmentDistance(unit,a,poly[(i+1)%poly.length])<=(unit.r||.22)));
+}
 function urbanQuad(cell,house,allowed=null){
   if(cell.length<4)return null;
   const footprint=houseFootprintParts(house).flatMap(p=>p.points);
@@ -119,15 +154,18 @@ function urbanQuad(cell,house,allowed=null){
   for(let a=0;a<cell.length-3;a++)for(let b=a+1;b<cell.length-2;b++)
     for(let c=b+1;c<cell.length-1;c++)for(let d=c+1;d<cell.length;d++){
       const quad=[cell[a],cell[b],cell[c],cell[d]],size=Math.abs(urbanArea(quad));
-      if(size<=area||!footprint.every(p=>urbanContains(quad,p,.16)))continue;
+      if(size<=area||!footprint.every(p=>urbanContains(quad,p,.16))||!urbanLotHasMinimumSize(quad,house.angle||0))continue;
       best=quad;area=size;
     }
   if(best&&(!allowed||allowed(best)))return best;
   // A small oriented rectangle is also an inscribed quadrilateral, useful for
   // dense legacy settlements whose cell has more than four narrow corners.
   const local=footprint.map(p=>toLocalPoint(house,p)),pad=.20;
-  const x0=Math.min(...local.map(p=>p.x))-pad,x1=Math.max(...local.map(p=>p.x))+pad;
-  const y0=Math.min(...local.map(p=>p.y))-pad,y1=Math.max(...local.map(p=>p.y))+pad;
+  const minX=Math.min(...local.map(p=>p.x))-pad,maxX=Math.max(...local.map(p=>p.x))+pad;
+  const minY=Math.min(...local.map(p=>p.y))-pad,maxY=Math.max(...local.map(p=>p.y))+pad;
+  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+  const hx=Math.max(URBAN_MIN_LOT_SIZE/2,(maxX-minX)/2),hy=Math.max(URBAN_MIN_LOT_SIZE/2,(maxY-minY)/2);
+  const x0=cx-hx,x1=cx+hx,y0=cy-hy,y1=cy+hy;
   const quad=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].map(([x,y])=>houseLocalToWorld(house,x,y));
   return quad.every(p=>urbanContains(cell,p))&&(!allowed||allowed(quad))?quad:null;
 }
@@ -164,7 +202,8 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
 function urbanHouseFitsLots(candidate){
   const houses=State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
   houses.push(candidate);
-  if(!urbanLotFor(candidate,houses))return false;
+  const lot=urbanLotFor(candidate,houses);
+  if(!lot||urbanLotUnitConflict(lot))return false;
   // A new site must not steal the footprint of an already occupied parcel.
   return houses.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
     !urbanLotFor(h,State.structures.filter(s=>s.type==='house'))||!!urbanLotFor(h,houses));

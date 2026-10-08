@@ -647,6 +647,18 @@
     unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;changed();
     status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
   }
+  function spawnOccupants(){
+    const out=[];
+    for(const unit of combat.units.concat(combat.enemy)){
+      if(unit.defeated||unit.stats?.hp<=0)continue;
+      for(const [ox,oy] of militaryOffsets(unit.kind))out.push({x:unit.x+ox,y:unit.y+oy,r:unit.kind==='knight'?.30:.22});
+    }
+    return out;
+  }
+  function civilSpawnPosition(p,house,resident){
+    const motion=residentMotion.get(resident.id);
+    return motion?motionPosition(motion,performance.now()):civilianLegalPosition(p,house);
+  }
   function archers(){
     const now=performance.now();
     if(now<nextArcherRosterAt&&State.structures.length===archerRosterSize)return archerRoster;
@@ -832,7 +844,7 @@
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,
+  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     yellowGeometry:()=>circles().filter(c=>c.mode==='yellow').concat(combat.strokes.filter(c=>['yellow','eraseYellow'].includes(c.mode))),
     invalidateRoutes:()=>{civilianRouteCache.clear();circleCacheBucket=-1;visibilityDirty=true;for(const u of combat?.units||[])u.path=null},
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
