@@ -1122,7 +1122,7 @@ function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
     ctx.beginPath();ctx.moveTo(bx+Math.cos(-Math.PI*.55)*r,by+Math.sin(-Math.PI*.55)*r);
     ctx.lineTo(bx-r*.18,by);
     ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
-  }else{
+  }else if(type!=='unarmed'){
     const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
     drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride);
     // Sword.
@@ -1133,6 +1133,57 @@ function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   }
 
   ctx.restore();
+}
+function drawNobleFigure(p,z,id,phase=0){
+  const scale=militaryScale(),bob=Math.sin(phase*Math.PI*2)*.018;
+  const base=w2s(p,z+bob),bodyW=5.2*scale,bodyH=9.0*scale,headR=2.25*scale;
+  const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72;
+  const flip=(peasantHash(String(id)+'-noble')&1)!==0;
+  const main=flip?'#6f355d':'#2f4f75',trim='#c6a457';
+  ctx.save();
+  ctx.beginPath();ctx.moveTo(base.x-bodyW*.36,top);ctx.lineTo(base.x+bodyW*.36,top);
+  ctx.lineTo(base.x+bodyW*.58,bodyY+bodyH*.52);ctx.lineTo(base.x-bodyW*.58,bodyY+bodyH*.52);ctx.closePath();
+  ctx.fillStyle=main;ctx.fill();ctx.strokeStyle='rgba(28,22,24,.9)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
+  ctx.strokeStyle=trim;ctx.lineWidth=Math.max(1,1.15*scale);
+  ctx.beginPath();ctx.moveTo(base.x-bodyW*.42,bodyY+bodyH*.26);ctx.lineTo(base.x+bodyW*.42,bodyY+bodyH*.26);ctx.stroke();
+  const sex=(peasantHash(String(id)+'-sex')&1)?'female':'male';
+  drawVillagerHead(id,base.x,headY,headR,sex,villagerHair(id));
+  ctx.fillStyle=trim;ctx.fillRect(base.x-headR*.72,headY-headR*.82,headR*1.44,Math.max(1,1.1*scale));
+  ctx.restore();
+}
+function cutawayOccupantLayout(count){
+  if(count<=1)return[[0,.08]];
+  if(count===2)return[[-.34,.10],[.34,-.08]];
+  if(count===3)return[[-.48,.12],[0,-.12],[.48,.08]];
+  return[[-.52,.16],[-.18,-.14],[.18,.12],[.52,-.10]];
+}
+function drawCutawayOccupants(){
+  const structures=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+  const t=performance.now()/1000;
+  for(const s of structures){
+    const render=()=>{
+      for(const slot of cutawayRoomSlots(s)){
+        let count=0,kind=null;
+        if(slot.role==='barracks'){count=3;kind='soldier'}
+        else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
+        if(!count)continue;
+        const positions=cutawayOccupantLayout(count),items=[];
+        for(let i=0;i<count;i++){
+          const [nx,ny]=positions[i%positions.length],phase=(t*.42+i*.21+(peasantHash(s.id+'-'+slot.index+'-'+i)%100)/100)%1;
+          const sway=Math.sin(phase*Math.PI*2)*.035;
+          const p=cutawayRoomPoint(slot,nx+sway,ny);
+          items.push({p,phase,i,depth:viewDepthPoint(p)});
+        }
+        items.sort((a,b)=>a.depth-b.depth);
+        for(const item of items){
+          const id=s.id+'-room-'+slot.index+'-'+item.i;
+          if(kind==='soldier')drawSoldierFigure(item.p,slot.z+.09,'unarmed',id,item.phase);
+          else drawNobleFigure(item.p,slot.z+.09,id,item.phase);
+        }
+      }
+    };
+    if(s.type==='tower')withStructureGroundPlane(s,render);else render();
+  }
 }
 function wallPatrolPoint(wall,day,index=0,count=1){
   const pg=wall.type==='palisade'?palisadeLayout(wall):null;
