@@ -202,8 +202,13 @@
     return false;
   }
   function animateCivilianPaths(now){
-    transitionFrame=0;
-    if(!combat||!runningCivilianMotions())return;
+    if(!combat||!runningCivilianMotions()){
+      transitionFrame=0;
+      return;
+    }
+    // IMPORTANT: leave transitionFrame set while calling draw().
+    // drawPeasants -> civilPosition -> requestCivilianAnimation must not
+    // schedule a second RAF from inside this callback (exponential loop).
     if(now-transitLastFrame>=50){
       transitLastFrame=now;
       draw();
