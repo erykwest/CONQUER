@@ -294,6 +294,10 @@
       '<div class="grid3">'+buttons+'</div><div class="legend">Transfer up to 50 from settlement resources per click. Supply capacity depends on rooms.</div></div>';
   }
   function bindPanel(slots){
+    slots.querySelectorAll('[data-siege-archer]').forEach(btn=>btn.onclick=()=>{
+      const tower=selectedStructure();
+      if(tower?.type==='tower')changeArchers(tower.id,Number(btn.dataset.siegeArcher));
+    });
     slots.querySelectorAll('[data-siege-transfer]').forEach(btn=>btn.onclick=()=>{
       const out=transfer(btn.dataset.siegeTransfer);
       if(!out.accepted)status(out.reason);
