@@ -1042,17 +1042,19 @@ function drawPeasants(){
     representedPopulation+=housePopulationCapacity(house).total;
     const kind=villagerClass(house),assignment=assignments.get(house.id);
     for(const resident of houseResidents(house)){
-      if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
+      // Alarm destinations are computed even for residents not selected by
+      // distant-camera LOD, so mobilization does not depend on zoom level.
       let p=residentClassPosition(house,resident,day,assignment);
       if(p)p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
-      // Recall/release may keep a resident visible while their ordinary
-      // day schedule is inactive; the tactical subsystem owns that transition.
-      p=window.ConquerCombat?.civilPosition(p,house,resident)??p;
+      const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
+      if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
+      if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
       if(!p||!worldPointVisible(p,0,40))continue;
       const rp=rotateViewPoint(p);
       dots.push({
         p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
-        hair:resident.hair,colors:resident.colors
+        hair:resident.hair,colors:resident.colors,
+        militia:window.ConquerCombat?.recruitedResident(resident.id)||false
       });
       activeAgents++;
     }
@@ -1062,7 +1064,10 @@ function drawPeasants(){
     window.__conquerPerf.representedPopulation=representedPopulation;
     window.__conquerPerf.visibleVillagers=activeAgents;
   }
-  for(const dot of dots)drawVillagerFigure(dot);
+  for(const dot of dots){
+    if(dot.militia)drawSoldierFigure(dot.p,.10,'spearman',dot.id,day);
+    else drawVillagerFigure(dot);
+  }
 }
 function militaryScale(){
   return clamp(State.view.scale,.55,1.45);
