@@ -33,6 +33,7 @@ function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   if(scheduleSave)scheduleLocalSave();
 }
 function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
+  window.ConquerSiege?.sanitizeRooms(s);
   markDirty(hardNavigation,structureSceneLayers(s),scheduleSave);
 }
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
@@ -195,6 +196,22 @@ function renderFunctionPanel(){
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate,maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
   info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
   let html='';
+  if(s.type==='tower'){
+    const active=!!s.isMastio;
+    html+='<div class="slot"><div class="slot-label">Final defence · Mastio ★</div>'+
+      '<button data-siege-mastio="'+s.id+'" '+(building?'disabled':'')+' class="'+(active?'active':'')+'">'+(active?'★ Mastio designated · remove':'☆ Designate this tower as Mastio')+'</button>'+
+      '<div class="legend">Requires one Common Hall in a lower-floor room. Reassign at any time.</div></div>';
+  }
+  if(s.type==='tower'){
+    const archerSlots=window.ConquerSiege?.archerSlots(s)||[];
+    const archers=window.ConquerSiege?.stationedArchers(s)||0;
+    const roofSlots=archerSlots.filter(slot=>slot.kind==='roof').length;
+    const slitSlots=archerSlots.length-roofSlots;
+    html+='<div class="slot"><div class="slot-label">Tower archers · '+archers+' / '+archerSlots.length+'</div>'+
+      '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
+      '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
+      '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+  }
   if(s.type==='house'){
     const level=houseLevel(s);
     html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 3 residents · L2: 6 · L3: 9 · L4: 12. L3: extended ${housePlanType(s)} plan · L4: elite house with ${houseTurretType(s)} turret.</div></div>`;
@@ -254,9 +271,19 @@ function renderFunctionPanel(){
   if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
-    else html+=s.functions.map((value,i)=>{const size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · ${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
+    else html+=s.functions.map((value,i)=>{const size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · Floor ${i+1} · ${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
+  }
+  if(['tower','gate','built'].includes(s.type)){
+    const hp=window.ConquerSiege?.integrity(s);
+    if(hp)html+='<div class="slot"><div class="slot-label">Defensive integrity</div>'+
+      '<div class="legend">Masonry '+Math.ceil(hp.core.hp)+' / '+hp.core.max+
+      (hp.door?' · Door '+Math.ceil(hp.door.hp)+' / '+hp.door.max:'')+'</div>'+
+      '<div class="grid3"><button data-siege-test="axe" type="button">Test axe</button><button data-siege-test="ram" type="button">Test ram</button><button data-siege-test="trebuchet" type="button">Test trebuchet</button></div>'+
+      '<div class="legend">Prototype damage controls; only effective tools can harm each material.</div></div>';
+    html+=window.ConquerSiege?.summaryHtml()||'';
   }
   slots.innerHTML=html;
+  window.ConquerSiege?.bindPanel(slots);
   slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;const level=clamp(houseLevel(target)+1,1,4);if(!urbanHouseFitsLots({...target,houseLevel:level})){status('House extension would exceed its lot');return}target.houseLevel=level;markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
@@ -265,7 +292,8 @@ function renderFunctionPanel(){
 
     if(target.type==='tower'){
       const parent=target.parentTowerId&&State.structures.find(s=>s.id===target.parentTowerId&&s.type==='tower');
-      if(parent&&requested>=towerTier(parent)){
+      if(target.isMastio&&requested<2){status('Mastio must keep a room for the Common Hall (T2+).');return;}
+       if(parent&&requested>=towerTier(parent)){
         status('Subtower must remain smaller than its parent tower');return;
       }
       const children=subtowerChildren(target.id);
@@ -285,7 +313,7 @@ function renderFunctionPanel(){
 
     markStructureDirty(target);renderFunctionPanel();draw();
   });
-  slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;const level=Number(btn.dataset.heightLevel);if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall'}target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
@@ -325,7 +353,7 @@ function renderFunctionPanel(){
     status((target.type==='tower'?'Tower':'Built section')+' cutaway '+(target.cutaway?'enabled':'disabled'));
   });
   slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','palisade','built'].includes(target.type))return;target.flip=!target.flip;markStructureDirty(target);renderFunctionPanel();draw();status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped')});
-  slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markStructureDirty(target);draw()});
+  slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);const i=Number(e.target.dataset.functionSlot),fn=e.target.value||null;if(target.isMastio&&target.functions[i]==='commonHall'&&fn!=='commonHall'&&!target.functions.some((f,j)=>j!==i&&f==='commonHall')){status('Mastio requires its Common Hall — reassign the Mastio first.');renderFunctionPanel();return}if(fn&&!window.ConquerSiege.allowed(target,i,fn)){status('Function not permitted at this floor/access');renderFunctionPanel();return}target.functions[i]=fn;markStructureDirty(target);renderFunctionPanel();draw()});
 }
 let pan=null;
 canvas.addEventListener('pointerdown',e=>{
@@ -677,7 +705,7 @@ function migrateStructures(list){
     // V1 visual-variant migration. Legacy structures keep today's appearance.
     normalizeStructureVariants(s);
 
-    if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
+    if(['tower','gate','built'].includes(s.type)){normalizeFunctions(s);window.ConquerSiege?.sanitizeRooms(s)}
     return s;
   });
 
@@ -700,6 +728,7 @@ function migrateStructures(list){
       s.subtowerAngle=attachment.subtowerAngle;
     }
   }
+  const keep=migrated.find(s=>s.type==='tower'&&s.isMastio);for(const s of migrated)if(s.isMastio&&s!==keep)s.isMastio=false;
   return migrated;
 }
 const LOCAL_STORAGE_SCHEMA=2;
@@ -720,7 +749,7 @@ function localStorageKey(){
 let localSaveTimer=null;
 function saveLocal(){
   const t0=performance.now();
-  localStorage.setItem(localStorageKey(),JSON.stringify({schema:LOCAL_STORAGE_SCHEMA,seed:State.seed,biome:State.biome,season:State.season,seasonOverride:State.seasonOverride||null,neighborBiomes:State.neighborBiomes,landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment},structures:State.structures,resources:State.resources,policies:State.policies,heraldry:State.heraldry||null,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view,combat:window.ConquerCombat?.serialize()||State.combat}));
+  localStorage.setItem(localStorageKey(),JSON.stringify({schema:LOCAL_STORAGE_SCHEMA,seed:State.seed,biome:State.biome,season:State.season,seasonOverride:State.seasonOverride||null,neighborBiomes:State.neighborBiomes,landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment},structures:State.structures,resources:State.resources,siege:State.siege||null,policies:State.policies,heraldry:State.heraldry||null,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view,combat:window.ConquerCombat?.serialize()||State.combat}));
   if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
   window.__conquerAnalytics?.measure('SAVE',performance.now()-t0);
 }
@@ -728,10 +757,10 @@ function scheduleLocalSave(delay=700){
   if(localSaveTimer)return;
   localSaveTimer=setTimeout(()=>{localSaveTimer=null;saveLocal()},delay);
 }
-function loadLocal(){try{const key=localStorageKey();const x=JSON.parse(localStorage.getItem(key)||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.season=['summer','autumn','winter','spring'].includes(x.season)?x.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(x.seasonOverride)?x.seasonOverride:null;State.neighborBiomes=x.neighborBiomes||{};State.combat=x.combat||null;State.structures=migrateStructures(x.structures);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};State.heraldry=x.heraldry||null;const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();const savedLandscape=x.landscape;if(savedLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(savedLandscape.relief?.hills)&&Array.isArray(savedLandscape.environment)){State.relief=savedLandscape.relief;State.environment=savedLandscape.environment;clearReliefBandCache()}else{State.relief=null;State.environment=[];ensureStaticLandscape();saveLocal()}ensureBorderEntrySelection();if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);}}
+function loadLocal(){try{const key=localStorageKey();const x=JSON.parse(localStorage.getItem(key)||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.season=['summer','autumn','winter','spring'].includes(x.season)?x.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(x.seasonOverride)?x.seasonOverride:null;State.neighborBiomes=x.neighborBiomes||{};State.combat=x.combat||null;State.structures=migrateStructures(x.structures);window.ConquerSiege?.restore(x.siege);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};State.heraldry=x.heraldry||null;const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();const savedLandscape=x.landscape;if(savedLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(savedLandscape.relief?.hills)&&Array.isArray(savedLandscape.environment)){State.relief=savedLandscape.relief;State.environment=savedLandscape.environment;clearReliefBandCache()}else{State.relief=null;State.environment=[];ensureStaticLandscape();saveLocal()}ensureBorderEntrySelection();if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.combat=cloudPolicies.combat||null;State.heraldry=cloudPolicies.heraldry||State.heraldry||null;window.ConquerCombat?.restore(State.combat);State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.season=['summer','autumn','winter','spring'].includes(cloudPolicies.season)?cloudPolicies.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(cloudPolicies.seasonOverride)?cloudPolicies.seasonOverride:null;const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();const cloudLandscape=cloudPolicies.landscape;let repairedLandscape=false;if(cloudLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(cloudLandscape.relief?.hills)&&Array.isArray(cloudLandscape.environment)){State.relief=cloudLandscape.relief;State.environment=cloudLandscape.environment;clearReliefBandCache();repairedLandscape=repairForestsAgainstSteepSlopes()}else{State.relief=null;State.environment=[];ensureStaticLandscape();repairedLandscape=true}ensureBorderEntrySelection();if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();if(repairedLandscape)await saveCloud();else saveLocal();renderUI();renderFunctionPanel();draw()}}
-async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,combat:window.ConquerCombat?.serialize()||State.combat,heraldry:State.heraldry||null,season:State.season,seasonOverride:State.seasonOverride||null,village:State.village,clock:{day:State.clock.day},landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);window.ConquerSiege?.restore(data.policies?.siege);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.combat=cloudPolicies.combat||null;State.heraldry=cloudPolicies.heraldry||State.heraldry||null;window.ConquerCombat?.restore(State.combat);State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.season=['summer','autumn','winter','spring'].includes(cloudPolicies.season)?cloudPolicies.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(cloudPolicies.seasonOverride)?cloudPolicies.seasonOverride:null;const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();const cloudLandscape=cloudPolicies.landscape;let repairedLandscape=false;if(cloudLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(cloudLandscape.relief?.hills)&&Array.isArray(cloudLandscape.environment)){State.relief=cloudLandscape.relief;State.environment=cloudLandscape.environment;clearReliefBandCache();repairedLandscape=repairForestsAgainstSteepSlopes()}else{State.relief=null;State.environment=[];ensureStaticLandscape();repairedLandscape=true}ensureBorderEntrySelection();if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();if(repairedLandscape)await saveCloud();else saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,siege:State.siege||null,combat:window.ConquerCombat?.serialize()||State.combat,heraldry:State.heraldry||null,season:State.season,seasonOverride:State.seasonOverride||null,village:State.village,clock:{day:State.clock.day},landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
 const CALENDAR_MONTHS=[
   {name:'Gen',days:31},{name:'Feb',days:28},{name:'Mar',days:31},{name:'Apr',days:30},
@@ -883,6 +912,7 @@ function generateNewMap(){
   State.relief=null;
   State.environment=[];
   State.structures=[];
+  window.ConquerSiege?.restore(null);
   State.combat=null;
   window.ConquerCombat?.restore(null);
   State.pendingWellId=null;
@@ -1020,7 +1050,9 @@ function simulationFrame(now){
   window.__conquerAnalytics?.frame(now,rawDtMs);
   const dt=Math.min(.25,rawDtMs/1000);simLast=now;
   if(State.clock.speed>0){
+    const previousDay=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
+    window.ConquerSiege?.tick(previousDay,State.clock.day);
     // Combat faults must not affect village/economy/render simulation.
     if(window.ConquerCombat&&!window.__conquerCombatSuspended){
       try{window.ConquerCombat.tick(dt*State.clock.speed)}

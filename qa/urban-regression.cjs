@@ -17,9 +17,10 @@ navigator:{},fetch:()=>new Promise(()=>{}),atob:s=>Buffer.from(s,'base64').toStr
 const context=vm.createContext(sandbox);
 function run(s){return vm.runInContext(s,context)}
 function moduleFile(n){return fs.readFileSync(__dirname+'/../src/settlement-'+n+'.js','utf8')}
-for(const n of ['core','world','castle','urban','population'])run(moduleFile(n));
+for(const n of ['core','world','castle','urban','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
 run(moduleFile('app').split('function pointerScreen')[0]);
+run(moduleFile('combat-rules'));
 run(moduleFile('combat').replace('window.ConquerCombat={','window.ConquerCombat={__qa:{safeMilitarySegment,infantryRoute,lineVisible},'));
 run('State.seed=12345; State.environment=[];State.relief=null;');
 let passed=0;
@@ -201,3 +202,4 @@ test('active civilians block spawning without changing their routines or movemen
  assert.equal(run("urbanLotUnitConflict({points:[{x:90,y:90},{x:113,y:90},{x:113,y:113},{x:90,y:113}]})"),true);
 });
 console.log(passed+' urban regression checks passed.');
+
