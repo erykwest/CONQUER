@@ -468,58 +468,8 @@ function pointRadius(s){
     trim(events,MAX_EVENTS);
   }
   function delta(name,p){return Math.max(0,finite(p[name])-finite(lastPerf[name]))}
-  function sendRemote(sample){
-    const now=performance.now();
-    if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
-    lastRemoteAt=now;
-    const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
-    const row={
-      session_id:sessionId,
-      day:sample.day,
-      speed:sample.speed,
-      frame_avg_ms:sample.frame?.avgMs||0,
-      frame_max_ms:sample.frame?.maxMs||0,
-      frame_over_34:sample.frame?.over34||0,
-      draw_ms:sample.draw?.lastMs||0,
-      maintenance_ms:sample.maintenance?.lastMs||0,
-      save_ms:sample.save?.lastMs||0,
-      visible_population:sample.population?.visible||0,
-      represented_population:sample.population?.represented||0,
-      structures:sample.scene?.structures||0,
-      roads:sample.scene?.roads||0,
-      nav_graph_builds_delta:sample.navigation?.deltaGraphBuilds||0,
-      nav_trees_delta:sample.navigation?.deltaTreesBuilt||0,
-      nav_invalidations_delta:sample.navigation?.deltaNavInvalidations||0,
-      cache_invalidations_delta:sample.cache?.deltaInvalidations||0,
-      cache_rebuilds_delta:
-        (sample.cache?.deltaLandscapeRebuilds||0)+(sample.cache?.deltaGroundRebuilds||0)+
-        (sample.cache?.deltaShadowRebuilds||0)+(sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+
-        (sample.cache?.deltaCastleFrontRebuilds||0),
-      asset_cache_entries:sample.assetCache?.entries||0,
-      asset_cache_mb:sample.assetCache?.estimatedMb||0,
-      asset_cache_hits_delta:sample.assetCache?.deltaHits||0,
-      asset_cache_misses_delta:sample.assetCache?.deltaMisses||0,
-      asset_cache_evictions_delta:sample.assetCache?.deltaEvictions||0,
-      asset_prerender_ms:sample.assetCache?.lastPrerenderMs||0,
-      castle_body_bitmap_hits_delta:sample.assetCache?.deltaCastleBodyHits||0,
-      castle_body_bitmap_misses_delta:sample.assetCache?.deltaCastleBodyMisses||0,
-      castle_body_bitmap_ms:sample.assetCache?.castleBodyMs||0,
-      recent_events:recentEvents
-    };
-    if(window.CONQUER_ENABLE_UNSAFE_TELEMETRY!==true)return;
-    fetch(SUPABASE_URL+'/rest/v1/simulation_telemetry',{
-      method:'POST',
-      headers:{
-        'content-type':'application/json',
-        'apikey':SUPABASE_KEY,
-        'authorization':'Bearer '+SUPABASE_KEY,
-        'prefer':'return=minimal'
-      },
-      body:JSON.stringify(row),
-      keepalive:true,
-      cache:'no-store'
-    }).catch(err=>event('REMOTE_TELEMETRY_ERROR',{message:String(err)},'warn',30000));
-  }
+  // Diagnostics are local-only until a secure, authenticated ingestion service exists.
+  function sendRemote(_sample){ return; }
   function frame(now,rawDtMs){
     const dt=finite(rawDtMs);
     frameCount++;frameSum+=dt;frameMax=Math.max(frameMax,dt);
