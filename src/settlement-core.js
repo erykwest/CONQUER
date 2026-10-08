@@ -176,17 +176,17 @@ const WALL_BREAK_MIN=.10;
 
 // Builder Geometry V2 — visual variants are data, not separate structure types.
 // Geometry/cost/functions stay on the structure; appearance is selected here.
-const STRUCTURE_VARIANT_VERSION=1;
+const STRUCTURE_VARIANT_VERSION=2;
 const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
-    roofStyle:Object.freeze(['battlement','pitched']),
+    roofStyle:Object.freeze(['battlement','machicolation','pitched']),
     baseStyle:Object.freeze(['standard','buttress','splayed'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat'])
   }),
   wall:Object.freeze({
-    skin:Object.freeze(['standard','hoarding'])
+    skin:Object.freeze(['standard','machicolation','hoarding'])
   }),
   built:Object.freeze({
     skin:Object.freeze(['standard','arcade'])
@@ -281,6 +281,13 @@ function gateRoofStyle(s){
 }
 function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
 function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
+// Semantic gameplay hook: combat can query this later without depending on renderer details.
+function hasMachicolation(s){
+  if(!s)return false;
+  if(s.type==='tower')return !isWoodTower(s)&&towerRoofStyle(s)==='machicolation';
+  if(s.type==='wall')return wallTier(s)>=2&&wallSkin(s)==='machicolation';
+  return false;
+}
 
 function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
 function wallTier(s){
@@ -294,7 +301,10 @@ function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,3);return 
 function applyStructureTier(s,tier){
   tier=clamp(Math.round(Number(tier)||1),1,3);
   s.tier=tier;
-  if(['wall','palisade'].includes(s.type)){s.width=wallWidthForTier(tier)}
+  if(['wall','palisade'].includes(s.type)){
+    s.width=wallWidthForTier(tier);
+    if(s.type==='wall'&&tier===1&&wallSkin(s)==='machicolation')s.skin='standard';
+  }
   else if(s.type==='tower'){
     if(s.shape==='round')s.r=towerSizeForTier('round',tier);
     else s.size=towerSizeForTier('square',tier);
