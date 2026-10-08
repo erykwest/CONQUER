@@ -24,7 +24,13 @@
     surface.width=outline.width=ZONE_SIZE;surface.height=outline.height=ZONE_SIZE;
     zoneImages[mode]={surface,outline,ctx:surface.getContext('2d'),outlineCtx:outline.getContext('2d')};
   }
-  let zoneSignature='';
+  let zoneSignature='',zoneRevision=0,fogRevision=0;
+  // Render static FoW + merged brush masks once into a shared atlas rather
+  // than drawing seven large bitmaps into the isometric screen every frame.
+  const backdrop=document.createElement('canvas');
+  backdrop.width=backdrop.height=ZONE_SIZE;
+  const backdropCtx=backdrop.getContext('2d');
+  let backdropSignature='';
   let lastObserverSig='',lastAreaSig='',selected=null,painting=false,lastPaint=null;
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
   const residentMotion=new Map(),residentLastPosition=new Map();
@@ -60,7 +66,7 @@
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
     window.ConquerCombatRules?.reset();
-    zoneSignature='';
+    zoneSignature='';backdropSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
   }
   function serialize(){
@@ -383,6 +389,7 @@
       image.data[k]=8;image.data[k+1]=12;image.data[k+2]=16;image.data[k+3]=a;
     }
     fogCtx.putImageData(image,0,0);
+    fogRevision++;
   }
   function renderFogProjection(pixelRatio){
     const a=w2sRaw({x:0,y:0},0),b=w2sRaw({x:STEP,y:0},0),c=w2sRaw({x:0,y:STEP},0);
@@ -463,7 +470,7 @@
     const signature=automatic.map(c=>[c.x,c.y,c.r,c.mode,c.id].join(':')).join('|')+
       '|brush:'+brushes.length+':'+(brushes.at(-1)?Object.values(brushes.at(-1)).join(':'):'');
     if(signature===zoneSignature)return;
-    zoneSignature=signature;
+    zoneSignature=signature;zoneRevision++;
     for(const region of Object.values(zoneImages)){
       region.ctx.clearRect(0,0,ZONE_SIZE,ZONE_SIZE);
       region.ctx.globalCompositeOperation='source-over';
@@ -488,32 +495,54 @@
       outlineCtx.globalCompositeOperation='source-over';
     }
   }
-  function renderMergedZones(pixelRatio){
-    updateZoneUnion();
+  function renderTacticalBackdrop(pixelRatio){
+    if(combat.zones&&activeWell())updateZoneUnion();
+    const signature=(combat.fog?fogRevision:'off')+'|'+(combat.zones?zoneRevision:'off')+
+      '|'+!!activeWell();
+    if(signature!==backdropSignature){
+      backdropSignature=signature;
+      const c=backdropCtx,t0=performance.now();
+      c.setTransform(1,0,0,1,0,0);
+      c.clearRect(0,0,ZONE_SIZE,ZONE_SIZE);
+      if(combat.fog){
+        c.imageSmoothingEnabled=false;
+        c.globalAlpha=1;
+        c.drawImage(fog,0,0,ZONE_SIZE,ZONE_SIZE);
+      }
+      if(combat.zones&&activeWell()){
+        c.imageSmoothingEnabled=true;
+        for(const mode of ['allow','yellow','green']){
+          const mask=zoneImages[mode];
+          c.globalAlpha=mode==='allow'?.055:mode==='yellow'?.07:.10;
+          c.drawImage(mask.surface,0,0);
+          c.globalAlpha=.30;
+          c.drawImage(mask.outline,0,0);
+        }
+      }
+      c.globalAlpha=1;
+      const ms=performance.now()-t0;
+      if(window.__conquerPerf)window.__conquerPerf.combatBackdropMs=ms;
+      if(ms>30)window.__conquerAnalytics?.event('COMBAT_BACKDROP_SLOW',{ms:+ms.toFixed(1)},'warn',3000);
+    }
+    if(!combat.fog&&!combat.zones)return;
     const a=w2sRaw({x:0,y:0},0),bx=w2sRaw({x:1/ZONE_PIXELS,y:0},0),by=w2sRaw({x:0,y:1/ZONE_PIXELS},0);
     g.save();
     g.setTransform(pixelRatio*(bx.x-a.x),pixelRatio*(bx.y-a.y),pixelRatio*(by.x-a.x),pixelRatio*(by.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
     g.imageSmoothingEnabled=true;
-    for(const mode of ['allow','yellow','green']){
-      const image=zoneImages[mode];
-      g.globalAlpha=mode==='allow'?.055:mode==='yellow'?.07:.10;
-      g.drawImage(image.surface,0,0);
-      g.globalAlpha=.30; // 70% transparent outlines
-      g.drawImage(image.outline,0,0);
-    }
+    g.drawImage(backdrop,0,0);
     g.restore();
   }
   function renderOverlay(){
     if(!combat)return;
+    const overlayStart=performance.now();
     const rect=wrap.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
     if(canvasLayer.width!==Math.round(rect.width*d)||canvasLayer.height!==Math.round(rect.height*d)){
       canvasLayer.width=Math.round(rect.width*d);canvasLayer.height=Math.round(rect.height*d);
     }
     g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,rect.width,rect.height);
     if(activeWell())refreshFog();
-    if(combat.fog)renderFogProjection(d);
+    renderTacticalBackdrop(d);
     if(!activeWell())return;
-    if(combat.zones)renderMergedZones(d);
     const king=combat.units.find(u=>u.kind==='knight');
     if(king){
       g.strokeStyle='rgba(255,211,116,.78)';g.lineWidth=1.5;
@@ -535,6 +564,7 @@
       }
     }
     characters.sort((a,b)=>viewDepthPoint(a.p)-viewDepthPoint(b.p));
+    const sightSources=combat.enemy.length?observers():null;
     withRenderContext(g,()=>{
       for(const soldier of characters){
         drawSoldierFigure(soldier.p,.08,soldier.type,soldier.id,State.clock.day);
@@ -558,7 +588,7 @@
         }
       }
       for(const e of combat.enemy){
-        if(e.defeated||e.stats?.hp<=0||!spotted(e,observers()))continue;
+        if(e.defeated||e.stats?.hp<=0||!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
         drawSoldierFigure(e,.08,'spearman',e.id,State.clock.day,livery);
         const p=w2s(e,.08);g.strokeStyle='#e45151';g.lineWidth=2;
@@ -578,6 +608,9 @@
         (focused?' · HP '+hp(focused)+' · B '+brain(focused):'')+
         (combat.enemy.length?' · Enemy HP '+hp(combat.enemy[0]):'');
     }
+    const overlayMs=performance.now()-overlayStart;
+    if(window.__conquerPerf)window.__conquerPerf.combatOverlayMs=overlayMs;
+    if(overlayMs>25)window.__conquerAnalytics?.event('COMBAT_OVERLAY_SLOW',{ms:+overlayMs.toFixed(1),units:combat.units.length,enemies:combat.enemy.length},'warn',3000);
   }
   const SQUAD_FOOTPRINT=[[-.55,-.22],[0,-.22],[.55,-.22],[-.55,.33],[0,.33]];
   function militaryOffsets(kind){return kind==='squad'?SQUAD_FOOTPRINT:[[0,0]]}
