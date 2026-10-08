@@ -1,7 +1,7 @@
 'use strict';
 // CONQUER /combat — tactical prototype. Classic script, no build dependencies.
 (function(){
-  const STEP=2, N=WORLD/STEP, COLORS={allowed:'#ddd8bf',yellow:'#e6b845',green:'#65bc83'};
+  const STEP=2, N=WORLD/STEP, VISION_BASE=16, VISION_PER_HEIGHT=4, COLORS={allow:'#ddd8bf',yellow:'#e6b845',green:'#65bc83'};
   const canvasLayer=document.createElement('canvas');
   canvasLayer.id='combatCanvas';
   canvasLayer.setAttribute('aria-hidden','true');
@@ -16,17 +16,25 @@
   const strokeBuckets=new Map();let indexedStrokes=-1;
   let lastObserverSig='',lastAreaSig='',selected=null,painting=false,lastPaint=null;
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
+  const residentMotion=new Map(),residentLastPosition=new Map();
+  let transitLastFrame=0;
   let combat=null;
 
-  function defaults(){return{version:1,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
+  function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
   function restore(raw){
-    combat=Object.assign(defaults(),raw&&raw.version===1?raw:{});
+    combat=Object.assign(defaults(),raw&&[1,2].includes(raw.version)?raw:{});
+    // V1 persisted tiles from the experimental fog even where they were never
+    // legitimately discovered. Keep territorial edits, reset only V1 discovery.
+    if(combat.version!==2){combat.seen='';combat.version=2}
+    combat.fog=true;
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&['squad','knight'].includes(s.kind)): [];
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
     memory.fill(0);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
+    residentMotion.clear();residentLastPosition.clear();
+    zoneSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
   }
   function serialize(){
@@ -177,11 +185,11 @@
     for(const tower of State.structures){
       if(tower.type!=='tower'||underConstruction(tower))continue;
       const h=clamp(Math.round(terrainElevation(tower)+structureLevel(tower)),0,8);
-      out.push({x:tower.x,y:tower.y,h,r:8+2*h,id:tower.id});
+      out.push({x:tower.x,y:tower.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:tower.id});
     }
     for(const unit of combat.units){
       const h=clamp(Math.round(terrainElevation(unit)),0,8);
-      out.push({x:unit.x,y:unit.y,h,r:8+2*h,id:unit.id});
+      out.push({x:unit.x,y:unit.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:unit.id});
     }
     return out;
   }
@@ -271,7 +279,7 @@
     const steps=48;
     g.beginPath();
     for(let i=0;i<=steps;i++){
-      const a=i*Math.PI*2/steps,p=w2sRaw({x:c.x+Math.cos(a)*c.r,y:c.y+Math.sin(a)*c.r},0);
+      const a=i*Math.PI*2/steps,p=w2sRaw({x:c.x+Math.cos(a)*c.r,y:c.y+Math.sin(a)*c.r},Number.isFinite(c.groundZ)?c.groundZ:0);
       if(i===0)g.moveTo(p.x,p.y);else g.lineTo(p.x,p.y);
     }
     g.closePath();
@@ -307,11 +315,11 @@
     const king=combat.units.find(u=>u.kind==='knight');
     if(king){
       g.strokeStyle='rgba(255,211,116,.7)';g.fillStyle='rgba(255,211,116,.045)';
-      g.lineWidth=1.5;g.setLineDash([5,4]);drawMapCircle({...king,r:16});g.setLineDash([]);
+      g.lineWidth=1.5;g.setLineDash([5,4]);drawMapCircle({...king,r:16,groundZ:terrainElevation(king)});g.setLineDash([]);
     }
     if(selected){
       const u=combat.units.find(u=>u.id===selected);
-      if(u){g.strokeStyle='#e3fcac';g.fillStyle='rgba(216,255,150,.06)';g.lineWidth=1.3;drawMapCircle({...u,r:u.kind==='squad'?6:16});}
+      if(u){g.strokeStyle='#e3fcac';g.fillStyle='rgba(216,255,150,.06)';g.lineWidth=1.3;drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)});}
     }
     const characters=[];
     for(const u of combat.units){
