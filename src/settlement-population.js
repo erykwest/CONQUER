@@ -1062,10 +1062,9 @@ function militaryScale(){
   return clamp(State.view.scale,.55,1.45);
 }
 function soldierLivery(id){
-  const flip=(peasantHash(String(id)+'-livery')&1)!==0;
-  return flip
-    ?{main:REIGN_COLOR_2,alt:REIGN_COLOR_1,mainDark:REIGN_COLOR_2_DARK,altDark:REIGN_COLOR_1_DARK}
-    :{main:REIGN_COLOR_1,alt:REIGN_COLOR_2,mainDark:REIGN_COLOR_1_DARK,altDark:REIGN_COLOR_2_DARK};
+ const herald=State.heraldry||{};
+ return {main:herald.c1||REIGN_COLOR_1,alt:herald.c2||REIGN_COLOR_2,
+  mainDark:herald.c1||REIGN_COLOR_1_DARK,altDark:herald.c2||REIGN_COLOR_2_DARK};
 }
 function soldierBodyPath(base,bodyW,bodyH,top,bodyY){
   ctx.beginPath();
@@ -1075,10 +1074,10 @@ function soldierBodyPath(base,bodyW,bodyH,top,bodyY){
 function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale){
   ctx.save();
   ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.clip();
-  ctx.fillStyle=livery.main;ctx.fillRect(cx-rx,cy-ry,rx,ry);
-  ctx.fillStyle=livery.alt;ctx.fillRect(cx,cy-ry,rx,ry);
-  ctx.fillStyle=livery.alt;ctx.fillRect(cx-rx,cy,rx,ry);
-  ctx.fillStyle=livery.main;ctx.fillRect(cx,cy,rx,ry);
+  if(!window.__conquerHeraldryCanvas?.paint(ctx,cx-rx,cy-ry,rx*2,ry*2)){
+    ctx.fillStyle=livery.main;ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);
+    ctx.fillStyle=livery.alt;ctx.fillRect(cx,cy-ry,rx,ry*2);
+  }
   ctx.restore();
   ctx.save();ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(.8,.9*scale);
   ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
@@ -1091,8 +1090,10 @@ function drawSoldierFigure(p,z,type,id,phase=0){
 
   // Realm livery: every soldier carries both current reign colours.
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.save();ctx.clip();
-  ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH*.52);
-  ctx.fillStyle=livery.alt;ctx.fillRect(base.x-bodyW,top+bodyH*.52,bodyW*2,bodyH);
+  if(!window.__conquerHeraldryCanvas?.paint(ctx,base.x-bodyW*.5,top,bodyW,bodyH)){
+    ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH);
+    ctx.fillStyle=livery.alt;ctx.fillRect(base.x,top,bodyW,bodyH);
+  }
   ctx.restore();
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);
   ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();

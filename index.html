@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="./src/settlement.css?v=webgpu-2">
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
 <div id="wrap">
   <canvas id="gpuCanvas" aria-hidden="true"></canvas>
   <canvas id="c"></canvas>
@@ -98,6 +98,26 @@
     <button class="full" id="saveBtn">Save settlement</button>
     <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
   </aside>
+  <div id="profileOverlay" class="profile-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <section class="profile-window">
+      <div class="profile-titlebar"><h2 id="profileTitle">PROFILE <small>· Partita corrente</small></h2><button type="button" id="profileClose" aria-label="Chiudi">✕</button></div>
+      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button></nav>
+      <section class="profile-section" id="profileGeneral">
+        <h3>DATI DELLA PARTITA</h3>
+        <div class="profile-facts"><div>Insediamento <strong id="profileVillage">—</strong></div><div>Seed <strong id="profileSeed">—</strong></div><div>Bioma <strong id="profileBiome">—</strong></div><div>Giorno <strong id="profileDay">—</strong></div><div>Cella mondo <strong>0, 0</strong></div></div>
+        <p class="profile-help">Questi dati appartengono alla partita, non all'account del giocatore.</p>
+      </section>
+      <section class="profile-section" id="profileHeraldry" hidden>
+        <div class="heraldry-editor">
+          <div><h3>PARTIZIONE DEL CAMPO</h3><div id="heraldryPatterns" class="heraldry-patterns"></div>
+            <h3>COLORI</h3><div id="heraldryColors" class="heraldry-colors"></div>
+            <h3>SIMBOLO CENTRALE</h3><div id="heraldrySymbols" class="heraldry-symbols"></div></div>
+          <div class="heraldry-preview"><h3>ANTEPRIMA · TEXTURE RETTANGOLARE</h3><div id="heraldryFlag"></div><h3>APPLICAZIONI / CLIPPING</h3><div id="heraldryApplications"></div><p class="profile-help">Il motivo è sempre rettangolare. Scudi e stendardi applicano soltanto una maschera; il simbolo rimane centrato.</p></div>
+        </div>
+      </section>
+      <footer class="profile-footer"><span id="heraldrySaveStatus">Salvataggio automatico della partita</span><button id="profileDone" type="button">CHIUDI</button></footer>
+    </section>
+  </div>
   <div id="foundVillageModal" class="modal-backdrop">
     <div class="modal-card">
       <h2>Found a village</h2>
@@ -119,6 +139,7 @@
   <div id="devTools">
     <button id="devToggle" type="button" aria-expanded="false">DEV ▾</button>
     <div id="devPanel" hidden>
+      <div class="dev-section"><span class="dev-label">MAPPA</span><button class="full" id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></div>
       <div class="dev-section">
         <span class="dev-label">LUCE</span>
         <div class="dev-row">
@@ -185,5 +206,7 @@
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
 <script src="./src/settlement-app.js"></script>
+<script src="./src/heraldry-symbols.js"></script>
+<script src="./src/settlement-heraldry.js"></script>
 </body>
 </html>
