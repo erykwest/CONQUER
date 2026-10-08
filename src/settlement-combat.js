@@ -13,6 +13,7 @@
   const forestCell=new Int16Array(N*N),heightCell=new Float32Array(N*N);
   let terrainRef=null,forestRef=null,lastVision=0,maskDirty=true,visibilityDirty=true;
   let circleCache=[],circleCacheBucket=-1;
+  const strokeBuckets=new Map();let indexedStrokes=-1;
   let lastObserverSig='',lastAreaSig='',selected=null,painting=false,lastPaint=null;
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
   let combat=null;
@@ -25,7 +26,7 @@
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
     memory.fill(0);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
-    selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;
+    selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     State.combat=combat;syncButtons();refreshFog(true);
   }
   function serialize(){
@@ -67,6 +68,23 @@
     circleCache=out;return out;
   }
   function nearCircle(p,c){const dx=p.x-c.x,dy=p.y-c.y;return dx*dx+dy*dy<=c.r*c.r}
+  function indexStroke(stroke,i){
+    const size=8,x0=Math.floor((stroke.x-stroke.r)/size),x1=Math.floor((stroke.x+stroke.r)/size);
+    const y0=Math.floor((stroke.y-stroke.r)/size),y1=Math.floor((stroke.y+stroke.r)/size);
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      const key=x+','+y,list=strokeBuckets.get(key)||[];list.push(i);strokeBuckets.set(key,list);
+    }
+  }
+  function strokeCandidates(p){
+    if(indexedStrokes!==combat.strokes.length){
+      strokeBuckets.clear();combat.strokes.forEach(indexStroke);indexedStrokes=combat.strokes.length;
+    }
+    return strokeBuckets.get(Math.floor(p.x/8)+','+Math.floor(p.y/8))||[];
+  }
+  function appendStroke(stroke){
+    const i=combat.strokes.length;combat.strokes.push(stroke);
+    if(indexedStrokes===i){indexStroke(stroke,i);indexedStrokes++}
+  }
   function areaState(p){
     const well=activeWell();
     if(!well)return{allowed:false,yellow:false,green:false};
@@ -77,8 +95,8 @@
       if(c.mode==='yellow')yellow=true;
       if(c.mode==='green')green=true;
     }
-    for(const stroke of combat.strokes){
-      if(!nearCircle(p,stroke))continue;
+    for(const i of strokeCandidates(p)){
+      const stroke=combat.strokes[i];if(!nearCircle(p,stroke))continue;
       if(stroke.mode==='allow')allowed=true;
       else if(stroke.mode==='deny')allowed=false;
       else if(stroke.mode==='yellow')yellow=true;
@@ -273,7 +291,11 @@
     }
     if(combat.zones){
       for(const c of circles().concat(combat.strokes)){
-        let mode=c.mode;if(mode==='deny'||mode==='eraseYellow'||mode==='eraseGreen')continue;
+        let mode=c.mode;
+        if(mode==='deny'||mode==='eraseYellow'||mode==='eraseGreen'){
+          g.strokeStyle=mode==='deny'?'#d4d0c3':mode==='eraseYellow'?'#b59961':'#719c87';
+          g.fillStyle='rgba(10,16,18,.23)';g.lineWidth=1.2;g.setLineDash([2,4]);drawMapCircle(c);continue;
+        }
         const color=COLORS[mode];if(!color)continue;
         g.strokeStyle=color;g.fillStyle=mode==='green'?'rgba(101,188,131,.12)':mode==='yellow'?'rgba(230,184,69,.07)':'rgba(230,226,207,.05)';
         g.lineWidth=mode==='green'?1.1:.8;g.setLineDash(c.id?[5,5]:[]);drawMapCircle(c);
@@ -350,11 +372,11 @@
     if(lastPaint&&dist(lastPaint,q)>r*.55){
       const count=Math.ceil(dist(lastPaint,q)/(r*.45));
       for(let i=1;i<count;i++){
-        const t=i/count;combat.strokes.push({x:lastPaint.x+(q.x-lastPaint.x)*t,y:lastPaint.y+(q.y-lastPaint.y)*t,r,mode});
+        const t=i/count;appendStroke({x:lastPaint.x+(q.x-lastPaint.x)*t,y:lastPaint.y+(q.y-lastPaint.y)*t,r,mode});
       }
     }
-    combat.strokes.push({x:q.x,y:q.y,r,mode});
-    if(combat.strokes.length>2500)combat.strokes.splice(0,combat.strokes.length-2500);
+    appendStroke({x:q.x,y:q.y,r,mode});
+    if(combat.strokes.length>2500){combat.strokes.splice(0,combat.strokes.length-2500);indexedStrokes=-1;}
     lastPaint=q;changed();
   }
   function handleDown(e){
