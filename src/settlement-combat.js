@@ -82,13 +82,14 @@
         ?{x:u.target.x,y:u.target.y}:null};
     })};
   }
-  function changed(){
-    // Brush edits and alert toggles do not alter physical sight lines.
-    if(activeWell())updateAlert(observers());
+  function changed(brushInProgress=false){
+    // During a brush drag, check alert/LOS at the end rather than for every
+    // pointer sample; stamps can arrive substantially faster than 60 Hz.
+    if(!brushInProgress&&activeWell())updateAlert(observers());
     State.dirty=true;
     const el=document.getElementById('saveState');if(el)el.textContent='unsaved';
     if(typeof scheduleLocalSave==='function')scheduleLocalSave();
-    syncButtons();
+    if(!brushInProgress)syncButtons();
   }
   const point=(x,y)=>({x:Math.max(0,Math.min(WORLD,x)),y:Math.max(0,Math.min(WORLD,y))});
   const activeWell=()=>State.village.founded?State.structures.find(s=>s.id===State.village.wellId&&s.type==='well'):null;
@@ -736,14 +737,22 @@
     }
     appendStroke({x:q.x,y:q.y,r,mode});
     if(combat.strokes.length>2500){combat.strokes.splice(0,combat.strokes.length-2500);indexedStrokes=-1;}
-    lastPaint=q;civilianRouteCache.clear();changed();
+    lastPaint=q;civilianRouteCache.clear();changed(true);
+  }
+  let queuedToolDraw=false;
+  function requestToolDraw(){
+    // Active simulation already repaints the full world at an adaptive FPS.
+    // Avoid synchronous redraws for every mousemove on brush strokes.
+    if(State.clock.speed>0||queuedToolDraw)return;
+    queuedToolDraw=true;
+    requestAnimationFrame(()=>{queuedToolDraw=false;draw()});
   }
   function handleDown(e){
     if(e.button!==0)return;
     const p=pointerWorld(e),kind=State.tool.kind;
     if(kind==='combat-brush'){
       e.preventDefault();e.stopImmediatePropagation();painting=true;lastPaint=null;
-      canvas.setPointerCapture(e.pointerId);paint(p,State.tool.combatBrush);draw();return;
+      canvas.setPointerCapture(e.pointerId);paint(p,State.tool.combatBrush);requestToolDraw();return;
     }
     if(kind==='combat-intruder'){
       e.preventDefault();e.stopImmediatePropagation();
@@ -767,11 +776,13 @@
   canvas.addEventListener('pointerdown',handleDown,true);
   canvas.addEventListener('pointermove',e=>{
     if(!painting)return;
-    e.stopImmediatePropagation();e.preventDefault();paint(pointerWorld(e),State.tool.combatBrush);draw();
+    e.stopImmediatePropagation();e.preventDefault();paint(pointerWorld(e),State.tool.combatBrush);requestToolDraw();
   },true);
   for(const type of ['pointerup','pointercancel'])canvas.addEventListener(type,e=>{
     if(!painting)return;
-    painting=false;lastPaint=null;e.stopImmediatePropagation();scheduleLocalSave();draw();
+    painting=false;lastPaint=null;e.stopImmediatePropagation();
+    if(activeWell())updateAlert(observers());
+    scheduleLocalSave();requestToolDraw();
   },true);
   const styles=document.createElement('style');
   styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c}';
