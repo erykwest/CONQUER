@@ -196,7 +196,7 @@ function renderFunctionPanel(){
     const active=!!s.isMastio;
     html+='<div class="slot"><div class="slot-label">Final defence · Mastio ★</div>'+
       '<button data-siege-mastio="'+s.id+'" '+(building?'disabled':'')+' class="'+(active?'active':'')+'">'+(active?'★ Mastio designated · remove':'☆ Designate this tower as Mastio')+'</button>'+
-      '<div class="legend">One Mastio per castle. Reassign at any time to a completed tower.</div></div>';
+      '<div class="legend">Requires one Common Hall in a lower-floor room. Reassign at any time.</div></div>';
   }
   if(s.type==='tower'){
     const archerSlots=window.ConquerSiege?.archerSlots(s)||[];
@@ -288,7 +288,8 @@ function renderFunctionPanel(){
 
     if(target.type==='tower'){
       const parent=target.parentTowerId&&State.structures.find(s=>s.id===target.parentTowerId&&s.type==='tower');
-      if(parent&&requested>=towerTier(parent)){
+      if(target.isMastio&&requested<2){status('Mastio must keep a room for the Common Hall (T2+).');return;}
+       if(parent&&requested>=towerTier(parent)){
         status('Subtower must remain smaller than its parent tower');return;
       }
       const children=subtowerChildren(target.id);
@@ -308,7 +309,7 @@ function renderFunctionPanel(){
 
     markStructureDirty(target);renderFunctionPanel();draw();
   });
-  slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;target.level=Number(btn.dataset.heightLevel);normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;const level=Number(btn.dataset.heightLevel);if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall'}target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
@@ -348,7 +349,7 @@ function renderFunctionPanel(){
     status((target.type==='tower'?'Tower':'Built section')+' cutaway '+(target.cutaway?'enabled':'disabled'));
   });
   slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','palisade','built'].includes(target.type))return;target.flip=!target.flip;markStructureDirty(target);renderFunctionPanel();draw();status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped')});
-  slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);const i=Number(e.target.dataset.functionSlot),fn=e.target.value||null;if(fn&&!window.ConquerSiege.allowed(target,i,fn)){status('Function not permitted at this floor/access');renderFunctionPanel();return}target.functions[i]=fn;markStructureDirty(target);renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);const i=Number(e.target.dataset.functionSlot),fn=e.target.value||null;if(target.isMastio&&target.functions[i]==='commonHall'&&fn!=='commonHall'&&!target.functions.some((f,j)=>j!==i&&f==='commonHall')){status('Mastio requires its Common Hall — reassign the Mastio first.');renderFunctionPanel();return}if(fn&&!window.ConquerSiege.allowed(target,i,fn)){status('Function not permitted at this floor/access');renderFunctionPanel();return}target.functions[i]=fn;markStructureDirty(target);renderFunctionPanel();draw()});
 }
 let pan=null;
 canvas.addEventListener('pointerdown',e=>{
