@@ -32,10 +32,13 @@ function patternSvg(id,c1,c2){
  };
  return base+(shape[id]||'');
 }
-function symbolSvg(){
- const entry=window.CONQUER_HERALDRY_SYMBOLS.find(s=>s.id===h.symbol);
- if(!entry?.path)return '';
- return '<g transform="translate(17 17) scale(.66)" fill="'+h.c3+'" stroke="'+h.c4+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="'+entry.path+'"/></g>';
+function symbolSvg(entry=window.CONQUER_HERALDRY_SYMBOLS.find(s=>s.id===h.symbol),fill=h.c3,stroke=h.c4){
+ const source=window.CONQUER_HERALDRY_SOURCES?.[entry?.source],box=entry?.viewBox;
+ if(!source?.path||!Array.isArray(box)||box.length!==4)return '';
+ const [x,y,w,ht]=box,size=66,scale=size/Math.max(w,ht);
+ const tx=17+(size-w*scale)/2-x*scale,ty=17+(size-ht*scale)/2-y*scale;
+ const clipId='charge-'+entry.id;
+ return '<defs><clipPath id="'+clipId+'"><rect x="17" y="17" width="66" height="66"/></clipPath></defs><g clip-path="url(#'+clipId+')"><g transform="translate('+tx+' '+ty+') scale('+scale+')" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"><path vector-effect="non-scaling-stroke" d="'+source.path+'"/></g></g>';
 }
 function layers(){return patternSvg(h.pattern,h.c1,h.c2)+symbolSvg()}
 function rectangle(){return svg('<g transform="scale(1.6 1)">'+patternSvg(h.pattern,h.c1,h.c2)+'</g><g transform="translate(30 0)">'+symbolSvg()+'</g>','0 0 160 100')}
@@ -47,7 +50,7 @@ function clip(type){
 function draw(){
  $('heraldryPatterns').innerHTML=patterns.map((p,i)=>'<button type="button" class="'+(p===h.pattern?'active':'')+'" data-pattern="'+p+'" aria-label="Partizione '+(i+1)+'" title="Partizione '+(i+1)+'">'+svg(patternSvg(p,'#111','#f1e7d7'))+'</button>').join('');
  $('heraldryColors').innerHTML=[['c1','Colore 1 · campo'],['c2','Colore 2 · campo'],['c3','Colore 3 · simbolo'],['c4','Colore 4 · contorno']].map(([k,label])=>'<label class="heraldry-color"><input type="color" data-heraldry-color="'+k+'" value="'+h[k]+'"><span>'+label+'</span></label>').join('');
- $('heraldrySymbols').innerHTML=window.CONQUER_HERALDRY_SYMBOLS.map(entry=>'<button type="button" title="'+entry.label+'" class="'+(h.symbol===entry.id?'active':'')+'" data-symbol="'+entry.id+'">'+(entry.path?svg('<g transform="translate(5 5) scale(.9)" fill="#111" stroke="#e0d2bd" stroke-width="2"><path d="'+entry.path+'"/></g>'):'<span style="font-size:30px">∅</span>')+'<span>'+entry.label+'</span></button>').join('');
+ $('heraldrySymbols').innerHTML=window.CONQUER_HERALDRY_SYMBOLS.map(entry=>'<button type="button" title="'+entry.label+'" class="'+(h.symbol===entry.id?'active':'')+'" data-symbol="'+entry.id+'">'+svg(symbolSvg(entry,'#111','#e0d2bd'))+'<span>'+entry.label+'</span></button>').join('');
 
  $('heraldryFlag').innerHTML=rectangle();
  $('heraldryApplications').innerHTML=[['shield','Scudo'],['banner','Stendardo'],['cloth','Tessuto']].map(([type,label])=>'<div class="heraldry-application">'+clip(type)+'<span>'+label+'</span></div>').join('');
