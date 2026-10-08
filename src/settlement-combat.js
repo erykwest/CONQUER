@@ -31,6 +31,8 @@
   let transitLastFrame=0;
   let combat=null;
   const archerCache=new Map();
+  let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
+  let tacticalRuleAccum=0;
 
   function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
   function restore(raw){
@@ -56,7 +58,8 @@
     visible.fill(0);paintFogBitmap();
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
-    archerCache.clear();window.ConquerCombatRules?.reset();
+    archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
+    window.ConquerCombatRules?.reset();
     zoneSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
   }
@@ -216,14 +219,15 @@
     }
     return false;
   }
+  // The settlement already owns a 30/24/15 FPS redraw loop while time runs.
+  // A second civilian RAF used to draw the entire 2.5D world AGAIN at 20 FPS,
+  // doubling rendering work whenever Recall/Release was enabled.
+  // This fallback runs only if the simulation is paused.
   function animateCivilianPaths(now){
-    if(!combat||!runningCivilianMotions()){
+    if(!combat||State.clock.speed>0||!runningCivilianMotions()){
       transitionFrame=0;
       return;
     }
-    // IMPORTANT: leave transitionFrame set while calling draw().
-    // drawPeasants -> civilPosition -> requestCivilianAnimation must not
-    // schedule a second RAF from inside this callback (exponential loop).
     if(now-transitLastFrame>=50){
       transitLastFrame=now;
       draw();
@@ -231,6 +235,10 @@
     transitionFrame=requestAnimationFrame(animateCivilianPaths);
   }
   function requestCivilianAnimation(){
+    if(State.clock.speed>0){
+      if(transitionFrame){cancelAnimationFrame(transitionFrame);transitionFrame=0}
+      return;
+    }
     if(!transitionFrame&&runningCivilianMotions())
       transitionFrame=requestAnimationFrame(animateCivilianPaths);
   }
@@ -390,8 +398,11 @@
     const sources=observers();
     const sig=sources.map(s=>s.id+':'+s.x.toFixed(1)+':'+s.y.toFixed(1)+':'+s.h).join('|')+
       ':structures'+State.structures.length+':env'+State.environment.length;
-    if(!force&&!visibilityDirty&&sig===lastObserverSig&&now-lastVision<2500)return;
+    // Static watchtowers do not require a full 10k-cell raycast every 2.5s.
+    // Retain occasional refresh for in-place terrain / forest edits.
+    if(!force&&!visibilityDirty&&sig===lastObserverSig&&now-lastVision<12000)return;
     lastObserverSig=sig;lastVision=now;visibilityDirty=false;
+    const fogStart=performance.now();
     visible.fill(0);
     for(const source of sources){
       const x0=Math.max(0,Math.floor((source.x-source.r)/STEP)),x1=Math.min(N-1,Math.ceil((source.x+source.r)/STEP));
@@ -411,6 +422,9 @@
       }
     }
     paintFogBitmap();maskDirty=false;
+    const fogMs=performance.now()-fogStart;
+    if(window.__conquerPerf)window.__conquerPerf.combatFogMs=fogMs;
+    if(fogMs>35)window.__conquerAnalytics?.event('COMBAT_FOG_SLOW',{ms:+fogMs.toFixed(1),observers:sources.length},'warn',3000);
     updateAlert(sources);
   }
   function spotted(p,sources){
@@ -597,6 +611,10 @@
     status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
   }
   function archers(){
+    const now=performance.now();
+    if(now<nextArcherRosterAt&&State.structures.length===archerRosterSize)return archerRoster;
+    nextArcherRosterAt=now+1000;
+    archerRosterSize=State.structures.length;
     const active=new Set(),out=[];
     function put(id,p,visualZ,h){
       active.add(id);
@@ -626,7 +644,8 @@
       }
     }
     for(const key of archerCache.keys())if(!active.has(key))archerCache.delete(key);
-    return out;
+    archerRoster=out;
+    return archerRoster;
   }
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
@@ -655,14 +674,23 @@
       }
     }
     if(moved){visibilityDirty=true;maskDirty=true}
+    // Combat AI, target acquisition and LOS are capped at 10 Hz.
+    // World unit movement remains driven by the regular simulation delta.
     const rules=window.ConquerCombatRules;
-    if(rules){
-      for(const e of combat.enemy){
+    tacticalRuleAccum=Math.min(.25,tacticalRuleAccum+dt);
+    if(rules&&tacticalRuleAccum>=.1){
+      const step=tacticalRuleAccum;tacticalRuleAccum=0;
+      const ruleStart=performance.now();
+      const hostiles=combat.enemy.filter(e=>!e.defeated&&(!e.stats||e.stats.hp>0));
+      for(const e of hostiles){
         e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
       }
-      rules.update(dt,combat.units,combat.enemy,archers(),
+      rules.update(step,combat.units,combat.enemy,hostiles.length?archers():[],
         (e,shooter)=>sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,r:rules.shooterRange(shooter,e)},e),
         (a,b)=>!terrainSegmentCrossesCliff(a,b)&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
+      const ruleMs=performance.now()-ruleStart;
+      if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
+      if(ruleMs>25)window.__conquerAnalytics?.event('COMBAT_RULES_SLOW',{ms:+ruleMs.toFixed(1),archers:hostiles.length?archerRoster.length:0,hostiles:hostiles.length},'warn',3000);
     }
   }
   function paint(p,mode){
