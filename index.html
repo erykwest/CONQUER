@@ -184,6 +184,7 @@
       <div class="dev-section">
         <span class="dev-label">METEO</span>
         <div class="dev-row dev-row-weather">
+          <button data-weather-override="sun" title="Force sun / disable weather effects">☀️</button>
           <button data-weather-override="rain" title="Force rain">🌧️</button>
           <button data-weather-override="snow" title="Force snow">🌨️</button>
           <button data-weather-override="storm" title="Force thunderstorm">🌩️</button>
@@ -191,6 +192,11 @@
           <button data-weather-override="fog" title="Force fog">🌫️</button>
         </div>
         <span class="dev-hint">Nessuna selezione = procedurale</span>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">CUTAWAY</span>
+        <div class="dev-row"><button id="devCutawayAll" type="button" title="Toggle cutaway on all eligible built sections and T2/T3 stone towers">Cutaway ALL</button></div>
+        <span class="dev-hint">T1 towers are excluded.</span>
       </div>
     </div>
   </div>
