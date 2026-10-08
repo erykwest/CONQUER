@@ -228,7 +228,7 @@ function towerDoorOccluders(tower,spec,apexZ){
 }
 function drawTowerDoorSpec(tower,spec){
   if(!towerDoorVisible(tower,spec))return;
-  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54)/3,fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),height=fullHeight/3,centerZ=spec.baseZ+height/2,tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact,half=width/2;
+  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54),fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),height=fullHeight/3,centerZ=spec.baseZ+height/2,tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact,half=width/2;
   const edge={a:{x:c.x-tx*half,y:c.y-ty*half},b:{x:c.x+tx*half,y:c.y+ty*half}},apexZ=spec.baseZ+height;
   const drawDoor=()=>{if(!drawArchitectureAssetOnEdge(edge,centerZ,width,height,'towerDoor'))drawFacadeAssetBackdrop(edge,centerZ,width,height,0,'#211713')};
   const occ=towerDoorOccluders(tower,spec,apexZ);if(!occ.length){drawDoor();return}
@@ -302,7 +302,7 @@ function linearFacadeEdge(s,side){
   };
 }
 function drawBuiltArcade(s){
-  if(!s||s.type!=='built'||underConstruction(s))return;const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
+  if(!s||s.type!=='built'||underConstruction(s)||builtSkin(s)!=='arcade')return;const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
   const edge=linearFacadeEdge(s,inside),count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,h=Math.min(1.46,structureHeight(s)-.16),centerZ=.04+h/2,key=cell<2.25?'arcade2':'arcade3';
   withStructureDetailOcclusion(s,centerZ+h/2,()=>{for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2,w=cell*.96;drawFacadeAssetBackdrop(edge,centerZ,w,h*.86,off,'#24211f');drawArchitectureAssetOnEdge(edge,centerZ,w,h,key,off)}})
 }
@@ -817,6 +817,8 @@ function renderCastleBodyContent(){
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of raised)drawStructure(s);
 
+  // Machicolation floors are part of the castle body, below tower units.
+  drawMachicolationFloors();
   drawCutawayStructures();
   drawTowerDoors();
   drawTowerRoofs();
