@@ -610,11 +610,7 @@
       (last?[last.x,last.y,last.r,last.mode].join(':'):'');
     if(signature===whiteBoundarySignature)return whiteBoundaryCache;
     whiteBoundarySignature=signature;
-    const step=1.25,edge=.72,points=[];
-    for(let y=step/2;y<WORLD;y+=step)for(let x=step/2;x<WORLD;x+=step){
-      const p={x,y};if(!areaState(p).allowed)continue;
-      if([[edge,0],[-edge,0],[0,edge],[0,-edge]].some(([dx,dy])=>!areaState({x:x+dx,y:y+dy}).allowed))points.push(p);
-    }
+    const points=window.ConquerCombatRules.boundaryPoints(p=>areaState(p).allowed,WORLD,1.25);
     whiteBoundaryCache=points;
     for(const unit of combat.units)if(unit.kind==='patrol'){
       unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
@@ -630,25 +626,8 @@
       unit.patrolBoundaryIndex=current;unit.patrolPreviousIndex=null;
       return boundary[current];
     }
-    const origin=boundary[current],previous=Number.isInteger(unit.patrolPreviousIndex)?boundary[unit.patrolPreviousIndex]:null;
     const direction=unit.patrolDirection||1,center=activeWell()||{x:WORLD/2,y:WORLD/2};
-    const baseAngle=Math.atan2(origin.y-center.y,origin.x-center.x);
-    let best=-1,bestScore=-Infinity;
-    for(let i=0;i<boundary.length;i++){
-      if(i===current||i===unit.patrolPreviousIndex)continue;
-      const d=dist(origin,boundary[i]);if(d>.01&&d<=1.9){
-        let score=-d;
-        if(previous){
-          const ax=origin.x-previous.x,ay=origin.y-previous.y,bx=boundary[i].x-origin.x,by=boundary[i].y-origin.y;
-          score+=(ax*bx+ay*by)/Math.max(.01,Math.hypot(ax,ay)*Math.hypot(bx,by))*3;
-        }else{
-          let delta=Math.atan2(boundary[i].y-center.y,boundary[i].x-center.x)-baseAngle;
-          while(delta>Math.PI)delta-=Math.PI*2;while(delta<-Math.PI)delta+=Math.PI*2;
-          score+=delta*direction*4;
-        }
-        if(score>bestScore){bestScore=score;best=i}
-      }
-    }
+    const best=window.ConquerCombatRules.nextBoundaryIndex(boundary,current,unit.patrolPreviousIndex,direction,center);
     if(best<0){unit.patrolBoundaryIndex=null;return null}
     unit.patrolPreviousIndex=current;unit.patrolBoundaryIndex=best;
     return boundary[best];
@@ -657,7 +636,7 @@
     for(const unit of combat.units){
       if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.target||now<(unit.nextPatrolAt||0))continue;
       const target=patrolDestination(unit);
-      unit.nextPatrolAt=now+1200;
+      unit.nextPatrolAt=target?now:now+300;
       if(target){unit.target=target;unit.path=null;unit.pathIndex=1}
     }
   }
@@ -736,7 +715,8 @@
     let moved=false;
     for(const u of combat.units){
       if(u.routing)continue;
-      moved=advanceUnit(u,dt,u.kind==='knight'?1.5:.8)||moved;
+      const speed=u.kind==='knight'?1.5:u.kind==='patrol'?1.15:.8;
+      moved=advanceUnit(u,dt,speed)||moved;
     }
     if(moved){visibilityDirty=true;maskDirty=true}
     // Combat AI, target acquisition and LOS are capped at 10 Hz.

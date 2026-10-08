@@ -31,6 +31,36 @@
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
   const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.combatKind||'infantry';
+  function boundaryPoints(isAllowed,worldSize=200,step=1.25){
+    const edge=step*.576,points=[];
+    for(let y=step/2;y<worldSize;y+=step)for(let x=step/2;x<worldSize;x+=step){
+      const p={x,y};if(!isAllowed(p))continue;
+      if([[edge,0],[-edge,0],[0,edge],[0,-edge]].some(([dx,dy])=>!isAllowed({x:x+dx,y:y+dy})))points.push(p);
+    }
+    return points;
+  }
+  function nextBoundaryIndex(points,current,previous,direction,center,maxGap=3.05){
+    const origin=points[current];if(!origin)return-1;
+    const prior=Number.isInteger(previous)?points[previous]:null;
+    const baseAngle=Math.atan2(origin.y-center.y,origin.x-center.x);
+    let best=-1,bestScore=-Infinity;
+    for(let i=0;i<points.length;i++){
+      if(i===current||i===previous)continue;
+      const candidate=points[i],dx=candidate.x-origin.x,dy=candidate.y-origin.y,d=Math.hypot(dx,dy);
+      if(d<=.01||d>maxGap)continue;
+      let score=-d*.2;
+      if(prior){
+        const ax=origin.x-prior.x,ay=origin.y-prior.y;
+        score+=(ax*dx+ay*dy)/Math.max(.01,Math.hypot(ax,ay)*d)*4;
+      }else{
+        let delta=Math.atan2(candidate.y-center.y,candidate.x-center.x)-baseAngle;
+        while(delta>Math.PI)delta-=Math.PI*2;while(delta<-Math.PI)delta+=Math.PI*2;
+        score+=delta*direction*5;
+      }
+      if(score>bestScore){bestScore=score;best=i}
+    }
+    return best;
+  }
   function nearestLiving(origin,units,visibleFn=()=>true){
     let target=null,best=Infinity;
     for(const unit of units||[]){
@@ -165,6 +195,6 @@
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
   }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,ensure,living,nearestLiving,enemyIntent,meleePair,shooterRange,update,visualEffects:()=>({shots,meleeFlashes,elapsed}),
+  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,ensure,living,nearestLiving,enemyIntent,meleePair,shooterRange,update,visualEffects:()=>({shots,meleeFlashes,elapsed}),
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0}};
 })();

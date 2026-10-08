@@ -17,6 +17,15 @@ assert.ok(rules,'combat rules are exported');
 assert.equal(rules.shooterRange({h:4},{h:1}),18,'downhill fire gains one unit per height level');
 assert.equal(rules.shooterRange({h:1},{h:4}),12,'uphill fire loses one unit per height level');
 assert.equal(rules.ensure({kind:'patrol'},'patrol').maxHp,40,'a two-pikeman patrol uses the scaled patrol profile');
+const circleAllowed=p=>(p.x-100)**2+(p.y-100)**2<=20**2;
+const circleBoundary=rules.boundaryPoints(circleAllowed,200,1.25);
+let boundaryIndex=0,previousIndex=null,visited=new Set([0]);
+for(let i=0;i<60;i++){
+  const next=rules.nextBoundaryIndex(circleBoundary,boundaryIndex,previousIndex,1,{x:100,y:100});
+  assert.notEqual(next,-1,'perimeter traversal must not dead-end');
+  previousIndex=boundaryIndex;boundaryIndex=next;visited.add(next);
+}
+assert.ok(visited.size>40,'a patrol must make visible progress around the perimeter');
 
 const raider={id:'raider',x:10,y:10,combatKind:'infantry'};
 const knight={id:'knight',x:15,y:10,kind:'knight'};
@@ -45,11 +54,13 @@ assert.match(runtimeSource,/function removePatrol\(\)/,'White Zone patrols can b
 assert.match(runtimeSource,/unit\.kind==='patrol'\?patrolRoute/,'patrol movement uses the White Zone constrained route');
 assert.match(runtimeSource,/function whiteBoundaryPoints\(\)/,'patrol waypoints are generated from the White Zone perimeter');
 assert.match(runtimeSource,/patrolBoundaryIndex/,'patrols retain continuity along the perimeter contour');
-assert.match(runtimeSource,/!areaState\(\{x:x\+dx,y:y\+dy\}\)\.allowed/,'perimeter cells border forbidden territory');
+assert.match(rulesSource,/!isAllowed\(\{x:x\+dx,y:y\+dy\}\)/,'perimeter cells border forbidden territory');
+assert.match(runtimeSource,/unit\.nextPatrolAt=target\?now:now\+300/,'successful perimeter legs chain without an idle pause');
+assert.match(runtimeSource,/u\.kind==='patrol'\?1\.15/,'perimeter patrols use a visibly readable walking speed');
 assert.match(runtimeSource,/rules\.enemyIntent/,'runtime delegates hostile decisions to combat rules');
 assert.match(runtimeSource,/safeMilitarySegment\(unit,nextPos/,'hostile and friendly movement share terrain collision checks');
 assert.doesNotMatch(rulesSource,/getContext\(|drawImage\(|fillRect\(/,'rules stay independent of canvas rendering');
 assert.match(renderSource,/ConquerCombatRules\?\.visualEffects/,'renderer only consumes combat visual effects');
 assert.match(renderSource,/u\.kind==='patrol'\?2:5/,'a patrol renders exactly two pikemen');
 
-console.log('combat regression: 24 assertions passed');
+console.log('combat regression: perimeter traversal and combat assertions passed');
