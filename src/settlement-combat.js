@@ -650,24 +650,23 @@
     nextArcherRosterAt=now+1000;
     archerRosterSize=State.structures.length;
     const active=new Set(),out=[];
-    function put(id,p,visualZ,h){
+    function put(id,p,visualZ,h,face=null){
       active.add(id);
       let shooter=archerCache.get(id);
       if(!shooter){shooter={id,clock:0};archerCache.set(id,shooter)}
       shooter.x=p.x;shooter.y=p.y;shooter.h=h;shooter.visualZ=visualZ;
+      shooter.nx=face?.nx??null;shooter.ny=face?.ny??null;
       shooter.terrainAt=terrainElevation;out.push(shooter);
     }
     for(const s of State.structures){
       if(!['tower','built','gate'].includes(s.type)||underConstruction(s))continue;
       const ground=terrainElevation({x:s.x??s.a?.x,y:s.y??s.a?.y});
       if(s.type==='tower'){
-        const wood=isWoodTower(s),roof=wood||towerRoofStyle(s)==='battlement';
-        const floor=wood?1:structureLevel(s);
-        const relative=roof?(wood?1.46:structureHeight(s)+.08):
-          Math.min(structureHeight(s)-.35,1.34+(floor-1)*1.14);
-        // Arrow slit garrison is hidden behind the facade; roof garrison
-        // reuses the visible archer already drawn by drawCastleSoldiers().
-        put(s.id+':'+(roof?'roof':'slit'),{x:s.x,y:s.y},ground+relative,ground+(roof?floor:Math.max(1,floor-1)));
+        // Combat shooters are exactly the staffed slots shown by the Builder.
+        // No unassigned tower fires and slits have outward firing arcs.
+        for(const slot of window.ConquerSiege?.occupiedArcherSlots(s)||[]){
+          put(slot.id,slot.p,slot.visualZ,slot.h,slot.kind==='slit'?slot:null);
+        }
       }else if(s.type==='gate'){
         if(gateRoofStyle(s)==='battlement')put(s.id+':gate-roof',{x:s.x,y:s.y},ground+structureHeight(s)+.08,ground+structureLevel(s));
       }else if(s.type==='built'){
@@ -720,7 +719,16 @@
         e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
       }
       rules.update(step,combat.units,combat.enemy,hostiles.length?archers():[],
-        (e,shooter)=>sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,r:rules.shooterRange(shooter,e)},e),
+        (e,shooter)=>{
+          // An arrow slit can fire only through its own outward opening;
+          // rooftop posts retain a full-circle field of fire.
+          if(Number.isFinite(shooter.nx)){
+            const d=Math.hypot(e.x-shooter.x,e.y-shooter.y)||1;
+            const facing=((e.x-shooter.x)*shooter.nx+(e.y-shooter.y)*shooter.ny)/d;
+            if(facing<.45)return false;
+          }
+          return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,r:rules.shooterRange(shooter,e)},e);
+        },
         (a,b)=>!terrainSegmentCrossesCliff(a,b)&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
@@ -831,6 +839,7 @@
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,
     invalidateRoutes:()=>civilianRouteCache.clear(),
+    invalidateArchers:()=>{nextArcherRosterAt=0;archerRosterSize=-1},
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
   draw();
 })();
