@@ -545,15 +545,22 @@
         (combat.enemy.length?' · Enemy HP '+hp(combat.enemy[0]):'');
     }
   }
-  function safeMilitarySegment(a,b,id){
-    return !terrainSegmentCrossesCliff(a,b)&&peasantSegmentClear(a,b,id);
+  const SQUAD_FOOTPRINT=[[-.55,-.22],[0,-.22],[.55,-.22],[-.55,.33],[0,.33]];
+  function militaryOffsets(kind){return kind==='squad'?SQUAD_FOOTPRINT:[[0,0]]}
+  function cliffClearForFootprint(p,kind){
+    return militaryOffsets(kind).every(([ox,oy])=>!terrainSegmentCrossesCliff(
+      {x:p.x+ox,y:p.y+oy},{x:p.x+ox,y:p.y+oy}));
   }
-  function infantryRoute(start,goal,id){
-    if(safeMilitarySegment(start,goal,id))return [start,goal];
+  function safeMilitarySegment(a,b,id,kind){
+    return peasantSegmentClear(a,b,id)&&militaryOffsets(kind).every(([ox,oy])=>
+      !terrainSegmentCrossesCliff({x:a.x+ox,y:a.y+oy},{x:b.x+ox,y:b.y+oy}));
+  }
+  function infantryRoute(start,goal,id,kind='knight'){
+    if(safeMilitarySegment(start,goal,id,kind))return [start,goal];
     const roads=roadNetworkPath(start,goal,id);
-    if(roads?.length>1&&roads.slice(1).every((p,i)=>safeMilitarySegment(roads[i],p,id)))return roads;
-    const path=findPeasantPath(start,goal,id,14);
-    return path?.length>1&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id))?path:null;
+    if(roads?.length>1&&roads.slice(1).every((p,i)=>safeMilitarySegment(roads[i],p,id,kind)))return roads;
+    const path=findPeasantPath(start,goal,id,14,p=>cliffClearForFootprint(p,kind));
+    return path?.length>1&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id,kind))?path:null;
   }
   function issueMove(unit,p){
     if(unit.defeated||unit.routing){status('Unit cannot receive orders');return}
@@ -564,7 +571,7 @@
       }
       if(dist(unit,p)>6){status('Sergeant order limit: maximum 6U per order');return}
     }
-    const target=point(p.x,p.y),path=infantryRoute(unit,target,unit.id);
+    const target=point(p.x,p.y),path=infantryRoute(unit,target,unit.id,unit.kind);
     if(!path){status('No traversable route — cliff, terrain or obstruction blocks the order');return}
     unit.target=target;unit.path=path;unit.pathIndex=1;changed();
     status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
@@ -608,7 +615,7 @@
     for(const u of combat.units){
       if(!u.target||u.defeated||u.routing)continue;
       if(!u.path?.length){
-        u.path=infantryRoute(u,u.target,u.id);u.pathIndex=1;
+        u.path=infantryRoute(u,u.target,u.id,u.kind);u.pathIndex=1;
         if(!u.path){u.target=null;continue}
       }
       let budget=dt*(u.kind==='knight'?1.5:.8);
@@ -619,8 +626,8 @@
         if(length<.025){u.x=next.x;u.y=next.y;u.pathIndex++;continue}
         const step=Math.min(length,budget);
         const nextPos={x:u.x+(next.x-u.x)*step/length,y:u.y+(next.y-u.y)*step/length};
-        if(terrainSegmentCrossesCliff(u,nextPos)){
-          u.target=null;u.path=null;status('Cliff blocks route: unit stopped');break;
+        if(!safeMilitarySegment(u,nextPos,u.id,u.kind)){
+          u.target=null;u.path=null;status('Cliff or obstruction blocks unit footprint: stopped');break;
         }
         u.x=nextPos.x;u.y=nextPos.y;budget-=step;moved=true;
         if(step>=length-.025){u.x=next.x;u.y=next.y;u.pathIndex++}
