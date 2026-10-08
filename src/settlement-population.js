@@ -179,6 +179,7 @@ function invalidateNavigation(hard=true){
   if(window.__conquerPerf)window.__conquerPerf.navInvalidations=navPerf.navInvalidations;
   roadNavGraphCache.dirty=true;
   roadDestinationTreeCache.clear();
+  window.ConquerCombat?.invalidateRoutes?.();
   if(!hard)return;
   peasantPathSignature='';
   peasantPathCache.clear();
@@ -491,7 +492,7 @@ function peasantSegmentClear(a,b,sourceHouseId){
   for(let i=1;i<steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
   return true;
 }
-function smoothPeasantPath(points,sourceHouseId){
+function smoothPeasantPath(points,sourceHouseId,allowedAt=null){
   if(points.length<=2)return points;
   const prefix=[0];
   for(let i=0;i<points.length-1;i++)prefix.push(prefix.at(-1)+peasantSegmentTravelCost(points[i],points[i+1]));
@@ -500,6 +501,7 @@ function smoothPeasantPath(points,sourceHouseId){
     let chosen=i+1;
     for(let j=points.length-1;j>i+1;j--){
       if(!peasantSegmentClear(points[i],points[j],sourceHouseId))continue;
+      if(allowedAt){const length=dist(points[i],points[j]);let valid=true;for(let k=0;k<=Math.ceil(length/.5);k++){const t=k/Math.max(1,Math.ceil(length/.5));if(!allowedAt({x:points[i].x+(points[j].x-points[i].x)*t,y:points[i].y+(points[j].y-points[i].y)*t})){valid=false;break}}if(!valid)continue;}
       const originalCost=prefix[j]-prefix[i],shortcutCost=peasantSegmentTravelCost(points[i],points[j]);
       // Only simplify if the shortcut preserves the road preference found by A*.
       if(shortcutCost<=originalCost*1.06){chosen=j;break}
@@ -514,7 +516,7 @@ class PeasantMinHeap{
   pop(){const a=this.a;if(!a.length)return null;const root=a[0],last=a.pop();if(a.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=a.length)break;let m=r<a.length&&a[r].f<a[l].f?r:l;if(a[m].f>=last.f)break;a[i]=a[m];i=m}a[i]=last}return root}
   get length(){return this.a.length}
 }
-function findPeasantPath(start,goal,sourceHouseId,pad=8){
+function findPeasantPath(start,goal,sourceHouseId,pad=8,allowedAt=null){
   const step=PEASANT_PATH_STEP;
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -523,7 +525,7 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8){
     const cx=Math.round(p.x/step),cy=Math.round(p.y/step);let best=null,bestD=Infinity;
     for(let r=0;r<=4;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
       if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
-      const x=cx+dx,y=cy+dy,q=pos(x,y);if(x<minX||x>maxX||y<minY||y>maxY||pointBlockedForPeasant(q,sourceHouseId))continue;
+      const x=cx+dx,y=cy+dy,q=pos(x,y);if(x<minX||x>maxX||y<minY||y>maxY||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q)))continue;
       if(!peasantSegmentClear(p,q,sourceHouseId))continue;
       const d=dist(p,q);if(d<bestD){best={x,y,q};bestD=d}
     }
@@ -539,10 +541,10 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8){
     if(cur.x===g.x&&cur.y===g.y){found=cur;break}
     for(const [dx,dy] of dirs){
       const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
-      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId))continue;
+      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q)))continue;
       if(dx&&dy){
         const q1=pos(cur.x+dx,cur.y),q2=pos(cur.x,cur.y+dy);
-        if(pointBlockedForPeasant(q1,sourceHouseId)||pointBlockedForPeasant(q2,sourceHouseId))continue;
+        if(pointBlockedForPeasant(q1,sourceHouseId)||pointBlockedForPeasant(q2,sourceHouseId)||(allowedAt&&(!allowedAt(q1)||!allowedAt(q2))))continue;
       }
       const baseStep=Math.hypot(dx,dy)*step;
       const from=pos(cur.x,cur.y),moveCost=baseStep*(peasantTerrainCost(from)+peasantTerrainCost(q))*.5;
@@ -557,7 +559,7 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8){
   if(!found)return null;
   const rev=[],startKey=key(s.x,s.y);let k=key(g.x,g.y);
   while(true){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));if(k===startKey)break;k=came.get(k);if(!k)return null}
-  rev.reverse();return smoothPeasantPath([start,...rev,goal],sourceHouseId);
+  rev.reverse();return smoothPeasantPath([start,...rev,goal],sourceHouseId,allowedAt);
 }
 function peasantPath(house,assignment){
   syncPeasantPathCache();
