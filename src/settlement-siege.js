@@ -173,7 +173,7 @@
         if(blocked(dir,floor))continue;
         const p={x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
         result.push({id:tower.id+':slit:'+floor+':'+dir.face,kind:'slit',
-          floor,face:dir.face,p,z,h:ground+floor,visualZ:ground+z});
+          floor,face:dir.face,nx:dir.nx,ny:dir.ny,p,z,h:ground+floor,visualZ:ground+z});
       }
     }
     return result;
