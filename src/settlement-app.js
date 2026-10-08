@@ -972,12 +972,29 @@ function runSettlementMaintenance(reason='watchdog',completedStructures=[]){
   return changed;
 }
 function simulationFrame(now){
+  try{
   const rawDtMs=now-simLast;
   window.__conquerAnalytics?.frame(now,rawDtMs);
   const dt=Math.min(.25,rawDtMs/1000);simLast=now;
   if(State.clock.speed>0){
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
-     window.ConquerCombat?.tick(dt*State.clock.speed);
+    // Combat faults must not affect village/economy/render simulation.
+    if(window.ConquerCombat&&!window.__conquerCombatSuspended){
+      try{window.ConquerCombat.tick(dt*State.clock.speed)}
+      catch(err){
+        const faults=(window.__conquerCombatFaults||0)+1;
+        window.__conquerCombatFaults=faults;
+        console.error('CONQUER_COMBAT_TICK_ERROR',err);
+        window.__conquerAnalytics?.event('COMBAT_TICK_ERROR',{
+          message:String(err?.message||err),stack:String(err?.stack||'').slice(0,800),
+          faults
+        },'error',1000);
+        if(faults>=3){
+          window.__conquerCombatSuspended=true;
+          status('Combat isolated after repeated errors — settlement simulation remains active');
+        }
+      }
+    }
     if(syncSeasonToCalendar())scheduleLocalSave(100);
 
     // Time itself remains frame-continuous, but expensive simulation decisions
@@ -1063,7 +1080,16 @@ function simulationFrame(now){
     clearWeatherOverlay();
     weatherLayerActive=false;
   }
-  requestAnimationFrame(simulationFrame);
+  }catch(err){
+    // The next animation frame must NOT depend on every optional subsystem
+    // completing successfully. Report failures but keep the clock/UI alive.
+    console.error('CONQUER_SIMULATION_FRAME_ERROR',err);
+    try{window.__conquerAnalytics?.event('SIMULATION_FRAME_ERROR',{
+      message:String(err?.message||err),stack:String(err?.stack||'').slice(0,800)
+    },'error',1000)}catch(_){}
+  }finally{
+    requestAnimationFrame(simulationFrame);
+  }
 }
 requestAnimationFrame(simulationFrame);
 window.addEventListener('keydown',e=>{
