@@ -2407,10 +2407,15 @@ function drawQuarteredTowerFlag(tower){
   ctx.strokeStyle='#745538';ctx.lineWidth=Math.max(1,1.15*scale);
   ctx.beginPath();ctx.moveTo(base.x,base.y+1);ctx.lineTo(mastTop.x,mastTop.y);ctx.stroke();
 
-  pathPolygon([tl,tm,center,lm],REIGN_COLOR_1,null);
-  pathPolygon([tm,tr,rm,center],REIGN_COLOR_2,null);
-  pathPolygon([lm,center,bm,bl],REIGN_COLOR_2,null);
-  pathPolygon([center,rm,br,bm],REIGN_COLOR_1,null);
+  ctx.save();
+  ctx.beginPath();ctx.moveTo(tl.x,tl.y);ctx.lineTo(tr.x,tr.y);
+  ctx.lineTo(br.x,br.y);ctx.lineTo(bl.x,bl.y);ctx.closePath();ctx.clip();
+  const herald=State.heraldry||{};
+  if(!window.__conquerHeraldryCanvas?.paint(ctx,tl.x,Math.min(tl.y,tr.y),clothW,clothH+Math.abs(wave))){
+    ctx.fillStyle=herald.c1||REIGN_COLOR_1;ctx.fillRect(tl.x,tl.y,clothW,clothH);
+    ctx.fillStyle=herald.c2||REIGN_COLOR_2;ctx.fillRect(tl.x+clothW/2,tl.y,clothW/2,clothH);
+  }
+  ctx.restore();
   pathPolygon([tl,tr,br,bl],null,'rgba(236,222,200,.72)',Math.max(.7,.8*scale));
 
   ctx.fillStyle='#c6a461';ctx.beginPath();ctx.arc(mastTop.x,mastTop.y,Math.max(1.1,1.25*scale),0,Math.PI*2);ctx.fill();

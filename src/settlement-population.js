@@ -1068,23 +1068,22 @@ function militaryScale(){
   return clamp(State.view.scale,.55,1.45);
 }
 function soldierLivery(id){
-  const flip=(peasantHash(String(id)+'-livery')&1)!==0;
-  return flip
-    ?{main:REIGN_COLOR_2,alt:REIGN_COLOR_1,mainDark:REIGN_COLOR_2_DARK,altDark:REIGN_COLOR_1_DARK}
-    :{main:REIGN_COLOR_1,alt:REIGN_COLOR_2,mainDark:REIGN_COLOR_1_DARK,altDark:REIGN_COLOR_2_DARK};
+ const herald=State.heraldry||{};
+ return {main:herald.c1||REIGN_COLOR_1,alt:herald.c2||REIGN_COLOR_2,
+  mainDark:herald.c1||REIGN_COLOR_1_DARK,altDark:herald.c2||REIGN_COLOR_2_DARK};
 }
 function soldierBodyPath(base,bodyW,bodyH,top,bodyY){
   ctx.beginPath();
   ctx.moveTo(base.x-bodyW*.42,top);ctx.lineTo(base.x+bodyW*.42,top);
   ctx.lineTo(base.x+bodyW*.50,bodyY+bodyH*.50);ctx.lineTo(base.x-bodyW*.50,bodyY+bodyH*.50);ctx.closePath();
 }
-function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale){
+function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale,useHeraldry=true){
   ctx.save();
   ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.clip();
-  ctx.fillStyle=livery.main;ctx.fillRect(cx-rx,cy-ry,rx,ry);
-  ctx.fillStyle=livery.alt;ctx.fillRect(cx,cy-ry,rx,ry);
-  ctx.fillStyle=livery.alt;ctx.fillRect(cx-rx,cy,rx,ry);
-  ctx.fillStyle=livery.main;ctx.fillRect(cx,cy,rx,ry);
+  if(!useHeraldry||!window.__conquerHeraldryCanvas?.paint(ctx,cx-rx,cy-ry,rx*2,ry*2)){
+    ctx.fillStyle=livery.main;ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);
+    ctx.fillStyle=livery.alt;ctx.fillRect(cx,cy-ry,rx,ry*2);
+  }
   ctx.restore();
   ctx.save();ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(.8,.9*scale);
   ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
@@ -1097,8 +1096,10 @@ function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
 
   // Realm livery: every soldier carries both current reign colours.
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.save();ctx.clip();
-  ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH*.52);
-  ctx.fillStyle=livery.alt;ctx.fillRect(base.x-bodyW,top+bodyH*.52,bodyW*2,bodyH);
+  if(liveryOverride||!window.__conquerHeraldryCanvas?.paint(ctx,base.x-bodyW*.5,top,bodyW,bodyH)){
+    ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH);
+    ctx.fillStyle=livery.alt;ctx.fillRect(base.x,top,bodyW,bodyH);
+  }
   ctx.restore();
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);
   ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
@@ -1123,7 +1124,7 @@ function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
     ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
   }else{
     const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale);
+    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride);
     // Sword.
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
     ctx.beginPath();ctx.moveTo(base.x+bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();
