@@ -12,6 +12,7 @@
   const memory=new Uint8Array(N*N), visible=new Uint8Array(N*N);
   const forestCell=new Int16Array(N*N),heightCell=new Float32Array(N*N);
   let terrainRef=null,forestRef=null,lastVision=0,maskDirty=true,visibilityDirty=true;
+  let circleCache=[],circleCacheBucket=-1;
   let lastObserverSig='',lastAreaSig='',selected=null,painting=false,lastPaint=null;
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
   let combat=null;
@@ -24,7 +25,7 @@
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
     memory.fill(0);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
-    selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;
+    selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;
     State.combat=combat;syncButtons();refreshFog(true);
   }
   function serialize(){
@@ -51,6 +52,9 @@
   }
   function circles(){
     const well=activeWell();if(!well)return [];
+    const bucket=Math.floor(performance.now()/400);
+    if(circleCacheBucket===bucket)return circleCache;
+    circleCacheBucket=bucket;
     const out=[
       {x:well.x,y:well.y,r:20,mode:'allow',id:'well-access'},
       {x:well.x,y:well.y,r:14,mode:'yellow',id:'well-alert'},
@@ -60,7 +64,7 @@
       if(tower.type==='tower'&&!underConstruction(tower))
         out.push({x:tower.x,y:tower.y,r:8+2*structureLevel(tower),mode:'yellow',id:tower.id});
     }
-    return out;
+    circleCache=out;return out;
   }
   function nearCircle(p,c){const dx=p.x-c.x,dy=p.y-c.y;return dx*dx+dy*dy<=c.r*c.r}
   function areaState(p){
@@ -119,7 +123,7 @@
   function terrainCache(){
     if(State.relief!==terrainRef||State.environment!==forestRef){
       terrainRef=State.relief;forestRef=State.environment;
-      forestCell.fill(-2);heightCell.fill(NaN);memory.fill(0);
+      forestCell.fill(-2);heightCell.fill(NaN);
       visibilityDirty=true;maskDirty=true;
     }
   }
