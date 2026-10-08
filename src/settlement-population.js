@@ -1088,9 +1088,9 @@ function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale){
   ctx.save();ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(.8,.9*scale);
   ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
 }
-function drawSoldierFigure(p,z,type,id,phase=0){
+function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
-  const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,livery=soldierLivery(id);
+  const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,livery=liveryOverride||soldierLivery(id);
 
   ctx.save();
 
