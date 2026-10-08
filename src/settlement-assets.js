@@ -128,7 +128,7 @@ function findHouseAssetId(level,plan=null,turret=null,doorSide=1,width=1.5){
 }
 function structureAssetFamilyCatalog(){
   const out=[],add=(key,label,base,rotates=true)=>out.push({key,label,base,rotates});
-  for(const shape of ['square','round'])for(let tier=1;tier<=3;tier++)for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','pitched'])for(const baseStyle of ['standard','buttress','splayed']){
+  for(const shape of ['square','round'])for(let tier=1;tier<=3;tier++)for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched'])for(const baseStyle of ['standard','buttress','splayed']){
     const size=towerSizeForTier(shape,tier);
     add(
       'tower-stone-'+shape+'-t'+tier+'-l'+level+'-'+roofStyle+'-'+baseStyle,
@@ -143,7 +143,7 @@ function structureAssetFamilyCatalog(){
     assetPointBase('gate',{shape:'square',material:'stone',size:1.5,level,roofStyle})
   );
   add('gate-wood','Wood gate',assetPointBase('gate',{shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}));
-  for(let tier=1;tier<=3;tier++)for(let level=1;level<=2;level++)for(const skin of ['standard','hoarding'])for(const length of STRUCTURE_ASSET_TEST_LENGTHS.wall)add(
+  for(let tier=1;tier<=3;tier++)for(let level=1;level<=2;level++)for(const skin of (tier===1?['standard','hoarding']:['standard','machicolation','hoarding']))for(const length of STRUCTURE_ASSET_TEST_LENGTHS.wall)add(
     'wall-t'+tier+'-l'+level+'-'+skin+'-'+length,'Wall T'+tier+' L'+level+' '+skin+' '+length+'U',
     assetLinearBase('wall',length,{tier,level,skin,width:wallWidthForTier(tier)})
   );
