@@ -45,7 +45,7 @@ select{width:100%;border:1px solid var(--line-strong);background:var(--sunken);c
 .dev-label{display:block;margin-bottom:6px;font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--text-2)}
 .dev-row{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .dev-row-4{grid-template-columns:repeat(4,1fr)}
-.dev-row-weather{grid-template-columns:repeat(5,1fr)}
+.dev-row-weather{grid-template-columns:repeat(6,1fr)}
 #devPanel button{min-width:0;height:34px;padding:0 6px;border-radius:8px;font-size:12px;background:var(--btn)}
 #devPanel .dev-row-4 button,#devPanel .dev-row-weather button{font-size:17px}
 #devPanel button.active{background:var(--accent);color:#1b130f;border-color:var(--accent)}
