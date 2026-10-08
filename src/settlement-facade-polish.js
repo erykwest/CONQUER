@@ -70,7 +70,7 @@ function punchBuiltArcadeOpenings(edge,count,h){
 }
 
 drawBuiltArcade=function(s){
-  if(!s||s.type!=='built'||underConstruction(s))return;
+  if(!s||s.type!=='built'||underConstruction(s)||builtSkin(s)!=='arcade')return;
   const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
   const edge=linearFacadeEdge(s,inside),h=Math.min(1.18,structureHeight(s)-.22);
   if(h<=.18||edge.length<.35)return;
