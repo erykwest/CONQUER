@@ -51,6 +51,7 @@ function draw(){
 }
 function persist(){sanitize();State.heraldry={...h};saveLocal();scheduleLocalSave();$('heraldrySaveStatus').textContent='Araldica salvata nella partita · locale';draw()}
 function open(tab='general'){
+ h={...DEFAULT,...(State.heraldry||{})};sanitize();
  $('profileOverlay').hidden=false;
  $('profileVillage').textContent=State.village?.name||'Insediamento non fondato';
  $('profileSeed').textContent=String(State.seed);
@@ -70,5 +71,5 @@ document.querySelectorAll('[data-profile-tab]').forEach(b=>b.addEventListener('c
 $('heraldryPatterns').addEventListener('click',e=>{const b=e.target.closest('[data-pattern]');if(b){h.pattern=b.dataset.pattern;persist()}});
 $('heraldrySymbols').addEventListener('click',e=>{const b=e.target.closest('[data-symbol]');if(b){h.symbol=b.dataset.symbol;persist()}});
 $('heraldryColors').addEventListener('input',e=>{const k=e.target.dataset.heraldryColor;if(k&&validHex(e.target.value)){h[k]=e.target.value;persist()}});
-window.__conquerHeraldry={get:()=>({...State.heraldry}),render:()=>svg(layers()),open:()=>open('heraldry')};
+window.__conquerHeraldry={reset:()=>{h={...DEFAULT};State.heraldry={...h};draw()},get:()=>({...State.heraldry}),render:()=>svg(layers()),open:()=>open('heraldry')};
 })();
