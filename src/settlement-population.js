@@ -488,6 +488,7 @@ function peasantSegmentTravelCost(a,b){
   return L*sum/steps;
 }
 function peasantSegmentClear(a,b,sourceHouseId){
+  if(terrainSegmentCrossesCliff(a,b))return false;
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.22));
   for(let i=1;i<steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
   return true;
