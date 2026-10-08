@@ -43,7 +43,7 @@ drawArchitectureAssetOnEdge=function(edge,centerZ,width,height,key,offsetWorld=0
 };
 
 gothicAssetSizeForLevel=function(s){
-  const l=structureLevel(s),base=l>=3?{w:.82,h:.84}:l>=2?{w:.68,h:.78}:{w:.54,h:.70};
+  const l=structureLevel(s),base=l>=2?{w:.68,h:.78}:{w:.54,h:.70};
   if(s?.type!=='tower')return base;
   const t=clamp(towerTier(s),1,3),scale=t===1?.56:t===2?.76:.94;
   return{w:base.w*scale,h:base.h*scale};
