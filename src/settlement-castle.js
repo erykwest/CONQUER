@@ -403,6 +403,383 @@ function extrudePolygonAt(worldPts,z0,z1,{top:topColor='#8c7b69',sideA='#554b42'
   pathPolygon(topPts,topColor,stroke,1);
 }
 let castleUnionCache={key:null,bands:null};
+const CUTAWAY_NEAR_ALPHA=.035;
+const CUTAWAY_FAR_ALPHA=1;
+const CUTAWAY_INNER_NEAR_ALPHA=.04;
+const CUTAWAY_INNER_FAR_ALPHA=1;
+const CUTAWAY_TOP_ALPHA=1;
+const CUTAWAY_PROP_ASSET_PATHS=Object.freeze({
+  crate:'./src/assets/interior/crate.svg',
+  barrel:'./src/assets/interior/barrel.svg'
+});
+const cutawayPropSprites={};
+function loadCutawayPropSprites(){
+  for(const [key,path] of Object.entries(CUTAWAY_PROP_ASSET_PATHS)){
+    const img=new Image();
+    img.onload=()=>{
+      cutawayPropSprites[key]=img;
+      window.__conquerAssetCompiler?.clearComposite?.();
+      if(typeof invalidateSceneCache==='function')invalidateSceneCache('castleBody');
+      if(typeof draw==='function')draw();
+    };
+    img.onerror=()=>console.warn('Cutaway prop SVG load failed',path);
+    img.src=path;
+  }
+}
+loadCutawayPropSprites();
+function cutawayPropSprite(key){const img=cutawayPropSprites[key];return img&&img.complete?img:null}
+function cutawayEligible(s){
+  if(!s||underConstruction(s))return false;
+  if(s.type==='built')return true;
+  // T1 towers are too small to read as useful rooms. Keep them solid until
+  // they receive a dedicated spiral-stair interior treatment.
+  return s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
+}
+function structureCutaway(s){
+  return !!s?.cutaway&&cutawayEligible(s);
+}
+function cutawayWallThickness(s){
+  if(s.type==='built')return clamp((Number(s.width)||1)*.14,.11,.17);
+  return clamp(.11+towerTier(s)*.025,.13,.19);
+}
+function cutawayWallGeometry(s){
+  const thickness=cutawayWallThickness(s);
+  if(s.type==='tower'){
+    if(s.shape==='round'){
+      const outer=footprintPoints(s),r=Math.max(.12,(Number(s.r)||.5)-thickness);
+      return{outer,inner:circleWorldPoints(s.x,s.y,r,24),thickness};
+    }
+    const d=rectDims(s),iw=Math.max(.18,d.w-thickness*2),ih=Math.max(.18,d.h-thickness*2);
+    return{
+      outer:footprintPoints(s),
+      inner:rectWorldPoints(s.x,s.y,iw,ih,s.angle||0),
+      thickness
+    };
+  }
+  if(s.type==='built'){
+    const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
+    const center={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
+    const iw=Math.max(.18,L-thickness*2),ih=Math.max(.18,(Number(s.width)||1)-thickness*2);
+    return{
+      outer:linePoly(s),
+      inner:rectWorldPoints(center.x,center.y,iw,ih,angle),
+      thickness
+    };
+  }
+  return{outer:footprintPoints(s),inner:footprintPoints(s),thickness};
+}
+function cutawayFloorBasis(s,g){
+  if(s.type==='built'){
+    const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1;
+    return{
+      center:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2},
+      angle:Math.atan2(dy,dx),
+      w:Math.max(.18,L-g.thickness*2),
+      h:Math.max(.18,(Number(s.width)||1)-g.thickness*2)
+    };
+  }
+  if(s.shape==='round'){
+    const r=Math.max(.12,(Number(s.r)||.5)-g.thickness);
+    return{center:{x:s.x,y:s.y},angle:s.angle||0,w:r*2,h:r*2};
+  }
+  const d=rectDims(s);
+  return{
+    center:{x:s.x,y:s.y},angle:s.angle||0,
+    w:Math.max(.18,d.w-g.thickness*2),
+    h:Math.max(.18,d.h-g.thickness*2)
+  };
+}
+function cutawayFloorLevels(s){
+  const level=structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
+  if(level<=1)return floors;
+  for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
+  return floors;
+}
+function cutawayLocalRect(center,angle,x0,y0,x1,y1){
+  const ca=Math.cos(angle),sa=Math.sin(angle);
+  const p=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
+  return[p(x0,y0),p(x1,y0),p(x1,y1),p(x0,y1)];
+}
+function clipToWorldPolygon(worldPts,z,fn){
+  const screen=projectPath(worldPts,z);if(screen.length<3)return;
+  ctx.save();ctx.beginPath();
+  screen.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath();ctx.clip();fn();ctx.restore();
+}
+function drawStoneTileFloor(s,g,z){
+  const basis=cutawayFloorBasis(s,g),tile=.32;
+  extrudePolygonAt(g.inner,Math.max(.005,z-.045),z,{
+    top:'#7f796f',sideA:'#4c4842',sideB:'#5a554d',stroke:'#a59b8d'
+  });
+  clipToWorldPolygon(g.inner,z+.002,()=>{
+    const nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
+    for(let ix=0;ix<nx;ix++)for(let iy=0;iy<ny;iy++){
+      const x0=-basis.w/2+ix*tile,x1=Math.min(basis.w/2,x0+tile);
+      const y0=-basis.h/2+iy*tile,y1=Math.min(basis.h/2,y0+tile);
+      const quad=cutawayLocalRect(basis.center,basis.angle,x0,y0,x1,y1);
+      pathPolygon(projectPath(quad,z+.004),(ix+iy)%2?'#8d877c':'#716c64','rgba(61,57,52,.52)',.55);
+    }
+  });
+}
+function drawWoodFloor(s,g,z){
+  const basis=cutawayFloorBasis(s,g),plank=.18;
+  extrudePolygonAt(g.inner,Math.max(.01,z-.065),z,{
+    top:'#795a3a',sideA:'#4b3424',sideB:'#5b402b',stroke:'#a27b50'
+  });
+  clipToWorldPolygon(g.inner,z+.002,()=>{
+    const across=basis.h<=basis.w,span=across?basis.h:basis.w,count=Math.max(1,Math.ceil(span/plank));
+    for(let i=0;i<count;i++){
+      const a=-span/2+i*plank,b=Math.min(span/2,a+plank);
+      const quad=across
+        ?cutawayLocalRect(basis.center,basis.angle,-basis.w/2,a,basis.w/2,b)
+        :cutawayLocalRect(basis.center,basis.angle,a,-basis.h/2,b,basis.h/2);
+      pathPolygon(projectPath(quad,z+.004),i%2?'#84613e':'#6f5034','rgba(54,36,24,.48)',.45);
+    }
+  });
+}
+function drawCutawayFloors(s,g){
+  for(const floor of cutawayFloorLevels(s)){
+    if(floor.material==='stone')drawStoneTileFloor(s,g,floor.z);
+    else drawWoodFloor(s,g,floor.z);
+  }
+}
+function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
+  const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),cap=Math.min(functionCapacity(s),floors.length);
+  const roles=Array.isArray(s.functions)?s.functions:[];
+  const out=[];
+  for(let i=0;i<cap;i++)out.push({
+    index:i,role:roles[i]||null,size:functionSlotSize(s,i),
+    z:floors[i].z,basis,g
+  });
+  return out;
+}
+function cutawayRoomPoint(slot,nx=0,ny=0){
+  const b=slot.basis,x=nx*b.w*.40,y=ny*b.h*.36,ca=Math.cos(b.angle),sa=Math.sin(b.angle);
+  return{x:b.center.x+x*ca-y*sa,y:b.center.y+x*sa+y*ca};
+}
+function drawCutawayInteriorBox(slot,nx,ny,wFrac,dFrac,height,top='#795a3a',sideA='#4b3424',sideB='#5b402b'){
+  const p=cutawayRoomPoint(slot,nx,ny);
+  const w=clamp(slot.basis.w*wFrac,.14,.78),d=clamp(slot.basis.h*dFrac,.10,.48);
+  const pts=rectWorldPoints(p.x,p.y,w,d,slot.basis.angle);
+  extrudePolygonAt(pts,slot.z+.012,slot.z+.012+height,{top,sideA,sideB,stroke:'#3d2a1c'});
+}
+function drawCutawayPropSprite(key,p,z,sizePx=18){
+  const img=cutawayPropSprite(key);if(!img)return;
+  const scale=clamp(State.view.scale,.55,1.45),h=sizePx*scale,w=h*(img.naturalWidth||128)/(img.naturalHeight||128);
+  const q=w2s(p,z);
+  ctx.save();ctx.globalAlpha=.98;ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(img,q.x-w/2,q.y-h,w,h);ctx.restore();
+}
+function drawStorageRoomProps(slot){
+  const large=slot.size==='large';
+  const layout=large
+    ?[['crate',-.72,-.46,18],['barrel',-.30,-.48,19],['crate',.12,-.43,17],['barrel',.53,-.38,18],['crate',-.50,.12,18],['barrel',.28,.15,19],['crate',.66,.20,16]]
+    :[['crate',-.48,-.30,18],['barrel',.05,-.34,19],['crate',.48,.18,17]];
+  for(const [key,x,y,size] of layout)drawCutawayPropSprite(key,cutawayRoomPoint(slot,x,y),slot.z+.035,size);
+}
+function drawBarracksRoomProps(slot){
+  const rows=slot.size==='large'?[-.52,0,.52]:[-.44,0,.44];
+  for(const x of rows)drawCutawayInteriorBox(slot,x,-.34,.22,.34,.055,'#775538','#4b3424','#5b402b');
+  drawCutawayInteriorBox(slot,0,.48,.48,.16,.10,'#6b4a30','#422e20','#533923');
+}
+function drawNobleRoomProps(slot){
+  drawCutawayInteriorBox(slot,-.18,-.24,.48,.44,.12,'#7e3d38','#4a2d27','#5b362e');
+  drawCutawayInteriorBox(slot,.58,-.30,.20,.22,.18,'#805a35','#4b3424','#5c4028');
+  drawCutawayInteriorBox(slot,.42,.42,.22,.22,.16,'#8b633b','#4b3424','#60452d');
+  if(slot.size==='large')drawCutawayInteriorBox(slot,-.62,.42,.26,.18,.13,'#8a6238','#4b3424','#60452d');
+}
+function drawCutawayInteriorProps(s,g){
+  for(const slot of cutawayRoomSlots(s,g)){
+    if(slot.role==='storage')drawStorageRoomProps(slot);
+    else if(slot.role==='barracks')drawBarracksRoomProps(slot);
+    else if(slot.role==='nobleRoom')drawNobleRoomProps(slot);
+  }
+}
+function drawCutawayWallRing(g,z,alpha=.72){
+  const outer=projectPath(g.outer,z),inner=projectPath(g.inner,z);
+  if(outer.length<3||inner.length<3)return;
+  ctx.save();ctx.globalAlpha*=alpha;ctx.beginPath();
+  outer.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+  inner.slice().reverse().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+  ctx.fillStyle=State.season==='winter'?WINTER_SNOW_TOP:'#8f857a';ctx.fill('evenodd');
+  ctx.strokeStyle='rgba(211,197,181,.52)';ctx.lineWidth=.75;ctx.stroke();
+  ctx.restore();
+}
+function cutawayTransparentFaceIndexes(s,g){
+  const n=g.outer.length;if(!n)return new Set();
+  const depths=Array.from({length:n},(_,i)=>{
+    const j=(i+1)%n;
+    return (viewDepthPoint(g.outer[i])+viewDepthPoint(g.outer[j]))/2;
+  });
+
+  // Built sections are longitudinal rooms/ranges, not closed boxes.
+  // In cutaway keep ONLY the rear long wall. Both short end walls are removed:
+  // otherwise they read as arbitrary internal partitions, exactly the artifact
+  // visible in the previous prototype.
+  if(n===4&&s.type==='built'){
+    const frontLong=depths[0]>=depths[2]?0:2;
+    return new Set([frontLong,1,3]);
+  }
+
+  // Square towers remove the two camera-facing faces.
+  if(n===4&&s.type==='tower'&&s.shape!=='round'){
+    const ranked=depths.map((depth,index)=>({depth,index})).sort((a,b)=>b.depth-a.depth);
+    return new Set([ranked[0].index,ranked[1].index]);
+  }
+
+  // Round towers use an approximately 90° camera-facing wedge. The two radial
+  // boundaries become the actual masonry section edges.
+  if(s.type==='tower'&&s.shape==='round'){
+    let peak=0;
+    for(let i=1;i<n;i++)if(depths[i]>depths[peak])peak=i;
+    const open=new Set();
+    for(let d=-3;d<=3;d++)open.add((peak+d+n)%n);
+    return open;
+  }
+
+  let peak=0;
+  for(let i=1;i<n;i++)if(depths[i]>depths[peak])peak=i;
+  return new Set([peak]);
+}
+function cutawayShellFaces(s,g,height){
+  const outerBase=projectPath(g.outer,0),outerTop=projectPath(g.outer,height);
+  const innerBase=projectPath(g.inner,0),innerTop=projectPath(g.inner,height);
+  const transparent=cutawayTransparentFaceIndexes(s,g),faces=[];
+  const n=Math.min(g.outer.length,g.inner.length);
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n,edgeDepth=(viewDepthPoint(g.outer[i])+viewDepthPoint(g.outer[j]))/2;
+    const near=transparent.has(i);
+    faces.push({
+      index:i,near,
+      // Built short ends (1/3) are actual section removals. Do not paint even
+      // a translucent panel there; only the rear-wall section jamb remains.
+      ghost:!(s.type==='built'&&near&&(i===1||i===3)),
+      depth:edgeDepth,
+      outer:[outerBase[i],outerBase[j],outerTop[j],outerTop[i]],
+      inner:[innerBase[i],innerBase[j],innerTop[j],innerTop[i]],
+      shade:castleSideShade(g.outer[i],g.outer[j])
+    });
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  return{faces,transparent};
+}
+function cutawayBoundaryVertices(transparent,count){
+  const vertices=[];
+  for(let v=0;v<count;v++){
+    const prev=(v-1+count)%count;
+    const next=v;
+    if(transparent.has(prev)!==transparent.has(next))vertices.push(v);
+  }
+  return vertices;
+}
+function drawCutawaySectionJambs(g,height,transparent){
+  const n=Math.min(g.outer.length,g.inner.length);
+  const boundaries=cutawayBoundaryVertices(transparent,n);
+  for(const i of boundaries){
+    const outer=g.outer[i],inner=g.inner[i];
+    const poly=[
+      w2s(outer,0),w2s(inner,0),
+      w2s(inner,height),w2s(outer,height)
+    ];
+    pathPolygon(poly,'#82776c','rgba(222,207,190,.72)',1.05);
+  }
+}
+function drawCutawayFlatRoofDeck(s,g,height){
+  if(s.type!=='tower'||towerRoofStyle(s)!=='battlement')return;
+  // The old union renderer supplied the tower's solid top. Cutaway towers are
+  // deliberately removed from that union, so restore the full opaque fighting
+  // deck explicitly: wall ring + inner stone slab.
+  extrudePolygonAt(g.inner,Math.max(.01,height-.07),height,{
+    top:winterSnowColor('#8f857a',WINTER_SNOW_TOP),
+    sideA:'#514a44',sideB:'#635951',
+    stroke:State.season==='winter'?WINTER_SNOW_STROKE:'#b8aa99'
+  });
+}
+function drawCutawayShellFaces(faces,near){
+  for(const face of faces){
+    if(face.near!==near||face.ghost===false)continue;
+    ctx.save();ctx.globalAlpha*=near?CUTAWAY_NEAR_ALPHA:CUTAWAY_FAR_ALPHA;
+    pathPolygon(face.outer,face.shade,near?'rgba(216,200,180,.34)':null,near?.8:1);
+    ctx.restore();
+
+    ctx.save();ctx.globalAlpha*=near?CUTAWAY_INNER_NEAR_ALPHA:CUTAWAY_INNER_FAR_ALPHA;
+    pathPolygon(face.inner,near?'#5a514a':'#61574f',near?'rgba(205,188,169,.28)':'rgba(199,181,163,.30)',.65);
+    ctx.restore();
+  }
+}
+function drawBuiltCutawayShell(s,g,height){
+  // Built sections are open longitudinal ranges in cutaway. Do not run the
+  // generic four-sided box renderer at all: it was the source of the stubborn
+  // full-height end panel. Draw exactly one opaque rear wall plus its thickness.
+  const depths=[0,1,2,3].map(i=>{
+    const j=(i+1)%4;
+    return (viewDepthPoint(g.outer[i])+viewDepthPoint(g.outer[j]))/2;
+  });
+  const frontLong=depths[0]>=depths[2]?0:2;
+  const rearLong=frontLong===0?2:0;
+  const j=(rearLong+1)%4;
+
+  const outer=[
+    w2s(g.outer[rearLong],0),w2s(g.outer[j],0),
+    w2s(g.outer[j],height),w2s(g.outer[rearLong],height)
+  ];
+  const inner=[
+    w2s(g.inner[rearLong],0),w2s(g.inner[j],0),
+    w2s(g.inner[j],height),w2s(g.inner[rearLong],height)
+  ];
+
+  pathPolygon(outer,castleSideShade(g.outer[rearLong],g.outer[j]),null);
+  pathPolygon(inner,'#61574f','rgba(199,181,163,.30)',.65);
+
+  // Only the two thin cut surfaces belonging to the rear wall thickness.
+  // These are masonry section edges, NOT short end walls.
+  for(const i of [rearLong,j]){
+    const strip=[
+      w2s(g.outer[i],0),w2s(g.inner[i],0),
+      w2s(g.inner[i],height),w2s(g.outer[i],height)
+    ];
+    pathPolygon(strip,'#82776c','rgba(222,207,190,.72)',1.05);
+  }
+}
+function drawCutawayStructure(s){
+  if(!structureCutaway(s)||underConstruction(s))return;
+  const render=()=>{
+    const g=cutawayWallGeometry(s),height=structureHeight(s);
+
+    if(s.type==='built'){
+      // Dedicated built-section cutaway: one rear wall, zero short end walls.
+      drawBuiltCutawayShell(s,g,height);
+      drawCutawayFloors(s,g);
+      drawCutawayInteriorProps(s,g);
+      drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
+      drawBuiltDetails(s,false);
+      if(builtSkin(s)==='arcade'){
+        ctx.save();ctx.globalAlpha*=.72;drawBuiltArcade(s);ctx.restore();
+      }
+      return;
+    }
+
+    const shell=cutawayShellFaces(s,g,height);
+    drawCutawayShellFaces(shell.faces,false);
+    drawCutawayFloors(s,g);
+    drawCutawayInteriorProps(s,g);
+    drawCutawaySectionJambs(g,height,shell.transparent);
+    drawCutawayShellFaces(shell.faces,true);
+    drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
+    drawCutawayFlatRoofDeck(s,g,height);
+
+    if(s.type==='tower'){
+      ctx.save();ctx.globalAlpha*=.28;drawStoneTowerBase(s,false);ctx.restore();
+    }
+  };
+  if(s.type==='tower')withStructureGroundPlane(s,render);else render();
+}
+function drawCutawayStructures(){
+  State.structures
+    .filter(s=>structureCutaway(s)&&!underConstruction(s))
+    .slice().sort((a,b)=>worldDepth(a)-worldDepth(b))
+    .forEach(drawCutawayStructure);
+}
 function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
 function unionFootprintPoints(s){
@@ -420,7 +797,7 @@ function polygonGeomForStructure(s){
 }
 function castleUnionBands(){
   const pc=window.__polygonClipping;if(!pc)return null;
-  const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s));
+  const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s));
   if(!items.length)return[];
   const descriptors=items.map(s=>({id:s.id,h:+structureHeight(s).toFixed(4),geom:polygonGeomForStructure(s)})).filter(x=>x.geom);
   const key=JSON.stringify(descriptors);
@@ -515,7 +892,7 @@ function drawCastleUnionDetails(){
   const hoardingFrame=State.structures.some(s=>isCastlePart(s)&&!underConstruction(s)&&s.type==='wall'&&wallSkin(s)==='hoarding')
     ?buildBattlementOcclusionFrame():null;
   for(const s of State.structures){
-    if(!isCastlePart(s)||underConstruction(s))continue;
+    if(!isCastlePart(s)||underConstruction(s)||structureCutaway(s))continue;
     if(s.type==='built'){
       drawBuiltDetails(s,false);
       drawBuiltArcade(s);
@@ -1636,18 +2013,22 @@ function linePoly(s){
   const a=s.a,b=s.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
+function functionSlotSize(s,index=0){
+  if(!s)return'normal';
+  if(s.type==='tower')return towerTier(s)>=3?'large':'normal';
+  if(s.type==='built')return Number(s.length)>=3?'large':'normal';
+  return'normal';
+}
+function functionSlotUnits(s,index=0){return functionSlotSize(s,index)==='large'?2:1}
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return structureLevel(s);
-  if(s.type==='tower'){
-    const base=towerTier(s)===3?2:towerTier(s)===2?1:0;
-    return base*structureLevel(s);
-  }
-  if(s.type==='built'){
-    const base=s.length>=3?2:s.length>=2?1:0;
-    return base*structureLevel(s);
-  }
+  if(s.type==='tower')return towerTier(s)>=2?structureLevel(s):0;
+  if(s.type==='built')return Number(s.length)>=2?structureLevel(s):0;
   return 0;
+}
+function functionCapacityUnits(s){
+  let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
 function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
 // Variant contract:
