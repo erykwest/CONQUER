@@ -40,13 +40,15 @@
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
   let tacticalRuleAccum=0;
 
-  function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
+  function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,recallMode:'off',seen:''};}
   function restore(raw){
     combat=Object.assign(defaults(),raw&&[1,2].includes(raw.version)?raw:{});
     // This builder starts with the terrain explored (known) but not currently
     // visible. The fog still hides unseen contacts and darkens unobserved areas.
     if(combat.version!==2){combat.seen='';combat.version=2}
     combat.fog=true;
+    combat.recallMode=['off','green','hall'].includes(raw?.recallMode)?raw.recallMode:(combat.recall?'green':'off');
+    combat.recall=combat.recallMode!=='off';
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units
       .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight'].includes(u.kind))
@@ -214,6 +216,75 @@
     }
     return null;
   }
+  // Castle function rooms have an exterior approach; civilians may never
+  // path directly through solid walls or magically appear inside a tower.
+  function castleAccessCandidates(building,origin,resident){
+    const out=[];
+    if(building.type==='tower'&&typeof towerDoorSpecs==='function'){
+      for(const spec of towerDoorSpecs(building)){
+        if(spec.baseZ>.20)continue; // Wall-walk openings are not ground-floor access.
+        const p={x:spec.contact.x+spec.outward.x*.48,y:spec.contact.y+spec.outward.y*.48};
+        out.push(p);
+      }
+    }
+    if(building.type==='built'){
+      const a=structureAccessPoint(building,origin,resident.id);
+      const center={x:(building.a.x+building.b.x)/2,y:(building.a.y+building.b.y)/2};
+      const opposite={x:2*center.x-origin.x,y:2*center.y-origin.y};
+      out.push(a,structureAccessPoint(building,opposite,resident.id));
+    }else{
+      out.push(structureAccessPoint(building,origin,resident.id));
+    }
+    return out.filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y));
+  }
+  function buildingDestination(house,resident,origin,buildings){
+    let best=null;
+    for(const building of buildings.slice().sort((a,b)=>{
+      const centerA=structureCenter(a),centerB=structureCenter(b);
+      return dist(origin,centerA)-dist(origin,centerB);
+    })){
+      const entries=castleAccessCandidates(building,origin,resident);
+      for(const target of entries){
+        if(pointBlockedForPeasant(target,house.id)||!areaState(target).allowed)continue;
+        const path=findCivilianRoute(origin,target,house);
+        if(!path||path.length<2||dist(path.at(-1),target)>.08)continue;
+        const length=pathLength(path);
+        if(!best||length<best.length)
+          best={target,path,length,structureId:building.id};
+      }
+    }
+    return best;
+  }
+  function recallMastio(house,resident,origin){
+    const keep=window.ConquerSiege?.mastio?.();
+    return keep?buildingDestination(house,resident,origin,[keep]):null;
+  }
+  function recruitArmory(house,resident,origin){
+    const armories=window.ConquerSiege?.armories?.()||[];
+    return armories.length?buildingDestination(house,resident,origin,armories):null;
+  }
+  function alarmMode(){return combat?.recallMode||'off'}
+  function setAlarmMode(mode){
+    if(!combat||!['off','green','hall'].includes(mode))return false;
+    if(mode==='hall'&&!window.ConquerSiege?.mastio?.()){
+      status('A completed Mastio with a Common Hall is required for the red bell.');
+      return false;
+    }
+    combat.recallMode=mode;
+    combat.recall=mode!=='off';
+    // Preserve ongoing recruited-men paths when escalating from green to red.
+    if(mode==='off')residentMotion.forEach(m=>{if(m.mode==='recruit')m.equipped=false});
+    changed();draw();requestCivilianAnimation();
+    status(mode==='green'?'🔔 Green alarm: women and children → safe zones; adult men → closest armory':
+      mode==='hall'?'🔔 Red alarm: women and children → Mastio Common Hall; adult men → closest armory':
+      '🔕 Release: civilians and recalled recruits return to normal routines');
+    return true;
+  }
+  function recruitedResident(id){
+    const motion=residentMotion.get(id),now=performance.now();
+    return !!(motion?.mode==='recruit'&&motion.structureId&&now>=motion.startedAt+motion.duration
+      &&(window.ConquerSiege?.armories?.()||[]).some(a=>a.id===motion.structureId));
+  }
   function motionPosition(motion,now){
     if(!motion.path||motion.path.length<2)return motion.start;
     const progress=clamp((now-motion.startedAt)/Math.max(1,motion.duration),0,1);
@@ -270,38 +341,47 @@
   function civilPosition(p,house,resident){
     if(!activeWell())return p;
     const desired=civilianLegalPosition(p,house);
-    const id=resident.id,now=performance.now();
-    const prior=residentMotion.get(id),mode=combat.recall?'recall':'release';
-    if(!combat.recall&&!prior){
+    const id=resident.id,now=performance.now(),alarm=alarmMode();
+    // Age takes precedence over sex: boys are children, never conscripted.
+    const mode=alarm==='off'?'release':
+      (resident.age==='adult'&&resident.sex==='male'?'recruit':alarm);
+    const prior=residentMotion.get(id);
+    if(mode==='release'&&!prior){
       if(desired)residentLastPosition.set(id,desired);
       return desired;
     }
-    // Residents not outside have nothing to flee from until they emerge.
-    if(!desired&&!prior&&!combat.recall)return null;
-    if(!desired&&!prior&&combat.recall)return null;
     let motion=prior;
+    if(motion?.mode==='recruit'&&!window.ConquerSiege?.armories?.().some(a=>a.id===motion.structureId))
+      motion=null; // If an armory is demolished, look for another one.
     if(!motion||motion.mode!==mode){
-      const origin=prior?motionPosition(prior,now):residentLastPosition.get(id)||desired;
       const home=typeof houseDoorInfo==='function'?houseDoorInfo(house)?.outside:null;
-      const destination=combat.recall
-        ?recallDestination(house,resident,origin)
-        :(desired||home||origin);
-      if(origin&&destination){
-        const path=findCivilianRoute(origin,destination,house);
-        const length=pathLength(path);
-        motion={
-          mode,homeId:house.id,start:origin,target:destination,path,startedAt:now,
-          duration:path.length<2?0:Math.max(450,length*550)
-        };
-        residentMotion.set(id,motion);
-      }else{
+      const origin=prior?motionPosition(prior,now):residentLastPosition.get(id)||desired||home;
+      if(!origin)return desired;
+      let result=null;
+      if(mode==='green'){
+        const target=recallDestination(house,resident,origin);
+        if(target)result={target,path:findCivilianRoute(origin,target,house)};
+      }else if(mode==='hall')result=recallMastio(house,resident,origin);
+      else if(mode==='recruit')result=recruitArmory(house,resident,origin);
+      else{
+        const target=desired||home||origin;
+        result={target,path:findCivilianRoute(origin,target,house)};
+      }
+      if(!result?.target||!result.path?.length){
         residentMotion.delete(id);
-        if(desired)residentLastPosition.set(id,desired);
+        // No available/accessible hall or armory: do not teleport.
         return desired;
       }
+      const length=pathLength(result.path);
+      motion={
+        mode,homeId:house.id,start:origin,target:result.target,path:result.path,
+        structureId:result.structureId||null,startedAt:now,
+        duration:result.path.length<2?0:Math.max(450,length*550)
+      };
+      residentMotion.set(id,motion);
     }
-    const position=motionPosition(motion,now);
-    if(mode==='release'&&now>=motion.startedAt+motion.duration){
+    const position=motionPosition(motion,now),arrived=now>=motion.startedAt+motion.duration;
+    if(mode==='release'&&arrived){
       residentMotion.delete(id);
       if(desired)residentLastPosition.set(id,desired);
       else residentLastPosition.delete(id);
@@ -310,6 +390,8 @@
     residentLastPosition.set(id,position);
     if(residentLastPosition.size>5000)residentLastPosition.clear();
     requestCivilianAnimation();
+    // Civilians disappear into the Common Hall after reaching its entrance.
+    if(mode==='hall'&&arrived&&motion.path.length>1)return null;
     return position;
   }
   function terrainCache(){
@@ -793,12 +875,12 @@
     scheduleLocalSave();requestToolDraw();
   },true);
   const styles=document.createElement('style');
-  styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c}';
+  styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatRecall[data-mode=green]{background:#35874e;color:#fff} #combatRecall[data-mode=hall]{background:#ad3438;color:#fff} #combatMute:disabled{opacity:.55} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c}';
   document.head.appendChild(styles);
   const ui=document.createElement('div');
   ui.id='combatControls';
   ui.innerHTML='<h3>COMBAT · Fog / Command</h3>'+
-    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones ON</button><button id="combatRecall">Recall civilians</button></div>'+
+    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones ON</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button></div>'+
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
@@ -812,7 +894,10 @@
     if(!combat||!$('combatFog'))return;
     $('combatFog').textContent='Fog '+(combat.fog?'ON':'OFF');
     $('combatZones').textContent='Zones '+(combat.zones?'ON':'OFF');
-    $('combatRecall').textContent=combat.recall?'Release civilians':'Recall civilians';
+    $('combatRecall').textContent='🔔';
+    $('combatRecall').dataset.mode=combat.recallMode;
+    $('combatRecall').title=combat.recallMode==='green'?'Green alarm · click to retreat into the Mastio':combat.recallMode==='hall'?'Red alarm · women and children in Common Hall':'Raise green alarm';
+    $('combatMute').disabled=combat.recallMode==='off';
     $('combatBrushSize').value=combat.brushRadius;
     $('combatBrushReadout').textContent=combat.brushRadius+'U';
     document.querySelectorAll('[data-combat-brush]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-brush'&&State.tool.combatBrush===b.dataset.combatBrush));
@@ -820,12 +905,8 @@
   }
   $('combatFog').onclick=()=>{combat.fog=!combat.fog;changed();draw()};
   $('combatZones').onclick=()=>{combat.zones=!combat.zones;changed();draw()};
-  $('combatRecall').onclick=()=>{
-    combat.recall=!combat.recall;
-    changed();draw();
-    requestCivilianAnimation();
-    status(combat.recall?'Civilian recall — pathfinding toward green zone':'Release — civilians route back to their routines');
-  };
+  $('combatRecall').onclick=()=>setAlarmMode(alarmMode()==='green'?'hall':'green');
+  $('combatMute').onclick=()=>setAlarmMode('off');
   document.querySelectorAll('[data-combat-brush]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-brush',combatBrush:b.dataset.combatBrush,label:'Brush: '+b.textContent});
     syncButtons();
@@ -838,6 +919,7 @@
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,
+    alarmMode,setAlarmMode,recruitedResident,
     invalidateRoutes:()=>civilianRouteCache.clear(),
     invalidateArchers:()=>{nextArcherRosterAt=0;archerRosterSize=-1},
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
