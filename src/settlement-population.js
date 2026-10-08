@@ -1042,17 +1042,19 @@ function drawPeasants(){
     representedPopulation+=housePopulationCapacity(house).total;
     const kind=villagerClass(house),assignment=assignments.get(house.id);
     for(const resident of houseResidents(house)){
-      if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
+      // Alarm destinations are computed even for residents not selected by
+      // distant-camera LOD, so mobilization does not depend on zoom level.
       let p=residentClassPosition(house,resident,day,assignment);
       if(p)p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
-      // Recall/release may keep a resident visible while their ordinary
-      // day schedule is inactive; the tactical subsystem owns that transition.
-      p=window.ConquerCombat?.civilPosition(p,house,resident)??p;
+      const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
+      if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
+      if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
       if(!p||!worldPointVisible(p,0,40))continue;
       const rp=rotateViewPoint(p);
       dots.push({
         p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
-        hair:resident.hair,colors:resident.colors
+        hair:resident.hair,colors:resident.colors,
+        militia:window.ConquerCombat?.recruitedResident(resident.id)||false
       });
       activeAgents++;
     }
@@ -1062,7 +1064,10 @@ function drawPeasants(){
     window.__conquerPerf.representedPopulation=representedPopulation;
     window.__conquerPerf.visibleVillagers=activeAgents;
   }
-  for(const dot of dots)drawVillagerFigure(dot);
+  for(const dot of dots){
+    if(dot.militia)drawSoldierFigure(dot.p,.10,'spearman',dot.id,day);
+    else drawVillagerFigure(dot);
+  }
 }
 function militaryScale(){
   return clamp(State.view.scale,.55,1.45);
@@ -1261,28 +1266,21 @@ function drawCastleSoldiers(){
     }
   }
 
-  // One archer lookout on every completed fighting tower.
+  // Only assigned garrison soldiers exist. Roof slot is visible; arrow-slit
+  // soldiers are masked by masonry unless the tower is shown in cutaway.
   for(const tower of State.structures){
     if(tower.type!=='tower'||underConstruction(tower))continue;
-    let p,z;
-
-    if(isWoodTower(tower)){
-      const style=woodTowerStyle(tower);
-      p=woodTowerLocal(tower,0,.03);
-      // Keep the sprite below the roof eave; front parapet/rail is redrawn later
-      // by the same castleFront protocol used by wall battlements.
-      z=style==='watchtower'?1.46:1.82;
-    }else{
-      if(!['battlement','machicolation'].includes(towerRoofStyle(tower)))continue;
-      const hash=peasantHash(tower.id+'-archer'),a=(hash%360)*Math.PI/180;
-      const radius=tower.shape==='round'?tower.r*.26:(tower.size||1)*.18;
-      p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius};
-      z=structureHeight(tower)+.08;
+    const occupied=window.ConquerSiege?.occupiedArcherSlots(tower)||[];
+    for(const slot of occupied){
+      if(slot.kind==='slit'&&!structureCutaway(tower))continue;
+      const p=slot.kind==='slit'
+        ?{x:tower.x+(slot.p.x-tower.x)*.63,y:tower.y+(slot.p.y-tower.y)*.63}
+        :slot.p;
+      withStructureGroundPlane(tower,()=>{
+        if(worldPointVisible(p,slot.z,48))
+          drawSoldierFigure(p,slot.z,'archer',slot.id,day+(slot.floor||0)*.15);
+      });
     }
-
-    withStructureGroundPlane(tower,()=>{
-      if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'archer',tower.id,day);
-    });
   }
 }
 function drawTrainingSoldiers(){

@@ -1066,6 +1066,7 @@ function draw(){
   drawCastleSoldiers();
   markPhase('castle-units');
   blitSceneCache('castleFront');
+  window.ConquerSiege?.drawOverlay();
   drawCastleFireFixtures();
 
   // Small facade/details stay dynamic for night lighting and selection semantics.
