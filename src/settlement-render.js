@@ -119,6 +119,13 @@ function visibleFacadeEdges(s){
   for(const fp of rings){if(fp.length<4)continue;for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);edges.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2})}}
   edges.sort((a,b)=>b.depth-a.depth);return edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
 }
+function cutawayOpenEdgeIndexes(s){
+  if(!structureCutaway(s))return null;
+  return cutawayTransparentFaceIndexes(s,cutawayWallGeometry(s));
+}
+function cutawayEdgeIsOpen(s,index){
+  return !!cutawayOpenEdgeIndexes(s)?.has(index);
+}
 function closestFootprintEdge(s,p){
   const fp=footprintPoints(s);if(fp.length<2)return null;
   let best=null,bestD=Infinity;
@@ -196,6 +203,11 @@ function towerDoorSpecs(tower){
   return specs;
 }
 function towerDoorVisible(tower,spec){
+  // A door cannot float on a facade that the cutaway has removed.
+  if(structureCutaway(tower)){
+    const edge=closestFootprintEdge(tower,spec.contact);
+    if(edge&&cutawayEdgeIsOpen(tower,edge.index))return false;
+  }
   // Near half of the tower only; the body naturally hides rear doors until
   // the camera is rotated.
   return viewDepthPoint(spec.contact)>=viewDepthPoint({x:tower.x,y:tower.y})-.015;
@@ -363,7 +375,10 @@ function drawWallHoarding(s,occlusionFrame=null){
   });
 }
 function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60){
-  if(side!==linearFrontSide(s))return;const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count;
+  if(side!==linearFrontSide(s))return;
+  // linePoly edge 0 = +normal long facade, edge 2 = -normal long facade.
+  if(structureCutaway(s)&&cutawayEdgeIsOpen(s,side>0?0:2))return;
+  const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count;
   for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf)}
 }
 function drawBuiltWindows(s,lit=false,nf=1){
@@ -386,7 +401,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
     if(s.type==='house'){if(includeHouses)drawHouseFacadeWindows(s,lit,nf)}
     else if(s.type==='built')drawBuiltWindows(s,lit,nf);
     else if(s.type==='gate'){if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf))}
-    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}})}})}
+    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){if(structureCutaway(s))return;for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s).filter(edge=>!cutawayEdgeIsOpen(s,edge.index)),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}})}})}
   }
 }
 function drawDayNightOverlay(){
@@ -406,6 +421,7 @@ const WEATHER_PROFILES=Object.freeze({
   winter:[['clear',.10],['wind',.22],['snow',.50],['storm',.05],['fog',.13]]
 });
 const WEATHER_STYLE=Object.freeze({
+  sun:{wind:0,rain:0,snow:0,lightning:0,clouds:0,fog:0},
   clear:{wind:.10,rain:0,snow:0,lightning:0,clouds:.10,fog:0},
   wind:{wind:.90,rain:0,snow:0,lightning:0,clouds:.38,fog:0},
   rain:{wind:.38,rain:1,snow:0,lightning:0,clouds:.82,fog:0},
@@ -788,7 +804,7 @@ let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!
 function renderCastleBodyContent(){
   const unionOk=drawCastleUnion();
   if(!unionOk){
-    const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+    const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of fallback)drawStructure(s);
   }else{
     drawCastleUnionDetails();
@@ -797,10 +813,11 @@ function renderCastleBodyContent(){
   // Point fortifications on slopes are intentionally kept out of the wall
   // boolean union: draw them as rigid volumes on their own level-0 plane.
   const raised=State.structures
-    .filter(s=>isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
+    .filter(s=>isRaisedPlacementCastlePoint(s)&&!underConstruction(s)&&!structureCutaway(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of raised)drawStructure(s);
 
+  drawCutawayStructures();
   drawTowerDoors();
   drawTowerRoofs();
   drawGateRoofs();
@@ -831,7 +848,7 @@ function castleBodyVisualSignature(){
     s.id||'',s.type||'',s.shape||'',s.material||'',s.woodStyle||'',s.woodRoof||'',
     s.roofStyle||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
     point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
-    s.level??null,s.tier??null,!!s.flip,s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
+    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,JSON.stringify(s.functions||[]),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
@@ -1019,6 +1036,7 @@ function draw(){
   markPhase('population');
   drawTrainingSoldiers();
   blitSceneCache('castleBody');
+  drawCutawayOccupants();
 
   drawTowerFlags();
   drawCastleSelection();
