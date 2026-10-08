@@ -17,8 +17,9 @@ function rotateViewPoint(p,turns=State.view.rotation||0){
 }
 function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
 const reliefBandCache=new Map();
+let reliefBandSpatialCache=null;
 function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
-function clearReliefBandCache(){reliefBandCache.clear()}
+function clearReliefBandCache(){reliefBandCache.clear();reliefBandSpatialCache=null}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
   const pts=level.top||[];if(pts.length<3)return[];
@@ -44,13 +45,30 @@ function reliefEdgeBands(level){
   });
   const bands=edges.map((edge,i)=>{
     const oa=outer[i],ob=outer[(i+1)%outer.length];
-    return{levelId:level.id,index:i,kind:edge.kind,width:edge.width,z0:level.z0,z1:level.z1,a:edge.a,b:edge.b,oa,ob,poly:[oa,ob,edge.b,edge.a]};
+    const poly=[oa,ob,edge.b,edge.a];
+    return{levelId:level.id,index:i,kind:edge.kind,width:edge.width,z0:level.z0,z1:level.z1,a:edge.a,b:edge.b,oa,ob,poly,
+      minX:Math.min(...poly.map(p=>p.x)),maxX:Math.max(...poly.map(p=>p.x)),
+      minY:Math.min(...poly.map(p=>p.y)),maxY:Math.max(...poly.map(p=>p.y))};
   });
   reliefBandCache.set(level.id,bands);return bands;
 }
 function reliefBandAt(p){
+  if(!reliefBandSpatialCache||reliefBandSpatialCache.relief!==State.relief){
+    const cells=new Map(),size=8;
+    for(const level of reliefLevels())for(const band of reliefEdgeBands(level)){
+      for(let x=Math.floor(band.minX/size);x<=Math.floor(band.maxX/size);x++)
+        for(let y=Math.floor(band.minY/size);y<=Math.floor(band.maxY/size);y++){
+          const key=x+','+y;
+          if(!cells.has(key))cells.set(key,[]);
+          cells.get(key).push(band);
+        }
+    }
+    reliefBandSpatialCache={relief:State.relief,cells,size};
+  }
+  const {cells,size}=reliefBandSpatialCache;
   let gentle=null;
-  for(const level of reliefLevels())for(const band of reliefEdgeBands(level)){
+  for(const band of cells.get(Math.floor(p.x/size)+','+Math.floor(p.y/size))||[]){
+    if(p.x<band.minX||p.x>band.maxX||p.y<band.minY||p.y>band.maxY)continue;
     if(!pointInPolygon(p,band.poly))continue;
     if(band.kind==='steep')return band;
     gentle=band;
@@ -3580,3 +3598,4 @@ function drawAutoStructure(s,preview=false){
   ctx.restore();if(underConstruction(s))drawConstructionProgress(s);
 }
 function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};return{x:0,y:0}}
+

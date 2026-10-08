@@ -600,11 +600,17 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const borderEntries=ensureBorderEntrySelection();
   State.village={...State.village,name,wellId:well.id,founded:true,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   closeVillageModal();
-  const mainSegments=connectSelectedBorderMainRoads();
+  connectBorderMainRoadsInFrames(mainSegments=>{
+    markDirty(true,['ground','base']);
+    renderUI();
+    const connected=ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length;
+    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
+    processVillageGrowth();draw();
+  });
   markDirty(true,['ground','base']);
   renderUI();
-  status(`${name} founded — 4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
-  processVillageGrowth();draw();
+  status(`${name} founded — connecting border main roads…`);
+  draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
@@ -1153,3 +1159,4 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('polygon-clipping-ready',()=>draw());
 window.addEventListener('resize',resize);loadLocal();if(ensureStaticLandscape())saveLocal();ensureBorderEntrySelection();renderUI();resize();fit();initSupabase();
+

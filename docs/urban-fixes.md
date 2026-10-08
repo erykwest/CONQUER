@@ -51,6 +51,17 @@ Branch: urban. Base: main at 97d24ab18cae55463262160a108bd951c044bb9f.
   existing parcel does not hide or delete that parcel.
 
 ## Verification
+City founding no longer computes all four long arterial paths inside the name
+confirmation handler. Path search and segment simplification yield to the UI
+with a 6 ms work budget. Growth waits until planning finishes; clearing the
+city cancels pending work, and changed building topology discards stale paths.
+Slope queries use a spatial index of cached relief bands, preserving exact
+polygon checks while avoiding a full scan for every pathfinding sample.
+
+Run `node qa/founding-regression.cjs` for actual name-confirmation tests on
+generated plains/forest terrain, slice duration, continuous valid roads,
+building changes, cancellation and slope-index parity with brute force.
+
 Run `node qa/urban-regression.cjs`.
 25 regression checks cover road migration, world bounds, four arterial routes,
 persistent deletion, instant reload/new construction, all house levels and
@@ -64,3 +75,4 @@ squad offsets, hostile units, active civilians and existing-lot stability.
 
 All JS modules passed syntax compilation. Browser visual verification was
 unavailable because access to the local preview address was denied.
+
