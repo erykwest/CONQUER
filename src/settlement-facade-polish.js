@@ -22,18 +22,20 @@ function facadeEmissiveMask(img){
   g.putImageData(d,0,0);facadeEmissiveCache.set(img,c);return c;
 }
 
-drawArchitectureAssetOnEdge=function(edge,centerZ,width,height,key,offsetWorld=0,lit=false,nf=1){
+drawArchitectureAssetOnEdge=function(edge,centerZ,width,height,key,offsetWorld=0,lit=false,nf=1,opacity=1){
   const img=architectureSprite(key);if(!img)return false;
   const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
   const lt=w2s(span.a,z1),rt=w2s(span.b,z1),lb=w2s(span.a,z0),iw=img.width,ih=img.height;
   ctx.save();
+  const baseAlpha=ctx.globalAlpha*clamp(Number(opacity)||0,0,1);
+  ctx.globalAlpha=baseAlpha;
   ctx.transform((rt.x-lt.x)/iw,(rt.y-lt.y)/iw,(lb.x-lt.x)/ih,(lb.y-lt.y)/ih,lt.x,lt.y);
   ctx.imageSmoothingEnabled=true;ctx.drawImage(img,0,0);
   if(lit&&/^gothicL[123]$/.test(key)){
     const glow=facadeEmissiveMask(img);
     if(glow){
       ctx.globalCompositeOperation='screen';
-      ctx.globalAlpha=Math.min(.72,.24+.42*nf);
+      ctx.globalAlpha=baseAlpha*Math.min(.72,.24+.42*nf);
       ctx.shadowColor='rgba(255,176,72,'+Math.min(.62,.20+.36*nf)+')';
       ctx.shadowBlur=5;
       ctx.drawImage(glow,0,0);
