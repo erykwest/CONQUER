@@ -542,7 +542,7 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8,allowedAt=null){
     if(cur.x===g.x&&cur.y===g.y){found=cur;break}
     for(const [dx,dy] of dirs){
       const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
-      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q)))continue;
+      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q))||terrainSegmentCrossesCliff(pos(cur.x,cur.y),q))continue;
       if(dx&&dy){
         const q1=pos(cur.x+dx,cur.y),q2=pos(cur.x,cur.y+dy);
         if(pointBlockedForPeasant(q1,sourceHouseId)||pointBlockedForPeasant(q2,sourceHouseId)||(allowedAt&&(!allowedAt(q1)||!allowedAt(q2))))continue;
