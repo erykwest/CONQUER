@@ -40,7 +40,15 @@
     if(combat.version!==2){combat.seen='';combat.version=2}
     combat.fog=true;
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
-    combat.units=Array.isArray(combat.units)?combat.units.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&['squad','knight'].includes(s.kind)): [];
+    combat.units=Array.isArray(combat.units)?combat.units
+      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight'].includes(u.kind))
+      .map(u=>{
+        // Navigation routes are volatile and can contain references to their
+        // source unit in old saves. Rebuild them from the destination instead.
+        const {path,pathIndex,engaged,...stored}=u;
+        return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
+          ?{x:u.target.x,y:u.target.y}:null};
+      }): [];
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
     for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';}
     memory.fill(1);
@@ -56,7 +64,14 @@
     if(!combat)return null;
     let chars='';for(let i=0;i<memory.length;i++)chars+=String.fromCharCode(memory[i]);
     combat.seen=btoa(chars);
-    return combat;
+    // Persist game data, never transient navigation graphs. A direct route
+    // previously stored [unit, destination], creating unit -> path -> unit
+    // and aborting the entire simulation when saveLocal JSON.stringify ran.
+    return {...combat,units:combat.units.map(u=>{
+      const {path,pathIndex,engaged,...stored}=u;
+      return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
+        ?{x:u.target.x,y:u.target.y}:null};
+    })};
   }
   function changed(){
     // Brush edits and alert toggles do not alter physical sight lines.
@@ -578,7 +593,7 @@
     }
     const target=point(p.x,p.y),path=infantryRoute(unit,target,unit.id,unit.kind);
     if(!path){status('No traversable route — cliff, terrain or obstruction blocks the order');return}
-    unit.target=target;unit.path=path;unit.pathIndex=1;changed();
+    unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;changed();
     status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
   }
   function archers(){
@@ -620,7 +635,8 @@
     for(const u of combat.units){
       if(!u.target||u.defeated||u.routing)continue;
       if(!u.path?.length){
-        u.path=infantryRoute(u,u.target,u.id,u.kind);u.pathIndex=1;
+        const route=infantryRoute(u,u.target,u.id,u.kind);
+        u.path=route?.map(p=>({x:p.x,y:p.y}))||null;u.pathIndex=1;
         if(!u.path){u.target=null;continue}
       }
       let budget=dt*(u.kind==='knight'?1.5:.8);
