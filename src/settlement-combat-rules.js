@@ -143,25 +143,6 @@
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
   }
-  function drawEffects(g,project){
-    g.save();
-    for(const p of shots){
-      const t=Math.min(1,(elapsed-p.start)/p.duration);
-      const rise=Math.sin(Math.PI*t)*Math.min(3,Math.hypot(p.to.x-p.from.x,p.to.y-p.from.y)*.20);
-      const x=p.from.x+(p.to.x-p.from.x)*t,y=p.from.y+(p.to.y-p.from.y)*t;
-      const z=p.from.z+(p.to.z-p.from.z)*t+rise;
-      const pos=project({x,y},z);
-      const end=project({x:p.from.x+(p.to.x-p.from.x)*Math.min(1,t+.045),y:p.from.y+(p.to.y-p.from.y)*Math.min(1,t+.045)},
-        p.from.z+(p.to.z-p.from.z)*Math.min(1,t+.045)+Math.sin(Math.PI*Math.min(1,t+.045))*Math.min(3,Math.hypot(p.to.x-p.from.x,p.to.y-p.from.y)*.20));
-      g.strokeStyle='#d7c6a1';g.lineWidth=2;g.beginPath();g.moveTo(pos.x,pos.y);g.lineTo(end.x,end.y);g.stroke();
-    }
-    for(const f of meleeFlashes){
-      const age=(elapsed-f.at)/.65,at=project(f,.16);
-      g.globalAlpha=Math.max(0,1-age);g.strokeStyle='#f3dcc0';g.lineWidth=1.8;
-      g.beginPath();g.moveTo(at.x-5,at.y-11-age*5);g.lineTo(at.x+6,at.y-3-age*5);g.stroke();
-    }
-    g.restore();
-  }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,ensure,living,meleePair,shooterRange,update,drawEffects,
+  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,ensure,living,meleePair,shooterRange,update,visualEffects:()=>({shots,meleeFlashes,elapsed}),
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0}};
 })();
