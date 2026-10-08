@@ -734,6 +734,7 @@ function drawLandscapeStaticScene(){
     drawTerrain();
     drawGrid();
     drawEnvironment();
+    drawForestBillboards();
     drawBuildArea();
   });
   entry.dirty=false;
