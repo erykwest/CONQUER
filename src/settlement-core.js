@@ -519,7 +519,7 @@ function pointRadius(s){
       DRAW:34,
       CACHE_LANDSCAPE:40,CACHE_GROUND:18,CACHE_SHADOW:18,CACHE_BASE:24,
       CACHE_CASTLE_BODY:24,CACHE_CASTLE_FRONT:18,CACHE_STAGE:34,
-      MAINTENANCE:22,SAVE:20,NAV_GRAPH:20,NAV_TREE:12,ROAD_REPAIR:15,GROWTH:20
+      MAINTENANCE:22,SAVE:20,NAV_GRAPH:20,NAV_TREE:12,PATROL_ROUTE:8,ROAD_REPAIR:15,GROWTH:20
     };
     const limit=limits[name]??30;
     if(v>=limit)event(name+'_SLOW',{ms:+v.toFixed(2),...data},v>=limit*2?'error':'warn',250);
@@ -549,7 +549,12 @@ function pointRadius(s){
         gridMisses:finite(p.gridMisses),deltaGridMisses:delta('gridMisses',p),
         destinationTreesBuilt:finite(p.destinationTreesBuilt),deltaTreesBuilt:delta('destinationTreesBuilt',p),
         destinationTreeHits:finite(p.destinationTreeHits),deltaTreeHits:delta('destinationTreeHits',p),
-        navInvalidations:finite(p.navInvalidations),deltaNavInvalidations:delta('navInvalidations',p)
+        navInvalidations:finite(p.navInvalidations),deltaNavInvalidations:delta('navInvalidations',p),
+        patrolRouteCalls:finite(p.patrolRouteCalls),deltaPatrolRouteCalls:delta('patrolRouteCalls',p),
+        patrolRouteCacheHits:finite(p.patrolRouteCacheHits),deltaPatrolRouteCacheHits:delta('patrolRouteCacheHits',p),
+        patrolLocalSearches:finite(p.patrolLocalSearches),deltaPatrolLocalSearches:delta('patrolLocalSearches',p),
+        patrolRouteMisses:finite(p.patrolRouteMisses),deltaPatrolRouteMisses:delta('patrolRouteMisses',p),
+        patrolRouteLastMs:+finite(p.patrolRouteLastMs).toFixed(2)
       },
       cache:{
         invalidations:finite(p.cacheInvalidations),deltaInvalidations:delta('cacheInvalidations',p),
@@ -596,6 +601,7 @@ function pointRadius(s){
     if(max(s=>s.save.lastMs)>30)issues.push('SAVE: synchronous save blocking');
     if(max(s=>s.navigation.deltaGraphBuilds)>1)issues.push('NAVIGATION: repeated graph rebuilds');
     if(max(s=>s.navigation.deltaTreesBuilt)>25)issues.push('NAVIGATION: destination-tree churn');
+    if(events.slice(-100).some(e=>e.type==='PATROL_ROUTE_SLOW'))issues.push('PATROL_ROUTE: slow perimeter routing');
     if(max(s=>s.cache.deltaInvalidations)>8)issues.push('CACHE: frequent invalidations');
     if(max(s=>
       s.cache.deltaLandscapeRebuilds+s.cache.deltaGroundRebuilds+s.cache.deltaShadowRebuilds+s.cache.deltaBaseRebuilds+

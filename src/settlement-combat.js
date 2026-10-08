@@ -39,8 +39,10 @@
   const archerCache=new Map();
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
   let tacticalRuleAccum=0;
-  let whiteBoundaryCache=[],whiteBoundarySignature='';
-  let whiteBoundaryPending=false;
+  const PATROL_PATH_STEP=.75,PATROL_LOOP_STRIDE=2,PATROL_ROUTE_CACHE_MAX=512;
+  let whiteBoundaryCache=[],whiteBoundaryLoopCache=[],whiteBoundarySignature='',whiteBoundaryRevision=0;
+  let whiteBoundaryPending=false,patrolNavRevision=0;
+  const patrolRouteCache=new Map();
 
   function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
   function restore(raw){
@@ -55,7 +57,7 @@
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
-        const {path,pathIndex,engaged,nextPatrolAt,...stored}=u;
+        const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
         return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
@@ -70,7 +72,8 @@
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
-    whiteBoundaryCache=[];whiteBoundarySignature='';whiteBoundaryPending=false;
+    whiteBoundaryCache=[];whiteBoundaryLoopCache=[];whiteBoundarySignature='';whiteBoundaryRevision=0;whiteBoundaryPending=false;
+    patrolNavRevision=0;patrolRouteCache.clear();
     window.ConquerCombatRules?.reset();
     zoneSignature='';backdropSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
@@ -83,7 +86,7 @@
     // previously stored [unit, destination], creating unit -> path -> unit
     // and aborting the entire simulation when saveLocal JSON.stringify ran.
     const storedUnit=u=>{
-      const {path,pathIndex,engaged,nextPatrolAt,...stored}=u;
+      const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
       return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
         ?{x:u.target.x,y:u.target.y}:null};
     };
@@ -563,12 +566,108 @@
     const path=findPeasantPath(start,goal,id,14,p=>cliffClearForFootprint(p,kind));
     return path?.length>1&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id,kind))?path:null;
   }
+  class PatrolMinHeap{
+    constructor(){this.a=[]}
+    push(n){const a=this.a;a.push(n);let i=a.length-1;while(i>0){const p=(i-1)>>1;if(a[p].f<=n.f)break;a[i]=a[p];i=p}a[i]=n}
+    pop(){const a=this.a;if(!a.length)return null;const root=a[0],last=a.pop();if(a.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=a.length)break;let m=r<a.length&&a[r].f<a[l].f?r:l;if(a[m].f>=last.f)break;a[i]=a[m];i=m}a[i]=last}return root}
+    get length(){return this.a.length}
+  }
+  function patrolRouteCacheKey(start,goal){
+    const q=p=>Math.round(p.x*4)+','+Math.round(p.y*4);
+    return whiteBoundaryRevision+'|'+patrolNavRevision+'|'+q(start)+'>'+q(goal);
+  }
+  function rememberPatrolRoute(key,route){
+    if(patrolRouteCache.size>=PATROL_ROUTE_CACHE_MAX){
+      const oldest=patrolRouteCache.keys().next().value;
+      if(oldest!=null)patrolRouteCache.delete(oldest);
+    }
+    patrolRouteCache.set(key,route?route.map(p=>({x:p.x,y:p.y})):null);
+  }
+  function compactPatrolPath(points,id){
+    if(!points?.length)return null;
+    const out=[points[0]];
+    for(let i=1;i<points.length-1;i++){
+      const next=points[i+1];
+      if(safeMilitarySegment(out.at(-1),next,id,'patrol')&&routeAllowed([out.at(-1),next]))continue;
+      out.push(points[i]);
+    }
+    out.push(points.at(-1));
+    return out;
+  }
+  function findPatrolPath(start,goal,id,pad){
+    const step=PATROL_PATH_STEP;
+    const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
+    const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
+    const key=(x,y)=>x+','+y,pos=(x,y)=>({x:x*step,y:y*step}),blocked=new Map();
+    const unavailable=(x,y)=>{
+      const k=key(x,y);if(blocked.has(k))return blocked.get(k);
+      const q=pos(x,y),value=x<minX||x>maxX||y<minY||y>maxY||!areaState(q).allowed||pointBlockedForPeasant(q,id);
+      blocked.set(k,value);return value;
+    };
+    function nearestFree(p){
+      const cx=Math.round(p.x/step),cy=Math.round(p.y/step);let best=null,bestD=Infinity;
+      for(let r=0;r<=4;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
+        if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
+        const x=cx+dx,y=cy+dy;if(unavailable(x,y))continue;
+        const q=pos(x,y);if(!safeMilitarySegment(p,q,id,'patrol')||!routeAllowed([p,q]))continue;
+        const d=dist(p,q);if(d<bestD){best={x,y,q};bestD=d}
+      }
+      return best;
+    }
+    const s=nearestFree(start),g=nearestFree(goal);if(!s||!g)return null;
+    const open=new PatrolMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
+    open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    let found=false,guard=0;
+    while(open.length&&guard++<8000){
+      const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
+      if(cur.x===g.x&&cur.y===g.y){found=true;break}
+      for(const [dx,dy] of dirs){
+        const nx=cur.x+dx,ny=cur.y+dy,nk=key(nx,ny);if(closed.has(nk)||unavailable(nx,ny))continue;
+        if(dx&&dy&&(unavailable(cur.x+dx,cur.y)||unavailable(cur.x,cur.y+dy)))continue;
+        const from=pos(cur.x,cur.y),q=pos(nx,ny);
+        if(terrainSegmentCrossesCliff(from,q))continue;
+        const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
+        if(tentative<(gScore.get(nk)??Infinity)){
+          gScore.set(nk,tentative);came.set(nk,ck);
+          open.push({x:nx,y:ny,f:tentative+dist(q,g.q)});
+        }
+      }
+    }
+    if(!found)return null;
+    const rev=[],startKey=key(s.x,s.y);let k=key(g.x,g.y);
+    while(true){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));if(k===startKey)break;k=came.get(k);if(!k)return null}
+    rev.reverse();
+    const path=[start,...rev,goal].filter((p,i,a)=>!i||dist(p,a[i-1])>.02);
+    return compactPatrolPath(path,id);
+  }
   function patrolRoute(start,goal,id){
-    if(safeMilitarySegment(start,goal,id,'patrol')&&routeAllowed([start,goal]))return[start,goal];
-    const roads=roadNetworkPath(start,goal,id);
-    if(roads?.length>1&&routeAllowed(roads)&&roads.slice(1).every((p,i)=>safeMilitarySegment(roads[i],p,id,'patrol')))return roads;
-    const path=findPeasantPath(start,goal,id,14,p=>cliffClearForFootprint(p,'patrol')&&areaState(p).allowed);
-    return path?.length>1&&routeAllowed(path)&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id,'patrol'))?path:null;
+    const t0=performance.now(),distance=dist(start,goal),cacheKey=patrolRouteCacheKey(start,goal);
+    const perf=window.__conquerPerf||(window.__conquerPerf={});
+    perf.patrolRouteCalls=(perf.patrolRouteCalls||0)+1;
+    if(patrolRouteCache.has(cacheKey)){
+      perf.patrolRouteCacheHits=(perf.patrolRouteCacheHits||0)+1;
+      const cached=patrolRouteCache.get(cacheKey);
+      const route=cached?.map((p,i,a)=>i===0?{x:start.x,y:start.y}:i===a.length-1?{x:goal.x,y:goal.y}:{...p})||null;
+      perf.patrolRouteLastMs=performance.now()-t0;
+      return route;
+    }
+    let route=null,mode='direct';
+    if(safeMilitarySegment(start,goal,id,'patrol')&&routeAllowed([start,goal]))route=[start,goal];
+    else{
+      mode='local-grid';
+      perf.patrolLocalSearches=(perf.patrolLocalSearches||0)+1;
+      const pad=distance<=4?2.5:Math.min(5,3+distance*.08);
+      route=findPatrolPath(start,goal,id,pad);
+    }
+    if(route?.length>1&&routeAllowed(route)&&route.slice(1).every((p,i)=>safeMilitarySegment(route[i],p,id,'patrol'))){
+      rememberPatrolRoute(cacheKey,route);
+    }else{
+      route=null;rememberPatrolRoute(cacheKey,null);perf.patrolRouteMisses=(perf.patrolRouteMisses||0)+1;
+    }
+    const ms=performance.now()-t0;perf.patrolRouteLastMs=ms;
+    window.__conquerAnalytics?.measure('PATROL_ROUTE',ms,{mode,distance:+distance.toFixed(2),points:route?.length||0});
+    return route;
   }
   function issueMove(unit,p){
     if(unit.defeated||unit.routing){status('Unit cannot receive orders');return}
@@ -589,7 +688,10 @@
     if(!unit.path?.length){
       const route=unit.kind==='patrol'?patrolRoute(unit,unit.target,unit.id):infantryRoute(unit,unit.target,unit.id,unit.kind||'knight');
       unit.path=route?.map(p=>({x:p.x,y:p.y}))||null;unit.pathIndex=1;
-      if(!unit.path){unit.target=null;return false}
+      if(!unit.path){
+        if(unit.kind==='patrol')unit.nextPatrolAt=performance.now()+350;
+        unit.target=null;return false
+      }
     }
     let budget=dt*speed,moved=false;
     while(budget>0&&unit.target){
@@ -611,42 +713,49 @@
       (last?[last.x,last.y,last.r,last.mode].join(':'):'');
     const signatureChanged=signature!==whiteBoundarySignature;
     if(!window.ConquerCombatRules.shouldRebuildBoundary(painting,whiteBoundaryCache.length>0,signatureChanged))return whiteBoundaryCache;
-    whiteBoundarySignature=signature;
+    whiteBoundarySignature=signature;whiteBoundaryRevision++;
     const points=window.ConquerCombatRules.boundaryPoints(p=>areaState(p).allowed,WORLD,1.25);
     whiteBoundaryCache=points;
+    const center=activeWell()||{x:WORLD/2,y:WORLD/2};
+    whiteBoundaryLoopCache=window.ConquerCombatRules.traceBoundaryIndices(points,center,1);
+    patrolRouteCache.clear();
     for(const unit of combat.units)if(unit.kind==='patrol'){
-      unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
+      unit.patrolLoopPosition=null;unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
     }
-    spacePatrols(points);
+    spacePatrols(points,whiteBoundaryLoopCache);
     return points;
   }
-  function spacePatrols(boundary=whiteBoundaryPoints()){
+  function spacePatrols(boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache){
     const patrols=combat.units.filter(u=>u.kind==='patrol'&&!u.defeated);
-    if(!patrols.length||!boundary.length)return;
-    const center=activeWell()||{x:WORLD/2,y:WORLD/2};
-    const loop=window.ConquerCombatRules.traceBoundaryIndices(boundary,center,1);
-    if(!loop.length)return;
+    if(!patrols.length||!boundary.length||!loop.length)return;
     patrols.forEach((unit,i)=>{
-      unit.patrolAnchorIndex=loop[Math.floor(i*loop.length/patrols.length)%loop.length];
+      const loopPosition=Math.floor(i*loop.length/patrols.length)%loop.length;
+      unit.patrolLoopPosition=loopPosition;
+      unit.patrolAnchorIndex=loop[loopPosition];
       unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;unit.patrolDirection=1;
       unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;
     });
   }
   function patrolDestination(unit){
-    const boundary=whiteBoundaryPoints();if(!boundary.length)return null;
-    let current=Number.isInteger(unit.patrolBoundaryIndex)?unit.patrolBoundaryIndex:-1;
-    if(current<0||!boundary[current]||dist(unit,boundary[current])>3){
-      current=Number.isInteger(unit.patrolAnchorIndex)&&boundary[unit.patrolAnchorIndex]?unit.patrolAnchorIndex:0;
-      if(!Number.isInteger(unit.patrolAnchorIndex))for(let i=1;i<boundary.length;i++)if(dist(unit,boundary[i])<dist(unit,boundary[current]))current=i;
-      unit.patrolBoundaryIndex=current;unit.patrolPreviousIndex=null;
-      unit.patrolAnchorIndex=null;
-      return boundary[current];
+    const boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache;if(!boundary.length||!loop.length)return null;
+    let position=Number.isInteger(unit.patrolLoopPosition)?unit.patrolLoopPosition:-1;
+    let current=position>=0?loop[position]:-1;
+    if(current<0||!boundary[current]||dist(unit,boundary[current])>3.25){
+      if(Number.isInteger(unit.patrolAnchorIndex)){
+        const anchored=loop.indexOf(unit.patrolAnchorIndex);
+        if(anchored>=0)position=anchored;
+      }
+      if(position<0){
+        position=0;let bestD=dist(unit,boundary[loop[0]]);
+        for(let i=1;i<loop.length;i++){const d=dist(unit,boundary[loop[i]]);if(d<bestD){bestD=d;position=i}}
+      }
+      unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolAnchorIndex=null;
+      return boundary[loop[position]];
     }
-    const direction=unit.patrolDirection||1,center=activeWell()||{x:WORLD/2,y:WORLD/2};
-    const best=window.ConquerCombatRules.nextBoundaryIndex(boundary,current,unit.patrolPreviousIndex,direction,center);
-    if(best<0){unit.patrolBoundaryIndex=null;return null}
-    unit.patrolPreviousIndex=current;unit.patrolBoundaryIndex=best;
-    return boundary[best];
+    const direction=unit.patrolDirection<0?-1:1;
+    position=(position+direction*PATROL_LOOP_STRIDE)%loop.length;if(position<0)position+=loop.length;
+    unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolPreviousIndex=null;
+    return boundary[loop[position]];
   }
   function updatePatrols(now){
     for(const unit of combat.units){
@@ -815,7 +924,7 @@
     if(!painting)return;
     painting=false;lastPaint=null;e.stopImmediatePropagation();
     if(whiteBoundaryPending){
-      whiteBoundaryPending=false;whiteBoundarySignature='';
+      whiteBoundaryPending=false;whiteBoundarySignature='';patrolNavRevision++;patrolRouteCache.clear();
       for(const unit of combat.units)if(unit.kind==='patrol'){unit.target=null;unit.path=null;unit.nextPatrolAt=0}
     }
     if(activeWell())updateAlert(observers());
@@ -877,7 +986,10 @@
   };
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,
-    invalidateRoutes:()=>civilianRouteCache.clear(),
+    invalidateRoutes:()=>{
+      civilianRouteCache.clear();patrolNavRevision++;patrolRouteCache.clear();
+      for(const unit of combat.units||[])if(unit.kind==='patrol'&&unit.target){unit.path=null;unit.pathIndex=1}
+    },
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
   draw();
 })();
