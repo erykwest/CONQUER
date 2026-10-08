@@ -91,7 +91,7 @@
     // negative uphill, exactly symmetrical when shooter and target swap.
     return Math.max(1,PROFILES.archer.range+shooter.h-targetH);
   }
-  function update(dt,friendly,enemy,shooters,visibleFn){
+  function update(dt,friendly,enemy,shooters,visibleFn,canContact=()=>true){
     if(!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);elapsed+=dt;combatClock+=dt;
     for(const u of friendly.concat(enemy)){
@@ -107,7 +107,7 @@
       if(!living(a)||a.routing)continue;
       let nearest=null,gap=1;
       for(const b of enemy){
-        if(!living(b)||b.routing)continue;
+        if(!living(b)||b.routing||!canContact(a,b))continue;
         const distance=Math.hypot(a.x-b.x,a.y-b.y);
         if(distance<gap){nearest=b;gap=distance}
       }
