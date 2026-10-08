@@ -230,8 +230,8 @@ const BIOMES=Object.freeze({
   mountains:{label:'Montagne',field:'#2b2620'},
   sea:{label:'Mare',field:'#2a2818'}
 });
-const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','workshop','prison'];
-const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Storage',quarters:'Quarters',workshop:'Workshop',prison:'Prison'};
+const FUNCTION_CATALOG=['guard','barracks','armory','storage','quarters','nobleRoom','workshop','prison'];
+const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Storage',quarters:'Quarters',nobleRoom:'Noble room',workshop:'Workshop',prison:'Prison'};
 const uid=()=>crypto.randomUUID?.()||('id-'+Date.now()+'-'+Math.random());
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const snapGrid=v=>Math.round(v/GRID)*GRID;
