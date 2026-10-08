@@ -198,6 +198,16 @@ function renderFunctionPanel(){
       '<button data-siege-mastio="'+s.id+'" '+(building?'disabled':'')+' class="'+(active?'active':'')+'">'+(active?'★ Mastio designated · remove':'☆ Designate this tower as Mastio')+'</button>'+
       '<div class="legend">One Mastio per castle. Reassign at any time to a completed tower.</div></div>';
   }
+  if(s.type==='tower'){
+    const archerSlots=window.ConquerSiege?.archerSlots(s)||[];
+    const archers=window.ConquerSiege?.stationedArchers(s)||0;
+    const roofSlots=archerSlots.filter(slot=>slot.kind==='roof').length;
+    const slitSlots=archerSlots.length-roofSlots;
+    html+='<div class="slot"><div class="slot-label">Tower archers · '+archers+' / '+archerSlots.length+'</div>'+
+      '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
+      '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
+      '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+  }
   if(s.type==='house'){
     const level=houseLevel(s);
     html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 3 residents · L2: 6 · L3: 9 · L4: 12. L3: extended ${housePlanType(s)} plan · L4: elite house with ${houseTurretType(s)} turret.</div></div>`;
