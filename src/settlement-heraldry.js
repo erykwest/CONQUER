@@ -37,6 +37,7 @@ function symbolSvg(){
  return '<g transform="translate(16 3) scale(.69)" fill="'+h.c3+'" stroke="'+h.c4+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M49 10l-8 6-11-1-7 8 5 6-7 5 6 3-2 8 9 2 5-9 9 3-2 8-12 3 4 7-7 9-7-2-3 8 9 5 10-5 6-11 8 4 2 9-5 7 9 5 8-4 1-10 8 1 5 8 9-4 1-12-9-6-3-12 8-2 8 7 6-6-7-13-12-5 7-7 11 3 4-6-4-7 3-8 8-4 2-10-6-6-8 5-4-7 5-9-6-5 2-9 12-3 2-8-7-6-11 3-3-7-7-2z"/></g>';
 }
 function layers(){return patternSvg(h.pattern,h.c1,h.c2)+symbolSvg()}
+function rectangle(){return svg('<g transform="scale(1.6 1)">'+patternSvg(h.pattern,h.c1,h.c2)+'</g><g transform="translate(30 0)">'+symbolSvg()+'</g>','0 0 160 100')}
 function svg(content,view='0 0 100 100'){return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+view+'" aria-hidden="true">'+content+'</svg>'}
 function clip(type){
  const shape=type==='shield'?'M12 5H88V51Q84 77 50 96Q16 77 12 51Z':type==='banner'?'M17 2H83V96L50 81 17 96Z':'M4 12H96V88H4Z';
@@ -46,7 +47,7 @@ function draw(){
  $('heraldryPatterns').innerHTML=patterns.map((p,i)=>'<button type="button" class="'+(p===h.pattern?'active':'')+'" data-pattern="'+p+'" aria-label="Partizione '+(i+1)+'" title="Partizione '+(i+1)+'">'+svg(patternSvg(p,'#111','#f1e7d7'))+'</button>').join('');
  $('heraldryColors').innerHTML=[['c1','Colore 1 · campo'],['c2','Colore 2 · campo'],['c3','Colore 3 · simbolo'],['c4','Colore 4 · contorno']].map(([k,label])=>'<label class="heraldry-color"><input type="color" data-heraldry-color="'+k+'" value="'+h[k]+'"><span>'+label+'</span></label>').join('');
  $('heraldrySymbols').innerHTML='<button type="button" class="'+(h.symbol==='lion'?'active':'')+'" data-symbol="lion">'+svg(symbolSvg().replaceAll('fill="'+h.c3+'"','fill="#111111"'))+'<span>Leone</span></button><button type="button" class="'+(h.symbol==='none'?'active':'')+'" data-symbol="none"><span style="font-size:30px">∅</span><span>Nessuno</span></button>';
- $('heraldryFlag').innerHTML=svg(layers());
+ $('heraldryFlag').innerHTML=rectangle();
  $('heraldryApplications').innerHTML=[['shield','Scudo'],['banner','Stendardo'],['cloth','Tessuto']].map(([type,label])=>'<div class="heraldry-application">'+clip(type)+'<span>'+label+'</span></div>').join('');
 }
 function persist(){sanitize();State.heraldry={...h};saveLocal();scheduleLocalSave();$('heraldrySaveStatus').textContent='Araldica salvata nella partita · locale';draw()}
@@ -71,5 +72,5 @@ document.querySelectorAll('[data-profile-tab]').forEach(b=>b.addEventListener('c
 $('heraldryPatterns').addEventListener('click',e=>{const b=e.target.closest('[data-pattern]');if(b){h.pattern=b.dataset.pattern;persist()}});
 $('heraldrySymbols').addEventListener('click',e=>{const b=e.target.closest('[data-symbol]');if(b){h.symbol=b.dataset.symbol;persist()}});
 $('heraldryColors').addEventListener('input',e=>{const k=e.target.dataset.heraldryColor;if(k&&validHex(e.target.value)){h[k]=e.target.value;persist()}});
-window.__conquerHeraldry={reset:()=>{h={...DEFAULT};State.heraldry={...h};draw()},get:()=>({...State.heraldry}),render:()=>svg(layers()),open:()=>open('heraldry')};
+window.__conquerHeraldry={reset:()=>{h={...DEFAULT};State.heraldry={...h};draw()},get:()=>({...State.heraldry}),render:()=>rectangle(),open:()=>open('heraldry')};
 })();
