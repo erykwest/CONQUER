@@ -36,7 +36,8 @@
     return combat;
   }
   function changed(){
-    visibilityDirty=true;maskDirty=true;
+    // Brush edits and alert toggles do not alter physical sight lines.
+    if(activeWell())updateAlert(observers());
     State.dirty=true;
     const el=document.getElementById('saveState');if(el)el.textContent='unsaved';
     if(typeof scheduleLocalSave==='function')scheduleLocalSave();
@@ -212,7 +213,8 @@
   function refreshFog(force=false){
     if(!combat||!activeWell())return;
     const now=performance.now();
-    if(!force&&!visibilityDirty&&now-lastVision<900)return;
+    // Limit full LOS/fog refreshes while units travel or the player paints.
+    if(!force&&now-lastVision<500)return;
     startUnits();terrainCache();
     const sources=observers();
     const sig=sources.map(s=>s.id+':'+s.x.toFixed(1)+':'+s.y.toFixed(1)+':'+s.h).join('|')+
@@ -462,6 +464,6 @@
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;draw()}};
+  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
   draw();
 })();
