@@ -221,6 +221,10 @@
     const desired=civilianLegalPosition(p,house);
     const id=resident.id,now=performance.now();
     const prior=residentMotion.get(id),mode=combat.recall?'recall':'release';
+    if(!combat.recall&&!prior){
+      if(desired)residentLastPosition.set(id,desired);
+      return desired;
+    }
     // Residents not outside have nothing to flee from until they emerge.
     if(!desired&&!prior&&!combat.recall)return null;
     if(!desired&&!prior&&combat.recall)return null;
