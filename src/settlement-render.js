@@ -791,6 +791,7 @@ function drawGroundStaticScene(){
     // Weather-ground detail is isolated here. Wet/dry transitions invalidate
     // only this cheap layer instead of terrain + every building.
     drawPuddleLayer();
+    drawUrbanLots();
   });
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});
@@ -1086,3 +1087,4 @@ function draw(){
   markPhase('castle-facades-effects');
   if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
 }
+

@@ -6,12 +6,12 @@ function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by
 function structureAt(p){
   const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
-  const linear=State.structures.filter(s=>!s.auto&&['wall','palisade','built','road'].includes(s.type));
+  const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId)&&['wall','palisade','built','road'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
   return null;
 }
 function structureAtScreen(p){
-  const manual=State.structures.filter(s=>!s.auto||s.type==='house').slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
+  const manual=State.structures.filter(s=>!s.auto||s.type==='house'||s.type==='road'&&s.routeId).slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
@@ -126,6 +126,10 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
 
+  if(target.type==='road'&&target.routeId){
+    const deleted=new Set(State.village.deletedMainRoutes||[]);deleted.add(target.routeId);
+    State.village.deletedMainRoutes=[...deleted];
+  }
   if(target.type==='tower')restoreTowerWallConnections(target);
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
@@ -280,7 +284,7 @@ function renderFunctionPanel(){
   }
   slots.innerHTML=html;
   window.ConquerSiege?.bindPanel(slots);
-  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)+1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
+  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;const level=clamp(houseLevel(target)+1,1,4);if(!urbanHouseFitsLots({...target,houseLevel:level})){status('House extension would exceed its lot');return}target.houseLevel=level;markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(!target)return;
@@ -624,11 +628,17 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const borderEntries=ensureBorderEntrySelection();
   State.village={...State.village,name,wellId:well.id,founded:true,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   closeVillageModal();
-  const mainSegments=connectSelectedBorderMainRoads();
+  connectBorderMainRoadsInFrames(mainSegments=>{
+    markDirty(true,['ground','base']);
+    renderUI();
+    const connected=ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length;
+    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
+    processVillageGrowth();draw();
+  });
   markDirty(true,['ground','base']);
   renderUI();
-  status(`${name} founded — 4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
-  processVillageGrowth();draw();
+  status(`${name} founded — connecting border main roads…`);
+  draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
@@ -1181,3 +1191,4 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('polygon-clipping-ready',()=>draw());
 window.addEventListener('resize',resize);loadLocal();if(ensureStaticLandscape())saveLocal();ensureBorderEntrySelection();renderUI();resize();fit();initSupabase();
+

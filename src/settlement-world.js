@@ -66,11 +66,16 @@ function autoOverlapsManual(auto,manual){
 }
 function removeOverlappingAuto(manual){
   let removed=0;const roads=[];
+  const clearedHouses=new Set(urbanLotsOverlappingBuilding(manual).map(lot=>lot.houseId));
+  for(const house of autoList('house'))if(autoOverlapsManual(house,manual))clearedHouses.add(house.id);
   State.structures=State.structures.filter(s=>{
-    const hit=s.auto&&autoOverlapsManual(s,manual);
+    // House-owned access spurs disappear with the parcel and must not be repaired.
+    if(s.type==='road'&&clearedHouses.has(s.accessFor)){removed++;return false}
+    const hit=s.auto&&(clearedHouses.has(s.id)||autoOverlapsManual(s,manual));
     if(hit){removed++;if(s.type==='road')roads.push({...s,a:{...s.a},b:{...s.b}})}
     return !hit;
   });
+  if(clearedHouses.size)invalidateUrbanGeometry();
   return{removed,roads};
 }
 const ROAD_REPAIR_INDEX_CELL=4;
@@ -155,7 +160,7 @@ function roadRepairEntryBlocksPoint(entry,p,clearance,width){
   return false;
 }
 function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null){
-  if(!inBuild(p)||environmentBlocksPoint(p,'road'))return false;
+  if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||environmentBlocksPoint(p,'road'))return false;
   const clearance=width/2+.16;
 
   if(spatialIndex){
@@ -173,15 +178,21 @@ function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null){
   }
   return true;
 }
+function finishRoadWork(work){let step;do{step=work.next()}while(!step.done);return step.value}
 function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[],spatialIndex=null){
+  return finishRoadWork(roadRepairSegmentWork(a,b,width,ignoreIds,spatialIndex));
+}
+function* roadRepairSegmentWork(a,b,width=.30,ignoreIds=[],spatialIndex=null){
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
   for(let i=0;i<=steps;i++){
+    if(i%16===0)yield;
     const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
     if(!roadRepairPointClear(p,width,ignoreIds,spatialIndex))return false;
   }
   return true;
 }
-function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24000){
+function findRoadRepairPath(...args){return finishRoadWork(findRoadRepairWork(...args))}
+function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24000){
   const analyticsT0=performance.now();
   const spatialIndex=buildRoadRepairSpatialIndex(ignoreIds);
   const pointMemo=new Map(),segmentMemo=new Map();
@@ -209,9 +220,10 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
   const key=(x,y)=>x+','+y,pos=(x,y)=>({x:x*step,y:y*step});
-  function nearestFree(p){
+  function* nearestFree(p){
     const cx=Math.round(p.x/step),cy=Math.round(p.y/step);let best=null,bestD=Infinity;
     for(let r=0;r<=6;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
+      if(dy===-r)yield;
       if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
       const x=cx+dx,y=cy+dy,q=pos(x,y);
       if(x<minX||x>maxX||y<minY||y>maxY||!pointClear(q))continue;
@@ -219,7 +231,7 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
     }
     return best;
   }
-  const s=nearestFree(start),g=nearestFree(goal);
+  const s=yield* nearestFree(start),g=yield* nearestFree(goal);
   if(!s||!g){
     window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{
       found:false,reason:'endpoint',blockers:spatialIndex.entries.length,
@@ -233,6 +245,7 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   let found=null,guard=0;
   while(open.length&&guard++<maxGuard){
+    if(guard%4===0)yield;
     const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
     if(cur.x===g.x&&cur.y===g.y){found=cur;break}
     const cp=pos(cur.x,cur.y);
@@ -265,13 +278,14 @@ function findRoadRepairPath(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=240
   window.__conquerAnalytics?.measure('ROAD_REPAIR',performance.now()-analyticsT0,{found:true,points:rev.length,...telemetry});
   return rev;
 }
-function simplifyRoadRepairPath(points,width=.30,ignoreIds=[]){
+function simplifyRoadRepairPath(...args){return finishRoadWork(simplifyRoadRepairWork(...args))}
+function* simplifyRoadRepairWork(points,width=.30,ignoreIds=[]){
   if(!points||points.length<=2)return points||[];
   const out=[points[0]];let i=0;
   while(i<points.length-1){
     let chosen=i+1;
     for(let j=points.length-1;j>i+1;j--){
-      if(roadRepairSegmentClear(points[i],points[j],width,ignoreIds)){chosen=j;break}
+      if(yield* roadRepairSegmentWork(points[i],points[j],width,ignoreIds)){chosen=j;break}
     }
     out.push(points[chosen]);i=chosen;
   }
@@ -301,8 +315,9 @@ function addReactiveRoadPolyline(points,template={},meta={}){
   }
   return added;
 }
+function mainRoadRouteDeleted(routeId){return (State.village.deletedMainRoutes||[]).includes(routeId)}
 function arterialRoutePlan(routeId){
-  return ensureRoadPlan().find(r=>r.id===routeId)||null;
+  return mainRoadRouteDeleted(routeId)?null:ensureRoadPlan().find(r=>r.id===routeId)||null;
 }
 function arterialSegmentOrderValue(r){
   return Number.isFinite(Number(r.routeSeq))?Number(r.routeSeq):0;
@@ -351,20 +366,21 @@ function arterialSafeWaypoints(routeId,displaced=[]){
   }
   return pts;
 }
-function buildArterialRepairPolyline(routeId,displaced=[]){
+function buildArterialRepairPolyline(...args){return finishRoadWork(buildArterialRepairWork(...args))}
+function* buildArterialRepairWork(routeId,displaced=[]){
   const well=State.structures.find(s=>s.id===State.village.wellId),waypoints=arterialSafeWaypoints(routeId,displaced);
   if(!well||waypoints.length<2)return null;
   const width=.62,ignore=[well.id],full=[waypoints[0]];
   for(let i=0;i<waypoints.length-1;i++){
     const a=full.at(-1),b=waypoints[i+1];let leg=null;
-    if(roadRepairSegmentClear(a,b,width,ignore))leg=[a,b];
-    else leg=findRoadRepairPath(a,b,width,12,ignore,60000);
+    if(yield* roadRepairSegmentWork(a,b,width,ignore))leg=[a,b];
+    else leg=yield* findRoadRepairWork(a,b,width,12,ignore,60000);
     if(!leg||leg.length<2)return null;
     for(let j=1;j<leg.length;j++){
       const p=leg[j];if(dist(full.at(-1),p)>.08)full.push(p);
     }
   }
-  return simplifyRoadRepairPath(full,width,ignore);
+  return yield* simplifyRoadRepairWork(full,width,ignore);
 }
 function subdivideRoadPolyline(points,maxLen=5.0){
   if(!points||points.length<2)return points||[];
@@ -389,8 +405,10 @@ function refreshStaleHouseRoadRefs(){
     if(best)h.roadId=best.id;
   }
 }
-function rebuildArterialRoute(routeId,displaced=[]){
-  const plan=arterialRoutePlan(routeId),path=buildArterialRepairPolyline(routeId,displaced);
+function rebuildArterialRoute(...args){return finishRoadWork(rebuildArterialWork(...args))}
+function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
+  const plan=arterialRoutePlan(routeId),path=yield* buildArterialRepairWork(routeId,displaced);
+  if(!stillValid()||mainRoadRouteDeleted(routeId))return 0;
   if(!plan||!path||path.length<2)return 0;
 
   // Only replace the route after a complete valid path has been found.
@@ -492,7 +510,7 @@ function gateMainRouteContinuous(gate){
   return Math.min(dist(cursor,endpoints[0]),dist(cursor,endpoints[1]))<=.90;
 }
 function buildGateMainConnection(gate,force=false){
-  if(!gate||gate.type!=='gate'||underConstruction(gate))return 0;
+  if(!gate||gate.type!=='gate'||underConstruction(gate)||mainRoadRouteDeleted(gateMainRouteId(gate)))return 0;
   const routeId=gateMainRouteId(gate),attemptKey=gateMainTopologyKey(gate);
 
   if(!force&&gateMainRouteContinuous(gate)){
@@ -811,7 +829,7 @@ function reconcileReactiveRoadNetwork(){
   // This entry point is used after load, when derived branches must be restored
   // as existing geometry rather than re-enter construction.
   changed+=reconcileTowerSecondaryBranches(Infinity,true);
-  changed+=reconcileSettlementAccessRoads();
+  changed+=reconcileSettlementAccessRoads(Infinity,true);
   if(changed)invalidateNavigation(false);
   return changed;
 }
@@ -1181,8 +1199,8 @@ function roadEnvironmentConflict(road){
   return false;
 }
 function edgeSample(edge,t){
-  const v=BUILD_MIN+t*(BUILD_MAX-BUILD_MIN);
-  if(edge==='north')return{x:v,y:BUILD_MIN};if(edge==='south')return{x:v,y:BUILD_MAX};if(edge==='west')return{x:BUILD_MIN,y:v};return{x:BUILD_MAX,y:v};
+  const v=t*WORLD;
+  if(edge==='north')return{x:v,y:0};if(edge==='south')return{x:v,y:WORLD};if(edge==='west')return{x:0,y:v};return{x:WORLD,y:v};
 }
 function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
 function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
@@ -1199,7 +1217,7 @@ function growthRng(step,salt=0){
 }
 const BORDER_ENTRY_SIDES=['north','east','south','west'];
 const BORDER_ENTRY_FRACTIONS=[.25,.50,.75];
-const ROAD_PLAN_VERSION=2;
+const ROAD_PLAN_VERSION=3;
 function borderEntryCandidates(){
   const out=[];
   for(const edge of BORDER_ENTRY_SIDES){
@@ -1212,7 +1230,8 @@ function borderEntryCandidates(){
 }
 function validBorderEntrySelection(entries){
   return Array.isArray(entries)&&entries.length===4&&BORDER_ENTRY_SIDES.every(edge=>
-    entries.some(e=>e?.edge===edge&&Number.isFinite(e.x)&&Number.isFinite(e.y))
+    entries.some(e=>e?.edge===edge&&BORDER_ENTRY_FRACTIONS.includes(e.t)&&
+      dist(e,edgeSample(edge,e.t))<.001)
   );
 }
 function ensureBorderEntrySelection(){
@@ -1256,11 +1275,49 @@ function connectSelectedBorderMainRoads(){
   if(!well||plan.length!==4)return 0;
   let changed=0;
   for(const route of plan){
+    if(mainRoadRouteDeleted(route.id))continue;
     route.connected=true;
     if(!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
   }
   if(changed)invalidateNavigation(false);
   return changed;
+}
+let foundingRoadJob=null;
+function connectBorderMainRoadsInFrames(onDone=()=>{}){
+  const village=State.village,well=State.structures.find(s=>s.id===village.wellId);
+  const plan=ensureRoadPlan();
+  if(!well||plan.length!==4)return;
+  const job={village};foundingRoadJob=job;
+  const active=()=>foundingRoadJob===job&&State.village===village&&village.founded&&State.structures.includes(well);
+  function* work(){
+    let changed=0;
+    for(const route of plan){
+      if(mainRoadRouteDeleted(route.id))continue;
+      route.connected=true;
+      while(active()&&!mainRoadRouteDeleted(route.id)&&!arterialRouteContinuous(route.id)){
+        const revision=navPerf.navInvalidations||0;
+        const added=yield* rebuildArterialWork(route.id,[],()=>active()&&(navPerf.navInvalidations||0)===revision);
+        changed+=added;
+        if(added||(navPerf.navInvalidations||0)===revision)break;
+        // A building or deletion changed the map while planning: discard and retry.
+        yield;
+      }
+      if(changed){markDirty(true,['ground','base']);draw()}
+      yield;
+    }
+    return changed;
+  }
+  const iterator=work();
+  function tick(){
+    if(!active()){if(foundingRoadJob===job)foundingRoadJob=null;return}
+    const deadline=performance.now()+6;
+    let step;
+    do{step=iterator.next()}while(!step.done&&performance.now()<deadline);
+    if(step.done){foundingRoadJob=null;onDone(step.value);return}
+    setTimeout(tick,0);
+  }
+  // Return to the input handler before any terrain/path search starts.
+  setTimeout(tick,0);
 }
 function mainRoadSnapAnchor(p){
   let best={point:{x:snapGrid(p.x),y:snapGrid(p.y)},distance:Infinity};
@@ -1361,9 +1418,10 @@ function constrainRoadCandidate(candidate){
 function spawnArterial(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();if(!well||!plan.length)return false;
   for(const route of plan){
+    if(mainRoadRouteDeleted(route.id))continue;
     if(routeRoads(route.id).length&&!arterialRouteContinuous(route.id))rebuildArterialRoute(route.id,[]);
   }
-  const open=plan.filter(p=>!p.connected);if(!open.length)return false;
+  const open=plan.filter(p=>!p.connected&&!mainRoadRouteDeleted(p.id));if(!open.length)return false;
   // Alternate progress across the two border routes by choosing the one with fewer accepted segments.
   open.sort((p,q)=>routeRoads(p.id).length-routeRoads(q.id).length);
   const route=open[0],existing=routeRoads(route.id),a=existing.length?{...existing[existing.length-1].b}:{x:well.x,y:well.y};
@@ -1395,7 +1453,7 @@ function spawnLocalRoad(step){
   return reconcileSettlementAccessRoads(1)>0;
 }
 function spawnRoad(step){
-  const plan=ensureRoadPlan(),incomplete=plan.some(p=>!p.connected);
+  const plan=ensureRoadPlan(),incomplete=plan.some(p=>!p.connected&&!mainRoadRouteDeleted(p.id));
   if(incomplete)return spawnArterial(step);
   return spawnLocalRoad(step);
 }
@@ -1408,7 +1466,7 @@ function spawnHouse(step){
     const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
     const ang=roadAngle(road),side=rnd()<.5?-1:1,offset=1.15+rnd()*1.35;
     const p={x:q.x-Math.sin(ang)*offset*side,y:q.y+Math.cos(ang)*offset*side};
-    const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p))continue;
+    const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow)continue;
     const core=Math.exp(-Math.pow(d-Math.min(6.5,radius*.62),2)/(2*3.0*3.0));
     const score=core*1.2+(1-offset/3)*.65+rnd()*.20;
     candidates.push({p,ang,score,roadId:road.id,doorSide:-side});
@@ -1416,7 +1474,10 @@ function spawnHouse(step){
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,24)){
     const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
-    if(!autoBlocked(h,placed,manual,.38)){State.structures.push(h);ensureSettlementRoadAccess(h);return true}
+    if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h)))continue;
+    // Resolve and validate the parcel before committing a house to the simulation.
+    if(!urbanHouseFitsLots(h))continue;
+    State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);return true;
   }
   return false;
 }
@@ -1440,6 +1501,7 @@ function spawnField(step){
 }
 function processVillageGrowth(){
   if(!State.village.founded)return 0;
+  if(foundingRoadJob?.village===State.village)return 0;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
   ensureRoadPlan();
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
@@ -1479,3 +1541,4 @@ function openVillageModal(well){
   modal.classList.add('open');input.value=State.village.name||'';setTimeout(()=>input.focus(),0);
 }
 function closeVillageModal(){document.getElementById('foundVillageModal').classList.remove('open');State.pendingWellId=null}
+

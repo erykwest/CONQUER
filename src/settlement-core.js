@@ -28,7 +28,9 @@ function invalidateSettlementScene(includeCastle=true){
 }
 function structureSceneLayers(s){
   if(!s)return['ground','shadow','base','castleBody','castleFront'];
-  if(s.type==='road'||(s.auto&&s.type==='field'))return['ground'];
+  if(s.type==='road')return['ground','base'];
+  if(s.auto&&s.type==='field')return['ground'];
+  if(s.type==='house')return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
   // Palisades and timber fortifications are rendered in the non-union base layer.

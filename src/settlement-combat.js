@@ -441,6 +441,7 @@
     return out;
   }
   function lineVisible(source,target,sourceForest,targetForest){
+    if(!urbanHouseLineVisible(source,target))return false;
     const length=dist(source,target),steps=Math.floor(length/STEP);
     for(let k=1;k<steps;k++){
       const t=k/steps,p={x:source.x+(target.x-source.x)*t,y:source.y+(target.y-source.y)*t};
@@ -662,13 +663,13 @@
             g.lineTo(base.x+(end.x-base.x)*(.25+.7*pulse),base.y-8+(end.y-base.y-8)*(.25+.7*pulse));g.stroke();
           }
         }
-        if(soldier.flag){
+        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,.08,()=>{
           const base=w2s(soldier.p,.08);
           g.strokeStyle='#5d4535';g.lineWidth=1.8;g.beginPath();
           g.moveTo(base.x+5,base.y-2);g.lineTo(base.x+5,base.y-27);g.stroke();
           g.fillStyle='#d6bd68';g.beginPath();g.moveTo(base.x+5,base.y-27);
           g.lineTo(base.x+19,base.y-24);g.lineTo(base.x+5,base.y-19);g.fill();
-        }
+        });
       }
       for(const e of combat.enemy){
         if(e.defeated||e.stats?.hp<=0||!spotted(e,sightSources))continue;
@@ -698,12 +699,14 @@
   const SQUAD_FOOTPRINT=[[-.55,-.22],[0,-.22],[.55,-.22],[-.55,.33],[0,.33]];
   function militaryOffsets(kind){return kind==='squad'?SQUAD_FOOTPRINT:[[0,0]]}
   function cliffClearForFootprint(p,kind){
-    return militaryOffsets(kind).every(([ox,oy])=>!terrainSegmentCrossesCliff(
-      {x:p.x+ox,y:p.y+oy},{x:p.x+ox,y:p.y+oy}));
+    return militaryOffsets(kind).every(([ox,oy])=>{
+      const q={x:p.x+ox,y:p.y+oy};
+      return !pointBlockedForPeasant(q)&&!terrainSegmentCrossesCliff(q,q);
+    });
   }
   function safeMilitarySegment(a,b,id,kind){
     return peasantSegmentClear(a,b,id)&&militaryOffsets(kind).every(([ox,oy])=>
-      !terrainSegmentCrossesCliff({x:a.x+ox,y:a.y+oy},{x:b.x+ox,y:b.y+oy}));
+      peasantSegmentClear({x:a.x+ox,y:a.y+oy},{x:b.x+ox,y:b.y+oy},id));
   }
   function infantryRoute(start,goal,id,kind='knight'){
     if(safeMilitarySegment(start,goal,id,kind))return [start,goal];
@@ -725,6 +728,18 @@
     if(!path){status('No traversable route — cliff, terrain or obstruction blocks the order');return}
     unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;changed();
     status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
+  }
+  function spawnOccupants(){
+    const out=[];
+    for(const unit of combat.units.concat(combat.enemy)){
+      if(unit.defeated||unit.stats?.hp<=0)continue;
+      for(const [ox,oy] of militaryOffsets(unit.kind))out.push({x:unit.x+ox,y:unit.y+oy,r:unit.kind==='knight'?.30:.22});
+    }
+    return out;
+  }
+  function civilSpawnPosition(p,house,resident){
+    const motion=residentMotion.get(resident.id);
+    return motion?motionPosition(motion,performance.now()):civilianLegalPosition(p,house);
   }
   function archers(){
     const now=performance.now();
@@ -809,9 +824,9 @@
             const facing=((e.x-shooter.x)*shooter.nx+(e.y-shooter.y)*shooter.ny)/d;
             if(facing<.45)return false;
           }
-          return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,r:rules.shooterRange(shooter,e)},e);
+          return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:rules.shooterRange(shooter,e)},e);
         },
-        (a,b)=>!terrainSegmentCrossesCliff(a,b)&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
+        (a,b)=>safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
       if(ruleMs>25)window.__conquerAnalytics?.event('COMBAT_RULES_SLOW',{ms:+ruleMs.toFixed(1),archers:hostiles.length?archerRoster.length:0,hostiles:hostiles.length},'warn',3000);
@@ -827,7 +842,7 @@
     }
     appendStroke({x:q.x,y:q.y,r,mode});
     if(combat.strokes.length>2500){combat.strokes.splice(0,combat.strokes.length-2500);indexedStrokes=-1;}
-    lastPaint=q;civilianRouteCache.clear();changed(true);
+    lastPaint=q;civilianRouteCache.clear();invalidateUrbanGeometry();invalidateSceneCache('ground');changed(true);
   }
   let queuedToolDraw=false;
   function requestToolDraw(){
@@ -918,9 +933,10 @@
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,
+  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     alarmMode,setAlarmMode,recruitedResident,
-    invalidateRoutes:()=>civilianRouteCache.clear(),
+    yellowGeometry:()=>circles().filter(c=>c.mode==='yellow').concat(combat.strokes.filter(c=>['yellow','eraseYellow'].includes(c.mode))),
+    invalidateRoutes:()=>{civilianRouteCache.clear();circleCacheBucket=-1;visibilityDirty=true;for(const u of combat?.units||[])u.path=null},
     invalidateArchers:()=>{nextArcherRosterAt=0;archerRosterSize=-1},
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
   draw();

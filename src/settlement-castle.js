@@ -17,8 +17,9 @@ function rotateViewPoint(p,turns=State.view.rotation||0){
 }
 function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
 const reliefBandCache=new Map();
+let reliefBandSpatialCache=null;
 function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
-function clearReliefBandCache(){reliefBandCache.clear()}
+function clearReliefBandCache(){reliefBandCache.clear();reliefBandSpatialCache=null}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
   const pts=level.top||[];if(pts.length<3)return[];
@@ -44,13 +45,30 @@ function reliefEdgeBands(level){
   });
   const bands=edges.map((edge,i)=>{
     const oa=outer[i],ob=outer[(i+1)%outer.length];
-    return{levelId:level.id,index:i,kind:edge.kind,width:edge.width,z0:level.z0,z1:level.z1,a:edge.a,b:edge.b,oa,ob,poly:[oa,ob,edge.b,edge.a]};
+    const poly=[oa,ob,edge.b,edge.a];
+    return{levelId:level.id,index:i,kind:edge.kind,width:edge.width,z0:level.z0,z1:level.z1,a:edge.a,b:edge.b,oa,ob,poly,
+      minX:Math.min(...poly.map(p=>p.x)),maxX:Math.max(...poly.map(p=>p.x)),
+      minY:Math.min(...poly.map(p=>p.y)),maxY:Math.max(...poly.map(p=>p.y))};
   });
   reliefBandCache.set(level.id,bands);return bands;
 }
 function reliefBandAt(p){
+  if(!reliefBandSpatialCache||reliefBandSpatialCache.relief!==State.relief){
+    const cells=new Map(),size=8;
+    for(const level of reliefLevels())for(const band of reliefEdgeBands(level)){
+      for(let x=Math.floor(band.minX/size);x<=Math.floor(band.maxX/size);x++)
+        for(let y=Math.floor(band.minY/size);y<=Math.floor(band.maxY/size);y++){
+          const key=x+','+y;
+          if(!cells.has(key))cells.set(key,[]);
+          cells.get(key).push(band);
+        }
+    }
+    reliefBandSpatialCache={relief:State.relief,cells,size};
+  }
+  const {cells,size}=reliefBandSpatialCache;
   let gentle=null;
-  for(const level of reliefLevels())for(const band of reliefEdgeBands(level)){
+  for(const band of cells.get(Math.floor(p.x/size)+','+Math.floor(p.y/size))||[]){
+    if(p.x<band.minX||p.x>band.maxX||p.y<band.minY||p.y>band.maxY)continue;
     if(!pointInPolygon(p,band.poly))continue;
     if(band.kind==='steep')return band;
     gentle=band;
@@ -3531,11 +3549,34 @@ function houseDoorInfo(house){
   const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=(Number(house.h)||1)/2;
   const lateralSign=(peasantHash(house.id)&2)?1:-1;
   const lateralOffset=(Number(house.w)||1.5)*.24*lateralSign;
+  // Extensions and L4 turrets may cover the original base-wall entrance.
+  // Put the door on the outermost exposed footprint along its outward ray.
+  let reach=half;
+  for(const part of houseFootprintParts(house)){
+    const poly=part.points.map(p=>({x:(p.x-house.x)*tangent.x+(p.y-house.y)*tangent.y,
+      y:(p.x-house.x)*normal.x+(p.y-house.y)*normal.y}));
+    for(let i=0;i<poly.length;i++){
+      const a=poly[i],b=poly[(i+1)%poly.length];
+      if(lateralOffset<Math.min(a.x,b.x)-1e-8||lateralOffset>Math.max(a.x,b.x)+1e-8)continue;
+      if(Math.abs(b.x-a.x)<1e-8){reach=Math.max(reach,a.y,b.y);continue}
+      const t=(lateralOffset-a.x)/(b.x-a.x);
+      reach=Math.max(reach,a.y+(b.y-a.y)*t);
+    }
+  }
   const surface={
-    x:house.x+normal.x*half+tangent.x*lateralOffset,
-    y:house.y+normal.y*half+tangent.y*lateralOffset
+    x:house.x+normal.x*reach+tangent.x*lateralOffset,
+    y:house.y+normal.y*reach+tangent.y*lateralOffset
   };
-  const outside={x:surface.x+normal.x*.28,y:surface.y+normal.y*.28};
+  let outside={x:surface.x+normal.x*.28,y:surface.y+normal.y*.28};
+  // Keep clearance from nearby extension/turret corners as well as the
+  // facade intersected by the entrance ray.
+  const parts=houseFootprintParts(house);
+  for(let i=0;i<24;i++){
+    const blocked=parts.some(part=>pointInPolygon(outside,part.points)||part.points.some((a,j)=>
+      pointSegmentDistance(outside,a,part.points[(j+1)%part.points.length])<=.22));
+    if(!blocked)break;
+    outside={x:outside.x+normal.x*.12,y:outside.y+normal.y*.12};
+  }
   return{surface,outside,tangent,normal,side,lateralSign};
 }
 function drawHouseDoor(house){
@@ -3557,3 +3598,4 @@ function drawAutoStructure(s,preview=false){
   ctx.restore();if(underConstruction(s))drawConstructionProgress(s);
 }
 function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};return{x:0,y:0}}
+
