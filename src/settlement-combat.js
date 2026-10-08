@@ -1,7 +1,7 @@
 'use strict';
 // CONQUER /combat — tactical prototype. Classic script, no build dependencies.
 (function(){
-  const STEP=2, N=WORLD/STEP, VISION_BASE=16, VISION_PER_HEIGHT=4, COLORS={allow:'#ddd8bf',yellow:'#e6b845',green:'#65bc83'};
+  const STEP=2, N=WORLD/STEP, FOREST_SIGHT_U=6, VISION_BASE=16, VISION_PER_HEIGHT=4, COLORS={allow:'#ddd8bf',yellow:'#e6b845',green:'#65bc83'};
   const canvasLayer=document.createElement('canvas');
   canvasLayer.id='combatCanvas';
   canvasLayer.setAttribute('aria-hidden','true');
@@ -305,7 +305,7 @@
     const f=State.environment[forestId];if(!f||!f.points)return false;
     let min=Infinity;
     for(let i=0;i<f.points.length;i++)min=Math.min(min,pointSegmentDistance(p,f.points[i],f.points[(i+1)%f.points.length]));
-    return min>2;
+    return min>FOREST_SIGHT_U;
   }
   function observers(){
     const out=[];
@@ -328,8 +328,8 @@
       if(terrain>source.h+.05)return false;
       if(forestId>=0&&terrain+1>=source.h-.05){
         // Edge silhouettes may be visible, but deep tree cover hides the cell.
-        if(!(forestId===targetForest&&length-dist(source,p)<2)&&
-           !(forestId===sourceForest&&dist(source,p)<1))return false;
+        if(!(forestId===targetForest&&length-dist(source,p)<FOREST_SIGHT_U)&&
+           !(forestId===sourceForest&&dist(source,p)<FOREST_SIGHT_U))return false;
       }
     }
     return true;
@@ -339,10 +339,10 @@
     const sourceForest=forestAt(source),targetForest=forestAt(target);
     if(targetForest>=0){
       if(sourceForest===targetForest){
-        if(dist(source,target)>2)return false;
+        if(dist(source,target)>FOREST_SIGHT_U)return false;
       }else if(inForestDeep(target,targetForest))return false;
     }
-    if(sourceForest>=0&&sourceForest!==targetForest&&dist(source,target)>2)return false;
+    if(sourceForest>=0&&sourceForest!==targetForest&&dist(source,target)>FOREST_SIGHT_U)return false;
     return lineVisible(source,target,sourceForest,targetForest);
   }
   function paintFogBitmap(){
@@ -380,10 +380,10 @@
         if(dist(source,p)>source.r)continue;
         const f=tileForest(x,y);
         if(f>=0){
-          if(srcForest===f){if(dist(source,p)>2)continue}
+          if(srcForest===f){if(dist(source,p)>FOREST_SIGHT_U)continue}
           else if(inForestDeep(p,f))continue;
         }
-        if(srcForest>=0&&srcForest!==f&&dist(source,p)>2)continue;
+        if(srcForest>=0&&srcForest!==f&&dist(source,p)>FOREST_SIGHT_U)continue;
         if(lineVisible(source,p,srcForest,f)){visible[i]=1;memory[i]=1}
       }
     }
@@ -459,9 +459,9 @@
     g.imageSmoothingEnabled=true;
     for(const mode of ['allow','yellow','green']){
       const image=zoneImages[mode];
-      g.globalAlpha=mode==='allow'?.09:mode==='yellow'?.12:.19;
+      g.globalAlpha=mode==='allow'?.055:mode==='yellow'?.07:.10;
       g.drawImage(image.surface,0,0);
-      g.globalAlpha=.85;
+      g.globalAlpha=.30; // 70% transparent outlines
       g.drawImage(image.outline,0,0);
     }
     g.restore();
