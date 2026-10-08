@@ -1,12 +1,12 @@
 'use strict';
 // Heraldry is campaign data; visual supports only clip the shared rectangular SVG.
 (()=>{
-const DEFAULT={pattern:2,c1:'#b32628',c2:'#eac15b',symbol:'lion',c3:'#111111',c4:'#f5e8c8'};
+const DEFAULT={pattern:'quarterly',c1:'#b32628',c2:'#eac15b',symbol:'lion',c3:'#111111',c4:'#f5e8c8'};
 const patterns=['plain1','plain2','perFess','pale','billet','cross','fess','pall','chevron','lozenge','pile','saltire','perPale','perBend','perSaltire','quarterly','bend','gyron','point','wavy'];
 const $=id=>document.getElementById(id);
 const validHex=v=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
 let h={...DEFAULT,...(State.heraldry||{})};
-function sanitize(){if(!patterns.includes(h.pattern))h.pattern=DEFAULT.pattern;for(const k of ['c1','c2','c3','c4'])if(!validHex(h[k]))h[k]=DEFAULT[k];if(!['lion','none'].includes(h.symbol))h.symbol='lion'}
+function sanitize(){if(!patterns.includes(h.pattern))h.pattern=DEFAULT.pattern;for(const k of ['c1','c2','c3','c4'])if(!validHex(h[k]))h[k]=DEFAULT[k];if(!window.CONQUER_HERALDRY_SYMBOLS.some(s=>s.id===h.symbol))h.symbol='lion'}
 function patternSvg(id,c1,c2){
  const base='<rect width="100" height="100" fill="'+c2+'"/>';
  const shape={
@@ -33,8 +33,9 @@ function patternSvg(id,c1,c2){
  return base+(shape[id]||'');
 }
 function symbolSvg(){
- if(h.symbol==='none')return '';
- return '<g transform="translate(16 3) scale(.69)" fill="'+h.c3+'" stroke="'+h.c4+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M49 10l-8 6-11-1-7 8 5 6-7 5 6 3-2 8 9 2 5-9 9 3-2 8-12 3 4 7-7 9-7-2-3 8 9 5 10-5 6-11 8 4 2 9-5 7 9 5 8-4 1-10 8 1 5 8 9-4 1-12-9-6-3-12 8-2 8 7 6-6-7-13-12-5 7-7 11 3 4-6-4-7 3-8 8-4 2-10-6-6-8 5-4-7 5-9-6-5 2-9 12-3 2-8-7-6-11 3-3-7-7-2z"/></g>';
+ const entry=window.CONQUER_HERALDRY_SYMBOLS.find(s=>s.id===h.symbol);
+ if(!entry?.path)return '';
+ return '<g transform="translate(17 17) scale(.66)" fill="'+h.c3+'" stroke="'+h.c4+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="'+entry.path+'"/></g>';
 }
 function layers(){return patternSvg(h.pattern,h.c1,h.c2)+symbolSvg()}
 function rectangle(){return svg('<g transform="scale(1.6 1)">'+patternSvg(h.pattern,h.c1,h.c2)+'</g><g transform="translate(30 0)">'+symbolSvg()+'</g>','0 0 160 100')}
@@ -46,11 +47,12 @@ function clip(type){
 function draw(){
  $('heraldryPatterns').innerHTML=patterns.map((p,i)=>'<button type="button" class="'+(p===h.pattern?'active':'')+'" data-pattern="'+p+'" aria-label="Partizione '+(i+1)+'" title="Partizione '+(i+1)+'">'+svg(patternSvg(p,'#111','#f1e7d7'))+'</button>').join('');
  $('heraldryColors').innerHTML=[['c1','Colore 1 · campo'],['c2','Colore 2 · campo'],['c3','Colore 3 · simbolo'],['c4','Colore 4 · contorno']].map(([k,label])=>'<label class="heraldry-color"><input type="color" data-heraldry-color="'+k+'" value="'+h[k]+'"><span>'+label+'</span></label>').join('');
- $('heraldrySymbols').innerHTML='<button type="button" class="'+(h.symbol==='lion'?'active':'')+'" data-symbol="lion">'+svg(symbolSvg().replaceAll('fill="'+h.c3+'"','fill="#111111"'))+'<span>Leone</span></button><button type="button" class="'+(h.symbol==='none'?'active':'')+'" data-symbol="none"><span style="font-size:30px">∅</span><span>Nessuno</span></button>';
+ $('heraldrySymbols').innerHTML=window.CONQUER_HERALDRY_SYMBOLS.map(entry=>'<button type="button" title="'+entry.label+'" class="'+(h.symbol===entry.id?'active':'')+'" data-symbol="'+entry.id+'">'+(entry.path?svg('<g transform="translate(5 5) scale(.9)" fill="#111" stroke="#e0d2bd" stroke-width="2"><path d="'+entry.path+'"/></g>'):'<span style="font-size:30px">∅</span>')+'<span>'+entry.label+'</span></button>').join('');
+
  $('heraldryFlag').innerHTML=rectangle();
  $('heraldryApplications').innerHTML=[['shield','Scudo'],['banner','Stendardo'],['cloth','Tessuto']].map(([type,label])=>'<div class="heraldry-application">'+clip(type)+'<span>'+label+'</span></div>').join('');
 }
-function persist(){sanitize();State.heraldry={...h};saveLocal();scheduleLocalSave();$('heraldrySaveStatus').textContent='Araldica salvata nella partita · locale';draw()}
+function persist(){sanitize();State.heraldry={...h};window.__conquerHeraldryCanvas?.invalidate();if(typeof invalidateSceneCache==='function')invalidateSceneCache();if(typeof draw==='function')draw();saveLocal();scheduleLocalSave();$('heraldrySaveStatus').textContent='Araldica salvata nella partita · locale';draw()}
 function open(tab='general'){
  h={...DEFAULT,...(State.heraldry||{})};sanitize();
  $('profileOverlay').hidden=false;
@@ -73,4 +75,27 @@ $('heraldryPatterns').addEventListener('click',e=>{const b=e.target.closest('[da
 $('heraldrySymbols').addEventListener('click',e=>{const b=e.target.closest('[data-symbol]');if(b){h.symbol=b.dataset.symbol;persist()}});
 $('heraldryColors').addEventListener('input',e=>{const k=e.target.dataset.heraldryColor;if(k&&validHex(e.target.value)){h[k]=e.target.value;persist()}});
 window.__conquerHeraldry={reset:()=>{h={...DEFAULT};State.heraldry={...h};draw()},get:()=>({...State.heraldry}),render:()=>rectangle(),open:()=>open('heraldry')};
+})();
+
+'use strict';
+// Cached, universal SVG pattern raster for the canvas renderer.
+// Each object applies its own clipping shape before drawing.
+(function(){
+ let cachedKey='',image=null,ready=false;
+ function update(){
+  const h=State.heraldry||{};
+  const key=JSON.stringify([h.pattern,h.c1,h.c2,h.symbol,h.c3,h.c4]);
+  if(key===cachedKey)return;
+  cachedKey=key;ready=false;image=null;
+  const api=window.__conquerHeraldry;
+  if(!api)return;
+  const markup=api.render().replace(/<svg /,'<svg width="320" height="200" ');
+  const asset=new Image();
+  const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(markup);
+  asset.onload=()=>{if(cachedKey!==key)return;image=asset;ready=true;if(typeof invalidateSceneCache==='function')invalidateSceneCache();if(typeof draw==='function')draw()};
+  asset.onerror=()=>{ready=false};
+  asset.src=url;
+ }
+ function paint(ctx,x,y,w,h){update();if(!ready)return false;ctx.drawImage(image,x,y,w,h);return true}
+ window.__conquerHeraldryCanvas={paint,invalidate:()=>{cachedKey='';ready=false;image=null}};
 })();
