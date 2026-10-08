@@ -399,7 +399,7 @@
   function updateAlert(sources){
     let next='clear';
     for(const intruder of combat.enemy){
-      if(!spotted(intruder,sources))continue;
+      if(intruder.defeated||intruder.stats?.hp<=0||!spotted(intruder,sources))continue;
       const a=areaState(intruder);
       if(a.green){next='general';break}
       if(a.yellow)next='local';
@@ -482,12 +482,12 @@
     if(combat.zones)renderMergedZones(d);
     const king=combat.units.find(u=>u.kind==='knight');
     if(king){
-      g.strokeStyle='rgba(255,211,116,.7)';g.fillStyle='rgba(255,211,116,.045)';
-      g.lineWidth=1.5;g.setLineDash([5,4]);drawMapCircle({...king,r:16,groundZ:terrainElevation(king)});g.setLineDash([]);
+      g.strokeStyle='rgba(255,211,116,.78)';g.lineWidth=1.5;
+      g.setLineDash([6,5]);drawMapCircle({...king,r:16,groundZ:terrainElevation(king)},true);g.setLineDash([]);
     }
     if(selected){
       const u=combat.units.find(u=>u.id===selected);
-      if(u){g.strokeStyle='#e3fcac';g.fillStyle='rgba(216,255,150,.06)';g.lineWidth=1.3;drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)});}
+      if(u){g.strokeStyle='#e3fcac';g.lineWidth=1.3;g.setLineDash([4,4]);drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)},true);g.setLineDash([]);}
     }
     const characters=[];
     for(const u of combat.units){
@@ -532,8 +532,18 @@
       }
     });
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
+    const focused=combat.units.find(u=>u.id===selected);
     document.getElementById('combatSelection').textContent=selected?
-      ((combat.units.find(u=>u.id===selected)?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
+      ((focused?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
+    const panel=document.getElementById('combatStats');
+    if(panel){
+      const hp=x=>x?.stats?Math.max(0,Math.round(x.stats.hp))+'/'+x.stats.maxHp:'—';
+      const brain=x=>x?.stats?Math.round(x.stats.brain):'—';
+      const allies=combat.units.filter(u=>!u.defeated),hostiles=combat.enemy.filter(e=>!e.defeated);
+      panel.textContent='Units '+allies.length+' / Hostiles '+hostiles.length+
+        (focused?' · HP '+hp(focused)+' · B '+brain(focused):'')+
+        (combat.enemy.length?' · Enemy HP '+hp(combat.enemy[0]):'');
+    }
   }
   function safeMilitarySegment(a,b,id){
     return !terrainSegmentCrossesCliff(a,b)&&peasantSegmentClear(a,b,id);
@@ -683,7 +693,8 @@
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button></div>'+
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
-    '<div class="legend" id="combatSelection">Select a unit to move</div>'+
+    '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
+    '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
     '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>';
   document.querySelector('#builder h2').insertAdjacentElement('afterend',ui);
   const $=id=>document.getElementById(id);
