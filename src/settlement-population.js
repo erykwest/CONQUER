@@ -1195,7 +1195,7 @@ function wallPatrolPoint(wall,day,index=0,count=1){
   const a=pg?pg.a:wall.a,b=pg?pg.b:wall.b;
   const dx=b.x-a.x,dy=b.y-a.y,L=Math.max(.001,Math.hypot(dx,dy));
   const seed=(peasantHash(wall.id+'-patrol')%1000)/1000,phase=count>1?index:0;
-  let t=(day*.72+seed+phase)%2;t=t<=1?t:2-t;
+  let t=(day*1.44+seed+phase)%2;t=t<=1?t:2-t;
 
   // Normal patrol margin plus an explicit tower/gate safety zone on snapped
   // ends. Palisades are already visually trimmed, so this produces an

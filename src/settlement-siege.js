@@ -156,7 +156,7 @@
     const result=[],center={x:tower.x,y:tower.y};
     const wood=isWoodTower(tower);
     const openDeck=wood?woodTowerStyle(tower)==='palisadeTower'&&woodTowerRoof(tower)==='open'
-      :towerRoofStyle(tower)==='battlement';
+      :['battlement','machicolation'].includes(towerRoofStyle(tower));
     const top=wood?1:structureLevel(tower);
     const ground=placementGroundZ(tower);
     if(openDeck){
@@ -194,7 +194,7 @@
       });
     };
     const radius=tower.shape==='round'?Math.max(.13,tower.r-.17):Math.max(.13,(tower.size||1)/2-.17);
-    for(let floor=top;floor>=1;floor--){
+    for(let floor=top;floor>=2;floor--){ // P1 has no arrow slits
       const z=[1.34,2.48,3.62][floor-1];
       if(z>=structureHeight(tower)-.28)continue;
       for(const dir of dirs){
