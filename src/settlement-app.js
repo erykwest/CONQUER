@@ -187,9 +187,9 @@ function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
   const simpleCivic=isCivic(s);
-  if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s);panel.classList.add('open');
+  if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s),capUnits=(s.type==='house'||simpleCivic)?0:functionCapacityUnits(s);panel.classList.add('open');
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate,maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Capacity</span><b>${cap} ${cap===1?'function':'functions'}</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">Capacity per level: &lt;2U = 0 · 2–&lt;3U = 1 · ≥3U = 2.</div>`:''}`;
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
   let html='';
   if(s.type==='house'){
     const level=houseLevel(s);
@@ -238,6 +238,10 @@ function renderFunctionPanel(){
     const skin=wallSkin(s);
     html+=`<div class="slot"><div class="slot-label">Wall skin</div><div class="grid"><button data-wall-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-wall-skin="hoarding" class="${skin==='hoarding'?'active':''}">Hoarding</button></div><div class="legend">Hoarding replaces the exterior battlement treatment with a timber fighting gallery.</div></div>`;
   }
+  if(cutawayEligible(s)){
+    const cutaway=structureCutaway(s);
+    html+=`<div class="slot"><div class="slot-label">Cutaway facade</div><button data-cutaway-toggle class="${cutaway?'active':''}" ${building?'disabled':''}>${cutaway?'Cutaway ON':'Cutaway OFF'}</button><div class="legend">Opens the camera-facing shell and exposes the functional rooms.</div></div>`;
+  }
   if(['wall','palisade','built'].includes(s.type)){
     const flipLabel=s.type==='built'?'Exterior side / windows':'Exterior side';
     const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':s.type==='palisade'?'Defines which side is exterior; walkway and earthwork are generated inward.':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
@@ -246,7 +250,7 @@ function renderFunctionPanel(){
   if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
-    else html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Function slot ${i+1}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('');
+    else html+=s.functions.map((value,i)=>{const size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · ${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
   }
   slots.innerHTML=html;
   slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)+1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
@@ -308,6 +312,14 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markStructureDirty(target);renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
   slots.querySelectorAll('[data-built-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='built')return;if(!setStructureVariant(target,'skin',btn.dataset.builtSkin))return;markStructureDirty(target);renderFunctionPanel();draw();status('Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'))});
   slots.querySelectorAll('[data-wall-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;if(!setStructureVariant(target,'skin',btn.dataset.wallSkin))return;markStructureDirty(target);renderFunctionPanel();draw();status('Wall skin: '+target.skin)});
+  slots.querySelectorAll('[data-cutaway-toggle]').forEach(btn=>btn.onclick=()=>{
+    const target=selectedStructure();
+    if(!cutawayEligible(target))return;
+    target.cutaway=!structureCutaway(target);
+    markStructureDirty(target,false);
+    renderFunctionPanel();draw();
+    status((target.type==='tower'?'Tower':'Built section')+' cutaway '+(target.cutaway?'enabled':'disabled'));
+  });
   slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','palisade','built'].includes(target.type))return;target.flip=!target.flip;markStructureDirty(target);renderFunctionPanel();draw();status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped')});
   slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);target.functions[Number(e.target.dataset.functionSlot)]=e.target.value||null;markStructureDirty(target);draw()});
 }
@@ -745,6 +757,14 @@ function syncDevButtons(){
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
   document.querySelectorAll('[data-light-override]').forEach(b=>b.classList.toggle('active',b.dataset.lightOverride===State.daylightOverride));
   document.querySelectorAll('[data-weather-override]').forEach(b=>b.classList.toggle('active',b.dataset.weatherOverride===State.weatherOverride));
+  const cutawayAll=document.getElementById('devCutawayAll');
+  if(cutawayAll){
+    const eligible=State.structures.filter(cutawayEligible);
+    const allOn=eligible.length>0&&eligible.every(structureCutaway);
+    cutawayAll.classList.toggle('active',allOn);
+    cutawayAll.textContent=allOn?'Cutaway ALL ✓':'Cutaway ALL';
+    cutawayAll.disabled=!eligible.length;
+  }
 }
 function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${cal.day} ${cal.name} · Y${cal.year} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
 function visibleCanvasCenter(){
@@ -790,7 +810,7 @@ function setLightOverride(mode){
   draw();
 }
 function setWeatherOverride(kind){
-  if(!['rain','snow','storm','wind','fog'].includes(kind))return;
+  if(!['sun','rain','snow','storm','wind','fog'].includes(kind))return;
   State.weatherOverride=State.weatherOverride===kind?null:kind;
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
   syncDevButtons();
@@ -798,6 +818,15 @@ function setWeatherOverride(kind){
   draw();
   status(State.weatherOverride?('FORCE METEO: '+State.weatherOverride):'Meteo: procedurale');
   drawWeatherOverlay();
+}
+function toggleAllCutaways(){
+  const eligible=State.structures.filter(cutawayEligible);
+  if(!eligible.length){status('No cutaway-eligible structures');syncDevButtons();return}
+  const enable=!eligible.every(structureCutaway);
+  for(const s of eligible)s.cutaway=enable;
+  markDirty(false,['castleBody','castleFront']);
+  renderFunctionPanel();syncDevButtons();draw();
+  status(enable?('CUTAWAY ALL: '+eligible.length+' structures'):'CUTAWAY ALL: off');
 }
 function setSeason(season){
   if(!['summer','autumn','winter','spring'].includes(season))return;
@@ -814,6 +843,8 @@ function ensureDevControls(){
   document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));
   document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
   document.querySelectorAll('[data-weather-override]').forEach(b=>b.onclick=()=>setWeatherOverride(b.dataset.weatherOverride));
+  const cutawayAll=document.getElementById('devCutawayAll');
+  if(cutawayAll)cutawayAll.onclick=toggleAllCutaways;
   const toggle=document.getElementById('devToggle'),panel=document.getElementById('devPanel');
   if(toggle&&panel)toggle.onclick=()=>{
     const open=panel.hidden;
@@ -1054,6 +1085,12 @@ function simulationFrame(now){
     if(now-simPersistAt>=LOCAL_AUTOSAVE_MS){
       saveLocal();
       simPersistAt=now;
+    }
+  }else{
+    const animatedCutaway=State.structures.some(s=>structureCutaway(s)&&Array.isArray(s.functions)&&s.functions.some(role=>role==='barracks'||role==='nobleRoom'));
+    if(animatedCutaway&&now-simDrawAt>=84){
+      draw();
+      simDrawAt=now;
     }
   }
   const shadowState=sunShadowState();
