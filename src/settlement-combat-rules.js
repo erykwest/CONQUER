@@ -6,6 +6,7 @@
   const MAX_E=150,MAX_B=150;
   const PROFILES=Object.freeze({
     spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
+    patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
@@ -29,6 +30,7 @@
     }
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
+  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.combatKind||'infantry';
   function nearestLiving(origin,units,visibleFn=()=>true){
     let target=null,best=Infinity;
     for(const unit of units||[]){
@@ -59,12 +61,12 @@
   }
   function living(u){return !!u&&(!u.stats||u.stats.hp>0)}
   function effectiveCombat(u){
-    const v=ensure(u,u.kind==='squad'?'spearman':u.kind==='knight'?'knight':u.combatKind||'infantry');
+    const v=ensure(u,profileKind(u));
     if(v.energy<=0||v.brain<=0)return 0;
     return Math.max(0,v.combat-(v.brain/MAX_B<=.5?1:0));
   }
   function applyDamage(u,hits,source){
-    const s=ensure(u,u.kind==='squad'?'spearman':u.kind==='knight'?'knight':u.combatKind||'infantry');
+    const s=ensure(u,profileKind(u));
     const before=s.hp;
     s.hp=Math.max(0,s.hp-hits);
     s.brain=Math.max(0,s.brain-hits);
@@ -77,7 +79,7 @@
     if(source&&hits>0){source.damageDealt=(source.damageDealt||0)+hits}
   }
   function meleePair(a,b,count){
-    ensure(a,a.kind==='squad'?'spearman':a.kind==='knight'?'knight':a.combatKind||'infantry');
+    ensure(a,profileKind(a));
     ensure(b,b.combatKind||'infantry');
     let hitA=0,hitB=0;
     const ca=effectiveCombat(a),cb=effectiveCombat(b);
@@ -117,7 +119,7 @@
     for(const u of friendly.concat(enemy)){
       if(!living(u))continue;
       if(!u.engaged) {
-        const s=ensure(u,u.kind==='squad'?'spearman':u.kind==='knight'?'knight':u.combatKind||'infantry');
+        const s=ensure(u,profileKind(u));
         s.energy=Math.min(MAX_E,s.energy+dt*10);
         if(!u.routing)s.brain=Math.min(MAX_B,s.brain+dt);
       }
@@ -135,7 +137,7 @@
       a.engaged=nearest.engaged=true;
       a.target=null;
       if(combatClock>=1){
-        const frontage=Math.min(PROFILES[a.kind==='squad'?'spearman':'knight'].front,PROFILES[nearest.combatKind||'infantry'].front);
+        const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[nearest.combatKind||'infantry'].front);
         meleePair(a,nearest,Math.max(1,frontage));
         if(meleeFlashes.length>50)meleeFlashes.shift();
         meleeFlashes.push({x:(a.x+nearest.x)/2,y:(a.y+nearest.y)/2,at:elapsed});

@@ -16,6 +16,7 @@ const rules=sandbox.window.ConquerCombatRules;
 assert.ok(rules,'combat rules are exported');
 assert.equal(rules.shooterRange({h:4},{h:1}),18,'downhill fire gains one unit per height level');
 assert.equal(rules.shooterRange({h:1},{h:4}),12,'uphill fire loses one unit per height level');
+assert.equal(rules.ensure({kind:'patrol'},'patrol').maxHp,40,'a two-pikeman patrol uses the scaled patrol profile');
 
 const raider={id:'raider',x:10,y:10,combatKind:'infantry'};
 const knight={id:'knight',x:15,y:10,kind:'knight'};
@@ -39,9 +40,14 @@ assert.equal(target.stats.hp,99,'automatic defensive shooter damages a visible i
 
 assert.match(runtimeSource,/wallPatrolPoint\(s,State\.clock\.day/,'wall patrols participate in local vision');
 assert.match(runtimeSource,/gateGuardPositions\(s\)/,'gate guards participate in local vision');
+assert.match(runtimeSource,/function addPatrol\(\)/,'White Zone patrols can be added from the combat controls');
+assert.match(runtimeSource,/function removePatrol\(\)/,'White Zone patrols can be removed from the combat controls');
+assert.match(runtimeSource,/unit\.kind==='patrol'\?patrolRoute/,'patrol movement uses the White Zone constrained route');
+assert.match(runtimeSource,/areaState\(p\)\.allowed/,'patrol destinations stay inside allowed territory');
 assert.match(runtimeSource,/rules\.enemyIntent/,'runtime delegates hostile decisions to combat rules');
 assert.match(runtimeSource,/safeMilitarySegment\(unit,nextPos/,'hostile and friendly movement share terrain collision checks');
 assert.doesNotMatch(rulesSource,/getContext\(|drawImage\(|fillRect\(/,'rules stay independent of canvas rendering');
 assert.match(renderSource,/ConquerCombatRules\?\.visualEffects/,'renderer only consumes combat visual effects');
+assert.match(renderSource,/u\.kind==='patrol'\?2:5/,'a patrol renders exactly two pikemen');
 
-console.log('combat regression: 16 assertions passed');
+console.log('combat regression: 22 assertions passed');

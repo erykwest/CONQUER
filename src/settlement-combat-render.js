@@ -61,9 +61,11 @@
       if(u.kind==='knight'&&!u.defeated)characters.push({p:u,type:'knight',id:u.id,unit:u});
       else{
         if(u.defeated)continue;
-        for(let i=0;i<5;i++){
+        const count=u.kind==='patrol'?2:5;
+        for(let i=0;i<count;i++){
           const row=Math.floor(i/3),col=i%3,spacing=.55;
-          characters.push({p:{x:u.x+(col-1)*spacing,y:u.y+(row-.4)*spacing},type:'spearman',id:u.id+':'+i,flag:i===0,unit:u,index:i});
+          const offset=count===2?(i?spacing/2:-spacing/2):(col-1)*spacing;
+          characters.push({p:{x:u.x+offset,y:u.y+(row-.4)*spacing},type:'spearman',id:u.id+':'+i,flag:u.kind==='squad'&&i===0,unit:u,index:i});
         }
       }
     }
@@ -102,7 +104,7 @@
     drawEffects(g,(p,z)=>w2sRaw(p,z),window.ConquerCombatRules?.visualEffects?.());
     const focused=combat.units.find(u=>u.id===selected);
     document.getElementById('combatSelection').textContent=selected?
-      ((focused?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
+      ((focused?.kind==='squad'?'Pikemen ×5':focused?.kind==='patrol'?'Patrol ×2':'Knight')+' selected · click destination'):'Select a unit to move';
     const panel=document.getElementById('combatStats');
     if(panel){
       const hp=x=>x?.stats?Math.max(0,Math.round(x.stats.hp))+'/'+x.stats.maxHp:'—';

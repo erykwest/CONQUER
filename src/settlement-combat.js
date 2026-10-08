@@ -49,11 +49,11 @@
     combat.fog=true;
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units
-      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight'].includes(u.kind))
+      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight','patrol'].includes(u.kind))
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
-        const {path,pathIndex,engaged,...stored}=u;
+        const {path,pathIndex,engaged,nextPatrolAt,...stored}=u;
         return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
@@ -80,7 +80,7 @@
     // previously stored [unit, destination], creating unit -> path -> unit
     // and aborting the entire simulation when saveLocal JSON.stringify ran.
     const storedUnit=u=>{
-      const {path,pathIndex,engaged,...stored}=u;
+      const {path,pathIndex,engaged,nextPatrolAt,...stored}=u;
       return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
         ?{x:u.target.x,y:u.target.y}:null};
     };
@@ -560,6 +560,13 @@
     const path=findPeasantPath(start,goal,id,14,p=>cliffClearForFootprint(p,kind));
     return path?.length>1&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id,kind))?path:null;
   }
+  function patrolRoute(start,goal,id){
+    if(safeMilitarySegment(start,goal,id,'patrol')&&routeAllowed([start,goal]))return[start,goal];
+    const roads=roadNetworkPath(start,goal,id);
+    if(roads?.length>1&&routeAllowed(roads)&&roads.slice(1).every((p,i)=>safeMilitarySegment(roads[i],p,id,'patrol')))return roads;
+    const path=findPeasantPath(start,goal,id,14,p=>cliffClearForFootprint(p,'patrol')&&areaState(p).allowed);
+    return path?.length>1&&routeAllowed(path)&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id,'patrol'))?path:null;
+  }
   function issueMove(unit,p){
     if(unit.defeated||unit.routing){status('Unit cannot receive orders');return}
     if(unit.kind==='squad'){
@@ -577,7 +584,7 @@
   function advanceUnit(unit,dt,speed){
     if(!unit.target||unit.defeated)return false;
     if(!unit.path?.length){
-      const route=infantryRoute(unit,unit.target,unit.id,unit.kind||'knight');
+      const route=unit.kind==='patrol'?patrolRoute(unit,unit.target,unit.id):infantryRoute(unit,unit.target,unit.id,unit.kind||'knight');
       unit.path=route?.map(p=>({x:p.x,y:p.y}))||null;unit.pathIndex=1;
       if(!unit.path){unit.target=null;return false}
     }
@@ -593,6 +600,43 @@
       if(step>=length-.025){unit.x=next.x;unit.y=next.y;unit.pathIndex++}
     }
     return moved;
+  }
+  function patrolDestination(unit){
+    unit.patrolLeg=(unit.patrolLeg||0)+1;
+    const seed=peasantHash(unit.id+':'+unit.patrolLeg);
+    for(let i=0;i<20;i++){
+      const angle=((seed+i*137)%360)*Math.PI/180,radius=3+((seed>>>((i%4)*8))%800)/100;
+      const p=point(unit.x+Math.cos(angle)*radius,unit.y+Math.sin(angle)*radius);
+      if(!areaState(p).allowed||pointBlockedForPeasant(p,unit.id))continue;
+      if(patrolRoute(unit,p,unit.id))return p;
+    }
+    return null;
+  }
+  function updatePatrols(now){
+    for(const unit of combat.units){
+      if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.target||now<(unit.nextPatrolAt||0))continue;
+      const target=patrolDestination(unit);
+      unit.nextPatrolAt=now+1200;
+      if(target){unit.target=target;unit.path=null;unit.pathIndex=1}
+    }
+  }
+  function addPatrol(){
+    const well=activeWell();
+    if(!well){status('Found the settlement before adding a White Zone patrol');return}
+    startUnits();
+    const index=combat.units.filter(u=>u.kind==='patrol').length;
+    const angle=index*Math.PI*.77,radius=2.4+(index%3)*.45;
+    let spawn=point(well.x+Math.cos(angle)*radius,well.y+Math.sin(angle)*radius);
+    if(!areaState(spawn).allowed||pointBlockedForPeasant(spawn,'combat-patrol'))spawn={x:well.x,y:well.y};
+    combat.units.push({id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolLeg:index});
+    visibilityDirty=true;changed();status('White Zone patrol added · 2 pikemen');draw();
+  }
+  function removePatrol(){
+    let index=-1;for(let i=combat.units.length-1;i>=0;i--)if(combat.units[i].kind==='patrol'){index=i;break}
+    if(index<0){status('No White Zone patrol to remove');return}
+    const [removed]=combat.units.splice(index,1);
+    if(selected===removed.id)selected=null;
+    visibilityDirty=true;changed();status('White Zone patrol removed');draw();
   }
   function updateEnemyAI(now,rules){
     const objective=activeWell();
@@ -647,6 +691,7 @@
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);
+    updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
       if(u.routing)continue;
@@ -708,7 +753,7 @@
       status('Environmental raider placed — it will scout, pursue and raid using traversable terrain');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
-      const hit=combat.units.find(u=>dist(u,p)<1.1);
+      const hit=combat.units.find(u=>u.kind!=='patrol'&&dist(u,p)<1.1);
       if(hit){
         e.preventDefault();e.stopImmediatePropagation();selected=hit.id;
         setTool({kind:'combat-orders',label:'Orders: click destination'});
@@ -741,6 +786,8 @@
     '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones ON</button><button id="combatRecall">Recall civilians</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button></div>'+
+    '<div class="combat-row"><button id="combatPatrolAdd">Patrol + · 2 pikemen</button><button id="combatPatrolRemove">Patrol −</button></div>'+
+    '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Place raider</button><button id="combatClearEnemies">Clear raiders</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
@@ -755,6 +802,9 @@
     $('combatRecall').textContent=combat.recall?'Release civilians':'Recall civilians';
     $('combatBrushSize').value=combat.brushRadius;
     $('combatBrushReadout').textContent=combat.brushRadius+'U';
+    const patrols=combat.units.filter(u=>u.kind==='patrol').length;
+    $('combatPatrolCount').textContent='White Zone patrols · '+patrols+' ('+(patrols*2)+' pikemen)';
+    $('combatPatrolRemove').disabled=patrols===0;
     document.querySelectorAll('[data-combat-brush]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-brush'&&State.tool.combatBrush===b.dataset.combatBrush));
     $('combatOrders').classList.toggle('active',State.tool.kind==='combat-orders');
   }
@@ -772,6 +822,8 @@
   });
   $('combatBrushSize').oninput=e=>{combat.brushRadius=Number(e.target.value);changed();draw()};
   $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click knight or pikemen squad, then click target'});syncButtons()};
+  $('combatPatrolAdd').onclick=addPatrol;
+  $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
   $('combatClearEnemies').onclick=()=>{combat.enemy=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
   const priorDraw=draw;
