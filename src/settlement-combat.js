@@ -579,7 +579,7 @@
       shooter.terrainAt=terrainElevation;out.push(shooter);
     }
     for(const s of State.structures){
-      if(underConstruction(s))continue;
+      if(!['tower','built','gate'].includes(s.type)||underConstruction(s))continue;
       const ground=terrainElevation({x:s.x??s.a?.x,y:s.y??s.a?.y});
       if(s.type==='tower'){
         const wood=isWoodTower(s),roof=wood||towerRoofStyle(s)==='battlement';
@@ -589,6 +589,8 @@
         // Arrow slit garrison is hidden behind the facade; roof garrison
         // reuses the visible archer already drawn by drawCastleSoldiers().
         put(s.id+':'+(roof?'roof':'slit'),{x:s.x,y:s.y},ground+relative,ground+(roof?floor:Math.max(1,floor-1)));
+      }else if(s.type==='gate'){
+        if(gateRoofStyle(s)==='battlement')put(s.id+':gate-roof',{x:s.x,y:s.y},ground+structureHeight(s)+.08,ground+structureLevel(s));
       }else if(s.type==='built'){
         const center={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
         const level=structureLevel(s);
