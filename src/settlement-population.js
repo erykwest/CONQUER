@@ -178,6 +178,7 @@ function invalidateNavigation(hard=true){
   navPerf.navInvalidations=(navPerf.navInvalidations||0)+1;
   if(window.__conquerPerf)window.__conquerPerf.navInvalidations=navPerf.navInvalidations;
   roadNavGraphCache.dirty=true;
+  invalidateUrbanGeometry();
   roadDestinationTreeCache.clear();
   window.ConquerCombat?.invalidateRoutes?.();
   if(!hard)return;
@@ -408,13 +409,25 @@ function roadNetworkPath(start,goal,sourceHouseId){
   const network=roadTreePathFromAnchor(a,b);
   if(!network)return null;
 
-  const out=[];
+  let out=[];
   appendRoutePoints(out,startConnector);
   appendRoutePoints(out,network);
   appendRoutePoints(out,goalConnector.slice().reverse());
-  if(out.slice(1).some((p,i)=>terrainSegmentCrossesCliff(out[i],p)))return null;
+  const well=State.structures.find(s=>s.type==='well'&&dist(s,goal)<.03);
+  if(well)out=trimPathBeforeCircle(out,well,.62+PEASANT_CLEARANCE+.16);
+  const clear=[];
+  for(const p of out){
+    if(!clear.length){clear.push(p);continue}
+    const a=clear.at(-1);
+    if(peasantSegmentClear(a,p,sourceHouseId))appendRoutePoints(clear,[p]);
+    else{
+      const detour=findPeasantPath(a,p,sourceHouseId,2.5);
+      if(!detour)return null;
+      appendRoutePoints(clear,detour);
+    }
+  }
   navPerf.graphRoutes++;
-  return out;
+  return clear;
 }
 function peasantObstacleSignature(){
   return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training'].includes(s.type)).map(s=>{
@@ -432,7 +445,7 @@ function syncPeasantPathCache(){
 function pointBlockedForPeasant(p,sourceHouseId){
   if(terrainSlopeKind(p)==='steep')return true;
   for(const s of State.structures){
-    if(s.id===sourceHouseId)continue;
+    if(s.id===sourceHouseId&&s.type!=='house')continue;
     if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training'].includes(s.type))continue;
 
     // Market ground and the actual castle gate passage are traversable.
@@ -491,7 +504,7 @@ function peasantSegmentTravelCost(a,b){
 function peasantSegmentClear(a,b,sourceHouseId){
   if(terrainSegmentCrossesCliff(a,b))return false;
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.22));
-  for(let i=1;i<steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
+  for(let i=0;i<=steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
   return true;
 }
 function smoothPeasantPath(points,sourceHouseId,allowedAt=null){
@@ -543,7 +556,7 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8,allowedAt=null){
     if(cur.x===g.x&&cur.y===g.y){found=cur;break}
     for(const [dx,dy] of dirs){
       const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
-      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q))||terrainSegmentCrossesCliff(pos(cur.x,cur.y),q))continue;
+      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q))||!peasantSegmentClear(pos(cur.x,cur.y),q,sourceHouseId))continue;
       if(dx&&dy){
         const q1=pos(cur.x+dx,cur.y),q2=pos(cur.x,cur.y+dy);
         if(pointBlockedForPeasant(q1,sourceHouseId)||pointBlockedForPeasant(q2,sourceHouseId)||(allowedAt&&(!allowedAt(q1)||!allowedAt(q2))))continue;
@@ -1008,6 +1021,9 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
   ctx.restore();
 }
 function drawVillagerFigure(dot){
+  return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
+}
+function drawVillagerFigureUnmasked(dot){
   const base=w2s(dot.p,.10),scale=clamp(State.view.scale,.55,1.45);
   const kind=dot.kind,sizeFactor=dot.age==='child'?.5:1;
   const bodyW=clamp(6.0*scale,4.2,8.2)*sizeFactor,bodyH=clamp(8.0*scale,5.5,10.6)*sizeFactor;
@@ -1089,6 +1105,9 @@ function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale,useHeraldry=true){
   ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
 }
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
+  return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
+}
+function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
   const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,livery=liveryOverride||soldierLivery(id);
 

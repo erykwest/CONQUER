@@ -359,6 +359,7 @@
     return out;
   }
   function lineVisible(source,target,sourceForest,targetForest){
+    if(!urbanHouseLineVisible(source,target))return false;
     const length=dist(source,target),steps=Math.floor(length/STEP);
     for(let k=1;k<steps;k++){
       const t=k/steps,p={x:source.x+(target.x-source.x)*t,y:source.y+(target.y-source.y)*t};
@@ -580,13 +581,13 @@
             g.lineTo(base.x+(end.x-base.x)*(.25+.7*pulse),base.y-8+(end.y-base.y-8)*(.25+.7*pulse));g.stroke();
           }
         }
-        if(soldier.flag){
+        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,.08,()=>{
           const base=w2s(soldier.p,.08);
           g.strokeStyle='#5d4535';g.lineWidth=1.8;g.beginPath();
           g.moveTo(base.x+5,base.y-2);g.lineTo(base.x+5,base.y-27);g.stroke();
           g.fillStyle='#d6bd68';g.beginPath();g.moveTo(base.x+5,base.y-27);
           g.lineTo(base.x+19,base.y-24);g.lineTo(base.x+5,base.y-19);g.fill();
-        }
+        });
       }
       for(const e of combat.enemy){
         if(e.defeated||e.stats?.hp<=0||!spotted(e,sightSources))continue;
@@ -616,12 +617,14 @@
   const SQUAD_FOOTPRINT=[[-.55,-.22],[0,-.22],[.55,-.22],[-.55,.33],[0,.33]];
   function militaryOffsets(kind){return kind==='squad'?SQUAD_FOOTPRINT:[[0,0]]}
   function cliffClearForFootprint(p,kind){
-    return militaryOffsets(kind).every(([ox,oy])=>!terrainSegmentCrossesCliff(
-      {x:p.x+ox,y:p.y+oy},{x:p.x+ox,y:p.y+oy}));
+    return militaryOffsets(kind).every(([ox,oy])=>{
+      const q={x:p.x+ox,y:p.y+oy};
+      return !pointBlockedForPeasant(q)&&!terrainSegmentCrossesCliff(q,q);
+    });
   }
   function safeMilitarySegment(a,b,id,kind){
     return peasantSegmentClear(a,b,id)&&militaryOffsets(kind).every(([ox,oy])=>
-      !terrainSegmentCrossesCliff({x:a.x+ox,y:a.y+oy},{x:b.x+ox,y:b.y+oy}));
+      peasantSegmentClear({x:a.x+ox,y:a.y+oy},{x:b.x+ox,y:b.y+oy},id));
   }
   function infantryRoute(start,goal,id,kind='knight'){
     if(safeMilitarySegment(start,goal,id,kind))return [start,goal];
@@ -720,8 +723,8 @@
         e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
       }
       rules.update(step,combat.units,combat.enemy,hostiles.length?archers():[],
-        (e,shooter)=>sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,r:rules.shooterRange(shooter,e)},e),
-        (a,b)=>!terrainSegmentCrossesCliff(a,b)&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
+        (e,shooter)=>sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:rules.shooterRange(shooter,e)},e),
+        (a,b)=>safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
       if(ruleMs>25)window.__conquerAnalytics?.event('COMBAT_RULES_SLOW',{ms:+ruleMs.toFixed(1),archers:hostiles.length?archerRoster.length:0,hostiles:hostiles.length},'warn',3000);
@@ -830,7 +833,7 @@
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,
-    invalidateRoutes:()=>civilianRouteCache.clear(),
+    invalidateRoutes:()=>{civilianRouteCache.clear();visibilityDirty=true;for(const u of combat?.units||[])u.path=null},
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
   draw();
 })();

@@ -3531,11 +3531,34 @@ function houseDoorInfo(house){
   const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=(Number(house.h)||1)/2;
   const lateralSign=(peasantHash(house.id)&2)?1:-1;
   const lateralOffset=(Number(house.w)||1.5)*.24*lateralSign;
+  // Extensions and L4 turrets may cover the original base-wall entrance.
+  // Put the door on the outermost exposed footprint along its outward ray.
+  let reach=half;
+  for(const part of houseFootprintParts(house)){
+    const poly=part.points.map(p=>({x:(p.x-house.x)*tangent.x+(p.y-house.y)*tangent.y,
+      y:(p.x-house.x)*normal.x+(p.y-house.y)*normal.y}));
+    for(let i=0;i<poly.length;i++){
+      const a=poly[i],b=poly[(i+1)%poly.length];
+      if(lateralOffset<Math.min(a.x,b.x)-1e-8||lateralOffset>Math.max(a.x,b.x)+1e-8)continue;
+      if(Math.abs(b.x-a.x)<1e-8){reach=Math.max(reach,a.y,b.y);continue}
+      const t=(lateralOffset-a.x)/(b.x-a.x);
+      reach=Math.max(reach,a.y+(b.y-a.y)*t);
+    }
+  }
   const surface={
-    x:house.x+normal.x*half+tangent.x*lateralOffset,
-    y:house.y+normal.y*half+tangent.y*lateralOffset
+    x:house.x+normal.x*reach+tangent.x*lateralOffset,
+    y:house.y+normal.y*reach+tangent.y*lateralOffset
   };
-  const outside={x:surface.x+normal.x*.28,y:surface.y+normal.y*.28};
+  let outside={x:surface.x+normal.x*.28,y:surface.y+normal.y*.28};
+  // Keep clearance from nearby extension/turret corners as well as the
+  // facade intersected by the entrance ray.
+  const parts=houseFootprintParts(house);
+  for(let i=0;i<24;i++){
+    const blocked=parts.some(part=>pointInPolygon(outside,part.points)||part.points.some((a,j)=>
+      pointSegmentDistance(outside,a,part.points[(j+1)%part.points.length])<=.22));
+    if(!blocked)break;
+    outside={x:outside.x+normal.x*.12,y:outside.y+normal.y*.12};
+  }
   return{surface,outside,tangent,normal,side,lateralSign};
 }
 function drawHouseDoor(house){

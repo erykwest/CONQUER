@@ -155,7 +155,7 @@ function roadRepairEntryBlocksPoint(entry,p,clearance,width){
   return false;
 }
 function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null){
-  if(!inBuild(p)||environmentBlocksPoint(p,'road'))return false;
+  if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||environmentBlocksPoint(p,'road'))return false;
   const clearance=width/2+.16;
 
   if(spatialIndex){
@@ -301,8 +301,9 @@ function addReactiveRoadPolyline(points,template={},meta={}){
   }
   return added;
 }
+function mainRoadRouteDeleted(routeId){return (State.village.deletedMainRoutes||[]).includes(routeId)}
 function arterialRoutePlan(routeId){
-  return ensureRoadPlan().find(r=>r.id===routeId)||null;
+  return mainRoadRouteDeleted(routeId)?null:ensureRoadPlan().find(r=>r.id===routeId)||null;
 }
 function arterialSegmentOrderValue(r){
   return Number.isFinite(Number(r.routeSeq))?Number(r.routeSeq):0;
@@ -492,7 +493,7 @@ function gateMainRouteContinuous(gate){
   return Math.min(dist(cursor,endpoints[0]),dist(cursor,endpoints[1]))<=.90;
 }
 function buildGateMainConnection(gate,force=false){
-  if(!gate||gate.type!=='gate'||underConstruction(gate))return 0;
+  if(!gate||gate.type!=='gate'||underConstruction(gate)||mainRoadRouteDeleted(gateMainRouteId(gate)))return 0;
   const routeId=gateMainRouteId(gate),attemptKey=gateMainTopologyKey(gate);
 
   if(!force&&gateMainRouteContinuous(gate)){
@@ -811,7 +812,7 @@ function reconcileReactiveRoadNetwork(){
   // This entry point is used after load, when derived branches must be restored
   // as existing geometry rather than re-enter construction.
   changed+=reconcileTowerSecondaryBranches(Infinity,true);
-  changed+=reconcileSettlementAccessRoads();
+  changed+=reconcileSettlementAccessRoads(Infinity,true);
   if(changed)invalidateNavigation(false);
   return changed;
 }
@@ -1181,8 +1182,8 @@ function roadEnvironmentConflict(road){
   return false;
 }
 function edgeSample(edge,t){
-  const v=BUILD_MIN+t*(BUILD_MAX-BUILD_MIN);
-  if(edge==='north')return{x:v,y:BUILD_MIN};if(edge==='south')return{x:v,y:BUILD_MAX};if(edge==='west')return{x:BUILD_MIN,y:v};return{x:BUILD_MAX,y:v};
+  const v=t*WORLD;
+  if(edge==='north')return{x:v,y:0};if(edge==='south')return{x:v,y:WORLD};if(edge==='west')return{x:0,y:v};return{x:WORLD,y:v};
 }
 function villageSeed(well){return (State.seed ^ Math.imul(Math.round(well.x*10),73856093) ^ Math.imul(Math.round(well.y*10),19349663))>>>0}
 function rotPoint(cx,cy,x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}}
@@ -1199,7 +1200,7 @@ function growthRng(step,salt=0){
 }
 const BORDER_ENTRY_SIDES=['north','east','south','west'];
 const BORDER_ENTRY_FRACTIONS=[.25,.50,.75];
-const ROAD_PLAN_VERSION=2;
+const ROAD_PLAN_VERSION=3;
 function borderEntryCandidates(){
   const out=[];
   for(const edge of BORDER_ENTRY_SIDES){
@@ -1212,7 +1213,8 @@ function borderEntryCandidates(){
 }
 function validBorderEntrySelection(entries){
   return Array.isArray(entries)&&entries.length===4&&BORDER_ENTRY_SIDES.every(edge=>
-    entries.some(e=>e?.edge===edge&&Number.isFinite(e.x)&&Number.isFinite(e.y))
+    entries.some(e=>e?.edge===edge&&BORDER_ENTRY_FRACTIONS.includes(e.t)&&
+      dist(e,edgeSample(edge,e.t))<.001)
   );
 }
 function ensureBorderEntrySelection(){
@@ -1256,6 +1258,7 @@ function connectSelectedBorderMainRoads(){
   if(!well||plan.length!==4)return 0;
   let changed=0;
   for(const route of plan){
+    if(mainRoadRouteDeleted(route.id))continue;
     route.connected=true;
     if(!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
   }
@@ -1361,9 +1364,10 @@ function constrainRoadCandidate(candidate){
 function spawnArterial(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();if(!well||!plan.length)return false;
   for(const route of plan){
+    if(mainRoadRouteDeleted(route.id))continue;
     if(routeRoads(route.id).length&&!arterialRouteContinuous(route.id))rebuildArterialRoute(route.id,[]);
   }
-  const open=plan.filter(p=>!p.connected);if(!open.length)return false;
+  const open=plan.filter(p=>!p.connected&&!mainRoadRouteDeleted(p.id));if(!open.length)return false;
   // Alternate progress across the two border routes by choosing the one with fewer accepted segments.
   open.sort((p,q)=>routeRoads(p.id).length-routeRoads(q.id).length);
   const route=open[0],existing=routeRoads(route.id),a=existing.length?{...existing[existing.length-1].b}:{x:well.x,y:well.y};
@@ -1395,7 +1399,7 @@ function spawnLocalRoad(step){
   return reconcileSettlementAccessRoads(1)>0;
 }
 function spawnRoad(step){
-  const plan=ensureRoadPlan(),incomplete=plan.some(p=>!p.connected);
+  const plan=ensureRoadPlan(),incomplete=plan.some(p=>!p.connected&&!mainRoadRouteDeleted(p.id));
   if(incomplete)return spawnArterial(step);
   return spawnLocalRoad(step);
 }
@@ -1416,7 +1420,10 @@ function spawnHouse(step){
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,24)){
     const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
-    if(!autoBlocked(h,placed,manual,.38)){State.structures.push(h);ensureSettlementRoadAccess(h);return true}
+    if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h)))continue;
+    // Resolve and validate the parcel before committing a house to the simulation.
+    if(!urbanHouseFitsLots(h))continue;
+    State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);return true;
   }
   return false;
 }

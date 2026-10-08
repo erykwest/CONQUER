@@ -6,12 +6,12 @@ function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by
 function structureAt(p){
   const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
-  const linear=State.structures.filter(s=>!s.auto&&['wall','palisade','built','road'].includes(s.type));
+  const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId)&&['wall','palisade','built','road'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
   return null;
 }
 function structureAtScreen(p){
-  const manual=State.structures.filter(s=>!s.auto||s.type==='house').slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
+  const manual=State.structures.filter(s=>!s.auto||s.type==='house'||s.type==='road'&&s.routeId).slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
@@ -125,6 +125,10 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
 
+  if(target.type==='road'&&target.routeId){
+    const deleted=new Set(State.village.deletedMainRoutes||[]);deleted.add(target.routeId);
+    State.village.deletedMainRoutes=[...deleted];
+  }
   if(target.type==='tower')restoreTowerWallConnections(target);
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost)refundCost(target.buildCost);
@@ -253,7 +257,7 @@ function renderFunctionPanel(){
     else html+=s.functions.map((value,i)=>{const size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · ${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
   }
   slots.innerHTML=html;
-  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)+1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
+  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;const level=clamp(houseLevel(target)+1,1,4);if(!urbanHouseFitsLots({...target,houseLevel:level})){status('House extension would exceed its lot');return}target.houseLevel=level;markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(!target)return;
