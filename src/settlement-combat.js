@@ -30,6 +30,7 @@
   const residentMotion=new Map(),residentLastPosition=new Map();
   let transitLastFrame=0;
   let combat=null;
+  const archerCache=new Map();
 
   function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
   function restore(raw){
@@ -41,11 +42,13 @@
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&['squad','knight'].includes(s.kind)): [];
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
+    for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';}
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     visible.fill(0);paintFogBitmap();
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
+    archerCache.clear();window.ConquerCombatRules?.reset();
     zoneSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
   }
@@ -488,11 +491,12 @@
     }
     const characters=[];
     for(const u of combat.units){
-      if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id});
+      if(u.kind==='knight'&&!u.defeated)characters.push({p:u,type:'knight',id:u.id,unit:u});
       else{
+        if(u.defeated)continue;
         for(let i=0;i<5;i++){
           const row=Math.floor(i/3),col=i%3,spacing=.55;
-          characters.push({p:{x:u.x+(col-1)*spacing,y:u.y+(row-.4)*spacing},type:'spearman',id:u.id+':'+i,flag:i===0});
+          characters.push({p:{x:u.x+(col-1)*spacing,y:u.y+(row-.4)*spacing},type:'spearman',id:u.id+':'+i,flag:i===0,unit:u,index:i});
         }
       }
     }
@@ -500,6 +504,17 @@
     withRenderContext(g,()=>{
       for(const soldier of characters){
         drawSoldierFigure(soldier.p,.08,soldier.type,soldier.id,State.clock.day);
+        if(soldier.type==='spearman'&&soldier.unit.engaged){
+          const target=combat.enemy.filter(e=>!e.defeated&&e.stats?.hp>0)
+            .sort((a,b)=>dist(a,soldier.unit)-dist(b,soldier.unit))[0];
+          if(target&&dist(target,soldier.unit)<1){
+            const base=w2s(soldier.p,.24),end=w2s(target,.45);
+            const pulse=(Math.sin((window.ConquerCombatRules?.time||0)*Math.PI*3+soldier.index*1.2)+1)/2;
+            g.strokeStyle='#c9c6b4';g.lineWidth=Math.max(.75,1.25*State.view.scale);
+            g.beginPath();g.moveTo(base.x,base.y-8);
+            g.lineTo(base.x+(end.x-base.x)*(.25+.7*pulse),base.y-8+(end.y-base.y-8)*(.25+.7*pulse));g.stroke();
+          }
+        }
         if(soldier.flag){
           const base=w2s(soldier.p,.08);
           g.strokeStyle='#5d4535';g.lineWidth=1.8;g.beginPath();
@@ -509,38 +524,106 @@
         }
       }
       for(const e of combat.enemy){
-        if(!spotted(e,observers()))continue;
-        drawSoldierFigure(e,.08,'spearman',e.id,State.clock.day);
+        if(e.defeated||e.stats?.hp<=0||!spotted(e,observers()))continue;
+        const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
+        drawSoldierFigure(e,.08,'spearman',e.id,State.clock.day,livery);
         const p=w2s(e,.08);g.strokeStyle='#e45151';g.lineWidth=2;
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
+    window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
     document.getElementById('combatSelection').textContent=selected?
       ((combat.units.find(u=>u.id===selected)?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
   }
+  function safeMilitarySegment(a,b,id){
+    return !terrainSegmentCrossesCliff(a,b)&&peasantSegmentClear(a,b,id);
+  }
+  function infantryRoute(start,goal,id){
+    if(safeMilitarySegment(start,goal,id))return [start,goal];
+    const roads=roadNetworkPath(start,goal,id);
+    if(roads?.length>1&&roads.slice(1).every((p,i)=>safeMilitarySegment(roads[i],p,id)))return roads;
+    const path=findPeasantPath(start,goal,id,14);
+    return path?.length>1&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id))?path:null;
+  }
   function issueMove(unit,p){
+    if(unit.defeated||unit.routing){status('Unit cannot receive orders');return}
     if(unit.kind==='squad'){
-      const knight=combat.units.find(u=>u.kind==='knight');
+      const knight=combat.units.find(u=>u.kind==='knight'&&!u.defeated);
       if(!knight||dist(unit,knight)>16||dist(p,knight)>16){
         status('Out of knight command beacon (16U)');return;
       }
       if(dist(unit,p)>6){status('Sergeant order limit: maximum 6U per order');return}
     }
-    unit.target=point(p.x,p.y);changed();
-    status((unit.kind==='squad'?'Pikemen':'Knight')+' moving');
+    const target=point(p.x,p.y),path=infantryRoute(unit,target,unit.id);
+    if(!path){status('No traversable route — cliff, terrain or obstruction blocks the order');return}
+    unit.target=target;unit.path=path;unit.pathIndex=1;changed();
+    status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
+  }
+  function archers(){
+    const active=new Set(),out=[];
+    function put(id,p,visualZ,h){
+      active.add(id);
+      let shooter=archerCache.get(id);
+      if(!shooter){shooter={id,clock:0};archerCache.set(id,shooter)}
+      shooter.x=p.x;shooter.y=p.y;shooter.h=h;shooter.visualZ=visualZ;
+      shooter.terrainAt=terrainElevation;out.push(shooter);
+    }
+    for(const s of State.structures){
+      if(underConstruction(s))continue;
+      const ground=terrainElevation({x:s.x??s.a?.x,y:s.y??s.a?.y});
+      if(s.type==='tower'){
+        const wood=isWoodTower(s),roof=wood||towerRoofStyle(s)==='battlement';
+        const floor=wood?1:structureLevel(s);
+        const relative=roof?(wood?1.46:structureHeight(s)+.08):
+          Math.min(structureHeight(s)-.35,1.34+(floor-1)*1.14);
+        // Arrow slit garrison is hidden behind the facade; roof garrison
+        // reuses the visible archer already drawn by drawCastleSoldiers().
+        put(s.id+':'+(roof?'roof':'slit'),{x:s.x,y:s.y},ground+relative,ground+(roof?floor:Math.max(1,floor-1)));
+      }else if(s.type==='built'){
+        const center={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
+        const level=structureLevel(s);
+        const base=terrainElevation(center);
+        put(s.id+':arrow-slit',center,base+Math.min(structureHeight(s)-.22,level>=2?2.36:1.3),base+level);
+      }
+    }
+    for(const key of archerCache.keys())if(!active.has(key))archerCache.delete(key);
+    return out;
   }
   function tick(dt){
-    if(!combat||!activeWell())return;
+    if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
+    dt=Math.min(dt,.25);
     let moved=false;
     for(const u of combat.units){
-      if(!u.target)continue;
-      const dx=u.target.x-u.x,dy=u.target.y-u.y,len=Math.hypot(dx,dy);
-      if(len<.03){u.x=u.target.x;u.y=u.target.y;u.target=null;continue}
-      const step=Math.min(len,dt*(u.kind==='knight'?1.5:.8));
-      u.x+=dx/len*step;u.y+=dy/len*step;moved=true;
-      if(step>=len-.03)u.target=null;
+      if(!u.target||u.defeated||u.routing)continue;
+      if(!u.path?.length){
+        u.path=infantryRoute(u,u.target,u.id);u.pathIndex=1;
+        if(!u.path){u.target=null;continue}
+      }
+      let budget=dt*(u.kind==='knight'?1.5:.8);
+      while(budget>0&&u.target){
+        const next=u.path[u.pathIndex];
+        if(!next){u.target=null;u.path=null;break}
+        const length=dist(u,next);
+        if(length<.025){u.x=next.x;u.y=next.y;u.pathIndex++;continue}
+        const step=Math.min(length,budget);
+        const nextPos={x:u.x+(next.x-u.x)*step/length,y:u.y+(next.y-u.y)*step/length};
+        if(terrainSegmentCrossesCliff(u,nextPos)){
+          u.target=null;u.path=null;status('Cliff blocks route: unit stopped');break;
+        }
+        u.x=nextPos.x;u.y=nextPos.y;budget-=step;moved=true;
+        if(step>=length-.025){u.x=next.x;u.y=next.y;u.pathIndex++}
+      }
     }
     if(moved){visibilityDirty=true;maskDirty=true}
+    const rules=window.ConquerCombatRules;
+    if(rules){
+      for(const e of combat.enemy){
+        e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
+      }
+      rules.update(dt,combat.units,combat.enemy,archers(),
+        (e,shooter)=>sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,r:rules.shooterRange(shooter,e)},e),
+        (a,b)=>!terrainSegmentCrossesCliff(a,b)&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
+    }
   }
   function paint(p,mode){
     const q=point(p.x,p.y),r=clamp(Number(combat.brushRadius)||5,1,16);
@@ -563,7 +646,7 @@
     }
     if(kind==='combat-intruder'){
       e.preventDefault();e.stopImmediatePropagation();
-      combat.enemy.push({id:uid(),x:p.x,y:p.y});changed();setTool({kind:'select',label:'Select'});
+      combat.enemy.push({id:uid(),x:p.x,y:p.y,faction:'dev_hostile',combatKind:'infantry'});changed();setTool({kind:'select',label:'Select'});
       status('Test intruder placed — visible only within line of sight');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
@@ -629,7 +712,7 @@
   $('combatBrushSize').oninput=e=>{combat.brushRadius=Number(e.target.value);changed();draw()};
   $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click knight or pikemen squad, then click target'});syncButtons()};
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
-  $('combatClearEnemies').onclick=()=>{combat.enemy=[];changed();alertState='clear';draw()};
+  $('combatClearEnemies').onclick=()=>{combat.enemy=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
