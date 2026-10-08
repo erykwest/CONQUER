@@ -80,8 +80,20 @@ function interiorFacadeEdgeIndex(s){
   return best;
 }
 function isInteriorFacadeEdge(s,edge){return Number.isFinite(edge?.index)&&edge.index===interiorFacadeEdgeIndex(s)}
-function gothicAssetForLevel(s){return structureLevel(s)>=3?'gothicL3':structureLevel(s)>=2?'gothicL2':'gothicL1'}
-function gothicAssetSizeForLevel(s){const l=structureLevel(s);return l>=3?{w:.82,h:.84}:l>=2?{w:.68,h:.78}:{w:.54,h:.70}}
+function gothicAssetForLevel(s){return structureLevel(s)>=2?'gothicL2':'gothicL1'}
+function gothicAssetSizeForLevel(s){const l=structureLevel(s);return l>=2?{w:.68,h:.78}:{w:.54,h:.70}}
+function towerGothicAssetForRow(s,row){
+  if(!row||row.floor<2)return null;
+  if(row.floor===2)return'gothicL1';
+  // P3 wants a bifora, but narrow towers keep the single lancet as fallback.
+  return towerTier(s)>=2?'gothicL2':'gothicL1';
+}
+function towerGothicAssetSizeForRow(s,row){
+  const key=towerGothicAssetForRow(s,row);
+  const base=key==='gothicL2'?{w:.68,h:.78}:{w:.54,h:.70};
+  const t=clamp(towerTier(s),1,3),scale=t===1?.56:t===2?.76:.94;
+  return{w:base.w*scale,h:base.h*scale};
+}
 function roundTowerFacadeEdges(s){
   const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x),r=Math.max(.2,Number(s.r)||.5)+.006,span=Math.min(.54,r*.95);
   const centerDepth=viewDepthPoint({x:s.x,y:s.y}),out=[];
@@ -267,9 +279,19 @@ function towerLevelHeight(s,level){
   const t=towerTier(s);
   return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
 }
-function towerWindowRows(s){const l=structureLevel(s),rows=[{z:1.34}];if(l>=2)rows.push({z:2.48});if(l>=3)rows.push({z:3.62});return rows.filter(r=>r.z<structureHeight(s)-.28)}
+function towerWindowRows(s){
+  const l=structureLevel(s),rows=[];
+  // P1 is intentionally blind: no windows and no arrow slits.
+  if(l>=2)rows.push({floor:2,z:2.48});
+  if(l>=3)rows.push({floor:3,z:3.62});
+  return rows.filter(r=>r.z<structureHeight(s)-.28);
+}
 function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
-  const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);for(const edge of roundTowerFacadeEdges(s)){if(edge.interior)drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}
+  const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)return;
+  for(const edge of roundTowerFacadeEdges(s)){
+    if(edge.interior)drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf);
+    else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit');
+  }
 }
 function linearFrontSide(s){
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
@@ -401,7 +423,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
     if(s.type==='house'){if(includeHouses)drawHouseFacadeWindows(s,lit,nf)}
     else if(s.type==='built')drawBuiltWindows(s,lit,nf);
     else if(s.type==='gate'){if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf))}
-    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){if(structureCutaway(s))return;for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s).filter(edge=>!cutawayEdgeIsOpen(s,edge.index)),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}})}})}
+    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){if(structureCutaway(s))return;for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s).filter(edge=>!cutawayEdgeIsOpen(s,edge.index));for(const row of rows){const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)continue;withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit')}})}}})}
   }
 }
 function drawDayNightOverlay(){
