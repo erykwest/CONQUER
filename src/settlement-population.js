@@ -1042,6 +1042,7 @@ function drawPeasants(){
       let p=residentClassPosition(house,resident,day,assignment);
       if(!p)continue;
       p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
+       p=window.ConquerCombat?.civilPosition(p,house,resident)||p;
       if(!worldPointVisible(p,0,40))continue;
       const rp=rotateViewPoint(p);
       dots.push({
