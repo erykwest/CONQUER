@@ -121,6 +121,81 @@
     // No automatic surrender in P0: the actual siege/occupation loop is P2.
     if(Math.floor(before)!==Math.floor(after))scheduleLocalSave(500);
   }
+  // The same ordered tower slots drive UI, visible soldiers and combat fire.
+  // Priority: usable roof, then embrasures from highest to lowest floor.
+  function archerSlots(tower){
+    if(!tower||tower.type!=='tower'||underConstruction(tower)||tower.destroyed)return[];
+    const result=[],center={x:tower.x,y:tower.y};
+    const wood=isWoodTower(tower);
+    const openDeck=wood?woodTowerStyle(tower)==='palisadeTower'&&woodTowerRoof(tower)==='open'
+      :towerRoofStyle(tower)==='battlement';
+    const top=wood?1:structureLevel(tower);
+    const ground=placementGroundZ(tower);
+    if(openDeck){
+      const p=wood?woodTowerLocal(tower,0,.03):{...center};
+      const z=wood?1.82:structureHeight(tower)+.08;
+      result.push({id:tower.id+':roof',kind:'roof',floor:top,p,z,
+        h:ground+top,visualZ:ground+z});
+    }
+    if(wood)return result; // Wooden towers have no stone arrow slits.
+    const iv=structureInteriorVector(tower);
+    let dirs=[];
+    if(tower.shape==='round'){
+      const base=Math.atan2(iv.y,iv.x);
+      // Face zero opens toward the castle interior, never a firing slit.
+      dirs=[1,2,3].map(i=>({face:i,nx:Math.cos(base+i*Math.PI/2),ny:Math.sin(base+i*Math.PI/2)}));
+    }else{
+      const fp=footprintPoints(tower),interior=interiorFacadeEdgeIndex(tower);
+      for(let i=0;i<fp.length;i++){
+        if(i===interior)continue;
+        const a=fp[i],b=fp[(i+1)%fp.length];
+        const nx=(a.x+b.x)/2-tower.x,ny=(a.y+b.y)/2-tower.y,L=Math.hypot(nx,ny)||1;
+        dirs.push({face:i,nx:nx/L,ny:ny/L});
+      }
+    }
+    const links=State.structures.filter(s=>!underConstruction(s)&&['wall','built','palisade'].includes(s.type)
+      &&(s.aSnap===tower.id||s.bSnap===tower.id));
+    const blocked=(dir,floor)=>{
+      return links.some(wall=>{
+        if(structureLevel(wall)<floor)return false;
+        const contact=wall.aSnap===tower.id?wall.a:wall.b;
+        if(!contact)return false;
+        const dx=contact.x-tower.x,dy=contact.y-tower.y,L=Math.hypot(dx,dy)||1;
+        // Corner junctions disable both adjacent wall faces.
+        return (dir.nx*dx+dir.ny*dy)/L>=.65;
+      });
+    };
+    const radius=tower.shape==='round'?Math.max(.13,tower.r-.17):Math.max(.13,(tower.size||1)/2-.17);
+    for(let floor=top;floor>=1;floor--){
+      const z=[1.34,2.48,3.62][floor-1];
+      if(z>=structureHeight(tower)-.28)continue;
+      for(const dir of dirs){
+        if(blocked(dir,floor))continue;
+        const p={x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
+        result.push({id:tower.id+':slit:'+floor+':'+dir.face,kind:'slit',
+          floor,face:dir.face,p,z,h:ground+floor,visualZ:ground+z});
+      }
+    }
+    return result;
+  }
+  function stationedArchers(tower){
+    const n=Number(tower?.archerCount);
+    return Math.min(archerSlots(tower).length,Number.isFinite(n)?Math.max(0,Math.floor(n)):0);
+  }
+  function occupiedArcherSlots(tower){return archerSlots(tower).slice(0,stationedArchers(tower))}
+  function changeArchers(id,delta){
+    const tower=State.structures.find(s=>s.id===id&&s.type==='tower');
+    if(!tower||underConstruction(tower))return false;
+    const slots=archerSlots(tower),before=stationedArchers(tower);
+    const next=Math.max(0,Math.min(slots.length,before+Math.sign(Number(delta)||0)));
+    if(before===next)return false;
+    tower.archerCount=next;
+    window.ConquerCombat?.invalidateArchers?.();
+    markDirty(false,false,true);
+    renderFunctionPanel();draw();
+    status('Archers assigned: '+next+' / '+slots.length+' · '+(next?slots[Math.max(0,next-1)].kind:'empty'));
+    return true;
+  }
   function healthMaximum(s){
     const base=BASE_HEALTH[s.type]||0;
     const material=s.material==='wood'?.60:1;
@@ -235,5 +310,6 @@
   }
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
-    drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum};
+    drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
+    archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();
