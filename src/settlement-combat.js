@@ -392,7 +392,7 @@
       status('Test intruder placed — visible only within line of sight');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
-      const hit=combat.units.find(u=>dist(u,p)<2);
+      const hit=combat.units.find(u=>dist(u,p)<1.1);
       if(hit){
         e.preventDefault();e.stopImmediatePropagation();selected=hit.id;
         setTool({kind:'combat-orders',label:'Orders: click destination'});
