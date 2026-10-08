@@ -138,26 +138,39 @@
     for(let i=1;i<path.length;i++)n+=dist(path[i-1],path[i]);
     return n;
   }
+  function routeAllowed(path){
+    if(!path?.length)return false;
+    for(let i=0;i<path.length;i++){
+      if(!areaState(path[i]).allowed)return false;
+      if(!i)continue;
+      const start=path[i-1],end=path[i],steps=Math.max(1,Math.ceil(dist(start,end)/.5));
+      for(let j=1;j<steps;j++){
+        const t=j/steps;
+        if(!areaState({x:start.x+(end.x-start.x)*t,y:start.y+(end.y-start.y)*t}).allowed)return false;
+      }
+    }
+    return true;
+  }
   function findCivilianRoute(start,target,house){
     if(dist(start,target)<.07)return[start,target];
-    if(peasantSegmentClear(start,target,house.id))return[start,target];
+    if(peasantSegmentClear(start,target,house.id)&&routeAllowed([start,target]))return[start,target];
     const key=[house.id,Math.round(start.x*2),Math.round(start.y*2),Math.round(target.x*2),Math.round(target.y*2)].join(':');
     const cached=civilianRouteCache.get(key);
     if(cached){
       const route=[start,...cached.slice(1,-1),target];
-      if(peasantSegmentClear(start,route[1],house.id)&&
+      if(routeAllowed(route)&&peasantSegmentClear(start,route[1],house.id)&&
          peasantSegmentClear(route.at(-2),target,house.id))return route;
     }
-    // Reuse CONQUER's actual pedestrian routing rather than interpolating
-    // through buildings, walls or steep slopes. Prefer roads, then grid A*.
-    const route=roadNetworkPath(start,target,house.id)
-      ||findPeasantPath(start,target,house.id,12);
-    if(route?.length>1){
+    // Both the existing road graph and the fallback grid A* must honor White:
+    // a mathematically short route outside authorized territory is invalid.
+    const road=roadNetworkPath(start,target,house.id);
+    const route=road&&routeAllowed(road)?road:findPeasantPath(start,target,house.id,12,p=>areaState(p).allowed);
+    if(route?.length>1&&routeAllowed(route)){
       if(civilianRouteCache.size>600)civilianRouteCache.clear();
       civilianRouteCache.set(key,route);
       return route;
     }
-    return[start]; // No valid route: stay put. Never cross walls as fallback.
+    return[start]; // Unreachable: do not teleport or cross forbidden ground.
   }
   function recallDestination(house,resident,origin){
     const zones=closestSafe(origin);
@@ -539,7 +552,7 @@
     }
     appendStroke({x:q.x,y:q.y,r,mode});
     if(combat.strokes.length>2500){combat.strokes.splice(0,combat.strokes.length-2500);indexedStrokes=-1;}
-    lastPaint=q;changed();
+    lastPaint=q;civilianRouteCache.clear();changed();
   }
   function handleDown(e){
     if(e.button!==0)return;
@@ -620,6 +633,8 @@
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
+  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,
+    invalidateRoutes:()=>civilianRouteCache.clear(),
+    visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
   draw();
 })();
