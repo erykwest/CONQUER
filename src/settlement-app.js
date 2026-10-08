@@ -834,6 +834,7 @@ function generateNewMap(){
   State.draft=null;State.selectedId=null;
   State.seed=freshLandscapeSeed();
   State.heraldry=null;
+  window.__conquerHeraldry?.reset();
   localStorage.setItem('conquer.seed.0.0',String(State.seed));
 
   // True new-map reset: nothing from the previous settlement survives.
