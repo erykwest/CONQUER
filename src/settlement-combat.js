@@ -57,8 +57,11 @@
         return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
-    combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
-    for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';}
+    combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)).map(e=>{
+      const {path,pathIndex,engaged,aiNextAt,...stored}=e;
+      return{...stored,target:e.target&&Number.isFinite(e.target.x)&&Number.isFinite(e.target.y)?{x:e.target.x,y:e.target.y}:null};
+    }):[];
+    for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';e.environmental??=true;}
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     visible.fill(0);paintFogBitmap();
@@ -76,11 +79,12 @@
     // Persist game data, never transient navigation graphs. A direct route
     // previously stored [unit, destination], creating unit -> path -> unit
     // and aborting the entire simulation when saveLocal JSON.stringify ran.
-    return {...combat,units:combat.units.map(u=>{
+    const storedUnit=u=>{
       const {path,pathIndex,engaged,...stored}=u;
       return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
         ?{x:u.target.x,y:u.target.y}:null};
-    })};
+    };
+    return {...combat,units:combat.units.map(storedUnit),enemy:combat.enemy.map(storedUnit)};
   }
   function changed(brushInProgress=false){
     // During a brush drag, check alert/LOS at the end rather than for every
@@ -353,8 +357,25 @@
       out.push({x:tower.x,y:tower.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:tower.id});
     }
     for(const unit of combat.units){
+      if(unit.defeated)continue;
       const h=clamp(Math.round(terrainElevation(unit)),0,8);
       out.push({x:unit.x,y:unit.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:unit.id});
+    }
+    // Completed gate guards and wall patrols are local sentries. They reveal a
+    // smaller area than the mobile commander/squad and keep their positions in
+    // the population simulation rather than duplicating render-only state.
+    for(const s of State.structures){
+      if(underConstruction(s))continue;
+      if(s.type==='gate'){
+        for(const [i,p] of gateGuardPositions(s).entries())out.push({...p,h:terrainElevation(p),r:10,id:s.id+':guard:'+i});
+      }else if(['wall','palisade'].includes(s.type)){
+        const tier=wallTier(s),count=tier===1?0:tier===3?2:1;
+        for(let i=0;i<count;i++){
+          const p=wallPatrolPoint(s,State.clock.day,i,count);
+          const z=s.type==='palisade'?palisadePatrolSurface(s).z:structureHeight(s)+.10;
+          out.push({...p,h:terrainElevation(p)+z,r:10+2*structureLevel(s),id:s.id+':patrol:'+i});
+        }
+      }
     }
     return out;
   }
@@ -553,6 +574,39 @@
     unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;changed();
     status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
   }
+  function advanceUnit(unit,dt,speed){
+    if(!unit.target||unit.defeated)return false;
+    if(!unit.path?.length){
+      const route=infantryRoute(unit,unit.target,unit.id,unit.kind||'knight');
+      unit.path=route?.map(p=>({x:p.x,y:p.y}))||null;unit.pathIndex=1;
+      if(!unit.path){unit.target=null;return false}
+    }
+    let budget=dt*speed,moved=false;
+    while(budget>0&&unit.target){
+      const next=unit.path[unit.pathIndex];
+      if(!next){unit.target=null;unit.path=null;break}
+      const length=dist(unit,next);
+      if(length<.025){unit.x=next.x;unit.y=next.y;unit.pathIndex++;continue}
+      const step=Math.min(length,budget),nextPos={x:unit.x+(next.x-unit.x)*step/length,y:unit.y+(next.y-unit.y)*step/length};
+      if(!safeMilitarySegment(unit,nextPos,unit.id,unit.kind||'knight')){unit.target=null;unit.path=null;break}
+      unit.x=nextPos.x;unit.y=nextPos.y;budget-=step;moved=true;
+      if(step>=length-.025){unit.x=next.x;unit.y=next.y;unit.pathIndex++}
+    }
+    return moved;
+  }
+  function updateEnemyAI(now,rules){
+    const objective=activeWell();
+    for(const enemy of combat.enemy){
+      if(enemy.defeated)continue;
+      if(now<(enemy.aiNextAt||0))continue;
+      enemy.aiNextAt=now+800+(peasantHash(enemy.id)%400);
+      const intent=rules.enemyIntent(enemy,combat.units,objective,
+        (source,target)=>sourceSees({x:source.x,y:source.y,h:terrainElevation(source),r:12},target),WORLD);
+      const changedTarget=!enemy.target||!intent.target||dist(enemy.target,intent.target)>.75;
+      enemy.aiMode=intent.mode;
+      if(changedTarget){enemy.target=intent.target;enemy.path=null;enemy.pathIndex=1}
+    }
+  }
   function archers(){
     const now=performance.now();
     if(now<nextArcherRosterAt&&State.structures.length===archerRosterSize)return archerRoster;
@@ -595,26 +649,8 @@
     dt=Math.min(dt,.25);
     let moved=false;
     for(const u of combat.units){
-      if(!u.target||u.defeated||u.routing)continue;
-      if(!u.path?.length){
-        const route=infantryRoute(u,u.target,u.id,u.kind);
-        u.path=route?.map(p=>({x:p.x,y:p.y}))||null;u.pathIndex=1;
-        if(!u.path){u.target=null;continue}
-      }
-      let budget=dt*(u.kind==='knight'?1.5:.8);
-      while(budget>0&&u.target){
-        const next=u.path[u.pathIndex];
-        if(!next){u.target=null;u.path=null;break}
-        const length=dist(u,next);
-        if(length<.025){u.x=next.x;u.y=next.y;u.pathIndex++;continue}
-        const step=Math.min(length,budget);
-        const nextPos={x:u.x+(next.x-u.x)*step/length,y:u.y+(next.y-u.y)*step/length};
-        if(!safeMilitarySegment(u,nextPos,u.id,u.kind)){
-          u.target=null;u.path=null;status('Cliff or obstruction blocks unit footprint: stopped');break;
-        }
-        u.x=nextPos.x;u.y=nextPos.y;budget-=step;moved=true;
-        if(step>=length-.025){u.x=next.x;u.y=next.y;u.pathIndex++}
-      }
+      if(u.routing)continue;
+      moved=advanceUnit(u,dt,u.kind==='knight'?1.5:.8)||moved;
     }
     if(moved){visibilityDirty=true;maskDirty=true}
     // Combat AI, target acquisition and LOS are capped at 10 Hz.
@@ -625,9 +661,12 @@
       const step=tacticalRuleAccum;tacticalRuleAccum=0;
       const ruleStart=performance.now();
       const hostiles=combat.enemy.filter(e=>!e.defeated&&(!e.stats||e.stats.hp>0));
+      updateEnemyAI(performance.now(),rules);
       for(const e of hostiles){
         e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
+        moved=advanceUnit(e,step,e.routing?1.05:.65)||moved;
       }
+      if(moved){visibilityDirty=true;maskDirty=true}
       rules.update(step,combat.units,combat.enemy,hostiles.length?archers():[],
         (e,shooter)=>sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,r:rules.shooterRange(shooter,e)},e),
         (a,b)=>!terrainSegmentCrossesCliff(a,b)&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
@@ -665,8 +704,8 @@
     }
     if(kind==='combat-intruder'){
       e.preventDefault();e.stopImmediatePropagation();
-      combat.enemy.push({id:uid(),x:p.x,y:p.y,faction:'dev_hostile',combatKind:'infantry'});changed();setTool({kind:'select',label:'Select'});
-      status('Test intruder placed — visible only within line of sight');draw();return;
+      combat.enemy.push({id:uid(),x:p.x,y:p.y,faction:'dev_hostile',combatKind:'infantry',environmental:true,aiMode:'raid'});changed();setTool({kind:'select',label:'Select'});
+      status('Environmental raider placed — it will scout, pursue and raid using traversable terrain');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
       const hit=combat.units.find(u=>dist(u,p)<1.1);
@@ -703,7 +742,7 @@
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button></div>'+
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
-    '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
+    '<div class="combat-row"><button id="combatIntruder">Place raider</button><button id="combatClearEnemies">Clear raiders</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
     '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>';

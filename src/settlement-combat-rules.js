@@ -29,6 +29,26 @@
     }
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
+  function nearestLiving(origin,units,visibleFn=()=>true){
+    let target=null,best=Infinity;
+    for(const unit of units||[]){
+      if(!living(unit)||!visibleFn(unit,origin))continue;
+      const d=Math.hypot(origin.x-unit.x,origin.y-unit.y);
+      if(d<best){best=d;target=unit}
+    }
+    return target;
+  }
+  function enemyIntent(enemy,friendly,objective,visibleFn=()=>true,worldSize=200){
+    const stats=ensure(enemy,enemy.combatKind||'infantry');
+    if(enemy.routing||stats.brain<=0){
+      const exits=[{x:0,y:enemy.y},{x:worldSize,y:enemy.y},{x:enemy.x,y:0},{x:enemy.x,y:worldSize}];
+      return{mode:'retreat',target:exits.sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y))[0]};
+    }
+    const prey=nearestLiving(enemy,friendly,unit=>visibleFn(enemy,unit));
+    if(prey)return{mode:'pursue',target:{x:prey.x,y:prey.y},targetId:prey.id};
+    if(objective)return{mode:'raid',target:{x:objective.x,y:objective.y}};
+    return{mode:'hold',target:null};
+  }
   function ensure(entity,kind){
     if(!entity.stats){
       const p=PROFILES[kind]||PROFILES.infantry;
@@ -143,6 +163,6 @@
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
   }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,ensure,living,meleePair,shooterRange,update,visualEffects:()=>({shots,meleeFlashes,elapsed}),
+  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,ensure,living,nearestLiving,enemyIntent,meleePair,shooterRange,update,visualEffects:()=>({shots,meleeFlashes,elapsed}),
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0}};
 })();
