@@ -1261,28 +1261,21 @@ function drawCastleSoldiers(){
     }
   }
 
-  // One archer lookout on every completed fighting tower.
+  // Only assigned garrison soldiers exist. Roof slot is visible; arrow-slit
+  // soldiers are masked by masonry unless the tower is shown in cutaway.
   for(const tower of State.structures){
     if(tower.type!=='tower'||underConstruction(tower))continue;
-    let p,z;
-
-    if(isWoodTower(tower)){
-      const style=woodTowerStyle(tower);
-      p=woodTowerLocal(tower,0,.03);
-      // Keep the sprite below the roof eave; front parapet/rail is redrawn later
-      // by the same castleFront protocol used by wall battlements.
-      z=style==='watchtower'?1.46:1.82;
-    }else{
-      if(towerRoofStyle(tower)!=='battlement')continue;
-      const hash=peasantHash(tower.id+'-archer'),a=(hash%360)*Math.PI/180;
-      const radius=tower.shape==='round'?tower.r*.26:(tower.size||1)*.18;
-      p={x:tower.x+Math.cos(a)*radius,y:tower.y+Math.sin(a)*radius};
-      z=structureHeight(tower)+.08;
+    const occupied=window.ConquerSiege?.occupiedArcherSlots(tower)||[];
+    for(const slot of occupied){
+      if(slot.kind==='slit'&&!structureCutaway(tower))continue;
+      const p=slot.kind==='slit'
+        ?{x:tower.x+(slot.p.x-tower.x)*.63,y:tower.y+(slot.p.y-tower.y)*.63}
+        :slot.p;
+      withStructureGroundPlane(tower,()=>{
+        if(worldPointVisible(p,slot.z,48))
+          drawSoldierFigure(p,slot.z,'archer',slot.id,day+(slot.floor||0)*.15);
+      });
     }
-
-    withStructureGroundPlane(tower,()=>{
-      if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'archer',tower.id,day);
-    });
   }
 }
 function drawTrainingSoldiers(){
