@@ -34,15 +34,16 @@
   function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
   function restore(raw){
     combat=Object.assign(defaults(),raw&&[1,2].includes(raw.version)?raw:{});
-    // V1 persisted tiles from the experimental fog even where they were never
-    // legitimately discovered. Keep territorial edits, reset only V1 discovery.
+    // This builder starts with the terrain explored (known) but not currently
+    // visible. The fog still hides unseen contacts and darkens unobserved areas.
     if(combat.version!==2){combat.seen='';combat.version=2}
     combat.fog=true;
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&['squad','knight'].includes(s.kind)): [];
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
-    memory.fill(0);
+    memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
+    visible.fill(0);paintFogBitmap();
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
     zoneSignature='';
@@ -327,6 +328,19 @@
     if(sourceForest>=0&&sourceForest!==targetForest&&dist(source,target)>2)return false;
     return lineVisible(source,target,sourceForest,targetForest);
   }
+  function paintFogBitmap(){
+    const image=fogCtx.createImageData(N,N);
+    for(let i=0;i<visible.length;i++){
+      const k=i*4,a=visible[i]?0:memory[i]?158:232;
+      image.data[k]=8;image.data[k+1]=12;image.data[k+2]=16;image.data[k+3]=a;
+    }
+    fogCtx.putImageData(image,0,0);
+  }
+  function renderFogProjection(pixelRatio){
+    const a=w2sRaw({x:0,y:0},0),b=w2sRaw({x:STEP,y:0},0),c=w2sRaw({x:0,y:STEP},0);
+    g.save();g.setTransform(pixelRatio*(b.x-a.x),pixelRatio*(b.y-a.y),pixelRatio*(c.x-a.x),pixelRatio*(c.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
+    g.imageSmoothingEnabled=false;g.drawImage(fog,0,0);g.restore();
+  }
   function refreshFog(force=false){
     if(!combat||!activeWell())return;
     const now=performance.now();
@@ -356,12 +370,7 @@
         if(lineVisible(source,p,srcForest,f)){visible[i]=1;memory[i]=1}
       }
     }
-    let image=fogCtx.createImageData(N,N);
-    for(let i=0;i<visible.length;i++){
-      const k=i*4,a=visible[i]?0:memory[i]?158:232;
-      image.data[k]=8;image.data[k+1]=12;image.data[k+2]=16;image.data[k+3]=a;
-    }
-    fogCtx.putImageData(image,0,0);maskDirty=false;
+    paintFogBitmap();maskDirty=false;
     updateAlert(sources);
   }
   function spotted(p,sources){
@@ -447,13 +456,9 @@
       canvasLayer.width=Math.round(rect.width*d);canvasLayer.height=Math.round(rect.height*d);
     }
     g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,rect.width,rect.height);
+    if(activeWell())refreshFog();
+    if(combat.fog)renderFogProjection(d);
     if(!activeWell())return;
-    refreshFog();
-    if(combat.fog){
-      const a=w2sRaw({x:0,y:0},0),b=w2sRaw({x:STEP,y:0},0),c=w2sRaw({x:0,y:STEP},0);
-      g.save();g.setTransform(d*(b.x-a.x),d*(b.y-a.y),d*(c.x-a.x),d*(c.y-a.y),d*a.x,d*a.y);
-      g.imageSmoothingEnabled=false;g.drawImage(fog,0,0);g.restore();
-    }
     if(combat.zones)renderMergedZones(d);
     const king=combat.units.find(u=>u.kind==='knight');
     if(king){
