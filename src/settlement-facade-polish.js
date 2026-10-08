@@ -14,7 +14,8 @@ function facadeEmissiveMask(img){
     const r=p[i],gg=p[i+1],b=p[i+2],a=p[i+3],mx=Math.max(r,gg,b);
     // Only the dark bluish glass/opening pixels emit. Stone, white trim and
     // black outlines remain in the night-darkened base pass.
-    const glass=a>20&&mx<175&&b>r+6&&b>=gg-3&&r<125;
+    const mn=Math.min(r,gg,b),chroma=mx-mn;
+    const glass=a>20&&mx<132&&b>58&&b-r>12&&gg-r>5&&b>=gg-2&&chroma>10&&r<98;
     if(glass){p[i]=255;p[i+1]=188;p[i+2]=92;p[i+3]=Math.min(220,Math.round(a*.82))}
     else p[i+3]=0;
   }
@@ -48,14 +49,35 @@ gothicAssetSizeForLevel=function(s){
   return{w:base.w*scale,h:base.h*scale};
 };
 
+function punchBuiltArcadeOpenings(edge,count,h){
+  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const cell=edge.length/count,baseZ=.025,springZ=.04+h*.56,apexZ=.04+h*.93;
+  ctx.save();
+  ctx.globalCompositeOperation='destination-out';
+  ctx.fillStyle='#000';
+  for(let i=0;i<count;i++){
+    const along=(i+.5)*cell,half=cell*.30;
+    const c={x:edge.a.x+ux*along,y:edge.a.y+uy*along};
+    const l={x:c.x-ux*half,y:c.y-uy*half},r={x:c.x+ux*half,y:c.y+uy*half};
+    const lb=w2s(l,baseZ),rb=w2s(r,baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),ap=w2s(c,apexZ);
+    ctx.beginPath();
+    ctx.moveTo(lb.x,lb.y);ctx.lineTo(rb.x,rb.y);ctx.lineTo(rs.x,rs.y);
+    ctx.quadraticCurveTo(rs.x+(ap.x-rs.x)*.54,rs.y+(ap.y-rs.y)*.36,ap.x,ap.y);
+    ctx.quadraticCurveTo(ls.x+(ap.x-ls.x)*.54,ls.y+(ap.y-ls.y)*.36,ls.x,ls.y);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+}
+
 drawBuiltArcade=function(s){
   if(!s||s.type!=='built'||underConstruction(s))return;
   const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
   const edge=linearFacadeEdge(s,inside),h=Math.min(1.18,structureHeight(s)-.22);
   if(h<=.18||edge.length<.35)return;
-  const centerZ=.04+h/2,key=edge.length<2.35?'arcade2':'arcade3';
-  // One coherent arcade per wall section: no tiled frames and no black
-  // rectangular backdrop. The wall itself remains visible through the arches.
+  const key=edge.length<2.35?'arcade2':'arcade3',count=key==='arcade2'?2:3,centerZ=.04+h/2;
+  // The portico is a real opening in the castle-body cache: cut the masonry
+  // first, then draw only the stone arcade frame on top.
+  punchBuiltArcadeOpenings(edge,count,h);
   drawArchitectureAssetOnEdge(edge,centerZ,edge.length*.94,h,key,0,false,1);
 };
 
