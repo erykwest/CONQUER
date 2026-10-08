@@ -47,17 +47,41 @@
       return l===1||(l===2&&top>=3);
     return true;
   }
+  function ensureMastioHall(tower,replace=false){
+    if(!eligibleRoom(tower)||tower.type!=='tower'||!functionCapacity(tower))return false;
+    normalizeFunctions(tower);
+    if(tower.functions.some((fn,i)=>fn==='commonHall'&&allowed(tower,i,fn)))return true;
+    let index=tower.functions.findIndex((fn,i)=>!fn&&allowed(tower,i,'commonHall'));
+    // Repair legacy saves without silently replacing an occupied room on a new designation.
+    if(index<0&&replace)index=tower.functions.findIndex((fn,i)=>allowed(tower,i,'commonHall'));
+    if(index<0)return false;
+    tower.functions[index]='commonHall';
+    return true;
+  }
+  function mastio(){
+    return State.structures.find(s=>s.type==='tower'&&s.isMastio&&!s.destroyed&&!underConstruction(s)
+      &&s.functions?.includes('commonHall'))||null;
+  }
+  function armories(){
+    return State.structures.filter(s=>eligibleRoom(s)&&!s.destroyed
+      &&s.functions?.some((fn,i)=>fn==='armory'&&allowed(s,i,fn)));
+  }
   function sanitizeRooms(s){
     if(!s||!['tower','gate','built'].includes(s.type))return false;
     normalizeFunctions(s);let changed=false;
     s.functions.forEach((fn,i)=>{if(fn&&!allowed(s,i,fn)){s.functions[i]=null;changed=true}});
+    if(s.type==='tower'&&s.isMastio&&!ensureMastioHall(s,true)){
+      s.isMastio=false;changed=true;
+    }
     return changed;
   }
   function normalizeMastio(){
     let chosen=false;
     for(const s of State.structures){
       if(!s.isMastio)continue;
-      if(s.type==='tower'&&!s.destroyed&&!chosen){chosen=true;continue}
+      if(s.type==='tower'&&!s.destroyed&&!chosen&&ensureMastioHall(s,true)){
+        chosen=true;continue;
+      }
       s.isMastio=false;
     }
   }
@@ -65,11 +89,15 @@
     const selected=State.structures.find(s=>s.id===id&&s.type==='tower'&&!s.destroyed&&!underConstruction(s));
     if(!selected)return false;
     const already=!!selected.isMastio;
+    if(!already&&!ensureMastioHall(selected)){
+      status('Mastio requires a Common Hall: provide an available lower-floor room (T2+).');
+      return false;
+    }
     for(const s of State.structures)if(s.type==='tower')s.isMastio=false;
     if(!already)selected.isMastio=true;
     markDirty(false,['base','castleBody','castleFront']);
     renderFunctionPanel();draw();
-    status(already?'Mastio designation removed':'Mastio designated — final defensive position');
+    status(already?'Mastio designation removed':'Mastio designated — Common Hall secured');
     return true;
   }
   function capacity(){
@@ -312,7 +340,7 @@
       renderFunctionPanel();
     });
   }
-  window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,allowed,sanitizeRooms,
+  window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
