@@ -31,6 +31,10 @@ assert.ok(tracedLoop.length>40,'the perimeter exposes a stable ordered loop for 
 const quarterAnchors=Array.from({length:4},(_,i)=>Math.floor(i*tracedLoop.length/4));
 const quarterGaps=quarterAnchors.map((anchor,i)=>(i===quarterAnchors.length-1?tracedLoop.length:quarterAnchors[i+1])-anchor);
 assert.ok(Math.max(...quarterGaps)-Math.min(...quarterGaps)<=1,'four patrol anchors are equidistant along the perimeter arc');
+let rebuilds=0;
+for(let i=0;i<100;i++)if(rules.shouldRebuildBoundary(true,true,true))rebuilds++;
+if(rules.shouldRebuildBoundary(false,true,true))rebuilds++;
+assert.equal(rebuilds,1,'a 100-sample White brush rebuilds the perimeter only once, after release');
 
 const raider={id:'raider',x:10,y:10,combatKind:'infantry'};
 const knight={id:'knight',x:15,y:10,kind:'knight'};
@@ -64,6 +68,7 @@ assert.match(runtimeSource,/unit\.nextPatrolAt=target\?now:now\+300/,'successful
 assert.match(runtimeSource,/u\.kind==='patrol'\?1\.15/,'perimeter patrols use a visibly readable walking speed');
 assert.match(runtimeSource,/Math\.floor\(i\*loop\.length\/patrols\.length\)/,'multiple patrols are spaced by equal perimeter arc');
 assert.match(runtimeSource,/whiteBoundarySignature=''/,'White Zone edits invalidate patrol spacing immediately');
+assert.match(runtimeSource,/shouldRebuildBoundary\(painting,whiteBoundaryCache\.length>0,signatureChanged\)/,'perimeter rebuilds are frozen while the White brush is dragging');
 assert.match(runtimeSource,/rules\.enemyIntent/,'runtime delegates hostile decisions to combat rules');
 assert.match(runtimeSource,/safeMilitarySegment\(unit,nextPos/,'hostile and friendly movement share terrain collision checks');
 assert.doesNotMatch(rulesSource,/getContext\(|drawImage\(|fillRect\(/,'rules stay independent of canvas rendering');

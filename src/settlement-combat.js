@@ -40,6 +40,7 @@
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
   let tacticalRuleAccum=0;
   let whiteBoundaryCache=[],whiteBoundarySignature='';
+  let whiteBoundaryPending=false;
 
   function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,seen:''};}
   function restore(raw){
@@ -69,7 +70,7 @@
     selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
-    whiteBoundaryCache=[];whiteBoundarySignature='';
+    whiteBoundaryCache=[];whiteBoundarySignature='';whiteBoundaryPending=false;
     window.ConquerCombatRules?.reset();
     zoneSignature='';backdropSignature='';
     State.combat=combat;syncButtons();refreshFog(true);
@@ -608,7 +609,8 @@
     const last=combat.strokes.at(-1);
     const signature=automatic.map(c=>[c.x,c.y,c.r].join(':')).join('|')+'|'+combat.strokes.length+'|'+
       (last?[last.x,last.y,last.r,last.mode].join(':'):'');
-    if(signature===whiteBoundarySignature)return whiteBoundaryCache;
+    const signatureChanged=signature!==whiteBoundarySignature;
+    if(!window.ConquerCombatRules.shouldRebuildBoundary(painting,whiteBoundaryCache.length>0,signatureChanged))return whiteBoundaryCache;
     whiteBoundarySignature=signature;
     const points=window.ConquerCombatRules.boundaryPoints(p=>areaState(p).allowed,WORLD,1.25);
     whiteBoundaryCache=points;
@@ -767,10 +769,7 @@
     }
     appendStroke({x:q.x,y:q.y,r,mode});
     if(combat.strokes.length>2500){combat.strokes.splice(0,combat.strokes.length-2500);indexedStrokes=-1;}
-    if(['allow','deny'].includes(mode)){
-      whiteBoundarySignature='';
-      for(const unit of combat.units)if(unit.kind==='patrol'){unit.target=null;unit.path=null;unit.nextPatrolAt=0}
-    }
+    if(['allow','deny'].includes(mode))whiteBoundaryPending=true;
     lastPaint=q;civilianRouteCache.clear();changed(true);
   }
   let queuedToolDraw=false;
@@ -815,6 +814,10 @@
   for(const type of ['pointerup','pointercancel'])canvas.addEventListener(type,e=>{
     if(!painting)return;
     painting=false;lastPaint=null;e.stopImmediatePropagation();
+    if(whiteBoundaryPending){
+      whiteBoundaryPending=false;whiteBoundarySignature='';
+      for(const unit of combat.units)if(unit.kind==='patrol'){unit.target=null;unit.path=null;unit.nextPatrolAt=0}
+    }
     if(activeWell())updateAlert(observers());
     scheduleLocalSave();requestToolDraw();
   },true);
