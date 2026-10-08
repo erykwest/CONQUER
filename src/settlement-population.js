@@ -1040,10 +1040,11 @@ function drawPeasants(){
     for(const resident of houseResidents(house)){
       if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
       let p=residentClassPosition(house,resident,day,assignment);
-      if(!p)continue;
-      p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
-       p=window.ConquerCombat?.civilPosition(p,house,resident)||p;
-      if(!worldPointVisible(p,0,40))continue;
+      if(p)p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
+      // Recall/release may keep a resident visible while their ordinary
+      // day schedule is inactive; the tactical subsystem owns that transition.
+      p=window.ConquerCombat?.civilPosition(p,house,resident)??p;
+      if(!p||!worldPointVisible(p,0,40))continue;
       const rp=rotateViewPoint(p);
       dots.push({
         p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
