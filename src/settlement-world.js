@@ -66,11 +66,16 @@ function autoOverlapsManual(auto,manual){
 }
 function removeOverlappingAuto(manual){
   let removed=0;const roads=[];
+  const clearedHouses=new Set(urbanLotsOverlappingBuilding(manual).map(lot=>lot.houseId));
+  for(const house of autoList('house'))if(autoOverlapsManual(house,manual))clearedHouses.add(house.id);
   State.structures=State.structures.filter(s=>{
-    const hit=s.auto&&autoOverlapsManual(s,manual);
+    // House-owned access spurs disappear with the parcel and must not be repaired.
+    if(s.type==='road'&&clearedHouses.has(s.accessFor)){removed++;return false}
+    const hit=s.auto&&(clearedHouses.has(s.id)||autoOverlapsManual(s,manual));
     if(hit){removed++;if(s.type==='road')roads.push({...s,a:{...s.a},b:{...s.b}})}
     return !hit;
   });
+  if(clearedHouses.size)invalidateUrbanGeometry();
   return{removed,roads};
 }
 const ROAD_REPAIR_INDEX_CELL=4;
@@ -1412,7 +1417,7 @@ function spawnHouse(step){
     const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
     const ang=roadAngle(road),side=rnd()<.5?-1:1,offset=1.15+rnd()*1.35;
     const p={x:q.x-Math.sin(ang)*offset*side,y:q.y+Math.cos(ang)*offset*side};
-    const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p))continue;
+    const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow)continue;
     const core=Math.exp(-Math.pow(d-Math.min(6.5,radius*.62),2)/(2*3.0*3.0));
     const score=core*1.2+(1-offset/3)*.65+rnd()*.20;
     candidates.push({p,ang,score,roadId:road.id,doorSide:-side});

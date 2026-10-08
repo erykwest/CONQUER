@@ -76,7 +76,7 @@ test('LOS blocks short rays through houses and permits raised observers above ro
  assert.equal(run('window.ConquerCombat.__qa.lineVisible({x:99,y:100,h:0},{x:101,y:100},-1,-1)'),false);
 });
 test('one occupied quadrilateral per Voronoi lot, no overlap and house footprints inside',()=>{
- run("State.structures=[];for(let y=0;y<3;y++)for(let x=0;x<3;x++)State.structures.push({id:'h'+x+'-'+y,type:'house',auto:true,x:95+x*4,y:95+y*4,w:1.5,h:1,angle:0});invalidateNavigation()");
+ run("State.structures=[{id:'well',type:'well',x:80,y:80}];State.village={founded:true,wellId:'well'};State.combat.strokes=[{x:100,y:100,r:50,mode:'yellow'}];for(let y=0;y<3;y++)for(let x=0;x<3;x++)State.structures.push({id:'h'+x+'-'+y,type:'house',auto:true,x:95+x*4,y:95+y*4,w:1.5,h:1,angle:0});invalidateNavigation()");
  assert.equal(run('urbanLots().length'),9);
  assert.equal(run('urbanLots().every(l=>l.points.length===4)'),true);
  assert.equal(run("urbanLots().every(l=>houseFootprintParts(State.structures.find(h=>h.id===l.houseId)).every(part=>part.points.every(p=>urbanContains(l.points,p,.159))))"),true);
@@ -118,5 +118,57 @@ test('a household cannot path through its own home; extended entrances stay outs
   assert.equal(run("peasantSegmentClear({x:98,y:100},{x:102,y:100},'home')"),false,'Own house L'+level+' side '+side);
   assert.equal(run("pointBlockedForPeasant(houseDoorInfo(State.structures[0]).outside,'home')"),false,'Entrance L'+level+' side '+side+' '+JSON.stringify(run('houseDoorInfo(State.structures[0])')));
  }
+});
+function zoningFixture(){
+ run("State.environment=[];State.structures=[{id:'well',type:'well',x:100,y:100}];State.village={founded:true,wellId:'well'};State.combat.strokes=[];invalidateNavigation()");
+}
+test('whole parcels stay inside yellow, even when the house center is inside but corners are outside',()=>{
+ zoningFixture();
+ assert.equal(run("urbanYellowContains([{x:111,y:101},{x:116,y:101},{x:116,y:103},{x:111,y:103}])"),false);
+ assert.equal(run("urbanYellowContains([{x:104,y:102},{x:108,y:102},{x:108,y:105},{x:104,y:105}])"),true);
+ assert.equal(run("urbanHouseFitsLots({id:'outside',type:'house',x:116,y:102,w:1.5,h:1,angle:0})"),false);
+});
+test('an erased yellow island and a narrow erased edge invalidate the parcel',()=>{
+ zoningFixture();
+ run("State.combat.strokes=[{x:106,y:104,r:1,mode:'eraseYellow'}];invalidateUrbanGeometry()");
+ assert.equal(run("urbanYellowContains([{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}])"),false);
+ run("State.combat.strokes=[{x:106,y:101.01,r:1,mode:'eraseYellow'}];invalidateUrbanGeometry()");
+ assert.equal(run("urbanYellowContains([{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}])"),false);
+});
+test('disconnected yellow disks cannot allow a parcel across an uncovered gap',()=>{
+ zoningFixture();
+ run("State.combat.strokes=[{x:124,y:100,r:1.5,mode:'yellow'},{x:130,y:100,r:1.5,mode:'yellow'}];invalidateUrbanGeometry()");
+ assert.equal(run("urbanYellowContains([{x:123.5,y:99.5},{x:130.5,y:99.5},{x:130.5,y:100.5},{x:123.5,y:100.5}])"),false);
+});
+test('forests inside a lot and forest edges crossing a lot are rejected',()=>{
+ zoningFixture();
+ run("State.environment=[{type:'forest',points:[{x:105.1,y:103.1},{x:105.4,y:103.1},{x:105.4,y:103.4},{x:105.1,y:103.4}]}]");
+ assert.equal(run("urbanParcelAllowed([{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}],'candidate')"),false);
+ run("State.environment=[{type:'forest',points:[{x:102,y:103.2},{x:110,y:103.2},{x:110,y:103.4},{x:102,y:103.4}]}]");
+ assert.equal(run("urbanParcelAllowed([{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}],'candidate')"),false);
+});
+test('completed and unfinished building footprints prevent parcel creation',()=>{
+ zoningFixture();
+ run("State.structures.push({id:'tower',type:'tower',shape:'square',size:1,x:106,y:104,angle:.7,construction:{start:0,end:10}})");
+ assert.equal(run("urbanParcelAllowed([{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}],'candidate')"),false);
+ run("delete State.structures[1].construction");
+ assert.equal(run("urbanParcelAllowed([{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}],'candidate')"),false);
+});
+test('building over the yard removes the whole lot, house and private spur without rebuilding it',()=>{
+ zoningFixture();
+ run("State.structures.push({id:'home',type:'house',auto:true,x:106,y:104,w:1.5,h:1,angle:0,doorSide:-1},{id:'spur',type:'road',auto:true,accessFor:'home',a:{x:106,y:103.2},b:{x:106,y:101},width:.3});invalidateNavigation();globalThis.oldLot=urbanLots().find(l=>l.houseId==='home');globalThis.corner=oldLot.points.reduce((a,p)=>dist(p,State.structures[1])>dist(a,State.structures[1])?p:a);globalThis.newBuilding={id:'new-tower',type:'tower',shape:'square',size:1,x:corner.x,y:corner.y,angle:0};globalThis.displaced=removeOverlappingAuto(newBuilding);State.structures.push(newBuilding);invalidateNavigation()");
+ assert.ok(run("oldLot&&dist(corner,{x:106,y:104})>2.5"));
+ assert.equal(run("State.structures.some(s=>s.id==='home'||s.id==='spur')"),false);
+ assert.equal(run("urbanLots().some(l=>l.houseId==='home')"),false);
+ assert.equal(run("displaced.roads.some(r=>r.id==='spur')"),false);
+ assert.equal(run("State.structures.some(s=>s.id==='new-tower')"),true);
+ assert.equal(run("urbanFenceSegments().length"),0);
+});
+test('a failed paid building placement does not clear a lot',()=>{
+ zoningFixture();
+ run("State.structures.push({id:'home',type:'house',auto:true,x:106,y:104,w:1.5,h:1,angle:0});invalidateNavigation();State.resources={gold:0,stone:0,wood:0,metal:0};globalThis.result=addStructure({id:'expensive',type:'tower',shape:'square',size:1,x:108,y:106,angle:0})");
+ assert.equal(run('result'),false);
+ assert.equal(run("State.structures.some(s=>s.id==='home')"),true);
+ assert.equal(run("urbanLots().length"),1);
 });
 console.log(passed+' urban regression checks passed.');

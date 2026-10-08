@@ -27,7 +27,92 @@ function urbanContains(poly,p,pad=0){
     return sign*(dx*(p.y-a.y)-dy*(p.x-a.x))>=pad*Math.hypot(dx,dy)-1e-7;
   });
 }
-function urbanQuad(cell,house){
+function urbanPolygonsOverlap(a,b){
+  if(!a?.length||!b?.length)return false;
+  const bounds=p=>({x0:Math.min(...p.map(q=>q.x)),x1:Math.max(...p.map(q=>q.x)),
+    y0:Math.min(...p.map(q=>q.y)),y1:Math.max(...p.map(q=>q.y))});
+  const aa=bounds(a),bb=bounds(b);
+  if(aa.x1<bb.x0||bb.x1<aa.x0||aa.y1<bb.y0||bb.y1<aa.y0)return false;
+  if(a.some(p=>pointInPolygon(p,b))||b.some(p=>pointInPolygon(p,a)))return true;
+  return a.some((p,i)=>b.some((q,j)=>segmentDistance(p,a[(i+1)%a.length],q,b[(j+1)%b.length])<1e-7));
+}
+function urbanCircleSegmentHits(circle,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y,fx=a.x-circle.x,fy=a.y-circle.y;
+  const A=dx*dx+dy*dy;if(A<1e-12)return[];
+  const B=2*(fx*dx+fy*dy),C=fx*fx+fy*fy-circle.r*circle.r,D=B*B-4*A*C;
+  if(D<0)return[];
+  return[(-B-Math.sqrt(D))/(2*A),(-B+Math.sqrt(D))/(2*A)]
+    .filter(t=>t>=0&&t<=1).map(t=>({t,x:a.x+dx*t,y:a.y+dy*t}));
+}
+function urbanCirclePairHits(a,b){
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+  if(d<1e-8||d>a.r+b.r||d<Math.abs(a.r-b.r))return[];
+  const x=(a.r*a.r-b.r*b.r+d*d)/(2*d),h=Math.sqrt(Math.max(0,a.r*a.r-x*x));
+  const cx=a.x+dx*x/d,cy=a.y+dy*x/d;
+  return[{x:cx-dy*h/d,y:cy+dx*h/d},{x:cx+dy*h/d,y:cy-dx*h/d}];
+}
+function urbanYellowContains(poly){
+  const combat=window.ConquerCombat;if(!combat?.areaState||!combat.yellowGeometry)return false;
+  const yellow=p=>combat.areaState(p).yellow;
+  if(!poly.every(yellow))return false;
+  const x0=Math.min(...poly.map(p=>p.x)),x1=Math.max(...poly.map(p=>p.x));
+  const y0=Math.min(...poly.map(p=>p.y)),y1=Math.max(...poly.map(p=>p.y));
+  const regions=combat.yellowGeometry().filter(c=>c.x+c.r>=x0&&c.x-c.r<=x1&&c.y+c.r>=y0&&c.y-c.r<=y1);
+  // A convex parcel inside one uncut yellow disk is wholly inside the zone.
+  if(!regions.some(c=>c.mode==='eraseYellow')&&regions.some(c=>poly.every(p=>dist(p,c)<=c.r)))return true;
+  // Split every parcel edge at all brush-circle intersections. Membership is
+  // constant on each open interval, including a narrow erased strip.
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i],b=poly[(i+1)%poly.length],ts=[0,1];
+    for(const c of regions)ts.push(...urbanCircleSegmentHits(c,a,b).map(p=>p.t));
+    ts.sort((a,b)=>a-b);
+    for(let j=1;j<ts.length;j++){
+      const t=(ts[j-1]+ts[j])/2;
+      if(!yellow({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}))return false;
+    }
+  }
+  // A hole can sit entirely inside the parcel. Circle-circle and circle-edge
+  // crossings split its boundary into arcs of constant membership. Test both
+  // sides of each arc, so corners alone cannot hide an erased island.
+  for(const c of regions){
+    if(urbanContains(poly,c)&&!yellow(c))return false;
+    const angles=[0,Math.PI/2,Math.PI,Math.PI*1.5];
+    const add=p=>angles.push((Math.atan2(p.y-c.y,p.x-c.x)+Math.PI*2)%(Math.PI*2));
+    for(const other of regions)if(other!==c)for(const p of urbanCirclePairHits(c,other))add(p);
+    for(let i=0;i<poly.length;i++)for(const p of urbanCircleSegmentHits(c,poly[i],poly[(i+1)%poly.length]))add(p);
+    angles.sort((a,b)=>a-b);
+    for(let i=0;i<angles.length;i++){
+      const angle=(angles[i]+(i+1<angles.length?angles[i+1]:angles[0]+Math.PI*2))/2;
+      for(const delta of [-.00001,.00001]){
+        const p={x:c.x+Math.cos(angle)*(c.r+delta),y:c.y+Math.sin(angle)*(c.r+delta)};
+        if(urbanContains(poly,p)&&!yellow(p))return false;
+      }
+    }
+  }
+  return true;
+}
+function urbanBuildingPolygons(s){
+  if(!s||['road','field'].includes(s.type))return[];
+  if(s.type==='house')return houseFootprintParts(s).map(p=>p.points);
+  if(isCivic(s))return civicParts(s).map(p=>p.points);
+  const points=footprintPoints(s);return points?.length?[points]:[];
+}
+function urbanParcelAllowed(points,houseId){
+  if(!urbanYellowContains(points))return false;
+  for(const forest of State.environment){
+    if(forest.type==='forest'&&urbanPolygonsOverlap(points,forest.points))return false;
+  }
+  for(const s of State.structures){
+    if(s.id===houseId)continue;
+    if(urbanBuildingPolygons(s).some(poly=>urbanPolygonsOverlap(points,poly)))return false;
+  }
+  return true;
+}
+function urbanLotsOverlappingBuilding(building){
+  const footprints=urbanBuildingPolygons(building);if(!footprints.length)return[];
+  return urbanLots().filter(lot=>footprints.some(poly=>urbanPolygonsOverlap(lot.points,poly)));
+}
+function urbanQuad(cell,house,allowed=null){
   if(cell.length<4)return null;
   const footprint=houseFootprintParts(house).flatMap(p=>p.points);
   let best=null,area=0;
@@ -37,14 +122,14 @@ function urbanQuad(cell,house){
       if(size<=area||!footprint.every(p=>urbanContains(quad,p,.16)))continue;
       best=quad;area=size;
     }
-  if(best)return best;
+  if(best&&(!allowed||allowed(best)))return best;
   // A small oriented rectangle is also an inscribed quadrilateral, useful for
   // dense legacy settlements whose cell has more than four narrow corners.
   const local=footprint.map(p=>toLocalPoint(house,p)),pad=.20;
   const x0=Math.min(...local.map(p=>p.x))-pad,x1=Math.max(...local.map(p=>p.x))+pad;
   const y0=Math.min(...local.map(p=>p.y))-pad,y1=Math.max(...local.map(p=>p.y))+pad;
   const quad=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].map(([x,y])=>houseLocalToWorld(house,x,y));
-  return quad.every(p=>urbanContains(cell,p))?quad:null;
+  return quad.every(p=>urbanContains(cell,p))&&(!allowed||allowed(quad))?quad:null;
 }
 function urbanLotFor(house,houses,roads=primaryRoadList()){
   const reach=3.4;
@@ -73,7 +158,7 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
     cell=urbanClip(cell,nx,ny,q.x*nx+q.y*ny-(Number(road.width)||.62)/2-.12);
     if(cell.length<4)return null;
   }
-  const points=urbanQuad(cell,house);
+  const points=urbanQuad(cell,house,points=>urbanParcelAllowed(points,house.id));
   return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
 }
 function urbanHouseFitsLots(candidate){
@@ -81,7 +166,8 @@ function urbanHouseFitsLots(candidate){
   houses.push(candidate);
   if(!urbanLotFor(candidate,houses))return false;
   // A new site must not steal the footprint of an already occupied parcel.
-  return houses.every(h=>dist(h,candidate)>10.2||!!urbanLotFor(h,houses));
+  return houses.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
+    !urbanLotFor(h,State.structures.filter(s=>s.type==='house'))||!!urbanLotFor(h,houses));
 }
 function urbanLots(){
   if(urbanLotCache)return urbanLotCache;

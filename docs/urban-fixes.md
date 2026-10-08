@@ -26,12 +26,29 @@ Branch: urban. Base: main at 97d24ab18cae55463262160a108bd951c044bb9f.
   of painting duplicate shared boundaries. Fences are visual lot boundaries;
   the house footprint is the physical blocker.
 
+## Zoning and construction clearance
+- The entire four-corner parcel must be inside the current yellow zone.
+  Circle-boundary intersections also detect interior erased areas and gaps
+  between painted regions; checking only house centers or parcel corners is
+  insufficient.
+- Neither parcels nor houses overlap forests or other building footprints,
+  including buildings under construction. If possible, a smaller parcel is
+  used; otherwise the spawn candidate is rejected.
+- Placing a building over any part of a parcel clears the whole parcel, its
+  house, fences and house-owned access roads. This happens after placement
+  and affordability validation, so failed construction does not clear a lot.
+- Brush edits invalidate the parcel cache; topology changes refresh automatic
+  yellow circles immediately.
+
 ## Verification
 Run `node qa/urban-regression.cjs`.
-14 regression checks cover road migration, world bounds, four arterial routes,
+21 regression checks cover road migration, world bounds, four arterial routes,
 persistent deletion, instant reload/new construction, all house levels and
 rotations, squad clearance, LOS height, Voronoi occupancy, shared fences,
 well detours, projection masks and growth across five procedural seeds.
+Additional checks cover full yellow-zone containment (including erased islands
+and disconnected painted disks), forest boundaries, completed/unfinished
+buildings, whole-parcel clearance and failed construction preserving the lot.
 
 All JS modules passed syntax compilation. Browser visual verification was
 unavailable because access to the local preview address was denied.
