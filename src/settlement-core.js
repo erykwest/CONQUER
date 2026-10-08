@@ -506,6 +506,7 @@ function pointRadius(s){
       castle_body_bitmap_ms:sample.assetCache?.castleBodyMs||0,
       recent_events:recentEvents
     };
+    if(window.CONQUER_ENABLE_UNSAFE_TELEMETRY!==true)return;
     fetch(SUPABASE_URL+'/rest/v1/simulation_telemetry',{
       method:'POST',
       headers:{
