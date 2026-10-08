@@ -412,6 +412,7 @@ function roadNetworkPath(start,goal,sourceHouseId){
   appendRoutePoints(out,startConnector);
   appendRoutePoints(out,network);
   appendRoutePoints(out,goalConnector.slice().reverse());
+  if(out.slice(1).some((p,i)=>terrainSegmentCrossesCliff(out[i],p)))return null;
   navPerf.graphRoutes++;
   return out;
 }
