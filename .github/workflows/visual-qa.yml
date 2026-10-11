@@ -25,6 +25,13 @@ jobs:
           done
           echo "Static server never started"
           exit 1
+      - name: Check scripts and existing urban geometry regressions
+        shell: bash
+        run: |
+          node --check qa/visual-regression.cjs
+          node --check qa/visual-scenes.cjs
+          node qa/urban-regression.cjs
+          node qa/founding-regression.cjs
       - name: Install browser and image tools
         shell: bash
         run: |
