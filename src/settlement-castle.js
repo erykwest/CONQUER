@@ -2413,22 +2413,26 @@ function structureDetailOccluders(owner,z){
     return worldDepth(o)>ownerDepth+1e-4;
   });
 }
+
 function withStructureDetailOcclusion(owner,z,drawFn){
   const occluders=structureDetailOccluders(owner,z);
   if(!occluders.length){drawFn();return}
   const r=wrap.getBoundingClientRect();
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(-48,-48,r.width+96,r.height+96);
-  for(const o of occluders){
-    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-  ctx.clip('evenodd');
-  drawFn();
-  ctx.restore();
+  try{
+    // Intersect inverse masks separately: one even-odd compound path XORs
+    // overlapping silhouettes and erroneously reveals hidden details.
+    for(const o of occluders){
+      const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
+      ctx.beginPath();
+      ctx.rect(-48,-48,r.width+96,r.height+96);
+      ctx.moveTo(hull[0].x,hull[0].y);
+      for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+      ctx.closePath();
+      ctx.clip('evenodd');
+    }
+    drawFn();
+  }finally{ctx.restore()}
 }
 function structureScreenSilhouette(s){
   return withStructureGroundPlane(s,()=>{
@@ -2449,25 +2453,24 @@ function structureScreenSilhouette(s){
     return convexHull(cloud);
   });
 }
+
 function withBuiltRoofOcclusionClip(s,drawFn){
   const occluders=roofOccluderStructures(s);
   if(!occluders.length){drawFn();return}
-
   const r=wrap.getBoundingClientRect();
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(-32,-32,r.width+64,r.height+64);
-
-  for(const target of occluders){
-    const hull=structureScreenSilhouette(target);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-
-  ctx.clip('evenodd');
-  drawFn();
-  ctx.restore();
+  try{
+    for(const target of occluders){
+      const hull=structureScreenSilhouette(target);if(hull.length<3)continue;
+      ctx.beginPath();
+      ctx.rect(-32,-32,r.width+64,r.height+64);
+      ctx.moveTo(hull[0].x,hull[0].y);
+      for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+      ctx.closePath();
+      ctx.clip('evenodd');
+    }
+    drawFn();
+  }finally{ctx.restore()}
 }
 function drawBuiltDetails(s,preview=false){
   if(s.type!=='built')return;
@@ -2599,21 +2602,23 @@ function battlementOccluderHull(entry){
   entry.hull=structureScreenSilhouette(entry.s);
   return entry.hull;
 }
+
 function withTowerBattlementOcclusion(piece,frame,drawFn){
   const occluders=castleBattlementOccluders(piece,frame);
   if(!occluders.length){drawFn();return}
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(-48,-48,frame.viewportW+96,frame.viewportH+96);
-  for(const entry of occluders){
-    const hull=battlementOccluderHull(entry);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-  ctx.clip('evenodd');
-  drawFn();
-  ctx.restore();
+  try{
+    for(const entry of occluders){
+      const hull=battlementOccluderHull(entry);if(hull.length<3)continue;
+      ctx.beginPath();
+      ctx.rect(-48,-48,frame.viewportW+96,frame.viewportH+96);
+      ctx.moveTo(hull[0].x,hull[0].y);
+      for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+      ctx.closePath();
+      ctx.clip('evenodd');
+    }
+    drawFn();
+  }finally{ctx.restore()}
 }
 function drawBattlementPiece(piece,frame){
   return withProjectionGroundZ(piece.groundZ,()=>withTowerBattlementOcclusion(piece,frame,()=>{
