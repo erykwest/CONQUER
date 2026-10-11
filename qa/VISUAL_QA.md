@@ -18,7 +18,7 @@ Note: the semantic probes validate **geometry, mask clips and candidate front/be
 
 ## Running locally
 
-Install `playwright@1.55.0` and `pngjs@7.0.0` with Node 20+ and run `npx playwright install chromium`. Start the repository as a static site (e.g. `python3 -m http.server 4173`).
+Install `playwright@1.55.0`, `pngjs@7.0.0` and `polygon-clipping@0.15.7` with Node 20+ and run `npx playwright install chromium`. Start the repository as a static site (e.g. `python3 -m http.server 4173`).
 
 Commands:
 - `node qa/visual-regression.cjs --smoke`: six critical scenes × four rotations, plus diagnostics and stress.
@@ -32,7 +32,7 @@ The runner never updates baseline PNGs unless `--update-baselines` is given. If 
 
 ## Outputs
 
-`qa/visual-results/report.json` includes source scene ID, camera rotation, structural bounds/height/depth and precise failures. `report.md` contains a readable table. `actual/` contains screenshots and `diff/` contains highlighted changed pixels (red).
+`qa/visual-results/report.json` includes source scene ID, camera rotation, structural bounds/height/depth and precise failures. `report.md` contains a readable table. `actual/` contains viewport screenshots, `details/` contains center crops for small architectural elements, and `diff/` contains highlighted changed pixels (red).
 
 Suggested ongoing workflow:
 1. Open the GitHub Actions **Visual QA** workflow after a PR.
@@ -42,7 +42,7 @@ Suggested ongoing workflow:
 
 ## Determinism safeguards
 
-The runner fixes seed 224466, day 20, summer/day, camera projection, 1280 × 900 viewport and DPR 1, and forces Canvas2D. It also hides the UI and weather canvases and resets the state and render cache for every scene. A second pass of the tower/wall scene detects stale bitmap caches and other nondeterminism.
+The runner fixes seed 224466, day 20, summer/day, camera projection, 1280 × 900 viewport and DPR 1, and forces Canvas2D. It pins the local polygon-clipping union implementation and waits until all architectural PNG assets finish loading. It also hides the UI and weather canvases and resets the state and render cache for every scene. A second pass of the tower/wall scene detects stale bitmap caches and other nondeterminism.
 
 Only renderer output from an identical Chromium environment should be compared to approved baselines. Do not mix browsers, font environments or DPR. The hybrid WebGPU renderer is deliberately not used for the canonical PNG baseline. The existing WebGPU smoke workflow continues to gate GPU fallback and blank-frame errors; an explicit cross-renderer image parity suite should be added when GPU output is stable in CI.
 
