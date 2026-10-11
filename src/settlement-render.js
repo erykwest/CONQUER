@@ -1033,6 +1033,7 @@ function draw(){
     },'warn',5000);
   }
   beginPopulationFrame(r);
+  window.ConquerSnowTracks?.beginFrame(r);
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
   ensureStaticSceneCaches();
@@ -1041,8 +1042,10 @@ function draw(){
     blitSceneCache('landscape');
     blitSceneCache('ground');
     blitSceneCache('shadow');
-    blitSceneCache('base');
   }
+  const snowTracksDrawn=window.ConquerSnowTracks?.draw(screenCtx);
+  // Houses occlude ground tracks in both the Canvas and hybrid WebGPU paths.
+  if(!gpuStatic||snowTracksDrawn)blitSceneCache('base');
 
   // Only construction sites remain fully dynamic at ground/building depth.
   State.structures

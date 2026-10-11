@@ -1130,7 +1130,7 @@ function simulationFrame(now){
     }
   }else{
     const animatedCutaway=State.structures.some(s=>structureCutaway(s)&&Array.isArray(s.functions)&&s.functions.some(role=>role==='barracks'||role==='nobleRoom'));
-    if(animatedCutaway&&now-simDrawAt>=84){
+    if((animatedCutaway||window.ConquerSnowTracks?.active())&&now-simDrawAt>=84){
       draw();
       simDrawAt=now;
     }
