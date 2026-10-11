@@ -1,0 +1,58 @@
+name: Visual QA
+
+on:
+  push:
+    branches: [main, visual-qa]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare local site
+        shell: bash
+        run: |
+          python3 -m http.server 4173 >/tmp/conquer-visual-http.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "Static server never started"
+          exit 1
+      - name: Install browser and image tools
+        shell: bash
+        run: |
+          npm install --no-save playwright@1.55.0 pngjs@7.0.0
+          npx playwright install --with-deps chromium
+      - name: Execute geometric/visual regressions
+        shell: bash
+        env:
+          CONQUER_QA_URL: http://127.0.0.1:4173/
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            node qa/visual-regression.cjs --full
+          else
+            node qa/visual-regression.cjs --smoke
+          fi
+      - name: Publish job summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f qa/visual-results/report.md ]]; then
+            cat qa/visual-results/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Visual QA did not produce a report. Check the runner step logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-qa
+          path: qa/visual-results/
+          if-no-files-found: warn
+          retention-days: 14
