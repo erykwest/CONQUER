@@ -17,7 +17,7 @@ navigator:{},fetch:()=>new Promise(()=>{}),atob:s=>Buffer.from(s,'base64').toStr
 const context=vm.createContext(sandbox);
 function run(s){return vm.runInContext(s,context)}
 function moduleFile(n){return fs.readFileSync(__dirname+'/../src/settlement-'+n+'.js','utf8')}
-for(const n of ['core','world','castle','urban','siege','population'])run(moduleFile(n));
+for(const n of ['core','world','castle','urban','fields','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
 run(moduleFile('app').split('function pointerScreen')[0]);
 run(moduleFile('combat-rules'));

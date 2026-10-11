@@ -212,7 +212,7 @@ function footprintPoints(s){
     const cx=pts.reduce((a,p)=>a+p.x,0)/pts.length,cy=pts.reduce((a,p)=>a+p.y,0)/pts.length;
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
-  if(s.type==='field')return rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0);
+  if(s.type==='field')return fieldPoints(s);
   if(isCivic(s)){
     const pts=civicParts(s).flatMap(p=>p.points);
     if(!pts.length)return[];
@@ -3419,32 +3419,8 @@ function drawPointStructure(s,preview=false){
 function drawFlatRect(s,fill,stroke){
   pathPolygon(projectPath(rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0)),fill,stroke,1);
 }
-function fieldGrid(field){
-  const usableW=Math.max(.2,Number(field.w)-FIELD_CELL_MARGIN*2),usableH=Math.max(.2,Number(field.h)-FIELD_CELL_MARGIN*2);
-  const cols=Math.max(1,Math.floor(usableW/FIELD_CELL_TARGET)),rows=Math.max(1,Math.floor(usableH/FIELD_CELL_TARGET));
-  const cellW=usableW/cols,cellH=usableH/rows,ca=Math.cos(field.angle||0),sa=Math.sin(field.angle||0);
-  const localToWorld=(x,y)=>({x:field.x+x*ca-y*sa,y:field.y+x*sa+y*ca});
-  const cells=[];
-  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
-    const x=-usableW/2+(col+.5)*cellW,y=-usableH/2+(row+.5)*cellH;
-    cells.push({index:row*cols+col,row,col,x,y,world:localToWorld(x,y)});
-  }
-  return{usableW,usableH,cols,rows,cellW,cellH,cells,localToWorld};
-}
-function drawField(field){
-  const winter=State.season==='winter';
-  drawFlatRect(field,winter?'rgba(237,241,237,.88)':'rgba(133,111,55,.52)',winter?'rgba(126,139,130,.52)':'rgba(190,168,95,.58)');
-  const g=fieldGrid(field);ctx.save();ctx.strokeStyle=winter?'rgba(151,163,155,.22)':'rgba(218,195,118,.28)';ctx.lineWidth=.7;
-  for(let i=1;i<g.cols;i++){
-    const x=-g.usableW/2+i*g.cellW,a=w2s(g.localToWorld(x,-g.usableH/2),.012),b=w2s(g.localToWorld(x,g.usableH/2),.012);
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  }
-  for(let i=1;i<g.rows;i++){
-    const y=-g.usableH/2+i*g.cellH,a=w2s(g.localToWorld(-g.usableW/2,y),.012),b=w2s(g.localToWorld(g.usableW/2,y),.012);
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  }
-  ctx.restore();
-}
+function fieldGrid(field){return fieldLayout(field)}
+function drawField(field){drawFieldGround(field)}
 function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
   const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=houseLocalToWorld(s,part.cx,part.cy);
   const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;

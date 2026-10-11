@@ -1044,7 +1044,9 @@ function draw(){
     blitSceneCache('base');
   }
 
-  // Only construction sites remain fully dynamic at ground/building depth.
+  for(const field of completedSettlement('field'))drawFieldWork(field);
+
+  // Construction sites remain dynamic at ground/building depth.
   State.structures
     .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .forEach(drawAutoStructure);

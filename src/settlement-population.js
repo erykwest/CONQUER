@@ -141,11 +141,17 @@ function drawDynamicShadows(){
 }
 let fieldWorkAssignmentCache={key:null,map:new Map()};
 function fieldWorkAssignments(houses,fields){
-  const key=houses.map(h=>h.id).sort().join(',')+'|'+fields.map(f=>[f.id,f.x,f.y,f.w,f.h,f.angle].join(':')).sort().join(',');
+  const key=houses.map(h=>[h.id,h.x,h.y,houseLevel(h)].join(':')).sort().join(',')+'|'+fields.map(f=>{
+    const crop=fieldCrop(f),layout=fieldLayout(f);
+    return f.id+':'+layout.poly.map(p=>p.x+','+p.y).join(';')+':'+crop.phase+':'+layout.cells.map(c=>fieldSlotDone(f,c)?1:0).join('');
+  }).sort().join('|');
   if(fieldWorkAssignmentCache.key===key)return fieldWorkAssignmentCache.map;
 
   const slots=[];
-  for(const field of fields)for(const cell of fieldGrid(field).cells)slots.push({field,cell,used:false});
+  for(const field of fields){
+    if(fieldCrop(field).phase==='grow')continue;
+    for(const cell of fieldGrid(field).cells)if(!fieldSlotDone(field,cell))slots.push({field,cell,used:false});
+  }
   const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id));
   for(const house of ordered){
     const door=houseDoorInfo(house).outside;let best=null,bestScore=Infinity;
@@ -154,7 +160,7 @@ function fieldWorkAssignments(houses,fields){
       const score=dist(door,slot.cell.world);
       if(score<bestScore){bestScore=score;best=slot}
     }
-    if(best){best.used=true;assignments.set(house.id,{field:best.field,cell:best.cell})}
+    if(best){best.used=true;assignments.set(house.id,{house,field:best.field,cell:best.cell})}
   }
   fieldWorkAssignmentCache={key,map:assignments};
   return assignments;
@@ -856,13 +862,16 @@ function pointAlongPath(path,t){
   return path.at(-1);
 }
 function peasantPosition(house,assignment,day){
-  const h=peasantHash(house.id),frac=day-Math.floor(day),stagger=(((h>>>8)%1000)/1000-.5)*.025;
-  const leave0=.06+stagger,leave1=.14+stagger,return0=.52+stagger,return1=.62+stagger;
+  const frac=day-Math.floor(day);
+  const leave0=.06,leave1=.14,return0=.52,return1=.62;
   if(frac<leave0||frac>return1)return null;
-  const path=peasantPath(house,assignment),work=assignment.cell.world;
+  const base=peasantPath(house,assignment);
+  if(dist(base.at(-1),assignment.cell.world)>.05)return null;
+  const path=base.concat(fieldWorkerRoute(assignment.field,assignment.cell));
+  const work=fieldWorkerPosition(assignment.field,assignment.cell);
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   if(frac<leave1)return pointAlongPath(path,smooth((frac-leave0)/(leave1-leave0)));
-  if(frac<return0)return residentIdlePoint(work,house.id+'-field-work',day,.16);
+  if(frac<return0)return work;
   return pointAlongPath(path,1-smooth((frac-return0)/(return1-return0)));
 }
 function peasantAnimationActive(){
@@ -942,7 +951,8 @@ function residentClassPosition(house,resident,day,assignment){
   const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
-  if(level===1)return assignment?peasantPosition(house,assignment,shiftedDay):null;
+  // Farm work follows calendar days, so visible workers match daily crop progress.
+  if(level===1)return assignment?peasantPosition(house,assignment,State.clock.day):null;
   if(level===2)return artisanPosition(house,shiftedDay);
   if(level===3)return merchantPosition(house,shiftedDay);
   return elitePosition(house,shiftedDay);
@@ -1061,7 +1071,7 @@ function drawPeasants(){
       // Alarm destinations are computed even for residents not selected by
       // distant-camera LOD, so mobilization does not depend on zoom level.
       let p=residentClassPosition(house,resident,day,assignment);
-      if(p)p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
+      if(p&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)===1))p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
       if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;

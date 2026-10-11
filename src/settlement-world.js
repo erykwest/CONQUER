@@ -110,7 +110,7 @@ function roadRepairBlockerEntry(s){
   let rings=[];
   if(s.type==='house')rings=houseFootprintParts(s).map(q=>q.points);
   else if(isCivic(s))rings=civicParts(s).map(q=>q.points);
-  else if(s.type==='field')rings=[rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0)];
+  else if(s.type==='field')rings=[fieldPoints(s)];
   else if(s.x!=null)rings=[footprintPoints(s)];
   if(!rings.some(poly=>poly?.length))return null;
   return{kind:s.type==='gate'?'gate':'rings',s,rings};
@@ -619,6 +619,17 @@ function nearestPrimaryRoadProjection(p){
   return best;
 }
 function fieldRoadAccessPoint(field,target){
+  if(field.type==='field'){
+    const poly=fieldPoints(field);let best=null,bestD=Infinity;
+    for(let i=0;i<poly.length;i++){
+      const a=poly[i],b=poly[(i+1)%poly.length],dx=b.x-a.x,dy=b.y-a.y;
+      const t=clamp(((target.x-a.x)*dx+(target.y-a.y)*dy)/(dx*dx+dy*dy),0,1);
+      const edge={x:a.x+t*dx,y:a.y+t*dy},d=dist(edge,target);
+      if(d<bestD){best=edge;bestD=d}
+    }
+    const dx=best.x-field.x,dy=best.y-field.y,L=Math.hypot(dx,dy)||1;
+    return{x:best.x+dx/L*.28,y:best.y+dy/L*.28};
+  }
   const q=toLocalPoint(field,target),hw=Math.max(.1,(Number(field.w)||2)/2),hh=Math.max(.1,(Number(field.h)||2)/2);
   let x=clamp(q.x,-hw,hw),y=clamp(q.y,-hh,hh);
   const nx=Math.abs(q.x)/hw,ny=Math.abs(q.y)/hh;
@@ -1483,7 +1494,7 @@ function spawnHouse(step){
 }
 function spawnField(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);if(!well||!roads.length)return false;
-  const rnd=growthRng(step,307),radius=currentGrowthRadius()+4,manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
+  const rnd=growthRng(step,307),radius=currentGrowthRadius()+4;
   const houses=autoList('house');if(houses.length<5)return false;
   const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(22,radius+4),candidates=[];
   for(let i=0;i<110;i++){
@@ -1495,7 +1506,11 @@ function spawnField(step){
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,28)){
     const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
-    if(!autoBlocked(f,placed,manual,.65)){State.structures.push(f);ensureSettlementRoadAccess(f);return true}
+    f.points=fieldVoronoiQuad(f,rnd);if(!f.points)continue;
+    f.fieldVersion=1;
+    f.w=2*Math.max(...f.points.map(p=>Math.abs(p.x-f.x)));
+    f.h=2*Math.max(...f.points.map(p=>Math.abs(p.y-f.y)));
+    if(fieldAllowed(f)){State.structures.push(f);ensureSettlementRoadAccess(f);return true}
   }
   return false;
 }

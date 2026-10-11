@@ -1077,6 +1077,7 @@ function simulationFrame(now){
     let completed=[];
     if(now-simLogicAt>=SIM_LOGIC_FRAME_MS){
       processVillageGrowth();
+      tickFields(State.clock.day);
       completed=constructionCompletionsCrossed(simLogicDay,State.clock.day);
       simLogicDay=State.clock.day;
       simLogicAt=now;
