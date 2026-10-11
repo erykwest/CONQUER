@@ -54,6 +54,22 @@ function cropPNG(buffer,width=640,height=450){
   }
   return PNG.sync.write(dst);
 }
+// Small signatures identify which cached layer leaks state across fixture changes.
+function browserLayerHashes(){
+  return function(){
+    const result={};
+    for(const [name,entry] of Object.entries(sceneCache)){
+      const cv=entry.canvas,off=document.createElement('canvas');off.width=128;off.height=96;
+      const g=off.getContext('2d',{willReadFrequently:true});
+      g.drawImage(cv,0,0,off.width,off.height);
+      const data=g.getImageData(0,0,off.width,off.height).data;
+      let hash=2166136261;
+      for(let i=0;i<data.length;i++)hash=Math.imul(hash^data[i],16777619)>>>0;
+      result[name]=hash.toString(16);
+    }
+    return result;
+  };
+}
 function browserFixture(){
   // Serialized into Chromium main world; use the genuine game drawing routines.
   return function({scene,rotation}){
@@ -181,7 +197,7 @@ async function main(){
   await page.waitForTimeout(200);
   const report={date:new Date().toISOString(),gitSha:process.env.GITHUB_SHA||'',mode:SMOKE?'smoke':'full',scenes:[],errors:[],summary:{passed:0,failed:0,pending:0,maskChecks:0,maskFailures:0}};
   const shot=()=>page.locator('#wrap').screenshot({animations:'disabled',timeout:45000});
-  let reference=null;
+  let reference=null,referenceHashes=null;
   try{
     for(const scene of SELECTED){
       for(const rotation of rotationCases){
@@ -199,7 +215,7 @@ async function main(){
           fs.writeFileSync(file('details',name+'.png'),detail);
           rec.health=pixelHealth(capture);
           if(rec.health.colors<4||rec.health.visible<200)throw Error('Blank or nearly blank frame '+JSON.stringify(rec.health));
-          if(scene.id==='tower-wall-link'&&rotation===0)reference=capture;
+          if(scene.id==='tower-wall-link'&&rotation===0){reference=capture;referenceHashes=await page.evaluate(browserLayerHashes());}
           if(UPDATE){
             fs.writeFileSync(baseline,capture);
             fs.writeFileSync(detailBaseline,detail);
@@ -220,8 +236,17 @@ async function main(){
         console.log(rec.status.padEnd(7),name,rec.error?rec.error.slice(0,220):rec.baseline||'');
       }
     }
-    // Real direct-vs-bitmap check is already implemented in CONQUER: make it a gate.
+    // Compare before and after the bitmap benchmark to isolate its side effects.
     const castle=scenes.find(s=>s.id==='tower-wall-link');
+    if(reference){
+      await page.evaluate(browserFixture(),{scene:castle,rotation:0});
+      const beforeCache=await shot();
+      fs.writeFileSync(file('actual','repeat-before-benchmark.png'),beforeCache);
+      report.preBenchmarkDeterminism=comparePNGs(reference,beforeCache,file('diff','repeat-before-benchmark.png'));
+      report.referenceLayers=referenceHashes;
+      report.preBenchmarkLayers=await page.evaluate(browserLayerHashes());
+    }
+    // Real direct-vs-bitmap check is already implemented in CONQUER: make it a gate.
     await page.evaluate(browserFixture(),{scene:castle,rotation:0});
     const cache=await page.evaluate(()=>window.__conquerCastleBodyCache?.benchmark?.(2)||null);
     report.cacheParity=cache;
@@ -233,8 +258,10 @@ async function main(){
     if(reference){
       await page.evaluate(browserFixture(),{scene:castle,rotation:0});
       const repeated=await shot();
+      fs.writeFileSync(file('actual','repeat-after-benchmark.png'),repeated);
+      report.postBenchmarkLayers=await page.evaluate(browserLayerHashes());
       report.determinism=comparePNGs(reference,repeated,file('diff','determinism.png'));
-      if(report.determinism.ratio>MAX_DIFF_RATIO){
+      if(report.determinism.ratio>MAX_DIFF_RATIO||(report.preBenchmarkDeterminism?.ratio||0)>MAX_DIFF_RATIO){
         report.errors.push('repeat scene differs by '+report.determinism.ratio);
         report.summary.failed++;
       }
@@ -276,6 +303,8 @@ async function main(){
       ...report.scenes.map(s=>'| '+s.scene+' | '+s.rotation*90+'° | '+s.status+' | '+(s.baseline||'-')+' | '+(s.diff?Math.max(100*s.diff.ratio,100*(s.detailDiff?.ratio||0)).toFixed(3)+'%':'-')+' |'),
       '', 'Cache parity: '+JSON.stringify(report.cacheParity||'not supported'),
       '', 'Determinism: '+JSON.stringify(report.determinism||'not measured'),
+      '', 'Pre-benchmark repeat: '+JSON.stringify(report.preBenchmarkDeterminism||'not measured'),
+      '', 'Cache fingerprints: '+JSON.stringify({reference:report.referenceLayers,before:report.preBenchmarkLayers,after:report.postBenchmarkLayers}),
       '', 'Stress: '+JSON.stringify(report.stress||'not run'),
       '', 'Errors:', ...report.errors.map(e=>'- '+e.replace(/\n/g,' ').slice(0,500)),
       '', 'Baseline changes require --update-baselines, review, and a separate commit. Missing baselines are explicit PENDING, never auto-approved.'
