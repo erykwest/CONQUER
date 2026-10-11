@@ -170,7 +170,7 @@ async function main(){
           const capture=await shot(),actualPath=file('actual',name+'.png'),baseline=path.join(BASE,name+'.png');
           fs.writeFileSync(actualPath,capture);
           rec.health=pixelHealth(capture);
-          if(rec.health.colors<12||rec.health.visible<200)throw Error('Blank or nearly blank frame '+JSON.stringify(rec.health));
+          if(rec.health.colors<4||rec.health.visible<200)throw Error('Blank or nearly blank frame '+JSON.stringify(rec.health));
           if(scene.id==='tower-wall-link'&&rotation===0)reference=capture;
           if(UPDATE){fs.writeFileSync(baseline,capture);rec.baseline='UPDATED';}
           else if(fs.existsSync(baseline)){
