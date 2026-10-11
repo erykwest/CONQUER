@@ -28,7 +28,7 @@ jobs:
       - name: Install browser and image tools
         shell: bash
         run: |
-          npm install --no-save playwright@1.55.0 pngjs@7.0.0
+          npm install --no-save playwright@1.55.0 pngjs@7.0.0 polygon-clipping@0.15.7
           npx playwright install --with-deps chromium
       - name: Execute geometric/visual regressions
         shell: bash
