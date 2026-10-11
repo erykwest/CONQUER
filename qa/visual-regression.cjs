@@ -43,6 +43,17 @@ function pixelHealth(image){
   }
   return{colors:unique.size,visible};
 }
+// Center crop gives fine details real pixel weight in addition to the full viewport.
+function cropPNG(buffer,width=640,height=450){
+  const src=PNG.sync.read(buffer),w=Math.min(width,src.width),h=Math.min(height,src.height);
+  const x=Math.floor((src.width-w)/2),y=Math.floor((src.height-h)/2);
+  const dst=new PNG({width:w,height:h});
+  for(let row=0;row<h;row++){
+    const from=((y+row)*src.width+x)*4,to=row*w*4;
+    src.data.copy(dst.data,to,from,from+w*4);
+  }
+  return PNG.sync.write(dst);
+}
 function browserFixture(){
   // Serialized into Chromium main world; use the genuine game drawing routines.
   return function({scene,rotation}){
@@ -142,7 +153,7 @@ function browserDiagnostic(){
   };
 }
 async function main(){
-  mkdir(OUT);mkdir(file('actual'));mkdir(file('diff'));
+  mkdir(OUT);mkdir(file('actual'));mkdir(file('details'));mkdir(file('diff'));
   if(UPDATE)mkdir(BASE);
   const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--disable-gpu-sandbox','--enable-unsafe-webgpu']});
   const context=await browser.newContext({viewport:{width:1280,height:900},deviceScaleFactor:1,reducedMotion:'reduce'});
@@ -152,7 +163,22 @@ async function main(){
   await page.goto(HOST+(HOST.includes('?')?'&':'?')+'renderer=canvas2d',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>typeof draw==='function'&&typeof structureScreenSilhouette==='function'&&!!window.ConquerWebGPU,{timeout:60000});
   await page.addStyleTag({content:'body>header,#wrap>aside,#wrap>div,#weatherCanvas,#weatherCloudLayer,#timePanel{visibility:hidden!important} #wrap{background:#202419!important} *{transition:none!important;animation:none!important}'});
-  await page.waitForTimeout(500);
+  // The production app imports polygon clipping asynchronously from esm.sh.
+  // Pin an identical locally served UMD build before *any* reference frame,
+  // otherwise the castle can switch from prism fallback to boolean union
+  // halfway through a suite and produce false visual regressions.
+  await page.addScriptTag({url:new URL('node_modules/polygon-clipping/dist/polygon-clipping.umd.min.js',HOST).toString()});
+  await page.evaluate(()=>{
+    if(!window.polygonClipping?.union)throw Error('Local polygon-clipping fixture failed to initialize');
+    window.__polygonClipping=window.polygonClipping;
+    invalidateSceneCache();
+    draw();
+  });
+  await page.waitForFunction(
+    ()=>Object.keys(architectureSprites).length===Object.keys(ARCHITECTURE_ASSET_PATHS).length,
+    {timeout:30000}
+  );
+  await page.waitForTimeout(200);
   const report={date:new Date().toISOString(),gitSha:process.env.GITHUB_SHA||'',mode:SMOKE?'smoke':'full',scenes:[],errors:[],summary:{passed:0,failed:0,pending:0,maskChecks:0,maskFailures:0}};
   const shot=()=>page.locator('#wrap').screenshot({animations:'disabled',timeout:45000});
   let reference=null;
@@ -169,13 +195,20 @@ async function main(){
           report.summary.maskFailures+=rec.diagnostics.maskFailures;
           const capture=await shot(),actualPath=file('actual',name+'.png'),baseline=path.join(BASE,name+'.png');
           fs.writeFileSync(actualPath,capture);
+          const detail=cropPNG(capture),detailBaseline=path.join(BASE,name+'-detail.png');
+          fs.writeFileSync(file('details',name+'.png'),detail);
           rec.health=pixelHealth(capture);
           if(rec.health.colors<4||rec.health.visible<200)throw Error('Blank or nearly blank frame '+JSON.stringify(rec.health));
           if(scene.id==='tower-wall-link'&&rotation===0)reference=capture;
-          if(UPDATE){fs.writeFileSync(baseline,capture);rec.baseline='UPDATED';}
-          else if(fs.existsSync(baseline)){
+          if(UPDATE){
+            fs.writeFileSync(baseline,capture);
+            fs.writeFileSync(detailBaseline,detail);
+            rec.baseline='UPDATED';
+          }else if(fs.existsSync(baseline)&&fs.existsSync(detailBaseline)){
             rec.diff=comparePNGs(fs.readFileSync(baseline),capture,file('diff',name+'.png'));
-            if(rec.diff.ratio>MAX_DIFF_RATIO)throw Error('visual diff '+(rec.diff.ratio*100).toFixed(3)+'% > '+(MAX_DIFF_RATIO*100).toFixed(3)+'%');
+            rec.detailDiff=comparePNGs(fs.readFileSync(detailBaseline),detail,file('diff',name+'-detail.png'));
+            if(rec.diff.ratio>MAX_DIFF_RATIO||rec.detailDiff.ratio>MAX_DIFF_RATIO)
+              throw Error('visual diff '+(rec.diff.ratio*100).toFixed(3)+'% full, '+(rec.detailDiff.ratio*100).toFixed(3)+'% detail > '+(MAX_DIFF_RATIO*100).toFixed(3)+'%');
             rec.baseline='VERIFIED';
           }else{
             rec.status='PENDING';rec.baseline='MISSING';
@@ -240,7 +273,7 @@ async function main(){
       '', 'Status: '+(report.summary.failed?'FAIL':'PASS')+' — '+report.summary.passed+' pass, '+report.summary.failed+' fail, '+report.summary.pending+' pending baselines.',
       '', 'Mask checks: '+report.summary.maskChecks+', failures: '+report.summary.maskFailures+'.',
       '', '| Scene | Camera | Status | Baseline | Difference |','|---|---:|---|---|---:|',
-      ...report.scenes.map(s=>'| '+s.scene+' | '+s.rotation*90+'° | '+s.status+' | '+(s.baseline||'-')+' | '+(s.diff?(100*s.diff.ratio).toFixed(3)+'%':'-')+' |'),
+      ...report.scenes.map(s=>'| '+s.scene+' | '+s.rotation*90+'° | '+s.status+' | '+(s.baseline||'-')+' | '+(s.diff?Math.max(100*s.diff.ratio,100*(s.detailDiff?.ratio||0)).toFixed(3)+'%':'-')+' |'),
       '', 'Cache parity: '+JSON.stringify(report.cacheParity||'not supported'),
       '', 'Determinism: '+JSON.stringify(report.determinism||'not measured'),
       '', 'Stress: '+JSON.stringify(report.stress||'not run'),
