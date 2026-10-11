@@ -1021,6 +1021,7 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
   ctx.restore();
 }
 function drawVillagerFigure(dot){
+  window.ConquerSnowTracks?.sample(dot.id,dot.p,.10,dot.age==='child'?.5:1);
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
 }
 function drawVillagerFigureUnmasked(dot){
@@ -1110,6 +1111,7 @@ function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale,useHeraldry=true){
   ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
 }
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
+  window.ConquerSnowTracks?.sample(id,p,z);
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
 }
 function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
