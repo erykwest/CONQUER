@@ -31,7 +31,7 @@
   };
   function makeState(){
     return {
-      version:1,lastDay:Math.floor(finite(State.clock?.day))-1,
+      version:1,lastDay:Math.floor(finite(State.clock?.day))-1,castleGold:300,
       castle:empty(),target:{...TARGET},saleShare:Object.fromEntries(GOODS.map(g=>[g,50])),
       lots:Object.fromEntries(GOODS.map(g=>[g,[]])),
       prices:{...BASE},externalDemand:empty(),externalOffers:empty(),
@@ -100,7 +100,7 @@
     const staffing=activeCapacity(),date=dateAt(day);
     for(const s of activeStructures()){
       const a=e.activities[s.id],spec=KIND[s.type],staff=staffing[s.id]||0;
-      if(!staff||s.economyDisabled||s.destroyed||s.abandoned)continue;
+      if(!staff||s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
       if(s.type==='field'||s.type==='vineyard'){
         // Field visual cycles are tracked independently. Economic harvest occurs
         // at most once per autumn, provided a completed cultivation cycle exists.
@@ -140,7 +140,6 @@
       const gross=round(sold*price);
       const tax=round(gross*clamp(finite(State.policies?.tax,0),0,100)/100);
       if(consumer)e.wallet[consumer]=round(Math.max(0,e.wallet[consumer]-gross));
-      if(lot.owner==='lord')e.wallet.L4=round(e.wallet.L4+0); // no implicit L4 windfall
       if(lot.owner==='lord')e.castleGold=round(finite(e.castleGold)+gross);
       else e.wallet.L4=round(e.wallet.L4+gross-tax);
       e.castleGold=round(finite(e.castleGold)+tax*(lot.owner==='private'?1:0));
@@ -236,7 +235,7 @@
       const b=e.books[id]||{revenue:0,cost:0,tax:0,wages:0};
       const profit=round(b.revenue-b.cost-b.tax-b.wages);
       const margin=b.revenue>0?profit/b.revenue:-1;
-      const negative=profit<0;
+      const negative=profit<0||(a.type==='workshop'&&profit<e.wage.L3);
       a.negativeYears=negative?(a.negativeYears||0)+1:0;
       a.margin=round(margin);a.profit=profit;
       const limit=a.type==='field'?3:2;
@@ -272,11 +271,11 @@
     if(!GOODS.includes(good))return false;
     state().externalDemand[good]=Math.max(0,finite(qty));return true;
   }
+  function assetValue(activity){const a=activity;return Math.max(1,Math.round(KIND[a.type].build*(1+clamp(finite(a.margin),-.5,1))))}
   function transfer(id,owner){
     const e=sync(),a=e.activities[id],s=State.structures.find(x=>x.id===id);
     if(!a||!s||!['private','lord'].includes(owner)||a.owner===owner)return false;
-    const base=KIND[a.type].build;
-    const price=Math.max(1,Math.round(base*(1+clamp(finite(a.margin),-.5,1))));
+    const price=assetValue(a);
     const buyer=owner==='lord'?'castleGold':'L4',seller=a.owner==='lord'?'castleGold':'L4';
     const funds=buyer==='castleGold'?finite(e.castleGold):finite(e.wallet.L4);
     if(funds<price)return false;
@@ -313,6 +312,10 @@
         ' · castle '+fmt(s.castle[g])+'</small><label>Sell <select data-econ-sale="'+g+'">'+
         [0,25,50,75,100].map(n=>'<option value="'+n+'"'+(e.saleShare[g]===n?' selected':'')+'>'+n+'%</option>').join('')+
         '</select></label><label>Reserve <input data-econ-target="'+g+'" type="number" min="0" step="10" value="'+e.target[g]+'"></label></div>'
+      ).join('')+'</div><div class="legend">Private property is held by the aggregate L4 sector. Trading transfers whole activities, never named citizens.</div>'+
+      '<div class="economy-assets">'+Object.entries(e.activities).filter(([id])=>State.structures.some(s=>s.id===id)).slice(0,12).map(([id,a])=>
+        '<div class="economy-asset">'+a.type+' · '+(a.owner==='lord'?'Lord':'L4')+' · '+assetValue(a)+' gold '+
+        '<button type="button" data-econ-transfer="'+id+'" data-econ-owner="'+(a.owner==='lord'?'private':'lord')+'">'+(a.owner==='lord'?'Sell to L4':'Buy for lord')+'</button></div>'
       ).join('')+'</div>';
   }
   function bind(){
@@ -323,6 +326,10 @@
       const good=node.dataset.econSale||node.dataset.econTarget;
       if(node.dataset.econSale)setShare(good,node.value);
       else if(node.dataset.econTarget)setTarget(good,node.value);
+      if(typeof scheduleLocalSave==='function')scheduleLocalSave(200);
+    });
+    target.addEventListener('click',event=>{const button=event.target.closest('[data-econ-transfer]');if(!button)return;
+      if(!transfer(button.dataset.econTransfer,button.dataset.econOwner)){if(typeof status==='function')status('Insufficient economic capital for enterprise transfer');return}
       if(typeof scheduleLocalSave==='function')scheduleLocalSave(200);
     });
     render(true);
