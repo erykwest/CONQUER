@@ -948,6 +948,9 @@ function familyPosition(house,day){
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
 }
 function residentClassPosition(house,resident,day,assignment){
+  const weekly=window.ConquerEconomy?.weekday(State.clock.day);
+  if(weekly===6)return null; // Sunday rest: no scheduled civilian trips or labor.
+  if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip for all classes.
   const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
