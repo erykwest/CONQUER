@@ -902,6 +902,7 @@ function freshLandscapeSeed(){
 }
 function generateNewMap(){
   State.clock.speed=0;
+  State.clock.day=0;
   State.draft=null;State.selectedId=null;
   State.seed=freshLandscapeSeed();
   State.heraldry=null;
