@@ -107,7 +107,8 @@ function fieldCrop(field){
   return crop;
 }
 function fieldSlotDone(field,cell){return (fieldCrop(field).work[cell.index]||0)>=cell.end-cell.start-1e-7}
-function fieldWorkClock(day){const whole=Math.floor(day);return whole+clamp((day-whole-.14)/.38,0,1)}
+// Five-day workweek: Saturday is the market, Sunday is rest. Growth keeps progressing.
+function fieldWorkClock(day){const whole=Math.floor(day),week=Math.floor(whole/7),weekday=((whole%7)+7)%7;return week*5+Math.min(weekday,5)+(weekday<5?clamp((day-whole-.14)/.38,0,1):0)}
 function tickFields(day=State.clock.day){
   const fields=completedSettlement('field');if(!fields.length)return;
   const houses=completedSettlement('house').filter(h=>houseLevel(h)===1);
