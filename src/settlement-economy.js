@@ -54,6 +54,8 @@
   }
   function sync(){
     const e=state();
+    const present=new Set((State.structures||[]).filter(s=>KIND[s.type]).map(s=>s.id));
+    for(const id of Object.keys(e.activities))if(!present.has(id))delete e.activities[id];
     for(const s of activeStructures()){
       if(!e.activities[s.id]){
         e.activities[s.id]={type:s.type,owner:s.economicOwner==='lord'?'lord':'private',inputs:empty(),cyclesSeen:finite(s.crop?.cycles),lastHarvestYear:0};
@@ -71,7 +73,11 @@
       e.castle[good]=round(e.castle[good]+received);
       quantity-=received;
     }
-    if(quantity>0)e.lots[good].push({id,owner,qty:round(quantity)});
+    if(quantity>0){
+      const existing=e.lots[good].find(l=>l.id===id&&l.owner===owner);
+      if(existing)existing.qty=round(existing.qty+quantity);
+      else e.lots[good].push({id,owner,qty:round(quantity)});
+    }
   }
   function book(e,id,field,value){
     const b=e.books[id]||(e.books[id]={revenue:0,cost:0,tax:0,wages:0});
