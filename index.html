@@ -94,6 +94,10 @@
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
     <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
     <div class="policy"><span>Levy</span><input id="levy" type="range" min="0" max="100" value="10"></div>
+    <details id="economyDetails" class="economy-details" open>
+      <summary>Economy · Production and Market</summary>
+      <div id="economyOverview" aria-live="off">Economy initializes when the settlement loads.</div>
+    </details>
     <h3>Persistence</h3>
     <button class="full" id="saveBtn">Save settlement</button>
     <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
@@ -215,6 +219,7 @@
 <script src="./src/settlement-render.js"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
+<script src="./src/settlement-economy.js?v=economy-1"></script>
 <script src="./src/settlement-app.js"></script>
 <script src="./src/settlement-combat-rules.js?v=combat-3"></script>
 <script src="./src/settlement-combat.js?v=combat-3"></script>
