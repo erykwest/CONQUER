@@ -374,7 +374,18 @@ function* buildArterialRepairWork(routeId,displaced=[]){
   for(let i=0;i<waypoints.length-1;i++){
     const a=full.at(-1),b=waypoints[i+1];let leg=null;
     if(yield* roadRepairSegmentWork(a,b,width,ignore))leg=[a,b];
-    else leg=yield* findRoadRepairWork(a,b,width,12,ignore,60000);
+    else{
+      // Forest belts and hill contours can require detours beyond the local
+      // 12U corridor. Widen only after a failed bounded search; each search
+      // still yields cooperatively to keep village founding responsive.
+      for(const [pad,maxGuard] of [[12,60000],[24,85000],[42,130000]]){
+        leg=yield* findRoadRepairWork(a,b,width,pad,ignore,maxGuard);
+        if(leg?.length>1)break;
+        window.__conquerAnalytics?.event('ARTERIAL_DETOUR_RETRY',{
+          routeId,pad,from:a,to:b
+        },'warn',5000);
+      }
+    }
     if(!leg||leg.length<2)return null;
     for(let j=1;j<leg.length;j++){
       const p=leg[j];if(dist(full.at(-1),p)>.08)full.push(p);
