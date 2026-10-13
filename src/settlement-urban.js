@@ -288,7 +288,7 @@ function urbanLotRoadFrontages(lot){
   return out.sort((a,b)=>b.length-a.length||a.edge-b.edge);
 }
 function urbanDenseParts(house){
-  if(!house?.auto||houseLevel(house)<3)return[];
+  if(!house||( !house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
   if(urbanDensityCache.revision!==urbanRevision){
     urbanDensityCache={revision:urbanRevision,parts:new Map()};
   }
@@ -358,10 +358,10 @@ function urbanPolygonIntersectionArea(a,b){
 }
 function urbanHouseDisplayParts(house){
   const dense=urbanDenseParts(house);
-  return dense.length>=2?dense:houseFootprintParts(house);
+  return dense.length?dense:houseFootprintParts(house);
 }
 function urbanDenseHouseDoorInfo(house){
-  const parts=urbanDenseParts(house);if(parts.length<2)return null;
+  const parts=urbanDenseParts(house);if(!parts.length)return null;
   const first=parts[0],lot=urbanLots().find(l=>l.houseId===house.id);
   const edge=lot&&lot.points[first.frontage],next=lot&&lot.points[(first.frontage+1)%lot.points.length];
   if(!edge||!next)return null;
@@ -407,7 +407,7 @@ function urbanFenceSegments(lots=null,fields=null){
   };
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);if(!house)continue;
-    if(house.auto&&houseLevel(house)>=3)continue; // Dense streets have no paddock fence.
+    if((house.auto||house.urbanRedeveloped)&&houseLevel(house)>=3)continue; // Redeveloped plots have no paddock fence.
     const door=houseDoorInfo(house).outside;
     addParcel(lot.points,door,nearestPrimaryRoadProjection(door)?.point||door);
   }
@@ -476,7 +476,7 @@ function drawUrbanLots(){
   const lots=urbanLots();
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);
-    const dense=house?.auto&&houseLevel(house)>=3;
+    const dense=(house?.auto||house?.urbanRedeveloped)&&houseLevel(house)>=3;
     pathPolygon(lot.points.map(p=>w2s(p,.015)),
       dense?'rgba(128,116,103,.36)':'rgba(167,135,81,.10)',null);
   }
