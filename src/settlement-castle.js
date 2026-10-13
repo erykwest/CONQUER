@@ -214,7 +214,7 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   if(s.type==='field')return fieldPoints(s);
-  if(window.ConquerIndustries?.is(s))return rectWorldPoints(s.x,s.y,2,2,s.angle||0);
+  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){
     const pts=civicParts(s).flatMap(p=>p.points);
     if(!pts.length)return[];
@@ -941,6 +941,15 @@ function pointInScreenPolygon(p,poly){
     const a=poly[i],b=poly[j],hit=((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside;
   }return inside;
 }
+function screenHitStructureBodyAtFootprint(fp,p,h){
+  const base=projectPath(fp,0),top=projectPath(fp,h);
+  if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
+  for(let i=0;i<fp.length;i++){
+    const j=(i+1)%fp.length;
+    if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true;
+  }
+  return false;
+}
 function screenHitStructureBody(s,p){
   if(s.type==='house'||isCivic(s)){
     const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
@@ -953,7 +962,12 @@ function screenHitStructureBody(s,p){
     }
     return false;
   }
-  const fp=footprintPoints(s);if(fp.length<3)return false;const h=structureHeight(s),base=projectPath(fp,0),top=projectPath(fp,h);
+  const fp=footprintPoints(s);if(fp.length<3)return false;
+  if(window.ConquerIndustries?.is(s)){
+    const ground=Number.isFinite(s.groundZ)?s.groundZ:window.ConquerIndustries.groundLevel(s);
+    return withProjectionGroundZ(ground,()=>screenHitStructureBodyAtFootprint(fp,p,structureHeight(s)));
+  }
+  const h=structureHeight(s),base=projectPath(fp,0),top=projectPath(fp,h);
   if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
   for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length;if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true}
   return false;
