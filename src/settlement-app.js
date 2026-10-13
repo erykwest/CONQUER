@@ -623,9 +623,17 @@ for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{con
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-crossing]'))b.onclick=()=>{
   const variant=b.dataset.crossing;
-  const width=['dry','water'].includes(variant)?1.5:variant==='stone'?1.5:1.2;
+  const width=Number(document.querySelector('[data-crossing-width].active')?.dataset.crossingWidth)||2;
   setTool({kind:'crossing',crossing:variant,width,label:(['dry','water'].includes(variant)?'Moat':'Bridge')+
     ' '+variant+' · 2 clicks · '+(variant==='water'?'H0 only':'level banks'),el:b});
+};
+for(const b of document.querySelectorAll('[data-crossing-width]'))b.onclick=()=>{
+  const width=Number(b.dataset.crossingWidth);
+  document.querySelectorAll('[data-crossing-width]').forEach(x=>x.classList.toggle('active',x===b));
+  if(State.tool.kind==='crossing'){
+    State.tool.width=width;State.draft=null;
+    status('Crossing width: '+width+'U');draw();
+  }
 };
 for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,isPalisade=b.dataset.linear==='palisade',level=isPalisade?1:State.buildLevels.wall;setTool({kind:'linear',linear:b.dataset.linear,level,tier,label:(b.dataset.linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'&&State.tool.material!=='wood'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
