@@ -50,7 +50,7 @@ function changeHouseDensity(target,level){
   target.houseLevel=level;
   if(!target.auto)target.urbanRedeveloped=level>=3;
   invalidateUrbanGeometry();
-  const count=urbanDenseParts(target).length;
+  const count=urbanDenseBuildingCount(target);
   // Only clear obsolete access spurs when there is a real street-facing
   // building. A house without usable frontage keeps its existing entrance.
   if(level>=3&&count){
@@ -238,7 +238,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='house'){
     const level=houseLevel(s);
-    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: cottage + yard · L2: expanded home · L3/L4: compact roadside houses based on primary-road frontage (one shared cadastral parcel). Population stays tied to the parcel.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: cottage + yard · L2: expanded home · L3: L/T-shaped houses · L4: L/T-shaped houses with round or square turret. Density follows primary-road frontage; one cadastral parcel remains.</div></div>`;
   }
   if(canTier){
     const current=['wall','palisade'].includes(s.type)?wallTier(s):towerTier(s);
