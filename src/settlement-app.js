@@ -1273,6 +1273,6 @@ window.addEventListener('keydown',e=>{
   if(e.key==='Delete'&&State.selectedId){deleteStructure(State.selectedId);return}
   if((e.ctrlKey||e.metaKey)&&k==='s'){e.preventDefault();saveCloud()}
 });
-window.addEventListener('polygon-clipping-ready',()=>draw());
+window.addEventListener('polygon-clipping-ready',()=>{invalidateSceneCache(['ground','castleBody']);draw()});
 window.addEventListener('resize',resize);loadLocal();if(ensureStaticLandscape())saveLocal();ensureBorderEntrySelection();renderUI();resize();fit();initSupabase();
 
