@@ -71,13 +71,15 @@ test('streetfront houses vary independently within ±20% without leaving the lot
     const width=Math.min(front.length/count+.045,level===4?1.65:1.95);
     const depth=level===4?1.13:.98;
     const parts=run('urbanDenseParts(State.structures[0])');
-    assert.equal(parts.length,count);
-    for(const part of parts){
+    assert.equal(run('urbanDenseBuildingCount(State.structures[0])'),count);
+    const primary=parts.filter(p=>p.kind==='body'&&p.cx===0&&p.cy===0);
+    assert.equal(primary.length,count);
+    for(const part of primary){
       assert.ok(part.w>=width*.8-1e-7&&part.w<=width*1.2+1e-7);
       assert.ok(part.h>=depth*.8-1e-7&&part.h<=depth*1.2+1e-7);
-      assert.ok(run('urbanContains(urbanLotCache[0].points,'+
-        JSON.stringify(part.points[0])+',.05)'));
     }
+    for(const part of parts)for(const point of part.points)
+      assert.ok(run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(point)+',.035)'));
     const saved=JSON.stringify(parts);
     run('urbanRevision++');
     assert.equal(JSON.stringify(run('urbanDenseParts(State.structures[0])')),saved);
@@ -92,21 +94,57 @@ test('L1 and L2 remain single-house lots',()=>{
 test('L3 frontage creates three houses within a 6 U street-facing plot',()=>{
   house.houseLevel=3;
   assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),1);
-  assert.equal(run('urbanDenseParts(State.structures[0]).length'),3);
+  assert.equal(run('urbanDenseBuildingCount(State.structures[0])'),3);
   assert.equal(run('urbanFenceSegments([urbanLotCache[0]],[]).length'),0);
   assert.equal(State.structures.filter(s=>s.type==='house').length,1);
 });
 test('L4 increases frontage density and keeps all buildings within the parcel',()=>{
   house.houseLevel=4;
-  assert.equal(run('urbanDenseParts(State.structures[0]).length'),4);
-  assert.ok(run('urbanDenseParts(State.structures[0]).every(p=>p.points.every(q=>urbanContains(urbanLotCache[0].points,q,.05)))'));
-  assert.ok(run('urbanDenseParts(State.structures[0]).every((p,i,a)=>i===0||dist(p.center,a[i-1].center)<2)'));
+  assert.equal(run('urbanDenseBuildingCount(State.structures[0])'),4);
+  assert.ok(run('urbanDenseParts(State.structures[0]).every(p=>p.points.every(q=>urbanContains(urbanLotCache[0].points,q,.035)))'));
+  assert.ok(run('urbanDenseParts(State.structures[0]).every(p=>p.buildingKey&&p.points.length>=4)'));
   assert.ok(run('urbanDenseHouseDoorInfo(State.structures[0]).outside.y<0'));
+});
+test('every L3 building restores its deterministic L or T plan',()=>{
+  house.houseLevel=3;run('urbanRevision++');
+  const parts=run('urbanDenseParts(State.structures[0])');
+  const keys=[...new Set(parts.map(p=>p.buildingKey))];
+  assert.equal(keys.length,3);
+  for(const key of keys){
+    const own=parts.filter(p=>p.buildingKey===key);
+    const expected=run('housePlanType({id:'+JSON.stringify(key)+'})');
+    assert.equal(own.filter(p=>p.kind==='body').length,expected==='L'?2:3);
+    assert.equal(own.filter(p=>p.kind==='turret').length,0);
+  }
+});
+test('every L4 townhouse restores a turret in addition to its L/T extensions',()=>{
+  house.houseLevel=4;run('urbanRevision++');
+  const parts=run('urbanDenseParts(State.structures[0])');
+  const keys=[...new Set(parts.map(p=>p.buildingKey))];
+  assert.equal(keys.length,4);
+  for(const key of keys){
+    const own=parts.filter(p=>p.buildingKey===key);
+    const plan=run('housePlanType({id:'+JSON.stringify(key)+'})');
+    const towerType=run('houseTurretType({id:'+JSON.stringify(key)+'})');
+    assert.equal(own.filter(p=>p.kind==='body').length,plan==='L'?2:3);
+    assert.equal(own.filter(p=>p.kind==='turret').length,1);
+    assert.equal(own.find(p=>p.kind==='turret').type,towerType);
+  }
+  const before=JSON.stringify(parts);run('urbanRevision++');
+  assert.equal(JSON.stringify(run('urbanDenseParts(State.structures[0])')),before);
+});
+test('L3 and L4 original standalone house shapes retain extensions and turret',()=>{
+  house.auto=false;house.urbanRedeveloped=false;house.houseLevel=3;
+  assert.ok(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="body").length')>=2);
+  assert.equal(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="turret").length'),0);
+  house.houseLevel=4;
+  assert.equal(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="turret").length'),1);
+  house.auto=true;house.houseLevel=4;
 });
 test('frontage on an additional primary road produces more infill units',()=>{
   State.structures.push(side);run('urbanRevision++');
   assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),2);
-  assert.ok(run('urbanDenseParts(State.structures[0]).length')>4);
+  assert.ok(run('urbanDenseBuildingCount(State.structures[0])')>4);
 });
 test('multiple short primary-road segments are merged along a long parcel edge',()=>{
   State.structures=[house,road];
@@ -122,7 +160,7 @@ test('multiple short primary-road segments are merged along a long parcel edge',
 test('no primary road frontage means no additional buildings',()=>{
   road.a.y=-4;road.b.y=-4;side.a.x=10;side.b.x=10;run('urbanRevision++');
   assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
-  assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),1);
+  assert.ok(run('urbanHouseDisplayParts(State.structures[0]).filter(p=>p.kind==="body").length')>=2);
 });
 // Exercise the actual button handler, not a duplicate test implementation.
 const app=fs.readFileSync(__dirname+'/../src/settlement-app.js','utf8');
@@ -144,7 +182,7 @@ test('manual Upgrade button from L2 to L3 accepts a single frontage townhouse',(
   State.structures=[house,road];run('urbanRevision++');
   run('changeHouseDensity(State.structures[0],3)');
   assert.equal(house.houseLevel,3);
-  assert.equal(run('urbanDenseParts(State.structures[0]).length'),1);
+  assert.equal(run('urbanDenseBuildingCount(State.structures[0])'),1);
   assert.ok(messages.at(-1).includes('1 streetfront building'));
 });
 test('upgrade remains possible on L2 plot without two viable road-front buildings',()=>{
@@ -161,7 +199,7 @@ test('manually placed L2 house can redevelop into a compact roadside parcel',()=
   run('urbanRevision++');run('changeHouseDensity(State.structures[0],3)');
   assert.equal(house.houseLevel,3);
   assert.equal(house.urbanRedeveloped,true);
-  assert.equal(run('urbanDenseParts(State.structures[0]).length'),1);
+  assert.equal(run('urbanDenseBuildingCount(State.structures[0])'),1);
   run('changeHouseDensity(State.structures[0],2)');
   assert.equal(house.houseLevel,2);
   assert.equal(house.urbanRedeveloped,false);
