@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - webgpu
+      - fix/urban2-spawn-fields-overlap
   workflow_dispatch:
 
 jobs:
