@@ -352,7 +352,7 @@ function houseFootprintParts(s){
 }
 function houseBodyHeight(s){return houseLevel(s)===1?.95:s.auto&&houseLevel(s)===4?2.38:1.72}
 function houseRidgeHeight(s){return houseLevel(s)===1?1.45:s.auto&&houseLevel(s)===4?2.95:2.26}
-function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
+function houseStructureHeight(s){const turret=!s.auto&&houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
 const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
 function civicLocalParts(s){
