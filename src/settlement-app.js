@@ -290,13 +290,20 @@ function renderFunctionPanel(){
     if(!urbanLotFor(candidate,houses,primaryRoadList())){
       status('Level change would exceed the lot or violate terrain zoning');return;
     }
+    const previousLevel=target.houseLevel;
     target.houseLevel=level;
+    invalidateUrbanGeometry();
+    if(target.auto&&level>=3&&urbanDenseParts(target).length<2){
+      target.houseLevel=previousLevel;
+      invalidateUrbanGeometry();
+      status('L3/L4 requires enough primary-road frontage for at least two houses');
+      return;
+    }
     // One cadastral owner remains; only the frontage-dependent physical
     // buildings are replaced. Keep old road spurs out of the new townhouses.
     if(target.auto&&level>=3){
       State.structures=State.structures.filter(s=>s.type!=='road'||s.accessFor!==target.id);
     }
-    invalidateUrbanGeometry();
     if(target.auto&&level<3)ensureSettlementRoadAccess(target,true);
     markStructureDirty(target);
     renderFunctionPanel();draw();
