@@ -18,22 +18,73 @@ function rectWorldPoints(cx,cy,w,h,angle=0){
     .map(([x,y])=>({x:cx+x*ca-y*sa,y:cy+x*sa+y*ca}));
 }
 const State={structures:[house,road],environment:[]};
+function peasantHash(id){
+  let h=2166136261>>>0;
+  for(const ch of String(id)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}
+  return h>>>0;
+}
 const sandbox={
-  State,window:{},dist,rectWorldPoints,
+  State,window:{},dist,rectWorldPoints,peasantHash,
+  clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
+  circleWorldPoints:(x,y,r,n)=>Array.from({length:n},(_,i)=>({
+    x:x+Math.cos(i/n*Math.PI*2)*r,y:y+Math.sin(i/n*Math.PI*2)*r
+  })),
   closestPointOnSegment,
   pointSegmentDistance:(p,a,b)=>dist(p,closestPointOnSegment(p,a,b)),
-  houseLevel:s=>s.houseLevel||1,
-  primaryRoadList:()=>State.structures.filter(s=>s.type==='road'&&s.routeId),
-  houseFootprintParts:s=>[{kind:'body',center:{x:s.x,y:s.y},w:s.w,h:s.h,
-    points:rectWorldPoints(s.x,s.y,s.w,s.h,s.angle)}]
+  primaryRoadList:()=>State.structures.filter(s=>s.type==='road'&&s.routeId)
 };
 const context=vm.createContext(sandbox),run=source=>vm.runInContext(source,context);
+const core=fs.readFileSync(__dirname+'/../src/settlement-core.js','utf8');
+run(core.slice(core.indexOf('function houseLevel('),core.indexOf('const CIVIC_TYPES=')));
 const script=fs.readFileSync(__dirname+'/../src/settlement-urban.js','utf8');
 run(script);
 run("urbanLotCache=[{houseId:'h',points:[{x:0,y:0},{x:6,y:0},{x:6,y:4},{x:0,y:4}]}]");
 const lot=run('urbanLotCache[0]');
 let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name)}
+test('all four levels have deterministic independent dimensions within ±20%',()=>{
+  const samples=[];
+  for(let level=1;level<=4;level++)for(let i=0;i<120;i++){
+    const h={id:'size-'+i,type:'house',auto:true,houseLevel:level,
+      x:3,y:1.4,w:1.5,h:1,angle:0};
+    State.structures[0]=h;
+    const scaled=run('houseFootprintDimensions(State.structures[0])');
+    const again=run('houseFootprintDimensions(State.structures[0])');
+    assert.ok(scaled.w>=1.5*.8&&scaled.w<=1.5*1.2);
+    assert.ok(scaled.h>=.8&&scaled.h<=1.2);
+    assert.equal(scaled.w,again.w);assert.equal(scaled.h,again.h);
+    const body=run('houseFootprintParts(State.structures[0])[0]');
+    assert.ok(Math.abs(body.w-scaled.w)<1e-8);
+    assert.ok(Math.abs(body.h-scaled.h)<1e-8);
+    if(level===1)samples.push(scaled);
+  }
+  assert.ok(samples.filter(s=>Math.abs(s.w/1.5-s.h)>.05).length>50,
+    'X/Y scaling should not be correlated');
+  State.structures[0]=house;
+});
+test('streetfront houses vary independently within ±20% without leaving the lot',()=>{
+  for(const level of [3,4]){
+    house.houseLevel=level;
+    run('urbanRevision++');
+    const front=run('urbanLotRoadFrontages(urbanLotCache[0])[0]');
+    const count=Math.floor((front.length+.06)/(level===3?1.45:1.17));
+    const width=Math.min(front.length/count+.045,level===4?1.65:1.95);
+    const depth=level===4?1.13:.98;
+    const parts=run('urbanDenseParts(State.structures[0])');
+    assert.equal(parts.length,count);
+    for(const part of parts){
+      assert.ok(part.w>=width*.8-1e-7&&part.w<=width*1.2+1e-7);
+      assert.ok(part.h>=depth*.8-1e-7&&part.h<=depth*1.2+1e-7);
+      assert.ok(run('urbanContains(urbanLotCache[0].points,'+
+        JSON.stringify(part.points[0])+',.05)'));
+    }
+    const saved=JSON.stringify(parts);
+    run('urbanRevision++');
+    assert.equal(JSON.stringify(run('urbanDenseParts(State.structures[0])')),saved);
+  }
+  house.houseLevel=3;
+  run('urbanRevision++');
+});
 test('L1 and L2 remain single-house lots',()=>{
   house.houseLevel=1;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
   house.houseLevel=2;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
