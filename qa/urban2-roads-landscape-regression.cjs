@@ -55,9 +55,10 @@ test('buildable outline is dynamic instead of baked into terrain',()=>{
   const renderSource=fs.readFileSync(__dirname+'/../src/settlement-render.js','utf8');
   const cached=renderSource.slice(renderSource.indexOf('function drawLandscapeStaticScene(){'),renderSource.indexOf('function drawGroundStaticScene(){'));
   const dynamic=renderSource.slice(renderSource.indexOf('function draw(){'),renderSource.indexOf('function draw(){')+2000);
-  assert.doesNotMatch(cached,/drawBuildArea\(/);
-  assert.match(dynamic,/drawBuildArea\(\)/);
-  assert.equal((renderSource.match(/drawBuildArea\(\);/g)||[]).length,1);
+  // Keep assertions safe inside this twice-compiled regression harness.
+  assert.equal(cached.includes('drawBuildArea('),false);
+  assert.equal(dynamic.includes('drawBuildArea()'),true);
+  assert.equal(renderSource.split('drawBuildArea();').length-1,1);
 });
 console.log(passed+' URBAN 2 landscape and routing checks passed.');
 `);
