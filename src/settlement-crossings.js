@@ -89,14 +89,19 @@
     status((s.type==='moat'?'Moat':'Bridge')+' placed · '+s.length.toFixed(1)+'U · level '+s.groundZ);
     draw();return true;
   }
-  function filled(s,l){
-    return s.fills?.some(f=>f.progress>=1&&Math.abs(l.along-f.at)<=f.span/2)||false;
+  const HEAVY_WIDTHS={ram:1.4,siegeTower:2.4,mantlet:1};
+  function heavyWidth(kind){return typeof kind==='string'?(HEAVY_WIDTHS[kind]||1.4):kind?1.4:0}
+  function filled(s,l,width=0){
+    return s.fills?.some(f=>f.progress>=1&&f.span+1e-5>=width
+      &&Math.abs(l.along-f.at)<=Math.max(0,(f.span-width)/2))||false;
   }
   function onOpenBridge(p,forHeavy=false){
+    const requirement=heavyWidth(forHeavy);
     for(const s of State.structures){
-      if(s.type==='bridge'&&!underConstruction(s)&&onStrip(s,p,forHeavy?-.03:0))
-        return s;
-      if(s.type==='gate'&&drawbridgePassage(s,p))return s;
+      if(s.type==='bridge'&&!underConstruction(s)&&s.width+1e-5>=requirement
+        &&onStrip(s,p,requirement?-.03:0))return s;
+      if(s.type==='gate'&&drawbridgePassage(s,p)
+        &&deck(s).width+1e-5>=requirement)return s;
     }
     return null;
   }
@@ -111,7 +116,7 @@
   function movementMultiplier(p,heavy=false){
     if(onOpenBridge(p,heavy))return 1;
     const found=moatAt(p);
-    if(!found||found.filled)return 1;
+    if(!found||filled(found.moat,found.location,heavyWidth(heavy)))return 1;
     if(heavy)return 0;
     return found.moat.variant==='water'?.25:.5;
   }
@@ -150,16 +155,18 @@
     patch.span=Math.max(patch.span,width);
     // Deliberately modest rate: operators fill the ditch, not the vehicle itself.
     const effort=Math.max(0,Number(effortDays)||0);
+    const before=patch.progress;
     patch.progress=clamp01(patch.progress+effort/(s.variant==='water'?4:2.5)/s.width*1.5);
-    markDirty(true,['ground','base']);
+    markDirty(before<1&&patch.progress>=1,['ground','base']);
     return{ok:true,progress:patch.progress,complete:patch.progress>=1,moatId:s.id};
   }
   function heavyApproach(unit,days){
-    if(!unit||!['ram','siegeTower','mantlet'].includes(unit.kind))return null;
-    const spans={ram:1.4,siegeTower:2.4,mantlet:1.0};
+    if(!unit||!HEAVY_WIDTHS[unit.kind])return null;
+    if(onOpenBridge(unit,unit.kind))return null;
     for(const s of State.structures){
-      if(s.type==='moat'&&!underConstruction(s)&&onStrip(s,unit,.35)
-        &&movementMultiplier(unit,true)===0)return progressFilling(s.id,unit,spans[unit.kind],days);
+      const l=s.type==='moat'&&!underConstruction(s)?onStrip(s,unit,.35):null;
+      if(l&&!filled(s,l,HEAVY_WIDTHS[unit.kind]))
+        return progressFilling(s.id,unit,HEAVY_WIDTHS[unit.kind],days);
     }
     return null;
   }
