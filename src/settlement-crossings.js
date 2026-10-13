@@ -10,6 +10,81 @@
   const clamp01=v=>Math.max(0,Math.min(1,Number(v)||0));
   const xy=s=>s?.a&&s?.b&&Number.isFinite(s.a.x)&&Number.isFinite(s.a.y)&&Number.isFinite(s.b.x)&&Number.isFinite(s.b.y);
   const length=s=>Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y);
+  // Point magnets are screen-distance based: reliably pick an endpoint at any
+  // zoom and on raised terraces. Both ends of existing moats can be extended.
+  const MOAT_MAGNET_PX=17;
+  function snapMoatEndpoint(world,screen=null){
+    if(!world||!Number.isFinite(world.x)||!Number.isFinite(world.y))return null;
+    let nearest=null,best=Infinity;
+    for(const s of State.structures){
+      if(s.type!=='moat'||!xy(s))continue;
+      for(const end of ['a','b']){
+        const anchor=s[end];
+        const distance=screen
+          ?Math.hypot(w2s(anchor,Number(s.groundZ)||0).x-screen.x,
+            w2s(anchor,Number(s.groundZ)||0).y-screen.y)
+          :Math.hypot(world.x-anchor.x,world.y-anchor.y);
+        if(distance>(screen?MOAT_MAGNET_PX:.55)||distance>=best)continue;
+        nearest={point:{x:anchor.x,y:anchor.y},structureId:s.id,end,
+          variant:s.variant,width:s.width,groundZ:Number(s.groundZ)||0,distance};
+        best=distance;
+      }
+    }
+    return nearest;
+  }
+  function drawMoatMagnets(){
+    if(State.tool?.kind!=='crossing'||!['dry','water'].includes(State.tool.crossing))return;
+    const highlighted=State.tool.moatHover;
+    ctx.save();
+    const shown=new Set();
+    for(const s of State.structures){
+      if(s.type!=='moat'||!xy(s))continue;
+      for(const end of ['a','b']){
+        const anchor=s[end],key=anchor.x.toFixed(3)+','+anchor.y.toFixed(3)+','+(Number(s.groundZ)||0);
+        if(shown.has(key))continue;
+        shown.add(key);
+        const v=w2s(anchor,Number(s.groundZ)||0),
+          active=highlighted&&Math.hypot(anchor.x-highlighted.point.x,anchor.y-highlighted.point.y)<.015,
+          origin=State.draft?.a&&Math.hypot(anchor.x-State.draft.a.x,anchor.y-State.draft.a.y)<.015;
+        ctx.beginPath();ctx.arc(v.x,v.y,active?7:origin?6:4,0,Math.PI*2);
+        ctx.fillStyle=active?'#8dffbd':origin?'#ffe2a2':'#f3ce84';ctx.fill();
+        ctx.lineWidth=active?2.5:1.5;ctx.strokeStyle='#314938';ctx.stroke();
+      }
+    }
+    if(State.draft?.a){
+      const z=Number(State.draft.aGroundZ)||terrainElevation(State.draft.a),
+        p=w2s(State.draft.a,z);
+      ctx.beginPath();ctx.arc(p.x,p.y,5.5,0,Math.PI*2);
+      ctx.fillStyle='#ffdc8c';ctx.fill();ctx.lineWidth=1.8;ctx.strokeStyle='#533921';ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawMoatJunctions(){
+    const nodes=new Map();
+    for(const s of State.structures){
+      if(s.type!=='moat'||underConstruction(s)||!xy(s))continue;
+      const z=Number(s.groundZ)||0;
+      for(const end of ['a','b']){
+        const a=s[end],key=Math.round(a.x*100)+':'+Math.round(a.y*100)+':'+Math.round(z*100)+':'+s.variant;
+        if(!nodes.has(key))nodes.set(key,[]);
+        nodes.get(key).push({p:a,s,z});
+      }
+    }
+    const disk=(p,r,z)=>Array.from({length:18},(_,i)=>{
+      const angle=i*2*Math.PI/18;
+      return w2s({x:p.x+Math.cos(angle)*r,y:p.y+Math.sin(angle)*r},z);
+    });
+    for(const entries of nodes.values()){
+      if(entries.length<2)continue;
+      const {p,z,s}=entries[0],width=Math.max(...entries.map(e=>Number(e.s.width)||1.5)),
+        water=s.variant==='water';
+      // A rounded union closes the triangular gaps left by two rectangular
+      // strips meeting at an angle, without changing the terrain heightmap.
+      pathPolygon(disk(p,width*.50,z),'#7b6850','#514533',.6);
+      pathPolygon(disk(p,width*.23,z-(water?.18:.32)),
+        water?'#398aa5':'#5a4937',water?'#8bc6cf':'#473d32',.7);
+    }
+  }
   function frame(s){
     const L=length(s)||1,ux=(s.b.x-s.a.x)/L,uy=(s.b.y-s.a.y)/L;
     return{L,ux,uy,nx:-uy,ny:ux,width:Number(s.width)||WIDTHS[s.type]||1};
@@ -294,6 +369,7 @@
         ctx.restore();
       }
     }
+    drawMoatJunctions();
   }
   let frameAt=0,rafPending=0;
   function drawDynamic(){
@@ -370,6 +446,7 @@
     slots.querySelector('[data-drawbridge-remove]')?.addEventListener('click',()=>removeDrawbridge(s));
   }
   window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
+    snapMoatEndpoint,drawMoatMagnets,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,installDrawbridge,toggleDrawbridge,removeDrawbridge,
     drawbridgeBlocks,drawbridgePassage,stateOfGate,DRAWBRIDGE_COST};
