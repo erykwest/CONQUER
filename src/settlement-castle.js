@@ -3525,9 +3525,10 @@ function houseDoorInfo(house){
   const infillDoor=urbanDenseHouseDoorInfo(house);if(infillDoor)return infillDoor;
   if(!Number.isFinite(Number(house.doorSide)))house.doorSide=inferHouseDoorSide(house);
   const side=Number(house.doorSide)>=0?1:-1,ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0);
-  const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=(Number(house.h)||1)/2;
+  const size=houseFootprintDimensions(house);
+  const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=size.h/2;
   const lateralSign=(peasantHash(house.id)&2)?1:-1;
-  const lateralOffset=(Number(house.w)||1.5)*.24*lateralSign;
+  const lateralOffset=size.w*.24*lateralSign;
   // Extensions and L4 turrets may cover the original base-wall entrance.
   // Put the door on the outermost exposed footprint along its outward ray.
   let reach=half;
