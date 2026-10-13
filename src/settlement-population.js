@@ -141,10 +141,16 @@ function drawDynamicShadows(){
 }
 let fieldWorkAssignmentCache={key:null,map:new Map()};
 function fieldWorkAssignments(houses,fields){
+  // Workforce is allocated by class, never by an individual economic agent.
+  // Each L1 house supplies one available farm worker; workers claimed by L1
+  // industries must not simultaneously animate/work on an agricultural field.
+  const economy=window.ConquerEconomy,allocation=economy?.staffing?.()||{};
+  const reserved=State.structures.reduce((total,s)=>total+(
+    s.type!=='field'&&economy?.KIND?.[s.type]?.classId===1?(allocation[s.id]||0):0),0);
   const key=houses.map(h=>[h.id,h.x,h.y,houseLevel(h)].join(':')).sort().join(',')+'|'+fields.map(f=>{
     const crop=fieldCrop(f),layout=fieldLayout(f);
     return f.id+':'+layout.poly.map(p=>p.x+','+p.y).join(';')+':'+crop.phase+':'+layout.cells.map(c=>fieldSlotDone(f,c)?1:0).join('');
-  }).sort().join('|');
+  }).sort().join('|')+'|workers-reserved:'+reserved;
   if(fieldWorkAssignmentCache.key===key)return fieldWorkAssignmentCache.map;
 
   const slots=[];
@@ -152,7 +158,7 @@ function fieldWorkAssignments(houses,fields){
     if(fieldCrop(field).phase==='grow')continue;
     for(const cell of fieldGrid(field).cells)if(!fieldSlotDone(field,cell))slots.push({field,cell,used:false});
   }
-  const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id));
+  const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved);
   for(const house of ordered){
     const door=houseDoorInfo(house).outside;let best=null,bestScore=Infinity;
     for(const slot of slots){
