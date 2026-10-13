@@ -133,6 +133,28 @@ test('every L4 townhouse restores a turret in addition to its L/T extensions',()
   const before=JSON.stringify(parts);run('urbanRevision++');
   assert.equal(JSON.stringify(run('urbanDenseParts(State.structures[0])')),before);
 });
+test('250 seeded plots retain L/T and L4 turret with valid geometry',()=>{
+  const previousId=house.id;
+  for(const level of [3,4]){
+    house.houseLevel=level;
+    for(let i=0;i<250;i++){
+      house.id='seeded-'+i;run('urbanLotCache[0].houseId=State.structures[0].id;urbanRevision++');
+      const parts=run('urbanDenseParts(State.structures[0])');
+      const keys=[...new Set(parts.map(p=>p.buildingKey))];
+      assert.equal(keys.length,level===3?3:4,'frontage count changed for plot '+i);
+      for(const key of keys){
+        const group=parts.filter(p=>p.buildingKey===key);
+        const expected=run('housePlanType({id:'+JSON.stringify(key)+'})');
+        assert.equal(group.filter(p=>p.kind==='body').length,expected==='L'?2:3);
+        assert.equal(group.filter(p=>p.kind==='turret').length,level===4?1:0);
+        for(const shape of group)for(const vertex of shape.points)
+          assert.ok(run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(vertex)+',.035)'),
+            'extension or turret exceeds parcel '+i);
+      }
+    }
+  }
+  house.id=previousId;run('urbanLotCache[0].houseId=State.structures[0].id;urbanRevision++');
+});
 test('L3 and L4 original standalone house shapes retain extensions and turret',()=>{
   house.auto=false;house.urbanRedeveloped=false;house.houseLevel=3;
   assert.ok(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="body").length')>=2);
