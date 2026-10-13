@@ -1083,6 +1083,8 @@ function drawPeasants(){
       if(p&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)===1))p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
+      // Footsteps follow every resident's actual position, independent of LOD.
+      if(p)window.ConquerSnowTracks?.observe(resident.id,p,State.clock.day,'person');
       if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
       if(!p||!worldPointVisible(p,0,40))continue;
       const rp=rotateViewPoint(p);
