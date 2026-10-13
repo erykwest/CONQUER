@@ -97,6 +97,10 @@
   retained.hidden=true;
   root.append(rail,flyout,retained);
   if(combatPanel)retained.append(combatPanel);
+  // Production tools are also live, event-bound DOM controls: retain them
+  // inside the document while a different palette is open.
+  const industryButtons=originalButtons.filter(b=>b.hasAttribute('data-industry'));
+  for(const b of industryButtons)retained.append(b);
   let currentCategory=null;
   function iconize(btn,label,icon,tag){
     btn.classList.add('ux-icon-btn');btn.setAttribute('aria-label',label);btn.setAttribute('title',label);
@@ -122,6 +126,7 @@
     heading.textContent=group.label;
     // Move, never destroy, the event-bound combat panel during category changes.
     if(combatPanel)retained.append(combatPanel);
+    for(const b of industryButtons)retained.append(b);
     catalog.replaceChildren();
     if(group.id==='combat'&&combatPanel)catalog.append(combatPanel);
     for(const [selector,label,icon] of group.items){
