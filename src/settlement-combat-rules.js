@@ -100,7 +100,7 @@
     if(source&&hits>0){source.damageDealt=(source.damageDealt||0)+hits}
   }
   function meleePair(a,b,count){
-    ensure(a,a.kind==='squad'?'spearman':a.kind==='knight'?'knight':a.combatKind||'infantry');
+    ensure(a,profileKind(a));
     ensure(b,b.combatKind||'infantry');
     let hitA=0,hitB=0;
     const ca=effectiveCombat(a),cb=effectiveCombat(b);
