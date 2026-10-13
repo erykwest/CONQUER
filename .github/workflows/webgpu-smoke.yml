@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - webgpu
+      - fix/p2-field-inset-urban-density
   workflow_dispatch:
 
 jobs:
