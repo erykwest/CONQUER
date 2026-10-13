@@ -1102,6 +1102,10 @@ function draw(){
     blitSceneCache('base');
   }
 
+  // Snow trails are dynamic world-space terrain marks. Draw before figures
+  // and outside the cached landscape so movement never rebuilds ground assets.
+  window.ConquerSnowTracks?.draw();
+
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.
   drawBuildArea();
