@@ -272,6 +272,13 @@
       }
     }
   }
+  function drawPreview(s){
+    if(!s||!xy(s)||length(s)<.02)return;
+    ctx.save();ctx.globalAlpha=.50;
+    const candidate={...s,groundZ:Number(s.groundZ)||terrainElevation(s.a),fills:[]};
+    if(s.type==='moat')drawMoat(candidate);else drawBridge(candidate);
+    ctx.restore();
+  }
   function drawGround(){
     for(const s of State.structures){
       if(s.type==='moat'||s.type==='bridge'){
@@ -355,7 +362,7 @@
     slots.querySelector('[data-drawbridge-toggle]')?.addEventListener('click',()=>toggleDrawbridge(s));
     slots.querySelector('[data-drawbridge-remove]')?.addEventListener('click',()=>removeDrawbridge(s));
   }
-  window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawDynamic,
+  window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,installDrawbridge,toggleDrawbridge,removeDrawbridge,
     drawbridgeBlocks,drawbridgePassage,stateOfGate,DRAWBRIDGE_COST};
