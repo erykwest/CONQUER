@@ -1,0 +1,17 @@
+name: Urban density regression
+on:
+  push:
+    branches:
+      - urban-density-l3-l4
+  workflow_dispatch:
+jobs:
+  density-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test manual upgrades and frontage generation
+        run: node qa/urban-density-regression.cjs
