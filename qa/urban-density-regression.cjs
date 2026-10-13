@@ -108,6 +108,17 @@ test('frontage on an additional primary road produces more infill units',()=>{
   assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),2);
   assert.ok(run('urbanDenseParts(State.structures[0]).length')>4);
 });
+test('multiple short primary-road segments are merged along a long parcel edge',()=>{
+  State.structures=[house,road];
+  road.a={x:0,y:-.45};road.b={x:1.8,y:-.45};
+  const continuation={id:'continuation',type:'road',routeId:'arterial',
+    a:{x:1.8,y:-.45},b:{x:6,y:-.45},width:.62};
+  State.structures.push(continuation);
+  assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),1);
+  assert.ok(run('urbanLotRoadFrontages(urbanLotCache[0])[0].length')>5);
+  State.structures=[house,road];road.b={x:6,y:-.45};
+  run('urbanRevision++');
+});
 test('no primary road frontage means no additional buildings',()=>{
   road.a.y=-4;road.b.y=-4;side.a.x=10;side.b.x=10;run('urbanRevision++');
   assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
