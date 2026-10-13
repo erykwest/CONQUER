@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - webgpu
+      - fix/urban2-dev-knight-brush-snowtracks
   workflow_dispatch:
 
 jobs:
