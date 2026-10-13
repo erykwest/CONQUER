@@ -425,15 +425,42 @@ canvas.addEventListener('pointerdown',e=>{
     if(addStructure(well))openVillageModal(well);return
   }
   if(State.tool.kind==='crossing'){
+    const moat=['dry','water'].includes(State.tool.crossing);
+    const magnet=moat?window.ConquerCrossings?.snapMoatEndpoint(p,sp):null;
+    const q=magnet?.point||{x:snapGrid(p.x),y:snapGrid(p.y)};
     if(!State.draft){
-      State.draft={a:{x:snapGrid(p.x),y:snapGrid(p.y)},preview:null};
-      status('Crossing: bank A fixed — click bank B');draw();
+      State.draft={a:{...q},aSnap:magnet?.structureId||null,
+        aGroundZ:magnet?.groundZ??terrainElevation(q),preview:null};
+      status(magnet?'⛓ Moat magnet A — choose next endpoint':'Crossing: bank A fixed — click bank B');
+      draw();
     }else{
-      const a=State.draft.a,b={x:snapGrid(p.x),y:snapGrid(p.y)};
-      const crossing={id:uid(),type:['dry','water'].includes(State.tool.crossing)?'moat':'bridge',
-        variant:State.tool.crossing,a,b,width:State.tool.width};
+      const a=State.draft.a,b={...q};
+      if(moat&&dist(a,b)<.20){
+        State.draft=null;
+        State.tool.moatHover=null;
+        status('Moat chain stopped — click anywhere to start another');
+        draw();return;
+      }
+      const crossing={id:uid(),type:moat?'moat':'bridge',
+        variant:State.tool.crossing,a:{...a},b,width:State.tool.width};
+      if(moat){
+        crossing.aSnap=State.draft.aSnap||null;
+        crossing.bSnap=magnet?.structureId||null;
+      }
       if(window.ConquerCrossings?.add(crossing)){
-        State.draft=null;status('Crossing placed — choose next bank A');draw();
+        if(moat){
+          // The next segment begins exactly where the previous one ended.
+          // Escape / clicking the current origin stops the chain.
+          State.draft={a:{...crossing.b},aSnap:crossing.id,
+            aGroundZ:crossing.groundZ,preview:null};
+          State.tool.moatHover=null;
+          status(magnet?'⛓ Moats connected — choose next endpoint (Esc to finish)':
+            '⛓ Moat continued — choose next endpoint (Esc to finish)');
+        }else{
+          State.draft=null;
+          status('Bridge placed — choose next bank A');
+        }
+        draw();
       }
     }
     return;
@@ -484,13 +511,22 @@ canvas.addEventListener('pointermove',e=>{
     return
   }
   const p=pointerWorld(e);
-  if(State.tool.kind==='crossing'&&State.draft){
-    const a=State.draft.a,b={x:snapGrid(p.x),y:snapGrid(p.y)};
-    const type=['dry','water'].includes(State.tool.crossing)?'moat':'bridge';
+  if(State.tool.kind==='crossing'){
+    const moat=['dry','water'].includes(State.tool.crossing);
+    const snap=moat?window.ConquerCrossings?.snapMoatEndpoint(p,pointerScreen(e)):null;
+    State.tool.moatHover=snap||null;
+    if(!State.draft){
+      // Show magnets before the first click as well.
+      if(moat)draw();
+      return;
+    }
+    const a=State.draft.a,b=snap?.point||{x:snapGrid(p.x),y:snapGrid(p.y)};
+    const type=moat?'moat':'bridge';
     const preview={type,variant:State.tool.crossing,a,b,width:State.tool.width,length:dist(a,b)};
-    State.draft.preview=preview;
+    State.draft.preview=preview.length>=.02?preview:null;
     const error=window.ConquerCrossings?.validate({...preview});
-    status(error||type+' '+preview.length.toFixed(1)+'U · flat level banks');
+    status(moat&&snap&&dist(a,b)<.20?'Click start point to end this moat chain':
+      error||((snap?'⛓ Magnet · ':'')+type+' '+preview.length.toFixed(1)+'U · flat level banks'));
     draw();return;
   }
   if(State.tool.kind==='linear'&&State.draft){
