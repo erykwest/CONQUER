@@ -700,7 +700,7 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,spec=window.ConquerIndustries.TYPES[type];
    setTool({kind:'industry',industry:type,
      placementSpec:window.ConquerIndustries.make(type,{x:0,y:0}),
-     label:spec.name+' · 2×2U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(spec.cost),el:b});
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(spec.cost),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
