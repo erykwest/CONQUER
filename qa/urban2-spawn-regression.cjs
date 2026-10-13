@@ -13,7 +13,7 @@ test('house Voronoi parcels never consume existing field polygons',()=>{
  fixture();
  run("globalThis.qaField={id:'farm',type:'field',auto:true,x:106,y:104,points:[{x:104,y:102},{x:108,y:102},{x:108,y:106},{x:104,y:106}]};State.structures.push(qaField);invalidateUrbanGeometry()");
  assert.equal(run("urbanParcelAllowed([{x:105,y:103},{x:109,y:103},{x:109,y:107},{x:105,y:107}],'new-home')"),false);
- assert.equal(run("urbanParcelAllowed([{x:110,y:108},{x:112,y:108},{x:112,y:110},{x:110,y:110}],'new-home')"),true);
+ assert.equal(run("urbanParcelAllowed([{x:98,y:110},{x:100,y:110},{x:100,y:112},{x:98,y:112}],'new-home')"),true);
 });
 test('candidate house evaluation reuses one live-occupant snapshot and original lot cache',()=>{
  fixture();
