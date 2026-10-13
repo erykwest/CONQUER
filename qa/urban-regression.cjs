@@ -64,12 +64,17 @@ test('refresh restores secondary roads instantly; newly created access roads ret
  run("State.structures=State.structures.filter(s=>!s.accessFor);ensureSettlementRoadAccess(State.structures.find(s=>s.id==='home'))");
  assert.equal(run("State.structures.filter(s=>s.accessFor==='home').every(underConstruction)"),true);
 });
-test('house bodies, extensions and turrets block paths at all four levels and rotations',()=>{
+test('actual rendered house bodies, L/T extensions and turrets block paths at all levels and rotations',()=>{
  for(let level=1;level<=4;level++)for(let turn=0;turn<4;turn++){
   fixture();run('State.structures[2].houseLevel='+level+';State.structures[2].angle='+turn*Math.PI/2+';invalidateNavigation()');
-  assert.equal(run("houseFootprintParts(State.structures[2]).every(part=>pointBlockedForPeasant(part.center,'unit'))"),true);
-  assert.equal(run("peasantSegmentClear({x:104,y:102},{x:108,y:102},'unit')"),false);
-  assert.equal(run("peasantSegmentClear({x:106,y:102},{x:106.01,y:102},'unit')"),false);
+  // Dense L3/L4 houses replace the detached footprint with streetfront
+  // volumes. The collision mask must agree with what the player actually sees.
+  assert.equal(run("urbanHouseDisplayParts(State.structures[2]).every(part=>pointBlockedForPeasant(part.center,'unit'))"),true);
+  assert.equal(run("urbanHouseDisplayParts(State.structures[2]).every(part=>!peasantSegmentClear({x:part.center.x-.5,y:part.center.y},{x:part.center.x+.5,y:part.center.y},'unit'))"),true);
+  if(level<=2){
+    assert.equal(run("peasantSegmentClear({x:104,y:102},{x:108,y:102},'unit')"),false);
+    assert.equal(run("peasantSegmentClear({x:106,y:102},{x:106.01,y:102},'unit')"),false);
+  }
  }
 });
 test('full squad footprint detects a house that the squad center misses',()=>{

@@ -86,7 +86,8 @@ function fieldLayout(field){
       }
     }
     if(hits.length<2)continue;
-    const lo=Math.min(...hits)+.03,hi=Math.max(...hits)-.03;if(hi<=lo)continue;
+    // Keep plough furrows and serpentine paths behind fencing, hedges and walls.
+    const lo=Math.min(...hits)+.28,hi=Math.max(...hits)-.28;if(hi<=lo)continue;
     const world=u=>({x:u*ux+v*vx,y:u*uy+v*vy});
     const row=rows.length,forward=row%2===0,ra=world(forward?lo:hi),rb=world(forward?hi:lo);
     if(last)append(last,ra,-1);

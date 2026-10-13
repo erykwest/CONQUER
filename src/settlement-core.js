@@ -317,6 +317,25 @@ function structureLevel(s){
   return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
+// Independent local X/Y scale in [0.8, 1.2], seeded by the stable house ID.
+// The geometry is derived (never saved as another mutable dimension), so
+// existing saves and reloads always give the same dimensions.
+function houseDimensionScale(house,axis,part='main'){
+  const id=typeof house==='string'?house:(house?.id||'house');
+  // Avalanche FNV output: suffix-only X/Y keys would otherwise be highly
+  // correlated and make every building grow/shrink in both axes together.
+  let hash=peasantHash(id+'|dimension|'+part+'|'+axis)>>>0;
+  hash^=hash>>>16;hash=Math.imul(hash,0x7feb352d);
+  hash^=hash>>>15;hash=Math.imul(hash,0x846ca68b);
+  hash^=hash>>>16;
+  return .8+.4*((hash>>>0)/4294967295);
+}
+function houseFootprintDimensions(s){
+  return{
+    w:(Number(s.w)||1.5)*houseDimensionScale(s,'x'),
+    h:(Number(s.h)||1)*houseDimensionScale(s,'y')
+  };
+}
 function housePlanType(s){return (peasantHash(s?.id||'house')&1)?'L':'T'}
 function houseTurretType(s){return (peasantHash((s?.id||'house')+'-turret')&1)?'round':'square'}
 function houseLocalToWorld(s,x,y){
@@ -325,34 +344,45 @@ function houseLocalToWorld(s,x,y){
 }
 function houseTurretInfo(s){
   if(houseLevel(s)<4)return null;
-  const w=Number(s.w)||1.5,h=Number(s.h)||1,hash=peasantHash((s.id||'house')+'-turret-pos');
-  const sx=(hash&2)?1:-1,sy=(hash&4)?1:-1,type=houseTurretType(s);
-  const cx=sx*w*.60,cy=sy*h*.58,center=houseLocalToWorld(s,cx,cy);
+  const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s),hash=peasantHash((s.id||'house')+'-turret-pos');
+  const sx=(hash&2)?1:-1,sy=s.urbanCompact?1:(hash&4)?1:-1,type=houseTurretType(s);
+  // Compact L4 keeps its turret, but positions it behind the frontage
+  // instead of projecting into a neighbouring townhouse.
+  const cx=s.urbanCompact?sx*w*.18:sx*w*.60,cy=sy*h*(s.urbanCompact?.65:.58);
+  const center=houseLocalToWorld(s,cx,cy);
   const bodyH=2.62,roofH=3.42;
   if(type==='round'){
-    const r=.52;
+    const r=s.urbanCompact?Math.min(.37,w*.22,h*.33):.52;
     return{kind:'turret',type,cx,cy,center,r,bodyH,roofH,points:circleWorldPoints(center.x,center.y,r,20)};
   }
-  const size=.92;
+  const size=s.urbanCompact?Math.min(.70,w*.4,h*.60):.92;
   return{kind:'turret',type,cx,cy,center,size,bodyH,roofH,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
 }
 function houseFootprintParts(s){
-  const parts=[{kind:'body',cx:0,cy:0,w:Number(s.w)||1.5,h:Number(s.h)||1,roofTurn:0}];
+  // Streetfront volumes have already received their independent ±20% sizes.
+  const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s);
+  const parts=[{kind:'body',cx:0,cy:0,w,h,roofTurn:0}];
   if(houseLevel(s)>=3){
-    const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s),w=Number(s.w)||1.5,h=Number(s.h)||1;
+    const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s);
     if(plan==='L'){
-      parts.push({kind:'body',cx:sign*w*.38,cy:h*.56,w:w*.55,h:h*.95,roofTurn:Math.PI/2});
+      parts.push({kind:'body',cx:sign*w*(s.urbanCompact?.25:.38),
+        cy:h*(s.urbanCompact?.40:.56),w:w*(s.urbanCompact?.48:.55),
+        h:h*(s.urbanCompact?.68:.95),roofTurn:Math.PI/2});
     }else{
-      parts.push({kind:'body',cx:0,cy:h*.62,w:w*1.18,h:h*.48,roofTurn:Math.PI/2});
-      parts.push({kind:'body',cx:0,cy:h*.92,w:w*.46,h:h*.34,roofTurn:Math.PI/2});
+      parts.push({kind:'body',cx:0,cy:h*(s.urbanCompact?.44:.62),
+        w:w*(s.urbanCompact?1.04:1.18),h:h*(s.urbanCompact?.40:.48),
+        roofTurn:Math.PI/2});
+      parts.push({kind:'body',cx:0,cy:h*(s.urbanCompact?.72:.92),
+        w:w*(s.urbanCompact?.40:.46),h:h*(s.urbanCompact?.30:.34),
+        roofTurn:Math.PI/2});
     }
   }
   const out=parts.map(p=>{const q=houseLocalToWorld(s,p.cx,p.cy);return{...p,center:q,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)}});
   const turret=houseTurretInfo(s);if(turret)out.push(turret);
   return out;
 }
-function houseBodyHeight(s){return houseLevel(s)===1?.95:1.72}
-function houseRidgeHeight(s){return houseLevel(s)===1?1.45:2.26}
+function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.38:1.72}
+function houseRidgeHeight(s){return houseLevel(s)===1?1.45:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.95:2.26}
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
 const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
@@ -451,7 +481,8 @@ function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
   if(s.type==='well')return .75;
-  if(s.type==='house'||s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
+  if(s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
   if(isCivic(s))return civicRadius(s);
   return .5;
 }

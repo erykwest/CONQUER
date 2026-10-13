@@ -140,9 +140,20 @@ function drawGateWindows(s,lit=false,nf=1){
   });
 }
 function visibleFacadeEdges(s){
-  const rings=s.type==='house'?houseFootprintParts(s).filter(p=>p.kind!=='turret').map(p=>p.points):[footprintPoints(s)],edges=[];
-  for(const fp of rings){if(fp.length<4)continue;for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);edges.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2})}}
-  edges.sort((a,b)=>b.depth-a.depth);return edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
+  const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'):null;
+  const rings=parts?parts.map(p=>p.points):[footprintPoints(s)],edges=[];
+  for(const fp of rings){
+    if(fp.length<4)continue;
+    const faces=[];
+    for(let i=0;i<fp.length;i++){
+      const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);
+      faces.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2});
+    }
+    faces.sort((a,b)=>b.depth-a.depth);
+    edges.push(...(parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?faces.slice(0,2):faces));
+  }
+  edges.sort((a,b)=>b.depth-a.depth);
+  return parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?edges:edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
 }
 function cutawayOpenEdgeIndexes(s){
   if(!structureCutaway(s))return null;

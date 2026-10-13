@@ -19,6 +19,13 @@ test('slots use floor(area / 4), and serpentine rows follow the longest side eve
  assert.equal(run('fieldLayout(qaField)===fieldLayout(qaField)'),true);
  run("const qaLayout=fieldLayout(qaField);for(let i=0;i<qaLayout.rows.length;i++){const r=qaLayout.rows[i];if(Math.abs(r.b.y-r.a.y)>1e-8)throw Error('alignment');if(r.forward!==(i%2===0))throw Error('direction');if(i&&Math.abs(r.v-qaLayout.rows[i-1].v-.5)>1e-8)throw Error('spacing')}for(let d=0;d<=qaLayout.total;d+=.03)if(!urbanContains(qaField.points,qaLayout.at(d)))throw Error('route outside field');");
 });
+test('serpentine rows remain at least 0.28 U inside field-edge fences',()=>{
+ farm();
+ run("globalThis.qaInnerMargins=fieldLayout(qaField).rows.map(row=>({left:Math.min(row.a.x,row.b.x)-103,right:107-Math.max(row.a.x,row.b.x)}))");
+ assert.equal(run("qaInnerMargins.every(p=>Math.abs(p.left-.28)<1e-6&&Math.abs(p.right-.28)<1e-6)"),true);
+ // The worker's actual traversed path is built from these inset segments.
+ assert.equal(run("fieldLayout(qaField).segments.every(s=>s.row<0||s.a.x>=103.28-1e-6&&s.b.x<=106.72+1e-6||s.row<0||s.b.x>=103.28-1e-6&&s.a.x<=106.72+1e-6)"),true);
+});
 test('migration stays inside the previous footprint and preserves saved crop state',()=>{
  fixture();run("const legacy={id:'legacy',type:'field',x:105,y:105,w:3.8,h:2.4,angle:.4};const oldPoly=rectWorldPoints(105,105,3.8,2.4,.4);const points=fieldPoints(legacy);if(!points.every(p=>urbanContains(oldPoly,p)))throw Error('migration expanded');fieldCrop(legacy).phase='sow';fieldCrop(legacy).work[0]=.7;const restored=JSON.parse(JSON.stringify(legacy));");
  assert.equal(run('fieldQuadValid(fieldPoints(legacy))'),true);
