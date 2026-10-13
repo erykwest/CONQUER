@@ -105,6 +105,13 @@
     ctx.font='bold '+Math.max(9,Math.round(U*State.view.scale*.74))+'px system-ui';
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(s.type==='loggingCamp'?'L':s.type==='quarry'?'C':'M',center.x,center.y);
+    // Orientation indicator remains legible on symmetric 2×2 placeholders.
+    const angle=Number(s.angle)||0;
+    const tip=w2s({x:s.x+Math.cos(angle)*.82,y:s.y+Math.sin(angle)*.82},z+h+.055);
+    const back=w2s({x:s.x+Math.cos(angle)*.42,y:s.y+Math.sin(angle)*.42},z+h+.055);
+    ctx.strokeStyle=s.type==='mine'?'#f2c879':'#f7d78c';
+    ctx.lineWidth=Math.max(1.4,State.view.scale*2);
+    ctx.beginPath();ctx.moveTo(back.x,back.y);ctx.lineTo(tip.x,tip.y);ctx.stroke();
     ctx.restore();
   }
   function forestAccessPoint(s){
