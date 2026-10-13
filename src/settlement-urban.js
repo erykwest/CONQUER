@@ -1,9 +1,9 @@
 'use strict';
 // Quadrilateral parcels inscribed in bounded Euclidean Voronoi cells.
 // Houses are the sites. A rejected four-corner parcel never spawns a house.
-let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null;
+let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null,urbanFenceCache=null;
 function invalidateUrbanGeometry(){
-  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;
+  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;urbanFenceCache=null;
 }
 function urbanArea(poly){
   return poly.reduce((a,p,i)=>a+p.x*poly[(i+1)%poly.length].y-p.y*poly[(i+1)%poly.length].x,0)/2;
@@ -416,7 +416,12 @@ function urbanBoundaryMaterial(a,b){
   const roll=biomeHash(State.seed+'|boundary|'+urbanBoundaryKey(a,b))/4294967296;
   return roll<.5?'fence':roll<.8?'wall':'hedge';
 }
-function urbanFenceSegments(lots=urbanLots(),fields=completedSettlement('field')){
+function urbanFenceSegments(lots=null,fields=null){
+  const cacheable=lots==null&&fields==null;
+  if(lots==null)lots=urbanLots();
+  if(fields==null)fields=completedSettlement('field');
+  const cacheKey=cacheable?urbanRevision+'|'+fields.map(f=>f.id).join('|'):null;
+  if(cacheKey&&urbanFenceCache?.key===cacheKey)return urbanFenceCache.edges;
   const raw=[];
   const addParcel=(points,door,goal)=>{
     let gateEdge=-1,best=Infinity;
@@ -437,8 +442,7 @@ function urbanFenceSegments(lots=urbanLots(),fields=completedSettlement('field')
   };
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);if(!house)continue;
-    // L3/L4 urban plots are paved street blocks: no agricultural/paddock fence.
-    if((house.auto||house.urbanRedeveloped)&&houseLevel(house)>=3)continue;
+    if((house.auto||house.urbanRedeveloped)&&houseLevel(house)>=3)continue; // Redeveloped plots have no paddock fence.
     const door=houseDoorInfo(house).outside;
     addParcel(lot.points,door,nearestPrimaryRoadProjection(door)?.point||door);
   }
@@ -476,6 +480,7 @@ function urbanFenceSegments(lots=urbanLots(),fields=completedSettlement('field')
     const at=t=>({x:g.dx*t+g.nx*g.c,y:g.dy*t+g.ny*g.c});
     for(const r of merged)out.push({a:at(r.lo),b:at(r.hi),material:r.material});
   }
+  if(cacheKey)urbanFenceCache={key:cacheKey,edges:out};
   return out;
 }
 function drawUrbanFence({a,b}){
@@ -504,8 +509,13 @@ function drawUrbanWall({a,b}){
 }
 function drawUrbanLots(){
   const lots=urbanLots();
-  for(const lot of lots)pathPolygon(lot.points.map(p=>w2s(p,.015)),'rgba(167,135,81,.10)',null);
-  const edges=urbanFenceSegments(lots).sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
+  for(const lot of lots){
+    const house=State.structures.find(h=>h.id===lot.houseId);
+    const dense=(house?.auto||house?.urbanRedeveloped)&&houseLevel(house)>=3;
+    pathPolygon(lot.points.map(p=>w2s(p,.015)),
+      dense?'rgba(128,116,103,.36)':'rgba(167,135,81,.10)',null);
+  }
+  const edges=urbanFenceSegments().slice().sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
   ctx.save();ctx.lineWidth=Math.max(.65,State.view.scale*.9);
   for(const edge of edges){
     if(edge.material==='wall')drawUrbanWall(edge);
@@ -580,7 +590,7 @@ function urbanHouseFaces(house,part){
     const apex=vertex(part.center,roof);
     for(let i=0;i<fp.length;i++)faces.push([vertex(fp[i],wall),vertex(fp[(i+1)%fp.length],wall),apex]);
   }else{
-    const turn=part.roofTurn||0,angle=(house.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle);
+    const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(house.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle);
     const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
     const local=(x,y)=>({x:part.center.x+x*ca-y*sa,y:part.center.y+x*sa+y*ca});
     const a=vertex(local(-rw/2,-rh/2),wall),b=vertex(local(rw/2,-rh/2),wall);
