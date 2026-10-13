@@ -941,7 +941,7 @@ function pointInScreenPolygon(p,poly){
 }
 function screenHitStructureBody(s,p){
   if(s.type==='house'||isCivic(s)){
-    const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
+    const parts=s.type==='house'?urbanHouseDisplayParts(s):civicParts(s);
     const h=structureHeight(s);
     for(const part of parts){
       const ph=part.role==='plaza'?.78:part.role==='tower'?h:Math.min(h,s.type==='church'?2.52:h);
