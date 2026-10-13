@@ -792,6 +792,7 @@ function drawGroundStaticScene(){
     // only this cheap layer instead of terrain + every building.
     drawPuddleLayer();
     drawUrbanLots();
+    window.ConquerCrossings?.drawGround();
   });
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});
@@ -812,7 +813,7 @@ function drawBaseStaticScene(){
   const entry=prepareSceneCache('base');
   withRenderContext(entry.ctx,()=>{
     const completedOthers=State.structures
-      .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
+      .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
     drawStaticHouseFacadeDetails();
@@ -1049,7 +1050,7 @@ function draw(){
     .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .forEach(drawAutoStructure);
   const dynamicSites=State.structures
-    .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
+    .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
 
@@ -1065,6 +1066,7 @@ function draw(){
   drawTowerFlags();
   drawCastleSelection();
   drawCastleSoldiers();
+  window.ConquerCrossings?.drawDynamic();
   markPhase('castle-units');
   blitSceneCache('castleFront');
   window.ConquerSiege?.drawOverlay();
@@ -1075,8 +1077,9 @@ function draw(){
   drawGatePortals();
   drawChimneysAndSmoke();
 
+  if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.previewSegments?.length)for(const segment of State.draft.previewSegments)drawStructure(segment,true);
-  else if(State.draft?.preview)drawStructure(State.draft.preview,true);
+  else if(State.draft?.preview&&!['moat','bridge'].includes(State.draft.preview.type))drawStructure(State.draft.preview,true);
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
