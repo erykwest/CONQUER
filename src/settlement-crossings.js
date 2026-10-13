@@ -239,7 +239,7 @@
     }
     for(const patch of s.fills||[]){
       if(patch.progress<=0)continue;
-      const half=Math.min(f.L||length(s),patch.span)/2,from=Math.max(0,patch.at-half),
+      const half=Math.min(length(s),patch.span)/2,from=Math.max(0,patch.at-half),
         to=Math.min(length(s),patch.at+half);
       const acrossEnd=-.5+patch.progress;
       const p0=point(s,from,-width*.5),p1=point(s,to,-width*.5),
