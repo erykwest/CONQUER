@@ -113,4 +113,54 @@ test('no primary road frontage means no additional buildings',()=>{
   assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
   assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),1);
 });
+// Exercise the actual button handler, not a duplicate test implementation.
+const app=fs.readFileSync(__dirname+'/../src/settlement-app.js','utf8');
+const actionStart=app.indexOf('function changeHouseDensity(');
+const actionEnd=app.indexOf('function selectedStructure(){',actionStart);
+assert.ok(actionStart>=0&&actionEnd>actionStart,'house upgrade handler must be available');
+run(app.slice(actionStart,actionEnd));
+const messages=[];
+sandbox.status=message=>messages.push(message);
+sandbox.markStructureDirty=()=>{};
+sandbox.renderFunctionPanel=()=>{};
+sandbox.draw=()=>{};
+sandbox.ensureSettlementRoadAccess=()=>{};
+const overrideLot="urbanLotFor=house=>({id:'lot:'+house.id,houseId:house.id,points:[{x:0,y:0},{x:6,y:0},{x:6,y:4},{x:0,y:4}]})";
+run(overrideLot);
+test('manual Upgrade button from L2 to L3 accepts a single frontage townhouse',()=>{
+  house.auto=true;house.houseLevel=2;
+  road.a={x:0,y:-.45};road.b={x:1.8,y:-.45};
+  State.structures=[house,road];run('urbanRevision++');
+  run('changeHouseDensity(State.structures[0],3)');
+  assert.equal(house.houseLevel,3);
+  assert.equal(run('urbanDenseParts(State.structures[0]).length'),1);
+  assert.ok(messages.at(-1).includes('1 streetfront building'));
+});
+test('upgrade remains possible on L2 plot without two viable road-front buildings',()=>{
+  house.houseLevel=2;
+  road.a={x:0,y:-4};road.b={x:6,y:-4};
+  run('urbanRevision++');run('changeHouseDensity(State.structures[0],3)');
+  assert.equal(house.houseLevel,3);
+  assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
+  assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),1);
+});
+test('manually placed L2 house can redevelop into a compact roadside parcel',()=>{
+  house.auto=false;house.houseLevel=2;
+  road.a={x:0,y:-.45};road.b={x:1.8,y:-.45};
+  run('urbanRevision++');run('changeHouseDensity(State.structures[0],3)');
+  assert.equal(house.houseLevel,3);
+  assert.equal(house.urbanRedeveloped,true);
+  assert.equal(run('urbanDenseParts(State.structures[0]).length'),1);
+  run('changeHouseDensity(State.structures[0],2)');
+  assert.equal(house.houseLevel,2);
+  assert.equal(house.urbanRedeveloped,false);
+  house.auto=true;
+});
+test('failed geometric validation cannot partially upgrade an existing plot',()=>{
+  house.houseLevel=2;
+  run('urbanLotFor=()=>null');
+  run('changeHouseDensity(State.structures[0],3)');
+  assert.equal(house.houseLevel,2);
+  assert.ok(messages.at(-1).includes('exceed the lot'));
+});
 console.log('Urban density regression: '+passed+' passed');
