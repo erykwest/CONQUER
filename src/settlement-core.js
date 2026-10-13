@@ -28,7 +28,7 @@ function invalidateSettlementScene(includeCastle=true){
 }
 function structureSceneLayers(s){
   if(!s)return['ground','shadow','base','castleBody','castleFront'];
-  if(s.type==='road')return['ground','base'];
+  if(['road','moat','bridge'].includes(s.type))return['ground','base'];
   if(s.auto&&s.type==='field')return['ground'];
   if(s.type==='house')return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
@@ -398,6 +398,13 @@ function constructionCost(s){
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
   }
   if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
+  if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});
+  if(s.type==='bridge'){
+    const factor=(s.width||1.5)/(s.variant==='stone'?1.5:1.2);
+    return roundCost(s.variant==='stone'
+      ?{gold:9*(s.length||1)*factor,stone:24*(s.length||1)*factor}
+      :{gold:5*(s.length||1)*factor,wood:18*(s.length||1)*factor});
+  }
   if(s.type==='well')return {...COSTS.well};
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -420,6 +427,8 @@ function buildDuration(s){
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length)*(.75+.25*structureLevel(s));
+  if(s.type==='moat')return .8+(s.length||1)*(s.variant==='water'?.9:.65)*(s.width||1.5)/1.5;
+  if(s.type==='bridge')return .8+(s.length||1)*(s.variant==='stone'?.8:.5)*(s.width||1.5)/1.5;
   if(s.type==='road')return BUILD_DAYS.road;
   if(s.type==='house')return BUILD_DAYS.house;
   if(s.type==='field')return BUILD_DAYS.field;

@@ -193,6 +193,8 @@ function structureHeight(s){
   if(s.type==='palisade')return 1.15;
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
+  if(s.type==='bridge')return .12;
+  if(s.type==='moat')return 0;
   if(s.type==='house')return houseStructureHeight(s);
   if(s.type==='market')return .78;
   if(s.type==='tavern')return 2.15;
@@ -205,7 +207,7 @@ function footprintPoints(s){
   if(s.type==='tower'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
   if(['tower','gate'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
-  if(['wall','palisade','built'].includes(s.type))return linePoly(s);
+  if(['wall','palisade','built','moat','bridge'].includes(s.type))return linePoly(s);
   if(s.type==='house'){
     const parts=houseFootprintParts(s),pts=parts.flatMap(p=>p.points);
     if(parts.length===1)return pts;

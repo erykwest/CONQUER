@@ -126,7 +126,18 @@ function drawGatePortals(){
 function gateWindowRows(s){const l=structureLevel(s),rows=[1.72];if(l>=2)rows.push(2.92);if(l>=3)rows.push(4.12);return rows.filter(z=>z<structureHeight(s)-.28)}
 function drawGateWindows(s,lit=false,nf=1){
   const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
-  for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{for(const edge of gateFacadeEdges(s)){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit')}})
+  for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{
+    for(const edge of gateFacadeEdges(s)){
+      const paint=()=>isInteriorFacadeEdge(s,edge)
+        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)
+        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit');
+      // The nighttime glow pass runs after the drawbridge. Mask only its
+      // exterior-facing facade, preserving windows on the unobstructed sides.
+      if(edge.role==='front'&&window.ConquerCrossings?.withDrawbridgeWindowOcclusion)
+        window.ConquerCrossings.withDrawbridgeWindowOcclusion(s,paint);
+      else paint();
+    }
+  });
 }
 function visibleFacadeEdges(s){
   const rings=s.type==='house'?houseFootprintParts(s).filter(p=>p.kind!=='turret').map(p=>p.points):[footprintPoints(s)],edges=[];
@@ -792,6 +803,7 @@ function drawGroundStaticScene(){
     // only this cheap layer instead of terrain + every building.
     drawPuddleLayer();
     drawUrbanLots();
+    window.ConquerCrossings?.drawGround();
   });
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});
@@ -812,7 +824,7 @@ function drawBaseStaticScene(){
   const entry=prepareSceneCache('base');
   withRenderContext(entry.ctx,()=>{
     const completedOthers=State.structures
-      .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
+      .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
     drawStaticHouseFacadeDetails();
@@ -1049,7 +1061,7 @@ function draw(){
     .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .forEach(drawAutoStructure);
   const dynamicSites=State.structures
-    .filter(s=>!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
+    .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
 
@@ -1070,13 +1082,18 @@ function draw(){
   window.ConquerSiege?.drawOverlay();
   drawCastleFireFixtures();
 
-  // Small facade/details stay dynamic for night lighting and selection semantics.
+  // The drawbridge is an exterior shield when raised. Paint portals and
+  // windows FIRST, then the moving drawbridge so it physically covers them
+  // on the outward Gate facade (stone and timber alike).
   drawFacadeWindows(false,1,false);
   drawGatePortals();
+  window.ConquerCrossings?.drawDynamic();
   drawChimneysAndSmoke();
 
+  if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.previewSegments?.length)for(const segment of State.draft.previewSegments)drawStructure(segment,true);
-  else if(State.draft?.preview)drawStructure(State.draft.preview,true);
+  else if(State.draft?.preview&&!['moat','bridge'].includes(State.draft.preview.type))drawStructure(State.draft.preview,true);
+  window.ConquerCrossings?.drawMoatMagnets();
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();

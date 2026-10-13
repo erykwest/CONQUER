@@ -9,6 +9,8 @@
     work:'M4 20 17 7m-4-2 6 6M4 5l5 5M3 21l4-4',
     castle:'M3 21V8h4V4h3v4h4V4h3v4h4v13M3 13h18M9 21v-6h6v6',
     route:'M4 21c11 0 4-18 16-18M4 16c7 0 5-10 16-10M9 20l-1-2m9-9-1-2',
+    moat:'M3 5c3 7 4 7 8 6s5-4 7 7M2 8c4 7 6 8 10 6s5-4 10 6',
+    bridge:'M2 18h20M4 18V9l8-5 8 5v9M7 18v-7m10 7v-7M4 9h16',
     trash:'M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6',
     undo:'M9 14l-5-5 5-5M4 9h10a6 6 0 010 12',
     square:'M5 20V5h14v15M5 12h14M11 5v-3m2 3v-3',
@@ -49,7 +51,11 @@
       ['[data-gate]','Porta in pietra','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
-      ['[data-main-road]','Strada principale','route']]}
+      ['[data-main-road]','Strada principale','route'],
+      ['[data-crossing="dry"]','Fossato asciutto','moat'],
+      ['[data-crossing="water"]','Fossato allagato · quota 0','moat'],
+      ['[data-crossing="wood"]','Ponte di legno','bridge'],
+      ['[data-crossing="stone"]','Ponte di pietra','bridge']]}
   ];
   const originalButtons=[...root.querySelectorAll('button')];
   const controls=[
@@ -58,7 +64,8 @@
     {name:'Altezza torre',icon:'level',selectors:['[data-tower-level]']},
     {name:'Spessore muro / palizzata',icon:'depth',selectors:['[data-wall-tier]']},
     {name:'Altezza muro',icon:'level',selectors:['[data-wall-level]']},
-    {name:'Altezza porta',icon:'level',selectors:['[data-gate-level]']}
+    {name:'Altezza porta',icon:'level',selectors:['[data-gate-level]']},
+    {name:'Larghezza fossati e ponti',icon:'depth',category:'infrastructure',selectors:['[data-crossing-width]']}
   ];
   // Move the original DOM nodes: old event bindings continue to operate unchanged.
   root.replaceChildren();
@@ -102,7 +109,10 @@
       const b=originalButtons.find(x=>x.matches(selector));
       if(!b)continue;iconize(b,label,icon);catalog.append(b);
     }
-    options.hidden=currentCategory!=='defense';
+    options.hidden=!['defense','infrastructure'].includes(currentCategory);
+    options.querySelectorAll('.ux-option-line').forEach(line=>{
+      line.style.display=(line.dataset.category||'defense')===currentCategory?'flex':'none';
+    });
   }
   for(const group of groups){
     const b=command(group.label,group.icon,()=>toggleGroup(group.id));
@@ -114,7 +124,7 @@
   if(clear){iconize(clear,'Elimina tutto','trash');bottom.append(clear)}
   for(const control of controls){
     const line=document.createElement('div');line.className='ux-option-line';
-    line.dataset.tip=control.name;line.setAttribute('aria-label',control.name);
+    line.dataset.tip=control.name;line.dataset.category=control.category||'defense';line.setAttribute('aria-label',control.name);
     const glyph=document.createElement('span');glyph.className='ux-option-glyph';glyph.innerHTML=svg(control.icon);
     line.append(glyph);
     const values=document.createElement('div');values.className='ux-option-values';
@@ -132,7 +142,7 @@
   // Clicking an actual build tool chooses it without closing the palette; this
   // keeps level/tier presets accessible while the ghost is being previewed.
   for(const b of originalButtons)b.addEventListener('click',()=>{
-    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')){
+    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')){
       requestAnimationFrame(()=>{if(b.classList.contains('ux-icon-btn'))document.querySelectorAll('.ux-catalog .ux-icon-btn').forEach(x=>x.classList.toggle('active',x===b))});
     }
   });
