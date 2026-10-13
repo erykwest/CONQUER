@@ -123,6 +123,7 @@
   // Purely visual anonymized workforce. No chopping animation or forest depletion.
   function drawWorkers(){
     if(!window.ConquerEconomy||window.ConquerEconomy.weekday(State.clock.day)>=5)return;
+    if((window.ConquerCombat?.alarmMode?.()||'off')!=='off')return;
     const allocated=window.ConquerEconomy.staffing(),frac=State.clock.day-Math.floor(State.clock.day);
     if(frac<.11||frac>.66)return;
     for(const s of State.structures||[]){
