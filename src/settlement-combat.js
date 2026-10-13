@@ -376,7 +376,7 @@
       motion={
         mode,homeId:house.id,start:origin,target:result.target,path:result.path,
         structureId:result.structureId||null,startedAt:now,
-        duration:result.path.length<2?0:Math.max(450,length*550)
+        duration:result.path.length<2?0:Math.max(450,length*550*(window.ConquerCrossings?.routeMultiplier(result.path)||1))
       };
       residentMotion.set(id,motion);
     }
@@ -788,7 +788,7 @@
         u.path=route?.map(p=>({x:p.x,y:p.y}))||null;u.pathIndex=1;
         if(!u.path){u.target=null;continue}
       }
-      let budget=dt*(u.kind==='knight'?1.5:.8);
+      let budget=dt*(u.kind==='knight'?1.5:.8)*(window.ConquerCrossings?.movementMultiplier(u)||1);
       while(budget>0&&u.target){
         const next=u.path[u.pathIndex];
         if(!next){u.target=null;u.path=null;break}
