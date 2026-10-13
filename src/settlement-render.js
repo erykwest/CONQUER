@@ -129,9 +129,20 @@ function drawGateWindows(s,lit=false,nf=1){
   for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{for(const edge of gateFacadeEdges(s)){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit')}})
 }
 function visibleFacadeEdges(s){
-  const rings=s.type==='house'?houseFootprintParts(s).filter(p=>p.kind!=='turret').map(p=>p.points):[footprintPoints(s)],edges=[];
-  for(const fp of rings){if(fp.length<4)continue;for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);edges.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2})}}
-  edges.sort((a,b)=>b.depth-a.depth);return edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
+  const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'):null;
+  const rings=parts?parts.map(p=>p.points):[footprintPoints(s)],edges=[];
+  for(const fp of rings){
+    if(fp.length<4)continue;
+    const faces=[];
+    for(let i=0;i<fp.length;i++){
+      const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);
+      faces.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2});
+    }
+    faces.sort((a,b)=>b.depth-a.depth);
+    edges.push(...(parts?.length>=2&&s.auto&&houseLevel(s)>=3?faces.slice(0,2):faces));
+  }
+  edges.sort((a,b)=>b.depth-a.depth);
+  return parts?.length>=2&&s.auto&&houseLevel(s)>=3?edges:edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
 }
 function cutawayOpenEdgeIndexes(s){
   if(!structureCutaway(s))return null;
@@ -407,7 +418,7 @@ function drawBuiltWindows(s,lit=false,nf=1){
   withBuiltRoofOcclusionClip(s,()=>{if(l>=2)drawBuiltWindowRow(s,inside,upperZ,.42,lit,nf,'gothicL3',.92,.78);drawBuiltWindowRow(s,outside,lowerZ,.72,false,nf,'arrowSlit',.23,.58);if(l>=2)drawBuiltWindowRow(s,outside,upperZ,.72,false,nf,'arrowSlit',.23,.58)})
 }
 function drawHouseFacadeWindows(s,lit=false,nf=1){
-  const rows=houseLevel(s)>=2?[.52,1.34]:[.48];
+  const rows=houseLevel(s)>=4&&s.auto?[.52,1.32,2.07]:houseLevel(s)>=2?[.52,1.34]:[.48];
   for(const edge of visibleFacadeEdges(s))for(const z of rows)drawWindowOnEdge(edge,z,lit,nf,0);
 }
 function drawStaticHouseFacadeDetails(){
