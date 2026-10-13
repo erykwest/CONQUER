@@ -3424,7 +3424,7 @@ function drawFlatRect(s,fill,stroke){
 function fieldGrid(field){return fieldLayout(field)}
 function drawField(field){drawFieldGround(field)}
 function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
-  const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=houseLocalToWorld(s,part.cx,part.cy);
+  const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=part.center||houseLocalToWorld(s,part.cx,part.cy);
   const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
   const local=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
   const c0=local(-rw/2,-rh/2),c1=local(rw/2,-rh/2),c2=local(rw/2,rh/2),c3=local(-rw/2,rh/2);
@@ -3479,7 +3479,7 @@ function drawHouseTurret(s,turret,selected=false){
 function drawHouse(s){
   const level=houseLevel(s),wallH=houseBodyHeight(s),ridgeH=houseRidgeHeight(s),selected=State.selectedId===s.id;
   const stroke=selected?'#f4b76f':'#aaa199';
-  const parts=houseFootprintParts(s).map(part=>{
+  const parts=urbanHouseDisplayParts(s).map(part=>{
     const center=part.center||houseLocalToWorld(s,part.cx,part.cy);
     return{...part,depth:viewDepthPoint(center)};
   }).sort((a,b)=>a.depth-b.depth);
@@ -3522,6 +3522,7 @@ function inferHouseDoorSide(house){
   return (peasantHash(house.id)&1)?1:-1;
 }
 function houseDoorInfo(house){
+  const infillDoor=urbanDenseHouseDoorInfo(house);if(infillDoor)return infillDoor;
   if(!Number.isFinite(Number(house.doorSide)))house.doorSide=inferHouseDoorSide(house);
   const side=Number(house.doorSide)>=0?1:-1,ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0);
   const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=(Number(house.h)||1)/2;
