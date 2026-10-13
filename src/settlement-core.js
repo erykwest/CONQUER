@@ -343,7 +343,7 @@ function houseLocalToWorld(s,x,y){
 }
 function houseTurretInfo(s){
   if(houseLevel(s)<4)return null;
-  const {w,h}=houseFootprintDimensions(s),hash=peasantHash((s.id||'house')+'-turret-pos');
+  const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s),hash=peasantHash((s.id||'house')+'-turret-pos');
   const sx=(hash&2)?1:-1,sy=s.urbanCompact?1:(hash&4)?1:-1,type=houseTurretType(s);
   // Compact L4 keeps its turret, but positions it behind the frontage
   // instead of projecting into a neighbouring townhouse.
