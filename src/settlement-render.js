@@ -779,24 +779,33 @@ function drawLandscapeStaticScene(){
   window.__conquerAnalytics?.measure('CACHE_LANDSCAPE',performance.now()-analyticsT0);
 }
 function drawGroundStaticScene(){
-  const analyticsT0=performance.now();
+  const analyticsT0=performance.now(),parts={network:0,puddles:0,urban:0};
   const entry=prepareSceneCache('ground');
   withRenderContext(entry.ctx,()=>{
     // Ground network changes frequently during growth/completion but must never
     // force terrain/environment rasterization.
+    let partT0=performance.now();
     State.structures
       .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&!underConstruction(s))
       .forEach(drawAutoStructure);
+    parts.network=performance.now()-partT0;
 
     // Weather-ground detail is isolated here. Wet/dry transitions invalidate
     // only this cheap layer instead of terrain + every building.
-    drawPuddleLayer();
-    drawUrbanLots();
+    partT0=performance.now();drawPuddleLayer();parts.puddles=performance.now()-partT0;
+    partT0=performance.now();drawUrbanLots();parts.urban=performance.now()-partT0;
   });
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});
   perf.cacheGroundRebuilds=(perf.cacheGroundRebuilds||0)+1;
-  window.__conquerAnalytics?.measure('CACHE_GROUND',performance.now()-analyticsT0);
+  perf.lastGroundParts={
+    networkMs:+parts.network.toFixed(2),puddlesMs:+parts.puddles.toFixed(2),urbanMs:+parts.urban.toFixed(2)
+  };
+  const totalMs=performance.now()-analyticsT0;
+  if(totalMs>=18)window.__conquerAnalytics?.event('CACHE_GROUND_BREAKDOWN',{
+    ms:+totalMs.toFixed(2),...perf.lastGroundParts,structures:State.structures.length
+  },totalMs>=36?'error':'warn',500);
+  window.__conquerAnalytics?.measure('CACHE_GROUND',totalMs);
 }
 function drawShadowStaticScene(){
   const analyticsT0=performance.now();
