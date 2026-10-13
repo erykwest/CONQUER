@@ -1358,6 +1358,8 @@ function addManualMainRoad(a,b){
     routeId:'manual-main:'+id,routeSeq:0,
     a:{...a},b:{...b},length:L,width:TYPES.road.width,appeal:1
   };
+  const verdict=window.ConquerPlacement?.check(road);
+  if(verdict&&!verdict.ok){status('Road blocked: '+verdict.reason);return false}
   State.structures.push(road);
   invalidateNavigation(false);
   markDirty(false,['ground'],true);
