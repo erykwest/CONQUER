@@ -126,7 +126,18 @@ function drawGatePortals(){
 function gateWindowRows(s){const l=structureLevel(s),rows=[1.72];if(l>=2)rows.push(2.92);if(l>=3)rows.push(4.12);return rows.filter(z=>z<structureHeight(s)-.28)}
 function drawGateWindows(s,lit=false,nf=1){
   const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
-  for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{for(const edge of gateFacadeEdges(s)){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf);else drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit')}})
+  for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{
+    for(const edge of gateFacadeEdges(s)){
+      const paint=()=>isInteriorFacadeEdge(s,edge)
+        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)
+        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit');
+      // The nighttime glow pass runs after the drawbridge. Mask only its
+      // exterior-facing facade, preserving windows on the unobstructed sides.
+      if(edge.role==='front'&&window.ConquerCrossings?.withDrawbridgeWindowOcclusion)
+        window.ConquerCrossings.withDrawbridgeWindowOcclusion(s,paint);
+      else paint();
+    }
+  });
 }
 function visibleFacadeEdges(s){
   const rings=s.type==='house'?houseFootprintParts(s).filter(p=>p.kind!=='turret').map(p=>p.points):[footprintPoints(s)],edges=[];
