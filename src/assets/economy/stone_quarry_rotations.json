@@ -1,11 +1,15 @@
 {
   "asset": "stone_quarry",
-  "source": "stone_quarry.svg",
+  "engine": "3d-world-projected-to-svg",
   "frame_count": 24,
   "angle_step_degrees": 15,
+  "camera_pitch_degrees": 35.26439,
+  "azimuth_rotation_degrees": 360,
+  "projection": "orthographic isometric; view remains upright; actual 3D model transforms and occlusion",
+  "world_anchor": "scene center",
   "viewBox": "0 0 1024 1024",
   "transparent_background": true,
-  "method": "2D SVG planar rotation of the initial isometric illustration (not genuine camera-azimuth reprojection)",
+  "generator": "tools/generate-stone-quarry-isometric.py",
   "sprites": [
     {
       "degrees": 0,
