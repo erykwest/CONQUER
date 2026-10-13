@@ -941,7 +941,7 @@ function pointInScreenPolygon(p,poly){
 }
 function screenHitStructureBody(s,p){
   if(s.type==='house'||isCivic(s)){
-    const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
+    const parts=s.type==='house'?urbanHouseDisplayParts(s):civicParts(s);
     const h=structureHeight(s);
     for(const part of parts){
       const ph=part.role==='plaza'?.78:part.role==='tower'?h:Math.min(h,s.type==='church'?2.52:h);
@@ -3053,6 +3053,20 @@ function chimneySpecs(s){
   const specs=[];
 
   if(s.type==='house'){
+    const dense=urbanDenseParts(s);
+    if(dense.length){
+      // Each actual L/T house gets its own chimney, not the empty
+      // cadastral center that belonged to the old detached cottage.
+      const main=new Map();
+      for(const part of dense)if(part.kind==='body'&&!main.has(part.buildingKey))
+        main.set(part.buildingKey,part);
+      let index=0;
+      for(const part of main.values()){
+        specs.push({center:part.center,angle:part.roofAngle,
+          z0:houseRidgeHeight(s)-.05,z1:houseRidgeHeight(s)+.43,index:index++});
+      }
+      return specs;
+    }
     const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),ridgeH=houseRidgeHeight(s);
     const ridgeLength=Math.max(.5,Number(s.w)||1.5);
     const count=Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
@@ -3424,7 +3438,7 @@ function drawFlatRect(s,fill,stroke){
 function fieldGrid(field){return fieldLayout(field)}
 function drawField(field){drawFieldGround(field)}
 function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
-  const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=houseLocalToWorld(s,part.cx,part.cy);
+  const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=part.center||houseLocalToWorld(s,part.cx,part.cy);
   const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
   const local=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
   const c0=local(-rw/2,-rh/2),c1=local(rw/2,-rh/2),c2=local(rw/2,rh/2),c3=local(-rw/2,rh/2);
@@ -3449,7 +3463,7 @@ function drawHouseTurretRoof(s,turret,selected=false){
   if(turret.type==='round'){
     ring=circleWorldPoints(center.x,center.y,turret.r*1.20,20);
   }else{
-    ring=rectWorldPoints(center.x,center.y,turret.size*1.18,turret.size*1.18,s.angle||0);
+    ring=rectWorldPoints(center.x,center.y,turret.size*1.18,turret.size*1.18,Number.isFinite(turret.roofAngle)?turret.roofAngle:(s.angle||0));
   }
   const faces=[];
   for(let i=0;i<ring.length;i++){
@@ -3479,7 +3493,7 @@ function drawHouseTurret(s,turret,selected=false){
 function drawHouse(s){
   const level=houseLevel(s),wallH=houseBodyHeight(s),ridgeH=houseRidgeHeight(s),selected=State.selectedId===s.id;
   const stroke=selected?'#f4b76f':'#aaa199';
-  const parts=houseFootprintParts(s).map(part=>{
+  const parts=urbanHouseDisplayParts(s).map(part=>{
     const center=part.center||houseLocalToWorld(s,part.cx,part.cy);
     return{...part,depth:viewDepthPoint(center)};
   }).sort((a,b)=>a.depth-b.depth);
@@ -3522,11 +3536,13 @@ function inferHouseDoorSide(house){
   return (peasantHash(house.id)&1)?1:-1;
 }
 function houseDoorInfo(house){
+  const infillDoor=urbanDenseHouseDoorInfo(house);if(infillDoor)return infillDoor;
   if(!Number.isFinite(Number(house.doorSide)))house.doorSide=inferHouseDoorSide(house);
   const side=Number(house.doorSide)>=0?1:-1,ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0);
-  const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=(Number(house.h)||1)/2;
+  const size=houseFootprintDimensions(house);
+  const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=size.h/2;
   const lateralSign=(peasantHash(house.id)&2)?1:-1;
-  const lateralOffset=(Number(house.w)||1.5)*.24*lateralSign;
+  const lateralOffset=size.w*.24*lateralSign;
   // Extensions and L4 turrets may cover the original base-wall entrance.
   // Put the door on the outermost exposed footprint along its outward ray.
   let reach=half;
