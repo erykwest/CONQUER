@@ -765,6 +765,43 @@ function drawStructure(s,preview=false){
     else drawConstructionProgress(s);
   }
 }
+// Preserve the normal translucent preview; tint its actual footprint red
+// only when the same nonmutating preflight used by the commit would reject it.
+function builderGhostVerdict(ghost){
+  if(!ghost||!window.ConquerPlacement)return{ok:true};
+  if(ghost._ghostCheck)return ghost._ghostCheck;
+  const draft=State.draft;
+  const probe=draft?.parentTowerId&&ghost.type==='tower'
+    ?{...ghost,parentTowerId:draft.parentTowerId,wallSnapId:draft.wallSnapId}
+    :draft?.wallSnapId&&ghost.type==='tower'
+      ?{...ghost,wallSnapId:draft.wallSnapId}:ghost;
+  const result=window.ConquerPlacement.check(probe);
+  // Ghost instances are replaced whenever the pointer changes position,
+  // so validations never run again on unchanged frames.
+  ghost._ghostCheck=result;
+  return result;
+}
+function drawInvalidPlacementGhost(ghost){
+  if(!ghost)return;
+  ctx.save();
+  ctx.globalAlpha=1;
+  const fill='rgba(232,40,47,.38)',stroke='rgba(255,76,83,.98)';
+  ctx.setLineDash([5,3]);
+  ctx.lineWidth=2.5;
+  if(ghost.a&&ghost.b&&ghost.type==='road'){
+    const a=w2s(ghost.a),b=w2s(ghost.b);
+    ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(5,(ghost.width||.6)*U*State.view.scale);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }else{
+    const rings=window.ConquerPlacement?.contact(ghost)||[];
+    const z=Number.isFinite(ghost.groundZ)?ghost.groundZ:terrainElevation(structureCenter(ghost));
+    for(const poly of rings){
+      if(poly?.length<3)continue;
+      pathPolygon(projectPath(poly,z+.03),fill,stroke,2.5);
+    }
+  }
+  ctx.restore();
+}
 function drawLandscapeStaticScene(){
   const analyticsT0=performance.now();
   const entry=prepareSceneCache('landscape');
@@ -1079,8 +1116,22 @@ function draw(){
   drawGatePortals();
   drawChimneysAndSmoke();
 
-  if(State.draft?.previewSegments?.length)for(const segment of State.draft.previewSegments)drawStructure(segment,true);
-  else if(State.draft?.preview)drawStructure(State.draft.preview,true);
+  if(State.draft?.previewSegments?.length){
+    const segments=State.draft.previewSegments;
+    const totalCost=aggregateConstructionCost(segments);
+    const routeUnderfunded=!canAfford(totalCost);
+    for(const segment of segments){
+      drawStructure(segment,true);
+      const verdict=builderGhostVerdict(segment);
+      if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
+    }
+  }else if(State.draft?.preview){
+    drawStructure(State.draft.preview,true);
+    const verdict=builderGhostVerdict(State.draft.preview);
+    if(!verdict.ok)drawInvalidPlacementGhost(State.draft.preview);
+  }else if(State.draft?.invalidPreview){
+    drawInvalidPlacementGhost(State.draft.invalidPreview);
+  }
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
