@@ -8,8 +8,8 @@
   const KIND = Object.freeze({
     field:{good:'food',classId:1,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
-    quarry:{good:'stone',classId:2,workers:2,rate:1.2,build:65},
-    mine:{good:'metal',classId:2,workers:2,rate:.7,build:95},
+    quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
+    mine:{good:'stone',classId:2,workers:2,rate:2,build:95},
     workshop:{good:'equipment',classId:3,workers:1,rate:.5,inputs:{metal:.6,wood:.3},build:130},
     vineyard:{good:'luxury',classId:1,workers:2,build:90}
   });
@@ -340,6 +340,6 @@
     });
     render(true);
   }
-  window.ConquerEconomy=Object.freeze({GOODS,KIND,weekday,state,reset,sync,tick,render,bind,
+  window.ConquerEconomy=Object.freeze({GOODS,KIND,weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
     setShare,setTarget,setExternalDemand,transfer,snapshot,population});
 })();
