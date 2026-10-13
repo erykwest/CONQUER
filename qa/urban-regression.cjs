@@ -84,6 +84,18 @@ test('one occupied quadrilateral per Voronoi lot, no overlap and house footprint
  assert.equal(run("urbanLots().every(l=>State.structures.filter(h=>urbanContains(l.points,h)).length===1)"),true);
  assert.equal(run("urbanHouseFitsLots({id:'duplicate',type:'house',x:95,y:95,w:1.5,h:1})"),false);
 });
+test('manual L2 to L3 upgrade ignores occupants but never bypasses lot geometry',()=>{
+ run("State.environment=[];State.structures=[{id:'upgradable',type:'house',auto:true,x:100,y:100,w:1.5,h:1,angle:0,houseLevel:2}];State.combat.strokes=[{x:100,y:100,r:40,mode:'yellow'}];invalidateNavigation();invalidateUrbanGeometry()");
+ assert.equal(run("urbanHouseFitsLots({...State.structures[0],houseLevel:3},{ignoreDynamicUnits:true})"),true);
+ // A resident physically inside the plot is valid for an existing household,
+ // but remains disqualifying for a new construction site.
+ run("globalThis.originalLotCollision=urbanLotUnitConflict;urbanLotUnitConflict=()=>true");
+ try{
+   assert.equal(run("urbanHouseFitsLots({...State.structures[0],houseLevel:3})"),false);
+   assert.equal(run("urbanHouseFitsLots({...State.structures[0],houseLevel:3},{ignoreDynamicUnits:true})"),true);
+ }finally{run("urbanLotUnitConflict=originalLotCollision")}
+ assert.equal(run("urbanHouseFitsLots({...State.structures[0],houseLevel:3,x:150},{ignoreDynamicUnits:true})"),false);
+});
 test('shared parcel fences are merged once, including partial collinear overlaps',()=>{
  run("State.structures=[{id:'a',type:'house',x:98,y:100,w:1.5,h:1},{id:'b',type:'house',x:102,y:100,w:1.5,h:1}];invalidateNavigation();globalThis.fenceFixture=[{houseId:'a',points:[{x:96,y:98},{x:100,y:98},{x:100,y:102},{x:96,y:102}]},{houseId:'b',points:[{x:100,y:98},{x:104,y:98},{x:104,y:102},{x:100,y:102}]}]");
  assert.equal(run('urbanFenceSegments(fenceFixture).filter(e=>Math.abs(e.a.x-100)<.0001&&Math.abs(e.b.x-100)<.0001).length'),1);
