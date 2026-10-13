@@ -222,7 +222,7 @@ test('squad members and clearance radii are included in occupied parcel checks',
 });
 test('active civilians block spawning without changing their routines or movement state',()=>{
  zoningFixture();
- run("State.combat.units=[];State.combat.enemy=[];State.structures.push({id:'resident-home',type:'house',auto:true,x:104,y:104,w:1.5,h:1,angle:0});State.clock.day=10;invalidateNavigation();globalThis.positions=urbanSpawnOccupants()");
+ run("State.combat.units=[];State.combat.enemy=[];State.structures.push({id:'resident-home',type:'house',auto:true,x:104,y:104,w:1.5,h:1,angle:0});State.clock.day=10.35;invalidateNavigation();globalThis.positions=urbanSpawnOccupants()");
  assert.ok(run('positions.length>0'));
  assert.equal(run("urbanLotUnitConflict({points:[{x:90,y:90},{x:113,y:90},{x:113,y:113},{x:90,y:113}]})"),true);
 });
