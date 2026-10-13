@@ -97,11 +97,31 @@ function urbanBuildingPolygons(s){
   if(isCivic(s))return civicParts(s).map(p=>p.points);
   const points=footprintPoints(s);return points?.length?[points]:[];
 }
-function urbanParcelAllowed(points,houseId){
-  if(!urbanYellowContains(points))return false;
-  for(const forest of State.environment){
-    if(forest.type==='forest'&&urbanPolygonsOverlap(points,forest.points))return false;
+function urbanParcelTerrainAllowed(points){
+  if(!points?.length)return false;
+  // Reject the *whole* parcel, not just the house or field center.
+  // Gentle slopes remain buildable; only cliffs/steep relief are excluded.
+  for(const feature of State.environment){
+    if(['forest','mountain','pond','sea'].includes(feature.type)&&
+      urbanPolygonsOverlap(points,feature.points))return false;
+    if(['river','stream'].includes(feature.type)){
+      const line=feature.points||[],clearance=(Number(feature.width)||0)/2+.20;
+      for(let j=0;j<line.length-1;j++){
+        const a=line[j],b=line[j+1];
+        if(urbanContains(points,a)||urbanContains(points,b))return false;
+        for(let i=0;i<points.length;i++)
+          if(segmentDistance(a,b,points[i],points[(i+1)%points.length])<=clearance)return false;
+      }
+    }
   }
+  const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  for(let x=x0;x<=x1+.001;x+=.3)for(let y=y0;y<=y1+.001;y+=.3)
+    if(urbanContains(points,{x,y})&&terrainSlopeKind({x,y})==='steep')return false;
+  return points.every(p=>terrainSlopeKind(p)!=='steep');
+}
+function urbanParcelAllowed(points,houseId){
+  if(!urbanYellowContains(points)||!urbanParcelTerrainAllowed(points))return false;
   for(const s of State.structures){
     if(s.id===houseId)continue;
     // A house parcel must not swallow an existing field. Field footprints
