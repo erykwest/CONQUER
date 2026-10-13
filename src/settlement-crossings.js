@@ -508,10 +508,18 @@
     return true;
   }
   function drawGround(){
-    const moats=State.structures.filter(s=>s.type==='moat'&&!underConstruction(s));
-    const pending=State.structures.filter(s=>s.type==='moat'&&underConstruction(s));
+    // Pending + completed segments share ONE chain silhouette. Drawing pending
+    // rectangles separately would bring back the exact overlaps at junctions.
+    const moats=State.structures.filter(s=>s.type==='moat');
     drawUnifiedMoats(moats);
-    for(const s of pending){ctx.save();ctx.globalAlpha=.55;drawMoat(s);ctx.restore()}
+    for(const s of moats){
+      if(!underConstruction(s))continue;
+      const z=Number(s.groundZ)||0,a=w2s(s.a,z+.025),b=w2s(s.b,z+.025);
+      // Lightweight construction hint on the centerline; no extra rim/cap.
+      ctx.save();ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+      ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(237,203,141,.56)';
+      ctx.lineWidth=1.6;ctx.stroke();ctx.restore();
+    }
     // Bridges are always painted last, regardless of build order.
     for(const s of State.structures){
       if(s.type!=='bridge')continue;
