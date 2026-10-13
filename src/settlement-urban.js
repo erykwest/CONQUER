@@ -310,7 +310,13 @@ function urbanDenseParts(house){
         const partKey='street:'+frontage.edge+':'+i;
         // Different X/Y dimensions on every individual townhouse, seeded
         // by parcel + street edge + position (unchanged across saves/reloads).
-        const faceWidth=baseWidth*houseDimensionScale(house,'x',partKey);
+        const requestedWidth=baseWidth*houseDimensionScale(house,'x',partKey);
+        // A wide house at either end of the row must not cross the plot
+        // corner. Trim only the oversized frontage, never below -20%.
+        const edgeLength=dist(frontage.a,frontage.b);
+        const maxInsideWidth=2*(Math.min(along,edgeLength-along)-.075);
+        const faceWidth=Math.min(requestedWidth,maxInsideWidth);
+        if(faceWidth<baseWidth*.8-1e-7)continue;
         const faceDepth=depth*houseDimensionScale(house,'y',partKey);
         const center={
           x:frontage.a.x+frontage.ux*along+inward.x*(faceDepth/2+.14),
