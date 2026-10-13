@@ -427,12 +427,6 @@ canvas.addEventListener('pointerdown',e=>{
   }
 
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
-  if(State.tool.kind==='industry'){
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-    const s={id:uid(),...window.ConquerIndustries.make(State.tool.industry,q)};
-    if(addStructure(s))status(structureLabel(s)+' · L'+window.ConquerIndustries.TYPES[s.type].tier+' · 2 workers');
-    return;
-  }
   if(State.tool.kind==='tower'){
     const snap=towerPlacementSnap(p),q=snap.point;
     if(State.tool.shape==='round'){
@@ -462,7 +456,10 @@ canvas.addEventListener('pointerdown',e=>{
     State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
     status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
-  if(State.tool.kind==='civic'){
+  if(State.tool.kind==='civic'||State.tool.kind==='industry'){
+    // Two-click oriented placement shared by all point buildings:
+    // first click fixes the centre, pointer movement rotates the ghost,
+    // second click commits the final angle.
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
     State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
     status(structureLabel(State.draft.preview)+' position fixed — move cursor to rotate, click to confirm');draw();return
@@ -695,7 +692,8 @@ for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
 };
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,spec=window.ConquerIndustries.TYPES[type];
-   setTool({kind:'industry',industry:type,placementSpec:{type,shape:'industry',w:2,h:2},
+   setTool({kind:'industry',industry:type,
+     placementSpec:window.ConquerIndustries.make(type,{x:0,y:0}),
      label:spec.name+' · 2×2U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(spec.cost),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
