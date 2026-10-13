@@ -1,0 +1,107 @@
+{
+  "asset": "stone_quarry",
+  "source": "stone_quarry.svg",
+  "frame_count": 24,
+  "angle_step_degrees": 15,
+  "viewBox": "0 0 1024 1024",
+  "transparent_background": true,
+  "method": "2D SVG planar rotation of the initial isometric illustration (not genuine camera-azimuth reprojection)",
+  "sprites": [
+    {
+      "degrees": 0,
+      "path": "./stone_quarry_rotations/stone_quarry_000.svg"
+    },
+    {
+      "degrees": 15,
+      "path": "./stone_quarry_rotations/stone_quarry_015.svg"
+    },
+    {
+      "degrees": 30,
+      "path": "./stone_quarry_rotations/stone_quarry_030.svg"
+    },
+    {
+      "degrees": 45,
+      "path": "./stone_quarry_rotations/stone_quarry_045.svg"
+    },
+    {
+      "degrees": 60,
+      "path": "./stone_quarry_rotations/stone_quarry_060.svg"
+    },
+    {
+      "degrees": 75,
+      "path": "./stone_quarry_rotations/stone_quarry_075.svg"
+    },
+    {
+      "degrees": 90,
+      "path": "./stone_quarry_rotations/stone_quarry_090.svg"
+    },
+    {
+      "degrees": 105,
+      "path": "./stone_quarry_rotations/stone_quarry_105.svg"
+    },
+    {
+      "degrees": 120,
+      "path": "./stone_quarry_rotations/stone_quarry_120.svg"
+    },
+    {
+      "degrees": 135,
+      "path": "./stone_quarry_rotations/stone_quarry_135.svg"
+    },
+    {
+      "degrees": 150,
+      "path": "./stone_quarry_rotations/stone_quarry_150.svg"
+    },
+    {
+      "degrees": 165,
+      "path": "./stone_quarry_rotations/stone_quarry_165.svg"
+    },
+    {
+      "degrees": 180,
+      "path": "./stone_quarry_rotations/stone_quarry_180.svg"
+    },
+    {
+      "degrees": 195,
+      "path": "./stone_quarry_rotations/stone_quarry_195.svg"
+    },
+    {
+      "degrees": 210,
+      "path": "./stone_quarry_rotations/stone_quarry_210.svg"
+    },
+    {
+      "degrees": 225,
+      "path": "./stone_quarry_rotations/stone_quarry_225.svg"
+    },
+    {
+      "degrees": 240,
+      "path": "./stone_quarry_rotations/stone_quarry_240.svg"
+    },
+    {
+      "degrees": 255,
+      "path": "./stone_quarry_rotations/stone_quarry_255.svg"
+    },
+    {
+      "degrees": 270,
+      "path": "./stone_quarry_rotations/stone_quarry_270.svg"
+    },
+    {
+      "degrees": 285,
+      "path": "./stone_quarry_rotations/stone_quarry_285.svg"
+    },
+    {
+      "degrees": 300,
+      "path": "./stone_quarry_rotations/stone_quarry_300.svg"
+    },
+    {
+      "degrees": 315,
+      "path": "./stone_quarry_rotations/stone_quarry_315.svg"
+    },
+    {
+      "degrees": 330,
+      "path": "./stone_quarry_rotations/stone_quarry_330.svg"
+    },
+    {
+      "degrees": 345,
+      "path": "./stone_quarry_rotations/stone_quarry_345.svg"
+    }
+  ]
+}
