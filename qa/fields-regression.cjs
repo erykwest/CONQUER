@@ -70,7 +70,7 @@ test('October plough, March sow, autonomous spring growth, July harvest, next Oc
  run("c.lastDay=qaJuly-1;State.clock.day=qaJuly;tickFields(qaJuly)");
  assert.equal(run('c.phase'),'harvest');assert.equal(run('c.growth'),1);
  run("c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);globalThis.qaHarvestSunday=qaJuly+(6-qaJuly%7+7)%7;c.lastDay=qaHarvestSunday-1;State.clock.day=qaHarvestSunday;tickFields(qaHarvestSunday)");
- assert.equal(run('c.harvested'),undefined,'Sunday market/rest must not finish harvest');
+ assert.equal(run('c.harvested'),false,'Sunday market/rest must not finish harvest');
  // Tuesday includes Monday's shift; on Monday at midnight no work has passed.
  run("c.lastDay=qaHarvestSunday;State.clock.day=qaHarvestSunday+2;tickFields(qaHarvestSunday+2)");
  assert.equal(run('c.harvested'),true);assert.equal(run('c.cycles'),1);
