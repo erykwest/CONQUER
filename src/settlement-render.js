@@ -1060,6 +1060,7 @@ function draw(){
   // Population remains between settlement massing and completed castle massing,
   // preserving the existing occlusion behaviour.
   drawPeasants();
+  window.ConquerIndustries?.drawWorkers();
   markPhase('population');
   drawTrainingSoldiers();
   blitSceneCache('castleBody');
