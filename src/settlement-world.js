@@ -1533,7 +1533,7 @@ function spawnField(step){
     addCandidate({x:h.x+Math.cos(a)*d,y:h.y+Math.sin(a)*d},.75);
   }
   candidates.sort((a,b)=>b.score-a.score);
-  for(const c of candidates.slice(0,72)){
+  for(const c of candidates.slice(0,36)){
     const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
     f.points=fieldVoronoiQuad(f,rnd);if(!f.points)continue;
     f.fieldVersion=1;
