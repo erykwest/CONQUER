@@ -829,7 +829,6 @@ function drawLandscapeStaticScene(){
     drawTerrain();
     drawGrid();
     drawEnvironment();
-    drawBuildArea();
   });
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});
@@ -1103,6 +1102,9 @@ function draw(){
     blitSceneCache('base');
   }
 
+  // Dynamic placement overlay: switching tools must not invalidate or rebuild
+  // the static landscape cache, and the WebGPU path must show the same outline.
+  drawBuildArea();
   for(const field of completedSettlement('field'))drawFieldWork(field);
 
   // Construction sites remain dynamic at ground/building depth.
