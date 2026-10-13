@@ -930,7 +930,10 @@ function drawCastleUnionDetails(){
   }
 }
 function drawCastleSelection(){
-  const s=selectedStructure();if(!s||(!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s))||underConstruction(s))return;
+  // Asset load callbacks may draw before settlement-app installs its selection
+  // helper. Selection rendering only needs the shared State model.
+  const s=State.structures?.find(item=>item.id===State.selectedId);
+  if(!s||(!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s))||underConstruction(s))return;
   withStructureGroundPlane(s,()=>{
     const pts=projectPath(footprintPoints(s),structureHeight(s));if(pts.length<3)return;
     ctx.save();ctx.strokeStyle='#f4b76f';ctx.lineWidth=2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
