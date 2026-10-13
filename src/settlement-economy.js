@@ -95,7 +95,8 @@
   function activeCapacity(){
     const pop=population(),limits={L1:Math.floor(pop.L1/3),L2:Math.floor(pop.L2/3),L3:Math.floor(pop.L3/3),L4:pop.L4};
     const remaining={...limits},allocated={};
-    for(const s of activeStructures().sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
+    // Player-established industries claim workers before automatically generated fields.
+    for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
       const req=workerDemand(s),group=classKey(req.tier),count=Math.min(req.count,remaining[group]);
       remaining[group]-=count;allocated[s.id]=count;
     }
