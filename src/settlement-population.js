@@ -143,13 +143,13 @@ let fieldWorkAssignmentCache={key:null,map:new Map()};
 function fieldWorkAssignments(houses,fields){
   const key=houses.map(h=>[h.id,h.x,h.y,houseLevel(h)].join(':')).sort().join(',')+'|'+fields.map(f=>{
     const crop=fieldCrop(f),layout=fieldLayout(f);
-    return f.id+':'+layout.poly.map(p=>p.x+','+p.y).join(';')+':'+crop.phase+':'+layout.cells.map(c=>fieldSlotDone(f,c)?1:0).join('');
+    return f.id+':'+layout.poly.map(p=>p.x+','+p.y).join(';')+':'+crop.phase+':'+(crop.ploughed?'P':'')+(crop.harvested?'H':'')+':'+fieldSeasonPhase(calendarDateFromDay().month)+':'+layout.cells.map(c=>fieldSlotDone(f,c)?1:0).join('');
   }).sort().join('|');
   if(fieldWorkAssignmentCache.key===key)return fieldWorkAssignmentCache.map;
 
   const slots=[];
   for(const field of fields){
-    if(fieldCrop(field).phase==='grow')continue;
+    if(!fieldCropReady(field))continue;
     for(const cell of fieldGrid(field).cells)if(!fieldSlotDone(field,cell))slots.push({field,cell,used:false});
   }
   const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id));
