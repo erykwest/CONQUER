@@ -433,7 +433,7 @@ canvas.addEventListener('pointerdown',e=>{
       const crossing={id:uid(),type:['dry','water'].includes(State.tool.crossing)?'moat':'bridge',
         variant:State.tool.crossing,a,b,width:State.tool.width};
       if(window.ConquerCrossings?.add(crossing)){
-        State.draft=null;status('Crossing placed — choose next bank A');
+        State.draft=null;status('Crossing placed — choose next bank A');draw();
       }
     }
     return;
