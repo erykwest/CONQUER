@@ -58,12 +58,9 @@ function fieldAllowed(field){
     if(s.type==='field'&&urbanPolygonsOverlap(poly,fieldPoints(s)))return false;
     if(s.type==='road'&&roadTouchesPolygon(s,poly,.12))return false;
   }
-  const minX=Math.min(...poly.map(p=>p.x)),maxX=Math.max(...poly.map(p=>p.x));
-  const minY=Math.min(...poly.map(p=>p.y)),maxY=Math.max(...poly.map(p=>p.y));
-  for(let x=minX;x<=maxX+.01;x+=.4)for(let y=minY;y<=maxY+.01;y+=.4){
-    const p={x,y};if(urbanContains(poly,p)&&environmentBlocksPoint(p,'settlement'))return false;
-  }
-  return poly.every(p=>!environmentBlocksPoint(p,'settlement'));
+  // The shared polygon terrain validator rejects cliffs, forest and water;
+  // normal relief slopes are intentionally permitted.
+  return true;
 }
 function fieldLayout(field){
   const poly=fieldPoints(field);if(fieldLayoutCache.has(poly))return fieldLayoutCache.get(poly);
