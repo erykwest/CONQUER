@@ -321,8 +321,13 @@ function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
 // existing saves and reloads always give the same dimensions.
 function houseDimensionScale(house,axis,part='main'){
   const id=typeof house==='string'?house:(house?.id||'house');
-  const hash=peasantHash(id+'|dimension|'+part+'|'+axis)>>>0;
-  return .8+.4*(hash/4294967295);
+  // Avalanche FNV output: suffix-only X/Y keys would otherwise be highly
+  // correlated and make every building grow/shrink in both axes together.
+  let hash=peasantHash(id+'|dimension|'+part+'|'+axis)>>>0;
+  hash^=hash>>>16;hash=Math.imul(hash,0x7feb352d);
+  hash^=hash>>>15;hash=Math.imul(hash,0x846ca68b);
+  hash^=hash>>>16;
+  return .8+.4*((hash>>>0)/4294967295);
 }
 function houseFootprintDimensions(s){
   return{
