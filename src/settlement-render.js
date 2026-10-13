@@ -771,7 +771,6 @@ function drawLandscapeStaticScene(){
     drawTerrain();
     drawGrid();
     drawEnvironment();
-    drawBuildArea();
   });
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});
@@ -1053,6 +1052,7 @@ function draw(){
     blitSceneCache('base');
   }
 
+  drawBuildArea();
   for(const field of completedSettlement('field'))drawFieldWork(field);
 
   // Construction sites remain dynamic at ground/building depth.
