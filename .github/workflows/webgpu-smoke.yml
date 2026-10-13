@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - webgpu
+      - fix/urban2-roads-landscape-buildarea
   workflow_dispatch:
 
 jobs:
