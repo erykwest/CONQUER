@@ -582,6 +582,11 @@ canvas.addEventListener('pointermove',e=>{
     }
     draw();return
   }
+  if(State.tool.kind==='well'){
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    State.draft={mode:'hover',preview:{type:'well',x:q.x,y:q.y}};
+    draw();return;
+  }
   if(State.tool.kind==='tower'&&State.tool.shape==='round'){
     const snap=towerPlacementSnap(p);
     State.draft={
