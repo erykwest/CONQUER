@@ -361,34 +361,110 @@
     if(s.type==='moat')drawMoat(candidate);else drawBridge(candidate);
     ctx.restore();
   }
-  // Paint the entire moat network as unified terrain bands, not one
-  // rectangle and one circular end cap per segment. Polygon union removes
-  // overlapping interiors AND the anti-aliased seams at joined endpoints.
-  // Each width band is unioned independently: outer earth, sloped rim, bottom.
-  // No source geometry is modified, so snapping, fills and routing persist.
-  function moatUnionGeometry(segments,fraction,pc){
-    const polygons=segments.map(s=>[
-      corners(s,-fraction/2,fraction/2).map(p=>[p.x,p.y])
-    ]);
-    return polygons.length===1?[polygons[0]]:pc.union(...polygons);
+  // Convert a group of snapped moat sections to uninterrupted polylines.
+  // Nodes with degree 2 are internal corners; a degree 1 node is a free end;
+  // at branching nodes each outgoing chain is handled independently.
+  function moatChains(segments){
+    const nodes=new Map(),edges=[];
+    const key=p=>Math.round(p.x*10000)+':'+Math.round(p.y*10000);
+    function vertex(p){
+      const k=key(p);
+      if(!nodes.has(k))nodes.set(k,{point:{x:p.x,y:p.y},links:[]});
+      return k;
+    }
+    for(const s of segments){
+      if(!xy(s)||length(s)<1e-5)continue;
+      const a=vertex(s.a),b=vertex(s.b),index=edges.length;
+      if(a===b)continue;
+      edges.push({a,b,width:Number(s.width)||1.5,s});
+      nodes.get(a).links.push(index);
+      nodes.get(b).links.push(index);
+    }
+    const used=new Set(),chains=[];
+    function trace(origin,first){
+      let node=origin,edgeIndex=first;
+      const points=[{...nodes.get(origin).point}],widths=[],parts=[];
+      while(!used.has(edgeIndex)){
+        used.add(edgeIndex);
+        const edge=edges[edgeIndex],next=edge.a===node?edge.b:edge.a;
+        points.push({...nodes.get(next).point});
+        widths.push(edge.width);
+        parts.push(edge.s);
+        node=next;
+        if(node===origin||nodes.get(node).links.length!==2)break;
+        const following=nodes.get(node).links.find(i=>!used.has(i));
+        if(following==null)break;
+        edgeIndex=following;
+      }
+      if(widths.length)chains.push({points,widths,parts,closed:node===origin});
+    }
+    for(const [key,node] of nodes){
+      if(node.links.length===2)continue;
+      for(const i of node.links)if(!used.has(i))trace(key,i);
+    }
+    // Remaining edges form closed loops with no free endpoints.
+    for(let i=0;i<edges.length;i++)if(!used.has(i))trace(edges[i].a,i);
+    return chains;
   }
-  function paintMoatMulti(multi,z,fill,stroke=null){
-    if(!multi?.length)return;
+  function moatOffsetOutline(chain,fraction=1){
+    const closed=chain.closed,points=closed?chain.points.slice(0,-1):chain.points;
+    const count=points.length,widths=chain.widths;
+    if(count<2)return[];
+    const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y});
+    const unit=d=>{const n=Math.hypot(d.x,d.y)||1;return{x:d.x/n,y:d.y/n}};
+    const cross=(a,b)=>a.x*b.y-a.y*b.x;
+    const sidePoints=sign=>{
+      const result=[];
+      for(let i=0;i<count;i++){
+        const p=points[i];
+        if(!closed&&(i===0||i===count-1)){
+          const k=i===0?0:count-2;
+          const d=unit(sub(points[k+1],points[k]));
+          const h=widths[k]*fraction*.5*sign;
+          result.push({x:p.x-d.y*h,y:p.y+d.x*h});
+          continue;
+        }
+        const prev=(i-1+count)%count,next=(i+1)%count;
+        const d0=unit(sub(p,points[prev])),d1=unit(sub(points[next],p));
+        const h0=widths[(i-1+widths.length)%widths.length]*fraction*.5*sign;
+        const h1=widths[i%widths.length]*fraction*.5*sign;
+        const a={x:p.x-d0.y*h0,y:p.y+d0.x*h0};
+        const b={x:p.x-d1.y*h1,y:p.y+d1.x*h1};
+        const denom=cross(d0,d1);
+        const dot=d0.x*d1.x+d0.y*d1.y;
+        if(Math.abs(denom)<1e-6){
+          if(dot>0)result.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+          else result.push(a,b);
+          continue;
+        }
+        const delta=sub(b,a),t=cross(delta,d1)/denom;
+        const meet={x:a.x+d0.x*t,y:a.y+d0.y*t};
+        // Bevel acute U-turns rather than produce giant mitre spikes.
+        const miterLimit=Math.max(Math.abs(h0),Math.abs(h1))*3;
+        if(Math.hypot(meet.x-p.x,meet.y-p.y)<=miterLimit)
+          result.push(meet);
+        else result.push(a,b);
+      }
+      return result;
+    };
+    const left=sidePoints(1),right=sidePoints(-1);
+    return closed?[left,right]:[left.concat(right.reverse())];
+  }
+  function drawMoatOutline(rings,z,fill){
+    if(!rings?.length)return;
     ctx.save();ctx.beginPath();
-    for(const poly of multi)for(const ring of poly){
+    for(const ring of rings){
       if(ring.length<3)continue;
-      const first=w2s({x:ring[0][0],y:ring[0][1]},z);
-      ctx.moveTo(first.x,first.y);
+      const first=w2s(ring[0],z);ctx.moveTo(first.x,first.y);
       for(let i=1;i<ring.length;i++){
-        const p=w2s({x:ring[i][0],y:ring[i][1]},z);
+        const p=w2s(ring[i],z);
         ctx.lineTo(p.x,p.y);
       }
       ctx.closePath();
     }
-    ctx.fillStyle=fill;
-    ctx.fill('evenodd');
-    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=.8;ctx.stroke()}
-    ctx.restore();
+    // Edges are only the outer outline of the whole chain. There are no
+    // intermediate end caps, no strokes and no double-painted segment rims.
+    ctx.fillStyle=fill;ctx.fill('evenodd');ctx.restore();
   }
   function drawMoatFills(s){
     const z=Number(s.groundZ)||0,width=frame(s).width;
@@ -403,45 +479,40 @@
     }
   }
   function drawUnifiedMoats(moats){
-    const pc=window.__polygonClipping;
-    if(!pc||typeof pc.union!=='function')return false;
+    // Independent of polygon-clipping/CDN availability. A native union of
+    // contiguous centerline sections removes seams even in offline sessions.
     const groups=new Map();
     for(const s of moats){
+      if(!xy(s))continue;
       const key=s.variant+':'+Math.round((Number(s.groundZ)||0)*1000);
       if(!groups.has(key))groups.set(key,[]);
       groups.get(key).push(s);
     }
-    try{
-      for(const segments of groups.values()){
-        const base=segments[0],water=base.variant==='water',z=Number(base.groundZ)||0;
-        // Three unions, shared by ALL segments of the same surface/height.
-        // Unlike per-piece quads, shared corners never receive duplicate strokes.
-        const outer=moatUnionGeometry(segments,1,pc);
-        const slope=moatUnionGeometry(segments,.74,pc);
-        const floor=moatUnionGeometry(segments,.46,pc);
-        paintMoatMulti(outer,z,'#7b6850','#514533');
-        paintMoatMulti(slope,z-.095,'#987c58');
-        paintMoatMulti(floor,z-(water?.18:.32),
-          water?'#398aa5':'#5a4937',water?'#8bc6cf':'#473d32');
-        for(const seg of segments)drawMoatFills(seg);
+    for(const segments of groups.values()){
+      const base=segments[0],water=base.variant==='water',z=Number(base.groundZ)||0;
+      const chains=moatChains(segments);
+      const layers=[
+        {fraction:1,z,fill:'#7b6850'},
+        {fraction:.74,z:z-.095,fill:'#987c58'},
+        {fraction:.46,z:z-(water?.18:.32),fill:water?'#398aa5':'#5a4937'}
+      ];
+      // All outer banks first, then all slopes, then all floors. Crucial at
+      // T junctions: one segment's outer bank never covers another's floor.
+      for(const layer of layers){
+        for(const chain of chains){
+          drawMoatOutline(moatOffsetOutline(chain,layer.fraction),layer.z,layer.fill);
+        }
       }
-      return true;
-    }catch(err){
-      console.warn('Moat polygon union fallback',err);
-      return false;
+      for(const s of segments)drawMoatFills(s);
     }
+    return true;
   }
   function drawGround(){
     const moats=State.structures.filter(s=>s.type==='moat'&&!underConstruction(s));
     const pending=State.structures.filter(s=>s.type==='moat'&&underConstruction(s));
-    if(!drawUnifiedMoats(moats)){
-      // Offline fallback until the optional polygon library has loaded.
-      for(const s of moats)drawMoat(s);
-      drawMoatJunctions();
-    }
+    drawUnifiedMoats(moats);
     for(const s of pending){ctx.save();ctx.globalAlpha=.55;drawMoat(s);ctx.restore()}
-    // Always paint bridges after the ditch, regardless of creation order.
-    // Otherwise a later excavated segment incorrectly covers an existing deck.
+    // Bridges are always painted last, regardless of build order.
     for(const s of State.structures){
       if(s.type!=='bridge')continue;
       ctx.save();if(underConstruction(s))ctx.globalAlpha=.55;
@@ -523,7 +594,7 @@
     slots.querySelector('[data-drawbridge-remove]')?.addEventListener('click',()=>removeDrawbridge(s));
   }
   window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
-    snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,
+    snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,moatChains,moatOffsetOutline,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,installDrawbridge,toggleDrawbridge,removeDrawbridge,
     drawbridgeBlocks,drawbridgePassage,stateOfGate,DRAWBRIDGE_COST};
