@@ -301,24 +301,28 @@ function urbanDenseParts(house){
     for(const frontage of urbanLotRoadFrontages(lot)){
       const count=Math.floor((frontage.length+.06)/width);
       if(!count)continue;
-      const spacing=frontage.length/count,faceWidth=Math.min(spacing+.045,level===4?1.65:1.95);
+      const spacing=frontage.length/count,baseWidth=Math.min(spacing+.045,level===4?1.65:1.95);
       const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
       const angle=Math.atan2(frontage.uy,frontage.ux);
       for(let i=0;i<count;i++){
         if(parts.length>=10)break;
         const along=frontage.from+(i+.5)*spacing;
+        const partKey='street:'+frontage.edge+':'+i;
+        // Different X/Y dimensions on every individual townhouse, seeded
+        // by parcel + street edge + position (unchanged across saves/reloads).
+        const faceWidth=baseWidth*houseDimensionScale(house,'x',partKey);
+        const faceDepth=depth*houseDimensionScale(house,'y',partKey);
         const center={
-          x:frontage.a.x+frontage.ux*along+inward.x*(depth/2+.14),
-          y:frontage.a.y+frontage.uy*along+inward.y*(depth/2+.14)
+          x:frontage.a.x+frontage.ux*along+inward.x*(faceDepth/2+.14),
+          y:frontage.a.y+frontage.uy*along+inward.y*(faceDepth/2+.14)
         };
-        const points=rectWorldPoints(center.x,center.y,faceWidth,depth,angle);
+        const points=rectWorldPoints(center.x,center.y,faceWidth,faceDepth,angle);
         if(!points.every(pt=>urbanContains(lot.points,pt,.06)))continue;
-        // Corner-row buildings may penetrate slightly but cannot form a
-        // single overlapping block or leak outside the owned parcel.
-        const area=faceWidth*depth;
+        // Allow a light overlap at party walls, but never across parcel limits.
+        const area=faceWidth*faceDepth;
         if(parts.some(other=>urbanPolygonIntersectionArea(points,other.points)>area*.18))continue;
         parts.push({kind:'body',dense:true,cx:0,cy:0,center,points,
-          w:faceWidth,h:depth,roofTurn:0,roofAngle:angle,
+          w:faceWidth,h:faceDepth,roofTurn:0,roofAngle:angle,
           roadId:frontage.roadId,frontage:frontage.edge});
       }
       if(parts.length>=10)break;
