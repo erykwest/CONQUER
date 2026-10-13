@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - webgpu
+      - fix/p1-seasonal-farming-parcel-terrain
   workflow_dispatch:
 
 jobs:
