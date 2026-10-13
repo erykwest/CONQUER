@@ -443,7 +443,7 @@ function syncPeasantPathCache(){
   peasantPathCache.clear();
 }
 function pointBlockedForPeasant(p,sourceHouseId){
-  if(terrainSlopeKind(p)==='steep')return true;
+  if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
   for(const s of State.structures){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
     if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training'].includes(s.type))continue;
@@ -451,6 +451,7 @@ function pointBlockedForPeasant(p,sourceHouseId){
     // Market ground and the actual castle gate passage are traversable.
     if(s.type==='market')continue;
     if(s.type==='gate'){
+      if(window.ConquerCrossings?.drawbridgeBlocks(p,s))return true;
       if(gatePointInPassage(s,p,.08))continue;
       const q=toLocalPoint(s,p),d=rectDims(s);
       if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
@@ -486,11 +487,10 @@ function peasantRoadDistance(p){
 }
 function peasantTerrainCost(p){
   const road=peasantRoadDistance(p);
-  if(!Number.isFinite(road.d))return 1;
   const edge=Math.max(.10,road.width/2);
-  if(road.d<=edge+.18)return PEASANT_ROAD_COST;
-  if(road.d<=edge+PEASANT_ROADSIDE_RANGE)return PEASANT_ROADSIDE_COST;
-  return 1;
+  const base=!Number.isFinite(road.d)?1:road.d<=edge+.18?PEASANT_ROAD_COST:
+    road.d<=edge+PEASANT_ROADSIDE_RANGE?PEASANT_ROADSIDE_COST:1;
+  return base/Math.max(.1,window.ConquerCrossings?.movementMultiplier(p)||1);
 }
 function peasantSegmentTravelCost(a,b){
   const L=dist(a,b);if(L<=1e-6)return 0;
@@ -502,7 +502,7 @@ function peasantSegmentTravelCost(a,b){
   return L*sum/steps;
 }
 function peasantSegmentClear(a,b,sourceHouseId){
-  if(terrainSegmentCrossesCliff(a,b))return false;
+  if(terrainSegmentCrossesCliff(a,b)&&!window.ConquerCrossings?.segmentCanCrossCliff(a,b))return false;
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.22));
   for(let i=0;i<=steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
   return true;
