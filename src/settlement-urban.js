@@ -315,18 +315,28 @@ function urbanDenseParts(house){
         // corner. Trim only the oversized frontage, never below -20%.
         const edgeLength=dist(frontage.a,frontage.b);
         const maxInsideWidth=2*(Math.min(along,edgeLength-along)-.075);
-        const faceWidth=Math.min(requestedWidth,maxInsideWidth);
-        if(faceWidth<baseWidth*.8-1e-7)continue;
+        let faceWidth=Math.min(requestedWidth,maxInsideWidth);
+        const minWidth=baseWidth*.8;
+        if(faceWidth<minWidth-1e-7)continue;
         const faceDepth=depth*houseDimensionScale(house,'y',partKey);
         const center={
           x:frontage.a.x+frontage.ux*along+inward.x*(faceDepth/2+.14),
           y:frontage.a.y+frontage.uy*along+inward.y*(faceDepth/2+.14)
         };
-        const points=rectWorldPoints(center.x,center.y,faceWidth,faceDepth,angle);
-        if(!points.every(pt=>urbanContains(lot.points,pt,.06)))continue;
-        // Allow a light overlap at party walls, but never across parcel limits.
-        const area=faceWidth*faceDepth;
-        if(parts.some(other=>urbanPolygonIntersectionArea(points,other.points)>area*.18))continue;
+        // If the random width collides with an already placed neighbour,
+        // narrow it within the same ±20% range instead of creating a gap.
+        let points=null,accepted=false;
+        for(let attempt=0;attempt<8;attempt++){
+          points=rectWorldPoints(center.x,center.y,faceWidth,faceDepth,angle);
+          const inside=points.every(pt=>urbanContains(lot.points,pt,.06));
+          const area=faceWidth*faceDepth;
+          const collision=inside&&parts.some(other=>
+            urbanPolygonIntersectionArea(points,other.points)>area*.18);
+          if(inside&&!collision){accepted=true;break}
+          if(faceWidth<=minWidth+1e-7)break;
+          faceWidth=Math.max(minWidth,faceWidth-baseWidth*.06);
+        }
+        if(!accepted)continue;
         parts.push({kind:'body',dense:true,cx:0,cy:0,center,points,
           w:faceWidth,h:faceDepth,roofTurn:0,roofAngle:angle,
           roadId:frontage.roadId,frontage:frontage.edge});
