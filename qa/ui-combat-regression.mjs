@@ -54,6 +54,38 @@ try{
   assert.ok(devAndSnow.footprints>=6,'Four world units of movement must leave a winter trail');
 
 
+  // Exercise actual Canvas house drawing with multiple streetfront modules.
+  // A standalone geometry VM test cannot detect missing canvas integration.
+  const denseBrowser=await page.evaluate(()=>{
+    const oldStructures=State.structures,oldCache=urbanLotCache,oldSelected=State.selectedId;
+    const house={id:'qa-browser-density',type:'house',auto:true,houseLevel:3,
+      x:103,y:101.4,w:1.5,h:1,angle:0};
+    const road={id:'qa-browser-density-road',type:'road',routeId:'qa-main',
+      a:{x:100,y:99.55},b:{x:106,y:99.55},width:.62};
+    const lot={houseId:house.id,points:[{x:100,y:100},{x:106,y:100},
+      {x:106,y:104},{x:100,y:104}]};
+    try{
+      State.structures=[...oldStructures,house,road];
+      urbanLotCache=[lot];State.selectedId=house.id;
+      const l3=urbanDenseParts(house),n3=urbanDenseBuildingCount(house);
+      drawHouse(house); // real roof, chimney, turret/facade canvas routines
+      house.houseLevel=4;
+      const l4=urbanDenseParts(house),n4=urbanDenseBuildingCount(house);
+      drawHouse(house);
+      return{n3,n4,l3Bodies:l3.filter(x=>x.kind==='body').length,
+        l4Turrets:l4.filter(x=>x.kind==='turret').length,
+        physicalParts:l4.every(part=>!!part.points?.length)};
+    }finally{
+      State.structures=oldStructures;State.selectedId=oldSelected;
+      urbanLotCache=oldCache;invalidateSceneCache();draw();
+    }
+  });
+  assert.equal(denseBrowser.n3,3,'Real browser must render three L3 frontage houses');
+  assert.equal(denseBrowser.n4,4,'Real browser must render four L4 frontage houses');
+  assert.ok(denseBrowser.l3Bodies>=6,'L3 frontage modules must preserve L/T wings');
+  assert.equal(denseBrowser.l4Turrets,4,'Each L4 module needs its own turret');
+  assert.equal(denseBrowser.physicalParts,true);
+
   await page.getByRole('button',{name:'Combattimento e allarmi'}).click();
   assert.equal(await page.locator('#combatControls').isVisible(),true,'Combat controls should open');
   assert.equal(await page.locator('#combatPatrolAdd').isVisible(),true,'Patrol + must be visible inside the Combat category');
@@ -96,7 +128,7 @@ try{
   assert.equal(checked.patrolRemoved,true,'Patrol - must remove a patrol without disrupting the permanent squad');
   assert.equal(checked.routeChecked,true,'Patrol must survive a simulation tick and be serializable');
   assert.deepEqual(errors,[],'Unexpected browser exceptions');
-  console.log(JSON.stringify({result:'PASS',dom,devAndSnow,checked,errors},null,2));
+  console.log(JSON.stringify({result:'PASS',dom,devAndSnow,denseBrowser,checked,errors},null,2));
 }finally{
   await browser.close();
 }
