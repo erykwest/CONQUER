@@ -1066,24 +1066,17 @@ function draw(){
   drawTowerFlags();
   drawCastleSelection();
   drawCastleSoldiers();
-  window.ConquerCrossings?.drawDynamic();
   markPhase('castle-units');
   blitSceneCache('castleFront');
   window.ConquerSiege?.drawOverlay();
   drawCastleFireFixtures();
 
-  // Small facade/details stay dynamic for night lighting and selection semantics.
+  // The drawbridge is an exterior shield when raised. Paint portals and
+  // windows FIRST, then the moving drawbridge so it physically covers them
+  // on the outward Gate facade (stone and timber alike).
   drawFacadeWindows(false,1,false);
   drawGatePortals();
-  // Stone Gate portals/windows are restored above the moving drawbridge by
-  // the two calls above. The timber Gate's door is normally baked into the
-  // static base layer, so restore that facade detail here as well; otherwise
-  // a raised drawbridge wrongly paints over its door texture.
-  for(const gate of State.structures){
-    if(gate.type!=='gate'||!isWoodGate(gate)||underConstruction(gate)||
-       !gate.drawbridge?.installed||gate.drawbridge.progress<=.02)continue;
-    withStructureGroundPlane(gate,()=>drawWoodGateDoor(gate));
-  }
+  window.ConquerCrossings?.drawDynamic();
   drawChimneysAndSmoke();
 
   if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
