@@ -199,11 +199,14 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
   const points=urbanQuad(cell,house,points=>urbanParcelAllowed(points,house.id));
   return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
 }
-function urbanHouseFitsLots(candidate){
+function urbanHouseFitsLots(candidate,{ignoreDynamicUnits=false}={}){
   const houses=State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
   houses.push(candidate);
   const lot=urbanLotFor(candidate,houses);
-  if(!lot||urbanLotUnitConflict(lot))return false;
+  // During an upgrade, the household's existing occupants already live within
+  // the lot. They must not veto enlarging their own home. New construction
+  // continues to respect dynamic unit collisions.
+  if(!lot||(!ignoreDynamicUnits&&urbanLotUnitConflict(lot)))return false;
   // A new site must not steal the footprint of an already occupied parcel.
   return houses.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
     !urbanLotFor(h,State.structures.filter(s=>s.type==='house'))||!!urbanLotFor(h,houses));
@@ -213,31 +216,46 @@ function urbanLots(){
   const houses=State.structures.filter(s=>s.type==='house'),roads=primaryRoadList();
   return urbanLotCache=houses.map(h=>urbanLotFor(h,houses,roads)).filter(Boolean);
 }
-function urbanFenceSegments(lots=urbanLots()){
+// Choose once from world geometry, independent of draw order, camera and reload.
+function urbanBoundaryKey(a,b){
+  const key=p=>p.x.toFixed(4)+','+p.y.toFixed(4),keys=[key(a),key(b)].sort();
+  return keys.join('|');
+}
+function urbanBoundaryMaterial(a,b){
+  const roll=biomeHash(State.seed+'|boundary|'+urbanBoundaryKey(a,b))/4294967296;
+  return roll<.5?'fence':roll<.8?'wall':'hedge';
+}
+function urbanFenceSegments(lots=urbanLots(),fields=completedSettlement('field')){
   const raw=[];
-  for(const lot of lots){
-    const house=State.structures.find(h=>h.id===lot.houseId);
-    if(!house)continue;
-    const door=houseDoorInfo(house).outside;
-    const road=nearestPrimaryRoadProjection(door);
-    const goal=road?.point||door;
+  const addParcel=(points,door,goal)=>{
     let gateEdge=-1,best=Infinity;
     for(let i=0;i<4;i++){
-      const a=lot.points[i],b=lot.points[(i+1)%4],q=closestPointOnSegment(goal,a,b),score=dist(q,door)+dist(q,goal);
+      const a=points[i],b=points[(i+1)%4],q=closestPointOnSegment(goal,a,b),score=dist(q,door)+dist(q,goal);
       if(score<best){best=score;gateEdge=i}
     }
     for(let i=0;i<4;i++){
-      const a=lot.points[i],b=lot.points[(i+1)%4],L=dist(a,b);
-      if(L<.05)continue;
-      if(i!==gateEdge){raw.push({a,b});continue}
-      const q=closestPointOnSegment(goal,a,b),t=dist(a,q)/L;
-      const half=.48/L,t0=clamp(t-half,0,1),t1=clamp(t+half,0,1);
-      const at=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
-      if(t0>.01)raw.push({a,b:at(t0)});
-      if(t1<.99)raw.push({a:at(t1),b});
+      const a=points[i],b=points[(i+1)%4],L=dist(a,b);if(L<.05)continue;
+      const edge={a,b,material:urbanBoundaryMaterial(a,b),key:urbanBoundaryKey(a,b)};
+      if(i===gateEdge){
+        const q=closestPointOnSegment(goal,a,b),t=dist(a,q)/L,half=.48/L;
+        const at=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+        edge.gap=[at(clamp(t-half,0,1)),at(clamp(t+half,0,1))];
+      }
+      raw.push(edge);
     }
+  };
+  for(const lot of lots){
+    const house=State.structures.find(h=>h.id===lot.houseId);if(!house)continue;
+    const door=houseDoorInfo(house).outside;
+    addParcel(lot.points,door,nearestPrimaryRoadProjection(door)?.point||door);
   }
-  // Union collinear intervals, including partially shared edges and gates.
+  for(const field of fields){
+    const road=nearestPrimaryRoadProjection(field);
+    const entry=fieldRoadAccessPoint(field,road?.point||{x:field.x+1,y:field.y});
+    addParcel(fieldPoints(field),entry,entry);
+  }
+  // Split at all endpoints, choose one owner for shared intervals and subtract
+  // every entrance globally. A neighbour must not seal another parcel's gate.
   const groups=new Map();
   for(const edge of raw){
     let dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy);dx/=L;dy/=L;
@@ -245,39 +263,61 @@ function urbanFenceSegments(lots=urbanLots()){
     const nx=-dy,ny=dx,c=edge.a.x*nx+edge.a.y*ny;
     const key=[dx.toFixed(5),dy.toFixed(5),c.toFixed(4)].join(',');
     let group=groups.get(key);
-    if(!group){group={dx,dy,nx,ny,c,ranges:[]};groups.set(key,group)}
-    const a=edge.a.x*dx+edge.a.y*dy,b=edge.b.x*dx+edge.b.y*dy;
-    group.ranges.push([Math.min(a,b),Math.max(a,b)]);
+    if(!group){group={dx,dy,nx,ny,c,ranges:[],gaps:[]};groups.set(key,group)}
+    const coordinate=p=>p.x*dx+p.y*dy,range=[coordinate(edge.a),coordinate(edge.b)].sort((a,b)=>a-b);
+    group.ranges.push({lo:range[0],hi:range[1],material:edge.material,key:edge.key});
+    if(edge.gap)group.gaps.push(edge.gap.map(coordinate).sort((a,b)=>a-b));
   }
   const out=[];
   for(const g of groups.values()){
-    g.ranges.sort((a,b)=>a[0]-b[0]);const merged=[];
-    for(const range of g.ranges){
+    const cuts=[...new Set([...g.ranges.flatMap(r=>[r.lo,r.hi]),...g.gaps.flat()])].sort((a,b)=>a-b),merged=[];
+    for(let i=1;i<cuts.length;i++){
+      const lo=cuts[i-1],hi=cuts[i],mid=(lo+hi)/2;if(hi-lo<1e-7)continue;
+      if(g.gaps.some(([a,b])=>mid>a-1e-7&&mid<b+1e-7))continue;
+      const owner=g.ranges.filter(r=>mid>=r.lo-1e-7&&mid<=r.hi+1e-7).sort((a,b)=>a.key.localeCompare(b.key))[0];
+      if(!owner)continue;
       const last=merged.at(-1);
-      if(last&&range[0]<=last[1]+.0001)last[1]=Math.max(last[1],range[1]);else merged.push([...range]);
+      if(last&&Math.abs(last.hi-lo)<1e-7&&last.material===owner.material)last.hi=hi;
+      else merged.push({lo,hi,material:owner.material});
     }
     const at=t=>({x:g.dx*t+g.nx*g.c,y:g.dy*t+g.ny*g.c});
-    for(const [a,b] of merged)out.push({a:at(a),b:at(b)});
+    for(const r of merged)out.push({a:at(r.lo),b:at(r.hi),material:r.material});
   }
   return out;
 }
+function drawUrbanFence({a,b}){
+  const L=dist(a,b),count=Math.max(1,Math.ceil(L/.65));
+  ctx.strokeStyle='#806442';
+  for(const z of [.13,.30]){
+    const p=w2s(a,z),q=w2s(b,z);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+  }
+  for(let i=0;i<=count;i++){
+    const t=i/count,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t},foot=w2s(p,.02),top=w2s(p,.38);
+    ctx.beginPath();ctx.moveTo(foot.x,foot.y);ctx.lineTo(top.x,top.y);ctx.stroke();
+  }
+}
+function drawUrbanWall({a,b}){
+  const L=dist(a,b),nx=-(b.y-a.y)/L*.065,ny=(b.x-a.x)/L*.065;
+  const poly=[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
+  extrudePolygon(poly,.36,{top:State.season==='winter'?'#e5e9df':'#a3937a',sideA:'#766a59',sideB:'#8b7c67',stroke:'rgba(57,49,39,.65)'});
+  ctx.strokeStyle='rgba(57,49,39,.4)';
+  for(const z of [.12,.24]){
+    const p=w2s(a,z),q=w2s(b,z);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+  }
+  for(let i=1;i<L/.55;i++){
+    const t=i*.55/L,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t},foot=w2s(p,0),top=w2s(p,.36);
+    ctx.beginPath();ctx.moveTo(foot.x,foot.y);ctx.lineTo(top.x,top.y);ctx.stroke();
+  }
+}
 function drawUrbanLots(){
   const lots=urbanLots();
-  for(const lot of lots){
-    pathPolygon(lot.points.map(p=>w2s(p,.015)),'rgba(167,135,81,.10)',null);
-  }
+  for(const lot of lots)pathPolygon(lot.points.map(p=>w2s(p,.015)),'rgba(167,135,81,.10)',null);
   const edges=urbanFenceSegments(lots).sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
-  ctx.save();ctx.lineWidth=Math.max(.65,State.view.scale*.9);ctx.strokeStyle='#806442';
-  for(const {a,b} of edges){
-    const L=dist(a,b),count=Math.max(1,Math.ceil(L/.65));
-    for(const z of [.13,.30]){
-      const p=w2s(a,z),q=w2s(b,z);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
-    }
-    for(let i=0;i<=count;i++){
-      const t=i/count,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
-      const foot=w2s(p,.02),top=w2s(p,.38);
-      ctx.beginPath();ctx.moveTo(foot.x,foot.y);ctx.lineTo(top.x,top.y);ctx.stroke();
-    }
+  ctx.save();ctx.lineWidth=Math.max(.65,State.view.scale*.9);
+  for(const edge of edges){
+    if(edge.material==='wall')drawUrbanWall(edge);
+    else if(edge.material==='hedge')drawUrbanHedge(edge);
+    else drawUrbanFence(edge);
   }
   ctx.restore();
 }

@@ -4,7 +4,7 @@ function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
-  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','loggingCamp','quarry','mine'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
   const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId)&&['wall','palisade','built','road','moat','bridge'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
@@ -15,7 +15,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   if(hardNavigation){
@@ -39,6 +39,13 @@ function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
 function addStructure(s){
+  const preflight=window.ConquerPlacement?.check(s);
+  if(preflight&&!preflight.ok){status(preflight.reason);return false}
+  if(window.ConquerIndustries?.is(s)){
+    const site=window.ConquerIndustries.validate(s);
+    if(!site.ok){status(site.reason);return false}
+    s.groundZ=site.ground;s.resourceTarget=site.resourceTarget;
+  }
   normalizeStructureRotation(s);
   normalizeStructureVariants(s);
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
@@ -50,6 +57,10 @@ function addStructure(s){
       s.groundZ=placementGroundZ(s);
       s.foundationMinZ=profile.minZ;
       s.foundationVersion=1;
+    }else if(window.ConquerIndustries?.is(s)){
+      // Industries were already surveyed by their own resource-specific preflight.
+      // Quarry and mine intentionally occupy rocky slopes, not flat terraces.
+      s.groundZ=window.ConquerIndustries.validate(s).ground;
     }else{
       const groundZ=buildableTerrainElevationForStructure(s);
       if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
@@ -110,6 +121,8 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
   // Preflight the whole dogleg before mutating state, so a two-leg wall is atomic
   // from the player's point of view.
   for(const s of structures){
+    const verdict=window.ConquerPlacement?.check(s);
+    if(verdict&&!verdict.ok){status('Route blocked: '+verdict.reason);return false}
     if(buildableTerrainElevationForStructure(s)==null){
       status('Route crosses incompatible terrain — choose another joint or endpoint');
       return false;
@@ -151,8 +164,11 @@ function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
 function normalizeTowerAngle(a){return normalizeStructureAngle(a)}
 function turnTower(target,delta,label){
   if(!target||target.type!=='tower')return false;
+  const angle=snapStructureAngle((Number(target.angle)||0)+delta);
+  const verdict=window.ConquerPlacement?.check({...target,angle},{ignoreId:target.id,checkCost:false});
+  if(verdict&&!verdict.ok){status('Rotation blocked: '+verdict.reason);return false}
 
-  applyStructureRotation(target,(Number(target.angle)||0)+delta);
+  applyStructureRotation(target,angle);
   if(target.parentTowerId&&target.shape==='square'){
     target.orientationOffset=snapStructureAngle((Number(target.orientationOffset)||0)+delta);
   }
@@ -175,7 +191,10 @@ function turnTower(target,delta,label){
 }
 function turnGate(target,delta,label='Gate rotated'){
   if(!target||target.type!=='gate')return false;
-  applyStructureRotation(target,(Number(target.angle)||0)+delta);
+  const angle=snapStructureAngle((Number(target.angle)||0)+delta);
+  const verdict=window.ConquerPlacement?.check({...target,angle},{ignoreId:target.id,checkCost:false});
+  if(verdict&&!verdict.ok){status('Rotation blocked: '+verdict.reason);return false}
+  applyStructureRotation(target,angle);
 
   // Gate front is semantic: rotation carries its attached front subtorri.
   syncSubtowerTree(target.id);
@@ -188,8 +207,42 @@ function turnGate(target,delta,label='Gate rotated'){
   return true;
 }
 function flipGate(target){return turnGate(target,Math.PI,'Gate front flipped')}
+function rotatePointStructure(target,steps=1){
+  if(!target||!['house','market','tavern','church','training','loggingCamp','quarry','mine'].includes(target.type))return false;
+  const oldAngle=Number(target.angle)||0,next=snapStructureAngle(oldAngle+STRUCTURE_ANGLE_STEP*steps);
+  const candidate={...target,angle:next,rotationStep:structureRotationStep(next)};
+  // Rotation is a structural edit. Ignore the current footprint and the former
+  // resource cost, but never ignore nearby occupied geometry or terrain.
+  const verdict=window.ConquerPlacement?.check(candidate,{ignoreId:target.id,checkCost:false,includeAuto:target.auto});
+  if(verdict&&!verdict.ok){status('Rotation blocked: '+verdict.reason);return false}
+  applyStructureRotation(target,next);
+  if(isPlacementFoundationBuilding(target)){
+    const foundation=placementFoundationProfile(target);
+    if(foundation){target.groundZ=foundation.baseZ;target.foundationMinZ=foundation.minZ;target.foundationVersion=1}
+  }else if(window.ConquerIndustries?.is(target)){
+    target.groundZ=window.ConquerIndustries.validate(target).ground;
+  }else{
+    target.groundZ=buildableTerrainElevationForStructure(target);
+  }
+  if(target.type==='house')invalidateUrbanGeometry();
+  markStructureDirty(target,true,true);
+  renderFunctionPanel();draw();
+  status(structureLabel(target)+' · rotated '+Math.round(target.angle*180/Math.PI)%360+'°');
+  return true;
+}
+
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
+  if(window.ConquerIndustries?.is(s)){
+    const spec=window.ConquerIndustries.TYPES[s.type],econ=window.ConquerEconomy;
+    const staff=econ?.staffing?.()[s.id]||0;
+    const details=econ?.state()?.activities?.[s.id],owner=details?.owner||(s.economicOwner==='lord'?'lord':'private');
+    panel.classList.add('open');
+    info.innerHTML=`<div class="kv"><span>Industry</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${remainingDays(s).toFixed(1)}d</div>`:''}`;
+    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?'3×3U, any part overlaps steep rock':'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
+    slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
+    return;
+  }
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
@@ -219,6 +272,10 @@ function renderFunctionPanel(){
       '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
       '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+  }
+  if(['house','market','tavern','church','training'].includes(s.type)){
+    const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
+    html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
   }
   if(s.type==='house'){
     const level=houseLevel(s);
@@ -294,8 +351,8 @@ function renderFunctionPanel(){
   slots.innerHTML=html;
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
-  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;const level=clamp(houseLevel(target)+1,1,4);if(!urbanHouseFitsLots({...target,houseLevel:level})){status('House extension would exceed its lot');return}target.houseLevel=level;markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
-  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
+  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;const level=clamp(houseLevel(target)+1,1,4);if(!urbanHouseFitsLots({...target,houseLevel:level},{ignoreDynamicUnits:true})){status('House extension would exceed its available lot or overlap another structure');return}target.houseLevel=level;invalidateUrbanGeometry();markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
+  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);invalidateUrbanGeometry();markStructureDirty(target);renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(!target)return;
     const requested=Number(btn.dataset.structureTier);
@@ -324,6 +381,7 @@ function renderFunctionPanel(){
     markStructureDirty(target);renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;const level=Number(btn.dataset.heightLevel);if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall'}target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
@@ -414,7 +472,10 @@ canvas.addEventListener('pointerdown',e=>{
     State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
     status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
-  if(State.tool.kind==='civic'){
+  if(State.tool.kind==='civic'||State.tool.kind==='industry'){
+    // Two-click oriented placement shared by all point buildings:
+    // first click fixes the centre, pointer movement rotates the ghost,
+    // second click commits the final angle.
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
     State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
     status(structureLabel(State.draft.preview)+' position fixed — move cursor to rotate, click to confirm');draw();return
@@ -477,9 +538,10 @@ canvas.addEventListener('pointerdown',e=>{
       if(mainRoad){
         const n=normalizeLinear(State.draft.a,e2.point,spec,false);
         if(n&&n.length>=spec.min-.001){
-          addManualMainRoad(n.a,n.b);
-          State.draft=null;
-          status('Main road added — choose next segment');
+          if(addManualMainRoad(n.a,n.b)){
+            State.draft=null;
+            status('Main road added — choose next segment');
+          }
         }else status('Segment too short');
       }else{
         const route=normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!e2.structureId);
@@ -535,9 +597,12 @@ canvas.addEventListener('pointermove',e=>{
       const n=normalizeLinear(State.draft.a,snap.point,spec,false);
       if(n){
         State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:true};
-        State.draft.previewSegments=null;
-        status(`Main road: ${n.length.toFixed(2)}U — click to confirm`);
+        State.draft.previewSegments=null;State.draft.invalidPreview=null;
+        const verdict=window.ConquerPlacement?.check(State.draft.preview);
+        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`Main road: ${n.length.toFixed(2)}U — click to confirm`);
         draw();
+      }else{
+        State.draft.preview=null;State.draft.invalidPreview={type:'road',a:State.draft.a,b:snap.point,width:spec.width};draw();
       }
       return;
     }
@@ -545,6 +610,7 @@ canvas.addEventListener('pointermove',e=>{
     const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!snap.structureId);
     if(route){
       const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
+      State.draft.invalidPreview=null;
       State.draft.preview=null;
       State.draft.previewSegments=route.segments.map(seg=>({...base,a:seg.a,b:seg.b,length:seg.length,rotationStep:seg.rotationStep}));
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
@@ -552,6 +618,7 @@ canvas.addEventListener('pointermove',e=>{
       status(`${State.tool.label}: ${total.toFixed(2)}U · ${legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
+      State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};
       status(snap.structureId?'No valid two-segment 15° route to this magnet':'Segment too short');
     }
     draw();
@@ -562,8 +629,9 @@ canvas.addEventListener('pointermove',e=>{
     if(State.draft?.mode==='orient'){
       const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
       State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
+      const ghost=window.ConquerPlacement?.check({...State.draft.preview,parentTowerId:State.draft.parentTowerId||null,wallSnapId:State.draft.wallSnapId||null});
       let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
-      status(State.draft.wallSnapId?`Wall snap · aligned ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · aligned ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
       draw();return
     }
     if(State.tool.kind==='tower'){
@@ -581,8 +649,15 @@ canvas.addEventListener('pointermove',e=>{
     }else{
       const q={x:snapGrid(p.x),y:snapGrid(p.y)};
       State.draft={mode:'hover',preview:makePlacementPreview(q,0)};
+      const ghost=window.ConquerPlacement?.check(State.draft.preview);
+      if(ghost&&!ghost.ok)status('Placement blocked: '+ghost.reason);
     }
     draw();return
+  }
+  if(State.tool.kind==='well'){
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    State.draft={mode:'hover',preview:{type:'well',x:q.x,y:q.y}};
+    draw();return;
   }
   if(State.tool.kind==='tower'&&State.tool.shape==='round'){
     const snap=towerPlacementSnap(p);
@@ -704,7 +779,13 @@ for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   const type=b.dataset.civic,spec={type,shape:'civic'};
   setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(COSTS[type]),el:b});
 };
-document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
+for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
+   const type=b.dataset.industry,spec=window.ConquerIndustries.TYPES[type];
+   setTool({kind:'industry',industry:type,
+     placementSpec:window.ConquerIndustries.make(type,{x:0,y:0}),
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(spec.cost),el:b});
+ };
+ document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
@@ -727,11 +808,12 @@ document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingW
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,['ground','base','castleBody','castleFront']);renderUI();draw()}};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,['ground','base','castleBody','castleFront']);renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
 function migrateStructures(list){
   const migrated=(list||[]).map(s=>{
     if(['moat','bridge'].includes(s.type))window.ConquerCrossings?.normalise(s);
+    if(window.ConquerIndustries?.is(s))window.ConquerIndustries.normalizeFootprint(s);
     if(s.type==='house')s.houseLevel=houseLevel(s);
     if(s.type==='built'){
       s.width=1;
@@ -833,7 +915,7 @@ function localStorageKey(){
 let localSaveTimer=null;
 function saveLocal(){
   const t0=performance.now();
-  localStorage.setItem(localStorageKey(),JSON.stringify({schema:LOCAL_STORAGE_SCHEMA,seed:State.seed,biome:State.biome,season:State.season,seasonOverride:State.seasonOverride||null,neighborBiomes:State.neighborBiomes,landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment},structures:State.structures,resources:State.resources,siege:State.siege||null,policies:State.policies,heraldry:State.heraldry||null,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view,combat:window.ConquerCombat?.serialize()||State.combat}));
+  localStorage.setItem(localStorageKey(),JSON.stringify({schema:LOCAL_STORAGE_SCHEMA,seed:State.seed,biome:State.biome,season:State.season,seasonOverride:State.seasonOverride||null,neighborBiomes:State.neighborBiomes,landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment},structures:State.structures,resources:State.resources,economy:State.economy||null,siege:State.siege||null,policies:State.policies,heraldry:State.heraldry||null,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view,combat:window.ConquerCombat?.serialize()||State.combat}));
   if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
   window.__conquerAnalytics?.measure('SAVE',performance.now()-t0);
 }
@@ -841,10 +923,10 @@ function scheduleLocalSave(delay=700){
   if(localSaveTimer)return;
   localSaveTimer=setTimeout(()=>{localSaveTimer=null;saveLocal()},delay);
 }
-function loadLocal(){try{const key=localStorageKey();const x=JSON.parse(localStorage.getItem(key)||'null');if(x){State.seed=x.seed??State.seed;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.season=['summer','autumn','winter','spring'].includes(x.season)?x.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(x.seasonOverride)?x.seasonOverride:null;State.neighborBiomes=x.neighborBiomes||{};State.combat=x.combat||null;State.structures=migrateStructures(x.structures);window.ConquerSiege?.restore(x.siege);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};State.heraldry=x.heraldry||null;const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();const savedLandscape=x.landscape;if(savedLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(savedLandscape.relief?.hills)&&Array.isArray(savedLandscape.environment)){State.relief=savedLandscape.relief;State.environment=savedLandscape.environment;clearReliefBandCache()}else{State.relief=null;State.environment=[];ensureStaticLandscape();saveLocal()}ensureBorderEntrySelection();if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);}}
+function loadLocal(){try{const key=localStorageKey();const x=JSON.parse(localStorage.getItem(key)||'null');if(x){State.seed=x.seed??State.seed;State.economy=x.economy||null;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.season=['summer','autumn','winter','spring'].includes(x.season)?x.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(x.seasonOverride)?x.seasonOverride:null;State.neighborBiomes=x.neighborBiomes||{};State.combat=x.combat||null;State.structures=migrateStructures(x.structures);window.ConquerSiege?.restore(x.siege);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};State.heraldry=x.heraldry||null;const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;resetLegacyVillageGrowth();const savedLandscape=x.landscape;if(savedLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(savedLandscape.relief?.hills)&&Array.isArray(savedLandscape.environment)){State.relief=savedLandscape.relief;State.environment=savedLandscape.environment;clearReliefBandCache()}else{State.relief=null;State.environment=[];ensureStaticLandscape();saveLocal()}ensureBorderEntrySelection();for(const structure of State.structures)if(window.ConquerIndustries?.is(structure))window.ConquerIndustries.normalizeFootprint(structure);if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();['tax','rations','levy'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);}}
 async function initSupabase(){for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);window.ConquerSiege?.restore(data.policies?.siege);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.combat=cloudPolicies.combat||null;State.heraldry=cloudPolicies.heraldry||State.heraldry||null;window.ConquerCombat?.restore(State.combat);State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.season=['summer','autumn','winter','spring'].includes(cloudPolicies.season)?cloudPolicies.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(cloudPolicies.seasonOverride)?cloudPolicies.seasonOverride:null;const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();const cloudLandscape=cloudPolicies.landscape;let repairedLandscape=false;if(cloudLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(cloudLandscape.relief?.hills)&&Array.isArray(cloudLandscape.environment)){State.relief=cloudLandscape.relief;State.environment=cloudLandscape.environment;clearReliefBandCache();repairedLandscape=repairForestsAgainstSteepSlopes()}else{State.relief=null;State.environment=[];ensureStaticLandscape();repairedLandscape=true}ensureBorderEntrySelection();if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();if(repairedLandscape)await saveCloud();else saveLocal();renderUI();renderFunctionPanel();draw()}}
-async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,siege:State.siege||null,combat:window.ConquerCombat?.serialize()||State.combat,heraldry:State.heraldry||null,season:State.season,seasonOverride:State.seasonOverride||null,village:State.village,clock:{day:State.clock.day},landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
+async function loadCloud(){if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){State.seed=data.terrain_seed;State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=migrateStructures(data.structures);window.ConquerSiege?.restore(data.policies?.siege);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(10000,Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.economy=cloudPolicies.economy||null;State.combat=cloudPolicies.combat||null;State.heraldry=cloudPolicies.heraldry||State.heraldry||null;window.ConquerCombat?.restore(State.combat);State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy};State.season=['summer','autumn','winter','spring'].includes(cloudPolicies.season)?cloudPolicies.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(cloudPolicies.seasonOverride)?cloudPolicies.seasonOverride:null;const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{})};if(legacyGrowth)State.village.growthVersion=1;State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);resetLegacyVillageGrowth();const cloudLandscape=cloudPolicies.landscape;let repairedLandscape=false;if(cloudLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(cloudLandscape.relief?.hills)&&Array.isArray(cloudLandscape.environment)){State.relief=cloudLandscape.relief;State.environment=cloudLandscape.environment;clearReliefBandCache();repairedLandscape=repairForestsAgainstSteepSlopes()}else{State.relief=null;State.environment=[];ensureStaticLandscape();repairedLandscape=true}ensureBorderEntrySelection();for(const structure of State.structures)if(window.ConquerIndustries?.is(structure))window.ConquerIndustries.normalizeFootprint(structure);if(State.village.founded)connectSelectedBorderMainRoads();rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();if(repairedLandscape)await saveCloud();else saveLocal();renderUI();renderFunctionPanel();draw()}}
+async function saveCloud(){saveLocal();if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,economy:State.economy||null,siege:State.siege||null,combat:window.ConquerCombat?.serialize()||State.combat,heraldry:State.heraldry||null,season:State.season,seasonOverride:State.seasonOverride||null,village:State.village,clock:{day:State.clock.day},landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
 const CALENDAR_MONTHS=[
   {name:'Gen',days:31},{name:'Feb',days:28},{name:'Mar',days:31},{name:'Apr',days:30},
@@ -889,7 +971,7 @@ function syncDevButtons(){
     cutawayAll.disabled=!eligible.length;
   }
 }
-function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${cal.day} ${cal.name} · Y${cal.year} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('')}
+function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${['Lun','Mar','Mer','Gio','Ven','Sab · Mercato','Dom · Riposo'][window.ConquerEconomy?.weekday(State.clock.day)??0]} · ${cal.day} ${cal.name} · Y${cal.year} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('');window.ConquerEconomy?.render()}
 function visibleCanvasCenter(){
   const r=canvas.getBoundingClientRect();
   return{x:r.width/2,y:r.height/2};
@@ -986,6 +1068,7 @@ function freshLandscapeSeed(){
 }
 function generateNewMap(){
   State.clock.speed=0;
+  State.clock.day=0;
   State.draft=null;State.selectedId=null;
   State.seed=freshLandscapeSeed();
   State.heraldry=null;
@@ -996,6 +1079,7 @@ function generateNewMap(){
   State.relief=null;
   State.environment=[];
   State.structures=[];
+  window.ConquerEconomy?.reset();
   window.ConquerSiege?.restore(null);
   State.combat=null;
   window.ConquerCombat?.restore(null);
@@ -1161,6 +1245,8 @@ function simulationFrame(now){
     let completed=[];
     if(now-simLogicAt>=SIM_LOGIC_FRAME_MS){
       processVillageGrowth();
+      tickFields(State.clock.day);
+      window.ConquerEconomy?.tick(previousDay,State.clock.day);
       completed=constructionCompletionsCrossed(simLogicDay,State.clock.day);
       simLogicDay=State.clock.day;
       simLogicAt=now;
@@ -1274,5 +1360,5 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&k==='s'){e.preventDefault();saveCloud()}
 });
 window.addEventListener('polygon-clipping-ready',()=>{invalidateSceneCache(['ground','castleBody']);draw()});
-window.addEventListener('resize',resize);loadLocal();if(ensureStaticLandscape())saveLocal();ensureBorderEntrySelection();renderUI();resize();fit();initSupabase();
+window.addEventListener('resize',resize);loadLocal();window.ConquerEconomy?.bind();if(ensureStaticLandscape())saveLocal();ensureBorderEntrySelection();renderUI();resize();fit();initSupabase();
 

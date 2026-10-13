@@ -195,6 +195,7 @@ function structureHeight(s){
   if(s.type==='well')return .42;
   if(s.type==='bridge')return .12;
   if(s.type==='moat')return 0;
+  if(window.ConquerIndustries?.is(s))return .35;
   if(s.type==='house')return houseStructureHeight(s);
   if(s.type==='market')return .78;
   if(s.type==='tavern')return 2.15;
@@ -214,7 +215,8 @@ function footprintPoints(s){
     const cx=pts.reduce((a,p)=>a+p.x,0)/pts.length,cy=pts.reduce((a,p)=>a+p.y,0)/pts.length;
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
-  if(s.type==='field')return rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0);
+  if(s.type==='field')return fieldPoints(s);
+  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){
     const pts=civicParts(s).flatMap(p=>p.points);
     if(!pts.length)return[];
@@ -941,6 +943,15 @@ function pointInScreenPolygon(p,poly){
     const a=poly[i],b=poly[j],hit=((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside;
   }return inside;
 }
+function screenHitStructureBodyAtFootprint(fp,p,h){
+  const base=projectPath(fp,0),top=projectPath(fp,h);
+  if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
+  for(let i=0;i<fp.length;i++){
+    const j=(i+1)%fp.length;
+    if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true;
+  }
+  return false;
+}
 function screenHitStructureBody(s,p){
   if(s.type==='house'||isCivic(s)){
     const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
@@ -953,7 +964,12 @@ function screenHitStructureBody(s,p){
     }
     return false;
   }
-  const fp=footprintPoints(s);if(fp.length<3)return false;const h=structureHeight(s),base=projectPath(fp,0),top=projectPath(fp,h);
+  const fp=footprintPoints(s);if(fp.length<3)return false;
+  if(window.ConquerIndustries?.is(s)){
+    const ground=Number.isFinite(s.groundZ)?s.groundZ:window.ConquerIndustries.groundLevel(s);
+    return withProjectionGroundZ(ground,()=>screenHitStructureBodyAtFootprint(fp,p,structureHeight(s)));
+  }
+  const h=structureHeight(s),base=projectPath(fp,0),top=projectPath(fp,h);
   if(pointInScreenPolygon(p,base)||pointInScreenPolygon(p,top))return true;
   for(let i=0;i<fp.length;i++){const j=(i+1)%fp.length;if(pointInScreenPolygon(p,[base[i],base[j],top[j],top[i]]))return true}
   return false;
@@ -1546,9 +1562,12 @@ function commitOrientedPlacement(center,angle){
   }:{};
   const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
   const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
-  State.draft=null;
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
-  if(ok&&!snap.wallId&&!snap.parentTowerId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
+  if(ok){
+    State.draft=null;
+    if(!snap.wallId&&!snap.parentTowerId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
+  }
+  // Invalid placement keeps the red ghost available for another orientation.
   return ok;
 }
 function boundaryPoint(s,target){
@@ -2056,7 +2075,7 @@ function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
+function structureLabel(s){if(!s)return'';if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return'Market · 4×4U';if(s.type==='tavern')return'Tavern · double-T plan';if(s.type==='church')return'Church · large';if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
 function drawLinearBase(s,preview=false){
   const h=structureHeight(s),selected=State.selectedId===s.id;
   const colors=s.type==='wall'
@@ -3421,32 +3440,8 @@ function drawPointStructure(s,preview=false){
 function drawFlatRect(s,fill,stroke){
   pathPolygon(projectPath(rectWorldPoints(s.x,s.y,s.w,s.h,s.angle||0)),fill,stroke,1);
 }
-function fieldGrid(field){
-  const usableW=Math.max(.2,Number(field.w)-FIELD_CELL_MARGIN*2),usableH=Math.max(.2,Number(field.h)-FIELD_CELL_MARGIN*2);
-  const cols=Math.max(1,Math.floor(usableW/FIELD_CELL_TARGET)),rows=Math.max(1,Math.floor(usableH/FIELD_CELL_TARGET));
-  const cellW=usableW/cols,cellH=usableH/rows,ca=Math.cos(field.angle||0),sa=Math.sin(field.angle||0);
-  const localToWorld=(x,y)=>({x:field.x+x*ca-y*sa,y:field.y+x*sa+y*ca});
-  const cells=[];
-  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
-    const x=-usableW/2+(col+.5)*cellW,y=-usableH/2+(row+.5)*cellH;
-    cells.push({index:row*cols+col,row,col,x,y,world:localToWorld(x,y)});
-  }
-  return{usableW,usableH,cols,rows,cellW,cellH,cells,localToWorld};
-}
-function drawField(field){
-  const winter=State.season==='winter';
-  drawFlatRect(field,winter?'rgba(237,241,237,.88)':'rgba(133,111,55,.52)',winter?'rgba(126,139,130,.52)':'rgba(190,168,95,.58)');
-  const g=fieldGrid(field);ctx.save();ctx.strokeStyle=winter?'rgba(151,163,155,.22)':'rgba(218,195,118,.28)';ctx.lineWidth=.7;
-  for(let i=1;i<g.cols;i++){
-    const x=-g.usableW/2+i*g.cellW,a=w2s(g.localToWorld(x,-g.usableH/2),.012),b=w2s(g.localToWorld(x,g.usableH/2),.012);
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  }
-  for(let i=1;i<g.rows;i++){
-    const y=-g.usableH/2+i*g.cellH,a=w2s(g.localToWorld(-g.usableW/2,y),.012),b=w2s(g.localToWorld(g.usableW/2,y),.012);
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  }
-  ctx.restore();
-}
+function fieldGrid(field){return fieldLayout(field)}
+function drawField(field){drawFieldGround(field)}
 function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
   const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=houseLocalToWorld(s,part.cx,part.cy);
   const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;

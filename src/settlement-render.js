@@ -763,7 +763,8 @@ function drawStructure(s,preview=false){
   const render=()=>{
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
-    if(isCivic(s))drawCivicStructure(s,preview);
+    if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    else if(isCivic(s))drawCivicStructure(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
     else if(s.type==='palisade')drawPalisade(s,preview);
     else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
@@ -772,8 +773,54 @@ function drawStructure(s,preview=false){
   if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,render);else render();
   if(!preview&&underConstruction(s)){
     if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
+    else if(window.ConquerIndustries?.is(s))withProjectionGroundZ(s.groundZ,()=>drawConstructionProgress(s));
     else drawConstructionProgress(s);
   }
+}
+// Preserve the normal translucent preview; tint its actual footprint red
+// only when the same nonmutating preflight used by the commit would reject it.
+function builderGhostVerdict(ghost){
+  if(!ghost||!window.ConquerPlacement)return{ok:true};
+  if(ghost._ghostCheck)return ghost._ghostCheck;
+  const draft=State.draft;
+  const probe=draft?.parentTowerId&&ghost.type==='tower'
+    ?{...ghost,parentTowerId:draft.parentTowerId,wallSnapId:draft.wallSnapId}
+    :draft?.wallSnapId&&ghost.type==='tower'
+      ?{...ghost,wallSnapId:draft.wallSnapId}:ghost;
+  const result=window.ConquerPlacement.check(probe);
+  // Ghost instances are replaced whenever the pointer changes position,
+  // so validations never run again on unchanged frames.
+  ghost._ghostCheck=result;
+  return result;
+}
+function drawInvalidPlacementGhost(ghost){
+  if(!ghost)return;
+  ctx.save();
+  ctx.globalAlpha=1;
+  const fill='rgba(232,40,47,.38)',stroke='rgba(255,76,83,.98)';
+  ctx.setLineDash([5,3]);
+  ctx.lineWidth=2.5;
+  if(ghost.a&&ghost.b&&ghost.type==='road'){
+    const a=w2s(ghost.a),b=w2s(ghost.b);
+    ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(5,(ghost.width||.6)*U*State.view.scale);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }else{
+    const rings=window.ConquerPlacement?.contact(ghost)||[];
+    const ground=Number.isFinite(ghost.groundZ)?ghost.groundZ:
+      window.ConquerIndustries?.is(ghost)?window.ConquerIndustries.groundLevel(ghost):
+      isPlacementFoundationBuilding(ghost)?placementGroundZ(ghost):
+      terrainElevation(structureCenter(ghost));
+    withProjectionGroundZ(ground,()=>{
+      for(const poly of rings){
+        if(poly?.length<3)continue;
+        pathPolygon(projectPath(poly,.03),fill,stroke,2.5);
+        // A red upper face remains aligned to the slope-based industry platform.
+        const height=Math.max(0,structureHeight(ghost));
+        if(height>.05)pathPolygon(projectPath(poly,height+.04),'rgba(229,36,45,.28)',stroke,2);
+      }
+    });
+  }
+  ctx.restore();
 }
 function drawLandscapeStaticScene(){
   const analyticsT0=performance.now();
@@ -1056,7 +1103,9 @@ function draw(){
     blitSceneCache('base');
   }
 
-  // Only construction sites remain fully dynamic at ground/building depth.
+  for(const field of completedSettlement('field'))drawFieldWork(field);
+
+  // Construction sites remain dynamic at ground/building depth.
   State.structures
     .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .forEach(drawAutoStructure);
@@ -1069,6 +1118,7 @@ function draw(){
   // Population remains between settlement massing and completed castle massing,
   // preserving the existing occlusion behaviour.
   drawPeasants();
+  window.ConquerIndustries?.drawWorkers();
   markPhase('population');
   drawTrainingSoldiers();
   blitSceneCache('castleBody');
@@ -1091,8 +1141,27 @@ function draw(){
   drawChimneysAndSmoke();
 
   if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
-  if(State.draft?.previewSegments?.length)for(const segment of State.draft.previewSegments)drawStructure(segment,true);
-  else if(State.draft?.preview&&!['moat','bridge'].includes(State.draft.preview.type))drawStructure(State.draft.preview,true);
+  if(State.draft?.previewSegments?.length){
+    const segments=State.draft.previewSegments;
+    const totalCost=aggregateConstructionCost(segments);
+    const routeUnderfunded=!canAfford(totalCost);
+    for(const segment of segments){
+      drawStructure(segment,true);
+      const verdict=builderGhostVerdict(segment);
+      if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
+    }
+  }else if(State.draft?.preview){
+    const ghost=State.draft.preview;
+    if(['moat','bridge'].includes(ghost.type)){
+      window.ConquerCrossings?.drawPreview(ghost);
+    }else{
+      drawStructure(ghost,true);
+      const verdict=builderGhostVerdict(ghost);
+      if(!verdict.ok)drawInvalidPlacementGhost(ghost);
+    }
+  }else if(State.draft?.invalidPreview){
+    drawInvalidPlacementGhost(State.draft.invalidPreview);
+  }
   window.ConquerCrossings?.drawMoatMagnets();
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};

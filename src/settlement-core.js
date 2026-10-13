@@ -31,6 +31,7 @@ function structureSceneLayers(s){
   if(['road','moat','bridge'].includes(s.type))return['ground','base'];
   if(s.auto&&s.type==='field')return['ground'];
   if(s.type==='house')return['ground','shadow','base'];
+  if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
   // Palisades and timber fortifications are rendered in the non-union base layer.
@@ -162,8 +163,6 @@ const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,mark
 const GROWTH_INTERVAL_DAYS=2.5;
 const BASE_DAYS_PER_SECOND=.25;
 const PEASANT_VISUAL_SPEED=.025;
-const FIELD_CELL_TARGET=.75;
-const FIELD_CELL_MARGIN=.12;
 const VISUAL_DAYLIGHT_RATIO=16/24;
 const VISUAL_NIGHT_RATIO=8/24;
 const NIGHT_OVERLAY_MAX=.48;
@@ -406,6 +405,7 @@ function constructionCost(s){
       :{gold:5*(s.length||1)*factor,wood:18*(s.length||1)*factor});
   }
   if(s.type==='well')return {...COSTS.well};
+  if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.TYPES[s.type].cost};
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
@@ -423,6 +423,7 @@ function buildDuration(s){
   }
   if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
+  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.TYPES[s.type].days;
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
@@ -450,7 +451,7 @@ function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
   if(s.type==='well')return .75;
-  if(s.type==='house'||s.type==='field')return Math.hypot(s.w,s.h)/2;
+  if(s.type==='house'||s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
   if(isCivic(s))return civicRadius(s);
   return .5;
 }
