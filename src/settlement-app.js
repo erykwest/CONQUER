@@ -39,6 +39,8 @@ function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
 function addStructure(s){
+  const preflight=window.ConquerPlacement?.check(s);
+  if(preflight&&!preflight.ok){status(preflight.reason);return false}
   if(window.ConquerIndustries?.is(s)){
     const site=window.ConquerIndustries.validate(s);
     if(!site.ok){status(site.reason);return false}
@@ -193,6 +195,28 @@ function turnGate(target,delta,label='Gate rotated'){
   return true;
 }
 function flipGate(target){return turnGate(target,Math.PI,'Gate front flipped')}
+function rotatePointStructure(target,steps=1){
+  if(!target||!['house','market','tavern','church','training','loggingCamp','quarry','mine'].includes(target.type))return false;
+  const oldAngle=Number(target.angle)||0,next=snapStructureAngle(oldAngle+STRUCTURE_ANGLE_STEP*steps);
+  const candidate={...target,angle:next,rotationStep:structureRotationStep(next)};
+  // Rotation is a structural edit. Ignore the current footprint and the former
+  // resource cost, but never ignore nearby occupied geometry or terrain.
+  const verdict=window.ConquerPlacement?.check(candidate,{ignoreId:target.id,checkCost:false,includeAuto:target.auto});
+  if(verdict&&!verdict.ok){status('Rotation blocked: '+verdict.reason);return false}
+  applyStructureRotation(target,next);
+  if(isPlacementFoundationBuilding(target)){
+    const foundation=placementFoundationProfile(target);
+    if(foundation){target.groundZ=foundation.baseZ;target.foundationMinZ=foundation.minZ;target.foundationVersion=1}
+  }else{
+    target.groundZ=buildableTerrainElevationForStructure(target);
+  }
+  if(target.type==='house')invalidateUrbanGeometry();
+  markStructureDirty(target,true,true);
+  renderFunctionPanel();draw();
+  status(structureLabel(target)+' · rotated '+Math.round(target.angle*180/Math.PI)%360+'°');
+  return true;
+}
+
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(window.ConquerIndustries?.is(s)){
@@ -201,7 +225,8 @@ function renderFunctionPanel(){
     const details=econ?.state()?.activities?.[s.id],owner=details?.owner||(s.economicOwner==='lord'?'lord':'private');
     panel.classList.add('open');
     info.innerHTML=`<div class="kv"><span>Industry</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${remainingDays(s).toFixed(1)}d</div>`:''}`;
-    slots.innerHTML='<div class="legend">Placement: '+(s.type==='loggingCamp'?'within 10U of forest':s.type==='quarry'?'hill terrace next to rocky slope':'flat ground beside steep cliff')+'. No tree depletion yet.</div>';
+    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'within 10U of forest':s.type==='quarry'?'hill terrace next to rocky slope':'flat ground beside steep cliff')+'. No tree depletion yet.</div>';
+    slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
     return;
   }
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training'].includes(s.type)){panel.classList.remove('open');return}
@@ -225,6 +250,10 @@ function renderFunctionPanel(){
       '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
       '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+  }
+  if(['house','market','tavern','church','training'].includes(s.type)){
+    const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
+    html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
   }
   if(s.type==='house'){
     const level=houseLevel(s);
@@ -328,6 +357,7 @@ function renderFunctionPanel(){
     markStructureDirty(target);renderFunctionPanel();draw();
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;const level=Number(btn.dataset.heightLevel);if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall'}target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
+  slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
