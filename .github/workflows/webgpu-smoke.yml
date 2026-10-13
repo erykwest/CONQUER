@@ -25,6 +25,16 @@ jobs:
           npm install playwright@1.55.0 >/dev/null
           npx playwright install --with-deps chromium >/dev/null
 
+      - name: Run deterministic gameplay regression suites
+        run: |
+          for test in qa/*-regression.cjs; do
+            echo "Running $test"
+            node "$test"
+          done
+
+      - name: Verify Builder, industry and Combat browser integration
+        run: node qa/ui-combat-regression.mjs
+
       - name: Exercise hybrid renderer and fallback
         shell: bash
         run: |
