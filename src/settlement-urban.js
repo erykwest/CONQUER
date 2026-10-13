@@ -268,24 +268,37 @@ function urbanLotRoadFrontages(lot){
   for(let i=0;i<polygon.length;i++){
     const a=polygon[i],b=polygon[(i+1)%polygon.length],length=dist(a,b);
     if(length<1.5)continue;
-    const ux=(b.x-a.x)/length,uy=(b.y-a.y)/length;
-    let best=null;
-    const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    const ux=(b.x-a.x)/length,uy=(b.y-a.y)/length,intervals=[];
     for(const road of roads){
       const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy);
       if(L<.1||Math.abs((dx*ux+dy*uy)/L)<.93)continue;
-      const distance=pointSegmentDistance(mid,road.a,road.b);
-      if(distance>Math.max(1.05,(Number(road.width)||.62)/2+.72))continue;
       const t0=(road.a.x-a.x)*ux+(road.a.y-a.y)*uy;
       const t1=(road.b.x-a.x)*ux+(road.b.y-a.y)*uy;
       const from=Math.max(.22,Math.min(t0,t1)),to=Math.min(length-.22,Math.max(t0,t1));
-      if(to-from<1.05)continue;
-      if(!best||distance<best.distance)best={roadId:road.id,edge:i,from,to,
-        length:to-from,distance,a,b,ux,uy};
+      if(to-from<.1)continue;
+      // Distance must be measured over the road-facing overlap, not at the
+      // midpoint of the entire parcel side: many main-road segments are short.
+      const halfway=(from+to)/2;
+      const q={x:a.x+ux*halfway,y:a.y+uy*halfway};
+      const distance=pointSegmentDistance(q,road.a,road.b);
+      if(distance>Math.max(1.05,(Number(road.width)||.62)/2+.72))continue;
+      intervals.push({from,to,distance,roadId:road.id});
     }
-    if(best)out.push(best);
+    intervals.sort((a,b)=>a.from-b.from||a.to-b.to);
+    const merged=[];
+    for(const item of intervals){
+      const last=merged.at(-1);
+      if(last&&item.from<=last.to+.08){
+        last.to=Math.max(last.to,item.to);
+        if(item.distance<last.distance){last.distance=item.distance;last.roadId=item.roadId}
+      }else merged.push({...item});
+    }
+    for(const span of merged)if(span.to-span.from>=1.05){
+      out.push({edge:i,a,b,ux,uy,from:span.from,to:span.to,
+        length:span.to-span.from,distance:span.distance,roadId:span.roadId});
+    }
   }
-  return out.sort((a,b)=>b.length-a.length||a.edge-b.edge);
+  return out.sort((a,b)=>b.length-a.length||a.edge-b.edge||a.from-b.from);
 }
 function urbanDenseParts(house){
   if(!house||( !house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
@@ -307,7 +320,7 @@ function urbanDenseParts(house){
       for(let i=0;i<count;i++){
         if(parts.length>=10)break;
         const along=frontage.from+(i+.5)*spacing;
-        const partKey='street:'+frontage.edge+':'+i;
+        const partKey='street:'+frontage.edge+':'+frontage.from.toFixed(2)+':'+i;
         // Different X/Y dimensions on every individual townhouse, seeded
         // by parcel + street edge + position (unchanged across saves/reloads).
         const requestedWidth=baseWidth*houseDimensionScale(house,'x',partKey);
