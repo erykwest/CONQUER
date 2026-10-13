@@ -762,6 +762,7 @@ function drawStructure(s,preview=false){
   if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,render);else render();
   if(!preview&&underConstruction(s)){
     if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
+    else if(window.ConquerIndustries?.is(s))withProjectionGroundZ(s.groundZ,()=>drawConstructionProgress(s));
     else drawConstructionProgress(s);
   }
 }
@@ -794,14 +795,19 @@ function drawInvalidPlacementGhost(ghost){
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
   }else{
     const rings=window.ConquerPlacement?.contact(ghost)||[];
-    const z=Number.isFinite(ghost.groundZ)?ghost.groundZ:terrainElevation(structureCenter(ghost));
-    for(const poly of rings){
-      if(poly?.length<3)continue;
-      pathPolygon(projectPath(poly,z+.03),fill,stroke,2.5);
-      // The top face makes the ghost itself visibly red, not just its floor.
-      const height=Math.max(0,structureHeight(ghost));
-      if(height>.05)pathPolygon(projectPath(poly,z+height+.04),'rgba(229,36,45,.28)',stroke,2);
-    }
+    const ground=Number.isFinite(ghost.groundZ)?ghost.groundZ:
+      window.ConquerIndustries?.is(ghost)?window.ConquerIndustries.groundLevel(ghost):
+      isPlacementFoundationBuilding(ghost)?placementGroundZ(ghost):
+      terrainElevation(structureCenter(ghost));
+    withProjectionGroundZ(ground,()=>{
+      for(const poly of rings){
+        if(poly?.length<3)continue;
+        pathPolygon(projectPath(poly,.03),fill,stroke,2.5);
+        // A red upper face remains aligned to the slope-based industry platform.
+        const height=Math.max(0,structureHeight(ghost));
+        if(height>.05)pathPolygon(projectPath(poly,height+.04),'rgba(229,36,45,.28)',stroke,2);
+      }
+    });
   }
   ctx.restore();
 }
