@@ -1546,9 +1546,12 @@ function commitOrientedPlacement(center,angle){
   }:{};
   const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
   const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
-  State.draft=null;
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
-  if(ok&&!snap.wallId&&!snap.parentTowerId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
+  if(ok){
+    State.draft=null;
+    if(!snap.wallId&&!snap.parentTowerId)status((s.type==='gate'?'Gate':'Structure')+' placed — choose next position');
+  }
+  // Invalid placement keeps the red ghost available for another orientation.
   return ok;
 }
 function boundaryPoint(s,target){
