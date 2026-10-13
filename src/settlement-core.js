@@ -357,7 +357,7 @@ function houseTurretInfo(s){
 function houseFootprintParts(s){
   const {w,h}=houseFootprintDimensions(s);
   const parts=[{kind:'body',cx:0,cy:0,w,h,roofTurn:0}];
-  if(houseLevel(s)>=3&&!s.auto){
+  if(houseLevel(s)>=3&&!s.auto&&!s.urbanRedeveloped){
     const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s);
     if(plan==='L'){
       parts.push({kind:'body',cx:sign*w*.38,cy:h*.56,w:w*.55,h:h*.95,roofTurn:Math.PI/2});
@@ -367,12 +367,12 @@ function houseFootprintParts(s){
     }
   }
   const out=parts.map(p=>{const q=houseLocalToWorld(s,p.cx,p.cy);return{...p,center:q,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)}});
-  const turret=!s.auto&&houseTurretInfo(s);if(turret)out.push(turret);
+  const turret=!s.auto&&!s.urbanRedeveloped&&houseTurretInfo(s);if(turret)out.push(turret);
   return out;
 }
 function houseBodyHeight(s){return houseLevel(s)===1?.95:s.auto&&houseLevel(s)===4?2.38:1.72}
 function houseRidgeHeight(s){return houseLevel(s)===1?1.45:s.auto&&houseLevel(s)===4?2.95:2.26}
-function houseStructureHeight(s){const turret=!s.auto&&houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
+function houseStructureHeight(s){const turret=!s.auto&&!s.urbanRedeveloped&&houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
 const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
 function civicLocalParts(s){
