@@ -103,13 +103,16 @@ const shadowCasterGeometryCache=new Map();
 function shadowCasterSignature(s){
   return[
     s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
-    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.baseStyle,s.material,s.woodStyle,s.woodRoof
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
+    s.type==='house'&&s.auto&&houseLevel(s)>=3?urbanRevision:0
   ].join('|');
 }
 function shadowCasterGeometry(s){
   const key=shadowCasterSignature(s),cached=shadowCasterGeometryCache.get(s.id);
   if(cached?.key===key)return cached;
-  const fp=isCastlePart(s)?unionFootprintPoints(s):footprintPoints(s);
+  const fp=s.type==='house'&&s.auto&&houseLevel(s)>=3
+    ?convexHull(urbanHouseDisplayParts(s).flatMap(part=>part.points))
+    :isCastlePart(s)?unionFootprintPoints(s):footprintPoints(s);
   const h=shadowStructureHeight(s);
   const value={key,fp,h};
   shadowCasterGeometryCache.set(s.id,value);
@@ -470,7 +473,7 @@ function pointBlockedForPeasant(p,sourceHouseId){
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='house'||isCivic(s)){
-      const parts=s.type==='house'?houseFootprintParts(s):civicParts(s);
+      const parts=s.type==='house'?urbanHouseDisplayParts(s):civicParts(s);
       for(const part of parts){
         if(pointInPolygon(p,part.points))return true;
         for(let i=0;i<part.points.length;i++){const j=(i+1)%part.points.length;if(pointSegmentDistance(p,part.points[i],part.points[j])<=PEASANT_CLEARANCE)return true}
