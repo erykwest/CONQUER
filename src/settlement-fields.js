@@ -119,6 +119,7 @@ function fieldSeasonPhase(month){
 }
 function fieldCropReady(field,day=State.clock.day){
   const crop=fieldCrop(field),month=calendarDateFromDay(day).month;
+  if(crop.ploughed&&crop.phase==='plough'||crop.harvested&&crop.phase==='harvest')return false;
   return crop.phase===fieldSeasonPhase(month)&&crop.work.some((done,i)=>{
     const cell=fieldLayout(field).cells[i];
     return cell&&done<cell.end-cell.start-1e-7;
@@ -131,7 +132,7 @@ function tickFields(day=State.clock.day){
   // Prepare all crop states before assigning workers so a completed field
   // immediately releases its workforce to any other available parcel.
   for(const field of fields){
-    const crop=fieldCrop(field),previous=calendarDateFromDay(crop.lastDay).month;
+    const crop=fieldCrop(field);
     const year=calendarDateFromDay(day).year;
     if(crop.seasonYear==null)crop.seasonYear=year;
     if(season==='plough'&&crop.phase==='plough'&&crop.seasonYear!==year){
@@ -139,7 +140,7 @@ function tickFields(day=State.clock.day){
     }
     if(crop.phase==='grow'){
       // Sown fields develop through the spring; they mature for July harvest.
-      crop.growth=clamp((day-(crop.sownDay??day))/(Math.max(1,(year-1)*365+181-(crop.sownDay??day))),0,1);
+      crop.growth=clamp((day-(crop.sownDay??day))/(Math.max(1,(year-1)*365+181-CALENDAR_EPOCH_DAY_OF_YEAR-(crop.sownDay??day))),0,1);
       if(season==='harvest'){
         crop.phase='harvest';crop.growth=1;crop.work.fill(0);
       }
@@ -212,7 +213,7 @@ function drawFieldWork(field){
   const layout=fieldLayout(field),crop=fieldCrop(field);
   ctx.save();ctx.lineWidth=Math.max(.6,.075*U*State.view.scale);
   for(const row of layout.rows){
-    const intervals=crop.phase==='plough'?fieldDoneIntervals(field,row.segment):[[0,1]];
+    const intervals=crop.phase==='plough'&&!crop.ploughed?fieldDoneIntervals(field,row.segment):[[0,1]];
     ctx.strokeStyle='#4b3020';
     for(const [t0,t1] of intervals){
       const at=t=>({x:row.a.x+(row.b.x-row.a.x)*t,y:row.a.y+(row.b.y-row.a.y)*t});
@@ -225,7 +226,7 @@ function drawFieldWork(field){
         ctx.fillRect(p.x-.7,p.y-.7,1.4,1.4);
       }
     }
-    if(crop.phase==='harvest'){
+    if(crop.phase==='harvest'&&!crop.harvested){
       let cursor=0;
       for(const [a,b] of [...fieldDoneIntervals(field,row.segment),[1,1]]){
         if(a>cursor+1e-7)drawFieldCropPolygon(fieldStrip(layout,row,cursor,a),1);
