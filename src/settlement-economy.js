@@ -108,6 +108,7 @@
     for(const s of activeStructures()){
       const a=e.activities[s.id],spec=KIND[s.type],staff=staffing[s.id]||0;
       if(!staff||s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
+      if(s.type!=='field'&&(window.ConquerCombat?.alarmMode?.()||'off')!=='off')continue;
       if(s.type==='field'||s.type==='vineyard'){
         // Field visual cycles are tracked independently. Economic harvest occurs
         // at most once per autumn, provided a completed cultivation cycle exists.
