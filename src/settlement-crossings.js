@@ -1,0 +1,362 @@
+'use strict';
+// Standalone terrain crossings: local moat slowdown, bridges and Gate drawbridges.
+// Game rules deliberately do not depend on the appearance of the 2.5D renderer.
+(function(){
+  const WIDTHS={moat:1.5,bridge:1.2};
+  const MAX_LENGTH=16;
+  const MIN_LENGTH=1;
+  const TYPES=['dry','water','wood','stone'];
+  const DRAWBRIDGE_COST={gold:18,wood:28,metal:5};
+  const clamp01=v=>Math.max(0,Math.min(1,Number(v)||0));
+  const xy=s=>s?.a&&s?.b&&Number.isFinite(s.a.x)&&Number.isFinite(s.a.y)&&Number.isFinite(s.b.x)&&Number.isFinite(s.b.y);
+  const length=s=>Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y);
+  function frame(s){
+    const L=length(s)||1,ux=(s.b.x-s.a.x)/L,uy=(s.b.y-s.a.y)/L;
+    return{L,ux,uy,nx:-uy,ny:ux,width:Number(s.width)||WIDTHS[s.type]||1};
+  }
+  function location(s,p){
+    if(!xy(s))return null;
+    const f=frame(s),dx=p.x-s.a.x,dy=p.y-s.a.y;
+    return{along:dx*f.ux+dy*f.uy,across:dx*f.nx+dy*f.ny,f};
+  }
+  function onStrip(s,p,pad=0){
+    const l=location(s,p);
+    return l&&l.along>=-pad&&l.along<=l.f.L+pad&&Math.abs(l.across)<=l.f.width/2+pad?l:null;
+  }
+  function point(s,along,across){
+    const f=frame(s);
+    return{x:s.a.x+f.ux*along+f.nx*across,y:s.a.y+f.uy*along+f.ny*across};
+  }
+  function corners(s,near=-.5,far=.5,from=0,to=null){
+    const f=frame(s),end=to==null?f.L:to;
+    return[point(s,from,near*f.width),point(s,end,near*f.width),
+      point(s,end,far*f.width),point(s,from,far*f.width)];
+  }
+  function samples(s){
+    const f=frame(s),out=[];
+    for(let i=0;i<=Math.max(2,Math.ceil(f.L/.3));i++){
+      const t=i/Math.max(2,Math.ceil(f.L/.3));
+      for(const offset of [-.5,0,.5])out.push(point(s,f.L*t,offset*f.width));
+    }
+    return out;
+  }
+  function validate(s){
+    if(!s||!['moat','bridge'].includes(s.type)||!xy(s))return'Invalid crossing geometry';
+    if(!TYPES.includes(s.variant))return'Invalid crossing material';
+    if(s.type==='moat'&&!['dry','water'].includes(s.variant))return'Invalid moat variant';
+    if(s.type==='bridge'&&!['wood','stone'].includes(s.variant))return'Invalid bridge material';
+    const f=frame(s);
+    if(f.L<MIN_LENGTH-.001||f.L>MAX_LENGTH+.001)return'Length must be 1–16U';
+    if(f.width<.6||f.width>4)return'Width must be between 0.6 and 4U';
+    if(!inBuild(s.a)||!inBuild(s.b))return'Both endpoints must be inside the build area';
+    if(s.type==='bridge'){
+      // Crossing the gap may be over air or a cliff. Only BANKS must be flat,
+      // accessible and at exactly the same elevation. No sloped bridges.
+      if(terrainSlopeKind(s.a)||terrainSlopeKind(s.b))return'Bridge banks must be flat';
+      const za=terrainPlateauElevation(s.a),zb=terrainPlateauElevation(s.b);
+      if(za==null||zb==null||Math.abs(za-zb)>.01)return'Bridge endpoints must have the SAME elevation';
+      s.groundZ=za;
+    }else{
+      // A moat follows a flat contour; an excavated trench is not a ramp.
+      const levels=samples(s).map(p=>terrainSlopeKind(p)?null:terrainPlateauElevation(p));
+      if(levels.some(z=>z==null)||levels.some(z=>Math.abs(z-levels[0])>.01))
+        return'Moat must follow one flat terrace';
+      if(s.variant==='water'&&levels.some(z=>Math.abs(z)>.01))
+        return'Water-filled moats require ground level 0';
+      s.groundZ=levels[0];
+    }
+    return null;
+  }
+  function normalise(s){
+    if(!s||!['moat','bridge'].includes(s.type))return s;
+    s.width=Math.max(.6,Math.min(4,Number(s.width)||WIDTHS[s.type]));
+    s.variant=s.type==='moat'?(s.variant==='water'?'water':'dry'):(s.variant==='stone'?'stone':'wood');
+    s.length=length(s);
+    s.fills=Array.isArray(s.fills)?s.fills.filter(f=>Number.isFinite(f.at)&&Number.isFinite(f.span))
+      .map(f=>({at:Math.max(0,Math.min(s.length,f.at)),span:Math.max(.5,Math.min(4,f.span)),
+        progress:clamp01(f.progress)})).slice(-64):[];
+    return s;
+  }
+  function add(s){
+    normalise(s);
+    const err=validate(s);
+    if(err){status(err);return false}
+    const cost=constructionCost(s);
+    if(!canAfford(cost)){status('Insufficient resources: '+costText(cost));return false}
+    s.id=s.id||uid();s.buildCost=cost;spendCost(cost);beginConstruction(s);
+    State.structures.push(s);
+    selectStructure(s);markDirty(true,['ground','base','castleBody']);
+    status((s.type==='moat'?'Moat':'Bridge')+' placed · '+s.length.toFixed(1)+'U · level '+s.groundZ);
+    draw();return true;
+  }
+  function filled(s,l){
+    return s.fills?.some(f=>f.progress>=1&&Math.abs(l.along-f.at)<=f.span/2)||false;
+  }
+  function onOpenBridge(p,forHeavy=false){
+    for(const s of State.structures){
+      if(s.type==='bridge'&&!underConstruction(s)&&onStrip(s,p,forHeavy?-.03:0))
+        return s;
+      if(s.type==='gate'&&drawbridgePassage(s,p))return s;
+    }
+    return null;
+  }
+  function moatAt(p){
+    for(const s of State.structures){
+      if(s.type!=='moat'||underConstruction(s))continue;
+      const l=onStrip(s,p);
+      if(l)return{moat:s,location:l,filled:filled(s,l)};
+    }
+    return null;
+  }
+  function movementMultiplier(p,heavy=false){
+    if(onOpenBridge(p,heavy))return 1;
+    const found=moatAt(p);
+    if(!found||found.filled)return 1;
+    if(heavy)return 0;
+    return found.moat.variant==='water'?.25:.5;
+  }
+  function routeMultiplier(path){
+    if(!path||path.length<2)return 1;
+    let normal=0,weighted=0;
+    for(let i=1;i<path.length;i++){
+      const a=path[i-1],b=path[i],L=Math.hypot(b.x-a.x,b.y-a.y);
+      const steps=Math.max(1,Math.ceil(L/.2));
+      for(let j=0;j<steps;j++){
+        const t=(j+.5)/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+        const m=Math.max(.1,movementMultiplier(p));
+        normal+=L/steps;weighted+=L/steps/m;
+      }
+    }
+    return normal>0?weighted/normal:1;
+  }
+  function onBridge(p){return !!onOpenBridge(p)}
+  function segmentCanCrossCliff(a,b){
+    const steps=Math.max(2,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.12));
+    for(let i=0;i<=steps;i++){
+      const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+      if(terrainSlopeKind(p)==='steep'&&!onOpenBridge(p))return false;
+    }
+    return true;
+  }
+  function progressFilling(id,position,span,effortDays=0){
+    const s=State.structures.find(x=>x.id===id&&x.type==='moat'&&!underConstruction(x));
+    if(!s)return{ok:false,reason:'No completed moat'};
+    const l=location(s,position);
+    if(!l||l.along<0||l.along>l.f.L||Math.abs(l.across)>l.f.width/2+.35)
+      return{ok:false,reason:'Equipment not in contact with moat'};
+    const width=Math.max(.5,Math.min(4,Number(span)||1.2));
+    let patch=s.fills.find(f=>Math.abs(f.at-l.along)<Math.max(.25,width*.4));
+    if(!patch){patch={at:l.along,span:width,progress:0};s.fills.push(patch)}
+    patch.span=Math.max(patch.span,width);
+    // Deliberately modest rate: operators fill the ditch, not the vehicle itself.
+    const effort=Math.max(0,Number(effortDays)||0);
+    patch.progress=clamp01(patch.progress+effort/(s.variant==='water'?4:2.5)/s.width*1.5);
+    markDirty(true,['ground','base']);
+    return{ok:true,progress:patch.progress,complete:patch.progress>=1,moatId:s.id};
+  }
+  function heavyApproach(unit,days){
+    if(!unit||!['ram','siegeTower','mantlet'].includes(unit.kind))return null;
+    const spans={ram:1.4,siegeTower:2.4,mantlet:1.0};
+    for(const s of State.structures){
+      if(s.type==='moat'&&!underConstruction(s)&&onStrip(s,unit,.35)
+        &&movementMultiplier(unit,true)===0)return progressFilling(s.id,unit,spans[unit.kind],days);
+    }
+    return null;
+  }
+  function drawbridge(gate){
+    return gate?.type==='gate'&&gate.drawbridge?.installed?gate.drawbridge:null;
+  }
+  function stateOfGate(gate){
+    const d=drawbridge(gate);
+    return !d?'none':d.progress>=.99?'raised':d.progress<=.01?'lowered':'moving';
+  }
+  function deck(gate){
+    const d=rectDims(gate),a=Number(gate.angle)||0;
+    const outward={x:Math.cos(a),y:Math.sin(a)};
+    const tangent={x:-outward.y,y:outward.x};
+    const hinge={x:gate.x+outward.x*d.w/2,y:gate.y+outward.y*d.w/2};
+    const length=2.25,width=Math.min(1.2,d.h*.80);
+    return{hinge,outward,tangent,length,width,z:placementGroundZ(gate)};
+  }
+  function drawbridgePassage(gate,p){
+    const d=drawbridge(gate);
+    if(!d||underConstruction(gate)||d.progress>.02)return false;
+    const g=deck(gate),dx=p.x-g.hinge.x,dy=p.y-g.hinge.y;
+    const forward=dx*g.outward.x+dy*g.outward.y,lateral=dx*g.tangent.x+dy*g.tangent.y;
+    return forward>=-.10&&forward<=g.length+.06&&Math.abs(lateral)<=g.width/2;
+  }
+  function drawbridgeBlocks(p,gate){
+    const d=drawbridge(gate);
+    if(!d||underConstruction(gate)||d.progress<=.02)return false;
+    const g=deck(gate),dx=p.x-g.hinge.x,dy=p.y-g.hinge.y;
+    const forward=dx*g.outward.x+dy*g.outward.y,lateral=dx*g.tangent.x+dy*g.tangent.y;
+    return forward>=-.35&&forward<=.45&&Math.abs(lateral)<g.width/2+.12;
+  }
+  function toggleDrawbridge(gate){
+    const d=drawbridge(gate);
+    if(!d||underConstruction(gate))return false;
+    d.raised=!d.raised;
+    markDirty(true,false,true);
+    renderFunctionPanel();draw();
+    status(d.raised?'Raising drawbridge':'Lowering drawbridge');
+    return true;
+  }
+  function installDrawbridge(gate){
+    if(!gate||gate.type!=='gate'||underConstruction(gate)||drawbridge(gate))return false;
+    if(!canAfford(DRAWBRIDGE_COST)){status('Insufficient resources · '+costText(DRAWBRIDGE_COST));return false}
+    spendCost(DRAWBRIDGE_COST);
+    gate.drawbridge={installed:true,raised:false,progress:0};
+    markDirty(true,['ground','base']);renderFunctionPanel();draw();
+    status('Drawbridge installed on the gate');
+    return true;
+  }
+  function removeDrawbridge(gate){
+    if(!drawbridge(gate))return false;
+    delete gate.drawbridge;markDirty(true,['ground','base']);renderFunctionPanel();draw();
+    status('Drawbridge removed (no materials refunded)');return true;
+  }
+  function drawMoat(s){
+    const z=Number(s.groundZ)||0,water=s.variant==='water',width=frame(s).width;
+    const outer=corners(s),inner=corners(s,-.23,.23);
+    pathPolygon(outer.map(p=>w2s(p,z)),'#7b6850','#514533',.85);
+    // Excavation: two sloping banks and a recessed floor (local ground layer).
+    const near=[point(s,0,-width/2),point(s,length(s),-width/2)];
+    const far=[point(s,0,width/2),point(s,length(s),width/2)];
+    pathPolygon([w2s(near[0],z),w2s(near[1],z),
+      w2s(inner[1],z-.30),w2s(inner[0],z-.30)],'#9a805c','#68513b',.75);
+    pathPolygon([w2s(inner[3],z-.30),w2s(inner[2],z-.30),
+      w2s(far[1],z),w2s(far[0],z)],'#7c6247','#675039',.75);
+    pathPolygon(inner.map(p=>w2s(p,z-(water?.18:.32))),
+      water?'#398aa5':'#5a4937',water?'#8bc6cf':'#473d32',.9);
+    if(water){
+      const f=frame(s);
+      for(let i=1;i<Math.floor(f.L*1.3);i+=2){
+        const a=point(s,i/f.L*f.L,-f.width*.10),b=point(s,Math.min(f.L,i+.35),f.width*.10);
+        ctx.beginPath();const q=w2s(a,z-.15),r=w2s(b,z-.15);
+        ctx.moveTo(q.x,q.y);ctx.lineTo(r.x,r.y);
+        ctx.strokeStyle='rgba(187,236,234,.42)';ctx.lineWidth=.9;ctx.stroke();
+      }
+    }
+    for(const patch of s.fills||[]){
+      if(patch.progress<=0)continue;
+      const half=Math.min(f.L||length(s),patch.span)/2,from=Math.max(0,patch.at-half),
+        to=Math.min(length(s),patch.at+half);
+      const acrossEnd=-.5+patch.progress;
+      const p0=point(s,from,-width*.5),p1=point(s,to,-width*.5),
+        p2=point(s,to,width*acrossEnd),p3=point(s,from,width*acrossEnd);
+      pathPolygon([p0,p1,p2,p3].map(p=>w2s(p,z+.025)),
+        '#c2a477','#806c4c',.8);
+    }
+  }
+  function drawBridge(s){
+    const z=(Number(s.groundZ)||0)+.09,f=frame(s),width=f.width;
+    const poly=corners(s);
+    pathPolygon(poly.map(p=>w2s(p,z)),s.variant==='stone'?'#9c9b92':'#986e42',
+      s.variant==='stone'?'#5c5b53':'#50361e',1);
+    const across=(-width/2);
+    if(s.variant==='wood'){
+      for(let v=.25;v<f.L;v+=.35){
+        const a=w2s(point(s,v,-width*.49),z+.009),b=w2s(point(s,v,width*.49),z+.009);
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle='rgba(54,33,18,.58)';ctx.lineWidth=1;ctx.stroke();
+      }
+      for(const side of [-1,1]){
+        const a=w2s(point(s,0,side*width/2),z+.23),b=w2s(point(s,f.L,side*width/2),z+.23);
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+        ctx.strokeStyle='#735037';ctx.lineWidth=2.0;ctx.stroke();
+      }
+    }else{
+      for(const side of [-1,1]){
+        const a=w2s(point(s,0,side*width/2),z+.24),b=w2s(point(s,f.L,side*width/2),z+.24);
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+        ctx.strokeStyle='#78766d';ctx.lineWidth=3.4;ctx.stroke();
+      }
+    }
+  }
+  function drawGround(){
+    for(const s of State.structures){
+      if(s.type==='moat'||s.type==='bridge'){
+        ctx.save();if(underConstruction(s))ctx.globalAlpha=.55;
+        if(s.type==='moat')drawMoat(s);else drawBridge(s);
+        ctx.restore();
+      }
+    }
+  }
+  let frameAt=0,rafPending=0;
+  function drawDynamic(){
+    const now=performance.now(),elapsed=frameAt?Math.min(.08,(now-frameAt)/1000):0;
+    frameAt=now;let moving=false;
+    for(const gate of State.structures){
+      const d=drawbridge(gate);
+      if(!d||underConstruction(gate))continue;
+      const target=d.raised?1:0;
+      if(Math.abs(d.progress-target)>.001){
+        d.progress=Math.max(0,Math.min(1,d.progress+(d.raised?1:-1)*elapsed/1.6));
+        if(Math.abs(d.progress-target)<.01)d.progress=target;
+        moving=true;
+      }
+      const g=deck(gate),theta=d.progress*Math.PI/2;
+      const far={x:g.hinge.x+g.outward.x*g.length*Math.cos(theta),
+        y:g.hinge.y+g.outward.y*g.length*Math.cos(theta)};
+      const side=g.tangent,w=g.width/2,baseZ=g.z+.08,tipZ=baseZ+g.length*Math.sin(theta);
+      const a={x:g.hinge.x+side.x*w,y:g.hinge.y+side.y*w},
+        b={x:g.hinge.x-side.x*w,y:g.hinge.y-side.y*w},
+        c={x:far.x-side.x*w,y:far.y-side.y*w},
+        e={x:far.x+side.x*w,y:far.y+side.y*w};
+      withStructureGroundPlane(gate,()=>{
+        pathPolygon([w2s(a,baseZ-g.z),w2s(b,baseZ-g.z),
+          w2s(c,tipZ-g.z),w2s(e,tipZ-g.z)],
+          '#9d7044','#412b1a',1.6);
+        for(const shift of [-w*.78,w*.78]){
+          const h={x:g.hinge.x+side.x*shift,y:g.hinge.y+side.y*shift},
+            t={x:far.x+side.x*shift,y:far.y+side.y*shift};
+          const p=w2s(h,2.0),q=w2s(t,tipZ-g.z);
+          ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);
+          ctx.strokeStyle='#b8a98b';ctx.lineWidth=1;ctx.stroke();
+        }
+      });
+    }
+    if(moving&&!rafPending){
+      rafPending=requestAnimationFrame(()=>{rafPending=0;draw()});
+    }
+  }
+  function panel(s){
+    if(s.type==='moat'){
+      const fills=(s.fills||[]).filter(f=>f.progress>=1).length;
+      return '<div class="slot"><div class="slot-label">Moat · '+(s.variant==='water'?'Water':'Dry')+'</div>'+
+        '<div class="legend">Depth .3U · infantry '+(s.variant==='water'?'25%':'50%')+
+        ' speed · heavy equipment requires filling · crossings ready '+fills+'</div></div>';
+    }
+    if(s.type==='bridge')return '<div class="slot"><div class="slot-label">Bridge · '+s.variant+'</div>'+
+      '<div class="legend">Flat deck at elevation '+s.groundZ+
+      ' · length '+s.length.toFixed(1)+'U · width '+s.width.toFixed(1)+
+      'U · no sloped bridges</div>'+
+      (s.variant==='wood'?'<button data-crossing-demolish>⚒ Demolish wooden bridge</button><div class="legend">Irreversible, no refund.</div>':'')+'</div>';
+    if(s.type==='gate'){
+      const d=drawbridge(s);
+      return '<div class="slot"><div class="slot-label">Drawbridge · Gate accessory</div>'+
+      (d?'<div class="grid"><button data-drawbridge-toggle '+(underConstruction(s)?'disabled':'')+'>'+
+        (d.raised?'⬇ Lower':'⬆ Raise')+'</button><button data-drawbridge-remove>Remove</button></div>'+
+        '<div class="legend">Animated gate-side bridge. '+stateOfGate(s)+'. Access only when fully lowered.</div>':
+        '<button data-drawbridge-install '+(underConstruction(s)?'disabled':'')+
+        '>Install drawbridge · '+costText(DRAWBRIDGE_COST)+'</button>')+'</div>';
+    }
+    return '';
+  }
+  function bindPanel(slots){
+    const s=selectedStructure();if(!s)return;
+    slots.querySelector('[data-crossing-demolish]')?.addEventListener('click',()=>{
+      if(confirm('Demolish the wooden bridge permanently?')){
+        State.structures=State.structures.filter(x=>x.id!==s.id);
+        State.selectedId=null;markDirty(true,['ground','base']);renderFunctionPanel();draw();
+        status('Wooden bridge demolished — no materials returned');
+      }
+    });
+    slots.querySelector('[data-drawbridge-install]')?.addEventListener('click',()=>installDrawbridge(s));
+    slots.querySelector('[data-drawbridge-toggle]')?.addEventListener('click',()=>toggleDrawbridge(s));
+    slots.querySelector('[data-drawbridge-remove]')?.addEventListener('click',()=>removeDrawbridge(s));
+  }
+  window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawDynamic,
+    movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
+    heavyApproach,progressFilling,installDrawbridge,toggleDrawbridge,removeDrawbridge,
+    drawbridgeBlocks,drawbridgePassage,stateOfGate,DRAWBRIDGE_COST};
+})();
