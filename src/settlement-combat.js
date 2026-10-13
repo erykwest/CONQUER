@@ -634,7 +634,11 @@
     }
     if(selected){
       const u=combat.units.find(u=>u.id===selected);
-      if(u){g.strokeStyle='#e3fcac';g.lineWidth=1.3;g.setLineDash([4,4]);drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)},true);g.setLineDash([]);}
+      if(u){
+        g.strokeStyle='rgba(227,252,172,.52)';g.lineWidth=1.2;g.setLineDash([5,5]);
+        drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)},true);g.setLineDash([]);
+        drawSelectedUnitMarker(u);
+      }
     }
     const characters=[];
     for(const u of combat.units){
@@ -681,20 +685,70 @@
     });
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
     const focused=combat.units.find(u=>u.id===selected);
-    document.getElementById('combatSelection').textContent=selected?
-      ((focused?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
+    if(focused)window.ConquerCombatRules?.ensure(focused,focused.kind==='squad'?'spearman':'knight');
+    document.getElementById('combatSelection').textContent=focused?
+      ((focused.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
+    renderSelectedUnitHud(focused);
     const panel=document.getElementById('combatStats');
     if(panel){
-      const hp=x=>x?.stats?Math.max(0,Math.round(x.stats.hp))+'/'+x.stats.maxHp:'—';
-      const brain=x=>x?.stats?Math.round(x.stats.brain):'—';
       const allies=combat.units.filter(u=>!u.defeated),hostiles=combat.enemy.filter(e=>!e.defeated);
       panel.textContent='Units '+allies.length+' / Hostiles '+hostiles.length+
-        (focused?' · HP '+hp(focused)+' · B '+brain(focused):'')+
-        (combat.enemy.length?' · Enemy HP '+hp(combat.enemy[0]):'');
+        (combat.enemy.length?' · Enemy HP '+(combat.enemy[0]?.stats?Math.max(0,Math.round(combat.enemy[0].stats.hp))+'/'+combat.enemy[0].stats.maxHp:'—'):'');
     }
     const overlayMs=performance.now()-overlayStart;
     if(window.__conquerPerf)window.__conquerPerf.combatOverlayMs=overlayMs;
     if(overlayMs>25)window.__conquerAnalytics?.event('COMBAT_OVERLAY_SLOW',{ms:+overlayMs.toFixed(1),units:combat.units.length,enemies:combat.enemy.length},'warn',3000);
+  }
+  function selectedUnitState(u){
+    if(!u)return '';
+    if(u.defeated||u.stats?.hp<=0)return 'DEFEATED';
+    if(u.routing)return 'ROUTING';
+    if(u.engaged)return 'ENGAGED';
+    if(u.target)return 'MARCHING';
+    return 'READY';
+  }
+  function drawSelectedUnitMarker(u){
+    const z=terrainElevation(u),base=w2s(u,z+.03),squad=u.kind==='squad';
+    g.save();
+    const pulse=.72+.18*Math.sin(performance.now()/190);
+    g.globalAlpha=pulse;g.strokeStyle='#ffd77c';g.lineWidth=2.4;g.setLineDash([]);
+    g.beginPath();g.ellipse(base.x,base.y-2,squad?25:16,squad?10:7,0,0,Math.PI*2);g.stroke();
+    g.globalAlpha=1;
+    const top=w2s(u,z+(squad?1.75:1.5));
+    g.fillStyle='#ffd77c';g.beginPath();g.moveTo(top.x,top.y-5);g.lineTo(top.x-6,top.y-15);g.lineTo(top.x+6,top.y-15);g.closePath();g.fill();
+    if(u.target){
+      const points=u.path?.length?u.path.slice(Math.max(0,u.pathIndex-1)): [u,u.target];
+      g.strokeStyle='rgba(255,215,124,.82)';g.lineWidth=1.8;g.setLineDash([7,5]);g.beginPath();
+      const start=w2s(u,z+.04);g.moveTo(start.x,start.y);
+      for(const q of points){
+        const at=w2s(q,terrainElevation(q)+.04);g.lineTo(at.x,at.y);
+      }
+      const target=w2s(u.target,terrainElevation(u.target)+.04);g.lineTo(target.x,target.y);g.stroke();g.setLineDash([]);
+      g.strokeStyle='#ffd77c';g.lineWidth=2;g.beginPath();g.ellipse(target.x,target.y,10,5,0,0,Math.PI*2);g.stroke();
+      g.beginPath();g.moveTo(target.x-6,target.y);g.lineTo(target.x+6,target.y);g.moveTo(target.x,target.y-6);g.lineTo(target.x,target.y+6);g.stroke();
+    }
+    g.restore();
+  }
+  function renderSelectedUnitHud(u){
+    const hud=document.getElementById('unitSelectionHud');if(!hud)return;
+    if(!u){hud.hidden=true;return}
+    const s=u.stats||{},pct=(v,max=150)=>clamp((Number(v)||0)/Math.max(1,Number(max)||1)*100,0,100);
+    const squad=u.kind==='squad',state=selectedUnitState(u);
+    const name=squad?'PIKEMEN':'KNIGHT';
+    const subtitle=squad?'5 soldiers · Sergeant order 6U':'Commander · Command radius 16U';
+    const order=u.target?('Target '+dist(u,u.target).toFixed(1)+'U away'):'Awaiting orders';
+    hud.hidden=false;hud.dataset.state=state.toLowerCase();
+    document.getElementById('unitHudIcon').textContent=squad?'⚔':'♞';
+    document.getElementById('unitHudName').textContent=name;
+    document.getElementById('unitHudSubtitle').textContent=subtitle;
+    document.getElementById('unitHudState').textContent=state;
+    document.getElementById('unitHudHpText').textContent=Math.max(0,Math.round(s.hp||0))+' / '+Math.round(s.maxHp||0);
+    document.getElementById('unitHudHp').style.width=pct(s.hp,s.maxHp)+'%';
+    document.getElementById('unitHudEnergyText').textContent=Math.round(s.energy||0)+' / 150';
+    document.getElementById('unitHudEnergy').style.width=pct(s.energy)+'%';
+    document.getElementById('unitHudBrainText').textContent=Math.round(s.brain||0)+' / 150';
+    document.getElementById('unitHudBrain').style.width=pct(s.brain)+'%';
+    document.getElementById('unitHudStats').textContent='Combat '+(s.combat??'—')+' · Armor '+(s.armor??'—')+' · '+order;
   }
   const SQUAD_FOOTPRINT=[[-.55,-.22],[0,-.22],[.55,-.22],[-.55,.33],[0,.33]];
   function militaryOffsets(kind){return kind==='squad'?SQUAD_FOOTPRINT:[[0,0]]}
@@ -871,6 +925,7 @@
         setTool({kind:'combat-orders',label:'Orders: click destination'});
         syncButtons();draw();return;
       }
+      if(kind==='select'&&selected){selected=null;renderSelectedUnitHud(null);}
       if(kind==='combat-orders'&&selected){
         e.preventDefault();e.stopImmediatePropagation();
         const u=combat.units.find(u=>u.id===selected);if(u)issueMove(u,p);
@@ -890,7 +945,7 @@
     scheduleLocalSave();requestToolDraw();
   },true);
   const styles=document.createElement('style');
-  styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatRecall[data-mode=green]{background:#35874e;color:#fff} #combatRecall[data-mode=hall]{background:#ad3438;color:#fff} #combatMute:disabled{opacity:.55} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c}';
+  styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatRecall[data-mode=green]{background:#35874e;color:#fff} #combatRecall[data-mode=hall]{background:#ad3438;color:#fff} #combatMute:disabled{opacity:.55} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c} #unitSelectionHud{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);z-index:12;width:min(390px,calc(100% - 28px));padding:10px 12px 11px;background:rgba(23,15,12,.96);border:1px solid #9b7449;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.42);backdrop-filter:blur(7px);pointer-events:auto} #unitSelectionHud[hidden]{display:none} .unit-hud-head{display:grid;grid-template-columns:38px 1fr auto 26px;align-items:center;gap:8px;margin-bottom:8px} .unit-hud-icon{width:38px;height:38px;border:1px solid #8d6b44;border-radius:8px;display:grid;place-items:center;background:#302218;font-size:20px;color:#ffd77c} .unit-hud-title{display:flex;flex-direction:column;min-width:0}.unit-hud-title b{font-size:12px;letter-spacing:.08em}.unit-hud-title small{font-size:9px;color:#b9a690;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.unit-hud-state{font-size:9px;font-weight:900;letter-spacing:.08em;color:#ffd77c}.unit-hud-close{width:26px!important;height:26px!important;padding:0!important;border-radius:7px!important}.unit-hud-bars{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.unit-hud-meter{min-width:0}.unit-hud-meter label{display:flex!important;justify-content:space-between;gap:5px!important;margin-bottom:3px;font-size:9px!important;color:#b9a690}.unit-hud-track{height:5px;background:#100b09;border-radius:999px;overflow:hidden}.unit-hud-track i{display:block;height:100%;background:#8fbf73}.unit-hud-meter.energy .unit-hud-track i{background:#d8b55b}.unit-hud-meter.brain .unit-hud-track i{background:#7fa2c9}.unit-hud-stats{margin-top:7px;padding-top:6px;border-top:1px solid #4b382b;font-size:10px;color:#e2d3bd} #unitSelectionHud[data-state=engaged] .unit-hud-state{color:#efc06c} #unitSelectionHud[data-state=routing] .unit-hud-state,#unitSelectionHud[data-state=defeated] .unit-hud-state{color:#fc6868} @media(max-width:720px){#unitSelectionHud{bottom:46px;width:min(360px,calc(100% - 18px))}.unit-hud-bars{grid-template-columns:1fr}.unit-hud-head{grid-template-columns:34px 1fr auto 26px}.unit-hud-icon{width:34px;height:34px}}';
   document.head.appendChild(styles);
   const ui=document.createElement('div');
   ui.id='combatControls';
@@ -904,6 +959,14 @@
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
     '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>';
   document.querySelector('#builder h2').insertAdjacentElement('afterend',ui);
+  const unitHud=document.createElement('div');
+  unitHud.id='unitSelectionHud';unitHud.hidden=true;
+  unitHud.innerHTML='<div class="unit-hud-head"><div class="unit-hud-icon" id="unitHudIcon">⚔</div><div class="unit-hud-title"><b id="unitHudName">UNIT</b><small id="unitHudSubtitle"></small></div><span class="unit-hud-state" id="unitHudState">READY</span><button class="unit-hud-close" id="unitHudClose" type="button" aria-label="Deselect unit">×</button></div>'+
+    '<div class="unit-hud-bars"><div class="unit-hud-meter"><label><span>HP</span><b id="unitHudHpText">—</b></label><div class="unit-hud-track"><i id="unitHudHp"></i></div></div>'+
+    '<div class="unit-hud-meter energy"><label><span>ENERGY</span><b id="unitHudEnergyText">—</b></label><div class="unit-hud-track"><i id="unitHudEnergy"></i></div></div>'+
+    '<div class="unit-hud-meter brain"><label><span>MORALE</span><b id="unitHudBrainText">—</b></label><div class="unit-hud-track"><i id="unitHudBrain"></i></div></div></div>'+
+    '<div class="unit-hud-stats" id="unitHudStats"></div>';
+  wrap.appendChild(unitHud);
   const $=id=>document.getElementById(id);
   function syncButtons(){
     if(!combat||!$('combatFog'))return;
@@ -930,6 +993,8 @@
   $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click knight or pikemen squad, then click target'});syncButtons()};
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
   $('combatClearEnemies').onclick=()=>{combat.enemy=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  $('unitHudClose').onclick=()=>{selected=null;renderSelectedUnitHud(null);if(State.tool.kind==='combat-orders')setTool({kind:'select',label:'Select'});syncButtons();draw()};
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&selected){selected=null;renderSelectedUnitHud(null);syncButtons();}});
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
