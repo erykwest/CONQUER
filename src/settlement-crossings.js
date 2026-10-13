@@ -180,14 +180,14 @@
   }
   function drawbridgePassage(gate,p){
     const d=drawbridge(gate);
-    if(!d||underConstruction(gate)||d.progress>.02)return false;
+    if(!d||underConstruction(gate)||d.raised||d.progress>.02)return false;
     const g=deck(gate),dx=p.x-g.hinge.x,dy=p.y-g.hinge.y;
     const forward=dx*g.outward.x+dy*g.outward.y,lateral=dx*g.tangent.x+dy*g.tangent.y;
     return forward>=-.10&&forward<=g.length+.06&&Math.abs(lateral)<=g.width/2;
   }
   function drawbridgeBlocks(p,gate){
     const d=drawbridge(gate);
-    if(!d||underConstruction(gate)||d.progress<=.02)return false;
+    if(!d||underConstruction(gate)||(!d.raised&&d.progress<=.02))return false;
     const g=deck(gate),dx=p.x-g.hinge.x,dy=p.y-g.hinge.y;
     const forward=dx*g.outward.x+dy*g.outward.y,lateral=dx*g.tangent.x+dy*g.tangent.y;
     return forward>=-.35&&forward<=.45&&Math.abs(lateral)<g.width/2+.12;
