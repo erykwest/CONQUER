@@ -104,6 +104,9 @@ function urbanParcelAllowed(points,houseId){
   }
   for(const s of State.structures){
     if(s.id===houseId)continue;
+    // A house parcel must not swallow an existing field. Field footprints
+    // are not building polygons, so test them explicitly here.
+    if(s.type==='field'&&urbanPolygonsOverlap(points,fieldPoints(s)))return false;
     if(urbanBuildingPolygons(s).some(poly=>urbanPolygonsOverlap(points,poly)))return false;
   }
   return true;
