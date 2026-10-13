@@ -112,6 +112,9 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 .ux-builder .ux-close .ux-svg{width:17px;height:17px}
 .ux-builder .ux-catalog{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
 .ux-builder .ux-catalog .ux-icon-btn{width:100%;min-width:0;aspect-ratio:1;height:auto}
+/* Keep the full tactical UI readable when mounted in the SVG flyout. */
+.ux-builder .ux-catalog #combatControls{grid-column:1/-1;min-width:0;margin:0}
+.ux-builder #uxRetainedControls[hidden]{display:none!important}
 .ux-builder .ux-options{border-top:1px solid var(--line);margin-top:14px;padding-top:10px}
 .ux-builder .ux-options>strong{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
 .ux-builder .ux-option-line{display:flex;align-items:center;gap:8px;margin:7px 0}
