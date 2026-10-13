@@ -1055,6 +1055,10 @@ function ensureStaticLandscape(){
   if(!Array.isArray(State.environment)||!State.environment.length){
     generateEnvironment();generated=true;
   }
+  // Remove obsolete brown hill/rough ellipses from existing saved maps as well.
+  // True relief remains in State.relief; it is not flattened or regenerated.
+  const withoutOvals=State.environment.filter(f=>f.type!=='rough'&&f.type!=='hill');
+  if(withoutOvals.length!==State.environment.length){State.environment=withoutOvals;generated=true}
   if(repairForestsAgainstSteepSlopes())generated=true;
   return generated;
 }
@@ -1156,7 +1160,6 @@ function ensureForestCoverage(env,rnd,target=.20){
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[];
   const addBlob=(type,count,small=false)=>{for(let i=0;i<count;i++){if(type==='forest'){addForestBlob(env,rnd,small,3);continue}const p=randomEnvPoint(rnd,18),rx=small?4+rnd()*3:7+rnd()*4,ry=small?3+rnd()*2:4+rnd()*3;if(type==='mountain')env.push(makeEnvBlob(rnd,'mountain',p.x,p.y,rx,ry,'#56493c','#968470',24,.11));else if(type==='pond')env.push(makeEnvBlob(rnd,'pond',p.x,p.y,rx,ry,'#3f7f8a','#8ab9bd',20,.20))}};
-  const addEllipse=(type,count)=>{for(let i=0;i<count;i++){const p=randomEnvPoint(rnd,18);if(type==='hill')env.push(makeEnvEllipse('hill',p.x,p.y,7+rnd()*4,4+rnd()*2,(rnd()-.5)*1.4,'#5c5235','#927b4f'));else env.push(makeEnvEllipse('rough',p.x,p.y,4.5+rnd()*2.5,3+rnd()*1.5,(rnd()-.5)*1.4,'rgba(105,92,54,.45)','rgba(155,132,79,.55)'))}};
   if(State.biome==='sea')env.push(makeEnvSea(rnd));
   if(State.biome==='valley'||State.biome==='mountains'){
     const count=State.biome==='mountains'?5+Math.floor(rnd()*3):3+Math.floor(rnd()*3);
@@ -1167,21 +1170,21 @@ function generateEnvironment(){
     }
   }
   if(State.biome==='plains'){
-    addEllipse('rough',1+Math.floor(rnd()*2));if(rnd()<.45)env.push(makeEnvWater(rnd,'stream'));if(rnd()<.55)addBlob('forest',1,true);
+    if(rnd()<.45)env.push(makeEnvWater(rnd,'stream'));if(rnd()<.55)addBlob('forest',1,true);
   }else if(State.biome==='hills'){
-    addEllipse('hill',3+Math.floor(rnd()*2));addEllipse('rough',1+Math.floor(rnd()*2));if(rnd()<.55)addBlob('forest',1,true);
+    if(rnd()<.55)addBlob('forest',1,true);
   }else if(State.biome==='valley'){
-    env.push(makeEnvWater(rnd,'stream'));addEllipse('rough',1);
+    env.push(makeEnvWater(rnd,'stream'));
   }else if(State.biome==='river'){
-    env.push(makeEnvWater(rnd,'river'));addBlob('forest',1+Math.floor(rnd()*2),true);if(rnd()<.55)addEllipse('hill',1);
+    env.push(makeEnvWater(rnd,'river'));addBlob('forest',1+Math.floor(rnd()*2),true);
   }else if(State.biome==='forest'){
     addBlob('forest',4+Math.floor(rnd()*3),true);env.push(makeEnvWater(rnd,'stream'));if(rnd()<.65)addBlob('pond',1,true);
   }else if(State.biome==='mountains'){
-    env.push(makeEnvWater(rnd,'stream'));addEllipse('hill',1+Math.floor(rnd()*2));
+    env.push(makeEnvWater(rnd,'stream'));
   }else if(State.biome==='sea'){
-    addEllipse('rough',1);if(rnd()<.55)addBlob('forest',1,true);
+    if(rnd()<.55)addBlob('forest',1,true);
   }
-  for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i]))env.splice(i,1);
+  for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
   ensureForestCoverage(env,rnd,.20);
   State.environment=env;
 }
@@ -1196,10 +1199,12 @@ function environmentContains(f,p,pad=0){
 }
 function environmentBlocksPoint(p,mode='settlement'){
   const slope=terrainSlopeKind(p);
-  if(mode==='road'&&slope==='steep')return true;
+  // Main roads, arterial connections and road repairs must avoid all relief
+  // bands, including gentle hill slopes (not just cliff/steep bands).
+  if(mode==='road'&&slope)return true;
   if(mode==='settlement'&&slope)return true;
   for(const f of State.environment){
-    if(mode==='road'&&['sea','mountain','pond'].includes(f.type)&&environmentContains(f,p,.25))return true;
+    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45))return true;
     if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
   }
   return false;
