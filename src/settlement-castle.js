@@ -3053,6 +3053,20 @@ function chimneySpecs(s){
   const specs=[];
 
   if(s.type==='house'){
+    const dense=urbanDenseParts(s);
+    if(dense.length){
+      // Each actual L/T house gets its own chimney, not the empty
+      // cadastral center that belonged to the old detached cottage.
+      const main=new Map();
+      for(const part of dense)if(part.kind==='body'&&!main.has(part.buildingKey))
+        main.set(part.buildingKey,part);
+      let index=0;
+      for(const part of main.values()){
+        specs.push({center:part.center,angle:part.roofAngle,
+          z0:houseRidgeHeight(s)-.05,z1:houseRidgeHeight(s)+.43,index:index++});
+      }
+      return specs;
+    }
     const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),ridgeH=houseRidgeHeight(s);
     const ridgeLength=Math.max(.5,Number(s.w)||1.5);
     const count=Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
@@ -3449,7 +3463,7 @@ function drawHouseTurretRoof(s,turret,selected=false){
   if(turret.type==='round'){
     ring=circleWorldPoints(center.x,center.y,turret.r*1.20,20);
   }else{
-    ring=rectWorldPoints(center.x,center.y,turret.size*1.18,turret.size*1.18,s.angle||0);
+    ring=rectWorldPoints(center.x,center.y,turret.size*1.18,turret.size*1.18,Number.isFinite(turret.roofAngle)?turret.roofAngle:(s.angle||0));
   }
   const faces=[];
   for(let i=0;i<ring.length;i++){
