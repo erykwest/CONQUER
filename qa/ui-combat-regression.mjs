@@ -21,6 +21,38 @@ try{
   assert.ok(dom.industries.every(Boolean),'All three extraction tools must be preserved');
   assert.ok(dom.categories.includes('Combattimento e allarmi'),'Combat category must remain navigable');
   assert.ok(dom.categories.includes('Produzione'),'Production category must remain navigable');
+  const devAndSnow=await page.evaluate(()=>{
+    const defaults={
+      light:State.daylightOverride,
+      season:State.seasonOverride,
+      weather:State.weatherOverride,
+      fog:window.ConquerCombat.serialize().fog,
+      tracksReady:!!window.ConquerSnowTracks
+    };
+    const old={season:State.season,override:State.seasonOverride,environment:State.environment,relief:State.relief};
+    try{
+      State.season='winter';State.seasonOverride='winter';
+      State.environment=[];State.relief=null;
+      window.ConquerSnowTracks.reset();
+      window.ConquerSnowTracks.observe('qa-walking',{x:100,y:100},0);
+      window.ConquerSnowTracks.observe('qa-walking',{x:104,y:100},.04);
+      const footprints=window.ConquerSnowTracks.count();
+      draw();
+      return{...defaults,footprints};
+    }finally{
+      window.ConquerSnowTracks.reset();
+      State.season=old.season;State.seasonOverride=old.override;
+      State.environment=old.environment;State.relief=old.relief;
+      draw();
+    }
+  });
+  assert.equal(devAndSnow.light,'day','DEV default must force daylight');
+  assert.equal(devAndSnow.season,'summer','DEV default must force summer');
+  assert.equal(devAndSnow.weather,'sun','DEV default must disable rain/fog');
+  assert.equal(devAndSnow.fog,false,'Combat fog must start disabled');
+  assert.equal(devAndSnow.tracksReady,true,'Snow footprint module must be loaded');
+  assert.ok(devAndSnow.footprints>=6,'Four world units of movement must leave a winter trail');
+
 
   await page.getByRole('button',{name:'Combattimento e allarmi'}).click();
   assert.equal(await page.locator('#combatControls').isVisible(),true,'Combat controls should open');
@@ -64,7 +96,7 @@ try{
   assert.equal(checked.patrolRemoved,true,'Patrol - must remove a patrol without disrupting the permanent squad');
   assert.equal(checked.routeChecked,true,'Patrol must survive a simulation tick and be serializable');
   assert.deepEqual(errors,[],'Unexpected browser exceptions');
-  console.log(JSON.stringify({result:'PASS',dom,checked,errors},null,2));
+  console.log(JSON.stringify({result:'PASS',dom,devAndSnow,checked,errors},null,2));
 }finally{
   await browser.close();
 }
