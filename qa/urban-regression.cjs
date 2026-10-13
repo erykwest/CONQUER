@@ -19,7 +19,15 @@ function run(s){return vm.runInContext(s,context)}
 function moduleFile(n){return fs.readFileSync(__dirname+'/../src/settlement-'+n+'.js','utf8')}
 for(const n of ['core','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
-run(moduleFile('app').split('function pointerScreen')[0]);
+const appSource=moduleFile('app');
+run(appSource.split('function pointerScreen')[0]);
+// Load the ACTUAL shared calendar implementation into the VM. The full app
+// bootstrap cannot be evaluated in headless regression mode, but crop
+// simulation must not rely on a hardcoded calendar shim.
+const calendarStart=appSource.indexOf('const CALENDAR_MONTHS=');
+const calendarEnd=appSource.indexOf('function syncSeasonToCalendar()',calendarStart);
+if(calendarStart<0||calendarEnd<calendarStart)throw Error('Game calendar implementation not found');
+run(appSource.slice(calendarStart,calendarEnd));
 run(moduleFile('combat-rules'));
 run(moduleFile('combat').replace('window.ConquerCombat={','window.ConquerCombat={__qa:{safeMilitarySegment,infantryRoute,lineVisible},'));
 run('State.seed=12345; State.environment=[];State.relief=null;');
