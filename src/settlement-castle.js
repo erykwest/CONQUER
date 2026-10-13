@@ -3486,7 +3486,8 @@ function drawHouseTurretRoof(s,turret,selected=false){
   if(turret.type==='round'){
     ring=circleWorldPoints(center.x,center.y,turret.r*1.20,20);
   }else{
-    ring=rectWorldPoints(center.x,center.y,turret.size*1.18,turret.size*1.18,s.angle||0);
+    ring=rectWorldPoints(center.x,center.y,turret.size*1.18,turret.size*1.18,
+      Number.isFinite(turret.roofAngle)?turret.roofAngle:(s.angle||0));
   }
   const faces=[];
   for(let i=0;i<ring.length;i++){
