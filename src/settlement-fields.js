@@ -84,7 +84,9 @@ function fieldLayout(field){
       }
     }
     if(hits.length<2)continue;
-    const lo=Math.min(...hits)+.03,hi=Math.max(...hits)-.03;if(hi<=lo)continue;
+    // Leave a visible margin inside the parcel for hedges, walls and fences.
+    // Crop paths must never reach the parcel boundary.
+    const lo=Math.min(...hits)+.28,hi=Math.max(...hits)-.28;if(hi<=lo)continue;
     const world=u=>({x:u*ux+v*vx,y:u*uy+v*vy});
     const row=rows.length,forward=row%2===0,ra=world(forward?lo:hi),rb=world(forward?hi:lo);
     if(last)append(last,ra,-1);
@@ -108,32 +110,72 @@ function fieldCrop(field){
 }
 function fieldSlotDone(field,cell){return (fieldCrop(field).work[cell.index]||0)>=cell.end-cell.start-1e-7}
 function fieldWorkClock(day){const whole=Math.floor(day);return whole+clamp((day-whole-.14)/.38,0,1)}
+// Months are zero based (Jan=0). Farming advances only in the specified seasons.
+function fieldSeasonPhase(month){
+  if(month===9||month===10)return 'plough'; // October–November
+  if(month===2||month===3)return 'sow';      // March–April
+  if(month===6||month===7)return 'harvest';  // July–August
+  return null;
+}
+function fieldCropReady(field,day=State.clock.day){
+  const crop=fieldCrop(field),month=calendarDateFromDay(day).month;
+  return crop.phase===fieldSeasonPhase(month)&&crop.work.some((done,i)=>{
+    const cell=fieldLayout(field).cells[i];
+    return cell&&done<cell.end-cell.start-1e-7;
+  });
+}
 function tickFields(day=State.clock.day){
   const fields=completedSettlement('field');if(!fields.length)return;
   const houses=completedSettlement('house').filter(h=>houseLevel(h)===1);
+  const month=calendarDateFromDay(day).month,season=fieldSeasonPhase(month);
+  // Prepare all crop states before assigning workers so a completed field
+  // immediately releases its workforce to any other available parcel.
+  for(const field of fields){
+    const crop=fieldCrop(field),previous=calendarDateFromDay(crop.lastDay).month;
+    const year=calendarDateFromDay(day).year;
+    if(crop.seasonYear==null)crop.seasonYear=year;
+    if(season==='plough'&&crop.phase==='plough'&&crop.seasonYear!==year){
+      crop.work.fill(0);crop.seasonYear=year;
+    }
+    if(crop.phase==='grow'){
+      // Sown fields develop through the spring; they mature for July harvest.
+      crop.growth=clamp((day-(crop.sownDay??day))/(Math.max(1,(year-1)*365+181-(crop.sownDay??day))),0,1);
+      if(season==='harvest'){
+        crop.phase='harvest';crop.growth=1;crop.work.fill(0);
+      }
+    }
+    // A finished July/August harvest waits until October to plough again.
+    if(season==='plough'&&crop.phase==='harvest'&&crop.harvested){
+      crop.phase='plough';crop.work.fill(0);crop.harvested=false;crop.growth=0;
+    }
+    if(crop.phase==='plough'&&season==='sow'&&crop.ploughed){
+      crop.phase='sow';crop.work.fill(0);
+    }
+  }
   const assignments=fieldWorkAssignments(houses,fields),alarm=window.ConquerCombat?.alarmMode?.()||'off';
   for(const field of fields){
     const crop=fieldCrop(field),layout=fieldLayout(field),before=crop.lastDay;
-    const elapsed=Math.max(0,day-before),work=Math.max(0,fieldWorkClock(day)-fieldWorkClock(before));crop.lastDay=day;
+    const elapsed=Math.max(0,day-before),work=Math.max(0,fieldWorkClock(day)-fieldWorkClock(before));
+    crop.lastDay=day;
     if(!elapsed)continue;
-    State.dirty=true;
-    if(crop.phase==='grow'){
-      crop.growth=clamp(crop.growth+elapsed/FIELD_RULES.growthDays,0,1);
-      if(crop.growth>=1){crop.phase='harvest';crop.work.fill(0)}
-      continue;
-    }
+    if(crop.phase==='grow')continue;
+    if(!season||crop.phase!==season||crop.ploughed&&season==='plough'||crop.harvested&&season==='harvest')continue;
     if(alarm!=='off'||!work)continue;
-    const rate=crop.phase==='plough'?FIELD_RULES.ploughRate:crop.phase==='sow'?FIELD_RULES.sowRate:FIELD_RULES.harvestRate;
+    const rate=season==='plough'?FIELD_RULES.ploughRate:season==='sow'?FIELD_RULES.sowRate:FIELD_RULES.harvestRate;
+    let worked=false;
     for(const assignment of assignments.values())if(assignment.field.id===field.id){
       const cell=assignment.cell,route=peasantPath(assignment.house,assignment);
-      if(dist(route.at(-1),cell.world)>.05)continue;
+      if(!route?.length||dist(route.at(-1),cell.world)>.05)continue;
       crop.work[cell.index]=Math.min(cell.end-cell.start,(crop.work[cell.index]||0)+work*rate);
+      worked=true;
     }
+    if(worked)State.dirty=true;
     if(layout.cells.length&&layout.cells.every(cell=>fieldSlotDone(field,cell))){
-      if(crop.phase==='plough')crop.phase='sow';
-      else if(crop.phase==='sow'){crop.phase='grow';crop.growth=0}
-      else{crop.phase='plough';crop.growth=0;crop.cycles++}
-      crop.work.fill(0);
+      if(season==='plough'){crop.ploughed=true;crop.work.fill(0)}
+      else if(season==='sow'){crop.phase='grow';crop.sownDay=day;crop.growth=0;crop.ploughed=false;crop.work.fill(0)}
+      else{crop.harvested=true;crop.cycles++;crop.work.fill(0)}
+      State.dirty=true;
+      fieldWorkAssignmentCache.key=null;
     }
   }
 }
