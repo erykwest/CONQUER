@@ -17,7 +17,7 @@
   // Masks are raster unions of auto-generated regions and manual brush marks.
   // They are projected as a single surface per color: no overlapping circle
   // outlines, no doubling alpha, and subtractive strokes cut real holes.
-  const ZONE_PIXELS=2, ZONE_SIZE=WORLD*ZONE_PIXELS;
+  const ZONE_PIXELS=4, ZONE_SIZE=WORLD*ZONE_PIXELS;
   const zoneImages={};
   for(const mode of ['allow','yellow','green']){
     const surface=document.createElement('canvas'),outline=document.createElement('canvas');
@@ -571,7 +571,7 @@
     for(const {surface,ctx,outlineCtx} of Object.values(zoneImages)){
       ctx.globalCompositeOperation='source-over';
       outlineCtx.clearRect(0,0,ZONE_SIZE,ZONE_SIZE);
-      for(const [x,y] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]]){
+      for(const [x,y] of [[-2,0],[2,0],[0,-2],[0,2],[-2,-2],[2,-2],[-2,2],[2,2]]){
         outlineCtx.drawImage(surface,x,y);
       }
       outlineCtx.globalCompositeOperation='destination-out';
@@ -594,12 +594,12 @@
         c.drawImage(fog,0,0,ZONE_SIZE,ZONE_SIZE);
       }
       if(combat.zones&&activeWell()){
-        c.imageSmoothingEnabled=true;
+        c.imageSmoothingEnabled=false;
         for(const mode of ['allow','yellow','green']){
           const mask=zoneImages[mode];
           c.globalAlpha=mode==='allow'?.055:mode==='yellow'?.07:.10;
           c.drawImage(mask.surface,0,0);
-          c.globalAlpha=.30;
+          c.globalAlpha=.85;
           c.drawImage(mask.outline,0,0);
         }
       }
@@ -612,7 +612,7 @@
     const a=w2sRaw({x:0,y:0},0),bx=w2sRaw({x:1/ZONE_PIXELS,y:0},0),by=w2sRaw({x:0,y:1/ZONE_PIXELS},0);
     g.save();
     g.setTransform(pixelRatio*(bx.x-a.x),pixelRatio*(bx.y-a.y),pixelRatio*(by.x-a.x),pixelRatio*(by.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
-    g.imageSmoothingEnabled=true;
+    g.imageSmoothingEnabled=false;
     g.drawImage(backdrop,0,0);
     g.restore();
   }
