@@ -3424,7 +3424,7 @@ function drawFlatRect(s,fill,stroke){
 function fieldGrid(field){return fieldLayout(field)}
 function drawField(field){drawFieldGround(field)}
 function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
-  const turn=part.roofTurn||0,angle=(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=part.center||houseLocalToWorld(s,part.cx,part.cy);
+  const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(s.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle),center=part.center||houseLocalToWorld(s,part.cx,part.cy);
   const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
   const local=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
   const c0=local(-rw/2,-rh/2),c1=local(rw/2,-rh/2),c2=local(rw/2,rh/2),c3=local(-rw/2,rh/2);
