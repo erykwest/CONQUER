@@ -1055,6 +1055,9 @@ function ensureStaticLandscape(){
   if(!Array.isArray(State.environment)||!State.environment.length){
     generateEnvironment();generated=true;
   }
+  // Migrate saved maps: flat brown ellipses were an obsolete terrain overlay.
+  const withoutOvals=State.environment.filter(f=>f.type!=='rough'&&f.type!=='hill');
+  if(withoutOvals.length!==State.environment.length){State.environment=withoutOvals;generated=true}
   if(repairForestsAgainstSteepSlopes())generated=true;
   return generated;
 }
