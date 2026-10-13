@@ -212,8 +212,11 @@ function urbanHouseSpawnContext(){
     existingLots:new Map()
   };
 }
-function urbanHouseFitsLots(candidate,{ignoreDynamicUnits=false,...context}={}){
-  const spawnContext=context.houses&&context.existingLots instanceof Map?context:null;
+function urbanHouseFitsLots(candidate,options={}){
+  const ignoreDynamicUnits=!!options.ignoreDynamicUnits;
+  // Keep the original context reference: the cached occupants and base lots
+  // must persist across all candidate sites within one spawn attempt.
+  const spawnContext=options.houses&&options.existingLots instanceof Map?options:null;
   const existing=spawnContext?.houses||State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
   const houses=existing.filter(h=>h.id!==candidate.id);
   houses.push(candidate);
