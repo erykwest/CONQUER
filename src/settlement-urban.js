@@ -219,7 +219,11 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
     cell=urbanClip(cell,nx,ny,q.x*nx+q.y*ny-(Number(road.width)||.62)/2-.12);
     if(cell.length<4)return null;
   }
-  const points=urbanQuad(cell,house,points=>urbanParcelAllowed(points,house.id));
+  // Keep the cadastral plot from the original cottage when it is redeveloped:
+  // dense townhouses derive from road frontage without subdividing ownership.
+  const site=(houseLevel(house)>=3&&(house.auto||house.urbanRedeveloped))
+    ?{...house,houseLevel:2}:house;
+  const points=urbanQuad(cell,site,points=>urbanParcelAllowed(points,house.id));
   return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
 }
 function urbanHouseSpawnContext(){
@@ -301,10 +305,9 @@ function urbanLotRoadFrontages(lot){
   return out.sort((a,b)=>b.length-a.length||a.edge-b.edge||a.from-b.from);
 }
 function urbanDenseParts(house){
-  if(!house||( !house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
-  if(urbanDensityCache.revision!==urbanRevision){
+  if(!house||(!house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
+  if(urbanDensityCache.revision!==urbanRevision)
     urbanDensityCache={revision:urbanRevision,parts:new Map()};
-  }
   const cached=urbanDensityCache.parts.get(house.id);
   if(cached&&cached.level===houseLevel(house))return cached.parts;
   const lot=urbanLots().find(l=>l.houseId===house.id),parts=[];
@@ -316,16 +319,13 @@ function urbanDenseParts(house){
       if(!count)continue;
       const spacing=frontage.length/count,baseWidth=Math.min(spacing+.045,level===4?1.65:1.95);
       const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
-      const angle=Math.atan2(frontage.uy,frontage.ux);
+      // Original L/T extensions grow towards the plot interior (+local Y).
+      const angle=Math.atan2(inward.y,inward.x)-Math.PI/2;
       for(let i=0;i<count;i++){
-        if(parts.length>=10)break;
+        if(new Set(parts.map(p=>p.buildingKey)).size>=10)break;
         const along=frontage.from+(i+.5)*spacing;
         const partKey='street:'+frontage.edge+':'+frontage.from.toFixed(2)+':'+i;
-        // Different X/Y dimensions on every individual townhouse, seeded
-        // by parcel + street edge + position (unchanged across saves/reloads).
         const requestedWidth=baseWidth*houseDimensionScale(house,'x',partKey);
-        // A wide house at either end of the row must not cross the plot
-        // corner. Trim only the oversized frontage, never below -20%.
         const edgeLength=dist(frontage.a,frontage.b);
         const maxInsideWidth=2*(Math.min(along,edgeLength-along)-.075);
         let faceWidth=Math.min(requestedWidth,maxInsideWidth);
@@ -336,29 +336,38 @@ function urbanDenseParts(house){
           x:frontage.a.x+frontage.ux*along+inward.x*(faceDepth/2+.14),
           y:frontage.a.y+frontage.uy*along+inward.y*(faceDepth/2+.14)
         };
-        // If the random width collides with an already placed neighbour,
-        // narrow it within the same ±20% range instead of creating a gap.
-        let points=null,accepted=false;
+        const buildingKey=house.id+'|'+partKey,virtual={
+          id:buildingKey,type:'house',houseLevel:level,urbanCompact:true,
+          x:center.x,y:center.y,angle,w:faceWidth,h:faceDepth
+        };
+        let accepted=null;
         for(let attempt=0;attempt<8;attempt++){
-          points=rectWorldPoints(center.x,center.y,faceWidth,faceDepth,angle);
-          const inside=points.every(pt=>urbanContains(lot.points,pt,.06));
-          const area=faceWidth*faceDepth;
-          const collision=inside&&parts.some(other=>
-            urbanPolygonIntersectionArea(points,other.points)>area*.18);
-          if(inside&&!collision){accepted=true;break}
+          virtual.w=faceWidth;
+          const shape=houseFootprintParts(virtual).map(part=>({
+            ...part,dense:true,buildingKey,roadId:frontage.roadId,
+            frontage:frontage.edge,roofAngle:angle+(part.roofTurn||0)
+          }));
+          // Test the *entire* L/T outline and the L4 turret, not just the
+          // original rectangular body. Slight shared-wall overlap is allowed.
+          const inside=shape.every(part=>part.points.every(pt=>urbanContains(lot.points,pt,.04)));
+          const collision=inside&&shape.some(part=>parts.some(previous=>{
+            const area=Math.min(Math.abs(urbanArea(part.points)),Math.abs(urbanArea(previous.points)));
+            return area>1e-8&&urbanPolygonIntersectionArea(part.points,previous.points)>area*.20;
+          }));
+          if(inside&&!collision){accepted=shape;break}
           if(faceWidth<=minWidth+1e-7)break;
           faceWidth=Math.max(minWidth,faceWidth-baseWidth*.06);
         }
-        if(!accepted)continue;
-        parts.push({kind:'body',dense:true,cx:0,cy:0,center,points,
-          w:faceWidth,h:faceDepth,roofTurn:0,roofAngle:angle,
-          roadId:frontage.roadId,frontage:frontage.edge});
+        if(accepted)parts.push(...accepted);
       }
-      if(parts.length>=10)break;
+      if(new Set(parts.map(p=>p.buildingKey)).size>=10)break;
     }
   }
   urbanDensityCache.parts.set(house.id,{level:houseLevel(house),parts});
   return parts;
+}
+function urbanDenseBuildingCount(house){
+  return new Set(urbanDenseParts(house).map(p=>p.buildingKey)).size;
 }
 function urbanPolygonIntersectionArea(a,b){
   let clipped=a.slice(),sign=urbanArea(b)>=0?1:-1;
@@ -375,7 +384,7 @@ function urbanHouseDisplayParts(house){
 }
 function urbanDenseHouseDoorInfo(house){
   const parts=urbanDenseParts(house);if(!parts.length)return null;
-  const first=parts[0],lot=urbanLots().find(l=>l.houseId===house.id);
+  const first=parts.find(p=>p.kind==='body'),lot=urbanLots().find(l=>l.houseId===house.id);
   const edge=lot&&lot.points[first.frontage],next=lot&&lot.points[(first.frontage+1)%lot.points.length];
   if(!edge||!next)return null;
   const L=dist(edge,next)||1,tangent={x:(next.x-edge.x)/L,y:(next.y-edge.y)/L};
