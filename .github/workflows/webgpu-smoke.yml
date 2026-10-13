@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - webgpu
+      - fix/calendar-day-48s-1x
   workflow_dispatch:
 
 jobs:
