@@ -36,6 +36,30 @@ function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
   window.ConquerSiege?.sanitizeRooms(s);
   markDirty(hardNavigation,structureSceneLayers(s),scheduleSave);
 }
+function changeHouseDensity(target,level){
+  if(level===houseLevel(target))return;
+  const candidate={...target,houseLevel:level,
+    urbanRedeveloped:!target.auto&&level>=3};
+  const houses=State.structures.filter(s=>s.type==='house').map(s=>s.id===target.id?candidate:s);
+  // An upgrade does not create a new parcel: use the existing ownership
+  // and validate its revised footprint without imposing a minimum of two
+  // frontage buildings. A narrow main road may support only one.
+  if(!urbanLotFor(candidate,houses,primaryRoadList())){
+    status('Level change would exceed the lot or violate terrain zoning');return;
+  }
+  target.houseLevel=level;
+  if(!target.auto)target.urbanRedeveloped=level>=3;
+  invalidateUrbanGeometry();
+  const count=urbanDenseParts(target).length;
+  // Only clear obsolete access spurs when there is a real street-facing
+  // building. A house without usable frontage keeps its existing entrance.
+  if(level>=3&&count){
+    State.structures=State.structures.filter(s=>s.type!=='road'||s.accessFor!==target.id);
+  }else if(level<3&&target.auto)ensureSettlementRoadAccess(target,true);
+  markStructureDirty(target);
+  renderFunctionPanel();draw();
+  status('House L'+level+(count?' · '+count+' streetfront '+(count===1?'building':'buildings'):' · waiting for primary road frontage'));
+}
 function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
 function addStructure(s){
@@ -284,30 +308,6 @@ function renderFunctionPanel(){
   }
   slots.innerHTML=html;
   window.ConquerSiege?.bindPanel(slots);
-  function changeHouseDensity(target,level){
-    if(level===houseLevel(target))return;
-    const candidate={...target,houseLevel:level,
-      urbanRedeveloped:!target.auto&&level>=3};
-    const houses=State.structures.filter(s=>s.type==='house').map(s=>s.id===target.id?candidate:s);
-    // An upgrade does not create a new parcel: use the existing ownership
-    // and validate its revised footprint without imposing a minimum of two
-    // frontage buildings. A narrow main road may support only one.
-    if(!urbanLotFor(candidate,houses,primaryRoadList())){
-      status('Level change would exceed the lot or violate terrain zoning');return;
-    }
-    target.houseLevel=level;
-    if(!target.auto)target.urbanRedeveloped=level>=3;
-    invalidateUrbanGeometry();
-    const count=urbanDenseParts(target).length;
-    // Only clear obsolete access spurs when there is a real street-facing
-    // building. A house without usable frontage keeps its existing entrance.
-    if(level>=3&&count){
-      State.structures=State.structures.filter(s=>s.type!=='road'||s.accessFor!==target.id);
-    }else if(level<3&&target.auto)ensureSettlementRoadAccess(target,true);
-    markStructureDirty(target);
-    renderFunctionPanel();draw();
-    status('House L'+level+(count?' · '+count+' streetfront '+(count===1?'building':'buildings'):' · waiting for primary road frontage'));
-  }
   slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(target?.type==='house')changeHouseDensity(target,clamp(houseLevel(target)+1,1,4))});
   slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(target?.type==='house')changeHouseDensity(target,clamp(houseLevel(target)-1,1,4))});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
