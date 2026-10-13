@@ -103,4 +103,79 @@ test('general preview and rotation are wired into the application',()=>{
   assert.match(render,/rgba\(232,40,47/);
   assert.match(castle,/if\(ok\)\{\s*State\.draft=null/);
 });
+
+function extractSpan(text,start,end){
+  const i=text.indexOf(start),j=text.indexOf(end,i);
+  assert.ok(i>=0&&j>i,'Expected mouse placement handlers and castle helpers');
+  return text.slice(i,j);
+}
+function mousePlacementHarness(type){
+  const industry=['loggingCamp','quarry','mine'].includes(type);
+  const spec={type,shape:industry?'industry':'civic',w:2,h:2,...(industry?{economicOwner:'lord'}:{})};
+  const State={tool:{kind:industry?'industry':'civic',placementSpec:spec},
+    draft:null,structures:[]};
+  const listeners={},messages=[];
+  let allowBuild=true;
+  const step=Math.PI/12;
+  const snapAngle=a=>Math.round(a/step)*step;
+  const context={
+    State,window:{ConquerPlacement:{check:()=>({ok:true})}},
+    canvas:{addEventListener:(event,handler)=>{listeners[event]=handler}},
+    pointerScreen:e=>({x:e.x,y:e.y}),
+    s2w:(x,y)=>({x,y}),pointerWorld:e=>({x:e.x,y:e.y}),
+    snapGrid:x=>Math.round(x*2)/2,
+    inBuild:p=>p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150,
+    towerPlacementSnap:()=>null,
+    placementAngle:(center,p)=>snapAngle(Math.atan2(p.y-center.y,p.x-center.x)),
+    snapStructureAngle:snapAngle,structureRotationStep:a=>Math.round(a/step),
+    addStructure:s=>{if(!allowBuild)return false;State.structures.push(s);return true},
+    addTowerWithPlacement:()=>false,uid:()=>type+'-built',
+    draw:()=>{},status:message=>messages.push(message)
+  };
+  const helpers=extractSpan(castle,'function orientedToolSpec(){','function boundaryPoint(');
+  const down=extractSpan(app,"canvas.addEventListener('pointerdown',e=>{",'\nlet panFrame=0');
+  const move=extractSpan(app,"canvas.addEventListener('pointermove',e=>{",'\nfunction finishCanvasPan()');
+  const code="let pan=null;function structureLabel(s){return s.type}\n"+helpers+'\n'+down+'\n'+move;
+  vm.runInNewContext(code,context,{filename:'builder-orientation-events.js'});
+  return{State,listeners,messages,allow:v=>{allowBuild=v}};
+}
+test('mouse rotates logging, quarry and mine ghosts before building (tower-style)',()=>{
+  for(const type of ['loggingCamp','quarry','mine']){
+    const h=mousePlacementHarness(type);
+    h.listeners.pointerdown({button:0,x:100,y:100});
+    assert.equal(h.State.draft.mode,'orient');
+    assert.equal(h.State.structures.length,0,'First click must never construct '+type);
+    assert.equal(h.State.draft.preview.angle,0);
+    h.listeners.pointermove({x:105,y:105});
+    assert.ok(Math.abs(h.State.draft.preview.angle-Math.PI/4)<1e-8,
+      'Mouse must rotate the ghost for '+type);
+    h.listeners.pointerdown({button:0,x:105,y:105});
+    assert.equal(h.State.structures.length,1);
+    assert.equal(h.State.structures[0].economicOwner,'lord');
+    assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/4)<1e-8);
+    assert.equal(h.State.draft,null);
+  }
+});
+test('civic buildings retain the same two-click mouse rotation path',()=>{
+  const h=mousePlacementHarness('market');
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  h.listeners.pointermove({x:105,y:105});
+  h.listeners.pointerdown({button:0,x:105,y:105});
+  assert.equal(h.State.structures.length,1);
+  assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/4)<1e-8);
+});
+test('a rejected second click retains oriented ghost and can be retried',()=>{
+  const h=mousePlacementHarness('quarry');
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  h.listeners.pointermove({x:105,y:105});
+  h.allow(false);
+  h.listeners.pointerdown({button:0,x:105,y:105});
+  assert.equal(h.State.structures.length,0);
+  assert.equal(h.State.draft.mode,'orient');
+  h.allow(true);
+  h.listeners.pointerdown({button:0,x:105,y:105});
+  assert.equal(h.State.structures.length,1);
+  assert.equal(h.State.draft,null);
+});
+
 console.log('Builder placement regression: all checks passed.');
