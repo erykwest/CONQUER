@@ -798,6 +798,9 @@ function drawInvalidPlacementGhost(ghost){
     for(const poly of rings){
       if(poly?.length<3)continue;
       pathPolygon(projectPath(poly,z+.03),fill,stroke,2.5);
+      // The top face makes the ghost itself visibly red, not just its floor.
+      const height=Math.max(0,structureHeight(ghost));
+      if(height>.05)pathPolygon(projectPath(poly,z+height+.04),'rgba(229,36,45,.28)',stroke,2);
     }
   }
   ctx.restore();
