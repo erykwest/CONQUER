@@ -301,7 +301,7 @@ function urbanDenseParts(house){
     for(const frontage of urbanLotRoadFrontages(lot)){
       const count=Math.floor((frontage.length+.06)/width);
       if(!count)continue;
-      const spacing=frontage.length/count,faceWidth=Math.min(width+.055,spacing+.045);
+      const spacing=frontage.length/count,faceWidth=Math.min(spacing+.045,level===4?1.65:1.95);
       const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
       const angle=Math.atan2(frontage.uy,frontage.ux);
       for(let i=0;i<count;i++){
