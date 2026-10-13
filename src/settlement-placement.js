@@ -28,7 +28,8 @@
   const within=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)
     &&p.x>=BUILD_MIN-EPS&&p.x<=BUILD_MAX+EPS&&p.y>=BUILD_MIN-EPS&&p.y<=BUILD_MAX+EPS;
   function whitezone(s,polys){
-    if(isLine(s))return within(s.a)&&within(s.b);
+    if(isLine(s))return within(s.a)&&within(s.b)&&(
+      s.type==='road'||polys.every(poly=>poly.every(within)));
     return polys.length&&polys.every(poly=>poly.length>=3&&poly.every(within));
   }
   function samples(polys){
@@ -53,9 +54,10 @@
     );
   }
   function regularCollision(s,other,polys,options={}){
+    if(s.type==='house'&&other.type==='road'&&other.accessFor===s.id)return false;
     // Castle pieces deliberately join walls/gates/towers at their sockets.
     if(['tower','gate'].includes(s.type)&&['wall','built','tower','gate','palisade'].includes(other.type)){
-      if(other.id===s.parentTowerId||other.id===s.wallSnapId)return false;
+      if(other.id===s.parentTowerId||other.parentTowerId===s.id||other.id===s.wallSnapId)return false;
       if(['wall','built','palisade'].includes(other.type))return false;
     }
     if(['wall','built','palisade'].includes(s.type)&&['tower','gate','wall','built','palisade'].includes(other.type))return false;
