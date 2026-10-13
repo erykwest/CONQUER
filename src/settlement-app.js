@@ -57,6 +57,10 @@ function addStructure(s){
       s.groundZ=placementGroundZ(s);
       s.foundationMinZ=profile.minZ;
       s.foundationVersion=1;
+    }else if(window.ConquerIndustries?.is(s)){
+      // Industries were already surveyed by their own resource-specific preflight.
+      // Quarry and mine intentionally occupy rocky slopes, not flat terraces.
+      s.groundZ=window.ConquerIndustries.validate(s).ground;
     }else{
       const groundZ=buildableTerrainElevationForStructure(s);
       if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
@@ -215,6 +219,8 @@ function rotatePointStructure(target,steps=1){
   if(isPlacementFoundationBuilding(target)){
     const foundation=placementFoundationProfile(target);
     if(foundation){target.groundZ=foundation.baseZ;target.foundationMinZ=foundation.minZ;target.foundationVersion=1}
+  }else if(window.ConquerIndustries?.is(target)){
+    target.groundZ=window.ConquerIndustries.validate(target).ground;
   }else{
     target.groundZ=buildableTerrainElevationForStructure(target);
   }
@@ -233,7 +239,7 @@ function renderFunctionPanel(){
     const details=econ?.state()?.activities?.[s.id],owner=details?.owner||(s.economicOwner==='lord'?'lord':'private');
     panel.classList.add('open');
     info.innerHTML=`<div class="kv"><span>Industry</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${remainingDays(s).toFixed(1)}d</div>`:''}`;
-    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'within 10U of forest':s.type==='quarry'?'hill terrace next to rocky slope':'flat ground beside steep cliff')+'. No tree depletion yet.</div>';
+    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?'3×3U, any part overlaps steep rock':'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
     slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
     return;
   }
@@ -723,6 +729,7 @@ document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlemen
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
 function migrateStructures(list){
   const migrated=(list||[]).map(s=>{
+    if(window.ConquerIndustries?.is(s))window.ConquerIndustries.normalizeFootprint(s);
     if(s.type==='house')s.houseLevel=houseLevel(s);
     if(s.type==='built'){
       s.width=1;
