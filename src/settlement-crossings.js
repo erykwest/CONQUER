@@ -532,7 +532,11 @@
         if(Math.abs(d.progress-target)<.01)d.progress=target;
         moving=true;
       }
-      const g=deck(gate),theta=d.progress*Math.PI/2;
+      const g=deck(gate);
+      // Exterior leaf is hidden by the solid gatehouse when the camera looks
+      // from the opposite (interior) side. Never paint it across the rear wall.
+      if(viewDepthPoint(g.hinge)<viewDepthPoint({x:gate.x,y:gate.y})-.01)continue;
+      const theta=d.progress*Math.PI/2;
       const far={x:g.hinge.x+g.outward.x*g.length*Math.cos(theta),
         y:g.hinge.y+g.outward.y*g.length*Math.cos(theta)};
       const side=g.tangent,w=g.width/2,baseZ=g.z+.08,tipZ=baseZ+g.length*Math.sin(theta);
