@@ -681,7 +681,10 @@
     });
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
     const focused=combat.units.find(u=>u.id===selected);
-    document.getElementById('combatSelection').textContent=selected?
+    // The Builder layout may be replaced by another UI shell. Missing optional
+    // HUD controls must never interrupt render/simulation or the combat canvas.
+    const selectionLabel=document.getElementById('combatSelection');
+    if(selectionLabel)selectionLabel.textContent=selected?
       ((focused?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
     const panel=document.getElementById('combatStats');
     if(panel){
