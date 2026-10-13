@@ -316,6 +316,20 @@ function structureLevel(s){
   return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
+// Independent local X/Y scale in [0.8, 1.2], seeded by the stable house ID.
+// The geometry is derived (never saved as another mutable dimension), so
+// existing saves and reloads always give the same dimensions.
+function houseDimensionScale(house,axis,part='main'){
+  const id=typeof house==='string'?house:(house?.id||'house');
+  const hash=peasantHash(id+'|dimension|'+part+'|'+axis)>>>0;
+  return .8+.4*(hash/4294967295);
+}
+function houseFootprintDimensions(s){
+  return{
+    w:(Number(s.w)||1.5)*houseDimensionScale(s,'x'),
+    h:(Number(s.h)||1)*houseDimensionScale(s,'y')
+  };
+}
 function housePlanType(s){return (peasantHash(s?.id||'house')&1)?'L':'T'}
 function houseTurretType(s){return (peasantHash((s?.id||'house')+'-turret')&1)?'round':'square'}
 function houseLocalToWorld(s,x,y){
@@ -324,7 +338,7 @@ function houseLocalToWorld(s,x,y){
 }
 function houseTurretInfo(s){
   if(houseLevel(s)<4)return null;
-  const w=Number(s.w)||1.5,h=Number(s.h)||1,hash=peasantHash((s.id||'house')+'-turret-pos');
+  const {w,h}=houseFootprintDimensions(s),hash=peasantHash((s.id||'house')+'-turret-pos');
   const sx=(hash&2)?1:-1,sy=(hash&4)?1:-1,type=houseTurretType(s);
   const cx=sx*w*.60,cy=sy*h*.58,center=houseLocalToWorld(s,cx,cy);
   const bodyH=2.62,roofH=3.42;
@@ -336,9 +350,10 @@ function houseTurretInfo(s){
   return{kind:'turret',type,cx,cy,center,size,bodyH,roofH,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
 }
 function houseFootprintParts(s){
-  const parts=[{kind:'body',cx:0,cy:0,w:Number(s.w)||1.5,h:Number(s.h)||1,roofTurn:0}];
+  const {w,h}=houseFootprintDimensions(s);
+  const parts=[{kind:'body',cx:0,cy:0,w,h,roofTurn:0}];
   if(houseLevel(s)>=3&&!s.auto){
-    const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s),w=Number(s.w)||1.5,h=Number(s.h)||1;
+    const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s);
     if(plan==='L'){
       parts.push({kind:'body',cx:sign*w*.38,cy:h*.56,w:w*.55,h:h*.95,roofTurn:Math.PI/2});
     }else{
@@ -439,7 +454,8 @@ function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
   if(s.type==='well')return .75;
-  if(s.type==='house'||s.type==='field')return Math.hypot(s.w,s.h)/2;
+  if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
+  if(s.type==='field')return Math.hypot(s.w,s.h)/2;
   if(isCivic(s))return civicRadius(s);
   return .5;
 }
