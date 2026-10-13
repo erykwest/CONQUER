@@ -1,9 +1,9 @@
 'use strict';
 // Quadrilateral parcels inscribed in bounded Euclidean Voronoi cells.
 // Houses are the sites. A rejected four-corner parcel never spawns a house.
-let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null;
+let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null,urbanFenceCache=null;
 function invalidateUrbanGeometry(){
-  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;
+  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;urbanFenceCache=null;
 }
 function urbanArea(poly){
   return poly.reduce((a,p,i)=>a+p.x*poly[(i+1)%poly.length].y-p.y*poly[(i+1)%poly.length].x,0)/2;
@@ -199,12 +199,35 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
   const points=urbanQuad(cell,house,points=>urbanParcelAllowed(points,house.id));
   return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
 }
-function urbanHouseFitsLots(candidate){
-  const houses=State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
-  houses.push(candidate);
-  const lot=urbanLotFor(candidate,houses);
-  if(!lot||urbanLotUnitConflict(lot))return false;
+function urbanHouseSpawnContext(){
+  return{
+    houses:State.structures.filter(s=>s.type==='house'),
+    roads:primaryRoadList(),
+    occupants:null,
+    existingLots:new Map()
+  };
+}
+function urbanHouseFitsLots(candidate,context=null){
+  const existing=context?.houses||State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
+  const houses=existing.filter(s=>s.id!==candidate.id);houses.push(candidate);
+  const roads=context?.roads;
+  const lot=urbanLotFor(candidate,houses,roads);
+  const occupants=context?(context.occupants??=(urbanSpawnOccupants())):undefined;
+  if(!lot||urbanLotUnitConflict(lot,occupants))return false;
   // A new site must not steal the footprint of an already occupied parcel.
+  if(context){
+    for(const h of existing){
+      if(h.id===candidate.id||dist(h,candidate)>10.2)continue;
+      let baseline;
+      if(context.existingLots.has(h.id))baseline=context.existingLots.get(h.id);
+      else{
+        baseline=urbanLotFor(h,existing,roads);
+        context.existingLots.set(h.id,baseline||null);
+      }
+      if(baseline&&!urbanLotFor(h,houses,roads))return false;
+    }
+    return true;
+  }
   return houses.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
     !urbanLotFor(h,State.structures.filter(s=>s.type==='house'))||!!urbanLotFor(h,houses));
 }
@@ -222,7 +245,12 @@ function urbanBoundaryMaterial(a,b){
   const roll=biomeHash(State.seed+'|boundary|'+urbanBoundaryKey(a,b))/4294967296;
   return roll<.5?'fence':roll<.8?'wall':'hedge';
 }
-function urbanFenceSegments(lots=urbanLots(),fields=completedSettlement('field')){
+function urbanFenceSegments(lots=null,fields=null){
+  const cacheable=lots==null&&fields==null;
+  if(lots==null)lots=urbanLots();
+  if(fields==null)fields=completedSettlement('field');
+  const cacheKey=cacheable?urbanRevision+'|'+fields.map(f=>f.id).join('|'):null;
+  if(cacheKey&&urbanFenceCache?.key===cacheKey)return urbanFenceCache.edges;
   const raw=[];
   const addParcel=(points,door,goal)=>{
     let gateEdge=-1,best=Infinity;
@@ -280,6 +308,7 @@ function urbanFenceSegments(lots=urbanLots(),fields=completedSettlement('field')
     const at=t=>({x:g.dx*t+g.nx*g.c,y:g.dy*t+g.ny*g.c});
     for(const r of merged)out.push({a:at(r.lo),b:at(r.hi),material:r.material});
   }
+  if(cacheKey)urbanFenceCache={key:cacheKey,edges:out};
   return out;
 }
 function drawUrbanFence({a,b}){
@@ -309,7 +338,7 @@ function drawUrbanWall({a,b}){
 function drawUrbanLots(){
   const lots=urbanLots();
   for(const lot of lots)pathPolygon(lot.points.map(p=>w2s(p,.015)),'rgba(167,135,81,.10)',null);
-  const edges=urbanFenceSegments(lots).sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
+  const edges=urbanFenceSegments().slice().sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
   ctx.save();ctx.lineWidth=Math.max(.65,State.view.scale*.9);
   for(const edge of edges){
     if(edge.material==='wall')drawUrbanWall(edge);
