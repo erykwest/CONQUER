@@ -1471,6 +1471,7 @@ function spawnRoad(step){
 function spawnHouse(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);if(!well||!roads.length)return false;
   const rnd=growthRng(step,211),radius=currentGrowthRadius(),manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
+  const lotContext=urbanHouseSpawnContext();
   const candidates=[];
   for(let i=0;i<90;i++){
     const road=roads[Math.floor(rnd()*roads.length)],t=.12+rnd()*.76;
@@ -1487,7 +1488,7 @@ function spawnHouse(step){
     const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
     if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h)))continue;
     // Resolve and validate the parcel before committing a house to the simulation.
-    if(!urbanHouseFitsLots(h))continue;
+    if(!urbanHouseFitsLots(h,lotContext))continue;
     State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);return true;
   }
   return false;
@@ -1518,10 +1519,12 @@ function processVillageGrowth(){
   if(!State.village.founded)return 0;
   if(foundingRoadJob?.village===State.village)return 0;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
+  const analyticsT0=performance.now();
   ensureRoadPlan();
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
-  let guard=0,changed=0;
+  let guard=0,changed=0,processed=0;
   while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
+    processed++;
     const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
     let kind;
     if(roads===0)kind='road';
@@ -1532,9 +1535,17 @@ function processVillageGrowth(){
       else if(rnd<.38)kind='road';
       else kind='house';
     }
-    let ok=kind==='road'?spawnRoad(step):kind==='field'?spawnField(step):spawnHouse(step);
-    if(!ok&&kind!=='house')ok=spawnHouse(step);
-    if(!ok&&kind!=='road')ok=spawnRoad(step);
+    const attempt=spawnKind=>{
+      const t0=performance.now();
+      const ok=spawnKind==='road'?spawnRoad(step):spawnKind==='field'?spawnField(step):spawnHouse(step);
+      window.__conquerAnalytics?.measure('SPAWN_'+spawnKind.toUpperCase(),performance.now()-t0,{
+        step,ok,houses,roads,fields,structures:State.structures.length
+      });
+      return ok;
+    };
+    let ok=attempt(kind);
+    if(!ok&&kind!=='house')ok=attempt('house');
+    if(!ok&&kind!=='road')ok=attempt('road');
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
     if(ok){
@@ -1544,6 +1555,9 @@ function processVillageGrowth(){
       markDirty(false,false,false);
     }
   }
+  if(processed)window.__conquerAnalytics?.measure('GROWTH',performance.now()-analyticsT0,{
+    processed,changed,structures:State.structures.length
+  });
   return changed;
 }
 function resetLegacyVillageGrowth(){
