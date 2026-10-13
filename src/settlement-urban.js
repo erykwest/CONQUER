@@ -104,6 +104,9 @@ function urbanParcelAllowed(points,houseId){
   }
   for(const s of State.structures){
     if(s.id===houseId)continue;
+    // Field polygons are not returned by urbanBuildingPolygons: protect the
+    // agricultural lot before accepting a new house's Voronoi parcel.
+    if(s.type==='field'&&urbanPolygonsOverlap(points,fieldPoints(s)))return false;
     if(urbanBuildingPolygons(s).some(poly=>urbanPolygonsOverlap(points,poly)))return false;
   }
   return true;
@@ -199,17 +202,48 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
   const points=urbanQuad(cell,house,points=>urbanParcelAllowed(points,house.id));
   return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
 }
-function urbanHouseFitsLots(candidate,{ignoreDynamicUnits=false}={}){
-  const houses=State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
+// Reuse the immutable snapshot while evaluating many speculative spawn sites.
+// Manual L2+ upgrades still use the independent ignoreDynamicUnits option.
+function urbanHouseSpawnContext(){
+  return{
+    houses:State.structures.filter(s=>s.type==='house'),
+    roads:primaryRoadList(),
+    occupants:null,
+    existingLots:new Map()
+  };
+}
+function urbanHouseFitsLots(candidate,options={}){
+  const ignoreDynamicUnits=!!options.ignoreDynamicUnits;
+  // Keep the original context reference: the cached occupants and base lots
+  // must persist across all candidate sites within one spawn attempt.
+  const spawnContext=options.houses&&options.existingLots instanceof Map?options:null;
+  const existing=spawnContext?.houses||State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
+  const houses=existing.filter(h=>h.id!==candidate.id);
   houses.push(candidate);
-  const lot=urbanLotFor(candidate,houses);
-  // During an upgrade, the household's existing occupants already live within
-  // the lot. They must not veto enlarging their own home. New construction
-  // continues to respect dynamic unit collisions.
-  if(!lot||(!ignoreDynamicUnits&&urbanLotUnitConflict(lot)))return false;
-  // A new site must not steal the footprint of an already occupied parcel.
-  return houses.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
-    !urbanLotFor(h,State.structures.filter(s=>s.type==='house'))||!!urbanLotFor(h,houses));
+  const roads=spawnContext?.roads;
+  const lot=urbanLotFor(candidate,houses,roads);
+  if(!lot)return false;
+  // During manual upgrades, existing residents must not veto their own home.
+  // During spawn, enumerate resident positions only once per growth attempt.
+  if(!ignoreDynamicUnits){
+    const occupants=spawnContext?(spawnContext.occupants??=(urbanSpawnOccupants())):undefined;
+    if(urbanLotUnitConflict(lot,occupants))return false;
+  }
+  if(spawnContext){
+    for(const h of existing){
+      if(h.id===candidate.id||dist(h,candidate)>10.2)continue;
+      let baseline;
+      if(spawnContext.existingLots.has(h.id))baseline=spawnContext.existingLots.get(h.id);
+      else{
+        baseline=urbanLotFor(h,existing,roads);
+        spawnContext.existingLots.set(h.id,baseline||null);
+      }
+      if(baseline&&!urbanLotFor(h,houses,roads))return false;
+    }
+    return true;
+  }
+  return existing.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
+    !urbanLotFor(h,existing)||!!urbanLotFor(h,houses));
 }
 function urbanLots(){
   if(urbanLotCache)return urbanLotCache;

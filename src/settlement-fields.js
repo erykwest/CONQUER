@@ -48,11 +48,15 @@ function fieldPoints(field){
   field.fieldVersion=1;
   return field.points;
 }
-function fieldAllowed(field){
+function fieldAllowed(field,spawnContext=null){
   const poly=fieldPoints(field);
   if(!fieldQuadValid(poly)||!urbanParcelAllowed(poly,field.id))return false;
   if(urbanLots().some(lot=>urbanPolygonsOverlap(poly,lot.points)))return false;
-  if(urbanLotUnitConflict({points:poly}))return false;
+  // Candidate evaluation can run dozens of times in one growth step.
+  // Reuse the live occupants snapshot instead of recomputing all residents
+  // and their destinations for every rejected polygon.
+  const occupants=spawnContext?(spawnContext.occupants??=(urbanSpawnOccupants())):undefined;
+  if(urbanLotUnitConflict({points:poly},occupants))return false;
   for(const s of State.structures){
     if(s.id===field.id)continue;
     if(s.type==='field'&&urbanPolygonsOverlap(poly,fieldPoints(s)))return false;

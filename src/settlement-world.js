@@ -1473,6 +1473,7 @@ function spawnRoad(step){
 function spawnHouse(step){
   const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);if(!well||!roads.length)return false;
   const rnd=growthRng(step,211),radius=currentGrowthRadius(),manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
+  const lotContext=urbanHouseSpawnContext();
   const candidates=[];
   for(let i=0;i<90;i++){
     const road=roads[Math.floor(rnd()*roads.length)],t=.12+rnd()*.76;
@@ -1489,30 +1490,64 @@ function spawnHouse(step){
     const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
     if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h)))continue;
     // Resolve and validate the parcel before committing a house to the simulation.
-    if(!urbanHouseFitsLots(h))continue;
+    if(!urbanHouseFitsLots(h,lotContext))continue;
     State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);return true;
   }
   return false;
 }
 function spawnField(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);if(!well||!roads.length)return false;
-  const rnd=growthRng(step,307),radius=currentGrowthRadius()+4;
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);
+  if(!well||!roads.length)return false;
   const houses=autoList('house');if(houses.length<5)return false;
+  const rnd=growthRng(step,307),radius=currentGrowthRadius()+4;
+  const validationContext={occupants:null};
   const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(22,radius+4),candidates=[];
+  const addCandidate=(p,score)=>{
+    if(!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow)return;
+    const road=nearestRoadInfo(p,roads);
+    if(!road)return;
+    candidates.push({p,road,score:score+.18*Math.exp(-road.d/4)+rnd()*.20});
+  };
+  // Sample productive land around the settlement, not only an outer ring
+  // that can lie entirely outside the current yellow zoning brush.
   for(let i=0;i<110;i++){
-    const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2,p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
-    if(!inBuild(p))continue;
-    const road=nearestRoadInfo(p,roads),ring=Math.exp(-Math.pow(d-(inner+outer)*.5,2)/(2*4.2*4.2));
-    const score=ring+.18*Math.exp(-road.d/4)+rnd()*.20;candidates.push({p,road,score});
+    const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2;
+    const p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
+    const ring=Math.exp(-Math.pow(d-(inner+outer)*.5,2)/(2*4.2*4.2));
+    addCandidate(p,ring);
+  }
+  // Use road-facing farmland sites as a second source. This is especially
+  // useful in settlements where the yellow zone is narrow or asymmetric.
+  for(let i=0;i<100;i++){
+    const road=roads[Math.floor(rnd()*roads.length)];
+    const t=.12+rnd()*.76,a=roadAngle(road),side=rnd()<.5?-1:1;
+    const offset=3+rnd()*4.5;
+    const p={
+      x:road.a.x+(road.b.x-road.a.x)*t-Math.sin(a)*offset*side,
+      y:road.a.y+(road.b.y-road.a.y)*t+Math.cos(a)*offset*side
+    };
+    if(dist(p,well)>Math.max(12,radius+6))continue;
+    addCandidate(p,.8);
+  }
+  // Rural plots can also grow beside existing households without forcing
+  // all fields to compete for the limited peripheral annulus.
+  for(let i=0;i<70;i++){
+    const h=houses[Math.floor(rnd()*houses.length)],a=rnd()*Math.PI*2,d=3+rnd()*4;
+    addCandidate({x:h.x+Math.cos(a)*d,y:h.y+Math.sin(a)*d},.75);
   }
   candidates.sort((a,b)=>b.score-a.score);
-  for(const c of candidates.slice(0,28)){
+  for(const c of candidates.slice(0,36)){
     const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
     f.points=fieldVoronoiQuad(f,rnd);if(!f.points)continue;
     f.fieldVersion=1;
     f.w=2*Math.max(...f.points.map(p=>Math.abs(p.x-f.x)));
     f.h=2*Math.max(...f.points.map(p=>Math.abs(p.y-f.y)));
-    if(fieldAllowed(f)){State.structures.push(f);ensureSettlementRoadAccess(f);return true}
+    if(fieldAllowed(f,validationContext)){
+      State.structures.push(f);
+      ensureSettlementRoadAccess(f);
+      invalidateUrbanGeometry();
+      return true;
+    }
   }
   return false;
 }
@@ -1520,23 +1555,33 @@ function processVillageGrowth(){
   if(!State.village.founded)return 0;
   if(foundingRoadJob?.village===State.village)return 0;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
+  const analyticsT0=performance.now();
   ensureRoadPlan();
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
-  let guard=0,changed=0;
+  let guard=0,changed=0,processed=0;
   while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
+    processed++;
     const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
     let kind;
     if(roads===0)kind='road';
     else if(houses<2)kind='house';
     else{
       const rnd=growthRng(step,509)();
-      if(houses>=5&&fields<Math.ceil(houses*.50)&&rnd<.17)kind='field';
+      if(houses>=5&&fields<Math.ceil(houses*.50))kind='field';
       else if(rnd<.38)kind='road';
       else kind='house';
     }
-    let ok=kind==='road'?spawnRoad(step):kind==='field'?spawnField(step):spawnHouse(step);
-    if(!ok&&kind!=='house')ok=spawnHouse(step);
-    if(!ok&&kind!=='road')ok=spawnRoad(step);
+    const attempt=spawnKind=>{
+      const t0=performance.now();
+      const ok=spawnKind==='road'?spawnRoad(step):spawnKind==='field'?spawnField(step):spawnHouse(step);
+      window.__conquerAnalytics?.measure('SPAWN_'+spawnKind.toUpperCase(),performance.now()-t0,{
+        step,ok,houses,roads,fields,structures:State.structures.length
+      });
+      return ok;
+    };
+    let ok=attempt(kind);
+    if(!ok&&kind!=='house')ok=attempt('house');
+    if(!ok&&kind!=='road')ok=attempt('road');
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
     if(ok){
@@ -1546,6 +1591,9 @@ function processVillageGrowth(){
       markDirty(false,false,false);
     }
   }
+  if(processed)window.__conquerAnalytics?.measure('GROWTH',performance.now()-analyticsT0,{
+    processed,changed,structures:State.structures.length
+  });
   return changed;
 }
 function resetLegacyVillageGrowth(){
