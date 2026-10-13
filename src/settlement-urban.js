@@ -259,6 +259,99 @@ function urbanLots(){
   const houses=State.structures.filter(s=>s.type==='house'),roads=primaryRoadList();
   return urbanLotCache=houses.map(h=>urbanLotFor(h,houses,roads)).filter(Boolean);
 }
+// Urban redevelopment: a L3/L4 plot is one economic household, with several
+// deterministic street-front volumes. Children are geometry, not extra citizens.
+const URBAN_FRONT_WIDTH=Object.freeze({3:1.45,4:1.17});
+let urbanDensityCache={revision:-1,parts:new Map()};
+function urbanLotRoadFrontages(lot){
+  const roads=primaryRoadList(true),out=[],polygon=lot.points;
+  for(let i=0;i<polygon.length;i++){
+    const a=polygon[i],b=polygon[(i+1)%polygon.length],length=dist(a,b);
+    if(length<1.5)continue;
+    const ux=(b.x-a.x)/length,uy=(b.y-a.y)/length;
+    let best=null;
+    const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    for(const road of roads){
+      const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy);
+      if(L<.1||Math.abs((dx*ux+dy*uy)/L)<.93)continue;
+      const distance=pointSegmentDistance(mid,road.a,road.b);
+      if(distance>Math.max(1.05,(Number(road.width)||.62)/2+.72))continue;
+      const t0=(road.a.x-a.x)*ux+(road.a.y-a.y)*uy;
+      const t1=(road.b.x-a.x)*ux+(road.b.y-a.y)*uy;
+      const from=Math.max(.22,Math.min(t0,t1)),to=Math.min(length-.22,Math.max(t0,t1));
+      if(to-from<1.05)continue;
+      if(!best||distance<best.distance)best={roadId:road.id,edge:i,from,to,
+        length:to-from,distance,a,b,ux,uy};
+    }
+    if(best)out.push(best);
+  }
+  return out.sort((a,b)=>b.length-a.length||a.edge-b.edge);
+}
+function urbanDenseParts(house){
+  if(!house?.auto||houseLevel(house)<3)return[];
+  if(urbanDensityCache.revision!==urbanRevision){
+    urbanDensityCache={revision:urbanRevision,parts:new Map()};
+  }
+  const cached=urbanDensityCache.parts.get(house.id);
+  if(cached&&cached.level===houseLevel(house))return cached.parts;
+  const lot=urbanLots().find(l=>l.houseId===house.id),parts=[];
+  if(lot){
+    const level=houseLevel(house),width=URBAN_FRONT_WIDTH[level],depth=level===4?1.13:.98;
+    const sign=urbanArea(lot.points)>=0?1:-1;
+    for(const frontage of urbanLotRoadFrontages(lot)){
+      const count=Math.floor((frontage.length+.06)/width);
+      if(!count)continue;
+      const spacing=frontage.length/count,faceWidth=Math.min(width+.055,spacing+.045);
+      const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
+      const angle=Math.atan2(frontage.uy,frontage.ux);
+      for(let i=0;i<count;i++){
+        if(parts.length>=10)break;
+        const along=frontage.from+(i+.5)*spacing;
+        const center={
+          x:frontage.a.x+frontage.ux*along+inward.x*(depth/2+.14),
+          y:frontage.a.y+frontage.uy*along+inward.y*(depth/2+.14)
+        };
+        const points=rectWorldPoints(center.x,center.y,faceWidth,depth,angle);
+        if(!points.every(pt=>urbanContains(lot.points,pt,.06)))continue;
+        // Corner-row buildings may penetrate slightly but cannot form a
+        // single overlapping block or leak outside the owned parcel.
+        const area=faceWidth*depth;
+        if(parts.some(other=>urbanPolygonIntersectionArea(points,other.points)>area*.18))continue;
+        parts.push({kind:'body',dense:true,cx:0,cy:0,center,points,
+          w:faceWidth,h:depth,roofTurn:angle-(house.angle||0),
+          roadId:frontage.roadId,frontage:frontage.edge});
+      }
+      if(parts.length>=10)break;
+    }
+  }
+  urbanDensityCache.parts.set(house.id,{level:houseLevel(house),parts});
+  return parts;
+}
+function urbanPolygonIntersectionArea(a,b){
+  let clipped=a.slice(),sign=urbanArea(b)>=0?1:-1;
+  for(let i=0;i<b.length&&clipped.length;i++){
+    const p=b[i],q=b[(i+1)%b.length];
+    const nx=sign*(q.y-p.y),ny=sign*(p.x-q.x);
+    clipped=urbanClip(clipped,nx,ny,nx*p.x+ny*p.y);
+  }
+  return clipped.length>=3?Math.abs(urbanArea(clipped)):0;
+}
+function urbanHouseDisplayParts(house){
+  const dense=urbanDenseParts(house);
+  return dense.length>=2?dense:houseFootprintParts(house);
+}
+function urbanDenseHouseDoorInfo(house){
+  const parts=urbanDenseParts(house);if(parts.length<2)return null;
+  const first=parts[0],lot=urbanLots().find(l=>l.houseId===house.id);
+  const edge=lot&&lot.points[first.frontage],next=lot&&lot.points[(first.frontage+1)%lot.points.length];
+  if(!edge||!next)return null;
+  const L=dist(edge,next)||1,tangent={x:(next.x-edge.x)/L,y:(next.y-edge.y)/L};
+  const sign=urbanArea(lot.points)>=0?1:-1;
+  const normal={x:tangent.y*sign,y:-tangent.x*sign};
+  const surface={x:first.center.x+normal.x*first.h*.5,y:first.center.y+normal.y*first.h*.5};
+  const outside={x:surface.x+normal.x*.26,y:surface.y+normal.y*.26};
+  return{surface,outside,tangent,normal,side:1,lateralSign:1};
+}
 // Choose once from world geometry, independent of draw order, camera and reload.
 function urbanBoundaryKey(a,b){
   const key=p=>p.x.toFixed(4)+','+p.y.toFixed(4),keys=[key(a),key(b)].sort();
@@ -294,6 +387,7 @@ function urbanFenceSegments(lots=null,fields=null){
   };
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);if(!house)continue;
+    if(house.auto&&houseLevel(house)>=3)continue; // Dense streets have no paddock fence.
     const door=houseDoorInfo(house).outside;
     addParcel(lot.points,door,nearestPrimaryRoadProjection(door)?.point||door);
   }
@@ -360,7 +454,12 @@ function drawUrbanWall({a,b}){
 }
 function drawUrbanLots(){
   const lots=urbanLots();
-  for(const lot of lots)pathPolygon(lot.points.map(p=>w2s(p,.015)),'rgba(167,135,81,.10)',null);
+  for(const lot of lots){
+    const house=State.structures.find(h=>h.id===lot.houseId);
+    const dense=house?.auto&&houseLevel(house)>=3;
+    pathPolygon(lot.points.map(p=>w2s(p,.015)),
+      dense?'rgba(128,116,103,.36)':'rgba(167,135,81,.10)',null);
+  }
   const edges=urbanFenceSegments().slice().sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
   ctx.save();ctx.lineWidth=Math.max(.65,State.view.scale*.9);
   for(const edge of edges){
@@ -373,7 +472,7 @@ function drawUrbanLots(){
 function urbanHouseGeometry(){
   if(urbanGeometryCache)return urbanGeometryCache;
   return urbanGeometryCache=State.structures.filter(s=>s.type==='house').map(house=>{
-    const parts=houseFootprintParts(house).map(part=>{
+    const parts=urbanHouseDisplayParts(house).map(part=>{
       const bodyH=part.kind==='turret'?part.bodyH:houseBodyHeight(house);
       const roofH=part.kind==='turret'?part.roofH:houseRidgeHeight(house);
       return{...part,bodyH,roofH};
