@@ -318,7 +318,7 @@ function urbanDenseParts(house){
         const area=faceWidth*depth;
         if(parts.some(other=>urbanPolygonIntersectionArea(points,other.points)>area*.18))continue;
         parts.push({kind:'body',dense:true,cx:0,cy:0,center,points,
-          w:faceWidth,h:depth,roofTurn:angle-(house.angle||0),
+          w:faceWidth,h:depth,roofTurn:0,roofAngle:angle,
           roadId:frontage.roadId,frontage:frontage.edge});
       }
       if(parts.length>=10)break;
@@ -509,7 +509,7 @@ function urbanHouseLineVisible(source,target){
       const ground=terrainElevation(part.center);
       // Gabled roofs have piecewise-linear height. Test the ridge crossing
       // as well as interval endpoints, so even a short ray cannot skip a wall.
-      const turn=part.roofTurn||0,angle=(entry.house.angle||0)+turn;
+      const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(entry.house.angle||0)+turn;
       const localY=p=>-(p.x-part.center.x)*Math.sin(angle)+(p.y-part.center.y)*Math.cos(angle);
       const ya=localY(source),yb=localY(target);
       const ridge=Math.abs(yb-ya)>1e-9?-ya/(yb-ya):-1;
@@ -535,7 +535,7 @@ function urbanHouseFaces(house,part){
     const apex=vertex(part.center,roof);
     for(let i=0;i<fp.length;i++)faces.push([vertex(fp[i],wall),vertex(fp[(i+1)%fp.length],wall),apex]);
   }else{
-    const turn=part.roofTurn||0,angle=(house.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle);
+    const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(house.angle||0)+turn,ca=Math.cos(angle),sa=Math.sin(angle);
     const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
     const local=(x,y)=>({x:part.center.x+x*ca-y*sa,y:part.center.y+x*sa+y*ca});
     const a=vertex(local(-rw/2,-rh/2),wall),b=vertex(local(rw/2,-rh/2),wall);
