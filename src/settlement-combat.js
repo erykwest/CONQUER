@@ -1000,6 +1000,8 @@
         u.x=nextPos.x;u.y=nextPos.y;budget-=step;moved=true;
         if(step>=length-.025){u.x=next.x;u.y=next.y;u.pathIndex++}
       }
+      // Record real military movement on snowy ground (knight = horse track).
+      window.ConquerSnowTracks?.observe(u.id,u,State.clock.day,u.kind==='knight'?'horse':'person');
     }
     if(moved){visibilityDirty=true;maskDirty=true}
     // Combat AI, target acquisition and LOS are capped at 10 Hz.
