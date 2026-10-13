@@ -59,8 +59,10 @@ test('October plough, March sow, autonomous spring growth, July harvest, next Oc
  assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'completed field must release farmers');
  run("c.lastDay=qaSpring-1;State.clock.day=qaSpring;tickFields(qaSpring)");
  assert.equal(run('c.phase'),'sow');
- assert.equal(run('c.work[0]'),3,'March sowing rate 3U per farmer/day');
- run("c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);c.lastDay=qaSpring;State.clock.day=qaSpring+1;tickFields(qaSpring+1)");
+ // March 1 is Monday: no work is completed at midnight.
+ run("c.lastDay=qaSpring;State.clock.day=qaSpring+1;tickFields(qaSpring+1)");
+ assert.equal(run('c.work[0]'),3,'March sowing rate 3U per farmer per completed working day');
+ run("c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);c.lastDay=qaSpring+1;State.clock.day=qaSpring+2;tickFields(qaSpring+2)");
  assert.equal(run('c.phase'),'grow');
  assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'growing fields must not claim farmers');
  run("c.lastDay=qaJune-1;State.clock.day=qaJune;tickFields(qaJune)");
@@ -69,7 +71,8 @@ test('October plough, March sow, autonomous spring growth, July harvest, next Oc
  assert.equal(run('c.phase'),'harvest');assert.equal(run('c.growth'),1);
  run("c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);globalThis.qaHarvestSunday=qaJuly+(6-qaJuly%7+7)%7;c.lastDay=qaHarvestSunday-1;State.clock.day=qaHarvestSunday;tickFields(qaHarvestSunday)");
  assert.equal(run('c.harvested'),undefined,'Sunday market/rest must not finish harvest');
- run("c.lastDay=qaHarvestSunday;State.clock.day=qaHarvestSunday+1;tickFields(qaHarvestSunday+1)");
+ // Tuesday includes Monday's shift; on Monday at midnight no work has passed.
+ run("c.lastDay=qaHarvestSunday;State.clock.day=qaHarvestSunday+2;tickFields(qaHarvestSunday+2)");
  assert.equal(run('c.harvested'),true);assert.equal(run('c.cycles'),1);
  assert.equal(run('c.phase'),'harvest','harvested field must wait until October');
  run("c.lastDay=qaNextAutumn-1;State.clock.day=qaNextAutumn;tickFields(qaNextAutumn)");
