@@ -158,8 +158,11 @@ function pointerWorld(e){const p=pointerScreen(e);return s2w(p.x,p.y)}
 function normalizeTowerAngle(a){return normalizeStructureAngle(a)}
 function turnTower(target,delta,label){
   if(!target||target.type!=='tower')return false;
+  const angle=snapStructureAngle((Number(target.angle)||0)+delta);
+  const verdict=window.ConquerPlacement?.check({...target,angle},{ignoreId:target.id,checkCost:false});
+  if(verdict&&!verdict.ok){status('Rotation blocked: '+verdict.reason);return false}
 
-  applyStructureRotation(target,(Number(target.angle)||0)+delta);
+  applyStructureRotation(target,angle);
   if(target.parentTowerId&&target.shape==='square'){
     target.orientationOffset=snapStructureAngle((Number(target.orientationOffset)||0)+delta);
   }
@@ -182,7 +185,10 @@ function turnTower(target,delta,label){
 }
 function turnGate(target,delta,label='Gate rotated'){
   if(!target||target.type!=='gate')return false;
-  applyStructureRotation(target,(Number(target.angle)||0)+delta);
+  const angle=snapStructureAngle((Number(target.angle)||0)+delta);
+  const verdict=window.ConquerPlacement?.check({...target,angle},{ignoreId:target.id,checkCost:false});
+  if(verdict&&!verdict.ok){status('Rotation blocked: '+verdict.reason);return false}
+  applyStructureRotation(target,angle);
 
   // Gate front is semantic: rotation carries its attached front subtorri.
   syncSubtowerTree(target.id);
@@ -516,9 +522,12 @@ canvas.addEventListener('pointermove',e=>{
       const n=normalizeLinear(State.draft.a,snap.point,spec,false);
       if(n){
         State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:true};
-        State.draft.previewSegments=null;
-        status(`Main road: ${n.length.toFixed(2)}U — click to confirm`);
+        State.draft.previewSegments=null;State.draft.invalidPreview=null;
+        const verdict=window.ConquerPlacement?.check(State.draft.preview);
+        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`Main road: ${n.length.toFixed(2)}U — click to confirm`);
         draw();
+      }else{
+        State.draft.preview=null;State.draft.invalidPreview={type:'road',a:State.draft.a,b:snap.point,width:spec.width};draw();
       }
       return;
     }
@@ -526,6 +535,7 @@ canvas.addEventListener('pointermove',e=>{
     const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!snap.structureId);
     if(route){
       const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
+      State.draft.invalidPreview=null;
       State.draft.preview=null;
       State.draft.previewSegments=route.segments.map(seg=>({...base,a:seg.a,b:seg.b,length:seg.length,rotationStep:seg.rotationStep}));
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
@@ -533,6 +543,7 @@ canvas.addEventListener('pointermove',e=>{
       status(`${State.tool.label}: ${total.toFixed(2)}U · ${legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
+      State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};
       status(snap.structureId?'No valid two-segment 15° route to this magnet':'Segment too short');
     }
     draw();
@@ -543,8 +554,9 @@ canvas.addEventListener('pointermove',e=>{
     if(State.draft?.mode==='orient'){
       const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
       State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
+      const ghost=window.ConquerPlacement?.check({...State.draft.preview,parentTowerId:State.draft.parentTowerId||null,wallSnapId:State.draft.wallSnapId||null});
       let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
-      status(State.draft.wallSnapId?`Wall snap · aligned ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · aligned ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
       draw();return
     }
     if(State.tool.kind==='tower'){
@@ -562,6 +574,8 @@ canvas.addEventListener('pointermove',e=>{
     }else{
       const q={x:snapGrid(p.x),y:snapGrid(p.y)};
       State.draft={mode:'hover',preview:makePlacementPreview(q,0)};
+      const ghost=window.ConquerPlacement?.check(State.draft.preview);
+      if(ghost&&!ghost.ok)status('Placement blocked: '+ghost.reason);
     }
     draw();return
   }
