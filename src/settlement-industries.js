@@ -107,5 +107,44 @@
     ctx.fillText(s.type==='loggingCamp'?'L':s.type==='quarry'?'C':'M',center.x,center.y);
     ctx.restore();
   }
-  window.ConquerIndustries=Object.freeze({TYPES,is,make,validate,render,nearestForest,nearestSlope});
+  function forestAccessPoint(s){
+    const hit=nearestForest({x:s.x,y:s.y});
+    if(!hit.forest)return null;
+    const p={x:s.x,y:s.y},poly=hit.forest.points;
+    let best=null,distance=Infinity;
+    for(let i=0;i<poly.length;i++){
+      const a=poly[i],b=poly[(i+1)%poly.length],dx=b.x-a.x,dy=b.y-a.y;
+      const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+      const q={x:a.x+dx*t,y:a.y+dy*t},d=Math.hypot(p.x-q.x,p.y-q.y);
+      if(d<distance){best=q;distance=d}
+    }
+    return distance<=TYPES.loggingCamp.radius?best:null;
+  }
+  // Purely visual anonymized workforce. No chopping animation or forest depletion.
+  function drawWorkers(){
+    if(!window.ConquerEconomy||window.ConquerEconomy.weekday(State.clock.day)>=5)return;
+    const allocated=window.ConquerEconomy.staffing(),frac=State.clock.day-Math.floor(State.clock.day);
+    if(frac<.11||frac>.66)return;
+    for(const s of State.structures||[]){
+      if(s.type!=='loggingCamp'||underConstruction(s)||s.economyDisabled)continue;
+      const count=Math.min(2,allocated[s.id]||0),forest=forestAccessPoint(s);if(!count||!forest)continue;
+      const start={x:s.x,y:s.y},end=forest;
+      for(let i=0;i<count;i++){
+        const offset=i*.035,t=frac-offset;
+        let progress;
+        if(t<.11||t>.65)continue;
+        if(t<.25)progress=(t-.11)/.14;
+        else if(t<.47)progress=1;
+        else if(t<.63)progress=1-(t-.47)/.16;
+        else progress=0;
+        progress=Math.max(0,Math.min(1,progress));
+        const point={x:start.x+(end.x-start.x)*progress,y:start.y+(end.y-start.y)*progress};
+        const screen=w2s(point,terrainElevation(point)+.14);
+        ctx.save();ctx.fillStyle='#b5a17e';ctx.strokeStyle='#423124';ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(screen.x+(i?2:-2),screen.y,Math.max(2,U*State.view.scale*.13),0,Math.PI*2);
+        ctx.fill();ctx.stroke();ctx.restore();
+      }
+    }
+  }
+  window.ConquerIndustries=Object.freeze({TYPES,is,make,validate,render,drawWorkers,nearestForest,nearestSlope});
 })();
