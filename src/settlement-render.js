@@ -139,10 +139,10 @@ function visibleFacadeEdges(s){
       faces.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2});
     }
     faces.sort((a,b)=>b.depth-a.depth);
-    edges.push(...(parts?.length>=2&&s.auto&&houseLevel(s)>=3?faces.slice(0,2):faces));
+    edges.push(...(parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?faces.slice(0,2):faces));
   }
   edges.sort((a,b)=>b.depth-a.depth);
-  return parts?.length>=2&&s.auto&&houseLevel(s)>=3?edges:edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
+  return parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?edges:edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
 }
 function cutawayOpenEdgeIndexes(s){
   if(!structureCutaway(s))return null;
