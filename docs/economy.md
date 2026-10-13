@@ -57,3 +57,19 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 
 ## Regression
 Run `node qa/economy-regression.cjs` in a local checkout. The test suite covers labor weekends, aggregate cohorts, reserve saturation, sales, exports, ownership, and monthly boundaries.
+
+## Extractive buildings — placeholder implementation (economy branch)
+
+The economy Builder now offers three manual, lord-owned `2×2U` industry footprints. They must sit **entirely inside the whitezone** (`x,y ∈ [50,150]`), on a single flat terrace, outside water, forest polygons, slopes, and existing manual buildings. Automatic urban objects may be displaced through the existing Builder procedure.
+
+| Building | Graphic placeholder | Placement rule | Workers | Daily workday production |
+| --- | --- | --- | --- | --- |
+| Logging camp | Brown 2×2U low block | Forest boundary within 10U of building centre; footprint must stay outside forest | 2 × L1 | 1 wood per active worker |
+| Quarry | Light-grey 2×2U low block | Elevated flat hill terrace (H1+) within 3.5U of a rocky hillside band | 2 × L2 | 1 stone per active worker |
+| Mine | Dark anthracite-grey 2×2U low block | Flat terrace within 3.5U of a steep rock face, not inside the cliff | 2 × L2 | 1 stone per active worker **as currently requested** |
+
+Worker numbers are balancing placeholders (2 each), and are limited by the aggregate L1/L2 labor pool: without enough workers, output is lower or zero. Saturday is market day; Sunday is rest. A logging camp displays two anonymous small walkers heading to the forest edge during workdays (not persistent individual laborers). No forest depletion, individual chopping animation, or regeneration logic has been implemented.
+
+**Open design decision:** the mine currently yields stone according to the latest instruction; earlier economic design assumed metal. Choose the definitive mined good before balancing the metallurgical chain. Rendering intentionally remains temporary while SVG assets are authored in `urban`. No claim is made that the `urban` branch art has been merged.
+
+Regression: `node qa/economy-industries-regression.cjs` (whitezone, forest range, quarry/mine terrain, collisions, staffing, daily output and weekends).
