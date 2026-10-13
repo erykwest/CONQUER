@@ -191,7 +191,9 @@ test('upgrade remains possible on L2 plot without two viable road-front building
   run('urbanRevision++');run('changeHouseDensity(State.structures[0],3)');
   assert.equal(house.houseLevel,3);
   assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
-  assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),1);
+  // Without street frontage the house retains its *original L/T shape*,
+  // rather than silently falling back to a featureless rectangle.
+  assert.ok(run('urbanHouseDisplayParts(State.structures[0]).filter(p=>p.kind==="body").length')>=2);
 });
 test('manually placed L2 house can redevelop into a compact roadside parcel',()=>{
   house.auto=false;house.houseLevel=2;
