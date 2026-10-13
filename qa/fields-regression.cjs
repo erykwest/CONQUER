@@ -53,17 +53,18 @@ test('full cycle plough → sow → autonomous growth → harvest → plough',()
  assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0);
  run("State.structures=State.structures.filter(s=>s.type!=='house');State.clock.day=8.5;tickFields(8.5)");assert.equal(run('c.growth'),.5);
  run("State.clock.day=12;tickFields(12)");assert.equal(run('c.phase'),'harvest');
- run("State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);State.clock.day=13;tickFields(13)");assert.equal(run('c.phase'),'plough');assert.equal(run('c.cycles'),1);
+ run("State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);State.clock.day=13;tickFields(13)");assert.equal(run('c.phase'),'harvest','Sunday is not a farming workday');
+ run("State.clock.day=15;tickFields(15)");assert.equal(run('c.phase'),'plough');assert.equal(run('c.cycles'),1);
 });
 test('alarms suspend labor but allow autonomous growth; pause does not advance crops',()=>{
- run("c.work.fill(0);window.ConquerCombat.alarmMode=()=>'mobilize';State.clock.day=14;tickFields(14)");assert.equal(run('c.work[0]'),0);
- run("c.phase='grow';c.growth=0;State.clock.day=15;tickFields(15)");assert.ok(Math.abs(run('c.growth')-1/7)<1e-9);
- run('tickFields(15)');assert.ok(Math.abs(run('c.growth')-1/7)<1e-9);run("window.ConquerCombat.alarmMode=()=>'off'");
+ run("c.work.fill(0);window.ConquerCombat.alarmMode=()=>'mobilize';State.clock.day=16;tickFields(16)");assert.equal(run('c.work[0]'),0);
+ run("c.phase='grow';c.growth=0;State.clock.day=17;tickFields(17)");assert.ok(Math.abs(run('c.growth')-1/7)<1e-9);
+ run('tickFields(17)');assert.ok(Math.abs(run('c.growth')-1/7)<1e-9);run("window.ConquerCombat.alarmMode=()=>'off'");
 });
 test('workers traverse their exact serpentine portion and commute to current work',()=>{
  run("c.phase='plough';c.work[0]=2;const cell=fieldLayout(qaField).cells[0];const p=fieldWorkerPosition(qaField,cell);const expected=fieldLayout(qaField).at(cell.start+2)");
  assert.equal(run('dist(p,expected)'),0);
- assert.equal(run("dist(peasantPosition(State.structures.find(s=>s.id==='h1'),{field:qaField,cell},15.3),expected)"),0);
+ assert.equal(run("dist(peasantPosition(State.structures.find(s=>s.id==='h1'),{field:qaField,cell},17.3),expected)"),0);
  assert.equal(run('fieldWorkerRoute(qaField,cell).at(-1).x'),run('expected.x'));
 });
 test('harvest strips cover entire irregular polygon before work and remove the grown fill',()=>{
