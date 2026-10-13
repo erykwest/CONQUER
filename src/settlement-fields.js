@@ -62,12 +62,10 @@ function fieldAllowed(field,spawnContext=null){
     if(s.type==='field'&&urbanPolygonsOverlap(poly,fieldPoints(s)))return false;
     if(s.type==='road'&&roadTouchesPolygon(s,poly,.12))return false;
   }
-  const minX=Math.min(...poly.map(p=>p.x)),maxX=Math.max(...poly.map(p=>p.x));
-  const minY=Math.min(...poly.map(p=>p.y)),maxY=Math.max(...poly.map(p=>p.y));
-  for(let x=minX;x<=maxX+.01;x+=.4)for(let y=minY;y<=maxY+.01;y+=.4){
-    const p={x,y};if(urbanContains(poly,p)&&environmentBlocksPoint(p,'settlement'))return false;
-  }
-  return poly.every(p=>!environmentBlocksPoint(p,'settlement'));
+  // urbanParcelAllowed already checked the *entire* polygon, including
+  // rivers/forests/steep slopes. Do not use environmentBlocksPoint('settlement')
+  // here: that legacy point validator also rejects ordinary gentle hills.
+  return true;
 }
 function fieldLayout(field){
   const poly=fieldPoints(field);if(fieldLayoutCache.has(poly))return fieldLayoutCache.get(poly);
@@ -111,34 +109,78 @@ function fieldCrop(field){
   return crop;
 }
 function fieldSlotDone(field,cell){return (fieldCrop(field).work[cell.index]||0)>=cell.end-cell.start-1e-7}
-// Five-day workweek: Saturday is the market, Sunday is rest. Growth keeps progressing.
+// Preserve weekday-aware economy: work Mon-Fri; Saturday market and Sunday rest.
 function fieldWorkClock(day){const whole=Math.floor(day),week=Math.floor(whole/7),weekday=((whole%7)+7)%7;return week*5+Math.min(weekday,5)+(weekday<5?clamp((day-whole-.14)/.38,0,1):0)}
+// Months are zero based (Jan=0). Farming advances only in the specified seasons.
+function fieldSeasonPhase(month){
+  if(month===9||month===10)return 'plough'; // October–November
+  if(month===2||month===3)return 'sow';      // March–April
+  if(month===6||month===7)return 'harvest';  // July–August
+  return null;
+}
+function fieldCropReady(field,day=State.clock.day){
+  const crop=fieldCrop(field),month=calendarDateFromDay(day).month;
+  if(crop.ploughed&&crop.phase==='plough'||crop.harvested&&crop.phase==='harvest')return false;
+  return crop.phase===fieldSeasonPhase(month)&&crop.work.some((done,i)=>{
+    const cell=fieldLayout(field).cells[i];
+    return cell&&done<cell.end-cell.start-1e-7;
+  });
+}
 function tickFields(day=State.clock.day){
   const fields=completedSettlement('field');if(!fields.length)return;
   const houses=completedSettlement('house').filter(h=>houseLevel(h)===1);
+  const month=calendarDateFromDay(day).month,season=fieldSeasonPhase(month);
+  // Prepare all crop states before assigning workers so a completed field
+  // immediately releases its workforce to any other available parcel.
+  for(const field of fields){
+    const crop=fieldCrop(field);
+    const year=calendarDateFromDay(day).year;
+    if(crop.seasonYear==null)crop.seasonYear=year;
+    if(season==='plough'&&crop.phase==='plough'&&crop.seasonYear!==year){
+      crop.work.fill(0);crop.seasonYear=year;
+    }
+    if(crop.phase==='grow'){
+      // Sown fields develop through the spring; they mature for July harvest.
+      const summerStart=(year-1)*365+181-CALENDAR_EPOCH_DAY_OF_YEAR;
+      if(!Number.isFinite(crop.sownDay))crop.sownDay=day;
+      const progress=clamp((day-crop.sownDay)/Math.max(1,summerStart-crop.sownDay),0,1);
+      if(progress!==crop.growth){crop.growth=progress;State.dirty=true;}
+      if(season==='harvest'){
+        crop.phase='harvest';crop.growth=1;crop.work.fill(0);
+      }
+    }
+    // A finished July/August harvest waits until October to plough again.
+    if(season==='plough'&&crop.phase==='harvest'&&crop.harvested){
+      crop.phase='plough';crop.work.fill(0);crop.harvested=false;crop.growth=0;
+    }
+    if(crop.phase==='plough'&&season==='sow'&&crop.ploughed){
+      crop.phase='sow';crop.work.fill(0);
+    }
+  }
   const assignments=fieldWorkAssignments(houses,fields),alarm=window.ConquerCombat?.alarmMode?.()||'off';
   for(const field of fields){
     const crop=fieldCrop(field),layout=fieldLayout(field),before=crop.lastDay;
-    const elapsed=Math.max(0,day-before),work=Math.max(0,fieldWorkClock(day)-fieldWorkClock(before));crop.lastDay=day;
+    const elapsed=Math.max(0,day-before),work=Math.max(0,fieldWorkClock(day)-fieldWorkClock(before));
+    crop.lastDay=day;
     if(!elapsed)continue;
-    State.dirty=true;
-    if(crop.phase==='grow'){
-      crop.growth=clamp(crop.growth+elapsed/FIELD_RULES.growthDays,0,1);
-      if(crop.growth>=1){crop.phase='harvest';crop.work.fill(0)}
-      continue;
-    }
+    if(crop.phase==='grow')continue;
+    if(!season||crop.phase!==season||crop.ploughed&&season==='plough'||crop.harvested&&season==='harvest')continue;
     if(alarm!=='off'||!work)continue;
-    const rate=crop.phase==='plough'?FIELD_RULES.ploughRate:crop.phase==='sow'?FIELD_RULES.sowRate:FIELD_RULES.harvestRate;
+    const rate=season==='plough'?FIELD_RULES.ploughRate:season==='sow'?FIELD_RULES.sowRate:FIELD_RULES.harvestRate;
+    let worked=false;
     for(const assignment of assignments.values())if(assignment.field.id===field.id){
       const cell=assignment.cell,route=peasantPath(assignment.house,assignment);
-      if(dist(route.at(-1),cell.world)>.05)continue;
+      if(!route?.length||dist(route.at(-1),cell.world)>.05)continue;
       crop.work[cell.index]=Math.min(cell.end-cell.start,(crop.work[cell.index]||0)+work*rate);
+      worked=true;
     }
+    if(worked)State.dirty=true;
     if(layout.cells.length&&layout.cells.every(cell=>fieldSlotDone(field,cell))){
-      if(crop.phase==='plough')crop.phase='sow';
-      else if(crop.phase==='sow'){crop.phase='grow';crop.growth=0}
-      else{crop.phase='plough';crop.growth=0;crop.cycles++}
-      crop.work.fill(0);
+      if(season==='plough'){crop.ploughed=true;crop.work.fill(0)}
+      else if(season==='sow'){crop.phase='grow';crop.sownDay=day;crop.growth=0;crop.ploughed=false;crop.work.fill(0)}
+      else{crop.harvested=true;crop.cycles++;crop.work.fill(0)}
+      State.dirty=true;
+      fieldWorkAssignmentCache.key=null;
     }
   }
 }
