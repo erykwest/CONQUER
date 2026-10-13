@@ -260,6 +260,35 @@
     const length=2.25,width=Math.min(1.2,d.h*.80);
     return{hinge,outward,tangent,length,width,z:placementGroundZ(gate)};
   }
+  // Night lighting redraws Gothic windows after the moving drawbridge.
+  // Mask the precise projected leaf from front-facing window sprites so that
+  // illuminated pixels never leak through the raised shield. The mask also
+  // follows every intermediate angle of the opening animation.
+  function withDrawbridgeWindowOcclusion(gate,drawFn){
+    const d=drawbridge(gate);
+    if(!d||underConstruction(gate)||d.progress<=.02){drawFn();return}
+    const g=deck(gate),center={x:gate.x,y:gate.y};
+    if(viewDepthPoint(g.hinge)<viewDepthPoint(center)-.01){drawFn();return}
+    const theta=Math.max(0,Math.min(1,d.progress))*Math.PI/2;
+    const cosine=Math.cos(theta),sine=Math.sin(theta),half=g.width/2,
+      far={x:g.hinge.x+g.outward.x*g.length*cosine,
+        y:g.hinge.y+g.outward.y*g.length*cosine},
+      lower=g.z+.08,upper=lower+g.length*sine;
+    const corners=[
+      {p:{x:g.hinge.x+g.tangent.x*half,y:g.hinge.y+g.tangent.y*half},z:lower},
+      {p:{x:g.hinge.x-g.tangent.x*half,y:g.hinge.y-g.tangent.y*half},z:lower},
+      {p:{x:far.x-g.tangent.x*half,y:far.y-g.tangent.y*half},z:upper},
+      {p:{x:far.x+g.tangent.x*half,y:far.y+g.tangent.y*half},z:upper}
+    ].map(c=>w2s(c.p,c.z-g.z));
+    ctx.save();ctx.beginPath();
+    ctx.rect(-1e5,-1e5,2e5,2e5);
+    ctx.moveTo(corners[0].x,corners[0].y);
+    for(let i=1;i<corners.length;i++)ctx.lineTo(corners[i].x,corners[i].y);
+    ctx.closePath();
+    ctx.clip('evenodd');
+    drawFn();
+    ctx.restore();
+  }
   function drawbridgePassage(gate,p){
     const d=drawbridge(gate);
     if(!d||underConstruction(gate)||d.raised||d.progress>.02)return false;
@@ -601,5 +630,5 @@
     snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,moatChains,moatOffsetOutline,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,installDrawbridge,toggleDrawbridge,removeDrawbridge,
-    drawbridgeBlocks,drawbridgePassage,stateOfGate,DRAWBRIDGE_COST};
+    drawbridgeBlocks,drawbridgePassage,withDrawbridgeWindowOcclusion,stateOfGate,DRAWBRIDGE_COST};
 })();
