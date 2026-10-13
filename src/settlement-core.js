@@ -164,7 +164,9 @@ const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day).
 const BASE_DAYS_PER_SECOND=1/48;
-const PEASANT_VISUAL_SPEED=.025;
+// Villager routines and procedural daylight use the same simulated day as crops,
+// seasons and the calendar (a full visual day now takes 48 s at 1×).
+const PEASANT_VISUAL_SPEED=1;
 const VISUAL_DAYLIGHT_RATIO=16/24;
 const VISUAL_NIGHT_RATIO=8/24;
 const NIGHT_OVERLAY_MAX=.48;
