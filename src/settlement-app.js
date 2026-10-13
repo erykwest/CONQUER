@@ -117,6 +117,8 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
   // Preflight the whole dogleg before mutating state, so a two-leg wall is atomic
   // from the player's point of view.
   for(const s of structures){
+    const verdict=window.ConquerPlacement?.check(s);
+    if(verdict&&!verdict.ok){status('Route blocked: '+verdict.reason);return false}
     if(buildableTerrainElevationForStructure(s)==null){
       status('Route crosses incompatible terrain — choose another joint or endpoint');
       return false;
@@ -482,9 +484,10 @@ canvas.addEventListener('pointerdown',e=>{
       if(mainRoad){
         const n=normalizeLinear(State.draft.a,e2.point,spec,false);
         if(n&&n.length>=spec.min-.001){
-          addManualMainRoad(n.a,n.b);
-          State.draft=null;
-          status('Main road added — choose next segment');
+          if(addManualMainRoad(n.a,n.b)){
+            State.draft=null;
+            status('Main road added — choose next segment');
+          }
         }else status('Segment too short');
       }else{
         const route=normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!e2.structureId);
