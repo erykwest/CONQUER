@@ -96,3 +96,31 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 .heraldry-application{background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:12px;text-align:center}
 .heraldry-application svg{display:block;width:100%;height:130px;max-width:180px;margin:auto}.heraldry-application span{font-size:11px;color:var(--muted)}
 @media(max-width:720px){.heraldry-editor{grid-template-columns:1fr}.heraldry-preview{border:0;border-top:1px solid var(--line);padding:12px 0 0}.profile-facts{grid-template-columns:1fr}.profile-overlay{padding:4px}.profile-window{max-height:99%}}
+
+/* UX branch — vertical SVG tool palette and contextual catalog */
+#builder.ux-builder{left:10px;top:10px;bottom:10px;width:60px;padding:0;overflow:visible;border:0;background:transparent;box-shadow:none;z-index:9}
+.ux-builder .ux-rail{width:58px;height:100%;max-height:100%;padding:7px 5px;display:flex;flex-direction:column;gap:7px;background:rgba(32,23,18,.96);border:1px solid var(--line-strong);border-radius:13px;box-shadow:0 10px 30px #0006}
+.ux-builder .ux-rail-bottom{margin-top:auto;display:flex;flex-direction:column;gap:7px}
+.ux-builder .ux-separator{height:1px;background:var(--line-strong);margin:4px 2px}
+.ux-builder button.ux-icon-btn,.ux-builder button.ux-close{display:flex;align-items:center;justify-content:center;width:46px;height:46px;min-width:46px;padding:8px;border-radius:9px;position:relative;flex:0 0 auto}
+.ux-builder .ux-svg{display:block;width:25px;height:25px;pointer-events:none}
+.ux-builder .ux-icon-btn.active{color:#23160d;background:var(--accent);border-color:var(--accent)}
+.ux-builder .ux-flyout{position:absolute;left:66px;top:0;width:270px;max-height:calc(100vh - 86px);overflow-y:auto;padding:12px;background:rgba(35,25,19,.97);border:1px solid var(--line-strong);border-radius:13px;box-shadow:0 12px 38px #0008}
+.ux-builder .ux-flyout[hidden],.ux-builder .ux-options[hidden]{display:none}
+.ux-builder .ux-flyout-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+.ux-builder button.ux-close{width:30px;height:30px;min-width:30px;padding:5px}
+.ux-builder .ux-close .ux-svg{width:17px;height:17px}
+.ux-builder .ux-catalog{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.ux-builder .ux-catalog .ux-icon-btn{width:100%;min-width:0;aspect-ratio:1;height:auto}
+.ux-builder .ux-options{border-top:1px solid var(--line);margin-top:14px;padding-top:10px}
+.ux-builder .ux-options>strong{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.ux-builder .ux-option-line{display:flex;align-items:center;gap:8px;margin:7px 0}
+.ux-builder .ux-option-glyph{width:24px;flex:0 0 24px;color:var(--muted)}
+.ux-builder .ux-option-glyph .ux-svg{width:21px;height:21px}
+.ux-builder .ux-option-values{display:flex;min-width:0;flex:1;gap:5px}
+.ux-builder .ux-value-btn{flex:1;min-width:0;padding:7px 3px;font-size:11px;font-weight:700}
+.ux-builder .ux-icon-btn[data-tip]:hover::after,.ux-builder .ux-icon-btn[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;top:50%;left:calc(100% + 12px);transform:translateY(-50%);width:max-content;max-width:220px;padding:7px 10px;border-radius:6px;background:#17100cf5;border:1px solid #805c3d;box-shadow:0 5px 20px #000a;color:var(--text);font:600 12px/1.3 system-ui;z-index:40;pointer-events:none}
+.ux-builder .ux-catalog .ux-icon-btn[data-tip]:hover::after{left:50%;top:calc(100% + 8px);transform:translateX(-50%)}
+#functionPanel{right:calc(var(--sidebar) + 20px);top:76px}
+@media(max-width:1180px){#functionPanel{right:10px}}
+@media(max-width:700px){#builder.ux-builder{left:5px;top:5px;bottom:5px;width:53px}.ux-builder .ux-rail{width:51px;padding:6px 3px}.ux-builder button.ux-icon-btn{width:43px;height:43px;min-width:43px}.ux-builder .ux-flyout{left:57px;width:min(265px,calc(100vw - 72px));max-height:calc(100vh - 80px)}}
