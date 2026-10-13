@@ -1075,6 +1075,15 @@ function draw(){
   // Small facade/details stay dynamic for night lighting and selection semantics.
   drawFacadeWindows(false,1,false);
   drawGatePortals();
+  // Stone Gate portals/windows are restored above the moving drawbridge by
+  // the two calls above. The timber Gate's door is normally baked into the
+  // static base layer, so restore that facade detail here as well; otherwise
+  // a raised drawbridge wrongly paints over its door texture.
+  for(const gate of State.structures){
+    if(gate.type!=='gate'||!isWoodGate(gate)||underConstruction(gate)||
+       !gate.drawbridge?.installed||gate.drawbridge.progress<=.02)continue;
+    withStructureGroundPlane(gate,()=>drawWoodGateDoor(gate));
+  }
   drawChimneysAndSmoke();
 
   if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
