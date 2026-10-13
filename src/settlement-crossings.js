@@ -361,15 +361,92 @@
     if(s.type==='moat')drawMoat(candidate);else drawBridge(candidate);
     ctx.restore();
   }
-  function drawGround(){
-    for(const s of State.structures){
-      if(s.type==='moat'||s.type==='bridge'){
-        ctx.save();if(underConstruction(s))ctx.globalAlpha=.55;
-        if(s.type==='moat')drawMoat(s);else drawBridge(s);
-        ctx.restore();
+  // Paint the entire moat network as unified terrain bands, not one
+  // rectangle and one circular end cap per segment. Polygon union removes
+  // overlapping interiors AND the anti-aliased seams at joined endpoints.
+  // Each width band is unioned independently: outer earth, sloped rim, bottom.
+  // No source geometry is modified, so snapping, fills and routing persist.
+  function moatUnionGeometry(segments,fraction,pc){
+    const polygons=segments.map(s=>[
+      corners(s,-fraction/2,fraction/2).map(p=>[p.x,p.y])
+    ]);
+    return polygons.length===1?[polygons[0]]:pc.union(...polygons);
+  }
+  function paintMoatMulti(multi,z,fill,stroke=null){
+    if(!multi?.length)return;
+    ctx.save();ctx.beginPath();
+    for(const poly of multi)for(const ring of poly){
+      if(ring.length<3)continue;
+      const first=w2s({x:ring[0][0],y:ring[0][1]},z);
+      ctx.moveTo(first.x,first.y);
+      for(let i=1;i<ring.length;i++){
+        const p=w2s({x:ring[i][0],y:ring[i][1]},z);
+        ctx.lineTo(p.x,p.y);
       }
+      ctx.closePath();
     }
-    drawMoatJunctions();
+    ctx.fillStyle=fill;
+    ctx.fill('evenodd');
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=.8;ctx.stroke()}
+    ctx.restore();
+  }
+  function drawMoatFills(s){
+    const z=Number(s.groundZ)||0,width=frame(s).width;
+    for(const patch of s.fills||[]){
+      if(patch.progress<=0)continue;
+      const half=Math.min(length(s),patch.span)/2,
+        from=Math.max(0,patch.at-half),to=Math.min(length(s),patch.at+half);
+      const y=-.5+patch.progress;
+      const poly=[point(s,from,-width*.5),point(s,to,-width*.5),
+        point(s,to,width*y),point(s,from,width*y)];
+      pathPolygon(poly.map(p=>w2s(p,z+.025)),'#c2a477','#806c4c',.8);
+    }
+  }
+  function drawUnifiedMoats(moats){
+    const pc=window.__polygonClipping;
+    if(!pc||typeof pc.union!=='function')return false;
+    const groups=new Map();
+    for(const s of moats){
+      const key=s.variant+':'+Math.round((Number(s.groundZ)||0)*1000);
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(s);
+    }
+    try{
+      for(const segments of groups.values()){
+        const base=segments[0],water=base.variant==='water',z=Number(base.groundZ)||0;
+        // Three unions, shared by ALL segments of the same surface/height.
+        // Unlike per-piece quads, shared corners never receive duplicate strokes.
+        const outer=moatUnionGeometry(segments,1,pc);
+        const slope=moatUnionGeometry(segments,.74,pc);
+        const floor=moatUnionGeometry(segments,.46,pc);
+        paintMoatMulti(outer,z,'#7b6850','#514533');
+        paintMoatMulti(slope,z-.095,'#987c58');
+        paintMoatMulti(floor,z-(water?.18:.32),
+          water?'#398aa5':'#5a4937',water?'#8bc6cf':'#473d32');
+        for(const seg of segments)drawMoatFills(seg);
+      }
+      return true;
+    }catch(err){
+      console.warn('Moat polygon union fallback',err);
+      return false;
+    }
+  }
+  function drawGround(){
+    const moats=State.structures.filter(s=>s.type==='moat'&&!underConstruction(s));
+    const pending=State.structures.filter(s=>s.type==='moat'&&underConstruction(s));
+    if(!drawUnifiedMoats(moats)){
+      // Offline fallback until the optional polygon library has loaded.
+      for(const s of moats)drawMoat(s);
+      drawMoatJunctions();
+    }
+    for(const s of pending){ctx.save();ctx.globalAlpha=.55;drawMoat(s);ctx.restore()}
+    // Always paint bridges after the ditch, regardless of creation order.
+    // Otherwise a later excavated segment incorrectly covers an existing deck.
+    for(const s of State.structures){
+      if(s.type!=='bridge')continue;
+      ctx.save();if(underConstruction(s))ctx.globalAlpha=.55;
+      drawBridge(s);ctx.restore();
+    }
   }
   let frameAt=0,rafPending=0;
   function drawDynamic(){
@@ -446,7 +523,7 @@
     slots.querySelector('[data-drawbridge-remove]')?.addEventListener('click',()=>removeDrawbridge(s));
   }
   window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
-    snapMoatEndpoint,drawMoatMagnets,
+    snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,installDrawbridge,toggleDrawbridge,removeDrawbridge,
     drawbridgeBlocks,drawbridgePassage,stateOfGate,DRAWBRIDGE_COST};
