@@ -1118,7 +1118,7 @@
     const patrols=combat.units.filter(u=>u.kind==='patrol').length;
     $('combatPatrolCount').textContent='White Zone patrols · '+patrols+' ('+(patrols*2)+' pikemen)';
     $('combatPatrolRemove').disabled=patrols===0;
-    $('combatPatrolAdd').disabled=!activeWell();
+    // Keep Add clickable before founding: the action explains the prerequisite.
     document.querySelectorAll('[data-combat-brush]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-brush'&&State.tool.combatBrush===b.dataset.combatBrush));
     $('combatOrders').classList.toggle('active',State.tool.kind==='combat-orders');
   }
