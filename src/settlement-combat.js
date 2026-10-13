@@ -17,7 +17,8 @@
   // Masks are raster unions of auto-generated regions and manual brush marks.
   // They are projected as a single surface per color: no overlapping circle
   // outlines, no doubling alpha, and subtractive strokes cut real holes.
-  const ZONE_PIXELS=2, ZONE_SIZE=WORLD*ZONE_PIXELS;
+  // Four pixels per world unit prevent the feathered/blurry brush boundaries.
+  const ZONE_PIXELS=4, ZONE_SIZE=WORLD*ZONE_PIXELS;
   const zoneImages={};
   for(const mode of ['allow','yellow','green']){
     const surface=document.createElement('canvas'),outline=document.createElement('canvas');
@@ -45,13 +46,15 @@
   const patrolRouteCache=new Map();
 
 
-  function defaults(){return{version:2,fog:true,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,recallMode:'off',seen:''};}
+  function defaults(){return{version:2,fog:false,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,recallMode:'off',seen:''};}
   function restore(raw){
     combat=Object.assign(defaults(),raw&&[1,2].includes(raw.version)?raw:{});
     // This builder starts with the terrain explored (known) but not currently
     // visible. The fog still hides unseen contacts and darkens unobserved areas.
     if(combat.version!==2){combat.seen='';combat.version=2}
-    combat.fog=true;
+    // DEV view defaults to fog OFF even for old snapshots saved with fog ON.
+    // The player can still enable it with the Fog button at any time.
+    combat.fog=false;
     combat.recallMode=['off','green','hall'].includes(raw?.recallMode)?raw.recallMode:(combat.recall?'green':'off');
     combat.recall=combat.recallMode!=='off';
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
@@ -601,12 +604,12 @@
         c.drawImage(fog,0,0,ZONE_SIZE,ZONE_SIZE);
       }
       if(combat.zones&&activeWell()){
-        c.imageSmoothingEnabled=true;
+        c.imageSmoothingEnabled=false;
         for(const mode of ['allow','yellow','green']){
           const mask=zoneImages[mode];
           c.globalAlpha=mode==='allow'?.055:mode==='yellow'?.07:.10;
           c.drawImage(mask.surface,0,0);
-          c.globalAlpha=.30;
+          c.globalAlpha=.85;
           c.drawImage(mask.outline,0,0);
         }
       }
@@ -619,7 +622,7 @@
     const a=w2sRaw({x:0,y:0},0),bx=w2sRaw({x:1/ZONE_PIXELS,y:0},0),by=w2sRaw({x:0,y:1/ZONE_PIXELS},0);
     g.save();
     g.setTransform(pixelRatio*(bx.x-a.x),pixelRatio*(bx.y-a.y),pixelRatio*(by.x-a.x),pixelRatio*(by.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
-    g.imageSmoothingEnabled=true;
+    g.imageSmoothingEnabled=false;
     g.drawImage(backdrop,0,0);
     g.restore();
   }
@@ -635,11 +638,11 @@
     renderTacticalBackdrop(d);
     if(!activeWell())return;
     const king=combat.units.find(u=>u.kind==='knight');
-    if(king){
+    if(king&&selected===king.id){
       g.strokeStyle='rgba(255,211,116,.78)';g.lineWidth=1.5;
       g.setLineDash([6,5]);drawMapCircle({...king,r:16,groundZ:terrainElevation(king)},true);g.setLineDash([]);
     }
-    if(selected){
+    if(selected&&selected!==king?.id){
       const u=combat.units.find(u=>u.id===selected);
       if(u){g.strokeStyle='#e3fcac';g.lineWidth=1.3;g.setLineDash([4,4]);drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)},true);g.setLineDash([]);}
     }
