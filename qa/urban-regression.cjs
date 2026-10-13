@@ -82,11 +82,11 @@ test('one occupied quadrilateral per Voronoi lot, no overlap and house footprint
  assert.equal(run('urbanLots().every(l=>l.points.length===4)'),true);
  assert.equal(run("urbanLots().every(l=>houseFootprintParts(State.structures.find(h=>h.id===l.houseId)).every(part=>part.points.every(p=>urbanContains(l.points,p,.159))))"),true);
  assert.equal(run("urbanLots().every(l=>State.structures.filter(h=>urbanContains(l.points,h)).length===1)"),true);
- console.log('UPGRADE_DIAG',run("JSON.stringify((()=>{const candidate={...State.structures[0],houseLevel:3},houses=[candidate],lot=urbanLotFor(candidate,houses);return {lot,parts:houseFootprintParts(candidate).map(p=>p.points),yellow:urbanYellowContains([{x:99,y:99},{x:101,y:99},{x:101,y:101},{x:99,y:101}]),parcel:lot?urbanParcelAllowed(lot.points,candidate.id):null,roads:primaryRoadList().length,env:State.environment.length,structures:State.structures.length};})())"));
  assert.equal(run("urbanHouseFitsLots({id:'duplicate',type:'house',x:95,y:95,w:1.5,h:1})"),false);
 });
 test('manual L2 to L3 upgrade ignores occupants but never bypasses lot geometry',()=>{
  run("State.environment=[];State.structures=[{id:'upgradable',type:'house',auto:true,x:100,y:100,w:1.5,h:1,angle:0,houseLevel:2}];State.combat.strokes=[{x:100,y:100,r:40,mode:'yellow'}];invalidateNavigation();invalidateUrbanGeometry()");
+ console.log('UPGRADE_DIAG',run("JSON.stringify((()=>{const candidate={...State.structures[0],houseLevel:3},houses=[candidate],lot=urbanLotFor(candidate,houses);return {lot,parts:houseFootprintParts(candidate).map(p=>p.points),yellow:urbanYellowContains([{x:99,y:99},{x:101,y:99},{x:101,y:101},{x:99,y:101}]),parcel:lot?urbanParcelAllowed(lot.points,candidate.id):null,roads:primaryRoadList().length,env:State.environment.length,structures:State.structures.length};})())"));
  assert.equal(run("urbanHouseFitsLots({...State.structures[0],houseLevel:3},{ignoreDynamicUnits:true})"),true);
  // A resident physically inside the plot is valid for an existing household,
  // but remains disqualifying for a new construction site.
