@@ -73,3 +73,15 @@ Worker numbers are balancing placeholders (2 each), and are limited by the aggre
 **Open design decision:** the mine currently yields stone according to the latest instruction; earlier economic design assumed metal. Choose the definitive mined good before balancing the metallurgical chain. Rendering intentionally remains temporary while SVG assets are authored in `urban`. No claim is made that the `urban` branch art has been merged.
 
 Regression: `node qa/economy-industries-regression.cjs` (whitezone, forest range, quarry/mine terrain, collisions, staffing, daily output and weekends).
+
+## General Builder feature: rotate existing buildings and invalid red ghosts
+
+This behavior is **shared across the Builder**, not a special rule of industrial structures.
+
+- After placement: select a house, market, tavern, church, training ground, logging camp, quarry or mine, then rotate by **±15° or 180°** in the structure panel.
+- Existing tower and gate ±15°/180° controls remain, but now also run collision/terrain preflight before changing orientation.
+- Rotation keeps the original world centre and construction progress, and is rejected without modifying the structure if its new footprint is blocked.
+- Placement previews are translucent in their ordinary style when permitted; rejected footprints receive a **red fill and red outline** (including roads, walls, civic buildings, towers, industries, and the village well). A rejected oriented placement retains its preview rather than disappearing.
+- The shared `src/settlement-placement.js` validator checks whitezone boundaries, ground/terrain, nature obstacles, manual collisions, village-well uniqueness and construction affordability. Existing intended tower/gate/wall sockets and market-road crossings are preserved.
+- Industry 2×2U placeholders include a direction marker so rotations are visually distinguishable before their SVGs are introduced.
+- Tests: `node qa/builder-placement-regression.cjs`. The Builder remains a classic-script Canvas application; no extra rendering dependencies.
