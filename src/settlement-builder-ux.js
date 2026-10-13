@@ -50,6 +50,11 @@
       ['[data-linear="built"]','Sezione costruita','built'],
       ['[data-gate]','Porta in pietra','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
+    {id:'economy',label:'Produzione',icon:'work',items:[
+      ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
+      ['[data-industry="quarry"]','Cava','work'],
+      ['[data-industry="mine"]','Miniera','work']]},
+    {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
       ['[data-main-road]','Strada principale','route'],
       ['[data-crossing="dry"]','Fossato asciutto','moat'],
@@ -57,6 +62,10 @@
       ['[data-crossing="wood"]','Ponte di legno','bridge'],
       ['[data-crossing="stone"]','Ponte di pietra','bridge']]}
   ];
+  // The combat module inserts live controls into #builder before this UX loads.
+  // Replacing children without retaining them detached Combat and crashed every
+  // simulation draw once a village well became active.
+  const combatPanel=root.querySelector('#combatControls');
   const originalButtons=[...root.querySelectorAll('button')];
   const controls=[
     {name:'Pianta torre quadrata',icon:'square',selectors:['[data-tower="square"]']},
@@ -81,7 +90,13 @@
   const optionHeading=document.createElement('strong');optionHeading.textContent='Configurazione';
   options.append(optionHeading);
   flyout.append(header,catalog,options);
-  root.append(rail,flyout);
+  // Preserve the existing combat DOM, its IDs and event listeners even while
+  // its palette category is closed. Other systems still update these controls.
+  const retained=document.createElement('div');
+  retained.id='uxRetainedControls';
+  retained.hidden=true;
+  root.append(rail,flyout,retained);
+  if(combatPanel)retained.append(combatPanel);
   let currentCategory=null;
   function iconize(btn,label,icon,tag){
     btn.classList.add('ux-icon-btn');btn.setAttribute('aria-label',label);btn.setAttribute('title',label);
@@ -104,7 +119,11 @@
     groupButtons.forEach((btn,key)=>{btn.classList.toggle('active',key===currentCategory);btn.setAttribute('aria-expanded',String(key===currentCategory))});
     if(!currentCategory)return;
     const group=groups.find(g=>g.id===currentCategory);
-    heading.textContent=group.label;catalog.replaceChildren();
+    heading.textContent=group.label;
+    // Move, never destroy, the event-bound combat panel during category changes.
+    if(combatPanel)retained.append(combatPanel);
+    catalog.replaceChildren();
+    if(group.id==='combat'&&combatPanel)catalog.append(combatPanel);
     for(const [selector,label,icon] of group.items){
       const b=originalButtons.find(x=>x.matches(selector));
       if(!b)continue;iconize(b,label,icon);catalog.append(b);
@@ -142,7 +161,7 @@
   // Clicking an actual build tool chooses it without closing the palette; this
   // keeps level/tier presets accessible while the ghost is being previewed.
   for(const b of originalButtons)b.addEventListener('click',()=>{
-    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')){
+    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')||b.hasAttribute('data-industry')){
       requestAnimationFrame(()=>{if(b.classList.contains('ux-icon-btn'))document.querySelectorAll('.ux-catalog .ux-icon-btn').forEach(x=>x.classList.toggle('active',x===b))});
     }
   });
