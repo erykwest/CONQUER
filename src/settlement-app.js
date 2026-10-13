@@ -214,7 +214,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='house'){
     const level=houseLevel(s);
-    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 3 residents · L2: 6 · L3: 9 · L4: 12. L3: extended ${housePlanType(s)} plan · L4: elite house with ${houseTurretType(s)} turret.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: cottage + yard · L2: expanded home · L3/L4: compact roadside houses based on primary-road frontage (one shared cadastral parcel). Population stays tied to the parcel.</div></div>`;
   }
   if(canTier){
     const current=['wall','palisade'].includes(s.type)?wallTier(s):towerTier(s);
@@ -284,8 +284,27 @@ function renderFunctionPanel(){
   }
   slots.innerHTML=html;
   window.ConquerSiege?.bindPanel(slots);
-  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;const level=clamp(houseLevel(target)+1,1,4);if(!urbanHouseFitsLots({...target,houseLevel:level})){status('House extension would exceed its lot');return}target.houseLevel=level;markStructureDirty(target);renderFunctionPanel();draw();status('House upgraded to L'+target.houseLevel)});
-  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='house')return;target.houseLevel=clamp(houseLevel(target)-1,1,4);markStructureDirty(target);renderFunctionPanel();draw();status('House downgraded to L'+target.houseLevel)});
+  function changeHouseDensity(target,level){
+    const candidate={...target,houseLevel:level};
+    const houses=State.structures.filter(s=>s.type==='house').map(s=>s.id===target.id?candidate:s);
+    if(!urbanLotFor(candidate,houses,primaryRoadList())){
+      status('Level change would exceed the lot or violate terrain zoning');return;
+    }
+    target.houseLevel=level;
+    // One cadastral owner remains; only the frontage-dependent physical
+    // buildings are replaced. Keep old road spurs out of the new townhouses.
+    if(target.auto&&level>=3){
+      State.structures=State.structures.filter(s=>s.type!=='road'||s.accessFor!==target.id);
+    }
+    invalidateUrbanGeometry();
+    if(target.auto&&level<3)ensureSettlementRoadAccess(target,true);
+    markStructureDirty(target);
+    renderFunctionPanel();draw();
+    const count=urbanDenseParts(target).length;
+    status('House L'+level+(count>=2?' · '+count+' streetfront buildings':''));
+  }
+  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(target?.type==='house')changeHouseDensity(target,clamp(houseLevel(target)+1,1,4))});
+  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(target?.type==='house')changeHouseDensity(target,clamp(houseLevel(target)-1,1,4))});
   slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(!target)return;
     const requested=Number(btn.dataset.structureTier);
