@@ -199,11 +199,14 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
   const points=urbanQuad(cell,house,points=>urbanParcelAllowed(points,house.id));
   return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
 }
-function urbanHouseFitsLots(candidate){
+function urbanHouseFitsLots(candidate,{ignoreDynamicUnits=false}={}){
   const houses=State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
   houses.push(candidate);
   const lot=urbanLotFor(candidate,houses);
-  if(!lot||urbanLotUnitConflict(lot))return false;
+  // During an upgrade, the household's existing occupants already live within
+  // the lot. They must not veto enlarging their own home. New construction
+  // continues to respect dynamic unit collisions.
+  if(!lot||(!ignoreDynamicUnits&&urbanLotUnitConflict(lot)))return false;
   // A new site must not steal the footprint of an already occupied parcel.
   return houses.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
     !urbanLotFor(h,State.structures.filter(s=>s.type==='house'))||!!urbanLotFor(h,houses));
