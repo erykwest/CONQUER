@@ -221,7 +221,11 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
     cell=urbanClip(cell,nx,ny,q.x*nx+q.y*ny-(Number(road.width)||.62)/2-.12);
     if(cell.length<4)return null;
   }
-  const points=urbanQuad(cell,house,points=>urbanParcelAllowed(points,house.id));
+  // Redevelopment preserves the cadastral lot of the existing cottage;
+  // dense streetfront volumes are derived within that owned plot.
+  const site=(houseLevel(house)>=3&&(house.auto||house.urbanRedeveloped))
+    ?{...house,houseLevel:2}:house;
+  const points=urbanQuad(cell,site,points=>urbanParcelAllowed(points,house.id));
   return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
 }
 // Reuse the immutable snapshot while evaluating many speculative spawn sites.
@@ -272,6 +276,137 @@ function urbanLots(){
   const houses=State.structures.filter(s=>s.type==='house'),roads=primaryRoadList();
   return urbanLotCache=houses.map(h=>urbanLotFor(h,houses,roads)).filter(Boolean);
 }
+// Urban redevelopment: a L3/L4 plot is one economic household, with several
+// deterministic street-front volumes. Children are geometry, not extra citizens.
+const URBAN_FRONT_WIDTH=Object.freeze({3:1.45,4:1.17});
+let urbanDensityCache={revision:-1,parts:new Map()};
+function urbanLotRoadFrontages(lot){
+  const roads=primaryRoadList(true),out=[],polygon=lot.points;
+  for(let i=0;i<polygon.length;i++){
+    const a=polygon[i],b=polygon[(i+1)%polygon.length],length=dist(a,b);
+    if(length<1.5)continue;
+    const ux=(b.x-a.x)/length,uy=(b.y-a.y)/length,intervals=[];
+    for(const road of roads){
+      const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy);
+      if(L<.1||Math.abs((dx*ux+dy*uy)/L)<.93)continue;
+      const t0=(road.a.x-a.x)*ux+(road.a.y-a.y)*uy;
+      const t1=(road.b.x-a.x)*ux+(road.b.y-a.y)*uy;
+      const from=Math.max(.22,Math.min(t0,t1)),to=Math.min(length-.22,Math.max(t0,t1));
+      if(to-from<.1)continue;
+      // Distance must be measured over the road-facing overlap, not at the
+      // midpoint of the entire parcel side: many main-road segments are short.
+      const halfway=(from+to)/2;
+      const q={x:a.x+ux*halfway,y:a.y+uy*halfway};
+      const distance=pointSegmentDistance(q,road.a,road.b);
+      if(distance>Math.max(1.05,(Number(road.width)||.62)/2+.72))continue;
+      intervals.push({from,to,distance,roadId:road.id});
+    }
+    intervals.sort((a,b)=>a.from-b.from||a.to-b.to);
+    const merged=[];
+    for(const item of intervals){
+      const last=merged.at(-1);
+      if(last&&item.from<=last.to+.08){
+        last.to=Math.max(last.to,item.to);
+        if(item.distance<last.distance){last.distance=item.distance;last.roadId=item.roadId}
+      }else merged.push({...item});
+    }
+    for(const span of merged)if(span.to-span.from>=1.05){
+      out.push({edge:i,a,b,ux,uy,from:span.from,to:span.to,
+        length:span.to-span.from,distance:span.distance,roadId:span.roadId});
+    }
+  }
+  return out.sort((a,b)=>b.length-a.length||a.edge-b.edge||a.from-b.from);
+}
+function urbanDenseParts(house){
+  if(!house||(!house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
+  if(urbanDensityCache.revision!==urbanRevision)
+    urbanDensityCache={revision:urbanRevision,parts:new Map()};
+  const cached=urbanDensityCache.parts.get(house.id);
+  if(cached&&cached.level===houseLevel(house))return cached.parts;
+  const lot=urbanLots().find(l=>l.houseId===house.id),parts=[];
+  if(lot){
+    const level=houseLevel(house),width=URBAN_FRONT_WIDTH[level],depth=level===4?1.13:.98;
+    const sign=urbanArea(lot.points)>=0?1:-1;
+    for(const frontage of urbanLotRoadFrontages(lot)){
+      const count=Math.floor((frontage.length+.06)/width);
+      if(!count)continue;
+      const spacing=frontage.length/count,baseWidth=Math.min(spacing+.045,level===4?1.65:1.95);
+      const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
+      // Original L/T extensions grow towards the plot interior (+local Y).
+      const angle=Math.atan2(inward.y,inward.x)-Math.PI/2;
+      for(let i=0;i<count;i++){
+        if(new Set(parts.map(p=>p.buildingKey)).size>=10)break;
+        const along=frontage.from+(i+.5)*spacing;
+        const partKey='street:'+frontage.edge+':'+frontage.from.toFixed(2)+':'+i;
+        const requestedWidth=baseWidth*houseDimensionScale(house,'x',partKey);
+        const edgeLength=dist(frontage.a,frontage.b);
+        const maxInsideWidth=2*(Math.min(along,edgeLength-along)-.075);
+        let faceWidth=Math.min(requestedWidth,maxInsideWidth);
+        const minWidth=baseWidth*.8;
+        if(faceWidth<minWidth-1e-7)continue;
+        const faceDepth=depth*houseDimensionScale(house,'y',partKey);
+        const center={
+          x:frontage.a.x+frontage.ux*along+inward.x*(faceDepth/2+.14),
+          y:frontage.a.y+frontage.uy*along+inward.y*(faceDepth/2+.14)
+        };
+        const buildingKey=house.id+'|'+partKey,virtual={
+          id:buildingKey,type:'house',houseLevel:level,urbanCompact:true,
+          x:center.x,y:center.y,angle,w:faceWidth,h:faceDepth
+        };
+        let accepted=null;
+        for(let attempt=0;attempt<8;attempt++){
+          virtual.w=faceWidth;
+          const shape=houseFootprintParts(virtual).map(part=>({
+            ...part,dense:true,buildingKey,roadId:frontage.roadId,
+            frontage:frontage.edge,roofAngle:angle+(part.roofTurn||0)
+          }));
+          // Test the *entire* L/T outline and the L4 turret, not just the
+          // original rectangular body. Slight shared-wall overlap is allowed.
+          const inside=shape.every(part=>part.points.every(pt=>urbanContains(lot.points,pt,.04)));
+          const collision=inside&&shape.some(part=>parts.some(previous=>{
+            const area=Math.min(Math.abs(urbanArea(part.points)),Math.abs(urbanArea(previous.points)));
+            return area>1e-8&&urbanPolygonIntersectionArea(part.points,previous.points)>area*.20;
+          }));
+          if(inside&&!collision){accepted=shape;break}
+          if(faceWidth<=minWidth+1e-7)break;
+          faceWidth=Math.max(minWidth,faceWidth-baseWidth*.06);
+        }
+        if(accepted)parts.push(...accepted);
+      }
+      if(new Set(parts.map(p=>p.buildingKey)).size>=10)break;
+    }
+  }
+  urbanDensityCache.parts.set(house.id,{level:houseLevel(house),parts});
+  return parts;
+}
+function urbanDenseBuildingCount(house){
+  return new Set(urbanDenseParts(house).map(p=>p.buildingKey)).size;
+}
+function urbanPolygonIntersectionArea(a,b){
+  let clipped=a.slice(),sign=urbanArea(b)>=0?1:-1;
+  for(let i=0;i<b.length&&clipped.length;i++){
+    const p=b[i],q=b[(i+1)%b.length];
+    const nx=sign*(q.y-p.y),ny=sign*(p.x-q.x);
+    clipped=urbanClip(clipped,nx,ny,nx*p.x+ny*p.y);
+  }
+  return clipped.length>=3?Math.abs(urbanArea(clipped)):0;
+}
+function urbanHouseDisplayParts(house){
+  const dense=urbanDenseParts(house);
+  return dense.length?dense:houseFootprintParts(house);
+}
+function urbanDenseHouseDoorInfo(house){
+  const parts=urbanDenseParts(house);if(!parts.length)return null;
+  const first=parts.find(p=>p.kind==='body'),lot=urbanLots().find(l=>l.houseId===house.id);
+  const edge=lot&&lot.points[first.frontage],next=lot&&lot.points[(first.frontage+1)%lot.points.length];
+  if(!edge||!next)return null;
+  const L=dist(edge,next)||1,tangent={x:(next.x-edge.x)/L,y:(next.y-edge.y)/L};
+  const sign=urbanArea(lot.points)>=0?1:-1;
+  const normal={x:tangent.y*sign,y:-tangent.x*sign};
+  const surface={x:first.center.x+normal.x*first.h*.5,y:first.center.y+normal.y*first.h*.5};
+  const outside={x:surface.x+normal.x*.26,y:surface.y+normal.y*.26};
+  return{surface,outside,tangent,normal,side:1,lateralSign:1};
+}
 // Choose once from world geometry, independent of draw order, camera and reload.
 function urbanBoundaryKey(a,b){
   const key=p=>p.x.toFixed(4)+','+p.y.toFixed(4),keys=[key(a),key(b)].sort();
@@ -302,6 +437,8 @@ function urbanFenceSegments(lots=urbanLots(),fields=completedSettlement('field')
   };
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);if(!house)continue;
+    // L3/L4 urban plots are paved street blocks: no agricultural/paddock fence.
+    if((house.auto||house.urbanRedeveloped)&&houseLevel(house)>=3)continue;
     const door=houseDoorInfo(house).outside;
     addParcel(lot.points,door,nearestPrimaryRoadProjection(door)?.point||door);
   }
@@ -380,7 +517,7 @@ function drawUrbanLots(){
 function urbanHouseGeometry(){
   if(urbanGeometryCache)return urbanGeometryCache;
   return urbanGeometryCache=State.structures.filter(s=>s.type==='house').map(house=>{
-    const parts=houseFootprintParts(house).map(part=>{
+    const parts=urbanHouseDisplayParts(house).map(part=>{
       const bodyH=part.kind==='turret'?part.bodyH:houseBodyHeight(house);
       const roofH=part.kind==='turret'?part.roofH:houseRidgeHeight(house);
       return{...part,bodyH,roofH};
@@ -417,7 +554,7 @@ function urbanHouseLineVisible(source,target){
       const ground=terrainElevation(part.center);
       // Gabled roofs have piecewise-linear height. Test the ridge crossing
       // as well as interval endpoints, so even a short ray cannot skip a wall.
-      const turn=part.roofTurn||0,angle=(entry.house.angle||0)+turn;
+      const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(entry.house.angle||0)+turn;
       const localY=p=>-(p.x-part.center.x)*Math.sin(angle)+(p.y-part.center.y)*Math.cos(angle);
       const ya=localY(source),yb=localY(target);
       const ridge=Math.abs(yb-ya)>1e-9?-ya/(yb-ya):-1;
