@@ -60,13 +60,13 @@ Run `node qa/economy-regression.cjs` in a local checkout. The test suite covers 
 
 ## Extractive buildings — placeholder implementation (economy branch)
 
-The economy Builder now offers three manual, lord-owned `2×2U` industry footprints. They must sit **entirely inside the whitezone** (`x,y ∈ [50,150]`), on a single flat terrace, outside water, forest polygons, slopes, and existing manual buildings. Automatic urban objects may be displaced through the existing Builder procedure.
+The economy Builder offers three manual, lord-owned industry footprints of differing sizes. The **entire footprint** must remain in the whitezone (`x,y ∈ [50,150]`) and avoid water, forests and existing manual buildings. **Quarry and mine are deliberately allowed directly on steep rocky slopes**; a flat-terrace requirement applies only to logging camps. Existing 2×2U saved quarries/mines migrate to the new footprints.
 
 | Building | Graphic placeholder | Placement rule | Workers | Daily workday production |
 | --- | --- | --- | --- | --- |
-| Logging camp | Brown 2×2U low block | Forest boundary within 10U of building centre; footprint must stay outside forest | 2 × L1 | 1 wood per active worker |
-| Quarry | Light-grey 2×2U low block | Elevated flat hill terrace (H1+) within 3.5U of a rocky hillside band | 2 × L2 | 1 stone per active worker |
-| Mine | Dark anthracite-grey 2×2U low block | Flat terrace within 3.5U of a steep rock face, not inside the cliff | 2 × L2 | 1 stone per active worker **as currently requested** |
+| Logging camp | Brown 2×2U low block | Flat ground with forest boundary within 10U of building centre | 2 × L1 | 1 wood per active worker |
+| Quarry | Light-grey **3×3U** low block | **Any part** of the rotated 3×3U footprint must overlap a steep rocky slope; centre need not be on the slope | 2 × L2 | 1 stone per active worker |
+| Mine | Dark anthracite-grey **1×1U** low block | **Centre point** must sit directly on a steep rocky slope; edge overlap alone is insufficient | 2 × L2 | 1 stone per active worker **as currently requested** |
 
 Worker numbers are balancing placeholders (2 each), and are limited by the aggregate L1/L2 labor pool: without enough workers, output is lower or zero. Saturday is market day; Sunday is rest. A logging camp displays two anonymous small walkers heading to the forest edge during workdays (not persistent individual laborers). No forest depletion, individual chopping animation, or regeneration logic has been implemented.
 
@@ -83,5 +83,5 @@ This behavior is **shared across the Builder**, not a special rule of industrial
 - Rotation keeps the original world centre and construction progress, and is rejected without modifying the structure if its new footprint is blocked.
 - Placement previews are translucent in their ordinary style when permitted; rejected footprints receive a **red fill and red outline** (including roads, walls, civic buildings, towers, industries, and the village well). A rejected oriented placement retains its preview rather than disappearing.
 - The shared `src/settlement-placement.js` validator checks whitezone boundaries, ground/terrain, nature obstacles, manual collisions, village-well uniqueness and construction affordability. Existing intended tower/gate/wall sockets and market-road crossings are preserved.
-- Industry 2×2U placeholders include a direction marker so rotations are visually distinguishable before their SVGs are introduced.
+- Industry 2×2 / 3×3 / 1×1U placeholders include a direction marker so rotations are visually distinguishable before their SVGs are introduced.
 - Tests: `node qa/builder-placement-regression.cjs`. The Builder remains a classic-script Canvas application; no extra rendering dependencies.
