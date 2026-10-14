@@ -1600,21 +1600,32 @@ function syncPrimaryRoadBridges(){
   return added;
 }
 function addManualMainRoad(a,b){
-  if(!a||!b)return false;
-  const L=dist(a,b);if(L<TYPES.road.min-.001)return false;
-  const id=uid(),road={
-    id,type:'road',auto:false,manualMain:true,roadClass:'arterial-manual',
-    routeId:'manual-main:'+id,routeSeq:0,
-    a:{...a},b:{...b},length:L,width:TYPES.road.width,appeal:1
-  };
-  const verdict=window.ConquerPlacement?.check(road);
-  if(verdict&&!verdict.ok){status('Road blocked: '+verdict.reason);return false}
-  State.structures.push(road);
-  autoPrimaryRoadBridges(road);
-  invalidateSceneCache('landscape');
+  if(!a||!b||dist(a,b)<TYPES.road.min-.001)return false;
+  const width=TYPES.road.width,id=uid(),routeId='manual-main:'+id;
+  const proposed={type:'road',manualMain:true,roadClass:'arterial-manual',a,b,width};
+  const ignored=State.village?.wellId?[State.village.wellId]:[];
+  let points=roadEnvironmentConflict(proposed)
+    ?findRoadRepairPath(a,b,width,18,ignored,85000,true):[{...a},{...b}];
+  if(!points?.length){status('No clear road detour around the forest');return false}
+  if(points.length>2)points=simplifyRoadRepairPath(points,width,ignored,true);
+  points=subdivideRoadPolyline(primaryRoadOrthogonalPolyline(points),ROAD_RULES.arterialSegmentMax);
+  const roads=[];
+  for(let i=1;i<points.length;i++){
+    const from=points[i-1],to=points[i],length=dist(from,to);
+    if(length<.18)continue;
+    const road={id:i===1?id:uid(),type:'road',auto:false,manualMain:true,
+      roadClass:'arterial-manual',routeId,routeSeq:roads.length,
+      a:{...from},b:{...to},length,width,appeal:1};
+    const verdict=window.ConquerPlacement?.check(road);
+    if(verdict&&!verdict.ok){status('Road blocked: '+verdict.reason);return false}
+    roads.push(road);
+  }
+  if(!roads.length)return false;
+  State.structures.push(...roads);
+  for(const road of roads)autoPrimaryRoadBridges(road);
   invalidateNavigation(false);
   markDirty(false,['ground'],true);
-  selectStructure(road);
+  selectStructure(roads.at(-1));
   return true;
 }
 function routeRoads(routeId){return roadList().filter(r=>r.routeId===routeId).sort((a,b)=>(a.routeSeq||0)-(b.routeSeq||0))}
