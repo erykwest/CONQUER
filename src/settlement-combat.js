@@ -1110,25 +1110,60 @@
       status('Test intruder placed — visible only within line of sight');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
-      const hit=combat.units.find(u=>u.kind!=='patrol'&&dist(u,p)<1.1);
+      const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&dist(u,p)<1.1)
+        .sort((a,b)=>dist(a,p)-dist(b,p))[0];
       if(hit){
-        e.preventDefault();e.stopImmediatePropagation();selected=hit.id;
-        setTool({kind:'combat-orders',label:'Orders: click destination'});
+        e.preventDefault();e.stopImmediatePropagation();
+        selectCombatUnits([hit],e.shiftKey,e.shiftKey);
+        setTool({kind:'combat-orders',label:'Orders: select, Shift+click or drag a box'});
         syncButtons();draw();return;
       }
-      if(kind==='combat-orders'&&selected){
-        e.preventDefault();e.stopImmediatePropagation();
-        const u=combat.units.find(u=>u.id===selected);if(u)issueMove(u,p);
-        draw();return;
-      }
+      // Delay blank-ground action until pointerup to distinguish a move order
+      // from box selection. Capture-phase prevents building clicks on drags.
+      e.preventDefault();e.stopImmediatePropagation();
+      const start=pointerScreen(e);
+      selectionDrag={pointerId:e.pointerId,start,end:{...start},shift:e.shiftKey,kind};
+      canvas.setPointerCapture(e.pointerId);requestToolDraw();return;
     }
   }
   canvas.addEventListener('pointerdown',handleDown,true);
   canvas.addEventListener('pointermove',e=>{
+    if(selectionDrag&&selectionDrag.pointerId===e.pointerId){
+      e.preventDefault();e.stopImmediatePropagation();
+      selectionDrag.end=pointerScreen(e);
+      requestToolDraw();return;
+    }
     if(!painting)return;
     e.stopImmediatePropagation();e.preventDefault();paint(pointerWorld(e),State.tool.combatBrush);requestToolDraw();
   },true);
   for(const type of ['pointerup','pointercancel'])canvas.addEventListener(type,e=>{
+    if(selectionDrag&&selectionDrag.pointerId===e.pointerId){
+      e.preventDefault();e.stopImmediatePropagation();
+      const drag=selectionDrag;selectionDrag=null;
+      if(canvas.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);
+      if(type==='pointercancel'){draw();return}
+      drag.end=pointerScreen(e);
+      const dx=drag.end.x-drag.start.x,dy=drag.end.y-drag.start.y;
+      if(Math.hypot(dx,dy)>=6){
+        const x0=Math.min(drag.start.x,drag.end.x),x1=Math.max(drag.start.x,drag.end.x);
+        const y0=Math.min(drag.start.y,drag.end.y),y1=Math.max(drag.start.y,drag.end.y);
+        const hits=combat.units.filter(u=>{
+          if(u.defeated||u.routing)return false;
+          const q=w2s(u,.08);return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
+        });
+        selectCombatUnits(hits,drag.shift);
+        if(hits.length)setTool({kind:'combat-orders',label:'Orders: click destination'});
+      }else if(drag.kind==='combat-orders'&&selectedIds.size&&!drag.shift){
+        issueGroupMove(pointerWorld(e));
+      }else if(!drag.shift){
+        clearCombatSelection();
+        if(drag.kind==='select'){
+          const sp=pointerScreen(e);
+          selectStructure(structureAtScreen(sp)||structureAt(pointerWorld(e)));
+        }
+      }
+      draw();return;
+    }
     if(!painting)return;
     painting=false;lastPaint=null;e.stopImmediatePropagation();
     // Apply White Zone edits once on pointer release; never re-route each drag sample.
@@ -1136,6 +1171,10 @@
     for(const u of combat.units)if(u.kind==='patrol'){u.target=null;u.path=null;u.nextPatrolAt=0}
     if(activeWell())updateAlert(observers());
     scheduleLocalSave();requestToolDraw();
+  },true);
+  window.addEventListener('keydown',e=>{
+    if(e.key!=='Escape'||!selectedIds.size||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||''))return;
+    clearCombatSelection();setTool({kind:'select',label:'Select'});draw();
   },true);
   const styles=document.createElement('style');
   styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatRecall[data-mode=green]{background:#35874e;color:#fff} #combatRecall[data-mode=hall]{background:#ad3438;color:#fff} #combatMute:disabled{opacity:.55} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c}';
