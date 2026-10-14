@@ -33,7 +33,7 @@ test('smaller viable quadrilateral is used when the maximum-area lot is blocked'
  assert.ok(run('qaQuad.some(p=>p.x>105.5)'));
 });
 test('both local and cloud loads defer main-road planning',()=>{
- const app=fs.readFileSync(__dirname+'/../src/settlement-app.js','utf8');
+ const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n');
  const local=app.slice(app.indexOf('function loadLocal(){'),app.indexOf('async function initSupabase()'));
  const cloud=app.slice(app.indexOf('async function loadCloud()'),app.indexOf('async function saveCloud()'));
  assert.ok(local.includes('connectBorderMainRoadsInFrames('));
