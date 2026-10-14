@@ -185,7 +185,7 @@ function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[],spatialIndex=null,all
   return finishRoadWork(roadRepairSegmentWork(a,b,width,ignoreIds,spatialIndex,allowPrimaryNature));
 }
 function* roadRepairSegmentWork(a,b,width=.30,ignoreIds=[],spatialIndex=null,allowPrimaryNature=false){
-  const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
+  const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.09));
   for(let i=0;i<=steps;i++){
     if(i%16===0)yield;
     const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
@@ -209,7 +209,7 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
   const segmentClear=(a,b)=>{
     const ak=pointKey(a),bk=pointKey(b),k=ak<bk?ak+'|'+bk:bk+'|'+ak;
     if(segmentMemo.has(k)){segmentHits++;return segmentMemo.get(k)}
-    const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
+    const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.09));
     let ok=true;
     for(let i=0;i<=steps;i++){
       const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
@@ -1646,7 +1646,7 @@ function perpendicularRiverRoadPath(a,b){
   // avoid forest, hills and steep relief. Do not introduce forbidden slope
   // shortcuts into an otherwise valid pathfinding result.
   const clear=(u,v)=>{
-    const steps=Math.max(2,Math.ceil(dist(u,v)/.20));
+    const steps=Math.max(2,Math.ceil(dist(u,v)/.09));
     for(let i=0;i<=steps;i++){
       const t=i/steps,p={x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t};
       if(environmentBlocksPoint(p,'road'))return false;
