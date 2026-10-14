@@ -75,26 +75,54 @@
     }
     return changed;
   }
+  function mastioEligible(s){
+    return !!s&&s.type==='tower'&&!s.parentTowerId&&!s.destroyed
+      &&(!isWoodTower(s)||woodTowerStyle(s)!=='watchtower');
+  }
   function normalizeMastio(){
     let chosen=false;
     for(const s of State.structures){
       if(!s.isMastio)continue;
-      if(s.type==='tower'&&!s.destroyed&&!chosen&&ensureMastioHall(s,true)){
-        chosen=true;continue;
+      if(mastioEligible(s)&&!chosen){
+        if(underConstruction(s)||ensureMastioHall(s,true)){chosen=true;continue}
       }
       s.isMastio=false;
     }
   }
+  function syncAutoMastio(){
+    // The first independent finished tower is the keep, regardless of whether
+    // it is wood, round stone or square stone. Gates/watchtowers are excluded.
+    if(State.structures.some(s=>s.type==='tower'&&s.isMastio&&mastioEligible(s)))return false;
+    const eligible=State.structures.filter(s=>mastioEligible(s)&&!underConstruction(s));
+    if(!eligible.length)return false;
+    eligible.sort((a,b)=>{
+      const t=s=>Number.isFinite(s.construction?.completeDay)?s.construction.completeDay:0;
+      return t(a)-t(b)||State.structures.indexOf(a)-State.structures.indexOf(b);
+    });
+    const first=eligible[0];
+    first.isMastio=true;
+    if(!ensureMastioHall(first,true)){first.isMastio=false;return false}
+    markDirty(false,['base','castleBody','castleFront']);
+    window.__conquerAnalytics?.event('MASTIO_AUTO_DESIGNATED',{
+      towerId:first.id,material:isWoodTower(first)?'wood':'stone',
+      shape:first.shape||'square',day:State.clock.day
+    });
+    return true;
+  }
   function assignMastio(id){
-    const selected=State.structures.find(s=>s.id===id&&s.type==='tower'&&!s.destroyed&&!underConstruction(s));
+    const selected=State.structures.find(s=>s.id===id&&mastioEligible(s)&&!underConstruction(s));
     if(!selected)return false;
     const already=!!selected.isMastio;
-    if(!already&&!ensureMastioHall(selected)){
-      status('Mastio requires a Common Hall: provide an available lower-floor room (T2+).');
-      return false;
+    if(!already){
+      selected.isMastio=true;
+      if(!ensureMastioHall(selected)){
+        selected.isMastio=false;
+        status('Mastio requires an available room for the Common Hall.');
+        return false;
+      }
     }
-    for(const s of State.structures)if(s.type==='tower')s.isMastio=false;
-    if(!already)selected.isMastio=true;
+    for(const s of State.structures)if(s.type==='tower'&&s!==selected)s.isMastio=false;
+    if(already)selected.isMastio=false;
     markDirty(false,['base','castleBody','castleFront']);
     renderFunctionPanel();draw();
     status(already?'Mastio designation removed':'Mastio designated — Common Hall secured');
@@ -284,11 +312,6 @@
   function drawOverlay(){
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
     for(const s of State.structures){
-      if(s.type==='tower'&&s.isMastio&&!underConstruction(s)){
-        const p=w2s(s,structureHeight(s)+.55),sz=Math.max(13,18*State.view.scale);
-        ctx.font='bold '+sz+'px sans-serif';ctx.lineWidth=3.5;ctx.strokeStyle='#473011';
-        ctx.strokeText('★',p.x,p.y);ctx.fillStyle='#ffdb63';ctx.fillText('★',p.x,p.y);
-      }
       const hp=s.siegeIntegrity?.core;
       if(!hp||hp.hp>=hp.max||hp.hp<=0)continue;
       const origin=s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
@@ -340,7 +363,7 @@
       renderFunctionPanel();
     });
   }
-  window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
+  window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
