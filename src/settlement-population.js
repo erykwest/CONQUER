@@ -1067,10 +1067,10 @@ function drawVillagerFigure(dot){
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
 }
 function drawVillagerFigureUnmasked(dot){
-  const base=w2s(dot.p,.10),scale=clamp(State.view.scale,.55,1.45);
+  const base=w2s(dot.p,.10),scale=State.view.scale;
   const kind=dot.kind,sizeFactor=dot.age==='child'?.5:1;
-  const bodyW=clamp(6.0*scale,4.2,8.2)*sizeFactor,bodyH=clamp(8.0*scale,5.5,10.6)*sizeFactor;
-  const headR=clamp(2.35*scale,1.8,3.15)*sizeFactor,bodyY=base.y-bodyH*.16;
+  const bodyW=6.0*scale*sizeFactor,bodyH=8.0*scale*sizeFactor;
+  const headR=2.35*scale*sizeFactor,bodyY=base.y-bodyH*.16;
   drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
   drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex,dot.hair);
 }
@@ -1131,7 +1131,8 @@ function drawPeasants(){
   }
 }
 function militaryScale(){
-  return clamp(State.view.scale,.55,1.45);
+  // World-size figures track the camera across its full .18x–3x zoom range.
+  return State.view.scale;
 }
 function soldierLivery(id){
  const herald=State.heraldry||{};
