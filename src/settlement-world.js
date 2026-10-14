@@ -427,7 +427,7 @@ function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
   // Only replace the route after a complete valid path has been found.
   const oldRoadIds=new Set(routeRoads(routeId).map(r=>r.id));
   State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor));
-  const pts=subdivideRoadPolyline(path,ROAD_RULES.arterialSegmentMax);
+  const pts=subdivideRoadPolyline(alignedRiverRoadPolyline(path),ROAD_RULES.arterialSegmentMax);
   let added=0,parent=null;
   for(let i=0;i<pts.length-1;i++){
     const a=pts[i],b=pts[i+1];if(dist(a,b)<.18)continue;
@@ -1560,6 +1560,16 @@ function perpendicularRiverRoadPath(a,b){
   if(![near,far].every(p=>p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD&&!terrainSlopeKind(p)))return[a,b];
   if(dist(a,near)<.10||dist(far,b)<.10)return[a,b];
   return[a,near,far,b];
+}
+function alignedRiverRoadPolyline(points){
+  if(!points||points.length<2)return points||[];
+  const route=[{...points[0]}];
+  for(let i=1;i<points.length;i++){
+    const segment=perpendicularRiverRoadPath(route.at(-1),points[i]);
+    for(let j=1;j<segment.length;j++)
+      if(dist(route.at(-1),segment[j])>.001)route.push({...segment[j]});
+  }
+  return route;
 }
 function addManualMainRoad(a,b){
   if(!a||!b)return false;
