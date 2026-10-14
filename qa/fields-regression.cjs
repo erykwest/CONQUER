@@ -129,6 +129,7 @@ test('idle L2 workers open a field in the ploughing window without five houses',
   assert.equal(run('fieldQuadValid(qaL2Field.points)&&fieldAllowed(qaL2Field)'),true);
   assert.equal(run('fieldWorkAssignments(completedSettlement("house"),completedSettlement("field")).get("artisan")?.field.id'),run('qaL2Field.id'),'L2 must be assigned to its newly opened field');
   run("globalThis.qaL2Crop=fieldCrop(qaL2Field);qaL2Crop.lastDay=qaFirstAutumnMonday+.40;State.clock.day=qaFirstAutumnMonday+1.40;tickFields(State.clock.day)");
+  console.log('L2 DEBUG '+run("JSON.stringify({day:State.clock.day,clock:fieldWorkClock(State.clock.day),previous:fieldWorkClock(qaFirstAutumnMonday+.40),crop:qaL2Crop,field:qaL2Field.id,assigned:fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).get('artisan')?.cell?.world,path:peasantPath(State.structures.find(s=>s.id==='artisan'),fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).get('artisan')),layout:fieldLayout(qaL2Field).total})"));
   assert.ok(run('qaL2Crop.work.reduce((a,b)=>a+b,0)')>0,'L2 must actually plough after opening the new field');
   assert.equal(run("State.structures.filter(s=>s.openedByL2).length"),1,'a busy L2 must not continually create new parcels');
 });
