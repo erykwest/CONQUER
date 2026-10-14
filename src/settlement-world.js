@@ -1129,6 +1129,12 @@ function repairForestsAgainstSteepSlopes(){
 
 function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate))return false;
+  // Do not trap the initial settlement inside an unbreakable forest ring.
+  // This protects only the immediate hub, not radial road corridors.
+  const town={x:WORLD/2,y:WORLD/2},townClearance=7;
+  if(pointInPolygon(town,candidate.points))return false;
+  for(let i=0;i<candidate.points.length;i++)
+    if(pointSegmentDistance(town,candidate.points[i],candidate.points[(i+1)%candidate.points.length])<townClearance)return false;
   // Keep both riverbanks clear and never cover the river centerline.
   for(const water of env.filter(f=>f.type==='river'||f.type==='stream')){
     const clearance=(water.width||1.25)/2+2;
@@ -1268,8 +1274,22 @@ function generateEnvironment(){
 function pointInPolygon(point,pts){
   let inside=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}return inside;
 }
+const ENV_POLYGON_BOUNDS=new WeakMap();
 function environmentContains(f,p,pad=0){
-  if(['forest','mountain','pond','sea'].includes(f.type))return pointInPolygon(p,f.points);
+  if(['forest','mountain','pond','sea'].includes(f.type)){
+    if(!f.points?.length)return false;
+    let bounds=ENV_POLYGON_BOUNDS.get(f.points);
+    if(!bounds){
+      bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+      for(const v of f.points){
+        bounds.minX=Math.min(bounds.minX,v.x);bounds.maxX=Math.max(bounds.maxX,v.x);
+        bounds.minY=Math.min(bounds.minY,v.y);bounds.maxY=Math.max(bounds.maxY,v.y);
+      }
+      ENV_POLYGON_BOUNDS.set(f.points,bounds);
+    }
+    if(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY)return false;
+    return pointInPolygon(p,f.points);
+  }
   if(['hill','rough'].includes(f.type)){const ca=Math.cos(-(f.angle||0)),sa=Math.sin(-(f.angle||0)),dx=p.x-f.x,dy=p.y-f.y,x=dx*ca-dy*sa,y=dx*sa+dy*ca;return x*x/((f.rx+pad)*(f.rx+pad))+y*y/((f.ry+pad)*(f.ry+pad))<=1}
   if(['stream','river'].includes(f.type)){for(let i=0;i<f.points.length-1;i++)if(pointSegmentDistance(p,f.points[i],f.points[i+1])<=f.width/2+pad)return true}
   return false;
