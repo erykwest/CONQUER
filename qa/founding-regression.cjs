@@ -46,7 +46,7 @@ for(const [seed,biome] of [[12345,'plains'],[4242,'forest']])check('actual name 
  if(routeCount!==4)console.log('UNCONNECTED_ROUTE_DIAGNOSTICS',JSON.stringify(run("ensureRoadPlan().map(r=>({id:r.id,edge:r.edge,roads:routeRoads(r.id).length,continuous:arterialRouteContinuous(r.id),target:r.target}))")));
  assert.equal(routeCount,4);
  const clear=run('roadList().every(r=>roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId]))');
- if(!clear)console.log('blocked samples',JSON.stringify(run('roadList().filter(r=>!roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId])).map(r=>Array.from({length:51},(_,i)=>{const t=i/50,p={x:r.a.x+(r.b.x-r.a.x)*t,y:r.a.y+(r.b.y-r.a.y)*t};return [t,environmentBlocksPoint(p,"road"),terrainSlopeKind(p)]}).filter(q=>q[1]||q[2]))')));
+ if(!clear)console.log('blocked samples',JSON.stringify(run('roadList().filter(r=>!roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId])).map(r=>({a:r.a,b:r.b,route:r.routeId,blocked:Array.from({length:51},(_,i)=>{const t=i/50,p={x:r.a.x+(r.b.x-r.a.x)*t,y:r.a.y+(r.b.y-r.a.y)*t};return [t,environmentBlocksPoint(p,"road"),terrainSlopeKind(p)]}).filter(q=>q[1]||q[2])}))')));
  assert.equal(clear,true);
  console.log('  planning slices',timing);
 });
