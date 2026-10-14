@@ -53,12 +53,49 @@
       tail:'M48 104 C38 122,32 150,34 186 C29 191,27 199,31 205 C37 202,41 195,39 187 C39 153,45 126,54 108 Z',
       pivot:{x:176,y:118},eye:{x:226,y:90},tailPivot:{x:50,y:106},center:{x:134,y:244},
       pose:{walk:{x:16,y:4,rot:0},browse:{x:24,y:30,rot:1.25}},
-      hoof:12,headBehind:true,
+      // In-world size relative to sheep and goats.
+      hoof:12,headBehind:true,scale:1.7,
       colors:{body:'#7a5236',shade:'#694530',line:'#3b2617',head:'#7a5236',headLine:'#3b2617',
         leg:'#7a5236',legFar:'#5f3f29',legLine:'#3b2617',eye:'#1e140d',
         ear:'#5f3f29',muzzle:'#a47c5d',hoof:'#2a1c12'}
+    },
+    // Source: cavallo_esteso.svg (256×256, faces right). Long hanging tail
+    // and a mane along the neck redrawn after the reference; coat variants.
+    horse:{
+      artFacing:1,
+      body:'M54 130 C60 108,88 92,126 92 C150 84,176 90,190 106 C202 110,210 118,214 128 C220 144,214 158,200 168 C190 180,172 188,148 188 C124 188,96 184,76 174 C60 166,50 150,54 130 Z',
+      head:'M170 102 C174 84,182 68,194 52 C204 38,214 28,222 28 C226 28,228 32,228 38 C226 48,224 60,224 70 C226 84,230 94,236 104 C236 112,228 118,220 118 C210 120,198 118,190 112 C182 120,172 128,162 132 C156 128,154 120,156 112 C160 108,164 106,170 102 Z',
+      headParts:[
+        {d:'M217 34 L213 17 L226 29 Z',fill:'body'},
+        {d:'M166 104 C170 84,180 66,194 50 C202 41,210 33,219 30 C214 40,206 50,200 60 C190 74,183 88,178 106 Z',fill:'mane'}
+      ],
+      legs:'M80 172 C86 172,90 176,90 182 L88 230 C88 236,84 242,78 242 C72 242,68 236,68 230 L70 182 C70 176,74 172,80 172 Z M110 178 C116 178,120 182,120 188 L118 236 C118 242,114 248,108 248 C102 248,98 242,98 236 L100 188 C100 182,104 178,110 178 Z M156 176 C162 176,166 180,166 186 L164 232 C164 238,160 244,154 244 C148 244,144 238,144 232 L146 186 C146 180,150 176,156 176 Z M190 166 C196 166,200 170,200 176 L196 226 C196 232,192 238,186 238 C180 238,176 232,176 226 L180 176 C180 170,184 166,190 166 Z',
+      tail:'M60 124 C46 134,38 162,36 198 C35 208,41 214,47 207 C49 182,55 158,66 138 Z',
+      tailFill:'mane',
+      pivot:{x:166,y:118},eye:{x:222,y:52},tailPivot:{x:60,y:128},center:{x:134,y:246},
+      // Dedicated neck joint: the neck is its own tapered piece from a root
+      // hidden in the body to the throat (line a→b); the rigid head rides on
+      // its end. Pose x/y move the throat, rot turns the head about it.
+      pose:{walk:{x:0,y:0,rot:0},browse:{x:36,y:120,rot:.55}},
+      joint:{a:{x:210,y:40},b:{x:194,y:108}},
+      neck:{root:{x:150,y:112},rootWidth:58,tipWidth:66,mane:12},
+      hoof:12,headBehind:true,
+      colors:{body:'#8a5a35',shade:'#764b2b',line:'#3a2414',head:'#8a5a35',headLine:'#3a2414',
+        leg:'#8a5a35',legFar:'#6d4628',legLine:'#3a2414',eye:'#120c08',mane:'#2a1a10',hoof:'#221812'},
+      coats:{
+        brown:{},
+        black:{body:'#2e2a27',shade:'#24211f',line:'#0c0b0a',head:'#2e2a27',headLine:'#0c0b0a',
+          leg:'#2e2a27',legFar:'#1f1c1a',legLine:'#0c0b0a',eye:'#000',mane:'#151311',hoof:'#0a0908'},
+        grey:{body:'#9b9a95',shade:'#888782',line:'#474643',head:'#9b9a95',headLine:'#474643',
+          leg:'#9b9a95',legFar:'#7f7e79',legLine:'#474643',mane:'#5e5d59',hoof:'#2c2b29'},
+        white:{body:'#ece9e2',shade:'#d8d3c8',line:'#6a645b',head:'#ece9e2',headLine:'#6a645b',
+          leg:'#ece9e2',legFar:'#cdc7bc',legLine:'#6a645b',mane:'#d0c9bc',hoof:'#4a443d'}
+      }
     }
   };
+  // Coat variants are merged once, not per frame.
+  for(const sp of Object.values(SPECIES))
+    if(sp.coats)sp.coatColors=Object.fromEntries(Object.entries(sp.coats).map(([k,v])=>[k,{...sp.colors,...v}]));
   // Each leg is its own subpath; its hip is the top of the subpath.
   for(const sp of Object.values(SPECIES))
     sp.legList=sp.legs.split(/(?=M)/).map(s=>{const [x,y]=s.slice(1).trim().split(/[ ,]+/).map(Number);return{d:s,x,y:y+6}});
@@ -115,9 +152,11 @@
   // height of the 256-unit art box, facing 1 = right / -1 = left.
   // opts.blend (0..1) eases walk → browse; defaults from opts.mode.
   function drawAnimal(species,ctx,x,y,size,opts={}){
-    const sp=SPECIES[species],c=sp.colors;
+    // opts.coat picks a coat variant where the species has them (horse).
+    const sp=SPECIES[species],c=sp.coatColors?.[opts.coat]||sp.colors;
     const t=opts.t||0,seed=opts.seed||0,facing=opts.facing>=0?1:-1;
     const blend=Math.max(0,Math.min(1,opts.blend??(opts.mode==='browse'?1:0)));
+    size*=sp.scale||1;
     const s=size/256,lw=Math.max(.55,size/90)/s,pose=blendedPose(species,t,seed,blend);
     ctx.save();
     ctx.translate(x,y);ctx.scale(facing*sp.artFacing*s,s);ctx.translate(-sp.center.x,-sp.center.y);
@@ -148,7 +187,7 @@
     }
     if(sp.headBehind)drawHead(ctx,sp,c,pose,lw,size);
     ctx.save();rotateAbout(ctx,sp.tailPivot,pose.tail);
-    fillStroke(ctx,sp.tail,c.body,c.line,lw);ctx.restore();
+    fillStroke(ctx,sp.tail,c[sp.tailFill||'body'],c.line,lw);ctx.restore();
     fillStroke(ctx,sp.body,c.body,c.line,lw);
     // A low belly shade keeps light coats readable on light ground.
     ctx.save();ctx.clip(path(sp.body));ctx.fillStyle=c.shade;
@@ -158,19 +197,66 @@
   }
   // The head is rigid: only moved and rotated, never reshaped.
   function drawHead(ctx,sp,c,pose,lw,size){
+    if(sp.neck){
+      // Dedicated neck: tapered piece from the hidden root to the moved throat,
+      // then the rigid head (cut at the throat) turned about its own joint.
+      const {a,b}=sp.joint,j={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      drawNeck(ctx,sp,c,lw,{x:j.x+pose.headX,y:j.y+pose.headY});
+      ctx.save();ctx.translate(pose.headX,pose.headY);rotateAbout(ctx,j,pose.headRot);
+      ctx.clip(jointSide(sp,true));drawHeadArt(ctx,sp,c,lw,size);
+      ctx.restore();
+      return;
+    }
     ctx.save();ctx.translate(pose.headX,pose.headY);rotateAbout(ctx,sp.pivot,pose.headRot);
+    drawHeadArt(ctx,sp,c,lw,size);
+    ctx.restore();
+  }
+  function drawNeck(ctx,sp,c,lw,tip){
+    const n=sp.neck,r=n.root,dx=tip.x-r.x,dy=tip.y-r.y,len=Math.hypot(dx,dy)||1;
+    // Normal pointing to the crest (away from the throat) carries the mane.
+    let nx=dy/len,ny=-dx/len;
+    if(nx*(sp.joint.a.x-sp.joint.b.x)+ny*(sp.joint.a.y-sp.joint.b.y)<0){nx=-nx;ny=-ny}
+    const quad=(w0,w1,o0,o1)=>{ctx.beginPath();
+      ctx.moveTo(r.x+nx*(w0/2+o0),r.y+ny*(w0/2+o0));ctx.lineTo(tip.x+nx*(w1/2+o1),tip.y+ny*(w1/2+o1));
+      ctx.lineTo(tip.x-nx*w1/2,tip.y-ny*w1/2);ctx.lineTo(r.x-nx*w0/2,r.y-ny*w0/2);ctx.closePath()};
+    quad(n.rootWidth,n.tipWidth,0,0);ctx.fillStyle=c.head;ctx.fill();
+    ctx.strokeStyle=c.headLine;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke();
+    if(n.mane){
+      // Mane strip along the crest edge.
+      ctx.beginPath();
+      ctx.moveTo(r.x+nx*n.rootWidth/2,r.y+ny*n.rootWidth/2);ctx.lineTo(tip.x+nx*n.tipWidth/2,tip.y+ny*n.tipWidth/2);
+      ctx.lineTo(tip.x+nx*(n.tipWidth/2-n.mane),tip.y+ny*(n.tipWidth/2-n.mane));
+      ctx.lineTo(r.x+nx*(n.rootWidth/2-n.mane),r.y+ny*(n.rootWidth/2-n.mane));ctx.closePath();
+      ctx.fillStyle=c.mane;ctx.fill();ctx.strokeStyle=c.headLine;ctx.stroke();
+    }
+  }
+  function drawHeadArt(ctx,sp,c,lw,size){
     if(sp.horn){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}
     fillStroke(ctx,sp.head,c.head,c.headLine,lw);
     if(sp.beard)fillStroke(ctx,sp.beard,c.beard,c.headLine,lw);
     for(const part of sp.headParts||[])fillStroke(ctx,part.d,c[part.fill],c.headLine,lw);
     if(sp.horn)fillStroke(ctx,sp.horn,c.horn,c.hornLine,lw);
     if(size>=24){ctx.fillStyle=c.eye;ctx.beginPath();ctx.arc(sp.eye.x,sp.eye.y,4.5,0,Math.PI*2);ctx.fill()}
-    ctx.restore();
+  }
+  // Half-plane on one side of the throat line (head side or neck side).
+  const jointCache=new Map();
+  function jointSide(sp,head){
+    const key=sp.joint.a.x+','+sp.joint.a.y+','+head;let p=jointCache.get(key);if(p)return p;
+    const {a,b}=sp.joint,len=Math.hypot(b.x-a.x,b.y-a.y),dx=(b.x-a.x)/len,dy=(b.y-a.y)/len;
+    let nx=-dy,ny=dx;
+    if((sp.pivot.x-a.x)*nx+(sp.pivot.y-a.y)*ny>0){nx=-nx;ny=-ny}
+    if(!head){nx=-nx;ny=-ny}
+    const shift=0,F=600,ax=a.x+nx*shift,ay=a.y+ny*shift,bx=b.x+nx*shift,by=b.y+ny*shift;
+    p=new Path2D();
+    p.moveTo(ax-dx*F,ay-dy*F);p.lineTo(bx+dx*F,by+dy*F);
+    p.lineTo(bx+dx*F+nx*F,by+dy*F+ny*F);p.lineTo(ax-dx*F+nx*F,ay-dy*F+ny*F);p.closePath();
+    jointCache.set(key,p);return p;
   }
   const drawSheep=(ctx,x,y,size,opts)=>drawAnimal('sheep',ctx,x,y,size,opts);
   const drawGoat=(ctx,x,y,size,opts)=>drawAnimal('goat',ctx,x,y,size,opts);
   const drawCow=(ctx,x,y,size,opts)=>drawAnimal('cow',ctx,x,y,size,opts);
+  const drawHorse=(ctx,x,y,size,opts)=>drawAnimal('horse',ctx,x,y,size,opts);
   window.ConquerAnimals={SPECIES,SHEEP:SPECIES.sheep,HEAD:SPECIES.sheep.pose,COLORS:SPECIES.sheep.colors,
     gaitPose,sheepPose:gaitPose,blendedPose:(t,seed,blend)=>blendedPose('sheep',t,seed,blend),blendedPoseOf:blendedPose,
-    drawAnimal,drawSheep,drawGoat,drawCow};
+    drawAnimal,drawSheep,drawGoat,drawCow,drawHorse};
 })();

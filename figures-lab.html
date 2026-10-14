@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CONQUER — Figures Lab</title>
+<style>
+  :root{--bg:#1d1a16;--panel:#2a251f;--text:#efe6d6;--muted:#b4a68f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif}
+  header{padding:10px 16px;display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;background:var(--panel)}
+  h1{font-size:16px;margin:0;letter-spacing:.04em}
+  .group{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .group span{color:var(--muted);margin-right:4px}
+  label{color:var(--muted);display:flex;gap:6px;align-items:center}
+  button{background:#3b342b;color:var(--text);border:1px solid #574c3e;border-radius:6px;padding:5px 10px;cursor:pointer}
+  button[aria-pressed="true"]{background:#c98a3c;border-color:#c98a3c;color:#1d1a16}
+  [hidden]{display:none!important}
+  canvas{display:block;width:100%;height:auto}
+  .note{color:var(--muted);padding:8px 16px;margin:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Figures Lab</h1>
+  <div class="group" role="group" aria-label="Animali"><span>Animali</span>
+    <button data-subject="sheep">Pecora</button><button data-subject="goat">Capra</button>
+    <button data-subject="cow">Mucca</button><button data-subject="horse">Cavallo</button>
+  </div>
+  <div class="group" role="group" aria-label="Persone"><span>Persone</span>
+    <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
+    <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
+  </div>
+  <div class="group" role="group" aria-label="Azione" id="actions"></div>
+  <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
+  <label id="coatBox">Manto <select id="coat"><option value="brown">marrone</option><option value="black">nero</option><option value="grey">grigio</option><option value="white">bianco</option></select></label>
+  <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
+  <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
+</header>
+<p class="note">In alto: il soggetto scelto in tre dimensioni. In basso: scena in scala di gioco con gregge misto, popolani e una scaramuccia in loop. Le persone usano le funzioni di disegno del gioco.</p>
+<canvas id="c" width="1200" height="800"></canvas>
+<script>
+// Minimal stand-ins for the game globals the figure drawers rely on: a flat
+// screen-space world (w2s = identity), no urban occlusion, no terrain.
+let ctx=null;
+const State={view:{scale:1},heraldry:{}};
+const VILLAGER_SKIN='#d99a83',REIGN_COLOR_1='#b53636',REIGN_COLOR_2='#355fb8',REIGN_COLOR_1_DARK='#7f2323',REIGN_COLOR_2_DARK='#243f79';
+const HAIR_COLORS={blonde:'#d5b65a',brown:'#65452f',black:'#262321',gray:'#9a9891',red:'#9b4a2d'};
+function w2s(p){return{x:p.x,y:p.y}}
+function w2sRaw(p){return{x:p.x,y:p.y}}
+function withUrbanFigureOcclusion(p,z,fn){return fn()}
+function terrainElevation(){return 0}
+function withProjectionGroundZ(g,fn){return fn()}
+function peasantHash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function villagerHair(id){return['blonde','brown','black','gray','red'][peasantHash(id)%5]}
+</script>
+<script src="./src/settlement-population-figures.js?v=lab-1"></script>
+<script src="./src/settlement-combat-anim.js?v=lab-1"></script>
+<script src="./src/settlement-animals.js?v=lab-2"></script>
+<script>
+(function(){
+  const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,c=document.getElementById('c'),g=c.getContext('2d');
+  const $=id=>document.getElementById(id);
+  const ANIMALS=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
+  const ACTIONS={animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
+  const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
+  let subject='sheep',action='walk',blend=0,last=performance.now(),clock=0;
+  const kindOf=s=>ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  function renderButtons(){
+    document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
+    const acts=ACTIONS[kindOf(subject)];
+    if(!acts.some(([k])=>k===action))action=acts[0][0];
+    $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
+    $('coatBox').hidden=subject!=='horse';
+    $('flipBox').hidden=kindOf(subject)!=='animal';
+    resetHero();
+  }
+  document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;renderButtons()});
+  $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k){action=k;renderButtons()}};
+
+  // Hero soldier state: the three sizes share one fighter and one dummy foe.
+  let hero,foe,nextHit=0,nextDeath=0,arrows=[];
+  function resetHero(){hero={id:'hero-'+subject,engaged:false};foe={id:'foe',engaged:false};nextHit=clock+.3;nextDeath=clock+.2;arrows=[]}
+
+  const VILLAGERS=[
+    {kind:'peasant',sex:'male',age:'adult',colors:['#8c6b3f','#5d4a32']},
+    {kind:'peasant',sex:'female',age:'adult',colors:['#9a7b52','#6b5338']},
+    {kind:'artisan',sex:'male',age:'adult',colors:['#6d7f8c','#4a5560']},
+    {kind:'merchant',sex:'female',age:'adult',colors:['#7a4f7a','#c6a457']},
+    {kind:'peasant',sex:'male',age:'child',colors:['#a08060','#6b5338']}
+  ].map((v,i)=>({...v,id:'v'+i,hair:villagerHair('v'+i)}));
+
+  function drawPerson(type,p,scale,unit,foePoint,livery,index=0){
+    State.view.scale=scale;ctx=g;
+    CA.drawFigure(p,0,type,unit.id,clock*.2,livery,CA.pose(unit,index,p,foePoint));
+  }
+  function drawArrows(){
+    const at=(a,k)=>({x:a.from.x+(a.to.x-a.from.x)*k,y:a.from.y+(a.to.y-a.from.y)*k-Math.sin(Math.PI*k)*a.arc});
+    for(const a of arrows){
+      const k=(clock-a.at)/a.dur;if(k<0||k>1)continue;
+      const p=at(a,k),q=at(a,Math.min(1,k+.06));
+      g.strokeStyle='#d7c6a1';g.lineWidth=a.w;g.beginPath();g.moveTo(p.x,p.y);g.lineTo(q.x,q.y);g.stroke();
+    }
+    arrows=arrows.filter(a=>clock-a.at<a.dur+.1);
+  }
+  function heroSoldiers(W,H,k){
+    const sizes=[[W*.18,H*.5,10*k],[W*.6,H*.5,5*k],[W*.84,H*.5,2.5*k]];
+    hero.engaged=foe.engaged=action!=='guard';
+    if(action==='attack'&&clock>=nextHit){
+      CA.strike(hero,foe);
+      if(subject==='archer'){
+        for(const [x,y,s] of sizes)arrows.push({from:{x:x+2*s,y:y-6*s},to:{x:x+15*s,y:y-4*s},at:clock,dur:.35,arc:3*s,w:Math.max(1,s*.35)});
+        CA.hurt(foe,.35);nextHit=clock+2;
+      }else{CA.strike(foe,hero);CA.hurt(foe,CA.TIMING.IMPACT);nextHit=clock+1.1}
+    }
+    if(action==='die'&&clock>=nextDeath){resetHero();hero.engaged=foe.engaged=true;CA.strike(foe,hero);CA.fall(hero,CA.TIMING.IMPACT,foe);nextDeath=clock+3.2}
+    for(const [x,y,s] of sizes){
+      const hp={x,y},fp={x:x+(subject==='archer'?16:13)*s,y};
+      drawPerson(subject,hp,s*2,hero,fp,null);
+      drawPerson('spearman',fp,s*2,foe,hp,HOSTILE);
+    }
+    drawArrows();
+  }
+  function heroVillagers(W,H,k){
+    VILLAGERS.forEach((v,i)=>{State.view.scale=18*k;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:W*(.14+i*.17),y:H*.5}})});
+  }
+  function heroAnimals(W,H,k,dt){
+    blend+=(action==='browse'?1:-1)*dt/.3;blend=Math.max(0,Math.min(1,blend));
+    const facing=$('flip').checked?1:-1,coat=$('coat').value;
+    // Hero views are normalised; the scene below shows true relative sizes.
+    const norm=1/(A.SPECIES[subject].scale||1);
+    [[W*.3,300],[W*.66,140],[W*.86,60]].forEach(([x,s],i)=>
+      A.drawAnimal(subject,g,x,H*.5,s*k*norm,{t:clock+i*.3,mode:action,blend,facing,seed:i*2,coat}));
+  }
+
+  // Game-scale scene: mixed flock, villagers, a looping skirmish.
+  const COATS=['brown','black','grey','white'];
+  const flock=Array.from({length:12},(_,i)=>({x:80+i*60,y:640+(i%3)*42,seed:i*1.7,mode:i%2?'browse':'walk',blend:i%2?1:0,
+    until:2+i*.6,dir:i%2?1:-1,species:ANIMALS[i%4],coat:COATS[(i>>2)%4]}));
+  const fighters=[0,1,2].map(i=>({ally:{id:'ally'+i,engaged:true},enemy:{id:'enemy'+i,engaged:true},next:i*.37}));
+  const sceneArcher={id:'scene-archer',engaged:true},sceneKnight={id:'scene-knight',engaged:true},knightFoe={id:'kfoe',engaged:true};
+  let archerNext=.5,knightNext=.2;
+  function scene(W,H,k,dt){
+    const z=Number($('zoom').value)*k;
+    g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,H*.66,W,2);
+    // Animal size ties to person scale: a sheep stands about 0.6 of a person.
+    const animalSize=4.9*z;
+    for(const s of flock){
+      s.until-=dt;
+      if(s.until<=0){s.mode=s.mode==='walk'?'browse':'walk';s.until=s.mode==='walk'?1.5+Math.random()*2:2+Math.random()*4;if(s.mode==='walk'&&Math.random()<.4)s.dir*=-1}
+      s.blend+=(s.mode==='browse'?1:-1)*dt/.3;s.blend=Math.max(0,Math.min(1,s.blend));
+      if(s.mode==='walk'){s.x+=s.dir*dt*14;if(s.x<40||s.x>760){s.dir*=-1}}
+      A.drawAnimal(s.species,g,s.x*k,s.y*k,animalSize,{t:clock,seed:s.seed,mode:s.mode,blend:s.blend,facing:s.dir,coat:s.coat});
+    }
+    VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});
+    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
+    fighters.forEach((f,i)=>{
+      const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};
+      if(clock>=f.next){CA.strike(f.ally,f.enemy);CA.strike(f.enemy,f.ally);if(Math.random()<.5)CA.hurt(Math.random()<.5?f.ally:f.enemy,CA.TIMING.IMPACT);f.next=clock+1+Math.random()*.3}
+      drawPerson('spearman',ap,z,f.ally,ep,null,i);
+      drawPerson('spearman',ep,z,f.enemy,ap,HOSTILE,i);
+    });
+    const arP={x:830*k,y:770*k},target={x:964*k,y:748*k};
+    if(clock>=archerNext){CA.strike(sceneArcher,null);arrows.push({from:{x:arP.x+z,y:arP.y-3*z},to:target,at:clock,dur:.5,arc:4*z,w:Math.max(1,z*.4)});archerNext=clock+2}
+    drawPerson('archer',arP,z,sceneArcher,target,null);
+    const kp={x:1060*k,y:720*k},kf={x:kp.x+2.6*z,y:kp.y+.5*z};
+    if(clock>=knightNext){CA.strike(sceneKnight,knightFoe);CA.strike(knightFoe,sceneKnight);knightNext=clock+1.2}
+    drawPerson('knight',kp,z,sceneKnight,kf,null);
+    drawPerson('spearman',kf,z,knightFoe,kp,HOSTILE);
+    drawArrows();
+  }
+  function resize(){const w=Math.min(1200,c.clientWidth||1200);if(c.width!==w){c.width=w;c.height=Math.round(w*.667)}}
+  function frame(now){
+    render(Math.min(.05,(now-last)/1000)*Number($('speed').value));last=now;
+    requestAnimationFrame(frame);
+  }
+  function render(dt){
+    resize();clock+=dt;
+    CA.setClock(clock); // the speed slider drives combat timing too
+    const W=c.width,H=c.height,k=W/1200;
+    g.fillStyle='#6f9a48';g.fillRect(0,0,W,H);
+    g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
+    const kind=kindOf(subject);
+    if(kind==='animal')heroAnimals(W,H,k,dt);
+    else if(kind==='soldier')heroSoldiers(W,H,k);
+    else heroVillagers(W,H,k);
+    scene(W,H,k,dt);
+  }
+  // Manual stepping for automated checks (rAF pauses in background tabs).
+  window.ConquerLab={step:(dt=1/60)=>render(dt)};
+  renderButtons();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
