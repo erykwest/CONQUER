@@ -1279,6 +1279,7 @@ function growthRng(step,salt=0){
 }
 const BORDER_ENTRY_SIDES=['north','east','south','west'];
 const BORDER_ENTRY_FRACTIONS=[.25,.50,.75];
+const BORDER_ENTRY_BACKUP_FRACTIONS=Array.from({length:19},(_,i)=>(i+1)*.05);
 const ROAD_PLAN_VERSION=3;
 function borderEntryCandidates(){
   const out=[];
@@ -1292,7 +1293,7 @@ function borderEntryCandidates(){
 }
 function validBorderEntrySelection(entries){
   return Array.isArray(entries)&&entries.length===4&&BORDER_ENTRY_SIDES.every(edge=>
-    entries.some(e=>e?.edge===edge&&BORDER_ENTRY_FRACTIONS.includes(e.t)&&
+    entries.some(e=>e?.edge===edge&&(BORDER_ENTRY_FRACTIONS.includes(e.t)||BORDER_ENTRY_BACKUP_FRACTIONS.some(t=>Math.abs(t-e.t)<1e-6))&&
       dist(e,edgeSample(edge,e.t))<.001)
   );
 }
@@ -1304,8 +1305,16 @@ function ensureBorderEntrySelection(){
     const options=all.filter(e=>e.edge===edge);
     const start=Math.floor(rnd()*options.length);
     const ordered=options.map((_,i)=>options[(start+i)%options.length]);
-    const choice=ordered.find(e=>!environmentBlocksPoint(e,'road'))||ordered[0];
-    selected.push({...choice});
+    // Main roads open a cut through woods and get wooden bridges over water.
+    // Target selection should reject slopes/sea, not forest or river banks.
+    let choice=ordered.find(e=>!primaryRoadTerrainBlocked(e));
+    if(!choice){
+      const base=ordered[0]?.t||.5;
+      choice=BORDER_ENTRY_BACKUP_FRACTIONS.slice().sort((a,b)=>Math.abs(a-base)-Math.abs(b-base))
+        .map((t,i)=>({id:'border-'+edge+'-alternate-'+i,edge,index:-1,t,...edgeSample(edge,t)}))
+        .find(e=>!primaryRoadTerrainBlocked(e));
+    }
+    selected.push({...choice||ordered[0]});
   }
   State.village.borderEntries=selected;
   return selected;
