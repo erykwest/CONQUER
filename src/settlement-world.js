@@ -1659,10 +1659,20 @@ function spawnArterial(step){
   let b=remaining<=ROAD_RULES.arterialSegmentMax?{x:target.x,y:target.y}:{x:a.x+Math.cos(heading)*len,y:a.y+Math.sin(heading)*len};
   const road=constrainRoadCandidate(beginConstruction({id:uid(),type:'road',auto:true,roadClass:'arterial',routeId:route.id,routeSeq:existing.length,a,b,width:.62,appeal:1,parentRoadId:existing.at(-1)?.id||null}));
   if(!road)return false;
-  State.structures.push(road);
-  autoPrimaryRoadBridges(road);
+  const points=perpendicularRiverRoadPath(road.a,road.b);
+  let parent=road.parentRoadId,last=road;
+  for(let i=0;i<points.length-1;i++){
+    const segment=i===0?road:{...road,id:uid()};
+    segment.a={...points[i]};segment.b={...points[i+1]};
+    segment.routeSeq=existing.length+i;
+    segment.parentRoadId=parent;
+    segment.length=dist(segment.a,segment.b);
+    State.structures.push(segment);
+    autoPrimaryRoadBridges(segment);
+    parent=segment.id;last=segment;
+  }
   invalidateSceneCache('landscape');
-  if(dist(road.b,target)<.35)route.connected=true;
+  if(dist(last.b,target)<.35)route.connected=true;
   return true;
 }
 function candidateBranchOrigins(rnd){
