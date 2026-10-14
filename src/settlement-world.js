@@ -1491,6 +1491,35 @@ function autoPrimaryRoadBridges(road){
   let start=-1,index=0,created=0;
   function addSpan(from,to){
     if(to-from<.001)return;
+    // Build over the local river normal, not along an oblique road segment.
+    const midT=(from+to)/2,intersection={
+      x:road.a.x+(road.b.x-road.a.x)*midT,
+      y:road.a.y+(road.b.y-road.a.y)*midT
+    };
+    let closest=null,best=Infinity;
+    for(const river of water)for(let i=1;i<river.points.length;i++){
+      const p=river.points[i-1],q=river.points[i],distance=pointSegmentDistance(intersection,p,q);
+      if(distance<best){best=distance;closest={river,p,q}}
+    }
+    if(!closest)return;
+    const tx=closest.q.x-closest.p.x,ty=closest.q.y-closest.p.y,tLen=Math.hypot(tx,ty)||1;
+    const nx=-ty/tLen,ny=tx/tLen;
+    const riverHalf=(closest.river.width||1.25)/2+.48;
+    const bankA={x:intersection.x-nx*riverHalf,y:intersection.y-ny*riverHalf};
+    const bankB={x:intersection.x+nx*riverHalf,y:intersection.y+ny*riverHalf};
+    // Projection onto the new bridge normal is the shortest legal span.
+    if(!terrainSlopeKind(bankA)&&!terrainSlopeKind(bankB)){
+      const za=terrainPlateauElevation(bankA),zb=terrainPlateauElevation(bankB);
+      if(za!=null&&zb!=null&&Math.abs(za-zb)<=.01){
+        State.structures.push({id:'river-bridge-'+road.id+'-'+index++,
+          type:'bridge',auto:true,primaryBridgeFor:road.id,
+          variant:'wood',a:bankA,b:bankB,
+          width:Math.max(1.2,(road.width||.62)+.58),
+          length:dist(bankA,bankB),groundZ:za,
+          ...(road.construction?{construction:{...road.construction}}:{})});
+        created++;return;
+      }
+    }
     const startT=Math.max(0,from-.42/length),endT=Math.min(1,to+.42/length);
     if(endT-startT<.005)return;
     const pieces=Math.max(1,Math.ceil((endT-startT)*length/15.5));
