@@ -7,8 +7,8 @@ const root=__dirname+'/../src/';
 const castle=['castle','landscape','castle-placement','castle-structures','buildings'].map(part=>fs.readFileSync(root+'settlement-'+part+'.js','utf8')).join('\n');
 const siege=fs.readFileSync(root+'settlement-siege.js','utf8');
 const render=['architecture','weather','render'].map(part=>fs.readFileSync(root+'settlement-'+part+'.js','utf8')).join('\n');
-const population=fs.readFileSync(root+'settlement-population.js','utf8');
-const app=fs.readFileSync(root+'settlement-app.js','utf8');
+const population=['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'].map(part=>fs.readFileSync(root+'settlement-'+part+'.js','utf8')).join('\n');
+const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>fs.readFileSync(root+'settlement-'+part+'.js','utf8')).join('\n');
 
 const capacitySrc=castle.match(/function functionCapacity\(s\)\{[\s\S]*?\n\}/)?.[0];
 const normaliseSrc=castle.match(/function normalizeFunctions\(s\)\{[^\n]*\}/)?.[0];
