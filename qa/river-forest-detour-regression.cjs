@@ -1,0 +1,30 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const world=fs.readFileSync(__dirname+'/../src/settlement-world.js','utf8');
+const landscape=fs.readFileSync(__dirname+'/../src/settlement-landscape.js','utf8');
+assert.match(world,/return environmentBlocksPoint\(p,'road'\);/);
+assert.doesNotMatch(landscape,/filter\(tree=>!primaryRoadCarvesPoint/);
+assert.match(world,/if\(environmentBlocksPoint\(p,'road'\)\)return true/);
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const intersect=(a,b,c,d)=>{
+ const r={x:b.x-a.x,y:b.y-a.y},s={x:d.x-c.x,y:d.y-c.y},cross=(v,w)=>v.x*w.y-v.y*w.x;
+ const t=cross({x:c.x-a.x,y:c.y-a.y},s)/cross(r,s);
+ const u=cross({x:c.x-a.x,y:c.y-a.y},r)/cross(r,s);
+ return t>0&&t<1&&u>0&&u<1?{x:a.x+t*r.x,y:a.y+t*r.y}:null;
+};
+const river={type:'river',width:3.2,points:[{x:50,y:90},{x:50,y:110}]};
+const ctx=vm.createContext({State:{environment:[river]},WORLD:200,dist:distance,
+ segmentIntersectionPoint:intersect,terrainSlopeKind:()=>null,environmentBlocksPoint:()=>false});
+const a=world.indexOf('function perpendicularRiverRoadPath(');
+const b=world.indexOf('function addManualMainRoad(',a);
+assert.ok(a>0&&b>a);
+vm.runInContext(world.slice(a,b),ctx);
+const routed=vm.runInContext('perpendicularRiverRoadPath({x:40,y:94},{x:60,y:106})',ctx);
+assert.equal(routed.length,4,'slanting main road bends at both riverbanks');
+const bridgeA=routed[1],bridgeB=routed[2];
+assert.ok(Math.abs(bridgeA.y-bridgeB.y)<1e-9,'bridge follows river normal');
+assert.ok(Math.abs(distance(bridgeA,bridgeB)-(river.width+.96))<1e-8,'bridge is only river width plus bank allowance');
+assert.ok(distance(routed[0],routed[1])>0&&distance(routed[2],routed[3])>0);
+console.log('PASS forest detours and shortest perpendicular crossing with connected approach roads');

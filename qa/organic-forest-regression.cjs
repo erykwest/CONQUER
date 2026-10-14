@@ -6,7 +6,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const world=fs.readFileSync(__dirname+'/../src/settlement-world.js','utf8');
 const landscape=fs.readFileSync(__dirname+'/../src/settlement-landscape.js','utf8');
-const begin=world.indexOf('function makeOrganicForestBlob(');
+const begin=world.indexOf('function forestBeltOutline(');
 const end=world.indexOf('function addForestBlob(',begin);
 assert.ok(begin>=0&&end>begin,'organic forest source must exist');
 const context=vm.createContext({
@@ -40,9 +40,9 @@ for(let sample=0;sample<80;sample++){
   assert.ok(points.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)));
   const angles=points.map(p=>Math.atan2(p.y-forest.y,p.x-forest.x));
   const distances=points.map(p=>Math.hypot(p.y-forest.y,p.x-forest.x));
-  assert.ok(Math.max(...distances)/Math.min(...distances)<Math.max(4.7,3*Math.max(forest.rx/forest.ry,forest.ry/forest.rx)),'keep smooth rounded lobes, permitting elongated forest proportions');
+  if(!forest.outlineType)assert.ok(Math.max(...distances)/Math.min(...distances)<Math.max(4.7,3*Math.max(forest.rx/forest.ry,forest.ry/forest.rx)),'rounded lobed islands');
   const maxNeighborJump=Math.max(...distances.map((d,i)=>Math.abs(d-distances[(i+1)%distances.length])));
-  assert.ok(maxNeighborJump<Math.max(forest.rx,forest.ry)*.23,'smooth shoreline-style outline');
+  assert.ok(maxNeighborJump<Math.max(forest.rx,forest.ry)*.45,'continuous forest boundary including rounded ribbon end caps');
   for(let i=0;i<points.length;i++)for(let j=i+2;j<points.length;j++){
     if(i===0&&j===points.length-1)continue;
     assert.ok(!intersects(points[i],points[(i+1)%points.length],points[j],points[(j+1)%points.length]),'organic polygon cannot self-intersect');

@@ -161,7 +161,7 @@ function roadRepairEntryBlocksPoint(entry,p,clearance,width){
 }
 function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null,allowPrimaryNature=false){
   if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||
-    (allowPrimaryNature||primaryRoadCarvesPoint(p)
+    (allowPrimaryNature
       ?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return false;
   const clearance=width/2+.16;
 
@@ -185,7 +185,7 @@ function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[],spatialIndex=null,all
   return finishRoadWork(roadRepairSegmentWork(a,b,width,ignoreIds,spatialIndex,allowPrimaryNature));
 }
 function* roadRepairSegmentWork(a,b,width=.30,ignoreIds=[],spatialIndex=null,allowPrimaryNature=false){
-  const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
+  const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.09));
   for(let i=0;i<=steps;i++){
     if(i%16===0)yield;
     const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
@@ -209,7 +209,7 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
   const segmentClear=(a,b)=>{
     const ak=pointKey(a),bk=pointKey(b),k=ak<bk?ak+'|'+bk:bk+'|'+ak;
     if(segmentMemo.has(k)){segmentHits++;return segmentMemo.get(k)}
-    const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
+    const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.09));
     let ok=true;
     for(let i=0;i<=steps;i++){
       const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
@@ -355,7 +355,7 @@ function arterialSafeWaypoints(routeId,displaced=[]){
   for(const r of source){
     const p={...r.b};
     if(dist(p,pts.at(-1))<.45)continue;
-    if(roadRepairPointClear(p,width,ignore,null,true))pts.push(p);
+    if(roadRepairPointClear(p,width,ignore))pts.push(p);
   }
 
   if(plan.connected||plan.planningToBorder||!source.length){
@@ -386,6 +386,34 @@ function* buildArterialRepairWork(routeId,displaced=[]){
         window.__conquerAnalytics?.event('ARTERIAL_DETOUR_RETRY',{
           routeId,pad,from:a,to:b
         },'warn',5000);
+      }
+    }
+    // If a broad woodland makes the original gate on the border unreachable,
+    // choose another *clear* entrance on the SAME map edge instead of cutting
+    // down trees or leaving one of the four master roads disconnected.
+    if((!leg||leg.length<2)&&i===waypoints.length-2){
+      const plan=arterialRoutePlan(routeId),edge=plan?.edge,old=plan?.target;
+      if(edge&&old){
+        const preferred=edge==='north'||edge==='south'?old.x/WORLD:old.y/WORLD;
+        const alternatives=BORDER_ENTRY_BACKUP_FRACTIONS
+          .filter(t=>Math.abs(t-preferred)>.001)
+          .sort((a,b)=>Math.abs(a-preferred)-Math.abs(b-preferred));
+        for(const t of alternatives){
+          const alt=edgeSample(edge,t);
+          if(environmentBlocksPoint(alt,'road'))continue;
+          const option=(yield* roadRepairSegmentWork(a,alt,width,ignore,null,true))
+            ?[a,alt]
+            :yield* findRoadRepairWork(a,alt,width,48,ignore,180000,true);
+          if(!option||option.length<2)continue;
+          plan.target={x:alt.x,y:alt.y,edge};
+          const entry=State.village.borderEntries?.find(e=>e.edge===edge);
+          if(entry){entry.x=alt.x;entry.y=alt.y;entry.t=t;entry.index=-1;entry.id='border-'+edge+'-alternate-'+Math.round(t*100)}
+          plan.entryId=entry?.id||plan.entryId;
+          window.__conquerAnalytics?.event('ARTERIAL_ENTRY_REROUTED',{
+            routeId,edge,oldTarget:old,newTarget:plan.target
+          },'info');
+          leg=option;break;
+        }
       }
     }
     if(!leg||leg.length<2)return null;
@@ -427,7 +455,7 @@ function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
   // Only replace the route after a complete valid path has been found.
   const oldRoadIds=new Set(routeRoads(routeId).map(r=>r.id));
   State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor));
-  const pts=subdivideRoadPolyline(path,ROAD_RULES.arterialSegmentMax);
+  const pts=subdivideRoadPolyline(alignedRiverRoadPolyline(path),ROAD_RULES.arterialSegmentMax);
   let added=0,parent=null;
   for(let i=0;i<pts.length-1;i++){
     const a=pts[i],b=pts[i+1];if(dist(a,b)<.18)continue;
@@ -1121,15 +1149,75 @@ function repairForestsAgainstSteepSlopes(){
   });
   if(removed){
     const rnd=seedRand((State.seed^biomeHash(State.biome)^0x2d6f5b1d)>>>0);
-    ensureForestCoverage(State.environment,rnd,.20);
+    ensureForestCoverage(State.environment,rnd,State.biome==='forest'?.18:.12);
   }
   State.relief.forestTerrainRuleVersion=FOREST_TERRAIN_RULE_VERSION;
   return removed>0||!already;
 }
 
+const ENV_POLYGON_BOUNDS=new WeakMap();
+function environmentPolygonBounds(points){
+  let bounds=ENV_POLYGON_BOUNDS.get(points);
+  if(bounds)return bounds;
+  bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+  for(const p of points){
+    bounds.minX=Math.min(bounds.minX,p.x);bounds.maxX=Math.max(bounds.maxX,p.x);
+    bounds.minY=Math.min(bounds.minY,p.y);bounds.maxY=Math.max(bounds.maxY,p.y);
+  }
+  ENV_POLYGON_BOUNDS.set(points,bounds);
+  return bounds;
+}
 function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate))return false;
-  return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
+  // Do not trap the initial settlement inside an unbreakable forest ring.
+  // This protects only the immediate hub, not radial road corridors.
+  const town={x:WORLD/2,y:WORLD/2},townClearance=7;
+  if(pointInPolygon(town,candidate.points))return false;
+  for(let i=0;i<candidate.points.length;i++)
+    if(pointSegmentDistance(town,candidate.points[i],candidate.points[(i+1)%candidate.points.length])<townClearance)return false;
+  // Keep both riverbanks clear and never cover the river centerline.
+  for(const water of env.filter(f=>f.type==='river'||f.type==='stream')){
+    const clearance=(water.width||1.25)/2+2;
+    for(let i=1;i<water.points.length;i++){
+      const a=water.points[i-1],b=water.points[i];
+      for(const p of candidate.points)if(pointSegmentDistance(p,a,b)<clearance)return false;
+      const steps=Math.max(1,Math.ceil(dist(a,b)));
+      for(let j=0;j<=steps;j++){
+        const p={x:a.x+(b.x-a.x)*j/steps,y:a.y+(b.y-a.y)*j/steps};
+        if(pointInPolygon(p,candidate.points))return false;
+      }
+    }
+  }
+  // O(1) bounding-box rejection before O(vertices²) polygon distance:
+  // most forest patches are far apart, especially in high-density biomes.
+  const a=environmentPolygonBounds(candidate.points);
+  return env.filter(f=>f.type==='forest').every(f=>{
+    const b=environmentPolygonBounds(f.points);
+    if(a.minX>b.maxX+minGap||b.minX>a.maxX+minGap||
+       a.minY>b.maxY+minGap||b.minY>a.maxY+minGap)return true;
+    return polygonGap(candidate.points,f.points)>=minGap;
+  });
+}
+function forestBeltOutline(kind,rx,ry,rotation,phase){
+  // Rounded thickened spline, supporting horseshoe C, curved L and meander S.
+  const spine=[],n=36;
+  for(let i=0;i<=n;i++){
+    const t=i/n,a=t*Math.PI*1.5-Math.PI*.75;
+    const p=kind==='C'?{x:.43*Math.cos(a),y:.43*Math.sin(a)}:
+      kind==='L'?{x:-.43+.86*t*t,y:-.43+.86*(2*t-t*t)}:
+      {x:-.44+.88*t,y:.29*Math.sin(t*Math.PI*2)};
+    spine.push(p);
+  }
+  const sides=sign=>spine.map((p,i)=>{
+    const prev=spine[Math.max(0,i-1)],next=spine[Math.min(n,i+1)];
+    const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1;
+    const w=(kind==='S'?.05:.14)*(1+.13*Math.sin(phase+i/n*Math.PI*4));
+    return{x:p.x-sign*dy/len*w,y:p.y+sign*dx/len*w};
+  });
+  const ca=Math.cos(rotation),sa=Math.sin(rotation);
+  return [...sides(1),...sides(-1).reverse()].map(p=>{
+    const xx=p.x*rx,yy=p.y*ry;return{x:xx*ca-yy*sa,y:xx*sa+yy*ca};
+  });
 }
 function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
   // Correlated, low-frequency lobes rather than independent radial jitter:
@@ -1138,6 +1226,14 @@ function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
   const tau=Math.PI*2,rotation=rnd()*tau,phase2=rnd()*tau,phase3=rnd()*tau;
   const phase5=rnd()*tau,stretch=.84+rnd()*.32,angleCount=small?40:56;
   const cr=Math.cos(rotation),sr=Math.sin(rotation),points=[];
+  const outlineType=rnd();
+  if(outlineType>.55){
+    const kind=outlineType<.72?'C':outlineType<.86?'L':'S';
+    const outline=forestBeltOutline(kind,rx,ry,rotation,phase3);
+    for(const p of outline)points.push({x:x+p.x,y:y+p.y});
+    return{id:'env-forest-'+Math.round(x*10)+'-'+Math.round(y*10),
+      type:'forest',points,fill:'#2e3c1d',edge:'#5c7438',x,y,rx,ry,outlineType:kind};
+  }
   for(let i=0;i<angleCount;i++){
     const a=i*tau/angleCount;
     const lobes=1+.15*Math.sin(2*a+phase2)+.11*Math.sin(3*a+phase3)
@@ -1153,10 +1249,11 @@ function makeForestCandidate(rnd,small=false){
   // allowing up to 300% of the previous maxima (small 21x15, large 45x36).
   // Forest centres can fall on the world border, producing partial woods.
   const p=randomEnvPoint(rnd,0);
-  // Bias toward ordinary woods so the occasional 3× massif does not
-  // routinely cut off the four radial village-to-border road routes.
-  const rx=small?4+Math.pow(rnd(),3)*17:8+Math.pow(rnd(),3)*37;
-  const ry=small?3+Math.pow(rnd(),3)*12:6+Math.pow(rnd(),3)*30;
+  // Prioritize broad woodlands over dozens of tiny dots. The minimum and
+  // the 300% maximum stay unchanged; x/y sizes are gently correlated.
+  const size=Math.pow(rnd(),small?.82:.62),aspect=.78+rnd()*.44;
+  const rx=small?4+17*size:8+37*size;
+  const ry=small?3+12*Math.min(1,size*aspect):6+30*Math.min(1,size*aspect);
   return makeOrganicForestBlob(rnd,p.x,p.y,rx,ry,small);
 }
 function addForestBlob(env,rnd,small=false,minGap=3,maxAttempts=120){
@@ -1183,14 +1280,36 @@ function estimateForestCoverage(env,samples=72){
   return total?covered/total:0;
 }
 function ensureForestCoverage(env,rnd,target=.20){
-  let coverage=estimateForestCoverage(env),guard=0,failures=0;
-  while(coverage<target&&guard++<320&&failures<24){
-    if(addForestBlob(env,rnd,false,3,80)){
-      coverage=estimateForestCoverage(env);
-      failures=0;
-    }else failures++;
+  // Maintain an incremental raster rather than rescanning every existing
+  // tree line after each accepted forest (previously quadratic in patch count).
+  const samples=72,total=samples*samples,occupied=new Uint8Array(total);
+  let covered=0,guard=0,failures=0;
+  const maxForests=State.biome==='forest'?20:13;
+  let forestCount=env.filter(f=>f.type==='forest').length;
+  function markForest(f){
+    const b=environmentPolygonBounds(f.points);
+    const x0=Math.max(0,Math.floor(b.minX/WORLD*samples)-1);
+    const x1=Math.min(samples-1,Math.ceil(b.maxX/WORLD*samples)+1);
+    const y0=Math.max(0,Math.floor(b.minY/WORLD*samples)-1);
+    const y1=Math.min(samples-1,Math.ceil(b.maxY/WORLD*samples)+1);
+    for(let iy=y0;iy<=y1;iy++){
+      const y=(iy+.5)/samples*WORLD;
+      for(let ix=x0;ix<=x1;ix++){
+        const i=iy*samples+ix;
+        if(occupied[i])continue;
+        const p={x:(ix+.5)/samples*WORLD,y};
+        if(pointInPolygon(p,f.points)){occupied[i]=1;covered++}
+      }
+    }
   }
-  return coverage;
+  for(const f of env)if(f.type==='forest')markForest(f);
+  // The cap is deliberate: no more proliferating tiny woodland patches just
+  // to meet a fixed coverage percentage in constrained geography.
+  while(covered/total<target&&forestCount<maxForests&&guard++<320&&failures<24){
+    const forest=addForestBlob(env,rnd,false,3,80);
+    if(forest){forestCount++;markForest(forest);failures=0}else failures++;
+  }
+  return covered/total;
 }
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[];
@@ -1213,21 +1332,28 @@ function generateEnvironment(){
   }else if(State.biome==='river'){
     env.push(makeEnvWater(rnd,'river'));addBlob('forest',1+Math.floor(rnd()*2),true);
   }else if(State.biome==='forest'){
-    addBlob('forest',4+Math.floor(rnd()*3),true);env.push(makeEnvWater(rnd,'stream'));if(rnd()<.65)addBlob('pond',1,true);
+    env.push(makeEnvWater(rnd,'stream'));addBlob('forest',1+Math.floor(rnd()*2),true);if(rnd()<.65)addBlob('pond',1,true);
   }else if(State.biome==='mountains'){
     env.push(makeEnvWater(rnd,'stream'));
   }else if(State.biome==='sea'){
     if(rnd()<.55)addBlob('forest',1,true);
   }
   for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
-  ensureForestCoverage(env,rnd,.20);
+  // Dense-forest biome retains substantial woods; other biomes have fewer,
+  // larger woodland masses rather than the same blanket coverage.
+  ensureForestCoverage(env,rnd,State.biome==='forest'?.18:.12);
   State.environment=env;
 }
 function pointInPolygon(point,pts){
   let inside=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}return inside;
 }
 function environmentContains(f,p,pad=0){
-  if(['forest','mountain','pond','sea'].includes(f.type))return pointInPolygon(p,f.points);
+  if(['forest','mountain','pond','sea'].includes(f.type)){
+    if(!f.points?.length)return false;
+    const bounds=environmentPolygonBounds(f.points);
+    if(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY)return false;
+    return pointInPolygon(p,f.points);
+  }
   if(['hill','rough'].includes(f.type)){const ca=Math.cos(-(f.angle||0)),sa=Math.sin(-(f.angle||0)),dx=p.x-f.x,dy=p.y-f.y,x=dx*ca-dy*sa,y=dx*sa+dy*ca;return x*x/((f.rx+pad)*(f.rx+pad))+y*y/((f.ry+pad)*(f.ry+pad))<=1}
   if(['stream','river'].includes(f.type)){for(let i=0;i<f.points.length-1;i++)if(pointSegmentDistance(p,f.points[i],f.points[i+1])<=f.width/2+pad)return true}
   return false;
@@ -1239,8 +1365,9 @@ function primaryRoadCarvesPoint(p,extra=.62){
     pointSegmentDistance(p,s.a,s.b)<=(Number(s.width)||.62)/2+extra);
 }
 function primaryRoadTerrainBlocked(p){
-  if(terrainSlopeKind(p))return true;
-  return State.environment.some(f=>['sea','mountain','pond','hill','rough'].includes(f.type)&&environmentContains(f,p,.45));
+  // Primary roads have the same forest and slope exclusions as local paths.
+  // Rivers and streams are traversable only through their timber bridges.
+  return environmentBlocksPoint(p,'road');
 }
 function environmentBlocksPoint(p,mode='settlement'){
   const slope=terrainSlopeKind(p);
@@ -1249,15 +1376,14 @@ function environmentBlocksPoint(p,mode='settlement'){
   if(mode==='road'&&slope)return true;
   if(mode==='settlement'&&slope)return true;
   for(const f of State.environment){
-    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45)
-      &&!(f.type==='forest'&&primaryRoadCarvesPoint(p)))return true;
+    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45))return true;
     if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
   }
   return false;
 }
 function roadEnvironmentConflict(road){
   const len=dist(road.a,road.b),steps=Math.max(6,Math.ceil(len/.35));
-  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if((isPrimaryRoad(road)?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return true}
+  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if(environmentBlocksPoint(p,'road'))return true}
   return false;
 }
 function edgeSample(edge,t){
@@ -1307,12 +1433,12 @@ function ensureBorderEntrySelection(){
     const ordered=options.map((_,i)=>options[(start+i)%options.length]);
     // Main roads open a cut through woods and get wooden bridges over water.
     // Target selection should reject slopes/sea, not forest or river banks.
-    let choice=ordered.find(e=>!primaryRoadTerrainBlocked(e));
+    let choice=ordered.find(e=>!environmentBlocksPoint(e,'road'));
     if(!choice){
       const base=ordered[0]?.t||.5;
       choice=BORDER_ENTRY_BACKUP_FRACTIONS.slice().sort((a,b)=>Math.abs(a-base)-Math.abs(b-base))
         .map((t,i)=>({id:'border-'+edge+'-alternate-'+i,edge,index:-1,t,...edgeSample(edge,t)}))
-        .find(e=>!primaryRoadTerrainBlocked(e));
+        .find(e=>!environmentBlocksPoint(e,'road'));
     }
     selected.push({...choice||ordered[0]});
   }
@@ -1448,22 +1574,36 @@ function autoPrimaryRoadBridges(road){
   let start=-1,index=0,created=0;
   function addSpan(from,to){
     if(to-from<.001)return;
-    const startT=Math.max(0,from-.42/length),endT=Math.min(1,to+.42/length);
-    if(endT-startT<.005)return;
-    const pieces=Math.max(1,Math.ceil((endT-startT)*length/15.5));
-    for(let k=0;k<pieces;k++){
-      const t0=startT+(endT-startT)*k/pieces,t1=startT+(endT-startT)*(k+1)/pieces;
-      const a={x:road.a.x+(road.b.x-road.a.x)*t0,y:road.a.y+(road.b.y-road.a.y)*t0};
-      const b={x:road.a.x+(road.b.x-road.a.x)*t1,y:road.a.y+(road.b.y-road.a.y)*t1};
-      if(terrainSlopeKind(a)||terrainSlopeKind(b))continue;
-      const za=terrainPlateauElevation(a),zb=terrainPlateauElevation(b);
-      if(za==null||zb==null||Math.abs(za-zb)>.01)continue;
-      const bridge={id:'river-bridge-'+road.id+'-'+index++,type:'bridge',auto:true,
-        primaryBridgeFor:road.id,variant:'wood',a,b,width:Math.max(1.2,(road.width||.62)+.58),
-        length:dist(a,b),groundZ:za,
-        ...(road.construction?{construction:{...road.construction}}:{})};
-      State.structures.push(bridge);created++;
+    // Build over the local river normal, not along an oblique road segment.
+    const midT=(from+to)/2,intersection={
+      x:road.a.x+(road.b.x-road.a.x)*midT,
+      y:road.a.y+(road.b.y-road.a.y)*midT
+    };
+    let closest=null,best=Infinity;
+    for(const river of water)for(let i=1;i<river.points.length;i++){
+      const p=river.points[i-1],q=river.points[i],distance=pointSegmentDistance(intersection,p,q);
+      if(distance<best){best=distance;closest={river,p,q}}
     }
+    if(!closest)return;
+    const tx=closest.q.x-closest.p.x,ty=closest.q.y-closest.p.y,tLen=Math.hypot(tx,ty)||1;
+    const nx=-ty/tLen,ny=tx/tLen;
+    const riverHalf=(closest.river.width||1.25)/2+.48;
+    const bankA={x:intersection.x-nx*riverHalf,y:intersection.y-ny*riverHalf};
+    const bankB={x:intersection.x+nx*riverHalf,y:intersection.y+ny*riverHalf};
+    // Projection onto the new bridge normal is the shortest legal span.
+    if(!terrainSlopeKind(bankA)&&!terrainSlopeKind(bankB)){
+      const za=terrainPlateauElevation(bankA),zb=terrainPlateauElevation(bankB);
+      if(za!=null&&zb!=null&&Math.abs(za-zb)<=.01){
+        State.structures.push({id:'river-bridge-'+road.id+'-'+index++,
+          type:'bridge',auto:true,primaryBridgeFor:road.id,
+          variant:'wood',a:bankA,b:bankB,
+          width:Math.max(1.2,(road.width||.62)+.58),
+          length:dist(bankA,bankB),groundZ:za,
+          ...(road.construction?{construction:{...road.construction}}:{})});
+        created++;return;
+      }
+    }
+
   }
   for(let i=0;i<=steps;i++){
     const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
@@ -1481,6 +1621,51 @@ function syncPrimaryRoadBridges(){
   if(added)invalidateSceneCache(['landscape','ground']);
   return added;
 }
+function perpendicularRiverRoadPath(a,b){
+  // Real road geometry bends onto the shortest bank-to-bank normal.
+  // This keeps the visual timber bridge aligned with the actual road route.
+  const water=State.environment.filter(f=>f.type==='river'||f.type==='stream');
+  let best=null;
+  for(const river of water)for(let i=1;i<river.points.length;i++){
+    const u=river.points[i-1],v=river.points[i],cross=segmentIntersectionPoint(a,b,u,v);
+    if(!cross)continue;
+    const t=dist(a,cross)/Math.max(.001,dist(a,b));
+    if(t>.98||t<.02)continue;
+    if(!best||t<best.t)best={river,u,v,cross,t};
+  }
+  if(!best)return[a,b];
+  const dx=best.v.x-best.u.x,dy=best.v.y-best.u.y,l=Math.hypot(dx,dy)||1;
+  let nx=-dy/l,ny=dx/l;
+  if(nx*(b.x-a.x)+ny*(b.y-a.y)<0){nx=-nx;ny=-ny}
+  const half=(best.river.width||1.25)/2+.48;
+  const near={x:best.cross.x-nx*half,y:best.cross.y-ny*half};
+  const far={x:best.cross.x+nx*half,y:best.cross.y+ny*half};
+  if(![near,far].every(p=>p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD&&!terrainSlopeKind(p)))return[a,b];
+  if(dist(a,near)<.10||dist(far,b)<.10)return[a,b];
+  // A perpendicular bridge is only valid when BOTH new approach bends also
+  // avoid forest, hills and steep relief. Do not introduce forbidden slope
+  // shortcuts into an otherwise valid pathfinding result.
+  const clear=(u,v)=>{
+    const steps=Math.max(2,Math.ceil(dist(u,v)/.09));
+    for(let i=0;i<=steps;i++){
+      const t=i/steps,p={x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t};
+      if(environmentBlocksPoint(p,'road'))return false;
+    }
+    return true;
+  };
+  if(!clear(a,near)||!clear(near,far)||!clear(far,b))return[a,b];
+  return[a,near,far,b];
+}
+function alignedRiverRoadPolyline(points){
+  if(!points||points.length<2)return points||[];
+  const route=[{...points[0]}];
+  for(let i=1;i<points.length;i++){
+    const segment=perpendicularRiverRoadPath(route.at(-1),points[i]);
+    for(let j=1;j<segment.length;j++)
+      if(dist(route.at(-1),segment[j])>.001)route.push({...segment[j]});
+  }
+  return route;
+}
 function addManualMainRoad(a,b){
   if(!a||!b)return false;
   const L=dist(a,b);if(L<TYPES.road.min-.001)return false;
@@ -1491,8 +1676,16 @@ function addManualMainRoad(a,b){
   };
   const verdict=window.ConquerPlacement?.check(road);
   if(verdict&&!verdict.ok){status('Road blocked: '+verdict.reason);return false}
-  State.structures.push(road);
-  autoPrimaryRoadBridges(road);
+  const points=perpendicularRiverRoadPath(road.a,road.b);
+  let previous=null;
+  for(let i=0;i<points.length-1;i++){
+    const section=i===0?road:{...road,id:uid()};
+    section.a={...points[i]};section.b={...points[i+1]};
+    section.routeSeq=i;section.parentRoadId=previous?.id||null;
+    section.length=dist(section.a,section.b);
+    State.structures.push(section);autoPrimaryRoadBridges(section);
+    previous=section;
+  }
   invalidateSceneCache('landscape');
   invalidateNavigation(false);
   markDirty(false,['ground'],true);
@@ -1579,10 +1772,20 @@ function spawnArterial(step){
   let b=remaining<=ROAD_RULES.arterialSegmentMax?{x:target.x,y:target.y}:{x:a.x+Math.cos(heading)*len,y:a.y+Math.sin(heading)*len};
   const road=constrainRoadCandidate(beginConstruction({id:uid(),type:'road',auto:true,roadClass:'arterial',routeId:route.id,routeSeq:existing.length,a,b,width:.62,appeal:1,parentRoadId:existing.at(-1)?.id||null}));
   if(!road)return false;
-  State.structures.push(road);
-  autoPrimaryRoadBridges(road);
+  const points=perpendicularRiverRoadPath(road.a,road.b);
+  let parent=road.parentRoadId,last=road;
+  for(let i=0;i<points.length-1;i++){
+    const segment=i===0?road:{...road,id:uid()};
+    segment.a={...points[i]};segment.b={...points[i+1]};
+    segment.routeSeq=existing.length+i;
+    segment.parentRoadId=parent;
+    segment.length=dist(segment.a,segment.b);
+    State.structures.push(segment);
+    autoPrimaryRoadBridges(segment);
+    parent=segment.id;last=segment;
+  }
   invalidateSceneCache('landscape');
-  if(dist(road.b,target)<.35)route.connected=true;
+  if(dist(last.b,target)<.35)route.connected=true;
   return true;
 }
 function candidateBranchOrigins(rnd){
