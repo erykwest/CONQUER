@@ -27,10 +27,10 @@ test('house sampling focuses on in-radius road sections, not distant segments',(
 });
 test('smaller viable quadrilateral is used when the maximum-area lot is blocked',()=>{
  setup();
- run("globalThis.qaCell=[{x:94,y:96},{x:106,y:96},{x:108,y:100},{x:106,y:104},{x:94,y:104}];globalThis.qaHome={id:'candidate',type:'house',x:100,y:100,w:1.5,h:1,angle:0};globalThis.qaQuad=urbanQuad(qaCell,qaHome,q=>Math.abs(urbanArea(q))<80)");
+ run("globalThis.qaCell=Array.from({length:6},(_,i)=>({x:100+6*Math.cos(Math.PI+i*Math.PI/3),y:100+6*Math.sin(Math.PI+i*Math.PI/3)}));globalThis.qaHome={id:'candidate',type:'house',x:100,y:100,w:1.5,h:1,angle:0};globalThis.qaQuad=urbanQuad(qaCell,qaHome,q=>Math.abs(urbanArea(q))<55)");
  assert.ok(run('qaQuad!==null'));
  assert.ok(run('Math.abs(urbanArea(qaQuad))>5'));
- assert.ok(run('Math.abs(urbanArea(qaQuad))<80'));
+ assert.ok(run('Math.abs(urbanArea(qaQuad))<55'));
 });
 test('both local and cloud loads defer main-road planning',()=>{
  const app=fs.readFileSync(__dirname+'/../src/settlement-app.js','utf8');
