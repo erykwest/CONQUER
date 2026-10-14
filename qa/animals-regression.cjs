@@ -9,11 +9,11 @@ const window={};
 const source=fs.readFileSync(path.join(__dirname,'..','src','settlement-animals.js'),'utf8');
 vm.runInContext(source,vm.createContext({window,Math,Object,Number,Map}));
 const {SHEEP,HEAD,sheepPose,blendedPose}=window.ConquerAnimals;
-for(const part of ['body','face','legs','tail'])assert.ok(SHEEP[part].startsWith('M'),'sheep has its own '+part);
+for(const part of ['body','head','legs','tail'])assert.ok(SHEEP[part].startsWith('M'),'sheep has its own '+part);
 assert.equal(SHEEP.legList.length,4,'four independently posed legs');
 assert.ok(SHEEP.legList.every(l=>Number.isFinite(l.x)&&Number.isFinite(l.y)),'every leg has a hip pivot');
-assert.equal((source.match(/face:'/g)||[]).length,1,'one head shape shared by every pose');
-console.log('PASS sheep art is one rigid set: body, face, four legs and tail');
+assert.equal((source.match(/ head:'/g)||[]).length,2,'one head shape per species, shared by every pose');
+console.log('PASS sheep art is one rigid set: body, head, four legs and tail');
 
 let maxSwing=0;
 for(let t=0;t<1;t+=.01){
@@ -42,3 +42,15 @@ assert.equal(walk.neck,0,'no neck while walking');
 assert.ok(graze.headY-walk.headY>90,'browse lowers the head to the grass');
 assert.ok(mid.headY>walk.headY&&mid.headY<graze.headY,'the head travels continuously between poses');
 console.log('PASS walk → browse head travel');
+
+const {SPECIES,blendedPoseOf}=window.ConquerAnimals;
+const goat=SPECIES.goat;
+for(const part of ['body','head','horn','beard','legs','tail'])assert.ok(goat[part].startsWith('M'),'goat has its own '+part);
+assert.equal(goat.legList.length,4,'goat has four independently posed legs');
+assert.equal(goat.colors.horn,'#4a2f1d','goat horns are dark brown');
+assert.equal(goat.colors.body,'#d8c19a','goat coat is beige');
+const gw=blendedPoseOf('goat',.3,0,0),gb=blendedPoseOf('goat',.3,0,1);
+assert.ok(gb.headRot-gw.headRot>1,'goat browse swings the rigid head and neck down to the grass');
+const sw=blendedPoseOf('sheep',.3,0,0);
+assert.ok(Math.abs(gw.legs[0]+sw.legs[0])<1e-9,'right-facing goat art mirrors the shared gait');
+console.log('PASS goat parts, colours and browse');

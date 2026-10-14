@@ -1,30 +1,53 @@
 'use strict';
 // CONQUER animals: procedural canvas animation from the split SVG parts in
-// animali_svg_v2 (body / face / legs / tail). Sheep first: walk + browse.
-// One rigid set of parts: browsing lowers the same head, it never reshapes it.
+// animali_svg_v2 (body / head / legs / tail). Each species is one rigid set
+// of parts: browsing lowers the same head, it never reshapes it.
 // Classic script, no dependencies; poses are pure functions of time.
 (function(){
-  // Source: pecora_estesa.svg (256×256, faces left).
-  const SHEEP={
-    body:'M74 96 C74 78,92 68,116 68 C128 56,154 58,166 72 C190 72,208 86,208 108 C220 116,224 128,220 142 C222 158,214 170,198 176 C188 190,166 196,146 192 C128 198,102 196,88 184 C66 182,52 166,52 144 C42 132,40 118,46 104 C44 92,54 84,66 82 C68 88,70 92,74 96 Z',
-    face:'M58 78 C72 62,94 58,106 70 C112 76,112 88,106 96 C96 110,76 116,62 104 C50 94,50 86,58 78 Z M56 76 L46 66 L42 56 L52 56 L62 64 Z M96 74 L108 66 L118 64 L118 72 L104 82 Z',
-    legs:'M80 174 C86 174,92 178,92 184 L90 226 C90 232,86 238,80 238 C74 238,70 232,70 226 L72 184 C72 178,74 174,80 174 Z M112 178 C118 178,124 182,124 188 L124 230 C124 236,120 242,114 242 C108 242,104 236,104 230 L104 188 C104 182,106 178,112 178 Z M154 178 C160 178,166 182,166 188 L162 228 C162 236,158 242,152 242 C146 242,142 236,142 230 L144 188 C144 182,148 178,154 178 Z M186 170 C192 170,198 174,198 180 L194 224 C194 232,190 238,184 238 C178 238,174 232,174 226 L176 182 C176 176,180 170,186 170 Z',
-    tail:'M206 112 C220 114,224 122,222 130 C218 126,212 124,206 120 Z',
-    neck:{x:100,y:92},eye:{x:72,y:82},tailPivot:{x:206,y:116},center:{x:134,y:240},
-    // Woolly neck root, hidden inside the fleece; it shows only when the head drops.
-    neckRoot:{x:80,y:122}
+  const SPECIES={
+    // Source: pecora_estesa.svg (256×256, faces left).
+    sheep:{
+      artFacing:-1,
+      body:'M74 96 C74 78,92 68,116 68 C128 56,154 58,166 72 C190 72,208 86,208 108 C220 116,224 128,220 142 C222 158,214 170,198 176 C188 190,166 196,146 192 C128 198,102 196,88 184 C66 182,52 166,52 144 C42 132,40 118,46 104 C44 92,54 84,66 82 C68 88,70 92,74 96 Z',
+      head:'M58 78 C72 62,94 58,106 70 C112 76,112 88,106 96 C96 110,76 116,62 104 C50 94,50 86,58 78 Z M56 76 L46 66 L42 56 L52 56 L62 64 Z M96 74 L108 66 L118 64 L118 72 L104 82 Z',
+      legs:'M80 174 C86 174,92 178,92 184 L90 226 C90 232,86 238,80 238 C74 238,70 232,70 226 L72 184 C72 178,74 174,80 174 Z M112 178 C118 178,124 182,124 188 L124 230 C124 236,120 242,114 242 C108 242,104 236,104 230 L104 188 C104 182,106 178,112 178 Z M154 178 C160 178,166 182,166 188 L162 228 C162 236,158 242,152 242 C146 242,142 236,142 230 L144 188 C144 182,148 178,154 178 Z M186 170 C192 170,198 174,198 180 L194 224 C194 232,190 238,184 238 C178 238,174 232,174 226 L176 182 C176 176,180 170,186 170 Z',
+      tail:'M206 112 C220 114,224 122,222 130 C218 126,212 124,206 120 Z',
+      pivot:{x:100,y:92},eye:{x:72,y:82},tailPivot:{x:206,y:116},center:{x:134,y:240},
+      // Walk pulls the head clear of the fleece (as in the reference
+      // silhouette); browse lowers it, muzzle to the grass.
+      pose:{walk:{x:-18,y:-8,rot:0},browse:{x:-66,y:98,rot:-.85}},
+      // Fleece-covered neck root, hidden in the body until the head drops.
+      woolNeck:{x:80,y:122,width:34},
+      colors:{body:'#f6f3ec',shade:'#e4ddd0',line:'#5e554b',head:'#e7b1ab',headLine:'#87534f',
+        leg:'#e7b1ab',legFar:'#c98f8a',legLine:'#87534f',eye:'#2b2321'}
+    },
+    // Source: capra_estesa.svg (256×256, faces right). Horns redrawn to sweep
+    // back over the neck like an ibex; head and neck move as one rigid piece.
+    goat:{
+      artFacing:1,
+      body:'M66 126 C76 100,106 88,144 92 C166 80,192 88,202 108 C214 112,220 122,220 134 C220 146,214 156,202 162 C194 176,178 184,156 186 C130 188,102 182,86 172 C72 164,62 150,66 126 Z',
+      head:'M170 100 C176 82,192 68,210 62 C226 56,238 62,240 74 C242 90,234 104,222 112 C212 118,202 118,192 114 C188 124,182 132,172 138 C162 136,156 132,154 126 C160 120,166 112,170 100 Z',
+      horn:'M211 68 C213 40,198 16,174 14 C162 14,152 22,148 36 C158 28,170 22,181 24 C196 30,203 50,201 70 Z',
+      beard:'M228 112 C230 120,228 128,222 134 C220 128,218 120,220 112 Z',
+      legs:'M88 170 C94 170,98 174,98 180 L96 228 C96 234,92 240,86 240 C80 240,76 234,76 228 L78 180 C78 174,82 170,88 170 Z M120 176 C126 176,130 180,130 186 L130 232 C130 238,126 244,120 244 C114 244,110 238,110 232 L110 186 C110 180,114 176,120 176 Z M156 176 C162 176,166 180,166 186 L164 230 C164 238,160 244,154 244 C148 244,144 238,144 232 L146 186 C146 180,150 176,156 176 Z M188 168 C194 168,198 172,198 178 L196 226 C196 232,192 238,186 238 C180 238,176 232,176 226 L178 178 C178 172,182 168,188 168 Z',
+      tail:'M66 130 C56 124,54 112,60 104 C68 110,72 120,70 130 Z',
+      pivot:{x:166,y:128},eye:{x:216,y:76},tailPivot:{x:66,y:128},center:{x:138,y:242},
+      pose:{walk:{x:10,y:-14,rot:0},browse:{x:6,y:30,rot:1.42}},
+      // The neck grows out of the body: the head group sits behind the body.
+      hoof:12,farHorn:{x:-7,y:3},headBehind:true,
+      colors:{body:'#d8c19a',shade:'#c4aa80',line:'#5f4a33',head:'#d8c19a',headLine:'#5f4a33',
+        leg:'#d8c19a',legFar:'#b99f76',legLine:'#5f4a33',eye:'#2b2321',
+        horn:'#4a2f1d',hornFar:'#33200f',hornLine:'#24170c',beard:'#b39a72',hoof:'#3a2c20'}
+    }
   };
-  // Head placement relative to the art: walk pulls it clear of the fleece
-  // (as in the reference silhouette), browse lowers it, muzzle to the grass.
-  const HEAD={walk:{x:-18,y:-8,rot:0},browse:{x:-66,y:98,rot:-.85}};
-  const COLORS={wool:'#f6f3ec',woolShade:'#e4ddd0',woolLine:'#5e554b',skin:'#e7b1ab',skinFar:'#c98f8a',skinLine:'#87534f',eye:'#2b2321'};
   // Each leg is its own subpath; its hip is the top of the subpath.
-  SHEEP.legList=SHEEP.legs.split(/(?=M)/).map(s=>{const [x,y]=s.slice(1).trim().split(/[ ,]+/).map(Number);return{d:s,x,y:y+6}});
+  for(const sp of Object.values(SPECIES))
+    sp.legList=sp.legs.split(/(?=M)/).map(s=>{const [x,y]=s.slice(1).trim().split(/[ ,]+/).map(Number);return{d:s,x,y:y+6}});
 
   const lerp=(a,b,k)=>a+(b-a)*k;
   const ease=k=>k*k*(3-2*k);
-  // Pure pose maths for one mode.
-  function sheepPose(mode,t,seed=0){
+  // Pure gait maths for one mode, shared by all species.
+  function gaitPose(mode,t,seed=0){
     const out={legs:[0,0,0,0],lift:[0,0,0,0],bob:0,head:0,tail:0,chew:0};
     if(mode==='walk'){
       const p=t*Math.PI*2*1.6+seed;
@@ -48,16 +71,17 @@
     return out;
   }
   // Blended pose: blend 0 = walk, 1 = browse. The head travels continuously.
-  function blendedPose(t,seed,blend){
-    const k=ease(blend),w=sheepPose('walk',t,seed),b=sheepPose('browse',t,seed);
+  // Gait angles are authored for left-facing art; right-facing art mirrors them.
+  function blendedPose(species,t,seed,blend){
+    const sp=SPECIES[species],k=ease(blend),w=gaitPose('walk',t,seed),b=gaitPose('browse',t,seed),dir=-sp.artFacing;
     return{
-      legs:w.legs.map((a,i)=>lerp(a,b.legs[i],k)),
+      legs:w.legs.map((a,i)=>lerp(a,b.legs[i],k)*dir),
       lift:w.lift.map((a,i)=>lerp(a,b.lift[i],k)),
-      bob:lerp(w.bob,b.bob,k),tail:lerp(w.tail,b.tail,k),
-      headX:lerp(HEAD.walk.x,HEAD.browse.x,k),
-      headY:lerp(HEAD.walk.y,HEAD.browse.y,k)+b.chew*2*k,
-      headRot:lerp(HEAD.walk.rot+w.head,HEAD.browse.rot+b.head,k),
-      neck:k,tilt:-.05*k
+      bob:lerp(w.bob,b.bob,k),tail:lerp(w.tail,b.tail,k)*dir,
+      headX:lerp(sp.pose.walk.x,sp.pose.browse.x,k),
+      headY:lerp(sp.pose.walk.y,sp.pose.browse.y,k)+b.chew*2*k,
+      headRot:lerp(sp.pose.walk.rot+w.head*dir,sp.pose.browse.rot+b.head*dir,k),
+      neck:k,tilt:-.05*k*dir
     };
   }
 
@@ -68,47 +92,64 @@
     if(line){ctx.strokeStyle=line;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke(p)}
   }
   const rotateAbout=(ctx,p,a)=>{ctx.translate(p.x,p.y);ctx.rotate(a);ctx.translate(-p.x,-p.y)};
-  // Draws one sheep. (x,y) = ground point under its feet, size = on-screen
+  // Draws one animal. (x,y) = ground point under its feet, size = on-screen
   // height of the 256-unit art box, facing 1 = right / -1 = left.
   // opts.blend (0..1) eases walk → browse; defaults from opts.mode.
-  function drawSheep(ctx,x,y,size,opts={}){
+  function drawAnimal(species,ctx,x,y,size,opts={}){
+    const sp=SPECIES[species],c=sp.colors;
     const t=opts.t||0,seed=opts.seed||0,facing=opts.facing>=0?1:-1;
     const blend=Math.max(0,Math.min(1,opts.blend??(opts.mode==='browse'?1:0)));
-    const s=size/256,lw=Math.max(.55,size/90)/s,art=SHEEP,pose=blendedPose(t,seed,blend);
+    const s=size/256,lw=Math.max(.55,size/90)/s,pose=blendedPose(species,t,seed,blend);
     ctx.save();
-    ctx.translate(x,y);ctx.scale(-facing*s,s);ctx.translate(-art.center.x,-art.center.y);
+    ctx.translate(x,y);ctx.scale(facing*sp.artFacing*s,s);ctx.translate(-sp.center.x,-sp.center.y);
     // Soft ground shadow.
     ctx.fillStyle='rgba(30,40,20,.22)';ctx.beginPath();
-    ctx.ellipse(art.center.x,art.center.y-2,78,12,0,0,Math.PI*2);ctx.fill();
-    // Far legs (1, 3) a shade darker, all legs under the fleece.
-    art.legList.forEach((leg,i)=>{
+    ctx.ellipse(sp.center.x,sp.center.y-2,78,12,0,0,Math.PI*2);ctx.fill();
+    // Far legs (1, 3) a shade darker, all legs under the body.
+    sp.legList.forEach((leg,i)=>{
       ctx.save();ctx.translate(0,-pose.lift[i]);rotateAbout(ctx,leg,pose.legs[i]);
-      fillStroke(ctx,leg.d,i%2?COLORS.skinFar:COLORS.skin,COLORS.skinLine,lw);
+      fillStroke(ctx,leg.d,i%2?c.legFar:c.leg,null,lw);
+      if(sp.hoof){
+        const p=path(leg.d);ctx.save();ctx.clip(p);ctx.fillStyle=c.hoof;
+        ctx.fillRect(leg.x-20,sp.center.y-sp.hoof-4,40,40);ctx.restore();
+      }
+      ctx.strokeStyle=c.legLine;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke(path(leg.d));
       ctx.restore();
     });
     ctx.translate(0,pose.bob);
-    rotateAbout(ctx,{x:art.center.x,y:150},pose.tilt);
-    // Head anchor: the neck pivot carried by the head placement.
-    const anchor={x:art.neck.x+pose.headX,y:art.neck.y+pose.headY};
-    if(pose.neck>.02){
+    rotateAbout(ctx,{x:sp.center.x,y:150},pose.tilt);
+    // Head anchor: the head pivot carried by the head placement.
+    const anchor={x:sp.pivot.x+pose.headX,y:sp.pivot.y+pose.headY};
+    if(sp.woolNeck&&pose.neck>.02){
       // Fleece-covered neck from inside the body down to the lowered head.
-      ctx.lineCap='round';
-      ctx.strokeStyle=COLORS.woolLine;ctx.lineWidth=34*pose.neck+lw*2;
-      ctx.beginPath();ctx.moveTo(art.neckRoot.x,art.neckRoot.y);ctx.lineTo(anchor.x,anchor.y);ctx.stroke();
-      ctx.strokeStyle=COLORS.wool;ctx.lineWidth=34*pose.neck;ctx.stroke();
+      const n=sp.woolNeck;ctx.lineCap='round';
+      ctx.strokeStyle=c.line;ctx.lineWidth=n.width*pose.neck+lw*2;
+      ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(anchor.x,anchor.y);ctx.stroke();
+      ctx.strokeStyle=c.body;ctx.lineWidth=n.width*pose.neck;ctx.stroke();
     }
-    ctx.save();rotateAbout(ctx,art.tailPivot,pose.tail);
-    fillStroke(ctx,art.tail,COLORS.wool,COLORS.woolLine,lw);ctx.restore();
-    fillStroke(ctx,art.body,COLORS.wool,COLORS.woolLine,lw);
-    // A low belly shade keeps white fleece readable on light ground.
-    ctx.save();ctx.clip(path(art.body));ctx.fillStyle=COLORS.woolShade;
-    ctx.beginPath();ctx.ellipse(art.center.x,art.center.y-50,110,24,0,0,Math.PI*2);ctx.fill();ctx.restore();
-    // The head is rigid: only moved and rotated, never reshaped.
-    ctx.save();ctx.translate(pose.headX,pose.headY);rotateAbout(ctx,art.neck,pose.headRot);
-    fillStroke(ctx,art.face,COLORS.skin,COLORS.skinLine,lw);
-    if(size>=24){ctx.fillStyle=COLORS.eye;ctx.beginPath();ctx.arc(art.eye.x,art.eye.y,4.5,0,Math.PI*2);ctx.fill()}
-    ctx.restore();
+    if(sp.headBehind)drawHead(ctx,sp,c,pose,lw,size);
+    ctx.save();rotateAbout(ctx,sp.tailPivot,pose.tail);
+    fillStroke(ctx,sp.tail,c.body,c.line,lw);ctx.restore();
+    fillStroke(ctx,sp.body,c.body,c.line,lw);
+    // A low belly shade keeps light coats readable on light ground.
+    ctx.save();ctx.clip(path(sp.body));ctx.fillStyle=c.shade;
+    ctx.beginPath();ctx.ellipse(sp.center.x,sp.center.y-50,110,24,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    if(!sp.headBehind)drawHead(ctx,sp,c,pose,lw,size);
     ctx.restore();
   }
-  window.ConquerAnimals={SHEEP,HEAD,COLORS,sheepPose,blendedPose,drawSheep};
+  // The head is rigid: only moved and rotated, never reshaped.
+  function drawHead(ctx,sp,c,pose,lw,size){
+    ctx.save();ctx.translate(pose.headX,pose.headY);rotateAbout(ctx,sp.pivot,pose.headRot);
+    if(sp.horn){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}
+    fillStroke(ctx,sp.head,c.head,c.headLine,lw);
+    if(sp.beard)fillStroke(ctx,sp.beard,c.beard,c.headLine,lw);
+    if(sp.horn)fillStroke(ctx,sp.horn,c.horn,c.hornLine,lw);
+    if(size>=24){ctx.fillStyle=c.eye;ctx.beginPath();ctx.arc(sp.eye.x,sp.eye.y,4.5,0,Math.PI*2);ctx.fill()}
+    ctx.restore();
+  }
+  const drawSheep=(ctx,x,y,size,opts)=>drawAnimal('sheep',ctx,x,y,size,opts);
+  const drawGoat=(ctx,x,y,size,opts)=>drawAnimal('goat',ctx,x,y,size,opts);
+  window.ConquerAnimals={SPECIES,SHEEP:SPECIES.sheep,HEAD:SPECIES.sheep.pose,COLORS:SPECIES.sheep.colors,
+    gaitPose,sheepPose:gaitPose,blendedPose:(t,seed,blend)=>blendedPose('sheep',t,seed,blend),blendedPoseOf:blendedPose,
+    drawAnimal,drawSheep,drawGoat};
 })();
