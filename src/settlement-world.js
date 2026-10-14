@@ -1312,15 +1312,14 @@ function environmentBlocksPoint(p,mode='settlement'){
   if(mode==='road'&&slope)return true;
   if(mode==='settlement'&&slope)return true;
   for(const f of State.environment){
-    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45)
-      )return true;
+    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45))return true;
     if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
   }
   return false;
 }
 function roadEnvironmentConflict(road){
   const len=dist(road.a,road.b),steps=Math.max(6,Math.ceil(len/.35));
-  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if((environmentBlocksPoint(p,'road')))return true}
+  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if(environmentBlocksPoint(p,'road'))return true}
   return false;
 }
 function edgeSample(edge,t){
