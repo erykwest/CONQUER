@@ -1127,13 +1127,31 @@ function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate))return false;
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
+function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
+  // Correlated, low-frequency lobes rather than independent radial jitter:
+  // recognisably rounded tree lines with coves, bulges and asymmetry.
+  // Only the vertex polygon changes; collision/paths use these same points.
+  const tau=Math.PI*2,rotation=rnd()*tau,phase2=rnd()*tau,phase3=rnd()*tau;
+  const phase5=rnd()*tau,stretch=.84+rnd()*.32,angleCount=small?40:56;
+  const cr=Math.cos(rotation),sr=Math.sin(rotation),points=[];
+  for(let i=0;i<angleCount;i++){
+    const a=i*tau/angleCount;
+    const lobes=1+.15*Math.sin(2*a+phase2)+.11*Math.sin(3*a+phase3)
+      +.045*Math.cos(5*a+phase5);
+    const ux=Math.cos(a)*rx*lobes*stretch,uy=Math.sin(a)*ry*lobes/stretch;
+    points.push({x:x+ux*cr-uy*sr,y:y+ux*sr+uy*cr});
+  }
+  return{id:'env-forest-'+Math.round(x*10)+'-'+Math.round(y*10),
+    type:'forest',points,fill:'#2e3c1d',edge:'#5c7438',x,y,rx,ry};
+}
 function makeForestCandidate(rnd,small=false){
-  // Forest centres may sit directly on the world boundary; their masks can
-  // therefore enter the map from outside instead of always forming islands.
+  // Preserve the previous minimum radii (small 4x3, large 8x6), while
+  // allowing up to 300% of the previous maxima (small 21x15, large 45x36).
+  // Forest centres can fall on the world border, producing partial woods.
   const p=randomEnvPoint(rnd,0);
-  const rx=small?4+rnd()*3:8+rnd()*7;
-  const ry=small?3+rnd()*2:6+rnd()*6;
-  return makeEnvBlob(rnd,'forest',p.x,p.y,rx,ry,'#2e3c1d','#5c7438',small?28:32,small?.10:.14);
+  const rx=small?4+rnd()*17:8+rnd()*37;
+  const ry=small?3+rnd()*12:6+rnd()*30;
+  return makeOrganicForestBlob(rnd,p.x,p.y,rx,ry,small);
 }
 function addForestBlob(env,rnd,small=false,minGap=3,maxAttempts=120){
   for(let attempt=0;attempt<maxAttempts;attempt++){
