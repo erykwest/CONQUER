@@ -162,7 +162,7 @@ const COSTS={
 const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
-// All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day).
+// All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
 const BASE_DAYS_PER_SECOND=1/48;
 // Villager routines and procedural daylight use the same simulated day as crops,
 // seasons and the calendar (a full visual day now takes 48 s at 1×).
