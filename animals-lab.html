@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CONQUER — Animals Lab</title>
+<style>
+  :root{--bg:#1d1a16;--panel:#2a251f;--text:#efe6d6;--muted:#b4a68f;--grass:#5f8a3e;--grass2:#6f9a48}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif}
+  header{padding:12px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:var(--panel)}
+  h1{font-size:16px;margin:0;letter-spacing:.04em}
+  label{color:var(--muted);display:flex;gap:6px;align-items:center}
+  button{background:#3b342b;color:var(--text);border:1px solid #574c3e;border-radius:6px;padding:5px 10px;cursor:pointer}
+  button[aria-pressed="true"]{background:#c98a3c;border-color:#c98a3c;color:#1d1a16}
+  canvas{display:block;width:100%;height:auto}
+  .note{color:var(--muted);padding:8px 16px;margin:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Animals Lab — pecora</h1>
+  <div role="group" aria-label="Modalità">
+    <button id="mWalk" aria-pressed="true">Walking</button>
+    <button id="mBrowse" aria-pressed="false">Browse</button>
+  </div>
+  <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
+  <label><input id="flip" type="checkbox"> Verso destra</label>
+</header>
+<p class="note">In alto: la pecora grande con la modalità scelta. In basso: un gregge in scala di gioco che alterna camminata e pascolo da solo.</p>
+<canvas id="c" width="1200" height="760"></canvas>
+<script src="./src/settlement-animals.js?v=sheep-1"></script>
+<script>
+(function(){
+  const A=window.ConquerAnimals,c=document.getElementById('c'),g=c.getContext('2d');
+  let mode='walk',blend=0,last=performance.now(),clock=0;
+  const set=m=>{mode=m;document.getElementById('mWalk').setAttribute('aria-pressed',m==='walk');document.getElementById('mBrowse').setAttribute('aria-pressed',m==='browse')};
+  document.getElementById('mWalk').onclick=()=>set('walk');
+  document.getElementById('mBrowse').onclick=()=>set('browse');
+  // Small flock: each sheep wanders, stops to graze, then moves on.
+  const flock=Array.from({length:9},(_,i)=>({x:120+i*110,y:560+(i%3)*55,seed:i*1.7,mode:i%2?'browse':'walk',blend:i%2?1:0,
+    until:2+i*.6,dir:i%2?1:-1}));
+  function resize(){const w=Math.min(1200,c.clientWidth||1200);if(c.width!==w){c.width=w;c.height=Math.round(w*.63)}}
+  function frame(now){
+    resize();
+    const dt=Math.min(.05,(now-last)/1000)*Number(document.getElementById('speed').value);last=now;clock+=dt;
+    blend+=(mode==='browse'?1:-1)*dt/.3;blend=Math.max(0,Math.min(1,blend));
+    const W=c.width,H=c.height,k=W/1200;
+    g.fillStyle='#6f9a48';g.fillRect(0,0,W,H);
+    g.fillStyle='#5f8a3e';for(let i=0;i<60;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
+    // Hero sheep.
+    const facing=document.getElementById('flip').checked?1:-1;
+    A.drawSheep(g,W*.3,H*.55,300*k,{t:clock,mode,blend,facing});
+    A.drawSheep(g,W*.66,H*.55,140*k,{t:clock+.3,mode,blend,facing,seed:2});
+    A.drawSheep(g,W*.86,H*.55,60*k,{t:clock+.6,mode,blend,facing,seed:4});
+    // Flock at game scale (~20 px tall).
+    g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,H*.66,W,2);
+    for(const s of flock){
+      s.until-=dt;
+      if(s.until<=0){s.mode=s.mode==='walk'?'browse':'walk';s.until=s.mode==='walk'?1.5+Math.random()*2:2+Math.random()*4;if(s.mode==='walk'&&Math.random()<.4)s.dir*=-1}
+      s.blend+=(s.mode==='browse'?1:-1)*dt/.3;s.blend=Math.max(0,Math.min(1,s.blend));
+      if(s.mode==='walk'){s.x+=s.dir*dt*22;if(s.x<40||s.x>1160){s.dir*=-1}}
+      A.drawSheep(g,s.x*k,(s.y+40)*k,28*k,{t:clock,seed:s.seed,mode:s.mode,blend:s.blend,facing:s.dir});
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
