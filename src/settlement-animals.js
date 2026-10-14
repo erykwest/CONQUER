@@ -79,7 +79,8 @@
       pose:{walk:{x:0,y:0,rot:0},browse:{x:36,y:120,rot:.55}},
       joint:{a:{x:210,y:40},b:{x:194,y:108}},
       neck:{root:{x:150,y:112},rootWidth:58,tipWidth:66,mane:12},
-      hoof:12,headBehind:true,
+      // In-world size: a horse stands well above sheep and people.
+      hoof:12,headBehind:true,scale:1.9,
       colors:{body:'#8a5a35',shade:'#764b2b',line:'#3a2414',head:'#8a5a35',headLine:'#3a2414',
         leg:'#8a5a35',legFar:'#6d4628',legLine:'#3a2414',eye:'#120c08',mane:'#2a1a10',hoof:'#221812'},
       coats:{

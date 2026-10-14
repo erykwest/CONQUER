@@ -31,9 +31,19 @@
     <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
+  <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
+    <button data-subject="wagon">Carro</button>
+  </div>
   <div class="group" role="group" aria-label="Azione" id="actions"></div>
   <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
   <label id="coatBox">Manto <select id="coat"><option value="brown">marrone</option><option value="black">nero</option><option value="grey">grigio</option><option value="white">bianco</option></select></label>
+  <div class="group" id="wagonBox">
+    <label>Telaio <select id="wChassis"><option value="wagon">carro 4 ruote</option><option value="cart">carretto 2 ruote</option></select></label>
+    <label>Copertura <select id="wBody"><option value="open">aperto</option><option value="covered">telonato</option></select></label>
+    <label>Cavalli <select id="wTeam"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label>
+    <label>Guidatore <select id="wDriver"><option value="villager">popolano</option><option value="spearman">guerriero</option><option value="knight">cavaliere</option><option value="">nessuno</option></select></label>
+    <label>Carico <select id="wCargo"><option value="mixed">misto</option><option value="sack">sacchi</option><option value="crate">casse</option><option value="barrel">botti</option><option value="hay">fieno</option><option value="logs">legna</option><option value="stone">pietra</option><option value="none">vuoto</option></select></label>
+  </div>
   <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
   <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
 </header>
@@ -57,22 +67,24 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-population-figures.js?v=lab-1"></script>
 <script src="./src/settlement-combat-anim.js?v=lab-1"></script>
 <script src="./src/settlement-animals.js?v=lab-2"></script>
+<script src="./src/settlement-wagons.js?v=lab-1"></script>
 <script>
 (function(){
-  const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,c=document.getElementById('c'),g=c.getContext('2d');
+  const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
   const ANIMALS=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
-  const ACTIONS={animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
+  const ACTIONS={vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',blend=0,last=performance.now(),clock=0;
-  const kindOf=s=>ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  const kindOf=s=>s==='wagon'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
     const acts=ACTIONS[kindOf(subject)];
     if(!acts.some(([k])=>k===action))action=acts[0][0];
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
-    $('coatBox').hidden=subject!=='horse';
-    $('flipBox').hidden=kindOf(subject)!=='animal';
+    $('coatBox').hidden=subject!=='horse'&&subject!=='wagon';
+    $('wagonBox').hidden=subject!=='wagon';
+    $('flipBox').hidden=!['animal','vehicle'].includes(kindOf(subject));
     resetHero();
   }
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;renderButtons()});
@@ -133,13 +145,39 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
       A.drawAnimal(subject,g,x,H*.5,s*k*norm,{t:clock+i*.3,mode:action,blend,facing,seed:i*2,coat}));
   }
 
+  // Wagon: every module comes from the selects; the driver is drawn by the
+  // game's own figure code on the seat anchor the wagon provides.
+  const CARGO_PRESETS={mixed:['sack','crate','barrel','hay','sack','crate'],sack:Array(6).fill('sack'),crate:Array(6).fill('crate'),
+    barrel:Array(6).fill('barrel'),hay:Array(6).fill('hay'),logs:['logs','logs','logs','logs'],stone:Array(6).fill('stone'),none:[]};
+  let wagonDistance=0;
+  function driverFor(type){
+    if(!type)return null;
+    return(gx,x,y,size)=>{
+      State.view.scale=size/4.9;ctx=gx;
+      if(type==='villager')drawVillagerFigureUnmasked({...VILLAGERS[0],p:{x,y}});
+      else CA.drawFigure({x,y},0,type,'driver-'+type,0,null,CA.pose({engaged:false},0));
+    };
+  }
+  function wagonSpec(){
+    const coat=$('coat').value,team=Number($('wTeam').value);
+    return{chassis:$('wChassis').value,body:$('wBody').value,cargo:CARGO_PRESETS[$('wCargo').value],
+      team:Array.from({length:team},(_,i)=>({coat:i?(coat==='white'?'grey':'white'):coat})),driver:driverFor($('wDriver').value)};
+  }
+  function heroWagon(W,H,k,dt){
+    const moving=action==='move',facing=$('flip').checked?-1:1;
+    if(moving)wagonDistance+=dt*60;
+    const spec=wagonSpec();
+    W2.drawWagon(g,W*(facing>0?.2:.62),H*.55,100*k,{...spec,facing,t:clock,distance:wagonDistance,moving});
+    W2.drawWagon(g,W*(facing>0?.8:.9),H*.55,32*k,{...spec,facing,t:clock,distance:wagonDistance,moving});
+  }
+
   // Game-scale scene: mixed flock, villagers, a looping skirmish.
   const COATS=['brown','black','grey','white'];
   const flock=Array.from({length:12},(_,i)=>({x:80+i*60,y:640+(i%3)*42,seed:i*1.7,mode:i%2?'browse':'walk',blend:i%2?1:0,
     until:2+i*.6,dir:i%2?1:-1,species:ANIMALS[i%4],coat:COATS[(i>>2)%4]}));
   const fighters=[0,1,2].map(i=>({ally:{id:'ally'+i,engaged:true},enemy:{id:'enemy'+i,engaged:true},next:i*.37}));
   const sceneArcher={id:'scene-archer',engaged:true},sceneKnight={id:'scene-knight',engaged:true},knightFoe={id:'kfoe',engaged:true};
-  let archerNext=.5,knightNext=.2;
+  let archerNext=.5,knightNext=.2,sceneWagonX=0;
   function scene(W,H,k,dt){
     const z=Number($('zoom').value)*k;
     g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,H*.66,W,2);
@@ -153,6 +191,10 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
       A.drawAnimal(s.species,g,s.x*k,s.y*k,animalSize,{t:clock,seed:s.seed,mode:s.mode,blend:s.blend,facing:s.dir,coat:s.coat});
     }
     VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});
+    // A supply wagon crossing the scene.
+    sceneWagonX=(sceneWagonX+dt*30)%1400;
+    W2.drawWagon(g,(sceneWagonX-200)*k,598*k,animalSize,{chassis:'wagon',body:'open',
+      cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}],driver:driverFor('villager'),facing:1,t:clock,distance:sceneWagonX*k/(animalSize/256),moving:true});
     // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
     fighters.forEach((f,i)=>{
       const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};
@@ -181,7 +223,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     g.fillStyle='#6f9a48';g.fillRect(0,0,W,H);
     g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
     const kind=kindOf(subject);
-    if(kind==='animal')heroAnimals(W,H,k,dt);
+    if(kind==='vehicle')heroWagon(W,H,k,dt);
+    else if(kind==='animal')heroAnimals(W,H,k,dt);
     else if(kind==='soldier')heroSoldiers(W,H,k);
     else heroVillagers(W,H,k);
     scene(W,H,k,dt);
