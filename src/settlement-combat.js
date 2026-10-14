@@ -40,7 +40,7 @@
   let combat=null;
   const archerCache=new Map();
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
-  let tacticalRuleAccum=0;
+  let tacticalRuleAccum=0,combatAnimFrame=0;
   const PATROL_PATH_STEP=.75,PATROL_LOOP_STRIDE=2,PATROL_ROUTE_CACHE_MAX=512;
   let whiteBoundaryCache=[],whiteBoundaryLoopCache=[],whiteBoundarySignature='',whiteBoundaryRevision=0;
   let whiteBoundaryPending=false,patrolNavRevision=0;
@@ -627,6 +627,14 @@
     g.drawImage(backdrop,0,0);
     g.restore();
   }
+  function drawPosedFigure(p,type,id,livery,unit,index=0){
+    const anim=window.ConquerCombatAnim;
+    if(!anim)return drawSoldierFigure(p,.08,type,id,State.clock.day,livery);
+    // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
+    const foe=anim.foeOf(unit);
+    const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
+    anim.drawFigure(p,.08,type,id,State.clock.day,livery,pose);
+  }
   function renderOverlay(){
     if(!combat)return;
     const overlayStart=performance.now();
@@ -646,11 +654,13 @@
       drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)},true);
       g.setLineDash([]);
     }
+    const anim=window.ConquerCombatAnim;
     const characters=[];
     for(const u of combat.units){
-      if(u.kind==='knight'&&!u.defeated)characters.push({p:u,type:'knight',id:u.id,unit:u});
+      // Defeated units stay on screen while their fall animation plays.
+      if(u.defeated&&!anim?.dying(u))continue;
+      if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u});
       else{
-        if(u.defeated)continue;
         const count=u.kind==='patrol'?2:5;
         for(let i=0;i<count;i++){
           const row=Math.floor(i/3),col=i%3,spacing=.55;
@@ -663,19 +673,8 @@
     const sightSources=combat.enemy.length?observers():null;
     withRenderContext(g,()=>{
       for(const soldier of characters){
-        drawSoldierFigure(soldier.p,.08,soldier.type,soldier.id,State.clock.day);
-        if(soldier.type==='spearman'&&soldier.unit.engaged){
-          const target=combat.enemy.filter(e=>!e.defeated&&e.stats?.hp>0)
-            .sort((a,b)=>dist(a,soldier.unit)-dist(b,soldier.unit))[0];
-          if(target&&dist(target,soldier.unit)<1){
-            const base=w2s(soldier.p,.24),end=w2s(target,.45);
-            const pulse=(Math.sin((window.ConquerCombatRules?.time||0)*Math.PI*3+soldier.index*1.2)+1)/2;
-            g.strokeStyle='#c9c6b4';g.lineWidth=Math.max(.75,1.25*State.view.scale);
-            g.beginPath();g.moveTo(base.x,base.y-8);
-            g.lineTo(base.x+(end.x-base.x)*(.25+.7*pulse),base.y-8+(end.y-base.y-8)*(.25+.7*pulse));g.stroke();
-          }
-        }
-        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,.08,()=>{
+        drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index);
+        if(soldier.flag&&!soldier.unit.defeated)withUrbanFigureOcclusion(soldier.p,.08,()=>{
           const base=w2s(soldier.p,.08);
           g.strokeStyle='#5d4535';g.lineWidth=1.8;g.beginPath();
           g.moveTo(base.x+5,base.y-2);g.lineTo(base.x+5,base.y-27);g.stroke();
@@ -684,13 +683,19 @@
         });
       }
       for(const e of combat.enemy){
-        if(e.defeated||e.stats?.hp<=0||!spotted(e,sightSources))continue;
+        const down=e.defeated||e.stats?.hp<=0;
+        if((down&&!anim?.dying(e))||!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        drawSoldierFigure(e,.08,'spearman',e.id,State.clock.day,livery);
+        drawPosedFigure(e,'spearman',e.id,livery,e,0);
+        if(down)continue;
         const p=w2s(e,.08);g.strokeStyle='#e45151';g.lineWidth=2;
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
+    // Combat only advances while the calendar runs; a swing or fall already
+    // started still finishes smoothly when the player pauses.
+    if(anim?.active()&&State.clock.speed===0&&!combatAnimFrame)
+      combatAnimFrame=requestAnimationFrame(()=>{combatAnimFrame=0;draw()});
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
     const focused=combat.units.find(u=>u.id===selected);
     // The Builder layout may be replaced by another UI shell. Missing optional

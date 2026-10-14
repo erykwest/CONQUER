@@ -121,12 +121,14 @@
   }
   function arrow(shooter,target,damage){
     if(shots.length>150)shots.splice(0,shots.length-150);
-    shots.push({
+    const shot={
       from:{x:shooter.x,y:shooter.y,z:shooter.visualZ},
       to:{x:target.x,y:target.y,z:target.visualZ??0},
       start:elapsed,duration:.35+.018*Math.hypot(shooter.x-target.x,shooter.y-target.y),
       hit:damage
-    });
+    };
+    shots.push(shot);
+    return shot;
   }
   function shooterRange(shooter,target){
     const targetH=Number.isFinite(target.h)?target.h:target.height??0;
@@ -159,7 +161,17 @@
       a.target=null;
       if(combatClock>=1){
         const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[nearest.combatKind||'infantry'].front);
-        meleePair(a,nearest,Math.max(1,frontage));
+        const {hitA,hitB}=meleePair(a,nearest,Math.max(1,frontage));
+        const anim=window.ConquerCombatAnim;
+        if(anim){
+          // Damage lands on the thrust, not on the wind-up.
+          const impact=anim.TIMING.IMPACT;
+          anim.strike(a,nearest);anim.strike(nearest,a);
+          if(hitA)anim.hurt(a,impact);
+          if(hitB)anim.hurt(nearest,impact);
+          if(a.defeated)anim.fall(a,impact,nearest);
+          if(nearest.defeated)anim.fall(nearest,impact,a);
+        }
         if(meleeFlashes.length>50)meleeFlashes.shift();
         meleeFlashes.push({x:(a.x+nearest.x)/2,y:(a.y+nearest.y)/2,at:elapsed});
       }
@@ -180,8 +192,12 @@
       if(shooter.clock<2)continue;
       shooter.clock%=2;
       const hit=shotHit(shooter,target);
-      arrow(shooter,target,hit);
-      if(hit)applyDamage(target,1,shooter);
+      const shot=arrow(shooter,target,hit);
+      if(hit){
+        applyDamage(target,1,shooter);
+        window.ConquerCombatAnim?.hurt(target,shot.duration);
+        if(target.defeated)window.ConquerCombatAnim?.fall(target,shot.duration,shooter);
+      }
     }
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
@@ -206,5 +222,5 @@
     g.restore();
   }
   window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,
-    get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0}};
+    get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0;window.ConquerCombatAnim?.reset()}};
 })();
