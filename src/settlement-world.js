@@ -388,6 +388,34 @@ function* buildArterialRepairWork(routeId,displaced=[]){
         },'warn',5000);
       }
     }
+    // If a broad woodland makes the original gate on the border unreachable,
+    // choose another *clear* entrance on the SAME map edge instead of cutting
+    // down trees or leaving one of the four master roads disconnected.
+    if((!leg||leg.length<2)&&i===waypoints.length-2){
+      const plan=arterialRoutePlan(routeId),edge=plan?.edge,old=plan?.target;
+      if(edge&&old){
+        const preferred=edge==='north'||edge==='south'?old.x/WORLD:old.y/WORLD;
+        const alternatives=BORDER_ENTRY_BACKUP_FRACTIONS
+          .filter(t=>Math.abs(t-preferred)>.001)
+          .sort((a,b)=>Math.abs(a-preferred)-Math.abs(b-preferred));
+        for(const t of alternatives){
+          const alt=edgeSample(edge,t);
+          if(environmentBlocksPoint(alt,'road'))continue;
+          const option=(yield* roadRepairSegmentWork(a,alt,width,ignore,null,true))
+            ?[a,alt]
+            :yield* findRoadRepairWork(a,alt,width,48,ignore,180000,true);
+          if(!option||option.length<2)continue;
+          plan.target={x:alt.x,y:alt.y,edge};
+          const entry=State.village.borderEntries?.find(e=>e.edge===edge);
+          if(entry){entry.x=alt.x;entry.y=alt.y;entry.t=t;entry.index=-1;entry.id='border-'+edge+'-alternate-'+Math.round(t*100)}
+          plan.entryId=entry?.id||plan.entryId;
+          window.__conquerAnalytics?.event('ARTERIAL_ENTRY_REROUTED',{
+            routeId,edge,oldTarget:old,newTarget:plan.target
+          },'info');
+          leg=option;break;
+        }
+      }
+    }
     if(!leg||leg.length<2)return null;
     for(let j=1;j<leg.length;j++){
       const p=leg[j];if(dist(full.at(-1),p)>.08)full.push(p);
