@@ -1146,22 +1146,59 @@ function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate)||!forestClearsWater(candidate,env))return false;
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
+function organicForestRibbon(profile,rnd){
+  // Single rounded outline following a smooth C/L/S centreline. The tube is
+  // a *single simple polygon*, preserving pathfinding and lot exclusion.
+  const width=(profile==='C'?.225:profile==='L'?.205:.195)*(0.91+rnd()*.18);
+  const centers=[],n=32;
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    if(profile==='C'){
+      const a=(t*2-1)*Math.PI*.73;
+      centers.push({x:.68*Math.cos(a)-.19,y:.77*Math.sin(a)});
+    }else if(profile==='L'){
+      centers.push({x:-.64+1.28*Math.pow(t,2.9),y:-.72+1.3*Math.sin(Math.min(t*1.72,1)*Math.PI/2)});
+    }else{
+      centers.push({x:.50*Math.sin(t*Math.PI*2),y:-.76+1.52*t});
+    }
+  }
+  const normals=centers.map((p,i)=>{
+    const before=centers[Math.max(0,i-1)],after=centers[Math.min(n,i+1)];
+    const dx=after.x-before.x,dy=after.y-before.y,L=Math.hypot(dx,dy)||1;
+    return{x:-dy/L,y:dx/L};
+  });
+  const out=[];
+  for(let i=0;i<=n;i++)out.push({x:centers[i].x+normals[i].x*width,y:centers[i].y+normals[i].y*width});
+  for(let k=1;k<=8;k++){
+    const a=-Math.PI*k/8,c=Math.cos(a),z=Math.sin(a),v=normals[n];
+    out.push({x:centers[n].x+width*(v.x*c-v.y*z),y:centers[n].y+width*(v.x*z+v.y*c)});
+  }
+  for(let i=n-1;i>=0;i--)out.push({x:centers[i].x-normals[i].x*width,y:centers[i].y-normals[i].y*width});
+  for(let k=1;k<8;k++){
+    const a=-Math.PI-Math.PI*k/8,c=Math.cos(a),z=Math.sin(a),v=normals[0];
+    out.push({x:centers[0].x+width*(v.x*c-v.y*z),y:centers[0].y+width*(v.x*z+v.y*c)});
+  }
+  return out;
+}
 function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
-  // Correlated, low-frequency lobes rather than independent radial jitter:
-  // recognisably rounded tree lines with coves, bulges and asymmetry.
-  // Only the vertex polygon changes; collision/paths use these same points.
+  // Most woods retain irregular roundish blobs, while a minority follow
+  // naturally bent C, L and S silhouettes without self-overlapping contours.
+  const profilePick=rnd(),profile=profilePick<.55?'rounded':
+    profilePick<.70?'C':profilePick<.85?'L':'S';
   const tau=Math.PI*2,rotation=rnd()*tau,phase2=rnd()*tau,phase3=rnd()*tau;
   const phase5=rnd()*tau,stretch=.84+rnd()*.32,angleCount=small?40:56;
   const cr=Math.cos(rotation),sr=Math.sin(rotation),points=[];
-  for(let i=0;i<angleCount;i++){
-    const a=i*tau/angleCount;
-    const lobes=1+.15*Math.sin(2*a+phase2)+.11*Math.sin(3*a+phase3)
-      +.045*Math.cos(5*a+phase5);
-    const ux=Math.cos(a)*rx*lobes*stretch,uy=Math.sin(a)*ry*lobes/stretch;
+  const local=profile==='rounded'?Array.from({length:angleCount},(_,i)=>{
+    const a=i*tau/angleCount,lobes=1+.15*Math.sin(2*a+phase2)
+      +.11*Math.sin(3*a+phase3)+.045*Math.cos(5*a+phase5);
+    return{x:Math.cos(a)*lobes,y:Math.sin(a)*lobes};
+  }):organicForestRibbon(profile,rnd);
+  for(const p of local){
+    const ux=p.x*rx*stretch,uy=p.y*ry/stretch;
     points.push({x:x+ux*cr-uy*sr,y:y+ux*sr+uy*cr});
   }
   return{id:'env-forest-'+Math.round(x*10)+'-'+Math.round(y*10),
-    type:'forest',points,fill:'#2e3c1d',edge:'#5c7438',x,y,rx,ry};
+    type:'forest',shapeProfile:profile,points,fill:'#2e3c1d',edge:'#5c7438',x,y,rx,ry};
 }
 function makeForestCandidate(rnd,small=false){
   // Preserve the previous minimum radii (small 4x3, large 8x6), while
