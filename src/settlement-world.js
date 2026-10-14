@@ -427,7 +427,7 @@ function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
   // Only replace the route after a complete valid path has been found.
   const oldRoadIds=new Set(routeRoads(routeId).map(r=>r.id));
   State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor));
-  const pts=subdivideRoadPolyline(path,ROAD_RULES.arterialSegmentMax);
+  const pts=subdivideRoadPolyline(primaryRoadOrthogonalPolyline(path),ROAD_RULES.arterialSegmentMax);
   let added=0,parent=null;
   for(let i=0;i<pts.length-1;i++){
     const a=pts[i],b=pts[i+1];if(dist(a,b)<.18)continue;
@@ -1499,7 +1499,62 @@ function mainRoadSnapAnchor(p){
   }
   return{point:best.point,magnet:Number.isFinite(best.distance)};
 }
-// Major roads cut through riverbeds on existing, selectable wooden decks.
+// A bridge crosses the nearest river centreline on its NORMAL, not at the
+// incoming road's often-oblique angle. The road bends onto that short span.
+function primaryRoadOrthogonalPolyline(points){
+  if(!Array.isArray(points)||points.length<2)return points||[];
+  const streams=State.environment.filter(f=>['river','stream'].includes(f.type)&&f.points?.length>1);
+  if(!streams.length)return points;
+  let route=points.map(p=>({x:p.x,y:p.y}));
+  const wet=(p,stream)=>stream.points.slice(1).some((q,i)=>
+    pointSegmentDistance(p,stream.points[i],q)<=(stream.width||1.25)/2+.12);
+  // At most a handful of river crossings on a 200U map. Every iteration
+  // consumes one unaligned intersection and preserves bank-to-bank connectivity.
+  for(let guard=0;guard<12;guard++){
+    let candidate=null;
+    for(let i=0;i<route.length-1&&!candidate;i++){
+      const a=route[i],b=route[i+1],vx=b.x-a.x,vy=b.y-a.y,L=Math.hypot(vx,vy);
+      if(L<.01)continue;
+      for(const stream of streams){
+        for(let j=1;j<stream.points.length;j++){
+          const u=stream.points[j-1],v=stream.points[j],ip=segmentIntersectionPoint(a,b,u,v);
+          if(!ip)continue;
+          const dx=v.x-u.x,dy=v.y-u.y,T=Math.hypot(dx,dy)||1;
+          const normal={x:-dy/T,y:dx/T};
+          const dot=(vx*normal.x+vy*normal.y)/L;
+          // The already-perpendicular bridge centre must remain unchanged.
+          if(Math.abs(dot)>.965)continue;
+          if(!candidate)candidate={i,ip,normal,dot,stream};
+        }
+      }
+    }
+    if(!candidate)break;
+    const {i,ip,stream}=candidate;
+    let {normal}=candidate;if(candidate.dot<0)normal={x:-normal.x,y:-normal.y};
+    const dryBank=sign=>{
+      let d=(stream.width||1.25)/2+.22,p;
+      for(let k=0;k<24;k++,d+=.2){
+        p={x:ip.x+normal.x*d*sign,y:ip.y+normal.y*d*sign};
+        if(!wet(p,stream))break;
+      }
+      return p;
+    };
+    const entry=dryBank(-1),exit=dryBank(1);
+    if([entry,exit].some(p=>p.x<0||p.x>WORLD||p.y<0||p.y>WORLD))break;
+    // Consume vertices located inside the water strip (including the
+    // occasional tiny A* steps) before joining the perpendicular span.
+    const relative=p=>(p.x-ip.x)*normal.x+(p.y-ip.y)*normal.y;
+    const bankHalf=dist(entry,exit)/2;
+    let before=i,after=i+1;
+    while(before>0&&relative(route[before])>-bankHalf-.35)before--;
+    while(after<route.length-1&&relative(route[after])<bankHalf+.35)after++;
+    const next=[...route.slice(0,before+1),entry,exit,...route.slice(after)];
+    if(next.some((p,k)=>k&&dist(p,next[k-1])<.01))break;
+    route=next;
+  }
+  return route;
+}
+// Wooden decks are spawned only above the river, from the connected road.
 function autoPrimaryRoadBridges(road){
   if(!isPrimaryRoad(road)||!road?.a||!road?.b)return 0;
   if(State.structures.some(s=>s.type==='bridge'&&s.primaryBridgeFor===road.id))return 0;
@@ -1511,7 +1566,7 @@ function autoPrimaryRoadBridges(road){
   let start=-1,index=0,created=0;
   function addSpan(from,to){
     if(to-from<.001)return;
-    const startT=Math.max(0,from-.42/length),endT=Math.min(1,to+.42/length);
+    const startT=Math.max(0,from-.22/length),endT=Math.min(1,to+.22/length);
     if(endT-startT<.005)return;
     const pieces=Math.max(1,Math.ceil((endT-startT)*length/15.5));
     for(let k=0;k<pieces;k++){
