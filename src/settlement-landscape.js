@@ -507,6 +507,7 @@ function drawForestMask(f){
   if(!forestLikelyVisible(f))return;
   const tier=landscapeDetailTier();
   const trees=forestTreeLayout(f)
+    .filter(tree=>!primaryRoadCarvesPoint(tree.p,.65))
     .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
     .filter(tree=>screenPointVisibleRaw(tree.p,tree.z,50))
     .slice()
