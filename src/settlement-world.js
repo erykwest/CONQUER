@@ -1125,6 +1125,17 @@ function repairForestsAgainstSteepSlopes(){
 
 function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate))return false;
+  // The four starting border roads must be able to escape the village.
+  // Reserve two narrow north-south/east-west clearings; large woodlands
+  // remain possible in the quadrants without isolating the central hub.
+  const margin=3,c=WORLD/2;
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const p of candidate.points){
+    minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+    minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);
+  }
+  if(minX<=c+margin&&maxX>=c-margin)return false;
+  if(minY<=c+margin&&maxY>=c-margin)return false;
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
 function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
