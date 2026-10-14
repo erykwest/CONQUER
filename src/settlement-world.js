@@ -1370,12 +1370,13 @@ function ensureBorderEntrySelection(){
   if(validBorderEntrySelection(State.village.borderEntries))return State.village.borderEntries;
   const all=borderEntryCandidates(),rnd=seedRand((State.seed^0x6d2b79f5)>>>0),selected=[];
   const well=State.structures.find(s=>s.type==='well')||{x:WORLD/2,y:WORLD/2};
+  const forests=State.environment.filter(f=>f.type==='forest');
   const corridorPenalty=entry=>{
-    const length=dist(well,entry),samples=Math.max(8,Math.ceil(length/2.2));
+    const length=dist(well,entry),samples=15;
     let blocked=0;
     for(let i=1;i<samples;i++){
       const t=i/samples,p={x:well.x+(entry.x-well.x)*t,y:well.y+(entry.y-well.y)*t};
-      if(primaryRoadTerrainBlocked(p))blocked++;
+      if(forests.some(f=>pointInPolygon(p,f.points)))blocked++;
     }
     return blocked/samples+length*.0002;
   };
