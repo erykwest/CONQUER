@@ -1281,8 +1281,9 @@ function primaryRoadCarvesPoint(p,extra=.62){
     pointSegmentDistance(p,s.a,s.b)<=(Number(s.width)||.62)/2+extra);
 }
 function primaryRoadTerrainBlocked(p){
-  if(terrainSlopeKind(p))return true;
-  return State.environment.some(f=>['sea','mountain','pond','hill','rough'].includes(f.type)&&environmentContains(f,p,.45));
+  // Primary roads have the same forest and slope exclusions as local paths.
+  // Rivers and streams are traversable only through their timber bridges.
+  return environmentBlocksPoint(p,'road');
 }
 function environmentBlocksPoint(p,mode='settlement'){
   const slope=terrainSlopeKind(p);
