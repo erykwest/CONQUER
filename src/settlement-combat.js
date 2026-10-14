@@ -1184,7 +1184,7 @@
   ui.innerHTML='<h3>COMBAT · Fog / Command</h3>'+
     '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones ON</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
-    '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button></div>'+
+    '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button></div>'+
     '<div class="combat-row"><button id="combatPatrolAdd" title="Add two pikemen to patrol the White Zone border">Patrol + · 2 pikemen</button><button id="combatPatrolRemove">Patrol −</button></div>'+ 
     '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+ 
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
@@ -1210,6 +1210,7 @@
     // Keep Add clickable before founding: the action explains the prerequisite.
     document.querySelectorAll('[data-combat-brush]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-brush'&&State.tool.combatBrush===b.dataset.combatBrush));
     $('combatOrders').classList.toggle('active',State.tool.kind==='combat-orders');
+    $('combatDeselect').disabled=selectedIds.size===0;
   }
   $('combatFog').onclick=()=>{combat.fog=!combat.fog;changed();draw()};
   $('combatZones').onclick=()=>{combat.zones=!combat.zones;changed();draw()};
@@ -1220,7 +1221,8 @@
     syncButtons();
   });
   $('combatBrushSize').oninput=e=>{combat.brushRadius=Number(e.target.value);changed();draw()};
-  $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click knight or pikemen squad, then click target'});syncButtons()};
+  $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click or box-select friendly units, Shift to add'});syncButtons()};
+  $('combatDeselect').onclick=()=>{clearCombatSelection();setTool({kind:'select',label:'Select'});draw()};
   $('combatPatrolAdd').onclick=addPatrol;
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
@@ -1230,6 +1232,9 @@
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     alarmMode,setAlarmMode,recruitedResident,
+    selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
+      const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);
+    },
     yellowGeometry:()=>circles().filter(c=>c.mode==='yellow').concat(combat.strokes.filter(c=>['yellow','eraseYellow'].includes(c.mode))),
     invalidateRoutes:()=>{civilianRouteCache.clear();circleCacheBucket=-1;visibilityDirty=true;
       whiteBoundarySignature='';patrolNavRevision++;patrolRouteCache.clear();
