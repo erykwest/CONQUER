@@ -613,6 +613,10 @@ function peasantPath(house,assignment){
   const start=houseDoorInfo(house).outside,goal={...cell.world};
   let path=roadNetworkPath(start,goal,house.id);
   if(!path&&peasantSegmentClear(start,goal,house.id))path=[start,goal];
+  // A farm can be reachable on foot even without a viable nearby road-anchor
+  // connector. Only search the local field route once (then cache it) rather
+  // than leaving the worker "assigned" but unable to plough or harvest.
+  if(!path&&dist(start,goal)<=18)path=findPeasantPath(start,goal,house.id,3);
   if(!path){navPerf.routeMisses=(navPerf.routeMisses||0)+1;path=[start]}
   peasantPathCache.set(key,path);return path;
 }
