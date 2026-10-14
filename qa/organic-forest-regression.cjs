@@ -40,7 +40,7 @@ for(let sample=0;sample<80;sample++){
   assert.ok(points.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)));
   const angles=points.map(p=>Math.atan2(p.y-forest.y,p.x-forest.x));
   const distances=points.map(p=>Math.hypot(p.y-forest.y,p.x-forest.x));
-  assert.ok(Math.max(...distances)/Math.min(...distances)<4.7,'keep rounded silhouettes');
+  assert.ok(Math.max(...distances)/Math.min(...distances)<Math.max(4.7,3*Math.max(forest.rx/forest.ry,forest.ry/forest.rx)),'keep smooth rounded lobes, permitting elongated forest proportions');
   const maxNeighborJump=Math.max(...distances.map((d,i)=>Math.abs(d-distances[(i+1)%distances.length])));
   assert.ok(maxNeighborJump<Math.max(forest.rx,forest.ry)*.23,'smooth shoreline-style outline');
   for(let i=0;i<points.length;i++)for(let j=i+2;j<points.length;j++){
