@@ -331,7 +331,7 @@ function arterialRouteContinuous(routeId){
     else if(dist(cursor,r.b)<=.42)cursor={...r.a};
     else return false;
   }
-  return !plan.connected||dist(cursor,plan.target)<=.65;
+  return dist(cursor,plan.target)<=.65;
 }
 function arterialSourceSegments(routeId,displaced=[]){
   const map=new Map();
@@ -356,7 +356,7 @@ function arterialSafeWaypoints(routeId,displaced=[]){
     if(roadRepairPointClear(p,width,ignore))pts.push(p);
   }
 
-  if(plan.connected){
+  if(plan.connected||plan.planningToBorder||!source.length){
     if(dist(pts.at(-1),plan.target)>.35)pts.push({...plan.target});
   }else if(source.length){
     // An incomplete route should only be rebuilt to its previous frontier,
@@ -1298,13 +1298,22 @@ function ensureRoadPlan(){
   return State.village.roadPlan;
 }
 function connectSelectedBorderMainRoads(){
+  // Synchronous helper for deterministic QA and explicit repair calls.
+  // The real app uses connectBorderMainRoadsInFrames, including on reload.
   const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();
   if(!well||plan.length!==4)return 0;
   let changed=0;
   for(const route of plan){
     if(mainRoadRouteDeleted(route.id))continue;
-    route.connected=true;
-    if(!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
+    route.planningToBorder=true;
+    try{
+      if(!arterialRouteContinuous(route.id))changed+=rebuildArterialRoute(route.id,[]);
+      route.connected=arterialRouteContinuous(route.id);
+    }finally{delete route.planningToBorder}
+    window.__conquerAnalytics?.event('MAIN_ROAD_RESULT',{
+      routeId:route.id,edge:route.edge,connected:route.connected,segments:routeRoads(route.id).length,
+      mode:'sync'
+    },route.connected?'info':'warn');
   }
   if(changed)invalidateNavigation(false);
   return changed;
@@ -1319,15 +1328,32 @@ function connectBorderMainRoadsInFrames(onDone=()=>{}){
   function* work(){
     let changed=0;
     for(const route of plan){
+      if(!active())break;
       if(mainRoadRouteDeleted(route.id))continue;
-      route.connected=true;
-      while(active()&&!mainRoadRouteDeleted(route.id)&&!arterialRouteContinuous(route.id)){
-        const revision=navPerf.navInvalidations||0;
-        const added=yield* rebuildArterialWork(route.id,[],()=>active()&&(navPerf.navInvalidations||0)===revision);
-        changed+=added;
-        if(added||(navPerf.navInvalidations||0)===revision)break;
-        // A building or deletion changed the map while planning: discard and retry.
-        yield;
+      const t0=performance.now();
+      let attempted=0;
+      route.planningToBorder=true;
+      try{
+        while(active()&&!mainRoadRouteDeleted(route.id)&&!arterialRouteContinuous(route.id)){
+          attempted++;
+          const revision=navPerf.navInvalidations||0;
+          const added=yield* rebuildArterialWork(route.id,[],()=>active()&&(navPerf.navInvalidations||0)===revision);
+          changed+=added;
+          if(added||(navPerf.navInvalidations||0)===revision)break;
+          // A building changed the terrain while planning: recompute the route.
+          yield;
+        }
+      }finally{
+        if(active()){
+          route.connected=arterialRouteContinuous(route.id);
+          delete route.planningToBorder;
+          window.__conquerAnalytics?.event('MAIN_ROAD_RESULT',{
+            routeId:route.id,edge:route.edge,connected:route.connected,
+            segments:routeRoads(route.id).length,attempted,
+            elapsedMs:+(performance.now()-t0).toFixed(1),
+            target:route.target
+          },route.connected?'info':'warn');
+        }
       }
       if(changed){markDirty(true,['ground','base']);draw()}
       yield;
@@ -1343,7 +1369,7 @@ function connectBorderMainRoadsInFrames(onDone=()=>{}){
     if(step.done){foundingRoadJob=null;onDone(step.value);return}
     setTimeout(tick,0);
   }
-  // Return to the input handler before any terrain/path search starts.
+  // Keep all initial and reloaded main-road routing off the input/load handler.
   setTimeout(tick,0);
 }
 function mainRoadSnapAnchor(p){
@@ -1487,28 +1513,46 @@ function spawnRoad(step){
   return spawnLocalRoad(step);
 }
 function spawnHouse(step){
-  const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);if(!well||!roads.length)return false;
+  const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);
+  if(!well||!roads.length)return false;
   const rnd=growthRng(step,211),radius=currentGrowthRadius(),manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
-  const lotContext=urbanHouseSpawnContext();
-  const candidates=[];
-  for(let i=0;i<90;i++){
-    const road=roads[Math.floor(rnd()*roads.length)],t=.12+rnd()*.76;
+  // Fully generated main roads extend to the 200U world border. Sampling
+  // every segment uniformly can exhaust all candidates outside the growth zone.
+  const nearby=roads.filter(r=>pointSegmentDistance(well,r.a,r.b)<=radius+3.5);
+  if(!nearby.length){
+    window.__conquerAnalytics?.event('HOUSE_SPAWN_FAILURE',{step,reason:'no_nearby_main_road',roads:roads.length,radius},'warn');
+    return false;
+  }
+  const lotContext=urbanHouseSpawnContext(),candidates=[];
+  let outOfZone=0,blocked=0,invalidLot=0;
+  for(let i=0;i<150;i++){
+    const road=nearby[Math.floor(rnd()*nearby.length)],t=.10+rnd()*.80;
     const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
-    const ang=roadAngle(road),side=rnd()<.5?-1:1,offset=1.15+rnd()*1.35;
+    const ang=roadAngle(road),side=rnd()<.5?-1:1,offset=1.75+rnd()*1.55;
     const p={x:q.x-Math.sin(ang)*offset*side,y:q.y+Math.cos(ang)*offset*side};
-    const d=dist(p,well);if(d>radius||d<1.7||!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow)continue;
+    const d=dist(p,well);
+    if(d>radius||d<1.7||!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow){outOfZone++;continue}
     const core=Math.exp(-Math.pow(d-Math.min(6.5,radius*.62),2)/(2*3.0*3.0));
     const score=core*1.2+(1-offset/3)*.65+rnd()*.20;
     candidates.push({p,ang,score,roadId:road.id,doorSide:-side});
   }
   candidates.sort((a,b)=>b.score-a.score);
-  for(const c of candidates.slice(0,24)){
+  for(const c of candidates.slice(0,48)){
     const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
-    if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h)))continue;
-    // Resolve and validate the parcel before committing a house to the simulation.
-    if(!urbanHouseFitsLots(h,lotContext))continue;
-    State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);return true;
+    if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h))){blocked++;continue}
+    if(!urbanHouseFitsLots(h,lotContext)){invalidLot++;continue}
+    State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);
+    window.__conquerAnalytics?.event('HOUSE_SPAWN_RESULT',{
+      step,nearbyRoads:nearby.length,totalRoads:roads.length,candidates:candidates.length,
+      outOfZone,blocked,invalidLot,houseId:h.id
+    });
+    return true;
   }
+  window.__conquerAnalytics?.event('HOUSE_SPAWN_FAILURE',{
+    step,reason:candidates.length?'parcel_or_occupancy':'no_zoned_candidates',
+    nearbyRoads:nearby.length,totalRoads:roads.length,candidates:candidates.length,
+    outOfZone,blocked,invalidLot,radius
+  },'warn');
   return false;
 }
 function spawnField(step){
