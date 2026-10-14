@@ -1251,14 +1251,32 @@ function estimateForestCoverage(env,samples=72){
   return total?covered/total:0;
 }
 function ensureForestCoverage(env,rnd,target=.20){
-  let coverage=estimateForestCoverage(env),guard=0,failures=0;
-  while(coverage<target&&guard++<320&&failures<24){
-    if(addForestBlob(env,rnd,false,3,80)){
-      coverage=estimateForestCoverage(env);
-      failures=0;
-    }else failures++;
+  // Maintain an incremental raster rather than rescanning every existing
+  // tree line after each accepted forest (previously quadratic in patch count).
+  const samples=72,total=samples*samples,occupied=new Uint8Array(total);
+  let covered=0,guard=0,failures=0;
+  function markForest(f){
+    const b=environmentPolygonBounds(f.points);
+    const x0=Math.max(0,Math.floor(b.minX/WORLD*samples)-1);
+    const x1=Math.min(samples-1,Math.ceil(b.maxX/WORLD*samples)+1);
+    const y0=Math.max(0,Math.floor(b.minY/WORLD*samples)-1);
+    const y1=Math.min(samples-1,Math.ceil(b.maxY/WORLD*samples)+1);
+    for(let iy=y0;iy<=y1;iy++){
+      const y=(iy+.5)/samples*WORLD;
+      for(let ix=x0;ix<=x1;ix++){
+        const i=iy*samples+ix;
+        if(occupied[i])continue;
+        const p={x:(ix+.5)/samples*WORLD,y};
+        if(pointInPolygon(p,f.points)){occupied[i]=1;covered++}
+      }
+    }
   }
-  return coverage;
+  for(const f of env)if(f.type==='forest')markForest(f);
+  while(covered/total<target&&guard++<320&&failures<24){
+    const forest=addForestBlob(env,rnd,false,3,80);
+    if(forest){markForest(forest);failures=0}else failures++;
+  }
+  return covered/total;
 }
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[];
