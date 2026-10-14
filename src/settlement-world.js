@@ -1520,22 +1520,7 @@ function autoPrimaryRoadBridges(road){
         created++;return;
       }
     }
-    const startT=Math.max(0,from-.42/length),endT=Math.min(1,to+.42/length);
-    if(endT-startT<.005)return;
-    const pieces=Math.max(1,Math.ceil((endT-startT)*length/15.5));
-    for(let k=0;k<pieces;k++){
-      const t0=startT+(endT-startT)*k/pieces,t1=startT+(endT-startT)*(k+1)/pieces;
-      const a={x:road.a.x+(road.b.x-road.a.x)*t0,y:road.a.y+(road.b.y-road.a.y)*t0};
-      const b={x:road.a.x+(road.b.x-road.a.x)*t1,y:road.a.y+(road.b.y-road.a.y)*t1};
-      if(terrainSlopeKind(a)||terrainSlopeKind(b))continue;
-      const za=terrainPlateauElevation(a),zb=terrainPlateauElevation(b);
-      if(za==null||zb==null||Math.abs(za-zb)>.01)continue;
-      const bridge={id:'river-bridge-'+road.id+'-'+index++,type:'bridge',auto:true,
-        primaryBridgeFor:road.id,variant:'wood',a,b,width:Math.max(1.2,(road.width||.62)+.58),
-        length:dist(a,b),groundZ:za,
-        ...(road.construction?{construction:{...road.construction}}:{})};
-      State.structures.push(bridge);created++;
-    }
+
   }
   for(let i=0;i<=steps;i++){
     const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
