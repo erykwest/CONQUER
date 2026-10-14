@@ -1127,6 +1127,18 @@ function repairForestsAgainstSteepSlopes(){
   return removed>0||!already;
 }
 
+const ENV_POLYGON_BOUNDS=new WeakMap();
+function environmentPolygonBounds(points){
+  let bounds=ENV_POLYGON_BOUNDS.get(points);
+  if(bounds)return bounds;
+  bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+  for(const p of points){
+    bounds.minX=Math.min(bounds.minX,p.x);bounds.maxX=Math.max(bounds.maxX,p.x);
+    bounds.minY=Math.min(bounds.minY,p.y);bounds.maxY=Math.max(bounds.maxY,p.y);
+  }
+  ENV_POLYGON_BOUNDS.set(points,bounds);
+  return bounds;
+}
 function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate))return false;
   // Do not trap the initial settlement inside an unbreakable forest ring.
@@ -1148,7 +1160,15 @@ function forestBlobCanPlace(candidate,env,minGap=3){
       }
     }
   }
-  return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
+  // O(1) bounding-box rejection before O(vertices²) polygon distance:
+  // most forest patches are far apart, especially in high-density biomes.
+  const a=environmentPolygonBounds(candidate.points);
+  return env.filter(f=>f.type==='forest').every(f=>{
+    const b=environmentPolygonBounds(f.points);
+    if(a.minX>b.maxX+minGap||b.minX>a.maxX+minGap||
+       a.minY>b.maxY+minGap||b.minY>a.maxY+minGap)return true;
+    return polygonGap(candidate.points,f.points)>=minGap;
+  });
 }
 function forestBeltOutline(kind,rx,ry,rotation,phase){
   // Rounded thickened spline, supporting horseshoe C, curved L and meander S.
@@ -1274,19 +1294,10 @@ function generateEnvironment(){
 function pointInPolygon(point,pts){
   let inside=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}return inside;
 }
-const ENV_POLYGON_BOUNDS=new WeakMap();
 function environmentContains(f,p,pad=0){
   if(['forest','mountain','pond','sea'].includes(f.type)){
     if(!f.points?.length)return false;
-    let bounds=ENV_POLYGON_BOUNDS.get(f.points);
-    if(!bounds){
-      bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
-      for(const v of f.points){
-        bounds.minX=Math.min(bounds.minX,v.x);bounds.maxX=Math.max(bounds.maxX,v.x);
-        bounds.minY=Math.min(bounds.minY,v.y);bounds.maxY=Math.max(bounds.maxY,v.y);
-      }
-      ENV_POLYGON_BOUNDS.set(f.points,bounds);
-    }
+    const bounds=environmentPolygonBounds(f.points);
     if(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY)return false;
     return pointInPolygon(p,f.points);
   }
