@@ -1172,7 +1172,7 @@
     if(activeWell())updateAlert(observers());
     scheduleLocalSave();requestToolDraw();
   },true);
-  window.addEventListener('keydown',e=>{
+  window.addEventListener?.('keydown',e=>{
     if(e.key!=='Escape'||!selectedIds.size||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||''))return;
     clearCombatSelection();setTool({kind:'select',label:'Select'});draw();
   },true);
