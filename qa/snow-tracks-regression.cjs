@@ -59,7 +59,7 @@ assert.equal(snow.count(),0,'leaving winter clears footprints');
 State.season='winter';snow.draw();
 assert.equal(snow.count(),0,'old tracks must not reappear in a later winter');
 
-const pop=fs.readFileSync(__dirname+'/../src/settlement-population.js','utf8');
+const pop=['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'].map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n');
 const combat=fs.readFileSync(__dirname+'/../src/settlement-combat.js','utf8');
 const render=fs.readFileSync(__dirname+'/../src/settlement-render.js','utf8');
 const html=fs.readFileSync(__dirname+'/../index.html','utf8');

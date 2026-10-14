@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const core=fs.readFileSync(__dirname+'/../src/settlement-core.js','utf8');
-const app=fs.readFileSync(__dirname+'/../src/settlement-app.js','utf8');
+const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n');
 const html=fs.readFileSync(__dirname+'/../index.html','utf8');
 
 const literal=core.match(/const BASE_DAYS_PER_SECOND=([^;]+);/);
@@ -38,7 +38,7 @@ for(const [speed,seconds] of [[1,48],[3,16],[10,4.8],[100,0.48]]){
     'visible control must document '+speed+'x actual day duration');
 }
 console.log('PASS pause, common settlement calendar, economic and seasonal consumers');
-const population=fs.readFileSync(__dirname+'/../src/settlement-population.js','utf8');
+const population=['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'].map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n');
 const visualRateLiteral=core.match(/const PEASANT_VISUAL_SPEED=([^;]+);/);
 assert.ok(visualRateLiteral,'visual day scaling must remain declared');
 const visualRate=Function('return ('+visualRateLiteral[1]+')')();

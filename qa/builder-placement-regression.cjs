@@ -6,9 +6,9 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
 const source=fs.readFileSync(path.join(root,'src/settlement-placement.js'),'utf8');
-const app=fs.readFileSync(path.join(root,'src/settlement-app.js'),'utf8');
-const render=fs.readFileSync(path.join(root,'src/settlement-render.js'),'utf8');
-const castle=fs.readFileSync(path.join(root,'src/settlement-castle.js'),'utf8');
+const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>fs.readFileSync(path.join(root,'src/settlement-'+part+'.js'),'utf8')).join('\n');
+const render=['architecture','weather','render'].map(part=>fs.readFileSync(path.join(root,'src/settlement-'+part+'.js'),'utf8')).join('\n');
+const castle=['castle','landscape','castle-placement','castle-structures','buildings'].map(part=>fs.readFileSync(path.join(root,'src/settlement-'+part+'.js'),'utf8')).join('\n');
 const square=(cx,cy,w,h,angle=0)=>[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>
   ({x:cx+x*Math.cos(angle)-y*Math.sin(angle),y:cy+x*Math.sin(angle)+y*Math.cos(angle)}));
 const inside=(p,poly)=>{

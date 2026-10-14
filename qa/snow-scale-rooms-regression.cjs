@@ -3,8 +3,8 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const src=name=>fs.readFileSync(__dirname+'/../src/'+name,'utf8');
-const core=src('settlement-core.js'),castle=src('settlement-castle.js'),app=src('settlement-app.js');
-const siege=src('settlement-siege.js'),render=src('settlement-render.js'),population=src('settlement-population.js');
+const core=src('settlement-core.js'),castle=['castle','landscape','castle-placement','castle-structures','buildings'].map(part=>src('settlement-'+part+'.js')).join('\n'),app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>src('settlement-'+part+'.js')).join('\n');
+const siege=src('settlement-siege.js'),render=['architecture','weather','render'].map(part=>src('settlement-'+part+'.js')).join('\n'),population=['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'].map(part=>src('settlement-'+part+'.js')).join('\n');
 
 const catalog=core.match(/const FUNCTION_CATALOG=(\[[^\n]+\]);/);
 assert.ok(catalog);
