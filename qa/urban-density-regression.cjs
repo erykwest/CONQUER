@@ -185,7 +185,7 @@ test('no primary road frontage means no additional buildings',()=>{
   assert.ok(run('urbanHouseDisplayParts(State.structures[0]).filter(p=>p.kind==="body").length')>=2);
 });
 // Exercise the actual button handler, not a duplicate test implementation.
-const app=fs.readFileSync(__dirname+'/../src/settlement-app.js','utf8');
+const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n');
 const actionStart=app.indexOf('function changeHouseDensity(');
 const actionEnd=app.indexOf('function selectedStructure(){',actionStart);
 assert.ok(actionStart>=0&&actionEnd>actionStart,'house upgrade handler must be available');
