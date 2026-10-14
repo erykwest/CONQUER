@@ -1,0 +1,30 @@
+name: Settlement routing and spawn regression
+
+on:
+  push:
+    branches:
+      - fix/settlement-main-roads-house-spawn-20261014
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  settlement-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify all deterministic settlement regressions
+        run: |
+          for test in qa/*-regression.cjs; do
+            echo "Running $test"
+            node "$test"
+          done
+      - name: Compile all JavaScript modules
+        run: |
+          for src in src/*.js; do
+            node --check "$src"
+          done

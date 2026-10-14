@@ -175,14 +175,16 @@ function urbanLotUnitConflict(lot,occupants=urbanSpawnOccupants()){
 function urbanQuad(cell,house,allowed=null){
   if(cell.length<4)return null;
   const footprint=houseFootprintParts(house).flatMap(p=>p.points);
-  let best=null,area=0;
+  const candidates=[];
   for(let a=0;a<cell.length-3;a++)for(let b=a+1;b<cell.length-2;b++)
     for(let c=b+1;c<cell.length-1;c++)for(let d=c+1;d<cell.length;d++){
       const quad=[cell[a],cell[b],cell[c],cell[d]],size=Math.abs(urbanArea(quad));
-      if(size<=area||!footprint.every(p=>urbanContains(quad,p,.16))||!urbanLotHasMinimumSize(quad,house.angle||0))continue;
-      best=quad;area=size;
+      if(!footprint.every(p=>urbanContains(quad,p,.16))||!urbanLotHasMinimumSize(quad,house.angle||0))continue;
+      candidates.push({quad,size});
     }
-  if(best&&(!allowed||allowed(best)))return best;
+  // A blocked maximum-area quad must not reject other viable inscribed lots.
+  candidates.sort((a,b)=>b.size-a.size);
+  for(const {quad} of candidates)if(!allowed||allowed(quad))return quad;
   // A small oriented rectangle is also an inscribed quadrilateral, useful for
   // dense legacy settlements whose cell has more than four narrow corners.
   const local=footprint.map(p=>toLocalPoint(house,p)),pad=.20;
