@@ -283,7 +283,7 @@ function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
   const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;
   const base=w2s({x:mx,y:my},z),a=w2s(edge.a,z),b=w2s(edge.b,z);
   const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const ww=clamp(4.2*State.view.scale,2.2,5.2),wh=clamp(6.5*State.view.scale,3.2,7.4);
+  const ww=4.2*State.view.scale,wh=6.5*State.view.scale;
   const cx=base.x+ux*offsetPx,cy=base.y+uy*offsetPx;
   const corners=[
     {x:cx-ux*ww/2,y:cy-uy*ww/2-wh/2},
@@ -296,6 +296,33 @@ function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
     ctx.shadowColor='rgba(255,190,80,'+(.72*nf)+')';ctx.shadowBlur=clamp(9*State.view.scale,4,12);
     pathPolygon(corners,'rgba(255,213,118,'+(.92*nf)+')','rgba(90,58,24,.72)',.8);
   }else pathPolygon(corners,'rgba(35,29,24,.82)','rgba(170,139,96,.38)',.7);
+  ctx.restore();
+}
+// Mastio heraldry hangs below the sill of the castle-interior-facing window.
+// Paint in the same projected facade plane as the existing architectural art.
+function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1){
+  if(!s.isMastio||!edge)return;
+  const width=Math.max(.30,windowWidth*1.08),height=.64;
+  const topZ=windowZ-windowHeight/2-.055;
+  const span=facadeAssetWorldSpan(edge,width),lt=w2s(span.a,topZ),rt=w2s(span.b,topZ),lb=w2s(span.a,topZ-height);
+  ctx.save();
+  ctx.globalAlpha*=clamp(opacity,0,1);
+  ctx.transform((rt.x-lt.x)/100,(rt.y-lt.y)/100,
+    (lb.x-lt.x)/120,(lb.y-lt.y)/120,lt.x,lt.y);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(100,0);ctx.lineTo(100,120);
+  ctx.lineTo(50,105);ctx.lineTo(0,120);ctx.closePath();
+  ctx.fillStyle='#322218';ctx.fill();ctx.clip();
+  const herald=State.heraldry||{};
+  if(!window.__conquerHeraldryCanvas?.paint(ctx,0,0,100,120)){
+    ctx.fillStyle=herald.c1||REIGN_COLOR_1;ctx.fillRect(0,0,100,120);
+    ctx.fillStyle=herald.c2||REIGN_COLOR_2;ctx.fillRect(50,0,50,120);
+  }
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(100,0);ctx.lineTo(100,120);
+  ctx.lineTo(50,105);ctx.lineTo(0,120);ctx.closePath();
+  ctx.strokeStyle='rgba(244,222,179,.84)';ctx.lineWidth=3.3;ctx.stroke();
+  // Rod fixed directly beneath the stone or timber sill.
+  ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(105,0);
+  ctx.strokeStyle='#9d8253';ctx.lineWidth=6;ctx.stroke();
   ctx.restore();
 }
 function towerLevelHeight(s,level){
@@ -312,8 +339,10 @@ function towerWindowRows(s){
 function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
   const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row),opacity=cutawayFacadeOpacity(s);if(!key)return;
   for(const edge of roundTowerFacadeEdges(s)){
-    if(edge.interior)drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
-    else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+    if(edge.interior){
+      drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
+      if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w*.86,sz.h,opacity);
+    }else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
   }
 }
 function linearFrontSide(s){
@@ -440,11 +469,48 @@ function drawStaticHouseFacadeDetails(){
 }
 function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
   if(State.view.scale<.24)return;
-  for(const s of State.structures){if(underConstruction(s))continue;const center=structureCenter(s);if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
-    if(s.type==='house'){if(includeHouses)drawHouseFacadeWindows(s,lit,nf)}
-    else if(s.type==='built')drawBuiltWindows(s,lit,nf);
-    else if(s.type==='gate'){if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf))}
-    else if(s.type==='tower'&&!isWoodTower(s)){withStructureGroundPlane(s,()=>{const rows=towerWindowRows(s);if(!rows.length)return;if(s.shape==='round'){for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf))}else{const edges=visibleFacadeEdges(s),opacity=cutawayFacadeOpacity(s);for(const row of rows){const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)continue;withStructureDetailOcclusion(s,row.z,()=>{for(const edge of edges){if(isInteriorFacadeEdge(s,edge))drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity)}})}}})}
+  for(const s of State.structures){
+    if(underConstruction(s))continue;
+    const center=structureCenter(s);
+    if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
+    if(s.type==='house'){
+      if(includeHouses)drawHouseFacadeWindows(s,lit,nf);
+    }else if(s.type==='built')drawBuiltWindows(s,lit,nf);
+    else if(s.type==='gate'){
+      if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf));
+    }else if(s.type==='tower'){
+      withStructureGroundPlane(s,()=>{
+        if(isWoodTower(s)){
+          // A wooden keep has a timber-framed interior-facing window, too.
+          if(!s.isMastio||woodTowerStyle(s)==='watchtower')return;
+          const edge=visibleFacadeEdges(s).find(e=>isInteriorFacadeEdge(s,e));
+          if(!edge)return;
+          const z=Math.min(structureHeight(s)-.53,1.45),w=.40,h=.50;
+          drawArchitectureAssetOnEdge(edge,z,w,h,'gothicL1',0,lit,nf);
+          if(!lit)drawMastioWindowDrape(s,edge,z,w,h);
+          return;
+        }
+        const rows=towerWindowRows(s);
+        if(!rows.length)return;
+        if(s.shape==='round'){
+          for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
+          return;
+        }
+        const edges=visibleFacadeEdges(s),opacity=cutawayFacadeOpacity(s);
+        for(const row of rows){
+          const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);
+          if(!key)continue;
+          withStructureDetailOcclusion(s,row.z,()=>{
+            for(const edge of edges){
+              if(isInteriorFacadeEdge(s,edge)){
+                drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
+                if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
+              }else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+            }
+          });
+        }
+      });
+    }
   }
 }
 function drawDayNightOverlay(){
@@ -1142,7 +1208,6 @@ function draw(){
   drawCutawayOccupants();
 
   drawTowerFlags();
-  drawCastleSelection();
   drawCastleSoldiers();
   markPhase('castle-units');
   blitSceneCache('castleFront');
@@ -1186,6 +1251,8 @@ function draw(){
   }
   drawDayNightOverlay();
   drawNightLights();
+  // High-contrast dynamic outline stays visible above roofs, windows and light.
+  drawCastleSelection();
   endPopulationFrame();
   markPhase('castle-facades-effects');
   if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
