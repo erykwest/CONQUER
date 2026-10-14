@@ -1149,8 +1149,10 @@ function makeForestCandidate(rnd,small=false){
   // allowing up to 300% of the previous maxima (small 21x15, large 45x36).
   // Forest centres can fall on the world border, producing partial woods.
   const p=randomEnvPoint(rnd,0);
-  const rx=small?4+rnd()*17:8+rnd()*37;
-  const ry=small?3+rnd()*12:6+rnd()*30;
+  // Bias toward ordinary woods so the occasional 3× massif does not
+  // routinely cut off the four radial village-to-border road routes.
+  const rx=small?4+Math.pow(rnd(),3)*17:8+Math.pow(rnd(),3)*37;
+  const ry=small?3+Math.pow(rnd(),3)*12:6+Math.pow(rnd(),3)*30;
   return makeOrganicForestBlob(rnd,p.x,p.y,rx,ry,small);
 }
 function addForestBlob(env,rnd,small=false,minGap=3,maxAttempts=120){
