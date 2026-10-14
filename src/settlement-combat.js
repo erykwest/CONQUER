@@ -841,19 +841,55 @@
     window.__conquerAnalytics?.measure('PATROL_ROUTE',ms,{mode,distance:+distance.toFixed(2),points:route?.length||0});
     return route;
   }
-  function issueMove(unit,p){
-    if(unit.defeated||unit.routing){status('Unit cannot receive orders');return}
-    if(unit.kind==='squad'){
-      const knight=combat.units.find(u=>u.kind==='knight'&&!u.defeated);
-      if(!knight||dist(unit,knight)>16||dist(p,knight)>16){
-        status('Out of knight command beacon (16U)');return;
-      }
-      if(dist(unit,p)>6){status('Sergeant order limit: maximum 6U per order');return}
+  function selectCombatUnits(units,additive=false,toggle=false){
+    if(!additive)selectedIds.clear();
+    for(const unit of units){
+      if(unit.defeated||unit.routing)continue;
+      if(toggle&&selectedIds.has(unit.id))selectedIds.delete(unit.id);
+      else selectedIds.add(unit.id);
+    }
+    selected=[...selectedIds].at(-1)||null;
+    syncButtons();
+  }
+  function clearCombatSelection(){
+    selectedIds.clear();selected=null;selectionDrag=null;syncButtons();
+  }
+  function commanderCoversOrder(unit,target){
+    const commander=combat.units.find(u=>u.kind==='knight'&&!u.defeated&&!u.routing);
+    return !!commander&&dist(unit,commander)<=16&&dist(target,commander)<=16;
+  }
+  function issueMove(unit,p,quiet=false){
+    if(unit.defeated||unit.routing){
+      if(!quiet)status('Unit cannot receive orders');
+      return false;
+    }
+    // The knight's 16U command beacon takes precedence over the subordinate
+    // sergeant's 6U personal order radius when both endpoints are covered.
+    if(unit.kind==='squad'&&!commanderCoversOrder(unit,p)){
+      if(!quiet)status('Out of knight command beacon (16U)');
+      return false;
     }
     const target=point(p.x,p.y),path=infantryRoute(unit,target,unit.id,unit.kind);
-    if(!path){status('No traversable route — cliff, terrain or obstruction blocks the order');return}
-    unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;changed();
-    status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
+    if(!path){
+      if(!quiet)status('No traversable route — cliff, terrain or obstruction blocks the order');
+      return false;
+    }
+    unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;
+    if(!quiet){changed();status((unit.kind==='squad'?'Pikemen':unit.kind==='patrol'?'Patrol':'Knight')+' marching via valid terrain')}
+    return true;
+  }
+  function issueGroupMove(target){
+    const units=combat.units.filter(u=>selectedIds.has(u.id)&&!u.defeated&&!u.routing);
+    if(!units.length)return;
+    const centroid={x:units.reduce((sum,u)=>sum+u.x,0)/units.length,y:units.reduce((sum,u)=>sum+u.y,0)/units.length};
+    let moved=0;
+    for(const unit of units){
+      // Preserve group spacing and issue each route independently to avoid
+      // stacking entire squads at one destination point.
+      if(issueMove(unit,point(target.x+unit.x-centroid.x,target.y+unit.y-centroid.y),true))moved++;
+    }
+    if(moved)changed();
+    status(moved===units.length?moved+' unit(s) marching':moved+'/'+units.length+' orders accepted (command radius / obstacles)');
   }
   function whiteBoundaryPoints(){
     const automatic=circles().filter(c=>c.mode==='allow');
