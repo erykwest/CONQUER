@@ -32,7 +32,8 @@
   backdrop.width=backdrop.height=ZONE_SIZE;
   const backdropCtx=backdrop.getContext('2d');
   let backdropSignature='';
-  let lastObserverSig='',lastAreaSig='',selected=null,painting=false,lastPaint=null;
+  let lastObserverSig='',lastAreaSig='',selected=null,selectionDrag=null,painting=false,lastPaint=null;
+  const selectedIds=new Set();
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
   const residentMotion=new Map(),residentLastPosition=new Map();
   let transitLastFrame=0;
@@ -72,7 +73,7 @@
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     visible.fill(0);paintFogBitmap();
-    selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
+    selected=null;selectedIds.clear();selectionDrag=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
     whiteBoundaryCache=[];whiteBoundaryLoopCache=[];whiteBoundarySignature='';whiteBoundaryRevision=0;
@@ -638,13 +639,12 @@
     renderTacticalBackdrop(d);
     if(!activeWell())return;
     const king=combat.units.find(u=>u.kind==='knight');
-    if(king&&selected===king.id){
-      g.strokeStyle='rgba(255,211,116,.78)';g.lineWidth=1.5;
-      g.setLineDash([6,5]);drawMapCircle({...king,r:16,groundZ:terrainElevation(king)},true);g.setLineDash([]);
-    }
-    if(selected&&selected!==king?.id){
-      const u=combat.units.find(u=>u.id===selected);
-      if(u){g.strokeStyle='#e3fcac';g.lineWidth=1.3;g.setLineDash([4,4]);drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)},true);g.setLineDash([]);}
+    for(const u of combat.units){
+      if(!selectedIds.has(u.id)||u.defeated)continue;
+      g.strokeStyle=u.kind==='knight'?'rgba(255,211,116,.86)':'#e3fcac';
+      g.lineWidth=1.5;g.setLineDash([5,4]);
+      drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)},true);
+      g.setLineDash([]);
     }
     const characters=[];
     for(const u of combat.units){
@@ -696,8 +696,10 @@
     // The Builder layout may be replaced by another UI shell. Missing optional
     // HUD controls must never interrupt render/simulation or the combat canvas.
     const selectionLabel=document.getElementById('combatSelection');
-    if(selectionLabel)selectionLabel.textContent=selected?
-      ((focused?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
+    if(selectionLabel)selectionLabel.textContent=selectedIds.size>1
+      ?selectedIds.size+' units selected · click destination / Shift to add'
+      :selected?((focused?.kind==='squad'?'Pikemen ×5':focused?.kind==='patrol'?'Patrol':'Knight')+' selected · click destination')
+      :'Select units · drag a box, Shift+click to add';
     const panel=document.getElementById('combatStats');
     if(panel){
       const hp=x=>x?.stats?Math.max(0,Math.round(x.stats.hp))+'/'+x.stats.maxHp:'—';
@@ -706,6 +708,12 @@
       panel.textContent='Units '+allies.length+' / Hostiles '+hostiles.length+
         (focused?' · HP '+hp(focused)+' · B '+brain(focused):'')+
         (combat.enemy.length?' · Enemy HP '+hp(combat.enemy[0]):'');
+    }
+    if(selectionDrag){
+      const {start,end}=selectionDrag;
+      g.save();g.fillStyle='rgba(198,232,155,.13)';g.strokeStyle='#dcf6ab';g.lineWidth=1.2;
+      g.setLineDash([5,3]);g.fillRect(start.x,start.y,end.x-start.x,end.y-start.y);
+      g.strokeRect(start.x,start.y,end.x-start.x,end.y-start.y);g.restore();
     }
     const overlayMs=performance.now()-overlayStart;
     if(window.__conquerPerf)window.__conquerPerf.combatOverlayMs=overlayMs;
@@ -923,6 +931,7 @@
     if(index<0){status('No White Zone patrol to remove');return}
     const [removed]=combat.units.splice(index,1);
     if(selected===removed.id)selected=null;
+    selectedIds.delete(removed.id);
     spacePatrols();
     visibilityDirty=true;changed();status('White Zone patrol removed');draw();
   }
