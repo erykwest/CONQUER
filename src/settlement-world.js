@@ -1157,7 +1157,13 @@ function organicForestRibbon(profile,rnd){
       const a=(t*2-1)*Math.PI*.73;
       centers.push({x:.68*Math.cos(a)-.19,y:.77*Math.sin(a)});
     }else if(profile==='L'){
-      centers.push({x:-.64+1.28*Math.pow(t,2.9),y:-.72+1.3*Math.sin(Math.min(t*1.72,1)*Math.PI/2)});
+      // Vertical leg -> quarter-circle elbow -> horizontal leg. The bend
+      // radius exceeds the forest belt half-width, avoiding self-overlaps.
+      if(t<=.38)centers.push({x:-.62,y:-.70+.90*t/.38});
+      else if(t<.62){
+        const a=Math.PI-(t-.38)/.24*Math.PI/2;
+        centers.push({x:-.27+.35*Math.cos(a),y:.20+.35*Math.sin(a)});
+      }else centers.push({x:-.27+.97*(t-.62)/.38,y:.55});
     }else{
       centers.push({x:.50*Math.sin(t*Math.PI*2),y:-.76+1.52*t});
     }
