@@ -1149,7 +1149,7 @@ function forestBlobCanPlace(candidate,env,minGap=3){
 function organicForestRibbon(profile,rnd){
   // Single rounded outline following a smooth C/L/S centreline. The tube is
   // a *single simple polygon*, preserving pathfinding and lot exclusion.
-  const width=(profile==='C'?.225:profile==='L'?.205:.195)*(0.91+rnd()*.18);
+  const width=(profile==='C'?.225:profile==='L'?.205:.125)*(0.91+rnd()*.18);
   const centers=[],n=32;
   for(let i=0;i<=n;i++){
     const t=i/n;
@@ -1165,7 +1165,7 @@ function organicForestRibbon(profile,rnd){
         centers.push({x:-.27+.35*Math.cos(a),y:.20+.35*Math.sin(a)});
       }else centers.push({x:-.27+.97*(t-.62)/.38,y:.55});
     }else{
-      centers.push({x:.50*Math.sin(t*Math.PI*2),y:-.76+1.52*t});
+      centers.push({x:.31*Math.sin(t*Math.PI*2),y:-.76+1.52*t});
     }
   }
   const normals=centers.map((p,i)=>{
