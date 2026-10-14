@@ -380,7 +380,7 @@ function* buildArterialRepairWork(routeId,displaced=[]){
       // Forest belts and hill contours can require detours beyond the local
       // 12U corridor. Widen only after a failed bounded search; each search
       // still yields cooperatively to keep village founding responsive.
-      for(const [pad,maxGuard] of [[12,60000],[24,85000],[42,130000]]){
+      for(const [pad,maxGuard] of [[12,60000],[26,90000],[48,145000],[82,230000]]){
         leg=yield* findRoadRepairWork(a,b,width,pad,ignore,maxGuard,true);
         if(leg?.length>1)break;
         window.__conquerAnalytics?.event('ARTERIAL_DETOUR_RETRY',{
