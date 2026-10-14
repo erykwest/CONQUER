@@ -1626,7 +1626,8 @@ function spawnField(step,workerHouse=null){
       f.openedByL2=workerHouse.id;
     }
     State.structures.push(f);
-    ensureSettlementRoadAccess(f);
+    // L2-cleared fields are immediately active: their access track must be too.
+    ensureSettlementRoadAccess(f,!!workerHouse);
     invalidateUrbanGeometry();
     window.__conquerAnalytics?.event('FIELD_SPAWN_RESULT',{
       step,source,fieldId:f.id,workerHouseId:workerHouse?.id||null,
