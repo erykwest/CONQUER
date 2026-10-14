@@ -143,19 +143,31 @@ function drawDynamicShadows(){
   for(const s of casters)drawStructureShadow(s,sun);
 }
 let fieldWorkAssignmentCache={key:null,map:new Map()};
-function fieldWorkAssignments(houses,fields){
-  // Workforce is allocated by class, never by an individual economic agent.
-  // Each L1 house supplies one available farm worker; workers claimed by L1
-  // industries must not simultaneously animate/work on an agricultural field.
+// A house represents one available agricultural worker in its social cohort.
+// Non-farm industries have priority; in particular, an employed L2 miner or
+// quarry worker cannot also create or work a field.
+function fieldAvailableHouses(houses){
   const economy=window.ConquerEconomy,allocation=economy?.staffing?.()||{};
-  const reserved=State.structures.reduce((total,s)=>total+(
-    s.type!=='field'&&economy?.KIND?.[s.type]?.classId===1?(allocation[s.id]||0):0),0);
+  const reserved={1:0,2:0};
+  for(const s of State.structures){
+    const tier=economy?.KIND?.[s.type]?.classId;
+    if(s.type!=='field'&&(tier===1||tier===2))reserved[tier]+=allocation[s.id]||0;
+  }
+  const sorted=tier=>houses.filter(h=>houseLevel(h)===tier)
+    .sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved[tier]);
+  return {L1:sorted(1),L2:sorted(2),reserved};
+}
+function fieldWorkAssignments(houses,fields){
+  // L1 workers occupy available field slots first. Idle L2 workers can farm
+  // remaining slots rather than remaining locked to artisan routines.
+  const workforce=fieldAvailableHouses(houses);
+  const reserved=workforce.reserved;
   const key=houses.map(h=>[h.id,h.x,h.y,houseLevel(h)].join(':')).sort().join(',')+'|'+fields.map(f=>{
     const crop=fieldCrop(f),layout=fieldLayout(f);
     return f.id+':'+layout.poly.map(p=>p.x+','+p.y).join(';')+':'+crop.phase+':'+
       (crop.ploughed?'P':'')+(crop.harvested?'H':'')+':'+fieldSeasonPhase(calendarDateFromDay().month)+
       ':'+layout.cells.map(c=>fieldSlotDone(f,c)?1:0).join('');
-  }).sort().join('|')+'|workers-reserved:'+reserved;
+  }).sort().join('|')+'|workers-reserved:'+reserved[1]+':'+reserved[2];
   if(fieldWorkAssignmentCache.key===key)return fieldWorkAssignmentCache.map;
 
   const slots=[];
@@ -164,7 +176,7 @@ function fieldWorkAssignments(houses,fields){
     if(!fieldCropReady(field))continue;
     for(const cell of fieldGrid(field).cells)if(!fieldSlotDone(field,cell))slots.push({field,cell,used:false});
   }
-  const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved);
+  const assignments=new Map(),ordered=[...workforce.L1,...workforce.L2];
   for(const house of ordered){
     const door=houseDoorInfo(house).outside;let best=null,bestScore=Infinity;
     for(const slot of slots){
@@ -966,8 +978,10 @@ function residentClassPosition(house,resident,day,assignment){
   const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
-  // Farm work follows calendar days, so visible workers match daily crop progress.
-  if(level===1)return assignment?peasantPosition(house,assignment,State.clock.day):null;
+  // Both L1 and unoccupied L2 workers use the real serpentine field route.
+  if(resident.sex==='male'&&assignment&&(level===1||level===2))
+    return peasantPosition(house,assignment,State.clock.day);
+  if(level===1)return null;
   if(level===2)return artisanPosition(house,shiftedDay);
   if(level===3)return merchantPosition(house,shiftedDay);
   return elitePosition(house,shiftedDay);
@@ -1075,8 +1089,8 @@ function drawPeasants(){
   if(!houses.length)return;
   const day=peasantVisualDay(),dots=[];
   let representedPopulation=0,activeAgents=0;
-  const peasantHouses=houses.filter(h=>houseLevel(h)===1);
-  const assignments=fieldWorkAssignments(peasantHouses,fields);
+  const farmHouses=houses.filter(h=>houseLevel(h)===1||houseLevel(h)===2);
+  const assignments=fieldWorkAssignments(farmHouses,fields);
 
   const residentStride=State.view.scale<.30?3:State.view.scale<.55?2:1;
   for(const house of houses){
@@ -1086,7 +1100,7 @@ function drawPeasants(){
       // Alarm destinations are computed even for residents not selected by
       // distant-camera LOD, so mobilization does not depend on zoom level.
       let p=residentClassPosition(house,resident,day,assignment);
-      if(p&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)===1))p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
+      if(p&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
       // Footsteps follow every resident's actual position, independent of LOD.
