@@ -1571,8 +1571,16 @@ function addManualMainRoad(a,b){
   };
   const verdict=window.ConquerPlacement?.check(road);
   if(verdict&&!verdict.ok){status('Road blocked: '+verdict.reason);return false}
-  State.structures.push(road);
-  autoPrimaryRoadBridges(road);
+  const points=perpendicularRiverRoadPath(road.a,road.b);
+  let previous=null;
+  for(let i=0;i<points.length-1;i++){
+    const section=i===0?road:{...road,id:uid()};
+    section.a={...points[i]};section.b={...points[i+1]};
+    section.routeSeq=i;section.parentRoadId=previous?.id||null;
+    section.length=dist(section.a,section.b);
+    State.structures.push(section);autoPrimaryRoadBridges(section);
+    previous=section;
+  }
   invalidateSceneCache('landscape');
   invalidateNavigation(false);
   markDirty(false,['ground'],true);
