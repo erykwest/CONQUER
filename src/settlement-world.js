@@ -1230,6 +1230,16 @@ function environmentContains(f,p,pad=0){
   if(['stream','river'].includes(f.type)){for(let i=0;i<f.points.length-1;i++)if(pointSegmentDistance(p,f.points[i],f.points[i+1])<=f.width/2+pad)return true}
   return false;
 }
+// Primary roads are allowed to carve woods and cross natural waterways.
+function isPrimaryRoad(s){return s?.type==='road'&&(!!s.manualMain||s.roadClass==='arterial'||s.roadClass==='arterial-manual'||!!s.routeId&&String(s.routeId).startsWith('arterial-'))}
+function primaryRoadCarvesPoint(p,extra=.62){
+  return State.structures.some(s=>isPrimaryRoad(s)&&
+    pointSegmentDistance(p,s.a,s.b)<=(Number(s.width)||.62)/2+extra);
+}
+function primaryRoadTerrainBlocked(p){
+  if(terrainSlopeKind(p))return true;
+  return State.environment.some(f=>['sea','mountain','pond','hill','rough'].includes(f.type)&&environmentContains(f,p,.45));
+}
 function environmentBlocksPoint(p,mode='settlement'){
   const slope=terrainSlopeKind(p);
   // Main roads, arterial connections and road repairs must avoid all relief
@@ -1237,14 +1247,15 @@ function environmentBlocksPoint(p,mode='settlement'){
   if(mode==='road'&&slope)return true;
   if(mode==='settlement'&&slope)return true;
   for(const f of State.environment){
-    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45))return true;
+    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45)
+      &&!(f.type==='forest'&&primaryRoadCarvesPoint(p)))return true;
     if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
   }
   return false;
 }
 function roadEnvironmentConflict(road){
   const len=dist(road.a,road.b),steps=Math.max(6,Math.ceil(len/.35));
-  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if(environmentBlocksPoint(p,'road'))return true}
+  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if((isPrimaryRoad(road)?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return true}
   return false;
 }
 function edgeSample(edge,t){
