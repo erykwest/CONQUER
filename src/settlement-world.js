@@ -1572,7 +1572,7 @@ function spawnField(step,workerHouse=null){
   const addCandidate=(p,score)=>{
     if(!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow)return;
     const road=nearestRoadInfo(p,roads);
-    if(!road)return;
+    if(!road||(workerHouse&&road.d>4.5))return;
     candidates.push({p,road,score:score+.18*Math.exp(-road.d/4)+rnd()*.20});
   };
   // Explore rural plots close to the actual buildable/yellow zone.
@@ -1613,8 +1613,11 @@ function spawnField(step,workerHouse=null){
   let invalidQuad=0,blocked=0;
   for(const c of candidates.slice(0,workerHouse?60:36)){
     const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
-    f.points=fieldVoronoiQuad(f,rnd);
-    if(!f.points){invalidQuad++;continue}
+    // A newly opened L2 plot is a one-worker farm (area/4 = one slot).
+    // Keep its four-corner Voronoi shape, but bound it to a compact cell.
+    const workerLimit=workerHouse?rectWorldPoints(f.x,f.y,3.6,3.6,f.angle):null;
+    f.points=fieldVoronoiQuad(f,rnd,workerLimit);
+    if(!f.points||workerHouse&&fieldLayout(f).cells.length!==1){invalidQuad++;continue}
     f.fieldVersion=1;
     f.w=2*Math.max(...f.points.map(p=>Math.abs(p.x-f.x)));
     f.h=2*Math.max(...f.points.map(p=>Math.abs(p.y-f.y)));
