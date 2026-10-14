@@ -1368,22 +1368,29 @@ function validBorderEntrySelection(entries){
 }
 function ensureBorderEntrySelection(){
   if(validBorderEntrySelection(State.village.borderEntries))return State.village.borderEntries;
-
   const all=borderEntryCandidates(),rnd=seedRand((State.seed^0x6d2b79f5)>>>0),selected=[];
+  const well=State.structures.find(s=>s.type==='well')||{x:WORLD/2,y:WORLD/2};
+  const corridorPenalty=entry=>{
+    const length=dist(well,entry),samples=Math.max(8,Math.ceil(length/2.2));
+    let blocked=0;
+    for(let i=1;i<samples;i++){
+      const t=i/samples,p={x:well.x+(entry.x-well.x)*t,y:well.y+(entry.y-well.y)*t};
+      if(primaryRoadTerrainBlocked(p))blocked++;
+    }
+    return blocked/samples+length*.0002;
+  };
   for(const edge of BORDER_ENTRY_SIDES){
     const options=all.filter(e=>e.edge===edge);
     const start=Math.floor(rnd()*options.length);
     const ordered=options.map((_,i)=>options[(start+i)%options.length]);
-    // Select dry, forest-free portal endpoints; waterways may be crossed
-    // on their shortest perpendicular wooden bridge, not carved through.
-    let choice=ordered.find(e=>!primaryRoadTerrainBlocked(e));
-    if(!choice){
-      const base=ordered[0]?.t||.5;
-      choice=BORDER_ENTRY_BACKUP_FRACTIONS.slice().sort((a,b)=>Math.abs(a-base)-Math.abs(b-base))
-        .map((t,i)=>({id:'border-'+edge+'-alternate-'+i,edge,index:-1,t,...edgeSample(edge,t)}))
-        .find(e=>!primaryRoadTerrainBlocked(e));
-    }
-    selected.push({...choice||ordered[0]});
+    // Choose a usable shore/edge opening with the least obstructed approach;
+    // the routing engine still bends around every actual wooded polygon.
+    const candidates=[...ordered,...BORDER_ENTRY_BACKUP_FRACTIONS
+      .filter(t=>!BORDER_ENTRY_FRACTIONS.some(primary=>Math.abs(t-primary)<1e-6))
+      .map((t,i)=>({id:'border-'+edge+'-alternate-'+i,edge,index:-1,t,...edgeSample(edge,t)}))];
+    const choice=candidates.filter(e=>!primaryRoadTerrainBlocked(e))
+      .sort((a,b)=>corridorPenalty(a)-corridorPenalty(b))[0]||ordered[0];
+    selected.push({...choice});
   }
   State.village.borderEntries=selected;
   return selected;
