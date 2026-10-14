@@ -16,7 +16,7 @@ const intersect=(a,b,c,d)=>{
 };
 const river={type:'river',width:3.2,points:[{x:50,y:90},{x:50,y:110}]};
 const ctx=vm.createContext({State:{environment:[river]},WORLD:200,dist:distance,
- segmentIntersectionPoint:intersect,terrainSlopeKind:()=>null});
+ segmentIntersectionPoint:intersect,terrainSlopeKind:()=>null,environmentBlocksPoint:()=>false});
 const a=world.indexOf('function perpendicularRiverRoadPath(');
 const b=world.indexOf('function addManualMainRoad(',a);
 assert.ok(a>0&&b>a);
