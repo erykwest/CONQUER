@@ -16,7 +16,7 @@ setTimeout:()=>0,clearTimeout(){},requestAnimationFrame:()=>0,cancelAnimationFra
 navigator:{},fetch:()=>new Promise(()=>{}),atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64')};
 const context=vm.createContext(sandbox);
 function run(s){return vm.runInContext(s,context)}
-function moduleFile(n){return fs.readFileSync(__dirname+'/../src/settlement-'+n+'.js','utf8')}
+function moduleFile(n){const files=n==='castle'?['castle','landscape','castle-placement','castle-structures','buildings']:[n];return files.map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n')}
 for(const n of ['core','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
 const appSource=moduleFile('app');
