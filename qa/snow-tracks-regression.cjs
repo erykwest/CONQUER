@@ -6,7 +6,7 @@ const src=fs.readFileSync(__dirname+'/../src/settlement-snow-tracks.js','utf8');
 const marks=[];
 const brush={
  save(){},restore(){},translate(x,y){this.x=x;this.y=y},
- rotate(){},beginPath(){},ellipse(){},fill(){marks.push({x:this.x,y:this.y})}
+ rotate(){},beginPath(){},ellipse(x,y,rx,ry){this.rx=rx;this.ry=ry},fill(){marks.push({x:this.x,y:this.y,rx:this.rx,ry:this.ry})}
 };
 const State={season:'summer',clock:{day:0},environment:[],view:{scale:1}};
 const ctx=vm.createContext({State,WORLD:200,window:{},Math,
@@ -35,6 +35,8 @@ assert.ok(items.every(p=>p.day===.02),'tracks use simulation time');
 
 marks.length=0;snow.draw();
 assert.equal(marks.length,snow.count(),'snow footprint render draws stored positions');
+assert.ok(marks.every(mark=>mark.rx===.75&&mark.ry===.425),'footprint length and width are half their original screen sizes');
+assert.equal(snow.settings.keepDays,1,'snow tracks persist for exactly one simulation day');
 snow.observe('villager',{x:106,y:100},.04,'person');
 assert.ok(snow.count()>items.length,'movement extends the trail');
 
@@ -46,8 +48,8 @@ const count=snow.count();
 snow.observe('villager',{x:150,y:150},.07);
 assert.equal(snow.count(),count,'teleport must not draw a fake diagonal path');
 
-State.clock.day=3;snow.draw();
-assert.equal(snow.count(),0,'two-day-old marks disappear');
+State.clock.day=1.1;snow.draw();
+assert.equal(snow.count(),0,'footprints disappear after one simulation day');
 
 State.clock.day=4;snow.observe('villager',{x:120,y:120},4);
 snow.observe('villager',{x:123,y:120},4.01);
@@ -64,6 +66,10 @@ const html=fs.readFileSync(__dirname+'/../index.html','utf8');
 assert.match(pop,/ConquerSnowTracks\?\.observe\(resident\.id,p,State\.clock\.day,'person'\)/,'civilian movement must feed tracks');
 assert.match(combat,/ConquerSnowTracks\?\.observe\(u\.id,u,State\.clock\.day/,'military movement must feed tracks');
 assert.match(render,/ConquerSnowTracks\?\.draw\(\)/,'tracks are included in the render pipeline');
+assert.ok(render.indexOf('window.ConquerSnowTracks?.draw();')<render.indexOf("blitSceneCache('base');",render.indexOf('window.ConquerSnowTracks?.draw();')),'snow footprints render before buildings');
+const gpu=fs.readFileSync(__dirname+'/../src/settlement-webgpu.js','utf8');
+assert.match(gpu,/renderStaticLayers\(viewport=wrap\.getBoundingClientRect\(\),excludeBase=false\)/,'WebGPU compositor must support moving base after snow');
+assert.match(render,/renderStaticLayers\?\.\(r,snowUnderBuildings\)/,'WebGPU base is excluded when snow marks exist');
 assert.ok(html.indexOf('settlement-snow-tracks.js')>html.indexOf('settlement-population.js'));
 assert.ok(html.indexOf('settlement-snow-tracks.js')<html.indexOf('settlement-render.js'));
 console.log('PASS dynamic winter snow footprints, alternation, cavalry, expiry, seasons and load order');
