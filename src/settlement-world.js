@@ -1121,7 +1121,7 @@ function repairForestsAgainstSteepSlopes(){
   });
   if(removed){
     const rnd=seedRand((State.seed^biomeHash(State.biome)^0x2d6f5b1d)>>>0);
-    ensureForestCoverage(State.environment,rnd,.20);
+    ensureForestCoverage(State.environment,rnd,State.biome==='forest'?.18:.12);
   }
   State.relief.forestTerrainRuleVersion=FOREST_TERRAIN_RULE_VERSION;
   return removed>0||!already;
@@ -1221,10 +1221,11 @@ function makeForestCandidate(rnd,small=false){
   // allowing up to 300% of the previous maxima (small 21x15, large 45x36).
   // Forest centres can fall on the world border, producing partial woods.
   const p=randomEnvPoint(rnd,0);
-  // Bias toward ordinary woods so the occasional 3× massif does not
-  // routinely cut off the four radial village-to-border road routes.
-  const rx=small?4+Math.pow(rnd(),3)*17:8+Math.pow(rnd(),3)*37;
-  const ry=small?3+Math.pow(rnd(),3)*12:6+Math.pow(rnd(),3)*30;
+  // Prioritize broad woodlands over dozens of tiny dots. The minimum and
+  // the 300% maximum stay unchanged; x/y sizes are gently correlated.
+  const size=Math.pow(rnd(),small?.82:.62),aspect=.78+rnd()*.44;
+  const rx=small?4+17*size:8+37*size;
+  const ry=small?3+12*Math.min(1,size*aspect):6+30*Math.min(1,size*aspect);
   return makeOrganicForestBlob(rnd,p.x,p.y,rx,ry,small);
 }
 function addForestBlob(env,rnd,small=false,minGap=3,maxAttempts=120){
@@ -1255,6 +1256,8 @@ function ensureForestCoverage(env,rnd,target=.20){
   // tree line after each accepted forest (previously quadratic in patch count).
   const samples=72,total=samples*samples,occupied=new Uint8Array(total);
   let covered=0,guard=0,failures=0;
+  const maxForests=State.biome==='forest'?20:13;
+  let forestCount=env.filter(f=>f.type==='forest').length;
   function markForest(f){
     const b=environmentPolygonBounds(f.points);
     const x0=Math.max(0,Math.floor(b.minX/WORLD*samples)-1);
@@ -1272,9 +1275,11 @@ function ensureForestCoverage(env,rnd,target=.20){
     }
   }
   for(const f of env)if(f.type==='forest')markForest(f);
-  while(covered/total<target&&guard++<320&&failures<24){
+  // The cap is deliberate: no more proliferating tiny woodland patches just
+  // to meet a fixed coverage percentage in constrained geography.
+  while(covered/total<target&&forestCount<maxForests&&guard++<320&&failures<24){
     const forest=addForestBlob(env,rnd,false,3,80);
-    if(forest){markForest(forest);failures=0}else failures++;
+    if(forest){forestCount++;markForest(forest);failures=0}else failures++;
   }
   return covered/total;
 }
@@ -1299,14 +1304,16 @@ function generateEnvironment(){
   }else if(State.biome==='river'){
     env.push(makeEnvWater(rnd,'river'));addBlob('forest',1+Math.floor(rnd()*2),true);
   }else if(State.biome==='forest'){
-    env.push(makeEnvWater(rnd,'stream'));addBlob('forest',4+Math.floor(rnd()*3),true);if(rnd()<.65)addBlob('pond',1,true);
+    env.push(makeEnvWater(rnd,'stream'));addBlob('forest',1+Math.floor(rnd()*2),true);if(rnd()<.65)addBlob('pond',1,true);
   }else if(State.biome==='mountains'){
     env.push(makeEnvWater(rnd,'stream'));
   }else if(State.biome==='sea'){
     if(rnd()<.55)addBlob('forest',1,true);
   }
   for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
-  ensureForestCoverage(env,rnd,.20);
+  // Dense-forest biome retains substantial woods; other biomes have fewer,
+  // larger woodland masses rather than the same blanket coverage.
+  ensureForestCoverage(env,rnd,State.biome==='forest'?.18:.12);
   State.environment=env;
 }
 function pointInPolygon(point,pts){
