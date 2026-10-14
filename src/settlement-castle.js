@@ -613,7 +613,7 @@ function drawNobleRoomProps(slot){
 function drawCutawayInteriorProps(s,g){
   for(const slot of cutawayRoomSlots(s,g)){
     if(slot.role==='storage')drawStorageRoomProps(slot);
-    else if(slot.role==='barracks')drawBarracksRoomProps(slot);
+    else if(slot.role==='barracks'||slot.role==='quarters')drawBarracksRoomProps(slot);
     else if(slot.role==='nobleRoom')drawNobleRoomProps(slot);
   }
 }
@@ -2101,7 +2101,7 @@ function functionCapacity(s){
 function functionCapacityUnits(s){
   let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
-function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap);while(s.functions.length<cap)s.functions.push(null);return s}
+function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);while(s.functions.length<cap)s.functions.push(null);return s}
 // Variant contract:
  // tower/gate -> roofStyle
  // wall/built -> skin
@@ -3535,7 +3535,7 @@ function drawHouseTurret(s,turret,selected=false){
 
   // Small high window so the tower reads immediately as inhabited rather than defensive.
   const p=w2s(turret.center,breakZ+(turret.bodyH-breakZ)*.55);
-  const ww=3.5*State.view.scale,wh=5.6*State.view.scale;
+  const ww=1.75*State.view.scale,wh=2.8*State.view.scale;
   ctx.save();ctx.fillStyle='rgba(31,29,28,.86)';ctx.fillRect(p.x-ww/2,p.y-wh/2,ww,wh);
   ctx.strokeStyle='rgba(190,178,155,.42)';ctx.lineWidth=.7;ctx.strokeRect(p.x-ww/2,p.y-wh/2,ww,wh);ctx.restore();
 }

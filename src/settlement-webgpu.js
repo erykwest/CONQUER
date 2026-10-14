@@ -258,17 +258,20 @@ fn fsMain(in: VOut) -> @location(0) vec4f {
     out.set(q,offset);
   }
 
-  function renderStaticLayers(viewport=wrap.getBoundingClientRect()){
+  function renderStaticLayers(viewport=wrap.getBoundingClientRect(),excludeBase=false){
     if(!state.active||!state.ready||!state.device||!state.context)return false;
     if(!viewport.width||!viewport.height)return false;
 
     try{
       configureCanvas(viewport.width,viewport.height,devicePixelRatio||1);
+      // Snow footprints sit between ground and buildings. In that case the
+      // cached base bitmap is composited later on the 2D overlay instead.
+      const drawnLayers=excludeBase?STATIC_LAYERS.filter(name=>name!=='base'):STATIC_LAYERS;
       const records=[];
-      const vertices=new Float32Array(STATIC_LAYERS.length*16);
+      const vertices=new Float32Array(drawnLayers.length*16);
       let vertexOffset=0;
 
-      for(const name of STATIC_LAYERS){
+      for(const name of drawnLayers){
         const entry=sceneCache[name];
         if(!entry?.view||!entry.canvas?.width||!entry.canvas?.height)return false;
         let rec=state.layerGpu.get(name);

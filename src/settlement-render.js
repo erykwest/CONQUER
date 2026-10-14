@@ -260,7 +260,7 @@ function towerDoorOccluders(tower,spec,apexZ){
 }
 function drawTowerDoorSpec(tower,spec){
   if(!towerDoorVisible(tower,spec))return;
-  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54),fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),height=fullHeight/3,centerZ=spec.baseZ+height/2,tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact,half=width/2;
+  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54)*1.5,fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),height=fullHeight/3*1.5,centerZ=spec.baseZ+height/2,tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact,half=width/2;
   const edge={a:{x:c.x-tx*half,y:c.y-ty*half},b:{x:c.x+tx*half,y:c.y+ty*half}},apexZ=spec.baseZ+height,opacity=cutawayFacadeOpacity(tower);
   const drawDoor=()=>{
     if(drawArchitectureAssetOnEdge(edge,centerZ,width,height,'towerDoor',0,false,1,opacity))return;
@@ -283,7 +283,7 @@ function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
   const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;
   const base=w2s({x:mx,y:my},z),a=w2s(edge.a,z),b=w2s(edge.b,z);
   const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const ww=4.2*State.view.scale,wh=6.5*State.view.scale;
+  const ww=2.1*State.view.scale,wh=3.25*State.view.scale;
   const cx=base.x+ux*offsetPx,cy=base.y+uy*offsetPx;
   const corners=[
     {x:cx-ux*ww/2,y:cy-uy*ww/2-wh/2},
@@ -1173,17 +1173,19 @@ function draw(){
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
   ensureStaticSceneCaches();
-  const gpuStatic=window.ConquerWebGPU?.renderStaticLayers?.(r)===true;
+  // Keep moving footprints above the terrain but BELOW completed buildings.
+  // With WebGPU active, exclude the base layer from its compositing pass and
+  // blit that cached bitmap on the front canvas after the snow. Otherwise
+  // WebGPU's opaque static canvas would always bury the footprints entirely.
+  const snowUnderBuildings=State.season==='winter'&&(window.ConquerSnowTracks?.count?.()||0)>0;
+  const gpuStatic=window.ConquerWebGPU?.renderStaticLayers?.(r,snowUnderBuildings)===true;
   if(!gpuStatic){
     blitSceneCache('landscape');
     blitSceneCache('ground');
     blitSceneCache('shadow');
-    blitSceneCache('base');
   }
-
-  // Snow trails are dynamic world-space terrain marks. Draw before figures
-  // and outside the cached landscape so movement never rebuilds ground assets.
   window.ConquerSnowTracks?.draw();
+  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');
 
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.

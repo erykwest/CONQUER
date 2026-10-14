@@ -3,7 +3,7 @@
 (function(){
   const CAPACITY=Object.freeze({granary:{food:240},storage:{materials:240},armory:{equipment:80},
     stables:{horses:12},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
-    nobleRoom:{knights:2},quarters:{soldiers:8}});
+    nobleRoom:{knights:2},quarters:{soldiers:16}});
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
     spear:{stone:0,wood:0,door:0},
