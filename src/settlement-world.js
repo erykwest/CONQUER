@@ -1555,12 +1555,19 @@ function spawnHouse(step){
   },'warn');
   return false;
 }
-function spawnField(step){
+function spawnField(step,workerHouse=null){
   const well=State.structures.find(s=>s.id===State.village.wellId),roads=primaryRoadList(true);
-  if(!well||!roads.length)return false;
-  const houses=autoList('house');if(houses.length<5)return false;
-  const rnd=growthRng(step,307),radius=currentGrowthRadius()+4;
-  const validationContext={occupants:null};
+  const houses=State.structures.filter(s=>s.type==='house'&&!underConstruction(s));
+  const reason=!well?'no_well':!roads.length?'no_main_roads':
+    !workerHouse&&autoList('house').length<5?'under_five_houses':null;
+  const source=workerHouse?'idle_L2':'village_growth';
+  const fail=(reason,detail={})=>{
+    window.__conquerAnalytics?.event('FIELD_SPAWN_FAILURE',{step,source,reason,...detail},'warn');
+    return false;
+  };
+  if(reason)return fail(reason,{houses:houses.length,roads:roads.length});
+  const rnd=growthRng(step,307+(workerHouse?peasantHash(workerHouse.id)%100000:0));
+  const radius=currentGrowthRadius()+4,validationContext={occupants:null};
   const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(22,radius+4),candidates=[];
   const addCandidate=(p,score)=>{
     if(!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow)return;
@@ -1568,18 +1575,18 @@ function spawnField(step){
     if(!road)return;
     candidates.push({p,road,score:score+.18*Math.exp(-road.d/4)+rnd()*.20});
   };
-  // Sample productive land around the settlement, not only an outer ring
-  // that can lie entirely outside the current yellow zoning brush.
+  // Explore rural plots close to the actual buildable/yellow zone.
   for(let i=0;i<110;i++){
     const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2;
     const p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
     const ring=Math.exp(-Math.pow(d-(inner+outer)*.5,2)/(2*4.2*4.2));
     addCandidate(p,ring);
   }
-  // Use road-facing farmland sites as a second source. This is especially
-  // useful in settlements where the yellow zone is narrow or asymmetric.
+  // Main roads extend far beyond the village, so prioritise local segments.
+  const localRoads=roads.filter(r=>pointSegmentDistance(well,r.a,r.b)<=radius+6);
+  const sampleRoads=localRoads.length?localRoads:roads;
   for(let i=0;i<100;i++){
-    const road=roads[Math.floor(rnd()*roads.length)];
+    const road=sampleRoads[Math.floor(rnd()*sampleRoads.length)];
     const t=.12+rnd()*.76,a=roadAngle(road),side=rnd()<.5?-1:1;
     const offset=3+rnd()*4.5;
     const p={
@@ -1589,27 +1596,47 @@ function spawnField(step){
     if(dist(p,well)>Math.max(12,radius+6))continue;
     addCandidate(p,.8);
   }
-  // Rural plots can also grow beside existing households without forcing
-  // all fields to compete for the limited peripheral annulus.
   for(let i=0;i<70;i++){
-    const h=houses[Math.floor(rnd()*houses.length)],a=rnd()*Math.PI*2,d=3+rnd()*4;
+    const h=houses[Math.floor(rnd()*houses.length)];
+    if(!h)break;
+    const a=rnd()*Math.PI*2,d=3+rnd()*4;
     addCandidate({x:h.x+Math.cos(a)*d,y:h.y+Math.sin(a)*d},.75);
   }
+  // Idle L2 artisans first look for a nearby piece of land they can walk to.
+  if(workerHouse)for(let i=0;i<110;i++){
+    const a=rnd()*Math.PI*2,d=2.8+rnd()*6.5;
+    const p={x:workerHouse.x+Math.cos(a)*d,y:workerHouse.y+Math.sin(a)*d};
+    if(dist(p,well)>Math.max(13,radius+5))continue;
+    addCandidate(p,1.12);
+  }
   candidates.sort((a,b)=>b.score-a.score);
-  for(const c of candidates.slice(0,36)){
+  let invalidQuad=0,blocked=0;
+  for(const c of candidates.slice(0,workerHouse?60:36)){
     const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
-    f.points=fieldVoronoiQuad(f,rnd);if(!f.points)continue;
+    f.points=fieldVoronoiQuad(f,rnd);
+    if(!f.points){invalidQuad++;continue}
     f.fieldVersion=1;
     f.w=2*Math.max(...f.points.map(p=>Math.abs(p.x-f.x)));
     f.h=2*Math.max(...f.points.map(p=>Math.abs(p.y-f.y)));
-    if(fieldAllowed(f,validationContext)){
-      State.structures.push(f);
-      ensureSettlementRoadAccess(f);
-      invalidateUrbanGeometry();
-      return true;
+    if(!fieldAllowed(f,validationContext)){blocked++;continue}
+    if(workerHouse){
+      // Opening farmland IS the ploughing job, not a separate building project.
+      // The free L2 worker may start aratura on the very next simulation tick.
+      delete f.construction;
+      f.openedByL2=workerHouse.id;
     }
+    State.structures.push(f);
+    ensureSettlementRoadAccess(f);
+    invalidateUrbanGeometry();
+    window.__conquerAnalytics?.event('FIELD_SPAWN_RESULT',{
+      step,source,fieldId:f.id,workerHouseId:workerHouse?.id||null,
+      candidates:candidates.length,invalidQuad,blocked,area:+Math.abs(urbanArea(f.points)).toFixed(2)
+    });
+    return true;
   }
-  return false;
+  return fail(candidates.length?'no_valid_parcel':'no_zoned_candidates',{
+    candidates:candidates.length,invalidQuad,blocked,nearbyRoads:sampleRoads.length,houses:houses.length
+  });
 }
 function processVillageGrowth(){
   if(!State.village.founded)return 0;
