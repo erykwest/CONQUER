@@ -2094,7 +2094,7 @@ function functionSlotUnits(s,index=0){return functionSlotSize(s,index)==='large'
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return structureLevel(s);
-  if(s.type==='tower')return towerTier(s)>=2?structureLevel(s):0;
+  if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
   if(s.type==='built')return Number(s.length)>=2?structureLevel(s):0;
   return 0;
 }
