@@ -1129,6 +1129,19 @@ function repairForestsAgainstSteepSlopes(){
 
 function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate))return false;
+  // Keep both riverbanks clear and never cover the river centerline.
+  for(const water of env.filter(f=>f.type==='river'||f.type==='stream')){
+    const clearance=(water.width||1.25)/2+2;
+    for(let i=1;i<water.points.length;i++){
+      const a=water.points[i-1],b=water.points[i];
+      for(const p of candidate.points)if(pointSegmentDistance(p,a,b)<clearance)return false;
+      const steps=Math.max(1,Math.ceil(dist(a,b)));
+      for(let j=0;j<=steps;j++){
+        const p={x:a.x+(b.x-a.x)*j/steps,y:a.y+(b.y-a.y)*j/steps};
+        if(pointInPolygon(p,candidate.points))return false;
+      }
+    }
+  }
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
 function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
