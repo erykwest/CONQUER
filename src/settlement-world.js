@@ -159,8 +159,10 @@ function roadRepairEntryBlocksPoint(entry,p,clearance,width){
   }
   return false;
 }
-function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null){
-  if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||environmentBlocksPoint(p,'road'))return false;
+function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null,allowPrimaryNature=false){
+  if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||
+    (allowPrimaryNature||primaryRoadCarvesPoint(p)
+      ?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return false;
   const clearance=width/2+.16;
 
   if(spatialIndex){
@@ -179,20 +181,20 @@ function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null){
   return true;
 }
 function finishRoadWork(work){let step;do{step=work.next()}while(!step.done);return step.value}
-function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[],spatialIndex=null){
-  return finishRoadWork(roadRepairSegmentWork(a,b,width,ignoreIds,spatialIndex));
+function roadRepairSegmentClear(a,b,width=.30,ignoreIds=[],spatialIndex=null,allowPrimaryNature=false){
+  return finishRoadWork(roadRepairSegmentWork(a,b,width,ignoreIds,spatialIndex,allowPrimaryNature));
 }
-function* roadRepairSegmentWork(a,b,width=.30,ignoreIds=[],spatialIndex=null){
+function* roadRepairSegmentWork(a,b,width=.30,ignoreIds=[],spatialIndex=null,allowPrimaryNature=false){
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.24));
   for(let i=0;i<=steps;i++){
     if(i%16===0)yield;
     const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
-    if(!roadRepairPointClear(p,width,ignoreIds,spatialIndex))return false;
+    if(!roadRepairPointClear(p,width,ignoreIds,spatialIndex,allowPrimaryNature))return false;
   }
   return true;
 }
 function findRoadRepairPath(...args){return finishRoadWork(findRoadRepairWork(...args))}
-function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24000){
+function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24000,allowPrimaryNature=false){
   const analyticsT0=performance.now();
   const spatialIndex=buildRoadRepairSpatialIndex(ignoreIds);
   const pointMemo=new Map(),segmentMemo=new Map();
@@ -201,7 +203,7 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
   const pointClear=p=>{
     const k=pointKey(p);
     if(pointMemo.has(k)){pointHits++;return pointMemo.get(k)}
-    const ok=roadRepairPointClear(p,width,ignoreIds,spatialIndex);
+    const ok=roadRepairPointClear(p,width,ignoreIds,spatialIndex,allowPrimaryNature);
     pointMemo.set(k,ok);return ok;
   };
   const segmentClear=(a,b)=>{
@@ -279,13 +281,13 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
   return rev;
 }
 function simplifyRoadRepairPath(...args){return finishRoadWork(simplifyRoadRepairWork(...args))}
-function* simplifyRoadRepairWork(points,width=.30,ignoreIds=[]){
+function* simplifyRoadRepairWork(points,width=.30,ignoreIds=[],allowPrimaryNature=false){
   if(!points||points.length<=2)return points||[];
   const out=[points[0]];let i=0;
   while(i<points.length-1){
     let chosen=i+1;
     for(let j=points.length-1;j>i+1;j--){
-      if(yield* roadRepairSegmentWork(points[i],points[j],width,ignoreIds)){chosen=j;break}
+      if(yield* roadRepairSegmentWork(points[i],points[j],width,ignoreIds,null,allowPrimaryNature)){chosen=j;break}
     }
     out.push(points[chosen]);i=chosen;
   }
@@ -353,7 +355,7 @@ function arterialSafeWaypoints(routeId,displaced=[]){
   for(const r of source){
     const p={...r.b};
     if(dist(p,pts.at(-1))<.45)continue;
-    if(roadRepairPointClear(p,width,ignore))pts.push(p);
+    if(roadRepairPointClear(p,width,ignore,null,true))pts.push(p);
   }
 
   if(plan.connected||plan.planningToBorder||!source.length){
@@ -373,13 +375,13 @@ function* buildArterialRepairWork(routeId,displaced=[]){
   const width=.62,ignore=[well.id],full=[waypoints[0]];
   for(let i=0;i<waypoints.length-1;i++){
     const a=full.at(-1),b=waypoints[i+1];let leg=null;
-    if(yield* roadRepairSegmentWork(a,b,width,ignore))leg=[a,b];
+    if(yield* roadRepairSegmentWork(a,b,width,ignore,null,true))leg=[a,b];
     else{
       // Forest belts and hill contours can require detours beyond the local
       // 12U corridor. Widen only after a failed bounded search; each search
       // still yields cooperatively to keep village founding responsive.
       for(const [pad,maxGuard] of [[12,60000],[24,85000],[42,130000]]){
-        leg=yield* findRoadRepairWork(a,b,width,pad,ignore,maxGuard);
+        leg=yield* findRoadRepairWork(a,b,width,pad,ignore,maxGuard,true);
         if(leg?.length>1)break;
         window.__conquerAnalytics?.event('ARTERIAL_DETOUR_RETRY',{
           routeId,pad,from:a,to:b
@@ -391,7 +393,7 @@ function* buildArterialRepairWork(routeId,displaced=[]){
       const p=leg[j];if(dist(full.at(-1),p)>.08)full.push(p);
     }
   }
-  return yield* simplifyRoadRepairWork(full,width,ignore);
+  return yield* simplifyRoadRepairWork(full,width,ignore,true);
 }
 function subdivideRoadPolyline(points,maxLen=5.0){
   if(!points||points.length<2)return points||[];
@@ -1125,17 +1127,6 @@ function repairForestsAgainstSteepSlopes(){
 
 function forestBlobCanPlace(candidate,env,minGap=3){
   if(forestIntersectsSteepRelief(candidate))return false;
-  // The four starting border roads must be able to escape the village.
-  // Reserve two narrow north-south/east-west clearings; large woodlands
-  // remain possible in the quadrants without isolating the central hub.
-  const margin=3,c=WORLD/2;
-  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-  for(const p of candidate.points){
-    minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
-    minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);
-  }
-  if(minX<=c+margin&&maxX>=c-margin)return false;
-  if(minY<=c+margin&&maxY>=c-margin)return false;
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
 function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
