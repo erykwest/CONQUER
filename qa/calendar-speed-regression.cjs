@@ -16,10 +16,11 @@ assert.ok(statement,'the runtime must advance the calendar from shared rate and 
 const advance=Function('State','dt','BASE_DAYS_PER_SECOND',statement[0]);
 assert.match(app,/const dt=Math\.min\(\.25,rawDtMs\/1000\)/,'frame delta remains bounded');
 
-for(const [speed,seconds] of [[1,48],[3,16],[10,4.8]]){
+for(const [speed,seconds] of [[1,48],[3,16],[10,4.8],[100,0.48]]){
   const State={clock:{day:24.5,speed}};
-  const intervals=Math.round(seconds/.1);
-  for(let i=0;i<intervals;i++)advance(State,.1,rate);
+  const intervals=Math.max(1,Math.ceil(seconds/.1));
+  const dt=seconds/intervals;
+  for(let i=0;i<intervals;i++)advance(State,dt,rate);
   assert.ok(Math.abs(State.clock.day-25.5)<1e-10,
     speed+'x must advance exactly one game day in '+seconds+' seconds');
   console.log('PASS '+speed+'x: '+seconds+' real seconds per simulated day');
@@ -32,7 +33,7 @@ assert.match(app,/window\.ConquerSiege\?\.tick\(previousDay,State\.clock\.day\)/
 assert.match(app,/tickFields\(State\.clock\.day\)/);
 assert.match(app,/window\.ConquerEconomy\?\.tick\(previousDay,State\.clock\.day\)/);
 assert.match(app,/syncSeasonToCalendar\(\)/);
-for(const [speed,seconds] of [[1,48],[3,16],[10,4.8]]){
+for(const [speed,seconds] of [[1,48],[3,16],[10,4.8],[100,0.48]]){
   assert.ok(html.includes('data-speed="'+speed+'" title="'+speed+'× · '+seconds+' seconds per day"'),
     'visible control must document '+speed+'x actual day duration');
 }
