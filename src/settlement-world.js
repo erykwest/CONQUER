@@ -1642,6 +1642,18 @@ function perpendicularRiverRoadPath(a,b){
   const far={x:best.cross.x+nx*half,y:best.cross.y+ny*half};
   if(![near,far].every(p=>p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD&&!terrainSlopeKind(p)))return[a,b];
   if(dist(a,near)<.10||dist(far,b)<.10)return[a,b];
+  // A perpendicular bridge is only valid when BOTH new approach bends also
+  // avoid forest, hills and steep relief. Do not introduce forbidden slope
+  // shortcuts into an otherwise valid pathfinding result.
+  const clear=(u,v)=>{
+    const steps=Math.max(2,Math.ceil(dist(u,v)/.20));
+    for(let i=0;i<=steps;i++){
+      const t=i/steps,p={x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t};
+      if(environmentBlocksPoint(p,'road'))return false;
+    }
+    return true;
+  };
+  if(!clear(a,near)||!clear(near,far)||!clear(far,b))return[a,b];
   return[a,near,far,b];
 }
 function alignedRiverRoadPolyline(points){
