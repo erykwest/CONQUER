@@ -425,7 +425,8 @@ function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
   if(!plan||!path||path.length<2)return 0;
 
   // Only replace the route after a complete valid path has been found.
-  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId));
+  const oldRoadIds=new Set(routeRoads(routeId).map(r=>r.id));
+  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor));
   const pts=subdivideRoadPolyline(path,ROAD_RULES.arterialSegmentMax);
   let added=0,parent=null;
   for(let i=0;i<pts.length-1;i++){
@@ -436,7 +437,7 @@ function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
       reactive:true,arterialRebuilt:true
     };
     // Route repair is topology restoration, not a new growth event: it becomes usable immediately.
-    State.structures.push(road);parent=road.id;added++;
+    State.structures.push(road);if(isPrimaryRoad(road))autoPrimaryRoadBridges(road);parent=road.id;added++;
   }
   refreshStaleHouseRoadRefs();
   invalidateNavigation();
@@ -578,7 +579,8 @@ function buildGateMainConnection(gate,force=false){
     return 0;
   }
 
-  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId));
+  const oldRoadIds=new Set(routeRoads(routeId).map(r=>r.id));
+  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor));
   let added=0,parent=trunk.road.id;
   for(let i=0;i<pts.length-1;i++){
     const a=pts[i],b=pts[i+1];if(dist(a,b)<.16)continue;
@@ -587,7 +589,7 @@ function buildGateMainConnection(gate,force=false){
       routeId,routeSeq:added,a:{...a},b:{...b},width,appeal:1,
       parentRoadId:parent,gateFor:gate.id,reactive:true
     };
-    State.structures.push(road);parent=road.id;added++;
+    State.structures.push(road);if(isPrimaryRoad(road))autoPrimaryRoadBridges(road);parent=road.id;added++;
   }
   if(!added){
     gate.gateMainAttemptKey=attemptKey;
@@ -1425,6 +1427,51 @@ function mainRoadSnapAnchor(p){
   }
   return{point:best.point,magnet:Number.isFinite(best.distance)};
 }
+// Major roads cut through riverbeds on existing, selectable wooden decks.
+function autoPrimaryRoadBridges(road){
+  if(!isPrimaryRoad(road)||!road?.a||!road?.b)return 0;
+  if(State.structures.some(s=>s.type==='bridge'&&s.primaryBridgeFor===road.id))return 0;
+  const water=State.environment.filter(f=>['river','stream'].includes(f.type));
+  if(!water.length)return 0;
+  const length=dist(road.a,road.b),steps=Math.max(3,Math.ceil(length/.20));
+  const waterAt=p=>water.some(f=>f.points.slice(1).some((end,i)=>
+    pointSegmentDistance(p,f.points[i],end)<=(Number(f.width)||1.25)/2+.07));
+  let start=-1,index=0,created=0;
+  function addSpan(from,to){
+    if(to-from<.001)return;
+    const startT=Math.max(0,from-.42/length),endT=Math.min(1,to+.42/length);
+    if(endT-startT<.005)return;
+    const pieces=Math.max(1,Math.ceil((endT-startT)*length/15.5));
+    for(let k=0;k<pieces;k++){
+      const t0=startT+(endT-startT)*k/pieces,t1=startT+(endT-startT)*(k+1)/pieces;
+      const a={x:road.a.x+(road.b.x-road.a.x)*t0,y:road.a.y+(road.b.y-road.a.y)*t0};
+      const b={x:road.a.x+(road.b.x-road.a.x)*t1,y:road.a.y+(road.b.y-road.a.y)*t1};
+      if(terrainSlopeKind(a)||terrainSlopeKind(b))continue;
+      const za=terrainPlateauElevation(a),zb=terrainPlateauElevation(b);
+      if(za==null||zb==null||Math.abs(za-zb)>.01)continue;
+      const bridge={id:'river-bridge-'+road.id+'-'+index++,type:'bridge',auto:true,
+        primaryBridgeFor:road.id,variant:'wood',a,b,width:Math.max(1.2,(road.width||.62)+.58),
+        length:dist(a,b),groundZ:za,
+        ...(road.construction?{construction:{...road.construction}}:{})};
+      State.structures.push(bridge);created++;
+    }
+  }
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
+    if(waterAt(p)){if(start<0)start=t}
+    else if(start>=0){addSpan(start,(i-1)/steps);start=-1}
+  }
+  if(start>=0)addSpan(start,1);
+  return created;
+}
+function syncPrimaryRoadBridges(){
+  const activeRoads=new Set(State.structures.filter(isPrimaryRoad).map(r=>r.id));
+  State.structures=State.structures.filter(s=>!s.primaryBridgeFor||activeRoads.has(s.primaryBridgeFor));
+  let added=0;
+  for(const road of State.structures.slice().filter(isPrimaryRoad))added+=autoPrimaryRoadBridges(road);
+  if(added)invalidateSceneCache(['landscape','ground']);
+  return added;
+}
 function addManualMainRoad(a,b){
   if(!a||!b)return false;
   const L=dist(a,b);if(L<TYPES.road.min-.001)return false;
@@ -1436,6 +1483,8 @@ function addManualMainRoad(a,b){
   const verdict=window.ConquerPlacement?.check(road);
   if(verdict&&!verdict.ok){status('Road blocked: '+verdict.reason);return false}
   State.structures.push(road);
+  autoPrimaryRoadBridges(road);
+  invalidateSceneCache('landscape');
   invalidateNavigation(false);
   markDirty(false,['ground'],true);
   selectStructure(road);
@@ -1522,6 +1571,8 @@ function spawnArterial(step){
   const road=constrainRoadCandidate(beginConstruction({id:uid(),type:'road',auto:true,roadClass:'arterial',routeId:route.id,routeSeq:existing.length,a,b,width:.62,appeal:1,parentRoadId:existing.at(-1)?.id||null}));
   if(!road)return false;
   State.structures.push(road);
+  autoPrimaryRoadBridges(road);
+  invalidateSceneCache('landscape');
   if(dist(road.b,target)<.35)route.connected=true;
   return true;
 }
