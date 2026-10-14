@@ -6,11 +6,14 @@ function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by
 function structureAt(p){
   const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','loggingCamp','quarry','mine'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
-  const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId)&&['wall','palisade','built','road','moat','bridge'].includes(s.type));
+  const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId||s.type==='bridge'&&s.primaryBridgeFor)&&['wall','palisade','built','road','moat','bridge'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
   return null;
 }
 function structureAtScreen(p){
+  // Crossings occupy the ground plane and are not represented by house/castle hit polygons.
+  const world=s2w(p.x,p.y);
+  for(const s of State.structures.slice().reverse())if(['moat','bridge'].includes(s.type)&&linearHit(s,world))return s;
   const manual=State.structures.filter(s=>!['moat','bridge'].includes(s.type)&&(!s.auto||s.type==='house'||s.type==='road'&&s.routeId)).slice().sort((a,b)=>worldDepth(b)-worldDepth(a));
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;

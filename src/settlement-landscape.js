@@ -36,7 +36,7 @@ const LANDSCAPE_RENDER_BUDGET=Object.freeze({
   rockCrestDensity:.95,
   forestDensity:.95,
   forestMin:14,
-  forestMax:40,
+  forestMax:120,
   flowerClusters:520
 });
 let landscapeRenderCacheSeed=null;
@@ -472,10 +472,21 @@ function forestTreeLayout(f){
   ensureLandscapeRenderCaches();
   if(forestTreeLayoutCache.has(f.id))return forestTreeLayoutCache.get(f.id);
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),trees=[],target=forestTreeCount(f);
+  // Sample the actual rotated, lobed polygon's bounds, not the nominal axis
+  // radii: every cove and peninsula must be eligible for trees.
+  const bounds={minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
+  for(const p of f.points||[]){
+    bounds.minX=Math.min(bounds.minX,p.x);bounds.maxX=Math.max(bounds.maxX,p.x);
+    bounds.minY=Math.min(bounds.minY,p.y);bounds.maxY=Math.max(bounds.maxY,p.y);
+  }
+  if(!Number.isFinite(bounds.minX)){
+    bounds.minX=f.x-f.rx;bounds.maxX=f.x+f.rx;
+    bounds.minY=f.y-f.ry;bounds.maxY=f.y+f.ry;
+  }
   let attempts=0;
   while(trees.length<target&&attempts<target*12){
     attempts++;
-    const p={x:f.x+(rnd()-.5)*f.rx*1.9,y:f.y+(rnd()-.5)*f.ry*1.9};
+    const p={x:bounds.minX+rnd()*(bounds.maxX-bounds.minX),y:bounds.minY+rnd()*(bounds.maxY-bounds.minY)};
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
     trees.push({
       p,z:terrainElevation(p),
@@ -489,13 +500,14 @@ function forestTreeLayout(f){
 }
 function forestLikelyVisible(f,pad=100){
   const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();
-  const extent=Math.max(f.rx||5,f.ry||4)*U*State.view.scale*1.55+pad+staticCullOverscan();
+  const extent=Math.hypot(f.rx||5,f.ry||4)*1.4*U*State.view.scale*1.55+pad+staticCullOverscan();
   return s.x>=-extent&&s.y>=-extent&&s.x<=r.width+extent&&s.y<=r.height+extent;
 }
 function drawForestMask(f){
   if(!forestLikelyVisible(f))return;
   const tier=landscapeDetailTier();
   const trees=forestTreeLayout(f)
+    .filter(tree=>!primaryRoadCarvesPoint(tree.p,.65))
     .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
     .filter(tree=>screenPointVisibleRaw(tree.p,tree.z,50))
     .slice()

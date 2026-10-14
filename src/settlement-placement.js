@@ -91,7 +91,7 @@
         const steps=Math.max(3,Math.ceil(d/.25));
         for(let i=0;i<=steps;i++){
           const t=i/steps,p={x:s.a.x+(s.b.x-s.a.x)*t,y:s.a.y+(s.b.y-s.a.y)*t};
-          if(environmentBlocksPoint(p,'road'))return invalid('Road crosses an impassable obstacle or cliff');
+          if((isPrimaryRoad(s)?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return invalid('Road crosses an impassable obstacle or cliff');
         }
       }else if(buildableTerrainElevationForStructure(s)==null){
         return invalid('Wall segment crosses incompatible terrain');

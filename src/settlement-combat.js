@@ -32,7 +32,8 @@
   backdrop.width=backdrop.height=ZONE_SIZE;
   const backdropCtx=backdrop.getContext('2d');
   let backdropSignature='';
-  let lastObserverSig='',lastAreaSig='',selected=null,painting=false,lastPaint=null;
+  let lastObserverSig='',lastAreaSig='',selected=null,selectionDrag=null,painting=false,lastPaint=null;
+  const selectedIds=new Set();
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
   const residentMotion=new Map(),residentLastPosition=new Map();
   let transitLastFrame=0;
@@ -72,7 +73,7 @@
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     visible.fill(0);paintFogBitmap();
-    selected=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
+    selected=null;selectedIds.clear();selectionDrag=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
     whiteBoundaryCache=[];whiteBoundaryLoopCache=[];whiteBoundarySignature='';whiteBoundaryRevision=0;
@@ -638,13 +639,12 @@
     renderTacticalBackdrop(d);
     if(!activeWell())return;
     const king=combat.units.find(u=>u.kind==='knight');
-    if(king&&selected===king.id){
-      g.strokeStyle='rgba(255,211,116,.78)';g.lineWidth=1.5;
-      g.setLineDash([6,5]);drawMapCircle({...king,r:16,groundZ:terrainElevation(king)},true);g.setLineDash([]);
-    }
-    if(selected&&selected!==king?.id){
-      const u=combat.units.find(u=>u.id===selected);
-      if(u){g.strokeStyle='#e3fcac';g.lineWidth=1.3;g.setLineDash([4,4]);drawMapCircle({...u,r:u.kind==='squad'?6:16,groundZ:terrainElevation(u)},true);g.setLineDash([]);}
+    for(const u of combat.units){
+      if(!selectedIds.has(u.id)||u.defeated)continue;
+      g.strokeStyle=u.kind==='knight'?'rgba(255,211,116,.86)':'#e3fcac';
+      g.lineWidth=1.5;g.setLineDash([5,4]);
+      drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)},true);
+      g.setLineDash([]);
     }
     const characters=[];
     for(const u of combat.units){
@@ -696,8 +696,10 @@
     // The Builder layout may be replaced by another UI shell. Missing optional
     // HUD controls must never interrupt render/simulation or the combat canvas.
     const selectionLabel=document.getElementById('combatSelection');
-    if(selectionLabel)selectionLabel.textContent=selected?
-      ((focused?.kind==='squad'?'Pikemen ×5':'Knight')+' selected · click destination'):'Select a unit to move';
+    if(selectionLabel)selectionLabel.textContent=selectedIds.size>1
+      ?selectedIds.size+' units selected · click destination / Shift to add'
+      :selected?((focused?.kind==='squad'?'Pikemen ×5':focused?.kind==='patrol'?'Patrol':'Knight')+' selected · click destination')
+      :'Select units · drag a box, Shift+click to add';
     const panel=document.getElementById('combatStats');
     if(panel){
       const hp=x=>x?.stats?Math.max(0,Math.round(x.stats.hp))+'/'+x.stats.maxHp:'—';
@@ -706,6 +708,12 @@
       panel.textContent='Units '+allies.length+' / Hostiles '+hostiles.length+
         (focused?' · HP '+hp(focused)+' · B '+brain(focused):'')+
         (combat.enemy.length?' · Enemy HP '+hp(combat.enemy[0]):'');
+    }
+    if(selectionDrag){
+      const {start,end}=selectionDrag;
+      g.save();g.fillStyle='rgba(198,232,155,.13)';g.strokeStyle='#dcf6ab';g.lineWidth=1.2;
+      g.setLineDash([5,3]);g.fillRect(start.x,start.y,end.x-start.x,end.y-start.y);
+      g.strokeRect(start.x,start.y,end.x-start.x,end.y-start.y);g.restore();
     }
     const overlayMs=performance.now()-overlayStart;
     if(window.__conquerPerf)window.__conquerPerf.combatOverlayMs=overlayMs;
@@ -833,19 +841,55 @@
     window.__conquerAnalytics?.measure('PATROL_ROUTE',ms,{mode,distance:+distance.toFixed(2),points:route?.length||0});
     return route;
   }
-  function issueMove(unit,p){
-    if(unit.defeated||unit.routing){status('Unit cannot receive orders');return}
-    if(unit.kind==='squad'){
-      const knight=combat.units.find(u=>u.kind==='knight'&&!u.defeated);
-      if(!knight||dist(unit,knight)>16||dist(p,knight)>16){
-        status('Out of knight command beacon (16U)');return;
-      }
-      if(dist(unit,p)>6){status('Sergeant order limit: maximum 6U per order');return}
+  function selectCombatUnits(units,additive=false,toggle=false){
+    if(!additive)selectedIds.clear();
+    for(const unit of units){
+      if(unit.defeated||unit.routing)continue;
+      if(toggle&&selectedIds.has(unit.id))selectedIds.delete(unit.id);
+      else selectedIds.add(unit.id);
+    }
+    selected=[...selectedIds].at(-1)||null;
+    syncButtons();
+  }
+  function clearCombatSelection(){
+    selectedIds.clear();selected=null;selectionDrag=null;syncButtons();
+  }
+  function commanderCoversOrder(unit,target){
+    const commander=combat.units.find(u=>u.kind==='knight'&&!u.defeated&&!u.routing);
+    return !!commander&&dist(unit,commander)<=16&&dist(target,commander)<=16;
+  }
+  function issueMove(unit,p,quiet=false){
+    if(unit.defeated||unit.routing){
+      if(!quiet)status('Unit cannot receive orders');
+      return false;
+    }
+    // The knight's 16U command beacon takes precedence over the subordinate
+    // sergeant's 6U personal order radius when both endpoints are covered.
+    if(unit.kind==='squad'&&!commanderCoversOrder(unit,p)){
+      if(!quiet)status('Out of knight command beacon (16U)');
+      return false;
     }
     const target=point(p.x,p.y),path=infantryRoute(unit,target,unit.id,unit.kind);
-    if(!path){status('No traversable route — cliff, terrain or obstruction blocks the order');return}
-    unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;changed();
-    status((unit.kind==='squad'?'Pikemen':'Knight')+' marching via valid terrain');
+    if(!path){
+      if(!quiet)status('No traversable route — cliff, terrain or obstruction blocks the order');
+      return false;
+    }
+    unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;
+    if(!quiet){changed();status((unit.kind==='squad'?'Pikemen':unit.kind==='patrol'?'Patrol':'Knight')+' marching via valid terrain')}
+    return true;
+  }
+  function issueGroupMove(target){
+    const units=combat.units.filter(u=>selectedIds.has(u.id)&&!u.defeated&&!u.routing);
+    if(!units.length)return;
+    const centroid={x:units.reduce((sum,u)=>sum+u.x,0)/units.length,y:units.reduce((sum,u)=>sum+u.y,0)/units.length};
+    let moved=0;
+    for(const unit of units){
+      // Preserve group spacing and issue each route independently to avoid
+      // stacking entire squads at one destination point.
+      if(issueMove(unit,point(target.x+unit.x-centroid.x,target.y+unit.y-centroid.y),true))moved++;
+    }
+    if(moved)changed();
+    status(moved===units.length?moved+' unit(s) marching':moved+'/'+units.length+' orders accepted (command radius / obstacles)');
   }
   function whiteBoundaryPoints(){
     const automatic=circles().filter(c=>c.mode==='allow');
@@ -923,6 +967,7 @@
     if(index<0){status('No White Zone patrol to remove');return}
     const [removed]=combat.units.splice(index,1);
     if(selected===removed.id)selected=null;
+    selectedIds.delete(removed.id);
     spacePatrols();
     visibilityDirty=true;changed();status('White Zone patrol removed');draw();
   }
@@ -1065,25 +1110,60 @@
       status('Test intruder placed — visible only within line of sight');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
-      const hit=combat.units.find(u=>u.kind!=='patrol'&&dist(u,p)<1.1);
+      const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&dist(u,p)<1.1)
+        .sort((a,b)=>dist(a,p)-dist(b,p))[0];
       if(hit){
-        e.preventDefault();e.stopImmediatePropagation();selected=hit.id;
-        setTool({kind:'combat-orders',label:'Orders: click destination'});
+        e.preventDefault();e.stopImmediatePropagation();
+        selectCombatUnits([hit],e.shiftKey,e.shiftKey);
+        setTool({kind:'combat-orders',label:'Orders: select, Shift+click or drag a box'});
         syncButtons();draw();return;
       }
-      if(kind==='combat-orders'&&selected){
-        e.preventDefault();e.stopImmediatePropagation();
-        const u=combat.units.find(u=>u.id===selected);if(u)issueMove(u,p);
-        draw();return;
-      }
+      // Delay blank-ground action until pointerup to distinguish a move order
+      // from box selection. Capture-phase prevents building clicks on drags.
+      e.preventDefault();e.stopImmediatePropagation();
+      const start=pointerScreen(e);
+      selectionDrag={pointerId:e.pointerId,start,end:{...start},shift:e.shiftKey,kind};
+      canvas.setPointerCapture(e.pointerId);requestToolDraw();return;
     }
   }
   canvas.addEventListener('pointerdown',handleDown,true);
   canvas.addEventListener('pointermove',e=>{
+    if(selectionDrag&&selectionDrag.pointerId===e.pointerId){
+      e.preventDefault();e.stopImmediatePropagation();
+      selectionDrag.end=pointerScreen(e);
+      requestToolDraw();return;
+    }
     if(!painting)return;
     e.stopImmediatePropagation();e.preventDefault();paint(pointerWorld(e),State.tool.combatBrush);requestToolDraw();
   },true);
   for(const type of ['pointerup','pointercancel'])canvas.addEventListener(type,e=>{
+    if(selectionDrag&&selectionDrag.pointerId===e.pointerId){
+      e.preventDefault();e.stopImmediatePropagation();
+      const drag=selectionDrag;selectionDrag=null;
+      if(canvas.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);
+      if(type==='pointercancel'){draw();return}
+      drag.end=pointerScreen(e);
+      const dx=drag.end.x-drag.start.x,dy=drag.end.y-drag.start.y;
+      if(Math.hypot(dx,dy)>=6){
+        const x0=Math.min(drag.start.x,drag.end.x),x1=Math.max(drag.start.x,drag.end.x);
+        const y0=Math.min(drag.start.y,drag.end.y),y1=Math.max(drag.start.y,drag.end.y);
+        const hits=combat.units.filter(u=>{
+          if(u.defeated||u.routing)return false;
+          const q=w2s(u,.08);return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
+        });
+        selectCombatUnits(hits,drag.shift);
+        if(hits.length)setTool({kind:'combat-orders',label:'Orders: click destination'});
+      }else if(drag.kind==='combat-orders'&&selectedIds.size&&!drag.shift){
+        issueGroupMove(pointerWorld(e));
+      }else if(!drag.shift){
+        clearCombatSelection();
+        if(drag.kind==='select'){
+          const sp=pointerScreen(e);
+          selectStructure(structureAtScreen(sp)||structureAt(pointerWorld(e)));
+        }
+      }
+      draw();return;
+    }
     if(!painting)return;
     painting=false;lastPaint=null;e.stopImmediatePropagation();
     // Apply White Zone edits once on pointer release; never re-route each drag sample.
@@ -1091,6 +1171,10 @@
     for(const u of combat.units)if(u.kind==='patrol'){u.target=null;u.path=null;u.nextPatrolAt=0}
     if(activeWell())updateAlert(observers());
     scheduleLocalSave();requestToolDraw();
+  },true);
+  window.addEventListener?.('keydown',e=>{
+    if(e.key!=='Escape'||!selectedIds.size||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||''))return;
+    clearCombatSelection();setTool({kind:'select',label:'Select'});draw();
   },true);
   const styles=document.createElement('style');
   styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatRecall[data-mode=green]{background:#35874e;color:#fff} #combatRecall[data-mode=hall]{background:#ad3438;color:#fff} #combatMute:disabled{opacity:.55} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c}';
@@ -1100,7 +1184,7 @@
   ui.innerHTML='<h3>COMBAT · Fog / Command</h3>'+
     '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones ON</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
-    '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button></div>'+
+    '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button></div>'+
     '<div class="combat-row"><button id="combatPatrolAdd" title="Add two pikemen to patrol the White Zone border">Patrol + · 2 pikemen</button><button id="combatPatrolRemove">Patrol −</button></div>'+ 
     '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+ 
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
@@ -1126,6 +1210,7 @@
     // Keep Add clickable before founding: the action explains the prerequisite.
     document.querySelectorAll('[data-combat-brush]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-brush'&&State.tool.combatBrush===b.dataset.combatBrush));
     $('combatOrders').classList.toggle('active',State.tool.kind==='combat-orders');
+    $('combatDeselect').disabled=selectedIds.size===0;
   }
   $('combatFog').onclick=()=>{combat.fog=!combat.fog;changed();draw()};
   $('combatZones').onclick=()=>{combat.zones=!combat.zones;changed();draw()};
@@ -1136,7 +1221,8 @@
     syncButtons();
   });
   $('combatBrushSize').oninput=e=>{combat.brushRadius=Number(e.target.value);changed();draw()};
-  $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click knight or pikemen squad, then click target'});syncButtons()};
+  $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click or box-select friendly units, Shift to add'});syncButtons()};
+  $('combatDeselect').onclick=()=>{clearCombatSelection();setTool({kind:'select',label:'Select'});draw()};
   $('combatPatrolAdd').onclick=addPatrol;
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
@@ -1146,6 +1232,9 @@
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     alarmMode,setAlarmMode,recruitedResident,
+    selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
+      const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);
+    },
     yellowGeometry:()=>circles().filter(c=>c.mode==='yellow').concat(combat.strokes.filter(c=>['yellow','eraseYellow'].includes(c.mode))),
     invalidateRoutes:()=>{civilianRouteCache.clear();circleCacheBucket=-1;visibilityDirty=true;
       whiteBoundarySignature='';patrolNavRevision++;patrolRouteCache.clear();

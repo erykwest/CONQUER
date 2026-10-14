@@ -590,18 +590,50 @@
       rafPending=requestAnimationFrame(()=>{rafPending=0;draw()});
     }
   }
+  function crossingUpgradeCost(s,variant){
+    // Charge only the additional investment, with no material refunds.
+    const oldCost=constructionCost({...s,auto:false});
+    const next=constructionCost({...s,auto:false,variant});
+    return Object.fromEntries(Object.keys(next).filter(k=>Math.max(0,(next[k]||0)-(oldCost[k]||0))>0)
+      .map(k=>[k,Math.max(0,(next[k]||0)-(oldCost[k]||0))]));
+  }
+  function upgradeBridge(s){
+    if(s?.type!=='bridge'||s.variant!=='wood'||underConstruction(s))return false;
+    const proposal={...s,variant:'stone'};
+    const error=validate(proposal);
+    if(error){status('Bridge upgrade unavailable: '+error);return false}
+    const price=crossingUpgradeCost(s,'stone');
+    if(!canAfford(price)){status('Insufficient resources · '+costText(price));return false}
+    spendCost(price);s.variant='stone';s.upgradeCost=price;
+    markDirty(true,['ground','base']);renderFunctionPanel();draw();
+    status('Wooden bridge upgraded to stone');return true;
+  }
+  function floodMoat(s){
+    if(s?.type!=='moat'||s.variant!=='dry'||underConstruction(s))return false;
+    const proposal={...s,variant:'water'};
+    const error=validate(proposal);
+    if(error){status('Cannot flood moat: '+error);return false}
+    const price=crossingUpgradeCost(s,'water');
+    if(!canAfford(price)){status('Insufficient resources · '+costText(price));return false}
+    spendCost(price);s.variant='water';s.upgradeCost=price;
+    markDirty(true,['ground','base']);renderFunctionPanel();draw();
+    status('Moat flooded · water level 0');return true;
+  }
   function panel(s){
     if(s.type==='moat'){
       const fills=(s.fills||[]).filter(f=>f.progress>=1).length;
       return '<div class="slot"><div class="slot-label">Moat · '+(s.variant==='water'?'Water':'Dry')+'</div>'+
         '<div class="legend">Depth .3U · infantry '+(s.variant==='water'?'25%':'50%')+
-        ' speed · heavy equipment requires filling · crossings ready '+fills+'</div></div>';
+        ' speed · heavy equipment requires filling · crossings ready '+fills+'</div>'+
+        (s.variant==='dry'?'<button data-crossing-flood '+(underConstruction(s)||Math.abs(Number(s.groundZ)||0)>.01?'disabled':'')+'>Flood moat · '+costText(crossingUpgradeCost(s,'water'))+'</button>'+
+          '<div class="legend">Requires a fully completed moat entirely on level 0.</div>':'')+'</div>';
     }
     if(s.type==='bridge')return '<div class="slot"><div class="slot-label">Bridge · '+s.variant+'</div>'+
       '<div class="legend">Flat deck at elevation '+s.groundZ+
       ' · length '+s.length.toFixed(1)+'U · width '+s.width.toFixed(1)+
       'U · no sloped bridges</div>'+
-      (s.variant==='wood'?'<button data-crossing-demolish>⚒ Demolish wooden bridge</button><div class="legend">Irreversible, no refund.</div>':'')+'</div>';
+      (s.variant==='wood'?'<button data-crossing-upgrade '+(underConstruction(s)?'disabled':'')+'>Upgrade to stone · '+costText(crossingUpgradeCost(s,'stone'))+'</button>'+
+        (!s.primaryBridgeFor?'<button data-crossing-demolish>⚒ Demolish wooden bridge</button><div class="legend">Irreversible, no refund.</div>':''):'')+'</div>';
     if(s.type==='gate'){
       const d=drawbridge(s);
       return '<div class="slot"><div class="slot-label">Drawbridge · Gate accessory</div>'+
@@ -615,6 +647,8 @@
   }
   function bindPanel(slots){
     const s=selectedStructure();if(!s)return;
+    slots.querySelector('[data-crossing-upgrade]')?.addEventListener('click',()=>upgradeBridge(s));
+    slots.querySelector('[data-crossing-flood]')?.addEventListener('click',()=>floodMoat(s));
     slots.querySelector('[data-crossing-demolish]')?.addEventListener('click',()=>{
       if(confirm('Demolish the wooden bridge permanently?')){
         State.structures=State.structures.filter(x=>x.id!==s.id);
@@ -629,6 +663,6 @@
   window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
     snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,moatChains,moatOffsetOutline,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
-    heavyApproach,progressFilling,installDrawbridge,toggleDrawbridge,removeDrawbridge,
+    heavyApproach,progressFilling,upgradeBridge,floodMoat,crossingUpgradeCost,installDrawbridge,toggleDrawbridge,removeDrawbridge,
     drawbridgeBlocks,drawbridgePassage,withDrawbridgeWindowOcclusion,stateOfGate,DRAWBRIDGE_COST};
 })();

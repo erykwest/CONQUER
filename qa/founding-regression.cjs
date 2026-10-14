@@ -42,8 +42,12 @@ for(const [seed,biome] of [[12345,'plains'],[4242,'forest']])check('actual name 
  assert.equal(run('processVillageGrowth()'),0);
  const timing=drain();
  assert.equal(run('foundingRoadJob'),null);
- assert.equal(run('ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length'),4);
- assert.equal(run('roadList().every(r=>roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId]))'),true);
+ const routeCount=run('ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length');
+ if(routeCount!==4)console.log('  unconnected routes',run("ensureRoadPlan().map(r=>({id:r.id,target:r.target,connected:arterialRouteContinuous(r.id),roads:routeRoads(r.id).length,targetBlocked:primaryRoadTerrainBlocked(r.target),targetSlope:terrainSlopeKind(r.target)}))"));
+ assert.equal(routeCount,4);
+ const clear=run('roadList().every(r=>roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId]))');
+ if(!clear)console.log('  road-block diagnostics',run("roadList().filter(r=>!roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId])).slice(0,4).map(r=>({a:r.a,b:r.b,route:r.routeId,why:environmentBlocksPoint(r.a,'road')?'environment':'structure'}))"));
+ assert.equal(clear,true);
  console.log('  planning slices',timing);
 });
 check('a new building invalidates an in-progress route and is avoided',()=>{
