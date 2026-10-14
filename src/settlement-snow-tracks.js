@@ -2,7 +2,7 @@
 // Ground footprints left by actual moving civilians and military units.
 // This is transient visual state: no save/schema changes, and no fake random tracks.
 (function(){
-  const SPACING=.50,MAX_STEP=5,MAX_MARKS=1800,KEEP_DAYS=2;
+  const SPACING=.50,MAX_STEP=5,MAX_MARKS=1800,KEEP_DAYS=1;
   const trails=[],actors=new Map();
   let lastSeason=null,lastDay=0,sequence=0;
 
@@ -57,16 +57,16 @@
     ctx.save();
     for(const t of trails){
       const normal={x:-t.uy,y:t.ux},foot={
-        x:t.x+normal.x*(t.wide?.19:.13)*t.side,
-        y:t.y+normal.y*(t.wide?.19:.13)*t.side
+        x:t.x+normal.x*(t.wide?.095:.065)*t.side,
+        y:t.y+normal.y*(t.wide?.095:.065)*t.side
       };
       const z=terrainElevation(foot)+.028;
       const point=w2sRaw(foot,z);
       if(point.x< -30||point.y< -30||point.x>maxX||point.y>maxY)continue;
       const tip=w2sRaw({x:foot.x+t.ux*.34,y:foot.y+t.uy*.34},z);
       const angle=Math.atan2(tip.y-point.y,tip.x-point.x);
-      const length=Math.max(1.5,Math.hypot(tip.x-point.x)*(t.wide?.48:.39));
-      const width=Math.max(.85,length*(t.wide?.57:.46));
+      const length=Math.max(.75,Math.hypot(tip.x-point.x)*(t.wide?.48:.39)*.5);
+      const width=Math.max(.425,length*(t.wide?.57:.46));
       const age=Math.max(0,day-t.day);
       ctx.globalAlpha=Math.max(.06,.68*(1-age/KEEP_DAYS));
       ctx.save();ctx.translate(point.x,point.y);ctx.rotate(angle);
