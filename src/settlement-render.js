@@ -85,7 +85,7 @@ function isInteriorFacadeEdge(s,edge){return Number.isFinite(edge?.index)&&edge.
 function gothicAssetForLevel(s){return structureLevel(s)>=2?'gothicL2':'gothicL1'}
 function gothicAssetSizeForLevel(s){const l=structureLevel(s);return l>=2?{w:.68,h:.78}:{w:.54,h:.70}}
 function towerGothicAssetForRow(s,row){
-  if(!row||row.floor<2)return null;
+  if(!row||row.floor<2)return s.isMastio&&row?.floor===1?'gothicL1':null;
   if(row.floor===2)return'gothicL1';
   // P3 wants a bifora, but narrow towers keep the single lancet as fallback.
   return towerTier(s)>=2?'gothicL2':'gothicL1';
@@ -331,7 +331,9 @@ function towerLevelHeight(s,level){
 }
 function towerWindowRows(s){
   const l=structureLevel(s),rows=[];
-  // P1 is intentionally blind: no windows and no arrow slits.
+  // P1 keeps its defensive blind walls, except an interior window for the mastio
+  // so even the first completed T1 stone tower can display the hanging heraldry.
+  if(l===1&&s.isMastio)rows.push({floor:1,z:1.53});
   if(l>=2)rows.push({floor:2,z:2.48});
   if(l>=3)rows.push({floor:3,z:3.62});
   return rows.filter(r=>r.z<structureHeight(s)-.28);
@@ -342,7 +344,7 @@ function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
     if(edge.interior){
       drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
       if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w*.86,sz.h,opacity);
-    }else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+    }else if(row.floor>=2)drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
   }
 }
 function linearFrontSide(s){
@@ -505,7 +507,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
               if(isInteriorFacadeEdge(s,edge)){
                 drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
                 if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
-              }else drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+              }else if(row.floor>=2)drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
             }
           });
         }
