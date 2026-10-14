@@ -1538,6 +1538,29 @@ function syncPrimaryRoadBridges(){
   if(added)invalidateSceneCache(['landscape','ground']);
   return added;
 }
+function perpendicularRiverRoadPath(a,b){
+  // Real road geometry bends onto the shortest bank-to-bank normal.
+  // This keeps the visual timber bridge aligned with the actual road route.
+  const water=State.environment.filter(f=>f.type==='river'||f.type==='stream');
+  let best=null;
+  for(const river of water)for(let i=1;i<river.points.length;i++){
+    const u=river.points[i-1],v=river.points[i],cross=segmentIntersectionPoint(a,b,u,v);
+    if(!cross)continue;
+    const t=dist(a,cross)/Math.max(.001,dist(a,b));
+    if(t>.98||t<.02)continue;
+    if(!best||t<best.t)best={river,u,v,cross,t};
+  }
+  if(!best)return[a,b];
+  const dx=best.v.x-best.u.x,dy=best.v.y-best.u.y,l=Math.hypot(dx,dy)||1;
+  let nx=-dy/l,ny=dx/l;
+  if(nx*(b.x-a.x)+ny*(b.y-a.y)<0){nx=-nx;ny=-ny}
+  const half=(best.river.width||1.25)/2+.48;
+  const near={x:best.cross.x-nx*half,y:best.cross.y-ny*half};
+  const far={x:best.cross.x+nx*half,y:best.cross.y+ny*half};
+  if(![near,far].every(p=>p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD&&!terrainSlopeKind(p)))return[a,b];
+  if(dist(a,near)<.10||dist(far,b)<.10)return[a,b];
+  return[a,near,far,b];
+}
 function addManualMainRoad(a,b){
   if(!a||!b)return false;
   const L=dist(a,b);if(L<TYPES.road.min-.001)return false;
