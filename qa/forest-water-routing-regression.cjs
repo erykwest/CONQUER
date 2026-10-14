@@ -42,7 +42,7 @@ check('C, L and S silhouettes use nonintersecting real polygons',()=>{
 check('river first and new forest polygons stay outside banks',()=>{
  for(const biome of ['river','forest']){
    reset();
-   run("State.seed=3949;State.biome='"+biome+"';generateRelief();generateEnvironment()");
+   run("State.seed=3949;State.biome='"+biome+"';State.relief={hills:[],version:LANDSCAPE_GENERATION_VERSION};clearReliefBandCache();generateEnvironment()");
    const counts=run("({water:State.environment.filter(f=>['river','stream'].includes(f.type)).length,forests:State.environment.filter(f=>f.type==='forest').length})");
    assert.ok(counts.water>0&&counts.forests>0,'expected water and forest in '+biome);
    assert.equal(run("State.environment.findIndex(f=>f.type==='forest')>State.environment.findIndex(f=>['river','stream'].includes(f.type))"),true);
