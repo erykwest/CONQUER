@@ -1436,11 +1436,37 @@ function connectBorderMainRoadsInFrames(onDone=()=>{}){
   const active=()=>foundingRoadJob===job&&State.village===village&&village.founded&&State.structures.includes(well);
   function* work(){
     let changed=0;
+    const woods=State.environment.filter(f=>f.type==='forest');
+    function* possibleExits(route){
+      const out=[];
+      for(const t of BORDER_ENTRY_BACKUP_FRACTIONS){
+        const p=edgeSample(route.edge,t);
+        if(primaryRoadTerrainBlocked(p)){yield;continue}
+        let forestHits=0,slopeHits=0;
+        const n=16;
+        for(let j=1;j<n;j++){
+          const u=j/n,q={x:well.x+(p.x-well.x)*u,y:well.y+(p.y-well.y)*u};
+          if(woods.some(f=>pointInPolygon(q,f.points)))forestHits++;
+          if(j%4===0&&terrainSlopeKind(q))slopeHits++;
+        }
+        out.push({point:{...p,edge:route.edge},entryId:'border-'+route.edge+'-alternate-'+Math.round(t*100),
+          t,score:forestHits*3+slopeHits*2+dist(well,p)*.004});
+        yield;
+      }
+      return out.sort((a,b)=>a.score-b.score);
+    }
     for(const route of plan){
       if(!active())break;
       if(mainRoadRouteDeleted(route.id))continue;
       const t0=performance.now();
       let attempted=0;
+      const exits=!routeRoads(route.id).length?yield* possibleExits(route):[];
+      const chooseExit=choice=>{
+        route.target={...choice.point};route.entryId=choice.entryId;
+        const entry=State.village.borderEntries?.find(e=>e.edge===route.edge);
+        if(entry)Object.assign(entry,{x:choice.point.x,y:choice.point.y,t:choice.t,id:choice.entryId});
+      };
+      if(exits.length)chooseExit(exits.shift());
       route.planningToBorder=true;
       try{
         while(active()&&!mainRoadRouteDeleted(route.id)&&!arterialRouteContinuous(route.id)){
@@ -1448,9 +1474,11 @@ function connectBorderMainRoadsInFrames(onDone=()=>{}){
           const revision=navPerf.navInvalidations||0;
           const added=yield* rebuildArterialWork(route.id,[],()=>active()&&(navPerf.navInvalidations||0)===revision);
           changed+=added;
-          if(added||(navPerf.navInvalidations||0)===revision)break;
-          // A building changed the terrain while planning: recompute the route.
-          yield;
+          if(added)break;
+          if((navPerf.navInvalidations||0)!==revision){yield;continue}
+          // A different portal may be reachable without removing woodland.
+          if(exits.length&&attempted<5){chooseExit(exits.shift());yield;continue}
+          break;
         }
       }finally{
         if(active()){
