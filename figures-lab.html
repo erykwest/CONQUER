@@ -27,6 +27,10 @@
     <button data-subject="sheep">Pecora</button><button data-subject="goat">Capra</button>
     <button data-subject="cow">Mucca</button><button data-subject="horse">Cavallo</button>
   </div>
+  <div class="group" role="group" aria-label="Selvatici"><span>Selvatici</span>
+    <button data-subject="deer">Cerva</button><button data-subject="stag">Cervo</button>
+    <button data-subject="wolf">Lupo</button><button data-subject="bear">Orso</button><button data-subject="boar">Cinghiale</button>
+  </div>
   <div class="group" role="group" aria-label="Persone"><span>Persone</span>
     <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
@@ -72,14 +76,14 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
-  const ANIMALS=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
+  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
   const ACTIONS={vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
-  let subject='sheep',action='walk',blend=0,last=performance.now(),clock=0;
+  let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
   const kindOf=s=>s==='wagon'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
-    const acts=ACTIONS[kindOf(subject)];
+    const acts=kindOf(subject)==='animal'?A.SPECIES[subject].modes:ACTIONS[kindOf(subject)];
     if(!acts.some(([k])=>k===action))action=acts[0][0];
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
     $('coatBox').hidden=subject!=='horse'&&subject!=='wagon';
@@ -87,8 +91,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('flipBox').hidden=!['animal','vehicle'].includes(kindOf(subject));
     resetHero();
   }
-  document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;renderButtons()});
-  $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k){action=k;renderButtons()}};
+  document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
+  $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
 
   // Hero soldier state: the three sizes share one fighter and one dummy foe.
   let hero,foe,nextHit=0,nextDeath=0,arrows=[];
@@ -137,12 +141,12 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     VILLAGERS.forEach((v,i)=>{State.view.scale=18*k;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:W*(.14+i*.17),y:H*.5}})});
   }
   function heroAnimals(W,H,k,dt){
-    blend+=(action==='browse'?1:-1)*dt/.3;blend=Math.max(0,Math.min(1,blend));
+    trans=Math.min(1,trans+dt/.45);
     const facing=$('flip').checked?1:-1,coat=$('coat').value;
     // Hero views are normalised; the scene below shows true relative sizes.
     const norm=1/(A.SPECIES[subject].scale||1);
     [[W*.3,300],[W*.66,140],[W*.86,60]].forEach(([x,s],i)=>
-      A.drawAnimal(subject,g,x,H*.5,s*k*norm,{t:clock+i*.3,mode:action,blend,facing,seed:i*2,coat}));
+      A.drawAnimal(subject,g,x,H*.5,s*k*norm,{t:clock+i*.3,from:fromAction,mode:action,blend:trans,facing,seed:i*2,coat}));
   }
 
   // Wagon: every module comes from the selects; the driver is drawn by the
@@ -178,6 +182,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   const fighters=[0,1,2].map(i=>({ally:{id:'ally'+i,engaged:true},enemy:{id:'enemy'+i,engaged:true},next:i*.37}));
   const sceneArcher={id:'scene-archer',engaged:true},sceneKnight={id:'scene-knight',engaged:true},knightFoe={id:'kfoe',engaged:true};
   let archerNext=.5,knightNext=.2,sceneWagonX=0;
+  const WILD=[{species:'deer',x:60,y:770,dir:1},{species:'stag',x:150,y:780,dir:1},{species:'wolf',x:290,y:775,dir:-1},{species:'bear',x:420,y:785,dir:1},{species:'boar',x:560,y:775,dir:-1}];
   function scene(W,H,k,dt){
     const z=Number($('zoom').value)*k;
     g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,H*.66,W,2);
@@ -191,6 +196,12 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
       A.drawAnimal(s.species,g,s.x*k,s.y*k,animalSize,{t:clock,seed:s.seed,mode:s.mode,blend:s.blend,facing:s.dir,coat:s.coat});
     }
     VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});
+    // Wildlife at the forest edge, cycling through each species' modes.
+    WILD.forEach((w,i)=>{
+      const modes=A.SPECIES[w.species].modes.map(m=>m[0]),n=Math.floor((clock+i*1.7)/4),m=modes[n%modes.length],prev=modes[(n+modes.length-1)%modes.length];
+      const k2=Math.min(1,((clock+i*1.7)%4)/.45);
+      A.drawAnimal(w.species,g,w.x*k,w.y*k,animalSize,{t:clock,from:prev,mode:m,blend:k2,facing:w.dir,seed:i});
+    });
     // A supply wagon crossing the scene.
     sceneWagonX=(sceneWagonX+dt*30)%1400;
     W2.drawWagon(g,(sceneWagonX-200)*k,598*k,animalSize,{chassis:'wagon',body:'open',

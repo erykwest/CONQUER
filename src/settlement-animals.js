@@ -94,6 +94,109 @@
       }
     }
   };
+  // Wildlife, authored for this game (right-facing, ground at y 244).
+  // Legs are listed hind near, hind far, fore near, fore far — the order the
+  // gallop and rearing poses rely on.
+  const legs=(xs,make)=>xs.map(make).join(' ');
+  const slimLeg=(top,w)=>x=>`M${x-w/2} ${top} L${x+w/2} ${top} L${x+w/2-1} 238 C${x+w/2-1} 244,${x-w/2+1} 244,${x-w/2+1} 238 Z`;
+  const pawLeg=(top,w)=>x=>`M${x-w/2} ${top} L${x+w/2} ${top} L${x+w/2-1} 234 C${x+w/2+3} 236,${x+w/2+3} 244,${x+w/2-4} 244 L${x-w/2+2} 244 C${x-w/2} 240,${x-w/2} 238,${x-w/2+1} 234 Z`;
+  const DOMESTIC_MODES=[['walk','Walking'],['browse','Browse']];
+  for(const sp of Object.values(SPECIES))sp.modes=DOMESTIC_MODES;
+  const DEER={
+    artFacing:1,scale:1.6,hindLegs:[0,1],headBehind:true,hoof:8,
+    modes:[['walk','Walking'],['browse','Browse'],['alert','Allerta'],['run','Corsa']],
+    body:'M70 122 C76 102,108 94,148 96 C176 92,198 100,206 116 C214 132,208 150,194 158 C172 168,128 170,98 166 C78 162,64 148,70 122 Z',
+    head:'M204 50 C212 40,228 40,238 48 L252 60 C256 64,254 70,248 70 L232 70 C222 76,210 74,204 66 C200 60,200 54,204 50 Z',
+    headParts:[
+      {d:'M208 48 C198 36,196 22,204 14 C212 22,216 36,214 46 Z',fill:'ear'},
+      {d:'M218 46 C220 32,228 22,238 20 C238 32,232 42,226 50 Z',fill:'ear'},
+      {d:'M248 60 C254 60,256 66,252 68 C248 68,246 64,248 60 Z',fill:'nose'}
+    ],
+    legs:legs([92,104,184,172],slimLeg(146,10)),
+    tail:'M72 112 C64 104,62 94,68 90 C74 96,78 106,78 116 Z',tailFill:'tail',
+    pivot:{x:184,y:114},eye:{x:226,y:54},tailPivot:{x:74,y:114},center:{x:134,y:244},
+    joint:{a:{x:214,y:44},b:{x:204,y:70}},neck:{root:{x:184,y:114},rootWidth:40,tipWidth:26},
+    pose:{walk:{x:0,y:0,rot:0},browse:{x:22,y:142,rot:1.3},alert:{x:-4,y:-12,rot:-.1},run:{x:14,y:26,rot:.3}},
+    colors:{body:'#a8703f',shade:'#cfa676',line:'#3c2716',head:'#a8703f',headLine:'#3c2716',
+      leg:'#a8703f',legFar:'#86572f',legLine:'#3c2716',ear:'#93612f',nose:'#2a1d12',eye:'#1a120b',
+      tail:'#f1e9dc',hoof:'#2a1d12',antler:'#dcc9a3',antlerFar:'#b7a27b'}
+  };
+  // Stag: the doe's body with a branching palm of antlers on the same head.
+  const antler=(dx,dy)=>[[[218+dx,46+dy],[208+dx,18+dy],[194+dx,-10+dy],[186+dx,-36+dy],[192+dx,-64+dy]],
+    [[206+dx,14+dy],[228+dx,-14+dy]],[[195+dx,-8+dy],[214+dx,-40+dy]],[[188+dx,-30+dy],[174+dx,-56+dy]],[[212+dx,30+dy],[198+dx,20+dy]]];
+  const STAG={...DEER,scale:1.8,headStrokes:[
+    {lines:antler(12,-2),width:7,color:'antlerFar',far:true},
+    {lines:antler(0,0),width:7,color:'antler'}
+  ]};
+  const WOLF={
+    artFacing:1,scale:1.15,hindLegs:[0,1],headBehind:true,
+    modes:[['walk','Walking'],['run','Corsa'],['howl','Ululato'],['idle','Fermo']],
+    body:'M66 126 C72 104,98 96,132 98 C162 92,188 94,202 108 C214 120,212 140,200 150 C184 162,146 164,114 162 C88 160,66 150,66 126 Z',
+    head:'M198 92 C208 80,226 78,236 86 L254 98 C258 102,256 107,250 108 L232 110 C222 116,208 114,200 106 C196 100,195 96,198 92 Z',
+    headParts:[
+      {d:'M204 90 L206 66 L218 84 Z',fill:'ear'},
+      {d:'M214 86 L222 64 L228 84 Z',fill:'ear'},
+      {d:'M250 98 C256 98,258 104,252 106 C248 106,247 100,250 98 Z',fill:'nose'}
+    ],
+    legs:legs([90,102,182,170],pawLeg(146,12)),
+    tail:'M68 118 C50 124,38 150,34 180 C32 196,44 200,50 188 C54 168,62 146,76 132 Z',tailFill:'tail',
+    pivot:{x:178,y:114},eye:{x:226,y:92},tailPivot:{x:70,y:122},center:{x:134,y:244},
+    joint:{a:{x:210,y:80},b:{x:202,y:110}},neck:{root:{x:178,y:114},rootWidth:50,tipWidth:34},
+    pose:{walk:{x:0,y:0,rot:0},run:{x:18,y:22,rot:.2},howl:{x:-8,y:-26,rot:-.95},idle:{x:0,y:0,rot:0}},
+    colors:{body:'#8c8b86',shade:'#c7c3b8',line:'#2c2c2a',head:'#8c8b86',headLine:'#2c2c2a',
+      leg:'#8c8b86',legFar:'#6b6a66',legLine:'#2c2c2a',ear:'#6b6a66',nose:'#1c1c1b',eye:'#e2b93b',tail:'#7d7c77'}
+  };
+  const BEAR={
+    artFacing:1,scale:1.7,hindLegs:[0,1],
+    modes:[['walk','Walking'],['stand','In piedi'],['sleep','Dorme']],
+    body:'M56 140 C56 106,88 86,130 88 C156 78,186 82,202 100 C216 116,216 146,204 160 C188 176,142 180,104 178 C74 176,56 166,56 140 Z',
+    head:'M194 106 C202 94,218 90,230 96 C240 102,250 110,254 120 C255 128,248 131,240 129 C228 134,210 134,200 126 C192 120,190 112,194 106 Z',
+    headParts:[
+      {d:'M200 102 C196 88,206 84,212 94 Z',fill:'ear'},
+      {d:'M238 112 C248 112,256 118,254 126 C250 132,240 130,234 124 Z',fill:'muzzle'},
+      {d:'M250 116 C256 116,258 122,253 124 C249 124,248 119,250 116 Z',fill:'nose'}
+    ],
+    legs:legs([84,98,184,170],pawLeg(156,28)),
+    tail:'M58 128 C50 124,46 132,52 138 C56 136,58 132,58 128 Z',
+    pivot:{x:192,y:116},eye:{x:222,y:106},tailPivot:{x:58,y:130},center:{x:134,y:244},
+    pose:{walk:{x:0,y:0,rot:0},
+      // Rearing: body up about the hip, hind legs stay planted, fore legs
+      // hang forward, head levels out.
+      stand:{x:0,y:0,rot:1.1,bodyRot:-1.25,bodyPivot:{x:90,y:160},legAdd:[0,0,.95,.8]},
+      sleep:{x:0,y:0,rot:0,art:'sleep'}},
+    sleep:{
+      body:'M58 204 C54 156,96 122,150 124 C202 126,228 160,224 200 C222 228,198 242,150 244 C100 246,60 234,58 204 Z',
+      parts:[
+        {d:'M186 216 C192 200,212 194,226 200 C238 206,240 222,230 230 C218 238,198 236,186 228 Z',fill:'head'},
+        {d:'M196 206 C194 194,202 192,208 200 Z',fill:'ear'},
+        {d:'M224 214 C234 214,240 220,236 226 C230 230,222 226,220 220 Z',fill:'muzzle'},
+        {d:'M150 232 C160 222,184 222,188 236 C176 242,160 242,150 232 Z',fill:'body'}
+      ],
+      eye:[[204,212],[213,215]]
+    },
+    colors:{body:'#5b3e27',shade:'#4b3320',line:'#1d130b',head:'#5b3e27',headLine:'#1d130b',
+      leg:'#5b3e27',legFar:'#45301d',legLine:'#1d130b',ear:'#45301d',muzzle:'#8a6a4c',nose:'#120c08',eye:'#120c08'}
+  };
+  const BOAR={
+    artFacing:1,scale:1.1,hindLegs:[0,1],headBehind:true,hoof:10,
+    modes:[['walk','Walking'],['browse','Grufola'],['run','Corsa']],
+    body:'M62 122 C72 98,110 92,150 96 C176 88,202 96,212 114 C218 132,212 154,194 162 C162 172,110 172,84 164 C66 158,58 142,62 122 Z',
+    head:'M196 104 C210 96,226 104,234 118 L250 138 C254 145,250 150,244 148 L226 146 C214 147,202 140,198 130 C194 120,193 110,196 104 Z',
+    headParts:[
+      {d:'M206 104 C202 90,212 86,218 98 Z',fill:'ear'},
+      {d:'M244 136 C250 136,254 142,250 148 C246 150,242 146,242 142 Z',fill:'nose'},
+      {d:'M232 144 C234 134,240 130,244 132 C242 138,238 142,232 144 Z',fill:'tusk'}
+    ],
+    legs:legs([92,104,186,174],slimLeg(150,18)),
+    tail:'M62 112 C52 104,44 110,48 116 C52 120,48 126,42 122 C44 130,54 128,56 120 C58 116,60 114,62 112 Z',
+    pivot:{x:180,y:118},eye:{x:216,y:114},tailPivot:{x:62,y:114},center:{x:134,y:244},
+    joint:{a:{x:204,y:98},b:{x:198,y:132}},neck:{root:{x:180,y:118},rootWidth:64,tipWidth:40,mane:9},
+    pose:{walk:{x:0,y:0,rot:0},browse:{x:6,y:48,rot:.6},run:{x:8,y:10,rot:.15}},
+    colors:{body:'#9b8a74',shade:'#8a7964',line:'#33393b',head:'#9b8a74',headLine:'#33393b',
+      leg:'#6d6151',legFar:'#574d40',legLine:'#33393b',ear:'#7d6e5c',nose:'#5b4a42',tusk:'#efe8d6',
+      mane:'#5a4f42',hoof:'#2a2522',eye:'#1a1a1a'}
+  };
+  Object.assign(SPECIES,{deer:DEER,stag:STAG,wolf:WOLF,bear:BEAR,boar:BOAR});
   // Coat variants are merged once, not per frame.
   for(const sp of Object.values(SPECIES))
     if(sp.coats)sp.coatColors=Object.fromEntries(Object.entries(sp.coats).map(([k,v])=>[k,{...sp.colors,...v}]));
@@ -115,7 +218,7 @@
       out.bob=-Math.abs(Math.cos(p))*4+2;
       out.head=Math.sin(p*2)*.05;
       out.tail=Math.sin(p*2)*.18;
-    }else{
+    }else if(mode==='browse'){
       // Browse: legs planted, short nibbles, a step every few seconds.
       const p=t*Math.PI*2+seed,nibble=Math.max(0,Math.sin(p*2.2));
       out.head=nibble*.08;
@@ -124,23 +227,53 @@
       if(shift>.96){const s=Math.sin((shift-.96)/.04*Math.PI);out.legs[0]=-s*.22;out.lift[0]=s*4}
       out.bob=Math.sin(t*1.3+seed)*.8;
       out.tail=Math.sin(t*5+seed)*(Math.sin(t*.7+seed)>.6?.25:.04);
+    }else if(mode==='run'){
+      // Gallop: hind pair (legs 0,1) and fore pair (2,3) reach together,
+      // the body pitches over the stride. Leg order: hind near/far, fore near/far.
+      const p=t*Math.PI*2*2.2+seed;
+      out.legs=[Math.sin(p),Math.sin(p+.35),Math.sin(p+Math.PI),Math.sin(p+Math.PI+.35)].map(s=>s*.6);
+      out.lift=out.legs.map(a=>Math.max(0,-a)*14);
+      out.bob=-Math.abs(Math.sin(p))*8+3;
+      out.head=Math.sin(p*2)*.06;
+      out.tail=.25+Math.sin(p)*.15;
+      out.pitch=Math.sin(p)*.07;
+    }else{
+      // Still: standing, howling, rearing — only breathing and a tail twitch.
+      out.bob=Math.sin(t*1.5+seed)*.6;
+      out.tail=Math.sin(t*2+seed)*.05;
     }
     return out;
   }
-  // Blended pose: blend 0 = walk, 1 = browse. The head travels continuously.
-  // Gait angles are authored for left-facing art; right-facing art mirrors them.
-  function blendedPose(species,t,seed,blend){
-    const sp=SPECIES[species],k=ease(blend),w=gaitPose('walk',t,seed),b=gaitPose('browse',t,seed),dir=-sp.artFacing;
+  // One mode's full pose. Gait angles are authored for left-facing art;
+  // right-facing art mirrors them. Pose specs per species: {x,y,rot} place
+  // the head; optional gait, tilt, neck, bodyRot/bodyPivot, legAdd, art.
+  function modePose(species,mode,t,seed){
+    const sp=SPECIES[species],spec=sp.pose[mode]||sp.pose.walk,dir=-sp.artFacing;
+    const gait=spec.gait||(['walk','browse','run'].includes(mode)?mode:'still');
+    const g=gaitPose(gait,t,seed),add=spec.legAdd||[0,0,0,0];
     return{
-      legs:w.legs.map((a,i)=>lerp(a,b.legs[i],k)*dir),
-      lift:w.lift.map((a,i)=>lerp(a,b.lift[i],k)),
-      bob:lerp(w.bob,b.bob,k),tail:lerp(w.tail,b.tail,k)*dir,
-      headX:lerp(sp.pose.walk.x,sp.pose.browse.x,k),
-      headY:lerp(sp.pose.walk.y,sp.pose.browse.y,k)+b.chew*2*k,
-      headRot:lerp(sp.pose.walk.rot+w.head*dir,sp.pose.browse.rot+b.head*dir,k),
-      neck:k,tilt:-.05*k*dir
+      legs:g.legs.map((a,i)=>a*dir+add[i]),lift:g.lift,bob:g.bob,tail:g.tail*dir,
+      headX:spec.x,headY:spec.y+(gait==='browse'?g.chew*2:0),headRot:spec.rot+g.head*dir,
+      neck:spec.neck??(mode==='browse'?1:0),
+      tilt:((spec.tilt??(mode==='browse'?-.05:0))+(g.pitch||0))*dir,
+      bodyRot:spec.bodyRot||0,bodyPivot:spec.bodyPivot||null,art:spec.art||'body'
     };
   }
+  // Transition from one mode to another (k 0..1). Rigid parts travel
+  // continuously; a different art (sleeping) swaps inside a short crouch.
+  function transitionPose(species,from,to,k,t,seed){
+    const a=modePose(species,from,t,seed),b=modePose(species,to,t,seed),e=ease(Math.max(0,Math.min(1,k)));
+    const out={};
+    for(const key of Object.keys(a)){
+      const va=a[key],vb=b[key];
+      out[key]=Array.isArray(va)?va.map((v,i)=>lerp(v,vb[i],e)):typeof va==='number'?lerp(va,vb,e):(e<.5?va:vb);
+    }
+    out.bodyPivot=b.bodyPivot||a.bodyPivot;
+    out.crouch=a.art!==b.art?Math.sin(e*Math.PI):0;
+    return out;
+  }
+  // Legacy blend: 0 = walk, 1 = browse.
+  const blendedPose=(species,t,seed,blend)=>transitionPose(species,'walk','browse',blend,t,seed);
 
   const pathCache=new Map();
   const path=d=>{let p=pathCache.get(d);if(!p){p=new Path2D(d);pathCache.set(d,p)}return p};
@@ -151,22 +284,35 @@
   const rotateAbout=(ctx,p,a)=>{ctx.translate(p.x,p.y);ctx.rotate(a);ctx.translate(-p.x,-p.y)};
   // Draws one animal. (x,y) = ground point under its feet, size = on-screen
   // height of the 256-unit art box, facing 1 = right / -1 = left.
-  // opts.blend (0..1) eases walk → browse; defaults from opts.mode.
+  // Modes: opts.mode is the target; opts.from + opts.blend (0..1) animate a
+  // transition into it. Without opts.from, walk/browse keep the legacy blend
+  // (0 = walk, 1 = browse); other modes are shown fully.
   function drawAnimal(species,ctx,x,y,size,opts={}){
     // opts.coat picks a coat variant where the species has them (horse).
     const sp=SPECIES[species],c=sp.coatColors?.[opts.coat]||sp.colors;
-    const t=opts.t||0,seed=opts.seed||0,facing=opts.facing>=0?1:-1;
-    const blend=Math.max(0,Math.min(1,opts.blend??(opts.mode==='browse'?1:0)));
+    const t=opts.t||0,seed=opts.seed||0,facing=opts.facing>=0?1:-1,mode=opts.mode||'walk';
+    let pose;
+    if(opts.from)pose=transitionPose(species,opts.from,mode,opts.blend??1,t,seed);
+    else if(mode==='walk'||mode==='browse')pose=blendedPose(species,t,seed,Math.max(0,Math.min(1,opts.blend??(mode==='browse'?1:0))));
+    else pose=transitionPose(species,mode,mode,1,t,seed);
     size*=sp.scale||1;
-    const s=size/256,lw=Math.max(.55,size/90)/s,pose=blendedPose(species,t,seed,blend);
+    const s=size/256,lw=Math.max(.55,size/90)/s;
     ctx.save();
     ctx.translate(x,y);ctx.scale(facing*sp.artFacing*s,s);ctx.translate(-sp.center.x,-sp.center.y);
     // Soft ground shadow.
     ctx.fillStyle='rgba(30,40,20,.22)';ctx.beginPath();
     ctx.ellipse(sp.center.x,sp.center.y-2,78,12,0,0,Math.PI*2);ctx.fill();
+    if(pose.crouch){
+      // Squash about the ground while one art swaps for another.
+      ctx.translate(sp.center.x,sp.center.y);ctx.scale(1+pose.crouch*.08,1-pose.crouch*.18);ctx.translate(-sp.center.x,-sp.center.y);
+    }
+    if(pose.art==='sleep'){drawSleeping(ctx,sp,c,lw,t,size);ctx.restore();return}
+    // Rearing: the whole animal turns about its hind feet, hind legs stay planted.
+    if(pose.bodyRot&&pose.bodyPivot)rotateAbout(ctx,pose.bodyPivot,pose.bodyRot);
+    const hind=sp.hindLegs||[];
     // Far legs (1, 3) a shade darker, all legs under the body.
     sp.legList.forEach((leg,i)=>{
-      ctx.save();ctx.translate(0,-pose.lift[i]);rotateAbout(ctx,leg,pose.legs[i]);
+      ctx.save();ctx.translate(0,-pose.lift[i]);rotateAbout(ctx,leg,pose.legs[i]-(hind.includes(i)?pose.bodyRot:0));
       fillStroke(ctx,leg.d,i%2?c.legFar:c.leg,null,lw);
       if(sp.hoof){
         const p=path(leg.d);ctx.save();ctx.clip(p);ctx.fillStyle=c.hoof;
@@ -204,7 +350,10 @@
       const {a,b}=sp.joint,j={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
       drawNeck(ctx,sp,c,lw,{x:j.x+pose.headX,y:j.y+pose.headY});
       ctx.save();ctx.translate(pose.headX,pose.headY);rotateAbout(ctx,j,pose.headRot);
-      ctx.clip(jointSide(sp,true));drawHeadArt(ctx,sp,c,lw,size);
+      // Antlers reach past the throat line: they ride the head unclipped.
+      for(const s of sp.headStrokes||[])if(s.far)drawStroke(ctx,s,c,lw);
+      ctx.save();ctx.clip(jointSide(sp,true));drawHeadArt(ctx,sp,c,lw,size,false);ctx.restore();
+      for(const s of sp.headStrokes||[])if(!s.far)drawStroke(ctx,s,c,lw);
       ctx.restore();
       return;
     }
@@ -231,13 +380,34 @@
       ctx.fillStyle=c.mane;ctx.fill();ctx.strokeStyle=c.headLine;ctx.stroke();
     }
   }
-  function drawHeadArt(ctx,sp,c,lw,size){
+  function drawHeadArt(ctx,sp,c,lw,size,strokes=true){
     if(sp.horn){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}
+    if(strokes)for(const s of sp.headStrokes||[])if(s.far)drawStroke(ctx,s,c,lw);
     fillStroke(ctx,sp.head,c.head,c.headLine,lw);
     if(sp.beard)fillStroke(ctx,sp.beard,c.beard,c.headLine,lw);
     for(const part of sp.headParts||[])fillStroke(ctx,part.d,c[part.fill],c.headLine,lw);
     if(sp.horn)fillStroke(ctx,sp.horn,c.horn,c.hornLine,lw);
+    if(strokes)for(const s of sp.headStrokes||[])if(!s.far)drawStroke(ctx,s,c,lw);
     if(size>=24){ctx.fillStyle=c.eye;ctx.beginPath();ctx.arc(sp.eye.x,sp.eye.y,4.5,0,Math.PI*2);ctx.fill()}
+  }
+  // Branching parts (antlers) as outlined round-capped polylines.
+  function drawStroke(ctx,s,c,lw){
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+    for(const [color,width] of [[c.headLine,s.width+lw*2],[c[s.color],s.width]]){
+      ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
+      for(const line of s.lines){ctx.moveTo(line[0][0],line[0][1]);for(const [px,py] of line.slice(1))ctx.lineTo(px,py)}
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // Sleeping art: a curled body that breathes slowly.
+  function drawSleeping(ctx,sp,c,lw,t,size){
+    const z=sp.sleep,breath=1+Math.sin(t*1.4)*.025;
+    ctx.translate(sp.center.x,sp.center.y);ctx.scale(1,breath);ctx.translate(-sp.center.x,-sp.center.y);
+    fillStroke(ctx,z.body,c.body,c.line,lw);
+    for(const part of z.parts)fillStroke(ctx,part.d,c[part.fill],c.line,lw);
+    if(size>=24&&z.eye){ctx.strokeStyle=c.line;ctx.lineWidth=lw*1.4;ctx.lineCap='round';ctx.beginPath();
+      ctx.moveTo(z.eye[0][0],z.eye[0][1]);ctx.lineTo(z.eye[1][0],z.eye[1][1]);ctx.stroke()}
   }
   // Half-plane on one side of the throat line (head side or neck side).
   const jointCache=new Map();
@@ -259,5 +429,6 @@
   const drawHorse=(ctx,x,y,size,opts)=>drawAnimal('horse',ctx,x,y,size,opts);
   window.ConquerAnimals={SPECIES,SHEEP:SPECIES.sheep,HEAD:SPECIES.sheep.pose,COLORS:SPECIES.sheep.colors,
     gaitPose,sheepPose:gaitPose,blendedPose:(t,seed,blend)=>blendedPose('sheep',t,seed,blend),blendedPoseOf:blendedPose,
+    modePose,transitionPose,
     drawAnimal,drawSheep,drawGoat,drawCow,drawHorse};
 })();

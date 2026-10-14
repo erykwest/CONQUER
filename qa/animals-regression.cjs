@@ -12,7 +12,10 @@ const {SHEEP,HEAD,sheepPose,blendedPose}=window.ConquerAnimals;
 for(const part of ['body','head','legs','tail'])assert.ok(SHEEP[part].startsWith('M'),'sheep has its own '+part);
 assert.equal(SHEEP.legList.length,4,'four independently posed legs');
 assert.ok(SHEEP.legList.every(l=>Number.isFinite(l.x)&&Number.isFinite(l.y)),'every leg has a hip pivot');
-assert.equal((source.match(/ head:'/g)||[]).length,Object.keys(window.ConquerAnimals.SPECIES).length,'one head shape per species, shared by every pose');
+for(const [name,sp] of Object.entries(window.ConquerAnimals.SPECIES)){
+  assert.equal(typeof sp.head,'string',name+' has one head shape');
+  assert.ok(Object.values(sp.pose).every(p=>!('head' in p)&&!('face' in p)),name+' poses never swap the head shape');
+}
 console.log('PASS sheep art is one rigid set: body, head, four legs and tail');
 
 let maxSwing=0;
@@ -70,3 +73,25 @@ const hw=blendedPoseOf('horse',.3,0,0),hb=blendedPoseOf('horse',.3,0,1);
 assert.ok(hb.headY-hw.headY>100,'browsing horse lowers the head on its neck to the grass');
 assert.ok(Math.abs(hb.headRot-hw.headRot)<1,'the rigid head turns only moderately; the neck does the work');
 console.log('PASS horse coats, neck joint and browse; cow scale');
+const {modePose,transitionPose}=window.ConquerAnimals;
+const expected={deer:['walk','browse','alert','run'],stag:['walk','browse','alert','run'],wolf:['walk','run','howl','idle'],bear:['walk','stand','sleep'],boar:['walk','browse','run']};
+for(const [name,modes] of Object.entries(expected)){
+  const sp=SPECIES[name];
+  assert.equal(sp.modes.map(m=>m[0]).join(','),modes.join(','),name+' offers its reference actions');
+  assert.equal(sp.legList.length,4,name+' has four legs');
+  for(const m of modes)for(let t=0;t<2;t+=.1){
+    const p=modePose(name,m,t,0);
+    assert.ok([...p.legs,p.headX,p.headY,p.headRot,p.bob].every(Number.isFinite),name+' '+m+' pose is finite');
+  }
+}
+assert.ok(SPECIES.stag.headStrokes?.length&&!SPECIES.deer.headStrokes,'only the stag carries antlers');
+const run=modePose('wolf','run',.1,0);
+assert.ok(Math.abs(run.legs[0]-run.legs[2])>.3,'gallop: hind and fore pairs reach in opposition');
+assert.ok(modePose('wolf','howl',0,0).headRot<-.5,'howling lifts the muzzle');
+const stand=modePose('bear','stand',0,0);
+assert.ok(stand.bodyRot<-1&&stand.bodyPivot,'a standing bear rears about its hip');
+assert.equal(modePose('bear','sleep',0,0).art,'sleep','a sleeping bear curls up');
+const swap=transitionPose('bear','walk','sleep',.5,0,0);
+assert.ok(swap.crouch>.9,'changing art (sleep) hides the swap in a crouch');
+assert.ok(transitionPose('deer','walk','browse',.5,0,0).headY>modePose('deer','walk',0,0).headY,'transitions move the head continuously');
+console.log('PASS wildlife: deer, stag, wolf, bear, boar modes');
