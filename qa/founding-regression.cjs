@@ -46,7 +46,7 @@ for(const [seed,biome] of [[12345,'plains'],[4242,'forest']])check('actual name 
  if(routeCount!==4)console.log('  unconnected routes',run("ensureRoadPlan().map(r=>({id:r.id,target:r.target,connected:arterialRouteContinuous(r.id),roads:routeRoads(r.id).length,targetBlocked:primaryRoadTerrainBlocked(r.target),targetSlope:terrainSlopeKind(r.target)}))"));
  assert.equal(routeCount,4);
  const clear=run('roadList().every(r=>roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId]))');
- if(!clear)console.log('  road-block diagnostics',run("roadList().filter(r=>!roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId])).slice(0,4).map(r=>({a:r.a,b:r.b,route:r.routeId,why:environmentBlocksPoint(r.a,'road')?'environment':'structure'}))"));
+ if(!clear)console.log('  road-block diagnostics',run("roadList().filter(r=>!roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId])).slice(0,4).map(r=>({a:r.a,b:r.b,route:r.routeId,why:[0,.25,.5,.75,1].map(t=>{const p={x:r.a.x+(r.b.x-r.a.x)*t,y:r.a.y+(r.b.y-r.a.y)*t};return {t,blocked:!roadRepairPointClear(p,r.width,[State.village.wellId]),forest:State.environment.some(f=>f.type==='forest'&&environmentContains(f,p,.45))}})}))"));
  assert.equal(clear,true);
  console.log('  planning slices',timing);
 });
