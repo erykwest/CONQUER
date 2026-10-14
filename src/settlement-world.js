@@ -161,7 +161,7 @@ function roadRepairEntryBlocksPoint(entry,p,clearance,width){
 }
 function roadRepairPointClear(p,width=.30,ignoreIds=[],spatialIndex=null,allowPrimaryNature=false){
   if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||
-    (allowPrimaryNature||primaryRoadCarvesPoint(p)
+    (allowPrimaryNature
       ?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return false;
   const clearance=width/2+.16;
 
@@ -355,7 +355,7 @@ function arterialSafeWaypoints(routeId,displaced=[]){
   for(const r of source){
     const p={...r.b};
     if(dist(p,pts.at(-1))<.45)continue;
-    if(roadRepairPointClear(p,width,ignore,null,true))pts.push(p);
+    if(roadRepairPointClear(p,width,ignore))pts.push(p);
   }
 
   if(plan.connected||plan.planningToBorder||!source.length){
@@ -1213,7 +1213,7 @@ function generateEnvironment(){
   }else if(State.biome==='river'){
     env.push(makeEnvWater(rnd,'river'));addBlob('forest',1+Math.floor(rnd()*2),true);
   }else if(State.biome==='forest'){
-    addBlob('forest',4+Math.floor(rnd()*3),true);env.push(makeEnvWater(rnd,'stream'));if(rnd()<.65)addBlob('pond',1,true);
+    env.push(makeEnvWater(rnd,'stream'));addBlob('forest',4+Math.floor(rnd()*3),true);if(rnd()<.65)addBlob('pond',1,true);
   }else if(State.biome==='mountains'){
     env.push(makeEnvWater(rnd,'stream'));
   }else if(State.biome==='sea'){
@@ -1250,14 +1250,14 @@ function environmentBlocksPoint(p,mode='settlement'){
   if(mode==='settlement'&&slope)return true;
   for(const f of State.environment){
     if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45)
-      &&!(f.type==='forest'&&primaryRoadCarvesPoint(p)))return true;
+      )return true;
     if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
   }
   return false;
 }
 function roadEnvironmentConflict(road){
   const len=dist(road.a,road.b),steps=Math.max(6,Math.ceil(len/.35));
-  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if((isPrimaryRoad(road)?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return true}
+  for(let i=1;i<steps;i++){const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};if((environmentBlocksPoint(p,'road')))return true}
   return false;
 }
 function edgeSample(edge,t){
@@ -1307,12 +1307,12 @@ function ensureBorderEntrySelection(){
     const ordered=options.map((_,i)=>options[(start+i)%options.length]);
     // Main roads open a cut through woods and get wooden bridges over water.
     // Target selection should reject slopes/sea, not forest or river banks.
-    let choice=ordered.find(e=>!primaryRoadTerrainBlocked(e));
+    let choice=ordered.find(e=>!environmentBlocksPoint(e,'road'));
     if(!choice){
       const base=ordered[0]?.t||.5;
       choice=BORDER_ENTRY_BACKUP_FRACTIONS.slice().sort((a,b)=>Math.abs(a-base)-Math.abs(b-base))
         .map((t,i)=>({id:'border-'+edge+'-alternate-'+i,edge,index:-1,t,...edgeSample(edge,t)}))
-        .find(e=>!primaryRoadTerrainBlocked(e));
+        .find(e=>!environmentBlocksPoint(e,'road'));
     }
     selected.push({...choice||ordered[0]});
   }
