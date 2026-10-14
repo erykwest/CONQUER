@@ -97,8 +97,16 @@
     const remaining={...limits},allocated={};
     // Player-established industries claim workers before automatically generated fields.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
-      const req=workerDemand(s),group=classKey(req.tier),count=Math.min(req.count,remaining[group]);
-      remaining[group]-=count;allocated[s.id]=count;
+      const req=workerDemand(s),group=classKey(req.tier);
+      let count=Math.min(req.count,remaining[group]);
+      remaining[group]-=count;
+      if(s.type==='field'&&count<req.count){
+        // A farm tended by otherwise idle L2 workers still produces food.
+        // Mines/quarries have already claimed their L2 workforce above.
+        const extra=Math.min(req.count-count,remaining.L2);
+        count+=extra;remaining.L2-=extra;
+      }
+      allocated[s.id]=count;
     }
     return allocated;
   }
