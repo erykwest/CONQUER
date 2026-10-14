@@ -1144,6 +1144,27 @@ function forestBlobCanPlace(candidate,env,minGap=3){
   }
   return env.filter(f=>f.type==='forest').every(f=>polygonGap(candidate.points,f.points)>=minGap);
 }
+function forestBeltOutline(kind,rx,ry,rotation,phase){
+  // Rounded thickened spline, supporting horseshoe C, curved L and meander S.
+  const spine=[],n=36;
+  for(let i=0;i<=n;i++){
+    const t=i/n,a=t*Math.PI*1.5-Math.PI*.75;
+    const p=kind==='C'?{x:.43*Math.cos(a),y:.43*Math.sin(a)}:
+      kind==='L'?{x:-.43+.86*t*t,y:-.43+.86*(2*t-t*t)}:
+      {x:-.44+.88*t,y:.29*Math.sin(t*Math.PI*2)};
+    spine.push(p);
+  }
+  const sides=sign=>spine.map((p,i)=>{
+    const prev=spine[Math.max(0,i-1)],next=spine[Math.min(n,i+1)];
+    const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1;
+    const w=.14*(1+.13*Math.sin(phase+i/n*Math.PI*4));
+    return{x:p.x-sign*dy/len*w,y:p.y+sign*dx/len*w};
+  });
+  const ca=Math.cos(rotation),sa=Math.sin(rotation);
+  return [...sides(1),...sides(-1).reverse()].map(p=>{
+    const xx=p.x*rx,yy=p.y*ry;return{x:xx*ca-yy*sa,y:xx*sa+yy*ca};
+  });
+}
 function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
   // Correlated, low-frequency lobes rather than independent radial jitter:
   // recognisably rounded tree lines with coves, bulges and asymmetry.
@@ -1151,6 +1172,14 @@ function makeOrganicForestBlob(rnd,x,y,rx,ry,small=false){
   const tau=Math.PI*2,rotation=rnd()*tau,phase2=rnd()*tau,phase3=rnd()*tau;
   const phase5=rnd()*tau,stretch=.84+rnd()*.32,angleCount=small?40:56;
   const cr=Math.cos(rotation),sr=Math.sin(rotation),points=[];
+  const outlineType=rnd();
+  if(outlineType>.55){
+    const kind=outlineType<.72?'C':outlineType<.86?'L':'S';
+    const outline=forestBeltOutline(kind,rx,ry,rotation,phase3);
+    for(const p of outline)points.push({x:x+p.x,y:y+p.y});
+    return{id:'env-forest-'+Math.round(x*10)+'-'+Math.round(y*10),
+      type:'forest',points,fill:'#2e3c1d',edge:'#5c7438',x,y,rx,ry,outlineType:kind};
+  }
   for(let i=0;i<angleCount;i++){
     const a=i*tau/angleCount;
     const lobes=1+.15*Math.sin(2*a+phase2)+.11*Math.sin(3*a+phase3)
