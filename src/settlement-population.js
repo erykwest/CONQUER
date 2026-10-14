@@ -1067,7 +1067,7 @@ function drawVillagerFigure(dot){
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
 }
 function drawVillagerFigureUnmasked(dot){
-  const base=w2s(dot.p,.10),scale=State.view.scale;
+  const base=w2s(dot.p,.10),scale=State.view.scale*.5;
   const kind=dot.kind,sizeFactor=dot.age==='child'?.5:1;
   const bodyW=6.0*scale*sizeFactor,bodyH=8.0*scale*sizeFactor;
   const headR=2.35*scale*sizeFactor,bodyY=base.y-bodyH*.16;
@@ -1132,7 +1132,7 @@ function drawPeasants(){
 }
 function militaryScale(){
   // World-size figures track the camera across its full .18x–3x zoom range.
-  return State.view.scale;
+  return State.view.scale*.5;
 }
 function soldierLivery(id){
  const herald=State.heraldry||{};
@@ -1234,7 +1234,7 @@ function drawCutawayOccupants(){
     const render=()=>{
       for(const slot of cutawayRoomSlots(s)){
         let count=0,kind=null;
-        if(slot.role==='barracks'){count=3;kind='soldier'}
+        if(slot.role==='barracks'||slot.role==='quarters'){count=3;kind='soldier'}
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
         if(!count)continue;
         const positions=cutawayOccupantLayout(count),items=[];
