@@ -126,6 +126,7 @@ test('idle L2 workers open a field in the ploughing window without five houses',
   run("State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5},{id:'artisan',type:'house',auto:true,x:101,y:108,w:1.5,h:1,houseLevel:2});invalidateNavigation();globalThis.qaFirstAutumnMonday=qaAutumn+((7-qaAutumn%7)%7);State.clock.day=qaFirstAutumnMonday+.40;tickFields(State.clock.day);globalThis.qaL2Field=State.structures.find(s=>s.openedByL2==='artisan')");
   assert.equal(run('Boolean(qaL2Field)'),true,'an idle L2 should create farmland independently of five-house threshold');
   assert.equal(run('underConstruction(qaL2Field)'),false,'opening farmland should not require a construction delay');
+  assert.equal(run('fieldLayout(qaL2Field).cells.length'),1,'a new L2 field must fit one worker slot');
   assert.equal(run('fieldQuadValid(qaL2Field.points)&&urbanYellowContains(qaL2Field.points)'),true);
   assert.equal(run('fieldWorkAssignments(completedSettlement("house"),completedSettlement("field")).get("artisan")?.field.id'),run('qaL2Field.id'),'L2 must be assigned to its newly opened field');
   run("globalThis.qaL2Crop=fieldCrop(qaL2Field);qaL2Crop.lastDay=qaFirstAutumnMonday+.40;State.clock.day=qaFirstAutumnMonday+1.40;tickFields(State.clock.day)");
