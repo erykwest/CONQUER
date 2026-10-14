@@ -102,7 +102,7 @@ function roadRepairEntryBounds(entry){
   };
 }
 function roadRepairBlockerEntry(s){
-  if(!s||s.type==='road'||s.type==='market')return null;
+  if(!s||s.type==='road'||s.type==='market'||s.primaryBridgeFor)return null;
   if(['wall','palisade','built'].includes(s.type))return{kind:'linear',s};
   if(s.type==='well')return{kind:'circle',s,r:.62};
   if(s.type==='tower'&&s.shape==='round')return{kind:'circle',s,r:Number(s.r)||.5};
