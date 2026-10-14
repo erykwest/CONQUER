@@ -4,7 +4,7 @@
 // for a pose per figure and draws it. Timing is real time so swings stay legible
 // at every calendar speed. No state is persisted: a WeakMap dies with entities.
 (function(){
-  const STRIKE=.45,HURT=.2,FALL=.38,FADE_FROM=.9,GONE=1.8,STAGGER=.065;
+  const STRIKE=.45,HURT=.2,FALL=.38,FADE_FROM=.9,GONE=1.8,STAGGER=.065,BLOOD=.9,SPRAY=.3;
   const LAST=GONE+STAGGER*5;
   const state=new WeakMap();
   let clockOverride=null,lastEventEnd=-1e9;
@@ -45,7 +45,7 @@
       const dx=to.x-from.x,dy=to.y-from.y,d=Math.hypot(dx,dy);
       if(d>.5){dirX=dx/d;dirY=dy/d}
     }
-    const out={dirX,dirY,attack:0,flash:0,ready:u.engaged?1:0,bob:0,fall:0,alpha:1};
+    const out={dirX,dirY,attack:0,flash:0,ready:u.engaged?1:0,bob:0,fall:0,alpha:1,blood:0,spray:0};
     if(u.engaged)out.bob=Math.sin(t*7+index*1.7);
     if(!s)return out;
     out.attack=attackCurve((t-s.strikeAt-index*STAGGER)/STRIKE);
@@ -58,6 +58,9 @@
         out.fall=1-Math.pow(1-f,3);
         out.alpha=d<FADE_FROM?1:Math.max(0,1-(d-FADE_FROM)/(GONE-FADE_FROM));
         out.attack=out.ready=out.bob=0;
+        // A small pool spreads under the body; a few drops fly on the blow.
+        out.blood=Math.min(1,d/BLOOD);
+        out.spray=d<SPRAY?d/SPRAY:0;
       }
     }
     return out;
@@ -80,6 +83,7 @@
       ctx.save();
       ctx.globalAlpha*=pose.alpha;
       ctx.translate(pose.dirX*reach,pose.dirY*reach*.6-Math.abs(pose.bob)*.5*scale);
+      if(pose.blood>0)drawBlood(base,scale,bodyH,pose);
       if(pose.fall>0){
         // Fall away from the foe, pivoting on the feet.
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
@@ -94,6 +98,24 @@
       }
       ctx.restore();
     }));
+  }
+  function drawBlood(base,scale,bodyH,pose){
+    const side=pose.dirX>0?-1:1,grow=Math.sqrt(pose.blood);
+    // Pool sits under the torso of the fallen body, flattened to the iso ground.
+    const cx=base.x+side*bodyH*.5,cy=base.y+2.2*scale,rx=5.6*scale*grow;
+    ctx.fillStyle='rgba(112,16,14,.72)';
+    ctx.beginPath();ctx.ellipse(cx,cy,rx,rx*.42,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+side*rx*.55,cy+rx*.12,rx*.45,rx*.2,0,0,Math.PI*2);ctx.fill();
+    if(pose.spray>0){
+      // Three drops arc away from the blow and land beside the body.
+      const s=pose.spray;ctx.fillStyle='rgba(140,20,16,'+(.9*(1-s*.4)).toFixed(3)+')';
+      for(let k=0;k<3;k++){
+        const reach=(4+k*2.2)*scale*s,lift=Math.sin(Math.PI*s)*(5+k*1.5)*scale;
+        ctx.beginPath();
+        ctx.arc(base.x+side*reach,base.y-bodyH*.55-lift+s*bodyH*.5+(k-1)*1.2*scale,Math.max(.8,1.05*scale),0,Math.PI*2);
+        ctx.fill();
+      }
+    }
   }
   function drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose){
     const x=base.x+bodyW*.55,gy=bodyY+bodyH*.43;
