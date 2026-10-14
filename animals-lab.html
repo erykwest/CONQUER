@@ -23,6 +23,7 @@
   <div role="group" aria-label="Specie">
     <button id="sSheep" aria-pressed="true">Pecora</button>
     <button id="sGoat" aria-pressed="false">Capra</button>
+    <button id="sCow" aria-pressed="false">Mucca</button>
   </div>
   <div role="group" aria-label="Modalità">
     <button id="mWalk" aria-pressed="true">Walking</button>
@@ -33,7 +34,7 @@
 </header>
 <p class="note">In alto: l'animale scelto con la modalità scelta. In basso: un gregge misto in scala di gioco che alterna camminata e pascolo da solo.</p>
 <canvas id="c" width="1200" height="760"></canvas>
-<script src="./src/settlement-animals.js?v=goat-1"></script>
+<script src="./src/settlement-animals.js?v=cow-1"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,c=document.getElementById('c'),g=c.getContext('2d');
@@ -41,12 +42,13 @@
   const set=m=>{mode=m;document.getElementById('mWalk').setAttribute('aria-pressed',m==='walk');document.getElementById('mBrowse').setAttribute('aria-pressed',m==='browse')};
   document.getElementById('mWalk').onclick=()=>set('walk');
   document.getElementById('mBrowse').onclick=()=>set('browse');
-  const pick=sp=>{species=sp;document.getElementById('sSheep').setAttribute('aria-pressed',sp==='sheep');document.getElementById('sGoat').setAttribute('aria-pressed',sp==='goat')};
+  const pick=sp=>{species=sp;document.getElementById('sSheep').setAttribute('aria-pressed',sp==='sheep');document.getElementById('sGoat').setAttribute('aria-pressed',sp==='goat');document.getElementById('sCow').setAttribute('aria-pressed',sp==='cow')};
   document.getElementById('sSheep').onclick=()=>pick('sheep');
   document.getElementById('sGoat').onclick=()=>pick('goat');
+  document.getElementById('sCow').onclick=()=>pick('cow');
   // Small flock: each sheep wanders, stops to graze, then moves on.
   const flock=Array.from({length:9},(_,i)=>({x:120+i*110,y:560+(i%3)*55,seed:i*1.7,mode:i%2?'browse':'walk',blend:i%2?1:0,
-    until:2+i*.6,dir:i%2?1:-1,species:i%3===2?'goat':'sheep'}));
+    until:2+i*.6,dir:i%2?1:-1,species:['sheep','goat','cow'][i%3]}));
   function resize(){const w=Math.min(1200,c.clientWidth||1200);if(c.width!==w){c.width=w;c.height=Math.round(w*.63)}}
   function frame(now){
     resize();

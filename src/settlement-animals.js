@@ -38,6 +38,25 @@
       colors:{body:'#d8c19a',shade:'#c4aa80',line:'#5f4a33',head:'#d8c19a',headLine:'#5f4a33',
         leg:'#d8c19a',legFar:'#b99f76',legLine:'#5f4a33',eye:'#2b2321',
         horn:'#4a2f1d',hornFar:'#33200f',hornLine:'#24170c',beard:'#b39a72',hoof:'#3a2c20'}
+    },
+    // Source: mucca_estesa.svg (256×256, faces right). Polled like the
+    // reference: no horns, an ear instead, lighter muzzle, long tufted tail.
+    cow:{
+      artFacing:1,
+      body:'M52 102 C68 88,96 82,126 84 C150 74,184 78,206 92 C220 98,228 110,228 126 C228 142,220 154,206 162 C190 174,164 180,132 180 C102 180,78 174,60 164 C46 156,38 142,38 126 C38 116,42 108,52 102 Z',
+      head:'M194 94 C202 80,218 72,232 76 C244 80,250 92,248 104 C246 116,236 126,224 128 C214 130,204 126,198 118 C190 124,182 128,174 130 C166 124,164 116,166 108 C172 102,180 96,194 94 Z',
+      headParts:[
+        {d:'M212 84 C204 74,192 70,184 74 C188 84,200 90,212 90 Z',fill:'ear'},
+        {d:'M236 96 C246 96,251 104,249 112 C246 121,236 122,231 116 C228 108,230 99,236 96 Z',fill:'muzzle'}
+      ],
+      legs:'M76 166 C82 166,86 170,86 176 L86 230 C86 236,82 242,76 242 C70 242,66 236,66 230 L66 176 C66 170,70 166,76 166 Z M112 170 C118 170,122 174,122 180 L122 234 C122 240,118 246,112 246 C106 246,102 240,102 234 L102 180 C102 174,106 170,112 170 Z M160 168 C166 168,170 172,170 178 L168 232 C168 238,164 244,158 244 C152 244,148 238,148 232 L150 178 C150 172,154 168,160 168 Z M194 160 C200 160,204 164,204 170 L202 226 C202 232,198 238,192 238 C186 238,182 232,182 226 L184 170 C184 164,188 160,194 160 Z',
+      tail:'M48 104 C38 122,32 150,34 186 C29 191,27 199,31 205 C37 202,41 195,39 187 C39 153,45 126,54 108 Z',
+      pivot:{x:176,y:118},eye:{x:226,y:90},tailPivot:{x:50,y:106},center:{x:134,y:244},
+      pose:{walk:{x:16,y:4,rot:0},browse:{x:24,y:30,rot:1.25}},
+      hoof:12,headBehind:true,
+      colors:{body:'#7a5236',shade:'#694530',line:'#3b2617',head:'#7a5236',headLine:'#3b2617',
+        leg:'#7a5236',legFar:'#5f3f29',legLine:'#3b2617',eye:'#1e140d',
+        ear:'#5f3f29',muzzle:'#a47c5d',hoof:'#2a1c12'}
     }
   };
   // Each leg is its own subpath; its hip is the top of the subpath.
@@ -143,13 +162,15 @@
     if(sp.horn){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}
     fillStroke(ctx,sp.head,c.head,c.headLine,lw);
     if(sp.beard)fillStroke(ctx,sp.beard,c.beard,c.headLine,lw);
+    for(const part of sp.headParts||[])fillStroke(ctx,part.d,c[part.fill],c.headLine,lw);
     if(sp.horn)fillStroke(ctx,sp.horn,c.horn,c.hornLine,lw);
     if(size>=24){ctx.fillStyle=c.eye;ctx.beginPath();ctx.arc(sp.eye.x,sp.eye.y,4.5,0,Math.PI*2);ctx.fill()}
     ctx.restore();
   }
   const drawSheep=(ctx,x,y,size,opts)=>drawAnimal('sheep',ctx,x,y,size,opts);
   const drawGoat=(ctx,x,y,size,opts)=>drawAnimal('goat',ctx,x,y,size,opts);
+  const drawCow=(ctx,x,y,size,opts)=>drawAnimal('cow',ctx,x,y,size,opts);
   window.ConquerAnimals={SPECIES,SHEEP:SPECIES.sheep,HEAD:SPECIES.sheep.pose,COLORS:SPECIES.sheep.colors,
     gaitPose,sheepPose:gaitPose,blendedPose:(t,seed,blend)=>blendedPose('sheep',t,seed,blend),blendedPoseOf:blendedPose,
-    drawAnimal,drawSheep,drawGoat};
+    drawAnimal,drawSheep,drawGoat,drawCow};
 })();

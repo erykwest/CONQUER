@@ -12,7 +12,7 @@ const {SHEEP,HEAD,sheepPose,blendedPose}=window.ConquerAnimals;
 for(const part of ['body','head','legs','tail'])assert.ok(SHEEP[part].startsWith('M'),'sheep has its own '+part);
 assert.equal(SHEEP.legList.length,4,'four independently posed legs');
 assert.ok(SHEEP.legList.every(l=>Number.isFinite(l.x)&&Number.isFinite(l.y)),'every leg has a hip pivot');
-assert.equal((source.match(/ head:'/g)||[]).length,2,'one head shape per species, shared by every pose');
+assert.equal((source.match(/ head:'/g)||[]).length,3,'one head shape per species, shared by every pose');
 console.log('PASS sheep art is one rigid set: body, head, four legs and tail');
 
 let maxSwing=0;
@@ -54,3 +54,10 @@ assert.ok(gb.headRot-gw.headRot>1,'goat browse swings the rigid head and neck do
 const sw=blendedPoseOf('sheep',.3,0,0);
 assert.ok(Math.abs(gw.legs[0]+sw.legs[0])<1e-9,'right-facing goat art mirrors the shared gait');
 console.log('PASS goat parts, colours and browse');
+const cow=SPECIES.cow;
+for(const part of ['body','head','legs','tail'])assert.ok(cow[part].startsWith('M'),'cow has its own '+part);
+assert.ok(!cow.horn,'cow is polled like the reference');
+assert.equal(cow.colors.body,'#7a5236','cow coat is brown');
+const cw=blendedPoseOf('cow',.3,0,0),cb=blendedPoseOf('cow',.3,0,1);
+assert.ok(cb.headRot-cw.headRot>1&&cb.headY>cw.headY,'cow browse lowers the rigid head to the grass');
+console.log('PASS cow parts, colour and browse');
