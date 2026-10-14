@@ -1157,7 +1157,7 @@ function forestBeltOutline(kind,rx,ry,rotation,phase){
   const sides=sign=>spine.map((p,i)=>{
     const prev=spine[Math.max(0,i-1)],next=spine[Math.min(n,i+1)];
     const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1;
-    const w=.14*(1+.13*Math.sin(phase+i/n*Math.PI*4));
+    const w=(kind==='S'?.05:.14)*(1+.13*Math.sin(phase+i/n*Math.PI*4));
     return{x:p.x-sign*dy/len*w,y:p.y+sign*dx/len*w};
   });
   const ca=Math.cos(rotation),sa=Math.sin(rotation);
