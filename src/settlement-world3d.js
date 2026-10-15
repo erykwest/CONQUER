@@ -193,17 +193,22 @@
   }
   function buildTerrain(){
     const v=[],push=(x,y,z)=>v.push(x,y,z);
-    // Base plain (z=0) slightly larger than the world so edges never show the clear colour.
+    // Hills crossing the map edge are cut at the world square, like the 2.5D relief
+    // (clipTerrainPolygon), instead of spilling past the map.
+    const clipped=tri=>{
+      const poly=clipTerrainPolygon(tri);
+      for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z);
+    };
     const W=WORLD;
     for(const [x,y] of [[0,0],[W,0],[W,W],[0,0],[W,W],[0,W]])push(x,y,0);
     for(const level of reliefLevels()){
       const top=level.top||[];if(top.length<3)continue;
       const tri=earcut(top);
-      for(const i of tri)push(top[i].x,top[i].y,level.z1);
+      for(let i=0;i<tri.length;i+=3)clipped([tri[i],tri[i+1],tri[i+2]].map(k=>({x:top[k].x,y:top[k].y,z:level.z1})));
       for(const band of reliefEdgeBands(level)){
         const [oa,ob,b,a]=band.poly;
-        push(oa.x,oa.y,band.z0);push(ob.x,ob.y,band.z0);push(b.x,b.y,band.z1);
-        push(oa.x,oa.y,band.z0);push(b.x,b.y,band.z1);push(a.x,a.y,band.z1);
+        clipped([{...oa,z:band.z0},{...ob,z:band.z0},{...b,z:band.z1}]);
+        clipped([{...oa,z:band.z0},{...b,z:band.z1},{...a,z:band.z1}]);
       }
     }
     return new Float32Array(v);
@@ -226,6 +231,22 @@
         if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
       }
     }
+    return new Float32Array(m.tris);
+  }
+  // Vertical cross-section closing hills where the map edge cuts them: follows the terrain
+  // height along each border so the section meets the clipped surface.
+  const EDGE_STEP=.1,EDGE_SECTION=['#5d5144','#4e443a'];
+  function buildTerrainEdges(){
+    const m=meshBuilder(),W=WORLD,n=Math.round(W/EDGE_STEP);
+    const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
+    borders.forEach((at,side)=>{
+      let prev=at(0),hp=terrainElevation(prev);
+      for(let i=1;i<=n;i++){
+        const p=at(i*EDGE_STEP),h=terrainElevation(p);
+        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],EDGE_SECTION[side%2]);
+        prev=p;hp=h;
+      }
+    });
     return new Float32Array(m.tris);
   }
   // Bake the existing 2D ground drawing in plan view (rotation 0) into a canvas covering [x0,x0+size]².
@@ -677,7 +698,7 @@
     const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
-      upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());
+      upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());upload(gl,'terrainEdges',buildTerrainEdges());
       uploadTexture(gl,'world',bakeGround(0,0,WORLD));
       uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
       S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
@@ -767,7 +788,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'mountains');drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write
