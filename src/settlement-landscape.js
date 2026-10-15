@@ -557,6 +557,21 @@ function drawGrid(){
     let a=w2s({x:i,y:0}),b=w2s({x:i,y:WORLD});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
     a=w2s({x:0,y:i});b=w2s({x:WORLD,y:i});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
   }ctx.restore();
+  if(isPlanView())drawPlanSnapGrid();
+}
+// Plan view only: the placement snap lattice (GRID = 0.5U) over the buildable area, 1U lines brighter.
+// w2sRaw ignores height in plan view, so straight lines stay exact on relief too.
+function drawPlanSnapGrid(){
+  const px=U*State.view.scale*GRID;if(px<6)return;
+  ctx.save();ctx.lineWidth=1;
+  for(let v=BUILD_MIN;v<=BUILD_MAX+1e-6;v+=GRID){
+    const major=Math.abs(v-Math.round(v))<1e-6;
+    if(!major&&px<10)continue;
+    ctx.strokeStyle=major?'rgba(255,255,255,.10)':'rgba(255,255,255,.045)';
+    let a=w2sRaw({x:v,y:BUILD_MIN}),b=w2sRaw({x:v,y:BUILD_MAX});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    a=w2sRaw({x:BUILD_MIN,y:v});b=w2sRaw({x:BUILD_MAX,y:v});ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  ctx.restore();
 }
 function drawBuildArea(){
   // The buildable-zone perimeter is a placement aid, not permanent landscape.
