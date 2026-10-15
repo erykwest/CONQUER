@@ -99,18 +99,22 @@
     const items=[];let total=0;
     const d0=view.depth(0,0,0),cam=[view.depth(1,0,0)-d0,view.depth(0,1,0)-d0,view.depth(0,0,1)-d0];
     for(const mesh of meshes){
-      const {pos,col,bias,outward}=mesh,n=col.length;total+=n;
+      const {pos,col,bias,outward,gi,groups}=mesh,n=col.length;total+=n;
+      // Meshes made of rigid parts (animals) sort part by part: primary key the
+      // part centre, secondary the triangle; plain meshes sort per triangle.
+      const gd=groups?groups.map(c=>view.depth(c[0],c[1],c[2])):null;
       for(let t=0;t<n;t++){
         const o=t*9,ax=pos[o],ay=pos[o+1],az=pos[o+2],bx=pos[o+3],by=pos[o+4],bz=pos[o+5],cx=pos[o+6],cy=pos[o+7],cz=pos[o+8];
         const ux=bx-ax,uy=by-ay,uz=bz-az,vx=cx-ax,vy=cy-ay,vz=cz-az;
         const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
         const o2=outward?.[t];
         if(o2&&o2[0]*cam[0]+o2[1]*cam[1]+o2[2]*cam[2]<=0)continue;
-        items.push({mesh,t,d:view.depth((ax+bx+cx)/3,(ay+by+cy)/3,(az+bz+cz)/3)+(bias?.[t]||0),f:soften(shadeFactor(nx,ny,nz,view.turns||0),rgb(col[t]))});
+        const td=view.depth((ax+bx+cx)/3,(ay+by+cy)/3,(az+bz+cz)/3)+(bias?.[t]||0);
+        items.push({mesh,t,d:gd?gd[gi[t]]:td,d2:gd?td:0,f:soften(shadeFactor(nx,ny,nz,view.turns||0),rgb(col[t]))});
       }
     }
-    for(const s of sprites)items.push({sprite:s,d:view.depth(s.x,s.y,s.z||0)});
-    items.sort((a,b)=>a.d-b.d);
+    for(const s of sprites)items.push({sprite:s,d:view.depth(s.x,s.y,s.z||0),d2:0});
+    items.sort((a,b)=>a.d-b.d||a.d2-b.d2);
     ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;
     for(const it of items){
       if(it.sprite){ctx.restore();it.sprite.draw();ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;continue}

@@ -24,8 +24,8 @@ def fresh_collection(name):
     return root
 
 
-def material(key, hex_color):
-    name = 'cq_' + key
+def material(key, hex_color, prefix=''):
+    name = 'cq_' + prefix + key
     m = bpy.data.materials.get(name)
     if not m:
         m = bpy.data.materials.new(name)
@@ -38,9 +38,10 @@ def material(key, hex_color):
 
 class Part:
     """One exported part: a Blender object built from bmesh primitives."""
-    def __init__(self, root, name, palette, offset=(0, 0, 0)):
+    def __init__(self, root, name, palette, offset=(0, 0, 0), prefix=''):
         self.name = name
         self.palette = palette
+        self.prefix = prefix   # per-model material names (several palettes in one scene)
         self.bm = bmesh.new()
         self.mats = []
         coll = bpy.data.collections.new('part_' + name)
@@ -136,8 +137,8 @@ class Part:
         bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
         self.bm.to_mesh(me); self.bm.free()
         for key in self.mats:
-            me.materials.append(material(key, self.palette[key]))
-        ob = bpy.data.objects.new(self.name, me)
+            me.materials.append(material(key, self.palette[key], self.prefix))
+        ob = bpy.data.objects.new(self.prefix + self.name, me)
         ob.location = self.offset
         self.coll.objects.link(ob)
         self.object = ob

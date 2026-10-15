@@ -36,7 +36,7 @@
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
   <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
-    <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button><button data-subject="horse3d">Cavallo 3D</button>
+    <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button>
   </div>
   <div class="group" role="group" aria-label="Azione" id="actions"></div>
   <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
@@ -89,16 +89,16 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   const ACTIONS={animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
-  const kindOf=s=>s==='horse3d'?'animal3d':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  const kindOf=s=>s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
-    const acts=kindOf(subject)==='animal'?A.SPECIES[subject].modes:ACTIONS[kindOf(subject)];
+    const acts=kindOf(subject)==='animal'?animalActions(subject):ACTIONS[kindOf(subject)];
     if(!acts.some(([k])=>k===action))action=acts[0][0];
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
-    $('coatBox').hidden=!['horse','wagon','wagon3d','horse3d'].includes(subject);
+    $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
-    $('wagon3dBox').hidden=!['wagon3d','horse3d'].includes(subject);
-    $('flipBox').hidden=!['animal','vehicle'].includes(kindOf(subject))||subject==='wagon3d';
+    $('wagon3dBox').hidden=!(subject==='wagon3d'||kindOf(subject)==='animal');
+    $('flipBox').hidden=subject!=='wagon';
     resetHero();
   }
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
@@ -150,15 +150,22 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   function heroVillagers(W,H,k){
     VILLAGERS.forEach((v,i)=>{State.view.scale=18*k;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:W*(.14+i*.17),y:H*.5}})});
   }
+  // Animals are 3D: the Blender-built models at any heading, driven by the shared gaits.
+  function animalActions(species){
+    const labels=Object.fromEntries(A.SPECIES[species].modes);labels.run=labels.run||'Corsa';
+    return A3.modesOf(species).map(m=>[m,labels[m]||m]);
+  }
+  function headingInput(dt){
+    if($('w3Auto').checked){w3Heading=(w3Heading+dt*25)%360;$('w3Heading').value=Math.round(w3Heading)}else w3Heading=Number($('w3Heading').value);
+    return w3Heading*Math.PI/180;
+  }
   function heroAnimals(W,H,k,dt){
     trans=Math.min(1,trans+dt/.45);
-    const facing=$('flip').checked?1:-1,coat=$('coat').value;
-    // Hero views are normalised; the scene below shows true relative sizes.
-    const norm=1/(A.SPECIES[subject].scale||1);
-    [[W*.3,300],[W*.66,140],[W*.86,60]].forEach(([x,s],i)=>
-      A.drawAnimal(subject,g,x,H*.5,s*k*norm,{t:clock+i*.3,from:fromAction,mode:action,blend:trans,facing,seed:i*2,coat}));
+    const heading=headingInput(dt),turns=Number($('w3Turns').value),coat=$('coat').value,M=window.ConquerAnimalModels[subject];
+    // Big view framed to the animal's height; the small one is at game scale.
+    [[W*.38,H*.6,12*(5.2/M.height)*k],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>
+      W3.drawMeshes(g,[A3.triangles(subject,{x:0,y:0,heading},{from:fromAction,mode:action,blend:trans,t:clock},A3.coatColors(subject,coat))],isoView(cx,cy,s,turns)));
   }
-
   // Wagon: every module comes from the selects; the driver is drawn by the
   // game's own figure code on the seat anchor the wagon provides.
   const CARGO_PRESETS={mixed:['sack','crate','barrel','hay','sack','crate'],sack:Array(6).fill('sack'),crate:Array(6).fill('crate'),
@@ -205,19 +212,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     if(anchors.seat&&spec.driver)sprites.push({...anchors.seat,z:anchors.seat.z+.12,draw:()=>{const s=view.project(anchors.seat.x,anchors.seat.y,anchors.seat.z);spec.driver(g,s.x,s.y,4.9*zoom)}});
     return W3.draw(g,spec,pose,view,sprites,team);
   }
-  function heroHorse3D(W,H,k,dt){
-    const turns=Number($('w3Turns').value),coat=$('coat').value;
-    if($('w3Auto').checked){w3Heading=(w3Heading+dt*25)%360;$('w3Heading').value=Math.round(w3Heading)}else w3Heading=Number($('w3Heading').value);
-    trans=Math.min(1,trans+dt/.45);
-    const heading=w3Heading*Math.PI/180;
-    [[W*.38,H*.56,12*9*k],[W*.82,H*.56,12*2.6*k]].forEach(([cx,cy,s])=>{
-      const view=isoView(cx,cy,s,turns);
-      W3.drawMeshes(g,[A3.triangles('horse',{x:0,y:0,heading},{from:fromAction,mode:action,blend:trans,t:clock},A3.coatColors('horse',coat))],view);
-    });
-  }
   function heroWagon3D(W,H,k,dt){
     const moving=action==='move',turns=Number($('w3Turns').value);
-    if($('w3Auto').checked){w3Heading=(w3Heading+dt*25)%360;$('w3Heading').value=Math.round(w3Heading)}else w3Heading=Number($('w3Heading').value);
+    headingInput(dt);
     if(moving)w3Distance+=dt*.35;
     const spec=wagonSpec();
     wagon3dAt(W*.4,H*.5,12*8*k,spec,moving,turns);
@@ -225,37 +222,49 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   }
 
   // Game-scale scene: mixed flock, villagers, a looping skirmish.
+  // Game-scale meadow in world units: every animal wanders in any direction,
+  // switches between its actions, and sorts in one depth order with a 3D wagon.
   const COATS=['brown','black','grey','white'];
-  const flock=Array.from({length:12},(_,i)=>({x:80+i*60,y:640+(i%3)*42,seed:i*1.7,mode:i%2?'browse':'walk',blend:i%2?1:0,
-    until:2+i*.6,dir:i%2?1:-1,species:ANIMALS[i%4],coat:COATS[(i>>2)%4]}));
-  const fighters=[0,1,2].map(i=>({ally:{id:'ally'+i,engaged:true},enemy:{id:'enemy'+i,engaged:true},next:i*.37}));
+  const HERD=['sheep','sheep','sheep','goat','goat','cow','cow','horse','horse','deer','stag','wolf','bear','boar'];
+  const herd=HERD.map((species,i)=>({species,x:Math.cos(i*2.4)*3.6,y:Math.sin(i*2.4)*3.6,heading:i*1.3,seed:i*1.7,
+    mode:'walk',from:'walk',trans:1,until:1+i*.4,coat:COATS[i%4]}));
+  function wander(a,dt){
+    const modes=A3.modesOf(a.species);
+    a.until-=dt;a.trans=Math.min(1,a.trans+dt/.45);
+    if(a.until<=0){
+      // Grazers mostly alternate walk and browse; wildlife cycles its own actions.
+      const next=modes.includes('browse')&&Math.random()<.6?(a.mode==='walk'?'browse':'walk'):modes[(modes.indexOf(a.mode)+1)%modes.length];
+      a.from=a.mode;a.mode=next;a.trans=0;a.until=2+Math.random()*3;
+    }
+    const speed=a.mode==='walk'?.16:a.mode==='run'?.55:0;
+    if(speed){
+      const d=Math.hypot(a.x,a.y);
+      if(d>5.2)a.heading+=Math.sign(Math.sin(Math.atan2(-a.y,-a.x)-a.heading))*dt*1.2;   // turn back to the meadow
+      else a.heading+=Math.sin(clock*.3+a.seed)*dt*.4;
+      a.x+=Math.cos(a.heading)*speed*dt;a.y+=Math.sin(a.heading)*speed*dt;
+    }
+  }
+  let sceneWagonA=0;  const fighters=[0,1,2].map(i=>({ally:{id:'ally'+i,engaged:true},enemy:{id:'enemy'+i,engaged:true},next:i*.37}));
   const sceneArcher={id:'scene-archer',engaged:true},sceneKnight={id:'scene-knight',engaged:true},knightFoe={id:'kfoe',engaged:true};
-  let archerNext=.5,knightNext=.2,sceneWagonX=0;
-  const WILD=[{species:'deer',x:60,y:770,dir:1},{species:'stag',x:150,y:780,dir:1},{species:'wolf',x:290,y:775,dir:-1},{species:'bear',x:420,y:785,dir:1},{species:'boar',x:560,y:775,dir:-1}];
+  let archerNext=.5,knightNext=.2;
   function scene(W,H,k,dt){
     const z=Number($('zoom').value)*k;
     g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,H*.66,W,2);
-    // Animal size ties to person scale: a sheep stands about 0.6 of a person.
-    const animalSize=4.9*z;
-    for(const s of flock){
-      s.until-=dt;
-      if(s.until<=0){s.mode=s.mode==='walk'?'browse':'walk';s.until=s.mode==='walk'?1.5+Math.random()*2:2+Math.random()*4;if(s.mode==='walk'&&Math.random()<.4)s.dir*=-1}
-      s.blend+=(s.mode==='browse'?1:-1)*dt/.3;s.blend=Math.max(0,Math.min(1,s.blend));
-      if(s.mode==='walk'){s.x+=s.dir*dt*14;if(s.x<40||s.x>760){s.dir*=-1}}
-      A.drawAnimal(s.species,g,s.x*k,s.y*k,animalSize,{t:clock,seed:s.seed,mode:s.mode,blend:s.blend,facing:s.dir,coat:s.coat});
+    const animalSize=4.9*z,view=isoView(W*.3,H*.8,12*z,0),meshes=[],sprites=[];
+    for(const a of herd){
+      wander(a,dt);
+      meshes.push(A3.triangles(a.species,a,{from:a.from,mode:a.mode,blend:a.trans,t:clock,seed:a.seed},A3.coatColors(a.species,a.coat)));
     }
-    VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});
-    // Wildlife at the forest edge, cycling through each species' modes.
-    WILD.forEach((w,i)=>{
-      const modes=A.SPECIES[w.species].modes.map(m=>m[0]),n=Math.floor((clock+i*1.7)/4),m=modes[n%modes.length],prev=modes[(n+modes.length-1)%modes.length];
-      const k2=Math.min(1,((clock+i*1.7)%4)/.45);
-      A.drawAnimal(w.species,g,w.x*k,w.y*k,animalSize,{t:clock,from:prev,mode:m,blend:k2,facing:w.dir,seed:i});
-    });
-    // A supply wagon crossing the scene.
-    sceneWagonX=(sceneWagonX+dt*30)%1400;
-    W2.drawWagon(g,(sceneWagonX-200)*k,598*k,animalSize,{chassis:'wagon',body:'open',
-      cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}],driver:driverFor('villager'),facing:1,t:clock,distance:sceneWagonX*k/(animalSize/256),moving:true});
-    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
+    // A supply wagon circling the meadow with its 3D team and a seated driver.
+    sceneWagonA+=dt*.06;
+    const wp={x:Math.cos(sceneWagonA)*6.2,y:Math.sin(sceneWagonA)*6.2,heading:sceneWagonA+Math.PI/2,distance:sceneWagonA*6.2},
+      wspec={chassis:'wagon',body:'open',cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}]},an=W3.anchors(wspec,wp);
+    meshes.push(W3.worldTriangles(wspec,wp));
+    an.horses.forEach((h,i)=>meshes.push(A3.triangles('horse',{...h,heading:wp.heading},{mode:'walk',t:clock+i*.12,seed:i},A3.coatColors('horse',wspec.team[i].coat))));
+    const drv=driverFor('villager');
+    sprites.push({...an.seat,z:an.seat.z+.12,draw:()=>{const p=view.project(an.seat.x,an.seat.y,an.seat.z);drv(g,p.x,p.y,animalSize)}});
+    W3.drawMeshes(g,meshes,view,sprites);
+    VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
     fighters.forEach((f,i)=>{
       const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};
       if(clock>=f.next){CA.strike(f.ally,f.enemy);CA.strike(f.enemy,f.ally);if(Math.random()<.5)CA.hurt(Math.random()<.5?f.ally:f.enemy,CA.TIMING.IMPACT);f.next=clock+1+Math.random()*.3}
@@ -284,7 +293,6 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
     const kind=kindOf(subject);
     if(subject==='wagon3d')heroWagon3D(W,H,k,dt);
-    else if(subject==='horse3d')heroHorse3D(W,H,k,dt);
     else if(kind==='vehicle')heroWagon(W,H,k,dt);
     else if(kind==='animal')heroAnimals(W,H,k,dt);
     else if(kind==='soldier')heroSoldiers(W,H,k);

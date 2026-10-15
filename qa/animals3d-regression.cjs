@@ -37,3 +37,37 @@ const east=tri({mode:'idle'},0),north=tri({mode:'idle'},Math.PI/2);
 const maxX=m=>Math.max(...m.pos.filter((_,i)=>i%3===0)),maxY=m=>Math.max(...m.pos.filter((_,i)=>i%3===1));
 assert.ok(maxX(east)>.4&&maxY(north)>.4,'the horse turns to any heading');
 console.log('PASS any heading');
+
+// ---- every species
+const ALL=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'];
+const range=(m,part)=>{let start=0;for(const [name,p] of Object.entries(m.parts)){if(name===part)return[start,start+p.c.length*9];start+=p.c.length*9}};
+const minZ=(mesh,r)=>{let z=Infinity;for(let i=r[0]+2;i<r[1];i+=3)z=Math.min(z,mesh.pos[i]);return z};
+for(const sp of ALL){
+  const m=window.ConquerAnimalModels[sp],cols=A3.coatColors(sp);
+  for(const mode of A3.modesOf(sp))for(let t=0;t<2;t+=.25){
+    const mesh=A3.triangles(sp,{x:0,y:0,heading:t},{mode,t},cols);
+    assert.ok(mesh.pos.every(Number.isFinite),sp+' '+mode+' is finite');
+    assert.ok(mesh.col.every(c=>/^#[0-9a-f]{6}$/i.test(c)),sp+' '+mode+' resolves every colour role');
+  }
+  if(A3.modesOf(sp).includes('browse')){
+    const z=minZ(A3.triangles(sp,{x:0,y:0},{mode:'browse'},cols),range(m,'head'));
+    assert.ok(z<.04,sp+' browses with its muzzle at the grass ('+z.toFixed(3)+' U)');
+  }
+}
+console.log('PASS all nine species pose, colour and graze in 3D');
+
+const bear=window.ConquerAnimalModels.bear,bc=A3.coatColors('bear');
+const stand=A3.triangles('bear',{x:0,y:0},{mode:'stand'},bc),walkB=A3.triangles('bear',{x:0,y:0},{mode:'walk',t:0},bc);
+const maxZ=(mesh,r)=>{let z=-Infinity;for(let i=r[0]+2;i<r[1];i+=3)z=Math.max(z,mesh.pos[i]);return z};
+assert.ok(maxZ(stand,range(bear,'head'))>maxZ(walkB,range(bear,'head'))*1.6,'a standing bear rears its head high');
+assert.ok(Math.abs(minZ(stand,range(bear,'legHL')))<.01,'its hind feet stay planted on the ground');
+const sleep=A3.triangles('bear',{x:0,y:0},{mode:'sleep'},bc);
+assert.ok(minZ(sleep,range(bear,'body'))<.02,'a sleeping bear lies on the ground');
+console.log('PASS bear rears on planted hind legs and lies down to sleep');
+
+const boar=window.ConquerAnimalModels.boar,horseM=window.ConquerAnimalModels.horse;
+const legLen=m=>m.pivots.legFL[2];
+assert.ok(legLen(boar)<.13,'boar legs are short ('+(legLen(boar)*3.5).toFixed(2)+' m to the shoulder)');
+const bodyLen=m=>{const v=m.parts.body.v;let a=Infinity,b=-Infinity;for(let i=0;i<v.length;i+=3){a=Math.min(a,v[i]);b=Math.max(b,v[i])}return b-a};
+assert.ok(legLen(boar)/bodyLen(boar)<legLen(horseM)/bodyLen(horseM)*.75,'boar legs are short for its body ('+(legLen(boar)/bodyLen(boar)).toFixed(2)+' vs horse '+(legLen(horseM)/bodyLen(horseM)).toFixed(2)+')');
+console.log('PASS boar proportions');
