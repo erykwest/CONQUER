@@ -517,7 +517,16 @@ function pointRadius(s){
     const now=performance.now();
     if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
     lastRemoteAt=now;
-    const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
+    // The active renderer travels as a synthetic first event so rows stay compatible with the
+    // existing table schema (recent_events is free-form JSON).
+    const p=perf(),w3d=window.ConquerWorld3D;
+    const rendererEvent={atMs:Math.round(now),type:'RENDERER',severity:'info',data:{
+      mode:w3d?.active?.()?'world3d':p.webgpuActive?'webgpu':'canvas2d',
+      phases:Object.fromEntries(Object.entries(p.renderPhases||{}).map(([k,v])=>[k,+finite(v).toFixed(1)])),
+      world3dBackMs:+finite(p.world3dBackMs).toFixed(1),world3dEnsureMs:+finite(p.world3dEnsureMs).toFixed(1),
+      world3dFrontMs:+finite(p.world3dFrontMs).toFixed(1),combatFogMs:+finite(p.combatFogMs).toFixed(1)
+    }};
+    const recentEvents=[rendererEvent,...events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8)];
     const row={
       session_id:sessionId,
       day:sample.day,

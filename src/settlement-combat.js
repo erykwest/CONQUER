@@ -491,6 +491,16 @@
     g.save();g.setTransform(pixelRatio*(b.x-a.x),pixelRatio*(b.y-a.y),pixelRatio*(c.x-a.x),pixelRatio*(c.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
     g.imageSmoothingEnabled=false;g.drawImage(fog,0,0);g.restore();
   }
+  // Everything the line-of-sight test reads besides the observers: forest outlines, relief hills
+  // and urban houses (urbanRevision). A rolling numeric hash, well under a millisecond.
+  let lastFogContentSig='';
+  function fogContentSig(){
+    let h=0;const add=v=>{h=(Math.imul(h,31)+(Math.round(Number(v)*1000)|0))|0};
+    for(const f of State.environment||[]){add(f.points?.length||0);for(const p of f.points||[]){add(p.x);add(p.y)}}
+    const relief=JSON.stringify(State.relief?.hills||[]);
+    for(let i=0;i<relief.length;i++)h=(Math.imul(h,31)+relief.charCodeAt(i))|0;
+    return h+'|'+(typeof urbanRevision!=='undefined'?urbanRevision:0);
+  }
   function refreshFog(force=false){
     if(!combat||!activeWell())return;
     const now=performance.now();
@@ -501,8 +511,15 @@
     const sig=sources.map(s=>s.id+':'+s.x.toFixed(1)+':'+s.y.toFixed(1)+':'+s.h).join('|')+
       ':structures'+State.structures.length+':env'+State.environment.length;
     // Static watchtowers do not require a full 10k-cell raycast every 2.5s.
-    // Retain occasional refresh for in-place terrain / forest edits.
-    if(!force&&!visibilityDirty&&sig===lastObserverSig&&now-lastVision<12000)return;
+    // In-place terrain / forest / urban edits are caught by a cheap content
+    // signature checked every 12s; the raycast only reruns when it changed.
+    if(!force&&!visibilityDirty&&sig===lastObserverSig){
+      if(now-lastVision<12000)return;
+      lastVision=now;
+      const content=fogContentSig();
+      if(content===lastFogContentSig)return;
+      lastFogContentSig=content;
+    }else lastFogContentSig=fogContentSig();
     lastObserverSig=sig;lastVision=now;visibilityDirty=false;
     const fogStart=performance.now();
     visible.fill(0);
