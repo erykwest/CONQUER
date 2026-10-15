@@ -350,6 +350,11 @@ function draw(){
   beginPopulationFrame(r);
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
+  // Opt-in full-scene 3D prototype (settlement-world3d.js): replaces every static scene cache.
+  const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);
+  if(world3d){
+    window.ConquerSnowTracks?.draw();
+  }else{
   ensureStaticSceneCaches();
   // Keep moving footprints above the terrain but BELOW completed buildings.
   // With WebGPU active, exclude the base layer from its compositing pass and
@@ -364,6 +369,7 @@ function draw(){
   }
   window.ConquerSnowTracks?.draw();
   if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');
+  }
 
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.
@@ -386,21 +392,21 @@ function draw(){
   window.ConquerIndustries?.drawWorkers();
   markPhase('population');
   drawTrainingSoldiers();
-  blitSceneCache('castleBody');
+  if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');
   drawCutawayOccupants();
 
   drawTowerFlags();
   drawCastleSoldiers();
   markPhase('castle-units');
-  blitSceneCache('castleFront');
+  if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
   window.ConquerSiege?.drawOverlay();
   drawCastleFireFixtures();
 
   // The drawbridge is an exterior shield when raised. Paint portals and
   // windows FIRST, then the moving drawbridge so it physically covers them
   // on the outward Gate facade (stone and timber alike).
-  drawFacadeWindows(false,1,false);
-  drawGatePortals();
+  if(world3d)window.ConquerWorld3D.drawMastioDrapes();
+  else{drawFacadeWindows(false,1,false);drawGatePortals()}
   window.ConquerCrossings?.drawDynamic();
   drawChimneysAndSmoke();
 

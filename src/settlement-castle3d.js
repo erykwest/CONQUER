@@ -51,8 +51,13 @@
     return z;
   }
   function memoGround(fn){const prev=groundMemo;groundMemo=new Map();try{return fn()}finally{groundMemo=prev}}
+  // worldOut: emit absolute world coordinates (x, y, z) instead of screen x/y + depth, for
+  // settlement-world3d.js, which projects on the GPU with the camera as shader uniforms.
+  let worldOut=false;
   function vert(p,z){
-    const g=groundAt(p),s=w2sRaw(p,z+g),q=rotateViewPoint(p);
+    const g=groundAt(p);
+    if(worldOut)return{x:p.x,y:p.y,d:z+g,wx:p.x,wy:p.y,wz:z+g};
+    const s=w2sRaw(p,z+g),q=rotateViewPoint(p);
     // Plan view looks straight down: only height decides what is in front.
     const d=typeof isPlanView==='function'&&isPlanView()?(z+g):q.x+q.y+DEPTH_K*(z+g);
     return{x:s.x,y:s.y,d,wx:p.x,wy:p.y,wz:z+g};
@@ -374,7 +379,20 @@
     invalidateSceneCache(['castleBody','castleFront']);draw();
     return active();
   }
-  window.ConquerCastle3D={active,supported,setEnabled,drawBody,drawFront,
+  // World-space castle meshes (6 floats per vertex: x, y, z, r, g, b; .lines = outlines) for the
+  // full-scene renderer. Side shading and the near/far battlement split follow the current view
+  // rotation, so callers rebuild on rotation change.
+  function worldMeshes(){
+    worldOut=true;
+    try{
+      return memoGround(()=>{
+        const body=bodyMesh(castleParts(),true),fm=makeMesh();addPieces(fm,'front');
+        return{body,front:withLines(fm),cutaway:bodyMesh(cutawayParts())};
+      });
+    }finally{worldOut=false}
+  }
+  window.ConquerCastle3D={active,supported,setEnabled,drawBody,drawFront,worldMeshes,castleParts:()=>castleParts(),
+    castleVolume:s=>castleVolume(s),PAL,
     status:()=>({enabled,supported:supported(),failed:gpu.failed,bodyMs:perf().castle3dBodyMs,frontMs:perf().castle3dFrontMs,bodyTris:perf().castle3dBodyTris,frontTris:perf().castle3dFrontTris}),
     _build:{body:buildBody,front:buildFront}};
 })();
