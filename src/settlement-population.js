@@ -155,7 +155,8 @@ function fieldWorkAssignments(houses,fields){
     if(!fieldCropReady(field))continue;
     for(const cell of fieldGrid(field).cells)if(!fieldSlotDone(field,cell))slots.push({field,cell,used:false});
   }
-  const assignments=new Map(),ordered=houses.slice().sort((a,b)=>peasantHash(a.id)-peasantHash(b.id));
+  const assignments=new Map(),ordered=houses.filter(h=>window.ConquerLivestock?.lotKindForHouse(h)!=='shepherd')
+    .sort((a,b)=>peasantHash(a.id)-peasantHash(b.id));
   for(const house of ordered){
     const door=houseDoorInfo(house).outside;let best=null,bestScore=Infinity;
     for(const slot of slots){
@@ -954,6 +955,11 @@ function residentClassPosition(house,resident,day,assignment){
   const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
+  // An L1 pastoral household keeps its own flock, rather than being assigned
+  // to the crop field at the same time. The resident leads the actual route.
+  if(level===1&&resident.sex==='male'&&resident.age==='adult'&&
+     window.ConquerLivestock?.lotKindForHouse(house)==='shepherd')
+    return window.ConquerLivestock.shepherdPosition(house);
   // Farm work follows calendar days, so visible workers match daily crop progress.
   if(level===1)return assignment?peasantPosition(house,assignment,State.clock.day):null;
   if(level===2)return artisanPosition(house,shiftedDay);
