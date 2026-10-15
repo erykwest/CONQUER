@@ -20,16 +20,18 @@
   const gpu={canvas:null,gl:null,prog:null,buf:null,loc:null,failed:null};
   const perf=()=>window.__conquerPerf||(window.__conquerPerf={});
 
-  // ---------- palettes (top, light side, dark side) ----------
+  // ---------- palettes (top, light side, dark side, top outline) ----------
+  // The outline is the stroke extrudePolygonAt draws around the top face. Union bodies get none here:
+  // the 2.5D stroke follows the outer contour of the merged band, per-prism edges would add false seams.
   const snowTop=c=>winterSnowColor(c);
   const PAL={
     stone:()=>[snowTop('#9a8e82'),'#635951','#514a44'],          // drawMultiPolygonBand / drawExposedTop
-    merlon:()=>[snowTop('#9a8e82'),'#635951','#514a44'],         // drawBattlementPiece
-    corbel:()=>[snowTop('#887d72'),'#554d46','#403b36'],
-    machFloor:()=>[snowTop('#918579'),'#605750','#4a443e'],
-    buttress:()=>[snowTop('#948779'),'#625a52','#4b4540'],
-    chimney:()=>['#3b302c','#493732','#332824'],
-    hoardDeck:()=>['#74533a','#5d432e','#493423'],
+    merlon:()=>[snowTop('#9a8e82'),'#635951','#514a44','#c8b9a9'],  // drawBattlementPiece
+    corbel:()=>[snowTop('#887d72'),'#554d46','#403b36','#9f9183'],
+    machFloor:()=>[snowTop('#918579'),'#605750','#4a443e','#b3a596'],
+    buttress:()=>[snowTop('#948779'),'#625a52','#4b4540','#9f9285'],
+    chimney:()=>['#3b302c','#493732','#332824','#6a5148'],
+    hoardDeck:()=>['#74533a','#5d432e','#493423','#927155'],
   };
   const rgbCache=new Map();
   function rgb(hex){
@@ -63,20 +65,24 @@
       nx+=(a.wy-b.wy)*(a.wz+b.wz);ny+=(a.wz-b.wz)*(a.wx+b.wx);nz+=(a.wx-b.wx)*(a.wy+b.wy);
     }
     const len=Math.hypot(nx,ny,nz)||1;
-    if(Math.abs(nz)/len>.5)return pal[0];
+    if(Math.abs(nz)/len>.5)return{col:pal[0],top:true};
     const p={x:vs[0].wx,y:vs[0].wy},e={x:p.x-ny,y:p.y+nx};
     const qa=rotateViewPoint(p),qb=rotateViewPoint(e),angle=Math.atan2(qb.y-qa.y,qb.x-qa.x);
-    return Math.cos(2*(angle-Math.PI/6))>=0?pal[1]:pal[2];
+    return{col:Math.cos(2*(angle-Math.PI/6))>=0?pal[1]:pal[2],top:false};
   }
   function makeMesh(){
-    const tris=[];
+    const tris=[],lines=[];
     return{
-      tris,
-      // face: vertices [{p,z}], colour: hex or palette array
+      tris,lines,
+      // face: vertices [{p,z}], colour: hex or palette array (top faces of stroked palettes get an outline)
       face(points,color){
         const vs=points.map(({p,z})=>vert(p,z));if(vs.length<3)return;
-        const c=rgb(Array.isArray(color)?shadeFor(vs,color):color);
+        const sh=Array.isArray(color)?shadeFor(vs,color):{col:color,top:false},c=rgb(sh.col);
         for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.d,c[0],c[1],c[2]);
+        if(sh.top&&Array.isArray(color)&&color[3]){
+          const o=rgb(color[3]);
+          for(let i=0;i<vs.length;i++)for(const v of [vs[i],vs[(i+1)%vs.length]])lines.push(v.x,v.y,v.d,o[0],o[1],o[2]);
+        }
       },
       prism(pts,z0,z1,pal){
         if(!pts||pts.length<3||!(z1>z0))return;
@@ -208,8 +214,10 @@
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());
       });
     }
-    return m.tris;
+    return withLines(m);
   }
+  // Triangle arrays carry their top-face outlines along (same 6-float vertex layout, GL_LINES pairs).
+  function withLines(m){const t=m.tris;t.lines=m.lines;return t}
   function buildBodyUncached(){return bodyMesh(castleParts())}
   // Full volumes of cutaway structures, used only as depth occluders (their look stays 2.5D).
   function buildCutawayDepth(){return memoGround(()=>bodyMesh(cutawayParts()))}
@@ -220,7 +228,7 @@
       const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
     }
-    return m.tris;
+    return withLines(m);
   }
 
   // ---------- WebGL2 ----------
@@ -250,12 +258,12 @@
       return gl;
     }catch(err){gpu.failed=String(err?.message||err);console.warn('Castle 3D unavailable:',gpu.failed);return null}
   }
-  function drawTris(gl,tris){
-    if(!tris.length)return;
+  function drawTris(gl,tris,mode=gl.TRIANGLES){
+    if(!tris?.length)return;
     gl.bindBuffer(gl.ARRAY_BUFFER,gpu.buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(tris),gl.STREAM_DRAW);
     gl.enableVertexAttribArray(gpu.loc.pos);gl.vertexAttribPointer(gpu.loc.pos,3,gl.FLOAT,false,24,0);
     gl.enableVertexAttribArray(gpu.loc.col);gl.vertexAttribPointer(gpu.loc.col,3,gl.FLOAT,false,24,12);
-    gl.drawArrays(gl.TRIANGLES,0,tris.length/6);
+    gl.drawArrays(mode,0,tris.length/6);
   }
   function screenBounds(sets){
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity,dMin=Infinity,dMax=-Infinity;
@@ -280,11 +288,15 @@
     gl.uniform4f(gpu.loc.bounds,b.x,b.y,b.w,b.h);gl.uniform2f(gpu.loc.depth,b.dMin,b.dMax);
     gl.clearColor(0,0,0,0);gl.clearDepth(1);gl.clearStencil(0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);
+    // Faces are pushed back slightly so the top-face outlines (drawn without offset) win the depth test.
+    gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
     if(maskToDepth){gl.enable(gl.STENCIL_TEST);gl.stencilFunc(gl.ALWAYS,1,0xff);gl.stencilOp(gl.KEEP,gl.REPLACE,gl.REPLACE)}
     else gl.disable(gl.STENCIL_TEST);
     if(depthOnly.length){gl.colorMask(false,false,false,false);drawTris(gl,depthOnly);gl.colorMask(true,true,true,true)}
     if(maskToDepth){gl.stencilFunc(gl.EQUAL,1,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP)}
     drawTris(gl,colour);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    drawTris(gl,colour.lines,gl.LINES);
     gl.disable(gl.STENCIL_TEST);
     const err=gl.getError();if(err){gpu.failed='gl-error-'+err;return null}
     return{bounds:b};
