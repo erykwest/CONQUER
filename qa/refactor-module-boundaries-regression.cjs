@@ -25,14 +25,30 @@ assert.match(castle,/function (?:drawForestGround|forestTreeLayout)\(/,'Forest r
 assert.match(castle,/function drawMarket\(/,'Castle and civic drawing entrypoints remain accessible');
 console.log('PASS castle extracted modules reconstruct in correct order, with intentional post-refactor enhancements');
 
-const renderSource=read('render'),arch=segment('architecture',true),weather=segment('weather');
+// Opt-in WebGL2 hooks (settlement-castle3d.js / settlement-world3d.js). Each must
+// appear exactly once; removing them must give back the exact 2.5D renderer.
+const render3dHooks=[
+  ['  // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.\n  if(window.ConquerCastle3D?.drawBody?.())return;\n',''],
+  ["1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),",
+   "1,State.season||'summer',num(State.view.scale),State.view.rotation||0,staticCacheDpr(),"],
+  ['()=>{if(!window.ConquerCastle3D?.drawFront?.())drawCastleBattlements()}','()=>drawCastleBattlements()'],
+  ['  // Opt-in full-scene 3D prototype (settlement-world3d.js): replaces every static scene cache.\n  const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);\n  if(world3d){\n    window.ConquerSnowTracks?.draw();\n  }else{\n',''],
+  ["  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n  }\n","  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n"],
+  ["if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');","blitSceneCache('castleBody');"],
+  ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
+  ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n']
+];
+const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
+  assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));
+  return src.replace(hooked,()=>original);
+},read('render')),arch=segment('architecture',true),weather=segment('weather');
 const start=renderSource.indexOf('function drawDayNightOverlay(){');
 const split=renderSource.indexOf('function drawConstructionProgress(s){');
 assert.ok(start>=0&&split>start);
 const render=arch+renderSource.slice(start,split)+weather+renderSource.slice(split);
 assert.equal(gitBlob(render),'ab715d38008b65bb5f7d92f363635924efe75437',
   'Render, weather and architectural sprites must match original rendering semantics');
-console.log('PASS architecture, weather and render modules exactly preserve the original implementation');
+console.log('PASS architecture, weather and render modules exactly preserve the original implementation (minus opt-in 3D hooks)');
 
 const html=fs.readFileSync(root+'index.html','utf8');
 const scriptPaths=[...html.matchAll(/<script\s+src="\.\/src\/([^"?]+)(?:\?[^"]*)?"\s*><\/script>/g)].map(m=>m[1]);
