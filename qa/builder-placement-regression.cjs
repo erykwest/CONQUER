@@ -33,6 +33,7 @@ function harness(){
   const context={
     State,window,BUILD_MIN:50,BUILD_MAX:150,
     houseFootprintParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
+    wellPlazaPoints:s=>square(s.x,s.y,3,3,0),
     isCivic:s=>['market','tavern','church','training'].includes(s.type),
     civicParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     structureGroundContactPolygons:s=>s.a?[square((s.a.x+s.b.x)/2,(s.a.y+s.b.y)/2,
@@ -56,6 +57,11 @@ function harness(){
     setCash:v=>{cash=v},setBlocked:v=>{blocked=v}};
 }
 function test(name,fn){fn();console.log('✓ '+name)}
+test('the 3x3U well plaza is a no-build zone',()=>{
+  const h=harness();h.State.structures.push({id:'well',type:'well',x:100,y:100});
+  assert.equal(h.check({type:'market',x:102,y:100,w:2,h:2}).ok,false);
+  assert.equal(h.check({type:'market',x:103,y:100,w:2,h:2}).ok,true);
+});
 test('central valid point placement',()=>{
   const h=harness();assert.equal(h.check({type:'market',x:100,y:100,w:2,h:2}).ok,true);
 });
