@@ -137,6 +137,8 @@ function drawBaseStaticScene(){
 }
 let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!=='0';
 function renderCastleBodyContent(){
+  // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.
+  if(window.ConquerCastle3D?.drawBody?.())return;
   const unionOk=drawCastleUnion();
   if(!unionOk){
     const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
@@ -189,7 +191,7 @@ function castleBodyVisualSignature(){
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
-    1,State.season||'summer',num(State.view.scale),State.view.rotation||0,staticCacheDpr(),
+    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',num(State.view.scale),State.view.rotation||0,staticCacheDpr(),
     !!window.__polygonClipping,items
   ]);
 }
@@ -274,7 +276,7 @@ function drawCastleBodyStaticScene(){
 function drawCastleFrontStaticScene(){
   const analyticsT0=performance.now();
   const entry=prepareSceneCache('castleFront');
-  withRenderContext(entry.ctx,()=>drawCastleBattlements());
+  withRenderContext(entry.ctx,()=>{if(!window.ConquerCastle3D?.drawFront?.())drawCastleBattlements()});
   entry.dirty=false;
   const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheCastleFrontRebuilds=(perf.cacheCastleFrontRebuilds||0)+1;
   window.__conquerAnalytics?.measure('CACHE_CASTLE_FRONT',performance.now()-analyticsT0);
