@@ -51,7 +51,9 @@
   function memoGround(fn){const prev=groundMemo;groundMemo=new Map();try{return fn()}finally{groundMemo=prev}}
   function vert(p,z){
     const g=groundAt(p),s=w2sRaw(p,z+g),q=rotateViewPoint(p);
-    return{x:s.x,y:s.y,d:q.x+q.y+DEPTH_K*(z+g),wx:p.x,wy:p.y,wz:z+g};
+    // Plan view looks straight down: only height decides what is in front.
+    const d=typeof isPlanView==='function'&&isPlanView()?(z+g):q.x+q.y+DEPTH_K*(z+g);
+    return{x:s.x,y:s.y,d,wx:p.x,wy:p.y,wz:z+g};
   }
   function shadeFor(vs,pal){
     // Newell normal in world space; top faces take the top colour, sides follow castleSideShade.

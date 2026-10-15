@@ -55,6 +55,19 @@ function rotateCamera(delta){
   State.view.x+=pivot.x-after.x;State.view.y+=pivot.y-after.y;
   State.draft=null;invalidateSceneCache();saveLocal();draw();status('View rotation: '+(State.view.rotation*90)+'°');
 }
+function syncPlanToggle(){
+  const btn=document.getElementById('planToggle');
+  if(btn){btn.classList.toggle('active',isPlanView());btn.title=isPlanView()?'Back to isometric view':'Plan view (top-down) for precise joints'}
+}
+function togglePlanView(){
+  // Keep the world point under the screen centre fixed; isometric → plan is roughly scale-preserving.
+  const pivot=visibleCanvasCenter(),anchor=s2w(pivot.x,pivot.y);
+  State.view.plan=!isPlanView();
+  const after=w2s(anchor);
+  State.view.x+=pivot.x-after.x;State.view.y+=pivot.y-after.y;
+  State.draft=null;invalidateSceneCache();syncPlanToggle();saveLocal();draw();
+  status(isPlanView()?'Plan view: top-down, heights flattened':'Isometric view');
+}
 function panCamera(dx,dy){
   State.view.x+=dx;State.view.y+=dy;invalidateSceneCache();saveLocal();draw();
 }
@@ -194,6 +207,8 @@ function generateNewMap(){
 document.getElementById('newMapBtn').onclick=generateNewMap;
 document.getElementById('rotateLeft').onclick=()=>rotateCamera(-1);
 document.getElementById('rotateRight').onclick=()=>rotateCamera(1);
+document.getElementById('planToggle').onclick=togglePlanView;
+syncPlanToggle();
 document.getElementById('biomeSelect').onchange=e=>{
   State.biome=BIOMES[e.target.value]?e.target.value:'plains';State.environment=[];generateEnvironment();
   State.structures=State.structures.filter(s=>!s.auto);
