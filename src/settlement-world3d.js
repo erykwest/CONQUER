@@ -10,11 +10,13 @@
 //     ConquerCastle3D.worldMeshes(); sun shadows from shadowCasterGeometry()/sunShadowState();
 //   - trees as depth-tested billboards using the forest SVG sprites.
 // Dynamic figures, decals and overlays keep drawing in 2D on #c (step 2 moves soldiers into 3D).
-// Opt-in: ?world3d=1 (persisted, page reloads on toggle) or ConquerWorld3D.setEnabled(true).
+// On by default where WebGL2 works; the 2.5D Canvas path is the fallback.
+// Opt-out: ?world3d=0 (persisted, page reloads on toggle) or ConquerWorld3D.setEnabled(false).
 (()=>{
-  const STORE_KEY='conquer.world3d.v1';
+  const STORE_KEY='conquer.world3d.v2';
   const fromUrl=(()=>{try{const v=new URLSearchParams(location.search).get('world3d');return v===null?null:v!=='0'}catch{return null}})();
-  let enabled=fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)==='1'}catch{return false}})();
+  const forcedCanvas=(()=>{try{return new URLSearchParams(location.search).get('renderer')==='canvas2d'}catch{return false}})();
+  let enabled=!forcedCanvas&&(fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)!=='0'}catch{return true}})());
   if(fromUrl!==null){try{localStorage.setItem(STORE_KEY,fromUrl?'1':'0')}catch{}}
 
   const TEX_SIZE=4096;                                   // world texture 200U, detail texture = build area
