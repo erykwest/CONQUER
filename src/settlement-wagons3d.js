@@ -92,30 +92,39 @@
   }
   // Canvas drawing. view: {project(x,y,z)->{x,y}, depth(x,y,z)->n (larger = nearer), turns}.
   // sprites: [{x,y,z,draw()}] drawn in depth order with the triangles (team, driver).
-  function draw(ctx,spec,pose,view,sprites=[]){
-    const {pos,col,bias,outward}=worldTriangles(spec,pose),n=col.length,items=[];
+  // Depth-sorted canvas drawing of any number of meshes ({pos,col,bias,outward} in
+  // world space) plus sprites. view: {project(x,y,z)->{x,y}, depth(x,y,z)->n (larger
+  // = nearer), turns}; sprites: [{x,y,z,draw()}] (driver, 2D figures).
+  function drawMeshes(ctx,meshes,view,sprites=[]){
+    const items=[];let total=0;
     const d0=view.depth(0,0,0),cam=[view.depth(1,0,0)-d0,view.depth(0,1,0)-d0,view.depth(0,0,1)-d0];
-    for(let t=0;t<n;t++){
-      const o=t*9,ax=pos[o],ay=pos[o+1],az=pos[o+2],bx=pos[o+3],by=pos[o+4],bz=pos[o+5],cx=pos[o+6],cy=pos[o+7],cz=pos[o+8];
-      const ux=bx-ax,uy=by-ay,uz=bz-az,vx=cx-ax,vy=cy-ay,vz=cz-az;
-      const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
-      const o2=outward[t];
-      if(o2&&o2[0]*cam[0]+o2[1]*cam[1]+o2[2]*cam[2]<=0)continue;
-      items.push({t,d:view.depth((ax+bx+cx)/3,(ay+by+cy)/3,(az+bz+cz)/3)+bias[t],f:soften(shadeFactor(nx,ny,nz,view.turns||0),rgb(col[t]))});
+    for(const mesh of meshes){
+      const {pos,col,bias,outward}=mesh,n=col.length;total+=n;
+      for(let t=0;t<n;t++){
+        const o=t*9,ax=pos[o],ay=pos[o+1],az=pos[o+2],bx=pos[o+3],by=pos[o+4],bz=pos[o+5],cx=pos[o+6],cy=pos[o+7],cz=pos[o+8];
+        const ux=bx-ax,uy=by-ay,uz=bz-az,vx=cx-ax,vy=cy-ay,vz=cz-az;
+        const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+        const o2=outward?.[t];
+        if(o2&&o2[0]*cam[0]+o2[1]*cam[1]+o2[2]*cam[2]<=0)continue;
+        items.push({mesh,t,d:view.depth((ax+bx+cx)/3,(ay+by+cy)/3,(az+bz+cz)/3)+(bias?.[t]||0),f:soften(shadeFactor(nx,ny,nz,view.turns||0),rgb(col[t]))});
+      }
     }
     for(const s of sprites)items.push({sprite:s,d:view.depth(s.x,s.y,s.z||0)});
     items.sort((a,b)=>a.d-b.d);
     ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;
     for(const it of items){
       if(it.sprite){ctx.restore();it.sprite.draw();ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;continue}
-      const o=it.t*9,a=view.project(pos[o],pos[o+1],pos[o+2]),b=view.project(pos[o+3],pos[o+4],pos[o+5]),c=view.project(pos[o+6],pos[o+7],pos[o+8]);
-      const [r,g,bl]=rgb(col[it.t]),f=it.f;
+      const pos=it.mesh.pos,o=it.t*9,a=view.project(pos[o],pos[o+1],pos[o+2]),b=view.project(pos[o+3],pos[o+4],pos[o+5]),c=view.project(pos[o+6],pos[o+7],pos[o+8]);
+      const [r,g,bl]=rgb(it.mesh.col[it.t]),f=it.f;
       const fill='rgb('+(r*f|0)+','+(g*f|0)+','+(bl*f|0)+')';
       ctx.fillStyle=ctx.strokeStyle=fill;   // same-colour stroke hides anti-alias seams
       ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.fill();ctx.stroke();
     }
     ctx.restore();
-    return n;
+    return total;
   }
-  window.ConquerWagons3D={assembly,worldTriangles,anchors,draw,shadeFactor,rotDir};
-})();
+  // Wagon plus optional extra meshes (its 3D team) in one depth order.
+  function draw(ctx,spec,pose,view,sprites=[],extra=[]){
+    return drawMeshes(ctx,[worldTriangles(spec,pose),...extra],view,sprites);
+  }
+  window.ConquerWagons3D={assembly,worldTriangles,anchors,draw,drawMeshes,shadeFactor,rotDir};})();

@@ -16,10 +16,17 @@ person is ~0.5 U in game).
 Shading is NOT baked: the game shades each triangle from its world normal so a
 turning wagon keeps the castle's two-tone side rule.
 """
-import bpy, bmesh, math, json, os, sys
-from mathutils import Vector, Matrix
+import json, math, os, sys, importlib
+from mathutils import Vector
+# Shared helpers live next to this file (cq_blender.py). When the file is exec()'d
+# through BlenderMCP there is no __file__, so CQ_DIR must be set by the caller.
+_here = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else CQ_DIR
+if _here not in sys.path:
+    sys.path.insert(0, _here)
+import cq_blender
+importlib.reload(cq_blender)
+from cq_blender import METERS_PER_U, Part, fresh_collection, export_part, u
 
-METERS_PER_U = 3.5
 COLORS = {
     'wood': '#9a6a3f', 'woodLight': '#b98652', 'woodDark': '#6f4a2b',
     'iron': '#55595d', 'ironLight': '#7c8186', 'canvas': '#e8dcc0', 'canvasHoop': '#8a6a46',
@@ -27,123 +34,7 @@ COLORS = {
     'barrel': '#8a5a35', 'stone': '#9a9893', 'stoneDark': '#7f7d78', 'log': '#8b6a45', 'logEnd': '#c9a66f',
     'leather': '#4a3020',
 }
-
-# ---------------------------------------------------------------- scene setup
 COLL_NAME = 'CONQUER_Wagon'
-def fresh_collection():
-    old = bpy.data.collections.get(COLL_NAME)
-    if old:
-        for ob in list(old.all_objects):
-            bpy.data.objects.remove(ob, do_unlink=True)
-        for ch in list(old.children):
-            bpy.data.collections.remove(ch)
-        bpy.data.collections.remove(old)
-    root = bpy.data.collections.new(COLL_NAME)
-    bpy.context.scene.collection.children.link(root)
-    return root
-
-def material(key):
-    name = 'cq_' + key
-    m = bpy.data.materials.get(name)
-    if not m:
-        m = bpy.data.materials.new(name)
-        h = COLORS[key].lstrip('#')
-        rgb = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
-        m.diffuse_color = (*[c ** 2.2 for c in rgb], 1.0)  # viewport colour (linear)
-        m['cq_key'] = key
-    return m
-
-class Part:
-    """One exported part: a Blender object built from bmesh primitives."""
-    def __init__(self, root, name, offset=(0, 0, 0)):
-        self.name = name
-        self.bm = bmesh.new()
-        self.mats = []
-        coll = bpy.data.collections.new('part_' + name)
-        root.children.link(coll)
-        self.coll = coll
-        self.offset = Vector(offset)   # display offset only (templates laid out side by side)
-
-    def _mat(self, key):
-        if key not in self.mats:
-            self.mats.append(key)
-        return self.mats.index(key)
-
-    def quads(self, verts, faces, key):
-        vs = [self.bm.verts.new(Vector(v)) for v in verts]
-        mi = self._mat(key)
-        for f in faces:
-            face = self.bm.faces.new([vs[i] for i in f])
-            face.material_index = mi
-
-    def box(self, center, size, key, rot=None):
-        """Axis-aligned box (optionally rotated by a 3x3 Matrix about its centre)."""
-        cx, cy, cz = center; sx, sy, sz = (s / 2 for s in size)
-        corners = [Vector((x, y, z)) for x in (-sx, sx) for y in (-sy, sy) for z in (-sz, sz)]
-        if rot is not None:
-            corners = [rot @ c for c in corners]
-        corners = [c + Vector((cx, cy, cz)) for c in corners]
-        # index = ix*4 + iy*2 + iz
-        faces = [(0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)]
-        self.quads(corners, faces, key)
-
-    def beam(self, a, b, w, h, key):
-        """Box of width w (horizontal) and height h from point a to point b."""
-        a, b = Vector(a), Vector(b)
-        d = b - a; length = d.length
-        x = d.normalized()
-        y = Vector((0, 0, 1)).cross(x)
-        if y.length < 1e-3:                       # vertical beam: any horizontal side axis
-            y = Vector((1, 0, 0)).cross(x)
-        y.normalize()
-        z = x.cross(y)
-        rot = Matrix((x, y, z)).transposed()
-        self.box(tuple((a + b) / 2), (length, w, h), key, rot)
-
-    def ring(self, r_out, r_in, half, key, n=12, axis='y', center=(0, 0, 0), side_key=None, outer=True, inner=True):
-        """Annulus extruded along an axis (wheel tyre / felloe); hidden surfaces can be skipped."""
-        c = Vector(center)
-        def p(r, a, s):
-            u, v = math.cos(a) * r, math.sin(a) * r
-            return c + (Vector((u, s, v)) if axis == 'y' else Vector((s, u, v)) if axis == 'x' else Vector((u, v, s)))
-        for i in range(n):
-            a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
-            vs = [p(r_out, a0, -half), p(r_out, a1, -half), p(r_out, a1, half), p(r_out, a0, half),
-                  p(r_in, a0, -half), p(r_in, a1, -half), p(r_in, a1, half), p(r_in, a0, half)]
-            surf = ([(0, 1, 2, 3)] if outer else []) + ([(7, 6, 5, 4)] if inner else [])
-            if surf:
-                self.quads(vs, surf, key)
-            self.quads(vs, [(4, 5, 1, 0), (3, 2, 6, 7)], side_key or key)
-
-    def cylinder(self, r, half, key, n=12, axis='y', center=(0, 0, 0), cap_key=None, radii=None, along=None):
-        """Closed cylinder; radii/along give a profile (bulged barrel, tapered sack)."""
-        c = Vector(center)
-        prof = list(zip(along, radii)) if radii else [(-half, r), (half, r)]
-        def p(rr, a, s):
-            u, v = math.cos(a) * rr, math.sin(a) * rr
-            return c + (Vector((u, s, v)) if axis == 'y' else Vector((s, u, v)) if axis == 'x' else Vector((u, v, s)))
-        for k in range(len(prof) - 1):
-            (s0, r0), (s1, r1) = prof[k], prof[k + 1]
-            for i in range(n):
-                a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
-                self.quads([p(r0, a0, s0), p(r0, a1, s0), p(r1, a1, s1), p(r1, a0, s1)], [(0, 1, 2, 3)], key)
-        for s, rr, flip in ((prof[0][0], prof[0][1], True), (prof[-1][0], prof[-1][1], False)):
-            pts = [p(rr, 2 * math.pi * i / n, s) for i in range(n)]
-            if flip:
-                pts = pts[::-1]
-            self.quads(pts, [tuple(range(n))], cap_key or key)
-
-    def finish(self):
-        me = bpy.data.meshes.new(self.name)
-        bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
-        self.bm.to_mesh(me); self.bm.free()
-        for key in self.mats:
-            me.materials.append(material(key))
-        ob = bpy.data.objects.new(self.name, me)
-        ob.location = self.offset
-        self.coll.objects.link(ob)
-        self.object = ob
-        return self
 
 # ---------------------------------------------------------------- parts
 def plank_wall(part, x0, x1, y, z0, z1, thick, along='x', keys=('wood', 'woodLight')):
@@ -180,7 +71,7 @@ def axle(part, x, z, half_track):
 
 def build(root):
     parts = {}
-    P = lambda name, off=(0, 0, 0): Part(root, name, off)
+    P = lambda name, off=(0, 0, 0): Part(root, name, COLORS, off)
 
     # --- wagon body: bed, under-frame, front bolster, seat
     p = P('wagonBody')
@@ -269,17 +160,7 @@ def export(parts, out_path):
     palette = list(COLORS.values()); keys = list(COLORS.keys())
     data = {'unit': 'U', 'metersPerU': METERS_PER_U, 'palette': palette, 'paletteKeys': keys, 'parts': {}}
     for name, part in parts.items():
-        ob = part.object; me = ob.data
-        me.calc_loop_triangles()
-        v, c = [], []
-        for tri in me.loop_triangles:
-            for vi in tri.vertices:
-                co = me.vertices[vi].co   # local coordinates (display offset excluded)
-                v += [round(co.x / METERS_PER_U, 3), round(co.y / METERS_PER_U, 3), round(co.z / METERS_PER_U, 3)]
-            key = me.materials[tri.material_index]['cq_key']
-            c.append(keys.index(key))
-        data['parts'][name] = {'v': v, 'c': c}
-    u = lambda *m: [round(x / METERS_PER_U, 4) for x in m]
+        data['parts'][name] = export_part(part, keys)   # local coordinates (display offset excluded)
     data['variants'] = {
         'wagon': {
             'body': 'wagonBody', 'cover': 'cover', 'hitch': {'1': 'wagonShafts', '2': 'wagonPole'},
@@ -311,7 +192,7 @@ def export(parts, out_path):
     return tris
 
 def main(out_path):
-    root = fresh_collection()
+    root = fresh_collection(COLL_NAME)
     parts = build(root)
     return export(parts, out_path)
 
