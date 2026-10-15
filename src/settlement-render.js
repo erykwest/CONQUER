@@ -189,7 +189,7 @@ function castleBodyVisualSignature(){
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
-    1,State.season||'summer',num(State.view.scale),State.view.rotation||0,staticCacheDpr(),
+    1,State.season||'summer',num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
     !!window.__polygonClipping,items
   ]);
 }

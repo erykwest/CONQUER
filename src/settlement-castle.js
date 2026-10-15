@@ -134,8 +134,12 @@ function environmentConflictsTestRelief(f){
   return false;
 }
 let structureProjectionGroundZ=null;
+// Plan view (top-down editor aid): world axes map straight to the screen and height is ignored,
+// so footprints, joints and the 0.5U grid can be placed exactly. Rotation still applies.
+function isPlanView(){return !!State.view.plan}
 function w2sRaw(p,z=0){
   const q=rotateViewPoint(p),s=U*State.view.scale;
+  if(isPlanView())return{x:State.view.x+q.x*s,y:State.view.y+q.y*s};
   return{x:State.view.x+(q.x-q.y)*s*ISO_X,y:State.view.y+(q.x+q.y)*s*ISO_Y-z*s*ISO_Z};
 }
 function w2s(p,z=0){
@@ -149,6 +153,7 @@ function withProjectionGroundZ(groundZ,drawFn){
   try{return drawFn()}finally{structureProjectionGroundZ=prev}
 }
 function s2wAtElevation(x,y,z=0){
+  if(isPlanView()){const s=U*State.view.scale||1;return unrotateViewPoint({x:(x-State.view.x)/s,y:(y-State.view.y)/s})}
   const s=U*State.view.scale||1,a=(x-State.view.x)/(s*ISO_X),b=(y-State.view.y+z*s*ISO_Z)/(s*ISO_Y);
   return unrotateViewPoint({x:(a+b)/2,y:(b-a)/2});
 }
@@ -163,6 +168,13 @@ function s2w(x,y){
 }
 function fit(){
   const r=wrap.getBoundingClientRect(),availW=Math.max(260,r.width-610),availH=Math.max(220,r.height-90);
+  if(isPlanView()){
+    const side=WORLD*U;
+    State.view.scale=clamp(Math.min(availW/side,availH/side),.18,3);
+    State.view.x=(r.width-side*State.view.scale)/2;
+    State.view.y=Math.max(38,(r.height-side*State.view.scale)/2+20);
+    invalidateSceneCache();draw();return;
+  }
   const worldW=2*WORLD*U*ISO_X,worldH=2*WORLD*U*ISO_Y;
   State.view.scale=clamp(Math.min(availW/worldW,availH/worldH),.18,3);
   const h=worldH*State.view.scale;
