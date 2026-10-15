@@ -461,8 +461,37 @@ function drawBuiltWindows(s,lit=false,nf=1){
   withBuiltRoofOcclusionClip(s,()=>{if(l>=2)drawBuiltWindowRow(s,inside,upperZ,.42,lit,nf,'gothicL3',.92,.78);drawBuiltWindowRow(s,outside,lowerZ,.72,false,nf,'arrowSlit',.23,.58);if(l>=2)drawBuiltWindowRow(s,outside,upperZ,.72,false,nf,'arrowSlit',.23,.58)})
 }
 function drawHouseFacadeWindows(s,lit=false,nf=1){
-  const rows=houseLevel(s)>=2?[.52,1.34]:[.48];
-  for(const edge of visibleFacadeEdges(s))for(const z of rows)drawWindowOnEdge(edge,z,lit,nf,0);
+  // Visible walls, matched to their geometry part (bodyH/ridge) by coordinates.
+  const key=(a,b)=>a.x.toFixed(4)+','+a.y.toFixed(4)+'|'+b.x.toFixed(4)+','+b.y.toFixed(4);
+  const walls=new Map(),entry=urbanHouseGeometry().find(e=>e.house.id===s.id);
+  for(const part of entry?.parts||[])part.points.forEach((a,i)=>walls.set(key(a,part.points[(i+1)%part.points.length]),{part,edge:{a,b:part.points[(i+1)%part.points.length]}}));
+  // Canvas has no depth buffer: a wall whose centre lies behind a nearer part of the same
+  // house (townhouse wings, L/T extensions) keeps neither its frame nor its windows.
+  const hidden=(part,mid,z)=>{
+    const depth=viewDepthPoint(mid),sp=w2s(mid,z);
+    return entry.parts.some(q=>q!==part&&q.points.some(p=>viewDepthPoint(p)>depth+.02)&&
+      urbanHouseFaces(s,q).some(face=>{const g=terrainElevation(q.center);return pointInScreenPolygon(sp,face.map(v=>w2s(v.p,v.z-g)))}));
+  };
+  for(const visible of visibleFacadeEdges(s)){
+    const wall=walls.get(key(visible.a,visible.b));if(!wall)continue;
+    const {part,edge}=wall,plan=houseFacadePlan(s,part,edge),L=dist(edge.a,edge.b)||1;
+    const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+    if(entry.parts.length>1&&hidden(part,{x:mx,y:my},(part.bodyH??houseBodyHeight(s))*.75))continue;
+    if(!lit&&plan.beams.length){
+      ctx.save();ctx.strokeStyle='#3b2a1e';ctx.lineCap='square';
+      ctx.lineWidth=Math.max(.8,HOUSE_TIMBER_W*U*State.view.scale);
+      ctx.beginPath();
+      for(const [p0,p1] of plan.beams){
+        const a=w2s({x:mx+ux*p0.off,y:my+uy*p0.off},p0.z),b=w2s({x:mx+ux*p1.off,y:my+uy*p1.off},p1.z);
+        ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+      }
+      ctx.stroke();ctx.restore();
+    }
+    for(const w of plan.windows){
+      const a=w2s(edge.a,w.z),b=w2s(edge.b,w.z),px=w.off*Math.hypot(b.x-a.x,b.y-a.y)/L;
+      drawWindowOnEdge(edge,w.z,lit,nf,px);
+    }
+  }
 }
 function drawStaticHouseFacadeDetails(){
   for(const house of completedSettlement('house')){

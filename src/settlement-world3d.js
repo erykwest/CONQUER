@@ -397,6 +397,15 @@
       quad(span.a,span.b,ground+centerZ-height/2,ground+centerZ+height/2,key,out);
     };
     const edgesOf=fp=>fp.map((a,i)=>({a,b:fp[(i+1)%fp.length],index:i}));
+    // A beam from wall point p0 to p1 ({off,z}), `width` thick within the wall plane.
+    const strip=(at,ground,p0,p1,width,out,col,push)=>{
+      const uv=atlas.map.get('__white');if(!uv)return;
+      const doff=p1.off-p0.off,dz=p1.z-p0.z,len=Math.hypot(doff,dz)||1,no=-dz/len*width/2,nz=doff/len*width/2;
+      const corner=(p,s)=>{const c=at(p.off+no*s);return{x:c.x+out.x*push,y:c.y+out.y*push,z:ground+p.z+nz*s}};
+      const P=[corner(p0,1),corner(p1,1),corner(p1,-1),corner(p0,-1)],[u0,v0,u1,v1]=uv;
+      for(const k of [0,1,2,0,2,3]){const q=P[k];v.push(q.x,q.y,q.z,k===1||k===2?u1:u0,k<2?v0:v1,col[0],col[1],col[2],col[3])}
+    };
+    const houseGeometry=new Map(urbanHouseGeometry().map(e=>[e.house.id,e]));
     for(const s of State.structures){
       if(underConstruction(s))continue;
       const center=structureCenter(s);
@@ -463,15 +472,19 @@
           }
         }
       }else if(s.type==='house'){
-        const rows=houseLevel(s)>=2?[.52,1.34]:[.48],WIN=[35/255*.82,29/255*.82,24/255*.82,.82];
-        for(const part of urbanHouseDisplayParts(s)){
+        const WIN=[35/255*.82,29/255*.82,24/255*.82,.82],TIMBER=[59/255,42/255,30/255,1];
+        const entry=houseGeometry.get(s.id);
+        for(const part of entry?.parts||[]){
           if(part.kind==='turret'||part.kind==='outbuilding')continue;
           const ground=terrainElevation(part.center);
           for(const edge of edgesOf(part.points)){
             const o=outward(edge,part.center),m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};
-            const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,hw=.0875;
+            const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
+            const plan=houseFacadePlan(s,part,edge),at=off=>({x:m.x+ux*off,y:m.y+uy*off});
+            // Timber frame strips sit just under the windows (smaller wall offset).
+            for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
             // drawWindowOnEdge: 2.1 x 3.25 px per view-scale unit -> .175U x ~.30U
-            for(const z of rows)quad({x:m.x-ux*hw,y:m.y-uy*hw},{x:m.x+ux*hw,y:m.y+uy*hw},ground+z-.15,ground+z+.15,'__white',o,WIN);
+            for(const w of plan.windows){const c=at(w.off);quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN)}
           }
         }
         const d=houseDoorInfo(s),hw=Math.min(.08,(Number(s.w)||1.5)*.0533),g=terrainElevation(d.surface),DOOR=[57/255,39/255,30/255,1];

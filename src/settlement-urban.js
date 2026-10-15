@@ -705,6 +705,53 @@ function urbanHouseGeometry(){
       minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y))};
   });
 }
+// Facade plan of one house wall, in wall coordinates (off = U along the edge from its midpoint,
+// towards edge.b; z = U above the part's ground). Shared by the 2.5D and WebGL2 renderers.
+// - windows: one per floor row; long sides of L2+ houses get two per row.
+// - beams: L2+ upper floors are medieval timber frame (sill and top plates, corner and window
+//   posts, rails around the windows, chevron braces in the blank panels); gable ends add a
+//   king post, collar tie and struts.
+const HOUSE_WINDOW_HALF_W=.0875,HOUSE_WINDOW_HALF_H=.15,HOUSE_TIMBER_W=.05;
+function houseFacadePlan(house,part,edge){
+  const level=houseLevel(house),L=dist(edge.a,edge.b),rows=level>=2?[.52,1.34]:[.48];
+  const pts=part.points,i=pts.indexOf(edge.a),other=i>=0?dist(pts[(i+1)%pts.length],pts[(i+2)%pts.length]):0;
+  const long=level>=2&&L>=1&&L>=other-1e-6;
+  const offs=long?[-L/4,L/4]:[0];
+  const windows=rows.flatMap(z=>offs.map(off=>({off,z})));
+  const beams=[];
+  if(level<2)return{windows,beams};
+  const wallH=part.bodyH??houseBodyHeight(house),fb=wallH*.5,top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
+  const seg=(o0,z0,o1,z1)=>beams.push([{off:o0,z:z0},{off:o1,z:z1}]);
+  seg(-half,fb+t,half,fb+t);seg(-half,top-t,half,top-t);
+  const upper=windows.filter(w=>w.z>fb&&w.z<top);
+  const flank=HOUSE_WINDOW_HALF_W+HOUSE_TIMBER_W*.9;
+  const posts=new Set([-(half-t),half-t]);
+  for(const w of upper){posts.add(w.off-flank);posts.add(w.off+flank)}
+  if(upper.length>1)posts.add(0);
+  const xs=[...posts].filter(x=>x>=-half&&x<=half).sort((a,b)=>a-b);
+  for(const x of xs)seg(x,fb+t,x,top-t);
+  for(const w of upper){
+    const sill=w.z-HOUSE_WINDOW_HALF_H-t,head=w.z+HOUSE_WINDOW_HALF_H+t;
+    if(sill>fb+HOUSE_TIMBER_W)seg(w.off-flank,sill,w.off+flank,sill);
+    if(head<top-HOUSE_TIMBER_W)seg(w.off-flank,head,w.off+flank,head);
+  }
+  // Chevron braces in panels without a window, rising towards the wall centre.
+  for(let k=0;k<xs.length-1;k++){
+    const x0=xs[k],x1=xs[k+1],mid=(x0+x1)/2;
+    if(x1-x0<.16||upper.some(w=>Math.abs(w.off-mid)<flank))continue;
+    if(mid<0)seg(x0,fb+t*2,x1,top-t*2);else seg(x0,top-t*2,x1,fb+t*2);
+  }
+  // Gable end: the wall perpendicular to the ridge carries the triangular gable above it.
+  const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(house.angle||0)+turn;
+  const ux=(edge.b.x-edge.a.x)/(L||1),uy=(edge.b.y-edge.a.y)/(L||1);
+  const ridge=part.roofH;
+  if(part.kind!=='turret'&&Number.isFinite(ridge)&&ridge>top+.2&&Math.abs(ux*Math.cos(angle)+uy*Math.sin(angle))<.3){
+    const zc=top+(ridge-top)*.42,hc=half*(1-.42)-t;
+    seg(0,top,0,ridge-t*2);seg(-hc,zc,hc,zc);
+    seg(-half*.62,top+t,-t,top+(ridge-top)*.72);seg(half*.62,top+t,t,top+(ridge-top)*.72);
+  }
+  return{windows,beams};
+}
 function urbanRayInterval(a,b,poly){
   let enter=0,exit=1;const sign=urbanArea(poly)>=0?1:-1;
   for(let i=0;i<poly.length;i++){
