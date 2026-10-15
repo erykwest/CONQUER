@@ -1,0 +1,121 @@
+'use strict';
+// CONQUER wagons in 3D: assembles the Blender-built parts (src/assets/wagon-model.js,
+// ASSETS/blender/build_wagon.py) at any heading, rolls the wheels, shades faces with the
+// castle's two-tone side rule, and draws them depth-sorted on a 2D canvas together with
+// the team and driver sprites. worldTriangles() gives the same geometry in world units
+// for the WebGL scene. Classic script; geometry maths is pure.
+(function(){
+  const M=()=>window.ConquerWagonModel;
+  const paletteIndex=key=>M().paletteKeys.indexOf(key);
+  const rgbCache=new Map();
+  function rgb(hex){
+    let v=rgbCache.get(hex);if(v)return v;
+    const h=hex.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+    rgbCache.set(hex,v);return v;
+  }
+  // Ground-plane quarter turns of the camera (same convention as rotateViewPoint).
+  function rotDir(x,y,turns){
+    const q=((turns%4)+4)%4;
+    return q===1?[-y,x]:q===2?[-x,-y]:q===3?[y,-x]:[x,y];
+  }
+  // Castle rule: top faces take the base colour; side faces get one of two tones by
+  // their facing relative to the light at 30 degrees (castleSideShade).
+  function shadeFactor(nx,ny,nz,turns){
+    const len=Math.hypot(nx,ny,nz)||1;
+    if(nz/len>.5)return 1;
+    if(nz/len<-.5)return .5;
+    const [ex,ey]=rotDir(-ny,nx,turns),angle=Math.atan2(ey,ex);
+    return Math.cos(2*(angle-Math.PI/6))>=0?.84:.68;
+  }
+  // Pale materials (canvas, fresh wood) keep more of their tone in shade, or a
+  // cream canvas reads as grey.
+  function soften(f,[r,g,b]){return(r+g+b)/765>.7?1-(1-f)*.55:f}
+  // Which parts make this wagon, where, and how each one moves.
+  function assembly(spec={}){
+    const m=M(),v=m.variants[spec.chassis==='cart'?'cart':'wagon'];
+    const team=Math.max(0,Math.min(2,spec.team?.length??0));
+    const out=[{part:v.body}];
+    if(team)out.push({part:v.hitch[String(team)]});
+    if(spec.body==='covered'&&v.cover)out.push({part:v.cover,covered:true});
+    for(const w of v.wheels)for(const at of w.at)out.push({part:w.part,wheel:true,r:w.r,at});
+    if(!(spec.body==='covered'&&v.cover)){
+      const cargo=(spec.cargo||[]).filter(k=>m.cargo[k]).slice(0,v.slots.length);
+      cargo.forEach((k,i)=>out.push({part:m.cargo[k],at:v.slots[i],cargo:k}));
+    }
+    return{variant:v,parts:out,team};
+  }
+  // Model point -> world: optional wheel spin about the local y axis, mount offset,
+  // heading about z, then the wagon position. pose: {x,y,z,heading,distance,bob}.
+  function placer(pose){
+    const c=Math.cos(pose.heading||0),s=Math.sin(pose.heading||0);
+    return(px,py,pz)=>[pose.x+px*c-py*s,pose.y+px*s+py*c,(pose.z||0)+pz];
+  }
+  // World-space triangles: Float32Array xyz per vertex and per-triangle base rgb.
+  function worldTriangles(spec,pose){
+    const m=M(),{parts,variant}=assembly(spec),place=placer(pose),pos=[],col=[],bias=[],outward=[];
+    // Painter hints for the canvas path: the bed floor goes first (cargo sits on it),
+    // hoops after the canvas they lie on. WebGL ignores these (depth buffer).
+    const floorTop=variant.slots[0][2],hoop=paletteIndex('canvasHoop');
+    const bob=pose.bob||0,dist=pose.distance||0;
+    for(const inst of parts){
+      const p=m.parts[inst.part];if(!p)continue;
+      const at=inst.at||[0,0,0],a=inst.wheel?dist/inst.r:0,ca=Math.cos(a),sa=Math.sin(a);
+      const lift=inst.wheel?0:bob;
+      for(let t=0;t<p.c.length;t++){
+        for(let k=0;k<3;k++){
+          let x=p.v[t*9+k*3],y=p.v[t*9+k*3+1],z=p.v[t*9+k*3+2];
+          if(inst.wheel){const x2=x*ca+z*sa;z=-x*sa+z*ca;x=x2}
+          const w=place(x+at[0],y+at[1],z+at[2]+lift);
+          pos.push(w[0],w[1],w[2]);
+        }
+        col.push(m.palette[p.c[t]]);
+        const z0=p.v[t*9+2],z1=p.v[t*9+5],z2=p.v[t*9+8];
+        const isHoop=inst.part===variant.cover&&p.c[t]===hoop;
+        bias.push(inst.part===variant.body&&Math.abs(z0-floorTop)<.003&&Math.abs(z1-floorTop)<.003&&Math.abs(z2-floorTop)<.003?-100:isHoop?.5:0);
+        if(isHoop){
+          // Hoops lie on the canvas: draw them over it, but only on the half that
+          // faces the camera (outward from the cover's long axis).
+          const ly=(p.v[t*9+1]+p.v[t*9+4]+p.v[t*9+7])/3,lz=(z0+z1+z2)/3-floorTop-.11;
+          const c=Math.cos(pose.heading||0),s=Math.sin(pose.heading||0);
+          outward[t]=[-ly*s,ly*c,lz];
+        }
+      }
+    }
+    return{pos:new Float32Array(pos),col,bias,outward};
+  }
+  // Mount points in world space for the caller's sprites.
+  function anchors(spec,pose){
+    const {variant,team}=assembly(spec),place=placer(pose),bob=pose.bob||0;
+    const seat=variant.seat?place(variant.seat[0],variant.seat[1],variant.seat[2]+bob):null;
+    const horses=team?variant.horses[String(team)].map(([hx,hy])=>{const w=place(hx,hy,0);return{x:w[0],y:w[1],z:w[2]}}):[];
+    return{seat:seat&&{x:seat[0],y:seat[1],z:seat[2]},horses};
+  }
+  // Canvas drawing. view: {project(x,y,z)->{x,y}, depth(x,y,z)->n (larger = nearer), turns}.
+  // sprites: [{x,y,z,draw()}] drawn in depth order with the triangles (team, driver).
+  function draw(ctx,spec,pose,view,sprites=[]){
+    const {pos,col,bias,outward}=worldTriangles(spec,pose),n=col.length,items=[];
+    const d0=view.depth(0,0,0),cam=[view.depth(1,0,0)-d0,view.depth(0,1,0)-d0,view.depth(0,0,1)-d0];
+    for(let t=0;t<n;t++){
+      const o=t*9,ax=pos[o],ay=pos[o+1],az=pos[o+2],bx=pos[o+3],by=pos[o+4],bz=pos[o+5],cx=pos[o+6],cy=pos[o+7],cz=pos[o+8];
+      const ux=bx-ax,uy=by-ay,uz=bz-az,vx=cx-ax,vy=cy-ay,vz=cz-az;
+      const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+      const o2=outward[t];
+      if(o2&&o2[0]*cam[0]+o2[1]*cam[1]+o2[2]*cam[2]<=0)continue;
+      items.push({t,d:view.depth((ax+bx+cx)/3,(ay+by+cy)/3,(az+bz+cz)/3)+bias[t],f:soften(shadeFactor(nx,ny,nz,view.turns||0),rgb(col[t]))});
+    }
+    for(const s of sprites)items.push({sprite:s,d:view.depth(s.x,s.y,s.z||0)});
+    items.sort((a,b)=>a.d-b.d);
+    ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;
+    for(const it of items){
+      if(it.sprite){ctx.restore();it.sprite.draw();ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;continue}
+      const o=it.t*9,a=view.project(pos[o],pos[o+1],pos[o+2]),b=view.project(pos[o+3],pos[o+4],pos[o+5]),c=view.project(pos[o+6],pos[o+7],pos[o+8]);
+      const [r,g,bl]=rgb(col[it.t]),f=it.f;
+      const fill='rgb('+(r*f|0)+','+(g*f|0)+','+(bl*f|0)+')';
+      ctx.fillStyle=ctx.strokeStyle=fill;   // same-colour stroke hides anti-alias seams
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.fill();ctx.stroke();
+    }
+    ctx.restore();
+    return n;
+  }
+  window.ConquerWagons3D={assembly,worldTriangles,anchors,draw,shadeFactor,rotDir};
+})();

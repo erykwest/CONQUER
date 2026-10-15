@@ -36,7 +36,7 @@
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
   <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
-    <button data-subject="wagon">Carro</button>
+    <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button>
   </div>
   <div class="group" role="group" aria-label="Azione" id="actions"></div>
   <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
@@ -47,6 +47,11 @@
     <label>Cavalli <select id="wTeam"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label>
     <label>Guidatore <select id="wDriver"><option value="villager">popolano</option><option value="spearman">guerriero</option><option value="knight">cavaliere</option><option value="">nessuno</option></select></label>
     <label>Carico <select id="wCargo"><option value="mixed">misto</option><option value="sack">sacchi</option><option value="crate">casse</option><option value="barrel">botti</option><option value="hay">fieno</option><option value="logs">legna</option><option value="stone">pietra</option><option value="none">vuoto</option></select></label>
+  </div>
+  <div class="group" id="wagon3dBox">
+    <label>Direzione <input id="w3Heading" type="range" min="0" max="359" step="1" value="210"></label>
+    <label><input id="w3Auto" type="checkbox" checked> Gira da solo</label>
+    <label>Telecamera <select id="w3Turns"><option value="0">0°</option><option value="1">90°</option><option value="2">180°</option><option value="3">270°</option></select></label>
   </div>
   <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
   <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
@@ -72,6 +77,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-combat-anim.js?v=lab-1"></script>
 <script src="./src/settlement-animals.js?v=lab-2"></script>
 <script src="./src/settlement-wagons.js?v=lab-1"></script>
+<script src="./src/assets/wagon-model.js?v=lab-1"></script>
+<script src="./src/settlement-wagons3d.js?v=lab-1"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
@@ -80,15 +87,16 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   const ACTIONS={vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
-  const kindOf=s=>s==='wagon'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  const kindOf=s=>s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
     const acts=kindOf(subject)==='animal'?A.SPECIES[subject].modes:ACTIONS[kindOf(subject)];
     if(!acts.some(([k])=>k===action))action=acts[0][0];
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
-    $('coatBox').hidden=subject!=='horse'&&subject!=='wagon';
-    $('wagonBox').hidden=subject!=='wagon';
-    $('flipBox').hidden=!['animal','vehicle'].includes(kindOf(subject));
+    $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
+    $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
+    $('wagon3dBox').hidden=subject!=='wagon3d';
+    $('flipBox').hidden=!['animal','vehicle'].includes(kindOf(subject))||subject==='wagon3d';
     resetHero();
   }
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
@@ -175,6 +183,36 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     W2.drawWagon(g,W*(facing>0?.8:.9),H*.55,32*k,{...spec,facing,t:clock,distance:wagonDistance,moving});
   }
 
+  // Wagon 3D: the Blender-built model at any heading, drawn with the game's iso
+  // projection (px per U = 12 x zoom, like w2sRaw); team and driver are sprites
+  // sorted into the same depth order.
+  const W3=window.ConquerWagons3D;let w3Distance=0,w3Heading=210;
+  function isoView(cx,cy,pxPerU,turns){
+    const rot=(x,y)=>W3.rotDir(x,y,turns);
+    return{turns,
+      project:(x,y,z)=>{const [qx,qy]=rot(x,y);return{x:cx+(qx-qy)*pxPerU*.8660254,y:cy+(qx+qy)*pxPerU*.5-z*pxPerU*.9}},
+      depth:(x,y,z)=>{const [qx,qy]=rot(x,y);return qx+qy+.9*z}};
+  }
+  function wagon3dAt(cx,cy,pxPerU,spec,moving,turns){
+    const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12;
+    const pose={x:0,y:0,heading:w3Heading*Math.PI/180,distance:w3Distance,bob:moving?Math.sin(w3Distance*40)*.004:0};
+    const anchors=W3.anchors(spec,pose),sprites=[];
+    // Side-view horses face the way the heading runs across the screen.
+    const p0=view.project(0,0,0),p1=view.project(Math.cos(pose.heading),Math.sin(pose.heading),0),facing=p1.x>=p0.x?1:-1;
+    anchors.horses.forEach((h,i)=>sprites.push({...h,draw:()=>{const s=view.project(h.x,h.y,h.z);
+      A.drawAnimal('horse',g,s.x,s.y,4.9*zoom,{t:moving?clock+i*.12:0,mode:'walk',facing,coat:spec.team[i]?.coat,seed:i})}}));
+    if(anchors.seat&&spec.driver)sprites.push({...anchors.seat,z:anchors.seat.z+.12,draw:()=>{const s=view.project(anchors.seat.x,anchors.seat.y,anchors.seat.z);spec.driver(g,s.x,s.y,4.9*zoom)}});
+    return W3.draw(g,spec,pose,view,sprites);
+  }
+  function heroWagon3D(W,H,k,dt){
+    const moving=action==='move',turns=Number($('w3Turns').value);
+    if($('w3Auto').checked){w3Heading=(w3Heading+dt*25)%360;$('w3Heading').value=Math.round(w3Heading)}else w3Heading=Number($('w3Heading').value);
+    if(moving)w3Distance+=dt*.35;
+    const spec=wagonSpec();
+    wagon3dAt(W*.4,H*.5,12*8*k,spec,moving,turns);
+    wagon3dAt(W*.84,H*.52,12*2.6*k,spec,moving,turns);
+  }
+
   // Game-scale scene: mixed flock, villagers, a looping skirmish.
   const COATS=['brown','black','grey','white'];
   const flock=Array.from({length:12},(_,i)=>({x:80+i*60,y:640+(i%3)*42,seed:i*1.7,mode:i%2?'browse':'walk',blend:i%2?1:0,
@@ -234,7 +272,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     g.fillStyle='#6f9a48';g.fillRect(0,0,W,H);
     g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
     const kind=kindOf(subject);
-    if(kind==='vehicle')heroWagon(W,H,k,dt);
+    if(subject==='wagon3d')heroWagon3D(W,H,k,dt);
+    else if(kind==='vehicle')heroWagon(W,H,k,dt);
     else if(kind==='animal')heroAnimals(W,H,k,dt);
     else if(kind==='soldier')heroSoldiers(W,H,k);
     else heroVillagers(W,H,k);
