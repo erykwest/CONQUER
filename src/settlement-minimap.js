@@ -90,6 +90,30 @@ window.ConquerMinimap=(()=>{
       }
     }
   }
+  function block(s){
+    const glyph=window.ConquerLOD?.buildingGlyph(s);
+    if(!glyph)return;
+    const p=toMap(glyph),pxPerU=drawSize/WORLD;
+    const w=Math.max(2.6,glyph.w*pxPerU),h=Math.max(2.6,glyph.h*pxPerU);
+    g.save();g.translate(p.x,p.y);
+    g.rotate((Number(s.angle)||0)+(State.view.rotation||0)*Math.PI/2);
+    g.fillStyle=glyph.fill;g.strokeStyle=glyph.stroke;g.lineWidth=.7;
+    g.fillRect(-w/2,-h/2,w,h);g.strokeRect(-w/2,-h/2,w,h);
+    g.restore();
+  }
+  function drawMilitaryMap(){
+    const contacts=window.ConquerCombat?.mapContacts?.()||[];
+    for(const unit of contacts){
+      if(!valid(unit))continue;
+      const isEnemy=unit.side==='enemy';
+      const color=isEnemy?'#e85d54':
+        unit.kind==='knight'?'#ffd27a':
+        unit.kind==='patrol'?'#a7dadd':'#a8d3fc';
+      const radius=unit.kind==='squad'?3.25:unit.kind==='knight'?3:2.45;
+      if(unit.selected)dot(unit,radius+2.2,'#f8df93','#22251c');
+      dot(unit,radius,color,isEnemy?'#4d211e':'#233947');
+    }
+  }
   function footprint(s){
     try{return footprintPoints(s)}catch(_){return[]}
   }
@@ -111,18 +135,12 @@ window.ConquerMinimap=(()=>{
       if(['wall','palisade','built','moat','bridge'].includes(s.type)&&valid(s.a)&&valid(s.b)){
         const color=s.type==='moat'?'#557986':s.type==='bridge'?'#c7b38d':s.type==='palisade'?'#8e754d':'#ded1ae';
         segment(s.a,s.b,color,Math.max(1.3,(Number(s.width)||.55)*drawSize/WORLD));
-      }else if(s.type==='house'){
-        fillPoly(footprint(s),'#c8ad82');
-      }else if(['tower','gate'].includes(s.type)){
-        const pts=footprint(s);
-        if(pts.length>2)fillPoly(pts,'#efe0bf','#5b4c3a');
-        else dot(s,2,'#efe0bf');
       }else if(s.type==='well'){
         dot(s,3.5,'#efc16a','#2c3328');
       }else{
-        const pts=footprint(s);
-        if(pts.length>2)fillPoly(pts,'#bc8965');
-        else if(valid(s))dot(s,2.2,'#bc8965');
+        // Map LOD: one tiny semantic footprint per building, without expensive
+        // multi-part roof/facade construction or 3D shader work.
+        block(s);
       }
     }
     g.globalAlpha=1;
@@ -168,6 +186,7 @@ window.ConquerMinimap=(()=>{
       g.strokeStyle='rgba(248,224,173,.65)';g.lineWidth=.9;g.setLineDash([3,3]);g.stroke();g.setLineDash([]);
     }
     drawStructuresMap();
+    drawMilitaryMap();
     drawViewport();
     g.restore();
   }
