@@ -71,11 +71,13 @@
     planCache.set(house.id,result);
     return result;
   }
-  function whiteAt(p){
+  function whiteZoneAt(p){
     const z=window.ConquerCombat?.areaState?.(p);
     return !!z?.allowed&&!z.yellow&&!z.green&&
-      p.x>1&&p.y>1&&p.x<WORLD-1&&p.y<WORLD-1&&
-      !pointBlockedForPeasant(p,null);
+      p.x>1&&p.y>1&&p.x<WORLD-1&&p.y<WORLD-1;
+  }
+  function whiteAt(p){
+    return whiteZoneAt(p)&&!pointBlockedForPeasant(p,null);
   }
   function whitePatch(p,r){
     if(!whiteAt(p))return false;
@@ -144,7 +146,9 @@
     const a=i*GOLDEN_ANGLE+rand(h)*.5+
       Math.sin(t*.6+rand(h^4234)*Math.PI*2)*.16;
     const p={x:pasture.center.x+Math.cos(a)*r,y:pasture.center.y+Math.sin(a)*r};
-    return whiteAt(p)?p:pasture.center;
+    // The patch was checked against obstacles when selected. Per-frame
+    // grazing only needs the inexpensive zone mask test.
+    return whiteZoneAt(p)?p:pasture.center;
   }
   function shepherdPosition(house){
     if(kindForHouse(house)!=='shepherd'||underConstruction(house))return null;
