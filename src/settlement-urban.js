@@ -499,8 +499,10 @@ function drawUrbanLots(){
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);
     const dense=(house?.auto||house?.urbanRedeveloped)&&houseLevel(house)>=3;
-    pathPolygon(lot.points.map(p=>w2s(p,.015)),
-      dense?'rgba(128,116,103,.36)':'rgba(167,135,81,.10)',null);
+    const use=window.ConquerLivestock?.lotKindForHouse(house);
+    const surface=dense?'rgba(128,116,103,.36)':use==='goat'?'rgba(155,123,71,.20)':
+      use==='shepherd'?'rgba(126,142,78,.18)':'rgba(167,135,81,.10)';
+    pathPolygon(lot.points.map(p=>w2s(p,.015)),surface,null);
   }
   const edges=urbanFenceSegments().slice().sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
   ctx.save();ctx.lineWidth=Math.max(.65,State.view.scale*.9);
