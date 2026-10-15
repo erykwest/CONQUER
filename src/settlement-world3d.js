@@ -667,19 +667,29 @@
   }
   function soldierTile(type,phase,livery){
     // Only the knight's sword swings with phase; everything else is a single pose.
-    const bucket=type==='knight'?Math.floor((((phase%1)+1)%1)*8):0;
+    const isDot=window.ConquerLOD?.militaryTier()==='dot';
+    const bucket=!isDot&&type==='knight'?Math.floor((((phase%1)+1)%1)*8):0;
     const herald=JSON.stringify(State.heraldry||null);
     if(soldierAtlas.heraldry!==herald){soldierAtlas.map.clear();soldierAtlas.next=0;soldierAtlas.heraldry=herald}
-    const key=type+'|'+bucket+'|'+(livery?JSON.stringify(livery):'realm');
+    const key=(isDot?'dot|':'figure|')+type+'|'+bucket+'|'+(livery?JSON.stringify(livery):'realm');
     let uv=soldierAtlas.map.get(key);if(uv)return uv;
     if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=1024}
     const cols=1024/SOLDIER_TILE,i=soldierAtlas.next++%(cols*cols),x=(i%cols)*SOLDIER_TILE,y=Math.floor(i/cols)*SOLDIER_TILE;
     const g=soldierAtlas.canvas.getContext('2d');g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);
-    const keepView=State.view,keepW2s=w2s;
-    State.view={...keepView,scale:SOLDIER_SR};
-    w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // drawSoldierFigureUnmasked projects only the feet
-    try{withRenderContext(g,()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'atlas',bucket/8,livery))}
-    finally{State.view=keepView;w2s=keepW2s}
+    if(isDot){
+      // The same sprite/billboard and depth-tested capsule stay in place, but
+      // the distant soldier is a single colored point instead of a figure.
+      const cy=y+SOLDIER_TILE*.54,r=SOLDIER_TILE*.34;
+      g.fillStyle=window.ConquerLOD.militaryColor(type,livery);
+      g.strokeStyle='#28302a';g.lineWidth=5;
+      g.beginPath();g.arc(x+SOLDIER_TILE/2,cy,r,0,Math.PI*2);g.fill();g.stroke();
+    }else{
+      const keepView=State.view,keepW2s=w2s;
+      State.view={...keepView,scale:SOLDIER_SR};
+      w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // drawSoldierFigureUnmasked projects only the feet
+      try{withRenderContext(g,()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'atlas',bucket/8,livery))}
+      finally{State.view=keepView;w2s=keepW2s}
+    }
     uv=[x/1024,y/1024,(x+SOLDIER_TILE)/1024,(y+SOLDIER_TILE)/1024];
     soldierAtlas.map.set(key,uv);soldierAtlas.dirty=true;return uv;
   }
