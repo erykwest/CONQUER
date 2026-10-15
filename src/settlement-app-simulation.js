@@ -173,7 +173,9 @@ function simulationFrame(now){
     }
   }else{
     const animatedCutaway=State.structures.some(s=>structureCutaway(s)&&Array.isArray(s.functions)&&s.functions.some(role=>role==='barracks'||role==='quarters'||role==='nobleRoom'));
-    if(animatedCutaway&&now-simDrawAt>=84){
+    // DEV weather/daylight overrides ease even with the simulation paused.
+    const ambientTransition=window.ConquerAmbientLight?.isTransitioning?.()||false;
+    if((animatedCutaway||ambientTransition)&&now-simDrawAt>=(ambientTransition?WEATHER_FRAME_MS:84)){
       draw();
       simDrawAt=now;
     }

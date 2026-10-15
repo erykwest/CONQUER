@@ -1,8 +1,15 @@
 'use strict';
 // Renderer scene orchestrator and cached layer composition. Shared classic-script globals.
 function drawDayNightOverlay(){
-  const nf=nightFactor();if(nf<=0)return;
-  const r=wrap.getBoundingClientRect();
+  const r=wrap.getBoundingClientRect(),nf=nightFactor();
+  if(window.ConquerAmbientLight){
+    window.ConquerAmbientLight.draw(ctx,r,{
+      fraction:visualCycleFrac(),night:nf,season:State.season,weather:currentWeather()
+    });
+    return;
+  }
+  // Defensive fallback if the optional color-grading module failed to load.
+  if(nf<=0)return;
   ctx.save();ctx.fillStyle='rgba(6,10,18,'+(NIGHT_OVERLAY_MAX*nf).toFixed(3)+')';ctx.fillRect(0,0,r.width,r.height);ctx.restore();
 }
 function drawNightLights(){

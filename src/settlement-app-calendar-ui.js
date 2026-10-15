@@ -152,9 +152,9 @@ function freshLandscapeSeed(){
   return Math.max(1,Math.floor(Math.random()*2147483647));
 }
 function generateNewMap(){
-  // New maps inherit the same visible DEV reference settings.
-  State.seasonOverride='summer';State.season='summer';
-  State.weatherOverride='sun';State.daylightOverride='day';
+  // New games follow the calendar and procedural daylight/weather by default.
+  State.seasonOverride=null;State.season=seasonForMonth(calendarDateFromDay(0).month);
+  State.weatherOverride=null;State.daylightOverride=null;
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
   window.ConquerSnowTracks?.reset();
   State.clock.speed=0;
