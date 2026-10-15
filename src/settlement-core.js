@@ -174,6 +174,9 @@ const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
+// The paved square around the well is a no-build zone: houses, lots, fields and buildings
+// keep out of it (roads may still cross it).
+function wellPlazaPoints(s){return rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0)}
 const LINEAR_POINT_MAGNET=.90;
 const TOWER_WALL_MAGNET=.78;
 const SUBTOWER_MAGNET=1.0;
@@ -391,7 +394,7 @@ function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact
 const HOUSE_ROOF_PITCH=Math.tan(60*Math.PI/180);
 function houseRoofSpan(part){return Math.abs(part.roofTurn||0)>1e-6?part.w:part.h}
 function housePartRidge(s,part,wallH=houseBodyHeight(s)){
-  if(part.kind==='turret')return part.roofH;
+  if(part.kind==='turret'||part.kind==='outbuilding')return part.roofH;
   if(houseLevel(s)===1)return 1.45;
   return wallH+HOUSE_ROOF_PITCH*houseRoofSpan(part)/2;
 }
@@ -401,7 +404,7 @@ function housePartRidges(s,parts,wallH=houseBodyHeight(s)){
   const main=new Map();
   return parts.map(part=>{
     const ridge=housePartRidge(s,part,wallH);
-    if(part.kind==='turret')return ridge;
+    if(part.kind==='turret'||part.kind==='outbuilding')return ridge;
     const key=part.buildingKey||'main';
     if(!main.has(key)){main.set(key,ridge);return ridge}
     return Math.min(ridge,main.get(key));

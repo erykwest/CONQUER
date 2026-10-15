@@ -94,6 +94,7 @@ function urbanYellowContains(poly){
 function urbanBuildingPolygons(s){
   if(!s||['road','field'].includes(s.type))return[];
   if(s.type==='house')return houseFootprintParts(s).map(p=>p.points);
+  if(s.type==='well')return[wellPlazaPoints(s)];
   if(isCivic(s))return civicParts(s).map(p=>p.points);
   const points=footprintPoints(s);return points?.length?[points]:[];
 }
@@ -440,7 +441,55 @@ function urbanPolygonIntersectionArea(a,b){
 }
 function urbanHouseDisplayParts(house){
   const dense=urbanDenseParts(house);
-  return dense.length?dense:houseFootprintParts(house);
+  return dense.length?dense.concat(urbanLotOutbuildings(house)):houseFootprintParts(house);
+}
+// L3/L4 yards fill up with secondary buildings along the plot's non-street
+// sides: open lean-to sheds (tettoie) and closed storehouses (magazzini).
+// They are solid parts of the household (navigation, LOS, occlusion) but
+// never count as dwellings and carry no windows or chimneys.
+let urbanOutbuildingCache={revision:-1,parts:new Map()};
+const URBAN_OUTBUILDING_MAX=6;
+function urbanLotOutbuildings(house){
+  if(!house||(!house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
+  if(urbanOutbuildingCache.revision!==urbanRevision)urbanOutbuildingCache={revision:urbanRevision,parts:new Map()};
+  const level=houseLevel(house),cached=urbanOutbuildingCache.parts.get(house.id);
+  if(cached&&cached.level===level)return cached.parts;
+  const lot=urbanLots().find(l=>l.houseId===house.id),parts=[];
+  const dense=urbanDenseParts(house);
+  if(lot&&dense.length){
+    const poly=lot.points,n=poly.length,sign=urbanArea(poly)>=0?1:-1;
+    const street=urbanLotStreetEdges(lot);
+    // Keep a walkable yard between the townhouses' backs and the outbuildings.
+    const clear=(rect,others,margin)=>others.every(o=>{
+      if(urbanPolygonIntersectionArea(rect,o.points)>1e-6)return false;
+      return rect.every((p,i)=>o.points.every((q,j)=>segmentDistance(p,rect[(i+1)%rect.length],q,o.points[(j+1)%o.points.length])>=margin));
+    });
+    for(let edge=0;edge<n&&parts.length<URBAN_OUTBUILDING_MAX;edge++){
+      if(street.has(edge))continue;
+      const a=poly[edge],b=poly[(edge+1)%n],L=dist(a,b);if(L<1.3)continue;
+      const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L,inward={x:-uy*sign,y:ux*sign};
+      const angle=Math.atan2(inward.y,inward.x)-Math.PI/2;
+      let along=.2,k=0;
+      while(along<L-.2&&parts.length<URBAN_OUTBUILDING_MAX){
+        const key=house.id+'|out:'+edge+':'+k,hash=peasantHash(key)>>>0;
+        const kind=(hash&1)?'shed':'store';
+        const w=(level===4?1.2:1.0)+((hash>>>3)%7)/10,d=kind==='shed'?.78:.9+((hash>>>7)%3)/20;
+        if(along+w>L-.2)break;
+        const mid=along+w/2,center={x:a.x+ux*mid+inward.x*(d/2+.06),y:a.y+uy*mid+inward.y*(d/2+.06)};
+        const points=rectWorldPoints(center.x,center.y,w,d,angle);
+        const inside=points.every(p=>urbanContains(poly,p,.04));
+        if(inside&&clear(points,dense,.45)&&clear(points,parts,.12)){
+          const bodyH=kind==='shed'?.62:.82,roofH=kind==='shed'?1.02:.82+Math.tan(Math.PI/4)*d/2;
+          parts.push({kind:'outbuilding',type:kind,center,points,w,h:d,roofTurn:0,roofAngle:angle,
+            bodyH,roofH,buildingKey:key});
+          along+=w+.3;
+        }else along+=.35;
+        k++;
+      }
+    }
+  }
+  urbanOutbuildingCache.parts.set(house.id,{level,parts});
+  return parts;
 }
 function urbanDenseHouseDoorInfo(house){
   const parts=urbanDenseParts(house);if(!parts.length)return null;
@@ -464,6 +513,16 @@ function urbanBoundaryMaterial(a,b){
   return roll<.5?'fence':roll<.8?'wall':'hedge';
 }
 const URBAN_FENCE_WELD=.2,URBAN_FENCE_PARALLEL=.06;   // U, sin(~3.4°)
+// Lot edges that face a street: those with townhouse frontage, plus any edge
+// lying along a primary road verge (too short for a frontage).
+function urbanLotStreetEdges(lot){
+  const out=new Set(urbanLotRoadFrontages(lot).map(f=>f.edge)),roads=primaryRoadList(true),n=lot.points.length;
+  for(let i=0;i<n;i++){
+    const a=lot.points[i],b=lot.points[(i+1)%n],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    if(roads.some(r=>pointSegmentDistance(mid,r.a,r.b)<=(Number(r.width)||.62)/2+URBAN_ROAD_VERGE+.15))out.add(i);
+  }
+  return out;
+}
 function urbanFenceSegments(lots=null,fields=null){
   const cacheable=lots==null&&fields==null;
   if(lots==null)lots=urbanLots();
@@ -490,7 +549,17 @@ function urbanFenceSegments(lots=null,fields=null){
   };
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);if(!house)continue;
-    if((house.auto||house.urbanRedeveloped)&&houseLevel(house)>=3)continue; // Redeveloped plots have no paddock fence.
+    if((house.auto||house.urbanRedeveloped)&&houseLevel(house)>=3){
+      // Redeveloped plots open on the street through their townhouses; the yard
+      // is still enclosed on every side that does not face a road.
+      const n=lot.points.length,street=urbanLotStreetEdges(lot);
+      for(let i=0;i<n;i++){
+        if(street.has(i))continue;
+        const a=lot.points[i],b=lot.points[(i+1)%n];if(dist(a,b)<.05)continue;
+        raw.push({a,b,material:urbanBoundaryMaterial(a,b),key:urbanBoundaryKey(a,b)});
+      }
+      continue;
+    }
     const door=houseDoorInfo(house).outside;
     addParcel(lot.points,door,nearestPrimaryRoadProjection(door)?.point||door);
   }
@@ -569,6 +638,42 @@ function drawUrbanWall({a,b}){
     ctx.beginPath();ctx.moveTo(foot.x,foot.y);ctx.lineTo(top.x,top.y);ctx.stroke();
   }
 }
+// Single trees on plot corners: each corner shared by several lots is welded
+// into one site first, then rolls once (30%), so a shared corner never gets
+// two trees. Same tree record as forest trees (drawTree / 3D billboards).
+let URBAN_CORNER_TREE_CHANCE=.3;
+let urbanCornerTreeCache={revision:-1,trees:[]};
+function urbanLotCornerTrees(){
+  if(urbanCornerTreeCache.revision===urbanRevision)return urbanCornerTreeCache.trees;
+  const sites=[];
+  for(const lot of urbanLots())for(const p of lot.points){
+    const site=sites.find(s=>dist(s,p)<=URBAN_FENCE_WELD);
+    if(site){site.sx+=p.x;site.sy+=p.y;site.n++;site.min=site.min.x<p.x||site.min.x===p.x&&site.min.y<=p.y?site.min:p}
+    else sites.push({x:p.x,y:p.y,sx:p.x,sy:p.y,n:1,min:p});
+  }
+  const roads=primaryRoadList(true),wells=State.structures.filter(s=>s.type==='well');
+  const fields=State.structures.filter(s=>s.type==='field').map(fieldPoints);
+  const solids=urbanHouseGeometry().flatMap(e=>e.parts.map(p=>p.points));
+  const trees=[];
+  for(const site of sites){
+    const p={x:site.sx/site.n,y:site.sy/site.n};
+    // Keyed on the site's lowest corner, so the roll does not depend on lot order.
+    const key=site.min.x.toFixed(2)+','+site.min.y.toFixed(2),hash=biomeHash(State.seed+'|lot-tree|'+key)>>>0;
+    if(hash/4294967296>=URBAN_CORNER_TREE_CHANCE)continue;
+    if(roads.some(r=>pointSegmentDistance(p,r.a,r.b)<(Number(r.width)||.62)/2+.35))continue;
+    if(wells.some(w=>urbanContains(wellPlazaPoints(w),p,-.2)))continue;
+    if(fields.some(f=>urbanContains(f,p,-.05)))continue;
+    if(solids.some(poly=>urbanContains(poly,p,-.3)))continue;
+    if(trees.some(t=>dist(t.p,p)<.8))continue;
+    const r=seedRand(hash);
+    trees.push({p,z:terrainElevation(p),urban:true,
+      shapeIndex:Math.floor(r()*FOREST_TREE_ASSETS.length),
+      colorIndex:Math.floor(r()*FOREST_CANOPY_PALETTES.summer.length),
+      flip:r()<.5,scale:.7+r()*.25});
+  }
+  urbanCornerTreeCache={revision:urbanRevision,trees};
+  return trees;
+}
 function drawUrbanLots(){
   const lots=urbanLots();
   for(const lot of lots){
@@ -585,13 +690,14 @@ function drawUrbanLots(){
     else drawUrbanFence(edge);
   }
   ctx.restore();
+  if(forestTreeSpritesReady)for(const tree of urbanLotCornerTrees().slice().sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawTree(tree);
 }
 function urbanHouseGeometry(){
   if(urbanGeometryCache)return urbanGeometryCache;
   return urbanGeometryCache=State.structures.filter(s=>s.type==='house').map(house=>{
     const display=urbanHouseDisplayParts(house),ridges=housePartRidges(house,display);
     const parts=display.map((part,i)=>{
-      const bodyH=part.kind==='turret'?part.bodyH:houseBodyHeight(house);
+      const bodyH=part.kind==='turret'||part.kind==='outbuilding'?part.bodyH:houseBodyHeight(house);
       return{...part,bodyH,roofH:ridges[i]};
     });
     const points=parts.flatMap(p=>p.points);
@@ -645,6 +751,16 @@ function urbanHouseFaces(house,part){
   const base=terrainElevation(part.center),wall=base+part.bodyH,roof=base+part.roofH;
   const vertex=(p,z)=>({p,z}),fp=part.points;
   const faces=[];
+  if(part.type==='shed'){
+    // Lean-to: single slope, high (roofH) on the plot boundary side, low (bodyH) towards the yard.
+    const sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle);
+    const top=p=>{const ly=-(p.x-part.center.x)*sa+(p.y-part.center.y)*ca;return base+part.roofH+(part.bodyH-part.roofH)*(ly/part.h+.5)};
+    for(let i=0;i<fp.length;i++){
+      const a=fp[i],b=fp[(i+1)%fp.length];faces.push([vertex(a,base),vertex(b,base),vertex(b,top(b)),vertex(a,top(a))]);
+    }
+    faces.push(fp.map(p=>vertex(p,top(p))));
+    return faces;
+  }
   for(let i=0;i<fp.length;i++){
     const a=fp[i],b=fp[(i+1)%fp.length];faces.push([vertex(a,base),vertex(b,base),vertex(b,wall),vertex(a,wall)]);
   }

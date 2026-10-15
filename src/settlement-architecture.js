@@ -141,7 +141,7 @@ function drawGateWindows(s,lit=false,nf=1){
   });
 }
 function visibleFacadeEdges(s){
-  const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'):null;
+  const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'&&p.kind!=='outbuilding'):null;
   const rings=parts?parts.map(p=>p.points):[footprintPoints(s)],edges=[];
   for(const fp of rings){
     if(fp.length<4)continue;

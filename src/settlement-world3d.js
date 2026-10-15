@@ -223,6 +223,7 @@
       const house=entry.house;if(underConstruction(house))continue;
       const lvl=houseLevel(house);
       for(const part of entry.parts){
+        if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
         const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
         const split=part.kind==='turret'?base+1.02:base+part.bodyH*.5;
         for(let i=0;i<n;i++){
@@ -271,6 +272,24 @@
       }
     }
     return new Float32Array(m.tris);
+  }
+  // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
+  function addOutbuilding(m,house,part,winter){
+    const faces=urbanHouseFaces(house,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
+    const roofA=winter?WINTER_ROOF[0]:'#5b3d30',roofB=winter?WINTER_ROOF[1]:'#6b4938';
+    if(part.type==='store'){
+      for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
+      m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
+      return;
+    }
+    const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=terrainElevation(c);
+    const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
+    for(let i=0;i<n;i++)if(faces[i].slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(faces[i]),'#5d4431');
+    m.face(P(faces[n]),roofB);
+    for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
+      const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
+      m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');
+    }
   }
   function addCivic(m,s,winter){
     const g=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s),angle=s.angle||0;
@@ -321,9 +340,10 @@
   }
   function buildTrees(atlas){
     const v=[];if(!atlas)return new Float32Array(0);
-    for(const f of State.environment||[]){
-      if(f.type!=='forest')continue;
-      for(const t of forestTreeLayout(f)){
+    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(forestTreeLayout);
+    groves.push(urbanLotCornerTrees());                  // single trees on plot corners
+    for(const trees of groves){
+      for(const t of trees){
         const uv=atlas.map.get(t.shapeIndex+':'+(atlas.season==='winter'?0:t.colorIndex));if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
         const size=2.25*t.scale,z=t.z||0;
@@ -445,7 +465,7 @@
       }else if(s.type==='house'){
         const rows=houseLevel(s)>=2?[.52,1.34]:[.48],WIN=[35/255*.82,29/255*.82,24/255*.82,.82];
         for(const part of urbanHouseDisplayParts(s)){
-          if(part.kind==='turret')continue;
+          if(part.kind==='turret'||part.kind==='outbuilding')continue;
           const ground=terrainElevation(part.center);
           for(const edge of edgesOf(part.points)){
             const o=outward(edge,part.center),m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};

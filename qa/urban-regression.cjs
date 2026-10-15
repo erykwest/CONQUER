@@ -121,6 +121,27 @@ test('neighbouring Voronoi lots share their common border instead of leaving a g
  // Every point on the bisector between the two homes, inside both reach boxes, belongs to both lots' boundary.
  assert.equal(run("(()=>{const A=urbanLots().find(l=>l.houseId==='a').points,B=urbanLots().find(l=>l.houseId==='b').points;const onEdge=(P,p)=>P.some((q,i)=>pointSegmentDistance(p,q,P[(i+1)%P.length])<1e-6);const shared=[...A.filter(p=>onEdge(B,p)),...B.filter(p=>onEdge(A,p))];return shared.length>=2&&Math.max(...shared.map(p=>dist(p,shared[0])))>3})()"),true);
 });
+test('the well plaza is a no-build zone for lots and houses',()=>{
+ run("State.structures=[{id:'well',type:'well',x:100,y:100},{id:'near',type:'house',auto:true,x:103,y:100,w:1.5,h:1,angle:0}];State.village={founded:true,wellId:'well'};State.combat.strokes=[{x:100,y:100,r:50,mode:'yellow'}];invalidateNavigation();invalidateUrbanGeometry()");
+ assert.equal(run("urbanLots().length"),1);
+ assert.ok(run("urbanPolygonIntersectionArea(urbanLots()[0].points,wellPlazaPoints(State.structures[0]))")<1e-6);
+ assert.equal(run("urbanHouseFitsLots({id:'in-plaza',type:'house',auto:true,x:100.4,y:101,w:1.5,h:1,angle:0},{ignoreDynamicUnits:true})"),false);
+});
+test('corner trees: one roll per shared corner, never two trees on one site',()=>{
+ run("State.structures=[{id:'well',type:'well',x:80,y:80}];State.village={founded:true,wellId:'well'};State.combat.strokes=[{x:100,y:100,r:50,mode:'yellow'}];for(let y=0;y<3;y++)for(let x=0;x<3;x++)State.structures.push({id:'t'+x+'-'+y,type:'house',auto:true,x:95+x*4,y:95+y*4,w:1.5,h:1,angle:0});invalidateNavigation();invalidateUrbanGeometry()");
+ run("globalThis.qaChance=URBAN_CORNER_TREE_CHANCE;URBAN_CORNER_TREE_CHANCE=1;invalidateUrbanGeometry()");
+ try{
+  const all=run("urbanLotCornerTrees().map(t=>t.p)");
+  // Interior corners are shared by up to four lots: still a single tree each.
+  assert.ok(all.length>=4);
+  assert.ok(all.every(p=>all.filter(q=>Math.hypot(p.x-q.x,p.y-q.y)<.8).length===1));
+  run("URBAN_CORNER_TREE_CHANCE=qaChance;invalidateUrbanGeometry()");
+  const some=run("urbanLotCornerTrees().map(t=>t.p.x.toFixed(3)+','+t.p.y.toFixed(3))");
+  assert.ok(some.length<all.length,'30% chance keeps only part of the corners');
+  run("invalidateUrbanGeometry()");
+  assert.deepEqual(run("urbanLotCornerTrees().map(t=>t.p.x.toFixed(3)+','+t.p.y.toFixed(3))"),some,'deterministic');
+ }finally{run("URBAN_CORNER_TREE_CHANCE=qaChance")}
+});
 test('nearly coincident parcel edges become one fence, not two parallel ones',()=>{
  run("State.structures=[{id:'a',type:'house',x:98,y:100,w:1.5,h:1},{id:'b',type:'house',x:102,y:100,w:1.5,h:1}];invalidateNavigation();globalThis.fenceFixture=[{houseId:'a',points:[{x:96,y:98},{x:100,y:98},{x:100,y:102},{x:96,y:102}]},{houseId:'b',points:[{x:100.1,y:98.05},{x:104,y:98},{x:104,y:102},{x:100.12,y:101.95}]}]");
  assert.equal(run('urbanFenceSegments(fenceFixture).filter(e=>Math.abs((e.a.x+e.b.x)/2-100.05)<.15&&Math.abs(e.a.x-e.b.x)<.2).length'),1);

@@ -41,7 +41,13 @@ const render3dHooks=[
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));
   return src.replace(hooked,()=>original);
-},read('render')),arch=segment('architecture',true),weather=segment('weather');
+},read('render')),weather=segment('weather');
+// Behaviour edit: yard outbuildings of L3/L4 plots carry no facade windows.
+const archEdits=[["urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'&&p.kind!=='outbuilding')","urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret')"]];
+const arch=archEdits.reduce((src,[edited,original])=>{
+  assert.equal(src.split(edited).length,2,'Expected exactly one architecture edit: '+edited.slice(0,60));
+  return src.replace(edited,()=>original);
+},segment('architecture',true));
 // Ambient-light grading intentionally replaces ONLY the old flat night overlay.
 // Restore that original method before comparing against the pre-refactor blob.
 const ambientOverlay=/function drawDayNightOverlay\(\)\{[\s\S]*?\n\}\n(?=function drawNightLights\(\)\{)/;
