@@ -74,6 +74,9 @@
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     visible.fill(0);paintFogBitmap();
     selected=null;selectedIds.clear();selectionDrag=null;lastObserverSig='';lastAreaSig='';maskDirty=true;visibilityDirty=true;circleCacheBucket=-1;indexedStrokes=-1;
+    // Lots are only valid inside the restored yellow zone: anything cached while
+    // loading (before this restore) saw no zone at all and holds no parcels.
+    if(typeof invalidateUrbanGeometry==='function')invalidateUrbanGeometry();
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
     whiteBoundaryCache=[];whiteBoundaryLoopCache=[];whiteBoundarySignature='';whiteBoundaryRevision=0;

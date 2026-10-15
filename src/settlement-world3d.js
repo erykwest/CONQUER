@@ -235,7 +235,7 @@
         if(part.kind==='turret'){
           for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
         }else{
-          const rA=winter?WINTER_ROOF[0]:lvl===1?'#5b3d30':'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?'#6b4938':'#3a3d42';
+          const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
           const gable=lvl===1?'#654936':'#d9c184';
           m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
         }

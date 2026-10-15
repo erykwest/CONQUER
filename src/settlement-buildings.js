@@ -273,7 +273,10 @@ function drawFlatRect(s,fill,stroke){
 }
 function fieldGrid(field){return fieldLayout(field)}
 function drawField(field){drawFieldGround(field)}
-function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
+// L1 cottages are thatched (straw); L2+ use anthracite slate. Gables stay timber/plaster.
+const HOUSE_THATCH={a:'#b39250',b:'#c4a25d',stroke:'#d8bd7c'};
+function drawHouseRoofPart(s,part,wallH,ridgeH,roofMaterial=false,gableFill=null){
+  const anthracite=roofMaterial===true,thatch=roofMaterial==='thatch';
   const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(s.angle||0)+turn;
   const ca=Math.cos(angle),sa=Math.sin(angle),center=part.center||houseLocalToWorld(s,part.cx,part.cy);
   const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
@@ -282,8 +285,8 @@ function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
   const r0=local(-rw/2,0),r1=local(rw/2,0);
   const winter=State.season==='winter';
   const faces=[
-    {kind:'roof',screen:[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_A:(anthracite?'#303237':'#5b3d30'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':'#8c6752'),lw:1},
-    {kind:'roof',screen:[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_B:(anthracite?'#3a3d42':'#6b4938'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':'#8c6752'),lw:1},
+    {kind:'roof',screen:[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_A:(anthracite?'#303237':thatch?HOUSE_THATCH.a:'#5b3d30'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':thatch?HOUSE_THATCH.stroke:'#8c6752'),lw:1},
+    {kind:'roof',screen:[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_B:(anthracite?'#3a3d42':thatch?HOUSE_THATCH.b:'#6b4938'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':thatch?HOUSE_THATCH.stroke:'#8c6752'),lw:1},
     {kind:'gable',screen:[w2s(c0,wallH),w2s(c3,wallH),w2s(r0,ridgeH)],fill:gableFill||'#654936',stroke:anthracite?'rgba(126,116,102,.55)':'#8c6752',lw:.75},
     {kind:'gable',screen:[w2s(c1,wallH),w2s(c2,wallH),w2s(r1,ridgeH)],fill:gableFill||'#654936',stroke:anthracite?'rgba(126,116,102,.55)':'#8c6752',lw:.75}
   ];
@@ -329,18 +332,19 @@ function drawHouseTurret(s,turret,selected=false){
   ctx.strokeStyle='rgba(190,178,155,.42)';ctx.lineWidth=.7;ctx.strokeRect(p.x-ww/2,p.y-wh/2,ww,wh);ctx.restore();
 }
 function drawHouse(s){
-  const level=houseLevel(s),wallH=houseBodyHeight(s),ridgeH=houseRidgeHeight(s),selected=State.selectedId===s.id;
+  const level=houseLevel(s),wallH=houseBodyHeight(s),selected=State.selectedId===s.id;
   const stroke=selected?'#f4b76f':'#aaa199';
-  const parts=urbanHouseDisplayParts(s).map(part=>{
+  const display=urbanHouseDisplayParts(s),ridges=housePartRidges(s,display,wallH);
+  const parts=display.map((part,i)=>{
     const center=part.center||houseLocalToWorld(s,part.cx,part.cy);
-    return{...part,depth:viewDepthPoint(center)};
+    return{...part,ridgeH:ridges[i],depth:viewDepthPoint(center)};
   }).sort((a,b)=>a.depth-b.depth);
 
   if(level===1){
     for(const part of parts){
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
       extrudePolygon(part.points,wallH,{top:'#7d5b43',sideA:'#4e392d',sideB:'#654936',stroke:selected?'#f4b76f':'#b89575'});
-      drawHouseRoofPart(s,part,wallH,ridgeH,false,null);
+      drawHouseRoofPart(s,part,wallH,part.ridgeH,'thatch',null);
     }
   }else{
     const floorBreak=wallH*.50;
@@ -349,7 +353,7 @@ function drawHouse(s){
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
       extrudePolygonAt(part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
       extrudePolygonAt(part.points,floorBreak,wallH,{top:creamTop,sideA:creamA,sideB:creamB,stroke});
-      drawHouseRoofPart(s,part,wallH,ridgeH,true,creamGable);
+      drawHouseRoofPart(s,part,wallH,part.ridgeH,true,creamGable);
     }
   }
   if(!underConstruction(s))drawHouseChimneys(s);

@@ -386,7 +386,31 @@ function houseFootprintParts(s){
   return out;
 }
 function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.38:1.72}
-function houseRidgeHeight(s){return houseLevel(s)===1?1.45:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.95:2.26}
+// L2+ gabled roofs are steep (60°, medieval): the ridge rises tan(60°)·half-span above the eaves,
+// where the span is the part's side perpendicular to its ridge. L1 cottages keep their low thatch.
+const HOUSE_ROOF_PITCH=Math.tan(60*Math.PI/180);
+function houseRoofSpan(part){return Math.abs(part.roofTurn||0)>1e-6?part.w:part.h}
+function housePartRidge(s,part,wallH=houseBodyHeight(s)){
+  if(part.kind==='turret')return part.roofH;
+  if(houseLevel(s)===1)return 1.45;
+  return wallH+HOUSE_ROOF_PITCH*houseRoofSpan(part)/2;
+}
+// Ridges for a list of parts: wings never rise above the main body of their own building
+// (first body part per buildingKey), so cross-gables meet the main roof below its ridge.
+function housePartRidges(s,parts,wallH=houseBodyHeight(s)){
+  const main=new Map();
+  return parts.map(part=>{
+    const ridge=housePartRidge(s,part,wallH);
+    if(part.kind==='turret')return ridge;
+    const key=part.buildingKey||'main';
+    if(!main.has(key)){main.set(key,ridge);return ridge}
+    return Math.min(ridge,main.get(key));
+  });
+}
+function houseRidgeHeight(s){
+  if(houseLevel(s)===1)return 1.45;
+  return housePartRidge(s,houseFootprintParts(s)[0]);
+}
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
 const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}

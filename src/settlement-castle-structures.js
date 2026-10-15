@@ -1002,8 +1002,10 @@ function chimneySpecs(s){
       const bodies=new Map();
       for(const part of dense)if(part.kind==='body'&&!bodies.has(part.buildingKey))bodies.set(part.buildingKey,part);
       let index=0;
-      for(const part of bodies.values())specs.push({center:part.center,angle:part.roofAngle,
-        z0:houseRidgeHeight(s)-.05,z1:houseRidgeHeight(s)+.43,index:index++});
+      for(const part of bodies.values()){
+        const ridge=housePartRidge(s,part);
+        specs.push({center:part.center,angle:part.roofAngle,z0:ridge-.05,z1:ridge+.43,index:index++});
+      }
       return specs;
     }
     const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),ridgeH=houseRidgeHeight(s);
