@@ -1078,6 +1078,7 @@ function draw(){
   markPhase('scene-caches');
   // Population remains between settlement massing and completed castle massing,
   // preserving the existing occlusion behaviour.
+  window.ConquerLivestock?.draw();
   drawPeasants();
   markPhase('population');
   drawTrainingSoldiers();
