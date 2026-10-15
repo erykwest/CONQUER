@@ -44,16 +44,16 @@ const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
 },read('render')),arch=segment('architecture',true),weather=segment('weather');
 // Ambient-light grading intentionally replaces ONLY the old flat night overlay.
 // Restore that original method before comparing against the pre-refactor blob.
-const ambientOverlay=/function drawDayNightOverlay\\(\\)\\{[\\s\\S]*?\\n\\}\\n(?=function drawNightLights\\(\\)\\{)/;
+const ambientOverlay=/function drawDayNightOverlay\(\)\{[\s\S]*?\n\}\n(?=function drawNightLights\(\)\{)/;
 assert.match(renderSource,ambientOverlay);
-assert.match(renderSource,/ConquerAmbientLight\\.draw\\(/);
+assert.match(renderSource,/ConquerAmbientLight\.draw\(/);
 const oldOverlay=[
   'function drawDayNightOverlay(){',
   '  const nf=nightFactor();if(nf<=0)return;',
   '  const r=wrap.getBoundingClientRect();',
   "  ctx.save();ctx.fillStyle='rgba(6,10,18,'+(NIGHT_OVERLAY_MAX*nf).toFixed(3)+')';ctx.fillRect(0,0,r.width,r.height);ctx.restore();",
   '}'
-].join('\\n')+'\\n';
+].join('\n')+'\n';
 const originalRenderSource=renderSource.replace(ambientOverlay,oldOverlay);
 const start=originalRenderSource.indexOf('function drawDayNightOverlay(){');
 const split=originalRenderSource.indexOf('function drawConstructionProgress(s){');
