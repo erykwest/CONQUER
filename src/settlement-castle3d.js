@@ -198,8 +198,9 @@
       }
     });
   }
-  function bodyMesh(parts){
+  function bodyMesh(parts,withBackPieces=false){
     const m=makeMesh();
+    if(withBackPieces)addPieces(m,'back');
     for(const s of parts){
       const point=s.type==='tower'||s.type==='gate';
       if(point&&isRaisedPlacementCastlePoint(s))addFoundation(m,s);
@@ -218,17 +219,35 @@
   }
   // Triangle arrays carry their top-face outlines along (same 6-float vertex layout, GL_LINES pairs).
   function withLines(m){const t=m.tris;t.lines=m.lines;return t}
-  function buildBodyUncached(){return bodyMesh(castleParts())}
+  function buildBodyUncached(){return bodyMesh(castleParts(),true)}
   // Full volumes of cutaway structures, used only as depth occluders (their look stays 2.5D).
   function buildCutawayDepth(){return memoGround(()=>bodyMesh(cutawayParts()))}
-  function buildFront(){return memoGround(buildFrontUncached)}
-  function buildFrontUncached(){
-    const m=makeMesh();
+  function buildFront(){return memoGround(()=>{const m=makeMesh();addPieces(m,'front');return withLines(m)})}
+
+  // Battlements are split around their owner: pieces on the far half belong to the castle body (drawn
+  // before patrols, so soldiers on the walkway stay in front of them), pieces on the near half go to
+  // castleFront (drawn after patrols). The 2.5D renderer gets the same effect by clipping far merlons
+  // at the wall crest. Plan view looks straight down: everything stays under the patrols.
+  function viewDepthOf(p){const q=rotateViewPoint(p);return q.x+q.y}
+  // Reference point for "near/far": the structure centre, or for linear pieces the closest point on the
+  // a→b axis (a wall's merlons all sit on one edge, so only the across-axis offset matters).
+  function ownerRef(s,c){
+    if(!(s.a&&s.b))return{x:s.x,y:s.y};
+    const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L2=dx*dx+dy*dy||1,t=clamp(((c.x-s.a.x)*dx+(c.y-s.a.y)*dy)/L2,0,1);
+    return{x:s.a.x+dx*t,y:s.a.y+dy*t};
+  }
+  function addPieces(m,which){
+    const plan=typeof isPlanView==='function'&&isPlanView();
+    if(plan&&which==='front')return;
     for(const s of castleParts()){
       const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
-      for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+      for(const p of pieces){
+        const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
+        const near=viewDepthOf(c)>viewDepthOf(ownerRef(s,c))+1e-6;
+        if(!plan&&(which==='front')!==near)continue;
+        withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+      }
     }
-    return withLines(m);
   }
 
   // ---------- WebGL2 ----------
