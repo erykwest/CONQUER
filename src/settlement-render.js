@@ -451,5 +451,6 @@ function draw(){
   endPopulationFrame();
   markPhase('castle-facades-effects');
   if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
+  window.ConquerMinimap?.requestDraw();
 }
 
