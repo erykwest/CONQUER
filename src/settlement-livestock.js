@@ -74,7 +74,7 @@
   function whiteAt(p){
     const z=window.ConquerCombat?.areaState?.(p);
     return !!z?.allowed&&!z.yellow&&!z.green&&
-      p.x>BUILD_MIN+.5&&p.y>BUILD_MIN+.5&&p.x<BUILD_MAX-.5&&p.y<BUILD_MAX-.5&&
+      p.x>1&&p.y>1&&p.x<WORLD-1&&p.y<WORLD-1&&
       !pointBlockedForPeasant(p,null);
   }
   function whitePatch(p,r){
@@ -87,11 +87,22 @@
   }
   function travelRoute(house,goal){
     const start=houseDoorInfo(house).outside;
+    const allowed=p=>!!window.ConquerCombat?.areaState?.(p)?.allowed;
+    const routeValid=route=>{
+      if(!route?.length||dist(route.at(-1),goal)>.7)return false;
+      for(let i=0;i<route.length;i++){
+        if(!allowed(route[i]))return false;
+        if(!i)continue;
+        const a=route[i-1],b=route[i],steps=Math.ceil(dist(a,b)/.5);
+        for(let j=1;j<steps;j++)if(!allowed(lerp(a,b,j/steps)))return false;
+      }
+      return true;
+    };
     let path=villagerPathBetween(house,start,goal,'shepherd');
-    if(path?.length>=2&&dist(path.at(-1),goal)<.5)return path;
+    if(routeValid(path))return path;
     if(dist(start,goal)<=32){
-      path=findPeasantPath(start,goal,house.id,6);
-      if(path?.length>=2&&dist(path.at(-1),goal)<1)return path;
+      path=findPeasantPath(start,goal,house.id,6,allowed);
+      if(routeValid(path))return path;
     }
     return null;
   }
@@ -103,13 +114,17 @@
     let selected=null;
     // Seek a contiguous patch of WHITE territory outside the urban yellow zone.
     // The starting angle is seeded, so adjacent households spread naturally.
-    for(let ring=5;ring<=42&&!selected;ring+=2.5){
-      for(let a=0;a<20&&!selected;a++){
-        const angle=2*Math.PI*(a/20+rand(seed)*.997);
-        const candidate={x:home.x+ring*Math.cos(angle),y:home.y+ring*Math.sin(angle)};
-        if(!whitePatch(candidate,radius))continue;
-        const route=travelRoute(house,candidate);
-        if(route)selected={center:candidate,path:route,radius};
+    for(const factor of [1,.75,.5]){
+      if(selected)break;
+      const reach=radius*factor;
+      for(let ring=5;ring<=42&&!selected;ring+=2.5){
+        for(let a=0;a<20&&!selected;a++){
+          const angle=2*Math.PI*(a/20+rand(seed)*.997);
+          const candidate={x:home.x+ring*Math.cos(angle),y:home.y+ring*Math.sin(angle)};
+          if(!whitePatch(candidate,reach))continue;
+          const route=travelRoute(house,candidate);
+          if(route)selected={center:candidate,path:route,radius:reach};
+        }
       }
     }
     routeCache.set(house.id,selected);
@@ -142,19 +157,20 @@
     return residentIdlePoint(pasture.center,house.id+'-shepherd',visualCycleDay(),.18);
   }
   function movingAnimalPosition(plan,pasture,i,frac,phase){
-    const h=hash(plan.house.id+'|sheep|'+i);
     const lag=i/Math.max(1,plan.count)*.18;
     const destination=pasturePoint(plan,pasture,i,visualCycleDay());
     const home=plan.pen[i],path=pasture.path;
     if(phase==='graze')return destination;
     if(phase==='home'||!pasture)return home;
     if(phase==='out'){
-      const progress=smooth(clamp((frac-DEPART)/(PASTURE_AT-DEPART)-lag,0,1));
+      const q=clamp((frac-DEPART)/(PASTURE_AT-DEPART),0,1);
+      const progress=smooth(clamp((q-lag)/(1-lag),0,1));
       const anchor=pointAlongPath(path,progress);
       const blend=smooth((progress-.83)/.17);
       return lerp(anchor,destination,blend);
     }
-    const progress=smooth(clamp((frac-RETURN)/(HOME_AT-RETURN)-lag,0,1));
+    const q=clamp((frac-RETURN)/(HOME_AT-RETURN),0,1);
+    const progress=smooth(clamp((q-lag)/(1-lag),0,1));
     const anchor=pointAlongPath(path,1-progress);
     const from=lerp(destination,anchor,smooth(progress/.12));
     return lerp(from,home,smooth((progress-.88)/.12));
