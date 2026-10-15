@@ -97,9 +97,11 @@
     };
   }
 
-  function castleParts(){
-    return State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s));
-  }
+  // Stone castle volumes, including towers/gates on raised slope foundations: the 2.5D path keeps
+  // those out of the union and paints them afterwards, which a depth-tested image cannot do.
+  function castleVolume(s){return(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s)}
+  function castleParts(){return State.structures.filter(s=>castleVolume(s)&&!structureCutaway(s))}
+  function cutawayParts(){return State.structures.filter(s=>castleVolume(s)&&structureCutaway(s))}
   const winter=()=>State.season==='winter';
 
   function addTower(m,s){
@@ -170,10 +172,29 @@
     bodyMemo.key=key;bodyMemo.tris=tris;
     return tris;
   }
-  function buildBodyUncached(){
+  function addFoundation(m,s){
+    // drawPlacementFoundation: ground-contact ring walls from the terrain up to the placement plane.
+    const baseZ=placementGroundZ(s);
+    if(!Number.isFinite(baseZ)||placementFoundationDepth(s)<=.015)return;
+    withProjectionGroundZ(0,()=>{
+      for(const fp of unionGroundContactRings(structureGroundContactPolygons(s))){
+        for(let i=0;i<fp.length;i++){
+          const a=fp[i],b=fp[(i+1)%fp.length],steps=Math.max(1,Math.ceil(dist(a,b)/.24));
+          for(let j=0;j<steps;j++){
+            const p0={x:a.x+(b.x-a.x)*j/steps,y:a.y+(b.y-a.y)*j/steps},p1={x:a.x+(b.x-a.x)*(j+1)/steps,y:a.y+(b.y-a.y)*(j+1)/steps};
+            const z0=Math.min(baseZ,terrainElevation(p0)),z1=Math.min(baseZ,terrainElevation(p1));
+            if(baseZ-Math.min(z0,z1)<=.01)continue;
+            m.face([{p:p0,z:z0},{p:p1,z:z1},{p:p1,z:baseZ},{p:p0,z:baseZ}],castleSideShade(p0,p1));
+          }
+        }
+      }
+    });
+  }
+  function bodyMesh(parts){
     const m=makeMesh();
-    for(const s of castleParts()){
+    for(const s of parts){
       const point=s.type==='tower'||s.type==='gate';
+      if(point&&isRaisedPlacementCastlePoint(s))addFoundation(m,s);
       const run=fn=>point?withStructureGroundPlane(s,fn):fn();
       run(()=>{
         m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
@@ -187,6 +208,9 @@
     }
     return m.tris;
   }
+  function buildBodyUncached(){return bodyMesh(castleParts())}
+  // Full volumes of cutaway structures, used only as depth occluders (their look stays 2.5D).
+  function buildCutawayDepth(){return memoGround(()=>bodyMesh(cutawayParts()))}
   function buildFront(){return memoGround(buildFrontUncached)}
   function buildFrontUncached(){
     const m=makeMesh();
@@ -212,7 +236,7 @@
     if(gpu.failed)return null;
     try{
       const c=document.createElement('canvas');
-      const gl=c.getContext('webgl2',{antialias:true,alpha:true,premultipliedAlpha:true,preserveDrawingBuffer:true,depth:true});
+      const gl=c.getContext('webgl2',{antialias:true,alpha:true,premultipliedAlpha:true,preserveDrawingBuffer:true,depth:true,stencil:true});
       if(!gl)throw new Error('webgl2-unavailable');
       const sh=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s};
       const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(prog);
@@ -242,7 +266,8 @@
     return{x:Math.floor(minX-pad),y:Math.floor(minY-pad),w:Math.ceil(maxX-minX+pad*2),h:Math.ceil(maxY-minY+pad*2),dMin:dMin-1,dMax:dMax+1};
   }
   // Rasterise: depthOnly tris write depth (colour masked), colour tris are drawn on top with depth test.
-  function rasterise(depthOnly,colour){
+  // maskToDepth: colour only lands where depthOnly geometry covers the pixel (stencil).
+  function rasterise(depthOnly,colour,maskToDepth=false){
     const gl=ensureGL();if(!gl)return null;
     const b=screenBounds([depthOnly,colour]);if(!b)return{empty:true};
     const dpr=staticCacheDpr(),maxSide=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
@@ -251,10 +276,14 @@
     if(gpu.canvas.width!==W||gpu.canvas.height!==H){gpu.canvas.width=W;gpu.canvas.height=H}
     gl.viewport(0,0,W,H);gl.useProgram(gpu.prog);
     gl.uniform4f(gpu.loc.bounds,b.x,b.y,b.w,b.h);gl.uniform2f(gpu.loc.depth,b.dMin,b.dMax);
-    gl.clearColor(0,0,0,0);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.clearColor(0,0,0,0);gl.clearDepth(1);gl.clearStencil(0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);
+    if(maskToDepth){gl.enable(gl.STENCIL_TEST);gl.stencilFunc(gl.ALWAYS,1,0xff);gl.stencilOp(gl.KEEP,gl.REPLACE,gl.REPLACE)}
+    else gl.disable(gl.STENCIL_TEST);
     if(depthOnly.length){gl.colorMask(false,false,false,false);drawTris(gl,depthOnly);gl.colorMask(true,true,true,true)}
+    if(maskToDepth){gl.stencilFunc(gl.EQUAL,1,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP)}
     drawTris(gl,colour);
+    gl.disable(gl.STENCIL_TEST);
     const err=gl.getError();if(err){gpu.failed='gl-error-'+err;return null}
     return{bounds:b};
   }
@@ -279,9 +308,14 @@
         ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
       }
     }
-    State.structures.filter(s=>isRaisedPlacementCastlePoint(s)&&!underConstruction(s)&&!structureCutaway(s))
-      .slice().sort((a,b)=>worldDepth(a)-worldDepth(b)).forEach(s=>drawStructure(s));
-    drawCutawayStructures();
+    // Cutaway structures keep their 2.5D interior rendering; afterwards everything that is in front
+    // of their full volume is re-rasterised on top, so they no longer paint over nearer masonry.
+    const cut=cutawayParts();
+    if(cut.length){
+      drawCutawayStructures();
+      const rr=rasterise(buildCutawayDepth(),body,true);
+      if(rr&&!rr.empty)ctx.drawImage(gpu.canvas,rr.bounds.x,rr.bounds.y,rr.bounds.w,rr.bounds.h);
+    }
     drawTowerDoors();
     const p=perf();p.castle3dBodyMs=performance.now()-t0;p.castle3dBodyTris=body.length/18;
     return true;
@@ -295,7 +329,8 @@
     if(!r)return false;
     if(!r.empty)ctx.drawImage(gpu.canvas,r.bounds.x,r.bounds.y,r.bounds.w,r.bounds.h);
     const all=State.structures;
-    try{State.structures=all.filter(s=>!isCastlePart(s));drawCastleBattlements()}finally{State.structures=all}
+    // 2.5D front pieces only for what the 3D pass does not own (palisades, wood towers, cutaways).
+    try{State.structures=all.filter(s=>!castleVolume(s)||structureCutaway(s));drawCastleBattlements()}finally{State.structures=all}
     const p=perf();p.castle3dFrontMs=performance.now()-t0;p.castle3dFrontTris=front.length/18;
     return true;
   }
