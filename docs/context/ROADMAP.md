@@ -44,6 +44,18 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 4. **Integrazione unificata:** capacità delle Built Sections e rifornimenti che influenzano realmente produzione, guarnigione e difesa.
 5. **Prototipo assedio verticale minimo:** un castello, uno o più accessi, risorse, una guarnigione, ariete/scale e condizione di resa verificabili.
 
+## Traccia trasversale — leggibilità e prestazioni (senza cambiare la priorità di M0–M3)
+
+Le conversazioni [VISUAL/AUDIO](sources/VISUAL-AUDIO-2026-10-14.md) e [MINIMAP](sources/MINIMAP-2026-10-15.md) aggiungono un'opportunità **parallela e vincolata**: verificare che economia e combattimento già simulati siano leggibili con animali, cittadini, carri, araldica, minimappa e audio, senza duplicare la simulazione.
+
+1. **Prima consolidare la base:** completare QA browser della **PR #44**; non chiamare «rilasciato» il LOD di scena finché non integrato in `main`.
+2. **Misurare prima di rifare:** benchmark cache bitmap e WebGPU (frame time, RAM/VRAM e asset bytes); esistono già `settlement-assets.js` e composizione WebGPU.
+3. **Esperimento architetturale limitato:** confronto A sprite prerenderizzati vs B modello 3D, partendo da torre e mura con cutaway, progress cantiere e danni; solo dopo il test decidere la pipeline definitiva.
+4. **Animazioni lavoro minimali:** strumenti/manine e varianti stagionali guidati dagli stati reali; non introdurre nuove meccaniche per giustificarle.
+5. **Audio graduale:** SFX contestuali/streaming e brani Suno solo con inventario tracce/licenze controllato, non come blocco di M1.
+
+Questa traccia **non sostituisce** la milestone M1 dell'economia. Dall'export [ECONOMY](sources/ECONOMY-2026-10-12.md) emerge inoltre che il motore economico è già passato tramite PR #22 su `main`: il lavoro prioritario è **integrarlo e verificarlo**, non riscriverlo.
+
 ## Dipendenze dei sottosistemi
 
 - **Campi:** geometria Voronoi → lavoro fisico → calendario coerente → produzione economica una sola volta → Farm Hub.
