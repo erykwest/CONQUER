@@ -29,7 +29,16 @@ for(const [name,files] of Object.entries(parts)){
     // Behaviour edit: L3/L4 yard outbuildings are excluded from the townhouse
     // shadow hull. Each such edit must appear exactly once; removing it must
     // give back the byte-identical extracted module.
-    const edits=[[".filter(part=>part.kind!=='outbuilding')",'']];
+    // The urban livestock sync intentionally excludes L1 shepherds from field
+    // assignments and gives the pastoral adult a daily route. Strip exactly
+    // those edits, then retain the original byte-for-byte extraction check.
+    const edits=[
+      [".filter(part=>part.kind!=='outbuilding')", ''],
+      ["houses.filter(h=>houseLevel(h)===tier&&(tier!==1||window.ConquerLivestock?.lotKindForHouse(h)!=='shepherd'))",
+       "houses.filter(h=>houseLevel(h)===tier)"],
+      ["+'|livestock-seed:'+State.seed;", ";"],
+      ["  // Flocks need their shepherd even on market/rest days.\n  if(houseLevel(house)===1&&resident.sex==='male'&&resident.age==='adult'&&\n      window.ConquerLivestock?.lotKindForHouse(house)==='shepherd')\n    return window.ConquerLivestock.shepherdPosition(house);\n", ""]
+    ];
     const original=edits.reduce((src,[edited,orig])=>{
       assert.equal(src.split(edited).length,2,'Expected exactly one population edit: '+edited);
       return src.replace(edited,()=>orig);
