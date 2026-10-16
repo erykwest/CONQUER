@@ -329,7 +329,13 @@ function mountainFaceColor(f,a,b,i){
   const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
   return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
 }
-// Snow caps the top quarter of every peak; pines cover the lower half of its slopes.
+// Snow above 75% and pines below 50% of the TALLEST summit's height: one snow line and one
+// tree line for the whole map, so lower summits may have no snow at all.
+function mountainMaxHeight(){
+  let h=0;for(const f of State.environment||[])if(f.type==='mountain')h=Math.max(h,f.height||3.6);return h;
+}
+function mountainSnowZ(){return mountainMaxHeight()*MOUNTAIN_SNOW_LINE}
+function mountainPineZ(){return mountainMaxHeight()*MOUNTAIN_PINE_LINE}
 const MOUNTAIN_SNOW_LINE=.75,MOUNTAIN_PINE_LINE=.5,MOUNTAIN_SNOW=[0xd6,0xdd,0xdf],MOUNTAIN_SNOW_LIT=[0xf4,0xf7,0xf7];
 function mountainSnowColor(f,a,b,i){
   const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
@@ -360,7 +366,7 @@ function mountainSurfaceZ(f,p){
 // neighbouring peak covers the spot. Each pine remembers its facet for 2.5D painting.
 const mountainPineCache=new Map();
 function mountainPineLayout(f){
-  const key=f.id+':'+State.seed+':'+(f.height||0);
+  const pineZ=mountainPineZ(),key=f.id+':'+State.seed+':'+(f.height||0)+':'+pineZ.toFixed(3);
   if(mountainPineCache.has(key))return mountainPineCache.get(key);
   const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6,out=[];
   const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
@@ -368,7 +374,7 @@ function mountainPineLayout(f){
     const p={x:x+(rnd()-.5)*step*.8,y:y+(rnd()-.5)*step*.8},shade=rnd(),scale=.9+rnd()*.45,flip=rnd()<.5;
     if(!pointInPolygon(p,f.points))continue;
     const z=mountainSurfaceZ(f,p),h=f.height||3.6;
-    if(z>h*MOUNTAIN_PINE_LINE||z<.05)continue;
+    if(z>pineZ||z>h||z<.05)continue;
     if(others.some(o=>pointInPolygon(p,o.points)&&mountainSurfaceZ(o,p)>z))continue;
     out.push({p,z,facet:mountainFacet(f,p),shade:shade<.5?0:1,scale,flip});
   }
@@ -408,11 +414,13 @@ function drawMountainPine(t){
 function drawRaisedFan(f,height){
   const base=f.points,center={x:f.x,y:f.y},top=w2s(center,height),faces=[];
   const plan=typeof isPlanView==='function'&&isPlanView(),pines=f.height?mountainPineLayout(f):[];
+  // Fraction of this peak's height where the map-wide snow line falls (1 = no snow).
+  const k=Math.min(1,mountainSnowZ()/height);
   for(let i=0;i<base.length;i++){
     const j=(i+1)%base.length,a=w2s(base[i]),b=w2s(base[j]);
-    const sa=w2s({x:f.x+(base[i].x-f.x)*(1-MOUNTAIN_SNOW_LINE),y:f.y+(base[i].y-f.y)*(1-MOUNTAIN_SNOW_LINE)},height*MOUNTAIN_SNOW_LINE);
-    const sb=w2s({x:f.x+(base[j].x-f.x)*(1-MOUNTAIN_SNOW_LINE),y:f.y+(base[j].y-f.y)*(1-MOUNTAIN_SNOW_LINE)},height*MOUNTAIN_SNOW_LINE);
-    faces.push({rock:[a,b,sb,sa],snow:[sa,sb,top],depth:(a.y+b.y)/2,i,
+    const sa=w2s({x:f.x+(base[i].x-f.x)*(1-k),y:f.y+(base[i].y-f.y)*(1-k)},height*k);
+    const sb=w2s({x:f.x+(base[j].x-f.x)*(1-k),y:f.y+(base[j].y-f.y)*(1-k)},height*k);
+    faces.push({rock:k<1?[a,b,sb,sa]:[a,b,top],snow:k<1?[sa,sb,top]:null,depth:(a.y+b.y)/2,i,
       color:mountainFaceColor(f,base[i],base[j],i),snowColor:mountainSnowColor(f,base[i],base[j],i)});
   }
   faces.sort((a,b)=>a.depth-b.depth);
@@ -420,7 +428,7 @@ function drawRaisedFan(f,height){
   const byFacet=new Map();for(const t of pines){if(!byFacet.has(t.facet))byFacet.set(t.facet,[]);byFacet.get(t.facet).push(t)}
   for(const q of faces){
     pathPolygon(q.rock,q.color,'rgba(170,150,125,.35)',.8);
-    pathPolygon(q.snow,q.snowColor,'rgba(200,210,214,.45)',.8);
+    if(q.snow)pathPolygon(q.snow,q.snowColor,'rgba(200,210,214,.45)',.8);
     if(plan||!forestTreeSpritesReady)continue;
     for(const t of (byFacet.get(q.i)||[]).sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawMountainPine(t);
   }

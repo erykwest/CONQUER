@@ -192,7 +192,8 @@
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
       const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
       // Rock up to the snow line (75% of the height), snow cap above it.
-      const k=typeof MOUNTAIN_SNOW_LINE!=='undefined'?MOUNTAIN_SNOW_LINE:1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
+      // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
+      const k=typeof mountainSnowZ==='function'?Math.min(1,mountainSnowZ()/apex.z):1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
       for(let i=0;i<f.points.length;i++){
         const a=f.points[i],b=f.points[(i+1)%f.points.length];
         const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2];

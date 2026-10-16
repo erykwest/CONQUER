@@ -1089,6 +1089,9 @@ function reliefStats(){
 // COFFEE BATTLES "rough" patches are not generated: CONQUER retired the rough ellipses.
 const BIOME_SCALE=2.2,BIOME_ZONE_INSET=2*BIOME_SCALE;
 const BIOME_RECIPES=Object.freeze({
+  // TEST (default): the settings used while developing — procedural terraced hills up to 20% of
+  // the map and many small woods up to 12% coverage.
+  test:{legacyRelief:.20,smallForestCoverage:.12},
   plains:{stream:.45,forests:[0,1]},
   hills:{hills:[3,4],hillHeight:[2,3],forests:[0,1]},
   valley:{mountains:[3,5],stream:1},
@@ -1216,6 +1219,15 @@ function generateRelief(){
   clearReliefBandCache();
   // generateTactical: hills placed after coast, mountains and water, never overlapping them.
   const recipe=biomeRecipe(),count=biomeRange(rnd,recipe.hills),obstacles=biomeTerrainObstacles();
+  if(recipe.legacyRelief){
+    // Former test relief: random procedural hills anywhere (also past the edge) until coverage.
+    let coverage=0,attempts=0;
+    while(coverage<recipe.legacyRelief&&State.relief.hills.length<14&&attempts<320){
+      const candidate=makeProceduralHill(rnd,State.relief.hills.length);attempts++;
+      if(!hillIntersectsWorld(candidate)||!hillSpacingOk(candidate,State.relief.hills))continue;
+      State.relief.hills.push(candidate);clearReliefBandCache();coverage=estimateReliefCoverage(44);
+    }
+  }
   // Foothills: a biome may ask for a minimum relief coverage (Montagne: 30% of the map); extra
   // hills, up to 1.7x larger, keep being placed after the recipe count until it is reached.
   let coverage=0,extra=0;
@@ -1431,12 +1443,12 @@ function estimateForestCoverage(env,samples=72){
   }
   return total?covered/total:0;
 }
-function ensureForestCoverage(env,rnd,target=.20){
+function ensureForestCoverage(env,rnd,target=.20,small=false){
   // Maintain an incremental raster rather than rescanning every existing
   // tree line after each accepted forest (previously quadratic in patch count).
   const samples=72,total=samples*samples,occupied=new Uint8Array(total);
   let covered=0,guard=0,failures=0;
-  const maxForests=State.biome==='forest'?20:13;
+  const maxForests=small?40:State.biome==='forest'?20:13;
   let forestCount=env.filter(f=>f.type==='forest').length;
   function markForest(f){
     const b=environmentPolygonBounds(f.points);
@@ -1458,7 +1470,7 @@ function ensureForestCoverage(env,rnd,target=.20){
   // The cap is deliberate: no more proliferating tiny woodland patches just
   // to meet a fixed coverage percentage in constrained geography.
   while(covered/total<target&&forestCount<maxForests&&guard++<320&&failures<24){
-    const forest=addForestBlob(env,rnd,false,3,80);
+    const forest=addForestBlob(env,rnd,small,3,80);
     if(forest){forestCount++;markForest(forest);failures=0}else failures++;
   }
   return covered/total;
@@ -1526,6 +1538,8 @@ function generateEnvironment(){
   if(recipe.continuousForest){
     for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
     env.push(makeContinuousForest(env,rnd,recipe.continuousForest));
+  }else if(recipe.smallForestCoverage){
+    ensureForestCoverage(env,rnd,recipe.smallForestCoverage,true);
   }else{
     const forests=biomeRange(rnd,recipe.forests);
     for(let i=0;i<forests;i++)addBiomeForest(env,rnd,!!recipe.smallForests);
