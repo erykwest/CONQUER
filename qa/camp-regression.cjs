@@ -84,6 +84,33 @@ troop.x=8;troop.y=8;allowRecall=false;cycle=.8;camp.synchronize();
 assert.equal(troop.campState,'stationed','blocked indoor path does not teleport');
 const calls=recallCalls;camp.synchronize();
 assert.equal(recallCalls,calls,'blocked path is not recalculated every frame');
+// Regression: every friendly field formation, not just barracks-linked squads,
+ // establishes a camp outside Yellow at night. The default /camp knight must
+ // produce a tent and fire rather than silently failing the roster filter.
+cycle=.3;camp.synchronize();
+const outsiders=[
+  {id:'unassigned-squad',kind:'squad',x:27,y:25,target:null},
+  {id:'field-knight',kind:'knight',x:24,y:27,target:null},
+  {id:'field-patrol',kind:'patrol',x:25,y:29,target:null}
+];
+roster.push(...outsiders);
+cycle=.8;camp.synchronize();
+assert.ok(outsiders.every(u=>u.campState==='camped'),'all friendly unit kinds camp outside Yellow');
+assert.ok(outsiders.every(u=>u.target===null),'nightly camp arrests active movement');
+const previousFixtures=fixtures,previousFlames=flames;
+camp.drawEncampments(screen);
+assert.equal(fixtures-previousFixtures,3,'each field unit gets its own brazier and tent');
+assert.equal(flames-previousFlames,3,'each field unit gets one visible fire');
+cycle=.3;camp.synchronize();
+assert.ok(outsiders.every(u=>!u.campState),'every field camp is removed at dawn');
+const standing={id:'city-knight',kind:'knight',x:7,y:7,target:null};
+roster.push(standing);
+cycle=.8;camp.synchronize();
+assert.equal(standing.campState,undefined,'unassigned units inside Yellow remain on duty');
+roster.splice(roster.indexOf(standing),1);
+roster.splice(roster.indexOf(outsiders[0]),3);
+cycle=.3;camp.synchronize();
+assert.match(combat,/unit\.campState\|\|unit\.target\|\|now</,'night patrols cannot resume roaming while camped');
 cycle=.3;camp.synchronize();
 camp.removeSquad('barracks-1:0');
 assert.equal(roster.length,2,'troop decrement updates roster');

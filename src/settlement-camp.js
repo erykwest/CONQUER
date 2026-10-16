@@ -44,8 +44,8 @@
     const tactical=window.ConquerCombat;if(!tactical)return;
     const nowNight=night(),rooms=barracks();let changed=false;
     for(const unit of units()){
-      if(unit.kind!=='squad'||!unit.barracksId||unit.defeated||unit.routing)continue;
-      const room=getEntry(unit,rooms);
+      if(!['squad','patrol','knight'].includes(unit.kind)||unit.defeated||unit.routing)continue;
+      const room=unit.barracksId?getEntry(unit,rooms):null;
       if(!nowNight){
         if(unit.campState){
           if(unit.campState==='returning'){unit.target=null;unit.path=null;unit.pathIndex=1}
@@ -59,6 +59,8 @@
         unit.campState='camped';unit.target=null;unit.path=null;unit.pathIndex=1;
         changed=true;continue;
       }
+      // Unassigned squads, knights and patrols have no indoor barracks
+      // destination; they remain on duty inside yellow and camp outside it.
       if(!room){if(unit.campState){unit.campState=null;changed=true}continue}
       const home=entryPoint(room);
       if(distance(unit,home)<=.35){
@@ -112,10 +114,17 @@
       const count=roster.filter(u=>u.barracksId===r.id).length;
       return {room:r,index,count};
     });
-    const signature=JSON.stringify({rows:rows.map(r=>[r.room.id,r.room.capacity,r.index,r.count]),focused,night:night()});
+    const fieldCamps=units().filter(u=>u.campState==='camped'&&!u.defeated).length;
+    const indoors=units().filter(u=>u.campState==='barracks'&&!u.defeated).length;
+    const signature=JSON.stringify({rows:rows.map(r=>[r.room.id,r.room.capacity,r.index,r.count]),focused,night:night(),fieldCamps,indoors});
     if(signature===lastBar)return;
     lastBar=signature;
-    for(const item of Array.from(bar.querySelectorAll('[data-camp-toggle],[data-camp-hint]')))item.remove();
+    for(const item of Array.from(bar.querySelectorAll('[data-camp-toggle],[data-camp-hint],[data-camp-status]')))item.remove();
+    if(night()){
+      const indicator=document.createElement('span');indicator.dataset.campStatus='';
+      indicator.textContent='🏕 '+fieldCamps+' campi · '+indoors+' in caserma';
+      bar.insertBefore(indicator,panel);
+    }
     for(const row of rows){
       const button=document.createElement('button');
       button.type='button';button.dataset.campToggle=row.room.id;
@@ -172,7 +181,8 @@
     g.beginPath();g.moveTo(T.x,T.y);g.lineTo(mid.x,mid.y);g.stroke();
   }
   function drawEncampments(g){
-    const campers=units().filter(u=>u.kind==='squad'&&u.campState==='camped'&&!u.defeated);
+    const campers=units().filter(u=>u.campState==='camped'&&!u.defeated&&
+      ['squad','patrol','knight'].includes(u.kind));
     if(!campers.length)return;
     withRenderContext(g,()=>{
       for(const unit of campers){

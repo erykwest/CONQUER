@@ -657,7 +657,11 @@
     for(const u of combat.units){
       if(u.defeated||u.campState==='barracks')continue;
       if(u.campState==='camped'){
-        characters.push({p:{x:u.x+.15,y:u.y+.85},type:'spearman',id:u.id+':camp-guard',unit:u,index:0});
+        // Preserve the cavalry figure for a lone knight; larger formations
+        // leave just one visible sentry while the remainder rests in tents.
+        const soloKnight=u.kind==='knight';
+        characters.push({p:soloKnight?u:{x:u.x+.15,y:u.y+.85},
+          type:soloKnight?'knight':'spearman',id:u.id+':camp-guard',unit:u,index:0});
         continue;
       }
       if(u.kind==='knight'&&!u.defeated)characters.push({p:u,type:'knight',id:u.id,unit:u});
@@ -967,7 +971,7 @@
   }
   function updatePatrols(now){
     for(const unit of combat.units){
-      if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.target||now<(unit.nextPatrolAt||0))continue;
+      if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.campState||unit.target||now<(unit.nextPatrolAt||0))continue;
       const target=patrolDestination(unit);
       unit.nextPatrolAt=target?now:now+300;
       if(target){unit.target=target;unit.path=null;unit.pathIndex=1}
@@ -1052,7 +1056,7 @@
     updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
-      if(!u.target||u.defeated||u.routing)continue;
+      if(!u.target||u.defeated||u.routing||u.campState==='camped'||u.campState==='barracks')continue;
       if(!u.path?.length){
         const route=u.kind==='patrol'?patrolRoute(u,u.target,u.id):infantryRoute(u,u.target,u.id,u.kind);
         u.path=route?.map(p=>({x:p.x,y:p.y}))||null;u.pathIndex=1;
