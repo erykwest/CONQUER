@@ -1233,10 +1233,29 @@
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
   $('combatClearEnemies').onclick=()=>{combat.enemy=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  // Read-only tactical contacts for ultra-low-detail views. Enemy positions
+  // obey exactly the same spotting rule as the tactical overlay, even when
+  // the developer disables the visual fog layer.
+  function mapContacts(){
+    if(!combat)return[];
+    const contacts=[];
+    for(const u of combat.units){
+      if(u.defeated||u.stats?.hp<=0)continue;
+      contacts.push({id:u.id,x:u.x,y:u.y,side:'friendly',kind:u.kind,selected:selectedIds.has(u.id)});
+    }
+    if(combat.enemy.length){
+      const sources=observers();
+      for(const e of combat.enemy){
+        if(e.defeated||e.stats?.hp<=0||!spotted(e,sources))continue;
+        contacts.push({id:e.id,x:e.x,y:e.y,side:'enemy',kind:e.kind||'hostile',selected:false});
+      }
+    }
+    return contacts;
+  }
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
+  window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     alarmMode,setAlarmMode,recruitedResident,
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);
