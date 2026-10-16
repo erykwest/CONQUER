@@ -32,6 +32,15 @@
 
 Non confondere il testo del [README](../../README.md) (contiene sezione «V0.11 scope») con la baseline attuale: l'[index.html](../../index.html) mostra «Castle Lab V0.43». Versioni di testo, tag e prodotto vanno riconciliate separatamente.
 
+## Work in progress — branch `assedio` (16/10/2026)
+
+> Questa sezione documenta **codice su branch**, **non su main**. La branch `assedio` è stata aggiornata con fast-forward al `main` [39caf15](https://github.com/erykwest/CONQUER/commit/39caf15078f8b079579e0707189a6806055013f0) (0 commit esclusivi prima dell'operazione, 198 commit dietro). Dopo il riallineamento si è sviluppato sul modulo **già esistente** `src/settlement-siege.js`.
+
+- **CODICE / S-05/S-16 (parziale):** target di fortificazione separati per componente e arma; attacchi ordinari di unità e frecce hanno danno **0** a mura, torri e struttura della torre-porta anche quando fatte di legno. Arieti e attacchi diretti con fiaccola non danneggiano il nucleo di questi elementi; catapulte/trabucchi conservano gli impatti strutturali previsti dal prototipo. Non è ancora l'intera matrice materiali/effetti.
+- **CODICE / S-25 (parziale):** le strutture `gate` mantengono durabilità `siegeIntegrity.core` e `siegeIntegrity.door` indipendenti; un impatto bersaglia esplicitamente `core` o `door`; componenti inesistenti sono rifiutati. Portone distrutto: la torre resta e la cache di navigazione viene invalidata. Due valori leggibili nel pannello selezione, salvati nella lista strutture (local/cloud).
+- **QA aggiunta:** [siege-damage-regression.cjs](../../qa/siege-damage-regression.cjs) con casi per immunità, bersagli errati, hit separati, persistenza JSON, breach e upgrade. Verificati anche **42 controlli** in un harness V8 isolato eseguendo il sorgente vivo; il nuovo script Node e l'insieme completo delle QA/CI devono essere eseguiti e confermati separatamente.
+- **NON COMPLETATO:** stato di chiusura fisica del portone nella navigazione (i varchi ordinari sono ancora attraversabili in tempo di pace); demolizione per parti/cadute, IA di assedio, fuoco con propagazione, macchine e animazioni/WebGL2. La notifica di breach invalidante la topologia è un hook preliminare, non prova di un passaggio realmente bloccato/sbloccato. Nessuna feature complessiva di assedio dichiarata chiusa.
+
 ## Verifiche di integrazione della settimana 10–16 ottobre
 
 - **Assedi/fortificazioni:** [PR #21](https://github.com/erykwest/CONQUER/pull/21) integrata su `main` il 13/10 (Mastio, richiamo popolani, logistica P0, fossati/ponti/levatoi): **base utilizzabile, non simulazione di assedio completa**.

@@ -7,6 +7,9 @@
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
     spear:{stone:0,wood:0,door:0},
+    arrow:{stone:0,wood:0,door:0},
+    bow:{stone:0,wood:0,door:0},
+    crossbow:{stone:0,wood:0,door:0},
     axe:{stone:0,wood:.45,door:.65},
     ram:{stone:0,wood:2.5,door:6},
     torch:{stone:0,wood:2,door:2.5},
@@ -14,6 +17,12 @@
     trebuchet:{stone:7,wood:8,door:7}
   });
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75});
+  const GATE_DOOR_HEALTH=85;
+  // S-05 / D-031: ordinary attacks and missiles are never demolition weapons.
+  // This applies to timber towers/walls and the gatehouse CORE too; the wooden
+  // portone and palisades have different target rules.
+  const NON_STRUCTURAL_WEAPONS=new Set(['sword','spear','axe','arrow','bow','crossbow']);
+  const STRUCTURAL_CORES=new Set(['wall','tower','gate','built']);
   const STOCK_KEYS=['food','wood','stone','metal','equipment','horses','gold'];
   const MATERIAL_KEYS=['wood','stone','metal'];
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
@@ -263,38 +272,66 @@
     if(!s||!BASE_HEALTH[s.type])return null;
     const max=healthMaximum(s);
     const existing=s.siegeIntegrity&&typeof s.siegeIntegrity==='object'?s.siegeIntegrity:null;
-    if(!existing)s.siegeIntegrity={core:{hp:max,max},door:s.type==='gate'?{hp:85,max:85}:null};
-    else{
-      if(!existing.core)existing.core={hp:max,max};
-      // Keep existing absolute damage when a tier/height upgrade changes maximum health.
-      const previous=Number(existing.core.max)||max,damage=Math.max(0,previous-(Number(existing.core.hp)||0));
-      existing.core.max=max;existing.core.hp=Math.max(0,max-damage);
-      if(s.type==='gate'&&!existing.door)existing.door={hp:85,max:85};
-    }
-    return s.siegeIntegrity;
+    if(!existing)s.siegeIntegrity={core:{hp:max,max}};
+    const x=s.siegeIntegrity;
+    if(!x.core||typeof x.core!=='object')x.core={hp:max,max};
+    // Preserve absolute damage across a tower upgrade; accept hp=0 (legacy
+    // saves and a recently breached gate must not be healed on every read).
+    const previous=Number(x.core.max);
+    const oldMax=Number.isFinite(previous)&&previous>0?previous:max;
+    const rawHp=Number(x.core.hp),hp=Number.isFinite(rawHp)?Math.max(0,Math.min(oldMax,rawHp)):oldMax;
+    x.core.max=max;x.core.hp=Math.max(0,max-(oldMax-hp));
+    if(s.type==='gate'){
+      if(!x.door||typeof x.door!=='object')x.door={hp:GATE_DOOR_HEALTH,max:GATE_DOOR_HEALTH};
+      const doorMax=Number(x.door.max);
+      x.door.max=Number.isFinite(doorMax)&&doorMax>0?doorMax:GATE_DOOR_HEALTH;
+      const doorHp=Number(x.door.hp);
+      x.door.hp=Number.isFinite(doorHp)?Math.max(0,Math.min(x.door.max,doorHp)):x.door.max;
+    }else if(x.door!==undefined)delete x.door;
+    return x;
+  }
+  function gateBreached(s){
+    return !!s&&s.type==='gate'&&integrity(s).door.hp<=0;
   }
   function targetMaterial(s,part='core'){
     if(part==='door'&&s.type==='gate')return'door';
     return s.type==='palisade'||s.material==='wood'?'wood':'stone';
   }
   function effectiveness(weapon,s,part='core'){
+    if(!s||!BASE_HEALTH[s.type]||(part!=='core'&&!(part==='door'&&s.type==='gate')))return 0;
+    // Gatehouses are structural cores; axes and arrows cannot bypass the
+    // wall/tower rule by attacking a WOODEN tower or choosing 'core' on a gate.
+    if(part==='core'&&STRUCTURAL_CORES.has(s.type)&&NON_STRUCTURAL_WEAPONS.has(weapon))return 0;
+    // Ram impacts and direct torch hits target portoni (or palisades), not
+    // walls, towers, gatehouse masonry or the core of a wooden gatehouse.
+    if(part==='core'&&STRUCTURAL_CORES.has(s.type)&&['ram','torch'].includes(weapon))return 0;
     return Math.max(0,WEAPONS[weapon]?.[targetMaterial(s,part)]||0);
   }
   function attackStructure(id,weapon,force=1,part='core'){
     const s=State.structures.find(x=>x.id===id);
-    if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,reason:'Invalid or unfinished fortification'};
-    const stats=integrity(s),section=part==='door'&&s.type==='gate'?'door':'core',hp=stats[section];
-    const factor=effectiveness(weapon,s,section);
-    if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
-    if(!hp||hp.hp<=0)return{ok:false,damage:0,reason:'Section already destroyed'};
-    const damage=Math.min(hp.hp,Math.max(0,Number(force)||0)*factor);
-    if(!damage)return{ok:false,damage:0,reason:'No force applied'};
+    if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,damage:0,reason:'Invalid or unfinished fortification'};
+    // Never silently remap an invalid door target to the gatehouse core.
+    if(part!=='core'&&!(part==='door'&&s.type==='gate'))
+      return{ok:false,damage:0,reason:'Invalid structure component'};
+    const stats=integrity(s),hp=stats[part];
+    const factor=effectiveness(weapon,s,part);
+    if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this component'};
+    if(hp.hp<=0)return{ok:false,damage:0,reason:'Section already destroyed'};
+    const power=Number(force);
+    if(!Number.isFinite(power)||power<=0)return{ok:false,damage:0,reason:'Invalid attack force'};
+    const damage=Math.min(hp.hp,power*factor);
+    if(damage<=0)return{ok:false,damage:0,reason:'No force applied'};
     hp.hp=Math.max(0,hp.hp-damage);
-    if(section==='core'&&hp.hp===0)destroyStructure(s);
+    if(part==='core'&&hp.hp===0)destroyStructure(s);
     else{
+      // Breaching the portone is a topology change, without destroying its
+      // gatehouse. Actual closed-door obstacle rules belong to siege navigation;
+      // peacetime gate passages must keep their existing behaviour.
+      if(part==='door'&&hp.hp===0&&typeof invalidateNavigation==='function')invalidateNavigation(true);
       invalidateStructureScene(s);markDirty(true,true,true);draw();
     }
-    return{ok:true,part:section,damage,remaining:hp.hp,max:hp.max,destroyed:hp.hp===0};
+    if(typeof scheduleLocalSave==='function')scheduleLocalSave(500);
+    return{ok:true,part,damage,remaining:hp.hp,max:hp.max,destroyed:hp.hp===0};
   }
   function destroyStructure(s){
     const x=state();
@@ -364,7 +401,7 @@
     });
   }
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
-    capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
+    capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,gateBreached,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();
