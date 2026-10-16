@@ -69,6 +69,29 @@
       `#version 300 es
       precision mediump float;in vec2 vUV;in vec4 vCol;uniform sampler2D uAtlas;out vec4 o;
       void main(){vec4 c=texture(uAtlas,vUV)*vCol;if(c.a<0.02)discard;o=c;}`],
+    // Window emissive decals are anchored on the actual 3D facades, sharing the masonry depth buffer.
+    light:[`#version 300 es
+      ${CAMERA}
+      in vec3 aPos;in vec2 aUV;in vec4 aCol;out vec2 vUV;out vec4 vCol;
+      void main(){gl_Position=cam(aPos,vec2(0.0));vUV=aUV;vCol=aCol;}`,
+      `#version 300 es
+      precision mediump float;in vec2 vUV;in vec4 vCol;uniform sampler2D uAtlas;uniform float uNight;out vec4 o;
+      void main(){vec4 tex=texture(uAtlas,vUV);float a=tex.a*vCol.a*uNight;
+        if(a<0.003)discard;o=vec4(tex.rgb*vCol.rgb*vCol.a*uNight,a);}`],
+    // A radial light halo is a camera-facing billboard with a world-space anchor and real depth.
+    fireLight:[`#version 300 es
+      ${CAMERA}
+      in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;in float aSeed;
+      out vec2 vUV;out float vSeed;
+      void main(){gl_Position=cam(aAnchor,aCorner*aSize*uS);vUV=aUV;vSeed=aSeed;}`,
+      `#version 300 es
+      precision mediump float;in vec2 vUV;in float vSeed;uniform sampler2D uAtlas;
+      uniform float uNight;uniform float uTime;out vec4 o;
+      void main(){vec4 tex=texture(uAtlas,vUV);
+        float flicker=clamp(0.86+0.09*sin(uTime*31.0+vSeed*6.283185)
+          +0.04*sin(uTime*53.0+vSeed*9.0),0.6,1.0);
+        float a=tex.a*uNight*flicker*0.8;
+        if(a<0.003)discard;o=vec4(tex.rgb*vec3(1.0,0.54,0.22)*uNight*flicker*0.8,a);}`],
     sprite:[`#version 300 es
       ${CAMERA}
       in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;out vec2 vUV;
@@ -370,31 +393,51 @@
   function buildDecalAtlas(){
     const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=3*T;
     const g=c.getContext('2d'),map=new Map();
-    const tiles=[...DECAL_KEYS,'__white'];
+    const tiles=[...DECAL_KEYS,'__white','__glow'];
     tiles.forEach((k,i)=>{
       const x=(i%cols)*T,y=Math.floor(i/cols)*T;
       if(k==='__white'){g.fillStyle='#fff';g.fillRect(x,y,16,16);map.set(k,[(x+4)/c.width,(y+4)/c.height,(x+12)/c.width,(y+12)/c.height]);return}
+      if(k==='__glow'){
+        const radial=g.createRadialGradient(x+T/2,y+T/2,0,x+T/2,y+T/2,T/2-2);
+        radial.addColorStop(0,'rgba(255,239,190,0.90)');
+        radial.addColorStop(.22,'rgba(255,194,103,0.56)');
+        radial.addColorStop(.58,'rgba(255,141,55,0.15)');
+        radial.addColorStop(1,'rgba(255,141,55,0)');
+        g.fillStyle=radial;g.fillRect(x+1,y+1,T-2,T-2);
+        map.set(k,[(x+1)/c.width,(y+1)/c.height,(x+T-1)/c.width,(y+T-1)/c.height]);return;
+      }
       const img=architectureSprite(k);if(!img)return;
       g.drawImage(img,x,y);map.set(k,[x/c.width,y/c.height,(x+img.width)/c.width,(y+img.height)/c.height]);
     });
     return{canvas:c,map};
   }
   function buildDecals(atlas){
-    const v=[],WHITE=[1,1,1,1];
-    const quad=(a,b,z0,z1,key,out,col=WHITE,push=.012)=>{
+    const v=[],lights=[],WHITE=[1,1,1,1];
+    const quad=(a,b,z0,z1,key,out,col=WHITE,push=.012,dest=v)=>{
       const uv=atlas.map.get(key);if(!uv)return;
       const [u0,v0,u1,v1]=uv,A={x:a.x+out.x*push,y:a.y+out.y*push},B={x:b.x+out.x*push,y:b.y+out.y*push};
       const P=[[A,z1,u0,v0],[B,z1,u1,v0],[B,z0,u1,v1],[A,z0,u0,v1]];
-      for(const k of [0,1,2,0,2,3]){const [p,z,u,w]=P[k];v.push(p.x,p.y,z,u,w,col[0],col[1],col[2],col[3])}
+      for(const k of [0,1,2,0,2,3]){const [p,z,u,w]=P[k];dest.push(p.x,p.y,z,u,w,col[0],col[1],col[2],col[3])}
     };
     const outward=(edge,c)=>{
       const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1;let nx=-dy/L,ny=dx/L;
       const mx=(edge.a.x+edge.b.x)/2-c.x,my=(edge.a.y+edge.b.y)/2-c.y;if(nx*mx+ny*my<0){nx=-nx;ny=-ny}
       return{x:nx,y:ny};
     };
+    // These emissive panes and soft halos are generated only when facade geometry changes.
+    // Intensity is a uniform: sunset/sunrise never recreate their buffers.
+    const lightWindow=(edge,centerZ,width,height,offset,ground,out)=>{
+      const halo=facadeAssetWorldSpan(edge,width*3.4,offset);
+      quad(halo.a,halo.b,ground+centerZ-height*1.7,ground+centerZ+height*1.7,
+        '__glow',out,[1,.67,.32,.33],.032,lights);
+      const glass=facadeAssetWorldSpan(edge,width*.8,offset);
+      quad(glass.a,glass.b,ground+centerZ-height*.4,ground+centerZ+height*.4,
+        '__white',out,[1,.77,.38,.77],.027,lights);
+    };
     const onEdge=(edge,centerZ,width,height,key,offset,ground,out)=>{
       const span=facadeAssetWorldSpan(edge,width,offset);
       quad(span.a,span.b,ground+centerZ-height/2,ground+centerZ+height/2,key,out);
+      if(key.startsWith('gothic'))lightWindow(edge,centerZ,width,height,offset,ground,out);
     };
     const edgesOf=fp=>fp.map((a,i)=>({a,b:fp[(i+1)%fp.length],index:i}));
     // A beam from wall point p0 to p1 ({off,z}), `width` thick within the wall plane.
@@ -484,11 +527,30 @@
             // Timber frame strips sit just under the windows (smaller wall offset).
             for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
             // drawWindowOnEdge: 2.1 x 3.25 px per view-scale unit -> .175U x ~.30U
-            for(const w of plan.windows){const c=at(w.off);quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN)}
+            for(const w of plan.windows){
+              const c=at(w.off);
+              quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
+              lightWindow(edge,w.z,hw*2,hh*2,w.off,ground,o);
+            }
           }
         }
         const d=houseDoorInfo(s),hw=Math.min(.08,(Number(s.w)||1.5)*.0533),g=terrainElevation(d.surface),DOOR=[57/255,39/255,30/255,1];
         quad({x:d.surface.x-d.tangent.x*hw,y:d.surface.y-d.tangent.y*hw},{x:d.surface.x+d.tangent.x*hw,y:d.surface.y+d.tangent.y*hw},g+.04,g+.552,'__white',d.normal,DOOR);
+      }
+    }
+    return{decals:new Float32Array(v),lights:new Float32Array(lights)};
+  }
+  function buildFireLights(atlas){
+    const uv=atlas.map.get('__glow'),v=[];if(!uv)return new Float32Array(v);
+    const [u0,v0,u1,v1]=uv;
+    for(const src of fireSources()){
+      const ground=Number.isFinite(src.groundZ)?src.groundZ:terrainElevation(src.p);
+      const z=ground+src.z+(src.kind==='brazier'?.08:0);
+      const size=src.kind==='brazier'?2:1.5;
+      const seed=(peasantHash(String(src.id)+'-fire')%1000)/1000;
+      const corners=[[-.5,-.5,u0,v0],[.5,-.5,u1,v0],[.5,.5,u1,v1],[-.5,.5,u0,v1]];
+      for(const i of [0,1,2,0,2,3]){
+        const q=corners[i];v.push(src.p.x,src.p.y,z,q[0],q[1],size,q[2],q[3],seed);
       }
     }
     return new Float32Array(v);
@@ -591,7 +653,11 @@
     const dSig=[structuresSig('all'),Object.keys(architectureSprites).length].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
-      upload(gl,'decals',buildDecals(atlas));S.sig.decals=dSig;st.decalsMs=performance.now()-a;
+      const baked=buildDecals(atlas);
+      upload(gl,'decals',baked.decals);
+      upload(gl,'nightWindows',baked.lights);
+      upload(gl,'fireLights',buildFireLights(atlas));
+      S.sig.decals=dSig;st.decalsMs=performance.now()-a;
     }
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
@@ -660,6 +726,36 @@
       const b=S.buf.trees;bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
       gl.drawArrays(gl.TRIANGLES,0,S.buf['trees#n']/8);
     }
+  }
+  // Light is composited AFTER the Canvas ambient tint, while reusing the 3D
+  // back/front depth buffer. Clearing only colour preserves occlusion by masonry and soldiers.
+  function renderNightLights(r,nf){
+    const gl=S.gl;
+    if(!gl||nf<=.01)return;
+    gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+    if(S.buf['nightWindows#n']&&S.tex.decalAtlas){
+      const pr=S.prog.light;gl.useProgram(pr.p);setCamera(gl,pr,r);
+      gl.uniform1f(pr.loc.uNight,nf);
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(pr.loc.uAtlas,0);
+      bindAttrib(gl,pr,'aPos',S.buf.nightWindows,3,36,0);
+      bindAttrib(gl,pr,'aUV',S.buf.nightWindows,2,36,12);
+      bindAttrib(gl,pr,'aCol',S.buf.nightWindows,4,36,20);
+      gl.drawArrays(gl.TRIANGLES,0,S.buf['nightWindows#n']/9);
+    }
+    if(S.buf['fireLights#n']&&S.tex.decalAtlas){
+      const pr=S.prog.fireLight;gl.useProgram(pr.p);setCamera(gl,pr,r);
+      gl.uniform1f(pr.loc.uNight,nf);gl.uniform1f(pr.loc.uTime,visualCycleDay());
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(pr.loc.uAtlas,0);
+      bindAttrib(gl,pr,'aAnchor',S.buf.fireLights,3,36,0);
+      bindAttrib(gl,pr,'aCorner',S.buf.fireLights,2,36,12);
+      bindAttrib(gl,pr,'aSize',S.buf.fireLights,1,36,20);
+      bindAttrib(gl,pr,'aUV',S.buf.fireLights,2,36,24);
+      bindAttrib(gl,pr,'aSeed',S.buf.fireLights,1,36,32);
+      gl.drawArrays(gl.TRIANGLES,0,S.buf['fireLights#n']/9);
+    }
+    gl.disable(gl.BLEND);gl.depthMask(true);
   }
   function renderFront(r,soldiers){
     // Soldiers and near-half battlements, depth-tested against the back pass (depth kept): masonry in
@@ -789,6 +885,15 @@
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
     return true;
   }
+  function drawNightLights3D(r){
+    const nf=nightFactor();if(nf<=.01)return;
+    const started=performance.now();
+    renderNightLights(r,nf);
+    ctx.drawImage(S.canvas,0,0,r.width,r.height);
+    // Animated flame shapes stay on the dynamic Canvas overlay; their light no longer does.
+    drawFireFlamesOnly(nf);
+    perf().world3dNightLightMs=performance.now()-started;
+  }
   function drawCastleOverlays(){
     // Arcades are 3D decals now; only cutaway interiors keep their 2.5D drawing.
     if(State.structures.some(s=>structureCutaway(s)&&!underConstruction(s)))drawCutawayStructures();
@@ -830,7 +935,7 @@
     }
     draw();
   }
-  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,drawMastioDrapes,_setActiveForTest,
+  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,drawNightLights3D,drawMastioDrapes,_setActiveForTest,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
