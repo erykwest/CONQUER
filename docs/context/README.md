@@ -27,9 +27,9 @@
 - **Non inventare completamenti:** ogni variazione di stato riporta prove (file, QA, issue/PR, commit, branch, data).
 - **Non uniformare di nascosto fonti in conflitto:** registrare in [DECISIONS.md](DECISIONS.md) e impedire che una supposizione diventi un requisito.
 
-## Fonti esterne non ancora assimilate
+## Conversazioni e fonti di decisioni
 
-Tre conversazioni condivise il 16/10/2026 sono censite in [EXTERNAL-SOURCES.md](EXTERNAL-SOURCES.md). **Non sono state lette** perché gli URL non hanno restituito il contenuto; non attribuire loro decisioni o feature fino a un import verificato.
+Il [registro fonti](EXTERNAL-SOURCES.md) distingue **3 conversazioni ora lette tramite export** (economia, animazioni/audio, minimappa/LOD) da **2 link ancora in attesa di testo**. I digest per dominio sono in [sources/](sources/): [economia](sources/ECONOMY-2026-10-12.md), [render/audio](sources/VISUAL-AUDIO-2026-10-14.md) e [minimappa](sources/MINIMAP-2026-10-15.md). Usarli per ricostruire il *perché* delle scelte, ma validare il codice contro branch, commit e test.
 
 ## Origine della piramide
 
