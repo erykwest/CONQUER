@@ -11,7 +11,7 @@
   const fogCtx=fog.getContext('2d');
   const memory=new Uint8Array(N*N), visible=new Uint8Array(N*N);
   const forestCell=new Int16Array(N*N),heightCell=new Float32Array(N*N);
-  let terrainRef=null,forestRef=null,lastVision=0,maskDirty=true,visibilityDirty=true;
+  let terrainRef=null,forestRef=null,forestRev=-1,lastVision=0,maskDirty=true,visibilityDirty=true;
   let circleCache=[],circleCacheBucket=-1;
   const strokeBuckets=new Map();let indexedStrokes=-1;
   // Masks are raster unions of auto-generated regions and manual brush marks.
@@ -409,8 +409,10 @@
     return position;
   }
   function terrainCache(){
-    if(State.relief!==terrainRef||State.environment!==forestRef){
-      terrainRef=State.relief;forestRef=State.environment;
+    // environmentRevision: main-road grooves cut the woodland in place.
+    const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    if(State.relief!==terrainRef||State.environment!==forestRef||envRev!==forestRev){
+      terrainRef=State.relief;forestRef=State.environment;forestRev=envRev;
       forestCell.fill(-2);heightCell.fill(NaN);
       visibilityDirty=true;maskDirty=true;
     }
@@ -437,6 +439,7 @@
   function inForestDeep(p,forestId){
     if(forestId<0)return false;
     const f=State.environment[forestId];if(!f||!f.points)return false;
+    if(f.holes?.length)return forestNearestEdge(f,p).distance>FOREST_SIGHT_U;
     let min=Infinity;
     for(let i=0;i<f.points.length;i++)min=Math.min(min,pointSegmentDistance(p,f.points[i],f.points[(i+1)%f.points.length]));
     return min>FOREST_SIGHT_U;
@@ -1230,10 +1233,29 @@
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
   $('combatClearEnemies').onclick=()=>{combat.enemy=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  // Read-only tactical contacts for ultra-low-detail views. Enemy positions
+  // obey exactly the same spotting rule as the tactical overlay, even when
+  // the developer disables the visual fog layer.
+  function mapContacts(){
+    if(!combat)return[];
+    const contacts=[];
+    for(const u of combat.units){
+      if(u.defeated||u.stats?.hp<=0)continue;
+      contacts.push({id:u.id,x:u.x,y:u.y,side:'friendly',kind:u.kind,selected:selectedIds.has(u.id)});
+    }
+    if(combat.enemy.length){
+      const sources=observers();
+      for(const e of combat.enemy){
+        if(e.defeated||e.stats?.hp<=0||!spotted(e,sources))continue;
+        contacts.push({id:e.id,x:e.x,y:e.y,side:'enemy',kind:e.kind||'hostile',selected:false});
+      }
+    }
+    return contacts;
+  }
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
+  window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     alarmMode,setAlarmMode,recruitedResident,
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);

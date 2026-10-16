@@ -19,7 +19,7 @@ function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoin
 const reliefBandCache=new Map();
 let reliefBandSpatialCache=null;
 function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
-function clearReliefBandCache(){reliefBandCache.clear();reliefBandSpatialCache=null}
+function clearReliefBandCache(){reliefBandCache.clear();reliefBandSpatialCache=null;terrainElevationIndex=null;placementGroundZMemo=new WeakMap()}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
   const pts=level.top||[];if(pts.length<3)return[];
@@ -98,12 +98,26 @@ function terrainSegmentCrossesCliff(a,b){
   }
   return false;
 }
+// Bounding boxes of every relief level (top + slope bands) and band, so a point far from a
+// hill skips its polygon tests. Same result as testing everything; rebuilt with the relief.
+let terrainElevationIndex=null;
+function terrainElevationLevels(){
+  if(terrainElevationIndex&&terrainElevationIndex.relief===State.relief&&terrainElevationIndex.hills===State.relief?.hills)return terrainElevationIndex.levels;
+  const levels=reliefLevels().map(level=>{
+    const bands=reliefEdgeBands(level),pts=[...(level.top||[]),...bands.flatMap(b=>b.poly)];
+    const box=pts.length?{x0:Math.min(...pts.map(q=>q.x)),y0:Math.min(...pts.map(q=>q.y)),x1:Math.max(...pts.map(q=>q.x)),y1:Math.max(...pts.map(q=>q.y))}:null;
+    return{level,bands,box};
+  });
+  terrainElevationIndex={relief:State.relief,hills:State.relief?.hills,levels};
+  return levels;
+}
 function terrainElevation(p){
   let z=0;
-  for(const level of reliefLevels()){
+  for(const {level,bands,box} of terrainElevationLevels()){
+    if(!box||p.x<box.x0||p.x>box.x1||p.y<box.y0||p.y>box.y1)continue;
     if(pointInPolygon(p,level.top)){z=Math.max(z,level.z1);continue}
-    for(const band of reliefEdgeBands(level)){
-      if(!pointInPolygon(p,band.poly))continue;
+    for(const band of bands){
+      if(p.x<band.minX||p.x>band.maxX||p.y<band.minY||p.y>band.maxY||!pointInPolygon(p,band.poly))continue;
       const dOuter=pointSegmentDistance(p,band.oa,band.ob),dInner=pointSegmentDistance(p,band.a,band.b);
       const t=clamp(dOuter/Math.max(1e-6,dOuter+dInner),0,1);
       z=Math.max(z,band.z0+(band.z1-band.z0)*t);
@@ -117,7 +131,8 @@ function terrainPlateauElevation(p){
   return z;
 }
 function environmentConflictsTestRelief(f){
-  if(!State.relief?.hills?.length||f.type==='forest'||f.type==='rough')return false;
+  // Mountains may stand on foothills (continuous massif): never dropped for overlapping relief.
+  if(!State.relief?.hills?.length||f.type==='forest'||f.type==='rough'||f.type==='mountain')return false;
   if(['stream','river'].includes(f.type)){
     for(let i=0;i<f.points.length-1;i++){
       const a=f.points[i],b=f.points[i+1],steps=Math.max(3,Math.ceil(dist(a,b)/1.5));
@@ -330,7 +345,21 @@ function placementFoundationProfile(s){
   if(!Number.isFinite(minZ)||!Number.isFinite(maxZ))return null;
   return{baseZ:maxZ,minZ,maxZ,depth:Math.max(0,maxZ-minZ)};
 }
+// Memo per structure: the foundation profile samples the whole footprint on the terrain and
+// was recomputed for every ground-plane draw call (hundreds of terrain samples per frame).
+let placementGroundZMemo=new WeakMap();
 function placementGroundZ(s){
+  if(!s||typeof s!=='object')return placementGroundZUncached(s);
+  const parent=s.parentTowerId?State.structures.find(o=>o.id===s.parentTowerId):null;
+  const key=[s.type,s.x,s.y,s.angle,s.size,s.r,s.w,s.h,s.shape,s.level,s.tier,s.material,s.baseStyle,s.woodStyle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.width,s.foundationVersion,s.groundZ,s.parentTowerId,
+    parent?[parent.x,parent.y,parent.angle,parent.size,parent.r,parent.groundZ].join(','):'',State.relief?.seed,State.relief?.hills?.length].join('|');
+  const hit=placementGroundZMemo.get(s);
+  if(hit&&hit.key===key&&hit.relief===State.relief)return hit.z;
+  const z=placementGroundZUncached(s);
+  placementGroundZMemo.set(s,{key,relief:State.relief,z});
+  return z;
+}
+function placementGroundZUncached(s){
   if(!isPlacementFoundationBuilding(s))return null;
   if(s.parentTowerId){
     const parent=State.structures.find(o=>o.id===s.parentTowerId);

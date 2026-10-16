@@ -73,7 +73,7 @@ body.ui2.ui2-dev #devTools{top:76px;right:var(--u2-gap)}
 #ui2 .u2-date span{font-size:12px;color:var(--u2-muted)}
 
 /* bottom-left: status + save */
-#ui2 .u2-toast{position:absolute;left:var(--u2-gap);bottom:var(--u2-gap);width:min(340px,calc(50% - 230px));display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#ui2 .u2-toast{position:absolute;left:var(--u2-gap);bottom:var(--u2-gap);width:min(340px,calc(50% - 250px));display:flex;flex-direction:column;gap:6px;pointer-events:none}
 #ui2 .u2-status{position:static;padding:8px 12px;border-color:var(--u2-line);font-size:13px;color:var(--u2-soft)}
 #ui2 .u2-saved{padding:0 12px;font-size:12px;color:var(--u2-good)}
 #ui2 .u2-saved.bad{color:var(--u2-bad)}
@@ -132,11 +132,18 @@ body.ui2 #functionPanel{display:none!important}
 #ui2 .u2-seg.u2-wrap{flex-wrap:wrap}
 #ui2 .u2-seg.u2-wrap button{flex:1 1 30%}
 
+/* Minimap (settlement-minimap.js): a tablet in the bottom-right corner, under the cards. */
+body.ui2 #conquerMinimap{right:var(--u2-gap);bottom:var(--u2-gap);z-index:11;background:var(--u2-panel);border-color:var(--u2-line-gold);border-radius:var(--u2-radius)}
+body.ui2 #conquerMinimap .minimap-head{font-family:var(--u2-display);font-size:13px;letter-spacing:.08em;color:var(--u2-gold)}
+body.ui2 #ui2 .u2-card-tall{max-height:calc(100% - 76px - 270px)}
+body.ui2:has(#conquerMinimap.collapsed) #ui2 .u2-card-tall{max-height:calc(100% - 76px - 80px)}
+
 /* Narrow windows: resources wrap onto two rows instead of losing their labels. */
 @media(max-width:1180px){
   #ui2 .u2-resbar{max-width:calc(100% - 440px)}
   #ui2 .u2-resbar ul{flex-wrap:wrap;justify-content:flex-end}
   #ui2 .u2-resbar li{padding:4px 8px}
   #ui2 .u2-card{width:290px;top:112px}
-  #ui2 .u2-card-tall{max-height:calc(100% - 112px - 96px)}
+  body.ui2 #ui2 .u2-card-tall{max-height:calc(100% - 112px - 270px)}
+  body.ui2:has(#conquerMinimap.collapsed) #ui2 .u2-card-tall{max-height:calc(100% - 112px - 80px)}
 }
