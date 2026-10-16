@@ -5,6 +5,12 @@
  if(!api||!panel)return;
  const enable=panel.querySelector('#soundEnable'),master=panel.querySelector('#soundMaster');
  const rows=[...panel.querySelectorAll('[data-sound-layer]')];
+ const previewClip=panel.querySelector('#soundPreviewClip');
+ const previewPlay=panel.querySelector('#soundPreviewPlay');
+ const previewStop=panel.querySelector('#soundPreviewStop');
+ const previewLayers={spring:'environment',summer:'environment',wind:'environment',rain:'environment',
+  thunder:'environment',market:'local',tavern:'local',choir:'local',bells:'local',
+  chopping:'local',mining:'local',pickaxe:'effects',marching:'local',training:'local'};
  function update(){
   const s=api.state();enable.textContent=s.enabled?'🔊 Audio ON':'🔇 Audio OFF';
   enable.classList.toggle('active',s.enabled);
@@ -21,7 +27,7 @@
   }
   panel.querySelector('#soundReadout').textContent=!s.available?'Web Audio non supportato':
    !s.enabled?'Audio OFF · attivalo manualmente':
-   s.error||('Loop: '+s.active.length+' · file mancanti: '+s.missing.length);
+   s.error||('Loop: '+s.active.length+' · Preview: '+(s.preview||'—')+' · file mancanti: '+s.missing.length);
  }
  enable.addEventListener('click',async()=>{await api.setEnabled(!api.state().enabled);update()});
  master.addEventListener('input',e=>{api.setMaster(+e.target.value/100);update()});
@@ -34,5 +40,12 @@
    api.testTone(layer);update();
   });
  }
+ previewPlay.addEventListener('click',async()=>{
+  if(!api.state().enabled)await api.setEnabled(true);
+  const id=previewClip.value;
+  if(window.ConquerSoundCatalog?.[id])await api.preview(id,previewLayers[id]||'effects');
+  update();
+ });
+ previewStop.addEventListener('click',()=>{api.stopPreview();update()});
  window.setInterval(update,1200);update();
 })();

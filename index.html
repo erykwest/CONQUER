@@ -223,6 +223,25 @@
         <div class="sound-channel" data-sound-layer="local"><span>2 Locale</span><input type="range" min="0" max="100" aria-label="Volume locale"><output>75%</output><button type="button" aria-label="Mute locale">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
         <div class="sound-channel" data-sound-layer="effects"><span>3 Effetti</span><input type="range" min="0" max="100" aria-label="Volume effetti"><output>80%</output><button type="button" aria-label="Mute effetti">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
         <div class="sound-channel" data-sound-layer="notifications"><span>4 Notifiche</span><input type="range" min="0" max="100" aria-label="Volume notifiche"><output>85%</output><button type="button" aria-label="Mute notifiche">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
+        <div class="sound-preview">
+          <select id="soundPreviewClip" aria-label="File audio da ascoltare">
+            <option value="spring">Primavera · bosco</option>
+            <option value="summer">Estate · cicale</option>
+            <option value="wind">Vento</option>
+            <option value="rain">Pioggia · compressa</option>
+            <option value="thunder">Tuono</option>
+            <option value="market">Mercato</option>
+            <option value="tavern">Taverna</option>
+            <option value="choir">Chiesa · coro</option>
+            <option value="bells">Campane</option>
+            <option value="chopping">Taglialegna</option>
+            <option value="mining">Minatori</option>
+            <option value="pickaxe">Piccone</option>
+            <option value="marching">Marcia</option>
+            <option value="training">Addestramento</option>
+          </select>
+          <div class="dev-row"><button type="button" id="soundPreviewPlay">▶ Ascolta file</button><button type="button" id="soundPreviewStop">■ Stop preview</button></div>
+        </div>
         <span id="soundReadout" class="dev-hint" role="status">Audio in attesa</span>
         <span class="dev-hint">Locale: zoom ≥30% o selezione. ▶ prova ogni canale senza file MP3.</span>
       </div>
@@ -265,9 +284,9 @@
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
 <script src="./src/settlement-architecture.js?v=refactor-1"></script>
 <script src="./src/settlement-weather.js?v=refactor-1"></script>
-<script src="./src/settlement-sound-catalog.js?v=sound-1"></script>
-<script src="./src/settlement-sound.js?v=sound-1"></script>
-<script src="./src/settlement-sound-bridge.js?v=sound-1"></script>
+<script src="./src/settlement-sound-catalog.js?v=sound-2"></script>
+<script src="./src/settlement-sound.js?v=sound-2"></script>
+<script src="./src/settlement-sound-bridge.js?v=sound-2"></script>
 <script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
 <script src="./src/settlement-render.js?v=ambient-light-1"></script>
 <script src="./src/settlement-castle3d.js?v=prototype-1"></script>
@@ -284,7 +303,7 @@
 <script src="./src/settlement-lod.js?v=lod-1"></script>
 <script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
-<script src="./src/settlement-sound-dev.js?v=sound-1"></script>
+<script src="./src/settlement-sound-dev.js?v=sound-2"></script>
 <script src="./src/settlement-combat-rules.js?v=combat-3"></script>
 <script src="./src/settlement-combat.js?v=combat-4"></script>
 <script src="./src/heraldry-symbols.js"></script>

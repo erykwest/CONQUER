@@ -16,8 +16,8 @@
   const night=typeof nightFactor==='function'&&nightFactor()>.55,weatherNow=weather||currentWeather();
   const environment=[];
   if(State.season==='spring')environment.push({id:'spring',volume:night?.25:.75});
-  else if(State.season==='summer')environment.push({id:night?'nature':'summer',volume:night?.3:.65});
-  else if(State.season==='autumn')environment.push({id:'nature',volume:night?.25:.5});
+  else if(State.season==='summer'&&!night)environment.push({id:'summer',volume:.65*Math.max(0,1-Math.min(1,weatherNow.rain))});
+  // Autumn/night have no unequivocal dedicated sample: do not invent a generic bed.
   if(weatherNow.rain>0)environment.push({id:'rain',volume:Math.min(1,weatherNow.rain*.85)});
   if(weatherNow.wind>.35||State.season==='winter')environment.push({id:'wind',volume:Math.min(.8,.2+weatherNow.wind*.6)});
   const local=[],selected=State.structures.find(s=>s.id===State.selectedId);
@@ -36,7 +36,7 @@
    }
   }
   audio.syncScene({environment,local});
-  if(weatherNow.kind==='storm'&&audio.state().enabled&&now-lastThunder>18000){
+  if(weatherNow.kind==='storm'&&audio.state().enabled&&now-lastThunder>65000){
    lastThunder=now;void audio.play('thunder','environment',.6);
   }
  }

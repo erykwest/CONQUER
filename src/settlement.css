@@ -149,3 +149,9 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 #devSound .sound-channel output{text-align:right;font-variant-numeric:tabular-nums}
 #devPanel #devSound .sound-channel button{height:25px;padding:0 2px;font-size:10px}
 #devSound .dev-row>button{font-size:11px}
+
+#devSound .sound-preview{border-top:1px solid var(--line-strong);margin-top:10px;padding-top:8px}
+#devSound .sound-preview select{font-size:11px;padding:6px;width:100%}
+#devSound .sound-preview .dev-row{margin-top:5px}
+#devSound .sound-preview button{font-size:10px}
+#devPanel{max-height:calc(100vh - 65px);overflow-y:auto}

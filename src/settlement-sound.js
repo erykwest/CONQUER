@@ -16,7 +16,7 @@
  };
  const prefs=getPrefs(),catalog=window.ConquerSoundCatalog||{},buffers=new Map(),failed=new Set();
  const desired=new Map(),active=new Map(),pending=new Set();
- let context=null,master=null,buses=null,enabled=false,error='';
+ let context=null,master=null,buses=null,enabled=false,error='',previewVoice=null,previewToken=0;
  const persist=()=>{try{localStorage.setItem(storageKey,JSON.stringify(prefs))}catch(_){}};
  function smooth(param,value,seconds=.18){
   param.cancelScheduledValues(context.currentTime);
@@ -59,6 +59,27 @@
   smooth(gain.gain,clamp(volume),.27);
   return {source,gain};
  }
+ function stopPreview(){
+  previewToken++;
+  if(!previewVoice)return;
+  const voice=previewVoice;previewVoice=null;
+  smooth(voice.gain.gain,0,.1);
+  try{voice.source.stop(context.currentTime+.15)}catch(_){}
+ }
+ async function preview(id,layer='effects'){
+  if(!enabled||!context||!layers.includes(layer)||!catalog[id])return false;
+  stopPreview();
+  const token=previewToken;
+  const buf=await buffer(id);
+  if(!buf||!enabled||token!==previewToken)return false;
+  const voice=createVoice(buf,layer,.75,!!catalog[id].loop);
+  previewVoice={...voice,id,layer};
+  voice.source.onended=()=>{
+   if(previewVoice?.source===voice.source)previewVoice=null;
+   voice.gain.disconnect();
+  };
+  return true;
+ }
  function stopLoop(key){
   const voice=active.get(key);if(!voice)return;
   active.delete(key);smooth(voice.gain.gain,0,.28);
@@ -96,7 +117,7 @@
   refresh();
  }
  async function setEnabled(value){
-  if(!value){enabled=false;for(const key of [...active.keys()])stopLoop(key);return false}
+  if(!value){enabled=false;stopPreview();for(const key of [...active.keys()])stopLoop(key);return false}
   const ctx=init();if(!ctx)return false;
   try{
    await ctx.resume();enabled=ctx.state==='running';
@@ -132,9 +153,9 @@
  function state(){
   return {enabled,available:!!(window.AudioContext||window.webkitAudioContext),layers:[...layers],
    master:prefs.master,volumes:{...prefs.volumes},muted:{...prefs.muted},
-   active:[...active.keys()],missing:[...failed],error};
+   active:[...active.keys()],preview:previewVoice?.id||null,missing:[...failed],error};
  }
  window.ConquerSound=Object.freeze({layers,setEnabled,setMaster,setVolume,setMuted,
-  syncScene,play,testTone,notify:()=>testTone('notifications'),state});
- window.addEventListener('pagehide',()=>{for(const key of [...active.keys()])stopLoop(key)});
+  syncScene,play,preview,stopPreview,testTone,notify:()=>testTone('notifications'),state});
+ window.addEventListener('pagehide',()=>{stopPreview();for(const key of [...active.keys()])stopLoop(key)});
 })();
