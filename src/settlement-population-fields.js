@@ -7,7 +7,8 @@ function fieldAvailableHouses(houses){
     const tier=economy?.KIND?.[s.type]?.classId;
     if(s.type!=='field'&&(tier===1||tier===2))reserved[tier]+=allocation[s.id]||0;
   }
-  const sorted=tier=>houses.filter(h=>houseLevel(h)===tier&&(tier!==1||window.ConquerLivestock?.lotKindForHouse(h)!=='shepherd'))
+  const sorted=tier=>houses.filter(h=>houseLevel(h)===tier&&
+    window.ConquerLivestock?.lotKindForHouse(h)!==(tier===1?'shepherd':'cow'))
     .sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved[tier]);
   return {L1:sorted(1),L2:sorted(2),reserved};
 }

@@ -1,5 +1,6 @@
 'use strict';
-// Livestock for L1 Voronoi households. All animals are derived from the saved
+// Deterministic domestic livestock for L1-L4 Voronoi households.
+// All animals are derived from the saved
 // settlement seed, house ID and polygon area: no duplicate persisted entities.
 (function(){
   const DEPART=.085,PASTURE_AT=.215,RETURN=.515,HOME_AT=.655;
@@ -11,9 +12,17 @@
   const rand=h=>{h=(Math.imul(h^h>>>16,0x7feb352d)>>>0);h=(Math.imul(h^h>>>15,0x846ca68b)>>>0);return ((h^h>>>16)>>>0)/4294967296};
   const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
   function kindForHouse(house){
-    if(!house||houseLevel(house)!==1)return null;
-    const value=hash(State.seed+'|livestock-l1|'+house.id)/4294967296;
-    return value<.5?'garden':value<.8?'goat':'shepherd';
+    if(!house)return null;
+    const level=houseLevel(house);
+    if(level===1){
+      const value=hash(State.seed+'|livestock-l1|'+house.id)/4294967296;
+      return value<.5?'garden':value<.8?'goat':'shepherd';
+    }
+    if(level===2){
+      const value=hash(State.seed+'|livestock-l2|'+house.id)/4294967296;
+      return value<.7?'garden':'cow';
+    }
+    return level===3||level===4?'horse':null;
   }
   function lotForHouse(house){
     return house&&urbanLots().find(lot=>lot.houseId===house.id)||null;
@@ -66,7 +75,8 @@
     const cached=planCache.get(house.id);
     const kind=kindForHouse(house),area=Math.abs(urbanArea(lot.points));
     if(cached&&cached.area===area&&cached.kind===kind)return cached;
-    const count=kind==='goat'?Math.round(area/2):kind==='shepherd'?Math.round(area):0;
+    const count=kind==='goat'?Math.round(area/2):kind==='shepherd'?Math.round(area):
+      kind==='cow'?Math.floor(area/3):0;
     const result={house,lot,kind,area,count,pen:count?penPoints(lot,house,count):[]};
     planCache.set(house.id,result);
     return result;
@@ -151,7 +161,8 @@
     return whiteZoneAt(p)?p:pasture.center;
   }
   function shepherdPosition(house){
-    if(kindForHouse(house)!=='shepherd'||underConstruction(house))return null;
+    const kind=kindForHouse(house);
+    if((kind!=='shepherd'&&kind!=='cow')||underConstruction(house))return null;
     const lot=lotForHouse(house);if(!lot)return null;
     const pasture=pastureFor(plan(house,lot));if(!pasture)return null;
     const frac=dayFraction(),phase=period(frac);
@@ -184,7 +195,7 @@
   function grazingBehavior(plan,pasture,lot,house,i){
     const time=visualCycleDay()*34;
     const seed=hash(house.id+'|graze-loop|'+i);
-    if(plan.kind==='shepherd'&&pasture){
+    if((plan.kind==='shepherd'||plan.kind==='cow')&&pasture){
       const anchor=pasturePoint(plan,pasture,i,visualCycleDay());
       const target=localGrazeTarget(anchor,seed,Math.max(.22,pasture.radius*.32),candidate=>
         whiteZoneAt(candidate)&&dist(candidate,pasture.center)<=pasture.radius*.98);
@@ -233,21 +244,43 @@
     }
     return seed%2?1:-1;
   }
+  // L3/L4: each existing open shed houses 1-3 horses. No horses spawn in
+  // storehouses, and roofs/placements stay owned by the urban geometry module.
+  function stableHorses(house){
+    const out=[];
+    for(const shed of urbanLotOutbuildings(house).filter(p=>p.type==='shed')){
+      const count=1+hash(State.seed+'|horse-count|'+shed.buildingKey)%3;
+      const angle=shed.roofAngle||0,ca=Math.cos(angle),sa=Math.sin(angle);
+      for(let i=0;i<count;i++){
+        const lateral=(i-(count-1)/2)*shed.w*.28;
+        const depth=(hash(shed.buildingKey+'|horse-y|'+i)%3-1)*shed.h*.11;
+        const p={x:shed.center.x+lateral*ca-depth*sa,
+          y:shed.center.y+lateral*sa+depth*ca};
+        const seed=hash(shed.buildingKey+'|horse|'+i);
+        out.push({id:shed.buildingKey+':horse:'+i,species:'horse',p,
+          mode:'browse',seed,heading:null,facing:seed%2?1:-1});
+      }
+    }
+    return out;
+  }
   function animals(){
     const out=[],frac=dayFraction();
     for(const lot of urbanLots()){
       const house=State.structures.find(s=>s.id===lot.houseId);
-      if(!house||houseLevel(house)!==1||underConstruction(house))continue;
+      if(!house||underConstruction(house))continue;
+      const kind=kindForHouse(house);
+      if(kind==='horse'){out.push(...stableHorses(house));continue}
+      if(kind!=='goat'&&kind!=='shepherd'&&kind!=='cow')continue;
       const data=plan(house,lot);
       if(!data.count)continue;
-      const pasture=data.kind==='shepherd'?pastureFor(data):null;
+      const pasture=kind==='shepherd'||kind==='cow'?pastureFor(data):null;
       const phase=pasture?period(frac):'home';
       for(let i=0;i<data.count;i++){
         let behavior={p:data.pen[i],mode:'browse',heading:null};
-        if(data.kind==='shepherd'&&pasture)behavior=movingAnimalPosition(data,pasture,i,frac,phase,lot,house);
+        if((kind==='shepherd'||kind==='cow')&&pasture)behavior=movingAnimalPosition(data,pasture,i,frac,phase,lot,house);
         else behavior=grazingBehavior(data,null,lot,house,i);
         const seed=hash(house.id+'|'+i);
-        out.push({id:house.id+':'+i,species:data.kind==='goat'?'goat':'sheep',p:behavior.p,mode:behavior.mode,
+        out.push({id:house.id+':'+i,species:kind==='goat'?'goat':kind==='cow'?'cow':'sheep',p:behavior.p,mode:behavior.mode,
           seed,heading:behavior.heading,facing:animalFacing(behavior.p,behavior.heading,seed)});
       }
     }
@@ -272,16 +305,29 @@
     if(window.__conquerPerf){window.__conquerPerf.livestock=objects.length;window.__conquerPerf.visibleLivestock=visible}
   }
   function occupancy(){
-    return animals().map(a=>({x:a.p.x,y:a.p.y,r:.13}));
+    return animals().map(a=>({x:a.p.x,y:a.p.y,r:
+      a.species==='cow'||a.species==='horse'?.23:.13}));
   }
   function summary(){
-    const counts={garden:0,goat:0,shepherd:0,goats:0,sheep:0};
+    const counts={garden:0,goat:0,shepherd:0,goats:0,sheep:0,
+      l2Gardens:0,cowLots:0,cows:0,horseLots:0,horseShelters:0,horses:0};
     for(const lot of urbanLots()){
       const house=State.structures.find(s=>s.id===lot.houseId);
-      if(!house||underConstruction(house)||houseLevel(house)!==1)continue;
-      const d=plan(house,lot);counts[d.kind]++;
-      if(d.kind==='goat')counts.goats+=d.count;
-      if(d.kind==='shepherd')counts.sheep+=d.count;
+      if(!house||underConstruction(house))continue;
+      const level=houseLevel(house),kind=kindForHouse(house);
+      if(level===1){
+        counts[kind]++;
+        const data=plan(house,lot);
+        if(kind==='goat')counts.goats+=data.count;
+        if(kind==='shepherd')counts.sheep+=data.count;
+      }else if(level===2){
+        if(kind==='garden')counts.l2Gardens++;
+        if(kind==='cow'){counts.cowLots++;counts.cows+=plan(house,lot).count}
+      }else if(kind==='horse'){
+        counts.horseLots++;
+        counts.horseShelters+=urbanLotOutbuildings(house).filter(p=>p.type==='shed').length;
+        counts.horses+=stableHorses(house).length;
+      }
     }
     return counts;
   }
