@@ -75,9 +75,9 @@
   function selection() {
     const s = typeof selectedStructure === 'function' ? selectedStructure() : null;
     if (!s) return null;
-    let label = s.type;
-    try { label = structureLabel(s); } catch {}
-    return { id: s.id, type: s.type, label };
+    let detail = null;
+    try { detail = StructureCommands.describeStructure(s.id); } catch (err) { console.warn('inspect failed', err); }
+    return { id: s.id, type: s.type, detail };
   }
   function snapshot() {
     return {
@@ -114,6 +114,15 @@
     togglePlan: () => togglePlanView(),
     undo: () => press('#undoBtn'),
     deselect: () => { State.selectedId = null; renderFunctionPanel(); draw(); emit(); },
+    // Structure commands: (command name, structure id, ...args) → see settlement-structure-commands.js.
+    structure: (name, id, ...args) => {
+      const fn = StructureCommands[name];
+      if (typeof fn !== 'function' || name === 'describeStructure') return false;
+      const out = fn(id, ...args);
+      emit();
+      return out;
+    },
+    demolish: id => { deleteStructure(id); emit(); },
     openProfile: () => press('#profileBtn'),
     toggleDev: () => press('#devToggle')
   };

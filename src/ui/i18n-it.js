@@ -57,6 +57,50 @@ export const T = {
     crossing: 'Clic sulle estremità · clic sul punto di partenza o Esc per chiudere la catena',
     delete: 'Clic su un edificio per demolirlo'
   },
+  structures: {
+    towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea',
+    gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
+    house: 'Casa', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento',
+    loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'
+  },
+  inspector: {
+    level: n => 'Livello ' + n,
+    underConstruction: d => 'In costruzione · ' + d.toFixed(1).replace('.', ',') + ' giorni',
+    completed: 'Completata',
+    cost: 'Costo',
+    controls: {
+      tier: 'Impronta', height: 'Livelli', rotation: 'Orientamento', roof: 'Tetto', woodRoof: 'Tetto',
+      base: 'Base in pietra', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato'
+    },
+    words: {
+      battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
+      standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio'
+    },
+    flip: 'Inverti', on: 'Attivo', off: 'Spento',
+    rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
+    facts: {
+      household: 'Capienza', residents: 'Uomini · donne · bambini', rooms: 'Stanze · capacità',
+      variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a'
+    },
+    house: 'Livello sociale', houseDown: '− Riduci', houseUp: '+ Amplia',
+    mastio: 'Mastio', mastioOn: 'Mastio attivo · rimuovi', mastioOff: 'Designa come mastio',
+    archers: (n, max) => 'Arcieri · ' + n + ' / ' + max,
+    archerSlots: (roof, slits) => 'Tetto ' + roof + ' · feritoie ' + slits,
+    roomsTitle: 'Stanze',
+    roomsPending: 'Le stanze si assegnano a costruzione finita.',
+    roomsNone: 'Nessuna stanza a questa impronta o altezza.',
+    room: (floor, size, units) => 'Piano ' + floor + ' · ' + (size === 'large' ? 'grande' : 'normale') + ' · ' + units + '×',
+    roomEmpty: '— Vuota —',
+    integrity: 'Integrità',
+    masonry: 'Muratura', door: 'Porta',
+    workers: 'Lavoratori', owner: 'Proprietà', ownerLord: 'Signore', ownerPrivate: 'Privata (L4)',
+    demolish: 'Demolisci', crossing: 'Fossato e ponte'
+  },
+  functions: {
+    guard: 'Corpo di guardia', barracks: 'Caserma', armory: 'Armeria', storage: 'Magazzino materiali', granary: 'Granaio',
+    kitchen: 'Cucina', stables: 'Scuderie', quarters: 'Alloggi', nobleRoom: 'Stanze nobili', workshop: 'Officina d\'armi',
+    chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione'
+  },
   manageTitle: 'Insediamento',
   defendTitle: 'Difesa',
   noVillage: 'Villaggio non fondato'

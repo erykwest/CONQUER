@@ -158,6 +158,86 @@ function LegacyCard({ title, selector }) {
     <div class="u2-legacy" ref=${ref}></div>
   </aside>`;
 }
+// ---------- selected-structure inspector ----------
+const I = T.inspector;
+function structureTitle(d) {
+  const S = T.structures;
+  if (d.type === 'tower') return d.woodStyle ? S[d.woodStyle] : d.shape === 'round' ? S.towerRound : S.towerSquare;
+  if (d.type === 'gate') return d.wood ? S.woodGate : S.gate;
+  return S[d.type] || d.label;
+}
+const costLine = cost => Object.entries(cost || {}).filter(([, v]) => v > 0).map(([k, v]) => T.resourcesLong[k] + ' ' + fmt(v)).join(' · ');
+function Choice({ ctl, run }) {
+  return html`<div class="u2-row"><span>${I.controls[ctl.key]}</span>
+    <div class="u2-seg u2-seg-sm">${ctl.options.map(o => html`
+      <button type="button" class=${o.active ? 'on' : ''} aria-pressed=${o.active} disabled=${!!o.disabled}
+        onClick=${() => run(ctl.cmd, o.value)}>${o.word ? I.words[o.word] : o.label}</button>`)}</div></div>`;
+}
+function Control({ ctl, run }) {
+  if (ctl.options) return html`<${Choice} ctl=${ctl} run=${run} />`;
+  if (ctl.rotate) return html`<div class="u2-row"><span>${I.controls.rotation} · ${ctl.angle}°</span>
+    <div class="u2-seg u2-seg-sm">
+      <button type="button" aria-label=${I.rotateLeft} onClick=${() => run('rotate', -1)}>−15°</button>
+      <button type="button" aria-label=${I.rotateFlip} onClick=${() => run('rotate', 'flip')}>180°</button>
+      <button type="button" aria-label=${I.rotateRight} onClick=${() => run('rotate', 1)}>+15°</button>
+    </div></div>`;
+  if (ctl.toggle) return html`<div class="u2-row u2-row-inline"><span>${I.controls[ctl.key]}</span>
+    <div class="u2-seg u2-seg-sm"><button type="button" class=${ctl.active ? 'on' : ''} aria-pressed=${!!ctl.active} disabled=${!!ctl.disabled}
+      onClick=${() => run(ctl.cmd)}>${ctl.key === 'side' ? I.flip : ctl.active ? I.on : I.off}</button></div></div>`;
+  return null;
+}
+// Moat/bridge settings still come from the crossings module as markup (phase 4 moves them to data).
+function CrossingPanel({ id }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const s = State.structures.find(x => x.id === id);
+    if (!ref.current || !s) return;
+    ref.current.innerHTML = window.ConquerCrossings?.panel(s) || '';
+    window.ConquerCrossings?.bindPanel(ref.current);
+  });
+  return html`<div class="u2-legacy u2-legacy-inline" ref=${ref}></div>`;
+}
+function Inspector({ snap, cmd }) {
+  const d = snap.selection?.detail;
+  if (!d) return null;
+  const run = (name, ...args) => cmd.structure(name, d.id, ...args);
+  const subtitle = [d.houseLevel ? I.level(d.houseLevel) : null, d.building ? I.underConstruction(d.building.days) : I.completed].filter(Boolean).join(' · ');
+  return html`<aside class="u2-tablet u2-card u2-card-tall u2-inspector" aria-label=${structureTitle(d)}>
+    <header><div><h2>${structureTitle(d)}</h2><div class="u2-sub">${subtitle}</div></div>
+      <button type="button" class="u2-close" aria-label=${T.close} onClick=${cmd.deselect}>×</button></header>
+    ${d.building && html`<div class="u2-progress"><i style=${'width:' + Math.round(d.building.progress * 100) + '%'}></i></div>`}
+    <div class="u2-scroll">
+      ${d.facts.length > 0 && html`<dl class="u2-facts">${d.facts.map(f => html`<dt>${I.facts[f.key]}</dt><dd>${f.value}</dd>`)}</dl>`}
+      ${d.industry && html`<dl class="u2-facts">
+        <dt>${I.workers} · L${d.industry.tier}</dt><dd>${d.industry.workers} / ${d.industry.max}</dd>
+        <dt>${I.owner}</dt><dd>${d.industry.owner === 'lord' ? I.ownerLord : I.ownerPrivate}</dd></dl>`}
+      ${d.house && html`<div class="u2-row"><span>${I.house} · L${d.house.level}</span><div class="u2-seg u2-seg-sm">
+        <button type="button" disabled=${!d.house.canDown} onClick=${() => run('changeHouseLevel', -1)}>${I.houseDown}</button>
+        <button type="button" disabled=${!d.house.canUp} onClick=${() => run('changeHouseLevel', 1)}>${I.houseUp}</button></div></div>`}
+      ${d.controls.length > 0 && html`<div class="u2-rows">${d.controls.map(c => html`<${Control} ctl=${c} run=${run} />`)}</div>`}
+      ${d.mastio && html`<div class="u2-row"><span>${I.mastio}</span><div class="u2-seg u2-seg-sm">
+        <button type="button" class=${d.mastio.active ? 'on' : ''} aria-pressed=${d.mastio.active} disabled=${d.mastio.disabled}
+          onClick=${() => run('toggleMastio')}>${d.mastio.active ? I.mastioOn : I.mastioOff}</button></div></div>`}
+      ${d.archers && html`<div class="u2-row"><span>${I.archers(d.archers.count, d.archers.max)}</span><div class="u2-seg u2-seg-sm">
+        <button type="button" disabled=${d.archers.disabled || d.archers.count === 0} onClick=${() => run('changeArchers', -1)}>−</button>
+        <button type="button" disabled=${d.archers.disabled || d.archers.count >= d.archers.max} onClick=${() => run('changeArchers', 1)}>+</button></div>
+        <small>${I.archerSlots(d.archers.roof, d.archers.slits)}</small></div>`}
+      ${d.rooms && html`<section class="u2-rooms"><h3>${I.roomsTitle}</h3>
+        ${d.rooms.pending ? html`<p>${I.roomsPending}</p>` : d.rooms.slots.length === 0 ? html`<p>${I.roomsNone}</p>` :
+          d.rooms.slots.map(r => html`<label class="u2-room"><span>${I.room(r.index + 1, r.size, r.units)}</span>
+            <select value=${r.value} onChange=${e => run('setRoom', r.index, e.currentTarget.value)}>
+              <option value="">${I.roomEmpty}</option>
+              ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}
+            </select></label>`)}</section>`}
+      ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
+      ${d.integrity && html`<dl class="u2-facts"><dt>${I.integrity} · ${I.masonry}</dt><dd>${d.integrity.core} / ${d.integrity.coreMax}</dd>
+        ${d.integrity.door != null && html`<dt>${I.door}</dt><dd>${d.integrity.door} / ${d.integrity.doorMax}</dd>`}</dl>`}
+    </div>
+    <footer class="u2-actions"><span>${I.cost}: ${costLine(d.cost)}</span>
+      <button type="button" class="u2-danger" onClick=${() => cmd.demolish(d.id)}>${I.demolish}</button></footer>
+  </aside>`;
+}
+
 function TimeBar({ snap, cmd }) {
   const c = snap.clock;
   return html`<div class="u2-tablet u2-timebar">
@@ -200,7 +280,8 @@ function App() {
   return html`
     <${ModeBar} mode=${mode} setMode=${setMode} />
     <${ResourceBar} snap=${snap} cmd=${cmd} />
-    ${mode === 'build' && html`<${ToolRail} snap=${snap} cmd=${cmd} /><${ToolCard} snap=${snap} cmd=${cmd} />`}
+    ${mode === 'build' && html`<${ToolRail} snap=${snap} cmd=${cmd} />${snap.selection?.detail
+      ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${ToolCard} snap=${snap} cmd=${cmd} />`}`}
     ${mode === 'manage' && html`<${LegacyCard} title=${T.manageTitle} selector="#policy" />`}
     ${mode === 'defend' && html`<${LegacyCard} title=${T.defendTitle} selector="#combatControls" />`}
     <${TimeBar} snap=${snap} cmd=${cmd} />
