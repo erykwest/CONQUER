@@ -1,9 +1,9 @@
 'use strict';
 // Quadrilateral parcels inscribed in bounded Euclidean Voronoi cells.
 // Houses are the sites. A rejected four-corner parcel never spawns a house.
-let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null,urbanFenceCache=null;
+let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null,urbanFenceCache=null,urbanFenceNavCache=null;
 function invalidateUrbanGeometry(){
-  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;urbanFenceCache=null;
+  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;urbanFenceCache=null;urbanFenceNavCache=null;
 }
 function urbanArea(poly){
   return poly.reduce((a,p,i)=>a+p.x*poly[(i+1)%poly.length].y-p.y*poly[(i+1)%poly.length].x,0)/2;
@@ -540,7 +540,7 @@ function urbanFenceSegments(lots=null,fields=null){
       const a=points[i],b=points[(i+1)%n],L=dist(a,b);if(L<.05)continue;
       const edge={a,b,material:urbanBoundaryMaterial(a,b),key:urbanBoundaryKey(a,b)};
       if(i===gateEdge){
-        const q=closestPointOnSegment(goal,a,b),t=dist(a,q)/L,half=.48/L;
+        const q=closestPointOnSegment(goal,a,b),t=dist(a,q)/L,half=.9/L;
         const at=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
         edge.gap=[at(clamp(t-half,0,1)),at(clamp(t+half,0,1))];
       }
@@ -613,6 +613,33 @@ function urbanFenceSegments(lots=null,fields=null){
   }
   if(cacheKey)urbanFenceCache={key:cacheKey,edges:out};
   return out;
+}
+// Physical boundaries block paths at precisely the drawn walls, fences and
+// hedges, but not at lot entrances. Spatial indexing avoids scanning every
+// Voronoi cell during every pedestrian and military A* step.
+const URBAN_FENCE_NAV_TILE=3,URBAN_FENCE_NAV_RADIUS=.22;
+function urbanFenceNavigationIndex(){
+  if(urbanFenceNavCache?.revision===urbanRevision)return urbanFenceNavCache.tiles;
+  const tiles=new Map(),tile=URBAN_FENCE_NAV_TILE;
+  for(const edge of urbanFenceSegments()){
+    const pad=URBAN_FENCE_NAV_RADIUS+.01;
+    const x0=Math.floor((Math.min(edge.a.x,edge.b.x)-pad)/tile);
+    const x1=Math.floor((Math.max(edge.a.x,edge.b.x)+pad)/tile);
+    const y0=Math.floor((Math.min(edge.a.y,edge.b.y)-pad)/tile);
+    const y1=Math.floor((Math.max(edge.a.y,edge.b.y)+pad)/tile);
+    for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){
+      const key=x+','+y,items=tiles.get(key);
+      if(items)items.push(edge);else tiles.set(key,[edge]);
+    }
+  }
+  urbanFenceNavCache={revision:urbanRevision,tiles};
+  return tiles;
+}
+function urbanFencePointBlocked(p,clearance=URBAN_FENCE_NAV_RADIUS){
+  const tile=URBAN_FENCE_NAV_TILE,cell=Math.floor(p.x/tile)+','+Math.floor(p.y/tile);
+  const edges=urbanFenceNavigationIndex().get(cell);
+  if(!edges)return false;
+  return edges.some(e=>pointSegmentDistance(p,e.a,e.b)<=clearance+1e-7);
 }
 function drawUrbanFence({a,b}){
   const L=dist(a,b),count=Math.max(1,Math.ceil(L/.65));
