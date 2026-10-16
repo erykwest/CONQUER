@@ -25,6 +25,23 @@ test('house sampling focuses on in-radius road sections, not distant segments',(
  assert.equal(run("State.structures.filter(s=>s.type==='house').length"),1);
  assert.ok(run("dist(State.structures.find(s=>s.type==='house'),{x:100,y:100})<=currentGrowthRadius()"));
 });
+test('village growth runs during background border planning once streets exist',()=>{
+ setup();
+ run("State.structures.push({id:'near',type:'road',auto:true,roadClass:'arterial',routeId:'arterial-0',a:{x:100,y:100},b:{x:100,y:112},width:.62});State.village.nextGrowthDay=.75;State.clock.day=1;foundingRoadJob={village:State.village};invalidateNavigation()");
+ try{
+   assert.ok(run('processVillageGrowth()')>0,'houses may grow before four main routes finish');
+   assert.equal(run("State.structures.filter(s=>s.type==='house').length"),1);
+ }finally{run('foundingRoadJob=null')}
+});
+test('no early growth pulse is discarded before first usable main road',()=>{
+ setup();
+ run("State.village.nextGrowthDay=.75;State.clock.day=3;foundingRoadJob={village:State.village}");
+ try{
+   assert.equal(run('processVillageGrowth()'),0);
+   assert.equal(run('State.village.nextGrowthDay'),.75);
+   assert.equal(run('State.village.growthStep'),0);
+ }finally{run('foundingRoadJob=null')}
+});
 test('smaller viable quadrilateral is used when the maximum-area lot is blocked',()=>{
  setup();
  run("globalThis.qaCell=Array.from({length:6},(_,i)=>({x:100+6*Math.cos(Math.PI+i*Math.PI/3),y:100+6*Math.sin(Math.PI+i*Math.PI/3)}));globalThis.qaHome={id:'candidate',type:'house',x:100,y:100,w:1.5,h:1,angle:0};globalThis.qaQuad=urbanQuad(qaCell,qaHome,q=>q.some(p=>p.x>105.5))");
