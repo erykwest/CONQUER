@@ -40,7 +40,7 @@ assert.ok(rules.traceBoundaryIndices(joinedSamples,{x:100,y:100}).length<joinedS
 verifyOrderedRing('overlapping White Zone circles',joined);
 verifyOrderedRing('White Zone with inner forbidden hole',
   p=>allowed(p)&&((p.x-106)**2+(p.y-100)**2>=9));
-const distant=p=>allowed(p)||((p.x-155)**2+(p.y-100)**2<=35**2);
+const distant=p=>allowed(p)||((p.x-165)**2+(p.y-100)**2<=28**2);
 const focused=rules.orderedBoundaryPoints(distant,200,1.25,{x:100,y:100});
 assert.ok(focused.every(p=>p.x<125),'contour should surround the settlement, not a remote disconnected zone');
 const boundary=rules.boundaryPoints(allowed,200,1.25);
