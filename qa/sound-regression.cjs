@@ -12,6 +12,7 @@ class MockAudioContext{
  constructor(){this.currentTime=0;this.state='suspended';this.destination={}}
  createGain(){return {gain:param(),connect(){},disconnect(){}}}
  createDynamicsCompressor(){return {threshold:{value:0},ratio:{value:0},connect(){}}}
+ createBiquadFilter(){return {type:'',frequency:param(),gain:param(),Q:param(),connect(){}}}
  createBufferSource(){return {connect(){},start(){},stop(){},onended:null}}
  createOscillator(){return {frequency:param(),connect(){},start(){oscillators++},stop(){},onended:null}}
  resume(){this.state='running';return Promise.resolve()}
@@ -37,11 +38,24 @@ async function main(){
  audio.setMaster(.4);assert.equal(audio.state().master,.4);
  audio.setVolume('effects',2);assert.equal(audio.state().volumes.effects,1);
  audio.setMuted('environment',true);assert.equal(audio.state().muted.environment,true);
+ assert.equal(audio.setEq('local','low',6),true);
+ assert.equal(audio.state().eq.local.low,6,'independent low shelf');
+ assert.equal(audio.setEq('local','mid',-14),true);
+ assert.equal(audio.state().eq.local.mid,-12,'EQ safety clamp');
+ assert.equal(audio.setEq('effects','high',3),true);
+ assert.equal(audio.state().eq.effects.high,3,'per-layer EQ');
+ audio.resetEq('local');assert.equal(audio.state().eq.local.low,0,'flat reset');
+ audio.setNormalization(false);assert.equal(audio.state().normalize,false);
+ audio.setNormalization(true);assert.equal(audio.state().normalize,true);
  audio.syncScene({environment:[{id:'rain',volume:.7}],local:[{id:'market',volume:.3}]});
  await Promise.resolve();await Promise.resolve();await Promise.resolve();
  assert.ok(window.ConquerSoundCatalog.rain.url.endsWith('rain-sound-550289%20(1).mp3'));
  const clips=Object.values(window.ConquerSoundCatalog);
  assert.equal(clips.length,14,'only the approved 14 audio assets are referenced');
+ for(const clip of clips){
+  assert.ok(Number.isFinite(clip.lufs)&&Number.isFinite(clip.peakDbtp)&&Number.isFinite(clip.gainDb),'measured loudness metadata: '+clip.id);
+  assert.ok(clip.peakDbtp+clip.gainDb<=-2.99,'calibrated input peak headroom: '+clip.id);
+ }
  for(const entry of clips){
   const assetPath=path.join(root,'src','assets','sounds',entry.file);
   const bytes=fs.readFileSync(assetPath);
@@ -53,8 +67,9 @@ async function main(){
  const captures=[],State={season:'spring',view:{scale:.29},selectedId:null,
   structures:[{id:'m1',type:'market',x:100,y:100}]};
  const world={ConquerSound:{syncScene:o=>captures.push(o),state:()=>({enabled:false})}};
+ const zoomStorage={getItem:()=>null,setItem(){}};
  vm.runInNewContext(file('settlement-sound-bridge.js'),{
-  window:world,State,nightFactor:()=>0,currentWeather:()=>({kind:'clear',rain:0,wind:0}),
+  window:world,State,localStorage:zoomStorage,nightFactor:()=>0,currentWeather:()=>({kind:'clear',rain:0,wind:0}),
   canvas:{clientWidth:500,clientHeight:300},s2w:()=>({x:100,y:100})
  });
  world.ConquerSoundBridge.tick(500,{kind:'clear',rain:0,wind:0});
@@ -64,10 +79,21 @@ async function main(){
  State.view.scale=.2;State.selectedId='m1';
  world.ConquerSoundBridge.tick(1300,{kind:'clear',rain:0,wind:0});
  assert.equal(captures[2].local[0].id,'market','selection bypasses zoom threshold');
+ State.selectedId=null;State.view.scale=.27;
+ world.ConquerSoundBridge.tick(1700,{kind:'clear',rain:0,wind:0});
+ assert.equal(captures[3].local.length,1,'hysteresis keeps playing between 25 and 30%');
+ State.view.scale=.25;
+ world.ConquerSoundBridge.tick(2100,{kind:'clear',rain:0,wind:0});
+ assert.equal(captures[4].local.length,0,'releases on 25%');
+ assert.equal(world.ConquerSoundBridge.setZoom(.4,.35),true);
+ assert.equal(world.ConquerSoundBridge.getZoom().on,.4);
+ assert.equal(world.ConquerSoundBridge.setZoom(.2,.3),false,'invalid threshold ordering');
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert.ok(html.includes('id="devSound"')&&html.includes('data-sound-layer="notifications"'));
  assert.ok(html.includes('settlement-sound-dev.js'));
  assert.ok(html.includes('id="soundPreviewPlay"'));
+ assert.ok(html.includes('id="soundZoomOn"')&&html.includes('id="soundZoomOff"'));
+ assert.ok(html.includes('data-sound-eq="notifications"')&&html.includes('id="soundNormalize"'));
  assert.ok(file('settlement-app-simulation.js').includes('ConquerSoundBridge?.tick'));
  console.log('SOUND regression OK — 4 buses, unlock, mixer, zoom, selection and DEV wiring');
 }

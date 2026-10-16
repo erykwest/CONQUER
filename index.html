@@ -223,6 +223,20 @@
         <div class="sound-channel" data-sound-layer="local"><span>2 Locale</span><input type="range" min="0" max="100" aria-label="Volume locale"><output>75%</output><button type="button" aria-label="Mute locale">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
         <div class="sound-channel" data-sound-layer="effects"><span>3 Effetti</span><input type="range" min="0" max="100" aria-label="Volume effetti"><output>80%</output><button type="button" aria-label="Mute effetti">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
         <div class="sound-channel" data-sound-layer="notifications"><span>4 Notifiche</span><input type="range" min="0" max="100" aria-label="Volume notifiche"><output>85%</output><button type="button" aria-label="Mute notifiche">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
+        <div class="sound-zoom-settings">
+          <span class="dev-label">AUDIO LOCALE · SOGLIE ZOOM</span>
+          <label>Attiva <input id="soundZoomOn" type="range" min="20" max="80" step="1" value="30"><output id="soundZoomOnValue">30%</output></label>
+          <label>Disattiva <input id="soundZoomOff" type="range" min="15" max="75" step="1" value="25"><output id="soundZoomOffValue">25%</output></label>
+          <span class="dev-hint">Isteresi per evitare accensione/spegnimento continuo</span>
+        </div>
+        <div class="sound-equalizers">
+          <span class="dev-label">EQUALIZZATORE PER LAYER</span>
+          <details data-sound-eq="environment"><summary>1 · Ambiente</summary></details>
+          <details data-sound-eq="local"><summary>2 · Locale</summary></details>
+          <details data-sound-eq="effects"><summary>3 · Effetti</summary></details>
+          <details data-sound-eq="notifications"><summary>4 · Notifiche</summary></details>
+        </div>
+        <label class="sound-normalize"><input id="soundNormalize" type="checkbox" checked> Normalizzazione LUFS (picchi protetti)</label>
         <div class="sound-preview">
           <select id="soundPreviewClip" aria-label="File audio da ascoltare">
             <option value="spring">Primavera · bosco</option>
@@ -243,7 +257,7 @@
           <div class="dev-row"><button type="button" id="soundPreviewPlay">▶ Ascolta file</button><button type="button" id="soundPreviewStop">■ Stop preview</button></div>
         </div>
         <span id="soundReadout" class="dev-hint" role="status">Audio in attesa</span>
-        <span class="dev-hint">Locale: zoom ≥30% o selezione. ▶ prova ogni canale senza file MP3.</span>
+        <span class="dev-hint">Attiva 30% · disattiva 25% · selezione sempre attiva. ▶ prova ogni canale senza MP3.</span>
       </div>
       <div class="dev-section">
         <span class="dev-label">CUTAWAY</span>

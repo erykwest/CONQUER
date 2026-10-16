@@ -26,3 +26,9 @@ Metadata: creator names and source IDs appear in the filenames, but exact indivi
 Drive master folder: https://drive.google.com/drive/folders/1QlAyXxEaGVdwxUVhA5ihDswg0B8N0PUv
 
 Mix test: DEV -> SOUND -> Audio ON -> select clip -> Ascolta file; Stop preview stops it. Per-channel ▶ tests remain synthesized. Autoplay is disabled until user interaction.
+
+## Loudness analysis and runtime trims
+
+All 14 assets were examined with FFmpeg `loudnorm` first-pass; per-file LUFS, measured true peak (dBTP), and applied gain (dB) are in `settlement-sound-catalog.js`. No offline processing replaced original media. The normalization policy guarantees a peak ceiling of -3 dBTP at the calibrated *file* gain stage (before extra EQ), with the final compressor also protecting summed output. EQ boost can of course alter peaks; use restrained EQ settings.
+
+Bitrates: rain selected variant ~79 kbps; many local tracks ~160 kbps; 256 kbps originals are preserved pending controlled transcoding with listening comparisons. Further destructive compression is deliberately deferred instead of multiplying codec loss without proof.

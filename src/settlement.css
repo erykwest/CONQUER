@@ -155,3 +155,15 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 #devSound .sound-preview .dev-row{margin-top:5px}
 #devSound .sound-preview button{font-size:10px}
 #devPanel{max-height:calc(100vh - 65px);overflow-y:auto}
+
+/* SOUND: zoom hysteresis and per-layer three-band EQ in DEV */
+#devSound .sound-zoom-settings,#devSound .sound-equalizers{margin-top:9px;padding-top:9px;border-top:1px solid var(--line-strong)}
+#devSound .sound-zoom-settings>label{display:grid;grid-template-columns:60px 1fr 30px;align-items:center;gap:4px;margin-top:5px;font-size:10px}
+#devSound .sound-zoom-settings input,#devSound .sound-eq-band input{width:100%;min-width:0;accent-color:var(--accent)}
+#devSound .sound-zoom-settings output,#devSound .sound-eq-band output{font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
+#devSound .sound-equalizers details{padding:6px 7px;margin-top:5px;background:rgba(0,0,0,.14);border:1px solid var(--line-strong);border-radius:7px}
+#devSound .sound-equalizers summary{cursor:pointer;font-size:11px}
+#devSound .sound-eq-band{display:grid;grid-template-columns:44px 1fr 35px;align-items:center;gap:3px;font-size:10px;margin-top:7px}
+#devPanel #devSound .sound-eq-reset{margin-top:8px;height:24px;padding:2px 7px;font-size:10px}
+#devSound .sound-normalize{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:10px;color:var(--text-2)}
+#devSound .sound-normalize input{accent-color:var(--accent)}

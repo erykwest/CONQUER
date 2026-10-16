@@ -5,7 +5,7 @@
  const storageKey='conquer.sound.mixer.v1';
  const bands=Object.freeze(['low','mid','high']);
  const flat=()=>({low:0,mid:0,high:0});
- const defaults={master:.75,volumes:{environment:.65,local:.75,effects:.8,notifications:.85},
+ const defaults={normalize:true,master:.75,volumes:{environment:.65,local:.75,effects:.8,notifications:.85},
   muted:{environment:false,local:false,effects:false,notifications:false},
   eq:Object.fromEntries(layers.map(layer=>[layer,flat()]))};
  const eqClamp=value=>Math.max(-12,Math.min(12,Number(value)||0));
@@ -13,7 +13,7 @@
  const getPrefs=()=>{
   try {
    const o=JSON.parse(localStorage.getItem(storageKey)||'{}');
-   return {master:clamp(o.master??defaults.master),
+   return {normalize:o.normalize!==false,master:clamp(o.master??defaults.master),
     volumes:Object.fromEntries(layers.map(k=>[k,clamp(o.volumes?.[k]??defaults.volumes[k])])),
     muted:Object.fromEntries(layers.map(k=>[k,!!(o.muted?.[k]??defaults.muted[k])])),
     eq:Object.fromEntries(layers.map(layer=>[layer,
@@ -77,7 +77,7 @@
  }
  function createVoice(id,buf,layer,volume,loop,tone=1){
   const source=context.createBufferSource(),gain=context.createGain();
-  const trim=10**((Number(catalog[id]?.gainDb)||0)/20);
+  const trim=prefs.normalize?10**((Number(catalog[id]?.gainDb)||0)/20):1;
   const filter=layer==='local'?context.createBiquadFilter():null;
   source.buffer=buf;source.loop=loop;gain.gain.value=0;
   if(filter){
@@ -86,7 +86,7 @@
   }else source.connect(gain);
   gain.connect(buses[layer]);source.start();
   smooth(gain.gain,clamp(volume)*trim,.27);
-  const voice={source,gain,filter,trim};setTone(voice,tone);
+  const voice={source,gain,filter,trim,id};setTone(voice,tone);
   return voice;
  }
  function stopPreview(){
@@ -133,6 +133,7 @@
   for(const [key,cue] of desired){
    const voice=active.get(key);
    if(voice){
+    voice.trim=prefs.normalize?10**((Number(catalog[voice.id]?.gainDb)||0)/20):1;
     smooth(voice.gain.gain,cue.volume*voice.trim,.18);
     setTone(voice,cue.tone);
    }else void startLoop(key);
@@ -166,6 +167,14 @@
   if(!layers.includes(layer))return false;
   prefs.muted[layer]=!!value;mix();persist();return true;
  }
+ function setNormalization(value){
+  prefs.normalize=!!value;persist();refresh();
+  if(previewVoice){
+   const trim=prefs.normalize?10**((Number(catalog[previewVoice.id]?.gainDb)||0)/20):1;
+   previewVoice.trim=trim;smooth(previewVoice.gain.gain,.75*trim,.16);
+  }
+  return prefs.normalize;
+ }
  function setEq(layer,band,db){
   if(!layers.includes(layer)||!bands.includes(band))return false;
   prefs.eq[layer][band]=eqClamp(db);mix();persist();return true;
@@ -192,11 +201,11 @@
  }
  function state(){
   return {enabled,available:!!(window.AudioContext||window.webkitAudioContext),layers:[...layers],
-   master:prefs.master,volumes:{...prefs.volumes},muted:{...prefs.muted},
+   normalize:prefs.normalize,master:prefs.master,volumes:{...prefs.volumes},muted:{...prefs.muted},
    eq:Object.fromEntries(layers.map(layer=>[layer,{...prefs.eq[layer]}])),
    active:[...active.keys()],preview:previewVoice?.id||null,missing:[...failed],error};
  }
- window.ConquerSound=Object.freeze({layers,setEnabled,setMaster,setVolume,setMuted,setEq,resetEq,
+ window.ConquerSound=Object.freeze({layers,setEnabled,setMaster,setVolume,setMuted,setEq,resetEq,setNormalization,
   syncScene,play,preview,stopPreview,testTone,notify:()=>testTone('notifications'),state});
  window.addEventListener('pagehide',()=>{stopPreview();for(const key of [...active.keys()])stopLoop(key)});
 })();
