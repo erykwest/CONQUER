@@ -101,6 +101,36 @@ export const T = {
     kitchen: 'Cucina', stables: 'Scuderie', quarters: 'Alloggi', nobleRoom: 'Stanze nobili', workshop: 'Officina d\'armi',
     chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione'
   },
+  manage: {
+    sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', game: 'Partita' },
+    village: 'Villaggio', notFounded: 'Non ancora fondato · costruisci il pozzo',
+    welfare: 'Benessere', capital: 'Capitale privato (L4)', castleGold: 'Oro del castello',
+    population: 'Popolazione', classes: 'L1 · L2 · L3 · L4', wages: 'Salari L1 · L2 · L3',
+    schedule: 'Lavoro lun–ven · mercato il sabato · domenica riposo. Salari mensili, rendiconti annuali.',
+    lastMarket: 'Ultimo mercato', foodSold: 'Cibo venduto', unmet: 'Domanda non soddisfatta',
+    events: 'Registro',
+    policies: { tax: 'Tasse', rations: 'Razioni', levy: 'Leva militare' },
+    policyHelp: {
+      tax: 'Quota sulle vendite private al mercato, incassata dal castello.',
+      rations: 'Non ancora usata dalla simulazione.',
+      levy: 'Non ancora usata dalla simulazione.'
+    },
+    goods: { food: 'Cibo', wood: 'Legno', stone: 'Pietra', metal: 'Metallo', equipment: 'Equipaggiamento', luxury: 'Lusso' },
+    price: 'Prezzo', inMarket: 'Al mercato', inCastle: 'Nel castello', sell: 'Vendi', reserve: 'Riserva',
+    marketHelp: 'Vendi: quota della produzione del signore messa sul mercato. Riserva: scorta che il castello trattiene.',
+    owner: { lord: 'Signore', private: 'Privata' },
+    value: 'Valore', workers: 'Lavoratori', profit: 'Utile',
+    buy: 'Compra per il signore', sellL4: 'Vendi ai privati', abandoned: 'Abbandonata',
+    noActivities: 'Nessuna attività produttiva ancora attiva.',
+    activityTypes: { field: 'Campo', loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', workshop: 'Officina', vineyard: 'Vigneto' },
+    stores: { food: 'Cibo', materials: 'Materiali', equipment: 'Armi', horses: 'Cavalli', gold: 'Oro' },
+    autonomy: 'Autonomia', days: n => n == null ? '∞' : n + ' giorni', dailyNeed: 'Consumo giornaliero',
+    capacity: 'Cucina · caserme · cavalieri', shortfall: d => 'Scorte insufficienti da ' + d.toFixed(1).replace('.', ',') + ' giorni',
+    storeHelp: 'Ogni clic sposta fino a 50 unità dalle risorse del villaggio. La capienza dipende dalle stanze.',
+    store: 'Deposita', seed: 'Seme della mappa', biome: 'Bioma', save: 'Salva sul cloud',
+    saveHelp: 'Il salvataggio locale è automatico. Il cloud si attiva con un account.',
+    biomes: { plains: 'Pianura', hills: 'Colline', valley: 'Vallata', river: 'Fiume', forest: 'Foresta', mountains: 'Montagne', sea: 'Mare' }
+  },
   manageTitle: 'Insediamento',
   defendTitle: 'Difesa',
   noVillage: 'Villaggio non fondato'

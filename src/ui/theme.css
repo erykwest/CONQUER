@@ -105,6 +105,33 @@ body.ui2 #functionPanel{display:none!important}
 #ui2 .u2-danger:hover{background:#3a1d16}
 #ui2 .u2-legacy-inline{padding:0;font-size:13px}
 
+/* Gestisci */
+#ui2 .u2-card-wide{width:380px}
+#ui2 .u2-scroll h3{margin:6px 0 0;font-family:var(--u2-display);font-size:18px;color:var(--u2-gold)}
+#ui2 .u2-note{margin:0;font-size:12px;line-height:1.4;color:var(--u2-muted)}
+#ui2 .u2-warn{margin:0;font-size:13px;color:var(--u2-bad)}
+#ui2 .u2-log{margin:0;padding-left:16px;font-size:12px;color:var(--u2-soft)}
+#ui2 .u2-slider{display:flex;flex-direction:column;gap:6px}
+#ui2 .u2-slider>span{display:flex;justify-content:space-between;font-size:13px;color:var(--u2-muted);text-transform:uppercase;letter-spacing:.06em}
+#ui2 .u2-slider b{color:var(--u2-strong);font-variant-numeric:tabular-nums}
+#ui2 .u2-slider input{width:100%;accent-color:var(--u2-gold-fill)}
+#ui2 .u2-slider small{font-size:12px;color:var(--u2-muted)}
+#ui2 .u2-good{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid var(--u2-line)}
+#ui2 .u2-good-head{display:flex;flex-direction:column;gap:2px}
+#ui2 .u2-good-head b{color:var(--u2-strong)}
+#ui2 .u2-good-head span{font-size:12px;color:var(--u2-muted);font-variant-numeric:tabular-nums}
+#ui2 .u2-inline-field{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--u2-muted);text-transform:uppercase;letter-spacing:.06em}
+#ui2 .u2-inline-field input,#ui2 .u2-room select{font:inherit}
+#ui2 .u2-inline-field input{width:96px;height:30px;padding:0 8px;border:1px solid var(--u2-line);border-radius:6px;background:var(--u2-sunken);color:var(--u2-text);text-align:right;font-variant-numeric:tabular-nums}
+#ui2 .u2-list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+#ui2 .u2-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:7px;background:var(--u2-chip)}
+#ui2 .u2-list li div{display:flex;flex-direction:column;min-width:0}
+#ui2 .u2-list li span{font-size:12px;color:var(--u2-muted)}
+#ui2 .u2-small-btn{flex:0 0 auto;height:30px;padding:0 10px;border:1px solid var(--u2-line-gold);border-radius:6px;background:#3b2a1c;color:var(--u2-gold);font-size:12px;font-weight:700}
+#ui2 .u2-primary{height:40px;border:1px solid var(--u2-gold-fill);border-radius:6px;background:#b5843a;color:var(--u2-ink);font-weight:700}
+#ui2 .u2-seg.u2-wrap{flex-wrap:wrap}
+#ui2 .u2-seg.u2-wrap button{flex:1 1 30%}
+
 /* Narrow windows: resources wrap onto two rows instead of losing their labels. */
 @media(max-width:1180px){
   #ui2 .u2-resbar{max-width:calc(100% - 440px)}

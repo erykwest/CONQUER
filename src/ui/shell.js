@@ -29,7 +29,13 @@ const ICON = {
   rotateRight: 'M20 12a8 8 0 1 1-3-6.2M20 4v5h-5',
   plan: 'M4 4h16v16H4zM4 12h16M12 4v16',
   shield: 'M6 3h12v8c0 5-6 10-6 10S6 16 6 11z',
-  gear: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1'
+  gear: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
+  overview: 'M5 3h14v18H5zM9 8h6M9 12h6M9 16h4',
+  policies: 'M12 3v18M6 21h12M5 7h14M5 7l-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z',
+  market: 'M4 10l2-6h12l2 6M4 10h16M6 10v10h12V10M10 20v-5h4v5',
+  activities: 'M14 6l4 4M4 20l9-9M12 4l8 8-3 3-8-8z',
+  castle: 'M4 21V9h3V5h3v4h4V5h3v4h3v12M4 14h16M10 21v-4h4v4',
+  game: 'M5 3h12l4 4v14H3V3h2M7 3v6h9V3M7 21v-7h10v7'
 };
 const Icon = ({ name, size = 20 }) => html`
   <svg class="u2-icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -238,6 +244,93 @@ function Inspector({ snap, cmd }) {
   </aside>`;
 }
 
+// ---------- Gestisci ----------
+const M = T.manage;
+const MANAGE_SECTIONS = ['overview', 'policies', 'market', 'activities', 'castle', 'game'];
+const num = (n, digits = 1) => Number(n || 0).toLocaleString('it-IT', { maximumFractionDigits: digits });
+function ManageRail({ section, setSection }) {
+  return html`<nav class="u2-tablet u2-rail" aria-label=${T.modes.manage}>
+    ${MANAGE_SECTIONS.map(id => html`
+      <button type="button" class=${'u2-tool' + (section === id ? ' on' : '')} aria-label=${M.sections[id]}
+        aria-pressed=${section === id} data-tip=${M.sections[id]} onClick=${() => setSection(id)}><${Icon} name=${id} size=${22} /></button>`)}
+  </nav>`;
+}
+function Facts({ rows }) {
+  return html`<dl class="u2-facts">${rows.filter(Boolean).map(([k, v]) => html`<dt>${k}</dt><dd>${v}</dd>`)}</dl>`;
+}
+function Overview({ game }) {
+  const v = game.read.village(), e = game.read.economy();
+  const pop = e ? Object.values(e.population) : [];
+  const trade = e?.lastTrade, unmet = trade ? Object.values(trade.unmet || {}).reduce((a, b) => a + b, 0) : 0;
+  return html`
+    <${Facts} rows=${[[M.village, v.name || M.notFounded]]} />
+    ${e && html`<${Facts} rows=${[
+      [M.population + ' (' + M.classes + ')', pop.join(' · ') + ' = ' + pop.reduce((a, b) => a + b, 0)],
+      [M.welfare, num(e.welfare) + ' / 100'],
+      [M.castleGold, num(e.castleGold)],
+      [M.capital, num(e.capital)],
+      [M.wages, [e.wage.L1, e.wage.L2, e.wage.L3].map(w => num(w, 2)).join(' · ')]]} />
+      <p class="u2-note">${M.schedule}</p>`}
+    ${trade && html`<h3>${M.lastMarket}</h3><${Facts} rows=${[
+      [M.foodSold, num(trade.domestic?.food)], [M.unmet, num(unmet)]]} />`}
+    ${e?.events?.length > 0 && html`<h3>${M.events}</h3><ul class="u2-log">${e.events.map(x => html`<li>${x.label}</li>`)}</ul>`}`;
+}
+function Policies({ game }) {
+  const p = game.read.policies();
+  return html`${['tax', 'rations', 'levy'].map(k => html`
+    <label class="u2-slider"><span>${M.policies[k]}<b>${p[k]}%</b></span>
+      <input type="range" min="0" max="100" value=${p[k]} onInput=${e => { game.commands.setPolicy(k, e.currentTarget.value); game.emit(); }} />
+      <small>${M.policyHelp[k]}</small></label>`)}`;
+}
+function Market({ game }) {
+  const e = game.read.economy();
+  if (!e) return null;
+  return html`<p class="u2-note">${M.marketHelp}</p>
+    ${e.goods.map(g => html`<div class="u2-good">
+      <div class="u2-good-head"><b>${M.goods[g.id]}</b><span>${M.price} ${num(g.price)} · ${M.inMarket} ${num(g.market)} · ${M.inCastle} ${num(g.castle)}</span></div>
+      <div class="u2-row"><span>${M.sell}</span><div class="u2-seg u2-seg-sm">${[0, 25, 50, 75, 100].map(n => html`
+        <button type="button" class=${g.share === n ? 'on' : ''} aria-pressed=${g.share === n}
+          onClick=${() => game.commands.setSaleShare(g.id, n)}>${n}%</button>`)}</div></div>
+      <label class="u2-inline-field"><span>${M.reserve}</span>
+        <input type="number" min="0" step="10" value=${g.reserve} onChange=${ev => game.commands.setReserve(g.id, ev.currentTarget.value)} /></label>
+    </div>`)}`;
+}
+function Activities({ game }) {
+  const e = game.read.economy();
+  if (!e || !e.activities.length) return html`<p class="u2-note">${M.noActivities}</p>`;
+  return html`<ul class="u2-list">${e.activities.map(a => html`<li>
+    <div><b>${M.activityTypes[a.type] || a.type}</b><span>${M.owner[a.owner]} · ${M.workers} ${a.workers} · ${M.value} ${num(a.value, 0)}${a.abandoned ? ' · ' + M.abandoned : ''}</span></div>
+    <button type="button" class="u2-small-btn" onClick=${() => game.commands.transferActivity(a.id, a.owner === 'lord' ? 'private' : 'lord')}>
+      ${a.owner === 'lord' ? M.sellL4 : M.buy}</button></li>`)}</ul>`;
+}
+function CastleStores({ game }) {
+  const l = game.read.logistics();
+  if (!l) return null;
+  return html`
+    <${Facts} rows=${[
+      ...l.stores.map(s => [M.stores[s.id], num(s.stock, 0) + ' / ' + num(s.cap, 0)]),
+      [M.autonomy, M.days(l.autonomy)], [M.dailyNeed, num(l.daily)],
+      [M.capacity, l.meals + ' · ' + l.soldiers + ' · ' + l.knights]]} />
+    ${l.shortfall > 0 && html`<p class="u2-warn">${M.shortfall(l.shortfall)}</p>`}
+    <div class="u2-row"><span>${M.store}</span><div class="u2-seg u2-seg-sm u2-wrap">${l.transfers.map(t => html`
+      <button type="button" disabled=${!t.enabled} onClick=${() => game.commands.storeInCastle(t.id)}>+${(M.goods[t.id] || M.stores[t.id] || t.id)}</button>`)}</div></div>
+    <p class="u2-note">${M.storeHelp}</p>`;
+}
+function GameInfo({ game }) {
+  const v = game.read.village();
+  return html`<${Facts} rows=${[[M.village, v.name || M.notFounded], [M.seed, v.seed], [M.biome, M.biomes[v.biome] || v.biome]]} />
+    <button type="button" class="u2-primary" onClick=${game.commands.saveCloud}>${M.save}</button>
+    <p class="u2-note">${M.saveHelp}</p>`;
+}
+const MANAGE_VIEWS = { overview: Overview, policies: Policies, market: Market, activities: Activities, castle: CastleStores, game: GameInfo };
+function ManageCard({ section, game }) {
+  const View = MANAGE_VIEWS[section];
+  return html`<aside class="u2-tablet u2-card u2-card-tall u2-card-wide" aria-label=${M.sections[section]}>
+    <header><h2>${M.sections[section]}</h2></header>
+    <div class="u2-scroll">${View && html`<${View} game=${game} />`}</div>
+  </aside>`;
+}
+
 function TimeBar({ snap, cmd }) {
   const c = snap.clock;
   return html`<div class="u2-tablet u2-timebar">
@@ -264,6 +357,8 @@ function App() {
   const [snap, setSnap] = useState(game.snapshot());
   const [mode, setModeState] = useState(['build', 'manage', 'defend'].includes(recall(MODE_KEY)) ? recall(MODE_KEY) : 'build');
   const setMode = m => { setModeState(m); remember(MODE_KEY, m); if (m !== 'build') game.commands.press('[data-tool="select"]'); };
+  const [section, setSectionState] = useState(MANAGE_SECTIONS.includes(recall('conquer.ui.manage')) ? recall('conquer.ui.manage') : 'overview');
+  const setSection = s => { setSectionState(s); remember('conquer.ui.manage', s); };
   useEffect(() => game.subscribe(setSnap), []);
   useEffect(() => {
     document.body.dataset.u2Mode = mode;
@@ -282,7 +377,7 @@ function App() {
     <${ResourceBar} snap=${snap} cmd=${cmd} />
     ${mode === 'build' && html`<${ToolRail} snap=${snap} cmd=${cmd} />${snap.selection?.detail
       ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${ToolCard} snap=${snap} cmd=${cmd} />`}`}
-    ${mode === 'manage' && html`<${LegacyCard} title=${T.manageTitle} selector="#policy" />`}
+    ${mode === 'manage' && html`<${ManageRail} section=${section} setSection=${setSection} /><${ManageCard} section=${section} game=${game} />`}
     ${mode === 'defend' && html`<${LegacyCard} title=${T.defendTitle} selector="#combatControls" />`}
     <${TimeBar} snap=${snap} cmd=${cmd} />
     <${Toast} snap=${snap} />`;

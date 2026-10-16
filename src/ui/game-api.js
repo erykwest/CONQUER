@@ -124,8 +124,84 @@
     },
     demolish: id => { deleteStructure(id); emit(); },
     openProfile: () => press('#profileBtn'),
-    toggleDev: () => press('#devToggle')
+    toggleDev: () => press('#devToggle'),
+
+    // ---- Gestisci ----
+    setPolicy: (key, value) => {
+      if (!['tax', 'rations', 'levy'].includes(key)) return false;
+      State.policies[key] = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+      const slider = document.getElementById(key);
+      if (slider) slider.value = State.policies[key];
+      markDirty(false, false, true);
+      return true;
+    },
+    setSaleShare: (good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },
+    setReserve: (good, qty) => { const ok = window.ConquerEconomy?.setTarget(good, qty); scheduleLocalSave(200); emit(); return ok; },
+    transferActivity: (id, owner) => {
+      const ok = window.ConquerEconomy?.transfer(id, owner);
+      if (!ok) status('Insufficient economic capital for enterprise transfer');
+      else scheduleLocalSave(200);
+      emit();
+      return ok;
+    },
+    storeInCastle: good => {
+      const out = window.ConquerSiege?.transfer(good);
+      if (!out) return false;
+      status(out.accepted ? 'Stored ' + out.accepted + ' ' + good : out.reason);
+      emit();
+      return !!out.accepted;
+    },
+    saveCloud: () => press('#saveBtn')
   };
 
-  window.ConquerGame = { snapshot, subscribe, commands, emit };
+  // ---- read models for the panels that are not part of every snapshot ----
+  const ECON_GOODS = ['food', 'wood', 'stone', 'metal', 'equipment', 'luxury'];
+  const read = {
+    village() {
+      return {
+        name: State.village?.name || null, founded: !!State.village?.founded, seed: State.seed,
+        biome: State.biome, day: State.clock.day
+      };
+    },
+    policies() { return { tax: State.policies.tax, rations: State.policies.rations, levy: State.policies.levy }; },
+    economy() {
+      const econ = window.ConquerEconomy;
+      if (!econ) return null;
+      const s = econ.snapshot(), e = econ.state(), staff = econ.staffing?.() || {};
+      const activities = Object.entries(e.activities)
+        .filter(([id]) => State.structures.some(x => x.id === id))
+        .map(([id, a]) => ({ id, type: a.type, owner: a.owner, value: econ.assetValue(a), workers: staff[id] || 0,
+          profit: a.profit ?? null, abandoned: !!a.abandoned }));
+      return {
+        welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
+        goods: ECON_GOODS.map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],
+          share: e.saleShare[g], reserve: e.target[g] })),
+        activities, events: (e.events || []).slice(0, 8), lastTrade: e.lastTrade || null, weekday: s.weekday
+      };
+    },
+    logistics() {
+      const siege = window.ConquerSiege;
+      if (!siege) return null;
+      const cap = siege.capacity(), x = siege.state(), daily = siege.dailyFoodDemand();
+      const material = siege.used('materials');
+      const MATERIALS = ['wood', 'stone', 'metal'];
+      return {
+        stores: [
+          { id: 'food', stock: x.stock.food, cap: cap.food },
+          { id: 'materials', stock: material, cap: cap.materials },
+          { id: 'equipment', stock: x.stock.equipment, cap: cap.equipment },
+          { id: 'horses', stock: x.stock.horses, cap: cap.horses },
+          { id: 'gold', stock: x.stock.gold, cap: cap.gold }
+        ],
+        autonomy: daily > 0 ? Math.floor(x.stock.food / daily) : null, daily,
+        meals: cap.meals, soldiers: cap.soldiers, knights: cap.knights, shortfall: x.starvationDays || 0,
+        transfers: ['food', 'wood', 'stone', 'metal', 'equipment', 'gold', 'horses'].map(key => {
+          const group = MATERIALS.includes(key) ? 'materials' : key;
+          return { id: key, enabled: (cap[group] || 0) > siege.used(group) && (State.resources[key] || 0) > 0 };
+        })
+      };
+    }
+  };
+
+  window.ConquerGame = { snapshot, subscribe, commands, read, emit };
 })();
