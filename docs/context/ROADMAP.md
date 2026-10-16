@@ -27,10 +27,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 | ID | Milestone | Esito osservabile richiesto | Dipende da | Stato al 16/10 |
 |---|---|---|---|---|
-| M0 | **Coerenza dei contratti** | Un solo calendario produttivo, regole terreno/accessibilità, QA su salvataggio e seed | base attuale | **IN CORSO / da auditare** |
-| M1 | **Economia locale affidabile** | Popolazione L1–L4, 4 poli, raccolti, stock, mercato e lavoratori coerenti e persistenti | M0 | **PARZIALE nel codice** |
-| M2 | **Castello strategico** | Built Sections e slot con capienze; guarnigione, armeria, materiali, percorsi e accessi collegati | M1 | **PROGETTAZIONE + prototipi** |
-| M3 | **Difesa e assedio** | Materiali/danni, palizzate/fossati/ponti/levatoi, IA d'assalto, incendio, Mastio, blocco e resa | M2 | **BACKLOG** |
+| M0 | **Coerenza dei contratti** | Un solo calendario produttivo, regole terreno/accessibilità, QA su salvataggio e seed | base attuale | **IN CORSO**: calendario a 48 s/giorno e refactor fusi, ma ledger/campi/risorse ancora da unificare |
+| M1 | **Economia locale affidabile** | Popolazione L1–L4, 4 poli, raccolti, stock, mercato e lavoratori coerenti e persistenti | M0 | **PARZIALE SU MAIN**: motore/industrie nella PR #22, integrazione con costruzioni e agricoltura non chiusa |
+| M2 | **Castello strategico** | Built Sections e slot con capienze; guarnigione, armeria, materiali, percorsi e accessi collegati | M1 | **CODICE PARZIALE SU MAIN**: Mastio, logistica P0, presidio, fossati/ponti/levatoi con PR #21; manca validazione capienze/ledger/difesa end-to-end |
+| M3 | **Difesa e assedio** | Materiali/danni, palizzate/fossati/ponti/levatoi, IA d'assalto, incendio, Mastio, blocco e resa | M2 | **BASE PARZIALE**: fortificazioni e logistica iniziale integrate; assedio completo, blocco e resa non dimostrati |
 | M4 | **Sistema feudale** | Feudi specializzati, tributi e carovane fisiche intercettabili, combattimento collegato | M1 + Combat stabile | **VISIONE/BACKLOG** |
 | M5 | **Prodotto distribuibile** | QA e UX ripetibili, documentazione, profilo audio/visivo, build accessibile, feedback esterno | M0–M3 (ambito MVP da decidere) | **DIREZIONE** |
 
@@ -48,9 +48,9 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 Le conversazioni [VISUAL/AUDIO](sources/VISUAL-AUDIO-2026-10-14.md) e [MINIMAP](sources/MINIMAP-2026-10-15.md) aggiungono un'opportunità **parallela e vincolata**: verificare che economia e combattimento già simulati siano leggibili con animali, cittadini, carri, araldica, minimappa e audio, senza duplicare la simulazione.
 
-1. **Prima consolidare la base:** completare QA browser della **PR #44**; non chiamare «rilasciato» il LOD di scena finché non integrato in `main`.
-2. **Misurare prima di rifare:** benchmark cache bitmap e WebGPU (frame time, RAM/VRAM e asset bytes); esistono già `settlement-assets.js` e composizione WebGPU.
-3. **Esperimento architetturale limitato:** confronto A sprite prerenderizzati vs B modello 3D, partendo da torre e mura con cutaway, progress cantiere e danni; solo dopo il test decidere la pipeline definitiva.
+1. **Consolidare ciò che è già integrato:** la **PR #44 è su `main` dal 16/10**; completare QA reale su minimappa/LOD (ISO/plan, rotazioni, fog, mobile, prestazioni) invece di ripetere l'integrazione.
+2. **Misurare prima di sostituire:** confrontare renderer WebGL2 predefinito, Canvas fallback e cache (frame time, RAM/VRAM, asset bytes) in scenari ripetibili. Un nuovo renderer 3D è **già su `main`** dal 15/10, non un desiderata.
+3. **Completare l'esperimento architetturale:** renderer WebGL2 di scena/castello e fallback Canvas già implementati ([db6857c](https://github.com/erykwest/CONQUER/commit/db6857c2af21b4010077107876f59cc300374697), [cc6830a](https://github.com/erykwest/CONQUER/commit/cc6830ac2b61d6a0769a4e1951a1f19fa0db11a)); testare parità funzionale di cutaway, cantiere e danni prima di scegliere tra questa soluzione e prerender ibridi.
 4. **Animazioni lavoro minimali:** strumenti/manine e varianti stagionali guidati dagli stati reali; non introdurre nuove meccaniche per giustificarle.
 5. **Audio graduale:** SFX contestuali/streaming e brani Suno solo con inventario tracce/licenze controllato, non come blocco di M1.
 
