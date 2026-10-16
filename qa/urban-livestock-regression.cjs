@@ -20,6 +20,12 @@ assert.match(urban,/type:'shed'.*roofH:1\.02/s);
 assert.match(fields,/tier===1\?'shepherd':'cow'/);
 assert.match(residents,/\['shepherd','cow'\]/);
 let fraction=.32;
+const pastureJobs=[];
+const runPastureJobs=(max=3000)=>{
+  let executed=0;
+  while(pastureJobs.length&&executed++<max)pastureJobs.shift()();
+  assert.ok(executed<max,'pasture planning completes without unbounded tasks');
+};
 const rendered=[],houses=[],lots=[];
 function hash(s){
   let h=2166136261;
@@ -49,6 +55,8 @@ const sandbox={window,State,urbanRevision:1,WORLD:200,peasantHash:hash,
   residentIdlePoint:p=>p,visualCycleFrac:()=>fraction,visualCycleDay:()=>90+fraction,
   viewDepthPoint:p=>p.y,worldPointVisible:()=>true,w2s:p=>({x:p.x-p.y,y:p.x+p.y}),
   withUrbanFigureOcclusion:(p,z,draw)=>draw(),ctx:{},
+  setTimeout:callback=>{pastureJobs.push(callback);return pastureJobs.length},
+  clearTimeout:()=>{},
   urbanLotOutbuildings:house=>{
     const level=house.level||1;
     if(level<3&&!(level===2&&window.ConquerLivestock?.lotKindForHouse(house)==='cow'))return[];
@@ -77,6 +85,12 @@ for(const [i,kind] of ['garden','goat','shepherd'].entries()){
 assert.deepEqual({...animals.summary()},
   {garden:1,goat:1,shepherd:1,goats:8,sheep:16,
     l2Gardens:0,cowLots:0,cows:0,horseLots:0,horseShelters:0,horses:0});
+// Pasture search is scheduled, not run during the frame that detects a herd.
+const firstFrame=animals.animals();
+assert.ok(pastureJobs.length>0,'pasture work deferred from rendering');
+assert.ok(firstFrame.filter(a=>a.species==='sheep').every(a=>sandbox.urbanContains(lots[2].points,a.p)),
+  'sheep remain safely at home until an accessible pasture is found');
+runPastureJobs();
 const daylight=animals.animals();
 assert.equal(daylight.filter(a=>a.species==='goat').length,8);
 assert.equal(daylight.filter(a=>a.species==='sheep').length,16);
@@ -124,6 +138,8 @@ for(const level of [3,4]){
   houses.push(house);lots.push({houseId:house.id,points:rectangle(house.x,house.y)});
 }
 fraction=.32;
+animals.animals();
+runPastureJobs();
 const dayHerd=animals.animals();
 const cowHerd=dayHerd.filter(a=>a.species==='cow');
 const stableHerd=dayHerd.filter(a=>a.species==='horse');
@@ -153,4 +169,11 @@ assert.ok(animals.animals().filter(a=>a.species==='cow').every(a=>
   sandbox.urbanContains(lots.find(l=>l.houseId===l2.cow).points,a.p)),
   'cows return to their L2 lot at night');
 assert.equal(animals.shepherdPosition(houses.find(h=>h.id===l2.cow)),null);
+// Changing house levels invalidates both resolved and pending pasture routes.
+const prior=lots.find(l=>l.houseId===l2.cow),candidate=houses.find(h=>h.id===l2.cow);
+candidate.level=1; sandbox.urbanRevision++;
+animals.animals();
+assert.ok(pastureJobs.length>0,'herd route refresh remains deferred after a density upgrade');
+runPastureJobs();
+assert.ok(animals.animals().every(a=>Number.isFinite(a.p.x)&&Number.isFinite(a.p.y)));
 console.log('Urban livestock integration regression PASS');

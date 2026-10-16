@@ -5,7 +5,7 @@
 (function(){
   const DEPART=.085,PASTURE_AT=.215,RETURN=.515,HOME_AT=.655;
   const GOLDEN_ANGLE=Math.PI*(3-Math.sqrt(5));
-  const planCache=new Map(),routeCache=new Map();
+  const planCache=new Map(),routeCache=new Map(),pendingPastures=new Map();
   let cacheSignature='';
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   const hash=s=>peasantHash(String(s))>>>0;
@@ -34,6 +34,10 @@
       (last?last.x+','+last.y+','+last.r+','+last.mode:'');
     if(cacheSignature!==signature){
       cacheSignature=signature;planCache.clear();routeCache.clear();
+      // Scheduled searches against an old Voronoi/navigation revision must
+      // never publish a stale route after house upgrades or construction.
+      for(const job of pendingPastures.values())if(job.timer!=null&&typeof clearTimeout==='function')clearTimeout(job.timer);
+      pendingPastures.clear();
     }
   }
   function isFreePenPoint(p,lot,house,accepted,clearance){
@@ -112,35 +116,65 @@
     };
     let path=villagerPathBetween(house,start,goal,'shepherd');
     if(routeValid(path))return path;
-    if(dist(start,goal)<=32){
-      path=findPeasantPath(start,goal,house.id,6,allowed);
-      if(routeValid(path))return path;
-    }
+    // Avoid a whole-map grid A* while drawing livestock. villagerPathBetween
+    // already tries the road graph, short local connectors and a direct ray.
+    // Retrying up to 32U for every candidate previously blocked the UI for
+    // multiple seconds after an L1 -> L2 upgrade invalidated the route cache.
     return null;
+  }
+  // Spread pasture discovery over browser tasks. Expensive geometry and
+  // navigation must never execute synchronously in draw() after upgrades.
+  const PASTURE_FACTORS=[1,.75,.5],PASTURE_ANGLES=20;
+  function schedulePastureSearch(job){
+    if(job.timer!=null)return;
+    job.timer=setTimeout(()=>{
+      job.timer=null;
+      if(job.signature!==cacheSignature||pendingPastures.get(job.house.id)!==job)return;
+      advancePastureSearch(job);
+    },0);
+  }
+  function advancePastureSearch(job){
+    // Limit each browser task by both candidate count and wall-clock time.
+    // The outer loop is resumable and scans exactly the same deterministic
+    // candidates as the former synchronous search, without blocking frames.
+    const now=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+    const started=now();
+    for(let attempts=0;attempts<4&&now()-started<5;attempts++){
+      if(job.factor>=PASTURE_FACTORS.length){
+        routeCache.set(job.house.id,null);
+        pendingPastures.delete(job.house.id);
+        return;
+      }
+      const reach=job.radius*PASTURE_FACTORS[job.factor];
+      const angle=2*Math.PI*(job.angle/PASTURE_ANGLES+rand(job.seed)*.997);
+      const candidate={x:job.home.x+job.ring*Math.cos(angle),
+        y:job.home.y+job.ring*Math.sin(angle)};
+      job.angle++;
+      if(job.angle>=PASTURE_ANGLES){
+        job.angle=0;job.ring+=2.5;
+        if(job.ring>42){job.ring=5;job.factor++}
+      }
+      if(!whitePatch(candidate,reach))continue;
+      const path=travelRoute(job.house,candidate);
+      if(!path)continue;
+      routeCache.set(job.house.id,{center:candidate,path,radius:reach});
+      pendingPastures.delete(job.house.id);
+      return;
+    }
+    schedulePastureSearch(job);
   }
   function pastureFor(plan){
     healthyPlanCache();
     if(routeCache.has(plan.house.id))return routeCache.get(plan.house.id);
-    const {house,count}=plan,home=houseDoorInfo(house).outside,seed=hash(house.id+'|pasture');
-    const radius=Math.max(1.0,Math.sqrt(count/Math.PI)*.75);
-    let selected=null;
-    // Seek a contiguous patch of WHITE territory outside the urban yellow zone.
-    // The starting angle is seeded, so adjacent households spread naturally.
-    for(const factor of [1,.75,.5]){
-      if(selected)break;
-      const reach=radius*factor;
-      for(let ring=5;ring<=42&&!selected;ring+=2.5){
-        for(let a=0;a<20&&!selected;a++){
-          const angle=2*Math.PI*(a/20+rand(seed)*.997);
-          const candidate={x:home.x+ring*Math.cos(angle),y:home.y+ring*Math.sin(angle)};
-          if(!whitePatch(candidate,reach))continue;
-          const route=travelRoute(house,candidate);
-          if(route)selected={center:candidate,path:route,radius:reach};
-        }
-      }
+    if(!pendingPastures.has(plan.house.id)){
+      const {house,count}=plan;
+      const job={house,home:houseDoorInfo(house).outside,
+        seed:hash(house.id+'|pasture'),radius:Math.max(1.0,Math.sqrt(count/Math.PI)*.75),
+        factor:0,ring:5,angle:0,timer:null,signature:cacheSignature};
+      pendingPastures.set(house.id,job);
+      schedulePastureSearch(job);
     }
-    routeCache.set(house.id,selected);
-    return selected;
+    return null;
   }
   function period(frac){
     return frac<DEPART?'home':frac<PASTURE_AT?'out':
