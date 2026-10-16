@@ -451,7 +451,7 @@ function draw(){
   drawDayNightOverlay();
   // WebGL2 lights share the real scene depth and are composited after colour grading.
   // Canvas keeps its original complete night path as the fallback.
-  if(world3d)window.ConquerWorld3D.drawNightLights3D(r);
+  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);
   else drawNightLights();
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
