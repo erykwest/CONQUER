@@ -408,6 +408,8 @@
     const houseGeometry=new Map(urbanHouseGeometry().map(e=>[e.house.id,e]));
     for(const s of State.structures){
       if(underConstruction(s))continue;
+      // Open (cutaway) structures draw their doors, slits and windows inside the cutaway mesh.
+      if(structureCutaway(s))continue;
       const center=structureCenter(s);
       if(s.type==='tower'&&!isWoodTower(s)){
         const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
@@ -508,6 +510,120 @@
       for(let i=1;i<hull.length-1;i++)for(const k of [0,i,i+1])v.push(hull[k].x,hull[k].y,zs[k]);
     }
     return{data:new Float32Array(v),alpha:sun.alpha*.82};
+  }
+
+  // ---------- cutaway interiors (towers, gates, built sections opened by the player) ----------
+  // The same shell as the 2.5D cutaway (far walls, cut jambs, crest ring, roof deck, floors) plus
+  // the furniture library, as one depth-tested mesh: lower-floor pieces can no longer paint over
+  // the floor above, and figures (billboards) sort with everything. Far-wall choice follows the
+  // camera quarter-turn, so there is one mesh per rotation. Doors, slits and windows of the
+  // standing walls are seen from inside; those of the removed walls are gone with them.
+  function shadeHex(hex,k){
+    const c=rgb(hex),lum=(c[0]+c[1]+c[2])/3,kk=lum>.7?1-(1-k)*.55:k;
+    return'#'+c.map(x=>Math.round(clamp(x*kk,0,1)*255).toString(16).padStart(2,'0')).join('');
+  }
+  // Convex polygon clip (Sutherland–Hodgman) of a ground polygon against a convex clip polygon.
+  function clipConvex(subject,clip){
+    let out=subject;const area=clip.reduce((a,p,i)=>{const q=clip[(i+1)%clip.length];return a+p.x*q.y-q.x*p.y},0),sgn=area>=0?1:-1;
+    for(let i=0;i<clip.length&&out.length;i++){
+      const a=clip[i],b=clip[(i+1)%clip.length],inside=p=>sgn*((b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x))>=-1e-9,src=out;out=[];
+      for(let k=0;k<src.length;k++){
+        const p=src[k],q=src[(k+1)%src.length],pi=inside(p),qi=inside(q);
+        if(pi)out.push(p);
+        if(pi!==qi){const d1=(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x),d2=(b.x-a.x)*(q.y-a.y)-(b.y-a.y)*(q.x-a.x),t=d1/(d1-d2);out.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}
+      }
+    }
+    return out;
+  }
+  function openingQuad(m,at,dir,z0,z1,w,hex){
+    const t={x:-dir.y,y:dir.x},a={x:at.x-t.x*w/2,y:at.y-t.y*w/2},b={x:at.x+t.x*w/2,y:at.y+t.y*w/2};
+    m.face([{...a,z:z0},{...b,z:z0},{...b,z:z1},{...a,z:z1}],hex);
+  }
+  function buildCutaway(){
+    const m=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    const W3=window.ConquerWagons3D,FU=window.ConquerCutawayFurniture;
+    for(const s of State.structures){
+      if(!structureCutaway(s)||underConstruction(s))continue;
+      const g=cutawayWallGeometry(s),H=structureHeight(s),n=Math.min(g.outer.length,g.inner.length);
+      const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
+      const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
+      let keep,jambs;
+      if(s.type==='built'){
+        const d=[0,1,2,3].map(i=>(viewDepthPoint(g.outer[i])+viewDepthPoint(g.outer[(i+1)%4]))/2),rear=d[0]>=d[2]?2:0;
+        keep=new Set([rear]);jambs=[rear,(rear+1)%4];
+      }else{
+        const open=cutawayTransparentFaceIndexes(s,g);
+        keep=new Set([...Array(n).keys()].filter(i=>!open.has(i)));jambs=cutawayBoundaryVertices(open,n);
+      }
+      for(const i of keep){
+        const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
+        m.face([Z(o0,0),Z(o1,0),Z(o1,H),Z(o0,H)],castleSideShade(o0,o1));
+        m.face([Z(i0,0),Z(i1,0),Z(i1,H),Z(i0,H)],'#61574f');
+      }
+      for(const v of jambs)m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
+      const ring=winter?WINTER_SNOW_TOP:'#8f857a';
+      for(let i=0;i<n;i++){const j=(i+1)%n;m.face([Z(g.outer[i],H),Z(g.outer[j],H),Z(g.inner[j],H),Z(g.inner[i],H)],ring)}
+      if(s.type==='tower'&&towerRoofStyle(s)==='battlement')m.face(g.inner.map(p=>Z(p,H-.01)),winter?WINTER_SNOW_TOP:'#8f857a');
+      // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
+      const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
+      const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
+      for(const floor of cutawayFloorLevels(s)){
+        const stone=floor.material==='stone',z=floor.z,th=stone?.045:.065;
+        m.face(g.inner.map(p=>Z(p,z)),stone?'#7f796f':'#795a3a');
+        for(let i=0;i<g.inner.length;i++){const a=g.inner[i],b=g.inner[(i+1)%g.inner.length];m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?'#5a554d':'#5b402b')}
+        if(stone){
+          const tile=.32,nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
+          for(let ix=0;ix<nx;ix++)for(let iy=0;iy<ny;iy++){
+            if((ix+iy)%2)continue;
+            const u0=-basis.w/2+ix*tile,v0=-basis.h/2+iy*tile,q=clipConvex([L(u0,v0),L(u0+tile,v0),L(u0+tile,v0+tile),L(u0,v0+tile)],g.inner);
+            if(q.length>2)m.face(q.map(p=>Z(p,z+.003)),'#8d877c');
+          }
+        }else{
+          const plank=.18,across=basis.h<=basis.w,span=across?basis.h:basis.w,len=across?basis.w:basis.h;
+          for(let i=0;i*plank<span;i++){
+            if(i%2)continue;
+            const a=-span/2+i*plank,b=Math.min(span/2,a+plank);
+            const quad=across?[L(-len/2,a),L(len/2,a),L(len/2,b),L(-len/2,b)]:[L(a,-len/2),L(b,-len/2),L(b,len/2),L(a,len/2)];
+            const q=clipConvex(quad,g.inner);if(q.length>2)m.face(q.map(p=>Z(p,z+.003)),'#84613e');
+          }
+        }
+      }
+      // Openings of the standing walls, seen from inside.
+      const keptDir=dir=>{let best=-1,bd=-Infinity;for(let i=0;i<n;i++){const a=g.outer[i],b=g.outer[(i+1)%n],mx=(a.x+b.x)/2-s.x,my=(a.y+b.y)/2-s.y,L2=Math.hypot(mx,my)||1,d=(mx*dir.x+my*dir.y)/L2;if(d>bd){bd=d;best=i}}return keep.has(best)};
+      const innerAt=dir=>{const r=s.shape==='round'?Math.max(.12,(Number(s.r)||.5)-g.thickness):null;
+        if(r)return{x:s.x+dir.x*(r-.006),y:s.y+dir.y*(r-.006)};
+        let best=null,bd=-Infinity;for(let i=0;i<g.inner.length;i++){const a=g.inner[i],b=g.inner[(i+1)%g.inner.length],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},d=(mid.x-s.x)*dir.x+(mid.y-s.y)*dir.y;if(d>bd){bd=d;best=mid}}
+        return{x:best.x-dir.x*.006,y:best.y-dir.y*.006};};
+      if(s.type==='tower'){
+        for(const row of towerWindowRows(s))for(const d of towerFaceDirections(s)){
+          const dir={x:d.nx,y:d.ny};if(!keptDir(dir))continue;
+          const at=innerAt(dir),zc=row.z;
+          if(d.interior&&towerGothicAssetForRow(s,row))openingQuad(m,at,dir,(plane?G0:0)+zc-.2,(plane?G0:0)+zc+.2,.26,'#8fa2b2');
+          else if(towerSlitFace(s,d.face,row.floor))openingQuad(m,at,dir,(plane?G0:0)+zc-.16,(plane?G0:0)+zc+.16,.06,'#1c1612');
+        }
+        for(const spec of (typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[])){
+          const dir={x:spec.outward.x,y:spec.outward.y};if(!keptDir(dir))continue;
+          const at={x:spec.contact.x-dir.x*(g.thickness+.006),y:spec.contact.y-dir.y*(g.thickness+.006)};
+          openingQuad(m,at,dir,G0+spec.baseZ+.01,G0+Math.min(spec.apexZ,spec.baseZ+.6),.3,'#1f1712');
+        }
+      }else if(s.type==='gate'){
+        const fp=footprintPoints(s);
+        for(const e of [1,3]){
+          if(!keep.has(e))continue;
+          const a=g.inner[e],b=g.inner[(e+1)%4],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},mo={x:(fp[e].x+fp[(e+1)%4].x)/2,y:(fp[e].y+fp[(e+1)%4].y)/2};
+          const dl=Math.hypot(mo.x-s.x,mo.y-s.y)||1,dir={x:(mo.x-s.x)/dl,y:(mo.y-s.y)/dl};
+          openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05,.78,'#1f1712');
+        }
+      }
+      // Furniture and ladders (world xy, z on the structure plane).
+      for(const f of FU?.worldFaces(s)||[]){
+        const pts=f.pts.map(p=>({x:p[0],y:p[1],z:(plane?G0:terrainElevation({x:p[0],y:p[1]}))+p[2]}));
+        const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1;
+        m.face(pts,shadeHex(f.hex,k));
+        if(f.emissive)em.face(pts,f.hex);
+      }
+    }
+    return{main:new Float32Array(m.tris),em:new Float32Array(em.tris)};
   }
 
   // ---------- content signatures (cheap, per frame) ----------
@@ -611,6 +727,22 @@
       }
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
+    // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
+    const cut=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s));
+    const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,
+      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
+    if(S.cutContent!==cutContent){
+      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.em.b)}
+      S.cutContent=cutContent;S.cutVariants=new Map();
+    }
+    if(cut.length){
+      const key=rot+'|'+plan;let v=S.cutVariants.get(key);
+      if(!v){
+        const a=performance.now(),d=buildCutaway(),mk=x=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,x,gl.STATIC_DRAW);return{b,n:x.length}};
+        v={main:mk(d.main),em:mk(d.em)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
+      }
+      S.buf.cutaway=v.main.b;S.buf['cutaway#n']=v.main.n;S.buf.cutawayEm=v.em.b;S.buf['cutawayEm#n']=v.em.n;
+    }else{S.buf['cutaway#n']=0;S.buf['cutawayEm#n']=0}
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
     st.ensureMs=performance.now()-t0;
@@ -659,7 +791,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');drawMesh(gl,r,'cutaway');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write
@@ -716,12 +848,24 @@
       return true;
     };
   }
-  function soldierTile(type,phase,livery){
+  // Nobles in the cutaway rooms are collected the same way (their look depends on two id bits).
+  if(typeof drawNobleFigure==='function'){
+    const originalNoble=drawNobleFigure;
+    drawNobleFigure=function(p,z,id,phase=0){
+      if(!collecting)return originalNoble.apply(this,arguments);
+      const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
+      collecting.push({p:{x:p.x,y:p.y},z:z+ground,type:'noble',id,phase:0,livery:null});
+      return true;
+    };
+    var drawNobleUnmasked=originalNoble;
+  }
+  function soldierTile(type,phase,livery,id){
     // Only the knight's sword swings with phase; everything else is a single pose.
     const bucket=type==='knight'?Math.floor((((phase%1)+1)%1)*8):0;
     const herald=JSON.stringify(State.heraldry||null);
     if(soldierAtlas.heraldry!==herald){soldierAtlas.map.clear();soldierAtlas.next=0;soldierAtlas.heraldry=herald}
-    const key=type+'|'+bucket+'|'+(livery?JSON.stringify(livery):'realm');
+    const look=type==='noble'?((peasantHash(String(id)+'-noble')&1)+'-'+(peasantHash(String(id)+'-sex')&1)):'';
+    const key=type+'|'+bucket+'|'+look+'|'+(livery?JSON.stringify(livery):'realm');
     let uv=soldierAtlas.map.get(key);if(uv)return uv;
     if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=1024}
     const cols=1024/SOLDIER_TILE,i=soldierAtlas.next++%(cols*cols),x=(i%cols)*SOLDIER_TILE,y=Math.floor(i/cols)*SOLDIER_TILE;
@@ -729,7 +873,7 @@
     const keepView=State.view,keepW2s=w2s;
     State.view={...keepView,scale:SOLDIER_SR};
     w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // drawSoldierFigureUnmasked projects only the feet
-    try{withRenderContext(g,()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'atlas',bucket/8,livery))}
+    try{withRenderContext(g,()=>type==='noble'&&drawNobleUnmasked?drawNobleUnmasked({x:0,y:0},0,id,0):drawSoldierFigureUnmasked({x:0,y:0},0,type,'atlas',bucket/8,livery))}
     finally{State.view=keepView;w2s=keepW2s}
     uv=[x/1024,y/1024,(x+SOLDIER_TILE)/1024,(y+SOLDIER_TILE)/1024];
     soldierAtlas.map.set(key,uv);soldierAtlas.dirty=true;return uv;
@@ -737,7 +881,7 @@
   function buildSoldiers(list){
     const v=[],out=[];
     for(const s of list){
-      const [u0,v0,u1,v1]=soldierTile(s.type,s.phase,s.livery);
+      const [u0,v0,u1,v1]=soldierTile(s.type,s.phase,s.livery,s.id);
       const C=[[-.5,-SOLDIER_FEET,u0,v0],[.5,-SOLDIER_FEET,u1,v0],[.5,1-SOLDIER_FEET,u1,v1],[-.5,1-SOLDIER_FEET,u0,v1]];
       for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U,u,w)}
       out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
@@ -808,8 +952,16 @@
     return true;
   }
   function drawCastleOverlays(){
-    // Arcades are 3D decals now; only cutaway interiors keep their 2.5D drawing.
-    if(State.structures.some(s=>structureCutaway(s)&&!underConstruction(s)))drawCutawayStructures();
+    // Arcades and cutaway interiors are 3D meshes now; nothing left to paint in 2D here.
+  }
+  // Night: flames and embers of the cutaway furniture redrawn at full light over the night
+  // overlay, depth-tested against the scene of this frame (depth buffer is preserved).
+  function drawEmissive(){
+    if(!active()||!S.buf['cutawayEm#n']||!(typeof nightFactor==='function'&&nightFactor()>.01))return;
+    const gl=S.gl,r=wrap.getBoundingClientRect();
+    gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
+    gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);drawMesh(gl,r,'cutawayEm');gl.disable(gl.POLYGON_OFFSET_FILL);gl.depthMask(true);
+    ctx.drawImage(S.canvas,0,0,r.width,r.height);
   }
   // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
   function drawMastioDrapes(){
@@ -824,8 +976,9 @@
     // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
     // frame is expensive, so skip the call entirely when none of them is present.
     const all=State.structures;
-    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||structureCutaway(s)));
-    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s)||structureCutaway(s));drawCastleBattlements()}finally{State.structures=all}}
+    // Cutaway battlements are part of the 3D castle front mesh (castle3d worldMeshes).
+    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)));
+    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s));drawCastleBattlements()}finally{State.structures=all}}
     perf().world3dFrontMs=performance.now()-t0;
   }
   function setEnabled(on){enabled=!!on;try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}location.reload()}
@@ -848,7 +1001,7 @@
     }
     draw();
   }
-  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,drawMastioDrapes,_setActiveForTest,
+  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,drawMastioDrapes,drawEmissive,_setActiveForTest,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,

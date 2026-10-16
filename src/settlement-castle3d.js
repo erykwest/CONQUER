@@ -244,7 +244,8 @@
   function addPieces(m,which){
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
-    for(const s of castleParts()){
+    // The full-scene renderer also owns the battlements of open (cutaway) structures.
+    for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
       const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){
         const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};

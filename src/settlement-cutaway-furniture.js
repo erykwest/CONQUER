@@ -203,42 +203,47 @@
   }
   // ---------- world faces
   function heraldry(){const h=State.heraldry||{};return{heraldA:h.c1||REIGN_COLOR_1,heraldB:h.c2||REIGN_COLOR_2}}
-  function pieceWorld(item,F,z,out,lights,her){
+  // Flames and embers are emissive: at night they are redrawn at full light over the overlay.
+  const EMISSIVE=new Set(['flame','ember']);
+  function pieceWorld(item,F,z,out,lights,her,floor){
     const pf=pieceFaces(item.name);if(!pf)return;
     const a=F.b.angle+item.turn*Math.PI/2,ca=Math.cos(a),sa=Math.sin(a),c=F.toWorld(item.u,item.v),zz=z+(item.lift||0);
     const W=([x,y,zl])=>[c.x+x*ca-y*sa,c.y+x*sa+y*ca,zz+zl];
     for(const f of pf.faces){
       const n=[f.n[0]*ca-f.n[1]*sa,f.n[0]*sa+f.n[1]*ca,f.n[2]];
-      out.push({pts:f.pts.map(W),hex:her[f.key]||f.hex,n});
+      out.push({pts:f.pts.map(W),hex:her[f.key]||f.hex,n,floor,emissive:EMISSIVE.has(f.key)});
     }
-    for(const [x,y,zl,kind] of pf.lights)lights.push({p:W([x,y,zl]),kind});
+    for(const [x,y,zl,kind] of pf.lights)lights.push({p:W([x,y,zl]),kind,floor});
   }
-  function boxWorld(F,u,v,z0,du,dv,h,hex,out){
+  function boxWorld(F,u,v,z0,du,dv,h,hex,out,floor){
     const c=[[u-du/2,v-dv/2],[u+du/2,v-dv/2],[u+du/2,v+dv/2],[u-du/2,v+dv/2]].map(([a,b])=>F.toWorld(a,b));
-    const top=c.map(p=>[p.x,p.y,z0+h]);out.push({pts:top,hex,n:[0,0,1]});
+    const top=c.map(p=>[p.x,p.y,z0+h]);out.push({pts:top,hex,n:[0,0,1],floor});
     for(let i=0;i<4;i++){const p=c[i],q=c[(i+1)%4],nx=(p.x+q.x)/2-F.toWorld(u,v).x,ny=(p.y+q.y)/2-F.toWorld(u,v).y,L=Math.hypot(nx,ny)||1;
-      out.push({pts:[[p.x,p.y,z0],[q.x,q.y,z0],[q.x,q.y,z0+h],[p.x,p.y,z0+h]],hex,n:[nx/L,ny/L,0]})}
+      out.push({pts:[[p.x,p.y,z0],[q.x,q.y,z0],[q.x,q.y,z0+h],[p.x,p.y,z0+h]],hex,n:[nx/L,ny/L,0],floor})}
   }
   // Ladder from this floor to the next one, leaning in the far corner.
-  function ladderWorld(L,F,z0,z1,out){
+  function ladderWorld(L,F,z0,z1,out,floor){
     const h=Math.max(.3,z1-z0),along=L.side[0]==='u'?'v':'u',sideU=along==='u';
     for(const s of [-1,1]){
       const du=sideU?.012:.02,dv=sideU?.02:.012,o=s*LADDER_W/2;
-      boxWorld(F,L.u+(sideU?o:0),L.v+(sideU?0:o),z0,sideU?.025:.025,sideU?.025:.025,h+.08,'#8b6a45',out);
+      boxWorld(F,L.u+(sideU?o:0),L.v+(sideU?0:o),z0,sideU?.025:.025,sideU?.025:.025,h+.08,'#8b6a45',out,floor);
     }
     for(let k=1;k*.09<h;k++){
       const z=z0+k*.09;
-      boxWorld(F,L.u,L.v,z-.008,sideU?LADDER_W:.02,sideU?.02:LADDER_W,.016,'#b98652',out);
+      boxWorld(F,L.u,L.v,z-.008,sideU?LADDER_W:.02,sideU?.02:LADDER_W,.016,'#b98652',out,floor);
     }
   }
   const cache=new Map();
   function structureFaces(s,g){
-    const key=[s.id,State.view.rotation||0,JSON.stringify((window.ConquerSiege?.archerSlots(s)||[]).map(a=>a.id)),(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),structureLevel(s),s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
+    // Cheap key: archer posts follow the wall junctions and the tower shape, not the archer
+    // count, so no archerSlots() scan per call.
+    const snaps=State.structures.filter(w=>w.aSnap===s.id||w.bSnap===s.id).map(w=>w.id+':'+structureLevel(w)).join(',');
+    const key=[s.id,State.view.rotation||0,snaps,s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),structureLevel(s),s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
     const faces=[],lights=[],her=heraldry(),spots=new Map();
     for(const room of layoutStructure(s,g)){
-      for(const it of room.items)pieceWorld(it,room.F,room.slot.z+.012,faces,lights,her);
-      if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces);
+      for(const it of room.items)pieceWorld(it,room.F,room.slot.z+.012,faces,lights,her,room.slot.index);
+      if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.index);
       spots.set(room.slot.index,freeSpots(room));
     }
     const res={key,faces,lights,spots};cache.set(s.id,res);return res;
@@ -257,9 +262,10 @@
   }
   // ---------- painting
   function depthOf(x,y,z){return typeof isPlanView==='function'&&isPlanView()?z:viewDepthPoint({x,y})+.9*z}
-  function draw(s,g){
+  // floor: only that floor's pieces (2.5D draws each floor right after its slab).
+  function draw(s,g,floor=null){
     if(!FM())return false;
-    const {faces}=structureFaces(s,g),turns=State.view.rotation||0,W3=window.ConquerWagons3D;
+    const faces=structureFaces(s,g).faces.filter(f=>floor===null||f.floor===floor),turns=State.view.rotation||0,W3=window.ConquerWagons3D;
     const list=faces.map(f=>{let d=0;for(const p of f.pts)d+=depthOf(p[0],p[1],p[2]);return{f,d:d/f.pts.length}}).sort((a,b)=>a.d-b.d);
     ctx.save();ctx.lineJoin='round';ctx.lineWidth=.5;
     for(const {f} of list){
@@ -304,5 +310,20 @@
     while(out.length<count&&pool.length)out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
     return out;
   }
-  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,standSpots,layoutStructure,pieceFaces,clear:()=>cache.clear()};
+  // 2.5D only: flames redrawn at full light after the night overlay (the WebGL scene has its
+  // own depth-tested emissive pass).
+  function drawEmissive2D(nf){
+    if(nf<=.01||!FM()||window.ConquerWorld3D?.active?.())return;
+    for(const s of State.structures){
+      if(!structureCutaway(s)||underConstruction(s))continue;
+      const paint=()=>{for(const f of structureFaces(s,cutawayWallGeometry(s)).faces){
+        if(!f.emissive)continue;
+        ctx.fillStyle=f.hex;ctx.beginPath();
+        f.pts.forEach((p,i)=>{const q=w2s({x:p[0],y:p[1]},p[2]);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.fill();
+      }};
+      if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,paint);else paint();
+    }
+  }
+  function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces:[]}
+  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,pieceFaces,clear:()=>cache.clear()};
 })();

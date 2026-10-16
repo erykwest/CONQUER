@@ -38,7 +38,7 @@ const render3dHooks=[
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
   ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n'],
   // Night glow of the cutaway furniture (settlement-cutaway-furniture.js).
-  ['  drawFireGlows(nf);\n  window.ConquerCutawayFurniture?.drawNightGlow(nf);\n','  drawFireGlows(nf);\n']
+  ['  drawFireGlows(nf);\n  window.ConquerWorld3D?.drawEmissive?.();window.ConquerCutawayFurniture?.drawEmissive2D(nf);window.ConquerCutawayFurniture?.drawNightGlow(nf);\n','  drawFireGlows(nf);\n']
 ];
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));
