@@ -100,7 +100,7 @@
       if(other.type==='road'){
         if(roadTouchesPolygon(other,fp,.15))return{ok:false,reason:'Industry overlaps a player road'};
       }else{
-        const otherPoly=footprintPoints(other);
+        const otherPoly=other.type==='well'?wellPlazaPoints(other):footprintPoints(other);
         if(polygonCollision(fp,otherPoly))return{ok:false,reason:'Industry overlaps another building'};
       }
     }

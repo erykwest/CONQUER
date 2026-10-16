@@ -24,7 +24,10 @@ function peasantHash(id){
   return h>>>0;
 }
 const sandbox={
-  State,window:{},dist,rectWorldPoints,peasantHash,
+  State,window:{},dist,rectWorldPoints,peasantHash,biomeHash:peasantHash,
+  segmentDistance:(a,b,c,d)=>Math.min(
+    dist(a,closestPointOnSegment(a,c,d)),dist(b,closestPointOnSegment(b,c,d)),
+    dist(c,closestPointOnSegment(c,a,b)),dist(d,closestPointOnSegment(d,a,b))),
   clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
   circleWorldPoints:(x,y,r,n)=>Array.from({length:n},(_,i)=>({
     x:x+Math.cos(i/n*Math.PI*2)*r,y:y+Math.sin(i/n*Math.PI*2)*r
@@ -95,8 +98,28 @@ test('L3 frontage creates three houses within a 6 U street-facing plot',()=>{
   house.houseLevel=3;
   assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),1);
   assert.equal(run('urbanDenseBuildingCount(State.structures[0])'),3);
-  assert.equal(run('urbanFenceSegments([urbanLotCache[0]],[]).length'),0);
+  // The yard is fenced on its three non-street sides; the street side stays open.
+  const fences=run('urbanFenceSegments([urbanLotCache[0]],[])');
+  assert.ok(fences.length>=3);
+  assert.ok(fences.every(e=>!(Math.abs(e.a.y)<.01&&Math.abs(e.b.y)<.01)),'no fence on the street edge');
+  for(const test of [e=>Math.abs(e.a.x)<.01&&Math.abs(e.b.x)<.01,e=>Math.abs(e.a.x-6)<.01&&Math.abs(e.b.x-6)<.01,e=>Math.abs(e.a.y-4)<.01&&Math.abs(e.b.y-4)<.01])
+    assert.ok(fences.some(test),'every non-street side is enclosed');
   assert.equal(State.structures.filter(s=>s.type==='house').length,1);
+});
+test('L3/L4 yards get sheds and storehouses on non-street sides, never counted as dwellings',()=>{
+  for(const level of [3,4]){
+    house.houseLevel=level;run('urbanRevision++');
+    const out=run('urbanLotOutbuildings(State.structures[0])'),dense=run('urbanDenseParts(State.structures[0])');
+    assert.ok(out.length>=1,'L'+level+' yard has outbuildings');
+    assert.ok(out.every(p=>p.kind==='outbuilding'&&['shed','store'].includes(p.type)));
+    assert.ok(out.every(p=>p.points.every(q=>run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(q)+',.035)'))));
+    // Not on the street side and clear of the townhouses.
+    assert.ok(out.every(p=>p.points.every(q=>q.y>1)));
+    assert.ok(out.every(p=>dense.every(d=>run('urbanPolygonIntersectionArea('+JSON.stringify(p.points)+','+JSON.stringify(d.points)+')')<1e-6)));
+    assert.equal(run('urbanDenseBuildingCount(State.structures[0])'),level===3?3:4);
+    assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),dense.length+out.length);
+  }
+  house.houseLevel=3;run('urbanRevision++');
 });
 test('L4 increases frontage density and keeps all buildings within the parcel',()=>{
   house.houseLevel=4;

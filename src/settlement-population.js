@@ -111,7 +111,7 @@ function shadowCasterGeometry(s){
   const key=shadowCasterSignature(s),cached=shadowCasterGeometryCache.get(s.id);
   if(cached?.key===key)return cached;
   const fp=s.type==='house'&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3
-    ?convexHull(urbanHouseDisplayParts(s).flatMap(part=>part.points))
+    ?convexHull(urbanHouseDisplayParts(s).filter(part=>part.kind!=='outbuilding').flatMap(part=>part.points))
     :isCastlePart(s)?unionFootprintPoints(s):footprintPoints(s);
   const h=shadowStructureHeight(s);
   const value={key,fp,h};

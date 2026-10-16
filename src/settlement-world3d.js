@@ -223,6 +223,7 @@
       const house=entry.house;if(underConstruction(house))continue;
       const lvl=houseLevel(house);
       for(const part of entry.parts){
+        if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
         const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
         const split=part.kind==='turret'?base+1.02:base+part.bodyH*.5;
         for(let i=0;i<n;i++){
@@ -235,7 +236,7 @@
         if(part.kind==='turret'){
           for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
         }else{
-          const rA=winter?WINTER_ROOF[0]:lvl===1?'#5b3d30':'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?'#6b4938':'#3a3d42';
+          const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
           const gable=lvl===1?'#654936':'#d9c184';
           m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
         }
@@ -271,6 +272,24 @@
       }
     }
     return new Float32Array(m.tris);
+  }
+  // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
+  function addOutbuilding(m,house,part,winter){
+    const faces=urbanHouseFaces(house,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
+    const roofA=winter?WINTER_ROOF[0]:'#5b3d30',roofB=winter?WINTER_ROOF[1]:'#6b4938';
+    if(part.type==='store'){
+      for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
+      m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
+      return;
+    }
+    const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=terrainElevation(c);
+    const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
+    for(let i=0;i<n;i++)if(faces[i].slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(faces[i]),'#5d4431');
+    m.face(P(faces[n]),roofB);
+    for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
+      const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
+      m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');
+    }
   }
   function addCivic(m,s,winter){
     const g=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s),angle=s.angle||0;
@@ -321,9 +340,10 @@
   }
   function buildTrees(atlas){
     const v=[];if(!atlas)return new Float32Array(0);
-    for(const f of State.environment||[]){
-      if(f.type!=='forest')continue;
-      for(const t of forestTreeLayout(f)){
+    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(forestTreeLayout);
+    groves.push(urbanLotCornerTrees());                  // single trees on plot corners
+    for(const trees of groves){
+      for(const t of trees){
         const uv=atlas.map.get(t.shapeIndex+':'+(atlas.season==='winter'?0:t.colorIndex));if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
         const size=2.25*t.scale,z=t.z||0;
@@ -377,6 +397,15 @@
       quad(span.a,span.b,ground+centerZ-height/2,ground+centerZ+height/2,key,out);
     };
     const edgesOf=fp=>fp.map((a,i)=>({a,b:fp[(i+1)%fp.length],index:i}));
+    // A beam from wall point p0 to p1 ({off,z}), `width` thick within the wall plane.
+    const strip=(at,ground,p0,p1,width,out,col,push)=>{
+      const uv=atlas.map.get('__white');if(!uv)return;
+      const doff=p1.off-p0.off,dz=p1.z-p0.z,len=Math.hypot(doff,dz)||1,no=-dz/len*width/2,nz=doff/len*width/2;
+      const corner=(p,s)=>{const c=at(p.off+no*s);return{x:c.x+out.x*push,y:c.y+out.y*push,z:ground+p.z+nz*s}};
+      const P=[corner(p0,1),corner(p1,1),corner(p1,-1),corner(p0,-1)],[u0,v0,u1,v1]=uv;
+      for(const k of [0,1,2,0,2,3]){const q=P[k];v.push(q.x,q.y,q.z,k===1||k===2?u1:u0,k<2?v0:v1,col[0],col[1],col[2],col[3])}
+    };
+    const houseGeometry=new Map(urbanHouseGeometry().map(e=>[e.house.id,e]));
     for(const s of State.structures){
       if(underConstruction(s))continue;
       const center=structureCenter(s);
@@ -443,15 +472,19 @@
           }
         }
       }else if(s.type==='house'){
-        const rows=houseLevel(s)>=2?[.52,1.34]:[.48],WIN=[35/255*.82,29/255*.82,24/255*.82,.82];
-        for(const part of urbanHouseDisplayParts(s)){
-          if(part.kind==='turret')continue;
+        const WIN=[35/255*.82,29/255*.82,24/255*.82,.82],TIMBER=[59/255,42/255,30/255,1];
+        const entry=houseGeometry.get(s.id);
+        for(const part of entry?.parts||[]){
+          if(part.kind==='turret'||part.kind==='outbuilding')continue;
           const ground=terrainElevation(part.center);
           for(const edge of edgesOf(part.points)){
             const o=outward(edge,part.center),m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};
-            const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,hw=.0875;
+            const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
+            const plan=houseFacadePlan(s,part,edge),at=off=>({x:m.x+ux*off,y:m.y+uy*off});
+            // Timber frame strips sit just under the windows (smaller wall offset).
+            for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
             // drawWindowOnEdge: 2.1 x 3.25 px per view-scale unit -> .175U x ~.30U
-            for(const z of rows)quad({x:m.x-ux*hw,y:m.y-uy*hw},{x:m.x+ux*hw,y:m.y+uy*hw},ground+z-.15,ground+z+.15,'__white',o,WIN);
+            for(const w of plan.windows){const c=at(w.off);quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN)}
           }
         }
         const d=houseDoorInfo(s),hw=Math.min(.08,(Number(s.w)||1.5)*.0533),g=terrainElevation(d.surface),DOOR=[57/255,39/255,30/255,1];

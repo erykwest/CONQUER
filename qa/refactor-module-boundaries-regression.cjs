@@ -41,7 +41,25 @@ const render3dHooks=[
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));
   return src.replace(hooked,()=>original);
-},read('render')),arch=segment('architecture',true),weather=segment('weather');
+},read('render')),weather=segment('weather');
+// Behaviour edit: yard outbuildings of L3/L4 plots carry no facade windows.
+const archEdits=[["urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'&&p.kind!=='outbuilding')","urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret')"]];
+// Behaviour edit: house facades follow houseFacadePlan (paired windows on long
+// sides, L2+ timber frame). Restore the original single-window method.
+const facadeMethod=/function drawHouseFacadeWindows\(s,lit=false,nf=1\)\{[\s\S]*?\n\}\n(?=function drawStaticHouseFacadeDetails\(\)\{)/;
+const oldFacadeMethod=[
+  'function drawHouseFacadeWindows(s,lit=false,nf=1){',
+  '  const rows=houseLevel(s)>=2?[.52,1.34]:[.48];',
+  '  for(const edge of visibleFacadeEdges(s))for(const z of rows)drawWindowOnEdge(edge,z,lit,nf,0);',
+  '}',''
+].join('\n');
+const archEdited=segment('architecture',true);
+assert.match(archEdited,facadeMethod);
+assert.match(archEdited,/houseFacadePlan\(s,part,edge\)/);
+const arch=archEdits.reduce((src,[edited,original])=>{
+  assert.equal(src.split(edited).length,2,'Expected exactly one architecture edit: '+edited.slice(0,60));
+  return src.replace(edited,()=>original);
+},archEdited.replace(facadeMethod,()=>oldFacadeMethod));
 // Ambient-light grading intentionally replaces ONLY the old flat night overlay.
 // Restore that original method before comparing against the pre-refactor blob.
 const ambientOverlay=/function drawDayNightOverlay\(\)\{[\s\S]*?\n\}\n(?=function drawNightLights\(\)\{)/;
