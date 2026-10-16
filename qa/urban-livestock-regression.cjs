@@ -19,6 +19,10 @@ assert.match(urban,/function urbanL2CattleShelter\(house\)/);
 assert.match(urban,/type:'shed'.*roofH:1\.02/s);
 assert.match(fields,/tier===1\?'shepherd':'cow'/);
 assert.match(residents,/\['shepherd','cow'\]/);
+assert.match(source,/PASTURE_SPACING=2\.5/);
+assert.match(source,/animalFrameCache=\{key,objects:out\}/);
+assert.match(source,/a\.shedKey\);/);
+assert.match(urban,/ignoreBuildingKey==null\|\|q\.buildingKey!==ignoreBuildingKey/);
 let fraction=.32;
 const pastureJobs=[];
 const runPastureJobs=(max=3000)=>{
@@ -141,6 +145,12 @@ fraction=.32;
 animals.animals();
 runPastureJobs();
 const dayHerd=animals.animals();
+const claims=animals.pastures();
+for(let i=0;i<claims.length;i++)for(let j=i+1;j<claims.length;j++){
+  const a=claims[i],b=claims[j];
+  assert.ok(Math.hypot(a.center.x-b.center.x,a.center.y-b.center.y)>=a.radius+b.radius+2.5-1e-6,
+    'livestock grazing patches must be disjoint with 2.5U free space');
+}
 const cowHerd=dayHerd.filter(a=>a.species==='cow');
 const stableHerd=dayHerd.filter(a=>a.species==='horse');
 assert.equal(cowHerd.length,Math.floor(16/3),'1 cow per 3 U²');
@@ -149,6 +159,7 @@ assert.ok(animals.shepherdPosition(houses.find(h=>h.id===l2.cow)),
   'an L2 cowherd accompanies cattle to pasture');
 assert.equal(dayHerd.filter(a=>a.species==='horse').length,stableHerd.length);
 assert.ok(stableHerd.length>=4&&stableHerd.length<=12,'1-3 horses per shed in L3/L4');
+assert.ok(stableHerd.every(a=>a.shedKey),'every horse identifies its lean-to to avoid roof occlusion');
 for(const house of houses.filter(h=>h.level>=3)){
   for(const roof of sandbox.urbanLotOutbuildings(house).filter(s=>s.type==='shed')){
     const population=stableHerd.filter(a=>a.id.startsWith(roof.buildingKey+':horse:'));

@@ -127,6 +127,7 @@ test('L3/L4 yards get sheds and storehouses on non-street sides, never counted a
     const out=run('urbanLotOutbuildings(State.structures[0])'),dense=run('urbanDenseParts(State.structures[0])');
     assert.ok(out.length>=1,'L'+level+' yard has outbuildings');
     assert.ok(out.every(p=>p.kind==='outbuilding'&&['shed','store'].includes(p.type)));
+    assert.ok(out.some(p=>p.type==='shed'),'every developed L3/L4 yard offers a horse shelter');
     assert.ok(out.every(p=>p.points.every(q=>run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(q)+',.035)'))));
     // Not on the street side and clear of the townhouses.
     assert.ok(out.every(p=>p.points.every(q=>q.y>1)));

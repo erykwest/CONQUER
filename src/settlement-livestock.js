@@ -160,6 +160,7 @@
     for(let attempts=0;attempts<3&&now()-started<4;attempts++){
       if(job.factor>=PASTURE_FACTORS.length){
         routeCache.set(job.house.id,null);
+        animalFrameCache.key=null;
         pendingPastures.delete(job.house.id);
         return;
       }
@@ -176,6 +177,7 @@
       const path=travelRoute(job.house,candidate);
       if(!path||!pastureIsSeparate(candidate,reach,job.house.id))continue;
       routeCache.set(job.house.id,{center:candidate,path,radius:reach});
+      animalFrameCache.key=null;
       pendingPastures.delete(job.house.id);
       return;
     }

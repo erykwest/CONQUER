@@ -940,8 +940,8 @@ function withUrbanFigureOcclusion(p,z,drawFn,ignoreBuildingKey=null){
   // At settlement-scale zoom sprites are subpixel; clipping against hundreds
   // of architectural faces costs far more than it contributes visually.
   if(State.view.scale<.48)return drawFn();
-  const screen=w2s(p,z),depth=viewDepthPoint(p),r=populationFrameBounds||wrap.getBoundingClientRect();
-  const pieces=urbanOcclusionPieces().filter(q=>q.buildingKey!==ignoreBuildingKey&&q.maxDepth>depth&&
+  const screen=w2s(p,z),depth=viewDepthPoint(p),r=wrap.getBoundingClientRect();
+  const pieces=urbanOcclusionPieces().filter(q=>(ignoreBuildingKey==null||q.buildingKey!==ignoreBuildingKey)&&q.maxDepth>depth&&
     q.minX<screen.x+28&&q.maxX>screen.x-28&&q.minY<screen.y+12&&q.maxY>screen.y-44);
   if(!pieces.length)return drawFn();
   ctx.save();
