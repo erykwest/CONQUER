@@ -177,7 +177,7 @@ const WELL_PLAZA_SIZE=3;
 // The paved square around the well is a no-build zone: houses, lots, fields and buildings
 // keep out of it (roads may still cross it).
 function wellPlazaPoints(s){return rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0)}
-const LINEAR_POINT_MAGNET=.90;
+const LINEAR_POINT_MAGNET=1.25;
 const TOWER_WALL_MAGNET=.78;
 const SUBTOWER_MAGNET=1.0;
 const WALL_BREAK_MIN=.10;

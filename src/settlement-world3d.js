@@ -633,6 +633,12 @@
           for(const [u,v] of ins){
             const A={x:p.x+(q.x-p.x)*u,y:p.y+(q.y-p.y)*u},B={x:p.x+(q.x-p.x)*v,y:p.y+(q.y-p.y)*v};
             m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],'#61574f');
+            // Connecting door through the dividing wall, on the subtower's ground floor.
+            const len=Math.hypot(B.x-A.x,B.y-A.y);
+            if(len>.45&&top>.7){
+              const mid={x:(A.x+B.x)/2,y:(A.y+B.y)/2},nx=-(B.y-A.y)/len,ny=(B.x-A.x)/len;
+              for(const sgn of [1,-1])openingQuad(m,{x:mid.x+nx*.006*sgn,y:mid.y+ny*.006*sgn},{x:nx*sgn,y:ny*sgn},Z(mid,.06).z,Z(mid,.62).z,.3,'#1f1712');
+            }
           }
         }
       }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v]))m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');

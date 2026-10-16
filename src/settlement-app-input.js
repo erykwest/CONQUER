@@ -120,7 +120,7 @@ canvas.addEventListener('pointerdown',e=>{
           }
         }else status('Segment too short');
       }else{
-        const route=splitBuiltRoute(normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!e2.structureId),State.tool.linear);
+        const route=splitBuiltRoute(normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!(e2.structureId||e2.wallEnd)),State.tool.linear);
         if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
           const legs=Math.min(2,route.segments.length);
           if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
@@ -183,7 +183,7 @@ canvas.addEventListener('pointermove',e=>{
       return;
     }
 
-    const route=splitBuiltRoute(normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!snap.structureId),State.tool.linear);
+    const route=splitBuiltRoute(normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.wallEnd)),State.tool.linear);
     if(route){
       const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
       State.draft.invalidPreview=null;

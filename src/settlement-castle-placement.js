@@ -51,6 +51,13 @@ function boundaryPoint(s,target){
   return{x:s.x+ux*edge,y:s.y+uy*edge}
 }
 function snapAnchor(p){
+  // Wall / built / palisade endpoints are magnets too (walls join walls), ahead of tower faces.
+  let end=null,endScore=Infinity;
+  for(const s of State.structures){
+    if(!['wall','built','palisade'].includes(s.type)||!s.a||!s.b)continue;
+    for(const q of [s.a,s.b]){const d=dist(p,q);if(d<=LINEAR_POINT_MAGNET&&d<endScore){end=q;endScore=d}}
+  }
+  if(end)return{point:{x:end.x,y:end.y},structureId:null,magnet:true,wallEnd:true};
   let best=null,bestPoint=null,bestScore=Infinity;
   for(const s of State.structures){
     if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;

@@ -76,6 +76,8 @@ const oldTowerWindowRows=[
 ].join('\n');
 const slitEdit="}else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(";
 assert.equal(archEdited.split(slitEdit).length,3,'Expected both tower slit rows to use towerSlitFace');
+const roofDoors=/  for\(const spec of towerRoofDoorSpecs\(tower\)\)specs\.push\(spec\);\n  return specs;\n\}\n\/\/ Parent\/subtower pairs[\s\S]*?\n  return out;\n\}\n/;
+assert.match(archEdited,roofDoors);
 const gateEdits=[
   ["  if(!s.isMastio||!edge||structureCutaway(s))return;   // no drape on an opened (cutaway) keep","  if(!s.isMastio||!edge)return;"],
   ["      const opacity=cutawayFacadeOpacity(s);\n      const paint=()=>isInteriorFacadeEdge(s,edge)\n        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf,opacity)\n        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit',0,false,1,opacity);",
@@ -84,7 +86,7 @@ const gateEdits=[
 const arch=[...archEdits,...gateEdits].reduce((src,[edited,original])=>{
   assert.equal(src.split(edited).length,2,'Expected exactly one architecture edit: '+edited.slice(0,60));
   return src.replace(edited,()=>original);
-},archEdited.replace(facadeMethod,()=>oldFacadeMethod).replace(towerOpenings,()=>oldTowerWindowRows)
+},archEdited.replace(roofDoors,()=>'  return specs;\n}\n').replace(facadeMethod,()=>oldFacadeMethod).replace(towerOpenings,()=>oldTowerWindowRows)
   .split(slitEdit).join("}else if(row.floor>=2)drawArchitectureAssetOnEdge("));
 // Ambient-light grading intentionally replaces ONLY the old flat night overlay.
 // Restore that original method before comparing against the pre-refactor blob.

@@ -239,7 +239,21 @@ function towerDoorSpecs(tower){
     });
     if(!duplicate)specs.push(spec);
   }
+  for(const spec of towerRoofDoorSpecs(tower))specs.push(spec);
   return specs;
+}
+// Parent/subtower pairs: the taller one opens a door onto the roof of the lower one, on the
+// face looking at it, at that roof's level (like the wall-walk doors).
+function towerRoofDoorSpecs(tower){
+  const out=[],h=structureHeight(tower);
+  for(const o of State.structures){
+    if(o===tower||underConstruction(o)||!['tower','gate'].includes(o.type))continue;
+    if(o.id!==tower.parentTowerId&&o.parentTowerId!==tower.id)continue;
+    if(structureHeight(o)>h-.6)continue;
+    const spec=towerDoorContactSpec(tower,boundaryPoint(tower,{x:o.x,y:o.y}),o,'roof');
+    if(spec)out.push(spec);
+  }
+  return out;
 }
 function towerDoorVisible(tower,spec){
   // Cutaway keeps doors as 20% ghosted architectural references instead of
