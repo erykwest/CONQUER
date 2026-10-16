@@ -14,7 +14,7 @@
 
 - Gli export allegati hanno intestazioni e URL originali verificati: `ChatGPT-Direzione animazioni audio-20261016-1605.md`, `ChatGPT-Implementazione minimappa navigabile-20261016-1605.md`, `ChatGPT-ECONOMY-20261016-1627.md`.
 - Ogni digest distingue **richiesta diretta**, **consiglio tecnico**, **dichiarazione su codice** e **stato Git controllato**. Segnalazioni su asset locali non committati restano tali, anche se riportano quantità precise.
-- Un quarto allegato denominato `ROUTINE POPOLANI.txt` contiene invece materiale su un progetto lavorativo distinto (**COLOSSEUM**): **ESCLUSO** da CONQUER; il contenuto non è stato importato o committato.
+- Un altro allegato conteneva materiale di un progetto distinto: **ESCLUSO** da CONQUER, senza importarne il contenuto o i dettagli identificativi.
 - L'importazione dei primi tre digest non chiude né valida le milestone. I file di progetto e i test su una branch specifica rimangono fonti prevalenti per ciò che è implementato.
 - Per SRC-CHAT-003 e SRC-CHAT-004: recuperare realmente il testo prima di assegnare titolo, decisioni, feature o stato «LETTO».
 
