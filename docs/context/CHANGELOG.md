@@ -2,6 +2,14 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-16 — Skeleton runtime della branch assedio
+
+- Branch `assedio` riallineata senza force con fast-forward a `main` [39caf15](https://github.com/erykwest/CONQUER/commit/39caf15078f8b079579e0707189a6806055013f0), conservando la branch e tutti i moduli già esistenti.
+- Modificato il dominio esistente `src/settlement-siege.js`, **non** creato un secondo motore: separazione esplicita fra core di mura/torri/torre-porta e portone; immunità a attacchi ordinari/frecce; niente fallback silenzioso di bersagli non validi; ripristino durabilità da save; invalidazione navigazione al breach, salvataggio differito.
+- Pannello Builder: valori distinti per struttura e portone (e indicatore **BREACHED**).
+- Inserita `qa/siege-damage-regression.cjs` e verificati 42 casi con un harness V8 sul sorgente della branch. Esecuzione Node CI e interazione completa con pathfinding/renderers ancora **da confermare**.
+- Backlog S-05/S-16/S-25 portato a **codice parziale su branch**; altri sistemi di incendio, artiglieria, IA, collisione porta chiusa rimangono aperti. Nessun merge su `main` in questo intervento.
+
 ## 2026-10-16 — Correzione dei contratti di danno negli assedi
 
 - Recepita una **correzione esplicita**: gli **attacchi ordinari delle unità** e le **frecce** non danneggiano mura o torri (**D-031**, S-05/S-16); eventuali danni strutturali richiedono una sorgente compatibile, non un attacco generico.
