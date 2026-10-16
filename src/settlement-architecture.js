@@ -389,6 +389,11 @@ function towerFaceOnDivider(s,dir,z){
   return State.structures.some(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&
     (o.id===s.parentTowerId||o.parentTowerId===s.id)&&structureHeight(o)>z&&pointInPolygon(probe,footprintPoints(o)));
 }
+// Same rule for an edge (facade asset placement): its middle's direction from the tower centre.
+function towerEdgeOnDivider(s,edge,z){
+  const mx=(edge.a.x+edge.b.x)/2-s.x,my=(edge.a.y+edge.b.y)/2-s.y,L=Math.hypot(mx,my)||1;
+  return towerFaceOnDivider(s,{nx:mx/L,ny:my/L},z);
+}
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);
   return !!dir&&!dir.interior&&floor>=2&&!towerFaceBlocked(s,dir,floor);
@@ -405,6 +410,7 @@ function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
   const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row),opacity=cutawayFacadeOpacity(s);if(!key)return;
   for(const edge of roundTowerFacadeEdges(s)){
     if(edge.interior){
+      if(towerEdgeOnDivider(s,edge,row.z))continue;   // window would open onto a dividing wall
       drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
       if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w*.86,sz.h,opacity);
     }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
@@ -597,6 +603,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           withStructureDetailOcclusion(s,row.z,()=>{
             for(const edge of edges){
               if(isInteriorFacadeEdge(s,edge)){
+                if(towerEdgeOnDivider(s,edge,row.z))continue;   // window would open onto a dividing wall
                 drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
                 if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
               }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
