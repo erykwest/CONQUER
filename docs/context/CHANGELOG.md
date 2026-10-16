@@ -2,6 +2,15 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-16 — Riconciliazione piramide con main e bilancio settimanale
+
+- **Base verificata:** `main` al commit [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99) (16/10, 15:16 UTC); aggiornati ingresso, stato, roadmap, decisioni e backlog. Questa operazione è **solo documentale**: nessuna nuova QA runtime/browser eseguita.
+- **Merger reali 13–16/10:** economico/industrie [PR #22](https://github.com/erykwest/CONQUER/pull/22); base fortificazioni/logistica e Mastio [PR #21](https://github.com/erykwest/CONQUER/pull/21); refactor castle/render/population/app [PR #38](https://github.com/erykwest/CONQUER/pull/38); foreste e attraversamenti [PR #39](https://github.com/erykwest/CONQUER/pull/39)/[PR #42](https://github.com/erykwest/CONQUER/pull/42); ambient light [PR #43](https://github.com/erykwest/CONQUER/pull/43); Nightlight [PR #47](https://github.com/erykwest/CONQUER/pull/47); minimappa e LOD **mergiati** [PR #44](https://github.com/erykwest/CONQUER/pull/44) al commit [2e7582d](https://github.com/erykwest/CONQUER/commit/2e7582d33575fcbdfa76605a08b09746327457c9).
+- **Renderer:** WebGL2 scena/castello [db6857c](https://github.com/erykwest/CONQUER/commit/db6857c2af21b4010077107876f59cc300374697), poi impostato come default con fallback Canvas [cc6830a](https://github.com/erykwest/CONQUER/commit/cc6830ac2b61d6a0769a4e0a9302ab639295caf0). Non esiste prova qui di import glTF completo o parità visiva in tutte le funzioni.
+- **Urban e rilievi:** lotti/tetti/facciate [d3ca98e](https://github.com/erykwest/CONQUER/commit/d3ca98e6dc1d75d651aade3af6bfffa1585e4e48), biomi [ee671e6](https://github.com/erykwest/CONQUER/commit/ee671e6f8af97a5dd3f55be72122a186ecb26ef9), continuità pedemontana e soglie neve/pini [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99). Materiali `urban` ancora da riconciliare separatamente.
+- **Branch e backlog:** `main...urban` diverged **+97/-24**; `main...sync/urban-main-2026-10-16` **+78/-24**; [PR #19](https://github.com/erykwest/CONQUER/pull/19) ancora aperta. Priorità invariata: calendario campi ↔ ledger, unico inventario economico/costruttivo, output miniera e vertical slice di assedio prima di nuove grandi feature.
+- **Correzione della documentazione storica:** i paragrafi sottostanti che dicevano «PR #44 aperta» descrivono uno snapshot precedente nella giornata del 16/10, **non** lo stato corrente.
+
 ## 2026-10-16 — Acquisizione suoni Pixabay / Drive
 
 - Importata come quarto digest la conversazione del 14/10 [Valuta suoni Pixabay](sources/PIXABAY-SOUNDS-2026-10-14.md); registrata SRC-CHAT-006 in [EXTERNAL-SOURCES](EXTERNAL-SOURCES.md).
