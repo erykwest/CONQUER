@@ -888,14 +888,25 @@
     const units=combat.units.filter(u=>selectedIds.has(u.id)&&!u.defeated&&!u.routing);
     if(!units.length)return;
     const centroid={x:units.reduce((sum,u)=>sum+u.x,0)/units.length,y:units.reduce((sum,u)=>sum+u.y,0)/units.length};
-    let moved=0;
+    let moved=0,outsideCommand=0,unreachable=0;
     for(const unit of units){
-      // Preserve group spacing and issue each route independently to avoid
-      // stacking entire squads at one destination point.
-      if(issueMove(unit,point(target.x+unit.x-centroid.x,target.y+unit.y-centroid.y),true))moved++;
+      // Preserve formation without hiding why individual orders were refused.
+      const goal=point(target.x+unit.x-centroid.x,target.y+unit.y-centroid.y);
+      if(unit.kind==='squad'&&!commanderCoversOrder(unit,goal)){
+        outsideCommand++;
+        continue;
+      }
+      if(issueMove(unit,goal,true))moved++;
+      else unreachable++;
     }
     if(moved)changed();
-    status(moved===units.length?moved+' unit(s) marching':moved+'/'+units.length+' orders accepted (command radius / obstacles)');
+    if(State.clock.speed===0&&moved)
+      status(moved+'/'+units.length+' ordini ricevuti · tempo in pausa: premi 1× per muovere le truppe');
+    else if(outsideCommand||unreachable)
+      status(moved+'/'+units.length+' ordini accettati'+
+        (outsideCommand?' · '+outsideCommand+' fuori raggio cavaliere (16U)':'')+
+        (unreachable?' · '+unreachable+' senza percorso':''));
+    else status(moved+' unit(s) marching');
   }
   function whiteBoundaryPoints(){
     const automatic=circles().filter(c=>c.mode==='allow');
