@@ -191,9 +191,13 @@
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
       const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
+      // Rock up to the snow line (75% of the height), snow cap above it.
+      const k=typeof MOUNTAIN_SNOW_LINE!=='undefined'?MOUNTAIN_SNOW_LINE:1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
       for(let i=0;i<f.points.length;i++){
         const a=f.points[i],b=f.points[(i+1)%f.points.length];
-        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},apex],typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2]);
+        const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2];
+        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},s(b),s(a)],rock);
+        if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
       }
     }
     return new Float32Array(m.tris);
@@ -346,10 +350,13 @@
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
+    // Mountain pines (96x128 canvases), two tones.
+    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'),aspect:1,pine:true});
     const rows=Math.ceil(tiles.length/ATLAS_COLS)||1,c=document.createElement('canvas');
     c.width=ATLAS_COLS*ATLAS_TILE;c.height=rows*ATLAS_TILE;const g=c.getContext('2d'),map=new Map();
     tiles.forEach((t,i)=>{const x=(i%ATLAS_COLS)*ATLAS_TILE,y=Math.floor(i/ATLAS_COLS)*ATLAS_TILE,h=Math.round(ATLAS_TILE*t.aspect);
-      g.drawImage(t.img,x,y,ATLAS_TILE,h);
+      // Pines keep their 3:4 shape centred in the square tile.
+      if(t.pine)g.drawImage(t.img,x+ATLAS_TILE*.125,y,ATLAS_TILE*.75,h);else g.drawImage(t.img,x,y,ATLAS_TILE,h);
       map.set(t.key,[x/c.width,y/c.height,(x+ATLAS_TILE)/c.width,(y+h)/c.height])});
     return{canvas:c,map,season};
   }
@@ -364,6 +371,16 @@
         const size=2.25*t.scale,z=t.z||0;
         const C=[[-.5,-.94,u0,v0],[.5,-.94,u1,v0],[.5,.06,u1,v1],[-.5,.06,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
+      }
+    }
+    // Pines on the lower half of the mountains, standing on the cone surface.
+    for(const f of State.environment||[]){
+      if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
+      for(const t of mountainPineLayout(f)){
+        const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
+        const size=2.4*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
       }
     }
     for(const e of urbanFenceSegments()){

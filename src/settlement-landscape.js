@@ -329,14 +329,101 @@ function mountainFaceColor(f,a,b,i){
   const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
   return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
 }
+// Snow caps the top quarter of every peak; pines cover the lower half of its slopes.
+const MOUNTAIN_SNOW_LINE=.75,MOUNTAIN_PINE_LINE=.5,MOUNTAIN_SNOW=[0xd6,0xdd,0xdf],MOUNTAIN_SNOW_LIT=[0xf4,0xf7,0xf7];
+function mountainSnowColor(f,a,b,i){
+  const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
+  const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.03:-.03),0,1);
+  return'#'+MOUNTAIN_SNOW.map((d,k)=>Math.round(d+(MOUNTAIN_SNOW_LIT[k]-d)*t).toString(16).padStart(2,'0')).join('');
+}
+// Cone surface height at p: linear from the base outline (0) to the apex (f.height).
+function mountainFacet(f,p){
+  const a=Math.atan2(p.y-f.y,p.x-f.x),n=f.points.length;
+  for(let i=0;i<n;i++){
+    const A=f.points[i],B=f.points[(i+1)%n];
+    const aa=Math.atan2(A.y-f.y,A.x-f.x),ab=Math.atan2(B.y-f.y,B.x-f.x);
+    let span=ab-aa;while(span<=-Math.PI)span+=2*Math.PI;while(span>Math.PI)span-=2*Math.PI;
+    let d=a-aa;while(d<=-Math.PI)d+=2*Math.PI;while(d>Math.PI)d-=2*Math.PI;
+    if(span>=0?d>=0&&d<=span:d<=0&&d>=span)return i;
+  }
+  return 0;
+}
+function mountainSurfaceZ(f,p){
+  const i=mountainFacet(f,p),A=f.points[i],B=f.points[(i+1)%f.points.length];
+  // Ray from the centre through p meets edge AB at the base: z falls linearly to it.
+  const dx=p.x-f.x,dy=p.y-f.y,ex=B.x-A.x,ey=B.y-A.y,den=dx*ey-dy*ex;
+  if(Math.abs(den)<1e-9)return 0;
+  const s=((A.x-f.x)*ey-(A.y-f.y)*ex)/den;
+  return s>1?(f.height||3.6)*(1-1/s):0;
+}
+// Pines on the lower half of each peak, on a jittered 2.6U grid, skipped where a taller
+// neighbouring peak covers the spot. Each pine remembers its facet for 2.5D painting.
+const mountainPineCache=new Map();
+function mountainPineLayout(f){
+  const key=f.id+':'+State.seed+':'+(f.height||0);
+  if(mountainPineCache.has(key))return mountainPineCache.get(key);
+  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6,out=[];
+  const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
+  for(let y=b.minY;y<=b.maxY;y+=step)for(let x=b.minX;x<=b.maxX;x+=step){
+    const p={x:x+(rnd()-.5)*step*.8,y:y+(rnd()-.5)*step*.8},shade=rnd(),scale=.9+rnd()*.45,flip=rnd()<.5;
+    if(!pointInPolygon(p,f.points))continue;
+    const z=mountainSurfaceZ(f,p),h=f.height||3.6;
+    if(z>h*MOUNTAIN_PINE_LINE||z<.05)continue;
+    if(others.some(o=>pointInPolygon(p,o.points)&&mountainSurfaceZ(o,p)>z))continue;
+    out.push({p,z,facet:mountainFacet(f,p),shade:shade<.5?0:1,scale,flip});
+  }
+  mountainPineCache.set(key,out);return out;
+}
+// Two-tone pine like the reference: tiered drooping crown and a short trunk.
+const mountainPineSprites={};
+function mountainPineSprite(variant,winter=false){
+  const key=variant+(winter?'w':'');
+  if(mountainPineSprites[key])return mountainPineSprites[key];
+  const W=96,H=128,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const crown=winter?(variant?'#6f8a72':'#7f9a80'):(variant?'#4f7a45':'#5d9140'),trunk='#a07560';
+  g.fillStyle=trunk;g.fillRect(W*.44,H*.80,W*.12,H*.17);
+  g.fillStyle=crown;g.beginPath();
+  const tiers=5,top=H*.04,bottom=H*.83;g.moveTo(W/2,top);
+  for(let k=1;k<=tiers;k++){
+    const y=top+(bottom-top)*k/tiers,half=W*(.10+.36*k/tiers);
+    g.quadraticCurveTo(W/2+half*.55,y-(bottom-top)/tiers*.35,W/2+half,y);
+    if(k<tiers)g.lineTo(W/2+half*.62,y-(bottom-top)/tiers*.12);
+  }
+  for(let k=tiers;k>=1;k--){
+    const y=top+(bottom-top)*k/tiers,half=W*(.10+.36*k/tiers);
+    if(k<tiers)g.lineTo(W/2-half*.62,y-(bottom-top)/tiers*.12);
+    g.lineTo(W/2-half,y);
+    g.quadraticCurveTo(W/2-half*.55,y-(bottom-top)/tiers*.35,k===1?W/2:W/2-W*(.10+.36*(k-1)/tiers),k===1?top:top+(bottom-top)*(k-1)/tiers);
+  }
+  g.closePath();g.fill();
+  if(winter){g.fillStyle='rgba(245,248,248,.55)';for(let k=1;k<=tiers;k++){const y=top+(bottom-top)*k/tiers,half=W*(.10+.36*k/tiers);g.fillRect(W/2-half*.6,y-H*.03,half*1.2,H*.02)}}
+  mountainPineSprites[key]=c;return c;
+}
+function drawMountainPine(t){
+  if(!screenPointVisibleRaw(t.p,t.z,30))return;
+  const img=mountainPineSprite(t.shade,State.season==='winter'),base=w2sRaw(t.p,t.z);
+  const h=Math.max(8,U*State.view.scale*2.4*t.scale),w=h*.75;
+  ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
+}
 function drawRaisedFan(f,height){
   const base=f.points,center={x:f.x,y:f.y},top=w2s(center,height),faces=[];
+  const plan=typeof isPlanView==='function'&&isPlanView(),pines=f.height?mountainPineLayout(f):[];
   for(let i=0;i<base.length;i++){
     const j=(i+1)%base.length,a=w2s(base[i]),b=w2s(base[j]);
-    faces.push({poly:[a,b,top],depth:(a.y+b.y)/2,i,color:mountainFaceColor(f,base[i],base[j],i)});
+    const sa=w2s({x:f.x+(base[i].x-f.x)*(1-MOUNTAIN_SNOW_LINE),y:f.y+(base[i].y-f.y)*(1-MOUNTAIN_SNOW_LINE)},height*MOUNTAIN_SNOW_LINE);
+    const sb=w2s({x:f.x+(base[j].x-f.x)*(1-MOUNTAIN_SNOW_LINE),y:f.y+(base[j].y-f.y)*(1-MOUNTAIN_SNOW_LINE)},height*MOUNTAIN_SNOW_LINE);
+    faces.push({rock:[a,b,sb,sa],snow:[sa,sb,top],depth:(a.y+b.y)/2,i,
+      color:mountainFaceColor(f,base[i],base[j],i),snowColor:mountainSnowColor(f,base[i],base[j],i)});
   }
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const q of faces)pathPolygon(q.poly,q.color,'rgba(170,150,125,.35)',.8);
+  // Pines go with their facet, so nearer facets (and their pines) cover farther ones.
+  const byFacet=new Map();for(const t of pines){if(!byFacet.has(t.facet))byFacet.set(t.facet,[]);byFacet.get(t.facet).push(t)}
+  for(const q of faces){
+    pathPolygon(q.rock,q.color,'rgba(170,150,125,.35)',.8);
+    pathPolygon(q.snow,q.snowColor,'rgba(200,210,214,.45)',.8);
+    if(plan||!forestTreeSpritesReady)continue;
+    for(const t of (byFacet.get(q.i)||[]).sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawMountainPine(t);
+  }
 }
 const FOREST_TREE_ASSETS=[
   './src/assets/forest/tree_01_tonda.svg',

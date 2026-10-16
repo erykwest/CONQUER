@@ -1024,6 +1024,8 @@ function hillIntersectsWorld(hill){
 function hillL1Gap(a,b){
   const pa=a?.levels?.[0]?.top||[],pb=b?.levels?.[0]?.top||[];
   if(pa.length<3||pb.length<3)return Infinity;
+  const ba=environmentPolygonBounds(pa),bb=environmentPolygonBounds(pb),far=RELIEF_L1_MIN_GAP+1;
+  if(ba.minX>bb.maxX+far||bb.minX>ba.maxX+far||ba.minY>bb.maxY+far||bb.minY>ba.maxY+far)return far;
   if(polygonsOverlapSimple(pa,pb))return 0;
   return polygonGap(pa,pb);
 }
@@ -1092,7 +1094,7 @@ const BIOME_RECIPES=Object.freeze({
   valley:{mountains:[3,5],stream:1},
   river:{river:true,forests:[1,2],hills:[0,1],hillHeight:[1,2]},
   forest:{stream:1,continuousForest:.20,ponds:[0,1]},
-  mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4]},
+  mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4],hillCoverage:.30},
   village:{forests:[1,2],hills:[0,1],hillHeight:[1,2]},
   sea:{sea:true,forests:[0,1]}
 });
@@ -1151,11 +1153,18 @@ function biomeMountains(){
       sub.height=main.height*biomeRand(rnd,.50,.75);sub.subPeak=true;sub.mainPeakId=main.id;
       subs.push(clip(sub));
     }
-    return[...peaks,...subs];
+    // Slope from 40deg (smallest summit) to 60deg (largest), interpolated by base radius; the
+    // height follows from slope and radius, so the tallest summit is also the steepest.
+    const all=[...peaks,...subs],rs=all.map(m=>Math.sqrt(m.rx*m.ry)),lo=Math.min(...rs),hi=Math.max(...rs);
+    for(const m of all){
+      const t=hi>lo?(Math.sqrt(m.rx*m.ry)-lo)/(hi-lo):1,deg=MOUNTAIN_SLOPE_DEG[0]+(MOUNTAIN_SLOPE_DEG[1]-MOUNTAIN_SLOPE_DEG[0])*t;
+      m.slopeDeg=deg;m.height=Math.sqrt(m.rx*m.ry)*Math.tan(deg*Math.PI/180);
+    }
+    return all;
   }
   return[];
 }
-const MOUNTAIN_STEEPNESS=[.95,1.15];
+const MOUNTAIN_STEEPNESS=[.95,1.15],MOUNTAIN_SLOPE_DEG=[40,60];
 // makeWatercourseAvoiding: the stream/river must stay clear of the mountain chain.
 function biomeWater(mountains){
   const recipe=biomeRecipe(),rnd=biomeStream(0x3a7684c1);
@@ -1175,7 +1184,11 @@ function biomeWater(mountains){
 // Outline used to keep hills, forests, ponds, sea and mountains apart.
 function reliefHillFootprint(hill){return hill.levels?.[0]?.top||[]}
 function biomeFeatureClear(points,obstacles,gap){
+  const a=environmentPolygonBounds(points);
   for(const o of obstacles){
+    // Bounding-box rejection before the O(n*m) polygon distance.
+    const b=environmentPolygonBounds(o.line||o.points),pad=(o.line?o.clear:gap)+.01;
+    if(a.minX>b.maxX+pad||b.minX>a.maxX+pad||a.minY>b.maxY+pad||b.minY>a.maxY+pad)continue;
     if(o.line){
       for(let i=1;i<o.line.length;i++)for(const p of points)if(pointSegmentDistance(p,o.line[i-1],o.line[i])<o.clear)return false;
       continue;
@@ -1203,17 +1216,25 @@ function generateRelief(){
   clearReliefBandCache();
   // generateTactical: hills placed after coast, mountains and water, never overlapping them.
   const recipe=biomeRecipe(),count=biomeRange(rnd,recipe.hills),obstacles=biomeTerrainObstacles();
-  for(let i=0;i<count;i++){
-    for(let attempt=0;attempt<420;attempt++){
-      const size=biomeFeatureSize(rnd,false),center=biomeCenter(rnd,size.margin);
+  // Foothills: a biome may ask for a minimum relief coverage (Montagne: 30% of the map); extra
+  // hills, up to 1.7x larger, keep being placed after the recipe count until it is reached.
+  let coverage=0,extra=0;
+  for(let i=0;i<count||(recipe.hillCoverage&&coverage<recipe.hillCoverage&&extra<90);i++){
+    if(i>=count)extra++;
+    for(let attempt=0;attempt<(i>=count?70:420);attempt++){
+      const size=biomeFeatureSize(rnd,false),center=biomeCenter(rnd,i>=count?0:size.margin);
+      // Foothills range from half to twice a recipe hill, so smaller ones fill the gaps.
+      if(i>=count){const k=attempt<35?biomeRand(rnd,1,2):biomeRand(rnd,.5,1);size.rx*=k;size.ry*=k}
       // Every terrace needs room: about one level per 3U of the short radius.
       const maxHeight=Math.max(1,Math.min(biomeRange(rnd,recipe.hillHeight||[1,2]),Math.floor(size.ry/3)));
       const candidate=makeProceduralHill(rnd,State.relief.hills.length,{center,rx:size.rx,ry:size.ry,maxHeight});
       const foot=reliefHillFootprint(candidate);
       if(!hillIntersectsWorld(candidate)||!hillSpacingOk(candidate,State.relief.hills))continue;
-      if(!biomeTownClear(foot)||!biomeFeatureClear(foot,obstacles,reliefEdgeWidth('gentle')+1))continue;
+      // Foothills (beyond the recipe count) may reach the mountain bases: only their slope band apart.
+      if(!biomeTownClear(foot)||!biomeFeatureClear(foot,obstacles,reliefEdgeWidth('gentle')+(i>=count?.1:1)))continue;
       State.relief.hills.push(candidate);
       clearReliefBandCache();
+      if(recipe.hillCoverage)coverage=estimateReliefCoverage(40);
       break;
     }
   }

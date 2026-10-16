@@ -15,7 +15,7 @@ const EXPECT={
   valley:{hills:[0,0],forests:[0,0],mountains:[3,5],water:['stream']},
   river:{hills:[0,1],forests:[0,2],mountains:[0,0],water:['river']},
   forest:{hills:[0,0],forests:[1,1],mountains:[0,0],water:['stream'],ponds:1,continuous:true},
-  mountains:{hills:[0,2],forests:[0,0],mountains:[4,7],water:['stream']},
+  mountains:{hills:[1,60],forests:[0,0],mountains:[4,7],water:['stream'],hillCoverage:.30},
   sea:{hills:[0,0],forests:[0,1],mountains:[0,0],water:[null],sea:true}
 };
 for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
@@ -32,7 +32,8 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
     "let open=0;const N=50;for(let iy=0;iy<N;iy++)for(let ix=0;ix<N;ix++)if(!inForest({x:(ix+.5)*WORLD/N,y:(iy+.5)*WORLD/N}))open++;"+
     "return{hills:hills.length,maxHeight:Math.max(0,...hills.map(h=>h.maxHeight)),forests:forests.length,continuous:forests.some(f=>f.continuous),"+
     "open:open/(N*N),peaks:peaks.length,subs:subs.length,"+
-    "steep:peaks.every(m=>m.height/Math.sqrt(m.rx*m.ry)>=.45),subHeights:subs.every(s=>{const m=peaks.find(p=>p.id===s.mainPeakId);return m&&s.height>=m.height*.5-1e-9&&s.height<=m.height*.75+1e-9}),"+
+    "slopes:[...peaks,...subs].map(m=>m.slopeDeg),slopeOk:[...peaks,...subs].every(m=>Math.abs(Math.atan(m.height/Math.sqrt(m.rx*m.ry))*180/Math.PI-m.slopeDeg)<1e-6),"+
+    "tallestSlope:[...peaks,...subs].sort((a,b)=>b.height-a.height)[0]?.slopeDeg,reliefCoverage:estimateReliefCoverage(48),"+
     "insideMap:env.filter(f=>f.type==='mountain').every(m=>m.points.every(p=>p.x>=-1e-6&&p.x<=WORLD+1e-6&&p.y>=-1e-6&&p.y<=WORLD+1e-6)),"+
     "ponds:env.filter(f=>f.type==='pond').length,water:water?.type||null,sea:!!sea,seaShare:sea?area(sea.points)/(WORLD*WORLD):0,sinuosity:len/span,"+
     "forestRadius:forests.filter(f=>!f.continuous).map(f=>Math.sqrt(f.rx*f.ry)),onWater,onHill,townCovered,ovals:env.some(f=>f.type==='hill'||f.type==='rough')}})()");
@@ -42,8 +43,8 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   assert.ok(r.peaks>=e.mountains[0]&&r.peaks<=e.mountains[1],tag+'main peaks '+r.peaks);
   if(r.peaks){
     assert.ok(r.subs>=r.peaks*2-1&&r.subs<=r.peaks*2+1,tag+'secondary summits '+r.subs+' for '+r.peaks+' peaks');
-    assert.ok(r.steep,tag+'main peaks must be steep');
-    assert.ok(r.subHeights,tag+'secondary summits at 50-75% of their peak');
+    assert.ok(r.slopes.every(d=>d>=40-1e-9&&d<=60+1e-9)&&r.slopeOk,tag+'mountain slopes within 40-60deg');
+    assert.ok(Math.abs(r.tallestSlope-60)<1e-6,tag+'tallest summit at 60deg');
     assert.ok(r.insideMap,tag+'mountains clipped to the map');
   }else assert.equal(r.subs,0,tag+'no secondary summits without a chain');
   assert.ok(e.water.includes(r.water),tag+'water '+r.water);
@@ -54,6 +55,7 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   assert.equal(r.continuous,!!e.continuous,tag+'continuous woodland');
   if(e.continuous)assert.ok(r.open>=.18&&r.open<=.40,tag+'open ground '+(100*r.open).toFixed(1)+'%');
   assert.ok(r.maxHeight<=4,tag+'hill height '+r.maxHeight);
+  if(e.hillCoverage)assert.ok(r.reliefCoverage>=e.hillCoverage-.02,tag+'hill coverage '+(100*r.reliefCoverage).toFixed(1)+'%');
   // Scaled COFFEE BATTLES sizes: small woods 11-15.4 x 6.6-8.8U, large 17.6-22 x 8.8-12.1U.
   for(const rad of r.forestRadius)assert.ok(rad>=8.5&&rad<=16.4,tag+'forest radius '+rad.toFixed(1));
   assert.equal(r.onWater,false,tag+'woods must leave the watercourse open');
