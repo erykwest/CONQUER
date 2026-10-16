@@ -1,19 +1,27 @@
-# Registro fonti esterne — conversazioni condivise
+# Registro fonti esterne — conversazioni importate e pendenti
 
-> Registrato il 16/10/2026. Questa pagina **non è un riassunto** dei contenuti: al momento della registrazione non è stato possibile leggere il testo dei link condivisi. Non inferire titoli, decisioni o implementazioni dai soli URL.
+> Ultima ricognizione: 16/10/2026. I link condivisi possono risultare illeggibili; per quelli ricevuti come export il testo è stato analizzato e sintetizzato **senza copiare l'intera conversazione nel repository pubblico**.
 
-| ID | Fonte | Stato acquisizione | Note |
+| ID | Link sorgente | Acquisizione | Digest / note |
 |---|---|---|---|
-| SRC-CHAT-001 | https://chatgpt.com/share/6ad22d36-e3f0-83ed-b261-b206e685f66b | **IN ATTESA DI TESTO** | Link fornito in chat il 16/10/2026; accesso web non riuscito |
-| SRC-CHAT-002 | https://chatgpt.com/share/6ad22d4a-9020-83ed-82b9-0d8bc1600bd3 | **IN ATTESA DI TESTO** | Link fornito in chat il 16/10/2026; accesso web non riuscito |
-| SRC-CHAT-003 | https://chatgpt.com/share/6ad22d85-4128-83eb-b338-7c5855aeca8f | **IN ATTESA DI TESTO** | Link fornito due volte, deduplicato; accesso web non riuscito |
+| SRC-CHAT-001 | https://chatgpt.com/share/6ad22d36-e3f0-83ed-b261-b206e685f66b | **LETTO — export 16/10/2026** | [Animazioni, rendering, audio, Suno](sources/VISUAL-AUDIO-2026-10-14.md) |
+| SRC-CHAT-002 | https://chatgpt.com/share/6ad22d4a-9020-83ed-82b9-0d8bc1600bd3 | **LETTO — export 16/10/2026** | [Minimappa / LOD; PR #44](sources/MINIMAP-2026-10-15.md) |
+| SRC-CHAT-003 | https://chatgpt.com/share/6ad22d85-4128-83eb-b338-7c5855aeca8f | **IN ATTESA DI TESTO** | Link già inviato due volte: deduplicato, senza export riconoscibile |
+| SRC-CHAT-004 | https://chatgpt.com/share/6ad22dbd-6aac-83eb-91fc-f3af89655a88 | **IN ATTESA DI TESTO** | Ultimo share aggiunto, URL non accessibile dal recupero web |
+| SRC-CHAT-005 | https://chatgpt.com/g/g-p-6abe1f4b147c8191bd451ac3eacadc73-coffee-conquer/c/6acccc53-af64-83eb-8b06-da317870daf2 | **LETTO — export 16/10/2026** | [Economia; design 12/10–merge 13/10](sources/ECONOMY-2026-10-12.md) |
 
-## Procedura d'importazione
+## Provenienza e controllo
 
-1. Recuperare per ciascuna fonte il **testo effettivo**, attraverso una versione esportata o un accesso verificabile al contenuto.
-2. Ricavare separatamente: scelte approvate, proposte, backlog, caratteristiche del codice citate e verifiche effettuate.
-3. Confrontare le informazioni con la branch e i commit interessati; non considerare una dichiarazione in chat equivalente a codice/test.
-4. Aggiornare [DECISIONS.md](DECISIONS.md), [ROADMAP.md](ROADMAP.md), [BACKLOG.md](BACKLOG.md) e [STATUS.md](STATUS.md) **solo sulla base di passaggi effettivamente leggibili**.
-5. Qui sostituire lo stato «IN ATTESA DI TESTO» con «LETTO» e un riferimento a estratto/data; registrare eventuali contraddizioni invece di armonizzarle automaticamente.
+- Gli export allegati hanno intestazioni e URL originali verificati: `ChatGPT-Direzione animazioni audio-20261016-1605.md`, `ChatGPT-Implementazione minimappa navigabile-20261016-1605.md`, `ChatGPT-ECONOMY-20261016-1627.md`.
+- Ogni digest distingue **richiesta diretta**, **consiglio tecnico**, **dichiarazione su codice** e **stato Git controllato**. Segnalazioni su asset locali non committati restano tali, anche se riportano quantità precise.
+- Un quarto allegato denominato `ROUTINE POPOLANI.txt` contiene invece materiale su un progetto lavorativo distinto (**COLOSSEUM**): **ESCLUSO** da CONQUER; il contenuto non è stato importato o committato.
+- L'importazione dei primi tre digest non chiude né valida le milestone. I file di progetto e i test su una branch specifica rimangono fonti prevalenti per ciò che è implementato.
+- Per SRC-CHAT-003 e SRC-CHAT-004: recuperare realmente il testo prima di assegnare titolo, decisioni, feature o stato «LETTO».
 
-**Avvertenza:** fino all'importazione verificata questi tre URL sono soltanto riferimenti documentali. La roadmap esistente non è stata alterata dai loro presunti contenuti.
+## Procedura per nuovi export
+
+1. Leggere l'intera trascrizione e verificare titolo, data e URL nell'header.
+2. Ricavare decisioni degli utenti, proposte dell'assistente, specifiche e feature riferite al codice.
+3. Confermare branch/HEAD e PR vive per le affermazioni tecniche prima di cambiarne lo stato.
+4. Aggiornare [DECISIONS](DECISIONS.md), [ROADMAP](ROADMAP.md), [STATUS](STATUS.md), [BACKLOG](BACKLOG.md) solo dove serve.
+5. Registrare in questo indice link, digest e data. Mai considerare una chat come test del software.
