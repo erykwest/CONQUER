@@ -329,14 +329,14 @@ function mountainFaceColor(f,a,b,i){
   const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
   return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
 }
-// Snow above 75% and pines below 50% of the TALLEST summit's height: one snow line and one
+// Snow above 50% and pines below 25% of the TALLEST summit's height: one snow line and one
 // tree line for the whole map, so lower summits may have no snow at all.
 function mountainMaxHeight(){
   let h=0;for(const f of State.environment||[])if(f.type==='mountain')h=Math.max(h,f.height||3.6);return h;
 }
 function mountainSnowZ(){return mountainMaxHeight()*MOUNTAIN_SNOW_LINE}
 function mountainPineZ(){return mountainMaxHeight()*MOUNTAIN_PINE_LINE}
-const MOUNTAIN_SNOW_LINE=.75,MOUNTAIN_PINE_LINE=.5,MOUNTAIN_SNOW=[0xd6,0xdd,0xdf],MOUNTAIN_SNOW_LIT=[0xf4,0xf7,0xf7];
+const MOUNTAIN_SNOW_LINE=.5,MOUNTAIN_PINE_LINE=.25,MOUNTAIN_SNOW=[0xd6,0xdd,0xdf],MOUNTAIN_SNOW_LIT=[0xf4,0xf7,0xf7];
 function mountainSnowColor(f,a,b,i){
   const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
   const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.03:-.03),0,1);

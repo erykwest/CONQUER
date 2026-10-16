@@ -117,7 +117,8 @@ function terrainPlateauElevation(p){
   return z;
 }
 function environmentConflictsTestRelief(f){
-  if(!State.relief?.hills?.length||f.type==='forest'||f.type==='rough')return false;
+  // Mountains may stand on foothills (continuous massif): never dropped for overlapping relief.
+  if(!State.relief?.hills?.length||f.type==='forest'||f.type==='rough'||f.type==='mountain')return false;
   if(['stream','river'].includes(f.type)){
     for(let i=0;i<f.points.length-1;i++){
       const a=f.points[i],b=f.points[i+1],steps=Math.max(3,Math.ceil(dist(a,b)/1.5));

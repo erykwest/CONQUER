@@ -1202,8 +1202,8 @@ function biomeFeatureClear(points,obstacles,gap){
 }
 function biomeTerrainObstacles(){
   const sea=biomeSea(),mountains=biomeMountains(),water=biomeWater(mountains),out=[];
+  // Hills may run into the mountains: foothills continue the massif instead of avoiding it.
   if(sea)out.push({points:sea.points});
-  for(const m of mountains)out.push({points:m.points});
   if(water)out.push({line:water.points,clear:water.width/2+2});
   return out;
 }
