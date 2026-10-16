@@ -174,10 +174,12 @@
   function grazeLoop(anchor,target,time,seed){
     const cycle=5.5+rand(seed^0x68bc21eb)*2.5;
     const phase=((time+rand(seed^0x9e3779b9)*cycle)/cycle)%1;
-    if(phase<.52)return {p:anchor,mode:'browse'};
-    if(phase<.66)return {p:lerp(anchor,target,smooth((phase-.52)/.14)),mode:'walk'};
-    if(phase<.88)return {p:target,mode:'browse'};
-    return {p:lerp(target,anchor,smooth((phase-.88)/.12)),mode:'walk'};
+    const towards={x:target.x-anchor.x,y:target.y-anchor.y};
+    const back={x:-towards.x,y:-towards.y};
+    if(phase<.52)return {p:anchor,mode:'browse',heading:back};
+    if(phase<.66)return {p:lerp(anchor,target,smooth((phase-.52)/.14)),mode:'walk',heading:towards};
+    if(phase<.88)return {p:target,mode:'browse',heading:towards};
+    return {p:lerp(target,anchor,smooth((phase-.88)/.12)),mode:'walk',heading:back};
   }
   function grazingBehavior(plan,pasture,lot,house,i){
     const time=visualCycleDay()*34;
@@ -193,24 +195,43 @@
       isFreePenPoint(candidate,lot,house,[],0));
     return grazeLoop(anchor,target,time,seed);
   }
+  // Use the actual projected travel vector when selecting the mirrored sprite.
+  // Graze movement uses a deterministic two-way heading; shepherd trips use
+  // their current path tangent, including the reversed return journey.
   function movingAnimalPosition(plan,pasture,i,frac,phase,lot,house){
     const lag=i/Math.max(1,plan.count)*.18;
     const destination=grazingBehavior(plan,pasture,lot,house,i);
     const home=plan.pen[i],path=pasture.path;
     if(phase==='graze')return destination;
-    if(phase==='home'||!pasture)return {p:home,mode:'browse'};
+    if(phase==='home'||!pasture)return {p:home,mode:'browse',heading:destination.heading};
     if(phase==='out'){
       const q=clamp((frac-DEPART)/(PASTURE_AT-DEPART),0,1);
       const progress=smooth(clamp((q-lag)/(1-lag),0,1));
       const anchor=pointAlongPath(path,progress);
       const blend=smooth((progress-.83)/.17);
-      return {p:lerp(anchor,destination.p,blend),mode:'walk'};
+      const point=lerp(anchor,destination.p,blend);
+      const next=pointAlongPath(path,Math.min(1,progress+.02));
+      const heading=blend>.8?{x:destination.p.x-anchor.x,y:destination.p.y-anchor.y}:
+        {x:next.x-anchor.x,y:next.y-anchor.y};
+      return {p:point,mode:'walk',heading};
     }
     const q=clamp((frac-RETURN)/(HOME_AT-RETURN),0,1);
     const progress=smooth(clamp((q-lag)/(1-lag),0,1));
     const anchor=pointAlongPath(path,1-progress);
     const from=lerp(destination.p,anchor,smooth(progress/.12));
-    return {p:lerp(from,home,smooth((progress-.88)/.12)),mode:'walk'};
+    const finish=smooth((progress-.88)/.12);
+    const point=lerp(from,home,finish);
+    const next=pointAlongPath(path,Math.max(0,1-progress-.02));
+    const heading=finish>.3?{x:home.x-from.x,y:home.y-from.y}:
+      {x:next.x-anchor.x,y:next.y-anchor.y};
+    return {p:point,mode:'walk',heading};
+  }
+  function animalFacing(p,heading,seed){
+    if(heading&&Math.hypot(heading.x,heading.y)>1e-5){
+      const q=w2s(p,.07),next=w2s({x:p.x+heading.x,y:p.y+heading.y},.07);
+      if(Math.abs(next.x-q.x)>.001)return next.x>q.x?1:-1;
+    }
+    return seed%2?1:-1;
   }
   function animals(){
     const out=[],frac=dayFraction();
@@ -222,11 +243,12 @@
       const pasture=data.kind==='shepherd'?pastureFor(data):null;
       const phase=pasture?period(frac):'home';
       for(let i=0;i<data.count;i++){
-        let behavior={p:data.pen[i],mode:'browse'};
+        let behavior={p:data.pen[i],mode:'browse',heading:null};
         if(data.kind==='shepherd'&&pasture)behavior=movingAnimalPosition(data,pasture,i,frac,phase,lot,house);
         else behavior=grazingBehavior(data,null,lot,house,i);
+        const seed=hash(house.id+'|'+i);
         out.push({id:house.id+':'+i,species:data.kind==='goat'?'goat':'sheep',p:behavior.p,mode:behavior.mode,
-          seed:hash(house.id+'|'+i),facing:hash(house.id+'|face|'+i)%2?1:-1});
+          seed,heading:behavior.heading,facing:animalFacing(behavior.p,behavior.heading,seed)});
       }
     }
     return out;

@@ -42,7 +42,7 @@ const sandbox={window,State,urbanRevision:1,WORLD:200,peasantHash:hash,
   villagerPathBetween:(h,a,b)=>[a,b],findPeasantPath:(a,b)=>[a,b],
   pointAlongPath:(p,t)=>({x:p[0].x+(p.at(-1).x-p[0].x)*t,y:p[0].y+(p.at(-1).y-p[0].y)*t}),
   residentIdlePoint:p=>p,visualCycleFrac:()=>fraction,visualCycleDay:()=>90+fraction,
-  viewDepthPoint:p=>p.y,worldPointVisible:()=>true,w2s:p=>({x:p.x,y:p.y}),
+  viewDepthPoint:p=>p.y,worldPointVisible:()=>true,w2s:p=>({x:p.x-p.y,y:p.x+p.y}),
   withUrbanFigureOcclusion:(p,z,draw)=>draw(),ctx:{}
 };
 vm.runInNewContext(source,sandbox,{filename:'settlement-livestock.js'});
@@ -72,4 +72,18 @@ fraction=.8;
 assert.ok(animals.animals().filter(a=>a.species==='sheep').every(a=>sandbox.urbanContains(lots[2].points,a.p)),
   'all sheep return to their lot at night');
 assert.equal(animals.shepherdPosition(houses[2]),null);
+// During movement, sprites follow projected direction; reversing the short
+// browse-loop stroll flips their mirrored art in both directions.
+let right=0,left=0;
+for(let n=0;n<1000;n++){
+  fraction=n/1000;
+  for(const a of animals.animals()){
+    if(a.species!=='goat'||a.mode!=='walk'||!a.heading)continue;
+    const projection=a.heading.x-a.heading.y;
+    if(Math.abs(projection)<1e-5)continue;
+    assert.equal(a.facing,Math.sign(projection),'walking sprite follows movement, not its initial random orientation');
+    if(a.facing===1)right++;else left++;
+  }
+}
+assert.ok(right>0&&left>0,'the animals actually flip while walking in opposite directions');
 console.log('Urban livestock integration regression PASS');

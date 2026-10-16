@@ -33,6 +33,7 @@ for(const [name,files] of Object.entries(parts)){
     // assignments and gives the pastoral adult a daily route. Strip exactly
     // those edits, then retain the original byte-for-byte extraction check.
     const edits=[
+      ["  if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;\n", ""],
       [".filter(part=>part.kind!=='outbuilding')", ''],
       ["houses.filter(h=>houseLevel(h)===tier&&(tier!==1||window.ConquerLivestock?.lotKindForHouse(h)!=='shepherd'))",
        "houses.filter(h=>houseLevel(h)===tier)"],
