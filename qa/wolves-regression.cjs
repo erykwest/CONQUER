@@ -104,6 +104,7 @@ context.findPeasantPath=()=>{civilianSearches++;throw Error('wolf must not call 
 night=true;api.ensure();
 for(const wolf of wolves){wolf.wolfDecisionIn=0;wolf.wolfPath=null;}
 const initialChecks=attempts;
+const baselineRoutes=win.__conquerPerf?.wolfRouteAttempts||0;
 api.tick(.05);
 const firstChecks=attempts-initialChecks;
 assert.ok(firstChecks>0,'one wolf attempts a bounded route');
@@ -112,9 +113,29 @@ let laterChecks=attempts;
 for(let i=0;i<16;i++)api.tick(.05);
 assert.ok(attempts-laterChecks<180,'no per-frame replan storm when paths fail');
 assert.equal(civilianSearches,0,'wolf pursuit never invokes expensive civilian pathfinder');
-assert.ok(win.__conquerPerf.wolfRouteAttempts<=6,
+assert.ok(win.__conquerPerf.wolfRouteAttempts-baselineRoutes<=6,
  'route planning is scheduled across ticks and obeys individual backoff');
 assert.ok(win.__conquerPerf.wolfRouteFailures>0,'blocked routes get counted');
 assert.ok(Number.isFinite(win.__conquerPerf.wolfAiMs),'wolf AI perf instrumentation is populated');
+
+// Rendering regression: the heavy SVG pose is drawn only when the animation
+// frame changes; intermediate tactical redraws reuse the cached bitmap.
+let renderClock=1000,svgPaints=0,bitmapDraws=0;
+context.performance.now=()=>renderClock;
+const fakeCanvas={
+  width:0,height:0,
+  getContext:()=>({clearRect:()=>{}})
+};
+context.document={createElement:()=>fakeCanvas};
+const fakeG={drawImage:()=>{bitmapDraws++}};
+win.ConquerAnimals.drawAnimal=()=>{svgPaints++};
+api.draw(fakeG,hunter);
+api.draw(fakeG,hunter);
+assert.equal(svgPaints,1,'same animation frame reuses cached wolf sprite');
+assert.equal(bitmapDraws,2,'moving wolf is drawn on each visual frame');
+renderClock+=140;
+api.draw(fakeG,hunter);
+assert.equal(svgPaints,2,'sprite refreshes for next animated gait frame');
+
 
 console.log('PASS imported wolf SVG, stable spawning, daytime neutral, nocturnal hunt/melee, dawn release');

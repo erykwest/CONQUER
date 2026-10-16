@@ -172,15 +172,43 @@
     perf.wolfRouteFailures=(perf.wolfRouteFailures||0)+failed;
     if(ms>20)window.__conquerAnalytics?.event('WOLF_AI_SLOW',{ms:+ms.toFixed(1),planned,failed,night},'warn',3000);
   }
+  // Animation frame atlas per wolf: painting every original SVG Path2D into
+  // the tactical canvas on every world redraw is unnecessarily expensive,
+  // especially alongside the night-light pass. Each wolf animates at ~8 FPS
+  // while its ground position is still updated every rendered frame.
+  const spriteFrames=new Map(),SPRITE_W=96,SPRITE_H=96,SPRITE_X=48,SPRITE_Y=78;
   function draw(g,wolf){
     if(!window.ConquerAnimals?.SPECIES?.wolf||wolf.defeated||wolf.stats?.hp===0)return;
     const p=w2s(wolf,.08);
     const size=clamp(State.view.scale*16,8,40);
-    withUrbanFigureOcclusion(wolf,.08,()=>
-      window.ConquerAnimals.drawAnimal('wolf',g,p.x,p.y,size,{
-        mode:wolf.wolfMode||(isNight()?'howl':'walk'),
-        facing:wolf.wolfFace||1,seed:wolf.wolfSeed||0,t:performance.now()/1000
-      }));
+    const mode=wolf.wolfMode||(isNight()?'howl':'walk');
+    const facing=wolf.wolfFace||1,seed=wolf.wolfSeed||0;
+    const time=performance.now();
+    const opts={mode,facing,seed,t:time/1000};
+    withUrbanFigureOcclusion(wolf,.08,()=>{
+      if(typeof document==='undefined'||typeof g.drawImage!=='function'){
+        window.ConquerAnimals.drawAnimal('wolf',g,p.x,p.y,size,opts);
+        return;
+      }
+      const frame=Math.floor((time+seed*115)/125);
+      let sprite=spriteFrames.get(wolf.id);
+      if(!sprite||sprite.size!==size||sprite.mode!==mode||
+         sprite.facing!==facing||sprite.frame!==frame){
+        const canvas=sprite?.canvas||document.createElement('canvas');
+        if(canvas.width!==SPRITE_W)canvas.width=SPRITE_W;
+        if(canvas.height!==SPRITE_H)canvas.height=SPRITE_H;
+        const c=canvas.getContext('2d');
+        if(!c){
+          window.ConquerAnimals.drawAnimal('wolf',g,p.x,p.y,size,opts);
+          return;
+        }
+        c.clearRect(0,0,SPRITE_W,SPRITE_H);
+        window.ConquerAnimals.drawAnimal('wolf',c,SPRITE_X,SPRITE_Y,size,opts);
+        sprite={canvas,size,mode,facing,frame};
+        spriteFrames.set(wolf.id,sprite);
+      }
+      g.drawImage(sprite.canvas,p.x-SPRITE_X,p.y-SPRITE_Y);
+    });
   }
   window.ConquerWolves={ensure,tick,draw,isNight,pack};
   ensure();
