@@ -27,6 +27,10 @@
 - **Non inventare completamenti:** ogni variazione di stato riporta prove (file, QA, issue/PR, commit, branch, data).
 - **Non uniformare di nascosto fonti in conflitto:** registrare in [DECISIONS.md](DECISIONS.md) e impedire che una supposizione diventi un requisito.
 
+## Fonti esterne non ancora assimilate
+
+Tre conversazioni condivise il 16/10/2026 sono censite in [EXTERNAL-SOURCES.md](EXTERNAL-SOURCES.md). **Non sono state lette** perché gli URL non hanno restituito il contenuto; non attribuire loro decisioni o feature fino a un import verificato.
+
 ## Origine della piramide
 
 La base è la repository [erykwest/CONQUER](https://github.com/erykwest/CONQUER): [README](../../README.md), [AGENTS.md](../../AGENTS.md), [backlog Builder/Manager](../feature-backlog.md), [economy](../economy.md), [urban fixes](../urban-fixes.md), sorgenti e QA. I documenti includono anche decisioni e proposte dalle conversazioni su CONQUER, il simulatore di castello/assedi e gli appunti di progetto disponibili al 16/10/2026. Non costituiscono un audit completo dell'intero codice.
