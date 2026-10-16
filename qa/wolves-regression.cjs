@@ -58,7 +58,7 @@ for(const wolf of wolves){
 assert.equal(packs.size,2,'wolves are generated into two distinct packs');
 assert.ok([...packs.values()].every(m=>m.length>=3&&m.length<=6),'each pack has 3–6 wolves');
 assert.equal(wolves.length,[...packs.values()].reduce((n,m)=>n+m.length,0));
-assert.equal(new Set(wolves.map(w=>w.id)).size,4);
+assert.equal(new Set(wolves.map(w=>w.id)).size,wolves.length,'all pack members have unique IDs');
 assert.ok(wolves.every(w=>w.kind==='wolf'&&w.combatKind==='wolf'&&w.faction==='wildlife'));
 assert.ok(wolves.every(w=>w.neutral),'daytime wolves are neutral');
 assert.ok(wolves.every(w=>Math.hypot(w.x-100,w.y-100)>=14),'wolves spawn outside yellow territory');
