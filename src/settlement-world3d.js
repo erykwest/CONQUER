@@ -540,11 +540,16 @@
     m.face([{...a,z:z0},{...b,z:z0},{...b,z:z1},{...a,z:z1}],hex);
   }
   function buildCutaway(){
-    const m=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
+    // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
+    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
     const W3=window.ConquerWagons3D,FU=window.ConquerCutawayFurniture;
     for(const s of State.structures){
       if(!structureCutaway(s)||underConstruction(s))continue;
-      const g=cutawayWallGeometry(s),H=structureHeight(s),n=Math.min(g.outer.length,g.inner.length);
+      const g0=cutawayWallGeometry(s),H=structureHeight(s),n=Math.min(g0.outer.length,g0.inner.length);
+      // Inner ring re-indexed so inner[i] is the vertex nearest outer[i] (built sections list them
+      // in another order, which made the crest quads cross over the whole room).
+      const g={...g0,inner:g0.outer.slice(0,n).map(o=>g0.inner.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,g0.inner[0]))};
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
@@ -557,13 +562,13 @@
       }
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
-        m.face([Z(o0,0),Z(o1,0),Z(o1,H),Z(o0,H)],castleSideShade(o0,o1));
+        sh.face([Z(o0,0),Z(o1,0),Z(o1,H),Z(o0,H)],castleSideShade(o0,o1));
         m.face([Z(i0,0),Z(i1,0),Z(i1,H),Z(i0,H)],'#61574f');
       }
       for(const v of jambs)m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
       const ring=winter?WINTER_SNOW_TOP:'#8f857a';
-      for(let i=0;i<n;i++){const j=(i+1)%n;m.face([Z(g.outer[i],H),Z(g.outer[j],H),Z(g.inner[j],H),Z(g.inner[i],H)],ring)}
-      if(s.type==='tower'&&towerRoofStyle(s)==='battlement')m.face(g.inner.map(p=>Z(p,H-.01)),winter?WINTER_SNOW_TOP:'#8f857a');
+      for(let i=0;i<n;i++){const j=(i+1)%n;sh.face([Z(g.outer[i],H),Z(g.outer[j],H),Z(g.inner[j],H),Z(g.inner[i],H)],ring)}
+      if(s.type==='tower'&&towerRoofStyle(s)==='battlement')sh.face(g.inner.map(p=>Z(p,H-.01)),winter?WINTER_SNOW_TOP:'#8f857a');
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
@@ -623,7 +628,7 @@
         if(f.emissive)em.face(pts,f.hex);
       }
     }
-    return{main:new Float32Array(m.tris),em:new Float32Array(em.tris)};
+    return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris)};
   }
 
   // ---------- content signatures (cheap, per frame) ----------
@@ -732,17 +737,17 @@
     const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,
       ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
     if(S.cutContent!==cutContent){
-      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.em.b)}
+      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b)}
       S.cutContent=cutContent;S.cutVariants=new Map();
     }
     if(cut.length){
       const key=rot+'|'+plan;let v=S.cutVariants.get(key);
       if(!v){
         const a=performance.now(),d=buildCutaway(),mk=x=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,x,gl.STATIC_DRAW);return{b,n:x.length}};
-        v={main:mk(d.main),em:mk(d.em)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
+        v={main:mk(d.main),shell:mk(d.shell),em:mk(d.em)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
       }
-      S.buf.cutaway=v.main.b;S.buf['cutaway#n']=v.main.n;S.buf.cutawayEm=v.em.b;S.buf['cutawayEm#n']=v.em.n;
-    }else{S.buf['cutaway#n']=0;S.buf['cutawayEm#n']=0}
+      S.buf.cutaway=v.main.b;S.buf['cutaway#n']=v.main.n;S.buf.cutawayShell=v.shell.b;S.buf['cutawayShell#n']=v.shell.n;S.buf.cutawayEm=v.em.b;S.buf['cutawayEm#n']=v.em.n;
+    }else{S.buf['cutaway#n']=0;S.buf['cutawayShell#n']=0;S.buf['cutawayEm#n']=0}
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
     st.ensureMs=performance.now()-t0;
@@ -791,7 +796,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');drawMesh(gl,r,'cutaway');
+    drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayShell');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write

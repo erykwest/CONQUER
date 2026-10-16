@@ -14,9 +14,10 @@ function drawDayNightOverlay(){
 }
 function drawNightLights(){
   const nf=nightFactor();if(nf<=.01)return;
+  // Cutaway interiors in full light first, so lit windows and fire flames stay on top.
+  window.ConquerWorld3D?.drawEmissive?.();window.ConquerCutawayFurniture?.drawEmissive2D(nf);
   drawFacadeWindows(true,nf);
   drawFireGlows(nf);
-  window.ConquerWorld3D?.drawEmissive?.();window.ConquerCutawayFurniture?.drawEmissive2D(nf);
 }
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
