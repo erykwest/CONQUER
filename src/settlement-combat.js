@@ -646,7 +646,7 @@
     if(!activeWell())return;
     const king=combat.units.find(u=>u.kind==='knight');
     for(const u of combat.units){
-      if(!selectedIds.has(u.id)||u.defeated)continue;
+      if(!selectedIds.has(u.id)||u.defeated||u.campState)continue;
       g.strokeStyle=u.kind==='knight'?'rgba(255,211,116,.86)':'#e3fcac';
       g.lineWidth=1.5;g.setLineDash([5,4]);
       drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)},true);
