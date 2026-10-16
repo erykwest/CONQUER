@@ -10,6 +10,7 @@ on:
       - src/settlement-population-garrisons.js
       - src/settlement-app-persistence.js
       - qa/camp-regression.cjs
+      - qa/patrol-regression.cjs
       - .github/workflows/camp-regression.yml
 jobs:
   camp-smoke:
@@ -29,5 +30,6 @@ jobs:
       - name: Behavioral regression
         run: |
           node qa/camp-regression.cjs
+          node qa/patrol-regression.cjs
           node qa/combat-selection-regression.cjs
           node qa/settlement-routing-spawn-regression.cjs
