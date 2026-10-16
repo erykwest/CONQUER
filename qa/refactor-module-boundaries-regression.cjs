@@ -38,6 +38,8 @@ const render3dHooks=[
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
   ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n']
 ];
+// Restore the intentional L1 herd pass when checking the original renderer blob.
+render3dHooks.push(['  window.ConquerLivestock?.draw();\n','']);
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));
   return src.replace(hooked,()=>original);
