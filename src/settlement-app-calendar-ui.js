@@ -210,7 +210,8 @@ document.getElementById('rotateRight').onclick=()=>rotateCamera(1);
 document.getElementById('planToggle').onclick=togglePlanView;
 syncPlanToggle();
 document.getElementById('biomeSelect').onchange=e=>{
-  State.biome=BIOMES[e.target.value]?e.target.value:'plains';State.environment=[];generateEnvironment();
+  // Hills, mountains, water and woods all come from the biome recipe.
+  State.biome=BIOMES[e.target.value]?e.target.value:'plains';clearReliefBandCache();generateRelief();State.environment=[];generateEnvironment();invalidateNavigation(false);
   State.structures=State.structures.filter(s=>!s.auto);
   if(State.village.founded){State.village.growthStep=0;State.village.nextGrowthDay=State.clock.day+.75;State.village.roadPlan=null;State.village.baseRoadAngle=null}
   markDirty(true,'all');renderUI();status('Biome: '+BIOMES[State.biome].label+' — automatic settlement growth reset');draw();

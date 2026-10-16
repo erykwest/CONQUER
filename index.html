@@ -21,6 +21,7 @@
 })();
 </script>
 <link rel="stylesheet" href="./src/settlement.css?v=antiregression-1">
+<link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 </head>
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
@@ -89,6 +90,7 @@
     <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
     <div class="kv"><span>Biome</span><b id="biomeLabel">Pianura</b></div>
     <select id="biomeSelect" aria-label="Biome">
+      <option value="test" selected>TEST</option>
       <option value="plains">Pianura</option>
       <option value="hills">Colline</option>
       <option value="valley">Vallata</option>
@@ -218,6 +220,10 @@
       </div>
     </div>
   </div>
+  <section id="conquerMinimap" aria-label="Minimappa navigabile">
+    <div class="minimap-head"><span>MINIMAPPA</span><button id="conquerMinimapToggle" type="button" aria-label="Riduci minimappa" aria-expanded="true" title="Riduci minimappa">−</button></div>
+    <canvas id="conquerMinimapCanvas" width="190" height="190" role="img" aria-label="Mappa top-down del territorio: trascina per spostare la vista" title="Clicca o trascina per centrare la camera"></canvas>
+  </section>
   <div id="status">Select a build tool</div>
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
@@ -264,6 +270,8 @@
 <script src="./src/settlement-app-persistence.js?v=refactor-2"></script>
 <script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
 <script src="./src/settlement-app-simulation.js?v=refactor-2"></script>
+<script src="./src/settlement-lod.js?v=lod-1"></script>
+<script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
 <script src="./src/settlement-combat-anim.js?v=anim-1"></script>
 <script src="./src/settlement-combat-rules.js?v=combat-4"></script>

@@ -891,6 +891,16 @@ function drawCastleFireFixtures(){
   for(const src of towerTorchSources())drawTorchFixture(src);
   for(const src of battlementBrazierSources())drawBrazierFixture(src);
 }
+// WebGL2 owns the glow halo; only the small animated flame remains a Canvas effect.
+function drawFireFlamesOnly(nf){
+  if(nf<=.01)return;
+  const scale=clamp(State.view.scale,.55,1.45);
+  for(const src of fireSources()){
+    const localZ=src.z+(src.kind==='brazier'?.08:0);
+    const p=Number.isFinite(src.groundZ)?w2sRaw(src.p,localZ+src.groundZ):w2s(src.p,localZ);
+    drawScreenFlame(p,scale,src.id,src.kind==='brazier');
+  }
+}
 function drawFireGlows(nf){
   if(nf<=.01)return;
   const scale=clamp(State.view.scale,.55,1.45);

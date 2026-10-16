@@ -320,14 +320,118 @@ function drawTerrain(){
   if(State.season==='spring')drawSpringFlowerClusters();
   ctx.restore();
 }
+// Mountain facet tone by its outward direction against a north-west light (world space, so the
+// slopes stay lit consistently as the camera turns), with a slight alternation between facets.
+const MOUNTAIN_LIGHT={x:-.6,y:-.8},MOUNTAIN_DARK=[0x46,0x3c,0x33],MOUNTAIN_LIT=[0x86,0x75,0x62];
+function mountainFaceColor(f,a,b,i){
+  const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
+  const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.035:-.035),0,1);
+  const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
+  return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+// Snow above 50% and pines below 25% of the TALLEST summit's height: one snow line and one
+// tree line for the whole map, so lower summits may have no snow at all.
+function mountainMaxHeight(){
+  let h=0;for(const f of State.environment||[])if(f.type==='mountain')h=Math.max(h,f.height||3.6);return h;
+}
+function mountainSnowZ(){return mountainMaxHeight()*MOUNTAIN_SNOW_LINE}
+function mountainPineZ(){return mountainMaxHeight()*MOUNTAIN_PINE_LINE}
+const MOUNTAIN_SNOW_LINE=.5,MOUNTAIN_PINE_LINE=.25,MOUNTAIN_SNOW=[0xd6,0xdd,0xdf],MOUNTAIN_SNOW_LIT=[0xf4,0xf7,0xf7];
+function mountainSnowColor(f,a,b,i){
+  const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
+  const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.03:-.03),0,1);
+  return'#'+MOUNTAIN_SNOW.map((d,k)=>Math.round(d+(MOUNTAIN_SNOW_LIT[k]-d)*t).toString(16).padStart(2,'0')).join('');
+}
+// Cone surface height at p: linear from the base outline (0) to the apex (f.height).
+function mountainFacet(f,p){
+  const a=Math.atan2(p.y-f.y,p.x-f.x),n=f.points.length;
+  for(let i=0;i<n;i++){
+    const A=f.points[i],B=f.points[(i+1)%n];
+    const aa=Math.atan2(A.y-f.y,A.x-f.x),ab=Math.atan2(B.y-f.y,B.x-f.x);
+    let span=ab-aa;while(span<=-Math.PI)span+=2*Math.PI;while(span>Math.PI)span-=2*Math.PI;
+    let d=a-aa;while(d<=-Math.PI)d+=2*Math.PI;while(d>Math.PI)d-=2*Math.PI;
+    if(span>=0?d>=0&&d<=span:d<=0&&d>=span)return i;
+  }
+  return 0;
+}
+function mountainSurfaceZ(f,p){
+  const i=mountainFacet(f,p),A=f.points[i],B=f.points[(i+1)%f.points.length];
+  // Ray from the centre through p meets edge AB at the base: z falls linearly to it.
+  const dx=p.x-f.x,dy=p.y-f.y,ex=B.x-A.x,ey=B.y-A.y,den=dx*ey-dy*ex;
+  if(Math.abs(den)<1e-9)return 0;
+  const s=((A.x-f.x)*ey-(A.y-f.y)*ex)/den;
+  return s>1?(f.height||3.6)*(1-1/s):0;
+}
+// Pines on the lower half of each peak, on a jittered 2.6U grid, skipped where a taller
+// neighbouring peak covers the spot. Each pine remembers its facet for 2.5D painting.
+const mountainPineCache=new Map();
+function mountainPineLayout(f){
+  const pineZ=mountainPineZ(),key=f.id+':'+State.seed+':'+(f.height||0)+':'+pineZ.toFixed(3);
+  if(mountainPineCache.has(key))return mountainPineCache.get(key);
+  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6,out=[];
+  const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
+  for(let y=b.minY;y<=b.maxY;y+=step)for(let x=b.minX;x<=b.maxX;x+=step){
+    const p={x:x+(rnd()-.5)*step*.8,y:y+(rnd()-.5)*step*.8},shade=rnd(),scale=.9+rnd()*.45,flip=rnd()<.5;
+    if(!pointInPolygon(p,f.points))continue;
+    const z=mountainSurfaceZ(f,p),h=f.height||3.6;
+    if(z>pineZ||z>h||z<.05)continue;
+    if(others.some(o=>pointInPolygon(p,o.points)&&mountainSurfaceZ(o,p)>z))continue;
+    out.push({p,z,facet:mountainFacet(f,p),shade:shade<.5?0:1,scale,flip});
+  }
+  mountainPineCache.set(key,out);return out;
+}
+// Two-tone pine like the reference: tiered drooping crown and a short trunk.
+const mountainPineSprites={};
+function mountainPineSprite(variant,winter=false){
+  const key=variant+(winter?'w':'');
+  if(mountainPineSprites[key])return mountainPineSprites[key];
+  const W=96,H=128,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const crown=winter?(variant?'#6f8a72':'#7f9a80'):(variant?'#4f7a45':'#5d9140'),trunk='#a07560';
+  g.fillStyle=trunk;g.fillRect(W*.44,H*.80,W*.12,H*.17);
+  g.fillStyle=crown;g.beginPath();
+  const tiers=5,top=H*.04,bottom=H*.83;g.moveTo(W/2,top);
+  for(let k=1;k<=tiers;k++){
+    const y=top+(bottom-top)*k/tiers,half=W*(.10+.36*k/tiers);
+    g.quadraticCurveTo(W/2+half*.55,y-(bottom-top)/tiers*.35,W/2+half,y);
+    if(k<tiers)g.lineTo(W/2+half*.62,y-(bottom-top)/tiers*.12);
+  }
+  for(let k=tiers;k>=1;k--){
+    const y=top+(bottom-top)*k/tiers,half=W*(.10+.36*k/tiers);
+    if(k<tiers)g.lineTo(W/2-half*.62,y-(bottom-top)/tiers*.12);
+    g.lineTo(W/2-half,y);
+    g.quadraticCurveTo(W/2-half*.55,y-(bottom-top)/tiers*.35,k===1?W/2:W/2-W*(.10+.36*(k-1)/tiers),k===1?top:top+(bottom-top)*(k-1)/tiers);
+  }
+  g.closePath();g.fill();
+  if(winter){g.fillStyle='rgba(245,248,248,.55)';for(let k=1;k<=tiers;k++){const y=top+(bottom-top)*k/tiers,half=W*(.10+.36*k/tiers);g.fillRect(W/2-half*.6,y-H*.03,half*1.2,H*.02)}}
+  mountainPineSprites[key]=c;return c;
+}
+function drawMountainPine(t){
+  if(!screenPointVisibleRaw(t.p,t.z,30))return;
+  const img=mountainPineSprite(t.shade,State.season==='winter'),base=w2sRaw(t.p,t.z);
+  const h=Math.max(8,U*State.view.scale*2.4*t.scale),w=h*.75;
+  ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
+}
 function drawRaisedFan(f,height){
   const base=f.points,center={x:f.x,y:f.y},top=w2s(center,height),faces=[];
+  const plan=typeof isPlanView==='function'&&isPlanView(),pines=f.height?mountainPineLayout(f):[];
+  // Fraction of this peak's height where the map-wide snow line falls (1 = no snow).
+  const k=Math.min(1,mountainSnowZ()/height);
   for(let i=0;i<base.length;i++){
     const j=(i+1)%base.length,a=w2s(base[i]),b=w2s(base[j]);
-    faces.push({poly:[a,b,top],depth:(a.y+b.y)/2,i});
+    const sa=w2s({x:f.x+(base[i].x-f.x)*(1-k),y:f.y+(base[i].y-f.y)*(1-k)},height*k);
+    const sb=w2s({x:f.x+(base[j].x-f.x)*(1-k),y:f.y+(base[j].y-f.y)*(1-k)},height*k);
+    faces.push({rock:k<1?[a,b,sb,sa]:[a,b,top],snow:k<1?[sa,sb,top]:null,depth:(a.y+b.y)/2,i,
+      color:mountainFaceColor(f,base[i],base[j],i),snowColor:mountainSnowColor(f,base[i],base[j],i)});
   }
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const q of faces)pathPolygon(q.poly,q.i%2?'#55493d':'#66584a','rgba(170,150,125,.35)',.8);
+  // Pines go with their facet, so nearer facets (and their pines) cover farther ones.
+  const byFacet=new Map();for(const t of pines){if(!byFacet.has(t.facet))byFacet.set(t.facet,[]);byFacet.get(t.facet).push(t)}
+  for(const q of faces){
+    pathPolygon(q.rock,q.color,'rgba(170,150,125,.35)',.8);
+    if(q.snow)pathPolygon(q.snow,q.snowColor,'rgba(200,210,214,.45)',.8);
+    if(plan||!forestTreeSpritesReady)continue;
+    for(const t of (byFacet.get(q.i)||[]).sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawMountainPine(t);
+  }
 }
 const FOREST_TREE_ASSETS=[
   './src/assets/forest/tree_01_tonda.svg',
@@ -455,6 +559,15 @@ function drawForestGround(f){
   world.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
   ctx.clip();
+  // Holes (clearings, banks, grooves): each one is cut out with an even-odd clip against a
+  // covering rectangle; successive clips intersect, so overlapping holes stay open.
+  const holes=(f.holes||[]).map(h=>h.map(p=>w2sRaw(p,terrainElevation(p))));
+  for(const hole of holes){
+    if(!screenPolygonVisible(hole,8))continue;
+    ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);
+    hole.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+    ctx.clip('evenodd');
+  }
   ctx.beginPath();
   pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
@@ -463,14 +576,36 @@ function drawForestGround(f){
   ctx.strokeStyle=State.season==='winter'?'rgba(126,139,130,.45)':'rgba(82,116,59,.58)';
   ctx.lineWidth=1.15;
   ctx.stroke();
+  // Clearing outlines (not grooves or banks) read as the woodland edge.
+  for(const hole of holes.slice(0,f.clearings||0)){
+    ctx.beginPath();hole.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();
+  }
   ctx.restore();
 }
 function forestTreeCount(f){
   return clamp(Math.round((f.rx||5)*(f.ry||4)*LANDSCAPE_RENDER_BUDGET.forestDensity),LANDSCAPE_RENDER_BUDGET.forestMin,LANDSCAPE_RENDER_BUDGET.forestMax);
 }
+// Holes (clearings, grooves) change the layout: key it by their count, not just the id.
+function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
+function clearForestLayoutCache(){forestTreeLayoutCache.clear()}
+// Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
+// containment, so carving a groove removes only the trees inside it instead of reshuffling all.
+const CONTINUOUS_FOREST_SPACING=4.4;
+function continuousForestTrees(f){
+  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
+  for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
+    const p={x:(ix+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING,y:(iy+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING};
+    const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
+    if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
+    tree.z=terrainElevation(p);trees.push(tree);
+  }
+  return trees;
+}
 function forestTreeLayout(f){
   ensureLandscapeRenderCaches();
-  if(forestTreeLayoutCache.has(f.id))return forestTreeLayoutCache.get(f.id);
+  const cacheKey=forestLayoutKey(f);
+  if(forestTreeLayoutCache.has(cacheKey))return forestTreeLayoutCache.get(cacheKey);
+  if(f.continuous){const trees=continuousForestTrees(f);forestTreeLayoutCache.set(cacheKey,trees);return trees}
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),trees=[],target=forestTreeCount(f);
   // Sample the actual rotated, lobed polygon's bounds, not the nominal axis
   // radii: every cove and peninsula must be eligible for trees.
@@ -496,7 +631,7 @@ function forestTreeLayout(f){
       scale:.8+rnd()*.4
     });
   }
-  forestTreeLayoutCache.set(f.id,trees);return trees;
+  forestTreeLayoutCache.set(cacheKey,trees);return trees;
 }
 function forestLikelyVisible(f,pad=100){
   const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();
@@ -523,7 +658,11 @@ function ellipseWorldPoints(f,n=28){
 }
 function drawEnvironment(){
   if(window.__conquerPerf)window.__conquerPerf.forestTrees=0;
-  for(const f of State.environment){
+  // Peaks overlap (main summits and their secondary ones): paint far to near, or by height in plan.
+  const depth=f=>isPlanView()?(f.height||3.6):w2sRaw({x:f.x,y:f.y},0).y;
+  const mountains=State.environment.filter(f=>f.type==='mountain').sort((a,b)=>depth(a)-depth(b));
+  const ordered=[...State.environment.filter(f=>f.type!=='mountain'),...mountains];
+  for(const f of ordered){
     ctx.save();
     if(['stream','river'].includes(f.type)){
       const pts=f.points.map(p=>w2s(p));ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
@@ -540,7 +679,7 @@ function drawEnvironment(){
         const coast=projectPath(f.coastline);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
       }
     }else if(f.type==='mountain'){
-      pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,3.6);
+      pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);
     }else if(['hill','rough'].includes(f.type)){
       const pts=ellipseWorldPoints(f);pathPolygon(projectPath(pts),f.fill,f.edge,1.1);
       if(f.type==='hill'){

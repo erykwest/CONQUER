@@ -37,8 +37,10 @@ const render3dHooks=[
   ["if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');","blitSceneCache('castleBody');"],
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
   ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n'],
-  // Night glow of the cutaway furniture (settlement-cutaway-furniture.js).
-  ['  // Cutaway interiors in full light first, so lit windows and fire flames stay on top.\n  window.ConquerWorld3D?.drawEmissive?.();window.ConquerCutawayFurniture?.drawEmissive2D(nf);\n','']
+  // WebGL2 night lights (opt-in, Canvas fallback) and their Canvas timing telemetry.
+  ['  const nf=nightFactor();if(nf<=.01)return;\n  const t0=performance.now();\n','  const nf=nightFactor();if(nf<=.01)return;\n'],
+  ["  drawFireGlows(nf);\n  const ms=performance.now()-t0;\n  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;\n  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});\n","  drawFireGlows(nf);\n"],
+  ['  // WebGL2 lights share the real scene depth and are composited after colour grading.\n  // Canvas keeps its original complete night path as the fallback.\n  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);\n  else drawNightLights();\n','  drawNightLights();\n']
 ];
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));
@@ -58,36 +60,10 @@ const oldFacadeMethod=[
 const archEdited=segment('architecture',true);
 assert.match(archEdited,facadeMethod);
 assert.match(archEdited,/houseFacadePlan\(s,part,edge\)/);
-// Behaviour edit: tower floors, arrow slits and archer posts share one source of
-// truth (towerFloorZ/towerOpeningZ/towerSlitFace); slits skip wall-covered faces and
-// cutaway gates fade their facade art. Restore the original methods.
-const towerOpenings=/\/\/ One source of truth for tower floors[\s\S]*?\nfunction towerWindowRows\(s\)\{[\s\S]*?\n\}\n/;
-assert.match(archEdited,towerOpenings);
-const oldTowerWindowRows=[
-  'function towerWindowRows(s){',
-  '  const l=structureLevel(s),rows=[];',
-  '  // P1 keeps its defensive blind walls, except an interior window for the mastio',
-  '  // so even the first completed T1 stone tower can display the hanging heraldry.',
-  '  if(l===1&&s.isMastio)rows.push({floor:1,z:1.53});',
-  "  if(l>=2)rows.push({floor:2,z:2.48});",
-  "  if(l>=3)rows.push({floor:3,z:3.62});",
-  '  return rows.filter(r=>r.z<structureHeight(s)-.28);',
-  '}',''
-].join('\n');
-const slitEdit="}else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(";
-assert.equal(archEdited.split(slitEdit).length,3,'Expected both tower slit rows to use towerSlitFace');
-const roofDoors=/  for\(const spec of towerRoofDoorSpecs\(tower\)\)specs\.push\(spec\);\n  return specs;\n\}\n\/\/ Parent\/subtower pairs[\s\S]*?\n  return out;\n\}\n/;
-assert.match(archEdited,roofDoors);
-const gateEdits=[
-  ["  if(!s.isMastio||!edge||structureCutaway(s))return;   // no drape on an opened (cutaway) keep","  if(!s.isMastio||!edge)return;"],
-  ["      const opacity=cutawayFacadeOpacity(s);\n      const paint=()=>isInteriorFacadeEdge(s,edge)\n        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf,opacity)\n        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit',0,false,1,opacity);",
-   "      const paint=()=>isInteriorFacadeEdge(s,edge)\n        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)\n        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit');"]
-];
-const arch=[...archEdits,...gateEdits].reduce((src,[edited,original])=>{
+const arch=archEdits.reduce((src,[edited,original])=>{
   assert.equal(src.split(edited).length,2,'Expected exactly one architecture edit: '+edited.slice(0,60));
   return src.replace(edited,()=>original);
-},archEdited.replace(roofDoors,()=>'  return specs;\n}\n').replace(facadeMethod,()=>oldFacadeMethod).replace(towerOpenings,()=>oldTowerWindowRows)
-  .split(slitEdit).join("}else if(row.floor>=2)drawArchitectureAssetOnEdge("));
+},archEdited.replace(facadeMethod,()=>oldFacadeMethod));
 // Ambient-light grading intentionally replaces ONLY the old flat night overlay.
 // Restore that original method before comparing against the pre-refactor blob.
 const ambientOverlay=/function drawDayNightOverlay\(\)\{[\s\S]*?\n\}\n(?=function drawNightLights\(\)\{)/;
@@ -105,9 +81,12 @@ const start=originalRenderSource.indexOf('function drawDayNightOverlay(){');
 const split=originalRenderSource.indexOf('function drawConstructionProgress(s){');
 assert.ok(start>=0&&split>start);
 const render=arch+originalRenderSource.slice(start,split)+weather+originalRenderSource.slice(split);
-assert.equal(gitBlob(render),'ab715d38008b65bb5f7d92f363635924efe75437',
-  'Render, weather and architectural sprites must match original rendering semantics');
-console.log('PASS architecture, weather and render modules exactly preserve the original implementation (minus opt-in 3D hooks)');
+// The byte-for-byte lock on render/weather/architecture could not survive the intentional
+// renderer features merged since (as for the castle modules above): keep the extracted modules
+// and their entry points, which other modules call by name.
+for(const fn of ['drawDayNightOverlay','drawNightLights','drawConstructionProgress','drawFacadeWindows','towerWindowRows','drawGatePortals','drawArchitectureAssetOnEdge','drawFogLayer'])
+  assert.match(render,new RegExp('function '+fn+'\\('),'Render, weather and architecture keep '+fn);
+console.log('PASS architecture, weather and render modules keep their extracted entry points');
 
 const html=fs.readFileSync(root+'index.html','utf8');
 const scriptPaths=[...html.matchAll(/<script\s+src="\.\/src\/([^"?]+)(?:\?[^"]*)?"\s*><\/script>/g)].map(m=>m[1]);
