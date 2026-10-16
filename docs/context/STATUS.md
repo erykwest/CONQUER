@@ -111,3 +111,9 @@ L'utente ha richiesto sottofondo per stagione/meteo e SFX locali attivi **se sel
 `ID | Feature | Branch | Stato | Prova codice | Test/risultato | Commit o PR | Data | Blocchi`.
 
 Aggiornare questo livello dopo ogni PR che modifica una milestone, non dopo ogni scambio di idee.
+
+## /camp — branch separata (16 ottobre 2026)
+
+- **CODICE su `camp`**: nuova pagina `camp/index.html`, modulo `src/settlement-camp.js`, integrazione con Combat Engine e persistenza dedicata. `/urban` non modificato.
+- **Comportamento previsto nel codice**: stanza barracks → capienza 16 soldati = 3 squadre da 5, con controlli nel fondo pagina; zona gialla → rientro navigato e dormita in caserma; esterno → tenda e braciere per truppa, un armigero visibile in guardia, gli altri nascosti fino all'alba.
+- **QA**: `qa/camp-regression.cjs` e workflow `CAMP regression` sul branch. Test V8 isolato superato durante l'implementazione; esito GitHub Actions e collaudo browser reale da verificare separatamente. Non ancora mergiato in `main`.
