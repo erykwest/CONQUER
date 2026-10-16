@@ -34,8 +34,10 @@ for(const [name,files] of Object.entries(parts)){
       assert.equal(src.split(edited).length,2,'Expected exactly one population edit: '+edited);
       return src.replace(edited,()=>orig);
     },source);
-    assert.equal(blob(original),baselines[name],
-      'Population module split must remain byte-identical until behavior edits');
+    // Later population features changed the split modules on purpose; the byte lock is replaced
+    // by the entry points other modules call (castle modules use the same approach).
+    for(const fn of ['drawPeasants','drawCutawayOccupants','drawCastleSoldiers','wallPatrolPoint','drawTrainingSoldiers'])
+      assert.match(original,new RegExp('function '+fn+'\\('),'Population keeps '+fn);
   }else{
     // Post-refactor interaction enhancements are intentionally allowed in app.
     // Preserve the extracted module ordering and stable entrypoint functions.

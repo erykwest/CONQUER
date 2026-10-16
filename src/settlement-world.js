@@ -2228,14 +2228,17 @@ function processVillageGrowth(){
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
   const analyticsT0=performance.now();
   ensureRoadPlan();
+  // Preserve queued housing growth until the road builder has at least one
+  // completed main street; avoid competing road repairs while it runs.
+  if(planningBorderRoads&&!primaryRoadList(true).length)return 0;
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
   let guard=0,changed=0,processed=0;
   while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
     processed++;
     const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
     let kind;
-    if(roads===0)kind='road';
-    else if(planningBorderRoads)kind='house'; // Do not race the border-route builder.
+    if(planningBorderRoads)kind='house'; // The road builder owns main arteries.
+    else if(roads===0)kind='road';
     else if(houses<2)kind='house';
     else{
       const rnd=growthRng(step,509)();
