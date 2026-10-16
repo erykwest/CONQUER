@@ -1,0 +1,219 @@
+// CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
+// Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
+import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
+import { T } from './i18n-it.js';
+
+const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
+const params = new URLSearchParams(location.search);
+const remember = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
+const recall = key => { try { return localStorage.getItem(key); } catch { return null; } };
+if (params.has('ui')) remember(STORE_KEY, params.get('ui') === '2' ? '1' : '0');
+if (params.has('dev')) remember(DEV_KEY, params.get('dev') === '1' ? '1' : '0');
+const enabled = recall(STORE_KEY) === '1' && window.ConquerGame;
+const devEnabled = recall(DEV_KEY) === '1';
+
+// ---------- icons (stroke paths, 24×24) ----------
+const ICON = {
+  select: 'M5 3l13 7-6 2-2 6z',
+  towers: 'M6 21V9h12v12M6 9V5h2v2h2V5h4v2h2V5h2v4M10 21v-4h4v4',
+  walls: 'M3 20V10h18v10M3 10V7h3v3M9 10V7h3v3M15 10V7h3v3M3 15h18',
+  gates: 'M4 21V6h16v15M9 21v-6a3 3 0 0 1 6 0v6',
+  roads: 'M8 21l3-18M16 21l-3-18M12 8v2M12 14v2',
+  crossings: 'M3 15h18M5 15v4M19 15v4M3 15a9 6 0 0 1 18 0',
+  civic: 'M4 21V10l8-6 8 6v11M9 21v-6h6v6',
+  production: 'M12 21V9M12 9c-3 0-5-2-5-5 3 0 5 2 5 5zM12 14c3 0 5-2 5-5-3 0-5 2-5 5z',
+  well: 'M5 10h14M7 10v10h10V10M8 10V5h8v5',
+  delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
+  rotateLeft: 'M4 12a8 8 0 1 0 3-6.2M4 4v5h5',
+  rotateRight: 'M20 12a8 8 0 1 1-3-6.2M20 4v5h-5',
+  plan: 'M4 4h16v16H4zM4 12h16M12 4v16',
+  shield: 'M6 3h12v8c0 5-6 10-6 10S6 16 6 11z',
+  gear: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1'
+};
+const Icon = ({ name, size = 20 }) => html`
+  <svg class="u2-icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${ICON[name]}></path></svg>`;
+
+// ---------- build catalog: each entry drives a legacy control in phase 1 ----------
+const V = T.values, O = T.options;
+const opt = (label, selector, active) => ({ label, selector, active });
+const CATALOG = [
+  { id: 'select', hint: T.hints.select, press: '[data-tool="select"]', is: s => s.tool.kind === 'select' },
+  { id: 'towers', hint: T.hints.point, press: '[data-tower="square"][data-size="1.5"]', is: s => s.tool.kind === 'tower',
+    rows: s => {
+      const t = s.tool, stone = t.material !== 'wood';
+      const rows = [{ label: O.shape, options: [
+        opt(V.square, '[data-tower="square"][data-size="1.5"]', stone && t.shape === 'square'),
+        opt(V.round, '[data-tower="round"][data-size="0.75"]', stone && t.shape === 'round'),
+        opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
+        opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower')] }];
+      if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2'].map(n =>
+        opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
+        opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone) rows.push({ label: O.level, options: [1, 2, 3].map(n => opt(String(n), `[data-tower-level="${n}"]`, s.levels.tower === n)) });
+      return rows;
+    } },
+  { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => s.tool.kind === 'linear' && s.tool.linear !== 'road',
+    rows: s => {
+      const kind = s.tool.linear, rows = [{ label: O.type, options: [
+        opt(V.wall, '[data-linear="wall"]', kind === 'wall'),
+        opt(V.palisade, '[data-linear="palisade"]', kind === 'palisade'),
+        opt(V.built, '[data-linear="built"]', kind === 'built')] }];
+      if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
+      if (kind !== 'palisade') rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, s.levels.wall === n)) });
+      return rows;
+    } },
+  { id: 'gates', hint: T.hints.point, press: '[data-gate]', is: s => s.tool.kind === 'gate',
+    rows: s => {
+      const stone = s.tool.material !== 'wood', rows = [{ label: O.material, options: [
+        opt(V.stone, '[data-gate]', stone), opt(V.wood, '[data-wood-gate]', !stone)] }];
+      if (stone) rows.push({ label: O.height, options: [1, 2, 3].map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
+      return rows;
+    } },
+  { id: 'roads', hint: T.hints.linear, press: '[data-main-road]', is: s => s.tool.kind === 'linear' && s.tool.linear === 'road' },
+  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => s.tool.kind === 'crossing',
+    rows: s => [
+      { label: O.type, options: [
+        opt(V.dry, '[data-crossing="dry"]', s.tool.crossing === 'dry'),
+        opt(V.water, '[data-crossing="water"]', s.tool.crossing === 'water'),
+        opt(V.woodBridge, '[data-crossing="wood"]', s.tool.crossing === 'wood'),
+        opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone')] },
+      { label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) }] },
+  { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
+    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training'].map(k =>
+      opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }] },
+  { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
+    rows: s => [{ label: O.building, options: ['loggingCamp', 'quarry', 'mine'].map(k =>
+      opt(V[k], `[data-industry="${k}"]`, s.tool.industry === k)) }] },
+  { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well' },
+  { id: 'delete', hint: T.hints.delete, press: '[data-tool="delete"]', is: s => s.tool.kind === 'delete' }
+];
+const activeEntry = snap => CATALOG.find(e => e.is(snap)) || CATALOG[0];
+const fmt = n => Math.round(Number(n) || 0).toLocaleString('it-IT');
+
+// ---------- tablets ----------
+function ModeBar({ mode, setMode }) {
+  return html`<div class="u2-tablet u2-modebar">
+    <div class="u2-brand">${T.brand}</div>
+    <nav class="u2-seg" aria-label="Modalità">
+      ${['build', 'manage', 'defend'].map((m, i) => html`
+        <button type="button" class=${mode === m ? 'on' : ''} aria-pressed=${mode === m}
+          title=${T.modes[m] + ' (' + (i + 1) + ')'} onClick=${() => setMode(m)}>${T.modes[m]}</button>`)}
+    </nav>
+  </div>`;
+}
+function ResourceBar({ snap, cmd }) {
+  return html`<div class="u2-tablet u2-resbar">
+    <ul aria-label="Risorse">
+      ${Object.keys(T.resources).map(k => html`
+        <li title=${T.resourcesLong[k]}><span>${T.resources[k]}</span><b>${fmt(snap.resources[k])}</b></li>`)}
+    </ul>
+    ${devEnabled && html`<button type="button" class="u2-icon-btn" aria-label=${T.dev} title=${T.dev} onClick=${cmd.toggleDev}><${Icon} name="gear" size=${18} /></button>`}
+    <button type="button" class="u2-icon-btn u2-gold" aria-label=${T.profile} title=${T.profile} onClick=${cmd.openProfile}><${Icon} name="shield" size=${18} /></button>
+  </div>`;
+}
+function ToolRail({ snap, cmd }) {
+  const active = activeEntry(snap).id;
+  return html`<nav class="u2-tablet u2-rail" aria-label="Strumenti di costruzione">
+    ${CATALOG.map(e => html`
+      <button type="button" class=${'u2-tool' + (active === e.id ? ' on' : '')} aria-label=${T.tools[e.id]}
+        aria-pressed=${active === e.id} data-tip=${T.tools[e.id]} onClick=${() => cmd.press(e.press)}>
+        <${Icon} name=${e.id} size=${22} />
+      </button>`)}
+    <div class="u2-sep"></div>
+    <button type="button" class="u2-tool" aria-label=${T.undo} data-tip=${T.undo} onClick=${cmd.undo}><${Icon} name="undo" /></button>
+  </nav>`;
+}
+function ToolCard({ snap, cmd }) {
+  const entry = activeEntry(snap);
+  if (entry.id === 'select' || snap.selection) return null;
+  const rows = entry.rows ? entry.rows(snap) : [];
+  return html`<aside class="u2-tablet u2-card" aria-label=${T.tools[entry.id]}>
+    <header><h2>${T.tools[entry.id]}</h2>
+      <button type="button" class="u2-close" aria-label=${T.close} onClick=${() => cmd.press('[data-tool="select"]')}>×</button></header>
+    ${rows.length > 0 && html`<div class="u2-rows">
+      ${rows.map(row => html`<div class="u2-row"><span>${row.label}</span>
+        <div class="u2-seg u2-seg-sm">${row.options.map(o => html`
+          <button type="button" class=${o.active ? 'on' : ''} aria-pressed=${o.active} onClick=${() => cmd.press(o.selector)}>${o.label}</button>`)}
+        </div></div>`)}
+    </div>`}
+    <footer>${entry.hint}</footer>
+  </aside>`;
+}
+// Hosts an existing, event-bound legacy panel inside a tablet without recreating it.
+function LegacyCard({ title, selector }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = document.querySelector(selector);
+    if (!el || !ref.current) return;
+    const home = el.parentNode, next = el.nextSibling;
+    ref.current.appendChild(el);
+    el.classList.add('u2-hosted');
+    return () => { el.classList.remove('u2-hosted'); home.insertBefore(el, next); };
+  }, [selector]);
+  return html`<aside class="u2-tablet u2-card u2-card-tall" aria-label=${title}>
+    <header><h2>${title}</h2></header>
+    <div class="u2-legacy" ref=${ref}></div>
+  </aside>`;
+}
+function TimeBar({ snap, cmd }) {
+  const c = snap.clock;
+  return html`<div class="u2-tablet u2-timebar">
+    <button type="button" class="u2-icon-btn" aria-label=${T.time.rotateLeft} title=${T.time.rotateLeft} onClick=${() => cmd.rotate(-1)}><${Icon} name="rotateLeft" size=${18} /></button>
+    <button type="button" class="u2-icon-btn" aria-label=${T.time.rotateRight} title=${T.time.rotateRight} onClick=${() => cmd.rotate(1)}><${Icon} name="rotateRight" size=${18} /></button>
+    <button type="button" class=${'u2-icon-btn' + (snap.view.plan ? ' on' : '')} aria-pressed=${snap.view.plan} aria-label=${T.time.plan} title=${T.time.plan} onClick=${cmd.togglePlan}><${Icon} name="plan" size=${18} /></button>
+    <div class="u2-date"><b>${c.weekday} ${c.date}</b><span>${T.year} ${c.year} · ${T.seasons[c.season] || ''}</span></div>
+    <div class="u2-seg">
+      <button type="button" class=${c.speed === 0 ? 'on' : ''} aria-label=${T.time.pause} title=${T.time.pause} onClick=${() => cmd.setSpeed(0)}>❚❚</button>
+      ${[1, 3, 10, 100].map(n => html`<button type="button" class=${c.speed === n ? 'on' : ''} aria-label=${T.time.speed(n)} onClick=${() => cmd.setSpeed(n)}>${n}×</button>`)}
+    </div>
+  </div>`;
+}
+function Toast({ snap }) {
+  const unsaved = /unsaved/i.test(snap.saved);
+  return html`<div class="u2-toast" aria-live="polite">
+    ${snap.status && html`<div class="u2-tablet u2-status">${snap.status}</div>`}
+    <div class=${'u2-saved' + (unsaved ? ' bad' : '')}>● ${unsaved ? T.unsaved : T.saved}</div>
+  </div>`;
+}
+
+function App() {
+  const game = window.ConquerGame;
+  const [snap, setSnap] = useState(game.snapshot());
+  const [mode, setModeState] = useState(['build', 'manage', 'defend'].includes(recall(MODE_KEY)) ? recall(MODE_KEY) : 'build');
+  const setMode = m => { setModeState(m); remember(MODE_KEY, m); if (m !== 'build') game.commands.press('[data-tool="select"]'); };
+  useEffect(() => game.subscribe(setSnap), []);
+  useEffect(() => {
+    document.body.dataset.u2Mode = mode;
+    const onKey = e => {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'select' || tag === 'textarea' || e.target?.isContentEditable || e.ctrlKey || e.metaKey || e.altKey) return;
+      const m = { 1: 'build', 2: 'manage', 3: 'defend' }[e.key];
+      if (m) { e.preventDefault(); setMode(m); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode]);
+  const cmd = game.commands;
+  return html`
+    <${ModeBar} mode=${mode} setMode=${setMode} />
+    <${ResourceBar} snap=${snap} cmd=${cmd} />
+    ${mode === 'build' && html`<${ToolRail} snap=${snap} cmd=${cmd} /><${ToolCard} snap=${snap} cmd=${cmd} />`}
+    ${mode === 'manage' && html`<${LegacyCard} title=${T.manageTitle} selector="#policy" />`}
+    ${mode === 'defend' && html`<${LegacyCard} title=${T.defendTitle} selector="#combatControls" />`}
+    <${TimeBar} snap=${snap} cmd=${cmd} />
+    <${Toast} snap=${snap} />`;
+}
+
+if (enabled) {
+  document.body.classList.add('ui2');
+  if (devEnabled) document.body.classList.add('ui2-dev');
+  const root = document.createElement('div');
+  root.id = 'ui2';
+  document.getElementById('wrap').appendChild(root);
+  // The map now fills the window: let the game re-measure its canvases.
+  if (typeof resize === 'function') resize();
+  render(html`<${App} />`, root);
+}

@@ -1,0 +1,93 @@
+/* CONQUER interface v2 ("Isole"): wood and gold, minimal symbols. Active only with body.ui2. */
+:root{
+  --u2-panel:rgba(43,29,19,.94);--u2-panel-solid:#2b1d13;--u2-sunken:#1f150e;--u2-chip:#33241a;--u2-chip-hi:#4a3420;
+  --u2-line:#5e4527;--u2-line-gold:#8a6a36;--u2-gold:#e3b45c;--u2-gold-fill:#c3933f;--u2-ink:#1c140e;
+  --u2-text:#efe4cf;--u2-strong:#f5ead6;--u2-muted:#b5a389;--u2-soft:#c8b697;--u2-good:#9cc28a;--u2-bad:#e6a28f;
+  --u2-radius:10px;--u2-gap:16px;
+  --u2-display:'Cormorant SC',Georgia,serif;--u2-body:'Alegreya Sans','Segoe UI',system-ui,sans-serif;
+}
+
+/* Legacy chrome that the new tablets replace (still in the DOM: handlers stay bound). */
+body.ui2>header,body.ui2 #builder,body.ui2 #timePanel,body.ui2 #status,body.ui2 #saveState{display:none!important}
+body.ui2 #policy:not(.u2-hosted){display:none!important}
+body.ui2:not(.ui2-dev) #devTools{display:none!important}
+body.ui2.ui2-dev #devTools{top:76px;right:var(--u2-gap)}
+
+#ui2{position:absolute;inset:0;z-index:10;pointer-events:none;font-family:var(--u2-body);font-size:15px;color:var(--u2-text)}
+#ui2 button{font:inherit;color:inherit;cursor:pointer}
+#ui2 .u2-tablet{position:absolute;pointer-events:auto;background:var(--u2-panel);border:1px solid var(--u2-line-gold);border-radius:var(--u2-radius);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#ui2 .u2-icon{display:block}
+
+/* segmented control */
+#ui2 .u2-seg{display:flex;gap:2px;padding:3px;background:var(--u2-sunken);border-radius:7px}
+#ui2 .u2-seg button{height:30px;min-width:34px;padding:0 12px;border:0;border-radius:5px;background:transparent;color:var(--u2-soft);font-weight:700}
+#ui2 .u2-seg button:hover{color:var(--u2-strong);background:var(--u2-chip)}
+#ui2 .u2-seg button.on{background:var(--u2-gold-fill);color:var(--u2-ink)}
+#ui2 .u2-seg-sm button{height:28px;padding:0 10px;font-size:13px;font-weight:500}
+#ui2 .u2-seg-sm button.on{background:var(--u2-chip-hi);color:var(--u2-strong);font-weight:700;box-shadow:inset 0 0 0 1px var(--u2-gold)}
+#ui2 button:focus-visible{outline:2px solid var(--u2-gold);outline-offset:1px}
+
+#ui2 .u2-icon-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:0;border-radius:6px;background:var(--u2-chip);color:#d9c39a}
+#ui2 .u2-icon-btn:hover{background:var(--u2-chip-hi);color:var(--u2-strong)}
+#ui2 .u2-icon-btn.on{background:var(--u2-gold-fill);color:var(--u2-ink)}
+#ui2 .u2-icon-btn.u2-gold{border:1px solid var(--u2-line-gold);background:#3b2a1c;color:var(--u2-gold)}
+
+/* top-left: brand + modes */
+#ui2 .u2-modebar{left:var(--u2-gap);top:var(--u2-gap);display:flex;align-items:center;gap:14px;padding:6px 8px 6px 16px}
+#ui2 .u2-brand{font-family:var(--u2-display);font-weight:700;font-size:22px;letter-spacing:.08em;color:var(--u2-gold);text-transform:uppercase}
+
+/* top-right: resources */
+#ui2 .u2-resbar{right:var(--u2-gap);top:var(--u2-gap);display:flex;align-items:center;gap:4px;padding:6px}
+#ui2 .u2-resbar ul{display:flex;gap:2px;margin:0;padding:0;list-style:none}
+#ui2 .u2-resbar li{display:flex;align-items:baseline;gap:6px;padding:6px 10px;border-radius:6px;background:var(--u2-chip)}
+#ui2 .u2-resbar li span{font-size:12px;color:var(--u2-muted)}
+#ui2 .u2-resbar li b{font-variant-numeric:tabular-nums;color:var(--u2-strong)}
+#ui2 .u2-resbar .u2-icon-btn{margin-left:4px}
+
+/* left: tool rail */
+#ui2 .u2-rail{left:var(--u2-gap);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;padding:6px}
+#ui2 .u2-tool{position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:7px;background:transparent;color:#d9c39a}
+#ui2 .u2-tool:hover{background:var(--u2-chip);color:var(--u2-strong)}
+#ui2 .u2-tool.on{background:var(--u2-gold-fill);border-color:var(--u2-gold);color:var(--u2-ink)}
+#ui2 .u2-tool[data-tip]:hover::after,#ui2 .u2-tool[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);white-space:nowrap;padding:6px 10px;border-radius:6px;background:var(--u2-gold);color:var(--u2-ink);font-size:13px;font-weight:700;pointer-events:none}
+#ui2 .u2-sep{height:1px;margin:4px 6px;background:var(--u2-line)}
+
+/* right: inspector cards */
+#ui2 .u2-card{right:var(--u2-gap);top:76px;width:320px;display:flex;flex-direction:column;overflow:hidden}
+#ui2 .u2-card-tall{max-height:calc(100% - 76px - 96px)}
+#ui2 .u2-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:14px 16px 10px}
+#ui2 .u2-card h2{margin:0;font-family:var(--u2-display);font-weight:700;font-size:24px;line-height:1.1;color:var(--u2-strong)}
+#ui2 .u2-close{width:28px;height:28px;border:0;border-radius:5px;background:transparent;color:var(--u2-muted);font-size:20px;line-height:1}
+#ui2 .u2-close:hover{background:var(--u2-chip);color:var(--u2-strong)}
+#ui2 .u2-rows{display:flex;flex-direction:column;gap:12px;padding:4px 16px 14px}
+#ui2 .u2-row{display:flex;flex-direction:column;gap:6px}
+#ui2 .u2-row>span{font-size:12px;color:var(--u2-muted);text-transform:uppercase;letter-spacing:.06em}
+#ui2 .u2-row .u2-seg button{flex:1 1 0;min-width:0;padding:0 6px}
+#ui2 .u2-card footer{padding:10px 16px;background:#241811;border-top:1px solid var(--u2-line);font-size:13px;color:var(--u2-soft)}
+#ui2 .u2-legacy{overflow:auto;padding:0 16px 14px}
+
+/* bottom-centre: time */
+#ui2 .u2-timebar{left:50%;bottom:var(--u2-gap);transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:6px}
+#ui2 .u2-date{display:flex;flex-direction:column;padding:0 12px;line-height:1.15;white-space:nowrap}
+#ui2 .u2-date b{font-weight:700}
+#ui2 .u2-date span{font-size:12px;color:var(--u2-muted)}
+
+/* bottom-left: status + save */
+#ui2 .u2-toast{position:absolute;left:var(--u2-gap);bottom:var(--u2-gap);width:min(340px,30vw);display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#ui2 .u2-status{position:static;padding:8px 12px;border-color:var(--u2-line);font-size:13px;color:var(--u2-soft)}
+#ui2 .u2-saved{padding:0 12px;font-size:12px;color:var(--u2-good)}
+#ui2 .u2-saved.bad{color:var(--u2-bad)}
+
+/* Legacy panels hosted inside a tablet (phase 1): flatten their own chrome. */
+#ui2 .u2-hosted{position:static!important;display:block!important;width:auto!important;max-height:none!important;margin:0;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;color:var(--u2-text)}
+#ui2 .u2-hosted>h2:first-child{display:none}
+
+/* Selected-structure inspector (legacy #functionPanel) placed where the cards live. */
+body.ui2 #functionPanel{right:var(--u2-gap)!important;top:76px!important;width:320px!important;z-index:11;background:var(--u2-panel);border:1px solid var(--u2-line-gold);border-radius:var(--u2-radius);font-family:var(--u2-body);color:var(--u2-text)}
+body.ui2 #functionPanel .panel-head h2{font-family:var(--u2-display);font-size:22px;color:var(--u2-strong)}
+body.ui2[data-u2-mode="manage"] #functionPanel,body.ui2[data-u2-mode="defend"] #functionPanel{display:none!important}
+
+@media(max-width:1180px){
+  #ui2 .u2-resbar li span{display:none}
+  #ui2 .u2-card,body.ui2 #functionPanel{width:290px!important}
+}
