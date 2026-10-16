@@ -25,11 +25,11 @@ test('house sampling focuses on in-radius road sections, not distant segments',(
  assert.equal(run("State.structures.filter(s=>s.type==='house').length"),1);
  assert.ok(run("dist(State.structures.find(s=>s.type==='house'),{x:100,y:100})<=currentGrowthRadius()"));
 });
-test('village growth runs during background border planning once streets exist',()=>{
+test('housing grows on completed arterial streets before all four border routes finish',()=>{
  setup();
  run("State.structures.push({id:'near',type:'road',auto:true,roadClass:'arterial',routeId:'arterial-0',a:{x:100,y:100},b:{x:100,y:112},width:.62});State.village.nextGrowthDay=.75;State.clock.day=1;foundingRoadJob={village:State.village};invalidateNavigation()");
  try{
-   assert.ok(run('processVillageGrowth()')>0,'houses may grow before four main routes finish');
+   assert.ok(run('processVillageGrowth()')>0,'housing growth cannot be blocked by pending outer routes');
    assert.equal(run("State.structures.filter(s=>s.type==='house').length"),1);
  }finally{run('foundingRoadJob=null')}
 });

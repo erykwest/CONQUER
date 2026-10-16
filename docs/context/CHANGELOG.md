@@ -60,3 +60,10 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 ```
 
 Non archiviare nuove idee indistintamente come «implementazioni»: mantenere separati backlog, decisioni e prove.
+
+## 2026-10-16 — CAMP (branch `camp`, non integrato)
+
+- **CODICE / BRANCH**: percorso isolato `/camp` con pulsante per ciascuna stanza caserma; gestione armigeri in squadre da cinque entro capacità stanza, salvataggio locale indipendente.
+- **CODICE / BRANCH**: al tramonto squadre entro zona gialla richiamate lungo percorsi validi alla propria caserma, squadre fuori zona accampate sul posto (tenda e braciere per unità, un solo soldato di guardia visibile). All'alba ripristino delle squadre. Nessun cambio a `/urban`.
+- **CODICE / BRANCH**: cutaway caserma sincronizzato con le truppe effettivamente rientrate, nessun soldato fittizio in stanza vuota.
+- **VERIFICA DA ESEGUIRE**: test browser su percorso, UI mobile, ritorni ostacolati, campi in elevazione, salvataggi e rendering WebGL2/Canvas; le sorgenti da sole non dimostrano QA superata.

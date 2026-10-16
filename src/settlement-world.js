@@ -2222,14 +2222,14 @@ function spawnField(step,workerHouse=null){
 }
 function processVillageGrowth(){
   if(!State.village.founded)return 0;
-  // The outer border-route builder can take many frames on blocked terrain.
-  // Existing finished streets must still receive houses while it runs.
+  // Housing must not wait for all four border arterials: a distant path can
+  // take many frames (or be unreachable) while finished streets are usable.
   const planningBorderRoads=foundingRoadJob?.village===State.village;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
   const analyticsT0=performance.now();
   ensureRoadPlan();
-  // Do not launch a competing road repair while the founding route builder has
-  // not yet produced a usable street. Leave pending growth pulses queued.
+  // Preserve queued housing growth until the road builder has at least one
+  // completed main street; avoid competing road repairs while it runs.
   if(planningBorderRoads&&!primaryRoadList(true).length)return 0;
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
   let guard=0,changed=0,processed=0;
@@ -2237,7 +2237,7 @@ function processVillageGrowth(){
     processed++;
     const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
     let kind;
-    if(planningBorderRoads)kind='house';
+    if(planningBorderRoads)kind='house'; // The road builder owns main arteries.
     else if(roads===0)kind='road';
     else if(houses<2)kind='house';
     else{
@@ -2256,7 +2256,8 @@ function processVillageGrowth(){
     };
     let ok=attempt(kind);
     if(!ok&&kind!=='house')ok=attempt('house');
-    // The founding route task owns the outer main roads until it finishes.
+    // While four arterial routes are being built in the background, do not
+    // launch competing route repairs from the growth pulse.
     if(!ok&&kind!=='road'&&!planningBorderRoads)ok=attempt('road');
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;

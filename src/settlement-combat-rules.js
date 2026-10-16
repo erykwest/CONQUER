@@ -7,6 +7,7 @@
   const PROFILES=Object.freeze({
     spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
     patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
+    wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
@@ -70,6 +71,83 @@
       trace.push(next);visited.add(next);previous=current;current=next;
     }
     return trace;
+  }
+  // Ordered outer perimeter of the *connected* White Zone. The old greedy
+  // neighbor trace could terminate on a local branch after just a dozen points,
+  // making a patrol ping-pong over that tiny arc instead of circulating.
+  // Trace directed cell-boundary edges so that every step follows a real
+  // contour; discard hole rings and prefer the ring enclosing the settlement.
+  function orderedBoundaryPoints(isAllowed,worldSize=200,step=1.25,focus=null){
+    const size=Math.ceil(worldSize/step),filled=new Uint8Array(size*size);
+    const inside=(x,y)=>x>=0&&y>=0&&x<size&&y<size&&filled[y*size+x]===1;
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+      filled[y*size+x]=isAllowed({x:(x+.5)*step,y:(y+.5)*step})?1:0;
+    }
+    const edges=[],outgoing=new Map();
+    function add(x1,y1,x2,y2,cx,cy){
+      const index=edges.length;edges.push({x1,y1,x2,y2,cx,cy});
+      const key=x1+','+y1,list=outgoing.get(key)||[];list.push(index);outgoing.set(key,list);
+    }
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+      if(!inside(x,y))continue;
+      // Clockwise edges: every edge has a traversable cell on its right.
+      if(!inside(x,y-1))add(x,y,x+1,y,x,y);
+      if(!inside(x+1,y))add(x+1,y,x+1,y+1,x,y);
+      if(!inside(x,y+1))add(x+1,y+1,x,y+1,x,y);
+      if(!inside(x-1,y))add(x,y+1,x,y,x,y);
+    }
+    const direction=e=>e.x2>e.x1?0:e.y2>e.y1?1:e.x2<e.x1?2:3;
+    const visited=new Uint8Array(edges.length);
+    function containsFocus(vertices){
+      if(!focus)return false;
+      const fx=focus.x/step,fy=focus.y/step;
+      let insideRing=false;
+      for(let i=0,j=vertices.length-1;i<vertices.length;j=i++){
+        const a=vertices[i],b=vertices[j];
+        if((a.y>fy)!==(b.y>fy) &&
+          fx<(b.x-a.x)*(fy-a.y)/(b.y-a.y)+a.x)insideRing=!insideRing;
+      }
+      return insideRing;
+    }
+    let best=[],bestScore=-Infinity;
+    for(let first=0;first<edges.length;first++){
+      if(visited[first])continue;
+      const start=edges[first],cells=[],vertices=[];
+      let current=first,closed=false;
+      for(let i=0;i<edges.length;i++){
+        if(visited[current])break;
+        const e=edges[current];visited[current]=1;
+        if(!cells.length||cells.at(-1).x!==e.cx||cells.at(-1).y!==e.cy)
+          cells.push({x:e.cx,y:e.cy});
+        vertices.push({x:e.x1,y:e.y1});
+        if(e.x2===start.x1&&e.y2===start.y1){closed=true;break}
+        const candidates=outgoing.get(e.x2+','+e.y2)||[];
+        const prior=direction(e);let next=-1,rank=5;
+        for(const j of candidates){
+          if(visited[j])continue;
+          // On diagonal contacts, turn right to stay on the same boundary,
+          // rather than switching to an unrelated touching component.
+          const turn=(direction(edges[j])-prior+4)%4;
+          const priority=turn===1?0:turn===0?1:turn===3?2:3;
+          if(priority<rank){rank=priority;next=j}
+        }
+        if(next<0)break;
+        current=next;
+      }
+      if(!closed||cells.length<4)continue;
+      if(cells.at(-1).x===cells[0].x&&cells.at(-1).y===cells[0].y)cells.pop();
+      const signedArea=vertices.reduce((area,p,i)=>{
+        const q=vertices[(i+1)%vertices.length];
+        return area+p.x*q.y-q.x*p.y;
+      },0)/2;
+      if(signedArea<=0)continue; // Skip counterclockwise internal holes.
+      const score=signedArea+(containsFocus(vertices)?size*size:0);
+      if(score>bestScore){
+        bestScore=score;
+        best=cells.map(c=>({x:(c.x+.5)*step,y:(c.y+.5)*step}));
+      }
+    }
+    return best;
   }
   const shouldRebuildBoundary=(painting,hasCache,signatureChanged)=>signatureChanged&&(!painting||!hasCache);
   function ensure(entity,kind){
@@ -150,7 +228,7 @@
       if(!living(a)||a.routing)continue;
       let nearest=null,gap=1;
       for(const b of enemy){
-        if(!living(b)||b.routing||!canContact(a,b))continue;
+        if(!living(b)||b.routing||b.neutral||!canContact(a,b))continue;
         const distance=Math.hypot(a.x-b.x,a.y-b.y);
         if(distance<gap){nearest=b;gap=distance}
       }
@@ -168,7 +246,7 @@
     for(const shooter of shooters){
       let target=null,best=Infinity;
       for(const e of enemy){
-        if(!living(e)||e.routing||!visibleFn(e,shooter))continue;
+        if(!living(e)||e.routing||e.neutral||!visibleFn(e,shooter))continue;
         const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
         if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
         target=e;best=d;
@@ -205,6 +283,6 @@
     }
     g.restore();
   }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,
+  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,orderedBoundaryPoints,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0}};
 })();
