@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-16 — Correzione dei contratti di danno negli assedi
+
+- Recepita una **correzione esplicita**: gli **attacchi ordinari delle unità** e le **frecce** non danneggiano mura o torri (**D-031**, S-05/S-16); eventuali danni strutturali richiedono una sorgente compatibile, non un attacco generico.
+- Definita la **doppia durabilità** per gli accessi con torre-porta: un valore per la struttura della torre, un valore per il **portone** (**D-032**, S-25). Gli impatti contro un componente non riducono automaticamente l'altro; distruggere il portone non equivale a distruggere la torre.
+- Precisati i requisiti degli **arieti** (S-22, bersaglio portone) e delle **fiaccole** (S-24, incendio sul componente), e aggiunti criteri di accettazione e QA a livello di specifica. Le regole di vulnerabilità delle singole tipologie di attacco al portone rimangono da dettagliare.
+- **Solo documentazione:** nessuna modifica alla simulazione o al rendering, nessuna QA runtime eseguita; roadmap e stato di avanzamento delle milestone invariati.
+
 ## 2026-10-16 — Riconciliazione piramide con main e bilancio settimanale
 
 - **Base verificata:** `main` al commit [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99) (16/10, 15:16 UTC); aggiornati ingresso, stato, roadmap, decisioni e backlog. Questa operazione è **solo documentale**: nessuna nuova QA runtime/browser eseguita.
