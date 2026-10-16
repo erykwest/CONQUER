@@ -39,7 +39,8 @@ const context=vm.createContext({
   peasantHash:id=>[...String(id)].reduce((h,c)=>(Math.imul(h,33)+c.charCodeAt(0))>>>0,5381),
   pointBlockedForPeasant:()=>false,terrainSegmentCrossesCliff:()=>false,
   peasantSegmentClear:()=>true,findPeasantPath:()=>null,
-  w2s:p=>({x:p.x,y:p.y}),clamp:(v,a,b)=>Math.min(b,Math.max(a,v)),
+  w2s:p=>({x:p.x,y:p.y}),militaryScale:()=>state.view.scale*.5,
+  clamp:(v,a,b)=>Math.min(b,Math.max(a,v)),
   withUrbanFigureOcclusion:(_p,_z,fn)=>fn(),performance:{now:()=>12345}
 });
 vm.runInContext(art,context,{filename:'settlement-animals.js'});
