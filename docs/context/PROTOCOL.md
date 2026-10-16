@@ -56,6 +56,14 @@ Prossima singola azione: ...
 Rischi / regressioni / branch divergenti: ...
 ```
 
+## Importare nuove conversazioni senza contaminare la roadmap
+
+- Se arrivano link ChatGPT Share, registrare gli URL in [EXTERNAL-SOURCES.md](EXTERNAL-SOURCES.md); se l'URL non restituisce testo **non attribuire contenuti ipotetici**.
+- Se arrivano export: verificare l'intestazione originale e creare un digest in [sources/](sources/) che separi richieste dell'utente, suggerimenti, decisioni, report di implementazione e **codice/PR accertati**.
+- Non pubblicare nel repository pubblico intere trascrizioni, file locali non committati, informazioni private o allegati di **progetti differenti**. Importare solo sintesi necessarie a CONQUER.
+- Quando una vecchia conversazione dice «in corso» e Git mostra un merge successivo, descrivere entrambe le date e usare Git come verità sull'integrazione, senza cancellare la cronologia delle intenzioni.
+- Aggiornare il registro delle fonti e gli indici in una PR documentale, senza dichiarare test del gioco che non sono stati eseguiti.
+
 ## Regole del lavoro Git
 
 - `main` è il riferimento per funzionalità integrate; una feature branch non è produzione.
