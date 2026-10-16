@@ -3,7 +3,10 @@
 // simulation. Day: wildlife is neutral and wanders. Night: it hunts nearby
 // friendly military units and may enter ordinary melee/archer combat.
 (function(){
-  const PACK_SIZE=4,DETECT=12,LOST=17,MELEE=.85;
+  // Two small cohesive packs limit total wolf AI work while making the
+  // encounter feel like real wildlife rather than four scattered individuals.
+  const PACK_COUNT=2,MIN_PACK=3,MAX_PACK=6,PACK_SCHEMA='packs-v2';
+  const DETECT=12,LOST=17,MELEE=.85;
   let nightCache=null;
   const combat=()=>window.ConquerCombat;
   const isNight=()=>visualCycleFrac()>=VISUAL_DAYLIGHT_RATIO;
@@ -15,35 +18,83 @@
     !pointBlockedForPeasant(p,'camp-wolf')&&!terrainSegmentCrossesCliff(p,p);
   function createPack(well){
     const wolves=[];
-    for(let i=0;i<PACK_SIZE;i++){
-      const seed=hash(State.seed+':'+well.id+':'+i);
-      let place=null;
-      for(let k=0;k<40;k++){
-        const a=(i+seed)*2*Math.PI/PACK_SIZE+k*.53;
-        const r=17+(i%3)*1.5+k*.15;
-        const p={x:well.x+Math.cos(a)*r,y:well.y+Math.sin(a)*r};
-        if(!free(p)||combat().areaState(p).yellow)continue;
-        place=p;break;
+    for(let group=0;group<PACK_COUNT;group++){
+      const packId='camp-wolf-pack-'+well.id+'-'+group;
+      const groupSeed=hash(State.seed+':'+well.id+':pack:'+group);
+      const size=MIN_PACK+Math.floor(groupSeed*(MAX_PACK-MIN_PACK+1));
+      // Choose one shared den, then place every member around it. Previously
+      // each wolf had its own den 17–20U from the well: not a pack.
+      let placed=null;
+      for(let attempt=0;attempt<48&&!placed;attempt++){
+        const angle=(group+groupSeed*.23)*Math.PI*2/PACK_COUNT+attempt*.33;
+        const radius=19+(attempt%8)*1.1;
+        const center={x:well.x+Math.cos(angle)*radius,y:well.y+Math.sin(angle)*radius};
+        if(!free(center)||combat().areaState(center).yellow)continue;
+        const members=[];
+        for(let i=0;i<size;i++){
+          const seed=hash(State.seed+':'+well.id+':'+group+':'+i);
+          let place=null;
+          for(let k=0;k<22;k++){
+            const a=i*Math.PI*2/size+k*.45+seed*.6;
+            const r=.9+(k%6)*.35;
+            const p={x:center.x+Math.cos(a)*r,y:center.y+Math.sin(a)*r};
+            if(!free(p)||combat().areaState(p).yellow||
+               members.some(member=>distance(member,p)<.65))continue;
+            place=p;break;
+          }
+          if(!place)continue;
+          members.push({
+            id:'camp-wolf-'+well.id+'-'+group+'-'+i,
+            kind:'wolf',combatKind:'wolf',faction:'wildlife',
+            wolfPackId:packId,wolfPackIndex:i,
+            neutral:true,defeated:false,
+            x:place.x,y:place.y,home:{...center},wolfSeed:seed,
+            wolfState:'roaming',wolfMode:'walk',wolfFace:i%2?1:-1,
+            wolfWanderIndex:0,wolfDecisionIn:0,wolfTargetId:null,
+            wolfPath:null,wolfPathIndex:1
+          });
+        }
+        // A very congested area must not leave orphaned singles or pairs.
+        if(members.length>=MIN_PACK)placed=members;
       }
-      if(!place)continue;
-      wolves.push({
-        id:'camp-wolf-'+well.id+'-'+i,kind:'wolf',combatKind:'wolf',
-        faction:'wildlife',neutral:true,defeated:false,
-        x:place.x,y:place.y,home:{...place},wolfSeed:seed,
-        wolfState:'roaming',wolfMode:'walk',wolfFace:i%2?1:-1,
-        wolfWanderIndex:0,wolfDecisionIn:0,wolfTargetId:null,
-        wolfPath:null,wolfPathIndex:1
-      });
+      if(placed)wolves.push(...placed);
     }
     return wolves;
+  }
+  function choosePackTargets(wolves){
+    const soldiers=combat()?.units().filter(live)||[];
+    const groups=new Map(),targets=new Map();
+    for(const wolf of wolves){
+      if(wolf.defeated||wolf.stats?.hp===0)continue;
+      const id=wolf.wolfPackId||wolf.id;
+      if(!groups.has(id))groups.set(id,[]);
+      groups.get(id).push(wolf);
+    }
+    for(const [id,members] of groups){
+      const prior=members.find(w=>w.wolfTargetId)?.wolfTargetId;
+      let chosen=null,best=Infinity;
+      for(const unit of soldiers){
+        const d=Math.min(...members.map(w=>distance(w,unit)));
+        if(d<(unit.id===prior?LOST:DETECT)&&d<best){
+          best=d;chosen=unit;
+        }
+      }
+      targets.set(id,chosen);
+    }
+    return targets;
   }
   function ensure(){
     const tactical=combat();
     const well=State.village?.founded&&State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
     if(!tactical||!well)return;
-    const token=String(State.seed)+':'+well.id;
+    // Incrementing the generation schema upgrades preexisting saves with the
+    // four separate wolves exactly once, without resetting on each redraw.
+    const token=String(State.seed)+':'+well.id+':'+PACK_SCHEMA;
     if(tactical.wolfSpawnedFor()!==token){
-      tactical.registerWolves(token,createPack(well));
+      if(tactical.registerWolves(token,createPack(well))){
+        nightCache=null;
+        spriteFrames.clear();
+      }
     }
     const night=isNight();
     if(nightCache!==night){
@@ -56,15 +107,6 @@
         wolf.wolfMode=night?'howl':'walk';
       }
     }
-  }
-  function closestTarget(wolf,priorId){
-    const active=combat()?.units().filter(live)||[];
-    let best=null,bestD=Infinity;
-    for(const u of active){
-      const d=distance(wolf,u),limit=u.id===priorId?LOST:DETECT;
-      if(d<limit&&d<bestD){best=u;bestD=d}
-    }
-    return best;
   }
   function wanderTarget(wolf){
     const i=wolf.wolfWanderIndex=(wolf.wolfWanderIndex||0)+1;
@@ -129,11 +171,13 @@
     // Distribute expensive route decisions over successive simulation ticks.
     // Rendering and movement still update for every wolf.
     let plannedThisTick=false,planned=0,failed=0;
-    for(const wolf of pack()){
+    const wolves=pack(),targets=night?choosePackTargets(wolves):null;
+    for(const wolf of wolves){
       if(wolf.defeated||wolf.stats?.hp===0)continue;
       wolf.neutral=!night;
       wolf.wolfDecisionIn=(wolf.wolfDecisionIn||0)-dt;
-      const target=night?closestTarget(wolf,wolf.wolfTargetId):null;
+      // Wolves in the same pack coordinate their hunt on one target.
+      const target=targets?.get(wolf.wolfPackId||wolf.id)||null;
       if(target){
         wolf.wolfTargetId=target.id;
         wolf.wolfState='hunting';
@@ -176,11 +220,18 @@
   // the tactical canvas on every world redraw is unnecessarily expensive,
   // especially alongside the night-light pass. Each wolf animates at ~8 FPS
   // while its ground position is still updated every rendered frame.
-  const spriteFrames=new Map(),SPRITE_W=96,SPRITE_H=96,SPRITE_X=48,SPRITE_Y=78;
+  // Animal SVG is drawn at its native authored proportions (wolf scale=1).
+  // Soldier head-top -> foot = 9.064 * militaryScale() pixels. Wolf art from
+  // ears (y=64) to paws (y=244) spans ~180/256 of its intrinsic canvas.
+  // Therefore its screen height tracks 70% of the human silhouette at any zoom.
+  const HUMAN_BODY_HEIGHT=9.064,WOLF_ART_HEIGHT=180;
+  function wolfDrawSize(){return HUMAN_BODY_HEIGHT*militaryScale()*.7*256/WOLF_ART_HEIGHT}
+  // Small cached canvas instead of 96x96; 6–12 wolves now cost less to composite.
+  const spriteFrames=new Map(),SPRITE_W=32,SPRITE_H=32,SPRITE_X=16,SPRITE_Y=25;
   function draw(g,wolf){
     if(!window.ConquerAnimals?.SPECIES?.wolf||wolf.defeated||wolf.stats?.hp===0)return;
     const p=w2s(wolf,.08);
-    const size=clamp(State.view.scale*16,8,40);
+    const size=wolfDrawSize();
     const mode=wolf.wolfMode||(isNight()?'howl':'walk');
     const facing=wolf.wolfFace||1,seed=wolf.wolfSeed||0;
     const time=performance.now();
@@ -210,6 +261,6 @@
       g.drawImage(sprite.canvas,p.x-SPRITE_X,p.y-SPRITE_Y);
     });
   }
-  window.ConquerWolves={ensure,tick,draw,isNight,pack};
+  window.ConquerWolves={ensure,tick,draw,isNight,pack,wolfDrawSize};
   ensure();
 })();

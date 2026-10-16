@@ -50,11 +50,27 @@ vm.runInContext(wolvesSrc,context,{filename:'settlement-wolves.js'});
 const api=win.ConquerWolves;
 assert.ok(api);
 assert.equal(registerCount,1,'wolves spawned once around founded settlement');
-assert.equal(wolves.length,4,'pack contains four wolves');
+const packs=new Map();
+for(const wolf of wolves){
+  if(!packs.has(wolf.wolfPackId))packs.set(wolf.wolfPackId,[]);
+  packs.get(wolf.wolfPackId).push(wolf);
+}
+assert.equal(packs.size,2,'wolves are generated into two distinct packs');
+assert.ok([...packs.values()].every(m=>m.length>=3&&m.length<=6),'each pack has 3–6 wolves');
+assert.equal(wolves.length,[...packs.values()].reduce((n,m)=>n+m.length,0));
 assert.equal(new Set(wolves.map(w=>w.id)).size,4);
 assert.ok(wolves.every(w=>w.kind==='wolf'&&w.combatKind==='wolf'&&w.faction==='wildlife'));
 assert.ok(wolves.every(w=>w.neutral),'daytime wolves are neutral');
 assert.ok(wolves.every(w=>Math.hypot(w.x-100,w.y-100)>=14),'wolves spawn outside yellow territory');
+for(const [id,members] of packs){
+  const den=members[0].home;
+  assert.ok(members.every(w=>w.wolfPackId===id&&w.home.x===den.x&&w.home.y===den.y),
+    'pack members share a single den and group identity');
+  assert.ok(members.every(w=>Math.hypot(w.x-den.x,w.y-den.y)<4),
+    'pack members spawn together rather than scattered around the village');
+}
+assert.equal(win.ConquerCombat.wolfSpawnedFor().endsWith('packs-v2'),true,
+  'new pack schema upgrades older saves exactly once');
 api.ensure();assert.equal(registerCount,1,'subsequent render must not respawn pack');
 api.tick(.25);
 assert.ok(wolves.every(w=>w.neutral),'daytime roaming does not turn wolves hostile');
@@ -68,6 +84,9 @@ const after=Math.hypot(hunter.x-soldiers[0].x,hunter.y-soldiers[0].y);
 assert.ok(after<before-.4,'wolf actually advances toward an approaching patrol at night');
 assert.equal(hunter.wolfState,'hunting','wolf actively hunts patrols at night');
 assert.equal(hunter.wolfTargetId,'patrol');
+const samePack=wolves.find(w=>w.wolfPackId===hunter.wolfPackId&&w.id!==hunter.id);
+assert.ok(samePack,'lead wolf has a packmate');
+assert.equal(samePack.wolfTargetId,'patrol','packmates coordinate on one target at night');
 const savedWolf=hunter;
 api.ensure();assert.equal(wolves[0],savedWolf,'day/night updates do not replace persisted wolf entities');
 night=false;api.ensure();api.tick(.25);
@@ -77,6 +96,18 @@ win.ConquerAnimals.drawAnimal=(...args)=>artCalls.push(args);
 api.draw({},hunter);
 assert.equal(artCalls[0][0],'wolf','render uses imported animated wolf, not infantry placeholder');
 assert.ok(['walk','idle','howl','run'].includes(artCalls[0][5].mode));
+assert.equal(win.ConquerAnimals.SPECIES.wolf.scale,undefined,
+ 'wolf SVG art must not apply a second species-level resize');
+const humanHeight=9.064*(state.view.scale*.5),expectedWolfHeight=humanHeight*.7;
+const apparentWolfHeight=api.wolfDrawSize()*180/256;
+assert.ok(Math.abs(apparentWolfHeight-expectedWolfHeight)<1e-9,
+ 'wolf render height is 70% of a soldier (not arbitrarily clamped)');
+for(const cameraScale of [.18,.72,1.5,3]){
+  state.view.scale=cameraScale;
+  assert.ok(Math.abs(api.wolfDrawSize()*180/256/(9.064*cameraScale*.5)-.7)<1e-9,
+    'wolf-human size ratio stays 70% through camera zoom');
+}
+state.view.scale=1;
 assert.match(combatSrc,/if\(intruder\.neutral\|\|intruder\.defeated/,'neutral wolves never trigger settlement alert');
 assert.match(combatSrc,/if\(e\.neutral\|\|e\.defeated/,'neutral wolves do not appear as enemy contacts');
 assert.match(rulesSrc,/if\(!living\(b\)\|\|b\.routing\|\|b\.neutral/,'melee ignores neutral creatures');
@@ -97,7 +128,7 @@ assert.equal(trooper.engaged,true,'hostile wolf enters melee contact at night');
 assert.equal(beast.engaged,true,'wolf becomes a real target in melee');
 
 // Nighttime performance regression: obstructed wolves must not retry A* every
-// frame. Four wolves share one route-planning slot per simulation update.
+// frame. Two packs of 3–6 wolves still share one route-planning slot per tick.
 let attempts=0,civilianSearches=0;
 context.peasantSegmentClear=()=>{attempts++;return false};
 context.findPeasantPath=()=>{civilianSearches++;throw Error('wolf must not call civilian A*')};
