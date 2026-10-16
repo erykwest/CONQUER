@@ -75,6 +75,19 @@ La presenza di `src/settlement-combat.js` prova un prototipo tattico, non tutti 
 - **X-04 — QA visuale:** fixture, più rotazioni camera, controlli di occlusione, verifiche manuali descritte, regressioni automatiche.
 - **X-05 — Pubblicazione:** pagina CONQUER, devlog, feedback/follower, donazioni opzionali, itch.io; Steam possibile più avanti.
 
+## Nuovi requisiti documentati negli export 12–15/10
+
+Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/VISUAL-AUDIO-2026-10-14.md), [MINIMAP](sources/MINIMAP-2026-10-15.md). I codici seguenti non sono implementazioni automaticamente confermate.
+
+- **E-01 — Economia mista:** confermare nell'end-to-end la proprietà *lord* vs capitale L4 aggregato, compravendita delle imprese e scorte con quota 0/25/50/75/100%; **parziale nel codice**, niente agente contabile individuale.
+- **E-02 — Filiera e mercato:** fonti `food/wood/stone/metal/equipment/luxury`, oro valuta; varianti pregiate **tag**, non nuovi contatori obbligatori; export solo con domanda/costi reali; **regole e motore base esistono, catena completa da validare**.
+- **E-03 — Tempo e feedback militare:** giorno di lavoro → output reale, mercato sabato, riposo domenica, bilanci annuali; assedio/incursione deve interrompere la produzione senza inventari concorrenti.
+- **V-01 — Prototipo rendering 3D vs sprite:** torre + due mura, giunzioni, cutaway, progressione del cantiere, danni, benchmark e fallback Canvas. **PROPOSTA**, non conversione autorizzata.
+- **V-02 — Cache asset:** misurare le 192 voci della cache bitmap e 32 MiB nominali dei compositi; identificare VRAM/RAM, eviction e perf prima di creare loader concorrenti.
+- **V-03 — Animazioni lavoro popolani:** mani/attrezzi modulari condizionati dall'attività reale, accessori stagionali solo quando utili e vicini; **PROPOSTA**.
+- **V-04 — Audio:** streaming musica current+next, SFX e ambience on demand, crossfade, controllo licenze/tracce Suno; **DIREZIONE**, non audio già pubblicato.
+- **UI-01 — Minimappa + LOD:** [PR #44](https://github.com/erykwest/CONQUER/pull/44) contiene codice su branch; prima del merge QA real browser ISO/plan, rotazioni, selezione, fog, mobile e benchmark. Building LOD nel mondo 3D **NON incluso**.
+
 ## Requisiti per promuovere un'idea al lavoro
 
 1. Identificare il *contratto/sistema* già esistente da riutilizzare.
