@@ -218,7 +218,8 @@ function towerDoorSpecs(tower){
         :boundaryPoint(tower,{x:tower.x+Math.cos(a),y:tower.y+Math.sin(a)});
     }
     const front=towerDoorContactSpec(tower,frontContact,null,'front');
-    if(front)specs.push(front);
+    // No entrance onto a dividing wall (the face runs into an attached subtower).
+    if(front&&!towerFaceOnDivider(tower,{nx:front.outward.x,ny:front.outward.y},front.baseZ+.3))specs.push(front);
   }
 
   // Additional doors at every true wall socket connected to this tower.
@@ -369,6 +370,7 @@ function towerFaceDirections(s){
 // A wall, built section or palisade snapped to the tower covers the face it meets
 // up to its own height: no arrow slit is drawn there and no archer can use it.
 function towerFaceBlocked(s,dir,floor){
+  if(towerFaceOnDivider(s,dir,towerOpeningZ(s,floor)))return true;
   return State.structures.some(wall=>{
     if(underConstruction(wall)||!['wall','built','palisade'].includes(wall.type))return false;
     if(wall.aSnap!==s.id&&wall.bSnap!==s.id)return false;
@@ -378,6 +380,14 @@ function towerFaceBlocked(s,dir,floor){
     // Corner junctions disable both adjacent wall faces.
     return (dir.nx*dx+dir.ny*dy)/L>=.65;
   });
+}
+// Parent/subtower pairs: a face whose middle runs into the attached structure is a dividing
+// wall up to that structure's height - no arrow slit, window or door opens onto it.
+function towerFaceOnDivider(s,dir,z){
+  const half=s.shape==='round'?(Number(s.r)||.5):Math.max(rectDims(s).w,rectDims(s).h)/2;
+  const probe={x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
+  return State.structures.some(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&
+    (o.id===s.parentTowerId||o.parentTowerId===s.id)&&structureHeight(o)>z&&pointInPolygon(probe,footprintPoints(o)));
 }
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);
