@@ -2222,17 +2222,23 @@ function spawnField(step,workerHouse=null){
 }
 function processVillageGrowth(){
   if(!State.village.founded)return 0;
-  if(foundingRoadJob?.village===State.village)return 0;
+  // The outer border-route builder can take many frames on blocked terrain.
+  // Existing finished streets must still receive houses while it runs.
+  const planningBorderRoads=foundingRoadJob?.village===State.village;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
   const analyticsT0=performance.now();
   ensureRoadPlan();
+  // Do not launch a competing road repair while the founding route builder has
+  // not yet produced a usable street. Leave pending growth pulses queued.
+  if(planningBorderRoads&&!primaryRoadList(true).length)return 0;
   if(State.village.nextGrowthDay==null)State.village.nextGrowthDay=State.clock.day+.75;
   let guard=0,changed=0,processed=0;
   while(State.clock.day>=State.village.nextGrowthDay&&guard++<8){
     processed++;
     const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
     let kind;
-    if(roads===0)kind='road';
+    if(planningBorderRoads)kind='house';
+    else if(roads===0)kind='road';
     else if(houses<2)kind='house';
     else{
       const rnd=growthRng(step,509)();
@@ -2250,7 +2256,8 @@ function processVillageGrowth(){
     };
     let ok=attempt(kind);
     if(!ok&&kind!=='house')ok=attempt('house');
-    if(!ok&&kind!=='road')ok=attempt('road');
+    // The founding route task owns the outer main roads until it finishes.
+    if(!ok&&kind!=='road'&&!planningBorderRoads)ok=attempt('road');
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
     if(ok){

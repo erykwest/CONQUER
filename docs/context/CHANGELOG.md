@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-16 — Diagnosi condivisa /main e /camp: crescita bloccata dalla pianificazione arteriale
+
+- Individuato su `main` il medesimo blocco di crescita già corretto su `camp`: la ricerca in background delle quattro strade perimetrali impediva lo spawn delle case, anche sulle arterie completate.
+- Preparata [PR #52](https://github.com/erykwest/CONQUER/pull/52) su branch `fix/main-growth-during-road-planning-20261016` dal `main` `39caf15`: spawn sulle strade già pronte e impulsi di crescita non consumati in assenza di percorsi utilizzabili.
+- Comandi militari `main`: messaggi espliciti per distanza cavaliere 16U, percorsi non traversabili e simulazione in pausa; non è stato rimosso il vincolo tattico.
+- [CI 38948914788](https://github.com/erykwest/CONQUER/actions/runs/38948914788) **PASS**; verifica browser/partita persistita ancora aperta. `main` e produzione non modificati.
+
 ## 2026-10-16 — Correzione dei contratti di danno negli assedi
 
 - Recepita una **correzione esplicita**: gli **attacchi ordinari delle unità** e le **frecce** non danneggiano mura o torri (**D-031**, S-05/S-16); eventuali danni strutturali richiedono una sorgente compatibile, non un attacco generico.

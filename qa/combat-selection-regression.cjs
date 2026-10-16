@@ -15,7 +15,7 @@ const units=[
 ];
 const calls=[],notices=[];
 const context=vm.createContext({
-  Math,Set,selected:null,selectionDrag:null,selectedIds:new Set(),
+  Math,Set,State:{clock:{speed:1}},selected:null,selectionDrag:null,selectedIds:new Set(),
   combat:{units},
   dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
   point:(x,y)=>({x:Math.max(0,Math.min(200,x)),y:Math.max(0,Math.min(200,y))}),
@@ -59,3 +59,13 @@ assert.match(source,/id="combatDeselect"/,'explicit deselect button');
 assert.match(source,/e\.key!=='Escape'/,'Escape supports clear selection');
 assert.match(source,/selectCombatUnits\(\[hit\],e\.shiftKey,e\.shiftKey\)/,'Shift click updates selection');
 console.log('PASS grouped destinations preserve relative formation, mouse box and keyboard actions are wired');
+// The command-radius limit is intentional on main, but rejection cannot be silent.
+clear();
+select([units[1]]);
+group({x:120,y:100});
+assert.match(notices.at(-1),/fuori raggio cavaliere \(16U\)/,'rejected order explains knight command radius');
+context.State.clock.speed=0;
+group({x:105,y:100});
+assert.match(notices.at(-1),/tempo in pausa/,'accepted paused orders explain why units are stationary');
+console.log('PASS command rejection and paused-order diagnostics');
+
