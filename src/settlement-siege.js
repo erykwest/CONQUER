@@ -302,8 +302,9 @@
     // Gatehouses are structural cores; axes and arrows cannot bypass the
     // wall/tower rule by attacking a WOODEN tower or choosing 'core' on a gate.
     if(part==='core'&&STRUCTURAL_CORES.has(s.type)&&NON_STRUCTURAL_WEAPONS.has(weapon))return 0;
-    // A ram/torch acts on a door (and possibly palisades), never gate masonry.
-    if(part==='core'&&s.type==='gate'&&['ram','torch'].includes(weapon))return 0;
+    // Ram impacts and direct torch hits target portoni (or palisades), not
+    // walls, towers, gatehouse masonry or the core of a wooden gatehouse.
+    if(part==='core'&&STRUCTURAL_CORES.has(s.type)&&['ram','torch'].includes(weapon))return 0;
     return Math.max(0,WEAPONS[weapon]?.[targetMaterial(s,part)]||0);
   }
   function attackStructure(id,weapon,force=1,part='core'){
