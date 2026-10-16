@@ -237,6 +237,17 @@
           <details data-sound-eq="notifications"><summary>4 · Notifiche</summary></details>
         </div>
         <label class="sound-normalize"><input id="soundNormalize" type="checkbox" checked> Normalizzazione LUFS (picchi protetti)</label>
+        <div class="sound-music">
+          <span class="dev-label">MUSIC · COLONNA SONORA</span>
+          <div class="dev-row"><button id="musicEnable" type="button">♫ Musica OFF</button>
+            <label class="sound-master">Volume <input id="musicVolume" type="range" min="0" max="100" value="40"><output id="musicVolumeValue">40%</output></label></div>
+          <label><input id="musicAuto" type="checkbox" checked> Playlist automatica stagionale</label>
+          <label><input id="musicNormalize" type="checkbox" checked> Normalizzazione musicale LUFS</label>
+          <select id="musicTrack" aria-label="Seleziona brano musicale"></select>
+          <div class="dev-row"><button id="musicListen" type="button">▶ Ascolta</button>
+            <button id="musicNext" type="button">⏭ Prossimo</button><button id="musicStop" type="button">■ Stop</button></div>
+          <span id="musicReadout" class="dev-hint">15 versioni musicali · 4 stagioni + generici</span>
+        </div>
         <div class="sound-preview">
           <select id="soundPreviewClip" aria-label="File audio da ascoltare">
             <option value="spring">Primavera · bosco</option>
@@ -298,6 +309,8 @@
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
 <script src="./src/settlement-architecture.js?v=refactor-1"></script>
 <script src="./src/settlement-weather.js?v=refactor-1"></script>
+<script src="./src/settlement-music-catalog.js?v=music-1"></script>
+<script src="./src/settlement-music.js?v=music-1"></script>
 <script src="./src/settlement-sound-catalog.js?v=sound-2"></script>
 <script src="./src/settlement-sound.js?v=sound-2"></script>
 <script src="./src/settlement-sound-bridge.js?v=sound-2"></script>
@@ -317,6 +330,7 @@
 <script src="./src/settlement-lod.js?v=lod-1"></script>
 <script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
+<script src="./src/settlement-music-dev.js?v=music-1"></script>
 <script src="./src/settlement-sound-dev.js?v=sound-2"></script>
 <script src="./src/settlement-combat-rules.js?v=combat-3"></script>
 <script src="./src/settlement-combat.js?v=combat-4"></script>

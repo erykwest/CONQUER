@@ -29,6 +29,7 @@
  function tick(now,weather){
   if(now-lastTick<350)return;
   lastTick=now;
+  window.ConquerMusic?.setSeason(State.season);
   const audio=window.ConquerSound;if(!audio)return;
   const night=typeof nightFactor==='function'&&nightFactor()>.55,weatherNow=weather||currentWeather();
   const environment=[];

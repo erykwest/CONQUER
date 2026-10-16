@@ -167,3 +167,9 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 #devPanel #devSound .sound-eq-reset{margin-top:8px;height:24px;padding:2px 7px;font-size:10px}
 #devSound .sound-normalize{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:10px;color:var(--text-2)}
 #devSound .sound-normalize input{accent-color:var(--accent)}
+
+#devSound .sound-music{margin-top:12px;padding-top:9px;border-top:1px solid var(--line-strong);display:grid;gap:6px}
+#devSound .sound-music label{font-size:10px;color:var(--text-2)}
+#devSound .sound-music select{width:100%;font-size:11px;padding:6px}
+#devSound .sound-music input[type=checkbox]{accent-color:var(--accent)}
+#devSound .sound-music .dev-row button{font-size:10px}
