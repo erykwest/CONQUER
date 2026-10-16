@@ -20,6 +20,12 @@
   training:'freesound_community-sword-training-1-41565.mp3'
  };
  const oneShots=new Set(['thunder','bells','pickaxe']);
- window.ConquerSoundCatalog=Object.freeze(Object.fromEntries(Object.entries(names).map(([id,name])=>
-  [id,Object.freeze({id,url:root+encodeURIComponent(name),file:name,loop:!oneShots.has(id)})])));
+ // FFmpeg loudnorm analysis of the original 14 MP3 files (LUFS integrated / dBTP).
+ // Non-destructive gain is peak-capped at -3 dBTP to preserve transient dynamics.
+ const levels={"spring":[-11.99,0.11,-12.01],"summer":[-22.94,-11.44,-1.06],"wind":[-30.33,-7.7,4.7],"rain":[-13.44,0.96,-10.56],"thunder":[-14.16,0.12,-9.84],"market":[-28.74,-5.28,2.28],"tavern":[-19.97,-2.13,-3.03],"bells":[-29.04,-12.84,8.04],"choir":[-34.34,-13.84,10.84],"chopping":[-23.59,-0.24,-2.76],"mining":[-21.85,0.59,-3.59],"pickaxe":[-13.98,0.43,-7.02],"marching":[-16.57,-0.25,-6.43],"training":[-18.26,-0.41,-5.74]};
+ window.ConquerSoundCatalog=Object.freeze(Object.fromEntries(Object.entries(names).map(([id,name])=>{
+  const [lufs,peakDbtp,gainDb]=levels[id];
+  return [id,Object.freeze({id,url:root+encodeURIComponent(name),file:name,
+    loop:!oneShots.has(id),lufs,peakDbtp,gainDb})];
+ })));
 })();
