@@ -14,8 +14,12 @@ function drawDayNightOverlay(){
 }
 function drawNightLights(){
   const nf=nightFactor();if(nf<=.01)return;
+  const t0=performance.now();
   drawFacadeWindows(true,nf);
   drawFireGlows(nf);
+  const ms=performance.now()-t0;
+  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;
+  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});
 }
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
@@ -445,7 +449,10 @@ function draw(){
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   }
   drawDayNightOverlay();
-  drawNightLights();
+  // WebGL2 lights share the real scene depth and are composited after colour grading.
+  // Canvas keeps its original complete night path as the fallback.
+  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);
+  else drawNightLights();
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   endPopulationFrame();
