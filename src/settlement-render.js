@@ -134,7 +134,13 @@ function drawBaseStaticScene(){
     const completedOthers=State.structures
       .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+    for(const s of completedOthers){
+      // When zoomed into a ward, do not rasterize remote homes into the
+      // cached base layer. Wide padding retains large townhouses near edges.
+      if(s.type==='house'&&!worldPointVisible(s,houseBodyHeight(s)+.6,
+        320+180*State.view.scale))continue;
+      if(s.auto)drawAutoStructure(s);else drawStructure(s);
+    }
     drawStaticHouseFacadeDetails();
   });
   entry.dirty=false;
