@@ -1,7 +1,7 @@
 # CONQUER — Piramide di contesto
 
 > Punto d'ingresso canonico per riprendere il progetto dopo una chat, un cambio di agente o una pausa.
-> Snapshot iniziale: **16 ottobre 2026**. La cronologia Git e i test hanno sempre precedenza sulle sintesi.
+> Snapshot iniziale: **16 ottobre 2026**; verifica successiva dello stesso giorno su `main` [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99). La cronologia Git e i test hanno sempre precedenza sulle sintesi.
 
 ## Leggere in quest'ordine
 
@@ -16,6 +16,8 @@
 
 **Entrata rapida (2 minuti):** leggi questa pagina, la tabella «Prossimo passo» della [roadmap](ROADMAP.md#prossimo-passo) e gli «avvisi» dello [stato](STATUS.md#avvisi-di-integrazione).  
 **Entrata per implementare:** aggiungi il backlog del sottosistema, i file sorgente e le QA pertinenti; verifica branch e commit attuali prima di scrivere.
+
+**Stato rapido al 16/10 (verificato su Git):** economia [PR #22](https://github.com/erykwest/CONQUER/pull/22), assedio-base [PR #21](https://github.com/erykwest/CONQUER/pull/21), refactor [PR #38](https://github.com/erykwest/CONQUER/pull/38), illuminazione [PR #43](https://github.com/erykwest/CONQUER/pull/43)/[PR #47](https://github.com/erykwest/CONQUER/pull/47), minimappa e LOD [PR #44](https://github.com/erykwest/CONQUER/pull/44) **già integrati su `main`**; renderer WebGL2 3D in default con fallback Canvas. **Non chiusi:** branch `urban`, riconciliazione ledger/Builder, calendario campi/economia, output miniera, QA end-to-end. Consulta [STATUS.md](STATUS.md) per le prove.
 
 ## Regole di verità
 
