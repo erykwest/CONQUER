@@ -33,7 +33,8 @@
 | D-024 | PREFERENZA ESPLICITA (MUSICA 15/10) | Per i prompt Suno: **Style e Lyrics separati**; Lyrics soltanto descrittivo; Style sotto **1000 caratteri**. | Suno Pro dichiarato acquistato, brani/licenze da inventariare; non presume audio integrato. [Fonte](sources/VISUAL-AUDIO-2026-10-14.md). |
 | D-025 | PRINCIPIO TECNICO (MINIMAP 15/10) | Il LOD cambia solo la rappresentazione della stessa entità; i marker nemici rispettano la visibilità tattica. | Prima implementazione in **PR #44 aperta**, non ancora su main. [Fonte](sources/MINIMAP-2026-10-15.md). |
 
-
+| D-026 | PREFERENZA ESPLICITA (AUDIO 14/10) | Ambiente sonoro legato a stagione/meteo/giorno-notte; **SFX di edifici/unità soltanto se selezionati o con zoom almeno 30%** (soglia di ingrandimento). | Dissolvenze, distanza, budget sorgenti e legame con stati reali; [Fonte Pixabay](sources/PIXABAY-SOUNDS-2026-10-14.md). |
+| D-027 | DIREZIONE ASSET (AUDIO 14/10) | Libreria SFX **repertoriata su Drive**, non da presumere nel Git: 24 MP3 contati nel thread, senza ascolto qualità; preservare provenienza/licenze file per file. | Evitare distribuzione indistinta di raw file in repo pubblico, testare duplicati e manifest; [Fonte Pixabay](sources/PIXABAY-SOUNDS-2026-10-14.md). |
 
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
