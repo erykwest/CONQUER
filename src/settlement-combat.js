@@ -997,10 +997,13 @@
     const signatureChanged=signature!==whiteBoundarySignature;
     if(!window.ConquerCombatRules.shouldRebuildBoundary(painting,whiteBoundaryCache.length>0,signatureChanged))return whiteBoundaryCache;
     whiteBoundarySignature=signature;whiteBoundaryRevision++;
-    const points=window.ConquerCombatRules.boundaryPoints(p=>areaState(p).allowed,WORLD,1.25);
-    whiteBoundaryCache=points;
     const center=activeWell()||{x:WORLD/2,y:WORLD/2};
-    whiteBoundaryLoopCache=window.ConquerCombatRules.traceBoundaryIndices(points,center,1);
+    const points=window.ConquerCombatRules.orderedBoundaryPoints(
+      p=>areaState(p).allowed,WORLD,1.25,center);
+    whiteBoundaryCache=points;
+    // The contour is already ordered. Never apply the branch-prone greedy
+    // neighbor trace to it or patrols can reverse along a short fragment.
+    whiteBoundaryLoopCache=points.map((_,i)=>i);
     patrolRouteCache.clear();
     for(const unit of combat.units)if(unit.kind==='patrol'){
       unit.patrolLoopPosition=null;unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
@@ -1021,26 +1024,29 @@
   }
   function patrolDestination(unit,skip=0){
     const boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache;if(!boundary.length||!loop.length)return null;
-    let position=Number.isInteger(unit.patrolLoopPosition)?unit.patrolLoopPosition:-1;
-    let current=position>=0?loop[position]:-1;
-    if(current<0||!boundary[current]||dist(unit,boundary[current])>3.25){
-      if(Number.isInteger(unit.patrolAnchorIndex)){
-        const anchored=loop.indexOf(unit.patrolAnchorIndex);
-        if(anchored>=0)position=anchored;
-      }
-      if(position<0){
-        position=0;let bestD=dist(unit,boundary[loop[0]]);
-        for(let i=1;i<loop.length;i++){const d=dist(unit,boundary[loop[i]]);if(d<bestD){bestD=d;position=i}}
-      }
-      const direction=unit.patrolDirection<0?-1:1;
-      position=(position+direction*skip*PATROL_LOOP_STRIDE)%loop.length;
-      if(position<0)position+=loop.length;
-      unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolAnchorIndex=null;
-      return boundary[loop[position]];
+    let position=Number.isInteger(unit.patrolLoopPosition)&&
+      unit.patrolLoopPosition>=0&&unit.patrolLoopPosition<loop.length?unit.patrolLoopPosition:-1;
+    const initial=position<0;
+    if(initial&&Number.isInteger(unit.patrolAnchorIndex)){
+      position=loop.indexOf(unit.patrolAnchorIndex);
     }
+    if(position<0){
+      // First assignment only: find the closest perimeter sample.
+      position=0;let bestD=dist(unit,boundary[loop[0]]);
+      for(let i=1;i<loop.length;i++){
+        const d=dist(unit,boundary[loop[i]]);
+        if(d<bestD){bestD=d;position=i}
+      }
+    }
+    // Once established, progress by sequence number, not distance to the
+    // previous raw border sample. Inward-adjusted waypoints and sparse
+    // corners may be farther than 3.25U, which previously reset the patrol
+    // to the same waypoint forever.
     const direction=unit.patrolDirection<0?-1:1;
-    position=(position+direction*(skip+1)*PATROL_LOOP_STRIDE)%loop.length;if(position<0)position+=loop.length;
-    unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolPreviousIndex=null;
+    position=(position+direction*(skip+(initial?0:1))*PATROL_LOOP_STRIDE)%loop.length;
+    if(position<0)position+=loop.length;
+    unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];
+    unit.patrolAnchorIndex=null;unit.patrolPreviousIndex=null;
     return boundary[loop[position]];
   }
   function patrolSafeWaypoint(candidate){

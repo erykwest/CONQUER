@@ -14,6 +14,35 @@ assert.ok(rules,'combat rules must load');
 assert.equal(rules.ensure({kind:'patrol'},'patrol').maxHp,40,'patrol is a two-pikeman unit, not a 5-pikeman squad');
 
 const allowed=p=>(p.x-100)**2+(p.y-100)**2<=400;
+function verifyOrderedRing(label,region,focus={x:100,y:100}){
+ const ring=rules.orderedBoundaryPoints(region,200,1.25,focus);
+ assert.ok(ring.length>60,label+': most perimeter points should form the ring');
+ const unique=new Set(ring.map(p=>p.x+','+p.y));
+ assert.equal(unique.size,ring.length,label+': no repeated first/last vertex');
+ const angles=ring.map(p=>Math.atan2(p.y-focus.y,p.x-focus.x));
+ const quadrants=new Set(ring.map(p=>Math.floor(((Math.atan2(p.y-focus.y,p.x-focus.x)+Math.PI)/(Math.PI/2)))%4));
+ assert.equal(quadrants.size,4,label+': patrol visits all sides, not one short arc');
+ assert.ok(ring.every((p,i)=>Math.hypot(p.x-ring[(i+1)%ring.length].x,p.y-ring[(i+1)%ring.length].y)<=1.8),
+   label+': ring neighbors are local, including wraparound');
+ return ring;
+}
+verifyOrderedRing('circular White Zone',allowed);
+const ellipse=p=>((p.x-100)/35)**2+((p.y-100)/15)**2<=1;
+const ellipseSamples=rules.boundaryPoints(ellipse,200,1.25);
+const greedy=rules.traceBoundaryIndices(ellipseSamples,{x:100,y:100});
+assert.ok(greedy.length<ellipseSamples.length*.5,'reproduction: old greedy trace stops early on ellipse');
+const ellipticRing=verifyOrderedRing('elliptic White Zone',ellipse);
+assert.ok(ellipticRing.length>ellipseSamples.length*.85,'new contour covers entire ellipse perimeter');
+const joined=p=>allowed(p)||((p.x-118)**2+(p.y-100)**2<=169);
+const joinedSamples=rules.boundaryPoints(joined,200,1.25);
+assert.ok(rules.traceBoundaryIndices(joinedSamples,{x:100,y:100}).length<joinedSamples.length*.5,
+ 'reproduction: old trace gets trapped at joined circles');
+verifyOrderedRing('overlapping White Zone circles',joined);
+verifyOrderedRing('White Zone with inner forbidden hole',
+  p=>allowed(p)&&((p.x-106)**2+(p.y-100)**2>=9));
+const distant=p=>allowed(p)||((p.x-155)**2+(p.y-100)**2<=35**2);
+const focused=rules.orderedBoundaryPoints(distant,200,1.25,{x:100,y:100});
+assert.ok(focused.every(p=>p.x<125),'contour should surround the settlement, not a remote disconnected zone');
 const boundary=rules.boundaryPoints(allowed,200,1.25);
 const loop=rules.traceBoundaryIndices(boundary,{x:100,y:100});
 assert.ok(loop.length>40,'White Zone yields a usable ordered boundary loop');
@@ -135,5 +164,10 @@ assert.match(runtimeSource,/id="combatPatrolAdd"/,'Patrol + action is in the com
 assert.match(runtimeSource,/id="combatPatrolRemove"/,'Patrol - action is in the combat panel');
 assert.match(runtimeSource,/u\.kind==='patrol'\?2:5/,'Patrol renders two pikemen, not five');
 assert.match(runtimeSource,/updatePatrols\(performance\.now\(\)\)/,'patrols advance during simulation');
+assert.match(runtimeSource,/ConquerCombatRules\.orderedBoundaryPoints/,'combat uses ordered contour, not greedy trace');
+assert.match(runtimeSource,/whiteBoundaryLoopCache=points\.map/,'indices preserve contour order');
+assert.doesNotMatch(runtimeSource.slice(runtimeSource.indexOf('function patrolDestination('),
+ runtimeSource.indexOf('function patrolSafeWaypoint(')),/dist\(unit,boundary\[current\]\)>3\.25/,
+ 'patrol destination cannot reset progress on sparse or inward-adjusted waypoints');
 assert.match(runtimeSource,/whiteBoundarySignature=''/,'editing the White Zone invalidates patrol waypoints');
 console.log('PASS White Zone Patrol profile, boundary, cached routes, UI and persistence');
