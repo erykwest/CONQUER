@@ -17,6 +17,8 @@
   const fromUrl=(()=>{try{const v=new URLSearchParams(location.search).get('world3d');return v===null?null:v!=='0'}catch{return null}})();
   const forcedCanvas=(()=>{try{return new URLSearchParams(location.search).get('renderer')==='canvas2d'}catch{return false}})();
   let enabled=!forcedCanvas&&(fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)!=='0'}catch{return true}})());
+  // Branch-local A/B: ?nightlight=0 keeps the same WebGL2 world, but uses old Canvas lights.
+  let useGpuNightLights=(()=>{try{return new URLSearchParams(location.search).get('nightlight')!=='0'}catch{return true}})();
   if(fromUrl!==null){try{localStorage.setItem(STORE_KEY,fromUrl?'1':'0')}catch{}}
 
   const TEX_SIZE=4096;                                   // world texture 200U, detail texture = build area
@@ -908,6 +910,8 @@
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
     return true;
   }
+  function nightLightsEnabled(){return useGpuNightLights}
+  function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}
   function drawNightLights3D(r){
     const nf=nightFactor();if(nf<=.01)return;
     const started=performance.now();
@@ -966,7 +970,8 @@
     }
     draw();
   }
-  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,drawNightLights3D,drawMastioDrapes,_setActiveForTest,
+  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
+    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,_setActiveForTest,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
