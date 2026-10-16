@@ -111,10 +111,10 @@
   const activeWell=()=>State.village.founded?State.structures.find(s=>s.id===State.village.wellId&&s.type==='well'):null;
   function startUnits(){
     const well=activeWell();if(!well||combat.units.length)return;
-    combat.units=[
-      {id:'combat-squad-'+well.id,kind:'squad',x:well.x+2,y:well.y+2,target:null,experience:0},
-      {id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}
-    ];changed();
+    combat.units=window.__CONQUER_CAMP_MODE__
+      ?[{id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}]
+      :[{id:'combat-squad-'+well.id,kind:'squad',x:well.x+2,y:well.y+2,target:null,experience:0},
+        {id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}];changed();
   }
   function circles(){
     const well=activeWell();if(!well)return [];
@@ -652,8 +652,14 @@
       drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)},true);
       g.setLineDash([]);
     }
+    window.ConquerCamp?.drawEncampments(g);
     const characters=[];
     for(const u of combat.units){
+      if(u.defeated||u.campState==='barracks')continue;
+      if(u.campState==='camped'){
+        characters.push({p:{x:u.x+.15,y:u.y+.85},type:'spearman',id:u.id+':camp-guard',unit:u,index:0});
+        continue;
+      }
       if(u.kind==='knight'&&!u.defeated)characters.push({p:u,type:'knight',id:u.id,unit:u});
       else{
         if(u.defeated)continue;
@@ -850,7 +856,7 @@
   function selectCombatUnits(units,additive=false,toggle=false){
     if(!additive)selectedIds.clear();
     for(const unit of units){
-      if(unit.defeated||unit.routing)continue;
+      if(unit.defeated||unit.routing||unit.campState)continue;
       if(toggle&&selectedIds.has(unit.id))selectedIds.delete(unit.id);
       else selectedIds.add(unit.id);
     }
@@ -865,7 +871,7 @@
     return !!commander&&dist(unit,commander)<=16&&dist(target,commander)<=16;
   }
   function issueMove(unit,p,quiet=false){
-    if(unit.defeated||unit.routing){
+    if(unit.defeated||unit.routing||unit.campState){
       if(!quiet)status('Unit cannot receive orders');
       return false;
     }
@@ -882,6 +888,14 @@
     }
     unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;
     if(!quiet){changed();status((unit.kind==='squad'?'Pikemen':unit.kind==='patrol'?'Patrol':'Knight')+' marching via valid terrain')}
+    return true;
+  }
+  // Barracks recall is an internal duty order, not subject to the knight beacon.
+  function recallCampUnit(unit,home){
+    if(unit.defeated||unit.routing)return false;
+    const target=point(home.x,home.y),path=infantryRoute(unit,target,unit.id,unit.kind);
+    if(!path)return false;
+    unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;
     return true;
   }
   function issueGroupMove(target){
@@ -980,7 +994,10 @@
   function spawnOccupants(){
     const out=[];
     for(const unit of combat.units.concat(combat.enemy)){
-      if(unit.defeated||unit.stats?.hp<=0)continue;
+      if(unit.defeated||unit.stats?.hp<=0||unit.campState==='barracks')continue;
+      if(unit.campState==='camped'){
+        out.push({x:unit.x+.15,y:unit.y+.85,r:.22});continue;
+      }
       for(const [ox,oy] of militaryOffsets(unit.kind))out.push({x:unit.x+ox,y:unit.y+oy,r:unit.kind==='knight'?.30:.22});
     }
     return out;
@@ -1028,6 +1045,7 @@
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);
+    window.ConquerCamp?.synchronize();
     updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
@@ -1055,6 +1073,7 @@
       window.ConquerSnowTracks?.observe(u.id,u,State.clock.day,u.kind==='knight'?'horse':'person');
     }
     if(moved){visibilityDirty=true;maskDirty=true}
+    window.ConquerCamp?.synchronize();
     // Combat AI, target acquisition and LOS are capped at 10 Hz.
     // World unit movement remains driven by the regular simulation delta.
     const rules=window.ConquerCombatRules;
@@ -1116,7 +1135,7 @@
       status('Test intruder placed — visible only within line of sight');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
-      const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&dist(u,p)<1.1)
+      const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&!u.campState&&dist(u,p)<1.1)
         .sort((a,b)=>dist(a,p)-dist(b,p))[0];
       if(hit){
         e.preventDefault();e.stopImmediatePropagation();
@@ -1154,7 +1173,7 @@
         const x0=Math.min(drag.start.x,drag.end.x),x1=Math.max(drag.start.x,drag.end.x);
         const y0=Math.min(drag.start.y,drag.end.y),y1=Math.max(drag.start.y,drag.end.y);
         const hits=combat.units.filter(u=>{
-          if(u.defeated||u.routing)return false;
+          if(u.defeated||u.routing||u.campState)return false;
           const q=w2s(u,.08);return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
         });
         selectCombatUnits(hits,drag.shift);
@@ -1256,6 +1275,7 @@
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
+    units:()=>combat?.units||[],recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
     alarmMode,setAlarmMode,recruitedResident,
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);
