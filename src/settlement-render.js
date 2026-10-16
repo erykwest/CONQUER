@@ -445,7 +445,10 @@ function draw(){
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   }
   drawDayNightOverlay();
-  drawNightLights();
+  // WebGL2 lights share the real scene depth and are composited after colour grading.
+  // Canvas keeps its original complete night path as the fallback.
+  if(world3d)window.ConquerWorld3D.drawNightLights3D(r);
+  else drawNightLights();
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   endPopulationFrame();
