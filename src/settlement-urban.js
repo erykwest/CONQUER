@@ -441,7 +441,51 @@ function urbanPolygonIntersectionArea(a,b){
 }
 function urbanHouseDisplayParts(house){
   const dense=urbanDenseParts(house);
-  return dense.length?dense.concat(urbanLotOutbuildings(house)):houseFootprintParts(house);
+  return dense.length?dense.concat(urbanLotOutbuildings(house)):
+    houseFootprintParts(house).concat(urbanLotOutbuildings(house));
+}
+// L2 cattle lots keep the original detached house and get one open lean-to
+// under which the herd can shelter. Reuse the L3/L4 roof geometry and collision
+// volumes: no extra persisted structures or changes to cadastral lot outlines.
+let urbanCattleShelterCache={revision:-1,parts:new Map()};
+function urbanL2CattleShelter(house){
+  if(!house||houseLevel(house)!==2||window.ConquerLivestock?.lotKindForHouse(house)!=='cow')return[];
+  if(urbanCattleShelterCache.revision!==urbanRevision)
+    urbanCattleShelterCache={revision:urbanRevision,parts:new Map()};
+  const key=house.id+'|'+State.seed;
+  if(urbanCattleShelterCache.parts.has(key))return urbanCattleShelterCache.parts.get(key);
+  const lot=urbanLots().find(l=>l.houseId===house.id);
+  const parts=[];
+  if(lot){
+    const poly=lot.points,sign=urbanArea(poly)>=0?1:-1,street=urbanLotStreetEdges(lot);
+    const candidates=poly.map((a,i)=>({
+      i,a,b:poly[(i+1)%poly.length],length:dist(a,poly[(i+1)%poly.length])
+    })).filter(e=>e.length>1.25).sort((a,b)=>Number(street.has(a.i))-Number(street.has(b.i))||b.length-a.length);
+    const footprint=houseFootprintParts(house);
+    for(const edge of candidates){
+      const {a,b,length:L}=edge,ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;
+      const inward={x:-uy*sign,y:ux*sign},angle=Math.atan2(inward.y,inward.x)-Math.PI/2;
+      const width=Math.min(2.4,L-.34),depth=.9;
+      for(const portion of [.5,.32,.68]){
+        const along=L*portion,center={
+          x:a.x+ux*along+inward.x*(depth/2+.08),
+          y:a.y+uy*along+inward.y*(depth/2+.08)
+        };
+        const points=rectWorldPoints(center.x,center.y,width,depth,angle);
+        if(!points.every(p=>urbanContains(poly,p,.055)))continue;
+        if(footprint.some(part=>urbanPolygonIntersectionArea(points,part.points)>1e-6||
+          points.some((p,i)=>part.points.some((q,j)=>segmentDistance(p,points[(i+1)%points.length],
+            q,part.points[(j+1)%part.points.length])<.16))))continue;
+        parts.push({kind:'outbuilding',type:'shed',center,points,w:width,h:depth,
+          roofTurn:0,roofAngle:angle,bodyH:.62,roofH:1.02,
+          buildingKey:house.id+'|cow-shelter'});
+        break;
+      }
+      if(parts.length)break;
+    }
+  }
+  urbanCattleShelterCache.parts.set(key,parts);
+  return parts;
 }
 // L3/L4 yards fill up with secondary buildings along the plot's non-street
 // sides: open lean-to sheds (tettoie) and closed storehouses (magazzini).
@@ -450,7 +494,9 @@ function urbanHouseDisplayParts(house){
 let urbanOutbuildingCache={revision:-1,parts:new Map()};
 const URBAN_OUTBUILDING_MAX=6;
 function urbanLotOutbuildings(house){
-  if(!house||(!house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
+  if(!house)return[];
+  if(houseLevel(house)===2)return urbanL2CattleShelter(house);
+  if((!house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
   if(urbanOutbuildingCache.revision!==urbanRevision)urbanOutbuildingCache={revision:urbanRevision,parts:new Map()};
   const level=houseLevel(house),cached=urbanOutbuildingCache.parts.get(house.id);
   if(cached&&cached.level===level)return cached.parts;
@@ -708,7 +754,8 @@ function drawUrbanLots(){
     const dense=(house?.auto||house?.urbanRedeveloped)&&houseLevel(house)>=3;
     const use=window.ConquerLivestock?.lotKindForHouse(house);
     const surface=dense?'rgba(128,116,103,.36)':use==='goat'?'rgba(155,123,71,.20)':
-      use==='shepherd'?'rgba(126,142,78,.18)':'rgba(167,135,81,.10)';
+      use==='shepherd'?'rgba(126,142,78,.18)':use==='cow'?'rgba(141,123,84,.23)':
+      use==='garden'?'rgba(117,153,72,.18)':'rgba(167,135,81,.10)';
     pathPolygon(lot.points.map(p=>w2s(p,.015)),surface,null);
   }
   const edges=urbanFenceSegments().slice().sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
