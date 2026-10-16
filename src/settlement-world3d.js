@@ -183,6 +183,21 @@
     }
     return new Float32Array(v);
   }
+  // Mountains as raised fans (drawRaisedFan): outline on the ground, apex 3.6U over the centre,
+  // faces alternating the same two tones. The ground bake only shows them from above.
+  const MOUNTAIN_HEIGHT=3.6,MOUNTAIN_FACES=['#55493d','#66584a'];
+  function buildMountains(){
+    const m=meshBuilder();
+    for(const f of State.environment||[]){
+      if(f.type!=='mountain'||!(f.points?.length>=3))continue;
+      const apex={x:f.x,y:f.y,z:MOUNTAIN_HEIGHT};
+      for(let i=0;i<f.points.length;i++){
+        const a=f.points[i],b=f.points[(i+1)%f.points.length];
+        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},apex],MOUNTAIN_FACES[i%2]);
+      }
+    }
+    return new Float32Array(m.tris);
+  }
   // Bake the existing 2D ground drawing in plan view (rotation 0) into a canvas covering [x0,x0+size]².
   function bakeGround(x0,y0,size){
     const N=TEX_SIZE,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
@@ -555,7 +570,7 @@
     const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,wet(),urbanRev(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
-      upload(gl,'terrain',buildTerrain());
+      upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());
       uploadTexture(gl,'world',bakeGround(0,0,WORLD));
       uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
       S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
@@ -641,7 +656,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'mountains');drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write

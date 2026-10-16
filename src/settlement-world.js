@@ -963,10 +963,10 @@ function assignSteepEdgesByLevel(relief,rnd){
     for(let i=0;i<count;i++)refs[i].level.edgeKinds[refs[i].index]='steep';
   }
 }
-function makeProceduralHill(rnd,index){
-  const controlCount=12+Math.floor(rnd()*5),maxHeight=index===0?5:2+Math.floor(rnd()*4);
-  const center={x:-18+rnd()*(WORLD+36),y:-18+rnd()*(WORLD+36)};
-  const rx=22+rnd()*16,ry=15+rnd()*13,angle=rnd()*Math.PI;
+function makeProceduralHill(rnd,index,spec=null){
+  const controlCount=12+Math.floor(rnd()*5),maxHeight=spec?.maxHeight??(index===0?5:2+Math.floor(rnd()*4));
+  const center=spec?.center??{x:-18+rnd()*(WORLD+36),y:-18+rnd()*(WORLD+36)};
+  const rx=spec?.rx??22+rnd()*16,ry=spec?.ry??15+rnd()*13,angle=spec?.angle??rnd()*Math.PI;
   const ca=Math.cos(angle),sa=Math.sin(angle),angles=[];
   const phaseA=rnd()*Math.PI*2,phaseB=rnd()*Math.PI*2;
   for(let i=0;i<controlCount;i++)angles.push(i/controlCount*Math.PI*2+(rnd()-.5)*.055);
@@ -1070,18 +1070,124 @@ function reliefStats(){
     hillCount:hills.length
   };
 }
+// ---------- biome recipes (COFFEE BATTLES MapEngine) ----------
+// Feature counts per biome follow COFFEE BATTLES generateOrography / generateHydrology /
+// generateTactical. Sizes are COFFEE BATTLES units scaled from its 90U battlefield to the
+// 200U CONQUER world. Hills become terraced relief; forests keep the organic outlines.
+// COFFEE BATTLES "rough" patches are not generated: CONQUER retired the rough ellipses.
+const BIOME_SCALE=2.2,BIOME_ZONE_INSET=2*BIOME_SCALE;
+const BIOME_RECIPES=Object.freeze({
+  plains:{stream:.45,forests:[0,1]},
+  hills:{hills:[3,4],hillHeight:[2,3],forests:[0,1]},
+  valley:{mountains:[3,5],stream:1},
+  river:{river:true,forests:[1,2],hills:[0,1],hillHeight:[1,2]},
+  forest:{stream:1,forests:[4,6],smallForests:true,ponds:[0,1]},
+  mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4]},
+  village:{forests:[1,2],hills:[0,1],hillHeight:[1,2]},
+  sea:{sea:true,forests:[0,1]}
+});
+function biomeRecipe(){return BIOME_RECIPES[State.biome]||BIOME_RECIPES.plains}
+function biomeRange(rnd,[lo,hi]=[0,0]){return lo+Math.floor(rnd()*(hi-lo+1))}
+function biomeRand(rnd,lo,hi){return lo+rnd()*(hi-lo)}
+// randomCenter(marginU) inside the COFFEE BATTLES map zone (battlefield inset by 2U).
+function biomeCenter(rnd,marginU=0){
+  const m=BIOME_ZONE_INSET+marginU*BIOME_SCALE;
+  return{x:m+rnd()*(WORLD-2*m),y:m+rnd()*(WORLD-2*m)};
+}
+// makeHill / makeForest sizes: large rx 8-10, ry 4-5.5; small rx 5-7, ry 3-4 (centre margin 7 / 4).
+function biomeFeatureSize(rnd,small){
+  return small
+    ?{margin:4,rx:biomeRand(rnd,5,7)*BIOME_SCALE,ry:biomeRand(rnd,3,4)*BIOME_SCALE}
+    :{margin:7,rx:biomeRand(rnd,8,10)*BIOME_SCALE,ry:biomeRand(rnd,4,5.5)*BIOME_SCALE};
+}
+// Coast, orography and hydrology come from their own seeded streams, so generateRelief() and
+// generateEnvironment() see the same sea, mountains and water and can avoid each other.
+function biomeStream(salt){return seedRand((State.seed^biomeHash(State.biome||'plains')^salt)>>>0)}
+function biomeSea(){return biomeRecipe().sea?makeEnvSea(biomeStream(0x51ea51ea)):null}
+// makeMountainSectorChain: a contiguous run of perimeter sectors (4x4 grid on the square map),
+// never a whole side, each holding a mountain about 0.52-0.60 of a sector across in radius.
+function biomeMountains(){
+  const recipe=biomeRecipe();if(!recipe.mountains)return[];
+  const rnd=biomeStream(0x60a4f7e1),cells=4,cw=WORLD/cells,ring=[];
+  for(let c=0;c<cells;c++)ring.push({r:0,c});
+  for(let r=1;r<cells;r++)ring.push({r,c:cells-1});
+  for(let c=cells-2;c>=0;c--)ring.push({r:cells-1,c});
+  for(let r=cells-2;r>0;r--)ring.push({r,c:0});
+  for(let attempt=0;attempt<80;attempt++){
+    const len=Math.min(biomeRange(rnd,recipe.mountains),ring.length-2),start=Math.floor(rnd()*ring.length);
+    const chosen=Array.from({length:len},(_,i)=>ring[(start+i)%ring.length]);
+    const fullSide=[r=>r.r===0,r=>r.r===cells-1,r=>r.c===0,r=>r.c===cells-1].some(t=>chosen.filter(t).length>=cells);
+    if(fullSide)continue;
+    return chosen.map(cell=>{
+      const x=(cell.c+.5)*cw,y=(cell.r+.5)*cw;
+      const m=makeEnvBlob(rnd,'mountain',x,y,cw*biomeRand(rnd,.52,.60),cw*biomeRand(rnd,.54,.62),'#56493c','#968470',24,.11);
+      // Perimeter mountains are cut at the map edge rather than spilling past it.
+      if(typeof clipTerrainPolygon==='function')m.points=clipTerrainPolygon(m.points).map(p=>({x:p.x,y:p.y}));
+      m.mapSector={row:cell.r,col:cell.c};return m;
+    });
+  }
+  return[];
+}
+// makeWatercourseAvoiding: the stream/river must stay clear of the mountain chain.
+function biomeWater(mountains){
+  const recipe=biomeRecipe(),rnd=biomeStream(0x3a7684c1);
+  const type=recipe.river?'river':recipe.stream&&rnd()<recipe.stream?'stream':null;
+  if(!type)return null;
+  let best=null,bestClear=-Infinity;
+  for(let attempt=0;attempt<40;attempt++){
+    const water=makeEnvWater(rnd,type);
+    let clear=Infinity;
+    for(const m of mountains)for(let i=1;i<water.points.length;i++)
+      for(const p of m.points)clear=Math.min(clear,pointSegmentDistance(p,water.points[i-1],water.points[i]));
+    if(clear>water.width/2+2)return water;
+    if(clear>bestClear){bestClear=clear;best=water}
+  }
+  return best;
+}
+// Outline used to keep hills, forests, ponds, sea and mountains apart.
+function reliefHillFootprint(hill){return hill.levels?.[0]?.top||[]}
+function biomeFeatureClear(points,obstacles,gap){
+  for(const o of obstacles){
+    if(o.line){
+      for(let i=1;i<o.line.length;i++)for(const p of points)if(pointSegmentDistance(p,o.line[i-1],o.line[i])<o.clear)return false;
+      continue;
+    }
+    if(polygonGap(points,o.points)<gap)return false;
+  }
+  return true;
+}
+function biomeTerrainObstacles(){
+  const sea=biomeSea(),mountains=biomeMountains(),water=biomeWater(mountains),out=[];
+  if(sea)out.push({points:sea.points});
+  for(const m of mountains)out.push({points:m.points});
+  if(water)out.push({line:water.points,clear:water.width/2+2});
+  return out;
+}
+const BIOME_TOWN={x:WORLD/2,y:WORLD/2},BIOME_TOWN_CLEARANCE=7;
+function biomeTownClear(points){
+  if(pointInPolygon(BIOME_TOWN,points))return false;
+  for(let i=0;i<points.length;i++)if(pointSegmentDistance(BIOME_TOWN,points[i],points[(i+1)%points.length])<BIOME_TOWN_CLEARANCE)return false;
+  return true;
+}
 function generateRelief(){
   const reliefSeed=(State.seed^0x5f356495)>>>0,rnd=seedRand(reliefSeed);
-  State.relief={version:LANDSCAPE_GENERATION_VERSION,seed:reliefSeed,hills:[],stats:null};
+  State.relief={version:LANDSCAPE_GENERATION_VERSION,seed:reliefSeed,biome:State.biome,hills:[],stats:null};
   clearReliefBandCache();
-  let coverage=0,attempts=0;
-  while(coverage<.20&&State.relief.hills.length<14&&attempts<320){
-    const candidate=makeProceduralHill(rnd,State.relief.hills.length);
-    attempts++;
-    if(!hillIntersectsWorld(candidate)||!hillSpacingOk(candidate,State.relief.hills))continue;
-    State.relief.hills.push(candidate);
-    clearReliefBandCache();
-    coverage=estimateReliefCoverage(44);
+  // generateTactical: hills placed after coast, mountains and water, never overlapping them.
+  const recipe=biomeRecipe(),count=biomeRange(rnd,recipe.hills),obstacles=biomeTerrainObstacles();
+  for(let i=0;i<count;i++){
+    for(let attempt=0;attempt<420;attempt++){
+      const size=biomeFeatureSize(rnd,false),center=biomeCenter(rnd,size.margin);
+      // Every terrace needs room: about one level per 3U of the short radius.
+      const maxHeight=Math.max(1,Math.min(biomeRange(rnd,recipe.hillHeight||[1,2]),Math.floor(size.ry/3)));
+      const candidate=makeProceduralHill(rnd,State.relief.hills.length,{center,rx:size.rx,ry:size.ry,maxHeight});
+      const foot=reliefHillFootprint(candidate);
+      if(!hillIntersectsWorld(candidate)||!hillSpacingOk(candidate,State.relief.hills))continue;
+      if(!biomeTownClear(foot)||!biomeFeatureClear(foot,obstacles,reliefEdgeWidth('gentle')+1))continue;
+      State.relief.hills.push(candidate);
+      clearReliefBandCache();
+      break;
+    }
   }
   assignSteepEdgesByLevel(State.relief,seedRand((reliefSeed^0x735a2d97)>>>0));
   clearReliefBandCache();
@@ -1147,10 +1253,7 @@ function repairForestsAgainstSteepSlopes(){
     if(!forestIntersectsSteepRelief(f))return true;
     removed++;return false;
   });
-  if(removed){
-    const rnd=seedRand((State.seed^biomeHash(State.biome)^0x2d6f5b1d)>>>0);
-    ensureForestCoverage(State.environment,rnd,State.biome==='forest'?.18:.12);
-  }
+  // Woods are counted per biome now: removed ones are not topped up to a coverage target.
   State.relief.forestTerrainRuleVersion=FOREST_TERRAIN_RULE_VERSION;
   return removed>0||!already;
 }
@@ -1311,37 +1414,43 @@ function ensureForestCoverage(env,rnd,target=.20){
   }
   return covered/total;
 }
+// COFFEE BATTLES phase order: Coast, Orography, Hydrology, then the tactical woods and ponds.
+// Each woodland/pond is tried up to 420 times (MapEngine.place) and skipped if it never fits.
+function biomeHillObstacles(){
+  return(State.relief?.hills||[]).map(h=>({points:reliefHillFootprint(h)})).filter(o=>o.points.length>=3);
+}
+function addBiomeForest(env,rnd,small){
+  const others=()=>[...biomeHillObstacles(),...env.filter(f=>['sea','mountain','pond'].includes(f.type)).map(f=>({points:f.points}))];
+  for(let attempt=0;attempt<420;attempt++){
+    const size=biomeFeatureSize(rnd,small),p=biomeCenter(rnd,size.margin);
+    const candidate=makeOrganicForestBlob(rnd,p.x,p.y,size.rx,size.ry,small);
+    if(!forestBlobCanPlace(candidate,env,3)||!biomeFeatureClear(candidate.points,others(),1))continue;
+    env.push(candidate);return candidate;
+  }
+  return null;
+}
+function addBiomePond(env,rnd){
+  const others=[...biomeHillObstacles(),...env.filter(f=>f.points&&!['stream','river'].includes(f.type)).map(f=>({points:f.points})),
+    ...env.filter(f=>['stream','river'].includes(f.type)).map(f=>({line:f.points,clear:f.width/2+2}))];
+  for(let attempt=0;attempt<420;attempt++){
+    // makePond: rx 4-5, ry 2.5-3.3, centre margin 4.
+    const p=biomeCenter(rnd,4),pond=makeEnvBlob(rnd,'pond',p.x,p.y,biomeRand(rnd,4,5)*BIOME_SCALE,biomeRand(rnd,2.5,3.3)*BIOME_SCALE,'#3f7f8a','#8ab9bd',20,.20);
+    if(!biomeTownClear(pond.points)||!biomeFeatureClear(pond.points,others,1))continue;
+    env.push(pond);return pond;
+  }
+  return null;
+}
 function generateEnvironment(){
-  const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[];
-  const addBlob=(type,count,small=false)=>{for(let i=0;i<count;i++){if(type==='forest'){addForestBlob(env,rnd,small,3);continue}const p=randomEnvPoint(rnd,18),rx=small?4+rnd()*3:7+rnd()*4,ry=small?3+rnd()*2:4+rnd()*3;if(type==='mountain')env.push(makeEnvBlob(rnd,'mountain',p.x,p.y,rx,ry,'#56493c','#968470',24,.11));else if(type==='pond')env.push(makeEnvBlob(rnd,'pond',p.x,p.y,rx,ry,'#3f7f8a','#8ab9bd',20,.20))}};
-  if(State.biome==='sea')env.push(makeEnvSea(rnd));
-  if(State.biome==='valley'||State.biome==='mountains'){
-    const count=State.biome==='mountains'?5+Math.floor(rnd()*3):3+Math.floor(rnd()*3);
-    const side=rnd()<.5?'west':'east';
-    for(let i=0;i<count;i++){
-      const t=(i+1)/(count+1),x=side==='west'?52+rnd()*15:148-rnd()*15,y=50+t*100+(rnd()-.5)*10;
-      env.push(makeEnvBlob(rnd,'mountain',x,y,8+rnd()*4,5+rnd()*3,'#56493c','#968470',24,.11));
-    }
-  }
-  if(State.biome==='plains'){
-    if(rnd()<.45)env.push(makeEnvWater(rnd,'stream'));if(rnd()<.55)addBlob('forest',1,true);
-  }else if(State.biome==='hills'){
-    if(rnd()<.55)addBlob('forest',1,true);
-  }else if(State.biome==='valley'){
-    env.push(makeEnvWater(rnd,'stream'));
-  }else if(State.biome==='river'){
-    env.push(makeEnvWater(rnd,'river'));addBlob('forest',1+Math.floor(rnd()*2),true);
-  }else if(State.biome==='forest'){
-    env.push(makeEnvWater(rnd,'stream'));addBlob('forest',1+Math.floor(rnd()*2),true);if(rnd()<.65)addBlob('pond',1,true);
-  }else if(State.biome==='mountains'){
-    env.push(makeEnvWater(rnd,'stream'));
-  }else if(State.biome==='sea'){
-    if(rnd()<.55)addBlob('forest',1,true);
-  }
+  const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[],recipe=biomeRecipe();
+  const sea=biomeSea();if(sea)env.push(sea);
+  const mountains=biomeMountains();env.push(...mountains);
+  const water=biomeWater(mountains);if(water)env.push(water);
+  const forests=biomeRange(rnd,recipe.forests);
+  for(let i=0;i<forests;i++)addBiomeForest(env,rnd,!!recipe.smallForests);
+  const ponds=biomeRange(rnd,recipe.ponds);
+  for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
+  // Relief from an older generator may still cross water or mountains laid out here.
   for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
-  // Dense-forest biome retains substantial woods; other biomes have fewer,
-  // larger woodland masses rather than the same blanket coverage.
-  ensureForestCoverage(env,rnd,State.biome==='forest'?.18:.12);
   State.environment=env;
 }
 function pointInPolygon(point,pts){
