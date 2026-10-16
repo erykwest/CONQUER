@@ -41,7 +41,7 @@ Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che 
 
 | ID | Tema | Fonti discordanti | Risoluzione richiesta |
 |---|---|---|---|
-| O-001 | Produzione miniera | `src/settlement-industries.js` usa `stone`; macroeconomia immagina `metal` | Decidere merce, possibile ruolo di cava/miniera, cambiare codice + test + ledger e registrare migrazione. |
+| O-001 | Produzione miniera | [ECONOMY 12/10](sources/ECONOMY-2026-10-12.md) propone Miniera→Metallo nella filiera V1, ma la richiesta successiva per i placeholder e `src/settlement-industries.js` su main usano intenzionalmente `stone`. | **DESIGN VS PROTOTIPO**, non errore accertato: confermare output definitivo prima di cambiare codice + test + ledger/migrazione. |
 | O-002 | Calendario agricolo | `src/settlement-fields.js` stagioni fisiche vs raccolto autunnale nel ledger | Un calendario fonte unica per campo, lavoratori, resa economica, UI e salvataggio. |
 | O-003 | Risorse Builder | `State.resources` di test vs riserva/mercato `ConquerEconomy` | Definire source-of-truth e migrazioni; nessun doppio conteggio. |
 | O-004 | Branch di sviluppo | /urban, sync/urban-main e main divergono | Identificare integrazioni complete e PR vive prima della prossima milestone; non scegliere per nome. |
