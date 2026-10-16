@@ -320,14 +320,23 @@ function drawTerrain(){
   if(State.season==='spring')drawSpringFlowerClusters();
   ctx.restore();
 }
+// Mountain facet tone by its outward direction against a north-west light (world space, so the
+// slopes stay lit consistently as the camera turns), with a slight alternation between facets.
+const MOUNTAIN_LIGHT={x:-.6,y:-.8},MOUNTAIN_DARK=[0x46,0x3c,0x33],MOUNTAIN_LIT=[0x86,0x75,0x62];
+function mountainFaceColor(f,a,b,i){
+  const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
+  const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.035:-.035),0,1);
+  const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
+  return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
+}
 function drawRaisedFan(f,height){
   const base=f.points,center={x:f.x,y:f.y},top=w2s(center,height),faces=[];
   for(let i=0;i<base.length;i++){
     const j=(i+1)%base.length,a=w2s(base[i]),b=w2s(base[j]);
-    faces.push({poly:[a,b,top],depth:(a.y+b.y)/2,i});
+    faces.push({poly:[a,b,top],depth:(a.y+b.y)/2,i,color:mountainFaceColor(f,base[i],base[j],i)});
   }
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const q of faces)pathPolygon(q.poly,q.i%2?'#55493d':'#66584a','rgba(170,150,125,.35)',.8);
+  for(const q of faces)pathPolygon(q.poly,q.color,'rgba(170,150,125,.35)',.8);
 }
 const FOREST_TREE_ASSETS=[
   './src/assets/forest/tree_01_tonda.svg',
@@ -455,6 +464,15 @@ function drawForestGround(f){
   world.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
   ctx.clip();
+  // Holes (clearings, banks, grooves): each one is cut out with an even-odd clip against a
+  // covering rectangle; successive clips intersect, so overlapping holes stay open.
+  const holes=(f.holes||[]).map(h=>h.map(p=>w2sRaw(p,terrainElevation(p))));
+  for(const hole of holes){
+    if(!screenPolygonVisible(hole,8))continue;
+    ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);
+    hole.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+    ctx.clip('evenodd');
+  }
   ctx.beginPath();
   pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
@@ -463,14 +481,36 @@ function drawForestGround(f){
   ctx.strokeStyle=State.season==='winter'?'rgba(126,139,130,.45)':'rgba(82,116,59,.58)';
   ctx.lineWidth=1.15;
   ctx.stroke();
+  // Clearing outlines (not grooves or banks) read as the woodland edge.
+  for(const hole of holes.slice(0,f.clearings||0)){
+    ctx.beginPath();hole.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();
+  }
   ctx.restore();
 }
 function forestTreeCount(f){
   return clamp(Math.round((f.rx||5)*(f.ry||4)*LANDSCAPE_RENDER_BUDGET.forestDensity),LANDSCAPE_RENDER_BUDGET.forestMin,LANDSCAPE_RENDER_BUDGET.forestMax);
 }
+// Holes (clearings, grooves) change the layout: key it by their count, not just the id.
+function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
+function clearForestLayoutCache(){forestTreeLayoutCache.clear()}
+// Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
+// containment, so carving a groove removes only the trees inside it instead of reshuffling all.
+const CONTINUOUS_FOREST_SPACING=4.4;
+function continuousForestTrees(f){
+  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
+  for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
+    const p={x:(ix+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING,y:(iy+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING};
+    const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
+    if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
+    tree.z=terrainElevation(p);trees.push(tree);
+  }
+  return trees;
+}
 function forestTreeLayout(f){
   ensureLandscapeRenderCaches();
-  if(forestTreeLayoutCache.has(f.id))return forestTreeLayoutCache.get(f.id);
+  const cacheKey=forestLayoutKey(f);
+  if(forestTreeLayoutCache.has(cacheKey))return forestTreeLayoutCache.get(cacheKey);
+  if(f.continuous){const trees=continuousForestTrees(f);forestTreeLayoutCache.set(cacheKey,trees);return trees}
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),trees=[],target=forestTreeCount(f);
   // Sample the actual rotated, lobed polygon's bounds, not the nominal axis
   // radii: every cove and peninsula must be eligible for trees.
@@ -496,7 +536,7 @@ function forestTreeLayout(f){
       scale:.8+rnd()*.4
     });
   }
-  forestTreeLayoutCache.set(f.id,trees);return trees;
+  forestTreeLayoutCache.set(cacheKey,trees);return trees;
 }
 function forestLikelyVisible(f,pad=100){
   const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();
@@ -523,7 +563,11 @@ function ellipseWorldPoints(f,n=28){
 }
 function drawEnvironment(){
   if(window.__conquerPerf)window.__conquerPerf.forestTrees=0;
-  for(const f of State.environment){
+  // Peaks overlap (main summits and their secondary ones): paint far to near, or by height in plan.
+  const depth=f=>isPlanView()?(f.height||3.6):w2sRaw({x:f.x,y:f.y},0).y;
+  const mountains=State.environment.filter(f=>f.type==='mountain').sort((a,b)=>depth(a)-depth(b));
+  const ordered=[...State.environment.filter(f=>f.type!=='mountain'),...mountains];
+  for(const f of ordered){
     ctx.save();
     if(['stream','river'].includes(f.type)){
       const pts=f.points.map(p=>w2s(p));ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
@@ -540,7 +584,7 @@ function drawEnvironment(){
         const coast=projectPath(f.coastline);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
       }
     }else if(f.type==='mountain'){
-      pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,3.6);
+      pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);
     }else if(['hill','rough'].includes(f.type)){
       const pts=ellipseWorldPoints(f);pathPolygon(projectPath(pts),f.fill,f.edge,1.1);
       if(f.type==='hill'){

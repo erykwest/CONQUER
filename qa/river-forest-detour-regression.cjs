@@ -4,7 +4,10 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const world=fs.readFileSync(__dirname+'/../src/settlement-world.js','utf8');
 const landscape=fs.readFileSync(__dirname+'/../src/settlement-landscape.js','utf8');
-assert.match(world,/return environmentBlocksPoint\(p,'road'\);/);
+// Main roads keep the local-road forest/slope rules; the only exception is the continuous
+// Foresta woodland, which they cut through with a groove.
+assert.match(world,/return environmentBlocksPoint\(p,'primary'\);/);
+assert.match(world,/if\(primary&&f\.type==='forest'&&f\.continuous\)continue;/);
 assert.doesNotMatch(landscape,/filter\(tree=>!primaryRoadCarvesPoint/);
 assert.match(world,/if\(environmentBlocksPoint\(p,'road'\)\)return true/);
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);

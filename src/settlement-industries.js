@@ -51,7 +51,10 @@
   function nearestForest(point){
     let best=null,d=Infinity;
     for(const forest of State.environment||[])if(forest.type==='forest'&&forest.points?.length){
-      const distance=edgeDistance(point,forest.points);
+      // A woodland with clearings/grooves: distance to its nearest edge from inside a hole.
+      const distance=forest.holes?.length
+        ?(environmentContains(forest,point)?0:forestNearestEdge(forest,point).distance)
+        :edgeDistance(point,forest.points);
       if(distance<d){best=forest;d=distance}
     }
     return{forest:best,distance:d};
@@ -146,6 +149,10 @@
     const hit=nearestForest({x:s.x,y:s.y});
     if(!hit.forest)return null;
     const p={x:s.x,y:s.y},poly=hit.forest.points;
+    if(hit.forest.holes?.length){
+      const edge=forestNearestEdge(hit.forest,p);
+      return edge.distance<=TYPES.loggingCamp.radius?edge.point:null;
+    }
     let best=null,distance=Infinity;
     for(let i=0;i<poly.length;i++){
       const a=poly[i],b=poly[(i+1)%poly.length],dx=b.x-a.x,dy=b.y-a.y;

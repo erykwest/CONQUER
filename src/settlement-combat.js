@@ -11,7 +11,7 @@
   const fogCtx=fog.getContext('2d');
   const memory=new Uint8Array(N*N), visible=new Uint8Array(N*N);
   const forestCell=new Int16Array(N*N),heightCell=new Float32Array(N*N);
-  let terrainRef=null,forestRef=null,lastVision=0,maskDirty=true,visibilityDirty=true;
+  let terrainRef=null,forestRef=null,forestRev=-1,lastVision=0,maskDirty=true,visibilityDirty=true;
   let circleCache=[],circleCacheBucket=-1;
   const strokeBuckets=new Map();let indexedStrokes=-1;
   // Masks are raster unions of auto-generated regions and manual brush marks.
@@ -409,8 +409,10 @@
     return position;
   }
   function terrainCache(){
-    if(State.relief!==terrainRef||State.environment!==forestRef){
-      terrainRef=State.relief;forestRef=State.environment;
+    // environmentRevision: main-road grooves cut the woodland in place.
+    const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    if(State.relief!==terrainRef||State.environment!==forestRef||envRev!==forestRev){
+      terrainRef=State.relief;forestRef=State.environment;forestRev=envRev;
       forestCell.fill(-2);heightCell.fill(NaN);
       visibilityDirty=true;maskDirty=true;
     }
@@ -437,6 +439,7 @@
   function inForestDeep(p,forestId){
     if(forestId<0)return false;
     const f=State.environment[forestId];if(!f||!f.points)return false;
+    if(f.holes?.length)return forestNearestEdge(f,p).distance>FOREST_SIGHT_U;
     let min=Infinity;
     for(let i=0;i<f.points.length;i++)min=Math.min(min,pointSegmentDistance(p,f.points[i],f.points[(i+1)%f.points.length]));
     return min>FOREST_SIGHT_U;

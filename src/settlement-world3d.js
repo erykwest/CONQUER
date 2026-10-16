@@ -190,10 +190,10 @@
     const m=meshBuilder();
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
-      const apex={x:f.x,y:f.y,z:MOUNTAIN_HEIGHT};
+      const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
       for(let i=0;i<f.points.length;i++){
         const a=f.points[i],b=f.points[(i+1)%f.points.length];
-        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},apex],MOUNTAIN_FACES[i%2]);
+        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},apex],typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2]);
       }
     }
     return new Float32Array(m.tris);
@@ -567,7 +567,9 @@
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
-    const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,wet(),urbanRev(),structuresSig('ground')].join('|');
+    // envRev: main roads cut grooves into a continuous woodland in place.
+    const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
       upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());
@@ -596,7 +598,7 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const treeSig=[season,forestTreeSpritesReady,(State.environment||[]).length,State.seed,urbanRev(),structuresSig('hedges'),
+    const treeSig=[season,forestTreeSpritesReady,(State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),
       Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
     if(S.sig.trees!==treeSig){
       const a=performance.now(),atlas=buildTreeAtlas();
