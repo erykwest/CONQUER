@@ -91,6 +91,13 @@ async function main(){
  assert.equal(world.ConquerSoundBridge.setZoom(.4,.35),true);
  assert.equal(world.ConquerSoundBridge.getZoom().on,.4);
  assert.equal(world.ConquerSoundBridge.setZoom(.2,.3),false,'invalid threshold ordering');
+ const processed=JSON.parse(fs.readFileSync(path.join(root,'docs','sound-compression-report.json'),'utf8'));
+ assert.equal(processed.assets.length,5,'five selected high-bitrate clips compressed');
+ for(const clip of processed.assets){
+  const bytes=fs.statSync(path.join(root,'src','assets','sounds',clip.file)).size;
+  assert.equal(bytes,clip.optimized_bytes,'compression report matches actual MP3: '+clip.cue);
+  assert.ok(clip.optimized_bytes<clip.original_bytes,'MP3 bitrate pass saved bytes: '+clip.cue);
+ }
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert.ok(html.includes('id="devSound"')&&html.includes('data-sound-layer="notifications"'));
  assert.ok(html.includes('settlement-sound-dev.js'));

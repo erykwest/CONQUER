@@ -11,7 +11,7 @@ The catalog maps **14 imported playable MP3s from Drive** to files in `src/asset
 
 API: `ConquerSound.setEnabled(bool)` (async); `setMaster(0..1)`; `setVolume(layer,0..1)`; `setMuted(layer,bool)`; `syncScene({environment:[{id,volume}],local:[{id,volume}]})`; `play(id,layer,volume)`; `notify()`; `testTone(layer)`; `state()`.
 
-Audio engine and catalog are independent of world State, rendering, calendar and DOM; the adapter `settlement-sound-bridge.js` is the only scene reader. Deferred: noise normalization, loop-point cleaning, spatial pan, notification priorities/ducking and gameplay effect hookups.
+Audio engine and catalog are independent of world State, rendering, calendar and DOM; the adapter `settlement-sound-bridge.js` is the only scene reader. Deferred: loop-point cleaning, full stereophonic positioning, notification priorities/ducking and gameplay effect hookups.
 
 ## Loudness, EQ and zoom tuning (October 2026)
 
@@ -21,4 +21,4 @@ Each Web Audio layer now has a live 3-band equalizer: low shelf 120 Hz, mid peak
 
 Local emitter zoom enters at 30%, exits at 25% (hysteresis), and the two thresholds can be edited in DEV; selecting an eligible building overrides the zoom gate. The local voice low-pass tracks camera distance, retaining clarity close up while softening distant sources. Zoom settings are saved under `conquer.sound.zoom.v1`; they never modify simulation saves. No separate worker/unit emitters are implemented yet.
 
-Files already encoded at 160 kbps or lower have not been re-encoded; the 79 kbps rain variant remains active. The original 256 kbps files are not automatically recompressed because re-encoding lossy MP3 without audition and AB tests can damage environmental stereo and loop transitions. A future asset build may ship selected derived copies after perceptual checks.
+Files already encoded at 160 kbps or lower were not re-encoded; the 79 kbps rain variant remains active. Five 256 kbps source clips were converted on the `sound` branch to MP3 128 kbps (stereo) or 96 kbps (mono), preserving channel counts and durations, with metadata recalculated after conversion. The originals remain intact on Drive. See `docs/sound-compression-report.json` for measured results. Audio loop seams and subjective differences remain unverified by listening; the mastering is deliberately conservative.
