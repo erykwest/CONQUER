@@ -518,7 +518,8 @@ function urbanLotOutbuildings(house){
       let along=.2,k=0;
       while(along<L-.2&&parts.length<URBAN_OUTBUILDING_MAX){
         const key=house.id+'|out:'+edge+':'+k,hash=peasantHash(key)>>>0;
-        const kind=(hash&1)?'shed':'store';
+        // A yard with outbuildings must include at least one actual stable.
+        const kind=parts.length===0?'shed':(hash&1)?'shed':'store';
         const w=(level===4?1.2:1.0)+((hash>>>3)%7)/10,d=kind==='shed'?.78:.9+((hash>>>7)%3)/20;
         if(along+w>L-.2)break;
         const mid=along+w/2,center={x:a.x+ux*mid+inward.x*(d/2+.06),y:a.y+uy*mid+inward.y*(d/2+.06)};
@@ -879,7 +880,13 @@ function urbanHouseFaces(house,part){
     const sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle);
     const top=p=>{const ly=-(p.x-part.center.x)*sa+(p.y-part.center.y)*ca;return base+part.roofH+(part.bodyH-part.roofH)*(ly/part.h+.5)};
     for(let i=0;i<fp.length;i++){
-      const a=fp[i],b=fp[(i+1)%fp.length];faces.push([vertex(a,base),vertex(b,base),vertex(b,top(b)),vertex(a,top(a))]);
+      const a=fp[i],b=fp[(i+1)%fp.length];
+      // The courtyard-facing side stays open: this is a lean-to, not a
+      // closed storehouse. Livestock is visible through the open bay.
+      const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      const inner=-(mid.x-part.center.x)*sa+(mid.y-part.center.y)*ca;
+      if(inner>part.h*.4)continue;
+      faces.push([vertex(a,base),vertex(b,base),vertex(b,top(b)),vertex(a,top(a))]);
     }
     faces.push(fp.map(p=>vertex(p,top(p))));
     return faces;
@@ -922,16 +929,19 @@ function urbanOcclusionPieces(){
     for(const part of entry.parts){
       const faces=urbanHouseFaces(entry.house,part);
       const projected=faces.flat().map(v=>w2sRaw(v.p,v.z));
-      pieces.push({faces,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
+      pieces.push({faces,buildingKey:part.buildingKey||null,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
         minX:Math.min(...projected.map(p=>p.x)),maxX:Math.max(...projected.map(p=>p.x)),
         minY:Math.min(...projected.map(p=>p.y)),maxY:Math.max(...projected.map(p=>p.y))});
     }
   }
   urbanProjectionCache={key,pieces};return pieces;
 }
-function withUrbanFigureOcclusion(p,z,drawFn){
-  const screen=w2s(p,z),depth=viewDepthPoint(p),r=wrap.getBoundingClientRect();
-  const pieces=urbanOcclusionPieces().filter(q=>q.maxDepth>depth&&
+function withUrbanFigureOcclusion(p,z,drawFn,ignoreBuildingKey=null){
+  // At settlement-scale zoom sprites are subpixel; clipping against hundreds
+  // of architectural faces costs far more than it contributes visually.
+  if(State.view.scale<.48)return drawFn();
+  const screen=w2s(p,z),depth=viewDepthPoint(p),r=populationFrameBounds||wrap.getBoundingClientRect();
+  const pieces=urbanOcclusionPieces().filter(q=>q.buildingKey!==ignoreBuildingKey&&q.maxDepth>depth&&
     q.minX<screen.x+28&&q.maxX>screen.x-28&&q.minY<screen.y+12&&q.maxY>screen.y-44);
   if(!pieces.length)return drawFn();
   ctx.save();

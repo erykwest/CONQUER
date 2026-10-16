@@ -6,6 +6,9 @@
   const DEPART=.085,PASTURE_AT=.215,RETURN=.515,HOME_AT=.655;
   const GOLDEN_ANGLE=Math.PI*(3-Math.sqrt(5));
   const planCache=new Map(),routeCache=new Map(),pendingPastures=new Map();
+  const horseCache=new Map();
+  let animalFrameCache={key:null,objects:[]};
+  const PASTURE_SPACING=2.5; // free ground between grazing patches, in U
   let cacheSignature='';
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   const hash=s=>peasantHash(String(s))>>>0;
@@ -34,6 +37,7 @@
       (last?last.x+','+last.y+','+last.r+','+last.mode:'');
     if(cacheSignature!==signature){
       cacheSignature=signature;planCache.clear();routeCache.clear();
+      horseCache.clear();animalFrameCache.key=null;
       // Scheduled searches against an old Voronoi/navigation revision must
       // never publish a stale route after house upgrades or construction.
       for(const job of pendingPastures.values())if(job.timer!=null&&typeof clearTimeout==='function')clearTimeout(job.timer);
@@ -94,10 +98,24 @@
     return whiteZoneAt(p)&&!pointBlockedForPeasant(p,null);
   }
   function whitePatch(p,r){
-    if(!whiteAt(p))return false;
+    // Cheap zoning checks first; run structure/fence collisions only after
+    // the entire circular sample is outside the yellow and green territory.
+    if(!whiteZoneAt(p))return false;
+    const samples=[p];
     for(let i=0;i<8;i++){
       const a=i*Math.PI/4;
-      if(!whiteAt({x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r}))return false;
+      const q={x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r};
+      if(!whiteZoneAt(q))return false;
+      if(i%2===0)samples.push(q);
+    }
+    return samples.every(q=>!pointBlockedForPeasant(q,null));
+  }
+  function pastureIsSeparate(center,radius,houseId){
+    // All successful claims remain reserved across frames and herd order.
+    // A planned pasture cannot touch another flock's grazing circle.
+    for(const [owner,other] of routeCache){
+      if(owner===houseId||!other)continue;
+      if(dist(center,other.center)<radius+other.radius+PASTURE_SPACING)return false;
     }
     return true;
   }
@@ -131,7 +149,7 @@
       job.timer=null;
       if(job.signature!==cacheSignature||pendingPastures.get(job.house.id)!==job)return;
       advancePastureSearch(job);
-    },0);
+    },18);
   }
   function advancePastureSearch(job){
     // Limit each browser task by both candidate count and wall-clock time.
@@ -139,7 +157,7 @@
     // candidates as the former synchronous search, without blocking frames.
     const now=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
     const started=now();
-    for(let attempts=0;attempts<4&&now()-started<5;attempts++){
+    for(let attempts=0;attempts<3&&now()-started<4;attempts++){
       if(job.factor>=PASTURE_FACTORS.length){
         routeCache.set(job.house.id,null);
         pendingPastures.delete(job.house.id);
@@ -154,9 +172,9 @@
         job.angle=0;job.ring+=2.5;
         if(job.ring>42){job.ring=5;job.factor++}
       }
-      if(!whitePatch(candidate,reach))continue;
+      if(!pastureIsSeparate(candidate,reach,job.house.id)||!whitePatch(candidate,reach))continue;
       const path=travelRoute(job.house,candidate);
-      if(!path)continue;
+      if(!path||!pastureIsSeparate(candidate,reach,job.house.id))continue;
       routeCache.set(job.house.id,{center:candidate,path,radius:reach});
       pendingPastures.delete(job.house.id);
       return;
@@ -281,23 +299,31 @@
   // L3/L4: each existing open shed houses 1-3 horses. No horses spawn in
   // storehouses, and roofs/placements stay owned by the urban geometry module.
   function stableHorses(house){
+    const cached=horseCache.get(house.id);
+    if(cached)return cached;
     const out=[];
     for(const shed of urbanLotOutbuildings(house).filter(p=>p.type==='shed')){
       const count=1+hash(State.seed+'|horse-count|'+shed.buildingKey)%3;
       const angle=shed.roofAngle||0,ca=Math.cos(angle),sa=Math.sin(angle);
       for(let i=0;i<count;i++){
         const lateral=(i-(count-1)/2)*shed.w*.28;
-        const depth=(hash(shed.buildingKey+'|horse-y|'+i)%3-1)*shed.h*.11;
+        // Set back slightly from the open (courtyard) edge of the lean-to:
+        // horses remain under the roof, with heads visible from the yard.
+        const depth=shed.h*(.21+(hash(shed.buildingKey+'|horse-y|'+i)%3)*.045);
         const p={x:shed.center.x+lateral*ca-depth*sa,
           y:shed.center.y+lateral*sa+depth*ca};
         const seed=hash(shed.buildingKey+'|horse|'+i);
         out.push({id:shed.buildingKey+':horse:'+i,species:'horse',p,
-          mode:'browse',seed,heading:null,facing:seed%2?1:-1});
+          shedKey:shed.buildingKey,mode:'browse',seed,heading:null,facing:seed%2?1:-1});
       }
     }
+    horseCache.set(house.id,out);
     return out;
   }
   function animals(){
+    healthyPlanCache();
+    const key=cacheSignature+'|'+Math.floor(visualCycleDay()*240);
+    if(animalFrameCache.key===key)return animalFrameCache.objects;
     const out=[],frac=dayFraction();
     for(const lot of urbanLots()){
       const house=State.structures.find(s=>s.id===lot.houseId);
@@ -318,22 +344,25 @@
           seed,heading:behavior.heading,facing:animalFacing(behavior.p,behavior.heading,seed)});
       }
     }
+    animalFrameCache={key,objects:out};
     return out;
   }
   function draw(){
     if(!window.ConquerAnimals?.drawAnimal)return;
-    const t=visualCycleDay(),objects=animals(),stride=State.view.scale<.30?3:State.view.scale<.5?2:1;
+    const t=visualCycleDay(),objects=animals(),
+      stride=Math.max(State.view.scale<.30?3:State.view.scale<.5?2:1,
+        objects.length>150?Math.ceil(objects.length/115):1);
     objects.sort((a,b)=>viewDepthPoint(a.p)-viewDepthPoint(b.p));
     let visible=0;
     for(const a of objects){
-      if(stride>1&&a.seed%stride!==0||!worldPointVisible(a.p,.07,30))continue;
+      if((a.species!=='horse'&&stride>1&&a.seed%stride!==0)||!worldPointVisible(a.p,.07,30))continue;
       const screen=w2s(a.p,.07);
       const size=Math.max(1.5,State.view.scale*5.75);
       withUrbanFigureOcclusion(a.p,.07,()=>window.ConquerAnimals.drawAnimal(
         a.species,ctx,screen.x,screen.y,size,{
           t:t*34,seed:a.seed%1000,facing:a.facing,
           mode:a.mode,blend:a.mode==='browse'?.86:0
-        }));
+        }),a.shedKey);
       visible++;
     }
     if(window.__conquerPerf){window.__conquerPerf.livestock=objects.length;window.__conquerPerf.visibleLivestock=visible}
@@ -365,5 +394,6 @@
     }
     return counts;
   }
-  window.ConquerLivestock={lotKindForHouse:kindForHouse,shepherdPosition,animals,draw,occupancy,summary};
+  window.ConquerLivestock={lotKindForHouse:kindForHouse,shepherdPosition,animals,draw,occupancy,summary,
+    pastures:()=>Array.from(routeCache.entries()).filter(([,p])=>p).map(([id,p])=>({id,center:p.center,radius:p.radius}))};
 })();
