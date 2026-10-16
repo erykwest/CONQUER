@@ -7,6 +7,7 @@ on:
       - camp/**
       - src/settlement-camp.js
       - src/settlement-combat.js
+      - src/settlement-population-garrisons.js
       - src/settlement-app-persistence.js
       - qa/camp-regression.cjs
       - .github/workflows/camp-regression.yml
@@ -22,6 +23,7 @@ jobs:
         run: |
           node --check src/settlement-camp.js
           node --check src/settlement-combat.js
+          node --check src/settlement-population-garrisons.js
           node --check src/settlement-app-persistence.js
       - name: Behavioral regression
         run: node qa/camp-regression.cjs
