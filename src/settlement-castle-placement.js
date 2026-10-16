@@ -528,9 +528,12 @@ function functionSlotSize(s,index=0){
   return'normal';
 }
 function functionSlotUnits(s,index=0){return functionSlotSize(s,index)==='large'?2:1}
+// The gate ground floor is the passage (the entrance itself): no room slot there, rooms start
+// on the floor above. functionFloorOffset maps slot i to floor i+offset.
+function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
-  if(s.type==='gate')return structureLevel(s);
+  if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
   if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
   if(s.type==='built')return Number(s.length)>=2?structureLevel(s):0;
   return 0;
@@ -538,7 +541,8 @@ function functionCapacity(s){
 function functionCapacityUnits(s){
   let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
-function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);while(s.functions.length<cap)s.functions.push(null);return s}
+// Older saves gave gates a ground-floor room: it is dropped once, keeping the upper rooms in place.
+function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];if(s.type==='gate'&&!s.gateGroundIsPassage){if(s.functions.length>cap)s.functions=s.functions.slice(1);s.gateGroundIsPassage=true}s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);while(s.functions.length<cap)s.functions.push(null);return s}
 // Variant contract:
  // tower/gate -> roofStyle
  // wall/built -> skin

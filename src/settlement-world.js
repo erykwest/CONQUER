@@ -20,8 +20,10 @@ function gatePointInPassage(gate,p,pad=.04){
 }
 function roadUsesGatePassage(road,gate){
   if(!road||!gate||gate.type!=='gate')return false;
-  const info=gatePassageInfo(gate),mid=closestPointOnSegment(info.center,road.a,road.b);
-  if(dist(mid,info.center)>info.halfWidth*.82)return false;
+  // On the passage axis (through it, or ending at its front / rear opening) and aligned with it.
+  const info=gatePassageInfo(gate),dx0=road.b.x-road.a.x,dy0=road.b.y-road.a.y,L0=Math.hypot(dx0,dy0)||1;
+  const off=Math.abs((info.center.x-road.a.x)*dy0-(info.center.y-road.a.y)*dx0)/L0;
+  if(off>info.halfWidth*.82)return false;
   const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
   const dot=Math.abs((dx/L)*info.ux+(dy/L)*info.uy);
   return dot>=Math.cos(32*Math.PI/180);
@@ -1554,6 +1556,11 @@ function mainRoadSnapAnchor(p){
   for(const entry of ensureBorderEntrySelection())consider(entry);
   const well=State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
   if(well)consider(well);
+  // Castle gates: road magnets just outside the front and rear openings of the passage.
+  for(const gate of State.structures){
+    if(gate.type!=='gate'||underConstruction(gate))continue;
+    const info=gatePassageInfo(gate);consider(info.sideA);consider(info.sideB);
+  }
 
   for(const road of roadList()){
     consider(road.a);consider(road.b);

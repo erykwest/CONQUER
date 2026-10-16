@@ -513,8 +513,9 @@ function structureCutaway(s){
 function cutawayBlockers(s){
   if(!s)return[];
   const out=[];
-  if(s.parentTowerId){const p=State.structures.find(o=>o.id===s.parentTowerId);if(p)out.push({pts:footprintPoints(p),h:structureHeight(p)})}
-  for(const c of State.structures)if(c.parentTowerId===s.id&&c.type==='tower'&&!underConstruction(c))out.push({pts:footprintPoints(c),h:structureHeight(c)});
+  // The parent stays intact: only a subtower is cut where it meets its parent (a dividing
+  // wall closes it there, see the World 3D cutaway mesh).
+  if(s.parentTowerId){const p=State.structures.find(o=>o.id===s.parentTowerId);if(p)out.push({pts:footprintPoints(p),h:structureHeight(p),parent:true})}
   return out.filter(b=>b.pts?.length>2);
 }
 function cutawayWallThickness(s){
@@ -624,12 +625,13 @@ function drawCutawayFloors(s,g){
   }
 }
 function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
-  const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),cap=Math.min(functionCapacity(s),floors.length);
+  // slot i is the room on floor i+offset (gates: the ground floor is the passage, no room).
+  const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),off=functionFloorOffset(s),cap=Math.min(functionCapacity(s),floors.length-off);
   const roles=Array.isArray(s.functions)?s.functions:[];
   const out=[];
   for(let i=0;i<cap;i++)out.push({
-    index:i,role:roles[i]||null,size:functionSlotSize(s,i),
-    z:floors[i].z,basis,g
+    index:i,floor:i+off,role:roles[i]||null,size:functionSlotSize(s,i),
+    z:floors[i+off].z,basis,g
   });
   return out;
 }

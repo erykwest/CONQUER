@@ -87,10 +87,14 @@ check('pieces stay in the room, apart, off the ladder corner and the archer post
   }
 });
 
-check('gates: furnished rooms, ground-floor passage left clear',()=>{
-  const all=rooms('g1',['guard','throneHall']);
-  assert.ok(all[1].items.some(i=>i.name==='throne'),'throne room above the gate');
-  const g=run("State.structures.find(x=>x.id==='g1')"),b=all[0].slot.basis;
+check('gates: no room on the passage floor, furnished rooms above',()=>{
+  const g=run("State.structures.find(x=>x.id==='g1')");
+  assert.equal(run('functionCapacity')(g),1,'a level-2 gate has one room slot (its upper floor)');
+  const all=rooms('g1',['throneHall']);
+  assert.equal(all[0].slot.floor,0);assert.ok(!all[0].slot.role&&all[0].items.length===0,'the ground floor is the empty entrance');
+  assert.ok(all[0].ladder,'a ladder leads up from the entrance');
+  assert.ok(all[1].slot.floor===1&&all[1].items.some(i=>i.name==='throne'),'throne room above the gate');
+  const b=all[0].slot.basis;
   for(const i of all[0].items.filter(i=>!i.deco)){
     const across=Math.min(Math.abs(i.r[1]),Math.abs(i.r[3]),Math.abs(i.r[0]),Math.abs(i.r[2]));
     assert.ok(!(i.r[1]<.38&&i.r[3]>-.38&&i.r[0]<b.w/2&&i.r[2]>-b.w/2)||!(i.r[0]<.38&&i.r[2]>-.38&&i.r[1]<b.h/2&&i.r[3]>-b.h/2),'passage clear: '+i.name);

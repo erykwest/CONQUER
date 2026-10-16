@@ -188,7 +188,7 @@
 
   // ---------- rooms of a structure
   function passageFor(s,slot){
-    if(s.type!=='gate'||slot.index!==0)return null;
+    if(s.type!=='gate'||slot.floor!==0)return null;
     // Portals sit on footprint edges 1 and 3: keep the strip between them clear.
     const fp=footprintPoints(s),m1={x:(fp[1].x+fp[2].x)/2,y:(fp[1].y+fp[2].y)/2},m3={x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2};
     const b=slot.basis,ax=m1.x-m3.x,ay=m1.y-m3.y,L=Math.hypot(ax,ay)||1,lu=(ax*Math.cos(b.angle)+ay*Math.sin(b.angle))/L;
@@ -196,16 +196,19 @@
     return Math.abs(lu)>.7?[-b.w/2,-half,b.w/2,half]:[-half,-b.h/2,half,b.h/2];
   }
   function layoutStructure(s,g){
-    const slots=cutawayRoomSlots(s,g),levels=structureLevel(s),out=[];
+    const levels=structureLevel(s),floors=cutawayFloorLevels(s),out=[];
+    const slots=cutawayRoomSlots(s,g).map(x=>({...x,floor:x.floor??x.index}));
+    // Gates: the ground floor is the entrance passage, no room; it only holds the ladder up.
+    if(functionFloorOffset(s)&&levels>1)slots.unshift({index:-1,floor:0,role:null,size:'normal',z:floors[0].z,basis:cutawayFloorBasis(s,g),g});
     for(const slot of slots){
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1;
-      const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.index+1).map(a=>a.p):[];
+      const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
       const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
-      out.push({slot,F:r.F,items:r.items,ladder:ladder&&slot.index<levels-1?r.F.ladder:null,
-        nextZ:slots[slot.index+1]?.z??cutawayFloorLevels(s)[slot.index+1]?.z});
+      out.push({slot,F:r.F,items:r.items,ladder:ladder&&slot.floor<levels-1?r.F.ladder:null,
+        nextZ:floors[slot.floor+1]?.z});
     }
     return out;
   }
@@ -250,8 +253,8 @@
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
     const faces=[],lights=[],her=heraldry(),spots=new Map();
     for(const room of layoutStructure(s,g)){
-      for(const it of room.items)pieceWorld(it,room.F,room.slot.z+.012,faces,lights,her,room.slot.index);
-      if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.index);
+      for(const it of room.items)pieceWorld(it,room.F,room.slot.z+.012,faces,lights,her,room.slot.floor);
+      if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.floor);
       spots.set(room.slot.index,freeSpots(room));
     }
     const res={key,faces,lights,spots};cache.set(s.id,res);return res;

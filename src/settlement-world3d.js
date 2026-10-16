@@ -620,7 +620,22 @@
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
         wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f');
       }
-      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v]))m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
+      // Subtower: the parent stays intact, and a dividing wall closes the subtower along the
+      // parent's outline where it runs through the subtower footprint.
+      for(const k of blkAll.filter(b=>b.parent)){
+        const own=footprintPoints(s),top=Math.min(H,k.h);
+        for(let i=0;i<k.pts.length;i++){
+          const p=k.pts[i],q=k.pts[(i+1)%k.pts.length],keepOut=segMinus(p,q,[own]);
+          // Inside parts = the segment minus its outside parts.
+          let t=0;const L=Math.hypot(q.x-p.x,q.y-p.y)||1,param=a=>Math.hypot(a.x-p.x,a.y-p.y)/L,ins=[];
+          for(const [a,b] of keepOut){const ta=param(a);if(ta-t>1e-4)ins.push([t,ta]);t=param(b)}
+          if(1-t>1e-4)ins.push([t,1]);
+          for(const [u,v] of ins){
+            const A={x:p.x+(q.x-p.x)*u,y:p.y+(q.y-p.y)*u},B={x:p.x+(q.x-p.x)*v,y:p.y+(q.y-p.y)*v};
+            m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],'#61574f');
+          }
+        }
+      }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v]))m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
       const ring=winter?WINTER_SNOW_TOP:'#8f857a';
       for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
       if(s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
