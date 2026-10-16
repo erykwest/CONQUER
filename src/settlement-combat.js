@@ -906,8 +906,17 @@
     else{
       mode='local-grid';
       perf.patrolLocalSearches=(perf.patrolLocalSearches||0)+1;
-      const pad=distance<=4?2.5:Math.min(5,3+distance*.08);
-      route=findPatrolPath(start,goal,id,pad);
+      // The former 2.5–5U bounding box made perfectly accessible routes
+      // impossible whenever a wall/building extended beyond this corridor.
+      // Expand in bounded stages to find genuine detours while preserving the
+      // fast narrow search on unobstructed short patrol legs.
+      const initialPad=distance<=4?2.5:Math.min(5,3+distance*.08);
+      const pads=[initialPad,Math.max(7,initialPad),Math.max(13,initialPad),Math.max(21,initialPad)];
+      for(const pad of pads){
+        if(route)break;
+        route=findPatrolPath(start,goal,id,pad);
+        perf.patrolSearchLastPad=pad;
+      }
     }
     if(route?.length>1&&routeAllowed(route)&&route.slice(1).every((p,i)=>safeMilitarySegment(route[i],p,id,'patrol'))){
       rememberPatrolRoute(cacheKey,route);
@@ -1055,24 +1064,23 @@
     for(const unit of combat.units){
       if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.campState||unit.target||now<(unit.nextPatrolAt||0))continue;
       const previous=unit.patrolLoopPosition,offset=unit.patrolProbeOffset||0;
-      let accepted=false;
-      // Test reachable waypoint candidates instead of advancing the patrol
-      // index before any path has actually been found.
-      for(let attempt=0;attempt<3;attempt++){
-        unit.patrolLoopPosition=previous;
-        const target=patrolSafeWaypoint(patrolDestination(unit,offset+attempt));
-        if(!target)continue;
-        const path=patrolRoute(unit,target,unit.id);
-        if(!path?.length||path.length<2)continue;
+      // Only one candidate is searched per simulation tick. Searching three
+      // endpoints * four increasingly wide A* windows in one tick caused
+      // visible frame stalls in dense villages.
+      unit.patrolLoopPosition=previous;
+      const target=patrolSafeWaypoint(patrolDestination(unit,offset));
+      const path=target?patrolRoute(unit,target,unit.id):null;
+      if(path?.length>1){
         unit.target={x:target.x,y:target.y};
         unit.path=path.map(p=>({x:p.x,y:p.y}));
         unit.pathIndex=1;unit.patrolProbeOffset=0;unit.nextPatrolAt=now;
-        accepted=true;break;
-      }
-      if(!accepted){
+      }else{
         unit.patrolLoopPosition=previous;
-        unit.patrolProbeOffset=(offset+3)%Math.max(1,whiteBoundaryLoopCache.length);
-        unit.nextPatrolAt=now+1000;
+        unit.patrolProbeOffset=(offset+1)%Math.max(1,whiteBoundaryLoopCache.length);
+        unit.nextPatrolAt=now+650;
+        if(window.__conquerPerf){
+          window.__conquerPerf.patrolWaypointMisses=(window.__conquerPerf.patrolWaypointMisses||0)+1;
+        }
       }
     }
   }

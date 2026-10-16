@@ -94,18 +94,42 @@ const waypointCtx=vm.createContext({
   activeWell:()=>({x:0,y:0}),WORLD:200,Math,performance:{now:()=>1000},
   dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
   areaState:()=>({allowed:true}),cliffClearForFootprint:()=>true,
+  window:{__conquerPerf:{}},
   patrolRoute:(from,to)=>allowCandidate&&to.x!==20?[from,to]:null
 });
 vm.runInContext('const PATROL_LOOP_STRIDE=2;',waypointCtx);
 vm.runInContext(runtimeSource.slice(destinationStart,destinationEnd),waypointCtx);
 vm.runInContext('updatePatrols(1000)',waypointCtx);
-assert.equal(mover.target.x,40,'patrol tries next waypoint when first is unreachable');
-assert.equal(mover.patrolLoopPosition,4,'patrol commits only the reachable boundary index');
-mover.target=null;allowCandidate=false;const previousIndex=mover.patrolLoopPosition;
+assert.equal(mover.target,null,'failed first candidate does not teleport or advance the patrol index');
+assert.equal(mover.patrolLoopPosition,0,'blocked waypoint remains uncommitted');
 vm.runInContext('updatePatrols(2000)',waypointCtx);
-assert.equal(mover.target,null,'all blocked candidates leave patrol without a target');
-assert.equal(mover.patrolLoopPosition,previousIndex,'failed patrol search preserves prior waypoint');
+assert.equal(mover.target.x,40,'next tick probes alternate reachable waypoint');
+assert.equal(mover.patrolLoopPosition,4,'only reachable waypoint is committed');
+mover.target=null;allowCandidate=false;const previousIndex=mover.patrolLoopPosition;
+vm.runInContext('updatePatrols(3000)',waypointCtx);
+assert.equal(mover.target,null,'blocked candidates leave patrol without a target');
+assert.equal(mover.patrolLoopPosition,previousIndex,'failed search preserves prior waypoint');
 
+// Reproduce the user's stall: a solid building blocks a 14U-tall corridor,
+// while a safe detour through the White Zone exists outside the old 5U limit.
+const corridorStart={x:102.6,y:100},corridorGoal={x:119,y:100};
+const rectangle=p=>p.x>=105&&p.x<=117&&p.y>=94&&p.y<=108;
+const rectangleSegment=(a,b)=>{
+ const steps=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.15));
+ for(let i=0;i<=steps;i++){
+  const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+  if(rectangle(p)||!allowed(p))return false;
+ }
+ return true;
+};
+routeContext.pointBlockedForPeasant=rectangle;
+routeContext.safeMilitarySegment=rectangleSegment;
+const extended=vm.runInContext("patrolRoute({x:102.6,y:100},{x:119,y:100},'corridor-detour')",routeContext);
+assert.ok(extended?.length>=3,'patrol detours around an elongated obstacle wider than 5U');
+assert.ok(extended.slice(1).every((p,i)=>rectangleSegment(extended[i],p)),
+ 'long detour never intersects the obstacle');
+assert.ok(routeContext.window.__conquerPerf.patrolSearchLastPad>=7,
+ 'A* actually expands its local search window to find the detour');
 assert.match(runtimeSource,/\['squad','knight','patrol'\]\.includes\(u\.kind\)/,'patrol survives save restoration');
 assert.match(runtimeSource,/id="combatPatrolAdd"/,'Patrol + action is in the combat panel');
 assert.match(runtimeSource,/id="combatPatrolRemove"/,'Patrol - action is in the combat panel');
