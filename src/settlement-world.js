@@ -2222,7 +2222,9 @@ function spawnField(step,workerHouse=null){
 }
 function processVillageGrowth(){
   if(!State.village.founded)return 0;
-  if(foundingRoadJob?.village===State.village)return 0;
+  // Housing must not wait for all four border arterials: a distant path can
+  // take many frames (or be unreachable) while finished streets are usable.
+  const planningBorderRoads=foundingRoadJob?.village===State.village;
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well||underConstruction(well))return 0;
   const analyticsT0=performance.now();
   ensureRoadPlan();
@@ -2233,6 +2235,7 @@ function processVillageGrowth(){
     const step=State.village.growthStep||0,houses=autoList('house').length,roads=roadList().length,fields=autoList('field').length;
     let kind;
     if(roads===0)kind='road';
+    else if(planningBorderRoads)kind='house'; // Do not race the border-route builder.
     else if(houses<2)kind='house';
     else{
       const rnd=growthRng(step,509)();
@@ -2250,7 +2253,9 @@ function processVillageGrowth(){
     };
     let ok=attempt(kind);
     if(!ok&&kind!=='house')ok=attempt('house');
-    if(!ok&&kind!=='road')ok=attempt('road');
+    // While four arterial routes are being built in the background, do not
+    // launch competing route repairs from the growth pulse.
+    if(!ok&&kind!=='road'&&!planningBorderRoads)ok=attempt('road');
     State.village.growthStep=step+1;
     State.village.nextGrowthDay+=GROWTH_INTERVAL_DAYS;
     if(ok){

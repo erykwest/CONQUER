@@ -13,9 +13,10 @@ const units=[
   {id:'far',kind:'squad',x:140,y:140},
   {id:'patrol1',kind:'patrol',x:101,y:102}
 ];
+const window={__CONQUER_CAMP_MODE__:false};
 const calls=[],notices=[];
 const context=vm.createContext({
-  Math,Set,selected:null,selectionDrag:null,selectedIds:new Set(),
+  Math,Set,window,selected:null,selectionDrag:null,selectedIds:new Set(),
   combat:{units},
   dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
   point:(x,y)=>({x:Math.max(0,Math.min(200,x)),y:Math.max(0,Math.min(200,y))}),
@@ -44,6 +45,10 @@ assert.equal(allow(units[3],{x:140,y:141}),false,'commander must cover squad its
 assert.equal(move(units[1],{x:113,y:100}),true,'squad can march more than sergeant 6U under commander');
 assert.equal(move(units[1],{x:118,y:100}),false,'commander radius still a limit');
 console.log('PASS 16U commander authority overrides 6U sergeant limit without leaking outside command area');
+window.__CONQUER_CAMP_MODE__=true;
+assert.equal(move(units[1],{x:118,y:100}),true,'/camp can order squads beyond the commander beacon for open-field camps');
+window.__CONQUER_CAMP_MODE__=false;
+console.log('PASS /camp direct orders extend beyond yellow and knight beacon');
 
 select([units[0],units[1],units[2]]);
 group({x:107,y:103});

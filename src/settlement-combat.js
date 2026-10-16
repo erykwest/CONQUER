@@ -877,7 +877,10 @@
     }
     // The knight's 16U command beacon takes precedence over the subordinate
     // sergeant's 6U personal order radius when both endpoints are covered.
-    if(unit.kind==='squad'&&!commanderCoversOrder(unit,p)){
+    // /camp is a direct-control prototype: troops must be able to march
+    // beyond the yellow settlement radius to establish a field camp.
+    // Preserve the 16U knight command rule for the regular combat mode.
+    if(unit.kind==='squad'&&!window.__CONQUER_CAMP_MODE__&&!commanderCoversOrder(unit,p)){
       if(!quiet)status('Out of knight command beacon (16U)');
       return false;
     }
