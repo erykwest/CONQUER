@@ -77,6 +77,7 @@ const oldTowerWindowRows=[
 const slitEdit="}else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(";
 assert.equal(archEdited.split(slitEdit).length,3,'Expected both tower slit rows to use towerSlitFace');
 const gateEdits=[
+  ["  if(!s.isMastio||!edge||structureCutaway(s))return;   // no drape on an opened (cutaway) keep","  if(!s.isMastio||!edge)return;"],
   ["      const opacity=cutawayFacadeOpacity(s);\n      const paint=()=>isInteriorFacadeEdge(s,edge)\n        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf,opacity)\n        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit',0,false,1,opacity);",
    "      const paint=()=>isInteriorFacadeEdge(s,edge)\n        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)\n        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit');"]
 ];

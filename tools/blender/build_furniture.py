@@ -188,6 +188,16 @@ def f_fireplace(p):
 def f_tapestry(p):
     p.box((-.02, 0, 2.3), (.04, 1.6, .05), 'woodDark'); p.box((0, 0, 1.45), (.02, 1.5, 1.7), 'heraldA')
     p.box((.012, 0, 1.45), (.01, 1.3, 1.5), 'heraldB'); p.box((.02, 0, 1.55), (.01, .5, .6), 'gold')
+def f_herald_drape(p):
+    """Tall heraldic drape hanging from a wall rod: swallowtail hem, centre pale, gilt edge."""
+    w, top, bottom = .62, 2.75, .75
+    p.beam((.03, -w / 2 - .06, top), (.03, w / 2 + .06, top), .035, .035, 'gold')
+    for y in (-w / 2 - .06, w / 2 + .06):
+        p.box((.03, y, top), (.06, .06, .06), 'goldDark')
+    p.quads([(.02, -w / 2, top - .03), (.02, w / 2, top - .03), (.02, w / 2, bottom), (.02, 0, bottom + .28), (.02, -w / 2, bottom)], [(0, 1, 2, 3, 4)], 'heraldA')
+    p.quads([(.026, -w * .17, top - .03), (.026, w * .17, top - .03), (.026, w * .17, bottom + .17), (.026, 0, bottom + .28), (.026, -w * .17, bottom + .17)], [(0, 1, 2, 3, 4)], 'heraldB')
+    for y in (-w / 2, w / 2):
+        p.box((.028, y, (top + bottom) / 2), (.008, .03, top - bottom - .03), 'gold')
 def f_writing_desk(p):
     table(p, .6, 1.2, .76, 'lacquerDark'); p.box((-.2, 0, .9), (.2, 1.1, .22), 'lacquer')
     p.box((.1, .2, .79), (.3, .4, .02), 'linen'); candle_flame(p, -.15, -.4, .76); p.box((.1, -.25, .8), (.05, .05, .08), 'soot')
@@ -289,7 +299,7 @@ PIECES = (
     ('grainBin', f_grain_bin), ('scales', f_scales),
     ('hearth', f_hearth), ('shelf', f_shelf), ('breadOven', f_bread_oven), ('hamRack', f_ham_rack),
     ('stall', f_stall), ('manger', f_manger), ('saddleStand', f_saddle_stand),
-    ('canopyBed', f_canopy_bed), ('rug', f_rug), ('runner', f_runner), ('fireplace', f_fireplace), ('tapestry', f_tapestry), ('writingDesk', f_writing_desk),
+    ('canopyBed', f_canopy_bed), ('rug', f_rug), ('runner', f_runner), ('fireplace', f_fireplace), ('tapestry', f_tapestry), ('heraldDrape', f_herald_drape), ('writingDesk', f_writing_desk),
     ('forge', f_forge), ('anvil', f_anvil), ('toolRack', f_tool_rack), ('grindstone', f_grindstone),
     ('altar', f_altar), ('pew', f_pew), ('kneeler', f_kneeler), ('lectern', f_lectern), ('candleStand', f_candle_stand), ('torchWall', f_torch_wall),
     ('throne', f_throne), ('strongChest', f_strong_chest), ('coinSacks', f_coin_sacks), ('goldChest', f_gold_chest), ('ingotRack', f_ingot_rack),

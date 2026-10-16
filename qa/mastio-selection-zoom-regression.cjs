@@ -102,7 +102,8 @@ assert.match(castle,/const ww=1\.75\*State\.view\.scale,wh=2\.8\*State\.view\.sc
 console.log('PASS civilians, troops and windows zoom with full world projection');
 
 assert.match(render,/function drawMastioWindowDrape\(/);
-assert.match(render,/if\(!s\.isMastio\|\|!edge\)return/);
+// The drape needs a mastio and a facade edge; an opened (cutaway) keep shows none.
+assert.match(render,/if\(!s\.isMastio\|\|!edge(\|\|structureCutaway\(s\))?\)return/);
 assert.match(render,/s\.isMastio\)rows\.push\(\{floor:1,z:1\.53\}\)/);
 assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge/);
 assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge,row\.z/);

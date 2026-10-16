@@ -121,6 +121,22 @@ function aggregateConstructionCost(structures){
   for(const s of structures)for(const [k,v] of Object.entries(constructionCost(s)||{}))total[k]=(total[k]||0)+v;
   return roundCost(total);
 }
+// Built sections are at most BUILT_MAX_LENGTH long: a longer leg is split into equal pieces, so
+// rooms (and their furniture) keep a readable size. The dogleg joint stays between the legs.
+const BUILT_MAX_LENGTH=3;
+function splitBuiltRoute(route,type){
+  if(type!=='built'||!route?.segments?.length)return route;
+  const legs=route.segments.length,segments=[];
+  route.segments.forEach((seg,leg)=>{
+    const n=Math.max(1,Math.ceil(seg.length/BUILT_MAX_LENGTH-1e-9));
+    for(let k=0;k<n;k++){
+      const p=t=>({x:seg.a.x+(seg.b.x-seg.a.x)*t,y:seg.a.y+(seg.b.y-seg.a.y)*t});
+      segments.push({...seg,a:p(k/n),b:p((k+1)/n),length:seg.length/n,
+        jointB:legs>1&&leg===0&&k===n-1,jointA:legs>1&&leg===legs-1&&k===0});
+    }
+  });
+  return{...route,segments};
+}
 function linearRouteStructures(route,endSnapId,spec){
   if(!route?.segments?.length)return[];
   const groupId=route.segments.length>1?uid():null,jointId=route.joint?uid():null;
@@ -135,8 +151,8 @@ function linearRouteStructures(route,endSnapId,spec){
     if(i===0&&State.draft?.aSnap)s.aSnap=State.draft.aSnap;
     if(i===route.segments.length-1&&endSnapId)s.bSnap=endSnapId;
     if(groupId)s.routeGroupId=groupId;
-    if(jointId&&i===0)s.bJoint=jointId;
-    if(jointId&&i===route.segments.length-1)s.aJoint=jointId;
+    if(jointId&&(seg.jointB??i===0))s.bJoint=jointId;
+    if(jointId&&(seg.jointA??i===route.segments.length-1))s.aJoint=jointId;
     return s;
   });
 }

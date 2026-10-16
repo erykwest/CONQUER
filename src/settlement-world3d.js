@@ -983,7 +983,8 @@
   }
   // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
   function drawMastioDrapes(){
-    const all=State.structures,mastio=all.filter(s=>s.isMastio&&!underConstruction(s));
+    // An opened (cutaway) keep shows its windows from inside the cutaway mesh, without drape.
+    const all=State.structures,mastio=all.filter(s=>s.isMastio&&!underConstruction(s)&&!structureCutaway(s));
     if(!mastio.length)return;
     try{State.structures=mastio;drawFacadeWindows(false,1,false)}finally{State.structures=all}
   }

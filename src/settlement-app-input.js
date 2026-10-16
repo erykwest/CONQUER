@@ -120,9 +120,9 @@ canvas.addEventListener('pointerdown',e=>{
           }
         }else status('Segment too short');
       }else{
-        const route=normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!e2.structureId);
+        const route=splitBuiltRoute(normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!e2.structureId),State.tool.linear);
         if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
-          const legs=route.segments.length;
+          const legs=Math.min(2,route.segments.length);
           if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
             State.draft=null;
             status(legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment');
@@ -183,7 +183,7 @@ canvas.addEventListener('pointermove',e=>{
       return;
     }
 
-    const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!snap.structureId);
+    const route=splitBuiltRoute(normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!snap.structureId),State.tool.linear);
     if(route){
       const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
       State.draft.invalidPreview=null;

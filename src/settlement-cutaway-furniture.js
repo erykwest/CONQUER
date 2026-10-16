@@ -168,6 +168,9 @@
       for(let i=0;i<rows;i++){const [fu,fv]=r.front(r.A,i%2?.45:-.45,.55+Math.floor(i/2)*.42);r.near(fu,fv,'pew',turn)}
       r.wall(r.B,-.6,'candleStand');r.wall(r.B,.6,'candleStand');if(r.large){r.near(.5,.5,'lectern',turn);r.wall(r.A,.85,'banner')}else{const [fu,fv]=r.front(r.A,0,.3);r.near(fu,fv,'kneeler',turn)}},
     commonHall(r){tableWithBenches(r,0,0);r.wall(r.A,.7,'s:barrelGroup');r.wall(r.B,0,'banner');
+      // Heraldic drapes hang along the standing walls (deco: above the benches and barrels).
+      for(const t of r.large?[-.6,0,.6]:[-.5,.5])r.wall(r.A,t,'heraldDrape',{deco:true,exact:true});
+      r.wall(r.B,r.large?-.6:-.55,'heraldDrape',{deco:true,exact:true});
       if(r.large){r.wall(r.A,-.4,'fireplace');tableWithBenches(r,.45,.5)}else r.wall(r.A,-.5,'brazier',{off:.1})},
     throneHall(r){r.wall(r.A,0,'throne');const [fu,fv]=r.front(r.A,0,1.05);r.at(fu*.55,fv*.55,'runner',r.toward(r.A),{deco:true});
       r.wall(r.A,-.85,'banner');r.wall(r.A,.85,'banner');r.wall(r.B,.0,'shieldWall',{deco:true});

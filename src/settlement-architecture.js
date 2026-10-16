@@ -303,7 +303,7 @@ function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
 // Mastio heraldry hangs below the sill of the castle-interior-facing window.
 // Paint in the same projected facade plane as the existing architectural art.
 function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1){
-  if(!s.isMastio||!edge)return;
+  if(!s.isMastio||!edge||structureCutaway(s))return;   // no drape on an opened (cutaway) keep
   const width=Math.max(.30,windowWidth*1.08),height=.64;
   const topZ=windowZ-windowHeight/2-.055;
   const span=facadeAssetWorldSpan(edge,width),lt=w2s(span.a,topZ),rt=w2s(span.b,topZ),lb=w2s(span.a,topZ-height);
