@@ -94,6 +94,21 @@ test('L1 and L2 remain single-house lots',()=>{
   house.houseLevel=1;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
   house.houseLevel=2;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
 });
+test('L2 cow plots gain exactly one lean-to, while L2 gardens have none',()=>{
+  house.houseLevel=2;run('urbanRevision++');
+  run("window.ConquerLivestock={lotKindForHouse:()=> 'cow'}");
+  const cattle=run('urbanLotOutbuildings(State.structures[0])');
+  assert.equal(cattle.length,1);
+  assert.equal(cattle[0].type,'shed');
+  assert.ok(cattle[0].points.every(p=>run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(p)+',.04)')));
+  const body=run('houseFootprintParts(State.structures[0])');
+  assert.ok(body.every(p=>run('urbanPolygonIntersectionArea('+JSON.stringify(p.points)+','+JSON.stringify(cattle[0].points)+')')<1e-6));
+  assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),body.length+1);
+  run("window.ConquerLivestock={lotKindForHouse:()=> 'garden'}");
+  assert.equal(run('urbanLotOutbuildings(State.structures[0]).length'),0);
+  run('window.ConquerLivestock=null;urbanRevision++');
+  house.houseLevel=3;
+});
 test('L3 frontage creates three houses within a 6 U street-facing plot',()=>{
   house.houseLevel=3;
   assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),1);
