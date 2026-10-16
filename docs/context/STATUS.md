@@ -1,7 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
-> Snapshot verificato per **lettura statica** e confronto branch il **16/10/2026**; nessuna esecuzione locale delle QA né test browser dichiarati in questa ricognizione.
-> Base: `main` a [9b7d05d](https://github.com/erykwest/CONQUER/commit/9b7d05db597b592b78c9b4647181cb39f2cb2a9d). Cambia velocemente: controllare sempre HEAD prima di agire.
+> Snapshot **aggiornato il 16/10/2026** attraverso commit e PR GitHub; controllo documentale, **nessuna nuova esecuzione locale di QA o browser** in questa revisione.
+> Base verificata: `main` a [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99) (16/10, 15:16 UTC). Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
 ## Semaforo epistemico
 
@@ -22,7 +22,10 @@
 | Economia aggregata | `src/settlement-economy.js`, [economy.md](../economy.md), `qa/economy-regression.cjs` | **CODICE + QA**: coorti L1–L4, produzione/mercato/casse e regole di riserva. Inventari di costruzione e stock economico sono ancora separati nel documento. |
 | Poli estrattivi | [settlement-industries.js](../../src/settlement-industries.js), [QA](../../qa/economy-industries-regression.cjs) | **CODICE + QA**: logging camp 2×2 U, cava 3×3 U, miniera 1×1 U con vincoli di posizione/lavoro; renderer dichiarato *placeholder* nel modulo main. |
 | Combattimento e territorio | [settlement-combat.js](../../src/settlement-combat.js) | **CODICE**: area tattica, visibilità/fog, zone, unità e pattuglie; non affermare che esista già un assedio completo. |
-| Rendering | [settlement-render.js](../../src/settlement-render.js) | **CODICE**: orchestratore grafico separato in moduli, ma non una separazione totale delle responsabilità meccaniche e grafiche. |
+| Rendering | `src/settlement-render.js`, `src/settlement-castle3d.js`, `src/settlement-world3d.js` | **CODICE SU MAIN**: scena/castello WebGL2 tridimensionali dal [commit db6857c](https://github.com/erykwest/CONQUER/commit/db6857c2af21b4010077107876f59cc300374697); renderer WebGL2 predefinito ove supportato dal [commit cc6830a](https://github.com/erykwest/CONQUER/commit/cc6830ac2b61d6a0769a4e1951a1f19fa0db11a) con fallback Canvas. La separazione tra regole e rendering **non è totale**; non è provata una pipeline glTF. |
+| Minimappa / LOD | `src/settlement-minimap.js`, `src/settlement-lod.js`, [PR #44](https://github.com/erykwest/CONQUER/pull/44) | **MERGIATA SU MAIN il 16/10** ([2e7582d](https://github.com/erykwest/CONQUER/commit/2e7582d33575fcbdfa76605a08b09746327457c9)): overview top-down con click/drag, edifici a blocchi nella minimappa, puntini per forze visibili e LOD delle unità nella scena sotto zoom 0,38. LOD edifici nella scena principale non dimostrato; QA browser/mobile/performance da completare. |
+| Illuminazione | [PR #43](https://github.com/erykwest/CONQUER/pull/43), [PR #47](https://github.com/erykwest/CONQUER/pull/47) | **MERGIATE SU MAIN**: color grading per ora/stagione/meteo, Nightlight WebGL2 per luci di finestre/fuochi con fallback e diagnostica A/B; test comparativo controllato non documentato. |
+| Lotto e architettura | [d3ca98e](https://github.com/erykwest/CONQUER/commit/d3ca98e6dc1d75d651aade3af6bfffa1585e4e48) | **CODICE SU MAIN (15/10)**: lotti Voronoi condivisi, cortili, piazza del pozzo, tetti L1–L4 e facciate a graticcio, con regressioni dedicate dichiarate nel commit. |
 | Araldica | `src/settlement-heraldry.js`, `src/heraldry-symbols.js` | **CODICE citato nel backlog verificato**: editor/pattern SVG presenti; propagazione a ogni supporto da testare. |
 | Alberi SVG | `src/assets/forest/tree_01_tonda.svg` … `tree_07_asimmetrica.svg` | **ASSET presenti secondo audit backlog**; integrazione/performance richiedono controllo. |
 | Deploy | [vercel.json](../../vercel.json), [AGENTS.md](../../AGENTS.md) | **CONFIGURAZIONE**: deploy Git automatico abilitato solo su `main`; feature branch con CI e PR. |
@@ -33,13 +36,13 @@ Non confondere il testo del [README](../../README.md) (contiene sezione «V0.11 
 
 ### 1. Branch /urban non è /main
 
-Al 16/10 il confronto [`main...urban`](https://github.com/erykwest/CONQUER/compare/main...urban) era **diverged**: 92 commit avanti / 9 indietro. Sono variazioni *al momento del confronto*, non una misura permanente. Tra i file specifici risultavano:
+Alla verifica Git del 16/10 su `main` [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99), [`main...urban`](https://github.com/erykwest/CONQUER/compare/main...urban) è **diverged: 97 commit avanti / 24 indietro** (valori relativi e temporanei). La [PR #19](https://github.com/erykwest/CONQUER/pull/19) è ancora aperta: contiene ampie differenze urbanistiche e asset, non equivalenti a funzionalità già su main. Tra i file specifici risultavano:
 
 - `src/settlement-livestock.js`, `src/settlement-animals.js`, `qa/urban-livestock-regression.cjs`;
 - SVG di logging camp, cava e miniera sotto `src/assets/economy/`;
 - integrazioni in `src/settlement-urban.js`, rendering e QA.
 
-C'è anche [`sync/urban-main-2026-10-16`](https://github.com/erykwest/CONQUER/tree/sync/urban-main-2026-10-16), che risultava anch'essa divergente. **Non dedurre quale abbia il codice definitivo dal nome.** Controllare commit, PR e merge prima di usare/descrivere un asset come integrato. Evitare un merge cieco delle branch.
+Anche [`sync/urban-main-2026-10-16`](https://github.com/erykwest/CONQUER/tree/sync/urban-main-2026-10-16) è divergente (**78 avanti / 24 indietro** vs `main`, stessa verifica). La [PR #45](https://github.com/erykwest/CONQUER/pull/45), integrata sulla branch `sync` e **non** su `main`, non chiude questa divergenza. **Non dedurre quale abbia il codice definitivo dal nome.** Controllare commit, PR e merge prima di usare/descrivere un asset come integrato. Evitare un merge cieco delle branch.
 
 ### 2. Calendari agricoli discordanti
 
@@ -66,15 +69,15 @@ I documenti su fortificazioni, Mastio, leve, stanze e assedio continuo contengon
 
 L'export completo [ECONOMY](sources/ECONOMY-2026-10-12.md) riporta **PR #22 integrata in `main`** tramite [merge 2b8e8239](https://github.com/erykwest/CONQUER/commit/2b8e8239d2009fd813b92ff8f7e18e05bfb625b7) il 13/10. La lettura di `src/settlement-economy.js`, `src/settlement-industries.js` e delle QA conferma la base nel repository. L'export menziona regressioni passate in quella sessione, **non le abbiamo rieseguite per questo import**. Rimangono da riconciliare campi/ledger, scorte costruttive, investimenti privati che edificano, export reale, produzione metallurgica.
 
-### Minimappa — codice in PR, non in main
+### Minimappa — integrata su main, collaudo end-to-end ancora necessario
 
-[PR #44](https://github.com/erykwest/CONQUER/pull/44) era **OPEN/non merged** al controllo GitHub del 16/10; branch `feature/topdown-minimap-20261015` divergente da `main`. Sorgenti aggiunte: `src/settlement-minimap.js`, `src/settlement-minimap.css`, `src/settlement-lod.js`. Secondo la PR: navigazione clic/drag, rotazione camera, blocchi edifici minimappa, unità tattiche come puntini (ostili solo se avvistati), LOD militare nella scena a zoom inferiore a **0,38**. **Verifiche dichiarate:** sintassi e smoke isolati. **Da fare:** test reale browser, mobile, performance, integrazione e merge. Il LOD edifici della scena principale resta proposta. [Digest](sources/MINIMAP-2026-10-15.md).
+La [PR #44](https://github.com/erykwest/CONQUER/pull/44) è stata **MERGIATA in main il 16/10/2026** al commit [2e7582d](https://github.com/erykwest/CONQUER/commit/2e7582d33575fcbdfa76605a08b09746327457c9). Include `src/settlement-minimap.js`, CSS overlay e `src/settlement-lod.js`; navigazione top-down con clic/drag; blocchi edilizi nella minimappa; contatti tattici come puntini con la stessa condizione `spotted()` del Combat Engine; unità lontane a puntini in Canvas2D e in atlas 3D sotto `view.scale < 0.38`. La PR dichiara verifiche di sintassi e smoke test isolati. **Non è stata eseguita da questa revisione una prova completa browser/mobile/rotazione/benchmark; il LOD edilizio nel mondo principale non è incluso**. Il digest della conversazione rimane [storico](sources/MINIMAP-2026-10-15.md).
 
 ### Asset/rendering — esistenti, non assumere gestione RAM completa
 
-Il modulo [settlement-assets.js](../../src/settlement-assets.js) definisce già cache LRU delle strutture (192 voci) e cache di compositi limitata nominalmente a 32 MiB, con contatori; il primo limite è **per numero**, non per memoria globale. [settlement-webgpu.js](../../src/settlement-webgpu.js) si definisce renderer ibrido dei layer statici Canvas, con fallback Canvas2D; **non è di per sé un importatore glTF/renderer 3D completo**. La branch `animation` era divergente e contiene moduli animali/carri e `figures-lab.html` secondo il confronto Git.
+Il modulo [settlement-assets.js](../../src/settlement-assets.js) mantiene cache di bitmap (192 voci) e compositi (32 MiB nominali); il primo è un limite **per numero**, non memoria globale. Il precedente `settlement-webgpu.js` è un compositore ibrido e **non** un importatore glTF. In aggiunta ora esistono `settlement-castle3d.js` e `settlement-world3d.js`, realmente WebGL2 e integrati nel percorso predefinito il 15/10; mantenuto fallback 2.5D/Canvas. Benchmark riferiti nel commit 3D (~39 ms/frame contro 76–100 in un scenario) **indicativi e non ripetuti in questa ricognizione**. L'asset pipeline glTF, l'isolamento completo della simulazione e il test sistematico dei cutaway restano da verificare. La branch `animation` e gli asset PNG/Blender esterni non vanno presunti in produzione.
 
-L'export [VISUAL/AUDIO](sources/VISUAL-AUDIO-2026-10-14.md) riporta **asset Blender/PNG locali non committati**, dimensioni non direttamente verificabili e due stime incompatibili (627 vs somma 657 MB). Non registrarli come asset distribuiti. Audio/Suno e prova del modello 3D per cutaway/danni/cantiere restano discussioni/prototipi, non implementazioni certificate.
+L'export [VISUAL/AUDIO](sources/VISUAL-AUDIO-2026-10-14.md) riporta **asset Blender/PNG locali non committati**, con dimensioni non verificate e stime divergenti (627/657 MB): non registrarli come asset distribuiti. Audio/Suno, supporto glTF completo e verifica dei casi cutaway/danni/cantiere restano fuori dalla certificazione; **non** confondere questi obiettivi con l'implementazione WebGL2 già presente.
 
 ### Libreria audio — inventario storico Drive, non implementazione
 
