@@ -557,7 +557,7 @@
   function updateAlert(sources){
     let next='clear';
     for(const intruder of combat.enemy){
-      if(intruder.defeated||intruder.stats?.hp<=0||!spotted(intruder,sources))continue;
+      if(intruder.neutral||intruder.defeated||intruder.stats?.hp<=0||!spotted(intruder,sources))continue;
       const a=areaState(intruder);
       if(a.green){next='general';break}
       if(a.yellow)next='local';
@@ -704,6 +704,7 @@
   }
   function renderOverlay(){
     if(!combat)return;
+    window.ConquerWolves?.ensure();
     const overlayStart=performance.now();
     const rect=wrap.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
     if(canvasLayer.width!==Math.round(rect.width*d)||canvasLayer.height!==Math.round(rect.height*d)){
@@ -753,7 +754,7 @@
       for(const soldier of characters){
         drawSoldierFigure(soldier.p,.08,soldier.type,soldier.id,State.clock.day);
         if(soldier.type==='spearman'&&soldier.unit.engaged){
-          const target=combat.enemy.filter(e=>!e.defeated&&e.stats?.hp>0)
+          const target=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&e.stats?.hp>0)
             .sort((a,b)=>dist(a,soldier.unit)-dist(b,soldier.unit))[0];
           if(target&&dist(target,soldier.unit)<1){
             const base=w2s(soldier.p,.24),end=w2s(target,.45);
@@ -769,7 +770,14 @@
           drawPatrolTorch(soldier.p,soldier.id));
       }
       for(const e of combat.enemy){
-        if(e.defeated||e.stats?.hp<=0||!spotted(e,sightSources))continue;
+        if(e.defeated||e.stats?.hp<=0)continue;
+        if(e.kind==='wolf'){
+          // Wildlife remains a visible neutral creature by day; at night the
+          // exact same entity is rendered while its combat flag turns hostile.
+          if(!combat.fog||spotted(e,sightSources))window.ConquerWolves?.draw(g,e);
+          continue;
+        }
+        if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
         drawSoldierFigure(e,.08,'spearman',e.id,State.clock.day,livery);
         const p=w2s(e,.08);g.strokeStyle='#e45151';g.lineWidth=2;
@@ -1181,6 +1189,7 @@
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);
+    window.ConquerWolves?.tick(dt);
     window.ConquerCamp?.synchronize();
     updatePatrols(performance.now());
     let moved=false;
@@ -1411,7 +1420,7 @@
     if(combat.enemy.length){
       const sources=observers();
       for(const e of combat.enemy){
-        if(e.defeated||e.stats?.hp<=0||!spotted(e,sources))continue;
+        if(e.neutral||e.defeated||e.stats?.hp<=0||!spotted(e,sources))continue;
         contacts.push({id:e.id,x:e.x,y:e.y,side:'enemy',kind:e.kind||'hostile',selected:false});
       }
     }
@@ -1421,7 +1430,16 @@
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
-    units:()=>combat?.units||[],recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
+    units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
+    // Wolves are regular persistent combat entities, but their spawning
+    // lifecycle belongs to the dedicated fauna simulation.
+    registerWolves:(token,wolves)=>{
+      if(!combat||combat.wolvesSpawnedFor===token)return false;
+      combat.enemy=combat.enemy.filter(e=>e.kind!=='wolf').concat(wolves);
+      combat.wolvesSpawnedFor=token;changed();return true;
+    },
+    wolfSpawnedFor:()=>combat?.wolvesSpawnedFor||null,
+    recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
     alarmMode,setAlarmMode,recruitedResident,
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);

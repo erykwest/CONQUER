@@ -24,12 +24,16 @@ jobs:
         run: |
           node --check src/settlement-camp.js
           node --check src/settlement-combat.js
+          node --check src/settlement-animals.js
+          node --check src/settlement-wolves.js
           node --check src/settlement-world.js
           node --check src/settlement-population-garrisons.js
           node --check src/settlement-app-persistence.js
       - name: Behavioral regression
         run: |
           node qa/camp-regression.cjs
+          node qa/wolves-regression.cjs
+          node qa/animals-regression.cjs
           node qa/night-vision-regression.cjs
           node qa/patrol-regression.cjs
           node qa/combat-selection-regression.cjs

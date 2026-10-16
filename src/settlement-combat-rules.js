@@ -7,6 +7,7 @@
   const PROFILES=Object.freeze({
     spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
     patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
+    wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
@@ -227,7 +228,7 @@
       if(!living(a)||a.routing)continue;
       let nearest=null,gap=1;
       for(const b of enemy){
-        if(!living(b)||b.routing||!canContact(a,b))continue;
+        if(!living(b)||b.routing||b.neutral||!canContact(a,b))continue;
         const distance=Math.hypot(a.x-b.x,a.y-b.y);
         if(distance<gap){nearest=b;gap=distance}
       }
@@ -245,7 +246,7 @@
     for(const shooter of shooters){
       let target=null,best=Infinity;
       for(const e of enemy){
-        if(!living(e)||e.routing||!visibleFn(e,shooter))continue;
+        if(!living(e)||e.routing||e.neutral||!visibleFn(e,shooter))continue;
         const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
         if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
         target=e;best=d;
