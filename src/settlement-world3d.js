@@ -540,10 +540,33 @@
     }
     return{decals:new Float32Array(v),lights:new Float32Array(lights)};
   }
+  // All world-space torch anchors are camera-independent: depth testing, not
+  // towerDoorVisible(), decides which flames are hidden behind a tower.
+  function allWorldFireSources(){
+    const sources=battlementBrazierSources();
+    for(const tower of State.structures){
+      if(tower.type!=='tower'||underConstruction(tower))continue;
+      for(const spec of towerDoorSpecs(tower)){
+        if(spec.kind!=='front')continue;
+        const doorTop=spec.baseZ+Math.max(.18,spec.apexZ-spec.baseZ)/3;
+        for(const side of [-1,1]){
+          sources.push({
+            kind:'torch',id:tower.id+':torch:'+side,
+            p:{
+              x:spec.contact.x+spec.tangent.x*.18*side+spec.outward.x*.035,
+              y:spec.contact.y+spec.tangent.y*.18*side+spec.outward.y*.035
+            },
+            z:doorTop+.10,groundZ:placementGroundZ(tower)
+          });
+        }
+      }
+    }
+    return sources;
+  }
   function buildFireLights(atlas){
     const uv=atlas.map.get('__glow'),v=[];if(!uv)return new Float32Array(v);
     const [u0,v0,u1,v1]=uv;
-    for(const src of fireSources()){
+    for(const src of allWorldFireSources()){
       const ground=Number.isFinite(src.groundZ)?src.groundZ:terrainElevation(src.p);
       const z=ground+src.z+(src.kind==='brazier'?.08:0);
       const size=src.kind==='brazier'?2:1.5;
@@ -892,7 +915,15 @@
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
     // Animated flame shapes stay on the dynamic Canvas overlay; their light no longer does.
     drawFireFlamesOnly(nf);
-    perf().world3dNightLightMs=performance.now()-started;
+    const p=perf(),ms=performance.now()-started;
+    p.world3dNightLightMs=ms;
+    const windowQuads=(S.buf['nightWindows#n']||0)/54;
+    const fireSources=(S.buf['fireLights#n']||0)/54;
+    window.__conquerAnalytics?.measure('NIGHTLIGHT_3D',ms,{windowQuads,fireSources});
+    if(!S.nightLightReported){
+      S.nightLightReported=true;
+      window.__conquerAnalytics?.event('NIGHTLIGHT_3D_ACTIVE',{windowQuads,fireSources,mode:'webgl2'},'info');
+    }
   }
   function drawCastleOverlays(){
     // Arcades are 3D decals now; only cutaway interiors keep their 2.5D drawing.
