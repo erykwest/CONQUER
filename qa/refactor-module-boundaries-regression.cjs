@@ -36,7 +36,11 @@ const render3dHooks=[
   ["  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n  }\n","  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n"],
   ["if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');","blitSceneCache('castleBody');"],
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
-  ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n']
+  ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n'],
+  // WebGL2 night lights (opt-in, Canvas fallback) and their Canvas timing telemetry.
+  ['  const nf=nightFactor();if(nf<=.01)return;\n  const t0=performance.now();\n','  const nf=nightFactor();if(nf<=.01)return;\n'],
+  ["  drawFireGlows(nf);\n  const ms=performance.now()-t0;\n  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;\n  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});\n","  drawFireGlows(nf);\n"],
+  ['  // WebGL2 lights share the real scene depth and are composited after colour grading.\n  // Canvas keeps its original complete night path as the fallback.\n  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);\n  else drawNightLights();\n','  drawNightLights();\n']
 ];
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));

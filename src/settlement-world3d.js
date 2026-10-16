@@ -208,6 +208,26 @@
     }
     return new Float32Array(v);
   }
+  // Mountains as raised fans (drawRaisedFan): outline on the ground, apex 3.6U over the centre,
+  // faces alternating the same two tones. The ground bake only shows them from above.
+  const MOUNTAIN_HEIGHT=3.6,MOUNTAIN_FACES=['#55493d','#66584a'];
+  function buildMountains(){
+    const m=meshBuilder();
+    for(const f of State.environment||[]){
+      if(f.type!=='mountain'||!(f.points?.length>=3))continue;
+      const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
+      // Rock up to the snow line (75% of the height), snow cap above it.
+      // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
+      const k=typeof mountainSnowZ==='function'?Math.min(1,mountainSnowZ()/apex.z):1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
+      for(let i=0;i<f.points.length;i++){
+        const a=f.points[i],b=f.points[(i+1)%f.points.length];
+        const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2];
+        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},s(b),s(a)],rock);
+        if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
+      }
+    }
+    return new Float32Array(m.tris);
+  }
   // Bake the existing 2D ground drawing in plan view (rotation 0) into a canvas covering [x0,x0+size]².
   function bakeGround(x0,y0,size){
     const N=TEX_SIZE,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
@@ -356,10 +376,13 @@
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
+    // Mountain pines (96x128 canvases), two tones.
+    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'),aspect:1,pine:true});
     const rows=Math.ceil(tiles.length/ATLAS_COLS)||1,c=document.createElement('canvas');
     c.width=ATLAS_COLS*ATLAS_TILE;c.height=rows*ATLAS_TILE;const g=c.getContext('2d'),map=new Map();
     tiles.forEach((t,i)=>{const x=(i%ATLAS_COLS)*ATLAS_TILE,y=Math.floor(i/ATLAS_COLS)*ATLAS_TILE,h=Math.round(ATLAS_TILE*t.aspect);
-      g.drawImage(t.img,x,y,ATLAS_TILE,h);
+      // Pines keep their 3:4 shape centred in the square tile.
+      if(t.pine)g.drawImage(t.img,x+ATLAS_TILE*.125,y,ATLAS_TILE*.75,h);else g.drawImage(t.img,x,y,ATLAS_TILE,h);
       map.set(t.key,[x/c.width,y/c.height,(x+ATLAS_TILE)/c.width,(y+h)/c.height])});
     return{canvas:c,map,season};
   }
@@ -374,6 +397,16 @@
         const size=2.25*t.scale,z=t.z||0;
         const C=[[-.5,-.94,u0,v0],[.5,-.94,u1,v0],[.5,.06,u1,v1],[-.5,.06,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
+      }
+    }
+    // Pines on the lower half of the mountains, standing on the cone surface.
+    for(const f of State.environment||[]){
+      if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
+      for(const t of mountainPineLayout(f)){
+        const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
+        const size=2.4*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
       }
     }
     for(const e of urbanFenceSegments()){
@@ -639,10 +672,12 @@
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
-    const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,wet(),urbanRev(),structuresSig('ground')].join('|');
+    // envRev: main roads cut grooves into a continuous woodland in place.
+    const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
-      upload(gl,'terrain',buildTerrain());
+      upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());
       uploadTexture(gl,'world',bakeGround(0,0,WORLD));
       uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
       S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
@@ -668,7 +703,7 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const treeSig=[season,forestTreeSpritesReady,(State.environment||[]).length,State.seed,urbanRev(),structuresSig('hedges'),
+    const treeSig=[season,forestTreeSpritesReady,(State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),
       Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
     if(S.sig.trees!==treeSig){
       const a=performance.now(),atlas=buildTreeAtlas();
@@ -732,7 +767,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'mountains');drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write
