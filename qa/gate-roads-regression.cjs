@@ -27,5 +27,15 @@ check('a road across the gate is still a conflict',()=>{
   assert.ok(conflict({type:'road',a:{x:100,y:94},b:{x:100,y:106},width:.62},gate),'perpendicular through the towers');
   assert.ok(conflict({type:'road',a:{x:94,y:100.9},b:{x:106,y:100.9},width:.62},gate),'parallel but off the passage');
 });
+check('gate subtower magnets: four corners and the middle of both flanks',()=>{
+  const sockets=run('GATE_SUBTOWER_SOCKETS'),attach=run('gateSubtowerAttachment'),child={type:'tower',shape:'round',r:.5};
+  assert.equal(sockets.length,6);
+  const pts=sockets.map(k=>attach(gate,child,k));
+  assert.ok(pts.every(a=>a&&a.subtowerSocket),'every socket resolves');
+  for(let i=0;i<6;i++)for(let j=i+1;j<6;j++)assert.ok(Math.hypot(pts[i].point.x-pts[j].point.x,pts[i].point.y-pts[j].point.y)>.5,'distinct sockets');
+  for(const a of pts){const q=run('toLocalPoint')(gate,a.point);assert.ok(Math.abs(q.x)>=1-1e-6||Math.abs(q.y)>=.7-1e-6,'child centre outside the gate');}
+  const sides=pts.filter(a=>a.subtowerSocket.startsWith('gate-side'));
+  for(const a of sides){const q=run('toLocalPoint')(gate,a.point);assert.ok(Math.abs(q.x)<1e-6&&Math.abs(Math.abs(q.y)-(.7+.5))<1e-6,'flank socket centred on the side, touching it')}
+});
 console.log('gate roads regression: '+passed+' checks');
 `);
