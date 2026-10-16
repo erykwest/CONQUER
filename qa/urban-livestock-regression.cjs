@@ -13,7 +13,7 @@ assert.ok(where('animals')>0&&where('livestock')>where('animals')&&where('render
 assert.match(fields,/ConquerLivestock\?\.lotKindForHouse\(h\)/);
 assert.match(residents,/ConquerLivestock\.shepherdPosition\(house\)/);
 assert.match(renderer,/ConquerLivestock\?\.draw\(\)/);
-assert.match(source,/Math\.max\(3,State\.view\.scale\*11\.5\)/);
+assert.match(source,/Math\.max\(1\.5,State\.view\.scale\*5\.75\)/);
 let fraction=.32;
 const rendered=[],houses=[],lots=[];
 function hash(s){
@@ -66,7 +66,8 @@ assert.ok(daylight.filter(a=>a.species==='sheep').every(a=>a.p.x>=40),'daytime s
 assert.ok(animals.shepherdPosition(houses[2]),'shepherd must lead flock by day');
 animals.draw();
 assert.equal(rendered.length,24);
-assert.ok(rendered.every(a=>a.size===11.5),'animal scale must be half of original');
+assert.ok(rendered.every(a=>a.size===5.75),'animal scale must halve again');
+assert.ok(rendered.some(a=>a.mode==='walk')&&rendered.some(a=>a.mode==='browse'),'livestock must alternate browsing with short walking bursts');
 fraction=.8;
 assert.ok(animals.animals().filter(a=>a.species==='sheep').every(a=>sandbox.urbanContains(lots[2].points,a.p)),
   'all sheep return to their lot at night');

@@ -160,24 +160,57 @@
     if(phase==='back')return pointAlongPath(pasture.path,1-smooth((frac-RETURN)/(HOME_AT-RETURN)));
     return residentIdlePoint(pasture.center,house.id+'-shepherd',visualCycleDay(),.18);
   }
-  function movingAnimalPosition(plan,pasture,i,frac,phase){
+  // Every animal alternates planted browsing with brief, bounded walking.
+  // The behavior is deterministic per house/animal and needs no persisted state.
+  function localGrazeTarget(anchor,seed,radius,accept){
+    for(let step=0;step<10;step++){
+      const angle=2*Math.PI*(rand(seed^Math.imul(step+1,0x9e3779b1))+step/10);
+      const reach=radius*(.45+.4*rand(seed^Math.imul(step+1,0x85ebca6b)));
+      const candidate={x:anchor.x+Math.cos(angle)*reach,y:anchor.y+Math.sin(angle)*reach};
+      if(accept(candidate))return candidate;
+    }
+    return anchor;
+  }
+  function grazeLoop(anchor,target,time,seed){
+    const cycle=5.5+rand(seed^0x68bc21eb)*2.5;
+    const phase=((time+rand(seed^0x9e3779b9)*cycle)/cycle)%1;
+    if(phase<.52)return {p:anchor,mode:'browse'};
+    if(phase<.66)return {p:lerp(anchor,target,smooth((phase-.52)/.14)),mode:'walk'};
+    if(phase<.88)return {p:target,mode:'browse'};
+    return {p:lerp(target,anchor,smooth((phase-.88)/.12)),mode:'walk'};
+  }
+  function grazingBehavior(plan,pasture,lot,house,i){
+    const time=visualCycleDay()*34;
+    const seed=hash(house.id+'|graze-loop|'+i);
+    if(plan.kind==='shepherd'&&pasture){
+      const anchor=pasturePoint(plan,pasture,i,visualCycleDay());
+      const target=localGrazeTarget(anchor,seed,Math.max(.22,pasture.radius*.32),candidate=>
+        whiteZoneAt(candidate)&&dist(candidate,pasture.center)<=pasture.radius*.98);
+      return grazeLoop(anchor,target,time,seed);
+    }
+    const anchor=plan.pen[i];
+    const target=localGrazeTarget(anchor,seed,Math.max(.14,Math.sqrt(Math.max(plan.area,1))*.08),candidate=>
+      isFreePenPoint(candidate,lot,house,[],0));
+    return grazeLoop(anchor,target,time,seed);
+  }
+  function movingAnimalPosition(plan,pasture,i,frac,phase,lot,house){
     const lag=i/Math.max(1,plan.count)*.18;
-    const destination=pasturePoint(plan,pasture,i,visualCycleDay());
+    const destination=grazingBehavior(plan,pasture,lot,house,i);
     const home=plan.pen[i],path=pasture.path;
     if(phase==='graze')return destination;
-    if(phase==='home'||!pasture)return home;
+    if(phase==='home'||!pasture)return {p:home,mode:'browse'};
     if(phase==='out'){
       const q=clamp((frac-DEPART)/(PASTURE_AT-DEPART),0,1);
       const progress=smooth(clamp((q-lag)/(1-lag),0,1));
       const anchor=pointAlongPath(path,progress);
       const blend=smooth((progress-.83)/.17);
-      return lerp(anchor,destination,blend);
+      return {p:lerp(anchor,destination.p,blend),mode:'walk'};
     }
     const q=clamp((frac-RETURN)/(HOME_AT-RETURN),0,1);
     const progress=smooth(clamp((q-lag)/(1-lag),0,1));
     const anchor=pointAlongPath(path,1-progress);
-    const from=lerp(destination,anchor,smooth(progress/.12));
-    return lerp(from,home,smooth((progress-.88)/.12));
+    const from=lerp(destination.p,anchor,smooth(progress/.12));
+    return {p:lerp(from,home,smooth((progress-.88)/.12)),mode:'walk'};
   }
   function animals(){
     const out=[],frac=dayFraction();
@@ -189,16 +222,10 @@
       const pasture=data.kind==='shepherd'?pastureFor(data):null;
       const phase=pasture?period(frac):'home';
       for(let i=0;i<data.count;i++){
-        let p=data.pen[i],mode='browse';
-        if(data.kind==='shepherd'&&pasture){
-          p=movingAnimalPosition(data,pasture,i,frac,phase);
-          mode=phase==='out'||phase==='back'?'walk':'browse';
-        }else{
-          const h=hash(house.id+'|goat|'+i),t=visualCycleDay();
-          const idle={x:p.x+Math.sin(t*16+h)*.12,y:p.y+Math.cos(t*13+h)*.12};
-          if(isFreePenPoint(idle,lot,house,[],0))p=idle;
-        }
-        out.push({id:house.id+':'+i,species:data.kind==='goat'?'goat':'sheep',p,mode,
+        let behavior={p:data.pen[i],mode:'browse'};
+        if(data.kind==='shepherd'&&pasture)behavior=movingAnimalPosition(data,pasture,i,frac,phase,lot,house);
+        else behavior=grazingBehavior(data,null,lot,house,i);
+        out.push({id:house.id+':'+i,species:data.kind==='goat'?'goat':'sheep',p:behavior.p,mode:behavior.mode,
           seed:hash(house.id+'|'+i),facing:hash(house.id+'|face|'+i)%2?1:-1});
       }
     }
@@ -212,7 +239,7 @@
     for(const a of objects){
       if(stride>1&&a.seed%stride!==0||!worldPointVisible(a.p,.07,30))continue;
       const screen=w2s(a.p,.07);
-      const size=Math.max(3,State.view.scale*11.5);
+      const size=Math.max(1.5,State.view.scale*5.75);
       withUrbanFigureOcclusion(a.p,.07,()=>window.ConquerAnimals.drawAnimal(
         a.species,ctx,screen.x,screen.y,size,{
           t:t*34,seed:a.seed%1000,facing:a.facing,
