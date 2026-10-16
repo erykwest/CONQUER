@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-16 — Acquisizione suoni Pixabay / Drive
+
+- Importata come quarto digest la conversazione del 14/10 [Valuta suoni Pixabay](sources/PIXABAY-SOUNDS-2026-10-14.md); registrata SRC-CHAT-006 in [EXTERNAL-SOURCES](EXTERNAL-SOURCES.md).
+- Conservata decisione esplicita **ambienti stagionali/meteo + effetti selezione/zoom ≥30%**; chiarita la proposta di tre canali sonori, fades e numero massimo di fonti contemporanee.
+- Inventario **storico riferito dal thread**, non audit corrente: **24 MP3 su Drive**, 10 ambienti e 14 effetti, con possibili nomi duplicati di pioggia. Qualità, loop, licenze individuali e runtime non verificati; **nessun audio importato in Git**.
+- Roadmap, codice e deployment invariati.
+
 ## 2026-10-16 — Importazione trascrizioni e prove Git
 
 - Letti gli export **ECONOMY (12–13/10)**, **Direzione animazioni/audio (14–15/10)** e **Minimappa LOD (15/10)**; creati tre digest in [sources](sources/) anziché pubblicare le chat integrali.
