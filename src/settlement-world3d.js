@@ -954,13 +954,26 @@
   function drawCastleOverlays(){
     // Arcades and cutaway interiors are 3D meshes now; nothing left to paint in 2D here.
   }
-  // Night: flames and embers of the cutaway furniture redrawn at full light over the night
-  // overlay, depth-tested against the scene of this frame (depth buffer is preserved).
+  // Night: open interiors stay in full light. The whole cutaway mesh (and its flames) is redrawn
+  // over the night overlay, depth-tested against this frame's scene (depth buffer is preserved),
+  // so whatever covers it in front keeps covering it.
   function drawEmissive(){
-    if(!active()||!S.buf['cutawayEm#n']||!(typeof nightFactor==='function'&&nightFactor()>.01))return;
+    if(!active()||!S.buf['cutaway#n']||!(typeof nightFactor==='function'&&nightFactor()>.01))return;
     const gl=S.gl,r=wrap.getBoundingClientRect();
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
-    gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);drawMesh(gl,r,'cutawayEm');gl.disable(gl.POLYGON_OFFSET_FILL);gl.depthMask(true);
+    gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayEm');gl.disable(gl.POLYGON_OFFSET_FILL);
+    // Figures inside the open rooms (occupants, archers at the slits) share the room light.
+    const inside=(S.frameFigures||[]).filter(f=>/-room-|:slit:/.test(String(f.id)));
+    if(inside.length&&S.tex.soldierAtlas){
+      const data=buildSoldiers(inside);let b=S.buf.indoorFigures;if(!b){b=gl.createBuffer();S.buf.indoorFigures=b}
+      gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STREAM_DRAW);
+      const sp=S.prog.sprite;gl.useProgram(sp.p);setCamera(gl,sp,r);
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
+      bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
+      gl.drawArrays(gl.TRIANGLES,0,data.length/8);
+      colliders=S.frameColliders||colliders;
+    }
+    gl.depthMask(true);
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
   }
   // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
@@ -972,6 +985,7 @@
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
     renderFront(r,buildSoldiers(list));ctx.drawImage(S.canvas,0,0,r.width,r.height);
+    S.frameFigures=list;S.frameColliders=colliders;     // the night interior pass reuses them
     if(S.debugColliders)drawColliderDebug();
     // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
     // frame is expensive, so skip the call entirely when none of them is present.
