@@ -11,6 +11,13 @@
 - **PROGETTO** — proposta/decisione descritta in documentazione senza prova end-to-end.
 - **CHIUSO** — riservato alle feature con PR/commit e test/regressioni riscontrati e aggiornati in questa tabella.
 
+## Diagnosi e fix in corso — crescita e ordini su main (16/10/2026)
+
+- **Riprodotto a livello di codice su main `39caf15`:** `processVillageGrowth()` ritorna senza spawn quando `foundingRoadJob` lavora alle quattro arterie. La telemetria Supabase (16/10, 18:23–18:29 UTC) registra partite a giorno 30+ con decine di strade e zero abitanti, oltre a ricerche `ROAD_REPAIR_SLOW` e blocchi di frame. Le righe di telemetria non identificano con certezza quale branch Vercel fosse aperta.
+- **Correzione su branch `fix/main-growth-during-road-planning-20261016`, PR [#52](https://github.com/erykwest/CONQUER/pull/52), non ancora in produzione:** consente case su arterie completate mentre la pianificazione dei bordi continua; conserva i pulse prima della prima strada; non lancia riparazioni concorrenti durante il lavoro in background.
+- **Ordini militari:** il codice `main` richiede cavaliere entro 16U dall'unità e dalla destinazione, e la simulazione parte in pausa. La PR aggiunge messaggi chiari per fuori-raggio, percorsi non validi e pausa, senza alterare le regole di combattimento. Un malfunzionamento aggiuntivo della selezione non è ancora dimostrato.
+- **Prove:** regressioni `qa/settlement-routing-spawn-regression.cjs`, `qa/combat-selection-regression.cjs` e intera suite deterministica in [GitHub Actions run 38948914788](https://github.com/erykwest/CONQUER/actions/runs/38948914788) **PASS** sul commit `b586607`. Rimangono da eseguire QA visuale/browser su salvataggio esistente e benchmark dei percorsi stradali.
+
 ## Quadro main — ciò che si può effettivamente affermare
 
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |
