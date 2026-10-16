@@ -33,6 +33,35 @@ const greedy=rules.traceBoundaryIndices(ellipseSamples,{x:100,y:100});
 assert.ok(greedy.length<ellipseSamples.length*.5,'reproduction: old greedy trace stops early on ellipse');
 const ellipticRing=verifyOrderedRing('elliptic White Zone',ellipse);
 assert.ok(ellipticRing.length>ellipseSamples.length*.85,'new contour covers entire ellipse perimeter');
+// A full patrol must progress through ordered boundary indices over many
+// successive destinations. Earlier tests checked single A* legs, missing the
+// short-arc oscillation seen in the live game.
+const driveStart=runtimeSource.indexOf('  function patrolDestination(');
+const driveEnd=runtimeSource.indexOf('  function patrolSafeWaypoint(',driveStart);
+assert.ok(driveStart>0&&driveEnd>driveStart,'patrol destination is extractable');
+const circuitPatrol={id:'perimeter-qa',kind:'patrol',x:100,y:100,patrolLoopPosition:null,patrolDirection:1};
+const circuitCtx=vm.createContext({
+  whiteBoundaryPoints:()=>ellipticRing,
+  whiteBoundaryLoopCache:ellipticRing.map((_,i)=>i),
+  activeWell:()=>({x:100,y:100}),
+  dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
+  Math
+});
+vm.runInContext('const PATROL_LOOP_STRIDE=2;',circuitCtx);
+vm.runInContext(runtimeSource.slice(driveStart,driveEnd),circuitCtx);
+const visitedIndices=[],quadrantsVisited=new Set();
+for(let i=0;i<70;i++){
+  const waypoint=vm.runInContext('patrolDestination(unit)',Object.assign(circuitCtx,{unit:circuitPatrol}));
+  assert.ok(waypoint,'each perimeter destination remains valid');
+  circuitPatrol.x=waypoint.x;circuitPatrol.y=waypoint.y;
+  visitedIndices.push(circuitPatrol.patrolLoopPosition);
+  quadrantsVisited.add(Math.floor((Math.atan2(waypoint.y-100,waypoint.x-100)+Math.PI)/(Math.PI/2))%4);
+}
+assert.ok(new Set(visitedIndices).size>=45,'70 patrol updates must traverse the full perimeter, not a small arc');
+assert.equal(quadrantsVisited.size,4,'moving patrol visits all four quadrants');
+assert.ok(visitedIndices.slice(1).every((idx,i)=>idx===(visitedIndices[i]+2)%ellipticRing.length),
+ 'successive patrol destinations always advance forward by stride (no oscillation)');
+
 const joined=p=>allowed(p)||((p.x-118)**2+(p.y-100)**2<=169);
 const joinedSamples=rules.boundaryPoints(joined,200,1.25);
 assert.ok(rules.traceBoundaryIndices(joinedSamples,{x:100,y:100}).length<joinedSamples.length*.5,
