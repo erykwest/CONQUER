@@ -64,7 +64,7 @@
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
-        const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
+        const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,patrolProbeOffset,...stored}=u;
         return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
@@ -93,7 +93,7 @@
     // previously stored [unit, destination], creating unit -> path -> unit
     // and aborting the entire simulation when saveLocal JSON.stringify ran.
     return {...combat,units:combat.units.map(u=>{
-      const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
+      const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,patrolProbeOffset,...stored}=u;
       return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
         ?{x:u.target.x,y:u.target.y}:null};
     })};
@@ -815,7 +815,10 @@
   }
   function patrolRouteCacheKey(start,goal){
     const q=p=>Math.round(p.x*4)+','+Math.round(p.y*4);
-    return whiteBoundaryRevision+'|'+patrolNavRevision+'|'+q(start)+'>'+q(goal);
+    // Construction, demolition and terrain edits can invalidate routes even
+    // when the White Zone boundary itself has not changed.
+    const navRevision=typeof navPerf!=='undefined'?(navPerf.navInvalidations||0):0;
+    return whiteBoundaryRevision+'|'+patrolNavRevision+'|'+navRevision+'|'+q(start)+'>'+q(goal);
   }
   function rememberPatrolRoute(key,route){
     if(patrolRouteCache.size>=PATROL_ROUTE_CACHE_MAX){
@@ -867,7 +870,9 @@
         const nx=cur.x+dx,ny=cur.y+dy,nk=key(nx,ny);if(closed.has(nk)||unavailable(nx,ny))continue;
         if(dx&&dy&&(unavailable(cur.x+dx,cur.y)||unavailable(cur.x,cur.y+dy)))continue;
         const from=pos(cur.x,cur.y),q=pos(nx,ny);
-        if(terrainSegmentCrossesCliff(from,q))continue;
+        // A* must enforce the same swept-footprint collision and zone
+        // restrictions as the actual patrol movement.
+        if(!safeMilitarySegment(from,q,id,'patrol')||!routeAllowed([from,q]))continue;
         const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
         if(tentative<(gScore.get(nk)??Infinity)){
           gScore.set(nk,tentative);came.set(nk,ck);
@@ -887,11 +892,14 @@
     const perf=window.__conquerPerf||(window.__conquerPerf={});
     perf.patrolRouteCalls=(perf.patrolRouteCalls||0)+1;
     if(patrolRouteCache.has(cacheKey)){
-      perf.patrolRouteCacheHits=(perf.patrolRouteCacheHits||0)+1;
       const cached=patrolRouteCache.get(cacheKey);
       const route=cached?.map((p,i,a)=>i===0?{x:start.x,y:start.y}:i===a.length-1?{x:goal.x,y:goal.y}:{...p})||null;
-      perf.patrolRouteLastMs=performance.now()-t0;
-      return route;
+      if(route?.length>1&&routeAllowed(route)&&route.slice(1).every((p,i)=>safeMilitarySegment(route[i],p,id,'patrol'))){
+        perf.patrolRouteCacheHits=(perf.patrolRouteCacheHits||0)+1;
+        perf.patrolRouteLastMs=performance.now()-t0;
+        return route;
+      }
+      patrolRouteCache.delete(cacheKey);
     }
     let route=null,mode='direct';
     if(safeMilitarySegment(start,goal,id,'patrol')&&routeAllowed([start,goal]))route=[start,goal];
@@ -904,7 +912,8 @@
     if(route?.length>1&&routeAllowed(route)&&route.slice(1).every((p,i)=>safeMilitarySegment(route[i],p,id,'patrol'))){
       rememberPatrolRoute(cacheKey,route);
     }else{
-      route=null;rememberPatrolRoute(cacheKey,null);perf.patrolRouteMisses=(perf.patrolRouteMisses||0)+1;
+      // A failed path must remain retryable after a gate opens or an obstruction moves.
+      route=null;perf.patrolRouteMisses=(perf.patrolRouteMisses||0)+1;
     }
     const ms=performance.now()-t0;perf.patrolRouteLastMs=ms;
     window.__conquerAnalytics?.measure('PATROL_ROUTE',ms,{mode,distance:+distance.toFixed(2),points:route?.length||0});
@@ -998,10 +1007,10 @@
       unit.patrolLoopPosition=loopPosition;
       unit.patrolAnchorIndex=loop[loopPosition];
       unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;unit.patrolDirection=1;
-      unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;
+      unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;unit.patrolProbeOffset=0;
     });
   }
-  function patrolDestination(unit){
+  function patrolDestination(unit,skip=0){
     const boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache;if(!boundary.length||!loop.length)return null;
     let position=Number.isInteger(unit.patrolLoopPosition)?unit.patrolLoopPosition:-1;
     let current=position>=0?loop[position]:-1;
@@ -1014,20 +1023,57 @@
         position=0;let bestD=dist(unit,boundary[loop[0]]);
         for(let i=1;i<loop.length;i++){const d=dist(unit,boundary[loop[i]]);if(d<bestD){bestD=d;position=i}}
       }
+      const direction=unit.patrolDirection<0?-1:1;
+      position=(position+direction*skip*PATROL_LOOP_STRIDE)%loop.length;
+      if(position<0)position+=loop.length;
       unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolAnchorIndex=null;
       return boundary[loop[position]];
     }
     const direction=unit.patrolDirection<0?-1:1;
-    position=(position+direction*PATROL_LOOP_STRIDE)%loop.length;if(position<0)position+=loop.length;
+    position=(position+direction*(skip+1)*PATROL_LOOP_STRIDE)%loop.length;if(position<0)position+=loop.length;
     unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolPreviousIndex=null;
     return boundary[loop[position]];
+  }
+  function patrolSafeWaypoint(candidate){
+    if(!candidate)return null;
+    const clear=p=>areaState(p).allowed&&cliffClearForFootprint(p,'patrol');
+    if(clear(candidate))return candidate;
+    // Samples of the White Zone perimeter may overlap a wall, house or
+    // blocked doorway. Shift a short distance inside the permitted area.
+    const center=activeWell()||{x:WORLD/2,y:WORLD/2};
+    const angle=Math.atan2(center.y-candidate.y,center.x-candidate.x);
+    for(const radius of [.5,1,1.5,2,2.5]){
+      for(const turn of [0,-Math.PI/4,Math.PI/4,-Math.PI/2,Math.PI/2,Math.PI]){
+        const a=angle+turn;
+        const p={x:candidate.x+Math.cos(a)*radius,y:candidate.y+Math.sin(a)*radius};
+        if(clear(p))return p;
+      }
+    }
+    return null;
   }
   function updatePatrols(now){
     for(const unit of combat.units){
       if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.campState||unit.target||now<(unit.nextPatrolAt||0))continue;
-      const target=patrolDestination(unit);
-      unit.nextPatrolAt=target?now:now+300;
-      if(target){unit.target=target;unit.path=null;unit.pathIndex=1}
+      const previous=unit.patrolLoopPosition,offset=unit.patrolProbeOffset||0;
+      let accepted=false;
+      // Test reachable waypoint candidates instead of advancing the patrol
+      // index before any path has actually been found.
+      for(let attempt=0;attempt<3;attempt++){
+        unit.patrolLoopPosition=previous;
+        const target=patrolSafeWaypoint(patrolDestination(unit,offset+attempt));
+        if(!target)continue;
+        const path=patrolRoute(unit,target,unit.id);
+        if(!path?.length||path.length<2)continue;
+        unit.target={x:target.x,y:target.y};
+        unit.path=path.map(p=>({x:p.x,y:p.y}));
+        unit.pathIndex=1;unit.patrolProbeOffset=0;unit.nextPatrolAt=now;
+        accepted=true;break;
+      }
+      if(!accepted){
+        unit.patrolLoopPosition=previous;
+        unit.patrolProbeOffset=(offset+3)%Math.max(1,whiteBoundaryLoopCache.length);
+        unit.nextPatrolAt=now+1000;
+      }
     }
   }
   function addPatrol(){
@@ -1113,7 +1159,7 @@
       if(!u.path?.length){
         const route=u.kind==='patrol'?patrolRoute(u,u.target,u.id):infantryRoute(u,u.target,u.id,u.kind);
         u.path=route?.map(p=>({x:p.x,y:p.y}))||null;u.pathIndex=1;
-        if(!u.path){u.target=null;if(u.kind==='patrol')u.nextPatrolAt=performance.now()+350;continue}
+        if(!u.path){u.target=null;if(u.kind==='patrol'){u.patrolProbeOffset=(u.patrolProbeOffset||0)+1;u.nextPatrolAt=performance.now()+650}continue}
       }
       let budget=dt*(u.kind==='knight'?1.5:u.kind==='patrol'?1.15:.8)*(window.ConquerCrossings?.movementMultiplier(u)||1);
       while(budget>0&&u.target){
@@ -1123,8 +1169,14 @@
         if(length<.025){u.x=next.x;u.y=next.y;u.pathIndex++;continue}
         const step=Math.min(length,budget);
         const nextPos={x:u.x+(next.x-u.x)*step/length,y:u.y+(next.y-u.y)*step/length};
-        if(!safeMilitarySegment(u,nextPos,u.id,u.kind)){
-          u.target=null;u.path=null;status('Cliff or obstruction blocks unit footprint: stopped');break;
+        if(!safeMilitarySegment(u,nextPos,u.id,u.kind)||
+           (u.kind==='patrol'&&!routeAllowed([u,nextPos]))){
+          u.target=null;u.path=null;
+          if(u.kind==='patrol'){
+            u.patrolProbeOffset=(u.patrolProbeOffset||0)+1;
+            u.nextPatrolAt=performance.now()+650;
+          }else status('Cliff or obstruction blocks unit footprint: stopped');
+          break;
         }
         u.x=nextPos.x;u.y=nextPos.y;budget-=step;moved=true;
         if(step>=length-.025){u.x=next.x;u.y=next.y;u.pathIndex++}

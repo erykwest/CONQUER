@@ -47,6 +47,65 @@ const cached=vm.runInContext("patrolRoute({x:100,y:85},{x:105,y:86},'p')",routeC
 assert.equal(cached.length,route.length,'route can be reused');
 assert.equal(routeContext.window.__conquerPerf.patrolRouteCacheHits,1,'repeat patrol leg uses route cache');
 
+// A wall across the direct line must be avoided in A*, not rejected only after
+// the whole computed route has been assembled.
+let wall=true;
+const insideWall=p=>wall&&p.x>=102.8&&p.x<=104.8&&p.y>=99.1&&p.y<=100.9;
+routeContext.pointBlockedForPeasant=insideWall;
+routeContext.safeMilitarySegment=(a,b)=>{
+ const count=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.1));
+ for(let i=0;i<=count;i++){
+  const t=i/count;
+  if(insideWall({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}))return false;
+ }
+ return true;
+};
+const detour=vm.runInContext("patrolRoute({x:100,y:100},{x:108,y:100},'obstacle')",routeContext);
+assert.ok(detour?.length>2,'patrol A* finds a detour around a solid obstruction');
+assert.ok(detour.slice(1).every((p,i)=>routeContext.safeMilitarySegment(detour[i],p)),
+ 'patrol path has no wall-crossing diagonals');
+// An existing cached route must be checked again when buildings appear.
+wall=false;
+vm.runInContext("patrolRoute({x:100,y:100},{x:108,y:100},'mutable')",routeContext);
+wall=true;
+const revised=vm.runInContext("patrolRoute({x:100,y:100},{x:108,y:100},'mutable')",routeContext);
+assert.ok(revised?.length>2&&revised.slice(1).every((p,i)=>routeContext.safeMilitarySegment(revised[i],p)),
+ 'changed obstruction invalidates a previously cached direct path');
+// Do not cache failure: the exact same route may become legal when reopened.
+routeContext.safeMilitarySegment=()=>false;
+const blocked=vm.runInContext("patrolRoute({x:100,y:100},{x:102,y:100},'reopen')",routeContext);
+assert.equal(blocked,null,'fully blocked patrol route correctly fails');
+routeContext.safeMilitarySegment=()=>true;
+wall=false;
+assert.ok(vm.runInContext("patrolRoute({x:100,y:100},{x:102,y:100},'reopen')",routeContext),
+ 'failed patrol route can be retried after the obstruction clears');
+
+// A bad waypoint is skipped only after pathfinding rejects it; the index and
+// route are committed together. No route must preserve the previous index.
+const destinationStart=runtimeSource.indexOf('  function patrolDestination(');
+const destinationEnd=runtimeSource.indexOf('  function addPatrol(',destinationStart);
+assert.ok(destinationStart>0&&destinationEnd>destinationStart);
+const points=Array.from({length:6},(_,i)=>({x:i*10,y:30}));
+const mover={id:'patrol-unit',kind:'patrol',x:0,y:30,patrolLoopPosition:0,patrolDirection:1,target:null};
+let allowCandidate=true;
+const waypointCtx=vm.createContext({
+  combat:{units:[mover]},whiteBoundaryLoopCache:[0,1,2,3,4,5],
+  whiteBoundaryPoints:()=>points,
+  activeWell:()=>({x:0,y:0}),WORLD:200,Math,performance:{now:()=>1000},
+  dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
+  areaState:()=>({allowed:true}),cliffClearForFootprint:()=>true,
+  patrolRoute:(from,to)=>allowCandidate&&to.x!==20?[from,to]:null
+});
+vm.runInContext('const PATROL_LOOP_STRIDE=2;',waypointCtx);
+vm.runInContext(runtimeSource.slice(destinationStart,destinationEnd),waypointCtx);
+vm.runInContext('updatePatrols(1000)',waypointCtx);
+assert.equal(mover.target.x,40,'patrol tries next waypoint when first is unreachable');
+assert.equal(mover.patrolLoopPosition,4,'patrol commits only the reachable boundary index');
+mover.target=null;allowCandidate=false;const previousIndex=mover.patrolLoopPosition;
+vm.runInContext('updatePatrols(2000)',waypointCtx);
+assert.equal(mover.target,null,'all blocked candidates leave patrol without a target');
+assert.equal(mover.patrolLoopPosition,previousIndex,'failed patrol search preserves prior waypoint');
+
 assert.match(runtimeSource,/\['squad','knight','patrol'\]\.includes\(u\.kind\)/,'patrol survives save restoration');
 assert.match(runtimeSource,/id="combatPatrolAdd"/,'Patrol + action is in the combat panel');
 assert.match(runtimeSource,/id="combatPatrolRemove"/,'Patrol - action is in the combat panel');
