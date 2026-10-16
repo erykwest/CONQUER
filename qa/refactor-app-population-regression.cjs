@@ -33,6 +33,7 @@ for(const [name,files] of Object.entries(parts)){
     // assignments and gives the pastoral adult a daily route. Strip exactly
     // those edits, then retain the original byte-for-byte extraction check.
     const edits=[
+      ["  if(!path&&dist(start,goal)<=18){\n    path=findPeasantPath(start,goal,house.id,3);\n    // A fence entrance can lie several units around the field perimeter.\n    // Expand the field-only detour when the short local A* is insufficient.\n    if(!path)path=findPeasantPath(start,goal,house.id,8);\n  }", "  if(!path&&dist(start,goal)<=18)path=findPeasantPath(start,goal,house.id,3);"],
       ["  if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;\n", ""],
       [".filter(part=>part.kind!=='outbuilding')", ''],
       ["houses.filter(h=>houseLevel(h)===tier&&(tier!==1||window.ConquerLivestock?.lotKindForHouse(h)!=='shepherd'))",
