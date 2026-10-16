@@ -48,11 +48,12 @@
       const room=getEntry(unit,rooms);
       if(!nowNight){
         if(unit.campState){
+          if(unit.campState==='returning'){unit.target=null;unit.path=null;unit.pathIndex=1}
           unit.campState=null;unit.campHome=null;changed=true;
         }
         continue;
       }
-      if(unit.campState==='camped'||unit.campState==='barracks')continue;
+      if(['camped','barracks','stationed'].includes(unit.campState))continue;
       // A unit already outside the yellow city territory stays where it is.
       if(!tactical.areaState(locationOf(unit)).yellow){
         unit.campState='camped';unit.target=null;unit.path=null;unit.pathIndex=1;
@@ -114,7 +115,7 @@
     const signature=JSON.stringify({rows:rows.map(r=>[r.room.id,r.room.capacity,r.index,r.count]),focused,night:night()});
     if(signature===lastBar)return;
     lastBar=signature;
-    for(const button of Array.from(bar.querySelectorAll('[data-camp-toggle]')))button.remove();
+    for(const item of Array.from(bar.querySelectorAll('[data-camp-toggle],[data-camp-hint]')))item.remove();
     for(const row of rows){
       const button=document.createElement('button');
       button.type='button';button.dataset.campToggle=row.room.id;
@@ -125,7 +126,7 @@
     }
     if(!rows.some(r=>r.room.id===focused))focused=null;
     if(!rows.length){
-      const hint=document.createElement('span');hint.dataset.campToggle='';
+      const hint=document.createElement('span');hint.dataset.campHint='';
       hint.textContent='Assegna una stanza Caserma nel castello';
       bar.insertBefore(hint,panel);
     }
