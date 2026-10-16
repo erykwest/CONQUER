@@ -1232,7 +1232,9 @@
     if(rules&&tacticalRuleAccum>=.1){
       const step=tacticalRuleAccum;tacticalRuleAccum=0;
       const ruleStart=performance.now();
-      const hostiles=combat.enemy.filter(e=>!e.defeated&&(!e.stats||e.stats.hp>0));
+      // Neutral daytime fauna must not trigger tower roster scans or
+      // expensive combat target acquisition.
+      const hostiles=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&(!e.stats||e.stats.hp>0));
       for(const e of hostiles){
         e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
       }

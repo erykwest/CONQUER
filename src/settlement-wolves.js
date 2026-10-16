@@ -73,18 +73,34 @@
     const p={x:wolf.home.x+Math.cos(angle)*radius,y:wolf.home.y+Math.sin(angle)*radius};
     return free(p)?p:wolf.home;
   }
+  // A wolf needs a short chase path, not the civilian road-weighted A*.
+  // The latter rechecks every street on every grid step and could freeze
+  // nighttime frames for hundreds of milliseconds when the target is blocked.
   function routeTo(wolf,goal){
-    if(!goal)return false;
+    if(!goal||!free(goal))return false;
+    const can=(a,b)=>peasantSegmentClear(a,b,wolf.id);
     let path=null;
-    if(peasantSegmentClear(wolf,goal,wolf.id))path=[{x:wolf.x,y:wolf.y},goal];
+    if(can(wolf,goal))path=[{x:wolf.x,y:wolf.y},goal];
     else{
-      const candidate=findPeasantPath(wolf,goal,wolf.id,9);
-      if(candidate?.length>1&&candidate.slice(1).every((p,i)=>
-        peasantSegmentClear(candidate[i],p,wolf.id)))path=candidate;
+      const dx=goal.x-wolf.x,dy=goal.y-wolf.y,L=Math.hypot(dx,dy)||1;
+      const nx=-dy/L,ny=dx/L;
+      // Two short bends slip around ordinary buildings or hedges.
+      // Fixed upper bounds keep a failed hunt from degenerating into a
+      // full-world graph search or a long synchronous fallback.
+      for(const offset of [2.5,5,8,11,14]){
+        if(path)break;
+        for(const sign of [1,-1]){
+          const side=offset*sign;
+          const a={x:wolf.x+dx*.04+nx*side,y:wolf.y+dy*.04+ny*side};
+          const b={x:goal.x-dx*.04+nx*side,y:goal.y-dy*.04+ny*side};
+          if(!free(a)||!free(b)||!can(wolf,a)||!can(a,b)||!can(b,goal))continue;
+          path=[{x:wolf.x,y:wolf.y},a,b,goal];break;
+        }
+      }
     }
-    if(!path){wolf.wolfPath=null;wolf.wolfPathIndex=1;return false}
-    wolf.wolfPath=path.map(p=>({x:p.x,y:p.y}));
-    wolf.wolfPathIndex=1;return true;
+    wolf.wolfPath=path?.map(p=>({x:p.x,y:p.y}))||null;
+    wolf.wolfPathIndex=1;
+    return !!path;
   }
   function advance(wolf,dt,speed){
     if(!wolf.wolfPath?.length)return;
@@ -107,8 +123,12 @@
   }
   function tick(dt){
     if(!Number.isFinite(dt)||dt<=0)return;
+    const t0=performance.now();
     ensure();
     const night=isNight();
+    // Distribute expensive route decisions over successive simulation ticks.
+    // Rendering and movement still update for every wolf.
+    let plannedThisTick=false,planned=0,failed=0;
     for(const wolf of pack()){
       if(wolf.defeated||wolf.stats?.hp===0)continue;
       wolf.neutral=!night;
@@ -122,21 +142,35 @@
           wolf.wolfDecisionIn=Math.min(.2,wolf.wolfDecisionIn);continue;
         }
         wolf.wolfMode='run';
-        if(wolf.wolfDecisionIn<=0||!wolf.wolfPath?.length){
-          routeTo(wolf,{x:target.x,y:target.y});
-          wolf.wolfDecisionIn=.65;
+        if(wolf.wolfDecisionIn<=0){
+          if(!plannedThisTick){
+            plannedThisTick=true;planned++;
+            if(!routeTo(wolf,{x:target.x,y:target.y}))failed++;
+            // A missing path gets a real cooldown: never recalculate on
+            // every frame just because the current path is null.
+            wolf.wolfDecisionIn=wolf.wolfPath?1:2.4;
+          }
         }
         advance(wolf,dt,1.35);
       }else{
         wolf.wolfTargetId=null;wolf.wolfState=night?'alert':'roaming';
-        if(wolf.wolfDecisionIn<=0||!wolf.wolfPath?.length){
-          routeTo(wolf,wanderTarget(wolf));
-          wolf.wolfDecisionIn=1.8+wolf.wolfSeed;
+        if(wolf.wolfDecisionIn<=0){
+          if(!plannedThisTick){
+            plannedThisTick=true;planned++;
+            if(!routeTo(wolf,wanderTarget(wolf)))failed++;
+            wolf.wolfDecisionIn=wolf.wolfPath?2.4+wolf.wolfSeed:3.4+wolf.wolfSeed;
+          }
         }
         wolf.wolfMode=wolf.wolfPath?.length?'walk':night?'howl':'idle';
         advance(wolf,dt,night?.54:.38);
       }
     }
+    const ms=performance.now()-t0,perf=window.__conquerPerf||(window.__conquerPerf={});
+    perf.wolfAiMs=ms;
+    perf.wolfAiMaxMs=Math.max(perf.wolfAiMaxMs||0,ms);
+    perf.wolfRouteAttempts=(perf.wolfRouteAttempts||0)+planned;
+    perf.wolfRouteFailures=(perf.wolfRouteFailures||0)+failed;
+    if(ms>20)window.__conquerAnalytics?.event('WOLF_AI_SLOW',{ms:+ms.toFixed(1),planned,failed,night},'warn',3000);
   }
   function draw(g,wolf){
     if(!window.ConquerAnimals?.SPECIES?.wolf||wolf.defeated||wolf.stats?.hp===0)return;

@@ -95,4 +95,26 @@ beast.neutral=false;
 rules.update(.25,[trooper],[beast],[],()=>true);
 assert.equal(trooper.engaged,true,'hostile wolf enters melee contact at night');
 assert.equal(beast.engaged,true,'wolf becomes a real target in melee');
+
+// Nighttime performance regression: obstructed wolves must not retry A* every
+// frame. Four wolves share one route-planning slot per simulation update.
+let attempts=0,civilianSearches=0;
+context.peasantSegmentClear=()=>{attempts++;return false};
+context.findPeasantPath=()=>{civilianSearches++;throw Error('wolf must not call civilian A*')};
+night=true;api.ensure();
+for(const wolf of wolves){wolf.wolfDecisionIn=0;wolf.wolfPath=null;}
+const initialChecks=attempts;
+api.tick(.05);
+const firstChecks=attempts-initialChecks;
+assert.ok(firstChecks>0,'one wolf attempts a bounded route');
+assert.ok(firstChecks<70,'bounded detours have fixed maximum work');
+let laterChecks=attempts;
+for(let i=0;i<16;i++)api.tick(.05);
+assert.ok(attempts-laterChecks<180,'no per-frame replan storm when paths fail');
+assert.equal(civilianSearches,0,'wolf pursuit never invokes expensive civilian pathfinder');
+assert.ok(win.__conquerPerf.wolfRouteAttempts<=6,
+ 'route planning is scheduled across ticks and obeys individual backoff');
+assert.ok(win.__conquerPerf.wolfRouteFailures>0,'blocked routes get counted');
+assert.ok(Number.isFinite(win.__conquerPerf.wolfAiMs),'wolf AI perf instrumentation is populated');
+
 console.log('PASS imported wolf SVG, stable spawning, daytime neutral, nocturnal hunt/melee, dawn release');
