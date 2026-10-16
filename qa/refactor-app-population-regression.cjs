@@ -36,10 +36,10 @@ for(const [name,files] of Object.entries(parts)){
       ["  if(!path&&dist(start,goal)<=18){\n    path=findPeasantPath(start,goal,house.id,3);\n    // A fence entrance can lie several units around the field perimeter.\n    // Expand the field-only detour when the short local A* is insufficient.\n    if(!path)path=findPeasantPath(start,goal,house.id,8);\n  }", "  if(!path&&dist(start,goal)<=18)path=findPeasantPath(start,goal,house.id,3);"],
       ["  if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;\n", ""],
       [".filter(part=>part.kind!=='outbuilding')", ''],
-      ["houses.filter(h=>houseLevel(h)===tier&&(tier!==1||window.ConquerLivestock?.lotKindForHouse(h)!=='shepherd'))",
+      ["houses.filter(h=>houseLevel(h)===tier&&\n    window.ConquerLivestock?.lotKindForHouse(h)!==(tier===1?'shepherd':'cow'))",
        "houses.filter(h=>houseLevel(h)===tier)"],
       ["+'|livestock-seed:'+State.seed;", ";"],
-      ["  // Flocks need their shepherd even on market/rest days.\n  if(houseLevel(house)===1&&resident.sex==='male'&&resident.age==='adult'&&\n      window.ConquerLivestock?.lotKindForHouse(house)==='shepherd')\n    return window.ConquerLivestock.shepherdPosition(house);\n", ""]
+      ["  // Flocks need their shepherd even on market/rest days.\n  if((houseLevel(house)===1||houseLevel(house)===2)&&resident.sex==='male'&&\n      resident.age==='adult'&&resident.index===0&&\n      ['shepherd','cow'].includes(window.ConquerLivestock?.lotKindForHouse(house)))\n    return window.ConquerLivestock.shepherdPosition(house);\n", ""]
     ];
     const original=edits.reduce((src,[edited,orig])=>{
       assert.equal(src.split(edited).length,2,'Expected exactly one population edit: '+edited);
