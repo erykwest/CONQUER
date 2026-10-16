@@ -10,3 +10,8 @@
 - Do not merge incomplete features solely to obtain a preview; request a one-off preview instead.
 
 Goal: many development commits and CI checks, **one automatic production deployment per completed iteration**.
+
+## Product context / continuity
+- Before estimating scope or starting implementation, read [docs/context/README.md](docs/context/README.md) and follow its links to vision, roadmap, branch-specific status, decisions, and subsystem backlog. Verify the live branch/HEAD and actual source before declaring a feature complete.
+- Preserve the pyramid in the same PR whenever priorities, implementation status, architectural contracts or design decisions change; keep proposals distinct from code, and code distinct from executed tests.
+- The [docs/feature-backlog.md](docs/feature-backlog.md) remains the detailed Builder/Manager backlog; the context pyramid links it instead of duplicating ownership.
