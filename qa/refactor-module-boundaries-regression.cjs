@@ -51,7 +51,7 @@ render3dHooks.push([
       if(s.auto)drawAutoStructure(s);else drawStructure(s);
     }
     drawStaticHouseFacadeDetails();`,
-  "    for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}\\n    drawStaticHouseFacadeDetails();"
+  "    for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}\n    drawStaticHouseFacadeDetails();"
 ]);
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));
