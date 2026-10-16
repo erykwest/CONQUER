@@ -436,24 +436,35 @@
     return heightCell[i];
   }
   function tileOf(p){return{x:clamp(Math.floor(p.x/STEP),0,N-1),y:clamp(Math.floor(p.y/STEP),0,N-1)}}
+  // The same simulated visual clock governs torches, daylight and combat LOS.
+  // Night vision is exactly one third of the daytime *radius* (not area).
+  function combatVisionFactor(){
+    return visualCycleFrac()>=VISUAL_DAYLIGHT_RATIO?1/3:1;
+  }
+  function combatVisionRadius(height){
+    return (VISION_BASE+VISION_PER_HEIGHT*height)*combatVisionFactor();
+  }
+  function combatForestSight(){return FOREST_SIGHT_U*combatVisionFactor()}
   function inForestDeep(p,forestId){
     if(forestId<0)return false;
     const f=State.environment[forestId];if(!f||!f.points)return false;
-    if(f.holes?.length)return forestNearestEdge(f,p).distance>FOREST_SIGHT_U;
+    const limit=combatForestSight();
+    if(f.holes?.length)return forestNearestEdge(f,p).distance>limit;
     let min=Infinity;
     for(let i=0;i<f.points.length;i++)min=Math.min(min,pointSegmentDistance(p,f.points[i],f.points[(i+1)%f.points.length]));
-    return min>FOREST_SIGHT_U;
+    return min>limit;
   }
   function observers(){
     const out=[];
     for(const tower of State.structures){
       if(tower.type!=='tower'||underConstruction(tower))continue;
       const h=clamp(Math.round(terrainElevation(tower)+structureLevel(tower)),0,8);
-      out.push({x:tower.x,y:tower.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:tower.id});
+      out.push({x:tower.x,y:tower.y,h,r:combatVisionRadius(h),id:tower.id});
     }
     for(const unit of combat.units){
       const h=clamp(Math.round(terrainElevation(unit)),0,8);
-      out.push({x:unit.x,y:unit.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:unit.id});
+      if(unit.defeated||unit.stats?.hp<=0||unit.campState==='barracks')continue;
+      out.push({x:unit.x,y:unit.y,h,r:combatVisionRadius(h),id:unit.id});
     }
     return out;
   }
@@ -466,8 +477,9 @@
       if(terrain>source.h+.05)return false;
       if(forestId>=0&&terrain+1>=source.h-.05){
         // Edge silhouettes may be visible, but deep tree cover hides the cell.
-        if(!(forestId===targetForest&&length-dist(source,p)<FOREST_SIGHT_U)&&
-           !(forestId===sourceForest&&dist(source,p)<FOREST_SIGHT_U))return false;
+        const limit=combatForestSight();
+        if(!(forestId===targetForest&&length-dist(source,p)<limit)&&
+           !(forestId===sourceForest&&dist(source,p)<limit))return false;
       }
     }
     return true;
@@ -477,10 +489,10 @@
     const sourceForest=forestAt(source),targetForest=forestAt(target);
     if(targetForest>=0){
       if(sourceForest===targetForest){
-        if(dist(source,target)>FOREST_SIGHT_U)return false;
+        if(dist(source,target)>combatForestSight())return false;
       }else if(inForestDeep(target,targetForest))return false;
     }
-    if(sourceForest>=0&&sourceForest!==targetForest&&dist(source,target)>FOREST_SIGHT_U)return false;
+    if(sourceForest>=0&&sourceForest!==targetForest&&dist(source,target)>combatForestSight())return false;
     return lineVisible(source,target,sourceForest,targetForest);
   }
   function paintFogBitmap(){
@@ -504,7 +516,9 @@
     if(!force&&now-lastVision<500)return;
     startUnits();terrainCache();
     const sources=observers();
-    const sig=sources.map(s=>s.id+':'+s.x.toFixed(1)+':'+s.y.toFixed(1)+':'+s.h).join('|')+
+    // A day/night or forced-light switch changes vision even when the tower
+    // and every soldier are stationary. Include the radius in the cache key.
+    const sig=sources.map(s=>s.id+':'+s.x.toFixed(1)+':'+s.y.toFixed(1)+':'+s.h+':'+s.r.toFixed(2)).join('|')+
       ':structures'+State.structures.length+':env'+State.environment.length;
     // Static watchtowers do not require a full 10k-cell raycast every 2.5s.
     // Retain occasional refresh for in-place terrain / forest edits.
@@ -536,7 +550,9 @@
     updateAlert(sources);
   }
   function spotted(p,sources){
-    const q=tileOf(p);return !!visible[idx(q.x,q.y)]||sources.some(s=>sourceSees(s,p));
+    // Enemy contacts must obey actual LOS at this instant, never a stale fog
+    // bitmap from the previous day/night phase.
+    return !!sources?.some(s=>sourceSees(s,p));
   }
   function updateAlert(sources){
     let next='clear';
@@ -1220,7 +1236,11 @@
             const facing=((e.x-shooter.x)*shooter.nx+(e.y-shooter.y)*shooter.ny)/d;
             if(facing<.45)return false;
           }
-          return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:rules.shooterRange(shooter,e)},e);
+          // A bow keeps its physical range, but a tower cannot select a
+          // target farther than its current (night-adjusted) sight radius.
+          const height=clamp(Math.round(shooter.h),0,8);
+          const range=Math.min(rules.shooterRange(shooter,e),combatVisionRadius(height));
+          return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:range},e);
         },
         (a,b)=>safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
       const ruleMs=performance.now()-ruleStart;

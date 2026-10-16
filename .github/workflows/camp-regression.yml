@@ -30,6 +30,7 @@ jobs:
       - name: Behavioral regression
         run: |
           node qa/camp-regression.cjs
+          node qa/night-vision-regression.cjs
           node qa/patrol-regression.cjs
           node qa/combat-selection-regression.cjs
           node qa/settlement-routing-spawn-regression.cjs
