@@ -45,6 +45,16 @@
     const nowNight=night(),rooms=barracks();let changed=false;
     for(const unit of units()){
       if(!['squad','patrol','knight'].includes(unit.kind)||unit.defeated||unit.routing)continue;
+      // White Zone patrols remain active day and night, even beyond Yellow.
+      // Recover saved patrols that were incorrectly put into a field camp.
+      if(unit.kind==='patrol'){
+        if(unit.campState){
+          unit.campState=null;unit.campHome=null;
+          unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;
+          changed=true;
+        }
+        continue;
+      }
       const room=unit.barracksId?getEntry(unit,rooms):null;
       if(!nowNight){
         if(unit.campState){
@@ -59,8 +69,8 @@
         unit.campState='camped';unit.target=null;unit.path=null;unit.pathIndex=1;
         changed=true;continue;
       }
-      // Unassigned squads, knights and patrols have no indoor barracks
-      // destination; they remain on duty inside yellow and camp outside it.
+      // Unassigned squads and knights have no indoor barracks destination;
+      // they remain on duty inside Yellow and camp outside it.
       if(!room){if(unit.campState){unit.campState=null;changed=true}continue}
       const home=entryPoint(room);
       if(distance(unit,home)<=.35){
@@ -182,7 +192,7 @@
   }
   function drawEncampments(g){
     const campers=units().filter(u=>u.campState==='camped'&&!u.defeated&&
-      ['squad','patrol','knight'].includes(u.kind));
+      ['squad','knight'].includes(u.kind));
     if(!campers.length)return;
     withRenderContext(g,()=>{
       for(const unit of campers){

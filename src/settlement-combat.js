@@ -633,6 +633,59 @@
     g.drawImage(backdrop,0,0);
     g.restore();
   }
+  // Infantry standards use the same campaign heraldry raster as tower flags,
+  // not a separately generated unit emblem.
+  function drawSquadStandard(p,id){
+    const base=w2s(p,.08),scale=clamp(State.view.scale,.55,1.45);
+    const mastX=base.x+5*scale,mastTop=base.y-36*scale;
+    const width=14*scale,height=19*scale;
+    const wave=Math.sin(visualCycleDay()*18+(peasantHash(id)%1000)*.00628)*1.1*scale;
+    const topLeft={x:mastX,y:mastTop+2*scale};
+    const topRight={x:mastX+width,y:topLeft.y+wave};
+    const bottomRight={x:topRight.x,y:topRight.y+height};
+    const bottomLeft={x:topLeft.x,y:topLeft.y+height};
+    g.save();
+    g.strokeStyle='#705038';g.lineWidth=Math.max(1,1.5*scale);
+    g.beginPath();g.moveTo(mastX,base.y-2*scale);g.lineTo(mastX,mastTop);g.stroke();
+    g.save();
+    g.beginPath();g.moveTo(topLeft.x,topLeft.y);g.lineTo(topRight.x,topRight.y);
+    g.lineTo(bottomRight.x,bottomRight.y);g.lineTo(bottomLeft.x,bottomLeft.y);
+    g.closePath();g.clip();
+    const herald=State.heraldry||{};
+    if(!window.__conquerHeraldryCanvas?.paint(g,topLeft.x,Math.min(topLeft.y,topRight.y),width,height+Math.abs(wave))){
+      g.fillStyle=herald.c1||REIGN_COLOR_1;
+      g.fillRect(topLeft.x,topLeft.y,width,height+Math.abs(wave));
+      g.fillStyle=herald.c2||REIGN_COLOR_2;
+      g.fillRect(topLeft.x+width/2,topLeft.y,width/2,height+Math.abs(wave));
+    }
+    g.restore();
+    g.strokeStyle='#e0d3b1';g.lineWidth=Math.max(.7,.85*scale);
+    g.beginPath();g.moveTo(topLeft.x,topLeft.y);g.lineTo(topRight.x,topRight.y);
+    g.lineTo(bottomRight.x,bottomRight.y);g.lineTo(bottomLeft.x,bottomLeft.y);
+    g.closePath();g.stroke();
+    g.fillStyle='#c6a461';g.beginPath();g.arc(mastX,mastTop,Math.max(1,1.1*scale),0,Math.PI*2);g.fill();
+    g.restore();
+  }
+  // One torch-bearer per two-man patrol: the light is held above the leading
+  // soldier's right hand, rather than being a stationary world fixture.
+  function drawPatrolTorch(p,id){
+    const base=w2s(p,.08),figureScale=militaryScale();
+    const scale=clamp(State.view.scale*.72,.45,1.5);
+    const grip={x:base.x+5.4*figureScale*.55,y:base.y-1.25*figureScale};
+    const tip={x:grip.x+1.2*figureScale,y:grip.y-15*figureScale};
+    g.save();
+    g.strokeStyle='#63472d';g.lineWidth=Math.max(1,1.65*figureScale);
+    g.beginPath();g.moveTo(grip.x,grip.y);g.lineTo(tip.x,tip.y);g.stroke();
+    g.fillStyle='#49372b';g.fillRect(tip.x-1.8*figureScale,tip.y-1.5*figureScale,3.6*figureScale,3*figureScale);
+    const glow=g.createRadialGradient(tip.x,tip.y,0,tip.x,tip.y,9*scale);
+    glow.addColorStop(0,'rgba(255,189,79,.48)');
+    glow.addColorStop(.5,'rgba(247,134,40,.21)');
+    glow.addColorStop(1,'rgba(247,134,40,0)');
+    g.globalCompositeOperation='screen';g.fillStyle=glow;
+    g.beginPath();g.arc(tip.x,tip.y,9*scale,0,Math.PI*2);g.fill();
+    g.restore();
+    drawScreenFlame(tip,scale,id+':patrol-hand-torch');
+  }
   function renderOverlay(){
     if(!combat)return;
     const overlayStart=performance.now();
@@ -671,7 +724,10 @@
         for(let i=0;i<count;i++){
           const row=Math.floor(i/3),col=i%3,spacing=.55;
           const offset=count===2?(i?spacing/2:-spacing/2):(col-1)*spacing;
-          characters.push({p:{x:u.x+offset,y:u.y+(row-.4)*spacing},type:'spearman',id:u.id+':'+i,flag:u.kind==='squad'&&i===0,unit:u,index:i});
+          const torch=u.kind==='patrol'&&i===0&&window.ConquerCamp?.isNight();
+          characters.push({p:{x:u.x+offset,y:u.y+(row-.4)*spacing},
+            type:torch?'unarmed':'spearman',id:u.id+':'+i,
+            flag:u.kind==='squad'&&i===0,torch,unit:u,index:i});
         }
       }
     }
@@ -691,13 +747,10 @@
             g.lineTo(base.x+(end.x-base.x)*(.25+.7*pulse),base.y-8+(end.y-base.y-8)*(.25+.7*pulse));g.stroke();
           }
         }
-        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,.08,()=>{
-          const base=w2s(soldier.p,.08);
-          g.strokeStyle='#5d4535';g.lineWidth=1.8;g.beginPath();
-          g.moveTo(base.x+5,base.y-2);g.lineTo(base.x+5,base.y-27);g.stroke();
-          g.fillStyle='#d6bd68';g.beginPath();g.moveTo(base.x+5,base.y-27);
-          g.lineTo(base.x+19,base.y-24);g.lineTo(base.x+5,base.y-19);g.fill();
-        });
+        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,.08,()=>
+          drawSquadStandard(soldier.p,soldier.unit.id));
+        if(soldier.torch)withUrbanFigureOcclusion(soldier.p,.08,()=>
+          drawPatrolTorch(soldier.p,soldier.id));
       }
       for(const e of combat.enemy){
         if(e.defeated||e.stats?.hp<=0||!spotted(e,sightSources))continue;
