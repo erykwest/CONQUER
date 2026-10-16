@@ -76,6 +76,12 @@ Il modulo [settlement-assets.js](../../src/settlement-assets.js) definisce già 
 
 L'export [VISUAL/AUDIO](sources/VISUAL-AUDIO-2026-10-14.md) riporta **asset Blender/PNG locali non committati**, dimensioni non direttamente verificabili e due stime incompatibili (627 vs somma 657 MB). Non registrarli come asset distribuiti. Audio/Suno e prova del modello 3D per cutaway/danni/cantiere restano discussioni/prototipi, non implementazioni certificate.
 
+### Libreria audio — inventario storico Drive, non implementazione
+
+L'export [Valuta suoni Pixabay](sources/PIXABAY-SOUNDS-2026-10-14.md) registra che **il 14/10** l'assistente ha elencato su Drive **24 MP3 (10 ambiente/natura, 14 effetti/attività)**, raggruppandoli dai nomi. Il file riporta tre nomi `rain-sound-550289`, due con la stessa dimensione. **Non sono stati ascoltati né ispezionati gli hash**, perciò il duplicato è un'ipotesi; non è stata rifatta ora l'ispezione del contenuto Drive. In questa importazione non sono stati importati MP3, misurate prestazioni audio, verificate licenze individuali o eseguiti test browser. I suoni rimangono **fuori Git** finché non vengono integrate risorse effettive.
+
+L'utente ha richiesto sottofondo per stagione/meteo e SFX locali attivi **se selezionati o a zoom ≥30%**; l'implementazione resta da verificare, così come fade, attenuazione spaziale, limite voci e controllo autoplay.
+
 ## QA nominate per i prossimi audit
 
 - `qa/fields-regression.cjs`
