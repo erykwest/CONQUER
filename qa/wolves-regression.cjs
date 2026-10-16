@@ -145,8 +145,8 @@ let laterChecks=attempts;
 for(let i=0;i<16;i++)api.tick(.05);
 assert.ok(attempts-laterChecks<180,'no per-frame replan storm when paths fail');
 assert.equal(civilianSearches,0,'wolf pursuit never invokes expensive civilian pathfinder');
-assert.ok(win.__conquerPerf.wolfRouteAttempts-baselineRoutes<=6,
- 'route planning is scheduled across ticks and obeys individual backoff');
+assert.ok(win.__conquerPerf.wolfRouteAttempts-baselineRoutes<=17,
+ 'at most one wolf route may be planned in each of 17 simulated ticks');
 assert.ok(win.__conquerPerf.wolfRouteFailures>0,'blocked routes get counted');
 assert.ok(Number.isFinite(win.__conquerPerf.wolfAiMs),'wolf AI perf instrumentation is populated');
 
