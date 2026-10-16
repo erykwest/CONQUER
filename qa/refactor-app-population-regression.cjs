@@ -29,7 +29,14 @@ for(const [name,files] of Object.entries(parts)){
     // Behaviour edit: L3/L4 yard outbuildings are excluded from the townhouse
     // shadow hull. Each such edit must appear exactly once; removing it must
     // give back the byte-identical extracted module.
-    const edits=[[".filter(part=>part.kind!=='outbuilding')",'']];
+    const edits=[[".filter(part=>part.kind!=='outbuilding')",''],
+      // Behaviour edits (cutaway furniture): occupants stand on spots the furniture
+      // leaves free, cutaway gates use their ground plane, and slit archers already
+      // stand on their floor inside the wall (archerSlots).
+      ["        // Stand on floor spots left free by the furniture; the fixed layout is the fallback.\n        const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);\n",''],
+      ["const p=spots?.[i]?{x:spots[i].x+sway*.4,y:spots[i].y}:cutawayRoomPoint(slot,nx+sway,ny);","const p=cutawayRoomPoint(slot,nx+sway,ny);"],
+      ["    if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,render);else render();\n  }\n}\nfunction wallPatrolPoint","    if(s.type==='tower')withStructureGroundPlane(s,render);else render();\n  }\n}\nfunction wallPatrolPoint"],
+      ["      // Slit archers already stand on their floor just inside the wall (archerSlots).\n      const p=slot.p;","      const p=slot.kind==='slit'\n        ?{x:tower.x+(slot.p.x-tower.x)*.63,y:tower.y+(slot.p.y-tower.y)*.63}\n        :slot.p;"]];
     const original=edits.reduce((src,[edited,orig])=>{
       assert.equal(src.split(edited).length,2,'Expected exactly one population edit: '+edited);
       return src.replace(edited,()=>orig);

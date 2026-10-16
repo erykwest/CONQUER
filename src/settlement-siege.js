@@ -194,42 +194,18 @@
         h:ground+top,visualZ:ground+z});
     }
     if(wood)return result; // Wooden towers have no stone arrow slits.
-    const iv=structureInteriorVector(tower);
-    let dirs=[];
-    if(tower.shape==='round'){
-      const base=Math.atan2(iv.y,iv.x);
-      // Face zero opens toward the castle interior, never a firing slit.
-      dirs=[1,2,3].map(i=>({face:i,nx:Math.cos(base+i*Math.PI/2),ny:Math.sin(base+i*Math.PI/2)}));
-    }else{
-      const fp=footprintPoints(tower),interior=interiorFacadeEdgeIndex(tower);
-      for(let i=0;i<fp.length;i++){
-        if(i===interior)continue;
-        const a=fp[i],b=fp[(i+1)%fp.length];
-        const nx=(a.x+b.x)/2-tower.x,ny=(a.y+b.y)/2-tower.y,L=Math.hypot(nx,ny)||1;
-        dirs.push({face:i,nx:nx/L,ny:ny/L});
-      }
-    }
-    const links=State.structures.filter(s=>!underConstruction(s)&&['wall','built','palisade'].includes(s.type)
-      &&(s.aSnap===tower.id||s.bSnap===tower.id));
-    const blocked=(dir,floor)=>{
-      return links.some(wall=>{
-        if(structureLevel(wall)<floor)return false;
-        const contact=wall.aSnap===tower.id?wall.a:wall.b;
-        if(!contact)return false;
-        const dx=contact.x-tower.x,dy=contact.y-tower.y,L=Math.hypot(dx,dy)||1;
-        // Corner junctions disable both adjacent wall faces.
-        return (dir.nx*dx+dir.ny*dy)/L>=.65;
-      });
-    };
-    const radius=tower.shape==='round'?Math.max(.13,tower.r-.17):Math.max(.13,(tower.size||1)/2-.17);
-    for(let floor=top;floor>=2;floor--){ // P1 has no arrow slits
-      const z=[1.34,2.48,3.62][floor-1];
-      if(z>=structureHeight(tower)-.28)continue;
-      for(const dir of dirs){
-        if(blocked(dir,floor))continue;
+    // Exactly the faces and heights where towerWindowRows draws an arrow slit: the
+    // archer stands on that floor just inside the wall, and shoots from the slit.
+    const half=tower.shape==='round'?(Number(tower.r)||.5):(tower.size||1)/2;
+    const radius=Math.max(.13,half-cutawayWallThickness(tower)-.1);
+    for(const row of towerWindowRows(tower).slice().reverse()){
+      if(row.floor<2)continue;   // P1 has no arrow slits
+      const floor=row.floor,feet=towerFloorZ(tower,floor);
+      for(const dir of towerFaceDirections(tower)){
+        if(!towerSlitFace(tower,dir.face,floor))continue;
         const p={x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
         result.push({id:tower.id+':slit:'+floor+':'+dir.face,kind:'slit',
-          floor,face:dir.face,nx:dir.nx,ny:dir.ny,p,z,h:ground+floor,visualZ:ground+z});
+          floor,face:dir.face,nx:dir.nx,ny:dir.ny,p,z:feet,slitZ:row.z,h:ground+floor,visualZ:ground+row.z});
       }
     }
     return result;

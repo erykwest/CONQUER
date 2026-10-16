@@ -16,11 +16,13 @@ function drawCutawayOccupants(){
         if(slot.role==='barracks'||slot.role==='quarters'){count=3;kind='soldier'}
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
         if(!count)continue;
+        // Stand on floor spots left free by the furniture; the fixed layout is the fallback.
+        const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);
         const positions=cutawayOccupantLayout(count),items=[];
         for(let i=0;i<count;i++){
           const [nx,ny]=positions[i%positions.length],phase=(t*.42+i*.21+(peasantHash(s.id+'-'+slot.index+'-'+i)%100)/100)%1;
           const sway=Math.sin(phase*Math.PI*2)*.035;
-          const p=cutawayRoomPoint(slot,nx+sway,ny);
+          const p=spots?.[i]?{x:spots[i].x+sway*.4,y:spots[i].y}:cutawayRoomPoint(slot,nx+sway,ny);
           items.push({p,phase,i,depth:viewDepthPoint(p)});
         }
         items.sort((a,b)=>a.depth-b.depth);
@@ -31,7 +33,7 @@ function drawCutawayOccupants(){
         }
       }
     };
-    if(s.type==='tower')withStructureGroundPlane(s,render);else render();
+    if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,render);else render();
   }
 }
 function wallPatrolPoint(wall,day,index=0,count=1){
@@ -117,9 +119,8 @@ function drawCastleSoldiers(){
     const occupied=window.ConquerSiege?.occupiedArcherSlots(tower)||[];
     for(const slot of occupied){
       if(slot.kind==='slit'&&!structureCutaway(tower))continue;
-      const p=slot.kind==='slit'
-        ?{x:tower.x+(slot.p.x-tower.x)*.63,y:tower.y+(slot.p.y-tower.y)*.63}
-        :slot.p;
+      // Slit archers already stand on their floor just inside the wall (archerSlots).
+      const p=slot.p;
       withStructureGroundPlane(tower,()=>{
         if(worldPointVisible(p,slot.z,48))
           drawSoldierFigure(p,slot.z,'archer',slot.id,day+(slot.floor||0)*.15);
