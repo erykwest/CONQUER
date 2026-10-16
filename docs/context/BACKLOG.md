@@ -71,7 +71,7 @@ La presenza di `src/settlement-combat.js` prova un prototipo tattico, non tutti 
 
 - **X-01 — Renderer e performance:** modulare logica e disegno, usare SVG/Canvas e cache/culling, mantenendo una fonte sola per coordinate, z e proiezione.
 - **X-02 — Illuminazione/stagioni:** tenere realismo atmosferico coerente con ciclo di gioco e visibilità tattica (riduzione notturna del raggio: proposta da validare).
-- **X-03 — Suoni:** loop ambientali variabili; elementi specifici alla selezione o sopra zoom 30%; dissolvenze e limite voci. Gli asset sono esterni a questa repository fino a import esplicito.
+- **X-03 — Suoni:** tre canali (ambiente, località/oggetti, eventi) con layer clima/stagioni e giornata; audio locale per selezione **oppure zoom ≥30%**, dissolvenze, attenuazione e limite voci. Il thread [Pixabay/Drive](sources/PIXABAY-SOUNDS-2026-10-14.md) riporta 24 MP3 repertoriati ma non ascoltati; gli asset **non sono nel repository/deployment fino a import verificato**.
 - **X-04 — QA visuale:** fixture, più rotazioni camera, controlli di occlusione, verifiche manuali descritte, regressioni automatiche.
 - **X-05 — Pubblicazione:** pagina CONQUER, devlog, feedback/follower, donazioni opzionali, itch.io; Steam possibile più avanti.
 
@@ -85,7 +85,7 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **V-01 — Prototipo rendering 3D vs sprite:** torre + due mura, giunzioni, cutaway, progressione del cantiere, danni, benchmark e fallback Canvas. **PROPOSTA**, non conversione autorizzata.
 - **V-02 — Cache asset:** misurare le 192 voci della cache bitmap e 32 MiB nominali dei compositi; identificare VRAM/RAM, eviction e perf prima di creare loader concorrenti.
 - **V-03 — Animazioni lavoro popolani:** mani/attrezzi modulari condizionati dall'attività reale, accessori stagionali solo quando utili e vicini; **PROPOSTA**.
-- **V-04 — Audio:** streaming musica current+next, SFX e ambience on demand, crossfade, controllo licenze/tracce Suno; **DIREZIONE**, non audio già pubblicato.
+- **V-04 — Audio:** streaming musica current+next, SFX e ambience on demand, crossfade, controllo licenze/tracce Suno; **DIREZIONE**, non audio già pubblicato. Fonte SFX distinta: [playlist Pixabay e inventario Drive](sources/PIXABAY-SOUNDS-2026-10-14.md), da verificare file per file.
 - **UI-01 — Minimappa + LOD:** [PR #44](https://github.com/erykwest/CONQUER/pull/44) contiene codice su branch; prima del merge QA real browser ISO/plan, rotazioni, selezione, fog, mobile e benchmark. Building LOD nel mondo 3D **NON incluso**.
 
 ## Requisiti per promuovere un'idea al lavoro
