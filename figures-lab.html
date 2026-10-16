@@ -42,8 +42,7 @@
   <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
   <label id="coatBox">Manto <select id="coat"><option value="brown">marrone</option><option value="black">nero</option><option value="grey">grigio</option><option value="white">bianco</option></select></label>
   <div class="group" id="wagonBox">
-    <label>Telaio <select id="wChassis"><option value="wagon">carro 4 ruote</option><option value="cart">carretto 2 ruote</option></select></label>
-    <label>Copertura <select id="wBody"><option value="open">aperto</option><option value="covered">telonato</option></select></label>
+    <label>Telaio <select id="wChassis"><option value="wagon">carro 4 ruote</option><option value="cart">carretto 2 ruote</option><option value="carriage">carrozza nobile</option></select></label>
     <label>Cavalli <select id="wTeam"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label>
     <label>Guidatore <select id="wDriver"><option value="villager">popolano</option><option value="spearman">guerriero</option><option value="knight">cavaliere</option><option value="">nessuno</option></select></label>
     <label>Carico <select id="wCargo"><option value="mixed">misto</option><option value="sack">sacchi</option><option value="crate">casse</option><option value="barrel">botti</option><option value="hay">fieno</option><option value="logs">legna</option><option value="stone">pietra</option><option value="none">vuoto</option></select></label>
@@ -181,7 +180,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   }
   function wagonSpec(){
     const coat=$('coat').value,team=Number($('wTeam').value);
-    return{chassis:$('wChassis').value,body:$('wBody').value,cargo:CARGO_PRESETS[$('wCargo').value],
+    return{chassis:$('wChassis').value,cargo:CARGO_PRESETS[$('wCargo').value],
       team:Array.from({length:team},(_,i)=>({coat:i?(coat==='white'?'grey':'white'):coat})),driver:driverFor($('wDriver').value)};
   }
   function heroWagon(W,H,k,dt){
@@ -258,7 +257,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     // A supply wagon circling the meadow with its 3D team and a seated driver.
     sceneWagonA+=dt*.06;
     const wp={x:Math.cos(sceneWagonA)*6.2,y:Math.sin(sceneWagonA)*6.2,heading:sceneWagonA+Math.PI/2,distance:sceneWagonA*6.2},
-      wspec={chassis:'wagon',body:'open',cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}]},an=W3.anchors(wspec,wp);
+      wspec={chassis:'wagon',cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}]},an=W3.anchors(wspec,wp);
     meshes.push(W3.worldTriangles(wspec,wp));
     an.horses.forEach((h,i)=>meshes.push(A3.triangles('horse',{...h,heading:wp.heading},{mode:'walk',t:clock+i*.12,seed:i},A3.coatColors('horse',wspec.team[i].coat))));
     const drv=driverFor('villager');

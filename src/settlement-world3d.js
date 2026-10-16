@@ -593,6 +593,24 @@
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
       upload(gl,'decals',buildDecals(atlas));S.sig.decals=dSig;st.decalsMs=performance.now()-a;
     }
+    // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
+    // side shading follows the camera quarter-turn, so keep one buffer per rotation.
+    if(window.ConquerScatter&&window.ConquerScatterModel){
+      const scContent=[season,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
+      if(S.scatterContent!==scContent){
+        const a=performance.now();
+        for(const v of S.scatterVariants?.values()||[])gl.deleteBuffer(v.b);
+        S.scatterContent=scContent;S.scatterVariants=new Map();S.scatterProps=ConquerScatter.layout();
+        st.scatterLayoutMs=performance.now()-a;st.scatterProps=S.scatterProps.length;
+      }
+      let v=S.scatterVariants.get(rot);
+      if(!v){
+        const a=performance.now(),d=ConquerScatter.worldMesh(S.scatterProps,rot),b=gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,gl.STATIC_DRAW);
+        v={b,n:d.length};S.scatterVariants.set(rot,v);st.scatterMeshMs=performance.now()-a;
+      }
+      S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
+    }
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
     st.ensureMs=performance.now()-t0;
@@ -641,7 +659,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write

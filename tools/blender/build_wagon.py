@@ -29,7 +29,8 @@ from cq_blender import METERS_PER_U, Part, fresh_collection, export_part, u
 
 COLORS = {
     'wood': '#9a6a3f', 'woodLight': '#b98652', 'woodDark': '#6f4a2b',
-    'iron': '#55595d', 'ironLight': '#7c8186', 'canvas': '#e8dcc0', 'canvasHoop': '#8a6a46',
+    'iron': '#55595d', 'ironLight': '#7c8186',
+    'lacquer': '#6a2430', 'lacquerDark': '#3e161d', 'trim': '#c9a24b', 'glass': '#2a333c', 'glassLight': '#e9d48a', 'velvet': '#4f1a2a',
     'sack': '#c9a46e', 'sackDark': '#a8834f', 'twine': '#7a5a32', 'hay': '#e2c25a',
     'barrel': '#8a5a35', 'stone': '#9a9893', 'stoneDark': '#7f7d78', 'log': '#8b6a45', 'logEnd': '#c9a66f',
     'leather': '#4a3020',
@@ -68,6 +69,59 @@ def wheel(part, r, half=.045, spokes=8):
 
 def axle(part, x, z, half_track):
     part.box((x, 0, z), (.09, half_track * 2 + .2, .09), 'woodDark')
+
+# Noble carriage geometry (metres): axles, wheel radii and the coachman's seat.
+CARRIAGE = {'rearX': -.8, 'rearR': .72, 'frontX': 1.05, 'frontR': .52, 'track': .82, 'seat': (1.18, 0, 1.6)}
+
+def carriage(part):
+    """Closed coach without wheels: perch and springs, boat-shaped lacquered cabin with
+    windows, crest door and gilt trim, coachman's box with footboard, lamps, rear board."""
+    c = CARRIAGE
+    axle(part, c['rearX'], c['rearR'], c['track']); axle(part, c['frontX'], c['frontR'], c['track'])
+    part.beam((c['rearX'], 0, c['rearR'] - .02), (c['frontX'] + .1, 0, c['frontR'] - .02), .1, .08, 'lacquerDark')   # perch
+    # C-springs from the axles up to the cabin corners.
+    for x0, z0, x1 in ((c['rearX'], c['rearR'], -.78), (c['frontX'], c['frontR'], .48)):
+        for s in (-1, 1):
+            part.beam((x0, s * .5, z0 + .04), (x0 + (x1 - x0) * .4, s * .52, z0 + .32), .05, .05, 'iron')
+            part.beam((x0 + (x1 - x0) * .4, s * .52, z0 + .32), (x1, s * .5, 1.0), .05, .05, 'iron')
+    # Cabin: narrower boat-shaped belly, then the body, the roof and its crown.
+    part.taper((-.15, 0, .92), (-.15, 0, 1.12), 1.2, 1.0, 1.5, 1.24, 'lacquerDark')
+    part.box((-.15, 0, 1.63), (1.5, 1.24, 1.02), 'lacquer')
+    part.box((-.15, 0, 2.18), (1.62, 1.34, .08), 'lacquerDark')
+    part.box((-.15, 0, 2.26), (1.3, 1.06, .08), 'lacquer')
+    for z in (1.15, 2.12):                                                               # gilt bands
+        part.box((-.15, 0, z), (1.53, 1.27, .04), 'trim')
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            part.box((-.15 + sx * .76, sy * .62, 1.63), (.04, .04, 1.0), 'trim')        # corner beads
+            part.box((-.15 + sx * .78, sy * .64, 2.27), (.06, .06, .1), 'trim')          # roof finials
+    for s in (-1, 1):
+        y = s * .625
+        for x0 in (-.78, .2):                                                            # side windows
+            part.box((x0 + .14, y, 1.84), (.28, .02, .38), 'glass')
+            part.box((x0 + .14, y, 1.84), (.32, .015, .42), 'trim')
+        part.box((-.15, y, 1.55), (.42, .022, .9), 'lacquerDark')                        # door
+        part.box((-.15, y * 1.003, 1.84), (.26, .024, .34), 'glass')
+        part.box((-.15, y * 1.006, 1.38), (.16, .026, .18), 'trim')                      # crest
+        part.box((-.15, y * 1.01, 1.38), (.1, .028, .11), 'velvet')
+        part.box((-.15, y * 1.05, .98), (.3, .06, .04), 'iron')                          # step
+    for x in (-.9, .6):                                                                  # front and rear windows
+        part.box((x, 0, 1.86), (.02, .6, .36), 'glass')
+    # Coachman's box: seat on two struts, cushion, footboard, lamps on the cabin front.
+    sx, sy, sz = c['seat']
+    for s in (-1, 1):
+        part.beam((c['frontX'], s * .45, c['frontR'] + .05), (sx - .05, s * .45, sz - .06), .06, .06, 'lacquerDark')
+    part.box((sx, 0, sz - .04), (.42, 1.0, .07), 'lacquerDark')
+    part.box((sx, 0, sz + .02), (.38, .94, .06), 'velvet')
+    part.box((sx - .2, 0, sz + .14), (.05, 1.0, .22), 'lacquer')
+    part.beam((sx + .48, 0, sz - .62), (sx + .26, 0, sz - .1), 1.0, .05, 'lacquerDark')   # footboard
+    for s in (-1, 1):
+        part.box((.63, s * .66, 1.95), (.1, .1, .16), 'trim')
+        part.box((.66, s * .66, 1.95), (.06, .07, .1), 'glassLight')
+    # Footman's board behind the cabin.
+    part.box((-1.1, 0, 1.0), (.26, 1.0, .05), 'lacquerDark')
+    for s in (-1, 1):
+        part.beam((-1.2, s * .45, 1.0), (-.9, s * .45, 1.4), .04, .04, 'iron')
 
 def build(root):
     parts = {}
@@ -108,21 +162,23 @@ def build(root):
         p.beam((x0 + .1, -.36, z0 + .02), (x0 + .1, .36, z0 + .02), .06, .06, 'woodDark')
         parts[name] = p.finish()
 
-    # --- canvas cover: hoops and an elliptic canvas shell (open ends)
-    p = P('cover')
-    n = 8; x0, x1 = -1.45, 1.45; base, top, hw = 1.28, 2.35, .68
-    arc = [(-hw * math.cos(math.pi * i / n), base + (top - base) * math.sin(math.pi * i / n)) for i in range(n + 1)]
-    for i in range(n):
-        (y0, z0), (y1, z1) = arc[i], arc[i + 1]
-        p.quads([(x0, y0, z0), (x1, y0, z0), (x1, y1, z1), (x0, y1, z1)], [(0, 1, 2, 3)], 'canvas')
-    # Hoops: flat bands just proud of the canvas (only their outer face shows).
-    for hx in (-1.42, -.47, .47, 1.42):
-        for i in range(n):
-            (y0, z0), (y1, z1) = arc[i], arc[i + 1]
-            k0, k1 = 1.015, 1.015
-            p.quads([(hx - .03, y0 * k0, (z0 - base) * k0 + base), (hx + .03, y0 * k0, (z0 - base) * k0 + base),
-                     (hx + .03, y1 * k1, (z1 - base) * k1 + base), (hx - .03, y1 * k1, (z1 - base) * k1 + base)], [(0, 1, 2, 3)], 'canvasHoop')
-    parts['cover'] = p.finish()
+    # --- noble carriage: lacquered cabin on springs, coachman's box, big rear wheels
+    p = P('carriageBody', (0, 8, 0))
+    carriage(p)
+    parts['carriageBody'] = p.finish()
+    for name, r in (('wheelCarriageRear', CARRIAGE['rearR']), ('wheelCarriageFront', CARRIAGE['frontR'])):
+        p = P(name, (-3, {'wheelCarriageRear': 6, 'wheelCarriageFront': 7.5}[name], 1))
+        wheel(p, r, spokes=10)
+        parts[name] = p.finish()
+    p = P('carriagePole', (0, 10, 0))
+    p.beam((1.2, 0, .5), (3.3, 0, .85), .08, .08, 'lacquerDark')
+    p.beam((3.25, -.5, .87), (3.25, .5, .87), .06, .06, 'lacquerDark')
+    parts['carriagePole'] = p.finish()
+    p = P('carriageShafts', (0, 12, 0))
+    for s in (-1, 1):
+        p.beam((1.2, s * .35, .55), (3.4, s * .3, .95), .06, .06, 'lacquerDark')
+    p.beam((1.3, -.36, .57), (1.3, .36, .57), .06, .06, 'lacquerDark')
+    parts['carriageShafts'] = p.finish()
 
     # --- cargo templates, base centred on the bed floor
     cx = 4.5
@@ -163,7 +219,7 @@ def export(parts, out_path):
         data['parts'][name] = export_part(part, keys)   # local coordinates (display offset excluded)
     data['variants'] = {
         'wagon': {
-            'body': 'wagonBody', 'cover': 'cover', 'hitch': {'1': 'wagonShafts', '2': 'wagonPole'},
+            'body': 'wagonBody', 'hitch': {'1': 'wagonShafts', '2': 'wagonPole'},
             'wheels': [{'part': 'wheelRear', 'r': u(.6)[0], 'at': [u(-1.0, s * .85, .6) for s in (-1, 1)]},
                        {'part': 'wheelFront', 'r': u(.45)[0], 'at': [u(1.05, s * .85, .45) for s in (-1, 1)]}],
             # Seated driver: figure feet below the seat so only the upper body shows.
@@ -172,11 +228,19 @@ def export(parts, out_path):
             'horses': {'1': [u(3.55, 0)], '2': [u(3.55, .45), u(3.55, -.45)]},
         },
         'cart': {
-            'body': 'cartBody', 'cover': None, 'hitch': {'1': 'cartShafts', '2': 'cartShafts'},
+            'body': 'cartBody', 'hitch': {'1': 'cartShafts', '2': 'cartShafts'},
             'wheels': [{'part': 'wheelCart', 'r': u(.65)[0], 'at': [u(0, s * .8, .65) for s in (-1, 1)]}],
             'seat': None,
             'slots': [u(x, y, .85) for y in (.28, -.28) for x in (-.45, .45)],
             'horses': {'1': [u(3.45, 0)], '2': [u(3.45, 0)]},
+        },
+        'carriage': {
+            'body': 'carriageBody', 'hitch': {'1': 'carriageShafts', '2': 'carriagePole'},
+            'wheels': [{'part': 'wheelCarriageRear', 'r': u(CARRIAGE['rearR'])[0], 'at': [u(CARRIAGE['rearX'], s * CARRIAGE['track'], CARRIAGE['rearR']) for s in (-1, 1)]},
+                       {'part': 'wheelCarriageFront', 'r': u(CARRIAGE['frontR'])[0], 'at': [u(CARRIAGE['frontX'], s * CARRIAGE['track'], CARRIAGE['frontR']) for s in (-1, 1)]}],
+            'seat': u(CARRIAGE['seat'][0], 0, CARRIAGE['seat'][2] - .88),
+            'slots': [],                                  # passengers ride inside, no open load
+            'horses': {'1': [u(3.85, 0)], '2': [u(3.85, .45), u(3.85, -.45)]},
         },
     }
     data['cargo'] = {'sack': 'cargoSack', 'crate': 'cargoCrate', 'barrel': 'cargoBarrel',
