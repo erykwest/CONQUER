@@ -60,6 +60,22 @@ Il codice `src/settlement-industries.js` su main definisce `mine.good='stone'`; 
 
 I documenti su fortificazioni, Mastio, leve, stanze e assedio continuo contengono requisiti ampi. Senza QA end-to-end non classificarli come completati. Le routine diurne e i soldati richiedono integrazione tra economia aggregata e agenti renderizzati.
 
+## Aggiornamento fonti importate (16/10, senza test runtime)
+
+### Economia — conferma di cronologia, non nuova feature
+
+L'export completo [ECONOMY](sources/ECONOMY-2026-10-12.md) riporta **PR #22 integrata in `main`** tramite [merge 2b8e8239](https://github.com/erykwest/CONQUER/commit/2b8e8239d2009fd813b92ff8f7e18e05bfb625b7) il 13/10. La lettura di `src/settlement-economy.js`, `src/settlement-industries.js` e delle QA conferma la base nel repository. L'export menziona regressioni passate in quella sessione, **non le abbiamo rieseguite per questo import**. Rimangono da riconciliare campi/ledger, scorte costruttive, investimenti privati che edificano, export reale, produzione metallurgica.
+
+### Minimappa — codice in PR, non in main
+
+[PR #44](https://github.com/erykwest/CONQUER/pull/44) era **OPEN/non merged** al controllo GitHub del 16/10; branch `feature/topdown-minimap-20261015` divergente da `main`. Sorgenti aggiunte: `src/settlement-minimap.js`, `src/settlement-minimap.css`, `src/settlement-lod.js`. Secondo la PR: navigazione clic/drag, rotazione camera, blocchi edifici minimappa, unità tattiche come puntini (ostili solo se avvistati), LOD militare nella scena a zoom inferiore a **0,38**. **Verifiche dichiarate:** sintassi e smoke isolati. **Da fare:** test reale browser, mobile, performance, integrazione e merge. Il LOD edifici della scena principale resta proposta. [Digest](sources/MINIMAP-2026-10-15.md).
+
+### Asset/rendering — esistenti, non assumere gestione RAM completa
+
+Il modulo [settlement-assets.js](../../src/settlement-assets.js) definisce già cache LRU delle strutture (192 voci) e cache di compositi limitata nominalmente a 32 MiB, con contatori; il primo limite è **per numero**, non per memoria globale. [settlement-webgpu.js](../../src/settlement-webgpu.js) si definisce renderer ibrido dei layer statici Canvas, con fallback Canvas2D; **non è di per sé un importatore glTF/renderer 3D completo**. La branch `animation` era divergente e contiene moduli animali/carri e `figures-lab.html` secondo il confronto Git.
+
+L'export [VISUAL/AUDIO](sources/VISUAL-AUDIO-2026-10-14.md) riporta **asset Blender/PNG locali non committati**, dimensioni non direttamente verificabili e due stime incompatibili (627 vs somma 657 MB). Non registrarli come asset distribuiti. Audio/Suno e prova del modello 3D per cutaway/danni/cantiere restano discussioni/prototipi, non implementazioni certificate.
+
 ## QA nominate per i prossimi audit
 
 - `qa/fields-regression.cjs`
