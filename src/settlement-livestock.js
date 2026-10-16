@@ -19,7 +19,7 @@
       return value<.5?'garden':value<.8?'goat':'shepherd';
     }
     if(level===2){
-      const value=hash(State.seed+'|livestock-l2|'+house.id)/4294967296;
+      const value=rand(hash(State.seed+'|livestock-l2|'+house.id));
       return value<.7?'garden':'cow';
     }
     return level===3||level===4?'horse':null;
