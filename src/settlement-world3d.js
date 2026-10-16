@@ -535,6 +535,52 @@
     }
     return out;
   }
+  // Parent/subtower overlap: what one structure draws is cut out of the other's footprint.
+  const orient=B=>B.reduce((a,p,i)=>{const q=B[(i+1)%B.length];return a+p.x*q.y-q.x*p.y},0)>=0?1:-1;
+  function clipHalf(poly,a,b,keepInside,sgn){
+    const side=p=>sgn*((b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x))*(keepInside?1:-1),out=[];
+    for(let k=0;k<poly.length;k++){
+      const p=poly[k],q=poly[(k+1)%poly.length],sp=side(p),sq=side(q);
+      if(sp>=0)out.push(p);
+      if((sp>=0)!==(sq>=0)){const t=sp/(sp-sq);out.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}
+    }
+    return out;
+  }
+  const area=P=>Math.abs(P.reduce((a,p,i)=>{const q=P[(i+1)%P.length];return a+p.x*q.y-q.x*p.y},0))/2;
+  // Convex polygon minus a list of convex blockers -> convex pieces.
+  function polyMinus(A,blockers){
+    let pieces=[A];
+    for(const B of blockers){
+      const sgn=orient(B),next=[];
+      for(const P of pieces){
+        let rest=P;
+        for(let i=0;i<B.length&&rest.length>2;i++){
+          const a=B[i],b=B[(i+1)%B.length],outside=clipHalf(rest,a,b,false,sgn);
+          if(outside.length>2&&area(outside)>1e-6)next.push(outside);
+          rest=clipHalf(rest,a,b,true,sgn);
+        }
+      }
+      pieces=next;
+    }
+    return pieces;
+  }
+  // Parts of segment p-q outside every convex blocker (Cyrus–Beck interval per blocker).
+  function segMinus(p,q,blockers){
+    let parts=[[0,1]];
+    for(const B of blockers){
+      const sgn=orient(B),d={x:q.x-p.x,y:q.y-p.y};let t0=0,t1=1,empty=false;
+      for(let i=0;i<B.length;i++){
+        const a=B[i],b=B[(i+1)%B.length],ex=b.x-a.x,ey=b.y-a.y;
+        const c0=sgn*(ex*(p.y-a.y)-ey*(p.x-a.x)),c1=sgn*(ex*d.y-ey*d.x);
+        if(Math.abs(c1)<1e-12){if(c0<0){empty=true;break}continue}
+        const t=-c0/c1;if(c1>0)t0=Math.max(t0,t);else t1=Math.min(t1,t);
+      }
+      if(empty||t1<=t0)continue;
+      parts=parts.flatMap(([u,v])=>[[u,Math.min(v,t0)],[Math.max(u,t1),v]].filter(([x,y])=>y-x>1e-4));
+    }
+    const at=t=>({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t});
+    return parts.map(([u,v])=>[at(u),at(v)]);
+  }
   function openingQuad(m,at,dir,z0,z1,w,hex){
     const t={x:-dir.y,y:dir.x},a={x:at.x-t.x*w/2,y:at.y-t.y*w/2},b={x:at.x+t.x*w/2,y:at.y+t.y*w/2};
     m.face([{...a,z:z0},{...b,z:z0},{...b,z:z1},{...a,z:z1}],hex);
@@ -550,6 +596,16 @@
       // Inner ring re-indexed so inner[i] is the vertex nearest outer[i] (built sections list them
       // in another order, which made the crest quads cross over the whole room).
       const g={...g0,inner:g0.outer.slice(0,n).map(o=>g0.inner.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,g0.inner[0]))};
+      // Parent / subtower footprints cut into this structure's walls, floors and crest.
+      const blkAll=cutawayBlockers(s),under=z=>blkAll.filter(b=>z<b.h-1e-6).map(b=>b.pts),blk=under(0);
+      const outside=(p,z=0)=>!under(z).some(B=>pointInPolygon(p,B));
+      const facesOut=(poly,hex,mesh,z)=>{const bz=under(z);for(const P of bz.length?polyMinus(poly,bz):[poly])mesh.face(P.map(p=>Z(p,z)),hex)};
+      // A wall face: full height outside the blockers, and above each blocker's top inside it.
+      const wallFace=(mesh,p,q,hex)=>{
+        for(const [a,b] of segMinus(p,q,blk))mesh.face([Z(a,0),Z(b,0),Z(b,H),Z(a,H)],hex);
+        const top=Math.max(0,...blkAll.map(b=>b.h));
+        if(blk.length&&top<H)mesh.face([Z(p,top),Z(q,top),Z(q,H),Z(p,H)],hex);
+      };
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
@@ -562,26 +618,25 @@
       }
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
-        sh.face([Z(o0,0),Z(o1,0),Z(o1,H),Z(o0,H)],castleSideShade(o0,o1));
-        m.face([Z(i0,0),Z(i1,0),Z(i1,H),Z(i0,H)],'#61574f');
+        wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f');
       }
-      for(const v of jambs)m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
+      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v]))m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
       const ring=winter?WINTER_SNOW_TOP:'#8f857a';
-      for(let i=0;i<n;i++){const j=(i+1)%n;sh.face([Z(g.outer[i],H),Z(g.outer[j],H),Z(g.inner[j],H),Z(g.inner[i],H)],ring)}
-      if(s.type==='tower'&&towerRoofStyle(s)==='battlement')sh.face(g.inner.map(p=>Z(p,H-.01)),winter?WINTER_SNOW_TOP:'#8f857a');
+      for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
+      if(s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
       for(const floor of cutawayFloorLevels(s)){
         const stone=floor.material==='stone',z=floor.z,th=stone?.045:.065;
-        m.face(g.inner.map(p=>Z(p,z)),stone?'#7f796f':'#795a3a');
-        for(let i=0;i<g.inner.length;i++){const a=g.inner[i],b=g.inner[(i+1)%g.inner.length];m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?'#5a554d':'#5b402b')}
+        facesOut(g.inner,stone?'#7f796f':'#795a3a',m,z);
+        for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?'#5a554d':'#5b402b')}
         if(stone){
           const tile=.32,nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
           for(let ix=0;ix<nx;ix++)for(let iy=0;iy<ny;iy++){
             if((ix+iy)%2)continue;
             const u0=-basis.w/2+ix*tile,v0=-basis.h/2+iy*tile,q=clipConvex([L(u0,v0),L(u0+tile,v0),L(u0+tile,v0+tile),L(u0,v0+tile)],g.inner);
-            if(q.length>2)m.face(q.map(p=>Z(p,z+.003)),'#8d877c');
+            if(q.length>2)facesOut(q,'#8d877c',m,z+.003);
           }
         }else{
           const plank=.18,across=basis.h<=basis.w,span=across?basis.h:basis.w,len=across?basis.w:basis.h;
@@ -589,7 +644,7 @@
             if(i%2)continue;
             const a=-span/2+i*plank,b=Math.min(span/2,a+plank);
             const quad=across?[L(-len/2,a),L(len/2,a),L(len/2,b),L(-len/2,b)]:[L(a,-len/2),L(b,-len/2),L(b,len/2),L(a,len/2)];
-            const q=clipConvex(quad,g.inner);if(q.length>2)m.face(q.map(p=>Z(p,z+.003)),'#84613e');
+            const q=clipConvex(quad,g.inner);if(q.length>2)facesOut(q,'#84613e',m,z+.003);
           }
         }
       }
@@ -602,13 +657,13 @@
       if(s.type==='tower'){
         for(const row of towerWindowRows(s))for(const d of towerFaceDirections(s)){
           const dir={x:d.nx,y:d.ny};if(!keptDir(dir))continue;
-          const at=innerAt(dir),zc=row.z;
+          const at=innerAt(dir),zc=row.z;if(!outside(at,zc))continue;
           if(d.interior&&towerGothicAssetForRow(s,row))openingQuad(m,at,dir,(plane?G0:0)+zc-.2,(plane?G0:0)+zc+.2,.26,'#8fa2b2');
           else if(towerSlitFace(s,d.face,row.floor))openingQuad(m,at,dir,(plane?G0:0)+zc-.16,(plane?G0:0)+zc+.16,.06,'#1c1612');
         }
         for(const spec of (typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[])){
           const dir={x:spec.outward.x,y:spec.outward.y};if(!keptDir(dir))continue;
-          const at={x:spec.contact.x-dir.x*(g.thickness+.006),y:spec.contact.y-dir.y*(g.thickness+.006)};
+          const at={x:spec.contact.x-dir.x*(g.thickness+.006),y:spec.contact.y-dir.y*(g.thickness+.006)};if(!outside(at))continue;
           openingQuad(m,at,dir,G0+spec.baseZ+.01,G0+Math.min(spec.apexZ,spec.baseZ+.6),.3,'#1f1712');
         }
       }else if(s.type==='gate'){

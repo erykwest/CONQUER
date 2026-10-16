@@ -93,7 +93,11 @@ function renderFunctionPanel(){
     const skin=wallSkin(s),narrow=wallTier(s)===1;
     html+=`<div class="slot"><div class="slot-label">Wall skin</div><div class="grid3"><button data-wall-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-wall-skin="machicolation" ${narrow?'disabled':''} class="${skin==='machicolation'?'active':''}">Machicolation</button><button data-wall-skin="hoarding" class="${skin==='hoarding'?'active':''}">Hoarding</button></div><div class="legend">${narrow?'Machicolation non disponibile sui muri T1 stretti. ':'Machicolation: merlatura in aggetto con mensole. '}Hoarding sostituisce invece il coronamento esterno con una galleria lignea.</div></div>`;
   }
-  if(cutawayEligible(s)){
+  if(cutawayEligible(s)&&s.parentTowerId&&State.structures.some(o=>o.id===s.parentTowerId)){
+    // Subtowers follow their parent's cutaway switch.
+    const cutaway=structureCutaway(s);
+    html+=`<div class="slot"><div class="slot-label">Cutaway facade · ${cutaway?'ON':'OFF'}</div><div class="legend">Follows the parent structure: open or close the cutaway from the parent tower or gate.</div></div>`;
+  }else if(cutawayEligible(s)){
     const cutaway=structureCutaway(s);
     html+=`<div class="slot"><div class="slot-label">Cutaway facade</div><button data-cutaway-toggle class="${cutaway?'active':''}" ${building?'disabled':''}>${cutaway?'Cutaway ON':'Cutaway OFF'}</button><div class="legend">Opens the camera-facing shell and exposes the functional rooms.</div></div>`;
   }

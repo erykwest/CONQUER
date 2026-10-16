@@ -67,6 +67,11 @@
       F.ladder={u:cu-Math.sign(cu)*(LADDER_W/2+.04),v:cv-Math.sign(cv)*(LADDER_W/2+.04),side:F.far[0]};
     }
     if(opts.passage)reserve.push(opts.passage);
+    // The parent of a subtower / the subtowers of a parent occupy part of the room.
+    for(const B of opts.blocks||[]){
+      const ca=Math.cos(F.b.angle),sa=Math.sin(F.b.angle),loc=B.map(p=>{const dx=p.x-F.b.center.x,dy=p.y-F.b.center.y;return[dx*ca+dy*sa,-dx*sa+dy*ca]});
+      reserve.push([Math.min(...loc.map(q=>q[0]))-.04,Math.min(...loc.map(q=>q[1]))-.04,Math.max(...loc.map(q=>q[0]))+.04,Math.max(...loc.map(q=>q[1]))+.04]);
+    }
     // Archer posts at the arrow slits of this floor stay clear of furniture.
     for(const p of opts.posts||[]){
       const dx=p.x-F.b.center.x,dy=p.y-F.b.center.y,ca=Math.cos(F.b.angle),sa=Math.sin(F.b.angle);
@@ -195,7 +200,7 @@
     for(const slot of slots){
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.index+1).map(a=>a.p):[];
-      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round'},{ladderCorner:ladder,passage:passageFor(s,slot),posts});
+      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
@@ -241,7 +246,7 @@
     // Cheap key: archer posts follow the wall junctions and the tower shape, not the archer
     // count, so no archerSlots() scan per call.
     const snaps=State.structures.filter(w=>w.aSnap===s.id||w.bSnap===s.id).map(w=>w.id+':'+structureLevel(w)).join(',');
-    const key=[s.id,State.view.rotation||0,snaps,s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),structureLevel(s),s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
+    const key=[s.id,State.view.rotation||0,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),structureLevel(s),s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
     const faces=[],lights=[],her=heraldry(),spots=new Map();
     for(const room of layoutStructure(s,g)){

@@ -499,8 +499,23 @@ function cutawayEligible(s){
   // they receive a dedicated spiral-stair interior treatment.
   return s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
 }
+// A subtower follows its parent tower/gate: one switch on the parent opens the attached
+// subtowers too (T1 subtowers stay solid, like any T1 tower).
 function structureCutaway(s){
+  if(s?.parentTowerId){
+    const parent=State.structures.find(o=>o.id===s.parentTowerId);
+    if(parent&&parent!==s)return structureCutaway(parent)&&cutawayEligible(s);
+  }
   return !!s?.cutaway&&cutawayEligible(s);
+}
+// Footprints that cut into a cutaway room, up to the height they occupy: the parent of a
+// subtower, the subtowers of a parent. Above that height the room's own walls continue.
+function cutawayBlockers(s){
+  if(!s)return[];
+  const out=[];
+  if(s.parentTowerId){const p=State.structures.find(o=>o.id===s.parentTowerId);if(p)out.push({pts:footprintPoints(p),h:structureHeight(p)})}
+  for(const c of State.structures)if(c.parentTowerId===s.id&&c.type==='tower'&&!underConstruction(c))out.push({pts:footprintPoints(c),h:structureHeight(c)});
+  return out.filter(b=>b.pts?.length>2);
 }
 function cutawayWallThickness(s){
   if(s.type==='built')return clamp((Number(s.width)||1)*.14,.11,.17);
