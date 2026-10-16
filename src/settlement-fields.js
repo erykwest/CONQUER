@@ -48,18 +48,23 @@ function fieldPoints(field){
   field.fieldVersion=1;
   return field.points;
 }
-function fieldAllowed(field){
+function fieldAllowed(field,spawnContext=null){
   const poly=fieldPoints(field);
   if(!fieldQuadValid(poly)||!urbanParcelAllowed(poly,field.id))return false;
   if(urbanLots().some(lot=>urbanPolygonsOverlap(poly,lot.points)))return false;
-  if(urbanLotUnitConflict({points:poly}))return false;
+  // Candidate evaluation can run dozens of times in one growth step.
+  // Reuse the live occupants snapshot instead of recomputing all residents
+  // and their destinations for every rejected polygon.
+  const occupants=spawnContext?(spawnContext.occupants??=(urbanSpawnOccupants())):undefined;
+  if(urbanLotUnitConflict({points:poly},occupants))return false;
   for(const s of State.structures){
     if(s.id===field.id)continue;
     if(s.type==='field'&&urbanPolygonsOverlap(poly,fieldPoints(s)))return false;
     if(s.type==='road'&&roadTouchesPolygon(s,poly,.12))return false;
   }
-  // The shared polygon terrain validator rejects cliffs, forest and water;
-  // normal relief slopes are intentionally permitted.
+  // urbanParcelAllowed already checked the *entire* polygon, including
+  // rivers/forests/steep slopes. Do not use environmentBlocksPoint('settlement')
+  // here: that legacy point validator also rejects ordinary gentle hills.
   return true;
 }
 function fieldLayout(field){
@@ -81,8 +86,7 @@ function fieldLayout(field){
       }
     }
     if(hits.length<2)continue;
-    // Leave a visible margin inside the parcel for hedges, walls and fences.
-    // Crop paths must never reach the parcel boundary.
+    // Keep plough furrows and serpentine paths behind fencing, hedges and walls.
     const lo=Math.min(...hits)+.28,hi=Math.max(...hits)-.28;if(hi<=lo)continue;
     const world=u=>({x:u*ux+v*vx,y:u*uy+v*vy});
     const row=rows.length,forward=row%2===0,ra=world(forward?lo:hi),rb=world(forward?hi:lo);
@@ -106,7 +110,8 @@ function fieldCrop(field){
   return crop;
 }
 function fieldSlotDone(field,cell){return (fieldCrop(field).work[cell.index]||0)>=cell.end-cell.start-1e-7}
-function fieldWorkClock(day){const whole=Math.floor(day);return whole+clamp((day-whole-.14)/.38,0,1)}
+// Preserve weekday-aware economy: work Mon-Fri; Saturday market and Sunday rest.
+function fieldWorkClock(day){const whole=Math.floor(day),week=Math.floor(whole/7),weekday=((whole%7)+7)%7;return week*5+Math.min(weekday,5)+(weekday<5?clamp((day-whole-.14)/.38,0,1):0)}
 // Months are zero based (Jan=0). Farming advances only in the specified seasons.
 function fieldSeasonPhase(month){
   if(month===9||month===10)return 'plough'; // October–November
@@ -122,9 +127,41 @@ function fieldCropReady(field,day=State.clock.day){
     return cell&&done<cell.end-cell.start-1e-7;
   });
 }
+function maybeExpandIdleL2Fields(houses,fields,day){
+  // Once per working day in October/November, any L2 labor not committed to
+  // mining, quarrying or an existing field may open one immediately arable plot.
+  if(!State.village?.founded||fieldSeasonPhase(calendarDateFromDay(day).month)!=='plough')return 0;
+  if((window.ConquerCombat?.alarmMode?.()||'off')!=='off')return 0;
+  const wholeDay=Math.floor(day),weekday=((wholeDay%7)+7)%7;
+  if(weekday>=5||fieldWorkClock(day)<=fieldWorkClock(wholeDay))return 0;
+  if(State.village.fieldExpansionAttemptDay===wholeDay)return 0;
+  // Avoid saturating the main thread if the village has no remaining zoned land.
+  if(Number.isFinite(State.village.fieldExpansionFailedDay)&&
+      wholeDay-State.village.fieldExpansionFailedDay<3)return 0;
+  const assigned=fieldWorkAssignments(houses,fields);
+  const idle=fieldAvailableHouses(houses).L2.filter(h=>!assigned.has(h.id));
+  if(!idle.length)return 0;
+  State.village.fieldExpansionAttemptDay=wholeDay;
+  const t0=performance.now();
+  // Try at most two different origins, build at most one field per day.
+  let created=0;
+  for(const house of idle.slice(0,2)){
+    if(spawnField(wholeDay*37+peasantHash(house.id)%100000,house)){created=1;break}
+  }
+  if(created){
+    State.village.fieldExpansionFailedDay=null;
+    fieldWorkAssignmentCache.key=null;
+    markDirty(false,false,false);
+  }else State.village.fieldExpansionFailedDay=wholeDay;
+  window.__conquerAnalytics?.event('FIELD_L2_EXPANSION',{
+    day:wholeDay,idleL2:idle.length,created,fields:fields.length,
+    elapsedMs:+(performance.now()-t0).toFixed(2)
+  },created?'info':'warn');
+  return created;
+}
 function tickFields(day=State.clock.day){
-  const fields=completedSettlement('field');if(!fields.length)return;
-  const houses=completedSettlement('house').filter(h=>houseLevel(h)===1);
+  const fields=completedSettlement('field');
+  const houses=completedSettlement('house').filter(h=>houseLevel(h)<=2);
   const month=calendarDateFromDay(day).month,season=fieldSeasonPhase(month);
   // Prepare all crop states before assigning workers so a completed field
   // immediately releases its workforce to any other available parcel.
@@ -137,7 +174,10 @@ function tickFields(day=State.clock.day){
     }
     if(crop.phase==='grow'){
       // Sown fields develop through the spring; they mature for July harvest.
-      crop.growth=clamp((day-(crop.sownDay??day))/(Math.max(1,(year-1)*365+181-CALENDAR_EPOCH_DAY_OF_YEAR-(crop.sownDay??day))),0,1);
+      const summerStart=(year-1)*365+181-CALENDAR_EPOCH_DAY_OF_YEAR;
+      if(!Number.isFinite(crop.sownDay))crop.sownDay=day;
+      const progress=clamp((day-crop.sownDay)/Math.max(1,summerStart-crop.sownDay),0,1);
+      if(progress!==crop.growth){crop.growth=progress;State.dirty=true;}
       if(season==='harvest'){
         crop.phase='harvest';crop.growth=1;crop.work.fill(0);
       }
@@ -176,6 +216,7 @@ function tickFields(day=State.clock.day){
       fieldWorkAssignmentCache.key=null;
     }
   }
+  maybeExpandIdleL2Fields(houses,fields,day);
 }
 function fieldWorkerPosition(field,cell){
   const crop=fieldCrop(field);
@@ -210,7 +251,7 @@ function drawFieldWork(field){
   const layout=fieldLayout(field),crop=fieldCrop(field);
   ctx.save();ctx.lineWidth=Math.max(.6,.075*U*State.view.scale);
   for(const row of layout.rows){
-    const intervals=crop.phase==='plough'&&!crop.ploughed?fieldDoneIntervals(field,row.segment):[[0,1]];
+    const intervals=crop.phase==='plough'?fieldDoneIntervals(field,row.segment):[[0,1]];
     ctx.strokeStyle='#4b3020';
     for(const [t0,t1] of intervals){
       const at=t=>({x:row.a.x+(row.b.x-row.a.x)*t,y:row.a.y+(row.b.y-row.a.y)*t});
@@ -223,7 +264,7 @@ function drawFieldWork(field){
         ctx.fillRect(p.x-.7,p.y-.7,1.4,1.4);
       }
     }
-    if(crop.phase==='harvest'&&!crop.harvested){
+    if(crop.phase==='harvest'){
       let cursor=0;
       for(const [a,b] of [...fieldDoneIntervals(field,row.segment),[1,1]]){
         if(a>cursor+1e-7)drawFieldCropPolygon(fieldStrip(layout,row,cursor,a),1);

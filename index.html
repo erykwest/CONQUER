@@ -20,7 +20,7 @@
     .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
 })();
 </script>
-<link rel="stylesheet" href="./src/settlement.css?v=webgpu-2">
+<link rel="stylesheet" href="./src/settlement.css?v=antiregression-1">
 </head>
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
@@ -51,6 +51,10 @@
     <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <h3>Roads</h3><button class="full" data-main-road>═ Main road</button>
+<h3>Fossati</h3><div class="grid"><button data-crossing="dry">⛏ Asciutto</button><button data-crossing="water">💧 Allagato H0</button></div>
+<h3>Ponti</h3><div class="grid"><button data-crossing="wood">🪵 Legno</button><button data-crossing="stone">🪨 Pietra</button></div>
+<div class="slot-label">Larghezza fossati e ponti</div><div class="grid3"><button data-crossing-width="1">1U</button><button data-crossing-width="2" class="active">2U</button><button data-crossing-width="3">3U</button></div>
+<div class="legend">Fossati: magneti alle estremità, tracciamento concatenato automatico. Click sul punto di partenza per interrompere la catena oppure Esc per uscire. Ponti: due estremità alla stessa quota. Levatoio dal menu Gate.</div>
     <h3>Settlement buildings</h3>
     <div class="grid3">
       <button data-civic="market">Market<br><span class="small">4×4U</span></button>
@@ -58,6 +62,14 @@
       <button data-civic="church">Church<br><span class="small">Large</span></button>
       <button data-civic="training">Training field<br><span class="small">5×4U</span></button>
     </div>
+    <div class="legend">Point buildings: click to fix the centre → move the mouse to rotate the ghost (15° steps) → click again to place.</div>
+    <h3>Industry · Economy placeholders</h3>
+    <div class="grid3">
+      <button data-industry="loggingCamp">Logging<br><span class="small">2×2U · L1×2</span></button>
+      <button data-industry="quarry">Quarry<br><span class="small">3×3U · L2×2</span></button>
+      <button data-industry="mine">Mine<br><span class="small">1×1U · L2×2</span></button>
+    </div>
+    <div class="legend">Click centre → move mouse to rotate → click again to build. Whole footprint in the whitezone. Logging within 10U of forest; quarry (3×3U) must partially overlap a rocky slope; mine (1×1U) must have its centre directly on the rocky slope.</div>
     <hr/>
     <div class="legend">Wood towers: watchtower 1×1 H1 · medium 1.5×1.5 H1 with open/pitched roof variant.<br>Wood gate: 1.5×1U · fixed H1 · flat roof.<br>Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Palisade: T1 stakes · T2 inner walkway · T3 inner 45° earthwork · fixed height · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
     <hr/>
@@ -94,6 +106,10 @@
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
     <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
     <div class="policy"><span>Levy</span><input id="levy" type="range" min="0" max="100" value="10"></div>
+    <details id="economyDetails" class="economy-details" open>
+      <summary>Economy · Production and Market</summary>
+      <div id="economyOverview" aria-live="off">Economy initializes when the settlement loads.</div>
+    </details>
     <h3>Persistence</h3>
     <button class="full" id="saveBtn">Save settlement</button>
     <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
@@ -130,11 +146,13 @@
   <div id="timePanel">
     <button id="rotateLeft" title="Rotate view 90° counter-clockwise">⟲</button>
     <button id="rotateRight" title="Rotate view 90° clockwise">⟳</button>
+    <button id="planToggle" title="Plan view (top-down) for precise joints">▦</button>
     <span id="dayLabel" class="time-readout">Day 0.0</span>
     <button data-speed="0" class="active" title="Pause">⏸</button>
-    <button data-speed="1" title="1× speed">1×</button>
-    <button data-speed="3" title="3× speed">3×</button>
-    <button data-speed="10" title="10× speed">10×</button>
+    <button data-speed="1" title="1× · 48 seconds per day">1×</button>
+    <button data-speed="3" title="3× · 16 seconds per day">3×</button>
+    <button data-speed="10" title="10× · 4.8 seconds per day">10×</button>
+    <button data-speed="100" title="100× · 0.48 seconds per day">100×</button>
   </div>
   <div id="devTools">
     <button id="devToggle" type="button" aria-expanded="false">DEV ▾</button>
@@ -206,21 +224,48 @@
 <script src="./src/settlement-core.js"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js"></script>
-<script src="./src/settlement-castle.js"></script>
+<script src="./src/settlement-castle.js?v=refactor-1"></script>
+<script src="./src/settlement-landscape.js?v=refactor-1"></script>
+<script src="./src/settlement-castle-placement.js?v=refactor-1"></script>
+<script src="./src/settlement-castle-structures.js?v=refactor-1"></script>
+<script src="./src/settlement-buildings.js?v=refactor-1"></script>
 <script src="./src/settlement-urban.js"></script>
 <script src="./src/settlement-fields.js"></script>
 <script src="./src/settlement-boundaries.js"></script>
+<script src="./src/settlement-industries.js?v=industry-1"></script>
+<script src="./src/settlement-placement.js?v=builder-ghost-1"></script>
 <script src="./src/settlement-siege.js?v=assedio-p0"></script>
+<script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5"></script>
 <script src="./src/settlement-population.js"></script>
-<script src="./src/settlement-animals.js?v=livestock-1"></script>
-<script src="./src/settlement-livestock.js?v=livestock-1"></script>
-<script src="./src/settlement-render.js"></script>
+<script src="./src/settlement-population-fields.js?v=refactor-2"></script>
+<script src="./src/settlement-population-navigation.js?v=refactor-2"></script>
+<script src="./src/settlement-population-routines.js?v=refactor-2"></script>
+<script src="./src/settlement-population-residents.js?v=refactor-2"></script>
+<script src="./src/settlement-population-figures.js?v=refactor-2"></script>
+<script src="./src/settlement-population-garrisons.js?v=refactor-2"></script>
+<script src="./src/settlement-animals.js?v=livestock-2"></script>
+<script src="./src/settlement-livestock.js?v=livestock-2"></script>
+  <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
+<script src="./src/settlement-architecture.js?v=refactor-1"></script>
+<script src="./src/settlement-weather.js?v=refactor-1"></script>
+<script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
+<script src="./src/settlement-render.js?v=ambient-light-1"></script>
+<script src="./src/settlement-castle3d.js?v=prototype-1"></script>
+<script src="./src/settlement-world3d.js?v=default-1"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
+<script src="./src/settlement-economy.js?v=economy-1"></script>
 <script src="./src/settlement-app.js"></script>
+<script src="./src/settlement-app-rooms.js?v=refactor-2"></script>
+<script src="./src/settlement-app-input.js?v=refactor-2"></script>
+<script src="./src/settlement-app-persistence.js?v=refactor-2"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
+<script src="./src/settlement-app-simulation.js?v=refactor-2"></script>
+<script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
 <script src="./src/settlement-combat-rules.js?v=combat-3"></script>
-<script src="./src/settlement-combat.js?v=combat-3"></script>
+<script src="./src/settlement-combat.js?v=combat-4"></script>
 <script src="./src/heraldry-symbols.js"></script>
 <script src="./src/settlement-heraldry.js"></script>
+<script src="./src/settlement-builder-ux.js?v=antiregression-2"></script>
 </body>
 </html>

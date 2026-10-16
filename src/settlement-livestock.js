@@ -212,7 +212,7 @@
     for(const a of objects){
       if(stride>1&&a.seed%stride!==0||!worldPointVisible(a.p,.07,30))continue;
       const screen=w2s(a.p,.07);
-      const size=Math.max(6,State.view.scale*23);
+      const size=Math.max(3,State.view.scale*11.5);
       withUrbanFigureOcclusion(a.p,.07,()=>window.ConquerAnimals.drawAnimal(
         a.species,ctx,screen.x,screen.y,size,{
           t:t*34,seed:a.seed%1000,facing:a.facing,

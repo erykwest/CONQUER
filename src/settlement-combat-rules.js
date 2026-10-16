@@ -6,6 +6,7 @@
   const MAX_E=150,MAX_B=150;
   const PROFILES=Object.freeze({
     spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
+    patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
@@ -29,6 +30,48 @@
     }
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
+  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.combatKind||'infantry';
+  function boundaryPoints(isAllowed,worldSize=200,step=1.25){
+    const edge=step*.576,points=[];
+    for(let y=step/2;y<worldSize;y+=step)for(let x=step/2;x<worldSize;x+=step){
+      const p={x,y};if(!isAllowed(p))continue;
+      if([[edge,0],[-edge,0],[0,edge],[0,-edge]].some(([dx,dy])=>!isAllowed({x:x+dx,y:y+dy})))points.push(p);
+    }
+    return points;
+  }
+  function nextBoundaryIndex(points,current,previous,direction,center,maxGap=3.05){
+    const origin=points[current];if(!origin)return-1;
+    const prior=Number.isInteger(previous)?points[previous]:null;
+    const baseAngle=Math.atan2(origin.y-center.y,origin.x-center.x);
+    let best=-1,bestScore=-Infinity;
+    for(let i=0;i<points.length;i++){
+      if(i===current||i===previous)continue;
+      const candidate=points[i],dx=candidate.x-origin.x,dy=candidate.y-origin.y,d=Math.hypot(dx,dy);
+      if(d<=.01||d>maxGap)continue;
+      let score=-d*.2;
+      if(prior){
+        const ax=origin.x-prior.x,ay=origin.y-prior.y;
+        score+=(ax*dx+ay*dy)/Math.max(.01,Math.hypot(ax,ay)*d)*4;
+      }else{
+        let delta=Math.atan2(candidate.y-center.y,candidate.x-center.x)-baseAngle;
+        while(delta>Math.PI)delta-=Math.PI*2;while(delta<-Math.PI)delta+=Math.PI*2;
+        score+=delta*direction*5;
+      }
+      if(score>bestScore){bestScore=score;best=i}
+    }
+    return best;
+  }
+  function traceBoundaryIndices(points,center,direction=1){
+    if(!points.length)return[];
+    const trace=[0],visited=new Set(trace);let previous=null,current=0;
+    for(let i=1;i<points.length;i++){
+      const next=nextBoundaryIndex(points,current,previous,direction,center);
+      if(next<0||visited.has(next))break;
+      trace.push(next);visited.add(next);previous=current;current=next;
+    }
+    return trace;
+  }
+  const shouldRebuildBoundary=(painting,hasCache,signatureChanged)=>signatureChanged&&(!painting||!hasCache);
   function ensure(entity,kind){
     if(!entity.stats){
       const p=PROFILES[kind]||PROFILES.infantry;
@@ -39,12 +82,12 @@
   }
   function living(u){return !!u&&(!u.stats||u.stats.hp>0)}
   function effectiveCombat(u){
-    const v=ensure(u,u.kind==='squad'?'spearman':u.kind==='knight'?'knight':u.combatKind||'infantry');
+    const v=ensure(u,profileKind(u));
     if(v.energy<=0||v.brain<=0)return 0;
     return Math.max(0,v.combat-(v.brain/MAX_B<=.5?1:0));
   }
   function applyDamage(u,hits,source){
-    const s=ensure(u,u.kind==='squad'?'spearman':u.kind==='knight'?'knight':u.combatKind||'infantry');
+    const s=ensure(u,profileKind(u));
     const before=s.hp;
     s.hp=Math.max(0,s.hp-hits);
     s.brain=Math.max(0,s.brain-hits);
@@ -57,7 +100,7 @@
     if(source&&hits>0){source.damageDealt=(source.damageDealt||0)+hits}
   }
   function meleePair(a,b,count){
-    ensure(a,a.kind==='squad'?'spearman':a.kind==='knight'?'knight':a.combatKind||'infantry');
+    ensure(a,profileKind(a));
     ensure(b,b.combatKind||'infantry');
     let hitA=0,hitB=0;
     const ca=effectiveCombat(a),cb=effectiveCombat(b);
@@ -97,7 +140,7 @@
     for(const u of friendly.concat(enemy)){
       if(!living(u))continue;
       if(!u.engaged) {
-        const s=ensure(u,u.kind==='squad'?'spearman':u.kind==='knight'?'knight':u.combatKind||'infantry');
+        const s=ensure(u,profileKind(u));
         s.energy=Math.min(MAX_E,s.energy+dt*10);
         if(!u.routing)s.brain=Math.min(MAX_B,s.brain+dt);
       }
@@ -115,7 +158,7 @@
       a.engaged=nearest.engaged=true;
       a.target=null;
       if(combatClock>=1){
-        const frontage=Math.min(PROFILES[a.kind==='squad'?'spearman':'knight'].front,PROFILES[nearest.combatKind||'infantry'].front);
+        const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[nearest.combatKind||'infantry'].front);
         meleePair(a,nearest,Math.max(1,frontage));
         if(meleeFlashes.length>50)meleeFlashes.shift();
         meleeFlashes.push({x:(a.x+nearest.x)/2,y:(a.y+nearest.y)/2,at:elapsed});
@@ -162,6 +205,6 @@
     }
     g.restore();
   }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,ensure,living,meleePair,shooterRange,update,drawEffects,
+  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0}};
 })();
