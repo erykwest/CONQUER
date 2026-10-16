@@ -105,6 +105,28 @@ const cached=vm.runInContext("patrolRoute({x:100,y:85},{x:105,y:86},'p')",routeC
 assert.equal(cached.length,route.length,'route can be reused');
 assert.equal(routeContext.window.__conquerPerf.patrolRouteCacheHits,1,'repeat patrol leg uses route cache');
 
+// A search around an impossible obstacle must respect a wall-clock deadline
+// instead of consuming an unbounded 100–900 ms long task.
+const blockedSource=routeSource;
+const budgetClock={count:0,now(){return ++this.count*5}};
+const budgetCtx=vm.createContext({
+  Map,Set,Math,
+  performance:{now:()=>budgetClock.now()},
+  window:{__conquerPerf:{}},
+  dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
+  pointBlockedForPeasant:p=>p.x>95&&p.x<115&&p.y>96&&p.y<104,
+  terrainSegmentCrossesCliff:()=>false,
+  areaState:()=>({allowed:true}),
+  safeMilitarySegment:()=>false,
+  routeAllowed:()=>true
+});
+vm.runInContext('const PATROL_PATH_STEP=.75,PATROL_ROUTE_CACHE_MAX=512;let whiteBoundaryRevision=1,patrolNavRevision=1;const patrolRouteCache=new Map();',budgetCtx);
+vm.runInContext(blockedSource,budgetCtx);
+const rejected=vm.runInContext("patrolRoute({x:94,y:100},{x:117,y:100},'blocked')",budgetCtx);
+assert.equal(rejected,null,'fully obstructed route fails');
+assert.ok(budgetClock.count<25,'path budget cuts off long blocked searches');
+
+
 // A wall across the direct line must be avoided in A*, not rejected only after
 // the whole computed route has been assembled.
 let wall=true;

@@ -862,7 +862,7 @@
     out.push(points.at(-1));
     return out;
   }
-  function findPatrolPath(start,goal,id,pad){
+  function findPatrolPath(start,goal,id,pad,deadline=Infinity){
     const step=PATROL_PATH_STEP;
     const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
     const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -888,6 +888,14 @@
     const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
     let found=false,guard=0;
     while(open.length&&guard++<8000){
+      // Reject pathological blocked A* searches before they freeze rendering:
+      // Supabase saw a 925 ms patrol search on a failed 7U route. Normal
+      // adjacent perimeter legs remain unaffected.
+      if((guard&3)===0&&performance.now()>deadline){
+        const perf=window.__conquerPerf||(window.__conquerPerf={});
+        perf.patrolBudgetStops=(perf.patrolBudgetStops||0)+1;
+        return null;
+      }
       const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
       if(cur.x===g.x&&cur.y===g.y){found=true;break}
       for(const [dx,dy] of dirs){
@@ -936,9 +944,10 @@
       // fast narrow search on unobstructed short patrol legs.
       const initialPad=distance<=4?2.5:Math.min(5,3+distance*.08);
       const pads=[initialPad,Math.max(7,initialPad),Math.max(13,initialPad),Math.max(21,initialPad)];
+      const deadline=t0+40;
       for(const pad of pads){
-        if(route)break;
-        route=findPatrolPath(start,goal,id,pad);
+        if(route||performance.now()>deadline)break;
+        route=findPatrolPath(start,goal,id,pad,deadline);
         perf.patrolSearchLastPad=pad;
       }
     }
