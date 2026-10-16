@@ -109,11 +109,12 @@ function renderFunctionPanel(){
   }
   if(['tower','gate','built'].includes(s.type)){
     const hp=window.ConquerSiege?.integrity(s);
-    if(hp)html+='<div class="slot"><div class="slot-label">Defensive integrity</div>'+
-      '<div class="legend">Masonry '+Math.ceil(hp.core.hp)+' / '+hp.core.max+
-      (hp.door?' · Door '+Math.ceil(hp.door.hp)+' / '+hp.door.max:'')+'</div>'+
+    if(hp)html+='<div class="slot"><div class="slot-label">Defensive integrity · independent components</div>'+
+      '<div class="legend">'+(s.type==='gate'?'Gatehouse':'Structure')+' '+Math.ceil(hp.core.hp)+' / '+hp.core.max+'</div>'+
+      (hp.door?'<div class="legend">Portone '+Math.ceil(hp.door.hp)+' / '+hp.door.max+
+        (window.ConquerSiege?.gateBreached(s)?' · BREACHED':'')+'</div>':'')+
       '<div class="grid3"><button data-siege-test="axe" type="button">Test axe</button><button data-siege-test="ram" type="button">Test ram</button><button data-siege-test="trebuchet" type="button">Test trebuchet</button></div>'+
-      '<div class="legend">Prototype damage controls; only effective tools can harm each material.</div></div>';
+      '<div class="legend">Prototype controls: ordinary attacks and arrows never damage walls/towers. Portone HP is separate from gatehouse HP.</div></div>';
     html+=window.ConquerSiege?.summaryHtml()||'';
   }
   html+=window.ConquerCrossings?.panel(s)||'';
