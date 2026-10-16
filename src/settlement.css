@@ -138,3 +138,14 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 .economy-good>small{grid-column:1/-1;color:var(--muted)}
 .economy-good>label{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
 .economy-good select,.economy-good input{width:75px;min-width:0;background:var(--sunken);color:var(--text);border:1px solid var(--line-strong);padding:3px;border-radius:4px}
+
+/* DEV sound mixer */
+#devSound .sound-master{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-2);min-width:0}
+#devSound .sound-master input{width:65px;min-width:0;accent-color:var(--accent)}
+#devSound .sound-master output{font-size:10px;min-width:28px;text-align:right}
+#devSound .sound-channel{display:grid;grid-template-columns:1fr 54px 29px 38px 27px;align-items:center;gap:3px;margin-top:7px;font-size:10px}
+#devSound .sound-channel span{min-width:0}
+#devSound .sound-channel input{width:100%;min-width:0;accent-color:var(--accent)}
+#devSound .sound-channel output{text-align:right;font-variant-numeric:tabular-nums}
+#devPanel #devSound .sound-channel button{height:25px;padding:0 2px;font-size:10px}
+#devSound .dev-row>button{font-size:11px}

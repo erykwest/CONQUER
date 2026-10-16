@@ -190,6 +190,7 @@ function simulationFrame(now){
   }
 
   const weather=currentWeather();
+  window.ConquerSoundBridge?.tick(now,weather);
   const worldWeatherKey=Math.floor(State.clock.day)+'|'+weather.kind;
   if(worldWeatherKey!==lastWorldWeatherKey){
     const previousWasWet=/\|(rain|storm)$/.test(lastWorldWeatherKey),nowWet=weather.rain>0;
