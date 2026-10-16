@@ -29,7 +29,7 @@
 
 ## Conversazioni e fonti di decisioni
 
-Il [registro fonti](EXTERNAL-SOURCES.md) distingue **3 conversazioni ora lette tramite export** (economia, animazioni/audio, minimappa/LOD) da **2 link ancora in attesa di testo**. I digest per dominio sono in [sources/](sources/): [economia](sources/ECONOMY-2026-10-12.md), [render/audio](sources/VISUAL-AUDIO-2026-10-14.md) e [minimappa](sources/MINIMAP-2026-10-15.md). Usarli per ricostruire il *perché* delle scelte, ma validare il codice contro branch, commit e test.
+Il [registro fonti](EXTERNAL-SOURCES.md) distingue **4 conversazioni lette tramite export** (economia, animazioni/audio, minimappa/LOD, libreria Pixabay) da **2 link ancora in attesa di testo**. I digest sono in [sources/](sources/): [economia](sources/ECONOMY-2026-10-12.md), [render/audio](sources/VISUAL-AUDIO-2026-10-14.md), [minimappa](sources/MINIMAP-2026-10-15.md) e [suoni Pixabay/Drive](sources/PIXABAY-SOUNDS-2026-10-14.md). Usarli per ricostruire il *perché* delle scelte, ma validare il codice contro branch, commit e test.
 
 ## Origine della piramide
 
