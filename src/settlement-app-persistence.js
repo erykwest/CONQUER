@@ -66,8 +66,11 @@ function migrateStructures(list){
     return s;
   });
 
-  const byId=new Map(migrated.map(s=>[s.id,s]));
-  for(const s of migrated){
+  // Remove annexes whose parent no longer exists and repair dimensions from catalog.
+  const parentIndex=new Map(migrated.map(s=>[s.id,s]));
+  const cleaned=migrated.filter(s=>!isCivicAnnex(s)||normalizeCivicAnnex(s,parentIndex.get(s.parentId)));
+  const byId=new Map(cleaned.map(s=>[s.id,s]));
+  for(const s of cleaned){
     if(s.type!=='tower'||!s.parentTowerId)continue;
     const parent=byId.get(s.parentTowerId);
     if(!parent||!['tower','gate'].includes(parent.type)||isWoodGate(parent)||(parent.type==='tower'&&towerTier(s)>=towerTier(parent))){
