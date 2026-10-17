@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-17 — Civil: lotti di pertinenza e skeleton Piazza
+
+- **Branch `Civil` da `main`**: riusati Voronoi, bordi e accessi esistenti per assegnare lotti di pertinenza a chiesa e locanda; il mercato ne rimane escluso.
+- **Skeleton sviluppo L1–L3**: `civicLevel` per chiesa, locanda e mercato; aggiunta Piazza `plaza` 5×5 U con varianti `paved`, `fountain`, `garden` e tre livelli, con Builder, persistenza e mesh Canvas/WebGL2. Strade e pedoni possono attraversare la piazza.
+- **Prove:** syntax check dei moduli modificati, verifica geometrica isolata su due lotti civici con impronte contenute; nuove regressioni Urban e Builder incluse nella CI `Civil skeleton regression` ([primo run verde](https://github.com/erykwest/CONQUER/actions/runs/39021863368)). I successivi push vengono verificati dallo stesso workflow; collaudo browser manuale ancora aperto.
+- **Confine intenzionale**: nessun bonus economico/sociale, nessuna espansione funzionale delle routine; `main` non modificato.
+
 ## 2026-10-16 — Diagnosi condivisa /main e /camp: crescita bloccata dalla pianificazione arteriale
 
 - Individuato su `main` il medesimo blocco di crescita già corretto su `camp`: la ricerca in background delle quattro strade perimetrali impediva lo spawn delle case, anche sulle arterie completate.
