@@ -57,6 +57,8 @@ function civicAnnexPlacementCheck(s){
   if(parent.type==='market'){
     // Public market pieces grow near the square, but never claim a private parcel.
     if(dist(s,parent)>9)return{ok:false,reason:'Market annex must remain within 9U of its square'};
+    if(urbanLots().some(lot=>urbanPolygonsOverlap(footprint,lot.points)))
+      return{ok:false,reason:'Public market expansion cannot occupy an owned Voronoi lot'};
   }else{
     const lot=urbanLots().find(l=>l.civicId===parent.id);
     if(!lot)return{ok:false,reason:'The parent needs a valid Voronoi lot'};
