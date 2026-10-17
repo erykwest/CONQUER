@@ -370,6 +370,29 @@
           m.prism(rectWorldPoints(c.x,c.y,1.15,.72,angle),g+.12,g+.46,'#654b34','#4b3826','#5a4430');
           m.prism(rectWorldPoints(c.x,c.y,1.38,.92,angle),g+.58,g+.66,canopy[k%4],canopy[k%4],canopy[k%4]);k++;
         }
+      }else if(s.type==='plaza'){
+        const level=civicLevel(s),variant=plazaVariant(s);
+        m.prism(part.points,g,g+.10,
+          variant==='garden'?'#8c9776':variant==='fountain'?'#a5a9a8':'#b3a28e',
+          '#777269','#868076');
+        if(variant==='garden'){
+          for(const x of [-1.08,1.08])for(const y of [-1.08,1.08]){
+            const c=L(x,y);
+            m.prism(rectWorldPoints(c.x,c.y,1.15,1.15,angle),g+.10,g+.15,'#698555','#80725b','#80725b');
+          }
+        }else{
+          const c=L(0,0),size=variant==='fountain'?1.45:1.25;
+          m.prism(rectWorldPoints(c.x,c.y,size,size,angle),g+.10,g+(variant==='fountain'?.29:.135),
+            variant==='fountain'?'#697e82':'#c2b7a4','#787c7b','#8c9190');
+          if(variant==='fountain')m.prism(rectWorldPoints(c.x,c.y,.65,.65,angle),g+.29,g+.35+level*.12,
+            '#b3b8b5','#858c89','#969e9b');
+          else if(level>=3)m.prism(rectWorldPoints(c.x,c.y,.45,.45,angle),g+.135,g+.60,
+            '#c0b7a9','#827b72','#938a80');
+        }
+        if(level>=2)for(const x of [-2,2])for(const y of [-2,2]){
+          const c=L(x,y);
+          m.prism(rectWorldPoints(c.x,c.y,.24,.24,angle),g+.10,g+.27,'#a49c8c','#696659','#777164');
+        }
       }else if(s.type==='training'){
         m.prism(part.points,g,g+.10,'#70502e','#5a3f24','#664729');
         for(const sx of [-1,1])for(const sy of [-1,1]){const c=L(sx*2.18,sy*1.68);m.prism(rectWorldPoints(c.x,c.y,.14,.14,angle),g+.10,g+.58,'#654b34','#4b3826','#5a4430')}
@@ -640,7 +663,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}
