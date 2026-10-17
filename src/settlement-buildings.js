@@ -117,6 +117,33 @@ function drawTrainingField(s,preview=false){
     extrudePolygonAt(pts,.10,.58,{top:'#8b6847',sideA:'#59412e',sideB:'#6d5037',stroke:null});
   }
 }
+function drawCivicAnnex(s,preview=false){
+  const spec=civicAnnexDefinition(s);if(!spec)return;
+  const poly=civicAnnexFootprint(s),kind=spec.kind;
+  const low=kind==='garden'||kind==='yard';
+  const height=kind==='garden'?.13:kind==='yard'?.09:kind==='stall'?.75:1.32;
+  const palette=kind==='garden'
+    ?{top:'#6a8452',sideA:'#67573c',sideB:'#7c6948'}
+    :kind==='yard'?{top:'#ad9a7a',sideA:'#8b7961',sideB:'#96846c'}
+    :kind==='stone'?{top:'#85847d',sideA:'#696862',sideB:'#777671'}
+    :{top:'#9b7c57',sideA:'#79563b',sideB:'#876446'};
+  extrudePolygonAt(poly,0,height,{...palette,stroke:'#51473c'});
+  if(kind==='garden'){
+    for(const offset of [-.45,0,.45]){
+      const c=houseLocalToWorld(s,offset,0);
+      const a=houseLocalToWorld(s,offset,-.65),b=houseLocalToWorld(s,offset,.65);
+      const p=w2s(a,.14),q=w2s(b,.14);
+      ctx.save();ctx.strokeStyle='#456536';ctx.lineWidth=Math.max(1,State.view.scale*1.8);
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();ctx.restore();
+    }
+  }
+  if(!low&&kind!=='stall'){
+    const ridge=poly.map(p=>w2s(p,height)),center=w2s(s,height+.30);
+    ctx.save();ctx.strokeStyle='#5d5148';ctx.lineWidth=Math.max(.8,State.view.scale);
+    for(const i of [0,2]){ctx.beginPath();ctx.moveTo(ridge[i].x,ridge[i].y);ctx.lineTo(center.x,center.y);ctx.stroke()}
+    ctx.restore();
+  }
+}
 function drawCivicStructure(s,preview=false){
   if(s.type==='market')drawMarket(s,preview);
   else if(s.type==='tavern')drawTavern(s,preview);
