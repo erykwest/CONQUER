@@ -63,11 +63,11 @@
     }
     if(['wall','built','palisade'].includes(s.type)&&['tower','gate','wall','built','palisade'].includes(other.type))return false;
     if(other.type==='road'){
-      if(s.type==='market')return false; // paved square & crossing roads supported.
+      if(s.type==='market'||s.type==='plaza')return false; // public squares allow crossing roads.
       return polys.some(poly=>roadTouchesPolygon(other,poly,.04));
     }
     if(s.type==='road'){
-      if(other.type==='market')return false;
+      if(other.type==='market'||other.type==='plaza')return false;
       return manualRoadConflict(s,other);
     }
     const otherPolys=contact(other);
