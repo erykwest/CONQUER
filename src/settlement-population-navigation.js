@@ -270,7 +270,7 @@ function roadNetworkPath(start,goal,sourceHouseId){
   return clear;
 }
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training'].includes(s.type)).map(s=>{
+  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza'].includes(s.type)).map(s=>{
     if(['wall','palisade','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
   }).join('|');
@@ -287,10 +287,10 @@ function pointBlockedForPeasant(p,sourceHouseId){
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
   for(const s of State.structures){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
-    if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training'].includes(s.type))continue;
+    if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training','plaza'].includes(s.type))continue;
 
-    // Market ground and the actual castle gate passage are traversable.
-    if(s.type==='market')continue;
+    // Market and public piazza floors remain walkable; they are not solid buildings.
+    if(s.type==='market'||s.type==='plaza')continue;
     if(s.type==='gate'){
       if(window.ConquerCrossings?.drawbridgeBlocks(p,s))return true;
       if(gatePointInPassage(s,p,.08))continue;
