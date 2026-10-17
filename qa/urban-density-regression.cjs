@@ -24,7 +24,7 @@ function peasantHash(id){
   return h>>>0;
 }
 const sandbox={
-  State,window:{},dist,rectWorldPoints,peasantHash,biomeHash:peasantHash,
+  State,window:{},dist,rectWorldPoints,isCivicAnnex:()=>false,civicAnnexFootprint:()=>[],peasantHash,biomeHash:peasantHash,
   segmentDistance:(a,b,c,d)=>Math.min(
     dist(a,closestPointOnSegment(a,c,d)),dist(b,closestPointOnSegment(b,c,d)),
     dist(c,closestPointOnSegment(c,a,b)),dist(d,closestPointOnSegment(d,a,b))),
