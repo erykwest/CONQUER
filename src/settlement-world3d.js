@@ -680,7 +680,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','civicAnnex'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}
