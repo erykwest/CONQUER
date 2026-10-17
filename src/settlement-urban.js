@@ -208,7 +208,7 @@ function urbanQuad(cell,house,allowed=null){
   return quad.every(p=>urbanContains(cell,p))&&(!allowed||allowed(quad))?quad:null;
 }
 function urbanLotFor(house,houses,roads=primaryRoadList()){
-  const reach=house.type==='house'?3.4:Math.max(3.4,civicRadius(house)+.85);
+  const reach=house.type==='house'?3.4:Math.max(3.4,civicRadius(house)+3.3);
   let cell=[
     {x:Math.max(BUILD_MIN,house.x-reach),y:Math.max(BUILD_MIN,house.y-reach)},
     {x:Math.min(BUILD_MAX,house.x+reach),y:Math.max(BUILD_MIN,house.y-reach)},
