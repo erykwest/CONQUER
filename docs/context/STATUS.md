@@ -11,6 +11,13 @@
 - **PROGETTO** — proposta/decisione descritta in documentazione senza prova end-to-end.
 - **CHIUSO** — riservato alle feature con PR/commit e test/regressioni riscontrati e aggiornati in questa tabella.
 
+## Civil — skeleton edifici civili (17/10/2026; branch `Civil`)
+
+- **CODICE / BRANCH**: chiesa e locanda entrano come siti del catasto Voronoi in `src/settlement-urban.js`, con `civicId` distinto dai lotti delle case e perimetri/accessi condivisi; il mercato **non** riceve un lotto di pertinenza.
+- **CODICE / BRANCH**: introdotti `civicLevel` L1–L3 per chiesa, locanda, mercato e piazza. Nuovo edificio `plaza` (Piazza) 5×5 U con tre varianti `paved`, `fountain`, `garden`, controlli Builder, persistenza e placeholder grafici Canvas/WebGL2. La piazza è suolo pubblico, attraversabile dalla viabilità; non possiede un lotto residenziale.
+- **NON REALIZZATO (voluto)**: modifiche visive evolutive complete, bonus, funzioni sociali/economiche e routine; questa iterazione definisce solo skeleton dati/geometria/UI.
+- **QA**: `qa/urban-regression.cjs` e `qa/builder-placement-regression.cjs` estesi; workflow [Civil skeleton regression](https://github.com/erykwest/CONQUER/actions/workflows/civil-regression.yml) esegue anche `qa/urban-density-regression.cjs` e controlli sintattici; primo run [39021863368](https://github.com/erykwest/CONQUER/actions/runs/39021863368) **PASS**. La verifica visuale in browser e la CI dopo le ultime modifiche restano da confermare. **Nessun merge in `main`.**
+
 ## Diagnosi e fix in corso — crescita e ordini su main (16/10/2026)
 
 - **Riprodotto a livello di codice su main `39caf15`:** `processVillageGrowth()` ritorna senza spawn quando `foundingRoadJob` lavora alle quattro arterie. La telemetria Supabase (16/10, 18:23–18:29 UTC) registra partite a giorno 30+ con decine di strade e zero abitanti, oltre a ricerche `ROAD_REPAIR_SLOW` e blocchi di frame. Le righe di telemetria non identificano con certezza quale branch Vercel fosse aperta.
