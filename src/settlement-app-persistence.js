@@ -5,6 +5,7 @@ function migrateStructures(list){
     if(['moat','bridge'].includes(s.type))window.ConquerCrossings?.normalise(s);
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.normalizeFootprint(s);
     if(s.type==='house')s.houseLevel=houseLevel(s);
+    normalizeCivicDevelopment(s);
     if(s.type==='built'){
       s.width=1;
       if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);
