@@ -31,7 +31,7 @@ const sandbox={
   terrainSlopeKind:()=>null,environmentContains:()=>false,
   isPlacementFoundationBuilding:()=>false,buildableTerrainElevationForStructure:()=>0,
   environmentBlocksPoint:()=>false,manualRoadConflict:()=>false,
-  isPrimaryRoad:()=>false,roadTouchesPolygon:(r,poly)=>poly.some(p=>dseg(p,r.a,r.b)<.1),
+  isPrimaryRoad:()=>false,roadTouchesPolygon:(r,poly)=>poly.some(p=>dseg(p,r.a,r.b)<.1)||[r.a,r.b].some(p=>inside(p,poly))||poly.some((p,i)=>intersects(r.a,r.b,p,poly[(i+1)%poly.length])),
   TYPES:{road:{min:1}},constructionCost:()=>({}),canAfford:()=>true,costText:()=>''
 };
 const c=vm.createContext(sandbox),run=(x)=>vm.runInContext(x,c);
