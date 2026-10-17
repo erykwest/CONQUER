@@ -40,7 +40,7 @@ for(const f of ['settlement-civic-annexes.js','settlement-placement.js'])
   run(fs.readFileSync(path.join(root,'src',f),'utf8'));
 let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name)}
-function parent(type,level=3){State.structures=[{id:'main',type,x:100,y:100,civicLevel:level,angle:0}];State.lots=[{civicId:'main',points:square(100,100,16,16)}]}
+function parent(type,level=3){State.structures=[{id:'main',type,x:100,y:100,civicLevel:level,angle:0}];State.lots=type==='market'?[]:[{civicId:'main',points:square(100,100,16,16)}]}
 test('catalog offers owned annexes for three civic parent types, with levels and dimensions',()=>{
   assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),4);
   assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.tavern).length"),4);
