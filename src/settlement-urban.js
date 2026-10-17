@@ -103,6 +103,11 @@ function urbanParcelTerrainAllowed(points){
   // Reject the *whole* parcel, not just the house or field center.
   // Gentle slopes remain buildable; only cliffs/steep relief are excluded.
   for(const feature of State.environment){
+    if(feature.type==='forest'&&feature.holes?.length){
+      // Parcel corners in woodland holes may be buildable, but trees are not.
+      if(forestCoversPolygon(feature,points))return false;
+      continue;
+    }
     if(['forest','mountain','pond','sea'].includes(feature.type)&&
       urbanPolygonsOverlap(points,feature.points))return false;
     if(['river','stream'].includes(feature.type)){

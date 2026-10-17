@@ -145,6 +145,16 @@ function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
 }
 function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
+  if(window.ConquerLOD?.militaryTier()==='dot'){
+    const foot=w2s(p,z),radius=2.1;
+    ctx.save();
+    ctx.fillStyle=window.ConquerLOD.militaryColor(type,liveryOverride);
+    ctx.strokeStyle='#252928';ctx.lineWidth=.8;
+    ctx.beginPath();ctx.arc(foot.x,foot.y-radius*.6,radius,0,Math.PI*2);
+    ctx.fill();ctx.stroke();
+    ctx.restore();
+    return;
+  }
   const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
   const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,livery=liveryOverride||soldierLivery(id);
 

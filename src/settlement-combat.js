@@ -11,7 +11,7 @@
   const fogCtx=fog.getContext('2d');
   const memory=new Uint8Array(N*N), visible=new Uint8Array(N*N);
   const forestCell=new Int16Array(N*N),heightCell=new Float32Array(N*N);
-  let terrainRef=null,forestRef=null,lastVision=0,maskDirty=true,visibilityDirty=true;
+  let terrainRef=null,forestRef=null,forestRev=-1,lastVision=0,maskDirty=true,visibilityDirty=true;
   let circleCache=[],circleCacheBucket=-1;
   const strokeBuckets=new Map();let indexedStrokes=-1;
   // Masks are raster unions of auto-generated regions and manual brush marks.
@@ -64,7 +64,7 @@
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
-        const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
+        const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,patrolProbeOffset,...stored}=u;
         return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
@@ -93,7 +93,7 @@
     // previously stored [unit, destination], creating unit -> path -> unit
     // and aborting the entire simulation when saveLocal JSON.stringify ran.
     return {...combat,units:combat.units.map(u=>{
-      const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
+      const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,patrolProbeOffset,...stored}=u;
       return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
         ?{x:u.target.x,y:u.target.y}:null};
     })};
@@ -111,10 +111,10 @@
   const activeWell=()=>State.village.founded?State.structures.find(s=>s.id===State.village.wellId&&s.type==='well'):null;
   function startUnits(){
     const well=activeWell();if(!well||combat.units.length)return;
-    combat.units=[
-      {id:'combat-squad-'+well.id,kind:'squad',x:well.x+2,y:well.y+2,target:null,experience:0},
-      {id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}
-    ];changed();
+    combat.units=window.__CONQUER_CAMP_MODE__
+      ?[{id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}]
+      :[{id:'combat-squad-'+well.id,kind:'squad',x:well.x+2,y:well.y+2,target:null,experience:0},
+        {id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}];changed();
   }
   function circles(){
     const well=activeWell();if(!well)return [];
@@ -409,8 +409,10 @@
     return position;
   }
   function terrainCache(){
-    if(State.relief!==terrainRef||State.environment!==forestRef){
-      terrainRef=State.relief;forestRef=State.environment;
+    // environmentRevision: main-road grooves cut the woodland in place.
+    const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    if(State.relief!==terrainRef||State.environment!==forestRef||envRev!==forestRev){
+      terrainRef=State.relief;forestRef=State.environment;forestRev=envRev;
       forestCell.fill(-2);heightCell.fill(NaN);
       visibilityDirty=true;maskDirty=true;
     }
@@ -434,23 +436,35 @@
     return heightCell[i];
   }
   function tileOf(p){return{x:clamp(Math.floor(p.x/STEP),0,N-1),y:clamp(Math.floor(p.y/STEP),0,N-1)}}
+  // The same simulated visual clock governs torches, daylight and combat LOS.
+  // Night vision is exactly one third of the daytime *radius* (not area).
+  function combatVisionFactor(){
+    return solarIsNight()?1/3:1;
+  }
+  function combatVisionRadius(height){
+    return (VISION_BASE+VISION_PER_HEIGHT*height)*combatVisionFactor();
+  }
+  function combatForestSight(){return FOREST_SIGHT_U*combatVisionFactor()}
   function inForestDeep(p,forestId){
     if(forestId<0)return false;
     const f=State.environment[forestId];if(!f||!f.points)return false;
+    const limit=combatForestSight();
+    if(f.holes?.length)return forestNearestEdge(f,p).distance>limit;
     let min=Infinity;
     for(let i=0;i<f.points.length;i++)min=Math.min(min,pointSegmentDistance(p,f.points[i],f.points[(i+1)%f.points.length]));
-    return min>FOREST_SIGHT_U;
+    return min>limit;
   }
   function observers(){
     const out=[];
     for(const tower of State.structures){
       if(tower.type!=='tower'||underConstruction(tower))continue;
       const h=clamp(Math.round(terrainElevation(tower)+structureLevel(tower)),0,8);
-      out.push({x:tower.x,y:tower.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:tower.id});
+      out.push({x:tower.x,y:tower.y,h,r:combatVisionRadius(h),id:tower.id});
     }
     for(const unit of combat.units){
       const h=clamp(Math.round(terrainElevation(unit)),0,8);
-      out.push({x:unit.x,y:unit.y,h,r:VISION_BASE+VISION_PER_HEIGHT*h,id:unit.id});
+      if(unit.defeated||unit.stats?.hp<=0||unit.campState==='barracks')continue;
+      out.push({x:unit.x,y:unit.y,h,r:combatVisionRadius(h),id:unit.id});
     }
     return out;
   }
@@ -463,8 +477,9 @@
       if(terrain>source.h+.05)return false;
       if(forestId>=0&&terrain+1>=source.h-.05){
         // Edge silhouettes may be visible, but deep tree cover hides the cell.
-        if(!(forestId===targetForest&&length-dist(source,p)<FOREST_SIGHT_U)&&
-           !(forestId===sourceForest&&dist(source,p)<FOREST_SIGHT_U))return false;
+        const limit=combatForestSight();
+        if(!(forestId===targetForest&&length-dist(source,p)<limit)&&
+           !(forestId===sourceForest&&dist(source,p)<limit))return false;
       }
     }
     return true;
@@ -474,10 +489,10 @@
     const sourceForest=forestAt(source),targetForest=forestAt(target);
     if(targetForest>=0){
       if(sourceForest===targetForest){
-        if(dist(source,target)>FOREST_SIGHT_U)return false;
+        if(dist(source,target)>combatForestSight())return false;
       }else if(inForestDeep(target,targetForest))return false;
     }
-    if(sourceForest>=0&&sourceForest!==targetForest&&dist(source,target)>FOREST_SIGHT_U)return false;
+    if(sourceForest>=0&&sourceForest!==targetForest&&dist(source,target)>combatForestSight())return false;
     return lineVisible(source,target,sourceForest,targetForest);
   }
   function paintFogBitmap(){
@@ -501,7 +516,9 @@
     if(!force&&now-lastVision<500)return;
     startUnits();terrainCache();
     const sources=observers();
-    const sig=sources.map(s=>s.id+':'+s.x.toFixed(1)+':'+s.y.toFixed(1)+':'+s.h).join('|')+
+    // A day/night or forced-light switch changes vision even when the tower
+    // and every soldier are stationary. Include the radius in the cache key.
+    const sig=sources.map(s=>s.id+':'+s.x.toFixed(1)+':'+s.y.toFixed(1)+':'+s.h+':'+s.r.toFixed(2)).join('|')+
       ':structures'+State.structures.length+':env'+State.environment.length;
     // Static watchtowers do not require a full 10k-cell raycast every 2.5s.
     // Retain occasional refresh for in-place terrain / forest edits.
@@ -533,12 +550,14 @@
     updateAlert(sources);
   }
   function spotted(p,sources){
-    const q=tileOf(p);return !!visible[idx(q.x,q.y)]||sources.some(s=>sourceSees(s,p));
+    // Enemy contacts must obey actual LOS at this instant, never a stale fog
+    // bitmap from the previous day/night phase.
+    return !!sources?.some(s=>sourceSees(s,p));
   }
   function updateAlert(sources){
     let next='clear';
     for(const intruder of combat.enemy){
-      if(intruder.defeated||intruder.stats?.hp<=0||!spotted(intruder,sources))continue;
+      if(intruder.neutral||intruder.defeated||intruder.stats?.hp<=0||!spotted(intruder,sources))continue;
       const a=areaState(intruder);
       if(a.green){next='general';break}
       if(a.yellow)next='local';
@@ -630,8 +649,62 @@
     g.drawImage(backdrop,0,0);
     g.restore();
   }
+  // Infantry standards use the same campaign heraldry raster as tower flags,
+  // not a separately generated unit emblem.
+  function drawSquadStandard(p,id){
+    const base=w2s(p,.08),scale=clamp(State.view.scale,.55,1.45);
+    const mastX=base.x+5*scale,mastTop=base.y-36*scale;
+    const width=14*scale,height=19*scale;
+    const wave=Math.sin(visualCycleDay()*18+(peasantHash(id)%1000)*.00628)*1.1*scale;
+    const topLeft={x:mastX,y:mastTop+2*scale};
+    const topRight={x:mastX+width,y:topLeft.y+wave};
+    const bottomRight={x:topRight.x,y:topRight.y+height};
+    const bottomLeft={x:topLeft.x,y:topLeft.y+height};
+    g.save();
+    g.strokeStyle='#705038';g.lineWidth=Math.max(1,1.5*scale);
+    g.beginPath();g.moveTo(mastX,base.y-2*scale);g.lineTo(mastX,mastTop);g.stroke();
+    g.save();
+    g.beginPath();g.moveTo(topLeft.x,topLeft.y);g.lineTo(topRight.x,topRight.y);
+    g.lineTo(bottomRight.x,bottomRight.y);g.lineTo(bottomLeft.x,bottomLeft.y);
+    g.closePath();g.clip();
+    const herald=State.heraldry||{};
+    if(!window.__conquerHeraldryCanvas?.paint(g,topLeft.x,Math.min(topLeft.y,topRight.y),width,height+Math.abs(wave))){
+      g.fillStyle=herald.c1||REIGN_COLOR_1;
+      g.fillRect(topLeft.x,topLeft.y,width,height+Math.abs(wave));
+      g.fillStyle=herald.c2||REIGN_COLOR_2;
+      g.fillRect(topLeft.x+width/2,topLeft.y,width/2,height+Math.abs(wave));
+    }
+    g.restore();
+    g.strokeStyle='#e0d3b1';g.lineWidth=Math.max(.7,.85*scale);
+    g.beginPath();g.moveTo(topLeft.x,topLeft.y);g.lineTo(topRight.x,topRight.y);
+    g.lineTo(bottomRight.x,bottomRight.y);g.lineTo(bottomLeft.x,bottomLeft.y);
+    g.closePath();g.stroke();
+    g.fillStyle='#c6a461';g.beginPath();g.arc(mastX,mastTop,Math.max(1,1.1*scale),0,Math.PI*2);g.fill();
+    g.restore();
+  }
+  // One torch-bearer per two-man patrol: the light is held above the leading
+  // soldier's right hand, rather than being a stationary world fixture.
+  function drawPatrolTorch(p,id){
+    const base=w2s(p,.08),figureScale=militaryScale();
+    const scale=clamp(State.view.scale*.72,.45,1.5);
+    const grip={x:base.x+5.4*figureScale*.55,y:base.y-1.25*figureScale};
+    const tip={x:grip.x+1.2*figureScale,y:grip.y-15*figureScale};
+    g.save();
+    g.strokeStyle='#63472d';g.lineWidth=Math.max(1,1.65*figureScale);
+    g.beginPath();g.moveTo(grip.x,grip.y);g.lineTo(tip.x,tip.y);g.stroke();
+    g.fillStyle='#49372b';g.fillRect(tip.x-1.8*figureScale,tip.y-1.5*figureScale,3.6*figureScale,3*figureScale);
+    const glow=g.createRadialGradient(tip.x,tip.y,0,tip.x,tip.y,9*scale);
+    glow.addColorStop(0,'rgba(255,189,79,.48)');
+    glow.addColorStop(.5,'rgba(247,134,40,.21)');
+    glow.addColorStop(1,'rgba(247,134,40,0)');
+    g.globalCompositeOperation='screen';g.fillStyle=glow;
+    g.beginPath();g.arc(tip.x,tip.y,9*scale,0,Math.PI*2);g.fill();
+    g.restore();
+    drawScreenFlame(tip,scale,id+':patrol-hand-torch');
+  }
   function renderOverlay(){
     if(!combat)return;
+    window.ConquerWolves?.ensure();
     const overlayStart=performance.now();
     const rect=wrap.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
     if(canvasLayer.width!==Math.round(rect.width*d)||canvasLayer.height!==Math.round(rect.height*d)){
@@ -643,14 +716,24 @@
     if(!activeWell())return;
     const king=combat.units.find(u=>u.kind==='knight');
     for(const u of combat.units){
-      if(!selectedIds.has(u.id)||u.defeated)continue;
+      if(!selectedIds.has(u.id)||u.defeated||u.campState)continue;
       g.strokeStyle=u.kind==='knight'?'rgba(255,211,116,.86)':'#e3fcac';
       g.lineWidth=1.5;g.setLineDash([5,4]);
       drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)},true);
       g.setLineDash([]);
     }
+    window.ConquerCamp?.drawEncampments(g);
     const characters=[];
     for(const u of combat.units){
+      if(u.defeated||u.campState==='barracks')continue;
+      if(u.campState==='camped'){
+        // Preserve the cavalry figure for a lone knight; larger formations
+        // leave just one visible sentry while the remainder rests in tents.
+        const soloKnight=u.kind==='knight';
+        characters.push({p:soloKnight?u:{x:u.x+.15,y:u.y+.85},
+          type:soloKnight?'knight':'spearman',id:u.id+':camp-guard',unit:u,index:0});
+        continue;
+      }
       if(u.kind==='knight'&&!u.defeated)characters.push({p:u,type:'knight',id:u.id,unit:u});
       else{
         if(u.defeated)continue;
@@ -658,7 +741,10 @@
         for(let i=0;i<count;i++){
           const row=Math.floor(i/3),col=i%3,spacing=.55;
           const offset=count===2?(i?spacing/2:-spacing/2):(col-1)*spacing;
-          characters.push({p:{x:u.x+offset,y:u.y+(row-.4)*spacing},type:'spearman',id:u.id+':'+i,flag:u.kind==='squad'&&i===0,unit:u,index:i});
+          const torch=u.kind==='patrol'&&i===0&&window.ConquerCamp?.isNight();
+          characters.push({p:{x:u.x+offset,y:u.y+(row-.4)*spacing},
+            type:torch?'unarmed':'spearman',id:u.id+':'+i,
+            flag:u.kind==='squad'&&i===0,torch,unit:u,index:i});
         }
       }
     }
@@ -668,7 +754,7 @@
       for(const soldier of characters){
         drawSoldierFigure(soldier.p,.08,soldier.type,soldier.id,State.clock.day);
         if(soldier.type==='spearman'&&soldier.unit.engaged){
-          const target=combat.enemy.filter(e=>!e.defeated&&e.stats?.hp>0)
+          const target=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&e.stats?.hp>0)
             .sort((a,b)=>dist(a,soldier.unit)-dist(b,soldier.unit))[0];
           if(target&&dist(target,soldier.unit)<1){
             const base=w2s(soldier.p,.24),end=w2s(target,.45);
@@ -678,16 +764,20 @@
             g.lineTo(base.x+(end.x-base.x)*(.25+.7*pulse),base.y-8+(end.y-base.y-8)*(.25+.7*pulse));g.stroke();
           }
         }
-        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,.08,()=>{
-          const base=w2s(soldier.p,.08);
-          g.strokeStyle='#5d4535';g.lineWidth=1.8;g.beginPath();
-          g.moveTo(base.x+5,base.y-2);g.lineTo(base.x+5,base.y-27);g.stroke();
-          g.fillStyle='#d6bd68';g.beginPath();g.moveTo(base.x+5,base.y-27);
-          g.lineTo(base.x+19,base.y-24);g.lineTo(base.x+5,base.y-19);g.fill();
-        });
+        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,.08,()=>
+          drawSquadStandard(soldier.p,soldier.unit.id));
+        if(soldier.torch)withUrbanFigureOcclusion(soldier.p,.08,()=>
+          drawPatrolTorch(soldier.p,soldier.id));
       }
       for(const e of combat.enemy){
-        if(e.defeated||e.stats?.hp<=0||!spotted(e,sightSources))continue;
+        if(e.defeated||e.stats?.hp<=0)continue;
+        if(e.kind==='wolf'){
+          // Wildlife remains a visible neutral creature by day; at night the
+          // exact same entity is rendered while its combat flag turns hostile.
+          if(!combat.fog||spotted(e,sightSources))window.ConquerWolves?.draw(g,e);
+          continue;
+        }
+        if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
         drawSoldierFigure(e,.08,'spearman',e.id,State.clock.day,livery);
         const p=w2s(e,.08);g.strokeStyle='#e45151';g.lineWidth=2;
@@ -749,7 +839,10 @@
   }
   function patrolRouteCacheKey(start,goal){
     const q=p=>Math.round(p.x*4)+','+Math.round(p.y*4);
-    return whiteBoundaryRevision+'|'+patrolNavRevision+'|'+q(start)+'>'+q(goal);
+    // Construction, demolition and terrain edits can invalidate routes even
+    // when the White Zone boundary itself has not changed.
+    const navRevision=typeof navPerf!=='undefined'?(navPerf.navInvalidations||0):0;
+    return whiteBoundaryRevision+'|'+patrolNavRevision+'|'+navRevision+'|'+q(start)+'>'+q(goal);
   }
   function rememberPatrolRoute(key,route){
     if(patrolRouteCache.size>=PATROL_ROUTE_CACHE_MAX){
@@ -769,7 +862,7 @@
     out.push(points.at(-1));
     return out;
   }
-  function findPatrolPath(start,goal,id,pad){
+  function findPatrolPath(start,goal,id,pad,deadline=Infinity){
     const step=PATROL_PATH_STEP;
     const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
     const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -795,13 +888,23 @@
     const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
     let found=false,guard=0;
     while(open.length&&guard++<8000){
+      // Reject pathological blocked A* searches before they freeze rendering:
+      // Supabase saw a 925 ms patrol search on a failed 7U route. Normal
+      // adjacent perimeter legs remain unaffected.
+      if((guard&3)===0&&performance.now()>deadline){
+        const perf=window.__conquerPerf||(window.__conquerPerf={});
+        perf.patrolBudgetStops=(perf.patrolBudgetStops||0)+1;
+        return null;
+      }
       const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
       if(cur.x===g.x&&cur.y===g.y){found=true;break}
       for(const [dx,dy] of dirs){
         const nx=cur.x+dx,ny=cur.y+dy,nk=key(nx,ny);if(closed.has(nk)||unavailable(nx,ny))continue;
         if(dx&&dy&&(unavailable(cur.x+dx,cur.y)||unavailable(cur.x,cur.y+dy)))continue;
         const from=pos(cur.x,cur.y),q=pos(nx,ny);
-        if(terrainSegmentCrossesCliff(from,q))continue;
+        // A* must enforce the same swept-footprint collision and zone
+        // restrictions as the actual patrol movement.
+        if(!safeMilitarySegment(from,q,id,'patrol')||!routeAllowed([from,q]))continue;
         const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
         if(tentative<(gScore.get(nk)??Infinity)){
           gScore.set(nk,tentative);came.set(nk,ck);
@@ -821,24 +924,38 @@
     const perf=window.__conquerPerf||(window.__conquerPerf={});
     perf.patrolRouteCalls=(perf.patrolRouteCalls||0)+1;
     if(patrolRouteCache.has(cacheKey)){
-      perf.patrolRouteCacheHits=(perf.patrolRouteCacheHits||0)+1;
       const cached=patrolRouteCache.get(cacheKey);
       const route=cached?.map((p,i,a)=>i===0?{x:start.x,y:start.y}:i===a.length-1?{x:goal.x,y:goal.y}:{...p})||null;
-      perf.patrolRouteLastMs=performance.now()-t0;
-      return route;
+      if(route?.length>1&&routeAllowed(route)&&route.slice(1).every((p,i)=>safeMilitarySegment(route[i],p,id,'patrol'))){
+        perf.patrolRouteCacheHits=(perf.patrolRouteCacheHits||0)+1;
+        perf.patrolRouteLastMs=performance.now()-t0;
+        return route;
+      }
+      patrolRouteCache.delete(cacheKey);
     }
     let route=null,mode='direct';
     if(safeMilitarySegment(start,goal,id,'patrol')&&routeAllowed([start,goal]))route=[start,goal];
     else{
       mode='local-grid';
       perf.patrolLocalSearches=(perf.patrolLocalSearches||0)+1;
-      const pad=distance<=4?2.5:Math.min(5,3+distance*.08);
-      route=findPatrolPath(start,goal,id,pad);
+      // The former 2.5–5U bounding box made perfectly accessible routes
+      // impossible whenever a wall/building extended beyond this corridor.
+      // Expand in bounded stages to find genuine detours while preserving the
+      // fast narrow search on unobstructed short patrol legs.
+      const initialPad=distance<=4?2.5:Math.min(5,3+distance*.08);
+      const pads=[initialPad,Math.max(7,initialPad),Math.max(13,initialPad),Math.max(21,initialPad)];
+      const deadline=t0+40;
+      for(const pad of pads){
+        if(route||performance.now()>deadline)break;
+        route=findPatrolPath(start,goal,id,pad,deadline);
+        perf.patrolSearchLastPad=pad;
+      }
     }
     if(route?.length>1&&routeAllowed(route)&&route.slice(1).every((p,i)=>safeMilitarySegment(route[i],p,id,'patrol'))){
       rememberPatrolRoute(cacheKey,route);
     }else{
-      route=null;rememberPatrolRoute(cacheKey,null);perf.patrolRouteMisses=(perf.patrolRouteMisses||0)+1;
+      // A failed path must remain retryable after a gate opens or an obstruction moves.
+      route=null;perf.patrolRouteMisses=(perf.patrolRouteMisses||0)+1;
     }
     const ms=performance.now()-t0;perf.patrolRouteLastMs=ms;
     window.__conquerAnalytics?.measure('PATROL_ROUTE',ms,{mode,distance:+distance.toFixed(2),points:route?.length||0});
@@ -847,7 +964,7 @@
   function selectCombatUnits(units,additive=false,toggle=false){
     if(!additive)selectedIds.clear();
     for(const unit of units){
-      if(unit.defeated||unit.routing)continue;
+      if(unit.defeated||unit.routing||unit.campState)continue;
       if(toggle&&selectedIds.has(unit.id))selectedIds.delete(unit.id);
       else selectedIds.add(unit.id);
     }
@@ -862,13 +979,16 @@
     return !!commander&&dist(unit,commander)<=16&&dist(target,commander)<=16;
   }
   function issueMove(unit,p,quiet=false){
-    if(unit.defeated||unit.routing){
+    if(unit.defeated||unit.routing||unit.campState){
       if(!quiet)status('Unit cannot receive orders');
       return false;
     }
     // The knight's 16U command beacon takes precedence over the subordinate
     // sergeant's 6U personal order radius when both endpoints are covered.
-    if(unit.kind==='squad'&&!commanderCoversOrder(unit,p)){
+    // /camp is a direct-control prototype: troops must be able to march
+    // beyond the yellow settlement radius to establish a field camp.
+    // Preserve the 16U knight command rule for the regular combat mode.
+    if(unit.kind==='squad'&&!window.__CONQUER_CAMP_MODE__&&!commanderCoversOrder(unit,p)){
       if(!quiet)status('Out of knight command beacon (16U)');
       return false;
     }
@@ -881,18 +1001,37 @@
     if(!quiet){changed();status((unit.kind==='squad'?'Pikemen':unit.kind==='patrol'?'Patrol':'Knight')+' marching via valid terrain')}
     return true;
   }
+  // Barracks recall is an internal duty order, not subject to the knight beacon.
+  function recallCampUnit(unit,home){
+    if(unit.defeated||unit.routing)return false;
+    const target=point(home.x,home.y),path=infantryRoute(unit,target,unit.id,unit.kind);
+    if(!path)return false;
+    unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;
+    return true;
+  }
   function issueGroupMove(target){
     const units=combat.units.filter(u=>selectedIds.has(u.id)&&!u.defeated&&!u.routing);
     if(!units.length)return;
     const centroid={x:units.reduce((sum,u)=>sum+u.x,0)/units.length,y:units.reduce((sum,u)=>sum+u.y,0)/units.length};
-    let moved=0;
+    let moved=0,outsideCommand=0,unreachable=0;
     for(const unit of units){
-      // Preserve group spacing and issue each route independently to avoid
-      // stacking entire squads at one destination point.
-      if(issueMove(unit,point(target.x+unit.x-centroid.x,target.y+unit.y-centroid.y),true))moved++;
+      // Preserve formation without hiding why individual orders were refused.
+      const goal=point(target.x+unit.x-centroid.x,target.y+unit.y-centroid.y);
+      if(unit.kind==='squad'&&!window.__CONQUER_CAMP_MODE__&&!commanderCoversOrder(unit,goal)){
+        outsideCommand++;
+        continue;
+      }
+      if(issueMove(unit,goal,true))moved++;
+      else unreachable++;
     }
     if(moved)changed();
-    status(moved===units.length?moved+' unit(s) marching':moved+'/'+units.length+' orders accepted (command radius / obstacles)');
+    if(State.clock.speed===0&&moved)
+      status(moved+'/'+units.length+' ordini ricevuti · tempo in pausa: premi 1× per muovere le truppe');
+    else if(outsideCommand||unreachable)
+      status(moved+'/'+units.length+' ordini accettati'+
+        (outsideCommand?' · '+outsideCommand+' fuori raggio cavaliere (16U)':'')+
+        (unreachable?' · '+unreachable+' senza percorso':''));
+    else status(moved+' unit(s) marching');
   }
   function whiteBoundaryPoints(){
     const automatic=circles().filter(c=>c.mode==='allow');
@@ -902,10 +1041,13 @@
     const signatureChanged=signature!==whiteBoundarySignature;
     if(!window.ConquerCombatRules.shouldRebuildBoundary(painting,whiteBoundaryCache.length>0,signatureChanged))return whiteBoundaryCache;
     whiteBoundarySignature=signature;whiteBoundaryRevision++;
-    const points=window.ConquerCombatRules.boundaryPoints(p=>areaState(p).allowed,WORLD,1.25);
-    whiteBoundaryCache=points;
     const center=activeWell()||{x:WORLD/2,y:WORLD/2};
-    whiteBoundaryLoopCache=window.ConquerCombatRules.traceBoundaryIndices(points,center,1);
+    const points=window.ConquerCombatRules.orderedBoundaryPoints(
+      p=>areaState(p).allowed,WORLD,1.25,center);
+    whiteBoundaryCache=points;
+    // The contour is already ordered. Never apply the branch-prone greedy
+    // neighbor trace to it or patrols can reverse along a short fragment.
+    whiteBoundaryLoopCache=points.map((_,i)=>i);
     patrolRouteCache.clear();
     for(const unit of combat.units)if(unit.kind==='patrol'){
       unit.patrolLoopPosition=null;unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
@@ -921,36 +1063,75 @@
       unit.patrolLoopPosition=loopPosition;
       unit.patrolAnchorIndex=loop[loopPosition];
       unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;unit.patrolDirection=1;
-      unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;
+      unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;unit.patrolProbeOffset=0;
     });
   }
-  function patrolDestination(unit){
+  function patrolDestination(unit,skip=0){
     const boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache;if(!boundary.length||!loop.length)return null;
-    let position=Number.isInteger(unit.patrolLoopPosition)?unit.patrolLoopPosition:-1;
-    let current=position>=0?loop[position]:-1;
-    if(current<0||!boundary[current]||dist(unit,boundary[current])>3.25){
-      if(Number.isInteger(unit.patrolAnchorIndex)){
-        const anchored=loop.indexOf(unit.patrolAnchorIndex);
-        if(anchored>=0)position=anchored;
-      }
-      if(position<0){
-        position=0;let bestD=dist(unit,boundary[loop[0]]);
-        for(let i=1;i<loop.length;i++){const d=dist(unit,boundary[loop[i]]);if(d<bestD){bestD=d;position=i}}
-      }
-      unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolAnchorIndex=null;
-      return boundary[loop[position]];
+    let position=Number.isInteger(unit.patrolLoopPosition)&&
+      unit.patrolLoopPosition>=0&&unit.patrolLoopPosition<loop.length?unit.patrolLoopPosition:-1;
+    const initial=position<0;
+    if(initial&&Number.isInteger(unit.patrolAnchorIndex)){
+      position=loop.indexOf(unit.patrolAnchorIndex);
     }
+    if(position<0){
+      // First assignment only: find the closest perimeter sample.
+      position=0;let bestD=dist(unit,boundary[loop[0]]);
+      for(let i=1;i<loop.length;i++){
+        const d=dist(unit,boundary[loop[i]]);
+        if(d<bestD){bestD=d;position=i}
+      }
+    }
+    // Once established, progress by sequence number, not distance to the
+    // previous raw border sample. Inward-adjusted waypoints and sparse
+    // corners may be farther than 3.25U, which previously reset the patrol
+    // to the same waypoint forever.
     const direction=unit.patrolDirection<0?-1:1;
-    position=(position+direction*PATROL_LOOP_STRIDE)%loop.length;if(position<0)position+=loop.length;
-    unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];unit.patrolPreviousIndex=null;
+    position=(position+direction*(skip+(initial?0:1))*PATROL_LOOP_STRIDE)%loop.length;
+    if(position<0)position+=loop.length;
+    unit.patrolLoopPosition=position;unit.patrolBoundaryIndex=loop[position];
+    unit.patrolAnchorIndex=null;unit.patrolPreviousIndex=null;
     return boundary[loop[position]];
+  }
+  function patrolSafeWaypoint(candidate){
+    if(!candidate)return null;
+    const clear=p=>areaState(p).allowed&&cliffClearForFootprint(p,'patrol');
+    if(clear(candidate))return candidate;
+    // Samples of the White Zone perimeter may overlap a wall, house or
+    // blocked doorway. Shift a short distance inside the permitted area.
+    const center=activeWell()||{x:WORLD/2,y:WORLD/2};
+    const angle=Math.atan2(center.y-candidate.y,center.x-candidate.x);
+    for(const radius of [.5,1,1.5,2,2.5]){
+      for(const turn of [0,-Math.PI/4,Math.PI/4,-Math.PI/2,Math.PI/2,Math.PI]){
+        const a=angle+turn;
+        const p={x:candidate.x+Math.cos(a)*radius,y:candidate.y+Math.sin(a)*radius};
+        if(clear(p))return p;
+      }
+    }
+    return null;
   }
   function updatePatrols(now){
     for(const unit of combat.units){
-      if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.target||now<(unit.nextPatrolAt||0))continue;
-      const target=patrolDestination(unit);
-      unit.nextPatrolAt=target?now:now+300;
-      if(target){unit.target=target;unit.path=null;unit.pathIndex=1}
+      if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.campState||unit.target||now<(unit.nextPatrolAt||0))continue;
+      const previous=unit.patrolLoopPosition,offset=unit.patrolProbeOffset||0;
+      // Only one candidate is searched per simulation tick. Searching three
+      // endpoints * four increasingly wide A* windows in one tick caused
+      // visible frame stalls in dense villages.
+      unit.patrolLoopPosition=previous;
+      const target=patrolSafeWaypoint(patrolDestination(unit,offset));
+      const path=target?patrolRoute(unit,target,unit.id):null;
+      if(path?.length>1){
+        unit.target={x:target.x,y:target.y};
+        unit.path=path.map(p=>({x:p.x,y:p.y}));
+        unit.pathIndex=1;unit.patrolProbeOffset=0;unit.nextPatrolAt=now;
+      }else{
+        unit.patrolLoopPosition=previous;
+        unit.patrolProbeOffset=(offset+1)%Math.max(1,whiteBoundaryLoopCache.length);
+        unit.nextPatrolAt=now+650;
+        if(window.__conquerPerf){
+          window.__conquerPerf.patrolWaypointMisses=(window.__conquerPerf.patrolWaypointMisses||0)+1;
+        }
+      }
     }
   }
   function addPatrol(){
@@ -977,7 +1158,10 @@
   function spawnOccupants(){
     const out=[];
     for(const unit of combat.units.concat(combat.enemy)){
-      if(unit.defeated||unit.stats?.hp<=0)continue;
+      if(unit.defeated||unit.stats?.hp<=0||unit.campState==='barracks')continue;
+      if(unit.campState==='camped'){
+        out.push({x:unit.x+.15,y:unit.y+.85,r:.22});continue;
+      }
       for(const [ox,oy] of militaryOffsets(unit.kind))out.push({x:unit.x+ox,y:unit.y+oy,r:unit.kind==='knight'?.30:.22});
     }
     return out;
@@ -1025,14 +1209,16 @@
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);
+    window.ConquerWolves?.tick(dt);
+    window.ConquerCamp?.synchronize();
     updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
-      if(!u.target||u.defeated||u.routing)continue;
+      if(!u.target||u.defeated||u.routing||u.campState==='camped'||u.campState==='barracks')continue;
       if(!u.path?.length){
         const route=u.kind==='patrol'?patrolRoute(u,u.target,u.id):infantryRoute(u,u.target,u.id,u.kind);
         u.path=route?.map(p=>({x:p.x,y:p.y}))||null;u.pathIndex=1;
-        if(!u.path){u.target=null;if(u.kind==='patrol')u.nextPatrolAt=performance.now()+350;continue}
+        if(!u.path){u.target=null;if(u.kind==='patrol'){u.patrolProbeOffset=(u.patrolProbeOffset||0)+1;u.nextPatrolAt=performance.now()+650}continue}
       }
       let budget=dt*(u.kind==='knight'?1.5:u.kind==='patrol'?1.15:.8)*(window.ConquerCrossings?.movementMultiplier(u)||1);
       while(budget>0&&u.target){
@@ -1042,8 +1228,14 @@
         if(length<.025){u.x=next.x;u.y=next.y;u.pathIndex++;continue}
         const step=Math.min(length,budget);
         const nextPos={x:u.x+(next.x-u.x)*step/length,y:u.y+(next.y-u.y)*step/length};
-        if(!safeMilitarySegment(u,nextPos,u.id,u.kind)){
-          u.target=null;u.path=null;status('Cliff or obstruction blocks unit footprint: stopped');break;
+        if(!safeMilitarySegment(u,nextPos,u.id,u.kind)||
+           (u.kind==='patrol'&&!routeAllowed([u,nextPos]))){
+          u.target=null;u.path=null;
+          if(u.kind==='patrol'){
+            u.patrolProbeOffset=(u.patrolProbeOffset||0)+1;
+            u.nextPatrolAt=performance.now()+650;
+          }else status('Cliff or obstruction blocks unit footprint: stopped');
+          break;
         }
         u.x=nextPos.x;u.y=nextPos.y;budget-=step;moved=true;
         if(step>=length-.025){u.x=next.x;u.y=next.y;u.pathIndex++}
@@ -1052,6 +1244,7 @@
       window.ConquerSnowTracks?.observe(u.id,u,State.clock.day,u.kind==='knight'?'horse':'person');
     }
     if(moved){visibilityDirty=true;maskDirty=true}
+    window.ConquerCamp?.synchronize();
     // Combat AI, target acquisition and LOS are capped at 10 Hz.
     // World unit movement remains driven by the regular simulation delta.
     const rules=window.ConquerCombatRules;
@@ -1059,7 +1252,9 @@
     if(rules&&tacticalRuleAccum>=.1){
       const step=tacticalRuleAccum;tacticalRuleAccum=0;
       const ruleStart=performance.now();
-      const hostiles=combat.enemy.filter(e=>!e.defeated&&(!e.stats||e.stats.hp>0));
+      // Neutral daytime fauna must not trigger tower roster scans or
+      // expensive combat target acquisition.
+      const hostiles=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&(!e.stats||e.stats.hp>0));
       for(const e of hostiles){
         e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
       }
@@ -1072,7 +1267,11 @@
             const facing=((e.x-shooter.x)*shooter.nx+(e.y-shooter.y)*shooter.ny)/d;
             if(facing<.45)return false;
           }
-          return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:rules.shooterRange(shooter,e)},e);
+          // A bow keeps its physical range, but a tower cannot select a
+          // target farther than its current (night-adjusted) sight radius.
+          const height=clamp(Math.round(shooter.h),0,8);
+          const range=Math.min(rules.shooterRange(shooter,e),combatVisionRadius(height));
+          return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:range},e);
         },
         (a,b)=>safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
       const ruleMs=performance.now()-ruleStart;
@@ -1113,7 +1312,7 @@
       status('Test intruder placed — visible only within line of sight');draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
-      const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&dist(u,p)<1.1)
+      const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&!u.campState&&dist(u,p)<1.1)
         .sort((a,b)=>dist(a,p)-dist(b,p))[0];
       if(hit){
         e.preventDefault();e.stopImmediatePropagation();
@@ -1151,7 +1350,7 @@
         const x0=Math.min(drag.start.x,drag.end.x),x1=Math.max(drag.start.x,drag.end.x);
         const y0=Math.min(drag.start.y,drag.end.y),y1=Math.max(drag.start.y,drag.end.y);
         const hits=combat.units.filter(u=>{
-          if(u.defeated||u.routing)return false;
+          if(u.defeated||u.routing||u.campState)return false;
           const q=w2s(u,.08);return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
         });
         selectCombatUnits(hits,drag.shift);
@@ -1230,10 +1429,39 @@
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
   $('combatClearEnemies').onclick=()=>{combat.enemy=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  // Read-only tactical contacts for ultra-low-detail views. Enemy positions
+  // obey exactly the same spotting rule as the tactical overlay, even when
+  // the developer disables the visual fog layer.
+  function mapContacts(){
+    if(!combat)return[];
+    const contacts=[];
+    for(const u of combat.units){
+      if(u.defeated||u.stats?.hp<=0)continue;
+      contacts.push({id:u.id,x:u.x,y:u.y,side:'friendly',kind:u.kind,selected:selectedIds.has(u.id)});
+    }
+    if(combat.enemy.length){
+      const sources=observers();
+      for(const e of combat.enemy){
+        if(e.neutral||e.defeated||e.stats?.hp<=0||!spotted(e,sources))continue;
+        contacts.push({id:e.id,x:e.x,y:e.y,side:'enemy',kind:e.kind||'hostile',selected:false});
+      }
+    }
+    return contacts;
+  }
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
+  window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
+    units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
+    // Wolves are regular persistent combat entities, but their spawning
+    // lifecycle belongs to the dedicated fauna simulation.
+    registerWolves:(token,wolves)=>{
+      if(!combat||combat.wolvesSpawnedFor===token)return false;
+      combat.enemy=combat.enemy.filter(e=>e.kind!=='wolf').concat(wolves);
+      combat.wolvesSpawnedFor=token;changed();return true;
+    },
+    wolfSpawnedFor:()=>combat?.wolvesSpawnedFor||null,
+    recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
     alarmMode,setAlarmMode,recruitedResident,
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);

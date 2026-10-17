@@ -111,7 +111,7 @@ const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 const STRUCTURE_ANGLE_STEP_DEG=15;
 const STRUCTURE_ANGLE_STEPS=360/STRUCTURE_ANGLE_STEP_DEG;
 const STRUCTURE_ANGLE_STEP=Math.PI*2/STRUCTURE_ANGLE_STEPS;
@@ -167,10 +167,19 @@ const BASE_DAYS_PER_SECOND=1/48;
 // Villager routines and procedural daylight use the same simulated day as crops,
 // seasons and the calendar (a full visual day now takes 48 s at 1×).
 const PEASANT_VISUAL_SPEED=1;
-const VISUAL_DAYLIGHT_RATIO=16/24;
-const VISUAL_NIGHT_RATIO=8/24;
+// The simulated calendar fraction is a true clock: 0 = midnight, .5 = noon.
+// Sunrise/sunset are civil hours. Spring and autumn intentionally share 06–18.
+const SEASONAL_SUN_HOURS=Object.freeze({
+  spring:Object.freeze({sunrise:6,sunset:18}),
+  summer:Object.freeze({sunrise:5,sunset:21}),
+  autumn:Object.freeze({sunrise:6,sunset:18}),
+  winter:Object.freeze({sunrise:8,sunset:16})
+});
+function solarHours(season=State.season){
+  return SEASONAL_SUN_HOURS[season]||SEASONAL_SUN_HOURS.spring;
+}
+const SOLAR_TWILIGHT_HOURS=1;
 const NIGHT_OVERLAY_MAX=.48;
-const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
@@ -230,6 +239,7 @@ const ROAD_RULES={
   branchSpawnSpacing:1.6,snapNodeDistance:1.15
 };
 const BIOMES=Object.freeze({
+  test:{label:'TEST',field:'#2a2818'},
   plains:{label:'Pianura',field:'#2a2818'},
   hills:{label:'Colline',field:'#2f2a19'},
   valley:{label:'Vallata',field:'#28271a'},

@@ -13,7 +13,15 @@ function drawCutawayOccupants(){
     const render=()=>{
       for(const slot of cutawayRoomSlots(s)){
         let count=0,kind=null;
-        if(slot.role==='barracks'||slot.role==='quarters'){count=3;kind='soldier'}
+        if(slot.role==='barracks'||slot.role==='quarters'){
+          count=3;kind='soldier';
+          if(window.__CONQUER_CAMP_MODE__&&slot.role==='barracks'){
+            // Camp roster is authoritative: no decorative soldiers in an empty room.
+            const housed=window.ConquerCombat?.units()?.filter(u=>u.kind==='squad'
+              &&u.barracksId===s.id+':'+slot.index&&u.campState==='barracks')||[];
+            count=Math.min(4,housed.length*2);
+          }
+        }
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
         if(!count)continue;
         const positions=cutawayOccupantLayout(count),items=[];

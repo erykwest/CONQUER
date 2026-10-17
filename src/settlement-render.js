@@ -4,7 +4,8 @@ function drawDayNightOverlay(){
   const r=wrap.getBoundingClientRect(),nf=nightFactor();
   if(window.ConquerAmbientLight){
     window.ConquerAmbientLight.draw(ctx,r,{
-      fraction:visualCycleFrac(),night:nf,season:State.season,weather:currentWeather()
+      fraction:visualCycleFrac(),night:nf,season:State.season,weather:currentWeather(),
+      ...solarHours()
     });
     return;
   }
@@ -14,8 +15,12 @@ function drawDayNightOverlay(){
 }
 function drawNightLights(){
   const nf=nightFactor();if(nf<=.01)return;
+  const t0=performance.now();
   drawFacadeWindows(true,nf);
   drawFireGlows(nf);
+  const ms=performance.now()-t0;
+  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;
+  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});
 }
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
@@ -135,8 +140,7 @@ function drawBaseStaticScene(){
       .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of completedOthers){
-      // When zoomed into a ward, do not rasterize remote homes into the
-      // cached base layer. Wide padding retains large townhouses near edges.
+      // Offscreen houses do not need full architectural rasterization.
       if(s.type==='house'&&!worldPointVisible(s,houseBodyHeight(s)+.6,
         320+180*State.view.scale))continue;
       if(s.auto)drawAutoStructure(s);else drawStructure(s);
@@ -452,11 +456,15 @@ function draw(){
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   }
   drawDayNightOverlay();
-  drawNightLights();
+  // WebGL2 lights share the real scene depth and are composited after colour grading.
+  // Canvas keeps its original complete night path as the fallback.
+  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);
+  else drawNightLights();
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   endPopulationFrame();
   markPhase('castle-facades-effects');
   if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
+  window.ConquerMinimap?.requestDraw();
 }
 
