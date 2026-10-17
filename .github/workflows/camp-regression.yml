@@ -7,6 +7,12 @@ on:
       - camp/**
       - src/settlement-camp.js
       - src/settlement-combat.js
+      - src/settlement-core.js
+      - src/settlement-population.js
+      - src/settlement-render.js
+      - src/settlement-ambient-light.js
+      - src/settlement-wolves.js
+      - qa/seasonal-solar-regression.cjs
       - src/settlement-population-garrisons.js
       - src/settlement-app-persistence.js
       - qa/camp-regression.cjs
@@ -23,6 +29,10 @@ jobs:
       - name: Syntax
         run: |
           node --check src/settlement-camp.js
+          node --check src/settlement-core.js
+          node --check src/settlement-population.js
+          node --check src/settlement-ambient-light.js
+          node --check src/settlement-app-calendar-ui.js
           node --check src/settlement-combat.js
           node --check src/settlement-animals.js
           node --check src/settlement-wolves.js
@@ -31,6 +41,9 @@ jobs:
           node --check src/settlement-app-persistence.js
       - name: Behavioral regression
         run: |
+          node qa/seasonal-solar-regression.cjs
+          node qa/calendar-speed-regression.cjs
+          node qa/ambient-light-regression.cjs
           node qa/camp-regression.cjs
           node qa/wolves-regression.cjs
           node qa/animals-regression.cjs

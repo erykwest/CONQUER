@@ -19,13 +19,17 @@ const winter=light.profileAt({season:'winter',fraction:.32,night:0,weather:'snow
 assert.ok(autumn.seasonR>spring.seasonR,'Autumn tint should be warmer than spring');
 assert.ok(winter.seasonB>autumn.seasonB,'Winter tint should be cooler than autumn');
 
-const dawn=light.profileAt({fraction:.04,night:0,season:'summer',weather:{kind:'clear',clouds:.1}});
-const noon=light.profileAt({fraction:.33,night:0,season:'summer',weather:'clear'});
-const dusk=light.profileAt({fraction:.63,night:0,season:'summer',weather:'clear'});
-const night=light.profileAt({fraction:.82,night:1,season:'summer',weather:'clear'});
+const dawn=light.profileAt({fraction:5.6/24,night:0,season:'summer',sunrise:5,sunset:21,weather:{kind:'clear',clouds:.1}});
+const noon=light.profileAt({fraction:.5,night:0,season:'summer',sunrise:5,sunset:21,weather:'clear'});
+const dusk=light.profileAt({fraction:20.3/24,night:0,season:'summer',sunrise:5,sunset:21,weather:'clear'});
+const night=light.profileAt({fraction:23/24,night:1,season:'summer',sunrise:5,sunset:21,weather:'clear'});
 assert.ok(dawn.dawnA>noon.dawnA,'Warm directional light near sunrise');
 assert.ok(dusk.duskA>noon.duskA,'Warm directional light near sunset');
 assert.ok(night.nightA>.5&&noon.nightA===0,'Night should dim without affecting noon');
+const winterDawn=light.profileAt({fraction:8.5/24,night:0,season:'winter',sunrise:8,sunset:16,weather:'clear'});
+const winterNight=light.profileAt({fraction:17/24,night:1,season:'winter',sunrise:8,sunset:16,weather:'clear'});
+assert.ok(winterDawn.dawnA>.05,'winter sunrise warms near 08:00');
+assert.equal(winterNight.duskA,0,'winter must not show dusk after 16:00');
 
 let fills=0,gradients=0;
 const fakeContext={
@@ -33,11 +37,11 @@ const fakeContext={
   createLinearGradient(){gradients++;return{addColorStop(){}}}
 };
 const viewport={width:1200,height:800};
-light.draw(fakeContext,viewport,{fraction:.33,night:0,season:'summer',weather:'clear'},0);
+light.draw(fakeContext,viewport,{fraction:.5,night:0,season:'summer',sunrise:5,sunset:21,weather:'clear'},0);
 assert.equal(fills,2,'Noon needs only the season and weather passes');
-light.draw(fakeContext,viewport,{fraction:.82,night:1,season:'winter',weather:'snow'},16);
+light.draw(fakeContext,viewport,{fraction:18/24,night:1,season:'winter',sunrise:8,sunset:16,weather:'snow'},16);
 assert.ok(light.isTransitioning(),'Day to night must not snap');
-for(let i=1;i<27;i++)light.draw(fakeContext,viewport,{fraction:.82,night:1,season:'winter',weather:'snow'},16+i*150);
+for(let i=1;i<27;i++)light.draw(fakeContext,viewport,{fraction:18/24,night:1,season:'winter',sunrise:8,sunset:16,weather:'snow'},16+i*150);
 assert.ok(!light.isTransitioning(),'Light should settle after the easing transition');
 assert.ok(gradients>0,'Night pass should use a gradient');
 console.log('ambient-light-regression: OK');

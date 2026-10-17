@@ -9,7 +9,7 @@
   const DETECT=12,LOST=17,MELEE=.85;
   let nightCache=null;
   const combat=()=>window.ConquerCombat;
-  const isNight=()=>visualCycleFrac()>=VISUAL_DAYLIGHT_RATIO;
+  const isNight=()=>solarIsNight();
   const pack=()=>combat()?.enemy().filter(e=>e.kind==='wolf')||[];
   const hash=s=>(peasantHash('camp-wolf:'+s)>>>0)/4294967296;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);

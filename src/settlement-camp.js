@@ -6,7 +6,7 @@
   const SQUAD_SIZE=5, SOLDIERS_PER_SLOT=16;
   const units=()=>window.ConquerCombat?.units()||[];
   const locationOf=unit=>({x:unit.x,y:unit.y});
-  const night=()=>visualCycleFrac()>=VISUAL_DAYLIGHT_RATIO;
+  const night=()=>solarIsNight();
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   function barracks(){
     const result=[];

@@ -4,7 +4,8 @@ function drawDayNightOverlay(){
   const r=wrap.getBoundingClientRect(),nf=nightFactor();
   if(window.ConquerAmbientLight){
     window.ConquerAmbientLight.draw(ctx,r,{
-      fraction:visualCycleFrac(),night:nf,season:State.season,weather:currentWeather()
+      fraction:visualCycleFrac(),night:nf,season:State.season,weather:currentWeather(),
+      ...solarHours()
     });
     return;
   }
