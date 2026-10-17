@@ -96,7 +96,26 @@ function drawChurch(s,preview=false){
       drawCivicGabledPart(s,part,2.72,3.35,'#66635f','#77736e','#3d4145','#484c50','#85817a',stroke);
     }else drawCivicGabledPart(s,part,1.88,2.52,'#6b6863','#7d7973','#41454a','#4c5054','#85817a',stroke);
   }
-  if(!preview&&!underConstruction(s))drawCivicEntrance(s);
+  if(!preview&&!underConstruction(s)){
+    drawCivicEntrance(s);
+    drawCivicCemetery(s);
+  }
+}
+// The cemetery is an intrinsic L1 lot feature, not a paid or removable annex.
+function drawCivicCemetery(church){
+  const area=civicCemeteryArea(church);if(!area)return;
+  extrudePolygonAt(area.points,0,.035,{
+    top:'#827b69',sideA:'#665e51',sideB:'#756d5d',stroke:'rgba(185,170,146,.7)'
+  });
+  for(const grave of civicCemeteryGraves(church)){
+    extrudePolygonAt(grave.points,.035,.08,{
+      top:'#675c4f',sideA:'#4b443c',sideB:'#5b5146'
+    });
+    const head=houseLocalToWorld({x:grave.center.x,y:grave.center.y,angle:grave.angle},0,-.23);
+    extrudePolygonAt(rectWorldPoints(head.x,head.y,.25,.14,grave.angle),.08,.39,{
+      top:'#b5b1a6',sideA:'#78766f',sideB:'#96928b'
+    });
+  }
 }
 function drawTrainingField(s,preview=false){
   const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'rgba(189,153,105,.72)';
