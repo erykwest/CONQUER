@@ -3,13 +3,16 @@
 (() => {
  const tracks=window.ConquerMusicCatalog||[],lookup=new Map(tracks.map(x=>[x.id,x]));
  const storageKey='conquer.music.v1',clamp=x=>Math.max(0,Math.min(1,Number(x)||0));
- let prefs={volume:.4,normalize:true,automatic:true};
+ let prefs={volume:.4,normalize:true,automatic:true,eq:{low:0,mid:0,high:0}};
  try{prefs={...prefs,...JSON.parse(localStorage.getItem(storageKey)||'{}')}}catch(_){}
  prefs.volume=clamp(prefs.volume);
- let enabled=false,season='spring',ctx=null,master=null,front=null,back=null,fadeTimer=null,sequence=0,last=null,error='';
+ const bands=['low','mid','high'],eqClamp=x=>Math.max(-12,Math.min(12,Number(x)||0));
+ prefs.eq=Object.fromEntries(bands.map(b=>[b,eqClamp(prefs.eq?.[b])]));
+
+ let enabled=false,season='spring',ctx=null,master=null,eqNodes=null,front=null,back=null,fadeTimer=null,sequence=0,last=null,error='';
  const save=()=>{try{localStorage.setItem(storageKey,JSON.stringify(prefs))}catch(_){}};
  const state=()=>({enabled,volume:prefs.volume,normalize:prefs.normalize,automatic:prefs.automatic,season,
-  track:back?.track.id||front?.track.id||null,error,tracks:tracks.length});
+  eq:{...prefs.eq},track:back?.track.id||front?.track.id||null,error,tracks:tracks.length});
  function init(){
   if(ctx)return true;
   const AC=window.AudioContext||window.webkitAudioContext;
@@ -17,7 +20,14 @@
   ctx=new AC();master=ctx.createGain();master.gain.value=prefs.volume;
   const compressor=ctx.createDynamicsCompressor();
   compressor.threshold.value=-7;compressor.ratio.value=6;
-  master.connect(compressor);compressor.connect(ctx.destination);
+  const low=ctx.createBiquadFilter(),mid=ctx.createBiquadFilter(),high=ctx.createBiquadFilter();
+  low.type='lowshelf';low.frequency.value=120;
+  mid.type='peaking';mid.frequency.value=950;mid.Q.value=.8;
+  high.type='highshelf';high.frequency.value=4600;
+  master.connect(low);low.connect(mid);mid.connect(high);high.connect(compressor);
+  compressor.connect(ctx.destination);
+  eqNodes={low,mid,high};
+  for(const b of bands)eqNodes[b].gain.value=prefs.eq[b];
   return true;
  }
  function factor(track){return prefs.normalize?Math.pow(10,track.gainDb/20):1}
@@ -25,7 +35,7 @@
  function clear(deck){if(!deck)return;deck.audio.pause();deck.audio.removeAttribute('src');deck.audio.load();deck.gain.disconnect()}
  function cancelFade(){if(fadeTimer!==null){clearInterval(fadeTimer);fadeTimer=null}}
  function choose(){
-  const available=tracks.filter(t=>t.season===season||t.season==='general');
+  const available=tracks.filter(t=>t.season===season);
   const options=available.filter(t=>t.id!==last),pool=options.length?options:available;
   return pool[Math.floor(Math.random()*pool.length)]||null;
  }
@@ -39,7 +49,7 @@
   gain.gain.value=0;source.connect(gain);gain.connect(master);
   const deck={audio,gain,track};back=deck;
   audio.preload='auto';
-  audio.onended=()=>{if(front===deck&&enabled)void next()};
+  audio.onended=()=>{if(front===deck){clear(deck);front=null;if(enabled&&prefs.automatic)void next()}};
   audio.onerror=()=>{error='MP3 non disponibile: '+track.file;if(back===deck)back=null;if(front===deck)front=null;clear(deck)};
   try{await audio.play()}catch(e){error='Riproduzione fallita: '+String(e?.message||e);if(back===deck)back=null;clear(deck);return false}
   if(token!==sequence||!enabled){clear(deck);return false}
@@ -61,8 +71,18 @@
  function setVolume(v){prefs.volume=clamp(v);if(master)master.gain.value=prefs.volume;save()}
  function setAutomatic(v){prefs.automatic=!!v;save()}
  function setNormalize(v){prefs.normalize=!!v;level(front,1);if(back)level(back,1);save()}
+ function setEq(band,db){
+  if(!bands.includes(band))return false;
+  prefs.eq[band]=eqClamp(db);
+  if(eqNodes)eqNodes[band].gain.value=prefs.eq[band];
+  save();return true;
+ }
+ function resetEq(){
+  for(const b of bands){prefs.eq[b]=0;if(eqNodes)eqNodes[b].gain.value=0}
+  save();return true;
+ }
  function setSeason(v){if(!['spring','summer','autumn','winter'].includes(v)||v===season)return;season=v;
   if(enabled&&prefs.automatic&&front?.track.season!==season)void next()}
- window.ConquerMusic=Object.freeze({catalog:tracks,state,select,next,stop,setEnabled,setVolume,setAutomatic,setNormalize,setSeason});
+ window.ConquerMusic=Object.freeze({catalog:tracks,state,select,next,stop,setEnabled,setVolume,setAutomatic,setNormalize,setEq,resetEq,setSeason});
  window.addEventListener('pagehide',stop);
 })();

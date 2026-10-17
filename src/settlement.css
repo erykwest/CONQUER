@@ -173,3 +173,11 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 #devSound .sound-music select{width:100%;font-size:11px;padding:6px}
 #devSound .sound-music input[type=checkbox]{accent-color:var(--accent)}
 #devSound .sound-music .dev-row button{font-size:10px}
+
+/* Dedicated streaming seasonal MUSIC mixer */
+#devSound .sound-music-eq{margin:6px 0;padding:6px;border:1px solid var(--line-strong);border-radius:6px}
+#devSound .sound-music-eq summary{font-size:11px;cursor:pointer}
+#devSound .sound-music-eq .sound-eq-band{display:grid;grid-template-columns:44px 1fr 36px;gap:5px;align-items:center;margin-top:6px;font-size:10px}
+#devSound .sound-music-eq input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
+#devSound .sound-music-eq output{text-align:right;font-size:10px}
+#devPanel #devSound #musicEqReset{font-size:10px;height:24px;padding:2px 8px;margin-top:6px}

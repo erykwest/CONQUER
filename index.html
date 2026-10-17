@@ -246,7 +246,12 @@
           <select id="musicTrack" aria-label="Seleziona brano musicale"></select>
           <div class="dev-row"><button id="musicListen" type="button">▶ Ascolta</button>
             <button id="musicNext" type="button">⏭ Prossimo</button><button id="musicStop" type="button">■ Stop</button></div>
-          <span id="musicReadout" class="dev-hint">15 versioni musicali · 4 stagioni + generici</span>
+          <details class="sound-music-eq">
+            <summary>Equalizzatore musicale · 3 bande</summary>
+            <div id="musicEq"></div>
+            <button type="button" id="musicEqReset">EQ flat (0 dB)</button>
+          </details>
+          <span id="musicReadout" class="dev-hint">9 brani stagionali · 3 primavera, 2 estate, 2 autunno, 2 inverno</span>
         </div>
         <div class="sound-preview">
           <select id="soundPreviewClip" aria-label="File audio da ascoltare">
