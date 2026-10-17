@@ -439,7 +439,7 @@
   // The same simulated visual clock governs torches, daylight and combat LOS.
   // Night vision is exactly one third of the daytime *radius* (not area).
   function combatVisionFactor(){
-    return visualCycleFrac()>=VISUAL_DAYLIGHT_RATIO?1/3:1;
+    return solarIsNight()?1/3:1;
   }
   function combatVisionRadius(height){
     return (VISION_BASE+VISION_PER_HEIGHT*height)*combatVisionFactor();

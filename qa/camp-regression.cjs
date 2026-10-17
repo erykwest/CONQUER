@@ -49,7 +49,7 @@ const tactical={
 const win={__CONQUER_CAMP_MODE__:true,ConquerCombat:tactical};
 const noop=()=>{};
 const context={
-  window:win,document,State:state,visualCycleFrac:()=>cycle,VISUAL_DAYLIGHT_RATIO:2/3,
+  window:win,document,State:state,solarIsNight:()=>cycle<5/24||cycle>=21/24,
   underConstruction:()=>false,functionSlotUnits:()=>1,pointBlockedForPeasant:()=>false,
   WORLD:200,uid:()=>String(++id),status:noop,draw:noop,scheduleLocalSave:()=>saveCalls++,
   terrainElevation:()=>0,w2sRaw:(p,z)=>({x:p.x,y:p.y-z}),
@@ -64,7 +64,7 @@ assert.equal(camp.barracks().length,1,'one button/roster per real barracks room'
 for(let n=0;n<4;n++)camp.addSquad('barracks-1:0');
 assert.equal(roster.length,3,'16 soldiers cap supports three squads of five');
 const troop=roster[0];
-troop.x=8;troop.y=8;cycle=.8;camp.synchronize();
+troop.x=8;troop.y=8;cycle=.95;camp.synchronize();
 assert.equal(troop.campState,'returning','yellow zone returns via combat navigation');
 assert.ok(troop.target,'return uses a real navigable destination');
 const home=troop.target;troop.x=home.x;troop.y=home.y;troop.target=null;
@@ -72,7 +72,7 @@ camp.synchronize();
 assert.equal(troop.campState,'barracks','arrived squad sleeps inside');
 cycle=.3;camp.synchronize();
 assert.equal(troop.campState,null,'squad becomes active at daybreak');
-troop.x=26;troop.y=30;cycle=.8;camp.synchronize();
+troop.x=26;troop.y=30;cycle=.95;camp.synchronize();
 assert.equal(troop.campState,'camped','outside yellow builds camp in place');
 assert.equal(troop.target,null,'camp cancels outdoor movement');
 const screen={
@@ -84,7 +84,7 @@ assert.equal(fixtures,1,'each camped troop gets a tower-style brazier');
 assert.equal(flames,1,'each camped troop gets one brazier flame');
 cycle=.3;camp.synchronize();
 assert.equal(troop.campState,null,'campers return to normal visibility at dawn');
-troop.x=8;troop.y=8;allowRecall=false;cycle=.8;camp.synchronize();
+troop.x=8;troop.y=8;allowRecall=false;cycle=.95;camp.synchronize();
 assert.equal(troop.campState,'stationed','blocked indoor path does not teleport');
 const calls=recallCalls;camp.synchronize();
 assert.equal(recallCalls,calls,'blocked path is not recalculated every frame');
@@ -97,7 +97,7 @@ const outsiders=[
   {id:'field-patrol',kind:'patrol',x:25,y:29,target:{x:29,y:29}}
 ];
 roster.push(...outsiders);
-cycle=.8;camp.synchronize();
+cycle=.95;camp.synchronize();
 assert.ok(outsiders.slice(0,2).every(u=>u.campState==='camped'),'squad and knight camp outside Yellow');
 assert.ok(outsiders.slice(0,2).every(u=>u.target===null),'camping halts their movement');
 assert.equal(outsiders[2].campState,undefined,'patrol never camps outside Yellow');
@@ -110,7 +110,7 @@ cycle=.3;camp.synchronize();
 assert.ok(outsiders.every(u=>!u.campState),'camp occupants awake at dawn and patrol stays active');
 const standing={id:'city-knight',kind:'knight',x:7,y:7,target:null};
 roster.push(standing);
-cycle=.8;camp.synchronize();
+cycle=.95;camp.synchronize();
 assert.equal(standing.campState,undefined,'unassigned units inside Yellow remain on duty');
 roster.splice(roster.indexOf(standing),1);
 roster.splice(roster.indexOf(outsiders[0]),3);
@@ -118,7 +118,7 @@ cycle=.3;camp.synchronize();
 assert.match(combat,/unit\.campState\|\|unit\.target\|\|now</,'patrol AI temporarily ignores a stale sleeping state');
 const stale={id:'old-patrol',kind:'patrol',x:28,y:27,campState:'camped',target:null,nextPatrolAt:9999};
 roster.push(stale);
-cycle=.8;camp.synchronize();
+cycle=.95;camp.synchronize();
 assert.equal(stale.campState,null,'legacy sleeping patrol is awakened even at night');
 assert.equal(stale.nextPatrolAt,0,'patrol AI can calculate a fresh route immediately');
 roster.pop();

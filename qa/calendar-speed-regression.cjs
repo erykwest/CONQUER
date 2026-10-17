@@ -48,15 +48,15 @@ const visualStart=population.indexOf('function peasantVisualDay()');
 const visualEnd=population.indexOf('function nightFactor()',visualStart);
 assert.ok(visualStart>=0&&visualEnd>visualStart);
 const visualFns=population.slice(visualStart,visualEnd);
-const visualFraction=Function('State','PEASANT_VISUAL_SPEED','VISUAL_DAYLIGHT_RATIO',
+const visualFraction=Function('State','PEASANT_VISUAL_SPEED',
   visualFns+';return visualCycleFrac();');
 for(const fraction of [.125,.5,.6666,.875]){
   assert.ok(Math.abs(visualFraction({clock:{day:5+fraction},daylightOverride:null},
-    visualRate,16/24)-fraction)<1e-12,'daylight phase must track calendar fraction '+fraction);
+    visualRate)-fraction)<1e-12,'daylight phase must track calendar fraction '+fraction);
 }
 assert.ok(Math.abs(visualFraction({clock:{day:5.875},daylightOverride:'day'},
-  visualRate,16/24)-1/3)<1e-12,'DEV forced day must override procedural sun');
+  visualRate)-.5)<1e-12,'DEV forced day must use noon');
 assert.ok(Math.abs(visualFraction({clock:{day:5.125},daylightOverride:'night'},
-  visualRate,16/24)-5/6)<1e-12,'DEV forced night must remain functional');
+  visualRate)-0)<1e-12,'DEV forced night must use midnight');
 console.log('PASS villager routine day and procedural day/night phases are calendar-synchronized');
 

@@ -167,10 +167,19 @@ const BASE_DAYS_PER_SECOND=1/48;
 // Villager routines and procedural daylight use the same simulated day as crops,
 // seasons and the calendar (a full visual day now takes 48 s at 1×).
 const PEASANT_VISUAL_SPEED=1;
-const VISUAL_DAYLIGHT_RATIO=16/24;
-const VISUAL_NIGHT_RATIO=8/24;
+// The simulated calendar fraction is a true clock: 0 = midnight, .5 = noon.
+// Sunrise/sunset are civil hours. Spring and autumn intentionally share 06–18.
+const SEASONAL_SUN_HOURS=Object.freeze({
+  spring:Object.freeze({sunrise:6,sunset:18}),
+  summer:Object.freeze({sunrise:5,sunset:21}),
+  autumn:Object.freeze({sunrise:6,sunset:18}),
+  winter:Object.freeze({sunrise:8,sunset:16})
+});
+function solarHours(season=State.season){
+  return SEASONAL_SUN_HOURS[season]||SEASONAL_SUN_HOURS.spring;
+}
+const SOLAR_TWILIGHT_HOURS=1;
 const NIGHT_OVERLAY_MAX=.48;
-const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;

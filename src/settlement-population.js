@@ -11,22 +11,27 @@ function completedSettlement(type){
 function peasantVisualDay(){return State.clock.day*PEASANT_VISUAL_SPEED}
 function visualCycleDay(){return peasantVisualDay()}
 function visualCycleFrac(){
-  if(State.daylightOverride==='day')return VISUAL_DAYLIGHT_RATIO*.5;
-  if(State.daylightOverride==='night')return VISUAL_DAYLIGHT_RATIO+(1-VISUAL_DAYLIGHT_RATIO)*.5;
-  const d=visualCycleDay();return d-Math.floor(d)
+  // DEV overrides change *visual* time only; simulation/calendar stays intact.
+  if(State.daylightOverride==='day')return .5; // 12:00
+  if(State.daylightOverride==='night')return 0; // 00:00
+  const d=visualCycleDay();return d-Math.floor(d);
+}
+function solarIsNight(){
+  const hour=visualCycleFrac()*24,{sunrise,sunset}=solarHours();
+  return hour<sunrise||hour>=sunset;
 }
 function nightFactor(){
-  const t=visualCycleFrac(),nightStart=VISUAL_DAYLIGHT_RATIO;
-  const duskEnd=nightStart+VISUAL_TWILIGHT,dawnStart=1-VISUAL_TWILIGHT;
-  if(t<nightStart)return 0;
-  if(t<duskEnd)return clamp((t-nightStart)/VISUAL_TWILIGHT,0,1);
-  if(t<dawnStart)return 1;
-  return 1-clamp((t-dawnStart)/VISUAL_TWILIGHT,0,1);
+  const hour=visualCycleFrac()*24,{sunrise,sunset}=solarHours();
+  if(hour>=sunrise&&hour<sunset)return 0;
+  // Sunlight ends/starts at the exact specified hours; the artistic overlay
+  // eases during the first hour after sunset and the last hour before dawn.
+  if(hour>=sunset)return clamp((hour-sunset)/SOLAR_TWILIGHT_HOURS,0,1);
+  return clamp((sunrise-hour)/SOLAR_TWILIGHT_HOURS,0,1);
 }
 function sunShadowState(){
-  const t=visualCycleFrac();
-  if(t<0||t>=VISUAL_DAYLIGHT_RATIO)return null;
-  const phase=clamp(t/VISUAL_DAYLIGHT_RATIO,0,1);
+  const hour=visualCycleFrac()*24,{sunrise,sunset}=solarHours();
+  if(hour<sunrise||hour>=sunset)return null;
+  const phase=clamp((hour-sunrise)/(sunset-sunrise),0,1);
   const arc=Math.max(0,Math.sin(Math.PI*phase));
   const edgeFade=clamp(arc*4,0,1);
   if(edgeFade<=.001)return null;

@@ -35,7 +35,7 @@ const state={
 };
 const context=vm.createContext({
   window:win,Math,Map,Set,Array,Number,Object,String,State:state,WORLD:200,
-  VISUAL_DAYLIGHT_RATIO:2/3,visualCycleFrac:()=>night?.8:.25,
+  solarIsNight:()=>night,
   peasantHash:id=>[...String(id)].reduce((h,c)=>(Math.imul(h,33)+c.charCodeAt(0))>>>0,5381),
   pointBlockedForPeasant:()=>false,terrainSegmentCrossesCliff:()=>false,
   peasantSegmentClear:()=>true,findPeasantPath:()=>null,

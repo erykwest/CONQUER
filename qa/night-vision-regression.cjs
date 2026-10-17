@@ -15,7 +15,7 @@ const populationStart=population.indexOf('function visualCycleFrac(){');
 const populationEnd=population.indexOf('function nightFactor(){',populationStart);
 assert.ok(populationStart>0&&populationEnd>populationStart);
 const context=vm.createContext({
-  Math,Map,Set,window:{},VISUAL_DAYLIGHT_RATIO:2/3,FOREST_SIGHT_U:6,
+  Math,Map,Set,window:{},solarHours:()=>({sunrise:5,sunset:21}),FOREST_SIGHT_U:6,
   VISION_BASE:16,VISION_PER_HEIGHT:4,STEP:2,
   State:{
     clock:{day:.25},daylightOverride:null,
@@ -46,7 +46,7 @@ const observer=(id)=>vm.runInContext("observers()",context).find(s=>s.id===id);
 const compare=(id,dayRange)=>{
   context.State.clock.day=.25;context.State.daylightOverride=null;
   const day=observer(id),dayR=day.r;
-  context.State.clock.day=.75;
+  context.State.clock.day=.95;
   const night=observer(id),nightR=night.r;
   assert.ok(Math.abs(nightR*3-dayR)<1e-9,id+' night range must be 1/3 of day');
   assert.equal(vm.runInContext('sourceSees(source,target)',Object.assign(context,{
@@ -63,7 +63,7 @@ const unit=compare('squad');
 assert.equal(unit.dayR,16);
 context.State.clock.day=.25;context.State.daylightOverride='night';
 assert.equal(observer('tower').r,tower.nightR,'forced night applies reduction');
-context.State.clock.day=.75;context.State.daylightOverride='day';
+context.State.clock.day=.95;context.State.daylightOverride='day';
 assert.equal(observer('tower').r,tower.dayR,'forced day restores full sight');
 context.State.daylightOverride=null;
 assert.equal(vm.runInContext("observers()",context).length,2,
@@ -74,7 +74,7 @@ context.State.clock.day=.25;
 context.source={x:100,y:100,r:20,h:0};
 context.target={x:104,y:100};
 assert.equal(vm.runInContext('sourceSees(source,target)',context),true,'daytime 6U woodland sight');
-context.State.clock.day=.75;
+context.State.clock.day=.95;
 assert.equal(vm.runInContext('sourceSees(source,target)',context),false,'nighttime 2U woodland sight');
 context.target={x:101.5,y:100};
 assert.equal(vm.runInContext('sourceSees(source,target)',context),true,'night forest sight works under 2U');
