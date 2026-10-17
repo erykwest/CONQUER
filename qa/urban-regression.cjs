@@ -301,8 +301,8 @@ test('church and tavern have Voronoi curtilage; market and public piazza do not'
   assert.equal(run("urbanLots().some(l=>['civic-market','civic-plaza'].includes(l.civicId))"),false);
   assert.ok(run('urbanFenceSegments().length')>=8,'civic parcels have physical boundaries');
 });
-test('civil development defaults, level clamping and three piazza variants survive migration',()=>{
-  const result=run("migrateStructures([{id:'c',type:'church',x:110,y:110,civicLevel:12},{id:'t',type:'tavern',x:120,y:110},{id:'p',type:'plaza',x:130,y:110,civicLevel:2,plazaVariant:'garden'},{id:'bad',type:'plaza',x:140,y:110,plazaVariant:'invalid'}])");
+test('civil development defaults, level clamping and three piazza variants normalize',()=>{
+  const result=run("[{id:'c',type:'church',x:110,y:110,civicLevel:12},{id:'t',type:'tavern',x:120,y:110},{id:'p',type:'plaza',x:130,y:110,civicLevel:2,plazaVariant:'garden'},{id:'bad',type:'plaza',x:140,y:110,plazaVariant:'invalid'}].map(normalizeCivicDevelopment)");
   assert.deepEqual(Array.from(result,s=>s.civicLevel),[3,1,2,1]);
   assert.equal(result[2].plazaVariant,'garden');
   assert.equal(result[3].plazaVariant,'paved');
