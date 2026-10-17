@@ -63,6 +63,11 @@ function renderFunctionPanel(){
     html+='<div class="slot"><div class="slot-label">Annexes · '+children.length+' built (skeleton)</div>'+
       Object.entries(catalog).map(([key,spec])=>{
         const owned=children.filter(child=>child.annexType===key),locked=civicLevel(s)<spec.level,full=owned.length>=spec.max;
+        if(spec.intrinsic){
+          const area=civicCemeteryArea(s);
+          return '<div class="slot-label">'+spec.label+' · L'+spec.level+'</div>'+
+            '<div class="legend">'+(area?'Included in church plot · '+area.w+'×'+area.h+'U':'Included from L1 · awaiting free space within the church lot')+'</div>';
+        }
         return '<div class="slot-label">'+spec.label+' · '+owned.length+'/'+spec.max+' · L'+spec.level+'</div>'+
           '<button data-civic-annex="'+key+'" '+(locked||full||building?'disabled':'')+'>'+
           (locked?'Requires L'+spec.level:full?'Limit reached':building?'Parent under construction':'Place '+spec.label)+' · '+spec.w+'×'+spec.h+'U</button>'+
