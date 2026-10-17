@@ -9,6 +9,8 @@
 
 **D-CIV-02 · DESIGN esplicito:** tre livelli di sviluppo (L1–L3) per edifici civili esistenti chiesa/locanda/mercato e nuova Piazza; tre varianti di Piazza (pavimentata, fontana, verde). Nella prima iterazione il livello è **skeleton di configurazione**, non un modificatore economico o di servizi; le forme/scale definitive restano future. Fonte tecnica: branch [`Civil`](https://github.com/erykwest/CONQUER/tree/Civil), `src/settlement-core.js`, `src/settlement-urban.js` e pannello `src/settlement-app-rooms.js`.
 
+**D-CIV-03 · DESIGN/CODICE su branch `Civil` (17/10):** ogni annesso civile è una struttura separata con `parentId` verso chiesa, taverna o mercato, tipo da catalogo (`annexType`), footprint e sblocco per `civicLevel`. Chiesa/taverna: costruzione solo dentro il lotto Voronoi; mercato: estensione pubblica vicina al mercato, vietato occupare lotti privati. I figli vengono eliminati insieme al padre; il livello non può scendere sotto il requisito di un annesso esistente. Per ora nessuna produzione, capacità, staff o costo, e rendering 2D/3D provvisorio. Dimensioni, limiti quantitativi e raggi sono valori di skeleton da rivedere al bilanciamento.
+
 ## Registro delle decisioni
 
 | ID | Classe | Decisione o regola da preservare | Conseguenza |
