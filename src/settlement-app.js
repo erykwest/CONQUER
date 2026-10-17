@@ -100,6 +100,7 @@ function addStructure(s){
     displaced=removeOverlappingAuto(s);
   }
   State.structures.push(s);
+  if(isCivicAnnex(s)||['church','tavern','house'].includes(s.type))invalidateUrbanGeometry();
   let reactive=0;
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
