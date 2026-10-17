@@ -15,6 +15,42 @@ function drawMarket(s,preview=false){
     extrudePolygonAt(canopy,.58,.66,{top:st.c,sideA:st.c,sideB:st.c,stroke:'rgba(235,218,186,.35)'});
   }
 }
+// Structural placeholder only: no piazza services, bonuses or populations yet.
+function drawPlaza(s,preview=false){
+  const p=civicParts(s)[0];if(!p)return;
+  const level=civicLevel(s),variant=plazaVariant(s),angle=s.angle||0;
+  const selected=State.selectedId===s.id;
+  const top=variant==='garden'?'#8c9776':variant==='fountain'?'#a5a9a8':'#b3a28e';
+  extrudePolygonAt(p.points,0,.10,{top,sideA:'#777269',sideB:'#868076',
+    stroke:selected?'#f4b76f':'#b5aaa0'});
+  if(variant==='garden'){
+    for(const [x,y] of [[-1.08,-1.08],[1.08,-1.08],[-1.08,1.08],[1.08,1.08]]){
+      const c=houseLocalToWorld(s,x,y);
+      extrudePolygonAt(rectWorldPoints(c.x,c.y,1.15,1.15,angle),.10,.15,
+        {top:'#698555',sideA:'#80725b',sideB:'#80725b'});
+    }
+  }else if(variant==='fountain'){
+    const c=houseLocalToWorld(s,0,0);
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,1.45,1.45,angle),.10,.29,
+      {top:'#697e82',sideA:'#787c7b',sideB:'#8c9190'});
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,.65,.65,angle),.29,.35+level*.12,
+      {top:'#b3b8b5',sideA:'#858c89',sideB:'#969e9b'});
+  }else{
+    const c=houseLocalToWorld(s,0,0);
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,1.25,1.25,angle),.10,.135,
+      {top:'#c2b7a4',sideA:'#81796c',sideB:'#8e8576'});
+  }
+  if(level>=2)for(const [x,y] of [[-2,-2],[2,-2],[-2,2],[2,2]]){
+    const c=houseLocalToWorld(s,x,y);
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,.24,.24,angle),.10,.27,
+      {top:'#a49c8c',sideA:'#696659',sideB:'#777164'});
+  }
+  if(level>=3){
+    const c=houseLocalToWorld(s,0,0);
+    if(variant==='paved')extrudePolygonAt(rectWorldPoints(c.x,c.y,.45,.45,angle),.135,.60,
+      {top:'#c0b7a9',sideA:'#827b72',sideB:'#938a80'});
+  }
+}
 function civicEntranceInfo(s){
   if(!s||!['tavern','church'].includes(s.type))return null;
   const localY=s.type==='tavern'?(-1.72-1.55/2):(-2.65-1.85/2);
@@ -86,6 +122,7 @@ function drawCivicStructure(s,preview=false){
   else if(s.type==='tavern')drawTavern(s,preview);
   else if(s.type==='church')drawChurch(s,preview);
   else if(s.type==='training')drawTrainingField(s,preview);
+  else if(s.type==='plaza')drawPlaza(s,preview);
 }
 function woodGateLocal(s,x,y){
   const q=rotateVec(x,y,s.angle||0);
