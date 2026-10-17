@@ -301,10 +301,14 @@ function urbanHouseFitsLots(candidate,options={}){
   const spawnContext=options.houses&&options.existingLots instanceof Map?options:null;
   const existing=spawnContext?.houses||State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
   const houses=existing.filter(h=>h.id!==candidate.id);
-  houses.push(candidate);
+  const civicSites=State.structures.filter(s=>(s.type==='tavern'||s.type==='church')&&!underConstruction(s));
+  const baseSites=houses.concat(civicSites),sites=baseSites.concat(candidate);
   const roads=spawnContext?.roads;
-  const lot=urbanLotFor(candidate,houses,roads);
+  const lot=urbanLotFor(candidate,sites,roads);
   if(!lot)return false;
+  // Preserve already-established civic plots when the settlement grows.
+  if(civicSites.some(civic=>dist(civic,candidate)<14&&
+    urbanLotFor(civic,baseSites,roads)&&!urbanLotFor(civic,sites,roads)))return false;
   // During manual upgrades, existing residents must not veto their own home.
   // During spawn, enumerate resident positions only once per growth attempt.
   if(!ignoreDynamicUnits){
@@ -317,15 +321,15 @@ function urbanHouseFitsLots(candidate,options={}){
       let baseline;
       if(spawnContext.existingLots.has(h.id))baseline=spawnContext.existingLots.get(h.id);
       else{
-        baseline=urbanLotFor(h,existing,roads);
+        baseline=urbanLotFor(h,baseSites,roads);
         spawnContext.existingLots.set(h.id,baseline||null);
       }
-      if(baseline&&!urbanLotFor(h,houses,roads))return false;
+      if(baseline&&!urbanLotFor(h,sites,roads))return false;
     }
     return true;
   }
   return existing.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
-    !urbanLotFor(h,existing)||!!urbanLotFor(h,houses));
+    !urbanLotFor(h,baseSites)||!!urbanLotFor(h,sites));
 }
 function urbanLots(){
   if(urbanLotCache)return urbanLotCache;
