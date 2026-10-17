@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-17 — Civil: skeleton degli edifici annessi
+
+- Catalogo di 12 annessi con relazione strutturale `parentId`, collocabili dal pannello chiesa, taverna e mercato. L1–L3 sbloccano categorie, non creano automaticamente i figli.
+- I figli di chiesa/taverna usano il lotto Voronoi del padre; le estensioni del mercato occupano spazio pubblico entro 9U e rispettano proprietà private e collisioni. Eliminazione padre→figli, blocco rotazione padre con figli, migrazione file salvati.
+- Placeholder geometrici Canvas/WebGL2, hit test, navigazione e ombre; nessuna nuova simulazione economica o gestione ospiti. Regressione dedicata `qa/civic-annex-regression.cjs` nella CI `Civil` (prima esecuzione con test nuovi [39023575840](https://github.com/erykwest/CONQUER/actions/runs/39023575840) superata; verifiche successive da registrare).
+- Solo branch `Civil`; QA browser/visiva non effettuata.
+
 ## 2026-10-17 — Civil: lotti di pertinenza e skeleton Piazza
 
 - **Branch `Civil` da `main`**: riusati Voronoi, bordi e accessi esistenti per assegnare lotti di pertinenza a chiesa e locanda; il mercato ne rimane escluso.
