@@ -301,6 +301,15 @@ test('church and tavern have Voronoi curtilage; market and public piazza do not'
   assert.equal(run("urbanLots().some(l=>['civic-market','civic-plaza'].includes(l.civicId))"),false);
   assert.ok(run('urbanFenceSegments().length')>=8,'civic parcels have physical boundaries');
 });
+test('church L1 includes cemetery plots inside its real Voronoi lot',()=>{
+  zoningFixture();
+  run("State.structures.push({id:'chapel',type:'church',x:117,y:117,angle:0,civicLevel:1});invalidateNavigation()");
+  const result=run("civicCemeteryArea(State.structures.find(s=>s.id==='chapel'))");
+  assert.ok(result,'A church with a free lot must have a burial area');
+  assert.equal(run("civicCemeteryGraves(State.structures[1]).length"),6);
+  assert.equal(run("civicCemeteryArea(State.structures[1]).points.every(p=>urbanContains(urbanLots().find(l=>l.civicId==='chapel').points,p,.09))"),true);
+  assert.equal(run("civicCemeteryArea(State.structures[1]).points.every(p=>!civicParts(State.structures[1]).some(part=>urbanContains(part.points,p)))"),true);
+});
 test('civil development defaults, level clamping and three piazza variants normalize',()=>{
   const result=run("[{id:'c',type:'church',x:110,y:110,civicLevel:12},{id:'t',type:'tavern',x:120,y:110},{id:'p',type:'plaza',x:130,y:110,civicLevel:2,plazaVariant:'garden'},{id:'bad',type:'plaza',x:140,y:110,plazaVariant:'invalid'}].map(normalizeCivicDevelopment)");
   assert.deepEqual(Array.from(result,s=>s.civicLevel),[3,1,2,1]);
