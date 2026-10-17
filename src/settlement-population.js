@@ -16,12 +16,15 @@ function visualCycleFrac(){
   if(State.daylightOverride==='night')return 0; // 00:00
   const d=visualCycleDay();return d-Math.floor(d);
 }
+// Fractional days are IEEE754: 3 + 16/24 can become 15.999999999999996h.
+ // Snap only sub-microsecond clock noise so sunsets occur at the exact hour.
+function visualHour(){return Math.round(visualCycleFrac()*24*1e9)/1e9}
 function solarIsNight(){
-  const hour=visualCycleFrac()*24,{sunrise,sunset}=solarHours();
+  const hour=visualHour(),{sunrise,sunset}=solarHours();
   return hour<sunrise||hour>=sunset;
 }
 function nightFactor(){
-  const hour=visualCycleFrac()*24,{sunrise,sunset}=solarHours();
+  const hour=visualHour(),{sunrise,sunset}=solarHours();
   if(hour>=sunrise&&hour<sunset)return 0;
   // Sunlight ends/starts at the exact specified hours; the artistic overlay
   // eases during the first hour after sunset and the last hour before dawn.
@@ -29,7 +32,7 @@ function nightFactor(){
   return clamp((sunrise-hour)/SOLAR_TWILIGHT_HOURS,0,1);
 }
 function sunShadowState(){
-  const hour=visualCycleFrac()*24,{sunrise,sunset}=solarHours();
+  const hour=visualHour(),{sunrise,sunset}=solarHours();
   if(hour<sunrise||hour>=sunset)return null;
   const phase=clamp((hour-sunrise)/(sunset-sunrise),0,1);
   const arc=Math.max(0,Math.sin(Math.PI*phase));

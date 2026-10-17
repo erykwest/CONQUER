@@ -51,6 +51,11 @@ for(const [season,sunrise,sunset,darkHours] of [
   assert.ok(call('sunShadowState()')?.arc>.9,season+' shadows follow sun at solar noon');
   checkHour(sunset-1/60,false,season+' 1 min before sunset');
   checkHour(sunset,true,season+' precise sunset');
+  for(const elapsed of [1,29,365,1000]){
+    state.clock.day=elapsed+sunset/24;
+    assert.equal(call('solarIsNight()'),true,
+      season+' sunset must remain exact after '+elapsed+' days (no float drift)');
+  }
   assert.equal(call('sunShadowState()'),null,season+' sun is gone at sunset');
   checkHour(sunset+1/60,true,season+' 1 min after sunset');
   checkHour(23.99,true,season+' late night');
