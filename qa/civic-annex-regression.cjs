@@ -18,6 +18,7 @@ let seq=0,selectedTool=null,notice='';
 const sandbox={
   State,window:{},BUILD_MIN:50,BUILD_MAX:150,
   uid:()=>String(++seq),snapStructureAngle:a=>a,rectWorldPoints:square,
+  houseLocalToWorld:(parent,x,y)=>({x:parent.x+x*Math.cos(parent.angle||0)-y*Math.sin(parent.angle||0),y:parent.y+x*Math.sin(parent.angle||0)+y*Math.cos(parent.angle||0)}),
   civicLevel:s=>s.civicLevel||1,underConstruction:()=>false,
   urbanLots:()=>State.lots,urbanContains:inPoly,
   urbanPolygonsOverlap:(a,b)=>a.some(p=>inPoly(b,p))||b.some(p=>inPoly(a,p)),
@@ -42,10 +43,26 @@ let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name)}
 function parent(type,level=3){State.structures=[{id:'main',type,x:100,y:100,civicLevel:level,angle:0}];State.lots=type==='market'?[]:[{civicId:'main',points:square(100,100,16,16)}]}
 test('catalog offers owned annexes for three civic parent types, with levels and dimensions',()=>{
-  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),4);
-  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.tavern).length"),4);
+  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),5);
+  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.tavern).length"),5);
+  assert.equal(run("CIVIC_ANNEX_CATALOG.church.cemetery.intrinsic"),true);
+  assert.equal(run("CIVIC_ANNEX_CATALOG.tavern.brewery.level"),2);
   assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.market).length"),4);
   assert.equal(run("CIVIC_ANNEX_CATALOG.tavern.inn.level"),3);
+});
+test('L1 church cemetery is intrinsic, contained in its own lot and reserved',()=>{
+  parent('church',1);
+  const area=run("civicCemeteryArea(State.structures[0])");
+  assert.ok(area,'Cemetery should be generated for an L1 church with sufficient curtilage');
+  assert.equal(run("civicCemeteryGraves(State.structures[0]).length"),6);
+  assert.equal(area.points.every(p=>inPoly(State.lots[0].points,p,.09)),true);
+  assert.equal(run("makeCivicAnnex(State.structures[0],'cemetery',104.5,100)"),null);
+  assert.equal(run("startCivicAnnexPlacement(State.structures[0],'cemetery')"),false);
+  const annex=run("makeCivicAnnex(State.structures[0],'herbGarden',104.5,100)");
+  assert.match(sandbox.window.ConquerPlacement.check(annex).reason,/cemetery/);
+  annex.x=95.5;
+  assert.equal(sandbox.window.ConquerPlacement.check(annex).ok,true);
+  assert.equal(run("civicCemeteryArea(State.structures[0]).center.x"),area.center.x);
 });
 test('church annex lies entirely inside parent lot and cannot exceed it',()=>{
   parent('church');
@@ -62,6 +79,15 @@ test('tavern L1 can add storage, L2 unlocks stables, L3 lodging',()=>{
   assert.equal(sandbox.window.ConquerPlacement.check(a).ok,true);
   a=run("makeCivicAnnex(State.structures[0],'inn',104,104)");
   assert.match(sandbox.window.ConquerPlacement.check(a).reason,/L3/);
+});
+test('L2 tavern can attach a brewery beside its footprint, not build it remotely',()=>{
+  parent('tavern',1);
+  const brewery=run("makeCivicAnnex(State.structures[0],'brewery',104,100)");
+  assert.match(sandbox.window.ConquerPlacement.check(brewery).reason,/L2/);
+  State.structures[0].civicLevel=2;
+  assert.equal(sandbox.window.ConquerPlacement.check(brewery).ok,true);
+  brewery.x=106;
+  assert.match(sandbox.window.ConquerPlacement.check(brewery).reason,/adjoin/);
 });
 test('market annexes do not claim a private lot but are limited to nearby public space',()=>{
   parent('market');
