@@ -96,6 +96,7 @@ function urbanBuildingPolygons(s){
   if(s.type==='house')return houseFootprintParts(s).map(p=>p.points);
   if(s.type==='well')return[wellPlazaPoints(s)];
   if(isCivic(s))return civicParts(s).map(p=>p.points);
+  if(isCivicAnnex(s))return[civicAnnexFootprint(s)];
   const points=footprintPoints(s);return points?.length?[points]:[];
 }
 function urbanParcelTerrainAllowed(points){
@@ -131,7 +132,7 @@ function urbanParcelAllowed(points,houseId,skipYellow=false){
   // Gentle hills remain available to both houses and farmland.
   if((!skipYellow&&!urbanYellowContains(points))||!urbanParcelTerrainAllowed(points))return false;
   for(const s of State.structures){
-    if(s.id===houseId)continue;
+    if(s.id===houseId||isCivicAnnex(s)&&s.parentId===houseId)continue;
     // Field polygons are not returned by urbanBuildingPolygons: protect the
     // agricultural lot before accepting a new house's Voronoi parcel.
     if(s.type==='field'&&urbanPolygonsOverlap(points,fieldPoints(s)))return false;
@@ -253,7 +254,7 @@ const URBAN_ROAD_VERGE=.08,URBAN_OBSTACLE_GAP=.03;
 // side of the obstacle edge that separates them best.
 function urbanClipObstacles(cell,house){
   for(const s of State.structures){
-    if(s.id===house.id||s.type==='road'||s.type==='house'&&house.type==='house')continue;
+    if(s.id===house.id||isCivicAnnex(s)&&s.parentId===house.id||s.type==='road'||s.type==='house'&&house.type==='house')continue;
     const polys=s.type==='field'?[fieldPoints(s)]:urbanBuildingPolygons(s);
     for(const poly of polys){
       if(!poly?.length||!urbanPolygonsOverlap(cell,poly))continue;
