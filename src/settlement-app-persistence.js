@@ -88,8 +88,8 @@ function migrateStructures(list){
       s.subtowerAngle=attachment.subtowerAngle;
     }
   }
-  const keep=migrated.find(s=>s.type==='tower'&&s.isMastio);for(const s of migrated)if(s.isMastio&&s!==keep)s.isMastio=false;
-  return migrated;
+  const keep=cleaned.find(s=>s.type==='tower'&&s.isMastio);for(const s of cleaned)if(s.isMastio&&s!==keep)s.isMastio=false;
+  return cleaned;
 }
 const LOCAL_STORAGE_SCHEMA=2;
 function localStorageBranch(){
