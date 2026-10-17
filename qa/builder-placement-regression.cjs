@@ -34,7 +34,10 @@ function harness(){
     State,window,BUILD_MIN:50,BUILD_MAX:150,
     houseFootprintParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     wellPlazaPoints:s=>square(s.x,s.y,3,3,0),
-    isCivic:s=>['market','tavern','church','training','plaza'].includes(s.type),
+    isCivicAnnex:s=>s?.type==='civicAnnex',
+     civicAnnexFootprint:s=>square(s.x,s.y,s.w||2,s.h||2,s.angle||0),
+     civicAnnexPlacementCheck:()=>({ok:true}),
+     isCivic:s=>['market','tavern','church','training','plaza'].includes(s.type),
     civicParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     structureGroundContactPolygons:s=>s.a?[square((s.a.x+s.b.x)/2,(s.a.y+s.b.y)/2,
       Math.hypot(s.a.x-s.b.x,s.a.y-s.b.y),s.width||.5,Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x))]:
