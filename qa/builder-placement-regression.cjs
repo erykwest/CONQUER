@@ -48,6 +48,7 @@ function harness(){
     environmentBlocksPoint:()=>blocked,
     TYPES:{road:{min:1}},
     manualRoadConflict:(road,other)=>other.type==='house',
+    isPrimaryRoad:()=>false,
     roadTouchesPolygon:(road,polygon)=>polygon.some(p=>dseg(p,road.a,road.b)<.25),
     constructionCost:()=>({gold:10}),canAfford:()=>cash>=10,costText:()=>'10 gold',
     Math,Number,Object,Array
