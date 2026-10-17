@@ -1,0 +1,25 @@
+name: Civil skeleton regression
+
+on:
+  push:
+    branches:
+      - Civil
+  workflow_dispatch:
+
+jobs:
+  civil-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JS syntax
+        run: |
+          for file in src/*.js qa/*.cjs; do node --check "$file"; done
+      - name: Run urban and builder regressions
+        run: |
+          node qa/urban-regression.cjs
+          node qa/urban-density-regression.cjs
+          node qa/builder-placement-regression.cjs
