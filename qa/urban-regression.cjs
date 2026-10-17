@@ -17,7 +17,7 @@ navigator:{},fetch:()=>new Promise(()=>{}),atob:s=>Buffer.from(s,'base64').toStr
 const context=vm.createContext(sandbox);
 function run(s){return vm.runInContext(s,context)}
 function moduleFile(n){const groups={castle:['castle','landscape','castle-placement','castle-structures','buildings'],population:['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'],app:['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap']};const files=groups[n]||[n];return files.map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n')}
-for(const n of ['core','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
+for(const n of ['core','civic-annexes','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
 const appSource=moduleFile('app');
 run(appSource.split('function pointerScreen')[0]);
