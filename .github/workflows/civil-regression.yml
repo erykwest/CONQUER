@@ -23,3 +23,4 @@ jobs:
           node qa/urban-regression.cjs
           node qa/urban-density-regression.cjs
           node qa/builder-placement-regression.cjs
+          node qa/civic-annex-regression.cjs
