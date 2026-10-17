@@ -20,6 +20,7 @@ const sandbox={
   uid:()=>String(++seq),snapStructureAngle:a=>a,rectWorldPoints:square,
   civicLevel:s=>s.civicLevel||1,underConstruction:()=>false,
   urbanLots:()=>State.lots,urbanContains:inPoly,
+  urbanPolygonsOverlap:(a,b)=>a.some(p=>inPoly(b,p))||b.some(p=>inPoly(a,p)),
   dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
   status:x=>{notice=x},setTool:x=>{selectedTool=x},
   isCivic:s=>['market','church','tavern','training','plaza'].includes(s.type),
@@ -67,6 +68,9 @@ test('market annexes do not claim a private lot but are limited to nearby public
   State.lots=[];
   const a=run("makeCivicAnnex(State.structures[0],'stall',105,100)");
   assert.equal(sandbox.window.ConquerPlacement.check(a).ok,true);
+  State.lots=[{houseId:'private',points:square(105,100,2,2)}];
+  assert.match(sandbox.window.ConquerPlacement.check(a).reason,/owned Voronoi lot/);
+  State.lots=[];
   a.x=116;
   assert.match(sandbox.window.ConquerPlacement.check(a).reason,/within 9U/);
 });
