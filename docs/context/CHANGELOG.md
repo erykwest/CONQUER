@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-17 — Civil: cimitero L1 e birreria L2
+
+- **Chiesa L1:** cimitero automaticamente incluso nella proprietà; area di sepoltura ricavata dal lotto Voronoi, riserva anti-sovrapposizioni e segnali tombali 2D/3D. È parte del lotto, non un annesso collocabile manualmente; in lotti troppo stretti rimane senza area fisica fino a spazio disponibile.
+- **Taverna L2:** nuova estensione `brewery` nel menu annessi, posizionabile vicino all'edificio madre e all'interno del lotto. Solo skeleton visivo e dati, senza produzione di birra.
+- Catalogo: 14 voci totali (13 costruibili + cimitero intrinseco). Corretto anche il filtro di migrazione dei figli orfani nel caricamento dei salvataggi.
+- Verifica: [GitHub Actions 39033162718](https://github.com/erykwest/CONQUER/actions/runs/39033162718) PASS, compresi test di lotto Voronoi reale, limiti L2 e collisioni. Nessun merge in `main`, nessun collaudo browser.
+
 ## 2026-10-17 — Civil: skeleton degli edifici annessi
 
 - Catalogo di 12 annessi con relazione strutturale `parentId`, collocabili dal pannello chiesa, taverna e mercato. L1–L3 sbloccano categorie, non creano automaticamente i figli.
