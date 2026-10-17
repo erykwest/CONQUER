@@ -283,6 +283,7 @@ function syncPeasantPathCache(){
   peasantPathCache.clear();
 }
 function pointBlockedForPeasant(p,sourceHouseId){
+  if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
   for(const s of State.structures){
     if(s.id===sourceHouseId&&s.type!=='house')continue;

@@ -94,6 +94,21 @@ test('L1 and L2 remain single-house lots',()=>{
   house.houseLevel=1;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
   house.houseLevel=2;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
 });
+test('L2 cow plots gain exactly one lean-to, while L2 gardens have none',()=>{
+  house.houseLevel=2;run('urbanRevision++');
+  run("window.ConquerLivestock={lotKindForHouse:()=> 'cow'}");
+  const cattle=run('urbanLotOutbuildings(State.structures[0])');
+  assert.equal(cattle.length,1);
+  assert.equal(cattle[0].type,'shed');
+  assert.ok(cattle[0].points.every(p=>run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(p)+',.04)')));
+  const body=run('houseFootprintParts(State.structures[0])');
+  assert.ok(body.every(p=>run('urbanPolygonIntersectionArea('+JSON.stringify(p.points)+','+JSON.stringify(cattle[0].points)+')')<1e-6));
+  assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),body.length+1);
+  run("window.ConquerLivestock={lotKindForHouse:()=> 'garden'}");
+  assert.equal(run('urbanLotOutbuildings(State.structures[0]).length'),0);
+  run('window.ConquerLivestock=null;urbanRevision++');
+  house.houseLevel=3;
+});
 test('L3 frontage creates three houses within a 6 U street-facing plot',()=>{
   house.houseLevel=3;
   assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),1);
@@ -112,6 +127,7 @@ test('L3/L4 yards get sheds and storehouses on non-street sides, never counted a
     const out=run('urbanLotOutbuildings(State.structures[0])'),dense=run('urbanDenseParts(State.structures[0])');
     assert.ok(out.length>=1,'L'+level+' yard has outbuildings');
     assert.ok(out.every(p=>p.kind==='outbuilding'&&['shed','store'].includes(p.type)));
+    assert.ok(out.some(p=>p.type==='shed'),'every developed L3/L4 yard offers a horse shelter');
     assert.ok(out.every(p=>p.points.every(q=>run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(q)+',.035)'))));
     // Not on the street side and clear of the townhouses.
     assert.ok(out.every(p=>p.points.every(q=>q.y>1)));

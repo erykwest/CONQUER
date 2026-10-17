@@ -461,16 +461,29 @@ function drawBuiltWindows(s,lit=false,nf=1){
   withBuiltRoofOcclusionClip(s,()=>{if(l>=2)drawBuiltWindowRow(s,inside,upperZ,.42,lit,nf,'gothicL3',.92,.78);drawBuiltWindowRow(s,outside,lowerZ,.72,false,nf,'arrowSlit',.23,.58);if(l>=2)drawBuiltWindowRow(s,outside,upperZ,.72,false,nf,'arrowSlit',.23,.58)})
 }
 function drawHouseFacadeWindows(s,lit=false,nf=1){
+  // At high zoom most homes are offscreen; skip the expensive L/T occlusion
+  // and façade polygon work before it constructs any projection data.
+  if(!worldPointVisible(s,houseBodyHeight(s)+.6,320+180*State.view.scale))return;
   // Visible walls, matched to their geometry part (bodyH/ridge) by coordinates.
   const key=(a,b)=>a.x.toFixed(4)+','+a.y.toFixed(4)+'|'+b.x.toFixed(4)+','+b.y.toFixed(4);
   const walls=new Map(),entry=urbanHouseGeometry().find(e=>e.house.id===s.id);
   for(const part of entry?.parts||[])part.points.forEach((a,i)=>walls.set(key(a,part.points[(i+1)%part.points.length]),{part,edge:{a,b:part.points[(i+1)%part.points.length]}}));
   // Canvas has no depth buffer: a wall whose centre lies behind a nearer part of the same
   // house (townhouse wings, L/T extensions) keeps neither its frame nor its windows.
+  const screenFaces=new Map();
   const hidden=(part,mid,z)=>{
     const depth=viewDepthPoint(mid),sp=w2s(mid,z);
-    return entry.parts.some(q=>q!==part&&q.points.some(p=>viewDepthPoint(p)>depth+.02)&&
-      urbanHouseFaces(s,q).some(face=>{const g=terrainElevation(q.center);return pointInScreenPolygon(sp,face.map(v=>w2s(v.p,v.z-g)))}));
+    return entry.parts.some(q=>{
+      if(q===part||!q.points.some(p=>viewDepthPoint(p)>depth+.02))return false;
+      // Each neighboring wall's projected silhouettes are reused across all
+      // windows and timber beams in this house, not recomputed per facade.
+      if(!screenFaces.has(q)){
+        const ground=terrainElevation(q.center);
+        screenFaces.set(q,urbanHouseFaces(s,q).map(face=>
+          face.map(v=>w2s(v.p,v.z-ground))));
+      }
+      return screenFaces.get(q).some(poly=>pointInScreenPolygon(sp,poly));
+    });
   };
   for(const visible of visibleFacadeEdges(s)){
     const wall=walls.get(key(visible.a,visible.b));if(!wall)continue;

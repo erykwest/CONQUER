@@ -74,6 +74,11 @@ function familyPosition(house,day){
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
 }
 function residentClassPosition(house,resident,day,assignment){
+  // Flocks need their shepherd even on market/rest days.
+  if((houseLevel(house)===1||houseLevel(house)===2)&&resident.sex==='male'&&
+      resident.age==='adult'&&resident.index===0&&
+      ['shepherd','cow'].includes(window.ConquerLivestock?.lotKindForHouse(house)))
+    return window.ConquerLivestock.shepherdPosition(house);
   const weekly=window.ConquerEconomy?.weekday(State.clock.day);
   if(weekly===6)return null; // Sunday rest: no scheduled civilian trips or labor.
   if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip for all classes.

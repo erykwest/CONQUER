@@ -1,9 +1,9 @@
 'use strict';
 // Quadrilateral parcels inscribed in bounded Euclidean Voronoi cells.
 // Houses are the sites. A rejected four-corner parcel never spawns a house.
-let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null,urbanFenceCache=null;
+let urbanRevision=0,urbanGeometryCache=null,urbanLotCache=null,urbanFenceCache=null,urbanFenceNavCache=null;
 function invalidateUrbanGeometry(){
-  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;urbanFenceCache=null;
+  urbanRevision++;urbanGeometryCache=null;urbanLotCache=null;urbanFenceCache=null;urbanFenceNavCache=null;
 }
 function urbanArea(poly){
   return poly.reduce((a,p,i)=>a+p.x*poly[(i+1)%poly.length].y-p.y*poly[(i+1)%poly.length].x,0)/2;
@@ -104,8 +104,7 @@ function urbanParcelTerrainAllowed(points){
   // Gentle slopes remain buildable; only cliffs/steep relief are excluded.
   for(const feature of State.environment){
     if(feature.type==='forest'&&feature.holes?.length){
-      // Woodland with clearings/grooves (holes may overlap): no sampled point of the parcel
-      // may fall in the trees.
+      // Parcel corners in woodland holes may be buildable, but trees are not.
       if(forestCoversPolygon(feature,points))return false;
       continue;
     }
@@ -447,7 +446,51 @@ function urbanPolygonIntersectionArea(a,b){
 }
 function urbanHouseDisplayParts(house){
   const dense=urbanDenseParts(house);
-  return dense.length?dense.concat(urbanLotOutbuildings(house)):houseFootprintParts(house);
+  return dense.length?dense.concat(urbanLotOutbuildings(house)):
+    houseFootprintParts(house).concat(urbanLotOutbuildings(house));
+}
+// L2 cattle lots keep the original detached house and get one open lean-to
+// under which the herd can shelter. Reuse the L3/L4 roof geometry and collision
+// volumes: no extra persisted structures or changes to cadastral lot outlines.
+let urbanCattleShelterCache={revision:-1,parts:new Map()};
+function urbanL2CattleShelter(house){
+  if(!house||houseLevel(house)!==2||window.ConquerLivestock?.lotKindForHouse(house)!=='cow')return[];
+  if(urbanCattleShelterCache.revision!==urbanRevision)
+    urbanCattleShelterCache={revision:urbanRevision,parts:new Map()};
+  const key=house.id+'|'+State.seed;
+  if(urbanCattleShelterCache.parts.has(key))return urbanCattleShelterCache.parts.get(key);
+  const lot=urbanLots().find(l=>l.houseId===house.id);
+  const parts=[];
+  if(lot){
+    const poly=lot.points,sign=urbanArea(poly)>=0?1:-1,street=urbanLotStreetEdges(lot);
+    const candidates=poly.map((a,i)=>({
+      i,a,b:poly[(i+1)%poly.length],length:dist(a,poly[(i+1)%poly.length])
+    })).filter(e=>e.length>1.25).sort((a,b)=>Number(street.has(a.i))-Number(street.has(b.i))||b.length-a.length);
+    const footprint=houseFootprintParts(house);
+    for(const edge of candidates){
+      const {a,b,length:L}=edge,ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;
+      const inward={x:-uy*sign,y:ux*sign},angle=Math.atan2(inward.y,inward.x)-Math.PI/2;
+      const width=Math.min(2.4,L-.34),depth=.9;
+      for(const portion of [.5,.32,.68]){
+        const along=L*portion,center={
+          x:a.x+ux*along+inward.x*(depth/2+.08),
+          y:a.y+uy*along+inward.y*(depth/2+.08)
+        };
+        const points=rectWorldPoints(center.x,center.y,width,depth,angle);
+        if(!points.every(p=>urbanContains(poly,p,.055)))continue;
+        if(footprint.some(part=>urbanPolygonIntersectionArea(points,part.points)>1e-6||
+          points.some((p,i)=>part.points.some((q,j)=>segmentDistance(p,points[(i+1)%points.length],
+            q,part.points[(j+1)%part.points.length])<.16))))continue;
+        parts.push({kind:'outbuilding',type:'shed',center,points,w:width,h:depth,
+          roofTurn:0,roofAngle:angle,bodyH:.62,roofH:1.02,
+          buildingKey:house.id+'|cow-shelter'});
+        break;
+      }
+      if(parts.length)break;
+    }
+  }
+  urbanCattleShelterCache.parts.set(key,parts);
+  return parts;
 }
 // L3/L4 yards fill up with secondary buildings along the plot's non-street
 // sides: open lean-to sheds (tettoie) and closed storehouses (magazzini).
@@ -456,7 +499,9 @@ function urbanHouseDisplayParts(house){
 let urbanOutbuildingCache={revision:-1,parts:new Map()};
 const URBAN_OUTBUILDING_MAX=6;
 function urbanLotOutbuildings(house){
-  if(!house||(!house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
+  if(!house)return[];
+  if(houseLevel(house)===2)return urbanL2CattleShelter(house);
+  if((!house.auto&&!house.urbanRedeveloped)||houseLevel(house)<3)return[];
   if(urbanOutbuildingCache.revision!==urbanRevision)urbanOutbuildingCache={revision:urbanRevision,parts:new Map()};
   const level=houseLevel(house),cached=urbanOutbuildingCache.parts.get(house.id);
   if(cached&&cached.level===level)return cached.parts;
@@ -478,7 +523,8 @@ function urbanLotOutbuildings(house){
       let along=.2,k=0;
       while(along<L-.2&&parts.length<URBAN_OUTBUILDING_MAX){
         const key=house.id+'|out:'+edge+':'+k,hash=peasantHash(key)>>>0;
-        const kind=(hash&1)?'shed':'store';
+        // A yard with outbuildings must include at least one actual stable.
+        const kind=parts.length===0?'shed':(hash&1)?'shed':'store';
         const w=(level===4?1.2:1.0)+((hash>>>3)%7)/10,d=kind==='shed'?.78:.9+((hash>>>7)%3)/20;
         if(along+w>L-.2)break;
         const mid=along+w/2,center={x:a.x+ux*mid+inward.x*(d/2+.06),y:a.y+uy*mid+inward.y*(d/2+.06)};
@@ -546,7 +592,7 @@ function urbanFenceSegments(lots=null,fields=null){
       const a=points[i],b=points[(i+1)%n],L=dist(a,b);if(L<.05)continue;
       const edge={a,b,material:urbanBoundaryMaterial(a,b),key:urbanBoundaryKey(a,b)};
       if(i===gateEdge){
-        const q=closestPointOnSegment(goal,a,b),t=dist(a,q)/L,half=.48/L;
+        const q=closestPointOnSegment(goal,a,b),t=dist(a,q)/L,half=.9/L;
         const at=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
         edge.gap=[at(clamp(t-half,0,1)),at(clamp(t+half,0,1))];
       }
@@ -620,6 +666,33 @@ function urbanFenceSegments(lots=null,fields=null){
   if(cacheKey)urbanFenceCache={key:cacheKey,edges:out};
   return out;
 }
+// Physical boundaries block paths at precisely the drawn walls, fences and
+// hedges, but not at lot entrances. Spatial indexing avoids scanning every
+// Voronoi cell during every pedestrian and military A* step.
+const URBAN_FENCE_NAV_TILE=3,URBAN_FENCE_NAV_RADIUS=.22;
+function urbanFenceNavigationIndex(){
+  if(urbanFenceNavCache?.revision===urbanRevision)return urbanFenceNavCache.tiles;
+  const tiles=new Map(),tile=URBAN_FENCE_NAV_TILE;
+  for(const edge of urbanFenceSegments()){
+    const pad=URBAN_FENCE_NAV_RADIUS+.01;
+    const x0=Math.floor((Math.min(edge.a.x,edge.b.x)-pad)/tile);
+    const x1=Math.floor((Math.max(edge.a.x,edge.b.x)+pad)/tile);
+    const y0=Math.floor((Math.min(edge.a.y,edge.b.y)-pad)/tile);
+    const y1=Math.floor((Math.max(edge.a.y,edge.b.y)+pad)/tile);
+    for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){
+      const key=x+','+y,items=tiles.get(key);
+      if(items)items.push(edge);else tiles.set(key,[edge]);
+    }
+  }
+  urbanFenceNavCache={revision:urbanRevision,tiles};
+  return tiles;
+}
+function urbanFencePointBlocked(p,clearance=URBAN_FENCE_NAV_RADIUS){
+  const tile=URBAN_FENCE_NAV_TILE,cell=Math.floor(p.x/tile)+','+Math.floor(p.y/tile);
+  const edges=urbanFenceNavigationIndex().get(cell);
+  if(!edges)return false;
+  return edges.some(e=>pointSegmentDistance(p,e.a,e.b)<=clearance+1e-7);
+}
 function drawUrbanFence({a,b}){
   const L=dist(a,b),count=Math.max(1,Math.ceil(L/.65));
   ctx.strokeStyle='#806442';
@@ -685,8 +758,11 @@ function drawUrbanLots(){
   for(const lot of lots){
     const house=State.structures.find(h=>h.id===lot.houseId);
     const dense=(house?.auto||house?.urbanRedeveloped)&&houseLevel(house)>=3;
-    pathPolygon(lot.points.map(p=>w2s(p,.015)),
-      dense?'rgba(128,116,103,.36)':'rgba(167,135,81,.10)',null);
+    const use=window.ConquerLivestock?.lotKindForHouse(house);
+    const surface=dense?'rgba(128,116,103,.36)':use==='goat'?'rgba(155,123,71,.20)':
+      use==='shepherd'?'rgba(126,142,78,.18)':use==='cow'?'rgba(141,123,84,.23)':
+      use==='garden'?'rgba(117,153,72,.18)':'rgba(167,135,81,.10)';
+    pathPolygon(lot.points.map(p=>w2s(p,.015)),surface,null);
   }
   const edges=urbanFenceSegments().slice().sort((a,b)=>viewDepthPoint(a.a)-viewDepthPoint(b.a));
   ctx.save();ctx.lineWidth=Math.max(.65,State.view.scale*.9);
@@ -809,7 +885,13 @@ function urbanHouseFaces(house,part){
     const sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle);
     const top=p=>{const ly=-(p.x-part.center.x)*sa+(p.y-part.center.y)*ca;return base+part.roofH+(part.bodyH-part.roofH)*(ly/part.h+.5)};
     for(let i=0;i<fp.length;i++){
-      const a=fp[i],b=fp[(i+1)%fp.length];faces.push([vertex(a,base),vertex(b,base),vertex(b,top(b)),vertex(a,top(a))]);
+      const a=fp[i],b=fp[(i+1)%fp.length];
+      // The courtyard-facing side stays open: this is a lean-to, not a
+      // closed storehouse. Livestock is visible through the open bay.
+      const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      const inner=-(mid.x-part.center.x)*sa+(mid.y-part.center.y)*ca;
+      if(inner>part.h*.4)continue;
+      faces.push([vertex(a,base),vertex(b,base),vertex(b,top(b)),vertex(a,top(a))]);
     }
     faces.push(fp.map(p=>vertex(p,top(p))));
     return faces;
@@ -852,16 +934,19 @@ function urbanOcclusionPieces(){
     for(const part of entry.parts){
       const faces=urbanHouseFaces(entry.house,part);
       const projected=faces.flat().map(v=>w2sRaw(v.p,v.z));
-      pieces.push({faces,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
+      pieces.push({faces,buildingKey:part.buildingKey||null,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
         minX:Math.min(...projected.map(p=>p.x)),maxX:Math.max(...projected.map(p=>p.x)),
         minY:Math.min(...projected.map(p=>p.y)),maxY:Math.max(...projected.map(p=>p.y))});
     }
   }
   urbanProjectionCache={key,pieces};return pieces;
 }
-function withUrbanFigureOcclusion(p,z,drawFn){
+function withUrbanFigureOcclusion(p,z,drawFn,ignoreBuildingKey=null){
+  // At settlement-scale zoom sprites are subpixel; clipping against hundreds
+  // of architectural faces costs far more than it contributes visually.
+  if(State.view.scale<.48)return drawFn();
   const screen=w2s(p,z),depth=viewDepthPoint(p),r=wrap.getBoundingClientRect();
-  const pieces=urbanOcclusionPieces().filter(q=>q.maxDepth>depth&&
+  const pieces=urbanOcclusionPieces().filter(q=>(ignoreBuildingKey==null||q.buildingKey!==ignoreBuildingKey)&&q.maxDepth>depth&&
     q.minX<screen.x+28&&q.maxX>screen.x-28&&q.minY<screen.y+12&&q.maxY>screen.y-44);
   if(!pieces.length)return drawFn();
   ctx.save();

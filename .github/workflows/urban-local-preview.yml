@@ -1,0 +1,48 @@
+name: CONQUER urban local preview
+on:
+  push:
+    branches: [urban]
+    paths:
+      - '.github/workflows/urban-local-preview.yml'
+      - 'qa/urban-local-preview.mjs'
+      - 'preview-local.bat'
+      - 'preview-local.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Start local web server without Vercel
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/conquer-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/conquer-server.log
+          exit 1
+      - name: Prepare local headless browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Launch game in localhost browser and capture preview
+        run: node qa/urban-local-preview.mjs
+      - name: Bundle complete portable source
+        if: always()
+        run: |
+          mkdir -p artifacts
+          git archive --format=zip HEAD -o artifacts/CONQUER-urban-local.zip
+      - name: Publish screenshot, local bundle and test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CONQUER-urban-local-preview
+          path: artifacts/
+          retention-days: 14

@@ -116,6 +116,21 @@ test('shared parcel fences are merged once, including partial collinear overlaps
  run("State.structures=[{id:'a',type:'house',x:98,y:100,w:1.5,h:1},{id:'b',type:'house',x:102,y:100,w:1.5,h:1}];invalidateNavigation();globalThis.fenceFixture=[{houseId:'a',points:[{x:96,y:98},{x:100,y:98},{x:100,y:102},{x:96,y:102}]},{houseId:'b',points:[{x:100,y:98},{x:104,y:98},{x:104,y:102},{x:100,y:102}]}]");
  assert.equal(run('urbanFenceSegments(fenceFixture).filter(e=>Math.abs(e.a.x-100)<.0001&&Math.abs(e.b.x-100)<.0001).length'),1);
 });
+test('Voronoi fence lines obstruct pedestrians and soldiers but leave their gate traversable',()=>{
+ run("State.structures=[{id:'home',type:'house',x:100,y:100,w:1.5,h:1,angle:0}];State.village={founded:true,wellId:null};State.combat.strokes=[];invalidateNavigation();globalThis.savedUrbanLots=urbanLots;urbanLots=()=>[{houseId:'home',points:[{x:98,y:98},{x:102,y:98},{x:102,y:102},{x:98,y:102}]}]");
+ try{
+   const segments=run('urbanFenceSegments()');
+   assert.ok(segments.length>=4,'parcel must have enclosure segments');
+   assert.equal(run('urbanFencePointBlocked({x:102,y:101},PEASANT_CLEARANCE)'),true);
+   assert.equal(run("peasantSegmentClear({x:101.5,y:101},{x:103,y:101},'civilian')"),false);
+   assert.equal(run("window.ConquerCombat.__qa.safeMilitarySegment({x:101.5,y:101},{x:103,y:101},'squad','squad')"),false);
+   const opening=run('(()=>{let pts=[];for(let y=97.6;y<=102.4;y+=.04)if(!urbanFencePointBlocked({x:100,y},PEASANT_CLEARANCE))pts.push(y);return pts})()');
+   assert.ok(opening.length>0,'entrance remains walkable');
+   const route=run("findPeasantPath({x:101.5,y:101},{x:103,y:101},'civilian',8)");
+   assert.ok(route?.length>2,'path must detour through the entrance');
+   assert.equal(run("peasantSegmentClear({x:100,y:97},{x:100,y:99},'civilian')"),true,'entrance crosses fence without colliding');
+ }finally{run('urbanLots=savedUrbanLots;invalidateNavigation()')}
+});
 test('neighbouring Voronoi lots share their common border instead of leaving a gap',()=>{
  run("State.structures=[{id:'well',type:'well',x:80,y:80}];State.village={founded:true,wellId:'well'};State.combat.strokes=[{x:100,y:100,r:50,mode:'yellow'}];State.structures.push({id:'a',type:'house',auto:true,x:98,y:100,w:1.5,h:1,angle:0},{id:'b',type:'house',auto:true,x:102.4,y:100.7,w:1.5,h:1,angle:.3});invalidateNavigation();invalidateUrbanGeometry()");
  // Every point on the bisector between the two homes, inside both reach boxes, belongs to both lots' boundary.

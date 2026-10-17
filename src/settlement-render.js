@@ -139,7 +139,12 @@ function drawBaseStaticScene(){
     const completedOthers=State.structures
       .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+    for(const s of completedOthers){
+      // Offscreen houses do not need full architectural rasterization.
+      if(s.type==='house'&&!worldPointVisible(s,houseBodyHeight(s)+.6,
+        320+180*State.view.scale))continue;
+      if(s.auto)drawAutoStructure(s);else drawStructure(s);
+    }
     drawStaticHouseFacadeDetails();
   });
   entry.dirty=false;
@@ -400,6 +405,7 @@ function draw(){
   markPhase('scene-caches');
   // Population remains between settlement massing and completed castle massing,
   // preserving the existing occlusion behaviour.
+  window.ConquerLivestock?.draw();
   drawPeasants();
   window.ConquerIndustries?.drawWorkers();
   markPhase('population');
