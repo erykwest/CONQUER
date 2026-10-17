@@ -3,6 +3,12 @@
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
 
+## Aggiornamento Civil (17/10/2026)
+
+**D-CIV-01 · DESIGN esplicito:** chiesa e locanda hanno lotti Voronoi di pertinenza; il mercato non ha un lotto privato. Applicazione attraverso il sistema catastale già condiviso con le abitazioni, senza duplicare recinzioni. La piazza è un nuovo edificio pubblico e non genera un lotto di pertinenza.
+
+**D-CIV-02 · DESIGN esplicito:** tre livelli di sviluppo (L1–L3) per edifici civili esistenti chiesa/locanda/mercato e nuova Piazza; tre varianti di Piazza (pavimentata, fontana, verde). Nella prima iterazione il livello è **skeleton di configurazione**, non un modificatore economico o di servizi; le forme/scale definitive restano future. Fonte tecnica: branch [`Civil`](https://github.com/erykwest/CONQUER/tree/Civil), `src/settlement-core.js`, `src/settlement-urban.js` e pannello `src/settlement-app-rooms.js`.
+
 ## Registro delle decisioni
 
 | ID | Classe | Decisione o regola da preservare | Conseguenza |
