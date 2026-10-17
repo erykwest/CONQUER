@@ -327,6 +327,7 @@
     for(const s of State.structures){
       if(underConstruction(s))continue;
       if(isCivic(s))addCivic(m,s,winter);
+       else if(isCivicAnnex(s))addCivicAnnex(m,s,winter);
       else if(window.ConquerIndustries?.is(s)){
         const def=ConquerIndustries.TYPES[s.type],g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
         m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
@@ -355,6 +356,22 @@
     for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
       const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
       m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');
+    }
+  }
+  function addCivicAnnex(m,s,winter){
+    const spec=civicAnnexDefinition(s);if(!spec)return;
+    const g=Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(s),kind=spec.kind,poly=civicAnnexFootprint(s);
+    const height=kind==='garden'?.13:kind==='yard'?.09:kind==='stall'?.75:1.32;
+    const color=kind==='garden'?'#6a8452':kind==='yard'?'#ad9a7a':kind==='stone'?'#85847d':'#9b7c57';
+    m.prism(poly,g,g+height,color,kind==='stone'?'#696862':'#79563b',kind==='stone'?'#777671':'#876446');
+    if(kind==='garden'){
+      for(const offset of [-.45,0,.45]){
+        const p=houseLocalToWorld(s,offset,0);
+        m.prism(rectWorldPoints(p.x,p.y,.08,1.4,s.angle||0),g+.13,g+.19,'#426738','#385d30','#426738');
+      }
+    }else if(kind!=='yard'&&kind!=='stall'){
+      const roof=winter?WINTER_ROOF[0]:kind==='stone'?'#595a60':'#694a38';
+      m.gabled({x:s.x,y:s.y},spec.w,spec.h,0,s.angle||0,g+height,.001,.34,color,color,roof,roof,color);
     }
   }
   function addCivic(m,s,winter){
