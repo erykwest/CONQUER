@@ -425,6 +425,17 @@
         }
       }
     }
+    if(s.type==='church')addCivicCemetery(m,s,g);
+  }
+  function addCivicCemetery(m,church,ground){
+    const area=civicCemeteryArea(church);if(!area)return;
+    m.prism(area.points,ground,ground+.035,'#827b69','#665e51','#756d5d');
+    for(const grave of civicCemeteryGraves(church)){
+      m.prism(grave.points,ground+.035,ground+.08,'#675c4f','#4b443c','#5b5146');
+      const head=houseLocalToWorld({x:grave.center.x,y:grave.center.y,angle:grave.angle},0,-.23);
+      m.prism(rectWorldPoints(head.x,head.y,.25,.14,grave.angle),
+        ground+.08,ground+.39,'#b5b1a6','#78766f','#96928b');
+    }
   }
 
   // ---------- trees (billboards) ----------
