@@ -52,6 +52,9 @@ function harness(){
     structureGroundContactPolygons:s=>[rect(s.x,s.y,s.w||2,s.h||2,s.angle||0)],
     houseFootprintParts:s=>[{points:rect(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     isCivic:()=>false,civicParts:()=>[],
+    // Civil introduced civic annex placement into the shared preflight; this industry
+    // harness has no annex fixtures, so provide the real validator's neutral outcome.
+    isCivicAnnex:()=>false,civicAnnexFootprint:()=>[],civicAnnexPlacementCheck:()=>({ok:true}),
     constructionCost:()=>({gold:10}),canAfford:()=>true,costText:()=>'10 gold',
     isPlacementFoundationBuilding:()=>false,
     TYPES:{road:{min:1}},manualRoadConflict:()=>false,
