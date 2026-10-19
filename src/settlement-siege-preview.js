@@ -4,8 +4,9 @@
 // what the men carry are queued as dynamic meshes (ConquerWorld3D.addMesh), the men are the
 // game's own soldiers (drawSoldierFigure -> depth-tested billboards with colliders), and the
 // moat is filled through the game's own fill patch (settlement-crossings fills).
-//   ?siege=ram|mantlet|ladder|tower|moat   or   ConquerSiegePreview.start(kind)
-// On an empty map it builds a test bay first: an H1 stone wall, a stone gate and a water moat.
+//   ?siege=ram|mantlet|ladder|tower|moat[&level=2][&hides=1]   or   ConquerSiegePreview.start(kind,{level,hides})
+// On an empty map it builds a test bay first: a stone wall (H1, or H2 with level=2), a stone
+// gate and a water moat. On H2 the tower scene uses the level 2 tower (with archers on top).
 (function(){
   const SA=()=>window.ConquerSiegeAssault,SE=()=>window.ConquerSiegeEngines3D,W=()=>window.ConquerWorld3D;
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
@@ -38,13 +39,13 @@
     }
     return{x:100,y:100};
   }
-  function buildBay(){
+  function buildBay(level=1){
     const c=flatSpot(),rs=structureRotationStep(Math.PI/2),width=wallWidthForTier(2),half=.75;
-    const wall=(a,b)=>({id:uid(),type:'wall',width,level:1,tier:2,a,b,length:Math.hypot(b.x-a.x,b.y-a.y),rotationStep:rs});
+    const wall=(a,b)=>({id:uid(),type:'wall',width,level,tier:2,a,b,length:Math.hypot(b.x-a.x,b.y-a.y),rotationStep:rs,siegeTestBay:true});
     State.structures.push(
       wall({x:c.x,y:c.y-10},{x:c.x,y:c.y-half}),wall({x:c.x,y:c.y+half},{x:c.x,y:c.y+10}),
-      {id:uid(),type:'gate',shape:'square',material:'stone',size:1.5,level:1,functions:[],x:c.x,y:c.y,angle:Math.PI,rotationStep:structureRotationStep(Math.PI)},
-      {id:uid(),type:'moat',variant:'water',a:{x:c.x-3.5,y:c.y-10},b:{x:c.x-3.5,y:c.y+10},width:1.5,length:20,groundZ:0,fills:[]});
+      {id:uid(),type:'gate',shape:'square',material:'stone',size:1.5,level,functions:[],x:c.x,y:c.y,angle:Math.PI,rotationStep:structureRotationStep(Math.PI),siegeTestBay:true},
+      {id:uid(),type:'moat',variant:'water',a:{x:c.x-3.5,y:c.y-10},b:{x:c.x-3.5,y:c.y+10},width:1.5,length:20,groundZ:0,fills:[],siegeTestBay:true});
     invalidateSceneCache();
   }
   function findTarget(){
@@ -94,7 +95,7 @@
   // Called inside the game's frame, between the 3D back pass and the front pass.
   function drawFrame(){
     if(!run||!W()?.active?.())return;
-    const t=time(),sc=SA().scene(run.kind,t,run.target.G),F=run.target.F;
+    const t=time(),sc=SA().scene(run.kind,t,run.target.G,run.opts),F=run.target.F;
     syncFill(sc);
     if(sc.engine){
       const p=sc.engine.place,w=F.toWorld(p.x,p.y);
@@ -114,11 +115,17 @@
   function loop(){raf=0;if(!run)return;draw();if(run.frozen==null)raf=requestAnimationFrame(loop)}
   function start(kind='ram',opts={}){
     if(!SA().KINDS.includes(kind))throw new Error('siege kind: '+SA().KINDS.join('|'));
+    const level=opts.level===2?2:1;
     let target=findTarget();
-    if(!target){buildBay();target=findTarget()}
+    if(!target){buildBay(level);target=findTarget()}
     if(!target)throw new Error('no completed stone gate in a wall');
+    // The test bay follows the wall level asked for; a real settlement is never altered.
+    if(target.wall.siegeTestBay&&opts.level&&target.wall.level!==level){
+      for(const s of State.structures)if(s.siegeTestBay&&(s.type==='wall'||s.type==='gate'))s.level=level;
+      invalidateSceneCache();target=findTarget();
+    }
     if(run?.patch&&run.target.moat)run.target.moat.fills=run.target.moat.fills.filter(f=>f!==run.patch);
-    run={kind,target,t0:performance.now()/1000,frozen:null,livery:opts.livery||HOSTILE,team:opts.team||HOSTILE.alt,patch:null};
+    run={kind,target,opts:{hides:!!opts.hides},t0:performance.now()/1000,frozen:null,livery:opts.livery||HOSTILE,team:opts.team||HOSTILE.alt,patch:null};
     if(opts.camera!==false)frameCamera(target);
     if(!raf)raf=requestAnimationFrame(loop);
     return{kind,G:target.G};
@@ -130,6 +137,8 @@
     run=null;draw();
   }
   window.ConquerSiegePreview={start,stop,at,play,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G}};
-  const wanted=new URLSearchParams(location.search).get('siege');
-  if(wanted)window.addEventListener('load',()=>setTimeout(()=>{try{start(wanted)}catch(e){console.error('siege preview',e)}},300));
+  const q=new URLSearchParams(location.search),wanted=q.get('siege');
+  if(wanted)window.addEventListener('load',()=>setTimeout(()=>{
+    try{start(wanted,{level:Number(q.get('level'))||undefined,hides:q.get('hides')==='1'})}catch(e){console.error('siege preview',e)}
+  },300));
 })();

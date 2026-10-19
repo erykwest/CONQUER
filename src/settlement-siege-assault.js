@@ -100,14 +100,30 @@
     return{engine:{name:'ladder',place,state},soldiers,arrows:[],carried:[],flying:[],gate:{open:0,shake:0},fill:filledMoat('ladder'),fillY:Y};
   }
 
-  function tower(t,G){
-    const e=MODEL().engines.tower,pb=e.pivots.bridge,L=e.rig.bridgeLen;
+  // Assault tower: level 1 for the H1 wall, the level 2 upgrade for H2 (its archers
+  // shoot from the fighting top while it closes in). opts.hides: hides upgrade.
+  function tower(t,G,opts={}){
+    const name=G.walk>1.6?'tower2':'tower',e=MODEL().engines[name],pb=e.pivots.bridge,L=e.rig.bridgeLen;
     const drop=pb[2]-G.walk,reach=Math.sqrt(Math.max(0,L*L-drop*drop)),landing=G.face+Math.min(G.thick*.5,.2);
     const X0=G.moat[0]-2.2,X1=landing-pb[0]-reach,s=ease(seg(t,0,9)),x=lerp(X0,X1,s);
     const place={x,y:G.towerY??-1.8,heading:0},Y=place.y;
-    const state={mode:t<9?'move':'idle',distance:x-X0,bridge:seg(t,9,11)};
-    const soldiers=SE().crew('tower',place,state).map((p,i)=>man(p,'spearman','pusher'+i,{walk:t<9}));
-    // The assault party climbs inside, comes up on the platform and crosses.
+    const state={mode:t<9?'move':'idle',distance:x-X0,bridge:seg(t,9,11),hides:!!opts.hides};
+    const soldiers=SE().crew(name,place,state).map((p,i)=>man(p,'spearman','pusher'+i,{walk:t<9}));
+    const arrows=[];
+    SE().archers(name,place).forEach((p,i)=>{
+      // Each archer looses every 2 s at the wall top from the moment it is in range.
+      const q=t-4-i*.5;let aim=0;
+      if(q>=0){
+        const ph=q%2,n=Math.floor(q/2);aim=ph<1.4?1:0;
+        if(ph>=.6&&ph<1.2){
+          const f=(ph-.6)/.6,ty=Y+((n*3+i*5)%7-3)*.5;
+          const at=g=>[lerp(p.x+m(.3),G.face+.05,g),lerp(p.y,ty,g),lerp(p.z+m(1.4),G.walk+.15,g)+Math.sin(Math.PI*g)*m(.8)];
+          arrows.push({at:at(f),to:at(Math.min(1,f+.05))});
+        }
+      }
+      soldiers.push(man(p,'archer','tower-archer'+i,{aim}));
+    });
+    // The assault party climbs inside, comes up on the bridge deck and crosses.
     const deck=pb[2]+m(.07),root={x:x+pb[0],z:deck},tip={x:landing,z:G.walk};
     const posts=[-.7,.7,-1.4,1.4,-2.1];
     for(let i=0;i<5;i++){
@@ -121,9 +137,8 @@
       else{p=post;walk=false;dir=-1}
       soldiers.push(man(p,'spearman','assault'+i,{walk,dir}));
     }
-    return{engine:{name:'tower',place,state},soldiers,arrows:[],carried:[],flying:[],gate:{open:0,shake:0},fill:filledMoat('tower'),fillY:Y};
+    return{engine:{name,place,state},soldiers,arrows,carried:[],flying:[],gate:{open:0,shake:0},fill:filledMoat('tower'),fillY:Y};
   }
-
   // Fascine carriers: two trips each; every bundle thrown advances the game's fill
   // patch (settlement-crossings: it creeps across the moat from the near bank).
   const FASCINE_Y=[-1.1,-.65,-.2,.25,.7,1.15];
@@ -158,8 +173,9 @@
   }
 
   const SCENES={ram,mantlet,ladder,tower,moat};
-  function scene(kind,t,G=DEFAULT){
-    const T=CYCLE[kind];return SCENES[kind](((t%T)+T)%T,{...DEFAULT,...G});
+  // opts: upgrades of the engine (tower: {hides}).
+  function scene(kind,t,G=DEFAULT,opts={}){
+    const T=CYCLE[kind];return SCENES[kind](((t%T)+T)%T,{...DEFAULT,...G},opts);
   }
 
   // ---------------------------------------------------------------- meshes

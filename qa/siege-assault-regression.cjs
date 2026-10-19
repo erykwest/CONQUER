@@ -15,7 +15,7 @@ for(const f of ['assets/siege-engines-model.js','settlement-siege-engines3d.js',
   vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f),'utf8'),ctx);
 const SA=window.ConquerSiegeAssault,SE=window.ConquerSiegeEngines3D,G=SA.DEFAULT;
 const H1=1.15,H2=2.10,near=(a,b,eps,msg)=>assert.ok(Math.abs(a-b)<eps,msg+' ('+a.toFixed(3)+' vs '+b.toFixed(3)+')');
-const partRange=(e,part)=>{let s=0;for(const [n,p] of Object.entries(window.ConquerSiegeModel.engines[e].parts)){if(n===part)return[s,s+p.c.length*9];if(n!=='wheel')s+=p.c.length*9}};
+const partRange=(e,part)=>{let s=0;for(const [n,p] of Object.entries(window.ConquerSiegeModel.engines[e].parts)){if(n===part)return[s,s+p.c.length*9];if(n!=='wheel'&&n!=='hides')s+=p.c.length*9}};
 const along=(m,r,k)=>{let best=-1e9,at=null;for(let i=r[0];i<r[1];i+=3)if(m.pos[i+k]>best){best=m.pos[i+k];at=[m.pos[i],m.pos[i+1],m.pos[i+2]]}return at};
 
 assert.equal(G.walk,H1,'scenes use the game H1 wall height (structureHeight)');
@@ -79,3 +79,21 @@ const w3=fs.readFileSync(path.join(__dirname,'..','src','settlement-world3d.js')
 assert.match(w3,/s\.fills\?\.length\?s\.fills\.map/,'ground signature includes moat fills');
 assert.match(w3,/function addMesh/,'world3d takes dynamic meshes');
 console.log('PASS world3d re-bakes filled moats and draws dynamic meshes');
+
+// Upgrades. Level 2 tower for the high (H2) wall: its bridge lands on the H2 wall top,
+// archers stand on its fighting top; the ladder still never reaches H2.
+const G2={walk:H2};
+const tw2=SA.scene('tower',12,G2);
+assert.equal(tw2.engine.name,'tower2','an H2 wall calls for the level 2 tower');
+const tip2=along(SE.triangles('tower2',tw2.engine.place,tw2.engine.state),partRange('tower2','bridge'),0);
+near(tip2[2],H2,.06,'its bridge rests on the H2 wall top');
+const archers=tw2.soldiers.filter(s=>s.type==='archer');
+assert.equal(archers.length,4,'four archers on the fighting top');
+assert.ok(archers.every(s=>s.z>H2+.5),'standing above the H2 wall top');
+assert.ok(SA.scene('tower',6,G2).arrows.length>0,'shooting while it closes in');
+assert.equal(SA.scene('tower',19,G2).soldiers.filter(s=>s.x>G.face&&s.type==='spearman').length,5,'the party crosses onto the H2 wall');
+// Hides: a separate upgrade part, shown only when bought.
+const plain=SE.triangles('tower',{x:0,y:0},{}),hid=SE.triangles('tower',{x:0,y:0},{hides:true});
+assert.ok(hid.col.length>plain.col.length,'hides add their patches');
+assert.equal(SA.scene('tower',3,{},{hides:true}).engine.state.hides,true,'the scene passes the upgrade on');
+console.log('PASS tower upgrades: level 2 for H2 with archers, hides');

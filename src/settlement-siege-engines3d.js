@@ -13,7 +13,7 @@
   const ph=(u,a,b)=>ease(clamp01((u-a)/(b-a))),lerp=(a,b,s)=>a+(b-a)*s;
   // Action cycles (seconds) and the angles they sweep (radians; positive pitch =
   // the forward end of a part goes down about its pivot).
-  const CYCLE={ram:1.8,catapult:4.2,trebuchet:6,tower:6,ladder:7,mantlet:4};
+  const CYCLE={ram:1.8,catapult:4.2,trebuchet:6,tower:6,tower2:6,ladder:7,mantlet:4};
   // Trebuchet set-up loop for {mode:'setup'}: packed, unpack, set up, pack again.
   const SETUP=13;
   // Ram: drawn back on its ropes, then driven forward into the gate.
@@ -78,23 +78,26 @@
       slide:ph(u,.85,.92),raise:ph(u,.92,1),hangers:u>.995,stone:shot.stone,
       wheelOut:ph(u,0,.12),wheelFlat:ph(u,.12,.22)};
   }
-  // Tower and ladder are sized for the game's low (H1) wall: patrols walk on its
-  // top, structureHeight = 1.15 U. High (H2) walls cannot be scaled, only battered.
+  // The ladder is sized for the game's low (H1) wall: patrols walk on its top,
+  // structureHeight = 1.15 U. The assault tower comes in two levels: 'tower' for H1,
+  // 'tower2' (upgrade) for the high H2 wall (2.10 U) with archers on a fighting top.
   const WALL_WALK=1.15;
   // Siege tower: the bridge drops forward into a crenel and rests on the wall
   // walk, holds, and is hauled up. state.bridge (0 up .. 1 down) overrides.
-  function bridgeDown(){
-    const e=M().engines.tower;
-    return Math.PI/2+Math.asin(clamp01((e.pivots.bridge[2]-WALL_WALK)/e.rig.bridgeLen));
+  function bridgeDown(engine='tower'){
+    const e=M().engines[engine];
+    // Each level lands on the wall it was built for (rig.walk: H1 or H2 wall top).
+    return Math.PI/2+Math.asin(clamp01((e.pivots.bridge[2]-e.rig.walk)/e.rig.bridgeLen));
   }
-  function towerPose(state){
-    const D=bridgeDown();
-    if(Number.isFinite(state.bridge))return{bridge:D*ease(clamp01(state.bridge))};
-    if(state.mode!=='fire')return{bridge:0};
-    const k=((state.t||0)%CYCLE.tower)/CYCLE.tower;
-    if(k<.25)return{bridge:D*easeIn(k/.25)};
-    if(k<.75)return{bridge:D};
-    return{bridge:D*(1-ease((k-.75)/.25))};
+  // Upgrades: state.hides shows the wet hides over the front and sides.
+  function towerPose(state,engine='tower'){
+    const D=bridgeDown(engine),hides=!!state.hides;
+    if(Number.isFinite(state.bridge))return{bridge:D*ease(clamp01(state.bridge)),hides};
+    if(state.mode!=='fire')return{bridge:0,hides};
+    const k=((state.t||0)%CYCLE[engine])/CYCLE[engine];
+    if(k<.25)return{bridge:D*easeIn(k/.25),hides};
+    if(k<.75)return{bridge:D,hides};
+    return{bridge:D*(1-ease((k-.75)/.25)),hides};
   }
   // Scaling ladder: carried flat on the shoulders; the foot is planted and the
   // ladder swung up to lean on the wall, held while the men climb, then lowered.
@@ -112,7 +115,7 @@
     const fire=state.mode==='fire',k=fire?((state.t||0)%CYCLE[engine])/CYCLE[engine]:0;
     if(engine==='ram')return fire?ramPose(k):{ram:0};
     if(engine==='catapult')return catapultPose(k);
-    if(engine==='tower')return towerPose(state);
+    if(engine==='tower'||engine==='tower2')return towerPose(state,engine);
     if(engine==='mantlet')return{};
     if(engine==='ladder')return ladderPose(state);
     return trebuchetPose(state);
@@ -166,11 +169,12 @@
       if(name==='wheel')continue;
       if((name==='stone'||name==='slingStone')&&!st.stone)continue;
       if(name==='hangers'&&!st.hangers)continue;
+      if(name==='hides'&&!st.hides)continue;
       let fn=p=>p;
       if(treb)fn=treb[name]||fn;
       else if(engine==='ram'&&name==='ram')fn=p=>pitch(p,pv.ram,st.ram);
       else if(engine==='catapult'&&(name==='arm'||name==='stone'))fn=p=>pitch(p,pv.arm,st.arm);
-      else if(engine==='tower'&&name==='bridge')fn=p=>pitch(p,pv.bridge,st.bridge);
+      else if((engine==='tower'||engine==='tower2')&&name==='bridge')fn=p=>pitch(p,pv.bridge,st.bridge);
       else if(engine==='ladder'&&name==='ladder'){const L=st.ladder;fn=place(pv.ladder,L.a,[L.x,0,L.z])}
       out.push({name,part:e.parts[name],fn});
     }
@@ -229,5 +233,10 @@
     const c=Math.cos(placeAt.heading||0),s=Math.sin(placeAt.heading||0),d=RANGE[engine]*f,h=RANGE[engine]*.35*4*f*(1-f)+(engine==='catapult'?.95:1.6);
     return{x:(placeAt.x||0)+d*c,y:(placeAt.y||0)+d*s,z:(placeAt.z||0)+h,f};
   }
-  window.ConquerSiegeEngines3D={triangles,pose,crew,projectile,deploy:deployOf,CYCLE,SETUP,WALL_WALK,LADDER_LEAN,LADDER_FOOT};
+  // Archers on a tower's fighting top (level 2), world positions.
+  function archers(engine,placeAt){
+    const c=Math.cos(placeAt.heading||0),s=Math.sin(placeAt.heading||0);
+    return(M().engines[engine].rig?.archers||[]).map(([x,y,z])=>({x:(placeAt.x||0)+x*c-y*s,y:(placeAt.y||0)+x*s+y*c,z:(placeAt.z||0)+z}));
+  }
+  window.ConquerSiegeEngines3D={triangles,pose,crew,archers,projectile,deploy:deployOf,CYCLE,SETUP,WALL_WALK,LADDER_LEAN,LADDER_FOOT};
 })();

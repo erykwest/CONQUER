@@ -15,7 +15,7 @@ Run inside Blender (BlenderMCP execute_code):
 Axes: +X forward (towards the target), +Y left, +Z up; origin on the ground at the centre.
 """
 import json, math, os, sys, importlib
-from mathutils import Vector
+from mathutils import Vector, Matrix
 _here = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else CQ_DIR
 if _here not in sys.path:
     sys.path.insert(0, _here)
@@ -27,6 +27,7 @@ COLORS = {
     'wood': '#9a6a3f', 'woodLight': '#b98652', 'woodDark': '#6f4a2b',
     'iron': '#55595d', 'ironLight': '#7c8186', 'rope': '#b8a27a',
     'hide': '#7a5a3c', 'hideDark': '#5b412b', 'stone': '#9a9893', 'leather': '#4a3020',
+    'hideA': '#8a4b3c', 'hideB': '#6f5670', 'hideC': '#7d8c90', 'hideD': '#a3783f',
     'team': '#7b3f98',   # player colour: cloth wraps and banners, replaced in game per owner
 }
 KEYS = list(COLORS.keys())
@@ -255,77 +256,160 @@ def build_trebuchet(root, off):
 
 
 # ------------------------------------------------------------------ siege tower
-# Sized for the game's low (H1) wall: its walk is the structure height, 1.15 U
-# (4.0 m). High (H2) walls cannot be scaled, only battered down.
-WALL_WALK = 1.15 * 3.5
+# One assault tower with upgrades, sized on the game's walls (patrols walk on the
+# wall top, structureHeight): level 1 reaches the low H1 wall (1.15 U = 4.0 m),
+# level 2 the high H2 wall (2.10 U = 7.35 m) and carries a fighting top for
+# archers above the bridge. Wet hides over the front and sides (against fire) are a
+# further upgrade: a separate part shown only when bought. Look after the classic
+# assault tower: vertical plank front, plank sides on a trapezoid (sloping back),
+# open back with the ladders inside, plank battlements on top.
+WALLS = {1: 1.15 * 3.5, 2: 2.10 * 3.5}
+WALL_WALK = WALLS[1]
+HIDE_KEYS = ('hideA', 'hideB', 'hideC', 'hideD', 'hide', 'hideDark')
 
 
-def build_tower(root, off):
-    """Assault tower: tapered timber frame clad in hides on four wheels, two
-    storeys, a parapet on top and a drawbridge hinged on the front above the
-    wall walk (modelled raised; it is lowered forward into a crenel)."""
+def plate(p, c, w, h, axis, key, tilt=0.0):
+    """Flat rectangle (2 triangles) facing along axis 'x' or 'y': planks and hides seen
+    from both sides. w runs horizontally along the face, h vertically; tilt turns it in its plane."""
+    cx, cy, cz = c; ca, sa = math.cos(tilt), math.sin(tilt)
+    pts = []
+    for du, dv in ((-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)):
+        a, b = du * ca - dv * sa, du * sa + dv * ca
+        pts.append((cx, cy + a, cz + b) if axis == 'x' else (cx + a, cy, cz + b))
+    p.quads(pts, [(0, 1, 2, 3)], key)
+
+
+def build_tower(root, off, level=1):
+    name = 'tower' if level == 1 else 'tower%d' % level
     parts, pivots = {}, {}
-    B, T = 1.8, 1.5                               # base / top half-width
-    TOP = WALL_WALK + .45                         # platform: the bridge slopes down onto the walk
-    PAR = TOP + 1.1                               # parapet
-    BRIDGE = 2.4
-    half = lambda z: B + (T - B) * (z - .7) / (PAR - .7)
-    p = part(root, 'frame', 'tower', off)
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            post(p, (sx * B, sy * B, .5), (sx * T, sy * T, PAR), .3, 'wood')           # corner posts
-    for z in (.7, (.7 + TOP) / 2, TOP):
-        h = half(z)
+    walk = WALLS[level]
+    DECK = walk + .45                               # bridge hinge: it slopes down onto the wall top
+    TOP = DECK + (2.7 if level > 1 else 0)          # fighting top (level 2) or the bridge deck
+    PAR = TOP + 1.1
+    BRIDGE, W, FRONT = 2.6, 1.6, 1.7                # bridge length, half width, front face x
+    back0 = -(1.2 + .3 * PAR)                       # the back slopes in: x at the ground ...
+    back1 = -1.0                                    # ... and at the parapet
+    back = lambda z: back0 + (back1 - back0) * min(1, max(0, z / PAR))
+    floors = [.75] + [.75 + (DECK - .75) * k / (2 if level == 1 else 3) for k in range(1, (2 if level == 1 else 3))] + [DECK]
+    if level > 1:
+        floors.append(TOP)
+
+    p = part(root, 'frame', name, off)
+    for s in (-1, 1):
+        post(p, (FRONT, s * W, .45), (FRONT, s * W, PAR), .3, 'wood')                   # front posts
+        post(p, (back(.45), s * W, .45), (back(PAR), s * W, PAR), .3, 'wood')            # sloping back posts
+        p.box(((FRONT + back0) / 2, s * W, .5), (FRONT - back0 + .3, .3, .3), 'woodDark')  # sills
+    for z in floors:
+        bx = back(z)
         for s in (-1, 1):
-            p.box((0, s * h, z), (2 * h + .3, .24, .24), 'woodDark')                    # floor ring beams
-            p.box((s * h, 0, z), (.24, 2 * h + .3, .24), 'woodDark')
-    p.box((0, 0, TOP + .02), (2 * T, 2 * T, .12), 'woodLight')                         # top floor
-    for x in (-1.0, 1.0):
-        p.box((x, 0, .45), (.16, 2 * B + 1.0, .16), 'iron')                            # axles
-    # Hide cladding on sides and back, front up to the bridge; dark seams.
-    for (ax, s) in (('y', 1), ('y', -1), ('x', -1), ('x', 1)):
-        a, b = .9, TOP - (.05 if (ax == 'x' and s == 1) else 0)
-        pa, pb = half(a) + .14, half(b) + .14
-        A = (0, s * pa, a) if ax == 'y' else (s * pa, 0, a)
-        Bp = (0, s * pb, b) if ax == 'y' else (s * pb, 0, b)
-        p.taper(A, Bp, 2 * pa, .08, 2 * pb, .08, 'hide')
-        for z in ((.9 + TOP) * .38, (.9 + TOP) * .76):
-            h = half(z) + .2
-            c = (0, s * h, z) if ax == 'y' else (s * h, 0, z)
-            p.box(c, (2 * h, .06, .12) if ax == 'y' else (.06, 2 * h, .12), 'hideDark')
-        if ax != 'x' or s != 1:
-            for o in (-.6, .6):                                                          # arrow slits
-                zs = TOP - 1.2; h = half(zs) + .2
-                c = (o, s * h, zs) if ax == 'y' else (s * h, o, zs)
-                p.box(c, (.12, .05, .45) if ax == 'y' else (.05, .12, .45), 'leather')
-    # Parapet with merlons on three sides (the front is the bridge).
-    for (ax, s) in (('y', 1), ('y', -1), ('x', -1)):
-        c = (0, s * T, TOP + .45) if ax == 'y' else (s * T, 0, TOP + .45)
-        p.box(c, (2 * T + .2, .14, .8) if ax == 'y' else (.14, 2 * T + .2, .8), 'wood')
-        for o in (-1.0, 0, 1.0):
-            c = (o, s * T, TOP + 1.0) if ax == 'y' else (s * T, o, TOP + 1.0)
-            p.box(c, (.5, .16, .4) if ax == 'y' else (.16, .5, .4), 'wood')
-    post(p, (-T, T, PAR), (-T, T, PAR + 1.8), .08, 'woodDark')                         # banner
-    p.box((-T + .45, T, PAR + 1.45), (.8, .04, .55), 'team')
+            p.box(((FRONT + bx) / 2, s * W, z), (FRONT - bx + .3, .24, .24), 'woodDark')
+        p.box((FRONT, 0, z), (.24, 2 * W + .3, .24), 'woodDark')
+        p.box((bx, 0, z), (.24, 2 * W + .3, .24), 'woodDark')
+        p.box(((FRONT + bx) / 2, 0, z + .1), (FRONT - bx - .1, 2 * W - .1, .08), 'woodLight')  # floor planks
+    # Front: vertical planks up to the bridge; above it (level 2) up to the parapet.
+    spans = [(.5, DECK)] + ([(DECK + BRIDGE + .05, TOP)] if level > 1 and DECK + BRIDGE + .05 < TOP else [])
+    k = 0
+    y = -W + .15
+    while y < W - .1:
+        for z0, z1 in spans:
+            plate(p, (FRONT + .12, y + .15, (z0 + z1) / 2), .3, z1 - z0, 'x', 'woodLight' if k % 2 else 'wood')
+        y += .32; k += 1
+    # Sides: vertical planks on the trapezoid, cut along the sloping back.
+    for s in (-1, 1):
+        x = FRONT - .14; k = 0
+        while x > back0 + .1:
+            zt = PAR if x > back1 else PAR * (x - back0) / (back1 - back0)
+            if zt > .8:
+                plate(p, (x - .15, s * (W + .1), (.5 + zt) / 2), .3, zt - .5, 'y', 'woodLight' if k % 2 else 'wood')
+            x -= .32; k += 1
+        for z in floors:
+            bx = back(z)
+            p.box(((FRONT + bx) / 2, s * (W + .16), z), (FRONT - bx, .06, .14), 'woodDark')  # battens
+    # Open back: one ladder per storey, leaning inside.
+    for z0, z1 in zip(floors[:-1], floors[1:]):
+        x0 = back(z0) + .55
+        for sy in (-1, 1):
+            p.beam((x0, sy * .25 + .5, z0 + .1), (x0 + .5, sy * .25 + .5, z1 + .1), .07, .08, 'woodLight')
+        zz = z0 + .4
+        while zz < z1:
+            f = (zz - z0) / (z1 - z0)
+            p.box((x0 + .5 * f, .5, zz), (.05, .5, .05), 'wood')
+            zz += .35
+    # Plank battlements around the top.
+    for s in (-1, 1):
+        p.box(((FRONT + back1) / 2, s * W, TOP + .45), (FRONT - back1 + .2, .12, .7), 'wood')
+    for x, sx in ((FRONT, 1), (back1, -1)):
+        if level == 1 and sx == 1:
+            continue                                                                    # the bridge closes the front
+        p.box((x, 0, TOP + .45), (.12, 2 * W + .2, .7), 'wood')
+    for s in (-1, 1):
+        for x in [FRONT - .2 - .6 * i for i in range(int((FRONT - back1) / .6) + 1)]:
+            p.box((x, s * W, TOP + .95), (.3, .14, .4), 'woodLight')
+    for x, sx in ((FRONT, 1), (back1, -1)):
+        if level == 1 and sx == 1:
+            continue
+        for yy in (-1.2, -.4, .4, 1.2):
+            p.box((x, yy, TOP + .95), (.14, .3, .4), 'woodLight')
+    post(p, (back1, W, PAR), (back1, W, PAR + 1.8), .08, 'woodDark')                 # banner
+    p.box((back1 + .45, W, PAR + 1.45), (.8, .04, .55), 'team')
+    for x in (FRONT - .5, back0 + .7) + ((back0 / 2 + .5,) if level > 1 else ()):
+        p.box((x, 0, .4), (.16, 2 * W + 1.0, .16), 'iron')                              # axles
     parts['frame'] = p.finish()
 
-    p = part(root, 'bridge', 'tower', off)
-    p.box((T + .12, 0, TOP + BRIDGE / 2), (.14, 2.0, BRIDGE), 'woodLight')             # planks, raised
-    for z in (TOP + .5, TOP + 1.3, TOP + 2.1):
-        p.box((T + .22, 0, z), (.08, 2.1, .16), 'wood')                               # battens
+    # Upgrade: wet hides patched over the front and the sides.
+    p = part(root, 'hides', name, off)
+    seed = 7
+    def rnd():
+        nonlocal seed
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff
+        return seed / 0x7fffffff
+    def patch(c, size, axis, key):
+        w, h = (size[1], size[2]) if axis == 'x' else (size[0], size[2])
+        plate(p, c, w, h, axis, key, (rnd() - .5) * .5)
+    z = .9
+    while z < DECK - .3:
+        y = -W + .3 + rnd() * .2
+        while y < W - .25:
+            w, h = .8 + rnd() * .4, .85 + rnd() * .45
+            patch((FRONT + .19, y, z), (.04, w, h), 'x', HIDE_KEYS[int(rnd() * 4)])
+            y += w * .85
+        z += .75
     for s in (-1, 1):
-        p.box((T + .22, s * .9, TOP + BRIDGE - .1), (.1, .1, .12), 'iron')            # chain rings
-    parts['bridge'] = p.finish()
-    pivots['bridge'] = u(T + .12, 0, TOP)
+        z = .9
+        while z < (PAR - .4 if level > 1 else DECK):
+            x = FRONT - .3 - rnd() * .2
+            while x > back(z) + .3:
+                w, h = .8 + rnd() * .4, .85 + rnd() * .45
+                patch((x, s * (W + .17), z), (w, .04, h), 'y', HIDE_KEYS[int(rnd() * 4)])
+                x -= w * .85
+            z += .8
+    parts['hides'] = p.finish()
 
-    p = part(root, 'wheel', 'tower', off)
+    p = part(root, 'bridge', name, off)
+    bx = FRONT + .26
+    p.box((bx, 0, DECK + BRIDGE / 2), (.12, 2.0, BRIDGE), 'woodLight')                # planks, raised
+    for zz in (DECK + .5, DECK + 1.3, DECK + 2.1):
+        p.box((bx + .09, 0, zz), (.07, 2.1, .14), 'wood')                              # battens
+    for s in (-1, 1):
+        p.box((bx + .09, s * .9, DECK + BRIDGE - .1), (.1, .1, .12), 'iron')           # rope rings
+    parts['bridge'] = p.finish()
+    pivots['bridge'] = u(bx, 0, DECK)
+
+    p = part(root, 'wheel', name, off)
     wheel(p, .55, half=.12, spokes=8)
     parts['wheel'] = p.finish()
-    meta = {'wheels': {'part': 'wheel', 'r': u(.55)[0], 'at': [u(x, s * (B + .3), .55) for x in (-1.0, 1.0) for s in (-1, 1)]},
-            'crew': [u(-2.5, y, 0) for y in (-1.0, 0, 1.0)], 'length': u(6.4)[0],
-            'rig': {'bridgeLen': u(BRIDGE)[0], 'deck': u(TOP + .08)[0], 'halfTop': u(T)[0], 'halfBase': u(B)[0], 'walk': u(WALL_WALK)[0]}}
+    axles = (FRONT - .5, back0 + .7) + ((back0 / 2 + .5,) if level > 1 else ())
+    archers = [u(x, y, TOP + .1) for x in (FRONT - .6, back1 + .5) for y in (-.7, .7)] if level > 1 else []
+    meta = {'wheels': {'part': 'wheel', 'r': u(.55)[0], 'at': [u(x, s * (W + .42), .55) for x in axles for s in (-1, 1)]},
+            'crew': [u(back0 - .7, y, 0) for y in (-1.0, 0, 1.0)], 'length': u(max(FRONT - back0 + BRIDGE, PAR))[0],
+            'level': level, 'upgrades': ['hides'],
+            'rig': {'bridgeLen': u(BRIDGE)[0], 'deck': u(DECK + .08)[0], 'walk': u(walk)[0], 'top': u(TOP + .1)[0],
+                    'front': u(FRONT)[0], 'archers': archers}}
     return parts, pivots, meta
 
+
+def build_tower2(root, off):
+    return build_tower(root, off, 2)
 
 # ------------------------------------------------------------------ mantlet
 def build_mantlet(root, off):
@@ -385,7 +469,7 @@ def build_ladder(root, off):
     return parts, pivots, meta
 
 ENGINES = [('ram', build_ram, (0, 0, 0)), ('catapult', build_catapult, (0, 6, 0)), ('trebuchet', build_trebuchet, (0, 13, 0)),
-           ('tower', build_tower, (0, 21, 0)), ('ladder', build_ladder, (0, 27, 0)),
+           ('tower', build_tower, (0, 21, 0)), ('tower2', build_tower2, (0, 39, 0)), ('ladder', build_ladder, (0, 27, 0)),
            ('mantlet', build_mantlet, (0, 31, 0))]
 
 
