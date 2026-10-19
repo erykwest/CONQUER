@@ -433,6 +433,7 @@ const PLAZA_VARIANTS=Object.freeze(['paved','fountain','garden']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
 function civicLevel(s){return Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1)))}
 function plazaVariant(s){return PLAZA_VARIANTS.includes(s?.plazaVariant)?s.plazaVariant:'paved'}
+const isPlazaLike=s=>s?.type==='plaza'||s?.type==='civicAnnex'&&s.annexType==='square';
 function normalizeCivicDevelopment(s){
   if(CIVIC_LEVEL_TYPES.includes(s?.type))s.civicLevel=civicLevel(s);
   if(s?.type==='plaza')s.plazaVariant=plazaVariant(s);

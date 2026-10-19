@@ -22,7 +22,7 @@ const keys=[];
 for(const type of ['church','tavern','market'])for(const l of [1,2,3])keys.push(C3.modelKey({type,civicLevel:l}));
 for(const v of ['paved','fountain','garden'])for(const l of [1,2,3])keys.push(C3.modelKey({type:'plaza',plazaVariant:v,civicLevel:l}));
 const catalog=run('CIVIC_ANNEX_CATALOG');
-for(const group of Object.values(catalog))for(const [k,spec] of Object.entries(group))if(!spec.intrinsic)keys.push(k);
+for(const group of Object.values(catalog))for(const [k,spec] of Object.entries(group))if(!spec.intrinsic&&spec.kind!=='plaza')keys.push(k);
 for(const k of Object.keys(M.models))if(k.startsWith('prop_'))keys.push(k);
 for(const k of keys){
   assert.ok(M.models[k],k+' has a model');
@@ -53,7 +53,11 @@ for(const type of ['church','tavern','market','plaza'])for(const l of [1,2,3]){
   else check(type+l,rects);
 }
 for(const group of Object.values(catalog))for(const [k,spec] of Object.entries(group))
-  if(!spec.intrinsic)check(k,[{cx:0,cy:0,w:spec.w,h:spec.h}]);
+  if(!spec.intrinsic&&spec.kind!=='plaza')check(k,[{cx:0,cy:0,w:spec.w,h:spec.h}]);
+State.structures=[{id:'c',type:'church',civicLevel:2}];
+assert.equal(C3.modelKey({type:'civicAnnex',annexType:'square',parentId:'c',plazaVariant:'garden'}),'plaza_garden2','the church square is a piazza at the church level');
+{const sq=C3.triangles('plaza_paved1',{x:0,y:0,angle:0,scale:.8},0);let m=0;for(let i=0;i<sq.pos.length;i+=3)m=Math.max(m,Math.abs(sq.pos[i]),Math.abs(sq.pos[i+1]));
+ assert.ok(m<=catalog.church.square.w/2+TOL,'the church square fits its 4 U annex');}
 console.log('PASS models stay on the gameplay footprints');
 
 // Placement: ground level, centre, angle (church tower = front at local -y).

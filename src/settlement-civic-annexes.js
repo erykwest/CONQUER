@@ -7,7 +7,9 @@ const CIVIC_ANNEX_CATALOG=Object.freeze({
     herbGarden:{label:'Herb garden',level:1,w:2,h:2,max:2,kind:'garden'},
     scriptorium:{label:'Scriptorium',level:2,w:2.5,h:2,max:1,kind:'stone'},
     monastery:{label:'Monastery',level:3,w:3,h:2.5,max:1,kind:'stone'},
-    cloister:{label:'Cloister',level:3,w:2.5,h:2.5,max:1,kind:'yard'}
+    cloister:{label:'Cloister',level:3,w:2.5,h:2.5,max:1,kind:'yard'},
+    // Church square (sagrato): a piazza in front of or beside the church, three variants.
+    square:{label:'Church square',level:1,w:4,h:4,max:1,kind:'plaza'}
   }),
   tavern:Object.freeze({
     storage:{label:'Storehouse',level:1,w:1.5,h:1.5,max:2,kind:'timber'},
@@ -51,8 +53,9 @@ function civicCemeteryArea(church){
   if(church?.type!=='church'||civicLevel(church)<1)return null;
   const lot=urbanLots().find(l=>l.civicId===church.id);if(!lot)return null;
   const body=civicParts(church).map(p=>p.points),angle=church.angle||0;
-  const probes=[[4.5,0],[-4.5,0],[4.5,2.5],[-4.5,2.5],[4.5,-2.5],[-4.5,-2.5],
-    [0,5.2],[0,-5.2],[5.2,0],[-5.2,0]];
+  // Beside the nave first: civic lots are capped close to the church (CIVIC_LOT_PAD).
+  const probes=[[2.7,2.9],[-2.7,2.9],[2.7,-2.4],[-2.7,-2.4],[2.7,3.4],[-2.7,3.4],
+    [4.5,0],[-4.5,0],[4.5,2.5],[-4.5,2.5],[4.5,-2.5],[-4.5,-2.5],[0,5.2],[0,-5.2],[5.2,0],[-5.2,0]];
   // Small lots can fit a shorter burial yard without enlarging the property.
   for(const [w,h] of [[2.2,2.2],[1.65,1.65]]){
     for(const [dx,dy] of probes){
@@ -93,13 +96,14 @@ function civicAnnexPlacementCheck(s){
   }else{
     const lot=urbanLots().find(l=>l.civicId===parent.id);
     if(!lot)return{ok:false,reason:'The parent needs a valid Voronoi lot'};
-    if(!footprint.every(p=>urbanContains(lot.points,p,.10)))
-      return{ok:false,reason:'Annex must fit entirely within the parent Voronoi lot'};
-    if(parent.type==='church'){
-      const cemetery=civicCemeteryArea(parent);
-      if(cemetery&&urbanPolygonsOverlap(footprint,cemetery.points))
-        return{ok:false,reason:'The L1 cemetery is reserved within the church lot'};
-    }
+    // Civic lots stay close to the building: annexes may extend past them, but
+    // must adjoin the parent's lot and never claim another owned lot.
+    if(!urbanPolygonsOverlap(footprint,lot.points)&&!footprint.some(p=>urbanContains(lot.points,p,.6)))
+      return{ok:false,reason:'Annex must adjoin the parent Voronoi lot'};
+    if(urbanLots().some(other=>other!==lot&&other.civicId!==parent.id&&urbanPolygonsOverlap(footprint,other.points)))
+      return{ok:false,reason:'Annex cannot occupy another owned Voronoi lot'};
+    // The churchyard fills the church lot around whatever is built there
+    // (settlement-civic3d.js lot props), so annexes no longer avoid a reserved patch.
     if(parent.type==='tavern'&&s.annexType==='brewery'){
       const near=civicParts(parent).some(part=>
         footprint.some(p=>part.points.some((a,i)=>pointSegmentDistance(p,a,part.points[(i+1)%part.points.length])<=.85))||

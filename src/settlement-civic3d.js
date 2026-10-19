@@ -10,13 +10,20 @@
   // Model key of a structure: church2, plaza_fountain3, an annex type, or null.
   function modelKey(s){
     if(!s)return null;
-    if(s.type==='civicAnnex')return s.annexType;
     const level=typeof civicLevel==='function'?civicLevel(s):1;
+    if(s.type==='civicAnnex'){
+      // The church square uses the piazza models at its parent's level.
+      if(s.annexType!=='square')return s.annexType;
+      const parent=(State.structures||[]).find(p=>p.id===s.parentId);
+      return 'plaza_'+(typeof plazaVariant==='function'?plazaVariant(s):'paved')+(parent&&typeof civicLevel==='function'?civicLevel(parent):1);
+    }
     if(s.type==='plaza')return 'plaza_'+(typeof plazaVariant==='function'?plazaVariant(s):'paved')+level;
     if(s.type==='church'||s.type==='tavern'||s.type==='market')return s.type+level;
     return null;
   }
   const has=s=>{const k=modelKey(s);return !!(k&&DATA()?.models?.[k])};
+  // Placement of the model: the church square shrinks the 5 U piazza to its 4 U annex.
+  const placeOf=s=>s.type==='civicAnnex'&&s.annexType==='square'?{x:s.x,y:s.y,angle:s.angle,scale:.8}:s;
   // Indexed parts expanded once into flat triangle lists.
   const expanded=new Map();
   function parts(key){
@@ -61,9 +68,9 @@
   // never on the building as built at its level, its annexes, roads or the entrance.
   // Small props are enlarged to stay legible at play zoom (as the scatter goods);
   // radii are the scaled footprints used to keep props apart.
-  const PROP_SCALE={graveStone:1.45,graveWorn:1.45,graveCross:1.45,graveSlab:1.45,graveTall:1.45,cemeteryCross:1.35,
+  const PROP_SCALE={treeOak:1,treeLinden:1,graveStone:1.45,graveWorn:1.45,graveCross:1.45,graveSlab:1.45,graveTall:1.45,cemeteryCross:1.35,
     cypress:1.25,cypressSmall:1.25,tableSet:1.3,tableBarrel:1.3,tablePergola:1.25,flowerBush:1.3};
-  const PROP_R={graveStone:.24,graveWorn:.24,graveCross:.24,graveSlab:.27,graveTall:.29,cemeteryCross:.55,
+  const PROP_R={treeOak:.55,treeLinden:.5,graveStone:.24,graveWorn:.24,graveCross:.24,graveSlab:.27,graveTall:.29,cemeteryCross:.55,
     cypress:.3,cypressSmall:.26,tableSet:.8,tableBarrel:.55,tablePergola:1.15,flowerBush:.28};
   const GRAVES={1:[['graveCross',4],['graveWorn',3],['graveStone',2]],
     2:[['graveStone',4],['graveWorn',2],['graveCross',2],['graveSlab',1]],
@@ -136,8 +143,19 @@
   }
   const put=(placed,asset,p,heading)=>placed.push(asset.startsWith('sc:')
     ?{asset,x:p.x,y:p.y,heading,r:scR(asset.slice(3)),s:1.3}:{asset,x:p.x,y:p.y,heading,r:PROP_R[asset],s:PROP_SCALE[asset]});
+  // A few shade trees inside the lot, clear of the building.
+  function plantTrees(s,ctx,rnd,placed,n){
+    const near=p=>Math.min(...ctx.body.map(b=>clearance(p,b)));
+    let k=0;
+    for(const p of samples(ctx.lot,rnd,80).filter(p=>near(p)>1.1).sort(()=>rnd()-.5)){
+      if(k>=n)break;const asset=rnd()<.55?'treeOak':'treeLinden';
+      if(placed.some(q=>q.asset.startsWith('tree')&&Math.hypot(q.x-p.x,q.y-p.y)<2.6))continue;
+      if(free(ctx,p,PROP_R[asset],placed)){put(placed,asset,p,rnd()*6.28);k++}
+    }
+  }
   function churchyard(s,level,ctx,rnd,placed){
     const a=s.angle||0,ex={x:Math.cos(a),y:Math.sin(a)},ey={x:-Math.sin(a),y:Math.cos(a)};
+    plantTrees(s,ctx,rnd,placed,level>=3?3:2);
     // Cypresses along the lot edge, then a churchyard cross behind the church (L2+).
     const edge=samples(ctx.lot,rnd,90).filter(p=>edgeDist(p,ctx.lot)<1.3).sort(()=>rnd()-.5);
     let trees=0;
@@ -166,6 +184,7 @@
   }
   function innGarden(s,level,ctx,rnd,placed){
     const near=p=>Math.min(...ctx.body.map(b=>clearance(p,b)));
+    plantTrees(s,ctx,rnd,placed,2);
     const cands=samples(ctx.lot,rnd,160).map(p=>({...p,d:near(p)})).filter(p=>p.d>.3&&p.d<3.4)
       .sort((p,q)=>p.d+rnd()*1.4-(q.d+rnd()*1.4));
     const want=[];for(let i=0;i<TABLE_COUNT[level];i++)want.push(pick(rnd,TABLES[level]));
@@ -235,7 +254,7 @@
   function bodyMesh(s,ground){
     const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season].join('|'),hit=bodyCache.get(s.id);
     if(hit&&hit.key===key)return hit.mesh;
-    const mesh=triangles(modelKey(s),s,ground);
+    const mesh=triangles(modelKey(s),placeOf(s),ground);
     bodyCache.set(s.id,{key,mesh});
     return mesh;
   }
@@ -248,7 +267,7 @@
     const ground=typeof structureProjectionGroundZ!=='undefined'&&Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ
       :Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(s);
     // Lot props are sub-pixel when zoomed far out: the 2.5D painter skips them there.
-    const list=preview?[triangles(modelKey(s),s,ground)]
+    const list=preview?[triangles(modelKey(s),placeOf(s),ground)]
       :(State.view.scale||1)<PROP_LOD_SCALE?[bodyMesh(s,ground)]:meshes(s,ground);
     ctx.save();
     if(preview)ctx.globalAlpha*=.62;

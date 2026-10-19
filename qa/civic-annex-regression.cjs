@@ -43,14 +43,15 @@ let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name)}
 function parent(type,level=3){State.structures=[{id:'main',type,x:100,y:100,civicLevel:level,angle:0}];State.lots=type==='market'?[]:[{civicId:'main',points:square(100,100,16,16)}]}
 test('catalog offers owned annexes for three civic parent types, with levels and dimensions',()=>{
-  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),5);
+  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),6);
+  assert.equal(run("CIVIC_ANNEX_CATALOG.church.square.kind"),'plaza');
   assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.tavern).length"),5);
   assert.equal(run("CIVIC_ANNEX_CATALOG.church.cemetery.intrinsic"),true);
   assert.equal(run("CIVIC_ANNEX_CATALOG.tavern.brewery.level"),2);
   assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.market).length"),4);
   assert.equal(run("CIVIC_ANNEX_CATALOG.tavern.inn.level"),3);
 });
-test('L1 church cemetery is intrinsic, contained in its own lot and reserved',()=>{
+test('L1 church cemetery is intrinsic and contained in its own lot; annexes may displace graves',()=>{
   parent('church',1);
   const area=run("civicCemeteryArea(State.structures[0])");
   assert.ok(area,'Cemetery should be generated for an L1 church with sufficient curtilage');
@@ -59,17 +60,19 @@ test('L1 church cemetery is intrinsic, contained in its own lot and reserved',()
   assert.equal(run("makeCivicAnnex(State.structures[0],'cemetery',104.5,100)"),null);
   assert.equal(run("startCivicAnnexPlacement(State.structures[0],'cemetery')"),false);
   const annex=run("makeCivicAnnex(State.structures[0],'herbGarden',104.5,100)");
-  assert.match(sandbox.window.ConquerPlacement.check(annex).reason,/cemetery/);
-  annex.x=95.5;
-  assert.equal(sandbox.window.ConquerPlacement.check(annex).ok,true);
+  assert.equal(sandbox.window.ConquerPlacement.check(annex).ok,true,'graves give way to annexes');
   assert.equal(run("civicCemeteryArea(State.structures[0]).center.x"),area.center.x);
 });
-test('church annex lies entirely inside parent lot and cannot exceed it',()=>{
+test('church annex may extend past its compact lot, but must adjoin it and keep off other lots',()=>{
   parent('church');
   const a=run("makeCivicAnnex(State.structures[0],'herbGarden',104,104)");
   assert.equal(sandbox.window.ConquerPlacement.check(a).ok,true);
   a.x=108;
-  assert.match(sandbox.window.ConquerPlacement.check(a).reason,/lot/);
+  assert.equal(sandbox.window.ConquerPlacement.check(a).ok,true,'straddling the lot edge is allowed');
+  a.x=113;
+  assert.match(sandbox.window.ConquerPlacement.check(a).reason,/adjoin/);
+  a.x=108;State.lots.push({houseId:'private',points:square(110,104,3,3)});
+  assert.match(sandbox.window.ConquerPlacement.check(a).reason,/another owned/);
 });
 test('tavern L1 can add storage, L2 unlocks stables, L3 lodging',()=>{
   parent('tavern',1);

@@ -215,6 +215,20 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
     {x:Math.min(BUILD_MAX,house.x+reach),y:Math.min(BUILD_MAX,house.y+reach)},
     {x:Math.max(BUILD_MIN,house.x-reach),y:Math.min(BUILD_MAX,house.y+reach)}
   ];
+  // Civic lots are capped a little beyond the building's largest (L3) silhouette,
+  // oriented with it; annexes may extend past the lot (civicAnnexPlacementCheck).
+  if(house.type!=='house'){
+    const parts=civicLocalParts(house),pad=CIVIC_LOT_PAD;
+    if(parts.length){
+      const a=house.angle||0,ex={x:Math.cos(a),y:Math.sin(a)},ey={x:-Math.sin(a),y:Math.cos(a)};
+      const x0=Math.min(...parts.map(p=>p.cx-p.w/2))-pad,x1=Math.max(...parts.map(p=>p.cx+p.w/2))+pad;
+      const y0=Math.min(...parts.map(p=>p.cy-p.h/2))-pad,y1=Math.max(...parts.map(p=>p.cy+p.h/2))+pad;
+      const ox=house.x*ex.x+house.y*ex.y,oy=house.x*ey.x+house.y*ey.y;
+      for(const [nx,ny,c] of [[ex.x,ex.y,ox+x1],[-ex.x,-ex.y,-(ox+x0)],[ey.x,ey.y,oy+y1],[-ey.x,-ey.y,-(oy+y0)]]){
+        cell=urbanClip(cell,nx,ny,c);if(cell.length<3)return null;
+      }
+    }
+  }
   for(const other of houses){
     if(other.id===house.id||dist(other,house)>reach*3)continue;
     const nx=other.x-house.x,ny=other.y-house.y;
@@ -249,7 +263,7 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
   const points=urbanQuad(cell,site,points=>urbanParcelAllowed(points,house.id,house.type!=='house'));
   return points?{id:'lot:'+house.id,...owner,points,height:.38}:null;
 }
-const URBAN_ROAD_VERGE=.08,URBAN_OBSTACLE_GAP=.03;
+const URBAN_ROAD_VERGE=.08,URBAN_OBSTACLE_GAP=.03,CIVIC_LOT_PAD=1.3;
 // Convex obstacles (fields, civic/castle footprints) near the house: keep the cell on the house's
 // side of the obstacle edge that separates them best.
 function urbanClipObstacles(cell,house){
@@ -741,7 +755,8 @@ let urbanCornerTreeCache={revision:-1,trees:[]};
 function urbanLotCornerTrees(){
   if(urbanCornerTreeCache.revision===urbanRevision)return urbanCornerTreeCache.trees;
   const sites=[];
-  for(const lot of urbanLots())for(const p of lot.points){
+  // Civic lots plant their own 3D trees (settlement-civic3d.js lot props).
+  for(const lot of urbanLots())if(!lot.civicId)for(const p of lot.points){
     const site=sites.find(s=>dist(s,p)<=URBAN_FENCE_WELD);
     if(site){site.sx+=p.x;site.sy+=p.y;site.n++;site.min=site.min.x<p.x||site.min.x===p.x&&site.min.y<=p.y?site.min:p}
     else sites.push({x:p.x,y:p.y,sx:p.x,sy:p.y,n:1,min:p});

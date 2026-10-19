@@ -1202,7 +1202,24 @@ def p_flowerBush(m):
     m.done('body', p)
 
 
-PROPS = [('graveStone', p_graveStone), ('graveWorn', p_graveWorn), ('graveCross', p_graveCross), ('graveSlab', p_graveSlab),
+def p_treeOak(m):
+    p = m.part('body')
+    p.taper((0, 0, 0), (0, 0, 2.6), .42, .42, .3, .3, 'woodDark')
+    for dx, dy, dz, r in ((0, 0, 3.6, 2.1), (.9, .4, 3.1, 1.3), (-.8, -.5, 3.3, 1.4), (.2, -.7, 4.6, 1.2)):
+        p.cylinder(0, 0, 'leaf' if dz < 4 else 'leafDark', n=8, axis='z', center=(dx, dy, 0),
+                   radii=[r * .45, r * .95, r, r * .7, .05], along=[dz - r * .7, dz - r * .3, dz, dz + r * .45, dz + r * .8])
+    m.done('body', p)
+
+
+def p_treeLinden(m):
+    p = m.part('body')
+    p.taper((0, 0, 0), (0, 0, 3.4), .36, .36, .24, .24, 'woodDark')
+    p.cylinder(0, 0, 'leafDark', n=8, axis='z', center=(0, 0, 0), radii=[.6, 1.8, 1.9, 1.3, .05], along=[2.2, 3.4, 4.6, 6.0, 7.2])
+    p.cylinder(0, 0, 'leaf', n=7, axis='z', center=(.3, .2, 0), radii=[.5, 1.3, 1.1, .05], along=[4.6, 5.6, 6.8, 7.8])
+    m.done('body', p)
+
+
+PROPS = [('treeOak', p_treeOak), ('treeLinden', p_treeLinden),('graveStone', p_graveStone), ('graveWorn', p_graveWorn), ('graveCross', p_graveCross), ('graveSlab', p_graveSlab),
          ('graveTall', p_graveTall), ('cemeteryCross', p_cemeteryCross), ('cypress', p_cypress), ('cypressSmall', p_cypressSmall),
          ('tableSet', p_tableSet), ('tableBarrel', p_tableBarrel), ('tablePergola', p_tablePergola), ('flowerBush', p_flowerBush)]
 

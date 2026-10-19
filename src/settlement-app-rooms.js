@@ -74,7 +74,7 @@ function renderFunctionPanel(){
           owned.map(child=>'<button data-civic-annex-child="'+child.id+'">↳ Select '+spec.label+'</button>').join('');
       }).join('')+'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>';
   }
-  if(s.type==='plaza'){
+  if(isPlazaLike(s)){
     html+=`<div class="slot"><div class="slot-label">Piazza variant</div><div class="grid3">${PLAZA_VARIANTS.map(variant=>`<button data-plaza-variant="${variant}" class="${plazaVariant(s)===variant?'active':''}">${variant==='paved'?'Paved':variant==='fountain'?'Fountain':'Garden'}</button>`).join('')}</div></div>`;
   }
   if(s.type==='house'){
@@ -199,7 +199,7 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-civic-annex]').forEach(btn=>btn.onclick=()=>startCivicAnnexPlacement(selectedStructure(),btn.dataset.civicAnnex));
   slots.querySelectorAll('[data-civic-annex-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.civicAnnexChild)));
   slots.querySelectorAll('[data-plaza-variant]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();if(target?.type!=='plaza')return;
+    const target=selectedStructure();if(!isPlazaLike(target))return;
     target.plazaVariant=btn.dataset.plazaVariant;
     normalizeCivicDevelopment(target);
     markStructureDirty(target);renderFunctionPanel();draw();

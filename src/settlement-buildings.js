@@ -141,8 +141,8 @@ function drawCivicAnnex(s,preview=false){
   // Blender-built model (settlement-civic3d.js); the block below is the fallback.
   if(window.ConquerCivic3D?.draw(s,preview))return;
   const poly=civicAnnexFootprint(s),kind=spec.kind;
-  const low=kind==='garden'||kind==='yard';
-  const height=kind==='garden'?.13:kind==='yard'?.09:kind==='stall'?.75:1.32;
+  const low=kind==='garden'||kind==='yard'||kind==='plaza';
+  const height=kind==='garden'?.13:kind==='yard'||kind==='plaza'?.09:kind==='stall'?.75:1.32;
   const palette=kind==='garden'
     ?{top:'#6a8452',sideA:'#67573c',sideB:'#7c6948'}
     :kind==='yard'?{top:'#ad9a7a',sideA:'#8b7961',sideB:'#96846c'}
