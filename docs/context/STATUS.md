@@ -18,6 +18,14 @@
 - **Ordini militari:** il codice `main` richiede cavaliere entro 16U dall'unità e dalla destinazione, e la simulazione parte in pausa. La PR aggiunge messaggi chiari per fuori-raggio, percorsi non validi e pausa, senza alterare le regole di combattimento. Un malfunzionamento aggiuntivo della selezione non è ancora dimostrato.
 - **Prove:** regressioni `qa/settlement-routing-spawn-regression.cjs`, `qa/combat-selection-regression.cjs` e intera suite deterministica in [GitHub Actions run 38948914788](https://github.com/erykwest/CONQUER/actions/runs/38948914788) **PASS** sul commit `b586607`. Rimangono da eseguire QA visuale/browser su salvataggio esistente e benchmark dei percorsi stradali.
 
+## Economia — aggiornamento 19/10/2026 (BRANCH, non main)
+
+- Base `main` `a4adca0`, ramo `feature/economic-balances-20261019`.
+- `src/settlement-economy.js`: produzione, domanda, acquisti soddisfatti, consumo fisico, deficit merce vs liquidità, scorte, segnali e trend quattro settimane; fabbisogni domestici legna ancora provvisori.
+- Investimento L4: la capacità mensile è azzerata se non esistono residenti L4; nessuna nuova impresa né upgrade case viene generato.
+- [CI GitHub Actions #39253184968](https://github.com/erykwest/CONQUER/actions/runs/39253184968): **PASS** per 3 suite Node economiche, inclusi bilanci, consumi e migrazione dello stato.
+- **Aperto:** QA browser, consumi castle/Builder, ledger inventario unico, calendario agricolo, output della miniera e investimenti che edificano fisicamente.
+
 ## Quadro main — ciò che si può effettivamente affermare
 
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |
