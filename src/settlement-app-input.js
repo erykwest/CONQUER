@@ -19,6 +19,21 @@ canvas.addEventListener('pointerdown',e=>{
   }
 
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
+  if(State.tool.kind==='terraform'){
+    const ghost=window.ConquerTerraforming?.preview(p,State.tool);
+    if(!ghost?.ok){status('Terraforming blocked: '+(ghost?.reason||'invalid terrain'));State.draft={mode:'terraform',preview:ghost};draw();return}
+    if(window.ConquerTerraforming.commit(ghost)){
+      clearReliefBandCache();
+      if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
+      if(typeof terrainMarkLayoutCache!=='undefined')terrainMarkLayoutCache=null;
+      if(typeof springFlowerLayoutCache!=='undefined')springFlowerLayoutCache=null;
+      markDirty(true,'all');
+      State.draft=null;
+      status((ghost.mode==='walled'?'Walled terrace':'Terrain')+' applied · H '+ghost.targetZ.toFixed(1));
+      draw();
+    }
+    return;
+  }
   if(State.tool.kind==='tower'){
     const snap=towerPlacementSnap(p),q=snap.point;
     if(State.tool.shape==='round'){
@@ -149,6 +164,13 @@ canvas.addEventListener('pointermove',e=>{
     return
   }
   const p=pointerWorld(e);
+  if(State.tool.kind==='terraform'){
+    const ghost=window.ConquerTerraforming?.preview(p,State.tool);
+    State.draft={mode:'terraform',preview:ghost};
+    status(!ghost?.ok?'Terraforming blocked: '+(ghost?.reason||'invalid terrain'):
+      (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='walled'?'Walled terrace':'Terrain')+' · H '+ghost.targetZ.toFixed(1)+' — click to apply');
+    draw();return;
+  }
   if(State.tool.kind==='crossing'){
     const moat=['dry','water'].includes(State.tool.crossing);
     const snap=moat?window.ConquerCrossings?.snapMoatEndpoint(p,pointerScreen(e)):null;
@@ -188,7 +210,11 @@ canvas.addEventListener('pointermove',e=>{
       const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
       State.draft.invalidPreview=null;
       State.draft.preview=null;
-      State.draft.previewSegments=route.segments.map(seg=>({...base,a:seg.a,b:seg.b,length:seg.length,rotationStep:seg.rotationStep}));
+      State.draft.previewSegments=route.segments.map((seg,index)=>({
+        ...base,a:seg.a,b:seg.b,length:seg.length,rotationStep:seg.rotationStep,
+        ...(index===0&&State.draft.aSnap?{aSnap:State.draft.aSnap}:{}),
+        ...(index===route.segments.length-1&&snap.structureId?{bSnap:snap.structureId}:{})
+      }));
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
       const legs=route.segments.length,total=route.length;
       status(`${State.tool.label}: ${total.toFixed(2)}U · ${legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
@@ -308,6 +334,28 @@ for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({k
 for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
+for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
+  const radius=Number(document.querySelector('[data-terraform-radius].active')?.dataset.terraformRadius)||4;
+  const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
+  const mode=b.dataset.terraform==='walled'?'walled':'terrain';
+  setTool({kind:'terraform',mode,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
+};
+for(const b of document.querySelectorAll('[data-terraform-delta]'))b.onclick=()=>{
+  const delta=Number(b.dataset.terraformDelta)<0?-1:1;
+  document.querySelectorAll('[data-terraform-delta]').forEach(x=>x.classList.toggle('active',x===b));
+  if(State.tool.kind==='terraform'){
+    State.tool.delta=delta;State.draft=null;
+    status((delta<0?'Dig':'Raise')+' 1U');draw();
+  }
+};
+for(const b of document.querySelectorAll('[data-terraform-radius]'))b.onclick=()=>{
+  const radius=Number(b.dataset.terraformRadius)||4;
+  document.querySelectorAll('[data-terraform-radius]').forEach(x=>x.classList.toggle('active',x===b));
+  if(State.tool.kind==='terraform'){
+    State.tool.radius=radius;State.draft=null;
+    status('Terraforming radius: '+radius+'U');draw();
+  }
+};
 for(const b of document.querySelectorAll('[data-crossing]'))b.onclick=()=>{
   const variant=b.dataset.crossing;
   const width=Number(document.querySelector('[data-crossing-width].active')?.dataset.crossingWidth)||2;
@@ -384,5 +432,5 @@ document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingW
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,['ground','base','castleBody','castleFront']);renderUI();draw()}};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
 ['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});

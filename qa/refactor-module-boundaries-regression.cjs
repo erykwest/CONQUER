@@ -6,13 +6,13 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const crypto=require('node:crypto');
 const root=__dirname+'/../';
-const read=name=>fs.readFileSync(root+'src/settlement-'+name+'.js','utf8');
+const read=name=>fs.readFileSync(root+'src/settlement-'+name+'.js','utf8').replace(/\r\n/g,'\n');
 function gitBlob(content){
   return crypto.createHash('sha1').update('blob '+Buffer.byteLength(content)+'\0'+content).digest('hex');
 }
 function segment(name,retainStrict=false){
   const src=read(name);
-  const head=retainStrict?/^\/\/ [^\n]+\n/:/^'use strict';\n\/\/ [^\n]+\n/;
+  const head=retainStrict?/^\/\/ [^\r\n]+\r?\n/:/^'use strict';\r?\n\/\/ [^\r\n]+\r?\n/;
   const stripped=src.replace(head,'');
   assert.notEqual(src,stripped,'Expected source extraction heading in '+name);
   return stripped;

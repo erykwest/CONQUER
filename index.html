@@ -52,6 +52,11 @@
     <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <h3>Roads</h3><button class="full" data-main-road>═ Main road</button>
+    <h3>Terraforming</h3>
+    <div class="grid"><button data-terraform="terrain">Terrain</button><button data-terraform="walled">Walled terrace</button></div>
+    <div class="grid"><button data-terraform-delta="-1">↓ Dig 1U</button><button data-terraform-delta="1" class="active">↑ Raise 1U</button></div>
+    <div class="grid3"><button data-terraform-radius="2">R2</button><button data-terraform-radius="4" class="active">R4</button><button data-terraform-radius="6">R6</button></div>
+    <div class="legend">The ghost previews the final elevation before applying it. Walled terraces cannot overlap another walled terrace. Their edges act as magnets for walls, aligned flush to the wall face.</div>
 <h3>Fossati</h3><div class="grid"><button data-crossing="dry">⛏ Asciutto</button><button data-crossing="water">💧 Allagato H0</button></div>
 <h3>Ponti</h3><div class="grid"><button data-crossing="wood">🪵 Legno</button><button data-crossing="stone">🪨 Pietra</button></div>
 <div class="slot-label">Larghezza fossati e ponti</div><div class="grid3"><button data-crossing-width="1">1U</button><button data-crossing-width="2" class="active">2U</button><button data-crossing-width="3">3U</button></div>
@@ -231,6 +236,7 @@
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js"></script>
 <script src="./src/settlement-castle.js?v=refactor-1"></script>
+<script src="./src/settlement-terraforming.js?v=terraforming-1"></script>
 <script src="./src/settlement-landscape.js?v=refactor-1"></script>
 <script src="./src/settlement-castle-placement.js?v=refactor-1"></script>
 <script src="./src/settlement-castle-structures.js?v=refactor-1"></script>

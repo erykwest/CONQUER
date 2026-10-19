@@ -7,7 +7,7 @@ const fs=require('node:fs');
 const root=__dirname+'/../';
 const read=name=>fs.readFileSync(root+'src/settlement-'+name+'.js','utf8');
 const blob=src=>crypto.createHash('sha1').update('blob '+Buffer.byteLength(src)+'\0'+src).digest('hex');
-const header=/^'use strict';\n\/\/ [^\n]+\n/;
+const header=/^'use strict';\r?\n\/\/ [^\r\n]+\r?\n/;
 const parts={
   population:['population','population-fields','population-navigation',
     'population-routines','population-residents','population-figures','population-garrisons'],

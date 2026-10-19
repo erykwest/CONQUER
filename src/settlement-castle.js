@@ -75,7 +75,7 @@ function reliefBandAt(p){
   }
   return gentle;
 }
-function terrainSlopeKind(p){return reliefBandAt(p)?.kind||null}
+function terrainSlopeKind(p){return window.ConquerTerraforming?.slopeAt(p)||reliefBandAt(p)?.kind||null}
 // A cliff is an impassable STEEP band, not just a large elevation delta.
 // Gentle ascent remains traversable, including different H plateaux reached
 // by a ramp. Sampling the segment prevents tunnelling through thin cliff bands.
@@ -111,7 +111,7 @@ function terrainElevationLevels(){
   terrainElevationIndex={relief:State.relief,hills:State.relief?.hills,levels};
   return levels;
 }
-function terrainElevation(p){
+function terrainBaseElevation(p){
   let z=0;
   for(const {level,bands,box} of terrainElevationLevels()){
     if(!box||p.x<box.x0||p.x>box.x1||p.y<box.y0||p.y>box.y1)continue;
@@ -124,6 +124,10 @@ function terrainElevation(p){
     }
   }
   return z;
+}
+function terrainElevation(p){
+  const base=terrainBaseElevation(p);
+  return window.ConquerTerraforming?.elevationAt(p,base)??base;
 }
 function terrainPlateauElevation(p){
   if(terrainSlopeKind(p))return null;
@@ -434,6 +438,8 @@ function structureTerrainSamples(s){
   return out;
 }
 function buildableTerrainElevationForStructure(s){
+  const terraceZ=window.ConquerTerraforming?.wallGroundZ(s);
+  if(terraceZ!=null)return terraceZ;
   const samples=structureTerrainSamples(s);if(!samples.length)return 0;
   let level=null;
   for(const p of samples){

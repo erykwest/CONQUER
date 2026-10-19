@@ -428,8 +428,10 @@ function draw(){
   window.ConquerCrossings?.drawDynamic();
   drawChimneysAndSmoke();
 
-  if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
-  if(State.draft?.previewSegments?.length){
+  if(State.draft?.mode==='terraform'){
+    window.ConquerTerraforming?.drawGhost(State.draft.preview);
+  }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
+  if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
     const totalCost=aggregateConstructionCost(segments);
     const routeUnderfunded=!canAfford(totalCost);
@@ -438,7 +440,7 @@ function draw(){
       const verdict=builderGhostVerdict(segment);
       if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
     }
-  }else if(State.draft?.preview){
+  }else if(State.draft?.mode!=='terraform'&&State.draft?.preview){
     const ghost=State.draft.preview;
     if(['moat','bridge'].includes(ghost.type)){
       window.ConquerCrossings?.drawPreview(ghost);
@@ -447,10 +449,11 @@ function draw(){
       const verdict=builderGhostVerdict(ghost);
       if(!verdict.ok)drawInvalidPlacementGhost(ghost);
     }
-  }else if(State.draft?.invalidPreview){
+  }else if(State.draft?.mode!=='terraform'&&State.draft?.invalidPreview){
     drawInvalidPlacementGhost(State.draft.invalidPreview);
   }
   window.ConquerCrossings?.drawMoatMagnets();
+  window.ConquerTerraforming?.drawMagnets();
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();

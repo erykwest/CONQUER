@@ -200,6 +200,25 @@
       for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z);
     };
     const W=WORLD;
+    const terraformEdits=State.relief?.terraforming||[];
+    if(terraformEdits.length){
+      // Once the player edits elevation, sample the single authoritative terrainElevation
+      // contract. A denser build-area grid preserves terrace and excavation silhouettes;
+      // the untouched world buffer stays coarse to limit upload cost.
+      const grid=(x0,y0,x1,y1,step)=>{
+        for(let y=y0;y<y1-1e-6;y+=step)for(let x=x0;x<x1-1e-6;x+=step){
+          const xa=Math.min(x1,x+step),ya=Math.min(y1,y+step);
+          const p00={x,y},p10={x:xa,y},p11={x:xa,y:ya},p01={x,y:ya};
+          for(const p of [p00,p10,p11,p00,p11,p01])push(p.x,p.y,terrainElevation(p));
+        }
+      };
+      grid(0,0,W,BUILD_MIN,2);
+      grid(0,BUILD_MAX,W,W,2);
+      grid(0,BUILD_MIN,BUILD_MIN,BUILD_MAX,2);
+      grid(BUILD_MAX,BUILD_MIN,W,BUILD_MAX,2);
+      grid(BUILD_MIN,BUILD_MIN,BUILD_MAX,BUILD_MAX,.5);
+      return new Float32Array(v);
+    }
     for(const [x,y] of [[0,0],[W,0],[W,W],[0,0],[W,W],[0,W]])push(x,y,0);
     for(const level of reliefLevels()){
       const top=level.top||[];if(top.length<3)continue;
@@ -695,7 +714,8 @@
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
-    const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
+    const terraformSig=(State.relief?.terraforming||[]).map(e=>[e.id,e.targetZ,e.radius,e.mode].join(':')).join(',');
+    const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
       upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());upload(gl,'terrainEdges',buildTerrainEdges());

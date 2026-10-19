@@ -11,6 +11,8 @@
     route:'M4 21c11 0 4-18 16-18M4 16c7 0 5-10 16-10M9 20l-1-2m9-9-1-2',
     moat:'M3 5c3 7 4 7 8 6s5-4 7 7M2 8c4 7 6 8 10 6s5-4 10 6',
     bridge:'M2 18h20M4 18V9l8-5 8 5v9M7 18v-7m10 7v-7M4 9h16',
+    terrain:'M2 18c4-1 5-7 10-8s5 5 10 3M2 21h20M8 16l4-6 4 4',
+    terrace:'M3 20h18M5 20v-5h5v-4h5V7h4M10 15h9M15 11h4',
     trash:'M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6',
     undo:'M9 14l-5-5 5-5M4 9h10a6 6 0 010 12',
     square:'M5 20V5h14v15M5 12h14M11 5v-3m2 3v-3',
@@ -55,6 +57,9 @@
       ['[data-industry="quarry"]','Cava','work'],
       ['[data-industry="mine"]','Miniera','work']]},
     {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[]},
+    {id:'terrain',label:'Terraforming',icon:'terrain',items:[
+      ['[data-terraform="terrain"]','Terreno','terrain'],
+      ['[data-terraform="walled"]','Terrazzamento murato','terrace']]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
       ['[data-main-road]','Strada principale','route'],
       ['[data-crossing="dry"]','Fossato asciutto','moat'],
@@ -74,7 +79,9 @@
     {name:'Spessore muro / palizzata',icon:'depth',selectors:['[data-wall-tier]']},
     {name:'Altezza muro',icon:'level',selectors:['[data-wall-level]']},
     {name:'Altezza porta',icon:'level',selectors:['[data-gate-level]']},
-    {name:'Larghezza fossati e ponti',icon:'depth',category:'infrastructure',selectors:['[data-crossing-width]']}
+    {name:'Larghezza fossati e ponti',icon:'depth',category:'infrastructure',selectors:['[data-crossing-width]']},
+    {name:'Scava / innalza',icon:'level',category:'terrain',selectors:['[data-terraform-delta]']},
+    {name:'Raggio intervento',icon:'depth',category:'terrain',selectors:['[data-terraform-radius]']}
   ];
   // Move the original DOM nodes: old event bindings continue to operate unchanged.
   root.replaceChildren();
@@ -133,7 +140,7 @@
       const b=originalButtons.find(x=>x.matches(selector));
       if(!b)continue;iconize(b,label,icon);catalog.append(b);
     }
-    options.hidden=!['defense','infrastructure'].includes(currentCategory);
+    options.hidden=!['defense','infrastructure','terrain'].includes(currentCategory);
     options.querySelectorAll('.ux-option-line').forEach(line=>{
       line.style.display=(line.dataset.category||'defense')===currentCategory?'flex':'none';
     });
@@ -155,7 +162,7 @@
     for(const selector of control.selectors){
       for(const b of originalButtons.filter(x=>x.matches(selector))){
         const label=b.textContent.trim().replace(/\s+/g,' ');
-        const token=(b.dataset.size ? b.dataset.size+'U' : b.dataset.towerLevel ? 'H'+b.dataset.towerLevel : b.dataset.wallTier ? 'T'+b.dataset.wallTier : b.dataset.wallLevel ? 'H'+b.dataset.wallLevel : b.dataset.gateLevel ? 'H'+b.dataset.gateLevel : label);
+        const token=(b.dataset.size ? b.dataset.size+'U' : b.dataset.towerLevel ? 'H'+b.dataset.towerLevel : b.dataset.wallTier ? 'T'+b.dataset.wallTier : b.dataset.wallLevel ? 'H'+b.dataset.wallLevel : b.dataset.gateLevel ? 'H'+b.dataset.gateLevel : b.dataset.terraformDelta ? (Number(b.dataset.terraformDelta)<0?'−1U':'+1U') : b.dataset.terraformRadius ? 'R'+b.dataset.terraformRadius : label);
         b.classList.add('ux-value-btn');b.title=control.name+' · '+label;b.setAttribute('aria-label',b.title);b.dataset.tip=b.title;b.textContent=token;
         values.append(b);
       }
@@ -166,7 +173,7 @@
   // Clicking an actual build tool chooses it without closing the palette; this
   // keeps level/tier presets accessible while the ghost is being previewed.
   for(const b of originalButtons)b.addEventListener('click',()=>{
-    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')||b.hasAttribute('data-industry')){
+    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-terraform')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')||b.hasAttribute('data-industry')){
       requestAnimationFrame(()=>{if(b.classList.contains('ux-icon-btn'))document.querySelectorAll('.ux-catalog .ux-icon-btn').forEach(x=>x.classList.toggle('active',x===b))});
     }
   });
