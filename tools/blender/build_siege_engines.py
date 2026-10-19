@@ -255,9 +255,9 @@ def build_trebuchet(root, off):
 
 
 # ------------------------------------------------------------------ siege tower
-# Sized for the low (H1) wall: walkway 3.4 m, merlons to 4.2 m. High (H2) walls
-# cannot be scaled, only battered down.
-WALL_WALK = 3.4
+# Sized for the game's low (H1) wall: its walk is the structure height, 1.15 U
+# (4.0 m). High (H2) walls cannot be scaled, only battered down.
+WALL_WALK = 1.15 * 3.5
 
 
 def build_tower(root, off):
@@ -265,14 +265,16 @@ def build_tower(root, off):
     storeys, a parapet on top and a drawbridge hinged on the front above the
     wall walk (modelled raised; it is lowered forward into a crenel)."""
     parts, pivots = {}, {}
-    B, T, TOP, PAR = 1.8, 1.5, 3.9, 5.0           # base / top half-width, platform, parapet
+    B, T = 1.8, 1.5                               # base / top half-width
+    TOP = WALL_WALK + .45                         # platform: the bridge slopes down onto the walk
+    PAR = TOP + 1.1                               # parapet
     BRIDGE = 2.4
     half = lambda z: B + (T - B) * (z - .7) / (PAR - .7)
     p = part(root, 'frame', 'tower', off)
     for sx in (-1, 1):
         for sy in (-1, 1):
             post(p, (sx * B, sy * B, .5), (sx * T, sy * T, PAR), .3, 'wood')           # corner posts
-    for z in (.7, 2.3, TOP):
+    for z in (.7, (.7 + TOP) / 2, TOP):
         h = half(z)
         for s in (-1, 1):
             p.box((0, s * h, z), (2 * h + .3, .24, .24), 'woodDark')                    # floor ring beams
@@ -287,14 +289,14 @@ def build_tower(root, off):
         A = (0, s * pa, a) if ax == 'y' else (s * pa, 0, a)
         Bp = (0, s * pb, b) if ax == 'y' else (s * pb, 0, b)
         p.taper(A, Bp, 2 * pa, .08, 2 * pb, .08, 'hide')
-        for z in (1.6, 3.1):
+        for z in ((.9 + TOP) * .38, (.9 + TOP) * .76):
             h = half(z) + .2
             c = (0, s * h, z) if ax == 'y' else (s * h, 0, z)
             p.box(c, (2 * h, .06, .12) if ax == 'y' else (.06, 2 * h, .12), 'hideDark')
         if ax != 'x' or s != 1:
             for o in (-.6, .6):                                                          # arrow slits
-                h = half(2.7) + .2
-                c = (o, s * h, 2.7) if ax == 'y' else (s * h, o, 2.7)
+                zs = TOP - 1.2; h = half(zs) + .2
+                c = (o, s * h, zs) if ax == 'y' else (s * h, o, zs)
                 p.box(c, (.12, .05, .45) if ax == 'y' else (.05, .12, .45), 'leather')
     # Parapet with merlons on three sides (the front is the bridge).
     for (ax, s) in (('y', 1), ('y', -1), ('x', -1)):
@@ -321,7 +323,7 @@ def build_tower(root, off):
     parts['wheel'] = p.finish()
     meta = {'wheels': {'part': 'wheel', 'r': u(.55)[0], 'at': [u(x, s * (B + .3), .55) for x in (-1.0, 1.0) for s in (-1, 1)]},
             'crew': [u(-2.5, y, 0) for y in (-1.0, 0, 1.0)], 'length': u(6.4)[0],
-            'rig': {'bridgeLen': u(BRIDGE)[0], 'deck': u(TOP + .08)[0], 'halfTop': u(T)[0], 'halfBase': u(B)[0]}}
+            'rig': {'bridgeLen': u(BRIDGE)[0], 'deck': u(TOP + .08)[0], 'halfTop': u(T)[0], 'halfBase': u(B)[0], 'walk': u(WALL_WALK)[0]}}
     return parts, pivots, meta
 
 
@@ -358,7 +360,7 @@ def build_mantlet(root, off):
 
 
 # ------------------------------------------------------------------ ladder
-LADDER_LEN = 4.6
+LADDER_LEN = 5.2      # leans on the H1 walk edge with ~1 m to spare
 
 
 def build_ladder(root, off):

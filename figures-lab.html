@@ -18,6 +18,8 @@
   [hidden]{display:none!important}
   canvas{display:block;width:100%;height:auto}
   .note{color:var(--muted);padding:8px 16px;margin:0}
+  .btnlink{display:inline-block;padding:4px 9px;border-radius:6px;background:#3a3127;color:#f3e6cf;text-decoration:none;font:inherit;font-size:12px;margin:2px}
+  .btnlink:hover{background:#5a4733}
 </style>
 </head>
 <body>
@@ -38,8 +40,8 @@
   <div class="group" role="group" aria-label="Assedio"><span>Assedio</span>
     <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Catapulta</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button><button data-subject="siege:mantlet">Mantelletto</button>
   </div>
-  <div class="group" role="group" aria-label="Assalto"><span>Assalto (muro H1)</span>
-    <button data-subject="assault:ram">Ariete</button><button data-subject="assault:mantlet">Mantelletto</button><button data-subject="assault:ladder">Scala</button><button data-subject="assault:tower">Torre</button><button data-subject="assault:moat">Fossato</button>
+  <div class="group" role="group" aria-label="Assalto"><span>Assalto nel gioco (muro H1 vero)</span>
+    <a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ram">Ariete</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=mantlet">Mantelletto</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ladder">Scala</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=tower">Torre</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=moat">Fossato</a>
   </div>
   <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
     <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button>
@@ -87,15 +89,14 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-wagons3d.js?v=lab-2"></script>
 <script src="./src/assets/animal-models.js?v=lab-1"></script>
 <script src="./src/settlement-animals3d.js?v=lab-1"></script>
-<script src="./src/assets/siege-engines-model.js?v=lab-3"></script>
-<script src="./src/settlement-siege-engines3d.js?v=lab-3"></script>
-<script src="./src/settlement-siege-assault.js?v=lab-3"></script>
+<script src="./src/assets/siege-engines-model.js?v=lab-4"></script>
+<script src="./src/settlement-siege-engines3d.js?v=lab-4"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
   const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
-  const ACTIONS={assault:[['play','Assalto']],siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
+  const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
   // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
   function siegeActions(e){
     const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:null}[e];
@@ -103,7 +104,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   }
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
-  const kindOf=s=>s.startsWith('assault:')?'assault':s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
     const acts=kindOf(subject)==='animal'?animalActions(subject):kindOf(subject)==='siege'?siegeActions(subject.split(':')[1]):ACTIONS[kindOf(subject)];
@@ -111,7 +112,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
     $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
-    $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege','assault'].includes(kindOf(subject)));
+    $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
     resetHero();
   }
@@ -253,40 +254,6 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     siegeAt(engine,W*.34,H*.6,Math.min(W*.26/len,H*.3/len),turns,heading);
     siegeAt(engine,W*.84,H*.62,12*2.6*k,turns,heading);
   }
-  // Assault scenes: the engines worked by their men against a low (H1) wall
-  // with a gate and a moat. Camera turned so the attackers face us.
-  const SA=window.ConquerSiegeAssault;
-  function assaultAt(sc,cx,cy,pxPerU,turns){
-    const v0=isoView(0,0,pxPerU,turns),o=v0.project(-5/3.5,0,1/3.5),view=isoView(cx-o.x,cy-o.y,pxPerU,turns),zoom=pxPerU/12;
-    const sprites=sc.soldiers.map((m,i)=>({x:m.x,y:m.y,z:m.z+.001,draw:()=>{
-      const s=view.project(m.x,m.y,m.z),bob=m.walk?Math.abs(Math.sin(clock*9+i*1.3))*1.6*zoom:m.climb?Math.abs(Math.sin(clock*7+i))*1.2*zoom:0;
-      State.view.scale=zoom;ctx=g;
-      CA.drawFigure({x:s.x,y:s.y-bob},0,m.type,m.id,0,null,{dirX:m.dir,dirY:0,attack:0,flash:0,ready:m.aim||0,bob:0,fall:0,alpha:1,blood:0,spray:0});
-      if(m.carry==='fascine'){
-        // A brushwood bundle on the shoulder.
-        // Sized on the figure (its body is 8 x militaryScale tall), not on the world.
-        const ms=militaryScale(),y=s.y-bob-12.5*ms;g.fillStyle='#8a6a3a';g.strokeStyle='#4f3a20';g.lineWidth=Math.max(.6,ms*.7);
-        g.beginPath();g.ellipse(s.x,y,7*ms,1.8*ms,-.25,0,Math.PI*2);g.fill();g.stroke();
-        g.beginPath();g.moveTo(s.x-2.5*ms,y-1.2*ms);g.lineTo(s.x-2.5*ms,y+2.2*ms);g.moveTo(s.x+2.5*ms,y-2.4*ms);g.lineTo(s.x+2.5*ms,y+1*ms);g.stroke();
-      }
-    }}));
-    for(const a of sc.arrows)sprites.push({x:a.x,y:a.y,z:a.z,draw:()=>{
-      const p=view.project(a.x,a.y,a.z),q=view.project(a.to[0],a.to[1],a.to[2]),d=Math.hypot(q.x-p.x,q.y-p.y)||1;State.view.scale=zoom;const L=5*militaryScale();
-      g.strokeStyle='#3b2a1a';g.lineWidth=Math.max(1,zoom);g.beginPath();g.moveTo(p.x-(q.x-p.x)/d*L,p.y-(q.y-p.y)/d*L);g.lineTo(p.x,p.y);g.stroke();
-    }});
-    if(sc.impact)sprites.push({x:SA.WALL.door-.05,y:0,z:.4,draw:()=>{
-      const p=view.project(SA.WALL.door-.05,0,.38);g.fillStyle='rgba(205,190,160,.55)';
-      for(let i=0;i<5;i++){g.beginPath();g.arc(p.x+(i-2)*5*zoom,p.y-(i%2)*4*zoom,(3+i%3)*zoom,0,Math.PI*2);g.fill()}
-    }});
-    W3.drawMeshes(g,SA.meshes(sc),view,sprites);
-  }
-  function heroAssault(W,H,k){
-    const kind=subject.split(':')[1],sc=SA.scene(kind,clock),turns=(Number($('w3Turns').value)+2)%4;
-    assaultAt(sc,W*.36,H*.5,Math.min(W*.075,H*.12),turns);
-    assaultAt(sc,W*.83,H*.55,12*2.6*k,turns);
-    g.fillStyle='#fff';g.font=(13*k)+'px sans-serif';
-    g.fillText('t '+((clock%SA.CYCLE[kind])).toFixed(1)+' / '+SA.CYCLE[kind]+' s'+(sc.filled!=null?'   fossato '+Math.round(sc.filled*100)+'%':''),12*k,H*.2);
-  }
   function heroWagon3D(W,H,k,dt){
     const moving=action==='move',turns=Number($('w3Turns').value);
     headingInput(dt);
@@ -368,7 +335,6 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
     const kind=kindOf(subject);
     if(kind==='siege')heroSiege(W,H,k,dt);
-    else if(kind==='assault')heroAssault(W,H,k);
     else if(subject==='wagon3d')heroWagon3D(W,H,k,dt);
     else if(kind==='vehicle')heroWagon(W,H,k,dt);
     else if(kind==='animal')heroAnimals(W,H,k,dt);

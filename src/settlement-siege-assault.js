@@ -1,53 +1,55 @@
 'use strict';
-// CONQUER siege assault choreography: how the men work each engine against a low
-// (H1) stone wall with a gate and a moat. Pure functions of time, in world units
-// (U; 1 U = 3.5 m), attackers coming from -x towards the wall face at x = 0:
-//   ram      pushed up the filled moat to the gate, swung by its crew until the
-//            gate gives way
-//   mantlet  pushed into bow range; the archers step out from behind it to shoot
-//   ladder   carried to the wall, raised, climbed; the men step onto the wall walk
-//   tower    pushed to the wall, bridge lowered into a crenel, the men cross onto
-//            the walk
-//   moat     men carry fascines and throw them in until the moat is filled
+// CONQUER siege assault choreography: how the men work each engine against the
+// game's low (H1) stone wall, its gatehouse and a moat. Pure functions of time in a
+// LOCAL frame, world units (U; 1 U = 3.5 m): attackers come from -x, the outer wall
+// face is x = 0, y runs along the wall with the gate at y = 0.
+//   ram      pushed over the filled moat to the gatehouse, swung by its crew
+//   mantlet  pushed into bow range short of the moat; archers step out to shoot
+//   ladder   carried to the wall, raised, climbed; the men step onto the wall top
+//   tower    pushed to the wall, bridge lowered onto it, the party crosses
+//   moat     men carry fascines and throw them in until the crossing is filled
 // High (H2) walls cannot be scaled (no ladder or tower reaches them), only battered.
-// scene(kind,t) -> {engine:{name,place,state}|null, soldiers, arrows, gate, moat};
-// meshes(scene) -> wall, moat and engine meshes for ConquerWagons3D.drawMeshes.
+// The wall geometry G comes from the real structures (ConquerSiegePreview) or the
+// defaults below, which copy the game's H1 wall, stone gate and water moat.
+// scene(kind,t,G) -> {engine:{name,place,state}|null, soldiers, arrows, carried,
+//   flying, fill:{span,progress}, impact}; meshes(scene) -> engine + carried loads.
 (function(){
   const SE=()=>window.ConquerSiegeEngines3D,MODEL=()=>window.ConquerSiegeModel;
   const m=v=>v/3.5;
   const clamp01=v=>Math.max(0,Math.min(1,v)),ease=k=>k*k*(3-2*k),lerp=(a,b,s)=>a+(b-a)*s;
   const seg=(t,a,b)=>clamp01((t-a)/(b-a));
-  const WALL={face:0,inner:m(2.4),walk:m(3.4),top:m(4.2),half:m(7.2),gate:m(1.3),gateH:m(2.8),door:m(.3),
-    merlons:[-6,-3.6,-1.2,1.2,3.6,6].map(m),merlonW:m(1.4),
-    moat:[m(-4.2),m(-.8)],moatBottom:m(-1.4),water:m(-.5),fascineR:m(.35)};
+  // Game defaults: H1 wall (structureHeight 1.15, tier 2 width .5), stone gatehouse
+  // 1.5 x 1.5 x 2.8 sticking out of the wall face, water moat 1.5 wide (crossings
+  // WIDTHS.moat) 2.5 U out, depth .3, water at -.18. Heavy crossing widths as in
+  // settlement-crossings HEAVY_WIDTHS.
+  const DEFAULT={face:0,walk:1.15,thick:.5,half:4.5,gateHalf:.75,gateH:2.8,door:-.5,
+    moat:[-4,-2.5],water:-.18,bottom:-.3,merlonH:.18};
+  const HEAVY={ram:1.4,tower:2.4,mantlet:1,ladder:1.4};
   const CYCLE={ram:16,mantlet:14,ladder:18,tower:20,moat:17};
-  const COLORS={stone:'#a8a194',walk:'#b9b2a4',merlon:'#9d968a',dark:'#2b2622',door:'#6f4a2b',band:'#55595d',
-    water:'#3f6170',bank:'#5d4a33',fascine:'#8a6a3a',fascineEnd:'#6b4f2a'};
+  const FASCINE_R=m(.35);
 
-  // ---------------------------------------------------------------- choreography
-  // Fascine slots: six across the causeway, two layers; filled = all twelve laid.
-  const FASCINE_Y=[-2.5,-1.5,-.5,.5,1.5,2.5].map(m);
-  const layerZ=n=>WALL.moatBottom+WALL.fascineR*(1+2*n);
-  const fullMoat=()=>[0,1].flatMap(n=>FASCINE_Y.map(y=>({y,z:layerZ(n)})));
   const man=(p,type,id,extra={})=>({x:p.x,y:p.y,z:p.z||0,type,id,walk:false,carry:null,dir:1,aim:0,climb:0,...extra});
+  const filledMoat=kind=>({span:HEAVY[kind],progress:1});
 
-  function ram(t){
-    const X0=m(-14),X1=m(-3.51),s=ease(seg(t,0,7)),x=lerp(X0,X1,s),place={x,y:0,heading:0};
+  function ram(t,G){
+    const reach=m(3.81);                     // pivot -> iron head at the blow (Blender ram, pitch -.2)
+    const X0=G.moat[0]-1.6,X1=G.door-reach,s=ease(seg(t,0,7)),x=lerp(X0,X1,s),place={x,y:0,heading:0};
     const STRIKES=4,P=SE().CYCLE.ram,bat=t>=7&&t<7+P*STRIKES;
     const state=bat?{mode:'fire',t:t-7,distance:x-X0}:{mode:t<7?'move':'idle',distance:x-X0};
     const a=bat?SE().pose('ram',state).ram:0;
-    // The head meets the door at 72% of each swing; the last blow breaks it in.
+    // The head meets the door at 72% of each swing.
     const impacts=[...Array(STRIKES).keys()].map(n=>7+P*(n+.72));
     let shake=0;
     for(const ti of impacts){const d=t-ti;if(d>=0&&d<.45)shake=Math.max(shake,(1-d/.45)*Math.abs(Math.cos(d*30)))}
     const open=ease(seg(t,impacts[STRIKES-1],impacts[STRIKES-1]+.8));
     // The crew haul on the log: they lean back with it and drive forward on the blow.
     const soldiers=SE().crew('ram',place,state).map((p,i)=>man({...p,x:p.x-a*m(.8)},'spearman','ram'+i,{walk:t<7}));
-    return{engine:{name:'ram',place,state},soldiers,arrows:[],gate:{open,shake},moat:{fascines:fullMoat(),flying:[]},impact:impacts.some(ti=>t>=ti&&t<ti+.12)};
+    return{engine:{name:'ram',place,state},soldiers,arrows:[],carried:[],flying:[],gate:{open,shake},fill:filledMoat('ram'),
+      impact:impacts.some(ti=>t>=ti&&t<ti+.12)};
   }
 
-  function mantlet(t){
-    const X0=m(-16),X1=m(-8),s=ease(seg(t,0,6)),x=lerp(X0,X1,s),place={x,y:0,heading:0};
+  function mantlet(t,G){
+    const X0=G.moat[0]-4.5,X1=G.moat[0]-.7,s=ease(seg(t,0,6)),x=lerp(X0,X1,s),place={x,y:0,heading:0};
     const state={mode:t<6?'move':'idle',distance:x-X0},soldiers=[],arrows=[];
     SE().crew('mantlet',place,state).forEach((p,i)=>{
       const archer=i>=2;let y=p.y,aim=0;
@@ -59,99 +61,106 @@
           const out=ph<.4?ease(ph/.4):ph<1.6?1:ph<2?1-ease((ph-1.6)/.4):0;
           y+=side*out*m(1.2);aim=out;
           if(ph>=.9&&ph<1.6){
-            const f=(ph-.9)/.7,ty=WALL.merlons[(n*5+i*2)%WALL.merlons.length]+m(.7);
-            const at=g=>[lerp(p.x+m(.3),WALL.face+m(.05),g),lerp(y,ty,g),lerp(m(1.4),m(3.9),g)+Math.sin(Math.PI*g)*m(2)];
-            const a=at(f),b=at(Math.min(1,f+.04));
-            arrows.push({x:a[0],y:a[1],z:a[2],to:b});
+            const f=(ph-.9)/.7,ty=((n*5+i*3)%7-3)*.6;
+            const at=g=>[lerp(p.x+m(.3),G.face-.02,g),lerp(y,ty,g),lerp(m(1.4),G.walk+.1,g)+Math.sin(Math.PI*g)*m(2.5)];
+            arrows.push({at:at(f),to:at(Math.min(1,f+.04))});
           }
         }
       }
       soldiers.push(man({...p,y},archer?'archer':'spearman','mantlet'+i,{walk:t<6,aim}));
     });
-    return{engine:{name:'mantlet',place,state},soldiers,arrows,gate:{open:0,shake:0},moat:{fascines:[],flying:[]}};
+    return{engine:{name:'mantlet',place,state},soldiers,arrows,carried:[],flying:[],gate:{open:0,shake:0},fill:null};
   }
 
-  function ladder(t){
-    const lean=SE().LADDER_LEAN,FOOT=m(-1.05),X0=m(-14),X1=FOOT-SE().LADDER_FOOT;
-    const s=ease(seg(t,0,6)),x=lerp(X0,X1,s),place={x,y:0,heading:0};
+  function ladder(t,G){
+    const lean=SE().LADDER_LEAN,FOOT=G.face-G.walk*Math.tan(lean)-.02,X0=G.moat[0]-1.8,X1=FOOT-SE().LADDER_FOOT;
+    const s=ease(seg(t,0,6)),x=lerp(X0,X1,s),place={x,y:G.ladderY??1.6,heading:0},Y=place.y;
     const state={mode:t<6?'move':'idle',distance:x-X0,up:seg(t,6,8)};
     const crew=SE().crew('ladder',place,state);
     // The two carriers and two men following them climb one after the other.
-    const ground=[crew[0],crew[1],{x:x-m(3.4),y:m(.5)},{x:x-m(3.9),y:m(-.5)}];
-    const queue=i=>({x:FOOT-m(.8)-i*m(.5),y:(i%2?-1:1)*m(.5)});
-    const rise=WALL.walk/Math.cos(lean),sl=Math.sin(lean),cl=Math.cos(lean),off=m(.28);
-    const onLadder=d=>({x:FOOT+d*sl-off*cl,y:0,z:d*cl+off*sl});
-    const posts=[-2.4,2.4,-4.4,4.4].map(m);
+    const ground=[crew[0],crew[1],{x:x-m(3.4),y:Y+m(.5)},{x:x-m(3.9),y:Y-m(.5)}];
+    const queue=i=>({x:FOOT-m(.8)-i*m(.5),y:Y+(i%2?-1:1)*m(.5)});
+    const rise=G.walk/Math.cos(lean),sl=Math.sin(lean),cl=Math.cos(lean),off=m(.28);
+    const onLadder=d=>({x:FOOT+d*sl-off*cl,y:Y,z:d*cl+off*sl});
+    const posts=[-.9,.9,-1.8,1.8];
     const soldiers=ground.map((g,i)=>{
       const start=8.4+i*1.8,c=t-start;
       let p={x:g.x,y:g.y,z:0},walk=t<6,climb=0,dir=1;
       if(i>=2&&t>=6){const q=queue(i),k=ease(seg(t,6,7.2));p={x:lerp(g.x,q.x,k),y:lerp(g.y,q.y,k),z:0};walk=k>0&&k<1}
       if(c>=0){
-        const base=onLadder(0),top=onLadder(rise),onWalk={x:m(.9),y:0,z:WALL.walk},post={x:m(1.6),y:posts[i],z:WALL.walk};
-        if(c<.35){const k=c/.35;p={x:lerp(p.x,base.x,k),y:lerp(p.y,0,k),z:0};walk=true}
+        const top=onLadder(rise),onWall={x:G.face+G.thick/2,y:Y,z:G.walk},post={x:G.face+G.thick/2,y:Y+posts[i],z:G.walk};
+        if(c<.35){const k=c/.35,b=onLadder(0);p={x:lerp(p.x,b.x,k),y:lerp(p.y,Y,k),z:0};walk=true}
         else if(c<2.6){p=onLadder(rise*(c-.35)/2.25);climb=1}
-        else if(c<3.1){const k=ease((c-2.6)/.5);p={x:lerp(top.x,onWalk.x,k),y:0,z:lerp(top.z,onWalk.z,k)+Math.sin(Math.PI*k)*m(.25)};walk=true}
-        else if(c<4.4){const k=ease((c-3.1)/1.3);p={x:lerp(onWalk.x,post.x,k),y:lerp(0,post.y,k),z:WALL.walk};walk=true}
+        else if(c<3.1){const k=ease((c-2.6)/.5);p={x:lerp(top.x,onWall.x,k),y:Y,z:lerp(top.z,onWall.z,k)+Math.sin(Math.PI*k)*m(.25)};walk=true}
+        else if(c<4.4){const k=ease((c-3.1)/1.3);p={x:onWall.x,y:lerp(Y,post.y,k),z:G.walk};walk=true}
         else{p=post;dir=-1}
       }
       return man(p,'spearman','ladder'+i,{walk,climb,dir});
     });
-    return{engine:{name:'ladder',place,state},soldiers,arrows:[],gate:{open:0,shake:0},moat:{fascines:fullMoat(),flying:[]}};
+    return{engine:{name:'ladder',place,state},soldiers,arrows:[],carried:[],flying:[],gate:{open:0,shake:0},fill:filledMoat('ladder'),fillY:Y};
   }
 
-  function tower(t){
+  function tower(t,G){
     const e=MODEL().engines.tower,pb=e.pivots.bridge,L=e.rig.bridgeLen;
-    const drop=pb[2]-WALL.walk,reach=Math.sqrt(Math.max(0,L*L-drop*drop));
-    const X0=m(-18),X1=m(.9)-pb[0]-reach,s=ease(seg(t,0,9)),x=lerp(X0,X1,s),place={x,y:0,heading:0};
+    const drop=pb[2]-G.walk,reach=Math.sqrt(Math.max(0,L*L-drop*drop)),landing=G.face+Math.min(G.thick*.5,.2);
+    const X0=G.moat[0]-2.2,X1=landing-pb[0]-reach,s=ease(seg(t,0,9)),x=lerp(X0,X1,s);
+    const place={x,y:G.towerY??-1.8,heading:0},Y=place.y;
     const state={mode:t<9?'move':'idle',distance:x-X0,bridge:seg(t,9,11)};
     const soldiers=SE().crew('tower',place,state).map((p,i)=>man(p,'spearman','pusher'+i,{walk:t<9}));
     // The assault party climbs inside, comes up on the platform and crosses.
-    const deck=pb[2]+m(.07),root={x:x+pb[0],z:deck},tip={x:m(.9),z:WALL.walk};
-    const posts=[-1.2,1.2,-2.6,2.6,-4].map(m);
+    const deck=pb[2]+m(.07),root={x:x+pb[0],z:deck},tip={x:landing,z:G.walk};
+    const posts=[-.7,.7,-1.4,1.4,-2.1];
     for(let i=0;i<5;i++){
       const c=t-(11.2+i*.9);if(c<0)continue;
-      const from={x:x-m(.5),y:m(((i%3)-1)*.7),z:deck},post={x:m(1.6),y:posts[i],z:WALL.walk};
+      const from={x:x-m(.5),y:Y+m(((i%3)-1)*.7),z:deck},post={x:G.face+G.thick/2,y:Y+posts[i],z:G.walk};
       let p,walk=true,dir=1;
-      if(c<.4){const k=c/.4;p={x:lerp(from.x,root.x,k),y:lerp(from.y,0,k),z:deck}}
-      else if(c<1.4){const k=(c-.4);p={x:lerp(root.x,tip.x,k),y:0,z:lerp(root.z,tip.z,k)}}
-      else if(c<2.6){const k=ease((c-1.4)/1.2);p={x:lerp(tip.x,post.x,k),y:lerp(0,post.y,k),z:WALL.walk}}
+      if(c<.4){const k=c/.4;p={x:lerp(from.x,root.x,k),y:lerp(from.y,Y,k),z:deck}}
+      else if(c<1.4){const k=c-.4;p={x:lerp(root.x,tip.x,k),y:Y,z:lerp(root.z,tip.z,k)}}
+      else if(c<1.8){const k=ease((c-1.4)/.4);p={x:lerp(tip.x,post.x,k),y:Y,z:G.walk}}
+      else if(c<2.8){const k=ease((c-1.8));p={x:post.x,y:lerp(Y,post.y,k),z:G.walk}}
       else{p=post;walk=false;dir=-1}
       soldiers.push(man(p,'spearman','assault'+i,{walk,dir}));
     }
-    return{engine:{name:'tower',place,state},soldiers,arrows:[],gate:{open:0,shake:0},moat:{fascines:fullMoat(),flying:[]}};
+    return{engine:{name:'tower',place,state},soldiers,arrows:[],carried:[],flying:[],gate:{open:0,shake:0},fill:filledMoat('tower'),fillY:Y};
   }
 
-  // Fascine carriers: two trips each (bottom layer, then top layer flush with the
-  // ground); a fascine is thrown from the bank and lands in its slot.
-  function moat(t){
-    const S=m(-13),E=m(-4.7),P=6.4,TRIPS=2,soldiers=[],fascines=[],flying=[];
-    const mid=(WALL.moat[0]+WALL.moat[1])/2;
+  // Fascine carriers: two trips each; every bundle thrown advances the game's fill
+  // patch (settlement-crossings: it creeps across the moat from the near bank).
+  const FASCINE_Y=[-1.1,-.65,-.2,.25,.7,1.15];
+  function moat(t,G){
+    const S=G.moat[0]-3.2,E=G.moat[0]-.25,P=6.4,TRIPS=2,soldiers=[],carried=[],flying=[];
+    const mid=(G.moat[0]+G.moat[1])/2;let landed=0;
     FASCINE_Y.forEach((y,i)=>{
       const o=i*.8,tau=t-o;
-      for(let n=0;n<TRIPS;n++)if(tau>=n*P+3.2)fascines.push({y,z:layerZ(n)});
-      let x=S,walk=false,carry='fascine',dir=1;
-      if(tau>=TRIPS*P){carry=null}
+      for(let n=0;n<TRIPS;n++)if(tau>=n*P+3.2)landed++;
+      let x=S,walk=false,carry=true,dir=1;
+      if(tau>=TRIPS*P)carry=false;
       else if(tau>=0){
         const n=Math.floor(tau/P),ph=tau-n*P;
         if(ph<2.6){x=lerp(S,E,ph/2.6);walk=true}
         else if(ph<3.2){
           x=E;
           if(ph>=2.8){
-            carry=null;const f=(ph-2.8)/.4;
-            flying.push({x:lerp(E+m(.4),mid,f),y,z:lerp(m(1.8),layerZ(n),f)+Math.sin(Math.PI*f)*m(.8)});
+            carry=false;const f=(ph-2.8)/.4;
+            flying.push({x:lerp(E+m(.4),mid,f),y,z:lerp(m(1.6),G.bottom+FASCINE_R*(1+2*n),f)+Math.sin(Math.PI*f)*m(.8),spin:f*2});
           }
         }
-        else if(ph<5.8){x=lerp(E,S,(ph-3.2)/2.6);walk=true;carry=null;dir=-1}
-        else carry=ph>6.1?'fascine':null;
+        else if(ph<5.8){x=lerp(E,S,(ph-3.2)/2.6);walk=true;carry=false;dir=-1}
+        else carry=ph>6.1;
       }
-      soldiers.push(man({x,y:y+m(.35)},'spearman','fascine'+i,{walk,carry,dir}));
+      const s=man({x,y:y+m(.35)},'spearman','fascine'+i,{walk,dir});
+      soldiers.push(s);
+      if(carry)carried.push({x:s.x,y:s.y,z:m(1.45)});
     });
-    return{engine:null,soldiers,arrows:[],gate:{open:0,shake:0},moat:{fascines,flying},
-      filled:fascines.length/(FASCINE_Y.length*TRIPS)};
+    const total=FASCINE_Y.length*TRIPS;
+    return{engine:null,soldiers,arrows:[],carried,flying,gate:{open:0,shake:0},
+      fill:{span:HEAVY.tower,progress:landed/total},filled:landed/total};
   }
 
   const SCENES={ram,mantlet,ladder,tower,moat};
-  function scene(kind,t){return SCENES[kind]((t%CYCLE[kind]+CYCLE[kind])%CYCLE[kind])}
+  function scene(kind,t,G=DEFAULT){
+    const T=CYCLE[kind];return SCENES[kind](((t%T)+T)%T,{...DEFAULT,...G});
+  }
 
   // ---------------------------------------------------------------- meshes
   const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
@@ -180,61 +189,35 @@
     };
     return me;
   }
-  function wallMesh(gate={}){
-    const W=WALL,me=Mesh(),X=[W.face,W.inner];
-    // Body in 1.2 m bays (they sort locally against the men), the gate passage open.
-    for(let y=-W.half;y<W.half-1e-6;y+=m(1.2)){
-      const y1=Math.min(W.half,y+m(1.2));
-      if(y1<=-W.gate||y>=W.gate)me.box(X,[y,y1],[0,W.walk],COLORS.stone,{top:COLORS.walk});
-      else{
-        if(y<-W.gate)me.box(X,[y,-W.gate],[0,W.walk],COLORS.stone,{top:COLORS.walk});
-        if(y1>W.gate)me.box(X,[W.gate,y1],[0,W.walk],COLORS.stone,{top:COLORS.walk});
-      }
-    }
-    me.box(X,[-W.gate,W.gate],[W.gateH,W.walk],COLORS.stone,{top:COLORS.walk});            // lintel
-    me.box([W.inner-m(.05),W.inner],[-W.gate,W.gate],[0,W.gateH],COLORS.dark);               // dark passage
-    for(const y of W.merlons)me.box([W.face,W.face+m(.5)],[y-W.merlonW/2,y+W.merlonW/2],[W.walk,W.top],COLORS.merlon);
-    // Two door leaves hinged at the jambs: they shudder under the ram and swing in.
-    const th=gate.open*1.45+gate.shake*.07,T=m(.15),cs=Math.cos(th),sn=Math.sin(th);
-    for(const s of [-1,1]){
-      const hinge=[W.door,-s*W.gate];
-      const fn=([l,t,z])=>[hinge[0]+l*sn+t*cs,hinge[1]+s*l*cs-s*t*sn,z];
-      me.box([0,W.gate-m(.02)],[0,T],[0,W.gateH-m(.02)],COLORS.door,{fn:([a,b,z])=>fn([a,b,z])});
-      for(const z of [m(.6),m(2.1)])me.box([0,W.gate-m(.05)],[-m(.03),0],[z,z+m(.14)],COLORS.band,{fn:([a,b,c])=>fn([a,b,c])});
-    }
-    return me;
-  }
-  function prism(me,x0,x1,y,z,r,color,end){
-    const g=me.group([(x0+x1)/2,y,z]),N=6,ring=x=>[...Array(N).keys()].map(k=>{const a=k/N*Math.PI*2;return[x,y+Math.cos(a)*r,z+Math.sin(a)*r]});
-    const A=ring(x0),B=ring(x1);
+  // A brushwood bundle lying along a horizontal direction (angle a in the xy plane).
+  function fascine(me,c,a=0,len=m(2),r=FASCINE_R){
+    const ca=Math.cos(a),sa=Math.sin(a),N=6,g=me.group(c);
+    const ring=s=>[...Array(N).keys()].map(k=>{const t=k/N*Math.PI*2,u=Math.cos(t)*r,w=Math.sin(t)*r;
+      return[c[0]+ca*s-sa*u,c[1]+sa*s+ca*u,c[2]+w]});
+    const A=ring(-len/2),B=ring(len/2);
     for(let k=0;k<N;k++){
-      const k1=(k+1)%N,a=(k+.5)/N*Math.PI*2;
-      me.quad(g,A[k],A[k1],B[k1],B[k],color,[0,Math.cos(a),Math.sin(a)]);
+      const k1=(k+1)%N,t=(k+.5)/N*Math.PI*2;
+      me.quad(g,A[k],A[k1],B[k1],B[k],'#8a6a3a',[-sa*Math.cos(t),ca*Math.cos(t),Math.sin(t)]);
     }
-    for(const [R,n] of [[A,[-1,0,0]],[B,[1,0,0]]])for(let k=1;k<N-1;k++){
-      const a=R[0],b=R[k],c=R[k+1];
-      const flip=dot(cross(sub(b,a),sub(c,a)),n)<0;
-      me.pos.push(...a,...(flip?c:b),...(flip?b:c));me.col.push(end);me.gi.push(g);me.bias.push(0);me.outward.push(n);
-    }
+    for(const [R,s] of [[A,-1],[B,1]])for(let k=1;k<N-1;k++)me.quad(g,R[0],R[k],R[k+1],R[k+1],'#6b4f2a',[ca*s,sa*s,0]);
   }
-  function moatMesh(moat={}){
-    const W=WALL,me=Mesh(),[x0,x1]=W.moat,h=W.half,z=W.water;
-    const g=me.group([(x0+x1)/2,0,W.moatBottom]);
-    me.quad(g,[x0,-h,z],[x1,-h,z],[x1,h,z],[x0,h,z],COLORS.water,[0,0,1]);
-    // Banks face into the moat: only those turned to the camera are drawn.
-    me.quad(g,[x0,-h,z],[x0,h,z],[x0,h,0],[x0,-h,0],COLORS.bank,[1,0,0]);
-    me.quad(g,[x1,-h,z],[x1,h,z],[x1,h,0],[x1,-h,0],COLORS.bank,[-1,0,0]);
-    me.quad(g,[x0,-h,z],[x1,-h,z],[x1,-h,0],[x0,-h,0],COLORS.bank,[0,1,0]);
-    me.quad(g,[x0,h,z],[x1,h,z],[x1,h,0],[x0,h,0],COLORS.bank,[0,-1,0]);
-    const r=W.fascineR;
-    for(const f of moat.fascines||[])prism(me,x0+m(.05),x1-m(.05),f.y,f.z,r,COLORS.fascine,COLORS.fascineEnd);
-    for(const f of moat.flying||[])prism(me,f.x-m(1.5),f.x+m(1.5),f.y,f.z,r,COLORS.fascine,COLORS.fascineEnd);
+  // Fascines on shoulders and in flight, arrows: small meshes for any renderer.
+  function propsMesh(sc){
+    const me=Mesh();
+    for(const c of sc.carried||[])fascine(me,[c.x,c.y,c.z],.35,m(1.6),m(.22));
+    for(const f of sc.flying||[])fascine(me,[f.x,f.y,f.z],Math.PI/2+(f.spin||0)*.3);
+    for(const a of sc.arrows||[]){
+      const d=sub(a.to,a.at),L=Math.hypot(...d)||1,u=d.map(v=>v/L*m(.8)),b=[a.at[0]-u[0],a.at[1]-u[1],a.at[2]-u[2]];
+      me.box([0,1],[-.004,.004],[-.004,.004],'#3b2a1a',{fn:([s,y,z])=>[b[0]+u[0]*s,b[1]+u[1]*s+y,b[2]+u[2]*s+z]});
+    }
     return me;
   }
+  // The scene's own meshes (local frame): the engine and what the men carry. The wall,
+  // gate and moat are the game's structures (see settlement-siege-preview.js).
   function meshes(sc,team){
-    const out=[moatMesh(sc.moat),wallMesh(sc.gate)];
+    const out=[propsMesh(sc)];
     if(sc.engine)out.push(SE().triangles(sc.engine.name,{...sc.engine.place,team},sc.engine.state));
     return out;
   }
-  window.ConquerSiegeAssault={WALL,CYCLE,KINDS:Object.keys(SCENES),scene,meshes,wallMesh,moatMesh};
+  window.ConquerSiegeAssault={DEFAULT,HEAVY,CYCLE,KINDS:Object.keys(SCENES),scene,meshes,propsMesh};
 })();

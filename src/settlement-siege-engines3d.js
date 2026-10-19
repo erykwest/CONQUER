@@ -78,9 +78,9 @@
       slide:ph(u,.85,.92),raise:ph(u,.92,1),hangers:u>.995,stone:shot.stone,
       wheelOut:ph(u,0,.12),wheelFlat:ph(u,.12,.22)};
   }
-  // Tower and ladder are sized for the low (H1) wall: its walk is 3.4 m up.
-  // High (H2) walls cannot be scaled, only battered down.
-  const WALL_WALK=3.4/3.5;
+  // Tower and ladder are sized for the game's low (H1) wall: patrols walk on its
+  // top, structureHeight = 1.15 U. High (H2) walls cannot be scaled, only battered.
+  const WALL_WALK=1.15;
   // Siege tower: the bridge drops forward into a crenel and rests on the wall
   // walk, holds, and is hauled up. state.bridge (0 up .. 1 down) overrides.
   function bridgeDown(){
