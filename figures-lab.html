@@ -35,6 +35,9 @@
     <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
+  <div class="group" role="group" aria-label="Assedio"><span>Assedio</span>
+    <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Catapulta</button><button data-subject="siege:trebuchet">Trabucco</button>
+  </div>
   <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
     <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button>
   </div>
@@ -81,15 +84,17 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-wagons3d.js?v=lab-2"></script>
 <script src="./src/assets/animal-models.js?v=lab-1"></script>
 <script src="./src/settlement-animals3d.js?v=lab-1"></script>
+<script src="./src/assets/siege-engines-model.js?v=lab-1"></script>
+<script src="./src/settlement-siege-engines3d.js?v=lab-1"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
   const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
-  const ACTIONS={animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
+  const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
-  const kindOf=s=>s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
     const acts=kindOf(subject)==='animal'?animalActions(subject):ACTIONS[kindOf(subject)];
@@ -97,7 +102,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
     $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
-    $('wagon3dBox').hidden=!(subject==='wagon3d'||kindOf(subject)==='animal');
+    $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
     resetHero();
   }
@@ -212,6 +217,33 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     if(anchors.seat&&spec.driver)sprites.push({...anchors.seat,z:anchors.seat.z+.12,draw:()=>{const s=view.project(anchors.seat.x,anchors.seat.y,anchors.seat.z);spec.driver(g,s.x,s.y,4.9*zoom)}});
     return W3.draw(g,spec,pose,view,sprites,team);
   }
+  // Siege engines: Blender models with their shot animated; the crew are the
+  // game's own 2D soldiers on the engine's crew anchors; the stone flies as a sprite.
+  const SE=window.ConquerSiegeEngines3D;let siegeDistance=0;
+  function siegeAt(engine,cx,cy,pxPerU,turns,heading){
+    const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12,state={mode:action,t:clock,distance:siegeDistance};
+    const place={x:0,y:0,heading},sprites=[];
+    SE.crew(engine,place).forEach((p,i)=>sprites.push({...p,draw:()=>{
+      const s=view.project(p.x,p.y,p.z),lean=action==='move'?Math.sin(clock*6+i)*.6:0;
+      State.view.scale=zoom;ctx=g;CA.drawFigure({x:s.x+lean,y:s.y},0,'spearman','crew'+i,0,null,CA.pose({engaged:false},i));
+    }}));
+    const stone=SE.projectile(engine,place,state);
+    if(stone)sprites.push({...stone,draw:()=>{
+      const sh=view.project(stone.x,stone.y,0),s=view.project(stone.x,stone.y,stone.z);
+      // A 0.4 m stone: sizes follow the world scale, not the figure zoom.
+      const r=Math.max(2,pxPerU*.06);
+      g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(sh.x,sh.y,r*1.4,r*.7,0,0,Math.PI*2);g.fill();
+      g.fillStyle='#8f8d88';g.strokeStyle='#4a4844';g.lineWidth=1;g.beginPath();g.arc(s.x,s.y,r,0,Math.PI*2);g.fill();g.stroke();
+    }});
+    W3.drawMeshes(g,[SE.triangles(engine,place,state)],view,sprites);
+  }
+  function heroSiege(W,H,k,dt){
+    const engine=subject.split(':')[1],turns=Number($('w3Turns').value),heading=headingInput(dt);
+    if(action==='move')siegeDistance+=dt*.3;
+    const len=window.ConquerSiegeModel.engines[engine].length;
+    siegeAt(engine,W*.34,H*.6,Math.min(W*.26/len,H*.3/len),turns,heading);
+    siegeAt(engine,W*.84,H*.62,12*2.6*k,turns,heading);
+  }
   function heroWagon3D(W,H,k,dt){
     const moving=action==='move',turns=Number($('w3Turns').value);
     headingInput(dt);
@@ -292,7 +324,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     g.fillStyle='#6f9a48';g.fillRect(0,0,W,H);
     g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
     const kind=kindOf(subject);
-    if(subject==='wagon3d')heroWagon3D(W,H,k,dt);
+    if(kind==='siege')heroSiege(W,H,k,dt);
+    else if(subject==='wagon3d')heroWagon3D(W,H,k,dt);
     else if(kind==='vehicle')heroWagon(W,H,k,dt);
     else if(kind==='animal')heroAnimals(W,H,k,dt);
     else if(kind==='soldier')heroSoldiers(W,H,k);
