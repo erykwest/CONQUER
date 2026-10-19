@@ -120,14 +120,15 @@ canvas.addEventListener('pointerdown',e=>{
           }
         }else status('Segment too short');
       }else{
-        const route=normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!e2.structureId);
+        // A magnet (tower, gate or a free wall end) is reached exactly.
+        const route=normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!(e2.structureId||e2.endpoint));
         if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
           const legs=route.segments.length;
           if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
             State.draft=null;
             status(legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment');
           }
-        }else status(e2.structureId?'No valid two-segment 15° route to this magnet':'Segment too short');
+        }else status(e2.structureId||e2.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
       }
     }
   }
@@ -167,8 +168,16 @@ canvas.addEventListener('pointermove',e=>{
       error||((snap?'⛓ Magnet · ':'')+type+' '+preview.length.toFixed(1)+'U · flat level banks'));
     draw();return;
   }
+  if(State.tool.kind==='linear'&&!State.draft&&['wall','palisade'].includes(State.tool.linear)){
+    // Light the wall-end magnet under the pointer before the first click too.
+    const hover=snapAnchor(p),was=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,now=hover.endpoint?hover.point:null;
+    State.tool.linearHover=hover;
+    if(!!was!==!!now||(was&&now&&dist(was,now)>1e-6))draw();
+    return;
+  }
   if(State.tool.kind==='linear'&&State.draft){
     const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec();
+    if(!mainRoad)State.tool.linearHover=snap;
     if(mainRoad){
       const n=normalizeLinear(State.draft.a,snap.point,spec,false);
       if(n){
@@ -183,7 +192,7 @@ canvas.addEventListener('pointermove',e=>{
       return;
     }
 
-    const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!snap.structureId);
+    const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.endpoint));
     if(route){
       const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
       State.draft.invalidPreview=null;
@@ -195,7 +204,7 @@ canvas.addEventListener('pointermove',e=>{
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
       State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};
-      status(snap.structureId?'No valid two-segment 15° route to this magnet':'Segment too short');
+      status(snap.structureId||snap.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
     }
     draw();
     return

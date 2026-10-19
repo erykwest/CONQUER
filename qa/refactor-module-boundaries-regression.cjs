@@ -36,7 +36,9 @@ const render3dHooks=[
   ["  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n  }\n","  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n"],
   ["if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');","blitSceneCache('castleBody');"],
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
-  ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n']
+  ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n'],
+  // Builder overlay hook: wall/palisade end magnets (settlement-castle-placement.js).
+  ["  if(typeof drawLinearMagnets==='function')drawLinearMagnets();\n",'']
 ];
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));

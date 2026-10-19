@@ -50,13 +50,57 @@ function boundaryPoint(s,target){
   }
   return{x:s.x+ux*edge,y:s.y+uy*edge}
 }
+// Magnet reach for linear tools: never less than LINEAR_POINT_MAGNET, and at least
+// ~18 screen px so it still grabs when zoomed out (capped at 2.5 U).
+function linearMagnetRadius(){
+  const pxPerU=(typeof U==='number'?U:12)*(Number(State.view?.scale)||1);
+  return Math.max(LINEAR_POINT_MAGNET,Math.min(2.5,18/Math.max(1e-6,pxPerU)));
+}
+// Free ends of walls/palisades of the type being drawn (also still under construction,
+// so a run can be continued at once). Ends already seated on a tower or gate are taken.
+function linearEndpointSnap(p,type,radius=linearMagnetRadius()){
+  if(!['wall','palisade'].includes(type))return null;
+  let best=null;
+  for(const s of State.structures){
+    if(s.type!==type||!s.a||!s.b)continue;
+    for(const end of ['a','b']){
+      if(end==='a'?s.aSnap:s.bSnap)continue;
+      const d=dist(p,s[end]);
+      if(d<=radius&&(!best||d<best.d))best={d,point:{x:s[end].x,y:s[end].y},wallId:s.id,end};
+    }
+  }
+  return best;
+}
+// Free wall/palisade ends you can continue from, drawn on the wall top while the
+// tool is active; the one under the pointer lights up (same look as moat magnets).
+function drawLinearMagnets(){
+  const type=State.tool?.kind==='linear'?State.tool.linear:null;
+  if(!['wall','palisade'].includes(type))return;
+  const hover=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,shown=new Set();
+  ctx.save();
+  for(const s of State.structures){
+    if(s.type!==type||!s.a||!s.b)continue;
+    for(const end of ['a','b']){
+      if(end==='a'?s.aSnap:s.bSnap)continue;
+      const q=s[end],key=q.x.toFixed(3)+','+q.y.toFixed(3);if(shown.has(key))continue;shown.add(key);
+      const v=w2s(q,structureHeight(s)),active=hover&&dist(q,hover)<.015;
+      ctx.beginPath();ctx.arc(v.x,v.y,active?7:4,0,Math.PI*2);
+      ctx.fillStyle=active?'#8dffbd':'#f3ce84';ctx.fill();
+      ctx.lineWidth=active?2.5:1.5;ctx.strokeStyle='#314938';ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
 function snapAnchor(p){
+  const radius=linearMagnetRadius();
   let best=null,bestPoint=null,bestScore=Infinity;
   for(const s of State.structures){
     if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;
     const q=boundaryPoint(s,p),score=dist(p,q);
-    if(score<=LINEAR_POINT_MAGNET&&score<bestScore){best=s;bestPoint=q;bestScore=score}
+    if(score<=radius&&score<bestScore){best=s;bestPoint=q;bestScore=score}
   }
+  const end=linearEndpointSnap(p,State.tool?.linear,radius);
+  if(end&&end.d<bestScore)return{point:end.point,structureId:null,magnet:true,endpoint:{wallId:end.wallId,end:end.end}};
   return best
     ?{point:bestPoint,structureId:best.id,magnet:true}
     :{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null,magnet:false};
