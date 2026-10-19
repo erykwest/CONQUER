@@ -130,8 +130,9 @@
   // ---------- small geometry helpers (world space, absolute z) ----------
   const rgbCache=new Map();
   function rgb(hex){
-    let v=rgbCache.get(hex);if(v)return v;
-    const h=String(hex).replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);rgbCache.set(hex,v);return v;
+    const color=visualPaletteColor(hex);
+    let v=rgbCache.get(color);if(v)return v;
+    const h=String(color).replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);rgbCache.set(color,v);return v;
   }
   function meshBuilder(){
     const tris=[];
@@ -754,11 +755,11 @@
       uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
       S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
     }
-    const bSig=[season,urbanRev(),structuresSig('buildings')].join('|');
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings')].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
-    const castleContent=[season,structuresSig('castle')].join('|');
+    const castleContent=[season,State.visualPalette,structuresSig('castle')].join('|');
     if(S.castleContent!==castleContent){
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();

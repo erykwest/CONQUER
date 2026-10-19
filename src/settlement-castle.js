@@ -202,7 +202,7 @@ function projectPath(points,z=0){
 }
 function pathPolygon(points,fill,stroke,lineWidth=1.2){
   if(!points?.length)return;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
-  if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke()}
+  if(fill){ctx.fillStyle=visualPaletteColor(fill);ctx.fill()}if(stroke){ctx.strokeStyle=visualPaletteColor(stroke);ctx.lineWidth=lineWidth;ctx.stroke()}
 }
 function rectWorldPoints(cx,cy,w,h,angle=0){
   const ca=Math.cos(angle),sa=Math.sin(angle),pts=[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]];
@@ -666,7 +666,7 @@ function drawCutawayWallRing(g,z,alpha=.72){
   ctx.save();ctx.globalAlpha*=alpha;ctx.beginPath();
   outer.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
   inner.slice().reverse().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
-  ctx.fillStyle=State.season==='winter'?WINTER_SNOW_TOP:'#8f857a';ctx.fill('evenodd');
+  ctx.fillStyle=visualPaletteColor(State.season==='winter'?WINTER_SNOW_TOP:'#8f857a');ctx.fill('evenodd');
   ctx.strokeStyle='rgba(211,197,181,.52)';ctx.lineWidth=.75;ctx.stroke();
   ctx.restore();
 }
@@ -894,8 +894,8 @@ function fillMultiPolygonTop(multi,z,fill,stroke){
     const pts=cleanClipRing(ring).map(p=>w2s(p,z));if(pts.length<3)continue;
     ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();
   }
-  ctx.fillStyle=fill;ctx.fill('evenodd');
-  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.15;ctx.stroke()}
+  ctx.fillStyle=visualPaletteColor(fill);ctx.fill('evenodd');
+  if(stroke){ctx.strokeStyle=visualPaletteColor(stroke);ctx.lineWidth=1.15;ctx.stroke()}
   ctx.restore();
 }
 function castleSideShade(a,b){

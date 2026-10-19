@@ -113,6 +113,79 @@ const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
 const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+// DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
+const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
+State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
+const CLAY_VISUAL_SWATCHES=Object.freeze({
+  '#9a8e82':'#be7254',
+  '#635951':'#98523e',
+  '#514a44':'#763b30',
+  '#887d72':'#ad654b',
+  '#554d46':'#804130',
+  '#403b36':'#653226',
+  '#9f9183':'#c18260',
+  '#c8b9a9':'#dc9b78',
+  '#918579':'#b87355',
+  '#605750':'#98503c',
+  '#4a443e':'#75392d',
+  '#b3a596':'#d18e6d',
+  '#948779':'#b77357',
+  '#625a52':'#9c5540',
+  '#4b4540':'#743c2f',
+  '#8f857a':'#b77558',
+  '#82776c':'#9d563f',
+  '#61574f':'#824332',
+  '#5a514a':'#774032',
+  '#49443f':'#774034',
+  '#686057':'#a35b46',
+  '#84796d':'#b37355',
+  '#4e4740':'#7d4232',
+  '#5d554d':'#97523d',
+  '#88796b':'#b67456',
+  '#62584f':'#995741',
+  '#8c7b69':'#b67354',
+  '#554b42':'#824432',
+  '#66594d':'#a45a44',
+  '#9f9285':'#c18665',
+  '#8d877c':'#b97758',
+  '#716c64':'#96513d',
+  '#7f796f':'#af6c50',
+  '#4c4842':'#783d31',
+  '#5a554d':'#8d4837',
+  '#a59b8d':'#c58a6a',
+  '#b8aa99':'#d09270',
+  '#676a6c':'#b66e51',
+  '#66635f':'#93503d',
+  '#77736e':'#a85d46',
+  '#6b6863':'#a96047',
+  '#7d7973':'#b87559',
+  '#85817a':'#c07c5c',
+  '#696862':'#96513e',
+  '#777671':'#ae684d',
+  '#85847d':'#bb7456',
+  '#625e59':'#ae664d',
+  '#4f4b47':'#864330',
+  '#303237':'#a94e36',
+  '#3a3d42':'#bf6345',
+  '#303943':'#a44c34',
+  '#394550':'#c06946',
+  '#34363a':'#a85239',
+  '#42454a':'#c26a4a',
+  '#303236':'#99442f',
+  '#44474c':'#cb7350',
+  '#3d4145':'#ab5038',
+  '#484c50':'#c26b49',
+  '#41454a':'#ae573d',
+  '#4c5054':'#c4714c',
+  '#595a60':'#b35d40',
+  '#3b302b':'#a85037',
+  '#493930':'#bd6647'
+});
+function visualPaletteColor(color){
+  if(State.visualPalette!=='clay'||typeof color!=='string')return color;
+  return CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color;
+}
+// DEV VISUAL PALETTE END
 const STRUCTURE_ANGLE_STEP_DEG=15;
 const STRUCTURE_ANGLE_STEPS=360/STRUCTURE_ANGLE_STEP_DEG;
 const STRUCTURE_ANGLE_STEP=Math.PI*2/STRUCTURE_ANGLE_STEPS;

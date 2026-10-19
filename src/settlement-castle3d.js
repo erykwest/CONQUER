@@ -35,9 +35,10 @@
   };
   const rgbCache=new Map();
   function rgb(hex){
-    let v=rgbCache.get(hex);if(v)return v;
-    const h=hex.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);
-    rgbCache.set(hex,v);return v;
+    const color=visualPaletteColor(hex);
+    let v=rgbCache.get(color);if(v)return v;
+    const h=color.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);
+    rgbCache.set(color,v);return v;
   }
 
   // ---------- geometry collection ----------

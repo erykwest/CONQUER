@@ -31,6 +31,10 @@ function syncSeasonToCalendar(){
   return true;
 }
 function syncDevButtons(){
+  document.querySelectorAll('[data-visual-palette]').forEach(b=>{
+    const active=b.dataset.visualPalette===State.visualPalette;
+    b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+  });
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
   document.querySelectorAll('[data-light-override]').forEach(b=>b.classList.toggle('active',b.dataset.lightOverride===State.daylightOverride));
   document.querySelectorAll('[data-weather-override]').forEach(b=>b.classList.toggle('active',b.dataset.weatherOverride===State.weatherOverride));
@@ -133,7 +137,19 @@ function setSeason(season){
   drawWeatherOverlay();
   status(State.seasonOverride?'FORCE SEASON: '+labels[State.seasonOverride]+' — clicca di nuovo per tornare al calendario':'Stagione: calendario automatico');
 }
+function setDevVisualPalette(next){
+  if(next!=='stone'&&next!=='clay'||State.visualPalette===next)return;
+  State.visualPalette=next;
+  try{localStorage.setItem(DEV_VISUAL_PALETTE_KEY,next)}catch{}
+  // Never markDirty or mutate resources/structures: this is a DEV visual preference.
+  invalidateSceneCache();
+  window.__conquerAssetCompiler?.clearComposite?.();
+  window.ConquerWorld3D?.invalidate?.();
+  syncDevButtons();draw();
+  status('PALETTE: '+(next==='clay'?'CLAY · mattone e tegola':'STONE · pietra e antracite'));
+}
 function ensureDevControls(){
+  document.querySelectorAll('[data-visual-palette]').forEach(b=>b.onclick=()=>setDevVisualPalette(b.dataset.visualPalette));
   document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));
   document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
   document.querySelectorAll('[data-weather-override]').forEach(b=>b.onclick=()=>setWeatherOverride(b.dataset.weatherOverride));
