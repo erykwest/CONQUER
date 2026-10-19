@@ -279,143 +279,173 @@ def timber_wall(p, a, b, z0, z1, n, key='beam', step=1.7, d=.07, braces=True, ra
 # ------------------------------------------------------------------ church
 # civicLocalParts: nave 2.9 x 6.2 U at cy .25, transept 5.2 x 1.65 U at cy .35, tower 1.85 U at cy -2.65.
 def church(m, L):
+    """L1 small chapel, L2 parish church, L3 cathedral with twin towers and a portal porch."""
     wall = {1: 'stoneRough', 2: 'stone', 3: 'stoneLight'}[L]
     trim = {1: 'stoneRoughDark', 2: 'stoneTrim', 3: 'stoneTrim'}[L]
     roof = ('roofShingle', 'roofShingleDark') if L == 1 else ('roofSlate', 'roofSlateDark')
     glass = 'dark' if L == 1 else 'glass'
-    wx = 4.6 if L == 1 else 4.35
-    wh = {1: 5.4, 2: 6.2, 3: 7.0}[L]
-    rise = wx * .95
-    R, k = wh + rise, rise / wx
-    y0, y1 = -9.6, 9.0
+    wx = {1: 3.3, 2: 4.35, 3: 4.35}[L]
+    wh = {1: 4.4, 2: 6.2, 3: 8.2}[L]
+    pitch = 1.3 if L == 3 else .95
+    rise = wx * pitch
+    R, k = wh + rise, pitch
+    y0, y1 = (-7.4, 5.0) if L == 1 else (-9.6, 9.0)
+    ar = 2.0 if L == 1 else 2.55
+    apse_h = wh - (1.1 if L < 3 else 1.9)
     cyt, hd, tx = .35 * S, 2.6, 8.6         # transept centre, half depth, arm end
-    te = wh - .3
-    tr = te + hd * .95
+    te = wh - (.3 if L == 2 else .8)
+    tr = te + hd * pitch
 
     # Nave with plinth and apse.
     p = m.part('nave')
     p.box((0, (y0 + y1) / 2, wh / 2), (2 * wx, y1 - y0, wh), wall)
     p.box((0, (y0 + y1) / 2, .25), (2 * wx + .2, y1 - y0 + .1, .5), trim)
-    ar = 2.55
     apse = [(math.cos(a) * ar, y1 + math.sin(a) * ar) for a in [math.pi * i / 6 for i in range(7)]]
-    prism(p, apse, 0, wh - 1.1, wall)
-    ys = (-5.4, -3.0, 5.6, 7.8)
+    prism(p, apse, 0, apse_h, wall)
+    ys = (-4.6, -2.2, .8, 3.2) if L == 1 else (-5.4, -3.0, 5.6, 7.8)
     for sx in (-1, 1):
         for i, y in enumerate(ys):
             o, n = (sx * wx, y), (sx, 0)
             if L == 1:
-                opening(p, o, n, .7, 1.7, 2.6, glass, arch='round')
+                opening(p, o, n, .6, 1.4, 2.0, glass, arch='round')
             else:
-                opening(p, o, n, .85 if L == 2 else 1.0, 2.7 if L == 2 else 3.4, 2.2,
+                opening(p, o, n, .85 if L == 2 else 1.0, 2.7 if L == 2 else 4.2, 2.2,
                         'glassRed' if L == 3 and i % 2 else glass, frame=trim, arch='pointed')
     for a in (math.pi * .25, math.pi * .5, math.pi * .75):
         n = (math.cos(a), math.sin(a))
-        opening(p, (n[0] * ar * .97, y1 + n[1] * ar * .97), n, .5, 1.5 if L == 1 else 2.0, 2.0, glass,
+        opening(p, (n[0] * ar * .97, y1 + n[1] * ar * .97), n, .45 if L == 1 else .5, 1.3 if L == 1 else 2.0, 1.6 if L == 1 else 2.0, glass,
                 arch='round' if L < 3 else 'pointed')
     if L >= 2:   # stepped buttresses between the bays
         for sx in (-1, 1):
             for y in (-7.4, -4.2, 4.5, 6.7, 8.8):
+                if L == 3 and y < -6.2:
+                    continue
                 p.box((sx * (wx + .33), y, wh * .28), (.66, .6, wh * .56), trim)
                 p.box((sx * (wx + .2), y, wh * .7), (.4, .5, wh * .3), trim)
+    if L == 3:   # rose window in the west gable, above the porch
+        plate(p, (0, y0), (0, -1), circ(0, wh + 1.9, 1.5, 12), trim, 0, .06)
+        plate(p, (0, y0), (0, -1), circ(0, wh + 1.9, 1.2, 12), 'glassRed', 0, .1)
+        plate(p, (0, y0), (0, -1), circ(0, wh + 1.9, .45, 8), 'gold', 0, .13)
     m.done('nave', p)
 
     p = m.part('naveRoof')
-    gable_roof(p, 0, (y0 + y1) / 2, y1 - y0, 2 * wx, wh, R, 'y', roof, gable_key=wall)
-    # Half cone over the apse.
-    rim = [(math.cos(a) * (ar + .35), y1 + math.sin(a) * (ar + .35), wh - 1.25) for a in [math.pi * i / 6 for i in range(7)]]
-    apex = (0, y1, wh + .9)
+    # The cathedral roof stops flush with the west front between the towers.
+    gable_roof(p, 0, (y0 + y1) / 2, y1 - y0, 2 * wx, wh, R, 'y', roof, gable_key=wall, ends=(L < 3, True))
+    if L == 3:
+        p.quads([(-wx, y0, wh), (wx, y0, wh), (0, y0, R - .2)], [(0, 1, 2)], wall)
+    rim = [(math.cos(a) * (ar + .35), y1 + math.sin(a) * (ar + .35), apse_h - .15) for a in [math.pi * i / 6 for i in range(7)]]
+    apex = (0, y1, apse_h + 2.0)
     for i in range(6):
         p.quads([rim[i], rim[i + 1], apex], [(0, 1, 2)], roof[i % 2])
     if L >= 2:
         cross(p, 0, y1 + .1, R - .1, 1.4, 'gold' if L == 3 else 'iron')
     if L == 3:   # fleche over the crossing
         p.box((0, cyt, R + .3), (1.1, 1.1, .9), 'stoneTrim')
-        pyramid(p, 0, cyt, 0, 0, R + .75, R + 4.6, ('roofLead', 'roofSlateDark'), n=8, r=.8)
-        cross(p, 0, cyt, R + 4.5, .9)
+        pyramid(p, 0, cyt, 0, 0, R + .75, R + 5.0, ('roofLead', 'roofSlateDark'), n=8, r=.8)
+        cross(p, 0, cyt, R + 4.9, .9)
     m.done('naveRoof', p)
 
     # Transept arms (separate parts so each sorts on its own side of the nave).
-    over = .45
-    zo_t = te - over * .95
-    x_r = (R - tr) / k
-    x_e = min((R - zo_t) / k, wx + over)
-    for sg, name in ((-1, 'armL'), (1, 'armR')):
-        p = m.part(name)
-        xm = sg * (wx + tx) / 2
-        p.box((xm, cyt, te / 2), (tx - wx + .1, 2 * hd, te), wall)
-        p.box((xm, cyt, .25), (tx - wx + .3, 2 * hd + .2, .5), trim)
-        o, n = (sg * tx, cyt), (sg, 0)
-        if L == 1:
-            opening(p, o, n, .8, 1.9, 2.4, glass, arch='round')
-        elif L == 2:
-            opening(p, o, n, 1.3, 3.4, 1.8, glass, frame=trim, arch='pointed')
-        else:
-            opening(p, o, n, 1.1, 2.6, 1.4, glass, frame=trim, arch='pointed')
-            plate(p, o, n, circ(0, te + .55, 1.15, 8, math.pi / 8), trim, 0, .06)
-            plate(p, o, n, circ(0, te + .55, .9, 8, math.pi / 8), 'glassRed', 0, .1)
-        for s, key in ((-1, roof[0]), (1, roof[1])):
-            slab(p, [(sg * x_e, cyt + s * (hd + over), zo_t), (sg * (tx + .35), cyt + s * (hd + over), zo_t),
-                     (sg * (tx + .35), cyt, tr), (sg * x_r, cyt, tr)], .2, key)
-        p.quads([(sg * tx, cyt - hd, te), (sg * tx, cyt + hd, te), (sg * tx, cyt, tr - .2)], [(0, 1, 2)], wall)
-        m.done(name, p)
-
-    # West tower with the door (the designated front, local -Y).
-    p = m.part('tower')
-    ty, th = -2.65 * S, 3.0
-    tz = {1: 9.0, 2: 12.0, 3: 13.6}[L]
-    p.box((0, ty, tz / 2), (2 * th, 2 * th, tz), wall)
-    p.box((0, ty, .3), (2 * th + .25, 2 * th + .25, .6), trim)
-    front = (0, ty - th)
-    door_w, door_h = {1: (1.6, 2.8), 2: (1.9, 3.3), 3: (2.1, 3.8)}[L]
-    opening(p, front, (0, -1), door_w, door_h, 0, 'woodDark', frame=trim, arch='pointed' if L == 3 else 'round')
-    p.box((0, ty - th - .3, .1), (door_w + 1.2, .6, .2), trim)                 # door step
     if L >= 2:
-        p.box((0, ty, 8.4), (2 * th + .2, 2 * th + .2, .3), trim)               # string course
-    if L == 3:
-        plate(p, front, (0, -1), circ(0, 5.9, 1.05, 8, math.pi / 8), trim, 0, .06)
-        plate(p, front, (0, -1), circ(0, 5.9, .8, 8, math.pi / 8), 'glassRed', 0, .1)
-        plate(p, front, (0, -1), circ(0, 9.6, .85, 8, math.pi / 8), 'clock', 0, .08)
-        p.box((0, ty - th - .1, 9.85), (.08, .06, .55), 'dark')
-        p.box((.18, ty - th - .1, 9.6), (.42, .06, .08), 'dark')
-    for n in ((0, -1), (0, 1), (1, 0), (-1, 0)):
-        o = (n[0] * th, ty + n[1] * th)
-        if L == 1:
-            for u_ in (-1.1, 1.1):
-                c = (o[0] - n[1] * u_, o[1] + n[0] * u_)
-                opening(p, c, n, .35, 1.1, 5.2, 'dark')
-        else:
-            for u_ in (-1.0, 1.0):
-                c = (o[0] - n[1] * u_, o[1] + n[0] * u_)
-                opening(p, c, n, .9, 2.2 if L == 2 else 2.5, tz - 2.9 if L == 2 else tz - 3.3, 'dark', frame=trim,
-                        arch='round' if L == 2 else 'pointed')
-            if n != (0, -1):
-                opening(p, o, n, .4, 1.2, 5.0, glass)
-    m.done('tower', p)
+        over = .45
+        zo_t = te - over * pitch
+        x_r = (R - tr) / k
+        x_e = min((R - zo_t) / k, wx + over)
+        for sg, name in ((-1, 'armL'), (1, 'armR')):
+            p = m.part(name)
+            xm = sg * (wx + tx) / 2
+            p.box((xm, cyt, te / 2), (tx - wx + .1, 2 * hd, te), wall)
+            p.box((xm, cyt, .25), (tx - wx + .3, 2 * hd + .2, .5), trim)
+            o, n = (sg * tx, cyt), (sg, 0)
+            if L == 2:
+                opening(p, o, n, 1.3, 3.4, 1.8, glass, frame=trim, arch='pointed')
+            else:
+                opening(p, o, n, 1.2, 3.4, 1.4, glass, frame=trim, arch='pointed')
+                plate(p, o, n, circ(0, te + .9, 1.25, 8, math.pi / 8), trim, 0, .06)
+                plate(p, o, n, circ(0, te + .9, 1.0, 8, math.pi / 8), 'glassRed', 0, .1)
+            for s, key in ((-1, roof[0]), (1, roof[1])):
+                slab(p, [(sg * x_e, cyt + s * (hd + over), zo_t), (sg * (tx + .35), cyt + s * (hd + over), zo_t),
+                         (sg * (tx + .35), cyt, tr), (sg * x_r, cyt, tr)], .2, key)
+            p.quads([(sg * tx, cyt - hd, te), (sg * tx, cyt + hd, te), (sg * tx, cyt, tr - .2)], [(0, 1, 2)], wall)
+            m.done(name, p)
 
-    p = m.part('belfry')
-    if L == 1:   # timber belfry under a shingled pyramid
-        p.box((0, ty, tz + 1.2), (2 * th + .2, 2 * th + .2, 2.4), 'wood')
+    if L < 3:
+        # West tower with the door (the designated front, local -Y).
+        p = m.part('tower')
+        ty, th, tz = (-8.8, 1.9, 6.6) if L == 1 else (-2.65 * S, 3.0, 12.0)
+        p.box((0, ty, tz / 2), (2 * th, 2 * th, tz), wall)
+        p.box((0, ty, .3), (2 * th + .25, 2 * th + .25, .6), trim)
+        front = (0, ty - th)
+        door_w, door_h = (1.3, 2.4) if L == 1 else (1.9, 3.3)
+        opening(p, front, (0, -1), door_w, door_h, 0, 'woodDark', frame=trim, arch='round')
+        p.box((0, ty - th - .3, .1), (door_w + 1.2, .6, .2), trim)
+        if L == 1:   # path to the street front of the plot
+            p.box((0, (ty - th - .6 - 12.4) / 2, .03), (1.3, 12.4 + ty - th - .6, .06), 'gravel')
+        else:
+            p.box((0, ty, 8.4), (2 * th + .2, 2 * th + .2, .3), trim)
         for n in ((0, -1), (0, 1), (1, 0), (-1, 0)):
-            o = (n[0] * (th + .1), ty + n[1] * (th + .1))
-            for u_ in (-1.2, 1.2):
-                plate(p, (o[0] - n[1] * u_, o[1] + n[0] * u_), n, rect_pts(.9, 1.5, tz + .45), 'dark', 0, .06)
-            plate(p, o, n, rect_pts(2 * th + .2, .14, tz + .05), 'woodDark', 0, .05)
-        pyramid(p, 0, ty, 2 * th + .9, 2 * th + .9, tz + 2.4, tz + 6.2, roof)
-        cross(p, 0, ty, tz + 6.1, 1.0, 'iron')
-    elif L == 2:
-        p.box((0, ty, tz + .15), (2 * th + .5, 2 * th + .5, .3), trim)
-        pyramid(p, 0, ty, 2 * th + .7, 2 * th + .7, tz + .3, tz + 6.0, roof)
-        cross(p, 0, ty, tz + 5.9, 1.3)
-    else:        # parapet, corner pinnacles and an octagonal spire
-        p.box((0, ty, tz + .2), (2 * th + .4, 2 * th + .4, .4), trim)
-        for sx in (-1, 1):
-            for sy in (-1, 1):
-                cx, cy = sx * (th - .1), ty + sy * (th - .1)
-                p.box((cx, cy, tz + .9), (.6, .6, 1.0), wall)
-                pyramid(p, cx, cy, .7, .7, tz + 1.4, tz + 3.0, ('roofLead', 'roofSlateDark'))
-        pyramid(p, 0, ty, 0, 0, tz + .4, tz + 11.0, ('roofLead', 'roofSlateDark'), n=8, r=2.65)
-        cross(p, 0, ty, tz + 10.9, 1.4)
-    m.done('belfry', p)
+            o = (n[0] * th, ty + n[1] * th)
+            if L == 1:
+                opening(p, o, n, .3, .9, 3.8, 'dark')
+            else:
+                for u_ in (-1.0, 1.0):
+                    c = (o[0] - n[1] * u_, o[1] + n[0] * u_)
+                    opening(p, c, n, .9, 2.2, tz - 2.9, 'dark', frame=trim, arch='round')
+                if n != (0, -1):
+                    opening(p, o, n, .4, 1.2, 5.0, glass)
+        m.done('tower', p)
+
+        p = m.part('belfry')
+        if L == 1:   # timber belfry under a shingled pyramid
+            p.box((0, ty, tz + 1.0), (2 * th + .2, 2 * th + .2, 2.0), 'wood')
+            for n in ((0, -1), (0, 1), (1, 0), (-1, 0)):
+                o = (n[0] * (th + .1), ty + n[1] * (th + .1))
+                plate(p, o, n, rect_pts(1.4, 1.2, tz + .4), 'dark', 0, .06)
+                plate(p, o, n, rect_pts(2 * th + .2, .14, tz + .05), 'woodDark', 0, .05)
+            pyramid(p, 0, ty, 2 * th + .8, 2 * th + .8, tz + 2.0, tz + 5.0, roof)
+            cross(p, 0, ty, tz + 4.9, .9, 'iron')
+        else:
+            p.box((0, ty, tz + .15), (2 * th + .5, 2 * th + .5, .3), trim)
+            pyramid(p, 0, ty, 2 * th + .7, 2 * th + .7, tz + .3, tz + 6.0, roof)
+            cross(p, 0, ty, tz + 5.9, 1.3)
+        m.done('belfry', p)
+        return
+
+    # Cathedral: twin towers on the nave's front corners and a portal porch between them.
+    for sx, name in ((-1, 'towerL'), (1, 'towerR')):
+        p = m.part(name)
+        cx, cy, h, tz = sx * 3.35, -7.95, 1.68, 16.0
+        p.box((cx, cy, tz / 2), (2 * h, 2 * h, tz), wall)
+        p.box((cx, cy, .3), (2 * h + .2, 2 * h + .2, .6), trim)
+        for z in (6.0, 11.2):
+            p.box((cx, cy, z), (2 * h + .16, 2 * h + .16, .28), trim)
+        for n in ((0, -1), (0, 1), (1, 0), (-1, 0)):
+            o = (cx + n[0] * h, cy + n[1] * h)
+            opening(p, o, n, .75, 2.8, 12.3, 'dark', frame=trim, arch='pointed')
+            opening(p, o, n, .45, 1.7, 7.4, glass, arch='pointed')
+        if sx < 0:
+            plate(p, (cx, cy - h), (0, -1), circ(0, 9.2, .75, 8, math.pi / 8), 'clock', 0, .08)
+            p.box((cx, cy - h - .1, 9.45), (.07, .06, .5), 'dark')
+            p.box((cx + .16, cy - h - .1, 9.2), (.36, .06, .07), 'dark')
+        p.box((cx, cy, tz + .2), (2 * h + .35, 2 * h + .35, .4), trim)
+        for px in (-1, 1):
+            for py in (-1, 1):
+                qx, qy = cx + px * (h - .05), cy + py * (h - .05)
+                p.box((qx, qy, tz + .8), (.42, .42, .8), wall)
+                pyramid(p, qx, qy, .5, .5, tz + 1.2, tz + 2.4, ('roofLead', 'roofSlateDark'))
+        pyramid(p, cx, cy, 0, 0, tz + .4, tz + 10.0, ('roofLead', 'roofSlateDark'), n=8, r=1.75)
+        cross(p, cx, cy, tz + 9.9, 1.2)
+        m.done(name, p)
+    p = m.part('porch')
+    py0 = -12.2
+    pc, pd = (py0 + y0) / 2, y0 - py0
+    p.box((0, pc, 2.6), (3.3, pd, 5.2), wall)
+    p.box((0, pc, .3), (3.5, pd + .1, .6), trim)
+    opening(p, (0, py0), (0, -1), 1.9, 3.7, 0, 'woodDark', frame=trim, arch='pointed')
+    gable_roof(p, 0, pc, pd, 3.3, 5.2, 7.4, 'y', roof, over=.2, end_over=.2, th=.15, gable_key=wall, ends=(True, False))
+    cross(p, 0, py0 - .1, 7.3, 1.0)
+    p.box((0, py0 - .25, .1), (3.0, .5, .2), trim)
+    m.done('porch', p)
 
 
 # ------------------------------------------------------------------ cemetery (intrinsic L1, scaled to its area)
@@ -453,73 +483,83 @@ def cemetery(m):
 # ------------------------------------------------------------------ tavern
 # civicLocalParts: spine 2.2 x 5.0 U, front and back wings 4.6 x 1.55 U at cy -/+1.72 U.
 def tavern(m, L):
+    """L1 single-storey L plan, L2 two-storey T plan, L3 tall H plan (inside the H footprint)."""
     wwx, wcy, whd, sx_ = 4.6 * S / 2, 1.72 * S, 1.55 * S / 2, 2.2 * S / 2
+    yb = 5.0 * S / 2
     inset = .3 if L == 3 else 0
-    floor1 = {1: 4.0, 2: 3.0, 3: 3.0}[L]
-    eave = {1: 4.0, 2: 6.0, 3: 6.2}[L]
+    floor1 = {1: 3.4, 2: 3.0, 3: 3.0}[L]
+    eave = {1: 3.4, 2: 6.0, 3: 7.6}[L]
     lower = 'stoneRough' if L < 3 else 'stone'
     upper = {1: 'wood', 2: 'plaster', 3: 'plasterWarm'}[L]
     roof = {1: ('roofThatch', 'roofThatchDark'), 2: ('roofShingle', 'roofShingleDark'), 3: ('roofTile', 'roofTileDark')}[L]
     over, th = (.4, .3) if L == 1 else (.4, .2)
-    kw = 1.05
+    kw = {1: 1.0, 2: 1.05, 3: 1.2}[L]
     R = eave + whd * kw
     ks = (R - eave) / sx_
+    wings = {1: [(-1, -sx_, wwx)], 2: [(-1, -wwx, wwx)], 3: [(-1, -wwx, wwx), (1, -wwx, wwx)]}[L]
+    back_wing = L == 3
+    rows = {1: [], 2: [floor1 + .9], 3: [floor1 + .9, floor1 + 3.1]}[L]
 
-    for sgn, name in ((-1, 'wingFront'), (1, 'wingBack')):
+    for sgn, x0, x1 in wings:
+        name = 'wingFront' if sgn < 0 else 'wingBack'
         p = m.part(name)
-        cy = sgn * wcy
+        cy, xc, ln = sgn * wcy, (x0 + x1) / 2, x1 - x0
         if L == 1:
-            p.box((0, cy, .35), (2 * wwx, 2 * whd, .7), 'stoneRough')
-            p.box((0, cy, (eave + .7) / 2), (2 * wwx - .2, 2 * whd - .2, eave - .7), 'wood')
-            for x in [-wwx + .6 + i * 1.2 for i in range(int((2 * wwx - 1.2) / 1.2) + 1)]:   # board battens
+            p.box((xc, cy, .35), (ln, 2 * whd, .7), 'stoneRough')
+            p.box((xc, cy, (eave + .7) / 2), (ln - .2, 2 * whd - .2, eave - .7), 'wood')
+            for x in [x0 + .6 + i * 1.2 for i in range(int((ln - 1.2) / 1.2) + 1)]:   # board battens
                 for yy, n in ((cy - whd + .1, (0, -1)), (cy + whd - .1, (0, 1))):
-                    plate(p, (x, yy), n, rect_pts(.12, eave - .7, .7), 'woodDark', 0, .04)
+                    if n[1] < 0 or x > sx_ + .3:
+                        plate(p, (x, yy), n, rect_pts(.12, eave - .7, .7), 'woodDark', 0, .04)
         else:
-            p.box((0, cy, floor1 / 2), (2 * (wwx - inset), 2 * (whd - inset), floor1), lower)
-            p.box((0, cy, (floor1 + eave) / 2), (2 * wwx, 2 * whd, eave - floor1), upper)
-            for n, a, b in (((0, -1), (-wwx, cy - whd), (wwx, cy - whd)), ((0, 1), (wwx, cy + whd), (sx_, cy + whd)),
-                            ((0, 1), (-sx_, cy + whd), (-wwx, cy + whd)), ((1, 0), (wwx, cy - whd), (wwx, cy + whd)),
-                            ((-1, 0), (-wwx, cy + whd), (-wwx, cy - whd))):
-                if sgn > 0:   # back wing: its outer face is +y, inner faces -y
-                    n = (n[0], -n[1]) if n[1] else n
-                    a, b = (a[0], 2 * cy - a[1]), (b[0], 2 * cy - b[1])
+            p.box((xc, cy, floor1 / 2), (ln - 2 * inset, 2 * (whd - inset), floor1), lower)
+            p.box((xc, cy, (floor1 + eave) / 2), (ln, 2 * whd, eave - floor1), upper)
+            yo_, yi_ = cy + sgn * whd, cy - sgn * whd
+            faces = [((0, sgn), (x0, yo_), (x1, yo_)), ((1, 0), (x1, cy - whd), (x1, cy + whd)), ((-1, 0), (x0, cy + whd), (x0, cy - whd))]
+            if x0 < -sx_ - .1:
+                faces.append(((0, -sgn), (x0, yi_), (-sx_, yi_)))
+            if x1 > sx_ + .1:
+                faces.append(((0, -sgn), (sx_, yi_), (x1, yi_)))
+            for n, a, b in faces:
                 timber_wall(p, a, b, floor1, eave, n)
             if L == 3:   # jetty beam ends under the upper floor
-                for x in [-wwx + .4 + i * 1.0 for i in range(int((2 * wwx - .8) / 1.0) + 1)]:
+                for x in [x0 + .4 + i * 1.0 for i in range(int((ln - .8) / 1.0) + 1)]:
                     p.box((x, cy + sgn * (whd - .15), floor1 - .1), (.16, .4, .16), 'beam')
-        # Windows on the outer face, and on the ends.
         yo = cy + sgn * whd
         n = (0, sgn)
-        xs = (-6.0, -3.0, 3.0, 6.0) if sgn < 0 else (-6.0, -2.0, 2.0, 6.0)
-        for x in xs:
-            z0 = 1.3 if L == 1 else 1.0
-            opening(p, (x, yo - (n[1] * inset if L == 3 else 0)), n, .9, 1.1, z0, 'dark', frame='woodDark')
+        for x in (-6.0, -3.0, 3.0, 6.0) if sgn < 0 else (-6.0, -2.0, 2.0, 6.0):
+            if not (x0 + .9 < x < x1 - .9):
+                continue
+            z0 = 1.2 if L == 1 else 1.0
+            opening(p, (x, yo - n[1] * inset), n, .9, 1.1, z0, 'dark', frame='woodDark')
             if L == 1:
                 shutters(p, (x, yo), n, .9, 1.1, z0)
-            else:
-                opening(p, (x, yo), n, .9, 1.2, floor1 + .9, 'glass' if L == 3 else 'dark', frame='woodDark')
-                shutters(p, (x, yo), n, .9, 1.2, floor1 + .9)
+            for zr in rows:
+                opening(p, (x, yo), n, .9, 1.2, zr, 'glass' if L == 3 else 'dark', frame='woodDark')
+                shutters(p, (x, yo), n, .9, 1.2, zr)
                 if L == 3:
-                    p.box((x, yo + sgn * .15, floor1 + .78), (1.2, .28, .22), 'woodDark')
-                    p.box((x, yo + sgn * .15, floor1 + .95), (1.1, .22, .16), 'flowerRed')
-        for ex in (-1, 1):
-            opening(p, (ex * (wwx - (inset if L == 3 else 0)), cy), (ex, 0), .9, 1.1, 1.2 if L == 1 else 1.0, 'dark', frame='woodDark')
-        if sgn < 0:   # front door, sign and bench
-            fy = yo + (inset if L == 3 else 0)
+                    p.box((x, yo + sgn * .15, zr - .12), (1.2, .28, .22), 'woodDark')
+                    p.box((x, yo + sgn * .15, zr + .05), (1.1, .22, .16), 'flowerRed')
+        for ex in (x0, x1):
+            if abs(ex) > sx_ + .1:
+                en = (1 if ex > 0 else -1, 0)
+                opening(p, (ex - en[0] * inset, cy), en, .9, 1.1, 1.2 if L == 1 else 1.0, 'dark', frame='woodDark')
+                for zr in rows:
+                    opening(p, (ex, cy), en, .9, 1.2, zr, 'dark', frame='woodDark')
+        if sgn < 0:   # front door, sign, bench, barrel
+            fy = yo + inset
             opening(p, (0, fy), (0, -1), 1.6, 2.6, 0, 'woodDark', frame='stoneTrim' if L > 1 else 'beam', arch='round')
             p.box((0, fy - .2, .08), (2.4, .4, .16), 'stoneTrim')
-            p.box((2.0, yo - .2, floor1 + (.4 if L == 1 else -.3)), (.08, .4, .08), 'iron')
-            plate(p, (2.0, yo - .25), (1, 0), rect_pts(.4, .55, floor1 + (-.25 if L == 1 else -.95)),
+            p.box((2.0, yo - .2, floor1 + (-.6 if L == 1 else -.3)), (.08, .4, .08), 'iron')
+            plate(p, (2.0, yo - .25), (1, 0), rect_pts(.4, .55, floor1 + (-1.25 if L == 1 else -.95)),
                   {1: 'woodLight', 2: 'canvasRed', 3: 'gold'}[L], -.03, .03)
-            bench(p, -3.6, fy - .2, 2.2)
+            bench(p, -2.4 if L == 1 else -3.6, fy - .2, 2.0 if L == 1 else 2.2)
             barrel(p, 4.0, fy - .12, r=.3, h=.85)
             if L == 3:
                 for lx in (-1.3, 1.3):
                     p.box((lx, yo - .15, 2.9), (.08, .3, .08), 'iron')
                     p.box((lx, yo - .26, 2.65), (.26, .26, .4), 'lamp')
-        # Roof with gable ends.
-        q = p
-        gable_roof(q, 0, cy, 2 * wwx, 2 * whd, eave, R, 'x', roof, over=over, th=th, gable_key=upper)
+        gable_roof(p, xc, cy, ln, 2 * whd, eave, R, 'x', roof, over=over, th=th, gable_key=upper)
         if L == 3:   # dormers on the outer slope
             for x in (-4.6, 4.6):
                 dy = yo - sgn * 1.0
@@ -528,27 +568,44 @@ def tavern(m, L):
                 gable_roof(p, x, dy - sgn * .7, 1.4, 1.7, eave + 1.3, eave + 2.1, 'y', roof, over=.15, end_over=.15, th=.12, gable_key=upper)
         m.done(name, p)
 
-    # Spine between the wings; its roof runs into the wing roofs along the valleys.
+    # Spine: from the front wing back to the back wing (H) or to its own gable end (L, T).
     p = m.part('spine')
     ys = wcy - whd + .05
-    p.box((0, 0, floor1 / 2 if L > 1 else eave / 2), (2 * (sx_ - inset), 2 * ys, floor1 if L > 1 else eave), lower if L > 1 else 'wood')
-    if L > 1:
-        p.box((0, 0, (floor1 + eave) / 2), (2 * sx_, 2 * ys, eave - floor1), upper)
+    ye = ys if back_wing else yb
+    yc, yl = (ye - ys) / 2, ye + ys
+    if L == 1:
+        p.box((0, yc, .35), (2 * sx_, yl, .7), 'stoneRough')
+        p.box((0, yc, (eave + .7) / 2), (2 * sx_ - .2, yl, eave - .7), 'wood')
+    else:
+        p.box((0, yc, floor1 / 2), (2 * (sx_ - inset), yl, floor1), lower)
+        p.box((0, yc, (floor1 + eave) / 2), (2 * sx_, yl, eave - floor1), upper)
         for sxx in (-1, 1):
-            timber_wall(p, (sxx * sx_, -sxx * ys), (sxx * sx_, sxx * ys), floor1, eave, (sxx, 0), step=2.0)
+            a, b = ((sxx * sx_, -ys), (sxx * sx_, ye)) if sxx > 0 else ((sxx * sx_, ye), (sxx * sx_, -ys))
+            timber_wall(p, a, b, floor1, eave, (sxx, 0), step=2.0)
+        if not back_wing:
+            timber_wall(p, (sx_, ye), (-sx_, ye), floor1, eave, (0, 1))
+    wy = [0] if back_wing else [-.5, 4.5]
     for sxx in (-1, 1):
-        opening(p, (sxx * (sx_ - (inset if L == 3 else 0)), 0), (sxx, 0), 1.0, 1.2, 1.1, 'dark', frame='woodDark')
-        if L > 1:
-            opening(p, (sxx * sx_, 0), (sxx, 0), 1.0, 1.2, floor1 + .9, 'dark', frame='woodDark')
+        for y in wy:
+            opening(p, (sxx * (sx_ - inset), y), (sxx, 0), 1.0, 1.2, 1.1, 'dark', frame='woodDark')
+            for zr in rows:
+                opening(p, (sxx * sx_, y), (sxx, 0), 1.0, 1.2, zr, 'dark', frame='woodDark')
+    if not back_wing:
+        opening(p, (0, ye), (0, 1), 1.2, 2.2, 0, 'woodDark', frame='beam')
+        for zr in rows:
+            opening(p, (0, ye), (0, 1), .9, 1.2, zr, 'dark', frame='woodDark')
     zo = eave - over * ks
     y_r = wcy
     y_e = wcy - whd - over * ks / kw
+    yb_e, yb_r = (y_e, y_r) if back_wing else (ye + .35, ye + .35)
     for sxx, key in ((-1, roof[0]), (1, roof[1])):
-        slab(p, [(sxx * (sx_ + over), -y_e, zo), (sxx * (sx_ + over), y_e, zo), (0, y_r, R), (0, -y_r, R)], th, key)
+        slab(p, [(sxx * (sx_ + over), -y_e, zo), (sxx * (sx_ + over), yb_e, zo), (0, yb_r, R), (0, -y_r, R)], th, key)
+    if not back_wing:
+        p.quads([(-sx_, ye, eave), (sx_, ye, eave), (0, ye, R - th)], [(0, 1, 2)], upper)
     m.done('spine', p)
 
     p = m.part('chimneys')
-    spots = {1: [(2.2, 0)], 2: [(-5.5, -wcy), (5.5, wcy)], 3: [(-5.5, -wcy), (5.5, wcy), (0, 0)]}[L]
+    spots = {1: [(1.8, 4.0)], 2: [(-5.5, -wcy), (1.6, 5.0)], 3: [(-5.5, -wcy), (5.5, wcy), (0, 0)]}[L]
     for x, y in spots:
         p.box((x, y, (R + 1.2) / 2), (.85, .85, R + 1.2), 'stoneRough' if L < 3 else 'brick')
         p.box((x, y, R + 1.25), (1.05, 1.05, .2), 'stoneTrim')
