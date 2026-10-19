@@ -1,0 +1,25 @@
+name: Economy flows regression
+on:
+  push:
+    branches:
+      - feature/economic-balances-20261019
+  pull_request:
+    paths:
+      - 'src/settlement-economy.js'
+      - 'qa/economy*.cjs'
+      - '.github/workflows/economy-flows-regression.yml'
+  workflow_dispatch:
+jobs:
+  economic-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Economy and construction-worker regressions
+        run: |
+          node qa/economy-regression.cjs
+          node qa/economy-industries-regression.cjs
+          node qa/economy-balance-regression.cjs
