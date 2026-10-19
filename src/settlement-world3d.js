@@ -329,7 +329,7 @@
       if(isCivic(s))addCivic(m,s,winter);
       else if(window.ConquerIndustries?.is(s)){
         const def=ConquerIndustries.TYPES[s.type],g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
-        m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
+        if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
       }else if(s.type==='well'){
         const g=terrainElevation(s);
         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,'#8d816e','#655b4f','#74695a');
