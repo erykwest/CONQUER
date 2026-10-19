@@ -44,3 +44,9 @@
 ## 4. Evidence gate
 
 Per dichiarare la feature **COMPLETATA** annotare: branch, SHA commit, elenco test lanciati, pass/fail, link GitHub Actions, prove manuali con scenario e dispositivo/browser. Per l'attuale commit **solo Markdown**, registrare **PROGETTO / DOCUMENTAZIONE — nessuna implementazione e nessuna QA runtime**. Non aprire PR verso `main` né avviare Vercel automaticamente.
+
+## DEV palette Stone / Clay — regressione estetica (19/10/2026)
+
+- **Automatica (disponibile ed eseguita):** `node qa/clay-palette-regression.cjs`: Stone di default, conversione colori delle murature/merli e del piano terra L2–L4, tetti civici/castello/case in tegola, rispetto di tetti di paglia L1, legno e neve; switch reversibile che invalida scene cache, bitmap compositi e World3D senza cambiare strutture o risorse.
+- **CI eseguita:** [run 39271126852](https://github.com/erykwest/CONQUER/actions/runs/39271126852) **PASS** su `bbe5a27` inclusi controlli sintattici e regressioni esistenti Civil/Urban/Builder/Economy/Industries. È una prova automatica, non un confronto di screenshot.
+- **Smoke test browser ancora aperto:** confrontare stesso insediamento Stone/Clay in WebGL2 e Canvas2D, con castello misto per altezza/forme (torri rotonde/quadrate, mura, porte, built sections e cutaway), villaggi L1–L4, edifici civici, inverno/notte, tetti inclinati; controllare che selezione, salvataggio e costi restino invariati. La modalità è volutamente **globale e cosmética**, non il futuro materiale `brick` per singola struttura.

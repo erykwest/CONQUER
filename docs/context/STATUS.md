@@ -7,7 +7,7 @@
 
 - **CODICE su `clay`:** due pulsanti DEV Stone/Clay, mappa swatch in `src/settlement-core.js`, uso Canvas/WebGL2 e invalidazione delle relative cache. Mura/torri in color mattone; piani terra case L2–L4 color laterizio; tetti prima antracite color tegola.
 - **NESSUN GAMEPLAY CLAY:** cave, risorsa argilla, costi/mattoni individuali e coefficienti HP 80% restano soltanto design. Switch locale solo visivo.
-- **QA aggiunta:** `qa/clay-palette-regression.cjs` con workflow dedicato `clay-palette-regression.yml`; test runtime/browser da distinguere dagli esiti della CI.
+- **QA eseguita sulla HEAD `bbe5a27`:** [GitHub Actions #39271126852](https://github.com/erykwest/CONQUER/actions/runs/39271126852) **PASS**: syntax check di tutti i sorgenti/QA JS, palette DEV, Urban, densità, Builder, Civil annexes, Economia e Industrie. Corretto nel solo harness QA di Industrie l'adattamento al preflight degli annessi di Civil. **Collaudo visivo Canvas/WebGL2 nel browser non eseguito.**
 
 ## Clay — istruzioni sul ramo `clay` (19/10/2026)
 

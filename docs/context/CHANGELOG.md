@@ -5,7 +5,7 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 ## 2026-10-19 — clay: palette DEV Stone/Clay
 
 - Aggiunto selettore globale DEV con visualizzazione alternativa mattone/tegola e piani terra delle case L2–L4, colori condivisi tra Canvas e WebGL2, preference locale e invalidazione della scena; nessun cambiamento economico o all'integrità.
-- Aggiunta regressione e workflow GitHub Actions dedicata alla branch `clay`, preservando la suite `Civil`.
+- Aggiunta regressione e workflow GitHub Actions dedicata alla branch `clay`, preservando la suite `Civil`; [CI 39271126852](https://github.com/erykwest/CONQUER/actions/runs/39271126852) **PASS** sulla HEAD `bbe5a27`. Corretto il mock degli annessi civili nella QA industriale, senza alterare il runtime.
 
 ## 2026-10-19 — clay: nuove istruzioni di sviluppo (solo Markdown)
 
