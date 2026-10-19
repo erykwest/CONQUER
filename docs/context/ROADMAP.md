@@ -38,6 +38,9 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**Priorità aggiornata il 19/10/2026 (M1):** consumi e produzione misurati per bene → saldi e trend → integrazione dei costi reali di costruzione/fortificazioni → condizioni economiche di investimento L4 → attività private e auto-upgrade abitativi. Il nucleo dei saldi settimanali è nella branch `feature/economic-balances-20261019`, con [QA Node superata](https://github.com/erykwest/CONQUER/actions/runs/39253184968); non è ancora verificato nel browser. Senza stock unico Builder/economia e margine operativo non deve partire nessuna costruzione automatica.
+
+
 1. **Riconciliare main / urban e lavori aperti:** scegliere l'esatta base tecnica prima di nuove feature; leggere [STATUS.md](STATUS.md) e PR attive. Non assumere che il codice di /urban sia già su main.
 2. **Chiudere i conflitti bloccanti:** miniera `stone` vs `metal`; calendario dei campi (visuale vs ledger); inventario economico vs risorse di costruzione di test.
 3. **Verificare P0 Builder senza riscrivere sistemi esistenti:** terreno, foreste, popolazione e idoneità dei quattro poli. Usare `docs/feature-backlog.md` con criteri di accettazione e QA.
