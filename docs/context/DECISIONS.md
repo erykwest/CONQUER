@@ -3,6 +3,16 @@
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
 
+## Aggiornamento clay (19/10/2026) — solo design, non codice
+
+**D-CLAY-01 · DESIGN:** introdurre Argilla (`clay`) come materia prima e mattoni cotti (`brick`) come materiale alternativo alla pietra per costruzioni murarie e fortificazioni; variante rosso/marrone della muratura esistente e **durabilità massima 80%** rispetto alla pietra, senza duplicare geometrie o sistemi di combattimento.
+
+**D-CLAY-02 · DESIGN:** la Cava esistente può produrre `stone` sulla roccia ripida oppure `clay` vicino a fiumi/torrenti/laghi (**entro 6 U**); nessuna nuova cava tipologica né fornace/risorsa `brick`. I lavoratori rimangono L2 e si usa il ledger unico.
+
+**D-CLAY-03 · DESIGN:** la conversione riguarda tutti gli elementi che consumano pietra e ne cambia costi e rendering; materiali selezionabili per singolo elemento costruibile per consentire castelli misti. Porte lignee e strutture in legno restano indipendenti. Vasellame rimandato a un'eventuale specializzazione L3.
+
+**D-CLAY-04 · CONTRATTO TECNICO DA SVILUPPARE:** proteggere la compatibilità con `Civil`: `material` ha già il significato wood/stone su tower/gate e la migrazione attuale non accetta `brick`; `State.resources` e ledger sono separati; nessuna affermazione di implementazione finché non si risolvono questi punti con QA. Guida: [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md), [piano QA](../CLAY-REGRESSION-PLAN.md).
+
 ## Aggiornamento Civil (17/10/2026)
 
 **D-CIV-01 · DESIGN esplicito:** chiesa e locanda hanno lotti Voronoi di pertinenza; il mercato non ha un lotto privato. Applicazione attraverso il sistema catastale già condiviso con le abitazioni, senza duplicare recinzioni. La piazza è un nuovo edificio pubblico e non genera un lotto di pertinenza.

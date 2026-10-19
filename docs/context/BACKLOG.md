@@ -3,6 +3,19 @@
 > Raccoglie *idee, requisiti e dipendenze*. Un requisito elencato qui **non prova** assenza né completamento nel software.
 > Non duplicare il backlog di 22 feature del Builder già mantenuto in [docs/feature-backlog.md](../feature-backlog.md): quello rimane il riferimento dettagliato per territorio/urbanistica/economia locale/araldica.
 
+## Clay — nuove murature e argilla (branch `clay`, 19/10/2026)
+
+**DESIGN, NON IMPLEMENTATO.** Lavoro di documentazione derivato da `Civil`, senza modifiche runtime. Contratto completo in [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e verifiche in [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).
+
+| ID | Requisito | Dipendenze |
+|---|---|---|
+| CLAY-P0 | Cava con modalità pietra/argilla, idoneità argilla ≤ 6 U da rive di fiumi/torrenti/laghi | industrie, terreno, piazzamento |
+| CLAY-P1 | Bene economico `clay` e uso costruttivo in sostituzione di `stone` | ledger, `State.resources`, UI |
+| CLAY-P2 | `brick` selezionabile per ogni elemento murario, geometria riusata, palette marrone/terracotta Canvas + WebGL2 | Builder, renderer, save/migration |
+| CLAY-P3 | HP max componenti murarie `brick` pari all'80% di `stone`, gate/anta separati | integrità, matrice danni, assedi |
+| CLAY-P4 | Suite regressione e test visuali, senza rotture dello skeleton `Civil` | QA economia, placement, save/load |
+| CLAY-FUT | Vasellame eventualmente nella Bottega L3; nessuna filiera produttiva obbligatoria ora | futura scelta di scope |
+
 ## Builder, Landscape ed economia (dettaglio esistente)
 
 - **P0-01…08:** orografia; foreste funzionali; Village Core; abitazioni/tier; logging camp; Farm Hub; cava; miniera.
