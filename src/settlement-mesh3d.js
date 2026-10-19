@@ -41,14 +41,22 @@
   // view: {project(x,y,z)->{x,y}, depth(x,y,z) (larger = nearer), turns}. Meshes with
   // groups sort part by part (part centre first, then triangle).
   function drawMeshes(ctx,meshes,view,sprites=[]){
-    const items=[];
+    const items=[],turns=view.turns||0;
     for(const mesh of meshes){
       const {pos,col,gi,groups,groupBias}=mesh,n=col.length;
       const gd=groups?groups.map((c,i)=>view.depth(c[0],c[1],c[2])+(groupBias?.[i]||0)):null;
+      // Shaded fill colours depend only on the camera quarter-turn: kept on the mesh.
+      if(!mesh._fills||mesh._turns!==turns){
+        mesh._turns=turns;mesh._fills=new Array(n);
+        for(let t=0;t<n;t++){
+          const [nx,ny,nz]=triNormal(pos,t*9),[r,g,b]=rgb(col[t]),f=shadeFactor(nx,ny,nz,turns,[r,g,b]);
+          mesh._fills[t]='rgb('+(r*f|0)+','+(g*f|0)+','+(b*f|0)+')';
+        }
+      }
       for(let t=0;t<n;t++){
-        const o=t*9,[nx,ny,nz]=triNormal(pos,o);
+        const o=t*9;
         const td=view.depth((pos[o]+pos[o+3]+pos[o+6])/3,(pos[o+1]+pos[o+4]+pos[o+7])/3,(pos[o+2]+pos[o+5]+pos[o+8])/3);
-        items.push({mesh,t,d:gd?gd[gi[t]]:td,d2:gd?td:0,f:shadeFactor(nx,ny,nz,view.turns||0,rgb(col[t]))});
+        items.push({mesh,t,d:gd?gd[gi[t]]:td,d2:gd?td:0});
       }
     }
     for(const s of sprites)items.push({sprite:s,d:view.depth(s.x,s.y,s.z||0),d2:0});
@@ -57,8 +65,7 @@
     for(const it of items){
       if(it.sprite){ctx.restore();it.sprite.draw();ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;continue}
       const p=it.mesh.pos,o=it.t*9,a=view.project(p[o],p[o+1],p[o+2]),b=view.project(p[o+3],p[o+4],p[o+5]),c=view.project(p[o+6],p[o+7],p[o+8]);
-      const [r,g,bl]=rgb(it.mesh.col[it.t]),f=it.f;
-      ctx.fillStyle=ctx.strokeStyle='rgb('+(r*f|0)+','+(g*f|0)+','+(bl*f|0)+')';   // same-colour stroke hides seams
+      ctx.fillStyle=ctx.strokeStyle=it.mesh._fills[it.t];   // same-colour stroke hides seams
       ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.fill();ctx.stroke();
     }
     ctx.restore();

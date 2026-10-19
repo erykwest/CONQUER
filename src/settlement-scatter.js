@@ -202,7 +202,9 @@
   }
   function layout(){
     if(!M()||!Array.isArray(State.structures))return[];
-    const obs=buildObstacles(),out=[];
+    // Civic lot props (churchyard, inn tables) are placed first and kept clear of.
+    const pre=window.ConquerCivic3D?.allLotProps?.()||[];
+    const obs=buildObstacles(),out=pre.map(p=>({...p,civic:true}));
     const done=s=>!underConstruction(s);
     const fields=State.structures.filter(s=>s.type==='field'&&done(s));
     // Order = priority when space is contested: civic and work sites first, then yards.
@@ -216,7 +218,7 @@
     roadProps(out,obs);
     houseProps(out,obs,fields);
     fieldProps(out,obs,fields);
-    return out.slice(0,MAX_PROPS);
+    return out.slice(pre.length,pre.length+MAX_PROPS);
   }
   // Everything layout() reads, as a cheap string (callers cache layouts by it).
   function signature(){
