@@ -1,6 +1,6 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
-> Aggiornato: 2026-10-16  
+> Aggiornato: 2026-10-19
 > Ambito: territorio, foreste, urbanistica, economia locale, fortificazioni, araldica e ambientazione.  
 > Documento di pianificazione: **non** equivale a un audit funzionale completo né a un elenco di difetti confermati.
 
@@ -29,6 +29,7 @@
 ## P0 — Fondamenta territoriali ed economiche
 
 - [ ] **P0-01 — Orografia base e idoneità del terreno.** Riutilizzare il rilievo esistente, verificando quote/pendenze/scarpate per collocamento edifici, percorsi, estrazione e futura difesa. **Accettazione:** lo stesso contratto di terreno governa validazione del Builder, accessibilità e rendering; i salvataggi precedenti restano leggibili.
+- [x] **P0-01a — Terraforming del giocatore (branch `terraforming`).** Scavo/innalzamento e terrazzamento murato con ghost; divieto di sovrapporre due terrazzamenti murati; magnete muro a filo; persistenza e rendering Canvas/WebGL2. **Accettazione verificata sul branch:** `qa/terraforming-regression.cjs` (7 controlli), intera QA deterministica e prova browser Chromium. Rimane fuori da `main` fino a integrazione esplicita.
 - [ ] **P0-02 — Foreste procedurali funzionali.** Completare, dove mancante, densità e sfruttamento: abbattimento, produzione legna, liberazione del terreno e rigenerazione secondo regole definite. **Accettazione:** produzione e stato della foresta rimangono coerenti dopo reload, senza spawn su edifici o strade non consentite.
 - [ ] **P0-03 — Pozzo / Village Core.** Consolidare la fondazione e la crescita progressiva già avviata, anziché ricreare un secondo generatore. **Accettazione:** niente lotti/edifici sovrapposti, crescita deterministica per seed, accessi stradali e persistenza validi.
 - [ ] **P0-04 — Abitazioni L1–L4 e popolazione produttiva.** Consolidare la coerenza tra livello abitazione, capienza, tier/professione e disponibilità di lavoro; separare status/tier dal lavoro corrente, se non ancora operativo. **Accettazione:** popolazione disponibile e lavoratori assegnabili coerenti con case ed economia; i tier superiori possono coprire lavori inferiori dove previsto.

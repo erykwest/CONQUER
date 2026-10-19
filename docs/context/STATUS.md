@@ -1,7 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
-> Snapshot **aggiornato il 16/10/2026** attraverso commit e PR GitHub; controllo documentale, **nessuna nuova esecuzione locale di QA o browser** in questa revisione.
-> Base verificata: `main` a [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99) (16/10, 15:16 UTC). Il repository può cambiare: ricontrollare HEAD prima di intervenire.
+> Snapshot **aggiornato il 19/10/2026** per il lavoro Terraforming; le sezioni storiche del 16/10 mantengono i propri limiti di verifica.
+> Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
 ## Semaforo epistemico
 
@@ -10,6 +10,15 @@
 - **BRANCH** — cambiamenti specifici fuori da `main`; non sono automaticamente rilasciati.
 - **PROGETTO** — proposta/decisione descritta in documentazione senza prova end-to-end.
 - **CHIUSO** — riservato alle feature con PR/commit e test/regressioni riscontrati e aggiornati in questa tabella.
+
+## Terraforming — branch `terraforming` (19/10/2026)
+
+- **BRANCH + CODICE:** due modalità nel Builder, **Terreno** e **Terrazzamento murato**, entrambe con ghost della quota finale, raggio 2/4/6 U e scavo/innalzamento di 1 U.
+- **VINCOLO:** il piazzamento di un terrazzamento murato sopra un altro è respinto prima del commit, evitando accumuli anomali e aree invalicabili. Il bordo fornisce magneti alle mura; il loro asse viene traslato di mezzo spessore così che la faccia esterna rimanga a filo.
+- **CONTRATTO TECNICO:** gli interventi persistono in `State.relief.terraforming`; `terrainElevation` e `terrainSlopeKind` restano i punti condivisi per regole, Canvas e mesh WebGL2. Il ghost non muta il rilievo e non invalida cache o navigazione durante il movimento del puntatore.
+- **QA LOCALE PASS:** tutte le suite `qa/*.cjs`, inclusi i 7 controlli di `qa/terraforming-regression.cjs`; `node --check` su tutti i file `src/*.js`; `git diff --check`.
+- **BROWSER PASS (Chromium via HTTP):** ghost valido/rosso, rifiuto sovrapposizione, persistenza dopo reload e muro agganciato a due vertici del terrazzamento con quota H1 e faccia a filo. Nessun errore applicativo in console; osservato soltanto l'avviso Chromium non bloccante su `powerPreference`.
+- **LIMITE DI RILASCIO:** commit `fa9ef0d` è fuori da `main`; nessuna PR, merge o pubblicazione effettuata in questo aggiornamento.
 
 ## Diagnosi e fix in corso — crescita e ordini su main (16/10/2026)
 

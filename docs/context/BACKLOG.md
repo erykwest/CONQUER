@@ -6,6 +6,7 @@
 ## Builder, Landscape ed economia (dettaglio esistente)
 
 - **P0-01…08:** orografia; foreste funzionali; Village Core; abitazioni/tier; logging camp; Farm Hub; cava; miniera.
+- **P0-01a Terraforming:** completato e verificato sul branch `terraforming` (`fa9ef0d`), con due modalità, ghost, blocco dei terrazzamenti murati sovrapposti e magnete delle mura a filo; non ancora integrato in `main`.
 - **P1-09…13:** Built Sections; fabbro; mercato; palizzate; ponti.
 - **P2-14…20:** fossati, levatoi, basamenti, servizi, araldica SVG e propagazione.
 - **P3-21…22:** sette alberi SVG e circa 25 scatter antropici.
