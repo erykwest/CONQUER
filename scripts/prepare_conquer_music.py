@@ -133,13 +133,29 @@ def conversion(file: Path, output: Path, args: argparse.Namespace) -> dict[str, 
     os.close(fd)
     tmp = Path(temp_name)
     try:
-        execute([
-            "ffmpeg", "-hide_banner", "-nostats", "-loglevel", "error", "-y",
-            "-i", str(file), "-map", "0:a:0", "-vn", "-map_metadata", "0",
-            "-af", ",".join(filters + [norm]), "-ar", str(rate),
-            "-ac", str(channels), "-c:a", "libmp3lame", "-b:a", f"{bit_rate}k",
-            "-id3v2_version", "3", str(tmp),
-        ])
+        peak_correction_db = 0.0
+        final: dict[str, Any] | None = None
+        # L'encoder MP3 può introdurre overshoot inter-sample. Se accade,
+        # ricodifica sempre dall'originale con la compensazione necessaria,
+        # evitando una seconda generazione lossy.
+        for _ in range(3):
+            encode_filters = filters + [norm]
+            if peak_correction_db:
+                encode_filters.append(f"volume={peak_correction_db:g}dB")
+            execute([
+                "ffmpeg", "-hide_banner", "-nostats", "-loglevel", "error", "-y",
+                "-i", str(file), "-map", "0:a:0", "-vn", "-map_metadata", "0",
+                "-af", ",".join(encode_filters), "-ar", str(rate),
+                "-ac", str(channels), "-c:a", "libmp3lame", "-b:a", f"{bit_rate}k",
+                "-id3v2_version", "3", str(tmp),
+            ])
+            final = loudnorm_stats(tmp, [], args.target_lufs, args.peak_dbtp)
+            excess = float(final["input_tp"]) - args.peak_dbtp
+            if excess <= 0.02:
+                break
+            peak_correction_db -= excess + 0.05
+        if final is None or float(final["input_tp"]) > args.peak_dbtp + 0.02:
+            raise ValueError("Il true peak finale supera il limite dopo la compensazione MP3")
         after = probe(tmp)
         output_duration = float(after["format"]["duration"])
         output_channels = int(after["streams"][0]["channels"])
@@ -149,8 +165,6 @@ def conversion(file: Path, output: Path, args: argparse.Namespace) -> dict[str, 
             raise ValueError("Il numero di canali audio è cambiato")
         if tmp.stat().st_size == 0:
             raise ValueError("Output vuoto")
-        # Verifica la loudness del MP3 finale, dopo la codifica (anche i picchi).
-        final = loudnorm_stats(tmp, [], args.target_lufs, args.peak_dbtp)
         result = {
             "original_bytes": file.stat().st_size,
             "processed_bytes": tmp.stat().st_size,
@@ -161,6 +175,7 @@ def conversion(file: Path, output: Path, args: argparse.Namespace) -> dict[str, 
             "input_lufs": float(analysis["input_i"]),
             "output_lufs": float(final["input_i"]),
             "output_true_peak_dbtp": float(final["input_tp"]),
+            "peak_correction_db": round(peak_correction_db, 2),
         }
         # Solo dopo tutti i controlli l'output diventa definitivo.
         tmp.replace(output)

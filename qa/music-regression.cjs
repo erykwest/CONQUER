@@ -20,15 +20,24 @@ const counts=tracks.reduce((a,x)=>(a[x.season]=(a[x.season]||0)+1,a),{});
 assert.equal(JSON.stringify(counts),JSON.stringify({spring:3,summer:2,autumn:2,winter:2}));
 const report=JSON.parse(fs.readFileSync(path.join(root,'docs/music-compression-report.json'),'utf8'));
 assert.equal(report.assets.length,9);
+assert.equal(report.loudness_target_lufs,-18);
+assert.equal(report.peak_ceiling_dbtp,-1.5);
+assert.deepEqual(report.eq_db,{bass:0,mid:0,high:0});
 for(const clip of tracks){
  assert.ok(Number.isFinite(clip.gainDb)&&Number.isFinite(clip.lufs)&&Number.isFinite(clip.truePeak));
- assert.ok(clip.truePeak+clip.gainDb<=-2.99,'peak-safe gain '+clip.id);
+ assert.equal(clip.gainDb,0,'processed file needs no runtime trim '+clip.id);
+ assert.ok(Math.abs(clip.lufs-report.loudness_target_lufs)<=.75,'loudness target '+clip.id);
+ assert.ok(clip.truePeak<=report.peak_ceiling_dbtp+.02,'peak ceiling '+clip.id);
  const p=path.join(root,'src/assets/sounds/music',clip.file),bytes=fs.readFileSync(p);
  assert.ok(bytes.length>10000,'real decoded MP3 '+clip.id);
  assert.ok((bytes[0]===0x49&&bytes[1]===0x44&&bytes[2]===0x33)||(bytes[0]===0xff&&(bytes[1]&0xe0)===0xe0),'MP3 header '+clip.id);
  const entry=report.assets.find(x=>x.id===clip.id);
  assert.ok(entry&&entry.stored_bytes===bytes.length);
+ assert.equal(entry.lufs,clip.lufs);
+ assert.equal(entry.true_peak_dbtp,clip.truePeak);
+ assert.equal(entry.reencoded,true);
 }
+assert.ok(!fs.existsSync(path.join(root,'src','assets','sounds','music',report.duplicate.file)),'byte-identical duplicate excluded');
 assert.ok(!fs.existsSync(path.join(root,'.music-staging')),'raw transfer chunks removed from deploy tree');
 vm.runInNewContext(source('settlement-music.js'),sandbox);
 const api=window.ConquerMusic;
