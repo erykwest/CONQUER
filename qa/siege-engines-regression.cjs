@@ -17,14 +17,14 @@ for(const [name,e] of Object.entries(M.engines)){
     assert.equal(p.v.length,p.c.length*9,name+' '+part+': nine coordinates per triangle');
     assert.ok(p.c.every(i=>i>=0&&i<M.palette.length),name+' '+part+': palette colours');
   }
-  assert.equal(e.wheels.at.length,name==='ladder'?0:4,name+(name==='ladder'?' is carried':' rolls on four wheels'));
+  assert.equal(e.wheels.at.length,{ladder:0,mantlet:2}[name]??4,name+' wheels');
   assert.ok(e.crew.length>=2,name+' has a crew');
   for(const mode of ['idle','move','fire','setup'])for(let t=0;t<13;t+=.37){
     const m=SE.triangles(name,{x:3,y:4,heading:t},{mode,t,distance:t});
     assert.ok(m.pos.every(Number.isFinite),name+' '+mode+' is finite');
   }
 }
-console.log('PASS five engines, well-formed parts, every pose finite');
+console.log('PASS six engines, well-formed parts, every pose finite');
 
 // Helpers: z range of one part in a posed engine.
 const partRange=(e,part)=>{let s=0;for(const [n,p] of Object.entries(M.engines[e].parts)){if(n===part)return[s,s+p.c.length*9];if(n!=='wheel')s+=p.c.length*9}};
@@ -82,5 +82,6 @@ const br=partRange('tower','bridge');
 assert.ok(xMax(down,br)>xMax(tw,br)+.5,'the bridge drops forward');
 assert.ok(SE.pose('ladder',{mode:'idle'}).up===0&&SE.pose('ladder',{mode:'fire',t:.6*7}).up===1,'the ladder goes up');
 const lr=partRange('ladder','ladder');
-assert.ok(zMax(SE.triangles('ladder',{x:0,y:0},{mode:'fire',t:.6*7}),lr)>2.1,'raised, it reaches over a stone wall');
+const ladTop=zMax(SE.triangles('ladder',{x:0,y:0},{mode:'fire',t:.6*7}),lr);
+assert.ok(ladTop>SE.WALL_WALK+.15&&ladTop<2.1,'raised, it reaches over the low (H1) wall, never the high (H2) one');
 console.log('PASS siege tower bridge and scaling ladder');

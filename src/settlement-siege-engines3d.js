@@ -13,7 +13,7 @@
   const ph=(u,a,b)=>ease(clamp01((u-a)/(b-a))),lerp=(a,b,s)=>a+(b-a)*s;
   // Action cycles (seconds) and the angles they sweep (radians; positive pitch =
   // the forward end of a part goes down about its pivot).
-  const CYCLE={ram:1.8,catapult:4.2,trebuchet:6,tower:6,ladder:7};
+  const CYCLE={ram:1.8,catapult:4.2,trebuchet:6,tower:6,ladder:7,mantlet:4};
   // Trebuchet set-up loop for {mode:'setup'}: packed, unpack, set up, pack again.
   const SETUP=13;
   // Ram: drawn back on its ropes, then driven forward into the gate.
@@ -78,28 +78,42 @@
       slide:ph(u,.85,.92),raise:ph(u,.92,1),hangers:u>.995,stone:shot.stone,
       wheelOut:ph(u,0,.12),wheelFlat:ph(u,.12,.22)};
   }
-  // Siege tower: the bridge drops forward onto the wall, holds, and is hauled up.
-  const BRIDGE_DOWN=Math.PI/2+.08;
-  function towerPose(k){
-    if(k<.25)return{bridge:BRIDGE_DOWN*easeIn(k/.25)};
-    if(k<.75)return{bridge:BRIDGE_DOWN};
-    return{bridge:BRIDGE_DOWN*(1-ease((k-.75)/.25))};
+  // Tower and ladder are sized for the low (H1) wall: its walk is 3.4 m up.
+  // High (H2) walls cannot be scaled, only battered down.
+  const WALL_WALK=3.4/3.5;
+  // Siege tower: the bridge drops forward into a crenel and rests on the wall
+  // walk, holds, and is hauled up. state.bridge (0 up .. 1 down) overrides.
+  function bridgeDown(){
+    const e=M().engines.tower;
+    return Math.PI/2+Math.asin(clamp01((e.pivots.bridge[2]-WALL_WALK)/e.rig.bridgeLen));
+  }
+  function towerPose(state){
+    const D=bridgeDown();
+    if(Number.isFinite(state.bridge))return{bridge:D*ease(clamp01(state.bridge))};
+    if(state.mode!=='fire')return{bridge:0};
+    const k=((state.t||0)%CYCLE.tower)/CYCLE.tower;
+    if(k<.25)return{bridge:D*easeIn(k/.25)};
+    if(k<.75)return{bridge:D};
+    return{bridge:D*(1-ease((k-.75)/.25))};
   }
   // Scaling ladder: carried flat on the shoulders; the foot is planted and the
   // ladder swung up to lean on the wall, held while the men climb, then lowered.
-  const LADDER_CARRY={x:-4.3/3.5,z:1.45/3.5,a:Math.PI/2},LADDER_UP={x:-1.3/3.5,z:0,a:.3};
+  // Raised it leans at LADDER_LEAN with its foot LADDER_FOOT ahead of the engine
+  // origin. state.up (0 carried .. 1 raised) overrides the 'fire' loop.
+  const LADDER_LEAN=.3,LADDER_FOOT=.6/3.5;
   function ladderPose(state){
     const fire=state.mode==='fire',k=fire?((state.t||0)%CYCLE.ladder)/CYCLE.ladder:0;
-    const up=!fire?0:k<.08?0:k<.4?ease((k-.08)/.32):k<.82?1:1-ease((k-.82)/.18);
-    const bob=state.mode==='move'?Math.sin((state.distance||0)*9)*.012:0;
-    return{up,ladder:{x:lerp(LADDER_CARRY.x,LADDER_UP.x,up),z:lerp(LADDER_CARRY.z,LADDER_UP.z,up)+bob*(1-up),a:lerp(LADDER_CARRY.a,LADDER_UP.a,up)}};
+    const up=Number.isFinite(state.up)?ease(clamp01(state.up)):!fire?0:k<.08?0:k<.4?ease((k-.08)/.32):k<.82?1:1-ease((k-.82)/.18);
+    const bob=state.mode==='move'?Math.sin((state.distance||0)*9)*.012:0,L=M().engines.ladder.rig.len;
+    return{up,ladder:{x:lerp(-L/2,LADDER_FOOT,up),z:lerp(1.45/3.5,0,up)+bob*(1-up),a:lerp(Math.PI/2,LADDER_LEAN,up)}};
   }
   // Pose for {mode:'idle'|'move'|'fire'|'setup', t, distance, deploy}.
   function pose(engine,state={}){
     const fire=state.mode==='fire',k=fire?((state.t||0)%CYCLE[engine])/CYCLE[engine]:0;
     if(engine==='ram')return fire?ramPose(k):{ram:0};
     if(engine==='catapult')return catapultPose(k);
-    if(engine==='tower')return fire?towerPose(k):{bridge:0};
+    if(engine==='tower')return towerPose(state);
+    if(engine==='mantlet')return{};
     if(engine==='ladder')return ladderPose(state);
     return trebuchetPose(state);
   }
@@ -195,12 +209,12 @@
     return{pos,col,gi,groups,bias:new Array(col.length).fill(0),outward:[]};
   }
   // Crew standing at the engine (world); the ladder men move to its foot when it goes up.
-  const LADDER_FOOT=[[-2.1/3.5,.5/3.5],[-2.1/3.5,-.5/3.5]];
+  const LADDER_CREW=[[-.2/3.5,.55/3.5],[-.2/3.5,-.55/3.5]];
   function crew(engine,placeAt,state={}){
     const c=Math.cos(placeAt.heading||0),s=Math.sin(placeAt.heading||0);
     const up=engine==='ladder'?ladderPose(state).up:0;
     return M().engines[engine].crew.map(([x,y,z],i)=>{
-      if(up&&LADDER_FOOT[i]){x=lerp(x,LADDER_FOOT[i][0],up);y=lerp(y,LADDER_FOOT[i][1],up)}
+      if(up&&LADDER_CREW[i]){x=lerp(x,LADDER_CREW[i][0],up);y=lerp(y,LADDER_CREW[i][1],up)}
       return{x:(placeAt.x||0)+x*c-y*s,y:(placeAt.y||0)+x*s+y*c,z:(placeAt.z||0)+z};
     });
   }
@@ -215,5 +229,5 @@
     const c=Math.cos(placeAt.heading||0),s=Math.sin(placeAt.heading||0),d=RANGE[engine]*f,h=RANGE[engine]*.35*4*f*(1-f)+(engine==='catapult'?.95:1.6);
     return{x:(placeAt.x||0)+d*c,y:(placeAt.y||0)+d*s,z:(placeAt.z||0)+h,f};
   }
-  window.ConquerSiegeEngines3D={triangles,pose,crew,projectile,deploy:deployOf,CYCLE,SETUP};
+  window.ConquerSiegeEngines3D={triangles,pose,crew,projectile,deploy:deployOf,CYCLE,SETUP,WALL_WALK,LADDER_LEAN,LADDER_FOOT};
 })();

@@ -255,43 +255,47 @@ def build_trebuchet(root, off):
 
 
 # ------------------------------------------------------------------ siege tower
+# Sized for the low (H1) wall: walkway 3.4 m, merlons to 4.2 m. High (H2) walls
+# cannot be scaled, only battered down.
+WALL_WALK = 3.4
+
+
 def build_tower(root, off):
-    """Assault tower: tapered timber frame clad in hides on four wheels, three
-    floors, a parapet on top and a drawbridge hinged on the front at wall height
-    (modelled raised; it is lowered forward onto the wall)."""
+    """Assault tower: tapered timber frame clad in hides on four wheels, two
+    storeys, a parapet on top and a drawbridge hinged on the front above the
+    wall walk (modelled raised; it is lowered forward into a crenel)."""
     parts, pivots = {}, {}
-    B, T, TOP, PAR = 1.9, 1.5, 7.6, 8.8           # base / top half-width, platform, parapet
+    B, T, TOP, PAR = 1.8, 1.5, 3.9, 5.0           # base / top half-width, platform, parapet
+    BRIDGE = 2.4
     half = lambda z: B + (T - B) * (z - .7) / (PAR - .7)
     p = part(root, 'frame', 'tower', off)
     for sx in (-1, 1):
         for sy in (-1, 1):
-            post(p, (sx * B, sy * B, .5), (sx * T, sy * T, PAR), .32, 'wood')          # corner posts
-    for z in (.7, 3.2, 5.5, TOP):
+            post(p, (sx * B, sy * B, .5), (sx * T, sy * T, PAR), .3, 'wood')           # corner posts
+    for z in (.7, 2.3, TOP):
         h = half(z)
         for s in (-1, 1):
-            p.box((0, s * h, z), (2 * h + .3, .26, .26), 'woodDark')                    # floor ring beams
-            p.box((s * h, 0, z), (.26, 2 * h + .3, .26), 'woodDark')
+            p.box((0, s * h, z), (2 * h + .3, .24, .24), 'woodDark')                    # floor ring beams
+            p.box((s * h, 0, z), (.24, 2 * h + .3, .24), 'woodDark')
     p.box((0, 0, TOP + .02), (2 * T, 2 * T, .12), 'woodLight')                         # top floor
-    for x in (-1.1, 1.1):
+    for x in (-1.0, 1.0):
         p.box((x, 0, .45), (.16, 2 * B + 1.0, .16), 'iron')                            # axles
     # Hide cladding on sides and back, front up to the bridge; dark seams.
     for (ax, s) in (('y', 1), ('y', -1), ('x', -1), ('x', 1)):
-        a, b = (.9, TOP) if not (ax == 'x' and s == 1) else (.9, TOP - .05)
+        a, b = .9, TOP - (.05 if (ax == 'x' and s == 1) else 0)
         pa, pb = half(a) + .14, half(b) + .14
         A = (0, s * pa, a) if ax == 'y' else (s * pa, 0, a)
         Bp = (0, s * pb, b) if ax == 'y' else (s * pb, 0, b)
         p.taper(A, Bp, 2 * pa, .08, 2 * pb, .08, 'hide')
-        for z in (2.0, 4.3, 6.5):
+        for z in (1.6, 3.1):
             h = half(z) + .2
             c = (0, s * h, z) if ax == 'y' else (s * h, 0, z)
-            sz = (2 * h, .06, .12) if ax == 'y' else (.06, 2 * h, .12)
-            p.box(c, sz, 'hideDark')
+            p.box(c, (2 * h, .06, .12) if ax == 'y' else (.06, 2 * h, .12), 'hideDark')
         if ax != 'x' or s != 1:
-            for z in (4.4, 6.6):                                                         # arrow slits
-                h = half(z) + .2
-                for o in (-.6, .6):
-                    c = (o, s * h, z) if ax == 'y' else (s * h, o, z)
-                    p.box(c, (.12, .05, .5) if ax == 'y' else (.05, .12, .5), 'leather')
+            for o in (-.6, .6):                                                          # arrow slits
+                h = half(2.7) + .2
+                c = (o, s * h, 2.7) if ax == 'y' else (s * h, o, 2.7)
+                p.box(c, (.12, .05, .45) if ax == 'y' else (.05, .12, .45), 'leather')
     # Parapet with merlons on three sides (the front is the bridge).
     for (ax, s) in (('y', 1), ('y', -1), ('x', -1)):
         c = (0, s * T, TOP + .45) if ax == 'y' else (s * T, 0, TOP + .45)
@@ -299,53 +303,88 @@ def build_tower(root, off):
         for o in (-1.0, 0, 1.0):
             c = (o, s * T, TOP + 1.0) if ax == 'y' else (s * T, o, TOP + 1.0)
             p.box(c, (.5, .16, .4) if ax == 'y' else (.16, .5, .4), 'wood')
-    # Banner pole on the back corner.
-    post(p, (-T, T, PAR), (-T, T, PAR + 2.0), .08, 'woodDark')
-    p.box((-T + .45, T, PAR + 1.6), (.8, .04, .55), 'team')
+    post(p, (-T, T, PAR), (-T, T, PAR + 1.8), .08, 'woodDark')                         # banner
+    p.box((-T + .45, T, PAR + 1.45), (.8, .04, .55), 'team')
     parts['frame'] = p.finish()
 
     p = part(root, 'bridge', 'tower', off)
-    p.box((T + .12, 0, TOP + 1.5), (.14, 2.2, 3.0), 'woodLight')                      # planks, raised
-    for z in (TOP + .6, TOP + 1.6, TOP + 2.6):
-        p.box((T + .22, 0, z), (.08, 2.3, .16), 'wood')                               # battens
+    p.box((T + .12, 0, TOP + BRIDGE / 2), (.14, 2.0, BRIDGE), 'woodLight')             # planks, raised
+    for z in (TOP + .5, TOP + 1.3, TOP + 2.1):
+        p.box((T + .22, 0, z), (.08, 2.1, .16), 'wood')                               # battens
     for s in (-1, 1):
-        p.box((T + .22, s * 1.0, TOP + 2.9), (.1, .1, .12), 'iron')                   # chain rings
+        p.box((T + .22, s * .9, TOP + BRIDGE - .1), (.1, .1, .12), 'iron')            # chain rings
     parts['bridge'] = p.finish()
     pivots['bridge'] = u(T + .12, 0, TOP)
 
     p = part(root, 'wheel', 'tower', off)
-    wheel(p, .6, half=.12, spokes=8)
+    wheel(p, .55, half=.12, spokes=8)
     parts['wheel'] = p.finish()
-    meta = {'wheels': {'part': 'wheel', 'r': u(.6)[0], 'at': [u(x, s * (B + .32), .6) for x in (-1.1, 1.1) for s in (-1, 1)]},
-            'crew': [u(-2.7, y, 0) for y in (-1.0, 0, 1.0)], 'length': u(9.0)[0]}
+    meta = {'wheels': {'part': 'wheel', 'r': u(.55)[0], 'at': [u(x, s * (B + .3), .55) for x in (-1.0, 1.0) for s in (-1, 1)]},
+            'crew': [u(-2.5, y, 0) for y in (-1.0, 0, 1.0)], 'length': u(6.4)[0],
+            'rig': {'bridgeLen': u(BRIDGE)[0], 'deck': u(TOP + .08)[0], 'halfTop': u(T)[0], 'halfBase': u(B)[0]}}
+    return parts, pivots, meta
+
+
+# ------------------------------------------------------------------ mantlet
+def build_mantlet(root, off):
+    """Mantlet: a slanted plank shield on two wheels with push handles behind;
+    archers shelter behind it and shoot over or round it."""
+    parts, pivots = {}, {}
+    p = part(root, 'frame', 'mantlet', off)
+    bottom, top = Vector((.35, 0, .2)), Vector((-.2, 0, 2.3))
+    p.taper(bottom, top, 2.6, .12, 2.6, .12, 'wood')                                 # the shield
+    d = (top - bottom).normalized(); n = Vector((d.z, 0, -d.x))                       # front normal (+x)
+    for y in (-1.1, -.55, 0, .55, 1.1):
+        p.beam(bottom + n * .07 + Vector((0, y, 0)), top + n * .07 + Vector((0, y, 0)), .07, .04, 'woodDark')
+    for k in (.25, .8):
+        c = bottom.lerp(top, k) + n * .1
+        p.beam(c + Vector((0, -1.3, 0)), c + Vector((0, 1.3, 0)), .1, .06, 'woodDark')  # cross battens
+    c = bottom.lerp(top, .55) + n * .1
+    p.beam(c + Vector((0, -1.3, 0)), c + Vector((0, 1.3, 0)), .2, .05, 'team')         # coloured band
+    for y in (-.6, .6):
+        c = bottom.lerp(top, .7) + n * .13
+        p.box(tuple(c + Vector((0, y, 0))), (.05, .28, .07), 'leather')                # sighting slits
+    for s in (-1, 1):
+        post(p, (-.1, s * .9, 1.6), (-1.0, s * .9, .35), .1, 'woodDark')               # rear props
+        post(p, (.05, s * .55, .75), (-1.45, s * .45, .95), .09, 'wood')               # push handles
+    p.box((.1, 0, .45), (.12, 3.0, .12), 'iron')                                       # axle
+    parts['frame'] = p.finish()
+    p = part(root, 'wheel', 'mantlet', off)
+    wheel(p, .45, half=.07, spokes=6)
+    parts['wheel'] = p.finish()
+    meta = {'wheels': {'part': 'wheel', 'r': u(.45)[0], 'at': [u(.1, s * 1.42, .45) for s in (-1, 1)]},
+            'crew': [u(-1.75, .45, 0), u(-1.75, -.45, 0), u(-1.0, 1.05, 0), u(-1.0, -1.05, 0)], 'length': u(3.0)[0]}
     return parts, pivots, meta
 
 
 # ------------------------------------------------------------------ ladder
+LADDER_LEN = 4.6
+
+
 def build_ladder(root, off):
     """Scaling ladder with iron hooks, modelled standing with its foot at the
     origin (pivot); carried flat on the shoulders, raised against the wall."""
     parts, pivots = {}, {}
-    L = 8.6
+    L = LADDER_LEN
     p = part(root, 'ladder', 'ladder', off)
     for s in (-1, 1):
-        post(p, (0, s * .3, 0), (0, s * .24, L), .1, 'woodLight')                     # rails
-        p.beam((0, s * .24, L - .1), (.35, s * .24, L + .05), .05, .05, 'iron')        # hooks
-        p.beam((.35, s * .24, L + .05), (.4, s * .24, L - .2), .05, .05, 'iron')
+        post(p, (0, s * .3, 0), (0, s * .26, L), .1, 'woodLight')                     # rails
+        p.beam((0, s * .26, L - .1), (.3, s * .26, L + .05), .05, .05, 'iron')         # hooks
+        p.beam((.3, s * .26, L + .05), (.35, s * .26, L - .18), .05, .05, 'iron')
     z = .35
     while z < L - .1:
-        w = .3 + (.24 - .3) * z / L
+        w = .3 + (.26 - .3) * z / L
         p.box((0, 0, z), (.06, 2 * w, .06), 'wood')                                   # rungs
         z += .38
     parts['ladder'] = p.finish()
     pivots['ladder'] = u(0, 0, 0)
     meta = {'wheels': {'part': None, 'r': 0, 'at': []},
-            'crew': [u(-2.4, .45, 0), u(2.0, -.45, 0)], 'length': u(8.8)[0]}
+            'crew': [u(-1.5, .45, 0), u(1.3, -.45, 0)], 'length': u(4.8)[0], 'rig': {'len': u(L)[0]}}
     return parts, pivots, meta
 
-
 ENGINES = [('ram', build_ram, (0, 0, 0)), ('catapult', build_catapult, (0, 6, 0)), ('trebuchet', build_trebuchet, (0, 13, 0)),
-           ('tower', build_tower, (0, 21, 0)), ('ladder', build_ladder, (0, 27, 0))]
+           ('tower', build_tower, (0, 21, 0)), ('ladder', build_ladder, (0, 27, 0)),
+           ('mantlet', build_mantlet, (0, 31, 0))]
 
 
 def main(out_path):
