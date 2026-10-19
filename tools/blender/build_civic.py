@@ -276,6 +276,42 @@ def timber_wall(p, a, b, z0, z1, n, key='beam', step=1.7, d=.07, braces=True, ra
         p.beam(P(L - .15, z0 + .15), P(L - bay + .1, z1 - .15), d, .14, key)
 
 
+def grave(p, x, y, i, stone=True):
+    """Grass mound with a headstone (or a wooden cross) at its head (+y), facing -y."""
+    p.box((x, y, .07), (.55, 1.1, .12), 'lawnDark')
+    if stone:
+        plate(p, (x, y + .5), (0, -1), arch_pts(.46, .72 + (i % 3) * .08, .08), 'stoneLight' if i % 2 else 'stone', -.06, .06)
+    else:
+        cross(p, x, y + .5, .08, .95, 'woodDark')
+
+
+def churchyard(m, wx):
+    """The chapel's own burial ground in the transept ground it leaves free (L1)."""
+    x0, x1, y0, y1 = wx + .15, 8.85, -1.5, 3.95
+    p = m.part('ground')
+    for sg in (-1, 1):
+        p.box((sg * (x0 + x1) / 2, (y0 + y1) / 2, .03), (x1 - x0, y1 - y0, .06), 'lawn')
+        p.box((sg * 6.2, y0 + .9, .065), (.9, 1.8, .02), 'gravel')
+    m.done('ground', p)
+    for sg, name in ((-1, 'yardL'), (1, 'yardR')):
+        p = m.part(name)
+        p.box((sg * (x1 - .12), (y0 + y1) / 2, .35), (.25, y1 - y0, .7), 'stoneRough')
+        p.box((sg * (x0 + x1) / 2, y1 - .12, .35), (x1 - x0, .25, .7), 'stoneRough')
+        for a, b in ((x0, 5.7), (6.7, x1)):                       # front wall with a gate gap
+            p.box((sg * (a + b) / 2, y0 + .12, .35), (b - a, .25, .7), 'stoneRough')
+        for gx in (5.6, 6.8):
+            p.box((sg * gx, y0 + .12, .5), (.35, .35, 1.0), 'stone')
+        i = 0
+        for y in (.9, 2.5):
+            for x in (4.3, 5.3, 7.1, 8.0):
+                grave(p, sg * x, y, i, stone=(i % 4 != 3))
+                i += 1
+        grave(p, sg * 4.3, -.7, i + 1)
+        grave(p, sg * 8.0, -.7, i + 2)
+        cypress(p, sg * 8.3, y1 - .5, 4.2, .42)
+        m.done(name, p)
+
+
 # ------------------------------------------------------------------ church
 # civicLocalParts: nave 2.9 x 6.2 U at cy .25, transept 5.2 x 1.65 U at cy .35, tower 1.85 U at cy -2.65.
 def church(m, L):
@@ -409,6 +445,8 @@ def church(m, L):
             pyramid(p, 0, ty, 2 * th + .7, 2 * th + .7, tz + .3, tz + 6.0, roof)
             cross(p, 0, ty, tz + 5.9, 1.3)
         m.done('belfry', p)
+        if L == 1:
+            churchyard(m, wx)
         return
 
     # Cathedral: twin towers on the nave's front corners and a portal porch between them.
@@ -482,6 +520,48 @@ def cemetery(m):
 
 # ------------------------------------------------------------------ tavern
 # civicLocalParts: spine 2.2 x 5.0 U, front and back wings 4.6 x 1.55 U at cy -/+1.72 U.
+def table_set(p, x, y, n_mugs=2):
+    """Trestle table along x with a bench on each side and a few tankards."""
+    p.box((x, y, .74), (1.8, .8, .07), 'woodLight')
+    for k in (-1, 1):
+        p.box((x + k * .7, y, .37), (.1, .6, .7), 'woodDark')
+        bench(p, x, y + k * .75, 1.8)
+    for i in range(n_mugs):
+        p.cylinder(.07, 0, 'woodLight' if i % 2 else 'iron', n=6, axis='z', center=(x - .5 + i * .55, y + (.15 if i % 2 else -.15), 0),
+                   radii=[.07, .07], along=[.775, .93])
+
+
+def outdoor_tables(m, L, sx_, wwx, wcy, whd):
+    """Tables outside the inn on the free ground of the H footprint (L1, L2)."""
+    if L == 1:   # front corner left free by the L plan
+        p = m.part('tablesFront')
+        xc = -(sx_ + wwx) / 2
+        table_set(p, xc, -wcy - 1.2, 3)
+        table_set(p, xc, -wcy + 1.3)
+        barrel(p, xc - 1.6, -wcy + 2.4, r=.3, h=.8)
+        m.done('tablesFront', p)
+    if L in (1, 2):   # beer garden behind the inn, a vine pergola over the left tables in L2
+        for sg, name in ((-1, 'gardenL'), (1, 'gardenR')):
+            p = m.part(name)
+            xc = sg * (sx_ + wwx) / 2
+            table_set(p, xc, wcy - 1.2, 3)
+            if L == 2:
+                table_set(p, xc, wcy + 1.3)
+            if L == 2 and sg < 0:
+                for px in (-1.6, 1.6):
+                    for py in (-2.3, 2.3):
+                        p.box((xc + px, wcy + py, 1.25), (.14, .14, 2.5), 'woodDark')
+                for px in (-1.6, 1.6):
+                    p.box((xc + px, wcy, 2.55), (.14, 4.9, .14), 'wood')
+                for i in range(7):
+                    py = -2.25 + i * .75
+                    p.box((xc, wcy + py, 2.66), (3.6, .1, .08), 'wood')
+                    p.box((xc, wcy + py + .3, 2.72), (3.4, .4, .06), 'leaf' if i % 2 else 'leafDark')
+            else:
+                bush(p, xc + sg * 1.4, wcy + 2.0, .5, .9, 'flowerYellow' if sg > 0 else 'herb')
+            m.done(name, p)
+
+
 def tavern(m, L):
     """L1 single-storey L plan, L2 two-storey T plan, L3 tall H plan (inside the H footprint)."""
     wwx, wcy, whd, sx_ = 4.6 * S / 2, 1.72 * S, 1.55 * S / 2, 2.2 * S / 2
@@ -491,7 +571,7 @@ def tavern(m, L):
     eave = {1: 3.4, 2: 6.0, 3: 7.6}[L]
     lower = 'stoneRough' if L < 3 else 'stone'
     upper = {1: 'wood', 2: 'plaster', 3: 'plasterWarm'}[L]
-    roof = {1: ('roofThatch', 'roofThatchDark'), 2: ('roofShingle', 'roofShingleDark'), 3: ('roofTile', 'roofTileDark')}[L]
+    roof = {1: ('roofThatch', 'roofThatchDark'), 2: ('roofShingle', 'roofShingleDark'), 3: ('roofSlate', 'roofSlateDark')}[L]
     over, th = (.4, .3) if L == 1 else (.4, .2)
     kw = {1: 1.0, 2: 1.05, 3: 1.2}[L]
     R = eave + whd * kw
@@ -603,6 +683,8 @@ def tavern(m, L):
     if not back_wing:
         p.quads([(-sx_, ye, eave), (sx_, ye, eave), (0, ye, R - th)], [(0, 1, 2)], upper)
     m.done('spine', p)
+
+    outdoor_tables(m, L, sx_, wwx, wcy, whd)
 
     p = m.part('chimneys')
     spots = {1: [(1.8, 4.0)], 2: [(-5.5, -wcy), (1.6, 5.0)], 3: [(-5.5, -wcy), (5.5, wcy), (0, 0)]}[L]

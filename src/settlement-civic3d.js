@@ -56,8 +56,11 @@
     return{pos,col,gi,groups,groupBias};
   }
   // The church's intrinsic cemetery, fitted to its Voronoi curtilage (civicCemeteryArea).
+  // The L1 chapel model carries its own churchyard beside the nave, so the lot
+  // cemetery is drawn from L2 on.
   function cemeteryMesh(s,ground){
     if(s.type!=='church'||!DATA()?.models?.cemetery||typeof civicCemeteryArea!=='function')return null;
+    if((typeof civicLevel==='function'?civicLevel(s):1)<2)return null;
     const area=civicCemeteryArea(s);if(!area)return null;
     return triangles('cemetery',{x:area.center.x,y:area.center.y,angle:area.angle,scale:area.w/2.2},ground);
   }
