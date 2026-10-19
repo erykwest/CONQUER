@@ -3,6 +3,12 @@
 > Snapshot **aggiornato il 16/10/2026** attraverso commit e PR GitHub; controllo documentale, **nessuna nuova esecuzione locale di QA o browser** in questa revisione.
 > Base verificata: `main` a [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99) (16/10, 15:16 UTC). Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
+## Clay — palette DEV globale (19/10/2026)
+
+- **CODICE su `clay`:** due pulsanti DEV Stone/Clay, mappa swatch in `src/settlement-core.js`, uso Canvas/WebGL2 e invalidazione delle relative cache. Mura/torri in color mattone; piani terra case L2–L4 color laterizio; tetti prima antracite color tegola.
+- **NESSUN GAMEPLAY CLAY:** cave, risorsa argilla, costi/mattoni individuali e coefficienti HP 80% restano soltanto design. Switch locale solo visivo.
+- **QA aggiunta:** `qa/clay-palette-regression.cjs` con workflow dedicato `clay-palette-regression.yml`; test runtime/browser da distinguere dagli esiti della CI.
+
 ## Clay — istruzioni sul ramo `clay` (19/10/2026)
 
 - **BRANCH / PROGETTO:** `clay` deriva da `Civil` (HEAD sorgente `ba592cfaed7b76ae20e6f0192955fa68212de410`). Aggiunti documenti di progettazione/implementazione [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).

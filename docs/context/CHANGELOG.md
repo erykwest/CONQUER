@@ -2,6 +2,11 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-19 — clay: palette DEV Stone/Clay
+
+- Aggiunto selettore globale DEV con visualizzazione alternativa mattone/tegola e piani terra delle case L2–L4, colori condivisi tra Canvas e WebGL2, preference locale e invalidazione della scena; nessun cambiamento economico o all'integrità.
+- Aggiunta regressione e workflow GitHub Actions dedicata alla branch `clay`, preservando la suite `Civil`.
+
 ## 2026-10-19 — clay: nuove istruzioni di sviluppo (solo Markdown)
 
 - Creato ramo `clay` dalla HEAD di `Civil`, senza introdurre modifiche al codice o merge verso `main`.
