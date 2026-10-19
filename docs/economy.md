@@ -55,6 +55,25 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 - No physical capacity mapping for castle built-sections; reserve targets currently function as provisional per-good caps.
 - No automatic matching of army/castle construction resource costs to the economic reserve (testing inventory is separate).
 
+## Weekly production, consumption and shortage accounting (19 October 2026, feature branch)
+
+The existing economic tick retains its cadence: Mon–Fri production, Saturday household purchases, enterprise input procurement and market settlement, Sunday rest. A **per-good balance** now records gross workday production, intended weekly demand, demand fulfilled by actual transfers, physically consumed units, external exports, remaining market/castle/industry-buffer stocks and unmet demand.
+
+The distinction matters:
+- `unmetSupply`: goods missing from **accessible market lots**.
+- `unmetBudget`: unsatisfied purchasing power while goods remain for sale.
+- `netProduction = produced - demand`: a structural flow mismatch, not a storage delta.
+- `netPhysical = produced - consumed - exported`: actual change in the local physical resource pool, including industry buffers and castle reserves.
+- `reserveGap`: target castle stock still unmet; a strategic target, **not** a fabricated purchase or consumption.
+
+For households, weekly baseline food is 0.55 per resident in every cohort, luxury is 0.08 for L3 and 0.25 for L4; these preexisting coefficients are preserved. **New provisional need:** domestic fuel/general upkeep consumes wood per resident per week: L1 0.06, L2 0.08, L3 0.10, L4 0.12. All are balancing parameters, not historical realism claims. Industry input purchases replenish buffers; input goods count as *consumed* only when production actually uses them. Stone, equipment and other strategic categories do **not** acquire arbitrary demand before construction, garrison and castle upkeep draw from the same ledger.
+
+Each Saturday stores a result under `State.economy.lastBalance.goods[good]`; up to eight weeks of history survive save/load and the last four completed markets supply a rolling production/demand signal. The categories are `supply-shortage`, `purchasing-power`, `production-deficit`, `surplus` and `balanced`. Signals are diagnostic, **not automatic construction orders**. Existing v1 saves lazily get flow counters without resetting money or stock.
+
+The monthly `investmentCapacity` can be positive only when an actual L4 housing cohort is present; the private sector's initial capital balance by itself does not authorize spontaneous enterprises. **Not implemented:** automatic business creation or housing promotion, forecast investment profitability, genuine castle/Builder consumption, military provisioning, and full region-to-region flow.
+
+Tests: `qa/economy-regression.cjs`, `qa/economy-industries-regression.cjs`, `qa/economy-balance-regression.cjs`, run in `.github/workflows/economy-flows-regression.yml`. [CI success, branch](https://github.com/erykwest/CONQUER/actions/runs/39253184968). The workflow is deterministic Node QA, **not** a browser or live simulation certification.
+
 ## Regression
 Run `node qa/economy-regression.cjs` in a local checkout. The test suite covers labor weekends, aggregate cohorts, reserve saturation, sales, exports, ownership, and monthly boundaries.
 
