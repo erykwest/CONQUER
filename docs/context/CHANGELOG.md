@@ -2,6 +2,11 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-19 — Civil: guida tecnica per sviluppo annessi
+
+- Aggiunto [`docs/CIVIL-ANNEX-DEVELOPMENT.md`](../CIVIL-ANNEX-DEVELOPMENT.md) sulla branch `Civil`: stato reale del catalogo, differenza cimitero intrinseco / birreria costruibile, punti di estensione nei moduli, vincoli Voronoi e placement, renderer, persistenza, test, criteri di completamento e decisioni da prendere prima di sviluppare meccaniche economiche.
+- Inserito un collegamento dalla piramide del contesto. **Solo documentazione; nessuna nuova funzione di gioco introdotta da questo commit.**
+
 ## 2026-10-17 — Civil: cimitero L1 e birreria L2
 
 - **Chiesa L1:** cimitero automaticamente incluso nella proprietà; area di sepoltura ricavata dal lotto Voronoi, riserva anti-sovrapposizioni e segnali tombali 2D/3D. È parte del lotto, non un annesso collocabile manualmente; in lotti troppo stretti rimane senza area fisica fino a spazio disponibile.
