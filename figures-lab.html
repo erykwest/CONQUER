@@ -36,7 +36,7 @@
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
   <div class="group" role="group" aria-label="Assedio"><span>Assedio</span>
-    <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Catapulta</button><button data-subject="siege:trebuchet">Trabucco</button>
+    <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Catapulta</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button>
   </div>
   <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
     <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button>
@@ -84,20 +84,25 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-wagons3d.js?v=lab-2"></script>
 <script src="./src/assets/animal-models.js?v=lab-1"></script>
 <script src="./src/settlement-animals3d.js?v=lab-1"></script>
-<script src="./src/assets/siege-engines-model.js?v=lab-1"></script>
-<script src="./src/settlement-siege-engines3d.js?v=lab-1"></script>
+<script src="./src/assets/siege-engines-model.js?v=lab-2"></script>
+<script src="./src/settlement-siege-engines3d.js?v=lab-2"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
   const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
   const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
+  // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
+  function siegeActions(e){
+    const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata'}[e];
+    return[['idle',e==='ladder'?'Trasporto':'Fermo'],['move','In marcia'],['fire',fire]].concat(e==='trebuchet'?[['setup','Allestimento']]:[]);
+  }
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
   const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
-    const acts=kindOf(subject)==='animal'?animalActions(subject):ACTIONS[kindOf(subject)];
+    const acts=kindOf(subject)==='animal'?animalActions(subject):kindOf(subject)==='siege'?siegeActions(subject.split(':')[1]):ACTIONS[kindOf(subject)];
     if(!acts.some(([k])=>k===action))action=acts[0][0];
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
     $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
@@ -223,7 +228,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   function siegeAt(engine,cx,cy,pxPerU,turns,heading){
     const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12,state={mode:action,t:clock,distance:siegeDistance};
     const place={x:0,y:0,heading},sprites=[];
-    SE.crew(engine,place).forEach((p,i)=>sprites.push({...p,draw:()=>{
+    SE.crew(engine,place,state).forEach((p,i)=>sprites.push({...p,draw:()=>{
       const s=view.project(p.x,p.y,p.z),lean=action==='move'?Math.sin(clock*6+i)*.6:0;
       State.view.scale=zoom;ctx=g;CA.drawFigure({x:s.x+lean,y:s.y},0,'spearman','crew'+i,0,null,CA.pose({engaged:false},i));
     }}));

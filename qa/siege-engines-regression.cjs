@@ -17,14 +17,14 @@ for(const [name,e] of Object.entries(M.engines)){
     assert.equal(p.v.length,p.c.length*9,name+' '+part+': nine coordinates per triangle');
     assert.ok(p.c.every(i=>i>=0&&i<M.palette.length),name+' '+part+': palette colours');
   }
-  assert.equal(e.wheels.at.length,4,name+' rolls on four wheels');
+  assert.equal(e.wheels.at.length,name==='ladder'?0:4,name+(name==='ladder'?' is carried':' rolls on four wheels'));
   assert.ok(e.crew.length>=2,name+' has a crew');
-  for(const mode of ['idle','move','fire'])for(let t=0;t<7;t+=.37){
+  for(const mode of ['idle','move','fire','setup'])for(let t=0;t<13;t+=.37){
     const m=SE.triangles(name,{x:3,y:4,heading:t},{mode,t,distance:t});
     assert.ok(m.pos.every(Number.isFinite),name+' '+mode+' is finite');
   }
 }
-console.log('PASS three engines, well-formed parts, every pose finite');
+console.log('PASS five engines, well-formed parts, every pose finite');
 
 // Helpers: z range of one part in a posed engine.
 const partRange=(e,part)=>{let s=0;for(const [n,p] of Object.entries(M.engines[e].parts)){if(n===part)return[s,s+p.c.length*9];if(n!=='wheel')s+=p.c.length*9}};
@@ -61,3 +61,26 @@ assert.equal(SE.projectile('trebuchet',{x:0,y:0},{mode:'idle'}),null,'nothing fl
 const flying=SE.projectile('trebuchet',{x:0,y:0,heading:0},{mode:'fire',t:.3*6});
 assert.ok(flying&&flying.x>0,'the stone flies towards the target (+x)');
 console.log('PASS projectile');
+
+// Trebuchet set-up: packed it rides on its wheels with the uprights folded;
+// set up its frame sits on the ground and the uprights stand.
+const zMin=(m,r)=>{let z=Infinity;for(let i=r[0]+2;i<r[1];i+=3)z=Math.min(z,m.pos[i]);return z};
+const packed=SE.triangles('trebuchet',{x:0,y:0},{mode:'move'}),set=SE.triangles('trebuchet',{x:0,y:0},{mode:'idle'});
+const base=partRange('trebuchet','base'),tower=partRange('trebuchet','tower');
+assert.ok(zMin(packed,base)>zMin(set,base)+.08,'packed, the frame rides up on its wheels');
+assert.ok(zMin(set,base)<.01,'set up, the frame sits on the ground');
+assert.ok(zMax(packed,tower)<zMax(set,tower)/3,'packed, the uprights lie folded');
+assert.equal(SE.deploy({mode:'move'}),0);assert.equal(SE.deploy({mode:'fire'}),1);
+assert.equal(SE.projectile('trebuchet',{x:0,y:0},{mode:'fire',t:.3*6,deploy:.5}),null,'no shot before it is set up');
+const wz=m=>{let z=-Infinity;for(let i=m.pos.length-1-tr.parts.wheel.c.length*9*4+3;i<m.pos.length;i+=3)z=Math.max(z,m.pos[i]);return z};
+assert.ok(wz(set)<wz(packed)/2,'set up, the wheels lie flat on the ground');
+console.log('PASS trebuchet packs on wheels and sets up on the ground');
+
+// Siege tower lowers its bridge forward; the ladder is carried flat and raised.
+const tw=SE.triangles('tower',{x:0,y:0},{mode:'idle'}),down=SE.triangles('tower',{x:0,y:0},{mode:'fire',t:.5*6});
+const br=partRange('tower','bridge');
+assert.ok(xMax(down,br)>xMax(tw,br)+.5,'the bridge drops forward');
+assert.ok(SE.pose('ladder',{mode:'idle'}).up===0&&SE.pose('ladder',{mode:'fire',t:.6*7}).up===1,'the ladder goes up');
+const lr=partRange('ladder','ladder');
+assert.ok(zMax(SE.triangles('ladder',{x:0,y:0},{mode:'fire',t:.6*7}),lr)>2.1,'raised, it reaches over a stone wall');
+console.log('PASS siege tower bridge and scaling ladder');
