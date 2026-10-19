@@ -806,6 +806,7 @@
   }
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
+    try{for(const m of window.ConquerSiege?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}  // breach rubble
     const dyn=buildDynamic(dynamicQueue);dynamicQueue=[];
     renderFront(r,buildSoldiers(list),dyn);ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();

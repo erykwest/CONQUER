@@ -91,7 +91,8 @@
     for(let i=0;i<me.pos.length;i+=3){const w=F.toWorld(me.pos[i],me.pos[i+1]);pos[i]=w.x;pos[i+1]=w.y;pos[i+2]=me.pos[i+2]}
     return{pos,col:me.col};
   }
-  function time(){return run.frozen??(performance.now()/1000-run.t0)}
+  const STOP_SHORT={ladder:4,tower:6};
+  function time(){const t=run.frozen??(performance.now()/1000-run.t0);return run.blocked?Math.min(t,STOP_SHORT[run.kind]):t}
   // Called inside the game's frame, between the 3D back pass and the front pass.
   function drawFrame(){
     if(!run||!W()?.active?.())return;
@@ -126,6 +127,12 @@
     }
     if(run?.patch&&run.target.moat)run.target.moat.fills=run.target.moat.fills.filter(f=>f!==run.patch);
     run={kind,target,opts:{hides:!!opts.hides},t0:performance.now()/1000,frozen:null,livery:opts.livery||HOSTILE,team:opts.team||HOSTILE.alt,patch:null};
+    // Ladders and towers cannot storm thin (T1) walls or walls with hoardings: the engine
+    // closes in, stops short and the reason is shown.
+    const check=['ladder','tower'].includes(kind)&&window.ConquerSiege?.assaultCheck
+      ?ConquerSiege.assaultCheck(target.wall,kind,target.G.walk>1.6?2:1):{ok:true};
+    run.blocked=check.ok?null:check.reason;
+    if(run.blocked)status('Assalto impossibile: '+run.blocked);
     if(opts.camera!==false)frameCamera(target);
     if(!raf)raf=requestAnimationFrame(loop);
     return{kind,G:target.G};
@@ -136,7 +143,7 @@
     if(run?.patch&&run.target.moat){run.target.moat.fills=run.target.moat.fills.filter(f=>f!==run.patch);invalidateSceneCache(['ground','base'])}
     run=null;draw();
   }
-  window.ConquerSiegePreview={start,stop,at,play,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G}};
+  window.ConquerSiegePreview={start,stop,at,play,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G,blocked:run.blocked}};
   const q=new URLSearchParams(location.search),wanted=q.get('siege');
   if(wanted)window.addEventListener('load',()=>setTimeout(()=>{
     try{start(wanted,{level:Number(q.get('level'))||undefined,hides:q.get('hides')==='1'})}catch(e){console.error('siege preview',e)}

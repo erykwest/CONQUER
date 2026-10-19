@@ -107,6 +107,18 @@ function renderFunctionPanel(){
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
     else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · Floor ${i+1} · ${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
   }
+  if(['wall','palisade'].includes(s.type)&&!building){
+    // Walls take damage bay by bay; a fallen bay opens a breach there.
+    const siege=window.ConquerSiege,list=siege?.bays(s);
+    if(list){
+      const ladder=siege.assaultCheck(s,'ladder'),tower=siege.assaultCheck(s,'tower',2);
+      const towerText=tower.ok?'torre liv. '+structureLevel(s)+'+':'torre no ('+tower.reason+')';
+      html+='<div class="slot"><div class="slot-label">Integrità · '+list.length+' campate</div>'+
+        list.map((b,i)=>'<div class="grid"><div class="legend">Campata '+(i+1)+' · '+Math.ceil(b.hp)+' / '+Math.round(b.max)+'</div>'+
+          '<button data-siege-bay="'+i+'" type="button">Test trebuchet</button></div>').join('')+
+        '<div class="legend">Assalto: '+(ladder.ok?'scale sì':'scale no ('+ladder.reason+')')+' · '+towerText+'</div></div>';
+    }
+  }
   if(['tower','gate','built'].includes(s.type)){
     const hp=window.ConquerSiege?.integrity(s);
     if(hp)html+='<div class="slot"><div class="slot-label">Defensive integrity</div>'+

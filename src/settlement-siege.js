@@ -280,9 +280,130 @@
   function effectiveness(weapon,s,part='core'){
     return Math.max(0,WEAPONS[weapon]?.[targetMaterial(s,part)]||0);
   }
+  // ---------- wall bays and breaches ----------
+  // Walls and palisades take damage bay by bay (~2.5 U each, laid out along a->b) so
+  // a breach opens where the blows land. When a bay falls the wall is split there:
+  // the standing stretches become separate walls (same ids for towers' links, own
+  // bays and costs) and the gap holds rubble, so navigation, colliders and both
+  // renderers see the opening with no special case.
+  const BAY_TARGET=2.5;
+  const isLinear=s=>!!s&&['wall','palisade'].includes(s.type);
+  const lengthOf=s=>Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y);
+  const sum=(list,key)=>list.reduce((t,b)=>t+b[key],0);
+  function bays(s){
+    if(!isLinear(s))return null;
+    const stats=integrity(s);if(!stats)return null;
+    const L=lengthOf(s),total=stats.core.max;
+    let list=Array.isArray(stats.bays)&&stats.bays.length?stats.bays:null;
+    if(!list){
+      // First use (or a legacy save): even bays, damage already taken spread evenly.
+      const n=Math.max(1,Math.round(L/BAY_TARGET)),damage=Math.max(0,total-stats.core.hp);
+      list=[...Array(n).keys()].map(i=>({from:L*i/n,to:L*(i+1)/n,max:total/n,hp:Math.max(0,(total-damage)/n)}));
+    }else if(Math.abs((list[list.length-1].to||L)-L)>1e-6||Math.abs(sum(list,'max')-total)>1e-6){
+      // A tower re-snapping the end or an upgrade: rescale, keep each bay's absolute damage.
+      const old=list[list.length-1].to||L;
+      list=list.map(b=>{
+        const max=total*(b.to-b.from)/old,damage=Math.max(0,(Number(b.max)||max)-(Number(b.hp)||0));
+        return{from:b.from*L/old,to:b.to*L/old,max,hp:Math.max(0,max-damage)};
+      });
+    }
+    stats.bays=list;stats.core.hp=sum(list,'hp');
+    return list;
+  }
+  function bayIndexAt(s,p){
+    const list=bays(s),L=lengthOf(s)||1;
+    const along=((p.x-s.a.x)*(s.b.x-s.a.x)+(p.y-s.a.y)*(s.b.y-s.a.y))/L;
+    const i=list.findIndex(b=>along<b.to);
+    return i<0?list.length-1:i;
+  }
+  function attackWall(s,weapon,force,where){
+    const list=bays(s),factor=effectiveness(weapon,s,'core');
+    if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
+    let i=Number.isInteger(where)?where:where&&Number.isFinite(where.x)?bayIndexAt(s,where):Math.floor((list.length-1)/2);
+    i=Math.max(0,Math.min(list.length-1,i));
+    const bay=list[i];
+    if(bay.hp<=0)return{ok:false,damage:0,reason:'Bay already breached'};
+    const damage=Math.min(bay.hp,Math.max(0,Number(force)||0)*factor);
+    if(!damage)return{ok:false,damage:0,reason:'No force applied'};
+    bay.hp=Math.max(0,bay.hp-damage);s.siegeIntegrity.core.hp=sum(list,'hp');
+    if(bay.hp===0){
+      const pieces=breach(s,i);
+      return{ok:true,part:'bay',bay:i,damage,remaining:0,max:bay.max,destroyed:true,breach:true,pieces};
+    }
+    invalidateStructureScene(s);markDirty(true,true,true);draw();
+    return{ok:true,part:'bay',bay:i,damage,remaining:bay.hp,max:bay.max,destroyed:false};
+  }
+  function breach(s,i){
+    const list=s.siegeIntegrity.bays,L=lengthOf(s),ux=(s.b.x-s.a.x)/L,uy=(s.b.y-s.a.y)/L;
+    const at=d=>({x:s.a.x+ux*d,y:s.a.y+uy*d}),bay=list[i],p0=at(bay.from),p1=at(bay.to);
+    const piece=(a,b,aSnap,bSnap,kept,offset)=>{
+      const len=Math.hypot(b.x-a.x,b.y-a.y);
+      if(!kept.length||len<(typeof WALL_BREAK_MIN==='number'?WALL_BREAK_MIN:.1))return null;
+      const f=wallFragmentFrom(s,a,b,aSnap,bSnap,len/L),own=kept.map(k=>({from:k.from-offset,to:k.to-offset,max:k.max,hp:k.hp}));
+      f.siegeIntegrity={core:{hp:sum(own,'hp'),max:sum(own,'max')},door:null,bays:own};
+      return f;
+    };
+    const left=piece(s.a,p0,s.aSnap,null,list.slice(0,i),0),right=piece(p1,s.b,null,s.bSnap,list.slice(i+1),bay.to);
+    const pieces=[left,right].filter(Boolean);
+    const x=state();
+    x.ruins.push({id:s.id+':breach:'+i+':'+State.clock.day,type:'breach',wall:s.type,a:p0,b:p1,
+      x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2,width:Number(s.width)||.5,height:structureHeight(s),day:State.clock.day});
+    if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
+    const idx=State.structures.findIndex(t=>t.id===s.id);
+    if(idx>=0)State.structures.splice(idx,1,...pieces);
+    // Towers keep their links: the a end now belongs to the left stretch, the b end to the right.
+    for(const t of State.structures)if(Array.isArray(t.wallConnections))
+      t.wallConnections=t.wallConnections.flatMap(c=>c.wallId!==s.id?[c]:c.end==='a'?(left?[{...c,wallId:left.id}]:[]):(right?[{...c,wallId:right.id}]:[]));
+    if(State.selectedId===s.id)State.selectedId=pieces[0]?.id||null;
+    if(typeof invalidateCastleColliderGeometry==='function')invalidateCastleColliderGeometry(...pieces);
+    if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+    invalidateSceneCache();markDirty(true,true,true);
+    renderFunctionPanel();draw();
+    return pieces.map(p=>p.id);
+  }
+  // Ladders and assault towers need somewhere to rest: not on thin (T1) walls, and
+  // hoardings keep them off. Ladders only reach the low (H1) wall top; a tower
+  // reaches walls up to its own level. Machicolations do not stop an assault.
+  function assaultCheck(wall,engine,level=1){
+    if(!isLinear(wall))return{ok:false,reason:'Only walls can be stormed'};
+    if(wallTier(wall)<2)return{ok:false,reason:'Thin wall (T1): no ladder or bridge can rest on it'};
+    if(wall.type==='wall'&&wallSkin(wall)==='hoarding')return{ok:false,reason:'Hoardings keep ladders and bridges off the wall'};
+    const h=structureLevel(wall);
+    if(engine==='ladder'&&h>1)return{ok:false,reason:'Ladders only reach low (H1) walls'};
+    if(engine==='tower'&&(Number(level)||1)<h)return{ok:false,reason:'A level '+h+' assault tower is needed for this wall'};
+    if(!['ladder','tower'].includes(engine))return{ok:false,reason:'Not an assault engine'};
+    return{ok:true};
+  }
+  // Rubble in breaches: broken blocks spilled across the gap (static meshes, world units).
+  const rubbleCache=new Map();
+  function rubbleMesh(r){
+    let m=rubbleCache.get(r.id);if(m)return m;
+    const pos=[],col=[],COLORS=['#9a8e82','#8a7f74','#a89c8f','#7d7266'];
+    let seed=0;for(const ch of String(r.id))seed=(seed*31+ch.charCodeAt(0))>>>0;
+    const rnd=()=>(seed=(Math.imul(seed,1103515245)+12345)>>>0)/4294967296;
+    const L=Math.hypot(r.b.x-r.a.x,r.b.y-r.a.y)||1,ux=(r.b.x-r.a.x)/L,uy=(r.b.y-r.a.y)/L,nx=-uy,ny=ux;
+    const spread=(r.width||.5)/2+.45,peak=(r.height||1.15)*.32,g=typeof terrainElevation==='function'?terrainElevation(r):0;
+    const box=(cx,cy,z0,sx,sy,sz,yaw,c)=>{
+      const ca=Math.cos(yaw),sa=Math.sin(yaw),P=[];
+      for(const dx of [-sx,sx])for(const dy of [-sy,sy])for(const z of [z0,z0+2*sz])P.push([cx+dx*ca-dy*sa,cy+dx*sa+dy*ca,z]);
+      for(const [a,b,c2,d] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
+        for(const tri of [[a,b,c2],[a,c2,d]]){for(const k of tri)pos.push(...P[k]);col.push(c)}
+    };
+    const n=Math.max(8,Math.round(L*14*(r.width||.5)+L*6));
+    for(let k=0;k<n;k++){
+      const t=(rnd()*.9+.05)*L,s=(rnd()*2-1)*spread,mound=peak*Math.max(0,1-Math.abs(s)/spread)*(.6+.4*Math.sin(Math.PI*t/L));
+      const size=.05+rnd()*.09,z=g+Math.max(0,mound*rnd()-size*.5);
+      box(r.a.x+ux*t+nx*s,r.a.y+uy*t+ny*s,z,size*(1+rnd()),size,size*(.6+rnd()*.5),rnd()*Math.PI,COLORS[Math.floor(rnd()*COLORS.length)]);
+    }
+    m={pos,col};rubbleCache.set(r.id,m);return m;
+  }
+  // Moving or static extra meshes for the 3D world renderer (rubble in breaches).
+  function dynamicMeshes(){return state().ruins.filter(r=>r.type==='breach'&&r.a&&r.b).map(rubbleMesh)}
   function attackStructure(id,weapon,force=1,part='core'){
     const s=State.structures.find(x=>x.id===id);
     if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,reason:'Invalid or unfinished fortification'};
+    // Walls and palisades: part may name a bay (index) or the point of impact {x,y}.
+    if(isLinear(s))return attackWall(s,weapon,force,part==='core'?null:part);
     const stats=integrity(s),section=part==='door'&&s.type==='gate'?'door':'core',hp=stats[section];
     const factor=effectiveness(weapon,s,section);
     if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
@@ -309,18 +430,37 @@
     markDirty(true,true,true);
     renderFunctionPanel();draw();
   }
+  function crack(origin,z,k){
+    const p=w2s(origin,z),s=.6+k;
+    ctx.strokeStyle='rgba(45,24,18,.9)';ctx.lineWidth=Math.max(1,State.view.scale*2);
+    ctx.beginPath();ctx.moveTo(p.x-5*s,p.y-5*s);ctx.lineTo(p.x+2*s,p.y+s);
+    ctx.lineTo(p.x-2*s,p.y+7*s);ctx.lineTo(p.x+6*s,p.y+12*s);ctx.stroke();
+  }
   function drawOverlay(){
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
     for(const s of State.structures){
       const hp=s.siegeIntegrity?.core;
       if(!hp||hp.hp>=hp.max||hp.hp<=0)continue;
-      const origin=s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
-      const p=w2s(origin,structureHeight(s)*.55);
-      ctx.strokeStyle='rgba(45,24,18,.9)';ctx.lineWidth=Math.max(1,State.view.scale*2);
-      ctx.beginPath();ctx.moveTo(p.x-5,p.y-5);ctx.lineTo(p.x+2,p.y+1);
-      ctx.lineTo(p.x-2,p.y+7);ctx.lineTo(p.x+6,p.y+12);ctx.stroke();
+      // Walls crack bay by bay, where they were hit.
+      if(isLinear(s)&&Array.isArray(s.siegeIntegrity.bays)){
+        const L=lengthOf(s)||1;
+        for(const b of s.siegeIntegrity.bays)if(b.hp<b.max){
+          const m=(b.from+b.to)/2/L;crack({x:s.a.x+(s.b.x-s.a.x)*m,y:s.a.y+(s.b.y-s.a.y)*m},structureHeight(s)*.55,1-b.hp/b.max);
+        }
+        continue;
+      }
+      crack(s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2},structureHeight(s)*.55,.4);
     }
+    const world3d=window.ConquerWorld3D?.active?.();
     for(const r of state().ruins){
+      if(r.type==='breach'&&r.a&&r.b){
+        if(world3d)continue;                  // drawn as 3D rubble (dynamicMeshes)
+        const L=Math.hypot(r.b.x-r.a.x,r.b.y-r.a.y)||1,nx=-(r.b.y-r.a.y)/L,ny=(r.b.x-r.a.x)/L,w=(r.width||.5)/2+.3;
+        const q=[[r.a,w],[r.b,w],[r.b,-w],[r.a,-w]].map(([p,o])=>w2s({x:p.x+nx*o,y:p.y+ny*o},0));
+        ctx.fillStyle='#857867';ctx.strokeStyle='#4f4337';ctx.lineWidth=1;
+        ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.stroke();
+        continue;
+      }
       const p=w2s(r,0),z=State.view.scale;
       ctx.fillStyle='#796653';ctx.strokeStyle='#49372c';ctx.lineWidth=1;
       ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(3,8*z),Math.max(2,4*z),0,0,Math.PI*2);ctx.fill();ctx.stroke();
@@ -355,6 +495,12 @@
       else status('Stored '+out.accepted+' '+btn.dataset.siegeTransfer);
     });
     slots.querySelectorAll('[data-siege-mastio]').forEach(btn=>btn.onclick=()=>assignMastio(btn.dataset.siegeMastio));
+    slots.querySelectorAll('[data-siege-bay]').forEach(btn=>btn.onclick=()=>{
+      const s=selectedStructure();if(!isLinear(s))return;
+      const out=attackStructure(s.id,'trebuchet',10,Number(btn.dataset.siegeBay));
+      status(out.ok?(out.breach?'Breccia aperta nella campata '+(out.bay+1):'Campata '+(out.bay+1)+' colpita · '+out.damage.toFixed(1)):out.reason);
+      renderFunctionPanel();
+    });
     slots.querySelectorAll('[data-siege-test]').forEach(btn=>btn.onclick=()=>{
       const s=selectedStructure();if(!s)return;
       const part=s.type==='gate'&&btn.dataset.siegeTest!=='trebuchet'?'door':'core';
@@ -366,5 +512,6 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
+    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();
