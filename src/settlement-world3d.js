@@ -361,6 +361,7 @@
   function addCivicAnnex(m,s,winter){
     const spec=civicAnnexDefinition(s);if(!spec)return;
     const g=Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(s),kind=spec.kind,poly=civicAnnexFootprint(s);
+    if(window.ConquerCivic3D?.addToBuilder(m,s,g))return;
     const height=kind==='garden'?.13:kind==='yard'?.09:kind==='stall'?.75:1.32;
     const color=kind==='garden'?'#6a8452':kind==='yard'?'#ad9a7a':kind==='stone'?'#85847d':'#9b7c57';
     m.prism(poly,g,g+height,color,kind==='stone'?'#696862':'#79563b',kind==='stone'?'#777671':'#876446');
@@ -377,6 +378,7 @@
   function addCivic(m,s,winter){
     const g=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s),angle=s.angle||0;
     const L=(x,y)=>houseLocalToWorld(s,x,y);
+    if(window.ConquerCivic3D?.addToBuilder(m,s,g))return;   // Blender model (+ cemetery)
     for(const part of civicParts(s)){
       const turn=part.roofTurn||0;
       if(s.type==='market'){

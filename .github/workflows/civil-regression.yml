@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - Civil
+      - civil-3d
   workflow_dispatch:
 
 jobs:
@@ -24,3 +25,4 @@ jobs:
           node qa/urban-density-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/civic-annex-regression.cjs
+          node qa/civic3d-regression.cjs

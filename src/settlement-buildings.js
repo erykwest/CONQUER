@@ -138,6 +138,8 @@ function drawTrainingField(s,preview=false){
 }
 function drawCivicAnnex(s,preview=false){
   const spec=civicAnnexDefinition(s);if(!spec)return;
+  // Blender-built model (settlement-civic3d.js); the block below is the fallback.
+  if(window.ConquerCivic3D?.draw(s,preview))return;
   const poly=civicAnnexFootprint(s),kind=spec.kind;
   const low=kind==='garden'||kind==='yard';
   const height=kind==='garden'?.13:kind==='yard'?.09:kind==='stall'?.75:1.32;
@@ -164,6 +166,9 @@ function drawCivicAnnex(s,preview=false){
   }
 }
 function drawCivicStructure(s,preview=false){
+  // Blender-built models (settlement-civic3d.js, church with its cemetery); the
+  // geometric drawings below stay as the fallback.
+  if(window.ConquerCivic3D?.draw(s,preview))return;
   if(s.type==='market')drawMarket(s,preview);
   else if(s.type==='tavern')drawTavern(s,preview);
   else if(s.type==='church')drawChurch(s,preview);
