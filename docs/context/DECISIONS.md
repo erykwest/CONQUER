@@ -43,6 +43,9 @@
 | D-031 | VINCOLO DI DESIGN ESPLICITO (ASSEDIO 16/10) | **Attacchi ordinari delle unità e frecce non danneggiano mura né torri**: danno strutturale 0. Non basta essere un bersaglio selezionabile; arma/azione e tipo di elemento devono risultare compatibili nella matrice dei danni. | S-05/S-16: vietare la perdita di HP di murature e torri per attacco ordinario, indipendentemente dalla loro integrità; prevedere QA deterministiche contro bypass e impatti incompatibili. Nessuna modifica runtime in questo commit. |
 | D-032 | VINCOLO DI DESIGN ESPLICITO (ASSEDIO 16/10) | **Torre-porta e portone possiedono due valori di durabilità separati**: uno per la struttura della torre, uno per il portone vero e proprio. Ogni impatto agisce sulla durabilità del componente effettivamente colpito, non sull'altra per semplice associazione spaziale. | S-22/S-24/S-25: attacco/incendio del portone non rimuove automaticamente HP alla torre-porta; distruzione del portone sblocca il passaggio secondo lo stato della navigazione, senza distruggere la torre. Regole del possibile crollo della struttura da specificare, non inventate. Nessuna modifica runtime in questo commit. |
 
+| D-033 | VINCOLO DESIGN (19/10/2026) | Prima i consumi e i saldi produttivi, poi mercanti e auto-upgrade delle case. Le nuove imprese spontanee richiedono una popolazione L4 reale. | I segnali economici devono distinguere carenza fisica, insufficienza monetaria, surplus e trend. |
+| D-034 | CODICE BRANCH (19/10/2026) | Su `feature/economic-balances-20261019` bilancio settimanale per bene e trend a quattro settimane; consumo domestico di legna provvisorio. | [QA Node PASS](https://github.com/erykwest/CONQUER/actions/runs/39253184968); non implica merge o test browser. |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
