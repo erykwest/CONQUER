@@ -2,6 +2,12 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-19 — Il saldo economico prima di mercanti e case
+
+- Decisione **D-033**: misurare consumi, produzioni, deficit e surplus prima di attivare crescita imprenditoriale e urbana.
+- Implementazione **D-034** sulla branch `feature/economic-balances-20261019`: bilanci per bene, bisogni domestici, consumo dei workshop, cause del deficit e trend a quattro settimane; investimento L4 condizionato alla presenza della classe L4.
+- [CI economica PASS](https://github.com/erykwest/CONQUER/actions/runs/39253184968). Mancano integrazione dello stock Builder, prova browser e sviluppo delle imprese automatiche. `main` non modificata da questa iterazione.
+
 ## 2026-10-16 — Diagnosi condivisa /main e /camp: crescita bloccata dalla pianificazione arteriale
 
 - Individuato su `main` il medesimo blocco di crescita già corretto su `camp`: la ricerca in background delle quattro strade perimetrali impediva lo spawn delle case, anche sulle arterie completate.
