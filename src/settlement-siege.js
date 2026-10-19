@@ -356,6 +356,7 @@
       t.wallConnections=t.wallConnections.flatMap(c=>c.wallId!==s.id?[c]:c.end==='a'?(left?[{...c,wallId:left.id}]:[]):(right?[{...c,wallId:right.id}]:[]));
     if(State.selectedId===s.id)State.selectedId=pieces[0]?.id||null;
     if(typeof invalidateCastleColliderGeometry==='function')invalidateCastleColliderGeometry(...pieces);
+    window.ConquerWallWalk?.invalidate();                 // the breach cuts the wall walk
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     invalidateSceneCache();markDirty(true,true,true);
     renderFunctionPanel();draw();
@@ -424,6 +425,7 @@
     if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
     if(s.type==='tower'&&typeof detachSubtowerChildren==='function')detachSubtowerChildren(s.id);
     State.structures=State.structures.filter(x=>x.id!==s.id);
+    window.ConquerWallWalk?.invalidate();
     if(State.selectedId===s.id)State.selectedId=null;
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     invalidateSceneCache();

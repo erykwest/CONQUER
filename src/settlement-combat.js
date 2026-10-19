@@ -47,7 +47,7 @@
   const patrolRouteCache=new Map();
 
 
-  function defaults(){return{version:2,fog:false,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],recall:false,recallMode:'off',seen:''};}
+  function defaults(){return{version:2,fog:false,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],storms:[],recall:false,recallMode:'off',seen:''};}
   function restore(raw){
     combat=Object.assign(defaults(),raw&&[1,2].includes(raw.version)?raw:{});
     // This builder starts with the terrain explored (known) but not currently
@@ -64,11 +64,14 @@
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
-        const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
+        const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,legs,climbing,stoneClock,...stored}=u;
         return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
-    combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)):[];
+    combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y))
+      .map(({legs,climbing,nextThink,engaged,...e})=>e):[];
+    // Ladders and assault towers set against the walls (dev assault).
+    combat.storms=Array.isArray(combat.storms)?combat.storms.filter(s=>s&&s.wallId&&s.foot&&s.origin&&['ladder','tower'].includes(s.kind)):[];
     for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';}
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
@@ -89,8 +92,8 @@
     // Persist game data, never transient navigation graphs. A direct route
     // previously stored [unit, destination], creating unit -> path -> unit
     // and aborting the entire simulation when saveLocal JSON.stringify ran.
-    return {...combat,units:combat.units.map(u=>{
-      const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,...stored}=u;
+    return {...combat,enemy:combat.enemy.map(({legs,climbing,nextThink,engaged,...e})=>e),units:combat.units.map(u=>{
+      const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,legs,climbing,stoneClock,...stored}=u;
       return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
         ?{x:u.target.x,y:u.target.y}:null};
     })};
@@ -627,13 +630,13 @@
     g.drawImage(backdrop,0,0);
     g.restore();
   }
-  function drawPosedFigure(p,type,id,livery,unit,index=0){
+  function drawPosedFigure(p,type,id,livery,unit,index=0,z=.08){
     const anim=window.ConquerCombatAnim;
-    if(!anim)return drawSoldierFigure(p,.08,type,id,State.clock.day,livery);
+    if(!anim)return drawSoldierFigure(p,z,type,id,State.clock.day,livery);
     // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
     const foe=anim.foeOf(unit);
     const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
-    anim.drawFigure(p,.08,type,id,State.clock.day,livery,pose);
+    anim.drawFigure(p,z,type,id,State.clock.day,livery,pose);
   }
   function renderOverlay(){
     if(!combat)return;
@@ -651,7 +654,7 @@
       if(!selectedIds.has(u.id)||u.defeated)continue;
       g.strokeStyle=u.kind==='knight'?'rgba(255,211,116,.86)':'#e3fcac';
       g.lineWidth=1.5;g.setLineDash([5,4]);
-      drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)},true);
+      drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)+(u.z||0)},true);
       g.setLineDash([]);
     }
     const anim=window.ConquerCombatAnim;
@@ -659,13 +662,21 @@
     for(const u of combat.units){
       // Defeated units stay on screen while their fall animation plays.
       if(u.defeated&&!anim?.dying(u))continue;
-      if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u});
+      const z=.08+(u.z||0);
+      if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u,z});
       else{
         const count=u.kind==='patrol'?2:5;
+        // On a wall walk the men stand in file along the wall.
+        const f=!u.climbing&&u.wall?WW()?.frame(u.wall):null;
         for(let i=0;i<count;i++){
-          const row=Math.floor(i/3),col=i%3,spacing=.55;
-          const offset=count===2?(i?spacing/2:-spacing/2):(col-1)*spacing;
-          characters.push({p:{x:u.x+offset,y:u.y+(row-.4)*spacing},type:'spearman',id:u.id+':'+i,flag:u.kind==='squad'&&i===0,unit:u,index:i});
+          let p;
+          if(f){const o=(i-(count-1)/2)*.42;p={x:u.x+f.ux*o,y:u.y+f.uy*o}}
+          else{
+            const row=Math.floor(i/3),col=i%3,spacing=.55;
+            const offset=count===2?(i?spacing/2:-spacing/2):(col-1)*spacing;
+            p={x:u.x+offset,y:u.y+(row-.4)*spacing};
+          }
+          characters.push({p,type:'spearman',id:u.id+':'+i,flag:u.kind==='squad'&&i===0,unit:u,index:i,z});
         }
       }
     }
@@ -673,9 +684,9 @@
     const sightSources=combat.enemy.length?observers():null;
     withRenderContext(g,()=>{
       for(const soldier of characters){
-        drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index);
-        if(soldier.flag&&!soldier.unit.defeated)withUrbanFigureOcclusion(soldier.p,.08,()=>{
-          const base=w2s(soldier.p,.08);
+        drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index,soldier.z);
+        if(soldier.flag&&!soldier.unit.defeated)withUrbanFigureOcclusion(soldier.p,soldier.z,()=>{
+          const base=w2s(soldier.p,soldier.z);
           g.strokeStyle='#5d4535';g.lineWidth=1.8;g.beginPath();
           g.moveTo(base.x+5,base.y-2);g.lineTo(base.x+5,base.y-27);g.stroke();
           g.fillStyle='#d6bd68';g.beginPath();g.moveTo(base.x+5,base.y-27);
@@ -686,9 +697,9 @@
         const down=e.defeated||e.stats?.hp<=0;
         if((down&&!anim?.dying(e))||!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        drawPosedFigure(e,'spearman',e.id,livery,e,0);
+        drawPosedFigure(e,'spearman',e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
-        const p=w2s(e,.08);g.strokeStyle='#e45151';g.lineWidth=2;
+        const p=w2s(e,.08+(e.z||0));g.strokeStyle='#e45151';g.lineWidth=2;
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
@@ -696,6 +707,14 @@
     // started still finishes smoothly when the player pauses.
     if(anim?.active()&&State.clock.speed===0&&!combatAnimFrame)
       combatAnimFrame=requestAnimationFrame(()=>{combatAnimFrame=0;draw()});
+    // 2.5D view: assault ladders and towers as simple timber outlines (3D draws the models).
+    if(combat.storms?.length&&!window.ConquerWorld3D?.active?.())withRenderContext(g,()=>{
+      for(const s of combat.storms){
+        const ww=WW(),top=ww?.at({wallId:s.wallId,t:s.t});if(!top)continue;
+        const a=w2s(s.foot,0),b=w2s(top,top.z+.15);
+        g.strokeStyle='#7a5530';g.lineWidth=s.kind==='ladder'?3:9;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();
+      }
+    });
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
     const focused=combat.units.find(u=>u.id===selected);
     // The Builder layout may be replaced by another UI shell. Missing optional
@@ -874,6 +893,14 @@
       if(!quiet)status('Out of knight command beacon (16U)');
       return false;
     }
+    // A unit on the walls comes down by the nearest stair first.
+    if(unit.wall||unit.climbing){
+      const legs=planLegs(unit,{ground:point(p.x,p.y)});
+      if(!legs){if(!quiet)status('No stair leads down from this wall');return false}
+      unit.legs=legs;unit.target=null;unit.path=null;
+      if(!quiet){changed();status('Coming down from the wall')}
+      return true;
+    }
     const target=point(p.x,p.y),path=infantryRoute(unit,target,unit.id,unit.kind);
     if(!path){
       if(!quiet)status('No traversable route — cliff, terrain or obstruction blocks the order');
@@ -1024,12 +1051,214 @@
     archerRoster=out;
     return archerRoster;
   }
+  // ---------- walls: troops on the wall walks (settlement-wallwalk.js) ----------
+  // A unit is on the ground, climbing (a tower stair or an assault ladder/tower) or on
+  // a wall walk: u.wall={wallId,t}, u.z = height above the terrain. Orders become legs:
+  // ground route -> climb -> walk along the walls -> climb down -> ground route.
+  // Defenders use the stairs in towers and gates; attackers come up at their storm
+  // points (ladders, assault towers) and come down inside through the stairs.
+  const WW=()=>window.ConquerWallWalk;
+  const CLIMB_S=1.6,THINK_S=1;
+  const livingUnit=u=>!!u&&!u.defeated&&!(u.stats&&u.stats.hp<=0);
+  function unitWall(u){
+    if(!u.wall)return null;
+    const ww=WW(),e=ww?.edgeOf(u.wall.wallId);
+    if(e)return u.wall;
+    // The wall under him fell or was split: stay on what is left, or come down.
+    const loc=ww?.locate(u,.6);
+    if(loc){u.wall={wallId:loc.wallId,t:loc.t};u.z=loc.z;return u.wall}
+    u.wall=null;u.z=0;return null;
+  }
+  const levelOf=u=>u.climbing?'climb':unitWall(u)?'wall:'+WW().component(u.wall):'ground';
+  function groundLeg(from,to,u){
+    const path=infantryRoute(from,to,u.id,u.kind||'knight');
+    // Attackers may need the last stretch against the wall face (inside the wall's clearance).
+    const points=(path||[from,to]).map(p=>({x:p.x,y:p.y,z:0}));
+    return{kind:'ground',points};
+  }
+  const climbLeg=(access,up)=>{
+    const top=WW().at(access.entry),bottom={x:access.ground.x,y:access.ground.y,z:0};
+    return{kind:'climb',from:up?bottom:top,to:up?top:bottom,duration:CLIMB_S,elapsed:0,
+      toWall:up?{wallId:access.entry.wallId,t:access.entry.t}:null,stagger:access.stagger||0};
+  };
+  function accesses(kind){
+    const ww=WW();if(!ww)return[];
+    const stairs=ww.stairs().map(s=>({id:s.id,ground:s.ground,entry:s.entry,comp:ww.component(s.entry)}));
+    if(kind!=='storm')return stairs;
+    return(combat.storms||[]).filter(s=>ww.edgeOf(s.wallId)).map(s=>({id:s.id,ground:s.foot,entry:{wallId:s.wallId,t:s.t},comp:ww.component({wallId:s.wallId})}));
+  }
+  const best=(list,score)=>{let b=null,bs=Infinity;for(const a of list){const s=score(a);if(s<bs){bs=s;b=a}}return b};
+  // Legs from where the unit is to target {wall:{wallId,t}} or {ground:{x,y}}.
+  // up/down: which accesses may be used to climb and to come down.
+  function planLegs(u,target,{up='stairs',down='stairs'}={}){
+    const ww=WW();if(!ww)return null;
+    const legs=[],here=unitWall(u);let pos={x:u.x,y:u.y};
+    if(here&&target.wall&&ww.component(here)===ww.component(target.wall)){
+      const r=ww.route(here,target.wall);return r?[{kind:'wall',points:r.points,end:target.wall}]:null;
+    }
+    if(here){
+      const hc=ww.component(here),goal=target.wall?ww.at(target.wall):target.ground;
+      const a=best(accesses(down).filter(a=>a.comp===hc),a=>(ww.route(here,a.entry)?.length??Infinity)+Math.hypot(a.ground.x-goal.x,a.ground.y-goal.y));
+      if(!a)return null;
+      legs.push({kind:'wall',points:ww.route(here,a.entry).points,end:a.entry},climbLeg(a,false));
+      pos=a.ground;
+    }
+    if(target.ground){legs.push(groundLeg(pos,target.ground,u));return legs}
+    const tc=ww.component(target.wall);
+    const a=best(accesses(up).filter(a=>a.comp===tc),a=>Math.hypot(a.ground.x-pos.x,a.ground.y-pos.y)+(ww.route(a.entry,target.wall)?.length??Infinity));
+    if(!a)return null;
+    legs.push(groundLeg(pos,a.ground,u),climbLeg(a,true));
+    const r=ww.route(a.entry,target.wall);if(r)legs.push({kind:'wall',points:r.points,end:target.wall});
+    return legs;
+  }
+  // Advance a unit along its legs; men stop to fight while engaged.
+  function stepLegs(u,dt,speed){
+    if(u.engaged||!u.legs?.length)return false;
+    let budget=dt*speed,moved=false;
+    while(budget>1e-6&&u.legs?.length){
+      const leg=u.legs[0];
+      if(leg.kind==='climb'){
+        if(leg.stagger>0){const w=Math.min(leg.stagger,budget/speed);leg.stagger-=w;budget-=w*speed;continue}
+        const use=Math.min(leg.duration-leg.elapsed,budget/speed);leg.elapsed+=use;budget-=use*speed;
+        const k=Math.min(1,leg.elapsed/leg.duration);
+        u.x=leg.from.x+(leg.to.x-leg.from.x)*k;u.y=leg.from.y+(leg.to.y-leg.from.y)*k;u.z=leg.from.z+(leg.to.z-leg.from.z)*k;
+        u.climbing=k<1;u.wall=null;moved=true;
+        if(k>=1){u.legs.shift();u.climbing=false;if(leg.toWall)u.wall={...leg.toWall};else u.z=0}
+        continue;
+      }
+      if(!leg.i)leg.i=1;
+      const next=leg.points[leg.i];
+      if(!next){u.legs.shift();if(leg.kind==='wall'&&leg.end)u.wall={...leg.end};continue}
+      const d=Math.hypot(next.x-u.x,next.y-u.y);
+      if(d<.02){u.x=next.x;u.y=next.y;leg.i++;continue}
+      const step=Math.min(d,budget);
+      u.x+=(next.x-u.x)*step/d;u.y+=(next.y-u.y)*step/d;budget-=step;moved=true;
+      if(leg.kind==='wall'){
+        u.z=next.z;const loc=WW().locate(u,.8);if(loc)u.wall={wallId:loc.wallId,t:loc.t};
+      }else{u.z=0;u.wall=null}
+    }
+    if(!u.legs?.length)u.legs=null;
+    return moved;
+  }
+  // Send units onto a wall top (spread along it) or down to a ground point.
+  function issueWallOrder(units,loc){
+    const ww=WW(),e=ww.edgeOf(loc.wallId);let ok=0;
+    units.forEach((u,i)=>{
+      const off=(i-(units.length-1)/2)*.7/Math.max(.5,e.len),t=Math.max(0,Math.min(1,loc.t+off));
+      const p=ww.at({wallId:loc.wallId,t});
+      if(u.kind==='squad'&&!commanderCoversOrder(u,p))return;
+      const legs=planLegs(u,{wall:{wallId:loc.wallId,t}});
+      if(!legs)return;
+      u.legs=legs;u.target=null;u.path=null;ok++;
+    });
+    if(ok)changed();
+    status(ok?ok+' unit(s) sent onto the wall':'No stair (tower or gate) leads onto this wall');
+    return ok;
+  }
+  // Storm points: an assault ladder or tower set against a wall (ConquerSiege.assaultCheck).
+  function addStorm(kind,loc){
+    const ww=WW(),f=ww.frame(loc),s=f.wall,level=structureLevel(s);
+    const check=window.ConquerSiege?.assaultCheck(s,kind,kind==='tower'?level:1);
+    if(!check?.ok){status('Assault refused: '+(check?.reason||'no assault rules'));return null}
+    const p=ww.at(loc),face={x:p.x+f.ex*f.half,y:p.y+f.ey*f.half},heading=Math.atan2(-f.ey,-f.ex);
+    const SE=window.ConquerSiegeEngines3D,walk=structureHeight(s);
+    let foot,origin;
+    if(kind==='ladder'){
+      const d=walk*Math.tan(SE?.LADDER_LEAN??.3)+.02;
+      foot={x:face.x+f.ex*d,y:face.y+f.ey*d};
+      const back=SE?.LADDER_FOOT??.17;origin={x:foot.x+f.ex*back,y:foot.y+f.ey*back};
+    }else{
+      const name=level>1?'tower2':'tower',e=window.ConquerSiegeModel?.engines?.[name];
+      const pb=e?.pivots.bridge||[.5,0,1.3],L=e?.rig.bridgeLen||.74,drop=pb[2]-walk,reach=Math.sqrt(Math.max(0,L*L-drop*drop));
+      const back=pb[0]+reach-Math.min(f.half,.2);   // origin behind the face so the bridge lands on the wall top
+      origin={x:face.x+f.ex*back,y:face.y+f.ey*back};
+      const rear=(e?.crew?.[0]?.[0]??-1)-.2;foot={x:origin.x-f.ex*rear,y:origin.y-f.ey*rear};
+    }
+    const storm={id:'storm-'+uid(),kind,wallId:s.id,t:loc.t,foot,origin,heading,level};
+    (combat.storms||(combat.storms=[])).push(storm);
+    // Every hostile outside joins the assault.
+    let n=0;
+    for(const e of combat.enemy)if(livingUnit(e)&&!e.wall){e.assault=storm.id;e.legs=null;e.nextThink=0;n++}
+    changed();status((kind==='ladder'?'Ladder':'Assault tower')+' set against the wall · '+n+' attacker(s)');
+    return storm;
+  }
+  // Attackers: climb at their storm point, then hunt defenders along the walls; with no
+  // one left on the walls they come down inside through a stair and go for the garrison.
+  function assaultThink(e,now){
+    if(e.engaged||e.climbing||now<(e.nextThink||0))return;
+    e.nextThink=now+THINK_S*1000;
+    const ww=WW();if(!ww)return;
+    const here=unitWall(e);
+    if(!here){
+      if(e.legs?.length)return;
+      const storm=(combat.storms||[]).find(s=>s.id===e.assault&&ww.edgeOf(s.wallId));
+      const inside=!storm||e.cameDown;
+      if(!inside){
+        const i=combat.enemy.filter(x=>x.assault===storm.id).indexOf(e);
+        const legs=planLegs(e,{wall:{wallId:storm.wallId,t:storm.t}},{up:'storm'});
+        if(legs){for(const l of legs)if(l.kind==='climb')l.stagger=Math.max(0,i)*.9;e.legs=legs}
+        return;
+      }
+      const foe=best(combat.units.filter(u=>livingUnit(u)&&!u.routing&&!unitWall(u)&&!u.climbing),u=>Math.hypot(u.x-e.x,u.y-e.y));
+      if(foe&&Math.hypot(foe.x-e.x,foe.y-e.y)>.8)e.legs=[groundLeg(e,foe,e)];
+      return;
+    }
+    const comp=ww.component(here);
+    const onWalls=combat.units.filter(u=>livingUnit(u)&&!u.routing&&unitWall(u)&&ww.component(u.wall)===comp);
+    const foe=best(onWalls,u=>Math.hypot(u.x-e.x,u.y-e.y));
+    if(foe){
+      if(Math.hypot(foe.x-e.x,foe.y-e.y)>.8){const r=ww.route(here,foe.wall);if(r)e.legs=[{kind:'wall',points:r.points,end:foe.wall}]}
+      return;
+    }
+    if(e.legs?.length)return;
+    const below=best(combat.units.filter(u=>livingUnit(u)&&!u.routing&&!unitWall(u)),u=>Math.hypot(u.x-e.x,u.y-e.y));
+    if(below){const legs=planLegs(e,{ground:{x:below.x,y:below.y}},{down:'stairs'});if(legs){e.legs=legs;e.cameDown=true}}
+  }
+  // Stones from hoardings and machicolations: men on such a wall hit attackers at its
+  // foot, 0-1 U out from the outer face (also men on ladders), every 2.5 s.
+  function stoneDrops(step){
+    const ww=WW(),rules=window.ConquerCombatRules;if(!ww||!rules?.dropStone)return;
+    for(const u of combat.units){
+      if(!livingUnit(u)||u.routing||u.engaged||u.climbing||!unitWall(u))continue;
+      const f=ww.frame(u.wall);if(!f||f.wall.type!=='wall')continue;
+      const skin=wallSkin(f.wall),reach=skin==='hoarding'||(skin==='machicolation'&&hasMachicolation(f.wall))?1:0;
+      if(!reach)continue;
+      u.stoneClock=(u.stoneClock||0)+step;if(u.stoneClock<2.5)continue;
+      const along0=(u.x-f.wall.a.x)*f.ux+(u.y-f.wall.a.y)*f.uy;
+      let target=null,bd=Infinity;
+      for(const e of combat.enemy){
+        if(!livingUnit(e)||unitWall(e))continue;
+        const rx=e.x-f.wall.a.x,ry=e.y-f.wall.a.y,along=rx*f.ux+ry*f.uy,out=rx*f.ex+ry*f.ey-f.half;
+        if(out<-.05||out>reach||Math.abs(along-along0)>1.6)continue;
+        const d=Math.abs(along-along0)+out;if(d<bd){bd=d;target=e}
+      }
+      if(!target)continue;
+      u.stoneClock=0;
+      const z=terrainElevation(u)+(u.z||0)+.15;
+      rules.dropStone(u,target,{x:u.x+f.ex*(f.half+.12),y:u.y+f.ey*(f.half+.12),z},u.kind==='squad'?2:1);
+    }
+  }
+  // Ladders and assault towers against the walls, for the 3D renderer.
+  function dynamicMeshes(){
+    const SE=window.ConquerSiegeEngines3D;if(!SE||!combat?.storms?.length)return[];
+    return combat.storms.filter(s=>WW()?.edgeOf(s.wallId)).map(s=>{
+      const g=terrainElevation(s.origin);
+      return s.kind==='ladder'
+        ?SE.triangles('ladder',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{up:1})
+        :SE.triangles(s.level>1?'tower2':'tower',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{bridge:1});
+    });
+  }
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);
     updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
+      // Orders onto/along/off the walls run as legs (ground, climb, wall walk).
+      if(u.legs?.length&&!u.defeated&&!u.routing){
+        if(stepLegs(u,dt,u.kind==='knight'?1.5:u.kind==='patrol'?1.15:.8))moved=true;
+        continue;
+      }
       if(!u.target||u.defeated||u.routing)continue;
       if(!u.path?.length){
         const route=u.kind==='patrol'?patrolRoute(u,u.target,u.id):infantryRoute(u,u.target,u.id,u.kind);
@@ -1053,6 +1282,13 @@
       // Record real military movement on snowy ground (knight = horse track).
       window.ConquerSnowTracks?.observe(u.id,u,State.clock.day,u.kind==='knight'?'horse':'person');
     }
+    // Attackers: assault AI at their storm points, then along the walls.
+    const nowMs=performance.now();
+    for(const e of combat.enemy){
+      if(!livingUnit(e)||e.routing)continue;
+      if(e.assault)assaultThink(e,nowMs);
+      if(e.legs?.length&&stepLegs(e,dt,.8))moved=true;
+    }
     if(moved){visibilityDirty=true;maskDirty=true}
     // Combat AI, target acquisition and LOS are capped at 10 Hz.
     // World unit movement remains driven by the regular simulation delta.
@@ -1063,7 +1299,7 @@
       const ruleStart=performance.now();
       const hostiles=combat.enemy.filter(e=>!e.defeated&&(!e.stats||e.stats.hp>0));
       for(const e of hostiles){
-        e.h=terrainElevation(e);e.visualZ=e.h+.6;e.faction??='dev_hostile';
+        e.h=terrainElevation(e)+(e.z||0);e.visualZ=e.h+.6;e.faction??='dev_hostile';
       }
       rules.update(step,combat.units,combat.enemy,hostiles.length?archers():[],
         (e,shooter)=>{
@@ -1076,7 +1312,13 @@
           }
           return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:rules.shooterRange(shooter,e)},e);
         },
-        (a,b)=>safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1);
+        // Melee only between men on the same level: on the ground, or on the same joined walls.
+        (a,b)=>{
+          const la=levelOf(a);if(la!==levelOf(b)||la==='climb')return false;
+          if(la!=='ground')return true;
+          return safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1;
+        });
+      stoneDrops(step);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
       if(ruleMs>25)window.__conquerAnalytics?.event('COMBAT_RULES_SLOW',{ms:+ruleMs.toFixed(1),archers:hostiles.length?archerRoster.length:0,hostiles:hostiles.length},'warn',3000);
@@ -1108,6 +1350,13 @@
     if(kind==='combat-brush'){
       e.preventDefault();e.stopImmediatePropagation();painting=true;lastPaint=null;
       canvas.setPointerCapture(e.pointerId);paint(p,State.tool.combatBrush);requestToolDraw();return;
+    }
+    if(kind==='combat-storm'){
+      e.preventDefault();e.stopImmediatePropagation();
+      const hit=WW()?.pickScreen(pointerScreen(e))||WW()?.locate(p,1.2);
+      if(!hit){status('Click the top of a wall (T2+, finished)');return}
+      if(addStorm(State.tool.stormKind,{wallId:hit.wallId,t:hit.t}))setTool({kind:'select',label:'Select'});
+      syncButtons();draw();return;
     }
     if(kind==='combat-intruder'){
       e.preventDefault();e.stopImmediatePropagation();
@@ -1154,12 +1403,15 @@
         const y0=Math.min(drag.start.y,drag.end.y),y1=Math.max(drag.start.y,drag.end.y);
         const hits=combat.units.filter(u=>{
           if(u.defeated||u.routing)return false;
-          const q=w2s(u,.08);return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
+          const q=w2s(u,.08+(u.z||0));return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
         });
         selectCombatUnits(hits,drag.shift);
         if(hits.length)setTool({kind:'combat-orders',label:'Orders: click destination'});
       }else if(drag.kind==='combat-orders'&&selectedIds.size&&!drag.shift){
-        issueGroupMove(pointerWorld(e));
+        // Clicking a wall top sends the selection up onto the wall walk.
+        const wallHit=WW()?.pickScreen(pointerScreen(e));
+        if(wallHit)issueWallOrder(combat.units.filter(u=>selectedIds.has(u.id)&&!u.defeated&&!u.routing),wallHit);
+        else issueGroupMove(pointerWorld(e));
       }else if(!drag.shift){
         clearCombatSelection();
         if(drag.kind==='select'){
@@ -1194,6 +1446,7 @@
     '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+ 
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
+    '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
     '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>';
@@ -1214,6 +1467,7 @@
     $('combatPatrolRemove').disabled=patrols===0;
     // Keep Add clickable before founding: the action explains the prerequisite.
     document.querySelectorAll('[data-combat-brush]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-brush'&&State.tool.combatBrush===b.dataset.combatBrush));
+    document.querySelectorAll('[data-combat-storm]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-storm'&&State.tool.stormKind===b.dataset.combatStorm));
     $('combatOrders').classList.toggle('active',State.tool.kind==='combat-orders');
     $('combatDeselect').disabled=selectedIds.size===0;
   }
@@ -1231,11 +1485,15 @@
   $('combatPatrolAdd').onclick=addPatrol;
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
-  $('combatClearEnemies').onclick=()=>{combat.enemy=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  document.querySelectorAll('[data-combat-storm]').forEach(b=>b.onclick=()=>{
+    setTool({kind:'combat-storm',stormKind:b.dataset.combatStorm,label:'Click the top of a wall to storm it'});syncButtons();
+  });
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
+    dynamicMeshes,addStorm,issueWallOrder,planLegs,
     alarmMode,setAlarmMode,recruitedResident,
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);

@@ -42,9 +42,11 @@
   function buildBay(level=1){
     const c=flatSpot(),rs=structureRotationStep(Math.PI/2),width=wallWidthForTier(2),half=.75;
     const wall=(a,b)=>({id:uid(),type:'wall',width,level,tier:2,a,b,length:Math.hypot(b.x-a.x,b.y-a.y),rotationStep:rs,siegeTestBay:true});
+    const gateId=uid();
+    // Both stretches are seated on the gatehouse, which is also their stair.
     State.structures.push(
-      wall({x:c.x,y:c.y-10},{x:c.x,y:c.y-half}),wall({x:c.x,y:c.y+half},{x:c.x,y:c.y+10}),
-      {id:uid(),type:'gate',shape:'square',material:'stone',size:1.5,level,functions:[],x:c.x,y:c.y,angle:Math.PI,rotationStep:structureRotationStep(Math.PI),siegeTestBay:true},
+      {...wall({x:c.x,y:c.y-10},{x:c.x,y:c.y-half}),bSnap:gateId},{...wall({x:c.x,y:c.y+half},{x:c.x,y:c.y+10}),aSnap:gateId},
+      {id:gateId,type:'gate',shape:'square',material:'stone',size:1.5,level,functions:[],x:c.x,y:c.y,angle:Math.PI,rotationStep:structureRotationStep(Math.PI),siegeTestBay:true},
       {id:uid(),type:'moat',variant:'water',a:{x:c.x-3.5,y:c.y-10},b:{x:c.x-3.5,y:c.y+10},width:1.5,length:20,groundZ:0,fills:[],siegeTestBay:true});
     invalidateSceneCache();
   }

@@ -806,7 +806,10 @@
   }
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
-    try{for(const m of window.ConquerSiege?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}  // breach rubble
+    // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
+    for(const source of [window.ConquerSiege,window.ConquerCombat]){
+      try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
+    }
     const dyn=buildDynamic(dynamicQueue);dynamicQueue=[];
     renderFront(r,buildSoldiers(list),dyn);ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();

@@ -17,7 +17,7 @@
     realm:{livery:null},
     dev_hostile:{livery:{main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'}}
   };
-  const shots=[],meleeFlashes=[];
+  const shots=[],meleeFlashes=[],stones=[];
   let elapsed=0,combatClock=0;
   const roll=()=>D12[Math.floor(Math.random()*D12.length)];
   function configureFactions(data){
@@ -130,6 +130,22 @@
     shots.push(shot);
     return shot;
   }
+  // Stones dropped from hoardings/machicolations on men at the wall foot: heavy, short,
+  // almost sure to land (armour still counts); each hit takes 3 hp.
+  const STONE_DAMAGE=3;
+  function dropStone(source,target,from,count=1){
+    const v=ensure(target,profileKind(target));let hits=0;
+    for(let i=0;i<count;i++){const die=roll();if(die===6||die>v.armor)hits++}
+    const fall=.45;
+    if(stones.length>80)stones.splice(0,stones.length-80);
+    stones.push({from:{...from},to:{x:target.x,y:target.y,z:target.visualZ??((target.h??0)+.5)},start:elapsed,duration:fall,hit:hits>0});
+    if(hits){
+      applyDamage(target,hits*STONE_DAMAGE,source);
+      window.ConquerCombatAnim?.hurt(target,fall);
+      if(target.defeated)window.ConquerCombatAnim?.fall(target,fall,source);
+    }
+    return hits;
+  }
   function shooterRange(shooter,target){
     const targetH=Number.isFinite(target.h)?target.h:target.height??0;
     // +1/-1 range for every relative altitude level. Positive downhill,
@@ -201,6 +217,7 @@
     }
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
+    for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);
   }
   function drawEffects(g,project){
     g.save();
@@ -214,6 +231,13 @@
         p.from.z+(p.to.z-p.from.z)*Math.min(1,t+.045)+Math.sin(Math.PI*Math.min(1,t+.045))*Math.min(3,Math.hypot(p.to.x-p.from.x,p.to.y-p.from.y)*.20));
       g.strokeStyle='#d7c6a1';g.lineWidth=2;g.beginPath();g.moveTo(pos.x,pos.y);g.lineTo(end.x,end.y);g.stroke();
     }
+    for(const s of stones){
+      // Falls with gravity from the gallery; a puff where it lands.
+      const t=Math.min(1,(elapsed-s.start)/s.duration),k=t*t;
+      const at=project({x:s.from.x+(s.to.x-s.from.x)*t,y:s.from.y+(s.to.y-s.from.y)*t},s.from.z+(s.to.z-s.from.z)*k);
+      if(t<1){g.globalAlpha=1;g.fillStyle='#8e877c';g.strokeStyle='#4a453f';g.lineWidth=1;g.beginPath();g.arc(at.x,at.y,3.2,0,Math.PI*2);g.fill();g.stroke()}
+      else{const age=(elapsed-s.start-s.duration)/.25;g.globalAlpha=Math.max(0,.6-age*.6);g.fillStyle='#c9bda7';g.beginPath();g.arc(at.x,at.y,4+age*6,0,Math.PI*2);g.fill();g.globalAlpha=1}
+    }
     for(const f of meleeFlashes){
       const age=(elapsed-f.at)/.65,at=project(f,.16);
       g.globalAlpha=Math.max(0,1-age);g.strokeStyle='#f3dcc0';g.lineWidth=1.8;
@@ -221,6 +245,6 @@
     }
     g.restore();
   }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,
-    get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;elapsed=0;combatClock=0;window.ConquerCombatAnim?.reset()}};
+  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,dropStone,STONE_DAMAGE,
+    get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;stones.length=0;elapsed=0;combatClock=0;window.ConquerCombatAnim?.reset()}};
 })();
