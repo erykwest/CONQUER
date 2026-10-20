@@ -135,9 +135,13 @@ function urbanFieldParcelAllowed(points,fieldId){
   const minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y));
   for(let x=minX;x<=maxX+.001;x+=.4)for(let y=minY;y<=maxY+.001;y+=.4){
     const p={x,y};if(!urbanContains(points,p))continue;
-    if(window.ConquerCombat?.areaState(p).yellow||terrainPlateauElevation(p)!==0)return false;
+    const zone=window.ConquerCombat?.areaState(p);
+    if(zone?.yellow||zone?.green||terrainPlateauElevation(p)!==0)return false;
   }
-  for(const p of points)if(window.ConquerCombat?.areaState(p).yellow||terrainPlateauElevation(p)!==0)return false;
+  for(const p of points){
+    const zone=window.ConquerCombat?.areaState(p);
+    if(zone?.yellow||zone?.green||terrainPlateauElevation(p)!==0)return false;
+  }
   // Small painted yellow islands can fall between the regular samples.
   // Testing brush centres avoids accepting such enclosed zoning pockets.
   for(const zone of window.ConquerCombat?.yellowGeometry?.()||[]){
