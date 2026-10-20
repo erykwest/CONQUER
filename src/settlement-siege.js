@@ -456,8 +456,8 @@
     for(const r of x.ruins)if(r.spec?.stump&&r.id.startsWith(s.id+':storey:')){r.spec.stump=false;C()?.forget(r.id);heapCache.delete(r.id);rubbleGrid=null}
     const pts=parts.flat(),cx=pts.reduce((t,p)=>t+p.x,0)/pts.length,cy=pts.reduce((t,p)=>t+p.y,0)/pts.length;
     const id=s.id+':'+(opts.cause||'collapse')+':'+x.ruins.length+':'+State.clock.day+':'+Math.round(z1*100);
-    const spec={id,parts:parts.map(p=>p.map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))),z0,z1,ground:groundOf(s),
-      seed:id,palette:opts.palette||collapsePalette(s),material:opts.material||collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey'||opts.cause==='ruin',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
+    const spec={id,parts:parts.map(p=>p.map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))),z0,z1,ground:opts.ground??groundOf(s),
+      ...(opts.delay?{delay:opts.delay}:{}),seed:id,palette:opts.palette||collapsePalette(s),material:opts.material||collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey'||opts.cause==='ruin',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
     const ruin={id,type:'collapse',cause:opts.cause||'destroyed',structure:s.type,x:cx,y:cy,day:State.clock.day,spec};
     if(opts.a)Object.assign(ruin,{a:opts.a,b:opts.b,width:Number(s.width)||.5,height:structureHeight(s)});
     x.ruins.push(ruin);if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
@@ -653,8 +653,22 @@
   }
   // A wooden bridge pulled down: its planks and beams fall into the moat.
   function collapseBridge(b){
-    const g=groundOf(b);
-    return startCollapse(b,g-.3,g+.22,{cause:'demolished',parts:[footprintPoints(b)]});
+    // A cascade: the deck gives way span by span from one end, each piece falling from
+    // deck height to whatever lies under it (a moat bed, a valley floor), and the trestles
+    // or piers beneath fold up just after the span they carried.
+    const deck=Number(b.groundZ)||groundOf(b),L=Math.hypot(b.b.x-b.a.x,b.b.y-b.a.y)||1;
+    const ux=(b.b.x-b.a.x)/L,uy=(b.b.y-b.a.y)/L,w=(Number(b.width)||1)/2,n=Math.max(1,Math.round(L/1.5));
+    const at=(t,c)=>({x:b.a.x+ux*t*L-uy*c,y:b.a.y+uy*t*L+ux*c});
+    const under=p=>typeof terrainElevation==='function'?terrainElevation(p):0;
+    let first=null;
+    for(let i=0;i<n;i++){
+      const t0=i/n,t1=(i+1)/n,mid=at((t0+t1)/2,0),g=Math.min(deck,under(mid)),delay=i*.22;
+      const lean={x:-uy*(Math.sin(i*2.3)*.6)+ux*.2,y:ux*(Math.sin(i*2.3)*.6)+uy*.2};
+      const r=startCollapse(b,deck-.15,deck+.22,{cause:'demolished',parts:[[at(t0,-w),at(t1,-w),at(t1,w),at(t0,w)]],ground:g,delay,lean});
+      first=first||r;
+      if(deck-g>.5)startCollapse(b,g,deck-.15,{cause:'demolished',parts:[[at(t0,-w*.8),at(t1,-w*.8),at(t1,w*.8),at(t0,w*.8)]],ground:g,delay:delay+.35,lean});
+    }
+    return first;
   }
   function breakDoor(g){
     delete g.drawbridge;                       // a raised drawbridge is smashed with the door
