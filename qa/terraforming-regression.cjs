@@ -196,13 +196,11 @@ test('square masonry terraces magnetize flush to each other without internal wal
   assert.equal(api.elevationAt({x:100,y:100},0),1,'seam is continuous at H1');
   const overlap=api.preview({x:98,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
   assert.equal(overlap.ok,false,'nonzero interior overlap is still forbidden');
-  const world=fs.readFileSync(path.join(__dirname,'..','src','settlement-world3d.js'),'utf8');
   const faces=[];
   context.meshBuilder=()=>({tris:[],face:(points,color)=>faces.push({points,color})});
   context.terrainElevation=p=>api.elevationAt(p,0);
   context.clipTerrainPolygon=poly=>poly;
-  vm.runInContext(world.slice(world.indexOf('  function buildTerrain(){'),world.indexOf('  // Mountains as raised fans')),context);
-  vm.runInContext(world.slice(world.indexOf('  const EDGE_STEP='),world.indexOf('  // Bake the existing 2D ground')),context);
+  // Reuse actual WebGL functions already compiled by the earlier test.
   const tris=vm.runInContext('buildTerrain()',context);
   let total=0;
   for(let i=0;i<tris.length;i+=9){
@@ -213,6 +211,22 @@ test('square masonry terraces magnetize flush to each other without internal wal
   vm.runInContext('buildTerrainEdges()',context);
   assert.equal(faces.filter(f=>['#49443f','#686057'].includes(f.color)).length,6,
     'six exterior masonry faces, no two overlapping internal ones');
+});
+test('round terraces also join along an actual facet rather than just touch at one point',()=>{
+  context.State.relief.terraforming=[];
+  const parent=api.preview({x:100,y:100},{mode:'walled',shape:'round',radius:4,delta:1,magnet:false});
+  assert.equal(api.commit(parent),true);
+  const support=4*Math.cos(Math.PI/24);
+  const next=api.preview({x:100+2*support+.08,y:100},{mode:'walled',shape:'round',radius:4,delta:1});
+  assert.equal(next.ok,true);
+  assert.ok(next.terraceSnap);
+  assert.ok(Math.abs(next.center.x-(100+2*support))<1e-6);
+  assert.equal(next.targetZ,1);
+  assert.equal(api.commit(next),true);
+  const [a,b]=api.edits();
+  assert.equal(api.exposedWallSegments(a,0).length,0);
+  assert.equal(api.exposedWallSegments(b,12).length,0);
+  assert.equal(api.elevationAt({x:100+support,y:100},0),1);
 });
 test('picked fractional point heights always round UP to a full integer before edit',()=>{
   context.State.relief.terraforming=[];
