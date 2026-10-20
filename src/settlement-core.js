@@ -583,6 +583,27 @@ function migrateConstructionSites(){
   }
   return changed;
 }
+function constructionCrewAssignments(day=State.clock.day,cutoff=day){
+  const slots=new Map();
+  if(!State.village?.founded)return slots;
+  const dayOfWeek=((Math.floor(day)%7)+7)%7;
+  if(dayOfWeek>=5)return slots;
+  const candidates=window.ConquerEconomy?.availableBuilderIds?.(day)||[];
+  const sites=(State.structures||[]).filter(s=>!s.auto&&
+    s.construction?.version===2&&underConstruction(s)&&
+    s.construction.startedDay<=cutoff).sort((a,b)=>
+    a.construction.startedDay-b.construction.startedDay||
+    String(a.id).localeCompare(String(b.id)));
+  for(const s of sites)slots.set(s.id,[]);
+  let index=0;
+  // One worker per open job first, then the second/third if still spare.
+  for(let pass=0;pass<CONSTRUCTION_MAX_WORKERS&&index<candidates.length;pass++)
+    for(const s of sites){
+      if(index>=candidates.length)break;
+      slots.get(s.id).push(candidates[index++]);
+    }
+  return slots;
+}
 function tickConstructionWork(fromDay,toDay){
   if(!State.village?.founded)return[];
   migrateConstructionSites();
@@ -607,18 +628,9 @@ function tickConstructionWork(fromDay,toDay){
     ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
       String(a.id).localeCompare(String(b.id)));
     if(sites.length){
-      const free=workerDay>0?Math.max(0,Math.floor(window.ConquerEconomy?.availableBuilders?.(t)||0)):0;
-      const allocated=new Map(sites.map(s=>[s.id,0]));
-      let remaining=free;
-      // Breadth-first distribution: every queued site gets one worker before
-      // any site gets a second, then up to three per construction.
-      for(let pass=0;pass<CONSTRUCTION_MAX_WORKERS&&remaining>0;pass++)
-        for(const s of sites){
-          if(!remaining)break;
-          if(allocated.get(s.id)===pass){allocated.set(s.id,pass+1);remaining--;}
-        }
+      const assigned=workerDay>0?constructionCrewAssignments(t,next):new Map();
       for(const s of sites){
-        const c=s.construction,n=allocated.get(s.id)||0;
+        const c=s.construction,n=assigned.get(s.id)?.length||0;
         const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
         const work=Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n;
         c.workers=n;
