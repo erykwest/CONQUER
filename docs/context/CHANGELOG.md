@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Skeleton L3 / L4 / L4+ e servizi locali
+
+- Implementato contratto `ConquerCommerce`: inventario **di blueprint** botteghe L3 senza produzione fittizia, associazione operatori L3 ai servizi locanda e chiesa, proprietà primarie L4 derivate dal ledger attuale.
+- L4+ rappresenta un viaggio interurbano di un L4 esistente o estero, senza nuova popolazione; manifesti di merci **dichiarativi**, non trasferimenti, e locanda con posti letto espliciti controllati.
+- Routine L3 riclassificata da “merchant” ad artigiano locale e collegata a bottega o servizio se assegnati. Overview economico e pannelli leggono i dati senza inventare flussi.
+- Persistenza nella struttura `State.economy.commerce` già salvata in locale e cloud; regression `qa/commerce-skeleton-regression.cjs`. Rimangono fuori scope carovane, vendite, entrate servizi e ricette attive. [Specifica](../commerce-skeleton.md).
+
 ## 2026-10-20 — Salari differenziati per cantieri del signore e spawn spontaneo
 
 - Le costruzioni volute dal giocatore pagano L1 dalla tesoreria a giornata-operaio, accreditando il wallet aggregato L1. Mancanza fondi sospende il lavoro, presenza di oro lo riattiva; le paghe maturate restano anche dopo cancellazione dell'edificio.
