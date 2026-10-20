@@ -143,16 +143,34 @@ test('production remains two units/day with two available workers',()=>{
   assert.equal(h.economy.snapshot().market.wood,10);
   assert.equal(h.economy.snapshot().market.stone,20);
 });
-test('both yellow windmill variants stay 2x2U and require a flat H+1 terrace',()=>{
+test('the industry catalogue and UI contain exactly two distinct mills',()=>{
+  const h=harness();
+  const registered=Object.keys(h.industry.TYPES).filter(type=>h.industry.isMill({type}));
+  assert.deepEqual(registered,['windmill','watermill']);
+  assert.equal(Object.hasOwn(h.industry.TYPES,'windmillA'),false);
+  assert.equal(Object.hasOwn(h.industry.TYPES,'windmillB'),false);
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const buttons=[...html.matchAll(/data-industry="([^"]*mill[^"]*)"/g)].map(match=>match[1]);
+  assert.deepEqual(buttons,['windmill','watermill']);
+});
+test('yellow windmill stays 2x2U and requires a flat H+1 terrace',()=>{
+  const h=harness();
+  h.ctx.buildableTerrainElevationForStructure=()=>0;
+  const mill=h.industry.make('windmill',{x:100,y:100});
+  assert.equal(mill.w,2);assert.equal(mill.h,2);
+  assert.equal(h.industry.validate(mill).ok,false,'H0 must reject windmills');
+  h.ctx.buildableTerrainElevationForStructure=()=>1;
+  assert.equal(h.industry.validate(mill).ok,true,'H+1 must allow the whole windmill');
+  assert.equal(h.placement.check(mill).ok,true);
+});
+test('saved legacy windmill A/B structures migrate to one windmill type',()=>{
   const h=harness();
   for(const type of ['windmillA','windmillB']){
-    h.ctx.buildableTerrainElevationForStructure=()=>0;
-    const mill=h.industry.make(type,{x:100,y:100});
-    assert.equal(mill.w,2);assert.equal(mill.h,2);
-    assert.equal(h.industry.validate(mill).ok,false,'H0 must reject windmills');
-    h.ctx.buildableTerrainElevationForStructure=()=>1;
-    assert.equal(h.industry.validate(mill).ok,true,'H+1 must allow the whole windmill');
-    assert.equal(h.placement.check(mill).ok,true);
+    const saved={id:type,type,x:100,y:100,w:3,h:3};
+    h.industry.normalizeFootprint(saved);
+    assert.equal(saved.type,'windmill');
+    assert.equal(saved.w,2);assert.equal(saved.h,2);
+    assert.equal(h.industry.is(saved),true);
   }
 });
 test('watermill wheel face aligns with water; distant bank fails placement',()=>{
