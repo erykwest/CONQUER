@@ -2,6 +2,12 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Razioni signorili e happiness L1–L4 (`jobmanager`)
+
+- Consumo ordinario esclusivamente dal mercato; scorte del castello intoccate fino a ordine di razione intera o dimezzata, con prelievo reale e limiti fisici.
+- Happiness indipendente per L1, L2, L3, L4; malus da sottoalimentazione o mezza razione, bonus da razioni intere servite. Migrazione salvataggi economici V1 e mantenimento `welfare` come media pesata per salari.
+- Interfaccia di gestione modificata e test `qa/economy-rations-regression.cjs` inserito nella CI; migrazione civile non ancora sviluppata.
+
 ## 2026-10-20 — Job Manager L1/L2 e cantieri lavorati (branch `jobmanager`)
 
 - Branch [`jobmanager`](https://github.com/erykwest/CONQUER/tree/jobmanager) creata dal `main` `a4adca0`; nuovo scheduler L1 con tutela degli allevatori alimentari, logging essenziale e costruzioni in concorrenza per manodopera disponibile. L1 esclusi dai campi; assegnazione agricola ed estrazione a L2.

@@ -9,6 +9,7 @@
 - **CANTIERI:** `workRequired/workDone` sostituisce il progresso a tempo per le strutture manuali; nessun L1 disponibile significa progresso fermo. Il pozzo fondativo è un'eccezione di bootstrap (prima che esistano case L1), mentre edifici procedurali auto-spawn restano immediati.
 - **PROTEZIONE SOSTENTAMENTO:** riserva di L1 allevatori calcolata con scorte alimentari del ledger economico su 14 giorni. Se gli allevatori idonei non bastano, il sistema segnala rischio ma non può impedire una carestia strutturale. Gli stock Builder di prova e il ledger non sono ancora unificati (O-003).
 - **QA ESEGUITA:** [GitHub Actions run 39457570788](https://github.com/erykwest/CONQUER/actions/runs/39457570788) **PASS**: `qa/jobmanager-regression.cjs`, `qa/economy-regression.cjs`, `qa/economy-industries-regression.cjs`, `qa/fields-regression.cjs`. Non equivalgono a un collaudo di navigazione, disegno, performance o migrazione browser con salvataggi reali.
+- **POLITICA ALIMENTARE (`jobmanager`):** i civili acquistano cibo dal mercato; il castello distribuisce solo su ordine esplicito (`full`/`half`). Happiness persistita separatamente per L1–L4 con penalita di fame e mezze razioni. Migrazioni non sviluppate: regola sociale futura L1/L2 servi non emigrano, L3/L4 liberi.
 - **NON RILASCIATO:** modifiche soltanto su feature branch, senza merge su `main` e senza deploy Vercel. Approfondimento in [docs/jobmanager.md](../jobmanager.md); decisione [D-033](DECISIONS.md).
 
 ## Semaforo epistemico

@@ -30,6 +30,15 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 - Nonfarm private abandonment: 2 consecutive negative annual operating balances.
 - Strategic lord-owned production may continue even when not profitable.
 
+## Rations and happiness by class (branch `jobmanager`, 20/10/2026)
+
+- **Default civilian food consumption uses the market only.** The lord's food store is not used automatically, even when residents cannot afford food. Builder's test resources are still a separate inventory.
+- The management Policies panel explicitly authorizes **full castle rations** (up to 100% of a cohort's weekly food requirement) or **half castle rations** (up to 50%). Available food is shared proportionally across L1–L4, never fabricated, and deducted from the castle ledger. Households may buy the remainder from market lots.
+- Four saved happiness values (`economy.happiness.L1`, `L2`, `L3`, `L4`) change separately during Saturday market accounting. Insufficient food lowers the affected class happiness; half rations lower morale even when households can buy the remainder. Delivered full rations give a small bonus. Existing saves migrate their former `welfare` to each class, then `welfare` becomes a population-weighted aggregate used by the preexisting wage calculation.
+- The former inert 0–100 `rations` slider is replaced by `market` (default), `full`, `half`, persisted in `economy.rationMode` for local and cloud saves.
+- L1/L2 are bound serfs who cannot emigrate; L3/L4 are free to leave. **The migration simulation itself remains unimplemented**, distinct from the food and happiness rules.
+- Run `node qa/economy-rations-regression.cjs` and existing economy/jobmanager QA suites.
+
 ## Castle vs market
 - Owner-dependent production: lord or private L4.
 - Per-good lord sale share: 0, 25, 50, 75, or 100%.
