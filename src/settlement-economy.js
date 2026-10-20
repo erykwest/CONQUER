@@ -558,7 +558,7 @@
       (s.commerce?
         '<div class="kv"><span>L3 shops / services</span><b>'+s.commerce.l3Shops+' / '+s.commerce.l3Services+'</b></div>'+
         '<div class="kv"><span>L4+ intercity manifests / present</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
-        '<div class="kv"><span>L4+ purse quoted / reserved</span><b>'+fmt(s.commerce.l4PlusDeclaredGold)+' / '+fmt(s.commerce.l4PlusHeldGold)+' gold</b></div>'+
+        '<div class="kv"><span>L4+ forziere dichiarato / accantonato</span><b>'+fmt(s.commerce.l4PlusDeclaredGold)+' / '+fmt(s.commerce.l4PlusHeldGold)+' gold</b></div>'+
         '<div class="kv"><span>Wagons quoted (not spawned)</span><b>'+s.commerce.l4PlusWagons+'</b></div>'+
         '<div class="kv"><span>Inn beds available</span><b>'+Math.max(0,s.commerce.innBeds-s.commerce.innOccupied)+' / '+s.commerce.innBeds+'</b></div>':'')+
       '<div class="legend">Local sales are L3 shop contracts; L4+ manifests concern only intercity trade. Trade, lodging payments and extra goods are not simulated yet.</div>'+
