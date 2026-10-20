@@ -546,7 +546,7 @@ function drawAutoStructure(s,preview=false){
     drawField(s);
   }else if(s.type==='road'){
     const a=w2s(s.a),b=w2s(s.b);ctx.strokeStyle='rgba(126,106,82,.70)';ctx.lineWidth=Math.max(2,s.width*U*State.view.scale*.72);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  }else if(s.type==='house')drawHouse(s);
+  }else if(s.type==='house')withStructureVisualMaterial(s,()=>drawHouse(s));
   ctx.restore();if(underConstruction(s))drawConstructionProgress(s);
 }
 function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};return{x:0,y:0}}

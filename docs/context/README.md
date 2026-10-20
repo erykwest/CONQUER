@@ -14,6 +14,8 @@
 | **4 — Dettaglio** | [BACKLOG.md](BACKLOG.md) | Dove stanno le singole feature, i requisiti e i documenti tematici? |
 | **5 — Continuità** | [PROTOCOL.md](PROTOCOL.md) e [CHANGELOG.md](CHANGELOG.md) | Come leggere, aggiornare e trasferire il contesto senza degradarlo? |
 
+**Guida operativa per `clay` (branch da `Civil`, solo istruzioni):** [argilla, murature in mattoni e roadmap implementativa](../CLAY-DEVELOPMENT.md) · [piano QA](../CLAY-REGRESSION-PLAN.md). Le modifiche non sono ancora nel codice.
+
 **Guida operativa per il sottosistema Civil:** [sviluppo edifici civili, cimitero L1, birreria L2 e annessi](../CIVIL-ANNEX-DEVELOPMENT.md). Contiene contratti del codice, percorso implementativo e checklist QA; è specifica della branch `Civil`.
 
 **Entrata rapida (2 minuti):** leggi questa pagina, la tabella «Prossimo passo» della [roadmap](ROADMAP.md#prossimo-passo) e gli «avvisi» dello [stato](STATUS.md#avvisi-di-integrazione).  

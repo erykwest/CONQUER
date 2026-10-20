@@ -2,6 +2,17 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-19 — clay: palette DEV Stone/Clay
+
+- Aggiunto selettore globale DEV con visualizzazione alternativa mattone/tegola e piani terra delle case L2–L4, colori condivisi tra Canvas e WebGL2, preference locale e invalidazione della scena; nessun cambiamento economico o all'integrità.
+- Aggiunta regressione e workflow GitHub Actions dedicata alla branch `clay`, preservando la suite `Civil`; [CI 39271126852](https://github.com/erykwest/CONQUER/actions/runs/39271126852) **PASS** sulla HEAD `bbe5a27`. Corretto il mock degli annessi civili nella QA industriale, senza alterare il runtime.
+
+## 2026-10-19 — clay: nuove istruzioni di sviluppo (solo Markdown)
+
+- Creato ramo `clay` dalla HEAD di `Civil`, senza introdurre modifiche al codice o merge verso `main`.
+- Preparati [`docs/CLAY-DEVELOPMENT.md`](../CLAY-DEVELOPMENT.md) e [`docs/CLAY-REGRESSION-PLAN.md`](../CLAY-REGRESSION-PLAN.md) con specifiche di Cava argilla entro 6 U, materiali e costi alternativi, palette, integrità all'80%, migrazioni e QA.
+- Aggiornati indice, decisioni, backlog, stato ed economia come **design non implementato**. Nessuna nuova suite runtime eseguita.
+
 ## 2026-10-19 — Civil: guida tecnica per sviluppo annessi
 
 - Aggiunto [`docs/CIVIL-ANNEX-DEVELOPMENT.md`](../CIVIL-ANNEX-DEVELOPMENT.md) sulla branch `Civil`: stato reale del catalogo, differenza cimitero intrinseco / birreria costruibile, punti di estensione nei moduli, vincoli Voronoi e placement, renderer, persistenza, test, criteri di completamento e decisioni da prendere prima di sviluppare meccaniche economiche.

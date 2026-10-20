@@ -48,11 +48,12 @@
       ['[data-linear="wall"]','Mura','wall'],
       ['[data-linear="palisade"]','Palizzata','fence'],
       ['[data-linear="built"]','Sezione costruita','built'],
-      ['[data-gate]','Porta in pietra','gate'],
+      ['[data-gate]','Porta muraria','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
-      ['[data-industry="quarry"]','Cava','work'],
+      ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','work'],
+      ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','work'],
       ['[data-industry="mine"]','Miniera','work']]},
     {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
@@ -68,6 +69,7 @@
   const combatPanel=root.querySelector('#combatControls');
   const originalButtons=[...root.querySelectorAll('button')];
   const controls=[
+    {name:'Materiale di muratura',icon:'built',category:'all',selectors:['[data-build-masonry]']},
     {name:'Pianta torre quadrata',icon:'square',selectors:['[data-tower="square"]']},
     {name:'Pianta torre rotonda',icon:'round',selectors:['[data-tower="round"]']},
     {name:'Altezza torre',icon:'level',selectors:['[data-tower-level]']},
@@ -133,9 +135,9 @@
       const b=originalButtons.find(x=>x.matches(selector));
       if(!b)continue;iconize(b,label,icon);catalog.append(b);
     }
-    options.hidden=!['defense','infrastructure'].includes(currentCategory);
+    options.hidden=currentCategory==='combat';
     options.querySelectorAll('.ux-option-line').forEach(line=>{
-      line.style.display=(line.dataset.category||'defense')===currentCategory?'flex':'none';
+      line.style.display=(line.dataset.category==='all'||(line.dataset.category||'defense')===currentCategory)?'flex':'none';
     });
   }
   for(const group of groups){

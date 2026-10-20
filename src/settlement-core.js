@@ -112,7 +112,91 @@ const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},buildMasonryMaterial:'stone',resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+// DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
+const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
+State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
+const CLAY_VISUAL_SWATCHES=Object.freeze({
+  '#9a8e82':'#be7254',
+  '#635951':'#98523e',
+  '#514a44':'#763b30',
+  '#887d72':'#ad654b',
+  '#554d46':'#804130',
+  '#403b36':'#653226',
+  '#9f9183':'#c18260',
+  '#c8b9a9':'#dc9b78',
+  '#918579':'#b87355',
+  '#605750':'#98503c',
+  '#4a443e':'#75392d',
+  '#b3a596':'#d18e6d',
+  '#948779':'#b77357',
+  '#625a52':'#9c5540',
+  '#4b4540':'#743c2f',
+  '#8f857a':'#b77558',
+  '#82776c':'#9d563f',
+  '#61574f':'#824332',
+  '#5a514a':'#774032',
+  '#49443f':'#774034',
+  '#686057':'#a35b46',
+  '#84796d':'#b37355',
+  '#4e4740':'#7d4232',
+  '#5d554d':'#97523d',
+  '#88796b':'#b67456',
+  '#62584f':'#995741',
+  '#8c7b69':'#b67354',
+  '#554b42':'#824432',
+  '#66594d':'#a45a44',
+  '#9f9285':'#c18665',
+  '#8d877c':'#b97758',
+  '#716c64':'#96513d',
+  '#7f796f':'#af6c50',
+  '#4c4842':'#783d31',
+  '#5a554d':'#8d4837',
+  '#a59b8d':'#c58a6a',
+  '#b8aa99':'#d09270',
+  '#676a6c':'#b66e51',
+  '#66635f':'#93503d',
+  '#77736e':'#a85d46',
+  '#6b6863':'#a96047',
+  '#7d7973':'#b87559',
+  '#85817a':'#c07c5c',
+  '#696862':'#96513e',
+  '#777671':'#ae684d',
+  '#85847d':'#bb7456',
+  '#625e59':'#ae664d',
+  '#4f4b47':'#864330',
+  '#303237':'#a94e36',
+  '#3a3d42':'#bf6345',
+  '#303943':'#a44c34',
+  '#394550':'#c06946',
+  '#34363a':'#a85239',
+  '#42454a':'#c26a4a',
+  '#303236':'#99442f',
+  '#44474c':'#cb7350',
+  '#3d4145':'#ab5038',
+  '#484c50':'#c26b49',
+  '#41454a':'#ae573d',
+  '#4c5054':'#c4714c',
+  '#595a60':'#b35d40',
+  '#3b302b':'#a85037',
+  '#493930':'#bd6647'
+});
+let structureVisualMaterial=null;
+function masonryMaterial(s){
+  if(!s||s.material==='wood'||s.type==='palisade'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
+  return s.masonryMaterial==='brick'?'brick':'stone';
+}
+function withStructureVisualMaterial(s,paint){
+  const previous=structureVisualMaterial;
+  structureVisualMaterial=masonryMaterial(s);
+  try{return paint()}finally{structureVisualMaterial=previous}
+}
+function visualPaletteColor(color){
+  if(typeof color!=='string')return color;
+  return (State.visualPalette==='clay'||structureVisualMaterial==='brick')
+    ?CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color:color;
+}
+// DEV VISUAL PALETTE END
 const STRUCTURE_ANGLE_STEP_DEG=15;
 const STRUCTURE_ANGLE_STEPS=360/STRUCTURE_ANGLE_STEP_DEG;
 const STRUCTURE_ANGLE_STEP=Math.PI*2/STRUCTURE_ANGLE_STEPS;
@@ -258,7 +342,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const snapGrid=v=>Math.round(v/GRID)*GRID;
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
-const RES_ORDER=['gold','stone','wood','metal'];
+const RES_ORDER=['gold','stone','clay','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
 function variantSchema(s){return s&&STRUCTURE_VARIANTS[s.type]||null}
 function variantDefaults(s){return s&&STRUCTURE_VARIANT_DEFAULTS[s.type]||null}
@@ -484,7 +568,7 @@ function levelCostFactor(s){
   return[1,1.8][l-1];
 }
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
-function constructionCost(s){
+function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
@@ -499,7 +583,7 @@ function constructionCost(s){
       :{gold:5*(s.length||1)*factor,wood:18*(s.length||1)*factor});
   }
   if(s.type==='well')return {...COSTS.well};
-  if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.TYPES[s.type].cost};
+  if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.definition(s).cost};
   if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -507,7 +591,12 @@ function constructionCost(s){
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   return{};
 }
-function costText(cost){const icons={gold:'🪙',stone:'🪨',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
+function constructionCost(s){
+  const cost=baseConstructionCost(s);
+  if(s?.masonryMaterial==='brick'&&cost.stone>0){cost.clay=(cost.clay||0)+cost.stone;delete cost.stone}
+  return cost;
+}
+function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
 function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v)}
 function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
 function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
@@ -518,7 +607,7 @@ function buildDuration(s){
   }
   if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
-  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.TYPES[s.type].days;
+  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.definition(s).days;
   if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));

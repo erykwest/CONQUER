@@ -2116,7 +2116,7 @@ function spawnHouse(step){
   }
   candidates.sort((a,b)=>b.score-a.score);
   for(const c of candidates.slice(0,48)){
-    const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
+    const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,masonryMaterial:State.village.privateMasonryMaterial==='brick'?'brick':'stone',x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
     if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h))){blocked++;continue}
     if(!urbanHouseFitsLots(h,lotContext)){invalidLot++;continue}
     State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);

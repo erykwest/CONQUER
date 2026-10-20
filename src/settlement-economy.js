@@ -2,9 +2,9 @@
 // CONQUER Economy V1: aggregate cohorts, deterministic periodic accounting.
 // Builder test resources deliberately remain separate from economic inventories.
 (() => {
-  const GOODS = Object.freeze(['food','wood','stone','metal','equipment','luxury']);
-  const BASE = Object.freeze({food:2,wood:3,stone:4,metal:7,equipment:17,luxury:20});
-  const TARGET = Object.freeze({food:100,wood:70,stone:70,metal:35,equipment:30,luxury:10});
+  const GOODS = Object.freeze(['food','wood','stone','clay','metal','equipment','luxury']);
+  const BASE = Object.freeze({food:2,wood:3,stone:4,clay:3,metal:7,equipment:17,luxury:20});
+  const TARGET = Object.freeze({food:100,wood:70,stone:70,clay:70,metal:35,equipment:30,luxury:10});
   const KIND = Object.freeze({
     field:{good:'food',classId:1,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
@@ -43,7 +43,20 @@
   }
   function state(){
     if(!State.economy||State.economy.version!==1)State.economy=makeState();
-    return State.economy;
+    // Upgrade pre-clay economy saves without erasing stocks, activities or historical books.
+    const e=State.economy;
+    for(const good of GOODS){
+      e.castle??={};e.target??={};e.saleShare??={};e.lots??={};
+      e.prices??={};e.externalDemand??={};e.externalOffers??={};
+      if(!Number.isFinite(e.castle[good]))e.castle[good]=0;
+      if(!Number.isFinite(e.target[good]))e.target[good]=TARGET[good];
+      if(!Number.isFinite(e.saleShare[good]))e.saleShare[good]=50;
+      if(!Array.isArray(e.lots[good]))e.lots[good]=[];
+      if(!Number.isFinite(e.prices[good]))e.prices[good]=BASE[good];
+      if(!Number.isFinite(e.externalDemand[good]))e.externalDemand[good]=0;
+      if(!Number.isFinite(e.externalOffers[good]))e.externalOffers[good]=0;
+    }
+    return e;
   }
   function reset(){State.economy=makeState();render(true)}
   function note(e,label){
@@ -141,7 +154,7 @@
           a.inputs[good]=round(Math.max(0,(a.inputs[good]||0)-produced/spec.rate*need));
         }
       }
-      if(produced>0)put(e,spec.good,produced,a.owner,s.id);
+      if(produced>0)put(e,s.type==='quarry'&&s.extractionMode==='clay'?'clay':spec.good,produced,a.owner,s.id);
     }
   }
   function fulfill(e,good,amount,consumer){
@@ -168,7 +181,7 @@
   }
   function market(day){
     const e=sync(),pop=population();
-    const demand={food:0,wood:0,stone:0,metal:0,equipment:0,luxury:0};
+    const demand=empty();
     for(let tier=1;tier<=4;tier++){
       const count=pop[classKey(tier)];
       demand.food+=count*.55;

@@ -39,7 +39,7 @@ function drawStructure(s,preview=false){
     else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
     ctx.restore();
   };
-  if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,render);else render();
+  withStructureVisualMaterial(s,()=>{if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,render);else render()});
   if(!preview&&underConstruction(s)){
     if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
     else if(window.ConquerIndustries?.is(s))withProjectionGroundZ(s.groundZ,()=>drawConstructionProgress(s));
@@ -158,7 +158,10 @@ let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!
 function renderCastleBodyContent(){
   // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.
   if(window.ConquerCastle3D?.drawBody?.())return;
-  const unionOk=drawCastleUnion();
+  // A merged single-colour 2D union cannot represent distinct wall/brick components.
+  // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
+  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick');
+  const unionOk=hasBrick?false:drawCastleUnion();
   if(!unionOk){
     const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of fallback)drawStructure(s);
@@ -203,14 +206,14 @@ function castleBodyVisualSignature(){
   const num=v=>Number.isFinite(Number(v))?+Number(v).toFixed(4):null;
   const point=p=>p?[num(p.x),num(p.y)]:null;
   const items=castleBodyRenderableStructures().map(s=>[
-    s.id||'',s.type||'',s.shape||'',s.material||'',s.woodStyle||'',s.woodRoof||'',
+    s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
     s.roofStyle||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
     point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
     s.level??null,s.tier??null,!!s.flip,!!s.cutaway,JSON.stringify(s.functions||[]),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
-    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
+    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
     !!window.__polygonClipping,items
   ]);
 }

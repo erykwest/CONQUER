@@ -129,16 +129,18 @@
 
   // ---------- small geometry helpers (world space, absolute z) ----------
   const rgbCache=new Map();
-  function rgb(hex){
-    let v=rgbCache.get(hex);if(v)return v;
-    const h=String(hex).replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);rgbCache.set(hex,v);return v;
+  function rgb(hex,usePalette=false){
+    // Preserve terrain and elevation tones when the architectural palette changes.
+    const color=usePalette?visualPaletteColor(hex):hex;
+    let v=rgbCache.get(color);if(v)return v;
+    const h=String(color).replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);rgbCache.set(color,v);return v;
   }
-  function meshBuilder(){
+  function meshBuilder(usePalette=false){
     const tris=[];
     const api={
       tris,
       face(vs,hex){                       // vs: [{x,y,z}] convex
-        const c=rgb(hex);
+        const c=rgb(hex,usePalette);
         for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.z,c[0],c[1],c[2]);
       },
       // Prism over a footprint with absolute base z; sides alternate like extrudePolygon (i%2 ? A : B).
@@ -283,10 +285,11 @@
   // ---------- buildings (non-castle) ----------
   const WINTER_ROOF=['#e7ece8','#dce3de'];
   function buildBuildings(){
-    const m=meshBuilder(),winter=State.season==='winter';
+    const m=meshBuilder(true),winter=State.season==='winter';
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
+      withStructureVisualMaterial(house,()=>{
       const lvl=houseLevel(house);
       for(const part of entry.parts){
         if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
@@ -311,6 +314,7 @@
         const g=terrainElevation(c.center);
         m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
       }
+      });
     }
     // Urban boundaries (urbanFenceSegments): fences and low walls as solids, hedges are billboards.
     for(const e of urbanFenceSegments()){
@@ -326,17 +330,17 @@
     }
     for(const s of State.structures){
       if(underConstruction(s))continue;
-      if(isCivic(s))addCivic(m,s,winter);
-       else if(isCivicAnnex(s))addCivicAnnex(m,s,winter);
+      if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
+      else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
-        const def=ConquerIndustries.TYPES[s.type],g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
+        const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
         if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
-      }else if(s.type==='well'){
+      }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
         const g=terrainElevation(s);
         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,'#8d816e','#655b4f','#74695a');
         m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,'#84796d','#4e4740','#5d554d');
         m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
-      }
+      });
     }
     return new Float32Array(m.tris);
   }
@@ -712,7 +716,7 @@
   function computeSigPass(){
     const acc=new Map();
     for(const s of State.structures){
-      const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+      const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
         // Moat fill patches are baked into the ground: filling must re-bake it.
         +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
         // The gate door's state swaps its facade decal.
@@ -761,11 +765,11 @@
       uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
       S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
     }
-    const bSig=[season,urbanRev(),structuresSig('buildings')].join('|');
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings')].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
-    const castleContent=[season,structuresSig('castle')].join('|');
+    const castleContent=[season,State.visualPalette,structuresSig('castle')].join('|');
     if(S.castleContent!==castleContent){
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();
@@ -1046,6 +1050,7 @@
   }
   function drawBack(r){
     const t0=performance.now(),gl=ensureGL();if(!gl)return false;
+    try{
     collecting=[];                           // soldiers drawn this frame go to the 3D front pass
     const gpu=document.getElementById('gpuCanvas');if(gpu&&gpu.style.visibility!=='hidden')gpu.style.visibility='hidden';
     ensureContent(gl);
@@ -1059,7 +1064,18 @@
       const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12);
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
+    if(gl.isContextLost()||gl.getError()!==gl.NO_ERROR)throw new Error('WebGL2 renderer failure');
     return true;
+    }catch(err){
+      // Never leave gameplay blank when the optional renderer fails.
+      S.failed='world3d-draw: '+String(err?.message||err);
+      enabled=false;collecting=null;
+      const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
+      window.ConquerWebGPU?.invalidate?.();
+      invalidateSceneCache();
+      console.warn('World 3D disabled; Canvas fallback:',S.failed);
+      return false;
+    }
   }
   function nightLightsEnabled(){return useGpuNightLights}
   function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}

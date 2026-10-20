@@ -65,6 +65,7 @@ function changeHouseDensity(target,level){
 }function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
 function addStructure(s){
+  if(!s.auto&&masonryMaterial(s)&&s.masonryMaterial!=='brick')s.masonryMaterial=State.buildMasonryMaterial==='brick'?'brick':'stone';
   if(isCivicAnnex(s)&&!normalizeCivicAnnex(s,State.structures.find(p=>p.id===s.parentId))){status('Invalid civic annex');return false}
    const preflight=window.ConquerPlacement?.check(s);
   if(preflight&&!preflight.ok){status(preflight.reason);return false}
@@ -133,7 +134,7 @@ function linearRouteStructures(route,endSnapId,spec){
       a:{...seg.a},b:{...seg.b},length:seg.length,rotationStep:seg.rotationStep,
       level:State.tool.level||State.buildLevels.wall,
       tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,
-      flip:false,functions:[]
+      flip:false,functions:[],masonryMaterial:State.buildMasonryMaterial
     };
     if(i===0&&State.draft?.aSnap)s.aSnap=State.draft.aSnap;
     if(i===route.segments.length-1&&endSnapId)s.bSnap=endSnapId;

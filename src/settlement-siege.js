@@ -257,7 +257,7 @@
   }
   function healthMaximum(s){
     const base=BASE_HEALTH[s.type]||0;
-    const material=s.material==='wood'?.60:1;
+    const material=s.material==='wood'?.60:s.masonryMaterial==='brick'?.80:1;
     const scale=['wall','built','palisade'].includes(s.type)?Math.max(1,Number(s.length)||1)
       :s.type==='house'?1+(houseLevel(s)-1)*.4:1;
     const tier=s.type==='tower'?towerTier(s):['wall','palisade'].includes(s.type)?wallTier(s):2;

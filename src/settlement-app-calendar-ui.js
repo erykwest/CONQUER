@@ -31,6 +31,18 @@ function syncSeasonToCalendar(){
   return true;
 }
 function syncDevButtons(){
+  document.querySelectorAll('[data-private-masonry]').forEach(b=>{
+    const active=b.dataset.privateMasonry===(State.village.privateMasonryMaterial||'stone');
+    b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+  });
+  document.querySelectorAll('[data-build-masonry]').forEach(b=>{
+    const active=b.dataset.buildMasonry===State.buildMasonryMaterial;
+    b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+  });
+  document.querySelectorAll('[data-visual-palette]').forEach(b=>{
+    const active=b.dataset.visualPalette===State.visualPalette;
+    b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+  });
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
   document.querySelectorAll('[data-light-override]').forEach(b=>b.classList.toggle('active',b.dataset.lightOverride===State.daylightOverride));
   document.querySelectorAll('[data-weather-override]').forEach(b=>b.classList.toggle('active',b.dataset.weatherOverride===State.weatherOverride));
@@ -47,7 +59,7 @@ function solarClockLabel(day=State.clock.day){
   const fraction=((day%1)+1)%1,minutes=Math.floor(fraction*24*60+1e-8);
   return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
 }
-function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${['Lun','Mar','Mer','Gio','Ven','Sab · Mercato','Dom · Riposo'][window.ConquerEconomy?.weekday(State.clock.day)??0]} · ${cal.day} ${cal.name} · Y${cal.year} · ${solarClockLabel()} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('');window.ConquerEconomy?.render()}
+function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${['Lun','Mar','Mer','Gio','Ven','Sab · Mercato','Dom · Riposo'][window.ConquerEconomy?.weekday(State.clock.day)??0]} · ${cal.day} ${cal.name} · Y${cal.year} · ${solarClockLabel()} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',clay:'🧱',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('');window.ConquerEconomy?.render()}
 function visibleCanvasCenter(){
   const r=canvas.getBoundingClientRect();
   return{x:r.width/2,y:r.height/2};
@@ -133,7 +145,27 @@ function setSeason(season){
   drawWeatherOverlay();
   status(State.seasonOverride?'FORCE SEASON: '+labels[State.seasonOverride]+' — clicca di nuovo per tornare al calendario':'Stagione: calendario automatico');
 }
+function setDevVisualPalette(next){
+  if(next!=='stone'&&next!=='clay'||State.visualPalette===next)return;
+  State.visualPalette=next;
+  try{localStorage.setItem(DEV_VISUAL_PALETTE_KEY,next)}catch{}
+  // Never markDirty or mutate resources/structures: this is a DEV visual preference.
+  // Rebuild only architectural rasters. The 3D renderer's palette-keyed signatures
+  // rebuild building/castle meshes on the next draw without rebaking ground textures.
+  invalidateSceneCache(['base','castleBody','castleFront']);
+  window.__conquerAssetCompiler?.clearComposite?.();
+  syncDevButtons();draw();
+  status('PALETTE: '+(next==='clay'?'CLAY · mattone e tegola':'STONE · pietra e antracite'));
+}
+function setPrivateMasonryMaterial(next){
+  if(!['stone','brick'].includes(next)||State.village.privateMasonryMaterial===next)return;
+  State.village.privateMasonryMaterial=next;
+  markDirty(false,false,true);syncDevButtons();
+  status('Nuove case private: '+(next==='brick'?'ARGILLA / MATTONI':'PIETRA')+' · le case esistenti non cambiano');
+}
 function ensureDevControls(){
+  document.querySelectorAll('[data-private-masonry]').forEach(b=>b.onclick=()=>setPrivateMasonryMaterial(b.dataset.privateMasonry));
+  document.querySelectorAll('[data-visual-palette]').forEach(b=>b.onclick=()=>setDevVisualPalette(b.dataset.visualPalette));
   document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));
   document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
   document.querySelectorAll('[data-weather-override]').forEach(b=>b.onclick=()=>setWeatherOverride(b.dataset.weatherOverride));
