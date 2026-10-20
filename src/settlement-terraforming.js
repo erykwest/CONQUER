@@ -219,9 +219,10 @@
     let best=null;
     for(const edit of edits()){
       if(edit.mode!=='walled'||!edit.top?.length)continue;
-      for(let i=0;i<edit.top.length;i++){
-        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-        let nx=edit.center.x-mid.x,ny=edit.center.y-mid.y,L=Math.hypot(nx,ny)||1;nx/=L;ny/=L;
+      for(let i=0;i<edit.top.length;i++)for(const {a,b} of exposedWallSegments(edit,i)){
+        const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+        let nx=edit.center.x-mid.x,ny=edit.center.y-mid.y,L=Math.hypot(nx,ny)||1;
+        nx/=L;ny/=L;
         for(const [vertex,endpoint] of [[a,'a'],[b,'b']]){
           const edgeScore=dist(point,vertex);
           if(edgeScore>.4)continue;
@@ -230,13 +231,13 @@
         }
       }
       if(best?.edgePoint)continue;
-      for(let i=0;i<edit.top.length;i++){
-        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length],q=segmentProjection(point,a,b),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-        let nx=edit.center.x-mid.x,ny=edit.center.y-mid.y,L=Math.hypot(nx,ny)||1;nx/=L;ny/=L;
+      for(let i=0;i<edit.top.length;i++)for(const {a,b} of exposedWallSegments(edit,i)){
+        const q=segmentProjection(point,a,b),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+        let nx=edit.center.x-mid.x,ny=edit.center.y-mid.y,L=Math.hypot(nx,ny)||1;
+        nx/=L;ny/=L;
         const axis={x:q.x+nx*wallWidth/2,y:q.y+ny*wallWidth/2},score=dist(point,axis);
-        if(score<=.75&&(!best||score<best.score)){
+        if(score<=.75&&(!best||score<best.score))
           best={score,point:axis,edgePoint:{x:q.x,y:q.y},structureId:'terraform:'+edit.id,magnet:true,terraceId:edit.id,edgeIndex:i};
-        }
       }
     }
     return best;
@@ -380,9 +381,14 @@
   function drawMagnets(){
     if(State.tool?.kind!=='linear'||State.tool.linear!=='wall'||typeof ctx==='undefined')return;
     ctx.save();ctx.fillStyle='rgba(119,236,178,.92)';ctx.strokeStyle='rgba(19,61,42,.95)';ctx.lineWidth=1.2;
-    for(const edit of edits())if(edit.mode==='walled')for(const point of edit.top){
-      const p=w2sRaw(point,edit.targetZ+.03);ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fill();ctx.stroke();
-    }
+    const seen=new Set();
+    for(const edit of edits())if(edit.mode==='walled')for(let i=0;i<edit.top.length;i++)
+      for(const edge of exposedWallSegments(edit,i))for(const point of [edge.a,edge.b]){
+        const key=Math.round(point.x*1e5)+','+Math.round(point.y*1e5);
+        if(seen.has(key))continue;
+        seen.add(key);
+        const p=w2sRaw(point,edit.targetZ+.03);ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fill();ctx.stroke();
+      }
     ctx.restore();
   }
 
