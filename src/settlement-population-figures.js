@@ -76,7 +76,8 @@ function worldPointVisible(p,z=0,pad=48){
 }
 function drawPeasants(){
   const houses=completedSettlement('house'),fields=completedSettlement('field');
-  if(!houses.length)return;
+  const founders=window.ConquerEconomy?.foundingWorkers?.()||0;
+  if(!houses.length&&!founders)return;
   const day=peasantVisualDay(),dots=[];
   let representedPopulation=0,activeAgents=0;
   const farmHouses=houses.filter(h=>houseLevel(h)===1||houseLevel(h)===2);
@@ -105,6 +106,24 @@ function drawPeasants(){
       });
       activeAgents++;
     }
+  }
+  // Founding crew has no house yet: render it near the village well without
+  // inventing a household or an independent individual accounting ledger.
+  const well=founders&&State.structures.find(s=>s.type==='well'&&s.id===State.village?.wellId);
+  if(well)for(let i=0;i<founders;i++){
+    representedPopulation++;
+    const id='founder:'+well.id+':'+i,phase=day*.13+i*.8;
+    const angle=i*(Math.PI*2/Math.max(1,founders))+.17;
+    const distance=2.05+(i%2)*.32;
+    const p={x:well.x+Math.cos(angle)*distance+Math.cos(phase)*.06,
+      y:well.y+Math.sin(angle)*distance+Math.sin(phase)*.06};
+    if(!worldPointVisible(p,0,40))continue;
+    const hash=peasantHash(id+'-lod');
+    if(residentStride>1&&hash%residentStride!==0)continue;
+    const rp=rotateViewPoint(p);
+    dots.push({p,depth:rp.x+rp.y,id,kind:'peasant',sex:'male',age:'adult',
+      hair:villagerHair(id),colors:villagerBodyColors(id,'peasant'),militia:false});
+    activeAgents++;
   }
   dots.sort((a,b)=>a.depth-b.depth);
   if(window.__conquerPerf){
