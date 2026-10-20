@@ -681,6 +681,14 @@ function drawNobleRoomProps(slot){
   drawCutawayInteriorBox(slot,.42,.42,.22,.22,.16,'#8b633b','#4b3424','#60452d');
   if(slot.size==='large')drawCutawayInteriorBox(slot,-.62,.42,.26,.18,.13,'#8a6238','#4b3424','#60452d');
 }
+function drawCutawayFloorsAndProps(s,g){
+  const F=window.ConquerCutawayFurniture;
+  if(!F){drawCutawayFloors(s,g);drawCutawayInteriorProps(s,g);return}
+  cutawayFloorLevels(s).forEach((floor,i)=>{
+    if(floor.material==='stone')drawStoneTileFloor(s,g,floor.z);else drawWoodFloor(s,g,floor.z);
+    F.draw(s,g,i);
+  });
+}
 function drawCutawayInteriorProps(s,g){
   // Furniture library (settlement-cutaway-furniture.js); the boxes below are the fallback.
   if(window.ConquerCutawayFurniture?.draw(s,g))return;
