@@ -121,8 +121,12 @@
     const type=TYPES[s.type],poly=footprint(s);
     const ground=Number.isFinite(s.groundZ)?s.groundZ:
       s.type==='loggingCamp'?terrainElevation(s):groundLevel(s);
+    const selected=State.selectedId===s.id;
+    // Blender-built model (settlement-industries3d.js); the platform below is the fallback.
+    // (The structure selection outline is drawn by the shared selection pass.)
+    if(window.ConquerIndustries3D?.draw(s,ground,preview))return;
     // Placeholder platform uses one surveyed elevation even when it spans rock.
-    const h=.35,selected=State.selectedId===s.id;
+    const h=.35;
     const shade=type.edge;
     ctx.save();
     if(preview)ctx.globalAlpha*=.62;
