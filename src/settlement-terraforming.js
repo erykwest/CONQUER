@@ -225,36 +225,65 @@
     }
     return pieces;
   }
+  // Recompute cut faces only when the authored geometry changes. This is also
+  // called from terrainSlopeKind/pathfinding, so per-frame sampling is too costly.
+  let flatWallsMemo=new WeakMap();
+  let flatWallsRevision=null;
   function flatWallSegments(edit){
     if(edit.mode!=='flat')return[];
-    const all=edits(),index=all.indexOf(edit),result=[];
-    for(let k=0;k<index;k++){
-      const terrace=all[k];if(terrace.mode!=='walled'||terrace.targetZ<=0)continue;
-      for(let i=0;i<edit.top.length;i++){
-        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
-        // The cut leaves an exposed vertical wall only where it crosses an
-        // earlier raised walled plateau. Clip the edge to each convex top.
-        let t0=0,t1=1;
-        for(let j=0;j<terrace.top.length;j++){
-          const c=terrace.top[j],d=terrace.top[(j+1)%terrace.top.length];
-          const side=p=>(d.x-c.x)*(p.y-c.y)-(d.y-c.y)*(p.x-c.x);
-          const u=side(a),v=side(b);
-          if(u<0&&v<0){t0=1;t1=0;break;}
-          if(u<0||v<0){
-            const t=u/(u-v);
-            if(u<0)t0=Math.max(t0,t);else t1=Math.min(t1,t);
-          }
-        }
-        if(t1-t0<1e-6)continue;
-        const p=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
-        const aa=p(t0),bb=p(t1),mid=p((t0+t1)/2);
-        // Later flattening cancels this cut face; earlier higher-priority
-        // terraces at the same H must not duplicate it.
-        if(all.slice(index+1).some(other=>other.mode==='flat'&&pointInPolygon(mid,other.top)))continue;
-        if(all.slice(k+1,index).some(other=>other.mode==='walled'&&other.targetZ===terrace.targetZ&&pointInPolygon(mid,other.top)))continue;
-        result.push({a:aa,b:bb,baseZ:0,targetZ:terrace.targetZ});
-      }
+    const all=edits();
+    if(!flatWallsRevision||flatWallsRevision.relief!==State.relief||
+       flatWallsRevision.list!==all||flatWallsRevision.length!==all.length||
+       flatWallsRevision.last!==all[all.length-1]){
+      flatWallsRevision={relief:State.relief,list:all,length:all.length,last:all[all.length-1]};
+      flatWallsMemo=new WeakMap();
     }
+    if(flatWallsMemo.has(edit))return flatWallsMemo.get(edit);
+    const result=[],EPS=.002,STEP=.25,HEIGHT_EPS=.0001;
+    const sample=(p,nx,ny)=>{
+      const inside={x:p.x-nx*EPS,y:p.y-ny*EPS};
+      const outside={x:p.x+nx*EPS,y:p.y+ny*EPS};
+      const h=q=>elevationAt(q,typeof terrainBaseElevation==='function'?terrainBaseElevation(q):0);
+      return{inner:h(inside),outer:h(outside)};
+    };
+    const signedArea=edit.top.reduce((z,p,i)=>{
+      const q=edit.top[(i+1)%edit.top.length];return z+p.x*q.y-q.x*p.y;
+    },0);
+    const sign=signedArea<0?-1:1;
+    for(let i=0;i<edit.top.length;i++){
+      const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
+      const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+      if(len<1e-7)continue;
+      const nx=sign*dy/len,ny=-sign*dx/len;
+      const count=Math.max(1,Math.ceil(len/STEP));
+      let active=null;
+      for(let j=0;j<count;j++){
+        const at=t=>({x:a.x+dx*t,y:a.y+dy*t});
+        const p=at(j/count),q=at((j+1)/count);
+        const hp=sample(p,nx,ny),hq=sample(q,nx,ny);
+        const mid=sample(at((j+.5)/count),nx,ny);
+        // Do not wall untouched H0 ground, or a cut fully hidden by a newer
+        // Flat. Adjacent intervals with constant height merge into one quad.
+        if(Math.max(Math.abs(hp.outer-hp.inner),Math.abs(hq.outer-hq.inner),
+                    Math.abs(mid.outer-mid.inner))<HEIGHT_EPS){
+          if(active){result.push(active);active=null;}
+          continue;
+        }
+        const part={a:p,b:q,baseZ:hp.inner,baseZB:hq.inner,
+          targetZ:hp.outer,targetZB:hq.outer};
+        const flatHeight=Math.abs(hp.outer-hq.outer)<1e-5&&
+          Math.abs(hp.inner-hq.inner)<1e-5;
+        const merge=active&&flatHeight&&
+          Math.abs(active.targetZ-part.targetZ)<1e-5&&
+          Math.abs(active.baseZ-part.baseZ)<1e-5&&
+          Math.abs(active.targetZB-part.targetZB)<1e-5&&
+          Math.abs(active.baseZB-part.baseZB)<1e-5;
+        if(merge)active.b=part.b;
+        else{if(active)result.push(active);active=part;}
+      }
+      if(active)result.push(active);
+    }
+    flatWallsMemo.set(edit,result);
     return result;
   }
   function boundaryContains(point,poly){
@@ -399,11 +428,14 @@
     const used=new Set(edits().map(edit=>edit.id));
     let index=1;while(used.has('terraform-'+index))index++;
     edits().push({...fresh,id:'terraform-'+index,previewOnly:false,ok:true,reason:''});
+    flatWallsRevision=null;
     return true;
   }
   function clear(){
     const list=edits(),count=list.length;
     list.splice(0,list.length);
+    flatWallsRevision=null;
+    flatWallsMemo=new WeakMap();
     if(typeof clearReliefBandCache==='function')clearReliefBandCache();
     if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
     if(typeof terrainMarkLayoutCache!=='undefined')terrainMarkLayoutCache=null;
@@ -415,8 +447,8 @@
     if(edit.mode==='flat'){
       for(const edge of flatWallSegments(edit)){
         const screen=projectClippedTerrain([
-          {...edge.a,z:edge.baseZ},{...edge.b,z:edge.baseZ},
-          {...edge.b,z:edge.targetZ},{...edge.a,z:edge.targetZ}
+          {...edge.a,z:edge.baseZ},{...edge.b,z:edge.baseZB},
+          {...edge.b,z:edge.targetZB},{...edge.a,z:edge.targetZ}
         ]);
         if(screen.length>=3)faces.push({screen,index:0,depth:screen.reduce((sum,p)=>sum+p.y,0)/screen.length});
       }

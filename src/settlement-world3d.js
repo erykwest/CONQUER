@@ -214,6 +214,11 @@
           return{edit,top,minX:Math.min(...xs),maxX:Math.max(...xs),
             minY:Math.min(...ys),maxY:Math.max(...ys)};
         }));
+      const flatBounds=terraformEdits.filter(edit=>edit.mode==='flat').map(edit=>{
+        const xs=edit.top.map(p=>p.x),ys=edit.top.map(p=>p.y);
+        return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
+          minY:Math.min(...ys),maxY:Math.max(...ys)};
+      });
       // Cut the ground exactly at terrace edges. Sampling a height discontinuity
       // would create diagonal triangles instead of a vertical masonry wall.
       const halfPlane=(poly,a,b,inside)=>{
@@ -228,7 +233,27 @@
       };
       const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
       const ground=tri=>{
-        let pieces=[tri];
+        let pieces=[tri],nearFlat=false;
+        // The ground must be cut exactly on every Flat edge. Without this
+        // split, the .5U grid bridges the H0 hole with a diagonal ramp,
+        // leaving a gap or hiding the new vertical retaining wall.
+        for(const {edit,minX,maxX,minY,maxY} of flatBounds){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
+          nearFlat=true;
+          const next=[];
+          for(const piece of pieces){
+            let inner=piece;
+            for(let i=0;i<edit.top.length&&inner.length>=3;i++){
+              const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
+              const outside=halfPlane(inner,a,b,false);
+              if(outside.length>=3)next.push(outside);
+              inner=halfPlane(inner,a,b,true);
+            }
+            if(inner.length>=3)next.push(inner);
+          }
+          pieces=next;
+        }
         for(const {top,minX,maxX,minY,maxY} of terraceBounds){
           if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
              tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
@@ -244,7 +269,19 @@
           }
           pieces=next;
         }
-        pieces.forEach(emit);
+        for(const poly of pieces){
+          if(!nearFlat){emit(poly);continue;}
+          const centroid={x:poly.reduce((v,p)=>v+p.x,0)/poly.length,
+            y:poly.reduce((v,p)=>v+p.y,0)/poly.length};
+          // A vertex exactly on the seam has two heights. Evaluate it just
+          // inside its own polygon fragment to keep both sides discontinuous.
+          emit(poly.map(p=>{
+            const dx=centroid.x-p.x,dy=centroid.y-p.y,L=Math.hypot(dx,dy)||1;
+            const q={x:p.x+dx/L*.002,y:p.y+dy/L*.002};
+            return{...p,z:window.ConquerTerraforming.elevationAt(
+              q,terrainBaseElevation(q),{excludeWalled:true})};
+          }));
+        }
       };
       // Visible plateau fragments are already clipped and non-overlapping.
       const drawTerraceTops=()=>{
@@ -316,8 +353,8 @@
             m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
         }
       }else if(edit.mode==='flat'){
-        for(const {a,b,baseZ,targetZ} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
-          m.face([{...a,z:baseZ},{...b,z:baseZ},{...b,z:targetZ},{...a,z:targetZ}],'#686057');
+        for(const {a,b,baseZ,baseZB,targetZ,targetZB} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
+          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
