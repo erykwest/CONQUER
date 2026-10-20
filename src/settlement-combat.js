@@ -17,8 +17,9 @@
   // Masks are raster unions of auto-generated regions and manual brush marks.
   // They are projected as a single surface per color: no overlapping circle
   // outlines, no doubling alpha, and subtractive strokes cut real holes.
-  // Four pixels per world unit prevent the feathered/blurry brush boundaries.
-  const ZONE_PIXELS=4, ZONE_SIZE=WORLD*ZONE_PIXELS;
+  // Double the mask resolution for smoothly projected union borders.
+  // Fog retains its lightweight coarse grid; only zone masks are detailed.
+  const ZONE_PIXELS=8, ZONE_SIZE=WORLD*ZONE_PIXELS;
   const zoneImages={};
   for(const mode of ['allow','yellow','green']){
     const surface=document.createElement('canvas'),outline=document.createElement('canvas');
@@ -47,7 +48,7 @@
   const patrolRouteCache=new Map();
 
 
-  function defaults(){return{version:2,fog:false,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],storms:[],recall:false,recallMode:'off',seen:''};}
+  function defaults(){return{version:2,fog:false,zones:false,brushRadius:5,strokes:[],units:[],enemy:[],storms:[],recall:false,recallMode:'off',seen:''};}
   function restore(raw){
     combat=Object.assign(defaults(),raw&&[1,2].includes(raw.version)?raw:{});
     // This builder starts with the terrain explored (known) but not currently
@@ -56,6 +57,9 @@
     // DEV view defaults to fog OFF even for old snapshots saved with fog ON.
     // The player can still enable it with the Fog button at any time.
     combat.fog=false;
+    // Visibility toggle only: preserve zone geometry and simulation rules.
+    // Like Fog, Zones starts hidden for both fresh and restored games.
+    combat.zones=false;
     combat.recallMode=['off','green','hall'].includes(raw?.recallMode)?raw.recallMode:(combat.recall?'green':'off');
     combat.recall=combat.recallMode!=='off';
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
@@ -630,7 +634,8 @@
         c.drawImage(fog,0,0,ZONE_SIZE,ZONE_SIZE);
       }
       if(combat.zones&&activeWell()){
-        c.imageSmoothingEnabled=false;
+        c.imageSmoothingEnabled=true;
+        c.imageSmoothingQuality='high';
         for(const mode of ['allow','yellow','green']){
           const mask=zoneImages[mode];
           c.globalAlpha=mode==='allow'?.055:mode==='yellow'?.07:.10;
@@ -648,7 +653,8 @@
     const a=w2sRaw({x:0,y:0},0),bx=w2sRaw({x:1/ZONE_PIXELS,y:0},0),by=w2sRaw({x:0,y:1/ZONE_PIXELS},0);
     g.save();
     g.setTransform(pixelRatio*(bx.x-a.x),pixelRatio*(bx.y-a.y),pixelRatio*(by.x-a.x),pixelRatio*(by.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
-    g.imageSmoothingEnabled=false;
+    g.imageSmoothingEnabled=true;
+    g.imageSmoothingQuality='high';
     g.drawImage(backdrop,0,0);
     g.restore();
   }
@@ -1792,7 +1798,7 @@
   const ui=document.createElement('div');
   ui.id='combatControls';
   ui.innerHTML='<h3>COMBAT · Fog / Command</h3>'+
-    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones ON</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
+    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones OFF</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button></div>'+
     '<div class="combat-row"><button id="combatPatrolAdd" title="Add two pikemen to patrol the White Zone border">Patrol + · 2 pikemen</button><button id="combatPatrolRemove">Patrol −</button></div>'+ 
