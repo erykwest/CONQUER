@@ -28,6 +28,16 @@ const api=context.window.ConquerTerraforming;
 let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name)}
 
+test('square/round shape switch exists in both the Builder HTML and compact palette',()=>{
+  const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  const input=fs.readFileSync(path.join(__dirname,'..','src','settlement-app-input.js'),'utf8');
+  const palette=fs.readFileSync(path.join(__dirname,'..','src','settlement-builder-ux.js'),'utf8');
+  assert.match(html,/data-terraform-shape="square"/);
+  assert.match(html,/data-terraform-shape="round"/);
+  assert.match(input,/querySelectorAll\('\[data-terraform-shape\]'\)/);
+  assert.match(input,/State\.tool\.shape=shape/);
+  assert.match(palette,/selectors:\['\[data-terraform-shape\]'\]/);
+});
 test('ghost previews the final terrain without mutating relief',()=>{
   const before=JSON.stringify(context.State.relief);
   const ghost=api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:4});
