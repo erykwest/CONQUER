@@ -139,7 +139,7 @@
       const sameLine=others.some(other=>{
         if(String(other.id)<String(edit.id))return other.top.some((c,j)=>{
           const d=other.top[(j+1)%other.top.length],wx=d.x-c.x,wy=d.y-c.y;
-          return wx*ux+wy*uy>0&&pointSegmentDistance(mid,c,d)<1e-6;
+          return wx*ux+wy*uy>0&&dist(mid,segmentProjection(mid,c,d))<1e-6;
         });
         return false;
       });
