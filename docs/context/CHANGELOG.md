@@ -2,6 +2,12 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Salari differenziati per cantieri del signore e spawn spontaneo
+
+- Le costruzioni volute dal giocatore pagano L1 dalla tesoreria a giornata-operaio, accreditando il wallet aggregato L1. Mancanza fondi sospende il lavoro, presenza di oro lo riattiva; le paghe maturate restano anche dopo cancellazione dell'edificio.
+- Crescita urbana spontanea: equivalenza salariale L1 incorporata in `spawnCost`, senza un secondo addebito al signore. La quota è **valorizzazione imputata** finché non esiste un soggetto finanziatore per lo spawn.
+- Regimi salariali coerenti con `wage.L1` annualmente aggiornato, registri contabili persistenti, riepiloghi UI distinti e nuova QA `qa/construction-payroll-regression.cjs`.
+
 ## 2026-10-20 — L1 con tragitto fisico fino ai cantieri
 
 - Squadre L1 con identità stabili sincronizzate fra simulazione economica, avanzamento dei cantieri e rendering.
