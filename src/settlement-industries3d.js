@@ -5,10 +5,12 @@
 // both renderers: the 2.5D Canvas painter and the WebGL static scene.
 (function(){
   const MODELS=()=>window.ConquerIndustryModels;
-  const has=type=>!!MODELS()?.models?.[type];
+  // A quarry worked for clay is drawn as the clay pit.
+  const key=s=>window.ConquerIndustries?.isClayQuarry?.(s)?'clayPit':s?.type;
+  const has=s=>!!MODELS()?.models?.[typeof s==='string'?s:key(s)];
   // World triangles for an industry structure; ground parts always paint first.
   function triangles(s,ground){
-    const data=MODELS(),model=data.models[s.type],pal=data.palette;
+    const data=MODELS(),model=data.models[key(s)],pal=data.palette;
     const a=Number(s.angle)||0,c=Math.cos(a),sn=Math.sin(a),z0=ground||0;
     const pos=[],col=[],gi=[],groups=[],groupBias=[];
     for(const [name,part] of Object.entries(model.parts)){
@@ -28,7 +30,7 @@
   }
   // 2.5D: paint the model with the game's projection into the current ctx.
   function draw(s,ground,preview=false){
-    if(!has(s.type)||!window.ConquerMesh3D)return false;
+    if(!has(s)||!window.ConquerMesh3D)return false;
     ctx.save();
     if(preview)ctx.globalAlpha*=.62;
     window.ConquerMesh3D.drawMeshes(ctx,[triangles(s,ground)],window.ConquerMesh3D.gameView());
@@ -37,7 +39,7 @@
   }
   // WebGL: add the model to a world3d meshBuilder with fixed-light shaded colours.
   function addToBuilder(m,s,ground){
-    if(!has(s.type)||!window.ConquerMesh3D)return false;
+    if(!has(s)||!window.ConquerMesh3D)return false;
     const mesh=triangles(s,ground),p=mesh.pos;
     for(let t=0;t<mesh.col.length;t++){
       const o=t*9;

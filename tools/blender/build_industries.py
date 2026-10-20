@@ -27,6 +27,8 @@ COLORS = {
     'log': '#8b6a45', 'logEnd': '#d0ae72', 'roof': '#6a5038', 'roofDark': '#4f3b29',
     'rock': '#8f8b82', 'rockTop': '#a29d90', 'rockCut': '#c9c2b4', 'block': '#d3ccbd', 'rubble': '#77736b',
     'iron': '#55595d', 'rope': '#c8b48a', 'dark': '#15120f', 'ore': '#4b4d52', 'lamp': '#f2c14e',
+    'clay': '#c9773a', 'clayLight': '#dc873b', 'clayDark': '#995025', 'clayWet': '#8a4a26', 'clayCut': '#e09a5c',
+    'water': '#4f7f8f', 'brickGreen': '#c98b5a', 'brick': '#a5452c',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Industries'
@@ -293,7 +295,84 @@ def mine(m):
     m.done('spoil', p)
 
 
-MODELS = [('loggingCamp', logging_camp, (0, 0, 0)), ('quarry', quarry, (14, 0, 0)), ('mine', mine, (28, 0, 0))]
+# ------------------------------------------------------------------ clay pit
+def clay_pit(m):
+    """Clay pit 4x4 U = 14 m on flat lowland: a stepped dig with a puddled pond
+    at the back, banks of spoil, drying racks of green bricks and a wheelbarrow."""
+    p = m.part('ground')
+    ground_patch(p, 6.7, 6.7, 'dirt', n=12, z=.02)
+    m.done('ground', p)
+
+    # The dig: terraced clay floors rising from the wet bottom (back) to the yard.
+    p = m.part('pit')
+    for i, (x0, x1, z, key) in enumerate(((-6.0, -1.2, .05, 'clayWet'), (-1.2, .6, .22, 'clay'), (.6, 1.8, .4, 'clayLight'))):
+        p.box(((x0 + x1) / 2, -.6, z / 2), (x1 - x0, 7.4 - i * .8, z), key)
+        p.box((x1 - .03, -.6, z / 2), (.06, 7.4 - i * .8, z), 'clayCut')                    # spade-cut step face
+    # Standing water in the deepest corner and a few spade marks on the wet floor.
+    ground_patch_at = lambda cx, cy, rx, ry, key, z: [p.quads(
+        [(cx + math.cos(2 * math.pi * k / 9) * rx, cy + math.sin(2 * math.pi * k / 9) * ry, z) for k in range(9)],
+        [tuple(range(9))], key)]
+    ground_patch_at(-4.4, -2.6, 1.4, 1.1, 'water', .07)
+    for k in range(5):
+        p.box((rng.uniform(-3.5, -1.6), rng.uniform(-3, 2), .075), (.5, .08, .02), 'clayCut', rot=Matrix.Rotation(rng.uniform(-.6, .6), 3, 'Z'))
+    m.done('pit', p)
+
+    # Spoil banks around the dig (left, right and back) with tufts of grass.
+    p = m.part('banks')
+    for x in (-5.6, -4.0, -2.4, -.8):
+        for s in (-1, 1):
+            blob(p, x, -.6 + s * 4.6, rng.uniform(.8, 1.1), 0, rng.uniform(.5, .8), 'clayDark', n=7, top_scale=.5)
+    for y in (-3.6, -1.6, .4, 2.4):
+        blob(p, -6.3, y, .9, 0, .7, 'clayDark', n=7, top_scale=.5)
+    for _ in range(6):
+        blob(p, rng.uniform(-6, 0), rng.choice((-5.4, 4.0)), .25, .6, .2, 'grass', n=5)
+    m.done('banks', p)
+
+    # Drying racks of green bricks under small plank roofs (front right).
+    p = m.part('racks')
+    for ry in (2.4, 4.4):
+        x0, x1 = 2.2, 6.0
+        for x in (x0, x1):
+            for s in (-1, 1):
+                p.box((x, ry + s * .45, .65), (.1, .1, 1.3), 'woodDark')
+        for z in (.35, .8):
+            p.box(((x0 + x1) / 2, ry, z), (x1 - x0 + .2, 1.0, .05), 'wood')
+            for i in range(9):
+                p.box((x0 + .3 + i * .4, ry + (-.2 if i % 2 else .2), z + .09), (.28, .16, .12), 'brickGreen')
+        p.box(((x0 + x1) / 2, ry, 1.38), (x1 - x0 + .5, 1.4, .06), 'roof', rot=Matrix.Rotation(.08, 3, 'X'))
+    m.done('racks', p)
+
+    # Moulding table with a brick mould, a heap of raw clay and a wheelbarrow.
+    p = m.part('work')
+    p.box((3.0, -1.6, .8), (1.6, .8, .08), 'woodLight')
+    for x in (2.35, 3.65):
+        for s in (-1, 1):
+            p.box((x, -1.6 + s * .3, .4), (.08, .08, .8), 'woodDark')
+    p.box((2.7, -1.6, .88), (.32, .2, .08), 'woodDark')
+    p.box((3.3, -1.55, .88), (.28, .16, .1), 'brickGreen')
+    blob(p, 2.0, -3.4, .8, 0, .7, 'clay', n=8, top_scale=.45)
+    bx, by = 4.6, -3.2
+    p.box((bx, by, .5), (1.0, .7, .3), 'wood')
+    blob(p, bx, by, .3, .62, .18, 'clayWet', n=6)
+    p.cylinder(.22, .06, 'woodDark', n=8, axis='y', center=(bx + .55, by, .22), cap_key='wood')
+    for s in (-1, 1):
+        p.beam((bx - .3, by + s * .3, .4), (bx - 1.1, by + s * .35, .55), .05, .05, 'woodDark')
+        p.beam((bx - .3, by + s * .3, .35), (bx - .3, by + s * .3, 0), .05, .05, 'woodDark')
+    p.beam((1.3, 1.0, 0), (1.5, 1.2, 1.1), .04, .04, 'woodLight')                          # spade
+    p.box((1.3, 1.0, .1), (.2, .04, .25), 'iron')
+    m.done('work', p)
+
+    # Stack of fired bricks ready to haul away.
+    p = m.part('bricks')
+    for lvl in range(4):
+        for i in range(4):
+            for j in range(2):
+                p.box((5.2 + j * .3 + (lvl % 2) * .05, -.6 + i * .32, .06 + lvl * .12), (.28, .3, .11), 'brick')
+    m.done('bricks', p)
+
+
+MODELS = [('loggingCamp', logging_camp, (0, 0, 0)), ('quarry', quarry, (14, 0, 0)), ('mine', mine, (28, 0, 0)),
+          ('clayPit', clay_pit, (44, 0, 0))]
 
 
 def main(out_path):
