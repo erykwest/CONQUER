@@ -52,7 +52,7 @@ function renderFunctionPanel(){
   if(s.type==='tavern'){
     const inn=commerce?.occupancy?.(s.id);
     const operator=commerce?.state?.()?.services?.[s.id]?.operatorHouseId;
-    info.innerHTML+='<div class="legend">L3 inn service · '+(operator?'operator house '+operator:'operator not assigned')+
+    info.innerHTML+='<div class="legend">L3 inn service · '+(operator?'operator assigned':'operator not assigned')+
       ' · beds '+(inn?inn.occupied+' / '+inn.beds:'not available')+
       ' · no lodging payments simulated</div>';
   }
