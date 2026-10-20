@@ -595,12 +595,17 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
     a.construction.startedDay-b.construction.startedDay||
     String(a.id).localeCompare(String(b.id)));
   for(const s of sites)slots.set(s.id,[]);
-  let index=0;
+  const used=new Set();
   // One worker per open job first, then the second/third if still spare.
-  for(let pass=0;pass<CONSTRUCTION_MAX_WORKERS&&index<candidates.length;pass++)
+  // In the live world, reachable pedestrian routes are required; no phantom
+  // building progress can be produced by a worker stranded behind barriers.
+  for(let pass=0;pass<CONSTRUCTION_MAX_WORKERS&&used.size<candidates.length;pass++)
     for(const s of sites){
-      if(index>=candidates.length)break;
-      slots.get(s.id).push(candidates[index++]);
+      if(used.size>=candidates.length)break;
+      const worker=candidates.find(w=>!used.has(w.id)&&
+        (typeof constructionWorkerPath!=='function'||constructionWorkerPath(w,s)));
+      if(!worker)continue;
+      used.add(worker.id);slots.get(s.id).push(worker);
     }
   return slots;
 }
