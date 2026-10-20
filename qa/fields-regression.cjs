@@ -45,7 +45,7 @@ test('rural field rejects yellow zoning, forests, buildings, roads, other fields
 
 run("function qaMonthStart(month,year){for(let d=0;d<950;d++){const date=calendarDateFromDay(d);if(date.month===month&&date.year===year&&date.day===1)return d}throw Error('Calendar month missing')}");
 test('work progresses only during scheduled months and only on working weekdays',()=>{
- farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});State.clock.day=1;tickFields(1)");
+ farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});State.clock.day=1;globalThis.qaOriginalPeasantPath=peasantPath;peasantPath=(h,a)=>[houseDoorInfo(h).outside,a.cell.world];tickFields(1)");
  assert.equal(run("fieldCrop(qaField).work.reduce((a,b)=>a+b,0)"),0,'June has no ploughing');
  assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'no idle-season worker allocations');
  run("globalThis.c=fieldCrop(qaField);c.lastDay=qaAutumn-1;State.clock.day=qaAutumn;tickFields(qaAutumn)");
@@ -117,6 +117,7 @@ test('harvest strips cover entire irregular polygon before work and remove the g
  run('drawFieldCropPolygon=drawCropOriginal');assert.equal(run('FIELD_RULES.cropHeight'),.1);
 });
 
+run("peasantPath=qaOriginalPeasantPath");
 test('real village growth spawns four-corner H0 fields outside yellow zoning',()=>{
  fixture();run("State.clock.day=1;State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5});for(let i=0;i<5;i++)State.structures.push({id:'farmhouse'+i,type:'house',auto:true,x:96+i*2,y:97,w:1.5,h:1,angle:0});State.village.nextGrowthDay=2;invalidateNavigation();let spawned=0;for(let step=0;step<12;step++)if(spawnField(step))spawned++;");
  assert.ok(run('spawned')>0,'real spawn must find space');
