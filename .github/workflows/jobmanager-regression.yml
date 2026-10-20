@@ -9,6 +9,7 @@ on:
       - 'src/settlement-core.js'
       - 'src/settlement-population-fields.js'
       - 'qa/jobmanager-regression.cjs'
+      - 'qa/economy-rations-regression.cjs'
       - 'qa/fields-regression.cjs'
       - '.github/workflows/jobmanager-regression.yml'
 jobs:
@@ -21,5 +22,6 @@ jobs:
           node-version: '22'
       - run: node qa/jobmanager-regression.cjs
       - run: node qa/economy-regression.cjs
+      - run: node qa/economy-rations-regression.cjs
       - run: node qa/economy-industries-regression.cjs
       - run: node qa/fields-regression.cjs
