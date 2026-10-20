@@ -1,0 +1,38 @@
+name: Clay browser visual smoke
+on:
+  push:
+    branches: [clay]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Start local game
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/clay-http.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/index.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/clay-http.log
+          exit 1
+      - name: Install headless Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Real browser scenes, toggles and geometry buffers
+        run: node qa/clay-browser-regression.mjs
+      - name: Upload screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clay-browser-screenshots
+          path: artifacts/
+          retention-days: 7
