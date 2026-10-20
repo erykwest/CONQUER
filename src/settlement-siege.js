@@ -13,7 +13,8 @@
     catapult:{stone:3,wood:3.8,door:3.5},
     trebuchet:{stone:7,wood:8,door:7}
   });
-  const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75});
+  const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
+    house:90,market:70,tavern:140,church:240});
   const STOCK_KEYS=['food','wood','stone','metal','equipment','horses','gold'];
   const MATERIAL_KEYS=['wood','stone','metal'];
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
@@ -255,7 +256,8 @@
   function healthMaximum(s){
     const base=BASE_HEALTH[s.type]||0;
     const material=s.material==='wood'?.60:1;
-    const scale=['wall','built','palisade'].includes(s.type)?Math.max(1,Number(s.length)||1):1;
+    const scale=['wall','built','palisade'].includes(s.type)?Math.max(1,Number(s.length)||1)
+      :s.type==='house'?1+(houseLevel(s)-1)*.4:1;
     const tier=s.type==='tower'?towerTier(s):['wall','palisade'].includes(s.type)?wallTier(s):2;
     return Math.round(base*material*scale*(.65+tier*.175)*(1+(structureLevel(s)-1)*.30));
   }
@@ -275,7 +277,8 @@
   }
   function targetMaterial(s,part='core'){
     if(part==='door'&&s.type==='gate')return'door';
-    return s.type==='palisade'||s.material==='wood'?'wood':'stone';
+    // Houses, markets and taverns are timber-framed; the church is masonry.
+    return s.type==='palisade'||s.material==='wood'||['house','market','tavern'].includes(s.type)?'wood':'stone';
   }
   function effectiveness(weapon,s,part='core'){
     return Math.max(0,WEAPONS[weapon]?.[targetMaterial(s,part)]||0);
@@ -345,10 +348,10 @@
     };
     const left=piece(s.a,p0,s.aSnap,null,list.slice(0,i),0),right=piece(p1,s.b,null,s.bSnap,list.slice(i+1),bay.to);
     const pieces=[left,right].filter(Boolean);
-    const x=state();
-    x.ruins.push({id:s.id+':breach:'+i+':'+State.clock.day,type:'breach',wall:s.type,a:p0,b:p1,
-      x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2,width:Number(s.width)||.5,height:structureHeight(s),day:State.clock.day});
-    if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
+    // The bay comes down: its masonry (and merlons) falls into the gap.
+    const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=groundOf(s);
+    startCollapse(s,g,g+structureHeight(s)+.18,{cause:'breach',a:p0,b:p1,
+      parts:[[{x:p0.x+nx,y:p0.y+ny},{x:p1.x+nx,y:p1.y+ny},{x:p1.x-nx,y:p1.y-ny},{x:p0.x-nx,y:p0.y-ny}]]});
     const idx=State.structures.findIndex(t=>t.id===s.id);
     if(idx>=0)State.structures.splice(idx,1,...pieces);
     // Towers keep their links: the a end now belongs to the left stretch, the b end to the right.
@@ -398,8 +401,64 @@
     }
     m={pos,col};rubbleCache.set(r.id,m);return m;
   }
-  // Moving or static extra meshes for the 3D world renderer (rubble in breaches).
-  function dynamicMeshes(){return state().ruins.filter(r=>r.type==='breach'&&r.a&&r.b).map(rubbleMesh)}
+  // ---------- collapses ----------
+  // A collapse keeps its spec in the ruins list: the falling blocks while it plays (this
+  // session only, real time), then the heap they settle in, rebuilt from the spec on load.
+  const started=new Map(),now=()=>performance.now()/1000;
+  const C=()=>window.ConquerCollapse;
+  function groundOf(s){
+    if(typeof placementGroundZ==='function')return Number(placementGroundZ(s))||0;
+    const c=s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
+    return typeof terrainElevation==='function'?terrainElevation(c):0;
+  }
+  function collapseParts(s){
+    if(s.type==='house'&&typeof houseFootprintParts==='function')return houseFootprintParts(s).map(p=>p.points);
+    if(typeof isCivic==='function'&&isCivic(s)&&typeof civicParts==='function')return civicParts(s).map(p=>p.points);
+    const fp=typeof footprintPoints==='function'?footprintPoints(s):[];
+    return fp.length>=3?[fp]:[];
+  }
+  const STONE={side:['#635951','#514a44','#7d736b','#9a8e82'],top:['#9a8e82','#8a7f74']};
+  function collapsePalette(s){
+    if(s.type==='palisade'||s.material==='wood'||(s.type==='tower'&&isWoodTower(s)))return{side:['#7a5534','#5e4128','#8a6a42'],top:['#6b4a2e']};
+    if(s.type==='house'||s.type==='tavern'||s.type==='market')return{side:['#c9b896','#a8946f','#b7a582','#6b4a2e'],top:['#7a4a38','#5b3d30']};
+    return STONE;
+  }
+  function startCollapse(s,z0,z1,opts={}){
+    const x=state(),parts=opts.parts||collapseParts(s);
+    if(!parts.length||!(z1>z0))return null;
+    // Rubble left on this structure's stump by an earlier storey falls with it.
+    for(const r of x.ruins)if(r.spec?.stump&&r.id.startsWith(s.id+':storey:')){r.spec.stump=false;C()?.forget(r.id);heapCache.delete(r.id)}
+    const pts=parts.flat(),cx=pts.reduce((t,p)=>t+p.x,0)/pts.length,cy=pts.reduce((t,p)=>t+p.y,0)/pts.length;
+    const id=s.id+':'+(opts.cause||'collapse')+':'+x.ruins.length+':'+State.clock.day+':'+Math.round(z1*100);
+    const spec={id,parts:parts.map(p=>p.map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))),z0,z1,ground:groundOf(s),
+      seed:id,palette:collapsePalette(s),lean:opts.lean||null,stump:opts.cause==='storey',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
+    const ruin={id,type:'collapse',cause:opts.cause||'destroyed',structure:s.type,x:cx,y:cy,day:State.clock.day,spec};
+    if(opts.a)Object.assign(ruin,{a:opts.a,b:opts.b,width:Number(s.width)||.5,height:structureHeight(s)});
+    x.ruins.push(ruin);if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
+    started.set(id,now());animate();
+    return ruin;
+  }
+  let raf=0;
+  function animate(){
+    if(raf||typeof requestAnimationFrame!=='function')return;
+    const step=()=>{raf=0;if(playing().length){draw();raf=requestAnimationFrame(step)}else started.clear()};
+    raf=requestAnimationFrame(step);
+  }
+  function playing(){
+    if(!C())return[];
+    return state().ruins.filter(r=>r.spec&&started.has(r.id)&&!C().finished(r.spec,now()-started.get(r.id)));
+  }
+  const heapCache=new Map();
+  function ruinMesh(r){
+    if(r.spec&&C()){
+      if(started.has(r.id)){const t=now()-started.get(r.id);if(t<C().duration(r.spec))return C().mesh(r.spec,t)}
+      let m=heapCache.get(r.id);if(!m){m=C().mesh(r.spec,Infinity);heapCache.set(r.id,m)}
+      return m;
+    }
+    return r.type==='breach'&&r.a&&r.b?rubbleMesh(r):null;   // breaches saved before collapses
+  }
+  // Extra meshes for the 3D world renderer: falling blocks and rubble heaps.
+  function dynamicMeshes(){return state().ruins.map(ruinMesh).filter(Boolean)}
   function attackStructure(id,weapon,force=1,part='core'){
     const s=State.structures.find(x=>x.id===id);
     if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,reason:'Invalid or unfinished fortification'};
@@ -412,17 +471,46 @@
     const damage=Math.min(hp.hp,Math.max(0,Number(force)||0)*factor);
     if(!damage)return{ok:false,damage:0,reason:'No force applied'};
     hp.hp=Math.max(0,hp.hp-damage);
-    if(section==='core'&&hp.hp===0)destroyStructure(s);
+    const from=part&&Number.isFinite(part.x)?part:null;
+    if(section==='core'&&hp.hp===0)destroyStructure(s,from);
+    else if(section==='core'&&storeyCollapse(s,from)){}
     else{
       invalidateStructureScene(s);markDirty(true,true,true);draw();
     }
     return{ok:true,part:section,damage,remaining:hp.hp,max:hp.max,destroyed:hp.hp===0};
   }
-  function destroyStructure(s){
-    const x=state();
-    x.ruins.push({id:s.id,type:s.type,x:s.x??(s.a.x+s.b.x)/2,
-      y:s.y??(s.a.y+s.b.y)/2,day:State.clock.day});
-    if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
+  // Towers and gatehouses fail a storey at a time: at 2/3 and 1/3 of their health the
+  // top storey comes down (the structure loses a level, its rooms and slots up there),
+  // what is left is a sound lower tower with the health it still had.
+  function storeyCollapse(s,from){
+    if(!['tower','gate'].includes(s.type))return false;
+    const hp=s.siegeIntegrity.core;let fell=false;
+    for(let L=structureLevel(s);L>1&&hp.hp/hp.max<=(L-1)/L+1e-9;L=structureLevel(s)){
+      const f=hp.hp/hp.max,g=groundOf(s),oldH=structureHeight(s);
+      s.level=L-1;
+      const newH=structureHeight(s),max=healthMaximum(s);
+      hp.max=max;hp.hp=Math.min(max,max*f*L/(L-1));
+      if(typeof normalizeFunctions==='function')normalizeFunctions(s);
+      startCollapse(s,g+newH,g+oldH+.35,{cause:'storey',lean:from?{x:s.x-from.x,y:s.y-from.y}:null});
+      fell=true;
+    }
+    if(!fell)return false;
+    window.ConquerCombat?.invalidateArchers?.();
+    window.ConquerWallWalk?.invalidate();
+    invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
+    return true;
+  }
+  function destroyStructure(s,from=null){
+    // Everything standing comes down; walls that leant on it stay as open ends.
+    const g=groundOf(s),H=structureHeight(s)+(['tower','gate'].includes(s.type)?.35:0);
+    if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
+    else{const x=state();x.ruins.push({id:s.id,type:s.type,x:s.x??(s.a.x+s.b.x)/2,y:s.y??(s.a.y+s.b.y)/2,day:State.clock.day})}
+    for(const w of State.structures){
+      if(w.aSnap===s.id)w.aSnap=null;
+      if(w.bSnap===s.id)w.bSnap=null;
+    }
+    // Houses live in the urban geometry cache: drop it or the fallen house stays drawn.
+    if(s.type==='house'&&typeof invalidateUrbanGeometry==='function')invalidateUrbanGeometry();
     if(s.type==='tower'&&typeof detachSubtowerChildren==='function')detachSubtowerChildren(s.id);
     State.structures=State.structures.filter(x=>x.id!==s.id);
     window.ConquerWallWalk?.invalidate();
@@ -437,6 +525,26 @@
     ctx.strokeStyle='rgba(45,24,18,.9)';ctx.lineWidth=Math.max(1,State.view.scale*2);
     ctx.beginPath();ctx.moveTo(p.x-5*s,p.y-5*s);ctx.lineTo(p.x+2*s,p.y+s);
     ctx.lineTo(p.x-2*s,p.y+7*s);ctx.lineTo(p.x+6*s,p.y+12*s);ctx.stroke();
+  }
+  // 2.5D: painter-sorted flat-shaded triangles (rubble is low, few hundred blocks at most).
+  function drawMeshes2D(meshes){
+    const items=[];
+    for(const m of meshes){
+      const p=m.pos;
+      for(let t=0;t<m.col.length;t++){
+        const i=t*9,ux=p[i+3]-p[i],uy=p[i+4]-p[i+1],uz=p[i+5]-p[i+2],vx=p[i+6]-p[i],vy=p[i+7]-p[i+1],vz=p[i+8]-p[i+2];
+        const nz=ux*vy-uy*vx,len=Math.hypot(uy*vz-uz*vy,uz*vx-ux*vz,nz)||1;
+        const c={x:(p[i]+p[i+3]+p[i+6])/3,y:(p[i+1]+p[i+4]+p[i+7])/3},q=rotateViewPoint(c);
+        items.push({m,i,d:q.x+q.y+ISO_Z*(p[i+2]+p[i+5]+p[i+8])/3,f:nz/len>.5?1:nz/len<-.5?.5:.76,col:m.col[t]});
+      }
+    }
+    items.sort((a,b)=>a.d-b.d);
+    for(const it of items){
+      const p=it.m.pos,i=it.i,a=w2sRaw({x:p[i],y:p[i+1]},p[i+2]),b=w2sRaw({x:p[i+3],y:p[i+4]},p[i+5]),c=w2sRaw({x:p[i+6],y:p[i+7]},p[i+8]);
+      const h=it.col.replace('#',''),r=parseInt(h.slice(0,2),16)*it.f|0,g=parseInt(h.slice(2,4),16)*it.f|0,bl=parseInt(h.slice(4,6),16)*it.f|0;
+      ctx.fillStyle=ctx.strokeStyle='rgb('+r+','+g+','+bl+')';ctx.lineWidth=.6;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.fill();ctx.stroke();
+    }
   }
   function drawOverlay(){
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
@@ -454,7 +562,18 @@
       crack(s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2},structureHeight(s)*.55,.4);
     }
     const world3d=window.ConquerWorld3D?.active?.();
+    // Collapses: dust over the falling blocks (both renderers); in 2.5D the blocks and heaps too.
+    if(C()){
+      for(const r of playing()){
+        for(const d of C().dust(r.spec,now()-started.get(r.id))){
+          const p=w2sRaw(d,d.z),q=w2sRaw({x:d.x+d.r,y:d.y},d.z),rad=Math.max(2,Math.hypot(q.x-p.x,q.y-p.y));
+          ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
+        }
+      }
+      if(!world3d)drawMeshes2D(state().ruins.filter(r=>r.spec).map(ruinMesh));
+    }
     for(const r of state().ruins){
+      if(r.spec)continue;
       if(r.type==='breach'&&r.a&&r.b){
         if(world3d)continue;                  // drawn as 3D rubble (dynamicMeshes)
         const L=Math.hypot(r.b.x-r.a.x,r.b.y-r.a.y)||1,nx=-(r.b.y-r.a.y)/L,ny=(r.b.x-r.a.x)/L,w=(r.width||.5)/2+.3;
@@ -514,6 +633,6 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,
+    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,startCollapse,collapsing:()=>playing().map(r=>r.id),
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();

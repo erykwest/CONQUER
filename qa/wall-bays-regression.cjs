@@ -7,7 +7,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const root=__dirname+'/../src/';
-const siege=fs.readFileSync(root+'settlement-siege.js','utf8');
+const siege=fs.readFileSync(root+'settlement-collapse.js','utf8')+'\n'+fs.readFileSync(root+'settlement-siege.js','utf8');
 const placement=fs.readFileSync(root+'settlement-castle-placement.js','utf8');
 const core=fs.readFileSync(root+'settlement-core.js','utf8');
 const pick=(src,re,name)=>{const m=src.match(re)?.[0];assert.ok(m,'use the actual '+name);return m};
@@ -24,7 +24,8 @@ function fixture(){
     wallTier:s=>s.tier||2,wallSkin:s=>s.skin||'standard',towerTier:()=>2,
     underConstruction:()=>false,invalidateStructureScene:()=>{},invalidateSceneCache:()=>{},
     invalidateNavigation:()=>{calls.nav++},invalidateCastleColliderGeometry:()=>{calls.colliders++},
-    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0
+    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0,
+    performance:{now:()=>0},isWoodTower:()=>false
   });
   vm.runInContext(breakMin+'\n'+fragmentSrc+'\n'+siege,ctx);
   return{State,S:ctx.window.ConquerSiege,calls};
@@ -67,7 +68,7 @@ const wall=(o={})=>({id:'wall',type:'wall',a:{x:0,y:0},b:{x:8,y:0},length:8,widt
   assert.equal(left.buildCost.stone+right.buildCost.stone<=80,true,'costs are split, not duplicated');
   assert.equal(State.selectedId,left.id,'the selection follows a stretch');
   const ruin=State.siege.ruins.at(-1);
-  assert.equal(ruin.type,'breach');assert.ok(ruin.width===.5&&ruin.height===1.15,'rubble sized on the wall');
+  assert.equal(ruin.cause,'breach','the bay comes down as a collapse');assert.ok(ruin.width===.5&&ruin.height===1.15,'rubble sized on the wall');
   assert.ok(calls.nav>0&&calls.colliders>0,'navigation and colliders see the gap');
   const rubble=S.dynamicMeshes();
   assert.equal(rubble.length,1);assert.equal(rubble[0].pos.length,rubble[0].col.length*9);
@@ -79,7 +80,7 @@ const wall=(o={})=>({id:'wall',type:'wall',a:{x:0,y:0},b:{x:8,y:0},length:8,widt
   const {State,S}=fixture(),w=wall({length:2.6,b:{x:2.6,y:0}});State.structures.push(w);
   for(let k=0;k<20;k++)S.attackStructure('wall','trebuchet',10,0);
   assert.equal(State.structures.filter(s=>s.type==='wall').length,0,'a one-bay wall is gone when its bay falls');
-  assert.equal(State.siege.ruins.at(-1).type,'breach');
+  assert.equal(State.siege.ruins.at(-1).cause,'breach');
   // Legacy save: damage on the whole wall, no bays yet -> spread over the bays.
   const {State:St2,S:S2}=fixture(),old=wall();St2.structures.push(old);
   const max=S2.healthMaximum(old);old.siegeIntegrity={core:{hp:max-90,max},door:null};

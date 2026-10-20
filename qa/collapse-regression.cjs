@@ -1,0 +1,95 @@
+'use strict';
+// Collapses: the lost volume breaks into blocks that fall and settle in a heap, the
+// same every time (rebuilt from a save). Towers and gatehouses lose their top storey at
+// 2/3 and 1/3 of their health and fall whole at zero; houses come down whole; walls
+// that leant on a fallen tower stay as open ends.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const root=__dirname+'/../src/';
+const collapse=fs.readFileSync(root+'settlement-collapse.js','utf8');
+const siege=fs.readFileSync(root+'settlement-siege.js','utf8');
+const square=(x,y,h)=>[{x:x-h,y:y-h},{x:x+h,y:y-h},{x:x+h,y:y+h},{x:x-h,y:y+h}];
+
+// ---- the collapse module alone
+{
+  const window={};vm.runInContext(collapse,vm.createContext({window,Math,Number,Object,Array,Map,String}));
+  const C=window.ConquerCollapse;
+  const spec={id:'t1',parts:[square(10,10,.75)],z0:0,z1:4.8,ground:0,seed:'t1',palette:{side:['#635951'],top:['#9a8e82']},lean:{x:1,y:0}};
+  const a=C.blocks(spec);C.forget('t1');const b=C.blocks(spec);
+  assert.deepEqual(a.map(k=>[k.x,k.y,k.z,k.restZ]),b.map(k=>[k.x,k.y,k.z,k.restZ]),'the same collapse every time');
+  assert.ok(a.length>20&&a.length<=220,'a bounded cloud of blocks ('+a.length+')');
+  const start=C.mesh(spec,0);
+  assert.ok(start.pos.every(Number.isFinite)&&start.pos.length===start.col.length*9);
+  for(let i=2;i<start.pos.length;i+=3)assert.ok(start.pos[i]>=-.05&&start.pos[i]<=4.8+.5,'at t=0 the blocks fill the lost volume');
+  const D=C.duration(spec);
+  assert.ok(D>.5&&D<6,'it plays in a few seconds ('+D.toFixed(2)+' s)');
+  const end=C.mesh(spec,Infinity);
+  for(let i=2;i<end.pos.length;i+=3)assert.ok(end.pos[i]>=-.35,'nothing ends below the ground');
+  const rest=a.map(k=>C.pose(k,1e9));
+  assert.ok(rest.every(p=>p.z<2),'everything has come down');
+  const meanX=rest.reduce((s,p)=>s+p.x,0)/rest.length;
+  assert.ok(meanX>10,'the heap leans the way the tower fell');
+  assert.ok(rest.every(p=>Math.hypot(p.x-10,p.y-10)<.75+4.8),'the heap stays near its footprint');
+  assert.ok(C.dust(spec,.8).length>0,'dust where the blocks land');
+  assert.equal(C.dust(spec,D+5).length,0);assert.ok(C.finished(spec,D+5));
+  // A storey falling off a tower: what lands on the stump rests on its top.
+  const storey={...spec,id:'t2',seed:'t2',z0:3.6,z1:4.8,stump:true,lean:{x:.1,y:0}};
+  const on=C.blocks(storey).filter(k=>Math.abs(k.restZ-3.6)<.5);
+  assert.ok(on.length>0,'some rubble stays on the stump');
+  console.log('PASS collapse: deterministic blocks fall, lean and settle; dust; stumps');
+}
+
+// ---- towers, houses and walls in the siege domain
+function fixture(){
+  const State={clock:{day:30},structures:[],siege:null,selectedId:null,view:{scale:1}};
+  const calls={urban:0,functions:0};
+  const ctx=vm.createContext({
+    State,window:{},console,Math,Number,Object,Array,Map,Set,String,performance:{now:()=>0},
+    structureLevel:s=>s.level||1,
+    structureHeight:s=>s.type==='tower'?[2.35,3.55,4.75][(s.level||1)-1]:s.type==='house'?2.26:[1.15,2.1][(s.level||1)-1],
+    footprintPoints:s=>square(s.x,s.y,.75),houseFootprintParts:s=>[{points:square(s.x,s.y,1)}],houseLevel:()=>2,
+    wallTier:()=>2,wallSkin:()=>'standard',towerTier:()=>2,isWoodTower:()=>false,isCivic:()=>false,
+    normalizeFunctions:()=>{calls.functions++},invalidateUrbanGeometry:()=>{calls.urban++},
+    underConstruction:()=>false,invalidateStructureScene:()=>{},invalidateSceneCache:()=>{},invalidateNavigation:()=>{},
+    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0
+  });
+  vm.runInContext(collapse+'\n'+siege,ctx);
+  return{State,S:ctx.window.ConquerSiege,calls};
+}
+{
+  const {State,S,calls}=fixture();
+  const tower={id:'T',type:'tower',shape:'square',size:1.5,level:3,x:5,y:5,functions:[]};
+  const wall={id:'W',type:'wall',a:{x:5.75,y:5},b:{x:12,y:5},aSnap:'T',bSnap:null,width:.5,level:1};
+  State.structures.push(tower,wall);
+  const max=S.integrity(tower).core.max;
+  S.attackStructure('T','trebuchet',(max*.30)/7);
+  assert.equal(tower.level,3,'above 2/3 of its health the tower stands whole');
+  S.attackStructure('T','trebuchet',(max*.06)/7,{x:2,y:5});
+  assert.equal(tower.level,2,'below 2/3 the top storey falls');
+  let r=State.siege.ruins.at(-1);
+  assert.equal(r.cause,'storey');assert.ok(Math.abs(r.spec.z0-3.55)<1e-9&&r.spec.z1>4.75,'the lost slab is the top storey');
+  assert.ok(r.spec.stump&&r.spec.lean.x>0,'it rests partly on the stump, thrown away from the blow');
+  assert.ok(calls.functions>0,'rooms up there are dropped');
+  const hp=tower.siegeIntegrity.core;
+  assert.ok(hp.hp>0&&hp.hp<=hp.max&&hp.max<max,'a sound lower tower with the health it still had');
+  for(let k=0;k<200&&State.structures.includes(tower);k++)S.attackStructure('T','trebuchet',5);
+  assert.ok(!State.structures.includes(tower),'at zero it falls whole');
+  assert.equal(State.siege.ruins.filter(x=>x.cause==='storey').length,2,'two storeys fell on the way down');
+  assert.ok(State.siege.ruins.filter(x=>x.cause==='storey').every(x=>!x.spec.stump),'rubble on the stump came down with it');
+  assert.equal(State.siege.ruins.at(-1).cause,'destroyed');
+  assert.equal(wall.aSnap,null,'the wall that leant on it is left as an open end');
+  assert.ok(S.dynamicMeshes().every(m=>m.pos.length===m.col.length*9&&m.pos.every(Number.isFinite)),'heaps for the 3D renderer');
+  console.log('PASS towers lose storeys, then fall; walls are left open');
+}
+{
+  const {State,S,calls}=fixture();
+  const house={id:'H',type:'house',x:0,y:0,functions:[]};State.structures.push(house);
+  assert.equal(S.attackStructure('H','axe',1).ok,true,'timber-framed houses take axe blows');
+  for(let k=0;k<200&&State.structures.includes(house);k++)S.attackStructure('H','ram',10);
+  assert.ok(!State.structures.includes(house),'a house comes down whole');
+  const r=State.siege.ruins.at(-1);
+  assert.ok(r.spec.hollow&&r.spec.z1===2.26,'a hollow shell up to the ridge');
+  assert.ok(calls.urban>0,'the urban geometry forgets it');
+  console.log('PASS houses collapse');
+}
