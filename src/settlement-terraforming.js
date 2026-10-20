@@ -357,8 +357,10 @@
       Number(options.rotation):shape==='square'?0:-Math.PI/SEGMENTS);
     const top=polygon(resolvedCenter,radius,rotation,shape);
     const outer=polygon(resolvedCenter,radius+edgeWidth,rotation,shape);
+    // Graded hills union as soon as their sloped aprons overlap, even if the
+    // flat plateau polygons themselves are still separated.
     const overlapping=mode==='flat'?[]:edits().filter(edit=>edit.mode===mode&&
-      polygonsOverlapInterior(top,edit.top));
+      (mode==='terrain'?polygonsOverlapInterior(outer,edit.outer):polygonsOverlapInterior(top,edit.top)));
     if(overlapping.length&&mode!=='flat'){
       const sameDirection=overlapping.filter(edit=>Math.sign(edit.targetZ-edit.baseZ)===delta);
       if(sameDirection.length){
