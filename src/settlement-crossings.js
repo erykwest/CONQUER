@@ -348,15 +348,18 @@
         }
       }
     }else{
-      // Trestle bents every ~1.2 U, braced with X planks across each bent and between bents.
+      // Trestle bents every ~1.2 U, braced with X planks across each bent and between bents:
+      // one X per storey (~1 U of height), a horizontal waler at each storey line.
       const bents=[],step=1.2,leg=w-.12;
+      const tiers=(lo,hi)=>{const n=Math.max(1,Math.round((hi-lo)/1)),h=(hi-lo)/n,out=[];for(let i=0;i<n;i++)out.push([lo+i*h,lo+(i+1)*h]);return out};
       for(let a=step/2;a<f.L-.2;a+=step){
         const g=ground(a);if(under-g<.12){bents.push(null);continue}
         bents.push({a,g});
         for(const side of [-1,1])box(a-.05,a+.05,side*leg-.05,side*leg+.05,g-.05,under,dark);
-        if(under-g>.5){
-          beam(a,-leg,g+.1,a,leg,under-.05,.035,dark,true);
-          beam(a,leg,g+.1,a,-leg,under-.05,.035,dark,true);
+        if(under-g>.5)for(const [z0,z1] of tiers(g+.1,under-.05)){
+          beam(a,-leg,z0,a,leg,z1,.035,dark,true);
+          beam(a,leg,z0,a,-leg,z1,.035,dark,true);
+          if(z1<under-.1)box(a-.04,a+.04,-leg,leg,z1-.03,z1+.03,dark);
         }
       }
       for(let i=0;i+1<bents.length;i++){
@@ -364,8 +367,11 @@
         const lo=Math.max(p.g,q.g)+.1;if(under-lo<.4)continue;
         for(const side of [-1,1]){
           const c=side*(leg+.07);
-          beam(p.a,c,lo,q.a,c,under-.05,.035,dark,false);
-          beam(p.a,c,under-.05,q.a,c,lo,.035,dark,false);
+          for(const [z0,z1] of tiers(lo,under-.05)){
+            beam(p.a,c,z0,q.a,c,z1,.035,dark,false);
+            beam(p.a,c,z1,q.a,c,z0,.035,dark,false);
+            if(z1<under-.1)box(p.a,q.a,c-.03,c+.03,z1-.03,z1+.03,dark);
+          }
         }
       }
     }
