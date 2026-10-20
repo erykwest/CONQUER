@@ -48,7 +48,7 @@
       ['[data-linear="wall"]','Mura','wall'],
       ['[data-linear="palisade"]','Palizzata','fence'],
       ['[data-linear="built"]','Sezione costruita','built'],
-      ['[data-gate]','Porta in pietra','gate'],
+      ['[data-gate]','Porta muraria','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],

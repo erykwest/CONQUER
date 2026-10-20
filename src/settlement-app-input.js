@@ -324,17 +324,18 @@ canvas.addEventListener('wheel',e=>{
 function setBuildMasonryMaterial(next){
   if(!['stone','brick'].includes(next)||next===State.buildMasonryMaterial)return;
   State.buildMasonryMaterial=next;
-  if(State.draft?.preview)State.draft.preview.masonryMaterial=next;
-  if(State.draft?.previewSegments)for(const s of State.draft.previewSegments)s.masonryMaterial=next;
+  if(State.draft?.preview){State.draft.preview.masonryMaterial=next;delete State.draft.preview._ghostCheck}
+  if(State.draft?.previewSegments)for(const s of State.draft.previewSegments){s.masonryMaterial=next;delete s._ghostCheck}
   document.querySelectorAll('[data-build-masonry]').forEach(b=>{
     const active=b.dataset.buildMasonry===next;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
   });
   scheduleLocalSave();draw();
-  status('Muratura nuovi cantieri: '+(next==='brick'?'MATTONI (argilla)':'PIETRA'));
+  const preview=State.draft?.preview||State.draft?.previewSegments?.[0];
+  status('Muratura nuovi cantieri: '+(next==='brick'?'MATTONI (argilla)':'PIETRA')+(preview?' · '+costText(State.draft?.previewSegments?aggregateConstructionCost(State.draft.previewSegments):constructionCost(preview)):''));
 }
 for(const b of document.querySelectorAll('[data-build-masonry]'))b.onclick=()=>setBuildMasonryMaterial(b.dataset.buildMasonry);
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-crossing]'))b.onclick=()=>{
@@ -365,13 +366,13 @@ document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
   if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',material:'stone',level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
 document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',level};
+  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level};
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
   setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
@@ -388,7 +389,7 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,spec=window.ConquerIndustries.TYPES[type];
    setTool({kind:'industry',industry:type,
      placementSpec:window.ConquerIndustries.make(type,{x:0,y:0}),
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(spec.cost),el:b});
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(constructionCost({...window.ConquerIndustries.make(type,{x:0,y:0}),masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
