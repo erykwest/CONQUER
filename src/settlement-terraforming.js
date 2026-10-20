@@ -291,11 +291,16 @@
     }
     return Math.max(0,z);
   }
+  function isFlatAt(point){
+    return edits().some(edit=>edit.mode==='flat'&&insideEdit(point,edit));
+  }
   function slopeAt(point){
     const all=edits(),lastFlat=all.findLastIndex(edit=>edit.mode==='flat'&&insideEdit(point,edit));
     const active=all.slice(lastFlat+1).filter(edit=>edit.mode!=='flat').reverse();
-    for(const edit of all)if(edit.mode==='flat'&&flatWallSegments(edit).some(edge=>
-      dist(point,segmentProjection(point,edge.a,edge.b))<=.12))return 'steep';
+    for(const edit of all)if(edit.mode==='flat'&&
+      dist(point,edit.center)<edit.radius*(shapeOf(edit)==='square'?Math.SQRT2:1)+.2&&
+      flatWallSegments(edit).some(edge=>
+        dist(point,segmentProjection(point,edge.a,edge.b))<=.12))return 'steep';
     for(const edit of active)if(edit.mode==='walled'&&edit.top.some((_,i)=>
       exposedWallSegments(edit,i).some(edge=>
         dist(point,segmentProjection(point,edge.a,edge.b))<=.12)))return 'steep';
@@ -501,7 +506,7 @@
   }
 
   window.ConquerTerraforming=Object.freeze({
-    LIMITS,SHAPES,edits,preview,commit,clear,elevationAt,slopeAt,snapWallAnchor,wallGroundZ,
+    LIMITS,SHAPES,edits,preview,commit,clear,elevationAt,slopeAt,isFlatAt,snapWallAnchor,wallGroundZ,
     exposedWallSegments,unionContours,polygonsOverlapInterior,visibleTerracePieces,flatWallSegments,
     drawCommitted,drawGhost,drawMagnets
   });
