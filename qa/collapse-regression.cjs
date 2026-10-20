@@ -59,10 +59,10 @@ function fixture(){
   const calls={urban:0,functions:0};
   const ctx=vm.createContext({
     State,window:{},console,Math,Number,Object,Array,Map,Set,String,performance:{now:()=>0},
-    structureLevel:s=>s.level||1,
-    structureHeight:s=>s.type==='tower'?[2.35,3.55,4.75][(s.level||1)-1]:s.type==='house'?2.26:[1.15,2.1][(s.level||1)-1],
+    structureLevel:s=>s.level||1,wallTier:s=>s.tier||2,
+    structureHeight:s=>s.type==='ruin'?s.ruinHeight:s.type==='tower'?[2.35,3.55,4.75][(s.level||1)-1]:s.type==='house'?2.26:[1.15,2.1][(s.level||1)-1],
     footprintPoints:s=>square(s.x,s.y,.75),houseFootprintParts:s=>[{points:square(s.x,s.y,1)}],houseLevel:()=>2,
-    wallTier:()=>2,wallSkin:()=>'standard',towerTier:()=>2,isWoodTower:()=>false,isCivic:()=>false,
+    wallTier:()=>2,wallSkin:()=>'standard',towerTier:()=>2,isWoodTower:s=>s.material==='wood',isCivic:()=>false,
     normalizeFunctions:()=>{calls.functions++},invalidateUrbanGeometry:()=>{calls.urban++},
     underConstruction:()=>false,invalidateStructureScene:()=>{},invalidateSceneCache:()=>{},invalidateNavigation:()=>{},
     markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0
@@ -86,14 +86,46 @@ function fixture(){
   assert.ok(calls.functions>0,'rooms up there are dropped');
   const hp=tower.siegeIntegrity.core;
   assert.ok(hp.hp>0&&hp.hp<=hp.max&&hp.max<max,'a sound lower tower with the health it still had');
-  for(let k=0;k<200&&State.structures.includes(tower);k++)S.attackStructure('T','trebuchet',5);
-  assert.ok(!State.structures.includes(tower),'at zero it falls whole');
+  for(let k=0;k<200&&tower.type==='tower';k++)S.attackStructure('T','trebuchet',5);
+  assert.equal(tower.type,'ruin','a stone tower never falls whole: a ruined stump stays');
+  assert.equal(State.structures.filter(s=>s.id==='T').length,1,'same structure, same id');
+  assert.ok(tower.ruinHeight>=2.35*.34-1e-9&&tower.ruinHeight<=2.35*.5+1e-9,'a third to a half of it stays standing');
+  assert.ok(!tower.functions&&!tower.archerCount&&!tower.siegeIntegrity,'no rooms, no posts, no health left to take');
+  assert.equal(wall.aSnap,'T','the wall still leans on the stump: no way through');
   assert.equal(State.siege.ruins.filter(x=>x.cause==='storey').length,2,'two storeys fell on the way down');
   assert.ok(State.siege.ruins.filter(x=>x.cause==='storey').every(x=>!x.spec.stump),'rubble on the stump came down with it');
-  assert.equal(State.siege.ruins.at(-1).cause,'destroyed');
-  assert.equal(wall.aSnap,null,'the wall that leant on it is left as an open end');
-  assert.ok(S.dynamicMeshes().every(m=>m.pos.length===m.col.length*9&&m.pos.every(Number.isFinite)),'heaps for the 3D renderer');
-  console.log('PASS towers lose storeys, then fall; walls are left open');
+  const last=State.siege.ruins.at(-1);
+  assert.equal(last.cause,'ruin');assert.ok(last.spec.stump&&Math.abs(last.spec.z0-tower.ruinHeight)<1e-3,'the top comes down onto the stump');
+  assert.ok(S.dynamicMeshes().every(m=>m.pos.length===m.col.length*9&&m.pos.every(Number.isFinite)),'heaps and stump for the 3D renderer');
+  // Rubble: a high core nobody crosses, a slowing fringe, no heavy engine at all.
+  let core=0,fringe=0;
+  for(let x=1;x<=9;x+=.25)for(let y=1;y<=9;y+=.25){const p={x,y};if(!S.rubbleAt(p))continue;if(S.rubbleBlocks(p))core++;else fringe++;
+    assert.equal(S.rubbleFactor(p,'ram'),0,'heavy engines cannot cross rubble');if(!S.rubbleBlocks(p))assert.equal(S.rubbleFactor(p),.5,'infantry is slowed')}
+  assert.ok(core>0&&fringe>0,'a blocking core and a slowing fringe ('+core+'/'+fringe+')');
+  assert.equal(S.rubbleFactor({x:40,y:40}),1,'clear ground elsewhere');
+  console.log('PASS stone towers lose storeys, then stand as ruined stumps in their rubble');
+}
+{
+  const {State,S}=fixture();
+  const wood={id:'WT',type:'tower',shape:'square',size:1.5,level:1,x:5,y:5,material:'wood',functions:[]};
+  const wall={id:'W',type:'wall',a:{x:5.75,y:5},b:{x:12,y:5},aSnap:'WT',bSnap:null,width:.5,level:1};
+  State.structures.push(wood,wall);
+  for(let k=0;k<200&&State.structures.includes(wood);k++)S.attackStructure('WT','axe',10);
+  assert.ok(!State.structures.includes(wood),'a wooden tower comes down whole');
+  assert.equal(wall.aSnap,null,'and leaves the wall an open end');
+  assert.equal(State.siege.ruins.at(-1).spec.material,'wood');
+  console.log('PASS wooden towers fall whole');
+}
+{
+  // A breach heap is a way in: it slows, it never walls the gap up.
+  const {State,S}=fixture();
+  const wall={id:'B',type:'wall',a:{x:0,y:0},b:{x:2.5,y:0},width:.5,level:1,tier:2};
+  State.structures.push(wall);
+  for(let k=0;k<50&&State.structures.includes(wall);k++)S.attackStructure('B','trebuchet',10,0);
+  let cells=0;
+  for(let x=-2;x<=4.5;x+=.25)for(let y=-2;y<=2;y+=.25){const p={x,y};if(S.rubbleAt(p)){cells++;assert.equal(S.rubbleBlocks(p),false,'a breach heap never blocks')}}
+  assert.ok(cells>0,'there is rubble in the breach');
+  console.log('PASS breach rubble slows but never blocks');
 }
 {
   const {State,S,calls}=fixture();

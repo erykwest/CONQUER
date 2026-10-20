@@ -36,6 +36,7 @@
       starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[]
     }:initial();
     state();normalizeMastio();
+    rubbleGrid=null;                                  // rubble of the loaded game
   }
   function eligibleRoom(s){return !!s&&['tower','gate','built'].includes(s.type)&&!underConstruction(s)}
   function floor(s,index){return index+1}
@@ -435,14 +436,15 @@
     const x=state(),parts=opts.parts||collapseParts(s);
     if(!parts.length||!(z1>z0))return null;
     // Rubble left on this structure's stump by an earlier storey falls with it.
-    for(const r of x.ruins)if(r.spec?.stump&&r.id.startsWith(s.id+':storey:')){r.spec.stump=false;C()?.forget(r.id);heapCache.delete(r.id)}
+    for(const r of x.ruins)if(r.spec?.stump&&r.id.startsWith(s.id+':storey:')){r.spec.stump=false;C()?.forget(r.id);heapCache.delete(r.id);rubbleGrid=null}
     const pts=parts.flat(),cx=pts.reduce((t,p)=>t+p.x,0)/pts.length,cy=pts.reduce((t,p)=>t+p.y,0)/pts.length;
     const id=s.id+':'+(opts.cause||'collapse')+':'+x.ruins.length+':'+State.clock.day+':'+Math.round(z1*100);
     const spec={id,parts:parts.map(p=>p.map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))),z0,z1,ground:groundOf(s),
-      seed:id,palette:collapsePalette(s),material:collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
+      seed:id,palette:collapsePalette(s),material:collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey'||opts.cause==='ruin',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
     const ruin={id,type:'collapse',cause:opts.cause||'destroyed',structure:s.type,x:cx,y:cy,day:State.clock.day,spec};
     if(opts.a)Object.assign(ruin,{a:opts.a,b:opts.b,width:Number(s.width)||.5,height:structureHeight(s)});
     x.ruins.push(ruin);if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
+    rubbleGrid=null;
     started.set(id,now());animate();
     return ruin;
   }
@@ -465,8 +467,85 @@
     }
     return r.type==='breach'&&r.a&&r.b?rubbleMesh(r):null;   // breaches saved before collapses
   }
-  // Extra meshes for the 3D world renderer: falling blocks and rubble heaps.
-  function dynamicMeshes(){return state().ruins.map(ruinMesh).filter(Boolean)}
+  // ---------- ruined stumps ----------
+  // A stone tower or gatehouse never falls whole: its top half to two thirds comes down
+  // and a ruined stump stays, still a solid obstacle holding the walls that lean on it
+  // (same id, so their links hold), with no rooms or posts. A fallen gatehouse thus
+  // closes its passage instead of opening a way through the walls.
+  function ruinStructure(s,from){
+    const g=groundOf(s),H=structureHeight(s);
+    let seed=0;for(const ch of String(s.id))seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
+    const keep=H*(.34+.16*((seed%1000)/1000));             // a third to a half stays standing
+    startCollapse(s,g+keep,g+H+.35,{cause:'ruin',lean:from?{x:s.x-from.x,y:s.y-from.y}:null});
+    const stump={id:s.id,type:'ruin',ruinOf:s.type,shape:s.shape,size:s.size,r:s.r,w:s.w,h:s.h,x:s.x,y:s.y,
+      angle:s.angle||0,rotationStep:s.rotationStep,material:s.material,ruinHeight:+keep.toFixed(3),
+      wallConnections:s.wallConnections,ruinDay:State.clock.day};
+    for(const k of Object.keys(s))delete s[k];
+    for(const [k,v] of Object.entries(stump))if(v!==undefined)s[k]=v;   // same object: selection and links hold
+    window.ConquerCombat?.invalidateArchers?.();window.ConquerWallWalk?.invalidate();
+    if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+    invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
+  }
+  const stumpCache=new Map();
+  function stumpMesh(s){
+    const key=s.id+':'+s.ruinHeight;let m=stumpCache.get(key);if(m)return m;
+    const pos=[],col=[],g=groundOf(s),H=Number(s.ruinHeight)||.8,base=footprintPoints(s);
+    let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
+    const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
+    // Edges split every ~0.25 U so the broken top can be ragged.
+    const ring=[];
+    for(let i=0;i<base.length;i++){
+      const a=base[i],b=base[(i+1)%base.length],n=Math.max(1,Math.round(Math.hypot(b.x-a.x,b.y-a.y)/.25));
+      for(let k=0;k<n;k++)ring.push({x:a.x+(b.x-a.x)*k/n,y:a.y+(b.y-a.y)*k/n});
+    }
+    const tops=ring.map((_,i)=>H*(rnd()<.18?.55+rnd()*.2:.82+rnd()*.18));
+    const cx=ring.reduce((t,p)=>t+p.x,0)/ring.length,cy=ring.reduce((t,p)=>t+p.y,0)/ring.length;
+    const tri=(a,b,c,colr)=>{pos.push(...a,...b,...c);col.push(colr)};
+    for(let i=0;i<ring.length;i++){
+      const j=(i+1)%ring.length,a=ring[i],b=ring[j],ha=g+tops[i],hb=g+tops[j];
+      const sideCol=i%3===0?'#6f665d':'#7d736b';
+      tri([a.x,a.y,g],[b.x,b.y,g],[b.x,b.y,hb],sideCol);tri([a.x,a.y,g],[b.x,b.y,hb],[a.x,a.y,ha],sideCol);
+      // Broken top: rubble-filled, sloping in from the ragged rim (faces up).
+      const c=[cx,cy,g+H*.72],p=[a.x,a.y,ha],q=[b.x,b.y,hb];
+      const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
+      if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
+    }
+    m={pos,col};stumpCache.set(key,m);return m;
+  }
+  // ---------- rubble on the ground ----------
+  // Where the pieces settled, on a 0.25 U grid: the heap height there. A high core (over
+  // ~1 m) cannot be crossed on foot; elsewhere rubble halves infantry speed; heavy engines
+  // cannot cross any of it. A breach is the exception: its heap is a way in, never a wall.
+  const RUBBLE_CELL=.25,RUBBLE_WALL=.3;
+  let rubbleGrid=null;
+  function rubbleIndex(){
+    if(rubbleGrid)return rubbleGrid;
+    rubbleGrid=new Map();
+    if(!C())return rubbleGrid;
+    for(const r of state().ruins){
+      if(!r.spec)continue;
+      const g=r.spec.ground||0,breach=r.cause==='breach';
+      for(const b of C().blocks(r.spec)){
+        const q=C().pose(b,Infinity),h=q.z-g+Math.min(...b.s),L=b.s[0],ca=Math.cos(b.yaw),sa=Math.sin(b.yaw);
+        if(h<=.01)continue;
+        for(let d=-L/2;d<=L/2+1e-9;d+=RUBBLE_CELL*.8){
+          const k=Math.floor((q.x+ca*d)/RUBBLE_CELL)+','+Math.floor((q.y+sa*d)/RUBBLE_CELL),cur=rubbleGrid.get(k);
+          if(!cur||h>cur.h)rubbleGrid.set(k,{h,breach:breach&&(!cur||cur.breach)});
+          else if(!breach&&cur.breach)cur.breach=false;
+        }
+      }
+    }
+    return rubbleGrid;
+  }
+  function rubbleAt(p){return rubbleIndex().get(Math.floor(p.x/RUBBLE_CELL)+','+Math.floor(p.y/RUBBLE_CELL))||null}
+  function rubbleBlocks(p){const r=rubbleAt(p);return !!r&&r.h>=RUBBLE_WALL&&!r.breach}
+  function rubbleFactor(p,heavy=false){const r=rubbleAt(p);return !r?1:heavy?0:.5}
+  // Extra meshes for the 3D world renderer: falling blocks, rubble heaps, ruined stumps.
+  function dynamicMeshes(){
+    const out=state().ruins.map(ruinMesh).filter(Boolean);
+    for(const s of State.structures)if(s.type==='ruin')out.push(stumpMesh(s));
+    return out;
+  }
   function attackStructure(id,weapon,force=1,part='core'){
     const s=State.structures.find(x=>x.id===id);
     if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,reason:'Invalid or unfinished fortification'};
@@ -509,6 +588,8 @@
     return true;
   }
   function destroyStructure(s,from=null){
+    // Stone towers and gatehouses are left as ruined stumps (they keep closing the walls).
+    if(['tower','gate'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!(typeof isWoodGate==='function'&&isWoodGate(s)))return ruinStructure(s,from);
     // Everything standing comes down; walls that leant on it stay as open ends.
     const g=groundOf(s),H=structureHeight(s)+(['tower','gate'].includes(s.type)?.35:0);
     if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
@@ -578,7 +659,7 @@
           ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
         }
       }
-      if(!world3d)drawMeshes2D(state().ruins.filter(r=>r.spec).map(ruinMesh));
+      if(!world3d)drawMeshes2D(dynamicMeshes());
     }
     for(const r of state().ruins){
       if(r.spec)continue;
@@ -641,6 +722,6 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,startCollapse,collapsing:()=>playing().map(r=>r.id),
+    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();

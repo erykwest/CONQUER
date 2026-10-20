@@ -22,6 +22,7 @@ function drawConstructionProgress(s){
 }
 function drawStructure(s,preview=false){
   if(s?.type==='road'){drawAutoStructure(s,preview);return}
+  if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
   const render=()=>{
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);

@@ -284,9 +284,10 @@ function syncPeasantPathCache(){
 }
 function pointBlockedForPeasant(p,sourceHouseId){
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
+  if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
   for(const s of State.structures){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
-    if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training'].includes(s.type))continue;
+    if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training','ruin'].includes(s.type))continue;
 
     // Market ground and the actual castle gate passage are traversable.
     if(s.type==='market')continue;
@@ -303,7 +304,7 @@ function pointBlockedForPeasant(p,sourceHouseId){
       continue;
     }
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
-    if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
+    if((s.type==='tower'||s.type==='ruin')&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='house'||isCivic(s)){
       const parts=s.type==='house'?urbanHouseDisplayParts(s):civicParts(s);
       for(const part of parts){

@@ -38,7 +38,9 @@ const render3dHooks=[
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
   ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n'],
   // Builder overlay hook: wall/palisade end magnets (settlement-castle-placement.js).
-  ["  if(typeof drawLinearMagnets==='function')drawLinearMagnets();\n",'']
+  ["  if(typeof drawLinearMagnets==='function')drawLinearMagnets();\n",''],
+  // Siege hook: ruined stumps are drawn with their rubble by settlement-siege.js.
+  ["  if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)\n",'']
 ];
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));

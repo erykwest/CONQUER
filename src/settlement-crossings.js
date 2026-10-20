@@ -188,7 +188,12 @@
     }
     return null;
   }
+  // Rubble slows infantry and stops heavy engines (settlement-siege rubbleFactor).
   function movementMultiplier(p,heavy=false){
+    const rubble=window.ConquerSiege?.rubbleFactor?.(p,heavy)??1;
+    return rubble<=0?0:rubble*crossingMultiplier(p,heavy);
+  }
+  function crossingMultiplier(p,heavy=false){
     if(onOpenBridge(p,heavy))return 1;
     const found=moatAt(p);
     if(!found||filled(found.moat,found.location,heavyWidth(heavy)))return 1;
