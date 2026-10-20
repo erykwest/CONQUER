@@ -260,12 +260,17 @@
     return{allocated,remaining,limits,assignedL1,spareL1:l1Available};
   }
   function activeCapacity(){return laborAllocation().allocated}
+  function buildersFunded(){
+    return constructionWagePerWorkday()<=0||finite(state().castleGold)>1e-8;
+  }
   function availableBuilderIds(day=State.clock?.day){
-    if(!State.village?.founded||((window.ConquerCombat?.alarmMode?.()||'off')!=='off'))return [];
+    if(!State.village?.founded||!buildersFunded()||
+        ((window.ConquerCombat?.alarmMode?.()||'off')!=='off'))return [];
     return laborAllocation(day).spareL1;
   }
   function availableBuilders(day=State.clock?.day){
-    if(!State.village?.founded||((window.ConquerCombat?.alarmMode?.()||'off')!=='off'))return 0;
+    if(!State.village?.founded||!buildersFunded()||
+        ((window.ConquerCombat?.alarmMode?.()||'off')!=='off'))return 0;
     // Construction never takes the same L1 counted at a workplace.
     return Math.max(0,laborAllocation(day).remaining.L1);
   }
