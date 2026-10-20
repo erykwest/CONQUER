@@ -53,6 +53,8 @@
 
 | D-038 | CODICE BRANCH (20/10) | Un lavoratore L1 visibile a un cantiere è sempre uno degli stessi ID che l'economia ha assegnato al cantiere: casa L1 o fondatore, percorso pedonale valido e viaggio giornaliero. | Le assegnazioni evitano doppio impiego in industria, campo o allevamento; senza percorso raggiungibile non si genera avanzamento. Cache percorsi invalidata con la topologia esistente; QA browser da verificare. |
 
+| D-039 | VINCOLO + CODICE BRANCH (20/10) | **Cantieri manuali:** il signore paga il lavoro L1 via tesoreria quando è realmente svolto; **crescita spontanea:** il valore del lavoro è incluso una volta nel costo di spawn, non addebitato al signore. | L1 riceve `wage.L1 / 20` oro per giornata-operaio effettiva, senza doppia paga mensile; i cantieri senza fondi si fermano. Lo `spawnCost` automatico è per ora valore imputato, non cassa privata realmente movimentata: soggetto finanziatore autonomo ancora da modellare. |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
