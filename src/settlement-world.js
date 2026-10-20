@@ -296,9 +296,11 @@ function* simplifyRoadRepairWork(points,width=.30,ignoreIds=[],allowPrimaryNatur
 function reactiveRoadExists(a,b,eps=.24){
   return roadList().some(r=>(dist(r.a,a)<eps&&dist(r.b,b)<eps)||(dist(r.a,b)<eps&&dist(r.b,a)<eps));
 }
-function addReactiveRoadPolyline(points,template={},meta={}){
+function addReactiveRoadPolyline(...args){return finishRoadWork(addReactiveRoadWork(...args))}
+function* addReactiveRoadWork(points,template={},meta={},stillValid=()=>true){
   if(!points||points.length<2)return 0;
-  const width=Number(template.width)||.30,clean=simplifyRoadRepairPath(points,width,meta.ignoreIds||[]);
+  const width=Number(template.width)||.30,clean=yield* simplifyRoadRepairWork(points,width,meta.ignoreIds||[]);
+  if(!stillValid())return 0;
   let added=0,total=Math.max(1,clean.length-1);
   for(let i=0;i<clean.length-1;i++){
     const a=clean[i],b=clean[i+1];if(dist(a,b)<.24||reactiveRoadExists(a,b))continue;
@@ -551,7 +553,8 @@ function gateMainRouteContinuous(gate){
   }
   return Math.min(dist(cursor,endpoints[0]),dist(cursor,endpoints[1]))<=.90;
 }
-function buildGateMainConnection(gate,force=false){
+function buildGateMainConnection(...args){return finishRoadWork(buildGateMainConnectionWork(...args))}
+function* buildGateMainConnectionWork(gate,force=false,stillValid=()=>true){
   if(!gate||gate.type!=='gate'||underConstruction(gate)||mainRoadRouteDeleted(gateMainRouteId(gate)))return 0;
   const routeId=gateMainRouteId(gate),attemptKey=gateMainTopologyKey(gate);
 
@@ -576,13 +579,14 @@ function buildGateMainConnection(gate,force=false){
   const passage=gatePassageInfo(gate,trunk.point);if(!passage)return 0;
   const width=.62,ignore=[];
   let approach;
-  if(roadRepairSegmentClear(trunk.point,passage.near,width,ignore)){
+  if(yield* roadRepairSegmentWork(trunk.point,passage.near,width,ignore)){
     approach=[{...trunk.point},{...passage.near}];
   }else{
     // This is intentionally a short local repair search, not a settlement-wide
     // well→gate A*. The primary road already provides global connectivity.
-    approach=findRoadRepairPath(trunk.point,passage.near,width,10,ignore,18000);
+    approach=yield* findRoadRepairWork(trunk.point,passage.near,width,10,ignore,18000);
   }
+  if(!stillValid())return 0;
   if(!approach||approach.length<2){
     gate.gateMainAttemptKey=attemptKey;
     gate.gateMainBlocked=true;
@@ -593,14 +597,16 @@ function buildGateMainConnection(gate,force=false){
   for(const p of [passage.center,passage.far]){
     if(dist(full.at(-1),p)>.08)full.push({...p});
   }
-  if(!roadRepairSegmentClear(passage.near,passage.center,width,ignore)||
-     !roadRepairSegmentClear(passage.center,passage.far,width,ignore)){
+  if(!(yield* roadRepairSegmentWork(passage.near,passage.center,width,ignore))||
+     !(yield* roadRepairSegmentWork(passage.center,passage.far,width,ignore))){
+    if(!stillValid())return 0;
     gate.gateMainAttemptKey=attemptKey;
     gate.gateMainBlocked=true;
     return 0;
   }
 
-  const clean=simplifyRoadRepairPath(full,width,ignore),pts=subdivideRoadPolyline(clean,ROAD_RULES.arterialSegmentMax);
+  const clean=yield* simplifyRoadRepairWork(full,width,ignore),pts=subdivideRoadPolyline(clean,ROAD_RULES.arterialSegmentMax);
+  if(!stillValid())return 0;
   if(pts.length<2){
     gate.gateMainAttemptKey=attemptKey;
     gate.gateMainBlocked=true;
@@ -737,7 +743,8 @@ function removeTowerSecondaryBranch(towerId){
   if(removed)invalidateNavigation(false);
   return removed;
 }
-function ensureTowerSecondaryBranch(tower,instant=false){
+function ensureTowerSecondaryBranch(...args){return finishRoadWork(ensureTowerSecondaryBranchWork(...args))}
+function* ensureTowerSecondaryBranchWork(tower,instant=false,stillValid=()=>true){
   if(!tower||tower.type!=='tower'||tower.parentTowerId||underConstruction(tower))return 0;
   if(towerSecondaryRoads(tower.id).length)return 0;
 
@@ -749,17 +756,18 @@ function ensureTowerSecondaryBranch(tower,instant=false){
     if(target.type==='well')ignore.push(target.id);
 
     let path;
-    if(roadRepairSegmentClear(start,goal,width,ignore))path=[start,goal];
-    else path=findRoadRepairPath(start,goal,width,14,ignore,60000);
+    if(yield* roadRepairSegmentWork(start,goal,width,ignore))path=[start,goal];
+    else path=yield* findRoadRepairWork(start,goal,width,14,ignore,60000);
+    if(!stillValid())return 0;
     if(!path||path.length<2)continue;
 
-    const added=addReactiveRoadPolyline(path,{width},{
+    const added=yield* addReactiveRoadWork(path,{width},{
       accessFor:tower.id,
       branchTargetId:target.id,
       roadClass:'secondary-tower',
       ignoreIds:ignore,
       instant
-    });
+    },stillValid);
     if(added)return added;
   }
   return 0;
@@ -807,7 +815,8 @@ function rebuildSecondaryRoadsOnLoad(){
   invalidateNavigation();
   return removed;
 }
-function ensureSettlementRoadAccess(s,instant=false){
+function ensureSettlementRoadAccess(...args){return finishRoadWork(ensureSettlementRoadAccessWork(...args))}
+function* ensureSettlementRoadAccessWork(s,instant=false,stillValid=()=>true){
   if(!s||underConstruction(s))return 0;
   if(State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))return 0;
   const nearest=nearestPrimaryRoadProjection(structureCenter(s));if(!nearest)return 0;
@@ -816,12 +825,13 @@ function ensureSettlementRoadAccess(s,instant=false){
   const width=s.type==='market'?.34:s.type==='field'?.26:.30;
   const ignore=[s.id];
   let path;
-  if(roadRepairSegmentClear(start,goal,width,ignore))path=[start,goal];
-  else path=findRoadRepairPath(start,goal,width,10,ignore,45000);
+  if(yield* roadRepairSegmentWork(start,goal,width,ignore))path=[start,goal];
+  else path=yield* findRoadRepairWork(start,goal,width,10,ignore,45000);
+  if(!stillValid())return 0;
   if(!path||path.length<2)return 0;
-  return addReactiveRoadPolyline(path,{width,parentRoadId:nearest.road.id},{
+  return yield* addReactiveRoadWork(path,{width,parentRoadId:nearest.road.id},{
     accessFor:s.id,roadClass:'access-primary',ignoreIds:ignore,instant
-  });
+  },stillValid);
 }
 function reconcileSettlementAccessRoads(limit=Infinity,instant=false){
   let changed=0,done=0;

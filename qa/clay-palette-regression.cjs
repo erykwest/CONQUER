@@ -57,7 +57,12 @@ assert.match(canvas,/ctx\.strokeStyle=visualPaletteColor\(stroke\)/);
 assert.match(gl,/const color=visualPaletteColor\(hex\)/);
 assert.match(world,/usePalette\?visualPaletteColor\(hex\):hex/);
 assert.match(world,/const m=meshBuilder\(true\),winter=/);
-assert.match(world,/if\(gl.isContextLost\(\)\|\|gl.getError\(\)!==gl.NO_ERROR\)/);
+// Error polling now follows a ready GPU fence; the behavioral contract lives
+// in webgl-error-poll-regression.cjs and the browser fallback injection.
+assert.match(world,/pollRendererError\(gl\);/);
+assert.match(world,/deferRendererError\(gl\);/);
+assert.match(world,/if\(gl.isContextLost\(\)\)throw new Error/);
+assert.match(world,/gl.getError\(\)!==gl.NO_ERROR/);
 assert.match(world,/const bSig=\[season,State\.visualPalette,/);
 assert.match(world,/const castleContent=\[season,State\.visualPalette,/);
 assert.match(render,/State\.season\|\|'summer',State\.visualPalette/);

@@ -8,6 +8,85 @@ let adaptiveVisualFrameMs=VISUAL_FRAME_FAST_MS,simDrawEmaMs=0;
 const WEATHER_FRAME_MS=1000/24;
 const MAINTENANCE_WATCHDOG_MS=2500;
 const LOCAL_AUTOSAVE_MS=5000;
+let sceneDrawRequested=false;
+// Fire, damage and collapses mutate state immediately. The one simulation RAF
+// paints their combined result, including animated effects while paused.
+function requestSceneDraw(){sceneDrawRequested=true}
+const COMPLETION_ROAD_BUDGET_MS=6;
+let completionRoadJob=null;
+function scheduleCompletionRoadMaintenance(completed){
+  const village=State.village;
+  let job=completionRoadJob;
+  if(!job||job.village!==village){
+    job={village,tasks:new Map(),current:null,iterator:null};completionRoadJob=job;
+    setTimeout(tick,0);
+  }
+  const types=new Set(completed.map(s=>s.type));
+  const completedIds=new Set(completed.map(s=>s.id));
+  const add=(kind,s)=>job.tasks.set(kind+':'+s.id,{kind,id:s.id});
+  // A new gate/well can unlock previously unreachable tower branches.
+  for(const s of State.structures){
+    if(underConstruction(s))continue;
+    if(completedIds.has(s.id)&&s.type==='gate')add('gate',s);
+    if((completedIds.has(s.id)||types.has('gate')||types.has('well'))&&s.type==='tower'&&!s.parentTowerId)add('tower',s);
+  }
+  for(const s of completed)if(s.type==='house'||s.type==='field'||isCivic(s))add('access',s);
+  function tick(){
+    if(completionRoadJob!==job)return;
+    if(State.village!==village){completionRoadJob=null;return}
+    const t0=performance.now(),deadline=t0+COMPLETION_ROAD_BUDGET_MS;
+    let changed=0;
+    try{
+      do{
+        if(job.iterator&&!job.valid()){
+          job.iterator.return();job.iterator=null;
+        }
+        if(!job.iterator){
+          const task=job.tasks.values().next().value;
+          if(!task)break;
+          const s=State.structures.find(s=>s.id===task.id);
+          if(!s||underConstruction(s)){job.tasks.delete(task.kind+':'+task.id);continue}
+          job.current=task;
+          if(task.kind==='tower'){
+            const live=new Set(State.structures.filter(s=>(s.type==='gate'||s.type==='well')&&!underConstruction(s)).map(s=>s.id));
+            if(towerSecondaryRoads(s.id).some(r=>r.branchTargetId&&!live.has(r.branchTargetId)))changed+=removeTowerSecondaryBranch(s.id);
+          }
+          const revision=navPerf.navInvalidations||0;
+          job.valid=()=>State.village===village&&State.structures.includes(s)&&!underConstruction(s)&&(navPerf.navInvalidations||0)===revision;
+          job.iterator=task.kind==='gate'?buildGateMainConnectionWork(s,false,job.valid):
+            task.kind==='tower'?ensureTowerSecondaryBranchWork(s,false,job.valid):ensureSettlementRoadAccessWork(s,false,job.valid);
+        }
+        const step=job.iterator.next();
+        if(step.done){
+          const n=step.value||0;changed+=n;
+          // Gate commits already invalidate their graph; other access roads do not.
+          if(n&&job.current.kind!=='gate')invalidateNavigation(false);
+          job.tasks.delete(job.current.kind+':'+job.current.id);
+          job.iterator=null;job.current=null;
+        }
+      }while(performance.now()<deadline);
+    }catch(err){
+      // An optional road failure must not stop later completion jobs.
+      if(job.current)job.tasks.delete(job.current.kind+':'+job.current.id);
+      job.iterator=null;job.current=null;
+      console.error('CONQUER_COMPLETION_ROAD_ERROR',err);
+    }
+    if(changed){job.repaint=true;markDirty(false,['ground','base'])}
+    const ms=performance.now()-t0,perf=window.__conquerPerf;
+    if(perf){
+      perf.completionRoadSlices=(perf.completionRoadSlices||0)+1;
+      perf.completionRoadMaxSliceMs=Math.max(perf.completionRoadMaxSliceMs||0,ms);
+      perf.completionRoadWorkMs=(perf.completionRoadWorkMs||0)+ms;
+      perf.completionRoadPending=job.tasks.size;
+    }
+    window.__conquerAnalytics?.measure('COMPLETION_ROADS',ms,{pending:job.tasks.size,changed});
+    if(job.tasks.size)setTimeout(tick,0);
+    else{
+      completionRoadJob=null;
+      if(job.repaint&&State.clock.speed<=0)requestAnimationFrame(()=>{if(State.village===village&&State.clock.speed<=0)draw()});
+    }
+  }
+}
 function constructionCompletionsCrossed(beforeDay,afterDay){
   const out=[];
   for(const s of State.structures){
@@ -35,26 +114,7 @@ function runSettlementMaintenance(reason='watchdog',completedStructures=[]){
   measureStep('towerCollider',()=>syncCompletedTowerWallColliders(false));
 
   if(reason==='completion'){
-    const completedTypes=new Set(completedStructures.map(s=>s?.type).filter(Boolean));
-
-    if(completedTypes.has('gate')){
-      measureStep('gateMain',()=>reconcileGateMainConnections(false));
-    }
-
-    if(completedTypes.has('tower')||completedTypes.has('gate')||completedTypes.has('well')){
-      measureStep('towerSecondary',()=>reconcileTowerSecondaryBranches());
-    }
-
-    const accessTargets=completedStructures.filter(s=>
-      s&&!underConstruction(s)&&(s.type==='house'||s.type==='field'||isCivic(s))
-    );
-    if(accessTargets.length){
-      measureStep('settlementAccess',()=>{
-        let n=0;
-        for(const target of accessTargets)n+=ensureSettlementRoadAccess(target);
-        return n;
-      });
-    }
+    measureStep('roadSchedule',()=>{scheduleCompletionRoadMaintenance(completedStructures);return 0});
   }else if(reason!=='watchdog'){
     measureStep('gateMain',()=>reconcileGateMainConnections(false));
     measureStep('towerSecondary',()=>reconcileTowerSecondaryBranches());
@@ -64,7 +124,11 @@ function runSettlementMaintenance(reason='watchdog',completedStructures=[]){
   if(reason==='completion'){
     // Promote only the layers that actually gained completed geometry. Reactive
     // road reconciliation adds ground geometry; it must not dirty landscape.
-    invalidateNavigation(false);
+    // Castle/house footprints already obstruct parcels during construction.
+    // Church/tavern completion adds a Voronoi site; completed primary roads
+    // unlock dense street-front houses. New road commits invalidate parcels
+    // themselves when they actually change the network.
+    invalidateNavigation(false,{urban:completedStructures.some(s=>s.type==='church'||s.type==='tavern'||s.type==='road'&&!!s.routeId)});
     fieldWorkAssignmentCache={key:null,map:new Map()};
     const layers=new Set();
     for(const item of completedStructures)for(const layer of structureSceneLayers(item))layers.add(layer);
@@ -143,6 +207,7 @@ function simulationFrame(now){
 
     if(now-simDrawAt>=adaptiveVisualFrameMs){
       const t0=performance.now();
+      sceneDrawRequested=false;
       draw();
       const drawMs=performance.now()-t0;
 
@@ -177,7 +242,9 @@ function simulationFrame(now){
     const animatedCutaway=State.structures.some(s=>structureCutaway(s)&&Array.isArray(s.functions)&&s.functions.some(role=>role==='barracks'||role==='quarters'||role==='nobleRoom'));
     // DEV weather/daylight overrides ease even with the simulation paused.
     const ambientTransition=window.ConquerAmbientLight?.isTransitioning?.()||false;
-    if((animatedCutaway||ambientTransition)&&now-simDrawAt>=(ambientTransition?WEATHER_FRAME_MS:84)){
+    const animatedEffects=window.ConquerFire?.needsAnimation?.()||window.ConquerSiege?.needsAnimation?.();
+    if(sceneDrawRequested||((animatedCutaway||ambientTransition||animatedEffects)&&now-simDrawAt>=(ambientTransition?WEATHER_FRAME_MS:animatedEffects?VISUAL_FRAME_FAST_MS:84))){
+      sceneDrawRequested=false;
       draw();
       simDrawAt=now;
     }

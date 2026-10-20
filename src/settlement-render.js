@@ -225,6 +225,18 @@ function drawCastleBodyBitmap(){
   if(!result?.ok){renderCastleBodyContent();return{mode:'fallback',hit:false,reason:result?.reason||'cache-failed'}}
   return{mode:result.hit?'hit':'miss',hit:!!result.hit,ms:result.ms||0,bytes:result.bytes||0};
 }
+function drawCutawayStaticOverlay(){
+  const api=window.__conquerAssetCompiler,bounds=castleBodyCompositeBounds();
+  if(!api?.renderComposite||!bounds){drawCutawayStructures();return}
+  // Occupants remain in drawCutawayOccupants, animated every visual frame.
+  // Reuse the existing bounded 32 MiB composite cache for shell, floors and props.
+  const props=Object.keys(cutawayPropSprites).filter(k=>cutawayPropSprite(k)).join(',');
+  const key='cutaway|'+castleBodyVisualSignature()+'|'+props+'|'+(State.selectedId||'')+'|'+State.relief?.seed+'|'+JSON.stringify(State.relief?.terraforming||[]);
+  const result=api.renderComposite('cutaway',key,bounds,drawCutawayStructures);
+  if(!result?.ok)drawCutawayStructures();
+  const perf=window.__conquerPerf;
+  if(perf){perf.cutawayCacheHits=(perf.cutawayCacheHits||0)+(result?.hit?1:0);perf.cutawayCacheBuilds=(perf.cutawayCacheBuilds||0)+(result?.ok&&!result.hit?1:0)}
+}
 function updateCastleCacheControls(){
   const btn=document.getElementById('castleCacheToggle');
   if(btn){btn.textContent='Castle cache '+(castleBodyBitmapEnabled?'ON':'OFF');btn.classList.toggle('active',castleBodyBitmapEnabled)}

@@ -1,6 +1,7 @@
 'use strict';
 // CONQUER /assedio P0: siege domain (no rendering-driven combat rules).
 (function(){
+  function redraw(){if(typeof requestSceneDraw==='function')requestSceneDraw();else if(typeof draw==='function')draw()}
   const CAPACITY=Object.freeze({granary:{food:240},storage:{materials:240},armory:{equipment:80},
     stables:{horses:12},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
     nobleRoom:{knights:2},quarters:{soldiers:16}});
@@ -31,6 +32,9 @@
     return x;
   }
   function restore(raw){
+    const previous=Array.isArray(State.siege?.ruins)?State.siege.ruins:[],loaded=Array.isArray(raw?.ruins)?raw.ruins:[];
+    for(const r of [...previous,...loaded])if(r?.id)window.ConquerCollapse?.forget(r.id);
+    started.clear();heapCache.clear();rubbleCache.clear();stumpCache.clear();crownCache.clear();
     State.siege=raw&&typeof raw==='object'?{
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
       starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[]
@@ -126,7 +130,7 @@
     for(const s of State.structures)if(s.type==='tower'&&s!==selected)s.isMastio=false;
     if(already)selected.isMastio=false;
     markDirty(false,['base','castleBody','castleFront']);
-    renderFunctionPanel();draw();
+    renderFunctionPanel();redraw();
     status(already?'Mastio designation removed':'Mastio designated — Common Hall secured');
     return true;
   }
@@ -251,7 +255,7 @@
     tower.archerCount=next;
     window.ConquerCombat?.invalidateArchers?.();
     markDirty(false,false,true);
-    renderFunctionPanel();draw();
+    renderFunctionPanel();redraw();
     status('Archers assigned: '+next+' / '+slots.length+' · '+(next?slots[Math.max(0,next-1)].kind:'empty'));
     return true;
   }
@@ -335,7 +339,9 @@
       const pieces=breach(s,i);
       return{ok:true,part:'bay',bay:i,damage,remaining:0,max:bay.max,destroyed:true,breach:true,pieces};
     }
-    invalidateStructureScene(s);markDirty(true,true,true);draw();
+    // HP-only damage is painted by the dynamic cracks overlay. It changes no
+    // footprint, road, parcel or static castle geometry.
+    markDirty(false,false,true);redraw();
     return{ok:true,part:'bay',bay:i,damage,remaining:bay.hp,max:bay.max,destroyed:false};
   }
   function breach(s,i){
@@ -374,7 +380,7 @@
     window.ConquerWallWalk?.invalidate();                 // the breach cuts the wall walk
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     invalidateSceneCache();markDirty(true,true,true);
-    renderFunctionPanel();draw();
+    renderFunctionPanel();redraw();
     return pieces.map(p=>p.id);
   }
   // Ladders and assault towers need somewhere to rest: not on thin (T1) walls, and
@@ -460,26 +466,34 @@
       ...(opts.delay?{delay:opts.delay}:{}),seed:id,palette:opts.palette||collapsePalette(s),material:opts.material||collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey'||opts.cause==='ruin',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
     const ruin={id,type:'collapse',cause:opts.cause||'destroyed',structure:s.type,x:cx,y:cy,day:State.clock.day,spec};
     if(opts.a)Object.assign(ruin,{a:opts.a,b:opts.b,width:Number(s.width)||.5,height:structureHeight(s)});
-    x.ruins.push(ruin);if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
+    x.ruins.push(ruin);
+    if(x.ruins.length>200)for(const old of x.ruins.splice(0,x.ruins.length-200)){
+      started.delete(old.id);heapCache.delete(old.id);rubbleCache.delete(old.id);C()?.forget(old.id);
+    }
     rubbleGrid=null;
     started.set(id,now());animate();
     return ruin;
   }
   let raf=0;
   function animate(){
+    if(typeof requestSceneDraw==='function'){requestSceneDraw();return}
     if(raf||typeof requestAnimationFrame!=='function')return;
     const step=()=>{raf=0;if(playing().length){draw();raf=requestAnimationFrame(step)}else started.clear()};
     raf=requestAnimationFrame(step);
   }
   function playing(){
     if(!C())return[];
-    return state().ruins.filter(r=>r.spec&&started.has(r.id)&&!C().finished(r.spec,now()-started.get(r.id)));
+    return state().ruins.filter(r=>{
+      if(!r.spec||!started.has(r.id))return false;
+      if(C().finished(r.spec,now()-started.get(r.id))){started.delete(r.id);return false}
+      return true;
+    });
   }
   const heapCache=new Map();
   function ruinMesh(r){
     if(r.spec&&C()){
       if(started.has(r.id)){const t=now()-started.get(r.id);if(t<C().duration(r.spec))return C().mesh(r.spec,t)}
-      let m=heapCache.get(r.id);if(!m){m=C().mesh(r.spec,Infinity);heapCache.set(r.id,m)}
+      let m=heapCache.get(r.id);if(!m){m=C().mesh(r.spec,Infinity);m.static=true;heapCache.set(r.id,m)}
       return m;
     }
     return r.type==='breach'&&r.a&&r.b?rubbleMesh(r):null;   // breaches saved before collapses
@@ -501,7 +515,7 @@
     for(const [k,v] of Object.entries(stump))if(v!==undefined)s[k]=v;   // same object: selection and links hold
     window.ConquerCombat?.invalidateArchers?.();window.ConquerWallWalk?.invalidate();
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
-    invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
+    invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();redraw();
   }
   const stumpCache=new Map();
   function stumpMesh(s){
@@ -527,7 +541,7 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col};stumpCache.set(key,m);return m;
+    m={pos,col,static:true};stumpCache.set(key,m);return m;
   }
   // ---------- rubble on the ground ----------
   // Where the pieces settled, on a 0.25 U grid: the heap height there. A high core (over
@@ -586,7 +600,7 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col};crownCache.set(key,m);return m;
+    m={pos,col,static:true};crownCache.set(key,m);return m;
   }
   function dynamicMeshes(){
     const out=state().ruins.map(ruinMesh).filter(Boolean);
@@ -618,7 +632,7 @@
     // A hand on the gate overrides the night watch until the next morning.
     if(isNight()){g.nightOverride=true;delete g.nightClosed}
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
-    markDirty(true,true,true);renderFunctionPanel();draw();
+    markDirty(true,true,true);renderFunctionPanel();redraw();
     status(g.closed?'Gate closed: nobody passes':'Gate open');
     return true;
   }
@@ -641,7 +655,7 @@
     }
     if(changed){
       if(typeof invalidateNavigation==='function')invalidateNavigation(true);
-      markDirty(true,true,true);renderFunctionPanel();draw();
+      markDirty(true,true,true);renderFunctionPanel();redraw();
       status(night?'Night: the gates are shut':'Morning: the gates open');
     }
   }
@@ -674,7 +688,7 @@
     delete g.drawbridge;                       // a raised drawbridge is smashed with the door
     g.closed=false;
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
-    invalidateStructureScene(g);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
+    invalidateStructureScene(g);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();redraw();
     status('The gate is broken in');
   }
   // 2.5D portals follow the door's state. architecture's drawGatePortals is wrapped once
@@ -688,7 +702,7 @@
       const img=new Image();
       img.onload=()=>{
         try{architectureSprites[key]=typeof prepareArchitectureSprite==='function'?prepareArchitectureSprite(img):img}catch{architectureSprites[key]=img}
-        invalidateSceneCache();draw();
+        invalidateSceneCache();redraw();
       };
       img.src=path;
     }
@@ -724,11 +738,11 @@
     hp.hp=Math.max(0,hp.hp-damage);
     const from=part&&Number.isFinite(part.x)?part:null;
     if(section==='door'&&hp.hp===0)breakDoor(s);
-    else if(section==='door'&&doorStage(s)!==stageBefore){invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);draw()}
+    else if(section==='door'&&doorStage(s)!==stageBefore){invalidateStructureScene(s);markDirty(false,false,true);redraw()}
     else if(section==='core'&&hp.hp===0)destroyStructure(s,from);
     else if(section==='core'&&storeyCollapse(s,from)){}
     else{
-      invalidateStructureScene(s);markDirty(true,true,true);draw();
+      markDirty(false,false,true);redraw();
     }
     return{ok:true,part:section,damage,remaining:hp.hp,max:hp.max,destroyed:hp.hp===0};
   }
@@ -750,7 +764,7 @@
     if(!fell)return false;
     window.ConquerCombat?.invalidateArchers?.();
     window.ConquerWallWalk?.invalidate();
-    invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
+    invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();redraw();
     return true;
   }
   function destroyStructure(s,from=null){
@@ -773,7 +787,7 @@
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     invalidateSceneCache();
     markDirty(true,true,true);
-    renderFunctionPanel();draw();
+    renderFunctionPanel();redraw();
   }
   function crack(origin,z,k){
     const p=w2s(origin,z),s=.6+k;
@@ -781,9 +795,25 @@
     ctx.beginPath();ctx.moveTo(p.x-5*s,p.y-5*s);ctx.lineTo(p.x+2*s,p.y+s);
     ctx.lineTo(p.x-2*s,p.y+7*s);ctx.lineTo(p.x+6*s,p.y+12*s);ctx.stroke();
   }
-  // 2.5D: painter-sorted flat-shaded triangles (rubble is low, few hundred blocks at most).
+  // 2.5D: painter-sorted flat-shaded triangles. Cache the entire settled layer so
+  // overlapping heaps retain the same painter order as the moving geometry.
+  let rubbleBitmap=null,rubbleBitmapRevision=0;
+  function drawRubble2D(meshes){
+    const api=window.__conquerAssetCompiler;
+    if(!meshes.length){rubbleBitmap=null;return}
+    if(!api?.renderComposite||meshes.some(m=>!m.static)){drawMeshes2D(meshes);return}
+    const projection=[State.view.scale,State.view.rotation||0,isPlanView(),staticCacheDpr()].join('|');
+    if(!rubbleBitmap||rubbleBitmap.projection!==projection||meshes.length!==rubbleBitmap.meshes.length||meshes.some((m,i)=>m!==rubbleBitmap.meshes[i])){
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      for(const m of meshes)for(let i=0;i<m.pos.length;i+=3){const p=w2sRaw({x:m.pos[i],y:m.pos[i+1]},m.pos[i+2]);minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
+      rubbleBitmap={meshes:meshes.slice(),projection,key:'rubble|'+(++rubbleBitmapRevision),x:State.view.x,y:State.view.y,bounds:{minX:minX-2,minY:minY-2,maxX:maxX+2,maxY:maxY+2}};
+    }
+    const r=rubbleBitmap,dx=State.view.x-r.x,dy=State.view.y-r.y,b=r.bounds;
+    const result=api.renderComposite('rubble',r.key,{minX:b.minX+dx,minY:b.minY+dy,maxX:b.maxX+dx,maxY:b.maxY+dy},()=>drawMeshes2D(meshes));
+    if(!result.ok)drawMeshes2D(meshes);
+  }
   function drawMeshes2D(meshes){
-    const items=[];
+    const items=[],batch=meshes.every(m=>m.static);
     for(const m of meshes){
       const p=m.pos;
       for(let t=0;t<m.col.length;t++){
@@ -794,12 +824,21 @@
       }
     }
     items.sort((a,b)=>a.d-b.d);
+    let color=null;
+    const flush=()=>{if(color!==null){ctx.fill();ctx.stroke()}};
+    ctx.lineWidth=.6;
     for(const it of items){
-      const p=it.m.pos,i=it.i,a=w2sRaw({x:p[i],y:p[i+1]},p[i+2]),b=w2sRaw({x:p[i+3],y:p[i+4]},p[i+5]),c=w2sRaw({x:p[i+6],y:p[i+7]},p[i+8]);
+      const p=it.m.pos,i=it.i,a=w2sRaw({x:p[i],y:p[i+1]},p[i+2]);let b=w2sRaw({x:p[i+3],y:p[i+4]},p[i+5]),c=w2sRaw({x:p[i+6],y:p[i+7]},p[i+8]);
       const h=it.col.replace('#',''),r=parseInt(h.slice(0,2),16)*it.f|0,g=parseInt(h.slice(2,4),16)*it.f|0,bl=parseInt(h.slice(4,6),16)*it.f|0;
-      ctx.fillStyle=ctx.strokeStyle='rgb('+r+','+g+','+bl+')';ctx.lineWidth=.6;
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.fill();ctx.stroke();
+      const next='rgb('+r+','+g+','+bl+')';
+      if(!batch){ctx.fillStyle=ctx.strokeStyle=next;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.fill();ctx.stroke();continue}
+      // Same-colour static triangles can share one fill/stroke, in painter
+      // order. Uniform winding prevents overlapping subpaths cancelling out.
+      if((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)[b,c]=[c,b];
+      if(next!==color){flush();color=next;ctx.fillStyle=ctx.strokeStyle=color;ctx.beginPath()}
+      ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();
     }
+    flush();
   }
   function drawOverlay(){
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
@@ -825,7 +864,7 @@
           ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
         }
       }
-      if(!world3d)drawMeshes2D(dynamicMeshes());
+      if(!world3d)drawRubble2D(dynamicMeshes());
     }
     for(const r of state().ruins){
       if(r.spec)continue;
@@ -896,6 +935,6 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),
+    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();

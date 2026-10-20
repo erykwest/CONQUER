@@ -15,6 +15,27 @@
 - **NON CODICE:** nel commit documentale non vengono implementate argilla, nuova modalità cava, materiale mattoni, durabilità 80% né palette. Nessuna regressione runtime viene dichiarata superata.
 - **DA FARE:** implementare su `clay` rispettando l'attuale skeleton `Civil`, poi provare collocazione entro 6 U, output contabile, costi murari, rendering multipipeline, integrità e migrazioni.
 
+## Audit prestazioni completamenti (20/10/2026)
+
+- **CODICE LOCALE / NON RILASCIATO:** branch `fix/construction-completion-perf`, base `main` `996b4a4` aggiornata con pull. Manutenzione stradale dei completamenti distribuita in intervalli con budget 6 ms; cancellazione/ricalcolo su modifica della topologia; invalidazione del catasto limitata ai cambiamenti reali; controllo errori WebGL2 differito tramite fence.
+- **PROVE:** benchmark ripetibile Chromium/WebGL2 e Canvas, regressioni di completamento e controllo errori GPU. Misure, comandi, artefatti e fallimenti preesistenti sono nell'[audit del 20/10](../construction-performance-audit-2026-10-20.md).
+- **RISULTATI LOCALI:** mediana WebGL2 manutenzione + primo disegno: torre 686→15 ms, portale 535→14 ms, stress 8 torri/mura/portale 1.981→457 ms. Batteria conclusiva 53/55 suite PASS; i due test sorgente falliscono anche su main. Sintassi e whitespace PASS; errore GPU iniettato porta a un Canvas visibile. Persistono picchi grafici nel castello stress e nel ciclo attivo: non è una certificazione di fluidità generale.
+- **LIMITE:** modifiche nel working tree, nessun commit/push/PR/merge/deploy o CI remota; non dichiarate disponibili su `main`. Roadmap e priorità M0–M3 invariate.
+
+## Audit round 2 — fuoco, crolli e cutaway (20/10/2026)
+
+- **CODICE LOCALE / NON RILASCIATO:** continua `fix/construction-completion-perf` sopra il round 1. Ridisegni dei danni coalescenti nel RAF di simulazione, navigazione preservata per i soli HP, buffer GPU per macerie ferme, cache composita del cutaway senza includere gli occupanti animati.
+- **QA LOCALE:** 54/56 suite PASS; i due fallimenti sorgente sono quelli già riprodotti su main. Incendio browser su 32 strutture, 30 crolli/12 ceppi, 12 cutaway, brigata con sei addette e incendio naturale fino al collasso di 24 case. Pixel del cutaway verificati a due rotazioni e due palette; buffer statici verificati stabili fino alla rotazione.
+- **RISULTATI E LIMITI:** logica incendio 7,3 s→6 ms e crolli 1,23 s→15 ms nella campagna comparabile; il rendering è differito e non va contato come eliminato. Cutaway WebGL P50 20→6 ms per disegno; macerie ferme circa 1 ms. Restano crolli Canvas fino a 2,23 s, percorsi brigata 140–330 ms e variabilità della composizione. [Audit completo](../fire-collapse-cutaway-performance-audit-2026-10-20.md).
+- **STATO GIT:** working tree locale, nessun commit/push/PR/merge/deploy o CI remota. Priorità della roadmap invariate.
+
+## Audit round 3 — Canvas, brigata, mura e attacco (20/10/2026)
+
+- **CODICE LOCALE:** continua `fix/construction-completion-perf`. Cache composita delle macerie Canvas ferme; A* cooperativo della brigata con budget indicativo 4 ms e priorità rotante; sagome/costi locali alla ricerca; rimossi percorsi diretti attraverso ostacoli e corrette le tangenti al pozzo che bloccavano le addette.
+- **PROVE BROWSER:** due renderer, 12 crolli, incendio su 24 case/sei addette, un cavaliere con cinque squadre in salita/discesa e 20 assalitori con scala, camminamento, discesa e combattimento reale. Otto casi a tempo simulato e quattro osservazioni con rendering continuo; nessun fault del motore nelle osservazioni finali. Pixel verificati su rotazioni/pan/zoom/plan view e tre materiali.
+- **RISULTATI E RESIDUI:** peggior aggiornamento brigata circa 1,8–2,4 s→25–32 ms, zero attraversamenti nei segmenti controllati. Macerie Canvas ferme riusate in circa 0,5 ms; **il primo disegno dopo la caduta può ancora fermarsi per 3 s**, e i crolli attivi restano pesanti. RAF militare variabile, fino a P95 133–150 ms nel caso delle squadre: non è una dichiarazione di fluidità generale. [Audit completo](../movement-collapse-performance-audit-2026-10-20.md), decisione D-036.
+- **QA / STATO:** 55/57 suite locali PASS; restano i due fallimenti sorgente già riprodotti su main. Sintassi dei sorgenti e whitespace PASS. Working tree locale, nessun commit/push/PR/merge/deploy o CI remota. Roadmap e priorità invariate.
+
 ## Semaforo epistemico
 
 - **CODICE** — implementazione/sorgenti identificati su una branch.
