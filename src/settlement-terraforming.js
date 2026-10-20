@@ -275,8 +275,7 @@
       }
       if(excludeWalled&&edit.mode==='walled')continue;
       if(insideEdit(point,edit)){
-        if(edit.mode==='walled')z=Math.max(z,edit.targetZ);
-        else z=Math.max(z,edit.targetZ);
+        z=edit.targetZ<edit.baseZ?Math.min(z,edit.targetZ):Math.max(z,edit.targetZ);
         continue;
       }
       if(edit.mode==='walled'||!pointInPolygon(point,edit.outer))continue;
@@ -288,13 +287,15 @@
       }else distance=dist(point,edit.center);
       const t=clamp((distance-edit.radius)/Math.max(.001,edit.edgeWidth),0,1);
       const candidate=edit.targetZ+(edit.baseZ-edit.targetZ)*t;
-      z=Math.max(z,candidate);
+      z=edit.targetZ<edit.baseZ?Math.min(z,candidate):Math.max(z,candidate);
     }
     return Math.max(0,z);
   }
   function slopeAt(point){
     const all=edits(),lastFlat=all.findLastIndex(edit=>edit.mode==='flat'&&insideEdit(point,edit));
     const active=all.slice(lastFlat+1).filter(edit=>edit.mode!=='flat').reverse();
+    for(const edit of all)if(edit.mode==='flat'&&flatWallSegments(edit).some(edge=>
+      dist(point,segmentProjection(point,edge.a,edge.b))<=.12))return 'steep';
     for(const edit of active)if(edit.mode==='walled'&&edit.top.some((_,i)=>
       exposedWallSegments(edit,i).some(edge=>
         dist(point,segmentProjection(point,edge.a,edge.b))<=.12)))return 'steep';
@@ -404,7 +405,16 @@
   }
   function facePolygons(edit){
     const faces=[];
-    if(edit.mode==='flat')return faces;
+    if(edit.mode==='flat'){
+      for(const edge of flatWallSegments(edit)){
+        const screen=projectClippedTerrain([
+          {...edge.a,z:edge.baseZ},{...edge.b,z:edge.baseZ},
+          {...edge.b,z:edge.targetZ},{...edge.a,z:edge.targetZ}
+        ]);
+        if(screen.length>=3)faces.push({screen,index:0,depth:screen.reduce((sum,p)=>sum+p.y,0)/screen.length});
+      }
+      return faces;
+    }
     for(let i=0;i<edit.top.length;i++){
       const segments=edit.mode==='walled'?exposedWallSegments(edit,i):
         [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
@@ -436,12 +446,16 @@
           :(winter?'#d2d8d3':face.index%2?'#464630':'#514e37');
       pathPolygon(face.screen,fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
     }
-    const top=projectClippedTerrain(edit.top.map(p=>({...p,z:edit.targetZ})));
+    const tops=ghost||edit.mode!=='walled'?[edit.top]:visibleTerracePieces(edit);
+    for(const piece of tops){
+    const top=projectClippedTerrain(piece.map(p=>({...p,z:edit.targetZ})));
     if(top.length>=3){
       const fill=ghost
         ?(valid?'rgba(78,224,149,.28)':'rgba(238,54,64,.34)')
         :(winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b'));
-      pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):edit.mode==='walled'?null:'rgba(210,194,151,.28)',ghost?2.2:edit.mode==='walled'?0:1);
+      pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):
+        edit.mode==='walled'||edit.mode==='flat'?null:'rgba(210,194,151,.28)',
+        ghost?2.2:edit.mode==='walled'||edit.mode==='flat'?0:1);
       if(!ghost&&edit.mode==='walled'){
         ctx.strokeStyle='rgba(210,194,151,.28)';ctx.lineWidth=1;
         ctx.beginPath();
@@ -451,6 +465,7 @@
         }
         ctx.stroke();
       }
+    }
     }
     if(ghost){
       const label=w2sRaw(edit.center,Math.max(edit.baseZ,edit.targetZ)+.16);
@@ -463,7 +478,7 @@
     }
     ctx.restore();
   }
-  function drawCommitted(){for(const edit of edits().slice().sort((a,b)=>a.targetZ-b.targetZ))drawEdit(edit)}
+  function drawCommitted(){for(const edit of edits())drawEdit(edit)}
   function drawGhost(ghost){drawEdit(ghost,{ghost:true})}
   function drawMagnets(){
     if(State.tool?.kind!=='linear'||State.tool.linear!=='wall'||typeof ctx==='undefined')return;
