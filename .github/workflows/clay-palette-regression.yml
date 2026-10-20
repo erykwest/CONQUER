@@ -20,6 +20,7 @@ jobs:
       - name: Run Clay visual palette and existing Civil regressions
         run: |
           node qa/clay-palette-regression.cjs
+          node qa/clay-material-regression.cjs
           node qa/urban-regression.cjs
           node qa/urban-density-regression.cjs
           node qa/builder-placement-regression.cjs

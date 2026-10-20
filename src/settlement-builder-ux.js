@@ -134,7 +134,7 @@
       const b=originalButtons.find(x=>x.matches(selector));
       if(!b)continue;iconize(b,label,icon);catalog.append(b);
     }
-    options.hidden===false;options.hidden=currentCategory==='combat';
+    options.hidden=currentCategory==='combat';
     options.querySelectorAll('.ux-option-line').forEach(line=>{
       line.style.display=(line.dataset.category==='all'||(line.dataset.category||'defense')===currentCategory)?'flex':'none';
     });
