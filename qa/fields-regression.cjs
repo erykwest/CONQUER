@@ -32,11 +32,11 @@ test('migration stays inside the previous footprint and preserves saved crop sta
  assert.equal(run('fieldCrop(restored).phase'),'sow');assert.equal(run('fieldCrop(restored).work[0]'),.7);
 });
 test('rural field rejects yellow zoning, forests, buildings, roads, other fields and units',()=>{
- farm();run("State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'}];invalidateUrbanGeometry()");
+ farm();run("State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:5,mode:'eraseGreen'}];invalidateUrbanGeometry()");
  assert.equal(run('fieldAllowed(qaField)'),true);
- run("State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:.1,mode:'yellow'}];invalidateUrbanGeometry()");assert.equal(run('fieldAllowed(qaField)'),false);
+ run("State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:5,mode:'eraseGreen'},{x:105,y:104,r:.1,mode:'yellow'}];invalidateUrbanGeometry()");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.combat.strokes=[];State.environment=[{type:'forest',points:[{x:104,y:104},{x:105,y:104},{x:105,y:104.1},{x:104,y:104.1}]}];invalidateUrbanGeometry()");assert.equal(run('fieldAllowed(qaField)'),false);
- run("State.environment=[];State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'}];State.structures.push({id:'t',type:'tower',shape:'square',size:1,x:105,y:104})");assert.equal(run('fieldAllowed(qaField)'),false);
+ run("State.environment=[];State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:5,mode:'eraseGreen'}];State.structures.push({id:'t',type:'tower',shape:'square',size:1,x:105,y:104})");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.structures.pop();State.structures.push({id:'r',type:'road',a:{x:102,y:104},b:{x:108,y:104},width:.5})");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.structures.pop();State.structures.push({...qaField,id:'f2'})");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.structures.pop();window.ConquerCombat.spawnOccupants=()=>[{x:105,y:104,r:.2}]");assert.equal(run('fieldAllowed(qaField)'),false);
