@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## Cutaway furniture + WebGL2 — branch `feature/cutaway-furniture-converge` (21/10/2026)
+
+- **CODICE / branch:** libreria `src/assets/furniture-model.js` e generatore Blender; `src/settlement-cutaway-furniture.js` definisce le ricette delle stanze (14 ruoli e alias), il layout dimensionato, i mobili volumetrici, le luci e i posti liberi dai mobili. Arredi riservano scale, passaggio del portone e postazioni degli arcieri.
+- **MOTORE:** cutaway WebGL2 con volume pareti/superfici, ripartizione dei piani, arredi depth-tested, cache per rotazione e pass emissivo notturno, fallback Canvas. Porte in pietra e sottotorri apribili; il pianterreno della torre-porta è un passaggio, con migrazione delle precedenti assegnazioni delle stanze.
+- **COMPATIBILITÀ:** portato selettivamente sulla baseline moderna; conservate le geometrie Terraforming e gli altri moduli di `main`. Nessun merge diretto della vecchia branch `feature/cutaway-furniture`.
+- **QA:** `qa/cutaway-furniture-regression.cjs` per catalogo, ruoli, ingombri, piani e arcieri. PR [#65](https://github.com/erykwest/CONQUER/pull/65); registrare l'esito della CI completa dopo il run definitivo. Collaudo interattivo WebGL2 ancora da effettuare.
+
+
+
 > Snapshot **aggiornato il 19/10/2026** per il lavoro Terraforming; le sezioni storiche del 16/10 mantengono i propri limiti di verifica.
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
