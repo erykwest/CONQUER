@@ -498,7 +498,7 @@
   // ---------- facade decals (architecture PNGs + house windows/doors) ----------
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
-  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3'];
+  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken'];
   function buildDecalAtlas(){
     const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=3*T;
     const g=c.getContext('2d'),map=new Map();
@@ -596,7 +596,8 @@
         const interior=interiorFacadeEdgeIndex(s),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
-          if(edge.index===1||edge.index===3)onEdge(edge,.705,.90,1.35,'gatePortal',0,ground,o);   // front / rear
+          // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
+          if(edge.index===1||edge.index===3)onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
             else onEdge(edge,z,.24,.62,'arrowSlit',0,ground,o);
@@ -711,7 +712,11 @@
   function computeSigPass(){
     const acc=new Map();
     for(const s of State.structures){
-      const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0);
+      const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+        // Moat fill patches are baked into the ground: filling must re-bake it.
+        +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
+        // The gate door's state swaps its facade decal.
+        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'');
       let h=0;for(let i=0;i<str.length;i++)h=(Math.imul(h,31)+str.charCodeAt(i))|0;
       for(const cat of SIG_CATEGORIES)if(cat.test(s))acc.set(cat.name,(Math.imul(acc.get(cat.name)||0,33)^h)|0);
     }
@@ -909,11 +914,20 @@
     }
     gl.disable(gl.BLEND);gl.depthMask(true);
   }
-  function renderFront(r,soldiers){
+  function renderFront(r,soldiers,dynamic){
     // Soldiers and near-half battlements, depth-tested against the back pass (depth kept): masonry in
     // front of a soldier hides it, merlons on the near edge cover the patrol's legs, far ones do not.
     const gl=S.gl;gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);gl.depthMask(true);
+    // Moving meshes (siege engines and their loads), uploaded every frame, depth-tested and written
+    // so the soldiers sort against them too.
+    if(dynamic&&dynamic.length){
+      let b=S.buf.dynamic;if(!b){b=gl.createBuffer();S.buf.dynamic=b}
+      gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,dynamic,gl.STREAM_DRAW);
+      const pr=S.prog.mesh;gl.useProgram(pr.p);setCamera(gl,pr,r);
+      bindAttrib(gl,pr,'aPos',b,3,24,0);bindAttrib(gl,pr,'aCol',b,3,24,12);
+      gl.drawArrays(gl.TRIANGLES,0,dynamic.length/6);
+    }
     if(soldiers.length&&soldierAtlas.canvas){
       if(soldierAtlas.dirty){uploadTexture(gl,'soldierAtlas',soldierAtlas.canvas);soldierAtlas.dirty=false}
       let b=S.buf.soldiers;if(!b){b=gl.createBuffer();S.buf.soldiers=b}
@@ -1076,9 +1090,41 @@
     if(!mastio.length)return;
     try{State.structures=mastio;drawFacadeWindows(false,1,false)}finally{State.structures=all}
   }
+  // ---------- dynamic meshes: queued during the frame like soldiers ----------
+  // mesh: {pos: 9 world coords per triangle, col: one CSS hex per triangle}. Flat colours take the
+  // castle's two-tone side shading for the current view rotation (tops full, sides light/dark).
+  let dynamicQueue=[];
+  function addMesh(mesh){if(collecting&&mesh&&mesh.col&&mesh.col.length)dynamicQueue.push(mesh)}
+  const hexRgb=new Map();
+  function meshRgb(hex){
+    let v=hexRgb.get(hex);if(v)return v;
+    const h=hex.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);hexRgb.set(hex,v);return v;
+  }
+  function buildDynamic(list){
+    let n=0;for(const m of list)n+=m.col.length;
+    const out=new Float32Array(n*18);let o=0;
+    for(const m of list){
+      const p=m.pos;
+      for(let t=0;t<m.col.length;t++){
+        const i=t*9,ux=p[i+3]-p[i],uy=p[i+4]-p[i+1],uz=p[i+5]-p[i+2],vx=p[i+6]-p[i],vy=p[i+7]-p[i+1],vz=p[i+8]-p[i+2];
+        const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,len=Math.hypot(nx,ny,nz)||1;
+        let f;
+        if(nz/len>.5)f=1;else if(nz/len<-.5)f=.5;
+        else{const q=rotateViewPoint({x:-ny,y:nx}),z0=rotateViewPoint({x:0,y:0});f=Math.cos(2*(Math.atan2(q.y-z0.y,q.x-z0.x)-Math.PI/6))>=0?.84:.68}
+        const c=meshRgb(m.col[t]),pale=(c[0]+c[1]+c[2])/3>.7;if(pale)f=1-(1-f)*.55;
+        for(let k=0;k<3;k++){out[o++]=p[i+k*3];out[o++]=p[i+k*3+1];out[o++]=p[i+k*3+2];out[o++]=c[0]*f;out[o++]=c[1]*f;out[o++]=c[2]*f}
+      }
+    }
+    return out;
+  }
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
-    renderFront(r,buildSoldiers(list));ctx.drawImage(S.canvas,0,0,r.width,r.height);
+    // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
+    for(const source of [window.ConquerSiege,window.ConquerCombat]){
+      try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
+    }
+    const dyn=buildDynamic(dynamicQueue);dynamicQueue=[];
+    renderFront(r,buildSoldiers(list),dyn);ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
     // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
     // frame is expensive, so skip the call entirely when none of them is present.
@@ -1109,7 +1155,7 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

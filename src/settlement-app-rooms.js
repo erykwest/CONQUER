@@ -116,6 +116,11 @@ function renderFunctionPanel(){
       html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
     }
   }
+  if(s.type==='gate'&&!building&&window.ConquerSiege?.doorStage){
+    const st=window.ConquerSiege.doorStage(s),closed=!!s.closed&&st!=='broken';
+    const label={intact:'integro',damaged:'danneggiato',broken:'sfondato'}[st];
+    html+=`<div class="slot"><div class="slot-label">Portone · ${label}</div><div class="grid"><button data-gate-closed="0" class="${closed?'':'active'}">Aperto</button><button data-gate-closed="1" class="${closed?'active':''}" ${st==='broken'?'disabled':''}>Chiuso</button></div><div class="legend">Chiuso e integro blocca il passaggio a tutti; l'ariete lo sfonda e da sfondato resta aperto. Chiuso, le guardie rientrano.</div><div class="grid"><button data-gate-night="1" class="${s.nightClose!==false?'active':''}">Chiusura notturna ON</button><button data-gate-night="0" class="${s.nightClose===false?'active':''}">OFF</button></div><div class="legend">Si chiude da solo al tramonto e si riapre all'alba; aperto o chiuso a mano, resta così fino al mattino.</div></div>`;
+  }
   if(s.type==='built'){
     const skin=builtSkin(s);
     html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">Porticato affects only the interior ground floor.</div></div>`;
@@ -138,13 +143,28 @@ function renderFunctionPanel(){
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
     else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · Floor ${i+1} · ${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
   }
-  if(['tower','gate','built'].includes(s.type)){
+  if(['wall','palisade'].includes(s.type)&&!building){
+    // Walls take damage bay by bay; a fallen bay opens a breach there.
+    const siege=window.ConquerSiege,list=siege?.bays(s);
+    if(list){
+      const ladder=siege.assaultCheck(s,'ladder'),tower=siege.assaultCheck(s,'tower',2);
+      const towerText=tower.ok?'torre liv. '+structureLevel(s)+'+':'torre no ('+tower.reason+')';
+      html+='<div class="slot"><div class="slot-label">Integrità · '+list.length+' campate</div>'+
+        list.map((b,i)=>'<div class="grid"><div class="legend">Campata '+(i+1)+' · '+Math.ceil(b.hp)+' / '+Math.round(b.max)+'</div>'+
+          '<button data-siege-bay="'+i+'" type="button">Test trebuchet</button></div>').join('')+
+        '<div class="legend">Assalto: '+(ladder.ok?'scale sì':'scale no ('+ladder.reason+')')+' · '+towerText+'</div></div>';
+    }
+  }
+  const breakable=['tower','gate','built','house'].includes(s.type)||isCivic(s);
+  if(breakable&&!building){
     const hp=window.ConquerSiege?.integrity(s);
     if(hp)html+='<div class="slot"><div class="slot-label">Defensive integrity</div>'+
       '<div class="legend">Masonry '+Math.ceil(hp.core.hp)+' / '+hp.core.max+
       (hp.door?' · Door '+Math.ceil(hp.door.hp)+' / '+hp.door.max:'')+'</div>'+
       '<div class="grid3"><button data-siege-test="axe" type="button">Test axe</button><button data-siege-test="ram" type="button">Test ram</button><button data-siege-test="trebuchet" type="button">Test trebuchet</button></div>'+
-      '<div class="legend">Prototype damage controls; only effective tools can harm each material.</div></div>';
+      '<div class="legend">Prototype damage controls; only effective tools can harm each material. Towers and gates lose their top storey at 2/3 and 1/3 of their health.</div></div>';
+  }
+  if(['tower','gate','built'].includes(s.type)){
     html+=window.ConquerSiege?.summaryHtml()||'';
   }
   html+=window.ConquerCrossings?.panel(s)||'';

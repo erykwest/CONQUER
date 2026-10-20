@@ -27,6 +27,7 @@ function drawConstructionProgress(s){
 }
 function drawStructure(s,preview=false){
   if(s?.type==='road'){drawAutoStructure(s,preview);return}
+  if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
   const render=()=>{
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
@@ -452,6 +453,7 @@ function draw(){
     drawInvalidPlacementGhost(State.draft.invalidPreview);
   }
   window.ConquerCrossings?.drawMoatMagnets();
+  if(typeof drawLinearMagnets==='function')drawLinearMagnets();
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();

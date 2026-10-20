@@ -40,7 +40,11 @@ const render3dHooks=[
   // WebGL2 night lights (opt-in, Canvas fallback) and their Canvas timing telemetry.
   ['  const nf=nightFactor();if(nf<=.01)return;\n  const t0=performance.now();\n','  const nf=nightFactor();if(nf<=.01)return;\n'],
   ["  drawFireGlows(nf);\n  const ms=performance.now()-t0;\n  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;\n  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});\n","  drawFireGlows(nf);\n"],
-  ['  // WebGL2 lights share the real scene depth and are composited after colour grading.\n  // Canvas keeps its original complete night path as the fallback.\n  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);\n  else drawNightLights();\n','  drawNightLights();\n']
+  ['  // WebGL2 lights share the real scene depth and are composited after colour grading.\n  // Canvas keeps its original complete night path as the fallback.\n  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);\n  else drawNightLights();\n','  drawNightLights();\n'],
+  // Builder overlay hook: wall/palisade end magnets (settlement-castle-placement.js).
+  ["  if(typeof drawLinearMagnets==='function')drawLinearMagnets();\n",''],
+  // Siege hook: ruined stumps are drawn with their rubble by settlement-siege.js.
+  ["  if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)\n",'']
 ];
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));

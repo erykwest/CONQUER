@@ -5,7 +5,10 @@
       "**": false,
       "main": true,
       "urban": true,
-      "civil-3d": true
+      "civil-3d": true,
+      "animation": true,
+      "siege-engines": true,
+      "integration/civil-fire": true
     }
   }
 }

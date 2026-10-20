@@ -285,16 +285,18 @@ function syncPeasantPathCache(){
 function pointBlockedForPeasant(p,sourceHouseId){
   if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
+  if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
   for(const s of State.structures){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
-    if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training','plaza','civicAnnex'].includes(s.type))continue;
+    if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training','plaza','civicAnnex','ruin'].includes(s.type))continue;
     if(isCivicAnnex(s)&&['garden','yard'].includes(civicAnnexDefinition(s)?.kind))continue;
 
     // Market and public piazza floors remain walkable; they are not solid buildings.
     if(s.type==='market'||s.type==='plaza')continue;
     if(s.type==='gate'){
       if(window.ConquerCrossings?.drawbridgeBlocks(p,s))return true;
-      if(gatePointInPassage(s,p,.08))continue;
+      // A closed gate with its door still whole shuts the passage (settlement-siege.js).
+      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s))return true;continue}
       const q=toLocalPoint(s,p),d=rectDims(s);
       if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
       continue;
@@ -305,7 +307,7 @@ function pointBlockedForPeasant(p,sourceHouseId){
       continue;
     }
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
-    if(s.type==='tower'&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
+    if((s.type==='tower'||s.type==='ruin')&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='house'||isCivic(s)){
       const parts=s.type==='house'?urbanHouseDisplayParts(s):civicParts(s);
       for(const part of parts){

@@ -51,7 +51,7 @@ function harness(){
     footprintPoints:s=>rect(s.x,s.y,s.w||s.size||2,s.h||s.size||2,s.angle||0),
     structureGroundContactPolygons:s=>[rect(s.x,s.y,s.w||2,s.h||2,s.angle||0)],
     houseFootprintParts:s=>[{points:rect(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
-    isCivic:()=>false,civicParts:()=>[],
+    isCivic:()=>false,civicParts:()=>[],isCivicAnnex:()=>false,civicAnnexFootprint:()=>[],civicAnnexPlacementCheck:()=>({ok:true}),
     constructionCost:()=>({gold:10}),canAfford:()=>true,costText:()=>'10 gold',
     isPlacementFoundationBuilding:()=>false,
     TYPES:{road:{min:1}},manualRoadConflict:()=>false,

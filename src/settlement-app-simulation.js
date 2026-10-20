@@ -93,6 +93,8 @@ function simulationFrame(now){
     const previousDay=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
     window.ConquerSiege?.tick(previousDay,State.clock.day);
+    // Fires run on game time: they pause with the game and speed up with it.
+    try{window.ConquerFire?.tick(dt*State.clock.speed)}catch(err){console.error('CONQUER_FIRE_TICK_ERROR',err)}
     // Combat faults must not affect village/economy/render simulation.
     if(window.ConquerCombat&&!window.__conquerCombatSuspended){
       try{window.ConquerCombat.tick(dt*State.clock.speed)}
