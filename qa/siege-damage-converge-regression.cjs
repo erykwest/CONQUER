@@ -63,7 +63,7 @@ const tower=(id,material='stone',type='tower')=>({
     ['wall','trebuchet',1,999],
     ['wall','trebuchet',1,{x:1,y:NaN}],
     ['wall','trebuchet',1,{x:Infinity,y:1}],
-    ['gate','ram',1,{x:0,y:0}]
+    ['gate','ram',1,{x:0,y:NaN}]
   ];
   for(const [id,weapon,power,target] of cases){
     const result=S.attackStructure(id,weapon,power,target);
