@@ -1,10 +1,16 @@
 'use strict';
 // CONQUER Economy V1: aggregate cohorts, deterministic periodic accounting.
-// Builder test resources deliberately remain separate from economic inventories.
+// Castle goods and treasury are the source of truth for manual construction.
 (() => {
   const GOODS = Object.freeze(['food','wood','stone','metal','equipment','luxury']);
   const BASE = Object.freeze({food:2,wood:3,stone:4,metal:7,equipment:17,luxury:20});
   const TARGET = Object.freeze({food:100,wood:70,stone:70,metal:35,equipment:30,luxury:10});
+  // A one-time settlement charter, not recurring or counted as production.
+  // Keep a small local market food supply: households cannot buy castle reserves.
+  const FOUNDING_CHARTER=Object.freeze({
+    castle:Object.freeze({food:45,wood:200,stone:180,metal:16,equipment:0,luxury:0}),
+    market:Object.freeze({food:55,wood:20}),gold:400,workers:4
+  });
   // Weekly household requirements, by resident. Wood represents domestic fuel/maintenance.
   // Values are balancing placeholders; unsold strategic goods have no invented consumers.
   const HOUSEHOLD_NEEDS = Object.freeze({
@@ -29,8 +35,10 @@
   const classKey=n=>'L'+n;
   const dateAt=day=>typeof calendarDateFromDay==='function'?calendarDateFromDay(day):{month:0,year:1,day:1};
   const complete=s=>!(typeof underConstruction==='function'&&underConstruction(s));
+  const foundingWorkers=()=>State.village?.founded?
+    Math.max(0,Math.floor(finite(State.village?.foundingWorkers))):0;
   const population=()=>{
-    const counts={L1:0,L2:0,L3:0,L4:0};
+    const counts={L1:foundingWorkers(),L2:0,L3:0,L4:0};
     for(const h of State.structures||[])if(h.type==='house'&&complete(h)){
       const lvl=clamp(Math.floor(finite(h.houseLevel,1)),1,4);
       counts[classKey(lvl)]+=lvl*3; // existing housePopulationCapacity contract
@@ -47,7 +55,8 @@
       wage:{L1:1,L2:2,L3:3},activities:{},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
       weeks:0,months:0,years:0,
-      weekProduced:empty(),weekConsumed:empty(),balanceHistory:[],lastBalance:null
+      weekProduced:empty(),weekConsumed:empty(),weekBuildDemand:empty(),
+      weekRecovered:empty(),balanceHistory:[],lastBalance:null,foundingCharterId:null
     };
   }
   function state(){
@@ -58,10 +67,70 @@
   function ensureFlows(e){
     if(!e.weekProduced)e.weekProduced=empty();
     if(!e.weekConsumed)e.weekConsumed=empty();
+    if(!e.weekBuildDemand)e.weekBuildDemand=empty();
+    if(!e.weekRecovered)e.weekRecovered=empty();
     if(!Array.isArray(e.balanceHistory))e.balanceHistory=[];
     return e;
   }
   function reset(){State.economy=makeState();render(true)}
+  function foundingCharter(wellId){
+    if(!wellId)return false;
+    const e=ensureFlows(state());
+    if(e.foundingCharterId)return false;
+    // Existing saved stock is conserved; legacy UI test stock is NOT imported.
+    for(const good of GOODS){
+      e.castle[good]=round(Math.max(0,finite(e.castle[good]))+(FOUNDING_CHARTER.castle[good]||0));
+      const marketQty=FOUNDING_CHARTER.market[good]||0;
+      if(marketQty>0)e.lots[good].push({id:'charter:'+wellId+':'+good,owner:'lord',qty:marketQty});
+    }
+    e.castleGold=round(Math.max(0,finite(e.castleGold))+FOUNDING_CHARTER.gold);
+    e.foundingCharterId=String(wellId);
+    note(e,'Founding charter funded for '+wellId);
+    syncBuilderResources();render(true);return true;
+  }
+  function syncBuilderResources(){
+    if(!State.village?.founded)return;
+    const e=state();
+    const stock=State.resources||(State.resources={});
+    stock.gold=round(Math.max(0,finite(e.castleGold)));
+    for(const good of GOODS)stock[good]=round(Math.max(0,finite(e.castle[good])));
+    stock.population=Object.values(population()).reduce((a,b)=>a+b,0);
+  }
+  function canBuild(cost){
+    const e=state();
+    return Object.entries(cost||{}).every(([good,qty])=>{
+      if(!Number.isFinite(+qty)||+qty<0)return false;
+      if(good==='gold')return finite(e.castleGold)>=+qty;
+      return GOODS.includes(good)&&finite(e.castle[good])>=+qty;
+    });
+  }
+  function spendBuild(cost){
+    if(!canBuild(cost))return false;
+    const e=ensureFlows(state());
+    for(const [good,value] of Object.entries(cost||{})){
+      const qty=round(+value);
+      if(good==='gold')e.castleGold=round(e.castleGold-qty);
+      else{
+        e.castle[good]=round(e.castle[good]-qty);
+        e.weekBuildDemand[good]=round((e.weekBuildDemand[good]||0)+qty);
+        e.weekConsumed[good]=round((e.weekConsumed[good]||0)+qty);
+      }
+    }
+    syncBuilderResources();return true;
+  }
+  function refundBuild(cost){
+    const e=ensureFlows(state());
+    for(const [good,value] of Object.entries(cost||{})){
+      if(!Number.isFinite(+value)||+value<0)continue;
+      const qty=round(+value);
+      if(good==='gold')e.castleGold=round(e.castleGold+qty);
+      else if(GOODS.includes(good)){
+        e.castle[good]=round(Math.max(0,finite(e.castle[good]))+qty);
+        e.weekRecovered[good]=round((e.weekRecovered[good]||0)+qty);
+      }
+    }
+    syncBuilderResources();return true;
+  }
   function note(e,label){
     e.events.unshift({day:e.lastDay,label});if(e.events.length>25)e.events.length=25;
   }
@@ -111,7 +180,10 @@
     return {tier:spec.classId,count:spec.workers};
   }
   function activeCapacity(){
-    const pop=population(),limits={L1:Math.floor(pop.L1/3),L2:Math.floor(pop.L2/3),L3:Math.floor(pop.L3/3),L4:pop.L4};
+    const pop=population(),limits={
+      L1:Math.floor((pop.L1-foundingWorkers())/3)+foundingWorkers(),
+      L2:Math.floor(pop.L2/3),L3:Math.floor(pop.L3/3),L4:pop.L4
+    };
     const remaining={...limits},allocated={};
     // Player-established industries claim workers before automatically generated fields.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
@@ -210,6 +282,8 @@
         demand[good]=round(demand[good]+wanted);
       }
     }
+    // Construction is paid immediately at placement, not again on market day.
+    for(const good of GOODS)demand[good]=round(demand[good]+(e.weekBuildDemand[good]||0));
     const offered=empty();
     for(const good of GOODS){
       offered[good]=round(e.lots[good].reduce((sum,l)=>sum+l.qty,0));
@@ -217,6 +291,7 @@
       e.prices[good]=round(BASE[good]*clamp(Math.sqrt(pressure),.4,2.5));
     }
     const last={day,domestic:{},exports:{},unmet:{},unmetSupply:empty(),unmetBudget:empty()};
+    for(const good of GOODS)fulfilled[good]=round(e.weekBuildDemand[good]||0);
     for(let tier=1;tier<=4;tier++){
       const group=classKey(tier),count=pop[group];
       for(const [good,perResident] of Object.entries(HOUSEHOLD_NEEDS[group])){
@@ -266,8 +341,10 @@
       const inputStock=round(Object.values(e.activities).reduce((sum,a)=>sum+(a.inputs?.[good]||0),0));
       goods[good]={
         produced,demand:needed,fulfilled:met,consumed,exported:last.exports[good],
+        construction:round(e.weekBuildDemand[good]||0),recovered:round(e.weekRecovered[good]||0),
         unmet:unsatisfied,unmetSupply:round(supplyGap[good]),unmetBudget:round(budgetGap[good]),
-        netProduction:round(produced-needed),netPhysical:round(produced-consumed-last.exports[good]),
+        netProduction:round(produced-needed),
+        netPhysical:round(produced+(e.weekRecovered[good]||0)-consumed-last.exports[good]),
         marketStock,castleStock:round(e.castle[good]||0),inputStock,
         reserveGap:round(Math.max(0,(e.target[good]||0)-(e.castle[good]||0)))
       };
@@ -290,8 +367,9 @@
         net>tolerance?'surplus':'balanced';
     }
     e.lastBalance={day,goods};
-    e.weekProduced=empty();e.weekConsumed=empty();
+    e.weekProduced=empty();e.weekConsumed=empty();e.weekBuildDemand=empty();e.weekRecovered=empty();
     e.lastTrade=last;e.weeks++;
+    syncBuilderResources();
     const foodNeed=demand.food||0,foodUnmet=goods.food.unmet;
     e.welfare=clamp(round(e.welfare+(foodNeed>0?(1-2*foodUnmet/foodNeed)*.6:0)),0,100);
   }
@@ -427,6 +505,8 @@
     });
     render(true);
   }
-  window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
+  window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,
+    weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
+    foundingCharter,foundingWorkers,syncBuilderResources,canBuild,spendBuild,refundBuild,
     setShare,setTarget,setExternalDemand,transfer,snapshot,population});
 })();
