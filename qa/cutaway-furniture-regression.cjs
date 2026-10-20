@@ -100,5 +100,30 @@ check('gates: no room on the passage floor, furnished rooms above',()=>{
     assert.ok(!(i.r[1]<.38&&i.r[3]>-.38&&i.r[0]<b.w/2&&i.r[2]>-b.w/2)||!(i.r[0]<.38&&i.r[2]>-.38&&i.r[1]<b.h/2&&i.r[3]>-b.h/2),'passage clear: '+i.name);
   }
 });
+
+check('Canvas fallback paints each level and never calls a missing floor function',()=>{
+  assert.equal(run('typeof drawCutawayFloorsAndProps'),'function','Canvas 2.5D cutaway floor painter must be available');
+  const cube=run("State.structures.find(x=>x.id==='t2')");
+  const geometry=run('cutawayWallGeometry')(cube);
+  assert.doesNotThrow(()=>run('drawCutawayFloorsAndProps')(cube,geometry),'cutaway must not throw on the fallback path');
+});
+
+check('real WebGL2 cutaway mesh builds for single/all towers and every camera turn',()=>{
+  const src=fs.readFileSync(__dirname+'/../src/settlement-world3d.js','utf8');
+  const meshStart=src.indexOf('  const rgbCache=new Map()'),meshEnd=src.indexOf('  // ---------- terrain ----------',meshStart);
+  const cutStart=src.indexOf('  // ---------- cutaway interiors'),cutEnd=src.indexOf('  // ---------- content signatures',cutStart);
+  assert.ok(meshStart>0&&meshEnd>meshStart&&cutStart>meshEnd&&cutEnd>cutStart,'real world3d mesh source available');
+  run(src.slice(meshStart,meshEnd)+'\n'+src.slice(cutStart,cutEnd)+'\nwindow.__cutawayMeshRegression=buildCutaway');
+  for(const rot of [0,1,2,3]){
+    run('State.view.rotation='+rot);
+    for(const onlyOne of [true,false]){
+      run("State.structures.filter(s=>['t2','t3','g1'].includes(s.id)).forEach(s=>s.cutaway="+(!false)+" )");
+      if(onlyOne)run("State.structures.find(s=>s.id==='t3').cutaway=false;State.structures.find(s=>s.id==='g1').cutaway=false");
+      const out=run('window.__cutawayMeshRegression()');
+      assert.ok(out.main.length>50&&out.shell.length>50,'cutaway creates interior and shell geometry');
+      for(const part of [out.main,out.shell,out.em])assert.ok(Array.from(part).every(Number.isFinite),'world-space cutaway vertices and colours are finite');
+    }
+  }
+});
 console.log('cutaway furniture regression: '+passed+' checks');
 `);
