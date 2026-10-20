@@ -55,6 +55,20 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 - No physical capacity mapping for castle built-sections; reserve targets currently function as provisional per-good caps.
 - Manual Builder construction now consumes economic castle reserves on the feature branch; army provisioning and castle upkeep remain separate.
 
+## Manual construction staffed by idle L1 (20 October 2026, PR #55)
+
+Manual structures (castle towers, gates, walls, palisades, built sections, manually placed roads and industries) now use **construction V2**: a persistent quantity of worker-days, rather than automatically completing after calendar time. The pre-existing `buildDuration` values are interpreted as the effort required from **one L1 builder**. A site may receive up to **three** simultaneously allocated L1s. Workers are distributed breadth-first by stable creation order, one per site before second/third workers, and **cannot be counted again** in an industrial or agricultural workplace.
+
+`ConquerEconomy.availableBuilders()` calculates remaining L1 after industry/active field assignments; finished or seasonally inactive fields no longer reserve L1 forever. If no L1 remains, construction progress freezes. Work is accrued in the same weekday shift window as fields, 0.14–0.52 of each Monday–Friday day; Saturday market and Sunday rest do not add work. Alarm mode suspends the construction pool. The game simulation ticks construction alongside the economy and issues completion/scene maintenance only on a real work-based completion.
+
+Each V2 structure persists `{version,startedDay,workRequired,workDone,lastWorkDay,workers,completedDay}`. Manually built structures saved with V1 deadlines are converted lazily, preserving their already-completed fraction. Already-finished V1 structures remain finished. Existing **procedurally spawned** houses, fields and roads deliberately keep the old timer in this iteration: gating automated founding infrastructure behind L1 work could deadlock settlement population growth. This is a scoped milestone, not a claim that all urban generation is work-driven.
+
+Progress bars and selection UI show worker allocation and remaining effort, with a small builder count above manually constructed sites. The four founding L1s can supply early manual work without requiring a completed house.
+
+**Further work:** explicit worker paths/animation between residences or the well and sites; actual wage booking for construction (labor allocation currently affects time, not an additional salary deduction); job selection policies between essential production and urgent repairs; migrating autonomous village growth after bootstrapping safeguards; final browser QA. The economy remains aggregate and should not invent personal accounts for each worker.
+
+Regression: `qa/construction-workers-regression.cjs`, alongside the economy, founding, placement and population suites in `.github/workflows/economy-flows-regression.yml`.
+
 ## Real construction inventory and founding labor (20 October 2026, feature branch)
 
 The Builder and economic simulation now share a source of truth:
