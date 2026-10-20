@@ -153,8 +153,10 @@ function renderFunctionPanel(){
       '<div class="legend">Prototype damage controls; only effective tools can harm each material.</div></div>';
     html+=window.ConquerSiege?.summaryHtml()||'';
   }
+  html+=window.ConquerConvoys?.panelHtml?.(s)||'';
   html+=window.ConquerCrossings?.panel(s)||'';
   slots.innerHTML=html;
+  window.ConquerConvoys?.bindPanel?.(slots);
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
   slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{
