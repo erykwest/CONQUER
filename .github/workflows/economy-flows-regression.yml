@@ -7,6 +7,8 @@ on:
     paths:
       - 'src/settlement-economy.js'
       - 'qa/economy*.cjs'
+      - 'qa/construction*.cjs'
+      - 'src/settlement-core.js'
       - '.github/workflows/economy-flows-regression.yml'
   workflow_dispatch:
 jobs:
@@ -25,6 +27,7 @@ jobs:
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
           node qa/construction-workers-regression.cjs
+          node qa/construction-payroll-regression.cjs
           node qa/construction-commute-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
