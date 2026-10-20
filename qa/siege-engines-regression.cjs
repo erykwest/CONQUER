@@ -1,6 +1,6 @@
 'use strict';
 // Siege engines: Blender-built ram, catapult and trebuchet with the right
-// mechanics — the ram swings on its ropes, the catapult arm stops leaning on its
+// mechanics â€” the ram swings on its ropes, the catapult arm stops leaning on its
 // padded bar, the trebuchet counterweight hangs from the SHORT end and falls while
 // the long end with the sling goes over the top towards the target.
 const assert=require('node:assert/strict');
@@ -17,14 +17,14 @@ for(const [name,e] of Object.entries(M.engines)){
     assert.equal(p.v.length,p.c.length*9,name+' '+part+': nine coordinates per triangle');
     assert.ok(p.c.every(i=>i>=0&&i<M.palette.length),name+' '+part+': palette colours');
   }
-  assert.equal(e.wheels.at.length,{ladder:0,mantlet:2,tower2:6}[name]??4,name+' wheels');
+  assert.equal(e.wheels.at.length,{ladder:0,mantlet:2,tower2:6,ballista:0}[name]??4,name+' wheels');
   assert.ok(e.crew.length>=2,name+' has a crew');
   for(const mode of ['idle','move','fire','setup'])for(let t=0;t<13;t+=.37){
-    const m=SE.triangles(name,{x:3,y:4,heading:t},{mode,t,distance:t});
+    const m=SE.triangles(name,{x:3,y:4,heading:t},{mode,t,distance:t,ammo:['stone','fire','scatter'][Math.round(t)%3],ballista:t>6});
     assert.ok(m.pos.every(Number.isFinite),name+' '+mode+' is finite');
   }
 }
-console.log('PASS seven engines, well-formed parts, every pose finite');
+console.log('PASS eight engines, well-formed parts, every pose finite');
 
 // Helpers: z range of one part in a posed engine.
 const partRange=(e,part)=>{let s=0;for(const [n,p] of Object.entries(M.engines[e].parts)){if(n===part)return[s,s+p.c.length*9];if(n!=='wheel'&&n!=='hides')s+=p.c.length*9}};
@@ -66,15 +66,17 @@ console.log('PASS projectile');
 // set up its frame sits on the ground and the uprights stand.
 const zMin=(m,r)=>{let z=Infinity;for(let i=r[0]+2;i<r[1];i+=3)z=Math.min(z,m.pos[i]);return z};
 const packed=SE.triangles('trebuchet',{x:0,y:0},{mode:'move'}),set=SE.triangles('trebuchet',{x:0,y:0},{mode:'idle'});
-const base=partRange('trebuchet','base'),tower=partRange('trebuchet','tower');
-assert.ok(zMin(packed,base)>zMin(set,base)+.08,'packed, the frame rides up on its wheels');
+const base=partRange('trebuchet','base'),tower=partRange('trebuchet','king');
+assert.ok(zMin(packed,base)>zMin(set,base)+.05,'packed, the frame rides up on its wheels');
 assert.ok(zMin(set,base)<.01,'set up, the frame sits on the ground');
 assert.ok(zMax(packed,tower)<zMax(set,tower)/3,'packed, the uprights lie folded');
 assert.equal(SE.deploy({mode:'move'}),0);assert.equal(SE.deploy({mode:'fire'}),1);
 assert.equal(SE.projectile('trebuchet',{x:0,y:0},{mode:'fire',t:.3*6,deploy:.5}),null,'no shot before it is set up');
-const wz=m=>{let z=-Infinity;for(let i=m.pos.length-1-tr.parts.wheel.c.length*9*4+3;i<m.pos.length;i+=3)z=Math.max(z,m.pos[i]);return z};
-assert.ok(wz(set)<wz(packed)/2,'set up, the wheels lie flat on the ground');
-console.log('PASS trebuchet packs on wheels and sets up on the ground');
+// Set up it stands without wheels (taken off, laid flat and stowed under the frame).
+const wheelTris=tr.parts.wheel.c.length*4;
+assert.equal(packed.col.length-set.col.length>=wheelTris-200,true,'set up, the wheels are gone');
+assert.equal(SE.triangles('trebuchet',{x:0,y:0},{deploy:.18}).col.length===SE.triangles('trebuchet',{x:0,y:0},{deploy:.32}).col.length+wheelTris,true,'while setting up they are still there, lying flat');
+console.log('PASS trebuchet packs on wheels and sets up on the ground without them');
 
 // Siege tower lowers its bridge forward; the ladder is carried flat and raised.
 const tw=SE.triangles('tower',{x:0,y:0},{mode:'idle'}),down=SE.triangles('tower',{x:0,y:0},{mode:'fire',t:.5*6});
@@ -85,3 +87,37 @@ const lr=partRange('ladder','ladder');
 const ladTop=zMax(SE.triangles('ladder',{x:0,y:0},{mode:'fire',t:.6*7}),lr);
 assert.ok(ladTop>SE.WALL_WALK+.15&&ladTop<2.1,'raised, it reaches over the low (H1) wall, never the high (H2) one');
 console.log('PASS siege tower bridge and scaling ladder');
+
+// Trebuchet like the wooden model: two A-frames whose parts lie along the sills
+// when packed and stand in order during the set-up.
+{
+  const rig=M.engines.trebuchet.rig;
+  for(const n of ['king','legF','legR','tie1','tie2','ladder'])assert.ok(rig.stow[n]&&M.engines.trebuchet.parts[n],'stows '+n);
+  const legs=partRange('trebuchet','legF'),at=u=>zMax(SE.triangles('trebuchet',{x:0,y:0},{deploy:u}),legs);
+  assert.ok(at(0)<.4&&at(1)>1.4&&at(.38)<at(.45),'front legs rise in their slice of the set-up');
+  assert.ok(rig.cocked<0&&rig.cocked>-1,'cocked: long end down at the trough');
+  console.log('PASS trebuchet A-frames stow and stand up in order');
+}
+// Upgrades: incendiary ball (trebuchet), scatter shot (mangonel), ballista (alone,
+// on the mantlet). The burning ball is reported to the caller for its flames.
+{
+  const lit=SE.triangles('trebuchet',{x:0,y:0},{mode:'idle',ammo:'fire'});
+  assert.equal(lit.burning.length,1,'the loaded incendiary ball burns');
+  assert.equal(SE.triangles('trebuchet',{x:0,y:0},{mode:'idle'}).burning.length,0,'a plain stone does not');
+  const fly=SE.projectile('trebuchet',{x:0,y:0},{mode:'fire',t:.3*6,ammo:'fire'});
+  assert.equal(fly.ammo,'fire');
+  const sc=SE.projectile('catapult',{x:0,y:0},{mode:'fire',t:.4*4.2,ammo:'scatter'});
+  assert.ok(sc.ammo==='scatter'&&sc.pellets.length>=5,'scatter shot flies as pellets');
+  const ys=sc.pellets.map(p=>p.y);assert.ok(Math.max(...ys)-Math.min(...ys)>.5,'the pellets spread');
+  const stoneN=SE.triangles('catapult',{x:0,y:0},{mode:'idle'}).col.length,heapN=SE.triangles('catapult',{x:0,y:0},{mode:'idle',ammo:'scatter'}).col.length;
+  assert.notEqual(stoneN,heapN,'the cup holds a heap of stones instead');
+  const drawn=SE.pose('ballista',{mode:'idle'}),loose=SE.pose('ballista',{mode:'fire',t:.12*3.5});
+  assert.ok(drawn.draw===1&&drawn.bolt===1&&loose.bolt===0,'ballista: drawn and loaded, then the bolt is gone');
+  const bolt=SE.projectile('ballista',{x:0,y:0},{mode:'fire',t:.14*3.5});
+  assert.ok(bolt&&bolt.ammo==='bolt'&&bolt.x>1,'the bolt flies forward');
+  const plain=SE.triangles('mantlet',{x:0,y:0},{mode:'idle'}),armed=SE.triangles('mantlet',{x:0,y:0},{mode:'idle',ballista:true});
+  assert.ok(armed.col.length>plain.col.length,'the mantlet carries its ballista');
+  assert.ok(SE.projectile('mantlet',{x:0,y:0},{mode:'fire',t:.14*3.5,ballista:true}),'and shoots it through the embrasure');
+  assert.equal(SE.projectile('mantlet',{x:0,y:0},{mode:'fire',t:.14*3.5}),null,'no ballista, no bolt');
+  console.log('PASS upgrades: incendiary ball, scatter shot, ballista and mantlet ballista');
+}

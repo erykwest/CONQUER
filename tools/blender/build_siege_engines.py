@@ -1,4 +1,5 @@
-"""CONQUER siege engines builder (Blender 5.x): ram, catapult (onager), trebuchet.
+"""CONQUER siege engines builder (Blender 5.x): ram, catapult (mangonel/onager),
+trebuchet, assault towers, mantlet, scaling ladder, ballista.
 
 Same method as the wagon and the animals: real metres, rigid parts with pivots,
 flat colours shaded in game by the castle's two-tone rule. Moving parts are
@@ -31,7 +32,7 @@ COLORS = {
     'team': '#7b3f98',   # player colour: cloth wraps and banners, replaced in game per owner
 }
 KEYS = list(COLORS.keys())
-COLL_NAME = 'CONQUER_Siege'
+COLL_NAME = globals().get('SIEGE_COLL', 'CONQUER_Siege')
 
 
 def part(root, name, engine, offset):
@@ -133,6 +134,11 @@ def build_catapult(root, off):
     p = part(root, 'stone', 'catapult', off)
     p.cylinder(.16, 0, 'stone', n=6, axis='z', center=(-1.0, 0, 3.3), radii=[.1, .17, .1], along=[0, .14, .28])
     parts['stone'] = p.finish()
+    # Upgrade "sassaiola": the cup loaded with a heap of fist-sized stones instead.
+    p = part(root, 'pebbles', 'catapult', off)
+    for (dx, dy, dz) in ((-.1, -.1, 0), (.1, -.08, 0), (-.08, .1, 0), (.1, .1, 0), (0, 0, .1), (.02, -.12, .06), (-.12, .02, .07)):
+        p.cylinder(.08, 0, 'stone', n=5, axis='z', center=(-1.0 + dx, dy, 3.35 + dz), radii=[.05, .085, .05], along=[0, .07, .14])
+    parts['pebbles'] = p.finish()
 
     p = part(root, 'wheel', 'catapult', off)
     wheel(p, .45)
@@ -143,115 +149,186 @@ def build_catapult(root, off):
 
 
 # ------------------------------------------------------------------ trebuchet
-# Age-of-Empires style: a fixed engine on a ground frame (no wheels when set up)
-# with two tall uprights, a very long beam wrapped in the player's colour and a
-# boxed counterweight. It travels packed on the same frame raised on four wheels:
-# uprights folded forward, beam laid on top, box riding in the trough. Modelled
-# SET UP (frame on the ground); the game folds it with the `rig` numbers below.
-TREB_H = 5.6          # axle height
-TREB_HINGE = .5       # uprights fold about their feet at this height
-TREB_LIFT = .35       # packed: the frame rides this much higher, on its wheels
+# A counterweight trebuchet like a wooden scale model: long sills on ground
+# sleepers, two A-frames (front leg, rear leg, king post with a pointed cap and
+# two ties), a ladder up the front, a windlass with star capstans, a hopper-shaped
+# counterweight hinged on the short end and a covered sling trough ahead of the
+# frame on the long-arm side. Modelled SET UP. It travels packed on the same sills
+# raised on four wheels: A-frames laid down along the sills, ties and ladder on
+# the stack, beam resting on the box in the trough. `rig.stow` says how each part
+# lies when packed and when it goes up during the set-up (u from 0 to 1).
+TREB_H = 5.4             # axle height
+TREB_FOOT = .6           # legs and king posts hinge at their feet, on the foot blocks
+TREB_LIFT = .24          # packed: the sills ride on the wheel hubs
+TREB_Y = 1.15            # A-frame planes
+TREB_ARM = (2.7, -7.2)   # short end, long end
+TREB_HINGE_X = 2.3       # counterweight hinge on the short end
+TREB_LEG_X, TREB_TOP_X = 2.5, .16
+TREB_LADDER = ((3.15, -1.47, .46), (.55, -1.47, TREB_H - .35))
+
+
+def star(p, c, r, key='wood', spikes=8):
+    """Capstan star: handspikes radiating in the xz plane round a hub (axis y)."""
+    c = Vector(c)
+    p.cylinder(.16, .1, 'woodDark', n=8, center=tuple(c), cap_key='wood')
+    for i in range(spikes):
+        a = 2 * math.pi * (i + .5) / spikes
+        d = Vector((math.cos(a), 0, math.sin(a)))
+        p.beam(c + d * .12, c + d * r, .07, .09, key)
 
 
 def build_trebuchet(root, off):
     parts, pivots = {}, {}
-    H, HZ = TREB_H, TREB_HINGE
+    H, FZ, Y, HX = TREB_H, TREB_FOOT, TREB_Y, TREB_HINGE_X
+    sx, lx = TREB_ARM
+    LX, TX = TREB_LEG_X, TREB_TOP_X
+    leg_x = lambda z: LX - (LX - TX) * (z - FZ) / (H - .25 - FZ)                       # |x| of a leg at height z
+
     p = part(root, 'base', 'trebuchet', off)
+    for x in (-2.6, -.9, .9, 2.6):
+        p.box((x, 0, .08), (.3, 3.3, .16), 'woodDark')                                  # sleepers
+    for x in (-4.0, -5.9):
+        p.box((x, 0, .08), (.3, 1.7, .16), 'woodDark')
     for s in (-1, 1):
-        p.box((0, s * 1.3, .2), (6.8, .34, .34), 'woodDark')                            # sills
-        for x in (-3.45, 3.45):
-            p.box((x, s * 1.3, .2), (.12, .38, .38), 'team')                            # coloured end caps
-        p.box((0, s * 1.0, .4), (.6, .42, .3), 'wood')                                  # upright hinge blocks
-        for x in (-2.7, 2.7):
-            p.box((x, s * 1.25, .32), (.4, .3, .24), 'wood')                            # prop feet
-        for x in (-2.2, 2.2):
-            p.box((x, s * 1.55, .2), (.2, .2, .2), 'iron')                              # axle stubs
-    for x in (-3.2, -1.6, 0, 1.6, 3.2):
-        p.box((x, 0, .14), (.28, 2.9, .22), 'woodDark')                                 # cross beams
-    p.box((-2.9, 0, .3), (3.0, .7, .06), 'woodLight')                                   # sling trough
+        p.box((0, s * Y, .31), (6.6, .3, .3), 'wood')                                   # sills
+        for x in (-3.3, 3.3):
+            p.box((x, s * Y, .31), (.08, .34, .34), 'team')                             # coloured end caps
+        for x in (-LX, 0, LX):
+            p.box((x, s * Y, .53), (.42, .36, .14), 'woodDark')                         # foot blocks
+        p.beam((-2.4, s * Y, .3), (2.4, -s * Y, .3), .16, .16, 'woodDark')              # floor cross braces
+    p.box((3.15, 0, .38), (.24, 2.3, .16), 'woodDark')                                  # front cross beam (beam rest)
+    # Covered sling trough ahead of the frame, on the long-arm side.
+    p.box((-4.65, 0, .2), (3.9, 1.2, .08), 'woodDark')
     for s in (-1, 1):
-        p.box((-2.9, s * .36, .38), (3.0, .06, .18), 'wood')
-    p.cylinder(.22, .55, 'woodLight', n=8, center=(-3.9, 0, .7), cap_key='woodDark')    # windlass drum
+        p.box((-4.65, s * .56, .38), (3.9, .08, .4), 'wood')
+    for x in (-6.58, -2.72):
+        p.box((x, 0, .38), (.08, 1.2, .4), 'wood')
+    for y in (-.42, -.14, .14, .42):
+        p.box((-4.65, y, .6), (3.9, .26, .05), 'woodLight')                             # lid planks
+    for x in (-6.2, -4.65, -3.1):
+        p.box((x, 0, .64), (.1, 1.24, .04), 'iron')                                     # iron straps
+    # Windlass between its own posts, star capstans outside the frames.
     for s in (-1, 1):
-        p.box((-3.9, s * .62, .5), (.2, .12, .6), 'wood')
+        post(p, (-2.75, s * .85, .46), (-2.75, s * .85, 1.4), .2, 'wood')
+        star(p, (-2.75, s * 1.62, 1.15), .68)
+    p.cylinder(.2, .75, 'woodLight', n=10, center=(-2.75, 0, 1.15), cap_key='woodDark')
+    p.cylinder(.06, 1.7, 'iron', n=6, center=(-2.75, 0, 1.15))
     parts['base'] = p.finish()
 
-    # Uprights: tall posts with pointed caps, hinged at their feet, carrying the axle.
-    p = part(root, 'tower', 'trebuchet', off)
+    # A-frames: king posts (carrying the axle), front legs, rear legs, ties, ladder.
+    p = part(root, 'king', 'trebuchet', off)
     for s in (-1, 1):
-        y = s * 1.0
-        post(p, (0, y, HZ), (0, y, H + .5), .32, 'wood')
-        p.taper((0, y, H + .5), (0, y, H + 1.0), .36, .36, .06, .06, 'woodDark')
-        for z in (1.6, 3.6):
-            p.box((0, y, z), (.38, .38, .28), 'team')                                   # coloured wraps
-        p.box((0, y, H), (.5, .4, .6), 'iron')                                          # bearing plates
-    p.cylinder(.18, 1.2, 'iron', n=8, center=(0, 0, H), cap_key='ironLight')            # axle
-    parts['tower'] = p.finish()
-    pivots['tower'] = u(0, 0, HZ)
-
-    # Props: the rear pair slides along the frame while the uprights fold; the
-    # front pair is unpinned and laid back before folding.
-    for name, x0 in (('propR', -2.7), ('propF', 2.7)):
+        post(p, (0, s * Y, FZ), (0, s * Y, H + .75), .3, 'wood')
+        p.taper((0, s * Y, H + .75), (0, s * Y, H + 1.15), .32, .32, .05, .05, 'woodDark')
+        p.box((0, s * Y, H), (.42, .4, .5), 'iron')                                     # bearings
+        p.box((0, s * Y, 2.2), (.34, .34, .25), 'team')                                 # coloured wraps
+    p.cylinder(.17, Y + .2, 'iron', n=8, center=(0, 0, H), cap_key='ironLight')         # axle
+    parts['king'] = p.finish()
+    pivots['king'] = u(0, 0, FZ)
+    for name, sg in (('legF', 1), ('legR', -1)):
         p = part(root, name, 'trebuchet', off)
         for s in (-1, 1):
-            post(p, (x0, s * 1.25, .35), (0, s * 1.25, 3.4), .2, 'woodDark')
+            post(p, (sg * LX, s * Y, FZ), (sg * TX, s * Y, H - .25), .26, 'wood')
         parts[name] = p.finish()
-        pivots[name] = u(x0, 0, .35)
+        pivots[name] = u(sg * LX, 0, FZ)
+    TIES = (1.6, 3.5)
+    for i, z in enumerate(TIES):
+        p = part(root, 'tie%d' % (i + 1), 'trebuchet', off)
+        for s in (-1, 1):
+            p.box((0, s * (Y + .2), z), (2 * leg_x(z) + .3, .14, .2), 'woodDark')
+            for x in (-leg_x(z), 0, leg_x(z)):
+                p.box((x, s * (Y + .28), z), (.08, .04, .08), 'iron')                   # pins
+        parts['tie%d' % (i + 1)] = p.finish()
+        pivots['tie%d' % (i + 1)] = u(0, 0, z)
+    # Two raking braces dressed as ladders, one outside each A-frame (as on the
+    # model: rails and rungs, there for looks; nobody climbs them in game).
+    p = part(root, 'ladder', 'trebuchet', off)
+    for s in (-1, 1):
+        A, B = Vector(TREB_LADDER[0]), Vector(TREB_LADDER[1])
+        A.y, B.y = s * abs(A.y), s * abs(B.y)
+        for o in (-.22, .22):
+            post(p, A + Vector((0, o, 0)), B + Vector((0, o, 0)), .1, 'wood')
+        n = int((B - A).length / .36)
+        for i in range(1, n):
+            p.box(tuple(A.lerp(B, i / n)), (.05, .44, .05), 'woodDark')
+        p.box(tuple(A + Vector((0, 0, -.05))), (.3, .55, .16), 'woodDark')            # foot block
+    parts['ladder'] = p.finish()
+    pivots['ladder'] = u(*TREB_LADDER[0])
 
     # Beam modelled level: short end +x carries the counterweight hinge,
     # long end -x carries the sling. Pivot on the axle.
     p = part(root, 'arm', 'trebuchet', off)
-    p.taper((2.3, 0, H), (-6.6, 0, H), .5, .55, .24, .26, 'woodLight')
-    for x in (1.3, -1.0):
-        p.cylinder(.3, 0, 'iron', n=8, axis='x', center=(0, 0, H), radii=[.31, .31], along=[x, x + .12])
-    for x in (-2.4, -4.4):
-        p.cylinder(.3, 0, 'team', n=8, axis='x', center=(0, 0, H), radii=[.25, .25], along=[x, x + .4])
+    p.taper((sx, 0, H), (lx, 0, H), .46, .52, .22, .24, 'woodLight')
+    for x in (1.0, -1.1):
+        p.cylinder(.28, 0, 'iron', n=8, axis='x', center=(0, 0, H), radii=[.29, .29], along=[x, x + .12])
+    for x in (-2.8, -5.8):
+        p.cylinder(.25, 0, 'team', n=8, axis='x', center=(0, 0, H), radii=[.2, .2], along=[x, x + .35])
+    p.beam((lx + .05, 0, H + .1), (lx - .25, 0, H + .4), .05, .05, 'iron')              # release hook
     parts['arm'] = p.finish()
     pivots['arm'] = u(0, 0, H)
 
-    # Counterweight: a stone-filled box hanging from a hinge on the short end
-    # (hangers apart: they are hooked on only once the box is up).
+    # Counterweight: a hopper (box over a wedge) hanging from the short end;
+    # hangers apart: they are hooked on only once the box is up.
     p = part(root, 'weight', 'trebuchet', off)
-    p.box((2.0, 0, H - 1.85), (1.4, 1.2, 1.5), 'wood')
-    p.box((2.0, 0, H - 1.08), (1.3, 1.1, .06), 'stone')                                 # stones showing on top
-    for z in (H - 1.3, H - 2.4):
-        p.box((2.0, 0, z), (1.46, 1.26, .1), 'iron')                                    # iron bands
+    p.box((HX, 0, H - 1.35), (1.9, 1.3, .9), 'wood')
+    p.taper((HX, 0, H - 1.8), (HX, 0, H - 2.6), 1.3, 1.9, 1.3, .6, 'wood')
+    p.box((HX, 0, H - .88), (1.8, 1.2, .05), 'stone')                                   # stones showing on top
+    p.box((HX, 0, H - .93), (1.96, 1.36, .08), 'iron')                                  # iron rim
     for s in (-1, 1):
-        p.box((2.0, s * .62, H - 1.85), (.9, .04, .9), 'team')                          # coloured drapes
+        p.box((HX, s * .67, H - 1.4), (1.1, .04, .6), 'team')                           # coloured drapes
+        for x in (-.7, .7):
+            p.box((HX + x, s * .67, H - 1.35), (.07, .04, .86), 'iron')                 # corner straps
     parts['weight'] = p.finish()
-    pivots['weight'] = u(2.0, 0, H)
+    pivots['weight'] = u(HX, 0, H)
     p = part(root, 'hangers', 'trebuchet', off)
     for s in (-1, 1):
-        post(p, (2.0, s * .45, H - .05), (2.0, s * .5, H - 1.1), .12, 'woodDark')
+        post(p, (HX, s * .45, H - .05), (HX, s * .5, H - .92), .1, 'iron')
     parts['hangers'] = p.finish()
-    pivots['hangers'] = u(2.0, 0, H)
+    pivots['hangers'] = u(HX, 0, H)
 
     # Sling: two ropes from the long end to a leather pouch holding the stone,
     # modelled hanging straight down from the tip (pivot on the tip).
     p = part(root, 'sling', 'trebuchet', off)
     for s in (-1, 1):
-        p.beam((-6.6, 0, H), (-6.6, s * .14, H - 2.6), .03, .03, 'rope')
-    p.box((-6.6, 0, H - 2.7), (.36, .34, .14), 'leather')
+        p.beam((lx, 0, H), (lx, s * .14, H - 2.6), .03, .03, 'rope')
+    p.box((lx, 0, H - 2.7), (.36, .34, .14), 'leather')
     parts['sling'] = p.finish()
-    pivots['sling'] = u(-6.6, 0, H)
+    pivots['sling'] = u(lx, 0, H)
     p = part(root, 'slingStone', 'trebuchet', off)                                       # leaves the pouch on release
-    p.cylinder(.2, 0, 'stone', n=6, axis='z', center=(-6.6, 0, H - 2.66), radii=[.12, .2, .12], along=[0, .16, .32])
+    p.cylinder(.2, 0, 'stone', n=6, axis='z', center=(lx, 0, H - 2.66), radii=[.12, .2, .12], along=[0, .16, .32])
     parts['slingStone'] = p.finish()
-    pivots['slingStone'] = u(-6.6, 0, H)
+    pivots['slingStone'] = u(lx, 0, H)
 
     p = part(root, 'wheel', 'trebuchet', off)
     wheel(p, .55)
     parts['wheel'] = p.finish()
-    # Packed layout: beam resting on the box (in the trough) and on the folded uprights.
-    box_x, box_hinge_z = -2.6, .33 + 2.6
-    arm_tilt = math.atan2((box_hinge_z - 1.1 + .23) - (.65 + .25), 3.0 - box_x)
-    arm_pivot_x = .4
-    arm_pivot_z = (box_hinge_z - 1.1 + .23) - math.tan(arm_tilt) * (arm_pivot_x - box_x)
-    rig = {'lift': u(TREB_LIFT)[0], 'packedArm': u(arm_pivot_x, 0, arm_pivot_z), 'packedArmPitch': round(arm_tilt, 4),
-           'packedHinge': u(box_x, 0, box_hinge_z), 'propLen': u(math.hypot(2.7, 3.4 - .35))[0],
-           'propTop': u(0, 0, 3.4), 'wheelOut': u(1.05)[0], 'wheelFlatZ': u(.1)[0]}
-    meta = {'wheels': {'part': 'wheel', 'r': u(.55)[0], 'at': [u(x, s * 1.75, .55) for x in (-2.2, 2.2) for s in (-1, 1)]},
-            'crew': [u(-3.6, 1.0, 0), u(-3.6, -1.0, 0), u(3.0, 1.9, 0)], 'length': u(9.5)[0], 'axleZ': u(H)[0], 'rig': rig}
+
+    # Cocked: the long end down at the trough, the sling laid forward on its lid.
+    trough_top = .63
+    cocked = math.asin((H - (trough_top + .15)) / -lx)
+    # Packed: box standing on the trough lid, beam resting on it and on the front cross beam.
+    box_x, box_hinge_z = -4.6, trough_top + 2.6
+    rest = (3.15, .46 + .23)                                       # short tip on the front cross beam
+    on_box = (box_x, box_hinge_z - .9 + .2)
+    tilt = math.atan2(on_box[1] - rest[1], rest[0] - on_box[0])
+    pivot = (rest[0] - sx * math.cos(tilt), 0, rest[1] + sx * math.sin(tilt))
+    ang = lambda a, b: math.atan2(b[2] - a[2], b[0] - a[0])
+    aF = ang((LX, 0, FZ), (TX, 0, H - .25))
+    aR = ang((-LX, 0, FZ), (-TX, 0, H - .25))
+    aL = ang(TREB_LADDER[0], TREB_LADDER[1])
+    # stow: pitch (positive = forward end down) and lift dz about the part pivot, and
+    # the slice of the set-up during which the part goes up.
+    stow = {'king': {'pitch': round(-(math.pi / 2 - .07), 4), 'at': [.22, .36]},
+            'legF': {'pitch': round(-(math.pi - aF), 4), 'at': [.32, .44]},
+            'legR': {'pitch': round(aR - .07, 4), 'at': [.40, .52]},
+            'tie1': {'dz': u(.86 - TIES[0])[0], 'at': [.52, .57]},
+            'tie2': {'dz': u(1.06 - TIES[1])[0], 'at': [.55, .60]},
+            'ladder': {'pitch': round(-(math.pi - aL), 4), 'at': [.58, .64]}}
+    rig = {'lift': u(TREB_LIFT)[0], 'cocked': round(-cocked, 4), 'stow': stow,
+           'packedArm': u(*pivot), 'packedArmPitch': round(tilt, 4), 'packedHinge': u(box_x, 0, box_hinge_z),
+           'wheelOut': u(.9)[0], 'wheelFlatZ': u(.1)[0]}
+    meta = {'wheels': {'part': 'wheel', 'r': u(.55)[0], 'at': [u(x, s * 1.85, .55) for x in (-1.4, 2.2) for s in (-1, 1)]},
+            'crew': [u(-2.75, 2.35, 0), u(-2.75, -2.35, 0), u(3.6, -2.1, 0)], 'length': u(10.0)[0], 'axleZ': u(H)[0], 'rig': rig}
     return parts, pivots, meta
 
 
@@ -418,28 +495,101 @@ def build_mantlet(root, off):
     parts, pivots = {}, {}
     p = part(root, 'frame', 'mantlet', off)
     bottom, top = Vector((.35, 0, .2)), Vector((-.2, 0, 2.3))
-    p.taper(bottom, top, 2.6, .12, 2.6, .12, 'wood')                                 # the shield
+    at = lambda k, y=0: bottom.lerp(top, k) + Vector((0, y, 0))
+    W0, W1, WH = MANTLET_WINDOW                                                        # embrasure: k range, half width
+    p.taper(at(0), at(W0), 2.6, .12, 2.6, .12, 'wood')                                 # the shield, round
+    p.taper(at(W1), at(1), 2.6, .12, 2.6, .12, 'wood')                                 # an embrasure
+    for s in (-1, 1):
+        p.taper(at(W0, s * (1.3 + WH) / 2), at(W1, s * (1.3 + WH) / 2), 1.3 - WH, .12, 1.3 - WH, .12, 'wood')
     d = (top - bottom).normalized(); n = Vector((d.z, 0, -d.x))                       # front normal (+x)
-    for y in (-1.1, -.55, 0, .55, 1.1):
+    for y in (-1.1, -.55, .55, 1.1):
         p.beam(bottom + n * .07 + Vector((0, y, 0)), top + n * .07 + Vector((0, y, 0)), .07, .04, 'woodDark')
+    for (k0, k1) in ((0, W0), (W1, 1)):
+        p.beam(at(k0) + n * .07, at(k1) + n * .07, .07, .04, 'woodDark')
     for k in (.25, .8):
         c = bottom.lerp(top, k) + n * .1
         p.beam(c + Vector((0, -1.3, 0)), c + Vector((0, 1.3, 0)), .1, .06, 'woodDark')  # cross battens
-    c = bottom.lerp(top, .55) + n * .1
-    p.beam(c + Vector((0, -1.3, 0)), c + Vector((0, 1.3, 0)), .2, .05, 'team')         # coloured band
-    for y in (-.6, .6):
-        c = bottom.lerp(top, .7) + n * .13
-        p.box(tuple(c + Vector((0, y, 0))), (.05, .28, .07), 'leather')                # sighting slits
+    for s in (-1, 1):
+        c = bottom.lerp(top, .55) + n * .1
+        p.beam(c + Vector((0, s * WH, 0)), c + Vector((0, s * 1.3, 0)), .2, .05, 'team')  # coloured band
+        c = bottom.lerp(top, (W0 + W1) / 2) + n * .13
+        p.box(tuple(c + Vector((0, s * .85, 0))), (.05, .28, .07), 'leather')         # sighting slits
+    p.box((.1, 0, .45), (.12, 3.0, .12), 'iron')                                       # axle
+    parts['frame'] = p.finish()
+    # Shutter closing the embrasure (taken off when the ballista is mounted).
+    p = part(root, 'shutter', 'mantlet', off)
+    p.taper(at(W0) - n * .08, at(W1) - n * .08, 2 * WH + .1, .08, 2 * WH + .1, .08, 'woodDark')
+    p.box(tuple(at((W0 + W1) / 2) - n * .15), (.06, .2, .06), 'iron')
+    parts['shutter'] = p.finish()
+    # Rear props and push handles (cleared away for the ballista and its crew).
+    p = part(root, 'props', 'mantlet', off)
     for s in (-1, 1):
         post(p, (-.1, s * .9, 1.6), (-1.0, s * .9, .35), .1, 'woodDark')               # rear props
         post(p, (.05, s * .55, .75), (-1.45, s * .45, .95), .09, 'wood')               # push handles
-    p.box((.1, 0, .45), (.12, 3.0, .12), 'iron')                                       # axle
-    parts['frame'] = p.finish()
+    parts['props'] = p.finish()
     p = part(root, 'wheel', 'mantlet', off)
     wheel(p, .45, half=.07, spokes=6)
     parts['wheel'] = p.finish()
     meta = {'wheels': {'part': 'wheel', 'r': u(.45)[0], 'at': [u(.1, s * 1.42, .45) for s in (-1, 1)]},
-            'crew': [u(-1.75, .45, 0), u(-1.75, -.45, 0), u(-1.0, 1.05, 0), u(-1.0, -1.05, 0)], 'length': u(3.0)[0]}
+            'crew': [u(-1.75, .45, 0), u(-1.75, -.45, 0), u(-1.0, 1.05, 0), u(-1.0, -1.05, 0)], 'length': u(3.0)[0],
+            'rig': {'ballista': u(MANTLET_BALLISTA_X, 0, 0), 'ballistaCrew': [u(-2.9, .5, 0), u(-2.9, -.5, 0)]}}
+    return parts, pivots, meta
+
+
+# ------------------------------------------------------------------ ballista
+# Torsion bolt-thrower on a trestle: two rope skeins in the head, arms drawn back
+# by a string hooked on the slider's claw, a winch at the rear. Stands alone, behind
+# the mantlet's embrasure (upgrade) or on a roofless tower top. The string is drawn
+# in game from the arm tips to the claw.
+BALLISTA_Z = 1.3          # stock height above its floor
+BALLISTA_CLAW = -1.02     # claw (and bolt nock) when drawn
+MANTLET_WINDOW = (.45, .7, .4)
+MANTLET_BALLISTA_X = -.8  # the ballista stands behind the shield, its bolt through the embrasure
+
+
+def build_ballista(root, off):
+    parts, pivots = {}, {}
+    Z = BALLISTA_Z
+    p = part(root, 'stand', 'ballista', off)
+    post(p, (-.35, 0, 0), (-.35, 0, Z - .12), .16, 'wood')                             # pivot post
+    for a in (math.pi * .25, math.pi, math.pi * 1.75):
+        d = Vector((math.cos(a), math.sin(a), 0))
+        post(p, (-.35 + d.x * .85, d.y * .85, 0), (-.35, 0, Z * .55), .1, 'woodDark')   # trestle legs
+    p.box((-.35, 0, Z - .1), (.34, .34, .1), 'iron')                                   # turntable
+    parts['stand'] = p.finish()
+    p = part(root, 'stock', 'ballista', off)
+    p.box((-.35, 0, Z), (2.5, .26, .14), 'wood')                                       # stock
+    for s in (-1, 1):
+        p.box((-.4, s * .11, Z + .1), (2.3, .05, .07), 'woodDark')                     # slide rails
+        p.box((.55, s * .5, Z), (.22, .1, .74), 'wood')                                # head side posts
+        p.cylinder(.09, .3, 'rope', n=8, axis='z', center=(.55, s * .33, Z), cap_key='iron')   # skeins
+        p.beam((-1.45, s * .3, Z - .22), (-1.45, s * .3, Z + .26), .05, .05, 'woodDark')     # winch handles
+        p.beam((-1.69, s * .3, Z + .02), (-1.21, s * .3, Z + .02), .05, .05, 'woodDark')
+    for z in (Z + .33, Z - .33):
+        p.box((.55, 0, z), (.22, 1.1, .1), 'woodDark')                                 # head frame
+    p.box((.55, 0, Z - .2), (.22, .2, .2), 'iron')
+    p.cylinder(.08, .26, 'woodLight', n=8, center=(-1.45, 0, Z + .02), cap_key='woodDark')     # winch drum
+    parts['stock'] = p.finish()
+    for name, s in (('armL', 1), ('armR', -1)):
+        p = part(root, name, 'ballista', off)
+        p.taper((.55, s * .33, Z), (.38, s * 1.05, Z), .12, .1, .07, .06, 'woodLight')
+        p.box((.38, s * 1.05, Z), (.06, .06, .1), 'iron')
+        parts[name] = p.finish()
+        pivots[name] = u(.55, s * .33, Z)
+    p = part(root, 'slider', 'ballista', off)
+    p.box((-.6, 0, Z + .15), (.9, .17, .06), 'woodLight')
+    p.box((BALLISTA_CLAW, 0, Z + .2), (.08, .1, .1), 'iron')                            # claw
+    parts['slider'] = p.finish()
+    p = part(root, 'bolt', 'ballista', off)
+    p.beam((BALLISTA_CLAW + .02, 0, Z + .21), (.95, 0, Z + .21), .045, .045, 'woodLight')
+    p.taper((.95, 0, Z + .21), (1.18, 0, Z + .21), .09, .09, .01, .01, 'iron')
+    for s in (-1, 1):
+        p.box((BALLISTA_CLAW + .2, s * .05, Z + .21), (.22, .06, .02), 'team')         # fletching
+    parts['bolt'] = p.finish()
+    rig = {'z': u(Z)[0], 'claw': u(BALLISTA_CLAW)[0], 'tipL': u(.38, 1.05, Z), 'tipR': u(.38, -1.05, Z),
+           'boltZ': u(Z + .21)[0], 'muzzle': u(1.18)[0]}
+    meta = {'wheels': {'part': None, 'r': 0, 'at': []},
+            'crew': [u(-2.1, .5, 0), u(-2.1, -.5, 0)], 'length': u(3.0)[0], 'rig': rig}
     return parts, pivots, meta
 
 
@@ -470,7 +620,7 @@ def build_ladder(root, off):
 
 ENGINES = [('ram', build_ram, (0, 0, 0)), ('catapult', build_catapult, (0, 6, 0)), ('trebuchet', build_trebuchet, (0, 13, 0)),
            ('tower', build_tower, (0, 21, 0)), ('tower2', build_tower2, (0, 39, 0)), ('ladder', build_ladder, (0, 27, 0)),
-           ('mantlet', build_mantlet, (0, 31, 0))]
+           ('mantlet', build_mantlet, (0, 31, 0)), ('ballista', build_ballista, (0, 35, 0))]
 
 
 def main(out_path):

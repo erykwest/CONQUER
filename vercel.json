@@ -8,7 +8,8 @@
       "civil-3d": true,
       "animation": true,
       "siege-engines": true,
-      "integration/civil-fire": true
+      "integration/civil-fire": true,
+      "siege-upgrades": true
     }
   }
 }

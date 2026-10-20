@@ -199,7 +199,8 @@ const STRUCTURE_VARIANT_VERSION=2;
 const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
     roofStyle:Object.freeze(['battlement','machicolation','pitched']),
-    baseStyle:Object.freeze(['standard','buttress','splayed'])
+    baseStyle:Object.freeze(['standard','buttress','splayed']),
+    topWeapon:Object.freeze(['none','mangonel','ballista'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat'])
@@ -212,7 +213,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none'}),
   gate:Object.freeze({roofStyle:'battlement'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -287,6 +288,10 @@ function towerRoofStyle(s){
   if(s?.type==='tower'&&s.brokenTop&&!isWoodTower(s))return'broken';
   return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined;
 }
+// Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
+// at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))}
+function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';
