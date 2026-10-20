@@ -525,18 +525,111 @@ function buildDuration(s){
   if(s.type==='field')return BUILD_DAYS.field;
   return 0;
 }
+// Construction V2: manual projects use paid-for work units, not a calendar deadline.
+// The pre-existing procedural roads/houses/fields keep their bootstrap timers.
+const CONSTRUCTION_MAX_WORKERS=3;
+function constructionWorkClock(day){
+  // Same 5-day labor week / work shift used by the agricultural simulation.
+  const whole=Math.floor(day),week=Math.floor(whole/7),wd=((whole%7)+7)%7;
+  return week*5+Math.min(wd,5)+(wd<5?clamp((day-whole-.14)/.38,0,1):0);
+}
 function beginConstruction(s,delay=0){
   const d=buildDuration(s);if(d<=0)return s;
-  s.construction={startedDay:State.clock.day+delay,completeDay:State.clock.day+delay+d};return s;
+  const startedDay=State.clock.day+delay;
+  if(s.auto){
+    s.construction={startedDay,completeDay:startedDay+d};return s;
+  }
+  s.construction={version:2,startedDay,workRequired:d,workDone:0,
+    lastWorkDay:startedDay,workers:0,completedDay:null};
+  return s;
 }
 function constructionProgress(s){
   if(!s?.construction)return 1;
-  const a=s.construction.startedDay,b=s.construction.completeDay;
+  const c=s.construction;
+  if(c.version===2)return clamp((Number(c.workDone)||0)/Math.max(0.001,Number(c.workRequired)||1),0,1);
+  const a=c.startedDay,b=c.completeDay;
   if(State.clock.day<=a)return 0;if(State.clock.day>=b)return 1;
   return clamp((State.clock.day-a)/(b-a),0,1);
 }
 function underConstruction(s){return constructionProgress(s)<1}
-function remainingDays(s){return s?.construction?Math.max(0,s.construction.completeDay-State.clock.day):0}
+function remainingDays(s){
+  if(!s?.construction)return 0;
+  const c=s.construction;
+  if(c.version===2)return Math.max(0,Number(c.workRequired)-Number(c.workDone))/Math.max(1,Number(c.workers)||1);
+  return Math.max(0,c.completeDay-State.clock.day);
+}
+function constructionWorkStatus(s){
+  const c=s?.construction;
+  if(!c||!underConstruction(s))return '';
+  if(c.version!==2)return 'Procedural construction';
+  const wd=((Math.floor(State.clock.day)%7)+7)%7;
+  if(wd>=5)return 'Workers resting (weekend)';
+  return c.workers>0?c.workers+' L1 assigned':'Waiting for idle L1 workers';
+}
+function migrateConstructionSites(){
+  if(!State.village?.founded)return 0;
+  let changed=0;
+  for(const s of State.structures||[]){
+    const c=s.construction;
+    if(s.auto||!c||c.version===2||constructionProgress(s)>=1)continue;
+    const a=Number(c.startedDay),b=Number(c.completeDay);
+    if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a)continue;
+    // Never restart partial old-build progress or grant free work at migration.
+    const completedRatio=clamp((State.clock.day-a)/(b-a),0,1);
+    s.construction={version:2,startedDay:a,workRequired:b-a,
+      workDone:(b-a)*completedRatio,lastWorkDay:Math.max(State.clock.day,a),
+      workers:0,completedDay:null};
+    changed++;
+  }
+  return changed;
+}
+function tickConstructionWork(fromDay,toDay){
+  if(!State.village?.founded)return[];
+  migrateConstructionSites();
+  const start=Number(fromDay),end=Number(toDay);
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return[];
+  const completed=[];
+  let t=Math.max(0,start),guard=0;
+  while(t<end-1e-9&&guard++<10000){
+    const next=Math.min(end,Math.floor(t)+1);
+    if(next<=t+1e-9)break;
+    const workerDay=constructionWorkClock(next)-constructionWorkClock(t);
+    const sites=(State.structures||[]).filter(s=>
+      !s.auto&&s.construction?.version===2&&underConstruction(s)&&
+      s.construction.startedDay<next
+    ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
+      String(a.id).localeCompare(String(b.id)));
+    if(sites.length){
+      const free=workerDay>0?Math.max(0,Math.floor(window.ConquerEconomy?.availableBuilders?.(t)||0)):0;
+      const allocated=new Map(sites.map(s=>[s.id,0]));
+      let remaining=free;
+      // Breadth-first distribution: every queued site gets one worker before
+      // any site gets a second, then up to three per construction.
+      for(let pass=0;pass<CONSTRUCTION_MAX_WORKERS&&remaining>0;pass++)
+        for(const s of sites){
+          if(!remaining)break;
+          if(allocated.get(s.id)===pass){allocated.set(s.id,pass+1);remaining--;}
+        }
+      for(const s of sites){
+        const c=s.construction,n=allocated.get(s.id)||0;
+        const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
+        const work=Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n;
+        c.workers=n;
+        if(work>0){
+          c.workDone=Math.min(c.workRequired,c.workDone+work);
+          State.dirty=true;
+        }
+        c.lastWorkDay=Math.max(next,Number(c.lastWorkDay)||0);
+        if(c.workDone>=c.workRequired-1e-8){
+          c.workDone=c.workRequired;c.completedDay=next;c.workers=0;
+          completed.push(s);
+        }
+      }
+    }
+    t=next;
+  }
+  return completed;
+}
 function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
@@ -689,7 +782,7 @@ function pointRadius(s){
       scene:{
         structures:all.length,
         roads:all.reduce((n,x)=>n+(x?.type==='road'?1:0),0),
-        construction:all.reduce((n,x)=>n+(x?.construction&&finite(x.construction.completeDay)>day?1:0),0)
+        construction:all.reduce((n,x)=>n+(x?.construction&&underConstruction(x)?1:0),0)
       }
     };
     samples.push(s);trim(samples,MAX_SAMPLES);
