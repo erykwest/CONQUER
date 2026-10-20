@@ -10,6 +10,9 @@ on:
       - 'qa/construction*.cjs'
       - 'src/settlement-core.js'
       - 'src/settlement-commerce.js'
+      - 'src/settlement-population-residents.js'
+      - 'src/settlement-population-routines.js'
+      - 'src/settlement-app-rooms.js'
       - 'qa/commerce*.cjs'
       - '.github/workflows/economy-flows-regression.yml'
   workflow_dispatch:
@@ -26,6 +29,11 @@ jobs:
         run: |
           node qa/economy-regression.cjs
           node qa/commerce-skeleton-regression.cjs
+          node qa/settlement-routing-spawn-regression.cjs
+          node --check src/settlement-commerce.js
+          node --check src/settlement-population-routines.js
+          node --check src/settlement-population-residents.js
+          node --check src/settlement-app-rooms.js
           node qa/economy-industries-regression.cjs
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
