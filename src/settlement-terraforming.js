@@ -10,11 +10,10 @@
     if(!Array.isArray(State.relief.terraforming))State.relief.terraforming=[];
     for(const edit of State.relief.terraforming){
       if(edit?.mode!=='walled'||!edit.center||!Number.isFinite(Number(edit.radius)))continue;
-      const width=Math.max(1.25,Math.abs((Number(edit.targetZ)||0)-(Number(edit.baseZ)||0))*1.25,Number(edit.edgeWidth)||0);
-      if(edit.profile==='sloped'&&edit.material==='stone'&&Number(edit.edgeWidth)>=width-.001)continue;
-      edit.profile='sloped';edit.material='stone';edit.edgeWidth=width;
+      if(edit.profile==='vertical'&&edit.material==='stone'&&edit.edgeWidth===0)continue;
+      edit.profile='vertical';edit.material='stone';edit.edgeWidth=0;
       edit.top=polygon(edit.center,Number(edit.radius),Number(edit.rotation)||0);
-      edit.outer=polygon(edit.center,Number(edit.radius)+width,Number(edit.rotation)||0);
+      edit.outer=edit.top.map(p=>({...p}));
     }
     return State.relief.terraforming;
   }
@@ -59,9 +58,10 @@
     return edits().some(edit=>edit.mode==='walled'&&
       dist(candidate.center,edit.center)<candidate.radius+edit.radius+Math.max(candidate.edgeWidth||0,edit.edgeWidth||0)-1e-6);
   }
-  function elevationAt(point,baseZ=0){
+  function elevationAt(point,baseZ=0,{excludeWalled=false}={}){
     let z=Number(baseZ)||0;
     for(const edit of edits()){
+      if(excludeWalled&&edit.mode==='walled')continue;
       if(pointInPolygon(point,edit.top)){
         z=edit.targetZ;
         continue;
@@ -74,6 +74,7 @@
   }
   function slopeAt(point){
     for(const edit of edits().slice().reverse()){
+      if(edit.mode==='walled'&&edit.top.some((a,i)=>dist(point,segmentProjection(point,a,edit.top[(i+1)%edit.top.length]))<=.12))return 'steep';
       if(pointInPolygon(point,edit.top))return null;
       if(pointInPolygon(point,edit.outer))return edit.mode==='walled'?'steep':'gentle';
     }
@@ -121,13 +122,13 @@
     const naturalZ=Number(terrainBaseElevation(resolvedCenter))||0;
     const baseZ=elevationAt(resolvedCenter,naturalZ);
     const targetZ=clamp(Math.round((baseZ+delta)*2)/2,LIMITS.minZ,LIMITS.maxZ);
-    const edgeWidth=mode==='walled'?Math.max(1.25,Math.abs(targetZ-baseZ)*1.25):2;
+    const edgeWidth=mode==='walled'?0:2;
     const rotation=wallSnap?.rotation??(Number.isFinite(Number(options.rotation))?Number(options.rotation):-Math.PI/SEGMENTS);
     const top=polygon(resolvedCenter,radius,rotation),outer=polygon(resolvedCenter,radius+edgeWidth,rotation);
     const ghost={
       id:null,previewOnly:true,mode,center:{x:resolvedCenter.x,y:resolvedCenter.y},radius,delta,
       baseZ,targetZ,edgeWidth,rotation,top,outer,wallSnap,
-      profile:mode==='walled'?'sloped':'graded',material:mode==='walled'?'stone':'terrain',
+      profile:mode==='walled'?'vertical':'graded',material:mode==='walled'?'stone':'terrain',
       ok:true,reason:''
     };
     if(!insideBuild(outer)){

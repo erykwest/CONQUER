@@ -2,7 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
-## 2026-10-20 — Scarpata murata spiovente
+## 2026-10-20 — Chiarimento definitivo: gradone verticale color muro
+
+- Recepita la correzione esplicita: collina naturale invariata; terrazzamento verticale color muro con piano superiore piatto.
+- Eliminata completamente l'inclinazione; migrazione dei terrazzamenti inclinati già salvati. Mesh WebGL2 ritagliata al perimetro e chiusa con facce verticali.
+- Dieci controlli dedicati, inclusa verifica della mesh contro rampe spurie, buchi e sovrapposizione del suolo.
+
+## 2026-10-20 — Scarpata murata spiovente (interpretazione superata)
 
 - Sostituito il bordo quasi verticale del terrazzamento murato con una scarpata inclinata, larga almeno 1,25 U e proporzionale al dislivello.
 - Allineata la scarpata alla palette laterale delle mura; il piano superiore resta terreno calpestabile.

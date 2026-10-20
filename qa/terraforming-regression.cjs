@@ -49,26 +49,30 @@ test('a walled terrace cannot overlap another walled terrace',()=>{
   assert.equal(separate.ok,true);
 });
 
-test('a walled terrace exposes a visible sloped masonry revetment',()=>{
+test('a walled terrace has exactly vertical masonry faces and a flat top',()=>{
   context.State.relief.terraforming=[];
   const ghost=api.preview({x:100,y:100},{mode:'walled',delta:1,radius:4,magnet:false});
-  assert.equal(ghost.profile,'sloped');
+  assert.equal(ghost.profile,'vertical');
   assert.equal(ghost.material,'stone');
-  assert.ok(ghost.edgeWidth>=Math.abs(ghost.targetZ-ghost.baseZ));
-  assert.ok(ghost.outer[0].x-ghost.top[0].x>.9);
+  assert.equal(ghost.edgeWidth,0);
+  assert.deepEqual(ghost.outer,ghost.top);
+  api.commit(ghost);
+  assert.equal(api.elevationAt({x:103.9,y:100},0),1);
+  assert.equal(api.elevationAt({x:104.01,y:100},0),0);
+  assert.equal(api.slopeAt({x:103.97,y:100}),'steep');
 });
 
-test('saved vertical terraces migrate to the sloped masonry profile',()=>{
+test('saved sloped terraces migrate to the vertical masonry profile',()=>{
   context.State.relief.terraforming=[{
     id:'terraform-legacy',mode:'walled',center:{x:100,y:100},radius:4,
-    baseZ:0,targetZ:1,edgeWidth:.12,rotation:0,
+    baseZ:0,targetZ:1,edgeWidth:1.25,rotation:0,profile:'sloped',material:'stone',
     top:[{x:104,y:100}],outer:[{x:104.12,y:100}]
   }];
   const migrated=api.edits()[0];
-  assert.equal(migrated.profile,'sloped');
+  assert.equal(migrated.profile,'vertical');
   assert.equal(migrated.material,'stone');
-  assert.ok(migrated.edgeWidth>=1.25);
-  assert.ok(migrated.outer[0].x-migrated.top[0].x>.9);
+  assert.equal(migrated.edgeWidth,0);
+  assert.deepEqual(migrated.outer,migrated.top);
 });
 
 test('walled terrace magnet aligns its edge to the near wall face',()=>{
@@ -114,6 +118,34 @@ test('free terrace edges share the walls 15 degree angle lattice',()=>{
     const a=ghost.top[i],b=ghost.top[(i+1)%ghost.top.length];
     const degrees=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
     assert.ok(Math.abs(degrees/15-Math.round(degrees/15))<1e-9,'edge '+i+' is '+degrees+' degrees');
+  }
+});
+
+test('WebGL terrain cuts a sharp step and closes it with vertical wall-colour faces',()=>{
+  context.State.relief.terraforming=[];
+  api.commit(api.preview({x:100,y:100},{mode:'walled',radius:4,delta:1,magnet:false}));
+  const world=fs.readFileSync(path.join(__dirname,'..','src','settlement-world3d.js'),'utf8');
+  const faces=[];
+  context.meshBuilder=()=>({tris:[],face:(points,color)=>faces.push({points,color})});
+  context.terrainElevation=p=>api.elevationAt(p,0);
+  context.clipTerrainPolygon=poly=>poly;
+  vm.runInContext(world.slice(world.indexOf('  function buildTerrain(){'),world.indexOf('  // Mountains as raised fans')),context);
+  vm.runInContext(world.slice(world.indexOf('  const EDGE_STEP='),world.indexOf('  // Bake the existing 2D ground')),context);
+  const triangles=vm.runInContext('buildTerrain()',context);
+  let area=0;
+  for(let i=0;i<triangles.length;i+=9){
+    const [ax,ay,az,bx,by,bz,cx,cy,cz]=triangles.slice(i,i+9);
+    assert.equal(az,bz);assert.equal(bz,cz,'terrain triangle must not bridge the vertical step');
+    area+=Math.abs((bx-ax)*(cy-ay)-(by-ay)*(cx-ax))/2;
+  }
+  assert.ok(Math.abs(area-context.WORLD**2)<.05,'ground and terrace top cover the world without holes or overlap');
+  vm.runInContext('buildTerrainEdges()',context);
+  const walls=faces.filter(f=>['#49443f','#686057'].includes(f.color));
+  assert.equal(walls.length,24);
+  for(const {points:[a,b,c,d]} of walls){
+    assert.equal(a.x,d.x);assert.equal(a.y,d.y);
+    assert.equal(b.x,c.x);assert.equal(b.y,c.y);
+    assert.equal(a.z,0);assert.equal(d.z,1);
   }
 });
 

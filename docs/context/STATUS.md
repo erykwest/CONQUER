@@ -15,10 +15,10 @@
 
 - **BRANCH + CODICE:** due modalità nel Builder, **Terreno** e **Terrazzamento murato**, entrambe con ghost della quota finale, raggio 2/4/6 U e scavo/innalzamento di 1 U.
 - **VINCOLO:** il piazzamento di un terrazzamento murato sopra un altro è respinto prima del commit, evitando accumuli anomali e aree invalicabili. Il bordo fornisce magneti alle mura; il loro asse viene traslato di mezzo spessore così che la faccia esterna rimanga a filo.
-- **CORREZIONE VISIVA 20/10:** il bordo murato usa una scarpata inclinata larga almeno 1,25 U, proporzionale al dislivello, e gli stessi toni laterali delle mura. I terrazzamenti già salvati con il vecchio bordo quasi verticale vengono migrati in memoria al nuovo profilo.
+- **CHIARIMENTO DEFINITIVO:** terrazzamento con pareti esattamente verticali color muro e piano piatto; collina naturale invariata. Migrazione dei vecchi terrazzamenti inclinati e ritaglio esatto della mesh WebGL2 al bordo. Dieci controlli dedicati, compresa copertura del suolo senza buchi e assenza di triangoli inclinati nel salto di quota.
 - **CONTRATTO TECNICO:** gli interventi persistono in `State.relief.terraforming`; `terrainElevation` e `terrainSlopeKind` restano i punti condivisi per regole, Canvas e mesh WebGL2. Il ghost non muta il rilievo e non invalida cache o navigazione durante il movimento del puntatore.
 - **QA LOCALE PASS:** tutte le suite `qa/*.cjs`, inclusi i 9 controlli di `qa/terraforming-regression.cjs`; `node --check` sui file modificati; `git diff --check`.
-- **BROWSER PASS (Chromium via HTTP):** ghost valido/rosso, scarpata spiovente in muratura, rifiuto sovrapposizione, persistenza dopo reload e muro agganciato a due vertici del terrazzamento con quota H1 e faccia a filo. Nessun errore applicativo in console; osservato soltanto l'avviso Chromium non bloccante su `powerPreference` e il `favicon.ico` assente.
+- **BROWSER STORICO (prima del chiarimento verticale):** verificati ghost, sovrapposizione, reload e aggancio mura. Questa prova non certifica la nuova mesh verticale; la geometria corrente è verificata dalla QA dedicata.
 - **LIMITE DI RILASCIO:** commit `fa9ef0d` è fuori da `main`; nessuna PR, merge o pubblicazione effettuata in questo aggiornamento.
 
 ## Diagnosi e fix in corso — crescita e ordini su main (16/10/2026)

@@ -202,6 +202,39 @@
     const W=WORLD;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
     if(terraformEdits.length){
+      const terraces=terraformEdits.filter(e=>e.mode==='walled');
+      // Cut the ground exactly at terrace edges. Sampling a height discontinuity
+      // would create diagonal triangles instead of a vertical masonry wall.
+      const halfPlane=(poly,a,b,inside)=>{
+        const result=[],side=p=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);
+        for(let i=0;i<poly.length;i++){
+          const p=poly[i],q=poly[(i+1)%poly.length],dp=side(p),dq=side(q);
+          const pin=inside?dp>=0:dp<=0,qin=inside?dq>=0:dq<=0;
+          if(pin)result.push(p);
+          if(pin!==qin){const t=dp/(dp-dq);result.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t,z:p.z+(q.z-p.z)*t})}
+        }
+        return result;
+      };
+      const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
+      const ground=tri=>{
+        let pieces=[tri];
+        for(const edit of terraces){
+          if(tri.every(p=>p.x<edit.center.x-edit.radius)||tri.every(p=>p.x>edit.center.x+edit.radius)||
+             tri.every(p=>p.y<edit.center.y-edit.radius)||tri.every(p=>p.y>edit.center.y+edit.radius))continue;
+          const next=[];
+          for(const piece of pieces){
+            let inner=piece;
+            for(let i=0;i<edit.top.length&&inner.length>=3;i++){
+              const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
+              const outside=halfPlane(inner,a,b,false);
+              if(outside.length>=3)next.push(outside);
+              inner=halfPlane(inner,a,b,true);
+            }
+          }
+          pieces=next;
+        }
+        pieces.forEach(emit);
+      };
       // Once the player edits elevation, sample the single authoritative terrainElevation
       // contract. A denser build-area grid preserves terrace and excavation silhouettes;
       // the untouched world buffer stays coarse to limit upload cost.
@@ -209,7 +242,8 @@
         for(let y=y0;y<y1-1e-6;y+=step)for(let x=x0;x<x1-1e-6;x+=step){
           const xa=Math.min(x1,x+step),ya=Math.min(y1,y+step);
           const p00={x,y},p10={x:xa,y},p11={x:xa,y:ya},p01={x,y:ya};
-          for(const p of [p00,p10,p11,p00,p11,p01])push(p.x,p.y,terrainElevation(p));
+          for(const p of [p00,p10,p11,p01])p.z=window.ConquerTerraforming.elevationAt(p,terrainBaseElevation(p),{excludeWalled:true});
+          ground([p00,p10,p11]);ground([p00,p11,p01]);
         }
       };
       grid(0,0,W,BUILD_MIN,2);
@@ -217,6 +251,7 @@
       grid(0,BUILD_MIN,BUILD_MIN,BUILD_MAX,2);
       grid(BUILD_MAX,BUILD_MIN,W,BUILD_MAX,2);
       grid(BUILD_MIN,BUILD_MIN,BUILD_MAX,BUILD_MAX,.5);
+      for(const edit of terraces)emit(edit.top.map(p=>({...p,z:edit.targetZ})));
       return new Float32Array(v);
     }
     for(const [x,y] of [[0,0],[W,0],[W,W],[0,0],[W,W],[0,W]])push(x,y,0);
@@ -257,6 +292,13 @@
   const EDGE_STEP=.1,EDGE_SECTION=['#5d5144','#4e443a'];
   function buildTerrainEdges(){
     const m=meshBuilder(),W=WORLD,n=Math.round(W/EDGE_STEP);
+    for(const edit of window.ConquerTerraforming?.edits?.()||[]){
+      if(edit.mode!=='walled')continue;
+      for(let i=0;i<edit.top.length;i++){
+        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
+        m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+      }
+    }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
     borders.forEach((at,side)=>{
       let prev=at(0),hp=terrainElevation(prev);
