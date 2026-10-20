@@ -154,9 +154,26 @@
       ['Pietra quadrata L3',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Pietra quadrata L3 tetto',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched'}],
       ['Pietra rotonda L3 caditoie',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation'}],
+      ['Grande quadrata L3 merli',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement'}],
+      ['Grande quadrata L3 caditoie',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'buttress'}],
+      ['Grande rotonda L3 merli',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',baseStyle:'splayed'}],
+      ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}]
+    ],
+    walls:[
+      ['Muro sottile T1 H1',{type:'wall',tier:1,level:1,skin:'standard'}],
+      ['Muro medio T2 H1',{type:'wall',tier:2,level:1,skin:'standard'}],
+      ['Muro spesso T3 H1',{type:'wall',tier:3,level:1,skin:'standard'}],
+      ['Muro medio T2 H2',{type:'wall',tier:2,level:2,skin:'standard'}],
+      ['Muro spesso T3 H2',{type:'wall',tier:3,level:2,skin:'standard'}],
+      ['T2 H2 caditoie',{type:'wall',tier:2,level:2,skin:'machicolation'}],
+      ['T2 H2 hoardings',{type:'wall',tier:2,level:2,skin:'hoarding'}],
+      ['T1 H1 hoardings',{type:'wall',tier:1,level:1,skin:'hoarding'}],
+      ['Palizzata T1',{type:'palisade',tier:1,level:1}],
+      ['Palizzata T2',{type:'palisade',tier:2,level:1}],
+      ['Palizzata T3',{type:'palisade',tier:3,level:1}]
     ],
     gates:[
       ['Porta pietra L1',{type:'gate',shape:'square',material:'stone',size:1.5,level:1,roofStyle:'battlement'}],
@@ -178,8 +195,24 @@
   }
   // Fixed columns, so a phase always sits under its heading (a L1 tower skips the storeys).
   const COLUMNS={towers:['intatta','danneggiata','crollo 1 piano','crollo 2 piani','distrutta'],
-    gates:['intatta','danneggiata','portone incrinato','portone sfondato','crollo 1 piano','crollo 2 piani','distrutta']};
+    gates:['intatta','danneggiata','portone incrinato','portone sfondato','crollo 1 piano','crollo 2 piani','distrutta'],
+    walls:['intatto','campata danneggiata','breccia','due brecce','distrutto']};
+  // Walls: 7.5 U, three bays; hits land at the bay centres of the original line, on
+  // whatever stretch stands there after earlier breaches.
+  const WALL_L=7.5,BAY_T=[1/6,1/2,5/6];
+  function hitBay(s0,t,f){
+    const S=window.ConquerSiege,p={x:s0.a.x+(s0.b.x-s0.a.x)*t,y:s0.a.y+(s0.b.y-s0.a.y)*t};
+    const w=State.structures.find(x=>['wall','palisade'].includes(x.type)&&x.a&&x.b&&pointSegmentDistance(p,x.a,x.b)<.05);
+    if(!w)return;
+    const list=S.bays(w),i=S.bayIndexAt(w,p),bay=list[i],factor=S.effectiveness('trebuchet',w,'core')||1;
+    const damage=bay.hp-bay.max*f;if(damage>0)S.attackStructure(w.id,'trebuchet',damage/factor+1e-6,i);
+  }
+  function wallPhases(){
+    return[['intatto',()=>{}],['campata danneggiata',s=>hitBay(s,BAY_T[1],.4)],['breccia',s=>hitBay(s,BAY_T[1],0)],
+      ['due brecce',s=>{hitBay(s,BAY_T[0],0);hitBay(s,BAY_T[2],0)}],['distrutto',s=>{for(const t of BAY_T)hitBay(s,t,0)}]];
+  }
   function phases(spec){
+    if(['wall','palisade'].includes(spec.type))return wallPhases();
     const L=spec.level||1,wood=spec.material==='wood',out=[['intatta',()=>{}],['danneggiata',s=>hpTo(s,.85)]];
     if(spec.type==='gate')out.push(['portone incrinato',s=>doorTo(s,.5)],['portone sfondato',s=>doorTo(s,0)]);
     if(!wood)for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
@@ -190,7 +223,7 @@
   function gallery(kind='towers'){
     const rows=GALLERY[kind];if(!rows)throw new Error('gallery: towers|gates');
     run=null;State.structures=[];if(State.siege)State.siege.ruins=[];
-    const heads=COLUMNS[kind],cols=heads.length,DX=4.6,DY=5.2;
+    const heads=COLUMNS[kind],cols=heads.length,DX=kind==='walls'?9.5:4.6,DY=kind==='walls'?3.4:5.2;
     let c=null;
     for(let x=40;x<=150&&!c;x+=5)for(let y=20;y<=150&&!c;y+=5){
       let ok=true;
@@ -201,7 +234,10 @@
     const made=[];
     rows.forEach(([label,spec],j)=>phases(spec).forEach(([phase,apply])=>{
       const i=heads.indexOf(phase);
-      const s={id:uid(),functions:[],angle:0,rotationStep:0,...spec,x:c.x+i*DX,y:c.y+j*DY};
+      const x=c.x+i*DX,y=c.y+j*DY,linear=['wall','palisade'].includes(spec.type);
+      const s=linear
+        ?{id:uid(),functions:[],flip:false,...spec,width:wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
+        :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
       State.structures.push(s);made.push({s,apply});
     }));
     invalidateSceneCache();window.ConquerWallWalk?.invalidate();

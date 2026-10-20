@@ -353,6 +353,16 @@
     const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=groundOf(s);
     startCollapse(s,g,g+structureHeight(s)+.18,{cause:'breach',a:p0,b:p1,
       parts:[[{x:p0.x+nx,y:p0.y+ny},{x:p1.x+nx,y:p1.y+ny},{x:p1.x-nx,y:p1.y-ny},{x:p0.x-nx,y:p0.y-ny}]]});
+    // What overhangs the bay on the outer face comes down with it: the timber gallery of a
+    // hoarding as beams and planks, a machicolation's corbels and parapet as stone.
+    const skin=s.type==='wall'&&typeof wallSkin==='function'?wallSkin(s):'standard';
+    if(skin==='hoarding'||skin==='machicolation'){
+      const side=typeof wallExteriorSide==='function'?wallExteriorSide(s):1,ex=-uy*side,ey=ux*side,H=structureHeight(s);
+      const [o0,o1,z0,z1]=skin==='hoarding'?[hw-.02,hw+.42,H-.05,H+.66]:[hw-.035,hw+.145,H-.23,H+.4];
+      const strip=[{x:p0.x+ex*o0,y:p0.y+ey*o0},{x:p1.x+ex*o0,y:p1.y+ey*o0},{x:p1.x+ex*o1,y:p1.y+ey*o1},{x:p0.x+ex*o1,y:p0.y+ey*o1}];
+      startCollapse(s,g+z0,g+z1,{cause:'breach-'+skin,parts:[strip],
+        ...(skin==='hoarding'?{material:'wood',palette:{side:['#7a5534','#5e4128','#8a6a42','#6b4a2e'],top:['#6b4a2e','#7a5534']}}:{})});
+    }
     const idx=State.structures.findIndex(t=>t.id===s.id);
     if(idx>=0)State.structures.splice(idx,1,...pieces);
     // Towers keep their links: the a end now belongs to the left stretch, the b end to the right.
@@ -446,7 +456,7 @@
     const pts=parts.flat(),cx=pts.reduce((t,p)=>t+p.x,0)/pts.length,cy=pts.reduce((t,p)=>t+p.y,0)/pts.length;
     const id=s.id+':'+(opts.cause||'collapse')+':'+x.ruins.length+':'+State.clock.day+':'+Math.round(z1*100);
     const spec={id,parts:parts.map(p=>p.map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))),z0,z1,ground:groundOf(s),
-      seed:id,palette:collapsePalette(s),material:collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey'||opts.cause==='ruin',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
+      seed:id,palette:opts.palette||collapsePalette(s),material:opts.material||collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey'||opts.cause==='ruin',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
     const ruin={id,type:'collapse',cause:opts.cause||'destroyed',structure:s.type,x:cx,y:cy,day:State.clock.day,spec};
     if(opts.a)Object.assign(ruin,{a:opts.a,b:opts.b,width:Number(s.width)||.5,height:structureHeight(s)});
     x.ruins.push(ruin);if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);
@@ -530,7 +540,8 @@
     if(!C())return rubbleGrid;
     for(const r of state().ruins){
       if(!r.spec)continue;
-      const g=r.spec.ground||0,breach=r.cause==='breach';
+      // A breach's heap (and the gallery that fell with it) is a way in, never a wall.
+      const g=r.spec.ground||0,breach=String(r.cause||'').startsWith('breach');
       for(const b of C().blocks(r.spec)){
         const q=C().pose(b,Infinity),h=q.z-g+Math.min(...b.s),L=b.s[0],ca=Math.cos(b.yaw),sa=Math.sin(b.yaw);
         if(h<=.01)continue;

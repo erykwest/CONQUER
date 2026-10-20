@@ -105,3 +105,19 @@ const wall=(o={})=>({id:'wall',type:'wall',a:{x:0,y:0},b:{x:8,y:0},length:8,widt
   assert.equal(ok({},'ladder'),true);
   console.log('PASS assault rules: T1 and hoardings repel ladders and towers');
 }
+
+{
+  // What overhangs the bay falls with it: a hoarding's timber gallery as wood, a
+  // machicolation's corbels as stone; the heaps outside the breach do not close it.
+  for(const [skin,material] of [['hoarding','wood'],['machicolation','stone']]){
+    const {State,S}=fixture(),w=wall({skin});State.structures.push(w);
+    for(let k=0;k<20;k++)S.attackStructure('wall','trebuchet',10,1);
+    const fell=State.siege.ruins.filter(r=>r.cause==='breach-'+skin);
+    assert.equal(fell.length,1,skin+' over the bay comes down');
+    assert.equal(fell[0].spec.material,material,'as '+material);
+    assert.ok(fell[0].spec.parts[0].every(p=>p.y>=.25-.05),'on the outer face of the wall');
+  }
+  const src=fs.readFileSync(root+'settlement-siege.js','utf8');
+  assert.match(src,/breach=String\(r\.cause\|\|''\)\.startsWith\('breach'\)/,'the fallen gallery is part of the way in');
+  console.log('PASS hoardings and machicolations fall with a breached bay');
+}
