@@ -55,6 +55,8 @@
 
 | D-039 | VINCOLO + CODICE BRANCH (20/10) | **Cantieri manuali:** il signore paga il lavoro L1 via tesoreria quando è realmente svolto; **crescita spontanea:** il valore del lavoro è incluso una volta nel costo di spawn, non addebitato al signore. | L1 riceve `wage.L1 / 20` oro per giornata-operaio effettiva, senza doppia paga mensile; i cantieri senza fondi si fermano. Lo `spawnCost` automatico è per ora valore imputato, non cassa privata realmente movimentata: soggetto finanziatore autonomo ancora da modellare. |
 
+| D-040 | VINCOLO DESIGN (20/10) + CODICE SKELETON | **L3 = botteghe e servizi locali** (per ora locanda e chiesa), con vendita diretta locale; **L4 = proprietari/investitori dei siti produttivi**; **L4+ = ruolo temporaneo di mercante/viaggiatore tra città**, non una classe demografica o canale obbligatorio per la vendita locale. | Il nuovo `ConquerCommerce` registra progetti di bottega L3, servizi gestiti, proprietà primarie esistenti, manifesti L4+ e posti letto espliciti. Non attribuire a questi registri produzione, spostamento fisico o pagamenti finché non sono implementati. [Contratto](../commerce-skeleton.md). |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
