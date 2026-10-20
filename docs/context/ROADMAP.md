@@ -38,6 +38,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**Tranche salari 20/10/2026, PR #55 Draft:** il signore paga i costruttori L1 per le sole giornate-operaio svolte sui cantieri del giocatore; lo spawn spontaneo incorpora il valore del lavoro come costo di creazione, senza pagamento duplicato. **Prossima dipendenza economica:** identificare chi finanzia davvero la crescita autonoma (famiglie, capitale L4, cassa urbana) prima di scalare da costo imputato a trasferimento monetario; poi completare le ricette materiali dello spawn e la verifica browser. Mantenere cantieri auto procedurali temporizzati finché non è attivo l'anti-deadlock.
+
+## Prossimo passo
+
 **Tranche percorsi L1 (20/10/2026, PR #55 Draft):** lavoratori assegnati univocamente e spostamento visuale attraverso rete pedonale casa/pozzo → cantiere. In assenza di percorso il lavoro non avanza. **Prossimi controlli:** QA browser su castello, mura e industrie; persistenza; prestazioni cache. Poi contabilizzare salari e priorità dei lavori, senza duplicare conti personali. Costruzioni procedurali ancora escluse dalla manodopera per evitare deadlock di fondazione.
 
 ## Prossimo passo
