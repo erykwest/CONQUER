@@ -46,6 +46,13 @@
 - **QA:** `qa/construction-commute-regression.cjs` verifica identità, andata/ritorno, industria, assenza di strada, cache e weekend. Le regressioni CI non sostituiscono la prova di gioco/browser e non attestano il pagamento salari.
 - **Aperto:** salari dei costruttori, percorsi speciali/assedi, gameplay dei cantieri autonomi e validazione browser/visiva.
 
+## Monete in carovana e carichi monotipo — 21/10/2026, PR #55 Draft
+
+- **CODICE BRANCH:** `ConquerCommerce.planJourney` ammette **al massimo una merce** e una borsa di monete `coinGold` separata dal mercato; la quotazione `caravanQuote` applica 100 punti di capienza/carretto, coefficienti di ingombro per bene, 0,2 oro per carro/giorno (valori di progetto senza prelievo automatico). Carri vuoti per missioni d'acquisto con monete.
+- **FONDI REALI:** `reserveJourneyCoins` trasferisce esplicitamente l'oro dichiarato dal wallet L4 al manifesto, senza duplicarlo; `cancelPlannedJourney` può rimborsare una sola volta prima della partenza. Monete estere non accreditate automaticamente alla città.
+- **COMPATIBILITÀ:** salvataggi `commerce` V1 migrati a V2; viaggio misto legacy conservato, ma nuovi manifesti multi-merce respinti. QA `qa/commerce-skeleton-regression.cjs` estesa a oro, capienza, finanziamento, rimborsi, vecchi save.
+- **NON ANCORA ATTIVO:** scambio, riempimento del carro al mercato estero, spese giornaliere, uscita/ingresso visivo dalle quattro arterie, nave, carovana fisica/world map. [Specifica](../commerce-skeleton.md).
+
 ## Commercio e servizi L3/L4/L4+ — skeleton 20/10/2026, PR #55 Draft
 
 - **CODICE BRANCH:** `src/settlement-commerce.js` definisce botteghe L3 locali (blueprint), servizi L3 locanda/chiesa con gestore opzionale, vista aggregata delle proprietà primarie L4 e manifesti dei viaggiatori L4+ in entrata/uscita; `index.html` ne carica il contratto dopo l'economia.
