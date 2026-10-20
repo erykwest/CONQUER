@@ -5,7 +5,21 @@ The civilian workforce uses completed housing cohorts (one adult male per L1/L2/
 - **L1**: goat/sheep tending (food), logging (wood), construction; no fieldwork.
 - **L2**: fields (plough, sow, harvest) and specialist extraction (quarry/mine).
 - **L3**: workshop jobs; L4, children and women are outside the V1 job scheduler.
-- **No** hunting/forest foraging and **no** new women's work loop in this iteration.
+- **No** hunting/forest foraging. The female daily routine is separate from the economic job scheduler; see below.
+
+## Adult female routines — visual (L1–L4)
+
+Visual routines, without changing male Job Manager staffing or material production:
+
+| Cohort | Mon–Fri mornings | Saturday morning | Sunday morning | Afternoons |
+|---|---|---|---|---|
+| L1/L2 | Household Voronoi lot work until noon | Market | Church | **leisure Female** |
+| L3 | Market | Market | Church | **leisure Female** |
+| L4 | **leisure Female** | Market | Church | **leisure Female** |
+
+The `leisure Female` social target is the nearest reachable public plaza (existing walkable market), well plaza, or garden parcel. Garden parcels are derived from existing `ConquerLivestock` "garden" house lots, rather than spawning new map objects; inaccessible fenced gardens are skipped. The routine uses existing village navigation and returns home in the late afternoon. When a required market/church is absent the agent does not invent or teleport to an unrelated structure. Work in lots is **visual only**, no second economic worker or harvest created. Existing combat overrides (evacuation) remain in control of final positions. Scheduled activity is exposed by `ConquerFemaleRoutines.activity(tier,weekday,frac)`.
+
+QA: `node qa/female-routines-regression.cjs`, also in the Job Manager workflow.
 
 ## Daily scheduling and food protection
 

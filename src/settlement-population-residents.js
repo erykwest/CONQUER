@@ -88,12 +88,15 @@ function residentClassPosition(house,resident,day,assignment){
         resident.id+'-herd',day,.24):null;
     }
   }
-  const weekly=window.ConquerEconomy?.weekday(State.clock.day);
-  if(weekly===6)return null; // Sunday rest: no scheduled civilian trips or labor.
-  if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip for all classes.
+  const weekly=window.ConquerEconomy?.weekday(State.clock.day)??((Math.floor(State.clock.day)%7+7)%7);
   const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
+  // Adult women's schedules span Saturday market and Sunday mass; do not apply
+  // the old all-civilians Sunday shutdown or male artisan/merchant routines.
+  if(resident.sex==='female'&&resident.age==='adult')
+    return window.ConquerFemaleRoutines?.position(house,resident,State.clock.day)??null;
+  if(weekly===6)return null; // Existing Sunday rest for men and children.
+  if(weekly===5)return familyPosition(house,State.clock.day);
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
-  if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
   // Field routes belong exclusively to L2 men.
   if(resident.sex==='male'&&assignment&&level===2)
     return peasantPosition(house,assignment,State.clock.day);
