@@ -44,7 +44,7 @@ A future migration must separate the current generic `workshop` business ledger 
 An L4+ manifest is explicitly planned through `planJourney()`:
 - `source:'resident'`: requires a completed **L4 household**, origins at the current village (identified by its stable well ID), destination is a **different** city.
 - `source:'external'`: origin must be a different city and the destination must be the current village; external travelers are never counted in local housing.
-- `cargo` is an array of valid, positive existing market goods. It is **a declaration only** and is not loaded from any source inventory yet.
+- `cargo` is an array of **at most one** valid market commodity; gold coin cargo is a separate purse (`coinGold`, `purse.gold/reservedGold`). The goods manifest is **declarative**, not loaded from any source inventory yet.
 - The role is `tier:4,role:'L4+'`, with statuses `planned → arrived → lodged → departed` (the `lodged` state may be skipped).
 - `confirmArrival()` is an explicit integration hook for **future** caravan/route completion; nothing triggers it from the time/calendar simulation today.
 - `checkIn()` requires a confirmed local arrival and a real `tavern` service with an available bed. `depart()` frees the bed. An inn cannot reduce capacity below occupied beds.
@@ -52,9 +52,21 @@ An L4+ manifest is explicitly planned through `planJourney()`:
 
 **Important:** no automatic departures/arrivals, carriage physics, customer purchases, cargo transfer, taxes, lodging payments or exports exist in this scaffold. The existing economy foreign-demand abstraction remains unchanged. Never enable a sale by changing only `manifest.status`; inventory/funding transfers need a separate atomic accounting design.
 
+## Monotype cargo and physical coin purse (21 October 2026)
+
+A journey is now **one kind of trade good, plus an independent purse of gold coins**. The gold purse is actual movable purchasing power, not a seventh `GOODS` resource and not a second trading commodity. This lets an L4+ merchant (a) export one good, (b) depart with an empty cart and cash to buy imports, or (c) sell abroad and reuse cash for a return purchase, when trade settlement is implemented. The current skeleton **does not yet settle sales or exchange cargo at the destination**.
+
+`planJourney({...,cargo:[{good,qty}],coinGold})` accepts **zero or one** goods line and an optional nonnegative gold amount rounded to thousandths. A proposed purchase-only trip `cargo:[],coinGold>0` quotes one empty wagon. Gold held in the purse **does not occupy trade cargo points**: it is too compact for coins to be a sensible volume-filler. Empty capacity is a legitimate economic inefficiency. Multiple commercial goods are rejected for new trips. Existing old-save mixed manifests remain as legacy data rather than being silently deleted.
+
+**Provisional land cargo model:** 100 capacity points per wagon, weight per unit: food 2, wood 5, stone 10, metal 8, equipment 3, luxury 1. A wagon carries 10 stone or 100 luxury units under these placeholders. `caravanQuote()` returns `loadPoints`, `wagons`, `freePoints` and an indicative operating cost of **0.2 gold per wagon/day**, *not* a charge yet. There is no second per-good travel price. Future textiles/leather/coins-as-precious-metal should have their own approved weight/provenance when added to the economic goods registry. The future naval model can reuse the monetary/merchandise split with its own capacity and fare tables.
+
+**No money creation:** simply declaring `coinGold` does not debit any wallet or mint spendable money; `purse:{gold,reservedGold}` distinguishes proposed funds from physically reserved funds. For a **resident outbound** journey, `reserveJourneyCoins(id)` explicitly transfers coins from the existing *aggregate L4 wallet* into journey escrow, with full funding or no action. The wallet loses exactly that amount. A second call does not debit twice; `cancelPlannedJourney(id)` refunds escrow exactly once, only before departure. For inbound **external** merchants, a declared coin purse has foreign provenance and is never credited to local money by itself. Sending, theft, unloading, spending, re-export, and final repatriation require later atomic balance/stock handling; no travel is scheduled by these methods.
+
+**Food is not a generic filler good.** Crew provisions can eventually be a separate upkeep allowance paid or consumed over travel days without becoming a second *commercial* line. Shipping a partly empty cart is allowed; cargo economics should be driven by margin, price, and round-trip transport costs, not fake ballast.
+
 ## Persistence and performance
 
-`State.economy.commerce={version:1,shops:{},services:{},journeys:{}}` lives inside the already-serialized economy for local and Supabase saves. Lazy `state()` handles older save games without clearing balances or inventing visits. `reset()` resets it with the economy. `sync()` removes orphan service/shop references and creates only completed-service descriptors. Journeys are **not** stepped each visual frame; no extra navigational agents or dynamic commodity loops were added. A small read-only summary appears in economy overview and selected-structure panels.
+`State.economy.commerce={version:1,shops:{},services:{},journeys:{}}` lives inside the already-serialized economy for local and Supabase saves. Lazy `state()` migrates older save games, preserving old multi-commodity manifests without copying gold into them or clearing balances/visits. Current commerce schema version is 2. `reset()` resets it with the economy. `sync()` removes orphan service/shop references and creates only completed-service descriptors. Journeys are **not** stepped each visual frame; no extra navigational agents or dynamic commodity loops were added. A small read-only summary appears in economy overview and selected-structure panels.
 
 ## QA and pending milestones
 
