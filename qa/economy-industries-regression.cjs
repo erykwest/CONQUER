@@ -146,6 +146,7 @@ test('production remains two units/day with two available workers',()=>{
 test('both yellow windmill variants stay 2x2U and require a flat H+1 terrace',()=>{
   const h=harness();
   for(const type of ['windmillA','windmillB']){
+    h.ctx.buildableTerrainElevationForStructure=()=>0;
     const mill=h.industry.make(type,{x:100,y:100});
     assert.equal(mill.w,2);assert.equal(mill.h,2);
     assert.equal(h.industry.validate(mill).ok,false,'H0 must reject windmills');
