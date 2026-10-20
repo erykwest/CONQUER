@@ -11,8 +11,7 @@
     quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
     mine:{good:'stone',classId:2,workers:2,rate:2,build:95},
     // Optional mills process unmarketed crop stock. No additional tradeable good.
-    windmillA:{good:'food',classId:1,workers:0,rate:12,build:40},
-    windmillB:{good:'food',classId:1,workers:0,rate:12,build:40},
+    windmill:{good:'food',classId:1,workers:0,rate:12,build:40},
     watermill:{good:'food',classId:1,workers:0,rate:12,build:45},
     workshop:{good:'equipment',classId:3,workers:1,rate:.5,inputs:{metal:.6,wood:.3},build:130},
     vineyard:{good:'luxury',classId:1,workers:2,build:90}
@@ -119,12 +118,12 @@
     const e=sync();if(weekday(day)>=5)return;
     const staffing=activeCapacity(),date=dateAt(day);
     const active=activeStructures(),hasMill=active.some(s=>
-      ['windmillA','windmillB','watermill'].includes(s.type)&&
+      ['windmill','watermill'].includes(s.type)&&
       !s.economyDisabled&&!s.destroyed&&!s.abandoned);
     for(const s of active){
       const a=e.activities[s.id],spec=KIND[s.type],staff=staffing[s.id]||0;
       if(s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
-      if(['windmillA','windmillB','watermill'].includes(s.type)){
+      if(['windmill','watermill'].includes(s.type)){
         // Milling is an optional service, even when no workforce is free.
         // Rural auto-fields are often privately owned while player mills
         // belong to the lord. A mill serves both owners without confiscating
