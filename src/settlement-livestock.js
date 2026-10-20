@@ -136,6 +136,25 @@
     }
     return true;
   }
+  function pastureBuildingAllowed(center,radius){
+    // A building can cut through the grazing disk even if the centre and
+    // eight compass samples are clear. Test each solid footprint exactly.
+    const clearance=radius+.20;
+    for(const building of State.structures){
+      if(['field','road','moat','bridge'].includes(building.type))continue;
+      for(const polygon of urbanBuildingPolygons(building)){
+        if(!polygon?.length)continue;
+        const xs=polygon.map(v=>v.x),ys=polygon.map(v=>v.y);
+        if(center.x<Math.min(...xs)-clearance||center.x>Math.max(...xs)+clearance||
+           center.y<Math.min(...ys)-clearance||center.y>Math.max(...ys)+clearance)continue;
+        if(pointInPolygon(center,polygon))return false;
+        for(let i=0;i<polygon.length;i++)
+          if(pointSegmentDistance(center,polygon[i],polygon[(i+1)%polygon.length])<=clearance)
+            return false;
+      }
+    }
+    return true;
+  }
   function whitePatch(p,r){
     // Cheap zoning checks first; run structure/fence collisions only after
     // the entire circular sample is outside the yellow and green territory.
@@ -212,7 +231,7 @@
         job.angle=0;job.ring+=2.5;
         if(job.ring>42){job.ring=5;job.factor++}
       }
-      if(!pastureIsSeparate(candidate,reach,job.house.id)||!whitePatch(candidate,reach)||!pastureTerrainAllowed(candidate,reach))continue;
+      if(!pastureIsSeparate(candidate,reach,job.house.id)||!whitePatch(candidate,reach)||!pastureTerrainAllowed(candidate,reach)||!pastureBuildingAllowed(candidate,reach))continue;
       const path=travelRoute(job.house,candidate);
       if(!path||!pastureIsSeparate(candidate,reach,job.house.id))continue;
       routeCache.set(job.house.id,{center:candidate,path,radius:reach});
