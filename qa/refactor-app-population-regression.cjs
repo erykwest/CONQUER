@@ -10,7 +10,10 @@ const root=__dirname+'/../';
 const siegeHooks={'population-navigation':[
   ["  if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap\n",''],
   ["'training','ruin'].includes(s.type))continue;","'training'].includes(s.type))continue;"],
-  ["if((s.type==='tower'||s.type==='ruin')&&s.shape==='round')","if(s.type==='tower'&&s.shape==='round')"]
+  ["if((s.type==='tower'||s.type==='ruin')&&s.shape==='round')","if(s.type==='tower'&&s.shape==='round')"],
+  // A closed gate with its door still whole shuts the passage.
+  ["      // A closed gate with its door still whole shuts the passage (settlement-siege.js).\n      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s))return true;continue}",
+   "      if(gatePointInPassage(s,p,.08))continue;"]
 ]};
 const read=name=>(siegeHooks[name]||[]).reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one siege hook: '+hooked.trim().slice(0,60));

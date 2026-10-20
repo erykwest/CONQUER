@@ -293,7 +293,8 @@ function pointBlockedForPeasant(p,sourceHouseId){
     if(s.type==='market')continue;
     if(s.type==='gate'){
       if(window.ConquerCrossings?.drawbridgeBlocks(p,s))return true;
-      if(gatePointInPassage(s,p,.08))continue;
+      // A closed gate with its door still whole shuts the passage (settlement-siege.js).
+      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s))return true;continue}
       const q=toLocalPoint(s,p),d=rectDims(s);
       if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
       continue;

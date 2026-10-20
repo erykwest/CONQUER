@@ -85,6 +85,11 @@ function renderFunctionPanel(){
       html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
     }
   }
+  if(s.type==='gate'&&!building&&window.ConquerSiege?.doorStage){
+    const st=window.ConquerSiege.doorStage(s),closed=!!s.closed&&st!=='broken';
+    const label={intact:'integro',damaged:'danneggiato',broken:'sfondato'}[st];
+    html+=`<div class="slot"><div class="slot-label">Portone · ${label}</div><div class="grid"><button data-gate-closed="0" class="${closed?'':'active'}">Aperto</button><button data-gate-closed="1" class="${closed?'active':''}" ${st==='broken'?'disabled':''}>Chiuso</button></div><div class="legend">Chiuso e integro blocca il passaggio a tutti; l'ariete lo sfonda e da sfondato resta aperto.</div></div>`;
+  }
   if(s.type==='built'){
     const skin=builtSkin(s);
     html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">Porticato affects only the interior ground floor.</div></div>`;
