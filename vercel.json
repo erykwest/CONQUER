@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "**": false,
       "main": true,
-      "animation": true
+      "animation": true,
+      "siege-engines": true
     }
   }
 }
