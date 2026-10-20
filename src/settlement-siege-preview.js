@@ -139,15 +139,112 @@
     if(!raf)raf=requestAnimationFrame(loop);
     return{kind,G:target.G};
   }
+  // ---------- destruction gallery: every tower and gate, phase by phase ----------
+  // One row per variant (the Builder's catalogue: stone square/round by level and roof,
+  // wood towers, stone gates by level, the wood gate), one column per phase: intact,
+  // damaged, door cracked / broken in (gates), a storey down for each level lost, and
+  // destroyed. Damage goes through ConquerSiege, so the phases are the game's own
+  // (storey collapses, ruined stumps, wood breaking up). Dev only: it clears the map.
+  const sq=t=>typeof towerSizeForTier==='function'?towerSizeForTier('square',t):[1,1.5,2][t-1];
+  const rd=t=>typeof towerSizeForTier==='function'?towerSizeForTier('round',t):[.5,.75,1][t-1];
+  const GALLERY={
+    towers:[
+      ['Pietra quadrata L1',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata L2',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata L3',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata L3 tetto',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched'}],
+      ['Pietra rotonda L3 caditoie',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation'}],
+      ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
+      ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
+      ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}]
+    ],
+    gates:[
+      ['Porta pietra L1',{type:'gate',shape:'square',material:'stone',size:1.5,level:1,roofStyle:'battlement'}],
+      ['Porta pietra L2',{type:'gate',shape:'square',material:'stone',size:1.5,level:2,roofStyle:'battlement'}],
+      ['Porta pietra L3',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'battlement'}],
+      ['Porta pietra L3 tetto',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'pitched'}],
+      ['Porta legno',{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}]
+    ]
+  };
+  function hpTo(s,f){
+    const S=window.ConquerSiege,st=S.integrity(s);if(!st)return;
+    const factor=S.effectiveness('trebuchet',s,'core')||1,damage=st.core.hp-st.core.max*f;
+    if(damage>0)S.attackStructure(s.id,'trebuchet',damage/factor+1e-6,'core');
+  }
+  function doorTo(s,f){
+    const S=window.ConquerSiege,st=S.integrity(s);if(!st?.door)return;
+    const factor=S.effectiveness('ram',s,'door')||1,damage=st.door.hp-st.door.max*f;
+    if(damage>0)S.attackStructure(s.id,'ram',damage/factor+1e-6,'door');
+  }
+  // Fixed columns, so a phase always sits under its heading (a L1 tower skips the storeys).
+  const COLUMNS={towers:['intatta','danneggiata','crollo 1 piano','crollo 2 piani','distrutta'],
+    gates:['intatta','danneggiata','portone incrinato','portone sfondato','crollo 1 piano','crollo 2 piani','distrutta']};
+  function phases(spec){
+    const L=spec.level||1,wood=spec.material==='wood',out=[['intatta',()=>{}],['danneggiata',s=>hpTo(s,.85)]];
+    if(spec.type==='gate')out.push(['portone incrinato',s=>doorTo(s,.5)],['portone sfondato',s=>doorTo(s,0)]);
+    if(!wood)for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
+    out.push(['distrutta',s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,0)}]);
+    return out;
+  }
+  let galleryLabels=null;
+  function gallery(kind='towers'){
+    const rows=GALLERY[kind];if(!rows)throw new Error('gallery: towers|gates');
+    run=null;State.structures=[];if(State.siege)State.siege.ruins=[];
+    const heads=COLUMNS[kind],cols=heads.length,DX=4.6,DY=5.2;
+    let c=null;
+    for(let x=40;x<=150&&!c;x+=5)for(let y=20;y<=150&&!c;y+=5){
+      let ok=true;
+      for(let i=0;i<cols&&ok;i++)for(let j=0;j<rows.length&&ok;j++)if(Math.abs(terrainElevation({x:x+i*DX,y:y+j*DY}))>.001)ok=false;
+      if(ok)c={x,y};
+    }
+    c=c||{x:60,y:40};
+    const made=[];
+    rows.forEach(([label,spec],j)=>phases(spec).forEach(([phase,apply])=>{
+      const i=heads.indexOf(phase);
+      const s={id:uid(),functions:[],angle:0,rotationStep:0,...spec,x:c.x+i*DX,y:c.y+j*DY};
+      State.structures.push(s);made.push({s,apply});
+    }));
+    invalidateSceneCache();window.ConquerWallWalk?.invalidate();
+    // Every hit redraws the scene: hold the redraws while the phases are applied.
+    const realDraw=draw;draw=()=>{};
+    try{for(const {s,apply} of made){try{apply(s)}catch(e){console.error('gallery',e)}}}finally{draw=realDraw}
+    galleryLabels={rows:rows.map(([label],j)=>({label,at:{x:c.x-2.6,y:c.y+j*DY}})),
+      cols:heads.map((p,i)=>({label:p,at:{x:c.x+i*DX,y:c.y-2.8}}))};
+    // Camera on the whole grid.
+    State.view.rotation=0;
+    const wrap=document.getElementById('wrap')||document.body,box=wrap.getBoundingClientRect();
+    const rc=box.width>10?box:{width:1024,height:710};                 // hidden page: a nominal view
+    const mid={x:c.x+(cols-1)*DX/2,y:c.y+(rows.length-1)*DY/2};
+    State.view.scale=Math.min(rc.width/((cols+rows.length)*DX*12*.95),rc.height/((cols+rows.length)*DY*6*.95+40))*1.1;
+    const p=w2s(mid,0);State.view.x+=rc.width/2-p.x;State.view.y+=rc.height*.55-p.y;
+    invalidateSceneCache();draw();
+    return{kind,rows:rows.length,cols,origin:c,rowLabels:rows.map(([l])=>l),columns:heads,DX,DY};
+  }
+  // Labels over the gallery (row names on the left, phases on top).
+  function drawGalleryLabels(){
+    if(!galleryLabels)return;
+    ctx.save();ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.65)';ctx.fillStyle='#f3e6cf';
+    for(const l of [...galleryLabels.rows,...galleryLabels.cols]){const p=w2s(l.at,0);ctx.strokeText(l.label,p.x,p.y);ctx.fillText(l.label,p.x,p.y)}
+    ctx.restore();
+  }
+  if(typeof drawCastleSoldiers==='function'){
+    const prior=drawCastleSoldiers;
+    drawCastleSoldiers=function(){const r=prior.apply(this,arguments);try{drawGalleryLabels()}catch(e){}return r};
+  }
   function at(t){if(!run)return;run.frozen=t;draw()}
   function play(){if(!run)return;run.t0=performance.now()/1000-(run.frozen||0);run.frozen=null;if(!raf)raf=requestAnimationFrame(loop)}
   function stop(){
     if(run?.patch&&run.target.moat){run.target.moat.fills=run.target.moat.fills.filter(f=>f!==run.patch);invalidateSceneCache(['ground','base'])}
     run=null;draw();
   }
-  window.ConquerSiegePreview={start,stop,at,play,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G,blocked:run.blocked}};
+  // Labels on/off (contact sheets capture each cell alone, without them).
+  function setGalleryLabels(on){if(!on)galleryLabels=null}
+  window.ConquerSiegePreview={start,stop,at,play,gallery,setGalleryLabels,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G,blocked:run.blocked}};
   const q=new URLSearchParams(location.search),wanted=q.get('siege');
   if(wanted)window.addEventListener('load',()=>setTimeout(()=>{
-    try{start(wanted,{level:Number(q.get('level'))||undefined,hides:q.get('hides')==='1'})}catch(e){console.error('siege preview',e)}
+    try{
+      if(wanted.startsWith('gallery'))gallery(wanted.split('-')[1]||'towers');
+      else start(wanted,{level:Number(q.get('level'))||undefined,hides:q.get('hides')==='1'});
+    }catch(e){console.error('siege preview',e)}
   },300));
 })();

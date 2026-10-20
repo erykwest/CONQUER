@@ -346,7 +346,7 @@
   // ---------- facade decals (architecture PNGs + house windows/doors) ----------
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
-  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3'];
+  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken'];
   function buildDecalAtlas(){
     const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=3*T;
     const g=c.getContext('2d'),map=new Map();
@@ -415,7 +415,8 @@
         const interior=interiorFacadeEdgeIndex(s),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
-          if(edge.index===1||edge.index===3)onEdge(edge,.705,.90,1.35,'gatePortal',0,ground,o);   // front / rear
+          // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
+          if(edge.index===1||edge.index===3)onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
             else onEdge(edge,z,.24,.62,'arrowSlit',0,ground,o);
@@ -486,7 +487,9 @@
     for(const s of State.structures){
       const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
         // Moat fill patches are baked into the ground: filling must re-bake it.
-        +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'');
+        +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
+        // The gate door's state swaps its facade decal.
+        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'');
       let h=0;for(let i=0;i<str.length;i++)h=(Math.imul(h,31)+str.charCodeAt(i))|0;
       for(const cat of SIG_CATEGORIES)if(cat.test(s))acc.set(cat.name,(Math.imul(acc.get(cat.name)||0,33)^h)|0);
     }

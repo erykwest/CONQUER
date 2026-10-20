@@ -370,6 +370,12 @@
   // hoardings keep them off. Ladders only reach the low (H1) wall top; a tower
   // reaches walls up to its own level. Machicolations do not stop an assault.
   function assaultCheck(wall,engine,level=1){
+    // The ram is set against a gate's door (stone walls shrug it off).
+    if(engine==='ram'){
+      if(wall?.type!=='gate'||underConstruction(wall))return{ok:false,reason:'The ram is set against a gate'};
+      if(doorStage(wall)==='broken')return{ok:false,reason:'This gate is already broken in'};
+      return{ok:true};
+    }
     if(!isLinear(wall))return{ok:false,reason:'Only walls can be stormed'};
     if(wallTier(wall)<2)return{ok:false,reason:'Thin wall (T1): no ladder or bridge can rest on it'};
     if(wall.type==='wall'&&wallSkin(wall)==='hoarding')return{ok:false,reason:'Hoardings keep ladders and bridges off the wall'};
@@ -547,6 +553,67 @@
     for(const s of State.structures)if(s.type==='ruin')out.push(stumpMesh(s));
     return out;
   }
+  // ---------- gates: leaves that close, a door that can be battered in ----------
+  // A gate stands open unless it is closed from its panel (gate.closed). Closed and
+  // whole it blocks the passage for everyone; the ram (or heavy shot) wears the door
+  // down: 'damaged' below 2/3, 'broken' at zero, and the passage then stays open for
+  // good. A raised drawbridge is the first shield: it takes the blows and goes with it.
+  function doorStage(g){
+    if(!g||g.type!=='gate')return null;
+    const d=g.siegeIntegrity?.door;
+    if(!d||d.hp>d.max*2/3)return'intact';
+    return d.hp<=0?'broken':'damaged';
+  }
+  function gateClosed(g){return !!g&&g.type==='gate'&&!!g.closed&&!underConstruction(g)&&doorStage(g)!=='broken'}
+  function setGateClosed(id,closed){
+    const g=State.structures.find(s=>s.id===id&&s.type==='gate');
+    if(!g||underConstruction(g))return false;
+    if(closed&&doorStage(g)==='broken'){status('The door is broken in: the gate cannot be closed');return false}
+    g.closed=!!closed;
+    if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+    markDirty(true,true,true);renderFunctionPanel();draw();
+    status(g.closed?'Gate closed: nobody passes':'Gate open');
+    return true;
+  }
+  function breakDoor(g){
+    delete g.drawbridge;                       // a raised drawbridge is smashed with the door
+    g.closed=false;
+    if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+    invalidateStructureScene(g);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
+    status('The gate is broken in');
+  }
+  // 2.5D portals follow the door's state. architecture's drawGatePortals is wrapped once
+  // every script has run (its module is kept byte-identical by the refactor invariant).
+  const DOOR_ASSETS={gatePortalDamaged:'./src/assets/architecture/gate_portal_damaged.png',
+    gatePortalBroken:'./src/assets/architecture/gate_portal_broken.png'};
+  function doorAsset(g){const st=doorStage(g);return st==='broken'?'gatePortalBroken':st==='damaged'?'gatePortalDamaged':'gatePortal'}
+  function loadDoorAssets(){
+    if(typeof Image!=='function'||typeof architectureSprites==='undefined')return;
+    for(const [key,path] of Object.entries(DOOR_ASSETS)){
+      const img=new Image();
+      img.onload=()=>{
+        try{architectureSprites[key]=typeof prepareArchitectureSprite==='function'?prepareArchitectureSprite(img):img}catch{architectureSprites[key]=img}
+        invalidateSceneCache();draw();
+      };
+      img.src=path;
+    }
+  }
+  window.addEventListener?.('DOMContentLoaded',()=>{
+    loadDoorAssets();
+    if(typeof drawGatePortals!=='function')return;
+    drawGatePortals=function(){
+      for(const s of State.structures){
+        if(s.type!=='gate'||isWoodGate(s)||underConstruction(s))continue;
+        const key=doorAsset(s);
+        withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
+          for(const edge of gateFacadeEdges(s)){
+            if(edge.role!=='front'&&edge.role!=='rear')continue;
+            if(key==='gatePortal'||!drawArchitectureAssetOnEdge(edge,.705,.90,1.35,key))drawGatePortalOnEdge(edge);
+          }
+        }));
+      }
+    };
+  });
   function attackStructure(id,weapon,force=1,part='core'){
     const s=State.structures.find(x=>x.id===id);
     if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,reason:'Invalid or unfinished fortification'};
@@ -558,9 +625,12 @@
     if(!hp||hp.hp<=0)return{ok:false,damage:0,reason:'Section already destroyed'};
     const damage=Math.min(hp.hp,Math.max(0,Number(force)||0)*factor);
     if(!damage)return{ok:false,damage:0,reason:'No force applied'};
+    const stageBefore=doorStage(s);
     hp.hp=Math.max(0,hp.hp-damage);
     const from=part&&Number.isFinite(part.x)?part:null;
-    if(section==='core'&&hp.hp===0)destroyStructure(s,from);
+    if(section==='door'&&hp.hp===0)breakDoor(s);
+    else if(section==='door'&&doorStage(s)!==stageBefore){invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);draw()}
+    else if(section==='core'&&hp.hp===0)destroyStructure(s,from);
     else if(section==='core'&&storeyCollapse(s,from)){}
     else{
       invalidateStructureScene(s);markDirty(true,true,true);draw();
@@ -713,6 +783,9 @@
       status(out.ok?(out.breach?'Breccia aperta nella campata '+(out.bay+1):'Campata '+(out.bay+1)+' colpita · '+out.damage.toFixed(1)):out.reason);
       renderFunctionPanel();
     });
+    slots.querySelectorAll('[data-gate-closed]').forEach(btn=>btn.onclick=()=>{
+      const s=selectedStructure();if(s?.type==='gate')setGateClosed(s.id,btn.dataset.gateClosed==='1');
+    });
     slots.querySelectorAll('[data-siege-test]').forEach(btn=>btn.onclick=()=>{
       const s=selectedStructure();if(!s)return;
       const part=s.type==='gate'&&btn.dataset.siegeTest!=='trebuchet'?'door':'core';
@@ -724,6 +797,6 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),
+    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,setGateClosed,doorAsset,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();

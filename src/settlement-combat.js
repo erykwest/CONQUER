@@ -69,9 +69,9 @@
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y))
-      .map(({legs,climbing,nextThink,engaged,...e})=>e):[];
+      .map(({legs,climbing,nextThink,engaged,gateway,...e})=>e):[];
     // Ladders and assault towers set against the walls (dev assault).
-    combat.storms=Array.isArray(combat.storms)?combat.storms.filter(s=>s&&s.wallId&&s.foot&&s.origin&&['ladder','tower'].includes(s.kind)):[];
+    combat.storms=Array.isArray(combat.storms)?combat.storms.filter(s=>s&&s.foot&&s.origin&&(['ladder','tower'].includes(s.kind)&&s.wallId||s.kind==='ram'&&s.gateId)):[];
     for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';}
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
@@ -711,6 +711,10 @@
     // 2.5D view: assault ladders and towers as simple timber outlines (3D draws the models).
     if(combat.storms?.length&&!window.ConquerWorld3D?.active?.())withRenderContext(g,()=>{
       for(const s of combat.storms){
+        if(s.kind==='ram'){
+          if(s.done)continue;
+          const a=w2s(s.foot,0),b=w2s(s.origin,.35);g.strokeStyle='#6b4a2c';g.lineWidth=12;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();continue;
+        }
         const ww=WW(),top=ww?.at({wallId:s.wallId,t:s.t});if(!top)continue;
         const a=w2s(s.foot,0),b=w2s(top,top.z+.15);
         g.strokeStyle='#7a5530';g.lineWidth=s.kind==='ladder'?3:9;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();
@@ -1072,10 +1076,18 @@
   }
   const levelOf=u=>u.climbing?'climb':unitWall(u)?'wall:'+WW().component(u.wall):'ground';
   function groundLeg(from,to,u){
-    const path=infantryRoute(from,to,u.id,u.kind||'knight');
-    // Attackers may need the last stretch against the wall face (inside the wall's clearance).
-    const points=(path||[from,to]).map(p=>({x:p.x,y:p.y,z:0}));
-    return{kind:'ground',points};
+    let path=infantryRoute(from,to,u.id,u.kind||'knight');
+    // The last stretch may lie inside a wall's clearance (a ladder foot, a gate mouth):
+    // route to just short of it, then step in. Never walk through masonry.
+    if(!path){
+      const d=Math.hypot(to.x-from.x,to.y-from.y);
+      if(d<1.5)path=[from,to];
+      else{
+        const k=.9/d,near={x:to.x+(from.x-to.x)*k,y:to.y+(from.y-to.y)*k},r=infantryRoute(from,near,u.id,u.kind||'knight');
+        path=r?[...r,to]:[from];
+      }
+    }
+    return{kind:'ground',points:path.map(p=>({x:p.x,y:p.y,z:0}))};
   }
   const climbLeg=(access,up)=>{
     const top=WW().at(access.entry),bottom={x:access.ground.x,y:access.ground.y,z:0};
@@ -1183,12 +1195,71 @@
     changed();status((kind==='ladder'?'Ladder':'Assault tower')+' set against the wall · '+n+' attacker(s)');
     return storm;
   }
+  // ---------- the ram: battering a gate in ----------
+  // A ram storm stands before a gate's door with its head just short of it. The first
+  // four attackers man it (the model's crew posts), the others wait behind; with two or
+  // more at their posts it swings (1.8 s) and every blow hits the door
+  // (ConquerSiege.attackStructure 'door'). When the door gives, everyone goes in.
+  const RAM_CYCLE=1.8,RAM_BLOW=.72,RAM_REACH=3.81/3.5;
+  function addRamStorm(gate){
+    const check=window.ConquerSiege?.assaultCheck(gate,'ram');
+    if(!check?.ok){status('Assault refused: '+(check?.reason||'no assault rules'));return null}
+    const a=Number(gate.angle)||0,out={x:Math.cos(a),y:Math.sin(a)},half=rectDims(gate).w/2;
+    const back=RAM_REACH-.04,origin={x:gate.x+out.x*(half+back),y:gate.y+out.y*(half+back)};
+    const storm={id:'storm-'+uid(),kind:'ram',gateId:gate.id,origin,heading:a+Math.PI,clock:0,
+      foot:{x:origin.x+out.x*1.2,y:origin.y+out.y*1.2}};
+    (combat.storms||(combat.storms=[])).push(storm);
+    let n=0;
+    for(const e of combat.enemy)if(livingUnit(e)&&!e.wall){e.assault=storm.id;e.legs=null;e.nextThink=0;e.cameDown=false;n++}
+    changed();status('Ram set against the gate · '+n+' attacker(s)');
+    return storm;
+  }
+  const ramPlace=s=>({x:s.origin.x,y:s.origin.y,heading:s.heading});
+  function ramPosts(storm){
+    const SE=window.ConquerSiegeEngines3D;
+    return SE?SE.crew('ram',ramPlace(storm)):[storm.origin];
+  }
+  function ramCrew(storm){
+    const posts=ramPosts(storm),crew=combat.enemy.filter(e=>e.assault===storm.id&&livingUnit(e)&&!e.routing);
+    return crew.map((e,i)=>({e,post:posts[i]||null}));
+  }
+  function ramThink(e,storm){
+    const crew=ramCrew(storm),i=crew.findIndex(c=>c.e===e);if(i<0)return;
+    // Beyond the four posts the others wait in a loose rank behind the ram.
+    const k=i-ramPosts(storm).length,a=storm.heading+Math.PI/2;
+    const spot=crew[i].post||{x:storm.foot.x+Math.cos(a)*((k%3)-1)*.55,y:storm.foot.y+Math.sin(a)*((k%3)-1)*.55};
+    if(Math.hypot(spot.x-e.x,spot.y-e.y)>.25&&!e.legs?.length)e.legs=[groundLeg(e,spot,e)];
+  }
+  // Swing the rams that are manned; a blow lands at 72% of each swing.
+  function ramStep(dt){
+    for(const storm of combat.storms||[]){
+      if(storm.kind!=='ram'||storm.done)continue;
+      const gate=State.structures.find(s=>s.id===storm.gateId);
+      if(!gate||window.ConquerSiege?.doorStage(gate)==='broken'){breakIn(storm);continue}
+      const manned=ramCrew(storm).filter(c=>c.post&&!c.e.engaged&&!c.e.legs?.length&&Math.hypot(c.post.x-c.e.x,c.post.y-c.e.y)<.3);
+      storm.manned=manned.length;
+      if(manned.length<2)continue;
+      const before=(storm.clock%RAM_CYCLE)/RAM_CYCLE;storm.clock+=dt;const after=(storm.clock%RAM_CYCLE)/RAM_CYCLE;
+      if(!(before<RAM_BLOW&&after>=RAM_BLOW)&&!(after<before&&before<RAM_BLOW))continue;
+      const out=window.ConquerSiege?.attackStructure(gate.id,'ram',manned.length*.5,'door');
+      storm.blows=(storm.blows||0)+1;
+      if(out?.destroyed||window.ConquerSiege?.doorStage(gate)==='broken')breakIn(storm);
+    }
+  }
+  function breakIn(storm){
+    storm.done=true;
+    // They go in through the gate passage itself (narrow for the grid router).
+    for(const e of combat.enemy)if(e.assault===storm.id){e.cameDown=true;e.gateway=storm.gateId;e.legs=null;e.nextThink=0}
+    status('The gate is broken in: the attackers pour through');
+  }
   // Attackers: climb at their storm point, then hunt defenders along the walls; with no
   // one left on the walls they come down inside through a stair and go for the garrison.
   function assaultThink(e,now){
     if(e.engaged||e.climbing||now<(e.nextThink||0))return;
     e.nextThink=now+THINK_S*1000;
     const ww=WW();if(!ww)return;
+    const ram=(combat.storms||[]).find(s=>s.id===e.assault&&s.kind==='ram');
+    if(ram&&!ram.done&&!e.cameDown){ramThink(e,ram);return}
     const here=unitWall(e);
     if(!here){
       if(e.legs?.length)return;
@@ -1199,6 +1270,16 @@
         const legs=planLegs(e,{wall:{wallId:storm.wallId,t:storm.t}},{up:'storm'});
         if(legs){for(const l of legs)if(l.kind==='climb')l.stagger=Math.max(0,i)*.9;e.legs=legs}
         return;
+      }
+      if(e.gateway){
+        const gate=State.structures.find(s=>s.id===e.gateway&&s.type==='gate');e.gateway=null;
+        if(gate&&typeof gatePassageInfo==='function'){
+          // Through the passage and a step beyond its inner mouth (clear of the gatehouse).
+          const info=gatePassageInfo(gate,e),dx=info.far.x-info.center.x,dy=info.far.y-info.center.y,L=Math.hypot(dx,dy)||1;
+          const inside={x:info.far.x+dx/L*.6,y:info.far.y+dy/L*.6,z:0};
+          e.legs=[groundLeg(e,info.near,e),{kind:'ground',points:[{...info.near,z:0},{...info.far,z:0},inside]}];
+          return;
+        }
       }
       const foe=best(combat.units.filter(u=>livingUnit(u)&&!u.routing&&!unitWall(u)&&!u.climbing),u=>Math.hypot(u.x-e.x,u.y-e.y));
       if(foe&&Math.hypot(foe.x-e.x,foe.y-e.y)>.8)e.legs=[groundLeg(e,foe,e)];
@@ -1278,8 +1359,10 @@
   // Ladders and assault towers against the walls, for the 3D renderer.
   function dynamicMeshes(){
     const SE=window.ConquerSiegeEngines3D;if(!SE||!combat?.storms?.length)return[];
-    return combat.storms.filter(s=>WW()?.edgeOf(s.wallId)).map(s=>{
+    return combat.storms.filter(s=>s.kind==='ram'?!s.done:WW()?.edgeOf(s.wallId)).map(s=>{
       const g=terrainElevation(s.origin);
+      if(s.kind==='ram')return SE.triangles('ram',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},
+        (s.manned||0)>=2?{mode:'fire',t:s.clock}:{mode:'idle'});
       return s.kind==='ladder'
         ?SE.triangles('ladder',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{up:1})
         :SE.triangles(s.level>1?'tower2':'tower',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{bridge:1});
@@ -1327,6 +1410,7 @@
       else if(e.torch)torchThink(e,nowMs);
       if(e.legs?.length&&stepLegs(e,dt,.8))moved=true;
     }
+    ramStep(dt);
     if(moved){visibilityDirty=true;maskDirty=true}
     // Combat AI, target acquisition and LOS are capped at 10 Hz.
     // World unit movement remains driven by the regular simulation delta.
@@ -1388,6 +1472,13 @@
     if(kind==='combat-brush'){
       e.preventDefault();e.stopImmediatePropagation();painting=true;lastPaint=null;
       canvas.setPointerCapture(e.pointerId);paint(p,State.tool.combatBrush);requestToolDraw();return;
+    }
+    if(kind==='combat-storm'&&State.tool.stormKind==='ram'){
+      e.preventDefault();e.stopImmediatePropagation();
+      const s=structureAtScreen(pointerScreen(e))||structureAt(p);
+      if(s?.type!=='gate'){status('Click a gate to set the ram against it');return}
+      if(addRamStorm(s))setTool({kind:'select',label:'Select'});
+      syncButtons();draw();return;
     }
     if(kind==='combat-storm'){
       e.preventDefault();e.stopImmediatePropagation();
@@ -1495,7 +1586,7 @@
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
     '<div class="combat-row"><button id="combatTorch" title="Place an attacker with a torch: he sets alight the nearest thing that burns">Torch-bearer</button><button data-combat-fire="arrows" title="Click a structure: a volley of fire arrows from outside">Fire arrows</button><button data-combat-fire="stone" title="Click a structure: a burning trebuchet stone">Fire stone</button></div>'+
-    '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button></div>'+
+    '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button><button data-combat-storm="ram" title="Set a ram against a gate: intruders batter it in">Assault · ram</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
     '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>';
@@ -1546,7 +1637,7 @@
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
-    dynamicMeshes,addStorm,issueWallOrder,planLegs,
+    dynamicMeshes,addStorm,addRamStorm,issueWallOrder,planLegs,
     alarmMode,setAlarmMode,recruitedResident,
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);
