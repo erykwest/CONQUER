@@ -81,7 +81,7 @@ check('builder crew has stable names and no duplicated founders',()=>{
   const list=h.crew(.30).get('tower-a');
   assert.equal(list.length,3);
   assert.equal(new Set(list.map(w=>w.id)).size,3);
-  assert.deepEqual(list.map(w=>w.id),['founder:well:0','founder:well:1','founder:well:2']);
+  assert.deepEqual(Array.from(list,w=>w.id),['founder:well:0','founder:well:1','founder:well:2']);
   const figures=h.draw(.30);
   assert.equal(figures.length,4,'three at work, one idle at the well');
   for(const worker of list){
@@ -110,7 +110,7 @@ check('idle house worker is physically represented on route to work',()=>{
 check('industrial jobs reserve founders and they do not remain idle at the well',()=>{
   const h=harness({founders:4,industry:1}),site=h.add('tower-c');
   const crew=h.crew(.3).get(site.id);
-  assert.deepEqual(crew.map(w=>w.id),['founder:well:2','founder:well:3']);
+  assert.deepEqual(Array.from(crew,w=>w.id),['founder:well:2','founder:well:3']);
   assert.equal(h.draw(.3).length,2,'two at construction, two represented by industry');
 });
 check('unreachable construction stops instead of teleporting builders',()=>{
