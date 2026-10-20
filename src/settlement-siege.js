@@ -591,6 +591,10 @@
   function dynamicMeshes(){
     const out=state().ruins.map(ruinMesh).filter(Boolean);
     for(const s of State.structures)if(s.type==='ruin')out.push(stumpMesh(s));
+    if(window.ConquerWorld3D?.active?.())for(const s of State.structures){
+      const m=s.type==='gate'?window.ConquerCrossings?.drawbridgeMesh?.(s):s.type==='bridge'?window.ConquerCrossings?.bridgeMesh?.(s):null;
+      if(m)out.push(m);
+    }
     for(const s of State.structures)if(s.brokenTop&&['tower','gate'].includes(s.type)&&!underConstruction(s))out.push(crownMesh(s));
     return out;
   }

@@ -8,6 +8,8 @@ const root=__dirname+'/../';
 // Siege hooks in the navigation: ruined stumps and the high core of collapse heaps block
 // movement. Each must appear exactly once; removing them gives back the original source.
 const siegeHooks={'population-garrisons':[
+  ["const guards=window.ConquerCrossings?.drawbridgeGuards?.(gate)||gateGuardPositions(gate);   // on a lowered drawbridge: at its far end","const guards=gateGuardPositions(gate);"],
+  ["const p=guards[i],z=p.z??.08;","const p=guards[i],z=.08;"],
   ["    if(window.ConquerSiege?.gateClosed?.(gate))continue;   // closed: the guards are inside\n",'']
 ],'population-navigation':[
   ["  if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap\n",''],

@@ -93,9 +93,9 @@ function drawCastleSoldiers(){
   for(const gate of State.structures){
     if(gate.type!=='gate'||underConstruction(gate))continue;
     if(window.ConquerSiege?.gateClosed?.(gate))continue;   // closed: the guards are inside
-    const guards=gateGuardPositions(gate);
+    const guards=window.ConquerCrossings?.drawbridgeGuards?.(gate)||gateGuardPositions(gate);   // on a lowered drawbridge: at its far end
     for(let i=0;i<guards.length;i++){
-      const p=guards[i],z=.08;
+      const p=guards[i],z=p.z??.08;
       if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',gate.id+':gate-guard:'+i,day+i*.5);
     }
   }

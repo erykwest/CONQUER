@@ -295,6 +295,68 @@
     const len=Math.max(1,bankAt-tipAt+.05);
     return{a:at(bankAt),b:at(bankAt-len),width:Math.max(.6,g.width)};
   }
+  // A bridge for the 3D renderer: a deck at its banks' level, parapets (timber rails
+  // or stone), and supports down to the ground below (timber trestles every ~1.2 U, or
+  // stone piers), so a bridge between two hills spans the gap instead of following it.
+  const bridgeCache=new Map();
+  function bridgeMesh(s){
+    if(!xy(s))return null;
+    const key=s.id+':'+s.a.x+','+s.a.y+':'+s.b.x+','+s.b.y+':'+s.width+':'+s.variant+':'+(underConstruction(s)?1:0);
+    let m=bridgeCache.get(s.id);if(m&&m.key===key)return m;
+    const f=frame(s),w=f.width/2,top=(Number(s.groundZ)||0)+.09,stone=s.variant==='stone',pos=[],col=[];
+    const P=(along,across,z)=>{const p=point(s,along,across);return[p.x,p.y,z]};
+    const box=(a0,a1,c0,c1,z0,z1,colr)=>{
+      const v=[];for(const a of [a0,a1])for(const c of [c0,c1])for(const z of [z0,z1])v.push(P(a,c,z));
+      for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(colr)}
+    };
+    const deck=stone?'#9c9b92':'#986e42',dark=stone?'#78766d':'#6f4a2b';
+    box(0,f.L,-w,w,top-.1,top,deck);
+    if(stone)for(const side of [-1,1])box(0,f.L,side*w-(side>0?.12:0),side*w+(side<0?.12:0),top,top+.25,dark);
+    else for(const side of [-1,1]){
+      box(0,f.L,side*(w-.04)-.025,side*(w-.04)+.025,top+.2,top+.24,dark);
+      for(let a=.1;a<f.L;a+=.6)box(a-.03,a+.03,side*(w-.04)-.03,side*(w-.04)+.03,top,top+.24,dark);
+    }
+    // Supports: wherever the ground falls away under the deck.
+    const step=stone?1.6:1.2,ground=a=>{const p=point(s,a,0);return typeof terrainElevation==='function'?terrainElevation(p):0};
+    for(let a=step/2;a<f.L-.2;a+=step){
+      const g=ground(a);if(top-.1-g<.12)continue;
+      if(stone)box(a-.25,a+.25,-w+.1,w-.1,g-.05,top-.1,dark);
+      else for(const side of [-1,1])box(a-.05,a+.05,side*(w-.12)-.05,side*(w-.12)+.05,g-.05,top-.1,dark);
+    }
+    m={key,pos,col};bridgeCache.set(s.id,m);return m;
+  }  // The leaf as world triangles for the 3D renderer: a plank deck hinged at the gate,
+  // raised by its progress, with two chains up to the gatehouse.
+  function drawbridgeMesh(gate){
+    const d=drawbridge(gate);if(!d||underConstruction(gate))return null;
+    const g=deck(gate),th=Math.max(0,Math.min(1,d.progress))*Math.PI/2,c=Math.cos(th),s=Math.sin(th);
+    const z0=(typeof terrainElevation==='function'?terrainElevation(g.hinge):0)+.08,T=.07,w=g.width/2;
+    const P=(along,across,up)=>[g.hinge.x+g.outward.x*(along*c-up*s)+g.tangent.x*across,g.hinge.y+g.outward.y*(along*c-up*s)+g.tangent.y*across,z0+along*s+up*c];
+    const pos=[],col=[];
+    const box=(a0,a1,w0,w1,u0,u1,colr)=>{
+      const v=[];for(const a of [a0,a1])for(const b of [w0,w1])for(const u of [u0,u1])v.push(P(a,b,u));
+      for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(colr)}
+    };
+    box(0,g.length,-w,w,-T,0,'#9d7044');
+    for(const a of [g.length*.3,g.length*.7])box(a-.05,a+.05,-w,w,0,.03,'#6f4a2b');
+    for(const k of [-.78,.78]){
+      // Chains from high on the gatehouse to the leaf's tip, as thin bars.
+      const tip=P(g.length,w*k,0),top=[g.hinge.x+g.tangent.x*w*k,g.hinge.y+g.tangent.y*w*k,z0+1.9];
+      const n=Math.hypot(tip[0]-top[0],tip[1]-top[1],tip[2]-top[2]),e=.012;
+      for(const [dx,dy] of [[e,0],[0,e]]){
+        const a=[top[0]-dx,top[1]-dy,top[2]],b=[top[0]+dx,top[1]+dy,top[2]],cc=[tip[0]+dx,tip[1]+dy,tip[2]],dd=[tip[0]-dx,tip[1]-dy,tip[2]];
+        pos.push(...a,...b,...cc,...a,...cc,...dd);col.push('#b8a98b','#b8a98b');void n;
+      }
+    }
+    return{pos,col};
+  }  // A lowered drawbridge: the two gate guards stand at its far end, one on each side.
+  function drawbridgeGuards(gate){
+    const d=drawbridge(gate);
+    if(!d||underConstruction(gate)||d.raised||d.progress>.02)return null;
+    const g=deck(gate),at=Math.max(.3,g.length-.3),side=Math.max(.15,g.width/2-.18);
+    return[-1,1].map(s=>({x:g.hinge.x+g.outward.x*at+g.tangent.x*side*s,y:g.hinge.y+g.outward.y*at+g.tangent.y*side*s,z:.18}));
+  }
   function halfBridgeOf(gate){return State.structures.find(s=>s.type==='bridge'&&s.halfBridgeFor===gate.id)||null}
   function buildHalfBridge(gate){
     const need=halfBridgeNeed(gate);
@@ -585,7 +647,9 @@
     // rectangles separately would bring back the exact overlaps at junctions.
     const moats=State.structures.filter(s=>s.type==='moat');
     drawUnifiedMoats(moats);
-    // Bridges are always painted last, regardless of build order.
+    // Bridges are always painted last, regardless of build order. In the 3D world they
+    // are real decks at their banks' level (bridgeMesh), never painted on the ground.
+    if(window.ConquerWorld3D?.active?.())return;
     for(const s of State.structures){
       if(s.type!=='bridge')continue;
       ctx.save();if(underConstruction(s))ctx.globalAlpha=.55;
@@ -617,6 +681,8 @@
         b={x:g.hinge.x-side.x*w,y:g.hinge.y-side.y*w},
         c={x:far.x-side.x*w,y:far.y-side.y*w},
         e={x:far.x+side.x*w,y:far.y+side.y*w};
+      // In the 3D world the leaf is a depth-tested mesh (drawbridgeMesh): guards on it show.
+      if(window.ConquerWorld3D?.active?.())continue;
       withStructureGroundPlane(gate,()=>{
         pathPolygon([w2s(a,baseZ-g.z),w2s(b,baseZ-g.z),
           w2s(c,tipZ-g.z),w2s(e,tipZ-g.z)],
@@ -721,7 +787,7 @@
     return true;
   }
   window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
-    deck,moatAhead,halfBridgeNeed,halfBridgeOf,buildHalfBridge,demolishBridge,
+    deck,moatAhead,drawbridgeGuards,drawbridgeMesh,bridgeMesh,halfBridgeNeed,halfBridgeOf,buildHalfBridge,demolishBridge,
     snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,moatChains,moatOffsetOutline,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,upgradeBridge,floodMoat,crossingUpgradeCost,installDrawbridge,toggleDrawbridge,removeDrawbridge,
