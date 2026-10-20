@@ -62,18 +62,23 @@
     return best;
   }
   function terraceMagnet(center,radius,shape){
-    if(shape!=='square')return null;
     let best=null;
     for(const edit of edits()){
-      if(edit.mode!=='walled'||shapeOf(edit)!=='square')continue;
+      if(edit.mode!=='walled')continue;
       for(let i=0;i<edit.top.length;i++){
         const a=edit.top[i],b=edit.top[(i+1)%edit.top.length],dx=b.x-a.x,dy=b.y-a.y;
         const len=Math.hypot(dx,dy)||1,nx=dy/len,ny=-dx/len;
         const midpoint={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-        const proposed={x:midpoint.x+nx*radius,y:midpoint.y+ny*radius};
+        const support=shape==='square'?radius:radius*Math.cos(Math.PI/SEGMENTS);
+        const proposed={x:midpoint.x+nx*support,y:midpoint.y+ny*support};
         const score=dist(center,proposed);
         if(score>1.25||best&&score>=best.score)continue;
-        best={center:proposed,rotation:Number(edit.rotation)||0,terraceId:edit.id,edgeIndex:i,score};
+        const tangent=Math.atan2(dy,dx);
+        // Equal shapes preserve the parent polygon phase. Mixed joins align
+        // a side of the new regular polygon exactly with the existing edge.
+        const rotation=shape===shapeOf(edit)?Number(edit.rotation)||0:
+          shape==='square'?tangent+Math.PI:tangent+Math.PI/2-Math.PI/SEGMENTS;
+        best={center:proposed,rotation,terraceId:edit.id,edgeIndex:i,score};
       }
     }
     return best;
