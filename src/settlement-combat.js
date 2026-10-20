@@ -699,6 +699,7 @@
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
         drawPosedFigure(e,'spearman',e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
+        if(e.torch)window.ConquerFire?.drawTorch(g,w2s(e,.08+(e.z||0)),State.view.scale,e.id);
         const p=w2s(e,.08+(e.z||0));g.strokeStyle='#e45151';g.lineWidth=2;
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
@@ -1214,6 +1215,42 @@
     const below=best(combat.units.filter(u=>livingUnit(u)&&!u.routing&&!unitWall(u)),u=>Math.hypot(u.x-e.x,u.y-e.y));
     if(below){const legs=planLegs(e,{ground:{x:below.x,y:below.y}},{down:'stairs'});if(legs){e.legs=legs;e.cameDown=true}}
   }
+  // Torch-bearers: walk to the nearest standing thing that burns (ConquerFire.parts) and
+  // is not alight yet, set it alight from its foot (gates: the door), then the next one.
+  function torchThink(e,now){
+    const F=window.ConquerFire;if(!F||e.engaged||e.climbing||now<(e.nextThink||0))return;
+    e.nextThink=now+THINK_S*1000;
+    const target=State.structures.find(s=>s.id===e.torchTarget);
+    if(target&&F.parts(target).length&&!F.burning(target.id)){
+      if(F.gap(e,target)<.8){                               // within a torch's reach
+        F.ignite(target.id,{z:.3,x:e.x,y:e.y,heat:.35});e.legs=null;e.torchTarget=null;
+        status('Torch-bearer set '+(target.type)+' alight');
+      }else if(!e.legs?.length)e.torchTarget=null;          // could not get there: choose again
+      return;
+    }
+    if(e.legs?.length)return;
+    const skip=e.unreachable||[];
+    const s=best(State.structures.filter(s=>F.parts(s).length&&!F.burning(s.id)&&!skip.includes(s.id)&&F.gap(e,s)<30),s=>F.gap(e,s));
+    if(!s){e.torchTarget=null;return}
+    const c=s.x!==undefined?{x:s.x,y:s.y}:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
+    // Stand just outside the footprint, on the side he comes from (gates: in front of the door).
+    let goal;
+    if(s.a&&s.b){
+      const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L2=dx*dx+dy*dy||1,k=Math.max(0,Math.min(1,((e.x-s.a.x)*dx+(e.y-s.a.y)*dy)/L2));
+      const p={x:s.a.x+dx*k,y:s.a.y+dy*k},ox=e.x-p.x,oy=e.y-p.y,ol=Math.hypot(ox,oy)||1,o=(Number(s.width)||.3)/2+.3;
+      goal={x:p.x+ox/ol*o,y:p.y+oy/ol*o};
+    }else{
+      const a=s.type==='gate'?Number(s.angle)||0:Math.atan2(e.y-c.y,e.x-c.x),r=F.gap(c,s)+(s.type==='gate'?(rectDims(s).w/2):F.radius(s))+.3;
+      goal={x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r};
+    }
+    // Only by a real route (never through a wall): it may stop short where the footprint's
+    // clearance begins, the last few steps are straight on. No route: try something else.
+    const path=infantryRoute(e,goal,e.id,'infantry'),last=path?.[path.length-1];
+    if(!path||Math.hypot(last.x-goal.x,last.y-goal.y)>1){(e.unreachable||(e.unreachable=[])).push(s.id);e.torchTarget=null;return}
+    const points=path.map(p=>({x:p.x,y:p.y,z:0}));
+    if(Math.hypot(last.x-goal.x,last.y-goal.y)>.02)points.push({x:goal.x,y:goal.y,z:0});
+    e.torchTarget=s.id;e.legs=[{kind:'ground',points}];
+  }
   // Stones from hoardings and machicolations: men on such a wall hit attackers at its
   // foot, 0-1 U out from the outer face (also men on ladders), every 2.5 s.
   function stoneDrops(step){
@@ -1287,6 +1324,7 @@
     for(const e of combat.enemy){
       if(!livingUnit(e)||e.routing)continue;
       if(e.assault)assaultThink(e,nowMs);
+      else if(e.torch)torchThink(e,nowMs);
       if(e.legs?.length&&stepLegs(e,dt,.8))moved=true;
     }
     if(moved){visibilityDirty=true;maskDirty=true}
@@ -1360,8 +1398,18 @@
     }
     if(kind==='combat-intruder'){
       e.preventDefault();e.stopImmediatePropagation();
-      combat.enemy.push({id:uid(),x:p.x,y:p.y,faction:'dev_hostile',combatKind:'infantry'});changed();setTool({kind:'select',label:'Select'});
-      status('Test intruder placed — visible only within line of sight');draw();return;
+      const torch=!!State.tool.torch;
+      combat.enemy.push({id:uid(),x:p.x,y:p.y,faction:'dev_hostile',combatKind:'infantry',...(torch?{torch:true}:{})});changed();setTool({kind:'select',label:'Select'});
+      status(torch?'Torch-bearer placed: he goes for the nearest thing that burns':'Test intruder placed — visible only within line of sight');draw();return;
+    }
+    if(kind==='combat-fire'){
+      // Burning shots at the structure clicked, loosed from outside the walls.
+      e.preventDefault();e.stopImmediatePropagation();
+      const s=structureAtScreen(pointerScreen(e))||structureAt(p);
+      if(!s){status('Click a structure');return}
+      const n=window.ConquerFire?.volley(s,State.tool.fireKind,activeWell()||null);
+      status(n?(State.tool.fireKind==='stone'?'Burning stone loosed at ':n+' fire arrows loosed at ')+s.type:'Nothing to aim at');
+      draw();return;
     }
     if(kind==='combat-orders'||kind==='select'){
       const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&dist(u,p)<1.1)
@@ -1446,6 +1494,7 @@
     '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+ 
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
+    '<div class="combat-row"><button id="combatTorch" title="Place an attacker with a torch: he sets alight the nearest thing that burns">Torch-bearer</button><button data-combat-fire="arrows" title="Click a structure: a volley of fire arrows from outside">Fire arrows</button><button data-combat-fire="stone" title="Click a structure: a burning trebuchet stone">Fire stone</button></div>'+
     '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
@@ -1485,6 +1534,10 @@
   $('combatPatrolAdd').onclick=addPatrol;
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
+  $('combatTorch').onclick=()=>{setTool({kind:'combat-intruder',torch:true,label:'Click terrain to place a torch-bearer'});syncButtons()};
+  document.querySelectorAll('[data-combat-fire]').forEach(b=>b.onclick=()=>{
+    setTool({kind:'combat-fire',fireKind:b.dataset.combatFire,label:'Click a structure to shoot at it'});syncButtons();
+  });
   $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
   document.querySelectorAll('[data-combat-storm]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-storm',stormKind:b.dataset.combatStorm,label:'Click the top of a wall to storm it'});syncButtons();

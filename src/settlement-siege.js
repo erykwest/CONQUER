@@ -538,7 +538,8 @@
     return rubbleGrid;
   }
   function rubbleAt(p){return rubbleIndex().get(Math.floor(p.x/RUBBLE_CELL)+','+Math.floor(p.y/RUBBLE_CELL))||null}
-  function rubbleBlocks(p){const r=rubbleAt(p);return !!r&&r.h>=RUBBLE_WALL&&!r.breach}
+  // Burning rubble blocks everyone while it burns, even in a breach (ConquerFire).
+  function rubbleBlocks(p){if(window.ConquerFire?.blocks(p))return true;const r=rubbleAt(p);return !!r&&r.h>=RUBBLE_WALL&&!r.breach}
   function rubbleFactor(p,heavy=false){const r=rubbleAt(p);return !r?1:heavy?0:.5}
   // Extra meshes for the 3D world renderer: falling blocks, rubble heaps, ruined stumps.
   function dynamicMeshes(){
@@ -676,6 +677,7 @@
       ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(3,8*z),Math.max(2,4*z),0,0,Math.PI*2);ctx.fill();ctx.stroke();
     }
     ctx.restore();
+    window.ConquerFire?.draw();                         // flames, smoke, burning shots
   }
   function summaryHtml(){
     const c=capacity(),x=state(),f=x.stock.food,d=dailyFoodDemand();
