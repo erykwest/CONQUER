@@ -892,7 +892,10 @@ function autoBlocked(candidate,placed,manual,margin=.2){
   const p={x:candidate.x,y:candidate.y},r=pointRadius(candidate)+margin;
   if(environmentBlocksPoint(p,'settlement'))return true;
   for(const s of manual){if(['wall','palisade','built'].includes(s.type)){if(pointSegmentDistance(p,s.a,s.b)<=r+s.width/2)return true}else if(s.x!=null&&dist(p,s)<=r+pointRadius(s))return true}
-  for(const s of placed){if(s.type==='road')continue;if(dist(p,s)<=r+pointRadius(s)+margin)return true}
+  for(const s of placed){
+    if(s.type==='road'||candidate.type==='house'&&s.type==='field')continue;
+    if(dist(p,s)<=r+pointRadius(s)+margin)return true
+  }
   return false;
 }
 function biomeHash(name){let h=2166136261>>>0;for(const ch of name){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
@@ -2119,6 +2122,8 @@ function spawnHouse(step){
     const houseAngle=snapStructureAngle(c.ang),h=beginConstruction({id:uid(),type:'house',auto:true,masonryMaterial:State.village.privateMasonryMaterial==='brick'?'brick':'stone',x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:rnd()>.78?2:1.5,h:1,angle:houseAngle,rotationStep:structureRotationStep(houseAngle),appeal:c.score,roadId:c.roadId,doorSide:c.doorSide});
     if(autoBlocked(h,placed,manual,.38)||roadList().some(r=>manualRoadConflict(r,h))){blocked++;continue}
     if(!urbanHouseFitsLots(h,lotContext)){invalidLot++;continue}
+    // Housing may reclaim an existing field (and its local access spur).
+    urbanReclaimFieldsForHouse(h);
     State.structures.push(h);invalidateUrbanGeometry();ensureSettlementRoadAccess(h);
     window.__conquerAnalytics?.event('HOUSE_SPAWN_RESULT',{
       step,nearbyRoads:nearby.length,totalRoads:roads.length,candidates:candidates.length,
@@ -2146,14 +2151,14 @@ function spawnField(step,workerHouse=null){
   if(reason)return fail(reason,{houses:houses.length,roads:roads.length});
   const rnd=growthRng(step,307+(workerHouse?peasantHash(workerHouse.id)%100000:0));
   const radius=currentGrowthRadius()+4,validationContext={occupants:null};
-  const inner=Math.max(6.5,currentGrowthRadius()*.72),outer=Math.min(22,radius+4),candidates=[];
+  const inner=Math.max(7,currentGrowthRadius()+1),outer=Math.min(42,Math.max(inner+9,radius+15)),candidates=[];
   const addCandidate=(p,score)=>{
-    if(!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow)return;
+    if(!inBuild(p)||window.ConquerCombat?.areaState(p).yellow||terrainPlateauElevation(p)!==0)return;
     const road=nearestRoadInfo(p,roads);
     if(!road||(workerHouse&&road.d>4.5))return;
     candidates.push({p,road,score:score+.18*Math.exp(-road.d/4)+rnd()*.20});
   };
-  // Explore rural plots close to the actual buildable/yellow zone.
+  // Explore H0 in the white rural belt outside the yellow/green housing zone.
   for(let i=0;i<110;i++){
     const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2;
     const p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
@@ -2171,7 +2176,7 @@ function spawnField(step,workerHouse=null){
       x:road.a.x+(road.b.x-road.a.x)*t-Math.sin(a)*offset*side,
       y:road.a.y+(road.b.y-road.a.y)*t+Math.cos(a)*offset*side
     };
-    if(dist(p,well)>Math.max(12,radius+6))continue;
+    if(dist(p,well)>Math.max(22,radius+19))continue;
     addCandidate(p,.8);
   }
   for(let i=0;i<70;i++){
@@ -2184,18 +2189,17 @@ function spawnField(step,workerHouse=null){
   if(workerHouse)for(let i=0;i<110;i++){
     const a=rnd()*Math.PI*2,d=2.8+rnd()*6.5;
     const p={x:workerHouse.x+Math.cos(a)*d,y:workerHouse.y+Math.sin(a)*d};
-    if(dist(p,well)>Math.max(13,radius+5))continue;
+    if(dist(p,well)>Math.max(22,radius+19))continue;
     addCandidate(p,1.12);
   }
   candidates.sort((a,b)=>b.score-a.score);
   let invalidQuad=0,blocked=0;
   for(const c of candidates.slice(0,workerHouse?60:36)){
-    const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:2.6+rnd()*1.3,h:1.8+rnd()*1.1,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
-    // A newly opened L2 plot is a one-worker farm (area/4 = one slot).
-    // Keep its four-corner Voronoi shape, but bound it to a compact cell.
-    const workerLimit=workerHouse?rectWorldPoints(f.x,f.y,3.6,3.6,f.angle):null;
+    const f=beginConstruction({id:uid(),type:'field',auto:true,x:snapGrid(c.p.x),y:snapGrid(c.p.y),w:4.1+rnd()*1.4,h:3.6+rnd()*1.4,angle:c.road.angle+(rnd()-.5)*.18,appeal:c.score});
+    // All rural fields may be larger; worker slots still scale as area/4.
+    const workerLimit=workerHouse?rectWorldPoints(f.x,f.y,5.5,5.5,f.angle):null;
     f.points=fieldVoronoiQuad(f,rnd,workerLimit);
-    if(!f.points||workerHouse&&fieldLayout(f).cells.length!==1){invalidQuad++;continue}
+    if(!f.points){invalidQuad++;continue}
     f.fieldVersion=1;
     f.w=2*Math.max(...f.points.map(p=>Math.abs(p.x-f.x)));
     f.h=2*Math.max(...f.points.map(p=>Math.abs(p.y-f.y)));

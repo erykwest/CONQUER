@@ -127,15 +127,42 @@ function urbanParcelTerrainAllowed(points){
     if(urbanContains(points,{x,y})&&terrainSlopeKind({x,y})==='steep')return false;
   return points.every(p=>terrainSlopeKind(p)!=='steep');
 }
+function urbanFieldParcelAllowed(points,fieldId){
+  if(!points?.length||!urbanParcelTerrainAllowed(points))return false;
+  if(points.some(p=>p.x<BUILD_MIN||p.x>BUILD_MAX||p.y<BUILD_MIN||p.y>BUILD_MAX))return false;
+  // Fields belong in the white rural belt, not the settlement's yellow/green
+  // housing area. H0 must hold over the whole parcel, not only its centroid.
+  const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x));
+  const minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y));
+  for(let x=minX;x<=maxX+.001;x+=.4)for(let y=minY;y<=maxY+.001;y+=.4){
+    const p={x,y};if(!urbanContains(points,p))continue;
+    const zone=window.ConquerCombat?.areaState(p);
+    if(zone?.yellow||zone?.green||terrainPlateauElevation(p)!==0)return false;
+  }
+  for(const p of points){
+    const zone=window.ConquerCombat?.areaState(p);
+    if(zone?.yellow||zone?.green||terrainPlateauElevation(p)!==0)return false;
+  }
+  // Small painted yellow islands can fall between the regular samples.
+  // Testing brush centres avoids accepting such enclosed zoning pockets.
+  for(const zone of window.ConquerCombat?.yellowGeometry?.()||[]){
+    if(zone.mode==='yellow'&&urbanContains(points,zone)&&window.ConquerCombat.areaState(zone).yellow)return false;
+  }
+  for(const other of State.structures){
+    if(other.id===fieldId||other.type==='field'||other.type==='road')continue;
+    if(urbanBuildingPolygons(other).some(poly=>urbanPolygonsOverlap(points,poly)))return false;
+  }
+  return true;
+}
 function urbanParcelAllowed(points,houseId,skipYellow=false){
   // Reject the entire proposed parcel on water/forest/cliffs, not just its site.
   // Gentle hills remain available to both houses and farmland.
   if((!skipYellow&&!urbanYellowContains(points))||!urbanParcelTerrainAllowed(points))return false;
   for(const s of State.structures){
     if(s.id===houseId||isCivicAnnex(s)&&s.parentId===houseId)continue;
-    // Field polygons are not returned by urbanBuildingPolygons: protect the
-    // agricultural lot before accepting a new house's Voronoi parcel.
-    if(s.type==='field'&&urbanPolygonsOverlap(points,fieldPoints(s)))return false;
+    // Houses have priority over fields; the field is reclaimed only after
+    // the new house passes the lot/terrain checks and is actually placed.
+    if(s.type==='field')continue;
     if(urbanBuildingPolygons(s).some(poly=>urbanPolygonsOverlap(points,poly)))return false;
   }
   return true;
@@ -268,8 +295,8 @@ const URBAN_ROAD_VERGE=.08,URBAN_OBSTACLE_GAP=.03,CIVIC_LOT_PAD=1.3;
 // side of the obstacle edge that separates them best.
 function urbanClipObstacles(cell,house){
   for(const s of State.structures){
-    if(s.id===house.id||isCivicAnnex(s)&&s.parentId===house.id||s.type==='road'||s.type==='house'&&house.type==='house')continue;
-    const polys=s.type==='field'?[fieldPoints(s)]:urbanBuildingPolygons(s);
+    if(s.id===house.id||isCivicAnnex(s)&&s.parentId===house.id||s.type==='road'||s.type==='field'||s.type==='house'&&house.type==='house')continue;
+    const polys=urbanBuildingPolygons(s);
     for(const poly of polys){
       if(!poly?.length||!urbanPolygonsOverlap(cell,poly))continue;
       const sign=urbanArea(poly)>=0?1:-1;let best=null;
@@ -308,6 +335,21 @@ function urbanHouseSpawnContext(){
     occupants:null,
     existingLots:new Map()
   };
+}
+function urbanReclaimFieldsForHouse(house){
+  // Displace rural agriculture only AFTER the house is valid. The owner parcel
+  // takes precedence and an entire overlapped field is reclaimed rather than
+  // leaving tiny non-farmable fragments or stale worker/crop footprints.
+  const lot=urbanLotFor(house,State.structures.filter(s=>s.type==='house').concat(house));
+  const parts=houseFootprintParts(house).map(p=>p.points);
+  const area=lot?.points?[lot.points,...parts]:parts;
+  const removed=new Set(State.structures.filter(s=>s.type==='field'&&s.auto&&
+    area.some(poly=>urbanPolygonsOverlap(poly,fieldPoints(s)))).map(s=>s.id));
+  if(!removed.size)return 0;
+  State.structures=State.structures.filter(s=>!removed.has(s.id)&&
+    !(s.type==='road'&&removed.has(s.accessFor)));
+  invalidateUrbanGeometry();
+  return removed.size;
 }
 function urbanHouseFitsLots(candidate,options={}){
   const ignoreDynamicUnits=!!options.ignoreDynamicUnits;

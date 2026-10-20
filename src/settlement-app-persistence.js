@@ -3,6 +3,8 @@
 function migrateStructures(list){
   const migrated=(list||[]).map(s=>{
     if(['moat','bridge'].includes(s.type))window.ConquerCrossings?.normalise(s);
+    // Migrate old windmill A/B save records before industry recognition.
+    if(s.type==='windmillA'||s.type==='windmillB')s.type='windmill';
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.normalizeFootprint(s);
     if(s.type==='house')s.houseLevel=houseLevel(s);
     normalizeCivicDevelopment(s);

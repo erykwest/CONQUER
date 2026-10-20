@@ -5,7 +5,9 @@
   const TYPES=Object.freeze({
     loggingCamp:{label:'Taglialegna',name:'Logging camp',good:'wood',tier:1,workers:2,w:2,h:2,color:'#795036',edge:'#4a2d1c',radius:10,days:3,cost:{gold:35,wood:25}},
     quarry:{label:'Cava',name:'Stone quarry',good:'stone',tier:2,workers:2,w:3,h:3,color:'#999b9c',edge:'#64686c',days:5,cost:{gold:65,wood:20,stone:8}},
-    mine:{label:'Miniera',name:'Mine',good:'stone',tier:2,workers:2,w:1,h:1,color:'#31363e',edge:'#171b20',days:7,cost:{gold:95,wood:35,stone:18}}
+    mine:{label:'Miniera',name:'Mine',good:'stone',tier:2,workers:2,w:1,h:1,color:'#31363e',edge:'#171b20',days:7,cost:{gold:95,wood:35,stone:18}},
+    windmill:{label:'Mulino a vento',name:'Windmill',good:'food',tier:1,workers:0,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:40,wood:30,stone:10}},
+    watermill:{label:'Mulino ad acqua',name:'Watermill',good:'food',tier:1,workers:0,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:45,wood:35,stone:10}}
   });
   const CLAY_QUARRY=Object.freeze({
     ...TYPES.quarry,label:'Argilla',name:'Clay pit',good:'clay',
@@ -21,7 +23,7 @@
     const spec=type==='quarry'&&mode==='clay'?CLAY_QUARRY:TYPES[type];
     return{type,x:position.x,y:position.y,
       w:spec?.w||2,h:spec?.h||2,extractionMode:type==='quarry'?mode:undefined,
-      shape:'industry',angle:0,economicOwner:'lord',workersRequired:2,
+      shape:'industry',angle:0,economicOwner:'lord',workersRequired:spec?.workers??2,
       productionGood:spec?.good||'wood'};
   };
   const footprint=s=>{const spec=definition(s);return rectWorldPoints(s.x,s.y,spec.w,spec.h,s.angle||0)};
@@ -40,6 +42,8 @@
     return terrainElevation({x:s.x,y:s.y});
   }
   function normalizeFootprint(s){
+    // Preserve settlements saved before the two wind variants were consolidated.
+    if(s?.type==='windmillA'||s?.type==='windmillB')s.type='windmill';
     if(!is(s))return s;
     if(s.type==='quarry'){
       s.extractionMode=s.extractionMode==='clay'?'clay':'stone';
@@ -48,6 +52,7 @@
     const spec=definition(s);
     s.w=spec.w;s.h=spec.h;
     if(s.type==='quarry'||s.type==='mine')s.groundZ=groundLevel(s);
+    if(s.type==='watermill')orientToWater(s);
     return s;
   }
   function onRockySlope(p){return terrainSlopeKind(p)==='steep'}
@@ -109,18 +114,67 @@
       if(segmentsIntersect(a[i],a[(i+1)%a.length],b[j],b[(j+1)%b.length]))return true;
     return false;
   }
+  // A watermill's +X face represents the future wheel; point it at the
+  // nearest river/stream bank. The yellow block remains a plain 2×2U placeholder.
+  function closestWater(p){
+    let hit=null,best=Infinity;
+    for(const water of State.environment||[]){
+      if(!['river','stream'].includes(water.type))continue;
+      const points=water.points||[];
+      for(let i=1;i<points.length;i++){
+        const a=points[i-1],b=points[i],dx=b.x-a.x,dy=b.y-a.y;
+        const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+        const q={x:a.x+dx*t,y:a.y+dy*t},d=dist(p,q);
+        if(d<best){best=d;hit={water,point:q,distance:d,bankDistance:d-(Number(water.width)||1.25)/2}}
+      }
+    }
+    return hit;
+  }
+  function orientToWater(s){
+    if(s.type!=='watermill')return s;
+    const hit=closestWater(s);
+    if(hit&&hit.distance>.001){
+      s.angle=Math.atan2(hit.point.y-s.y,hit.point.x-s.x);
+      s.rotationStep=structureRotationStep(s.angle);
+      s.waterSide='+X';
+    }
+    return s;
+  }
+  function isMill(s){return ['windmill','watermill'].includes(s?.type)}
   function validate(s){
     if(!is(s))return{ok:false,reason:'Unknown industry'};
-    const p={x:s.x,y:s.y},type=definition(s),fp=footprint(s);
+    const p={x:s.x,y:s.y},type=definition(s);
+    const water=s.type==='watermill'?closestWater(p):null;
+    // Validation does not change the passed-in candidate or saved structure.
+    const placement=s.type==='watermill'?orientToWater({...s}):s;
+    const fp=footprint(placement);
     // The WHOLE footprint remains in the whitezone, even on cliffs.
     if(fp.some(v=>v.x<BUILD_MIN||v.x>BUILD_MAX||v.y<BUILD_MIN||v.y>BUILD_MAX))
       return{ok:false,reason:'The entire '+type.w+'×'+type.h+'U footprint must remain in the whitezone (100×100U)'};
     // Rock is allowed for extraction, but never water, trees or other obstacles.
-    const points=footprintSamples(s);
+    const points=footprintSamples(placement);
     if(points.some(q=>(State.environment||[]).some(f=>
-      ['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,q,.20))))
+      (s.type==='watermill'?['sea','mountain','pond','forest']:['sea','mountain','pond','forest','river','stream']).includes(f.type)&&environmentContains(f,q,s.type==='watermill'?0:.20))))
       return{ok:false,reason:'Industry footprint intersects forest, water or obstacle'};
-    if(s.type==='loggingCamp'){
+    if(isMill(s)){
+      const ground=buildableTerrainElevationForStructure(placement);
+      if(ground==null)return{ok:false,reason:'Mill requires one level terrace (2×2U)'};
+      if(s.type!=='watermill'&&Math.abs(ground-1)>.001)
+        return{ok:false,reason:'Windmills can only be built at H+1'};
+      if(s.type==='watermill'){
+        // With a 2U square the wheel-facing edge sits 1U away from the centre.
+        if(!water||Math.abs(water.bankDistance-1)>.28)
+          return{ok:false,reason:'Watermill wheel side must touch a river or stream bank'};
+        // Check the interior, while allowing the river exactly at the wheel edge.
+        const a=placement.angle||0;
+        const n={x:Math.cos(a),y:Math.sin(a)},t={x:-n.y,y:n.x};
+        for(const side of [-.8,0,.8]){
+          const q={x:s.x+n.x*.72+t.x*side,y:s.y+n.y*.72+t.y*side};
+          if((State.environment||[]).some(f=>['river','stream'].includes(f.type)&&environmentContains(f,q,-.04)))
+            return{ok:false,reason:'Watermill body would extend into water'};
+        }
+      }
+    }else if(s.type==='loggingCamp'){
       if(buildableTerrainElevationForStructure(s)==null)
         return{ok:false,reason:'Logging camp needs a flat terrace'};
     }else if(isClayQuarry(s)){
@@ -148,7 +202,9 @@
         if(polygonCollision(fp,otherPoly))return{ok:false,reason:'Industry overlaps another building'};
       }
     }
-    const ground=s.type==='loggingCamp'?buildableTerrainElevationForStructure(s):groundLevel(s);
+    const ground=isMill(s)?buildableTerrainElevationForStructure(placement):
+      s.type==='loggingCamp'?buildableTerrainElevationForStructure(s):groundLevel(s);
+    if(isMill(s))return{ok:true,ground,resourceTarget:water?.water?.id||null,distance:water?.bankDistance||0,angle:placement.angle};
     if(s.type==='loggingCamp'){
       const found=nearestForest(p);
       if(!found.forest||found.distance>type.radius)
@@ -180,10 +236,11 @@
       top:type.color,sideA:shade,sideB:shade,stroke:selected?'#f4b76f':'#c4bcb0'
     });
     const center=w2s({x:s.x,y:s.y},h+.04);
-    ctx.fillStyle=s.type==='mine'?'#f4eee6':'#211d17';
+    ctx.fillStyle=isMill(s)?'#594405':s.type==='mine'?'#f4eee6':'#211d17';
     ctx.font='bold '+Math.max(9,Math.round(U*State.view.scale*.74))+'px system-ui';
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(s.type==='loggingCamp'?'L':isClayQuarry(s)?'A':s.type==='quarry'?'C':'M',center.x,center.y);
+    ctx.fillText(isMill(s)?(s.type==='watermill'?'A':'V'):
+      s.type==='loggingCamp'?'L':isClayQuarry(s)?'A':s.type==='quarry'?'C':'M',center.x,center.y);
     // Direction marker scales to the footprint (1×1 mine through 3×3 quarry).
     const angle=Number(s.angle)||0,front=type.w/2;
     const tip=w2s({x:s.x+Math.cos(angle)*front*.82,y:s.y+Math.sin(angle)*front*.82},h+.055);
@@ -238,5 +295,5 @@
       }
     }
   }
-  window.ConquerIndustries=Object.freeze({TYPES,is,isClayQuarry,definition,make,footprint,groundLevel,normalizeFootprint,validate,render,drawWorkers,nearestForest,nearestSlope,nearestClayWater});
+  window.ConquerIndustries=Object.freeze({TYPES,is,isMill,isClayQuarry,definition,make,footprint,groundLevel,normalizeFootprint,validate,orientToWater,render,drawWorkers,nearestForest,nearestSlope,nearestClayWater});
 })();

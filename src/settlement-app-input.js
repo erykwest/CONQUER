@@ -448,7 +448,7 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const spec=window.ConquerIndustries.definition(candidate);
    setTool({kind:'industry',industry:type,
      placementSpec:candidate,
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{

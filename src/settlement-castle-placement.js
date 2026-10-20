@@ -16,7 +16,11 @@ function orientedToolSpec(){
 }
 function makePlacementPreview(q,angle=0){
   const spec=orientedToolSpec(),snapped=snapStructureAngle(angle),rotationStep=structureRotationStep(snapped);
-  if(spec)return{...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
+  if(spec){
+    const candidate={...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
+    if(candidate.type==='watermill')window.ConquerIndustries?.orientToWater(candidate);
+    return candidate;
+  }
   if(State.tool.kind==='tower'&&State.tool.shape==='round')return{type:'tower',shape:'round',material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,angle:0,rotationStep:0,previewOnly:true,functions:[]};
   return null;
 }
@@ -31,6 +35,7 @@ function commitOrientedPlacement(center,angle){
   }:{};
   const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
   const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  if(s.type==='watermill')window.ConquerIndustries?.orientToWater(s);
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
   if(ok){
     State.draft=null;
