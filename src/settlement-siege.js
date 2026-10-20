@@ -748,9 +748,12 @@
       if(!valid)return{ok:false,damage:0,reason:'Invalid wall bay or impact point'};
       return attackWall(s,weapon,power,where);
     }
-    if(part!=='core'&&!(part==='door'&&s.type==='gate'))
+    // A finite world-space hit point is a valid CORE target for a tower or
+    // building and supplies the impact direction to storey/ruin collapses.
+    const impactPoint=part&&typeof part==='object'&&Number.isFinite(part.x)&&Number.isFinite(part.y);
+    if(part!=='core'&&!(part==='door'&&s.type==='gate')&&!impactPoint)
       return{ok:false,damage:0,reason:'Invalid structure component'};
-    const stats=integrity(s),section=part,hp=stats[section];
+    const stats=integrity(s),section=part==='door'?'door':'core',hp=stats[section];
     const factor=effectiveness(weapon,s,section);
     if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
     if(!hp||hp.hp<=0)return{ok:false,damage:0,reason:'Section already destroyed'};
@@ -758,7 +761,7 @@
     if(!damage)return{ok:false,damage:0,reason:'No force applied'};
     const stageBefore=doorStage(s);
     hp.hp=Math.max(0,hp.hp-damage);
-    const from=part&&Number.isFinite(part.x)?part:null;
+    const from=impactPoint?part:null;
     if(section==='door'&&hp.hp===0)breakDoor(s);
     else if(section==='door'&&doorStage(s)!==stageBefore){invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);draw()}
     else if(section==='core'&&hp.hp===0)destroyStructure(s,from);
