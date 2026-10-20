@@ -9,6 +9,8 @@ on:
       - 'qa/economy*.cjs'
       - 'qa/construction*.cjs'
       - 'src/settlement-core.js'
+      - 'src/settlement-commerce.js'
+      - 'qa/commerce*.cjs'
       - '.github/workflows/economy-flows-regression.yml'
   workflow_dispatch:
 jobs:
@@ -23,6 +25,7 @@ jobs:
       - name: Economy and construction-worker regressions
         run: |
           node qa/economy-regression.cjs
+          node qa/commerce-skeleton-regression.cjs
           node qa/economy-industries-regression.cjs
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
