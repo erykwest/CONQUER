@@ -113,7 +113,7 @@ test('calendar boundary pays wages monthly, not daily',()=>{
 test('a lordly mill processes private crop into Food; mill stays optional',()=>{
   const field={id:'farm',type:'field',economicOwner:'private',crop:{cycles:0}};
   const base=[{id:'home',type:'house',houseLevel:1},field];
-  const {economy,State}=makeHarness([...base,{id:'mill',type:'windmillA',economicOwner:'lord'}]);
+  const {economy,State}=makeHarness([...base,{id:'mill',type:'windmill',economicOwner:'lord'}]);
   economy.sync();
   field.crop.cycles=1;
   const harvest=Array.from({length:150},(_,day)=>day).find(day=>{
