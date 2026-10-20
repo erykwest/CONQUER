@@ -26,6 +26,13 @@
 - [CI GitHub Actions #39253184968](https://github.com/erykwest/CONQUER/actions/runs/39253184968): **PASS** per 3 suite Node economiche, inclusi bilanci, consumi e migrazione dello stato.
 - **Aperto:** QA browser, consumi castle/Builder, ledger inventario unico, calendario agricolo, output della miniera e investimenti che edificano fisicamente.
 
+## Economia/Builder — tranche 20/10/2026, solo BRANCH
+
+- `feature/economic-balances-20261019`: il Builder ora preleva/riaccredita materiali dalla cassa e riserva economica; inventario UI `State.resources` riflette il ledger, senza reintegrare automaticamente 10.000 unità su caricamento. Vengono registrati consumo da cantiere e materiali recuperati.
+- **Fondazione:** 4 L1 iniziali senza casa, visualizzati attorno al pozzo e conteggiati nella produzione; dotazione iniziale finita al castello e alimenti nel mercato; marker evita doppie dotazioni su salvataggio/caricamento. I vecchi salvataggi fondati ricevono una dotazione migratoria una tantum e non importano i 10.000 fittizi.
+- **QA:** `qa/economy-builder-integration.cjs`, founding, placement e moduli popolazione nel workflow economico. Lo stato finale si verifica dal run GitHub Actions sul commit di questa branch; non confondere con browser.
+- **Non chiuso:** manodopera L1 che determina durata fisica del cantiere, salvaging realistico, requisiti militari e fabbisogni del castello, provenienza metallo della miniera, calendario unico e acquisto strategico da lotti privati.
+
 ## Quadro main — ciò che si può effettivamente affermare
 
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |
