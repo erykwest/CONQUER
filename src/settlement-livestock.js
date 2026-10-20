@@ -32,7 +32,7 @@
   }
   function healthyPlanCache(){
     const strokes=State.combat?.strokes||[],last=strokes.at(-1);
-    const signature=State.seed+'|'+urbanRevision+'|'+(State.village.wellId||'')+
+    const signature=State.seed+'|'+urbanRevision+'|'+(typeof environmentRevision==='number'?environmentRevision:0)+'|'+(State.village.wellId||'')+
       '|'+(window.ConquerCombat?.areaState?1:0)+'|'+strokes.length+'|'+
       (last?last.x+','+last.y+','+last.r+','+last.mode:'');
     if(cacheSignature!==signature){
@@ -96,6 +96,45 @@
   }
   function whiteAt(p){
     return whiteZoneAt(p)&&!pointBlockedForPeasant(p,null);
+  }
+  // No part of a grazing circle may occupy woodland, waterways, open
+  // water or rocky/steep relief. Checking only the centre and a few compass
+  // points allowed narrow streams and forest borders through the pasture.
+  function pastureTerrainAllowed(center,radius){
+    const edgeClearance=.20;
+    for(const feature of State.environment||[]){
+      const type=feature.type;
+      if(type==='river'||type==='stream'){
+        const line=feature.points||[],limit=radius+(Number(feature.width)||0)/2+edgeClearance;
+        for(let i=1;i<line.length;i++)
+          if(pointSegmentDistance(center,line[i-1],line[i])<=limit)return false;
+        continue;
+      }
+      if(!['forest','mountain','pond','sea'].includes(type)||!feature.points?.length)continue;
+      if(environmentContains(feature,center))return false;
+      // Include forest clearings/grooves as interior boundaries. A pasture
+      // inside a sufficiently wide clearing is permitted; one touching
+      // woodland around it is not.
+      const rings=type==='forest'?[feature.points,...(feature.holes||[])]:[feature.points];
+      for(const ring of rings)for(let i=0;i<ring.length;i++)
+        if(pointSegmentDistance(center,ring[i],ring[(i+1)%ring.length])<=radius+edgeClearance)
+          return false;
+    }
+    // Relief can have thin steep bands entirely within a pasture circle.
+    // Sample its full footprint, not just the rim (max search radius ~2U).
+    const step=.25;
+    if(terrainSlopeKind(center)==='steep')return false;
+    for(let dx=-radius;dx<=radius;dx+=step){
+      const half=Math.sqrt(Math.max(0,radius*radius-dx*dx));
+      for(let dy=-half;dy<=half;dy+=step)
+        if(terrainSlopeKind({x:center.x+dx,y:center.y+dy})==='steep')return false;
+    }
+    for(let i=0;i<32;i++){
+      const angle=i*Math.PI/16;
+      if(terrainSlopeKind({x:center.x+Math.cos(angle)*radius,
+        y:center.y+Math.sin(angle)*radius})==='steep')return false;
+    }
+    return true;
   }
   function whitePatch(p,r){
     // Cheap zoning checks first; run structure/fence collisions only after
@@ -173,7 +212,7 @@
         job.angle=0;job.ring+=2.5;
         if(job.ring>42){job.ring=5;job.factor++}
       }
-      if(!pastureIsSeparate(candidate,reach,job.house.id)||!whitePatch(candidate,reach))continue;
+      if(!pastureIsSeparate(candidate,reach,job.house.id)||!whitePatch(candidate,reach)||!pastureTerrainAllowed(candidate,reach))continue;
       const path=travelRoute(job.house,candidate);
       if(!path||!pastureIsSeparate(candidate,reach,job.house.id))continue;
       routeCache.set(job.house.id,{center:candidate,path,radius:reach});
