@@ -18,16 +18,46 @@
   // A quarry worked for clay is drawn as the clay pit.
   const key=s=>window.ConquerIndustries?.isClayQuarry?.(s)?'clayPit':s?.type==='ruin'&&MILLS.includes(s.ruinOf)?s.ruinOf+'Ruin':s?.type+variant(s);
   const has=s=>!!MODELS()?.models?.[typeof s==='string'?s:key(s)];
+  // Turning parts (windmill sails, watermill wheel) spin about the model X axis
+  // through their pivot. They are left out of the static scene and drawn every
+  // frame from dynamicMeshes(); the angle runs on real time while the game runs.
+  const SPIN={sails:.9,wheel:.7};                  // rad/s
+  const WIND_FACTOR=2;                             // sails turn twice as fast in a wind or storm
+  const phases=new Map();let lastSpin=0;
+  function windy(){
+    try{return(typeof currentWeather==='function'?currentWeather().wind:0)>=.85}catch{return false}
+  }
+  function spinning(s){
+    if(!MILLS.includes(s?.type)||variant(s)||s.burnt)return false;
+    if(window.ConquerFire?.burning?.(s.id))return false;              // nobody grinds in a fire
+    if(typeof underConstruction==='function'&&underConstruction(s))return false;
+    return true;
+  }
+  function advance(){
+    const now=typeof performance!=='undefined'?performance.now():Date.now();
+    const dt=lastSpin?Math.min(.25,(now-lastSpin)/1000):0;lastSpin=now;
+    if(!(State.clock?.speed>0))return;
+    const wind=windy()?WIND_FACTOR:1;
+    for(const s of State.structures){
+      if(!spinning(s))continue;
+      const rate=s.type==='windmill'?SPIN.sails*wind:SPIN.wheel;
+      phases.set(s.id,((phases.get(s.id)||0)+dt*rate)%(Math.PI*2));
+    }
+  }
   // World triangles for an industry structure; ground parts always paint first.
-  function triangles(s,ground){
+  // opts.only/opts.skip: part-name sets; turning parts take their current angle.
+  function triangles(s,ground,opts={}){
     const data=MODELS(),model=data.models[key(s)],pal=data.palette;
     const a=Number(s.angle)||0,c=Math.cos(a),sn=Math.sin(a),z0=ground||0;
     const pos=[],col=[],gi=[],groups=[],groupBias=[];
     for(const [name,part] of Object.entries(model.parts)){
+      if(opts.only&&!opts.only.has(name)||opts.skip?.has(name))continue;
+      const pv=model.pivots?.[name],r=pv?phases.get(s.id)||0:0,rc=Math.cos(r),rs=Math.sin(r);
       const g=groups.length,start=pos.length;
       for(let t=0;t<part.c.length;t++){
         for(let k=0;k<3;k++){
-          const x=part.v[t*9+k*3],y=part.v[t*9+k*3+1],z=part.v[t*9+k*3+2];
+          const x=part.v[t*9+k*3];let y=part.v[t*9+k*3+1],z=part.v[t*9+k*3+2];
+          if(pv){const dy=y-pv[1],dz=z-pv[2];y=pv[1]+dy*rc-dz*rs;z=pv[2]+dy*rs+dz*rc}
           pos.push(s.x+x*c-y*sn,s.y+x*sn+y*c,z0+z);
         }
         col.push(pal[part.c[t]]);gi.push(g);
@@ -43,19 +73,35 @@
     if(!has(s)||!window.ConquerMesh3D)return false;
     ctx.save();
     if(preview)ctx.globalAlpha*=.62;
-    window.ConquerMesh3D.drawMeshes(ctx,[triangles(s,ground)],window.ConquerMesh3D.gameView());
+    // A placement ghost shows the whole mill; a built one leaves its sails/wheel to the dynamic layer.
+    window.ConquerMesh3D.drawMeshes(ctx,[triangles(s,ground,preview?{}:{skip:new Set(turning(s))})],window.ConquerMesh3D.gameView());
     ctx.restore();
     return true;
   }
+  const turning=s=>Object.keys(MODELS()?.models?.[key(s)]?.pivots||{});
   // WebGL: add the model to a world3d meshBuilder with fixed-light shaded colours.
+  // Turning parts stay out of the static scene (see dynamicMeshes).
   function addToBuilder(m,s,ground){
     if(!has(s)||!window.ConquerMesh3D)return false;
-    const mesh=triangles(s,ground),p=mesh.pos;
+    const mesh=triangles(s,ground,{skip:new Set(turning(s))}),p=mesh.pos;
     for(let t=0;t<mesh.col.length;t++){
       const o=t*9;
       m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t));
     }
     return true;
   }
-  window.ConquerIndustries3D={has,key,variant,triangles,draw,addToBuilder};
+  // Sails and wheels at this frame's angle, for the dynamic layer of either renderer.
+  function dynamicMeshes(){
+    advance();
+    const out=[];
+    for(const s of State.structures){
+      if(!MILLS.includes(s.type)||!has(s))continue;
+      const names=turning(s);if(!names.length)continue;
+      const ground=Number.isFinite(s.groundZ)?s.groundZ:window.ConquerIndustries?.groundLevel?.(s)||0;
+      out.push(triangles(s,ground,{only:new Set(names)}));
+    }
+    return out;
+  }
+  window.ConquerIndustries3D={has,key,variant,triangles,draw,addToBuilder,dynamicMeshes,spinning,
+    phase:id=>phases.get(id)||0,SPIN,WIND_FACTOR};
 })();

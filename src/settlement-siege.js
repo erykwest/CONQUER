@@ -844,7 +844,7 @@
           ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
         }
       }
-      if(!world3d)drawMeshes2D(dynamicMeshes());
+      if(!world3d)drawMeshes2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[])]);
     }
     for(const r of state().ruins){
       if(r.spec)continue;

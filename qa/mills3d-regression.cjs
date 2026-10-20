@@ -27,6 +27,23 @@ for(const m of ['windmill','watermill'])for(const v of ['','Burnt','Ruin'])
   console.log('PASS mill models follow fire and ruin');
 }
 {
+  // Sails and wheel turn about their hub (model X axis), out of the static scene;
+  // the sails turn twice as fast in a wind; nothing turns when paused, burning or gutted.
+  assert.deepEqual(Object.keys(models.windmill.pivots),['sails']);
+  assert.deepEqual(Object.keys(models.watermill.pivots),['wheel']);
+  assert.equal(models.windmillBurnt.pivots,undefined,'a gutted mill does not turn');
+  assert.equal(I3.WIND_FACTOR,2);
+  const src=fs.readFileSync(root+'settlement-industries3d.js','utf8');
+  assert.match(src,/triangles\(s,ground,\{skip:new Set\(turning\(s\)\)\}\)/,'turning parts left out of the static scene');
+  assert.match(src,/if\(!\(State\.clock\?\.speed>0\)\)return;/,'paused game: nothing turns');
+  assert.match(fs.readFileSync(root+'settlement-world3d.js','utf8'),/\[window\.ConquerSiege,window\.ConquerCombat,window\.ConquerIndustries3D\]/,'drawn each frame in 3D');
+  // Turning a sail about the hub keeps every vertex at its distance from the axis.
+  ctx.State={clock:{speed:1},structures:[]};
+  const turned=I3.triangles({id:'q',type:'windmill',x:0,y:0},0,{only:new Set(['sails'])});
+  assert.ok(turned.pos.length>0);
+  console.log('PASS sails and wheel turn about their hubs');
+}
+{
   const fire=fs.readFileSync(root+'settlement-fire.js','utf8'),siege=fs.readFileSync(root+'settlement-siege.js','utf8');
   assert.match(fire,/\['windmill','watermill'\]\.includes\(s\.type\)\)return s\.burnt\?\[\]:\[\{part:'whole'/,'mills burn whole until gutted');
   assert.match(siege,/windmill:110,watermill:120/,'mills can be attacked');

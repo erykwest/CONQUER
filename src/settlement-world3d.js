@@ -1201,7 +1201,8 @@
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
-    for(const source of [window.ConquerSiege,window.ConquerCombat]){
+    // Mill sails and wheels turn every frame (industries).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     const dyn=buildDynamic(dynamicQueue);dynamicQueue=[];
