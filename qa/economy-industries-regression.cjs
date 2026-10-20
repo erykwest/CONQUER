@@ -44,7 +44,7 @@ function harness(){
     reliefLevels:()=>[{bands:[ROCK,GENTLE]}],reliefEdgeBands:level=>level.bands,
     terrainSlopeKind:p=>contains(p,ROCK.poly)?'steep':contains(p,GENTLE.poly)?'gentle':null,
     terrainElevation:p=>contains(p,ROCK.poly)?1:contains(p,GENTLE.poly)?.5:0,
-    environmentContains:(f,p,pad)=>contains(p,f.points),
+    environmentContains:(f,p,pad)=>['stream','river'].includes(f.type)?f.points.slice(1).some((q,i)=>segmentDist(p,f.points[i],q)<=(f.width||1.25)/2+(pad||0)):contains(p,f.points),
     environmentBlocksPoint:p=>State.environment.some(f=>contains(p,f.points)),
     buildableTerrainElevationForStructure:s=>contains({x:s.x,y:s.y},ROCK.poly)?null:0,
     roadTouchesPolygon:()=>false,
@@ -144,5 +144,81 @@ test('production remains two units/day with two available workers',()=>{
   h.economy.tick(4,6);
   assert.equal(h.economy.snapshot().market.wood,10);
   assert.equal(h.economy.snapshot().market.stone,20);
+});
+
+test('clay pit is 4x4 orange and keeps legacy stone quarry 3x3',()=>{
+  const h=harness();
+  const stone=h.industry.make('quarry',{x:128.75,y:125});
+  const clay=h.industry.make('quarry',{x:106.5,y:100},'clay');
+  assert.equal(stone.extractionMode,'stone');assert.equal(stone.productionGood,'stone');
+  assert.equal(clay.extractionMode,'clay');assert.equal(clay.productionGood,'clay');
+  assert.deepEqual([clay.w,clay.h],[4,4]);
+  assert.deepEqual([h.industry.definition(clay).w,h.industry.definition(clay).h],[4,4]);
+  assert.equal(h.industry.definition(clay).color,'#dc873b');
+  assert.equal(h.industry.definition(stone).color,'#999b9c');
+  assert.ok(!('stone' in h.industry.definition(clay).cost),'build clay without imported stone');
+  const old={type:'quarry',x:128.75,y:125,w:2,h:2};
+  h.industry.normalizeFootprint(old);
+  assert.equal(old.extractionMode,'stone');assert.equal(old.productionGood,'stone');
+  assert.equal(old.w,3);assert.equal(old.h,3);
+  h.industry.normalizeFootprint(clay);
+  assert.equal(clay.w,4);assert.equal(clay.h,4);assert.equal(clay.groundZ,0);
+});
+test('clay centre H0 within 6U of river or stream BANK, not footprint edge',()=>{
+  for(const type of ['river','stream']){
+    const h=harness();
+    h.State.environment=[{id:'water-'+type,type,width:2,points:[{x:100,y:90},{x:100,y:110}]}];
+    const good=h.industry.make('quarry',{x:106.99,y:100},'clay');
+    assert.equal(h.industry.validate(good).ok,true);
+    assert.equal(h.placement.check(good).ok,true);
+    assert.equal(h.industry.validate({...good,x:107.01}).ok,false);
+    assert.match(h.industry.validate({...good,x:107.01}).reason,/6U/);
+    assert.equal(h.industry.validate({...good,x:101.8}).ok,false,'footprint cannot intrude into water');
+    assert.equal(h.industry.nearestClayWater(good).distance.toFixed(2),'5.99');
+  }
+});
+test('lake shoreline counts as water; sea never counts',()=>{
+  const h=harness();
+  const lake={id:'lake',type:'pond',points:rect(100,100,4,4)};
+  const pit=h.industry.make('quarry',{x:107.99,y:100},'clay');
+  h.State.environment=[lake];
+  assert.equal(h.industry.validate(pit).ok,true);
+  assert.equal(h.industry.validate({...pit,x:108.01}).ok,false);
+  h.State.environment=[{...lake,id:'sea',type:'sea'}];
+  assert.match(h.industry.validate(pit).reason,/6U/);
+});
+test('clay requires centre H0, respects whitezone, forests, roads and buildings',()=>{
+  const h=harness(),river={id:'river',type:'river',width:2,points:[{x:117,y:100},{x:117,y:140}]};
+  const pit=h.industry.make('quarry',{x:122,y:125},'clay');
+  h.State.environment=[river];
+  assert.match(h.industry.validate(pit).reason,/H0/,'H0 required even if near water');
+  const flat={...pit,x:122,y:100};
+  assert.equal(h.industry.validate(flat).ok,true);
+  assert.match(h.industry.validate({...flat,x:50}).reason,/whitezone/);
+  h.State.structures=[{id:'tower',type:'tower',x:122,y:100,w:1,h:1}];
+  assert.match(h.industry.validate(flat).reason,/overlaps another building/);
+  h.State.structures=[];
+  h.State.environment.push({id:'forest',type:'forest',points:rect(123,100,1,1)});
+  assert.match(h.industry.validate(flat).reason,/forest, water or obstacle/);
+});
+test('staffed clay extraction generates clay commodity without changing stone production',()=>{
+  const h=harness();
+  h.State.structures=[
+    ...Array.from({length:4},(_,i)=>({id:'l2-'+i,type:'house',houseLevel:2})),
+    {...h.industry.make('quarry',{x:108,y:100},'clay'),id:'clay-quarry'},
+    {...h.industry.make('quarry',{x:129,y:120}),id:'stone-quarry'}
+  ];
+  h.economy.setShare('clay',100);
+  h.economy.setShare('stone',100);
+  h.economy.tick(-1,4);
+  assert.equal(h.economy.snapshot().market.clay,10);
+  assert.equal(h.economy.snapshot().market.stone,10);
+  // Loading old v1 economy with missing clay entries must retain old inventory.
+  const e=h.economy.state(),older={...e,castle:{wood:17},lots:{wood:[{qty:7}]},prices:{wood:3}};
+  h.State.economy=older;
+  const upgraded=h.economy.state();
+  assert.equal(upgraded.castle.wood,17);
+  assert.equal(upgraded.castle.clay,0);
+  assert.ok(Array.isArray(upgraded.lots.clay));
 });
 console.log('Industry regression: all checks passed.');

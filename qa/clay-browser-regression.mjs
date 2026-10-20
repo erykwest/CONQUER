@@ -19,7 +19,8 @@ try{
       State.structures=[
         ...State.structures,
         {id:'clay-qa-house',type:'house',auto:true,masonryMaterial:'brick',houseLevel:3,x:104,y:101,w:1.5,h:1,angle:0},
-        {id:'clay-qa-tower',type:'tower',masonryMaterial:'stone',x:110,y:102,shape:'square',material:'stone',level:2,angle:0,r:1.2,health:100}
+        {id:'clay-qa-tower',type:'tower',masonryMaterial:'stone',x:110,y:102,shape:'square',material:'stone',level:2,angle:0,r:1.2,health:100},
+        {...window.ConquerIndustries.make('quarry',{x:105,y:109},'clay'),id:'clay-qa-pit'}
       ];
       State.view.scale=1;
       State.view.x=650;
@@ -71,6 +72,15 @@ try{
       assert.equal(materials.selectedBuild,'brick');
       assert.equal(materials.selectedPrivate,'brick');
       assert.equal(materials.oldStructuresUntouched,true);
+      const clayPit=await page.evaluate(()=>{
+        const pit=State.structures.find(s=>s.id==='clay-qa-pit');
+        const def=ConquerIndustries.definition(pit);
+        return{mode:pit.extractionMode,size:[pit.w,pit.h],good:pit.productionGood,color:def.color,
+          hasTool:!!document.querySelector('[data-industry="quarry"][data-extraction-mode="clay"]')};
+      });
+      assert.equal(clayPit.mode,'clay');assert.equal(clayPit.good,'clay');
+      assert.deepEqual(clayPit.size,[4,4]);
+      assert.equal(clayPit.color,'#dc873b');assert.ok(clayPit.hasTool);
       if(mode==='webgl'){
         assert.equal(snapshot.mode3d,true,'WebGL2 should be active in Chromium');
         assert.ok(snapshot.world3d.buffers['buildings#n']>0,'house geometry disappeared');
