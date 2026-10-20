@@ -544,7 +544,7 @@
     const target=typeof document!=='undefined'?document.getElementById('economyOverview'):null;
     if(!target)return;
     const e=sync(),s=snapshot();
-    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.castleGold+'|'+s.constructionPayroll+'|'+s.spontaneousSpawnCount+'|'+(target.dataset.force||'');
+    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.castleGold+'|'+s.constructionPayroll+'|'+s.spontaneousSpawnCount+'|'+(s.commerce?Object.values(s.commerce).join('|'):'no-commerce')+'|'+(target.dataset.force||'');
     if(!force&&target.dataset.stamp===stamp)return;
     target.dataset.stamp=stamp;
     const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:1});
