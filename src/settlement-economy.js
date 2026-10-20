@@ -537,6 +537,7 @@
       spontaneousSpawnLabor:spontaneousLabor,spontaneousSpawnCount:spontaneous.length,
       welfare:e.welfare,activities:Object.keys(e.activities).length,
       balance:e.lastBalance||null,investmentCapacity:round(finite(e.investmentCapacity)),
+      commerce:window.ConquerCommerce?.snapshot?.()||null,
       weeks:e.weeks,months:e.months,years:e.years};
   }
   function render(force=false){
@@ -554,6 +555,11 @@
       '<div class="kv"><span>Spontaneous spawn labor (embedded estimate)</span><b>'+fmt(s.spontaneousSpawnLabor)+' gold</b></div>'+
       '<div class="kv"><span>L4 investment capacity</span><b>'+fmt(s.investmentCapacity)+' gold</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
+      (s.commerce?
+        '<div class="kv"><span>L3 shops / services</span><b>'+s.commerce.l3Shops+' / '+s.commerce.l3Services+'</b></div>'+
+        '<div class="kv"><span>L4+ intercity manifests / present</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
+        '<div class="kv"><span>Inn beds available</span><b>'+Math.max(0,s.commerce.innBeds-s.commerce.innOccupied)+' / '+s.commerce.innBeds+'</b></div>':'')+
+      '<div class="legend">Local sales are L3 shop contracts; L4+ manifests concern only intercity trade. Trade, lodging payments and extra goods are not simulated yet.</div>'+
       '<div class="legend">Mon–Fri work · Saturday market · Sunday rest. Wages monthly, rates/returns yearly.</div>'+
       '<div class="economy-goods">'+GOODS.map(g=>
         '<div class="economy-good"><b>'+g+'</b><small>Price '+fmt(s.prices[g])+' · market '+fmt(s.market[g])+
