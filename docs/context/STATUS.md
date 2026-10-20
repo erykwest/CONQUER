@@ -3,6 +3,14 @@
 > Snapshot **aggiornato il 16/10/2026** attraverso commit e PR GitHub; controllo documentale, **nessuna nuova esecuzione locale di QA o browser** in questa revisione.
 > Base verificata: `main` a [be14ccf](https://github.com/erykwest/CONQUER/commit/be14ccf521269cd50e36104dd6192f94c6729f99) (16/10, 15:16 UTC). Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
+## Implementazione Job Manager — branch dedicata (20/10/2026)
+
+- **BRANCH / CODICE:** [`jobmanager`](https://github.com/erykwest/CONQUER/tree/jobmanager) derivata da `main` a `a4adca0`. Il nuovo `src/settlement-jobmanager.js` assegna gli adulti L1 disponibili al pascolo, alla raccolta di legna presso Logging Camp e ai cantieri raggiungibili; **campi esclusivamente L2**, cava/miniera con personale L2.
+- **CANTIERI:** `workRequired/workDone` sostituisce il progresso a tempo per le strutture manuali; nessun L1 disponibile significa progresso fermo. Il pozzo fondativo è un'eccezione di bootstrap (prima che esistano case L1), mentre edifici procedurali auto-spawn restano immediati.
+- **PROTEZIONE SOSTENTAMENTO:** riserva di L1 allevatori calcolata con scorte alimentari del ledger economico su 14 giorni. Se gli allevatori idonei non bastano, il sistema segnala rischio ma non può impedire una carestia strutturale. Gli stock Builder di prova e il ledger non sono ancora unificati (O-003).
+- **QA ESEGUITA:** [GitHub Actions run 39457570788](https://github.com/erykwest/CONQUER/actions/runs/39457570788) **PASS**: `qa/jobmanager-regression.cjs`, `qa/economy-regression.cjs`, `qa/economy-industries-regression.cjs`, `qa/fields-regression.cjs`. Non equivalgono a un collaudo di navigazione, disegno, performance o migrazione browser con salvataggi reali.
+- **NON RILASCIATO:** modifiche soltanto su feature branch, senza merge su `main` e senza deploy Vercel. Approfondimento in [docs/jobmanager.md](../jobmanager.md); decisione [D-033](DECISIONS.md).
+
 ## Semaforo epistemico
 
 - **CODICE** — implementazione/sorgenti identificati su una branch.

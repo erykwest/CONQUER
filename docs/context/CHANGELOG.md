@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Job Manager L1/L2 e cantieri lavorati (branch `jobmanager`)
+
+- Branch [`jobmanager`](https://github.com/erykwest/CONQUER/tree/jobmanager) creata dal `main` `a4adca0`; nuovo scheduler L1 con tutela degli allevatori alimentari, logging essenziale e costruzioni in concorrenza per manodopera disponibile. L1 esclusi dai campi; assegnazione agricola ed estrazione a L2.
+- Progressione cantieri per lavoro effettivo, persistenza dei punti-lavoro e migrazione dei timer precedenti. Pozzo fondativo e spawn procedurali hanno regole specifiche per evitare blocchi iniziali.
+- QA deterministiche eseguite con esito positivo in [Actions 39457570788](https://github.com/erykwest/CONQUER/actions/runs/39457570788). **Non** ancora verificato in browser su salvataggi reali e non rilasciato su `main`.
+- Registrata decisione D-033 e documentazione dedicata [jobmanager.md](../jobmanager.md). Nessuna attivazione di caccia, raccolta forestale o ciclo femminile.
+
 ## 2026-10-16 — Diagnosi condivisa /main e /camp: crescita bloccata dalla pianificazione arteriale
 
 - Individuato su `main` il medesimo blocco di crescita già corretto su `camp`: la ricerca in background delle quattro strade perimetrali impediva lo spawn delle case, anche sulle arterie completate.
