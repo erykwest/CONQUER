@@ -42,8 +42,10 @@ test('commerce boots empty without L4+ resident inflation or phantom transaction
   const h=harness(),before=h.e.snapshot();
   const c=h.c.snapshot(),after=h.e.snapshot();
   assert.deepEqual(asObject(c),{l3Shops:0,l3Services:2,l3OperatedServices:0,
-    l4PrimarySites:1,l4PlusPlanned:0,l4PlusPresent:0,innBeds:0,innOccupied:0});
-  assert.equal(h.c.state().version,1);
+    l4PrimarySites:1,l4PlusPlanned:0,l4PlusPresent:0,
+    l4PlusDeclaredGold:0,l4PlusHeldGold:0,l4PlusWagons:0,
+    innBeds:0,innOccupied:0});
+  assert.equal(h.c.state().version,2);
   assert.deepEqual(asObject(before.population),asObject(after.population));
   assert.equal(after.castleGold,before.castleGold);
   assert.equal(h.e.GOODS.length,6,'no extra market goods before approval of actual recipes');
@@ -89,19 +91,126 @@ test('primary-site portfolio uses existing economic ownership, without fabricati
 test('resident L4+ trip and foreign L4+ manifest do not create cash or goods',()=>{
   const h=harness(),before=h.e.snapshot();
   const resident={id:'out',source:'resident',houseId:'home4',originId:'well',destinationId:'other',
-    cargo:[{good:'stone',qty:2}]};
+    cargo:[{good:'stone',qty:2}],coinGold:12};
   const foreign={id:'incoming',source:'external',originId:'other',destinationId:'well',
-    cargo:[{good:'wood',qty:4}]};
+    cargo:[{good:'wood',qty:4}],coinGold:50};
   assert.equal(h.c.planJourney(resident),true);
   assert.equal(h.c.planJourney(foreign),true);
   assert.equal(h.c.state().journeys.incoming.tier,4);
   assert.equal(h.c.state().journeys.incoming.role,'L4+');
   assert.equal(h.c.snapshot().l4PlusPlanned,2);
+  assert.equal(h.c.snapshot().l4PlusDeclaredGold,62);
+  assert.equal(h.c.snapshot().l4PlusHeldGold,0,'planning does not take coins from wallet');
+  assert.equal(h.c.snapshot().l4PlusWagons,2,'each shipment has its own wagon');
+  assert.equal(h.c.state().journeys.out.purse.gold,12);
   assert.equal(h.c.snapshot().l4PlusPresent,0);
   assert.deepEqual(asObject(h.e.population()),asObject(before.population));
   assert.equal(h.e.snapshot().castleGold,before.castleGold);
   assert.deepEqual(asObject(h.e.snapshot().market),asObject(before.market));
   assert.equal(h.c.state().journeys.incoming.cargo[0].qty,4,'manifest does not materialize stock');
+});
+test('one commodity per journey; coins are a physical purse not a second market good',()=>{
+  const h=harness(),before=h.e.snapshot(),wallet=h.e.state().wallet.L4;
+  assert.equal(h.c.planJourney({id:'mixed',originId:'x',destinationId:'well',
+    cargo:[{good:'stone',qty:1},{good:'luxury',qty:1}],coinGold:20}),false);
+  assert.equal(h.c.planJourney({id:'gold-false-good',originId:'x',destinationId:'well',
+    cargo:[{good:'gold',qty:10}]}),false);
+  assert.equal(h.c.planJourney({id:'negative-gold',originId:'x',destinationId:'well',
+    coinGold:-1}),false);
+  assert.equal(h.c.planJourney({id:'bad-decimals',originId:'x',destinationId:'well',
+    coinGold:.0001}),false);
+  assert.equal(h.c.planJourney({id:'only-gold',originId:'x',destinationId:'well',
+    coinGold:120}),true);
+  assert.deepEqual(asObject(h.c.state().journeys['only-gold'].cargo),[]);
+  assert.deepEqual(asObject(h.c.state().journeys['only-gold'].purse),
+    {gold:120,reservedGold:0});
+  assert.equal(h.c.state().journeys['only-gold'].transport.wagons,1,
+    'a buying trip brings an empty cart');
+  assert.equal(h.c.state().journeys['only-gold'].transport.loadPoints,0);
+  assert.equal(h.e.state().wallet.L4,wallet);
+  assert.equal(h.e.snapshot().castleGold,before.castleGold);
+  assert.deepEqual(asObject(h.e.snapshot().market),asObject(before.market));
+});
+test('capacity is based on single cargo type, not on coin amount',()=>{
+  const h=harness();
+  assert.equal(h.c.WAGON_CAPACITY,100);
+  assert.equal(h.c.caravanQuote([{good:'stone',qty:10}],0).wagons,1);
+  assert.equal(h.c.caravanQuote([{good:'stone',qty:11}],0).wagons,2);
+  const clothAnalog=h.c.caravanQuote([{good:'luxury',qty:100}],900);
+  assert.equal(clothAnalog.wagons,1);
+  assert.equal(clothAnalog.loadPoints,100);
+  assert.equal(clothAnalog.freePoints,0);
+  assert.equal(clothAnalog.goldPerDay,.2);
+  assert.equal(h.c.caravanQuote([{good:'stone',qty:5}],500).freePoints,50);
+  assert.equal(h.c.caravanQuote([{good:'stone',qty:5}],0).freePoints,50,
+    'even 500 gold cannot fill empty stone capacity');
+  assert.equal(h.c.caravanQuote([],0).wagons,0);
+  assert.equal(h.c.caravanQuote([],500).wagons,1);
+  assert.equal(h.c.caravanQuote([{good:'stone',qty:2},{good:'food',qty:2}],1),null);
+});
+test('resident L4 purse is escrowed from existing wallet, and cancelling refunds once',()=>{
+  const h=harness(),before=h.e.state().wallet.L4,stock=asObject(h.e.snapshot().market);
+  const trip={id:'merchant',source:'resident',houseId:'home4',originId:'well',
+    destinationId:'foreign',cargo:[{good:'metal',qty:2}],coinGold:120};
+  assert.equal(h.c.planJourney(trip),true);
+  assert.equal(h.e.state().wallet.L4,before,'planning alone cannot duplicate spendable gold');
+  assert.equal(h.c.reserveJourneyCoins('merchant'),true);
+  assert.equal(h.e.state().wallet.L4,before-120);
+  assert.equal(h.c.state().journeys.merchant.purse.reservedGold,120);
+  assert.equal(h.c.snapshot().l4PlusHeldGold,120);
+  assert.equal(h.c.reserveJourneyCoins('merchant'),false,'no second wallet debit');
+  assert.equal(h.c.cancelPlannedJourney('merchant'),true);
+  assert.equal(h.e.state().wallet.L4,before,'cancellation returns exact reserved gold');
+  assert.equal(h.c.cancelPlannedJourney('merchant'),false,'no second refund');
+  assert.deepEqual(asObject(h.e.snapshot().market),stock,
+    'the coin purse must not modify goods stock');
+});
+test('no phantom purse: budget check, external funds and save/reload',()=>{
+  const h=harness(),wallet=h.e.state().wallet.L4;
+  assert.equal(h.c.planJourney({id:'unfunded',source:'resident',houseId:'home4',
+    originId:'well',destinationId:'city',coinGold:wallet+1}),true);
+  assert.equal(h.c.reserveJourneyCoins('unfunded'),false);
+  assert.equal(h.e.state().wallet.L4,wallet);
+  assert.equal(h.c.planJourney({id:'external',originId:'elsewhere',
+    destinationId:'well',coinGold:9000}),true);
+  assert.equal(h.c.reserveJourneyCoins('external'),false);
+  assert.equal(h.e.state().wallet.L4,wallet,'foreign purse never debits or credits local cash');
+  assert.equal(h.c.cancelPlannedJourney('unfunded'),true);
+  const saved=asObject(h.State.economy),resumed=harness(saved);
+  assert.equal(resumed.c.snapshot().l4PlusDeclaredGold,9000);
+  assert.equal(resumed.e.state().wallet.L4,wallet);
+  assert.equal(resumed.c.state().journeys.external.purse.reservedGold,0);
+});
+test('escrow survives save/reload without duplicate transfer or loss',()=>{
+  const h=harness(),wallet=h.e.state().wallet.L4;
+  h.c.planJourney({id:'funded',source:'resident',houseId:'home4',
+    originId:'well',destinationId:'x',coinGold:50});
+  h.c.reserveJourneyCoins('funded');
+  const resumed=harness(asObject(h.State.economy));
+  assert.equal(resumed.e.state().wallet.L4,wallet-50);
+  assert.equal(resumed.c.snapshot().l4PlusHeldGold,50);
+  assert.equal(resumed.c.reserveJourneyCoins('funded'),false);
+  assert.equal(resumed.c.cancelPlannedJourney('funded'),true);
+  assert.equal(resumed.e.state().wallet.L4,wallet);
+});
+test('legacy V1 cargo with multiple goods remains stored but new trips are monotype',()=>{
+  const h=harness();
+  h.c.planJourney({id:'historic',originId:'other',destinationId:'well',
+    cargo:[{good:'wood',qty:1}]});
+  const saved=asObject(h.State.economy);
+  saved.commerce.version=1;
+  saved.commerce.journeys.historic.cargo.push({good:'food',qty:1});
+  delete saved.commerce.journeys.historic.purse;
+  delete saved.commerce.journeys.historic.transport;
+  const resumed=harness(saved);
+  assert.equal(resumed.c.state().version,2);
+  assert.deepEqual(asObject(resumed.c.state().journeys.historic.purse),
+    {gold:0,reservedGold:0});
+  assert.equal(resumed.c.state().journeys.historic.cargo.length,2,
+    'migration does not erase preexisting multis');
+  assert.equal(resumed.c.state().journeys.historic.transport.wagons,1);
+  assert.equal(resumed.c.planJourney({id:'new',originId:'other',destinationId:'well',
+    cargo:[{good:'wood',qty:1},{good:'food',qty:1}]}),false);
 });
 test('invalid manifests reject same-city, illegal class, unknown cargo and duplicate IDs',()=>{
   const h=harness();
