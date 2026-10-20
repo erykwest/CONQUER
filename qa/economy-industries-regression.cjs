@@ -47,6 +47,7 @@ function harness(){
     environmentContains:(f,p,pad)=>contains(p,f.points),
     environmentBlocksPoint:p=>State.environment.some(f=>contains(p,f.points)),
     buildableTerrainElevationForStructure:s=>contains({x:s.x,y:s.y},ROCK.poly)?null:0,
+    structureRotationStep:a=>Math.round(a/(Math.PI/12)),
     roadTouchesPolygon:()=>false,
     footprintPoints:s=>rect(s.x,s.y,s.w||s.size||2,s.h||s.size||2,s.angle||0),
     structureGroundContactPolygons:s=>[rect(s.x,s.y,s.w||2,s.h||2,s.angle||0)],
@@ -64,7 +65,7 @@ function harness(){
   vm.runInContext(industrySource,ctx,{filename:'settlement-industries.js'});
   vm.runInContext(placementSource,ctx,{filename:'settlement-placement.js'});
   vm.runInContext(economySource,ctx,{filename:'settlement-economy.js'});
-  return{State,industry:window.ConquerIndustries,
+  return{State,ctx,industry:window.ConquerIndustries,
     placement:window.ConquerPlacement,economy:window.ConquerEconomy};
 }
 function test(name,fn){fn();console.log('✓ '+name)}
@@ -141,5 +142,29 @@ test('production remains two units/day with two available workers',()=>{
   h.economy.tick(4,6);
   assert.equal(h.economy.snapshot().market.wood,10);
   assert.equal(h.economy.snapshot().market.stone,20);
+});
+test('both yellow windmill variants stay 2x2U and require a flat H+1 terrace',()=>{
+  const h=harness();
+  for(const type of ['windmillA','windmillB']){
+    const mill=h.industry.make(type,{x:100,y:100});
+    assert.equal(mill.w,2);assert.equal(mill.h,2);
+    assert.equal(h.industry.validate(mill).ok,false,'H0 must reject windmills');
+    h.ctx.buildableTerrainElevationForStructure=()=>1;
+    assert.equal(h.industry.validate(mill).ok,true,'H+1 must allow the whole windmill');
+    assert.equal(h.placement.check(mill).ok,true);
+  }
+});
+test('watermill wheel face aligns with water; distant bank fails placement',()=>{
+  const h=harness();
+  const water={id:'stream',type:'stream',width:1,points:[{x:110,y:98},{x:110,y:102}]};
+  h.State.environment=[water];
+  const mill=h.industry.make('watermill',{x:108.5,y:100});
+  mill.angle=Math.PI/2; // an arbitrary user rotation cannot override the bank
+  const verdict=h.industry.validate(mill);
+  assert.equal(verdict.ok,true);
+  assert.ok(Math.abs(verdict.angle)<.01,'wheel (+X) must point east at the stream');
+  assert.equal(h.placement.check(mill).ok,true);
+  assert.equal(h.industry.validate({...mill,x:100}).ok,false);
+  assert.equal(h.industry.make('watermill',{x:108.5,y:100}).w,2);
 });
 console.log('Industry regression: all checks passed.');
