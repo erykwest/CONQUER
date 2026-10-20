@@ -38,6 +38,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**Tranche percorsi L1 (20/10/2026, PR #55 Draft):** lavoratori assegnati univocamente e spostamento visuale attraverso rete pedonale casa/pozzo → cantiere. In assenza di percorso il lavoro non avanza. **Prossimi controlli:** QA browser su castello, mura e industrie; persistenza; prestazioni cache. Poi contabilizzare salari e priorità dei lavori, senza duplicare conti personali. Costruzioni procedurali ancora escluse dalla manodopera per evitare deadlock di fondazione.
+
+## Prossimo passo
+
 **Tranche cantieri manuali, 20/10/2026 (feature branch PR #55):** avanzamento basato su L1 disponibili reali e giornate-operaio, con pause produttive e weekend. Gli operai iniziali sono utilizzabili. **Priorità di seguito:** validazione visiva dei cantieri e mobilità dei costruttori, definizione del costo salariale e politiche di priorità, poi estensione condizionata alle strutture generate autonomamente. Non attribuire a case/strade procedurali una manodopera non ancora simulata.
 
 ## Prossimo passo
