@@ -205,6 +205,11 @@
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
     if(terraformEdits.length){
       const terraces=terraformEdits.filter(e=>e.mode==='walled');
+      const terraceBounds=terraces.map(edit=>{
+        const xs=edit.top.map(p=>p.x),ys=edit.top.map(p=>p.y);
+        return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
+          minY:Math.min(...ys),maxY:Math.max(...ys)};
+      });
       // Cut the ground exactly at terrace edges. Sampling a height discontinuity
       // would create diagonal triangles instead of a vertical masonry wall.
       const halfPlane=(poly,a,b,inside)=>{
@@ -220,9 +225,9 @@
       const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
       const ground=tri=>{
         let pieces=[tri];
-        for(const edit of terraces){
-          if(tri.every(p=>p.x<edit.center.x-edit.radius)||tri.every(p=>p.x>edit.center.x+edit.radius)||
-             tri.every(p=>p.y<edit.center.y-edit.radius)||tri.every(p=>p.y>edit.center.y+edit.radius))continue;
+        for(const {edit,minX,maxX,minY,maxY} of terraceBounds){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
           const next=[];
           for(const piece of pieces){
             let inner=piece;
@@ -297,8 +302,10 @@
     for(const edit of window.ConquerTerraforming?.edits?.()||[]){
       if(edit.mode!=='walled')continue;
       for(let i=0;i<edit.top.length;i++){
-        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
-        m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+        const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
+          [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
+        for(const {a,b} of segments)
+          m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
@@ -821,7 +828,7 @@
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
-    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.radius,e.edgeWidth,e.mode,e.material].join(':')).join(',');
+    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.baseZ,e.radius,e.shape,e.rotation,e.center.x,e.center.y,e.edgeWidth,e.mode,e.material].join(':')).join(',');
     const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
