@@ -93,7 +93,9 @@ function drawLinearMagnets(){
 }
 function snapAnchor(p){
   const radius=linearMagnetRadius();
-  let best=null,bestPoint=null,bestScore=Infinity;
+  const terrace=State.tool?.kind==='linear'&&State.tool.linear==='wall'
+    ?window.ConquerTerraforming?.snapWallAnchor(p,currentLinearSpec().width):null;
+  let best=terrace?{id:terrace.structureId}:null,bestPoint=terrace?.point||null,bestScore=terrace?.score??Infinity;
   for(const s of State.structures){
     if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;
     const q=boundaryPoint(s,p),score=dist(p,q);
@@ -102,7 +104,7 @@ function snapAnchor(p){
   const end=linearEndpointSnap(p,State.tool?.linear,radius);
   if(end&&end.d<bestScore)return{point:end.point,structureId:null,magnet:true,endpoint:{wallId:end.wallId,end:end.end}};
   return best
-    ?{point:bestPoint,structureId:best.id,magnet:true}
+    ?{point:bestPoint,structureId:best.id,magnet:true,terraceId:terrace&&best.id===terrace.structureId?terrace.terraceId:null,terraceEdge:terrace&&best.id===terrace.structureId?terrace.edgeIndex:null}
     :{point:{x:snapGrid(p.x),y:snapGrid(p.y)},structureId:null,magnet:false};
 }
 function towerToolPrototype(angle=0){

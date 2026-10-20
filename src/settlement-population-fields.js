@@ -7,7 +7,8 @@ function fieldAvailableHouses(houses){
     const tier=economy?.KIND?.[s.type]?.classId;
     if(s.type!=='field'&&(tier===1||tier===2))reserved[tier]+=allocation[s.id]||0;
   }
-  const sorted=tier=>houses.filter(h=>houseLevel(h)===tier)
+  const sorted=tier=>houses.filter(h=>houseLevel(h)===tier&&
+    window.ConquerLivestock?.lotKindForHouse(h)!==(tier===1?'shepherd':'cow'))
     .sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved[tier]);
   return {L1:sorted(1),L2:sorted(2),reserved};
 }
@@ -21,7 +22,7 @@ function fieldWorkAssignments(houses,fields){
     return f.id+':'+layout.poly.map(p=>p.x+','+p.y).join(';')+':'+crop.phase+':'+
       (crop.ploughed?'P':'')+(crop.harvested?'H':'')+':'+fieldSeasonPhase(calendarDateFromDay().month)+
       ':'+layout.cells.map(c=>fieldSlotDone(f,c)?1:0).join('');
-  }).sort().join('|')+'|workers-reserved:'+reserved[1]+':'+reserved[2];
+  }).sort().join('|')+'|workers-reserved:'+reserved[1]+':'+reserved[2]+'|livestock-seed:'+State.seed;
   if(fieldWorkAssignmentCache.key===key)return fieldWorkAssignmentCache.map;
 
   const slots=[];

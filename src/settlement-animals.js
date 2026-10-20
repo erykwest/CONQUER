@@ -129,7 +129,9 @@
     {lines:antler(0,0),width:7,color:'antler'}
   ]};
   const WOLF={
-    artFacing:1,scale:1.15,hindLegs:[0,1],headBehind:true,
+    // Intrinsic SVG scale only: world sizing is controlled centrally by
+    // settlement-wolves.js relative to a human, not a second resize factor.
+    artFacing:1,hindLegs:[0,1],headBehind:true,
     modes:[['walk','Walking'],['run','Corsa'],['howl','Ululato'],['idle','Fermo']],
     body:'M66 126 C72 104,98 96,132 98 C162 92,188 94,202 108 C214 120,212 140,200 150 C184 162,146 164,114 162 C88 160,66 150,66 126 Z',
     head:'M198 92 C208 80,226 78,236 86 L254 98 C258 102,256 107,250 108 L232 110 C222 116,208 114,200 106 C196 100,195 96,198 92 Z',

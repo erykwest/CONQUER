@@ -24,7 +24,7 @@ const read=name=>(siegeHooks[name]||[]).reduce((src,[hooked,original])=>{
   return src.replace(hooked,()=>original);
 },fs.readFileSync(root+'src/settlement-'+name+'.js','utf8'));
 const blob=src=>crypto.createHash('sha1').update('blob '+Buffer.byteLength(src)+'\0'+src).digest('hex');
-const header=/^'use strict';\n\/\/ [^\n]+\n/;
+const header=/^'use strict';\r?\n\/\/ [^\r\n]+\r?\n/;
 const parts={
   population:['population','population-fields','population-navigation',
     'population-routines','population-residents','population-figures','population-garrisons'],
@@ -43,8 +43,18 @@ for(const [name,files] of Object.entries(parts)){
     return stripped;
   }).join('');
   if(name==='population'){
-    assert.equal(blob(source),baselines[name],
-      'Population module split must remain byte-identical until behavior edits');
+    // Behaviour edit: L3/L4 yard outbuildings are excluded from the townhouse
+    // shadow hull. Each such edit must appear exactly once; removing it must
+    // give back the byte-identical extracted module.
+    const edits=[[".filter(part=>part.kind!=='outbuilding')",'']];
+    const original=edits.reduce((src,[edited,orig])=>{
+      assert.equal(src.split(edited).length,2,'Expected exactly one population edit: '+edited);
+      return src.replace(edited,()=>orig);
+    },source);
+    // Later population features changed the split modules on purpose; the byte lock is replaced
+    // by the entry points other modules call (castle modules use the same approach).
+    for(const fn of ['drawPeasants','drawCutawayOccupants','drawCastleSoldiers','wallPatrolPoint','drawTrainingSoldiers'])
+      assert.match(original,new RegExp('function '+fn+'\\('),'Population keeps '+fn);
   }else{
     // Post-refactor interaction enhancements are intentionally allowed in app.
     // Preserve the extracted module ordering and stable entrypoint functions.

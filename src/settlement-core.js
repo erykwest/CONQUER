@@ -111,7 +111,7 @@ const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'plains',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 const STRUCTURE_ANGLE_STEP_DEG=15;
 const STRUCTURE_ANGLE_STEPS=360/STRUCTURE_ANGLE_STEP_DEG;
 const STRUCTURE_ANGLE_STEP=Math.PI*2/STRUCTURE_ANGLE_STEPS;
@@ -167,13 +167,25 @@ const BASE_DAYS_PER_SECOND=1/48;
 // Villager routines and procedural daylight use the same simulated day as crops,
 // seasons and the calendar (a full visual day now takes 48 s at 1×).
 const PEASANT_VISUAL_SPEED=1;
-const VISUAL_DAYLIGHT_RATIO=16/24;
-const VISUAL_NIGHT_RATIO=8/24;
+// The simulated calendar fraction is a true clock: 0 = midnight, .5 = noon.
+// Sunrise/sunset are civil hours. Spring and autumn intentionally share 06–18.
+const SEASONAL_SUN_HOURS=Object.freeze({
+  spring:Object.freeze({sunrise:6,sunset:18}),
+  summer:Object.freeze({sunrise:5,sunset:21}),
+  autumn:Object.freeze({sunrise:6,sunset:18}),
+  winter:Object.freeze({sunrise:8,sunset:16})
+});
+function solarHours(season=State.season){
+  return SEASONAL_SUN_HOURS[season]||SEASONAL_SUN_HOURS.spring;
+}
+const SOLAR_TWILIGHT_HOURS=1;
 const NIGHT_OVERLAY_MAX=.48;
-const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
+// The paved square around the well is a no-build zone: houses, lots, fields and buildings
+// keep out of it (roads may still cross it).
+function wellPlazaPoints(s){return rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0)}
 const LINEAR_POINT_MAGNET=.90;
 const TOWER_WALL_MAGNET=.78;
 const SUBTOWER_MAGNET=1.0;
@@ -227,6 +239,7 @@ const ROAD_RULES={
   branchSpawnSpacing:1.6,snapNodeDistance:1.15
 };
 const BIOMES=Object.freeze({
+  test:{label:'TEST',field:'#2a2818'},
   plains:{label:'Pianura',field:'#2a2818'},
   hills:{label:'Colline',field:'#2f2a19'},
   valley:{label:'Vallata',field:'#28271a'},
@@ -391,7 +404,31 @@ function houseFootprintParts(s){
   return out;
 }
 function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.38:1.72}
-function houseRidgeHeight(s){return houseLevel(s)===1?1.45:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.95:2.26}
+// L2+ gabled roofs are steep (60°, medieval): the ridge rises tan(60°)·half-span above the eaves,
+// where the span is the part's side perpendicular to its ridge. L1 cottages keep their low thatch.
+const HOUSE_ROOF_PITCH=Math.tan(60*Math.PI/180);
+function houseRoofSpan(part){return Math.abs(part.roofTurn||0)>1e-6?part.w:part.h}
+function housePartRidge(s,part,wallH=houseBodyHeight(s)){
+  if(part.kind==='turret'||part.kind==='outbuilding')return part.roofH;
+  if(houseLevel(s)===1)return 1.45;
+  return wallH+HOUSE_ROOF_PITCH*houseRoofSpan(part)/2;
+}
+// Ridges for a list of parts: wings never rise above the main body of their own building
+// (first body part per buildingKey), so cross-gables meet the main roof below its ridge.
+function housePartRidges(s,parts,wallH=houseBodyHeight(s)){
+  const main=new Map();
+  return parts.map(part=>{
+    const ridge=housePartRidge(s,part,wallH);
+    if(part.kind==='turret'||part.kind==='outbuilding')return ridge;
+    const key=part.buildingKey||'main';
+    if(!main.has(key)){main.set(key,ridge);return ridge}
+    return Math.min(ridge,main.get(key));
+  });
+}
+function houseRidgeHeight(s){
+  if(houseLevel(s)===1)return 1.45;
+  return housePartRidge(s,houseFootprintParts(s)[0]);
+}
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
 const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}

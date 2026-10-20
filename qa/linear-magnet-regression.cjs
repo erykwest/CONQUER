@@ -19,7 +19,7 @@ const code=[
 ].join('\n');
 function fixture(tool,scale=1){
   const State={structures:[],tool:{kind:'linear',linear:tool},view:{scale}};
-  const ctx=vm.createContext({State,Math,Number,U:12,
+  const ctx=vm.createContext({State,Math,Number,U:12,window:{},
     dist:(a,b)=>Math.hypot(b.x-a.x,b.y-a.y),snapGrid:v=>Math.round(v*4)/4,
     underConstruction:s=>!!s.building,rotateVec:(x,y)=>({x,y}),rectDims:s=>({w:s.size,h:s.size})});
   vm.runInContext(code+'\nthis.snapAnchor=snapAnchor;this.radius=linearMagnetRadius;',ctx);

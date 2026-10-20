@@ -21,6 +21,7 @@
 })();
 </script>
 <link rel="stylesheet" href="./src/settlement.css?v=antiregression-1">
+<link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 </head>
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
@@ -51,6 +52,11 @@
     <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <h3>Roads</h3><button class="full" data-main-road>═ Main road</button>
+    <h3>Terraforming</h3>
+    <div class="grid"><button data-terraform="terrain">Terrain</button><button data-terraform="walled">Walled terrace</button></div>
+    <div class="grid"><button data-terraform-delta="-1">↓ Dig 1U</button><button data-terraform-delta="1" class="active">↑ Raise 1U</button></div>
+    <div class="grid3"><button data-terraform-radius="2">R2</button><button data-terraform-radius="4" class="active">R4</button><button data-terraform-radius="6">R6</button></div>
+    <div class="legend">The ghost previews the final elevation before applying it. Walled terraces cannot overlap another walled terrace. Their edges act as magnets for walls, aligned flush to the wall face.</div>
 <h3>Fossati</h3><div class="grid"><button data-crossing="dry">⛏ Asciutto</button><button data-crossing="water">💧 Allagato H0</button></div>
 <h3>Ponti</h3><div class="grid"><button data-crossing="wood">🪵 Legno</button><button data-crossing="stone">🪨 Pietra</button></div>
 <div class="slot-label">Larghezza fossati e ponti</div><div class="grid3"><button data-crossing-width="1">1U</button><button data-crossing-width="2" class="active">2U</button><button data-crossing-width="3">3U</button></div>
@@ -89,6 +95,7 @@
     <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
     <div class="kv"><span>Biome</span><b id="biomeLabel">Pianura</b></div>
     <select id="biomeSelect" aria-label="Biome">
+      <option value="test" selected>TEST</option>
       <option value="plains">Pianura</option>
       <option value="hills">Colline</option>
       <option value="valley">Vallata</option>
@@ -218,6 +225,10 @@
       </div>
     </div>
   </div>
+  <section id="conquerMinimap" aria-label="Minimappa navigabile">
+    <div class="minimap-head"><span>MINIMAPPA</span><button id="conquerMinimapToggle" type="button" aria-label="Riduci minimappa" aria-expanded="true" title="Riduci minimappa">−</button></div>
+    <canvas id="conquerMinimapCanvas" width="190" height="190" role="img" aria-label="Mappa top-down del territorio: trascina per spostare la vista" title="Clicca o trascina per centrare la camera"></canvas>
+  </section>
   <div id="status">Select a build tool</div>
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
@@ -225,11 +236,12 @@
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js"></script>
 <script src="./src/settlement-castle.js?v=refactor-1"></script>
+<script src="./src/settlement-terraforming.js?v=terraforming-1"></script>
 <script src="./src/settlement-landscape.js?v=refactor-1"></script>
 <script src="./src/settlement-castle-placement.js?v=refactor-1"></script>
 <script src="./src/settlement-castle-structures.js?v=refactor-1"></script>
 <script src="./src/settlement-buildings.js?v=refactor-1"></script>
-<script src="./src/settlement-urban.js"></script>
+<script src="./src/settlement-urban.js?v=merge-urban-1"></script>
 <script src="./src/settlement-fields.js"></script>
 <script src="./src/settlement-boundaries.js"></script>
 <script src="./src/settlement-industries.js?v=industry-1"></script>
@@ -239,12 +251,14 @@
 <script src="./src/settlement-fire.js?v=fire-1"></script>
 <script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5"></script>
 <script src="./src/settlement-population.js"></script>
-<script src="./src/settlement-population-fields.js?v=refactor-2"></script>
-<script src="./src/settlement-population-navigation.js?v=refactor-2"></script>
+<script src="./src/settlement-population-fields.js?v=livestock-tiers-1"></script>
+<script src="./src/settlement-population-navigation.js?v=lot-nav-1"></script>
 <script src="./src/settlement-population-routines.js?v=refactor-2"></script>
-<script src="./src/settlement-population-residents.js?v=refactor-2"></script>
+<script src="./src/settlement-population-residents.js?v=livestock-tiers-1"></script>
 <script src="./src/settlement-population-figures.js?v=refactor-2"></script>
 <script src="./src/settlement-population-garrisons.js?v=refactor-2"></script>
+<script src="./src/settlement-animals.js?v=merge-urban-1"></script>
+<script src="./src/settlement-livestock.js?v=merge-urban-1"></script>
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
 <script src="./src/settlement-architecture.js?v=refactor-1"></script>
 <script src="./src/settlement-weather.js?v=refactor-1"></script>
@@ -261,6 +275,8 @@
 <script src="./src/settlement-app-persistence.js?v=refactor-2"></script>
 <script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
 <script src="./src/settlement-app-simulation.js?v=refactor-2"></script>
+<script src="./src/settlement-lod.js?v=lod-1"></script>
+<script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
 <script src="./src/settlement-wallwalk.js?v=wallwalk-1"></script>
 <script src="./src/settlement-combat-anim.js?v=anim-1"></script>

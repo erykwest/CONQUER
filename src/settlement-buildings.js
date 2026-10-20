@@ -273,7 +273,10 @@ function drawFlatRect(s,fill,stroke){
 }
 function fieldGrid(field){return fieldLayout(field)}
 function drawField(field){drawFieldGround(field)}
-function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
+// L1 cottages are thatched (straw); L2+ use anthracite slate. Gables stay timber/plaster.
+const HOUSE_THATCH={a:'#b39250',b:'#c4a25d',stroke:'#d8bd7c'};
+function drawHouseRoofPart(s,part,wallH,ridgeH,roofMaterial=false,gableFill=null){
+  const anthracite=roofMaterial===true,thatch=roofMaterial==='thatch';
   const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(s.angle||0)+turn;
   const ca=Math.cos(angle),sa=Math.sin(angle),center=part.center||houseLocalToWorld(s,part.cx,part.cy);
   const rw=Math.abs(turn)>1e-6?part.h:part.w,rh=Math.abs(turn)>1e-6?part.w:part.h;
@@ -282,8 +285,8 @@ function drawHouseRoofPart(s,part,wallH,ridgeH,anthracite=false,gableFill=null){
   const r0=local(-rw/2,0),r1=local(rw/2,0);
   const winter=State.season==='winter';
   const faces=[
-    {kind:'roof',screen:[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_A:(anthracite?'#303237':'#5b3d30'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':'#8c6752'),lw:1},
-    {kind:'roof',screen:[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_B:(anthracite?'#3a3d42':'#6b4938'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':'#8c6752'),lw:1},
+    {kind:'roof',screen:[w2s(c0,wallH),w2s(c1,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_A:(anthracite?'#303237':thatch?HOUSE_THATCH.a:'#5b3d30'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':thatch?HOUSE_THATCH.stroke:'#8c6752'),lw:1},
+    {kind:'roof',screen:[w2s(c3,wallH),w2s(c2,wallH),w2s(r1,ridgeH),w2s(r0,ridgeH)],fill:winter?WINTER_SNOW_B:(anthracite?'#3a3d42':thatch?HOUSE_THATCH.b:'#6b4938'),stroke:winter?WINTER_SNOW_STROKE:(anthracite?'#55585e':thatch?HOUSE_THATCH.stroke:'#8c6752'),lw:1},
     {kind:'gable',screen:[w2s(c0,wallH),w2s(c3,wallH),w2s(r0,ridgeH)],fill:gableFill||'#654936',stroke:anthracite?'rgba(126,116,102,.55)':'#8c6752',lw:.75},
     {kind:'gable',screen:[w2s(c1,wallH),w2s(c2,wallH),w2s(r1,ridgeH)],fill:gableFill||'#654936',stroke:anthracite?'rgba(126,116,102,.55)':'#8c6752',lw:.75}
   ];
@@ -328,28 +331,57 @@ function drawHouseTurret(s,turret,selected=false){
   ctx.save();ctx.fillStyle='rgba(31,29,28,.86)';ctx.fillRect(p.x-ww/2,p.y-wh/2,ww,wh);
   ctx.strokeStyle='rgba(190,178,155,.42)';ctx.lineWidth=.7;ctx.strokeRect(p.x-ww/2,p.y-wh/2,ww,wh);ctx.restore();
 }
+// Yard outbuildings of L3/L4 plots (urbanLotOutbuildings): timber storehouse with a gabled
+// shingle roof, or an open lean-to on posts whose high side backs onto the plot boundary.
+const OUTBUILDING_TIMBER={a:'#5d4431',b:'#71543c',gable:'#6b4f39',stroke:'rgba(176,142,104,.55)'};
+function drawUrbanOutbuilding(s,part,selected=false){
+  const stroke=selected?'#f4b76f':OUTBUILDING_TIMBER.stroke;
+  if(part.type==='store'){
+    extrudePolygonAt(part.points,0,part.bodyH,{top:OUTBUILDING_TIMBER.b,sideA:OUTBUILDING_TIMBER.a,sideB:OUTBUILDING_TIMBER.b,stroke});
+    drawHouseRoofPart(s,part,part.bodyH,part.roofH,false,OUTBUILDING_TIMBER.gable);
+    return;
+  }
+  const faces=urbanHouseFaces(s,part),winter=State.season==='winter',ground=terrainElevation(part.center);
+  const sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),c=part.center;
+  const local=(x,y)=>({x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca});
+  const items=[];
+  // Back plank wall along the boundary (local -Y), posts at the yard corners, then the slope.
+  const back=faces.findIndex(f=>f.slice(0,2).every(v=>Math.abs(-(v.p.x-c.x)*sa+(v.p.y-c.y)*ca+part.h/2)<1e-6));
+  if(back>=0)items.push({depth:viewDepthPoint(local(0,-part.h/2)),draw:()=>pathPolygon(faces[back].map(v=>w2s(v.p,v.z-ground)),OUTBUILDING_TIMBER.a,stroke,.75)});
+  const posts=part.w>1.3?[-.5,0,.5]:[-.5,.5];
+  for(const t of posts){
+    const p=local(t*(part.w-.08),part.h/2-.04);
+    items.push({depth:viewDepthPoint(p),draw:()=>{const a=w2s(p,0),b=w2s(p,part.bodyH);ctx.save();ctx.strokeStyle='#4a3626';ctx.lineWidth=Math.max(1,State.view.scale*1.1);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}});
+  }
+  const roof=faces[faces.length-1];
+  items.push({depth:viewDepthPoint(c),draw:()=>pathPolygon(roof.map(v=>w2s(v.p,v.z-ground+.01)),winter?WINTER_SNOW_A:'#6b4938',winter?WINTER_SNOW_STROKE:'#8c6752',1)});
+  items.sort((a,b)=>a.depth-b.depth).forEach(i=>i.draw());
+}
 function drawHouse(s){
-  const level=houseLevel(s),wallH=houseBodyHeight(s),ridgeH=houseRidgeHeight(s),selected=State.selectedId===s.id;
+  const level=houseLevel(s),wallH=houseBodyHeight(s),selected=State.selectedId===s.id;
   const stroke=selected?'#f4b76f':'#aaa199';
-  const parts=urbanHouseDisplayParts(s).map(part=>{
+  const display=urbanHouseDisplayParts(s),ridges=housePartRidges(s,display,wallH);
+  const parts=display.map((part,i)=>{
     const center=part.center||houseLocalToWorld(s,part.cx,part.cy);
-    return{...part,depth:viewDepthPoint(center)};
+    return{...part,ridgeH:ridges[i],depth:viewDepthPoint(center)};
   }).sort((a,b)=>a.depth-b.depth);
 
   if(level===1){
     for(const part of parts){
+      if(part.kind==='outbuilding'){drawUrbanOutbuilding(s,part,selected);continue}
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
       extrudePolygon(part.points,wallH,{top:'#7d5b43',sideA:'#4e392d',sideB:'#654936',stroke:selected?'#f4b76f':'#b89575'});
-      drawHouseRoofPart(s,part,wallH,ridgeH,false,null);
+      drawHouseRoofPart(s,part,wallH,part.ridgeH,'thatch',null);
     }
   }else{
     const floorBreak=wallH*.50;
     const creamTop='#d6bf82',creamA='#c8ae70',creamB='#e0ca91',creamGable='#d9c184';
     for(const part of parts){
+      if(part.kind==='outbuilding'){drawUrbanOutbuilding(s,part,selected);continue}
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
       extrudePolygonAt(part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
       extrudePolygonAt(part.points,floorBreak,wallH,{top:creamTop,sideA:creamA,sideB:creamB,stroke});
-      drawHouseRoofPart(s,part,wallH,ridgeH,true,creamGable);
+      drawHouseRoofPart(s,part,wallH,part.ridgeH,true,creamGable);
     }
   }
   if(!underConstruction(s))drawHouseChimneys(s);

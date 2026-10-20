@@ -1,0 +1,11 @@
+/* World minimap: rotated top-down overview, independent of the 3D renderer. */
+#conquerMinimap{position:absolute;bottom:14px;right:calc(var(--sidebar) + 26px);width:212px;padding:7px;background:rgba(24,22,16,.94);border:1px solid #8b7350;border-radius:11px;box-shadow:0 7px 25px #0008;z-index:7;user-select:none}
+#conquerMinimap .minimap-head{display:flex;align-items:center;justify-content:space-between;height:23px;padding:0 2px 6px;font:800 10px/1.1 system-ui;letter-spacing:.13em;color:#e6d7b7}
+#conquerMinimap #conquerMinimapToggle{flex:none;width:24px;height:22px;padding:0;border-radius:5px;font-size:14px;line-height:1}
+#conquerMinimapCanvas{display:block;width:100%;aspect-ratio:1/1;height:auto;border:1px solid #9b896a;border-radius:5px;background:#516a49;cursor:crosshair;touch-action:none}
+#conquerMinimap.collapsed{width:auto;min-width:91px;padding:6px 8px}
+#conquerMinimap.collapsed .minimap-head{height:24px;padding:0}
+#conquerMinimap.collapsed #conquerMinimapCanvas{display:none}
+@media(max-width:1180px){#conquerMinimap{right:12px}}
+@media(max-width:700px){#conquerMinimap{right:7px;bottom:7px;width:154px;padding:5px}#conquerMinimap .minimap-head{font-size:9px}}
+@media(max-height:480px){#conquerMinimap{width:135px;bottom:5px}}

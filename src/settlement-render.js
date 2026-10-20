@@ -4,7 +4,8 @@ function drawDayNightOverlay(){
   const r=wrap.getBoundingClientRect(),nf=nightFactor();
   if(window.ConquerAmbientLight){
     window.ConquerAmbientLight.draw(ctx,r,{
-      fraction:visualCycleFrac(),night:nf,season:State.season,weather:currentWeather()
+      fraction:visualCycleFrac(),night:nf,season:State.season,weather:currentWeather(),
+      ...solarHours()
     });
     return;
   }
@@ -14,8 +15,12 @@ function drawDayNightOverlay(){
 }
 function drawNightLights(){
   const nf=nightFactor();if(nf<=.01)return;
+  const t0=performance.now();
   drawFacadeWindows(true,nf);
   drawFireGlows(nf);
+  const ms=performance.now()-t0;
+  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;
+  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});
 }
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);ctx.restore();
@@ -135,7 +140,12 @@ function drawBaseStaticScene(){
     const completedOthers=State.structures
       .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
       .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of completedOthers){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+    for(const s of completedOthers){
+      // Offscreen houses do not need full architectural rasterization.
+      if(s.type==='house'&&!worldPointVisible(s,houseBodyHeight(s)+.6,
+        320+180*State.view.scale))continue;
+      if(s.auto)drawAutoStructure(s);else drawStructure(s);
+    }
     drawStaticHouseFacadeDetails();
   });
   entry.dirty=false;
@@ -396,6 +406,7 @@ function draw(){
   markPhase('scene-caches');
   // Population remains between settlement massing and completed castle massing,
   // preserving the existing occlusion behaviour.
+  window.ConquerLivestock?.draw();
   drawPeasants();
   window.ConquerIndustries?.drawWorkers();
   markPhase('population');
@@ -418,8 +429,10 @@ function draw(){
   window.ConquerCrossings?.drawDynamic();
   drawChimneysAndSmoke();
 
-  if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
-  if(State.draft?.previewSegments?.length){
+  if(State.draft?.mode==='terraform'){
+    window.ConquerTerraforming?.drawGhost(State.draft.preview);
+  }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
+  if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
     const totalCost=aggregateConstructionCost(segments);
     const routeUnderfunded=!canAfford(totalCost);
@@ -428,7 +441,7 @@ function draw(){
       const verdict=builderGhostVerdict(segment);
       if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
     }
-  }else if(State.draft?.preview){
+  }else if(State.draft?.mode!=='terraform'&&State.draft?.preview){
     const ghost=State.draft.preview;
     if(['moat','bridge'].includes(ghost.type)){
       window.ConquerCrossings?.drawPreview(ghost);
@@ -437,21 +450,26 @@ function draw(){
       const verdict=builderGhostVerdict(ghost);
       if(!verdict.ok)drawInvalidPlacementGhost(ghost);
     }
-  }else if(State.draft?.invalidPreview){
+  }else if(State.draft?.mode!=='terraform'&&State.draft?.invalidPreview){
     drawInvalidPlacementGhost(State.draft.invalidPreview);
   }
   window.ConquerCrossings?.drawMoatMagnets();
   if(typeof drawLinearMagnets==='function')drawLinearMagnets();
+  window.ConquerTerraforming?.drawMagnets();
   if(State.draft?.mode==='orient'&&State.draft.center&&Number.isFinite(State.draft.angle)){
     const end={x:State.draft.center.x+Math.cos(State.draft.angle)*4,y:State.draft.center.y+Math.sin(State.draft.angle)*4};
     const a=w2s(State.draft.center),b=w2s(end);ctx.save();ctx.strokeStyle='rgba(244,183,111,.72)';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
   }
   drawDayNightOverlay();
-  drawNightLights();
+  // WebGL2 lights share the real scene depth and are composited after colour grading.
+  // Canvas keeps its original complete night path as the fallback.
+  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);
+  else drawNightLights();
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   endPopulationFrame();
   markPhase('castle-facades-effects');
   if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
+  window.ConquerMinimap?.requestDraw();
 }
 

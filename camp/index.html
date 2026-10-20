@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base href="../">
+<script>window.__CONQUER_CAMP_MODE__=true;</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CONQUER — Settlement Builder</title>
+<script>
+(() => {
+  import('https://esm.sh/@supabase/supabase-js@2.117.1')
+    .then(mod => { window.__createSupabaseClient = mod.createClient; })
+    .catch(err => console.warn('Supabase unavailable; local persistence remains active.', err));
+
+  import('https://esm.sh/polygon-clipping@0.15.7')
+    .then(mod => {
+      window.__polygonClipping = mod.default;
+      window.dispatchEvent(new Event('polygon-clipping-ready'));
+      if (typeof invalidateSceneCache === 'function') invalidateSceneCache();
+      if (typeof draw === 'function') draw();
+    })
+    .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
+})();
+</script>
+<link rel="stylesheet" href="./src/settlement.css?v=antiregression-1">
+<link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
+</head>
+<body>
+<header><div class="brand">CONQUER</div><div class="sub">CAMP · Military encampments</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
+<div id="wrap">
+  <canvas id="gpuCanvas" aria-hidden="true"></canvas>
+  <canvas id="c"></canvas>
+  <svg id="weatherCloudLayer" aria-hidden="true" preserveAspectRatio="none"></svg>
+  <canvas id="weatherCanvas" aria-hidden="true"></canvas>
+  <aside id="builder" class="panel">
+    <h2>Builder</h2>
+    <div class="grid"><button data-tool="select" class="active">↖ Select</button><button data-tool="delete">⌫ Delete</button></div>
+    <h3>Square towers</h3>
+    <div class="grid3"><button data-tower="square" data-size="1">1U</button><button data-tower="square" data-size="1.5">1.5U</button><button data-tower="square" data-size="2">2U</button></div>
+    <h3>Round towers</h3>
+    <div class="grid3"><button data-tower="round" data-size="0.5">R .5</button><button data-tower="round" data-size="0.75">R .75</button><button data-tower="round" data-size="1">R 1</button></div>
+    <h3>Wooden towers</h3>
+    <div class="grid"><button data-wood-tower="watchtower">Watchtower<br><span class="small">1×1 · H1</span></button><button data-wood-tower="palisadeTower">Wood tower<br><span class="small">1.5×1.5 · H1</span></button></div>
+    <h3>Tower height</h3>
+    <div class="grid3"><button data-tower-level="1" class="active">1 level</button><button data-tower-level="2">2 levels</button><button data-tower-level="3">3 levels</button></div>
+    <h3>Linear castle</h3>
+    <div class="grid3"><button data-linear="wall">Wall</button><button data-linear="palisade">Palisade</button><button data-linear="built">Built section</button></div>
+    <h3>Wall / palisade depth</h3>
+    <div class="grid3"><button data-wall-tier="1">T1 · .2U</button><button data-wall-tier="2" class="active">T2 · .5U</button><button data-wall-tier="3">T3 · 1U</button></div>
+    <h3>Wall height</h3>
+    <div class="grid"><button data-wall-level="1" class="active">1 level</button><button data-wall-level="2">2 levels</button></div>
+    <h3>Gate</h3>
+    <div class="grid"><button data-gate>Stone gate<br><span class="small">1.5×1.5U</span></button><button data-wood-gate>Wood gate<br><span class="small">1.5×1U · H1</span></button></div>
+    <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
+    <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
+    <h3>Roads</h3><button class="full" data-main-road>═ Main road</button>
+<h3>Fossati</h3><div class="grid"><button data-crossing="dry">⛏ Asciutto</button><button data-crossing="water">💧 Allagato H0</button></div>
+<h3>Ponti</h3><div class="grid"><button data-crossing="wood">🪵 Legno</button><button data-crossing="stone">🪨 Pietra</button></div>
+<div class="slot-label">Larghezza fossati e ponti</div><div class="grid3"><button data-crossing-width="1">1U</button><button data-crossing-width="2" class="active">2U</button><button data-crossing-width="3">3U</button></div>
+<div class="legend">Fossati: magneti alle estremità, tracciamento concatenato automatico. Click sul punto di partenza per interrompere la catena oppure Esc per uscire. Ponti: due estremità alla stessa quota. Levatoio dal menu Gate.</div>
+    <h3>Settlement buildings</h3>
+    <div class="grid3">
+      <button data-civic="market">Market<br><span class="small">4×4U</span></button>
+      <button data-civic="tavern">Tavern<br><span class="small">Double T</span></button>
+      <button data-civic="church">Church<br><span class="small">Large</span></button>
+      <button data-civic="training">Training field<br><span class="small">5×4U</span></button>
+    </div>
+    <div class="legend">Point buildings: click to fix the centre → move the mouse to rotate the ghost (15° steps) → click again to place.</div>
+    <h3>Industry · Economy placeholders</h3>
+    <div class="grid3">
+      <button data-industry="loggingCamp">Logging<br><span class="small">2×2U · L1×2</span></button>
+      <button data-industry="quarry">Quarry<br><span class="small">3×3U · L2×2</span></button>
+      <button data-industry="mine">Mine<br><span class="small">1×1U · L2×2</span></button>
+    </div>
+    <div class="legend">Click centre → move mouse to rotate → click again to build. Whole footprint in the whitezone. Logging within 10U of forest; quarry (3×3U) must partially overlap a rocky slope; mine (1×1U) must have its centre directly on the rocky slope.</div>
+    <hr/>
+    <div class="legend">Wood towers: watchtower 1×1 H1 · medium 1.5×1.5 H1 with open/pitched roof variant.<br>Wood gate: 1.5×1U · fixed H1 · flat roof.<br>Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Palisade: T1 stakes · T2 inner walkway · T3 inner 45° earthwork · fixed height · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
+    <hr/>
+    <div class="grid"><button id="undoBtn">↶ Undo</button><button id="clearBtn">Clear all</button></div>
+  </aside>
+
+  <aside id="functionPanel" class="panel">
+    <div class="panel-head"><h2>Structure functions</h2><button id="closeFunctions" class="icon-btn">×</button></div>
+    <div id="functionInfo"></div>
+    <div id="functionSlots"></div>
+  </aside>
+
+  <aside id="policy" class="panel">
+    <h2>Settlement</h2>
+    <div class="kv"><span>Village</span><b id="villageLabel">—</b></div>
+    <div class="kv"><span>World cell</span><b id="cellLabel">0, 0</b></div>
+    <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
+    <div class="kv"><span>Biome</span><b id="biomeLabel">Pianura</b></div>
+    <select id="biomeSelect" aria-label="Biome">
+      <option value="test" selected>TEST</option>
+      <option value="plains">Pianura</option>
+      <option value="hills">Colline</option>
+      <option value="valley">Vallata</option>
+      <option value="river">Fiume</option>
+      <option value="forest">Foresta</option>
+      <option value="mountains">Montagne</option>
+      <option value="sea">Mare</option>
+    </select>
+    <div class="kv"><span>Build area</span><b>100×100U</b></div>
+    <div class="kv"><span>World buffer</span><b>200×200U</b></div>
+    <div class="kv"><span>Growth pulse</span><b>~2.5 days</b></div>
+    <div class="kv"><span>Road model</span><b>radial / border-linked</b></div>
+    <div class="kv"><span>Time</span><b>paused on load</b></div>
+    <h3>Policies</h3>
+    <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
+    <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
+    <div class="policy"><span>Levy</span><input id="levy" type="range" min="0" max="100" value="10"></div>
+    <details id="economyDetails" class="economy-details" open>
+      <summary>Economy · Production and Market</summary>
+      <div id="economyOverview" aria-live="off">Economy initializes when the settlement loads.</div>
+    </details>
+    <h3>Persistence</h3>
+    <button class="full" id="saveBtn">Save settlement</button>
+    <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
+  </aside>
+  <div id="profileOverlay" class="profile-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <section class="profile-window">
+      <div class="profile-titlebar"><h2 id="profileTitle">PROFILE <small>· Partita corrente</small></h2><button type="button" id="profileClose" aria-label="Chiudi">✕</button></div>
+      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button></nav>
+      <section class="profile-section" id="profileGeneral">
+        <h3>DATI DELLA PARTITA</h3>
+        <div class="profile-facts"><div>Insediamento <strong id="profileVillage">—</strong></div><div>Seed <strong id="profileSeed">—</strong></div><div>Bioma <strong id="profileBiome">—</strong></div><div>Giorno <strong id="profileDay">—</strong></div><div>Cella mondo <strong>0, 0</strong></div></div>
+        <p class="profile-help">Questi dati appartengono alla partita, non all'account del giocatore.</p>
+      </section>
+      <section class="profile-section" id="profileHeraldry" hidden>
+        <div class="heraldry-editor">
+          <div><h3>PARTIZIONE DEL CAMPO</h3><div id="heraldryPatterns" class="heraldry-patterns"></div>
+            <h3>COLORI</h3><div id="heraldryColors" class="heraldry-colors"></div>
+            <h3>SIMBOLO CENTRALE</h3><div id="heraldrySymbols" class="heraldry-symbols"></div></div>
+          <div class="heraldry-preview"><h3>ANTEPRIMA · TEXTURE RETTANGOLARE</h3><div id="heraldryFlag"></div><h3>APPLICAZIONI / CLIPPING</h3><div id="heraldryApplications"></div><p class="profile-help">Il motivo è sempre rettangolare. Scudi e stendardi applicano soltanto una maschera; il simbolo rimane centrato.</p></div>
+        </div>
+      </section>
+      <footer class="profile-footer"><span id="heraldrySaveStatus">Salvataggio automatico della partita</span><button id="profileDone" type="button">CHIUDI</button></footer>
+    </section>
+  </div>
+  <div id="foundVillageModal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2>Found a village</h2>
+      <p>The well fixes the settlement core. Naming the village will generate the first road grid, houses and surrounding fields using the persistent settlement seed.</p>
+      <input id="villageNameInput" maxlength="40" autocomplete="off" placeholder="Village name">
+      <div class="row"><button id="cancelVillageBtn">Cancel</button><button id="confirmVillageBtn" class="active">Found village</button></div>
+    </div>
+  </div>
+  <div id="saveState">local</div>
+  <div id="timePanel">
+    <button id="rotateLeft" title="Rotate view 90° counter-clockwise">⟲</button>
+    <button id="rotateRight" title="Rotate view 90° clockwise">⟳</button>
+    <button id="planToggle" title="Plan view (top-down) for precise joints">▦</button>
+    <span id="dayLabel" class="time-readout">Day 0.0</span>
+    <button data-speed="0" class="active" title="Pause">⏸</button>
+    <button data-speed="1" title="1× · 48 seconds per day">1×</button>
+    <button data-speed="3" title="3× · 16 seconds per day">3×</button>
+    <button data-speed="10" title="10× · 4.8 seconds per day">10×</button>
+    <button data-speed="100" title="100× · 0.48 seconds per day">100×</button>
+  </div>
+  <div id="devTools">
+    <button id="devToggle" type="button" aria-expanded="false">DEV ▾</button>
+    <div id="devPanel" hidden>
+      <div class="dev-section"><span class="dev-label">MAPPA</span><button class="full" id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></div>
+      <div class="dev-section">
+        <span class="dev-label">LUCE</span>
+        <div class="dev-row">
+          <button data-light-override="day" title="Force day">☀︎ Giorno</button>
+          <button data-light-override="night" title="Force night">☾ Notte</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">STAGIONE</span>
+        <div class="dev-row dev-row-4">
+          <button data-season="summer" title="Estate">☀️</button>
+          <button data-season="autumn" title="Autunno">🍁</button>
+          <button data-season="winter" title="Inverno">❄️</button>
+          <button data-season="spring" title="Primavera">🌸</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">DIAGNOSTICA</span>
+        <div id="rendererReadout" class="dev-hint" title="Active rendering backend">Renderer in avvio…</div>
+        <div id="analyticsReadout" class="dev-hint" title="Background simulation analytics">Analytics in avvio…</div>
+        <div class="dev-row">
+          <button id="analyticsExportBtn" type="button" title="Export simulation diagnostics as JSON">Export JSON</button>
+          <button id="analyticsClearBtn" type="button" title="Clear in-memory diagnostics">Clear log</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">ASSET PIPELINE</span>
+        <div id="assetCompileReadout" class="dev-hint">Non compilato</div>
+        <div id="castleCacheReadout" class="dev-hint">Castle bitmap: —</div>
+        <div class="dev-row">
+          <button id="assetCompileBtn" type="button" title="Prerender and validate every structural asset at all 24 angles">Prerender + test</button>
+          <button id="assetExportBtn" type="button" title="Export the latest asset QA report">Export QA</button>
+        </div>
+        <div class="dev-row">
+          <button id="castleCacheToggle" type="button" title="Enable or disable the castle body composite bitmap cache">Castle cache ON</button>
+          <button id="castleCacheBenchmark" type="button" title="Benchmark direct castle rendering against a warm bitmap cache">A/B benchmark</button>
+        </div>
+        <div class="dev-row">
+          <button id="assetCacheClearBtn" type="button" title="Clear structural and composite bitmap caches">Clear asset cache</button>
+        </div>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">METEO</span>
+        <div class="dev-row dev-row-weather">
+          <button data-weather-override="sun" title="Force sun / disable weather effects">☀️</button>
+          <button data-weather-override="rain" title="Force rain">🌧️</button>
+          <button data-weather-override="snow" title="Force snow">🌨️</button>
+          <button data-weather-override="storm" title="Force thunderstorm">🌩️</button>
+          <button data-weather-override="wind" title="Force wind">🍃</button>
+          <button data-weather-override="fog" title="Force fog">🌫️</button>
+        </div>
+        <span class="dev-hint">Nessuna selezione = procedurale</span>
+      </div>
+      <div class="dev-section">
+        <span class="dev-label">CUTAWAY</span>
+        <div class="dev-row"><button id="devCutawayAll" type="button" title="Toggle cutaway on all eligible built sections and T2/T3 stone towers">Cutaway ALL</button></div>
+        <span class="dev-hint">T1 towers are excluded.</span>
+      </div>
+    </div>
+  </div>
+  <section id="conquerMinimap" aria-label="Minimappa navigabile">
+    <div class="minimap-head"><span>MINIMAPPA</span><button id="conquerMinimapToggle" type="button" aria-label="Riduci minimappa" aria-expanded="true" title="Riduci minimappa">−</button></div>
+    <canvas id="conquerMinimapCanvas" width="190" height="190" role="img" aria-label="Mappa top-down del territorio: trascina per spostare la vista" title="Clicca o trascina per centrare la camera"></canvas>
+  </section>
+  <div id="status">Select a build tool</div>
+</div>
+<!-- Ordered classic modules: shared global lexical runtime, no build step. -->
+<script src="./src/settlement-core.js"></script>
+<script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
+<script src="./src/settlement-world.js"></script>
+<script src="./src/settlement-castle.js?v=refactor-1"></script>
+<script src="./src/settlement-landscape.js?v=refactor-1"></script>
+<script src="./src/settlement-castle-placement.js?v=refactor-1"></script>
+<script src="./src/settlement-castle-structures.js?v=refactor-1"></script>
+<script src="./src/settlement-buildings.js?v=refactor-1"></script>
+<script src="./src/settlement-urban.js"></script>
+<script src="./src/settlement-fields.js"></script>
+<script src="./src/settlement-boundaries.js"></script>
+<script src="./src/settlement-industries.js?v=industry-1"></script>
+<script src="./src/settlement-placement.js?v=builder-ghost-1"></script>
+<script src="./src/settlement-siege.js?v=assedio-p0"></script>
+<script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5"></script>
+<script src="./src/settlement-population.js"></script>
+<script src="./src/settlement-population-fields.js?v=refactor-2"></script>
+<script src="./src/settlement-population-navigation.js?v=refactor-2"></script>
+<script src="./src/settlement-population-routines.js?v=refactor-2"></script>
+<script src="./src/settlement-population-residents.js?v=refactor-2"></script>
+<script src="./src/settlement-population-figures.js?v=refactor-2"></script>
+<script src="./src/settlement-population-garrisons.js?v=refactor-2"></script>
+  <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
+<script src="./src/settlement-architecture.js?v=refactor-1"></script>
+<script src="./src/settlement-weather.js?v=refactor-1"></script>
+<script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
+<script src="./src/settlement-render.js?v=ambient-light-1"></script>
+<script src="./src/settlement-castle3d.js?v=prototype-1"></script>
+<script src="./src/settlement-world3d.js?v=default-1"></script>
+<script src="./src/settlement-assets.js"></script>
+<script src="./src/settlement-facade-polish.js"></script>
+<script src="./src/settlement-economy.js?v=economy-1"></script>
+<script src="./src/settlement-app.js"></script>
+<script src="./src/settlement-app-rooms.js?v=refactor-2"></script>
+<script src="./src/settlement-app-input.js?v=refactor-2"></script>
+<script src="./src/settlement-app-persistence.js?v=refactor-2"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
+<script src="./src/settlement-app-simulation.js?v=refactor-2"></script>
+<script src="./src/settlement-lod.js?v=lod-1"></script>
+<script src="./src/settlement-minimap.js?v=minimap-1"></script>
+<script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
+<script src="./src/settlement-animals.js?v=animation-wolf-1"></script>
+<script src="./src/settlement-combat-rules.js?v=combat-3"></script>
+<script src="./src/settlement-combat.js?v=combat-4"></script>
+<script src="./src/settlement-camp.js?v=camp-1"></script>
+<script src="./src/settlement-wolves.js?v=camp-wolves-1"></script>
+<script src="./src/heraldry-symbols.js"></script>
+<script src="./src/settlement-heraldry.js"></script>
+<script src="./src/settlement-builder-ux.js?v=antiregression-2"></script>
+</body>
+</html>

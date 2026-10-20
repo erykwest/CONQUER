@@ -1,5 +1,7 @@
 # CONQUER
 
+> **Punto di ingresso aggiornato per roadmap, decisioni, stato Git e handoff:** [CONTEXT PYRAMID](docs/context/README.md). La sezione V0.11 sottostante è documentazione storica di una fase del prototipo, non lo stato completo al 16/10/2026.
+
 Settlement builder / manager prototype.
 
 ## V0.11 scope

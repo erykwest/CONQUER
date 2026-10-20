@@ -10,7 +10,12 @@ function peasantPath(house,assignment){
   // A farm can be reachable on foot even without a viable nearby road-anchor
   // connector. Only search the local field route once (then cache it) rather
   // than leaving the worker "assigned" but unable to plough or harvest.
-  if(!path&&dist(start,goal)<=18)path=findPeasantPath(start,goal,house.id,3);
+  if(!path&&dist(start,goal)<=18){
+    path=findPeasantPath(start,goal,house.id,3);
+    // A fence entrance can lie several units around the field perimeter.
+    // Expand the field-only detour when the short local A* is insufficient.
+    if(!path)path=findPeasantPath(start,goal,house.id,8);
+  }
   if(!path){navPerf.routeMisses=(navPerf.routeMisses||0)+1;path=[start]}
   peasantPathCache.set(key,path);return path;
 }

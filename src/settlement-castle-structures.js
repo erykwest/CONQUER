@@ -879,6 +879,16 @@ function drawCastleFireFixtures(){
   for(const src of towerTorchSources())drawTorchFixture(src);
   for(const src of battlementBrazierSources())drawBrazierFixture(src);
 }
+// WebGL2 owns the glow halo; only the small animated flame remains a Canvas effect.
+function drawFireFlamesOnly(nf){
+  if(nf<=.01)return;
+  const scale=clamp(State.view.scale,.55,1.45);
+  for(const src of fireSources()){
+    const localZ=src.z+(src.kind==='brazier'?.08:0);
+    const p=Number.isFinite(src.groundZ)?w2sRaw(src.p,localZ+src.groundZ):w2s(src.p,localZ);
+    drawScreenFlame(p,scale,src.id,src.kind==='brazier');
+  }
+}
 function drawFireGlows(nf){
   if(nf<=.01)return;
   const scale=clamp(State.view.scale,.55,1.45);
@@ -1002,8 +1012,10 @@ function chimneySpecs(s){
       const bodies=new Map();
       for(const part of dense)if(part.kind==='body'&&!bodies.has(part.buildingKey))bodies.set(part.buildingKey,part);
       let index=0;
-      for(const part of bodies.values())specs.push({center:part.center,angle:part.roofAngle,
-        z0:houseRidgeHeight(s)-.05,z1:houseRidgeHeight(s)+.43,index:index++});
+      for(const part of bodies.values()){
+        const ridge=housePartRidge(s,part);
+        specs.push({center:part.center,angle:part.roofAngle,z0:ridge-.05,z1:ridge+.43,index:index++});
+      }
       return specs;
     }
     const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),ridgeH=houseRidgeHeight(s);

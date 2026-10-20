@@ -5,7 +5,8 @@
       "**": false,
       "main": true,
       "animation": true,
-      "siege-engines": true
+      "siege-engines": true,
+      "urban": true
     }
   }
 }

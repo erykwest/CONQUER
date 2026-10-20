@@ -10,6 +10,7 @@
   const ignoreSet=options=>new Set([options?.ignoreId,...(options?.ignoreIds||[])].filter(Boolean));
   function contact(s){
     if(s.type==='house')return houseFootprintParts(s).map(p=>p.points);
+    if(s.type==='well')return[wellPlazaPoints(s)];
     if(isCivic(s))return civicParts(s).map(p=>p.points);
     return structureGroundContactPolygons(s);
   }
