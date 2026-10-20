@@ -49,6 +49,8 @@
 | D-035 | CODICE BRANCH (20/10) | Builder usa riserve fisiche e tesoreria di `ConquerEconomy` dopo la fondazione; `State.resources` è proiezione UI/legacy e non un secondo inventario. | Le merci sul mercato non sono risorse gratuite del castello; cantieri pagati materialmente al placement, recuperi registrati separatamente dalla produzione. |
 | D-036 | CODICE BRANCH (20/10) | Fondazione = dotazione iniziale una tantum + **4 adulti L1 senza casa**, visibili presso il pozzo e disponibili alla produzione. | Nessun L4 creato artificialmente; fabbisogno alimentare già presente; coefficiente della dotazione da tarare; builder non ha ancora tempi di costruzione dipendenti dagli L1. |
 
+| D-037 | CODICE BRANCH (20/10) | I cantieri manuali richiedono lavoro L1 effettivo: effort in giornate-operaio, lavoro lun–ven, priorità agli impieghi produttivi già attivi, assegnazione equa fino a 3 L1 per cantiere. | Senza L1 liberi le costruzioni si fermano; save V1 migrate senza perdere completamento, mentre strade/case/campi procedurali conservano i timer per non bloccare la fondazione. |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
