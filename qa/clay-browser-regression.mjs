@@ -25,6 +25,8 @@ try{
       State.view.x=650;
       State.view.y=-380;
       State.clock.speed=1;
+      invalidateUrbanGeometry();
+      urbanLotCache=[lot];
       invalidateSceneCache();
       draw();
     });
@@ -36,6 +38,7 @@ try{
         return{palette:State.visualPalette,mode3d:window.ConquerWorld3D.active(),world3d:st,structures:State.structures.length};
       },palette);
       results.push({mode,...snapshot});
+      console.log('QA snapshot',JSON.stringify({mode,palette: snapshot.palette,world3d:snapshot.world3d,structures:snapshot.structures}));
       await page.screenshot({path:'artifacts/clay-'+mode+'-'+palette+'-'+results.length+'.png'});
       assert.equal(snapshot.palette,palette,'palette transition mismatch');
       assert.ok(snapshot.structures>=2,'sample structures must exist');
