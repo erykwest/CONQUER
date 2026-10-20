@@ -589,7 +589,14 @@ function tickConstructionWork(fromDay,toDay){
   const start=Number(fromDay),end=Number(toDay);
   if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return[];
   const completed=[];
-  let t=Math.max(0,start),guard=0;
+  const pending=(State.structures||[]).filter(s=>
+    !s.auto&&s.construction?.version===2&&underConstruction(s));
+  if(!pending.length)return completed;
+  // Loaded games may resume at day 2000 with simLogicDay still at zero.
+  // Progress was already settled through each site's lastWorkDay.
+  const earliest=Math.min(...pending.map(s=>Math.max(s.construction.startedDay,
+    Number(s.construction.lastWorkDay)||s.construction.startedDay)));
+  let t=Math.max(0,start,Math.min(end,earliest)),guard=0;
   while(t<end-1e-9&&guard++<10000){
     const next=Math.min(end,Math.floor(t)+1);
     if(next<=t+1e-9)break;
@@ -627,6 +634,7 @@ function tickConstructionWork(fromDay,toDay){
       }
     }
     t=next;
+    if(completed.length===pending.length)break;
   }
   return completed;
 }
