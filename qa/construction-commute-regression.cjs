@@ -121,6 +121,15 @@ check('unreachable construction stops instead of teleporting builders',()=>{
   h.tick(0,.52);
   assert.equal(site.construction.workDone,0,'no progress without reachable path');
 });
+check('shepherd L1s remain on livestock duty rather than appearing at construction',()=>{
+  const h=harness({founders:0,houses:1});
+  h.window.ConquerLivestock={lotKindForHouse:()=> 'shepherd'};
+  const site=h.add('tower-shepherd');
+  assert.equal(h.window.ConquerEconomy.availableBuilders(),0);
+  assert.equal(h.crew(.3).get(site.id)?.length||0,0);
+  h.tick(0,.52);
+  assert.equal(site.construction.workDone,0);
+});
 check('route cache is reused and assignments do not leak into Saturday',()=>{
   const h=harness({founders:1}),site=h.add('tower-e');
   h.draw(.3);const calls=h.paths.length;
