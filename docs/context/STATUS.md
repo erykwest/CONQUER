@@ -9,7 +9,7 @@
 - **CODICE (solo branch):** le regole di `assedio` per attacchi ordinari/frecce e incompatibilità di arieti/fiaccole con i nuclei di mura, torri, torre-porta e sezioni costruite sono ora applicate all'attuale `src/settlement-siege.js`. Restano vulnerabili i portoni, le palizzate e gli edifici civili secondo la propria matrice.
 - **INTEGRAZIONE, non sostituzione:** conservate campate distruttibili, brecce, macerie, crolli per piani, portoni chiudibili, turni notturni e interazioni degli arieti già presenti in `main`. Nessun merge della vecchia branch `assedio`.
 - **VALIDAZIONE:** bersagli inesistenti o incompatibili (incluse campate fuori indice e coordinate non finite) e forze non finite/non positive sono rifiutati senza danno; HP esistenti, portone sfondato e danni dopo upgrade rimangono persistenti. Aggiunta `qa/siege-damage-converge-regression.cjs` con controlli su armi, campate, portone e upgrade.
-- **QA/RILASCIO:** suite disponibile su branch; l'esito del workflow e il controllo end-to-end nel browser vanno verificati dalla PR. `main` resta invariata finché non avviene un merge esplicito.
+- **QA GitHub Actions PASS:** [run #39503255422](https://github.com/erykwest/CONQUER/actions/runs/39503255422) su commit `7602fd7`: suite completa `qa/*-regression.cjs` e verifica sintattica dei moduli JavaScript. **QA browser non eseguita.** `main` resta invariata finché non avviene un merge esplicito.
 
 ## MAIN FIX — DEV scroll + mulini nel Builder (20/10/2026)
 
