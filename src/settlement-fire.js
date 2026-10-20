@@ -144,16 +144,103 @@
     const p=shot.from,q=shot.to,d=Math.hypot(q.x-p.x,q.y-p.y),arc=(shot.kind==='stone'?.38:.16)*d;
     return{x:p.x+(q.x-p.x)*u,y:p.y+(q.y-p.y)*u,z:p.z+(q.z-p.z)*u+Math.sin(Math.PI*u)*arc};
   }
+  // ---------- bucket brigade ----------
+  // The defenders fight fires: up to six women of the village run from the nearest well
+  // to the fire, throw a bucket, run back. One bucket puts out a fire an arrow has just
+  // started; a fire in full blaze grows back faster than a brigade from a distant well
+  // can douse it, so many fires at once overwhelm it. Water stops fire, not blows. From
+  // the ground a bucket does half as much to a tower's roof. Burning rubble can be doused.
+  const BRIGADE={size:6,speed:1.05,fill:1.1,throwT:.55,douse:.24,embers:9};
+  const WOMEN=[['#9a7b52','#6b5338'],['#8c6b3f','#5d4a32'],['#a0825a','#6e5639'],['#7f6a4e','#57452f']];
+  function brigadeOn(){return store().brigadeOn!==false}
+  function setBrigade(on){store().brigadeOn=!!on;if(!on)store().carriers=[]}
+  function wells(){return State.structures.filter(s=>s.type==='well'&&!(typeof underConstruction==='function'&&underConstruction(s)))}
+  // What can be fought: burning parts of standing structures and burning rubble.
+  function blazes(){
+    const x=store(),out=[];
+    for(const f of x.burning){const s=find(f.id);if(s)out.push({key:f.id+':'+f.part,fire:f,s,at:seat(s,f),r:f.at?.3:radius(s),heat:f.heat})}
+    for(const e of x.embers){const r=(State.siege?.ruins||[]).find(q=>q.id===e.ruin);if(r?.spec)out.push({key:'ember:'+e.ruin,ember:e,at:{x:r.x,y:r.y},r:emberRadius(r),heat:e.heat})}
+    return out;
+  }
+  function route(a,b){
+    const p=typeof findPeasantPath==='function'?findPeasantPath(a,b,null):null;
+    return(p&&p.length?p:[a,b]).map(q=>({x:q.x,y:q.y}));
+  }
+  // Where a woman stands to throw: on the side of the well, each in her own place.
+  function standBy(b,from,lane=0){
+    const a=Math.atan2(from.y-b.at.y,from.x-b.at.x)+lane*.38,o=b.r+.35;
+    return{x:b.at.x+Math.cos(a)*o,y:b.at.y+Math.sin(a)*o};
+  }
+  function walk(c,dt){
+    let budget=dt*BRIGADE.speed;
+    while(budget>0&&c.path?.length){
+      const n=c.path[0],d=Math.hypot(n.x-c.x,n.y-c.y);
+      if(d<.02){c.path.shift();continue}
+      const s=Math.min(d,budget);c.x+=(n.x-c.x)*s/d;c.y+=(n.y-c.y)*s/d;budget-=s;
+    }
+    return !c.path?.length;
+  }
+  function douse(b,x){
+    if(b.fire){
+      // A bucket smothers a small fire; on a full blaze it barely tells.
+      const f=b.fire,k=BRIGADE.douse*(1-f.heat*.75)*(f.part==='roof'?.5:1)/Math.max(.5,f.flam);
+      f.heat-=k;if(f.heat<=.02)x.burning=x.burning.filter(g=>g!==f);
+    }else if(b.ember){b.ember.left-=BRIGADE.embers;b.ember.heat=clamp(b.ember.left/EMBER_TIME,0,1)}
+    x.splashes.push({x:b.at.x,y:b.at.y,z:groundAt(b.at)+(b.fire?.part==='roof'?1.2:.5),age:0});
+  }
+  function brigadeTick(dt){
+    const x=store();
+    if(!Array.isArray(x.carriers))x.carriers=[];
+    if(!Array.isArray(x.splashes))x.splashes=[];
+    for(const sp of [...x.splashes]){sp.age+=dt;if(sp.age>.9)x.splashes=x.splashes.filter(o=>o!==sp)}
+    const ws=wells(),list=brigadeOn()&&ws.length?blazes():[];
+    // Nothing to fight (or no well): the women go home.
+    if(!list.length){
+      if(!ws.length){x.carriers=[];return}
+      for(const c of x.carriers)if(c.state!=='home'){c.state='home';c.full=false;c.path=route(c,{x:ws[0].x+.8,y:ws[0].y})}
+      for(const c of [...x.carriers])if(walk(c,dt))x.carriers=x.carriers.filter(o=>o!==c);
+      return;
+    }
+    while(x.carriers.length<BRIGADE.size){
+      const w=ws[0],i=x.carriers.length;
+      // They come out one after another and take turns at the well: a chain, not a crowd.
+      const a=i*1.05;
+      x.carriers.push({id:'bucket-'+i+'-'+Math.floor(Math.random()*1e6),x:w.x+Math.cos(a)*.8,y:w.y+Math.sin(a)*.8,state:'fill',t:-i*.7,
+        lane:(i%2?1:-1)*Math.ceil(i/2),colors:WOMEN[i%WOMEN.length],path:null});
+    }
+    // The smallest fires first (they can still be saved); each woman sticks to hers until it is out.
+    const byHeat=[...list].sort((a,b)=>a.heat-b.heat);
+    x.carriers.forEach((c,i)=>{
+      let b=list.find(q=>q.key===c.target);
+      if(!b){b=byHeat[i%byHeat.length];c.target=b.key;if(c.state==='go'||c.state==='throw'){c.state='fill';c.t=0}}
+      const well=ws.reduce((m,w)=>Math.hypot(w.x-b.at.x,w.y-b.at.y)<Math.hypot(m.x-b.at.x,m.y-b.at.y)?w:m,ws[0]);
+      const atWell={x:well.x+(b.at.x-well.x)/(Math.hypot(b.at.x-well.x,b.at.y-well.y)||1)*.9,y:well.y+(b.at.y-well.y)/(Math.hypot(b.at.x-well.x,b.at.y-well.y)||1)*.9};
+      if(c.state==='home'){c.state='fill';c.path=route(c,atWell)}
+      if(c.state==='fill'){
+        if(c.path?.length){walk(c,dt);return}
+        if(Math.hypot(c.x-atWell.x,c.y-atWell.y)>.9){c.path=route(c,atWell);return}
+        c.t+=dt;if(c.t>=BRIGADE.fill){c.t=0;c.full=true;c.state='go';c.path=route(c,standBy(b,well,c.lane||0))}
+        return;
+      }
+      if(c.state==='go'){if(walk(c,dt)){c.state='throw';c.t=0}return}
+      if(c.state==='throw'){
+        c.t+=dt;if(c.t<BRIGADE.throwT)return;
+        douse(b,x);c.full=false;c.state='fill';c.t=0;c.path=route(c,atWell);
+      }
+    });
+  }
   function tick(dt){
     if(!(dt>0))return;
     const x=store(),rain=wet();
+    brigadeTick(dt);
     for(const shot of [...x.shots]){shot.t+=dt;if(shot.t>=shot.delay+shot.dur){x.shots=x.shots.filter(o=>o!==shot);impact(shot)}}
     for(const sp of [...x.sparks]){sp.age+=dt;if(sp.age>(sp.big?1.2:.6))x.sparks=x.sparks.filter(o=>o!==sp)}
     for(const f of [...x.burning]){
       const s=find(f.id);
       if(!s||s.type==='ruin'){x.burning=x.burning.filter(g=>g!==f);if(f.heat>.3)toEmbers(f);continue}
       const cap=rain?.55:1;
-      f.heat=Math.min(cap,f.heat+dt*GROW*f.flam*(rain?.4:1));
+      // A new fire smoulders before it takes hold: growth speeds up as it spreads.
+      f.heat=Math.min(cap,f.heat+dt*GROW*f.flam*(.05+f.heat*f.heat)*(rain?.4:1));
       f.fuel-=dt*f.heat/BURN[f.part];
       f.clock+=dt;f.dmg+=dt*f.heat*f.flam;
       if(f.clock>=DAMAGE_EVERY){
@@ -176,7 +263,7 @@
       if(!r||e.left<=0){x.embers=x.embers.filter(g=>g!==e);continue}
       if(e.spread>=SPREAD_EVERY){spreadFrom(r,e.heat,.8,1.1,e.spread,null,emberRadius(r));e.spread=0}
     }
-    if(x.burning.length||x.embers.length||x.shots.length)loop();
+    if(x.burning.length||x.embers.length||x.shots.length||x.carriers?.length)loop();
   }
   function emberRadius(r){const pts=r.spec?.parts?.flat()||[];return pts.length?Math.max(...pts.map(q=>Math.hypot(q.x-r.x,q.y-r.y))):.5}
   // Burning rubble: nobody crosses it while the embers are hot, not even in a breach.
@@ -253,7 +340,7 @@
     }
   }
   function draw(){
-    const x=State.fire;if(!x||(!x.burning?.length&&!x.embers?.length&&!x.shots?.length&&!x.sparks?.length))return;
+    const x=State.fire;if(!x||(!x.burning?.length&&!x.embers?.length&&!x.shots?.length&&!x.sparks?.length&&!x.carriers?.length&&!x.splashes?.length))return;
     const g=typeof ctx!=='undefined'?ctx:null;if(!g)return;
     const t=performance.now()/1000,scale=State.view?.scale||1,unit=Math.max(2.5,4.2*scale);
     const night=typeof nightFactor==='function'?nightFactor():0;
@@ -272,6 +359,7 @@
     }
     for(const q of pts)flame(g,q.s,unit*(q.ember?.45:.55+q.heat*.65),t,q.k);
     drawShots(g,x,t,unit);
+    drawBrigade(g,x,t,unit);
     g.fillStyle='rgba(255,210,120,.9)';
     for(const q of pts){
       const age=(t*1.3+q.k*.37)%1;
@@ -306,6 +394,34 @@
         g.fillStyle='rgba(255,'+(160+i*6)+',70,'+(1-k).toFixed(3)+')';g.fillRect(p.x+Math.cos(a)*r,p.y+Math.sin(a)*r*.6-r*.3,Math.max(1,unit*.25),Math.max(1,unit*.25))}
     }
   }
+  // The women of the brigade with their buckets; the water and the steam where it lands.
+  function drawBrigade(g,x,t,unit){
+    g.globalCompositeOperation='source-over';
+    for(const c of x.carriers||[]){
+      const ground=groundAt(c),bob=c.state==='go'||(c.path?.length)?Math.abs(Math.sin(t*10+c.x))*unit*.35:0;
+      if(typeof drawVillagerFigure==='function'){
+        const keep=g===ctx;
+        drawVillagerFigure({p:{x:c.x,y:c.y},kind:'peasant',sex:'female',age:'adult',colors:c.colors,id:c.id,hair:null});void keep;
+      }
+      const p=project({x:c.x,y:c.y,z:ground+.25});
+      const bx=p.x+unit*1.1,by=p.y-unit*1.4-bob,w=unit*.9,h=unit*.8;
+      g.fillStyle='#6b5a46';g.strokeStyle='#3d3125';g.lineWidth=1;
+      g.beginPath();g.moveTo(bx-w/2,by);g.lineTo(bx+w/2,by);g.lineTo(bx+w*.38,by+h);g.lineTo(bx-w*.38,by+h);g.closePath();g.fill();g.stroke();
+      if(c.full){g.fillStyle='#5f9fc4';g.fillRect(bx-w*.42,by,w*.84,Math.max(1,h*.2))}
+      if(c.state==='throw'){
+        // The throw: an arc of water from the bucket towards the flames.
+        const k=c.t/BRIGADE.throwT;g.strokeStyle='rgba(120,180,220,'+(1-k).toFixed(3)+')';g.lineWidth=Math.max(1,unit*.35);
+        g.beginPath();g.moveTo(bx,by);g.quadraticCurveTo(bx+unit*2,by-unit*3,bx+unit*4*k+unit,by-unit*k);g.stroke();
+      }
+    }
+    for(const sp of x.splashes||[]){
+      const p=project(sp),k=sp.age/.9;
+      g.fillStyle='rgba(225,232,236,'+(.55*(1-k)).toFixed(3)+')';
+      for(let i=0;i<3;i++){g.beginPath();g.arc(p.x+(i-1)*unit*1.2,p.y-unit*(1+k*5+i),unit*(1+k*2),0,Math.PI*2);g.fill()}
+      g.fillStyle='rgba(110,170,215,'+(.8*(1-k)).toFixed(3)+')';
+      for(let i=0;i<8;i++){const a=i/8*Math.PI*2;g.fillRect(p.x+Math.cos(a)*unit*2*k,p.y+Math.sin(a)*unit*k-unit*k*2,Math.max(1,unit*.3),Math.max(1,unit*.3))}
+    }
+  }
   // The torch an attacker carries: a stick over his shoulder with a live flame.
   function drawTorch(g,p,scale,id){
     const t=performance.now()/1000,u=Math.max(1.4,2.1*scale),k=String(id).length;
@@ -322,11 +438,12 @@
     if(raf||typeof requestAnimationFrame!=='function')return;
     const step=now=>{
       raf=0;const x=State.fire;
-      if(!x||(!x.burning.length&&!x.embers.length&&!x.shots.length&&!x.sparks.length))return;
+      if(!x||(!x.burning.length&&!x.embers.length&&!x.shots.length&&!x.sparks.length&&!x.carriers?.length))return;
       if(now-lastDraw>45){lastDraw=now;if(typeof draw==='function')window.draw?.()}
       raf=requestAnimationFrame(step);
     };
     raf=requestAnimationFrame(step);
   }
-  window.ConquerFire={parts,ignite,extinguish,burning,tick,blocks,draw,drawTorch,volley,gap,radius,state:store,BURN};
+  window.ConquerFire={parts,ignite,extinguish,burning,tick,blocks,draw,drawTorch,volley,gap,radius,state:store,BURN,
+    brigade:{on:brigadeOn,set:setBrigade,carriers:()=>store().carriers||[],BRIGADE}};
 })();

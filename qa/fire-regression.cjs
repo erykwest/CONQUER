@@ -130,3 +130,28 @@ const house=(id,x,y)=>({id,type:'house',x,y,functions:[]});
   assert.equal(bare.F.burning('sb'),false,'fire arrows do nothing to bare masonry');
   console.log('PASS fire stones and fire arrows');
 }
+{
+  // Bucket brigade: the women put out a fire an arrow has just started, from a well
+  // close by; a full blaze with a distant well beats them; no well, no brigade.
+  const near=fixture();
+  near.State.structures.push({id:'well',type:'well',x:4,y:0},house('h',0,0));
+  near.F.ignite('h',{heat:.2,x:-1,y:0});
+  for(let k=0;k<160&&near.F.burning('h');k++)near.F.tick(.25);
+  assert.equal(near.F.burning('h'),false,'a single fire arrow is put out');
+  assert.ok(near.S.integrity(near.State.structures.find(s=>s.id==='h')).core.hp>100,'before it does much harm');
+  near.F.tick(.25);
+  assert.ok(near.F.brigade.carriers().length===0||near.F.brigade.carriers().every(c=>c.state==='home'),'and the women go home');
+  const far=fixture();
+  far.State.structures.push({id:'well',type:'well',x:14,y:0},house('h',0,0));
+  far.F.ignite('h',{heat:1});
+  for(let k=0;k<240&&far.State.structures.some(s=>s.id==='h');k++)far.F.tick(.25);
+  assert.ok(!far.State.structures.some(s=>s.id==='h'),'a full blaze far from the well wins');
+  const none=fixture();
+  none.State.structures.push(house('h',0,0));none.F.ignite('h',{heat:.2});none.F.tick(.5);
+  assert.equal(none.F.brigade.carriers().length,0,'no well, no brigade');
+  const off=fixture();
+  off.State.structures.push({id:'well',type:'well',x:4,y:0},house('h',0,0));
+  off.F.brigade.set(false);off.F.ignite('h',{heat:.2});off.F.tick(.5);
+  assert.equal(off.F.brigade.carriers().length,0,'the brigade can be stood down');
+  console.log('PASS bucket brigade: small fires are put out, a blaze from afar wins');
+}

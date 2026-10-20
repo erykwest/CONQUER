@@ -1585,7 +1585,7 @@
     '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+ 
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
-    '<div class="combat-row"><button id="combatTorch" title="Place an attacker with a torch: he sets alight the nearest thing that burns">Torch-bearer</button><button data-combat-fire="arrows" title="Click a structure: a volley of fire arrows from outside">Fire arrows</button><button data-combat-fire="stone" title="Click a structure: a burning trebuchet stone">Fire stone</button></div>'+
+    '<div class="combat-row"><button id="combatTorch" title="Place an attacker with a torch: he sets alight the nearest thing that burns">Torch-bearer</button><button data-combat-fire="arrows" title="Click a structure: a volley of fire arrows from outside">Fire arrows</button><button data-combat-fire="stone" title="Click a structure: a burning trebuchet stone">Fire stone</button><button id="combatBuckets" title="Bucket brigade: women run water from the nearest well to every fire">Buckets ON</button></div>'+
     '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button><button data-combat-storm="ram" title="Set a ram against a gate: intruders batter it in">Assault · ram</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
@@ -1596,6 +1596,7 @@
     if(!combat||!$('combatFog'))return;
     $('combatFog').textContent='Fog '+(combat.fog?'ON':'OFF');
     $('combatZones').textContent='Zones '+(combat.zones?'ON':'OFF');
+    if($('combatBuckets'))$('combatBuckets').textContent='Buckets '+(window.ConquerFire?.brigade.on()===false?'OFF':'ON');
     $('combatRecall').textContent='🔔';
     $('combatRecall').dataset.mode=combat.recallMode;
     $('combatRecall').title=combat.recallMode==='green'?'Green alarm · click to retreat into the Mastio':combat.recallMode==='hall'?'Red alarm · women and children in Common Hall':'Raise green alarm';
@@ -1625,6 +1626,7 @@
   $('combatPatrolAdd').onclick=addPatrol;
   $('combatPatrolRemove').onclick=removePatrol;
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
+  $('combatBuckets').onclick=()=>{const F=window.ConquerFire;if(!F)return;F.brigade.set(!F.brigade.on());syncButtons();status('Bucket brigade '+(F.brigade.on()?'on: women fight the fires':'off'))};
   $('combatTorch').onclick=()=>{setTool({kind:'combat-intruder',torch:true,label:'Click terrain to place a torch-bearer'});syncButtons()};
   document.querySelectorAll('[data-combat-fire]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-fire',fireKind:b.dataset.combatFire,label:'Click a structure to shoot at it'});syncButtons();
