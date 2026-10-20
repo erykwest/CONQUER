@@ -4,6 +4,13 @@
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
 
+## Convergenza regole assedio — branch `converge` (20/10/2026)
+
+- **CODICE (solo branch):** le regole di `assedio` per attacchi ordinari/frecce e incompatibilità di arieti/fiaccole con i nuclei di mura, torri, torre-porta e sezioni costruite sono ora applicate all'attuale `src/settlement-siege.js`. Restano vulnerabili i portoni, le palizzate e gli edifici civili secondo la propria matrice.
+- **INTEGRAZIONE, non sostituzione:** conservate campate distruttibili, brecce, macerie, crolli per piani, portoni chiudibili, turni notturni e interazioni degli arieti già presenti in `main`. Nessun merge della vecchia branch `assedio`.
+- **VALIDAZIONE:** bersagli inesistenti o incompatibili (incluse campate fuori indice e coordinate non finite) e forze non finite/non positive sono rifiutati senza danno; HP esistenti, portone sfondato e danni dopo upgrade rimangono persistenti. Aggiunta `qa/siege-damage-converge-regression.cjs` con controlli su armi, campate, portone e upgrade.
+- **QA/RILASCIO:** suite disponibile su branch; l'esito del workflow e il controllo end-to-end nel browser vanno verificati dalla PR. `main` resta invariata finché non avviene un merge esplicito.
+
 ## MAIN FIX — DEV scroll + mulini nel Builder (20/10/2026)
 
 - **CODICE su branch `fix/main-dev-scroll-mill-menu-20261020`:** limite verticale del gruppo DEV in `src/settlement.css`, bottone di apertura sempre visibile e contenuto del pannello scorrevole; `windmill` e `watermill` ripristinati nel catalogo **Produzione** del Builder compatto senza duplicare né ricreare i pulsanti già collegati al gameplay.
