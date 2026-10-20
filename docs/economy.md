@@ -3,6 +3,12 @@
 ## Guiding rule
 The economic simulation operates on **aggregate social cohorts (L1–L4)**; visible villagers are not individual economic agents. Each economic activity has an independent physical structure, but private ownership belongs to the pooled L4 sector, not a named person.
 
+## Civil commerce roles (20 October 2026 — skeleton)
+
+The [commerce skeleton](commerce-skeleton.md) defines **L3 local artisans** (direct shop sales) and L3-managed services (inn/church), **L4 investors and owners of primary production**, and **L4+ temporary intercity travelers for import/export**. An L4+ entry is a journey manifest, not an extra tier or population cohort. Its declared cargo, local artisan recipes and inn payments are **not active economic flows** in this tranche.
+
+The previous generic private `workshop` activity still belongs to the aggregate L4 ledger until its ownership, input stock and payouts are explicitly migrated; the skeleton must not duplicate workshop production or invent L3 goods. The contract uses the existing economy save payload and is covered by `qa/commerce-skeleton-regression.cjs`.
+
 ## Economic goods
 - Primary: `food`, `wood`, `stone`, `metal`.
 - Manufactured: `equipment` (workshop consumes metal and wood).
