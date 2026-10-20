@@ -288,7 +288,7 @@ test('boolean union merges partly overlapping square terraces into a concave per
   assert.ok(outer.length>=6,'the merged boundary is concave');
   const [one,two]=api.edits();
   const segments=[one,two].flatMap(edit=>edit.top.flatMap((_,i)=>api.exposedWallSegments(edit,i)));
-  assert.ok(segments.length<8,'internal wall segments removed, retaining only real boundary pieces');
+  assert.equal(segments.length,8,'concave union exposes exactly eight outer perimeter segments');
   const faces=[];
   context.meshBuilder=()=>({tris:[],face:(pts,color)=>faces.push({pts,color})});
   context.terrainElevation=p=>api.elevationAt(p,0);
