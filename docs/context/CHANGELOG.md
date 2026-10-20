@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-21 — Monete fisiche nei manifesti L4+, carichi monotipo
+
+- Una sola merce commerciabile per spedizione, con borsa monete indipendente; previsti viaggi di acquisto a carro vuoto.
+- Quotazione passiva carichi/carri: 100 punti capacità per carro, fattori per merce e costo indicativo giornaliero; nessuna spesa automatica senza calendario e mondo.
+- Wallet aggregato L4 → borsa del viaggio tramite riserva esplicita; cancellazione prima della partenza con restituzione singola. Nessuna generazione o duplicazione di monete, merci, personaggi o scambi.
+- Compatibilità save V1 → V2 e regressioni aggiornate. [Specifica](../commerce-skeleton.md).
+
 ## 2026-10-20 — Skeleton L3 / L4 / L4+ e servizi locali
 
 - Implementato contratto `ConquerCommerce`: inventario **di blueprint** botteghe L3 senza produzione fittizia, associazione operatori L3 ai servizi locanda e chiesa, proprietà primarie L4 derivate dal ledger attuale.
