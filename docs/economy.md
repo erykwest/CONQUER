@@ -45,7 +45,7 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 - Economic state persisted to localStorage and in the cloud settlement policies document.
 - Economy tab nested in the Settlement sidebar shows stocks, prices, welfare, cohort population, sale shares, reserve targets, and activity transfers.
 - Physically constructed **fields** register as economic activities. Other industry types are supported by the engine contract (`loggingCamp`, `quarry`, `mine`, `workshop`, `vineyard`) but still require Builder/urban placement and rendering implementation.
-- Construction-testing resources (`State.resources`, currently initialized at 10,000) remain separate from the economic ledger intentionally until construction and troop provisioning are migrated.
+- On this branch, post-founding `State.resources` reflects the economic castle inventory and treasury. Troop provisioning remains outside the unified ledger.
 
 ## Deliberately not claimed as implemented
 - No complete region-to-region trading system or dynamically discovered foreign demand yet; export orders are injected via API.
@@ -53,7 +53,24 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 - Existing visual field cropping phases have a faster cycle: the economic layer only books at most one autumn harvest; season-specific visual field calendar still needs reconciliation.
 - No fully modeled extraction depletion, multi-crop substitutions, housing promotion, alternative commodity quality, collective market storage capacity, or spoilage yet.
 - No physical capacity mapping for castle built-sections; reserve targets currently function as provisional per-good caps.
-- No automatic matching of army/castle construction resource costs to the economic reserve (testing inventory is separate).
+- Manual Builder construction now consumes economic castle reserves on the feature branch; army provisioning and castle upkeep remain separate.
+
+## Real construction inventory and founding labor (20 October 2026, feature branch)
+
+The Builder and economic simulation now share a source of truth:
+- **Gold:** `State.economy.castleGold`.
+- **Construction goods:** `State.economy.castle[good]`. A good offered in `lots` belongs to market sellers and is **not** free construction material: it must be acquired first in a later trade/procurement iteration.
+- **`State.resources` is a display/backward-compatible projection** after founding, not a separate source of construction credit. Pre-founding test values of 10,000 are discarded once the charter is initialized.
+- Placement preflight and building payments call `ConquerEconomy.canBuild/spendBuild`, with atomic refusal of unaffordable builds. Undo/deletion calls `refundBuild`; existing **full-cost refund semantics** are preserved for now and count as material recovery, not new production.
+- Weekly economic balances include actual material spending on constructions as immediate `construction` demand/consumption and material refunds as `recovered`. Gold is a monetary expenditure rather than a physical commodity.
+- Initial settlement charter (**one-time, balancing placeholders**): castle food 45, wood 200, stone 180, metal 16, gold +400 on top of the previous economic treasury; lord-owned local market food 55 and wood 20. Founding the well is the start trigger. Without a market food lot, initial residents would starve while food sat locked in castle reserves.
+- Founding creates **four visible adult L1 workers without housing**, recorded as `State.village.foundingWorkers` and included in the economic population and labor available to productive buildings. They are not four L1 houses and do not fabricate L4 owners.
+- Existing founded savegames with no charter marker receive a **one-time migration charter**. Their legacy 10,000-unit construction-test inventory is never interpreted as genuine stock. The charter marker, workers, stocks and balances persist in existing local/cloud saves.
+- Reset/new map returns to the pre-founding provisional environment; deleting the founding well removes that village's economic ledger.
+
+**Not yet implemented:** construction duration staffed by L1 (the old time-based construction progress remains); physical provisioning of troops and castle upkeep; direct purchasing of private market lots for construction; warehouse capacity; realistic salvage fractions; mine stone/metal decision; unified agricultural seasons. This is the Builder/treasury resource connection, not full territorial logistics or a self-building city.
+
+Tests: `qa/economy-builder-integration.cjs`, `qa/economy-balance-regression.cjs`, `qa/founding-regression.cjs`, `qa/builder-placement-regression.cjs`, `qa/refactor-app-population-regression.cjs` in `.github/workflows/economy-flows-regression.yml`.
 
 ## Weekly production, consumption and shortage accounting (19 October 2026, feature branch)
 
