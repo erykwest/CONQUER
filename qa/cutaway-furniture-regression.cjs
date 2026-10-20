@@ -113,7 +113,7 @@ check('real WebGL2 cutaway mesh builds for single/all towers and every camera tu
   const meshStart=src.indexOf('  const rgbCache=new Map()'),meshEnd=src.indexOf('  // ---------- terrain ----------',meshStart);
   const cutStart=src.indexOf('  // ---------- cutaway interiors'),cutEnd=src.indexOf('  // ---------- content signatures',cutStart);
   assert.ok(meshStart>0&&meshEnd>meshStart&&cutStart>meshEnd&&cutEnd>cutStart,'real world3d mesh source available');
-  run(src.slice(meshStart,meshEnd)+'\n'+src.slice(cutStart,cutEnd)+'\nwindow.__cutawayMeshRegression=buildCutaway');
+  run(src.slice(meshStart,meshEnd)+'\\n'+src.slice(cutStart,cutEnd)+'\\nwindow.__cutawayMeshRegression=buildCutaway');
   for(const rot of [0,1,2,3]){
     run('State.view.rotation='+rot);
     for(const onlyOne of [true,false]){
