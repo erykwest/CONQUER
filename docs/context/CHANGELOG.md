@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Cantieri manuali dipendenti dagli L1
+
+- I cantieri ordinati dal giocatore ricevono fino a tre L1 liberi, distribuiti uno a testa prima di saturare un singolo lavoro.
+- L'impegno produttivo L1 e il lavoro agricolo di stagione vengono sottratti dalla disponibilità; quando non resta forza lavoro, il cantiere è sospeso. Orario lavorativo condiviso con agricoltura e pausa nei fine settimana.
+- Migrazione dei lavori preesistenti conservando la percentuale maturata, notifiche di completamento una sola volta, indicatori UI e QA con concorrenza fra cantieri.
+- Restano da sviluppare i percorsi visibili casa/pozzo → cantiere e il pagamento esplicito di salari ai costruttori. Le strutture auto-generate non sono ancora convertite per evitare deadlock urbani.
+
 ## 2026-10-20 — Cantieri con risorse reali e squadra fondatrice
 
 - `State.resources` cessa di essere stock consumabile autonomo dopo fondazione: il Builder usa tesoro e materiali del castello nel motore economico.
