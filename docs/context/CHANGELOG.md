@@ -4,7 +4,7 @@
 
 - Integrati catalogo mobili generato da Blender, disposizione funzionale delle stanze e arredi non sovrapposti, mantenendo le postazioni degli arcieri e il corridoio delle porte.
 - Aggiunti interni depth-tested nel renderer WebGL2 con mesh separate per ambienti, guscio e superfici luminose, cache su rotazione, pass notturno e fallback Canvas.
-- Contenuti della vecchia branch `feature/cutaway-furniture` portati su `feature/cutaway-furniture-converge` aggiornata con le novità Terraforming di `main`. PR #65, verifica GitHub Actions in corso.
+- Contenuti della vecchia branch `feature/cutaway-furniture` portati su `feature/cutaway-furniture-converge` aggiornata con le novità Terraforming di `main`. PR #65, GitHub Actions suite integrale [#39508539592](https://github.com/erykwest/CONQUER/actions/runs/39508539592) **PASS**, CAMP e Builder PASS. Validazione visuale browser ancora aperta.
 
 
 
