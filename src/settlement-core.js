@@ -573,7 +573,9 @@ function constructionWorkStatus(s){
   if(c.version!==2)return 'Procedural construction';
   const wd=((Math.floor(State.clock.day)%7)+7)%7;
   if(wd>=5)return 'Workers resting (weekend)';
-  if(c.unfunded)return 'Paused: insufficient lord treasury for wages';
+  if(c.unfunded||(window.ConquerEconomy?.constructionWagePerWorkday?.()||0)>0&&
+      (window.ConquerEconomy?.state?.().castleGold||0)<=1e-8)
+    return 'Paused: insufficient lord treasury for wages';
   return c.workers>0?c.workers+' L1 assigned':'Waiting for idle L1 workers';
 }
 function migrateConstructionSites(){
