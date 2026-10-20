@@ -78,7 +78,9 @@ const tower=(id,material='stone',type='tower')=>({
     }
   }
   assert.equal(calls.dirty,0,'invalid targets and forces must not mutate structures');
-  console.log('PASS wrong components, wall bays and malformed forces are rejected');
+  const directed=S.attackStructure('tower','trebuchet',1,{x:2,y:5});
+  assert.equal(directed.ok,true,'finite world-space tower hits still drive directional collapses');
+  console.log('PASS invalid targets rejected while valid point-impact vectors remain supported');
 }
 {
   const {State,S}=fixture();
