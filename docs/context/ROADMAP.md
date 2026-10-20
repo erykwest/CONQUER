@@ -42,7 +42,7 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
-**21/10/2026 — Monete come carico carovane L4+ (PR #55 Draft):** esteso lo skeleton commerciale con carichi monotipo e borsa di monete che può essere accantonata dal wallet L4. Capienza 100/carretto e peso merceologico già quotabili, ma i costi giornalieri sono soltanto preventivi. **Sviluppo successivo:** banchina/mercato → strada maestra e quattro exit point reali → identità persistenti di città/celle della mappa mondiale → giorni di viaggio e spese effettive → transazioni atomiche di acquisto/vendita, eventuale ritorno carico/scarico; le navi riusano la stessa separazione merci/monete. Non introdurre carichi di più tipi; il cibo dell'equipaggio sarà costo di mantenimento, non secondo articolo di vendita.
+**21/10/2026 — Monete come carico carovane L4+ (PR #55 Draft):** esteso lo skeleton commerciale con carichi monotipo e forziere di monete che può essere accantonata dal wallet L4. Capienza 100/carro e 40/carretto e peso merceologico già quotabili, ma i costi giornalieri sono soltanto preventivi. **Sviluppo successivo:** banchina/mercato → strada maestra e quattro exit point reali → identità persistenti di città/celle della mappa mondiale → giorni di viaggio e spese effettive → transazioni atomiche di acquisto/vendita, eventuale ritorno carico/scarico; le navi riusano la stessa separazione merci/monete. Non introdurre carichi di più tipi; il cibo dell'equipaggio sarà costo di mantenimento, non secondo articolo di vendita.
 
 ## Prossimo passo
 
