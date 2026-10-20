@@ -149,6 +149,17 @@
     j.lodgingId=null;j.status='departed';
     State.dirty=true;return true;
   }
+  function worksiteForHouse(houseId){
+    const c=state(),id=String(houseId);
+    if(!c)return null;
+    if(c.shops[id]&&l3House(id))
+      return{kind:'shop',structure:structure(id),shop:c.shops[id]};
+    const service=Object.values(c.services).find(entry=>entry.operatorHouseId===id);
+    const building=service&&structure(service.structureId);
+    if(service&&l3House(id)&&completed(building))
+      return{kind:'service',structure:building,service};
+    return null;
+  }
   // Read-only primary ownership view. Existing L4 economic ownership remains
   // in ConquerEconomy.activities; this does not fabricate new private sites.
   function primaryPortfolio(){
@@ -176,7 +187,7 @@
   }
   window.ConquerCommerce=Object.freeze({
     WORKSHOP_KINDS,SERVICE_KINDS,PRIMARY_KINDS,
-    state,sync,registerShop,assignService,configureInnCapacity,occupancy,
+    state,sync,registerShop,assignService,configureInnCapacity,occupancy,worksiteForHouse,
     planJourney,confirmArrival,checkIn,depart,primaryPortfolio,snapshot
   });
 })();
