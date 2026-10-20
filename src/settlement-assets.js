@@ -155,7 +155,12 @@ function structureAssetFamilyCatalog(){
     'built-l'+level+'-'+skin+'-'+length,'Built section L'+level+' '+skin+' '+length+'U',
     assetLinearBase('built',length,{level,skin,width:1,functions:[]})
   );
-  for(const type of CIVIC_TYPES)add('civic-'+type,'Civic '+type,assetPointBase(type));
+  for(const type of CIVIC_TYPES){
+    if(CIVIC_LEVEL_TYPES.includes(type))for(let level=1;level<=3;level++){
+      if(type==='plaza')for(const variant of PLAZA_VARIANTS)add('civic-plaza-l'+level+'-'+variant,'Piazza L'+level+' '+variant,assetPointBase(type,{civicLevel:level,plazaVariant:variant}));
+      else add('civic-'+type+'-l'+level,'Civic '+type+' L'+level,assetPointBase(type,{civicLevel:level}));
+    }else add('civic-'+type,'Civic '+type,assetPointBase(type));
+  }
   for(const width of [1.5,2])for(const doorSide of [-1,1]){
     for(const level of [1,2]){
       const id=findHouseAssetId(level,null,null,doorSide,width);

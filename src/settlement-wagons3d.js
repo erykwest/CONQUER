@@ -6,7 +6,6 @@
 // for the WebGL scene. Classic script; geometry maths is pure.
 (function(){
   const M=()=>window.ConquerWagonModel;
-  const paletteIndex=key=>M().paletteKeys.indexOf(key);
   const rgbCache=new Map();
   function rgb(hex){
     let v=rgbCache.get(hex);if(v)return v;
@@ -27,21 +26,20 @@
     const [ex,ey]=rotDir(-ny,nx,turns),angle=Math.atan2(ey,ex);
     return Math.cos(2*(angle-Math.PI/6))>=0?.84:.68;
   }
-  // Pale materials (canvas, fresh wood) keep more of their tone in shade, or a
-  // cream canvas reads as grey.
+  // Pale materials (fresh wood, straw) keep more of their tone in shade.
   function soften(f,[r,g,b]){return(r+g+b)/765>.7?1-(1-f)*.55:f}
+  // Chassis: 'wagon' (four wheels, open bed), 'cart' (two wheels) or 'carriage'
+  // (closed noble coach: passengers ride inside, so it takes no cargo).
+  const CHASSIS=['wagon','cart','carriage'];
   // Which parts make this wagon, where, and how each one moves.
   function assembly(spec={}){
-    const m=M(),v=m.variants[spec.chassis==='cart'?'cart':'wagon'];
+    const m=M(),v=m.variants[CHASSIS.includes(spec.chassis)?spec.chassis:'wagon'];
     const team=Math.max(0,Math.min(2,spec.team?.length??0));
     const out=[{part:v.body}];
     if(team)out.push({part:v.hitch[String(team)]});
-    if(spec.body==='covered'&&v.cover)out.push({part:v.cover,covered:true});
     for(const w of v.wheels)for(const at of w.at)out.push({part:w.part,wheel:true,r:w.r,at});
-    if(!(spec.body==='covered'&&v.cover)){
-      const cargo=(spec.cargo||[]).filter(k=>m.cargo[k]).slice(0,v.slots.length);
-      cargo.forEach((k,i)=>out.push({part:m.cargo[k],at:v.slots[i],cargo:k}));
-    }
+    const cargo=(spec.cargo||[]).filter(k=>m.cargo[k]).slice(0,v.slots.length);
+    cargo.forEach((k,i)=>out.push({part:m.cargo[k],at:v.slots[i],cargo:k}));
     return{variant:v,parts:out,team};
   }
   // Model point -> world: optional wheel spin about the local y axis, mount offset,
@@ -52,10 +50,10 @@
   }
   // World-space triangles: Float32Array xyz per vertex and per-triangle base rgb.
   function worldTriangles(spec,pose){
-    const m=M(),{parts,variant}=assembly(spec),place=placer(pose),pos=[],col=[],bias=[],outward=[];
-    // Painter hints for the canvas path: the bed floor goes first (cargo sits on it),
-    // hoops after the canvas they lie on. WebGL ignores these (depth buffer).
-    const floorTop=variant.slots[0][2],hoop=paletteIndex('canvasHoop');
+    const m=M(),{parts,variant}=assembly(spec),place=placer(pose),pos=[],col=[],bias=[];
+    // Painter hint for the canvas path: the bed floor goes first (cargo sits on it).
+    // WebGL ignores it (depth buffer).
+    const floorTop=variant.slots[0]?.[2]??-1;
     const bob=pose.bob||0,dist=pose.distance||0;
     for(const inst of parts){
       const p=m.parts[inst.part];if(!p)continue;
@@ -70,18 +68,10 @@
         }
         col.push(m.palette[p.c[t]]);
         const z0=p.v[t*9+2],z1=p.v[t*9+5],z2=p.v[t*9+8];
-        const isHoop=inst.part===variant.cover&&p.c[t]===hoop;
-        bias.push(inst.part===variant.body&&Math.abs(z0-floorTop)<.003&&Math.abs(z1-floorTop)<.003&&Math.abs(z2-floorTop)<.003?-100:isHoop?.5:0);
-        if(isHoop){
-          // Hoops lie on the canvas: draw them over it, but only on the half that
-          // faces the camera (outward from the cover's long axis).
-          const ly=(p.v[t*9+1]+p.v[t*9+4]+p.v[t*9+7])/3,lz=(z0+z1+z2)/3-floorTop-.11;
-          const c=Math.cos(pose.heading||0),s=Math.sin(pose.heading||0);
-          outward[t]=[-ly*s,ly*c,lz];
-        }
+        bias.push(inst.part===variant.body&&Math.abs(z0-floorTop)<.003&&Math.abs(z1-floorTop)<.003&&Math.abs(z2-floorTop)<.003?-100:0);
       }
     }
-    return{pos:new Float32Array(pos),col,bias,outward};
+    return{pos:new Float32Array(pos),col,bias};
   }
   // Mount points in world space for the caller's sprites.
   function anchors(spec,pose){
@@ -131,4 +121,4 @@
   function draw(ctx,spec,pose,view,sprites=[],extra=[]){
     return drawMeshes(ctx,[worldTriangles(spec,pose),...extra],view,sprites);
   }
-  window.ConquerWagons3D={assembly,worldTriangles,anchors,draw,drawMeshes,shadeFactor,rotDir};})();
+  window.ConquerWagons3D={CHASSIS,assembly,worldTriangles,anchors,draw,drawMeshes,shadeFactor,rotDir};})();

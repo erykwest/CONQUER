@@ -38,7 +38,7 @@
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
   <div class="group" role="group" aria-label="Assedio"><span>Assedio</span>
-    <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Catapulta</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button><button data-subject="siege:mantlet">Mantelletto</button>
+    <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Mangano</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button><button data-subject="siege:mantlet">Mantelletto</button><button data-subject="siege:ballista">Balista</button>
   </div>
   <div class="group" role="group" aria-label="Assalto"><span>Assalto nel gioco (muro H1 vero)</span>
     <a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ram">Ariete</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=mantlet">Mantelletto</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ladder">Scala</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=tower">Torre</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=moat">Fossato</a>
@@ -50,8 +50,7 @@
   <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
   <label id="coatBox">Manto <select id="coat"><option value="brown">marrone</option><option value="black">nero</option><option value="grey">grigio</option><option value="white">bianco</option></select></label>
   <div class="group" id="wagonBox">
-    <label>Telaio <select id="wChassis"><option value="wagon">carro 4 ruote</option><option value="cart">carretto 2 ruote</option></select></label>
-    <label>Copertura <select id="wBody"><option value="open">aperto</option><option value="covered">telonato</option></select></label>
+    <label>Telaio <select id="wChassis"><option value="wagon">carro 4 ruote</option><option value="cart">carretto 2 ruote</option><option value="carriage">carrozza nobile</option></select></label>
     <label>Cavalli <select id="wTeam"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label>
     <label>Guidatore <select id="wDriver"><option value="villager">popolano</option><option value="spearman">guerriero</option><option value="knight">cavaliere</option><option value="">nessuno</option></select></label>
     <label>Carico <select id="wCargo"><option value="mixed">misto</option><option value="sack">sacchi</option><option value="crate">casse</option><option value="barrel">botti</option><option value="hay">fieno</option><option value="logs">legna</option><option value="stone">pietra</option><option value="none">vuoto</option></select></label>
@@ -60,6 +59,10 @@
     <label>Direzione <input id="w3Heading" type="range" min="0" max="359" step="1" value="210"></label>
     <label><input id="w3Auto" type="checkbox" checked> Gira da solo</label>
     <label>Telecamera <select id="w3Turns"><option value="0">0°</option><option value="1">90°</option><option value="2">180°</option><option value="3">270°</option></select></label>
+  </div>
+  <div class="group" id="siegeUpBox"><span>Potenziamenti</span>
+    <label id="ammoBox">Munizioni <select id="sAmmo"></select></label>
+    <label id="balBox"><input id="sBallista" type="checkbox"> Balista</label>
   </div>
   <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
   <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
@@ -89,8 +92,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-wagons3d.js?v=lab-2"></script>
 <script src="./src/assets/animal-models.js?v=lab-1"></script>
 <script src="./src/settlement-animals3d.js?v=lab-1"></script>
-<script src="./src/assets/siege-engines-model.js?v=lab-4"></script>
-<script src="./src/settlement-siege-engines3d.js?v=lab-4"></script>
+<script src="./src/assets/siege-engines-model.js?v=lab-5"></script>
+<script src="./src/settlement-siege-engines3d.js?v=lab-5"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
@@ -99,9 +102,12 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
   // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
   function siegeActions(e){
-    const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:null}[e];
+    const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:'Tiro balista',ballista:'Tiro'}[e];
     return[['idle',e==='ladder'?'Trasporto':'Fermo'],['move','In marcia']].concat(fire?[['fire',fire]]:[],e==='trebuchet'?[['setup','Allestimento']]:[]);
   }
+  // Upgrades: incendiary shots for the trebuchet, scatter shot for the mangonel,
+  // a ballista behind the mantlet's embrasure.
+  const AMMO={trebuchet:[['stone','Pietra'],['fire','Incendiaria']],catapult:[['stone','Pietra'],['scatter','Sassaiola']]};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
   const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
@@ -114,6 +120,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
     $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
+    const eng=kindOf(subject)==='siege'?subject.split(':')[1]:'',ammo=AMMO[eng];
+    $('siegeUpBox').hidden=!ammo&&eng!=='mantlet';$('ammoBox').hidden=!ammo;$('balBox').hidden=eng!=='mantlet';
+    if(ammo){const was=$('sAmmo').value;$('sAmmo').innerHTML=ammo.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('');if(ammo.some(([k])=>k===was))$('sAmmo').value=was}
     resetHero();
   }
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
@@ -196,7 +205,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   }
   function wagonSpec(){
     const coat=$('coat').value,team=Number($('wTeam').value);
-    return{chassis:$('wChassis').value,body:$('wBody').value,cargo:CARGO_PRESETS[$('wCargo').value],
+    return{chassis:$('wChassis').value,cargo:CARGO_PRESETS[$('wCargo').value],
       team:Array.from({length:team},(_,i)=>({coat:i?(coat==='white'?'grey':'white'):coat})),driver:driverFor($('wDriver').value)};
   }
   function heroWagon(W,H,k,dt){
@@ -230,22 +239,56 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   // Siege engines: Blender models with their shot animated; the crew are the
   // game's own 2D soldiers on the engine's crew anchors; the stone flies as a sprite.
   const SE=window.ConquerSiegeEngines3D;let siegeDistance=0;
+  // A flickering flame (and its glow) at a screen point; r in px.
+  function flame(x,y,r,seed=0){
+    const f=1+.18*Math.sin(clock*23+seed)+.1*Math.sin(clock*37+seed*2);
+    g.fillStyle='rgba(255,150,40,.25)';g.beginPath();g.arc(x,y-r*.6,r*2.2,0,Math.PI*2);g.fill();
+    for(const [c,k] of [['#d8461c',1],['#f59a2a',.7],['#ffe08a',.38]]){
+      const h=r*2.4*k*f,w=r*k;
+      g.fillStyle=c;g.beginPath();g.moveTo(x-w,y);g.quadraticCurveTo(x-w,y-h*.55,x+Math.sin(clock*9+seed)*w*.4,y-h);g.quadraticCurveTo(x+w,y-h*.55,x+w,y);g.closePath();g.fill();
+    }
+  }
   function siegeAt(engine,cx,cy,pxPerU,turns,heading){
-    const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12,state={mode:action,t:clock,distance:siegeDistance};
+    const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12;
+    const state={mode:action,t:clock,distance:siegeDistance,ammo:$('sAmmo').value,ballista:$('sBallista').checked};
     const place={x:0,y:0,heading},sprites=[];
     SE.crew(engine,place,state).forEach((p,i)=>sprites.push({...p,draw:()=>{
       const s=view.project(p.x,p.y,p.z),lean=action==='move'?Math.sin(clock*6+i)*.6:0;
       State.view.scale=zoom;ctx=g;CA.drawFigure({x:s.x+lean,y:s.y},0,'spearman','crew'+i,0,null,CA.pose({engaged:false},i));
     }}));
-    const stone=SE.projectile(engine,place,state);
-    if(stone)sprites.push({...stone,draw:()=>{
-      const sh=view.project(stone.x,stone.y,0),s=view.project(stone.x,stone.y,stone.z);
-      // A 0.4 m stone: sizes follow the world scale, not the figure zoom.
-      const r=Math.max(2,pxPerU*.06);
-      g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(sh.x,sh.y,r*1.4,r*.7,0,0,Math.PI*2);g.fill();
-      g.fillStyle='#8f8d88';g.strokeStyle='#4a4844';g.lineWidth=1;g.beginPath();g.arc(s.x,s.y,r,0,Math.PI*2);g.fill();g.stroke();
+    // A 0.4 m stone: sizes follow the world scale, not the figure zoom.
+    const r=Math.max(2,pxPerU*.06);
+    const ball=(p,rr,fill)=>{
+      const sh=view.project(p.x,p.y,0),s=view.project(p.x,p.y,p.z);
+      g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(sh.x,sh.y,rr*1.4,rr*.7,0,0,Math.PI*2);g.fill();
+      g.fillStyle=fill;g.strokeStyle='#4a4844';g.lineWidth=1;g.beginPath();g.arc(s.x,s.y,rr,0,Math.PI*2);g.fill();g.stroke();
+      return s;
+    };
+    const shot=SE.projectile(engine,place,state);
+    if(shot)sprites.push({...shot,draw:()=>{
+      if(shot.ammo==='scatter'){shot.pellets.forEach(p=>ball(p,r*.45,'#8f8d88'));return}
+      if(shot.ammo==='bolt'){
+        // Flat and fast: a short dark shaft along the heading, with a faint streak.
+        const s=view.project(shot.x,shot.y,shot.z),b=view.project(shot.x-Math.cos(shot.heading)*.35,shot.y-Math.sin(shot.heading)*.35,shot.z);
+        g.strokeStyle='rgba(255,255,255,.3)';g.lineWidth=1;g.beginPath();g.moveTo(b.x+(b.x-s.x)*3,b.y+(b.y-s.y)*3);g.lineTo(b.x,b.y);g.stroke();
+        g.strokeStyle='#3b2a1a';g.lineWidth=Math.max(1.5,pxPerU*.02);g.beginPath();g.moveTo(b.x,b.y);g.lineTo(s.x,s.y);g.stroke();
+        return;
+      }
+      if(shot.ammo==='fire'){
+        // Smoke trail from where the ball was a moment ago.
+        for(let i=6;i>=1;i--){
+          const p=SE.projectile(engine,place,{...state,t:clock-i*.05});if(!p)continue;
+          const q=view.project(p.x,p.y,p.z);g.fillStyle='rgba(60,55,50,'+(.32-i*.04)+')';g.beginPath();g.arc(q.x,q.y,r*(1+i*.25),0,Math.PI*2);g.fill();
+        }
+        const s=ball(shot,r,'#2b1a10');flame(s.x,s.y,Math.max(2.5,r*1.2));return;
+      }
+      ball(shot,r,'#8f8d88');
     }});
-    W3.drawMeshes(g,[SE.triangles(engine,place,state)],view,sprites);
+    const mesh=SE.triangles(engine,place,state);
+    W3.drawMeshes(g,[mesh],view,sprites);
+    // The incendiary ball burns while it waits in the sling: flames are drawn over
+    // the engine (they rise above the trough and give light).
+    mesh.burning.forEach((b,i)=>{const s=view.project(b.x,b.y,b.z);flame(s.x,s.y,Math.max(2.5,pxPerU*.07),i)});
   }
   function heroSiege(W,H,k,dt){
     const engine=subject.split(':')[1],turns=Number($('w3Turns').value),heading=headingInput(dt);
@@ -300,7 +343,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     // A supply wagon circling the meadow with its 3D team and a seated driver.
     sceneWagonA+=dt*.06;
     const wp={x:Math.cos(sceneWagonA)*6.2,y:Math.sin(sceneWagonA)*6.2,heading:sceneWagonA+Math.PI/2,distance:sceneWagonA*6.2},
-      wspec={chassis:'wagon',body:'open',cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}]},an=W3.anchors(wspec,wp);
+      wspec={chassis:'wagon',cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}]},an=W3.anchors(wspec,wp);
     meshes.push(W3.worldTriangles(wspec,wp));
     an.horses.forEach((h,i)=>meshes.push(A3.triangles('horse',{...h,heading:wp.heading},{mode:'walk',t:clock+i*.12,seed:i},A3.coatColors('horse',wspec.team[i].coat))));
     const drv=driverFor('villager');

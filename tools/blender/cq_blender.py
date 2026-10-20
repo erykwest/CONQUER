@@ -158,6 +158,24 @@ def export_part(part, keys, digits=3):
     return {'v': v, 'c': c}
 
 
+def export_part_indexed(part, keys, digits=3):
+    """Like export_part but with shared vertices: {p: xyz list (U), i: 3 indices per
+    triangle, c: palette index per triangle}. About 2.5x smaller for box-built models."""
+    me = part.object.data
+    me.calc_loop_triangles()
+    p, i, c, seen = [], [], [], {}
+    for tri in me.loop_triangles:
+        for vi in tri.vertices:
+            co = me.vertices[vi].co
+            k = (round(co.x / METERS_PER_U, digits), round(co.y / METERS_PER_U, digits), round(co.z / METERS_PER_U, digits))
+            if k not in seen:
+                seen[k] = len(seen)
+                p += [0 if v == 0 else v for v in k]
+            i.append(seen[k])
+        c.append(keys.index(me.materials[tri.material_index]['cq_key']))
+    return {'p': p, 'i': i, 'c': c}
+
+
 def u(*meters):
     """Metres -> U, rounded like the exported geometry."""
     return [round(x / METERS_PER_U, 4) for x in meters]

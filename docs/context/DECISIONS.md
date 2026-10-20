@@ -3,6 +3,26 @@
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
 
+## Aggiornamento clay (19/10/2026) — solo design, non codice
+
+**D-CLAY-01 · DESIGN:** introdurre Argilla (`clay`) come materia prima e mattoni cotti (`brick`) come materiale alternativo alla pietra per costruzioni murarie e fortificazioni; variante rosso/marrone della muratura esistente e **durabilità massima 80%** rispetto alla pietra, senza duplicare geometrie o sistemi di combattimento.
+
+**D-CLAY-02 · DESIGN:** la Cava esistente può produrre `stone` sulla roccia ripida oppure `clay` vicino a fiumi/torrenti/laghi (**entro 6 U**); nessuna nuova cava tipologica né fornace/risorsa `brick`. I lavoratori rimangono L2 e si usa il ledger unico.
+
+**D-CLAY-03 · DESIGN:** la conversione riguarda tutti gli elementi che consumano pietra e ne cambia costi e rendering; materiali selezionabili per singolo elemento costruibile per consentire castelli misti. Porte lignee e strutture in legno restano indipendenti. Vasellame rimandato a un'eventuale specializzazione L3.
+
+**D-CLAY-04 · CONTRATTO TECNICO DA SVILUPPARE:** proteggere la compatibilità con `Civil`: `material` ha già il significato wood/stone su tower/gate e la migrazione attuale non accetta `brick`; `State.resources` e ledger sono separati; nessuna affermazione di implementazione finché non si risolvono questi punti con QA. Guida: [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md), [piano QA](../CLAY-REGRESSION-PLAN.md).
+
+## Aggiornamento Civil (17/10/2026)
+
+**D-CIV-01 · DESIGN esplicito:** chiesa e locanda hanno lotti Voronoi di pertinenza; il mercato non ha un lotto privato. Applicazione attraverso il sistema catastale già condiviso con le abitazioni, senza duplicare recinzioni. La piazza è un nuovo edificio pubblico e non genera un lotto di pertinenza.
+
+**D-CIV-02 · DESIGN esplicito:** tre livelli di sviluppo (L1–L3) per edifici civili esistenti chiesa/locanda/mercato e nuova Piazza; tre varianti di Piazza (pavimentata, fontana, verde). Nella prima iterazione il livello è **skeleton di configurazione**, non un modificatore economico o di servizi; le forme/scale definitive restano future. Fonte tecnica: branch [`Civil`](https://github.com/erykwest/CONQUER/tree/Civil), `src/settlement-core.js`, `src/settlement-urban.js` e pannello `src/settlement-app-rooms.js`.
+
+**D-CIV-03 · DESIGN/CODICE su branch `Civil` (17/10):** ogni annesso civile è una struttura separata con `parentId` verso chiesa, taverna o mercato, tipo da catalogo (`annexType`), footprint e sblocco per `civicLevel`. Chiesa/taverna: costruzione solo dentro il lotto Voronoi; mercato: estensione pubblica vicina al mercato, vietato occupare lotti privati. I figli vengono eliminati insieme al padre; il livello non può scendere sotto il requisito di un annesso esistente. Per ora nessuna produzione, capacità, staff o costo, e rendering 2D/3D provvisorio. Dimensioni, limiti quantitativi e raggi sono valori di skeleton da rivedere al bilanciamento.
+
+**D-CIV-04 · DESIGN/CODICE su branch `Civil` (17/10):** alla chiesa **L1** spetta già un **cimitero interno al lotto Voronoi**, non da costruire manualmente: è una componente derivata del terreno di pertinenza, visibile con tombe schematiche e riservata agli annessi ulteriori. Quando il lotto non offre spazio sufficiente, non esce dai suoi confini. La taverna sblocca a **L2** una **estensione birreria** costruibile, che deve stare vicino alla struttura madre e nello stesso lotto. Resta uno skeleton, senza funerali, produzione di birra o gestione di personale.
+
 ## Registro delle decisioni
 
 | ID | Classe | Decisione o regola da preservare | Conseguenza |

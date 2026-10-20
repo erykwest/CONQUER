@@ -29,7 +29,7 @@ console.log('PASS castle extracted modules reconstruct in correct order, with in
 // appear exactly once; removing them must give back the exact 2.5D renderer.
 const render3dHooks=[
   ['  // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.\n  if(window.ConquerCastle3D?.drawBody?.())return;\n',''],
-  ["1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),",
+  ["1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),",
    "1,State.season||'summer',num(State.view.scale),State.view.rotation||0,staticCacheDpr(),"],
   ['()=>{if(!window.ConquerCastle3D?.drawFront?.())drawCastleBattlements()}','()=>drawCastleBattlements()'],
   ['  // Opt-in full-scene 3D prototype (settlement-world3d.js): replaces every static scene cache.\n  const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);\n  if(world3d){\n    window.ConquerSnowTracks?.draw();\n  }else{\n',''],
@@ -37,14 +37,14 @@ const render3dHooks=[
   ["if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');","blitSceneCache('castleBody');"],
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],
   ['  if(world3d)window.ConquerWorld3D.drawMastioDrapes();\n  else{drawFacadeWindows(false,1,false);drawGatePortals()}\n','  drawFacadeWindows(false,1,false);\n  drawGatePortals();\n'],
-  // Builder overlay hook: wall/palisade end magnets (settlement-castle-placement.js).
-  ["  if(typeof drawLinearMagnets==='function')drawLinearMagnets();\n",''],
-  // Siege hook: ruined stumps are drawn with their rubble by settlement-siege.js.
-  ["  if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)\n",''],
   // WebGL2 night lights (opt-in, Canvas fallback) and their Canvas timing telemetry.
   ['  const nf=nightFactor();if(nf<=.01)return;\n  const t0=performance.now();\n','  const nf=nightFactor();if(nf<=.01)return;\n'],
   ["  drawFireGlows(nf);\n  const ms=performance.now()-t0;\n  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;\n  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});\n","  drawFireGlows(nf);\n"],
-  ['  // WebGL2 lights share the real scene depth and are composited after colour grading.\n  // Canvas keeps its original complete night path as the fallback.\n  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);\n  else drawNightLights();\n','  drawNightLights();\n']
+  ['  // WebGL2 lights share the real scene depth and are composited after colour grading.\n  // Canvas keeps its original complete night path as the fallback.\n  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);\n  else drawNightLights();\n','  drawNightLights();\n'],
+  // Builder overlay hook: wall/palisade end magnets (settlement-castle-placement.js).
+  ["  if(typeof drawLinearMagnets==='function')drawLinearMagnets();\n",''],
+  // Siege hook: ruined stumps are drawn with their rubble by settlement-siege.js.
+  ["  if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)\n",'']
 ];
 const renderSource=render3dHooks.reduce((src,[hooked,original])=>{
   assert.equal(src.split(hooked).length,2,'Expected exactly one 3D hook: '+hooked.trim().slice(0,60));

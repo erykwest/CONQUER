@@ -34,7 +34,10 @@ function harness(){
     State,window,BUILD_MIN:50,BUILD_MAX:150,
     houseFootprintParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     wellPlazaPoints:s=>square(s.x,s.y,3,3,0),
-    isCivic:s=>['market','tavern','church','training'].includes(s.type),
+    isCivicAnnex:s=>s?.type==='civicAnnex',
+     civicAnnexFootprint:s=>square(s.x,s.y,s.w||2,s.h||2,s.angle||0),
+     civicAnnexPlacementCheck:()=>({ok:true}),
+     isCivic:s=>['market','tavern','church','training','plaza'].includes(s.type),
     civicParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     structureGroundContactPolygons:s=>s.a?[square((s.a.x+s.b.x)/2,(s.a.y+s.b.y)/2,
       Math.hypot(s.a.x-s.b.x,s.a.y-s.b.y),s.width||.5,Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x))]:
@@ -48,6 +51,7 @@ function harness(){
     environmentBlocksPoint:()=>blocked,
     TYPES:{road:{min:1}},
     manualRoadConflict:(road,other)=>other.type==='house',
+    isPrimaryRoad:()=>false,
     roadTouchesPolygon:(road,polygon)=>polygon.some(p=>dseg(p,road.a,road.b)<.25),
     constructionCost:()=>({gold:10}),canAfford:()=>cash>=10,costText:()=>'10 gold',
     Math,Number,Object,Array
@@ -184,4 +188,12 @@ test('a rejected second click retains oriented ghost and can be retried',()=>{
   assert.equal(h.State.draft,null);
 });
 
+test('a public piazza allows road crossings like the market',()=>{
+  const h=harness();
+  const road={id:'road-a',type:'road',a:{x:96,y:100},b:{x:104,y:100},width:.62};
+  h.State.structures.push(road);
+  assert.equal(h.check({type:'plaza',x:100,y:100,w:5,h:5}).ok,true);
+  h.State.structures=[{id:'plaza-a',type:'plaza',x:100,y:100,w:5,h:5}];
+  assert.equal(h.check({type:'road',a:{x:96,y:100},b:{x:104,y:100},width:.62}).ok,true);
+});
 console.log('Builder placement regression: all checks passed.');

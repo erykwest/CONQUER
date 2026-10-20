@@ -1,5 +1,5 @@
 'use strict';
-// Modular wagon: chassis, cover, team, driver seat and cargo slots compose
+// Modular wagon: chassis (cart, wagon, carriage), team, driver seat and cargo slots compose
 // independently, and the wheels roll with the distance travelled.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -30,9 +30,11 @@ assert.equal(one.horses.length,1);
 assert.equal(two.horses.length,2);
 assert.ok(two.horses[0].far&&!two.horses[1].far,'the far horse is drawn first, behind the near one');
 assert.ok(one.horses[0].x>CHASSIS.wagon.bed[1]*WAGON_SCALE,'the team stands ahead of the bed');
-assert.equal(wagonLayout({chassis:'cart',body:'covered'}).covered,false,'carts are never covered');
-assert.equal(wagonLayout({chassis:'wagon',body:'covered'}).covered,true);
-console.log('PASS team and cover');
+const coach=wagonLayout({chassis:'carriage',cargo:['sack','crate'],team:[{},{}]});
+assert.ok(coach.chassis.cabin&&coach.seat,'the carriage has a cabin and a coachman seat');
+assert.equal(coach.cargo.length,0,'a closed carriage takes no cargo');
+assert.ok(coach.chassis.wheels[1].r<coach.chassis.wheels[0].r,'carriage front wheels are smaller');
+console.log('PASS team and carriage');
 
 const r=CHASSIS.wagon.wheels[0].r;
 assert.ok(Math.abs(wheelAngle(2*Math.PI*r,r)-2*Math.PI)<1e-9,'a wheel turns once per circumference travelled');

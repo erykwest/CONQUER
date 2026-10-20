@@ -34,12 +34,20 @@ canvas.addEventListener('pointerdown',e=>{
     }
     return;
   }
+  if(State.tool.kind==='civicAnnex'){
+    const parent=State.structures.find(x=>x.id===State.tool.parentId);
+    if(!parent){status('Parent building no longer exists');setTool({kind:'select',label:'Select'});return}
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    const annex=makeCivicAnnex(parent,State.tool.annexType,q.x,q.y);
+    if(annex&&addStructure(annex))setTool({kind:'select',label:'Annex placed · select'});
+    return;
+  }
   if(State.tool.kind==='tower'){
     const snap=towerPlacementSnap(p),q=snap.point;
     if(State.tool.shape==='round'){
       State.draft=null;
       addTowerWithPlacement(
-        {id:uid(),type:'tower',shape:'round',x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]},
+        {id:uid(),type:'tower',shape:'round',material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]},
         snap
       );
       return
@@ -73,7 +81,7 @@ canvas.addEventListener('pointerdown',e=>{
   }
   if(State.tool.kind==='well'){
     if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',x:q.x,y:q.y};
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y};
     if(addStructure(well))openVillageModal(well);return
   }
   if(State.tool.kind==='crossing'){
@@ -93,7 +101,7 @@ canvas.addEventListener('pointerdown',e=>{
         status('Moat chain stopped — click anywhere to start another');
         draw();return;
       }
-      const crossing={id:uid(),type:moat?'moat':'bridge',
+      const crossing={id:uid(),type:moat?'moat':'bridge',masonryMaterial:State.buildMasonryMaterial,
         variant:State.tool.crossing,a:{...a},b,width:State.tool.width};
       if(moat){
         crossing.aSnap=State.draft.aSnap||null;
@@ -183,7 +191,7 @@ canvas.addEventListener('pointermove',e=>{
     }
     const a=State.draft.a,b=snap?.point||{x:snapGrid(p.x),y:snapGrid(p.y)};
     const type=moat?'moat':'bridge';
-    const preview={type,variant:State.tool.crossing,a,b,width:State.tool.width,length:dist(a,b)};
+    const preview={type,variant:State.tool.crossing,masonryMaterial:State.buildMasonryMaterial,a,b,width:State.tool.width,length:dist(a,b)};
     State.draft.preview=preview.length>=.02?preview:null;
     const error=window.ConquerCrossings?.validate({...preview});
     status(moat&&snap&&dist(a,b)<.20?'Click start point to end this moat chain':
@@ -216,7 +224,7 @@ canvas.addEventListener('pointermove',e=>{
 
     const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.endpoint));
     if(route){
-      const base={type:State.tool.linear,width:spec.width,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
+      const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
       State.draft.invalidPreview=null;
       State.draft.preview=null;
       State.draft.previewSegments=route.segments.map((seg,index)=>({
@@ -234,6 +242,15 @@ canvas.addEventListener('pointermove',e=>{
     }
     draw();
     return
+  }
+  if(State.tool.kind==='civicAnnex'){
+    const parent=State.structures.find(x=>x.id===State.tool.parentId);
+    if(!parent){State.draft=null;draw();return}
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)},ghost=makeCivicAnnex(parent,State.tool.annexType,q.x,q.y);
+    State.draft={mode:'hover',preview:ghost};
+    const verdict=window.ConquerPlacement?.check(ghost);
+    if(verdict&&!verdict.ok)status('Annex blocked: '+verdict.reason);
+    draw();return;
   }
   const oriented=orientedToolSpec();
   if(oriented){
@@ -267,7 +284,7 @@ canvas.addEventListener('pointermove',e=>{
   }
   if(State.tool.kind==='well'){
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-    State.draft={mode:'hover',preview:{type:'well',x:q.x,y:q.y}};
+    State.draft={mode:'hover',preview:{type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y}};
     draw();return;
   }
   if(State.tool.kind==='tower'&&State.tool.shape==='round'){
@@ -339,8 +356,21 @@ canvas.addEventListener('wheel',e=>{
   zoomWheelDelta+=e.deltaY;
   if(!zoomFrame)zoomFrame=requestAnimationFrame(flushWheelZoom);
 },{passive:false});
+function setBuildMasonryMaterial(next){
+  if(!['stone','brick'].includes(next)||next===State.buildMasonryMaterial)return;
+  State.buildMasonryMaterial=next;
+  if(State.draft?.preview){State.draft.preview.masonryMaterial=next;delete State.draft.preview._ghostCheck}
+  if(State.draft?.previewSegments)for(const s of State.draft.previewSegments){s.masonryMaterial=next;delete s._ghostCheck}
+  document.querySelectorAll('[data-build-masonry]').forEach(b=>{
+    const active=b.dataset.buildMasonry===next;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+  });
+  scheduleLocalSave();draw();
+  const preview=State.draft?.preview||State.draft?.previewSegments?.[0];
+  status('Muratura nuovi cantieri: '+(next==='brick'?'MATTONI (argilla)':'PIETRA')+(preview?' · '+costText(State.draft?.previewSegments?aggregateConstructionCost(State.draft.previewSegments):constructionCost(preview)):''));
+}
+for(const b of document.querySelectorAll('[data-build-masonry]'))b.onclick=()=>setBuildMasonryMaterial(b.dataset.buildMasonry);
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
@@ -393,13 +423,13 @@ document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
   if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',material:'stone',level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
 document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',level};
+  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level};
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
   setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
@@ -410,15 +440,17 @@ document.querySelector('[data-wood-gate]').onclick=e=>{
 };
 for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   const type=b.dataset.civic,spec={type,shape:'civic'};
-  setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(COSTS[type]),el:b});
+  setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(constructionCost({...spec,masonryMaterial:State.buildMasonryMaterial})),el:b});
 };
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
-   const type=b.dataset.industry,spec=window.ConquerIndustries.TYPES[type];
+   const type=b.dataset.industry,extractionMode=b.dataset.extractionMode==='clay'?'clay':'stone';
+   const candidate=window.ConquerIndustries.make(type,{x:0,y:0},extractionMode);
+   const spec=window.ConquerIndustries.definition(candidate);
    setTool({kind:'industry',industry:type,
-     placementSpec:window.ConquerIndustries.make(type,{x:0,y:0}),
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(spec.cost),el:b});
+     placementSpec:candidate,
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
- document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(COSTS.well),el:e.currentTarget});
+ document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}

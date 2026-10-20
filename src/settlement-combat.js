@@ -652,18 +652,10 @@
     g.drawImage(backdrop,0,0);
     g.restore();
   }
-  function drawPosedFigure(p,type,id,livery,unit,index=0,z=.08){
-    const anim=window.ConquerCombatAnim;
-    if(!anim)return drawSoldierFigure(p,z,type,id,State.clock.day,livery);
-    // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
-    const foe=anim.foeOf(unit);
-    const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
-    anim.drawFigure(p,z,type,id,State.clock.day,livery,pose);
-  }
   // Infantry standards use the same campaign heraldry raster as tower flags,
   // not a separately generated unit emblem.
-  function drawSquadStandard(p,id){
-    const base=w2s(p,.08),scale=clamp(State.view.scale,.55,1.45);
+  function drawSquadStandard(p,id,z=.08){
+    const base=w2s(p,z),scale=clamp(State.view.scale,.55,1.45);
     const mastX=base.x+5*scale,mastTop=base.y-36*scale;
     const width=14*scale,height=19*scale;
     const wave=Math.sin(visualCycleDay()*18+(peasantHash(id)%1000)*.00628)*1.1*scale;
@@ -695,8 +687,8 @@
   }
   // One torch-bearer per two-man patrol: the light is held above the leading
   // soldier's right hand, rather than being a stationary world fixture.
-  function drawPatrolTorch(p,id){
-    const base=w2s(p,.08),figureScale=militaryScale();
+  function drawPatrolTorch(p,id,z=.08){
+    const base=w2s(p,z),figureScale=militaryScale();
     const scale=clamp(State.view.scale*.72,.45,1.5);
     const grip={x:base.x+5.4*figureScale*.55,y:base.y-1.25*figureScale};
     const tip={x:grip.x+1.2*figureScale,y:grip.y-15*figureScale};
@@ -712,6 +704,14 @@
     g.beginPath();g.arc(tip.x,tip.y,9*scale,0,Math.PI*2);g.fill();
     g.restore();
     drawScreenFlame(tip,scale,id+':patrol-hand-torch');
+  }
+  function drawPosedFigure(p,type,id,livery,unit,index=0,z=.08){
+    const anim=window.ConquerCombatAnim;
+    if(!anim)return drawSoldierFigure(p,z,type,id,State.clock.day,livery);
+    // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
+    const foe=anim.foeOf(unit);
+    const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
+    anim.drawFigure(p,z,type,id,State.clock.day,livery,pose);
   }
   function renderOverlay(){
     if(!combat)return;
@@ -733,20 +733,20 @@
       drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)+(u.z||0)},true);
       g.setLineDash([]);
     }
-    const anim=window.ConquerCombatAnim;
     window.ConquerCamp?.drawEncampments(g);
+    const anim=window.ConquerCombatAnim;
     const characters=[];
     for(const u of combat.units){
+      if(u.campState==='barracks')continue;
       // Defeated units stay on screen while their fall animation plays.
       if(u.defeated&&!anim?.dying(u))continue;
-      if(u.campState==='barracks')continue;
       const z=.08+(u.z||0);
-      if(u.campState==='camped'){
+      if(u.campState==='camped'&&!u.defeated){
         // Preserve the cavalry figure for a lone knight; larger formations
         // leave just one visible sentry while the remainder rests in tents.
         const soloKnight=u.kind==='knight';
         characters.push({p:soloKnight?u:{x:u.x+.15,y:u.y+.85},
-          type:soloKnight?'knight':'spearman',id:u.id+':camp-guard',unit:u,index:0,z});
+          type:soloKnight?'knight':'spearman',id:u.id+':camp-guard',unit:u,index:0,z:.08});
         continue;
       }
       if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u,z});
@@ -763,7 +763,8 @@
             p={x:u.x+offset,y:u.y+(row-.4)*spacing};
           }
           const torch=u.kind==='patrol'&&i===0&&window.ConquerCamp?.isNight();
-          characters.push({p,type:torch?'unarmed':'spearman',id:u.id+':'+i,flag:u.kind==='squad'&&i===0,torch,unit:u,index:i,z});
+          characters.push({p,type:torch?'unarmed':'spearman',id:u.id+':'+i,
+            flag:u.kind==='squad'&&i===0,torch,unit:u,index:i,z});
         }
       }
     }
@@ -772,21 +773,34 @@
     withRenderContext(g,()=>{
       for(const soldier of characters){
         drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index,soldier.z);
-        if(soldier.flag&&!soldier.unit.defeated)withUrbanFigureOcclusion(soldier.p,soldier.z,()=>
-          drawSquadStandard(soldier.p,soldier.unit.id));
-        if(soldier.torch&&!soldier.unit.defeated)withUrbanFigureOcclusion(soldier.p,soldier.z,()=>
-          drawPatrolTorch(soldier.p,soldier.id));
+        if(soldier.unit.defeated)continue;
+        // Without the combat animations, a spear thrust line still shows engagement.
+        if(!anim&&soldier.type==='spearman'&&soldier.unit.engaged){
+          const target=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&e.stats?.hp>0)
+            .sort((a,b)=>dist(a,soldier.unit)-dist(b,soldier.unit))[0];
+          if(target&&dist(target,soldier.unit)<1){
+            const base=w2s(soldier.p,.24),end=w2s(target,.45);
+            const pulse=(Math.sin((window.ConquerCombatRules?.time||0)*Math.PI*3+soldier.index*1.2)+1)/2;
+            g.strokeStyle='#c9c6b4';g.lineWidth=Math.max(.75,1.25*State.view.scale);
+            g.beginPath();g.moveTo(base.x,base.y-8);
+            g.lineTo(base.x+(end.x-base.x)*(.25+.7*pulse),base.y-8+(end.y-base.y-8)*(.25+.7*pulse));g.stroke();
+          }
+        }
+        if(soldier.flag)withUrbanFigureOcclusion(soldier.p,soldier.z,()=>
+          drawSquadStandard(soldier.p,soldier.unit.id,soldier.z));
+        if(soldier.torch)withUrbanFigureOcclusion(soldier.p,soldier.z,()=>
+          drawPatrolTorch(soldier.p,soldier.id,soldier.z));
       }
       for(const e of combat.enemy){
         const down=e.defeated||e.stats?.hp<=0;
+        if(down&&!anim?.dying(e))continue;
         if(e.kind==='wolf'){
           // Wildlife remains a visible neutral creature by day; at night the
           // exact same entity is rendered while its combat flag turns hostile.
-          if(down)continue;
-          if(!combat.fog||spotted(e,sightSources))window.ConquerWolves?.draw(g,e);
+          if(!down&&(!combat.fog||spotted(e,sightSources)))window.ConquerWolves?.draw(g,e);
           continue;
         }
-        if((down&&!anim?.dying(e))||!spotted(e,sightSources))continue;
+        if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
         drawPosedFigure(e,'spearman',e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
@@ -1561,13 +1575,12 @@
     updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
-      if(u.campState==='camped'||u.campState==='barracks')continue;
       // Orders onto/along/off the walls run as legs (ground, climb, wall walk).
       if(u.legs?.length&&!u.defeated&&!u.routing){
         if(stepLegs(u,dt,u.kind==='knight'?1.5:u.kind==='patrol'?1.15:.8))moved=true;
         continue;
       }
-      if(!u.target||u.defeated||u.routing)continue;
+      if(!u.target||u.defeated||u.routing||u.campState==='camped'||u.campState==='barracks')continue;
       if(!u.path?.length){
         const route=u.kind==='patrol'?patrolRoute(u,u.target,u.id):infantryRoute(u,u.target,u.id,u.kind);
         u.path=route?.map(p=>({x:p.x,y:p.y}))||null;u.pathIndex=1;
@@ -1836,7 +1849,6 @@
   document.querySelectorAll('[data-combat-storm]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-storm',stormKind:b.dataset.combatStorm,label:'Click the top of a wall to storm it'});syncButtons();
   });
-
   // Read-only tactical contacts for ultra-low-detail views. Enemy positions
   // obey exactly the same spotting rule as the tactical overlay, even when
   // the developer disables the visual fog layer.

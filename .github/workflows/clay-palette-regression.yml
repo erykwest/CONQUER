@@ -1,0 +1,29 @@
+name: Clay palette regression
+on:
+  push:
+    branches:
+      - clay
+  workflow_dispatch:
+
+jobs:
+  clay-palette:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check all source and QA JavaScript syntax
+        run: |
+          for file in src/*.js qa/*.cjs; do node --check "$file"; done
+      - name: Run Clay visual palette and existing Civil regressions
+        run: |
+          node qa/clay-palette-regression.cjs
+          node qa/clay-material-regression.cjs
+          node qa/urban-regression.cjs
+          node qa/urban-density-regression.cjs
+          node qa/builder-placement-regression.cjs
+          node qa/civic-annex-regression.cjs
+          node qa/economy-regression.cjs
+          node qa/economy-industries-regression.cjs

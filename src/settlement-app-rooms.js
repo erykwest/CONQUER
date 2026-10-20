@@ -3,16 +3,25 @@
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(window.ConquerIndustries?.is(s)){
-    const spec=window.ConquerIndustries.TYPES[s.type],econ=window.ConquerEconomy;
+    const spec=window.ConquerIndustries.definition(s),econ=window.ConquerEconomy;
     const staff=econ?.staffing?.()[s.id]||0;
     const details=econ?.state()?.activities?.[s.id],owner=details?.owner||(s.economicOwner==='lord'?'lord':'private');
     panel.classList.add('open');
-    info.innerHTML=`<div class="kv"><span>Industry</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${remainingDays(s).toFixed(1)}d</div>`:''}`;
-    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?'3×3U, any part overlaps steep rock':'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
+    info.innerHTML=`<div class="kv"><span>Industry</span><b>${spec.name}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${remainingDays(s).toFixed(1)}d</div>`:''}`;
+    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?(s.extractionMode==='clay'?'4×4U, centre H0 and at most 6U from river/stream/lake bank':'3×3U, any part overlaps steep rock'):'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
     slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
     return;
   }
-  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
+  if(isCivicAnnex(s)){
+    const parent=State.structures.find(p=>p.id===s.parentId),spec=civicAnnexDefinition(s,parent);
+    panel.classList.add('open');
+    info.innerHTML='<div class="kv"><span>Annex</span><b>'+(spec?.label||'Unknown')+'</b></div><div class="legend">Skeleton · '+(parent?structureLabel(parent):'orphan')+' · '+(spec?spec.w+'×'+spec.h+'U':'')+'</div>';
+    slots.innerHTML='<div class="slot"><button data-annex-parent>← Parent building</button><button data-annex-delete>Remove annex</button><div class="legend">No workers, beds, goods or economy yet.</div></div>';
+    slots.querySelector('[data-annex-parent]').onclick=()=>selectStructure(parent||null);
+    slots.querySelector('[data-annex-delete]').onclick=()=>deleteStructure(s.id);
+    return;
+  }
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
     const cost=s.buildCost||constructionCost(s);
@@ -24,7 +33,7 @@ function renderFunctionPanel(){
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s),capUnits=(s.type==='house'||simpleCivic)?0:functionCapacityUnits(s);panel.classList.add('open');
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate,maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${masonryMaterial(s)?`<div class="kv"><span>Muratura</span><b>${masonryMaterial(s)==='brick'?'Mattoni / Argilla':'Pietra'}</b></div>`:''}${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label">Under construction · ${remainingDays(s).toFixed(1)} days</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
   let html='';
   if(s.type==='tower'){
     const active=!!s.isMastio;
@@ -42,9 +51,31 @@ function renderFunctionPanel(){
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
       '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
   }
-  if(['house','market','tavern','church','training'].includes(s.type)){
+  if(['house','market','tavern','church','training','plaza'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
+  }
+  if(CIVIC_LEVEL_TYPES.includes(s.type)){
+    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${[1,2,3].map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
+  }
+  if(CIVIC_ANNEX_CATALOG[s.type]){
+    const catalog=CIVIC_ANNEX_CATALOG[s.type],children=civicAnnexChildren(s.id);
+    html+='<div class="slot"><div class="slot-label">Annexes · '+children.length+' built (skeleton)</div>'+
+      Object.entries(catalog).map(([key,spec])=>{
+        const owned=children.filter(child=>child.annexType===key),locked=civicLevel(s)<spec.level,full=owned.length>=spec.max;
+        if(spec.intrinsic){
+          const area=civicCemeteryArea(s);
+          return '<div class="slot-label">'+spec.label+' · L'+spec.level+'</div>'+
+            '<div class="legend">'+(area?'Included in church plot · '+area.w+'×'+area.h+'U':'Included from L1 · awaiting free space within the church lot')+'</div>';
+        }
+        return '<div class="slot-label">'+spec.label+' · '+owned.length+'/'+spec.max+' · L'+spec.level+'</div>'+
+          '<button data-civic-annex="'+key+'" '+(locked||full||building?'disabled':'')+'>'+
+          (locked?'Requires L'+spec.level:full?'Limit reached':building?'Parent under construction':'Place '+spec.label)+' · '+spec.w+'×'+spec.h+'U</button>'+
+          owned.map(child=>'<button data-civic-annex-child="'+child.id+'">↳ Select '+spec.label+'</button>').join('');
+      }).join('')+'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>';
+  }
+  if(isPlazaLike(s)){
+    html+=`<div class="slot"><div class="slot-label">Piazza variant</div><div class="grid3">${PLAZA_VARIANTS.map(variant=>`<button data-plaza-variant="${variant}" class="${plazaVariant(s)===variant?'active':''}">${variant==='paved'?'Paved':variant==='fountain'?'Fountain':'Garden'}</button>`).join('')}</div></div>`;
   }
   if(s.type==='house'){
     const level=houseLevel(s);
@@ -73,6 +104,8 @@ function renderFunctionPanel(){
       }
       html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       html+=`<div class="slot"><div class="slot-label">Stone base</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti H1</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Svasato: H0.5. Contrafforti: da quota 0 a H1. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
+      const weapon=structureVariant(s,'topWeapon'),armed=towerTopWeaponAllowed(s),wb=(k,l)=>`<button data-tower-weapon="${k}" ${armed||k==='none'?'':'disabled'} class="${weapon===k?'active':''}">${l}</button>`;
+      html+=`<div class="slot"><div class="slot-label">Arma in cima</div><div class="grid3">${wb('none','Nessuna')}${wb('mangonel','Mangano')}${wb('ballista','Balista')}</div><div class="legend">${armed?'Upgrade: mangano o balista sulla piazza della torre, rivolti verso l\'esterno (vista 3D).':'Solo torri medie (T2) senza tetto a falde, di qualsiasi altezza.'}</div></div>`;
     }
   }
   if(s.type==='gate'){
@@ -174,6 +207,25 @@ function renderFunctionPanel(){
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;const level=Number(btn.dataset.heightLevel);if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall'}target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
+  slots.querySelectorAll('[data-civic-level]').forEach(btn=>btn.onclick=()=>{
+    const target=selectedStructure();if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return;
+    const level=Number(btn.dataset.civicLevel);
+    if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
+      status('Remove annexes requiring a higher level before downgrading');return;
+    }
+    target.civicLevel=level;
+    normalizeCivicDevelopment(target);
+    markStructureDirty(target);renderFunctionPanel();draw();
+    status(structureLabel(target)+' · skeleton stage only');
+  });
+  slots.querySelectorAll('[data-civic-annex]').forEach(btn=>btn.onclick=()=>startCivicAnnexPlacement(selectedStructure(),btn.dataset.civicAnnex));
+  slots.querySelectorAll('[data-civic-annex-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.civicAnnexChild)));
+  slots.querySelectorAll('[data-plaza-variant]').forEach(btn=>btn.onclick=()=>{
+    const target=selectedStructure();if(!isPlazaLike(target))return;
+    target.plazaVariant=btn.dataset.plazaVariant;
+    normalizeCivicDevelopment(target);
+    markStructureDirty(target);renderFunctionPanel();draw();
+  });
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
@@ -200,6 +252,7 @@ function renderFunctionPanel(){
     status('Tower base: '+(target.baseStyle==='buttress'?'buttressed':target.baseStyle==='splayed'?'splayed 10°':'standard'));
   });
   slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markStructureDirty(target);renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?'machicolation':'battlement'))});
+  slots.querySelectorAll('[data-tower-weapon]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'topWeapon',btn.dataset.towerWeapon))return;markStructureDirty(target);renderFunctionPanel();draw();status('Tower weapon: '+({none:'none',mangonel:'mangonel',ballista:'ballista'}[target.topWeapon])+(towerTopWeaponAllowed(target)?'':' (needs a T2 tower without a pitched roof)'))});
   slots.querySelectorAll('[data-wood-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return;target.woodRoof=btn.dataset.woodRoof==='pitched'?'pitched':'open';markStructureDirty(target);renderFunctionPanel();draw();status('Wood tower roof: '+target.woodRoof)});
   slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markStructureDirty(target);renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
   slots.querySelectorAll('[data-built-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='built')return;if(!setStructureVariant(target,'skin',btn.dataset.builtSkin))return;markStructureDirty(target);renderFunctionPanel();draw();status('Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'))});

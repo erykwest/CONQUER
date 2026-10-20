@@ -7,14 +7,26 @@
     quarry:{label:'Cava',name:'Stone quarry',good:'stone',tier:2,workers:2,w:3,h:3,color:'#999b9c',edge:'#64686c',days:5,cost:{gold:65,wood:20,stone:8}},
     mine:{label:'Miniera',name:'Mine',good:'stone',tier:2,workers:2,w:1,h:1,color:'#31363e',edge:'#171b20',days:7,cost:{gold:95,wood:35,stone:18}}
   });
+  const CLAY_QUARRY=Object.freeze({
+    ...TYPES.quarry,label:'Argilla',name:'Clay pit',good:'clay',
+    w:4,h:4,color:'#dc873b',edge:'#995025',
+    // No imported stone is needed to establish a clay pit on flat lowland.
+    cost:Object.freeze({gold:65,wood:28})
+  });
+  const isClayQuarry=s=>s?.type==='quarry'&&s.extractionMode==='clay';
+  const definition=s=>isClayQuarry(s)?CLAY_QUARRY:TYPES[s?.type];
   const is=s=>!!s&&Object.hasOwn(TYPES,s.type);
-  const make=(type,position)=>({type,x:position.x,y:position.y,
-    w:TYPES[type]?.w||2,h:TYPES[type]?.h||2,
-    shape:'industry',angle:0,economicOwner:'lord',workersRequired:2,
-    productionGood:TYPES[type]?.good||'wood'});
-  const footprint=s=>rectWorldPoints(s.x,s.y,TYPES[s.type].w,TYPES[s.type].h,s.angle||0);
+  const make=(type,position,extractionMode='stone')=>{
+    const mode=type==='quarry'&&extractionMode==='clay'?'clay':'stone';
+    const spec=type==='quarry'&&mode==='clay'?CLAY_QUARRY:TYPES[type];
+    return{type,x:position.x,y:position.y,
+      w:spec?.w||2,h:spec?.h||2,extractionMode:type==='quarry'?mode:undefined,
+      shape:'industry',angle:0,economicOwner:'lord',workersRequired:2,
+      productionGood:spec?.good||'wood'};
+  };
+  const footprint=s=>{const spec=definition(s);return rectWorldPoints(s.x,s.y,spec.w,spec.h,s.angle||0)};
   function footprintSamples(s,step=.3){
-    const {w,h}=TYPES[s.type],a=s.angle||0,ca=Math.cos(a),sa=Math.sin(a),out=[];
+    const {w,h}=definition(s),a=s.angle||0,ca=Math.cos(a),sa=Math.sin(a),out=[];
     const nx=Math.max(1,Math.ceil(w/step)),ny=Math.max(1,Math.ceil(h/step));
     for(let ix=0;ix<=nx;ix++)for(let iy=0;iy<=ny;iy++){
       const x=w*(ix/nx-.5),y=h*(iy/ny-.5);
@@ -23,12 +35,18 @@
     return out;
   }
   function groundLevel(s){
+    if(isClayQuarry(s))return 0;
     if(s.type==='quarry')return Math.max(...footprintSamples(s,.35).map(p=>terrainElevation(p)));
     return terrainElevation({x:s.x,y:s.y});
   }
   function normalizeFootprint(s){
     if(!is(s))return s;
-    s.w=TYPES[s.type].w;s.h=TYPES[s.type].h;
+    if(s.type==='quarry'){
+      s.extractionMode=s.extractionMode==='clay'?'clay':'stone';
+      s.productionGood=s.extractionMode==='clay'?'clay':'stone';
+    }
+    const spec=definition(s);
+    s.w=spec.w;s.h=spec.h;
     if(s.type==='quarry'||s.type==='mine')s.groundZ=groundLevel(s);
     return s;
   }
@@ -68,6 +86,22 @@
     }
     return{band:target,distance:nearest};
   }
+  // Water edge distance, measured from the 4x4 clay-pit CENTRE.
+  // Rivers/streams store a centerline + water width; ponds are world-space polygons.
+  function nearestClayWater(point){
+    let distance=Infinity,target=null;
+    for(const f of State.environment||[]){
+      let candidate=Infinity;
+      if((f.type==='river'||f.type==='stream')&&f.points?.length>=2){
+        for(let i=1;i<f.points.length;i++)
+          candidate=Math.min(candidate,Math.max(0,pointSegmentDistance(point,f.points[i-1],f.points[i])-(Number(f.width)||1.25)/2));
+      }else if(f.type==='pond'&&f.points?.length>=3){
+        candidate=edgeDistance(point,f.points);
+      }
+      if(candidate<distance){distance=candidate;target=f}
+    }
+    return{water:target,distance};
+  }
   function polygonCollision(a,b){
     if(!a?.length||!b?.length)return false;
     if(a.some(p=>pointInPolygon(p,b))||b.some(p=>pointInPolygon(p,a)))return true;
@@ -77,7 +111,7 @@
   }
   function validate(s){
     if(!is(s))return{ok:false,reason:'Unknown industry'};
-    const p={x:s.x,y:s.y},type=TYPES[s.type],fp=footprint(s);
+    const p={x:s.x,y:s.y},type=definition(s),fp=footprint(s);
     // The WHOLE footprint remains in the whitezone, even on cliffs.
     if(fp.some(v=>v.x<BUILD_MIN||v.x>BUILD_MAX||v.y<BUILD_MIN||v.y>BUILD_MAX))
       return{ok:false,reason:'The entire '+type.w+'×'+type.h+'U footprint must remain in the whitezone (100×100U)'};
@@ -89,8 +123,15 @@
     if(s.type==='loggingCamp'){
       if(buildableTerrainElevationForStructure(s)==null)
         return{ok:false,reason:'Logging camp needs a flat terrace'};
+    }else if(isClayQuarry(s)){
+      // The centre must be on elevation zero even when the corners touch other terraces.
+      if(Math.abs(terrainElevation(p))>1e-5||terrainSlopeKind(p))
+        return{ok:false,reason:'Clay pit centre must be at H0 (ground level)'};
+      const water=nearestClayWater(p);
+      if(!water.water||water.distance>6+1e-6)
+        return{ok:false,reason:'Clay pit centre must be within 6U of a river, stream or lake shoreline'};
     }else if(s.type==='quarry'){
-      // Any positive footprint/rock face overlap counts, even off-centre.
+      // Existing 3x3 stone quarry: overlap with steep rock is unchanged.
       if(!intersectsRockySlope(fp))
         return{ok:false,reason:'Quarry must overlap a rocky slope somewhere within its 3×3U footprint'};
     }else if(s.type==='mine'){
@@ -114,15 +155,23 @@
         return{ok:false,reason:'Logging camp requires forest within 10U'};
       return{ok:true,ground,resourceTarget:found.forest.id,distance:found.distance};
     }
+    if(isClayQuarry(s)){
+      const nearest=nearestClayWater(p);
+      return{ok:true,ground:0,resourceTarget:nearest.water.id,distance:nearest.distance};
+    }
     return{ok:true,ground,resourceTarget:'steep',distance:0};
   }
   function render(s,preview=false){
     if(!is(s))return;
-    const type=TYPES[s.type],poly=footprint(s);
+    const type=definition(s),poly=footprint(s);
     const ground=Number.isFinite(s.groundZ)?s.groundZ:
       s.type==='loggingCamp'?terrainElevation(s):groundLevel(s);
+    const selected=State.selectedId===s.id;
+    // Blender-built model (settlement-industries3d.js); the platform below is the fallback.
+    // (The structure selection outline is drawn by the shared selection pass.)
+    if(window.ConquerIndustries3D?.draw(s,ground,preview))return;
     // Placeholder platform uses one surveyed elevation even when it spans rock.
-    const h=.35,selected=State.selectedId===s.id;
+    const h=.35;
     const shade=type.edge;
     ctx.save();
     if(preview)ctx.globalAlpha*=.62;
@@ -134,7 +183,7 @@
     ctx.fillStyle=s.type==='mine'?'#f4eee6':'#211d17';
     ctx.font='bold '+Math.max(9,Math.round(U*State.view.scale*.74))+'px system-ui';
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(s.type==='loggingCamp'?'L':s.type==='quarry'?'C':'M',center.x,center.y);
+    ctx.fillText(s.type==='loggingCamp'?'L':isClayQuarry(s)?'A':s.type==='quarry'?'C':'M',center.x,center.y);
     // Direction marker scales to the footprint (1×1 mine through 3×3 quarry).
     const angle=Number(s.angle)||0,front=type.w/2;
     const tip=w2s({x:s.x+Math.cos(angle)*front*.82,y:s.y+Math.sin(angle)*front*.82},h+.055);
@@ -189,5 +238,5 @@
       }
     }
   }
-  window.ConquerIndustries=Object.freeze({TYPES,is,make,footprint,groundLevel,normalizeFootprint,validate,render,drawWorkers,nearestForest,nearestSlope});
+  window.ConquerIndustries=Object.freeze({TYPES,is,isClayQuarry,definition,make,footprint,groundLevel,normalizeFootprint,validate,render,drawWorkers,nearestForest,nearestSlope,nearestClayWater});
 })();

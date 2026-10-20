@@ -35,9 +35,10 @@
   };
   const rgbCache=new Map();
   function rgb(hex){
-    let v=rgbCache.get(hex);if(v)return v;
-    const h=hex.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);
-    rgbCache.set(hex,v);return v;
+    const color=visualPaletteColor(hex);
+    let v=rgbCache.get(color);if(v)return v;
+    const h=color.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);
+    rgbCache.set(color,v);return v;
   }
 
   // ---------- geometry collection ----------
@@ -207,6 +208,7 @@
     const m=makeMesh();
     if(withBackPieces)addPieces(m,'back');
     for(const s of parts){
+      withStructureVisualMaterial(s,()=>{
       const point=s.type==='tower'||s.type==='gate';
       if(point&&isRaisedPlacementCastlePoint(s))addFoundation(m,s);
       const run=fn=>point?withStructureGroundPlane(s,fn):fn();
@@ -218,6 +220,7 @@
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());
+      });
       });
     }
     return withLines(m);
@@ -245,6 +248,7 @@
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
     for(const s of castleParts()){
+      withStructureVisualMaterial(s,()=>{
       const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){
         const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
@@ -252,6 +256,7 @@
         if(!plan&&(which==='front')!==near)continue;
         withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
       }
+      });
     }
   }
 

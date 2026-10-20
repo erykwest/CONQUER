@@ -3,6 +3,18 @@
 > Snapshot **aggiornato il 19/10/2026** per il lavoro Terraforming; le sezioni storiche del 16/10 mantengono i propri limiti di verifica.
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
+## Clay — palette DEV globale (19/10/2026)
+
+- **CODICE su `clay`:** due pulsanti DEV Stone/Clay, mappa swatch in `src/settlement-core.js`, uso Canvas/WebGL2 e invalidazione delle relative cache. Mura/torri in color mattone; piani terra case L2–L4 color laterizio; tetti prima antracite color tegola.
+- **NESSUN GAMEPLAY CLAY:** cave, risorsa argilla, costi/mattoni individuali e coefficienti HP 80% restano soltanto design. Switch locale solo visivo.
+- **QA eseguita sulla HEAD `bbe5a27`:** [GitHub Actions #39271126852](https://github.com/erykwest/CONQUER/actions/runs/39271126852) **PASS**: syntax check di tutti i sorgenti/QA JS, palette DEV, Urban, densità, Builder, Civil annexes, Economia e Industrie. Corretto nel solo harness QA di Industrie l'adattamento al preflight degli annessi di Civil. **Collaudo visivo Canvas/WebGL2 nel browser non eseguito.**
+
+## Clay — istruzioni sul ramo `clay` (19/10/2026)
+
+- **BRANCH / PROGETTO:** `clay` deriva da `Civil` (HEAD sorgente `ba592cfaed7b76ae20e6f0192955fa68212de410`). Aggiunti documenti di progettazione/implementazione [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).
+- **NON CODICE:** nel commit documentale non vengono implementate argilla, nuova modalità cava, materiale mattoni, durabilità 80% né palette. Nessuna regressione runtime viene dichiarata superata.
+- **DA FARE:** implementare su `clay` rispettando l'attuale skeleton `Civil`, poi provare collocazione entro 6 U, output contabile, costi murari, rendering multipipeline, integrità e migrazioni.
+
 ## Semaforo epistemico
 
 - **CODICE** — implementazione/sorgenti identificati su una branch.
@@ -20,6 +32,16 @@
 - **QA LOCALE PASS:** tutte le suite `qa/*.cjs`, inclusi i 9 controlli di `qa/terraforming-regression.cjs`; `node --check` sui file modificati; `git diff --check`.
 - **BROWSER STORICO (prima del chiarimento verticale):** verificati ghost, sovrapposizione, reload e aggancio mura. Questa prova non certifica la nuova mesh verticale; la geometria corrente è verificata dalla QA dedicata.
 - **LIMITE DI RILASCIO:** commit `fa9ef0d` è fuori da `main`; nessuna PR, merge o pubblicazione effettuata in questo aggiornamento.
+## Civil — skeleton edifici civili (17/10/2026; branch `Civil`)
+
+- **CODICE / BRANCH**: chiesa e locanda entrano come siti del catasto Voronoi in `src/settlement-urban.js`, con `civicId` distinto dai lotti delle case e perimetri/accessi condivisi; il mercato **non** riceve un lotto di pertinenza.
+- **CODICE / BRANCH**: introdotti `civicLevel` L1–L3 per chiesa, locanda, mercato e piazza. Nuovo edificio `plaza` (Piazza) 5×5 U con tre varianti `paved`, `fountain`, `garden`, controlli Builder, persistenza e placeholder grafici Canvas/WebGL2. La piazza è suolo pubblico, attraversabile dalla viabilità; non possiede un lotto residenziale.
+- **CODICE / BRANCH (annessi civili)**: `src/settlement-civic-annexes.js` definisce 14 voci catalogate (5 chiesa, 5 taverna, 4 mercato): 13 annessi costruibili e il cimitero L1 intrinseco della chiesa, ciascuna con `parentId` e `annexType`; gestione nel menu principale, selezione, costruzione singola via click, eliminazione con il padre, livello minimo L1–L3, massimi per tipo, impronta e blocco collisioni. Gli annessi di chiesa/taverna rimangono nel lotto Voronoi del proprietario; quelli del mercato espandono il suolo pubblico vicino (entro 9U, non su lotti privati). Rappresentazioni provvisorie Canvas/WebGL2 e migrazione salvataggi.
+- **CODICE / BRANCH (aggiornamento L1–L2)**: ogni chiesa L1 dispone automaticamente di un cimitero ricavato dalla porzione libera del proprio lotto Voronoi, con area riservata e tombe schematiche Canvas/WebGL2, senza creazione o cancellazione manuale di un figlio. La birreria (`brewery`) è un annesso selezionabile della taverna da L2, collocabile solo in prossimità dell'edificio all'interno del lotto. Se la proprietà non ha superficie sufficiente, il pannello segnala l'assenza temporanea di uno spazio per le tombe; non viene occupato suolo esterno al lotto.
+- **NON REALIZZATO (voluto)**: lavoratori, effetti economici/sociali, posti letto, inventari, animazioni dedicate, costi e durata lavori degli annessi; rimangono istantanei/gratuiti nello skeleton. Collaudo visivo browser non eseguito.
+- **QA**: `qa/urban-regression.cjs` e `qa/builder-placement-regression.cjs` estesi; workflow [Civil skeleton regression](https://github.com/erykwest/CONQUER/actions/workflows/civil-regression.yml) esegue anche `qa/urban-density-regression.cjs` e controlli sintattici; primo run [39021863368](https://github.com/erykwest/CONQUER/actions/runs/39021863368) **PASS**. Ultima CI dopo il fix di test su commit `9d0417f`: [run 39022033711](https://github.com/erykwest/CONQUER/actions/runs/39022033711) **PASS**; verifiche visuali in browser ancora da eseguire. **Nessun merge in `main`.**
+- **QA cimitero/birreria**: test aggiunti a `qa/civic-annex-regression.cjs` per cimitero implicito, riserva di suolo, L2 e adiacenza della birreria e a `qa/urban-regression.cjs` per geometria su lotto Voronoi effettivo. [Run 39033162718](https://github.com/erykwest/CONQUER/actions/runs/39033162718) **PASS**, QA browser non eseguita.
+- **QA aggiuntiva**: `qa/civic-annex-regression.cjs` incluso nello stesso workflow per cataloghi, L1–L3, geometria, collisioni, lotti e mercato; [run 39023575840](https://github.com/erykwest/CONQUER/actions/runs/39023575840) **PASS**; controllo anti-invasione di lotti incluso nel successivo [run 39023749740](https://github.com/erykwest/CONQUER/actions/runs/39023749740) **PASS** su commit `4353e53`.
 
 ## Diagnosi e fix in corso — crescita e ordini su main (16/10/2026)
 
@@ -134,3 +156,7 @@ Aggiornare questo livello dopo ogni PR che modifica una milestone, non dopo ogni
 - **CODICE su `camp`**: nuova pagina `camp/index.html`, modulo `src/settlement-camp.js`, integrazione con Combat Engine e persistenza dedicata. `/urban` non modificato.
 - **Comportamento previsto nel codice**: stanza barracks → capienza 16 soldati = 3 squadre da 5, con controlli nel fondo pagina; zona gialla → rientro navigato e dormita in caserma; esterno → tenda e braciere per truppa, un armigero visibile in guardia, gli altri nascosti fino all'alba.
 - **QA**: `qa/camp-regression.cjs` e workflow `CAMP regression` sul branch. Test V8 isolato superato durante l'implementazione; workflow GitHub Actions `CAMP regression` [run 38935536886](https://github.com/erykwest/CONQUER/actions/runs/38935536886) **superato**, inclusi controllo sintassi e QA comportamentale Node. Collaudo browser reale/WebGL2/mobile ancora da verificare separatamente. Non ancora mergiato in `main`.
+
+- 2026-10-20 · clay: aggiunta selezione muratura pietra/argilla per nuovi cantieri e preferenza per nuovi spawn delle case private; costi Builder 1:1, persistenza locale/cloud, colori per edificio, integrità core mattone 80%. L'estrazione della cava e l'economia dell'argilla non sono ancora integrate.
+
+- 2026-10-20 · clay: una nuova modalità cava argilla arancione 4×4 H0, centro entro 6U da fiumi/torrenti/laghi, con stesse collisioni/quota e opzione Builder dedicata; registrazione clay nell'economia esistente e migrazione del ledger legacy. Produzione economia separata dall'inventario demo Builder.

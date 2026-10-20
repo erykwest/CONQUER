@@ -33,6 +33,8 @@
   <aside id="builder" class="panel">
     <h2>Builder</h2>
     <div class="grid"><button data-tool="select" class="active">↖ Select</button><button data-tool="delete">⌫ Delete</button></div>
+    <h3>Muratura prossimi cantieri</h3>
+    <div class="grid"><button type="button" data-build-masonry="stone" aria-pressed="true" class="active">🪨 Pietra</button><button type="button" data-build-masonry="brick" aria-pressed="false">🧱 Argilla</button></div>
     <h3>Square towers</h3>
     <div class="grid3"><button data-tower="square" data-size="1">1U</button><button data-tower="square" data-size="1.5">1.5U</button><button data-tower="square" data-size="2">2U</button></div>
     <h3>Round towers</h3>
@@ -48,7 +50,7 @@
     <h3>Wall height</h3>
     <div class="grid"><button data-wall-level="1" class="active">1 level</button><button data-wall-level="2">2 levels</button></div>
     <h3>Gate</h3>
-    <div class="grid"><button data-gate>Stone gate<br><span class="small">1.5×1.5U</span></button><button data-wood-gate>Wood gate<br><span class="small">1.5×1U · H1</span></button></div>
+    <div class="grid"><button data-gate>Masonry gate<br><span class="small">1.5×1.5U</span></button><button data-wood-gate>Wood gate<br><span class="small">1.5×1U · H1</span></button></div>
     <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <h3>Roads</h3><button class="full" data-main-road>═ Main road</button>
@@ -65,17 +67,19 @@
     <div class="grid3">
       <button data-civic="market">Market<br><span class="small">4×4U</span></button>
       <button data-civic="tavern">Tavern<br><span class="small">Double T</span></button>
-      <button data-civic="church">Church<br><span class="small">Large</span></button>
+      <button data-civic="church">Church<br><span class="small">Large · L1–L3</span></button>
+      <button data-civic="plaza">Piazza<br><span class="small">3 levels · 3 variants</span></button>
       <button data-civic="training">Training field<br><span class="small">5×4U</span></button>
     </div>
     <div class="legend">Point buildings: click to fix the centre → move the mouse to rotate the ghost (15° steps) → click again to place.</div>
     <h3>Industry · Economy placeholders</h3>
     <div class="grid3">
       <button data-industry="loggingCamp">Logging<br><span class="small">2×2U · L1×2</span></button>
-      <button data-industry="quarry">Quarry<br><span class="small">3×3U · L2×2</span></button>
+      <button data-industry="quarry">Stone quarry<br><span class="small">3×3U · L2×2</span></button>
+      <button data-industry="quarry" data-extraction-mode="clay">Clay pit<br><span class="small">4×4U · H0 · ≤6U acqua</span></button>
       <button data-industry="mine">Mine<br><span class="small">1×1U · L2×2</span></button>
     </div>
-    <div class="legend">Click centre → move mouse to rotate → click again to build. Whole footprint in the whitezone. Logging within 10U of forest; quarry (3×3U) must partially overlap a rocky slope; mine (1×1U) must have its centre directly on the rocky slope.</div>
+    <div class="legend">Click centre → move mouse to rotate → click again to build. Whole footprint in the whitezone. Logging within 10U of forest; stone quarry (3×3U) must partially overlap a rocky slope; clay pit (4×4U) requires its centre at H0 within 6U of river, stream or lake shoreline (not sea); mine (1×1U) must have its centre directly on the rocky slope.</div>
     <hr/>
     <div class="legend">Wood towers: watchtower 1×1 H1 · medium 1.5×1.5 H1 with open/pitched roof variant.<br>Wood gate: 1.5×1U · fixed H1 · flat roof.<br>Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Palisade: T1 stakes · T2 inner walkway · T3 inner 45° earthwork · fixed height · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
     <hr/>
@@ -109,6 +113,9 @@
     <div class="kv"><span>Growth pulse</span><b>~2.5 days</b></div>
     <div class="kv"><span>Road model</span><b>radial / border-linked</b></div>
     <div class="kv"><span>Time</span><b>paused on load</b></div>
+    <h3>Nuove case private · spawn automatico</h3>
+    <div class="grid"><button type="button" data-private-masonry="stone" aria-pressed="true" class="active">🪨 Pietra</button><button type="button" data-private-masonry="brick" aria-pressed="false">🧱 Argilla</button></div>
+    <div class="legend">La preferenza vale solo per le nuove case generate automaticamente. Non modifica gli edifici già presenti.</div>
     <h3>Policies</h3>
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
     <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
@@ -165,6 +172,14 @@
     <button id="devToggle" type="button" aria-expanded="false">DEV ▾</button>
     <div id="devPanel" hidden>
       <div class="dev-section"><span class="dev-label">MAPPA</span><button class="full" id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></div>
+      <div class="dev-section">
+        <span class="dev-label">ANTEPRIMA GRAFICA · solo estetica</span>
+        <div class="dev-row" role="group" aria-label="Palette grafica globale">
+          <button type="button" data-visual-palette="stone" aria-pressed="true" title="Pietra e tetti in antracite">Stone</button>
+          <button type="button" data-visual-palette="clay" aria-pressed="false" title="Mattoni, piani terra L2–L4 in laterizio e tetti in tegola">Clay</button>
+        </div>
+        <span class="dev-hint">Stone: visualizza i materiali effettivi. Clay: forza il colore mattone su tutta la scena. Il comando DEV non modifica costi né materiali.</span>
+      </div>
       <div class="dev-section">
         <span class="dev-label">LUCE</span>
         <div class="dev-row">
@@ -233,6 +248,10 @@
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
 <script src="./src/settlement-core.js"></script>
+<script src="./src/settlement-civic-annexes.js?v=civil-annex-1"></script>
+<script src="./src/assets/civic-models.js?v=civic3d-1"></script>
+<script src="./src/settlement-mesh3d.js?v=civic3d-1"></script>
+<script src="./src/settlement-civic3d.js?v=civic3d-1"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js"></script>
 <script src="./src/settlement-castle.js?v=refactor-1"></script>
@@ -245,6 +264,9 @@
 <script src="./src/settlement-fields.js"></script>
 <script src="./src/settlement-boundaries.js"></script>
 <script src="./src/settlement-industries.js?v=industry-1"></script>
+<script src="./src/assets/industry-models.js?v=ind-1"></script>
+<script src="./src/settlement-mesh3d.js?v=ind-1"></script>
+<script src="./src/settlement-industries3d.js?v=ind-1"></script>
 <script src="./src/settlement-placement.js?v=builder-ghost-1"></script>
 <script src="./src/settlement-collapse.js?v=collapse-1"></script>
 <script src="./src/settlement-siege.js?v=assedio-p0"></script>
@@ -265,7 +287,10 @@
 <script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
 <script src="./src/settlement-render.js?v=ambient-light-1"></script>
 <script src="./src/settlement-castle3d.js?v=prototype-1"></script>
-<script src="./src/settlement-world3d.js?v=default-1"></script>
+<script src="./src/settlement-wagons3d.js?v=scatter-1"></script>
+<script src="./src/assets/scatter-model.js?v=scatter-1"></script>
+<script src="./src/settlement-scatter.js?v=scatter-1"></script>
+<script src="./src/settlement-world3d.js?v=scatter-1"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
 <script src="./src/settlement-economy.js?v=economy-1"></script>
@@ -285,9 +310,10 @@
 <script src="./src/heraldry-symbols.js"></script>
 <script src="./src/settlement-heraldry.js"></script>
 <script src="./src/settlement-builder-ux.js?v=antiregression-2"></script>
-<script src="./src/assets/siege-engines-model.js?v=siege-1"></script>
-<script src="./src/settlement-siege-engines3d.js?v=siege-1"></script>
+<script src="./src/assets/siege-engines-model.js?v=siege-2"></script>
+<script src="./src/settlement-siege-engines3d.js?v=siege-2"></script>
 <script src="./src/settlement-siege-assault.js?v=siege-1"></script>
 <script src="./src/settlement-siege-preview.js?v=siege-1"></script>
+<script src="./src/settlement-tower-weapons.js?v=siege-1"></script>
 </body>
 </html>

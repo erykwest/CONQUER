@@ -206,7 +206,7 @@ function projectPath(points,z=0){
 }
 function pathPolygon(points,fill,stroke,lineWidth=1.2){
   if(!points?.length)return;ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
-  if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke()}
+  if(fill){ctx.fillStyle=visualPaletteColor(fill);ctx.fill()}if(stroke){ctx.strokeStyle=visualPaletteColor(stroke);ctx.lineWidth=lineWidth;ctx.stroke()}
 }
 function rectWorldPoints(cx,cy,w,h,angle=0){
   const ca=Math.cos(angle),sa=Math.sin(angle),pts=[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]];
@@ -229,6 +229,7 @@ function structureHeight(s){
   if(s.type==='ruin')return Number(s.ruinHeight)||.8;     // the stump a fallen tower or gate leaves
   if(window.ConquerIndustries?.is(s))return .35;
   if(s.type==='house')return houseStructureHeight(s);
+  if(isCivicAnnex(s)){const spec=civicAnnexDefinition(s);return !spec?0:spec.kind==='garden'||spec.kind==='yard'?.18:spec.kind==='stall'?.95:1.55;}
   if(s.type==='market')return .78;
   if(s.type==='tavern')return 2.15;
   if(s.type==='church')return 3.35;
@@ -249,6 +250,7 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   if(s.type==='field')return fieldPoints(s);
+  if(isCivicAnnex(s))return civicAnnexFootprint(s);
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){
     const pts=civicParts(s).flatMap(p=>p.points);
@@ -672,7 +674,7 @@ function drawCutawayWallRing(g,z,alpha=.72){
   ctx.save();ctx.globalAlpha*=alpha;ctx.beginPath();
   outer.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
   inner.slice().reverse().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
-  ctx.fillStyle=State.season==='winter'?WINTER_SNOW_TOP:'#8f857a';ctx.fill('evenodd');
+  ctx.fillStyle=visualPaletteColor(State.season==='winter'?WINTER_SNOW_TOP:'#8f857a');ctx.fill('evenodd');
   ctx.strokeStyle='rgba(211,197,181,.52)';ctx.lineWidth=.75;ctx.stroke();
   ctx.restore();
 }
@@ -849,7 +851,7 @@ function drawCutawayStructures(){
   State.structures
     .filter(s=>structureCutaway(s)&&!underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b))
-    .forEach(drawCutawayStructure);
+    .forEach(s=>withStructureVisualMaterial(s,()=>drawCutawayStructure(s)));
 }
 function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
@@ -900,8 +902,8 @@ function fillMultiPolygonTop(multi,z,fill,stroke){
     const pts=cleanClipRing(ring).map(p=>w2s(p,z));if(pts.length<3)continue;
     ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();
   }
-  ctx.fillStyle=fill;ctx.fill('evenodd');
-  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.15;ctx.stroke()}
+  ctx.fillStyle=visualPaletteColor(fill);ctx.fill('evenodd');
+  if(stroke){ctx.strokeStyle=visualPaletteColor(stroke);ctx.lineWidth=1.15;ctx.stroke()}
   ctx.restore();
 }
 function castleSideShade(a,b){
@@ -964,6 +966,7 @@ function drawCastleUnionDetails(){
     ?buildBattlementOcclusionFrame():null;
   for(const s of State.structures){
     if(!isCastlePart(s)||underConstruction(s)||structureCutaway(s))continue;
+    withStructureVisualMaterial(s,()=>{
     if(s.type==='built'){
       drawBuiltDetails(s,false);
       drawBuiltArcade(s);
@@ -976,6 +979,7 @@ function drawCastleUnionDetails(){
       const h=structureHeight(s),a=w2s({x:s.x,y:s.y},h+.03),q={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},b=w2s(q,h+.03);
       ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
     }
+    });
   }
 }
 function drawCastleSelection(){

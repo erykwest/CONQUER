@@ -13,7 +13,7 @@ const siegeHooks={'population-garrisons':[
   ["    if(window.ConquerSiege?.gateClosed?.(gate))continue;   // closed: the guards are inside\n",'']
 ],'population-navigation':[
   ["  if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap\n",''],
-  ["'training','ruin'].includes(s.type))continue;","'training'].includes(s.type))continue;"],
+  ["'civicAnnex','ruin'].includes(s.type))continue;","'civicAnnex'].includes(s.type))continue;"],
   ["if((s.type==='tower'||s.type==='ruin')&&s.shape==='round')","if(s.type==='tower'&&s.shape==='round')"],
   // A closed gate with its door still whole shuts the passage.
   ["      // A closed gate with its door still whole shuts the passage (settlement-siege.js).\n      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s))return true;continue}",
