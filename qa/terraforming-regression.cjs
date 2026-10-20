@@ -49,6 +49,28 @@ test('a walled terrace cannot overlap another walled terrace',()=>{
   assert.equal(separate.ok,true);
 });
 
+test('a walled terrace exposes a visible sloped masonry revetment',()=>{
+  context.State.relief.terraforming=[];
+  const ghost=api.preview({x:100,y:100},{mode:'walled',delta:1,radius:4,magnet:false});
+  assert.equal(ghost.profile,'sloped');
+  assert.equal(ghost.material,'stone');
+  assert.ok(ghost.edgeWidth>=Math.abs(ghost.targetZ-ghost.baseZ));
+  assert.ok(ghost.outer[0].x-ghost.top[0].x>.9);
+});
+
+test('saved vertical terraces migrate to the sloped masonry profile',()=>{
+  context.State.relief.terraforming=[{
+    id:'terraform-legacy',mode:'walled',center:{x:100,y:100},radius:4,
+    baseZ:0,targetZ:1,edgeWidth:.12,rotation:0,
+    top:[{x:104,y:100}],outer:[{x:104.12,y:100}]
+  }];
+  const migrated=api.edits()[0];
+  assert.equal(migrated.profile,'sloped');
+  assert.equal(migrated.material,'stone');
+  assert.ok(migrated.edgeWidth>=1.25);
+  assert.ok(migrated.outer[0].x-migrated.top[0].x>.9);
+});
+
 test('walled terrace magnet aligns its edge to the near wall face',()=>{
   context.State.relief.terraforming=[];
   context.State.structures=[{id:'wall-1',type:'wall',a:{x:80,y:100},b:{x:120,y:100},width:.5}];

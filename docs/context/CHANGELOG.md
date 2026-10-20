@@ -2,6 +2,12 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Scarpata murata spiovente
+
+- Sostituito il bordo quasi verticale del terrazzamento murato con una scarpata inclinata, larga almeno 1,25 U e proporzionale al dislivello.
+- Allineata la scarpata alla palette laterale delle mura; il piano superiore resta terreno calpestabile.
+- Aggiunta migrazione dei terrazzamenti già persistiti e portata la regressione dedicata a 9 controlli.
+
 ## 2026-10-19 — Terraforming con ghost e terrazzamento murato
 
 - Implementato sul branch `terraforming` (commit `fa9ef0d`) il terreno modificabile con scavo/innalzamento e il terrazzamento murato, entrambi anticipati da ghost non distruttivo.

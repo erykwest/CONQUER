@@ -200,7 +200,7 @@
       for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z);
     };
     const W=WORLD;
-    const terraformEdits=State.relief?.terraforming||[];
+    const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
     if(terraformEdits.length){
       // Once the player edits elevation, sample the single authoritative terrainElevation
       // contract. A denser build-area grid preserves terrace and excavation silhouettes;
@@ -714,7 +714,8 @@
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
-    const terraformSig=(State.relief?.terraforming||[]).map(e=>[e.id,e.targetZ,e.radius,e.mode].join(':')).join(',');
+    const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
+    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.radius,e.edgeWidth,e.mode,e.material].join(':')).join(',');
     const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();

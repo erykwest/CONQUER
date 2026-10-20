@@ -8,6 +8,14 @@
   function edits(){
     if(!State.relief)return[];
     if(!Array.isArray(State.relief.terraforming))State.relief.terraforming=[];
+    for(const edit of State.relief.terraforming){
+      if(edit?.mode!=='walled'||!edit.center||!Number.isFinite(Number(edit.radius)))continue;
+      const width=Math.max(1.25,Math.abs((Number(edit.targetZ)||0)-(Number(edit.baseZ)||0))*1.25,Number(edit.edgeWidth)||0);
+      if(edit.profile==='sloped'&&edit.material==='stone'&&Number(edit.edgeWidth)>=width-.001)continue;
+      edit.profile='sloped';edit.material='stone';edit.edgeWidth=width;
+      edit.top=polygon(edit.center,Number(edit.radius),Number(edit.rotation)||0);
+      edit.outer=polygon(edit.center,Number(edit.radius)+width,Number(edit.rotation)||0);
+    }
     return State.relief.terraforming;
   }
   function polygon(center,radius,rotation=0){
@@ -113,12 +121,14 @@
     const naturalZ=Number(terrainBaseElevation(resolvedCenter))||0;
     const baseZ=elevationAt(resolvedCenter,naturalZ);
     const targetZ=clamp(Math.round((baseZ+delta)*2)/2,LIMITS.minZ,LIMITS.maxZ);
-    const edgeWidth=mode==='walled'?.12:2;
+    const edgeWidth=mode==='walled'?Math.max(1.25,Math.abs(targetZ-baseZ)*1.25):2;
     const rotation=wallSnap?.rotation??(Number.isFinite(Number(options.rotation))?Number(options.rotation):-Math.PI/SEGMENTS);
     const top=polygon(resolvedCenter,radius,rotation),outer=polygon(resolvedCenter,radius+edgeWidth,rotation);
     const ghost={
       id:null,previewOnly:true,mode,center:{x:resolvedCenter.x,y:resolvedCenter.y},radius,delta,
-      baseZ,targetZ,edgeWidth,rotation,top,outer,wallSnap,ok:true,reason:''
+      baseZ,targetZ,edgeWidth,rotation,top,outer,wallSnap,
+      profile:mode==='walled'?'sloped':'graded',material:mode==='walled'?'stone':'terrain',
+      ok:true,reason:''
     };
     if(!insideBuild(outer)){
       ghost.ok=false;
@@ -170,7 +180,7 @@
       const fill=ghost
         ?(valid?'rgba(68,207,134,.46)':'rgba(236,61,70,.52)')
         :edit.mode==='walled'
-          ?(face.index%2?'#635c54':'#777066')
+          ?(face.index%2?'#49443f':'#686057')
           :(winter?'#d2d8d3':face.index%2?'#464630':'#514e37');
       pathPolygon(face.screen,fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
     }
