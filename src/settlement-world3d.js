@@ -129,17 +129,18 @@
 
   // ---------- small geometry helpers (world space, absolute z) ----------
   const rgbCache=new Map();
-  function rgb(hex){
-    const color=visualPaletteColor(hex);
+  function rgb(hex,usePalette=false){
+    // Preserve terrain and elevation tones when the architectural palette changes.
+    const color=usePalette?visualPaletteColor(hex):hex;
     let v=rgbCache.get(color);if(v)return v;
     const h=String(color).replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);rgbCache.set(color,v);return v;
   }
-  function meshBuilder(){
+  function meshBuilder(usePalette=false){
     const tris=[];
     const api={
       tris,
       face(vs,hex){                       // vs: [{x,y,z}] convex
-        const c=rgb(hex);
+        const c=rgb(hex,usePalette);
         for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.z,c[0],c[1],c[2]);
       },
       // Prism over a footprint with absolute base z; sides alternate like extrudePolygon (i%2 ? A : B).
@@ -284,7 +285,7 @@
   // ---------- buildings (non-castle) ----------
   const WINTER_ROOF=['#e7ece8','#dce3de'];
   function buildBuildings(){
-    const m=meshBuilder(),winter=State.season==='winter';
+    const m=meshBuilder(true),winter=State.season==='winter';
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
@@ -1013,6 +1014,7 @@
   }
   function drawBack(r){
     const t0=performance.now(),gl=ensureGL();if(!gl)return false;
+    try{
     collecting=[];                           // soldiers drawn this frame go to the 3D front pass
     const gpu=document.getElementById('gpuCanvas');if(gpu&&gpu.style.visibility!=='hidden')gpu.style.visibility='hidden';
     ensureContent(gl);
@@ -1026,7 +1028,18 @@
       const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12);
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
+    if(gl.isContextLost()||gl.getError()!==gl.NO_ERROR)throw new Error('WebGL2 renderer failure');
     return true;
+    }catch(err){
+      // Never leave gameplay blank when the optional renderer fails.
+      S.failed='world3d-draw: '+String(err?.message||err);
+      enabled=false;collecting=null;
+      const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
+      window.ConquerWebGPU?.invalidate?.();
+      invalidateSceneCache();
+      console.warn('World 3D disabled; Canvas fallback:',S.failed);
+      return false;
+    }
   }
   function nightLightsEnabled(){return useGpuNightLights}
   function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}

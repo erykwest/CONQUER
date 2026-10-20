@@ -142,9 +142,10 @@ function setDevVisualPalette(next){
   State.visualPalette=next;
   try{localStorage.setItem(DEV_VISUAL_PALETTE_KEY,next)}catch{}
   // Never markDirty or mutate resources/structures: this is a DEV visual preference.
-  invalidateSceneCache();
+  // Rebuild only architectural rasters. The 3D renderer's palette-keyed signatures
+  // rebuild building/castle meshes on the next draw without rebaking ground textures.
+  invalidateSceneCache(['base','castleBody','castleFront']);
   window.__conquerAssetCompiler?.clearComposite?.();
-  window.ConquerWorld3D?.invalidate?.();
   syncDevButtons();draw();
   status('PALETTE: '+(next==='clay'?'CLAY · mattone e tegola':'STONE · pietra e antracite'));
 }
