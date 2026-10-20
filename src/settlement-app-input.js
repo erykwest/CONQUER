@@ -44,15 +44,9 @@ canvas.addEventListener('pointerdown',e=>{
   }
   if(State.tool.kind==='tower'){
     const snap=towerPlacementSnap(p),q=snap.point;
-    if(State.tool.shape==='round'){
-      State.draft=null;
-      addTowerWithPlacement(
-        {id:uid(),type:'tower',shape:'round',material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]},
-        snap
-      );
-      return
-    }
-    const lockedAngle=(snap.parentTowerId||snap.wallId)?snap.angle:null;
+    // A round footprint is independent of orientation; its door still needs
+    // a user-selected facing even when the centre snaps to a wall/subtower.
+    const lockedAngle=State.tool.shape==='round'?null:(snap.parentTowerId||snap.wallId)?snap.angle:null;
     const angle=Number.isFinite(lockedAngle)?lockedAngle:0;
     State.draft={
       mode:'orient',center:q,angle,lockedAngle,
@@ -259,11 +253,11 @@ canvas.addEventListener('pointermove',e=>{
       State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
       const ghost=window.ConquerPlacement?.check({...State.draft.preview,parentTowerId:State.draft.parentTowerId||null,wallSnapId:State.draft.wallSnapId||null});
       let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
-      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · aligned ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
       draw();return
     }
     if(State.tool.kind==='tower'){
-      const snap=towerPlacementSnap(p),angle=(snap.parentTowerId||snap.wallId)?snap.angle:0;
+      const snap=towerPlacementSnap(p),angle=State.tool.shape==='round'?0:(snap.parentTowerId||snap.wallId)?snap.angle:0;
       State.draft={
         mode:'hover',
         wallSnapId:snap.wallId||null,
@@ -286,19 +280,6 @@ canvas.addEventListener('pointermove',e=>{
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
     State.draft={mode:'hover',preview:{type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y}};
     draw();return;
-  }
-  if(State.tool.kind==='tower'&&State.tool.shape==='round'){
-    const snap=towerPlacementSnap(p);
-    State.draft={
-      mode:'hover',
-      wallSnapId:snap.wallId||null,
-      parentTowerId:snap.parentTowerId||null,
-      subtowerSocket:snap.subtowerSocket||null,
-      subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
-      preview:makePlacementPreview(snap.point,0)
-    };
-    if(snap.parentTowerId)status('Subtower socket');
-    draw();return
   }
 });
 function finishCanvasPan(){
