@@ -5,8 +5,18 @@
 // both renderers: the 2.5D Canvas painter and the WebGL static scene.
 (function(){
   const MODELS=()=>window.ConquerIndustryModels;
+  // Mills: gutted once a fire has eaten most of it (or it burnt out), a ruin when the
+  // siege or the fire brought it down (a 'ruin' structure that remembers ruinOf).
+  const MILLS=['windmill','watermill'];
+  function variant(s){
+    if(s?.type==='ruin'&&MILLS.includes(s.ruinOf))return'Ruin';
+    if(!MILLS.includes(s?.type))return'';
+    if(s.burnt)return'Burnt';
+    const fire=window.ConquerFire?.state?.().burning?.find(f=>f.id===s.id);
+    return fire&&fire.fuel<.6?'Burnt':'';
+  }
   // A quarry worked for clay is drawn as the clay pit.
-  const key=s=>window.ConquerIndustries?.isClayQuarry?.(s)?'clayPit':s?.type;
+  const key=s=>window.ConquerIndustries?.isClayQuarry?.(s)?'clayPit':s?.type==='ruin'&&MILLS.includes(s.ruinOf)?s.ruinOf+'Ruin':s?.type+variant(s);
   const has=s=>!!MODELS()?.models?.[typeof s==='string'?s:key(s)];
   // World triangles for an industry structure; ground parts always paint first.
   function triangles(s,ground){
@@ -47,5 +57,5 @@
     }
     return true;
   }
-  window.ConquerIndustries3D={has,triangles,draw,addToBuilder};
+  window.ConquerIndustries3D={has,key,variant,triangles,draw,addToBuilder};
 })();

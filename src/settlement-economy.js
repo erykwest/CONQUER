@@ -132,10 +132,10 @@
     const staffing=activeCapacity(),date=dateAt(day);
     const active=activeStructures(),hasMill=active.some(s=>
       ['windmill','watermill'].includes(s.type)&&
-      !s.economyDisabled&&!s.destroyed&&!s.abandoned);
+      !s.economyDisabled&&!s.destroyed&&!s.abandoned&&!s.burnt);
     for(const s of active){
       const a=e.activities[s.id],spec=KIND[s.type],staff=staffing[s.id]||0;
-      if(s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
+      if(s.economyDisabled||s.destroyed||s.abandoned||a.abandoned||s.burnt)continue;
       if(['windmill','watermill'].includes(s.type)){
         // Milling is an optional service, even when no workforce is free.
         // Rural auto-fields are often privately owned while player mills

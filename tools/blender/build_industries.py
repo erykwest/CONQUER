@@ -29,6 +29,8 @@ COLORS = {
     'iron': '#55595d', 'rope': '#c8b48a', 'dark': '#15120f', 'ore': '#4b4d52', 'lamp': '#f2c14e',
     'clay': '#c9773a', 'clayLight': '#dc873b', 'clayDark': '#995025', 'clayWet': '#8a4a26', 'clayCut': '#e09a5c',
     'water': '#4f7f8f', 'brickGreen': '#c98b5a', 'brick': '#a5452c',
+    'millWall': '#ddd2bf', 'millWallDark': '#bdb09a', 'sail': '#ece2c8', 'char': '#2b2522', 'charLight': '#4a3d33',
+    'soot': '#5b524a', 'ember': '#c0502a',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Industries'
@@ -371,8 +373,276 @@ def clay_pit(m):
     m.done('bricks', p)
 
 
+# ------------------------------------------------------------------ mills
+# Both mills sit on a 2x2 U = 7 m footprint. Each comes in three states: intact,
+# burnt (fire has gutted it: blackened, roof/cap gone, sails or paddles stripped)
+# and ruin (what the siege or the fire leaves: a ragged stump and fallen timbers).
+def ragged_ring(p, cx, cy, r0, r1, hmin, hmax, key, n=14, top_key=None):
+    """Hollow ragged-topped round wall between radii r0 (inner) and r1 (outer)."""
+    hs = [rng.uniform(hmin, hmax) for _ in range(n)]
+    for i in range(n):
+        a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
+        h0, h1 = hs[i], hs[(i + 1) % n]
+        o0, o1 = (cx + math.cos(a0) * r1, cy + math.sin(a0) * r1), (cx + math.cos(a1) * r1, cy + math.sin(a1) * r1)
+        i0, i1 = (cx + math.cos(a0) * r0, cy + math.sin(a0) * r0), (cx + math.cos(a1) * r0, cy + math.sin(a1) * r0)
+        vs = [(*o0, 0), (*o1, 0), (*o1, h1), (*o0, h0), (*i0, 0), (*i1, 0), (*i1, h1), (*i0, h0)]
+        p.quads(vs, [(0, 1, 2, 3), (5, 4, 7, 6), (3, 2, 6, 7)], key)
+        if top_key:
+            p.quads(vs, [(3, 2, 6, 7)], top_key)
+
+
+def ragged_wall(p, a, b, th, hmin, hmax, key, n=5, top_key=None):
+    """Straight ragged-topped wall from a to b (x,y), thickness th."""
+    ax, ay = a; bx, by = b
+    L = math.hypot(bx - ax, by - ay); nx, ny = -(by - ay) / L * th / 2, (bx - ax) / L * th / 2
+    hs = [rng.uniform(hmin, hmax) for _ in range(n + 1)]
+    for i in range(n):
+        t0, t1 = i / n, (i + 1) / n
+        x0, y0, x1, y1 = ax + (bx - ax) * t0, ay + (by - ay) * t0, ax + (bx - ax) * t1, ay + (by - ay) * t1
+        vs = [(x0 + nx, y0 + ny, 0), (x1 + nx, y1 + ny, 0), (x1 + nx, y1 + ny, hs[i + 1]), (x0 + nx, y0 + ny, hs[i]),
+              (x0 - nx, y0 - ny, 0), (x1 - nx, y1 - ny, 0), (x1 - nx, y1 - ny, hs[i + 1]), (x0 - nx, y0 - ny, hs[i])]
+        p.quads(vs, [(0, 1, 2, 3), (5, 4, 7, 6)], key)
+        p.quads(vs, [(3, 2, 6, 7)], top_key or key)
+        if i == 0:
+            p.quads(vs, [(4, 0, 3, 7)], key)
+        if i == n - 1:
+            p.quads(vs, [(1, 5, 6, 2)], key)
+
+
+HUB = (2.05, 0, 7.05)        # windmill windshaft hub (sails turn in the Y-Z plane, facing +X)
+
+
+def sail_arm(p, ang, length, cloth=True, broken=0, key='woodDark'):
+    """One sail: a stock from the hub with a lattice frame and (optionally) cloth."""
+    cx, cy, cz = HUB
+    dy, dz = math.cos(ang), math.sin(ang)
+    L = length * (1 - broken)
+    p.beam((cx, cy, cz), (cx, cy + dy * L, cz + dz * L), .12, .12, key)
+    if L < 1.2:
+        return
+    # Lattice: two rails and cross bars from 1 m out to the tip, offset to one side.
+    sy, sz = -dz, dy                                   # perpendicular in the sail plane
+    w = .75
+    a0, a1 = 1.0, L - .1
+    for off in (.12, w):
+        p.beam((cx, cy + dy * a0 + sy * off, cz + dz * a0 + sz * off), (cx, cy + dy * a1 + sy * off, cz + dz * a1 + sz * off), .05, .05, key)
+    for k in range(int((a1 - a0) / .6) + 1):
+        t = a0 + k * .6
+        p.beam((cx, cy + dy * t, cz + dz * t), (cx, cy + dy * t + sy * w, cz + dz * t + sz * w), .04, .04, key)
+    if cloth:
+        c = [(cx + .03, cy + dy * a0 + sy * .12, cz + dz * a0 + sz * .12), (cx + .03, cy + dy * a1 + sy * .12, cz + dz * a1 + sz * .12),
+             (cx + .03, cy + dy * a1 + sy * w, cz + dz * a1 + sz * w), (cx + .03, cy + dy * a0 + sy * w, cz + dz * a0 + sz * w)]
+        p.box(tuple(sum(v[i] for v in c) / 4 for i in range(3)), (.03, 1, 1), 'sail',
+              rot=Matrix(((1, 0, 0), (0, dy * (a1 - a0), sy * (w - .12)), (0, dz * (a1 - a0), sz * (w - .12)))))
+
+
+def windmill_tower(p, wall, dark, height=6.4):
+    p.cylinder(2.25, 0, wall, n=14, axis='z', center=(0, 0, 0), radii=[2.25, 1.7], along=[0, height], cap_key=dark)
+    p.cylinder(2.32, 0, dark, n=14, axis='z', center=(0, 0, 0), radii=[2.32, 2.3], along=[0, .45], cap_key=dark)   # plinth
+
+
+def windmill(m, state='intact'):
+    burnt, ruin = state == 'burnt', state == 'ruin'
+    p = m.part('ground')
+    ground_patch(p, 3.3, 3.3, 'soot' if state != 'intact' else 'dirt', z=.02)
+    m.done('ground', p)
+
+    p = m.part('tower')
+    if ruin:
+        ragged_ring(p, 0, 0, 1.75, 2.25, .9, 2.9, 'millWallDark', top_key='rock')
+        for k in range(6):                                                                # soot streaks on the stump
+            a = rng.uniform(0, 2 * math.pi)
+            p.box((math.cos(a) * 2.27, math.sin(a) * 2.27, .7), (.06, .5, 1.2), 'char', rot=Matrix.Rotation(a, 3, 'Z'))
+    else:
+        windmill_tower(p, 'millWallDark' if burnt else 'millWall', 'char' if burnt else 'millWallDark')
+        # Door at the front, two small windows up the tower.
+        p.box((2.2, 0, .95), (.18, .9, 1.7), 'char' if burnt else 'woodDark', rot=Matrix.Rotation(-.12, 3, 'Y'))
+        for z, a in ((3.2, .5), (4.8, -.6)):
+            p.box((math.cos(a) * 1.95, math.sin(a) * 1.95, z), (.14, .4, .55), 'dark', rot=Matrix.Rotation(a, 3, 'Z'))
+        if burnt:
+            # Soot licking up from the door and windows; the top rim charred.
+            p.box((2.1, 0, 2.6), (.08, 1.0, 1.8), 'char', rot=Matrix.Rotation(-.12, 3, 'Y'))
+            p.cylinder(1.75, 0, 'char', n=14, axis='z', center=(0, 0, 0), radii=[1.76, 1.72], along=[5.6, 6.42], cap_key='char')
+    m.done('tower', p)
+
+    p = m.part('cap')
+    if not burnt and not ruin:
+        # Boat-shaped wooden cap turned to the wind, with the windshaft out front.
+        p.cylinder(1.85, 0, 'roof', n=14, axis='z', center=(0, 0, 0), radii=[1.9, .25], along=[6.35, 8.1], cap_key='roofDark')
+        p.box((.1, 0, 6.5), (3.9, 1.4, .3), 'woodDark')
+        p.cylinder(.18, 0, 'woodDark', n=8, axis='x', center=(0, 0, 7.05), radii=[.18, .18], along=[.4, 2.2], cap_key='wood')
+        p.beam((-1.6, 0, 6.5), (-3.3, 0, .2), .12, .12, 'woodDark')                         # tail pole to turn the cap
+        p.beam((-3.3, -.5, .2), (-3.3, .5, .2), .1, .1, 'woodDark')
+    elif burnt:
+        # Only the charred cap frame is left on the rim.
+        for a in range(0, 360, 60):
+            r = math.radians(a)
+            p.beam((math.cos(r) * 1.7, math.sin(r) * 1.7, 6.4), (math.cos(r) * .3, math.sin(r) * .3, 7.5 - (a % 120) / 120), .1, .1, 'char')
+        p.cylinder(.18, 0, 'char', n=8, axis='x', center=(0, 0, 7.05), radii=[.18, .18], along=[.4, 2.2], cap_key='charLight')
+    m.done('cap', p)
+
+    p = m.part('sails')
+    if not ruin:
+        for i in range(4):
+            ang = math.pi / 4 + i * math.pi / 2
+            if burnt:
+                sail_arm(p, ang, 5.0, cloth=False, broken=(.0, .55, .25, .8)[i], key='char')
+            else:
+                sail_arm(p, ang, 5.0)
+        p.box((HUB[0] + .1, 0, HUB[2]), (.3, .5, .5), 'char' if burnt else 'iron')
+    m.done('sails', p)
+
+    p = m.part('yard')
+    if ruin:
+        # The cap and sails came down: charred spars and rafters on the ground, rubble at the foot.
+        log(p, (2.4, -3.1, .14), (3.0, 2.2, .3), .13, key='char', end='charLight')
+        log(p, (-.6, 2.6, .12), (3.1, 3.0, .12), .12, key='char', end='charLight')
+        log(p, (-2.8, -2.4, .1), (-.9, -3.2, .1), .1, key='charLight', end='char')
+        for k in range(10):
+            a = rng.uniform(0, 2 * math.pi); r = rng.uniform(2.3, 3.1)
+            blob(p, math.cos(a) * r, math.sin(a) * r, rng.uniform(.2, .45), 0, rng.uniform(.15, .4), 'rubble' if k % 3 else 'millWallDark', n=6)
+        blob(p, 0, 0, 1.1, 0, .5, 'soot', n=9)                                           # fallen masonry inside
+        p.box((.4, .3, .75), (1.4, .1, .1), 'char', rot=Matrix.Rotation(.6, 3, 'Z'))
+    else:
+        # Grain sacks by the door and a hand cart.
+        for k, (x, y) in enumerate(((2.75, -1.1), (2.9, -1.55), (2.6, -1.5))):
+            blob(p, x, y, .28, 0, .45 + (k == 1) * .05, 'charLight' if burnt else 'rope', n=7, top_scale=.7)
+        if not burnt:
+            p.box((2.6, 1.6, .5), (1.1, .7, .12), 'wood')
+            p.cylinder(.3, .05, 'woodDark', n=8, axis='y', center=(2.5, 1.6 + .4, .3), cap_key='wood')
+            p.cylinder(.3, .05, 'woodDark', n=8, axis='y', center=(2.5, 1.6 - .4, .3), cap_key='wood')
+            p.beam((2.0, 1.4, .5), (1.4, 1.35, .4), .05, .05, 'woodDark')
+            p.beam((2.0, 1.8, .5), (1.4, 1.85, .4), .05, .05, 'woodDark')
+    m.done('yard', p)
+
+
+def watermill(m, state='intact'):
+    """Wheel side (+X) against the river bank: undershot wheel on the outer face."""
+    burnt, ruin = state == 'burnt', state == 'ruin'
+    p = m.part('ground')
+    ground_patch(p, 3.3, 3.3, 'soot' if state != 'intact' else 'dirt', z=.02)
+    m.done('ground', p)
+
+    x0, x1, y0, y1 = -2.7, 2.7, -2.5, 2.5
+    p = m.part('house')
+    if ruin:
+        ragged_wall(p, (x0, y0), (x1, y0), .4, .5, 2.2, 'millWallDark', top_key='rock')
+        ragged_wall(p, (x1, y0), (x1, y1), .4, 1.2, 2.6, 'millWallDark', top_key='rock')
+        ragged_wall(p, (x1, y1), (x0 + 1.5, y1), .4, .3, 1.6, 'millWallDark', top_key='rock')
+        ragged_wall(p, (x0, y1 - 1.8), (x0, y0), .4, .4, 1.4, 'millWallDark', top_key='rock')
+        blob(p, -.4, .3, 1.1, 0, .45, 'soot', n=9)
+        blob(p, -2.6, 1.8, .6, 0, .4, 'millWallDark', n=7)
+        for a, b in (((-1.8, -1.6, .5), (1.6, 1.4, .25)), ((-2.0, 1.0, .3), (.6, -1.9, .8)), ((.4, 2.2, .2), (2.2, .2, 1.1))):
+            log(p, a, b, .12, key='char', end='charLight')
+    else:
+        wall, dark = ('millWallDark', 'char') if burnt else ('millWall', 'millWallDark')
+        # Stone ground floor, timber-framed upper floor.
+        p.box((0, 0, 1.25), (x1 - x0, y1 - y0, 2.5), wall)
+        p.box((0, 0, .2), (x1 - x0 + .14, y1 - y0 + .14, .4), dark)
+        up = 'charLight' if burnt else 'woodLight'
+        p.box((0, 0, 3.4), (x1 - x0 - .1, y1 - y0 - .1, 1.8), up)
+        for x in (x0 + .05, -.9, .9, x1 - .05):                                               # frame posts
+            for y in (y0 + .02, y1 - .02):
+                p.box((x, y, 3.4), (.16, .08, 1.8), 'char' if burnt else 'woodDark')
+        for y in (y0 + .02, y1 - .02):
+            p.box((0, y, 2.55), (x1 - x0, .1, .14), 'char' if burnt else 'woodDark')
+        p.box((x0 - .02, 0, 1.0), (.1, 1.0, 1.9), 'char' if burnt else 'woodDark')            # door (land side)
+        for y in (-1.3, 1.3):
+            p.box((x1 + .01, y, 1.6), (.06, .6, .7), 'dark')
+            p.box((x0 - .01, y, 3.4), (.06, .5, .6), 'dark')
+        if burnt:
+            for y in (-1.3, 1.3):
+                p.box((x1 + .02, y, 2.5), (.05, .9, 1.5), 'char')                                # soot over the windows
+    m.done('house', p)
+
+    p = m.part('roof')
+    if not ruin:
+        eave, ridge = 4.3, 6.1
+        if not burnt:
+            for s in (-1, 1):
+                lo, hi = (s * (y1 - y0) / 2 * 1.12, eave), (0, ridge)
+                ex0, ex1, th = x0 - .35, x1 + .35, .1
+                vs = [(ex0, lo[0], lo[1]), (ex1, lo[0], lo[1]), (ex1, hi[0], hi[1]), (ex0, hi[0], hi[1]),
+                      (ex0, lo[0], lo[1] - th), (ex1, lo[0], lo[1] - th), (ex1, hi[0], hi[1] - th), (ex0, hi[0], hi[1] - th)]
+                q = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (3, 2, 6, 7), (0, 3, 7, 4), (1, 5, 6, 2)]
+                p.quads(vs, q if s > 0 else [tuple(reversed(f)) for f in q], 'roof')
+            for x in (x0, x1):                                                                  # gables
+                v = [(x, y0 * 1.0, eave - .1), (x, y1 * 1.0, eave - .1), (x, 0, ridge - .05)]
+                p.box((x, 0, (eave + ridge) / 2 - .3), (.08, (y1 - y0) * .5, ridge - eave - .4), 'woodLight')
+        else:
+            # Roof burnt away: a few charred rafters and the ridge beam sagging.
+            for k in range(5):
+                x = x0 + .3 + k * (x1 - x0 - .6) / 4
+                for s in (-1, 1):
+                    if (k + (s > 0)) % 3 == 0:
+                        continue
+                    p.beam((x, s * 2.4, eave), (x, 0, ridge - .3 * (k % 2)), .09, .09, 'char')
+            p.beam((x0 + .3, 0, ridge - .2), (x1 - .6, 0, ridge - .7), .12, .12, 'char')
+    m.done('roof', p)
+
+    # Undershot wheel on the river face: axle out of the +X wall, wheel plane Y-Z.
+    p = m.part('wheel')
+    wx, wz, R = x1 + .75, 1.55, 1.9
+    key = 'char' if burnt or ruin else 'woodDark'
+    if ruin:
+        # The wheel broke off its axle and lies tilted against the bank.
+        rot = Matrix.Rotation(1.0, 3, 'Y')
+        base = Vector((x1 + 1.0, 0, .9))
+        n = 12
+        rim = [base + rot @ Vector((0, math.cos(2 * math.pi * k / n) * R, math.sin(2 * math.pi * k / n) * R)) for k in range(n)]
+        for k in range(n):
+            if k in (3, 4, 9):
+                continue
+            p.beam(tuple(rim[k]), tuple(rim[(k + 1) % n]), .12, .12, 'char')
+        for k in (0, 2, 6, 8):
+            p.beam(tuple(base), tuple(rim[k]), .08, .08, 'char')
+    else:
+        p.beam((x1 - .05, 0, wz), (wx + .5, 0, wz), .2, .2, 'iron' if not burnt else 'char')
+        n = 12
+        for side in (-.35, .35):
+            rim = [(wx + side, math.cos(2 * math.pi * k / n) * R, wz + math.sin(2 * math.pi * k / n) * R) for k in range(n)]
+            for k in range(n):
+                if burnt and k in (2, 7):
+                    continue
+                p.beam(rim[k], rim[(k + 1) % n], .1, .1, key)
+            for k in range(0, n, 2):
+                if burnt and k == 6:
+                    continue
+                p.beam((wx + side, 0, wz), rim[k], .07, .07, key)
+        for k in range(n):                                                                      # paddles
+            if burnt and k % 3:
+                continue
+            a = 2 * math.pi * k / n
+            p.box((wx, math.cos(a) * (R - .1), wz + math.sin(a) * (R - .1)), (.8, .1, .45), 'wood' if not burnt else 'char',
+                  rot=Matrix.Rotation(a + math.pi / 2, 3, 'X'))
+    m.done('wheel', p)
+
+    p = m.part('yard')
+    if not ruin:
+        # Head-race flume feeding the wheel from upstream (-Y), on trestles.
+        fz = wz + R + .15
+        flume = 'char' if burnt else 'wood'
+        p.box((wx, -2.6, fz), (.8, 2.6, .12), flume)
+        for s in (-1, 1):
+            p.box((wx + s * .4, -2.6, fz + .2), (.06, 2.6, .35), flume)
+        for y in (-3.4, -2.0):
+            p.beam((wx, y, 0), (wx, y, fz - .05), .1, .1, 'char' if burnt else 'woodDark')
+        if not burnt:
+            p.box((wx, -2.6, fz + .08), (.66, 2.5, .04), 'water')
+        for k, (x, y) in enumerate(((x0 - .5, -1.2), (x0 - .7, -1.7), (x0 - .4, -1.8))):
+            blob(p, x, y, .28, 0, .45, 'charLight' if burnt else 'rope', n=7, top_scale=.7)
+    else:
+        for k in range(8):
+            blob(p, rng.uniform(-3, 3), rng.choice((-3, 3)) * rng.uniform(.85, 1), rng.uniform(.2, .4), 0, .3, 'rubble', n=6)
+    m.done('yard', p)
+
+
 MODELS = [('loggingCamp', logging_camp, (0, 0, 0)), ('quarry', quarry, (14, 0, 0)), ('mine', mine, (28, 0, 0)),
-          ('clayPit', clay_pit, (44, 0, 0))]
+          ('clayPit', clay_pit, (44, 0, 0)),
+          ('windmill', lambda m: windmill(m), (0, 16, 0)), ('windmillBurnt', lambda m: windmill(m, 'burnt'), (12, 16, 0)),
+          ('windmillRuin', lambda m: windmill(m, 'ruin'), (24, 16, 0)),
+          ('watermill', lambda m: watermill(m), (0, 30, 0)), ('watermillBurnt', lambda m: watermill(m, 'burnt'), (12, 30, 0)),
+          ('watermillRuin', lambda m: watermill(m, 'ruin'), (24, 30, 0))]
 
 
 def main(out_path):

@@ -781,7 +781,9 @@
         // Moat fill patches are baked into the ground: filling must re-bake it.
         +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
         // The gate door's state swaps its facade decal.
-        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'');
+        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
+        // Mills swap to their gutted model mid-fire.
+        +(window.ConquerIndustries3D?.variant?.(s)||'');
       let h=0;for(let i=0;i<str.length;i++)h=(Math.imul(h,31)+str.charCodeAt(i))|0;
       for(const cat of SIG_CATEGORIES)if(cat.test(s))acc.set(cat.name,(Math.imul(acc.get(cat.name)||0,33)^h)|0);
     }

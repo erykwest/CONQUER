@@ -14,7 +14,8 @@
     trebuchet:{stone:7,wood:8,door:7}
   });
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
-    house:90,market:70,tavern:140,church:240});
+    house:90,market:70,tavern:140,church:240,windmill:110,watermill:120});
+  const isMill=s=>['windmill','watermill'].includes(s?.type);
   const STOCK_KEYS=['food','wood','stone','metal','equipment','horses','gold'];
   const MATERIAL_KEYS=['wood','stone','metal'];
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
@@ -280,7 +281,7 @@
   function targetMaterial(s,part='core'){
     if(part==='door'&&s.type==='gate')return'door';
     // Houses, markets and taverns are timber-framed; the church is masonry.
-    return s.type==='palisade'||s.material==='wood'||['house','market','tavern'].includes(s.type)?'wood':'stone';
+    return s.type==='palisade'||s.material==='wood'||['house','market','tavern'].includes(s.type)||isMill(s)?'wood':'stone';
   }
   function effectiveness(weapon,s,part='core'){
     return Math.max(0,WEAPONS[weapon]?.[targetMaterial(s,part)]||0);
@@ -479,6 +480,7 @@
   function ruinMesh(r){
     if(r.spec&&C()){
       if(started.has(r.id)){const t=now()-started.get(r.id);if(t<C().duration(r.spec))return C().mesh(r.spec,t)}
+      if(r.spec.transient)return null;      // only the fall is shown: the ruin model has its own rubble
       let m=heapCache.get(r.id);if(!m){m=C().mesh(r.spec,Infinity);heapCache.set(r.id,m)}
       return m;
     }
@@ -540,7 +542,7 @@
     rubbleGrid=new Map();
     if(!C())return rubbleGrid;
     for(const r of state().ruins){
-      if(!r.spec)continue;
+      if(!r.spec||r.spec.transient)continue;
       // A breach's heap (and the gallery that fell with it) is a way in, never a wall.
       const g=r.spec.ground||0,breach=String(r.cause||'').startsWith('breach');
       for(const b of C().blocks(r.spec)){
@@ -590,7 +592,8 @@
   }
   function dynamicMeshes(){
     const out=state().ruins.map(ruinMesh).filter(Boolean);
-    for(const s of State.structures)if(s.type==='ruin')out.push(stumpMesh(s));
+    for(const s of State.structures)if(s.type==='ruin')out.push(['windmill','watermill'].includes(s.ruinOf)&&window.ConquerIndustries3D?.has(s)
+      ?window.ConquerIndustries3D.triangles(s,Number(s.groundZ)||groundOf(s)):stumpMesh(s));
     if(window.ConquerWorld3D?.active?.())for(const s of State.structures){
       const m=s.type==='gate'?window.ConquerCrossings?.drawbridgeMesh?.(s):s.type==='bridge'?window.ConquerCrossings?.bridgeMesh?.(s):null;
       if(m)out.push(m);
@@ -753,7 +756,23 @@
     invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
     return true;
   }
+  // A fallen mill stays where it stood as its own ruin model (ConquerIndustries3D):
+  // the cap and sails, or the upper floor and roof, come down in a timber collapse.
+  function ruinMill(s,from){
+    // Heights in U (1 U = 3.5 m): the stump keeps ~2.5 m of tower or ~1.8 m of walls.
+    const g=Number(s.groundZ)||groundOf(s),wind=s.type==='windmill';
+    const fall=startCollapse(s,g+(wind?.7:.5),g+(wind?2.35:1.75),{cause:'ruin',palette:collapsePalette({type:'house'}),material:'timber',
+      lean:from?{x:s.x-from.x,y:s.y-from.y}:null});
+    if(fall){fall.spec.transient=true;fall.spec.stump=false}
+    const stump={id:s.id,type:'ruin',ruinOf:s.type,w:s.w,h:s.h,x:s.x,y:s.y,angle:s.angle||0,rotationStep:s.rotationStep,
+      groundZ:s.groundZ,ruinHeight:wind?.8:.55,ruinDay:State.clock.day};
+    for(const k of Object.keys(s))delete s[k];
+    for(const [k,v] of Object.entries(stump))if(v!==undefined)s[k]=v;
+    if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+    invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();draw();
+  }
   function destroyStructure(s,from=null){
+    if(isMill(s))return ruinMill(s,from);
     // Stone towers and gatehouses are left as ruined stumps (they keep closing the walls).
     if(['tower','gate'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!(typeof isWoodGate==='function'&&isWoodGate(s)))return ruinStructure(s,from);
     // Everything standing comes down; walls that leant on it stay as open ends.
