@@ -537,7 +537,16 @@ function beginConstruction(s,delay=0){
   const d=buildDuration(s);if(d<=0)return s;
   const startedDay=State.clock.day+delay;
   if(s.auto){
-    s.construction={startedDay,completeDay:startedDay+d};return s;
+    s.construction={startedDay,completeDay:startedDay+d};
+    // Autonomous growth carries its own labor valuation at spawn. The lord
+    // is never billed again during construction and candidates are not booked.
+    if(!s.spawnCost){
+      const quote=window.ConquerEconomy?.spontaneousSpawnQuote?.(d)||
+        {laborDays:d,laborGold:Math.round(d/20*1000)/1000};
+      s.spawnCost={laborDays:quote.laborDays,laborGold:quote.laborGold,
+        totalGold:quote.laborGold,payer:'spontaneous'};
+    }
+    return s;
   }
   s.construction={version:2,startedDay,workRequired:d,workDone:0,
     lastWorkDay:startedDay,workers:0,completedDay:null};
@@ -564,6 +573,7 @@ function constructionWorkStatus(s){
   if(c.version!==2)return 'Procedural construction';
   const wd=((Math.floor(State.clock.day)%7)+7)%7;
   if(wd>=5)return 'Workers resting (weekend)';
+  if(c.unfunded)return 'Paused: insufficient lord treasury for wages';
   return c.workers>0?c.workers+' L1 assigned':'Waiting for idle L1 workers';
 }
 function migrateConstructionSites(){
@@ -637,8 +647,16 @@ function tickConstructionWork(fromDay,toDay){
       for(const s of sites){
         const c=s.construction,n=assigned.get(s.id)?.length||0;
         const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
-        const work=Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n;
-        c.workers=n;
+        const requested=Math.min(Math.max(0,c.workRequired-c.workDone),
+          Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n);
+        // Only actual funded work advances construction. Materials were paid
+        // at placement; labor is paid as its shifts are performed.
+        const payroll=requested>0?
+          window.ConquerEconomy?.payConstructionWork?.(s,requested)||{work:requested,paid:0}:
+          {work:0,paid:0};
+        const work=payroll.work;
+        c.unfunded=requested>1e-9&&work<=1e-9;
+        c.workers=work>0?n:0;
         if(work>0){
           c.workDone=Math.min(c.workRequired,c.workDone+work);
           State.dirty=true;
