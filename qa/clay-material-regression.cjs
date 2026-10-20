@@ -25,4 +25,13 @@ assert.ok(/buildMasonryMaterial:State.buildMasonryMaterial/.test(read('src/settl
 assert.ok(/s.masonryMaterial=s.masonryMaterial==='brick'\?'brick':'stone'/.test(read('src/settlement-app-persistence.js')));
 assert.ok(/s.masonryMaterial==='brick'\?\.80:1/.test(read('src/settlement-siege.js')));
 assert.ok(/withStructureVisualMaterial\(s/.test(read('src/settlement-castle3d.js')));
+const a=core.indexOf('// DEV VISUAL PALETTE BEGIN'),b=core.indexOf('// DEV VISUAL PALETTE END');
+const st={visualPalette:'stone'},paintContext=vm.createContext({State:st,localStorage:{getItem:()=>null}});
+vm.runInContext(core.slice(a,b+'// DEV VISUAL PALETTE END'.length),paintContext);
+const swatch=obj=>{paintContext.target=obj;return vm.runInContext("withStructureVisualMaterial(target,()=>visualPaletteColor('#635951'))",paintContext)};
+assert.equal(swatch({type:'wall',masonryMaterial:'stone'}),'#635951');
+assert.equal(swatch({type:'wall',masonryMaterial:'brick'}),'#98523e');
+assert.equal(swatch({type:'tower',material:'wood',masonryMaterial:'brick'}),'#635951');
+assert.equal(vm.runInContext("visualPaletteColor('#635951')",paintContext),'#635951','structure scope restored');
+
 console.log('PASS clay masonry: per-structure stone/clay costs, auto-spawn rule, persistence, 80% structural HP');

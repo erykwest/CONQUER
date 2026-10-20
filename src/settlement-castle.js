@@ -843,7 +843,7 @@ function drawCutawayStructures(){
   State.structures
     .filter(s=>structureCutaway(s)&&!underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b))
-    .forEach(drawCutawayStructure);
+    .forEach(s=>withStructureVisualMaterial(s,()=>drawCutawayStructure(s)));
 }
 function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
