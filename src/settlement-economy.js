@@ -36,6 +36,7 @@
       lots:Object.fromEntries(GOODS.map(g=>[g,[]])),
       prices:{...BASE},externalDemand:empty(),externalOffers:empty(),
       wallet:{L1:24,L2:40,L3:60,L4:300},welfare:50,
+      happiness:{L1:50,L2:50,L3:50,L4:50},rationMode:'market',
       wage:{L1:1,L2:2,L3:3},activities:{},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
       weeks:0,months:0,years:0
@@ -43,7 +44,12 @@
   }
   function state(){
     if(!State.economy||State.economy.version!==1)State.economy=makeState();
-    return State.economy;
+    const e=State.economy;
+    if(!e.happiness||typeof e.happiness!=='object')e.happiness={};
+    for(const group of ['L1','L2','L3','L4'])
+      e.happiness[group]=clamp(finite(e.happiness[group],finite(e.welfare,50)),0,100);
+    if(!['market','full','half'].includes(e.rationMode))e.rationMode='market';
+    return e;
   }
   function reset(){State.economy=makeState();render(true)}
   function note(e,label){
@@ -167,45 +173,63 @@
     return{sold:amount-remaining,spent};
   }
   function market(day){
-    const e=sync(),pop=population();
+    const e=sync(),pop=population(),groups=['L1','L2','L3','L4'];
+    const needs=Object.fromEntries(groups.map(group=>[group,pop[group]*.55]));
+    const rationFactor=e.rationMode==='full'?1:e.rationMode==='half'?.5:0;
+    // No entitlement to castle stores without the lord's explicit order.
+    const totalRations=groups.reduce((sum,group)=>sum+needs[group]*rationFactor,0);
+    const available=totalRations>0?Math.min(1,Math.max(0,finite(e.castle.food))/totalRations):0;
+    const rationed={L1:0,L2:0,L3:0,L4:0};
+    for(const group of groups){
+      const issued=Math.min(Math.max(0,finite(e.castle.food)),round(needs[group]*rationFactor*available));
+      rationed[group]=issued;
+      e.castle.food=round(Math.max(0,finite(e.castle.food)-issued));
+    }
+    // Households buy any remaining food at market, provided they can afford it.
     const demand={food:0,wood:0,stone:0,metal:0,equipment:0,luxury:0};
     for(let tier=1;tier<=4;tier++){
-      const count=pop[classKey(tier)];
-      demand.food+=count*.55;
+      const group=classKey(tier),count=pop[group];
+      demand.food+=Math.max(0,needs[group]-rationed[group]);
       if(tier===3)demand.luxury+=count*.08;
       if(tier===4)demand.luxury+=count*.25;
     }
-    // Input demand from workshops based on next week's production.
     const staffing=activeCapacity();
     for(const s of activeStructures())if(KIND[s.type].inputs){
-      const a=e.activities[s.id],spec=KIND[s.type];
-      for(const [good,need] of Object.entries(spec.inputs))demand[good]+=need*5*(staffing[s.id]||0)/Math.max(1,spec.workers);
+      const spec=KIND[s.type];
+      for(const [good,need] of Object.entries(spec.inputs))
+        demand[good]+=need*5*(staffing[s.id]||0)/Math.max(1,spec.workers);
     }
     for(const good of GOODS){
       const supply=e.lots[good].reduce((sum,l)=>sum+l.qty,0);
       const pressure=(demand[good]+Math.max(0,finite(e.externalDemand[good]))+1)/(supply+1);
       e.prices[good]=round(BASE[good]*clamp(Math.sqrt(pressure),.4,2.5));
     }
-    const last={day,domestic:{},exports:{},unmet:{}};
-    // Household consumption is a weekly market purchase by an aggregate cohort.
+    const last={day,rationMode:e.rationMode,castleRations:{...rationed},marketFoodByClass:{},
+      domestic:{},exports:{},unmet:{}};
     for(let tier=1;tier<=4;tier++){
-      const group=classKey(tier),count=pop[group],want=count*.55;
-      const bought=fulfill(e,'food',want,group);
-      last.domestic.food=(last.domestic.food||0)+bought.sold;
-      last.unmet[group]=round(Math.max(0,want-bought.sold));
+      const group=classKey(tier),count=pop[group],want=needs[group];
+      const bought=fulfill(e,'food',Math.max(0,want-rationed[group]),group);
+      last.marketFoodByClass[group]=round(bought.sold);
+      last.domestic.food=round((last.domestic.food||0)+bought.sold);
+      last.unmet[group]=round(Math.max(0,want-rationed[group]-bought.sold));
+      if(count>0){
+        const fed=clamp((rationed[group]+bought.sold)/want,0,1);
+        const hunger=fed>=.999?.2:-Math.max(.5,5*(1-fed));
+        // Half rations hurt morale, even if citizens buy more at market.
+        const rationEffect=e.rationMode==='half'?-1.2:e.rationMode==='full'?.8*clamp(rationed[group]/want,0,1):0;
+        e.happiness[group]=clamp(round(e.happiness[group]+hunger+rationEffect),0,100);
+      }
       if(tier>=3){
         const luxury=fulfill(e,'luxury',count*(tier===3?.08:.25),group);
-        last.domestic.luxury=(last.domestic.luxury||0)+luxury.sold;
+        last.domestic.luxury=round((last.domestic.luxury||0)+luxury.sold);
       }
     }
     for(const s of activeStructures())if(KIND[s.type].inputs){
       const a=e.activities[s.id],spec=KIND[s.type];
       for(const [good,need] of Object.entries(spec.inputs)){
         const qty=Math.max(0,need*5-(a.inputs[good]||0));
-        // Material purchases are paid by the owning sector, not households.
-        const buyer=a.owner==='lord'?'castle': 'L4';
-        const available=buyer==='castle'?finite(e.castleGold):finite(e.wallet.L4);
-        const budget=available;
+        const buyer=a.owner==='lord'?'castle':'L4';
+        const budget=buyer==='castle'?finite(e.castleGold):finite(e.wallet.L4);
         const purchased=fulfill(e,good,Math.min(qty,budget/Math.max(.01,e.prices[good])),null);
         if(purchased.spent>0){
           if(buyer==='castle')e.castleGold=round(finite(e.castleGold)-purchased.spent);
@@ -213,17 +237,16 @@
           book(e,s.id,'cost',purchased.spent);
         }
         a.inputs[good]=round((a.inputs[good]||0)+purchased.sold);
-        last.domestic[good]=(last.domestic[good]||0)+purchased.sold;
+        last.domestic[good]=round((last.domestic[good]||0)+purchased.sold);
       }
     }
-    // Export is demand-constrained. Missing external buyers never absorb surplus.
     for(const good of GOODS){
       const exports=fulfill(e,good,Math.max(0,finite(e.externalDemand[good])),null);
       last.exports[good]=round(exports.sold);
     }
     e.lastTrade=last;e.weeks++;
-    const wanted=demand.food||0,unmet=Object.values(last.unmet).reduce((s,n)=>s+n,0);
-    e.welfare=clamp(round(e.welfare+(wanted>0?(1-2*unmet/wanted)*.6:0)),0,100);
+    const residents=groups.reduce((sum,g)=>sum+pop[g],0);
+    if(residents>0)e.welfare=round(groups.reduce((sum,g)=>sum+e.happiness[g]*pop[g],0)/residents);
   }
   function monthly(day){
     const e=sync(),staff=activeCapacity(),grouped={L1:0,L2:0},pop=population();
@@ -275,6 +298,16 @@
       if(today.year!==tomorrow.year)annual(day);
     }
   }
+  function setRations(mode){
+    if(!['market','full','half'].includes(mode))return false;
+    const e=state();
+    if(e.rationMode!==mode){
+      e.rationMode=mode;
+      note(e,mode==='market'?'Castle rationing ended':mode==='full'?'Full rations authorized':'Half rations authorized');
+      if(typeof markDirty==='function')markDirty(false,false,true);
+    }
+    render(true);return true;
+  }
   function setShare(good,pct){
     if(!GOODS.includes(good)||![0,25,50,75,100].includes(+pct))return false;
     const e=state();e.saleShare[good]=+pct;render(true);return true;
@@ -308,18 +341,25 @@
     return{day:e.lastDay,weekday:weekday(Math.max(0,e.lastDay)),population:population(),
       prices:{...e.prices},castle:{...e.castle},market:stocks,wage:{...e.wage},
       capital:round(e.wallet.L4),castleGold:round(finite(e.castleGold)),
-      welfare:e.welfare,activities:Object.keys(e.activities).length,
+      welfare:e.welfare,happiness:{...e.happiness},rationMode:e.rationMode,
+      castleFoodIssued:round(Object.values(e.lastTrade?.castleRations||{}).reduce((a,b)=>a+finite(b),0)),
+      activities:Object.keys(e.activities).length,
       weeks:e.weeks,months:e.months,years:e.years};
   }
   function render(force=false){
     const target=typeof document!=='undefined'?document.getElementById('economyOverview'):null;
     if(!target)return;
     const e=sync(),s=snapshot();
-    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+(target.dataset.force||'');
+    const policy=document.getElementById('rations');
+    if(policy)policy.value=s.rationMode;
+    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.rationMode+'|'+(target.dataset.force||'');
     if(!force&&target.dataset.stamp===stamp)return;
     target.dataset.stamp=stamp;
     const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:1});
-    target.innerHTML='<div class="kv"><span>Welfare / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
+    target.innerHTML='<div class="kv"><span>Average happiness / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
+      '<div class="kv"><span>Food policy</span><b>'+({market:'Market only',full:'Full rations',half:'Half rations'}[s.rationMode])+'</b></div>'+
+      ['L1','L2','L3','L4'].map(g=>'<div class="kv"><span>Happiness '+g+'</span><b>'+fmt(s.happiness[g])+'/100 · '+s.population[g]+' residents</b></div>').join('')+
+      '<div class="kv"><span>Castle food issued at last market</span><b>'+fmt(s.castleFoodIssued)+'</b></div>'+
       '<div class="kv"><span>Castle economic gold</span><b>'+fmt(s.castleGold)+'</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
       (window.ConquerJobManager?(()=>{const j=window.ConquerJobManager.summary();return '<div class="kv"><span>L1 jobs · builders / herders / loggers / idle</span><b>'+j.building+' / '+j.herding+' / '+j.logging+' / '+j.idle+'</b></div>'+
@@ -339,6 +379,10 @@
   function bind(){
     const target=document.getElementById('economyOverview');
     if(!target)return;
+    const policy=document.getElementById('rations');
+    if(policy)policy.addEventListener('change',event=>{
+      if(setRations(event.target.value)&&typeof scheduleLocalSave==='function')scheduleLocalSave(200);
+    });
     target.addEventListener('change',event=>{
       const node=event.target;
       const good=node.dataset.econSale||node.dataset.econTarget;
@@ -353,5 +397,5 @@
     render(true);
   }
   window.ConquerEconomy=Object.freeze({GOODS,KIND,weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
-    setShare,setTarget,setExternalDemand,transfer,snapshot,population});
+    setShare,setTarget,setRations,setExternalDemand,transfer,snapshot,population});
 })();

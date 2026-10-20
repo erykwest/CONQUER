@@ -22,7 +22,8 @@
     return clamp(Math.ceil(Math.max(1,area)/4),1,8);
   }
   function foodStocks(e){
-    return num(e?.castle?.food)+(e?.lots?.food||[]).reduce((a,l)=>a+num(l.qty),0);
+    const market=(e?.lots?.food||[]).reduce((a,l)=>a+num(l.qty),0);
+    return market+(e?.rationMode==='full'||e?.rationMode==='half'?num(e?.castle?.food):0);
   }
   function woodStocks(e){
     return num(e?.castle?.wood)+(e?.lots?.wood||[]).reduce((a,l)=>a+num(l.qty),0);
