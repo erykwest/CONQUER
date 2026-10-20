@@ -59,6 +59,9 @@ function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();docum
       const fill=site.parentElement?.querySelector('.progress i');
       if(fill)fill.style.width=(constructionProgress(selected)*100).toFixed(1)+'%';
     }
+    const wages=panel?.querySelector('[data-site-wages]');
+    if(wages&&typeof siteLaborText==='function')
+      wages.textContent=siteLaborText(selected);
   }
 }
 function visibleCanvasCenter(){
