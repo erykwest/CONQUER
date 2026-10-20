@@ -38,6 +38,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**Tranche 20/10/2026 (branch di sviluppo):** completata nel codice l'integrazione materiale Builder ↔ tesoreria/stock economici e inseriti quattro L1 iniziali privi di casa. Le risorse da 10.000 rimangono soltanto pre-fondazione e non sono un magazzino reale. **Prossimo vincolo**: far avanzare i cantieri soltanto con L1 effettivamente allocati, poi collegare il mantenimento di castello e guarnigione allo stesso inventario e rendere i deficit leggibili per le future imprese L4. Nessuna auto-nascita imprese/auto-upgrade case in questo intervento.
+
+## Prossimo passo
+
 **Priorità aggiornata il 19/10/2026 (M1):** consumi e produzione misurati per bene → saldi e trend → integrazione dei costi reali di costruzione/fortificazioni → condizioni economiche di investimento L4 → attività private e auto-upgrade abitativi. Il nucleo dei saldi settimanali è nella branch `feature/economic-balances-20261019`, con [QA Node superata](https://github.com/erykwest/CONQUER/actions/runs/39253184968); non è ancora verificato nel browser. Senza stock unico Builder/economia e margine operativo non deve partire nessuna costruzione automatica.
 
 
