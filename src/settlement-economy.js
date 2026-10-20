@@ -126,11 +126,18 @@
       if(s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
       if(['windmillA','windmillB','watermill'].includes(s.type)){
         // Milling is an optional service, even when no workforce is free.
-        const available=Math.max(0,e.cropStock[a.owner]||0);
-        const amount=round(Math.min(spec.rate,available));
-        if(amount>0){
-          e.cropStock[a.owner]=round(available-amount);
-          put(e,'food',amount,a.owner,s.id);
+        // Rural auto-fields are often privately owned while player mills
+        // belong to the lord. A mill serves both owners without confiscating
+        // their produce: each converted lot keeps the original crop owner.
+        let capacity=spec.rate;
+        for(const cropOwner of [a.owner,a.owner==='lord'?'private':'lord']){
+          const available=Math.max(0,e.cropStock[cropOwner]||0);
+          const amount=round(Math.min(capacity,available));
+          if(amount<=0)continue;
+          e.cropStock[cropOwner]=round(available-amount);
+          put(e,'food',amount,cropOwner,s.id);
+          capacity=round(capacity-amount);
+          if(capacity<=0)break;
         }
         continue;
       }
