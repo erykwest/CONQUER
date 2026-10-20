@@ -51,6 +51,8 @@
 
 | D-037 | CODICE BRANCH (20/10) | I cantieri manuali richiedono lavoro L1 effettivo: effort in giornate-operaio, lavoro lun–ven, priorità agli impieghi produttivi già attivi, assegnazione equa fino a 3 L1 per cantiere. | Senza L1 liberi le costruzioni si fermano; save V1 migrate senza perdere completamento, mentre strade/case/campi procedurali conservano i timer per non bloccare la fondazione. |
 
+| D-038 | CODICE BRANCH (20/10) | Un lavoratore L1 visibile a un cantiere è sempre uno degli stessi ID che l'economia ha assegnato al cantiere: casa L1 o fondatore, percorso pedonale valido e viaggio giornaliero. | Le assegnazioni evitano doppio impiego in industria, campo o allevamento; senza percorso raggiungibile non si genera avanzamento. Cache percorsi invalidata con la topologia esistente; QA browser da verificare. |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
