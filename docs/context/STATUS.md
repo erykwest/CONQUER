@@ -5,7 +5,7 @@
 - **CODICE / branch:** libreria `src/assets/furniture-model.js` e generatore Blender; `src/settlement-cutaway-furniture.js` definisce le ricette delle stanze (14 ruoli e alias), il layout dimensionato, i mobili volumetrici, le luci e i posti liberi dai mobili. Arredi riservano scale, passaggio del portone e postazioni degli arcieri.
 - **MOTORE:** cutaway WebGL2 con volume pareti/superfici, ripartizione dei piani, arredi depth-tested, cache per rotazione e pass emissivo notturno, fallback Canvas. Porte in pietra e sottotorri apribili; il pianterreno della torre-porta è un passaggio, con migrazione delle precedenti assegnazioni delle stanze.
 - **COMPATIBILITÀ:** portato selettivamente sulla baseline moderna; conservate le geometrie Terraforming e gli altri moduli di `main`. Nessun merge diretto della vecchia branch `feature/cutaway-furniture`.
-- **QA:** `qa/cutaway-furniture-regression.cjs` per catalogo, ruoli, ingombri, piani e arcieri. PR [#65](https://github.com/erykwest/CONQUER/pull/65); registrare l'esito della CI completa dopo il run definitivo. Collaudo interattivo WebGL2 ancora da effettuare.
+- **QA GitHub Actions PASS:** [run #39508539592](https://github.com/erykwest/CONQUER/actions/runs/39508539592) sulla HEAD `5e048a8`: suite completa `qa/*-regression.cjs`, inclusa `qa/cutaway-furniture-regression.cjs`, controlli compilazione/sintassi JavaScript; CAMP e Builder PASS. PR [#65](https://github.com/erykwest/CONQUER/pull/65) mergeabile, non ancora mergiata. Collaudo interattivo WebGL2 nel browser non eseguito.
 
 
 
