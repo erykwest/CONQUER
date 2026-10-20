@@ -262,8 +262,47 @@
     const outward={x:Math.cos(a),y:Math.sin(a)};
     const tangent={x:-outward.y,y:outward.x};
     const hinge={x:gate.x+outward.x*d.w/2,y:gate.y+outward.y*d.w/2};
-    const length=2.25,width=Math.min(1.2,d.h*.80);
-    return{hinge,outward,tangent,length,width,z:placementGroundZ(gate)};
+    // The leaf spans the moat in front of the gate, never longer than the small moat
+    // (WIDTHS.moat, 1.5 U). A wider moat, or one further out, needs a fixed half-bridge.
+    const ahead=moatAhead({hinge,outward}),width=Math.min(1.2,d.h*.80);
+    const length=ahead?Math.max(.6,Math.min(ahead.far+.15,WIDTHS.moat+.15)):WIDTHS.moat;
+    return{hinge,outward,tangent,length,width,z:placementGroundZ(gate),ahead};
+  }
+  // The first finished moat crossed by the line out of a gate: where its near and far
+  // banks are along that line (distance from the hinge) and how wide it is.
+  function moatAhead({hinge,outward},reach=12){
+    let best=null;
+    for(const s of State.structures){
+      if(s.type!=='moat'||underConstruction(s)||!xy(s))continue;
+      const f=frame(s),on=outward.x*f.nx+outward.y*f.ny;if(Math.abs(on)<.2)continue;
+      const across0=(hinge.x-s.a.x)*f.nx+(hinge.y-s.a.y)*f.ny;
+      const t1=(-f.width/2-across0)/on,t2=(f.width/2-across0)/on,near=Math.min(t1,t2),far=Math.max(t1,t2);
+      if(far<0||near>reach)continue;
+      const mid=(near+far)/2,along=(hinge.x+outward.x*mid-s.a.x)*f.ux+(hinge.y+outward.y*mid-s.a.y)*f.uy;
+      if(along<0||along>f.L)continue;
+      if(!best||near<best.near)best={moat:s,near:Math.max(0,near),far,width:f.width};
+    }
+    return best;
+  }
+  // Half-bridge: the fixed wooden span from the far bank to the drawbridge's tip, needed
+  // when the moat lies further out than the leaf reaches.
+  function halfBridgeNeed(gate){
+    const g=deck(gate);if(!g.ahead)return null;
+    const tipAt=g.length,bankAt=g.ahead.far+.25;
+    if(bankAt-tipAt<.2)return null;
+    const at=t=>({x:g.hinge.x+g.outward.x*t,y:g.hinge.y+g.outward.y*t});
+    // A bridge is at least 1 U long: a short one runs back under the lowered leaf.
+    const len=Math.max(1,bankAt-tipAt+.05);
+    return{a:at(bankAt),b:at(bankAt-len),width:Math.max(.6,g.width)};
+  }
+  function halfBridgeOf(gate){return State.structures.find(s=>s.type==='bridge'&&s.halfBridgeFor===gate.id)||null}
+  function buildHalfBridge(gate){
+    const need=halfBridgeNeed(gate);
+    if(!need){status('The drawbridge already spans the moat');return false}
+    if(halfBridgeOf(gate)){status('This gate already has its half-bridge');return false}
+    const s={type:'bridge',variant:'wood',a:need.a,b:need.b,width:need.width,halfBridgeFor:gate.id,autoDemolish:true};
+    const ok=add(s);if(ok)status('Half-bridge placed: from the far bank to the drawbridge');
+    return ok;
   }
   // Night lighting redraws Gothic windows after the moving drawbridge.
   // Mask the precise projected leaf from front-facing window sprites so that
@@ -633,7 +672,8 @@
         (s.variant==='dry'?'<button data-crossing-flood '+(underConstruction(s)||Math.abs(Number(s.groundZ)||0)>.01?'disabled':'')+'>Flood moat · '+costText(crossingUpgradeCost(s,'water'))+'</button>'+
           '<div class="legend">Requires a fully completed moat entirely on level 0.</div>':'')+'</div>';
     }
-    if(s.type==='bridge')return '<div class="slot"><div class="slot-label">Bridge · '+s.variant+'</div>'+
+    if(s.type==='bridge')return '<div class="slot"><div class="slot-label">'+(s.halfBridgeFor?'Mezzoponte':'Bridge')+' · '+s.variant+'</div>'+
+      (s.variant==='wood'?'<div class="grid"><button data-bridge-auto="1" class="'+(s.autoDemolish?'active':'')+'">Autodemolizione ON</button><button data-bridge-auto="0" class="'+(s.autoDemolish?'':'active')+'">OFF</button></div><div class="legend">Con l\'allarme rosso i difensori abbattono il ponte di legno nel fossato.</div>':'')+
       '<div class="legend">Flat deck at elevation '+s.groundZ+
       ' · length '+s.length.toFixed(1)+'U · width '+s.width.toFixed(1)+
       'U · no sloped bridges</div>'+
@@ -641,7 +681,10 @@
         (!s.primaryBridgeFor?'<button data-crossing-demolish>⚒ Demolish wooden bridge</button><div class="legend">Irreversible, no refund.</div>':''):'')+'</div>';
     if(s.type==='gate'){
       const d=drawbridge(s);
-      return '<div class="slot"><div class="slot-label">Drawbridge · Gate accessory</div>'+
+      const need=halfBridgeNeed(s),half=halfBridgeOf(s),leaf=deck(s);
+      const halfHtml=need&&!half?'<button data-halfbridge-build '+(underConstruction(s)?'disabled':'')+'>Costruisci mezzoponte</button><div class="legend">Il ponte levatoio è lungo al massimo quanto un fossato piccolo ('+leaf.length.toFixed(1)+'U): oltre serve un mezzoponte fisso di legno.</div>'
+        :half?'<div class="legend">Mezzoponte di legno '+(half.autoDemolish!==false?'· si autodemolisce all\'allarme rosso':'')+'</div>':'';
+      return '<div class="slot"><div class="slot-label">Drawbridge · Gate accessory · '+leaf.length.toFixed(1)+'U</div>'+halfHtml+
       (d?'<div class="grid"><button data-drawbridge-toggle '+(underConstruction(s)?'disabled':'')+'>'+
         (d.raised?'⬇ Lower':'⬆ Raise')+'</button><button data-drawbridge-remove>Remove</button></div>'+
         '<div class="legend">Animated gate-side bridge. '+stateOfGate(s)+'. Access only when fully lowered.</div>':
@@ -655,17 +698,30 @@
     slots.querySelector('[data-crossing-upgrade]')?.addEventListener('click',()=>upgradeBridge(s));
     slots.querySelector('[data-crossing-flood]')?.addEventListener('click',()=>floodMoat(s));
     slots.querySelector('[data-crossing-demolish]')?.addEventListener('click',()=>{
-      if(confirm('Demolish the wooden bridge permanently?')){
-        State.structures=State.structures.filter(x=>x.id!==s.id);
-        State.selectedId=null;markDirty(true,['ground','base']);renderFunctionPanel();draw();
-        status('Wooden bridge demolished — no materials returned');
-      }
+      if(confirm('Demolish the wooden bridge permanently?'))demolishBridge(s);
     });
+    slots.querySelectorAll('[data-bridge-auto]').forEach(b=>b.addEventListener('click',()=>{
+      s.autoDemolish=b.dataset.bridgeAuto==='1';markDirty(false,false,true);renderFunctionPanel();
+    }));
+    slots.querySelector('[data-halfbridge-build]')?.addEventListener('click',()=>buildHalfBridge(s));
     slots.querySelector('[data-drawbridge-install]')?.addEventListener('click',()=>installDrawbridge(s));
     slots.querySelector('[data-drawbridge-toggle]')?.addEventListener('click',()=>toggleDrawbridge(s));
     slots.querySelector('[data-drawbridge-remove]')?.addEventListener('click',()=>removeDrawbridge(s));
   }
+  // A wooden bridge pulled down into the moat (a collapse of planks when siege rules are
+  // loaded); no materials come back.
+  function demolishBridge(s){
+    if(!s||s.type!=='bridge')return false;
+    if(window.ConquerSiege?.collapseBridge)window.ConquerSiege.collapseBridge(s);
+    State.structures=State.structures.filter(x=>x.id!==s.id);
+    if(State.selectedId===s.id)State.selectedId=null;
+    if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+    markDirty(true,['ground','base']);renderFunctionPanel();draw();
+    status('Wooden bridge demolished — no materials returned');
+    return true;
+  }
   window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
+    deck,moatAhead,halfBridgeNeed,halfBridgeOf,buildHalfBridge,demolishBridge,
     snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,moatChains,moatOffsetOutline,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,upgradeBridge,floodMoat,crossingUpgradeCost,installDrawbridge,toggleDrawbridge,removeDrawbridge,

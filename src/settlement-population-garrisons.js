@@ -92,6 +92,7 @@ function drawCastleSoldiers(){
   // plane, so guards remain planted correctly on sloped approaches.
   for(const gate of State.structures){
     if(gate.type!=='gate'||underConstruction(gate))continue;
+    if(window.ConquerSiege?.gateClosed?.(gate))continue;   // closed: the guards are inside
     const guards=gateGuardPositions(gate);
     for(let i=0;i<guards.length;i++){
       const p=guards[i],z=.08;

@@ -7,7 +7,9 @@ const fs=require('node:fs');
 const root=__dirname+'/../';
 // Siege hooks in the navigation: ruined stumps and the high core of collapse heaps block
 // movement. Each must appear exactly once; removing them gives back the original source.
-const siegeHooks={'population-navigation':[
+const siegeHooks={'population-garrisons':[
+  ["    if(window.ConquerSiege?.gateClosed?.(gate))continue;   // closed: the guards are inside\n",'']
+],'population-navigation':[
   ["  if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap\n",''],
   ["'training','ruin'].includes(s.type))continue;","'training'].includes(s.type))continue;"],
   ["if((s.type==='tower'||s.type==='ruin')&&s.shape==='round')","if(s.type==='tower'&&s.shape==='round')"],

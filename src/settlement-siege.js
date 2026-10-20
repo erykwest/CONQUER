@@ -167,6 +167,7 @@
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
   function tick(before,after){
+    gateNightWatch();bridgeAlarm();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
     if(!elapsed)return;
@@ -428,7 +429,7 @@
   // Wood breaks into beams and planks, timber-framed buildings into plaster and beams
   // under a roof of boards, masonry into blocks.
   function collapseMaterial(s){
-    if(s.type==='palisade'||s.material==='wood'||(s.type==='tower'&&isWoodTower(s))||(s.type==='gate'&&typeof isWoodGate==='function'&&isWoodGate(s)))return'wood';
+    if(s.type==='palisade'||s.material==='wood'||(s.type==='bridge'&&s.variant!=='stone')||(s.type==='tower'&&isWoodTower(s))||(s.type==='gate'&&typeof isWoodGate==='function'&&isWoodGate(s)))return'wood';
     if(s.type==='house'||s.type==='tavern'||s.type==='market')return'timber';
     return'stone';
   }
@@ -599,10 +600,46 @@
     if(!g||underConstruction(g))return false;
     if(closed&&doorStage(g)==='broken'){status('The door is broken in: the gate cannot be closed');return false}
     g.closed=!!closed;
+    // A hand on the gate overrides the night watch until the next morning.
+    if(isNight()){g.nightOverride=true;delete g.nightClosed}
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     markDirty(true,true,true);renderFunctionPanel();draw();
     status(g.closed?'Gate closed: nobody passes':'Gate open');
     return true;
+  }
+  // Night watch: a gate set to close at night (the default) shuts at dusk and opens at
+  // dawn, unless someone opened or closed it by hand that night; a gate closed by hand
+  // in the day stays closed. Closed, its two guards go inside.
+  function isNight(){try{return typeof nightFactor==='function'&&nightFactor()>.5}catch{return false}}
+  let wasNight=null;
+  function gateNightWatch(){
+    const night=isNight();if(night===wasNight)return;wasNight=night;
+    let changed=false;
+    for(const g of State.structures){
+      if(g.type!=='gate'||underConstruction(g))continue;
+      if(!night){
+        if(g.nightClosed&&!g.nightOverride){g.closed=false;changed=true}
+        delete g.nightClosed;delete g.nightOverride;continue;
+      }
+      if(g.nightClose===false||g.nightOverride||g.closed||doorStage(g)==='broken')continue;
+      g.closed=true;g.nightClosed=true;changed=true;
+    }
+    if(changed){
+      if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+      markDirty(true,true,true);renderFunctionPanel();draw();
+      status(night?'Night: the gates are shut':'Morning: the gates open');
+    }
+  }
+  // Red alarm: the defenders pull their wooden half-bridges down into the moat.
+  function bridgeAlarm(){
+    if(window.ConquerCombat?.alarmMode?.()!=='hall')return;
+    for(const b of State.structures.filter(s=>s.type==='bridge'&&s.halfBridgeFor&&s.variant!=='stone'&&s.autoDemolish!==false&&!underConstruction(s)))
+      window.ConquerCrossings?.demolishBridge(b);
+  }
+  // A wooden bridge pulled down: its planks and beams fall into the moat.
+  function collapseBridge(b){
+    const g=groundOf(b);
+    return startCollapse(b,g-.3,g+.22,{cause:'demolished',parts:[footprintPoints(b)]});
   }
   function breakDoor(g){
     delete g.drawbridge;                       // a raised drawbridge is smashed with the door
@@ -812,6 +849,10 @@
       status(out.ok?(out.breach?'Breccia aperta nella campata '+(out.bay+1):'Campata '+(out.bay+1)+' colpita · '+out.damage.toFixed(1)):out.reason);
       renderFunctionPanel();
     });
+    slots.querySelectorAll('[data-gate-night]').forEach(btn=>btn.onclick=()=>{
+      const s=selectedStructure();if(s?.type!=='gate')return;
+      s.nightClose=btn.dataset.gateNight==='1';markDirty(false,false,true);renderFunctionPanel();
+    });
     slots.querySelectorAll('[data-gate-closed]').forEach(btn=>btn.onclick=()=>{
       const s=selectedStructure();if(s?.type==='gate')setGateClosed(s.id,btn.dataset.gateClosed==='1');
     });
@@ -826,6 +867,6 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,setGateClosed,doorAsset,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),
+    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();
