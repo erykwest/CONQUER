@@ -3,6 +3,14 @@
 > Snapshot **aggiornato il 19/10/2026** per il lavoro Terraforming; le sezioni storiche del 16/10 mantengono i propri limiti di verifica.
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
+
+## MAIN FIX — DEV scroll + mulini nel Builder (20/10/2026)
+
+- **CODICE su branch `fix/main-dev-scroll-mill-menu-20261020`:** limite verticale del gruppo DEV in `src/settlement.css`, bottone di apertura sempre visibile e contenuto del pannello scorrevole; `windmill` e `watermill` ripristinati nel catalogo **Produzione** del Builder compatto senza duplicare né ricreare i pulsanti già collegati al gameplay.
+- **CACHE:** versioni CSS e palette JS aggiornate in `index.html` per caricare la UI corretta.
+- **QA GitHub Actions PASS sulla PR #58:** [Builder menu regression #39497454600](https://github.com/erykwest/CONQUER/actions/runs/39497454600) — sintassi JS, registrazione dei due pulsanti, requisiti di scroll CSS e controlli esistenti su mulini 3D e posizionamento Builder. **Il collaudo interattivo nel browser non è incluso** in questa suite.
+- **RILASCIO:** merge su `main` solo dopo i controlli PR; nessun preview deployment Vercel richiesto.
+
 ## Clay — palette DEV globale (19/10/2026)
 
 - **CODICE su `clay`:** due pulsanti DEV Stone/Clay, mappa swatch in `src/settlement-core.js`, uso Canvas/WebGL2 e invalidazione delle relative cache. Mura/torri in color mattone; piani terra case L2–L4 color laterizio; tetti prima antracite color tegola.
