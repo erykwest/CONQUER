@@ -46,6 +46,9 @@
 | D-033 | VINCOLO DESIGN (19/10/2026) | Prima i consumi e i saldi produttivi, poi mercanti e auto-upgrade delle case. Le nuove imprese spontanee richiedono una popolazione L4 reale. | I segnali economici devono distinguere carenza fisica, insufficienza monetaria, surplus e trend. |
 | D-034 | CODICE BRANCH (19/10/2026) | Su `feature/economic-balances-20261019` bilancio settimanale per bene e trend a quattro settimane; consumo domestico di legna provvisorio. | [QA Node PASS](https://github.com/erykwest/CONQUER/actions/runs/39253184968); non implica merge o test browser. |
 
+| D-035 | CODICE BRANCH (20/10) | Builder usa riserve fisiche e tesoreria di `ConquerEconomy` dopo la fondazione; `State.resources` è proiezione UI/legacy e non un secondo inventario. | Le merci sul mercato non sono risorse gratuite del castello; cantieri pagati materialmente al placement, recuperi registrati separatamente dalla produzione. |
+| D-036 | CODICE BRANCH (20/10) | Fondazione = dotazione iniziale una tantum + **4 adulti L1 senza casa**, visibili presso il pozzo e disponibili alla produzione. | Nessun L4 creato artificialmente; fabbisogno alimentare già presente; coefficiente della dotazione da tarare; builder non ha ancora tempi di costruzione dipendenti dagli L1. |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
