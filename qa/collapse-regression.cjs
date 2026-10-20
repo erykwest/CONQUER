@@ -38,6 +38,19 @@ const square=(x,y,h)=>[{x:x-h,y:y-h},{x:x+h,y:y-h},{x:x+h,y:y+h},{x:x-h,y:y+h}];
   const on=C.blocks(storey).filter(k=>Math.abs(k.restZ-3.6)<.5);
   assert.ok(on.length>0,'some rubble stays on the stump');
   console.log('PASS collapse: deterministic blocks fall, lean and settle; dust; stumps');
+  // Wood breaks into long beams and planks, not cubes; on the ground they lie down.
+  const wood={...spec,id:'w1',seed:'w1',z1:2.4,material:'wood',palette:{side:['#7a5534'],top:['#6b4a2e']}};
+  const pieces=C.blocks(wood);
+  assert.ok(pieces.length>8&&pieces.every(k=>k.kind==='beam'||k.kind==='plank'),'only beams and planks');
+  assert.ok(pieces.every(k=>k.s[0]>=2*Math.max(k.s[1],k.s[2])),'long pieces');
+  assert.ok(pieces.filter(k=>k.kind==='plank').every(k=>k.s[2]<k.s[1]/3),'planks are thin boards');
+  const flat=a=>Math.abs(Math.sin(a))<1e-6;
+  assert.ok(pieces.every(k=>{const q=C.pose(k,1e9);return flat(q.ry)&&(k.kind!=='plank'||flat(q.rx))}),'at rest they lie flat, planks on their face');
+  assert.ok(pieces.some(k=>k.r0[1]!==0),'some start upright, like posts, and topple');
+  // Timber framing: plaster blocks and beams, a roof of boards.
+  const timber=C.blocks({...spec,id:'h1',seed:'h1',z1:2.2,material:'timber',hollow:true,palette:{side:['#c9b896'],top:['#7a4a38'],beam:['#4e392d']}});
+  assert.ok(['block','beam','plank'].every(kind=>timber.some(k=>k.kind===kind)),'plaster, beams and roof boards');
+  assert.ok(timber.filter(k=>k.kind==='beam').every(k=>k.col==='#4e392d'),'beams in the timber colour');
 }
 
 // ---- towers, houses and walls in the siege domain

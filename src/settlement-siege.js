@@ -418,9 +418,17 @@
     return fp.length>=3?[fp]:[];
   }
   const STONE={side:['#635951','#514a44','#7d736b','#9a8e82'],top:['#9a8e82','#8a7f74']};
+  // Wood breaks into beams and planks, timber-framed buildings into plaster and beams
+  // under a roof of boards, masonry into blocks.
+  function collapseMaterial(s){
+    if(s.type==='palisade'||s.material==='wood'||(s.type==='tower'&&isWoodTower(s))||(s.type==='gate'&&typeof isWoodGate==='function'&&isWoodGate(s)))return'wood';
+    if(s.type==='house'||s.type==='tavern'||s.type==='market')return'timber';
+    return'stone';
+  }
   function collapsePalette(s){
-    if(s.type==='palisade'||s.material==='wood'||(s.type==='tower'&&isWoodTower(s)))return{side:['#7a5534','#5e4128','#8a6a42'],top:['#6b4a2e']};
-    if(s.type==='house'||s.type==='tavern'||s.type==='market')return{side:['#c9b896','#a8946f','#b7a582','#6b4a2e'],top:['#7a4a38','#5b3d30']};
+    const m=collapseMaterial(s);
+    if(m==='wood')return{side:['#7a5534','#5e4128','#8a6a42','#6b4a2e'],top:['#6b4a2e','#7a5534']};
+    if(m==='timber')return{side:['#c9b896','#a8946f','#b7a582'],top:['#7a4a38','#5b3d30','#6b4a2e'],beam:['#4e392d','#5e4128']};
     return STONE;
   }
   function startCollapse(s,z0,z1,opts={}){
@@ -431,7 +439,7 @@
     const pts=parts.flat(),cx=pts.reduce((t,p)=>t+p.x,0)/pts.length,cy=pts.reduce((t,p)=>t+p.y,0)/pts.length;
     const id=s.id+':'+(opts.cause||'collapse')+':'+x.ruins.length+':'+State.clock.day+':'+Math.round(z1*100);
     const spec={id,parts:parts.map(p=>p.map(q=>({x:+q.x.toFixed(3),y:+q.y.toFixed(3)}))),z0,z1,ground:groundOf(s),
-      seed:id,palette:collapsePalette(s),lean:opts.lean||null,stump:opts.cause==='storey',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
+      seed:id,palette:collapsePalette(s),material:collapseMaterial(s),lean:opts.lean||null,stump:opts.cause==='storey',hollow:s.type==='house'||(typeof isCivic==='function'&&isCivic(s))};
     const ruin={id,type:'collapse',cause:opts.cause||'destroyed',structure:s.type,x:cx,y:cy,day:State.clock.day,spec};
     if(opts.a)Object.assign(ruin,{a:opts.a,b:opts.b,width:Number(s.width)||.5,height:structureHeight(s)});
     x.ruins.push(ruin);if(x.ruins.length>200)x.ruins.splice(0,x.ruins.length-200);

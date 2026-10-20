@@ -7,7 +7,9 @@
 // is simply the last frame and is rebuilt identically from a saved game.
 //   spec  {id, parts:[[{x,y}...]...], z0, z1, ground, seed, palette:{side:[hex], top:[hex]}, lean:{x,y},
 //          stump:true when what stays standing below z0 has the same footprint (a storey
-//          falls off a tower): blocks landing on it rest on its top, the others on the ground}
+//          falls off a tower): blocks landing on it rest on its top, the others on the ground,
+//          material:'stone'|'wood'|'timber' (wood breaks into long beams and planks; timber
+//          framing into plaster blocks and beams under a roof of boards), palette.beam: timber colour}
 //   mesh(spec,t)  -> {pos (9 per triangle, world U), col (hex per triangle)}
 //   dust(spec,t)  -> [{x,y,z,r,a}] puffs (r in U, a alpha)
 //   duration(spec) -> seconds until the last block is at rest (dust fades 1.6 s later)
@@ -42,7 +44,8 @@
     const R=Math.max(.3,Math.max(...all.map(p=>Math.hypot(p.x-cx,p.y-cy))));
     const lean=spec.lean||{x:rnd()-.5,y:rnd()-.5},ll=Math.hypot(lean.x,lean.y)||1,lx=lean.x/ll,ly=lean.y/ll;
     const ground=spec.ground||0,spread=R+H*.35,peak=Math.min(H*.3+.05,R*.9);
-    const side=spec.palette?.side||['#7d736b'],top=spec.palette?.top||side;
+    const side=spec.palette?.side||['#7d736b'],top=spec.palette?.top||side,beamCol=spec.palette?.beam||side;
+    const mat=spec.material||'stone',pick=list=>list[Math.floor(rnd()*list.length)];
     out=[];
     for(let x=Math.min(...xs)+cell/2;x<Math.max(...xs);x+=cell)for(let y=Math.min(...ys)+cell/2;y<Math.max(...ys);y+=cell){
       const p={x:x+(rnd()-.5)*cell*.3,y:y+(rnd()-.5)*cell*.3};
@@ -59,9 +62,18 @@
         const dx=p.x-cx,dy=p.y-cy,dl=Math.hypot(dx,dy)||1;
         const vx=(lx*.9+dx/dl*.5)*throwOut+(rnd()-.5)*.35,vy=(ly*.9+dy/dl*.5)*throwOut+(rnd()-.5)*.35;
         const delay=h*.18+rnd()*.12+(spec.delay||0);
-        out.push({x:p.x,y:p.y,z:z-sz/2,s:[sz*(.8+rnd()*.5),sz*(.8+rnd()*.4),sz*(.6+rnd()*.4)],
-          vx,vy,vz:rnd()*.4,delay,spin:[(rnd()-.5)*7,(rnd()-.5)*7],yaw:rnd()*Math.PI,
-          col:topLayer?top[Math.floor(rnd()*top.length)]:side[Math.floor(rnd()*side.length)],rest:rnd()});
+        // What breaks off: masonry blocks, or timber as long beams (square section) and planks.
+        let kind='block',col=topLayer?pick(top):pick(side);
+        if(mat==='wood'){if(rnd()>.4)continue;kind=rnd()<.55?'beam':'plank'}
+        else if(mat==='timber'){if(topLayer)kind='plank';else if(rnd()<.3){kind='beam';col=pick(beamCol)}}
+        const s=kind==='beam'?[cell*(2.4+rnd()*2),cell*(.3+rnd()*.12),0]:kind==='plank'?[cell*(2+rnd()*1.5),cell*(.75+rnd()*.3),cell*(.12+rnd()*.05)]
+          :[sz*(.8+rnd()*.5),sz*(.8+rnd()*.4),sz*(.6+rnd()*.4)];
+        if(kind==='beam')s[2]=s[1];
+        // Long pieces tumble end over end, some start upright (posts) and topple.
+        const long=kind!=='block',r0=[0,long&&mat==='wood'&&rnd()<.35?Math.PI/2:0];
+        out.push({x:p.x,y:p.y,z:z-sz/2,s,kind,r0,
+          vx,vy,vz:rnd()*.4,delay,spin:long?[(rnd()-.5)*3,(rnd()-.5)*6]:[(rnd()-.5)*7,(rnd()-.5)*7],yaw:rnd()*Math.PI,
+          col,rest:rnd()});
       }
     }
     // Thin the cloud evenly when the volume is large; keep the shape.
@@ -85,14 +97,23 @@
   // Pose of one block at time t since the collapse started.
   function pose(b,t){
     const tau=Math.max(0,t-b.delay);
-    if(tau<=0)return{x:b.x,y:b.y,z:b.z,rx:0,ry:0};
+    const r0=b.r0||[0,0];
+    if(tau<=0)return{x:b.x,y:b.y,z:b.z,rx:r0[0],ry:r0[1]};
     const fly=Math.min(tau,b.tHit),spinT=Math.min(tau,b.tHit+b.tBounce*.6);
     let x=b.x+b.vx*fly,y=b.y+b.vy*fly,z=b.z+b.vz*fly-G*fly*fly/2;
     if(tau>b.tHit){
       const u=Math.min(tau-b.tHit,b.tBounce),up=-b.vHit*BOUNCE;
       x+=b.vx*.35*u;y+=b.vy*.35*u;z=b.restZ+up*u-G*u*u/2;
     }
-    return{x,y,z:Math.max(b.restZ,z),rx:b.spin[0]*spinT,ry:b.spin[1]*spinT};
+    // On the ground every piece settles on a face. Beams and planks lie down: their long
+    // axis ends horizontal (pitch a multiple of PI), planks on their broad face.
+    let rx=r0[0]+b.spin[0]*spinT,ry=r0[1]+b.spin[1]*spinT;
+    if(tau>b.tHit){
+      const k=clamp((tau-b.tHit)/(b.tBounce+.25),0,1),e=k*k*(3-2*k),half=Math.PI/2;
+      const qx=b.kind==='plank'?Math.PI:half,qy=b.kind==='beam'||b.kind==='plank'?Math.PI:half;
+      rx+=(Math.round(rx/qx)*qx-rx)*e;ry+=(Math.round(ry/qy)*qy-ry)*e;
+    }
+    return{x,y,z:Math.max(b.restZ,z),rx,ry};
   }
   const FACES=[[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]];
   function mesh(spec,t=Infinity){
@@ -101,12 +122,14 @@
       const q=pose(b,t),[sx,sy,sz]=b.s;
       const cy=Math.cos(b.yaw),sy_=Math.sin(b.yaw),cr=Math.cos(q.rx),sr=Math.sin(q.rx),cp=Math.cos(q.ry),sp=Math.sin(q.ry);
       const P=[];
-      for(const dx of [-sx/2,sx/2])for(const dy of [-sy/2,sy/2])for(const dz of [0,sz]){
-        // spin about the block's x then y axis, then yaw; pivot on the block's base centre
+      for(const dx of [-sx/2,sx/2])for(const dy of [-sy/2,sy/2])for(const dz of [-sz/2,sz/2]){
+        // spin about the piece's x then y axis, then yaw, about its centre
         let x=dx,y=dy*cr-dz*sr,z=dy*sr+dz*cr;
         const x2=x*cp+z*sp;z=-x*sp+z*cp;x=x2;
-        P.push([q.x+x*cy-y*sy_,q.y+x*sy_+y*cy,q.z+z]);
+        P.push([q.x+x*cy-y*sy_,q.y+x*sy_+y*cy,z]);
       }
+      // Its lowest corner sits on q.z (the ground, the heap or where it is falling).
+      const lift=q.z-Math.min(...P.map(c=>c[2]));for(const c of P)c[2]+=lift;
       for(const [a,b2,c,d] of FACES)for(const tri of [[a,b2,c],[a,c,d]]){for(const k of tri)pos.push(P[k][0],P[k][1],P[k][2]);col.push(b.col)}
     }
     return{pos,col};
