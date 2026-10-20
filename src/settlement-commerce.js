@@ -67,6 +67,12 @@
     if(!c.shops||typeof c.shops!=='object')c.shops={};
     if(!c.services||typeof c.services!=='object')c.services={};
     if(!c.journeys||typeof c.journeys!=='object')c.journeys={};
+    // Migration must be visible even to callers that read state() without
+    // invoking sync(). Old manifests did not have a money payload.
+    for(const j of Object.values(c.journeys)){
+      if(!j.purse)j.purse={gold:0,reservedGold:0};
+      if(!j.transport)j.transport=caravanQuote(j.cargo||[],j.purse.gold,{legacyMixed:true});
+    }
     c.version=2;
     return c;
   }
@@ -96,10 +102,6 @@
       };
     }
     for(const j of Object.values(c.journeys)){
-      // Legacy v1 manifests had only goods, never money. Do not infer,
-      // reserve, or mint funds while migrating old save-game journeys.
-      if(!j.purse)j.purse={gold:0,reservedGold:0};
-      if(!j.transport)j.transport=caravanQuote(j.cargo||[],j.purse.gold,{legacyMixed:true});
       if(j.lodgingId&&!c.services[j.lodgingId]){
         j.lodgingId=null;
         if(j.status==='lodged')j.status='arrived';
