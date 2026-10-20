@@ -352,6 +352,55 @@ test('Flat subtracts a square hole from a terrace without missing 3D ground',()=
   assert.ok(Math.abs(area-40000)<.05,'no overlapping/missing mesh triangles');
   assert.ok(Math.abs(raised-48)<.05,'8×8 raised plateau less a 4×4 Flat cut');
 });
+test('Flat closes the side of a graded slope with continuously varying heights',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  context.terrainBaseElevation=()=>0;
+  const hill=api.preview({x:100,y:100},{mode:'terrain',shape:'square',radius:4,delta:1,magnet:false});
+  assert.equal(api.commit(hill),true);
+  const cut=api.preview({x:104.5,y:100},{mode:'flat',shape:'square',radius:2});
+  assert.equal(cut.ok,true,cut.reason);
+  assert.equal(api.commit(cut),true);
+  assert.equal(api.elevationAt({x:104,y:100},0),0,'inside Flat is H0');
+  assert.ok(api.elevationAt({x:104,y:102.01},0)>.01,'uphill side survives immediately outside the cut');
+  const faces=api.flatWallSegments(api.edits()[1]);
+  assert.ok(faces.length>4,'the variable-height slope is sampled more finely than four static quads');
+  assert.ok(faces.some(f=>Math.abs(f.targetZ-f.targetZB)>.01),
+    'cut top follows the changing height of the graded slope');
+  assert.ok(faces.every(f=>f.baseZ>=0&&f.baseZB>=0&&f.targetZ>=0&&f.targetZB>=0));
+  assert.ok(faces.some(f=>f.targetZ>.2)&&faces.some(f=>f.targetZ<.99),
+    'cut wall has intermediate top heights, not one extruded constant H');
+  const mesh=[];
+  context.meshBuilder=()=>({tris:[],face:(points,color)=>mesh.push({points,color})});
+  context.terrainElevation=p=>api.elevationAt(p,0);
+  const triangles=vm.runInContext('buildTerrain()',context);
+  let area=0;
+  for(let i=0;i<triangles.length;i+=9){
+    const [ax,ay,,bx,by,,cx,cy]=triangles.slice(i,i+9);
+    area+=Math.abs((bx-ax)*(cy-ay)-(by-ay)*(cx-ax))/2;
+  }
+  assert.ok(Math.abs(area-40000)<.05,'slope and Flat meet without missing or duplicated ground area');
+  vm.runInContext('buildTerrainEdges()',context);
+  const walls=mesh.filter(f=>f.color==='#686057');
+  assert.ok(walls.length>=faces.length,'WebGL creates an actual vertical face for each sampled cut segment');
+  assert.ok(walls.some(({points})=>Math.abs(points[2].z-points[3].z)>.01),
+    'WebGL wall top is allowed to slope between the two endpoints');
+  assert.ok(walls.every(({points})=>points.every(p=>Number.isFinite(p.z))));
+});
+test('Flat cuts a natural slope and does not create walls on untouched H0',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  context.terrainBaseElevation=p=>Math.max(0,(p.x-95)/7);
+  const empty=api.preview({x:85,y:100},{mode:'flat',shape:'square',radius:2});
+  assert.equal(api.commit(empty),true);
+  assert.equal(api.flatWallSegments(api.edits()[0]).length,0,'no unnecessary wall on H0 ground');
+  const cut=api.preview({x:100,y:100},{mode:'flat',shape:'round',radius:3});
+  assert.equal(api.commit(cut),true);
+  const walls=api.flatWallSegments(api.edits()[1]);
+  assert.ok(walls.length>0,'even natural relief needs a cut retaining face');
+  assert.ok(walls.some(f=>Math.abs(f.targetZ-f.targetZB)>.002),'natural slope varies along cut ring');
+  assert.equal(api.elevationAt({x:100,y:100},context.terrainBaseElevation({x:100,y:100})),0);
+  assert.ok(api.elevationAt({x:104,y:100},context.terrainBaseElevation({x:104,y:100}))>0);
+  context.terrainBaseElevation=()=>0;
+});
 test('Flat sets natural terrain to H0 and later works can rebuild',()=>{
   context.State.relief.terraforming=[];context.State.structures=[];
   context.terrainBaseElevation=()=>2.35;
