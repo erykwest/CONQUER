@@ -16,6 +16,8 @@ function drawDayNightOverlay(){
 function drawNightLights(){
   const nf=nightFactor();if(nf<=.01)return;
   const t0=performance.now();
+  window.ConquerWorld3D?.drawEmissive?.();
+  window.ConquerCutawayFurniture?.drawEmissive2D(nf);
   drawFacadeWindows(true,nf);
   drawFireGlows(nf);
   const ms=performance.now()-t0;
