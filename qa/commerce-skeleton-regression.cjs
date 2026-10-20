@@ -45,7 +45,7 @@ test('commerce boots empty without L4+ resident inflation or phantom transaction
     l4PrimarySites:1,l4PlusPlanned:0,l4PlusPresent:0,
     l4PlusDeclaredGold:0,l4PlusHeldGold:0,l4PlusWagons:0,
     innBeds:0,innOccupied:0});
-  assert.equal(h.c.state().version,2);
+  assert.equal(h.c.state().version,3);
   assert.deepEqual(asObject(before.population),asObject(after.population));
   assert.equal(after.castleGold,before.castleGold);
   assert.equal(h.e.GOODS.length,6,'no extra market goods before approval of actual recipes');
@@ -102,14 +102,14 @@ test('resident L4+ trip and foreign L4+ manifest do not create cash or goods',()
   assert.equal(h.c.snapshot().l4PlusDeclaredGold,62);
   assert.equal(h.c.snapshot().l4PlusHeldGold,0,'planning does not take coins from wallet');
   assert.equal(h.c.snapshot().l4PlusWagons,2,'each shipment has its own wagon');
-  assert.equal(h.c.state().journeys.out.purse.gold,12);
+  assert.equal(h.c.state().journeys.out.chest.gold,12);
   assert.equal(h.c.snapshot().l4PlusPresent,0);
   assert.deepEqual(asObject(h.e.population()),asObject(before.population));
   assert.equal(h.e.snapshot().castleGold,before.castleGold);
   assert.deepEqual(asObject(h.e.snapshot().market),asObject(before.market));
   assert.equal(h.c.state().journeys.incoming.cargo[0].qty,4,'manifest does not materialize stock');
 });
-test('one commodity per journey; coins are a physical purse not a second market good',()=>{
+test('one commodity per journey; coins are a physical chest not a second market good',()=>{
   const h=harness(),before=h.e.snapshot(),wallet=h.e.state().wallet.L4;
   assert.equal(h.c.planJourney({id:'mixed',originId:'x',destinationId:'well',
     cargo:[{good:'stone',qty:1},{good:'luxury',qty:1}],coinGold:20}),false);
@@ -122,7 +122,7 @@ test('one commodity per journey; coins are a physical purse not a second market 
   assert.equal(h.c.planJourney({id:'only-gold',originId:'x',destinationId:'well',
     coinGold:120}),true);
   assert.deepEqual(asObject(h.c.state().journeys['only-gold'].cargo),[]);
-  assert.deepEqual(asObject(h.c.state().journeys['only-gold'].purse),
+  assert.deepEqual(asObject(h.c.state().journeys['only-gold'].chest),
     {gold:120,reservedGold:0});
   assert.equal(h.c.state().journeys['only-gold'].transport.wagons,1,
     'a buying trip brings an empty cart');
@@ -148,7 +148,7 @@ test('capacity is based on single cargo type, not on coin amount',()=>{
   assert.equal(h.c.caravanQuote([],500).wagons,1);
   assert.equal(h.c.caravanQuote([{good:'stone',qty:2},{good:'food',qty:2}],1),null);
 });
-test('resident L4 purse is escrowed from existing wallet, and cancelling refunds once',()=>{
+test('resident L4 chest is escrowed from existing wallet, and cancelling refunds once',()=>{
   const h=harness(),before=h.e.state().wallet.L4,stock=asObject(h.e.snapshot().market);
   const trip={id:'merchant',source:'resident',houseId:'home4',originId:'well',
     destinationId:'foreign',cargo:[{good:'metal',qty:2}],coinGold:120};
@@ -156,16 +156,16 @@ test('resident L4 purse is escrowed from existing wallet, and cancelling refunds
   assert.equal(h.e.state().wallet.L4,before,'planning alone cannot duplicate spendable gold');
   assert.equal(h.c.reserveJourneyCoins('merchant'),true);
   assert.equal(h.e.state().wallet.L4,before-120);
-  assert.equal(h.c.state().journeys.merchant.purse.reservedGold,120);
+  assert.equal(h.c.state().journeys.merchant.chest.reservedGold,120);
   assert.equal(h.c.snapshot().l4PlusHeldGold,120);
   assert.equal(h.c.reserveJourneyCoins('merchant'),false,'no second wallet debit');
   assert.equal(h.c.cancelPlannedJourney('merchant'),true);
   assert.equal(h.e.state().wallet.L4,before,'cancellation returns exact reserved gold');
   assert.equal(h.c.cancelPlannedJourney('merchant'),false,'no second refund');
   assert.deepEqual(asObject(h.e.snapshot().market),stock,
-    'the coin purse must not modify goods stock');
+    'the coin chest must not modify goods stock');
 });
-test('no phantom purse: budget check, external funds and save/reload',()=>{
+test('no phantom chest: budget check, external funds and save/reload',()=>{
   const h=harness(),wallet=h.e.state().wallet.L4;
   assert.equal(h.c.planJourney({id:'unfunded',source:'resident',houseId:'home4',
     originId:'well',destinationId:'city',coinGold:wallet+1}),true);
@@ -174,12 +174,12 @@ test('no phantom purse: budget check, external funds and save/reload',()=>{
   assert.equal(h.c.planJourney({id:'external',originId:'elsewhere',
     destinationId:'well',coinGold:9000}),true);
   assert.equal(h.c.reserveJourneyCoins('external'),false);
-  assert.equal(h.e.state().wallet.L4,wallet,'foreign purse never debits or credits local cash');
+  assert.equal(h.e.state().wallet.L4,wallet,'foreign chest never debits or credits local cash');
   assert.equal(h.c.cancelPlannedJourney('unfunded'),true);
   const saved=asObject(h.State.economy),resumed=harness(saved);
   assert.equal(resumed.c.snapshot().l4PlusDeclaredGold,9000);
   assert.equal(resumed.e.state().wallet.L4,wallet);
-  assert.equal(resumed.c.state().journeys.external.purse.reservedGold,0);
+  assert.equal(resumed.c.state().journeys.external.chest.reservedGold,0);
 });
 test('escrow survives save/reload without duplicate transfer or loss',()=>{
   const h=harness(),wallet=h.e.state().wallet.L4;
@@ -200,11 +200,11 @@ test('legacy V1 cargo with multiple goods remains stored but new trips are monot
   const saved=asObject(h.State.economy);
   saved.commerce.version=1;
   saved.commerce.journeys.historic.cargo.push({good:'food',qty:1});
-  delete saved.commerce.journeys.historic.purse;
+  delete saved.commerce.journeys.historic.chest;
   delete saved.commerce.journeys.historic.transport;
   const resumed=harness(saved);
-  assert.equal(resumed.c.state().version,2);
-  assert.deepEqual(asObject(resumed.c.state().journeys.historic.purse),
+  assert.equal(resumed.c.state().version,3);
+  assert.deepEqual(asObject(resumed.c.state().journeys.historic.chest),
     {gold:0,reservedGold:0});
   assert.equal(resumed.c.state().journeys.historic.cargo.length,2,
     'migration does not erase preexisting multis');
@@ -279,6 +279,22 @@ test('old saves gain commerce state without resetting existing balances',()=>{
   resumed.e.reset();
   assert.equal(resumed.c.snapshot().l3Shops,0,'new game clears commerce');
   assert.equal(resumed.c.snapshot().l4PlusPlanned,0,'new game clears manifests');
+});
+test('v2 money purse migrates to physical chest without replaying L4 escrow',()=>{
+  const h=harness(),wallet=h.e.state().wallet.L4;
+  h.c.planJourney({id:'legacy-funded',source:'resident',houseId:'home4',
+    originId:'well',destinationId:'foreign',coinGold:25});
+  assert.equal(h.c.reserveJourneyCoins('legacy-funded'),true);
+  const saved=asObject(h.State.economy),j=saved.commerce.journeys['legacy-funded'];
+  saved.commerce.version=2;
+  j.purse=j.chest;delete j.chest;
+  const resumed=harness(saved),loaded=resumed.c.state().journeys['legacy-funded'];
+  assert.deepEqual(asObject(loaded.chest),{gold:25,reservedGold:25});
+  assert.equal(loaded.purse,undefined);
+  assert.equal(resumed.e.state().wallet.L4,wallet-25);
+  assert.equal(resumed.c.reserveJourneyCoins('legacy-funded'),false,'no duplicated debit');
+  assert.equal(resumed.c.cancelPlannedJourney('legacy-funded'),true);
+  assert.equal(resumed.e.state().wallet.L4,wallet,'no money lost during migration');
 });
 test('script order, persistence and L3 art direction stay compatible',()=>{
   assert.ok(html.indexOf('settlement-economy.js')<html.indexOf('settlement-commerce.js'));
