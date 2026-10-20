@@ -38,6 +38,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**21/10/2026 — Monete come carico carovane L4+ (PR #55 Draft):** esteso lo skeleton commerciale con carichi monotipo e borsa di monete che può essere accantonata dal wallet L4. Capienza 100/carretto e peso merceologico già quotabili, ma i costi giornalieri sono soltanto preventivi. **Sviluppo successivo:** banchina/mercato → strada maestra e quattro exit point reali → identità persistenti di città/celle della mappa mondiale → giorni di viaggio e spese effettive → transazioni atomiche di acquisto/vendita, eventuale ritorno carico/scarico; le navi riusano la stessa separazione merci/monete. Non introdurre carichi di più tipi; il cibo dell'equipaggio sarà costo di mantenimento, non secondo articolo di vendita.
+
+## Prossimo passo
+
 **Skeleton commerciale L3/L4/L4+ (20/10/2026, PR #55 Draft):** modello dati e primi contratti disponibili, senza merci o figure fantasma: L3 produce/vende localmente e gestirà servizi (locanda/chiesa), L4 possiede i siti produttivi, L4+ è un ruolo di viaggio import/export che richiede, per alloggiare, posti liberi in locanda. Il codice attuale crea solo blueprint L3, descrittori servizi, viste L4 e manifesti L4+; nessun commercio operativo.
 **Dipendenza successiva:** decidere merci effettive/ricette e pagamenti L3 → integrazione di acquisto/vendita locale con scorte vere; quindi proprietà/investimento L4 e solo dopo carovane inter-città con carico, rischio e transazioni atomiche. La capienza della locanda dovrà derivare da stanze effettive. [Contratto](../commerce-skeleton.md).
 
