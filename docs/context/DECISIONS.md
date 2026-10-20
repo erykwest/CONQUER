@@ -59,6 +59,8 @@
 
 | D-041 | VINCOLO + CODICE SKELETON (21/10) | **Carovana mercantile = un solo tipo di merce + monete d'oro fisicamente trasportate.** Le monete servono per acquisti all'estero, non per occupare artificiosamente la capienza. | Carro da 100 punti di carico, ingombri per bene e costo indicativo per carro/giorno; viaggio di sola compravendita possibile con carro inizialmente vuoto e borsa di monete. Le monete dei mercanti locali vengono riservate dal wallet L4, senza creazione di denaro; i legacy save misti restano intatti. Viaggi e scambi reali ancora futuri. [Specifica](../commerce-skeleton.md). |
 
+| D-042 | VINCOLO DESIGN + CODICE SKELETON (21/10) | Il giocatore invia **tributi/doni dal Mastio** con merci e/o **forziere** di monete, con scorta signorile prenotabile da menu. **Carretti** per logistica interna e piccole spedizioni; **carri** per merce; **carrozze** per trasferimento nobili (preferenza dame, non esclusività). | I fondi del signore possono essere accantonati realmente senza falsi viaggi; i posti di caserma prenotati non costituiscono guardie effettivamente assegnate. Mercenari L4+ con cuoio e araldica marrone neutra, costo consigliato **2× paga giornaliera L2** per giorno di viaggio, non ancora addebitato. [Contratto](../convoys-skeleton.md). |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
