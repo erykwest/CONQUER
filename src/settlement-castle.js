@@ -958,6 +958,7 @@ function drawCastleUnionDetails(){
     ?buildBattlementOcclusionFrame():null;
   for(const s of State.structures){
     if(!isCastlePart(s)||underConstruction(s)||structureCutaway(s))continue;
+    withStructureVisualMaterial(s,()=>{
     if(s.type==='built'){
       drawBuiltDetails(s,false);
       drawBuiltArcade(s);
@@ -970,6 +971,7 @@ function drawCastleUnionDetails(){
       const h=structureHeight(s),a=w2s({x:s.x,y:s.y},h+.03),q={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},b=w2s(q,h+.03);
       ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
     }
+    });
   }
 }
 function drawCastleSelection(){

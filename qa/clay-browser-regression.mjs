@@ -43,18 +43,34 @@ try{
       await page.screenshot({path:'artifacts/clay-'+mode+'-'+palette+'-'+results.length+'.png'});
       assert.equal(snapshot.palette,palette,'palette transition mismatch');
       assert.ok(snapshot.structures>=2,'sample structures must exist');
-      const materials=await page.evaluate(()=>({
+      const materials=await page.evaluate(()=>{
+        // The UI selections apply to future work only, never recolour existing IDs.
+        setBuildMasonryMaterial('brick');
+        setPrivateMasonryMaterial('brick');
+        const before=State.structures.map(s=>[s.id,s.masonryMaterial]);
+        setPrivateMasonryMaterial('stone');
+        const unchanged=before.every(([id,material])=>State.structures.find(s=>s.id===id).masonryMaterial===material);
+        setPrivateMasonryMaterial('brick');
+        const result=({
         house:State.structures.find(x=>x.id==='clay-qa-house').masonryMaterial,
         tower:State.structures.find(x=>x.id==='clay-qa-tower').masonryMaterial,
         uiBuilder:!!document.querySelector('[data-build-masonry="brick"]'),
         uiPrivate:!!document.querySelector('[data-private-masonry="brick"]'),
         stone:constructionCost({type:'tower',material:'stone',masonryMaterial:'stone',shape:'square',size:1.5,level:1}),
-        brick:constructionCost({type:'tower',material:'stone',masonryMaterial:'brick',shape:'square',size:1.5,level:1})
-      }));
+        brick:constructionCost({type:'tower',material:'stone',masonryMaterial:'brick',shape:'square',size:1.5,level:1}),
+        selectedBuild:State.buildMasonryMaterial,
+        selectedPrivate:State.village.privateMasonryMaterial,
+        oldStructuresUntouched:unchanged
+        });
+        return result;
+      });
       assert.equal(materials.house,'brick');assert.equal(materials.tower,'stone');
       assert.ok(materials.uiBuilder&&materials.uiPrivate,'material selectors present');
       assert.equal(materials.brick.clay,materials.stone.stone);
       assert.equal(materials.brick.stone,undefined);
+      assert.equal(materials.selectedBuild,'brick');
+      assert.equal(materials.selectedPrivate,'brick');
+      assert.equal(materials.oldStructuresUntouched,true);
       if(mode==='webgl'){
         assert.equal(snapshot.mode3d,true,'WebGL2 should be active in Chromium');
         assert.ok(snapshot.world3d.buffers['buildings#n']>0,'house geometry disappeared');
