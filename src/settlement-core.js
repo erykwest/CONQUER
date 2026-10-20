@@ -112,7 +112,7 @@ const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},buildMasonryMaterial:'stone',resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 // DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
 const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
 State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
@@ -181,9 +181,20 @@ const CLAY_VISUAL_SWATCHES=Object.freeze({
   '#3b302b':'#a85037',
   '#493930':'#bd6647'
 });
+let structureVisualMaterial=null;
+function masonryMaterial(s){
+  if(!s||s.material==='wood'||s.type==='palisade'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
+  return s.masonryMaterial==='brick'?'brick':'stone';
+}
+function withStructureVisualMaterial(s,paint){
+  const previous=structureVisualMaterial;
+  structureVisualMaterial=masonryMaterial(s);
+  try{return paint()}finally{structureVisualMaterial=previous}
+}
 function visualPaletteColor(color){
-  if(State.visualPalette!=='clay'||typeof color!=='string')return color;
-  return CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color;
+  if(typeof color!=='string')return color;
+  return (State.visualPalette==='clay'||structureVisualMaterial==='brick')
+    ?CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color:color;
 }
 // DEV VISUAL PALETTE END
 const STRUCTURE_ANGLE_STEP_DEG=15;
@@ -330,7 +341,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const snapGrid=v=>Math.round(v/GRID)*GRID;
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
-const RES_ORDER=['gold','stone','wood','metal'];
+const RES_ORDER=['gold','stone','clay','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
 function variantSchema(s){return s&&STRUCTURE_VARIANTS[s.type]||null}
 function variantDefaults(s){return s&&STRUCTURE_VARIANT_DEFAULTS[s.type]||null}
@@ -546,7 +557,7 @@ function levelCostFactor(s){
   return[1,1.8][l-1];
 }
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
-function constructionCost(s){
+function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
@@ -569,7 +580,12 @@ function constructionCost(s){
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   return{};
 }
-function costText(cost){const icons={gold:'🪙',stone:'🪨',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
+function constructionCost(s){
+  const cost=baseConstructionCost(s);
+  if(s?.masonryMaterial==='brick'&&cost.stone>0){cost.clay=(cost.clay||0)+cost.stone;delete cost.stone}
+  return cost;
+}
+function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
 function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v)}
 function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
 function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}

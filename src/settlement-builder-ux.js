@@ -68,6 +68,7 @@
   const combatPanel=root.querySelector('#combatControls');
   const originalButtons=[...root.querySelectorAll('button')];
   const controls=[
+    {name:'Materiale di muratura',icon:'built',category:'all',selectors:['[data-build-masonry]']},
     {name:'Pianta torre quadrata',icon:'square',selectors:['[data-tower="square"]']},
     {name:'Pianta torre rotonda',icon:'round',selectors:['[data-tower="round"]']},
     {name:'Altezza torre',icon:'level',selectors:['[data-tower-level]']},
@@ -133,9 +134,9 @@
       const b=originalButtons.find(x=>x.matches(selector));
       if(!b)continue;iconize(b,label,icon);catalog.append(b);
     }
-    options.hidden=!['defense','infrastructure'].includes(currentCategory);
+    options.hidden===false;options.hidden=currentCategory==='combat';
     options.querySelectorAll('.ux-option-line').forEach(line=>{
-      line.style.display=(line.dataset.category||'defense')===currentCategory?'flex':'none';
+      line.style.display=(line.dataset.category==='all'||(line.dataset.category||'defense')===currentCategory)?'flex':'none';
     });
   }
   for(const group of groups){
