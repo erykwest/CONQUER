@@ -10,6 +10,8 @@ on:
       - 'src/settlement-population-fields.js'
       - 'qa/jobmanager-regression.cjs'
       - 'src/settlement-population-female.js'
+      - 'src/settlement-population-male.js'
+      - 'qa/male-routines-regression.cjs'
       - 'src/settlement-population-residents.js'
       - 'qa/female-routines-regression.cjs'
       - 'qa/economy-rations-regression.cjs'
@@ -25,6 +27,7 @@ jobs:
           node-version: '22'
       - run: node qa/jobmanager-regression.cjs
       - run: node qa/female-routines-regression.cjs
+      - run: node qa/male-routines-regression.cjs
       - run: node qa/economy-regression.cjs
       - run: node qa/economy-rations-regression.cjs
       - run: node qa/economy-industries-regression.cjs

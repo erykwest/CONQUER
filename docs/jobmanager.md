@@ -21,6 +21,16 @@ The `leisure Female` social target is the nearest reachable public plaza (existi
 
 QA: `node qa/female-routines-regression.cjs`, also in the Job Manager workflow.
 
+## Adult male daily and weekend routines — visual (L1–L4)
+
+- **Mon–Fri:** each adult male maintains his existing economic/field routine until **18:00**, then moves to **`leisure male`** and returns home later in the evening.
+- **Saturday morning:** go to market, then `leisure male` on Saturday afternoon.
+- **Sunday morning:** go to church, then `leisure male` on Sunday afternoon (not ordinary field/construction work).
+- Initial `leisure male` venues: **tavern** if accessible; fallback to the market plaza, then the well plaza. `LEISURE_VENUES` is an extensible registry for future social activities. Use completed buildings, collision-aware entry points and real existing paths; no invented destinations or teleporting when venues are unavailable.
+- The male routine runs as a *visual schedule*, never books a second job, production, consumption or happiness benefit. Children are unchanged. Combat still has the final say about whether a civilian evacuates or follows a normal route.
+
+Regression: `node qa/male-routines-regression.cjs`, integrated with the six existing suites.
+
 ## Daily scheduling and food protection
 
 The manager reserves qualified L1 herders using an *indicative* 14-day food cover estimate from **accessible civilian economic food stock** (market lots; castle reserves only with an active ration order) and weekly demand of 0.55 food per resident. Estimated husbandry output is 0.9 food / employed L1 / working day. With any valid herd, at least one L1 is protected. Food risk remains possible when production is structurally insufficient; the scheduler cannot create livestock or feed people if there is none.

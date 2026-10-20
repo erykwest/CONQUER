@@ -2,6 +2,12 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Routine maschili leisure e weekend (`jobmanager`)
+
+- Dopo le 18:00 lun-ven gli adulti maschi L1-L4 vanno in **leisure male**; mercato sabato mattina, chiesa domenica mattina, leisure nei pomeriggi di entrambi i giorni.
+- Nuovo modulo `settlement-population-male.js`: locanda prioritariamente, poi piazza e pozzo come alternative raggiungibili, estendibile a future attivita; conserva lavoro mattutino e gestione militare esterna.
+- Copertura `qa/male-routines-regression.cjs` nel workflow jobmanager, senza creare produzione o risorse aggiuntive.
+
 ## 2026-10-20 — Routine femminili L1–L4 (`jobmanager`)
 
 - Nuovo `settlement-population-female.js` separato dalla logica economica. Attivita lotti L1/L2, mercato L3, leisure L4, sabato mercato/domenica chiesa per tutte le classi.

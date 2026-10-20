@@ -2,7 +2,7 @@
 // Resident families, demographics and appearance. Extracted verbatim from settlement-population.js.
 function peasantAnimationActive(){
   const day=peasantVisualDay(),frac=day-Math.floor(day);
-  return frac>=.035&&frac<=.67&&completedSettlement('house').length>0;
+  return frac>=.035&&frac<=.96&&completedSettlement('house').length>0;
 }
 function housePopulationCapacity(house){
   const level=houseLevel(house);
@@ -74,6 +74,11 @@ function familyPosition(house,day){
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
 }
 function residentClassPosition(house,resident,day,assignment){
+  // Male leisure and Sunday church take precedence over all day-job positions,
+  // including L1 shepherds/builders. Before 18:00 on weekdays, work is intact.
+  if(resident.sex==='male'&&resident.age==='adult'&&
+    window.ConquerMaleRoutines?.handles(State.clock.day))
+    return window.ConquerMaleRoutines.position(house,resident,State.clock.day);
   // The L1 adult follows their assigned job; no L1 field workers.
   if(houseLevel(house)===1&&resident.sex==='male'&&resident.age==='adult'&&resident.index===0){
     const job=window.ConquerJobManager?.plan(State.clock.day).assigned.get(house.id);
@@ -94,7 +99,7 @@ function residentClassPosition(house,resident,day,assignment){
   // the old all-civilians Sunday shutdown or male artisan/merchant routines.
   if(resident.sex==='female'&&resident.age==='adult')
     return window.ConquerFemaleRoutines?.position(house,resident,State.clock.day)??null;
-  if(weekly===6)return null; // Existing Sunday rest for men and children.
+  if(weekly===6)return null; // Children retain their old Sunday rest.
   if(weekly===5)return familyPosition(house,State.clock.day);
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   // Field routes belong exclusively to L2 men.
