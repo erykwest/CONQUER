@@ -21,11 +21,11 @@ function fieldQuadFromCell(cell,site){
 function fieldVoronoiQuad(field,rnd,limit=null){
   const site={x:field.x,y:field.y},angle=field.angle||0;
   for(let attempt=0;attempt<16;attempt++){
-    let cell=limit?limit.slice():rectWorldPoints(site.x,site.y,9,9,angle);
+    let cell=limit?limit.slice():rectWorldPoints(site.x,site.y,11,11,angle);
     // Four nearby virtual sites bound an otherwise unbounded rural cell.
     for(let i=0;i<4;i++){
       const a=angle+i*Math.PI/2+(rnd()-.5)*(limit?.08:.45);
-      const r=limit?(i%2?(field.h||2):(field.w||3))*(.92+rnd()*.06):3.5+rnd()*3.5;
+      const r=limit?(i%2?(field.h||2):(field.w||3))*(.92+rnd()*.06):4.5+rnd()*2.5;
       const other={x:site.x+Math.cos(a)*r,y:site.y+Math.sin(a)*r};
       cell=urbanClip(cell,other.x-site.x,other.y-site.y,
         (other.x*other.x+other.y*other.y-site.x*site.x-site.y*site.y)/2);
@@ -50,7 +50,7 @@ function fieldPoints(field){
 }
 function fieldAllowed(field,spawnContext=null){
   const poly=fieldPoints(field);
-  if(!fieldQuadValid(poly)||!urbanParcelAllowed(poly,field.id))return false;
+  if(!fieldQuadValid(poly)||!urbanFieldParcelAllowed(poly,field.id))return false;
   if(urbanLots().some(lot=>urbanPolygonsOverlap(poly,lot.points)))return false;
   // Candidate evaluation can run dozens of times in one growth step.
   // Reuse the live occupants snapshot instead of recomputing all residents
@@ -62,9 +62,8 @@ function fieldAllowed(field,spawnContext=null){
     if(s.type==='field'&&urbanPolygonsOverlap(poly,fieldPoints(s)))return false;
     if(s.type==='road'&&roadTouchesPolygon(s,poly,.12))return false;
   }
-  // urbanParcelAllowed already checked the *entire* polygon, including
-  // rivers/forests/steep slopes. Do not use environmentBlocksPoint('settlement')
-  // here: that legacy point validator also rejects ordinary gentle hills.
+  // urbanFieldParcelAllowed checked the complete whitezone/H0 polygon,
+  // including rivers, forests and hillside terraces.
   return true;
 }
 function fieldLayout(field){
