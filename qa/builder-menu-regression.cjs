@@ -28,5 +28,5 @@ assert.match(css,/#devTools\{[^}]*max-height:calc\(100% - 24px\)/);
 assert.match(css,/#devToggle\{[^}]*flex:0 0 34px/);
 assert.match(css,/#devPanel\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*overscroll-behavior:contain/);
 assert.match(html,/settlement\.css\?v=dev-scroll-mills-1/);
-assert.match(html,/settlement-builder-ux\.js\?v=dev-scroll-mills-1/);
+assert.match(html,/settlement-builder-ux\.js\?v=terraform-square-joins-1/);
 console.log('PASS DEV panel scroll and both original mill commands visible in the compact Builder palette');

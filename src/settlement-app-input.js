@@ -358,7 +358,16 @@ for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
   const radius=Number(document.querySelector('[data-terraform-radius].active')?.dataset.terraformRadius)||4;
   const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
   const mode=b.dataset.terraform==='walled'?'walled':'terrain';
-  setTool({kind:'terraform',mode,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
+  const shape=document.querySelector('[data-terraform-shape].active')?.dataset.terraformShape==='square'?'square':'round';
+  setTool({kind:'terraform',mode,shape,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+shape+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
+};
+for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=>{
+  const shape=b.dataset.terraformShape==='square'?'square':'round';
+  document.querySelectorAll('[data-terraform-shape]').forEach(x=>x.classList.toggle('active',x===b));
+  if(State.tool.kind==='terraform'){
+    State.tool.shape=shape;State.draft=null;
+    status('Terraforming shape: '+shape);draw();
+  }
 };
 for(const b of document.querySelectorAll('[data-terraform-delta]'))b.onclick=()=>{
   const delta=Number(b.dataset.terraformDelta)<0?-1:1;
