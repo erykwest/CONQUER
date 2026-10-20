@@ -138,6 +138,11 @@ function urbanFieldParcelAllowed(points,fieldId){
     if(window.ConquerCombat?.areaState(p).yellow||terrainPlateauElevation(p)!==0)return false;
   }
   for(const p of points)if(window.ConquerCombat?.areaState(p).yellow||terrainPlateauElevation(p)!==0)return false;
+  // Small painted yellow islands can fall between the regular samples.
+  // Testing brush centres avoids accepting such enclosed zoning pockets.
+  for(const zone of window.ConquerCombat?.yellowGeometry?.()||[]){
+    if(zone.mode==='yellow'&&urbanContains(points,zone)&&window.ConquerCombat.areaState(zone).yellow)return false;
+  }
   for(const other of State.structures){
     if(other.id===fieldId||other.type==='field'||other.type==='road')continue;
     if(urbanBuildingPolygons(other).some(poly=>urbanPolygonsOverlap(points,poly)))return false;
