@@ -21,11 +21,11 @@ function fieldQuadFromCell(cell,site){
 function fieldVoronoiQuad(field,rnd,limit=null){
   const site={x:field.x,y:field.y},angle=field.angle||0;
   for(let attempt=0;attempt<16;attempt++){
-    let cell=limit?limit.slice():rectWorldPoints(site.x,site.y,11,11,angle);
+    let cell=limit?limit.slice():rectWorldPoints(site.x,site.y,9,9,angle);
     // Four nearby virtual sites bound an otherwise unbounded rural cell.
     for(let i=0;i<4;i++){
       const a=angle+i*Math.PI/2+(rnd()-.5)*(limit?.08:.45);
-      const r=limit?(i%2?(field.h||2):(field.w||3))*(.92+rnd()*.06):4.5+rnd()*2.5;
+      const r=limit?(i%2?(field.h||2):(field.w||3))*(.92+rnd()*.06):3.5+rnd()*3.5;
       const other={x:site.x+Math.cos(a)*r,y:site.y+Math.sin(a)*r};
       cell=urbanClip(cell,other.x-site.x,other.y-site.y,
         (other.x*other.x+other.y*other.y-site.x*site.x-site.y*site.y)/2);
@@ -35,7 +35,16 @@ function fieldVoronoiQuad(field,rnd,limit=null){
       const nx=other.x-site.x,ny=other.y-site.y;
       cell=urbanClip(cell,nx,ny,(other.x*other.x+other.y*other.y-site.x*site.x-site.y*site.y)/2);
     }
-    const quad=fieldQuadFromCell(cell,site);if(quad)return quad;
+    const quad=fieldQuadFromCell(cell,site);
+    if(quad){
+      // Approx. twice the area of the old farm while preserving the 6U
+      // side-length contract. Never enlarge legacy/migrated footprints.
+      const longest=Math.max(...quad.map((p,i)=>dist(p,quad[(i+1)%4])));
+      const factor=limit?1:Math.min(Math.SQRT2,FIELD_RULES.maxSide/longest);
+      return factor<=1?quad:quad.map(p=>({
+        x:site.x+(p.x-site.x)*factor,y:site.y+(p.y-site.y)*factor
+      }));
+    }
   }
   return null;
 }
