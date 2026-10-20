@@ -39,6 +39,13 @@
 - **SALVATAGGI:** i vecchi cantieri manuali con `startedDay/completeDay` vengono convertiti mantenendo la percentuale realizzata, senza avanzamento gratuito o doppie notifiche. Nuovi cantieri salvano il lavoro effettuato. Costruzioni auto-generate mantengono il timer precedente.
 - **QA:** `qa/construction-workers-regression.cjs` aggiunta al workflow economico; `main` e produzione non modificati. Da verificare effettiva mobilità/animazione degli operai e end-to-end browser.
 
+## L1 visibili ai cantieri — tranche 20/10/2026, PR #55 in Draft
+
+- **Sulla branch:** `constructionCrewAssignments` assegna identificativi L1 stabili condivisi tra conteggio lavoro e rendering. Residenti L1 raggiungono il cantiere dalla porta della propria abitazione, mentre i quattro fondatori partono dal pozzo; andata mattutina, lavoro vicino all'accesso, ritorno serale. Un percorso non raggiungibile impedisce di assegnare il lavoratore e di maturare giornate-operaio.
+- **Fonte:** `src/settlement-economy.js` espone roster L1 non impegnato; `src/settlement-core.js` distribuisce le squadre; `src/settlement-population-routines.js` calcola e memorizza i percorsi; `src/settlement-population-figures.js` rappresenta soltanto gli assegnati; lavoratori impegnati nell'allevamento non sono considerati liberi.
+- **QA:** `qa/construction-commute-regression.cjs` verifica identità, andata/ritorno, industria, assenza di strada, cache e weekend. Le regressioni CI non sostituiscono la prova di gioco/browser e non attestano il pagamento salari.
+- **Aperto:** salari dei costruttori, percorsi speciali/assedi, gameplay dei cantieri autonomi e validazione browser/visiva.
+
 ## Quadro main — ciò che si può effettivamente affermare
 
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |
