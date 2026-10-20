@@ -322,6 +322,8 @@
     target.innerHTML='<div class="kv"><span>Welfare / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
       '<div class="kv"><span>Castle economic gold</span><b>'+fmt(s.castleGold)+'</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
+      (window.ConquerJobManager?(()=>{const j=window.ConquerJobManager.summary();return '<div class="kv"><span>L1 jobs · builders / herders / loggers / idle</span><b>'+j.building+' / '+j.herding+' / '+j.logging+' / '+j.idle+'</b></div>'+
+      '<div class="legend">'+(j.foodRisk?'⚠ Food supply at risk · ':'')+'Protected herders: '+j.protectedHerders+' · L2 alone cultivates fields</div>'})():'')+
       '<div class="legend">Mon–Fri work · Saturday market · Sunday rest. Wages monthly, rates/returns yearly.</div>'+
       '<div class="economy-goods">'+GOODS.map(g=>
         '<div class="economy-good"><b>'+g+'</b><small>Price '+fmt(s.prices[g])+' · market '+fmt(s.market[g])+

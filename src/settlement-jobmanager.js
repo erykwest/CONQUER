@@ -162,12 +162,11 @@
         if(!workers)continue;
         const c=s.construction,before=progress(s);
         c.workDone=Math.min(c.workRequired,num(c.workDone)+workers*effort);
-        if(before<1&&progress(s)>=1)finished.push(s);
+        if(before<1&&progress(s)>=1){finished.push(s);invalidate()}
       }
     }
-    // Construction changes only dynamic progress overlays; structural
-    // navigation and geometry must be reconciled once on completion.
-    if(finished.length){invalidate();State.dirty=true}
+    // Completed geometry is reconciled once by the simulation maintenance step.
+    if(finished.length)State.dirty=true
     return finished;
   }
   function position(house,day=State.clock.day){

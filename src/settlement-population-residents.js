@@ -79,7 +79,14 @@ function residentClassPosition(house,resident,day,assignment){
     const job=window.ConquerJobManager?.plan(State.clock.day).assigned.get(house.id);
     if(job?.kind==='building'||job?.kind==='logging')
       return window.ConquerJobManager.position(house,State.clock.day);
-    if(job?.kind==='herding')return window.ConquerLivestock?.shepherdPosition(house)||null;
+    if(job?.kind==='herding'){
+      const shepherd=window.ConquerLivestock?.shepherdPosition(house);
+      if(shepherd)return shepherd;
+      // Goatherds work in their courtyard pen instead of disappearing.
+      const f=day-Math.floor(day);
+      return f>=.10&&f<=.53?residentIdlePoint(houseDoorInfo(house).outside,
+        resident.id+'-herd',day,.24):null;
+    }
   }
   const weekly=window.ConquerEconomy?.weekday(State.clock.day);
   if(weekly===6)return null; // Sunday rest: no scheduled civilian trips or labor.

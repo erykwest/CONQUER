@@ -44,7 +44,7 @@ test('whole field respects yellow zone, forests, buildings, roads, other fields 
 
 run("function qaMonthStart(month,year){for(let d=0;d<950;d++){const date=calendarDateFromDay(d);if(date.month===month&&date.year===year&&date.day===1)return d}throw Error('Calendar month missing')}");
 test('work progresses only during scheduled months and only on working weekdays',()=>{
- farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});State.clock.day=1;tickFields(1)");
+ farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:2},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,houseLevel:2});State.clock.day=1;tickFields(1)");
  assert.equal(run("fieldCrop(qaField).work.reduce((a,b)=>a+b,0)"),0,'June has no ploughing');
  assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'no idle-season worker allocations');
  run("globalThis.c=fieldCrop(qaField);c.lastDay=qaAutumn-1;State.clock.day=qaAutumn;tickFields(qaAutumn)");
@@ -87,12 +87,12 @@ test('October plough, March sow, autonomous spring growth, July harvest, next Oc
 });
 test('finished seasonal fields release workers and preserve industrial reservations',()=>{
  farm();
- run("State.structures.push({id:'other-field',type:'field',auto:true,x:114,y:104,points:[{x:112,y:103},{x:116,y:103},{x:116,y:105},{x:112,y:105}]},{id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});State.clock.day=qaAutumn;fieldCrop(qaField).ploughed=true;fieldCrop(State.structures[2]).phase='plough';fieldWorkAssignmentCache.key=null;globalThis.qaAssigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
+ run("State.structures.push({id:'other-field',type:'field',auto:true,x:114,y:104,points:[{x:112,y:103},{x:116,y:103},{x:116,y:105},{x:112,y:105}]},{id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:2},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,houseLevel:2});State.clock.day=qaAutumn;fieldCrop(qaField).ploughed=true;fieldCrop(State.structures[2]).phase='plough';fieldWorkAssignmentCache.key=null;globalThis.qaAssigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
  assert.deepEqual(JSON.parse(JSON.stringify(run('qaAssigned'))),['other-field','other-field']);
  run("fieldCrop(qaField).ploughed=false;fieldCrop(State.structures[2]).ploughed=true;globalThis.qaReassigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
  assert.deepEqual(JSON.parse(JSON.stringify(run('qaReassigned'))),['f','f'],'season/completion changes must invalidate assignment key');
- run("globalThis.qaOldEconomy=window.ConquerEconomy;window.ConquerEconomy={KIND:{loggingCamp:{classId:1}},staffing:()=>({'logging':1})};State.structures.push({id:'logging',type:'loggingCamp',x:130,y:130});globalThis.qaIndustryAssignments=fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).size");
- assert.equal(run('qaIndustryAssignments'),1,'one worker remains reserved for logging');
+ run("globalThis.qaOldEconomy=window.ConquerEconomy;window.ConquerEconomy={KIND:{quarry:{classId:2}},staffing:()=>({'quarry':1})};State.structures.push({id:'quarry',type:'quarry',x:130,y:130});globalThis.qaIndustryAssignments=fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).size");
+ assert.equal(run('qaIndustryAssignments'),1,'one L2 remains reserved for quarrying');
  run("window.ConquerEconomy=qaOldEconomy");
 });
 test('alarms prevent work but cannot stop autonomous crop growth or restart a paused day',()=>{

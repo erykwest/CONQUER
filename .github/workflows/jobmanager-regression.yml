@@ -1,0 +1,25 @@
+name: Job Manager regression
+on:
+  push:
+    branches: [jobmanager]
+  pull_request:
+    paths:
+      - 'src/settlement-jobmanager.js'
+      - 'src/settlement-economy.js'
+      - 'src/settlement-core.js'
+      - 'src/settlement-population-fields.js'
+      - 'qa/jobmanager-regression.cjs'
+      - 'qa/fields-regression.cjs'
+      - '.github/workflows/jobmanager-regression.yml'
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node qa/jobmanager-regression.cjs
+      - run: node qa/economy-regression.cjs
+      - run: node qa/economy-industries-regression.cjs
+      - run: node qa/fields-regression.cjs
