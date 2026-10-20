@@ -2,6 +2,14 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-21 — Mastio/tributi/doni, carri, carrozze, guardie e mercenari
+
+- Il `purse` delle carovane diventa **`chest` / forziere**: migrazione save schema 2 → 3 senza doppio trasferimento dell'oro.
+- Nuovo `src/settlement-convoys.js`: menu di bozze dei tributi/doni dal Mastio, accantonamento/rimborso reale da risorse signorili, conteggio posti guardia richiesti da capienza caserme; nessuna partenza fittizia.
+- Carretto per piccoli carichi (40), carro merci (100), carrozza aristocratica due posti senza merci; modello che predilige dame senza vietare uomini.
+- Scorta L4+ con armatura di cuoio, araldica neutra marrone, preventivo salario mercenario 2× giornata L2; preventivo totale carro/scorta in funzione di giorni viaggio futuri. [Dettaglio](../convoys-skeleton.md).
+- Aggiunta QA deterministic `qa/convoys-skeleton-regression.cjs`, controllo dei salvataggi e dei limiti reali su oro, merci e posti caserma. Nessun asset nuovo importato da branch `animation` o `feature/scatter`.
+
 ## 2026-10-21 — Monete fisiche nei manifesti L4+, carichi monotipo
 
 - Una sola merce commerciabile per spedizione, con borsa monete indipendente; previsti viaggi di acquisto a carro vuoto.
