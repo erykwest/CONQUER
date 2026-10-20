@@ -173,7 +173,7 @@
       const goodsText=j.cargo.length?j.cargo[0].qty+' '+j.cargo[0].good:'solo monete';
       const guardEdit=j.status==='draft'?
         '<label>Guardie richieste <input data-convoy-guard-input="'+ref+
-        '" type="number" min="0" max="'+(availableGuardSlots(j.id)+j.escorts.requested)+
+        '" type="number" min="0" max="'+availableGuardSlots(j.id)+
         '" value="'+j.escorts.requested+'" step="1"></label>'+
         '<button type="button" data-convoy-guards="'+ref+'">Aggiorna scorta</button>':'';
       return'<div class="legend">'+label+' · '+htmlEscape(goodsText)+
