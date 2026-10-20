@@ -56,7 +56,7 @@
 
 ## Monete in carovana e carichi monotipo — 21/10/2026, PR #55 Draft
 
-- **CODICE BRANCH:** `ConquerCommerce.planJourney` ammette **al massimo una merce** e una borsa di monete `coinGold` separata dal mercato; la quotazione `caravanQuote` applica 100 punti di capienza/carretto, coefficienti di ingombro per bene, 0,2 oro per carro/giorno (valori di progetto senza prelievo automatico). Carri vuoti per missioni d'acquisto con monete.
+- **CODICE BRANCH:** `ConquerCommerce.planJourney` ammette **al massimo una merce** e un forziere di monete `coinGold` separata dal mercato; la quotazione `caravanQuote` applica 100 punti di capienza/carro (40 per carretto), coefficienti di ingombro per bene, 0,2 oro per carro/giorno (valori di progetto senza prelievo automatico). Carri vuoti per missioni d'acquisto con monete.
 - **FONDI REALI:** `reserveJourneyCoins` trasferisce esplicitamente l'oro dichiarato dal wallet L4 al manifesto, senza duplicarlo; `cancelPlannedJourney` può rimborsare una sola volta prima della partenza. Monete estere non accreditate automaticamente alla città.
 - **COMPATIBILITÀ:** salvataggi `commerce` V1 migrati a V2; viaggio misto legacy conservato, ma nuovi manifesti multi-merce respinti. QA `qa/commerce-skeleton-regression.cjs` estesa a oro, capienza, finanziamento, rimborsi, vecchi save.
 - **NON ANCORA ATTIVO:** scambio, riempimento del carro al mercato estero, spese giornaliere, uscita/ingresso visivo dalle quattro arterie, nave, carovana fisica/world map. [Specifica](../commerce-skeleton.md).
