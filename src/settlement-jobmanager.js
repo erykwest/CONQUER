@@ -138,9 +138,11 @@
   }
   function adopt(s,referenceDay=State.clock.day){
     const c=s?.construction;if(!c||Number.isFinite(c.workRequired))return;
-    const duration=Math.max(.001,num(c.completeDay)-num(c.startedDay)||buildDuration(s)||1);
+    const previousFinish=num(c.completeDay);
+    const duration=Math.max(.001,previousFinish-num(c.startedDay)||buildDuration(s)||1);
     c.workRequired=duration;
     c.workDone=clamp((num(referenceDay)-num(c.startedDay))/duration,0,1)*duration;
+    if(c.workDone>=c.workRequired)c.completedDay=previousFinish;
     delete c.completeDay;
   }
   function tick(from,to){
@@ -164,7 +166,11 @@
         c.workDone=Math.min(c.workRequired,num(c.workDone)+workers*effort);
         // Floating point fractions must not strand a completed work order at 99.9999%.
         if(c.workRequired-c.workDone<1e-8)c.workDone=c.workRequired;
-        if(before<1&&progress(s)>=1){finished.push(s);invalidate()}
+        if(before<1&&progress(s)>=1){
+          c.completedDay=Math.min(to,day+END);
+          finished.push(s);
+          invalidate();
+        }
       }
     }
     // Completed geometry is reconciled once by the simulation maintenance step.

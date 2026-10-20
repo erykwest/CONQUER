@@ -96,7 +96,8 @@
     const eligible=State.structures.filter(s=>mastioEligible(s)&&!underConstruction(s));
     if(!eligible.length)return false;
     eligible.sort((a,b)=>{
-      const t=s=>Number.isFinite(s.construction?.completeDay)?s.construction.completeDay:0;
+      const t=s=>Number.isFinite(s.construction?.completedDay)?s.construction.completedDay:
+        Number.isFinite(s.construction?.completeDay)?s.construction.completeDay:0;
       return t(a)-t(b)||State.structures.indexOf(a)-State.structures.indexOf(b);
     });
     const first=eligible[0];
