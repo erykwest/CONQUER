@@ -12,7 +12,7 @@ const functions=vm.runInNewContext(catalog[1]);
 assert.ok(functions.includes('barracks'),'barracks is the canonical garrison function');
 assert.ok(!functions.includes('quarters'),'duplicate quarters option must be hidden');
 const roomsSource=castle.match(/function functionCapacity\(s\)\{[\s\S]*?\n\}/)?.[0];
-const normalizeSource=castle.match(/function normalizeFunctions\(s\)\{[^\n]*\}/)?.[0];
+const normalizeSource=castle.match(/function normalizeFunctions\(s\)\{[\s\S]*?\n\}/)?.[0];
 assert.ok(roomsSource&&normalizeSource,'test genuine castle room normalization');
 const ctx=vm.createContext({
   towerTier:s=>Number(s.size)>=1.5?2:1,
