@@ -193,12 +193,17 @@
     const wellId=State.village?.wellId||'well';
     // IDs represent the same household's single working adult and the four
     // founding laborers. The economic accounting remains aggregate.
+    // A household adult responsible for livestock is already at work; do not
+    // send that same person to an industrial shift or a construction crew.
+    const workingHouses=houses.filter(h=>!['shepherd','cow'].includes(
+      window.ConquerLivestock?.lotKindForHouse?.(h)));
     const l1Available=[
-      ...houses.map(h=>({id:String(h.id)+':m:0',houseId:h.id})),
+      ...workingHouses.map(h=>({id:String(h.id)+':m:0',houseId:h.id})),
       ...Array.from({length:foundingWorkers()},(_,i)=>({
         id:'founder:'+wellId+':'+i,founderIndex:i
       }))
     ];
+    remaining.L1=Math.min(remaining.L1,l1Available.length);
     // Industry positions are staffed before assigning only spare L1 to manual
     // construction. An out-of-season field does not reserve a worker forever.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
