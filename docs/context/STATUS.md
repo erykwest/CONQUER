@@ -46,6 +46,13 @@
 - **QA:** `qa/construction-commute-regression.cjs` verifica identità, andata/ritorno, industria, assenza di strada, cache e weekend. Le regressioni CI non sostituiscono la prova di gioco/browser e non attestano il pagamento salari.
 - **Aperto:** salari dei costruttori, percorsi speciali/assedi, gameplay dei cantieri autonomi e validazione browser/visiva.
 
+## Salari dei cantieri — tranche 20/10/2026, branch PR #55
+
+- **CODICE BRANCH:** `ConquerEconomy.payConstructionWork` trasferisce oro dalla tesoreria del signore a `wallet.L1` solo in base al lavoro manuale effettivamente maturato, con prezzo `wage.L1/20` per giornata-operaio. Il cantiere viene rallentato o sospeso se mancano fondi, riprende se la cassa riceve oro. `construction.wagesPaid` e `economy.constructionPayroll` sono persistenti; gli stipendi non vengono rimborsati quando si cancella un edificio.
+- **SPAWN AUTO:** `beginConstruction(auto)` crea `spawnCost` con valore del lavoro imputato nello spawn, senza addebito al lord e senza doppio payroll. Il saldo `spontaneousSpawnLabor` considera solo strutture davvero presenti, non candidati scartati.
+- **PROVE:** aggiunta `qa/construction-payroll-regression.cjs` alle Actions economiche. Verificare l'esito del run sull'ultimo HEAD prima di dichiarare completamento.
+- **LIMITI:** costo di spawn autonomo attualmente solo lavoro, nessuna movimentazione da soggetto finanziatore privato ancora modellato. QA browser, salari reali da calibrare e finanza completa delle case da integrare.
+
 ## Quadro main — ciò che si può effettivamente affermare
 
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |
