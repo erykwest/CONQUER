@@ -75,7 +75,13 @@ function reliefBandAt(p){
   }
   return gentle;
 }
-function terrainSlopeKind(p){return window.ConquerTerraforming?.slopeAt(p)||reliefBandAt(p)?.kind||null}
+function terrainSlopeKind(p){
+  const edited=window.ConquerTerraforming?.slopeAt(p);
+  if(edited)return edited;
+  // A Flat H0 cut overrides even a naturally sloped relief band.
+  if(window.ConquerTerraforming?.isFlatAt(p))return null;
+  return reliefBandAt(p)?.kind||null;
+}
 // A cliff is an impassable STEEP band, not just a large elevation delta.
 // Gentle ascent remains traversable, including different H plateaux reached
 // by a ramp. Sampling the segment prevents tunnelling through thin cliff bands.
