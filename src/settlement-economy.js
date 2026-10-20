@@ -10,6 +10,10 @@
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
     quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
     mine:{good:'stone',classId:2,workers:2,rate:2,build:95},
+    // Optional mills process unmarketed crop stock. No additional tradeable good.
+    windmillA:{good:'food',classId:1,workers:0,rate:12,build:40},
+    windmillB:{good:'food',classId:1,workers:0,rate:12,build:40},
+    watermill:{good:'food',classId:1,workers:0,rate:12,build:45},
     workshop:{good:'equipment',classId:3,workers:1,rate:.5,inputs:{metal:.6,wood:.3},build:130},
     vineyard:{good:'luxury',classId:1,workers:2,build:90}
   });
@@ -36,7 +40,7 @@
       lots:Object.fromEntries(GOODS.map(g=>[g,[]])),
       prices:{...BASE},externalDemand:empty(),externalOffers:empty(),
       wallet:{L1:24,L2:40,L3:60,L4:300},welfare:50,
-      wage:{L1:1,L2:2,L3:3},activities:{},
+      wage:{L1:1,L2:2,L3:3},activities:{},cropStock:{lord:0,private:0},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
       weeks:0,months:0,years:0
     };
@@ -54,6 +58,7 @@
   }
   function sync(){
     const e=state();
+    e.cropStock||={lord:0,private:0}; // migrate earlier saved economies in place
     const present=new Set((State.structures||[]).filter(s=>KIND[s.type]).map(s=>s.id));
     for(const id of Object.keys(e.activities))if(!present.has(id))delete e.activities[id];
     for(const s of activeStructures()){
@@ -113,9 +118,23 @@
   function daily(day){
     const e=sync();if(weekday(day)>=5)return;
     const staffing=activeCapacity(),date=dateAt(day);
-    for(const s of activeStructures()){
+    const active=activeStructures(),hasMill=active.some(s=>
+      ['windmillA','windmillB','watermill'].includes(s.type)&&
+      !s.economyDisabled&&!s.destroyed&&!s.abandoned);
+    for(const s of active){
       const a=e.activities[s.id],spec=KIND[s.type],staff=staffing[s.id]||0;
-      if(!staff||s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
+      if(s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
+      if(['windmillA','windmillB','watermill'].includes(s.type)){
+        // Milling is an optional service, even when no workforce is free.
+        const available=Math.max(0,e.cropStock[a.owner]||0);
+        const amount=round(Math.min(spec.rate,available));
+        if(amount>0){
+          e.cropStock[a.owner]=round(available-amount);
+          put(e,'food',amount,a.owner,s.id);
+        }
+        continue;
+      }
+      if(!staff)continue;
       if(s.type!=='field'&&(window.ConquerCombat?.alarmMode?.()||'off')!=='off')continue;
       if(s.type==='field'||s.type==='vineyard'){
         // Field visual cycles are tracked independently. Economic harvest occurs
@@ -126,7 +145,9 @@
           ?fieldLayout(s).area:Math.max(4,finite(s.w,3)*finite(s.h,2));
         const quantity=round(area*(s.type==='field'?2.5:1.1)*Math.min(1,staff/workerDemand(s).count));
         if(quantity<=0)continue;
-        put(e,spec.good,quantity,a.owner,s.id);
+        if(s.type==='field'&&hasMill){
+          e.cropStock[a.owner]=round((e.cropStock[a.owner]||0)+quantity);
+        }else put(e,spec.good,quantity,a.owner,s.id);
         a.cyclesSeen=finite(s.crop?.cycles,a.cyclesSeen);
         a.lastHarvestYear=date.year;
         continue;
@@ -168,6 +189,11 @@
   }
   function market(day){
     const e=sync(),pop=population();
+    // Mills are never required to sustain the food economy.
+    for(const owner of ['lord','private']){
+      const raw=Math.max(0,e.cropStock[owner]||0);
+      if(raw>0){put(e,'food',raw,owner,'unmilled-'+owner);e.cropStock[owner]=0}
+    }
     const demand={food:0,wood:0,stone:0,metal:0,equipment:0,luxury:0};
     for(let tier=1;tier<=4;tier++){
       const count=pop[classKey(tier)];
