@@ -54,6 +54,7 @@
       wallet:{L1:24,L2:40,L3:60,L4:300},welfare:50,
       wage:{L1:1,L2:2,L3:3},activities:{},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
+      constructionPayroll:{total:0,bySite:{}},
       weeks:0,months:0,years:0,
       weekProduced:empty(),weekConsumed:empty(),weekBuildDemand:empty(),
       weekRecovered:empty(),balanceHistory:[],lastBalance:null,foundingCharterId:null
@@ -117,6 +118,39 @@
       }
     }
     syncBuilderResources();return true;
+  }
+  // L1 wages are 1 gold per month by default. An average month has 20
+  // production shifts; booking per WORKER-day keeps wages proportional to
+  // actual effort instead of charging a second fixed fee at placement.
+  function constructionWagePerWorkday(){
+    return Math.max(0,finite(state().wage?.L1,1))/20;
+  }
+  function payConstructionWork(site,requestedWork){
+    const c=site?.construction,e=state();
+    const request=Math.max(0,finite(requestedWork));
+    if(!State.village?.founded||site.auto||c?.version!==2||!request)
+      return{work:0,paid:0};
+    const rate=constructionWagePerWorkday();
+    if(rate<=0)return{work:request,paid:0};
+    const available=Math.max(0,finite(e.castleGold));
+    if(available<1e-8)return{work:0,paid:0};
+    const work=Math.min(request,available/rate);
+    if(work<1e-9)return{work:0,paid:0};
+    const precise=n=>Math.round(n*1e8)/1e8;
+    const paid=Math.min(available,precise(work*rate));
+    if(paid<=0)return{work:0,paid:0};
+    e.castleGold=precise(Math.max(0,available-paid));
+    e.wallet.L1=precise(finite(e.wallet.L1)+paid);
+    c.wagesPaid=precise(Math.max(0,finite(c.wagesPaid))+paid);
+    const payroll=e.constructionPayroll||(e.constructionPayroll={total:0,bySite:{}});
+    payroll.total=precise(finite(payroll.total)+paid);
+    payroll.bySite[site.id]=precise(finite(payroll.bySite[site.id])+paid);
+    syncBuilderResources();
+    return{work,paid};
+  }
+  function spontaneousSpawnQuote(workdays){
+    const days=Math.max(0,finite(workdays));
+    return{laborDays:round(days),laborGold:round(days*constructionWagePerWorkday())};
   }
   function refundBuild(cost){
     const e=ensureFlows(state());
@@ -489,9 +523,13 @@
   function snapshot(){
     const e=sync();
     const stocks=Object.fromEntries(GOODS.map(g=>[g,round(e.lots[g].reduce((sum,l)=>sum+l.qty,0))]));
+    const spontaneous=(State.structures||[]).filter(s=>s.auto&&s.spawnCost);
+    const spontaneousLabor=round(spontaneous.reduce((sum,s)=>sum+finite(s.spawnCost.laborGold),0));
     return{day:e.lastDay,weekday:weekday(Math.max(0,e.lastDay)),population:population(),
       prices:{...e.prices},castle:{...e.castle},market:stocks,wage:{...e.wage},
       capital:round(e.wallet.L4),castleGold:round(finite(e.castleGold)),
+      constructionPayroll:round(finite(e.constructionPayroll?.total)),
+      spontaneousSpawnLabor:spontaneousLabor,spontaneousSpawnCount:spontaneous.length,
       welfare:e.welfare,activities:Object.keys(e.activities).length,
       balance:e.lastBalance||null,investmentCapacity:round(finite(e.investmentCapacity)),
       weeks:e.weeks,months:e.months,years:e.years};
@@ -500,13 +538,15 @@
     const target=typeof document!=='undefined'?document.getElementById('economyOverview'):null;
     if(!target)return;
     const e=sync(),s=snapshot();
-    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+(target.dataset.force||'');
+    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.castleGold+'|'+s.constructionPayroll+'|'+s.spontaneousSpawnCount+'|'+(target.dataset.force||'');
     if(!force&&target.dataset.stamp===stamp)return;
     target.dataset.stamp=stamp;
     const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:1});
     const info=g=>s.balance?.goods?.[g];
     target.innerHTML='<div class="kv"><span>Welfare / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
       '<div class="kv"><span>Castle economic gold</span><b>'+fmt(s.castleGold)+'</b></div>'+
+      '<div class="kv"><span>L1 builders paid by lord</span><b>'+fmt(s.constructionPayroll)+' gold</b></div>'+
+      '<div class="kv"><span>Spontaneous spawn labor (embedded estimate)</span><b>'+fmt(s.spontaneousSpawnLabor)+' gold</b></div>'+
       '<div class="kv"><span>L4 investment capacity</span><b>'+fmt(s.investmentCapacity)+' gold</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
       '<div class="legend">Mon–Fri work · Saturday market · Sunday rest. Wages monthly, rates/returns yearly.</div>'+
@@ -543,6 +583,7 @@
   window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,
     weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
     foundingCharter,foundingWorkers,syncBuilderResources,canBuild,spendBuild,refundBuild,
+    constructionWagePerWorkday,payConstructionWork,spontaneousSpawnQuote,
     availableBuilders,availableBuilderIds,laborAllocation,
     setShare,setTarget,setExternalDemand,transfer,snapshot,population});
 })();
