@@ -13,7 +13,7 @@
   const is=s=>!!s&&Object.hasOwn(TYPES,s.type);
   const make=(type,position)=>({type,x:position.x,y:position.y,
     w:TYPES[type]?.w||2,h:TYPES[type]?.h||2,
-    shape:'industry',angle:0,economicOwner:'lord',workersRequired:2,
+    shape:'industry',angle:0,economicOwner:'lord',workersRequired:TYPES[type]?.workers||0,
     productionGood:TYPES[type]?.good||'wood'});
   const footprint=s=>rectWorldPoints(s.x,s.y,TYPES[s.type].w,TYPES[s.type].h,s.angle||0);
   function footprintSamples(s,step=.3){
