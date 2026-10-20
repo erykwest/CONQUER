@@ -1381,12 +1381,33 @@
     }
   }
   function drawCastleOverlays(){
-    // Arcades are 3D decals now; only cutaway interiors keep their 2.5D drawing.
-    if(State.structures.some(s=>structureCutaway(s)&&!underConstruction(s)))drawCutawayStructures();
+    // Cutaway rooms now render in WebGL2; Canvas owns only the fallback path.
+  }
+  // Night: open interiors stay in full light. The whole cutaway mesh (and its flames) is redrawn
+  // over the night overlay, depth-tested against this frame's scene (depth buffer is preserved),
+  // so whatever covers it in front keeps covering it.
+  function drawEmissive(){
+    if(!active()||!S.buf['cutaway#n']||!(typeof nightFactor==='function'&&nightFactor()>.01))return;
+    const gl=S.gl,r=wrap.getBoundingClientRect();
+    gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
+    gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayEm');gl.disable(gl.POLYGON_OFFSET_FILL);
+    // Figures inside the open rooms (occupants, archers at the slits) share the room light.
+    const inside=(S.frameFigures||[]).filter(f=>/-room-|:slit:/.test(String(f.id)));
+    if(inside.length&&S.tex.soldierAtlas){
+      const data=buildSoldiers(inside);let b=S.buf.indoorFigures;if(!b){b=gl.createBuffer();S.buf.indoorFigures=b}
+      gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STREAM_DRAW);
+      const sp=S.prog.sprite;gl.useProgram(sp.p);setCamera(gl,sp,r);
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
+      bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
+      gl.drawArrays(gl.TRIANGLES,0,data.length/8);
+      colliders=S.frameColliders||colliders;
+    }
+    gl.depthMask(true);
+    ctx.drawImage(S.canvas,0,0,r.width,r.height);
   }
   // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
   function drawMastioDrapes(){
-    const all=State.structures,mastio=all.filter(s=>s.isMastio&&!underConstruction(s));
+    const all=State.structures,mastio=all.filter(s=>s.isMastio&&!underConstruction(s)&&!structureCutaway(s));
     if(!mastio.length)return;
     try{State.structures=mastio;drawFacadeWindows(false,1,false)}finally{State.structures=all}
   }
@@ -1418,20 +1439,20 @@
     return out;
   }
   function drawFront(r){
-    const t0=performance.now(),list=collecting||[];collecting=null;
+    const t0=performance.now(),list=collecting||[];collecting=null;S.frameFigures=list;
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
     // Mill sails and wheels turn every frame (industries).
     for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     const dyn=buildDynamic(dynamicQueue);dynamicQueue=[];
-    renderFront(r,buildSoldiers(list),dyn);ctx.drawImage(S.canvas,0,0,r.width,r.height);
+    renderFront(r,buildSoldiers(list),dyn);S.frameColliders=colliders;ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
     // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
     // frame is expensive, so skip the call entirely when none of them is present.
     const all=State.structures;
-    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||structureCutaway(s)));
-    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s)||structureCutaway(s));drawCastleBattlements()}finally{State.structures=all}}
+    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)));
+    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s));drawCastleBattlements()}finally{State.structures=all}}
     perf().world3dFrontMs=performance.now()-t0;
   }
   function setEnabled(on){enabled=!!on;try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}location.reload()}
@@ -1455,7 +1476,7 @@
     draw();
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
-    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,_setActiveForTest,
+    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,_setActiveForTest,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
