@@ -33,6 +33,12 @@
 - **QA:** `qa/economy-builder-integration.cjs`, founding, placement e moduli popolazione nel workflow economico. Lo stato finale si verifica dal run GitHub Actions sul commit di questa branch; non confondere con browser.
 - **Non chiuso:** manodopera L1 che determina durata fisica del cantiere, salvaging realistico, requisiti militari e fabbisogni del castello, provenienza metallo della miniera, calendario unico e acquisto strategico da lotti privati.
 
+## Cantieri con manodopera L1 — sviluppo su PR #55 (20/10)
+
+- **CODICE SOLO SU BRANCH:** `src/settlement-core.js` introduce cantieri manuali V2 con `workRequired/workDone`, progressione solo per giorni lavorativi e massimo tre operai per cantiere. `src/settlement-economy.js` espone L1 disponibili al netto di industria e agricoltura; `src/settlement-app-simulation.js` integra il tick e notifica i completamenti. Pannelli e barre mostrano l'assegnazione.
+- **SALVATAGGI:** i vecchi cantieri manuali con `startedDay/completeDay` vengono convertiti mantenendo la percentuale realizzata, senza avanzamento gratuito o doppie notifiche. Nuovi cantieri salvano il lavoro effettuato. Costruzioni auto-generate mantengono il timer precedente.
+- **QA:** `qa/construction-workers-regression.cjs` aggiunta al workflow economico; `main` e produzione non modificati. Da verificare effettiva mobilità/animazione degli operai e end-to-end browser.
+
 ## Quadro main — ciò che si può effettivamente affermare
 
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |
