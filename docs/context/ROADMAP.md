@@ -38,6 +38,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**Tranche cantieri manuali, 20/10/2026 (feature branch PR #55):** avanzamento basato su L1 disponibili reali e giornate-operaio, con pause produttive e weekend. Gli operai iniziali sono utilizzabili. **Priorità di seguito:** validazione visiva dei cantieri e mobilità dei costruttori, definizione del costo salariale e politiche di priorità, poi estensione condizionata alle strutture generate autonomamente. Non attribuire a case/strade procedurali una manodopera non ancora simulata.
+
+## Prossimo passo
+
 **Tranche 20/10/2026 (branch di sviluppo):** completata nel codice l'integrazione materiale Builder ↔ tesoreria/stock economici e inseriti quattro L1 iniziali privi di casa. Le risorse da 10.000 rimangono soltanto pre-fondazione e non sono un magazzino reale. **Prossimo vincolo**: far avanzare i cantieri soltanto con L1 effettivamente allocati, poi collegare il mantenimento di castello e guarnigione allo stesso inventario e rendere i deficit leggibili per le future imprese L4. Nessuna auto-nascita imprese/auto-upgrade case in questo intervento.
 
 ## Prossimo passo
