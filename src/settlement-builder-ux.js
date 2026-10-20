@@ -87,6 +87,7 @@
     {name:'Altezza porta',icon:'level',selectors:['[data-gate-level]']},
     {name:'Larghezza fossati e ponti',icon:'depth',category:'infrastructure',selectors:['[data-crossing-width]']},
     {name:'Forma terreni / terrazzamenti',icon:'square',category:'terrain',selectors:['[data-terraform-shape]']},
+    {name:'Booleana terrazzamenti',icon:'terrain',category:'terrain',selectors:['[data-terraform-boolean]']},
     {name:'Scava / innalza',icon:'level',category:'terrain',selectors:['[data-terraform-delta]']},
     {name:'Raggio intervento',icon:'depth',category:'terrain',selectors:['[data-terraform-radius]']}
   ];

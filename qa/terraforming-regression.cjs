@@ -262,6 +262,91 @@ test('legacy round terraces keep 24 sides while saved squares keep four',()=>{
   assert.equal(api.edits()[1].top.length,4);
 });
 
+test('boolean union merges partly overlapping square terraces into a concave perimeter',()=>{
+  context.State.relief.terraforming=[];
+  context.State.structures=[];
+  context.terrainBaseElevation=()=>0;
+  const a=api.preview({x:95,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
+  assert.equal(api.commit(a),true);
+  const normal=api.preview({x:98,y:102},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
+  assert.equal(normal.ok,false,'existing normal mode rejects actual footprint overlap');
+  // The centre is on H1, but Union must reuse H1 rather than stack another H.
+  const union=api.preview({x:98,y:102},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false,boolean:'union'});
+  assert.equal(union.ok,true,union.reason);
+  assert.equal(union.baseZ,0);
+  assert.equal(union.targetZ,1);
+  assert.equal(api.commit(union),true);
+  assert.equal(api.edits().length,2,'source rectangles survive for editable saves');
+  assert.equal(api.elevationAt({x:94.5,y:99},0),1);
+  assert.equal(api.elevationAt({x:101.5,y:105},0),1);
+  assert.equal(api.slopeAt({x:96,y:104}),null,'internal seam is not a cliff');
+  const contours=api.unionContours();
+  assert.equal(contours.length,1,'actual union becomes one external contour');
+  const outer=contours[0].points;
+  const area=Math.abs(outer.reduce((sum,p,i)=>{const q=outer[(i+1)%outer.length];return sum+p.x*q.y-q.x*p.y},0))/2;
+  assert.ok(Math.abs(area-98)<1e-5,'boolean outline area is 64+64 minus 30 overlap: '+area);
+  assert.ok(outer.length>=6,'the merged boundary is concave');
+  const [one,two]=api.edits();
+  const segments=[one,two].flatMap(edit=>edit.top.flatMap((_,i)=>api.exposedWallSegments(edit,i)));
+  assert.equal(segments.length,8,'concave union exposes exactly eight outer perimeter segments');
+  const faces=[];
+  context.meshBuilder=()=>({tris:[],face:(pts,color)=>faces.push({pts,color})});
+  context.terrainElevation=p=>api.elevationAt(p,0);
+  context.clipTerrainPolygon=poly=>poly;
+  const tris=vm.runInContext('buildTerrain()',context);
+  let groundArea=0,unionArea=0;
+  for(let i=0;i<tris.length;i+=9){
+    const [ax,ay,az,bx,by,bz,cx,cy,cz]=tris.slice(i,i+9);
+    const a2=Math.abs((bx-ax)*(cy-ay)-(by-ay)*(cx-ax))/2;
+    groundArea+=a2;
+    if(az===1&&bz===1&&cz===1)unionArea+=a2;
+  }
+  assert.ok(Math.abs(groundArea-200*200)<.05,'no area duplication in WebGL mesh');
+  assert.ok(Math.abs(unionArea-98)<.05,'WebGL triangulates one merged H1 top with no z-fighting');
+  vm.runInContext('buildTerrainEdges()',context);
+  const walls=faces.filter(f=>['#49443f','#686057'].includes(f.color));
+  assert.equal(walls.length,segments.length,'WebGL walls follow exactly the boolean outer segments');
+});
+test('boolean union handles rotated/round overlaps and contained shapes',()=>{
+  context.State.relief.terraforming=[];
+  context.State.structures=[];
+  const a=api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:6,delta:1,magnet:false});
+  assert.equal(api.commit(a),true);
+  const rotated=api.preview({x:105,y:103},{mode:'walled',shape:'square',radius:4,delta:1,
+    rotation:Math.PI/4,magnet:false,boolean:'union'});
+  assert.equal(rotated.ok,true,rotated.reason);
+  assert.equal(api.commit(rotated),true);
+  assert.equal(api.unionContours().length,1);
+  const round=api.preview({x:108,y:98},{mode:'walled',shape:'round',radius:3,delta:1,
+    magnet:false,boolean:'union'});
+  assert.equal(round.ok,true,round.reason);
+  assert.equal(api.commit(round),true);
+  assert.equal(api.unionContours().length,1,'square, rotated square and circle form one outline');
+  const contained=api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:2,delta:1,
+    magnet:false,boolean:'union'});
+  assert.equal(contained.ok,true);
+  assert.equal(api.commit(contained),true);
+  assert.equal(api.unionContours().length,1,'contained shapes add no internal wall');
+});
+test('boolean union refuses opposite elevations without destroying existing terraces',()=>{
+  context.State.relief.terraforming=[];
+  context.State.structures=[];
+  const a=api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
+  api.commit(a);
+  const low=api.preview({x:102,y:101},{mode:'walled',shape:'square',radius:4,delta:-1,magnet:false,boolean:'union'});
+  assert.equal(low.ok,false);
+  assert.match(low.reason,/matching base and top elevation/i);
+  assert.equal(api.edits().length,1);
+});
+test('UI exposes the Boolean Union operation and connects it to active terraforming',()=>{
+  const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  const input=fs.readFileSync(path.join(__dirname,'..','src','settlement-app-input.js'),'utf8');
+  const palette=fs.readFileSync(path.join(__dirname,'..','src','settlement-builder-ux.js'),'utf8');
+  assert.match(html,/data-terraform-boolean="union"/);
+  assert.match(input,/State\.tool\.boolean=boolean/);
+  assert.match(palette,/data-terraform-boolean/);
+});
+
 test('clear removes player terraforming from the persisted relief model',()=>{
   context.State.relief.terraforming=[];
   api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:2}));
