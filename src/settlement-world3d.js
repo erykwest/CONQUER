@@ -679,8 +679,8 @@
             for(let i=0;i<4;i++){
               const a=base+i*Math.PI/2,o={x:Math.cos(a),y:Math.sin(a)},cc={x:s.x+o.x*r,y:s.y+o.y*r},tx=-o.y,ty=o.x;
               const edge={a:{x:cc.x-tx*span/2,y:cc.y-ty*span/2},b:{x:cc.x+tx*span/2,y:cc.y+ty*span/2}};
-              if(i===0)onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);
-              else if(row.floor>=2)onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
+              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z))onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);}
+              else if(towerSlitFace(s,i,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
             }
           }
         }else{
@@ -690,7 +690,7 @@
             for(const edge of edgesOf(footprintPoints(s))){
               const o=outward(edge,center);
               if(edge.index===interior)onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o);
-              else if(row.floor>=2)onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
+              else if(towerSlitFace(s,edge.index,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
             }
           }
         }
