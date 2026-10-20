@@ -11,6 +11,7 @@ const LOCAL_AUTOSAVE_MS=5000;
 function constructionCompletionsCrossed(beforeDay,afterDay){
   const out=[];
   for(const s of State.structures){
+    if(s?.construction?.version===2)continue; // notified by labor tick exactly once
     const d=Number(s?.construction?.completeDay);
     if(Number.isFinite(d)&&d>beforeDay&&d<=afterDay)out.push(s);
   }
@@ -119,7 +120,10 @@ function simulationFrame(now){
       processVillageGrowth();
       tickFields(State.clock.day);
       window.ConquerEconomy?.tick(previousDay,State.clock.day);
-      completed=constructionCompletionsCrossed(simLogicDay,State.clock.day);
+      // Player-build projects progress only when available L1 staff actually
+      // complete shift work; procedural road/house generation retains V1 clocks.
+      const laborCompletions=tickConstructionWork(simLogicDay,State.clock.day);
+      completed=[...constructionCompletionsCrossed(simLogicDay,State.clock.day),...laborCompletions];
       simLogicDay=State.clock.day;
       simLogicAt=now;
     }

@@ -18,6 +18,41 @@
 - **Ordini militari:** il codice `main` richiede cavaliere entro 16U dall'unità e dalla destinazione, e la simulazione parte in pausa. La PR aggiunge messaggi chiari per fuori-raggio, percorsi non validi e pausa, senza alterare le regole di combattimento. Un malfunzionamento aggiuntivo della selezione non è ancora dimostrato.
 - **Prove:** regressioni `qa/settlement-routing-spawn-regression.cjs`, `qa/combat-selection-regression.cjs` e intera suite deterministica in [GitHub Actions run 38948914788](https://github.com/erykwest/CONQUER/actions/runs/38948914788) **PASS** sul commit `b586607`. Rimangono da eseguire QA visuale/browser su salvataggio esistente e benchmark dei percorsi stradali.
 
+## Economia — aggiornamento 19/10/2026 (BRANCH, non main)
+
+- Base `main` `a4adca0`, ramo `feature/economic-balances-20261019`.
+- `src/settlement-economy.js`: produzione, domanda, acquisti soddisfatti, consumo fisico, deficit merce vs liquidità, scorte, segnali e trend quattro settimane; fabbisogni domestici legna ancora provvisori.
+- Investimento L4: la capacità mensile è azzerata se non esistono residenti L4; nessuna nuova impresa né upgrade case viene generato.
+- [CI GitHub Actions #39253184968](https://github.com/erykwest/CONQUER/actions/runs/39253184968): **PASS** per 3 suite Node economiche, inclusi bilanci, consumi e migrazione dello stato.
+- **Aperto:** QA browser, consumi castle/Builder, ledger inventario unico, calendario agricolo, output della miniera e investimenti che edificano fisicamente.
+
+## Economia/Builder — tranche 20/10/2026, solo BRANCH
+
+- `feature/economic-balances-20261019`: il Builder ora preleva/riaccredita materiali dalla cassa e riserva economica; inventario UI `State.resources` riflette il ledger, senza reintegrare automaticamente 10.000 unità su caricamento. Vengono registrati consumo da cantiere e materiali recuperati.
+- **Fondazione:** 4 L1 iniziali senza casa, visualizzati attorno al pozzo e conteggiati nella produzione; dotazione iniziale finita al castello e alimenti nel mercato; marker evita doppie dotazioni su salvataggio/caricamento. I vecchi salvataggi fondati ricevono una dotazione migratoria una tantum e non importano i 10.000 fittizi.
+- **QA:** `qa/economy-builder-integration.cjs`, founding, placement e moduli popolazione nel workflow economico. Lo stato finale si verifica dal run GitHub Actions sul commit di questa branch; non confondere con browser.
+- **Non chiuso:** manodopera L1 che determina durata fisica del cantiere, salvaging realistico, requisiti militari e fabbisogni del castello, provenienza metallo della miniera, calendario unico e acquisto strategico da lotti privati.
+
+## Cantieri con manodopera L1 — sviluppo su PR #55 (20/10)
+
+- **CODICE SOLO SU BRANCH:** `src/settlement-core.js` introduce cantieri manuali V2 con `workRequired/workDone`, progressione solo per giorni lavorativi e massimo tre operai per cantiere. `src/settlement-economy.js` espone L1 disponibili al netto di industria e agricoltura; `src/settlement-app-simulation.js` integra il tick e notifica i completamenti. Pannelli e barre mostrano l'assegnazione.
+- **SALVATAGGI:** i vecchi cantieri manuali con `startedDay/completeDay` vengono convertiti mantenendo la percentuale realizzata, senza avanzamento gratuito o doppie notifiche. Nuovi cantieri salvano il lavoro effettuato. Costruzioni auto-generate mantengono il timer precedente.
+- **QA:** `qa/construction-workers-regression.cjs` aggiunta al workflow economico; `main` e produzione non modificati. Da verificare effettiva mobilità/animazione degli operai e end-to-end browser.
+
+## L1 visibili ai cantieri — tranche 20/10/2026, PR #55 in Draft
+
+- **Sulla branch:** `constructionCrewAssignments` assegna identificativi L1 stabili condivisi tra conteggio lavoro e rendering. Residenti L1 raggiungono il cantiere dalla porta della propria abitazione, mentre i quattro fondatori partono dal pozzo; andata mattutina, lavoro vicino all'accesso, ritorno serale. Un percorso non raggiungibile impedisce di assegnare il lavoratore e di maturare giornate-operaio.
+- **Fonte:** `src/settlement-economy.js` espone roster L1 non impegnato; `src/settlement-core.js` distribuisce le squadre; `src/settlement-population-routines.js` calcola e memorizza i percorsi; `src/settlement-population-figures.js` rappresenta soltanto gli assegnati; lavoratori impegnati nell'allevamento non sono considerati liberi.
+- **QA:** `qa/construction-commute-regression.cjs` verifica identità, andata/ritorno, industria, assenza di strada, cache e weekend. Le regressioni CI non sostituiscono la prova di gioco/browser e non attestano il pagamento salari.
+- **Aperto:** salari dei costruttori, percorsi speciali/assedi, gameplay dei cantieri autonomi e validazione browser/visiva.
+
+## Salari dei cantieri — tranche 20/10/2026, branch PR #55
+
+- **CODICE BRANCH:** `ConquerEconomy.payConstructionWork` trasferisce oro dalla tesoreria del signore a `wallet.L1` solo in base al lavoro manuale effettivamente maturato, con prezzo `wage.L1/20` per giornata-operaio. Il cantiere viene rallentato o sospeso se mancano fondi, riprende se la cassa riceve oro. `construction.wagesPaid` e `economy.constructionPayroll` sono persistenti; gli stipendi non vengono rimborsati quando si cancella un edificio.
+- **SPAWN AUTO:** `beginConstruction(auto)` crea `spawnCost` con valore del lavoro imputato nello spawn, senza addebito al lord e senza doppio payroll. Il saldo `spontaneousSpawnLabor` considera solo strutture davvero presenti, non candidati scartati.
+- **PROVE:** aggiunta `qa/construction-payroll-regression.cjs` alle Actions economiche. Verificare l'esito del run sull'ultimo HEAD prima di dichiarare completamento.
+- **LIMITI:** costo di spawn autonomo attualmente solo lavoro, nessuna movimentazione da soggetto finanziatore privato ancora modellato. QA browser, salari reali da calibrare e finanza completa delle case da integrare.
+
 ## Quadro main — ciò che si può effettivamente affermare
 
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |

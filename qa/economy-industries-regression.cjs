@@ -139,7 +139,8 @@ test('production remains two units/day with two available workers',()=>{
   assert.equal(h.economy.snapshot().market.wood,10);
   assert.equal(h.economy.snapshot().market.stone,20);
   h.economy.tick(4,6);
-  assert.equal(h.economy.snapshot().market.wood,10);
+  assert.ok(h.economy.snapshot().market.wood<10,'Saturday households consume wood');
+  assert.equal(h.economy.snapshot().balance.goods.wood.produced,10);
   assert.equal(h.economy.snapshot().market.stone,20);
 });
 console.log('Industry regression: all checks passed.');

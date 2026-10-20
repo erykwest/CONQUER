@@ -2,6 +2,39 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Salari differenziati per cantieri del signore e spawn spontaneo
+
+- Le costruzioni volute dal giocatore pagano L1 dalla tesoreria a giornata-operaio, accreditando il wallet aggregato L1. Mancanza fondi sospende il lavoro, presenza di oro lo riattiva; le paghe maturate restano anche dopo cancellazione dell'edificio.
+- Crescita urbana spontanea: equivalenza salariale L1 incorporata in `spawnCost`, senza un secondo addebito al signore. La quota è **valorizzazione imputata** finché non esiste un soggetto finanziatore per lo spawn.
+- Regimi salariali coerenti con `wage.L1` annualmente aggiornato, registri contabili persistenti, riepiloghi UI distinti e nuova QA `qa/construction-payroll-regression.cjs`.
+
+## 2026-10-20 — L1 con tragitto fisico fino ai cantieri
+
+- Squadre L1 con identità stabili sincronizzate fra simulazione economica, avanzamento dei cantieri e rendering.
+- Percorsi pedonali da case o pozzo al sito, turni andata/lavoro/ritorno e impronte neve coerenti. I cantieri senza accesso pedonale non ricevono giornate-operaio.
+- Controlli contro impiego contemporaneo in industria, campi e allevamento; cache percorsi riutilizzata durante i frame.
+- Suite `qa/construction-commute-regression.cjs` aggiunta alle Actions economiche; salari e QA manuale browser sono passaggi separati.
+
+## 2026-10-20 — Cantieri manuali dipendenti dagli L1
+
+- I cantieri ordinati dal giocatore ricevono fino a tre L1 liberi, distribuiti uno a testa prima di saturare un singolo lavoro.
+- L'impegno produttivo L1 e il lavoro agricolo di stagione vengono sottratti dalla disponibilità; quando non resta forza lavoro, il cantiere è sospeso. Orario lavorativo condiviso con agricoltura e pausa nei fine settimana.
+- Migrazione dei lavori preesistenti conservando la percentuale maturata, notifiche di completamento una sola volta, indicatori UI e QA con concorrenza fra cantieri.
+- Restano da sviluppare i percorsi visibili casa/pozzo → cantiere e il pagamento esplicito di salari ai costruttori. Le strutture auto-generate non sono ancora convertite per evitare deadlock urbani.
+
+## 2026-10-20 — Cantieri con risorse reali e squadra fondatrice
+
+- `State.resources` cessa di essere stock consumabile autonomo dopo fondazione: il Builder usa tesoro e materiali del castello nel motore economico.
+- I costi diventano domanda e consumo contabilizzati, i rimborsi recuperi (non output produttivi).
+- Fondazione dotata di una cassa iniziale finita, merci sul mercato e quattro L1 non ancora alloggiati, visibili e impiegabili nei poli; save legacy migra senza importare risorse infinite.
+- Suite economica estesa a economia/Builder, fondazione, placement e regressione moduli popolazione; nessuna affermazione di prova manuale browser o merge su main.
+
+## 2026-10-19 — Il saldo economico prima di mercanti e case
+
+- Decisione **D-033**: misurare consumi, produzioni, deficit e surplus prima di attivare crescita imprenditoriale e urbana.
+- Implementazione **D-034** sulla branch `feature/economic-balances-20261019`: bilanci per bene, bisogni domestici, consumo dei workshop, cause del deficit e trend a quattro settimane; investimento L4 condizionato alla presenza della classe L4.
+- [CI economica PASS](https://github.com/erykwest/CONQUER/actions/runs/39253184968). Mancano integrazione dello stock Builder, prova browser e sviluppo delle imprese automatiche. `main` non modificata da questa iterazione.
+
 ## 2026-10-16 — Diagnosi condivisa /main e /camp: crescita bloccata dalla pianificazione arteriale
 
 - Individuato su `main` il medesimo blocco di crescita già corretto su `camp`: la ricerca in background delle quattro strade perimetrali impediva lo spawn delle case, anche sulle arterie completate.

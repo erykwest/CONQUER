@@ -38,6 +38,25 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**Tranche salari 20/10/2026, PR #55 Draft:** il signore paga i costruttori L1 per le sole giornate-operaio svolte sui cantieri del giocatore; lo spawn spontaneo incorpora il valore del lavoro come costo di creazione, senza pagamento duplicato. **Prossima dipendenza economica:** identificare chi finanzia davvero la crescita autonoma (famiglie, capitale L4, cassa urbana) prima di scalare da costo imputato a trasferimento monetario; poi completare le ricette materiali dello spawn e la verifica browser. Mantenere cantieri auto procedurali temporizzati finché non è attivo l'anti-deadlock.
+
+## Prossimo passo
+
+**Tranche percorsi L1 (20/10/2026, PR #55 Draft):** lavoratori assegnati univocamente e spostamento visuale attraverso rete pedonale casa/pozzo → cantiere. In assenza di percorso il lavoro non avanza. **Prossimi controlli:** QA browser su castello, mura e industrie; persistenza; prestazioni cache. Poi contabilizzare salari e priorità dei lavori, senza duplicare conti personali. Costruzioni procedurali ancora escluse dalla manodopera per evitare deadlock di fondazione.
+
+## Prossimo passo
+
+**Tranche cantieri manuali, 20/10/2026 (feature branch PR #55):** avanzamento basato su L1 disponibili reali e giornate-operaio, con pause produttive e weekend. Gli operai iniziali sono utilizzabili. **Priorità di seguito:** validazione visiva dei cantieri e mobilità dei costruttori, definizione del costo salariale e politiche di priorità, poi estensione condizionata alle strutture generate autonomamente. Non attribuire a case/strade procedurali una manodopera non ancora simulata.
+
+## Prossimo passo
+
+**Tranche 20/10/2026 (branch di sviluppo):** completata nel codice l'integrazione materiale Builder ↔ tesoreria/stock economici e inseriti quattro L1 iniziali privi di casa. Le risorse da 10.000 rimangono soltanto pre-fondazione e non sono un magazzino reale. **Prossimo vincolo**: far avanzare i cantieri soltanto con L1 effettivamente allocati, poi collegare il mantenimento di castello e guarnigione allo stesso inventario e rendere i deficit leggibili per le future imprese L4. Nessuna auto-nascita imprese/auto-upgrade case in questo intervento.
+
+## Prossimo passo
+
+**Priorità aggiornata il 19/10/2026 (M1):** consumi e produzione misurati per bene → saldi e trend → integrazione dei costi reali di costruzione/fortificazioni → condizioni economiche di investimento L4 → attività private e auto-upgrade abitativi. Il nucleo dei saldi settimanali è nella branch `feature/economic-balances-20261019`, con [QA Node superata](https://github.com/erykwest/CONQUER/actions/runs/39253184968); non è ancora verificato nel browser. Senza stock unico Builder/economia e margine operativo non deve partire nessuna costruzione automatica.
+
+
 1. **Riconciliare main / urban e lavori aperti:** scegliere l'esatta base tecnica prima di nuove feature; leggere [STATUS.md](STATUS.md) e PR attive. Non assumere che il codice di /urban sia già su main.
 2. **Chiudere i conflitti bloccanti:** miniera `stone` vs `metal`; calendario dei campi (visuale vs ledger); inventario economico vs risorse di costruzione di test.
 3. **Verificare P0 Builder senza riscrivere sistemi esistenti:** terreno, foreste, popolazione e idoneità dei quattro poli. Usare `docs/feature-backlog.md` con criteri di accettazione e QA.
