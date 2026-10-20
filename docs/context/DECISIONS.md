@@ -57,6 +57,8 @@
 
 | D-040 | VINCOLO DESIGN (20/10) + CODICE SKELETON | **L3 = botteghe e servizi locali** (per ora locanda e chiesa), con vendita diretta locale; **L4 = proprietari/investitori dei siti produttivi**; **L4+ = ruolo temporaneo di mercante/viaggiatore tra città**, non una classe demografica o canale obbligatorio per la vendita locale. | Il nuovo `ConquerCommerce` registra progetti di bottega L3, servizi gestiti, proprietà primarie esistenti, manifesti L4+ e posti letto espliciti. Non attribuire a questi registri produzione, spostamento fisico o pagamenti finché non sono implementati. [Contratto](../commerce-skeleton.md). |
 
+| D-041 | VINCOLO + CODICE SKELETON (21/10) | **Carovana mercantile = un solo tipo di merce + monete d'oro fisicamente trasportate.** Le monete servono per acquisti all'estero, non per occupare artificiosamente la capienza. | Carro da 100 punti di carico, ingombri per bene e costo indicativo per carro/giorno; viaggio di sola compravendita possibile con carro inizialmente vuoto e borsa di monete. Le monete dei mercanti locali vengono riservate dal wallet L4, senza creazione di denaro; i legacy save misti restano intatti. Viaggi e scambi reali ancora futuri. [Specifica](../commerce-skeleton.md). |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
