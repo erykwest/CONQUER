@@ -110,4 +110,24 @@ test('calendar boundary pays wages monthly, not daily',()=>{
   economy.tick(20,29); // 30 June, closes month
   assert.equal(economy.snapshot().months,1);
 });
+test('a lordly mill processes private crop into Food; mill stays optional',()=>{
+  const field={id:'farm',type:'field',economicOwner:'private',crop:{cycles:0}};
+  const base=[{id:'home',type:'house',houseLevel:1},field];
+  const {economy,State}=makeHarness([...base,{id:'mill',type:'windmillA',economicOwner:'lord'}]);
+  economy.sync();
+  field.crop.cycles=1;
+  const harvest=Array.from({length:150},(_,day)=>day).find(day=>{
+    const date=new Date(Date.UTC(2026,5,1+day));
+    return date.getUTCMonth()===8&&economy.weekday(day)===0;
+  });
+  economy.tick(-1,harvest+3);
+  const fromMill=economy.state().lots.food.filter(l=>l.id==='mill');
+  assert.ok(fromMill.some(l=>l.owner==='private'&&l.qty>0),'processed grain retains farm ownership');
+  assert.equal(economy.state().cropStock.private,0,'unprocessed crop buffer drains');
+  const noMillField={id:'other-farm',type:'field',economicOwner:'private',crop:{cycles:0}};
+  const noMill=makeHarness([{id:'home',type:'house',houseLevel:1},noMillField]);
+  noMill.economy.sync();noMillField.crop.cycles=1;
+  noMill.economy.tick(-1,harvest);
+  assert.ok(noMill.economy.snapshot().market.food>0,'existing Food production works without mills');
+});
 console.log('Economy regression: all checks passed.');
