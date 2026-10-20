@@ -205,7 +205,8 @@
     const terraceSnap=magnetic&&!wallSnap?terraceMagnet(center,radius,shape):null;
     const resolvedCenter=wallSnap?.center||terraceSnap?.center||center;
     const naturalZ=Number(terrainBaseElevation(resolvedCenter))||0;
-    const baseZ=Math.ceil(elevationAt(resolvedCenter,naturalZ)-1e-9);
+    const pickedZ=Math.ceil(elevationAt(resolvedCenter,naturalZ)-1e-9);
+    const baseZ=pickedZ===0?0:pickedZ; // avoid -0 from ceil(negative epsilon)
     const targetZ=clamp(baseZ+delta,LIMITS.minZ,LIMITS.maxZ);
     const edgeWidth=mode==='walled'?0:2;
     const rotation=wallSnap?.rotation??terraceSnap?.rotation??
