@@ -98,35 +98,83 @@
     if(candidate.mode!=='walled')return false;
     return edits().some(edit=>edit.mode==='walled'&&polygonsOverlapInterior(candidate.top,edit.top));
   }
-  // Return only exposed subsegments of a terrace face. If two level terraces
-  // share an edge (even partially), the internal masonry wall is invisible.
+  // Boolean union of overlapping convex terrace footprints. Saved edits remain
+  // independent primitives; visible perimeter is their exact polygonal union.
+  // Splitting at every boundary intersection handles crossing, partial overlaps,
+  // containment, L-shaped outlines and rotated round/square junctions.
   function exposedWallSegments(edit,index){
     const a=edit.top[index],b=edit.top[(index+1)%edit.top.length];
-    const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-    const covered=[];
-    for(const other of edits()){
-      if(other===edit||other.id===edit.id||other.mode!=='walled'||
-         Math.abs(other.targetZ-edit.targetZ)>1e-6||
-         Math.abs(other.baseZ-edit.baseZ)>1e-6)continue;
-      for(let j=0;j<other.top.length;j++){
-        const c=other.top[j],d=other.top[(j+1)%other.top.length];
-        const ex=d.x-c.x,ey=d.y-c.y,EL=Math.hypot(ex,ey)||1;
-        if((ex*ux+ey*uy)/EL>-.99999)continue;
-        const offset=(p)=>Math.abs((p.x-a.x)*uy-(p.y-a.y)*ux);
-        if(offset(c)>1e-5||offset(d)>1e-5)continue;
-        const t0=(c.x-a.x)*ux+(c.y-a.y)*uy,t1=(d.x-a.x)*ux+(d.y-a.y)*uy;
-        const lo=Math.max(0,Math.min(t0,t1)),hi=Math.min(L,Math.max(t0,t1));
-        if(hi-lo>1e-6)covered.push([lo,hi]);
+    const vx=b.x-a.x,vy=b.y-a.y,L=Math.hypot(vx,vy);
+    if(L<1e-8)return[];
+    const ux=vx/L,uy=vy/L,area=edit.top.reduce((sum,p,i)=>{
+      const q=edit.top[(i+1)%edit.top.length];return sum+p.x*q.y-q.x*p.y;
+    },0);
+    const sign=area<0?-1:1;
+    const others=edits().filter(other=>other!==edit&&other.id!==edit.id&&other.mode==='walled'&&
+      Math.abs(other.targetZ-edit.targetZ)<1e-7&&Math.abs(other.baseZ-edit.baseZ)<1e-7);
+    const cuts=[0,1],cross=(x,y,X,Y)=>x*Y-y*X;
+    const add=t=>{if(t>1e-8&&t<1-1e-8)cuts.push(t)};
+    for(const other of others)for(let j=0;j<other.top.length;j++){
+      const c=other.top[j],d=other.top[(j+1)%other.top.length];
+      const wx=d.x-c.x,wy=d.y-c.y,cx=c.x-a.x,cy=c.y-a.y;
+      const denom=cross(vx,vy,wx,wy);
+      if(Math.abs(denom)>1e-9){
+        const t=cross(cx,cy,wx,wy)/denom,u=cross(cx,cy,vx,vy)/denom;
+        if(t>=-1e-8&&t<=1+1e-8&&u>=-1e-8&&u<=1+1e-8)add(t);
+      }else if(Math.abs(cross(cx,cy,vx,vy))<1e-7*L){
+        add((cx*ux+cy*uy)/L);
+        add(((d.x-a.x)*ux+(d.y-a.y)*uy)/L);
       }
     }
-    covered.sort((x,y)=>x[0]-y[0]);
-    const result=[],at=t=>({x:a.x+ux*t,y:a.y+uy*t});let from=0;
-    for(const [lo,hi] of covered){
-      if(lo>from+1e-6)result.push({a:at(from),b:at(lo)});
-      from=Math.max(from,hi);
+    cuts.sort((x,y)=>x-y);
+    const result=[],point=t=>({x:a.x+vx*t,y:a.y+vy*t});
+    for(let i=1;i<cuts.length;i++){
+      const lo=cuts[i-1],hi=cuts[i];if(hi-lo<1e-7)continue;
+      const mid=point((lo+hi)/2);
+      // Sample just outside this oriented polygon edge. If another terrace
+      // occupies that side, this is an internal boolean seam, not a wall.
+      const outside={x:mid.x+sign*uy*.0001,y:mid.y-sign*ux*.0001};
+      if(others.some(other=>pointInPolygon(outside,other.top)))continue;
+      // Identical outside boundaries should appear once, not be doubled.
+      const sameLine=others.some(other=>{
+        if(String(other.id)<String(edit.id))return other.top.some((c,j)=>{
+          const d=other.top[(j+1)%other.top.length],wx=d.x-c.x,wy=d.y-c.y;
+          return wx*ux+wy*uy>0&&pointSegmentDistance(mid,c,d)<1e-6;
+        });
+        return false;
+      });
+      if(!sameLine)result.push({a:point(lo),b:point(hi)});
     }
-    if(from<L-1e-6)result.push({a:at(from),b:at(L)});
     return result;
+  }
+  function unionContours(){
+    const groups=new Map(),key=pt=>Math.round(pt.x*1e6)+','+Math.round(pt.y*1e6);
+    for(const edit of edits()){
+      if(edit.mode!=='walled')continue;
+      const level=edit.baseZ+':'+edit.targetZ;
+      if(!groups.has(level))groups.set(level,{baseZ:edit.baseZ,targetZ:edit.targetZ,edges:[]});
+      for(let i=0;i<edit.top.length;i++)groups.get(level).edges.push(...exposedWallSegments(edit,i));
+    }
+    const out=[];
+    for(const group of groups.values()){
+      const unused=new Map();
+      for(const edge of group.edges){
+        const k=key(edge.a);if(!unused.has(k))unused.set(k,[]);
+        unused.get(k).push(edge);
+      }
+      for(const edge of group.edges){
+        if(!unused.get(key(edge.a))?.includes(edge))continue;
+        const loop=[];let cur=edge,guard=0;
+        while(cur&&guard++<=group.edges.length+1){
+          loop.push(cur.a);
+          const bucket=unused.get(key(cur.a));bucket.splice(bucket.indexOf(cur),1);
+          if(key(cur.b)===key(loop[0]))break;
+          cur=unused.get(key(cur.b))?.[0];
+        }
+        if(loop.length>=3)out.push({baseZ:group.baseZ,targetZ:group.targetZ,points:loop});
+      }
+    }
+    return out;
   }
   function boundaryContains(point,poly){
     return poly.some((a,i)=>dist(point,segmentProjection(point,a,poly[(i+1)%poly.length]))<1e-6);
@@ -207,20 +255,29 @@
     const delta=Number(options.delta)<0?-1:1;
     const magnetic=mode==='walled'&&options.magnet!==false;
     const wallSnap=magnetic?wallMagnet(center,radius,shape):null;
-    const terraceSnap=magnetic&&!wallSnap?terraceMagnet(center,radius,shape):null;
+    const terraceSnap=magnetic&&!wallSnap&&options.boolean!=='union'?terraceMagnet(center,radius,shape):null;
     const resolvedCenter=wallSnap?.center||terraceSnap?.center||center;
     const naturalZ=Number(terrainBaseElevation(resolvedCenter))||0;
     const pickedZ=Math.ceil(elevationAt(resolvedCenter,naturalZ)-1e-9);
-    const baseZ=pickedZ===0?0:pickedZ; // avoid -0 from ceil(negative epsilon)
-    const targetZ=clamp(baseZ+delta,LIMITS.minZ,LIMITS.maxZ);
+    let baseZ=pickedZ===0?0:pickedZ; // avoid -0 from ceil(negative epsilon)
+    let targetZ=clamp(baseZ+delta,LIMITS.minZ,LIMITS.maxZ);
     const edgeWidth=mode==='walled'?0:2;
     const rotation=wallSnap?.rotation??terraceSnap?.rotation??
       (Number.isFinite(Number(options.rotation))?Number(options.rotation):
         shape==='square'?0:-Math.PI/SEGMENTS);
     const top=polygon(resolvedCenter,radius,rotation,shape);
     const outer=polygon(resolvedCenter,radius+edgeWidth,rotation,shape);
+    const overlapping=mode==='walled'?edits().filter(edit=>edit.mode==='walled'&&polygonsOverlapInterior(top,edit.top)):[];
+    // Explicit Union reuses the existing level even if the picked point sits
+    // on its plateau (where a normal Raise operation would mean +1 level).
+    if(mode==='walled'&&options.boolean==='union'&&overlapping.length){
+      const reference=overlapping[0];
+      if(Math.sign(reference.targetZ-reference.baseZ)===delta){
+        baseZ=reference.baseZ;targetZ=reference.targetZ;
+      }
+    }
     const ghost={
-      id:null,previewOnly:true,mode,shape,center:{x:resolvedCenter.x,y:resolvedCenter.y},radius,delta,
+      id:null,previewOnly:true,mode,shape,boolean:options.boolean==='union'?'union':'normal',center:{x:resolvedCenter.x,y:resolvedCenter.y},radius,delta,
       baseZ,targetZ,edgeWidth,rotation,top,outer,wallSnap,terraceSnap,
       profile:mode==='walled'?'vertical':'graded',material:mode==='walled'?'stone':'terrain',
       ok:true,reason:''
@@ -228,9 +285,15 @@
     if(!insideBuild(outer)){
       ghost.ok=false;
       ghost.reason='Terraforming must remain inside the build area';
-    }else if(overlapsWalledTerrace(ghost)){
-      ghost.ok=false;
-      ghost.reason='Cannot overlap the interior of another walled terrace';
+    }else if(overlapping.length){
+      const compatible=overlapping.every(edit=>
+        Math.abs(edit.baseZ-baseZ)<1e-7&&Math.abs(edit.targetZ-targetZ)<1e-7);
+      if(ghost.boolean!=='union'||!compatible){
+        ghost.ok=false;
+        ghost.reason=ghost.boolean==='union'
+          ?'Boolean Union requires matching base and top elevation'
+          :'Cannot overlap the interior of another walled terrace';
+      }
     }
     return ghost;
   }
@@ -308,7 +371,7 @@
       ctx.beginPath();outer.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
       ctx.strokeStyle=valid?'rgba(126,255,187,.92)':'rgba(255,86,94,.98)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);
       ctx.fillStyle=valid?'#d9ffe8':'#ffd7d9';ctx.font='700 12px system-ui';ctx.textAlign='center';
-      ctx.fillText((edit.wallSnap?'MAGNET · ':'')+'H '+edit.targetZ.toFixed(1),label.x,label.y-13);
+      ctx.fillText((edit.boolean==='union'?'UNION · ':edit.wallSnap?'MAGNET · ':'')+'H '+edit.targetZ.toFixed(1),label.x,label.y-13);
     }
     ctx.restore();
   }
@@ -325,7 +388,7 @@
 
   window.ConquerTerraforming=Object.freeze({
     LIMITS,SHAPES,edits,preview,commit,clear,elevationAt,slopeAt,snapWallAnchor,wallGroundZ,
-    exposedWallSegments,polygonsOverlapInterior,
+    exposedWallSegments,unionContours,polygonsOverlapInterior,
     drawCommitted,drawGhost,drawMagnets
   });
 })();
