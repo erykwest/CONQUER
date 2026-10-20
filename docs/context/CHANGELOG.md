@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — L1 con tragitto fisico fino ai cantieri
+
+- Squadre L1 con identità stabili sincronizzate fra simulazione economica, avanzamento dei cantieri e rendering.
+- Percorsi pedonali da case o pozzo al sito, turni andata/lavoro/ritorno e impronte neve coerenti. I cantieri senza accesso pedonale non ricevono giornate-operaio.
+- Controlli contro impiego contemporaneo in industria, campi e allevamento; cache percorsi riutilizzata durante i frame.
+- Suite `qa/construction-commute-regression.cjs` aggiunta alle Actions economiche; salari e QA manuale browser sono passaggi separati.
+
 ## 2026-10-20 — Cantieri manuali dipendenti dagli L1
 
 - I cantieri ordinati dal giocatore ricevono fino a tre L1 liberi, distribuiti uno a testa prima di saturare un singolo lavoro.
