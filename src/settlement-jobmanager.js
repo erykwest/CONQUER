@@ -162,6 +162,8 @@
         if(!workers)continue;
         const c=s.construction,before=progress(s);
         c.workDone=Math.min(c.workRequired,num(c.workDone)+workers*effort);
+        // Floating point fractions must not strand a completed work order at 99.9999%.
+        if(c.workRequired-c.workDone<1e-8)c.workDone=c.workRequired;
         if(before<1&&progress(s)>=1){finished.push(s);invalidate()}
       }
     }
