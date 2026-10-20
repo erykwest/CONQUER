@@ -6,9 +6,9 @@
     loggingCamp:{label:'Taglialegna',name:'Logging camp',good:'wood',tier:1,workers:2,w:2,h:2,color:'#795036',edge:'#4a2d1c',radius:10,days:3,cost:{gold:35,wood:25}},
     quarry:{label:'Cava',name:'Stone quarry',good:'stone',tier:2,workers:2,w:3,h:3,color:'#999b9c',edge:'#64686c',days:5,cost:{gold:65,wood:20,stone:8}},
     mine:{label:'Miniera',name:'Mine',good:'stone',tier:2,workers:2,w:1,h:1,color:'#31363e',edge:'#171b20',days:7,cost:{gold:95,wood:35,stone:18}},
-    windmillA:{label:'Mulino a vento I',name:'Windmill I',good:'food',tier:1,workers:1,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:40,wood:30,stone:10}},
-    windmillB:{label:'Mulino a vento II',name:'Windmill II',good:'food',tier:1,workers:1,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:40,wood:30,stone:10}},
-    watermill:{label:'Mulino ad acqua',name:'Watermill',good:'food',tier:1,workers:1,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:45,wood:35,stone:10}}
+    windmillA:{label:'Mulino a vento I',name:'Windmill I',good:'food',tier:1,workers:0,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:40,wood:30,stone:10}},
+    windmillB:{label:'Mulino a vento II',name:'Windmill II',good:'food',tier:1,workers:0,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:40,wood:30,stone:10}},
+    watermill:{label:'Mulino ad acqua',name:'Watermill',good:'food',tier:1,workers:0,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:45,wood:35,stone:10}}
   });
   const is=s=>!!s&&Object.hasOwn(TYPES,s.type);
   const make=(type,position)=>({type,x:position.x,y:position.y,
