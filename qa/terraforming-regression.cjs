@@ -378,6 +378,20 @@ test('nonnegative H floor and migration of legacy below-ground terrain',()=>{
   assert.equal(api.edits()[0].mode,'flat');
   assert.equal(api.elevationAt({x:102,y:102},0),0);
 });
+test('Flat H0 masks natural steep or gentle relief for placement and navigation',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  context.terrainBaseElevation=()=>1.5;
+  const natural=fs.readFileSync(path.join(__dirname,'..','src','settlement-castle.js'),'utf8');
+  const source=natural.match(/function terrainSlopeKind\(p\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source,'terrainSlopeKind uses a separate relief fallback');
+  const sandbox=vm.createContext({window:context.window,reliefBandAt:()=>({kind:'steep'})});
+  vm.runInContext(source,sandbox);
+  assert.equal(sandbox.terrainSlopeKind({x:100,y:100}),'steep');
+  assert.equal(api.commit(api.preview({x:100,y:100},{mode:'flat',shape:'square',radius:2})),true);
+  assert.equal(sandbox.terrainSlopeKind({x:100,y:100}),null,'a flattened hill is no longer naturally steep');
+  assert.equal(sandbox.terrainSlopeKind({x:110,y:110}),'steep','non-flattened relief remains untouched');
+  context.terrainBaseElevation=()=>0;
+});
 test('clear removes player terraforming from the persisted relief model',()=>{
   context.State.relief.terraforming=[];
   api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:2}));
