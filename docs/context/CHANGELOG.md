@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Cantieri con risorse reali e squadra fondatrice
+
+- `State.resources` cessa di essere stock consumabile autonomo dopo fondazione: il Builder usa tesoro e materiali del castello nel motore economico.
+- I costi diventano domanda e consumo contabilizzati, i rimborsi recuperi (non output produttivi).
+- Fondazione dotata di una cassa iniziale finita, merci sul mercato e quattro L1 non ancora alloggiati, visibili e impiegabili nei poli; save legacy migra senza importare risorse infinite.
+- Suite economica estesa a economia/Builder, fondazione, placement e regressione moduli popolazione; nessuna affermazione di prova manuale browser o merge su main.
+
 ## 2026-10-19 — Il saldo economico prima di mercanti e case
 
 - Decisione **D-033**: misurare consumi, produzioni, deficit e surplus prima di attivare crescita imprenditoriale e urbana.
