@@ -242,6 +242,36 @@
         }
         pieces.forEach(emit);
       };
+      // Boolean top union: clip each convex terrace top against already drawn
+      // same-level tops. This yields non-overlapping convex pieces, even for
+      // concave L/T shaped unions and rotated polygons (no z-fighting).
+      const polygonArea=poly=>Math.abs(poly.reduce((v,p,i)=>{
+        const q=poly[(i+1)%poly.length];return v+p.x*q.y-q.x*p.y;
+      },0))/2;
+      const subtractConvex=(poly,clip)=>{
+        let inside=poly,out=[];
+        for(let i=0;i<clip.length&&inside.length>=3;i++){
+          const a=clip[i],b=clip[(i+1)%clip.length];
+          const outside=halfPlane(inside,a,b,false);
+          if(outside.length>=3&&polygonArea(outside)>1e-8)out.push(outside);
+          inside=halfPlane(inside,a,b,true);
+        }
+        return out;
+      };
+      const drawTerraceTops=()=>{
+        const previous=[];
+        for(const terrace of terraces){
+          let pieces=[terrace.top.map(p=>({...p,z:terrace.targetZ}))];
+          for(const earlier of previous){
+            if(Math.abs(earlier.targetZ-terrace.targetZ)>1e-7||
+               Math.abs(earlier.baseZ-terrace.baseZ)>1e-7)continue;
+            pieces=pieces.flatMap(piece=>subtractConvex(piece,earlier.top));
+            if(!pieces.length)break;
+          }
+          for(const piece of pieces)emit(piece);
+          previous.push(terrace);
+        }
+      };
       // Once the player edits elevation, sample the single authoritative terrainElevation
       // contract. A denser build-area grid preserves terrace and excavation silhouettes;
       // the untouched world buffer stays coarse to limit upload cost.
@@ -258,7 +288,7 @@
       grid(0,BUILD_MIN,BUILD_MIN,BUILD_MAX,2);
       grid(BUILD_MAX,BUILD_MIN,W,BUILD_MAX,2);
       grid(BUILD_MIN,BUILD_MIN,BUILD_MAX,BUILD_MAX,.5);
-      for(const edit of terraces)emit(edit.top.map(p=>({...p,z:edit.targetZ})));
+      drawTerraceTops();
       return new Float32Array(v);
     }
     for(const [x,y] of [[0,0],[W,0],[W,W],[0,0],[W,W],[0,W]])push(x,y,0);

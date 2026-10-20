@@ -359,7 +359,8 @@ for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
   const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
   const mode=b.dataset.terraform==='walled'?'walled':'terrain';
   const shape=document.querySelector('[data-terraform-shape].active')?.dataset.terraformShape==='square'?'square':'round';
-  setTool({kind:'terraform',mode,shape,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+shape+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
+  const boolean=document.querySelector('[data-terraform-boolean].active')?.dataset.terraformBoolean==='union'?'union':'normal';
+  setTool({kind:'terraform',mode,shape,boolean,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+shape+(mode==='walled'&&boolean==='union'?' · BOOLEAN UNION':'')+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
 };
 for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=>{
   const shape=b.dataset.terraformShape==='square'?'square':'round';
@@ -367,6 +368,14 @@ for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=
   if(State.tool.kind==='terraform'){
     State.tool.shape=shape;State.draft=null;
     status('Terraforming shape: '+shape);draw();
+  }
+};
+for(const b of document.querySelectorAll('[data-terraform-boolean]'))b.onclick=()=>{
+  const boolean=b.dataset.terraformBoolean==='union'?'union':'normal';
+  document.querySelectorAll('[data-terraform-boolean]').forEach(x=>x.classList.toggle('active',x===b));
+  if(State.tool.kind==='terraform'){
+    State.tool.boolean=boolean;State.draft=null;
+    status(boolean==='union'?'Walled terrace: boolean union · matching H only':'Walled terrace: separate, no overlap');draw();
   }
 };
 for(const b of document.querySelectorAll('[data-terraform-delta]'))b.onclick=()=>{
