@@ -160,6 +160,89 @@
         reportedConnected:!!route?.connected};
     });
   }
+  // Small lord-owned draft controls; never offers a fictitious launch button.
+  function panelHtml(tower){
+    if(!tower||keep()?.id!==tower.id)return'';
+    const c=state(),goods=GOODS();
+    const rows=Object.values(c?.lordConvoys||{}).filter(j=>
+      ['draft','ready'].includes(j.status)&&j.originStructureId===String(tower.id));
+    const htmlEscape=s=>String(s).replace(/[&<>"']/g,ch=>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const items=rows.slice(-8).map(j=>{
+      const ref=encodeURIComponent(j.id),label=j.kind==='tribute'?'Tributo':'Dono';
+      const goodsText=j.cargo.length?j.cargo[0].qty+' '+j.cargo[0].good:'solo monete';
+      const guardEdit=j.status==='draft'?
+        '<label>Guardie richieste <input data-convoy-guard-input="'+ref+
+        '" type="number" min="0" max="'+(availableGuardSlots(j.id)+j.escorts.requested)+
+        '" value="'+j.escorts.requested+'" step="1"></label>'+
+        '<button type="button" data-convoy-guards="'+ref+'">Aggiorna scorta</button>':'';
+      return'<div class="legend">'+label+' · '+htmlEscape(goodsText)+
+        ' · forziere '+j.chest.gold+' oro · guardie richieste '+j.escorts.requested+
+        ' · '+(j.status==='ready'?'risorse accantonate':'bozza')+'</div>'+
+        guardEdit+(j.status==='draft'?'<button type="button" data-convoy-reserve="'+ref+
+        '">Accantona oro e merci</button>':'')+
+        '<button type="button" data-convoy-cancel="'+ref+'">Annulla convoglio</button>';
+    }).join('');
+    return'<div class="slot"><div class="slot-label">Tributi / doni · dal Mastio</div>'+
+      '<div class="legend">Prepara un convoglio per un feudo esterno. Nessuna partenza prima della futura mappa mondiale. Le guardie sono richieste, non ancora assegnate a un roster reale.</div>'+
+      '<label>Feudo destinatario <input type="text" data-convoy-destination maxlength="128" placeholder="ID feudo" /></label>'+
+      '<label>Tipo <select data-convoy-kind><option value="gift">Dono</option><option value="tribute">Tributo</option></select></label>'+
+      '<label>Merce <select data-convoy-good><option value="">Solo monete</option>'+
+      goods.map(g=>'<option value="'+htmlEscape(g)+'">'+htmlEscape(g)+'</option>').join('')+
+      '</select></label>'+
+      '<label>Quantità <input data-convoy-qty type="number" min="0" step="1" value="0"></label>'+
+      '<label>Monete nel forziere <input data-convoy-gold type="number" min="0" step="0.001" value="0"></label>'+
+      '<label>Scorta caserme (posti prenotabili '+availableGuardSlots()+')'+
+      '<input data-convoy-guard-count type="number" min="0" max="'+availableGuardSlots()+
+      '" step="1" value="0"></label>'+
+      '<button type="button" data-convoy-add>Prepara bozza</button>'+items+'</div>';
+  }
+  function bindPanel(root){
+    if(!root||!root.querySelectorAll)return;
+    const q=selector=>root.querySelector(selector);
+    const refresh=()=>{if(typeof scheduleLocalSave==='function')scheduleLocalSave(200);
+      if(typeof renderFunctionPanel==='function')renderFunctionPanel()};
+    const notice=message=>{if(typeof status==='function')status(message)};
+    const add=q('[data-convoy-add]');
+    if(add)add.onclick=()=>{
+      const c=state(),destinationId=q('[data-convoy-destination]')?.value.trim();
+      const kind=q('[data-convoy-kind]')?.value;
+      const good=q('[data-convoy-good]')?.value;
+      const qty=Number(q('[data-convoy-qty]')?.value);
+      const gold=Number(q('[data-convoy-gold]')?.value);
+      const guards=Number(q('[data-convoy-guard-count]')?.value);
+      if(!Number.isSafeInteger(qty)||qty<0||good&&qty<=0||!good&&qty!==0){
+        notice('Quantità della merce non valida');return;
+      }
+      let serial=1,id='lord-convoy-'+serial;
+      while(c.lordConvoys[id])id='lord-convoy-'+(++serial);
+      if(!planLordConvoy({id,kind,destinationId,
+        cargo:good?[{good,qty}]:[],coinGold:gold,guards})){
+        notice('Bozza non valida: Mastio, feudo, risorse o posti di scorta da verificare');
+        return;
+      }
+      notice('Convoglio creato come bozza: non è ancora partito');
+      refresh();
+    };
+    const decode=btn=>decodeURIComponent(btn.dataset.convoyReserve||
+      btn.dataset.convoyCancel||btn.dataset.convoyGuards);
+    root.querySelectorAll('[data-convoy-reserve]').forEach(btn=>btn.onclick=()=>{
+      if(!reserveLordConvoy(decode(btn))){notice('Scorte insufficienti o Mastio non disponibile');return}
+      notice('Merci e monete accantonate: percorso non ancora attivo');refresh();
+    });
+    root.querySelectorAll('[data-convoy-cancel]').forEach(btn=>btn.onclick=()=>{
+      if(!cancelLordConvoy(decode(btn)))return;
+      notice('Bozza annullata: scorte restituite, se già accantonate');refresh();
+    });
+    root.querySelectorAll('[data-convoy-guards]').forEach(btn=>btn.onclick=()=>{
+      const id=decode(btn),input=Array.from(root.querySelectorAll('[data-convoy-guard-input]'))
+        .find(i=>i.dataset.convoyGuardInput===encodeURIComponent(id));
+      if(!input||!assignLordGuards(id,Number(input.value))){
+        notice('Posti di scorta delle caserme insufficienti');return;
+      }
+      notice('Posti scorta richiesti aggiornati');refresh();
+    });
+  }
   function snapshot(){
     const c=state(),lord=Object.values(c?.lordConvoys||{}),
       coach=Object.values(c?.nobleJourneys||{}),
@@ -176,6 +259,6 @@
     state,quoteCargo,planLordConvoy,assignLordGuards,reserveLordConvoy,
     cancelLordConvoy,planNobleCoach,cancelNobleCoach,availableExits,
     guardSlots,availableGuardSlots,mercenaryDailyWage,quoteJourneyCost,
-    assignMerchantEscorts,snapshot
+    assignMerchantEscorts,panelHtml,bindPanel,snapshot
   });
 })();
