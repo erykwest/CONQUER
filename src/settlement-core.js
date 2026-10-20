@@ -508,16 +508,23 @@ function buildDuration(s){
 }
 function beginConstruction(s,delay=0){
   const d=buildDuration(s);if(d<=0)return s;
-  s.construction={startedDay:State.clock.day+delay,completeDay:State.clock.day+delay+d};return s;
+  // The founding well has no labor force yet: bootstrap the first village.
+  if(s.type==='well')return s;
+  s.construction={startedDay:State.clock.day+delay,workRequired:d,workDone:0,priority:1};return s;
 }
 function constructionProgress(s){
   if(!s?.construction)return 1;
+  if(Number.isFinite(s.construction.workRequired))
+    return clamp((Number(s.construction.workDone)||0)/Math.max(.001,s.construction.workRequired),0,1);
   const a=s.construction.startedDay,b=s.construction.completeDay;
-  if(State.clock.day<=a)return 0;if(State.clock.day>=b)return 1;
-  return clamp((State.clock.day-a)/(b-a),0,1);
+  return b>a?clamp((State.clock.day-a)/(b-a),0,1):1;
 }
 function underConstruction(s){return constructionProgress(s)<1}
-function remainingDays(s){return s?.construction?Math.max(0,s.construction.completeDay-State.clock.day):0}
+function remainingDays(s){
+  if(!s?.construction)return 0;
+  if(Number.isFinite(s.construction.workRequired))return Math.max(0,s.construction.workRequired-(s.construction.workDone||0));
+  return Math.max(0,(s.construction.completeDay||0)-State.clock.day);
+}
 function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
@@ -670,7 +677,7 @@ function pointRadius(s){
       scene:{
         structures:all.length,
         roads:all.reduce((n,x)=>n+(x?.type==='road'?1:0),0),
-        construction:all.reduce((n,x)=>n+(x?.construction&&finite(x.construction.completeDay)>day?1:0),0)
+        construction:all.reduce((n,x)=>n+(x?.construction&&underConstruction(x)?1:0),0)
       }
     };
     samples.push(s);trim(samples,MAX_SAMPLES);

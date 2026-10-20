@@ -6,12 +6,12 @@
   const BASE = Object.freeze({food:2,wood:3,stone:4,metal:7,equipment:17,luxury:20});
   const TARGET = Object.freeze({food:100,wood:70,stone:70,metal:35,equipment:30,luxury:10});
   const KIND = Object.freeze({
-    field:{good:'food',classId:1,workers:1,build:20},
+    field:{good:'food',classId:2,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
     quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
     mine:{good:'stone',classId:2,workers:2,rate:2,build:95},
     workshop:{good:'equipment',classId:3,workers:1,rate:.5,inputs:{metal:.6,wood:.3},build:130},
-    vineyard:{good:'luxury',classId:1,workers:2,build:90}
+    vineyard:{good:'luxury',classId:2,workers:2,build:90}
   });
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
   const finite=(v,d=0)=>Number.isFinite(+v)?+v:d;
@@ -88,11 +88,12 @@
     if(s.type==='field'){
       let slots=1;
       if(typeof fieldLayout==='function')slots=Math.max(1,fieldLayout(s).cells.length);
-      return {tier:1,count:slots};
+      return {tier:2,count:slots};
     }
     return {tier:spec.classId,count:spec.workers};
   }
   function activeCapacity(){
+    if(window.ConquerJobManager)return window.ConquerJobManager.plan().staffing;
     const pop=population(),limits={L1:Math.floor(pop.L1/3),L2:Math.floor(pop.L2/3),L3:Math.floor(pop.L3/3),L4:pop.L4};
     const remaining={...limits},allocated={};
     // Player-established industries claim workers before automatically generated fields.
@@ -100,12 +101,6 @@
       const req=workerDemand(s),group=classKey(req.tier);
       let count=Math.min(req.count,remaining[group]);
       remaining[group]-=count;
-      if(s.type==='field'&&count<req.count){
-        // A farm tended by otherwise idle L2 workers still produces food.
-        // Mines/quarries have already claimed their L2 workforce above.
-        const extra=Math.min(req.count-count,remaining.L2);
-        count+=extra;remaining.L2-=extra;
-      }
       allocated[s.id]=count;
     }
     return allocated;
@@ -113,6 +108,11 @@
   function daily(day){
     const e=sync();if(weekday(day)>=5)return;
     const staffing=activeCapacity(),date=dateAt(day);
+    // Husbandry is an L1 occupation, not agriculture. Only staffed
+    // goat/sheep households generate food; no hunting or forest gathering.
+    const jobs=window.ConquerJobManager?.plan(day);
+    if(jobs)for(const [houseId,job] of jobs.assigned)
+      if(job.kind==='herding')put(e,'food',.9,'private',houseId+':herd');
     for(const s of activeStructures()){
       const a=e.activities[s.id],spec=KIND[s.type],staff=staffing[s.id]||0;
       if(!staff||s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;

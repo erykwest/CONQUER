@@ -7,14 +7,12 @@ function fieldAvailableHouses(houses){
     const tier=economy?.KIND?.[s.type]?.classId;
     if(s.type!=='field'&&(tier===1||tier===2))reserved[tier]+=allocation[s.id]||0;
   }
-  const sorted=tier=>houses.filter(h=>houseLevel(h)===tier&&
-    window.ConquerLivestock?.lotKindForHouse(h)!==(tier===1?'shepherd':'cow'))
-    .sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved[tier]);
-  return {L1:sorted(1),L2:sorted(2),reserved};
+  const sorted=houses.filter(h=>houseLevel(h)===2)
+    .sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved[2]);
+  return {L1:[],L2:sorted,reserved};
 }
 function fieldWorkAssignments(houses,fields){
-  // L1 workers occupy available field slots first. Idle L2 workers can farm
-  // remaining slots rather than remaining locked to artisan routines.
+  // Only L2 adults can cultivate fields; L1 are builders, loggers or herders.
   const workforce=fieldAvailableHouses(houses);
   const reserved=workforce.reserved;
   const key=houses.map(h=>[h.id,h.x,h.y,houseLevel(h)].join(':')).sort().join(',')+'|'+fields.map(f=>{
@@ -31,7 +29,7 @@ function fieldWorkAssignments(houses,fields){
     if(!fieldCropReady(field))continue;
     for(const cell of fieldGrid(field).cells)if(!fieldSlotDone(field,cell))slots.push({field,cell,used:false});
   }
-  const assignments=new Map(),ordered=[...workforce.L1,...workforce.L2];
+  const assignments=new Map(),ordered=workforce.L2;
   for(const house of ordered){
     const door=houseDoorInfo(house).outside;let best=null,bestScore=Infinity;
     for(const slot of slots){

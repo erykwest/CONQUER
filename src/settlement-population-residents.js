@@ -74,19 +74,21 @@ function familyPosition(house,day){
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
 }
 function residentClassPosition(house,resident,day,assignment){
-  // Flocks need their shepherd even on market/rest days.
-  if((houseLevel(house)===1||houseLevel(house)===2)&&resident.sex==='male'&&
-      resident.age==='adult'&&resident.index===0&&
-      ['shepherd','cow'].includes(window.ConquerLivestock?.lotKindForHouse(house)))
-    return window.ConquerLivestock.shepherdPosition(house);
+  // The L1 adult follows their assigned job; no L1 field workers.
+  if(houseLevel(house)===1&&resident.sex==='male'&&resident.age==='adult'&&resident.index===0){
+    const job=window.ConquerJobManager?.plan(State.clock.day).assigned.get(house.id);
+    if(job?.kind==='building'||job?.kind==='logging')
+      return window.ConquerJobManager.position(house,State.clock.day);
+    if(job?.kind==='herding')return window.ConquerLivestock?.shepherdPosition(house)||null;
+  }
   const weekly=window.ConquerEconomy?.weekday(State.clock.day);
   if(weekly===6)return null; // Sunday rest: no scheduled civilian trips or labor.
   if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip for all classes.
   const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
   if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
-  // Both L1 and unoccupied L2 workers use the real serpentine field route.
-  if(resident.sex==='male'&&assignment&&(level===1||level===2))
+  // Field routes belong exclusively to L2 men.
+  if(resident.sex==='male'&&assignment&&level===2)
     return peasantPosition(house,assignment,State.clock.day);
   if(level===1)return null;
   if(level===2)return artisanPosition(house,shiftedDay);

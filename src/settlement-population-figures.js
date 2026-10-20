@@ -79,7 +79,7 @@ function drawPeasants(){
   if(!houses.length)return;
   const day=peasantVisualDay(),dots=[];
   let representedPopulation=0,activeAgents=0;
-  const farmHouses=houses.filter(h=>houseLevel(h)===1||houseLevel(h)===2);
+  const farmHouses=houses.filter(h=>houseLevel(h)===2);
   const assignments=fieldWorkAssignments(farmHouses,fields);
 
   const residentStride=State.view.scale<.30?3:State.view.scale<.55?2:1;

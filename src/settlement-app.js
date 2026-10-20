@@ -21,6 +21,7 @@ function structureAtScreen(p){
 function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
+  window.ConquerJobManager?.invalidate();
   if(hardNavigation){
     invalidateNavigation(true);
     fieldWorkAssignmentCache={key:null,map:new Map()};
