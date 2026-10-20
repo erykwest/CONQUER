@@ -96,6 +96,7 @@ function urbanBuildingPolygons(s){
   if(s.type==='house')return houseFootprintParts(s).map(p=>p.points);
   if(s.type==='well')return[wellPlazaPoints(s)];
   if(isCivic(s))return civicParts(s).map(p=>p.points);
+  if(isCivicAnnex(s))return[civicAnnexFootprint(s)];
   const points=footprintPoints(s);return points?.length?[points]:[];
 }
 function urbanParcelTerrainAllowed(points){
@@ -126,12 +127,12 @@ function urbanParcelTerrainAllowed(points){
     if(urbanContains(points,{x,y})&&terrainSlopeKind({x,y})==='steep')return false;
   return points.every(p=>terrainSlopeKind(p)!=='steep');
 }
-function urbanParcelAllowed(points,houseId){
+function urbanParcelAllowed(points,houseId,skipYellow=false){
   // Reject the entire proposed parcel on water/forest/cliffs, not just its site.
   // Gentle hills remain available to both houses and farmland.
-  if(!urbanYellowContains(points)||!urbanParcelTerrainAllowed(points))return false;
+  if((!skipYellow&&!urbanYellowContains(points))||!urbanParcelTerrainAllowed(points))return false;
   for(const s of State.structures){
-    if(s.id===houseId)continue;
+    if(s.id===houseId||isCivicAnnex(s)&&s.parentId===houseId)continue;
     // Field polygons are not returned by urbanBuildingPolygons: protect the
     // agricultural lot before accepting a new house's Voronoi parcel.
     if(s.type==='field'&&urbanPolygonsOverlap(points,fieldPoints(s)))return false;
@@ -179,9 +180,12 @@ function urbanLotUnitConflict(lot,occupants=urbanSpawnOccupants()){
   return occupants.some(unit=>pointInPolygon(unit,poly)||poly.some((a,i)=>
     pointSegmentDistance(unit,a,poly[(i+1)%poly.length])<=(unit.r||.22)));
 }
+function urbanSiteFootprint(site){
+  return site.type==='house'?houseFootprintParts(site).flatMap(p=>p.points):urbanBuildingPolygons(site).flat();
+}
 function urbanQuad(cell,house,allowed=null){
   if(cell.length<4)return null;
-  const footprint=houseFootprintParts(house).flatMap(p=>p.points);
+  const footprint=urbanSiteFootprint(house);
   const candidates=[];
   for(let a=0;a<cell.length-3;a++)for(let b=a+1;b<cell.length-2;b++)
     for(let c=b+1;c<cell.length-1;c++)for(let d=c+1;d<cell.length;d++){
@@ -204,13 +208,27 @@ function urbanQuad(cell,house,allowed=null){
   return quad.every(p=>urbanContains(cell,p))&&(!allowed||allowed(quad))?quad:null;
 }
 function urbanLotFor(house,houses,roads=primaryRoadList()){
-  const reach=3.4;
+  const reach=house.type==='house'?3.4:Math.max(3.4,civicRadius(house)+3.3);
   let cell=[
     {x:Math.max(BUILD_MIN,house.x-reach),y:Math.max(BUILD_MIN,house.y-reach)},
     {x:Math.min(BUILD_MAX,house.x+reach),y:Math.max(BUILD_MIN,house.y-reach)},
     {x:Math.min(BUILD_MAX,house.x+reach),y:Math.min(BUILD_MAX,house.y+reach)},
     {x:Math.max(BUILD_MIN,house.x-reach),y:Math.min(BUILD_MAX,house.y+reach)}
   ];
+  // Civic lots are capped a little beyond the building's largest (L3) silhouette,
+  // oriented with it; annexes may extend past the lot (civicAnnexPlacementCheck).
+  if(house.type!=='house'){
+    const parts=civicLocalParts(house),pad=CIVIC_LOT_PAD;
+    if(parts.length){
+      const a=house.angle||0,ex={x:Math.cos(a),y:Math.sin(a)},ey={x:-Math.sin(a),y:Math.cos(a)};
+      const x0=Math.min(...parts.map(p=>p.cx-p.w/2))-pad,x1=Math.max(...parts.map(p=>p.cx+p.w/2))+pad;
+      const y0=Math.min(...parts.map(p=>p.cy-p.h/2))-pad,y1=Math.max(...parts.map(p=>p.cy+p.h/2))+pad;
+      const ox=house.x*ex.x+house.y*ex.y,oy=house.x*ey.x+house.y*ey.y;
+      for(const [nx,ny,c] of [[ex.x,ex.y,ox+x1],[-ex.x,-ex.y,-(ox+x0)],[ey.x,ey.y,oy+y1],[-ey.x,-ey.y,-(oy+y0)]]){
+        cell=urbanClip(cell,nx,ny,c);if(cell.length<3)return null;
+      }
+    }
+  }
   for(const other of houses){
     if(other.id===house.id||dist(other,house)>reach*3)continue;
     const nx=other.x-house.x,ny=other.y-house.y;
@@ -232,24 +250,25 @@ function urbanLotFor(house,houses,roads=primaryRoadList()){
   }
   // Redevelopment preserves the cadastral lot of the existing cottage;
   // dense streetfront volumes are derived within that owned plot.
-  const site=(houseLevel(house)>=3&&(house.auto||house.urbanRedeveloped))
+  const site=(house.type==='house'&&houseLevel(house)>=3&&(house.auto||house.urbanRedeveloped))
     ?{...house,houseLevel:2}:house;
   // Preferred parcel: the whole Voronoi cell, so neighbouring lots share their
   // bisector edges exactly (one fence, no slivers between plots). Fields and
   // other buildings cut it along their own side, a few centimetres apart.
   const full=urbanCellParcel(urbanClipObstacles(cell,house),site);
-  if(full&&urbanParcelAllowed(full,house.id))return{id:'lot:'+house.id,houseId:house.id,points:full,height:.38};
+  const owner=house.type==='house'?{houseId:house.id}:{civicId:house.id};
+  if(full&&urbanParcelAllowed(full,house.id,house.type!=='house'))return{id:'lot:'+house.id,...owner,points:full,height:.38};
   // Fallback for cells crossed by forest, water or cliffs: the largest allowed
   // quadrilateral inscribed in the cell.
-  const points=urbanQuad(cell,site,points=>urbanParcelAllowed(points,house.id));
-  return points?{id:'lot:'+house.id,houseId:house.id,points,height:.38}:null;
+  const points=urbanQuad(cell,site,points=>urbanParcelAllowed(points,house.id,house.type!=='house'));
+  return points?{id:'lot:'+house.id,...owner,points,height:.38}:null;
 }
-const URBAN_ROAD_VERGE=.08,URBAN_OBSTACLE_GAP=.03;
+const URBAN_ROAD_VERGE=.08,URBAN_OBSTACLE_GAP=.03,CIVIC_LOT_PAD=1.3;
 // Convex obstacles (fields, civic/castle footprints) near the house: keep the cell on the house's
 // side of the obstacle edge that separates them best.
 function urbanClipObstacles(cell,house){
   for(const s of State.structures){
-    if(s.id===house.id||s.type==='house'||s.type==='road')continue;
+    if(s.id===house.id||isCivicAnnex(s)&&s.parentId===house.id||s.type==='road'||s.type==='house'&&house.type==='house')continue;
     const polys=s.type==='field'?[fieldPoints(s)]:urbanBuildingPolygons(s);
     for(const poly of polys){
       if(!poly?.length||!urbanPolygonsOverlap(cell,poly))continue;
@@ -276,7 +295,7 @@ function urbanCellParcel(cell,site){
     return Math.abs((p.x-a.x)*(b.y-a.y)-(p.y-a.y)*(b.x-a.x))>1e-5*Math.max(1,dist(a,b));
   });
   if(poly.length<3)return null;
-  const footprint=houseFootprintParts(site).flatMap(p=>p.points);
+  const footprint=urbanSiteFootprint(site);
   if(!footprint.every(p=>urbanContains(poly,p,.16)))return null;
   return urbanLotHasMinimumSize(poly,site.angle||0)?poly:null;
 }
@@ -297,10 +316,14 @@ function urbanHouseFitsLots(candidate,options={}){
   const spawnContext=options.houses&&options.existingLots instanceof Map?options:null;
   const existing=spawnContext?.houses||State.structures.filter(s=>s.type==='house'&&s.id!==candidate.id);
   const houses=existing.filter(h=>h.id!==candidate.id);
-  houses.push(candidate);
+  const civicSites=State.structures.filter(s=>(s.type==='tavern'||s.type==='church')&&!underConstruction(s));
+  const baseSites=houses.concat(civicSites),sites=baseSites.concat(candidate);
   const roads=spawnContext?.roads;
-  const lot=urbanLotFor(candidate,houses,roads);
+  const lot=urbanLotFor(candidate,sites,roads);
   if(!lot)return false;
+  // Preserve already-established civic plots when the settlement grows.
+  if(civicSites.some(civic=>dist(civic,candidate)<14&&
+    urbanLotFor(civic,baseSites,roads)&&!urbanLotFor(civic,sites,roads)))return false;
   // During manual upgrades, existing residents must not veto their own home.
   // During spawn, enumerate resident positions only once per growth attempt.
   if(!ignoreDynamicUnits){
@@ -313,20 +336,21 @@ function urbanHouseFitsLots(candidate,options={}){
       let baseline;
       if(spawnContext.existingLots.has(h.id))baseline=spawnContext.existingLots.get(h.id);
       else{
-        baseline=urbanLotFor(h,existing,roads);
+        baseline=urbanLotFor(h,baseSites,roads);
         spawnContext.existingLots.set(h.id,baseline||null);
       }
-      if(baseline&&!urbanLotFor(h,houses,roads))return false;
+      if(baseline&&!urbanLotFor(h,sites,roads))return false;
     }
     return true;
   }
   return existing.every(h=>h.id===candidate.id||dist(h,candidate)>10.2||
-    !urbanLotFor(h,existing)||!!urbanLotFor(h,houses));
+    !urbanLotFor(h,baseSites)||!!urbanLotFor(h,sites));
 }
 function urbanLots(){
   if(urbanLotCache)return urbanLotCache;
-  const houses=State.structures.filter(s=>s.type==='house'),roads=primaryRoadList();
-  return urbanLotCache=houses.map(h=>urbanLotFor(h,houses,roads)).filter(Boolean);
+  const sites=State.structures.filter(s=>s.type==='house'||(s.type==='tavern'||s.type==='church')&&!underConstruction(s));
+  const roads=primaryRoadList();
+  return urbanLotCache=sites.map(s=>urbanLotFor(s,sites,roads)).filter(Boolean);
 }
 // Urban redevelopment: a L3/L4 plot is one economic household, with several
 // deterministic street-front volumes. Children are geometry, not extra citizens.
@@ -600,6 +624,12 @@ function urbanFenceSegments(lots=null,fields=null){
     }
   };
   for(const lot of lots){
+    if(lot.civicId){
+      const civic=State.structures.find(s=>s.id===lot.civicId);if(!civic)continue;
+      const door=civicEntranceInfo(civic)?.outside||{x:civic.x,y:civic.y};
+      addParcel(lot.points,door,nearestPrimaryRoadProjection(door)?.point||door);
+      continue;
+    }
     const house=State.structures.find(h=>h.id===lot.houseId);if(!house)continue;
     if((house.auto||house.urbanRedeveloped)&&houseLevel(house)>=3){
       // Redeveloped plots open on the street through their townhouses; the yard
@@ -725,7 +755,8 @@ let urbanCornerTreeCache={revision:-1,trees:[]};
 function urbanLotCornerTrees(){
   if(urbanCornerTreeCache.revision===urbanRevision)return urbanCornerTreeCache.trees;
   const sites=[];
-  for(const lot of urbanLots())for(const p of lot.points){
+  // Civic lots plant their own 3D trees (settlement-civic3d.js lot props).
+  for(const lot of urbanLots())if(!lot.civicId)for(const p of lot.points){
     const site=sites.find(s=>dist(s,p)<=URBAN_FENCE_WELD);
     if(site){site.sx+=p.x;site.sy+=p.y;site.n++;site.min=site.min.x<p.x||site.min.x===p.x&&site.min.y<=p.y?site.min:p}
     else sites.push({x:p.x,y:p.y,sx:p.x,sy:p.y,n:1,min:p});
@@ -756,6 +787,12 @@ function urbanLotCornerTrees(){
 function drawUrbanLots(){
   const lots=urbanLots();
   for(const lot of lots){
+    if(lot.civicId){
+      const civic=State.structures.find(s=>s.id===lot.civicId);
+      const color=civic?.type==='church'?'rgba(148,145,135,.22)':'rgba(164,124,83,.18)';
+      pathPolygon(lot.points.map(p=>w2s(p,.015)),color,null);
+      continue;
+    }
     const house=State.structures.find(h=>h.id===lot.houseId);
     const dense=(house?.auto||house?.urbanRedeveloped)&&houseLevel(house)>=3;
     const use=window.ConquerLivestock?.lotKindForHouse(house);

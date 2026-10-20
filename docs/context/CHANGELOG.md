@@ -2,6 +2,32 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-19 — Civil: guida tecnica per sviluppo annessi
+
+- Aggiunto [`docs/CIVIL-ANNEX-DEVELOPMENT.md`](../CIVIL-ANNEX-DEVELOPMENT.md) sulla branch `Civil`: stato reale del catalogo, differenza cimitero intrinseco / birreria costruibile, punti di estensione nei moduli, vincoli Voronoi e placement, renderer, persistenza, test, criteri di completamento e decisioni da prendere prima di sviluppare meccaniche economiche.
+- Inserito un collegamento dalla piramide del contesto. **Solo documentazione; nessuna nuova funzione di gioco introdotta da questo commit.**
+
+## 2026-10-17 — Civil: cimitero L1 e birreria L2
+
+- **Chiesa L1:** cimitero automaticamente incluso nella proprietà; area di sepoltura ricavata dal lotto Voronoi, riserva anti-sovrapposizioni e segnali tombali 2D/3D. È parte del lotto, non un annesso collocabile manualmente; in lotti troppo stretti rimane senza area fisica fino a spazio disponibile.
+- **Taverna L2:** nuova estensione `brewery` nel menu annessi, posizionabile vicino all'edificio madre e all'interno del lotto. Solo skeleton visivo e dati, senza produzione di birra.
+- Catalogo: 14 voci totali (13 costruibili + cimitero intrinseco). Corretto anche il filtro di migrazione dei figli orfani nel caricamento dei salvataggi.
+- Verifica: [GitHub Actions 39033162718](https://github.com/erykwest/CONQUER/actions/runs/39033162718) PASS, compresi test di lotto Voronoi reale, limiti L2 e collisioni. Nessun merge in `main`, nessun collaudo browser.
+
+## 2026-10-17 — Civil: skeleton degli edifici annessi
+
+- Catalogo di 12 annessi con relazione strutturale `parentId`, collocabili dal pannello chiesa, taverna e mercato. L1–L3 sbloccano categorie, non creano automaticamente i figli.
+- I figli di chiesa/taverna usano il lotto Voronoi del padre; le estensioni del mercato occupano spazio pubblico entro 9U e rispettano proprietà private e collisioni. Eliminazione padre→figli, blocco rotazione padre con figli, migrazione file salvati.
+- Placeholder geometrici Canvas/WebGL2, hit test, navigazione e ombre; nessuna nuova simulazione economica o gestione ospiti. Regressione dedicata `qa/civic-annex-regression.cjs` nella CI `Civil` ([ultima CI verde, run 39023749740](https://github.com/erykwest/CONQUER/actions/runs/39023749740), inclusa la protezione dei lotti privati).
+- Solo branch `Civil`; QA browser/visiva non effettuata.
+
+## 2026-10-17 — Civil: lotti di pertinenza e skeleton Piazza
+
+- **Branch `Civil` da `main`**: riusati Voronoi, bordi e accessi esistenti per assegnare lotti di pertinenza a chiesa e locanda; il mercato ne rimane escluso.
+- **Skeleton sviluppo L1–L3**: `civicLevel` per chiesa, locanda e mercato; aggiunta Piazza `plaza` 5×5 U con varianti `paved`, `fountain`, `garden` e tre livelli, con Builder, persistenza e mesh Canvas/WebGL2. Strade e pedoni possono attraversare la piazza.
+- **Prove:** syntax check dei moduli modificati, verifica geometrica isolata su due lotti civici con impronte contenute; nuove regressioni Urban e Builder incluse nella CI `Civil skeleton regression` ([primo run verde](https://github.com/erykwest/CONQUER/actions/runs/39021863368)). I successivi push vengono verificati dallo stesso workflow; collaudo browser manuale ancora aperto.
+- **Confine intenzionale**: nessun bonus economico/sociale, nessuna espansione funzionale delle routine; `main` non modificato.
+
 ## 2026-10-16 — Diagnosi condivisa /main e /camp: crescita bloccata dalla pianificazione arteriale
 
 - Individuato su `main` il medesimo blocco di crescita già corretto su `camp`: la ricerca in background delle quattro strade perimetrali impediva lo spawn delle case, anche sulle arterie completate.

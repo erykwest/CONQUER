@@ -17,7 +17,7 @@ navigator:{},fetch:()=>new Promise(()=>{}),atob:s=>Buffer.from(s,'base64').toStr
 const context=vm.createContext(sandbox);
 function run(s){return vm.runInContext(s,context)}
 function moduleFile(n){const groups={castle:['castle','landscape','castle-placement','castle-structures','buildings'],population:['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'],app:['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap']};const files=groups[n]||[n];return files.map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n')}
-for(const n of ['core','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
+for(const n of ['core','civic-annexes','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
 const appSource=moduleFile('app');
 run(appSource.split('function pointerScreen')[0]);
@@ -290,6 +290,34 @@ test('active civilians block spawning without changing their routines or movemen
  run("State.combat.units=[];State.combat.enemy=[];State.structures.push({id:'resident-home',type:'house',auto:true,x:104,y:104,w:1.5,h:1,angle:0});State.clock.day=10.35;invalidateNavigation();globalThis.positions=urbanSpawnOccupants()");
  assert.ok(run('positions.length>0'));
  assert.equal(run("urbanLotUnitConflict({points:[{x:90,y:90},{x:113,y:90},{x:113,y:113},{x:90,y:113}]})"),true);
+});
+test('church and tavern have Voronoi curtilage; market and public piazza do not',()=>{
+  zoningFixture();
+  run("State.structures.push({id:'civic-church',type:'church',x:116,y:117,angle:0},{id:'civic-tavern',type:'tavern',x:132,y:117,angle:0},{id:'civic-market',type:'market',x:140,y:132,angle:0},{id:'civic-plaza',type:'plaza',x:145,y:132,angle:0});invalidateNavigation()");
+  const lots=run('urbanLots().filter(l=>l.civicId)');
+  assert.deepEqual(Array.from(lots,l=>l.civicId).sort(),['civic-church','civic-tavern']);
+  assert.equal(run('urbanLots().every(qaConvexLot)'),true);
+  assert.equal(run("urbanLots().filter(l=>l.civicId).every(l=>urbanSiteFootprint(State.structures.find(s=>s.id===l.civicId)).every(p=>urbanContains(l.points,p,.15)))"),true);
+  assert.equal(run("urbanLots().some(l=>['civic-market','civic-plaza'].includes(l.civicId))"),false);
+  assert.ok(run('urbanFenceSegments().length')>=8,'civic parcels have physical boundaries');
+});
+test('church L1 includes cemetery plots inside its real Voronoi lot',()=>{
+  zoningFixture();
+  run("State.structures.push({id:'chapel',type:'church',x:117,y:117,angle:0,civicLevel:1});invalidateNavigation()");
+  const result=run("civicCemeteryArea(State.structures.find(s=>s.id==='chapel'))");
+  assert.ok(result,'A church with a free lot must have a burial area');
+  assert.equal(run("civicCemeteryGraves(State.structures[1]).length"),6);
+  assert.equal(run("civicCemeteryArea(State.structures[1]).points.every(p=>urbanContains(urbanLots().find(l=>l.civicId==='chapel').points,p,.09))"),true);
+  assert.equal(run("civicCemeteryArea(State.structures[1]).points.every(p=>!civicParts(State.structures[1]).some(part=>urbanContains(part.points,p)))"),true);
+});
+test('civil development defaults, level clamping and three piazza variants normalize',()=>{
+  const result=run("[{id:'c',type:'church',x:110,y:110,civicLevel:12},{id:'t',type:'tavern',x:120,y:110},{id:'p',type:'plaza',x:130,y:110,civicLevel:2,plazaVariant:'garden'},{id:'bad',type:'plaza',x:140,y:110,plazaVariant:'invalid'}].map(normalizeCivicDevelopment)");
+  assert.deepEqual(Array.from(result,s=>s.civicLevel),[3,1,2,1]);
+  assert.equal(result[2].plazaVariant,'garden');
+  assert.equal(result[3].plazaVariant,'paved');
+  assert.equal(run('PLAZA_VARIANTS.length'),3);
+  assert.equal(run("civicParts({type:'plaza',x:130,y:120}).length"),1);
+  assert.equal(run("CIVIC_TYPES.includes('market')&&CIVIC_TYPES.includes('plaza')"),true);
 });
 console.log(passed+' urban regression checks passed.');
 

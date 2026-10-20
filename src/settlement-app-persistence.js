@@ -5,6 +5,7 @@ function migrateStructures(list){
     if(['moat','bridge'].includes(s.type))window.ConquerCrossings?.normalise(s);
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.normalizeFootprint(s);
     if(s.type==='house')s.houseLevel=houseLevel(s);
+    normalizeCivicDevelopment(s);
     if(s.type==='built'){
       s.width=1;
       if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);
@@ -65,8 +66,11 @@ function migrateStructures(list){
     return s;
   });
 
-  const byId=new Map(migrated.map(s=>[s.id,s]));
-  for(const s of migrated){
+  // Remove annexes whose parent no longer exists and repair dimensions from catalog.
+  const parentIndex=new Map(migrated.map(s=>[s.id,s]));
+  const cleaned=migrated.filter(s=>!isCivicAnnex(s)||normalizeCivicAnnex(s,parentIndex.get(s.parentId)));
+  const byId=new Map(cleaned.map(s=>[s.id,s]));
+  for(const s of cleaned){
     if(s.type!=='tower'||!s.parentTowerId)continue;
     const parent=byId.get(s.parentTowerId);
     if(!parent||!['tower','gate'].includes(parent.type)||isWoodGate(parent)||(parent.type==='tower'&&towerTier(s)>=towerTier(parent))){
@@ -84,8 +88,8 @@ function migrateStructures(list){
       s.subtowerAngle=attachment.subtowerAngle;
     }
   }
-  const keep=migrated.find(s=>s.type==='tower'&&s.isMastio);for(const s of migrated)if(s.isMastio&&s!==keep)s.isMastio=false;
-  return migrated;
+  const keep=cleaned.find(s=>s.type==='tower'&&s.isMastio);for(const s of cleaned)if(s.isMastio&&s!==keep)s.isMastio=false;
+  return cleaned;
 }
 const LOCAL_STORAGE_SCHEMA=2;
 function localStorageBranch(){

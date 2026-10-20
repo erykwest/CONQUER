@@ -15,6 +15,42 @@ function drawMarket(s,preview=false){
     extrudePolygonAt(canopy,.58,.66,{top:st.c,sideA:st.c,sideB:st.c,stroke:'rgba(235,218,186,.35)'});
   }
 }
+// Structural placeholder only: no piazza services, bonuses or populations yet.
+function drawPlaza(s,preview=false){
+  const p=civicParts(s)[0];if(!p)return;
+  const level=civicLevel(s),variant=plazaVariant(s),angle=s.angle||0;
+  const selected=State.selectedId===s.id;
+  const top=variant==='garden'?'#8c9776':variant==='fountain'?'#a5a9a8':'#b3a28e';
+  extrudePolygonAt(p.points,0,.10,{top,sideA:'#777269',sideB:'#868076',
+    stroke:selected?'#f4b76f':'#b5aaa0'});
+  if(variant==='garden'){
+    for(const [x,y] of [[-1.08,-1.08],[1.08,-1.08],[-1.08,1.08],[1.08,1.08]]){
+      const c=houseLocalToWorld(s,x,y);
+      extrudePolygonAt(rectWorldPoints(c.x,c.y,1.15,1.15,angle),.10,.15,
+        {top:'#698555',sideA:'#80725b',sideB:'#80725b'});
+    }
+  }else if(variant==='fountain'){
+    const c=houseLocalToWorld(s,0,0);
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,1.45,1.45,angle),.10,.29,
+      {top:'#697e82',sideA:'#787c7b',sideB:'#8c9190'});
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,.65,.65,angle),.29,.35+level*.12,
+      {top:'#b3b8b5',sideA:'#858c89',sideB:'#969e9b'});
+  }else{
+    const c=houseLocalToWorld(s,0,0);
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,1.25,1.25,angle),.10,.135,
+      {top:'#c2b7a4',sideA:'#81796c',sideB:'#8e8576'});
+  }
+  if(level>=2)for(const [x,y] of [[-2,-2],[2,-2],[-2,2],[2,2]]){
+    const c=houseLocalToWorld(s,x,y);
+    extrudePolygonAt(rectWorldPoints(c.x,c.y,.24,.24,angle),.10,.27,
+      {top:'#a49c8c',sideA:'#696659',sideB:'#777164'});
+  }
+  if(level>=3){
+    const c=houseLocalToWorld(s,0,0);
+    if(variant==='paved')extrudePolygonAt(rectWorldPoints(c.x,c.y,.45,.45,angle),.135,.60,
+      {top:'#c0b7a9',sideA:'#827b72',sideB:'#938a80'});
+  }
+}
 function civicEntranceInfo(s){
   if(!s||!['tavern','church'].includes(s.type))return null;
   const localY=s.type==='tavern'?(-1.72-1.55/2):(-2.65-1.85/2);
@@ -60,7 +96,26 @@ function drawChurch(s,preview=false){
       drawCivicGabledPart(s,part,2.72,3.35,'#66635f','#77736e','#3d4145','#484c50','#85817a',stroke);
     }else drawCivicGabledPart(s,part,1.88,2.52,'#6b6863','#7d7973','#41454a','#4c5054','#85817a',stroke);
   }
-  if(!preview&&!underConstruction(s))drawCivicEntrance(s);
+  if(!preview&&!underConstruction(s)){
+    drawCivicEntrance(s);
+    drawCivicCemetery(s);
+  }
+}
+// The cemetery is an intrinsic L1 lot feature, not a paid or removable annex.
+function drawCivicCemetery(church){
+  const area=civicCemeteryArea(church);if(!area)return;
+  extrudePolygonAt(area.points,0,.035,{
+    top:'#827b69',sideA:'#665e51',sideB:'#756d5d',stroke:'rgba(185,170,146,.7)'
+  });
+  for(const grave of civicCemeteryGraves(church)){
+    extrudePolygonAt(grave.points,.035,.08,{
+      top:'#675c4f',sideA:'#4b443c',sideB:'#5b5146'
+    });
+    const head=houseLocalToWorld({x:grave.center.x,y:grave.center.y,angle:grave.angle},0,-.23);
+    extrudePolygonAt(rectWorldPoints(head.x,head.y,.25,.14,grave.angle),.08,.39,{
+      top:'#b5b1a6',sideA:'#78766f',sideB:'#96928b'
+    });
+  }
 }
 function drawTrainingField(s,preview=false){
   const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'rgba(189,153,105,.72)';
@@ -81,11 +136,44 @@ function drawTrainingField(s,preview=false){
     extrudePolygonAt(pts,.10,.58,{top:'#8b6847',sideA:'#59412e',sideB:'#6d5037',stroke:null});
   }
 }
+function drawCivicAnnex(s,preview=false){
+  const spec=civicAnnexDefinition(s);if(!spec)return;
+  // Blender-built model (settlement-civic3d.js); the block below is the fallback.
+  if(window.ConquerCivic3D?.draw(s,preview))return;
+  const poly=civicAnnexFootprint(s),kind=spec.kind;
+  const low=kind==='garden'||kind==='yard'||kind==='plaza';
+  const height=kind==='garden'?.13:kind==='yard'||kind==='plaza'?.09:kind==='stall'?.75:1.32;
+  const palette=kind==='garden'
+    ?{top:'#6a8452',sideA:'#67573c',sideB:'#7c6948'}
+    :kind==='yard'?{top:'#ad9a7a',sideA:'#8b7961',sideB:'#96846c'}
+    :kind==='stone'?{top:'#85847d',sideA:'#696862',sideB:'#777671'}
+    :{top:'#9b7c57',sideA:'#79563b',sideB:'#876446'};
+  extrudePolygonAt(poly,0,height,{...palette,stroke:'#51473c'});
+  if(kind==='garden'){
+    for(const offset of [-.45,0,.45]){
+      const c=houseLocalToWorld(s,offset,0);
+      const a=houseLocalToWorld(s,offset,-.65),b=houseLocalToWorld(s,offset,.65);
+      const p=w2s(a,.14),q=w2s(b,.14);
+      ctx.save();ctx.strokeStyle='#456536';ctx.lineWidth=Math.max(1,State.view.scale*1.8);
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();ctx.restore();
+    }
+  }
+  if(!low&&kind!=='stall'){
+    const ridge=poly.map(p=>w2s(p,height)),center=w2s(s,height+.30);
+    ctx.save();ctx.strokeStyle='#5d5148';ctx.lineWidth=Math.max(.8,State.view.scale);
+    for(const i of [0,2]){ctx.beginPath();ctx.moveTo(ridge[i].x,ridge[i].y);ctx.lineTo(center.x,center.y);ctx.stroke()}
+    ctx.restore();
+  }
+}
 function drawCivicStructure(s,preview=false){
+  // Blender-built models (settlement-civic3d.js, church with its cemetery); the
+  // geometric drawings below stay as the fallback.
+  if(window.ConquerCivic3D?.draw(s,preview))return;
   if(s.type==='market')drawMarket(s,preview);
   else if(s.type==='tavern')drawTavern(s,preview);
   else if(s.type==='church')drawChurch(s,preview);
   else if(s.type==='training')drawTrainingField(s,preview);
+  else if(s.type==='plaza')drawPlaza(s,preview);
 }
 function woodGateLocal(s,x,y){
   const q=rotateVec(x,y,s.angle||0);

@@ -3,6 +3,16 @@
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
 
+## Aggiornamento Civil (17/10/2026)
+
+**D-CIV-01 · DESIGN esplicito:** chiesa e locanda hanno lotti Voronoi di pertinenza; il mercato non ha un lotto privato. Applicazione attraverso il sistema catastale già condiviso con le abitazioni, senza duplicare recinzioni. La piazza è un nuovo edificio pubblico e non genera un lotto di pertinenza.
+
+**D-CIV-02 · DESIGN esplicito:** tre livelli di sviluppo (L1–L3) per edifici civili esistenti chiesa/locanda/mercato e nuova Piazza; tre varianti di Piazza (pavimentata, fontana, verde). Nella prima iterazione il livello è **skeleton di configurazione**, non un modificatore economico o di servizi; le forme/scale definitive restano future. Fonte tecnica: branch [`Civil`](https://github.com/erykwest/CONQUER/tree/Civil), `src/settlement-core.js`, `src/settlement-urban.js` e pannello `src/settlement-app-rooms.js`.
+
+**D-CIV-03 · DESIGN/CODICE su branch `Civil` (17/10):** ogni annesso civile è una struttura separata con `parentId` verso chiesa, taverna o mercato, tipo da catalogo (`annexType`), footprint e sblocco per `civicLevel`. Chiesa/taverna: costruzione solo dentro il lotto Voronoi; mercato: estensione pubblica vicina al mercato, vietato occupare lotti privati. I figli vengono eliminati insieme al padre; il livello non può scendere sotto il requisito di un annesso esistente. Per ora nessuna produzione, capacità, staff o costo, e rendering 2D/3D provvisorio. Dimensioni, limiti quantitativi e raggi sono valori di skeleton da rivedere al bilanciamento.
+
+**D-CIV-04 · DESIGN/CODICE su branch `Civil` (17/10):** alla chiesa **L1** spetta già un **cimitero interno al lotto Voronoi**, non da costruire manualmente: è una componente derivata del terreno di pertinenza, visibile con tombe schematiche e riservata agli annessi ulteriori. Quando il lotto non offre spazio sufficiente, non esce dai suoi confini. La taverna sblocca a **L2** una **estensione birreria** costruibile, che deve stare vicino alla struttura madre e nello stesso lotto. Resta uno skeleton, senza funerali, produzione di birra o gestione di personale.
+
 ## Registro delle decisioni
 
 | ID | Classe | Decisione o regola da preservare | Conseguenza |

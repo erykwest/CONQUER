@@ -4,7 +4,7 @@ function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
-  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','loggingCamp','quarry','mine'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','plaza','civicAnnex','loggingCamp','quarry','mine'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
   const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId||s.type==='bridge'&&s.primaryBridgeFor)&&['wall','palisade','built','road','moat','bridge'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
@@ -65,7 +65,8 @@ function changeHouseDensity(target,level){
 }function selectedStructure(){return State.structures.find(s=>s.id===State.selectedId)||null}
 function selectStructure(s){State.selectedId=s?.id||null;invalidateSceneCache('base');renderFunctionPanel();draw()}
 function addStructure(s){
-  const preflight=window.ConquerPlacement?.check(s);
+  if(isCivicAnnex(s)&&!normalizeCivicAnnex(s,State.structures.find(p=>p.id===s.parentId))){status('Invalid civic annex');return false}
+   const preflight=window.ConquerPlacement?.check(s);
   if(preflight&&!preflight.ok){status(preflight.reason);return false}
   if(window.ConquerIndustries?.is(s)){
     const site=window.ConquerIndustries.validate(s);
@@ -73,6 +74,7 @@ function addStructure(s){
     s.groundZ=site.ground;s.resourceTarget=site.resourceTarget;
   }
   normalizeStructureRotation(s);
+  normalizeCivicDevelopment(s);
   normalizeStructureVariants(s);
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
   let displaced={removed:0,roads:[]};
@@ -98,6 +100,7 @@ function addStructure(s){
     displaced=removeOverlappingAuto(s);
   }
   State.structures.push(s);
+  if(isCivicAnnex(s)||['church','tavern','house'].includes(s.type))invalidateUrbanGeometry();
   let reactive=0;
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
@@ -170,6 +173,8 @@ function deleteStructure(id){
     State.village.deletedMainRoutes=[...deleted];
   }
   if(target.type==='tower')restoreTowerWallConnections(target);
+  const removedChildren=civicAnnexChildren(id);
+  for(const child of removedChildren)if(child.buildCost)refundCost(child.buildCost);
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost&&!(target.type==='bridge'&&target.variant==='wood'))refundCost(target.buildCost);
   if(target.type==='well'){
@@ -177,10 +182,12 @@ function deleteStructure(id){
     const borderEntries=ensureBorderEntrySelection();
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
-  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id);
+  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
   if(target.type==='tower')window.ConquerSiege?.syncAutoMastio?.();
   reconcileTowerSecondaryBranches(Infinity,true);
-  if(State.selectedId===id)State.selectedId=null;
+  if(State.selectedId===id||removedChildren.some(child=>child.id===State.selectedId))State.selectedId=null;
+  if(isCivicAnnex(target)&&State.structures.some(s=>s.id===target.parentId))State.selectedId=target.parentId;
+  if(isCivicAnnex(target)||removedChildren.length||['church','tavern'].includes(target.type))invalidateUrbanGeometry();
   renderFunctionPanel();
   const deletedLayers=new Set([...structureSceneLayers(target),'ground','base']);
   markDirty(true,[...deletedLayers]);
@@ -235,7 +242,8 @@ function turnGate(target,delta,label='Gate rotated'){
 }
 function flipGate(target){return turnGate(target,Math.PI,'Gate front flipped')}
 function rotatePointStructure(target,steps=1){
-  if(!target||!['house','market','tavern','church','training','loggingCamp','quarry','mine'].includes(target.type))return false;
+  if(!target||!['house','market','tavern','church','training','plaza','civicAnnex','loggingCamp','quarry','mine'].includes(target.type))return false;
+  if(civicAnnexChildren(target.id).length){status('Remove annexes before rotating the parent complex');return false;}
   const oldAngle=Number(target.angle)||0,next=snapStructureAngle(oldAngle+STRUCTURE_ANGLE_STEP*steps);
   const candidate={...target,angle:next,rotationStep:structureRotationStep(next)};
   // Rotation is a structural edit. Ignore the current footprint and the former

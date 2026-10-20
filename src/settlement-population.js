@@ -127,7 +127,7 @@ function shadowCasterGeometry(s){
   return value;
 }
 function drawStructureShadow(s,sun){
-  if(!s||underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type))return;
+  if(!s||underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','civicAnnex'].includes(s.type))return;
   const {fp,h}=shadowCasterGeometry(s);
   if(!fp?.length||h<=0)return;
   const len=h*sun.lengthPerHeight;
@@ -147,7 +147,7 @@ function drawStructureShadow(s,sun){
 }
 function drawDynamicShadows(){
   const sun=sunShadowState();if(!sun)return;
-  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type));
+  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','palisade','built','market','tavern','church','civicAnnex'].includes(s.type));
   for(const s of casters)drawStructureShadow(s,sun);
 }
 let fieldWorkAssignmentCache={key:null,map:new Map()};

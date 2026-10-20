@@ -40,7 +40,7 @@
   let combat=null;
   const archerCache=new Map();
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
-  let tacticalRuleAccum=0;
+  let tacticalRuleAccum=0,combatAnimFrame=0;
   const PATROL_PATH_STEP=.75,PATROL_LOOP_STRIDE=2,PATROL_ROUTE_CACHE_MAX=512;
   let whiteBoundaryCache=[],whiteBoundaryLoopCache=[],whiteBoundarySignature='',whiteBoundaryRevision=0;
   let whiteBoundaryPending=false,patrolNavRevision=0;
@@ -702,6 +702,14 @@
     g.restore();
     drawScreenFlame(tip,scale,id+':patrol-hand-torch');
   }
+  function drawPosedFigure(p,type,id,livery,unit,index=0){
+    const anim=window.ConquerCombatAnim;
+    if(!anim)return drawSoldierFigure(p,.08,type,id,State.clock.day,livery);
+    // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
+    const foe=anim.foeOf(unit);
+    const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
+    anim.drawFigure(p,.08,type,id,State.clock.day,livery,pose);
+  }
   function renderOverlay(){
     if(!combat)return;
     window.ConquerWolves?.ensure();
@@ -723,10 +731,13 @@
       g.setLineDash([]);
     }
     window.ConquerCamp?.drawEncampments(g);
+    const anim=window.ConquerCombatAnim;
     const characters=[];
     for(const u of combat.units){
-      if(u.defeated||u.campState==='barracks')continue;
-      if(u.campState==='camped'){
+      if(u.campState==='barracks')continue;
+      // Defeated units stay on screen while their fall animation plays.
+      if(u.defeated&&!anim?.dying(u))continue;
+      if(u.campState==='camped'&&!u.defeated){
         // Preserve the cavalry figure for a lone knight; larger formations
         // leave just one visible sentry while the remainder rests in tents.
         const soloKnight=u.kind==='knight';
@@ -734,9 +745,8 @@
           type:soloKnight?'knight':'spearman',id:u.id+':camp-guard',unit:u,index:0});
         continue;
       }
-      if(u.kind==='knight'&&!u.defeated)characters.push({p:u,type:'knight',id:u.id,unit:u});
+      if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u});
       else{
-        if(u.defeated)continue;
         const count=u.kind==='patrol'?2:5;
         for(let i=0;i<count;i++){
           const row=Math.floor(i/3),col=i%3,spacing=.55;
@@ -752,8 +762,10 @@
     const sightSources=combat.enemy.length?observers():null;
     withRenderContext(g,()=>{
       for(const soldier of characters){
-        drawSoldierFigure(soldier.p,.08,soldier.type,soldier.id,State.clock.day);
-        if(soldier.type==='spearman'&&soldier.unit.engaged){
+        drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index);
+        if(soldier.unit.defeated)continue;
+        // Without the combat animations, a spear thrust line still shows engagement.
+        if(!anim&&soldier.type==='spearman'&&soldier.unit.engaged){
           const target=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&e.stats?.hp>0)
             .sort((a,b)=>dist(a,soldier.unit)-dist(b,soldier.unit))[0];
           if(target&&dist(target,soldier.unit)<1){
@@ -770,20 +782,26 @@
           drawPatrolTorch(soldier.p,soldier.id));
       }
       for(const e of combat.enemy){
-        if(e.defeated||e.stats?.hp<=0)continue;
+        const down=e.defeated||e.stats?.hp<=0;
+        if(down&&!anim?.dying(e))continue;
         if(e.kind==='wolf'){
           // Wildlife remains a visible neutral creature by day; at night the
           // exact same entity is rendered while its combat flag turns hostile.
-          if(!combat.fog||spotted(e,sightSources))window.ConquerWolves?.draw(g,e);
+          if(!down&&(!combat.fog||spotted(e,sightSources)))window.ConquerWolves?.draw(g,e);
           continue;
         }
         if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        drawSoldierFigure(e,.08,'spearman',e.id,State.clock.day,livery);
+        drawPosedFigure(e,'spearman',e.id,livery,e,0);
+        if(down)continue;
         const p=w2s(e,.08);g.strokeStyle='#e45151';g.lineWidth=2;
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
+    // Combat only advances while the calendar runs; a swing or fall already
+    // started still finishes smoothly when the player pauses.
+    if(anim?.active()&&State.clock.speed===0&&!combatAnimFrame)
+      combatAnimFrame=requestAnimationFrame(()=>{combatAnimFrame=0;draw()});
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
     const focused=combat.units.find(u=>u.id===selected);
     // The Builder layout may be replaced by another UI shell. Missing optional

@@ -224,6 +224,7 @@ function structureHeight(s){
   if(s.type==='moat')return 0;
   if(window.ConquerIndustries?.is(s))return .35;
   if(s.type==='house')return houseStructureHeight(s);
+  if(isCivicAnnex(s)){const spec=civicAnnexDefinition(s);return !spec?0:spec.kind==='garden'||spec.kind==='yard'?.18:spec.kind==='stall'?.95:1.55;}
   if(s.type==='market')return .78;
   if(s.type==='tavern')return 2.15;
   if(s.type==='church')return 3.35;
@@ -243,6 +244,7 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   if(s.type==='field')return fieldPoints(s);
+  if(isCivicAnnex(s))return civicAnnexFootprint(s);
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){
     const pts=civicParts(s).flatMap(p=>p.points);

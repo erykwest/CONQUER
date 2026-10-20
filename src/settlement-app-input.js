@@ -19,6 +19,14 @@ canvas.addEventListener('pointerdown',e=>{
   }
 
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
+  if(State.tool.kind==='civicAnnex'){
+    const parent=State.structures.find(x=>x.id===State.tool.parentId);
+    if(!parent){status('Parent building no longer exists');setTool({kind:'select',label:'Select'});return}
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    const annex=makeCivicAnnex(parent,State.tool.annexType,q.x,q.y);
+    if(annex&&addStructure(annex))setTool({kind:'select',label:'Annex placed · select'});
+    return;
+  }
   if(State.tool.kind==='tower'){
     const snap=towerPlacementSnap(p),q=snap.point;
     if(State.tool.shape==='round'){
@@ -199,6 +207,15 @@ canvas.addEventListener('pointermove',e=>{
     }
     draw();
     return
+  }
+  if(State.tool.kind==='civicAnnex'){
+    const parent=State.structures.find(x=>x.id===State.tool.parentId);
+    if(!parent){State.draft=null;draw();return}
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)},ghost=makeCivicAnnex(parent,State.tool.annexType,q.x,q.y);
+    State.draft={mode:'hover',preview:ghost};
+    const verdict=window.ConquerPlacement?.check(ghost);
+    if(verdict&&!verdict.ok)status('Annex blocked: '+verdict.reason);
+    draw();return;
   }
   const oriented=orientedToolSpec();
   if(oriented){

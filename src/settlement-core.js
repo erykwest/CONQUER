@@ -31,6 +31,7 @@ function structureSceneLayers(s){
   if(['road','moat','bridge'].includes(s.type))return['ground','base'];
   if(s.auto&&s.type==='field')return['ground'];
   if(s.type==='house')return['ground','shadow','base'];
+  if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
@@ -128,7 +129,7 @@ function structureAngleFromStep(step){
 }
 function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
 function structureUsesDiscreteAngle(s){
-  return !!s&&['tower','gate','house','market','tavern','church','training'].includes(s.type);
+  return !!s&&['tower','gate','house','market','tavern','church','training','plaza'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
   if(!s)return 0;
@@ -157,9 +158,10 @@ const COSTS={
   market:{gold:120,stone:70,wood:85},
   tavern:{gold:190,stone:65,wood:145},
   church:{gold:320,stone:360,wood:110,metal:18},
+  plaza:{gold:90,stone:80,wood:10},
   training:{gold:90,stone:24,wood:70}
 };
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -425,8 +427,18 @@ function houseRidgeHeight(s){
   return housePartRidge(s,houseFootprintParts(s)[0]);
 }
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
-const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
+const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza']);
+const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza']);
+const PLAZA_VARIANTS=Object.freeze(['paved','fountain','garden']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
+function civicLevel(s){return Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1)))}
+function plazaVariant(s){return PLAZA_VARIANTS.includes(s?.plazaVariant)?s.plazaVariant:'paved'}
+const isPlazaLike=s=>s?.type==='plaza'||s?.type==='civicAnnex'&&s.annexType==='square';
+function normalizeCivicDevelopment(s){
+  if(CIVIC_LEVEL_TYPES.includes(s?.type))s.civicLevel=civicLevel(s);
+  if(s?.type==='plaza')s.plazaVariant=plazaVariant(s);
+  return s;
+}
 function civicLocalParts(s){
   if(s.type==='market')return[{cx:0,cy:0,w:4,h:4,role:'plaza',roofTurn:0}];
   if(s.type==='tavern')return[
@@ -440,6 +452,7 @@ function civicLocalParts(s){
     {cx:0,cy:-2.65,w:1.85,h:1.85,role:'tower',roofTurn:0}
   ];
   if(s.type==='training')return[{cx:0,cy:0,w:5,h:4,role:'training',roofTurn:0}];
+  if(s.type==='plaza')return[{cx:0,cy:0,w:5,h:5,role:'square',roofTurn:0}];
   return[];
 }
 function civicParts(s){
@@ -477,6 +490,7 @@ function constructionCost(s){
   }
   if(s.type==='well')return {...COSTS.well};
   if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.TYPES[s.type].cost};
+  if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
@@ -495,6 +509,7 @@ function buildDuration(s){
   if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.TYPES[s.type].days;
+  if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
@@ -524,6 +539,7 @@ function pointRadius(s){
   if(s.type==='well')return .75;
   if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
   if(s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(isCivicAnnex(s))return Math.hypot(s.w||1,s.h||1)/2;
   if(isCivic(s))return civicRadius(s);
   return .5;
 }

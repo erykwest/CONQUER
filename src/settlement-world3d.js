@@ -327,6 +327,7 @@
     for(const s of State.structures){
       if(underConstruction(s))continue;
       if(isCivic(s))addCivic(m,s,winter);
+       else if(isCivicAnnex(s))addCivicAnnex(m,s,winter);
       else if(window.ConquerIndustries?.is(s)){
         const def=ConquerIndustries.TYPES[s.type],g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
         m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
@@ -357,9 +358,27 @@
       m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');
     }
   }
+  function addCivicAnnex(m,s,winter){
+    const spec=civicAnnexDefinition(s);if(!spec)return;
+    const g=Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(s),kind=spec.kind,poly=civicAnnexFootprint(s);
+    if(window.ConquerCivic3D?.addToBuilder(m,s,g))return;
+    const height=kind==='garden'?.13:kind==='yard'?.09:kind==='stall'?.75:1.32;
+    const color=kind==='garden'?'#6a8452':kind==='yard'?'#ad9a7a':kind==='stone'?'#85847d':'#9b7c57';
+    m.prism(poly,g,g+height,color,kind==='stone'?'#696862':'#79563b',kind==='stone'?'#777671':'#876446');
+    if(kind==='garden'){
+      for(const offset of [-.45,0,.45]){
+        const p=houseLocalToWorld(s,offset,0);
+        m.prism(rectWorldPoints(p.x,p.y,.08,1.4,s.angle||0),g+.13,g+.19,'#426738','#385d30','#426738');
+      }
+    }else if(kind!=='yard'&&kind!=='stall'){
+      const roof=winter?WINTER_ROOF[0]:kind==='stone'?'#595a60':'#694a38';
+      m.gabled({x:s.x,y:s.y},spec.w,spec.h,0,s.angle||0,g+height,.001,.34,color,color,roof,roof,color);
+    }
+  }
   function addCivic(m,s,winter){
     const g=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s),angle=s.angle||0;
     const L=(x,y)=>houseLocalToWorld(s,x,y);
+    if(window.ConquerCivic3D?.addToBuilder(m,s,g))return;   // Blender model (+ cemetery)
     for(const part of civicParts(s)){
       const turn=part.roofTurn||0;
       if(s.type==='market'){
@@ -369,6 +388,29 @@
           const c=L(sx*1.05,sy*1.0);
           m.prism(rectWorldPoints(c.x,c.y,1.15,.72,angle),g+.12,g+.46,'#654b34','#4b3826','#5a4430');
           m.prism(rectWorldPoints(c.x,c.y,1.38,.92,angle),g+.58,g+.66,canopy[k%4],canopy[k%4],canopy[k%4]);k++;
+        }
+      }else if(s.type==='plaza'){
+        const level=civicLevel(s),variant=plazaVariant(s);
+        m.prism(part.points,g,g+.10,
+          variant==='garden'?'#8c9776':variant==='fountain'?'#a5a9a8':'#b3a28e',
+          '#777269','#868076');
+        if(variant==='garden'){
+          for(const x of [-1.08,1.08])for(const y of [-1.08,1.08]){
+            const c=L(x,y);
+            m.prism(rectWorldPoints(c.x,c.y,1.15,1.15,angle),g+.10,g+.15,'#698555','#80725b','#80725b');
+          }
+        }else{
+          const c=L(0,0),size=variant==='fountain'?1.45:1.25;
+          m.prism(rectWorldPoints(c.x,c.y,size,size,angle),g+.10,g+(variant==='fountain'?.29:.135),
+            variant==='fountain'?'#697e82':'#c2b7a4','#787c7b','#8c9190');
+          if(variant==='fountain')m.prism(rectWorldPoints(c.x,c.y,.65,.65,angle),g+.29,g+.35+level*.12,
+            '#b3b8b5','#858c89','#969e9b');
+          else if(level>=3)m.prism(rectWorldPoints(c.x,c.y,.45,.45,angle),g+.135,g+.60,
+            '#c0b7a9','#827b72','#938a80');
+        }
+        if(level>=2)for(const x of [-2,2])for(const y of [-2,2]){
+          const c=L(x,y);
+          m.prism(rectWorldPoints(c.x,c.y,.24,.24,angle),g+.10,g+.27,'#a49c8c','#696659','#777164');
         }
       }else if(s.type==='training'){
         m.prism(part.points,g,g+.10,'#70502e','#5a3f24','#664729');
@@ -384,6 +426,17 @@
           m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.88,2.52,'#6b6863','#7d7973',winter?WINTER_ROOF[0]:'#41454a',winter?WINTER_ROOF[1]:'#4c5054','#85817a');
         }
       }
+    }
+    if(s.type==='church')addCivicCemetery(m,s,g);
+  }
+  function addCivicCemetery(m,church,ground){
+    const area=civicCemeteryArea(church);if(!area)return;
+    m.prism(area.points,ground,ground+.035,'#827b69','#665e51','#756d5d');
+    for(const grave of civicCemeteryGraves(church)){
+      m.prism(grave.points,ground+.035,ground+.08,'#675c4f','#4b443c','#5b5146');
+      const head=houseLocalToWorld({x:grave.center.x,y:grave.center.y,angle:grave.angle},0,-.23);
+      m.prism(rectWorldPoints(head.x,head.y,.25,.14,grave.angle),
+        ground+.08,ground+.39,'#b5b1a6','#78766f','#96928b');
     }
   }
 
@@ -640,7 +693,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','civicAnnex'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}
@@ -740,6 +793,24 @@
       upload(gl,'fireLights',buildFireLights(atlas));
       S.sig.decals=dSig;st.decalsMs=performance.now()-a;
     }
+    // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
+    // side shading follows the camera quarter-turn, so keep one buffer per rotation.
+    if(window.ConquerScatter&&window.ConquerScatterModel){
+      const scContent=[season,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
+      if(S.scatterContent!==scContent){
+        const a=performance.now();
+        for(const v of S.scatterVariants?.values()||[])gl.deleteBuffer(v.b);
+        S.scatterContent=scContent;S.scatterVariants=new Map();S.scatterProps=ConquerScatter.layout();
+        st.scatterLayoutMs=performance.now()-a;st.scatterProps=S.scatterProps.length;
+      }
+      let v=S.scatterVariants.get(rot);
+      if(!v){
+        const a=performance.now(),d=ConquerScatter.worldMesh(S.scatterProps,rot),b=gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,gl.STATIC_DRAW);
+        v={b,n:d.length};S.scatterVariants.set(rot,v);st.scatterMeshMs=performance.now()-a;
+      }
+      S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
+    }
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
     st.ensureMs=performance.now()-t0;
@@ -788,7 +859,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write

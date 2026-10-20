@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CONQUER — Figures Lab</title>
+<style>
+  :root{--bg:#1d1a16;--panel:#2a251f;--text:#efe6d6;--muted:#b4a68f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif}
+  header{padding:10px 16px;display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;background:var(--panel)}
+  h1{font-size:16px;margin:0;letter-spacing:.04em}
+  .group{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .group span{color:var(--muted);margin-right:4px}
+  label{color:var(--muted);display:flex;gap:6px;align-items:center}
+  button{background:#3b342b;color:var(--text);border:1px solid #574c3e;border-radius:6px;padding:5px 10px;cursor:pointer}
+  button[aria-pressed="true"]{background:#c98a3c;border-color:#c98a3c;color:#1d1a16}
+  [hidden]{display:none!important}
+  canvas{display:block;width:100%;height:auto}
+  .note{color:var(--muted);padding:8px 16px;margin:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Figures Lab</h1>
+  <div class="group" role="group" aria-label="Animali"><span>Animali</span>
+    <button data-subject="sheep">Pecora</button><button data-subject="goat">Capra</button>
+    <button data-subject="cow">Mucca</button><button data-subject="horse">Cavallo</button>
+  </div>
+  <div class="group" role="group" aria-label="Selvatici"><span>Selvatici</span>
+    <button data-subject="deer">Cerva</button><button data-subject="stag">Cervo</button>
+    <button data-subject="wolf">Lupo</button><button data-subject="bear">Orso</button><button data-subject="boar">Cinghiale</button>
+  </div>
+  <div class="group" role="group" aria-label="Persone"><span>Persone</span>
+    <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
+    <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
+  </div>
+  <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
+    <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button>
+  </div>
+  <div class="group" role="group" aria-label="Azione" id="actions"></div>
+  <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
+  <label id="coatBox">Manto <select id="coat"><option value="brown">marrone</option><option value="black">nero</option><option value="grey">grigio</option><option value="white">bianco</option></select></label>
+  <div class="group" id="wagonBox">
+    <label>Telaio <select id="wChassis"><option value="wagon">carro 4 ruote</option><option value="cart">carretto 2 ruote</option><option value="carriage">carrozza nobile</option></select></label>
+    <label>Cavalli <select id="wTeam"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label>
+    <label>Guidatore <select id="wDriver"><option value="villager">popolano</option><option value="spearman">guerriero</option><option value="knight">cavaliere</option><option value="">nessuno</option></select></label>
+    <label>Carico <select id="wCargo"><option value="mixed">misto</option><option value="sack">sacchi</option><option value="crate">casse</option><option value="barrel">botti</option><option value="hay">fieno</option><option value="logs">legna</option><option value="stone">pietra</option><option value="none">vuoto</option></select></label>
+  </div>
+  <div class="group" id="wagon3dBox">
+    <label>Direzione <input id="w3Heading" type="range" min="0" max="359" step="1" value="210"></label>
+    <label><input id="w3Auto" type="checkbox" checked> Gira da solo</label>
+    <label>Telecamera <select id="w3Turns"><option value="0">0°</option><option value="1">90°</option><option value="2">180°</option><option value="3">270°</option></select></label>
+  </div>
+  <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
+  <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
+</header>
+<p class="note">In alto: il soggetto scelto in tre dimensioni. In basso: scena in scala di gioco con gregge misto, popolani e una scaramuccia in loop. Le persone usano le funzioni di disegno del gioco.</p>
+<canvas id="c" width="1200" height="800"></canvas>
+<script>
+// Minimal stand-ins for the game globals the figure drawers rely on: a flat
+// screen-space world (w2s = identity), no urban occlusion, no terrain.
+let ctx=null;
+const State={view:{scale:1},heraldry:{}};
+const VILLAGER_SKIN='#d99a83',REIGN_COLOR_1='#b53636',REIGN_COLOR_2='#355fb8',REIGN_COLOR_1_DARK='#7f2323',REIGN_COLOR_2_DARK='#243f79';
+const HAIR_COLORS={blonde:'#d5b65a',brown:'#65452f',black:'#262321',gray:'#9a9891',red:'#9b4a2d'};
+function w2s(p){return{x:p.x,y:p.y}}
+function w2sRaw(p){return{x:p.x,y:p.y}}
+function withUrbanFigureOcclusion(p,z,fn){return fn()}
+function terrainElevation(){return 0}
+function withProjectionGroundZ(g,fn){return fn()}
+function peasantHash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function villagerHair(id){return['blonde','brown','black','gray','red'][peasantHash(id)%5]}
+</script>
+<script src="./src/settlement-population-figures.js?v=lab-1"></script>
+<script src="./src/settlement-combat-anim.js?v=lab-1"></script>
+<script src="./src/settlement-animals.js?v=lab-2"></script>
+<script src="./src/settlement-wagons.js?v=lab-1"></script>
+<script src="./src/assets/wagon-model.js?v=lab-1"></script>
+<script src="./src/settlement-wagons3d.js?v=lab-2"></script>
+<script src="./src/assets/animal-models.js?v=lab-1"></script>
+<script src="./src/settlement-animals3d.js?v=lab-1"></script>
+<script>
+(function(){
+  const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
+  const $=id=>document.getElementById(id);
+  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
+  const ACTIONS={animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
+  const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
+  let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
+  const kindOf=s=>s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  function renderButtons(){
+    document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
+    const acts=kindOf(subject)==='animal'?animalActions(subject):ACTIONS[kindOf(subject)];
+    if(!acts.some(([k])=>k===action))action=acts[0][0];
+    $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
+    $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
+    $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
+    $('wagon3dBox').hidden=!(subject==='wagon3d'||kindOf(subject)==='animal');
+    $('flipBox').hidden=subject!=='wagon';
+    resetHero();
+  }
+  document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
+  $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
+
+  // Hero soldier state: the three sizes share one fighter and one dummy foe.
+  let hero,foe,nextHit=0,nextDeath=0,arrows=[];
+  function resetHero(){hero={id:'hero-'+subject,engaged:false};foe={id:'foe',engaged:false};nextHit=clock+.3;nextDeath=clock+.2;arrows=[]}
+
+  const VILLAGERS=[
+    {kind:'peasant',sex:'male',age:'adult',colors:['#8c6b3f','#5d4a32']},
+    {kind:'peasant',sex:'female',age:'adult',colors:['#9a7b52','#6b5338']},
+    {kind:'artisan',sex:'male',age:'adult',colors:['#6d7f8c','#4a5560']},
+    {kind:'merchant',sex:'female',age:'adult',colors:['#7a4f7a','#c6a457']},
+    {kind:'peasant',sex:'male',age:'child',colors:['#a08060','#6b5338']}
+  ].map((v,i)=>({...v,id:'v'+i,hair:villagerHair('v'+i)}));
+
+  function drawPerson(type,p,scale,unit,foePoint,livery,index=0){
+    State.view.scale=scale;ctx=g;
+    CA.drawFigure(p,0,type,unit.id,clock*.2,livery,CA.pose(unit,index,p,foePoint));
+  }
+  function drawArrows(){
+    const at=(a,k)=>({x:a.from.x+(a.to.x-a.from.x)*k,y:a.from.y+(a.to.y-a.from.y)*k-Math.sin(Math.PI*k)*a.arc});
+    for(const a of arrows){
+      const k=(clock-a.at)/a.dur;if(k<0||k>1)continue;
+      const p=at(a,k),q=at(a,Math.min(1,k+.06));
+      g.strokeStyle='#d7c6a1';g.lineWidth=a.w;g.beginPath();g.moveTo(p.x,p.y);g.lineTo(q.x,q.y);g.stroke();
+    }
+    arrows=arrows.filter(a=>clock-a.at<a.dur+.1);
+  }
+  function heroSoldiers(W,H,k){
+    const sizes=[[W*.18,H*.5,10*k],[W*.6,H*.5,5*k],[W*.84,H*.5,2.5*k]];
+    hero.engaged=foe.engaged=action!=='guard';
+    if(action==='attack'&&clock>=nextHit){
+      CA.strike(hero,foe);
+      if(subject==='archer'){
+        for(const [x,y,s] of sizes)arrows.push({from:{x:x+2*s,y:y-6*s},to:{x:x+15*s,y:y-4*s},at:clock,dur:.35,arc:3*s,w:Math.max(1,s*.35)});
+        CA.hurt(foe,.35);nextHit=clock+2;
+      }else{CA.strike(foe,hero);CA.hurt(foe,CA.TIMING.IMPACT);nextHit=clock+1.1}
+    }
+    if(action==='die'&&clock>=nextDeath){resetHero();hero.engaged=foe.engaged=true;CA.strike(foe,hero);CA.fall(hero,CA.TIMING.IMPACT,foe);nextDeath=clock+3.2}
+    for(const [x,y,s] of sizes){
+      const hp={x,y},fp={x:x+(subject==='archer'?16:13)*s,y};
+      drawPerson(subject,hp,s*2,hero,fp,null);
+      drawPerson('spearman',fp,s*2,foe,hp,HOSTILE);
+    }
+    drawArrows();
+  }
+  function heroVillagers(W,H,k){
+    VILLAGERS.forEach((v,i)=>{State.view.scale=18*k;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:W*(.14+i*.17),y:H*.5}})});
+  }
+  // Animals are 3D: the Blender-built models at any heading, driven by the shared gaits.
+  function animalActions(species){
+    const labels=Object.fromEntries(A.SPECIES[species].modes);labels.run=labels.run||'Corsa';
+    return A3.modesOf(species).map(m=>[m,labels[m]||m]);
+  }
+  function headingInput(dt){
+    if($('w3Auto').checked){w3Heading=(w3Heading+dt*25)%360;$('w3Heading').value=Math.round(w3Heading)}else w3Heading=Number($('w3Heading').value);
+    return w3Heading*Math.PI/180;
+  }
+  function heroAnimals(W,H,k,dt){
+    trans=Math.min(1,trans+dt/.45);
+    const heading=headingInput(dt),turns=Number($('w3Turns').value),coat=$('coat').value,M=window.ConquerAnimalModels[subject];
+    // Big view framed to the animal's height; the small one is at game scale.
+    [[W*.38,H*.6,12*(5.2/M.height)*k],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>
+      W3.drawMeshes(g,[A3.triangles(subject,{x:0,y:0,heading},{from:fromAction,mode:action,blend:trans,t:clock},A3.coatColors(subject,coat))],isoView(cx,cy,s,turns)));
+  }
+  // Wagon: every module comes from the selects; the driver is drawn by the
+  // game's own figure code on the seat anchor the wagon provides.
+  const CARGO_PRESETS={mixed:['sack','crate','barrel','hay','sack','crate'],sack:Array(6).fill('sack'),crate:Array(6).fill('crate'),
+    barrel:Array(6).fill('barrel'),hay:Array(6).fill('hay'),logs:['logs','logs','logs','logs'],stone:Array(6).fill('stone'),none:[]};
+  let wagonDistance=0;
+  function driverFor(type){
+    if(!type)return null;
+    return(gx,x,y,size)=>{
+      State.view.scale=size/4.9;ctx=gx;
+      if(type==='villager')drawVillagerFigureUnmasked({...VILLAGERS[0],p:{x,y}});
+      else CA.drawFigure({x,y},0,type,'driver-'+type,0,null,CA.pose({engaged:false},0));
+    };
+  }
+  function wagonSpec(){
+    const coat=$('coat').value,team=Number($('wTeam').value);
+    return{chassis:$('wChassis').value,cargo:CARGO_PRESETS[$('wCargo').value],
+      team:Array.from({length:team},(_,i)=>({coat:i?(coat==='white'?'grey':'white'):coat})),driver:driverFor($('wDriver').value)};
+  }
+  function heroWagon(W,H,k,dt){
+    const moving=action==='move',facing=$('flip').checked?-1:1;
+    if(moving)wagonDistance+=dt*60;
+    const spec=wagonSpec();
+    W2.drawWagon(g,W*(facing>0?.2:.62),H*.55,100*k,{...spec,facing,t:clock,distance:wagonDistance,moving});
+    W2.drawWagon(g,W*(facing>0?.8:.9),H*.55,32*k,{...spec,facing,t:clock,distance:wagonDistance,moving});
+  }
+
+  // Wagon 3D: the Blender-built model at any heading, drawn with the game's iso
+  // projection (px per U = 12 x zoom, like w2sRaw); team and driver are sprites
+  // sorted into the same depth order.
+  const W3=window.ConquerWagons3D,A3=window.ConquerAnimals3D;let w3Distance=0,w3Heading=210;
+  function isoView(cx,cy,pxPerU,turns){
+    const rot=(x,y)=>W3.rotDir(x,y,turns);
+    return{turns,
+      project:(x,y,z)=>{const [qx,qy]=rot(x,y);return{x:cx+(qx-qy)*pxPerU*.8660254,y:cy+(qx+qy)*pxPerU*.5-z*pxPerU*.9}},
+      depth:(x,y,z)=>{const [qx,qy]=rot(x,y);return qx+qy+.9*z}};
+  }
+  function wagon3dAt(cx,cy,pxPerU,spec,moving,turns){
+    const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12;
+    const pose={x:0,y:0,heading:w3Heading*Math.PI/180,distance:w3Distance,bob:moving?Math.sin(w3Distance*40)*.004:0};
+    const anchors=W3.anchors(spec,pose),sprites=[];
+    // The team is 3D too: it turns with the wagon and sorts with it in one depth order.
+    const team=anchors.horses.map((h,i)=>A3.triangles('horse',{...h,heading:pose.heading},
+      {mode:moving?'walk':'idle',t:clock+i*.12,seed:i},A3.coatColors('horse',spec.team[i]?.coat)));
+    if(anchors.seat&&spec.driver)sprites.push({...anchors.seat,z:anchors.seat.z+.12,draw:()=>{const s=view.project(anchors.seat.x,anchors.seat.y,anchors.seat.z);spec.driver(g,s.x,s.y,4.9*zoom)}});
+    return W3.draw(g,spec,pose,view,sprites,team);
+  }
+  function heroWagon3D(W,H,k,dt){
+    const moving=action==='move',turns=Number($('w3Turns').value);
+    headingInput(dt);
+    if(moving)w3Distance+=dt*.35;
+    const spec=wagonSpec();
+    wagon3dAt(W*.4,H*.5,12*8*k,spec,moving,turns);
+    wagon3dAt(W*.84,H*.52,12*2.6*k,spec,moving,turns);
+  }
+
+  // Game-scale scene: mixed flock, villagers, a looping skirmish.
+  // Game-scale meadow in world units: every animal wanders in any direction,
+  // switches between its actions, and sorts in one depth order with a 3D wagon.
+  const COATS=['brown','black','grey','white'];
+  const HERD=['sheep','sheep','sheep','goat','goat','cow','cow','horse','horse','deer','stag','wolf','bear','boar'];
+  const herd=HERD.map((species,i)=>({species,x:Math.cos(i*2.4)*3.6,y:Math.sin(i*2.4)*3.6,heading:i*1.3,seed:i*1.7,
+    mode:'walk',from:'walk',trans:1,until:1+i*.4,coat:COATS[i%4]}));
+  function wander(a,dt){
+    const modes=A3.modesOf(a.species);
+    a.until-=dt;a.trans=Math.min(1,a.trans+dt/.45);
+    if(a.until<=0){
+      // Grazers mostly alternate walk and browse; wildlife cycles its own actions.
+      const next=modes.includes('browse')&&Math.random()<.6?(a.mode==='walk'?'browse':'walk'):modes[(modes.indexOf(a.mode)+1)%modes.length];
+      a.from=a.mode;a.mode=next;a.trans=0;a.until=2+Math.random()*3;
+    }
+    const speed=a.mode==='walk'?.16:a.mode==='run'?.55:0;
+    if(speed){
+      const d=Math.hypot(a.x,a.y);
+      if(d>5.2)a.heading+=Math.sign(Math.sin(Math.atan2(-a.y,-a.x)-a.heading))*dt*1.2;   // turn back to the meadow
+      else a.heading+=Math.sin(clock*.3+a.seed)*dt*.4;
+      a.x+=Math.cos(a.heading)*speed*dt;a.y+=Math.sin(a.heading)*speed*dt;
+    }
+  }
+  let sceneWagonA=0;  const fighters=[0,1,2].map(i=>({ally:{id:'ally'+i,engaged:true},enemy:{id:'enemy'+i,engaged:true},next:i*.37}));
+  const sceneArcher={id:'scene-archer',engaged:true},sceneKnight={id:'scene-knight',engaged:true},knightFoe={id:'kfoe',engaged:true};
+  let archerNext=.5,knightNext=.2;
+  function scene(W,H,k,dt){
+    const z=Number($('zoom').value)*k;
+    g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,H*.66,W,2);
+    const animalSize=4.9*z,view=isoView(W*.3,H*.8,12*z,0),meshes=[],sprites=[];
+    for(const a of herd){
+      wander(a,dt);
+      meshes.push(A3.triangles(a.species,a,{from:a.from,mode:a.mode,blend:a.trans,t:clock,seed:a.seed},A3.coatColors(a.species,a.coat)));
+    }
+    // A supply wagon circling the meadow with its 3D team and a seated driver.
+    sceneWagonA+=dt*.06;
+    const wp={x:Math.cos(sceneWagonA)*6.2,y:Math.sin(sceneWagonA)*6.2,heading:sceneWagonA+Math.PI/2,distance:sceneWagonA*6.2},
+      wspec={chassis:'wagon',cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}]},an=W3.anchors(wspec,wp);
+    meshes.push(W3.worldTriangles(wspec,wp));
+    an.horses.forEach((h,i)=>meshes.push(A3.triangles('horse',{...h,heading:wp.heading},{mode:'walk',t:clock+i*.12,seed:i},A3.coatColors('horse',wspec.team[i].coat))));
+    const drv=driverFor('villager');
+    sprites.push({...an.seat,z:an.seat.z+.12,draw:()=>{const p=view.project(an.seat.x,an.seat.y,an.seat.z);drv(g,p.x,p.y,animalSize)}});
+    W3.drawMeshes(g,meshes,view,sprites);
+    VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
+    fighters.forEach((f,i)=>{
+      const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};
+      if(clock>=f.next){CA.strike(f.ally,f.enemy);CA.strike(f.enemy,f.ally);if(Math.random()<.5)CA.hurt(Math.random()<.5?f.ally:f.enemy,CA.TIMING.IMPACT);f.next=clock+1+Math.random()*.3}
+      drawPerson('spearman',ap,z,f.ally,ep,null,i);
+      drawPerson('spearman',ep,z,f.enemy,ap,HOSTILE,i);
+    });
+    const arP={x:830*k,y:770*k},target={x:964*k,y:748*k};
+    if(clock>=archerNext){CA.strike(sceneArcher,null);arrows.push({from:{x:arP.x+z,y:arP.y-3*z},to:target,at:clock,dur:.5,arc:4*z,w:Math.max(1,z*.4)});archerNext=clock+2}
+    drawPerson('archer',arP,z,sceneArcher,target,null);
+    const kp={x:1060*k,y:720*k},kf={x:kp.x+2.6*z,y:kp.y+.5*z};
+    if(clock>=knightNext){CA.strike(sceneKnight,knightFoe);CA.strike(knightFoe,sceneKnight);knightNext=clock+1.2}
+    drawPerson('knight',kp,z,sceneKnight,kf,null);
+    drawPerson('spearman',kf,z,knightFoe,kp,HOSTILE);
+    drawArrows();
+  }
+  function resize(){const w=Math.min(1200,c.clientWidth||1200);if(c.width!==w){c.width=w;c.height=Math.round(w*.667)}}
+  function frame(now){
+    render(Math.min(.05,(now-last)/1000)*Number($('speed').value));last=now;
+    requestAnimationFrame(frame);
+  }
+  function render(dt){
+    resize();clock+=dt;
+    CA.setClock(clock); // the speed slider drives combat timing too
+    const W=c.width,H=c.height,k=W/1200;
+    g.fillStyle='#6f9a48';g.fillRect(0,0,W,H);
+    g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
+    const kind=kindOf(subject);
+    if(subject==='wagon3d')heroWagon3D(W,H,k,dt);
+    else if(kind==='vehicle')heroWagon(W,H,k,dt);
+    else if(kind==='animal')heroAnimals(W,H,k,dt);
+    else if(kind==='soldier')heroSoldiers(W,H,k);
+    else heroVillagers(W,H,k);
+    scene(W,H,k,dt);
+  }
+  // Manual stepping for automated checks (rAF pauses in background tabs).
+  window.ConquerLab={step:(dt=1/60)=>render(dt)};
+  renderButtons();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

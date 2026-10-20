@@ -12,7 +12,16 @@ function renderFunctionPanel(){
     slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
     return;
   }
-  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
+  if(isCivicAnnex(s)){
+    const parent=State.structures.find(p=>p.id===s.parentId),spec=civicAnnexDefinition(s,parent);
+    panel.classList.add('open');
+    info.innerHTML='<div class="kv"><span>Annex</span><b>'+(spec?.label||'Unknown')+'</b></div><div class="legend">Skeleton · '+(parent?structureLabel(parent):'orphan')+' · '+(spec?spec.w+'×'+spec.h+'U':'')+'</div>';
+    slots.innerHTML='<div class="slot"><button data-annex-parent>← Parent building</button><button data-annex-delete>Remove annex</button><div class="legend">No workers, beds, goods or economy yet.</div></div>';
+    slots.querySelector('[data-annex-parent]').onclick=()=>selectStructure(parent||null);
+    slots.querySelector('[data-annex-delete]').onclick=()=>deleteStructure(s.id);
+    return;
+  }
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
     const cost=s.buildCost||constructionCost(s);
@@ -42,9 +51,31 @@ function renderFunctionPanel(){
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
       '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
   }
-  if(['house','market','tavern','church','training'].includes(s.type)){
+  if(['house','market','tavern','church','training','plaza'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
+  }
+  if(CIVIC_LEVEL_TYPES.includes(s.type)){
+    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${[1,2,3].map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
+  }
+  if(CIVIC_ANNEX_CATALOG[s.type]){
+    const catalog=CIVIC_ANNEX_CATALOG[s.type],children=civicAnnexChildren(s.id);
+    html+='<div class="slot"><div class="slot-label">Annexes · '+children.length+' built (skeleton)</div>'+
+      Object.entries(catalog).map(([key,spec])=>{
+        const owned=children.filter(child=>child.annexType===key),locked=civicLevel(s)<spec.level,full=owned.length>=spec.max;
+        if(spec.intrinsic){
+          const area=civicCemeteryArea(s);
+          return '<div class="slot-label">'+spec.label+' · L'+spec.level+'</div>'+
+            '<div class="legend">'+(area?'Included in church plot · '+area.w+'×'+area.h+'U':'Included from L1 · awaiting free space within the church lot')+'</div>';
+        }
+        return '<div class="slot-label">'+spec.label+' · '+owned.length+'/'+spec.max+' · L'+spec.level+'</div>'+
+          '<button data-civic-annex="'+key+'" '+(locked||full||building?'disabled':'')+'>'+
+          (locked?'Requires L'+spec.level:full?'Limit reached':building?'Parent under construction':'Place '+spec.label)+' · '+spec.w+'×'+spec.h+'U</button>'+
+          owned.map(child=>'<button data-civic-annex-child="'+child.id+'">↳ Select '+spec.label+'</button>').join('');
+      }).join('')+'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>';
+  }
+  if(isPlazaLike(s)){
+    html+=`<div class="slot"><div class="slot-label">Piazza variant</div><div class="grid3">${PLAZA_VARIANTS.map(variant=>`<button data-plaza-variant="${variant}" class="${plazaVariant(s)===variant?'active':''}">${variant==='paved'?'Paved':variant==='fountain'?'Fountain':'Garden'}</button>`).join('')}</div></div>`;
   }
   if(s.type==='house'){
     const level=houseLevel(s);
@@ -154,6 +185,25 @@ function renderFunctionPanel(){
   });
   slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;const level=Number(btn.dataset.heightLevel);if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall'}target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
   slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
+  slots.querySelectorAll('[data-civic-level]').forEach(btn=>btn.onclick=()=>{
+    const target=selectedStructure();if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return;
+    const level=Number(btn.dataset.civicLevel);
+    if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
+      status('Remove annexes requiring a higher level before downgrading');return;
+    }
+    target.civicLevel=level;
+    normalizeCivicDevelopment(target);
+    markStructureDirty(target);renderFunctionPanel();draw();
+    status(structureLabel(target)+' · skeleton stage only');
+  });
+  slots.querySelectorAll('[data-civic-annex]').forEach(btn=>btn.onclick=()=>startCivicAnnexPlacement(selectedStructure(),btn.dataset.civicAnnex));
+  slots.querySelectorAll('[data-civic-annex-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.civicAnnexChild)));
+  slots.querySelectorAll('[data-plaza-variant]').forEach(btn=>btn.onclick=()=>{
+    const target=selectedStructure();if(!isPlazaLike(target))return;
+    target.plazaVariant=btn.dataset.plazaVariant;
+    normalizeCivicDevelopment(target);
+    markStructureDirty(target);renderFunctionPanel();draw();
+  });
   slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
   slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
   slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
