@@ -15,6 +15,32 @@
     church:Object.freeze({operatorTier:3,kind:'worship',income:'not-simulated'})
   });
   const PRIMARY_KINDS=Object.freeze(['field','loggingCamp','quarry','mine','vineyard']);
+  // The gold purse is PHYSICAL, but is not a saleable market commodity.
+  // It travels separately from goods and has negligible wagon occupancy.
+  // One shipment = one type of merchandise; coins are the only permitted
+  // companion. The current 100-point weight table is a balancing proposal.
+  const WAGON_CAPACITY=100, WAGON_DAY_COST=0.2;
+  const CARGO_WEIGHTS=Object.freeze({
+    food:2,wood:5,stone:10,metal:8,equipment:3,luxury:1
+  });
+  const roundGold=n=>Math.round((n+Number.EPSILON)*1000)/1000;
+  const validCoins=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&
+    n<=1e9&&Math.abs(n-roundGold(n))<1e-8;
+  function caravanQuote(cargo=[],coinGold=0,{legacyMixed=false}={}){
+    if(!Array.isArray(cargo)||(!legacyMixed&&cargo.length>1)||
+      !validCoins(coinGold)||cargo.some(line=>
+        !line||!Object.prototype.hasOwnProperty.call(CARGO_WEIGHTS,line.good)||
+        !window.ConquerEconomy?.GOODS?.includes(line.good)||
+        !Number.isFinite(line.qty)||line.qty<=0))return null;
+    const points=cargo.reduce((n,line)=>n+line.qty*CARGO_WEIGHTS[line.good],0);
+    if(!Number.isFinite(points)||points>1e9)return null;
+    // A coin-funded buying expedition brings an EMPTY wagon for purchases.
+    // Coin weight is intentionally independent from the cart's 100-point bed.
+    const wagons=points>0?Math.ceil(points/WAGON_CAPACITY):coinGold>0?1:0;
+    return{mode:'wagon',capacity:WAGON_CAPACITY,loadPoints:Math.round(points*1000)/1000,
+      wagons,freePoints:Math.round((wagons*WAGON_CAPACITY-points)*1000)/1000,
+      goldPerDay:roundGold(wagons*WAGON_DAY_COST)};
+  }
   const validId=id=>typeof id==='string'&&id.length>0&&id.length<=128;
   const finite=n=>Number.isFinite(+n)?+n:0;
   const completed=s=>!!s&&!s.destroyed&&!s.abandoned&&
@@ -35,13 +61,13 @@
     const econ=window.ConquerEconomy?.state?.();
     if(!econ)return null;
     const c=econ.commerce||(econ.commerce={
-      version:1,shops:{},services:{},journeys:{}
+      version:2,shops:{},services:{},journeys:{}
     });
     // Add fields to older economic saves, without rewriting legacy inventory.
     if(!c.shops||typeof c.shops!=='object')c.shops={};
     if(!c.services||typeof c.services!=='object')c.services={};
     if(!c.journeys||typeof c.journeys!=='object')c.journeys={};
-    c.version=1;
+    c.version=2;
     return c;
   }
   function sync(){
@@ -70,6 +96,10 @@
       };
     }
     for(const j of Object.values(c.journeys)){
+      // Legacy v1 manifests had only goods, never money. Do not infer,
+      // reserve, or mint funds while migrating old save-game journeys.
+      if(!j.purse)j.purse={gold:0,reservedGold:0};
+      if(!j.transport)j.transport=caravanQuote(j.cargo||[],j.purse.gold,{legacyMixed:true});
       if(j.lodgingId&&!c.services[j.lodgingId]){
         j.lodgingId=null;
         if(j.status==='lodged')j.status='arrived';
@@ -112,21 +142,51 @@
   }
   // Journeys are manifests waiting for future route/caravan code. Neither
   // cash nor goods are moved by planning an entry in this registry.
-  function planJourney({id,originId,destinationId,source='external',houseId=null,cargo=[]}={}){
+  function planJourney({id,originId,destinationId,source='external',houseId=null,
+    cargo=[],coinGold=0}={}){
     const c=sync(),local=localId();
     if(!c||!local||!validId(id)||c.journeys[id]||
       !validId(originId)||!validId(destinationId)||originId===destinationId||
-      !['resident','external'].includes(source)||!Array.isArray(cargo))return false;
+      !['resident','external'].includes(source))return false;
+    const quote=caravanQuote(cargo,coinGold);
+    if(!quote)return false;
     if(source==='resident'&&
       (originId!==local||!l4House(houseId)))return false;
     if(source==='external'&&
       (destinationId!==local||houseId!==null))return false;
-    if(cargo.some(line=>!line||!window.ConquerEconomy?.GOODS?.includes(line.good)||
-        !Number.isFinite(line.qty)||line.qty<=0))return false;
     const manifest=cargo.map(line=>({good:line.good,qty:line.qty}));
     c.journeys[id]={id,originId,destinationId,source,
       sourceHouseId:source==='resident'?String(houseId):null,
-      tier:4,role:'L4+',cargo:manifest,status:'planned',lodgingId:null};
+      tier:4,role:'L4+',cargo:manifest,
+      purse:{gold:roundGold(coinGold),reservedGold:0},
+      transport:quote,status:'planned',lodgingId:null};
+    State.dirty=true;return true;
+  }
+  // Funds are held in the L4+ purse only on an explicit local funding step;
+  // merely planning a journey must not clone a wallet balance into cargo.
+  // External travelers have NO access to the local L4 wallet.
+  function reserveJourneyCoins(journeyId){
+    const c=sync(),j=c?.journeys[journeyId],e=window.ConquerEconomy?.state?.();
+    if(!e||!j||j.status!=='planned'||j.source!=='resident'||
+      j.originId!==localId()||!j.purse||
+      j.purse.reservedGold>0||j.purse.gold<=0)return false;
+    const due=j.purse.gold,balance=Number(e.wallet?.L4);
+    if(!Number.isFinite(balance)||balance<due)return false;
+    // This is an internal wallet-to-cargo hold, not a trade or expense.
+    e.wallet.L4=roundGold(balance-due);
+    j.purse.reservedGold=due;
+    State.dirty=true;return true;
+  }
+  // Before departure, cancellation is a true reversal of a local cash hold.
+  // No new currency is issued, and a second cancellation cannot refund twice.
+  function cancelPlannedJourney(journeyId){
+    const c=sync(),j=c?.journeys[journeyId];
+    if(!j||j.status!=='planned')return false;
+    if(j.source==='resident'&&j.purse?.reservedGold>0){
+      const e=window.ConquerEconomy.state();
+      e.wallet.L4=roundGold(Number(e.wallet.L4||0)+j.purse.reservedGold);
+    }
+    delete c.journeys[journeyId];
     State.dirty=true;return true;
   }
   // External transport system must explicitly confirm an inbound arrival.
@@ -181,13 +241,18 @@
       l4PrimarySites:primaryPortfolio().filter(s=>s.ownerTier===4).length,
       l4PlusPlanned:journeys.filter(j=>j.status==='planned').length,
       l4PlusPresent:journeys.filter(j=>j.status==='arrived'||j.status==='lodged').length,
+      l4PlusDeclaredGold:roundGold(journeys.reduce((n,j)=>n+(j.purse?.gold||0),0)),
+      l4PlusHeldGold:roundGold(journeys.reduce((n,j)=>n+(j.purse?.reservedGold||0),0)),
+      l4PlusWagons:journeys.reduce((n,j)=>n+(j.transport?.wagons||0),0),
       innBeds:lodging.reduce((n,s)=>n+s.guestCapacity,0),
       innOccupied:journeys.filter(j=>j.status==='lodged').length
     };
   }
   window.ConquerCommerce=Object.freeze({
     WORKSHOP_KINDS,SERVICE_KINDS,PRIMARY_KINDS,
+    WAGON_CAPACITY,WAGON_DAY_COST,CARGO_WEIGHTS,caravanQuote,
     state,sync,registerShop,assignService,configureInnCapacity,occupancy,worksiteForHouse,
-    planJourney,confirmArrival,checkIn,depart,primaryPortfolio,snapshot
+    planJourney,reserveJourneyCoins,cancelPlannedJourney,
+    confirmArrival,checkIn,depart,primaryPortfolio,snapshot
   });
 })();
