@@ -2,6 +2,12 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-20 — Routine femminili L1–L4 (`jobmanager`)
+
+- Nuovo `settlement-population-female.js` separato dalla logica economica. Attivita lotti L1/L2, mercato L3, leisure L4, sabato mercato/domenica chiesa per tutte le classi.
+- Dopo mezzogiorno attivita **leisure Female** con destinazioni vicine e raggiungibili tra giardini reali dei lotti, piazze/mercati e pozzi. Torna a casa a fine pomeriggio; conserva override combat e normali percorsi stradali.
+- Nuove QA dedicate con controllo calendario L1–L4, lavori sui lotti e assenza di teletrasporto. Nessuna produzione aggiuntiva dai lavoratori femminili.
+
 ## 2026-10-20 — Razioni signorili e happiness L1–L4 (`jobmanager`)
 
 - Consumo ordinario esclusivamente dal mercato; scorte del castello intoccate fino a ordine di razione intera o dimezzata, con prelievo reale e limiti fisici.

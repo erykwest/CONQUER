@@ -32,10 +32,10 @@
     const path=villagerPathBetween(house,start,goal,tag);
     return path?.length&&dist(path.at(-1),goal)<.35?path:null;
   }
-  function plotAnchor(house,identity){
+  function plotAnchor(house,identity,knownLot=null){
     const home=houseDoorInfo(house).outside;
-    const parcel=typeof urbanLots==='function'
-      ?urbanLots().find(l=>l.houseId===house.id):null;
+    const parcel=knownLot||(typeof urbanLots==='function'
+      ?urbanLots().find(l=>l.houseId===house.id):null);
     if(!parcel?.points?.length)return null;
     const phase=(peasantHash(identity+'-garden')%360)*Math.PI/180;
     // Sample only inside a real plot and outside house/fence colliders.
@@ -80,10 +80,11 @@
     // Respect fences: unreachable private gardens are not instant teleports.
     if(typeof urbanLots==='function'&&window.ConquerLivestock?.lotKindForHouse){
       const byId=new Map((State.structures||[]).filter(s=>s.type==='house'&&!underConstruction(s)).map(s=>[s.id,s]));
-      for(const lot of urbanLots()){
-        const owner=byId.get(lot.houseId);
-        if(!owner||window.ConquerLivestock.lotKindForHouse(owner)!=='garden')continue;
-        const point=plotAnchor(owner,owner.id+'-female-social');
+      const closestGardens=urbanLots().map(lot=>({lot,owner:byId.get(lot.houseId)}))
+        .filter(x=>x.owner&&window.ConquerLivestock.lotKindForHouse(x.owner)==='garden')
+        .sort((a,b)=>dist(from,a.owner)-dist(from,b.owner)).slice(0,8);
+      for(const {lot,owner} of closestGardens){
+        const point=plotAnchor(owner,owner.id+'-female-social',lot);
         if(point)choices.push({kind:'garden',id:lot.id,point});
       }
     }
@@ -96,7 +97,8 @@
   }
   function targets(house,resident,week){
     refreshCache();
-    const key=house.id+':'+resident.id+':'+week;
+    // Morning plan, not weekday index: Mon-Fri reuse the same cached paths.
+    const key=house.id+':'+resident.id+':'+activity(houseLevel(house),week,.25);
     if(targetCache.has(key))return targetCache.get(key);
     const home=houseDoorInfo(house).outside,tier=houseLevel(house);
     const first=activity(tier,week,.25);

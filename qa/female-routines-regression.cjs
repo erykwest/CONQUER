@@ -100,7 +100,7 @@ check('resident dispatcher sends adult females to new cycle even on Sunday, not 
   const S={clock:{day:6.25},structures:[]};
   const win={ConquerEconomy:{weekday:()=>6},ConquerFemaleRoutines:{position:()=>({x:123,y:456})}};
   const ctx=vm.createContext({State:S,window:win,Map,Math,Number,Object,Array,
-    houseLevel:h=>h.houseLevel});
+    houseLevel:h=>h.houseLevel,peasantHash:()=>123456});
   vm.runInContext(residents,ctx,{filename:'settlement-population-residents.js'});
   const adult={id:'f',sex:'female',age:'adult',index:0};
   for(const tier of [1,2,3,4]){
