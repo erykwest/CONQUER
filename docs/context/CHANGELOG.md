@@ -1,5 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-21 — Cutaway arredato e WebGL2, branch di convergenza
+
+- Integrati catalogo mobili generato da Blender, disposizione funzionale delle stanze e arredi non sovrapposti, mantenendo le postazioni degli arcieri e il corridoio delle porte.
+- Aggiunti interni depth-tested nel renderer WebGL2 con mesh separate per ambienti, guscio e superfici luminose, cache su rotazione, pass notturno e fallback Canvas.
+- Contenuti della vecchia branch `feature/cutaway-furniture` portati su `feature/cutaway-furniture-converge` aggiornata con le novità Terraforming di `main`. PR #65, verifica GitHub Actions in corso.
+
+
+
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
 ## 2026-10-20 — Chiarimento definitivo: gradone verticale color muro
