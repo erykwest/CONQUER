@@ -267,7 +267,11 @@ function setStructureVariant(s,key,value){
   s.variantVersion=STRUCTURE_VARIANT_VERSION;
   return true;
 }
-function towerRoofStyle(s){return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined}
+// A storey brought down from the top leaves a broken crown: no roof, merlons or deck.
+function towerRoofStyle(s){
+  if(s?.type==='tower'&&s.brokenTop&&!isWoodTower(s))return'broken';
+  return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined;
+}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';
@@ -282,6 +286,7 @@ function woodTowerRoof(s){
 function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
 function gateRoofStyle(s){
   if(isWoodGate(s))return'flat';
+  if(s?.type==='gate'&&s.brokenTop)return'broken';
   return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined
 }
 function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}

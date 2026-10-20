@@ -52,3 +52,13 @@ function fixture(){
   assert.ok(fs.existsSync(root+'assets/architecture/gate_portal_broken.png')&&fs.existsSync(root+'assets/architecture/gate_portal_damaged.png'));
   console.log('PASS ram storms, passage and portals are wired');
 }
+
+{
+  // A storey brought down from the top leaves a broken crown: no roof, merlons or deck.
+  const core=fs.readFileSync(root+'settlement-core.js','utf8');
+  assert.match(core,/if\(s\?\.type==='tower'&&s\.brokenTop&&!isWoodTower\(s\)\)return'broken';/,'a tower with a broken top has no roof style');
+  assert.match(core,/if\(s\?\.type==='gate'&&s\.brokenTop\)return'broken';/,'nor does a gatehouse');
+  assert.match(siege,/s\.level=L-1;s\.brokenTop=true;/,'a storey collapse breaks the crown');
+  assert.match(siege,/if\(s\.brokenTop&&\['tower','gate'\]\.includes\(s\.type\)&&!underConstruction\(s\)\)out\.push\(crownMesh\(s\)\)/,'the broken crown is drawn');
+  console.log('PASS partial collapses leave a broken crown');
+}
