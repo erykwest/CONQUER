@@ -29,7 +29,7 @@ test('candidate house evaluation reuses one live-occupant snapshot and original 
 });
 test('field placement reuses cached resident positions within a growth attempt',()=>{
  fixture();
- run("globalThis.origOccupants=urbanSpawnOccupants;globalThis.qaOccupantCalls=0;urbanSpawnOccupants=()=>{qaOccupantCalls++;return[]};globalThis.qaField={id:'f',type:'field',x:105,y:104,points:[{x:103,y:103},{x:107,y:103},{x:107,y:105},{x:103,y:105}]};State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'}];globalThis.fieldContext={occupants:null}");
+ run("globalThis.origOccupants=urbanSpawnOccupants;globalThis.qaOccupantCalls=0;urbanSpawnOccupants=()=>{qaOccupantCalls++;return[]};globalThis.qaField={id:'f',type:'field',x:105,y:104,points:[{x:103,y:103},{x:107,y:103},{x:107,y:105},{x:103,y:105}]};State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:5,mode:'eraseGreen'}];globalThis.fieldContext={occupants:null}");
  try{
   assert.equal(run("fieldAllowed(qaField,fieldContext)"),true);
   assert.equal(run("fieldAllowed(qaField,fieldContext)"),true);
