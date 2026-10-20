@@ -57,6 +57,8 @@ test('L3 workshops are blueprints, not factories producing free output',()=>{
   assert.equal(h.c.registerShop('home3b','invalid'),false);
   assert.equal(h.c.state().shops.home3.status,'blueprint');
   assert.equal(h.c.state().shops.home3.channel,'local');
+  assert.equal(h.c.worksiteForHouse('home3').kind,'shop');
+  assert.equal(h.c.worksiteForHouse('home3').structure.id,'home3');
   assert.equal(h.c.WORKSHOP_KINDS.weaver.outputs[0],'textiles');
   assert.equal(h.e.snapshot().castleGold,before.castleGold);
   assert.equal(h.c.snapshot().l3Shops,1);
@@ -69,6 +71,8 @@ test('L3 can operate inn/church, one local enterprise per household',()=>{
   assert.equal(h.c.registerShop('home3','tanner'),false,'operator cannot duplicate a shop');
   assert.equal(h.c.assignService('church','home3b'),true);
   assert.equal(h.c.snapshot().l3OperatedServices,2);
+  assert.equal(h.c.worksiteForHouse('home3').kind,'service');
+  assert.equal(h.c.worksiteForHouse('home3').structure.id,'inn');
   assert.equal(h.c.assignService('inn','home4'),false);
   assert.equal(h.c.assignService('mine','home3'),false);
 });
@@ -175,5 +179,7 @@ test('script order, persistence and L3 art direction stay compatible',()=>{
   assert.ok(core.includes("const CIVIC_TYPES=Object.freeze(['market','tavern','church','training'])"));
   assert.ok(residentsCode.includes("if(level===3)return artisanPosition(house,shiftedDay)"));
   assert.ok(residentsCode.includes("if(level===3)return'artisan'"));
+  const routines=fs.readFileSync(path.join(ROOT,'src/settlement-population-routines.js'),'utf8');
+  assert.ok(routines.includes("window.ConquerCommerce?.worksiteForHouse?.(house.id)"));
 });
 console.log('Commerce L3/L4/L4+ skeleton regression: all checks passed.');
