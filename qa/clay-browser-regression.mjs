@@ -23,7 +23,7 @@ try{
       ];
       State.view.scale=1;
       State.view.x=650;
-      State.view.y=-380;
+      State.view.y=-930; // frame the QA house and masonry tower inside the visible scene
       State.clock.speed=1;
       invalidateUrbanGeometry();
       urbanLotCache=[lot];
