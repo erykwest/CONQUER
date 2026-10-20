@@ -38,6 +38,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**21/10/2026 — Skeleton di convogli, tributi/doni e scorte nella PR #55 Draft:** il Mastio gestisce bozze manuali con riserva e restituzione reali di merci/oro, guardie richieste da posti caserma (non ancora attribuite a soldati fisici); per gli L4+ i mercenari richiedono preventivo giornaliero `2×(wage.L2/20)`, araldica marrone neutra e cuoio. Carretto 40 carico, carro 100 e carrozza 2 passeggeri nobili (preferenza dame). **Non partono** fino alla mappa dei feudi, percorsi confermati ai quattro confini, trasporto reale, ruoli militari effettivi e addebiti per giorno. La visualizzazione esistente dei carri è in una branch diversa. [Specifica](../convoys-skeleton.md).
+
+## Prossimo passo
+
 **21/10/2026 — Monete come carico carovane L4+ (PR #55 Draft):** esteso lo skeleton commerciale con carichi monotipo e borsa di monete che può essere accantonata dal wallet L4. Capienza 100/carretto e peso merceologico già quotabili, ma i costi giornalieri sono soltanto preventivi. **Sviluppo successivo:** banchina/mercato → strada maestra e quattro exit point reali → identità persistenti di città/celle della mappa mondiale → giorni di viaggio e spese effettive → transazioni atomiche di acquisto/vendita, eventuale ritorno carico/scarico; le navi riusano la stessa separazione merci/monete. Non introdurre carichi di più tipi; il cibo dell'equipaggio sarà costo di mantenimento, non secondo articolo di vendita.
 
 ## Prossimo passo
