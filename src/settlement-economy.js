@@ -184,7 +184,21 @@
       L1:Math.floor((pop.L1-foundingWorkers())/3)+foundingWorkers(),
       L2:Math.floor(pop.L2/3),L3:Math.floor(pop.L3/3),L4:pop.L4
     };
-    const remaining={...limits},allocated={};
+    const remaining={...limits},allocated={},assignedL1={};
+    const houses=(State.structures||[]).filter(s=>s.type==='house'&&complete(s)&&
+      clamp(Math.floor(finite(s.houseLevel,1)),1,4)===1).sort((a,b)=>
+      typeof peasantHash==='function'?
+        peasantHash(String(a.id))-peasantHash(String(b.id)):
+        String(a.id).localeCompare(String(b.id)));
+    const wellId=State.village?.wellId||'well';
+    // IDs represent the same household's single working adult and the four
+    // founding laborers. The economic accounting remains aggregate.
+    const l1Available=[
+      ...houses.map(h=>({id:String(h.id)+':m:0',houseId:h.id})),
+      ...Array.from({length:foundingWorkers()},(_,i)=>({
+        id:'founder:'+wellId+':'+i,founderIndex:i
+      }))
+    ];
     // Industry positions are staffed before assigning only spare L1 to manual
     // construction. An out-of-season field does not reserve a worker forever.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
@@ -196,6 +210,7 @@
       const req=workerDemand(s),group=classKey(req.tier);
       let count=Math.min(req.count,remaining[group]);
       remaining[group]-=count;
+      if(group==='L1')assignedL1[s.id]=l1Available.splice(0,count);
       if(s.type==='field'&&count<req.count){
         // Idle L2 may tend the remaining field slots.
         const extra=Math.min(req.count-count,remaining.L2);
@@ -203,9 +218,13 @@
       }
       allocated[s.id]=count;
     }
-    return{allocated,remaining,limits};
+    return{allocated,remaining,limits,assignedL1,spareL1:l1Available};
   }
   function activeCapacity(){return laborAllocation().allocated}
+  function availableBuilderIds(day=State.clock?.day){
+    if(!State.village?.founded||((window.ConquerCombat?.alarmMode?.()||'off')!=='off'))return [];
+    return laborAllocation(day).spareL1;
+  }
   function availableBuilders(day=State.clock?.day){
     if(!State.village?.founded||((window.ConquerCombat?.alarmMode?.()||'off')!=='off'))return 0;
     // Construction never takes the same L1 counted at a workplace.
@@ -519,6 +538,6 @@
   window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,
     weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
     foundingCharter,foundingWorkers,syncBuilderResources,canBuild,spendBuild,refundBuild,
-    availableBuilders,laborAllocation,
+    availableBuilders,availableBuilderIds,laborAllocation,
     setShare,setTarget,setExternalDemand,transfer,snapshot,population});
 })();
