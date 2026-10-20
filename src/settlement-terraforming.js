@@ -115,7 +115,7 @@
     },0);
     const sign=area<0?-1:1;
     const all=edits(),editIndex=all.indexOf(edit);
-    const others=all.filter(other=>other!==edit&&other.id!==edit.id&&other.mode==='walled'&&
+    const others=all.filter(other=>other!==edit&&other.id!==edit.id&&other.mode===edit.mode&&
       Math.abs(other.targetZ-edit.targetZ)<1e-7&&Math.abs(other.baseZ-edit.baseZ)<1e-7);
     const cuts=[0,1],cross=(x,y,X,Y)=>x*Y-y*X;
     const add=t=>{if(t>1e-8&&t<1-1e-8)cuts.push(t)};
@@ -217,7 +217,7 @@
     let pieces=[edit.top];
     for(let i=0;i<all.length;i++){
       const other=all[i];if(other===edit||!other.top?.length)continue;
-      if(other.mode==='flat'&&i>index||other.mode==='walled'&&i<index&&
+      if(other.mode==='flat'&&i>index||other.mode===edit.mode&&i<index&&
          Math.abs(other.baseZ-edit.baseZ)<1e-7&&Math.abs(other.targetZ-edit.targetZ)<1e-7){
         pieces=pieces.flatMap(poly=>subtractPolygon(poly,other.top));
         if(!pieces.length)break;
@@ -418,12 +418,16 @@
       return faces;
     }
     for(let i=0;i<edit.top.length;i++){
-      const segments=edit.mode==='walled'?exposedWallSegments(edit,i):
-        [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
+      const segments=exposedWallSegments(edit,i);
       for(const edge of segments){
         // Graded shapes use the full outer ring; masonry edges have zero offset.
-        const outerA=edit.mode==='walled'?edge.a:edit.outer[i];
-        const outerB=edit.mode==='walled'?edge.b:edit.outer[(i+1)%edit.top.length];
+        const vertexA=edit.top[i],vertexB=edit.top[(i+1)%edit.top.length];
+        const blend=t=>({
+          x:edit.outer[i].x+(edit.outer[(i+1)%edit.top.length].x-edit.outer[i].x)*t,
+          y:edit.outer[i].y+(edit.outer[(i+1)%edit.top.length].y-edit.outer[i].y)*t
+        });
+        const outerA=edit.mode==='walled'?edge.a:blend(segmentProjection(edge.a,vertexA,vertexB).t);
+        const outerB=edit.mode==='walled'?edge.b:blend(segmentProjection(edge.b,vertexA,vertexB).t);
         const vertices=[
           {...outerA,z:edit.baseZ},{...outerB,z:edit.baseZ},
           {...edge.b,z:edit.targetZ},{...edge.a,z:edit.targetZ}
@@ -448,7 +452,7 @@
           :(winter?'#d2d8d3':face.index%2?'#464630':'#514e37');
       pathPolygon(face.screen,fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
     }
-    const tops=ghost||edit.mode!=='walled'?[edit.top]:visibleTerracePieces(edit);
+    const tops=ghost||edit.mode==='flat'?[edit.top]:visibleTerracePieces(edit);
     for(const piece of tops){
     const top=projectClippedTerrain(piece.map(p=>({...p,z:edit.targetZ})));
     if(top.length>=3){
