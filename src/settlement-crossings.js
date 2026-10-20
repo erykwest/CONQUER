@@ -318,11 +318,56 @@
       for(let a=.1;a<f.L;a+=.6)box(a-.03,a+.03,side*(w-.04)-.03,side*(w-.04)+.03,top,top+.24,dark);
     }
     // Supports: wherever the ground falls away under the deck.
-    const step=stone?1.6:1.2,ground=a=>{const p=point(s,a,0);return typeof terrainElevation==='function'?terrainElevation(p):0};
-    for(let a=step/2;a<f.L-.2;a+=step){
-      const g=ground(a);if(top-.1-g<.12)continue;
-      if(stone)box(a-.25,a+.25,-w+.1,w-.1,g-.05,top-.1,dark);
-      else for(const side of [-1,1])box(a-.05,a+.05,side*(w-.12)-.05,side*(w-.12)+.05,g-.05,top-.1,dark);
+    const ground=a=>{const p=point(s,a,0);return typeof terrainElevation==='function'?terrainElevation(p):0};
+    const under=top-.1;
+    // A slanted plank from (a0,c0,z0) to (a1,c1,z1), t thick, laid flat in its own plane.
+    const beam=(a0,c0,z0,a1,c1,z1,t,colr,acrossPlane)=>{
+      const v=[];
+      for(const e of [[a0,c0,z0],[a1,c1,z1]])for(const i of [-1,1])for(const j of [-1,1])
+        v.push(acrossPlane?P(e[0]+i*t,e[1]+j*t*.6,e[2]):P(e[0]+j*t*.6,e[1]+i*t,e[2]));
+      for(const [i,j,k,l] of [[0,1,3,2],[4,6,7,5],[0,4,5,1],[2,3,7,6],[0,2,6,4],[1,5,7,3]])
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(colr)}
+    };
+    if(stone){
+      // Arcades: piers on the ground, round arches springing between them under the deck.
+      const spans=Math.max(1,Math.ceil(f.L/2.6)),span=f.L/spans,pier=.45,cw=w-.04;
+      for(let i=1;i<spans;i++){
+        const a=i*span,g=ground(a);if(under-g<.12)continue;
+        box(a-pier/2,a+pier/2,-cw,cw,g-.05,under,dark);
+        box(a-pier/2-.06,a+pier/2+.06,-cw-.06,cw+.06,g-.05,Math.min(under,g+.3),dark);   // footing
+      }
+      for(let i=0;i<spans;i++){
+        const a0=i*span+(i?pier/2:0),a1=(i+1)*span-(i<spans-1?pier/2:0),half=(a1-a0)/2,mid=(a0+a1)/2;
+        const gMin=Math.min(ground(a0),ground(mid),ground(a1)),rise=Math.min(half,under-.15-gMin);
+        if(rise<.12)continue;
+        const spring=under-.15-rise,N=10;
+        for(let k=0;k<N;k++){
+          const s0=a0+(a1-a0)*k/N,s1=a0+(a1-a0)*(k+1)/N,u=((s0+s1)/2-mid)/half;
+          const z=Math.max(spring+rise*Math.sqrt(Math.max(0,1-u*u)),ground((s0+s1)/2)-.05);
+          box(s0,s1,-cw,cw,z,under,dark);
+        }
+      }
+    }else{
+      // Trestle bents every ~1.2 U, braced with X planks across each bent and between bents.
+      const bents=[],step=1.2,leg=w-.12;
+      for(let a=step/2;a<f.L-.2;a+=step){
+        const g=ground(a);if(under-g<.12){bents.push(null);continue}
+        bents.push({a,g});
+        for(const side of [-1,1])box(a-.05,a+.05,side*leg-.05,side*leg+.05,g-.05,under,dark);
+        if(under-g>.5){
+          beam(a,-leg,g+.1,a,leg,under-.05,.035,dark,true);
+          beam(a,leg,g+.1,a,-leg,under-.05,.035,dark,true);
+        }
+      }
+      for(let i=0;i+1<bents.length;i++){
+        const p=bents[i],q=bents[i+1];if(!p||!q)continue;
+        const lo=Math.max(p.g,q.g)+.1;if(under-lo<.4)continue;
+        for(const side of [-1,1]){
+          const c=side*(leg+.07);
+          beam(p.a,c,lo,q.a,c,under-.05,.035,dark,false);
+          beam(p.a,c,under-.05,q.a,c,lo,.035,dark,false);
+        }
+      }
     }
     m={key,pos,col};bridgeCache.set(s.id,m);return m;
   }  // The leaf as world triangles for the 3D renderer: a plank deck hinged at the gate,
