@@ -46,6 +46,14 @@
 - **QA:** `qa/construction-commute-regression.cjs` verifica identità, andata/ritorno, industria, assenza di strada, cache e weekend. Le regressioni CI non sostituiscono la prova di gioco/browser e non attestano il pagamento salari.
 - **Aperto:** salari dei costruttori, percorsi speciali/assedi, gameplay dei cantieri autonomi e validazione browser/visiva.
 
+## Skeleton convogli signorili, piccoli carri, carrozze e scorte — 21/10/2026, PR #55 Draft
+
+- **CODICE BRANCH:** `ConquerConvoys` crea bozze `tribute/gift` da Mastio verso un feudo differente, con zero/una merce e/o un **forziere** di oro. Il pannello Mastio espone creazione, richiesta guardie, accantonamento reale di oro/merce della tesoreria e annullamento/rimborso singolo. `ready` NON equivale a partenza. Le risorse del Builder riflettono l'accantonamento.
+- **MEZZI:** valori preliminari `cart` 40 punti (0,10 oro/giorno), `wagon` 100 (0,20), `coach` 2 posti, nessuna merce (0,30), senza figura/animazione in questa branch. Carrozza L4 con preferenza dame, uomini ammessi, nessun nuovo residente creato.
+- **SCORTE:** posti per guardie del signore prenotabili contro **capienza caserme**, `assigned:0` finché non è disponibile un roster reale. Mercenari L4+ con contratto cuoio/araldica marrone neutra e preventivo **L2/20×2 oro/mercenario/giorno** (0,20 con salario L2 iniziale 2), senza pagamento automatico in assenza di giorni viaggio.
+- **COMPATIBILITÀ:** `State.economy.commerce` v3 migra le vecchie `purse` in `chest` preservando il capitale L4 riservato; niente bonus o perdita monete. QA `qa/convoys-skeleton-regression.cjs` + `qa/commerce-skeleton-regression.cjs` nella CI.
+- **FUORI SCOPE:** partenza mercato/Mastio, percorrenza arterie/exit, navigazione world map, mercenari/guardie effettivamente presenti, commercio o tributo effettivamente ricevuto, pagamento giornaliero e renderer dei nuovi mezzi. [Specifica](../convoys-skeleton.md).
+
 ## Monete in carovana e carichi monotipo — 21/10/2026, PR #55 Draft
 
 - **CODICE BRANCH:** `ConquerCommerce.planJourney` ammette **al massimo una merce** e una borsa di monete `coinGold` separata dal mercato; la quotazione `caravanQuote` applica 100 punti di capienza/carretto, coefficienti di ingombro per bene, 0,2 oro per carro/giorno (valori di progetto senza prelievo automatico). Carri vuoti per missioni d'acquisto con monete.
