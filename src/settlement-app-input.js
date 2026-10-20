@@ -386,10 +386,12 @@ for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(constructionCost({...spec,masonryMaterial:State.buildMasonryMaterial})),el:b});
 };
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
-   const type=b.dataset.industry,spec=window.ConquerIndustries.TYPES[type];
+   const type=b.dataset.industry,extractionMode=b.dataset.extractionMode==='clay'?'clay':'stone';
+   const candidate=window.ConquerIndustries.make(type,{x:0,y:0},extractionMode);
+   const spec=window.ConquerIndustries.definition(candidate);
    setTool({kind:'industry',industry:type,
-     placementSpec:window.ConquerIndustries.make(type,{x:0,y:0}),
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(constructionCost({...window.ConquerIndustries.make(type,{x:0,y:0}),masonryMaterial:State.buildMasonryMaterial})),el:b});
+     placementSpec:candidate,
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{

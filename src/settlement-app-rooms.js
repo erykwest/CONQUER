@@ -3,12 +3,12 @@
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(window.ConquerIndustries?.is(s)){
-    const spec=window.ConquerIndustries.TYPES[s.type],econ=window.ConquerEconomy;
+    const spec=window.ConquerIndustries.definition(s),econ=window.ConquerEconomy;
     const staff=econ?.staffing?.()[s.id]||0;
     const details=econ?.state()?.activities?.[s.id],owner=details?.owner||(s.economicOwner==='lord'?'lord':'private');
     panel.classList.add('open');
     info.innerHTML=`<div class="kv"><span>Industry</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${remainingDays(s).toFixed(1)}d</div>`:''}`;
-    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?'3×3U, any part overlaps steep rock':'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
+    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?(s.extractionMode==='clay'?'4×4U, centre H0 and at most 6U from river/stream/lake bank':'3×3U, any part overlaps steep rock'):'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
     slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
     return;
   }

@@ -52,7 +52,8 @@
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
-      ['[data-industry="quarry"]','Cava','work'],
+      ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','work'],
+      ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','work'],
       ['[data-industry="mine"]','Miniera','work']]},
     {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[

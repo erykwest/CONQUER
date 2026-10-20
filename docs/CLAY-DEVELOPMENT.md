@@ -99,3 +99,10 @@ L'asset della cava è oggi schematizzato: qualsiasi nuova rappresentazione deve 
 - **Rendering**: con modalità DEV Stone, ogni casa o elemento di castello usa la propria muratura (WebGL2 e Canvas). DEV Clay resta un override **esclusivamente visivo** globale; non cambia le strutture. Union raster 2D passa alla geometria per singola struttura in presenza di mattoni, per evitare di perdere i materiali nei castelli misti.
 - **Assedio**: `healthMaximum` applica 80% al core in muratura con `masonryMaterial:'brick'`, lasciando il portone autonomo; attacchi e target restano invariati.
 - **Limitazione nota**: l'inventario `clay` del Builder è ancora una risorsa di test inizializzata, **non** ancora alimentata dall'estrazione cava o da un ledger economico. La conversione della cava e l'integrazione economica restano work item separati, non dichiararli completati.
+
+## Cava argilla 4×4 H0 — 20/10/2026
+- La cava esistente `type:'quarry'` dispone di `extractionMode:'stone'|'clay'`; salvataggi legacy scelgono `stone` senza spostarsi né cambiare footprint.
+- Stone resta 3×3 U grigia, consentita su porzioni di roccia `steep`. Clay è un placeholder arancione 4×4 U e deve avere il **centro a H0** e a distanza **non superiore a 6 U dalla riva**, calcolata dal centro alla polilinea di `river`/`stream` meno metà larghezza, oppure al bordo del poligono `pond` (lago). Il mare `sea` non conta.
+- L'intera sagoma rispetta whitezone, foreste, acqua, ostacoli e altre strutture. La preview e il commit usano lo stesso validatore.
+- Non sono stati creati lavoratori duplicati: L2×2, ritmo esistente 2 unità/giorno con personale assegnato, in un solo ledger economico che supporta la commodity `clay`. La produzione economica resta distinta dalle risorse di test disponibili nel Builder (limite preesistente).
+- Nuovi cantieri per argilla non richiedono pietra; rendering Canvas e WebGL seguono il medesimo placeholder.

@@ -572,7 +572,7 @@ function baseConstructionCost(s){
       :{gold:5*(s.length||1)*factor,wood:18*(s.length||1)*factor});
   }
   if(s.type==='well')return {...COSTS.well};
-  if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.TYPES[s.type].cost};
+  if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.definition(s).cost};
   if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -596,7 +596,7 @@ function buildDuration(s){
   }
   if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
-  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.TYPES[s.type].days;
+  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.definition(s).days;
   if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));

@@ -149,3 +149,5 @@ Aggiornare questo livello dopo ogni PR che modifica una milestone, non dopo ogni
 - **QA**: `qa/camp-regression.cjs` e workflow `CAMP regression` sul branch. Test V8 isolato superato durante l'implementazione; workflow GitHub Actions `CAMP regression` [run 38935536886](https://github.com/erykwest/CONQUER/actions/runs/38935536886) **superato**, inclusi controllo sintassi e QA comportamentale Node. Collaudo browser reale/WebGL2/mobile ancora da verificare separatamente. Non ancora mergiato in `main`.
 
 - 2026-10-20 · clay: aggiunta selezione muratura pietra/argilla per nuovi cantieri e preferenza per nuovi spawn delle case private; costi Builder 1:1, persistenza locale/cloud, colori per edificio, integrità core mattone 80%. L'estrazione della cava e l'economia dell'argilla non sono ancora integrate.
+
+- 2026-10-20 · clay: una nuova modalità cava argilla arancione 4×4 H0, centro entro 6U da fiumi/torrenti/laghi, con stesse collisioni/quota e opzione Builder dedicata; registrazione clay nell'economia esistente e migrazione del ledger legacy. Produzione economia separata dall'inventario demo Builder.

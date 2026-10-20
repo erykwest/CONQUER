@@ -333,7 +333,7 @@
       if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
-        const def=ConquerIndustries.TYPES[s.type],g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
+        const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
         m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
       }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
         const g=terrainElevation(s);
