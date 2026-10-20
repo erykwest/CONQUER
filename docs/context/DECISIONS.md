@@ -3,6 +3,10 @@
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
 
+## Converge — regole assedio (20/10/2026)
+
+**Applicazione D-031/D-032 sulla branch `converge`:** le restrizioni delle armi contro mura, torri e gatehouse sono implementate nel motore attuale, preservando il sistema di campate, le brecce e la separazione fra portone e torre-porta. Test dedicati disponibili, QA su pull request necessaria. La vecchia branch `assedio` non va fusa integralmente.
+
 ## Aggiornamento clay (19/10/2026) — solo design, non codice
 
 **D-CLAY-01 · DESIGN:** introdurre Argilla (`clay`) come materia prima e mattoni cotti (`brick`) come materiale alternativo alla pietra per costruzioni murarie e fortificazioni; variante rosso/marrone della muratura esistente e **durabilità massima 80%** rispetto alla pietra, senza duplicare geometrie o sistemi di combattimento.
