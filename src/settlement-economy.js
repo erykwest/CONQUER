@@ -179,26 +179,37 @@
     }
     return {tier:spec.classId,count:spec.workers};
   }
-  function activeCapacity(){
+  function laborAllocation(day=State.clock?.day){
     const pop=population(),limits={
       L1:Math.floor((pop.L1-foundingWorkers())/3)+foundingWorkers(),
       L2:Math.floor(pop.L2/3),L3:Math.floor(pop.L3/3),L4:pop.L4
     };
     const remaining={...limits},allocated={};
-    // Player-established industries claim workers before automatically generated fields.
+    // Industry positions are staffed before assigning only spare L1 to manual
+    // construction. An out-of-season field does not reserve a worker forever.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
+      const activity=state().activities[s.id];
+      if(s.economyDisabled||s.destroyed||s.abandoned||activity?.abandoned||
+          s.type==='field'&&typeof fieldCropReady==='function'&&!fieldCropReady(s,day)){
+        allocated[s.id]=0;continue;
+      }
       const req=workerDemand(s),group=classKey(req.tier);
       let count=Math.min(req.count,remaining[group]);
       remaining[group]-=count;
       if(s.type==='field'&&count<req.count){
-        // A farm tended by otherwise idle L2 workers still produces food.
-        // Mines/quarries have already claimed their L2 workforce above.
+        // Idle L2 may tend the remaining field slots.
         const extra=Math.min(req.count-count,remaining.L2);
         count+=extra;remaining.L2-=extra;
       }
       allocated[s.id]=count;
     }
-    return allocated;
+    return{allocated,remaining,limits};
+  }
+  function activeCapacity(){return laborAllocation().allocated}
+  function availableBuilders(day=State.clock?.day){
+    if(!State.village?.founded||((window.ConquerCombat?.alarmMode?.()||'off')!=='off'))return 0;
+    // Construction never takes the same L1 counted at a workplace.
+    return Math.max(0,laborAllocation(day).remaining.L1);
   }
   function daily(day){
     const e=sync();if(weekday(day)>=5)return;
@@ -508,5 +519,6 @@
   window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,
     weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
     foundingCharter,foundingWorkers,syncBuilderResources,canBuild,spendBuild,refundBuild,
+    availableBuilders,laborAllocation,
     setShare,setTarget,setExternalDemand,transfer,snapshot,population});
 })();
