@@ -132,7 +132,7 @@ function terrainElevation(p){
 function terrainPlateauElevation(p){
   if(terrainSlopeKind(p))return null;
   let z=0;for(const level of reliefLevels())if(pointInPolygon(p,level.top))z=Math.max(z,level.z1);
-  return z;
+  return window.ConquerTerraforming?.elevationAt(p,z)??z;   // terrace tops count as plateaus
 }
 function environmentConflictsTestRelief(f){
   // Mountains may stand on foothills (continuous massif): never dropped for overlapping relief.
