@@ -151,12 +151,15 @@
     return z;
   }
   function slopeAt(point){
-    for(const edit of edits().slice().reverse()){
-      if(edit.mode==='walled'&&edit.top.some((_,i)=>exposedWallSegments(edit,i)
-        .some(edge=>dist(point,segmentProjection(point,edge.a,edge.b))<=.12)))return 'steep';
-      if(pointInPolygon(point,edit.top))return null;
+    const ordered=edits().slice().reverse();
+    // Shared faces are not cliffs. Flat tops take priority over another
+    // adjoining hill's sloped apron, so merged plateaux stay buildable.
+    for(const edit of ordered)if(edit.mode==='walled'&&edit.top.some((_,i)=>
+      exposedWallSegments(edit,i).some(edge=>
+        dist(point,segmentProjection(point,edge.a,edge.b))<=.12)))return 'steep';
+    if(ordered.some(edit=>pointInPolygon(point,edit.top)))return null;
+    for(const edit of ordered)
       if(pointInPolygon(point,edit.outer))return edit.mode==='walled'?'steep':'gentle';
-    }
     return null;
   }
   function snapWallAnchor(point,wallWidth=.5){
@@ -281,7 +284,16 @@
       const fill=ghost
         ?(valid?'rgba(78,224,149,.28)':'rgba(238,54,64,.34)')
         :(winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b'));
-      pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):'rgba(210,194,151,.28)',ghost?2.2:1);
+      pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):edit.mode==='walled'?null:'rgba(210,194,151,.28)',ghost?2.2:edit.mode==='walled'?0:1);
+      if(!ghost&&edit.mode==='walled'){
+        ctx.strokeStyle='rgba(210,194,151,.28)';ctx.lineWidth=1;
+        ctx.beginPath();
+        for(let i=0;i<edit.top.length;i++)for(const edge of exposedWallSegments(edit,i)){
+          const a=w2sRaw(edge.a,edit.targetZ),b=w2sRaw(edge.b,edit.targetZ);
+          ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+        }
+        ctx.stroke();
+      }
     }
     if(ghost){
       const label=w2sRaw(edit.center,Math.max(edit.baseZ,edit.targetZ)+.16);
