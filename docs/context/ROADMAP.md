@@ -38,6 +38,11 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**Skeleton commerciale L3/L4/L4+ (20/10/2026, PR #55 Draft):** modello dati e primi contratti disponibili, senza merci o figure fantasma: L3 produce/vende localmente e gestirà servizi (locanda/chiesa), L4 possiede i siti produttivi, L4+ è un ruolo di viaggio import/export che richiede, per alloggiare, posti liberi in locanda. Il codice attuale crea solo blueprint L3, descrittori servizi, viste L4 e manifesti L4+; nessun commercio operativo.
+**Dipendenza successiva:** decidere merci effettive/ricette e pagamenti L3 → integrazione di acquisto/vendita locale con scorte vere; quindi proprietà/investimento L4 e solo dopo carovane inter-città con carico, rischio e transazioni atomiche. La capienza della locanda dovrà derivare da stanze effettive. [Contratto](../commerce-skeleton.md).
+
+## Prossimo passo
+
 **Tranche salari 20/10/2026, PR #55 Draft:** il signore paga i costruttori L1 per le sole giornate-operaio svolte sui cantieri del giocatore; lo spawn spontaneo incorpora il valore del lavoro come costo di creazione, senza pagamento duplicato. **Prossima dipendenza economica:** identificare chi finanzia davvero la crescita autonoma (famiglie, capitale L4, cassa urbana) prima di scalare da costo imputato a trasferimento monetario; poi completare le ricette materiali dello spawn e la verifica browser. Mantenere cantieri auto procedurali temporizzati finché non è attivo l'anti-deadlock.
 
 ## Prossimo passo
