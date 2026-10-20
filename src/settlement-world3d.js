@@ -205,11 +205,15 @@
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
     if(terraformEdits.length){
       const terraces=terraformEdits.filter(e=>e.mode==='walled');
-      const terraceBounds=terraces.map(edit=>{
-        const xs=edit.top.map(p=>p.x),ys=edit.top.map(p=>p.y);
-        return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
-          minY:Math.min(...ys),maxY:Math.max(...ys)};
-      });
+      // Reuse exactly the visible surface fragments both for clipping the
+      // underlying ground and emitting plateau tops. Flat cuts must not leave
+      // invisible ground holes or overlapping faces after a subtraction.
+      const terraceBounds=terraces.flatMap(edit=>
+        (window.ConquerTerraforming?.visibleTerracePieces?.(edit)||[edit.top]).map(top=>{
+          const xs=top.map(p=>p.x),ys=top.map(p=>p.y);
+          return{edit,top,minX:Math.min(...xs),maxX:Math.max(...xs),
+            minY:Math.min(...ys),maxY:Math.max(...ys)};
+        }));
       // Cut the ground exactly at terrace edges. Sampling a height discontinuity
       // would create diagonal triangles instead of a vertical masonry wall.
       const halfPlane=(poly,a,b,inside)=>{
@@ -225,14 +229,14 @@
       const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
       const ground=tri=>{
         let pieces=[tri];
-        for(const {edit,minX,maxX,minY,maxY} of terraceBounds){
+        for(const {top,minX,maxX,minY,maxY} of terraceBounds){
           if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
              tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
           const next=[];
           for(const piece of pieces){
             let inner=piece;
-            for(let i=0;i<edit.top.length&&inner.length>=3;i++){
-              const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
+            for(let i=0;i<top.length&&inner.length>=3;i++){
+              const a=top[i],b=top[(i+1)%top.length];
               const outside=halfPlane(inner,a,b,false);
               if(outside.length>=3)next.push(outside);
               inner=halfPlane(inner,a,b,true);
@@ -242,35 +246,9 @@
         }
         pieces.forEach(emit);
       };
-      // Boolean top union: clip each convex terrace top against already drawn
-      // same-level tops. This yields non-overlapping convex pieces, even for
-      // concave L/T shaped unions and rotated polygons (no z-fighting).
-      const polygonArea=poly=>Math.abs(poly.reduce((v,p,i)=>{
-        const q=poly[(i+1)%poly.length];return v+p.x*q.y-q.x*p.y;
-      },0))/2;
-      const subtractConvex=(poly,clip)=>{
-        let inside=poly,out=[];
-        for(let i=0;i<clip.length&&inside.length>=3;i++){
-          const a=clip[i],b=clip[(i+1)%clip.length];
-          const outside=halfPlane(inside,a,b,false);
-          if(outside.length>=3&&polygonArea(outside)>1e-8)out.push(outside);
-          inside=halfPlane(inside,a,b,true);
-        }
-        return out;
-      };
+      // Visible plateau fragments are already clipped and non-overlapping.
       const drawTerraceTops=()=>{
-        const previous=[];
-        for(const terrace of terraces){
-          let pieces=[terrace.top.map(p=>({...p,z:terrace.targetZ}))];
-          for(const earlier of previous){
-            if(Math.abs(earlier.targetZ-terrace.targetZ)>1e-7||
-               Math.abs(earlier.baseZ-terrace.baseZ)>1e-7)continue;
-            pieces=pieces.flatMap(piece=>subtractConvex(piece,earlier.top));
-            if(!pieces.length)break;
-          }
-          for(const piece of pieces)emit(piece);
-          previous.push(terrace);
-        }
+        for(const {edit,top} of terraceBounds)emit(top.map(p=>({...p,z:edit.targetZ})));
       };
       // Once the player edits elevation, sample the single authoritative terrainElevation
       // contract. A denser build-area grid preserves terrace and excavation silhouettes;
@@ -330,12 +308,16 @@
   function buildTerrainEdges(){
     const m=meshBuilder(),W=WORLD,n=Math.round(W/EDGE_STEP);
     for(const edit of window.ConquerTerraforming?.edits?.()||[]){
-      if(edit.mode!=='walled')continue;
-      for(let i=0;i<edit.top.length;i++){
-        const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
-          [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
-        for(const {a,b} of segments)
-          m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+      if(edit.mode==='walled'){
+        for(let i=0;i<edit.top.length;i++){
+          const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
+            [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
+          for(const {a,b} of segments)
+            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+        }
+      }else if(edit.mode==='flat'){
+        for(const {a,b,baseZ,targetZ} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
+          m.face([{...a,z:baseZ},{...b,z:baseZ},{...b,z:targetZ},{...a,z:targetZ}],'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];

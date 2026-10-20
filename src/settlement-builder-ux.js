@@ -64,7 +64,8 @@
     {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[]},
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
-      ['[data-terraform="walled"]','Terrazzamento murato','terrace']]},
+      ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
+      ['[data-terraform="flat"]','Flat · sottrai e riporta a H0','level']]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
       ['[data-main-road]','Strada principale','route'],
       ['[data-crossing="dry"]','Fossato asciutto','moat'],
@@ -87,7 +88,6 @@
     {name:'Altezza porta',icon:'level',selectors:['[data-gate-level]']},
     {name:'Larghezza fossati e ponti',icon:'depth',category:'infrastructure',selectors:['[data-crossing-width]']},
     {name:'Forma terreni / terrazzamenti',icon:'square',category:'terrain',selectors:['[data-terraform-shape]']},
-    {name:'Booleana terrazzamenti',icon:'terrain',category:'terrain',selectors:['[data-terraform-boolean]']},
     {name:'Scava / innalza',icon:'level',category:'terrain',selectors:['[data-terraform-delta]']},
     {name:'Raggio intervento',icon:'depth',category:'terrain',selectors:['[data-terraform-radius]']}
   ];

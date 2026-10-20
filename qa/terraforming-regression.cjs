@@ -49,16 +49,15 @@ test('ghost previews the final terrain without mutating relief',()=>{
   assert.equal(JSON.stringify(context.State.relief),before);
 });
 
-test('a walled terrace cannot overlap another walled terrace',()=>{
-  const first=api.preview({x:90,y:90},{mode:'walled',delta:1,radius:4});
-  assert.equal(api.commit(first),true);
-  const overlap=api.preview({x:96,y:90},{mode:'walled',delta:1,radius:4});
-  assert.equal(overlap.ok,false);
-  assert.match(overlap.reason,/another walled terrace/i);
-  const separate=api.preview({x:110,y:90},{mode:'walled',delta:1,radius:4});
-  assert.equal(separate.ok,true);
+test('walled terraces union overlapping footprints without a mode switch',()=>{
+  const a=api.preview({x:90,y:90},{mode:'walled',delta:1,radius:4});
+  assert.equal(api.commit(a),true);
+  const b=api.preview({x:96,y:90},{mode:'walled',delta:1,radius:4});
+  assert.equal(b.ok,true,b.reason);
+  assert.equal(b.targetZ,1);
+  assert.equal(api.commit(b),true);
+  assert.equal(api.unionContours().length,1);
 });
-
 test('a walled terrace has exactly vertical masonry faces and a flat top',()=>{
   context.State.relief.terraforming=[];
   const ghost=api.preview({x:100,y:100},{mode:'walled',delta:1,radius:4,magnet:false});
@@ -96,19 +95,19 @@ test('walled terrace magnet aligns its edge to the near wall face',()=>{
   assert.ok(edge.every(p=>Math.abs(p.y-99.75)<1e-6));
 });
 
-test('committed terrain edits expose plateau, slope and excavation elevation',()=>{
-  context.State.structures=[];
-  context.State.relief.terraforming=[];
+test('sloped terrain has a plateau and gentle side; digging can only reach H0',()=>{
+  context.State.structures=[];context.State.relief.terraforming=[];
   assert.equal(api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:4})),true);
   assert.equal(api.elevationAt({x:100,y:100},0),1);
   assert.ok(Math.abs(api.elevationAt({x:105,y:100},0)-.5)<1e-6);
-  assert.equal(api.elevationAt({x:107,y:100},0),0);
   assert.equal(api.slopeAt({x:105,y:100}),'gentle');
+  const lower=api.preview({x:100,y:100},{mode:'terrain',delta:-1,radius:4});
+  assert.equal(lower.ok,true);
+  assert.equal(api.commit(lower),true);
+  assert.equal(api.elevationAt({x:100,y:100},0),0);
   context.State.relief.terraforming=[];
-  assert.equal(api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:-1,radius:4})),true);
-  assert.equal(api.elevationAt({x:100,y:100},0),-1);
+  assert.equal(api.preview({x:100,y:100},{mode:'terrain',delta:-1,radius:4}).ok,false);
 });
-
 test('wall endpoints magnetize to a walled terrace edge',()=>{
   context.State.relief.terraforming=[];
   const terrace=api.preview({x:100,y:100},{mode:'walled',delta:1,radius:4,magnet:false});
@@ -189,54 +188,28 @@ test('square hills interpolate their graded sides and merge laterally at the sam
   assert.equal(api.elevationAt({x:98.5,y:100},0),1);
   assert.ok(api.elevationAt({x:107,y:100},0)>0,'the second slope tapers away');
 });
-test('square masonry terraces magnetize flush to each other without internal walls',()=>{
+test('square terraces share a flat seam without any Separate option',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  const a=api.preview({x:96,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
+  assert.equal(api.commit(a),true);
+  const b=api.preview({x:104,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
+  assert.equal(b.ok,true,b.reason);
+  assert.equal(b.targetZ,1);
+  assert.equal(api.commit(b),true);
+  const [one,two]=api.edits();
+  assert.equal(api.exposedWallSegments(one,1).length,0);
+  assert.equal(api.exposedWallSegments(two,3).length,0);
+  assert.equal(api.elevationAt({x:100,y:100},0),1);
+});
+test('round terraces automatically union through partially overlapping facets',()=>{
   context.State.relief.terraforming=[];
-  const first=api.preview({x:96,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
+  const first=api.preview({x:100,y:100},{mode:'walled',shape:'round',radius:4,delta:1,magnet:false});
   assert.equal(api.commit(first),true);
-  const second=api.preview({x:104.3,y:100},{mode:'walled',shape:'square',radius:4,delta:1});
-  assert.equal(second.ok,true);
-  assert.equal(second.terraceSnap.terraceId,context.State.relief.terraforming[0].id);
-  assert.equal(second.center.x,104);
-  assert.equal(second.baseZ,0);
+  const second=api.preview({x:107,y:100},{mode:'walled',shape:'round',radius:4,delta:1,magnet:false});
+  assert.equal(second.ok,true,second.reason);
   assert.equal(second.targetZ,1);
   assert.equal(api.commit(second),true);
-  const [one,two]=api.edits();
-  assert.equal(api.exposedWallSegments(one,1).length,0,'shared right wall removed');
-  assert.equal(api.exposedWallSegments(two,3).length,0,'shared left wall removed');
-  assert.equal(api.elevationAt({x:100,y:100},0),1,'seam is continuous at H1');
-  const overlap=api.preview({x:98,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
-  assert.equal(overlap.ok,false,'nonzero interior overlap is still forbidden');
-  const faces=[];
-  context.meshBuilder=()=>({tris:[],face:(points,color)=>faces.push({points,color})});
-  context.terrainElevation=p=>api.elevationAt(p,0);
-  context.clipTerrainPolygon=poly=>poly;
-  // Reuse actual WebGL functions already compiled by the earlier test.
-  const tris=vm.runInContext('buildTerrain()',context);
-  let total=0;
-  for(let i=0;i<tris.length;i+=9){
-    const [ax,ay,,bx,by,,cx,cy]=tris.slice(i,i+9);
-    total+=Math.abs((bx-ax)*(cy-ay)-(by-ay)*(cx-ax))/2;
-  }
-  assert.ok(Math.abs(total-context.WORLD**2)<.05,'two adjacent square tops exactly tile the 3D ground');
-  vm.runInContext('buildTerrainEdges()',context);
-  assert.equal(faces.filter(f=>['#49443f','#686057'].includes(f.color)).length,6,
-    'six exterior masonry faces, no two overlapping internal ones');
-});
-test('round terraces also join along an actual facet rather than just touch at one point',()=>{
-  context.State.relief.terraforming=[];
-  const parent=api.preview({x:100,y:100},{mode:'walled',shape:'round',radius:4,delta:1,magnet:false});
-  assert.equal(api.commit(parent),true);
-  const support=4*Math.cos(Math.PI/24);
-  const next=api.preview({x:100+2*support+.08,y:100},{mode:'walled',shape:'round',radius:4,delta:1});
-  assert.equal(next.ok,true);
-  assert.ok(next.terraceSnap);
-  assert.ok(Math.abs(next.center.x-(100+2*support))<1e-6);
-  assert.equal(next.targetZ,1);
-  assert.equal(api.commit(next),true);
-  const [a,b]=api.edits();
-  assert.equal(api.exposedWallSegments(a,0).length,0);
-  assert.equal(api.exposedWallSegments(b,12).length,0);
-  assert.equal(api.elevationAt({x:100+support,y:100},0),1);
+  assert.equal(api.unionContours().length,1);
 });
 test('picked fractional point heights always round UP to a full integer before edit',()=>{
   context.State.relief.terraforming=[];
@@ -249,8 +222,8 @@ test('picked fractional point heights always round UP to a full integer before e
   assert.equal(lowered.targetZ,1);
   context.terrainBaseElevation=()=>-1.01;
   const negative=api.preview({x:110,y:110},{mode:'walled',delta:1,radius:2,magnet:false});
-  assert.equal(negative.baseZ,-1);
-  assert.equal(negative.targetZ,0);
+  assert.equal(negative.baseZ,0);
+  assert.equal(negative.targetZ,1);
   context.terrainBaseElevation=()=>0;
 });
 test('legacy round terraces keep 24 sides while saved squares keep four',()=>{
@@ -268,10 +241,8 @@ test('boolean union merges partly overlapping square terraces into a concave per
   context.terrainBaseElevation=()=>0;
   const a=api.preview({x:95,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
   assert.equal(api.commit(a),true);
-  const normal=api.preview({x:98,y:102},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
-  assert.equal(normal.ok,false,'existing normal mode rejects actual footprint overlap');
-  // The centre is on H1, but Union must reuse H1 rather than stack another H.
-  const union=api.preview({x:98,y:102},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false,boolean:'union'});
+  // The centre is on H1, but automatic union must retain H1.
+  const union=api.preview({x:98,y:102},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
   assert.equal(union.ok,true,union.reason);
   assert.equal(union.baseZ,0);
   assert.equal(union.targetZ,1);
@@ -313,17 +284,17 @@ test('boolean union handles rotated/round overlaps and contained shapes',()=>{
   const a=api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:6,delta:1,magnet:false});
   assert.equal(api.commit(a),true);
   const rotated=api.preview({x:105,y:103},{mode:'walled',shape:'square',radius:4,delta:1,
-    rotation:Math.PI/4,magnet:false,boolean:'union'});
+    rotation:Math.PI/4,magnet:false});
   assert.equal(rotated.ok,true,rotated.reason);
   assert.equal(api.commit(rotated),true);
   assert.equal(api.unionContours().length,1);
   const round=api.preview({x:108,y:98},{mode:'walled',shape:'round',radius:3,delta:1,
-    magnet:false,boolean:'union'});
+    magnet:false});
   assert.equal(round.ok,true,round.reason);
   assert.equal(api.commit(round),true);
   assert.equal(api.unionContours().length,1,'square, rotated square and circle form one outline');
   const contained=api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:2,delta:1,
-    magnet:false,boolean:'union'});
+    magnet:false});
   assert.equal(contained.ok,true);
   assert.equal(api.commit(contained),true);
   assert.equal(api.unionContours().length,1,'contained shapes add no internal wall');
@@ -333,20 +304,94 @@ test('boolean union refuses opposite elevations without destroying existing terr
   context.State.structures=[];
   const a=api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false});
   api.commit(a);
-  const low=api.preview({x:102,y:101},{mode:'walled',shape:'square',radius:4,delta:-1,magnet:false,boolean:'union'});
+  const low=api.preview({x:102,y:101},{mode:'walled',shape:'square',radius:4,delta:-1,magnet:false});
   assert.equal(low.ok,false);
   assert.match(low.reason,/matching base and top elevation/i);
   assert.equal(api.edits().length,1);
 });
-test('UI exposes the Boolean Union operation and connects it to active terraforming',()=>{
+test('Flat is available in Builder and Separate/Boolean toggles no longer exist',()=>{
   const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const input=fs.readFileSync(path.join(__dirname,'..','src','settlement-app-input.js'),'utf8');
   const palette=fs.readFileSync(path.join(__dirname,'..','src','settlement-builder-ux.js'),'utf8');
-  assert.match(html,/data-terraform-boolean="union"/);
-  assert.match(input,/State\.tool\.boolean=boolean/);
-  assert.match(palette,/data-terraform-boolean/);
+  assert.match(html,/data-terraform="flat"/);
+  assert.doesNotMatch(html,/data-terraform-boolean|Separate/);
+  assert.doesNotMatch(input,/data-terraform-boolean|State\.tool\.boolean/);
+  assert.match(palette,/data-terraform="flat"/);
 });
-
+test('overlapping sloped hills union without stacking from an elevated pick',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  context.terrainBaseElevation=()=>0;
+  assert.equal(api.commit(api.preview({x:92,y:100},{mode:'terrain',shape:'square',radius:4,delta:1})),true);
+  const b=api.preview({x:97,y:101},{mode:'terrain',shape:'round',radius:4,delta:1});
+  assert.equal(b.ok,true,b.reason);assert.equal(b.baseZ,0);assert.equal(b.targetZ,1);
+  assert.equal(api.commit(b),true);
+  for(let x=88;x<=101;x+=.5){
+    const h=api.elevationAt({x,y:100},0);
+    assert.ok(h>=0&&h<=1,'sloped union bounded between H0 and H1');
+  }
+  assert.equal(api.elevationAt({x:96,y:100},0),1);
+});
+test('Flat subtracts a square hole from a terrace without missing 3D ground',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  context.terrainBaseElevation=()=>0;
+  assert.equal(api.commit(api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false})),true);
+  const flat=api.preview({x:100,y:100},{mode:'flat',shape:'square',radius:2});
+  assert.equal(flat.ok,true);assert.equal(flat.targetZ,0);
+  assert.equal(api.commit(flat),true);
+  assert.equal(api.elevationAt({x:100,y:100},0),0);
+  assert.equal(api.elevationAt({x:97,y:100},0),1);
+  assert.equal(api.visibleTerracePieces(api.edits()[0]).length,4);
+  assert.equal(api.flatWallSegments(api.edits()[1]).length,4);
+  const tris=vm.runInContext('buildTerrain()',context);
+  let area=0,raised=0;
+  for(let i=0;i<tris.length;i+=9){
+    const [ax,ay,az,bx,by,bz,cx,cy,cz]=tris.slice(i,i+9);
+    const a=Math.abs((bx-ax)*(cy-ay)-(by-ay)*(cx-ax))/2;
+    area+=a;if(az===1&&bz===1&&cz===1)raised+=a;
+  }
+  assert.ok(Math.abs(area-40000)<.05,'no overlapping/missing mesh triangles');
+  assert.ok(Math.abs(raised-48)<.05,'8×8 raised plateau less a 4×4 Flat cut');
+});
+test('Flat sets natural terrain to H0 and later works can rebuild',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  context.terrainBaseElevation=()=>2.35;
+  assert.equal(api.commit(api.preview({x:100,y:100},{mode:'flat',radius:4})),true);
+  assert.equal(api.elevationAt({x:100,y:100},2.35),0);
+  assert.ok(api.elevationAt({x:106,y:100},2.35)>0);
+  const fresh=api.preview({x:100,y:100},{mode:'terrain',shape:'square',radius:2,delta:1});
+  assert.equal(fresh.baseZ,0);assert.equal(fresh.targetZ,1);
+  assert.equal(api.commit(fresh),true);
+  assert.equal(api.elevationAt({x:100,y:100},2.35),1);
+  context.terrainBaseElevation=()=>0;
+});
+test('nonnegative H floor and migration of legacy below-ground terrain',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  assert.equal(api.LIMITS.minZ,0);
+  const down=api.preview({x:100,y:100},{mode:'walled',delta:-1,radius:3,magnet:false});
+  assert.equal(down.ok,false);assert.equal(api.commit(down),false);
+  context.State.relief.terraforming=[{
+    id:'old-neg',mode:'terrain',shape:'square',center:{x:102,y:102},radius:2,rotation:0,
+    top:[{x:100,y:100},{x:104,y:100},{x:104,y:104},{x:100,y:104}],
+    outer:[{x:98,y:98},{x:106,y:98},{x:106,y:106},{x:98,y:106}],
+    baseZ:0,targetZ:-1,edgeWidth:2
+  }];
+  assert.equal(api.edits()[0].mode,'flat');
+  assert.equal(api.elevationAt({x:102,y:102},0),0);
+});
+test('Flat H0 masks natural steep or gentle relief for placement and navigation',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  context.terrainBaseElevation=()=>1.5;
+  const natural=fs.readFileSync(path.join(__dirname,'..','src','settlement-castle.js'),'utf8');
+  const source=natural.match(/function terrainSlopeKind\(p\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source,'terrainSlopeKind uses a separate relief fallback');
+  const sandbox=vm.createContext({window:context.window,reliefBandAt:()=>({kind:'steep'})});
+  vm.runInContext(source,sandbox);
+  assert.equal(sandbox.terrainSlopeKind({x:100,y:100}),'steep');
+  assert.equal(api.commit(api.preview({x:100,y:100},{mode:'flat',shape:'square',radius:2})),true);
+  assert.equal(sandbox.terrainSlopeKind({x:100,y:100}),null,'a flattened hill is no longer naturally steep');
+  assert.equal(sandbox.terrainSlopeKind({x:110,y:110}),'steep','non-flattened relief remains untouched');
+  context.terrainBaseElevation=()=>0;
+});
 test('clear removes player terraforming from the persisted relief model',()=>{
   context.State.relief.terraforming=[];
   api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:2}));

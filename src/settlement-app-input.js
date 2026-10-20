@@ -29,7 +29,7 @@ canvas.addEventListener('pointerdown',e=>{
       if(typeof springFlowerLayoutCache!=='undefined')springFlowerLayoutCache=null;
       markDirty(true,'all');
       State.draft=null;
-      status((ghost.mode==='walled'?'Walled terrace':'Terrain')+' applied · H '+ghost.targetZ.toFixed(1));
+      status((ghost.mode==='flat'?'Flat':ghost.mode==='walled'?'Walled terrace':'Sloped')+' applied · H '+ghost.targetZ.toFixed(0));
       draw();
     }
     return;
@@ -171,7 +171,7 @@ canvas.addEventListener('pointermove',e=>{
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};
     status(!ghost?.ok?'Terraforming blocked: '+(ghost?.reason||'invalid terrain'):
-      (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='walled'?'Walled terrace':'Terrain')+' · H '+ghost.targetZ.toFixed(1)+' — click to apply');
+      (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='flat'?'Flat subtraction':ghost.mode==='walled'?'Walled terrace':'Sloped')+' · H '+ghost.targetZ.toFixed(0)+' — click to apply');
     draw();return;
   }
   if(State.tool.kind==='crossing'){
@@ -357,10 +357,9 @@ document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',lin
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
   const radius=Number(document.querySelector('[data-terraform-radius].active')?.dataset.terraformRadius)||4;
   const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
-  const mode=b.dataset.terraform==='walled'?'walled':'terrain';
+  const mode=b.dataset.terraform==='walled'?'walled':b.dataset.terraform==='flat'?'flat':'terrain';
   const shape=document.querySelector('[data-terraform-shape].active')?.dataset.terraformShape==='square'?'square':'round';
-  const boolean=document.querySelector('[data-terraform-boolean].active')?.dataset.terraformBoolean==='union'?'union':'normal';
-  setTool({kind:'terraform',mode,shape,boolean,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+shape+(mode==='walled'&&boolean==='union'?' · BOOLEAN UNION':'')+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
+  setTool({kind:'terraform',mode,shape,radius,delta,label:(mode==='flat'?'Flat H0':mode==='walled'?'Walled terrace':'Sloped')+' · '+shape+(mode==='flat'?' · SUBTRACT':(delta<0?' · lower':' · raise')+' 1U')+' · R'+radius,el:b});
 };
 for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=>{
   const shape=b.dataset.terraformShape==='square'?'square':'round';
@@ -368,14 +367,6 @@ for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=
   if(State.tool.kind==='terraform'){
     State.tool.shape=shape;State.draft=null;
     status('Terraforming shape: '+shape);draw();
-  }
-};
-for(const b of document.querySelectorAll('[data-terraform-boolean]'))b.onclick=()=>{
-  const boolean=b.dataset.terraformBoolean==='union'?'union':'normal';
-  document.querySelectorAll('[data-terraform-boolean]').forEach(x=>x.classList.toggle('active',x===b));
-  if(State.tool.kind==='terraform'){
-    State.tool.boolean=boolean;State.draft=null;
-    status(boolean==='union'?'Walled terrace: boolean union · matching H only':'Walled terrace: separate, no overlap');draw();
   }
 };
 for(const b of document.querySelectorAll('[data-terraform-delta]'))b.onclick=()=>{

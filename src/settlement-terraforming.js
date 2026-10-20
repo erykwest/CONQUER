@@ -5,13 +5,17 @@
   const SEGMENTS=24;
   const SHAPES=Object.freeze(['round','square']);
   const shapeOf=edit=>edit?.shape==='square'?'square':'round';
-  const LIMITS=Object.freeze({minRadius:2,maxRadius:8,minZ:-3,maxZ:8});
+  const LIMITS=Object.freeze({minRadius:2,maxRadius:8,minZ:0,maxZ:8});
 
   function edits(){
     if(!State.relief)return[];
     if(!Array.isArray(State.relief.terraforming))State.relief.terraforming=[];
     for(const edit of State.relief.terraforming){
-      if(edit?.mode!=='walled'||!edit.center||!Number.isFinite(Number(edit.radius)))continue;
+      if(!edit?.center||!Number.isFinite(Number(edit.radius)))continue;
+      // Old excavations may contain negative H. H0 is the lower world bound.
+      if(Number(edit.targetZ)<0){edit.mode='flat';edit.targetZ=0;edit.baseZ=0;}
+      edit.baseZ=Math.max(0,Number(edit.baseZ)||0);
+      if(edit.mode!=='walled')continue;
       if(edit.profile==='vertical'&&edit.material==='stone'&&edit.edgeWidth===0)continue;
       edit.profile='vertical';edit.material='stone';edit.edgeWidth=0;
       edit.shape=shapeOf(edit);
@@ -110,7 +114,8 @@
       const q=edit.top[(i+1)%edit.top.length];return sum+p.x*q.y-q.x*p.y;
     },0);
     const sign=area<0?-1:1;
-    const others=edits().filter(other=>other!==edit&&other.id!==edit.id&&other.mode==='walled'&&
+    const all=edits(),editIndex=all.indexOf(edit);
+    const others=all.filter(other=>other!==edit&&other.id!==edit.id&&other.mode===edit.mode&&
       Math.abs(other.targetZ-edit.targetZ)<1e-7&&Math.abs(other.baseZ-edit.baseZ)<1e-7);
     const cuts=[0,1],cross=(x,y,X,Y)=>x*Y-y*X;
     const add=t=>{if(t>1e-8&&t<1-1e-8)cuts.push(t)};
@@ -143,7 +148,11 @@
         });
         return false;
       });
-      if(!sameLine)result.push({a:point(lo),b:point(hi)});
+      if(!sameLine){
+        const laterFlat=all.slice(editIndex+1).some(other=>other.mode==='flat'&&
+          pointInPolygon(mid,other.top));
+        if(!laterFlat)result.push({a:point(lo),b:point(hi)});
+      }
     }
     return result;
   }
@@ -176,19 +185,100 @@
     }
     return out;
   }
+  // Convex polygon subtraction. Flat cuts remain independent persisted edits,
+  // rather than destructively modifying older terrace records.
+  function polygonHalfPlane(poly,a,b,inside){
+    if(!poly.length)return[];
+    const result=[],side=p=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);
+    for(let i=0;i<poly.length;i++){
+      const p=poly[i],q=poly[(i+1)%poly.length],dp=side(p),dq=side(q);
+      const pin=inside?dp>=-1e-9:dp<=1e-9,qin=inside?dq>=-1e-9:dq<=1e-9;
+      if(pin)result.push(p);
+      if(pin!==qin){
+        const t=dp/(dp-dq);result.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t});
+      }
+    }
+    return result;
+  }
+  function polygonArea(poly){
+    return Math.abs(poly.reduce((sum,p,i)=>{const q=poly[(i+1)%poly.length];return sum+p.x*q.y-q.x*p.y},0))/2;
+  }
+  function subtractPolygon(poly,clip){
+    let inside=poly,result=[];
+    for(let i=0;i<clip.length&&inside.length>=3;i++){
+      const a=clip[i],b=clip[(i+1)%clip.length],outside=polygonHalfPlane(inside,a,b,false);
+      if(outside.length>=3&&polygonArea(outside)>1e-8)result.push(outside);
+      inside=polygonHalfPlane(inside,a,b,true);
+    }
+    return result;
+  }
+  function visibleTerracePieces(edit){
+    const all=edits(),index=all.indexOf(edit);
+    let pieces=[edit.top];
+    for(let i=0;i<all.length;i++){
+      const other=all[i];if(other===edit||!other.top?.length)continue;
+      if(other.mode==='flat'&&i>index||other.mode===edit.mode&&i<index&&
+         Math.abs(other.baseZ-edit.baseZ)<1e-7&&Math.abs(other.targetZ-edit.targetZ)<1e-7){
+        pieces=pieces.flatMap(poly=>subtractPolygon(poly,other.top));
+        if(!pieces.length)break;
+      }
+    }
+    return pieces;
+  }
+  function flatWallSegments(edit){
+    if(edit.mode!=='flat')return[];
+    const all=edits(),index=all.indexOf(edit),result=[];
+    for(let k=0;k<index;k++){
+      const terrace=all[k];if(terrace.mode!=='walled'||terrace.targetZ<=0)continue;
+      for(let i=0;i<edit.top.length;i++){
+        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
+        // The cut leaves an exposed vertical wall only where it crosses an
+        // earlier raised walled plateau. Clip the edge to each convex top.
+        let t0=0,t1=1;
+        for(let j=0;j<terrace.top.length;j++){
+          const c=terrace.top[j],d=terrace.top[(j+1)%terrace.top.length];
+          const side=p=>(d.x-c.x)*(p.y-c.y)-(d.y-c.y)*(p.x-c.x);
+          const u=side(a),v=side(b);
+          if(u<0&&v<0){t0=1;t1=0;break;}
+          if(u<0||v<0){
+            const t=u/(u-v);
+            if(u<0)t0=Math.max(t0,t);else t1=Math.min(t1,t);
+          }
+        }
+        if(t1-t0<1e-6)continue;
+        const p=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+        const aa=p(t0),bb=p(t1),mid=p((t0+t1)/2);
+        // Later flattening cancels this cut face; earlier higher-priority
+        // terraces at the same H must not duplicate it.
+        if(all.slice(index+1).some(other=>other.mode==='flat'&&pointInPolygon(mid,other.top)))continue;
+        if(all.slice(k+1,index).some(other=>other.mode==='walled'&&other.targetZ===terrace.targetZ&&pointInPolygon(mid,other.top)))continue;
+        result.push({a:aa,b:bb,baseZ:0,targetZ:terrace.targetZ});
+      }
+    }
+    return result;
+  }
   function boundaryContains(point,poly){
     return poly.some((a,i)=>dist(point,segmentProjection(point,a,poly[(i+1)%poly.length]))<1e-6);
   }
+  function insideEdit(point,edit){
+    return pointInPolygon(point,edit.top)||boundaryContains(point,edit.top);
+  }
   function elevationAt(point,baseZ=0,{excludeWalled=false}={}){
-    let z=Number(baseZ)||0;
-    for(const edit of edits()){
-      if(excludeWalled&&edit.mode==='walled')continue;
-      if(pointInPolygon(point,edit.top)||boundaryContains(point,edit.top)){
-        if(edit.mode==='walled')z=edit.targetZ;
-        else z=edit.targetZ>=edit.baseZ?Math.max(z,edit.targetZ):Math.min(z,edit.targetZ);
+    const all=edits();
+    let z=Math.max(0,Number(baseZ)||0);
+    // A Flat cut resets all older terrain and natural relief to H0; edits
+    // committed afterwards can raise the area again.
+    for(const edit of all){
+      if(edit.mode==='flat'){
+        if(insideEdit(point,edit))z=0;
         continue;
       }
-      if(!pointInPolygon(point,edit.outer))continue;
+      if(excludeWalled&&edit.mode==='walled')continue;
+      if(insideEdit(point,edit)){
+        z=edit.targetZ<edit.baseZ?Math.min(z,edit.targetZ):Math.max(z,edit.targetZ);
+        continue;
+      }
+      if(edit.mode==='walled'||!pointInPolygon(point,edit.outer))continue;
       let distance;
       if(shapeOf(edit)==='square'){
         const angle=-(Number(edit.rotation)||0),ca=Math.cos(angle),sa=Math.sin(angle);
@@ -197,21 +287,25 @@
       }else distance=dist(point,edit.center);
       const t=clamp((distance-edit.radius)/Math.max(.001,edit.edgeWidth),0,1);
       const candidate=edit.targetZ+(edit.baseZ-edit.targetZ)*t;
-      // Adjacent or overlapping graded hills combine as a continuous surface
-      // instead of the most recently authored edit punching a valley into it.
-      z=edit.targetZ>=edit.baseZ?Math.max(z,candidate):Math.min(z,candidate);
+      z=edit.targetZ<edit.baseZ?Math.min(z,candidate):Math.max(z,candidate);
     }
-    return z;
+    return Math.max(0,z);
+  }
+  function isFlatAt(point){
+    return edits().some(edit=>edit.mode==='flat'&&insideEdit(point,edit));
   }
   function slopeAt(point){
-    const ordered=edits().slice().reverse();
-    // Shared faces are not cliffs. Flat tops take priority over another
-    // adjoining hill's sloped apron, so merged plateaux stay buildable.
-    for(const edit of ordered)if(edit.mode==='walled'&&edit.top.some((_,i)=>
+    const all=edits(),lastFlat=all.findLastIndex(edit=>edit.mode==='flat'&&insideEdit(point,edit));
+    const active=all.slice(lastFlat+1).filter(edit=>edit.mode!=='flat').reverse();
+    for(const edit of all)if(edit.mode==='flat'&&
+      dist(point,edit.center)<edit.radius*(shapeOf(edit)==='square'?Math.SQRT2:1)+.2&&
+      flatWallSegments(edit).some(edge=>
+        dist(point,segmentProjection(point,edge.a,edge.b))<=.12))return 'steep';
+    for(const edit of active)if(edit.mode==='walled'&&edit.top.some((_,i)=>
       exposedWallSegments(edit,i).some(edge=>
         dist(point,segmentProjection(point,edge.a,edge.b))<=.12)))return 'steep';
-    if(ordered.some(edit=>pointInPolygon(point,edit.top)))return null;
-    for(const edit of ordered)
+    if(active.some(edit=>insideEdit(point,edit)))return null;
+    for(const edit of active)
       if(pointInPolygon(point,edit.outer))return edit.mode==='walled'?'steep':'gentle';
     return null;
   }
@@ -250,51 +344,51 @@
     return edit?edit.targetZ:null;
   }
   function preview(center,options={}){
-    const mode=options.mode==='walled'?'walled':'terrain';
+    const mode=options.mode==='walled'?'walled':options.mode==='flat'?'flat':'terrain';
     const shape=shapeOf(options);
     const radius=clamp(Number(options.radius)||4,LIMITS.minRadius,LIMITS.maxRadius);
     const delta=Number(options.delta)<0?-1:1;
     const magnetic=mode==='walled'&&options.magnet!==false;
     const wallSnap=magnetic?wallMagnet(center,radius,shape):null;
-    const terraceSnap=magnetic&&!wallSnap&&options.boolean!=='union'?terraceMagnet(center,radius,shape):null;
-    const resolvedCenter=wallSnap?.center||terraceSnap?.center||center;
+    // Union is always active; snapping to another terrace would unnecessarily
+    // prevent a freely overlapping boolean footprint.
+    const resolvedCenter=wallSnap?.center||center;
     const naturalZ=Number(terrainBaseElevation(resolvedCenter))||0;
     const pickedZ=Math.ceil(elevationAt(resolvedCenter,naturalZ)-1e-9);
-    let baseZ=pickedZ===0?0:pickedZ; // avoid -0 from ceil(negative epsilon)
+    let baseZ=Math.max(0,pickedZ===0?0:pickedZ);
     let targetZ=clamp(baseZ+delta,LIMITS.minZ,LIMITS.maxZ);
-    const edgeWidth=mode==='walled'?0:2;
-    const rotation=wallSnap?.rotation??terraceSnap?.rotation??
-      (Number.isFinite(Number(options.rotation))?Number(options.rotation):
-        shape==='square'?0:-Math.PI/SEGMENTS);
+    const edgeWidth=mode==='terrain'?2:0;
+    const rotation=wallSnap?.rotation??(Number.isFinite(Number(options.rotation))?
+      Number(options.rotation):shape==='square'?0:-Math.PI/SEGMENTS);
     const top=polygon(resolvedCenter,radius,rotation,shape);
     const outer=polygon(resolvedCenter,radius+edgeWidth,rotation,shape);
-    const overlapping=mode==='walled'?edits().filter(edit=>edit.mode==='walled'&&polygonsOverlapInterior(top,edit.top)):[];
-    // Explicit Union reuses the existing level even if the picked point sits
-    // on its plateau (where a normal Raise operation would mean +1 level).
-    if(mode==='walled'&&options.boolean==='union'&&overlapping.length){
-      const reference=overlapping[0];
-      if(Math.sign(reference.targetZ-reference.baseZ)===delta){
-        baseZ=reference.baseZ;targetZ=reference.targetZ;
+    // Graded hills union as soon as their sloped aprons overlap, even if the
+    // flat plateau polygons themselves are still separated.
+    const overlapping=mode==='flat'?[]:edits().filter(edit=>edit.mode===mode&&
+      (mode==='terrain'?polygonsOverlapInterior(outer,edit.outer):polygonsOverlapInterior(top,edit.top)));
+    if(overlapping.length&&mode!=='flat'){
+      const sameDirection=overlapping.filter(edit=>Math.sign(edit.targetZ-edit.baseZ)===delta);
+      if(sameDirection.length){
+        // When extending an existing feature, inherit its H instead of
+        // accidentally stacking one level from a partially raised pick point.
+        // Both walled terraces and graded/sloped hills use this union rule.
+        baseZ=sameDirection[0].baseZ;targetZ=sameDirection[0].targetZ;
       }
     }
+    if(mode==='flat'){baseZ=0;targetZ=0;}
     const ghost={
-      id:null,previewOnly:true,mode,shape,boolean:options.boolean==='union'?'union':'normal',center:{x:resolvedCenter.x,y:resolvedCenter.y},radius,delta,
-      baseZ,targetZ,edgeWidth,rotation,top,outer,wallSnap,terraceSnap,
-      profile:mode==='walled'?'vertical':'graded',material:mode==='walled'?'stone':'terrain',
-      ok:true,reason:''
+      id:null,previewOnly:true,mode,shape,center:{x:resolvedCenter.x,y:resolvedCenter.y},radius,delta,
+      baseZ,targetZ,edgeWidth,rotation,top,outer,wallSnap,
+      profile:mode==='walled'?'vertical':mode==='flat'?'flat':'graded',
+      material:mode==='walled'?'stone':'terrain',ok:true,reason:''
     };
     if(!insideBuild(outer)){
-      ghost.ok=false;
-      ghost.reason='Terraforming must remain inside the build area';
-    }else if(overlapping.length){
-      const compatible=overlapping.every(edit=>
-        Math.abs(edit.baseZ-baseZ)<1e-7&&Math.abs(edit.targetZ-targetZ)<1e-7);
-      if(ghost.boolean!=='union'||!compatible){
-        ghost.ok=false;
-        ghost.reason=ghost.boolean==='union'
-          ?'Boolean Union requires matching base and top elevation'
-          :'Cannot overlap the interior of another walled terrace';
-      }
+      ghost.ok=false;ghost.reason='Terraforming must remain inside the build area';
+    }else if(mode!=='flat'&&delta<0&&baseZ<=0){
+      ghost.ok=false;ghost.reason='Minimum terrain height is H0';
+    }else if(mode==='walled'&&overlapping.some(edit=>
+      Math.abs(edit.baseZ-baseZ)>1e-7||Math.abs(edit.targetZ-targetZ)>1e-7)){
+      ghost.ok=false;ghost.reason='Boolean Union requires matching base and top elevation';
     }
     return ghost;
   }
@@ -318,13 +412,27 @@
   }
   function facePolygons(edit){
     const faces=[];
+    if(edit.mode==='flat'){
+      for(const edge of flatWallSegments(edit)){
+        const screen=projectClippedTerrain([
+          {...edge.a,z:edge.baseZ},{...edge.b,z:edge.baseZ},
+          {...edge.b,z:edge.targetZ},{...edge.a,z:edge.targetZ}
+        ]);
+        if(screen.length>=3)faces.push({screen,index:0,depth:screen.reduce((sum,p)=>sum+p.y,0)/screen.length});
+      }
+      return faces;
+    }
     for(let i=0;i<edit.top.length;i++){
-      const segments=edit.mode==='walled'?exposedWallSegments(edit,i):
-        [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
+      const segments=exposedWallSegments(edit,i);
       for(const edge of segments){
         // Graded shapes use the full outer ring; masonry edges have zero offset.
-        const outerA=edit.mode==='walled'?edge.a:edit.outer[i];
-        const outerB=edit.mode==='walled'?edge.b:edit.outer[(i+1)%edit.top.length];
+        const vertexA=edit.top[i],vertexB=edit.top[(i+1)%edit.top.length];
+        const blend=t=>({
+          x:edit.outer[i].x+(edit.outer[(i+1)%edit.top.length].x-edit.outer[i].x)*t,
+          y:edit.outer[i].y+(edit.outer[(i+1)%edit.top.length].y-edit.outer[i].y)*t
+        });
+        const outerA=edit.mode==='walled'?edge.a:blend(segmentProjection(edge.a,vertexA,vertexB).t);
+        const outerB=edit.mode==='walled'?edge.b:blend(segmentProjection(edge.b,vertexA,vertexB).t);
         const vertices=[
           {...outerA,z:edit.baseZ},{...outerB,z:edit.baseZ},
           {...edge.b,z:edit.targetZ},{...edge.a,z:edit.targetZ}
@@ -349,12 +457,16 @@
           :(winter?'#d2d8d3':face.index%2?'#464630':'#514e37');
       pathPolygon(face.screen,fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
     }
-    const top=projectClippedTerrain(edit.top.map(p=>({...p,z:edit.targetZ})));
+    const tops=ghost||edit.mode==='flat'?[edit.top]:visibleTerracePieces(edit);
+    for(const piece of tops){
+    const top=projectClippedTerrain(piece.map(p=>({...p,z:edit.targetZ})));
     if(top.length>=3){
       const fill=ghost
         ?(valid?'rgba(78,224,149,.28)':'rgba(238,54,64,.34)')
         :(winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b'));
-      pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):edit.mode==='walled'?null:'rgba(210,194,151,.28)',ghost?2.2:edit.mode==='walled'?0:1);
+      pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):
+        edit.mode==='walled'||edit.mode==='flat'?null:'rgba(210,194,151,.28)',
+        ghost?2.2:edit.mode==='walled'||edit.mode==='flat'?0:1);
       if(!ghost&&edit.mode==='walled'){
         ctx.strokeStyle='rgba(210,194,151,.28)';ctx.lineWidth=1;
         ctx.beginPath();
@@ -365,6 +477,7 @@
         ctx.stroke();
       }
     }
+    }
     if(ghost){
       const label=w2sRaw(edit.center,Math.max(edit.baseZ,edit.targetZ)+.16);
       ctx.setLineDash([6,4]);
@@ -372,11 +485,11 @@
       ctx.beginPath();outer.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
       ctx.strokeStyle=valid?'rgba(126,255,187,.92)':'rgba(255,86,94,.98)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);
       ctx.fillStyle=valid?'#d9ffe8':'#ffd7d9';ctx.font='700 12px system-ui';ctx.textAlign='center';
-      ctx.fillText((edit.boolean==='union'?'UNION · ':edit.wallSnap?'MAGNET · ':'')+'H '+edit.targetZ.toFixed(1),label.x,label.y-13);
+      ctx.fillText((edit.mode==='flat'?'FLAT · ':edit.wallSnap?'MAGNET · ':'')+'H '+edit.targetZ.toFixed(1),label.x,label.y-13);
     }
     ctx.restore();
   }
-  function drawCommitted(){for(const edit of edits().slice().sort((a,b)=>a.targetZ-b.targetZ))drawEdit(edit)}
+  function drawCommitted(){for(const edit of edits())drawEdit(edit)}
   function drawGhost(ghost){drawEdit(ghost,{ghost:true})}
   function drawMagnets(){
     if(State.tool?.kind!=='linear'||State.tool.linear!=='wall'||typeof ctx==='undefined')return;
@@ -393,8 +506,8 @@
   }
 
   window.ConquerTerraforming=Object.freeze({
-    LIMITS,SHAPES,edits,preview,commit,clear,elevationAt,slopeAt,snapWallAnchor,wallGroundZ,
-    exposedWallSegments,unionContours,polygonsOverlapInterior,
+    LIMITS,SHAPES,edits,preview,commit,clear,elevationAt,slopeAt,isFlatAt,snapWallAnchor,wallGroundZ,
+    exposedWallSegments,unionContours,polygonsOverlapInterior,visibleTerracePieces,flatWallSegments,
     drawCommitted,drawGhost,drawMagnets
   });
 })();
