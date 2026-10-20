@@ -548,9 +548,38 @@
   function rubbleBlocks(p){if(window.ConquerFire?.blocks(p))return true;const r=rubbleAt(p);return !!r&&r.h>=RUBBLE_WALL&&!r.breach}
   function rubbleFactor(p,heavy=false){const r=rubbleAt(p);return !r?1:heavy?0:.5}
   // Extra meshes for the 3D world renderer: falling blocks, rubble heaps, ruined stumps.
+  // Broken crown on a tower or gatehouse that lost its top storey: ragged masonry around
+  // the rim, rubble filling the top (towerRoofStyle/gateRoofStyle report 'broken').
+  const crownCache=new Map();
+  function crownMesh(s){
+    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3);
+    let m=crownCache.get(key);if(m)return m;
+    const pos=[],col=[],base=footprintPoints(s);
+    let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
+    const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
+    const ring=[];
+    for(let i=0;i<base.length;i++){
+      const a=base[i],b=base[(i+1)%base.length],n=Math.max(1,Math.round(Math.hypot(b.x-a.x,b.y-a.y)/.2));
+      for(let k=0;k<n;k++)ring.push({x:a.x+(b.x-a.x)*k/n,y:a.y+(b.y-a.y)*k/n});
+    }
+    // Stubs of the fallen storey: mostly low, a few teeth standing higher.
+    const tops=ring.map(()=>rnd()<.22?.32+rnd()*.38:.04+rnd()*.16);
+    const cx=ring.reduce((t,p)=>t+p.x,0)/ring.length,cy=ring.reduce((t,p)=>t+p.y,0)/ring.length;
+    const tri=(a,b,c,colr)=>{pos.push(...a,...b,...c);col.push(colr)};
+    for(let i=0;i<ring.length;i++){
+      const j=(i+1)%ring.length,a=ring[i],b=ring[j],z0=g+H-.02,ha=g+H+tops[i],hb=g+H+tops[j];
+      const sideCol=i%3===0?'#6f665d':'#7d736b';
+      tri([a.x,a.y,z0],[b.x,b.y,z0],[b.x,b.y,hb],sideCol);tri([a.x,a.y,z0],[b.x,b.y,hb],[a.x,a.y,ha],sideCol);
+      const c=[cx,cy,g+H+.1],p=[a.x,a.y,ha],q=[b.x,b.y,hb];
+      const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
+      if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
+    }
+    m={pos,col};crownCache.set(key,m);return m;
+  }
   function dynamicMeshes(){
     const out=state().ruins.map(ruinMesh).filter(Boolean);
     for(const s of State.structures)if(s.type==='ruin')out.push(stumpMesh(s));
+    for(const s of State.structures)if(s.brokenTop&&['tower','gate'].includes(s.type)&&!underConstruction(s))out.push(crownMesh(s));
     return out;
   }
   // ---------- gates: leaves that close, a door that can be battered in ----------
@@ -645,7 +674,7 @@
     const hp=s.siegeIntegrity.core;let fell=false;
     for(let L=structureLevel(s);L>1&&hp.hp/hp.max<=(L-1)/L+1e-9;L=structureLevel(s)){
       const f=hp.hp/hp.max,g=groundOf(s),oldH=structureHeight(s);
-      s.level=L-1;
+      s.level=L-1;s.brokenTop=true;                 // the crown is gone: no roof, merlons or deck
       const newH=structureHeight(s),max=healthMaximum(s);
       hp.max=max;hp.hp=Math.min(max,max*f*L/(L-1));
       if(typeof normalizeFunctions==='function')normalizeFunctions(s);
