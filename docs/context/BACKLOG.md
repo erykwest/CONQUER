@@ -216,3 +216,16 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Avanzamento effettivo:** collegare la durata a volume di terra movimentata, estensione/profondità e disponibilità di lavoratori, in coerenza con il sistema cantieri; mostrare lo scavo in fasi progressive, senza completamento istantaneo nella partita ordinaria.
 - **Modalità DEV:** `Instant Build` può saltare l'attesa per test; `No Resource Consumption` non modifica i tempi di scavo, dato che il terraforming non consuma materiali già di suo.
 - **QA:** verificare durata e proporzionalità per fossati piccoli/grandi e lavori di terra, sospensione/ripresa dei cantieri, save/load, navigabilità e aggiornamento delle difese durante e dopo lo scavo.
+
+
+## Nota voice — meteo con effetti reali su cantieri e lavoratori
+
+> Requisito progettuale da sviluppare, **non implementazione confermata**.
+
+- **Meteo simulato:** condizioni meteorologiche variabili (sereno, pioggia, pioggia intensa, neve, gelo, vento forte) con durata e stagionalità, collegate al calendario già presente.
+- **Impatto prioritario sui cantieri:** il maltempo deve **rallentare l'avanzamento effettivo** delle costruzioni e prolungare i tempi di completamento, senza limitarsi a effetti grafici. Intensità e tipo di fenomeno determinano penalità differenti; eventi estremi possono sospendere temporaneamente specifici lavori all'aperto.
+- **Lavoratori:** produttività ridotta per attività esterne durante condizioni avverse, distinguendo dove utile i lavori al coperto da quelli esposti; evitare di penalizzare indiscriminatamente tutte le professioni.
+- **Terraforming e fossati:** scavi esposti particolarmente sensibili a piogge intense, gelo e neve, sommando l'impatto meteorologico ai tempi già volutamente elevati.
+- **Feedback al giocatore:** mostrare causa e peso del rallentamento nei pannelli del cantiere (es. `Rallentato dalla pioggia`) e aggiornare le stime di completamento in modo comprensibile.
+- **Modalità DEV:** `Instant Build` deve permettere test immediati anche con meteo avverso; in partita normale il meteo incide sempre sulla produttività.
+- **QA/bilanciamento:** simulare cantieri in tutte le stagioni e condizioni, verificare accumulo corretto dell'avanzamento, pause/riprese, salvataggi e assenza di blocchi permanenti; evitare che il clima renda impossibile la progressione.
