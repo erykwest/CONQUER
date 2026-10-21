@@ -21,6 +21,14 @@
 
 **Nota cruciale:** una decisione progettuale può richiedere di *cambiare* il codice attuale; «il codice fa X» non trasforma X automaticamente in scelta progettuale definitiva. Conflitti in [DECISIONS.md](DECISIONS.md).
 
+## Pull request: documentazione verificabile per default
+
+La procedura operativa vincolante è [PR-WORKFLOW.md](PR-WORKFLOW.md); il [registro corrente del 21/10](AUDIT-2026-10-21.md) è la base per distinguere merge effettivi da branch aperte.
+
+Su ogni PR verso `main` che modifica codice/test/asset: **STATUS + BACKLOG + CHANGELOG aggiornati nello stesso diff**; `ROADMAP` e `DECISIONS` aggiornati solo in caso di effetti su milestone o decisioni, oppure dichiarati invariati nel corpo della PR. Il workflow `Context sync` fallisce su documenti mancanti; i contenuti sono responsabilità dell'agente/implementatore, non di un generatore che inventa lo stato. Il file `.github/pull_request_template.md` dà la checklist a chi apre la PR.
+
+Nota: un workflow che fallisce **non basta a rendere la regola obbligatoria**, finché GitHub non richiede quel check tramite regola di protezione branch. Le PR che hanno base diversa da `main` (es. `knights`) devono comunque seguire la convenzione, ma saranno controllate dal workflow solo quando puntano a `main`.
+
 ## Ritmo di aggiornamento
 
 | Quando | Aggiornamento minimo |
