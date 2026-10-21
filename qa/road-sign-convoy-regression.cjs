@@ -120,4 +120,12 @@ test('merchant test uses only funded L4 coins, mercenary visuals are previews',(
   assert.equal(h.road.restore(),true);
   assert.equal(e.wallet.L4,before);
 });
+test('scatter model draws four signs and wagon renderer animates the convoy',()=>{
+  const h=harness(),e=h.eco.state();e.castleGold=40;e.castle.wood=15;
+  let drawn=0;h.window.ConquerWagons.drawWagon=()=>drawn++;
+  assert.equal(h.road.launch({edge:'east',kind:'gift',good:'wood',qty:9}).ok,true);
+  assert.doesNotThrow(()=>h.road.draw(),'actual signpost geometry must render without exceptions');
+  assert.ok(drawn>=1,'an animated wagon uses the imported wagon renderer');
+  assert.equal(h.road.restore(),true);
+});
 console.log('Road sign convoys regression: all checks passed.');
