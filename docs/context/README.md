@@ -1,5 +1,8 @@
 # CONQUER — Piramide di contesto
 
+> **Audit backlog aggiornato 22/10/2026:** [AUDIT-2026-10-22](AUDIT-2026-10-22.md) — riclassificazione verificata su main di 23 voci Builder, 25 assedio, Clay, feudi, QA e PR. Leggerlo prima di proporre feature già esistenti.
+
+
 > Punto d'ingresso canonico per riprendere il progetto dopo una chat, un cambio di agente o una pausa.
 > Snapshot iniziale: **16 ottobre 2026**. **Audit stato Git aggiornato al 21 ottobre 2026**, base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2). La cronologia Git e i test hanno sempre precedenza sulle sintesi.
 
