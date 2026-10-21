@@ -11,6 +11,10 @@ on:
       - 'src/settlement-core.js'
       - 'src/settlement-commerce.js'
       - 'src/settlement-convoys.js'
+      - 'src/settlement-road-sign-tests.js'
+      - 'src/assets/road-sign-model.js'
+      - 'src/settlement-wagons.js'
+      - 'qa/road-sign*.cjs'
       - 'qa/convoys*.cjs'
       - 'src/settlement-population-residents.js'
       - 'src/settlement-population-routines.js'
@@ -32,9 +36,13 @@ jobs:
           node qa/economy-regression.cjs
           node qa/commerce-skeleton-regression.cjs
           node qa/convoys-skeleton-regression.cjs
+          node qa/road-sign-convoy-regression.cjs
           node qa/settlement-routing-spawn-regression.cjs
           node --check src/settlement-commerce.js
           node --check src/settlement-convoys.js
+          node --check src/settlement-road-sign-tests.js
+          node --check src/settlement-wagons.js
+          node --check src/assets/road-sign-model.js
           node --check src/settlement-population-routines.js
           node --check src/settlement-population-residents.js
           node --check src/settlement-app-rooms.js
