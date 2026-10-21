@@ -3,7 +3,7 @@
 
 /**
  * CONQUER context guard.
- * On each PR targeting main, code/assets/test changes require an updated
+ * On each PR, code/assets/test changes require an updated
  * STATUS + BACKLOG + CHANGELOG in the SAME PR. No semantic content is invented.
  */
 const { execFileSync } = require('node:child_process');
