@@ -2,6 +2,13 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-21 — Cartelli stradali cliccabili e test convogli reversibili
+
+- Quattro signpost nei pressi del pozzo, sugli imbocchi delle arterie di confine già salvate, con selezione e pannello di test.
+- Riutilizzati modello signpost da `feature/scatter` e animazione carri/car­retti da `animation`; scorta animata con colori signorili o mercenari marroni.
+- Test stradale valido solo su tracciato completo; vere riserve di merci/oro, poi transito animato fino al bordo e ripristino singolo anche dopo reload. Merci mercantili NON scalate dal mercato senza acquisto reale, mercanti solo con monete.
+- Nuova regressione `qa/road-sign-convoy-regression.cjs` nella CI; nessuna modifica `main`, nessun deploy. [Specifica](../road-sign-convoy-tests.md).
+
 ## 2026-10-21 — Mastio/tributi/doni, carri, carrozze, guardie e mercenari
 
 - Il `purse` delle carovane diventa **`chest` / forziere**: migrazione save schema 2 → 3 senza doppio trasferimento dell'oro.
