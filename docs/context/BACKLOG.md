@@ -204,3 +204,15 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Progressione visiva universale:** tutte le categorie di edifici, sia del giocatore sia delle altre fazioni/insediamenti, devono mostrare fasi costruttive progressive legate all'avanzamento effettivo, non un modello completo che appare alla fine.
 - **Elementi di cantiere animati:** impalcature e ponteggi, gru, carrucole, sollevamento e posa di materiali, lavoratori e attrezzi; comparsa/rimozione per fase e tipologia di edificio, senza animazioni scollegate dallo stato reale del cantiere.
 - **Integrazione e QA:** sincronizzare percentuale di avanzamento, geometria, operai assegnati e risorse effettivamente spese; verificare che i due toggle DEV funzionino separatamente e insieme, non contaminino i salvataggi normali e permettano il ripristino della simulazione standard.
+
+
+## Nota voice — tempi di scavo per terraforming e fossati
+
+> Requisito progettuale da implementare; **non indica funzionalità già completata**.
+
+- **Terraforming non istantaneo:** ogni modifica del terreno richiede un tempo di lavoro/scavo proporzionato all'entità dell'intervento; applicare la stessa logica ai **fossati**, oggi segnalati senza tempi di realizzazione.
+- **Nessun consumo di risorse materiali:** il terraforming non deve consumare legno, pietra, metallo o altre risorse economiche; il suo costo fondamentale è il **tempo**, deliberatamente elevato.
+- **Forte disincentivo alle modifiche estese:** rendere molto onerosi temporalmente scavi e rimodellamenti massicci, così da favorire interventi mirati a rinforzare, proteggere o adattare posizioni strategiche, invece di riscrivere liberamente il paesaggio.
+- **Avanzamento effettivo:** collegare la durata a volume di terra movimentata, estensione/profondità e disponibilità di lavoratori, in coerenza con il sistema cantieri; mostrare lo scavo in fasi progressive, senza completamento istantaneo nella partita ordinaria.
+- **Modalità DEV:** `Instant Build` può saltare l'attesa per test; `No Resource Consumption` non modifica i tempi di scavo, dato che il terraforming non consuma materiali già di suo.
+- **QA:** verificare durata e proporzionalità per fossati piccoli/grandi e lavori di terra, sospensione/ripresa dei cantieri, save/load, navigabilità e aggiornamento delle difese durante e dopo lo scavo.
