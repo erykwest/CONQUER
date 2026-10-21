@@ -1,8 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
-> Snapshot **aggiornato il 19/10/2026** per il lavoro Terraforming; le sezioni storiche del 16/10 mantengono i propri limiti di verifica.
-> Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
+> **Snapshot corrente del 21/10/2026** in [AUDIT-2026-10-21.md](AUDIT-2026-10-21.md), base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2). Le sezioni sotto sono **storiche** e descrivono lo stato di branch/ora all'epoca: non possono prevalere sui merge successivi.
 
+
+## Snapshot attuale — main vs PR aperte (21/10/2026)
+
+**MERGED / codice su main:** [#44](https://github.com/erykwest/CONQUER/pull/44) minimappa+LOD; [#53](https://github.com/erykwest/CONQUER/pull/53) /camp, pattuglie, lupi e notte; [#54](https://github.com/erykwest/CONQUER/pull/54) solare stagionale; [#57](https://github.com/erykwest/CONQUER/pull/57)/[#58](https://github.com/erykwest/CONQUER/pull/58) mulini/menu; [#63–69](https://github.com/erykwest/CONQUER/pull/69) terraforming e cache; [#70](https://github.com/erykwest/CONQUER/pull/70) performance; [#71](https://github.com/erykwest/CONQUER/pull/71) 7 utensili/lavoro/cantieri; [#73](https://github.com/erykwest/CONQUER/pull/73) terrapieni d'assalto.
+
+**OPEN / non su main:** [#55](https://github.com/erykwest/CONQUER/pull/55) ledger unificato e **squadre L1 che costruiscono**, commercio e convogli skeleton; [#61](https://github.com/erykwest/CONQUER/pull/61) matrice danni; [#65](https://github.com/erykwest/CONQUER/pull/65) cutaway arredato; [#72](https://github.com/erykwest/CONQUER/pull/72) cavalieri/messaggero/tributo su base `knights`, non `main`. Anche #18 e #16 restano aperte. Nessuna delle PR aperte è qui equiparata a release.
+
+**QA:** la PR #70 riporta 60/62 suite PASS e browser fixture 40/30 Canvas/WebGL PASS; due suite preesistenti falliscono, picchi GPU fino a 303,8 ms; questa ricognizione non riesegue i test. Per stato, prove, confini e milestone vedere [audit completo](AUDIT-2026-10-21.md). Le note locali precedenti sulla branch performance non descrivono più lo stato di rilascio.
 
 ## Integrazione performance con main aggiornato (21/10/2026)
 
