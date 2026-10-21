@@ -47,7 +47,7 @@ function solarClockLabel(day=State.clock.day){
   const fraction=((day%1)+1)%1,minutes=Math.floor(fraction*24*60+1e-8);
   return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
 }
-function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${['Lun','Mar','Mer','Gio','Ven','Sab · Mercato','Dom · Riposo'][window.ConquerEconomy?.weekday(State.clock.day)??0]} · ${cal.day} ${cal.name} · Y${cal.year} · ${solarClockLabel()} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('');window.ConquerEconomy?.render()}
+function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${['Lun','Mar','Mer','Gio','Ven','Sab · Mercato','Dom · Riposo'][window.ConquerEconomy?.weekday(State.clock.day)??0]} · ${cal.day} ${cal.name} · Y${cal.year} · ${solarClockLabel()} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',metal:'⛓',equipment:'⚔'};document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res">${icons[k]||''} ${k} <b>${v}</b></span>`).join('');window.ConquerEconomy?.render();const kr=window.ConquerCombat?.knightRecruitment?.();const ks=document.getElementById('knightRoster');if(ks&&kr){ks.textContent=`Cavalieri ${kr.current}/${kr.limit} · Noble room ${kr.rooms} · Stalla ${kr.horses} cavalli`;const btn=document.getElementById('recruitKnight');if(btn)btn.disabled=kr.current>=kr.limit}}
 function visibleCanvasCenter(){
   const r=canvas.getBoundingClientRect();
   return{x:r.width/2,y:r.height/2};
@@ -166,6 +166,8 @@ function generateNewMap(){
   State.draft=null;State.selectedId=null;
   State.seed=freshLandscapeSeed();
   State.heraldry=null;
+  State.diplomacy=null;
+  window.ConquerDiplomacy?.reset();
   window.__conquerHeraldry?.reset();
   localStorage.setItem('conquer.seed.0.0',String(State.seed));
 

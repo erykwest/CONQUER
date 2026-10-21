@@ -119,6 +119,7 @@ function simulationFrame(now){
       processVillageGrowth();
       tickFields(State.clock.day);
       window.ConquerEconomy?.tick(previousDay,State.clock.day);
+      window.ConquerDiplomacy?.tick(previousDay,State.clock.day);
       completed=constructionCompletionsCrossed(simLogicDay,State.clock.day);
       simLogicDay=State.clock.day;
       simLogicAt=now;
