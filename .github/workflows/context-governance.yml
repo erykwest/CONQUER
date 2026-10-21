@@ -1,0 +1,33 @@
+name: Context pyramid guard
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  context-sync:
+    name: Context sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR head including base history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test governance logic
+        run: node qa/context-guard-regression.cjs
+      - name: Check context updates in PR diff
+        env:
+          CONTEXT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CONTEXT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node tools/context-guard.cjs
