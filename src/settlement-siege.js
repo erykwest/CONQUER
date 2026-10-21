@@ -170,6 +170,7 @@
     gateNightWatch();bridgeAlarm();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
+    if(elapsed)window.ConquerEarthworks?.tick(elapsed);
     if(!elapsed)return;
     const demand=dailyFoodDemand()*elapsed;
     if(demand<=0)return;
@@ -595,6 +596,7 @@
       const m=s.type==='gate'?window.ConquerCrossings?.drawbridgeMesh?.(s):s.type==='bridge'?window.ConquerCrossings?.bridgeMesh?.(s):null;
       if(m)out.push(m);
     }
+    if(window.ConquerWorld3D?.active?.())out.push(...(window.ConquerEarthworks?.meshes?.()||[]));
     for(const s of State.structures)if(s.brokenTop&&['tower','gate'].includes(s.type)&&!underConstruction(s))out.push(crownMesh(s));
     return out;
   }

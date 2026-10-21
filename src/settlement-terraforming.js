@@ -62,13 +62,16 @@
     let z=Number(baseZ)||0;
     for(const edit of edits()){
       if(excludeWalled&&edit.mode==='walled')continue;
+      // Siege fill (settlement-earthworks) only ever adds earth: it never lowers a hill.
+      const fill=edit.material==='fill';
       if(pointInPolygon(point,edit.top)){
-        z=edit.targetZ;
+        z=fill?Math.max(z,edit.targetZ):edit.targetZ;
         continue;
       }
       if(!pointInPolygon(point,edit.outer))continue;
       const radial=dist(point,edit.center),t=clamp((radial-edit.radius)/Math.max(.001,edit.edgeWidth),0,1);
-      z=edit.targetZ+(edit.baseZ-edit.targetZ)*t;
+      const graded=edit.targetZ+(edit.baseZ-edit.targetZ)*t;
+      z=fill?Math.max(z,graded):graded;
     }
     return z;
   }
@@ -182,6 +185,7 @@
         ?(valid?'rgba(68,207,134,.46)':'rgba(236,61,70,.52)')
         :edit.mode==='walled'
           ?(face.index%2?'#49443f':'#686057')
+          :edit.material==='fill'?(face.index%2?'#a88d57':'#b89c63')   // siege earthworks (settlement-earthworks)
           :(winter?'#d2d8d3':face.index%2?'#464630':'#514e37');
       pathPolygon(face.screen,fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
     }
@@ -189,7 +193,7 @@
     if(top.length>=3){
       const fill=ghost
         ?(valid?'rgba(78,224,149,.28)':'rgba(238,54,64,.34)')
-        :(winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b'));
+        :(winter?'#edf1ed':edit.material==='fill'?'#c9b17a':(BIOMES[State.biome]?.field||'#24291b'));
       pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):'rgba(210,194,151,.28)',ghost?2.2:1);
     }
     if(ghost){
