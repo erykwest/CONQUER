@@ -20,9 +20,13 @@ function gatePointInPassage(gate,p,pad=.04){
 }
 function roadUsesGatePassage(road,gate){
   if(!road||!gate||gate.type!=='gate')return false;
-  const info=gatePassageInfo(gate),mid=closestPointOnSegment(info.center,road.a,road.b);
-  if(dist(mid,info.center)>info.halfWidth*.82)return false;
-  const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
+  const info=gatePassageInfo(gate),dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
+  // Align with the passage axis; a road may end at either gate mouth without
+  // having to cross the gate centre, but a distant parallel road is not exempt.
+  const off=Math.abs((info.center.x-road.a.x)*dy-(info.center.y-road.a.y)*dx)/L;
+  if(off>info.halfWidth*.82)return false;
+  const near=closestPointOnSegment(info.center,road.a,road.b);
+  if(dist(near,info.center)>info.halfLength+.21)return false;
   const dot=Math.abs((dx/L)*info.ux+(dy/L)*info.uy);
   return dot>=Math.cos(32*Math.PI/180);
 }
@@ -1837,6 +1841,13 @@ function mainRoadSnapAnchor(p){
   for(const entry of ensureBorderEntrySelection())consider(entry);
   const well=State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
   if(well)consider(well);
+  // Roads snap just outside either opening; neither subtowers nor road
+  // magnets obstruct the gate passage.
+  for(const gate of State.structures){
+    if(gate.type!=='gate'||underConstruction(gate))continue;
+    const passage=gatePassageInfo(gate);
+    if(passage){consider(passage.sideA);consider(passage.sideB)}
+  }
 
   for(const road of roadList()){
     consider(road.a);consider(road.b);
