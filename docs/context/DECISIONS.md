@@ -117,6 +117,16 @@ resta scartato. Nessuna modifica al framebuffer o rinvio dei frame viene
 mantenuta. Motivazioni, esperimenti e misure nell'[audit esteso](../mass-battle-performance-audit-2026-10-21.md).
 Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
+## Nuovi contratti registrati dall'audit del 21/10/2026
+
+**D-039 · VINCOLO OPERATIVO / PR:** quando una pull request verso `main` modifica sorgenti, QA, asset o runtime, i cambiamenti della **stessa PR** includono `docs/context/STATUS.md`, `docs/context/BACKLOG.md`, `docs/context/CHANGELOG.md`. `ROADMAP.md` e `DECISIONS.md` devono essere aggiornati **quando** evolvono milestone, architettura o scelte; in assenza di cambi, la PR le dichiara esplicitamente invariate. È attivato un check automatico `Context sync`: verifica la presenza dei tre file nel diff, non la correttezza semantica. [Procedura](PR-WORKFLOW.md). Il blocco *effettivo* del merge richiede che il check sia reso obbligatorio da branch protection/ruleset GitHub; `main` risultava non protetta al 21/10.
+
+**D-040 · CODICE SU MAIN / limite funzionale:** [PR #71](https://github.com/erykwest/CONQUER/pull/71) implementa rappresentazione e utensili dei lavoratori/cantieri; **non** dimostra da sola consumo reale di lavoro L1 e scorte. Tale integrazione è dichiarata in [PR #55](https://github.com/erykwest/CONQUER/pull/55) tuttora OPEN. Animazione = osservabilità; contabilità/squadre disponibili = meccanica, da provare separatamente.
+
+**D-041 · CODICE SU MAIN / limite assedio:** [PR #73](https://github.com/erykwest/CONQUER/pull/73) aggiunge terra di riporto d'assalto compatibile col terrain boolean corrente; **non** implica implementazione di tutte le macchine o condizione di resa per blocco. Requisiti S-01–S-25 rimangono chiusi solo con prova di comportamento di ogni sistema.
+
+**Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
+
 ## Conflitti decisionali da risolvere esplicitamente
 
 | ID | Tema | Fonti discordanti | Risoluzione richiesta |
