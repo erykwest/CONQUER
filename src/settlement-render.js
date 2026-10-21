@@ -471,3 +471,6 @@ function draw(){
   window.ConquerMinimap?.requestDraw();
 }
 
+
+// Explicit redraw hook for the opt-in convoy animation (without invalidating caches).
+window.__drawConquerScene=draw;
