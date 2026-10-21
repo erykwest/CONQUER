@@ -305,6 +305,20 @@
     panel.querySelector('[data-road-close]').onclick=()=>{opened=null;refreshPanel();if(window.__drawConquerScene)window.__drawConquerScene()};
     const restoreButton=panel.querySelector('[data-road-restore]');
     if(restoreButton)restoreButton.onclick=()=>{if(restore())refreshPanel()};
+    const kindPicker=panel.querySelector('[data-road-kind]');
+    if(kindPicker)kindPicker.onchange=()=>{
+      const merchant=kindPicker.value==='merchant';
+      const goodPicker=panel.querySelector('[data-road-good]');
+      const qtyPicker=panel.querySelector('[data-road-qty]');
+      const goldPicker=panel.querySelector('[data-road-gold]');
+      if(goodPicker){
+        goodPicker.disabled=merchant;
+        if(merchant)goodPicker.value='';
+        else if(!goodPicker.value)goodPicker.value='wood';
+      }
+      if(qtyPicker){qtyPicker.disabled=merchant;qtyPicker.value=merchant?'0':'1'}
+      if(goldPicker&&merchant&&Number(goldPicker.value)===0)goldPicker.value='10';
+    };
     const launchButton=panel.querySelector('[data-road-launch]');
     if(launchButton)launchButton.onclick=()=>{
       const q=k=>panel.querySelector('[data-road-'+k+']'),kind=q('kind').value;
