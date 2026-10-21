@@ -73,6 +73,16 @@ test('blocked, broken or unfinished arterial road cannot launch or subtract reso
   assert.equal(h.road.launch({edge:'north',good:'stone',qty:3,coinGold:5}).ok,false,
     'segment must actually reach mapped exit point');
 });
+test('a road deliberately deleted by the player stays unusable even if its old segment remains',()=>{
+  const h=harness(),e=h.eco.state();
+  e.castleGold=40;e.castle.wood=10;
+  h.State.village.deletedMainRoutes=['route-east'];
+  assert.equal(h.road.routeFor('east'),null);
+  assert.equal(h.road.launch({edge:'east',good:'wood',qty:1}).ok,false);
+  assert.equal(e.castle.wood,10);
+  h.State.village.deletedMainRoutes=[];
+  assert.ok(h.road.routeFor('east'));
+});
 test('lord test transports real castle resources and reclaims every unit once',()=>{
   const h=harness(),e=h.eco.state();e.castleGold=70;e.castle.stone=20;
   const beforeMarket=plain(h.eco.snapshot().market);
