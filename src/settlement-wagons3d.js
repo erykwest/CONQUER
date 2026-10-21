@@ -48,9 +48,19 @@
     const c=Math.cos(pose.heading||0),s=Math.sin(pose.heading||0);
     return(px,py,pz)=>[pose.x+px*c-py*s,pose.y+px*s+py*c,(pose.z||0)+pz];
   }
+  // Body tilt about a pivot (model space): pose.pitch raises the front (+x), pose.roll
+  // lifts the left side (+y). Wheels stay on their axles; everything they carry tilts.
+  function tilter(pose){
+    const pi=pose.pitch||0,ro=pose.roll||0;if(!pi&&!ro)return null;
+    const pv=pose.pivot||[0,0,0],cp=Math.cos(pi),sp=Math.sin(pi),cr=Math.cos(ro),sr=Math.sin(ro);
+    return(x,y,z)=>{
+      const dx=x-pv[0],dy=y-pv[1],dz=z-pv[2],x2=dx*cp-dz*sp,z2=dx*sp+dz*cp;
+      return[pv[0]+x2,pv[1]+dy*cr-z2*sr,pv[2]+dy*sr+z2*cr];
+    };
+  }
   // World-space triangles: Float32Array xyz per vertex and per-triangle base rgb.
   function worldTriangles(spec,pose){
-    const m=M(),{parts,variant}=assembly(spec),place=placer(pose),pos=[],col=[],bias=[];
+    const m=M(),{parts,variant}=assembly(spec),place=placer(pose),tilt=tilter(pose),pos=[],col=[],bias=[];
     // Painter hint for the canvas path: the bed floor goes first (cargo sits on it).
     // WebGL ignores it (depth buffer).
     const floorTop=variant.slots[0]?.[2]??-1;
@@ -63,7 +73,9 @@
         for(let k=0;k<3;k++){
           let x=p.v[t*9+k*3],y=p.v[t*9+k*3+1],z=p.v[t*9+k*3+2];
           if(inst.wheel){const x2=x*ca+z*sa;z=-x*sa+z*ca;x=x2}
-          const w=place(x+at[0],y+at[1],z+at[2]+lift);
+          let q=[x+at[0],y+at[1],z+at[2]+lift];
+          if(tilt&&!inst.wheel)q=tilt(q[0],q[1],q[2]);
+          const w=place(q[0],q[1],q[2]);
           pos.push(w[0],w[1],w[2]);
         }
         col.push(m.palette[p.c[t]]);
@@ -75,8 +87,9 @@
   }
   // Mount points in world space for the caller's sprites.
   function anchors(spec,pose){
-    const {variant,team}=assembly(spec),place=placer(pose),bob=pose.bob||0;
-    const seat=variant.seat?place(variant.seat[0],variant.seat[1],variant.seat[2]+bob):null;
+    const {variant,team}=assembly(spec),place=placer(pose),tilt=tilter(pose),bob=pose.bob||0;
+    const sv=variant.seat?(tilt?tilt(variant.seat[0],variant.seat[1],variant.seat[2]+bob):[variant.seat[0],variant.seat[1],variant.seat[2]+bob]):null;
+    const seat=sv?place(sv[0],sv[1],sv[2]):null;
     const horses=team?variant.horses[String(team)].map(([hx,hy])=>{const w=place(hx,hy,0);return{x:w[0],y:w[1],z:w[2]}}):[];
     return{seat:seat&&{x:seat[0],y:seat[1],z:seat[2]},horses};
   }

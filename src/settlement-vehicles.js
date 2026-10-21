@@ -151,7 +151,7 @@
   // Fast painter for moving vehicles: each vertex projected once with the game's
   // rotateViewPoint / w2sRaw maths inlined (no per-call objects), faces turned away
   // from the camera dropped (closed Blender meshes), shaded fills cached.
-  const rgbCache=new Map(),fillCache=new Map();
+  const rgbCache=new Map(),fillCache=new Map(),OUTLINE='rgba(25,24,22,.92)';
   function rgb(hex){let v=rgbCache.get(hex);if(!v){const h=hex.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));rgbCache.set(hex,v)}return v}
   function fillOf(hex,f){
     const k=hex+(f*1000|0);let v=fillCache.get(k);
@@ -179,7 +179,19 @@
         if(plan){sx[i]=ox+q[0]*s;sy[i]=oy+q[1]*s;dz[i]=z}
         else{sx[i]=ox+(q[0]-q[1])*s*IX;sy[i]=oy+(q[0]+q[1])*s*IY-z*s*IZ;dz[i]=q[0]+q[1]+IZ*z}
       }
-      const gd=m.groups?m.groups.map(g0=>depthOf(g0[0],g0[1],g0[2])):null;
+      const gd=m.groups?m.groups.map((g0,i)=>depthOf(g0[0],g0[1],g0[2])+(m.groupBias?.[i]||0)):null;
+      if(m.flat&&gd){
+        // Flat style (ConquerMesh3D.drawFlat in knights): each rigid part is one item,
+        // outlined, filled with its colour or one shade tone.
+        const byG=gd.map(()=>[]);
+        for(let t=0;t<m.col.length;t++){
+          const o=t*9,ux=p[o+3]-p[o],uy=p[o+4]-p[o+1],uz=p[o+5]-p[o+2],vx=p[o+6]-p[o],vy=p[o+7]-p[o+1],vz=p[o+8]-p[o+2];
+          const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,f=shade&&shade(nx,ny,nz,turns)<.7?.88:1;
+          byG[m.gi[t]].push({a:t*3,fill:fillOf(m.col[t],f),d:(dz[t*3]+dz[t*3+1]+dz[t*3+2])/3});
+        }
+        byG.forEach((tris,g)=>{if(tris.length)items.push({flat:tris.sort((u,v)=>u.d-v.d),sx,sy,d:gd[g],d2:0})});
+        continue;
+      }
       for(let t=0;t<m.col.length;t++){
         const a=t*3,o=t*9;
         const ux=p[o+3]-p[o],uy=p[o+4]-p[o+1],uz=p[o+5]-p[o+2],vx=p[o+6]-p[o],vy=p[o+7]-p[o+1],vz=p[o+8]-p[o+2];
@@ -196,6 +208,13 @@
     g.save();g.lineJoin='round';g.lineWidth=.6;
     for(const it of items){
       if(it.sprite){g.restore();it.sprite.draw();g.save();g.lineJoin='round';g.lineWidth=.6;continue}
+      if(it.flat){
+        const {sx,sy}=it;g.beginPath();
+        for(const t of it.flat){const a=t.a;g.moveTo(sx[a],sy[a]);g.lineTo(sx[a+1],sy[a+1]);g.lineTo(sx[a+2],sy[a+2]);g.closePath()}
+        g.strokeStyle=OUTLINE;g.lineWidth=Math.max(1,(State.view.scale||1)*.5)*2;g.stroke();g.lineWidth=.6;
+        for(const t of it.flat){const a=t.a;g.fillStyle=g.strokeStyle=t.fill;g.beginPath();g.moveTo(sx[a],sy[a]);g.lineTo(sx[a+1],sy[a+1]);g.lineTo(sx[a+2],sy[a+2]);g.closePath();g.fill();g.stroke()}
+        continue;
+      }
       const {sx,sy,a}=it;
       g.fillStyle=g.strokeStyle=it.fill;
       g.beginPath();g.moveTo(sx[a],sy[a]);g.lineTo(sx[a+1],sy[a+1]);g.lineTo(sx[a+2],sy[a+2]);g.closePath();g.fill();g.stroke();
@@ -203,7 +222,26 @@
     g.restore();
     return items.length;
   }
-  const LOD_3D_SCALE=1.1;    // below this zoom the 2D modular wagon reads better and costs less
+  const LOD_3D_SCALE=1.1;
+  // Horse gait input for vehicle v of a convoy (shared by the team and the cart shafts).
+  const gaitOf=(k,v,i=0)=>({mode:v.moving?k.gait:'idle',t:v.s*(k.gait==='run'?.32:.55)+i*.12,seed:i});
+  // Body motion on the road. Cart: balanced on one axle, the shafts ride the horse's
+  // back, so the bed pitches with its stride; wagon: a slight roll; coach: it rocks
+  // on its springs. pose gets {pitch, roll, pivot} (settlement-wagons3d tilt).
+  function bodyMotion(c,v,spec){
+    const k=kindOf(c.vehicle),m=window.ConquerWagonModel?.variants?.[k.chassis];if(!m)return{};
+    const amp=Math.min(1,(c.speed||0)/2),s=v.s;
+    if(k.chassis==='cart'){
+      const axle=m.wheels[0].at[0],hitch=m.horses['1'][0];
+      let lift=0;
+      if(A3()&&window.ConquerAnimalModels?.horse){
+        const st=A3().pose('horse',gaitOf(k,v));lift=-(st.bob||0)*window.ConquerAnimalModels.horse.height/230;
+      }
+      return{pitch:Math.atan2(lift,hitch[0]-axle[0])+.03,roll:Math.sin(s*1.7)*.022*amp,pivot:[axle[0],0,axle[2]]};
+    }
+    if(k.chassis==='carriage')return{pitch:Math.sin(s*2.4)*.022*amp,roll:Math.sin(s*1.6+1)*.03*amp,pivot:[.05,0,.25]};
+    return{pitch:Math.sin(s*2.1)*.006*amp,roll:Math.sin(s*1.3)*.009*amp,pivot:[0,0,.2]};
+  }    // below this zoom the 2D modular wagon reads better and costs less
   // Everything one convoy shows this frame: vehicles, teams, drivers and escorts.
   // c: {id, vehicle, vehicles, good, qty, guards, livery, distance, speed, seed}
   function layout(c,points){
@@ -231,8 +269,12 @@
     // No seat (the cart): the carter walks at the horse's head on the near verge.
     if(!anchors.seat){
       const h=anchors.horses[0];if(!h)return null;
-      const p={x:h.x-Math.sin(v.heading)*.32+Math.cos(v.heading)*.15,y:h.y+Math.cos(v.heading)*.32+Math.sin(v.heading)*.15};
-      return{x:p.x,y:p.y,z:ground(p),draw:()=>drawVillagerFigureUnmasked({...DRIVER,id:'carter-'+c.id+'-'+v.i,p})};
+      const p={x:h.x-Math.sin(v.heading)*.22+Math.cos(v.heading)*.12,y:h.y+Math.cos(v.heading)*.22+Math.sin(v.heading)*.12};
+      const bob=v.moving?Math.abs(Math.sin(v.s*5.2))*.035:0,gz=ground(p);
+      return{x:p.x,y:p.y,z:gz,draw:()=>{
+        const dot={...DRIVER,id:'carter-'+c.id+'-'+v.i,p};
+        if(typeof withProjectionGroundZ==='function')withProjectionGroundZ(gz+bob,()=>drawVillagerFigureUnmasked(dot));else drawVillagerFigureUnmasked(dot);
+      }};
     }
     const seat=anchors.seat,look=c.vehicle==='coach'?COACHMAN:DRIVER;
     // Sorted at chest height so the bed sides do not paint over the seated figure.
@@ -256,13 +298,12 @@
     if(!W3()||!window.ConquerWagonModel||(State.view.scale||1)<LOD_3D_SCALE)return draw2D(c,L);
     const view=gameView(),meshes=[],sprites=[];
     for(const v of L.vehicles){
-      const pose={x:v.x,y:v.y,z:v.z,heading:v.heading,distance:v.s,bob:v.moving?Math.sin(v.s*9)*.004:0};
+      const pose={x:v.x,y:v.y,z:v.z,heading:v.heading,distance:v.s,bob:v.moving?Math.sin(v.s*9)*.004:0,...bodyMotion(c,v,v.spec)};
       meshes.push(W3().worldTriangles(v.spec,pose));
       const an=W3().anchors(v.spec,pose),k=kindOf(c.vehicle);
       if(A3()&&window.ConquerAnimalModels)an.horses.forEach((h,i)=>{
-        const mesh=A3().triangles('horse',{...h,heading:v.heading},
-          {mode:v.moving?k.gait:'idle',t:v.s*(k.gait==='run'?.32:.55)+i*.12,seed:i},A3().coatColors('horse',v.spec.team[i]?.coat));
-        for(let j=2;j<mesh.pos.length;j+=3)mesh.pos[j]+=v.z;     // stand on the terrain
+        const mesh=A3().triangles('horse',{...h,z:v.z,heading:v.heading},gaitOf(k,v,i),A3().coatColors('horse',v.spec.team[i]?.coat));
+        mesh.flat=true;                                         // flat outlined style, like the 2D figures
         meshes.push(mesh);
       });
       const d=driverSprite(c,v,an,view);if(d)sprites.push(d);

@@ -88,47 +88,66 @@
     for(const key of Object.keys(a))out[key]=Array.isArray(a[key])?a[key].map((v,i)=>lerp(v,b[key][i],k)):lerp(a[key],b[key],k);
     return out;
   }
-  // World triangles for one animal. place: {x,y,z,heading}; anim: pose input;
-  // colors: role -> hex (coatColors()).
-  function triangles(species,place,anim,colors){
-    const model=MODELS()[species],roles=MODELS().roles,st=pose(species,anim),H=model.height;
+  // Model-space -> world transform of one animal for a pose: xf(partName, [x,y,z]).
+  // Extra parts (horse gear, riders) reuse it with the name of the part they ride.
+  function transformer(species,place,st){
+    const model=MODELS()[species],H=model.height;
     const px=v=>v*H/230;                         // 2D art pixel -> U (2D art ~230 px tall)
-    const pos=[],col=[],gi=[],groups=[],c=Math.cos(place.heading||0),s=Math.sin(place.heading||0);
+    // place.scale enlarges the figure about its feet (legibility next to 2D figures).
+    const k=place.scale||1,c=Math.cos(place.heading||0)*k,s=Math.sin(place.heading||0)*k;
     const center=model.center,hip=model.hip||center,bob=-px(st.bob);
     const neckP=model.pivots.neck,headP=model.pivots.head,tailP=model.pivots.tail;
     const drop=st.drop*(model.bodyBottom-.01),breathe=1+st.breathe*.025;
-    for(const [name,part] of Object.entries(model.parts)){
-      const li=model.legs.indexOf(name),planted=li===0||li===1,g0=pos.length,group=groups.length;
-      for(let t=0;t<part.c.length;t++){
+    return(name,p)=>{
+      const li=model.legs.indexOf(name),planted=li===0||li===1;
+      if(li>=0){
+        // Positive gait angle = foot forward; lift raises the stepping leg.
+        p=pitch(p,model.pivots[name],-st.legs[li]);p[2]+=px(st.lift[li]);
+      }else if(name==='head'){
+        p=pitch(p,headP,st.head+st.nod+st.chew*.06);p=pitch(p,neckP,st.neck);p[0]+=st.reach;
+      }else if(name==='neck'){
+        p=pitch(p,neckP,st.neck);p[0]+=st.reach;
+      }else if(name==='tail'){
+        p=roll(pitch(p,tailP,-st.tail*.5),tailP,st.tail*.4);
+      }else if(name==='body'&&st.breathe){
+        p=[p[0],center[1]+(p[1]-center[1])*breathe,center[2]+(p[2]-center[2])*breathe];
+      }
+      // Rearing turns everything about the hip but the planted hind legs.
+      if(!(planted&&st.body))p=pitch(p,hip,st.body);
+      if(li<0)p[2]+=bob;
+      p=pitch(p,center,st.pitch);
+      p[2]-=drop;
+      return[(place.x||0)+p[0]*c-p[1]*s,(place.y||0)+p[0]*s+p[1]*c,(place.z||0)+p[2]*k];
+    };
+  }
+  // World triangles for one animal. place: {x,y,z,heading}; anim: pose input;
+  // colors: role -> hex (coatColors()). extras: [{bind, v (flat xyz), col (hex per
+  // triangle), local?(p), over?}] ride the named part (gear, a rider); each is its own
+  // group. 'over' (a small number) sorts the extra right after the part it covers
+  // (cloth on the body) instead of by its own centre.
+  function triangles(species,place,anim,colors,extras=[]){
+    const model=MODELS()[species],roles=MODELS().roles,st=pose(species,anim),xf=transformer(species,place,st);
+    const pos=[],col=[],gi=[],groups=[],groupBias=[],byName={};
+    const emit=(name,v,colorOf,local,over)=>{
+      const g0=pos.length,group=groups.length;
+      for(let t=0;t<v.length/9;t++){
         for(let k=0;k<3;k++){
-          let p=[part.v[t*9+k*3],part.v[t*9+k*3+1],part.v[t*9+k*3+2]];
-          if(li>=0){
-            // Positive gait angle = foot forward; lift raises the stepping leg.
-            p=pitch(p,model.pivots[name],-st.legs[li]);p[2]+=px(st.lift[li]);
-          }else if(name==='head'){
-            p=pitch(p,headP,st.head+st.nod+st.chew*.06);p=pitch(p,neckP,st.neck);p[0]+=st.reach;
-          }else if(name==='neck'){
-            p=pitch(p,neckP,st.neck);p[0]+=st.reach;
-          }else if(name==='tail'){
-            p=roll(pitch(p,tailP,-st.tail*.5),tailP,st.tail*.4);
-          }else if(name==='body'&&st.breathe){
-            p=[p[0],center[1]+(p[1]-center[1])*breathe,center[2]+(p[2]-center[2])*breathe];
-          }
-          // Rearing turns everything about the hip but the planted hind legs.
-          if(!(planted&&st.body))p=pitch(p,hip,st.body);
-          if(li<0)p[2]+=bob;
-          p=pitch(p,center,st.pitch);
-          p[2]-=drop;
-          pos.push((place.x||0)+p[0]*c-p[1]*s,(place.y||0)+p[0]*s+p[1]*c,(place.z||0)+p[2]);
+          let p=[v[t*9+k*3],v[t*9+k*3+1],v[t*9+k*3+2]];
+          if(local)p=local(p);
+          const w=xf(name,p);pos.push(w[0],w[1],w[2]);
         }
-        col.push(colors[roles[part.c[t]]]);gi.push(group);
+        col.push(colorOf(t));gi.push(group);
       }
       // Each rigid part sorts as a unit (by its centre), then triangle by triangle.
-      let gx=0,gy=0,gz=0;const n=(pos.length-g0)/3;
+      let gx=0,gy=0,gz=0;const n=(pos.length-g0)/3||1;
       for(let i=g0;i<pos.length;i+=3){gx+=pos[i];gy+=pos[i+1];gz+=pos[i+2]}
-      groups.push([gx/n,gy/n,gz/n]);
-    }
-    return{pos,col,gi,groups,bias:new Array(col.length).fill(0),outward:[]};
+      if(over&&byName[name]!==undefined){groups.push([...groups[byName[name]]]);groupBias.push(over)}
+      else{groups.push([gx/n,gy/n,gz/n]);groupBias.push(0)}
+      return group;
+    };
+    for(const [name,part] of Object.entries(model.parts))byName[name]=emit(name,part.v,t=>colors[roles[part.c[t]]]);
+    const extraGroups=extras.map(e=>emit(e.bind,e.v,t=>e.col[t],e.local,e.over));
+    return{pos,col,gi,groups,groupBias,extraGroups,xf,bias:new Array(col.length).fill(0),outward:[]};
   }
   // Role colours from the approved 2D palette (and coat) of the species.
   function coatColors(species,coat){
@@ -139,5 +158,5 @@
       nose:c.nose||c.line||'#1a1a1a',muzzle:c.muzzle||legFar,horn:c.horn||'#4a2f1d',beard:c.beard||c.body,
       tusk:c.tusk||'#efe8d6',antler:c.antler||'#dcc9a3',tail:c.tail||c.body};
   }
-  window.ConquerAnimals3D={triangles,coatColors,pose,graze,modesOf,SPECIAL};
+  window.ConquerAnimals3D={triangles,transformer,coatColors,pose,graze,modesOf,SPECIAL,pitch,roll};
 })();

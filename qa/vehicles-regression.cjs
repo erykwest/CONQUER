@@ -106,4 +106,18 @@ test('2D fallback without the 3D modules; transient coach trips arrive and clear
   assert.equal(h.V.trips().length,0,'arrived trips are removed');
   assert.equal(h.V.spawn({vehicle:'coach',from:{x:0,y:0},to:{x:0,y:0},points:[{x:0,y:0}]}),null);
 });
+test('the cart pitches on its axle with the horse stride; wheels stay on the axle',()=>{
+  const h=harness(NET),W=h.window.ConquerWagons3D,spec=h.V.specFor({vehicle:'cart',good:'stone',qty:30},0);
+  const axle=h.window.ConquerWagonModel.variants.cart.wheels[0].at[0];
+  const flat=W.worldTriangles(spec,{x:0,y:0,heading:0}),tilted=W.worldTriangles(spec,{x:0,y:0,heading:0,pitch:.1,pivot:[axle[0],0,axle[2]]});
+  let moved=0;for(let i=0;i<flat.pos.length;i++)moved=Math.max(moved,Math.abs(flat.pos[i]-tilted.pos[i]));
+  assert.ok(moved>.02,'the bed tilts');
+  const pitches=new Set();
+  for(const s of [3,3.4,3.8,4.2,4.6])
+    h.V.draw({id:'c',vehicle:'cart',vehicles:1,distance:s,speed:4},h.V.route({x:0,y:0},{x:30,y:0}));
+  const pose=h.window.ConquerAnimals3D.pose;let seen=[];
+  h.window.ConquerAnimals3D.pose=(sp,a)=>{const st=pose(sp,a);seen.push(st.bob);return st};
+  for(const s of [3,3.4,3.8,4.2])h.V.draw({id:'c',vehicle:'cart',vehicles:1,distance:s,speed:4},h.V.route({x:0,y:0},{x:30,y:0}));
+  assert.ok(new Set(seen.map(b=>b.toFixed(3))).size>1,'the stride bob drives the shafts');
+});
 console.log('Vehicles regression: all checks passed.');
