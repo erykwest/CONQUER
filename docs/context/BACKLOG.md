@@ -254,3 +254,14 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Navi militarizzate:** evoluzione successiva con **baliste** imbarcate e trasporto di truppe, inclusi **arcieri e fanti**; imbarco/sbarco, spazio disponibile e supporto alle operazioni militari costiere.
 - **Combattimento navale:** riconosciuto come sottosistema complesso (movimento, ingaggi, armi di bordo, unità trasportate e possibile abbordaggio). Rimandare progettazione dettagliata e implementazione a una fase successiva, evitando che blocchi economia, cantieri e assedi terrestri.
 - **Sequenza suggerita:** commercio marittimo e navi-cargo → trasporto truppe → armamento e scontri navali. Testare a ogni fase la compatibilità con convogli terrestri, risorse e persistenza.
+
+
+## Nota voice — varianti regionali e commercio interregionale (lungo periodo)
+
+> **Visione di lungo periodo, non implementata.** Distinguere quattro ambientazioni/istanze di gioco da quattro server fisici: l'eventuale architettura di hosting va decisa solo in seguito, in base a necessità reali.
+
+- **Core comune:** mantenere un unico motore e le medesime meccaniche di base, variando anzitutto asset, materiali, architetture, vegetazione e atmosfera per area geografico-culturale; introdurre solo in seguito differenze leggere di produzione e disponibilità delle risorse.
+- **Ambito regionale:** attuale riferimento visivo **Europa centrale**; possibile variante **Europa mediterranea** (Italia/Spagna, già in parte suggerita dagli edifici in `clay`); possibile variante **area araba/mediorientale** con proprio repertorio edilizio e ambientale. La proposta cita **quattro istanze principali**, ma definisce per ora solo tre ambiti: **quarta regione da definire**, senza inventarla.
+- **Beni locali ed esotici:** valutare produzione regionale di **vino** e altri beni distintivi, oltre a merci importate come **spezie** e vini di altre regioni; le merci esotiche possono esistere inizialmente solo come prodotti di commercio, senza richiedere una filiera locale completa.
+- **Geografia commerciale:** attribuire rilevanza alle rotte marittime e ai collegamenti verso regioni/climi più settentrionali o meridionali; disponibilità, prezzo e convenienza dei beni dipendono da provenienza, accessibilità e trasporto.
+- **Architettura e scope:** preferire configurazioni/data pack regionali sopra una simulazione condivisa, evitando quattro fork divergenti del codice. Prima consolidare economia, trasporti e gameplay locale; poi introdurre asset regionali, mercati interregionali e infine eventuali piccole differenze meccaniche.
