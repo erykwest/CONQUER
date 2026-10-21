@@ -1,6 +1,6 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
-> Aggiornato: 2026-10-19
+> Stato ricontrollato: 2026-10-21 su `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2); dettaglio [piramide/audit](context/AUDIT-2026-10-21.md).
 > Ambito: territorio, foreste, urbanistica, economia locale, fortificazioni, araldica e ambientazione.  
 > Documento di pianificazione: **non** equivale a un audit funzionale completo né a un elenco di difetti confermati.
 
@@ -26,10 +26,17 @@
 
 **Decisione da non assumere implicitamente:** al 16/10, nei file economici consultati la **miniera produce `stone`**, non `metal`. La merce definitiva è un punto progettuale aperto.
 
+## Aggiornamenti effettivi 21/10
+
+- **P0-01a:** il terraforming è ormai parte di `main` e include terrapieni da assedio via [#73](https://github.com/erykwest/CONQUER/pull/73); ulteriori verifiche non equivalgono a una nuova implementazione da zero.
+- **P0-04 / cantieri:** animazioni figuranti/lavoratori **integrate** [#71](https://github.com/erykwest/CONQUER/pull/71); la **necessità meccanica di L1 disponibili per completare una costruzione** è ancora contenuta nella PR [#55](https://github.com/erykwest/CONQUER/pull/55) **OPEN**, quindi non segnare soddisfatto quel criterio su main.
+- **P0-06:** mulino a vento/acqua e relativo menu già merge [#57](https://github.com/erykwest/CONQUER/pull/57)/[#58](https://github.com/erykwest/CONQUER/pull/58); resta la coerenza del ledger e dei campi.
+- **Criteri di chiusura:** le altre caselle non sono qui cambiate automaticamente in `[x]` senza un audit di accettazione individuale; il dettaglio di PR/QA è in [STATUS](context/STATUS.md).
+
 ## P0 — Fondamenta territoriali ed economiche
 
 - [ ] **P0-01 — Orografia base e idoneità del terreno.** Riutilizzare il rilievo esistente, verificando quote/pendenze/scarpate per collocamento edifici, percorsi, estrazione e futura difesa. **Accettazione:** lo stesso contratto di terreno governa validazione del Builder, accessibilità e rendering; i salvataggi precedenti restano leggibili.
-- [x] **P0-01a — Terraforming del giocatore (branch `terraforming`).** Collina naturale e gradone verticale color muro con ghost; divieto di sovrapporre due terrazzamenti murati; magnete muro a filo; persistenza e rendering Canvas/WebGL2. **QA dedicata:** `qa/terraforming-regression.cjs` (10 controlli, inclusa mesh verticale). Rimane fuori da `main` fino a integrazione esplicita.
+- [x] **P0-01a — Terraforming del giocatore (branch `terraforming`).** Collina naturale e gradone verticale color muro con ghost; divieto di sovrapporre due terrazzamenti murati; magnete muro a filo; persistenza e rendering Canvas/WebGL2. **QA dedicata:** `qa/terraforming-regression.cjs` (10 controlli, inclusa mesh verticale). **Successivamente integrato in `main`** insieme alle evoluzioni con [#63–69](https://github.com/erykwest/CONQUER/pull/69): la descrizione della branch e i 10 check riguardano il vecchio snapshot.
 - [ ] **P0-02 — Foreste procedurali funzionali.** Completare, dove mancante, densità e sfruttamento: abbattimento, produzione legna, liberazione del terreno e rigenerazione secondo regole definite. **Accettazione:** produzione e stato della foresta rimangono coerenti dopo reload, senza spawn su edifici o strade non consentite.
 - [ ] **P0-03 — Pozzo / Village Core.** Consolidare la fondazione e la crescita progressiva già avviata, anziché ricreare un secondo generatore. **Accettazione:** niente lotti/edifici sovrapposti, crescita deterministica per seed, accessi stradali e persistenza validi.
 - [ ] **P0-04 — Abitazioni L1–L4 e popolazione produttiva.** Consolidare la coerenza tra livello abitazione, capienza, tier/professione e disponibilità di lavoro; separare status/tier dal lavoro corrente, se non ancora operativo. **Accettazione:** popolazione disponibile e lavoratori assegnabili coerenti con case ed economia; i tier superiori possono coprire lavori inferiori dove previsto.
