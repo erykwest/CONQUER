@@ -48,6 +48,7 @@
     const routes=Array.isArray(State.village.roadPlan)?State.village.roadPlan:[];
     const w=well(),nav=typeof navPerf!=='undefined'?navPerf.navInvalidations||0:0;
     const key=[State.village.wellId,w.x,w.y,State.structures.length,nav,
+      (State.village.deletedMainRoutes||[]).join(','),
       routes.map(r=>[r.id,r.connected,r.target?.x,r.target?.y].join(':')).join(';')].join('|');
     if(cachedSignsKey===key&&cachedSigns)return cachedSigns;
     const result=EDGES.map(edge=>{
@@ -67,7 +68,9 @@
       const free=p=>typeof pointBlockedForPeasant!=='function'||!pointBlockedForPeasant(p,null);
       const pos=free(one)?one:free(other)?other:one;
       return{edge,label:labels[edge],routeId:route.id,roadPoint:target,
-        point:pos,angle,connected:!!route.connected&&!!path,path};
+        point:pos,angle,
+        connected:!!route.connected&&!!path&&!(State.village.deletedMainRoutes||[]).includes(route.id),
+        path};
     }).filter(Boolean);
     cachedSignsKey=key;cachedSigns=result;
     return result;
