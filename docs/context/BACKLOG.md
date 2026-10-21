@@ -179,3 +179,16 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Conseguenze e compromessi:** sanzioni possono aumentare deterrenza nel breve periodo, ma repressione eccessiva può diminuire consenso, fiducia e immigrazione; efficacia legata anche a legittimità, proporzionalità e capacità amministrativa. Evitare la regola semplicistica 'più esecuzioni = meno crimine'.
 - **Integrazioni:** connettere ordine pubblico a popolani, lavoro, economia, commercio, guardie, allarmi, calendario giorno/notte e reputazione cittadina; non creare un minigioco separato.
 - **Priorità:** prima modello aggregato di criminalità, guardie/ronde e impatto sul commercio; poi eventi di giustizia e rappresentazione pubblica. QA con simulazioni su più stagioni e test di equilibrio fra sicurezza, costo delle guardie e prosperità.
+
+
+## Nota voice — filiera alimentare, colture e foraggio invernale
+
+> Proposta progettuale da valutare, **non implementata**.
+
+- **Risorsa cibo articolata:** mantenere `cibo` come categoria aggregata per i bisogni alimentari, distinguendo sotto-risorse **carne, pesce, cereali e ortaggi**. Conservare quantità e disponibilità delle singole categorie per produzione, stoccaggio, consumo e commercio.
+- **Colture e raccolto:** i campi producono una risorsa agricola grezza (`crop`/raccolto), distinta dal prodotto alimentare trasformato. Definire per tipo di coltura la destinazione: cereali per alimentazione, foraggio per animali, eventuale semina futura; non assumere che ogni raccolto richieda molitura.
+- **Mulino:** introdurre una trasformazione esplicita per i raccolti cerealicoli destinati al consumo umano (raccolto grezzo → prodotto macinato/farina, oppure cereali alimentari secondo la nomenclatura finale), con resa, capacità e tempi di lavoro. La macinazione non deve essere obbligatoria per il foraggio.
+- **Pascoli e allevamento:** durante la stagione favorevole il bestiame può pascolare all'aperto; durante l'inverno resta nei recinti/lotti/stalle e consuma scorte di `crop` grezzo destinato a **foraggio**, senza passare dal mulino.
+- **Scorte stagionali:** bilanciare raccolto, consumo umano, mangime animale e riserva per semina. Se il foraggio non basta, conseguenze su salute, mortalità e produttività degli animali; impatto successivo sulla disponibilità di carne e altri prodotti zootecnici.
+- **Dipendenze:** integrare campi, calendario e inverno, magazzini, mulini, allevamenti, consumo popolazione, mercato e ledger economico unico. Evitare duplicazione tra risorse visuali e contabili.
+- **Test richiesti:** simulazioni multianno di semina/raccolta, capacità di molitura, approvvigionamento alimentare e sopravvivenza del bestiame durante inverni lunghi; verificare che i cicli siano sostenibili senza microgestione eccessiva.
