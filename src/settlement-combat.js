@@ -1076,7 +1076,7 @@
       status(moved+'/'+units.length+' ordini ricevuti · tempo in pausa: premi 1× per muovere le truppe');
     else if(outsideCommand||unreachable)
       status(moved+'/'+units.length+' ordini accettati'+
-        (outsideCommand?' · '+outsideCommand+' fuori raggio cavaliere (16U)':'')+
+        (outsideCommand?' · '+outsideCommand+' fuori raggio capitano (16U)':'')+
         (unreachable?' · '+unreachable+' senza percorso':''));
     else status(moved+' unit(s) marching');
   }
