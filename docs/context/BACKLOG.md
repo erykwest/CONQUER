@@ -229,3 +229,17 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Feedback al giocatore:** mostrare causa e peso del rallentamento nei pannelli del cantiere (es. `Rallentato dalla pioggia`) e aggiornare le stime di completamento in modo comprensibile.
 - **Modalità DEV:** `Instant Build` deve permettere test immediati anche con meteo avverso; in partita normale il meteo incide sempre sulla produttività.
 - **QA/bilanciamento:** simulare cantieri in tutte le stagioni e condizioni, verificare accumulo corretto dell'avanzamento, pause/riprese, salvataggi e assenza di blocchi permanenti; evitare che il clima renda impossibile la progressione.
+
+
+## Nota voice — spedizioni militari, convogli di rifornimento e accampamenti d'assedio
+
+> Proposta progettuale da sviluppare, **non implementazione confermata**. Riutilizzare dove possibile il sistema esistente di accampamento notturno delle truppe.
+
+- **Invio di contingenti:** introdurre una meccanica per organizzare e spedire contingenti militari fuori dall'insediamento, con destinazione, percorso, composizione, tempi di marcia e ordini di missione, inclusi attacco e assedio.
+- **Carri di rifornimento:** consentire carri logistici che accompagnano le colonne militari, trasportando provviste e materiali; scorte finite, consumo durante marcia e permanenza, possibilità di rifornimento e vulnerabilità dei convogli.
+- **Due modalità di campo:** distinguere l'**accampamento notturno automatico**, temporaneo e leggero, da un **accampamento militare persistente** che il comandante attaccante può scegliere di insediare vicino all'obiettivo e mantenere durante un assedio.
+- **Campo d'assedio costruibile:** offrire un sottoinsieme deliberatamente limitato del Builder: tende/zone di riposo, area deposito e carri, **palizzate leggere**, **torri di avvistamento** e pochi accessi difensivi. Non replicare l'intero catalogo di edifici e fortificazioni del castello.
+- **Costruzione e vincoli:** realizzazione progressiva con tempo, lavoratori/soldati assegnati e materiali trasportati o reperiti; la posizione e il perimetro del campo influiscono su visibilità, sicurezza, percorsi e capacità di lanciare attacchi.
+- **Assedio integrato:** il campo persistente diventa base operativa dell'attaccante per presidiare il territorio, organizzare sortite/assalti, accumulare rifornimenti e mantenere un blocco; il difensore può tentare incursioni contro campo e carri, interrompendo la logistica.
+- **Persistenza e UX:** il campo resta finché non viene smantellato, abbandonato o distrutto; distinguere chiaramente nel comando UI 'bivacco notturno' da 'stabilisci campo d'assedio'.
+- **QA:** testare spedizioni, consumo scorte, continuità dei carri, costruzione delle difese leggere, pathfinding di grandi colonne, assalti/sortite, interruzione rifornimenti e save/load durante assedi lunghi.
