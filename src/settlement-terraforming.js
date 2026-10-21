@@ -547,14 +547,14 @@
     const pickedZ=Math.ceil(elevationAt(resolvedCenter,naturalZ)-1e-9);
     let baseZ=Math.max(0,pickedZ===0?0:pickedZ);
     let targetZ=clamp(baseZ+delta,LIMITS.minZ,LIMITS.maxZ);
-    const edgeWidth=mode==='terrain'?2:0;
+    const edgeWidth=mode==='terrain'?(options.independentFill===true?Math.max(.05,Math.min(.5,Number(options.edgeWidth)||.5)):2):0;
     const rotation=wallSnap?.rotation??(Number.isFinite(Number(options.rotation))?
       Number(options.rotation):shape==='square'?0:-Math.PI/SEGMENTS);
     const top=polygon(resolvedCenter,radius,rotation,shape);
     const outer=polygon(resolvedCenter,radius+edgeWidth,rotation,shape);
     // Graded hills union as soon as their sloped aprons overlap, even if the
     // flat plateau polygons themselves are still separated.
-    const overlapping=mode==='flat'?[]:edits().filter(edit=>edit.mode===mode&&
+    const overlapping=mode==='flat'||options.independentFill===true?[]:edits().filter(edit=>edit.mode===mode&&
       (mode==='terrain'?polygonsOverlapInterior(outer,edit.outer):polygonsOverlapInterior(top,edit.top)));
     if(overlapping.length&&mode!=='flat'){
       const sameDirection=overlapping.filter(edit=>Math.sign(edit.targetZ-edit.baseZ)===delta);
@@ -568,6 +568,7 @@
     if(mode==='flat'){baseZ=0;targetZ=0;}
     const ghost={
       id:null,previewOnly:true,mode,shape,center:{x:resolvedCenter.x,y:resolvedCenter.y},radius,delta,
+      independentFill:options.independentFill===true,
       baseZ,targetZ,edgeWidth,rotation,top,outer,wallSnap,
       profile:mode==='walled'?'vertical':mode==='flat'?'flat':'graded',
       material:mode==='walled'?'stone':'terrain',ok:true,reason:''
@@ -670,6 +671,7 @@
         ?(valid?'rgba(68,207,134,.46)':'rgba(236,61,70,.52)')
         :edit.mode==='walled'
           ?(face.index%2?'#49443f':'#686057')
+          :edit.material==='fill'?(face.index%2?'#a88d57':'#b89c63')
           :(winter?'#d2d8d3':face.index%2?'#464630':'#514e37');
       pathPolygon(face.screen,fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
     }
@@ -679,7 +681,7 @@
     if(top.length>=3){
       const fill=ghost
         ?(valid?'rgba(78,224,149,.28)':'rgba(238,54,64,.34)')
-        :(winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b'));
+        :(winter?'#edf1ed':edit.material==='fill'?'#c9b17a':(BIOMES[State.biome]?.field||'#24291b'));
       pathPolygon(top,fill,ghost?(valid?'rgba(126,255,187,.98)':'rgba(255,86,94,.98)'):
         edit.mode==='walled'||edit.mode==='flat'?null:'rgba(210,194,151,.28)',
         ghost?2.2:edit.mode==='walled'||edit.mode==='flat'?0:1);
