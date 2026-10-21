@@ -33,6 +33,8 @@
     if(isWood(s))return[{part:'whole',flam:1}];
     if(s.type==='house'||s.type==='tavern')return[{part:'whole',flam:.9}];
     if(s.type==='market')return[{part:'whole',flam:.7}];
+    // Mills: timber cap, sails, floors and wheel; once gutted nothing is left to burn.
+    if(['windmill','watermill'].includes(s.type))return s.burnt?[]:[{part:'whole',flam:.85}];
     const out=[];
     if(s.type==='tower'&&typeof towerRoofStyle==='function'&&towerRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='gate'&&typeof gateRoofStyle==='function'&&gateRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
@@ -97,6 +99,7 @@
       if(s.type==='tower'||s.type==='gate')s.roofStyle='battlement';
     }else if(f.part==='hoarding')s.skin='standard';
     else if(f.part==='door')s.doorBurnt=true;
+    else if(f.part==='whole')s.burnt=true;      // a gutted mill: it stands, but grinds no more
     s.charred=true;
     if(typeof invalidateStructureScene==='function')invalidateStructureScene(s);
     if(typeof invalidateSceneCache==='function')invalidateSceneCache();
@@ -299,7 +302,13 @@
       }
       f.spread+=dt;
       if(f.spread>=SPREAD_EVERY&&f.heat>.45){spreadFrom(seat(s,f),f.heat,f.flam,1.4,f.spread,s.id,f.part==='whole'&&!f.at?radius(s):.3);f.spread=0}
-      if(f.fuel<=0){x.burning=x.burning.filter(g=>g!==f);if(f.part!=='whole')burnout(s,f)}
+      // A mill shows gutted once most of it has burnt (ConquerIndustries3D.variant).
+      if(!f.gutted&&f.fuel<.6&&['windmill','watermill'].includes(s.type)){
+        f.gutted=true;
+        if(typeof invalidateSceneCache==='function')invalidateSceneCache();
+        if(typeof markDirty==='function')markDirty(true,true,true);
+      }
+      if(f.fuel<=0){x.burning=x.burning.filter(g=>g!==f);if(f.part!=='whole')burnout(s,f);else if(f.gutted)burnout(s,f)}
     }
     for(const e of [...x.embers]){
       e.left-=dt*(rain?2.5:1);e.heat=clamp(e.left/EMBER_TIME,0,1);

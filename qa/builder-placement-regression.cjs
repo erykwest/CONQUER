@@ -119,11 +119,12 @@ function extractSpan(text,start,end){
   assert.ok(i>=0&&j>i,'Expected mouse placement handlers and castle helpers');
   return text.slice(i,j);
 }
-function mousePlacementHarness(type){
-  const industry=['loggingCamp','quarry','mine'].includes(type);
+function mousePlacementHarness(type,options={}){
+  const tower=type==='tower',industry=['loggingCamp','quarry','mine'].includes(type);
   const spec={type,shape:industry?'industry':'civic',w:2,h:2,...(industry?{economicOwner:'lord'}:{})};
-  const State={tool:{kind:industry?'industry':'civic',placementSpec:spec},
-    draft:null,structures:[]};
+  const tool=tower?{kind:'tower',shape:options.shape||'round',size:options.size??.75,level:2,material:'stone'}
+    :{kind:industry?'industry':'civic',placementSpec:spec};
+  const State={tool,draft:null,structures:[]};
   const listeners={},messages=[];
   let allowBuild=true;
   const step=Math.PI/12;
@@ -135,11 +136,11 @@ function mousePlacementHarness(type){
     s2w:(x,y)=>({x,y}),pointerWorld:e=>({x:e.x,y:e.y}),
     snapGrid:x=>Math.round(x*2)/2,
     inBuild:p=>p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150,
-    towerPlacementSnap:()=>null,
+    towerPlacementSnap:p=>options.snap||{point:{x:Math.round(p.x*2)/2,y:Math.round(p.y*2)/2},wallId:null,parentTowerId:null,angle:0},
     placementAngle:(center,p)=>snapAngle(Math.atan2(p.y-center.y,p.x-center.x)),
     snapStructureAngle:snapAngle,structureRotationStep:a=>Math.round(a/step),
     addStructure:s=>{if(!allowBuild)return false;State.structures.push(s);return true},
-    addTowerWithPlacement:()=>false,uid:()=>type+'-built',
+    addTowerWithPlacement:(s,snap)=>{if(!allowBuild)return false;State.structures.push({...s,placementSnap:{...snap}});return true},uid:()=>type+'-built',
     draw:()=>{},status:message=>messages.push(message)
   };
   const helpers=extractSpan(castle,'function orientedToolSpec(){','function boundaryPoint(');
@@ -186,6 +187,80 @@ test('a rejected second click retains oriented ghost and can be retried',()=>{
   h.listeners.pointerdown({button:0,x:105,y:105});
   assert.equal(h.State.structures.length,1);
   assert.equal(h.State.draft,null);
+});
+
+test('round towers of all radii use two-click orientation without early construction',()=>{
+  for(const size of [.5,.75,1]){
+    const h=mousePlacementHarness('tower',{shape:'round',size});
+    h.listeners.pointerdown({button:0,x:100,y:100});
+    assert.equal(h.State.structures.length,0,'First click must not build round R'+size);
+    assert.equal(h.State.draft.mode,'orient');
+    assert.equal(h.State.draft.preview.r,size);
+    assert.equal(h.State.draft.preview.angle,0);
+    h.listeners.pointermove({x:105,y:105});
+    assert.equal(h.State.draft.preview.shape,'round');
+    assert.ok(Math.abs(h.State.draft.preview.angle-Math.PI/4)<1e-8);
+    assert.equal(h.State.draft.preview.rotationStep,3);
+    h.listeners.pointerdown({button:0,x:105,y:105});
+    assert.equal(h.State.structures.length,1);
+    assert.equal(h.State.structures[0].r,size);
+    assert.equal(h.State.structures[0].rotationStep,3);
+    assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/4)<1e-8);
+    assert.equal(h.State.draft,null);
+  }
+});
+test('round tower wall snaps keep center/socket while allowing door-facing rotation',()=>{
+  const snap={point:{x:100,y:100},wallId:'wall-1',wallEnd:'a',angle:0};
+  const h=mousePlacementHarness('tower',{shape:'round',snap});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  assert.equal(h.State.draft.wallSnapId,'wall-1');
+  assert.equal(h.State.draft.lockedAngle,null);
+  h.listeners.pointermove({x:100,y:105});
+  assert.ok(Math.abs(h.State.draft.preview.angle-Math.PI/2)<1e-8);
+  h.listeners.pointerdown({button:0,x:100,y:105});
+  assert.equal(h.State.structures.length,1);
+  assert.equal(h.State.structures[0].placementSnap.wallId,'wall-1');
+  assert.equal(h.State.structures[0].placementSnap.wallEnd,'a');
+  assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/2)<1e-8);
+});
+test('round subtowers preserve radial socket metadata while independently rotating',()=>{
+  const snap={point:{x:100,y:100},parentTowerId:'tower-1',subtowerSocket:'radial',subtowerAngle:Math.PI/4,angle:0};
+  const h=mousePlacementHarness('tower',{shape:'round',snap});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  assert.equal(h.State.draft.lockedAngle,null);
+  h.listeners.pointermove({x:105,y:100});
+  h.listeners.pointerdown({button:0,x:105,y:100});
+  assert.equal(h.State.structures.length,1);
+  assert.equal(h.State.structures[0].placementSnap.parentTowerId,'tower-1');
+  assert.equal(h.State.structures[0].placementSnap.subtowerSocket,'radial');
+  assert.equal(h.State.structures[0].placementSnap.subtowerAngle,Math.PI/4);
+});
+test('square tower wall sockets continue locking their placement angle',()=>{
+  const snap={point:{x:100,y:100},wallId:'wall-1',wallEnd:'a',angle:Math.PI/2};
+  const h=mousePlacementHarness('tower',{shape:'square',size:1.5,snap});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  assert.ok(Math.abs(h.State.draft.lockedAngle-Math.PI/2)<1e-8);
+  h.listeners.pointermove({x:105,y:100});
+  assert.ok(Math.abs(h.State.draft.preview.angle-Math.PI/2)<1e-8);
+  h.listeners.pointerdown({button:0,x:105,y:100});
+  assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/2)<1e-8);
+});
+test('rejected second click keeps round tower orientation preview for retry',()=>{
+  const h=mousePlacementHarness('tower',{shape:'round'});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  h.listeners.pointermove({x:105,y:105});
+  h.allow(false);
+  h.listeners.pointerdown({button:0,x:105,y:105});
+  assert.equal(h.State.structures.length,0);
+  assert.equal(h.State.draft.mode,'orient');
+  h.allow(true);
+  h.listeners.pointerdown({button:0,x:105,y:105});
+  assert.equal(h.State.structures.length,1);
+  assert.equal(h.State.draft,null);
+});
+test('tower selection retains post-build rotation controls',()=>{
+  assert.match(app,/data-tower-rotate="-1"/);
+  assert.match(app,/data-tower-rotate="1"/);
 });
 
 test('a public piazza allows road crossings like the market',()=>{

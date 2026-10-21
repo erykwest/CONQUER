@@ -37,14 +37,14 @@ function hash(s){
   return h>>>0;
 }
 const rectangle=(x,y)=>[{x:x-2,y:y-2},{x:x+2,y:y-2},{x:x+2,y:y+2},{x:x-2,y:y+2}];
-const State={seed:'qa-livestock-2026',view:{scale:1},structures:houses,
+const State={seed:'qa-livestock-2026',view:{scale:1},structures:houses,environment:[],
   village:{wellId:'well'},combat:{strokes:[]}};
 const window={
   ConquerCombat:{areaState:p=>({allowed:true,yellow:p.x<40,green:false})},
   ConquerAnimals:{drawAnimal:(species,ctx,x,y,size,opts)=>rendered.push({species,size,mode:opts.mode})},
   __conquerPerf:{}
 };
-const sandbox={window,State,urbanRevision:1,WORLD:200,peasantHash:hash,
+const sandbox={window,State,urbanRevision:1,environmentRevision:0,WORLD:200,peasantHash:hash,
   houseLevel:h=>h.level||1,urbanLots:()=>lots,
   urbanArea:p=>Math.abs(p.reduce((n,a,i)=>n+a.x*p[(i+1)%p.length].y-a.y*p[(i+1)%p.length].x,0))/2,
   urbanContains:(p,q)=>q.x>=Math.min(...p.map(v=>v.x))&&q.x<=Math.max(...p.map(v=>v.x))&&
@@ -52,6 +52,24 @@ const sandbox={window,State,urbanRevision:1,WORLD:200,peasantHash:hash,
   houseFootprintParts:h=>[{points:rectangle(h.x,h.y).map(p=>({x:h.x+(p.x-h.x)*.2,y:h.y+(p.y-h.y)*.2}))}],
   underConstruction:()=>false,houseDoorInfo:h=>({outside:{x:h.x+1.5,y:h.y}}),
   pointBlockedForPeasant:()=>false,
+  urbanBuildingPolygons:s=>{
+    if(['road','field','moat','bridge'].includes(s.type))return[];
+    if(s.type==='house')return sandbox.houseFootprintParts(s).map(part=>part.points);
+    const halfX=(s.w||s.size||1)/2,halfY=(s.h||s.size||1)/2;
+    return [[{x:s.x-halfX,y:s.y-halfY},{x:s.x+halfX,y:s.y-halfY},
+      {x:s.x+halfX,y:s.y+halfY},{x:s.x-halfX,y:s.y+halfY}]];
+  },
+  pointInPolygon:(p,poly)=>{
+    let inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const a=poly[i],b=poly[j];
+      if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)inside=!inside;
+    }
+    return inside;
+  },
+  terrainSlopeKind:()=>null,
+  pointSegmentDistance:(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy)},
+  environmentContains:(f,p)=>{const inside=poly=>poly&&p.x>=Math.min(...poly.map(v=>v.x))&&p.x<=Math.max(...poly.map(v=>v.x))&&p.y>=Math.min(...poly.map(v=>v.y))&&p.y<=Math.max(...poly.map(v=>v.y));return inside(f.points)&&!(f.holes||[]).some(inside)},
   dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
   clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),
   villagerPathBetween:(h,a,b)=>[a,b],findPeasantPath:(a,b)=>[a,b],
@@ -187,4 +205,76 @@ animals.animals();
 assert.ok(pastureJobs.length>0,'herd route refresh remains deferred after a density upgrade');
 runPastureJobs();
 assert.ok(animals.animals().every(a=>Number.isFinite(a.p.x)&&Number.isFinite(a.p.y)));
+// Full-patch terrain exclusion regression: the centre alone must not decide
+// whether a grazing area intersects woodland, water or steep rocky ground.
+function refreshSheepPasture(){
+  sandbox.environmentRevision++;
+  animals.animals();
+  runPastureJobs();
+  const p=animals.pastures().find(p=>p.id===houses[2].id);
+  assert.ok(p,'sheep should locate another available white-zone pasture');
+  return p;
+}
+function rectAround(p,half){
+  return [{x:p.x-half,y:p.y-half},{x:p.x+half,y:p.y-half},
+    {x:p.x+half,y:p.y+half},{x:p.x-half,y:p.y+half}];
+}
+let pasture=animals.pastures().find(p=>p.id===houses[2].id);
+assert.ok(pasture);
+for(const type of ['forest','mountain','pond','sea']){
+  const blocked={...pasture.center};
+  State.environment=[{type,points:rectAround(blocked,.22)}];
+  pasture=refreshSheepPasture();
+  assert.ok(Math.hypot(pasture.center.x-blocked.x,pasture.center.y-blocked.y)>pasture.radius+.2,
+    type+' must not overlap even the edge of the pasture');
+}
+const waterCentre={...pasture.center},waterRadius=pasture.radius;
+const waterY=waterCentre.y+waterRadius+.12;
+for(const type of ['river','stream']){
+  const line=[{x:waterCentre.x-4,y:waterY},{x:waterCentre.x+4,y:waterY}];
+  State.environment=[{type,width:.25,points:line}];
+  pasture=refreshSheepPasture();
+  assert.ok(sandbox.pointSegmentDistance(pasture.center,...line)>pasture.radius+.125+.20-1e-6,
+    type+' bank clearance must exclude grazing circles (even with a clear centre)');
+}
+State.environment=[];
+const steepPocket={x:pasture.center.x+.42,y:pasture.center.y-.15};
+sandbox.terrainSlopeKind=p=>Math.hypot(p.x-steepPocket.x,p.y-steepPocket.y)<.34?'steep':null;
+pasture=refreshSheepPasture();
+assert.ok(Math.hypot(pasture.center.x-steepPocket.x,pasture.center.y-steepPocket.y)>pasture.radius+.08,
+  'rocky slope inside the pasture footprint must reject the whole candidate');
+sandbox.terrainSlopeKind=()=>null;
+// Woodland holes remain valid only if the full grazing footprint is inside a clearing.
+const clearingCentre={...pasture.center};
+State.environment=[{type:'forest',points:rectAround(clearingCentre,20),
+  holes:[rectAround(clearingCentre,Math.max(3,pasture.radius+1))]}];
+pasture=refreshSheepPasture();
+assert.ok(pasture,'forest clearings should not suppress all rural pasture candidates');
+State.environment=[];
+refreshSheepPasture();
+
+// Buildings must not intersect a grazing circle, even if its centre and
+// eight existing pedestrian sampling points remain unobstructed.
+State.environment=[];
+sandbox.terrainSlopeKind=()=>null;
+for(const type of ['tower','windmill','house']){
+  const prior=animals.pastures().find(p=>p.id===houses[2].id);
+  assert.ok(prior,'baseline pasture for '+type);
+  const position={x:prior.center.x+prior.radius+.07,y:prior.center.y};
+  const footprint=type==='house'?{w:.44,h:.44}:{size:.44};
+  const building={id:'qa-blocking-'+type,type,x:position.x,y:position.y,...footprint};
+  houses.push(building);
+  sandbox.urbanRevision++;
+  const next=refreshSheepPasture();
+  assert.ok(Math.hypot(next.center.x-position.x,next.center.y-position.y)>next.radius+.22+.20-1e-6,
+    type+' must not overlap or touch the grazing disk including its 0.2U margin');
+}
+const previous=animals.pastures().find(p=>p.id===houses[2].id);
+const interior={id:'qa-building-within-pasture',type:'market',x:previous.center.x,y:previous.center.y,w:.40,h:.40};
+houses.push(interior);
+sandbox.urbanRevision++;
+const clear=refreshSheepPasture();
+assert.ok(Math.hypot(clear.center.x-interior.x,clear.center.y-interior.y)>clear.radius+.20+.20-1e-6,
+  'even a building wholly inside the disk rejects that grazing pasture');
+
 console.log('Urban livestock integration regression PASS');

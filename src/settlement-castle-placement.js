@@ -5,7 +5,7 @@ function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);
 function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
 function placementAngle(center,p){return snapStructureAngle(Math.atan2(p.y-center.y,p.x-center.x))}
 function orientedToolSpec(){
-  if(State.tool.kind==='tower'&&State.tool.shape==='square')return{type:'tower',shape:'square',size:State.tool.size,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,functions:[]};
+  if(State.tool.kind==='tower')return{type:'tower',shape:State.tool.shape,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size}),functions:[]};
   if(State.tool.kind==='gate'){
     if(State.tool.material==='wood')return{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat',functions:[]};
     return{type:'gate',shape:'square',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:1.5,level:State.tool.level||State.buildLevels.gate,functions:[]};
@@ -16,8 +16,11 @@ function orientedToolSpec(){
 }
 function makePlacementPreview(q,angle=0){
   const spec=orientedToolSpec(),snapped=snapStructureAngle(angle),rotationStep=structureRotationStep(snapped);
-  if(spec)return{...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
-  if(State.tool.kind==='tower'&&State.tool.shape==='round')return{type:'tower',shape:'round',material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,angle:0,rotationStep:0,previewOnly:true,functions:[]};
+  if(spec){
+    const candidate={...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
+    if(candidate.type==='watermill')window.ConquerIndustries?.orientToWater(candidate);
+    return candidate;
+  }
   return null;
 }
 function commitOrientedPlacement(center,angle){
@@ -31,6 +34,7 @@ function commitOrientedPlacement(center,angle){
   }:{};
   const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
   const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  if(s.type==='watermill')window.ConquerIndustries?.orientToWater(s);
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
   if(ok){
     State.draft=null;

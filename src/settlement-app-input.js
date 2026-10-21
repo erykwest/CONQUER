@@ -29,7 +29,7 @@ canvas.addEventListener('pointerdown',e=>{
       if(typeof springFlowerLayoutCache!=='undefined')springFlowerLayoutCache=null;
       markDirty(true,'all');
       State.draft=null;
-      status((ghost.mode==='walled'?'Walled terrace':'Terrain')+' applied · H '+ghost.targetZ.toFixed(1));
+      status((ghost.mode==='flat'?'Flat':ghost.mode==='walled'?'Walled terrace':'Sloped')+' applied · H '+ghost.targetZ.toFixed(0));
       draw();
     }
     return;
@@ -44,15 +44,9 @@ canvas.addEventListener('pointerdown',e=>{
   }
   if(State.tool.kind==='tower'){
     const snap=towerPlacementSnap(p),q=snap.point;
-    if(State.tool.shape==='round'){
-      State.draft=null;
-      addTowerWithPlacement(
-        {id:uid(),type:'tower',shape:'round',material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y,r:State.tool.size,level:State.tool.level||State.buildLevels.tower,functions:[]},
-        snap
-      );
-      return
-    }
-    const lockedAngle=(snap.parentTowerId||snap.wallId)?snap.angle:null;
+    // A round footprint is independent of orientation; its door still needs
+    // a user-selected facing even when the centre snaps to a wall/subtower.
+    const lockedAngle=State.tool.shape==='round'?null:(snap.parentTowerId||snap.wallId)?snap.angle:null;
     const angle=Number.isFinite(lockedAngle)?lockedAngle:0;
     State.draft={
       mode:'orient',center:q,angle,lockedAngle,
@@ -177,7 +171,7 @@ canvas.addEventListener('pointermove',e=>{
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};
     status(!ghost?.ok?'Terraforming blocked: '+(ghost?.reason||'invalid terrain'):
-      (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='walled'?'Walled terrace':'Terrain')+' · H '+ghost.targetZ.toFixed(1)+' — click to apply');
+      (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='flat'?'Flat subtraction':ghost.mode==='walled'?'Walled terrace':'Sloped')+' · H '+ghost.targetZ.toFixed(0)+' — click to apply');
     draw();return;
   }
   if(State.tool.kind==='crossing'){
@@ -259,11 +253,11 @@ canvas.addEventListener('pointermove',e=>{
       State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
       const ghost=window.ConquerPlacement?.check({...State.draft.preview,parentTowerId:State.draft.parentTowerId||null,wallSnapId:State.draft.wallSnapId||null});
       let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
-      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · aligned ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
       draw();return
     }
     if(State.tool.kind==='tower'){
-      const snap=towerPlacementSnap(p),angle=(snap.parentTowerId||snap.wallId)?snap.angle:0;
+      const snap=towerPlacementSnap(p),angle=State.tool.shape==='round'?0:(snap.parentTowerId||snap.wallId)?snap.angle:0;
       State.draft={
         mode:'hover',
         wallSnapId:snap.wallId||null,
@@ -286,19 +280,6 @@ canvas.addEventListener('pointermove',e=>{
     const q={x:snapGrid(p.x),y:snapGrid(p.y)};
     State.draft={mode:'hover',preview:{type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y}};
     draw();return;
-  }
-  if(State.tool.kind==='tower'&&State.tool.shape==='round'){
-    const snap=towerPlacementSnap(p);
-    State.draft={
-      mode:'hover',
-      wallSnapId:snap.wallId||null,
-      parentTowerId:snap.parentTowerId||null,
-      subtowerSocket:snap.subtowerSocket||null,
-      subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
-      preview:makePlacementPreview(snap.point,0)
-    };
-    if(snap.parentTowerId)status('Subtower socket');
-    draw();return
   }
 });
 function finishCanvasPan(){
@@ -376,8 +357,17 @@ document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',lin
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
   const radius=Number(document.querySelector('[data-terraform-radius].active')?.dataset.terraformRadius)||4;
   const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
-  const mode=b.dataset.terraform==='walled'?'walled':'terrain';
-  setTool({kind:'terraform',mode,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
+  const mode=b.dataset.terraform==='walled'?'walled':b.dataset.terraform==='flat'?'flat':'terrain';
+  const shape=document.querySelector('[data-terraform-shape].active')?.dataset.terraformShape==='square'?'square':'round';
+  setTool({kind:'terraform',mode,shape,radius,delta,label:(mode==='flat'?'Flat H0':mode==='walled'?'Walled terrace':'Sloped')+' · '+shape+(mode==='flat'?' · SUBTRACT':(delta<0?' · lower':' · raise')+' 1U')+' · R'+radius,el:b});
+};
+for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=>{
+  const shape=b.dataset.terraformShape==='square'?'square':'round';
+  document.querySelectorAll('[data-terraform-shape]').forEach(x=>x.classList.toggle('active',x===b));
+  if(State.tool.kind==='terraform'){
+    State.tool.shape=shape;State.draft=null;
+    status('Terraforming shape: '+shape);draw();
+  }
 };
 for(const b of document.querySelectorAll('[data-terraform-delta]'))b.onclick=()=>{
   const delta=Number(b.dataset.terraformDelta)<0?-1:1;
@@ -448,7 +438,7 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const spec=window.ConquerIndustries.definition(candidate);
    setTool({kind:'industry',industry:type,
      placementSpec:candidate,
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U · L'+spec.tier+' ×2 · 1 '+spec.good+'/worker/day · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{

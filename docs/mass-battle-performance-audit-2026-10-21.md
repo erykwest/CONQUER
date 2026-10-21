@@ -215,3 +215,20 @@ GPU/browser eseguite separatamente. Log e risultati:
 `output/playwright/mass-battle/regressions-gpu-final-verified.log` e `.json`.
 Sintassi dei sorgenti modificati e whitespace PASS. Gli hash dei cinque sorgenti
 runtime registrati in `gpu-final-b.json` corrispondono ai file finali.
+
+## Integrazione prima del merge richiesto
+
+Dopo il push di `1520e00` e la richiesta esplicita di merge, sincronizzato il
+branch con `origin/main` `c94bdc1`. Conservate la firma completa degli edit
+terraforming, la firma dei lotti reali, le macerie transitorie dei mulini e i
+mesh statici/cache. Il Canvas include i mesh mobili di pale/ruote nello stesso
+painter delle macerie; il nuovo percorso di crollo dei mulini richiede un
+ridisegno coalescente.
+
+Verifica dell'integrazione: **60/62 suite PASS**, con i medesimi due fallimenti
+preesistenti. `integration-main.json` registra due ulteriori battaglie complete:
+298,1 s simulati, 37 contro 0 e stessi HP finali. WebGL 173 disegni / 2,48 s
+cumulativi, P95 16,9 ms e massimo 303,8 ms; Canvas 173 / 0,85 s, P95 7,5 ms e
+massimo 12,5 ms. Nessuna eccezione del motore; animazione in pausa e fallback
+Canvas iniettato PASS. Non viene dichiarata risolta l'attesa GPU residua.
+Log QA: `output/playwright/mass-battle/regressions-integration.log` e `.json`.

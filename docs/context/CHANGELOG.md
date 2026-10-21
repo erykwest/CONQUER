@@ -2,6 +2,11 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-21 — Integrazione performance prima del merge richiesto
+
+- Sincronizzato il branch performance con `origin/main` `c94bdc1`, preservando terraforming, mulini e le ottimizzazioni dei quattro audit; risolti i conflitti in firma terreno e macerie/renderer Canvas.
+- 60/62 suite PASS, con i due fallimenti sorgente preesistenti. Ripetuta fino all'eliminazione la battaglia su entrambi i renderer: stesso esito e verifiche di animazione/fallback PASS. I picchi GPU residui restano espliciti.
+
 ## 2026-10-21 — Riduzione dei ridisegni e dei controlli GPU
 
 - Esteso l'audit 40/30 con baseline strumentata, due campagne finali, tempi dei singoli metodi GPU e verifica browser di animazioni in pausa/fallback.

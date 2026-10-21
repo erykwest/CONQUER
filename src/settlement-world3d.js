@@ -229,6 +229,69 @@
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
     if(terraformEdits.length){
       const terraces=terraformEdits.filter(e=>e.mode==='walled');
+      // Reuse exactly the visible surface fragments both for clipping the
+      // underlying ground and emitting plateau tops. Flat cuts must not leave
+      // invisible ground holes or overlapping faces after a subtraction.
+      const terraceBounds=terraces.flatMap(edit=>
+        (window.ConquerTerraforming?.visibleTerracePieces?.(edit)||[edit.top]).map(top=>{
+          const xs=top.map(p=>p.x),ys=top.map(p=>p.y);
+          return{edit,top,minX:Math.min(...xs),maxX:Math.max(...xs),
+            minY:Math.min(...ys),maxY:Math.max(...ys)};
+        }));
+      const flatBounds=terraformEdits.filter(edit=>edit.mode==='flat').map(edit=>{
+        const xs=edit.top.map(p=>p.x),ys=edit.top.map(p=>p.y);
+        return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
+          minY:Math.min(...ys),maxY:Math.max(...ys)};
+      });
+      // Broadphase: register edit bounds in 8U buckets once. A 100×100U
+      // 0.5U terrain rebuild has 40,000 cells; almost all must bypass CSG
+      // clipping entirely instead of scanning every authored polygon.
+      const BIN=8,bins=new Map(),binKey=(x,y)=>x+','+y;
+      const register=(bound,kind)=>{
+        const x0=Math.floor(bound.minX/BIN),x1=Math.floor(bound.maxX/BIN);
+        const y0=Math.floor(bound.minY/BIN),y1=Math.floor(bound.maxY/BIN);
+        for(let ix=x0;ix<=x1;ix++)for(let iy=y0;iy<=y1;iy++){
+          const key=binKey(ix,iy);
+          if(!bins.has(key))bins.set(key,{flat:[],terrace:[]});
+          bins.get(key)[kind].push(bound);
+        }
+      };
+      flatBounds.forEach(bound=>register(bound,'flat'));
+      terraceBounds.forEach(bound=>register(bound,'terrace'));
+      const EMPTY_NEAR={flat:[],terrace:[]};
+      const touching=(item,x0,y0,x1,y1)=>
+        item.minX<=x1&&item.maxX>=x0&&item.minY<=y1&&item.maxY>=y0;
+      const nearCell=(x0,y0,x1,y1)=>{
+        const bx0=Math.floor(x0/BIN),by0=Math.floor(y0/BIN);
+        const bx1=Math.floor(x1/BIN),by1=Math.floor(y1/BIN);
+        // Almost every cell belongs to a single spatial bucket.
+        if(bx0===bx1&&by0===by1){
+          const bucket=bins.get(binKey(bx0,by0));
+          if(!bucket)return EMPTY_NEAR;
+          return{flat:bucket.flat.filter(item=>touching(item,x0,y0,x1,y1)),
+            terrace:bucket.terrace.filter(item=>touching(item,x0,y0,x1,y1))};
+        }
+        const selectedFlat=new Set(),selectedTerrace=new Set();
+        for(let ix=bx0;ix<=bx1;ix++)for(let iy=by0;iy<=by1;iy++){
+          const bucket=bins.get(binKey(ix,iy));
+          if(!bucket)continue;
+          for(const item of bucket.flat)
+            if(touching(item,x0,y0,x1,y1))selectedFlat.add(item);
+          for(const item of bucket.terrace)
+            if(touching(item,x0,y0,x1,y1))selectedTerrace.add(item);
+        }
+        return selectedFlat.size||selectedTerrace.size?
+          {flat:[...selectedFlat],terrace:[...selectedTerrace]}:EMPTY_NEAR;
+      };
+      const gridHeights=new Map();
+      const sampleHeight=p=>{
+        const key=p.x+','+p.y;
+        if(gridHeights.has(key))return gridHeights.get(key);
+        const z=window.ConquerTerraforming.elevationAt(
+          p,terrainBaseElevation(p),{excludeWalled:true});
+        gridHeights.set(key,z);
+        return z;
+      };
       // Cut the ground exactly at terrace edges. Sampling a height discontinuity
       // would create diagonal triangles instead of a vertical masonry wall.
       const halfPlane=(poly,a,b,inside)=>{
@@ -242,11 +305,16 @@
         return result;
       };
       const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
-      const ground=tri=>{
-        let pieces=[tri];
-        for(const edit of terraces){
-          if(tri.every(p=>p.x<edit.center.x-edit.radius)||tri.every(p=>p.x>edit.center.x+edit.radius)||
-             tri.every(p=>p.y<edit.center.y-edit.radius)||tri.every(p=>p.y>edit.center.y+edit.radius))continue;
+      const ground=(tri,near)=>{
+        if(!near.flat.length&&!near.terrace.length){emit(tri);return;}
+        let pieces=[tri],nearFlat=false;
+        // The ground must be cut exactly on every Flat edge. Without this
+        // split, the .5U grid bridges the H0 hole with a diagonal ramp,
+        // leaving a gap or hiding the new vertical retaining wall.
+        for(const {edit,minX,maxX,minY,maxY} of near.flat){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
+          nearFlat=true;
           const next=[];
           for(const piece of pieces){
             let inner=piece;
@@ -256,10 +324,42 @@
               if(outside.length>=3)next.push(outside);
               inner=halfPlane(inner,a,b,true);
             }
+            if(inner.length>=3)next.push(inner);
           }
           pieces=next;
         }
-        pieces.forEach(emit);
+        for(const {top,minX,maxX,minY,maxY} of near.terrace){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
+          const next=[];
+          for(const piece of pieces){
+            let inner=piece;
+            for(let i=0;i<top.length&&inner.length>=3;i++){
+              const a=top[i],b=top[(i+1)%top.length];
+              const outside=halfPlane(inner,a,b,false);
+              if(outside.length>=3)next.push(outside);
+              inner=halfPlane(inner,a,b,true);
+            }
+          }
+          pieces=next;
+        }
+        for(const poly of pieces){
+          if(!nearFlat){emit(poly);continue;}
+          const centroid={x:poly.reduce((v,p)=>v+p.x,0)/poly.length,
+            y:poly.reduce((v,p)=>v+p.y,0)/poly.length};
+          // A vertex exactly on the seam has two heights. Evaluate it just
+          // inside its own polygon fragment to keep both sides discontinuous.
+          emit(poly.map(p=>{
+            const dx=centroid.x-p.x,dy=centroid.y-p.y,L=Math.hypot(dx,dy)||1;
+            const q={x:p.x+dx/L*.002,y:p.y+dy/L*.002};
+            return{...p,z:window.ConquerTerraforming.elevationAt(
+              q,terrainBaseElevation(q),{excludeWalled:true})};
+          }));
+        }
+      };
+      // Visible plateau fragments are already clipped and non-overlapping.
+      const drawTerraceTops=()=>{
+        for(const {edit,top} of terraceBounds)emit(top.map(p=>({...p,z:edit.targetZ})));
       };
       // Once the player edits elevation, sample the single authoritative terrainElevation
       // contract. A denser build-area grid preserves terrace and excavation silhouettes;
@@ -268,8 +368,9 @@
         for(let y=y0;y<y1-1e-6;y+=step)for(let x=x0;x<x1-1e-6;x+=step){
           const xa=Math.min(x1,x+step),ya=Math.min(y1,y+step);
           const p00={x,y},p10={x:xa,y},p11={x:xa,y:ya},p01={x,y:ya};
-          for(const p of [p00,p10,p11,p01])p.z=window.ConquerTerraforming.elevationAt(p,terrainBaseElevation(p),{excludeWalled:true});
-          ground([p00,p10,p11]);ground([p00,p11,p01]);
+          for(const p of [p00,p10,p11,p01])p.z=sampleHeight(p);
+          const near=nearCell(x,y,xa,ya);
+          ground([p00,p10,p11],near);ground([p00,p11,p01],near);
         }
       };
       grid(0,0,W,BUILD_MIN,2);
@@ -277,7 +378,7 @@
       grid(0,BUILD_MIN,BUILD_MIN,BUILD_MAX,2);
       grid(BUILD_MAX,BUILD_MIN,W,BUILD_MAX,2);
       grid(BUILD_MIN,BUILD_MIN,BUILD_MAX,BUILD_MAX,.5);
-      for(const edit of terraces)emit(edit.top.map(p=>({...p,z:edit.targetZ})));
+      drawTerraceTops();
       return new Float32Array(v);
     }
     for(const [x,y] of [[0,0],[W,0],[W,W],[0,0],[W,W],[0,W]])push(x,y,0);
@@ -319,10 +420,16 @@
   function buildTerrainEdges(){
     const m=meshBuilder(),W=WORLD,n=Math.round(W/EDGE_STEP);
     for(const edit of window.ConquerTerraforming?.edits?.()||[]){
-      if(edit.mode!=='walled')continue;
-      for(let i=0;i<edit.top.length;i++){
-        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
-        m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+      if(edit.mode==='walled'){
+        for(let i=0;i<edit.top.length;i++){
+          const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
+            [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
+          for(const {a,b} of segments)
+            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+        }
+      }else if(edit.mode==='flat'){
+        for(const {a,b,baseZ,baseZB,targetZ,targetZB} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
+          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
@@ -805,7 +912,9 @@
         // Moat fill patches are baked into the ground: filling must re-bake it.
         +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
         // The gate door's state swaps its facade decal.
-        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'');
+        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
+        // Mills swap to their gutted model mid-fire.
+        +(window.ConquerIndustries3D?.variant?.(s)||'');
       let h=0;for(let i=0;i<str.length;i++)h=(Math.imul(h,31)+str.charCodeAt(i))|0;
       for(const cat of SIG_CATEGORIES)if(cat.test(s))acc.set(cat.name,(Math.imul(acc.get(cat.name)||0,33)^h)|0);
     }
@@ -857,7 +966,7 @@
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
-    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.radius,e.edgeWidth,e.mode,e.material].join(':')).join(',');
+    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.baseZ,e.radius,e.shape,e.rotation,e.center.x,e.center.y,e.edgeWidth,e.mode,e.material].join(':')).join(',');
     const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
@@ -1252,7 +1361,8 @@
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
-    for(const source of [window.ConquerSiege,window.ConquerCombat]){
+    // Mill sails and wheels turn every frame (industries).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);
