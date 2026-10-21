@@ -265,3 +265,17 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Beni locali ed esotici:** valutare produzione regionale di **vino** e altri beni distintivi, oltre a merci importate come **spezie** e vini di altre regioni; le merci esotiche possono esistere inizialmente solo come prodotti di commercio, senza richiedere una filiera locale completa.
 - **Geografia commerciale:** attribuire rilevanza alle rotte marittime e ai collegamenti verso regioni/climi più settentrionali o meridionali; disponibilità, prezzo e convenienza dei beni dipendono da provenienza, accessibilità e trasporto.
 - **Architettura e scope:** preferire configurazioni/data pack regionali sopra una simulazione condivisa, evitando quattro fork divergenti del codice. Prima consolidare economia, trasporti e gameplay locale; poi introdurre asset regionali, mercati interregionali e infine eventuali piccole differenze meccaniche.
+
+
+## Nota voice — revisione urgente pannelli amministrativi e dashboard storiche
+
+> **Priorità alta, richiesta di sviluppo; non ancora implementata.** I grafici devono rappresentare dati reali della simulazione, non valori fittizi.
+
+- **Riorganizzazione pannelli amministrativi:** dashboard leggibili, ispirate ai gestionali strategici, per comprendere rapidamente stato, cause e tendenze dell'insediamento.
+- **Economia nel tempo:** grafici storici dei flussi di produzione, consumo, importazioni, esportazioni, scorte, entrate e uscite; evidenziare surplus, deficit e colli di bottiglia per risorsa.
+- **Mercato:** andamento nel tempo dei prezzi delle singole merci, disponibilità, domanda/offerta e oscillazioni; distinguere chiaramente prezzo attuale e storico e spiegare quando la variazione è dovuta a carenza o abbondanza.
+- **Popolazione:** andamento pluriennale della popolazione con nascite, morti, immigrazione/emigrazione e, se già disponibili nella simulazione, categorie sociali/lavorative; visualizzare crescita o declino e relative cause.
+- **Interazione e leggibilità:** filtri per risorsa e periodo, scale temporali coerenti con calendario del gioco, tooltip e indicatori sintetici con collegamento ai dettagli.
+- **Prerequisito tecnico:** verificare quali serie storiche esistono davvero; aggiungere raccolta periodica e persistenza di snapshot aggregati solo dove mancano, usando un unico ledger economico affidabile. Evitare grafici che inventino storico o prezzi in assenza di meccaniche reali.
+- **QA e prestazioni:** confrontare valori dei grafici con stato effettivo della simulazione, testare salvataggio/caricamento e anni multipli, mantenere basso il costo di aggiornamento UI.
+- **Sequenza suggerita:** prima pannelli economia/mercato/popolazione con serie disponibili, poi approfondimenti e strumenti di confronto; la complessità UI può essere contenuta, ma va verificata la disponibilità dei dati storici.
