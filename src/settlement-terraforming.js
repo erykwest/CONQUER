@@ -71,6 +71,26 @@
     return a.x0<=b.x1+1e-8&&a.x1>=b.x0-1e-8&&
       a.y0<=b.y1+1e-8&&a.y1>=b.y0-1e-8;
   }
+  const HEIGHT_BIN=8,NO_EDITS=Object.freeze([]);
+  function nearbyHeightEdits(point){
+    const cache=geometryCache();
+    if(!cache.heightBins){
+      const bins=new Map();
+      for(const edit of edits()){
+        if(!edit?.outer?.length||!edit?.top?.length)continue;
+        const box=editBounds(edit).outer;
+        for(let ix=Math.floor(box.x0/HEIGHT_BIN);ix<=Math.floor(box.x1/HEIGHT_BIN);ix++)
+          for(let iy=Math.floor(box.y0/HEIGHT_BIN);iy<=Math.floor(box.y1/HEIGHT_BIN);iy++){
+            const key=ix+','+iy;
+            if(!bins.has(key))bins.set(key,[]);
+            bins.get(key).push(edit);
+          }
+      }
+      cache.heightBins=bins;
+    }
+    return cache.heightBins.get(Math.floor(point.x/HEIGHT_BIN)+','+
+      Math.floor(point.y/HEIGHT_BIN))||NO_EDITS;
+  }
   function insideBuild(points){
     return points.every(p=>p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX);
   }
@@ -342,7 +362,8 @@
       (pointInPolygon(point,edit.top)||boundaryContains(point,edit.top));
   }
   function elevationAt(point,baseZ=0,{excludeWalled=false}={}){
-    const all=edits();
+    // Spatially sorted in commit order; distant cells do no per-edit work.
+    const all=nearbyHeightEdits(point);
     let z=Math.max(0,Number(baseZ)||0);
     // A Flat cut resets all older terrain and natural relief to H0; edits
     // committed afterwards can raise the area again.
