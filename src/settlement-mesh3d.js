@@ -59,7 +59,8 @@
         items.push({mesh,t,d:gd?gd[gi[t]]:td,d2:gd?td:0});
       }
     }
-    for(const s of sprites)items.push({sprite:s,d:view.depth(s.x,s.y,s.z||0),d2:0});
+    // Sprites may pin their order (d, d2), e.g. a decal right after its part's triangles.
+    for(const s of sprites)items.push({sprite:s,d:s.d??view.depth(s.x,s.y,s.z||0),d2:s.d2??0});
     items.sort((a,b)=>a.d-b.d||a.d2-b.d2);
     ctx.save();ctx.lineJoin='round';ctx.lineWidth=.6;
     for(const it of items){

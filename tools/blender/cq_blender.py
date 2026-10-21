@@ -132,9 +132,11 @@ class Part:
                 pts = pts[::-1]
             self.quads(pts, [tuple(range(n))], cap_key or key)
 
-    def finish(self):
+    def finish(self, recalc=True):
+        """recalc=False keeps the winding as built (open cloth surfaces)."""
         me = bpy.data.meshes.new(self.name)
-        bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
+        if recalc:
+            bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
         self.bm.to_mesh(me); self.bm.free()
         for key in self.mats:
             me.materials.append(material(key, self.palette[key], self.prefix))

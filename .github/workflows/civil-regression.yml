@@ -5,6 +5,7 @@ on:
     branches:
       - Civil
       - civil-3d
+      - knights
   workflow_dispatch:
 
 jobs:
@@ -26,3 +27,5 @@ jobs:
           node qa/builder-placement-regression.cjs
           node qa/civic-annex-regression.cjs
           node qa/civic3d-regression.cjs
+          node qa/animals3d-regression.cjs
+          node qa/knights3d-regression.cjs

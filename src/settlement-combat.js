@@ -708,7 +708,34 @@
     // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
     const foe=anim.foeOf(unit);
     const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
+    if(type==='knight'&&drawMountedKnight(p,id,livery,unit,pose,foe))return;
     anim.drawFigure(p,.08,type,id,State.clock.day,livery,pose);
+  }
+  // Knights ride (settlement-knights3d.js): the 3D horse with caparison, lance and
+  // shield in the realm's arms. Heading follows the path, then the foe; the gait
+  // follows movement (a charge when moving engaged).
+  const riders=new WeakMap(),MOUNTED_SCALE=1.35;   // legible next to the 2D foot figures
+  function drawMountedKnight(p,id,livery,unit,pose,foe){
+    const K3=window.ConquerKnights3D;
+    if(!K3||!window.ConquerKnightModels||!window.ConquerMesh3D||window.ConquerLOD?.militaryTier()==='dot')return false;
+    let r=riders.get(unit);
+    // Start in a three-quarter view rather than facing the camera head-on.
+    if(!r){r={heading:Math.PI/4+1.05,t:0,last:performance.now()/1000};riders.set(unit,r)}
+    const now=performance.now()/1000,dt=Math.min(.1,Math.max(0,now-r.last));r.last=now;
+    const next=unit.path?.[unit.pathIndex],moving=!!next&&!unit.defeated&&State.clock.speed>0;
+    const aim=moving?next:foe&&!foe.defeated?foe:null;
+    if(aim&&Math.hypot(aim.x-unit.x,aim.y-unit.y)>.05){
+      const want=Math.atan2(aim.y-unit.y,aim.x-unit.x),d=Math.atan2(Math.sin(want-r.heading),Math.cos(want-r.heading));
+      r.heading+=d*Math.min(1,dt*6);
+    }
+    const mode=moving?(unit.engaged?'run':'walk'):'idle';
+    if(mode!==r.mode){r.from=r.mode||mode;r.mode=mode;r.blend=0}
+    r.blend=Math.min(1,(r.blend??1)+dt/.45);r.t+=dt*(moving?Math.min(2,.6+State.clock.speed*.1):1);
+    const ground=terrainElevation(p),paint=livery?null:window.__conquerHeraldryCanvas?.paint;
+    withUrbanFigureOcclusion(p,.08,()=>K3.draw(ctx,window.ConquerMesh3D.gameView(),'knight',
+      {x:p.x,y:p.y,z:ground,heading:r.heading,scale:MOUNTED_SCALE},{mode:r.mode,from:r.from,blend:r.blend,t:r.t,seed:peasantHash(id)%7},
+      pose,livery||soldierLivery(id),K3.coatFor(id),paint));
+    return true;
   }
   function renderOverlay(){
     if(!combat)return;
