@@ -4,6 +4,15 @@
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
 
+## Case L3/L4: tipo con timpano su strada, torrette d'angolo, abbaini (21/10/2026)
+
+- **BRANCH:** `case`, sopra l'audit sottostante.
+- **TIPO A TIMPANO (L3/L4 a schiera):** ogni lotto sceglie in modo deterministico (hash dell'id) tra il tipo con gronda su strada e il nuovo tipo con lato corto su strada: edifici stretti (1,0–1,08 U) e profondi (1,45–1,55 U), colmo perpendicolare alla strada, ala posteriore trasversale (pianta L/T). Se il lotto non è abbastanza profondo resta il tipo a gronda.
+- **TORRETTA L4:** sempre su un angolo verso strada. A schiera: a filo del muro di confine, sporge di ¾ del raggio oltre la facciata e l'edificio arretra della stessa misura (resta nel lotto). Isolata: lato porta, sul corpo più avanzato con un angolo libero dalla porta. Le finestre e le travi della facciata coperte dalla torretta vengono tolte; la porta della casa a schiera si sposta dal lato opposto alla torretta.
+- **FACCIATA TORRETTA:** graticcio (anelli/traversi a fascia, gronda e sommità, montanti) e due file di finestre verso l'esterno (rotonda 3+5, quadrata 2+4), in WebGL2 (decal + luci notturne) e Canvas.
+- **ABBAINI L4:** due per falda sul corpo principale di ogni edificio, evitando torretta e camini; finestra con luce notturna. Una torretta grande di casa isolata può togliere un abbaino per falda.
+- **QA:** `qa/houses3d-regression.cjs` estesa (tipo a timpano, angolo su strada, ≥3 finestre e graticcio della torretta, taglio facciata, abbaini). Verifica visiva WebGL2 e Canvas su due seed; prerender catalogo case PASS.
+
 ## Audit grafico case L1–L4 (21/10/2026)
 
 - **BRANCH:** `case` da `main` `7d9328a`.

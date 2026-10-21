@@ -455,31 +455,55 @@ function houseLocalToWorld(s,x,y){
   const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
 }
-function houseTurretInfo(s){
+function houseTurretInfo(s,bodies=null){
   if(houseLevel(s)<4)return null;
+  if(!bodies)return houseFootprintParts(s).find(p=>p.kind==='turret')||null;
   const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s),hash=peasantHash((s.id||'house')+'-turret-pos');
-  const sx=(hash&2)?1:-1,sy=s.urbanCompact?1:(hash&4)?1:-1,type=houseTurretType(s);
-  // Compact L4 keeps its turret, but positions it behind the frontage
-  // instead of projecting into a neighbouring townhouse.
-  const cx=s.urbanCompact?sx*w*.18:sx*w*.60,cy=sy*h*(s.urbanCompact?.65:.58);
+  const type=houseTurretType(s);
+  const r=s.urbanCompact?Math.min(.37,w*.25,h*.33):.52,size=s.urbanCompact?Math.min(.70,w*.42,h*.60):.92;
+  const rad=type==='round'?r:size/2;
+  // The turret always stands on a street-front corner. A townhouse (street on local -Y) keeps it
+  // flush with its party wall and pushes it 3/4 of a radius past the facade: urbanDenseLayout steps
+  // the building back by `front`, so the turret reaches the street line. A detached house turns it
+  // to its door side, on the frontmost body wide enough for it (L/T wings grow towards +Y), at the
+  // corner away from the door.
+  let cx,cy,sx,sy,front=0;
+  if(s.urbanCompact){sx=(hash&2)?1:-1;sy=-1;front=rad*.75;cx=sx*(w/2-rad);cy=-(h/2+front-rad)}
+  else{
+    sy=houseStreetSide(s);
+    // houseDoorInfo puts the door at ±24% of the width, on the hash's side: take the frontmost body
+    // with a corner clear of it.
+    const doorX=((peasantHash(s.id||'house')&2)?1:-1)*w*.24,reach=p=>sy*p.cy+p.h/2;
+    const corner=p=>{const x=k=>p.cx+k*(p.w/2-rad*.55),k=Math.abs(x(1)-doorX)>=Math.abs(x(-1)-doorX)?1:-1;return{p,k,x:x(k)}};
+    const hosts=bodies.filter(p=>p.w>=2*rad).sort((a,b)=>reach(b)-reach(a)).map(corner);
+    const pick=hosts.find(c=>Math.abs(c.x-doorX)>=rad)||corner(bodies[0]);
+    sx=pick.k;cx=pick.x;cy=pick.p.cy+sy*(pick.p.h/2-rad*.55);
+  }
   const center=houseLocalToWorld(s,cx,cy);
   // Heights follow the house walls (2.62/3.42 on a 1.72 U body): with the taller
   // auto/streetfront L4 body fixed values would bury the turret in the main roof.
   const wallH=houseBodyHeight(s),bodyH=wallH+.90,roofH=wallH+1.70,floorZ=wallH*.5;
-  if(type==='round'){
-    const r=s.urbanCompact?Math.min(.37,w*.22,h*.33):.52;
-    return{kind:'turret',type,cx,cy,center,r,bodyH,roofH,floorZ,points:circleWorldPoints(center.x,center.y,r,20)};
-  }
-  const size=s.urbanCompact?Math.min(.70,w*.4,h*.60):.92;
-  return{kind:'turret',type,cx,cy,center,size,bodyH,roofH,floorZ,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
+  const base={kind:'turret',type,cx,cy,sx,sy,center,rad,front,wallH,bodyH,roofH,floorZ,angle:s.angle||0};
+  if(type==='round')return{...base,r,points:circleWorldPoints(center.x,center.y,r,20)};
+  return{...base,size,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
+}
+// Local Y sign of the side a detached house shows to its road (its door side).
+function houseStreetSide(s){
+  if(s.doorSide!=null&&Number.isFinite(Number(s.doorSide)))return Number(s.doorSide)>=0?1:-1;
+  return typeof inferHouseDoorSide==='function'?inferHouseDoorSide(s):1;
 }
 function houseFootprintParts(s){
   // Streetfront volumes have already received their independent ±20% sizes.
   const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s);
-  const parts=[{kind:'body',cx:0,cy:0,w,h,roofTurn:0}];
+  const gable=!!s.gableFront;
+  const parts=[{kind:'body',cx:0,cy:0,w,h,roofTurn:gable?Math.PI/2:0}];
   if(houseLevel(s)>=3){
     const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s);
-    if(plan==='L'){
+    if(gable){
+      // Gable-front townhouse: the ridge runs away from the street, a lower cross wing closes the back.
+      if(plan==='L')parts.push({kind:'body',cx:sign*w*.18,cy:h*.52,w:w*.64,h:h*.34,roofTurn:0});
+      else parts.push({kind:'body',cx:0,cy:h*.50,w,h:h*.32,roofTurn:0});
+    }else if(plan==='L'){
       parts.push({kind:'body',cx:sign*w*(s.urbanCompact?.25:.38),
         cy:h*(s.urbanCompact?.40:.56),w:w*(s.urbanCompact?.48:.55),
         h:h*(s.urbanCompact?.68:.95),roofTurn:Math.PI/2});
@@ -493,7 +517,8 @@ function houseFootprintParts(s){
     }
   }
   const out=parts.map(p=>{const q=houseLocalToWorld(s,p.cx,p.cy);return{...p,center:q,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)}});
-  const turret=houseTurretInfo(s);if(turret)out.push(turret);
+  // Bodies keep a link to their turret so facades can leave the walls it covers bare.
+  const turret=houseTurretInfo(s,parts);if(turret){for(const p of out)p.turret=turret;out.push(turret)}
   return out;
 }
 function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.38:1.72}

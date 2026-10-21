@@ -411,13 +411,37 @@ function drawHouseTurret(s,turret,selected=false){
   extrudePolygonAt(turret.points,breakZ,turret.bodyH,{
     top:'#d6bf82',sideA:'#c8ae70',sideB:'#e0ca91',stroke
   });
+  // Timber frame and windows (houseTurretFacade), only on the turret's camera-facing side.
+  const plan=houseTurretFacade(turret),facing=(p,n)=>viewDepthPoint({x:p.x+n.x*.1,y:p.y+n.y*.1})>viewDepthPoint(p);
+  ctx.save();ctx.strokeStyle='#3b2a1e';ctx.lineCap='square';ctx.lineWidth=Math.max(.8,HOUSE_TIMBER_W*U*State.view.scale);
+  ctx.beginPath();
+  for(const b of plan.beams){
+    if(!facing({x:(b.a.p.x+b.b.p.x)/2,y:(b.a.p.y+b.b.p.y)/2},b.normal))continue;
+    const a=w2s(b.a.p,b.a.z),c=w2s(b.b.p,b.b.z);ctx.moveTo(a.x,a.y);ctx.lineTo(c.x,c.y);
+  }
+  ctx.stroke();ctx.restore();
+  for(const w of plan.windows)if(facing(w.p,w.normal))drawHouseFacadePane(w);
   drawHouseTurretRoof(s,turret,selected);
-
-  // Small high window so the tower reads immediately as inhabited rather than defensive.
-  const p=w2s(turret.center,breakZ+(turret.bodyH-breakZ)*.55);
-  const ww=1.75*State.view.scale,wh=2.8*State.view.scale;
-  ctx.save();ctx.fillStyle='rgba(31,29,28,.86)';ctx.fillRect(p.x-ww/2,p.y-wh/2,ww,wh);
-  ctx.strokeStyle='rgba(190,178,155,.42)';ctx.lineWidth=.7;ctx.strokeRect(p.x-ww/2,p.y-wh/2,ww,wh);ctx.restore();
+}
+// A small dark window pane {p,z,tangent,hw,hh} in world space (turrets, dormers).
+function drawHouseFacadePane(w){
+  const t=w.tangent,l={x:w.p.x-t.x*w.hw,y:w.p.y-t.y*w.hw},r={x:w.p.x+t.x*w.hw,y:w.p.y+t.y*w.hw};
+  pathPolygon([w2s(l,w.z-w.hh),w2s(r,w.z-w.hh),w2s(r,w.z+w.hh),w2s(l,w.z+w.hh)],'rgba(31,29,28,.86)','rgba(190,178,155,.42)',.7);
+}
+// L4 roof dormers of one part (urbanHouseDormers), on the slope facing the camera.
+function drawHouseDormers(dormers,part){
+  const winter=State.season==='winter';
+  const colors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
+    roofA:winter?WINTER_SNOW_A:'#303237',roofB:winter?WINTER_SNOW_B:'#3a3d42'};
+  for(const d of dormers){
+    if(Math.abs(d.partCenter.x-part.center.x)>1e-6||Math.abs(d.partCenter.y-part.center.y)>1e-6)continue;
+    const n=d.normal;
+    if(viewDepthPoint({x:d.center.x+n.x*.1,y:d.center.y+n.y*.1})<=viewDepthPoint(d.center))continue;
+    const faces=d.faces.map(f=>{const screen=f.pts.map(v=>w2s(v.p,v.z));return{f,screen,depth:screen.reduce((a,p)=>a+p.y,0)/screen.length}});
+    faces.sort((a,b)=>a.depth-b.depth);
+    for(const {f,screen} of faces)pathPolygon(screen,colors[f.kind],f.kind.startsWith('roof')?'#55585e':'rgba(126,116,102,.55)',.6);
+    drawHouseFacadePane(d.window);
+  }
 }
 // Yard outbuildings of L3/L4 plots (urbanLotOutbuildings): timber storehouse with a gabled
 // shingle roof, or an open lean-to on posts whose high side backs onto the plot boundary.
@@ -464,12 +488,14 @@ function drawHouse(s){
   }else{
     const floorBreak=wallH*.50;
     const creamTop='#d6bf82',creamA='#c8ae70',creamB='#e0ca91',creamGable='#d9c184';
+    const dormers=level===4?urbanHouseGeometry().find(e=>e.house.id===s.id)?.dormers||[]:[];
     for(const part of parts){
       if(part.kind==='outbuilding'){drawUrbanOutbuilding(s,part,selected);continue}
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
       extrudePolygonAt(part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
       extrudePolygonAt(part.points,floorBreak,wallH,{top:creamTop,sideA:creamA,sideB:creamB,stroke});
       drawHouseRoofPart(s,part,wallH,part.ridgeH,true,creamGable);
+      if(dormers.length)drawHouseDormers(dormers,part);
     }
   }
   if(!underConstruction(s))drawHouseChimneys(s);

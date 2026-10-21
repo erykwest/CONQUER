@@ -180,11 +180,14 @@ test('250 seeded plots retain L/T and L4 turret with valid geometry',()=>{
       house.id='seeded-'+i;run('urbanLotCache[0].houseId=State.structures[0].id;urbanRevision++');
       const parts=run('urbanDenseParts(State.structures[0])');
       const keys=[...new Set(parts.map(p=>p.buildingKey))];
-      assert.equal(keys.length,level===3?3:4,'frontage count changed for plot '+i);
+      // Each lot keeps one street type: eaves to the street or gable-front (narrower, deeper houses).
+      const gable=run("(peasantHash(State.structures[0].id+'|gable-front')&1)===1");
+      assert.equal(parts[0].roofTurn>1e-6,gable,'street type follows the lot hash for plot '+i);
+      assert.equal(keys.length,gable?5:(level===3?3:4),'frontage count changed for plot '+i+' (L'+level+(gable?' gable':'')+')');
       for(const key of keys){
         const group=parts.filter(p=>p.buildingKey===key);
         const expected=run('housePlanType({id:'+JSON.stringify(key)+'})');
-        assert.equal(group.filter(p=>p.kind==='body').length,expected==='L'?2:3);
+        assert.equal(group.filter(p=>p.kind==='body').length,gable||expected==='L'?2:3);
         assert.equal(group.filter(p=>p.kind==='turret').length,level===4?1:0);
         for(const shape of group)for(const vertex of shape.points)
           assert.ok(run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(vertex)+',.035)'),

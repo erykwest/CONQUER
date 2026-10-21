@@ -31,14 +31,16 @@ const rectWorldPoints=(x,y,w,h,a=0)=>{
 };
 const circleWorldPoints=(x,y,r,n)=>Array.from({length:n},(_,i)=>({x:x+Math.cos(i/n*Math.PI*2)*r,y:y+Math.sin(i/n*Math.PI*2)*r}));
 const sandbox={Math,Number,peasantHash:hash,rectWorldPoints,circleWorldPoints,terrainElevation:()=>0,
-  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)};
+  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),chimneySpecs:()=>[]};
 vm.createContext(sandbox);
 const pitch=core.match(/const HOUSE_ROOF_PITCH=[^;]+;/)[0],facade=urban.match(/const HOUSE_WINDOW_HALF_W=[^;]+;/)[0];
-vm.runInContext([pitch,facade,
+const turretWindow=urban.match(/const TURRET_WINDOW_HALF_W=[^;]+;/)[0];
+vm.runInContext([pitch,facade,turretWindow,
   ...['houseLevel','houseDimensionScale','houseFootprintDimensions','housePlanType','houseTurretType',
-    'houseLocalToWorld','houseTurretInfo','houseFootprintParts','houseBodyHeight','houseRoofSpan','housePartRidge']
+    'houseLocalToWorld','houseTurretInfo','houseStreetSide','houseFootprintParts','houseBodyHeight','houseRoofSpan','housePartRidge']
     .map(n=>fnSource(core,n)),
-  fnSource(urban,'urbanHouseFaces'),fnSource(urban,'houseFacadePlan'),
+  ...['urbanHouseFaces','houseFacadePlan','houseFacadeTurretCut','houseTurretFacade',
+    'urbanHouseDormers','urbanDormerSlots','urbanDormer'].map(n=>fnSource(urban,n)),
   fnSource(world,'addOutbuilding')].join('\n'),sandbox);
 
 // 1. Lean-to sheds leave the courtyard side open: the WebGL2 builder must take the roof
@@ -92,4 +94,75 @@ for(const [level,bodyH] of [[2,1.72],[3,1.72],[4,1.72],[4,2.38]]){
   assert.ok(rows[1]-hh>fb+.05&&rows[1]+hh<bodyH,'L'+level+' '+bodyH+': upper row inside the upper floor');
   if(bodyH===1.72)assert.deepEqual(rows,[.52,1.34],'1.72 U walls keep their original rows');
 }
-console.log('PASS houses3d-regression: sheds, '+turrets+' L4 turrets, facade rows');
+// 4. Gable-front townhouses: the main ridge runs away from the street, wings cross it.
+for(const level of [3,4])for(let i=0;i<16;i++){
+  const house={id:'gable-'+level+'-'+i,type:'house',urbanCompact:true,gableFront:true,x:100,y:100,w:1,h:1.5,angle:i*.2,houseLevel:level};
+  const bodies=sandbox.houseFootprintParts(house).filter(p=>p.kind==='body');
+  assert.equal(bodies[0].roofTurn,Math.PI/2,house.id+': main ridge perpendicular to the street');
+  assert.ok(bodies.slice(1).every(p=>p.roofTurn===0),house.id+': back wing crosses the main ridge');
+  assert.ok(bodies.every(p=>Math.abs(p.cx)+p.w/2<=house.w/2+1e-9),house.id+': wings stay within the street width');
+}
+
+// 5. L4 turrets stand on a street-front corner. Townhouses: flush with the party wall, past the
+// facade by `front` (the layout steps the building back by that much), never past the side.
+let corners=0;
+for(let i=0;i<64;i++)for(const gableFront of [false,true]){
+  const house={id:'corner-'+i,type:'house',urbanCompact:true,gableFront,x:100,y:100,w:gableFront?1:1.5,h:gableFront?1.5:1.13,angle:0,houseLevel:4};
+  const t=sandbox.houseTurretInfo(house);
+  assert.ok(t.cy<0&&t.sy===-1,house.id+': turret on the street side');
+  assert.ok(Math.abs(Math.abs(t.cx)+t.rad-house.w/2)<1e-9,house.id+': flush with the party wall');
+  assert.ok(Math.abs(t.cy-t.rad+house.h/2+t.front)<1e-9&&t.front>0,house.id+': reaches the street line');
+  corners++;
+}
+for(let i=0;i<32;i++)for(const doorSide of [-1,1]){
+  const house={id:'detached-'+i,type:'house',auto:true,x:100,y:100,w:1.5,h:1,angle:0,houseLevel:4,doorSide};
+  const parts=sandbox.houseFootprintParts(house),t=parts.find(p=>p.kind==='turret');
+  const bodies=parts.filter(p=>p.kind==='body');
+  assert.equal(t.sy,doorSide,house.id+': turret on the door (street) side');
+  assert.ok(bodies.some(p=>Math.abs(doorSide*t.cy+t.rad*.55-(doorSide*p.cy+p.h/2))<1e-9),house.id+': turret on a street-side body corner');
+  const w=sandbox.houseFootprintDimensions(house).w,doorX=((hash(house.id)&2)?1:-1)*w*.24;
+  assert.ok(Math.abs(t.cx-doorX)>=t.rad,house.id+': turret clear of the door');
+}
+
+// 6. Turret facades: timber frame and at least three outward windows on each L4 turret.
+for(const type of ['round','square'])for(let i=0;i<24;i++){
+  const id=['t',type,i].join('-'),house={id,type:'house',urbanCompact:true,x:100,y:100,w:1.5,h:1.13,angle:i*.3,houseLevel:4};
+  let t=sandbox.houseTurretInfo(house);
+  if(t.type!==type)continue;
+  const plan=sandbox.houseTurretFacade(t),street={x:-Math.sin(t.angle)*t.sy,y:Math.cos(t.angle)*t.sy};
+  const outward=plan.windows.filter(w=>w.normal.x*street.x+w.normal.y*street.y>-1e-9);
+  assert.ok(outward.length>=3,id+': at least three windows look to the street side ('+outward.length+')');
+  assert.ok(plan.windows.every(w=>w.z-w.hh>t.floorZ&&w.z+w.hh<t.bodyH),id+': windows inside the cream storeys');
+  assert.ok(plan.beams.length>=12,id+': timber frame');
+  assert.ok(plan.beams.every(b=>[b.a,b.b].every(v=>v.z>=t.floorZ&&v.z<=t.bodyH)),id+': beams on the timbered storeys');
+}
+
+// 7. The facade stretch covered by the turret keeps no window or beam.
+{
+  const house={id:'cut',type:'house',urbanCompact:true,x:100,y:100,w:1.5,h:1.13,angle:0,houseLevel:4};
+  const parts=sandbox.houseFootprintParts(house),body={...parts[0],bodyH:2.38,roofH:3.36},t=body.turret,pts=body.points;
+  const edge={a:pts[0],b:pts[1]},plan=sandbox.houseFacadePlan(house,body,edge);
+  const mx=(edge.a.x+edge.b.x)/2,c=t.center.x-mx;
+  assert.ok(plan.windows.every(w=>Math.abs(w.off-c)>=t.rad+HALF()),'no street window behind the turret');
+  assert.ok(plan.beams.every(([a,b])=>Math.min(a.off,b.off)>=c+t.rad+.02||Math.max(a.off,b.off)<=c-t.rad-.02),'no beam behind the turret');
+  function HALF(){return .0875}
+}
+
+// 8. Dormers: two per long side of each L4 main body, fewer only where the turret stands.
+let dormers=0;
+for(let i=0;i<32;i++){
+  const house={id:'dormer-'+i,type:'house',auto:true,x:100,y:100,w:1.5,h:1,angle:i*.2,houseLevel:4,doorSide:1};
+  const parts=sandbox.houseFootprintParts(house).map(p=>({...p,bodyH:p.kind==='turret'?p.bodyH:2.38,roofH:p.kind==='turret'?p.roofH:2.38+1.732*(p.roofTurn?p.w:p.h)/2}));
+  const all=sandbox.urbanHouseDormers(house,parts),free=sandbox.urbanHouseDormers(house,parts.map(p=>({...p,turret:null})));
+  assert.equal(free.length,4,house.id+': two dormers per slope without a turret');
+  assert.ok(all.length>=2,house.id+': at least two dormers beside the turret');
+  const body=parts[0];
+  for(const d of all){
+    const f=d.faces.find(q=>q.kind==='front');
+    assert.ok(f.pts.every(v=>v.z>body.bodyH&&v.z<body.roofH),house.id+': dormer sits on the roof');
+    assert.ok(d.window.z-d.window.hh>f.pts[0].z&&d.window.z+d.window.hh<f.pts[2].z,house.id+': dormer window inside its front');
+  }
+  assert.equal(sandbox.urbanHouseDormers({...house,houseLevel:3},parts).length,0,'no dormers below L4');
+  dormers+=all.length;
+}
+console.log('PASS houses3d-regression: sheds, '+turrets+' L4 turrets ('+corners+' street corners), facade rows, '+dormers+' dormers');
