@@ -170,7 +170,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     const heading=headingInput(dt),turns=Number($('w3Turns').value),coat=$('coat').value,M=window.ConquerAnimalModels[subject];
     // Big view framed to the animal's height; the small one is at game scale.
     [[W*.38,H*.6,12*(5.2/M.height)*k],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>
-      W3.drawMeshes(g,[A3.triangles(subject,{x:0,y:0,heading},{from:fromAction,mode:action,blend:trans,t:clock},A3.coatColors(subject,coat))],isoView(cx,cy,s,turns)));
+      window.ConquerMesh3D.drawFlat(g,[A3.triangles(subject,{x:0,y:0,heading},{from:fromAction,mode:action,blend:trans,t:clock},A3.coatColors(subject,coat))],isoView(cx,cy,s,turns),{lw:Math.max(.6,s/60)}));
   }
   // Mounted figures: horse + gear + rider in 3D, lance and fall from the combat poses,
   // realm arms painted on the shield and caparison (a test coat here: azure, a gold
@@ -244,7 +244,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     const team=anchors.horses.map((h,i)=>A3.triangles('horse',{...h,heading:pose.heading},
       {mode:moving?'walk':'idle',t:clock+i*.12,seed:i},A3.coatColors('horse',spec.team[i]?.coat)));
     if(anchors.seat&&spec.driver)sprites.push({...anchors.seat,z:anchors.seat.z+.12,draw:()=>{const s=view.project(anchors.seat.x,anchors.seat.y,anchors.seat.z);spec.driver(g,s.x,s.y,4.9*zoom)}});
-    return W3.draw(g,spec,pose,view,sprites,team);
+    const n=W3.draw(g,spec,pose,view,sprites,[]);
+    window.ConquerMesh3D.drawFlat(g,team,view,{lw:Math.max(.6,pxPerU/60)});
+    return n;
   }
   function heroWagon3D(W,H,k,dt){
     const moving=action==='move',turns=Number($('w3Turns').value);
@@ -297,7 +299,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     an.horses.forEach((h,i)=>meshes.push(A3.triangles('horse',{...h,heading:wp.heading},{mode:'walk',t:clock+i*.12,seed:i},A3.coatColors('horse',wspec.team[i].coat))));
     const drv=driverFor('villager');
     sprites.push({...an.seat,z:an.seat.z+.12,draw:()=>{const p=view.project(an.seat.x,an.seat.y,an.seat.z);drv(g,p.x,p.y,animalSize)}});
-    W3.drawMeshes(g,meshes,view,sprites);
+    // Animals (herd and team) flat like the 2D figures; the wagon keeps its shaded faces.
+    W3.drawMeshes(g,[meshes[herd.length]],view,sprites);
+    window.ConquerMesh3D.drawFlat(g,[...meshes.slice(0,herd.length),...meshes.slice(herd.length+1)],view,{lw:Math.max(.5,z*.45)});
     VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
     fighters.forEach((f,i)=>{
       const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};

@@ -125,23 +125,17 @@
   function drawFlat(ctx,view,kind,place,anim,pose,livery,coat,paint,lw=1.6){
     const fig=build(kind,place,anim,pose,livery,coat);
     if(fig.alpha<=0)return;
-    ctx.save();ctx.globalAlpha*=fig.alpha;ctx.lineJoin='round';
-    const layers=flatLayers(fig,view);
-    layers.forEach((tris,li)=>{
-      if(!tris.length)return;
-      // Outline: the whole part stroked thick in dark, then filled over.
-      ctx.beginPath();for(const t of tris){ctx.moveTo(...t.pts[0]);ctx.lineTo(...t.pts[1]);ctx.lineTo(...t.pts[2]);ctx.closePath()}
-      ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw*2;ctx.stroke();
-      for(const t of tris){ctx.fillStyle=ctx.strokeStyle=t.fill;ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(...t.pts[0]);ctx.lineTo(...t.pts[1]);ctx.lineTo(...t.pts[2]);ctx.closePath();ctx.fill();ctx.stroke()}
+    ctx.save();ctx.globalAlpha*=fig.alpha;
+    window.ConquerMesh3D.drawFlat(ctx,[fig.mesh],view,{lw,after:paint?(c,mesh,g)=>{
       // The realm arms on the faces of this part (shield, caparison flanks).
-      if(paint)for(const d of fig.decals)if(d.group===tris.group){
-        const a=view.project(...d.o),b=view.project(...d.u),c=view.project(...d.v);
-        const ux=b.x-a.x,uy=b.y-a.y,vx=c.x-a.x,vy=c.y-a.y;if(ux*vy-uy*vx<=1)continue;
-        ctx.save();ctx.transform(ux,uy,vx,vy,a.x,a.y);
-        if(d.clip){ctx.beginPath();d.clip.forEach(([cu,cv],i)=>i?ctx.lineTo(cu,cv):ctx.moveTo(cu,cv));ctx.closePath();ctx.clip()}
-        paint(ctx,0,0,1,1);ctx.restore();
+      for(const d of fig.decals)if(d.group===g){
+        const a=view.project(...d.o),b=view.project(...d.u),q=view.project(...d.v);
+        const ux=b.x-a.x,uy=b.y-a.y,vx=q.x-a.x,vy=q.y-a.y;if(ux*vy-uy*vx<=1)continue;
+        c.save();c.transform(ux,uy,vx,vy,a.x,a.y);
+        if(d.clip){c.beginPath();d.clip.forEach(([cu,cv],i)=>i?c.lineTo(cu,cv):c.moveTo(cu,cv));c.closePath();c.clip()}
+        paint(c,0,0,1,1);c.restore();
       }
-    });
+    }:null});
     ctx.restore();
   }
   // SVG of one frame (same flat layers): for review sheets and offline sprites.

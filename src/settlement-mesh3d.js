@@ -72,6 +72,38 @@
     ctx.restore();
     return items.length;
   }
+  // Flat style (the 2D figures' look) for meshes made of rigid parts: every part is a
+  // silhouette in flat colours with a dark outline, parts painted back to front.
+  // after(ctx, mesh, group) runs once a part is painted (decals such as heraldry).
+  // tone: one darker step for the side faces turned from the light (0 = fully flat).
+  function drawFlat(ctx,meshes,view,{lw=1.4,outline='rgba(25,24,22,.92)',after=null,tone=.12}={}){
+    const parts=[];
+    for(const mesh of meshes){
+      const {pos,col,gi,groups,groupBias}=mesh,byGroup=groups?groups.map(()=>[]):[[]];
+      for(let t=0;t<col.length;t++){
+        const o=t*9,P=k=>view.project(pos[o+k*3],pos[o+k*3+1],pos[o+k*3+2]);
+        const [nx,ny,nz]=triNormal(pos,o),f=shadeFactor(nx,ny,nz,view.turns||0)<.7?1-tone:1;
+        const fill=f<1?toHex(rgb(col[t]).map(v=>v*f)):col[t];
+        byGroup[gi?gi[t]:0].push({fill,a:P(0),b:P(1),c:P(2),
+          d:view.depth((pos[o]+pos[o+3]+pos[o+6])/3,(pos[o+1]+pos[o+4]+pos[o+7])/3,(pos[o+2]+pos[o+5]+pos[o+8])/3)});
+      }
+      byGroup.forEach((tris,g)=>{
+        if(!tris.length)return;
+        const c=groups?groups[g]:[0,0,0];
+        parts.push({mesh,g,tris:tris.sort((a,b)=>a.d-b.d),d:groups?view.depth(c[0],c[1],c[2])+(groupBias?.[g]||0):tris[0].d});
+      });
+    }
+    parts.sort((a,b)=>a.d-b.d);
+    ctx.save();ctx.lineJoin='round';
+    for(const p of parts){
+      ctx.beginPath();for(const t of p.tris){ctx.moveTo(t.a.x,t.a.y);ctx.lineTo(t.b.x,t.b.y);ctx.lineTo(t.c.x,t.c.y);ctx.closePath()}
+      ctx.strokeStyle=outline;ctx.lineWidth=lw*2;ctx.stroke();
+      ctx.lineWidth=.6;
+      for(const t of p.tris){ctx.fillStyle=ctx.strokeStyle=t.fill;ctx.beginPath();ctx.moveTo(t.a.x,t.a.y);ctx.lineTo(t.b.x,t.b.y);ctx.lineTo(t.c.x,t.c.y);ctx.closePath();ctx.fill();ctx.stroke()}
+      if(after)after(ctx,p.mesh,p.g);
+    }
+    ctx.restore();
+  }
   // The game's own projection (w2sRaw / rotateViewPoint / plan view) as a painter view.
   function gameView(){
     const plan=typeof isPlanView==='function'&&isPlanView();
@@ -79,5 +111,5 @@
       project:(x,y,z)=>w2sRaw({x,y},z),
       depth:(x,y,z)=>{if(plan)return z;const q=rotateViewPoint({x,y});return q.x+q.y+ISO_Z*z}};
   }
-  window.ConquerMesh3D={rgb,toHex,rotDir,shadeFactor,shadedHex,drawMeshes,gameView};
+  window.ConquerMesh3D={rgb,toHex,rotDir,shadeFactor,shadedHex,drawMeshes,drawFlat,gameView};
 })();
