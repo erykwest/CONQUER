@@ -21,13 +21,14 @@
   const MATERIAL_KEYS=['wood','stone','metal'];
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
-    lastDay:State.clock.day,starvationDays:0,ruins:[]}}
+    lastDay:State.clock.day,starvationDays:0,ruins:[],earthworks:[]}}
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
     const x=State.siege;
     if(!x.stock||typeof x.stock!=='object')x.stock={};
     for(const k of STOCK_KEYS)x.stock[k]=Math.max(0,Number(x.stock[k])||0);
     if(!Array.isArray(x.ruins))x.ruins=[];
+    if(!Array.isArray(x.earthworks))x.earthworks=[];
     if(!Number.isFinite(x.lastDay))x.lastDay=State.clock.day;
     if(!Number.isFinite(x.starvationDays))x.starvationDays=0;
     return x;
@@ -38,7 +39,8 @@
     started.clear();heapCache.clear();rubbleCache.clear();stumpCache.clear();crownCache.clear();
     State.siege=raw&&typeof raw==='object'?{
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
-      starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[]
+      starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
+      earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[]
     }:initial();
     state();normalizeMastio();
     rubbleGrid=null;                                  // rubble of the loaded game
@@ -175,6 +177,7 @@
     gateNightWatch();bridgeAlarm();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
+    if(elapsed)window.ConquerEarthworks?.tick(elapsed);
     if(!elapsed)return;
     const demand=dailyFoodDemand()*elapsed;
     if(demand<=0)return;
@@ -612,6 +615,7 @@
       const m=s.type==='gate'?window.ConquerCrossings?.drawbridgeMesh?.(s):s.type==='bridge'?window.ConquerCrossings?.bridgeMesh?.(s):null;
       if(m)out.push(m);
     }
+    if(window.ConquerWorld3D?.active?.())out.push(...(window.ConquerEarthworks?.meshes?.()||[]));
     for(const s of State.structures)if(s.brokenTop&&['tower','gate'].includes(s.type)&&!underConstruction(s))out.push(crownMesh(s));
     return out;
   }
