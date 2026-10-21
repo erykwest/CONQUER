@@ -462,6 +462,9 @@ function draw(){
   else drawNightLights();
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
+  // Interactive scatter signposts and opt-in convoy test animation live above
+  // scene caches and do not change pathfinding or collision geometry.
+  window.ConquerRoadSignTests?.draw?.();
   endPopulationFrame();
   markPhase('castle-facades-effects');
   if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
