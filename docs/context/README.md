@@ -3,7 +3,7 @@
 > Punto d'ingresso canonico per riprendere il progetto dopo una chat, un cambio di agente o una pausa.
 > Snapshot iniziale: **16 ottobre 2026**. **Audit stato Git aggiornato al 21 ottobre 2026**, base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2). La cronologia Git e i test hanno sempre precedenza sulle sintesi.
 
-**Stato corrente da aprire per primo:** [AUDIT-2026-10-21.md](AUDIT-2026-10-21.md) — merge #44/#48/#53/#54/#57–58/#63–69/#70/#71/#73, PR ancora aperte #55/#61/#65/#72 e limiti della QA. **Workflow PR automatico:** [PR-WORKFLOW.md](PR-WORKFLOW.md), [Action Context sync](../../.github/workflows/context-governance.yml); aggiornamenti obbligatori di STATUS/BACKLOG/CHANGELOG per le PR operative.
+**Stato corrente da aprire per primo:** [AUDIT-2026-10-21.md](AUDIT-2026-10-21.md) — merge #44/#48/#53/#54/#57–58/#63–69/#70/#71/#73, PR ancora aperte #55/#61/#65/#72 e limiti della QA. **Workflow PR automatico:** [PR-WORKFLOW.md](PR-WORKFLOW.md), [Action Context sync](../../.github/workflows/context-governance.yml); aggiornamenti obbligatori di STATUS/BACKLOG/CHANGELOG per le PR operative su qualsiasi branch.
 
 ## Leggere in quest'ordine
 
