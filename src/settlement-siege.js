@@ -2,8 +2,8 @@
 // CONQUER /assedio P0: siege domain (no rendering-driven combat rules).
 (function(){
   const CAPACITY=Object.freeze({granary:{food:240},storage:{materials:240},armory:{equipment:80},
-    stables:{horses:12},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
-    nobleRoom:{knights:2},quarters:{soldiers:16}});
+    stables:{horses:5},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
+    nobleRoom:{knights:1},quarters:{soldiers:16}});
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
     spear:{stone:0,wood:0,door:0},
@@ -135,7 +135,7 @@
       normalizeFunctions(s);
       s.functions.forEach((fn,i)=>{
         const spec=CAPACITY[fn];if(!spec||!allowed(s,i,fn))return;
-        const units=functionSlotUnits(s,i);
+        const units=(fn==='stables'||fn==='nobleRoom')?1:functionSlotUnits(s,i);
         for(const [k,v] of Object.entries(spec))out[k]+=v*units;
       });
     }
