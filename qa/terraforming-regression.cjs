@@ -484,6 +484,28 @@ test('WebGL terrain samples each grid vertex once instead of four times per cell
   console.log('  terrain mesh performance: '+samples+' height samples; '+elapsedMs.toFixed(0)+'ms');
   context.terrainBaseElevation=()=>0;
 });
+test('rebuilding many walled/Flat booleans remains bounded and preserves world area',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];context.terrainBaseElevation=()=>0;
+  for(let i=0;i<12;i++){
+    const x=65+i%4*17,y=68+Math.floor(i/4)*18;
+    const shape=i%2?'round':'square';
+    assert.equal(api.commit(api.preview({x,y},{mode:'walled',shape,radius:4,delta:1,magnet:false})),true);
+  }
+  for(let i=0;i<4;i++){
+    assert.equal(api.commit(api.preview({x:65+i*17,y:68},{mode:'flat',shape:'square',radius:2})),true);
+  }
+  const start=process.hrtime.bigint();
+  const triangles=vm.runInContext('buildTerrain()',context);
+  const elapsed=Number(process.hrtime.bigint()-start)/1e6;
+  assert.ok(elapsed<10000,'16 independent CSG edits should rebuild without extreme delays: '+elapsed.toFixed(0)+'ms');
+  let total=0;
+  for(let i=0;i<triangles.length;i+=9){
+    const [ax,ay,,bx,by,,cx,cy]=triangles.slice(i,i+9);
+    total+=Math.abs((bx-ax)*(cy-ay)-(by-ay)*(cx-ax))/2;
+  }
+  assert.ok(Math.abs(total-40000)<.1,'CSG still tessellates exactly the complete world');
+  console.log('  16 boolean edits: terrain mesh '+elapsed.toFixed(0)+'ms');
+});
 test('clear removes player terraforming from the persisted relief model',()=>{
   context.State.relief.terraforming=[];
   api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:2}));
