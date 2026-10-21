@@ -22,6 +22,7 @@
 </script>
 <link rel="stylesheet" href="./src/settlement.css?v=antiregression-1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
+<link rel="stylesheet" href="./src/settlement-diplomacy.css?v=1">
 </head>
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
@@ -116,6 +117,7 @@
     <h3>Forze nobiliari</h3>
     <div class="legend" id="knightRoster">Cavalieri 0/0 · Occorrono Noble room e Stalla</div>
     <button class="full" id="recruitKnight" type="button" disabled>⚔ Recluta cavaliere a cavallo</button>
+    <button class="full" id="caravanOpen" type="button">📦 Carovane (0)</button>
     <h3>Persistence</h3>
     <button class="full" id="saveBtn">Save settlement</button>
     <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
@@ -292,5 +294,6 @@
 <script src="./src/heraldry-symbols.js"></script>
 <script src="./src/settlement-heraldry.js"></script>
 <script src="./src/settlement-builder-ux.js?v=antiregression-2"></script>
+<script src="./src/settlement-diplomacy.js?v=1"></script>
 </body>
 </html>
