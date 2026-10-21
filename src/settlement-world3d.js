@@ -234,18 +234,30 @@
       };
       flatBounds.forEach(bound=>register(bound,'flat'));
       terraceBounds.forEach(bound=>register(bound,'terrace'));
+      const EMPTY_NEAR={flat:[],terrace:[]};
+      const touching=(item,x0,y0,x1,y1)=>
+        item.minX<=x1&&item.maxX>=x0&&item.minY<=y1&&item.maxY>=y0;
       const nearCell=(x0,y0,x1,y1)=>{
+        const bx0=Math.floor(x0/BIN),by0=Math.floor(y0/BIN);
+        const bx1=Math.floor(x1/BIN),by1=Math.floor(y1/BIN);
+        // Almost every cell belongs to a single spatial bucket.
+        if(bx0===bx1&&by0===by1){
+          const bucket=bins.get(binKey(bx0,by0));
+          if(!bucket)return EMPTY_NEAR;
+          return{flat:bucket.flat.filter(item=>touching(item,x0,y0,x1,y1)),
+            terrace:bucket.terrace.filter(item=>touching(item,x0,y0,x1,y1))};
+        }
         const selectedFlat=new Set(),selectedTerrace=new Set();
-        for(let ix=Math.floor(x0/BIN);ix<=Math.floor(x1/BIN);ix++)
-          for(let iy=Math.floor(y0/BIN);iy<=Math.floor(y1/BIN);iy++){
-            const bucket=bins.get(binKey(ix,iy));
-            if(!bucket)continue;
-            for(const item of bucket.flat)
-              if(item.minX<=x1&&item.maxX>=x0&&item.minY<=y1&&item.maxY>=y0)selectedFlat.add(item);
-            for(const item of bucket.terrace)
-              if(item.minX<=x1&&item.maxX>=x0&&item.minY<=y1&&item.maxY>=y0)selectedTerrace.add(item);
-          }
-        return{flat:[...selectedFlat],terrace:[...selectedTerrace]};
+        for(let ix=bx0;ix<=bx1;ix++)for(let iy=by0;iy<=by1;iy++){
+          const bucket=bins.get(binKey(ix,iy));
+          if(!bucket)continue;
+          for(const item of bucket.flat)
+            if(touching(item,x0,y0,x1,y1))selectedFlat.add(item);
+          for(const item of bucket.terrace)
+            if(touching(item,x0,y0,x1,y1))selectedTerrace.add(item);
+        }
+        return selectedFlat.size||selectedTerrace.size?
+          {flat:[...selectedFlat],terrace:[...selectedTerrace]}:EMPTY_NEAR;
       };
       const gridHeights=new Map();
       const sampleHeight=p=>{
