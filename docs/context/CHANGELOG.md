@@ -2,6 +2,15 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Revisione integrale backlog vs codice main
+
+- Audit **statico** della HEAD `c52b537` (sorgenti, 23 ID Builder, 25 requisiti S, CLAY, F/C/X, voice backlog, QA presente, PR aperte). Evidenze e limiti in [AUDIT-2026-10-22](AUDIT-2026-10-22.md).
+- Corretti falsi TODO: P2-16 basamenti; P2-18/19/20 araldica; P3-21 alberi sette SVG già collegati; P3-22 scatter contestuale 7 famiglie e ≥25 modelli; ponti, fossati, levatoi, palizzate. **13 nuclei Builder** su main e **10 voci** con residui meccanici/integrazione o QA. Una casella chiusa ora significa base di codice presente, non browser PASS.
+- Riconciliato **CLAY**: modalità cava argilla, `brick` e costi materiali, palette e durabilità 80% già codificati su main; precedente etichetta "DESIGN NON IMPLEMENTATO" rimane solo come nota storica 19/10.
+- Corretto il backlog assedi: Mastio, stock/capienze, HP, porte, fire spread, macchine e terrapieni sono implementazioni/prototipi reali; **blocco completo, resa automatica e strategia IA** non verificati e rimangono aperti.
+- Confermato output miniera `stone` su main, non `metal`; economia `State.resources` / `State.economy` / `State.siege.stock` separata; #55 draft, #61/#65 aperte, #72 con base `knights`. Nessuna PR è stata mergiata per questa sola revisione documentale.
+- Aggiornati [feature-backlog](../feature-backlog.md), [BACKLOG](BACKLOG.md), [STATUS](STATUS.md), [ROADMAP](ROADMAP.md). **Non rieseguite** suite QA e browser durante l'audit; non cambiate decisioni di design, solo stati verificati.
+
 ## 2026-10-21 — Audit live main e guardia di coerenza per ogni PR
 
 - Ricontrollata la base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2), merge effettivi e PR aperte. Creata la [ricognizione datata](AUDIT-2026-10-21.md), senza trasformare report di PR in nuove QA eseguite.

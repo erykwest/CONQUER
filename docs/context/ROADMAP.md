@@ -1,7 +1,21 @@
 # Livello 1 — Roadmap sistemica
 
-> Verificata su `main` al **2026-10-21** (commit [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2); [audit](AUDIT-2026-10-21.md)). È l'ordine **proposto per dipendenze e valore sistemico**, non una promessa di date o un inventario di feature assenti.
+> Triage delle **presenze nel codice** rinnovato al **22/10/2026** su `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), con [audit completo](AUDIT-2026-10-22.md). Ordine sistemico proposto, **non** certificazione browser/QA; la tabella del 21/10 sottostante conserva il proprio contesto storico.
 > Il backlog dettagliato P0–P3 del Builder è [docs/feature-backlog.md](../feature-backlog.md).
+
+## Riesame delle priorità — 22/10/2026
+
+**Nessun riavvio dei sottosistemi già presenti.** I 13 nuclei Builder già su main e numerosi moduli difensivi/ambientali si considerano **BASELINE DELIVERED**, non nuove attività di sviluppo. L'effort futuro è dedicato a comportamento mancante, dati incoerenti e prova di funzionamento.
+
+| Ordine | Residuo verificato | Obiettivo d'accettazione | Note |
+|---|---|---|---|
+| **M0 / prima** | Unificare risorse Builder, economy ledger e scorte assedio; calendario e raccolti | Ogni risorsa/coltura viene prodotta, consumata e conservata una sola volta | Primo passo prima di nuove catene produttive |
+| **M1 / poi** | Cantieri bloccati senza L1 disponibili (#55 draft), costi reali, completamento con lavoro | Un edificio non si completa senza manodopera e materiali; save/load coerente | Animazioni (#71) **già su main** ≠ lavoro effettivo |
+| **M1** | Scegliere output `mine` e collegare `workshop`/stanza a `equipment` | Miniera, bottega e stock condividono la stessa contabilità | La miniera attualmente produce `stone` |
+| **M2 / M3** | Allineare #61, stock/capienze/accessi e chiudere blocco/fame/resa | Un assedio di una porta determina un esito ripetibile e persistito | Danni, incendi, macchine e terrapieni **già presenti** |
+| **Parallelo limitato** | Bonus taverna/tempio; QA Canvas/WebGL2 e visual QA #18 | Bonus civico misurabile e nessun peggioramento di rendering | No nuove varianti scatter/asset |
+
+Le milestone **M4 feudi/tributi/carovane**, commercio avanzato, regioni e navigazione restano a lungo termine, senza precedere un assedio giocabile.
 
 ## Catena fondamentale
 
@@ -36,7 +50,7 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 **Nota:** milestone e stato sopra sintetizzano la maturità sistemica; non sono certificazioni di test eseguiti. L'ordine M3/M4 potrà essere ricalibrato, ma *non* spostare a monte i convogli senza inventari e combattimento affidabili.
 
-## Prossimo passo verificato al 21/10
+## Prossimo passo verificato al 21/10 (snapshot storico)
 
 1. **Integrare senza perdere il codice recente:** riconciliare con `main` [#55](https://github.com/erykwest/CONQUER/pull/55) (cantieri L1/ledger/convogli), [#61](https://github.com/erykwest/CONQUER/pull/61) (danni), [#65](https://github.com/erykwest/CONQUER/pull/65) (cutaway) e, separatamente, [#72](https://github.com/erykwest/CONQUER/pull/72) (base `knights`). QA e merge solo dopo confronto delle branche.
 2. **M0–M1 — Una sola economia reale:** chiudere `State.resources` vs ledger, miniera pietra/metallo, calendario campi/resa; completare il ciclo dei lavoratori e dei cantieri *meccanicamente*, non solo con animazioni già su main.
