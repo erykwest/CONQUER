@@ -261,9 +261,11 @@
     const others=all.filter(other=>other!==edit&&other.id!==edit.id&&other.mode===edit.mode&&
       Math.abs(other.targetZ-edit.targetZ)<1e-7&&Math.abs(other.baseZ-edit.baseZ)<1e-7&&
       boxesIntersect(edgeBox,editBounds(other).top));
+    const laterFlats=all.slice(editIndex+1).filter(other=>other.mode==='flat'&&
+      boxesIntersect(edgeBox,editBounds(other).top));
     const cuts=[0,1],cross=(x,y,X,Y)=>x*Y-y*X;
     const add=t=>{if(t>1e-8&&t<1-1e-8)cuts.push(t)};
-    for(const other of others)for(let j=0;j<other.top.length;j++){
+    for(const other of [...others,...laterFlats])for(let j=0;j<other.top.length;j++){
       const c=other.top[j],d=other.top[(j+1)%other.top.length];
       const wx=d.x-c.x,wy=d.y-c.y,cx=c.x-a.x,cy=c.y-a.y;
       const denom=cross(vx,vy,wx,wy);
@@ -293,7 +295,7 @@
         return false;
       });
       if(!sameLine){
-        const laterFlat=all.slice(editIndex+1).some(other=>other.mode==='flat'&&
+        const laterFlat=laterFlats.some(other=>
           boxContains(mid,editBounds(other).top)&&pointInPolygon(mid,other.top));
         if(!laterFlat)result.push({a:point(lo),b:point(hi)});
       }
@@ -342,7 +344,9 @@
       const pin=inside?dp>=-1e-9:dp<=1e-9,qin=inside?dq>=-1e-9:dq<=1e-9;
       if(pin)result.push(p);
       if(pin!==qin){
-        const t=dp/(dp-dq);result.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t});
+        const t=dp/(dp-dq),q0={x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t};
+        if(Number.isFinite(p.z)&&Number.isFinite(q.z))q0.z=p.z+(q.z-p.z)*t;
+        result.push(q0);
       }
     }
     return result;
@@ -636,8 +640,21 @@
           {...outerA,z:edit.baseZ},{...outerB,z:edit.baseZ},
           {...edge.b,z:edit.targetZ},{...edge.a,z:edit.targetZ}
         ];
-        const screen=projectClippedTerrain(vertices);
-        if(screen.length>=3)faces.push({screen,depth:screen.reduce((sum,p)=>sum+p.y,0)/screen.length,index:i});
+        // A later Flat removes not only the old top polygon, but also every
+        // portion of its graded apron: don't paint stale sloped faces in 2D.
+        let visible=[vertices];
+        if(edit.mode==='terrain'){
+          const all=edits(),index=all.indexOf(edit);
+          for(const newer of all.slice(index+1)){
+            if(newer.mode!=='flat'||!boxesIntersect(editBounds(edit).outer,editBounds(newer).top))continue;
+            visible=visible.flatMap(poly=>subtractPolygon(poly,newer.top));
+            if(!visible.length)break;
+          }
+        }
+        for(const face of visible){
+          const screen=projectClippedTerrain(face);
+          if(screen.length>=3)faces.push({screen,depth:screen.reduce((sum,p)=>sum+p.y,0)/screen.length,index:i});
+        }
       }
     }
     return faces.sort((a,b)=>a.depth-b.depth);
