@@ -14,8 +14,7 @@ canvas.addEventListener('pointerdown',e=>{
   // Once the centre is fixed, the second click only defines orientation.
   // It may be anywhere on screen; only the building centre must lie in the build area.
   if(State.draft?.mode==='orient'&&orientedToolSpec()){
-    const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
-    commitOrientedPlacement(State.draft.center,angle);return
+    commitOrientedPlacement(State.draft.center,orientedDraftAngle(p));return
   }
 
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
@@ -61,9 +60,9 @@ canvas.addEventListener('pointerdown',e=>{
     draw();return
   }
   if(State.tool.kind==='gate'){
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-    State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
-    status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
+    const road=gateRoadSnap(p),q=road?road.point:{x:snapGrid(p.x),y:snapGrid(p.y)},angle=road?road.axis:0;
+    State.draft={mode:'orient',center:q,angle,roadAxis:road?road.axis:null,preview:makePlacementPreview(q,angle)};
+    status(road?'Gate magnetized to the road — move cursor to choose the outer front, click to confirm':'Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
   if(State.tool.kind==='civic'||State.tool.kind==='industry'){
     // Two-click oriented placement shared by all point buildings:
@@ -249,11 +248,11 @@ canvas.addEventListener('pointermove',e=>{
   const oriented=orientedToolSpec();
   if(oriented){
     if(State.draft?.mode==='orient'){
-      const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
+      const angle=orientedDraftAngle(p);
       State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
       const ghost=window.ConquerPlacement?.check({...State.draft.preview,parentTowerId:State.draft.parentTowerId||null,wallSnapId:State.draft.wallSnapId||null});
       let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
-      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:Number.isFinite(State.draft.roadAxis)?`Road magnet · front ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
       draw();return
     }
     if(State.tool.kind==='tower'){
@@ -269,10 +268,12 @@ canvas.addEventListener('pointermove',e=>{
       };
       if(snap.parentTowerId)status('Subtower socket');
     }else{
-      const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-      State.draft={mode:'hover',preview:makePlacementPreview(q,0)};
+      const road=State.tool.kind==='gate'?gateRoadSnap(p):null;
+      const q=road?road.point:{x:snapGrid(p.x),y:snapGrid(p.y)};
+      State.draft={mode:'hover',preview:makePlacementPreview(q,road?road.axis:0)};
       const ghost=window.ConquerPlacement?.check(State.draft.preview);
       if(ghost&&!ghost.ok)status('Placement blocked: '+ghost.reason);
+      else if(road)status('Road magnet — click to place the gate over the road');
     }
     draw();return
   }

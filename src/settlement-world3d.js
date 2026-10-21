@@ -694,9 +694,10 @@
   // ---------- facade decals (architecture PNGs + house windows/doors) ----------
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
-  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken'];
+  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken','gatePortalFrame','gateBanner'];
   function buildDecalAtlas(){
-    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=3*T;
+    window.ConquerGates?.ensureSprites();
+    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=4*T;
     const g=c.getContext('2d'),map=new Map();
     const tiles=[...DECAL_KEYS,'__white','__glow'];
     tiles.forEach((k,i)=>{
@@ -790,10 +791,14 @@
       }else if(s.type==='gate'&&!isWoodGate(s)){
         const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
         const interior=interiorFacadeEdgeIndex(s),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
+        // Portal frames around the carved passage and the outer banners; the door leaves and
+        // the portcullis are meshes (settlement-gate-fittings.js).
+        const fittings=window.ConquerGates?.decalSpecs(s)||[];
+        for(const d of fittings)onEdge(d.edge,d.centerZ,d.width,d.height,d.key,d.offset,ground,d.edge.normal);
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
           // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
-          if(edge.index===1||edge.index===3)onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
+          if(!fittings.length&&(edge.index===1||edge.index===3))onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
             else onEdge(edge,z,.24,.62,'arrowSlit',0,ground,o);
@@ -849,7 +854,7 @@
   // All world-space torch anchors are camera-independent: depth testing, not
   // towerDoorVisible(), decides which flames are hidden behind a tower.
   function allWorldFireSources(){
-    const sources=battlementBrazierSources();
+    const sources=battlementBrazierSources().concat(window.ConquerGates?.torchSources(false)||[]);
     for(const tower of State.structures){
       if(tower.type!=='tower'||underConstruction(tower))continue;
       for(const spec of towerDoorSpecs(tower)){
@@ -1003,7 +1008,7 @@
       if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
       upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
-    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length].join('|');
+    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
       const baked=buildDecals(atlas);
@@ -1362,7 +1367,8 @@
     const t0=performance.now(),list=collecting||[];collecting=null;
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
     // Mill sails and wheels turn every frame (industries).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D]){
+    // Gate door leaves, portcullis and torch brackets (gate fittings).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);

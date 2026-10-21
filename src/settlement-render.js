@@ -444,6 +444,7 @@ function draw(){
   if(world3d)window.ConquerWorld3D.drawMastioDrapes();
   else{drawFacadeWindows(false,1,false);drawGatePortals()}
   window.ConquerCrossings?.drawDynamic();
+  window.ConquerGates?.tick();
   drawChimneysAndSmoke();
 
   if(State.draft?.mode==='terraform'){

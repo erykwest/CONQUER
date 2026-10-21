@@ -170,9 +170,11 @@ function renderFunctionPanel(){
     html+=window.ConquerSiege?.summaryHtml()||'';
   }
   html+=window.ConquerCrossings?.panel(s)||'';
+  html+=window.ConquerGates?.panel(s)||'';
   slots.innerHTML=html;
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
+  window.ConquerGates?.bindPanel(slots);
   slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{
     const target=selectedStructure();if(target?.type==='house')changeHouseDensity(target,clamp(houseLevel(target)+1,1,4));
   });

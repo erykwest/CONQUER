@@ -20,11 +20,20 @@ function gatePointInPassage(gate,p,pad=.04){
 }
 function roadUsesGatePassage(road,gate){
   if(!road||!gate||gate.type!=='gate')return false;
-  const info=gatePassageInfo(gate),mid=closestPointOnSegment(info.center,road.a,road.b);
-  if(dist(mid,info.center)>info.halfWidth*.82)return false;
-  const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
+  const info=gatePassageInfo(gate),dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
   const dot=Math.abs((dx/L)*info.ux+(dy/L)*info.uy);
-  return dot>=Math.cos(32*Math.PI/180);
+  if(dot<Math.cos(32*Math.PI/180))return false;
+  // Wherever the road strip meets the gatehouse its centreline must run inside the passage,
+  // entering and leaving by the mouths: a segment ending inside or bending there is fine.
+  const a=toLocalPoint(gate,road.a),b=toLocalPoint(gate,road.b),reach=rectDims(gate).h/2+(Number(road.width)||.3)/2;
+  const steps=Math.max(4,Math.ceil(L/.05));let inside=false;
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+    if(Math.abs(x)>info.halfLength+.02||Math.abs(y)>reach)continue;
+    if(Math.abs(y)>info.halfWidth*.82)return false;
+    inside=true;
+  }
+  return inside;
 }
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return dist(p,a);const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return dist(p,{x:a.x+t*dx,y:a.y+t*dy})}
 function segmentsIntersect(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);const a1=cr(a,b,c),a2=cr(a,b,d),a3=cr(c,d,a),a4=cr(c,d,b);return ((a1>0&&a2<0)||(a1<0&&a2>0))&&((a3>0&&a4<0)||(a3<0&&a4>0))}
