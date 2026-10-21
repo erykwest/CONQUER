@@ -1,9 +1,21 @@
 # Livello 2 — Stato tecnico e prove
 
-> **Snapshot corrente del 21/10/2026** in [AUDIT-2026-10-21.md](AUDIT-2026-10-21.md), base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2). Le sezioni sotto sono **storiche** e descrivono lo stato di branch/ora all'epoca: non possono prevalere sui merge successivi.
+> **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
 
 
-## Snapshot attuale — main vs PR aperte (21/10/2026)
+## Stato aggiornato da audit integrale (22/10/2026)
+
+- **13 feature Builder con core presente su main:** P0-01a/03/07; P1-12/13; P2-14/15/16/18/19/20; P3-21/22. **Non proporre più basamenti, alberi, scatter, araldica, palizzate, fossati, ponti e levatoi come implementazioni da zero.** I residui QA sono distinti.
+- **10 feature Builder parziali:** P0-01/02/04/05/06/08; P1-09/10/11; P2-17. Sono codificate in parte: completare soltanto i contratti mancanti. P2-17 ha taverna/tempio e routine già presenti, **non bonus**; P0-08 produce ancora `stone`, non `metal`.
+- **Clay su main:** cava d'argilla con validazione entro 6 U dall'acqua, `State.resources.clay`, costi `brick` in argilla, resa muraria e **HP all'80%**. QA `clay-material` e `clay-palette` presenti ma non rieseguite oggi. Le sezioni del 19/10 sulla branch `clay` sono storiche.
+- **Built Sections e assedio su main:** slot per piano, `ConquerSiege.capacity/transfer`, `siege.stock`, `starvationDays`, Mastio, slot arcieri, danni, incendi, porte con portone, scale/arieti/altre macchine, terrapieni. **Manca un assedio strategico completo**: `settlement-siege.js` dichiara `No automatic surrender in P0`. Lo stock assedio non è ancora dimostrato coerente con il ledger economico.
+- **Rami non integrati:** [#55](https://github.com/erykwest/CONQUER/pull/55) **DRAFT** — operai L1 cantieri/risorse/convogli parziali; [#61](https://github.com/erykwest/CONQUER/pull/61) danni; [#65](https://github.com/erykwest/CONQUER/pull/65) cutaway; [#72](https://github.com/erykwest/CONQUER/pull/72) su base `knights`; [#18](https://github.com/erykwest/CONQUER/pull/18) visual QA e [#16](https://github.com/erykwest/CONQUER/pull/16) hardening draft. Nessun merge è implicato dall'apertura.
+- **Test e limiti:** identificati `qa/fields-regression.cjs`, `qa/scatter-regression.cjs`, `qa/drawbridge-regression.cjs`, `qa/earthworks-regression.cjs`, `qa/gate-breach-regression.cjs`, `qa/economy-industries-regression.cjs`, `qa/clay-material-regression.cjs`; **non rieseguiti nel corso di questo audit**. Gli spike GPU e i due test falliti nel vecchio benchmark restano elementi da confermare/correggere.
+- **Priorità residua:** unificazione `State.resources` + `State.economy` + `State.siege.stock`; lavoro meccanico L1 ai cantieri; calendario/resa agricola; output miniera e officina; vertical slice con accessi/blocco/fame/resa; QA multipipeline.
+
+Tutti gli ID, prove e gap distinti per livello sono nell'[AUDIT-2026-10-22](AUDIT-2026-10-22.md). Non retrocedere a TODO una feature già presente perché richiede soltanto QA.
+
+## Snapshot attuale — main vs PR aperte (21/10/2026; storico)
 
 **MERGED / codice su main:** [#44](https://github.com/erykwest/CONQUER/pull/44) minimappa+LOD; [#53](https://github.com/erykwest/CONQUER/pull/53) /camp, pattuglie, lupi e notte; [#54](https://github.com/erykwest/CONQUER/pull/54) solare stagionale; [#57](https://github.com/erykwest/CONQUER/pull/57)/[#58](https://github.com/erykwest/CONQUER/pull/58) mulini/menu; [#63–69](https://github.com/erykwest/CONQUER/pull/69) terraforming e cache; [#70](https://github.com/erykwest/CONQUER/pull/70) performance; [#71](https://github.com/erykwest/CONQUER/pull/71) 7 utensili/lavoro/cantieri; [#73](https://github.com/erykwest/CONQUER/pull/73) terrapieni d'assalto.
 
