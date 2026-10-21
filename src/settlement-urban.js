@@ -468,7 +468,8 @@ function urbanDenseLayout(house,lot,gableFront){
       const edgeLen=dist(frontage.a,frontage.b);
       const startCorner=!!street?.has((frontage.edge+n-1)%n)&&frontage.from<.6;
       const endCorner=!!street?.has((frontage.edge+1)%n)&&frontage.to>edgeLen-.6;
-      const turretCorner=i=>i===count-1&&endCorner?sign:i===0&&startCorner?-sign:0;
+      // The lot vertex shared by the two streets; houseTurretInfo mirrors the turret towards it.
+      const turretCorner=i=>i===count-1&&endCorner?{side:sign,point:frontage.b}:i===0&&startCorner?{side:-sign,point:frontage.a}:null;
       const spacing=frontage.length/count,baseWidth=Math.min(spacing+.045,gableFront?1.25:level===4?1.65:1.95);
       const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
       // Original L/T extensions grow towards the plot interior (+local Y).

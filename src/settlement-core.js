@@ -473,17 +473,19 @@ function houseTurretInfo(s,bodies=null){
   // past the facade: the layout steps the building back by `front`, so it reaches the street line.
   // A detached house turns it to its door side, on the frontmost body wide enough for it (L/T wings
   // grow towards +Y); houseDoorInfo then keeps the door on the other half of the facade.
-  let cx,cy,sx,sy,front=0;
+  // Both mirror positions (sx = ±1) are built and the one nearer the street corner wins.
+  let place,sy,front=0,corner;
   if(s.urbanCompact){
-    if(!s.turretCorner)return null;
-    sx=s.turretCorner;sy=-1;front=rad*.75;cx=sx*(w/2-rad);cy=-(h/2+front-rad);
+    corner=s.turretCorner;if(!corner)return null;
+    sy=-1;front=rad*.75;place=k=>({cx:k*(w/2-rad),cy:-(h/2+front-rad)});
   }else{
-    const side=houseCornerSide(s);if(!side)return null;
-    sy=houseStreetSide(s);sx=side;
+    corner=houseCornerSide(s);if(!corner)return null;
+    sy=houseStreetSide(s);
     const reach=p=>sy*p.cy+p.h/2,host=bodies.filter(p=>p.w>=2*rad).sort((a,b)=>reach(b)-reach(a))[0]||bodies[0];
-    cx=host.cx+sx*(host.w/2-rad*.55);cy=host.cy+sy*(host.h/2-rad*.55);
+    place=k=>({cx:host.cx+k*(host.w/2-rad*.55),cy:host.cy+sy*(host.h/2-rad*.55)});
   }
-  const center=houseLocalToWorld(s,cx,cy);
+  const near=k=>{const p=place(k),c=houseLocalToWorld(s,p.cx,p.cy);return corner.point?Math.hypot(c.x-corner.point.x,c.y-corner.point.y):-k*corner.side};
+  const sx=near(1)<=near(-1)?1:-1,{cx,cy}=place(sx),center=houseLocalToWorld(s,cx,cy);
   // Heights follow the house walls (2.62/3.42 on a 1.72 U body): with the taller
   // auto/streetfront L4 body fixed values would bury the turret in the main roof.
   const wallH=houseBodyHeight(s),bodyH=wallH+.90,roofH=wallH+1.70,floorZ=houseFloorBreak(wallH);
@@ -497,9 +499,10 @@ function houseStreetSide(s){
   return typeof inferHouseDoorSide==='function'?inferHouseDoorSide(s):1;
 }
 // A detached house stands on a corner when two non-parallel streets (access spurs excluded) pass
-// close by. Returns the local X sign towards the side street, or 0.
+// close by. Returns {side: local X sign towards the side street, point: where the two street axes
+// cross}, or null.
 function houseCornerSide(s){
-  if(typeof roadList!=='function')return 0;
+  if(typeof roadList!=='function')return null;
   const {w,h}=houseFootprintDimensions(s),reach=Math.max(w,h)/2+1.8,ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   const near=[];
   for(const road of roadList(true)){
@@ -507,14 +510,16 @@ function houseCornerSide(s){
     const L=Math.hypot(road.b.x-road.a.x,road.b.y-road.a.y);if(L<.5)continue;
     const t=Math.max(0,Math.min(1,((s.x-road.a.x)*(road.b.x-road.a.x)+(s.y-road.a.y)*(road.b.y-road.a.y))/(L*L)));
     const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
-    if(Math.hypot(q.x-s.x,q.y-s.y)<=reach)near.push({ux:(road.b.x-road.a.x)/L,uy:(road.b.y-road.a.y)/L,lx:(q.x-s.x)*ca+(q.y-s.y)*sa});
+    if(Math.hypot(q.x-s.x,q.y-s.y)<=reach)near.push({a:road.a,ux:(road.b.x-road.a.x)/L,uy:(road.b.y-road.a.y)/L,lx:(q.x-s.x)*ca+(q.y-s.y)*sa});
   }
   for(let i=0;i<near.length;i++)for(let j=i+1;j<near.length;j++){
-    if(Math.abs(near[i].ux*near[j].uy-near[i].uy*near[j].ux)<.7)continue;
-    const side=Math.abs(near[i].lx)>Math.abs(near[j].lx)?near[i].lx:near[j].lx;
-    return side>=0?1:-1;
+    const p=near[i],q=near[j],cross=p.ux*q.uy-p.uy*q.ux;
+    if(Math.abs(cross)<.7)continue;
+    const t=((q.a.x-p.a.x)*q.uy-(q.a.y-p.a.y)*q.ux)/cross;
+    const side=Math.abs(p.lx)>Math.abs(q.lx)?p.lx:q.lx;
+    return{side:side>=0?1:-1,point:{x:p.a.x+p.ux*t,y:p.a.y+p.uy*t}};
   }
-  return 0;
+  return null;
 }
 function houseFootprintParts(s){
   // Streetfront volumes have already received their independent ±20% sizes.

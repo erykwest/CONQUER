@@ -70,7 +70,7 @@ let turrets=0;
 for(let i=0;i<64;i++){
   for(const house of [
     {id:'auto-'+i,type:'house',auto:true,x:100,y:100,w:1.5,h:1,angle:i*.1,houseLevel:4},
-    {id:'compact-'+i,type:'house',urbanCompact:true,turretCorner:1,x:100,y:100,w:1.6,h:1.13,angle:i*.1,houseLevel:4},
+    {id:'compact-'+i,type:'house',urbanCompact:true,turretCorner:{side:1},x:100,y:100,w:1.6,h:1.13,angle:i*.1,houseLevel:4},
     {id:'manual-'+i,type:'house',x:100,y:100,w:1.5,h:1,angle:i*.1,houseLevel:4}
   ]){
     const parts=sandbox.houseFootprintParts(house),turret=parts.find(p=>p.kind==='turret'),body=parts[0];
@@ -111,13 +111,14 @@ for(const level of [3,4])for(let i=0;i<16;i++){
 // back by that much), never past the side.
 let corners=0;
 for(let i=0;i<64;i++)for(const gableFront of [false,true]){
-  const turretCorner=i%2?1:-1;
+  const k=i%2?1:-1,turretCorner={side:k,point:{x:100+k*3,y:99}};
   const house={id:'corner-'+i,type:'house',urbanCompact:true,gableFront,turretCorner,x:100,y:100,w:gableFront?1:1.5,h:gableFront?1.5:1.13,angle:0,houseLevel:4};
   const t=sandbox.houseTurretInfo(house);
-  assert.ok(t.cy<0&&t.sy===-1&&t.sx===turretCorner,house.id+': turret on the street corner');
+  assert.ok(t.cy<0&&t.sy===-1&&t.sx===k,house.id+': turret mirrored onto the street corner');
+  assert.equal(sandbox.houseTurretInfo({...house,turretCorner:{side:k,point:{x:100-k*3,y:99}}}).sx,-k,house.id+': mirror follows the corner point');
   assert.ok(Math.abs(Math.abs(t.cx)+t.rad-house.w/2)<1e-9,house.id+': flush with the party wall');
   assert.ok(Math.abs(t.cy-t.rad+house.h/2+t.front)<1e-9&&t.front>0,house.id+': reaches the street line');
-  assert.equal(sandbox.houseTurretInfo({...house,turretCorner:0}),null,house.id+': mid-row townhouse has no turret');
+  assert.equal(sandbox.houseTurretInfo({...house,turretCorner:null}),null,house.id+': mid-row townhouse has no turret');
   corners++;
 }
 for(let i=0;i<32;i++)for(const doorSide of [-1,1]){
@@ -135,7 +136,7 @@ assert.match(buildings,/lateralSign=turret&&turret\.sx===hashSign\?-hashSign:has
 
 // 6. Turret facades: timber frame and at least three outward windows on each L4 turret.
 for(const type of ['round','square'])for(let i=0;i<24;i++){
-  const id=['t',type,i].join('-'),house={id,type:'house',urbanCompact:true,turretCorner:1,x:100,y:100,w:1.5,h:1.13,angle:i*.3,houseLevel:4};
+  const id=['t',type,i].join('-'),house={id,type:'house',urbanCompact:true,turretCorner:{side:1},x:100,y:100,w:1.5,h:1.13,angle:i*.3,houseLevel:4};
   let t=sandbox.houseTurretInfo(house);
   if(t.type!==type)continue;
   const plan=sandbox.houseTurretFacade(t),street={x:-Math.sin(t.angle)*t.sy,y:Math.cos(t.angle)*t.sy};
@@ -148,7 +149,7 @@ for(const type of ['round','square'])for(let i=0;i<24;i++){
 
 // 7. The facade stretch covered by the turret keeps no window or beam.
 {
-  const house={id:'cut',type:'house',urbanCompact:true,turretCorner:1,x:100,y:100,w:1.5,h:1.13,angle:0,houseLevel:4};
+  const house={id:'cut',type:'house',urbanCompact:true,turretCorner:{side:1},x:100,y:100,w:1.5,h:1.13,angle:0,houseLevel:4};
   const parts=sandbox.houseFootprintParts(house),body={...parts[0],bodyH:2.38,roofH:3.36},t=body.turret,pts=body.points;
   const edge={a:pts[0],b:pts[1]},plan=sandbox.houseFacadePlan(house,body,edge);
   const mx=(edge.a.x+edge.b.x)/2,c=t.center.x-mx;
