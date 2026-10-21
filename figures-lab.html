@@ -86,6 +86,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-mesh3d.js?v=lab-1"></script>
 <script src="./src/assets/knight-models.js?v=lab-1"></script>
 <script src="./src/settlement-knights3d.js?v=lab-1"></script>
+<script src="./src/settlement-mounted2d.js?v=lab-1"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
@@ -191,7 +192,12 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     const mode=action==='walk'?'walk':action==='run'?'run':'idle';
     const anim={mode,from:fromAction==='run'?'run':fromAction==='walk'?'walk':'idle',blend:trans,t:clock};
     const pose=CA.pose(hero,0);
-    [[W*.36,H*.62,12*30*k],[W*.86,H*.6,12*5*k]].forEach(([cx,cy,s])=>
+    // Flat 2D (the foot soldiers' style) at left, 3D at right: same controls, same poses.
+    const [rx,ry]=W3.rotDir(Math.cos(heading),Math.sin(heading),turns),facing=rx-ry>=0?1:-1;
+    const flat={kind,facing,mode,from:anim.from,blend:trans,t:clock,coat,pose,livery:LIVERY,paint:(gx,x,y,w,h)=>labArms(gx,x,y,w,h)};
+    window.ConquerMounted2D.draw(g,W*.24,H*.66,200*k,flat);
+    window.ConquerMounted2D.draw(g,W*.47,H*.62,5.75*2.6*k,flat);
+    [[W*.72,H*.62,12*22*k],[W*.93,H*.6,12*5*k]].forEach(([cx,cy,s])=>
       K3.draw(g,isoView(cx,cy,s,turns),kind,{x:0,y:0,heading},anim,pose,LIVERY,coat,labArms));
   }
   // Wagon: every module comes from the selects; the driver is drawn by the
@@ -304,8 +310,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     drawPerson('archer',arP,z,sceneArcher,target,null);
     const kp={x:1060*k,y:720*k},kf={x:kp.x+2.6*z,y:kp.y+.5*z};
     if(clock>=knightNext){CA.strike(sceneKnight,knightFoe);CA.strike(knightFoe,sceneKnight);knightNext=clock+1.2}
-    // The knight fights mounted, facing its foe (+x on screen is heading pi/6 in the iso view).
-    K3.draw(g,isoView(kp.x,kp.y,12*z,0),'knight',{x:0,y:0,heading:-Math.PI/4+.5},{mode:'idle',t:clock},CA.pose(sceneKnight,0),LIVERY,'black',labArms);
+    // The knight fights mounted (flat 2D, as in game), facing its foe.
+    window.ConquerMounted2D.draw(g,kp.x,kp.y,5.75*z,{kind:'knight',facing:1,mode:'idle',t:clock,coat:'black',pose:CA.pose(sceneKnight,0),livery:LIVERY,paint:labArms});
     drawPerson('spearman',kf,z,knightFoe,kp,HOSTILE);
     drawArrows();
   }

@@ -8,7 +8,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const window={};
 const ctx=vm.createContext({window,Math,Object,Number,Array,Map,Float32Array,String,WeakMap});
-for(const f of ['settlement-animals.js','assets/animal-models.js','settlement-animals3d.js','assets/knight-models.js','settlement-knights3d.js'])
+for(const f of ['settlement-animals.js','assets/animal-models.js','settlement-animals3d.js','assets/knight-models.js','settlement-knights3d.js','settlement-mounted2d.js'])
   vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f),'utf8'),ctx);
 const M=window.ConquerKnightModels,K3=window.ConquerKnights3D,horse=window.ConquerAnimalModels.horse;
 const LIVERY={main:'#123456',alt:'#abcdef'};
@@ -59,3 +59,11 @@ let zb=0,zs=0;for(let i=2;i<big.mesh.pos.length;i+=3)zb=Math.max(zb,big.mesh.pos
 assert.ok(Math.abs(zb/zs-1.35)<.01,'scale 1.35 makes the figure 1.35x taller');
 assert.ok(big.decals.every(d=>d.o.every(Number.isFinite)),'decals placed');
 console.log('PASS scale');
+
+// Flat 2D (in game): the same lance logic in the horse's art space (y down).
+const L2=window.ConquerMounted2D.lanceGeometry;
+const up=L2({ready:0,attack:0}),down=L2({ready:1,attack:0}),charging=L2({ready:0,attack:0,charge:true}),hit=L2({ready:1,attack:1});
+assert.ok(up.tip[1]<down.tip[1]-150,'2D lance raised at rest, couched when engaged');
+assert.ok(Math.abs(charging.tip[1]-down.tip[1])<50,'2D lance couched at the charge');
+assert.ok(hit.tip[0]>down.tip[0]+20,'2D strike drives the lance forward');
+console.log('PASS flat 2D lance');
