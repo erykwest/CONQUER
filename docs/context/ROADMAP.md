@@ -38,6 +38,10 @@ La rappresentazione grafica, i suoni e il polish **attraversano** queste fasi, m
 
 ## Prossimo passo
 
+**21/10/2026 — Cartelli di prova, animazioni e sottrazione reale su PR #55 Draft:** 4 segnaletiche originali presso il pozzo, collegate ai tracciati nord/est/sud/ovest, in modalità selezione aprono panel QA. Il pulsante avvia il solo tratto locale lungo la strada maestra realmente continua; carico signorile e forziere scalati realmente e rimborsabili via Ripristina, test mercantile inizialmente limitato alle monete L4; carri e scorte QA animati. Prossimo: **percorsi da Mastio/mercato**, carico merci L4 con saldo dei venditori, rostering delle guardie e integrazione delle celle della mappa del mondo, costi giornalieri e pericoli. [Contratto](../road-sign-convoy-tests.md).
+
+## Prossimo passo
+
 **21/10/2026 — Skeleton di convogli, tributi/doni e scorte nella PR #55 Draft:** il Mastio gestisce bozze manuali con riserva e restituzione reali di merci/oro, guardie richieste da posti caserma (non ancora attribuite a soldati fisici); per gli L4+ i mercenari richiedono preventivo giornaliero `2×(wage.L2/20)`, araldica marrone neutra e cuoio. Carretto 40 carico, carro 100 e carrozza 2 passeggeri nobili (preferenza dame). **Non partono** fino alla mappa dei feudi, percorsi confermati ai quattro confini, trasporto reale, ruoli militari effettivi e addebiti per giorno. La visualizzazione esistente dei carri è in una branch diversa. [Specifica](../convoys-skeleton.md).
 
 ## Prossimo passo
