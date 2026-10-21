@@ -4,6 +4,14 @@
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
 
+## Audit grafico case L1–L4 (21/10/2026)
+
+- **BRANCH:** `case` da `main` `7d9328a`.
+- **CAUSA PRINCIPALE:** le tettoie aperte (lotti bovini L2, cortili L3/L4) hanno un muro in meno; `addOutbuilding` del builder WebGL2 leggeva il tetto da `faces[n]` (inesistente) e il renderer 3D andava in errore, ricadendo in silenzio sul Canvas 2.5D. Regressione introdotta con il lato aperto delle tettoie (`9a11a14`). Gli "errori L4" visti in gioco erano in buona parte artefatti del fallback Canvas: ordine pittore delle ali T/L e travi/finestre di una casa disegnate sopra i tetti delle case vicine.
+- **CORREZIONI:** tetto della tettoia = ultima faccia; torrette L4 con altezze relative ai muri (corpo +0,90, cono +1,70, fascia grigia a metà muro), invariate per le L4 manuali da 1,72 U; righe finestre L2+ proporzionali all'altezza del muro (0,52/1,34 invariate a 1,72 U, centrate nel piano alto delle L4 da 2,38 U).
+- **QA:** nuova `qa/houses3d-regression.cjs` (fallisce su main, passa sul branch), aggiunta alla CI Civil. Suite locali 63/69: i 6 fallimenti (4 benchmark che richiedono browser e `refactor-app-population`, `wall-bays`) falliscono identici su main. Verifica visiva WebGL2 nel browser su villaggio generato con L1–L4, quattro rotazioni; prerender catalogo case 24 famiglie × 24 angoli PASS.
+- **APERTI:** nel solo fallback Canvas restano l'ordine pittore delle ali T/L (L3/L4) e le facciate di una casa visibili attraverso i tetti delle vicine; nel WebGL2 una sottile cucitura tratteggiata dove due case a schiera L4 si sovrappongono.
+
 ## Integrazione performance con main aggiornato (21/10/2026)
 
 - **BASE E AUTORIZZAZIONE:** dopo la pubblicazione di `1520e00`, richiesto il merge. Integrato `origin/main` a `c94bdc1` nel branch `fix/construction-completion-perf` prima della PR/squash; le sezioni di audit sottostanti descrivono i rispettivi snapshot storici.

@@ -403,7 +403,7 @@ function drawHouseTurretRoof(s,turret,selected=false){
   for(const f of faces)pathPolygon(f.poly,State.season==='winter'?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#303943':'#394550'),State.season==='winter'?(selected?'#f4b76f':WINTER_SNOW_STROKE):stroke,.75);
 }
 function drawHouseTurret(s,turret,selected=false){
-  const stroke=selected?'#f4b76f':'#918d86',breakZ=1.02;
+  const stroke=selected?'#f4b76f':'#918d86',breakZ=turret.floorZ;
   // L4 turret follows the elite-house language: grey lower floor, warm cream upper floors.
   extrudePolygonAt(turret.points,0,breakZ,{
     top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null

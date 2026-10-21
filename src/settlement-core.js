@@ -463,13 +463,15 @@ function houseTurretInfo(s){
   // instead of projecting into a neighbouring townhouse.
   const cx=s.urbanCompact?sx*w*.18:sx*w*.60,cy=sy*h*(s.urbanCompact?.65:.58);
   const center=houseLocalToWorld(s,cx,cy);
-  const bodyH=2.62,roofH=3.42;
+  // Heights follow the house walls (2.62/3.42 on a 1.72 U body): with the taller
+  // auto/streetfront L4 body fixed values would bury the turret in the main roof.
+  const wallH=houseBodyHeight(s),bodyH=wallH+.90,roofH=wallH+1.70,floorZ=wallH*.5;
   if(type==='round'){
     const r=s.urbanCompact?Math.min(.37,w*.22,h*.33):.52;
-    return{kind:'turret',type,cx,cy,center,r,bodyH,roofH,points:circleWorldPoints(center.x,center.y,r,20)};
+    return{kind:'turret',type,cx,cy,center,r,bodyH,roofH,floorZ,points:circleWorldPoints(center.x,center.y,r,20)};
   }
   const size=s.urbanCompact?Math.min(.70,w*.4,h*.60):.92;
-  return{kind:'turret',type,cx,cy,center,size,bodyH,roofH,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
+  return{kind:'turret',type,cx,cy,center,size,bodyH,roofH,floorZ,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
 }
 function houseFootprintParts(s){
   // Streetfront volumes have already received their independent ±20% sizes.

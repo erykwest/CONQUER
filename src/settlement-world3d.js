@@ -486,7 +486,7 @@
       for(const part of entry.parts){
         if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
         const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
-        const split=part.kind==='turret'?base+1.02:base+part.bodyH*.5;
+        const split=base+(part.kind==='turret'?part.floorZ:part.bodyH*.5);
         for(let i=0;i<n;i++){
           const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
           if(lvl===1&&part.kind!=='turret'){m.face([a,b,c,d],i%2?'#4e392d':'#654936');continue}
@@ -547,8 +547,10 @@
     }
     const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=terrainElevation(c);
     const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
-    for(let i=0;i<n;i++)if(faces[i].slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(faces[i]),'#5d4431');
-    m.face(P(faces[n]),roofB);
+    // The courtyard side is open, so a lean-to has fewer than n walls: the roof is the last face.
+    const walls=faces.slice(0,-1),roof=faces[faces.length-1];
+    for(const wall of walls)if(wall.slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(wall),'#5d4431');
+    m.face(P(roof),roofB);
     for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
       const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
       m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');

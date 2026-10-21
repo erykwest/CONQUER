@@ -874,14 +874,16 @@ function urbanHouseGeometry(){
 //   king post, collar tie and struts.
 const HOUSE_WINDOW_HALF_W=.0875,HOUSE_WINDOW_HALF_H=.15,HOUSE_TIMBER_W=.05;
 function houseFacadePlan(house,part,edge){
-  const level=houseLevel(house),L=dist(edge.a,edge.b),rows=level>=2?[.52,1.34]:[.48];
+  const level=houseLevel(house),L=dist(edge.a,edge.b),wallH=part.bodyH??houseBodyHeight(house);
+  // Rows scale with the wall (.52/1.34 on a 1.72 U body), so the taller L4 upper floor keeps them centred.
+  const rows=level>=2?[.52,1.34].map(z=>z*wallH/1.72):[.48];
   const pts=part.points,i=pts.indexOf(edge.a),other=i>=0?dist(pts[(i+1)%pts.length],pts[(i+2)%pts.length]):0;
   const long=level>=2&&L>=1&&L>=other-1e-6;
   const offs=long?[-L/4,L/4]:[0];
   const windows=rows.flatMap(z=>offs.map(off=>({off,z})));
   const beams=[];
   if(level<2)return{windows,beams};
-  const wallH=part.bodyH??houseBodyHeight(house),fb=wallH*.5,top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
+  const fb=wallH*.5,top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
   const seg=(o0,z0,o1,z1)=>beams.push([{off:o0,z:z0},{off:o1,z:z1}]);
   seg(-half,fb+t,half,fb+t);seg(-half,top-t,half,top-t);
   const upper=windows.filter(w=>w.z>fb&&w.z<top);
