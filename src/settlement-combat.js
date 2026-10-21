@@ -753,7 +753,7 @@
     const captain=combat.units.find(u=>u.kind==='captain');
     for(const u of combat.units){
       if(!selectedIds.has(u.id)||u.defeated||u.campState)continue;
-      #g.strokeStyle=u.kind==='captain'?'rgba(255,211,116,.86)':'#e3fcac';
+      g.strokeStyle=u.kind==='captain'?'rgba(255,211,116,.86)':'#e3fcac';
       g.lineWidth=1.5;g.setLineDash([5,4]);
       drawMapCircle({...u,r:u.kind==='captain'?16:6,groundZ:terrainElevation(u)},true);
       g.setLineDash([]);
