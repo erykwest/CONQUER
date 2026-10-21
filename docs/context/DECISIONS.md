@@ -61,6 +61,8 @@
 
 | D-042 | VINCOLO DESIGN + CODICE SKELETON (21/10) | Il giocatore invia **tributi/doni dal Mastio** con merci e/o **forziere** di monete, con scorta signorile prenotabile da menu. **Carretti** per logistica interna e piccole spedizioni; **carri** per merce; **carrozze** per trasferimento nobili (preferenza dame, non esclusività). | I fondi del signore possono essere accantonati realmente senza falsi viaggi; i posti di caserma prenotati non costituiscono guardie effettivamente assegnate. Mercenari L4+ con cuoio e araldica marrone neutra, costo consigliato **2× paga giornaliera L2** per giorno di viaggio, non ancora addebitato. [Contratto](../convoys-skeleton.md). |
 
+| D-043 | CODICE QA / DESIGN (21/10) | Quattro **cartelli stradali cliccabili** sulle arterie che partono dal pozzo, asset signpost originale dal branch scatter; pulsante di **test locale** di convogli, scorte e accantonamenti reali. | La simulazione QA parte dal primo tratto stradale, procede solo su strada continua fino al bordo e può essere completamente ripristinata senza creazione/distruzione di denaro o merci; vero percorso Mastio/mercato e world map ancora futuri. [Specifica](../road-sign-convoy-tests.md). |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
 
 ## Conflitti decisionali da risolvere esplicitamente
