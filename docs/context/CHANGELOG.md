@@ -2,6 +2,20 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-21 — Riduzione dei ridisegni e dei controlli GPU
+
+- Esteso l'audit 40/30 con baseline strumentata, due campagne finali, tempi dei singoli metodi GPU e verifica browser di animazioni in pausa/fallback.
+- Combattimento in pausa nel ciclo visuale comune; errori GL distanziati e checkpoint emesso dopo gli ultimi passaggi, senza permettere rinvii infiniti.
+- Rendering cumulativo WebGL ridotto del 72–82% nelle due prove; i blocchi isolati fino a circa 400 ms rimangono dichiarati. Framebuffer e rinvio dei frame scartati dopo misure, senza cambiare qualità grafica o danni. D-038, stato locale non pubblicato.
+- Batteria conclusiva 57/59 suite PASS; restano i due fallimenti preesistenti su main. Sintassi, whitespace e corrispondenza degli hash runtime alle misure PASS.
+
+## 2026-10-21 — Battaglia 40 contro 30 fino all'eliminazione
+
+- Aggiunti [audit](../mass-battle-performance-audit-2026-10-21.md), harness browser a 70 entità e sette controlli di regressione.
+- Corretti roster dei tipi individuali, tiro degli arcieri mobili su entrambi i lati, velocità della cavalleria ostile e controlli costosi applicati fuori portata.
+- Verificata eliminazione reale di tutti gli attaccanti a 298,1 secondi simulati su Canvas/WebGL; 37 difensori superstiti. Logica P95 circa 1 ms, picchi grafici WebGL ancora aperti e profilati in `getError`.
+- Base pubblicata `9e1b6a5`; nuove modifiche nel working tree, nessun nuovo commit/push/deploy. Roadmap invariata.
+
 ## 2026-10-20 — Terzo audit: Canvas, percorsi e assalto
 
 - Aggiunti [audit round 3](../movement-collapse-performance-audit-2026-10-20.md), benchmark browser e regressioni dei percorsi cooperativi.

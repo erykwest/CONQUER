@@ -86,6 +86,37 @@ né riduzione dei frammenti. Motivo, alternativa scartata e prove:
 crolli ancora in movimento e la variabilità dei frame restano espliciti. Codice
 locale su `fix/construction-completion-perf`, non rilasciato.
 
+**D-037 · CONTRATTO TECNICO LOCALE (21/10/2026):** nel test 40 contro 30 un
+fante/arciere individuale è una sola entità e una sola figura, distinto dalle
+squadre/pattuglie esistenti. I tipi persistiti includono `infantry` e `archer`;
+il profilo dell'arciere non richiede un secondo campo ridondante. Il motore del
+tiro è condiviso fra entrambi gli schieramenti tramite argomenti aggiuntivi
+opzionali di `ConquerCombatRules.update`, compatibili con i chiamanti precedenti.
+I record mobili mantengono il proprietario e non autorizzano un tiro da un morto
+o da chi è in mischia/sulle scale. Portata/distanza precedono collisioni e LOS
+costose; i loro verdetti restano necessari per le coppie vicine. Nessuna modifica
+ai valori di HP, armatura, dado o danno strutturale. Il driver QA invia ordini
+attraverso i percorsi reali; non decide morti o danni e non costituisce una nuova
+IA strategica. Motivazione e prove: [audit 40/30](../mass-battle-performance-audit-2026-10-21.md).
+Codice locale oltre `9e1b6a5`; il picco `getError` rimane aperto, il tentativo di
+fence aggiuntive non è stato mantenuto.
+
+**D-038 · CONTRATTO TECNICO LOCALE (21/10/2026):** le animazioni militari in
+pausa condividono il ciclo visuale della simulazione con incendi e crolli;
+il modulo del combattimento non avvia un secondo RAF per ridisegnare la scena.
+Il controllo errori WebGL mantiene la verifica per perdita del contesto a ogni
+disegno, ma distanzia le query sincrone `getError` di almeno 1 s. La fence viene
+emessa dopo front/luci e mantiene l'età iniziale quando sostituita: dopo 1 s di
+attesa il controllo viene comunque eseguito, accettando un possibile blocco
+residuo invece di nascondere gli errori sotto carico continuo. Errori, wait
+fallita e allocazione sync fallita conservano il fallback Canvas.
+Questa scelta riduce i costi cumulativi; **non elimina le singole attese GPU**
+né certifica FPS a 1×. Il contratto aggiorna il posizionamento del checkpoint
+descritto da D-034; il tentativo di sole fence aggiuntive ricordato in D-037
+resta scartato. Nessuna modifica al framebuffer o rinvio dei frame viene
+mantenuta. Motivazioni, esperimenti e misure nell'[audit esteso](../mass-battle-performance-audit-2026-10-21.md).
+Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
+
 ## Conflitti decisionali da risolvere esplicitamente
 
 | ID | Tema | Fonti discordanti | Risoluzione richiesta |

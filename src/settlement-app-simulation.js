@@ -242,7 +242,7 @@ function simulationFrame(now){
     const animatedCutaway=State.structures.some(s=>structureCutaway(s)&&Array.isArray(s.functions)&&s.functions.some(role=>role==='barracks'||role==='quarters'||role==='nobleRoom'));
     // DEV weather/daylight overrides ease even with the simulation paused.
     const ambientTransition=window.ConquerAmbientLight?.isTransitioning?.()||false;
-    const animatedEffects=window.ConquerFire?.needsAnimation?.()||window.ConquerSiege?.needsAnimation?.();
+    const animatedEffects=window.ConquerFire?.needsAnimation?.()||window.ConquerSiege?.needsAnimation?.()||window.ConquerCombatAnim?.active?.();
     if(sceneDrawRequested||((animatedCutaway||ambientTransition||animatedEffects)&&now-simDrawAt>=(ambientTransition?WEATHER_FRAME_MS:animatedEffects?VISUAL_FRAME_FAST_MS:84))){
       sceneDrawRequested=false;
       draw();

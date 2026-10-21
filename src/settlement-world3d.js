@@ -130,17 +130,22 @@
   function pollRendererError(gl){
     if(gl.isContextLost())throw new Error('WebGL2 renderer failure');
     if(!S.errorFence)return;
-    // A zero timeout only polls readiness. Calling getError while uploads are
-    // in flight would synchronously wait for the entire GPU command queue.
+    // Poll without waiting, but bound the grace period so a constantly busy
+    // queue cannot indefinitely postpone error detection.
     const ready=gl.clientWaitSync(S.errorFence,0,0);
-    if(ready===gl.TIMEOUT_EXPIRED)return;
+    if(ready===gl.TIMEOUT_EXPIRED&&performance.now()-S.errorFenceAt<1000)return;
     gl.deleteSync(S.errorFence);S.errorFence=null;
     if(ready===gl.WAIT_FAILED||gl.getError()!==gl.NO_ERROR)throw new Error('WebGL2 renderer failure');
+    // Even a signalled fence does not make the browser's error query free:
+    // getError can synchronise its command decoder. Keep it off the hot path;
+    // context loss is still checked every frame above.
+    S.errorCheckAfter=performance.now()+1000;
   }
   function deferRendererError(gl){
-    // Track the latest uploads, including a new content rebuild submitted
-    // while the preceding frame was still in flight. Keep only one fence.
+    if(performance.now()<(S.errorCheckAfter||0))return;
+    // Cover the latest complete frame, retaining the first checkpoint's age.
     if(S.errorFence)gl.deleteSync(S.errorFence);
+    else S.errorFenceAt=performance.now();
     S.errorFence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
     if(!S.errorFence)throw new Error('WebGL2 sync allocation failed');
     gl.flush();
@@ -1162,18 +1167,22 @@
       const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12);
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
-    deferRendererError(gl);
     return true;
     }catch(err){
       // Never leave gameplay blank when the optional renderer fails.
-      S.failed='world3d-draw: '+String(err?.message||err);
-      enabled=false;collecting=null;
-      const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
-      window.ConquerWebGPU?.invalidate?.();
-      invalidateSceneCache();
-      console.warn('World 3D disabled; Canvas fallback:',S.failed);
+      disableRenderer(err);
       return false;
     }
+  }
+  function disableRenderer(err){
+    S.failed='world3d-draw: '+String(err?.message||err);enabled=false;collecting=null;
+    const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
+    window.ConquerWebGPU?.invalidate?.();invalidateSceneCache();
+    console.warn('World 3D disabled; Canvas fallback:',S.failed);
+  }
+  function finishFrame(){
+    try{deferRendererError(S.gl);return true}
+    catch(err){disableRenderer(err);return false}
   }
   function nightLightsEnabled(){return useGpuNightLights}
   function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}
@@ -1279,7 +1288,7 @@
     draw();
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
-    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,_setActiveForTest,
+    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,finishFrame,_setActiveForTest,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,

@@ -481,6 +481,10 @@ function draw(){
   // Canvas keeps its original complete night path as the fallback.
   if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);
   else drawNightLights();
+  if(world3d&&!window.ConquerWorld3D.finishFrame()){
+    // A failed checkpoint must still leave a complete Canvas frame visible.
+    draw();return;
+  }
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   endPopulationFrame();

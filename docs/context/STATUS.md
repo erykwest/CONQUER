@@ -36,6 +36,21 @@
 - **RISULTATI E RESIDUI:** peggior aggiornamento brigata circa 1,8–2,4 s→25–32 ms, zero attraversamenti nei segmenti controllati. Macerie Canvas ferme riusate in circa 0,5 ms; **il primo disegno dopo la caduta può ancora fermarsi per 3 s**, e i crolli attivi restano pesanti. RAF militare variabile, fino a P95 133–150 ms nel caso delle squadre: non è una dichiarazione di fluidità generale. [Audit completo](../movement-collapse-performance-audit-2026-10-20.md), decisione D-036.
 - **QA / STATO:** 55/57 suite locali PASS; restano i due fallimenti sorgente già riprodotti su main. Sintassi dei sorgenti e whitespace PASS. Working tree locale, nessun commit/push/PR/merge/deploy o CI remota. Roadmap e priorità invariate.
 
+## Scontro 40 contro 30 — prova fino all'eliminazione (21/10/2026)
+
+- **BASE:** `9e1b6a5` pubblicato su `fix/construction-completion-perf`, CI Civil PASS. Le correzioni di questa nuova prova sono ulteriori modifiche locali non pubblicate.
+- **SCENARIO E RISULTATO:** 15 arcieri/20 fanti/5 cavalieri difensori contro 10 arcieri/17 fanti/3 cavalieri attaccanti, come 70 entità singole. Campo aperto e seed 12345. Canvas e WebGL arrivano entrambi a 0 attaccanti dopo 298,1 s simulati; restano 15 arcieri, 19 fanti, 3 cavalieri difensori. Tutte le sei combinazioni lato/tipo infliggono danni; nessun HP azzerato dal driver di prova.
+- **CORREZIONI LOCALI:** persistenza/render dei tipi individuali, arcieri mobili di entrambi i lati, velocità dei cavalieri attaccanti e filtro di portata prima di collisioni/LOS costose. Nessun cambio ai valori di HP, armatura o dadi. Sette regressioni dedicate.
+- **QA FINALE:** 56/58 suite PASS; restano `refactor-app-population-regression.cjs` e `wall-bays-regression.cjs`, già falliti su main. Sintassi e whitespace PASS. Nessun nuovo commit/push o CI remota per questo round.
+- **PERFORMANCE:** logica P95 circa 1 ms; Canvas draw P95 7,3 ms nella campagna principale. WebGL variabile fra P95 8,7 e 132,9 ms nelle ripetizioni: il profilo principale trova circa 3 s in `getError`. Il tentativo di aggiungere fence ai passaggi successivi non ha dimostrato beneficio ed è stato rimosso. La prova accelerata non certifica FPS a 1×. [Audit e comandi](../mass-battle-performance-audit-2026-10-21.md).
+
+## Ulteriore audit rendering 40/30 (21/10/2026)
+
+- **CODICE LOCALE:** animazioni di combattimento in pausa nel ciclo visuale condiviso; controllo errori WebGL distanziato di almeno 1 s, checkpoint dopo front/luci e attesa della fence con limite per evitare verifiche rimandate all'infinito. Perdita del contesto ancora controllata a ogni disegno; fallback Canvas mantenuto.
+- **MISURE:** baseline WebGL strumentata 324 disegni / 10,72 s cumulativi; due prove finali 174/170 disegni e 2,97/1,89 s (**−72–82%**). P95 76,5/8,3 ms contro 163,4 ms; **restano singoli blocchi fino a 396 ms**, quindi fluidità generale non dichiarata. Canvas 177 disegni / 0,738 s contro 326 / 1,433 s della campagna precedente. [Dati e limiti](../mass-battle-performance-audit-2026-10-21.md#ulteriore-riduzione-dei-costi-di-rendering--21102026).
+- **COMPORTAMENTO:** stessa eliminazione a 298,1 s simulati e 37 difensori superstiti. Verificati nel browser colpo/termine animazione in pausa e fallback dipinto con errore GPU iniettato. Esperimenti framebuffer/backpressure scartati. Base `9e1b6a5`; nuove modifiche non pubblicate. D-038; roadmap invariata.
+- **QA CONCLUSIVA:** 57/59 suite PASS, con i soli due fallimenti preesistenti su main (`refactor-app-population-regression`, `wall-bays-regression`). Sintassi e whitespace PASS; hash runtime corrispondenti alla misura finale.
+
 ## Semaforo epistemico
 
 - **CODICE** — implementazione/sorgenti identificati su una branch.

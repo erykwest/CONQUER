@@ -39,8 +39,9 @@
   let transitLastFrame=0;
   let combat=null;
   const archerCache=new Map();
+  const mobileArcherCache=new WeakMap();
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
-  let tacticalRuleAccum=0,combatAnimFrame=0;
+  let tacticalRuleAccum=0;
   const PATROL_PATH_STEP=.75,PATROL_LOOP_STRIDE=2,PATROL_ROUTE_CACHE_MAX=512;
   let whiteBoundaryCache=[],whiteBoundaryLoopCache=[],whiteBoundarySignature='',whiteBoundaryRevision=0;
   let whiteBoundaryPending=false,patrolNavRevision=0;
@@ -60,7 +61,7 @@
     combat.recall=combat.recallMode!=='off';
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units
-      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight','patrol'].includes(u.kind))
+      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight','patrol','infantry','archer'].includes(u.kind))
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
@@ -72,7 +73,7 @@
       .map(({legs,climbing,nextThink,engaged,gateway,...e})=>e):[];
     // Ladders and assault towers set against the walls (dev assault).
     combat.storms=Array.isArray(combat.storms)?combat.storms.filter(s=>s&&s.foot&&s.origin&&(['ladder','tower'].includes(s.kind)&&s.wallId||s.kind==='ram'&&s.gateId)):[];
-    for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';}
+    for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??=e.kind==='archer'?'archer':e.kind==='knight'?'knight':'infantry';}
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     visible.fill(0);paintFogBitmap();
@@ -750,6 +751,7 @@
         continue;
       }
       if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u,z});
+      else if(u.kind==='archer'||u.kind==='infantry')characters.push({p:u,type:u.kind==='archer'?'archer':'spearman',id:u.id,unit:u,z});
       else{
         const count=u.kind==='patrol'?2:5;
         // On a wall walk the men stand in file along the wall.
@@ -802,17 +804,16 @@
         }
         if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        drawPosedFigure(e,'spearman',e.id,livery,e,0,.08+(e.z||0));
+        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':'spearman';
+        drawPosedFigure(e,figure,e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
         if(e.torch)window.ConquerFire?.drawTorch(g,w2s(e,.08+(e.z||0)),State.view.scale,e.id);
         const p=w2s(e,.08+(e.z||0));g.strokeStyle='#e45151';g.lineWidth=2;
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
-    // Combat only advances while the calendar runs; a swing or fall already
-    // started still finishes smoothly when the player pauses.
-    if(anim?.active()&&State.clock.speed===0&&!combatAnimFrame)
-      combatAnimFrame=requestAnimationFrame(()=>{combatAnimFrame=0;draw()});
+    // Paused swings/falls share the simulation's visual scheduler with fire,
+    // collapses and scene requests, avoiding a second draw in the same RAF.
     // 2.5D view: assault ladders and towers as simple timber outlines (3D draws the models).
     if(combat.storms?.length&&!window.ConquerWorld3D?.active?.())withRenderContext(g,()=>{
       for(const s of combat.storms){
@@ -1255,6 +1256,17 @@
     archerRoster=out;
     return archerRoster;
   }
+  function mobileArchers(units){
+    const out=[];
+    for(const u of units){
+      if((u.kind!=='archer'&&u.combatKind!=='archer')||!livingUnit(u)||u.routing||u.climbing||u.campState)continue;
+      let shooter=mobileArcherCache.get(u);
+      if(!shooter){shooter={id:u.id,owner:u,clock:0,terrainAt:terrainElevation};mobileArcherCache.set(u,shooter)}
+      shooter.x=u.x;shooter.y=u.y;shooter.h=terrainElevation(u)+(u.z||0);shooter.visualZ=shooter.h+.6;
+      out.push(shooter);
+    }
+    return out;
+  }
   // ---------- walls: troops on the wall walks (settlement-wallwalk.js) ----------
   // A unit is on the ground, climbing (a tower stair or an assault ladder/tower) or on
   // a wall walk: u.wall={wallId,t}, u.z = height above the terrain. Orders become legs:
@@ -1615,7 +1627,7 @@
       if(!livingUnit(e)||e.routing)continue;
       if(e.assault)assaultThink(e,nowMs);
       else if(e.torch)torchThink(e,nowMs);
-      if(e.legs?.length&&stepLegs(e,dt,.8))moved=true;
+      if(e.legs?.length&&stepLegs(e,dt,e.kind==='knight'||e.combatKind==='knight'?1.5:.8))moved=true;
     }
     ramStep(dt);
     if(moved){visibilityDirty=true;maskDirty=true}
@@ -1630,11 +1642,11 @@
       // Neutral daytime fauna must not trigger tower roster scans or
       // expensive combat target acquisition.
       const hostiles=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&(!e.stats||e.stats.hp>0));
-      for(const e of hostiles){
-        e.h=terrainElevation(e)+(e.z||0);e.visualZ=e.h+.6;e.faction??='dev_hostile';
+      for(const e of combat.units.concat(hostiles)){
+        e.h=terrainElevation(e)+(e.z||0);e.visualZ=e.h+.6;
       }
-      rules.update(step,combat.units,combat.enemy,hostiles.length?archers():[],
-        (e,shooter)=>{
+      for(const e of hostiles)e.faction??='dev_hostile';
+      const sees=(e,shooter)=>{
           // An arrow slit can fire only through its own outward opening;
           // rooftop posts retain a full-circle field of fire.
           if(Number.isFinite(shooter.nx)){
@@ -1647,13 +1659,14 @@
           const height=clamp(Math.round(shooter.h),0,8);
           const range=Math.min(rules.shooterRange(shooter,e),combatVisionRadius(height));
           return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:range},e);
-        },
+        };
+      rules.update(step,combat.units,combat.enemy,hostiles.length?archers().concat(mobileArchers(combat.units)):[],sees,
         // Melee only between men on the same level: on the ground, or on the same joined walls.
         (a,b)=>{
           const la=levelOf(a);if(la!==levelOf(b)||la==='climb')return false;
           if(la!=='ground')return true;
           return safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1;
-        });
+        },mobileArchers(hostiles),sees);
       stoneDrops(step);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;

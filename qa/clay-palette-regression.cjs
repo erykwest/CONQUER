@@ -60,7 +60,9 @@ assert.match(world,/const m=meshBuilder\(true\),winter=/);
 // Error polling now follows a ready GPU fence; the behavioral contract lives
 // in webgl-error-poll-regression.cjs and the browser fallback injection.
 assert.match(world,/pollRendererError\(gl\);/);
-assert.match(world,/deferRendererError\(gl\);/);
+assert.match(world,/function finishFrame\(\)\{\s*try\{deferRendererError\(S\.gl\);/);
+assert.ok(render.indexOf('ConquerWorld3D.finishFrame()')>render.indexOf('ConquerWorld3D.drawNightLights3D(r)'),
+  'checkpoint follows the final GL pass; behavior is tested by webgl-error-poll-regression');
 assert.match(world,/if\(gl.isContextLost\(\)\)throw new Error/);
 assert.match(world,/gl.getError\(\)!==gl.NO_ERROR/);
 assert.match(world,/const bSig=\[season,State\.visualPalette,/);
