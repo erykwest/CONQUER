@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const root=path.resolve(__dirname,'..'),read=name=>fs.readFileSync(path.join(root,name),'utf8');
 const scripts=['src/settlement-economy.js','src/settlement-commerce.js',
   'src/settlement-convoys.js','src/assets/road-sign-model.js',
-  'src/settlement-wagons.js','src/settlement-road-sign-tests.js'];
+  'src/settlement-wagons.js','src/settlement-vehicles.js','src/settlement-road-sign-tests.js'];
 function harness(saved=null){
   const center={x:100,y:100},edges=[
     ['north',{x:100,y:50}],['east',{x:150,y:100}],

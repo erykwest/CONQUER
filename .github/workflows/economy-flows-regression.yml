@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/economic-balances-20261019
+      - economic-balances-animations
   pull_request:
     paths:
       - 'src/settlement-economy.js'
@@ -14,6 +15,10 @@ on:
       - 'src/settlement-road-sign-tests.js'
       - 'src/assets/road-sign-model.js'
       - 'src/settlement-wagons.js'
+      - 'src/settlement-vehicles.js'
+      - 'src/settlement-wagons3d.js'
+      - 'src/settlement-animals3d.js'
+      - 'qa/vehicles*.cjs'
       - 'qa/road-sign*.cjs'
       - 'qa/convoys*.cjs'
       - 'src/settlement-population-residents.js'
@@ -37,6 +42,10 @@ jobs:
           node qa/commerce-skeleton-regression.cjs
           node qa/convoys-skeleton-regression.cjs
           node qa/road-sign-convoy-regression.cjs
+          node qa/vehicles-regression.cjs
+          node qa/wagons3d-regression.cjs
+          node qa/animals3d-regression.cjs
+          node --check src/settlement-vehicles.js
           node qa/settlement-routing-spawn-regression.cjs
           node --check src/settlement-commerce.js
           node --check src/settlement-convoys.js
