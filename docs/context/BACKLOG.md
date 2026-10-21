@@ -3,6 +3,15 @@
 > Raccoglie *idee, requisiti e dipendenze*. Un requisito elencato qui **non prova** assenza né completamento nel software.
 > Non duplicare il backlog di 22 feature del Builder già mantenuto in [docs/feature-backlog.md](../feature-backlog.md): quello rimane il riferimento dettagliato per territorio/urbanistica/economia locale/araldica.
 
+## Triage su main del 21/10/2026
+
+La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot storici riportati più in basso.
+
+- **FATTO SU MAIN (merge, non accettazione completa):** minimappa/LOD [#44](https://github.com/erykwest/CONQUER/pull/44), pattuglie/lupi/camp [#53](https://github.com/erykwest/CONQUER/pull/53), ciclo solare [#54](https://github.com/erykwest/CONQUER/pull/54), mulini [#57](https://github.com/erykwest/CONQUER/pull/57)/[#58](https://github.com/erykwest/CONQUER/pull/58), terraforming [#63–69](https://github.com/erykwest/CONQUER/pull/69), prestazioni [#70](https://github.com/erykwest/CONQUER/pull/70), **animazioni lavoro con 7 attrezzi** [#71](https://github.com/erykwest/CONQUER/pull/71), terrapieni d'assalto [#73](https://github.com/erykwest/CONQUER/pull/73).
+- **IN CORSO / NON MERGE:** **L1 costruttori con lavoro meccanico e scorte reali** + commercio/convogli [#55](https://github.com/erykwest/CONQUER/pull/55); regole danni [#61](https://github.com/erykwest/CONQUER/pull/61); arredi/cutaway [#65](https://github.com/erykwest/CONQUER/pull/65); cavalieri e messaggeri [#72](https://github.com/erykwest/CONQUER/pull/72) su base `knights`.
+- **APERTO:** QA browser interattiva, prestazioni picchi GPU e visual QA [#18](https://github.com/erykwest/CONQUER/pull/18); ledger unico/agricoltura; matrimonio danni→accessibilità→assedio/blocco/resa; filiera metallo; sistema feudale completo.
+- La presenza di un modulo o di un check non trasforma le righe S-xx in **FATTO**: valutare la sequenza di combattimento completa contro i criteri di accettazione.
+
 ## Clay — nuove murature e argilla (branch `clay`, 19/10/2026)
 
 **DESIGN, NON IMPLEMENTATO.** Lavoro di documentazione derivato da `Civil`, senza modifiche runtime. Contratto completo in [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e verifiche in [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).
@@ -19,7 +28,7 @@
 ## Builder, Landscape ed economia (dettaglio esistente)
 
 - **P0-01…08:** orografia; foreste funzionali; Village Core; abitazioni/tier; logging camp; Farm Hub; cava; miniera.
-- **P0-01a Terraforming:** completato e verificato sul branch `terraforming` (`fa9ef0d`), con due modalità, ghost, blocco dei terrazzamenti murati sovrapposti e magnete delle mura a filo; non ancora integrato in `main`.
+- **P0-01a Terraforming:** **CODICE SU MAIN** dopo integrazioni [#63–69](https://github.com/erykwest/CONQUER/pull/69) e [#73](https://github.com/erykwest/CONQUER/pull/73) per earthworks; restano da verificare i casi visuali e compatibilità con strutture/routing. La nota su `terraforming fa9ef0d` è storica.
 - **P1-09…13:** Built Sections; fabbro; mercato; palizzate; ponti.
 - **P2-14…20:** fossati, levatoi, basamenti, servizi, araldica SVG e propagazione.
 - **P3-21…22:** sette alberi SVG e circa 25 scatter antropici.
@@ -130,7 +139,7 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **E-03 — Tempo e feedback militare:** giorno di lavoro → output reale, mercato sabato, riposo domenica, bilanci annuali; assedio/incursione deve interrompere la produzione senza inventari concorrenti.
 - **V-01 — Renderer 3D WebGL2 vs sprite:** **CODICE SU MAIN**: castello/scena [db6857c](https://github.com/erykwest/CONQUER/commit/db6857c2af21b4010077107876f59cc300374697) e default WebGL2 con fallback Canvas [cc6830a](https://github.com/erykwest/CONQUER/commit/cc6830ac2b61d6a0769a4e0a9302ab639295caf0). **RESTANO DA VERIFICARE**: confronti ripetibili su cutaway, stati di cantiere, danni, prestazioni RAM/VRAM, e pipeline finale di asset.
 - **V-02 — Cache e prestazioni:** misurare 192 voci bitmap e 32 MiB nominali dei compositi, ora confrontando **WebGL2 3D predefinito e Canvas fallback**; identificare VRAM/RAM, eviction e perf prima di creare loader concorrenti.
-- **V-03 — Animazioni lavoro popolani:** mani/attrezzi modulari condizionati dall'attività reale, accessori stagionali solo quando utili e vicini; **PROPOSTA**.
+- **V-03 — Animazioni lavoro popolani:** **MERGED SU MAIN** con sette utensili e fasi contestuali in [#71](https://github.com/erykwest/CONQUER/pull/71); restano QA visiva/performance e accessori stagionali **PROPOSTA**. Non confondere animazioni con lavoro economico/operai L1 della #55.
 - **V-04 — Audio:** streaming musica current+next, SFX e ambience on demand, crossfade, controllo licenze/tracce Suno; **DIREZIONE**, non audio già pubblicato. Fonte SFX distinta: [playlist Pixabay e inventario Drive](sources/PIXABAY-SOUNDS-2026-10-14.md), da verificare file per file.
 - **UI-01 — Minimappa + LOD:** **CODICE MERGIATO SU MAIN** il 16/10 via [PR #44](https://github.com/erykwest/CONQUER/pull/44) ([2e7582d](https://github.com/erykwest/CONQUER/commit/2e7582d33575fcbdfa76605a08b09746327457c9)); **DA VALIDARE** nel browser ISO/plan, rotazioni, selezione, fog, mobile e benchmark. Il Building LOD semplificato è nella minimappa, **non** nel mondo 3D principale.
 
