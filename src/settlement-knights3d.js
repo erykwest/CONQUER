@@ -108,5 +108,52 @@
     ctx.restore();
     return n;
   }
-  window.ConquerKnights3D={KINDS,build,draw,coatFor,lanceState};
+  // Flat style (the foot soldiers' look): each rigid part is one silhouette in a flat
+  // colour with a dark outline, parts painted back to front; no face shading.
+  // Returns [{fill, tris:[[x,y]x3]...}] in screen space, shared by canvas and SVG.
+  function flatLayers(fig,view){
+    const m=fig.mesh,order=m.groups.map((c,i)=>({i,d:view.depth(c[0],c[1],c[2])+(m.groupBias?.[i]||0)})).sort((a,b)=>a.d-b.d);
+    const byGroup=m.groups.map(()=>[]);
+    for(let t=0;t<m.col.length;t++){
+      const o=t*9,P=k=>{const p=view.project(m.pos[o+k*3],m.pos[o+k*3+1],m.pos[o+k*3+2]);return[p.x,p.y]};
+      const depth=view.depth((m.pos[o]+m.pos[o+3]+m.pos[o+6])/3,(m.pos[o+1]+m.pos[o+4]+m.pos[o+7])/3,(m.pos[o+2]+m.pos[o+5]+m.pos[o+8])/3);
+      byGroup[m.gi[t]].push({fill:m.col[t],pts:[P(0),P(1),P(2)],depth});
+    }
+    return order.map(({i})=>Object.assign(byGroup[i].sort((a,b)=>a.depth-b.depth),{group:i}));
+  }
+  const OUTLINE='rgba(25,24,22,.92)';
+  function drawFlat(ctx,view,kind,place,anim,pose,livery,coat,paint,lw=1.6){
+    const fig=build(kind,place,anim,pose,livery,coat);
+    if(fig.alpha<=0)return;
+    ctx.save();ctx.globalAlpha*=fig.alpha;ctx.lineJoin='round';
+    const layers=flatLayers(fig,view);
+    layers.forEach((tris,li)=>{
+      if(!tris.length)return;
+      // Outline: the whole part stroked thick in dark, then filled over.
+      ctx.beginPath();for(const t of tris){ctx.moveTo(...t.pts[0]);ctx.lineTo(...t.pts[1]);ctx.lineTo(...t.pts[2]);ctx.closePath()}
+      ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw*2;ctx.stroke();
+      for(const t of tris){ctx.fillStyle=ctx.strokeStyle=t.fill;ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(...t.pts[0]);ctx.lineTo(...t.pts[1]);ctx.lineTo(...t.pts[2]);ctx.closePath();ctx.fill();ctx.stroke()}
+      // The realm arms on the faces of this part (shield, caparison flanks).
+      if(paint)for(const d of fig.decals)if(d.group===tris.group){
+        const a=view.project(...d.o),b=view.project(...d.u),c=view.project(...d.v);
+        const ux=b.x-a.x,uy=b.y-a.y,vx=c.x-a.x,vy=c.y-a.y;if(ux*vy-uy*vx<=1)continue;
+        ctx.save();ctx.transform(ux,uy,vx,vy,a.x,a.y);
+        if(d.clip){ctx.beginPath();d.clip.forEach(([cu,cv],i)=>i?ctx.lineTo(cu,cv):ctx.moveTo(cu,cv));ctx.closePath();ctx.clip()}
+        paint(ctx,0,0,1,1);ctx.restore();
+      }
+    });
+    ctx.restore();
+  }
+  // SVG of one frame (same flat layers): for review sheets and offline sprites.
+  function toSVG(kind,heading,anim,pose,livery,coat,size=320){
+    const s=size*1.15,view={turns:0,project:(x,y,z)=>({x:size/2+(x-y)*s*.866,y:size*.86+(x+y)*s*.5-z*s*.9}),depth:(x,y,z)=>x+y+.9*z};
+    const layers=flatLayers(build(kind,{x:0,y:0,heading},anim,pose,livery,coat),view),f=v=>v.toFixed(1);
+    const body=layers.filter(l=>l.length).map(tris=>{
+      const d=tris.map(t=>'M'+t.pts.map(p=>f(p[0])+' '+f(p[1])).join('L')+'Z').join('');
+      return '<path d="'+d+'" fill="none" stroke="#191816" stroke-width="3.2" stroke-linejoin="round"/>'+
+        tris.map(t=>'<path d="M'+t.pts.map(p=>f(p[0])+' '+f(p[1])).join('L')+'Z" fill="'+t.fill+'" stroke="'+t.fill+'" stroke-width=".6"/>').join('');
+    }).join('');
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'">'+body+'</svg>';
+  }
+  window.ConquerKnights3D={KINDS,build,draw,drawFlat,toSVG,coatFor,lanceState};
 })();
