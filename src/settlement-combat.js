@@ -831,6 +831,7 @@
     if(anim?.active()&&State.clock.speed===0&&!combatAnimFrame)
       combatAnimFrame=requestAnimationFrame(()=>{combatAnimFrame=0;draw()});
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
+    window.ConquerDiplomacy?.draw(g);
     const focused=combat.units.find(u=>u.id===selected);
     // The Builder layout may be replaced by another UI shell. Missing optional
     // HUD controls must never interrupt render/simulation or the combat canvas.
