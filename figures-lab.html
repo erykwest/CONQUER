@@ -86,6 +86,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 </script>
 <script src="./src/settlement-population-figures.js?v=lab-1"></script>
 <script src="./src/settlement-combat-anim.js?v=lab-1"></script>
+<script src="./src/settlement-work-anim.js?v=lab-1"></script>
 <script src="./src/settlement-animals.js?v=lab-2"></script>
 <script src="./src/settlement-wagons.js?v=lab-1"></script>
 <script src="./src/assets/wagon-model.js?v=lab-1"></script>
@@ -96,10 +97,10 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-siege-engines3d.js?v=lab-5"></script>
 <script>
 (function(){
-  const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
+  const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,WA=window.ConquerWorkAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
   const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
-  const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo']]};
+  const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo'],['dig','Pala'],['chop','Ascia'],['pick','Piccone'],['build','Martello'],['plough','Zappa'],['sow','Semina'],['harvest','Falce']]};
   // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
   function siegeActions(e){
     const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:'Tiro balista',ballista:'Tiro'}[e];
@@ -108,6 +109,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   // Upgrades: incendiary shots for the trebuchet, scatter shot for the mangonel,
   // a ballista behind the mantlet's embrasure.
   const AMMO={trebuchet:[['stone','Pietra'],['fire','Incendiaria']],catapult:[['stone','Pietra'],['scatter','Sassaiola']]};
+  const WORK_TOOL={dig:'shovel',chop:'axe',pick:'pickaxe',build:'hammer',plough:'hoe',sow:'seeds',harvest:'sickle'};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
   const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
@@ -172,7 +174,11 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     drawArrows();
   }
   function heroVillagers(W,H,k){
-    VILLAGERS.forEach((v,i)=>{State.view.scale=18*k;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:W*(.14+i*.17),y:H*.5}})});
+    const tool=WORK_TOOL[action];
+    if(!tool){VILLAGERS.forEach((v,i)=>{State.view.scale=18*k;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:W*(.14+i*.17),y:H*.5}})});return}
+    // The worker at three sizes, facing both ways.
+    [[W*.22,H*.62,22*k,1],[W*.58,H*.62,11*k,-1],[W*.82,H*.62,5*k,1]].forEach(([x,y,s,f],i)=>{
+      State.view.scale=s;ctx=g;WA.drawWorkerUnmasked({...VILLAGERS[i===1?2:0],id:'worker'+i,p:{x,y}},tool,clock,f)});
   }
   // Animals are 3D: the Blender-built models at any heading, driven by the shared gaits.
   function animalActions(species){
@@ -349,7 +355,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     const drv=driverFor('villager');
     sprites.push({...an.seat,z:an.seat.z+.12,draw:()=>{const p=view.project(an.seat.x,an.seat.y,an.seat.z);drv(g,p.x,p.y,animalSize)}});
     W3.drawMeshes(g,meshes,view,sprites);
-    VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
+    VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});
+    // A work crew at game scale: one worker per tool.
+    Object.values(WORK_TOOL).forEach((tool,i)=>{State.view.scale=z;ctx=g;WA.drawWorkerUnmasked({...VILLAGERS[i%2?2:0],id:'crew'+i,p:{x:(640+i*26)*k,y:(560+(i%2)*12)*k}},tool,clock,i%2?-1:1)});    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
     fighters.forEach((f,i)=>{
       const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};
       if(clock>=f.next){CA.strike(f.ally,f.enemy);CA.strike(f.enemy,f.ally);if(Math.random()<.5)CA.hurt(Math.random()<.5?f.ally:f.enemy,CA.TIMING.IMPACT);f.next=clock+1+Math.random()*.3}

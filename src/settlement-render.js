@@ -425,6 +425,7 @@ function draw(){
   window.ConquerLivestock?.draw();
   drawPeasants();
   window.ConquerIndustries?.drawWorkers();
+  window.ConquerWorkAnim?.drawBuilders();
   markPhase('population');
   drawTrainingSoldiers();
   if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');
