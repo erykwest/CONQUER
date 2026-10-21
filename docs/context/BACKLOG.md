@@ -243,3 +243,14 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Assedio integrato:** il campo persistente diventa base operativa dell'attaccante per presidiare il territorio, organizzare sortite/assalti, accumulare rifornimenti e mantenere un blocco; il difensore può tentare incursioni contro campo e carri, interrompendo la logistica.
 - **Persistenza e UX:** il campo resta finché non viene smantellato, abbandonato o distrutto; distinguere chiaramente nel comando UI 'bivacco notturno' da 'stabilisci campo d'assedio'.
 - **QA:** testare spedizioni, consumo scorte, continuità dei carri, costruzione delle difese leggere, pathfinding di grandi colonne, assalti/sortite, interruzione rifornimenti e save/load durante assedi lunghi.
+
+
+## Nota voice — navigazione mercantile e militare (orizzonte futuro)
+
+> **Backlog di lungo periodo**, non priorità per il ciclo giocabile attuale; nessuna implementazione richiesta ora.
+
+- **Navi mercantili:** prima versione navale orientata a trasporto e commercio, riutilizzando per quanto possibile le dinamiche logistiche già previste per i carri (carico, scorte, itinerario, trasferimento di risorse, destinazioni, rischio/intercettazione). Capacità indicativa di **circa dieci carri per nave**, valore iniziale da bilanciare.
+- **Vincoli di navigazione:** porti e punti d'imbarco/sbarco, percorsi sull'acqua, tempi di viaggio, capacità di carico e collegamento al sistema economico; preferire una prima iterazione senza combattimento navale.
+- **Navi militarizzate:** evoluzione successiva con **baliste** imbarcate e trasporto di truppe, inclusi **arcieri e fanti**; imbarco/sbarco, spazio disponibile e supporto alle operazioni militari costiere.
+- **Combattimento navale:** riconosciuto come sottosistema complesso (movimento, ingaggi, armi di bordo, unità trasportate e possibile abbordaggio). Rimandare progettazione dettagliata e implementazione a una fase successiva, evitando che blocchi economia, cantieri e assedi terrestri.
+- **Sequenza suggerita:** commercio marittimo e navi-cargo → trasporto truppe → armamento e scontri navali. Testare a ogni fase la compatibilità con convogli terrestri, risorse e persistenza.
