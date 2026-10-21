@@ -231,11 +231,7 @@
   }
   window.ConquerDiplomacy={tick,reset,state,draw,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans};
   initUI();
-  const previousDraw=drawGlobal();
-  function drawGlobal(){
-    // Combat replaces draw at module load; this wrapper only repositions the clickable head icon.
-    const prev=window.draw||draw;
-    window.draw=function(){prev();positionLetter()};
-    return prev;
-  }
+  // Combat has already wrapped the scene draw; retain its layering and only move the DOM letter.
+  const drawSettlement=window.draw;
+  if(typeof drawSettlement==='function')window.draw=function(){drawSettlement();positionLetter()};
 })();
