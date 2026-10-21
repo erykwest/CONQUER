@@ -459,10 +459,16 @@ function urbanDenseLayout(house,lot,gableFront){
   {
     const level=houseLevel(house),width=(gableFront?URBAN_GABLE_FRONT_WIDTH:URBAN_FRONT_WIDTH)[level];
     const depth=gableFront?(level===4?1.55:1.45):level===4?1.13:.98;
-    const sign=urbanArea(lot.points)>=0?1:-1;
+    const sign=urbanArea(lot.points)>=0?1:-1,n=lot.points.length,street=level===4?urbanLotStreetEdges(lot):null;
     for(const frontage of urbanLotRoadFrontages(lot)){
       const count=Math.floor((frontage.length+.06)/width);
       if(!count)continue;
+      // L4 corner houses: the end building of a row whose lot corner meets another street gets the
+      // turret, on that corner (local +X runs along the frontage, times the lot orientation).
+      const edgeLen=dist(frontage.a,frontage.b);
+      const startCorner=!!street?.has((frontage.edge+n-1)%n)&&frontage.from<.6;
+      const endCorner=!!street?.has((frontage.edge+1)%n)&&frontage.to>edgeLen-.6;
+      const turretCorner=i=>i===count-1&&endCorner?sign:i===0&&startCorner?-sign:0;
       const spacing=frontage.length/count,baseWidth=Math.min(spacing+.045,gableFront?1.25:level===4?1.65:1.95);
       const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
       // Original L/T extensions grow towards the plot interior (+local Y).
@@ -484,7 +490,7 @@ function urbanDenseLayout(house,lot,gableFront){
           y:frontage.a.y+frontage.uy*along+inward.y*(faceDepth/2+URBAN_FRONT_SETBACK)
         };
         const buildingKey=house.id+'|'+partKey,virtual={
-          id:buildingKey,type:'house',houseLevel:level,urbanCompact:true,gableFront,
+          id:buildingKey,type:'house',houseLevel:level,urbanCompact:true,gableFront,turretCorner:turretCorner(i),
           x:center.x,y:center.y,angle,w:faceWidth,h:faceDepth
         };
         let accepted=null;
@@ -901,10 +907,10 @@ function houseFacadePlan(house,part,edge){
   const pts=part.points,i=pts.indexOf(edge.a),other=i>=0?dist(pts[(i+1)%pts.length],pts[(i+2)%pts.length]):0;
   const long=level>=2&&L>=1&&L>=other-1e-6;
   const offs=long?[-L/4,L/4]:[0];
-  const windows=rows.flatMap(z=>offs.map(off=>({off,z})));
+  const windows=houseFacadeDoorCut(house,edge,rows.flatMap(z=>offs.map(off=>({off,z}))));
   const beams=[];
   if(level<2)return{windows,beams};
-  const fb=wallH*.5,top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
+  const fb=houseFloorBreak(wallH),top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
   const seg=(o0,z0,o1,z1)=>beams.push([{off:o0,z:z0},{off:o1,z:z1}]);
   seg(-half,fb+t,half,fb+t);seg(-half,top-t,half,top-t);
   const upper=windows.filter(w=>w.z>fb&&w.z<top);
@@ -935,6 +941,19 @@ function houseFacadePlan(house,part,edge){
     seg(-half*.62,top+t,-t,top+(ridge-top)*.72);seg(half*.62,top+t,t,top+(ridge-top)*.72);
   }
   return houseFacadeTurretCut(part,edge,{windows,beams});
+}
+// A window never sits on or over the door: any window reaching down into the door's height keeps
+// HOUSE_DOOR_CLEARANCE beside the door leaf, or is dropped.
+const HOUSE_DOOR_TOP=.552,HOUSE_DOOR_CLEARANCE=.06;
+function houseFacadeDoorCut(house,edge,windows){
+  const door=typeof houseDoorInfo==='function'?houseDoorInfo(house):null;if(!door)return windows;
+  const L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+  const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2,dx=door.surface.x-mx,dy=door.surface.y-my;
+  const off=dx*ux+dy*uy;
+  if(Math.abs(-dx*uy+dy*ux)>.08||Math.abs(off)>L/2+.02)return windows;
+  const halfDoor=Math.min(.08,(Number(house.w)||1.5)*.0533);
+  return windows.filter(w=>w.z-HOUSE_WINDOW_HALF_H>HOUSE_DOOR_TOP+HOUSE_DOOR_CLEARANCE||
+    Math.abs(w.off-off)>=HOUSE_WINDOW_HALF_W+halfDoor+HOUSE_DOOR_CLEARANCE);
 }
 // The L4 corner turret stands in front of part of its own facade: that stretch keeps no window
 // or beam (horizontal plates are split around it).

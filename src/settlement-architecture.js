@@ -500,9 +500,14 @@ function drawHouseFacadeWindows(s,lit=false,nf=1){
       }
       ctx.stroke();ctx.restore();
     }
+    // Ground-floor windows of a jettied side (edges 0 and 2) sit on the recessed stone wall.
+    const index=part.points.indexOf(edge.a),recess=part.basePoints&&(index===0||index===2)?houseJetty(s):0;
+    let nx=-uy,ny=ux;if(nx*(mx-part.center.x)+ny*(my-part.center.y)<0){nx=-nx;ny=-ny}
+    const fb=houseFloorBreak(part.bodyH??houseBodyHeight(s));
     for(const w of plan.windows){
-      const a=w2s(edge.a,w.z),b=w2s(edge.b,w.z),px=w.off*Math.hypot(b.x-a.x,b.y-a.y)/L;
-      drawWindowOnEdge(edge,w.z,lit,nf,px);
+      const k=w.z<fb?recess:0,e=k?{a:{x:edge.a.x-nx*k,y:edge.a.y-ny*k},b:{x:edge.b.x-nx*k,y:edge.b.y-ny*k}}:edge;
+      const a=w2s(e.a,w.z),b=w2s(e.b,w.z),px=w.off*Math.hypot(b.x-a.x,b.y-a.y)/L;
+      drawWindowOnEdge(e,w.z,lit,nf,px);
     }
   }
 }

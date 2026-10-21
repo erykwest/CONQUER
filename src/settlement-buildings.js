@@ -486,13 +486,14 @@ function drawHouse(s){
       drawHouseRoofPart(s,part,wallH,part.ridgeH,'thatch',null);
     }
   }else{
-    const floorBreak=wallH*.50;
+    const floorBreak=houseFloorBreak(wallH);
     const creamTop='#d6bf82',creamA='#c8ae70',creamB='#e0ca91',creamGable='#d9c184';
     const dormers=level===4?urbanHouseGeometry().find(e=>e.house.id===s.id)?.dormers||[]:[];
     for(const part of parts){
       if(part.kind==='outbuilding'){drawUrbanOutbuilding(s,part,selected);continue}
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
-      extrudePolygonAt(part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
+      // Recessed stone ground floor; the jettied upper floor overhangs it on the door side and opposite.
+      extrudePolygonAt(part.basePoints||part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
       extrudePolygonAt(part.points,floorBreak,wallH,{top:creamTop,sideA:creamA,sideB:creamB,stroke});
       drawHouseRoofPart(s,part,wallH,part.ridgeH,true,creamGable);
       if(dormers.length)drawHouseDormers(dormers,part);
@@ -525,7 +526,9 @@ function houseDoorInfo(house){
   const side=Number(house.doorSide)>=0?1:-1,ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0);
   const size=houseFootprintDimensions(house);
   const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=size.h/2;
-  const lateralSign=(peasantHash(house.id)&2)?1:-1;
+  // The door takes the half of the facade away from an L4 corner turret.
+  const turret=houseTurretInfo(house),hashSign=(peasantHash(house.id)&2)?1:-1;
+  const lateralSign=turret&&turret.sx===hashSign?-hashSign:hashSign;
   const lateralOffset=size.w*.24*lateralSign;
   // Extensions and L4 turrets may cover the original base-wall entrance.
   // Put the door on the outermost exposed footprint along its outward ray.
@@ -561,9 +564,11 @@ function drawHouseDoor(house){
   const d=houseDoorInfo(house),halfW=Math.min(.08,(Number(house.w)||1.5)*.0533);
   const visible=visibleFacadeEdges(house).some(e=>pointSegmentDistance(d.surface,e.a,e.b)<.08);
   if(!visible)return;
-  const l={x:d.surface.x-d.tangent.x*halfW,y:d.surface.y-d.tangent.y*halfW};
-  const r={x:d.surface.x+d.tangent.x*halfW,y:d.surface.y+d.tangent.y*halfW};
-  const poly=[w2s(l,.04),w2s(r,.04),w2s(r,.552),w2s(l,.552)];
+  // The door opens in the recessed ground floor, under the jetty.
+  const j=houseJetty(house),c={x:d.surface.x-d.normal.x*j,y:d.surface.y-d.normal.y*j};
+  const l={x:c.x-d.tangent.x*halfW,y:c.y-d.tangent.y*halfW};
+  const r={x:c.x+d.tangent.x*halfW,y:c.y+d.tangent.y*halfW};
+  const poly=[w2s(l,.04),w2s(r,.04),w2s(r,HOUSE_DOOR_TOP),w2s(l,HOUSE_DOOR_TOP)];
   pathPolygon(poly,'#39271e','rgba(170,139,96,.50)',.7);
 }
 function drawAutoStructure(s,preview=false){

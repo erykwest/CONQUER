@@ -4,6 +4,14 @@
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
 
+## Case L2+: basamento più basso con sporto, porte libere, torrette solo d'angolo (21/10/2026)
+
+- **BASAMENTO:** il piano terra in pietra scende dal 50% al 42% del muro (`HOUSE_FLOOR_BREAK`, condiviso da WebGL2, Canvas, graticcio e torrette). Righe finestre invariate.
+- **SPORTO (jetty):** sulle case L2+ il basamento è arretrato di 0,07 U sul lato porta e su quello opposto (assi ±Y locali), i piani superiori sporgono; i lati/muri di confine restano a filo. In WebGL2 c'è il sottosporto in legno; porta e finestre del piano terra stanno sul muro arretrato. Collisioni e navigazione usano ancora la sagoma piena.
+- **PORTA:** nessuna finestra del piano terra sulla porta o sopra di essa: resta a 6 cm dall'anta oppure viene tolta (`houseFacadeDoorCut`).
+- **TORRETTE SOLO D'ANGOLO:** a schiera solo l'edificio di testa di un fronte il cui vertice del lotto tocca un'altra strada; isolate solo se due strade non parallele passano vicino. La torretta va verso la strada laterale e la porta si sposta nell'altra metà della facciata. Le altre L4 si distinguono per gli abbaini. Il catalogo prerender (case isolate senza strade) ora mostra L4 senza torretta.
+- **QA:** `houses3d`, `urban-density`, `urban-regression` aggiornate; 63/69 (stessi 6 fallimenti di main).
+
 ## Case L3/L4: tipo con timpano su strada, torrette d'angolo, abbaini (21/10/2026)
 
 - **BRANCH:** `case`, sopra l'audit sottostante.
