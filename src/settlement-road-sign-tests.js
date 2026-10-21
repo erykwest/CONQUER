@@ -8,6 +8,7 @@
   const money=n=>Math.round((n+Number.EPSILON)*1000)/1000;
   const coins=n=>Number.isFinite(n)&&n>=0&&n<=1e9;
   let panel=null,opened=null,lastFrame=0,seq=0;
+  let cachedSignsKey=null,cachedSigns=null;
   function commerce(){return window.ConquerCommerce}
   function convoys(){return window.ConquerConvoys}
   function active(){return window.ConquerEconomy?.state?.()?.commerce?.roadSignTest||null}
@@ -45,7 +46,11 @@
   function signs(){
     if(!State.village?.founded||!well())return[];
     const routes=Array.isArray(State.village.roadPlan)?State.village.roadPlan:[];
-    return EDGES.map(edge=>{
+    const w=well(),nav=typeof navPerf!=='undefined'?navPerf.navInvalidations||0:0;
+    const key=[State.village.wellId,w.x,w.y,State.structures.length,nav,
+      routes.map(r=>[r.id,r.connected,r.target?.x,r.target?.y].join(':')).join(';')].join('|');
+    if(cachedSignsKey===key&&cachedSigns)return cachedSigns;
+    const result=EDGES.map(edge=>{
       const route=routes.find(r=>r.edge===edge);
       if(!route)return null;
       // Place each post on the shoulder of its actual arterial branch,
@@ -64,6 +69,8 @@
       return{edge,label:labels[edge],routeId:route.id,roadPoint:target,
         point:pos,angle,connected:!!route.connected&&!!path,path};
     }).filter(Boolean);
+    cachedSignsKey=key;cachedSigns=result;
+    return result;
   }
   function hit(screen){
     if(State.tool?.kind!=='select')return null;
@@ -234,8 +241,12 @@
     return true;
   }
   function tick(dt){
-    const c=convoys()?.state?.(),job=c?.roadSignTest;
+    // Near-zero overhead when no test is active; the economy state/route graph
+    // should never be scanned at 60 Hz just to discover an absent convoy.
+    const job=active();
     if(!job||job.status!=='moving'||!Number.isFinite(dt)||dt<=0)return;
+    const c=convoys()?.state?.();
+    if(!c)return;
     job.distance=Math.min(job.total,(job.distance||0)+dt*6);
     if(job.distance>=job.total){
       job.status='exited';
@@ -281,10 +292,10 @@
         '<label>Tipo <select data-road-kind><option value="gift">Dono signorile</option>'+
         '<option value="tribute">Tributo signorile</option><option value="merchant">Mercante L4+ (solo monete)</option></select></label>'+
         '<label>Merce <select data-road-good><option value="">Solo monete</option>'+
-        goods.map(g=>'<option value="'+g+'">'+g+'</option>').join('')+'</select></label>'+
-        '<label>Quantità <input data-road-qty type="number" value="5" min="0" step="1" style="width:70px"></label>'+
+        goods.map(g=>'<option value="'+g+'"'+(g==='wood'?' selected':'')+'>'+g+'</option>').join('')+'</select></label>'+
+        '<label>Quantità <input data-road-qty type="number" value="1" min="0" step="1" style="width:70px"></label>'+
         '<label>Forziere monete <input data-road-gold type="number" value="0" min="0" step=".001" style="width:90px"></label>'+
-        '<label>Scorta <input data-road-guards type="number" min="0" max="40" value="0" style="width:55px"></label>'+
+        '<label>Scorta <input data-road-guards type="number" min="0" max="40" value="'+Math.min(2,available)+'" style="width:55px"></label>'+
         '<label>Veicolo <select data-road-vehicle><option value="wagon">Carro (100)</option>'+
         '<option value="cart">Carretto (40)</option></select></label>'+
         '<div style="opacity:.8">Guardie signorili: massimo '+available+
