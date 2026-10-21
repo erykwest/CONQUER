@@ -46,6 +46,12 @@
 - **QA:** `qa/construction-commute-regression.cjs` verifica identità, andata/ritorno, industria, assenza di strada, cache e weekend. Le regressioni CI non sostituiscono la prova di gioco/browser e non attestano il pagamento salari.
 - **Aperto:** salari dei costruttori, percorsi speciali/assedi, gameplay dei cantieri autonomi e validazione browser/visiva.
 
+## Quattro cartelli interattivi e animazione locale convogli — 21/10/2026, PR #55 Draft
+
+- **CODICE:** cartelli scatter autentici Nord/Est/Sud/Ovest, vicini al pozzo su strade maestre persistenti; clic in modalità Selezione apre il pannello QA. Asset signpost estratto da `feature/scatter` e `settlement-wagons.js` riutilizzato da `animation` per carro/carretto e cavalli.
+- **TEST FUNZIONALE:** lancio solo con ramo stradale continuo verso il bordo; simulazione dei carri su rotta stradale e scorta QA visiva; prelievo reale dal castello di merci/forziere per doni/tributi, o da `wallet.L4` delle monete per mercanti (merci L4 non ancora attive); annullamento/ripristino senza doppi accrediti, anche dopo salvataggio o arrivo al bordo.
+- **NESSUN VIAGGIO FRA FEUDI:** il prototipo parte dal tratto vicino al pozzo e raggiunge il bordo; NON ha ancora il percorso fisico dal Mastio/mercato, non registra vendite o consegne e non calcola costi di viaggio. Guardie visualizzate come segnaposto finché non esiste un roster reale. [Dettaglio e test](../road-sign-convoy-tests.md).
+
 ## Skeleton convogli signorili, piccoli carri, carrozze e scorte — 21/10/2026, PR #55 Draft
 
 - **CODICE BRANCH:** `ConquerConvoys` crea bozze `tribute/gift` da Mastio verso un feudo differente, con zero/una merce e/o un **forziere** di oro. Il pannello Mastio espone creazione, richiesta guardie, accantonamento reale di oro/merce della tesoreria e annullamento/rimborso singolo. `ready` NON equivale a partenza. Le risorse del Builder riflettono l'accantonamento.
