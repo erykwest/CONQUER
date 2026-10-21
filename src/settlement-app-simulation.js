@@ -90,6 +90,7 @@ function simulationFrame(now){
   const rawDtMs=now-simLast;
   window.__conquerAnalytics?.frame(now,rawDtMs);
   const dt=Math.min(.25,rawDtMs/1000);simLast=now;
+  window.ConquerRoadSignTests?.tick?.(dt);
   if(State.clock.speed>0){
     const previousDay=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
