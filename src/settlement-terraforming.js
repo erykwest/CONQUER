@@ -158,6 +158,89 @@
     if(candidate.mode!=='walled')return false;
     return edits().some(edit=>edit.mode==='walled'&&polygonsOverlapInterior(candidate.top,edit.top));
   }
+  function pointOnEdge(point,poly,eps=1e-6){
+    return poly.some((a,i)=>dist(point,segmentProjection(point,a,poly[(i+1)%poly.length]))<eps);
+  }
+  function pointStrictlyInside(point,poly){
+    return pointInPolygon(point,poly)&&!pointOnEdge(point,poly);
+  }
+  function segmentsCrossInterior(a,b,c,d){
+    const cross=(u,v,w,z)=>u*z-v*w;
+    const rx=b.x-a.x,ry=b.y-a.y,sx=d.x-c.x,sy=d.y-c.y;
+    const den=cross(rx,ry,sx,sy);
+    if(Math.abs(den)<1e-9)return false;
+    const qx=c.x-a.x,qy=c.y-a.y;
+    const t=cross(qx,qy,sx,sy)/den,u=cross(qx,qy,rx,ry)/den;
+    return t>1e-7&&t<1-1e-7&&u>1e-7&&u<1-1e-7;
+  }
+  function polygonsIntersectArea(a,b){
+    if(!a?.length||!b?.length)return false;
+    const xs=p=>({x0:Math.min(...p.map(q=>q.x)),y0:Math.min(...p.map(q=>q.y)),
+      x1:Math.max(...p.map(q=>q.x)),y1:Math.max(...p.map(q=>q.y))});
+    if(!boxesIntersect(xs(a),xs(b)))return false;
+    for(const p of a)if(pointStrictlyInside(p,b))return true;
+    for(const p of b)if(pointStrictlyInside(p,a))return true;
+    for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++)
+      if(segmentsCrossInterior(a[i],a[(i+1)%a.length],b[j],b[(j+1)%b.length]))return true;
+    // Identical/flush polygons have every vertex on the opposite boundary.
+    const centroid=poly=>({x:poly.reduce((v,p)=>v+p.x,0)/poly.length,
+      y:poly.reduce((v,p)=>v+p.y,0)/poly.length});
+    return pointStrictlyInside(centroid(a),b)||pointStrictlyInside(centroid(b),a);
+  }
+  function lineFootprint(a,b,width){
+    const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+    const nx=-dy/L*width/2,ny=dx/L*width/2;
+    return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},
+      {x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
+  }
+  function structureFootprints(s){
+    if(!s)return[];
+    if(s.type==='road'&&s.a&&s.b)return[lineFootprint(s.a,s.b,Number(s.width)||.6)];
+    if(s.type==='house'&&typeof houseFootprintParts==='function'){
+      const parts=houseFootprintParts(s).map(p=>p.points).filter(p=>p?.length>=3);
+      if(parts.length)return parts;
+    }
+    if(typeof footprintPoints==='function'){
+      const p=footprintPoints(s);
+      if(p?.length>=3)return[p];
+    }
+    if(s.a&&s.b)return[lineFootprint(s.a,s.b,Number(s.width)||.5)];
+    if(Number.isFinite(s.x)&&Number.isFinite(s.y)){
+      const radius=Math.max(.1,Number(s.r)||Number(s.radius)||.5);
+      return[polygon({x:s.x,y:s.y},radius,0,'round')];
+    }
+    return[];
+  }
+  function pointSegmentGap(a,b,c,d){
+    if(segmentsCrossInterior(a,b,c,d))return 0;
+    const distTo=(p,c,d)=>dist(p,segmentProjection(p,c,d));
+    return Math.min(distTo(a,c,d),distTo(b,c,d),distTo(c,a,b),distTo(d,a,b));
+  }
+  function footprintConflictsWater(area){
+    for(const water of State.environment||[]){
+      const type=water?.type;
+      if(!['river','stream','pond','lake','sea'].includes(type))continue;
+      if((type==='river'||type==='stream')&&water.points?.length>1){
+        const half=(Number(water.width)||1.25)/2;
+        for(let i=1;i<water.points.length;i++){
+          const a=water.points[i-1],b=water.points[i];
+          if(pointInPolygon(a,area)||pointInPolygon(b,area))return true;
+          for(let j=0;j<area.length;j++)if(pointSegmentGap(a,b,area[j],area[(j+1)%area.length])<half-1e-7)return true;
+        }
+      }else{
+        const footprint=water.points?.length>=3?water.points:
+          Number.isFinite(water.x)&&Number.isFinite(water.y)?
+            polygon({x:water.x,y:water.y},Number(water.radius)||Number(water.r)||2,0,'round'):[];
+        if(polygonsIntersectArea(area,footprint))return true;
+      }
+    }
+    return false;
+  }
+  function footprintConflictsStructure(area){
+    for(const s of State.structures||[])for(const footprint of structureFootprints(s))
+      if(polygonsIntersectArea(area,footprint))return true;
+    return false;
+  }
   // Boolean union of overlapping convex terrace footprints. Saved edits remain
   // independent primitives; visible perimeter is their exact polygonal union.
   // Splitting at every boundary intersection handles crossing, partial overlaps,
@@ -485,8 +568,16 @@
       profile:mode==='walled'?'vertical':mode==='flat'?'flat':'graded',
       material:mode==='walled'?'stone':'terrain',ok:true,reason:''
     };
-    if(!insideBuild(outer)){
-      ghost.ok=false;ghost.reason='Terraforming must remain inside the build area';
+    // Flat may cut across the buildable boundary; only its anchor must stay
+    // within the buildable region. All other terraform footprints stay inside.
+    if(mode==='flat'?!insideBuild([resolvedCenter]):!insideBuild(outer)){
+      ghost.ok=false;ghost.reason=mode==='flat'
+        ?'Flat centre must be inside the buildable border'
+        :'Terraforming must remain inside the build area';
+    }else if(footprintConflictsStructure(outer)){
+      ghost.ok=false;ghost.reason='Terraforming overlaps an existing structure';
+    }else if(footprintConflictsWater(outer)){
+      ghost.ok=false;ghost.reason='Terraforming overlaps a watercourse or lake';
     }else if(mode!=='flat'&&delta<0&&baseZ<=0){
       ghost.ok=false;ghost.reason='Minimum terrain height is H0';
     }else if(mode==='walled'&&overlapping.some(edit=>
