@@ -441,6 +441,49 @@ test('Flat H0 masks natural steep or gentle relief for placement and navigation'
   assert.equal(sandbox.terrainSlopeKind({x:110,y:110}),'steep','non-flattened relief remains untouched');
   context.terrainBaseElevation=()=>0;
 });
+test('boolean contour and mesh fragments are memoized until terrain edits change',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];context.terrainBaseElevation=()=>0;
+  assert.equal(api.commit(api.preview({x:95,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false})),true);
+  assert.equal(api.commit(api.preview({x:99,y:102},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false})),true);
+  const [first,second]=api.edits();
+  const exposed=api.exposedWallSegments(first,0);
+  const pieces=api.visibleTerracePieces(second);
+  assert.strictEqual(api.exposedWallSegments(first,0),exposed,'an unchanged boundary is not re-clipped');
+  assert.strictEqual(api.visibleTerracePieces(second),pieces,'an unchanged top is not re-subtracted');
+  assert.equal(api.commit(api.preview({x:105,y:103},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false})),true);
+  assert.notStrictEqual(api.exposedWallSegments(first,0),exposed,'a new edit invalidates derived perimeters');
+  assert.notStrictEqual(api.visibleTerracePieces(second),pieces,'a new edit invalidates mesh fragments');
+});
+test('spatial broadphase skips every distant polygon during height sampling',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];context.terrainBaseElevation=()=>0;
+  for(let i=0;i<10;i++){
+    assert.equal(api.commit(api.preview({x:65+i*8,y:100},{mode:'terrain',shape:'round',radius:3,delta:1,magnet:false})),true);
+  }
+  const original=context.pointInPolygon;
+  let checks=0;
+  context.pointInPolygon=(p,poly)=>{checks++;return original(p,poly)};
+  try{
+    for(let i=0;i<400;i++)assert.equal(api.elevationAt({x:15+i%10,y:15+Math.floor(i/10)},0),0);
+    assert.equal(checks,0,'no polygon winding test for faraway points');
+    assert.ok(api.elevationAt({x:65,y:100},0)>0,'nearby points still use real polygon test');
+    assert.ok(checks>0,'spatial rejection does not bypass valid geometry');
+  }finally{context.pointInPolygon=original;}
+});
+test('WebGL terrain samples each grid vertex once instead of four times per cell',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];
+  let samples=0;
+  context.terrainBaseElevation=()=>{samples++;return 0};
+  assert.equal(api.commit(api.preview({x:90,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false})),true);
+  samples=0;
+  const started=process.hrtime.bigint();
+  const result=vm.runInContext('buildTerrain()',context);
+  const elapsedMs=Number(process.hrtime.bigint()-started)/1e6;
+  assert.ok(result.length>0);
+  assert.ok(samples<80000,'height sampled once per vertex, not once per triangle corner: '+samples);
+  assert.ok(elapsedMs<10000,'small edited map should not spend many seconds recalculating booleans: '+elapsedMs.toFixed(0)+'ms');
+  console.log('  terrain mesh performance: '+samples+' height samples; '+elapsedMs.toFixed(0)+'ms');
+  context.terrainBaseElevation=()=>0;
+});
 test('clear removes player terraforming from the persisted relief model',()=>{
   context.State.relief.terraforming=[];
   api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:2}));
