@@ -219,6 +219,55 @@
         return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
           minY:Math.min(...ys),maxY:Math.max(...ys)};
       });
+      // Broadphase: register edit bounds in 8U buckets once. A 100×100U
+      // 0.5U terrain rebuild has 40,000 cells; almost all must bypass CSG
+      // clipping entirely instead of scanning every authored polygon.
+      const BIN=8,bins=new Map(),binKey=(x,y)=>x+','+y;
+      const register=(bound,kind)=>{
+        const x0=Math.floor(bound.minX/BIN),x1=Math.floor(bound.maxX/BIN);
+        const y0=Math.floor(bound.minY/BIN),y1=Math.floor(bound.maxY/BIN);
+        for(let ix=x0;ix<=x1;ix++)for(let iy=y0;iy<=y1;iy++){
+          const key=binKey(ix,iy);
+          if(!bins.has(key))bins.set(key,{flat:[],terrace:[]});
+          bins.get(key)[kind].push(bound);
+        }
+      };
+      flatBounds.forEach(bound=>register(bound,'flat'));
+      terraceBounds.forEach(bound=>register(bound,'terrace'));
+      const EMPTY_NEAR={flat:[],terrace:[]};
+      const touching=(item,x0,y0,x1,y1)=>
+        item.minX<=x1&&item.maxX>=x0&&item.minY<=y1&&item.maxY>=y0;
+      const nearCell=(x0,y0,x1,y1)=>{
+        const bx0=Math.floor(x0/BIN),by0=Math.floor(y0/BIN);
+        const bx1=Math.floor(x1/BIN),by1=Math.floor(y1/BIN);
+        // Almost every cell belongs to a single spatial bucket.
+        if(bx0===bx1&&by0===by1){
+          const bucket=bins.get(binKey(bx0,by0));
+          if(!bucket)return EMPTY_NEAR;
+          return{flat:bucket.flat.filter(item=>touching(item,x0,y0,x1,y1)),
+            terrace:bucket.terrace.filter(item=>touching(item,x0,y0,x1,y1))};
+        }
+        const selectedFlat=new Set(),selectedTerrace=new Set();
+        for(let ix=bx0;ix<=bx1;ix++)for(let iy=by0;iy<=by1;iy++){
+          const bucket=bins.get(binKey(ix,iy));
+          if(!bucket)continue;
+          for(const item of bucket.flat)
+            if(touching(item,x0,y0,x1,y1))selectedFlat.add(item);
+          for(const item of bucket.terrace)
+            if(touching(item,x0,y0,x1,y1))selectedTerrace.add(item);
+        }
+        return selectedFlat.size||selectedTerrace.size?
+          {flat:[...selectedFlat],terrace:[...selectedTerrace]}:EMPTY_NEAR;
+      };
+      const gridHeights=new Map();
+      const sampleHeight=p=>{
+        const key=p.x+','+p.y;
+        if(gridHeights.has(key))return gridHeights.get(key);
+        const z=window.ConquerTerraforming.elevationAt(
+          p,terrainBaseElevation(p),{excludeWalled:true});
+        gridHeights.set(key,z);
+        return z;
+      };
       // Cut the ground exactly at terrace edges. Sampling a height discontinuity
       // would create diagonal triangles instead of a vertical masonry wall.
       const halfPlane=(poly,a,b,inside)=>{
@@ -232,12 +281,13 @@
         return result;
       };
       const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
-      const ground=tri=>{
+      const ground=(tri,near)=>{
+        if(!near.flat.length&&!near.terrace.length){emit(tri);return;}
         let pieces=[tri],nearFlat=false;
         // The ground must be cut exactly on every Flat edge. Without this
         // split, the .5U grid bridges the H0 hole with a diagonal ramp,
         // leaving a gap or hiding the new vertical retaining wall.
-        for(const {edit,minX,maxX,minY,maxY} of flatBounds){
+        for(const {edit,minX,maxX,minY,maxY} of near.flat){
           if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
              tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
           nearFlat=true;
@@ -254,7 +304,7 @@
           }
           pieces=next;
         }
-        for(const {top,minX,maxX,minY,maxY} of terraceBounds){
+        for(const {top,minX,maxX,minY,maxY} of near.terrace){
           if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
              tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
           const next=[];
@@ -294,8 +344,9 @@
         for(let y=y0;y<y1-1e-6;y+=step)for(let x=x0;x<x1-1e-6;x+=step){
           const xa=Math.min(x1,x+step),ya=Math.min(y1,y+step);
           const p00={x,y},p10={x:xa,y},p11={x:xa,y:ya},p01={x,y:ya};
-          for(const p of [p00,p10,p11,p01])p.z=window.ConquerTerraforming.elevationAt(p,terrainBaseElevation(p),{excludeWalled:true});
-          ground([p00,p10,p11]);ground([p00,p11,p01]);
+          for(const p of [p00,p10,p11,p01])p.z=sampleHeight(p);
+          const near=nearCell(x,y,xa,ya);
+          ground([p00,p10,p11],near);ground([p00,p11,p01],near);
         }
       };
       grid(0,0,W,BUILD_MIN,2);

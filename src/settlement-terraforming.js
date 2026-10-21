@@ -35,6 +35,62 @@
       return{x:center.x+Math.cos(a)*radius,y:center.y+Math.sin(a)*radius};
     });
   }
+  // Immutable edits can be queried tens of thousands of times during a terrain
+  // rebuild. Reuse bounding boxes and derived boolean geometry until the authored
+  // edit collection changes; do not persist derived meshes into saved games.
+  let geometryRevision=null;
+  function geometryCache(){
+    const list=State.relief?.terraforming;
+    if(!geometryRevision||geometryRevision.relief!==State.relief||
+       geometryRevision.list!==list||geometryRevision.length!==list?.length||
+       geometryRevision.first!==list?.[0]||geometryRevision.last!==list?.[list.length-1]){
+      geometryRevision={relief:State.relief,list,length:list?.length,
+        first:list?.[0],last:list?.[list?.length-1],
+        bounds:new WeakMap(),edges:new WeakMap(),pieces:new WeakMap()};
+    }
+    return geometryRevision;
+  }
+  function editBounds(edit){
+    const cache=geometryCache(),cached=cache.bounds.get(edit);
+    if(cached&&cached.topRef===edit.top&&cached.outerRef===edit.outer)return cached;
+    const box=poly=>{
+      const xs=poly.map(p=>p.x),ys=poly.map(p=>p.y);
+      return{x0:Math.min(...xs),y0:Math.min(...ys),
+        x1:Math.max(...xs),y1:Math.max(...ys)};
+    };
+    const entry={topRef:edit.top,outerRef:edit.outer,
+      top:box(edit.top),outer:box(edit.outer||edit.top)};
+    cache.bounds.set(edit,entry);
+    return entry;
+  }
+  function boxContains(p,b){
+    return p.x>=b.x0-1e-8&&p.x<=b.x1+1e-8&&
+      p.y>=b.y0-1e-8&&p.y<=b.y1+1e-8;
+  }
+  function boxesIntersect(a,b){
+    return a.x0<=b.x1+1e-8&&a.x1>=b.x0-1e-8&&
+      a.y0<=b.y1+1e-8&&a.y1>=b.y0-1e-8;
+  }
+  const HEIGHT_BIN=8,NO_EDITS=Object.freeze([]);
+  function nearbyHeightEdits(point){
+    const cache=geometryCache();
+    if(!cache.heightBins){
+      const bins=new Map();
+      for(const edit of edits()){
+        if(!edit?.outer?.length||!edit?.top?.length)continue;
+        const box=editBounds(edit).outer;
+        for(let ix=Math.floor(box.x0/HEIGHT_BIN);ix<=Math.floor(box.x1/HEIGHT_BIN);ix++)
+          for(let iy=Math.floor(box.y0/HEIGHT_BIN);iy<=Math.floor(box.y1/HEIGHT_BIN);iy++){
+            const key=ix+','+iy;
+            if(!bins.has(key))bins.set(key,[]);
+            bins.get(key).push(edit);
+          }
+      }
+      cache.heightBins=bins;
+    }
+    return cache.heightBins.get(Math.floor(point.x/HEIGHT_BIN)+','+
+      Math.floor(point.y/HEIGHT_BIN))||NO_EDITS;
+  }
   function insideBuild(points){
     return points.every(p=>p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX);
   }
@@ -107,16 +163,21 @@
   // Splitting at every boundary intersection handles crossing, partial overlaps,
   // containment, L-shaped outlines and rotated round/square junctions.
   function exposedWallSegments(edit,index){
+    const cache=geometryCache(),stored=cache.edges.get(edit);
+    if(stored?.has(index))return stored.get(index);
     const a=edit.top[index],b=edit.top[(index+1)%edit.top.length];
     const vx=b.x-a.x,vy=b.y-a.y,L=Math.hypot(vx,vy);
     if(L<1e-8)return[];
+    const edgeBox={x0:Math.min(a.x,b.x),y0:Math.min(a.y,b.y),
+      x1:Math.max(a.x,b.x),y1:Math.max(a.y,b.y)};
     const ux=vx/L,uy=vy/L,area=edit.top.reduce((sum,p,i)=>{
       const q=edit.top[(i+1)%edit.top.length];return sum+p.x*q.y-q.x*p.y;
     },0);
     const sign=area<0?-1:1;
     const all=edits(),editIndex=all.indexOf(edit);
     const others=all.filter(other=>other!==edit&&other.id!==edit.id&&other.mode===edit.mode&&
-      Math.abs(other.targetZ-edit.targetZ)<1e-7&&Math.abs(other.baseZ-edit.baseZ)<1e-7);
+      Math.abs(other.targetZ-edit.targetZ)<1e-7&&Math.abs(other.baseZ-edit.baseZ)<1e-7&&
+      boxesIntersect(edgeBox,editBounds(other).top));
     const cuts=[0,1],cross=(x,y,X,Y)=>x*Y-y*X;
     const add=t=>{if(t>1e-8&&t<1-1e-8)cuts.push(t)};
     for(const other of others)for(let j=0;j<other.top.length;j++){
@@ -150,10 +211,13 @@
       });
       if(!sameLine){
         const laterFlat=all.slice(editIndex+1).some(other=>other.mode==='flat'&&
-          pointInPolygon(mid,other.top));
+          boxContains(mid,editBounds(other).top)&&pointInPolygon(mid,other.top));
         if(!laterFlat)result.push({a:point(lo),b:point(hi)});
       }
     }
+    let memo=cache.edges.get(edit);
+    if(!memo){memo=new Map();cache.edges.set(edit,memo);}
+    memo.set(index,result);
     return result;
   }
   function unionContours(){
@@ -213,16 +277,20 @@
     return result;
   }
   function visibleTerracePieces(edit){
+    const cache=geometryCache(),saved=cache.pieces.get(edit);
+    if(saved)return saved;
     const all=edits(),index=all.indexOf(edit);
     let pieces=[edit.top];
     for(let i=0;i<all.length;i++){
       const other=all[i];if(other===edit||!other.top?.length)continue;
-      if(other.mode==='flat'&&i>index||other.mode===edit.mode&&i<index&&
-         Math.abs(other.baseZ-edit.baseZ)<1e-7&&Math.abs(other.targetZ-edit.targetZ)<1e-7){
+      if((other.mode==='flat'&&i>index||other.mode===edit.mode&&i<index&&
+          Math.abs(other.baseZ-edit.baseZ)<1e-7&&Math.abs(other.targetZ-edit.targetZ)<1e-7)&&
+         boxesIntersect(editBounds(edit).top,editBounds(other).top)){
         pieces=pieces.flatMap(poly=>subtractPolygon(poly,other.top));
         if(!pieces.length)break;
       }
     }
+    cache.pieces.set(edit,pieces);
     return pieces;
   }
   // Recompute cut faces only when the authored geometry changes. This is also
@@ -290,14 +358,20 @@
     return poly.some((a,i)=>dist(point,segmentProjection(point,a,poly[(i+1)%poly.length]))<1e-6);
   }
   function insideEdit(point,edit){
-    return pointInPolygon(point,edit.top)||boundaryContains(point,edit.top);
+    return boxContains(point,editBounds(edit).top)&&
+      (pointInPolygon(point,edit.top)||boundaryContains(point,edit.top));
   }
   function elevationAt(point,baseZ=0,{excludeWalled=false}={}){
-    const all=edits();
+    // Spatially sorted in commit order; distant cells do no per-edit work.
+    const all=nearbyHeightEdits(point);
     let z=Math.max(0,Number(baseZ)||0);
     // A Flat cut resets all older terrain and natural relief to H0; edits
     // committed afterwards can raise the area again.
     for(const edit of all){
+      // Most ground-grid vertices never touch the authored edit. Bounding
+      // rejection avoids expensive polygon tests over every polygon side.
+      const box=editBounds(edit);
+      if(!boxContains(point,box.outer))continue;
       if(edit.mode==='flat'){
         if(insideEdit(point,edit))z=0;
         continue;
@@ -428,12 +502,14 @@
     const used=new Set(edits().map(edit=>edit.id));
     let index=1;while(used.has('terraform-'+index))index++;
     edits().push({...fresh,id:'terraform-'+index,previewOnly:false,ok:true,reason:''});
+    geometryRevision=null;
     flatWallsRevision=null;
     return true;
   }
   function clear(){
     const list=edits(),count=list.length;
     list.splice(0,list.length);
+    geometryRevision=null;
     flatWallsRevision=null;
     flatWallsMemo=new WeakMap();
     if(typeof clearReliefBandCache==='function')clearReliefBandCache();
