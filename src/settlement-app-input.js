@@ -153,6 +153,8 @@ canvas.addEventListener('pointermove',e=>{
     return
   }
   const p=pointerWorld(e);
+  // Four signposts behave like interactive wayfinding markers in select mode.
+  canvas.style.cursor=State.tool.kind==='select'&&window.ConquerRoadSignTests?.hit?.(pointerScreen(e))?'pointer':'';
   if(State.tool.kind==='crossing'){
     const moat=['dry','water'].includes(State.tool.crossing);
     const snap=moat?window.ConquerCrossings?.snapMoatEndpoint(p,pointerScreen(e)):null;
