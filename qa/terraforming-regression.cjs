@@ -506,6 +506,95 @@ test('rebuilding many walled/Flat booleans remains bounded and preserves world a
   assert.ok(Math.abs(total-40000)<.1,'CSG still tessellates exactly the complete world');
   console.log('  16 boolean edits: terrain mesh '+elapsed.toFixed(0)+'ms');
 });
+test('terraform footprint refuses buildings and road corridors, not just occupied centres',()=>{
+  context.State.relief.terraforming=[];context.State.environment=[];
+  context.terrainBaseElevation=()=>0;
+  context.State.structures=[{id:'tower',type:'tower',x:103.8,y:100,r:1}];
+  for(const mode of ['terrain','walled','flat']){
+    const g=api.preview({x:100,y:100},{mode,shape:'round',radius:3,delta:1,magnet:false});
+    assert.equal(g.ok,false,mode+' cannot clip a tower near the outside edge');
+    assert.match(g.reason,/structure/);
+  }
+  context.State.structures=[{id:'road',type:'road',a:{x:93,y:104},b:{x:110,y:104},width:1}];
+  for(const mode of ['terrain','walled','flat']){
+    const g=api.preview({x:100,y:100},{mode,shape:'square',radius:4,delta:1,magnet:false});
+    assert.equal(g.ok,false,mode+' cannot run a new footprint across a road');
+    assert.match(g.reason,/structure/);
+  }
+  // No false positive when a road is merely near the new worksite.
+  context.State.structures=[{id:'road',type:'road',a:{x:120,y:120},b:{x:130,y:120},width:1}];
+  assert.equal(api.preview({x:100,y:100},{mode:'flat',radius:4}).ok,true);
+  context.State.structures=[];
+});
+test('the real building footprint is used, including concave/rectangular parts',()=>{
+  context.State.relief.terraforming=[];context.State.environment=[];
+  context.State.structures=[{id:'large',type:'church',x:111,y:100}];
+  context.footprintPoints=s=>s.type==='church'?
+    [{x:98,y:97},{x:102,y:97},{x:102,y:99},{x:98,y:99}]:[];
+  try{
+    for(const mode of ['flat','terrain','walled']){
+      const g=api.preview({x:100,y:100},{mode,shape:'square',radius:3,magnet:false});
+      assert.equal(g.ok,false,mode+' must test real footprint, not the position of the structure');
+    }
+  }finally{delete context.footprintPoints;context.State.structures=[];}
+});
+test('lakes, streams, rivers and shoreline water block every terraforming type',()=>{
+  context.State.structures=[];context.State.relief.terraforming=[];
+  const cases=[
+    {type:'stream',points:[{x:96,y:100},{x:104,y:100}],width:1},
+    {type:'river',points:[{x:90,y:102},{x:110,y:102}],width:3.2},
+    {type:'pond',points:[{x:102,y:99},{x:107,y:99},{x:107,y:104},{x:102,y:104}]},
+    {type:'lake',points:[{x:97,y:97},{x:102,y:97},{x:102,y:102},{x:97,y:102}]},
+    {type:'sea',points:[{x:94,y:94},{x:100,y:94},{x:100,y:100},{x:94,y:100}]}
+  ];
+  for(const water of cases){
+    context.State.environment=[water];
+    for(const mode of ['terrain','walled','flat']){
+      const g=api.preview({x:100,y:100},{mode,shape:'square',radius:3,magnet:false});
+      assert.equal(g.ok,false,water.type+' must block '+mode);
+      assert.match(g.reason,/watercourse|lake/);
+    }
+  }
+  context.State.environment=[];
+});
+test('Flat is allowed across buildable border if and only if its centre stays inside',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];context.State.environment=[];
+  const inside=api.preview({x:51,y:100},{mode:'flat',shape:'square',radius:6});
+  assert.equal(inside.ok,true,inside.reason);
+  assert.ok(inside.top.some(p=>p.x<50));
+  assert.equal(api.commit(inside),true);
+  assert.equal(api.elevationAt({x:47,y:100},2),0,'Flat reaches beyond buildable edge');
+  const out=api.preview({x:49.9,y:100},{mode:'flat',shape:'square',radius:3});
+  assert.equal(out.ok,false);
+  assert.match(out.reason,/centre.*buildable/i);
+  assert.equal(api.preview({x:51,y:100},{mode:'terrain',shape:'square',radius:4}).ok,false,
+    'graded terraforming still requires the full outside apron within the border');
+  assert.equal(api.preview({x:51,y:100},{mode:'walled',shape:'square',radius:4,magnet:false}).ok,false);
+});
+test('Flat subtracts all older intersecting graded tops, aprons and masonry boundaries',()=>{
+  context.State.relief.terraforming=[];context.State.structures=[];context.State.environment=[];
+  context.terrainBaseElevation=()=>0;
+  assert.equal(api.commit(api.preview({x:100,y:100},{mode:'terrain',shape:'square',radius:4,delta:1})),true);
+  const hill=api.edits()[0];
+  const cut=api.preview({x:102,y:100},{mode:'flat',shape:'square',radius:4});
+  assert.equal(api.commit(cut),true);
+  for(let x=98;x<=106;x+=.25)for(let y=96;y<=104;y+=2)
+    assert.equal(api.elevationAt({x,y},0),0,'inside Flat no original raised terrain may survive');
+  assert.ok(api.elevationAt({x:96,y:100},0)>0,'outside Flat the old shape still exists');
+  const source=fs.readFileSync(path.join(__dirname,'..','src','settlement-terraforming.js'),'utf8');
+  assert.match(source,/visible=visible\.flatMap\(poly=>subtractPolygon\(poly,newer\.top\)\)/,
+    'the old sloped faces are actually cut in Canvas rather than merely overpainted');
+  // A masonry wall that is only half covered must retain the uncovered half.
+  context.State.relief.terraforming=[];context.State.structures=[];
+  assert.equal(api.commit(api.preview({x:100,y:100},{mode:'walled',shape:'square',radius:4,delta:1,magnet:false})),true);
+  assert.equal(api.commit(api.preview({x:104,y:102},{mode:'flat',shape:'square',radius:2})),true);
+  const old=api.edits()[0];
+  const edge=api.exposedWallSegments(old,1);
+  assert.ok(edge.length>0,'the uncovered remainder of a cut wall still exists');
+  const visibleLen=edge.reduce((sum,{a,b})=>sum+Math.hypot(b.x-a.x,b.y-a.y),0);
+  assert.ok(visibleLen>0&&visibleLen<8,'a partial cut splits a wall, it does not remove or retain all of it');
+  assert.equal(api.elevationAt({x:103.5,y:102},0),0,'flat removes H even adjacent to the cut wall');
+});
 test('clear removes player terraforming from the persisted relief model',()=>{
   context.State.relief.terraforming=[];
   api.commit(api.preview({x:100,y:100},{mode:'terrain',delta:1,radius:2}));
