@@ -1,6 +1,6 @@
 # Aggiornamento piramide a ogni pull request
 
-**Introdotto:** 21/10/2026. Questo è il punto di ingresso operativo per chi modifica CONQUER, anche tramite ChatGPT/Claude/altro agente. Si applica alle **pull request verso `main`**, non al comando locale `git pull` (che scarica codice ma non crea una modifica da documentare).
+**Introdotto:** 21/10/2026. Questo è il punto di ingresso operativo per chi modifica CONQUER, anche tramite ChatGPT/Claude/altro agente. Si applica a **tutte le pull request** (anche con base `knights` o altre branch), non al comando locale `git pull` (che scarica codice ma non crea una modifica da documentare).
 
 ## Perché
 
@@ -19,7 +19,7 @@ Ogni PR può cambiare la realtà del progetto. Se lo stato documentale rimane fe
 
 ## Controllo automatico
 
-- Workflow GitHub Actions [Context pyramid guard](../../.github/workflows/context-governance.yml), attivato a ogni apertura, update, riapertura o modifica di PR con base `main`.
+- Workflow GitHub Actions [Context pyramid guard](../../.github/workflows/context-governance.yml), attivato a ogni apertura, update, riapertura o modifica di PR **verso qualsiasi branch**.
 - `node tools/context-guard.cjs` confronta gli SHA base/head della PR; **se esistono modifiche operative** sotto `src/`, `qa/`, `camp/`, `assets/`, `public/`, `scripts/`, `tools/`, `server/`, `supabase/` o file di runtime in root, il job **fallisce** a meno che il diff includa tutti e tre `STATUS.md`, `BACKLOG.md`, `CHANGELOG.md`.
 - PR esclusivamente documentali o di configurazione CI passano senza obbligo di scrivere false variazioni di gameplay; il job esegue comunque la propria regressione.
 - Il controllo **verifica presenza nel diff**, non può giudicare verità e qualità semantica della descrizione. Review manuale + Git/QA rimangono necessarie.
