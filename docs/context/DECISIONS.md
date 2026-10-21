@@ -64,7 +64,58 @@
 | D-032 | VINCOLO DI DESIGN ESPLICITO (ASSEDIO 16/10) | **Torre-porta e portone possiedono due valori di durabilità separati**: uno per la struttura della torre, uno per il portone vero e proprio. Ogni impatto agisce sulla durabilità del componente effettivamente colpito, non sull'altra per semplice associazione spaziale. | S-22/S-24/S-25: attacco/incendio del portone non rimuove automaticamente HP alla torre-porta; distruzione del portone sblocca il passaggio secondo lo stato della navigazione, senza distruggere la torre. Regole del possibile crollo della struttura da specificare, non inventate. Nessuna modifica runtime in questo commit. |
 | D-033 | CODICE + VINCOLO ESPLICITO (TERRAFORMING 19–20/10) | Il Builder offre **Terreno** e **Terrazzamento murato** con ghost non distruttivo; un terrazzamento murato non può sovrapporsi a un altro terrazzamento murato. **Chiarimento definitivo: il terrazzamento è un gradone VERTICALE color muro, con piano superiore piatto.** La collina naturale mantiene i pendii esistenti. Il magnete tiene conto dello spessore delle mura. | Stato persistito in `State.relief.terraforming`; migrazione dei terrazzamenti inclinati al profilo verticale. Canvas e WebGL2 usano facce verticali; il WebGL2 ritaglia il terreno al bordo evitando triangoli inclinati. Mutazione e invalidazione solo alla conferma. QA: `qa/terraforming-regression.cjs`; branch `terraforming`. Superata la precedente interpretazione spiovente del 20/10. |
 
+| D-034 | CONTRATTO TECNICO LOCALE (20/10/2026) | La manutenzione stradale dopo un completamento usa gli stessi generatori e le stesse collisioni del percorso sincrono, con budget cooperativo 6 ms e revisione della navigazione verificata prima del commit. Un completamento non invalida il catasto se non lo modifica; i completamenti delle arterie aggiornano le facciate dense. Il renderer confronta il contenuto dei lotti e attende una fence con polling a timeout zero prima di leggere gli errori GPU. | Motivazione: A* sincrono, texture terreno ricostruite senza necessità e `getError` bloccante riprodotti nell'[audit del 20/10](../construction-performance-audit-2026-10-20.md). Evita riduzioni della risoluzione o rimozione del fallback. Codice locale su `fix/construction-completion-perf`, non su main; QA in `qa/construction-completion-regression.cjs`, `qa/webgl-error-poll-regression.cjs`, `qa/construction-performance.cjs`. |
+
 Le voci DESIGN sono decisioni di *indirizzo/progetto*, **non** affermazioni che il comportamento sia già implementato.
+
+**D-035 · CONTRATTO TECNICO LOCALE (20/10/2026):** danni ai soli HP modificano stato persistito e overlay dinamico, senza invalidare navigazione/catasto o ridisegnare sincronicamente. Nell'app completa fuoco e crolli richiedono un frame al ciclo di simulazione condiviso; il dominio mantiene il proprio comportamento e il fallback standalone. Le macerie ferme usano un buffer GPU per contenuto/rotazione, quelle in caduta restano dinamiche. Il cutaway WebGL riusa la cache composita esistente limitata a 32 MiB per pareti/arredi; occupanti, danni, selezione e propagazione restano guidati dallo stato originale. Motivo e alternative verificate: [audit round 2](../fire-collapse-cutaway-performance-audit-2026-10-20.md). Codice locale su `fix/construction-completion-perf`, non rilasciato; nessuna riduzione di frammenti, collisioni o regole del fuoco. I colli Canvas/brigata rimangono espliciti.
+
+**D-036 · CONTRATTO TECNICO LOCALE (20/10/2026):** i percorsi della brigata usano
+lo stesso A* del chiamante sincrono, esposto anche come generatore e consumato con
+budget condiviso indicativo di 4 ms. Priorità rotante tra addette e cancellazione
+su revisione della navigazione; una rotta fallita non autorizza un segmento diretto
+attraverso gli ostacoli. Sagome/costi dei nodi sono memo della singola ricerca;
+le tangenti a pozzi/torri tonde richiedono distanza continua dal segmento.
+Le macerie Canvas sono memorizzate soltanto quando tutte le mesh sono ferme,
+nella cache composita esistente da 32 MiB: ordine del painter preservato, pan
+riutilizzabile, nuove mesh/proiezione cambiano chiave. Il raggruppamento di triangoli
+consecutivi dello stesso colore riguarda il primo disegno statico; niente culling
+né riduzione dei frammenti. Motivo, alternativa scartata e prove:
+[audit round 3](../movement-collapse-performance-audit-2026-10-20.md),
+`qa/movement-path-performance-regression.cjs` e benchmark browser. Il costo dei
+crolli ancora in movimento e la variabilità dei frame restano espliciti. Codice
+locale su `fix/construction-completion-perf`, non rilasciato.
+
+**D-037 · CONTRATTO TECNICO LOCALE (21/10/2026):** nel test 40 contro 30 un
+fante/arciere individuale è una sola entità e una sola figura, distinto dalle
+squadre/pattuglie esistenti. I tipi persistiti includono `infantry` e `archer`;
+il profilo dell'arciere non richiede un secondo campo ridondante. Il motore del
+tiro è condiviso fra entrambi gli schieramenti tramite argomenti aggiuntivi
+opzionali di `ConquerCombatRules.update`, compatibili con i chiamanti precedenti.
+I record mobili mantengono il proprietario e non autorizzano un tiro da un morto
+o da chi è in mischia/sulle scale. Portata/distanza precedono collisioni e LOS
+costose; i loro verdetti restano necessari per le coppie vicine. Nessuna modifica
+ai valori di HP, armatura, dado o danno strutturale. Il driver QA invia ordini
+attraverso i percorsi reali; non decide morti o danni e non costituisce una nuova
+IA strategica. Motivazione e prove: [audit 40/30](../mass-battle-performance-audit-2026-10-21.md).
+Codice locale oltre `9e1b6a5`; il picco `getError` rimane aperto, il tentativo di
+fence aggiuntive non è stato mantenuto.
+
+**D-038 · CONTRATTO TECNICO LOCALE (21/10/2026):** le animazioni militari in
+pausa condividono il ciclo visuale della simulazione con incendi e crolli;
+il modulo del combattimento non avvia un secondo RAF per ridisegnare la scena.
+Il controllo errori WebGL mantiene la verifica per perdita del contesto a ogni
+disegno, ma distanzia le query sincrone `getError` di almeno 1 s. La fence viene
+emessa dopo front/luci e mantiene l'età iniziale quando sostituita: dopo 1 s di
+attesa il controllo viene comunque eseguito, accettando un possibile blocco
+residuo invece di nascondere gli errori sotto carico continuo. Errori, wait
+fallita e allocazione sync fallita conservano il fallback Canvas.
+Questa scelta riduce i costi cumulativi; **non elimina le singole attese GPU**
+né certifica FPS a 1×. Il contratto aggiorna il posizionamento del checkpoint
+descritto da D-034; il tentativo di sole fence aggiuntive ricordato in D-037
+resta scartato. Nessuna modifica al framebuffer o rinvio dei frame viene
+mantenuta. Motivazioni, esperimenti e misure nell'[audit esteso](../mass-battle-performance-audit-2026-10-21.md).
+Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
 ## Conflitti decisionali da risolvere esplicitamente
 

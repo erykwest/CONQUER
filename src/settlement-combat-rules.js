@@ -31,7 +31,7 @@
     }
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
-  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.combatKind||'infantry';
+  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.kind==='archer'?'archer':u.combatKind||'infantry';
   function boundaryPoints(isAllowed,worldSize=200,step=1.25){
     const edge=step*.576,points=[];
     for(let y=step/2;y<worldSize;y+=step)for(let x=step/2;x<worldSize;x+=step){
@@ -179,7 +179,7 @@
   }
   function meleePair(a,b,count){
     ensure(a,profileKind(a));
-    ensure(b,b.combatKind||'infantry');
+    ensure(b,profileKind(b));
     let hitA=0,hitB=0;
     const ca=effectiveCombat(a),cb=effectiveCombat(b);
     for(let i=0;i<count;i++){
@@ -230,7 +230,32 @@
     // negative uphill, exactly symmetrical when shooter and target swap.
     return Math.max(1,PROFILES.archer.range+shooter.h-targetH);
   }
-  function update(dt,friendly,enemy,shooters,visibleFn,canContact=()=>true){
+  function shoot(dt,shooters,targets,visibleFn){
+    for(const shooter of shooters){
+      const owner=shooter.owner;
+      if(owner&&(!living(owner)||owner.defeated||owner.routing||owner.engaged||owner.climbing))continue;
+      let target=null,best=Infinity;
+      for(const e of targets){
+        if(!living(e)||e.routing||e.neutral)continue;
+        const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
+        if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
+        if(!visibleFn(e,shooter))continue;
+        target=e;best=d;
+      }
+      if(!shooter.clock)shooter.clock=0;
+      if(!target){shooter.clock=0;continue}
+      shooter.clock+=dt;
+      if(shooter.clock<2)continue;
+      shooter.clock%=2;
+      const hit=shotHit(shooter,target),shot=arrow(shooter,target,hit);
+      if(hit){
+        applyDamage(target,1,owner||shooter);
+        window.ConquerCombatAnim?.hurt(target,shot.duration);
+        if(target.defeated)window.ConquerCombatAnim?.fall(target,shot.duration,owner||shooter);
+      }
+    }
+  }
+  function update(dt,friendly,enemy,shooters,visibleFn,canContact=()=>true,enemyShooters=[],enemyVisibleFn=visibleFn){
     if(!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);elapsed+=dt;combatClock+=dt;
     for(const u of friendly.concat(enemy)){
@@ -246,15 +271,15 @@
       if(!living(a)||a.routing)continue;
       let nearest=null,gap=1;
       for(const b of enemy){
-        if(!living(b)||b.routing||b.neutral||!canContact(a,b))continue;
+        if(!living(b)||b.routing||b.neutral)continue;
         const distance=Math.hypot(a.x-b.x,a.y-b.y);
-        if(distance<gap){nearest=b;gap=distance}
+        if(distance<gap&&canContact(a,b)){nearest=b;gap=distance}
       }
       if(!nearest)continue;
       a.engaged=nearest.engaged=true;
       a.target=null;
       if(combatClock>=1){
-        const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[nearest.combatKind||'infantry'].front);
+        const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[profileKind(nearest)].front);
         const {hitA,hitB}=meleePair(a,nearest,Math.max(1,frontage));
         const anim=window.ConquerCombatAnim;
         if(anim){
@@ -271,28 +296,8 @@
       }
     }
     if(combatClock>=1)combatClock%=1;
-    for(const shooter of shooters){
-      let target=null,best=Infinity;
-      for(const e of enemy){
-        if(!living(e)||e.routing||e.neutral||!visibleFn(e,shooter))continue;
-        const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
-        if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
-        target=e;best=d;
-      }
-      const id=shooter.id;
-      if(!shooter.clock)shooter.clock=0;
-      if(!target){shooter.clock=0;continue}
-      shooter.clock+=dt;
-      if(shooter.clock<2)continue;
-      shooter.clock%=2;
-      const hit=shotHit(shooter,target);
-      const shot=arrow(shooter,target,hit);
-      if(hit){
-        applyDamage(target,1,shooter);
-        window.ConquerCombatAnim?.hurt(target,shot.duration);
-        if(target.defeated)window.ConquerCombatAnim?.fall(target,shot.duration,shooter);
-      }
-    }
+    shoot(dt,shooters,enemy,visibleFn);
+    shoot(dt,enemyShooters,friendly,enemyVisibleFn);
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
     for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);

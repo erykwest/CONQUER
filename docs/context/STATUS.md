@@ -4,6 +4,12 @@
 > Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
 
 
+## Integrazione performance con main aggiornato (21/10/2026)
+
+- **BASE E AUTORIZZAZIONE:** dopo la pubblicazione di `1520e00`, richiesto il merge. Integrato `origin/main` a `c94bdc1` nel branch `fix/construction-completion-perf` prima della PR/squash; le sezioni di audit sottostanti descrivono i rispettivi snapshot storici.
+- **CONFLITTI RISOLTI:** conservati firma completa delle modifiche di terraforming e confronto dei lotti reali per la texture terreno; macerie transitorie dei mulini e flag/cache delle macerie ferme; pale/ruote dei mulini nel painter Canvas comune. Anche il crollo del mulino usa il ridisegno coalescente.
+- **QA INTEGRAZIONE:** 60/62 suite PASS; soli fallimenti preesistenti `refactor-app-population-regression` e `wall-bays-regression`. Battaglia browser Canvas/WebGL completata a 298,1 s, stesso esito 37 contro 0, animazione in pausa e fallback con errore iniettato PASS. WebGL draw P95 16,9 ms / massimo 303,8 ms, Canvas 7,5 / 12,5 ms: i picchi GPU residui restano aperti. Artefatti locali `output/playwright/mass-battle/integration-main.json` e `regressions-integration.json`. Stato PR/CI/merge verificabile nella cronologia GitHub, senza anticipare il deploy.
+
 ## MAIN FIX — DEV scroll + mulini nel Builder (20/10/2026)
 
 - **CODICE su branch `fix/main-dev-scroll-mill-menu-20261020`:** limite verticale del gruppo DEV in `src/settlement.css`, bottone di apertura sempre visibile e contenuto del pannello scorrevole; `windmill` e `watermill` ripristinati nel catalogo **Produzione** del Builder compatto senza duplicare né ricreare i pulsanti già collegati al gameplay.
@@ -22,6 +28,42 @@
 - **BRANCH / PROGETTO:** `clay` deriva da `Civil` (HEAD sorgente `ba592cfaed7b76ae20e6f0192955fa68212de410`). Aggiunti documenti di progettazione/implementazione [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).
 - **NON CODICE:** nel commit documentale non vengono implementate argilla, nuova modalità cava, materiale mattoni, durabilità 80% né palette. Nessuna regressione runtime viene dichiarata superata.
 - **DA FARE:** implementare su `clay` rispettando l'attuale skeleton `Civil`, poi provare collocazione entro 6 U, output contabile, costi murari, rendering multipipeline, integrità e migrazioni.
+
+## Audit prestazioni completamenti (20/10/2026)
+
+- **CODICE LOCALE / NON RILASCIATO:** branch `fix/construction-completion-perf`, base `main` `996b4a4` aggiornata con pull. Manutenzione stradale dei completamenti distribuita in intervalli con budget 6 ms; cancellazione/ricalcolo su modifica della topologia; invalidazione del catasto limitata ai cambiamenti reali; controllo errori WebGL2 differito tramite fence.
+- **PROVE:** benchmark ripetibile Chromium/WebGL2 e Canvas, regressioni di completamento e controllo errori GPU. Misure, comandi, artefatti e fallimenti preesistenti sono nell'[audit del 20/10](../construction-performance-audit-2026-10-20.md).
+- **RISULTATI LOCALI:** mediana WebGL2 manutenzione + primo disegno: torre 686→15 ms, portale 535→14 ms, stress 8 torri/mura/portale 1.981→457 ms. Batteria conclusiva 53/55 suite PASS; i due test sorgente falliscono anche su main. Sintassi e whitespace PASS; errore GPU iniettato porta a un Canvas visibile. Persistono picchi grafici nel castello stress e nel ciclo attivo: non è una certificazione di fluidità generale.
+- **LIMITE:** modifiche nel working tree, nessun commit/push/PR/merge/deploy o CI remota; non dichiarate disponibili su `main`. Roadmap e priorità M0–M3 invariate.
+
+## Audit round 2 — fuoco, crolli e cutaway (20/10/2026)
+
+- **CODICE LOCALE / NON RILASCIATO:** continua `fix/construction-completion-perf` sopra il round 1. Ridisegni dei danni coalescenti nel RAF di simulazione, navigazione preservata per i soli HP, buffer GPU per macerie ferme, cache composita del cutaway senza includere gli occupanti animati.
+- **QA LOCALE:** 54/56 suite PASS; i due fallimenti sorgente sono quelli già riprodotti su main. Incendio browser su 32 strutture, 30 crolli/12 ceppi, 12 cutaway, brigata con sei addette e incendio naturale fino al collasso di 24 case. Pixel del cutaway verificati a due rotazioni e due palette; buffer statici verificati stabili fino alla rotazione.
+- **RISULTATI E LIMITI:** logica incendio 7,3 s→6 ms e crolli 1,23 s→15 ms nella campagna comparabile; il rendering è differito e non va contato come eliminato. Cutaway WebGL P50 20→6 ms per disegno; macerie ferme circa 1 ms. Restano crolli Canvas fino a 2,23 s, percorsi brigata 140–330 ms e variabilità della composizione. [Audit completo](../fire-collapse-cutaway-performance-audit-2026-10-20.md).
+- **STATO GIT:** working tree locale, nessun commit/push/PR/merge/deploy o CI remota. Priorità della roadmap invariate.
+
+## Audit round 3 — Canvas, brigata, mura e attacco (20/10/2026)
+
+- **CODICE LOCALE:** continua `fix/construction-completion-perf`. Cache composita delle macerie Canvas ferme; A* cooperativo della brigata con budget indicativo 4 ms e priorità rotante; sagome/costi locali alla ricerca; rimossi percorsi diretti attraverso ostacoli e corrette le tangenti al pozzo che bloccavano le addette.
+- **PROVE BROWSER:** due renderer, 12 crolli, incendio su 24 case/sei addette, un cavaliere con cinque squadre in salita/discesa e 20 assalitori con scala, camminamento, discesa e combattimento reale. Otto casi a tempo simulato e quattro osservazioni con rendering continuo; nessun fault del motore nelle osservazioni finali. Pixel verificati su rotazioni/pan/zoom/plan view e tre materiali.
+- **RISULTATI E RESIDUI:** peggior aggiornamento brigata circa 1,8–2,4 s→25–32 ms, zero attraversamenti nei segmenti controllati. Macerie Canvas ferme riusate in circa 0,5 ms; **il primo disegno dopo la caduta può ancora fermarsi per 3 s**, e i crolli attivi restano pesanti. RAF militare variabile, fino a P95 133–150 ms nel caso delle squadre: non è una dichiarazione di fluidità generale. [Audit completo](../movement-collapse-performance-audit-2026-10-20.md), decisione D-036.
+- **QA / STATO:** 55/57 suite locali PASS; restano i due fallimenti sorgente già riprodotti su main. Sintassi dei sorgenti e whitespace PASS. Working tree locale, nessun commit/push/PR/merge/deploy o CI remota. Roadmap e priorità invariate.
+
+## Scontro 40 contro 30 — prova fino all'eliminazione (21/10/2026)
+
+- **BASE:** `9e1b6a5` pubblicato su `fix/construction-completion-perf`, CI Civil PASS. Le correzioni di questa nuova prova sono ulteriori modifiche locali non pubblicate.
+- **SCENARIO E RISULTATO:** 15 arcieri/20 fanti/5 cavalieri difensori contro 10 arcieri/17 fanti/3 cavalieri attaccanti, come 70 entità singole. Campo aperto e seed 12345. Canvas e WebGL arrivano entrambi a 0 attaccanti dopo 298,1 s simulati; restano 15 arcieri, 19 fanti, 3 cavalieri difensori. Tutte le sei combinazioni lato/tipo infliggono danni; nessun HP azzerato dal driver di prova.
+- **CORREZIONI LOCALI:** persistenza/render dei tipi individuali, arcieri mobili di entrambi i lati, velocità dei cavalieri attaccanti e filtro di portata prima di collisioni/LOS costose. Nessun cambio ai valori di HP, armatura o dadi. Sette regressioni dedicate.
+- **QA FINALE:** 56/58 suite PASS; restano `refactor-app-population-regression.cjs` e `wall-bays-regression.cjs`, già falliti su main. Sintassi e whitespace PASS. Nessun nuovo commit/push o CI remota per questo round.
+- **PERFORMANCE:** logica P95 circa 1 ms; Canvas draw P95 7,3 ms nella campagna principale. WebGL variabile fra P95 8,7 e 132,9 ms nelle ripetizioni: il profilo principale trova circa 3 s in `getError`. Il tentativo di aggiungere fence ai passaggi successivi non ha dimostrato beneficio ed è stato rimosso. La prova accelerata non certifica FPS a 1×. [Audit e comandi](../mass-battle-performance-audit-2026-10-21.md).
+
+## Ulteriore audit rendering 40/30 (21/10/2026)
+
+- **CODICE LOCALE:** animazioni di combattimento in pausa nel ciclo visuale condiviso; controllo errori WebGL distanziato di almeno 1 s, checkpoint dopo front/luci e attesa della fence con limite per evitare verifiche rimandate all'infinito. Perdita del contesto ancora controllata a ogni disegno; fallback Canvas mantenuto.
+- **MISURE:** baseline WebGL strumentata 324 disegni / 10,72 s cumulativi; due prove finali 174/170 disegni e 2,97/1,89 s (**−72–82%**). P95 76,5/8,3 ms contro 163,4 ms; **restano singoli blocchi fino a 396 ms**, quindi fluidità generale non dichiarata. Canvas 177 disegni / 0,738 s contro 326 / 1,433 s della campagna precedente. [Dati e limiti](../mass-battle-performance-audit-2026-10-21.md#ulteriore-riduzione-dei-costi-di-rendering--21102026).
+- **COMPORTAMENTO:** stessa eliminazione a 298,1 s simulati e 37 difensori superstiti. Verificati nel browser colpo/termine animazione in pausa e fallback dipinto con errore GPU iniettato. Esperimenti framebuffer/backpressure scartati. Base `9e1b6a5`; nuove modifiche non pubblicate. D-038; roadmap invariata.
+- **QA CONCLUSIVA:** 57/59 suite PASS, con i soli due fallimenti preesistenti su main (`refactor-app-population-regression`, `wall-bays-regression`). Sintassi e whitespace PASS; hash runtime corrispondenti alla misura finale.
 
 ## Semaforo epistemico
 

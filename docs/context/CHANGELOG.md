@@ -2,6 +2,44 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-21 — Integrazione performance prima del merge richiesto
+
+- Sincronizzato il branch performance con `origin/main` `c94bdc1`, preservando terraforming, mulini e le ottimizzazioni dei quattro audit; risolti i conflitti in firma terreno e macerie/renderer Canvas.
+- 60/62 suite PASS, con i due fallimenti sorgente preesistenti. Ripetuta fino all'eliminazione la battaglia su entrambi i renderer: stesso esito e verifiche di animazione/fallback PASS. I picchi GPU residui restano espliciti.
+
+## 2026-10-21 — Riduzione dei ridisegni e dei controlli GPU
+
+- Esteso l'audit 40/30 con baseline strumentata, due campagne finali, tempi dei singoli metodi GPU e verifica browser di animazioni in pausa/fallback.
+- Combattimento in pausa nel ciclo visuale comune; errori GL distanziati e checkpoint emesso dopo gli ultimi passaggi, senza permettere rinvii infiniti.
+- Rendering cumulativo WebGL ridotto del 72–82% nelle due prove; i blocchi isolati fino a circa 400 ms rimangono dichiarati. Framebuffer e rinvio dei frame scartati dopo misure, senza cambiare qualità grafica o danni. D-038, stato locale non pubblicato.
+- Batteria conclusiva 57/59 suite PASS; restano i due fallimenti preesistenti su main. Sintassi, whitespace e corrispondenza degli hash runtime alle misure PASS.
+
+## 2026-10-21 — Battaglia 40 contro 30 fino all'eliminazione
+
+- Aggiunti [audit](../mass-battle-performance-audit-2026-10-21.md), harness browser a 70 entità e sette controlli di regressione.
+- Corretti roster dei tipi individuali, tiro degli arcieri mobili su entrambi i lati, velocità della cavalleria ostile e controlli costosi applicati fuori portata.
+- Verificata eliminazione reale di tutti gli attaccanti a 298,1 secondi simulati su Canvas/WebGL; 37 difensori superstiti. Logica P95 circa 1 ms, picchi grafici WebGL ancora aperti e profilati in `getError`.
+- Base pubblicata `9e1b6a5`; nuove modifiche nel working tree, nessun nuovo commit/push/deploy. Roadmap invariata.
+
+## 2026-10-20 — Terzo audit: Canvas, percorsi e assalto
+
+- Aggiunti [audit round 3](../movement-collapse-performance-audit-2026-10-20.md), benchmark browser e regressioni dei percorsi cooperativi.
+- Cache delle macerie Canvas ferme e brigata con budget condiviso, priorità rotante e collisioni rispettate anche quando una rotta fallisce. Corretto il blocco al pozzo dovuto a tangenti non rilevate dal campionamento.
+- Verificati cavaliere/cinque squadre in salita e discesa e 20 assalitori con combattimento, su Canvas/WebGL e con rendering continuo. Documentati i residui: primo disegno Canvas ancora fino a 3 s, caduta attiva e intervalli RAF variabili. D-036 e stato aggiornati; nessun rilascio.
+- Batteria completa 55/57 suite PASS, con i due fallimenti sorgente preesistenti; sintassi e whitespace PASS.
+
+## 2026-10-20 — Secondo audit: incendio, distruzione e stanze
+
+- Aggiunti [audit round 2](../fire-collapse-cutaway-performance-audit-2026-10-20.md) e benchmark con incendio esteso, crolli, cutaway, brigata e incendio naturale fino alla distruzione delle case.
+- Eliminati i disegni sincroni e le invalidazioni per i soli HP; richieste visuali raccolte dal ciclo comune; macerie ferme su buffer GPU e superfici/arredi del cutaway nella cache esistente.
+- 54/56 suite locali PASS, due fallimenti preesistenti; dichiarati i residui su Canvas, pathfinding della brigata e composizione. Working tree locale senza rilascio. D-035 e stato aggiornati; roadmap invariata.
+
+## 2026-10-20 — Audit locale completamenti e freeze
+
+- Riprodotti e profilati i picchi al completamento di torri/portali su main `996b4a4`; aggiunto [audit ripetibile](../construction-performance-audit-2026-10-20.md).
+- Sul branch locale `fix/construction-completion-perf`: strade differite con generatori esistenti, cache del catasto preservata quando possibile e lettura errori WebGL2 dopo fence pronta.
+- Aggiornati contratto D-034 e stato con distinzione fra codice locale, prove e problemi già presenti su main. Priorità e milestone della roadmap invariate; nessun rilascio.
+
 ## 2026-10-20 — Chiarimento definitivo: gradone verticale color muro
 
 - Recepita la correzione esplicita: collina naturale invariata; terrazzamento verticale color muro con piano superiore piatto.

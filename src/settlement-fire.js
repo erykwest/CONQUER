@@ -166,12 +166,46 @@
     return out;
   }
   function route(a,b){
+    if(performance.now()>routeDeadline)return undefined;
+    const revision=typeof navPerf!=='undefined'?(navPerf.navInvalidations||0):0;
+    let job=routeJobs.get(a);
+    if(job&&(job.revision!==revision||Math.hypot(job.to.x-b.x,job.to.y-b.y)>.01||Math.hypot(job.from.x-a.x,job.from.y-a.y)>.01)){routeJobs.delete(a);job=null}
+    if(job){
+      do{const n=job.work.next();if(n.done){routeJobs.delete(a);return n.value?.map(q=>({x:q.x,y:q.y}))||null}}while(performance.now()<routeDeadline);
+      return undefined;
+    }
+    if(typeof peasantSegmentClear==='function'&&typeof roadList==='function'&&!roadList(true).length&&peasantSegmentClear(a,b,null,routeObstacles))return[{x:b.x,y:b.y}];
+    if(typeof findPeasantPathWork==='function'){
+      routeJobs.set(a,{revision,to:{...b},from:{x:a.x,y:a.y},work:findPeasantPathWork(a,b,null)});
+      return route(a,b);
+    }
+    if(typeof findPeasantPath!=='function'&&typeof peasantSegmentClear!=='function')return[{x:b.x,y:b.y}];
     const p=typeof findPeasantPath==='function'?findPeasantPath(a,b,null):null;
-    return(p&&p.length?p:[a,b]).map(q=>({x:q.x,y:q.y}));
+    return p?.length?p.map(q=>({x:q.x,y:q.y})):null;
+  }
+  let routeDeadline=Infinity,routeObstacles=null,brigadeTurn=0;
+  const routeJobs=new WeakMap();
+  function setRoute(c,to){
+    if(c.retry>0)return false;
+    const p=route(c,to);if(p===undefined)return false;
+    if(!p){c.retry=1;c.routeAttempt=(c.routeAttempt||0)+1;return false}
+    c.path=p;return true;
+  }
+  function wellStand(w,angle=0){
+    let p;
+    for(let k=0;k<16;k++){
+      const a=angle+k*Math.PI/8;p={x:w.x+Math.cos(a)*.9,y:w.y+Math.sin(a)*.9};
+      if(typeof pointBlockedForPeasant!=='function'||!pointBlockedForPeasant(p,null,routeObstacles))return p;
+    }
+    return p;
   }
   // Where a woman stands to throw: on the side of the well, each in her own place.
   function standBy(b,from,lane=0){
     const a=Math.atan2(from.y-b.at.y,from.x-b.at.x)+lane*.38,o=b.r+.35;
+    for(const extra of [0,.4,.8])for(const offset of [0,.45,-.45,.9,-.9,Math.PI]){
+      const p={x:b.at.x+Math.cos(a+offset)*(o+extra),y:b.at.y+Math.sin(a+offset)*(o+extra)};
+      if(typeof pointBlockedForPeasant!=='function'||!pointBlockedForPeasant(p,null,routeObstacles))return p;
+    }
     return{x:b.at.x+Math.cos(a)*o,y:b.at.y+Math.sin(a)*o};
   }
   function walk(c,dt){
@@ -179,7 +213,9 @@
     while(budget>0&&c.path?.length){
       const n=c.path[0],d=Math.hypot(n.x-c.x,n.y-c.y);
       if(d<.02){c.path.shift();continue}
-      const s=Math.min(d,budget);c.x+=(n.x-c.x)*s/d;c.y+=(n.y-c.y)*s/d;budget-=s;
+      const s=Math.min(d,budget),next={x:c.x+(n.x-c.x)*s/d,y:c.y+(n.y-c.y)*s/d};
+      if(typeof peasantSegmentClear==='function'&&!peasantSegmentClear(c,next,null,routeObstacles)){c.path=null;c.state='fill';c.t=0;c.retry=1;return false}
+      c.x=next.x;c.y=next.y;budget-=s;
     }
     return !c.path?.length;
   }
@@ -193,42 +229,51 @@
   }
   function brigadeTick(dt){
     const x=store();
+    routeDeadline=performance.now()+4;routeObstacles=null;
     if(!Array.isArray(x.carriers))x.carriers=[];
     if(!Array.isArray(x.splashes))x.splashes=[];
     for(const sp of [...x.splashes]){sp.age+=dt;if(sp.age>.9)x.splashes=x.splashes.filter(o=>o!==sp)}
     const ws=wells(),list=brigadeOn()&&ws.length?blazes():[];
+    if(ws.length&&(list.length||x.carriers.length))routeObstacles=typeof peasantObstacleSnapshot==='function'?peasantObstacleSnapshot():null;
+    for(const c of x.carriers)c.retry=Math.max(0,(c.retry||0)-dt);
     // Nothing to fight (or no well): the women go home.
     if(!list.length){
       if(!ws.length){x.carriers=[];return}
-      for(const c of x.carriers)if(c.state!=='home'){c.state='home';c.full=false;c.path=route(c,{x:ws[0].x+.8,y:ws[0].y})}
-      for(const c of [...x.carriers])if(walk(c,dt))x.carriers=x.carriers.filter(o=>o!==c);
+      const home=x.carriers.slice(),turn=brigadeTurn++%Math.max(1,home.length);
+      for(const c of home.slice(turn).concat(home.slice(0,turn))){
+        c.full=false;
+        if(c.state!=='home'||!c.path){if(!setRoute(c,wellStand(ws[0])))continue;c.state='home'}
+        if(walk(c,dt))x.carriers=x.carriers.filter(o=>o!==c);
+      }
       return;
     }
     while(x.carriers.length<BRIGADE.size){
       const w=ws[0],i=x.carriers.length;
       // They come out one after another and take turns at the well: a chain, not a crowd.
-      const a=i*1.05;
-      x.carriers.push({id:'bucket-'+i+'-'+Math.floor(Math.random()*1e6),x:w.x+Math.cos(a)*.8,y:w.y+Math.sin(a)*.8,state:'fill',t:-i*.7,
+      const p=wellStand(w,i*1.05);
+      x.carriers.push({id:'bucket-'+i+'-'+Math.floor(Math.random()*1e6),...p,state:'fill',t:-i*.7,
         lane:(i%2?1:-1)*Math.ceil(i/2),colors:WOMEN[i%WOMEN.length],path:null});
     }
     // The smallest fires first (they can still be saved); each woman sticks to hers until it is out.
     const byHeat=[...list].sort((a,b)=>a.heat-b.heat);
-    x.carriers.forEach((c,i)=>{
+    const turn=brigadeTurn++%x.carriers.length;
+    Array.from({length:x.carriers.length},(_,j)=>(j+turn)%x.carriers.length).forEach(i=>{
+      const c=x.carriers[i];
       let b=list.find(q=>q.key===c.target);
       if(!b){b=byHeat[i%byHeat.length];c.target=b.key;if(c.state==='go'||c.state==='throw'){c.state='fill';c.t=0}}
       const well=ws.reduce((m,w)=>Math.hypot(w.x-b.at.x,w.y-b.at.y)<Math.hypot(m.x-b.at.x,m.y-b.at.y)?w:m,ws[0]);
-      const atWell={x:well.x+(b.at.x-well.x)/(Math.hypot(b.at.x-well.x,b.at.y-well.y)||1)*.9,y:well.y+(b.at.y-well.y)/(Math.hypot(b.at.x-well.x,b.at.y-well.y)||1)*.9};
-      if(c.state==='home'){c.state='fill';c.path=route(c,atWell)}
+      const atWell=wellStand(well,Math.atan2(b.at.y-well.y,b.at.x-well.x));
+      if(c.state==='home'){c.state='fill';c.path=null}
       if(c.state==='fill'){
         if(c.path?.length){walk(c,dt);return}
-        if(Math.hypot(c.x-atWell.x,c.y-atWell.y)>.9){c.path=route(c,atWell);return}
-        c.t+=dt;if(c.t>=BRIGADE.fill){c.t=0;c.full=true;c.state='go';c.path=route(c,standBy(b,well,c.lane||0))}
+        if(Math.hypot(c.x-atWell.x,c.y-atWell.y)>.9){setRoute(c,atWell);return}
+        c.t+=dt;if(c.t>=BRIGADE.fill&&setRoute(c,standBy(b,well,(c.lane||0)+(c.routeAttempt||0)*1.25))){c.t=0;c.full=true;c.state='go'}
         return;
       }
       if(c.state==='go'){if(walk(c,dt)){c.state='throw';c.t=0}return}
       if(c.state==='throw'){
         c.t+=dt;if(c.t<BRIGADE.throwT)return;
-        douse(b,x);c.full=false;c.state='fill';c.t=0;c.path=route(c,atWell);
+        douse(b,x);c.full=false;c.state='fill';c.t=0;c.path=null;setRoute(c,atWell);
       }
     });
   }
@@ -442,8 +487,13 @@
     flame(g,tip,u*1.1,t,k);g.restore();
   }
   // Keep frames coming while something burns (the game may be paused: flames still flicker).
+  function needsAnimation(){
+    const x=State.fire;
+    return !!x&&(!!x.burning?.length||!!x.embers?.length||!!x.shots?.length||!!x.sparks?.length||!!x.carriers?.length);
+  }
   let raf=0,lastDraw=0;
   function loop(){
+    if(typeof requestSceneDraw==='function'){requestSceneDraw();return}
     if(raf||typeof requestAnimationFrame!=='function')return;
     const step=now=>{
       raf=0;const x=State.fire;
@@ -453,6 +503,6 @@
     };
     raf=requestAnimationFrame(step);
   }
-  window.ConquerFire={parts,ignite,extinguish,burning,tick,blocks,draw,drawTorch,volley,gap,radius,state:store,BURN,
+  window.ConquerFire={parts,ignite,extinguish,burning,tick,blocks,draw,drawTorch,volley,gap,radius,state:store,BURN,needsAnimation,
     brigade:{on:brigadeOn,set:setBrigade,carriers:()=>store().carriers||[],BRIGADE}};
 })();
