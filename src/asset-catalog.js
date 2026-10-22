@@ -73,10 +73,12 @@
     if(!collection)continue;
     for(const key of Object.keys(collection)){
       const isCivicProp=source.global==='ConquerCivicModels'&&key.startsWith('prop_');
-      const isCivicIndoor=source.global==='ConquerCivicModels'&&/table|stall|storage|stables|shop|brewery|warehouse/.test(key);
-      let category=isCivicProp?'Scatter':isCivicIndoor?'Interni':source.category;
+      const isCivicNature=isCivicProp&&/^prop_(tree|cypress|flowerBush)/.test(key);
+      const isCivicFurniture=isCivicProp&&/^prop_table/.test(key);
+      // A civic shop/stable/warehouse is a building, not an interior furnishing.
+      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':source.category;
       const family=source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
-        :isCivicProp?'Arredi ambientali':source.family;
+        :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali':source.family;
       items.push({id:'model:'+source.global+':'+key,title:titleFor(key),category,family,
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
