@@ -22,3 +22,33 @@ jobs:
           node-version: '22'
       - run: node --check src/asset-catalog.js
       - run: node qa/asset-catalog-regression.cjs
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Start local Asset Lab
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/asset-lab-http.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/figures-lab.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/asset-lab-http.log
+          exit 1
+      - name: Install Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run gallery browser QA
+        run: node qa/asset-catalog-browser.mjs
+      - name: Save visual diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asset-lab-visual-qa
+          path: artifacts/asset-lab-browser.png
+          retention-days: 7
