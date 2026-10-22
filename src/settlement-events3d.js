@@ -156,7 +156,9 @@
     const k=venueModel(s);return k?!!DATA().models[k]:true;
   };
 
-  // Indexed parts expanded once into flat triangle lists (per catalog).
+  // Indexed parts expanded once into flat triangle lists (per catalog). A part with
+  // wind-blown cloth (part.f) is split: its fixed triangles, and the cloth triangles
+  // with a flutter weight w (per vertex) and wave direction d (3 per vertex).
   const expanded=new Map();
   function parts(ref){
     let out=expanded.get(ref);if(out)return out;
@@ -164,12 +166,28 @@
     if(!model)return null;
     out=[];
     for(const [name,part] of Object.entries(model.parts)){
-      const v=new Float32Array(part.i.length*3);
-      for(let k=0;k<part.i.length;k++){const j=part.i[k]*3;v[k*3]=part.p[j];v[k*3+1]=part.p[j+1];v[k*3+2]=part.p[j+2]}
-      out.push({name,v,c:part.c});
+      const fk=new Map();if(part.f)part.f.i.forEach((j,k)=>fk.set(j,k));
+      const fixed=[],cloth=[];
+      for(let t=0;t<part.c.length;t++)(fk.size&&[0,1,2].some(q=>fk.has(part.i[t*3+q]))?cloth:fixed).push(t);
+      const build=(tris,isCloth)=>{
+        const v=new Float32Array(tris.length*9),c=new Array(tris.length);
+        const w=isCloth?new Float32Array(tris.length*3):null,d=isCloth?new Float32Array(tris.length*9):null;
+        tris.forEach((t,n)=>{
+          c[n]=part.c[t];
+          for(let q=0;q<3;q++){
+            const j=part.i[t*3+q],o=n*9+q*3;
+            v[o]=part.p[j*3];v[o+1]=part.p[j*3+1];v[o+2]=part.p[j*3+2];
+            if(isCloth&&fk.has(j)){const k=fk.get(j);w[n*3+q]=part.f.w[k];d[o]=part.f.d[k*3];d[o+1]=part.f.d[k*3+1];d[o+2]=part.f.d[k*3+2]}
+          }
+        });
+        return{name,v,c,w,d,cloth:isCloth};
+      };
+      if(fixed.length)out.push(build(fixed,false));
+      if(cloth.length)out.push(build(cloth,true));
     }
     expanded.set(ref,out);return out;
   }
+  const hasCloth=ref=>!!parts(ref)?.some(p=>p.cloth);
   // Primary colours for the knights' pairs: every ordered pair of two different ones.
   // Red, blue, yellow plus green and white: 20 ordered pairs, so every tent and piece
   // of gear in one venue gets its own pair (see uniquePairs).
@@ -194,15 +212,28 @@
   }
   // World triangles of a model at place {x,y,angle,scale} (painter / builder format);
   // pair: [colourA, colourB] for 'pair' livery models (default: from place.key).
-  function triangles(ref,place,ground,pair){
+  // opts.only: 'fixed' (static scene) or 'cloth' (dynamic layer); opts.wave: {t, amp}
+  // bends the cloth along its wave direction, more towards its free end.
+  function triangles(ref,place,ground,pair,opts={}){
     const ps=parts(ref);if(!ps)return null;
     const pal=palette(ref,pair||(liveryOf(ref)==='pair'?pairFor(place.key||ref):null)),a=Number(place.angle)||0,c=Math.cos(a),sn=Math.sin(a),k=place.scale||1,z0=ground||0;
     const pos=[],col=[],gi=[],groups=[],groupBias=[];
+    const wave=opts.wave,ph=(place.x||0)*.7+(place.y||0)*1.3;
     for(const part of ps){
-      const g=groups.length,start=pos.length,v=part.v;
+      if(opts.only==='fixed'&&part.cloth||opts.only==='cloth'&&!part.cloth)continue;
+      const g=groups.length,start=pos.length,v=part.v,flap=wave&&part.cloth;
       for(let i=0;i<v.length;i+=3){
-        const x=v[i]*k,y=v[i+1]*k;
-        pos.push(place.x+x*c-y*sn,place.y+x*sn+y*c,z0+v[i+2]*k);
+        let lx=v[i],ly=v[i+1],lz=v[i+2];
+        if(flap){
+          const w=part.w[i/3];
+          if(w){
+            // Travelling wave from the anchor to the free end, with a gentle sway.
+            const off=wave.amp*w*(Math.sin(wave.t*3.2+ph-w*3.1)+.35*Math.sin(wave.t*1.3+ph*1.7));
+            lx+=part.d[i]*off;ly+=part.d[i+1]*off;lz+=part.d[i+2]*off-wave.amp*.25*w*w;
+          }
+        }
+        const x=lx*k,y=ly*k;
+        pos.push(place.x+x*c-y*sn,place.y+x*sn+y*c,z0+lz*k);
       }
       for(const ci of part.c){col.push(pal[ci]);gi.push(g)}
       let cx=0,cy=0,cz=0;const n=(pos.length-start)/3||1;
@@ -265,15 +296,17 @@
     const turn=tent?40*Math.PI/180:/^sc:/.test(it.m)?Math.PI:35*Math.PI/180,shift=tent?.75:2;
     return{...it,a:(it.a||0)+r('a')*turn,x:it.x+r('x')*shift*size,y:it.y+r('y')*shift*size};
   }
-  // All meshes of a venue, cached per structure state.
+  // All fixed meshes of a venue, cached per structure state with the placed instances
+  // (the dynamic layer re-poses their cloth every frame).
   const meshCache=new Map();
   function meshes(s,ground){
     const h=(typeof State!=='undefined'&&State.heraldry)||{};
     const key=[s.venue,s.dressing,s.x,s.y,s.angle||0,s.w,s.h,ground,s.event?.setup,s.event?.phase,s.event?.progress,h.c1,h.c2,h.c4,State.seed].join('|');
     const hit=meshCache.get(s);if(hit&&hit.key===key)return hit.list;
-    const list=[];
+    const list=[],inst=[];
+    const place=(ref,pl,pair)=>{inst.push({ref,place:pl,pair});return triangles(ref,pl,ground,pair,{only:'fixed'})};
     const vm=venueModel(s);
-    if(vm)list.push(triangles(vm,s,ground));
+    if(vm)list.push(place(vm,s,null));
     else list.push(groundMesh(s,ground));
     const id=s.id??(s.x+','+s.y);
     // Distinct pairs within the venue: a seeded shuffle of PAIRS dealt in item order.
@@ -288,11 +321,35 @@
     setupItems(s).forEach((it0,i)=>{
       const it=jitter(s,it0,id+':'+i),p=toWorld(s,it.x,it.y);
       const pair=liveryOf(it.m)!=='pair'?null:/^tent/.test(it.m)?tentDeck[tents++%tentDeck.length]:deck[dealt++%deck.length];
-      const mesh=triangles(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},ground,pair);
+      const mesh=place(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},pair);
       if(mesh)list.push(mesh);
     });
-    meshCache.set(s,{key,list:list.filter(Boolean)});
+    meshCache.set(s,{key,list:list.filter(Boolean),inst,ground});
     return meshCache.get(s).list;
+  }
+  // ---------- wind: flags, pennons, bunting and banners wave on the dynamic layer
+  // Like the mill sails, the wave runs on real time while the game runs, stronger
+  // with the weather's wind.
+  let windT=0,lastWind=0;
+  function windStrength(){
+    try{const w=typeof currentWeather==='function'?Number(currentWeather().wind):NaN;return Number.isFinite(w)?Math.max(0,Math.min(1,w)):.3}catch{return .3}
+  }
+  function dynamicMeshes(){
+    const now=typeof performance!=='undefined'?performance.now():Date.now();
+    const dt=lastWind?Math.min(.25,(now-lastWind)/1000):0;lastWind=now;
+    if(typeof State!=='undefined'&&State.clock?.speed>0)windT+=dt;
+    const wave={t:windT,amp:.035+.075*windStrength()},out=[];
+    for(const s of (typeof State!=='undefined'&&State.structures)||[]){
+      if(!is(s)||!has(s))continue;
+      const g=Number.isFinite(s.groundZ)?s.groundZ:(typeof terrainElevation==='function'?terrainElevation(s):0);
+      meshes(s,g);
+      for(const ins of meshCache.get(s).inst){
+        if(!hasCloth(ins.ref))continue;
+        const m=triangles(ins.ref,ins.place,g,ins.pair,{only:'cloth',wave});
+        if(m&&m.col.length)out.push(m);
+      }
+    }
+    return out;
   }
   // 2.5D: paint into the current ctx.
   function draw(s,preview=false){
@@ -317,5 +374,5 @@
     }
     return true;
   }
-  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,is,has,sizeOf,setupsFor,venueModel,setupItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder};
+  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,is,has,sizeOf,setupsFor,venueModel,setupItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes};
 })();

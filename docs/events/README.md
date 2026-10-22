@@ -38,6 +38,8 @@ Festival ground setups (local layout in `SETUPS`, validated inside the ground wi
 
 Livery: stands, arena and stages follow the realm heraldry (`State.heraldry` c1 / c2 / c4). Knights' tents, lance and shield racks and armour take a deterministic random pair of primary colours per instance. Circus, bunting and stage cloths keep fixed festive colours. Model `meta` carries seats, performer, speaker and entrance points for the future attendance module.
 
+Wind: pennons, bunting, gonfalons and the arena gate banners are marked as cloth in the builder (part `f`: weight 0 at the anchor .. 1 at the free end, wave direction). `settlement-events3d.js` keeps them out of the static scene and returns them every frame from `dynamicMeshes()` (WebGL `drawFront`, 2.5D overlay, like the mill sails): a travelling wave that grows with the weather's wind and runs only while the game runs.
+
 Leisure catalog (24 models): ![catalog](leisure-catalog.png) · arena views: ![arena](arena-views.png)
 
 ## Modules to integrate (future implementation)

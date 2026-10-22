@@ -9,7 +9,8 @@ const path=require('node:path');
 const vm=require('node:vm');
 const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
 const window={},State={season:'summer',seed:7,heraldry:{c1:'#123456',c2:'#abcdef',c4:'#fedcba'}};
-const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array});
+const perf={t:0,now(){return this.t}};
+const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array,performance:perf});
 for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
 const M=window.ConquerEventModels,E=window.ConquerEvents3D;
 
@@ -124,3 +125,24 @@ for(const g of [venue('arenaLot',{id:'u1'}),venue('festivalGround',{id:'u2',even
   assert.ok(!seen.has(k),(g.venue+'/'+(g.event?.setup||''))+': two tents share colours '+k);seen.add(k)});
  assert.ok(seen.size>=4,'venue deals several pairs')}
 console.log('PASS livery: realm heraldry on stands and stages, primary pairs on knights\' gear');
+
+// Wind: cloth (pennons, bunting, banners) leaves the static scene and waves on the
+// dynamic layer, anchored at the staff and only while the game runs.
+{
+  const lot=venue('arenaLot',{id:'w1'}),fixedTris=E.meshes(lot,0).reduce((n,m)=>n+m.col.length,0);
+  const allTris=E.setupItems(lot).reduce((n,it)=>n+(E.triangles(it.m,{x:0,y:0},0)?.col.length||0),0)+4;   // + the lot's grass pad
+  assert.ok(fixedTris<allTris,'cloth is out of the static scene');
+  State.structures=[lot];State.clock={speed:1};
+  perf.t=1000;const a=E.dynamicMeshes();perf.t=1200;const b=E.dynamicMeshes();
+  assert.ok(a.length>0,'the arena lot has waving cloth');
+  const n=a.reduce((k,m)=>k+m.col.length,0);
+  assert.equal(fixedTris+n,allTris,'fixed + cloth triangles make the whole lot');
+  let moved=0,still=0;for(let i=0;i<a.length;i++)for(let k=0;k<a[i].pos.length;k++){const dd=Math.abs(a[i].pos[k]-b[i].pos[k]);if(dd>1e-4)moved++;else still++}
+  assert.ok(moved>0&&still>0,'free ends move, anchors stay ('+moved+' / '+still+')');
+  State.clock={speed:0};perf.t=1400;const c=E.dynamicMeshes();perf.t=2400;const d=E.dynamicMeshes();
+  assert.deepEqual(c[0].pos,d[0].pos,'paused game: the cloth holds still');
+  const amp=Math.max(...a.flatMap((m,i)=>m.pos.map((v,k)=>Math.abs(v-b[i].pos[k]))));
+  assert.ok(amp<.2,'the flutter stays small ('+amp.toFixed(3)+' U)');
+  State.structures=[];
+}
+console.log('PASS wind: cloth on the dynamic layer, anchored, waves only while the game runs');

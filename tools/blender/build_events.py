@@ -41,7 +41,7 @@ if _here not in sys.path:
 import cq_blender, build_civic
 importlib.reload(cq_blender)
 importlib.reload(build_civic)
-from cq_blender import Part, fresh_collection, export_part_indexed, u
+from cq_blender import METERS_PER_U, Part, fresh_collection, export_part_indexed, u
 from build_civic import circ, prism, slab, plate, blob, pyramid
 
 COLORS = {
@@ -91,13 +91,56 @@ def tongue(w, z, h=.3):
     return [(-w / 2, z), (w / 2, z), (w / 2, z - h * .55), (0, z - h), (-w / 2, z - h * .55)]
 
 
+class cloth:
+    """Marks the faces built inside the block as wind-blown cloth: weight 0 at the
+    anchor, 1 at length along axis; the cloth waves along disp (exported as part 'f')."""
+    def __init__(self, p, anchor, axis, disp, length):
+        self.p = p
+        self.spec = (Vector(anchor), Vector(axis).normalized(), Vector(disp).normalized(), length)
+
+    def __enter__(self):
+        self.n0 = len(self.p.bm.faces)
+
+    def __exit__(self, *exc):
+        if not hasattr(self.p, 'wind'):
+            self.p.wind = []
+        self.p.wind.append((self.n0, len(self.p.bm.faces)) + self.spec)
+
+
+def export_wind(part, digits=3):
+    """Flutter of a finished part, indexed like export_part_indexed: i = vertex index,
+    w = weight (0 anchor .. 1 free end), d = wave direction (3 per vertex)."""
+    spans = getattr(part, 'wind', None)
+    if not spans:
+        return None
+    me = part.object.data
+    me.calc_loop_triangles()
+    seen, out = {}, {}
+    for tri in me.loop_triangles:
+        span = next((s for s in spans if s[0] <= tri.polygon_index < s[1]), None)
+        for vi in tri.vertices:
+            co = me.vertices[vi].co
+            k = (round(co.x / METERS_PER_U, digits), round(co.y / METERS_PER_U, digits), round(co.z / METERS_PER_U, digits))
+            if k not in seen:
+                seen[k] = len(seen)
+            if span:
+                a, ax, d, L = span[2:]
+                w = max(0.0, min(1.0, (co - a).dot(ax) / L))
+                j = seen[k]
+                if w > out.get(j, (0.0,))[0]:
+                    out[j] = (w, d)
+    idx = sorted(out)
+    return {'i': idx, 'w': [round(out[j][0], 3) for j in idx], 'd': [round(c, 3) for j in idx for c in out[j][1]]}
+
+
 def pennon(p, x, y, z, length=1.4, axis=(1, 0), keys=('heraldA', 'heraldB')):
     """Swallow-tailed pennon from a staff at (x, y), top at z, flying along axis."""
     n = (axis[1], -axis[0])   # plate normal: its u axis is (-n.y, n.x) = axis
     a = [(.04, z), (length, z - .22), (length * .78, z - .34), (.04, z - .28)]
     b = [(.04, z - .28), (length * .78, z - .34), (length, z - .48), (.04, z - .56)]
-    plate(p, (x, y), n, a, keys[0], -.01, .01)
-    plate(p, (x, y), n, b, keys[1], -.01, .01)
+    with cloth(p, (x, y, z), (axis[0], axis[1], 0), (n[0], n[1], 0), length):
+        plate(p, (x, y), n, a, keys[0], -.01, .01)
+        plate(p, (x, y), n, b, keys[1], -.01, .01)
 
 
 def flagstaff(p, x, y, z0, h, length=1.2, axis=(1, 0)):
@@ -123,9 +166,10 @@ def skirt(p, x0, x1, y, ztop, zbot, nb, nt=4, fold=.2):
 def gonfalon(p, x, y, ztop, w=.9, h=1.7):
     """Banner hanging from a crossbar, facing -y; returns its arms decal."""
     p.beam((x - w / 2 - .08, y, ztop), (x + w / 2 + .08, y, ztop), .05, .05, 'woodDark')
-    plate(p, (x, y - .04), (0, -1), [(-w / 2, ztop - .04), (w / 2, ztop - .04), (w / 2, ztop - h), (-w / 2, ztop - h)], 'heraldA', 0, .02)
-    for t in range(3):
-        plate(p, (x - w / 2 + w / 3 * (t + .5), y - .04), (0, -1), tongue(w / 3, ztop - h + .02, .3), 'heraldB', 0, .02)
+    with cloth(p, (x, y, ztop), (0, 0, -1), (0, -1, 0), h + .3):
+        plate(p, (x, y - .04), (0, -1), [(-w / 2, ztop - .04), (w / 2, ztop - .04), (w / 2, ztop - h), (-w / 2, ztop - h)], 'heraldA', 0, .02)
+        for t in range(3):
+            plate(p, (x - w / 2 + w / 3 * (t + .5), y - .04), (0, -1), tongue(w / 3, ztop - h + .02, .3), 'heraldB', 0, .02)
     yd, a = y - .062, w * .36
     return {'o': u(x - a, yd, ztop - .2), 'u': u(x + a, yd, ztop - .2), 'v': u(x - a, yd, ztop - .2 - 2.3 * a), 'clip': None}
 
@@ -685,7 +729,8 @@ def arena_u(m):
     nb = 10
     for i in range(nb):
         x = -rt + 1.4 + (2 * rt - 2.8) * (i + .5) / nb
-        plate(p, (x, yg - .14), (0, -1), [(-.4, ht - .65), (.4, ht - .65), (.4, ht - 1.6), (0, ht - 1.85), (-.4, ht - 1.6)], tincture(i), 0, .02)
+        with cloth(p, (x, yg - .14, ht - .65), (0, 0, -1), (0, -1, 0), 1.2):
+            plate(p, (x, yg - .14), (0, -1), [(-.4, ht - .65), (.4, ht - .65), (.4, ht - 1.6), (0, ht - 1.85), (-.4, ht - 1.6)], tincture(i), 0, .02)
     m.done('gate', p)
 
     seats = []
@@ -981,7 +1026,8 @@ def bunting(p, a, b, n=9, sag=.35):
         t0, t1 = (i + .15) / n, (i + .85) / n
         q0, q1 = pt(t0), pt(t1)
         tip = (q0 + q1) / 2 - Vector((0, 0, .28))
-        prism3(p, [tuple(q0), tuple(q1), tuple(tip)], nrm, .01, FEST[i % len(FEST)])
+        with cloth(p, (q0 + q1) / 2, (0, 0, -1), nrm, .28):
+            prism3(p, [tuple(q0), tuple(q1), tuple(tip)], nrm, .01, FEST[i % len(FEST)])
 
 
 def lute(p, x, y, z, lean=.25):
@@ -1105,14 +1151,20 @@ def main(out_path):
         m = Model(root, name, (*LAYOUT[name], 0))
         build_civic.rng.seed(sum(map(ord, name)))   # blob() jitter
         fn(m)
-        parts = {k: export_part_indexed(p, KEYS) for k, p in m.parts.items()}
+        parts = {}
+        for k, p in m.parts.items():
+            parts[k] = export_part_indexed(p, KEYS)
+            f = export_wind(p)
+            if f:
+                parts[k]['f'] = f    # wind-blown cloth: animated by settlement-events3d.js
         n = sum(len(p['c']) for p in parts.values())
         stats[name] = n
         total += n
         data['models'][name] = {'parts': parts, 'meta': m.meta, 'decals': m.decals, 'livery': m.livery}
     js = ("'use strict';\n// Generated by ASSETS/blender/build_events.py — do not edit by hand.\n"
           "// Event venue and setup models in game-local space (U): front at -y, +z up, origin at the footprint centre.\n"
-          "// Parts: p = vertex xyz, i = 3 indices per triangle, c = palette index per triangle.\n"
+          "// Parts: p = vertex xyz, i = 3 indices per triangle, c = palette index per triangle,\n"
+          "// f = wind-blown cloth {i: vertex, w: weight 0..1, d: wave direction}.\n"
           "window.ConquerEventModels=" + json.dumps(data, separators=(',', ':')) + ";\n")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, 'w', encoding='utf-8', newline='\n') as f:
