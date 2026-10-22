@@ -71,8 +71,31 @@
       for(let i=0;i<4;i++)face([A[i],A[(i+1)%4],B[(i+1)%4],B[i]],BEAM,t);
     };
     const winter=typeof State!=='undefined'&&State.season==='winter';
+    const prism=(pts,z0,z1,c,t)=>{
+      face(pts.map(p=>({x:p.x,y:p.y,z:z1})),c,t);
+      for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];face([{...a,z:z0},{...b,z:z0},{...b,z:z1},{...a,z:z1}],c,t)}
+    };
+    // L3/L4 yard outbuildings, as settlement-world3d.js addOutbuilding draws them.
+    const outbuilding=part=>{
+      const faces=urbanHouseFaces(s,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
+      const roofA=winter?'#e7ece8':'#5b3d30',roofB=winter?'#dce3de':'#6b4938';
+      if(part.type==='store'){
+        for(let i=0;i<n;i++)face(P(faces[i]),i%2?'#5d4431':'#71543c','body');
+        face(P(faces[n]),roofA,'roof');face(P(faces[n+1]),roofB,'roof');face(P(faces[n+2]),'#6b4f39','gable');face(P(faces[n+3]),'#6b4f39','gable');
+        return;
+      }
+      // Open shed: posts first, the back wall, then the lean-to roof.
+      const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=call('terrainElevation',c)||0;
+      const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
+      for(let i=0;i<n;i++)if(faces[i].slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))face(P(faces[i]),'#5d4431','body');
+      face(P(faces[n]),roofB,'roof');
+      for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
+        const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
+        const pts=call('rectWorldPoints',p.x,p.y,.07,.07,part.roofAngle);if(pts)prism(pts,base,base+part.bodyH,'#4a3626','beam');
+      }
+    };
     for(const part of entry.parts){
-      if(part.kind==='outbuilding')continue;
+      if(part.kind==='outbuilding'){outbuilding(part);continue}
       const faces=urbanHouseFaces(s,part),n=part.points.length,base=call('terrainElevation',part.center)||0;
       const split=part.kind==='turret'?base+1.02:base+part.bodyH*.5;
       for(let i=0;i<n;i++){
