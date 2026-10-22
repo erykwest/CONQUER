@@ -1,0 +1,24 @@
+name: Asset Lab regression
+on:
+  pull_request:
+    paths:
+      - figures-lab.html
+      - src/asset-catalog.js
+      - qa/asset-catalog-regression.cjs
+      - .github/workflows/asset-lab-regression.yml
+  push:
+    branches: [feat/unified-visual-asset-lab]
+    paths:
+      - figures-lab.html
+      - src/asset-catalog.js
+      - qa/asset-catalog-regression.cjs
+jobs:
+  asset-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check src/asset-catalog.js
+      - run: node qa/asset-catalog-regression.cjs
