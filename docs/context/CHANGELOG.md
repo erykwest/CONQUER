@@ -2,6 +2,11 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Portoni: magnete strade e accessori
+
+- Branch `portoni`: magnete del portone sulle strade, passaggio voltato 3D con ante animate, upgrade grata per il portone in pietra, drappi araldici e torce notturne. Stato, prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026); requisiti GATE-01…06 nel [BACKLOG](BACKLOG.md#portoni--accessori-del-portone-branch-portoni-22102026).
+- ROADMAP e DECISIONS invariati: accessori di una struttura esistente, nessun cambio di priorità né di contratto; la grata non entra ancora nella matrice danni (S-05/S-25).
+
 ## 2026-10-21 — Audit live main e guardia di coerenza per ogni PR
 
 - Ricontrollata la base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2), merge effettivi e PR aperte. Creata la [ricognizione datata](AUDIT-2026-10-21.md), senza trasformare report di PR in nuove QA eseguite.

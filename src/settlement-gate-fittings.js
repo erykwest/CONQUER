@@ -303,10 +303,13 @@
     if(pc>.01&&edge.role==='front'){
       ctx.save();ctx.beginPath();outline.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.closePath();ctx.clip();
       const top=o.apex,lift=(1-pc)*(top+.04);
-      ctx.strokeStyle='#2e2a27';ctx.lineWidth=Math.max(1,1.6*State.view.scale);ctx.beginPath();
+      // Lit iron over the dark passage (the 3D vault shows them against the masonry instead).
+      ctx.beginPath();
       for(let c=-o.half+.02;c<=o.half;c+=.085){const a=P(c,lift+top),b=P(c,lift-.03);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}
       for(let z=.12;z<top;z+=.17){const a=P(-o.half,lift+z),b=P(o.half,lift+z);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}
-      ctx.stroke();ctx.restore();
+      const w=Math.max(1,.026*U*State.view.scale);           // a .026 U iron bar
+      ctx.strokeStyle='#1f1c1a';ctx.lineWidth=w+1.2;ctx.stroke();
+      ctx.strokeStyle='#7a726a';ctx.lineWidth=w;ctx.stroke();ctx.restore();
     }
     return true;
   }

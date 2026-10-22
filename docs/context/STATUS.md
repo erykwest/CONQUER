@@ -11,6 +11,16 @@
 
 **QA:** la PR #70 riporta 60/62 suite PASS e browser fixture 40/30 Canvas/WebGL PASS; due suite preesistenti falliscono, picchi GPU fino a 303,8 ms; questa ricognizione non riesegue i test. Per stato, prove, confini e milestone vedere [audit completo](AUDIT-2026-10-21.md). Le note locali precedenti sulla branch performance non descrivono più lo stato di rilascio.
 
+## Portoni — magnete strade, ante, grata, drappi e torce (22/10/2026)
+
+- **CODICE su branch `portoni`** (da `origin/main` `f739e51`), non su `main`. Nuovo modulo `src/settlement-gate-fittings.js` (`window.ConquerGates`) più agganci in castle3d/world3d, placement, input, navigazione, fuochi e pannello.
+- **Magnete:** il tool portone aggancia la strada più vicina (centro sulla mezzeria, passaggio lungo la strada, il movimento sceglie solo il fronte esterno). `roadUsesGatePassage` campiona la mezzeria: ammessa se entra ed esce dalle bocche, anche se termina o curva nel passaggio; il piazzamento non la tratta più come collisione.
+- **3D:** nel solo renderer World 3D il corpo del portone in pietra è scavato (pilastri, volta ogivale, pavimento) con la stessa sagoma del decal `gatePortal`; cornici del portale su entrambe le bocche. Ante come mesh dinamiche che ruotano verso l'interno in ~1,4 s seguendo `gate.closed`; scure se danneggiate, assenti se sfondate. I percorsi Canvas mantengono il blocco pieno.
+- **Grata:** upgrade del portone in pietra (24 oro, 16 metallo, 6 legno), alza/abbassa animato ~2,2 s; abbassata (o in movimento) blocca i pedoni anche a portone aperto; sfondata la porta, cede anche la grata.
+- **Drappi e torce:** due drappi con l'araldica del regno ai lati del portale esterno; due torce con staffa, fiamma e bagliore solo di notte, nascoste quando il fronte guarda via dalla camera.
+- **QA:** nuova `qa/gate-fittings-regression.cjs` PASS; aggiornati i pattern sorgente di `gate-breach` e `mills3d`. Batteria non-browser 62/64 PASS; i due fallimenti `refactor-app-population` e `wall-bays` falliscono identici su `origin/main` pulito. Controllo visivo nel browser locale: ante aperte/semiaperte/chiuse, grata, notte con torce, vista posteriore, fallback Canvas con grata e torce. Suite browser (`.mjs`) e CI non eseguite.
+- **LIMITI:** portone di legno solo con magnete; grata non è un bersaglio separato della matrice danni; un avviso WebGL preesistente ("no buffer is bound to enabled attribute") ha disattivato una volta il 3D durante le prove e non è stato riprodotto né attribuito a questo lavoro.
+
 ## Integrazione performance con main aggiornato (21/10/2026)
 
 - **BASE E AUTORIZZAZIONE:** dopo la pubblicazione di `1520e00`, richiesto il merge. Integrato `origin/main` a `c94bdc1` nel branch `fix/construction-completion-perf` prima della PR/squash; le sezioni di audit sottostanti descrivono i rispettivi snapshot storici.
