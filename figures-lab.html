@@ -61,6 +61,11 @@ header h1{font-size:18px;white-space:nowrap}
 #assetAnimationPanel{background:#342f28;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 #assetAnimationPanel canvas{width:100%;height:auto;max-width:100%;margin:0;border:0}
 #assetPreviewNote{color:var(--muted);font-size:12px;margin:10px 0}
+.asset-rotate{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;padding:8px;border-radius:7px;background:#30291f}
+.asset-rotate[hidden]{display:none}
+.asset-rotate button{min-width:70px;min-height:34px;font:inherit;font-weight:700;border:1px solid var(--line);border-radius:6px;background:#4d3d2b;color:var(--text);cursor:pointer}
+.asset-rotate button:hover{background:#725332;border-color:var(--accent)}
+#assetRotationValue{min-width:45px;text-align:center;font-variant-numeric:tabular-nums;color:#edc98f;font-size:13px}
 #assetBuilderLink{display:inline-block;margin-top:6px}
 .symbol-preview{fill:#d9b77c}
 body.asset-catalog-static #c,body.asset-catalog-static .note{display:none}
@@ -141,6 +146,11 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <div id="assetDetailMeta"></div>
     <div id="assetDetailPreview"></div>
     <div id="assetAnimationPanel" hidden></div>
+    <div id="assetRotationControls" class="asset-rotate" role="group" aria-label="Rotazione del modello 3D" hidden>
+      <button id="assetRotateLeft" type="button" aria-label="Ruota modello di 15 gradi a sinistra">↶ −15°</button>
+      <output id="assetRotationValue" aria-live="polite">0°</output>
+      <button id="assetRotateRight" type="button" aria-label="Ruota modello di 15 gradi a destra">+15° ↷</button>
+    </div>
     <p id="assetPreviewNote"></p>
     <span class="caption">Sorgente effettiva</span>
     <code id="assetDetailSource"></code>
@@ -475,7 +485,14 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     scene(W,H,k,dt);
   }
   // Manual stepping for automated checks (rAF pauses in background tabs).
-  window.ConquerLab={step:(dt=1/60)=>render(dt),at:t=>{clock=t;render(0)}};
+  window.ConquerLab={step:(dt=1/60)=>render(dt),at:t=>{clock=t;render(0)},
+    rotate3d:delta=>{
+      $('w3Auto').checked=false;
+      w3Heading=((Number($('w3Heading').value)+delta)%360+360)%360;
+      $('w3Heading').value=Math.round(w3Heading)%360;
+      render(0);
+      return w3Heading;
+    }};
   renderButtons();
   requestAnimationFrame(frame);
 })();
@@ -485,6 +502,6 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/assets/industry-models.js?v=asset-lab-1"></script>
 <script src="./src/assets/scatter-model.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
-<script src="./src/asset-catalog.js?v=asset-lab-1"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-2"></script>
 </body>
 </html>
