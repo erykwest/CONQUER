@@ -1,12 +1,15 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-## 2026-10-22 — Asset Lab unificato (in branch, non pubblicato)
+## 2026-10-22 — Asset Lab: rotazione ±15° e rimozione pseudo-fortificazioni (branch)
 
-- Creato `feat/unified-visual-asset-lab` da `main` per convertire `figures-lab.html` in browser visuale di asset senza cambiare il motore di gioco.
-- Nuovo registro derivato dagli asset reali e dalle famiglie native di modelli; barra di categorie, ricerca, filtri di famiglia/formato, anteprime e inspector. Conservato il rendering animato di figure, animali, carri e assedio nel Lab preesistente.
-- Integrate miniature SVG/PNG, modelli 3D e simboli; le primitive procedurali prive di asset autonomo espongono un'anteprima **SCHEMA** esplicita e un link al Builder.
-- Aggiunti controllo di copertura del manifesto `qa/asset-catalog-regression.cjs` e workflow dedicato; **esito CI/browser ancora da verificare**. Non dichiarato merge o deploy.
+- Su `fix/asset-lab-rotation-and-components`: comandi di rotazione sotto la preview dell'inspector, proiezione 3D orientabile a intervalli di 15°, rotazione delle anteprime native animate e disattivazione del giro automatico su interazione.
+- Eliminata la categoria «Fortificazioni» che sovrastimava semplici sottopezzi; sprite PNG reali riclassificati «Componenti», 13 schemi generici di fortificazione esclusi dalla griglia.
+- Rafforzate QA statiche e Chromium (rotazione effettiva, reversibilità, animazioni e categorie). **Esito CI nuovo ramo e merge ancora da verificare.** Invariati ROADMAP e DECISIONS: correzione di sola UX/accuratezza del catalogo.
 
+## 2026-10-22 — Asset Lab unificato (merge #79 su main)
+
+- Catalogo visuale in `figures-lab.html`, classificazione asset e modelli nativi; filtri, anteprime SVG/PNG, modelli 3D e figure animate.
+- Browser Chromium e regressione dedicata **PASS** sulla PR #79; squash merge `f576ac5` in `main`. I diagrammi SCHEMA delle strutture procedurali non certificavano modelli completi, problema affrontato nella nuova iterazione.
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
