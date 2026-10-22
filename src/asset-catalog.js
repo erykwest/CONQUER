@@ -47,8 +47,8 @@
     ['forest','Foresta procedurale','Territorio','Biomi'],
     ['terrain','Rilievo e scarpata','Territorio','Orografia']
   ];
-  const fileCategory=path=>path.includes('/architecture/')?'Fortificazioni'
-    :path.includes('/economy/')?'Produzione':path.includes('/forest/')||path.includes('/bushes/')||path.includes('/animals/')||path.endsWith('/tree-svgrepo-com.svg')?'Natura'
+  const fileCategory=path=>path.includes('/animals/')?'Fauna':path.includes('/architecture/')?'Fortificazioni'
+    :path.includes('/economy/')?'Produzione':path.includes('/forest/')||path.includes('/bushes/')||path.endsWith('/tree-svgrepo-com.svg')?'Natura'
     :path.includes('/interior/')?'Interni':path.includes('/heraldry/')?'Araldica':'Territorio';
   const fileFamily=path=>path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
@@ -138,9 +138,9 @@
     meshCache.set(item.id,mesh);
     return mesh;
   }
-  function renderModel(canvas,item){
-    const mesh=modelMesh(item),g=canvas.getContext('2d');
-    const w=canvas.width,h=canvas.height;g.clearRect(0,0,w,h);
+  function renderModel(canvas,item){return renderMesh(canvas,modelMesh(item))}
+  function renderMesh(canvas,mesh){
+    const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height;g.clearRect(0,0,w,h);
     if(!mesh)return placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');
     const p=mesh.pos;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(let i=0;i<p.length;i+=3){
@@ -196,6 +196,37 @@
     path.setAttribute('d',source.path);path.setAttribute('fill','#d9b77c');
     svg.appendChild(path);container.appendChild(svg);
   }
+  // Thumbnail figures use the very same drawing calls as the live Figure Lab.
+  // Each call temporarily swaps the classic-script canvas context, then restores it.
+  function renderFigure(canvas,item){
+    const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,subject=item.subject;
+    g.clearRect(0,0,w,h);
+    if(subject==='wagon3d'&&window.ConquerWagons3D?.worldTriangles){
+      const spec={chassis:'wagon',cargo:['crate','sack','barrel'],team:[]};
+      const mesh=window.ConquerWagons3D.worldTriangles(spec,{x:0,y:0,heading:0,distance:0});
+      return renderMesh(canvas,mesh);
+    }
+    if(subject==='wagon'&&window.ConquerWagons?.drawWagon){
+      window.ConquerWagons.drawWagon(g,w*.48,h*.64,Math.min(w*.48,h*.8),
+        {chassis:'wagon',cargo:['crate','barrel'],team:[],facing:1,moving:false,t:0,distance:0});return;
+    }
+    const previous=ctx,oldScale=State.view.scale;
+    try{
+      ctx=g;State.view.scale=Math.min(w*.09,h*.14);
+      const p={x:w*.5,y:h*.78};
+      if(subject==='villager'){
+        drawVillagerFigureUnmasked({id:'asset-lab-villager',kind:'peasant',sex:'male',age:'adult',
+          hair:'brown',colors:['#8c6b3f','#5d4a32'],p});
+      }else{
+        const unit={id:'asset-lab-'+subject,engaged:false};
+        window.ConquerCombatAnim.drawFigure(p,0,subject,unit.id,0,null,
+          window.ConquerCombatAnim.pose(unit,0));
+      }
+    }catch(error){
+      console.warn('Asset Lab figure thumbnail could not render',subject,error);
+      placeholder(canvas,'ANTEPRIMA DAL LAB');
+    }finally{ctx=previous;State.view.scale=oldScale}
+  }
   function makePreview(item,container,large){
     container.replaceChildren();
     if(item.kind==='file'){
@@ -209,13 +240,8 @@
     container.appendChild(canvas);
     if(item.kind==='schematic')return renderSchema(canvas,item);
     if(item.kind==='model'||item.kind==='animal')return renderModel(canvas,item);
-    if(item.kind==='figure'){
-      // Figure-specific animation remains the actual game renderer in the inspector.
-      const ctx=canvas.getContext('2d');
-      ctx.fillStyle='#d6b581';ctx.font=(large?100:58)+'px system-ui';ctx.textAlign='center';
-      ctx.fillText(item.subject==='wagon'||item.subject==='wagon3d'?'♞':'♟',canvas.width/2,canvas.height*.65);
-      ctx.font='12px system-ui';ctx.fillStyle='#a89b88';ctx.fillText('APRI ANIMAZIONE',canvas.width/2,canvas.height*.9);
-    }
+    if(item.kind==='figure')return renderFigure(canvas,item);
+
   }
   let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='';
   let observer=null;
