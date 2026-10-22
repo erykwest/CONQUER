@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Eventi: disposizione casuale senza collisioni
+
+- Il jitter di tende, scatter e attrezzature prova spostamenti decrescenti e scarta quelli che urtano oggetti già piazzati, posizioni di base degli oggetti successivi o il perimetro; in mancanza resta nella posizione di base (validata). QA su 25 seed per tutti gli allestimenti: nessuna collisione né uscita, 91% degli oggetti spostabili ancora spostati.
+
 ## 2026-10-22 — Eventi: bandiere al vento
 
 - Pennoni, festoni, gonfaloni e stendardi ondeggiano: pesi di stoffa esportati dal builder (parte `f`), strato dinamico come le pale dei mulini (WebGL e 2.5D), ampiezza legata al vento del meteo, fermi a gioco in pausa. Costo misurato ~0,6 ms per frame sul lotto arena (916 triangoli di stoffa). QA `events3d-regression` estesa; nel browser verificati movimento e assenza di errori (pannello nascosto: frame forzati a mano).

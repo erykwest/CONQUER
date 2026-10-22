@@ -287,14 +287,47 @@
   // Tents of the camp-like setups: ±40° and up to 75% of their size. Scatter goods,
   // racks and armour in every setup: any heading (±35° for gear) and up to 200%.
   const JITTER_SETUPS=new Set(['arenaLot','tourney','circus']);
-  function jitter(s,it,key){
+  // Candidate positions of an item, from the full random turn and shift down to its
+  // set place (always last).
+  function jitterCandidates(s,it,key){
     const setup=s.event?.setup||VENUES[s.venue]?.setup;
     const tent=/^tent/.test(it.m)&&JITTER_SETUPS.has(setup),loose=/^(sc:|propArmour|propWeapon|propSpear|propShield|propLance)/.test(it.m);
-    if(!tent&&!loose)return it;
+    if(!tent&&!loose)return[it];
     const b=modelBounds(it.m),size=b?Math.max(b.x1-b.x0,b.y1-b.y0)*(it.s||1):0;
     const r=k=>hash(((typeof State!=='undefined'&&State.seed)||1)+'|jit|'+key+'|'+k)/4294967296*2-1;
     const turn=tent?40*Math.PI/180:/^sc:/.test(it.m)?Math.PI:35*Math.PI/180,shift=tent?.75:2;
-    return{...it,a:(it.a||0)+r('a')*turn,x:it.x+r('x')*shift*size,y:it.y+r('y')*shift*size};
+    const out=[];
+    for(const f of [1,.7,.45,.25,.1]){
+      const dx=r('x'),dy=r('y'),da=r('a');
+      out.push({...it,a:(it.a||0)+da*turn*Math.max(f,.5),x:it.x+dx*shift*size*f,y:it.y+dy*shift*size*f});
+      // A second draw at the same scale tries another direction before shrinking.
+      out.push({...it,a:(it.a||0)+r('b'+f)*turn*Math.max(f,.5),x:it.x+r('u'+f)*shift*size*f,y:it.y+r('v'+f)*shift*size*f});
+    }
+    out.push(it);
+    return out;
+  }
+  // Final places of a venue's setup: each jittered item keeps clear of the items
+  // already placed, of the set places of those still to come (so any of them can
+  // fall back to its own) and of the venue's edge; otherwise it stays where it was set.
+  function placedItems(s){
+    const items=setupItems(s);if(!items.length)return items;
+    const {w,h}=sizeOf(s),id=s.id??(s.x+','+s.y),M=.04;
+    const base=items.map(itemRect),placed=[];
+    const clear=(a,b)=>!a||!b||a.x1<=b.x0-M||b.x1<=a.x0-M||a.y1<=b.y0-M||b.y1<=a.y0-M;   // M: a small gap
+    const inside=r=>!r||r.x0>=-w/2&&r.x1<=w/2&&r.y0>=-h/2&&r.y1<=h/2;
+    return items.map((it,i)=>{
+      const cands=jitterCandidates(s,it,id+':'+i);
+      let pick=it,rect=base[i];
+      for(const c of cands){
+        const r=c===it?base[i]:itemRect(c);
+        // The arena itself fills its lot: only the jitter has to stay inside.
+        if(c!==it&&!inside(r))continue;
+        if(c!==it&&(!placed.every(p=>clear(r,p))||!base.every((b,j)=>j<=i||clear(r,b))))continue;
+        pick=c;rect=r;break;
+      }
+      placed.push(rect);
+      return pick;
+    });
   }
   // All fixed meshes of a venue, cached per structure state with the placed instances
   // (the dynamic layer re-poses their cloth every frame).
@@ -318,8 +351,8 @@
       .map((p,k)=>hash(seed+'|flip|'+id+'|'+k)%2?[p[1],p[0]]:p);
     const deck=shuffle(PAIRS,'gear');
     let dealt=0,tents=0;
-    setupItems(s).forEach((it0,i)=>{
-      const it=jitter(s,it0,id+':'+i),p=toWorld(s,it.x,it.y);
+    placedItems(s).forEach((it,i)=>{
+      const p=toWorld(s,it.x,it.y);
       const pair=liveryOf(it.m)!=='pair'?null:/^tent/.test(it.m)?tentDeck[tents++%tentDeck.length]:deck[dealt++%deck.length];
       const mesh=place(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},pair);
       if(mesh)list.push(mesh);
@@ -374,5 +407,5 @@
     }
     return true;
   }
-  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,is,has,sizeOf,setupsFor,venueModel,setupItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes};
+  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes};
 })();

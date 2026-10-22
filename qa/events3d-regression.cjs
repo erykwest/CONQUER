@@ -146,3 +146,23 @@ console.log('PASS livery: realm heraldry on stands and stages, primary pairs on 
   State.structures=[];
 }
 console.log('PASS wind: cloth on the dynamic layer, anchored, waves only while the game runs');
+// Jittered layouts: across seeds, the final places never clash and stay on the lot.
+{
+  const T=.03,seed0=State.seed;let moved=0,total=0;
+  const grounds=[venue('arenaLot',{id:'p0'}),...['joust','tourney','circus','feast','camp','theatre'].map(k=>venue('festivalGround',{id:'p'+k,event:{setup:k,phase:'active'}}))];
+  for(let sd=1;sd<=25;sd++){
+    State.seed=sd;
+    for(const g of grounds){
+      const {w,h}=E.sizeOf(g),items=E.placedItems(g),base=E.setupItems(g),R=items.map(E.itemRect);
+      R.forEach((r,i)=>{assert.ok(r.x0>=-w/2-T&&r.x1<=w/2+T&&r.y0>=-h/2-T&&r.y1<=h/2+T,'seed '+sd+' '+(g.event?.setup||g.venue)+': '+items[i].m+' leaves the lot');
+        const loose=/^(sc:|propArmour|propWeapon|propSpear|propShield|propLance)/.test(base[i].m)||/^tent/.test(base[i].m)&&['arenaLot','tourney','circus'].includes(g.event?.setup||'arenaLot');
+        if(loose){total++;if(items[i]!==base[i])moved++}});
+      for(let i=0;i<R.length;i++)for(let j=i+1;j<R.length;j++){const a=R[i],b=R[j];
+        assert.ok(Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0)<=T||Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0)<=T,
+          'seed '+sd+' '+(g.event?.setup||g.venue)+': '+items[i].m+' clashes with '+items[j].m)}
+    }
+  }
+  State.seed=seed0;
+  assert.ok(moved>total*.6,'most tents, scatter and gear still move ('+moved+' / '+total+')');
+  console.log('PASS jittered layouts never clash and stay on the lot (25 seeds, '+moved+' / '+total+' items moved)');
+}
