@@ -125,6 +125,12 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
 **D-041 · CODICE SU MAIN / limite assedio:** [PR #73](https://github.com/erykwest/CONQUER/pull/73) aggiunge terra di riporto d'assalto compatibile col terrain boolean corrente; **non** implica implementazione di tutte le macchine o condizione di resa per blocco. Requisiti S-01–S-25 rimangono chiusi solo con prova di comportamento di ogni sistema.
 
+## Eventi (branch `events`, 22/10/2026)
+
+**D-042 · VINCOLO DI DESIGN ESPLICITO (EVENTI 22/10):** lo spiazzo polivalente per eventi programmati misura **14 × 10 U** (lato lungo sull'asse x locale, fronte a −y), non più 6 × 10 come nello skeleton iniziale. **Motivazione:** il 6 × 10 risultava evidentemente troppo piccolo per giostra, circo e sagra a grandezza reale; con 14 × 10 entrano liste di oltre 10 U con quattro tribune, il tendone con carri e tende, la sagra con quattro bancarelle e otto tavoli, e anche l'arena a U. **Alternative scartate:** 6 × 10 con oggetti rimpiccioliti; taglie multiple (rinviate). **Impatto:** `VENUES.festivalGround` e `SETUPS` in `src/settlement-events3d.js`, `qa/events3d-regression.cjs`, [docs/events/README.md](../events/README.md).
+
+**D-043 · VINCOLO DI DESIGN ESPLICITO (EVENTI 22/10):** tribune, arena e palchi seguono l'araldica del regno; tende dei cavalieri, rastrelliere e armature usano coppie casuali di colori primari per istanza; festoni, circo e stoffe del palco degli artisti mantengono colori festosi fissi.
+
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
 ## Conflitti decisionali da risolvere esplicitamente

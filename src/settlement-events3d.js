@@ -1,6 +1,6 @@
 'use strict';
 // CONQUER event venues in 3D (docs/events/README.md): the street performance spot,
-// the stage and the 6 x 10 festival ground, with the temporary setups of scheduled
+// the stage and the 14 x 10 festival ground, with the temporary setups of scheduled
 // events. Models come from the Blender-built catalog (src/assets/event-models.js,
 // tools/blender/build_events.py); feast tables and stalls reuse the civic props
 // (src/assets/civic-models.js). Models are in the venue's local axes (front at -y,
@@ -19,42 +19,57 @@
   const VENUES={
     streetSpot:{w:1.6,h:1.6},
     stage:{w:2.4,h:1.2,dressings:{players:'stagePlayers',herald:'stageHerald'},dressing:'players'},
-    festivalGround:{w:6,h:10}
+    festivalGround:{w:14,h:10}
   };
-  // Setups of the festival ground, local U, biggest items first (they arrive first).
-  // {m: event model or 'civic:<key>', x, y, a: heading, s: scale}. min = smallest ground.
-  // Wagons are built +x forward.
-  const H=Math.PI/2;
+  // Setups of the 14 x 10 festival ground (x along the long side, front at -y),
+  // local U, biggest items first (they arrive first). {m: event model or
+  // 'civic:<key>', x, y, a: heading, s: scale}. min = smallest ground that holds
+  // the setup. Wagons are built +x forward; stands face their local -y.
+  const H=Math.PI/2,PI=Math.PI,G={w:14,h:10};
   const SETUPS={
-    circus:{min:{w:6,h:10},items:[
-      {m:'circusTent',x:0,y:1.9,a:0},
-      {m:'tentOctagon',x:-2.0,y:-1.6,a:H,s:.7},{m:'tentSquare',x:2.05,y:-1.6,a:-H,s:.7},
-      {m:'wagonCaravan',x:-1.35,y:-3.55,a:0},{m:'wagonCage',x:1.35,y:-3.55,a:0},
-      {m:'wagonCargo',x:-.2,y:-4.55,a:Math.PI},{m:'podiumStreet',x:0,y:-1.5,a:0}]},   // the barker before the entrance
-    joust:{min:{w:6,h:10},items:[
-      {m:'standCovered',x:2.3,y:-.1,a:-H},{m:'standOpen',x:-2.35,y:.1,a:H},
-      {m:'propTilt',x:0,y:-1.74,a:H},{m:'propTilt',x:0,y:1.74,a:H},
-      {m:'tentOctagon',x:-1.85,y:3.9,a:0,s:.75},{m:'tentSquare',x:1.85,y:-3.95,a:Math.PI,s:.75},
-      {m:'propLanceRack',x:1.9,y:2.35,a:-H},{m:'propShieldRack',x:-1.95,y:-2.4,a:H},
-      {m:'propWeaponRack',x:-.85,y:-4.4,a:0},{m:'propArmourStand',x:.85,y:4.45,a:Math.PI}]},
-    camp:{min:{w:6,h:10},items:[
-      {m:'tentOctagon',x:-1.55,y:-3.55,a:0},{m:'tentSquare',x:1.6,y:-3.6,a:0},
-      {m:'tentSquare',x:-1.6,y:-.55,a:H},{m:'tentOctagon',x:1.55,y:-.5,a:-H},
-      {m:'propWeaponRack',x:-2.2,y:1.75,a:0},{m:'propSpearRack',x:-.6,y:1.75,a:0},
-      {m:'propShieldRack',x:1.1,y:1.75,a:0},{m:'propLanceRack',x:2.45,y:2.6,a:-H},
-      {m:'propArmourPile',x:-2.0,y:3.35,a:.4},{m:'propArmourCrate',x:-.4,y:3.5,a:-.2},
-      {m:'propArmourStand',x:.9,y:3.4,a:Math.PI},{m:'propArmourStand',x:1.6,y:4.3,a:Math.PI-.3}]},
-    feast:{min:{w:6,h:10},items:[
+    joust:{min:G,items:[
+      // Lists down the long axis: a three-segment tilt, two stands on each side.
+      {m:'standCovered',x:-2.1,y:2.5,a:0},{m:'standCovered',x:2.1,y:2.5,a:0},
+      {m:'standOpen',x:-2.1,y:-2.5,a:PI},{m:'standOpen',x:2.1,y:-2.5,a:PI},
+      {m:'propTilt',x:-3.47,y:0,a:0},{m:'propTilt',x:0,y:0,a:0},{m:'propTilt',x:3.47,y:0,a:0},
+      {m:'tentOctagon',x:-5.6,y:3.6,a:0},{m:'tentSquare',x:5.65,y:3.65,a:0},
+      {m:'tentSquare',x:-5.65,y:-3.65,a:PI},{m:'tentOctagon',x:5.6,y:-3.6,a:PI},
+      {m:'propLanceRack',x:6.5,y:1.6,a:-H},{m:'propLanceRack',x:-6.5,y:-1.6,a:H},
+      {m:'propShieldRack',x:-6.5,y:1.6,a:H},{m:'propArmourStand',x:6.5,y:-1.7,a:H},
+      {m:'propWeaponRack',x:-4.6,y:1.75,a:0},{m:'propArmourStand',x:4.6,y:-1.8,a:PI}]},
+    circus:{min:G,items:[
+      {m:'circusTent',x:0,y:.6,a:0},
+      {m:'tentOctagon',x:-4.6,y:2.6,a:0},{m:'tentSquare',x:4.6,y:2.6,a:0},
+      {m:'wagonCaravan',x:-5.6,y:-1.5,a:H},{m:'wagonCage',x:5.6,y:-1.5,a:H},
+      {m:'wagonCaravan',x:3.4,y:-3.9,a:PI},{m:'wagonCargo',x:-3.6,y:-3.9,a:0},
+      {m:'wagonCaravan',x:-6.4,y:2.7,a:H},{m:'wagonCargo',x:6.4,y:2.6,a:-H},
+      {m:'podiumStreet',x:0,y:-3.0,a:0}]},   // the barker before the big top's entrance
+    feast:{min:G,items:[
       {m:'stagePlayers',x:-.26,y:4.1,a:0},
-      {m:'civic:stall',x:-1.9,y:-3.9,a:H},{m:'civic:stall',x:1.9,y:-3.9,a:-H},
-      {m:'civic:prop_tablePergola',x:0,y:-3.6,a:0,s:1.25},
-      {m:'civic:prop_tableSet',x:-1.5,y:-1.2,a:0,s:1.3},{m:'civic:prop_tableSet',x:1.5,y:-1.2,a:0,s:1.3},
-      {m:'civic:prop_tableSet',x:-1.5,y:1.0,a:0,s:1.3},{m:'civic:prop_tableSet',x:1.5,y:1.0,a:0,s:1.3},
-      {m:'civic:prop_tableBarrel',x:0,y:-.1,a:.5,s:1.3},{m:'podiumStreet',x:-2.2,y:2.6,a:.4}]},
-    theatre:{min:{w:6,h:10},items:[
-      {m:'stageTheatre',x:0,y:3.95,a:0},{m:'standOpen',x:0,y:-4.1,a:Math.PI},
-      {m:'civic:prop_tableBarrel',x:-2.3,y:-1.5,a:0,s:1.3},{m:'podiumStreet',x:2.2,y:-1.2,a:-.6}]},
-    arena:{min:{w:8.4,h:9.2},items:[{m:'arenaU',x:0,y:.2,a:0}]}
+      {m:'civic:stall',x:-5.2,y:-4.2,a:0},{m:'civic:stall',x:-1.8,y:-4.2,a:0},
+      {m:'civic:stall',x:1.8,y:-4.2,a:0},{m:'civic:stall',x:5.2,y:-4.2,a:0},
+      {m:'civic:prop_tablePergola',x:-5.4,y:2.6,a:0,s:1.25},{m:'civic:prop_tablePergola',x:5.4,y:2.6,a:0,s:1.25},
+      ...[-4.5,-2.2,2.2,4.5].flatMap(x=>[-1.6,.6].map(y=>({m:'civic:prop_tableSet',x,y,a:0,s:1.3}))),
+      {m:'civic:prop_tableBarrel',x:0,y:-.5,a:.5,s:1.3},{m:'civic:prop_tableBarrel',x:-6.2,y:-.5,a:0,s:1.3},
+      {m:'civic:prop_tableBarrel',x:6.2,y:-.5,a:0,s:1.3},{m:'podiumStreet',x:-2.6,y:3.4,a:.4},
+      {m:'podiumStreet',x:2.6,y:3.4,a:-.4}]},
+    camp:{min:G,items:[
+      ...[-4.6,0,4.6].flatMap((x,i)=>[{m:i%2?'tentSquare':'tentOctagon',x,y:-3.4,a:0},{m:i%2?'tentOctagon':'tentSquare',x,y:-.2,a:0}]),
+      {m:'propWeaponRack',x:-5.5,y:2.3,a:0},{m:'propSpearRack',x:-3.6,y:2.3,a:0},
+      {m:'propShieldRack',x:-1.6,y:2.3,a:0},{m:'propLanceRack',x:.4,y:2.6,a:H},
+      {m:'propArmourPile',x:2.2,y:3.4,a:.4},{m:'propArmourCrate',x:4.0,y:3.4,a:-.2},
+      {m:'propArmourStand',x:5.6,y:2.6,a:PI},{m:'propArmourStand',x:6.2,y:3.8,a:PI-.3},
+      {m:'propLanceRack',x:-6.4,y:3.9,a:0}]},
+    theatre:{min:G,items:[
+      {m:'stageTheatre',x:0,y:3.95,a:0},
+      {m:'standOpen',x:-2.1,y:-4.1,a:PI},{m:'standOpen',x:2.1,y:-4.1,a:PI},
+      {m:'civic:prop_tableBarrel',x:-5.5,y:-1,a:0,s:1.3},{m:'civic:prop_tableBarrel',x:5.5,y:-1,a:0,s:1.3},
+      {m:'podiumStreet',x:-5.2,y:3.4,a:.4},{m:'civic:stall',x:5.3,y:3.6,a:PI}]},
+    arena:{min:G,items:[
+      {m:'arenaU',x:0,y:.2,a:0},
+      {m:'tentOctagon',x:-5.6,y:2.6,a:0},{m:'tentSquare',x:5.65,y:2.6,a:0},
+      {m:'propLanceRack',x:5.7,y:-.6,a:H},{m:'propArmourStand',x:-5.7,y:-.6,a:PI},
+      {m:'propShieldRack',x:-5.6,y:-2.6,a:H},{m:'propArmourPile',x:5.6,y:-2.8,a:.3}]}
   };
   const SHOWN_PHASES=new Set(['preparing','active','clearing']);
   const GROUND=['#7f9a55','#6c8648'];

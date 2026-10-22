@@ -5,7 +5,7 @@ This folder defines the initial contracts for social events. It intentionally do
 ## Spaces
 - **Street performance spot**: player-placed small location; spontaneous performance by one artist or a pair, with a small audience.
 - **Stage**: player-placed permanent performance platform; group performances with audience.
-- **Festival ground**: player-placed, fixed 6 × 10 world-unit rectangular reservation, green when idle. It is not a constructed building: no materials, labor, or build time. Blocks houses, fields, pastures, buildings and other reservations, but allows normal civilian traversal while idle. Relocatable when no event is active or being assembled. No automatic scanning of empty terrain to discover event locations.
+- **Festival ground**: player-placed, fixed 14 × 10 world-unit rectangular reservation (D-042; the first skeleton said 6 × 10), green when idle. It is not a constructed building: no materials, labor, or build time. Blocks houses, fields, pastures, buildings and other reservations, but allows normal civilian traversal while idle. Relocatable when no event is active or being assembled. No automatic scanning of empty terrain to discover event locations.
 
 ## Event lifecycle
 `planned -> preparing -> active -> clearing -> idle` (cancellation allowed before active).
@@ -25,13 +25,13 @@ Venue structure contract (data only until the venue registry exists):
 |---|---|---|
 | `streetSpot` | 1.6 × 1.6 | `podiumStreet`: octagonal podium, stool, lute, coin hat, bunting pole |
 | `stage` | 2.4 × 1.2 | same base, dressing `players` (`stagePlayers`: backcloth, wings, bunting) or `herald` (`stageHerald`: lectern, realm banners) |
-| `festivalGround` | 6 × 10 | green pad when idle; setup props during `preparing` (appear with `progress`), `active`, `clearing` (leave with `progress`) |
+| `festivalGround` | 14 × 10 (long side on local x) | green pad when idle; setup props during `preparing` (appear with `progress`), `active`, `clearing` (leave with `progress`) |
 
 Festival ground setups (local layout in `SETUPS`, validated inside the ground with no overlaps):
-- `joust`: covered and open stands either side of a two-segment tilt, knights' tents, lance and shield racks, weapon rack, armour stand;
-- `circus`: big top, two smaller tents, caravan, cage wagon, baggage cart, barker's podium;
-- `feast` (sagra): players' stage, stalls, tables (civic props), barker podium;
-- extra: `camp` (knights' camp), `theatre` (theatre stage facing an open stand); `arena` (U-shaped stand) needs a ground of at least 8.4 × 9.2 U — **proposed**, not part of the 6 × 10 contract.
+- `joust`: lists over 10 U long (three-segment tilt) with two covered stands on one side and two open stands on the other, knights' tents in the corners, lance, shield and weapon racks, armour stands;
+- `circus`: big top, two smaller tents, three caravans, cage wagon, two baggage carts, barker's podium;
+- `feast` (sagra): players' stage, four stalls, eight tables and two pergolas (civic props), barrel tables, two podiums;
+- extra: `camp` (knights' camp), `theatre` (theatre stage facing two open stands), `arena` (U-shaped stand with knights' tents and gear).
 
 Livery: stands, arena and stages follow the realm heraldry (`State.heraldry` c1 / c2 / c4). Knights' tents, lance and shield racks and armour take a deterministic random pair of primary colours per instance. Circus, bunting and stage cloths keep fixed festive colours. Model `meta` carries seats, performer, speaker and entrance points for the future attendance module.
 
@@ -44,7 +44,7 @@ Livery: stands, arena and stages follow the realm heraldry (`State.heraldry` c1 
 6. Temporary SVG asset placement; reuse combat engine for tournaments rather than implementing separate combat.
 
 ## Acceptance criteria
-- Placement/removal of a 6×10 festival ground reserves terrain without a construction bar.
+- Placement/removal of a 14×10 festival ground reserves terrain without a construction bar.
 - No building, field or pasture may overlap the reserved rectangle.
 - Idle ground remains visually green and passable.
 - The player schedules an event only on a placed compatible venue.
