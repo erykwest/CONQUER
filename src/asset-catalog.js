@@ -256,6 +256,7 @@
     document.body.classList.toggle('asset-figure',live);
     document.body.classList.toggle('asset-catalog-static',!live);
     const art=byId('assetDetailPreview');art.hidden=live;
+    byId('assetAnimationPanel').hidden=!live;
     const label=byId('assetPreviewNote');label.textContent=live?'Anteprima animata dal motore di gioco.':'';
     if(live)document.querySelector('[data-subject="'+item.subject+'"]').click();
     else makePreview(item,art,true);
@@ -315,6 +316,8 @@
   byId('assetReset').addEventListener('click',()=>{currentCategory='Tutti';currentFamily='';currentFormat='';query='';
     byId('assetSearch').value='';byId('assetFormat').value='';refresh()});
   window.ConquerAssetCatalog={items,refresh,select:id=>{const item=items.find(x=>x.id===id);if(item)selectItem(item)},get selected(){return selectedId}};
+  // Reparent the existing native animation canvas: the animator retains its context.
+  const liveCanvas=byId('c');if(liveCanvas)byId('assetAnimationPanel').appendChild(liveCanvas);
   refresh();
   selectItem(items.find(x=>x.id==='animal:sheep')||items[0]);
 })();
