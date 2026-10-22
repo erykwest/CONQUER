@@ -33,14 +33,19 @@ for(const name of ['ConquerCivicModels','ConquerIndustryModels','ConquerScatterM
   'ConquerWagonModel','ConquerSiegeModel','ConquerAnimalModels']){
   assert(source.includes(name),'Missing native model registry '+name);
 }
-for(const category of ['Fortificazioni','Edifici','Produzione','Popolazione','Truppe',
+for(const category of ['Componenti','Edifici','Produzione','Popolazione','Truppe',
   'Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Araldica','Territorio']){
   assert(source.includes("'"+category+"'"),'Missing navigable category '+category);
 }
-for(const primitive of ['tower-square','tower-round','wall','built','palisade','gate',
-  'drawbridge','moat','bridge','well','house1','house4','field','road','forest']){
+for(const primitive of ['well','house1','house4','field','road','forest']){
   assert(source.includes("['"+primitive+"'"),'Missing schematic game primitive '+primitive);
 }
+assert(!source.includes("'Fortificazioni'"),'Fortification subparts must not masquerade as complete fortifications');
+assert(!source.includes("['tower-square'"),'Fake complete castle schematic must not be listed');
+assert(source.includes("'/architecture/'")&&source.includes("'Componenti'"),'Real architecture sprites must remain discoverable as components');
+for(const id of ['assetRotateLeft','assetRotateRight','assetRotationControls','assetRotationValue'])assert(html.includes('id="'+id+'"'),'Missing 3D inspector rotation control '+id);
+assert(source.includes('rotateSelection(-15)')&&source.includes('rotateSelection(15)'), 'Rotation step must be 15 degrees');
+assert(html.includes('rotate3d:delta'), 'Live native 3D previews must rotate too');
 for(const expression of ['IntersectionObserver','aria-selected','aria-pressed','assetFamily',
   'assetFormat','toLocaleLowerCase','renderModel','renderSchema','selectItem']){
   assert(source.includes(expression),'Missing filtering / accessibility / rendering contract '+expression);
