@@ -556,7 +556,8 @@ function houseFootprintParts(s){
   const turret=houseTurretInfo(s,parts);if(turret){for(const p of out)p.turret=turret;out.push(turret)}
   return out;
 }
-function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.38:1.72}
+// L2+ storeys lowered ~10% (was 1.72 / 2.38 U): ground and upper floors read less lanky.
+function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.14:1.55}
 // L2+ gabled roofs are steep (60°, medieval): the ridge rises tan(60°)·half-span above the eaves,
 // where the span is the part's side perpendicular to its ridge. L1 cottages keep their low thatch.
 const HOUSE_ROOF_PITCH=Math.tan(60*Math.PI/180);
