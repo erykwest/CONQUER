@@ -5,6 +5,8 @@ on:
       - figures-lab.html
       - src/asset-catalog.js
       - qa/asset-catalog-regression.cjs
+      - qa/asset-catalog-browser.mjs
+      - index.html
       - .github/workflows/asset-lab-regression.yml
   push:
     branches: [feat/unified-visual-asset-lab]
