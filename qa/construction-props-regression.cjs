@@ -54,7 +54,10 @@ assert.ok(!prep.has('scaffoldBay')&&!prep.has('treadwheelCrane'),'prep: no scaff
 assert.ok(raise.has('scaffoldBay')&&raise.has('ladderShort')&&raise.has('treadwheelCrane'),'raise: scaffold, ladders and the great wheel for a tall tower');
 assert.deepEqual([...finish],['scaffoldBay','ladderShort'],'finish: only scaffold and ladders are left');
 assert.equal(at(1).length,0,'a finished structure has no props');
-console.log('PASS phases: prep -> raise -> finish -> removed');
+const cr=p=>at(p).find(i=>i.model==='treadwheelCrane');
+assert.ok(Math.hypot(cr(.5).x-tower.x,cr(.5).y-tower.y)<1e-6,'the crane stands on the building');
+assert.ok(cr(.3).z>0&&cr(.3).z<cr(.8).z&&cr(.8).z<=HEIGHT.tower,'the crane rides up with the masonry');
+console.log('PASS phases: prep -> raise -> finish -> removed; crane on top');
 
 const storeys=items=>new Set(items.filter(i=>i.model==='scaffoldBay').map(i=>i.z.toFixed(3))).size;
 const topZ=items=>Math.max(...items.filter(i=>i.model==='scaffoldBay').map(i=>i.z));

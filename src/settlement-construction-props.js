@@ -5,7 +5,8 @@
 // never change the site's state.
 //   prep   (p < .12)   material pile and work bench(es) next to the footprint
 //   raise  (.12–.90)   putlog scaffold rising with the work on the faces turned to the
-//                      camera, ladders storey by storey, a hoist or a treadwheel crane
+//                      camera, ladders storey by storey, a hoist on the ground or a
+//                      treadwheel crane riding on top of the rising masonry
 //   finish (p >= .90)  only the scaffold (full height) is left; it goes with completion
 // Sites are drawn on the dynamic Canvas layer by both renderers (settlement-render.js),
 // so the props are painted there too, right after their site. Classic script.
@@ -151,22 +152,26 @@
       free.push({model:'materialPile',at:.55,skip:kind.brick?['stone']:kind.masonry?['bricks']:['stone','bricks']});
       free.push({model:kind.bench,at:-.6});
       if(kind.secondBench)free.push({model:'carpenterBench',at:-1.25});
-      if(phase==='raise'&&kind.lift)free.push({model:kind.lift,at:kind.lift==='hoist'?1.35:-1.9,lift:true});
+      if(phase==='raise'&&kind.lift==='hoist')free.push({model:'hoist',at:1.35,lift:true});
     }
     const front=towardsCamera(),gap=kind.scaffold?reach+.08:.15;
+    // The great wheel rides on the masonry it builds: centred on the footprint at the
+    // working level, raised with it, the jib turned towards the material pile below.
+    if(phase==='raise'&&kind.lift==='treadwheelCrane'){
+      out.push({model:'treadwheelCrane',parts:Object.keys(MODELS().models.treadwheelCrane.parts),
+        x:fp.c.x,y:fp.c.y,z:groundAt(s,fp.c)+kind.H*raised(p),yaw:front+.55});
+    }
     for(const f of free){
-      const crane=f.model==='treadwheelCrane',r=crane?.45:radius(f.model);
+      const r=radius(f.model);
       let placed=null;
       for(const d of [0,.3,-.3,.6,-.6,.9,-.9]){
-        const a=front+f.at+d,dist=fp.r+gap+(crane?.45:f.lift?.1:r*.85);
+        const a=front+f.at+d,dist=fp.r+gap+(f.lift?.1:r*.85);
         const c={x:fp.c.x+Math.cos(a)*dist,y:fp.c.y+Math.sin(a)*dist};
         if(!blocked(s,c,r)){placed={c,a};break}
       }
       if(!placed)continue;
       const parts=Object.keys(MODELS().models[f.model].parts).filter(n=>!(f.skip||[]).includes(n));
-      // Lifting gear faces the work (+X towards the structure); the rest faces out.
-      const yaw=crane?placed.a+Math.PI:placed.a;
-      out.push({model:f.model,parts,x:placed.c.x,y:placed.c.y,z:groundAt(s,placed.c),yaw});
+      out.push({model:f.model,parts,x:placed.c.x,y:placed.c.y,z:groundAt(s,placed.c),yaw:placed.a});
     }
     return out;
   }
