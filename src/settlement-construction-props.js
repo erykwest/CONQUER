@@ -13,8 +13,7 @@
   const MODELS=()=>window.ConquerConstructionModels;
   const PHASE={prep:.12,finish:.9};
   const MAX_RUN=4;            // bays per face: longer faces get a run that moves with the work
-  const MAX_STOREYS=4;        // storeys shown below the working level (flying scaffold above)
-  const MAX_BAY_STOREYS=36;   // scaffold modules per site (painter budget)
+  const MAX_BAY_STOREYS=36;   // scaffold modules per site (painter budget): runs shrink to fit
   const MIN_SCALE=.18;        // below this zoom the props are not drawn
   const SKIP=new Set(['road','field','moat','bridge','ruin','plaza','training']);
   const fn=name=>typeof globalThis[name]==='function'?globalThis[name]:null;
@@ -116,13 +115,13 @@
         let n={x:(b.y-a.y)/L,y:-(b.x-a.x)/L};
         if(n.x*(m.x-fp.c.x)+n.y*(m.y-fp.c.y)<0)n={x:-n.x,y:-n.y};
         if(depth({x:m.x+n.x,y:m.y+n.y})-depth(m)<.25)continue;
-        const nb=Math.max(1,Math.floor(L/bay+.25)),run=Math.min(nb,MAX_RUN);
-        const start=nb>run?Math.round(raised(p)*(nb-run)):0;
-        runs.push({m,n,nb,run,start});
+        runs.push({m,n,nb:Math.max(1,Math.floor(L/bay+.25))});
       }
-      const bays=runs.reduce((a,r)=>a+r.run,0)||1;
-      const shown=Math.max(1,Math.min(MAX_STOREYS,Math.floor(MAX_BAY_STOREYS/bays)));
-      const k0=Math.max(0,levels-shown);
+      // Storeys always stand on the ground and stack as the work rises; the module
+      // budget is met by shortening the runs, never by dropping lower storeys.
+      const perRun=Math.max(1,Math.min(MAX_RUN,Math.floor(MAX_BAY_STOREYS/levels/(runs.length||1))));
+      for(const r of runs){r.run=Math.min(r.nb,perRun);r.start=r.nb>r.run?Math.round(raised(p)*(r.nb-r.run)):0}
+      const k0=0;
       let ladderRun=runs.reduce((best,r)=>!best||r.run>best.run?r:best,null);
       for(const r of runs){
         const yaw=Math.atan2(r.n.y,r.n.x),side={x:-Math.sin(yaw),y:Math.cos(yaw)};
@@ -225,6 +224,6 @@
     prune();
     return true;
   }
-  window.ConquerConstructionProps={PHASE,MAX_RUN,MAX_STOREYS,phaseOf,raised,siteKind,plan,meshOf,drawSite,units,
+  window.ConquerConstructionProps={PHASE,MAX_RUN,MAX_BAY_STOREYS,phaseOf,raised,siteKind,plan,meshOf,drawSite,units,
     clear:()=>cache.clear()};
 })();

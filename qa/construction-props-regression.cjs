@@ -60,7 +60,12 @@ const storeys=items=>new Set(items.filter(i=>i.model==='scaffoldBay').map(i=>i.z
 const topZ=items=>Math.max(...items.filter(i=>i.model==='scaffoldBay').map(i=>i.z));
 assert.ok(topZ(at(.3))<topZ(at(.8)),'the scaffold climbs with the work');
 assert.ok(topZ(at(.95))+U.storey>=HEIGHT.tower-1e-6&&topZ(at(.95))<HEIGHT.tower,'at the finish it reaches the top');
-assert.ok(storeys(at(.95))<=P.MAX_STOREYS,'storeys shown stay within the budget');
+for(const p of [.3,.6,.95]){
+  const sc=at(p).filter(i=>i.model==='scaffoldBay'),z=sc.map(i=>i.z);
+  assert.equal(Math.min(...z),0,'the scaffold stands on the ground at '+p);
+  assert.equal(storeys(sc),Math.round(Math.max(...z)/U.storey)+1,'storeys stack without gaps at '+p);
+  assert.ok(sc.length<=P.MAX_BAY_STOREYS,'scaffold modules stay within the budget at '+p);
+}
 const bays=at(.6).filter(i=>i.model==='scaffoldBay');
 assert.ok(bays.every(b=>Math.cos(b.yaw)+Math.sin(b.yaw)>.2),'scaffold only on faces turned to the camera');
 const top=Math.max(...bays.map(b=>b.z));
