@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Eventi: torneo, circo e sagra ampliati, catalogo leisure
+
+- Nuovo allestimento `tourney` (campo recintato, 4 tribune, 4 tende); circo con biglietterie, giocoliere, festoni e merci scatter; sagra con 16 tavoli. Nuovi modelli `circusBooth`, `propBunting`, `propFence`; gli allestimenti possono usare asset scatter (`sc:`). Catalogo illustrato in docs/events. QA aggiornata.
+
 ## 2026-10-22 — Eventi: spiazzo polivalente 14 × 10
 
 - Lo spiazzo eventi passa da 6 × 10 a 14 × 10 U su richiesta esplicita (D-042); ridisegnati a grandezza piena i layout di giostra, circo, sagra, accampamento, teatro e arena. Registrate in DECISIONS anche le regole di livrea (D-043). QA `events3d-regression` aggiornata (tutti gli allestimenti nel 14 × 10, nessuno nel 6 × 10).

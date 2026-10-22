@@ -10,7 +10,7 @@ const vm=require('node:vm');
 const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
 const window={},State={season:'summer',seed:7,heraldry:{c1:'#123456',c2:'#abcdef',c4:'#fedcba'}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array});
-for(const f of ['assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
+for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
 const M=window.ConquerEventModels,E=window.ConquerEvents3D;
 
 // Catalog: indexed parts, palette indices in range.
@@ -45,7 +45,7 @@ console.log('PASS venues: podium, stage (players / herald), festival ground');
 // Setups fit the ground and never overlap; the former 6 x 10 ground hosts none.
 const ground=venue('festivalGround');
 const setups=E.setupsFor(ground);
-for(const k of ['joust','circus','feast','camp','theatre','arena'])assert.ok(setups.includes(k),k+' fits the 14 x 10 ground');
+for(const k of ['joust','tourney','circus','feast','camp','theatre','arena'])assert.ok(setups.includes(k),k+' fits the 14 x 10 ground');
 assert.equal(E.setupsFor(venue('festivalGround',{w:6,h:10})).length,0,'a 6 x 10 ground is too small for every setup');
 assert.ok(E.itemRect({m:'arenaU',x:0,y:0,a:0}).x1-E.itemRect({m:'arenaU',x:0,y:0,a:0}).x0<10,'the U arena fits across the short side');
 for(const [name,setup] of Object.entries(E.SETUPS)){
@@ -61,6 +61,9 @@ for(const [name,setup] of Object.entries(E.SETUPS)){
  assert.ok(stands.length===4&&stands.every(r=>Math.min(Math.abs(r.y0),Math.abs(r.y1))>=1.2),'four stands leave the riders their lanes');
  assert.ok(tilt.every(r=>Math.abs(r.y0)<.2&&Math.abs(r.y1)<.2),'the tilt runs down the middle');
  assert.ok(Math.max(...tilt.map(r=>r.x1))-Math.min(...tilt.map(r=>r.x0))>10,'the lists run over 10 U')}
+{const t=E.SETUPS.tourney.items;assert.ok(t.filter(i=>i.m.startsWith('tent')).length>=4,'the tourney has at least four tents');
+ assert.ok(t.filter(i=>i.m==='propFence').length>=12,'the tourney field is fenced');
+ assert.ok(E.SETUPS.feast.items.filter(i=>i.m==='civic:prop_tableSet').length===16,'the feast has sixteen tables')}
 console.log('PASS setups ('+Object.keys(E.SETUPS).join(', ')+') fit their ground without overlaps');
 
 // Lifecycle: idle ground is a green pad; props arrive while preparing, leave while clearing.

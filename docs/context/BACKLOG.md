@@ -18,11 +18,12 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 
 | ID | Requisito | Stato | Dipendenze |
 |---|---|---|---|
-| EV-3D | Modelli e rendering di podio, palco (players / herald), spiazzo 14 × 10 con allestimenti giostra / circo / sagra (+ accampamento, teatro, arena) | CODICE + QA locale | `settlement-events3d.js`, renderer |
+| EV-3D | Modelli e rendering di podio, palco (players / herald), spiazzo 14 × 10 con allestimenti giostra / torneo / circo / sagra (+ accampamento, teatro, arena) | CODICE + QA locale | `settlement-events3d.js`, renderer |
 | EV-P0 | Registro spazi, posizionamento dal Builder, riserva del terreno senza cantiere, spostamento a evento inattivo | DA FARE | placement, Builder, save/load |
 | EV-P1 | Calendario e ciclo `planned → preparing → active → clearing → idle`, `progress` durante montaggio e smontaggio | DA FARE | orologio di gioco |
 | EV-P2 | Pubblico e artisti tramite routine esistenti (punti `seats`, `performers`, `speaker` nei meta dei modelli) | DA FARE | popolazione, navigazione |
 | EV-P3 | Taglia dello spiazzo: 14 × 10 U (D-042); eventuali taglie multiple | 14 × 10 DECISO, taglie multiple PROPOSTE | decisione di design |
+| EV-P5 | Revisione estetica dell'arena a U (in attesa di indicazioni) | APERTO | design |
 | EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |
 
 ## Clay — nuove murature e argilla (branch `clay`, 19/10/2026)

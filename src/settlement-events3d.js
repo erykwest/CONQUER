@@ -43,16 +43,39 @@
       {m:'wagonCaravan',x:-5.6,y:-1.5,a:H},{m:'wagonCage',x:5.6,y:-1.5,a:H},
       {m:'wagonCaravan',x:3.4,y:-3.9,a:PI},{m:'wagonCargo',x:-3.6,y:-3.9,a:0},
       {m:'wagonCaravan',x:-6.4,y:2.7,a:H},{m:'wagonCargo',x:6.4,y:2.6,a:-H},
-      {m:'podiumStreet',x:0,y:-3.0,a:0}]},   // the barker before the big top's entrance
+      {m:'podiumStreet',x:0,y:-3.0,a:0},   // the barker before the big top's entrance
+      {m:'circusBooth',x:-1.4,y:-3.3,a:.2},{m:'circusBooth',x:1.4,y:-3.3,a:-.2},
+      {m:'podiumStreet',x:-3.0,y:-1.2,a:.5},   // a juggler beside the big top
+      {m:'propBunting',x:-2.5,y:-2.4,a:0},{m:'propBunting',x:2.5,y:-2.4,a:0},
+      {m:'propBunting',x:-2.4,y:4.3,a:0},{m:'propBunting',x:0,y:4.3,a:0},{m:'propBunting',x:2.4,y:4.3,a:0},
+      {m:'sc:haystack',x:6.4,y:-.3,a:0,s:1},{m:'sc:hayBales',x:5.7,y:.3,a:.3,s:1.3},
+      {m:'sc:barrelGroup',x:-4.8,y:-3.0,a:0,s:1.3},{m:'sc:crateStack',x:4.9,y:-3.0,a:.4,s:1.3},
+      {m:'sc:sackPile',x:-4.6,y:.2,a:0,s:1.3},{m:'sc:wheelStack',x:6.4,y:-3.4,a:0,s:1.3}]},
     feast:{min:G,items:[
       {m:'stagePlayers',x:-.26,y:4.1,a:0},
       {m:'civic:stall',x:-5.2,y:-4.2,a:0},{m:'civic:stall',x:-1.8,y:-4.2,a:0},
       {m:'civic:stall',x:1.8,y:-4.2,a:0},{m:'civic:stall',x:5.2,y:-4.2,a:0},
       {m:'civic:prop_tablePergola',x:-5.4,y:2.6,a:0,s:1.25},{m:'civic:prop_tablePergola',x:5.4,y:2.6,a:0,s:1.25},
-      ...[-4.5,-2.2,2.2,4.5].flatMap(x=>[-1.6,.6].map(y=>({m:'civic:prop_tableSet',x,y,a:0,s:1.3}))),
+      // Sixteen tables: two full rows of six and a row of four before the stage.
+      ...[-2.6,-1.0].flatMap(y=>[-5.2,-3.5,-1.8,1.8,3.5,5.2].map(x=>({m:'civic:prop_tableSet',x,y,a:0,s:1.3}))),
+      ...[-3.5,-1.8,1.8,3.5].map(x=>({m:'civic:prop_tableSet',x,y:.6,a:0,s:1.3})),
       {m:'civic:prop_tableBarrel',x:0,y:-.5,a:.5,s:1.3},{m:'civic:prop_tableBarrel',x:-6.2,y:-.5,a:0,s:1.3},
       {m:'civic:prop_tableBarrel',x:6.2,y:-.5,a:0,s:1.3},{m:'podiumStreet',x:-2.6,y:3.4,a:.4},
-      {m:'podiumStreet',x:2.6,y:3.4,a:-.4}]},
+      {m:'podiumStreet',x:2.6,y:3.4,a:-.4},
+      {m:'propBunting',x:0,y:-1.8,a:0},{m:'propBunting',x:0,y:1.6,a:0},
+      {m:'sc:goodsMixed',x:-3.5,y:-4.3,a:0,s:1.3},{m:'sc:barrelGroup',x:0,y:-4.3,a:0,s:1.3},
+      {m:'sc:sackPile',x:3.5,y:-4.3,a:0,s:1.3}]},
+    tourney:{min:G,items:[
+      // Melee in a fenced field: stands on both long sides, four knights' tents at the ends.
+      {m:'standCovered',x:-2.1,y:3.2,a:0},{m:'standCovered',x:2.1,y:3.2,a:0},
+      {m:'standOpen',x:-2.1,y:-3.8,a:PI},{m:'standOpen',x:2.1,y:-3.8,a:PI},
+      ...[-3.5,-2.1,-.7,.7,2.1,3.5].flatMap(x=>[{m:'propFence',x,y:1.8,a:0},{m:'propFence',x,y:-2.4,a:0}]),
+      ...[-4.2,4.2].flatMap(x=>[{m:'propFence',x,y:1.1,a:H},{m:'propFence',x,y:-1.7,a:H}]),   // gates in the middle of the ends
+      {m:'tentOctagon',x:-5.65,y:2.6,a:0},{m:'tentSquare',x:5.7,y:2.65,a:0},
+      {m:'tentSquare',x:-5.7,y:-2.65,a:PI},{m:'tentOctagon',x:5.65,y:-2.6,a:PI},
+      {m:'propLanceRack',x:6.4,y:0,a:H},{m:'propShieldRack',x:-6.4,y:0,a:H},
+      {m:'propWeaponRack',x:-5.2,y:0,a:H},{m:'propArmourStand',x:5.2,y:.3,a:-H},
+      {m:'propArmourPile',x:5.4,y:-.6,a:.4}]},
     camp:{min:G,items:[
       ...[-4.6,0,4.6].flatMap((x,i)=>[{m:i%2?'tentSquare':'tentOctagon',x,y:-3.4,a:0},{m:i%2?'tentOctagon':'tentSquare',x,y:-.2,a:0}]),
       {m:'propWeaponRack',x:-5.5,y:2.3,a:0},{m:'propSpearRack',x:-3.6,y:2.3,a:0},
@@ -97,8 +120,22 @@
     if(phase==='clearing')return items.slice(0,items.length-Math.ceil(p*items.length));
     return items;
   }
+  // Scatter goods (src/assets/scatter-model.js) as a one-part model of the same shape.
+  const SCATTER=()=>window.ConquerScatterModel;
+  const scatterCache=new Map();
+  function scatterData(){
+    const m=SCATTER();if(!m?.assets)return null;
+    let d=scatterCache.get(m);if(d)return d;
+    const models={};
+    for(const [k,a] of Object.entries(m.assets))models[k]={parts:{body:{p:a.v,i:a.i,c:a.c}},livery:'realm'};
+    d={palette:m.palette,paletteKeys:m.paletteKeys||m.palette.map(()=>''),models};
+    scatterCache.set(m,d);return d;
+  }
+  // 'civic:<key>' civic props, 'sc:<asset>' scatter goods, otherwise an event model.
   function catalog(ref){
-    return ref.startsWith('civic:')?{data:CIVIC(),key:ref.slice(6),civic:true}:{data:DATA(),key:ref,civic:false};
+    if(ref.startsWith('civic:'))return{data:CIVIC(),key:ref.slice(6),civic:true};
+    if(ref.startsWith('sc:'))return{data:scatterData(),key:ref.slice(3),civic:true};
+    return{data:DATA(),key:ref,civic:false};
   }
   const has=s=>{
     if(!is(s)||!DATA()?.models)return false;
@@ -133,7 +170,7 @@
     const {data,civic}=catalog(ref),h=(typeof State!=='undefined'&&State.heraldry)||{};
     const valid=v=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
     const usePair=pair&&liveryOf(ref)==='pair';
-    const tag=(civic?'civic|':'event|')+(usePair?'pair|'+pair.join('|'):[h.c1,h.c2,h.c4].join('|'));
+    const tag=(civic?ref.slice(0,ref.indexOf(':')+1):'event|')+(usePair?'pair|'+pair.join('|'):[h.c1,h.c2,h.c4].join('|'));
     const hit=palCache.get(tag);if(hit&&hit.data===data)return hit.pal;
     const over=usePair?{heraldA:pair[0],heraldB:pair[1]}:{heraldA:h.c1,heraldB:h.c2,heraldTrim:h.c4};
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];return valid(over[k])?over[k]:hex});

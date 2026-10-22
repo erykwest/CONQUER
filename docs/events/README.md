@@ -31,9 +31,13 @@ Festival ground setups (local layout in `SETUPS`, validated inside the ground wi
 - `joust`: lists over 10 U long (three-segment tilt) with two covered stands on one side and two open stands on the other, knights' tents in the corners, lance, shield and weapon racks, armour stands;
 - `circus`: big top, two smaller tents, three caravans, cage wagon, two baggage carts, barker's podium;
 - `feast` (sagra): players' stage, four stalls, eight tables and two pergolas (civic props), barrel tables, two podiums;
+- `tourney` (torneo, melee): fenced field (12 `propFence` segments, gates at both ends), two covered and two open stands, four knights' tents, racks and armour;
+- circus also has two ticket booths, a juggler podium, bunting lines and scatter goods; the feast has sixteen tables and bunting over them.
 - extra: `camp` (knights' camp), `theatre` (theatre stage facing two open stands), `arena` (U-shaped stand with knights' tents and gear).
 
 Livery: stands, arena and stages follow the realm heraldry (`State.heraldry` c1 / c2 / c4). Knights' tents, lance and shield racks and armour take a deterministic random pair of primary colours per instance. Circus, bunting and stage cloths keep fixed festive colours. Model `meta` carries seats, performer, speaker and entrance points for the future attendance module.
+
+Leisure catalog (24 models): ![catalog](leisure-catalog.png) · arena views: ![arena](arena-views.png)
 
 ## Modules to integrate (future implementation)
 1. Venue registry and placement validation / occupancy reservations.

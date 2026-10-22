@@ -15,7 +15,9 @@ stands, the U-shaped arena, stages and the lists' scatter props.
   wings, bunting); stageTheatre: stage with proscenium, curtains, backdrop and
   folding screens;
 - circusTent (big top) and the troupe's wagons: wagonCaravan, wagonCage,
-  wagonCargo (+x forward, as build_wagon.py);
+  wagonCargo (+x forward, as build_wagon.py), circusBooth (ticket booth);
+- propBunting (bunting between two poles), propFence (1.4 U tournament fence
+  segment, top rail in the realm livery);
 - props (scatter): propTilt (a 12 m tilt barrier segment, to be tiled), lance,
   weapon, spear and shield racks, armour piles, crate and dressed mannequin.
 
@@ -40,7 +42,7 @@ import cq_blender, build_civic
 importlib.reload(cq_blender)
 importlib.reload(build_civic)
 from cq_blender import Part, fresh_collection, export_part_indexed, u
-from build_civic import circ, prism, slab, plate, blob
+from build_civic import circ, prism, slab, plate, blob, pyramid
 
 COLORS = {
     'heraldA': '#b53636', 'heraldB': '#355fb8', 'heraldTrim': '#d2ad4b',
@@ -292,6 +294,55 @@ def circus_tent(m):
     pavilion(m, 16, 5.5, 1, 2.6, 7.4, 8.6, over=.45, rope_step=2,
              keys=('circusRed', 'festYellow'), trim='gold', door=1.0)
     m.meta['ring'] = u(0, 0, 0) + [u(3.2)[0]]
+
+
+def circus_booth(m):
+    """Ticket booth: striped kiosk with a counter at the front (-y), pointed roof, sign."""
+    w, d, h = 1.5, 1.2, 2.0
+    p = m.part('booth')
+    p.box((0, 0, h / 2), (w, d, h), 'festYellow')
+    for i in range(5):                                                                    # red stripes on the sides
+        x = -w / 2 + w / 5 * (i + .5)
+        if i % 2 == 0:
+            for sy in (-1, 1):
+                if sy < 0 and i == 2:
+                    continue
+                plate(p, (x, sy * d / 2), (0, sy), [(-w / 10, 0), (w / 10, 0), (w / 10, h), (-w / 10, h)], 'circusRed', 0, .01)
+    for sx in (-1, 1):
+        for j in range(3):
+            y = -d / 2 + d / 3 * (j + .5)
+            if j % 2 == 0:
+                plate(p, (sx * w / 2, y), (sx, 0), [(-d / 6, 0), (d / 6, 0), (d / 6, h), (-d / 6, h)], 'circusRed', 0, .01)
+    plate(p, (0, -d / 2), (0, -1), [(-.4, 1.0), (.4, 1.0), (.4, 1.7), (-.4, 1.7)], 'dark', .01, .03)
+    p.box((0, -d / 2 - .15, 1.0), (.95, .32, .06), 'woodLight')                          # counter
+    pyramid(p, 0, 0, w + .3, d + .3, h, h + 1.0, ('circusRed', 'festYellow'))
+    p.box((0, -d / 2 - .06, h + .25), (1.1, .05, .4), 'canvas')                         # sign board
+    p.box((0, 0, h + 1.25), (.05, .05, .5), 'woodDark')
+    pennon(p, 0, 0, h + 1.45, .7, keys=('circusRed', 'festYellow'))
+    m.done('booth', p)
+
+
+def bunting_line(m):
+    """Two poles 4.5 m apart with a line of festive bunting (scatter for fairs and circus)."""
+    p = m.part('bunting')
+    for sx in (-2.25, 2.25):
+        p.box((sx, 0, 1.5), (.08, .08, 3.0), 'woodDark')
+        p.cylinder(.06, 0, 'gold', n=6, axis='z', center=(sx, 0, 0), radii=[.02, .07, .02], along=[3.0, 3.07, 3.16])
+    bunting(p, (-2.25, 0, 2.85), (2.25, 0, 2.85), n=8, sag=.45)
+    m.done('bunting', p)
+
+
+def lists_fence(m, L=4.9):
+    """Tournament fence segment along x (1.4 U): posts, a painted top rail parted in
+    the realm livery, a plain lower rail. Tile it round the field."""
+    p = m.part('fence')
+    for x in (-L / 2 + .07, 0, L / 2 - .07):
+        p.box((x, 0, .65), (.14, .14, 1.3), 'beam')
+        p.cylinder(.06, 0, 'gold', n=6, axis='z', center=(x, 0, 0), radii=[.06, .08, .02], along=[1.3, 1.36, 1.44])
+    for i, key in enumerate(('heraldA', 'heraldB')):
+        p.box(((i - .5) * L / 2, 0, 1.15), (L / 2, .1, .14), key)
+    p.box((0, 0, .55), (L, .08, .1), 'wood')
+    m.done('fence', p)
 
 
 # ------------------------------------------------------------------ circus wagons (+x forward)
@@ -983,13 +1034,15 @@ MODELS = [('tentOctagon', tent_octagon), ('tentSquare', tent_square), ('standOpe
           ('propArmourPile', p_armour_pile), ('propArmourCrate', p_armour_crate), ('propArmourStand', p_armour_stand),
           ('stageHerald', stage_herald), ('stageTheatre', stage_theatre), ('podiumStreet', podium_street),
           ('stagePlayers', stage_players), ('circusTent', circus_tent), ('wagonCaravan', wagon_caravan),
-          ('wagonCage', wagon_cage), ('wagonCargo', wagon_cargo)]
+          ('wagonCage', wagon_cage), ('wagonCargo', wagon_cargo), ('circusBooth', circus_booth),
+          ('propBunting', bunting_line), ('propFence', lists_fence)]
 LAYOUT = {'tentOctagon': (0, 0), 'tentSquare': (12, 0), 'standOpen': (0, 16), 'standCovered': (20, 16),
           'arenaU': (10, 52), 'propTilt': (0, -10), 'propLanceRack': (12, -10),
           'propWeaponRack': (17, -10), 'propSpearRack': (22, -10), 'propShieldRack': (27, -10),
           'propArmourPile': (17, -15), 'propArmourCrate': (22, -15), 'propArmourStand': (27, -15),
           'stageHerald': (0, -25), 'stageTheatre': (14, -25), 'podiumStreet': (-10, -25), 'stagePlayers': (0, -35),
-          'circusTent': (-30, 0), 'wagonCaravan': (-30, -14), 'wagonCage': (-24, -14), 'wagonCargo': (-18, -14)}
+          'circusTent': (-30, 0), 'wagonCaravan': (-30, -14), 'wagonCage': (-24, -14), 'wagonCargo': (-18, -14),
+          'circusBooth': (-30, -20), 'propBunting': (-25, -20), 'propFence': (-18, -20)}
 
 
 def main(out_path):
