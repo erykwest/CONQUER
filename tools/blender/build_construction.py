@@ -75,8 +75,13 @@ def pole(p, a, b, r, key='pole', end='poleEnd', n=6):
 
 
 def lashing(p, c, r=.09, h=.1):
-    """Rope binding around a pole joint."""
-    p.cylinder(r, 0, 'rope', n=6, axis='z', center=c, radii=[r, r], along=[-h / 2, h / 2])
+    """Rope binding around a pole joint (square: it is a few pixels in game)."""
+    p.cylinder(r, 0, 'rope', n=4, axis='z', center=c, radii=[r, r], along=[-h / 2, h / 2])
+
+
+def spole(p, a, b, r):
+    """Scaffold pole: four-sided, the scaffold is the bulk of a site's triangles."""
+    pole(p, a, b, r, n=4)
 
 
 def blob(p, cx, cy, r, z0, h, key, n=8, jitter=.18, top_scale=.55):
@@ -162,13 +167,11 @@ def scaffold_bay(m):
     and stack it in z. Its own standard is at -y; 'end' closes a run at +y."""
     y0, y1, top = -BAY / 2, BAY / 2, STOREY
     p = m.part('frame')
-    pole(p, (REACH, y0, 0), (REACH, y0, top), .065)
-    pole(p, (REACH + .02, y0 - .05, top - .1), (REACH + .02, y1 + .05, top - .1), .05)     # ledger
+    spole(p, (REACH, y0, 0), (REACH, y0, top), .065)
+    spole(p, (REACH + .02, y0 - .05, top - .1), (REACH + .02, y1 + .05, top - .1), .05)     # ledger
     for y in (y0 + .3, 0, y1 - .3):
         p.beam((-.25, y, top - .02), (REACH + .15, y, top - .02), .09, .09, 'woodDark')    # putlogs into the wall
     lashing(p, (REACH, y0, top - .1))
-    for y in (y0 + .3, 0, y1 - .3):
-        p.box((REACH + .02, y, top - .06), (.12, .12, .1), 'rope')
     p.box((.0, 0, top - .02), (.06, BAY - .2, .14), 'dark')                                 # putlog holes' shadow
     m.done('frame', p)
 
@@ -180,23 +183,23 @@ def scaffold_bay(m):
     m.done('deck', p)
 
     p = m.part('brace')
-    pole(p, (REACH + .07, y0 + .05, .1), (REACH + .07, y1 - .05, top - .2), .04)
+    spole(p, (REACH + .07, y0 + .05, .1), (REACH + .07, y1 - .05, top - .2), .04)
     m.done('brace', p)
 
     # Guard rail for the top storey: standard stub above the deck and a rail.
     p = m.part('rail')
-    pole(p, (REACH, y0, top), (REACH, y0, top + 1.1), .06)
-    pole(p, (REACH + .02, y0 - .05, top + 1.0), (REACH + .02, y1 + .05, top + 1.0), .04)
+    spole(p, (REACH, y0, top), (REACH, y0, top + 1.1), .06)
+    spole(p, (REACH + .02, y0 - .05, top + 1.0), (REACH + .02, y1 + .05, top + 1.0), .04)
     p.box((REACH - .02, 0, top + .16), (.04, BAY, .18), 'plank')                            # toe board
     lashing(p, (REACH, y0, top + 1.0), r=.08)
     m.done('rail', p)
 
     p = m.part('end')                                                                       # closing standard
-    pole(p, (REACH, y1, 0), (REACH, y1, top), .065)
+    spole(p, (REACH, y1, 0), (REACH, y1, top), .065)
     lashing(p, (REACH, y1, top - .1))
     m.done('end', p)
     p = m.part('endRail')                                                                   # its stub on the top storey
-    pole(p, (REACH, y1, top), (REACH, y1, top + 1.1), .06)
+    spole(p, (REACH, y1, top), (REACH, y1, top + 1.1), .06)
     lashing(p, (REACH, y1, top + 1.0), r=.08)
     m.done('endRail', p)
     m.meta.update(bay=BAY, storey=STOREY, reach=REACH)

@@ -155,8 +155,10 @@
     m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:'#34363a');
     m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:'#42454a');
     // Gable ends are left open in 2.5D; a closed volume needs them.
+    const roofTag=m.tag;m.tag='gable';
     m.face([{p:p0,z:H},{p:ra,z:R},{p:p3,z:H}],PAL.stone());
     m.face([{p:p1,z:H},{p:p2,z:H},{p:rb,z:R}],PAL.stone());
+    m.tag=roofTag;
     for(const c of chimneySpecs(s))m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),c.z0,c.z1,PAL.chimney());
   }
   function addHoarding(m,s){

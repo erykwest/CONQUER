@@ -70,19 +70,23 @@ for(const p of [.3,.6,.95]){
   assert.ok(sc.length<=P.MAX_BAY_STOREYS,'scaffold modules stay within the budget at '+p);
 }
 const bays=at(.6).filter(i=>i.model==='scaffoldBay');
-assert.ok(bays.every(b=>Math.cos(b.yaw)+Math.sin(b.yaw)>.2),'scaffold only on faces turned to the camera');
+const faces=new Set(bays.map(b=>Math.round(b.yaw/(Math.PI/2))&3));
+assert.equal(faces.size,4,'a tower is scaffolded on all four faces');
 const top=Math.max(...bays.map(b=>b.z));
 assert.ok(bays.every(b=>b.parts.includes('rail')===(b.z===top)),'guard rail only on the working storey');
 const ladders=at(.6).filter(i=>i.model==='ladderShort');
 assert.equal(ladders.length,storeys(at(.6)),'one ladder per storey');
-console.log('PASS scaffold: rises, faces the camera, rail on top, ladder per storey');
+console.log('PASS scaffold: rises, all round a tower, rail on top, ladder per storey');
 
-// ---- turning the camera half round moves the scaffold to the faces now in front
+// ---- other sites: only the faces turned to the camera, following the view
+const hall={id:'hb',type:'house',x:40,y:10,size:1.6};
+const hb=P.plan(hall,.6).filter(i=>i.model==='scaffoldBay');
+assert.ok(hb.length&&hb.every(b=>Math.cos(b.yaw)+Math.sin(b.yaw)>.2),'a house is scaffolded only on the faces turned to the camera');
 env.viewDepthPoint=p=>-(p.x+p.y);
-const back=P.plan(tower,.6).filter(i=>i.model==='scaffoldBay');
+const back=P.plan(hall,.6).filter(i=>i.model==='scaffoldBay');
 assert.ok(back.length&&back.every(b=>Math.cos(b.yaw)+Math.sin(b.yaw)<-.2),'with the camera on the other side the scaffold moves there');
 env.viewDepthPoint=p=>p.x+p.y;
-console.log('PASS camera side follows the view');
+console.log('PASS camera side follows the view (non-tower sites)');
 
 // ---- materials and type rules
 const brick={...tower,id:'t2',masonryMaterial:'brick'};

@@ -54,6 +54,16 @@ const tiled=A.assemble(src,2.9,1);
 assert.ok(tiled.col.includes('#333333'),'tiles follow behind the timber');
 console.log('PASS roof: rafters and battens first, tiles behind them');
 
+// ---- horizontal work (walls, palisades): section by section along the axis
+const wall={...building(),run:{ux:1,uy:0,u0:9,L:2,N:4}};
+const xMax=m=>{let x=-Infinity;for(let i=0;i<m.pos.length;i+=3)x=Math.max(x,m.pos[i]);return x};
+const w1=A.assembleRun(wall,.3,1),w2=A.assembleRun(wall,.6,1);
+assert.ok(xMax(w1)<xMax(w2)&&xMax(w2)<=11+1e-9,'the work advances along the axis');
+assert.ok(xMax(w1)<=9+2*(1/4)*2+1e-9,'nothing beyond the section being built');
+assert.ok(zMax(A.assembleRun(wall,.26,1))>=3-1e-9,'finished sections stand at full height');
+assert.ok(Math.abs(area(A.assembleRun(wall,1,1))-area({pos:wall.pos,col:wall.col}))<1e-6,'a finished run is the whole building');
+console.log('PASS horizontal work: sections along the axis, full height behind the front');
+
 // ---- the end is exactly the finished building
 const done=A.assemble(src,3+A.TILE_LAG+.01,1);
 assert.ok(Math.abs(area(done)-area({pos:src.pos,col:src.col}))<1e-6,'at the end the whole surface is there');

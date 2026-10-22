@@ -14,7 +14,8 @@
   const MODELS=()=>window.ConquerConstructionModels;
   const PHASE={prep:.12,finish:.9};
   const MAX_RUN=4;            // bays per face: longer faces get a run that moves with the work
-  const MAX_BAY_STOREYS=36;   // scaffold modules per site (painter budget): runs shrink to fit
+  const MAX_BAY_STOREYS=64;   // scaffold modules per site (painter budget): runs shrink to fit
+  const ALL_ROUND=new Set(['tower','gate']);   // scaffolded on every face
   const MIN_SCALE=.18;        // below this zoom the props are not drawn
   const SKIP=new Set(['road','field','moat','bridge','ruin','plaza','training']);
   const fn=name=>typeof globalThis[name]==='function'?globalThis[name]:null;
@@ -121,7 +122,12 @@
         const m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
         let n={x:(b.y-a.y)/L,y:-(b.x-a.x)/L};
         if(n.x*(m.x-fp.c.x)+n.y*(m.y-fp.c.y)<0)n={x:-n.x,y:-n.y};
-        if(depth({x:m.x+n.x,y:m.y+n.y})-depth(m)<.25)continue;
+        // Towers and gates are scaffolded all round (the assembly paints the site as one
+        // depth-sorted picture, so the far side stays behind the walls); other sites only
+        // on the faces turned to the camera.
+        if(!ALL_ROUND.has(s.type)&&depth({x:m.x+n.x,y:m.y+n.y})-depth(m)<.25)continue;
+        // A gate keeps its passage free: no scaffold on the faces the road goes through.
+        if(s.type==='gate'&&Math.abs(n.x*Math.cos(Number(s.angle)||0)+n.y*Math.sin(Number(s.angle)||0))>.7)continue;
         // Each run stops at its own wall top (a nave is lower than its bell tower).
         const local=A?.has?.(s)?A.heightNear(s,a,b):null,top=Math.min(standing,Number.isFinite(local)?local:kind.H);
         // Nearest storey: the top deck ends just under the eaves, where the roofers work.
@@ -131,7 +137,16 @@
       // budget is met by shortening the runs, never by dropping lower storeys.
       const stacked=runs.reduce((a,r)=>a+r.levels,0)||1;
       const perRun=Math.max(1,Math.min(MAX_RUN,Math.floor(MAX_BAY_STOREYS/stacked)));
-      for(const r of runs){r.run=Math.min(r.nb,perRun);r.start=r.nb>r.run?Math.round(raised(p)*(r.nb-r.run)):0}
+      // A wall built section by section keeps its scaffold on the section being built.
+      const fr=A?.has?.(s)?A.front(s,p):null;
+      for(const r of runs){
+        r.run=Math.min(r.nb,perRun);
+        if(r.nb<=r.run){r.start=0;continue}
+        if(fr!=null&&s.a&&s.b){
+          const P={x:s.a.x+(s.b.x-s.a.x)*fr,y:s.a.y+(s.b.y-s.a.y)*fr},along=(P.x-r.m.x)*-r.n.y+(P.y-r.m.y)*r.n.x;
+          r.start=Math.max(0,Math.min(r.nb-r.run,Math.round(along/bay+(r.nb-1)/2-(r.run-1)/2)));
+        }else r.start=Math.round(raised(p)*(r.nb-r.run));
+      }
       const k0=0;
       let ladderRun=runs.reduce((best,r)=>!best||r.run>best.run?r:best,null);
       for(const r of runs){
@@ -218,7 +233,7 @@
       s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.w,s.h,s.size,s.r,s.groundZ,(State.structures||[]).length].join('|');
   }
   function siteMesh(s){
-    const p=call('constructionProgress',s)??1;if(!(p<1))return null;
+    const p=call('constructionProgress',s)??1;if(!(p<1)||!(State.view?.scale>=MIN_SCALE))return null;
     const key=stateKey(s,p),hit=cache.get(s.id);
     if(hit&&hit.key===key)return hit.mesh;
     const items=plan(s,p),mesh=items.length?meshOf(items):null;
@@ -231,15 +246,20 @@
     for(const id of cache.keys())if(!live.has(id))cache.delete(id);
   }
   // Paint the props of one site (called right after the site itself).
+  // Sites assembled piece by piece paint their props with the building (ConquerAssembly.draw),
+  // depth-sorted together; the others (timber structures) paint them here, cached.
+  let uid=0;
   function drawSite(s){
     if(!MODELS()||!window.ConquerMesh3D||!(State.view?.scale>=MIN_SCALE))return false;
+    if(window.ConquerAssembly?.has?.(s))return false;
     const c=call('structureCenter',s);
     if(c&&fn('worldPointVisible')&&!worldPointVisible(c,0,260))return false;
     const mesh=siteMesh(s);if(!mesh)return false;
-    window.ConquerMesh3D.drawMeshes(ctx,[mesh],window.ConquerMesh3D.gameView());
+    if(!mesh._uid)mesh._uid=++uid;
+    window.ConquerMesh3D.drawCached(ctx,'props:'+s.id,String(mesh._uid),()=>[mesh],{x:c.x,y:c.y,z:groundAt(s,c)});
     prune();
     return true;
   }
-  window.ConquerConstructionProps={PHASE,MAX_RUN,MAX_BAY_STOREYS,phaseOf,raised,siteKind,plan,meshOf,drawSite,units,
+  window.ConquerConstructionProps={PHASE,MAX_RUN,MAX_BAY_STOREYS,phaseOf,raised,siteKind,plan,meshOf,siteMesh,drawSite,units,
     clear:()=>cache.clear()};
 })();

@@ -37,13 +37,62 @@
   function castleSource(s){
     const C=window.ConquerCastle3D;
     if(!C?.structureWorld||!['tower','gate','wall','built'].includes(s.type)||call('isWoodTower',s)||call('isWoodGate',s))return null;
-    const {tris,tags}=C.structureWorld(s),pos=[],col=[];
+    const {tris,tags}=C.structureWorld(s),pos=[],col=[],tag=[];
+    const ground=groundOf(s),cut=s.type==='gate'?gatePassage(s,ground):null;
+    const push=(poly,c,t)=>{if(poly.length<3)return;for(let i=1;i<poly.length-1;i++){for(const p of [poly[0],poly[i],poly[i+1]])pos.push(p[0],p[1],p[2]);col.push(c);tag.push(t)}};
     for(let t=0;t<tags.length;t++){
-      const o=t*18;
-      for(let k=0;k<3;k++)pos.push(tris[o+k*6],tris[o+k*6+1],tris[o+k*6+2]);
-      col.push(toHex(tris[o+3],tris[o+4],tris[o+5]));
+      const o=t*18,poly=[0,1,2].map(k=>[tris[o+k*6],tris[o+k*6+1],tris[o+k*6+2]]),c=toHex(tris[o+3],tris[o+4],tris[o+5]);
+      if(!cut||tags[t]!=='body'){push(poly,c,tags[t]);continue}
+      // The volume minus the passage: both sides of it, and above its vault.
+      push(clipF(poly,cut.fx,cut.fy,cut.v1,false),c,'body');
+      push(clipF(poly,cut.fx,cut.fy,cut.v0,true),c,'body');
+      push(clip(clipF(clipF(poly,cut.fx,cut.fy,cut.v0,false),cut.fx,cut.fy,cut.v1,true),2,cut.top,false),c,'body');
     }
-    return{pos,col,tag:tags.slice(),flat:true,ground:groundOf(s)};
+    if(cut)for(const f of cut.lining)push(f,'#3d3833','body');
+    // Curtain walls go up section by section along their axis (about 1 U each).
+    const run=s.type==='wall'&&s.a&&s.b?alongAxis(s.a,s.b,L=>Math.max(1,Math.round(L))):null;
+    return{pos,col,tag,flat:true,ground,run};
+  }
+  // Horizontal work along a->b: N sections, built one after the other.
+  function alongAxis(a,b,sections){
+    const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
+    return{ux:dx/L,uy:dy/L,u0:a.x*dx/L+a.y*dy/L,L,N:sections(L)};
+  }
+  // Palisade (drawPalisadePostLine): pointed octagonal posts every .205 U, driven one by one.
+  function palisadeSource(s){
+    if(s.type!=='palisade'||!s.a||!s.b||!fn('palisadeLayout'))return null;
+    const g=palisadeLayout(s),pos=[],col=[],tag=[];
+    const face=(pts,c)=>{for(let i=1;i<pts.length-1;i++){for(const p of [pts[0],pts[i],pts[i+1]])pos.push(p.x,p.y,p.z);col.push(c);tag.push('body')}};
+    const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),ang=Math.atan2(g.dy,g.dx),bodyZ=.93,tipZ=1.15;
+    for(let i=0;i<=count;i++){
+      const t=i/count,along=g.L*t,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
+      const off=fn('palisadePostOffsetAt')?palisadePostOffsetAt(g,along):g.postOffset;
+      const c=g.point(p,off),z0=call('terrainElevation',c)||0,ring=call('palisadeOctagon',c,g.postR,ang)||[];
+      for(let k=0;k<ring.length;k++){
+        const a=ring[k],b=ring[(k+1)%ring.length];
+        face([{...a,z:z0},{...b,z:z0},{...b,z:z0+bodyZ},{...a,z:z0+bodyZ}],k%2?'#51341f':'#65452b');
+        face([{...a,z:z0+bodyZ},{...b,z:z0+bodyZ},{x:c.x,y:c.y,z:z0+tipZ}],k%2?'#c29a6b':'#b68a5e');
+      }
+    }
+    return{pos,col,tag,flat:true,ground:call('terrainElevation',call('structureCenter',s))||0,
+      // One section per post, centred on it.
+      run:{...alongAxis(g.a,g.b,()=>count+1),u0:g.a.x*g.dx/g.L+g.a.y*g.dy/g.L-g.L/count/2,L:g.L*(count+1)/count}};
+  }
+  // The gate passage (gatePassageInfo): a box along the gate axis, as wide as the road
+  // through it and up to its vault; the castle volume is a plain prism, the opening is
+  // otherwise only painted on its faces.
+  function gatePassage(s,ground){
+    const info=call('gatePassageInfo',s);if(!info)return null;
+    const a=Number(s.angle)||0,ux=Math.cos(a),uy=Math.sin(a),fx=-uy,fy=ux;
+    const off=s.x*fx+s.y*fy,hw=info.halfWidth,hl=info.halfLength+.02;
+    const H=Number(call('structureHeight',s))||2.8,top=ground+Math.min(1.25,H*.42);
+    const P=(x,y,z)=>[s.x+ux*x+fx*y,s.y+uy*x+fy*y,z];
+    const lining=[
+      [P(-hl,-hw,ground),P(hl,-hw,ground),P(hl,-hw,top),P(-hl,-hw,top)],
+      [P(hl,hw,ground),P(-hl,hw,ground),P(-hl,hw,top),P(hl,hw,top)],
+      [P(-hl,-hw,top),P(hl,-hw,top),P(hl,hw,top),P(-hl,hw,top)]
+    ];
+    return{fx,fy,v0:off-hw,v1:off+hw,top,lining};
   }
   function civicSource(s){
     const C=window.ConquerCivic3D,D=window.ConquerCivicModels;
@@ -101,7 +150,7 @@
     if(!s||s.type==='ruin')return null;
     const site=s.construction;
     if(site)delete s.construction;
-    try{return castleSource(s)||civicSource(s)||houseSource(s)}
+    try{return castleSource(s)||civicSource(s)||houseSource(s)||palisadeSource(s)}
     finally{if(site)s.construction=site}
   }
   // Stone castle parts, civic buildings with a model, and urban houses (village-grown, auto).
@@ -109,6 +158,7 @@
     if(!s)return false;
     if(s.type==='house')return true;
     if(s.auto)return false;
+    if(s.type==='palisade')return !!s.a&&!!s.b;
     if(['tower','gate','wall','built'].includes(s.type))return !call('isWoodTower',s)&&!call('isWoodGate',s);
     return !!window.ConquerCivic3D?.has?.(s)&&s.type!=='civicAnnex';
   }
@@ -184,34 +234,59 @@
     const b=bounds(src);
     return clamp01((p-SPAN[0])/(SPAN[1]-SPAN[0]))*(b.top+TILE_LAG);
   }
-  function assemble(src,level,seed){
+  // One piece of the finished building (poly, z above the ground) at site level `level`.
+  function piece(sub,poly,tag,c,level,seed){
+    if(tag==='ground')emit(sub,poly,c);
+    else if(tag==='beam')emit(sub,clip(poly,2,level+BEAM_LEAD,true),c);
+    else if(tag==='roof'){
+      // Rafters down the slope, battens across it, then the tiles course by course.
+      const lr=level-RAFTER_LAG,lb=level-BATTEN_LAG,lt=level-TILE_LAG;
+      // Timber only where the tiles are not laid yet (it would share their plane).
+      const bare=Math.max(0,lt);
+      if(lr>bare)rafters(sub,poly,bare,lr);
+      if(lb>bare){
+        const zs=poly.map(q=>q[2]),z0=Math.max(bare,Math.min(...zs));
+        for(let z=Math.ceil(z0/BATTEN_STEP)*BATTEN_STEP;z<Math.min(lb,Math.max(...zs));z+=BATTEN_STEP)
+          emit(sub,band(poly,z,z+BATTEN_W),BATTEN);
+      }
+      if(lt>0)reveal(sub,poly,c,lt,seed+1);
+    }else reveal(sub,poly,c,level,seed);
+  }
+  function each(src,fnPiece){
     const out={pos:[],col:[],flat:src.flat},g=src.ground;
     for(let t=0;t<src.tag.length;t++){
-      const tag=src.tag[t],c=src.col[t];
       const poly=[0,1,2].map(k=>[src.pos[t*9+k*3],src.pos[t*9+k*3+1],src.pos[t*9+k*3+2]-g]);
-      const lift=p=>p.map(q=>[q[0],q[1],q[2]+g]);
       const sub={pos:[],col:[]};
-      if(tag==='ground')emit(sub,poly,c);
-      else if(tag==='beam')emit(sub,clip(poly,2,level+BEAM_LEAD,true),c);
-      else if(tag==='roof'){
-        // Rafters down the slope, battens across it, then the tiles course by course.
-        const lr=level-RAFTER_LAG,lb=level-BATTEN_LAG,lt=level-TILE_LAG;
-        // Timber only where the tiles are not laid yet (it would share their plane).
-        const bare=Math.max(0,lt);
-        if(lr>bare)rafters(sub,poly,bare,lr);
-        if(lb>bare){
-          const zs=poly.map(q=>q[2]),z0=Math.max(bare,Math.min(...zs));
-          for(let z=Math.ceil(z0/BATTEN_STEP)*BATTEN_STEP;z<Math.min(lb,Math.max(...zs));z+=BATTEN_STEP)
-            emit(sub,band(poly,z,z+BATTEN_W),BATTEN);
-        }
-        if(lt>0)reveal(sub,poly,c,lt,seed+1);
-      }else reveal(sub,poly,c,level,seed);
+      fnPiece(sub,poly,src.tag[t],src.col[t]);
       for(let i=0;i<sub.col.length;i++){
         for(let k=0;k<3;k++)out.pos.push(sub.pos[i*9+k*3],sub.pos[i*9+k*3+1],sub.pos[i*9+k*3+2]+g);
         out.col.push(sub.col[i]);
       }
     }
     return out;
+  }
+  // Vertical work: the whole building rises with the site level.
+  function assemble(src,level,seed){
+    return each(src,(sub,poly,tag,c)=>piece(sub,poly,tag,c,level,seed));
+  }
+  // Horizontal work (walls, palisades): w in [0,1] of the work; finished sections stand
+  // complete, the section being built rises like a small building, the rest is not begun.
+  function assembleRun(src,w,seed){
+    const r=src.run,top=bounds(src).top+TILE_LAG,sec=r.L/r.N,f=w*r.N,k=Math.min(r.N,Math.floor(f));
+    const u0=r.u0+k*sec,u1=u0+sec,level=(f-k)*top;
+    return each(src,(sub,poly,tag,c)=>{
+      emit(sub,clipF(poly,r.ux,r.uy,u0,true),c);
+      if(k<r.N){
+        const work=clipF(clipF(poly,r.ux,r.uy,u0,false),r.ux,r.uy,u1,true);
+        if(work.length>=3)piece(sub,work,tag,c,level,seed+k);
+      }
+    });
+  }
+  // Where the work is along the axis (0..1, centre of the section being built), or null.
+  function front(s,p=call('constructionProgress',s)??1){
+    const src=entry(s).src;if(!src?.run)return null;
+    const w=clamp01((p-SPAN[0])/(SPAN[1]-SPAN[0])),k=Math.min(src.run.N-1,Math.floor(w*src.run.N));
+    return(k+.5)/src.run.N;
   }
 
   // ---------- cache and drawing
@@ -250,29 +325,44 @@
     return n?{x:x/n,y:y/n}:null;
   }
   // Built height above the ground (U) of the walls at progress p: scaffold and crane follow it.
+  // (horizontal work: of the section being built, where the scaffold stands)
   function builtHeight(s,p=call('constructionProgress',s)??1){
     const e=entry(s);if(!e.src)return null;
-    return Math.min(bounds(e.src).wall,levelAt(e.src,p));
+    const b=bounds(e.src);
+    if(e.src.run){
+      const w=clamp01((p-SPAN[0])/(SPAN[1]-SPAN[0])),f=w*e.src.run.N;
+      return w>=1?b.wall:Math.min(b.wall,(f-Math.floor(f))*(b.top+TILE_LAG));
+    }
+    return Math.min(b.wall,levelAt(e.src,p));
   }
   function meshAt(s,p=call('constructionProgress',s)??1){
     const e=entry(s);if(!e.src)return null;
-    const b=bounds(e.src),span=b.top+TILE_LAG,step=Math.round(levelAt(e.src,p)/span*STEPS);
+    const b=bounds(e.src),span=b.top+TILE_LAG,w=clamp01((p-SPAN[0])/(SPAN[1]-SPAN[0]));
+    const steps=e.src.run?e.src.run.N*12:STEPS,step=Math.round(w*steps);
     let m=e.meshes.get(step);
     if(!m){
-      m=assemble(e.src,step/STEPS*span,seedOf(s));
+      m=e.src.run?assembleRun(e.src,step/steps,seedOf(s)):assemble(e.src,step/steps*span,seedOf(s));
       if(e.meshes.size>8)e.meshes.clear();
       e.meshes.set(step,m);
     }
     return m;
   }
-  // Paint the building at its stage; false when this structure has no assembly.
+  // Paint the building at its stage together with its site props (scaffold, crane, ...),
+  // depth-sorted as one picture so a scaffold behind the walls stays hidden by them, and
+  // cached as a bitmap until the stage or the view changes. false: no assembly here.
+  let uid=0;
   function draw(s){
     if(!has(s)||!window.ConquerMesh3D)return false;
     const m=meshAt(s);if(!m)return false;
-    if(m.col.length)window.ConquerMesh3D.drawMeshes(ctx,[m],window.ConquerMesh3D.gameView());
+    if(!m._uid)m._uid=++uid;
+    const P=window.ConquerConstructionProps,props=P?.siteMesh?.(s);
+    if(props&&!props._uid)props._uid=++uid;
+    const c=call('structureCenter',s)||{x:s.x,y:s.y},src=entry(s).src;
+    if(c&&fn('worldPointVisible')&&!worldPointVisible(c,0,320))return true;
+    window.ConquerMesh3D.drawCached(ctx,'site:'+s.id,m._uid+':'+(props?._uid||0),()=>[m,props],{x:c.x,y:c.y,z:src?.ground||0});
     if(cache.size>64){const live=new Set((State.structures||[]).map(o=>o.id));for(const id of cache.keys())if(!live.has(id))cache.delete(id)}
     return true;
   }
-  window.ConquerAssembly={SPAN,COURSE,CELL,TILE_LAG,has,source,levelAt,assemble,builtHeight,heightNear,crownCenter,meshAt,draw,clip,
+  window.ConquerAssembly={SPAN,COURSE,CELL,TILE_LAG,has,source,levelAt,assemble,assembleRun,front,builtHeight,heightNear,crownCenter,meshAt,draw,clip,
     clear:()=>cache.clear()};
 })();
