@@ -4,7 +4,7 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 
 ## 2026-10-22 — Eventi: disposizione più casuale
 
-- Jitter delle tende portato a ±40° / 12%; esteso a scatter, rastrelliere e armature in tutti gli allestimenti (D-043).
+- Jitter delle tende portato a ±40° / 75% (prima 12%), scatter e attrezzature fino al 200% (su richiesta esplicita, possibili contatti tra oggetti); esteso a scatter, rastrelliere e armature in tutti gli allestimenti (D-043).
 
 ## 2026-10-22 — Eventi: tende non allineate e tutte diverse
 
