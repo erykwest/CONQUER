@@ -4,6 +4,10 @@ on:
     branches: [main]
     paths:
       - 'src/settlement-construction-props.js'
+      - 'src/settlement-construction-assembly.js'
+      - 'src/settlement-castle3d.js'
+      - 'src/settlement-buildings.js'
+      - 'qa/construction-assembly-regression.cjs'
       - 'src/assets/construction-models.js'
       - 'src/settlement-mesh3d.js'
       - 'src/settlement-render.js'
@@ -24,5 +28,9 @@ jobs:
           node --check src/settlement-construction-props.js
           node --check src/assets/construction-models.js
           node --check qa/construction-props-regression.cjs
+          node --check src/settlement-construction-assembly.js
+          node --check qa/construction-assembly-regression.cjs
       - name: Run construction-props regression
         run: node qa/construction-props-regression.cjs
+      - name: Run construction-assembly regression
+        run: node qa/construction-assembly-regression.cjs

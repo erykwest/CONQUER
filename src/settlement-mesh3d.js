@@ -37,7 +37,7 @@
     const f=shadeFactor(nx,ny,nz,0,base);
     return toHex(base.map(c=>c*f));
   }
-  // Depth-sorted painter. meshes: [{pos,col,gi?,groups?,groupBias?}] in world space;
+  // Depth-sorted painter. meshes: [{pos,col,gi?,groups?,groupBias?,flat?}] in world space;
   // view: {project(x,y,z)->{x,y}, depth(x,y,z) (larger = nearer), turns}. Meshes with
   // groups sort part by part (part centre first, then triangle).
   function drawMeshes(ctx,meshes,view,sprites=[]){
@@ -49,7 +49,8 @@
       if(!mesh._fills||mesh._turns!==turns){
         mesh._turns=turns;mesh._fills=new Array(n);
         for(let t=0;t<n;t++){
-          const [nx,ny,nz]=triNormal(pos,t*9),[r,g,b]=rgb(col[t]),f=shadeFactor(nx,ny,nz,turns,[r,g,b]);
+          // flat meshes carry colours already shaded by their builder (castle volumes).
+          const [nx,ny,nz]=triNormal(pos,t*9),[r,g,b]=rgb(col[t]),f=mesh.flat?1:shadeFactor(nx,ny,nz,turns,[r,g,b]);
           mesh._fills[t]='rgb('+(r*f|0)+','+(g*f|0)+','+(b*f|0)+')';
         }
       }

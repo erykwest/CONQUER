@@ -62,7 +62,7 @@ console.log('PASS phases: prep -> raise -> finish -> removed; crane on top');
 const storeys=items=>new Set(items.filter(i=>i.model==='scaffoldBay').map(i=>i.z.toFixed(3))).size;
 const topZ=items=>Math.max(...items.filter(i=>i.model==='scaffoldBay').map(i=>i.z));
 assert.ok(topZ(at(.3))<topZ(at(.8)),'the scaffold climbs with the work');
-assert.ok(topZ(at(.95))+U.storey>=HEIGHT.tower-1e-6&&topZ(at(.95))<HEIGHT.tower,'at the finish it reaches the top');
+assert.ok(Math.abs(topZ(at(.95))+U.storey-HEIGHT.tower)<=U.storey/2+1e-6,'at the finish the top deck is within half a storey of the wall top');
 for(const p of [.3,.6,.95]){
   const sc=at(p).filter(i=>i.model==='scaffoldBay'),z=sc.map(i=>i.z);
   assert.equal(Math.min(...z),0,'the scaffold stands on the ground at '+p);

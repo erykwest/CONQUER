@@ -30,9 +30,16 @@
   // Share of the height already standing: the scaffold climbs with it.
   function raised(p){return p>=PHASE.finish?1:clamp01((p-PHASE.prep)/(PHASE.finish-PHASE.prep))}
 
+  // Height of the walls already standing: the assembly's site level when the building is
+  // assembled piece by piece, otherwise the share of its height.
+  function built(s,kind,p){
+    const h=window.ConquerAssembly?.has?.(s)?window.ConquerAssembly.builtHeight(s,p):null;
+    return Number.isFinite(h)?h:kind.H*raised(p);
+  }
   // What a site needs, by type and material. null: no props (roads, fields, ...).
   function siteKind(s){
-    if(!s||s.auto||SKIP.has(s.type)||window.ConquerIndustries?.is?.(s))return null;
+    // Village houses grow on their own (auto) but are real building sites too.
+    if(!s||s.auto&&s.type!=='house'||SKIP.has(s.type)||window.ConquerIndustries?.is?.(s))return null;
     const H=Number(call('structureHeight',s))||0;
     const wood=s.type==='palisade'||s.type==='house'||s.type==='market'||!!call('isWoodTower',s)||!!call('isWoodGate',s)||!!call('isCivicAnnex',s);
     const masonry=!wood;
@@ -107,8 +114,7 @@
     // Scaffold on the faces turned to the camera (figures and props are painted over the
     // site, so a scaffold behind it would show through the walls).
     if(kind.scaffold&&phase!=='prep'){
-      const levels=Math.max(1,Math.ceil(kind.H*raised(p)/storey-1e-6));
-      const runs=[];
+      const standing=built(s,kind,p),A=window.ConquerAssembly,runs=[];
       for(let i=0;i<fp.pts.length;i++){
         const a=fp.pts[i],b=fp.pts[(i+1)%fp.pts.length],L=Math.hypot(b.x-a.x,b.y-a.y);
         if(L<bay*.9)continue;                  // wall heads and short jogs get no bay
@@ -116,16 +122,20 @@
         let n={x:(b.y-a.y)/L,y:-(b.x-a.x)/L};
         if(n.x*(m.x-fp.c.x)+n.y*(m.y-fp.c.y)<0)n={x:-n.x,y:-n.y};
         if(depth({x:m.x+n.x,y:m.y+n.y})-depth(m)<.25)continue;
-        runs.push({m,n,nb:Math.max(1,Math.floor(L/bay+.25))});
+        // Each run stops at its own wall top (a nave is lower than its bell tower).
+        const local=A?.has?.(s)?A.heightNear(s,a,b):null,top=Math.min(standing,Number.isFinite(local)?local:kind.H);
+        // Nearest storey: the top deck ends just under the eaves, where the roofers work.
+        runs.push({m,n,nb:Math.max(1,Math.floor(L/bay+.25)),levels:Math.max(1,Math.round(top/storey))});
       }
       // Storeys always stand on the ground and stack as the work rises; the module
       // budget is met by shortening the runs, never by dropping lower storeys.
-      const perRun=Math.max(1,Math.min(MAX_RUN,Math.floor(MAX_BAY_STOREYS/levels/(runs.length||1))));
+      const stacked=runs.reduce((a,r)=>a+r.levels,0)||1;
+      const perRun=Math.max(1,Math.min(MAX_RUN,Math.floor(MAX_BAY_STOREYS/stacked)));
       for(const r of runs){r.run=Math.min(r.nb,perRun);r.start=r.nb>r.run?Math.round(raised(p)*(r.nb-r.run)):0}
       const k0=0;
       let ladderRun=runs.reduce((best,r)=>!best||r.run>best.run?r:best,null);
       for(const r of runs){
-        const yaw=Math.atan2(r.n.y,r.n.x),side={x:-Math.sin(yaw),y:Math.cos(yaw)};
+        const yaw=Math.atan2(r.n.y,r.n.x),side={x:-Math.sin(yaw),y:Math.cos(yaw)},levels=r.levels;
         for(let j=0;j<r.run;j++){
           const i=r.start+j,off=(i-(r.nb-1)/2)*bay,o={x:r.m.x+side.x*off,y:r.m.y+side.y*off},z0=groundAt(s,o);
           const last=j===r.run-1;
@@ -155,11 +165,12 @@
       if(phase==='raise'&&kind.lift==='hoist')free.push({model:'hoist',at:1.35,lift:true});
     }
     const front=towardsCamera(),gap=kind.scaffold?reach+.08:.15;
-    // The great wheel rides on the masonry it builds: centred on the footprint at the
-    // working level, raised with it, the jib turned towards the material pile below.
+    // The great wheel rides on the masonry it builds: on its highest part (a church's bell
+    // tower) at the working level, raised with it, the jib turned towards the material pile.
     if(phase==='raise'&&kind.lift==='treadwheelCrane'){
+      const at=window.ConquerAssembly?.has?.(s)&&window.ConquerAssembly.crownCenter(s)||fp.c;
       out.push({model:'treadwheelCrane',parts:Object.keys(MODELS().models.treadwheelCrane.parts),
-        x:fp.c.x,y:fp.c.y,z:groundAt(s,fp.c)+kind.H*raised(p),yaw:front+.55});
+        x:at.x,y:at.y,z:groundAt(s,at)+built(s,kind,p),yaw:front+.55});
     }
     for(const f of free){
       const r=radius(f.model);
@@ -203,7 +214,7 @@
   const cache=new Map();
   function stateKey(s,p){
     const {storey}=units(),k=siteKind(s);
-    return[s.id,phaseOf(p),k?Math.ceil(k.H*raised(p)/storey-1e-6):0,Math.round(raised(p)*20),State.view?.rotation||0,
+    return[s.id,phaseOf(p),k?Math.round(built(s,k,p)/storey*8):0,Math.round(raised(p)*20),State.view?.rotation||0,
       s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.w,s.h,s.size,s.r,s.groundZ,(State.structures||[]).length].join('|');
   }
   function siteMesh(s){
