@@ -162,6 +162,7 @@ function renderFunctionPanel(){
     const hp=window.ConquerSiege?.integrity(s);
     if(hp)html+='<div class="slot"><div class="slot-label">Defensive integrity</div>'+
       '<div class="legend">Masonry '+Math.ceil(hp.core.hp)+' / '+hp.core.max+
+      (hp.portcullis?' · Grata '+Math.ceil(hp.portcullis.hp)+' / '+hp.portcullis.max:'')+
       (hp.door?' · Door '+Math.ceil(hp.door.hp)+' / '+hp.door.max:'')+'</div>'+
       '<div class="grid3"><button data-siege-test="axe" type="button">Test axe</button><button data-siege-test="ram" type="button">Test ram</button><button data-siege-test="trebuchet" type="button">Test trebuchet</button></div>'+
       '<div class="legend">Prototype damage controls; only effective tools can harm each material. Towers and gates lose their top storey at 2/3 and 1/3 of their health.</div></div>';

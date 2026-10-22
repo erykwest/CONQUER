@@ -60,16 +60,37 @@
 
   // ---------- state ----------
   function portcullis(gate){return stoneGate(gate)&&gate.portcullis?.installed?gate.portcullis:null}
-  const broken=g=>window.ConquerSiege?.doorStage?.(g)==='broken';
   function doorTarget(g){return window.ConquerSiege?.gateClosed?.(g)?0:1}
-  // A lowered portcullis (fully or partly) shuts the passage; the ram smashes it with the door.
+  // A lowered portcullis (fully or partly) shuts the passage, door or no door. It is a defence
+  // layer of its own (settlement-siege 'portcullis' section): the ram must wreck it before it
+  // can reach the door; wrecked, it hangs bent half-raised and bars nothing until repaired.
+  const WRECKED_HANG=.25;
+  const PORTCULLIS_REPAIR={gold:8,metal:10};
   function portcullisBlocks(gate){
     const p=portcullis(gate);
-    return !!p&&!underConstruction(gate)&&!broken(gate)&&(p.lowered||p.progress>.02);
+    return !!p&&!underConstruction(gate)&&!p.wrecked&&(p.lowered||p.progress>.02);
   }
   function stateOfPortcullis(gate){
     const p=portcullis(gate);
-    return !p?'none':p.progress>=.99?'lowered':p.progress<=.01?'raised':'moving';
+    return !p?'none':p.wrecked?'wrecked':p.progress>=.99?'lowered':p.progress<=.01?'raised':'moving';
+  }
+  function wreckPortcullis(gate){
+    const p=portcullis(gate);if(!p||p.wrecked)return false;
+    p.wrecked=true;p.lowered=false;
+    if(typeof invalidateNavigation==='function')invalidateNavigation(true);
+    markDirty(true,false,true);renderFunctionPanel();draw();
+    status('The portcullis is wrecked: the door lies open to the ram');
+    return true;
+  }
+  function repairPortcullis(gate){
+    const p=portcullis(gate);if(!p?.wrecked||underConstruction(gate))return false;
+    if(!canAfford(PORTCULLIS_REPAIR)){status('Insufficient resources · '+costText(PORTCULLIS_REPAIR));return false}
+    spendCost(PORTCULLIS_REPAIR);
+    p.wrecked=false;p.lowered=false;
+    const hp=gate.siegeIntegrity?.portcullis;if(hp)hp.hp=hp.max;
+    markDirty(true,false,true);renderFunctionPanel();draw();
+    status('Portcullis repaired');
+    return true;
   }
   function installPortcullis(gate){
     if(!stoneGate(gate)||underConstruction(gate)||portcullis(gate))return false;
@@ -82,7 +103,7 @@
   }
   function togglePortcullis(gate){
     const p=portcullis(gate);if(!p||underConstruction(gate))return false;
-    if(!p.lowered&&broken(gate)){status('The gate is broken in: the portcullis is wrecked');return false}
+    if(p.wrecked){status('The portcullis is wrecked: repair it first');return false}
     p.lowered=!p.lowered;
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     markDirty(true,false,true);renderFunctionPanel();draw();
@@ -91,7 +112,7 @@
   }
   function removePortcullis(gate){
     if(!portcullis(gate))return false;
-    delete gate.portcullis;
+    delete gate.portcullis;delete gate.siegeIntegrity?.portcullis;
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     markDirty(true,false,true);renderFunctionPanel();draw();
     status('Portcullis removed (no materials refunded)');return true;
@@ -107,15 +128,15 @@
       const target=doorTarget(g);
       if(!Number.isFinite(g.doorOpen))g.doorOpen=target;
       else if(Math.abs(g.doorOpen-target)>.001){
-        g.doorOpen=clamp01(g.doorOpen+Math.sign(target-g.doorOpen)*dt/DOOR_SECONDS);
-        if(Math.abs(g.doorOpen-target)<.01)g.doorOpen=target;
+        const step=dt/DOOR_SECONDS,gap=target-g.doorOpen;
+        g.doorOpen=Math.abs(gap)<=Math.max(step,.01)?target:clamp01(g.doorOpen+Math.sign(gap)*step);
         moving=true;
       }
       const p=portcullis(g);if(!p)continue;
-      const down=p.lowered&&!broken(g)?1:0;
+      const down=p.wrecked?WRECKED_HANG:p.lowered?1:0;
       if(Math.abs(p.progress-down)>.001){
-        p.progress=clamp01(p.progress+Math.sign(down-p.progress)*dt/PORTCULLIS_SECONDS);
-        if(Math.abs(p.progress-down)<.01)p.progress=down;
+        const step=dt/PORTCULLIS_SECONDS,gap=down-p.progress;
+        p.progress=Math.abs(gap)<=Math.max(step,.01)?down:clamp01(p.progress+Math.sign(gap)*step);
         moving=true;
       }
     }
@@ -155,18 +176,20 @@
     const ring=[{u:w-.09,z:.5},{u:w-.05,z:.5},{u:w-.05,z:.56},{u:w-.09,z:.56}];
     b.slab(ring,(q,t)=>world(q.u,q.z,t),T,T+.02,bandColor);
   }
-  function addPortcullis(b,f,ground,progress){
-    const o=opening(),a0=f.L/2-.10,lift=(1-progress)*(o.apex+.04),iron='#34302d';
+  function addPortcullis(b,f,ground,progress,wrecked=false){
+    const o=opening(),a0=f.L/2-.10,lift=(1-progress)*(o.apex+.04),iron=wrecked?'#2a2624':'#34302d';
     const bar=(c0,c1,z0,z1)=>{
       const pts=[at(f,a0-.014,c0),at(f,a0+.014,c0),at(f,a0+.014,c1),at(f,a0-.014,c1)];
       b.slab(pts,(p,t)=>[p.x,p.y,ground+t],z0,z1,iron);
     };
     const span=o.half*2,count=Math.max(4,Math.round(span/.085));
     for(let i=0;i<=count;i++){
-      const c=-o.half+.02+(span-.04)*i/count;
-      bar(c-.013,c+.013,lift-.03,lift+o.apex);           // the spiked foot just below the rail
+      // Wrecked: some bars torn out, the others snapped off at uneven heights.
+      if(wrecked&&i%3===1)continue;
+      const c=-o.half+.02+(span-.04)*i/count,foot=wrecked?.08+((i*37)%5)*.06:-.03;
+      bar(c-.013,c+.013,lift+foot,lift+o.apex);           // the spiked foot just below the rail
     }
-    for(let z=.12;z<o.apex;z+=.17)bar(-o.half+.01,o.half-.01,lift+z,lift+z+.024);
+    for(let z=wrecked?.29:.12;z<o.apex;z+=.17)bar(-o.half+.01,o.half-.01,lift+z,lift+z+.024);
   }
   // Torches on the outer facade, either side of the portal, below the banners.
   const TORCH={across:.565,z:.88};
@@ -188,15 +211,17 @@
     if(!stoneGate(s)||underConstruction(s))return null;
     const p=portcullis(s),stage=window.ConquerSiege?.doorStage?.(s)||'intact';
     const door=Number.isFinite(s.doorOpen)?s.doorOpen:doorTarget(s),pc=p?p.progress:0;
-    const settled=(door===0||door===1)&&(pc===0||pc===1);
-    const key=[s.x,s.y,s.angle,s.size,s.w,s.h,groundOf(s),stage,door.toFixed(3),p?pc.toFixed(3):'-'].join('|');
+    const pcRest=p?(p.wrecked?WRECKED_HANG:p.lowered?1:0):0;
+    const settled=(door===0||door===1)&&pc===pcRest;
+    const key=[s.x,s.y,s.angle,s.size,s.w,s.h,groundOf(s),stage,door.toFixed(3),p?pc.toFixed(3)+(p.wrecked?'w':''):'-'].join('|');
     const hit=meshCache.get(s.id);if(hit&&hit.key===key)return hit.mesh;
     const f=frame(s),ground=groundOf(s),b=meshBuilder();
     if(stage!=='broken'){
       const theta=door*DOOR_OPEN,leaf=stage==='damaged'?'#5f4129':'#7a5233';
       for(const side of [-1,1])addLeaf(b,s,f,ground,side,theta,leaf,'#2f2b29');
-      if(p)addPortcullis(b,f,ground,pc);     // raised, it sits hidden in the masonry above the vault
     }
+    // Raised, it sits hidden in the masonry above the vault; it stands even with the door gone.
+    if(p)addPortcullis(b,f,ground,pc,!!p.wrecked);
     addTorchBrackets(b,f,ground);
     const mesh={pos:b.pos,col:b.col,static:settled};
     meshCache.set(s.id,{key,mesh});
@@ -339,11 +364,15 @@
   function panel(s){
     if(!stoneGate(s))return'';
     const p=portcullis(s),building=underConstruction(s);
-    return'<div class="slot"><div class="slot-label">Grata (saracinesca) · accessorio del portone in pietra</div>'+
-      (p?'<div class="grid"><button data-portcullis-toggle '+(building?'disabled':'')+'>'+(p.lowered?'⬆ Alza':'⬇ Abbassa')+
-        '</button><button data-portcullis-remove>Rimuovi</button></div>'+
-        '<div class="legend">Grata di ferro davanti alle ante · '+{none:'',raised:'alzata',lowered:'abbassata',moving:'in movimento'}[stateOfPortcullis(s)]+
-        '. Abbassata chiude il passaggio a tutti, anche con il portone aperto.</div>'
+    const hp=p&&!building?window.ConquerSiege?.integrity?.(s)?.portcullis:null;
+    const label={none:'',raised:'alzata',lowered:'abbassata',moving:'in movimento',wrecked:'distrutta'}[stateOfPortcullis(s)];
+    return'<div class="slot"><div class="slot-label">Grata (saracinesca) · '+(p?label+(hp?' · '+Math.ceil(hp.hp)+' / '+hp.max:''):'accessorio del portone in pietra')+'</div>'+
+      (p?(p.wrecked
+          ?'<div class="grid"><button data-portcullis-repair '+(building?'disabled':'')+'>Ripara · '+costText(PORTCULLIS_REPAIR)+'</button><button data-portcullis-remove>Rimuovi</button></div>'+
+            '<div class="legend">Piegata e mezza alzata: non sbarra più nulla finché non è riparata.</div>'
+          :'<div class="grid"><button data-portcullis-toggle '+(building?'disabled':'')+'>'+(p.lowered?'⬆ Alza':'⬇ Abbassa')+
+            '</button><button data-portcullis-remove>Rimuovi</button></div>'+
+            '<div class="legend">Strato difensivo davanti alle ante: abbassata chiude il passaggio a tutti, anche con il portone aperto o sfondato, e l\'ariete deve abbatterla prima di arrivare alla porta. Il fuoco la attraversa e raggiunge il legno.</div>')
       :'<button data-portcullis-install '+(building?'disabled':'')+'>Installa grata · '+costText(PORTCULLIS_COST)+'</button>'+
         '<div class="legend">Una saracinesca di ferro che scende davanti alle ante del portone.</div>')+'</div>';
   }
@@ -352,9 +381,10 @@
     slots.querySelector('[data-portcullis-install]')?.addEventListener('click',()=>installPortcullis(s));
     slots.querySelector('[data-portcullis-toggle]')?.addEventListener('click',()=>togglePortcullis(s));
     slots.querySelector('[data-portcullis-remove]')?.addEventListener('click',()=>removePortcullis(s));
+    slots.querySelector('[data-portcullis-repair]')?.addEventListener('click',()=>repairPortcullis(s));
   }
 
   window.ConquerGates={opening,addGateBody,tick,dynamicMeshes,gateMesh,torchSources,ensureSprites,decalSpecs,
     portcullis,portcullisBlocks,stateOfPortcullis,installPortcullis,togglePortcullis,removePortcullis,
-    panel,bindPanel,PORTCULLIS_COST,PORTAL,BANNER};
+    wreckPortcullis,repairPortcullis,panel,bindPanel,PORTCULLIS_COST,PORTCULLIS_REPAIR,PORTAL,BANNER};
 })();

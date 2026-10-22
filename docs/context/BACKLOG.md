@@ -24,7 +24,8 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 | GATE-03 | Grata (saracinesca) come upgrade del solo portone in pietra, animata; abbassata blocca il passaggio | BRANCH + QA + controllo visivo |
 | GATE-04 | Due drappi araldici ai lati del portale e due torce accese di notte sul fronte esterno | BRANCH + QA + controllo visivo |
 | GATE-05 | Ante, grata, drappi e torce per il portone di legno (oggi solo il magnete) | APERTO |
-| GATE-06 | Grata nella matrice danni/assedio (bersaglio proprio, ariete prima della grata); oggi cede insieme alla porta sfondata | APERTO, dipende da S-05/S-25 |
+| GATE-06 | Grata come strato difensivo separato (D-042): HP propri, colpita prima della porta, il fuoco passa, distrutta e riparabile, sbarra anche a porta sfondata | BRANCH + QA + controllo browser |
+| GATE-07 | IA d'assedio che sceglie fra ariete sulla grata, fuoco sulla porta e altri accessi; riparazione della grata durante l'assedio | APERTO, dipende da S-15 |
 
 ## Clay — nuove murature e argilla (branch `clay`, 19/10/2026)
 

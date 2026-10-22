@@ -128,11 +128,65 @@ function fixture({night=0,rotation=0}={}){
   step(100,30);
   assert.equal(G.portcullisBlocks(gate),false,'raised, the way is open');
   G.togglePortcullis(gate);step(100,30);gate.door=0;
-  assert.equal(G.portcullisBlocks(gate),false,'the ram smashes it with the door');
+  assert.equal(G.portcullisBlocks(gate),true,'a separate layer: it still bars the way with the door broken in');
   assert.match(G.panel(gate),/data-portcullis-toggle/);
+  assert.equal(G.wreckPortcullis(gate),true);
+  assert.equal(G.portcullisBlocks(gate),false,'wrecked, it bars nothing');
+  assert.equal(G.togglePortcullis(gate),false,'and cannot be lowered');
+  step(100,30);
+  assert.ok(Math.abs(gate.portcullis.progress-.25)<1e-9,'it hangs bent, half raised');
+  assert.ok(G.gateMesh(gate).static,'a settled wreck is a static mesh');
+  assert.match(G.panel(gate),/data-portcullis-repair/);
+  const metal=State.resources.metal;
+  assert.equal(G.repairPortcullis(gate),true);
+  assert.ok(!gate.portcullis.wrecked&&State.resources.metal===metal-G.PORTCULLIS_REPAIR.metal,'repaired for a price');
+  assert.equal(G.togglePortcullis(gate),true,'and works again');
   G.removePortcullis(gate);assert.equal(G.portcullis(gate),null);
   assert.match(read('settlement-population-navigation.js'),/ConquerGates\?\.portcullisBlocks\?\.\(s\)\)return true/,'navigation honours the portcullis');
   console.log('PASS the portcullis upgrade shuts the passage');
+}
+{
+  // The portcullis in the siege rules: its own health, hit before the door, fire passes through.
+  const State={clock:{day:3},structures:[],siege:null,view:{scale:1},selectedId:null,resources:{gold:100,metal:100,wood:100}};
+  const ctx=vm.createContext({
+    State,window:{ConquerCombat:{alarmMode:()=>'off'}},console,Math,Object,Array,Map,Set,String,Number,JSON,performance:{now:()=>0},
+    structureLevel:s=>s.level||1,structureHeight:()=>2.8,footprintPoints:()=>[],
+    rectDims:s=>({w:s.size||1.5,h:s.size||1.5}),placementGroundZ:()=>0,terrainElevation:()=>0,
+    wallTier:()=>2,wallSkin:()=>'standard',towerTier:()=>2,isCivic:()=>false,isWoodTower:()=>false,isWoodGate:s=>s?.material==='wood',
+    nightFactor:()=>0,underConstruction:s=>!!s.construction,normalizeFunctions:s=>s,functionCapacity:()=>0,scheduleLocalSave:()=>{},
+    invalidateStructureScene:()=>{},invalidateSceneCache:()=>{},invalidateNavigation:()=>{},requestAnimationFrame:()=>1,
+    canAfford:()=>true,costText:()=>'',spendCost:()=>{},
+    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},selectStructure:()=>{},selectedStructure:()=>null,
+    uid:(()=>{let n=0;return()=>'id'+(++n)})()
+  });
+  vm.runInContext(['settlement-collapse.js','settlement-siege.js','settlement-gate-fittings.js'].map(read).join('\n'),ctx);
+  const S=ctx.window.ConquerSiege,G=ctx.window.ConquerGates;
+  const gate={id:'g',type:'gate',material:'stone',x:0,y:0,size:1.5,angle:0,level:1,functions:[]};
+  State.structures.push(gate);
+  assert.equal(S.integrity(gate).portcullis,undefined,'no portcullis, no section');
+  G.installPortcullis(gate);G.togglePortcullis(gate);
+  const hp=S.integrity(gate).portcullis;
+  assert.ok(hp&&hp.max===S.PORTCULLIS_HEALTH&&hp.hp===hp.max,'its own health');
+  const door=S.integrity(gate).door.hp;
+  const hit=S.attackStructure('g','ram',5,'door');
+  assert.equal(hit.part,'portcullis','the ram hits the lowered portcullis first');
+  assert.equal(S.integrity(gate).door.hp,door,'the door behind is untouched');
+  assert.equal(S.attackStructure('g','spear',5,'door').ok,false,'spears do nothing to iron');
+  const burn=S.attackStructure('g','torch',2,'door');
+  assert.equal(burn.part,'door','fire reaches the door through the bars');
+  while(S.integrity(gate).portcullis.hp>0)S.attackStructure('g','ram',10,'door');
+  assert.ok(gate.portcullis.wrecked&&!G.portcullisBlocks(gate),'battered down, the portcullis is wrecked');
+  assert.equal(S.attackStructure('g','ram',5,'door').part,'door','then the door takes the blows');
+  assert.equal(S.gateBreached(gate),false,'the door still holds');
+  while(S.doorStage(gate)!=='broken')S.attackStructure('g','ram',10,'door');
+  assert.equal(S.gateBreached(gate),true,'door broken, no grate: the way is open');
+  G.repairPortcullis(gate);G.togglePortcullis(gate);
+  assert.equal(S.integrity(gate).portcullis.hp,S.PORTCULLIS_HEALTH,'repaired to full health');
+  assert.equal(S.gateBreached(gate),false,'a portcullis dropped behind a broken door bars the way again');
+  assert.match(read('settlement-combat.js'),/ConquerSiege\.gateBreached\(g\)/,'the ram storm breaks in only once breached');
+  G.removePortcullis(gate);
+  assert.equal(S.integrity(gate).portcullis,undefined,'removed, its section goes too');
+  console.log('PASS the portcullis is a defence layer of its own in front of the door');
 }
 {
   const front=fixture({rotation:0}),back=fixture({rotation:2});
