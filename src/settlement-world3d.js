@@ -481,44 +481,7 @@
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
-      withStructureVisualMaterial(house,()=>{
-      const lvl=houseLevel(house);
-      for(const part of entry.parts){
-        if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
-        const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
-        const split=base+(part.kind==='turret'?part.floorZ:houseFloorBreak(part.bodyH));
-        const bp=part.basePoints;
-        for(let i=0;i<n;i++){
-          const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
-          if(lvl===1&&part.kind!=='turret'){m.face([a,b,c,d],i%2?'#4e392d':'#654936');continue}
-          const sa={...a,z:split},sb={...b,z:split};
-          // Recessed stone ground floor (basePoints) under the jettied timber floors.
-          const ga=bp?{x:bp[i].x,y:bp[i].y,z:a.z}:a,gb=bp?{x:bp[(i+1)%n].x,y:bp[(i+1)%n].y,z:b.z}:b;
-          m.face([ga,gb,{...gb,z:split},{...ga,z:split}],i%2?'#4f4b47':'#625e59');m.face([sa,sb,c,d],i%2?'#c8ae70':'#e0ca91');
-          // Jetty underside: joists between the upper wall line and the recessed ground floor.
-          if(bp&&(i===0||i===2))m.face([sa,sb,{...gb,z:split},{...ga,z:split}],'#4a3626');
-        }
-        const roof=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
-        if(part.kind==='turret'){
-          for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
-        }else{
-          const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
-          const gable=lvl===1?'#654936':'#d9c184';
-          m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
-        }
-      }
-      // L4 dormers (urbanHouseDormers): cream front and cheeks, slate gable roof.
-      const dormerColors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
-        roofA:winter?WINTER_ROOF[0]:'#303237',roofB:winter?WINTER_ROOF[1]:'#3a3d42'};
-      for(const dormer of entry.dormers||[]){
-        const g=terrainElevation(dormer.partCenter);
-        for(const f of dormer.faces)m.face(f.pts.map(({p,z})=>({x:p.x,y:p.y,z:g+z})),dormerColors[f.kind]);
-      }
-      for(const c of chimneySpecs(house)){
-        const g=terrainElevation(c.center);
-        m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
-      }
-      });
+      withStructureVisualMaterial(house,()=>addHouse(m,entry,winter));
     }
     // Urban boundaries (urbanFenceSegments): fences and low walls as solids, hedges are billboards.
     for(const e of urbanFenceSegments()){
@@ -548,21 +511,69 @@
     }
     return new Float32Array(m.tris);
   }
+  // One urban house (an urbanHouseGeometry entry) into a mesh builder. Builders may offer
+  // tag(kind) to learn what the next faces are (body / upper / beam / gable / roof): the
+  // construction assembly (settlement-construction-assembly.js) uses it to build the
+  // house piece by piece; the WebGL builder has no tag and ignores it.
+  function addHouse(m,entry,winter){
+    const house=entry.house,lvl=houseLevel(house);
+    for(const part of entry.parts){
+      if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
+      const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
+      const split=base+(part.kind==='turret'?part.floorZ:houseFloorBreak(part.bodyH));
+      const bp=part.basePoints;
+      for(let i=0;i<n;i++){
+        const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
+        if(lvl===1&&part.kind!=='turret'){m.tag?.('body');m.face([a,b,c,d],i%2?'#4e392d':'#654936');continue}
+        const sa={...a,z:split},sb={...b,z:split};
+        // Recessed stone ground floor (basePoints) under the jettied timber floors.
+        const ga=bp?{x:bp[i].x,y:bp[i].y,z:a.z}:a,gb=bp?{x:bp[(i+1)%n].x,y:bp[(i+1)%n].y,z:b.z}:b;
+        m.tag?.('body');m.face([ga,gb,{...gb,z:split},{...ga,z:split}],i%2?'#4f4b47':'#625e59');
+        m.tag?.('upper');m.face([sa,sb,c,d],i%2?'#c8ae70':'#e0ca91');
+        // Jetty underside: joists between the upper wall line and the recessed ground floor.
+        m.tag?.('beam');if(bp&&(i===0||i===2))m.face([sa,sb,{...gb,z:split},{...ga,z:split}],'#4a3626');
+      }
+      const roof=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
+      m.tag?.('roof');
+      if(part.kind==='turret'){
+        for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
+      }else{
+        const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
+        const gable=lvl===1?'#654936':'#d9c184';
+        m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);
+        m.tag?.('gable');m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
+      }
+    }
+    // L4 dormers (urbanHouseDormers): cream front and cheeks, slate gable roof.
+    const dormerColors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
+      roofA:winter?WINTER_ROOF[0]:'#303237',roofB:winter?WINTER_ROOF[1]:'#3a3d42'};
+    m.tag?.('roof');
+    for(const dormer of entry.dormers||[]){
+      const g=terrainElevation(dormer.partCenter);
+      for(const f of dormer.faces)m.face(f.pts.map(({p,z})=>({x:p.x,y:p.y,z:g+z})),dormerColors[f.kind]);
+    }
+    for(const c of chimneySpecs(house)){
+      const g=terrainElevation(c.center);
+      m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
+    }
+  }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
     const faces=urbanHouseFaces(house,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
     const roofA=winter?WINTER_ROOF[0]:'#5b3d30',roofB=winter?WINTER_ROOF[1]:'#6b4938';
     if(part.type==='store'){
-      for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
-      m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
+      m.tag?.('body');for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
+      m.tag?.('roof');m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);
+      m.tag?.('gable');m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
       return;
     }
     const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=terrainElevation(c);
     const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
     // The courtyard side is open, so a lean-to has fewer than n walls: the roof is the last face.
     const walls=faces.slice(0,-1),roof=faces[faces.length-1];
-    for(const wall of walls)if(wall.slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(wall),'#5d4431');
-    m.face(P(roof),roofB);
+    m.tag?.('body');for(const wall of walls)if(wall.slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(wall),'#5d4431');
+    m.tag?.('roof');m.face(P(roof),roofB);
+    m.tag?.('beam');
     for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
       const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
       m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');
@@ -1437,7 +1448,7 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

@@ -55,12 +55,12 @@
       :/^roof/.test(keyOf.get(hex)||'roof')?'roof':'body');
     return{pos:mesh.pos,col:mesh.col,tag,flat:false,ground};
   }
-  // Urban house, as settlement-world3d.js builds it: stone ground floor, timber-framed
-  // plastered upper floor (L2+), thatch (L1) or slate roof, gables, chimneys.
+  // Urban house (all levels, jetties, turrets, dormers, yard outbuildings): stone ground
+  // floor, timber-framed plastered upper floors, roofs and gables.
   function houseSource(s){
-    if(s.type!=='house'||!fn('urbanHouseGeometry')||!fn('urbanHouseFaces'))return null;
+    if(s.type!=='house'||!fn('urbanHouseGeometry'))return null;
     const entry=urbanHouseGeometry().find(e=>e.house===s||e.house.id===s.id);if(!entry)return null;
-    const pos=[],col=[],tag=[],lvl=call('houseLevel',s)||1;
+    const pos=[],col=[],tag=[];
     const face=(pts,c,t)=>{for(let i=1;i<pts.length-1;i++){for(const p of [pts[0],pts[i],pts[i+1]])pos.push(p.x,p.y,p.z);col.push(c);tag.push(t)}};
     const beam=(a,b,t)=>{   // thin box between two points, standing proud of the facade
       const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,L=Math.hypot(dx,dy,dz)||1,w=.025;
@@ -70,56 +70,29 @@
       const r=[[-1,-1],[1,-1],[1,1],[-1,1]],A=r.map(([u,v])=>c(a,u,v)),B=r.map(([u,v])=>c(b,u,v));
       for(let i=0;i<4;i++)face([A[i],A[(i+1)%4],B[(i+1)%4],B[i]],BEAM,t);
     };
+    // The house is the one settlement-world3d.js builds (ConquerWorld3D.addHouse), fed to
+    // an adapter that records its tags; the plastered upper floor also gets its timber
+    // frame (corner and middle posts, sill and wall plate) which rises ahead of the infill.
+    const W3=window.ConquerWorld3D;if(!W3?.addHouse)return null;
     const winter=typeof State!=='undefined'&&State.season==='winter';
-    const prism=(pts,z0,z1,c,t)=>{
-      face(pts.map(p=>({x:p.x,y:p.y,z:z1})),c,t);
-      for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];face([{...a,z:z0},{...b,z:z0},{...b,z:z1},{...a,z:z1}],c,t)}
-    };
-    // L3/L4 yard outbuildings, as settlement-world3d.js addOutbuilding draws them.
-    const outbuilding=part=>{
-      const faces=urbanHouseFaces(s,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
-      const roofA=winter?'#e7ece8':'#5b3d30',roofB=winter?'#dce3de':'#6b4938';
-      if(part.type==='store'){
-        for(let i=0;i<n;i++)face(P(faces[i]),i%2?'#5d4431':'#71543c','body');
-        face(P(faces[n]),roofA,'roof');face(P(faces[n+1]),roofB,'roof');face(P(faces[n+2]),'#6b4f39','gable');face(P(faces[n+3]),'#6b4f39','gable');
-        return;
-      }
-      // Open shed: posts first, the back wall, then the lean-to roof.
-      const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=call('terrainElevation',c)||0;
-      const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
-      for(let i=0;i<n;i++)if(faces[i].slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))face(P(faces[i]),'#5d4431','body');
-      face(P(faces[n]),roofB,'roof');
-      for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
-        const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
-        const pts=call('rectWorldPoints',p.x,p.y,.07,.07,part.roofAngle);if(pts)prism(pts,base,base+part.bodyH,'#4a3626','beam');
-      }
-    };
-    for(const part of entry.parts){
-      if(part.kind==='outbuilding'){outbuilding(part);continue}
-      const faces=urbanHouseFaces(s,part),n=part.points.length,base=call('terrainElevation',part.center)||0;
-      const split=part.kind==='turret'?base+1.02:base+part.bodyH*.5;
-      for(let i=0;i<n;i++){
-        const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
-        if(lvl===1&&part.kind!=='turret'){face([a,b,c,d],i%2?'#4e392d':'#654936','body');continue}
-        const sa={...a,z:split},sb={...b,z:split};
-        face([a,b,sb,sa],i%2?'#4f4b47':'#625e59','body');
-        face([sa,sb,c,d],i%2?'#c8ae70':'#e0ca91','body');
-        // Timber frame of the upper floor: corner posts, a middle post, sill and wall plate.
-        const mid=(p,q)=>({x:(p.x+q.x)/2,y:(p.y+q.y)/2,z:(p.z+q.z)/2});
+    const mid=(p,q)=>({x:(p.x+q.x)/2,y:(p.y+q.y)/2,z:(p.z+q.z)/2});
+    let cur='body';
+    const m={
+      tag(t){cur=t},
+      face(vs,hex){
+        if(cur!=='upper'){face(vs,hex,cur);return}
+        face(vs,hex,'body');
+        if(vs.length!==4)return;
+        const [sa,sb,c,d]=vs;
         beam(sa,d,'beam');beam(sb,c,'beam');beam(mid(sa,sb),mid(d,c),'beam');beam(sa,sb,'beam');beam(d,c,'beam');
+      },
+      prism(pts,z0,z1,top,sideA,sideB){
+        if(!pts?.length||!(z1>z0))return;
+        m.face(pts.map(p=>({x:p.x,y:p.y,z:z1})),top);
+        for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];m.face([{x:a.x,y:a.y,z:z0},{x:b.x,y:b.y,z:z0},{x:b.x,y:b.y,z:z1},{x:a.x,y:a.y,z:z1}],i%2?sideA:sideB)}
       }
-      const roof=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
-      if(part.kind==='turret'){
-        for(let i=n;i<faces.length;i++)face(roof(faces[i]),winter?'#e7ece8':(i%2?'#303943':'#394550'),'roof');
-      }else{
-        const rA=winter?'#e7ece8':lvl===1?'#a88a52':'#303237',rB=winter?'#dce3de':lvl===1?'#94784a':'#3a3d42',gable=lvl===1?'#654936':'#d9c184';
-        face(roof(faces[n]),rA,'roof');face(roof(faces[n+1]),rB,'roof');face(roof(faces[n+2]),gable,'gable');face(roof(faces[n+3]),gable,'gable');
-      }
-    }
-    for(const c of call('chimneySpecs',s)||[]){
-      const g=call('terrainElevation',c.center)||0,pts=call('rectWorldPoints',c.center.x,c.center.y,.22,.20,c.angle||0);if(!pts)continue;
-      for(let i=0;i<4;i++){const a=pts[i],b=pts[(i+1)%4];face([{...a,z:g+c.z0},{...b,z:g+c.z0},{...b,z:g+c.z1},{...a,z:g+c.z1}],'#3b302c','roof')}
-    }
+    };
+    W3.addHouse(m,entry,winter);
     return{pos,col,tag,flat:true,ground:call('terrainElevation',call('structureCenter',s))||0};
   }
   // The geometry of the finished building: some builders leave out details (battlements)
