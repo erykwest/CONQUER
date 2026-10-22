@@ -12,6 +12,19 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 - **APERTO:** QA browser interattiva, prestazioni picchi GPU e visual QA [#18](https://github.com/erykwest/CONQUER/pull/18); ledger unico/agricoltura; matrimonio danni→accessibilità→assedio/blocco/resa; filiera metallo; sistema feudale completo.
 - La presenza di un modulo o di un check non trasforma le righe S-xx in **FATTO**: valutare la sequenza di combattimento completa contro i criteri di accettazione.
 
+## Eventi — spazi e allestimenti (branch `events`, 22/10/2026)
+
+**MODELLI 3D PRESENTI SU `events`, GAMEPLAY NON IMPLEMENTATO.** Contratto in [docs/events/README.md](../events/README.md).
+
+| ID | Requisito | Stato | Dipendenze |
+|---|---|---|---|
+| EV-3D | Modelli e rendering di podio, palco (players / herald), spiazzo 6 × 10 con allestimenti circo / giostra / sagra | CODICE + QA locale | `settlement-events3d.js`, renderer |
+| EV-P0 | Registro spazi, posizionamento dal Builder, riserva del terreno senza cantiere, spostamento a evento inattivo | DA FARE | placement, Builder, save/load |
+| EV-P1 | Calendario e ciclo `planned → preparing → active → clearing → idle`, `progress` durante montaggio e smontaggio | DA FARE | orologio di gioco |
+| EV-P2 | Pubblico e artisti tramite routine esistenti (punti `seats`, `performers`, `speaker` nei meta dei modelli) | DA FARE | popolazione, navigazione |
+| EV-P3 | Taglie dello spiazzo oltre 6 × 10 (l'arena a U richiede ≥ 8,4 × 9,2 U) | PROPOSTO | decisione di design |
+| EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |
+
 ## Clay — nuove murature e argilla (branch `clay`, 19/10/2026)
 
 **DESIGN, NON IMPLEMENTATO.** Lavoro di documentazione derivato da `Civil`, senza modifiche runtime. Contratto completo in [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e verifiche in [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).

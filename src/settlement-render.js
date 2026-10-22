@@ -32,6 +32,7 @@ function drawStructure(s,preview=false){
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);

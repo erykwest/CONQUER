@@ -11,6 +11,14 @@
 
 **QA:** la PR #70 riporta 60/62 suite PASS e browser fixture 40/30 Canvas/WebGL PASS; due suite preesistenti falliscono, picchi GPU fino a 303,8 ms; questa ricognizione non riesegue i test. Per stato, prove, confini e milestone vedere [audit completo](AUDIT-2026-10-21.md). Le note locali precedenti sulla branch performance non descrivono più lo stato di rilascio.
 
+## Eventi — modelli 3D degli spazi (branch `events`, 22/10/2026)
+
+- **CODICE su `events`:** catalogo Blender [`tools/blender/build_events.py`](../../tools/blender/build_events.py) → `src/assets/event-models.js` (`window.ConquerEventModels`, 21 modelli, 22.487 triangoli) e modulo [`src/settlement-events3d.js`](../../src/settlement-events3d.js) (`window.ConquerEvents3D`) agganciato al painter 2.5D (`settlement-render.js`) e al builder WebGL (`settlement-world3d.js`).
+- **Contratto dati, non gameplay:** strutture `{type:'eventVenue', venue:'streetSpot'|'stage'|'festivalGround', dressing, event:{setup, phase, progress}}`. Podio per artisti di strada; palco 2,4 × 1,2 U nelle due vesti `players` / `herald`; spiazzo 6 × 10 U verde da inattivo, con allestimenti `circus`, `joust`, `feast` (più `camp`, `theatre`; `arena` richiede ≥ 8,4 × 9,2 U) visibili in `preparing` / `active` / `clearing`.
+- **Livree:** tribune, arena, palchi seguono `State.heraldry` (c1, c2, c4); tende dei cavalieri, rastrelliere lance/scudi e armature usano coppie casuali deterministiche di colori primari; circo e festoni hanno colori fissi.
+- **NON PRESENTE:** posizionamento dal Builder, prenotazione del terreno, calendario, pubblico/artisti, effetti economici. Gli spazi esistono solo se inseriti in `State.structures`.
+- **QA eseguita localmente (22/10/2026):** `qa/events3d-regression.cjs` PASS (catalogo, spazi, allestimenti dentro lo spiazzo senza sovrapposizioni, ciclo di vita, rotazione, livree) e `qa/civic3d-regression.cjs` PASS; nuova Action `events-regression.yml`. Controllo nel browser con spazi iniettati via console: Canvas 2D e renderer di default disegnano giostra, circo, sagra, podio e palchi senza errori in console. CI GitHub da verificare dopo il push.
+
 ## Integrazione performance con main aggiornato (21/10/2026)
 
 - **BASE E AUTORIZZAZIONE:** dopo la pubblicazione di `1520e00`, richiesto il merge. Integrato `origin/main` a `c94bdc1` nel branch `fix/construction-completion-perf` prima della PR/squash; le sezioni di audit sottostanti descrivono i rispettivi snapshot storici.

@@ -2,6 +2,12 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Eventi: modelli 3D di podio, palchi e spiazzo polivalente
+
+- Su `events` aggiunti catalogo Blender (`tools/blender/build_events.py`, `src/assets/event-models.js`), modulo `src/settlement-events3d.js`, agganci nei renderer 2.5D e WebGL, QA `events3d-regression` e relativa Action.
+- [docs/events/README.md](../events/README.md) descrive il contratto `eventVenue`, gli allestimenti e le regole di livrea; STATUS e BACKLOG distinguono i modelli presenti dal gameplay ancora da fare.
+- ROADMAP e DECISIONS invariati: le taglie dello spiazzo oltre 6 × 10 restano una proposta (EV-P3).
+
 ## 2026-10-21 — Audit live main e guardia di coerenza per ogni PR
 
 - Ricontrollata la base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2), merge effettivi e PR aperte. Creata la [ricognizione datata](AUDIT-2026-10-21.md), senza trasformare report di PR in nuove QA eseguite.

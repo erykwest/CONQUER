@@ -522,7 +522,8 @@
     }
     for(const s of State.structures){
       if(underConstruction(s))continue;
-      if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
+      if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
+      else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
         const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
