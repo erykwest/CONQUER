@@ -8,7 +8,7 @@
   const gallery=byId('assetGallery'),filters=byId('assetCategoryFilters'),details=byId('assetDetail');
   if(!gallery||!filters||!details)return;
   const STATIC_FILES=["src/assets/animals/capra_estesa.svg","src/assets/animals/cavallo_esteso.svg","src/assets/animals/mucca_estesa.svg","src/assets/animals/pecora_estesa.svg","src/assets/architecture/arcade_2.png","src/assets/architecture/arcade_3.png","src/assets/architecture/arrow_slit.png","src/assets/architecture/gate_portal.png","src/assets/architecture/gate_portal_broken.png","src/assets/architecture/gate_portal_damaged.png","src/assets/architecture/gothic_l1.png","src/assets/architecture/gothic_l2.png","src/assets/architecture/gothic_l3.png","src/assets/architecture/tower_door.png","src/assets/bushes/bush_01_tondo.svg","src/assets/bushes/bush_02_globulare.svg","src/assets/bushes/bush_03_stratificato_globulare.svg","src/assets/bushes/bush_04_largo.svg","src/assets/bushes/bush_05_asimmetrico.svg","src/assets/bushes/bush_06_multilobato.svg","src/assets/bushes/bush_07_spinoso.svg","src/assets/economy/logging_camp.svg","src/assets/economy/mine.svg","src/assets/economy/stone_quarry.svg","src/assets/forest/tree_01_tonda.svg","src/assets/forest/tree_02_affusolata.svg","src/assets/forest/tree_03_conica.svg","src/assets/forest/tree_04_ombrello.svg","src/assets/forest/tree_05_goccia.svg","src/assets/forest/tree_06_stratificata.svg","src/assets/forest/tree_07_asimmetrica.svg","src/assets/heraldry/her1.svg","src/assets/heraldry/her2.svg","src/assets/interior/barrel.svg","src/assets/interior/crate.svg","src/assets/tree-svgrepo-com.svg"];
-  const CATEGORY_ORDER=['Tutti','Fortificazioni','Edifici','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Araldica','Territorio'];
+  const CATEGORY_ORDER=['Tutti','Edifici','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
   const MODEL_SOURCES=[
     {global:'ConquerCivicModels',collection:'models',category:'Edifici',family:'Edifici civili'},
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
@@ -23,19 +23,6 @@
     ['wagon3d','Carro animato 3D','Veicoli','Carri']
   ];
   const SCHEMATICS=[
-    ['tower-square','Torre quadrata','Fortificazioni','Torri'],
-    ['tower-round','Torre circolare','Fortificazioni','Torri'],
-    ['watchtower','Torre di guardia in legno','Fortificazioni','Torri'],
-    ['palisade-tower','Torre palizzata','Fortificazioni','Torri'],
-    ['wall','Mura in pietra','Fortificazioni','Mura'],
-    ['built','Mura abitate (Built Sections)','Fortificazioni','Mura'],
-    ['palisade','Palizzata','Fortificazioni','Mura'],
-    ['gate','Portale fortificato','Fortificazioni','Accessi'],
-    ['drawbridge','Ponte levatoio','Fortificazioni','Accessi'],
-    ['moat','Fossato','Fortificazioni','Accessi'],
-    ['bridge','Ponte','Fortificazioni','Accessi'],
-    ['earthworks','Terrapieno','Fortificazioni','Difese'],
-    ['hoarding','Caditoie in legno','Fortificazioni','Difese'],
     ['well','Pozzo','Edifici','Servizi'],
     ['house1','Abitazione L1','Edifici','Abitazioni'],
     ['house2','Abitazione L2','Edifici','Abitazioni'],
@@ -47,10 +34,10 @@
     ['forest','Foresta procedurale','Territorio','Biomi'],
     ['terrain','Rilievo e scarpata','Territorio','Orografia']
   ];
-  const fileCategory=path=>path.includes('/animals/')?'Fauna':path.includes('/architecture/')?'Fortificazioni'
+  const fileCategory=path=>path.includes('/animals/')?'Fauna':path.includes('/architecture/')?'Componenti'
     :path.includes('/economy/')?'Produzione':path.includes('/forest/')||path.includes('/bushes/')||path.endsWith('/tree-svgrepo-com.svg')?'Natura'
     :path.includes('/interior/')?'Interni':path.includes('/heraldry/')?'Araldica':'Territorio';
-  const fileFamily=path=>path.split('/').slice(-2,-1)[0]||'SVG';
+  const fileFamily=path=>path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
   const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
     loggingCamp:'Campo taglialegna',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
@@ -140,21 +127,24 @@
     meshCache.set(item.id,mesh);
     return mesh;
   }
-  function renderModel(canvas,item){return renderMesh(canvas,modelMesh(item))}
-  function renderMesh(canvas,mesh){
+  function renderModel(canvas,item,rotationDegrees=0){return renderMesh(canvas,modelMesh(item),rotationDegrees)}
+  function renderMesh(canvas,mesh,rotationDegrees=0){
     const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height;g.clearRect(0,0,w,h);
     if(!mesh)return placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');
+    const angle=rotationDegrees*Math.PI/180,cos=Math.cos(angle),sin=Math.sin(angle);
+    const rotate=(x,y)=>[x*cos-y*sin,x*sin+y*cos];
     const p=mesh.pos;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(let i=0;i<p.length;i+=3){
-      const x=(p[i]-p[i+1])*.866,y=(p[i]+p[i+1])*.5-p[i+2]*.95;
+      const [rx,ry]=rotate(p[i],p[i+1]);
+      const x=(rx-ry)*.866,y=(rx+ry)*.5-p[i+2]*.95;
       minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
     }
     if(!Number.isFinite(minX))return placeholder(canvas,'MODELLO VUOTO');
     const scale=Math.min((w-28)/Math.max(.01,maxX-minX),(h-28)/Math.max(.01,maxY-minY),900);
     const mx=(minX+maxX)/2,my=(minY+maxY)/2;
     const view={turns:0,
-      project:(x,y,z)=>({x:w/2+((x-y)*.866-mx)*scale,y:h/2+((x+y)*.5-z*.95-my)*scale}),
-      depth:(x,y,z)=>x+y+z*.55};
+      project:(x,y,z)=>{const [rx,ry]=rotate(x,y);return{x:w/2+((rx-ry)*.866-mx)*scale,y:h/2+((rx+ry)*.5-z*.95-my)*scale}},
+      depth:(x,y,z)=>{const [rx,ry]=rotate(x,y);return rx+ry+z*.55}};
     if(window.ConquerMesh3D?.drawMeshes)window.ConquerMesh3D.drawMeshes(g,[mesh],view);
     else placeholder(canvas,'RENDERER NON DISPONIBILE');
   }
@@ -200,13 +190,13 @@
   }
   // Thumbnail figures use the very same drawing calls as the live Figure Lab.
   // Each call temporarily swaps the classic-script canvas context, then restores it.
-  function renderFigure(canvas,item){
+  function renderFigure(canvas,item,rotationDegrees=0){
     const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,subject=item.subject;
     g.clearRect(0,0,w,h);
     if(subject==='wagon3d'&&window.ConquerWagons3D?.worldTriangles){
       const spec={chassis:'wagon',cargo:['crate','sack','barrel'],team:[]};
       const mesh=window.ConquerWagons3D.worldTriangles(spec,{x:0,y:0,heading:0,distance:0});
-      return renderMesh(canvas,mesh);
+      return renderMesh(canvas,mesh,rotationDegrees);
     }
     if(subject==='wagon'&&window.ConquerWagons?.drawWagon){
       window.ConquerWagons.drawWagon(g,w*.48,h*.64,Math.min(w*.48,h*.8),
@@ -229,7 +219,7 @@
       placeholder(canvas,'ANTEPRIMA DAL LAB');
     }finally{ctx=previous;State.view.scale=oldScale}
   }
-  function makePreview(item,container,large){
+  function makePreview(item,container,large,rotationDegrees=0){
     container.replaceChildren();
     if(item.kind==='file'){
       const im=document.createElement('img');im.src=item.url;im.alt=item.title;im.loading=large?'eager':'lazy';
@@ -241,15 +231,16 @@
     canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Anteprima '+item.title);
     container.appendChild(canvas);
     if(item.kind==='schematic')return renderSchema(canvas,item);
-    if(item.kind==='model'||item.kind==='animal')return renderModel(canvas,item);
-    if(item.kind==='figure')return renderFigure(canvas,item);
+    if(item.kind==='model'||item.kind==='animal')return renderModel(canvas,item,rotationDegrees);
+    if(item.kind==='figure')return renderFigure(canvas,item,rotationDegrees);
 
   }
-  let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='';
+  let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null;
   let observer=null;
   function selectItem(item){
     if(!item)return;
-    selectedId=item.id;
+    if(selectedId!==item.id)selectedRotation=0;
+    selectedItem=item;selectedId=item.id;
     document.querySelectorAll('.asset-card').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.id===item.id)));
     byId('assetDetailName').textContent=item.title;
     byId('assetDetailMeta').textContent=item.category+' / '+item.family+' · '+item.format;
@@ -259,12 +250,25 @@
     document.body.classList.toggle('asset-catalog-static',!live);
     const art=byId('assetDetailPreview');art.hidden=live;
     byId('assetAnimationPanel').hidden=!live;
+    const rotatable=item.kind==='model'||item.kind==='animal'||item.subject==='wagon3d';
+    byId('assetRotationControls').hidden=!rotatable;
+    byId('assetRotationValue').textContent=selectedRotation+'°';
     const label=byId('assetPreviewNote');label.textContent=live?'Anteprima animata dal motore di gioco.':'';
     if(live)document.querySelector('[data-subject="'+item.subject+'"]').click();
-    else makePreview(item,art,true);
+    else makePreview(item,art,true,selectedRotation);
     const link=byId('assetBuilderLink');link.hidden=!item.builder;
     details.hidden=false;
   }
+  function rotateSelection(delta){
+    if(!selectedItem||byId('assetRotationControls').hidden)return;
+    selectedRotation=((selectedRotation+delta)%360+360)%360;
+    byId('assetRotationValue').textContent=selectedRotation+'°';
+    const live=!byId('assetAnimationPanel').hidden;
+    if(live)window.ConquerLab?.rotate3d(delta);
+    else makePreview(selectedItem,byId('assetDetailPreview'),true,selectedRotation);
+  }
+  byId('assetRotateLeft').addEventListener('click',()=>rotateSelection(-15));
+  byId('assetRotateRight').addEventListener('click',()=>rotateSelection(15));
   function updateFilters(){
     filters.replaceChildren();
     for(const category of CATEGORY_ORDER.filter(c=>c==='Tutti'||items.some(x=>x.category===c))){
@@ -317,7 +321,7 @@
   byId('assetFormat').addEventListener('change',e=>{currentFormat=e.target.value;refresh()});
   byId('assetReset').addEventListener('click',()=>{currentCategory='Tutti';currentFamily='';currentFormat='';query='';
     byId('assetSearch').value='';byId('assetFormat').value='';refresh()});
-  window.ConquerAssetCatalog={items,refresh,select:id=>{const item=items.find(x=>x.id===id);if(item)selectItem(item)},get selected(){return selectedId}};
+  window.ConquerAssetCatalog={items,refresh,select:id=>{const item=items.find(x=>x.id===id);if(item)selectItem(item)},get selected(){return selectedId},get rotation(){return selectedRotation}};
   // Reparent the existing native animation canvas: the animator retains its context.
   const liveCanvas=byId('c');if(liveCanvas)byId('assetAnimationPanel').appendChild(liveCanvas);
   refresh();

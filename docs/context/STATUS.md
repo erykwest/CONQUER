@@ -1,13 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
-## Asset Lab — catalogo visivo unificato (branch, non main; 22/10/2026)
+## Asset Lab — ispezione ruotabile e componenti reali (branch `fix/asset-lab-rotation-and-components`, 22/10/2026)
 
-- **Codice su `feat/unified-visual-asset-lab` (da `main` `5a204e6`):** `figures-lab.html` mantiene la rotta esistente ma diventa un catalogo per categorie, famiglie, formati e ricerca testuale, con griglia di miniature, contatore e inspector.
-- **Sorgenti inventariate:** `src/asset-catalog.js` integra un manifesto di **36 asset originali SVG/PNG** (esclusi i 24 frame per rotazione derivati), i registri 3D correnti (45 modelli civili, 10 industriali, 27 scatter, 19 componenti carro e 8 macchine d'assedio), gli animali e le figure; araldica SVG e primitivi parametrici sono esplicitamente distinguibili.
-- **Rendering:** per i modelli riutilizza `ConquerMesh3D.drawMeshes`; per le figure resta il renderer animato del Lab originale. I componenti Builder senza modello 3D autonomo sono presentati con miniature marcate **SCHEMA** e apertura del Builder, non come screenshot fedeli.
-- **QA introdotta:** `qa/asset-catalog-regression.cjs` e workflow `Asset Lab regression` verificano copertura manifesto, contratti DOM, script e sintassi. **Non ancora dichiarati PASS** CI/browser in questa nota; atteso controllo su PR prima di merge.
-- **Release:** nessun merge, anteprima Vercel o modifica a `main` implicati dalla presenza di questa branch.
-
+- **Codice presente su branch (non ancora `main`):** inspector destro con pulsanti −15° / +15° per i modelli 3D; ricalcolo della proiezione e dell'ordinamento delle facce per le preview statiche; direzione reale modificata negli animali, carri 3D e macchine d'assedio animate, interrompendo l'autorotazione quando si usa il comando manuale.
+- **Catalogazione corretta:** eliminata la falsa categoria «Fortificazioni», che conteneva soltanto texture di elementi e disegni SCHEMA di componenti procedurali non visualizzati dal gioco. Le texture reali `src/assets/architecture/*.png` sono ora in «Componenti» / «Elementi architettonici»; i 13 schemi simulati di fortificazione non sono più esposti. Nessuna modifica alle fortificazioni del Builder.
+- **QA aggiornata:** asserzioni statiche per classificazione e rotazioni + browser Chromium per cambiamento pixel 3D, reversibilità, direzione degli animali animati, auto-rotazione disabilitata e invisibilità controlli su sprite 2D. **CI della branch non ancora verificata in questa nota**, prima di merge.
 
 > **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
 

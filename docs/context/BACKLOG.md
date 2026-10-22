@@ -1,12 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
-## UX — Asset Lab / catalogo visivo (22/10/2026)
+## UX — Asset Lab / rotazione viewer e categorizzazione (22/10/2026)
 
-- **In implementazione su `feat/unified-visual-asset-lab`:** sostituire il Lab a soli personaggi con **un catalogo visivo di ogni asset disponibile in repository**, senza duplicare modelli o sorgenti. Navigazione: barra di categorie, ricerca, famiglia, formato, griglia, inspector e conteggio.
-- **Asset rappresentati:** SVG/PNG originali; modelli civili, industriali, animali, carri, scatter, armi d'assedio; simboli araldici; figure animate; strutture parametriche del Builder. Le immagini di asset **SCHEMA** sono diagrammi dichiarati, non rendering certificati del gioco.
-- **Criteri di chiusura:** verifica di copertura `qa/asset-catalog-regression.cjs`, sintassi, controllo browser del caricamento/filtri/anteprime, preservazione dei test delle animazioni; commit + PR verificabili. **Non segnare come FATTO su `main` finché PR/CI non sono concluse.**
-- **Miglioramento successivo:** introdurre, per le strutture puramente procedurali, miniature renderizzate direttamente dal Builder in isolamento al posto delle schematizzazioni, senza ricrearne manualmente l'aspetto.
+- **IN CORSO in `fix/asset-lab-rotation-and-components`:** viewer a destra con comandi manuali di ±15° per modelli 3D e anteprime native animate; nascondere i comandi per PNG/SVG, schemi 2D e figure piane. QA statiche + browser per angolo effettivo e reversibilità; non segnare come rilasciato prima della CI e del merge.
+- **Revisione tassonomia:** le texture architettoniche isolate non sono fortificazioni complete. Rimuovere i 13 schemi illustrativi di fortificazioni dal catalogo; mantenere i file realmente presenti nella nuova categoria «Componenti». Non modificare le strutture generate dal Builder.
+- **Residuo non incluso:** un futuro catalogo di fortificazioni complete richiede miniature di strutture **effettivamente montate** dal Builder, non un collage di sottopezzi.
 
+## UX — Asset Lab / catalogo visivo (integrato su main tramite #79, 22/10/2026)
+
+- **FATTO nella prima versione:** catalogo visivo derivato dalle sorgenti presenti; SVG/PNG, 3D, figure animate, araldica e schemi parametrici distinti con etichetta SCHEMA; navigazione categoria/famiglia/formato/ricerca e pannello di dettaglio.
+- **Evidenza:** PR #79 fusa in `main`, regressioni e Chromium **PASS** al momento del merge. Le correzioni di questa iterazione hanno test propri non ancora verificati al momento della stesura.
+- **Miglioramento futuro:** sostituire gli schemi delle strutture puramente procedurali con miniature renderizzate direttamente dal Builder, senza reinventare componenti che non esistono come asset autonomi.
 
 > Raccoglie *idee, requisiti e dipendenze*. Un requisito elencato qui **non prova** assenza né completamento nel software.
 > Non duplicare il backlog di 22 feature del Builder già mantenuto in [docs/feature-backlog.md](../feature-backlog.md): quello rimane il riferimento dettagliato per territorio/urbanistica/economia locale/araldica.

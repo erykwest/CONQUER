@@ -20,6 +20,11 @@ try{
   });
   assert.ok(inventory.total>=150&&inventory.files>=36&&inventory.models>=100,JSON.stringify(inventory));
   assert.ok(inventory.categories>=11&&inventory.nav>=11,JSON.stringify(inventory));
+  assert.equal(await page.getByRole('button',{name:'Fortificazioni',exact:true}).count(),0,'Do not advertise incomplete fortress schematics');
+  await page.getByRole('button',{name:'Componenti',exact:true}).click();
+  const realComponents=await page.evaluate(()=>[...document.querySelectorAll('.asset-card')].map(b=>window.ConquerAssetCatalog.items.find(x=>x.id===b.dataset.id)));
+  assert.ok(realComponents.length>=8&&realComponents.every(x=>x.kind==='file'&&x.source.includes('/architecture/')),'Components must contain real architectural texture fragments only');
+  await page.locator('#assetReset').click();
   await page.getByRole('button',{name:'Scatter',exact:true}).first().click();
   const scatter=await page.evaluate(()=>[...document.querySelectorAll('.asset-card')]
     .every(b=>window.ConquerAssetCatalog.items.find(x=>x.id===b.dataset.id)?.category==='Scatter'));
@@ -43,12 +48,35 @@ try{
     return pixels;
   });
   assert.ok(filled>100,'Actual civic geometry should draw more than 100 visible pixels: '+filled);
+  const initialCanvas=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  await page.locator('#assetRotateRight').click();
+  assert.equal(await page.locator('#assetRotationValue').textContent(),'15°');
+  const rotatedCanvas=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  assert.notEqual(rotatedCanvas,initialCanvas,'15 degree rotation must change actual 3D geometry in inspector');
+  await page.locator('#assetRotateLeft').click();
+  assert.equal(await page.locator('#assetRotationValue').textContent(),'0°');
+  assert.equal(await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL()),initialCanvas,'Rotation should be reversible');
   await selected('file:src/assets/forest/tree_01_tonda.svg','asset-catalog-static');
   await page.waitForFunction(()=>{const i=document.querySelector('#assetDetailPreview img');return i&&i.complete&&i.naturalWidth>0});
-  await selected('procedural:wall','asset-catalog-static');
+  assert.equal(await page.locator('#assetRotationControls:visible').count(),0,'2D images must not offer fake 3D rotation');
+  await selected('file:src/assets/architecture/gate_portal.png','asset-catalog-static');
+  assert.match(await page.locator('#assetDetailMeta').textContent(),/Componenti/);
+  assert.equal(await page.locator('#assetRotationControls:visible').count(),0,'Architecture textures are 2D components');
+  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.items.some(x=>x.id==='procedural:wall')),false,'Fabricated whole fortifications should be gone');
+  await selected('procedural:house1','asset-catalog-static');
   assert.ok(await page.locator('#assetBuilderLink:visible').count(),'Parametric asset should link to Builder');
 
   await selected('animal:horse','asset-figure');
+  const liveRotation=await page.evaluate(()=>{
+    const input=document.getElementById('w3Heading'),auto=document.getElementById('w3Auto');
+    auto.checked=true;
+    const before=Number(input.value);
+    document.getElementById('assetRotateRight').click();
+    return{before,after:Number(input.value),auto:auto.checked};
+  });
+  assert.equal(liveRotation.after,(liveRotation.before+15)%360,'Native live animal must rotate 15 degrees');
+  assert.equal(liveRotation.auto,false,'Manual rotation should stop auto rotation');
+  assert.equal(await page.locator('#assetRotationValue').textContent(),'15°');
   assert.ok(await page.locator('#assetAnimationPanel canvas#c').count(),'Live animation canvas should remain mounted');
   await selected('figure:knight','asset-figure');
   await page.evaluate(()=>window.ConquerLab.step(1/60));
