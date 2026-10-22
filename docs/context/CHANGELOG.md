@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Eventi: tende non allineate e tutte diverse
+
+- In arena, torneo e circo le tende ruotano di ±25° e si spostano fino al 5% della loro misura (deterministico per partita). Le coppie di colori delle tende sono uniche in ogni spazio, su cinque smalti (D-043 aggiornata). QA estesa.
+
 ## 2026-10-22 — Eventi: arena arricchita in lotto dedicato
 
 - `arenaU` ora ha campo in sabbia, palco d'onore coperto con gonfaloni araldici e torri d'ingresso con stendardi. Nuovo spazio permanente `arenaLot` 18 × 14 U con 8 tende dei partecipanti, rastrelliere, armature, carri e merci scatter; l'arena esce dagli allestimenti dello spiazzo 14 × 10. QA aggiornata, verifica Canvas nel browser.

@@ -171,7 +171,9 @@
     expanded.set(ref,out);return out;
   }
   // Primary colours for the knights' pairs: every ordered pair of two different ones.
-  const PRIMARY=['#b8322c','#2f56a6','#d9b43a'];
+  // Red, blue, yellow plus green and white: 20 ordered pairs, so every tent and piece
+  // of gear in one venue gets its own pair (see uniquePairs).
+  const PRIMARY=['#b8322c','#2f56a6','#d9b43a','#3f7d3a','#ece6d6'];
   const PAIRS=PRIMARY.flatMap(a=>PRIMARY.filter(b=>b!==a).map(b=>[a,b]));
   function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
   // Deterministic pair for an instance key (map seed + venue + item).
@@ -250,6 +252,16 @@
     if(Number.isFinite(s.groundZ))return s.groundZ;
     return typeof terrainElevation==='function'?terrainElevation(s):0;
   }
+  // Tents of the camp-like setups are not set out in rows: a deterministic random
+  // turn (±25°) and shift (up to 5% of the tent's size) per instance.
+  const JITTER_SETUPS=new Set(['arenaLot','tourney','circus']);
+  function jitter(s,it,key){
+    const setup=s.event?.setup||VENUES[s.venue]?.setup;
+    if(!JITTER_SETUPS.has(setup)||!/^tent/.test(it.m))return it;
+    const b=modelBounds(it.m),size=b?Math.max(b.x1-b.x0,b.y1-b.y0)*(it.s||1):0;
+    const r=k=>hash(((typeof State!=='undefined'&&State.seed)||1)+'|jit|'+key+'|'+k)/4294967296*2-1;
+    return{...it,a:(it.a||0)+r('a')*25*Math.PI/180,x:it.x+r('x')*.05*size,y:it.y+r('y')*.05*size};
+  }
   // All meshes of a venue, cached per structure state.
   const meshCache=new Map();
   function meshes(s,ground){
@@ -261,9 +273,19 @@
     if(vm)list.push(triangles(vm,s,ground));
     else list.push(groundMesh(s,ground));
     const id=s.id??(s.x+','+s.y);
-    setupItems(s).forEach((it,i)=>{
-      const p=toWorld(s,it.x,it.y);
-      const mesh=triangles(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},ground);
+    // Distinct pairs within the venue: a seeded shuffle of PAIRS dealt in item order.
+    // Tents draw from unordered pairs (red/blue and blue/red count as the same tent),
+    // the other gear from the ordered ones.
+    const seed=(typeof State!=='undefined'&&State.seed)||1;
+    const shuffle=(list,tag)=>list.map((p,k)=>[hash(seed+'|'+tag+'|'+id+'|'+k),p]).sort((a,b)=>a[0]-b[0]).map(e=>e[1]);
+    const tentDeck=shuffle(PAIRS.filter(([a,b])=>PRIMARY.indexOf(a)<PRIMARY.indexOf(b)),'tents')
+      .map((p,k)=>hash(seed+'|flip|'+id+'|'+k)%2?[p[1],p[0]]:p);
+    const deck=shuffle(PAIRS,'gear');
+    let dealt=0,tents=0;
+    setupItems(s).forEach((it0,i)=>{
+      const it=jitter(s,it0,id+':'+i),p=toWorld(s,it.x,it.y);
+      const pair=liveryOf(it.m)!=='pair'?null:/^tent/.test(it.m)?tentDeck[tents++%tentDeck.length]:deck[dealt++%deck.length];
+      const mesh=triangles(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},ground,pair);
       if(mesh)list.push(mesh);
     });
     meshCache.set(s,{key,list:list.filter(Boolean)});

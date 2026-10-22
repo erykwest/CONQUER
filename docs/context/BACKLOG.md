@@ -23,6 +23,7 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 | EV-P1 | Calendario e ciclo `planned → preparing → active → clearing → idle`, `progress` durante montaggio e smontaggio | DA FARE | orologio di gioco |
 | EV-P2 | Pubblico e artisti tramite routine esistenti (punti `seats`, `performers`, `speaker` nei meta dei modelli) | DA FARE | popolazione, navigazione |
 | EV-P3 | Taglia dello spiazzo: 14 × 10 U (D-042); eventuali taglie multiple | 14 × 10 DECISO, taglie multiple PROPOSTE | decisione di design |
+| EV-P6 | Tende non allineate (±25°, 5%) e colori unici per spazio | CODICE + QA locale | `settlement-events3d.js` |
 | EV-P5 | Arena a U arricchita e lotto dedicato `arenaLot` 18 × 14 | CODICE + QA locale; posizionamento da Builder DA FARE | design, placement |
 | EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |
 

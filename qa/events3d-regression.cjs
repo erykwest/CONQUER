@@ -92,6 +92,11 @@ console.log('PASS lifecycle: idle pad, preparing / active / clearing props');
  const list=E.meshes(g,0),tilt=list[first+1];let mx=0,my=0;const k=tilt.pos.length/3;
  for(let i=0;i<tilt.pos.length;i+=3){mx+=tilt.pos[i];my+=tilt.pos[i+1]}
  assert.ok(Math.abs(mx/k-(50-it.y))<.2&&Math.abs(my/k-(20+it.x))<.3,'a 90deg ground turns the lists along +y')}
+{const g=venue('arenaLot',{id:'j1'}),items=E.setupItems(g),ms=E.meshes(g,0),it=items.findIndex(i=>i.m.startsWith('tent')),m=ms[it+1];
+ let cx=0,n=m.pos.length/3;for(let k=0;k<m.pos.length;k+=3)cx+=m.pos[k];
+ const plain=E.triangles(items[it].m,{x:items[it].x,y:items[it].y,angle:items[it].a,key:'x'},0);let px=0;for(let k=0;k<plain.pos.length;k+=3)px+=plain.pos[k];
+ assert.ok(Math.abs(cx/n-px/n)>1e-4,'arena tents are jittered');assert.ok(Math.abs(cx/n-px/n)<.2,'tent jitter stays small');
+ assert.deepEqual(E.meshes({...g},0)[it+1].pos.slice(0,6),m.pos.slice(0,6),'jitter is deterministic')}
 console.log('PASS placement turns setups with the ground');
 
 // Livery: stands, arena and stage follow the realm heraldry; knights' gear a primary pair.
@@ -100,7 +105,7 @@ for(const ref of ['standCovered','standOpen','arenaU','stageHerald']){
   assert.equal(M.models[ref].livery,'realm',ref+' follows the realm');
   const c=cols(ref);assert.ok(c.has('#123456')&&c.has('#abcdef'),ref+' takes the realm colours');
 }
-const PRIMARY=new Set(['#b8322c','#2f56a6','#d9b43a']);
+const PRIMARY=new Set(['#b8322c','#2f56a6','#d9b43a','#3f7d3a','#ece6d6']);
 const pairs=new Set();
 for(const ref of ['tentOctagon','tentSquare','propLanceRack','propArmourPile','propArmourCrate','propArmourStand']){
   assert.equal(M.models[ref].livery,'pair',ref+' takes a random pair');
@@ -113,4 +118,9 @@ for(const ref of ['tentOctagon','tentSquare','propLanceRack','propArmourPile','p
   assert.deepEqual([...cols(ref,'same')],[...cols(ref,'same')],ref+' pair is deterministic');
 }
 assert.ok(pairs.size>=2,'instances get different pairs');
+for(const g of [venue('arenaLot',{id:'u1'}),venue('festivalGround',{id:'u2',event:{setup:'tourney',phase:'active'}}),venue('festivalGround',{id:'u3',event:{setup:'camp',phase:'active'}})]){
+ const items=E.setupItems(g),ms=E.meshes(g,0),seen=new Set();
+ items.forEach((it,i)=>{if(!it.m.startsWith('tent'))return;const c=[...new Set(ms[i+1].col)].filter(x=>PRIMARY.has(x)).sort();const k=c.join();
+  assert.ok(!seen.has(k),(g.venue+'/'+(g.event?.setup||''))+': two tents share colours '+k);seen.add(k)});
+ assert.ok(seen.size>=4,'venue deals several pairs')}
 console.log('PASS livery: realm heraldry on stands and stages, primary pairs on knights\' gear');
