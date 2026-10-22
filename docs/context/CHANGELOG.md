@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Oggetti di cantiere per fase (branch `feature/construction-props`)
+
+- Scelto come ambito del backlog la **progressione visiva dei cantieri**; prima tappa: kit modulare di oggetti Blender e loro comparsa/rimozione per fase (`prep`/`raise`/`finish`). Aggiornati [BACKLOG](BACKLOG.md) (voce *Elementi di cantiere animati*, con residui) e [STATUS](STATUS.md). ROADMAP e DECISIONS invariati: nessun contratto o priorità cambiati.
+
 ## 2026-10-22 — Revisione integrale backlog vs codice main
 
 - Audit **statico** della HEAD `c52b537` (sorgenti, 23 ID Builder, 25 requisiti S, CLAY, F/C/X, voice backlog, QA presente, PR aperte). Evidenze e limiti in [AUDIT-2026-10-22](AUDIT-2026-10-22.md).

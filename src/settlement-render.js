@@ -417,7 +417,8 @@ function draw(){
   const dynamicSites=State.structures
     .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  // Each site is followed by its scaffold, lifting gear and materials for the current phase.
+  for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else{drawStructure(s);window.ConquerConstructionProps?.drawSite(s)}}
 
   markPhase('scene-caches');
   // Population remains between settlement massing and completed castle massing,
