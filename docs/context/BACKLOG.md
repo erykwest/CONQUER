@@ -303,3 +303,14 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Selezione automatica:** variare l'abbigliamento in funzione di stagione, temperatura e meteo corrente, senza richiedere microgestione al giocatore; conservare ruolo e riconoscibilità del personaggio.
 - **Integrazione grafica:** riutilizzare animazioni e scheletri esistenti, prevedendo varianti di equipaggiamento/overlay compatibili con movimento e lavoro; evitare cambi istantanei visivamente incoerenti se possibile.
 - **Priorità e QA:** miglioramento visivo successivo alla meccanica del meteo; verificare performance con molti abitanti, corrette transizioni stagionali e nessuna interferenza con divise/attrezzi professionali.
+
+
+## Nota voice — overlay DEV FPS e grafico prestazioni (30 secondi)
+
+> Funzionalità richiesta per il backlog; **non implementata**.
+
+- **Overlay in gioco:** visualizzare in alto a sinistra un contatore FPS aggiornato in tempo reale e un piccolo grafico scorrevole degli **ultimi 30 secondi**.
+- **Controllo DEV:** aggiungere un toggle nel pannello DEV per mostrare/nascondere l'overlay senza riavviare la partita; disattivabile per non interferire con l'interfaccia ordinaria.
+- **Rilevazione lag:** rendere evidenti cali improvvisi di FPS e picchi di frame time; privilegiare una traccia dei tempi per frame (ms) oppure affiancarla agli FPS per distinguere meglio gli spike.
+- **Impatto minimo:** campionamento e rendering dell'overlay leggeri, buffer temporale limitato a 30 secondi e nessun costo significativo quando disattivato.
+- **QA:** verificare accuratezza, comportamento in pausa e a differenti frame rate, corretto reset della finestra temporale e funzionamento su renderer supportati.
