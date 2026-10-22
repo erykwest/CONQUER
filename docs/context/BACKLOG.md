@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## UX — Asset Lab / catalogo visivo (22/10/2026)
+
+- **In implementazione su `feat/unified-visual-asset-lab`:** sostituire il Lab a soli personaggi con **un catalogo visivo di ogni asset disponibile in repository**, senza duplicare modelli o sorgenti. Navigazione: barra di categorie, ricerca, famiglia, formato, griglia, inspector e conteggio.
+- **Asset rappresentati:** SVG/PNG originali; modelli civili, industriali, animali, carri, scatter, armi d'assedio; simboli araldici; figure animate; strutture parametriche del Builder. Le immagini di asset **SCHEMA** sono diagrammi dichiarati, non rendering certificati del gioco.
+- **Criteri di chiusura:** verifica di copertura `qa/asset-catalog-regression.cjs`, sintassi, controllo browser del caricamento/filtri/anteprime, preservazione dei test delle animazioni; commit + PR verificabili. **Non segnare come FATTO su `main` finché PR/CI non sono concluse.**
+- **Miglioramento successivo:** introdurre, per le strutture puramente procedurali, miniature renderizzate direttamente dal Builder in isolamento al posto delle schematizzazioni, senza ricrearne manualmente l'aspetto.
+
+
 > Raccoglie *idee, requisiti e dipendenze*. Un requisito elencato qui **non prova** assenza né completamento nel software.
 > Non duplicare il backlog di 22 feature del Builder già mantenuto in [docs/feature-backlog.md](../feature-backlog.md): quello rimane il riferimento dettagliato per territorio/urbanistica/economia locale/araldica.
 

@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## Asset Lab — catalogo visivo unificato (branch, non main; 22/10/2026)
+
+- **Codice su `feat/unified-visual-asset-lab` (da `main` `5a204e6`):** `figures-lab.html` mantiene la rotta esistente ma diventa un catalogo per categorie, famiglie, formati e ricerca testuale, con griglia di miniature, contatore e inspector.
+- **Sorgenti inventariate:** `src/asset-catalog.js` integra un manifesto di **36 asset originali SVG/PNG** (esclusi i 24 frame per rotazione derivati), i registri 3D correnti (45 modelli civili, 10 industriali, 27 scatter, 19 componenti carro e 8 macchine d'assedio), gli animali e le figure; araldica SVG e primitivi parametrici sono esplicitamente distinguibili.
+- **Rendering:** per i modelli riutilizza `ConquerMesh3D.drawMeshes`; per le figure resta il renderer animato del Lab originale. I componenti Builder senza modello 3D autonomo sono presentati con miniature marcate **SCHEMA** e apertura del Builder, non come screenshot fedeli.
+- **QA introdotta:** `qa/asset-catalog-regression.cjs` e workflow `Asset Lab regression` verificano copertura manifesto, contratti DOM, script e sintassi. **Non ancora dichiarati PASS** CI/browser in questa nota; atteso controllo su PR prima di merge.
+- **Release:** nessun merge, anteprima Vercel o modifica a `main` implicati dalla presenza di questa branch.
+
+
 > **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
 
 

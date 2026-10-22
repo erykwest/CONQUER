@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CONQUER — Figures Lab</title>
+<title>CONQUER — Asset Lab</title>
 <style>
   :root{--bg:#1d1a16;--panel:#2a251f;--text:#efe6d6;--muted:#b4a68f}
   *{box-sizing:border-box}
@@ -20,11 +20,61 @@
   .note{color:var(--muted);padding:8px 16px;margin:0}
   .btnlink{display:inline-block;padding:4px 9px;border-radius:6px;background:#3a3127;color:#f3e6cf;text-decoration:none;font:inherit;font-size:12px;margin:2px}
   .btnlink:hover{background:#5a4733}
+
+/* Asset Lab — catalogue and visual inspector */
+:root{--line:#584c3e;--accent:#d6a15c;--surface:#29241f}
+header{position:relative;z-index:2;border-bottom:1px solid var(--line)}
+header h1{font-size:18px;white-space:nowrap}
+#labLegacyControls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
+#labLegacyControls .group:has(>button[data-subject]){display:none}
+.asset-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:16px;padding:16px;align-items:start}
+.asset-browser,.asset-inspector{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0;overflow:hidden}
+.asset-browser>div:first-child{padding:14px 14px 0}
+.asset-browser h2,.asset-inspector h2{font-size:16px;margin:0}
+.asset-browser p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.asset-filters{display:flex;gap:6px;overflow-x:auto;padding:12px 14px;scrollbar-width:thin;border-bottom:1px solid var(--line)}
+.asset-filters button{white-space:nowrap;border-radius:16px}
+.asset-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#30291f}
+.asset-tools input,.asset-tools select{color:var(--text);background:#201d19;border:1px solid var(--line);border-radius:6px;padding:8px;max-width:100%;font:inherit}
+.asset-tools #assetSearch{min-width:160px;flex:1}
+.asset-tools select{max-width:190px}
+#assetCount{font-size:12px;color:var(--muted);white-space:nowrap}
+#assetGallery{height:min(58vh,740px);min-height:280px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));align-content:start;gap:10px;padding:12px;scrollbar-width:thin}
+.asset-card{padding:0 0 10px;text-align:left;background:#352f27;border:1px solid #514536;border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.asset-card:hover{border-color:var(--accent);background:#433729}
+.asset-card[aria-selected="true"]{outline:2px solid var(--accent);outline-offset:-2px;background:#453622}
+.asset-card-visual{display:flex;align-items:center;justify-content:center;height:122px;width:100%;background:radial-gradient(ellipse at 50% 65%,#645543 0,#312d26 70%);overflow:hidden}
+.asset-card-visual img,.asset-card-visual svg{width:100%;height:100%;object-fit:contain;padding:6px}
+.asset-card-visual canvas{width:100%;height:100%;object-fit:contain}
+.asset-card strong,.asset-card small{margin:0 10px;overflow:hidden;text-overflow:ellipsis}
+.asset-card strong{font-size:12px;line-height:1.4;margin-top:8px}
+.asset-card small{font-size:10px;color:var(--muted);margin-top:4px}
+.catalog-empty{color:var(--muted);padding:20px}
+.asset-inspector{padding:16px;position:sticky;top:12px}
+.asset-inspector .caption{font-size:12px;color:var(--muted)}
+.asset-inspector #assetDetailMeta{margin:6px 0 12px;color:#d6b888;font-size:12px}
+.asset-inspector #assetDetailSource{display:block;overflow-wrap:anywhere;font-size:11px;color:#ab9b85;margin-top:10px}
+#assetDetailPreview{height:260px;background:radial-gradient(ellipse at center,#5e5347,#322b23);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#assetDetailPreview[hidden]{display:none}
+#assetDetailPreview img,#assetDetailPreview svg{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%;padding:8px}
+#assetDetailPreview canvas{max-width:100%;height:100%;object-fit:contain}
+#assetAnimationPanel{background:#342f28;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+#assetAnimationPanel canvas{width:100%;height:auto;max-width:100%;margin:0;border:0}
+#assetPreviewNote{color:var(--muted);font-size:12px;margin:10px 0}
+#assetBuilderLink{display:inline-block;margin-top:6px}
+.symbol-preview{fill:#d9b77c}
+body.asset-catalog-static #c,body.asset-catalog-static .note{display:none}
+body.asset-catalog-static #labLegacyControls{display:none}
+#c{max-width:1200px;margin:0 auto 22px;border:1px solid #514536;border-radius:8px}
+@media(max-width:900px){.asset-layout{grid-template-columns:minmax(0,1fr)}.asset-inspector{position:static}#assetGallery{height:min(53vh,660px)}#assetDetailPreview{height:220px}}
+@media(max-width:500px){.asset-layout{padding:8px;gap:8px}#assetGallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.asset-tools select{max-width:125px}}
+
 </style>
 </head>
 <body>
 <header>
-  <h1>Figures Lab</h1>
+  <h1>CONQUER · Asset Lab</h1>
+  <div id="labLegacyControls">
   <div class="group" role="group" aria-label="Animali"><span>Animali</span>
     <button data-subject="sheep">Pecora</button><button data-subject="goat">Capra</button>
     <button data-subject="cow">Mucca</button><button data-subject="horse">Cavallo</button>
@@ -66,8 +116,38 @@
   </div>
   <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
   <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
+</div>
 </header>
-<p class="note">In alto: il soggetto scelto in tre dimensioni. In basso: scena in scala di gioco con gregge misto, popolani e una scaramuccia in loop. Le persone usano le funzioni di disegno del gioco.</p>
+<main class="asset-layout">
+  <section class="asset-browser" aria-label="Catalogo asset">
+    <div><h2>Catalogo visivo degli asset</h2><p>Asset originali SVG/PNG, modelli 3D e strutture parametriche. Seleziona un elemento per ispezionarlo.</p></div>
+    <nav id="assetCategoryFilters" class="asset-filters" role="group" aria-label="Categorie asset"></nav>
+    <div class="asset-tools">
+      <input id="assetSearch" type="search" placeholder="Cerca asset, modello o sorgente..." aria-label="Cerca asset">
+      <select id="assetFamily" aria-label="Famiglia asset"><option value="">Tutte le famiglie</option></select>
+      <select id="assetFormat" aria-label="Tipo di risorsa">
+        <option value="">Tutti i formati</option><option value="file">SVG / PNG</option>
+        <option value="model">Modelli 3D</option><option value="animal">Animali 3D</option>
+        <option value="figure">Animazioni</option><option value="schematic">Parametrici</option>
+        <option value="symbol">Simboli araldici</option>
+      </select>
+      <button id="assetReset" type="button">Azzera</button>
+      <span id="assetCount" aria-live="polite"></span>
+    </div>
+    <div id="assetGallery" tabindex="0" aria-label="Griglia asset"></div>
+  </section>
+  <aside id="assetDetail" class="asset-inspector" aria-label="Anteprima asset" hidden>
+    <h2 id="assetDetailName"></h2>
+    <div id="assetDetailMeta"></div>
+    <div id="assetDetailPreview"></div>
+    <div id="assetAnimationPanel" hidden></div>
+    <p id="assetPreviewNote"></p>
+    <span class="caption">Sorgente effettiva</span>
+    <code id="assetDetailSource"></code>
+    <a id="assetBuilderLink" class="btnlink" href="./index.html?world3d=1" target="_blank" rel="noopener" hidden>Apri nel Builder ↗</a>
+  </aside>
+</main>
+<p class="note">Anteprima animata nel motore del gioco: soggetto principale e scena in scala, con controlli di movimento e varianti.</p>
 <canvas id="c" width="1200" height="800"></canvas>
 <script>
 // Minimal stand-ins for the game globals the figure drawers rely on: a flat
@@ -379,6 +459,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     requestAnimationFrame(frame);
   }
   function render(dt){
+    if(document.body.classList.contains('asset-catalog-static')){clock+=dt;return}
     resize();clock+=dt;
     CA.setClock(clock); // the speed slider drives combat timing too
     const W=c.width,H=c.height,k=W/1200;
@@ -399,5 +480,11 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   requestAnimationFrame(frame);
 })();
 </script>
+<script src="./src/settlement-mesh3d.js?v=asset-lab-1"></script>
+<script src="./src/assets/civic-models.js?v=asset-lab-1"></script>
+<script src="./src/assets/industry-models.js?v=asset-lab-1"></script>
+<script src="./src/assets/scatter-model.js?v=asset-lab-1"></script>
+<script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-1"></script>
 </body>
 </html>

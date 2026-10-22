@@ -1,5 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-22 — Asset Lab unificato (in branch, non pubblicato)
+
+- Creato `feat/unified-visual-asset-lab` da `main` per convertire `figures-lab.html` in browser visuale di asset senza cambiare il motore di gioco.
+- Nuovo registro derivato dagli asset reali e dalle famiglie native di modelli; barra di categorie, ricerca, filtri di famiglia/formato, anteprime e inspector. Conservato il rendering animato di figure, animali, carri e assedio nel Lab preesistente.
+- Integrate miniature SVG/PNG, modelli 3D e simboli; le primitive procedurali prive di asset autonomo espongono un'anteprima **SCHEMA** esplicita e un link al Builder.
+- Aggiunti controllo di copertura del manifesto `qa/asset-catalog-regression.cjs` e workflow dedicato; **esito CI/browser ancora da verificare**. Non dichiarato merge o deploy.
+
+
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
 ## 2026-10-22 — Revisione integrale backlog vs codice main
