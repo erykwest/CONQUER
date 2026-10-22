@@ -5,6 +5,7 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 ## 2026-10-22 — Portoni: magnete strade e accessori
 
 - Branch `portoni`: magnete del portone sulle strade, passaggio voltato 3D con ante animate, upgrade grata per il portone in pietra, drappi araldici e torce notturne. Stato, prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026); requisiti GATE-01…06 nel [BACKLOG](BACKLOG.md#portoni--accessori-del-portone-branch-portoni-22102026).
+- Aggiunto il magnete delle strade principali sulle due bocche del portone (GATE-01b).
 - ROADMAP e DECISIONS invariati: accessori di una struttura esistente, nessun cambio di priorità né di contratto; la grata non entra ancora nella matrice danni (S-05/S-25).
 
 ## 2026-10-21 — Audit live main e guardia di coerenza per ogni PR

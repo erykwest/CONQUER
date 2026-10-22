@@ -122,12 +122,20 @@ canvas.addEventListener('pointerdown',e=>{
     const mainRoad=State.tool.linear==='road',snapFn=mainRoad?mainRoadSnapAnchor:snapAnchor;
     if(!State.draft){
       const s=snapFn(p);
-      State.draft={a:s.point,aSnap:s.structureId||null,preview:null,previewSegments:null};
-      status(mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
+      State.draft={a:s.point,aSnap:s.structureId||null,aGatePort:s.gatePort||null,preview:null,previewSegments:null};
+      status(s.gatePort?'Main road: starts at the gate — choose point B':mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
       draw();
     }else{
       const e2=snapFn(p),spec=currentLinearSpec();
-      if(mainRoad){
+      if(mainRoad&&(State.draft.aGatePort||e2.gatePort)){
+        // A gate mouth is reached exactly: a free leg, then a straight approach into the passage.
+        const legs=manualRoadLegs(State.draft.a,e2.point,State.draft.aGatePort,e2.gatePort);
+        const bad=legs.find(l=>dist(l.a,l.b)<spec.min-.001||dist(l.a,l.b)>spec.max+.001);
+        const blocked=legs.map(l=>window.ConquerPlacement?.check({type:'road',manualMain:true,width:spec.width,...l})).find(v=>v&&!v.ok);
+        if(bad)status('Road to the gate: each leg must be '+spec.min+'–'+spec.max+'U');
+        else if(blocked)status('Road blocked: '+blocked.reason);
+        else if(legs.every(l=>addManualMainRoad(l.a,l.b))){State.draft=null;status('Main road joined to the gate — choose next segment')}
+      }else if(mainRoad){
         const n=normalizeLinear(State.draft.a,e2.point,spec,false);
         if(n&&n.length>=spec.min-.001){
           if(addManualMainRoad(n.a,n.b)){
@@ -201,6 +209,14 @@ canvas.addEventListener('pointermove',e=>{
   if(State.tool.kind==='linear'&&State.draft){
     const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec();
     if(!mainRoad)State.tool.linearHover=snap;
+    if(mainRoad&&(State.draft.aGatePort||snap.gatePort)){
+      const legs=manualRoadLegs(State.draft.a,snap.point,State.draft.aGatePort,snap.gatePort);
+      State.draft.preview=null;State.draft.invalidPreview=null;
+      State.draft.previewSegments=legs.map(l=>({type:'road',manualMain:true,width:spec.width,...l,length:dist(l.a,l.b)}));
+      const blocked=State.draft.previewSegments.map(s=>window.ConquerPlacement?.check(s)).find(v=>v&&!v.ok);
+      status(blocked?'Road blocked: '+blocked.reason:'Road magnet on the gate — click to confirm');
+      draw();return;
+    }
     if(mainRoad){
       const n=normalizeLinear(State.draft.a,snap.point,spec,false);
       if(n){

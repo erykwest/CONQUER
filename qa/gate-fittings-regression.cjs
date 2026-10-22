@@ -31,6 +31,24 @@ const read=f=>fs.readFileSync(root+f,'utf8');
   assert.match(input,/gateRoadSnap\(p\)/,'the gate tool uses the road magnet');
   assert.match(input,/orientedDraftAngle\(p\)/,'a road-snapped gate keeps its passage on the road while rotating');
   console.log('PASS gates snap onto roads and keep the way open');
+
+  // Roads drawn to a gate snap to its two mouths: a free leg to a straight approach, then
+  // through the mouth to the gate centre, where roads from both sides meet.
+  vm.runInContext('var State={structures:[gate],village:{}};var ROAD_RULES={snapNodeDistance:1.15};'+
+    ['gateRoadPort','manualRoadLegs','mainRoadSnapAnchor'].map(n=>fn(world,n)).join('\n'),Object.assign(ctx,{gate,snapGrid:v=>Math.round(v*2)/2,ensureBorderEntrySelection:()=>[],roadList:()=>[],closestPointOnSegment:p=>p}));
+  const west=ctx.mainRoadSnapAnchor({x:-.9,y:.3}),east=ctx.mainRoadSnapAnchor({x:.5,y:-.2});
+  assert.ok(west.gatePort&&east.gatePort,'both mouths are magnets, also from inside the gatehouse');
+  assert.ok(west.point.x===0&&west.point.y===0,'the road ends at the gate centre');
+  assert.ok(west.gatePort.approach.x<-.75&&east.gatePort.approach.x>.75,'each mouth has its own straight approach');
+  assert.equal(ctx.mainRoadSnapAnchor({x:0,y:3}).gatePort,undefined,'no magnet away from the mouths');
+  const legs=ctx.manualRoadLegs({x:-6,y:-3},west.point,null,west.gatePort);
+  assert.equal(legs.length,2,'free leg + approach');
+  assert.equal(ctx.roadUsesGatePassage({...legs[1],width:.62},gate),true,'the approach runs inside the passage');
+  assert.equal(ctx.roadUsesGatePassage({...legs[0],width:.62},gate),false,'the free leg stays clear of the gatehouse');
+  const out=ctx.manualRoadLegs(east.point,{x:6,y:2},east.gatePort,null);
+  assert.ok(out[0].a.x===legs[1].b.x&&out[0].a.y===legs[1].b.y,'roads from the two mouths share the centre node');
+  assert.match(read('settlement-app-input.js'),/manualRoadLegs\(State\.draft\.a,e2\.point,State\.draft\.aGatePort,e2\.gatePort\)/,'the road tool commits the legs');
+  console.log('PASS roads snap to both gate mouths and meet inside');
 }
 
 // ---------- fittings ----------

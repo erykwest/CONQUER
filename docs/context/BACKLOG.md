@@ -19,6 +19,7 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 | ID | Requisito | Stato |
 |---|---|---|
 | GATE-01 | Magnete del portone sulle strade esistenti: centro sulla mezzeria, passaggio allineato, strada mantenuta e percorribile | BRANCH + QA |
+| GATE-01b | Magnete delle strade principali sulle due bocche del portone, con accesso dritto e nodo comune al centro | BRANCH + QA + controllo browser |
 | GATE-02 | Ante del portone animate tra aperto e chiuso (pannello, chiusura notturna), passaggio voltato visibile nel 3D | BRANCH + QA + controllo visivo |
 | GATE-03 | Grata (saracinesca) come upgrade del solo portone in pietra, animata; abbassata blocca il passaggio | BRANCH + QA + controllo visivo |
 | GATE-04 | Due drappi araldici ai lati del portale e due torce accese di notte sul fronte esterno | BRANCH + QA + controllo visivo |

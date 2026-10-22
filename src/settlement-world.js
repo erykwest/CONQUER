@@ -1844,7 +1844,39 @@ function connectBorderMainRoadsInFrames(onDone=()=>{}){
   // Keep all initial and reloaded main-road routing off the input/load handler.
   setTimeout(tick,0);
 }
+// Road magnet on the two mouths of a gate: the road ends at the gate centre, after a straight
+// approach along the passage, so roads drawn to either mouth meet inside and join up.
+function gateRoadPort(p){
+  let best=null;
+  for(const gate of State.structures){
+    if(gate.type!=='gate')continue;
+    const info=gatePassageInfo(gate);if(!info)continue;
+    const q=toLocalPoint(gate,p),d=rectDims(gate);
+    for(const side of [-1,1]){
+      const mouth={x:gate.x+info.ux*side*d.w/2,y:gate.y+info.uy*side*d.w/2};
+      const inside=Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2&&Math.sign(q.x||side)===side;
+      const distance=inside?0:dist(p,mouth);
+      if(distance>ROAD_RULES.snapNodeDistance||(best&&distance>=best.distance))continue;
+      const reach=d.w/2+.75;
+      best={gateId:gate.id,distance,center:{x:gate.x,y:gate.y},
+        approach:{x:gate.x+info.ux*side*reach,y:gate.y+info.uy*side*reach}};
+    }
+  }
+  return best;
+}
+// The legs of a manual road whose ends may sit on gate mouths: A, its approach, B's approach, B.
+function manualRoadLegs(a,b,aPort=null,bPort=null){
+  const pts=[a];
+  if(aPort)pts.push(aPort.approach);
+  if(bPort&&!(aPort&&aPort.gateId===bPort.gateId))pts.push(bPort.approach);
+  pts.push(b);
+  const legs=[];
+  for(let i=0;i+1<pts.length;i++)if(dist(pts[i],pts[i+1])>.05)legs.push({a:{...pts[i]},b:{...pts[i+1]}});
+  return legs;
+}
 function mainRoadSnapAnchor(p){
+  const port=gateRoadPort(p);
+  if(port)return{point:{...port.center},magnet:true,gatePort:port};
   let best={point:{x:snapGrid(p.x),y:snapGrid(p.y)},distance:Infinity};
 
   const consider=q=>{
