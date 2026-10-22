@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CONQUER — Catalogo case</title>
+<style>
+  :root{--bg:#1d1a16;--card:#2a251f;--ink:#efe4d0;--muted:#a99a83;--tile:#cfc8b8;--accent:#e2a24c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,sans-serif}
+  header{padding:20px 24px 8px}
+  h1{margin:0 0 4px;font-size:22px;letter-spacing:.02em}
+  header p{margin:0;color:var(--muted)}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 24px}
+  .bar button{background:var(--card);color:var(--ink);border:1px solid #4a4034;border-radius:6px;padding:6px 12px;cursor:pointer}
+  .bar button.on{border-color:var(--accent);color:var(--accent)}
+  main{padding:0 24px 32px}
+  section{margin:18px 0 26px}
+  h2{font-size:16px;margin:0 0 4px}
+  h2 small{color:var(--muted);font-weight:400}
+  .row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  figure{margin:0;background:var(--tile);border-radius:6px;overflow:hidden}
+  figure canvas{display:block;width:100%;height:auto}
+  figcaption{background:var(--card);color:var(--muted);font-size:11px;padding:3px 6px}
+  #status{padding:0 24px;color:var(--muted)}
+  iframe{position:fixed;left:-4000px;top:0;width:1000px;height:700px;border:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Catalogo case</h1>
+  <p>Ogni variante disegnata dal renderer del gioco (Canvas 2.5D, estate) da più angolazioni. Si rigenera a ogni apertura.</p>
+</header>
+<div class="bar" id="angles"></div>
+<div id="status">Caricamento del gioco…</div>
+<main id="out"></main>
+<iframe id="game" src="./index.html?renderer=canvas2d"></iframe>
+<script>
+// Variant list: catalog families of the game plus townhouse types (eaves / gable-front, corner turret).
+const STEP_SETS={'4 viste':[0,6,12,18],'8 viste':[0,3,6,9,12,15,18,21],'1 vista':[3]};
+let steps=STEP_SETS['4 viste'];
+const bar=document.getElementById('angles'),out=document.getElementById('out'),status=document.getElementById('status');
+for(const name of Object.keys(STEP_SETS)){
+  const b=document.createElement('button');b.textContent=name;b.className=name==='4 viste'?'on':'';
+  b.onclick=()=>{steps=STEP_SETS[name];[...bar.children].forEach(c=>c.classList.toggle('on',c===b));render()};
+  bar.appendChild(b);
+}
+function variants(G){
+  const list=[],add=(group,label,base)=>list.push({group,label,base});
+  for(const level of [1,2,3,4])for(const plan of level>=3?['L','T']:[null]){
+    const id=G.findHouseAssetId(level,plan,null,1,1.5);
+    add('Case isolate','L'+level+(plan?' pianta '+plan:''),{id,type:'house',auto:true,x:100,y:100,w:1.5,h:1,houseLevel:level,doorSide:1,groundZ:0});
+  }
+  for(const gableFront of [false,true])for(const level of [3,4])for(const corner of level===4?[false,true]:[false])for(const plan of ['L','T']){
+    let id=null;for(let i=0;i<4096&&!id;i++){const k='catalog-'+level+'-'+plan+'-'+gableFront+'-'+i;if(G.housePlanType({id:k})===plan)id=k}
+    add(gableFront?'Case a schiera — timpano su strada':'Case a schiera — gronda su strada',
+      'L'+level+' '+plan+(corner?' · angolo con torretta':''),
+      {id,type:'house',urbanCompact:true,gableFront,turretCorner:corner?{side:1}:null,x:100,y:100,
+       w:gableFront?1.05:1.45,h:gableFront?1.5:1.13,angle:0,houseLevel:level,groundZ:0});
+  }
+  return list;
+}
+function render(){
+  const G=document.getElementById('game').contentWindow,C=G.__conquerAssetCompiler;if(!C)return;
+  out.innerHTML='';
+  const groups=new Map();
+  for(const v of variants(G)){
+    if(!groups.has(v.group)){
+      const sec=document.createElement('section'),h=document.createElement('h2'),row=document.createElement('div');
+      h.textContent=v.group;row.className='row';sec.append(h,row);out.appendChild(sec);groups.set(v.group,row);
+    }
+    const def={key:'catalog|'+v.base.id+'|'+v.label,label:v.label,base:v.base,rotates:true};
+    for(const st of steps){
+      G.invalidateUrbanGeometry();
+      const r=C.prerender(def,st,{retain:false});G.invalidateUrbanGeometry();
+      const b=r.metrics.bounds||{minX:0,minY:0,maxX:255,maxY:255},pad=8;
+      const side=Math.max(b.maxX-b.minX,b.maxY-b.minY)+pad*2,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2;
+      const c=document.createElement('canvas');c.width=300;c.height=300;
+      c.getContext('2d').drawImage(r.canvas,cx-side/2,cy-side/2,side,side,0,0,300,300);
+      const f=document.createElement('figure'),cap=document.createElement('figcaption');
+      cap.textContent=v.label+' · '+(st*15)+'°';f.append(c,cap);groups.get(v.group).appendChild(f);
+    }
+  }
+  G.invalidateSceneCache?.();
+  status.textContent=out.querySelectorAll('figure').length+' immagini';
+}
+document.getElementById('game').addEventListener('load',()=>{
+  const G=document.getElementById('game').contentWindow;
+  const wait=()=>G.__conquerAssetCompiler&&G.houseFootprintParts?render():setTimeout(wait,200);wait();
+});
+</script>
+</body>
+</html>
