@@ -95,7 +95,7 @@ console.log('PASS lifecycle: idle pad, preparing / active / clearing props');
 {const g=venue('arenaLot',{id:'j1'}),items=E.setupItems(g),ms=E.meshes(g,0),it=items.findIndex(i=>i.m.startsWith('tent')),m=ms[it+1];
  let cx=0,n=m.pos.length/3;for(let k=0;k<m.pos.length;k+=3)cx+=m.pos[k];
  const plain=E.triangles(items[it].m,{x:items[it].x,y:items[it].y,angle:items[it].a,key:'x'},0);let px=0;for(let k=0;k<plain.pos.length;k+=3)px+=plain.pos[k];
- assert.ok(Math.abs(cx/n-px/n)>1e-4,'arena tents are jittered');assert.ok(Math.abs(cx/n-px/n)<.2,'tent jitter stays small');
+ assert.ok(Math.abs(cx/n-px/n)>1e-4,'arena tents are jittered');assert.ok(Math.abs(cx/n-px/n)<.4,'tent jitter stays bounded');
  assert.deepEqual(E.meshes({...g},0)[it+1].pos.slice(0,6),m.pos.slice(0,6),'jitter is deterministic')}
 console.log('PASS placement turns setups with the ground');
 

@@ -252,15 +252,18 @@
     if(Number.isFinite(s.groundZ))return s.groundZ;
     return typeof terrainElevation==='function'?terrainElevation(s):0;
   }
-  // Tents of the camp-like setups are not set out in rows: a deterministic random
-  // turn (±25°) and shift (up to 5% of the tent's size) per instance.
+  // Nothing loose is set out in rows: deterministic random turn and shift per instance.
+  // Tents of the camp-like setups: ±40° and up to 12% of their size. Scatter goods,
+  // racks and armour in every setup: any heading and up to 35% of their size.
   const JITTER_SETUPS=new Set(['arenaLot','tourney','circus']);
   function jitter(s,it,key){
     const setup=s.event?.setup||VENUES[s.venue]?.setup;
-    if(!JITTER_SETUPS.has(setup)||!/^tent/.test(it.m))return it;
+    const tent=/^tent/.test(it.m)&&JITTER_SETUPS.has(setup),loose=/^(sc:|propArmour|propWeapon|propSpear|propShield|propLance)/.test(it.m);
+    if(!tent&&!loose)return it;
     const b=modelBounds(it.m),size=b?Math.max(b.x1-b.x0,b.y1-b.y0)*(it.s||1):0;
     const r=k=>hash(((typeof State!=='undefined'&&State.seed)||1)+'|jit|'+key+'|'+k)/4294967296*2-1;
-    return{...it,a:(it.a||0)+r('a')*25*Math.PI/180,x:it.x+r('x')*.05*size,y:it.y+r('y')*.05*size};
+    const turn=tent?40*Math.PI/180:/^sc:/.test(it.m)?Math.PI:35*Math.PI/180,shift=tent?.12:.35;
+    return{...it,a:(it.a||0)+r('a')*turn,x:it.x+r('x')*shift*size,y:it.y+r('y')*shift*size};
   }
   // All meshes of a venue, cached per structure state.
   const meshCache=new Map();

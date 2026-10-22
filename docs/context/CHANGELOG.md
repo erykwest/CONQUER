@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Eventi: disposizione più casuale
+
+- Jitter delle tende portato a ±40° / 12%; esteso a scatter, rastrelliere e armature in tutti gli allestimenti (D-043).
+
 ## 2026-10-22 — Eventi: tende non allineate e tutte diverse
 
 - In arena, torneo e circo le tende ruotano di ±25° e si spostano fino al 5% della loro misura (deterministico per partita). Le coppie di colori delle tende sono uniche in ogni spazio, su cinque smalti (D-043 aggiornata). QA estesa.
