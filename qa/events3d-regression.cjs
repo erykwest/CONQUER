@@ -45,9 +45,15 @@ console.log('PASS venues: podium, stage (players / herald), festival ground');
 // Setups fit the ground and never overlap; the former 6 x 10 ground hosts none.
 const ground=venue('festivalGround');
 const setups=E.setupsFor(ground);
-for(const k of ['joust','tourney','circus','feast','camp','theatre','arena'])assert.ok(setups.includes(k),k+' fits the 14 x 10 ground');
+for(const k of ['joust','tourney','circus','feast','camp','theatre'])assert.ok(setups.includes(k),k+' fits the 14 x 10 ground');
 assert.equal(E.setupsFor(venue('festivalGround',{w:6,h:10})).length,0,'a 6 x 10 ground is too small for every setup');
-assert.ok(E.itemRect({m:'arenaU',x:0,y:0,a:0}).x1-E.itemRect({m:'arenaU',x:0,y:0,a:0}).x0<10,'the U arena fits across the short side');
+assert.ok(!setups.includes('arenaLot'),'the arena lot is not a festival setup');
+{const lot=venue('arenaLot',{id:'a1'}),items=E.setupItems(lot);
+ assert.deepEqual(JSON.parse(JSON.stringify(E.sizeOf(lot))),{w:18,h:14},'the arena lot is 18 x 14 U');
+ assert.ok(items.some(i=>i.m==='arenaU')&&items.filter(i=>i.m.startsWith('tent')).length>=8,'the arena lot has the arena and eight participants tents');
+ assert.ok(items.some(i=>i.m.startsWith('sc:'))&&items.some(i=>i.m.startsWith('wagon')),'the arena lot has wagons and scatter goods');
+ assert.ok(E.has(lot)&&E.meshes(lot,0).length===items.length+1,'the lot always shows its setup over its ground');
+ const parts=Object.keys(M.models.arenaU.parts);for(const k of ['groundSand','honour','gate'])assert.ok(parts.includes(k),'the arena has its '+k)}
 for(const [name,setup] of Object.entries(E.SETUPS)){
   const {w,h}=setup.min,rects=setup.items.map(it=>{const r=E.itemRect(it);assert.ok(r,name+': '+it.m+' has a model');return r});
   rects.forEach((r,i)=>assert.ok(r.x0>=-w/2-TOL&&r.x1<=w/2+TOL&&r.y0>=-h/2-TOL&&r.y1<=h/2+TOL,
@@ -76,7 +82,7 @@ assert.equal(count({setup:'joust',phase:'clearing',progress:1}),0,'cleared at th
 assert.equal(E.setupItems(venue('festivalGround',{w:6,h:10,event:{setup:'joust',phase:'active'}})).length,0,'a setup that does not fit is not shown');
 const idle=E.meshes(venue('festivalGround',{id:'g0'}),2);
 assert.equal(idle.length,1,'idle ground: one mesh');
-assert.ok(idle[0].col.every(c=>/^#[67]/.test(c))&&idle[0].groupBias[0]===-1e6,'the idle ground is green and paints first');
+assert.ok(idle[0].col.every(c=>/^#[67]/.test(c))&&idle[0].groupBias[0]<=-1e6,'the idle ground is green and paints first');
 assert.ok(idle[0].pos.every((v,i)=>i%3!==2||Math.abs(v-2)<.05),'the ground pad sits on the ground level');
 console.log('PASS lifecycle: idle pad, preparing / active / clearing props');
 

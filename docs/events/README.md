@@ -25,6 +25,7 @@ Venue structure contract (data only until the venue registry exists):
 |---|---|---|
 | `streetSpot` | 1.6 × 1.6 | `podiumStreet`: octagonal podium, stool, lute, coin hat, bunting pole |
 | `stage` | 2.4 × 1.2 | same base, dressing `players` (`stagePlayers`: backcloth, wings, bunting) or `herald` (`stageHerald`: lectern, realm banners) |
+| `arenaLot` | 18 × 14 | permanent lot: the U arena (sand field, honour box, gate towers) with eight participants' tents, racks, armour, wagons and scatter goods, always shown |
 | `festivalGround` | 14 × 10 (long side on local x) | green pad when idle; setup props during `preparing` (appear with `progress`), `active`, `clearing` (leave with `progress`) |
 
 Festival ground setups (local layout in `SETUPS`, validated inside the ground with no overlaps):
@@ -33,7 +34,7 @@ Festival ground setups (local layout in `SETUPS`, validated inside the ground wi
 - `feast` (sagra): players' stage, four stalls, eight tables and two pergolas (civic props), barrel tables, two podiums;
 - `tourney` (torneo, melee): fenced field (12 `propFence` segments, gates at both ends), two covered and two open stands, four knights' tents, racks and armour;
 - circus also has two ticket booths, a juggler podium, bunting lines and scatter goods; the feast has sixteen tables and bunting over them.
-- extra: `camp` (knights' camp), `theatre` (theatre stage facing two open stands), `arena` (U-shaped stand with knights' tents and gear).
+- extra: `camp` (knights' camp), `theatre` (theatre stage facing two open stands). The U arena moved to its dedicated `arenaLot`.
 
 Livery: stands, arena and stages follow the realm heraldry (`State.heraldry` c1 / c2 / c4). Knights' tents, lance and shield racks and armour take a deterministic random pair of primary colours per instance. Circus, bunting and stage cloths keep fixed festive colours. Model `meta` carries seats, performer, speaker and entrance points for the future attendance module.
 

@@ -51,7 +51,7 @@ COLORS = {
     'rope': '#b9a57a', 'steel': '#9aa3aa', 'steelDark': '#5d656c', 'gold': '#d8b14a',
     'mail': '#7d858b', 'leather': '#6b4a2e', 'leatherDark': '#45301f',
     'curtain': '#7c2a33', 'curtainDark': '#5e1f27', 'festYellow': '#d9b13b', 'festGreen': '#6f8a3c',
-    'circusRed': '#b8322c', 'hay': '#d4b35b', 'barrel': '#8b5e35', 'iron': '#4f5357',
+    'circusRed': '#b8322c', 'hay': '#d4b35b', 'barrel': '#8b5e35', 'iron': '#4f5357', 'sand': '#cdb98a',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Events'
@@ -635,6 +635,58 @@ def arena_u(m):
             du = -w / 2 + w / 6 * (2 * t + 1)
             plate(p, o, inward, [(uu + du, z) for uu, z in tongue(w / 3, .47, .22)], 'heraldTrim', .02, .04)
     m.done('drapes', p)
+
+    # Sand on the field (painted first: part name starts with 'ground').
+    p = m.part('groundSand')
+    prism(p, [at(s, Ri - .1, 0)[:2] for s in path], 0, .03, 'sand')
+    m.done('groundSand', p)
+
+    # Honour box over the back of the arc (apex normal +y): floor over the top tiers,
+    # draped parapet, striped canopy with a valance, the lord's banners behind.
+    p = m.part('honour')
+    Y = lambda r: yc + r
+    r0, hw, zt = rb + 2.4, 2.6, zl + 3.0
+    p.box((0, Y((r0 + Ro) / 2), zl + .05), (2 * hw, Ro - r0, .12), 'woodLight')
+    for sx in (-1, 1):
+        for r in (r0 + .07, Ro - .07):
+            p.box((sx * (hw - .07), Y(r), (zl + zt) / 2), (.14, .14, zt - zl), 'beam')
+        p.box((sx * hw, Y((r0 + Ro) / 2), zl + .55), (.06, Ro - r0, .9), 'heraldB')     # side cheeks
+    p.box((0, Y(r0), zl + .55), (2 * hw, .06, .9), 'heraldA')                           # draped parapet
+    for t in range(8):
+        w = 2 * hw / 8
+        plate(p, (-hw + w * (t + .5), Y(r0) - .03), (0, -1), tongue(w, zl + .12, .25), 'heraldTrim', 0, .02)
+    for i in range(9):
+        x0, x1 = -hw - .3 + (2 * hw + .6) * i / 9, -hw - .3 + (2 * hw + .6) * (i + 1) / 9
+        slab(p, [(x0, Y(r0 - .4), zt), (x1, Y(r0 - .4), zt), (x1, Y(Ro + .2), zt + .5), (x0, Y(Ro + .2), zt + .5)], .05, tincture(i))
+    for i in range(12):
+        w = (2 * hw + .6) / 12
+        plate(p, (-hw - .3 + w * (i + .5), Y(r0 - .4)), (0, -1), tongue(w, zt - .03, .4), tincture(i + 1), 0, .03)
+    flagstaff(p, 0, Y((r0 + Ro) / 2), zt + .5, 1.4, 1.4)
+    for sx in (-1, 1):                                                                   # the lord's banners
+        x = sx * (hw + 1.2)
+        p.box((x, Y(Ro + .35), (zl + 1.1 + zt + 1.2) / 2), (.1, .1, zt + 1.2 - zl - 1.1), 'woodDark')
+        m.decals['arms' + ('R' if sx > 0 else 'L')] = {'part': 'honour', **gonfalon(p, x, Y(Ro + .3), zt + 1.0, .9, 1.9)}
+    m.done('honour', p)
+
+    # Gate at the open end: two timber towers on the leg ends, a beam with banners across.
+    p = m.part('gate')
+    yg, rt, ht = yc - Ls - 1.2, (rb + Ro) / 2, zl + 3.2
+    for sx in (-1, 1):
+        x = sx * rt
+        p.box((x, yg, ht / 2), (2.2, 2.2, ht), 'wood')
+        for dx in (-1.05, 1.05):
+            for dy in (-1.05, 1.05):
+                p.box((x + dx, yg + dy, ht / 2), (.18, .18, ht), 'beam')
+        p.box((x, yg, ht - .3), (2.5, 2.5, .2), 'woodDark')
+        pyramid(p, x, yg, 2.6, 2.6, ht - .2, ht + 1.6, ('heraldA', 'heraldB'))
+        plate(p, (x, yg - 1.1), (0, -1), [(-.35, 2.0), (.35, 2.0), (.35, 3.0), (-.35, 3.0)], 'dark', 0, .03)
+        flagstaff(p, x, yg, ht + 1.5, 1.2, 1.2)
+    p.box((0, yg, ht - .5), (2 * rt, .25, .3), 'woodDark')
+    nb = 10
+    for i in range(nb):
+        x = -rt + 1.4 + (2 * rt - 2.8) * (i + .5) / nb
+        plate(p, (x, yg - .14), (0, -1), [(-.4, ht - .65), (.4, ht - .65), (.4, ht - 1.6), (0, ht - 1.85), (-.4, ht - 1.6)], tincture(i), 0, .02)
+    m.done('gate', p)
 
     seats = []
     for i in range(nt):

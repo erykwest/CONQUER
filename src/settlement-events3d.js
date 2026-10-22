@@ -19,7 +19,9 @@
   const VENUES={
     streetSpot:{w:1.6,h:1.6},
     stage:{w:2.4,h:1.2,dressings:{players:'stagePlayers',herald:'stageHerald'},dressing:'players'},
-    festivalGround:{w:14,h:10}
+    festivalGround:{w:14,h:10},
+    // Permanent lot of the U arena with the participants' camp: its setup is always shown.
+    arenaLot:{w:18,h:14,setup:'arenaLot'}
   };
   // Setups of the 14 x 10 festival ground (x along the long side, front at -y),
   // local U, biggest items first (they arrive first). {m: event model or
@@ -88,11 +90,22 @@
       {m:'standOpen',x:-2.1,y:-4.1,a:PI},{m:'standOpen',x:2.1,y:-4.1,a:PI},
       {m:'civic:prop_tableBarrel',x:-5.5,y:-1,a:0,s:1.3},{m:'civic:prop_tableBarrel',x:5.5,y:-1,a:0,s:1.3},
       {m:'podiumStreet',x:-5.2,y:3.4,a:.4},{m:'civic:stall',x:5.3,y:3.6,a:PI}]},
-    arena:{min:G,items:[
-      {m:'arenaU',x:0,y:.2,a:0},
-      {m:'tentOctagon',x:-5.6,y:2.6,a:0},{m:'tentSquare',x:5.65,y:2.6,a:0},
-      {m:'propLanceRack',x:5.7,y:-.6,a:H},{m:'propArmourStand',x:-5.7,y:-.6,a:PI},
-      {m:'propShieldRack',x:-5.6,y:-2.6,a:H},{m:'propArmourPile',x:5.6,y:-2.8,a:.3}]}
+    arenaLot:{min:{w:18,h:14},fixed:true,items:[
+      {m:'arenaU',x:0,y:.1,a:0},
+      // Participants' camp: four tents down each side, pairs of primary colours.
+      ...[-1,1].flatMap(sx=>[4.4,1.5,-1.4,-4.3].map((y,i)=>({m:(i+(sx>0))%2?'tentSquare':'tentOctagon',x:sx*6.6,y,a:-sx*H}))),
+      {m:'propLanceRack',x:8.4,y:2.95,a:H},{m:'propShieldRack',x:-8.4,y:2.95,a:H},
+      {m:'propWeaponRack',x:-8.4,y:0,a:H},{m:'propSpearRack',x:8.4,y:0,a:H},
+      {m:'propArmourStand',x:8.4,y:-2.85,a:-H},{m:'propArmourPile',x:-8.4,y:-2.85,a:.4},
+      {m:'propArmourCrate',x:-8.3,y:5.9,a:0},{m:'propArmourStand',x:8.4,y:5.9,a:-H},
+      // Baggage behind the arc and goods by the gate.
+      {m:'wagonCaravan',x:-3.6,y:6.3,a:0},{m:'wagonCargo',x:3.6,y:6.3,a:PI},
+      {m:'sc:haystack',x:0,y:6.4,a:0,s:1},{m:'sc:hayBales',x:-1.4,y:6.5,a:.2,s:1.3},
+      {m:'sc:sackPile',x:1.4,y:6.5,a:0,s:1.3},
+      {m:'wagonCargo',x:-5.0,y:-6.4,a:0},{m:'sc:barrelGroup',x:-3.2,y:-6.4,a:0,s:1.3},
+      {m:'sc:crateStack',x:3.2,y:-6.4,a:.3,s:1.3},{m:'sc:firewood',x:4.4,y:-6.3,a:0,s:1.3},
+      {m:'sc:logPile',x:5.9,y:-6.4,a:0,s:1.3},{m:'circusBooth',x:-7.6,y:-6.2,a:0},
+      {m:'propBunting',x:-6.0,y:6.6,a:0},{m:'propBunting',x:6.0,y:6.6,a:0}]}
   };
   const SHOWN_PHASES=new Set(['preparing','active','clearing']);
   const GROUND=['#7f9a55','#6c8648'];
@@ -101,7 +114,7 @@
   const sizeOf=s=>s.venue==='festivalGround'?{w:Number(s.w)||VENUES.festivalGround.w,h:Number(s.h)||VENUES.festivalGround.h}:{w:VENUES[s.venue].w,h:VENUES[s.venue].h};
   const fits=(setup,size)=>!!SETUPS[setup]&&size.w>=SETUPS[setup].min.w-1e-9&&size.h>=SETUPS[setup].min.h-1e-9;
   // Setups a festival ground of this size can host.
-  function setupsFor(s){const size=sizeOf(s);return Object.keys(SETUPS).filter(k=>fits(k,size))}
+  function setupsFor(s){const size=sizeOf(s);return Object.keys(SETUPS).filter(k=>!SETUPS[k].fixed&&fits(k,size))}
   // Model of a venue itself: the podium, the dressed stage, or null (open ground).
   function venueModel(s){
     if(!is(s))return null;
@@ -112,6 +125,7 @@
   // Setup items visible now: all while active, a growing / shrinking share while
   // the event is preparing / clearing.
   function setupItems(s){
+    if(is(s)&&VENUES[s.venue].setup)return SETUPS[VENUES[s.venue].setup].items;   // permanent lot
     if(!is(s)||s.venue!=='festivalGround'||!s.event)return[];
     const {setup,phase}=s.event;
     if(!SHOWN_PHASES.has(phase)||!fits(setup,sizeOf(s)))return[];
@@ -229,7 +243,7 @@
     const e=.12;
     quad(-w/2,-h/2,w/2,h/2,.006,GROUND[1]);
     quad(-w/2+e,-h/2+e,w/2-e,h/2-e,.012,GROUND[0]);
-    return{pos,col,gi:col.map(()=>0),groups:[[s.x,s.y,z]],groupBias:[-1e6]};
+    return{pos,col,gi:col.map(()=>0),groups:[[s.x,s.y,z]],groupBias:[-2e6]};   // under the models' own ground parts (arena sand)
   }
   function groundZ(s){
     if(typeof structureProjectionGroundZ!=='undefined'&&Number.isFinite(structureProjectionGroundZ))return structureProjectionGroundZ;
@@ -249,7 +263,7 @@
     const id=s.id??(s.x+','+s.y);
     setupItems(s).forEach((it,i)=>{
       const p=toWorld(s,it.x,it.y);
-      const mesh=triangles(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+s.event.setup+':'+i},ground);
+      const mesh=triangles(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},ground);
       if(mesh)list.push(mesh);
     });
     meshCache.set(s,{key,list:list.filter(Boolean)});

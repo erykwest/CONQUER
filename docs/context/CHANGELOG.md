@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-22 — Eventi: arena arricchita in lotto dedicato
+
+- `arenaU` ora ha campo in sabbia, palco d'onore coperto con gonfaloni araldici e torri d'ingresso con stendardi. Nuovo spazio permanente `arenaLot` 18 × 14 U con 8 tende dei partecipanti, rastrelliere, armature, carri e merci scatter; l'arena esce dagli allestimenti dello spiazzo 14 × 10. QA aggiornata, verifica Canvas nel browser.
+
 ## 2026-10-22 — Eventi: torneo, circo e sagra ampliati, catalogo leisure
 
 - Nuovo allestimento `tourney` (campo recintato, 4 tribune, 4 tende); circo con biglietterie, giocoliere, festoni e merci scatter; sagra con 16 tavoli. Nuovi modelli `circusBooth`, `propBunting`, `propFence`; gli allestimenti possono usare asset scatter (`sc:`). Catalogo illustrato in docs/events. QA aggiornata.
