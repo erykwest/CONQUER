@@ -60,6 +60,22 @@ function variants(G){
   }
   return list;
 }
+// Reference figure: a 0.5 U person (door height .55 U) standing on the ground beside the house,
+// projected exactly like the asset prerender (scale 1.6, ground at 74% of the 256 px canvas).
+const FIGURE_HEIGHT=.5,FIGURE_AT={x:101.75,y:99.2};
+function scaleFigure(G,src){
+  const c=document.createElement('canvas');c.width=src.width;c.height=src.height;
+  const g=c.getContext('2d');g.drawImage(src,0,0);
+  // Top-level consts of the game's classic scripts are not window properties: read them by name.
+  const [U,scale,size,isoX,isoY,isoZ]=G.eval('[U,STRUCTURE_ASSET_RENDER_SCALE,STRUCTURE_ASSET_CANVAS_SIZE,ISO_X,ISO_Y,ISO_Z]');
+  const s=U*scale,vx=size/2,vy=size*.74-200*s*isoY,p=FIGURE_AT;
+  const fx=vx+(p.x-p.y)*s*isoX,fy=vy+(p.x+p.y)*s*isoY,h=FIGURE_HEIGHT*s*isoZ;
+  g.fillStyle='rgba(0,0,0,.22)';g.beginPath();g.ellipse(fx,fy,h*.22,h*.09,0,0,Math.PI*2);g.fill();
+  g.fillStyle='#b5482f';g.beginPath();g.roundRect(fx-h*.13,fy-h*.78,h*.26,h*.62,h*.08);g.fill();
+  g.fillStyle='#3a2a1f';g.fillRect(fx-h*.11,fy-h*.2,h*.08,h*.2);g.fillRect(fx+h*.03,fy-h*.2,h*.08,h*.2);
+  g.fillStyle='#e8c39e';g.beginPath();g.arc(fx,fy-h*.88,h*.11,0,Math.PI*2);g.fill();
+  return{canvas:c,minX:fx-h*.25,maxX:fx+h*.25,minY:fy-h,maxY:fy+h*.1};
+}
 function render(){
   const G=document.getElementById('game').contentWindow,C=G.__conquerAssetCompiler;if(!C)return;
   out.innerHTML='';
@@ -73,10 +89,11 @@ function render(){
     for(const st of steps){
       G.invalidateUrbanGeometry();
       const r=C.prerender(def,st,{retain:false});G.invalidateUrbanGeometry();
-      const b=r.metrics.bounds||{minX:0,minY:0,maxX:255,maxY:255},pad=8;
+      const fig=scaleFigure(G,r.canvas),b0=r.metrics.bounds||{minX:0,minY:0,maxX:255,maxY:255},pad=8;
+      const b={minX:Math.min(b0.minX,fig.minX),minY:Math.min(b0.minY,fig.minY),maxX:Math.max(b0.maxX,fig.maxX),maxY:Math.max(b0.maxY,fig.maxY)};
       const side=Math.max(b.maxX-b.minX,b.maxY-b.minY)+pad*2,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2;
       const c=document.createElement('canvas');c.width=300;c.height=300;
-      c.getContext('2d').drawImage(r.canvas,cx-side/2,cy-side/2,side,side,0,0,300,300);
+      c.getContext('2d').drawImage(fig.canvas,cx-side/2,cy-side/2,side,side,0,0,300,300);
       const f=document.createElement('figure'),cap=document.createElement('figcaption');
       cap.textContent=v.label+' · '+(st*15)+'°';f.append(c,cap);groups.get(v.group).appendChild(f);
     }

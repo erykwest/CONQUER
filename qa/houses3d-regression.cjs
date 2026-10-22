@@ -82,13 +82,13 @@ for(let i=0;i<64;i++){
   }
 }
 const manual=sandbox.houseTurretInfo({id:'m',type:'house',x:100,y:100,w:1.5,h:1,houseLevel:4});
-assert.equal(+manual.bodyH.toFixed(2),2.45,'manual L4 turret body one floor above its 1.55 U walls');
-assert.equal(+manual.roofH.toFixed(2),3.25,'manual L4 turret roof');
+assert.equal(+manual.bodyH.toFixed(2),2.27,'manual L4 turret body one floor above its 1.37 U walls');
+assert.equal(+manual.roofH.toFixed(2),3.07,'manual L4 turret roof');
 assert.match(buildings,/breakZ=turret\.floorZ/,'Canvas turret uses the shared floor band');
 assert.match(world,/part\.kind==='turret'\?part\.floorZ/,'WebGL2 turret uses the shared floor band');
 
 // 3. Window rows sit inside their floor on every wall height (L2/L3 1.72 U, auto L4 2.38 U).
-for(const [level,bodyH] of [[2,1.72],[3,1.72],[4,1.72],[4,2.38],[2,1.55],[4,2.14]]){
+for(const [level,bodyH] of [[2,1.72],[3,1.72],[4,1.72],[4,2.38],[2,1.37],[4,1.89]]){
   const points=rectWorldPoints(100,100,1.5,1,0),part={kind:'body',points,bodyH,roofH:bodyH+.87,roofTurn:0,w:1.5,h:1};
   const plan=sandbox.houseFacadePlan({id:'w',houseLevel:level},part,{a:points[0],b:points[1]});
   const rows=[...new Set(plan.windows.map(w=>+w.z.toFixed(3)))].sort((a,b)=>a-b),fb=sandbox.houseFloorBreak(bodyH),hh=.15;
@@ -176,7 +176,7 @@ for(let i=0;i<32;i++){
   dormers+=all.length;
 }
 // 9. Lower stone ground floor, recessed under a jetty on the door side and the opposite side only.
-assert.equal(sandbox.houseFloorBreak(1.72),1.72*.42,'ground floor takes 42% of the wall');
+assert.equal(sandbox.houseFloorBreak(1.37),1.37*.475,'ground floor takes 47.5% of the wall');
 for(const level of [1,2,3,4]){
   const house={id:'jetty-'+level,type:'house',auto:true,x:100,y:100,w:1.5,h:1,angle:.4,houseLevel:level,doorSide:1};
   for(const p of sandbox.houseFootprintParts(house).filter(q=>q.kind==='body')){

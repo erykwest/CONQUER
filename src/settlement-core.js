@@ -455,9 +455,9 @@ function houseLocalToWorld(s,x,y){
   const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
 }
-// L2+ houses: the stone ground floor takes the lower 42% of the wall; the timbered upper floors
+// L2+ houses: the stone ground floor takes the lower 47.5% of the wall; the timbered upper floors
 // jetty out over it by HOUSE_JETTY on the door side and the opposite side (local ±Y).
-const HOUSE_FLOOR_BREAK=.42,HOUSE_JETTY=.07;
+const HOUSE_FLOOR_BREAK=.475,HOUSE_JETTY=.07;
 function houseFloorBreak(wallH){return wallH*HOUSE_FLOOR_BREAK}
 function houseJetty(s){return houseLevel(s)>=2?HOUSE_JETTY:0}
 function houseTurretInfo(s,bodies=null){
@@ -556,8 +556,9 @@ function houseFootprintParts(s){
   const turret=houseTurretInfo(s,parts);if(turret){for(const p of out)p.turret=turret;out.push(turret)}
   return out;
 }
-// L2+ storeys lowered ~10% (was 1.72 / 2.38 U): ground and upper floors read less lanky.
-function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.14:1.55}
+// L2+ walls (was 1.72 / 2.38 U): storeys lowered ~10%, then the upper floors a further 20% with the
+// ground floor unchanged (HOUSE_FLOOR_BREAK rises from .42 to .475 accordingly).
+function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?1.89:1.37}
 // L2+ gabled roofs are steep (60°, medieval): the ridge rises tan(60°)·half-span above the eaves,
 // where the span is the part's side perpendicular to its ridge. L1 cottages keep their low thatch.
 const HOUSE_ROOF_PITCH=Math.tan(60*Math.PI/180);
