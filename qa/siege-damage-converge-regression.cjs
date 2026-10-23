@@ -9,14 +9,14 @@ const siege=fs.readFileSync(__dirname+'/../src/settlement-siege.js','utf8');
 
 function fixture(){
   const State={clock:{day:20},structures:[],siege:null,selectedId:null,view:{scale:1},resources:{}};
-  const calls={navigation:0,dirty:0,scene:0};
+  const calls={navigation:0,dirty:0,scene:0,redraw:0,draw:0};
   const ctx=vm.createContext({State,window:{},console,Math,Number,Object,Array,Map,Set,String,
     structureLevel:s=>s.level||1,structureHeight:s=>[2.8,4,5.2][(s.level||1)-1],
     towerTier:s=>s.tier||2,wallTier:s=>s.tier||2,wallSkin:()=>'standard',houseLevel:()=>1,
     underConstruction:()=>false,isWoodTower:s=>s.material==='wood',
     invalidateStructureScene:()=>calls.scene++,invalidateSceneCache:()=>calls.scene++,
     invalidateNavigation:()=>calls.navigation++,markDirty:()=>calls.dirty++,
-    renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0
+    renderFunctionPanel:()=>{},requestSceneDraw:()=>calls.redraw++,draw:()=>calls.draw++,status:()=>{},terrainElevation:()=>0
   });
   vm.runInContext(siege,ctx,{filename:'src/settlement-siege.js'});
   return{State,S:ctx.window.ConquerSiege,calls};
@@ -83,7 +83,7 @@ const tower=(id,material='stone',type='tower')=>({
   console.log('PASS invalid targets rejected while valid point-impact vectors remain supported');
 }
 {
-  const {State,S}=fixture();
+  const {State,S,calls}=fixture();
   const palisade=wall('pal','wood','palisade');
   const house=tower('house','wood','house');
   const gate=tower('gate','wood','gate');
@@ -104,6 +104,8 @@ const tower=(id,material='stone',type='tower')=>({
   assert.equal(bayList[0].hp,bayList[0].max);
   assert.equal(bayList[1].hp,bayList[1].max);
   assert.ok(bayList[2].hp<bayList[2].max,'only the impacted bay suffers');
+  assert.ok(calls.redraw>0,'damage uses the shared scene scheduler');
+  assert.equal(calls.draw,0,'damage must not reintroduce synchronous redraws');
   console.log('PASS palisades, civilians, portoni and localized siege artillery still work');
 }
 {

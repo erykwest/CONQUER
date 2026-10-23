@@ -11,6 +11,15 @@
 
 Goal: many development commits and CI checks, **one automatic production deployment per completed iteration**.
 
+## Obbligo di aggiornamento documentale in ogni PR operativa
+
+- Leggere [docs/context/AUDIT-2026-10-21.md](docs/context/AUDIT-2026-10-21.md) **come snapshot datato**, poi verificare lo stato live prima di lavorare.
+- **Prima di proporre una pull request che cambia codice, test o asset (anche quando la base non è `main`)**, aggiornare nello *stesso branch* `docs/context/STATUS.md`, `docs/context/BACKLOG.md` e `docs/context/CHANGELOG.md`. Il workflow GitHub Actions `Context sync` verifica il diff e fallisce se uno manca.
+- `docs/context/ROADMAP.md` e `docs/context/DECISIONS.md` si cambiano quando mutano roadmap/contratti/decisioni; altrimenti scrivere nella PR perché sono invariati. Aggiornare `docs/feature-backlog.md` per le feature di cui è owner.
+- Seguire [docs/context/PR-WORKFLOW.md](docs/context/PR-WORKFLOW.md) e la [PR template](.github/pull_request_template.md). Non confondere feature presente su branch, CI passata e merge in main.
+- La protezione `main` deve richiedere il check `Context sync` per bloccare realmente PR incomplete; senza required status check il fallimento è solo segnalato. Non aggirare la regola con un merge manuale.
+- Questa policy vale anche quando il lavoro viene svolto da assistenti/agent: **chi scrive il codice aggiorna la piramide**, non l'utente.
+
 ## Product context / continuity
 - Before estimating scope or starting implementation, read [docs/context/README.md](docs/context/README.md) and follow its links to vision, roadmap, branch-specific status, decisions, and subsystem backlog. Verify the live branch/HEAD and actual source before declaring a feature complete.
 - Preserve the pyramid in the same PR whenever priorities, implementation status, architectural contracts or design decisions change; keep proposals distinct from code, and code distinct from executed tests.

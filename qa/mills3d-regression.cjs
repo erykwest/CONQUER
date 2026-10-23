@@ -36,7 +36,7 @@ for(const m of ['windmill','watermill'])for(const v of ['','Burnt','Ruin'])
   const src=fs.readFileSync(root+'settlement-industries3d.js','utf8');
   assert.match(src,/triangles\(s,ground,\{skip:new Set\(turning\(s\)\)\}\)/,'turning parts left out of the static scene');
   assert.match(src,/if\(!\(State\.clock\?\.speed>0\)\)return;/,'paused game: nothing turns');
-  assert.match(fs.readFileSync(root+'settlement-world3d.js','utf8'),/\[window\.ConquerSiege,window\.ConquerCombat,window\.ConquerIndustries3D\]/,'drawn each frame in 3D');
+  assert.match(fs.readFileSync(root+'settlement-world3d.js','utf8'),/\[window\.ConquerSiege,window\.ConquerCombat,window\.ConquerIndustries3D(,window\.\w+)*\]/,'drawn each frame in 3D');
   // Turning a sail about the hub keeps every vertex at its distance from the axis.
   ctx.State={clock:{speed:1},structures:[]};
   const turned=I3.triangles({id:'q',type:'windmill',x:0,y:0},0,{only:new Set(['sails'])});

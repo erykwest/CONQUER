@@ -121,10 +121,34 @@
         S.prog[name]={p,loc};
       }
       S.aniso=gl.getExtension('EXT_texture_filter_anisotropic');
-      c.addEventListener('webglcontextlost',e=>{e.preventDefault();S.gl=null;S.failed='context-lost'});
+      c.addEventListener('webglcontextlost',e=>{e.preventDefault();S.gl=null;S.errorFence=null;S.failed='context-lost'});
       S.canvas=c;S.gl=gl;
       return gl;
     }catch(err){S.failed=String(err?.message||err);console.warn('World 3D unavailable:',S.failed);return null}
+  }
+
+  function pollRendererError(gl){
+    if(gl.isContextLost())throw new Error('WebGL2 renderer failure');
+    if(!S.errorFence)return;
+    // Poll without waiting, but bound the grace period so a constantly busy
+    // queue cannot indefinitely postpone error detection.
+    const ready=gl.clientWaitSync(S.errorFence,0,0);
+    if(ready===gl.TIMEOUT_EXPIRED&&performance.now()-S.errorFenceAt<1000)return;
+    gl.deleteSync(S.errorFence);S.errorFence=null;
+    if(ready===gl.WAIT_FAILED||gl.getError()!==gl.NO_ERROR)throw new Error('WebGL2 renderer failure');
+    // Even a signalled fence does not make the browser's error query free:
+    // getError can synchronise its command decoder. Keep it off the hot path;
+    // context loss is still checked every frame above.
+    S.errorCheckAfter=performance.now()+1000;
+  }
+  function deferRendererError(gl){
+    if(performance.now()<(S.errorCheckAfter||0))return;
+    // Cover the latest complete frame, retaining the first checkpoint's age.
+    if(S.errorFence)gl.deleteSync(S.errorFence);
+    else S.errorFenceAt=performance.now();
+    S.errorFence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
+    if(!S.errorFence)throw new Error('WebGL2 sync allocation failed');
+    gl.flush();
   }
 
   // ---------- small geometry helpers (world space, absolute z) ----------
@@ -205,6 +229,69 @@
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
     if(terraformEdits.length){
       const terraces=terraformEdits.filter(e=>e.mode==='walled');
+      // Reuse exactly the visible surface fragments both for clipping the
+      // underlying ground and emitting plateau tops. Flat cuts must not leave
+      // invisible ground holes or overlapping faces after a subtraction.
+      const terraceBounds=terraces.flatMap(edit=>
+        (window.ConquerTerraforming?.visibleTerracePieces?.(edit)||[edit.top]).map(top=>{
+          const xs=top.map(p=>p.x),ys=top.map(p=>p.y);
+          return{edit,top,minX:Math.min(...xs),maxX:Math.max(...xs),
+            minY:Math.min(...ys),maxY:Math.max(...ys)};
+        }));
+      const flatBounds=terraformEdits.filter(edit=>edit.mode==='flat').map(edit=>{
+        const xs=edit.top.map(p=>p.x),ys=edit.top.map(p=>p.y);
+        return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
+          minY:Math.min(...ys),maxY:Math.max(...ys)};
+      });
+      // Broadphase: register edit bounds in 8U buckets once. A 100×100U
+      // 0.5U terrain rebuild has 40,000 cells; almost all must bypass CSG
+      // clipping entirely instead of scanning every authored polygon.
+      const BIN=8,bins=new Map(),binKey=(x,y)=>x+','+y;
+      const register=(bound,kind)=>{
+        const x0=Math.floor(bound.minX/BIN),x1=Math.floor(bound.maxX/BIN);
+        const y0=Math.floor(bound.minY/BIN),y1=Math.floor(bound.maxY/BIN);
+        for(let ix=x0;ix<=x1;ix++)for(let iy=y0;iy<=y1;iy++){
+          const key=binKey(ix,iy);
+          if(!bins.has(key))bins.set(key,{flat:[],terrace:[]});
+          bins.get(key)[kind].push(bound);
+        }
+      };
+      flatBounds.forEach(bound=>register(bound,'flat'));
+      terraceBounds.forEach(bound=>register(bound,'terrace'));
+      const EMPTY_NEAR={flat:[],terrace:[]};
+      const touching=(item,x0,y0,x1,y1)=>
+        item.minX<=x1&&item.maxX>=x0&&item.minY<=y1&&item.maxY>=y0;
+      const nearCell=(x0,y0,x1,y1)=>{
+        const bx0=Math.floor(x0/BIN),by0=Math.floor(y0/BIN);
+        const bx1=Math.floor(x1/BIN),by1=Math.floor(y1/BIN);
+        // Almost every cell belongs to a single spatial bucket.
+        if(bx0===bx1&&by0===by1){
+          const bucket=bins.get(binKey(bx0,by0));
+          if(!bucket)return EMPTY_NEAR;
+          return{flat:bucket.flat.filter(item=>touching(item,x0,y0,x1,y1)),
+            terrace:bucket.terrace.filter(item=>touching(item,x0,y0,x1,y1))};
+        }
+        const selectedFlat=new Set(),selectedTerrace=new Set();
+        for(let ix=bx0;ix<=bx1;ix++)for(let iy=by0;iy<=by1;iy++){
+          const bucket=bins.get(binKey(ix,iy));
+          if(!bucket)continue;
+          for(const item of bucket.flat)
+            if(touching(item,x0,y0,x1,y1))selectedFlat.add(item);
+          for(const item of bucket.terrace)
+            if(touching(item,x0,y0,x1,y1))selectedTerrace.add(item);
+        }
+        return selectedFlat.size||selectedTerrace.size?
+          {flat:[...selectedFlat],terrace:[...selectedTerrace]}:EMPTY_NEAR;
+      };
+      const gridHeights=new Map();
+      const sampleHeight=p=>{
+        const key=p.x+','+p.y;
+        if(gridHeights.has(key))return gridHeights.get(key);
+        const z=window.ConquerTerraforming.elevationAt(
+          p,terrainBaseElevation(p),{excludeWalled:true});
+        gridHeights.set(key,z);
+        return z;
+      };
       // Cut the ground exactly at terrace edges. Sampling a height discontinuity
       // would create diagonal triangles instead of a vertical masonry wall.
       const halfPlane=(poly,a,b,inside)=>{
@@ -218,11 +305,16 @@
         return result;
       };
       const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
-      const ground=tri=>{
-        let pieces=[tri];
-        for(const edit of terraces){
-          if(tri.every(p=>p.x<edit.center.x-edit.radius)||tri.every(p=>p.x>edit.center.x+edit.radius)||
-             tri.every(p=>p.y<edit.center.y-edit.radius)||tri.every(p=>p.y>edit.center.y+edit.radius))continue;
+      const ground=(tri,near)=>{
+        if(!near.flat.length&&!near.terrace.length){emit(tri);return;}
+        let pieces=[tri],nearFlat=false;
+        // The ground must be cut exactly on every Flat edge. Without this
+        // split, the .5U grid bridges the H0 hole with a diagonal ramp,
+        // leaving a gap or hiding the new vertical retaining wall.
+        for(const {edit,minX,maxX,minY,maxY} of near.flat){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
+          nearFlat=true;
           const next=[];
           for(const piece of pieces){
             let inner=piece;
@@ -232,10 +324,42 @@
               if(outside.length>=3)next.push(outside);
               inner=halfPlane(inner,a,b,true);
             }
+            if(inner.length>=3)next.push(inner);
           }
           pieces=next;
         }
-        pieces.forEach(emit);
+        for(const {top,minX,maxX,minY,maxY} of near.terrace){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
+          const next=[];
+          for(const piece of pieces){
+            let inner=piece;
+            for(let i=0;i<top.length&&inner.length>=3;i++){
+              const a=top[i],b=top[(i+1)%top.length];
+              const outside=halfPlane(inner,a,b,false);
+              if(outside.length>=3)next.push(outside);
+              inner=halfPlane(inner,a,b,true);
+            }
+          }
+          pieces=next;
+        }
+        for(const poly of pieces){
+          if(!nearFlat){emit(poly);continue;}
+          const centroid={x:poly.reduce((v,p)=>v+p.x,0)/poly.length,
+            y:poly.reduce((v,p)=>v+p.y,0)/poly.length};
+          // A vertex exactly on the seam has two heights. Evaluate it just
+          // inside its own polygon fragment to keep both sides discontinuous.
+          emit(poly.map(p=>{
+            const dx=centroid.x-p.x,dy=centroid.y-p.y,L=Math.hypot(dx,dy)||1;
+            const q={x:p.x+dx/L*.002,y:p.y+dy/L*.002};
+            return{...p,z:window.ConquerTerraforming.elevationAt(
+              q,terrainBaseElevation(q),{excludeWalled:true})};
+          }));
+        }
+      };
+      // Visible plateau fragments are already clipped and non-overlapping.
+      const drawTerraceTops=()=>{
+        for(const {edit,top} of terraceBounds)emit(top.map(p=>({...p,z:edit.targetZ})));
       };
       // Once the player edits elevation, sample the single authoritative terrainElevation
       // contract. A denser build-area grid preserves terrace and excavation silhouettes;
@@ -244,8 +368,9 @@
         for(let y=y0;y<y1-1e-6;y+=step)for(let x=x0;x<x1-1e-6;x+=step){
           const xa=Math.min(x1,x+step),ya=Math.min(y1,y+step);
           const p00={x,y},p10={x:xa,y},p11={x:xa,y:ya},p01={x,y:ya};
-          for(const p of [p00,p10,p11,p01])p.z=window.ConquerTerraforming.elevationAt(p,terrainBaseElevation(p),{excludeWalled:true});
-          ground([p00,p10,p11]);ground([p00,p11,p01]);
+          for(const p of [p00,p10,p11,p01])p.z=sampleHeight(p);
+          const near=nearCell(x,y,xa,ya);
+          ground([p00,p10,p11],near);ground([p00,p11,p01],near);
         }
       };
       grid(0,0,W,BUILD_MIN,2);
@@ -253,7 +378,7 @@
       grid(0,BUILD_MIN,BUILD_MIN,BUILD_MAX,2);
       grid(BUILD_MAX,BUILD_MIN,W,BUILD_MAX,2);
       grid(BUILD_MIN,BUILD_MIN,BUILD_MAX,BUILD_MAX,.5);
-      for(const edit of terraces)emit(edit.top.map(p=>({...p,z:edit.targetZ})));
+      drawTerraceTops();
       return new Float32Array(v);
     }
     for(const [x,y] of [[0,0],[W,0],[W,W],[0,0],[W,W],[0,W]])push(x,y,0);
@@ -295,10 +420,16 @@
   function buildTerrainEdges(){
     const m=meshBuilder(),W=WORLD,n=Math.round(W/EDGE_STEP);
     for(const edit of window.ConquerTerraforming?.edits?.()||[]){
-      if(edit.mode!=='walled')continue;
-      for(let i=0;i<edit.top.length;i++){
-        const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
-        m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+      if(edit.mode==='walled'){
+        for(let i=0;i<edit.top.length;i++){
+          const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
+            [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
+          for(const {a,b} of segments)
+            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+        }
+      }else if(edit.mode==='flat'){
+        for(const {a,b,baseZ,baseZB,targetZ,targetZB} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
+          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
@@ -563,9 +694,10 @@
   // ---------- facade decals (architecture PNGs + house windows/doors) ----------
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
-  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken'];
+  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken','gatePortalFrame','gateBanner'];
   function buildDecalAtlas(){
-    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=3*T;
+    window.ConquerGates?.ensureSprites();
+    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=4*T;
     const g=c.getContext('2d'),map=new Map();
     const tiles=[...DECAL_KEYS,'__white','__glow'];
     tiles.forEach((k,i)=>{
@@ -659,10 +791,14 @@
       }else if(s.type==='gate'&&!isWoodGate(s)){
         const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
         const interior=interiorFacadeEdgeIndex(s),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
+        // Portal frames around the carved passage and the outer banners; the door leaves and
+        // the portcullis are meshes (settlement-gate-fittings.js).
+        const fittings=window.ConquerGates?.decalSpecs(s)||[];
+        for(const d of fittings)onEdge(d.edge,d.centerZ,d.width,d.height,d.key,d.offset,ground,d.edge.normal);
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
           // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
-          if(edge.index===1||edge.index===3)onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
+          if(!fittings.length&&(edge.index===1||edge.index===3))onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
             else onEdge(edge,z,.24,.62,'arrowSlit',0,ground,o);
@@ -718,7 +854,7 @@
   // All world-space torch anchors are camera-independent: depth testing, not
   // towerDoorVisible(), decides which flames are hidden behind a tower.
   function allWorldFireSources(){
-    const sources=battlementBrazierSources();
+    const sources=battlementBrazierSources().concat(window.ConquerGates?.torchSources(false)||[]);
     for(const tower of State.structures){
       if(tower.type!=='tower'||underConstruction(tower))continue;
       for(const spec of towerDoorSpecs(tower)){
@@ -799,6 +935,20 @@
   function structuresSig(name){return sigPass?.get(name)||0}
   // Urban lots/fences are regenerated by the game (urbanRevision) without any structure field changing.
   function urbanRev(){try{return typeof urbanRevision!=='undefined'?urbanRevision:0}catch{return 0}}
+  let groundLotRevision=-1,groundLotSeed=null,groundLotSig='';
+  function groundLotsSignature(){
+    if(groundLotRevision===urbanRev()&&groundLotSeed===State.seed)return groundLotSig;
+    groundLotRevision=urbanRev();groundLotSeed=State.seed;
+    const structures=new Map(State.structures.map(s=>[s.id,s]));
+    // Navigation/collider updates invalidate the parcel cache conservatively.
+    // Only rebake the two 4096px ground textures if the painted lots changed.
+    groundLotSig=JSON.stringify(urbanLots().map(lot=>{
+      const s=structures.get(lot.civicId||lot.houseId);
+      return[lot.houseId,lot.civicId,s?.type,!!(s?.auto||s?.urbanRedeveloped)&&houseLevel(s)>=3,
+        window.ConquerLivestock?.lotKindForHouse(s),lot.points];
+    }));
+    return groundLotSig;
+  }
   function wet(){try{return typeof weatherGroundWet==='function'?weatherGroundWet():!!State.weather?.wet}catch{return false}}
 
   function upload(gl,name,data){
@@ -821,8 +971,8 @@
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
-    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.radius,e.edgeWidth,e.mode,e.material].join(':')).join(',');
-    const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
+    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.baseZ,e.radius,e.shape,e.rotation,e.center.x,e.center.y,e.edgeWidth,e.mode,e.material].join(':')).join(',');
+    const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
       upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());upload(gl,'terrainEdges',buildTerrainEdges());
@@ -858,7 +1008,7 @@
       if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
       upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
-    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length].join('|');
+    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
       const baked=buildDecals(atlas);
@@ -988,6 +1138,7 @@
     // front of a soldier hides it, merlons on the near edge cover the patrol's legs, far ones do not.
     const gl=S.gl;gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);gl.depthMask(true);
+    drawMesh(gl,r,'settledRubble');
     // Moving meshes (siege engines and their loads), uploaded every frame, depth-tested and written
     // so the soldiers sort against them too.
     if(dynamic&&dynamic.length){
@@ -1116,6 +1267,7 @@
   function drawBack(r){
     const t0=performance.now(),gl=ensureGL();if(!gl)return false;
     try{
+    pollRendererError(gl);
     collecting=[];                           // soldiers drawn this frame go to the 3D front pass
     const gpu=document.getElementById('gpuCanvas');if(gpu&&gpu.style.visibility!=='hidden')gpu.style.visibility='hidden';
     ensureContent(gl);
@@ -1129,18 +1281,22 @@
       const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12);
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
-    if(gl.isContextLost()||gl.getError()!==gl.NO_ERROR)throw new Error('WebGL2 renderer failure');
     return true;
     }catch(err){
       // Never leave gameplay blank when the optional renderer fails.
-      S.failed='world3d-draw: '+String(err?.message||err);
-      enabled=false;collecting=null;
-      const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
-      window.ConquerWebGPU?.invalidate?.();
-      invalidateSceneCache();
-      console.warn('World 3D disabled; Canvas fallback:',S.failed);
+      disableRenderer(err);
       return false;
     }
+  }
+  function disableRenderer(err){
+    S.failed='world3d-draw: '+String(err?.message||err);enabled=false;collecting=null;
+    const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
+    window.ConquerWebGPU?.invalidate?.();invalidateSceneCache();
+    console.warn('World 3D disabled; Canvas fallback:',S.failed);
+  }
+  function finishFrame(){
+    try{deferRendererError(S.gl);return true}
+    catch(err){disableRenderer(err);return false}
   }
   function nightLightsEnabled(){return useGpuNightLights}
   function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}
@@ -1163,7 +1319,7 @@
   }
   function drawCastleOverlays(){
     // Arcades are 3D decals now; only cutaway interiors keep their 2.5D drawing.
-    if(State.structures.some(s=>structureCutaway(s)&&!underConstruction(s)))drawCutawayStructures();
+    if(State.structures.some(s=>structureCutaway(s)&&!underConstruction(s)))drawCutawayStaticOverlay();
   }
   // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
   function drawMastioDrapes(){
@@ -1198,14 +1354,26 @@
     }
     return out;
   }
+  let settledMeshRefs=[],settledMeshRotation=-1;
+  function uploadSettledMeshes(gl,meshes){
+    const rotation=State.view.rotation||0;
+    if(rotation===settledMeshRotation&&meshes.length===settledMeshRefs.length&&meshes.every((m,i)=>m===settledMeshRefs[i]))return;
+    const t0=performance.now();
+    upload(gl,'settledRubble',buildDynamic(meshes));
+    settledMeshRefs=meshes.slice();settledMeshRotation=rotation;
+    const p=perf();p.settledRubbleUploads=(p.settledRubbleUploads||0)+1;p.settledRubbleBuildMs=performance.now()-t0;
+  }
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
     // Mill sails and wheels turn every frame (industries).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D]){
+    // Gate door leaves, portcullis and torch brackets (gate fittings).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
-    const dyn=buildDynamic(dynamicQueue);dynamicQueue=[];
+    const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);
+    uploadSettledMeshes(S.gl,settled);
+    const dyn=buildDynamic(moving);dynamicQueue=[];
     renderFront(r,buildSoldiers(list),dyn);ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
     // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
@@ -1236,7 +1404,7 @@
     draw();
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
-    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,_setActiveForTest,
+    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,finishFrame,_setActiveForTest,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,

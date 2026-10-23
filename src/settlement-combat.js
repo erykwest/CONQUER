@@ -17,8 +17,9 @@
   // Masks are raster unions of auto-generated regions and manual brush marks.
   // They are projected as a single surface per color: no overlapping circle
   // outlines, no doubling alpha, and subtractive strokes cut real holes.
-  // Four pixels per world unit prevent the feathered/blurry brush boundaries.
-  const ZONE_PIXELS=4, ZONE_SIZE=WORLD*ZONE_PIXELS;
+  // Double the mask resolution for smoothly projected union borders.
+  // Fog retains its lightweight coarse grid; only zone masks are detailed.
+  const ZONE_PIXELS=8, ZONE_SIZE=WORLD*ZONE_PIXELS;
   const zoneImages={};
   for(const mode of ['allow','yellow','green']){
     const surface=document.createElement('canvas'),outline=document.createElement('canvas');
@@ -39,15 +40,16 @@
   let transitLastFrame=0;
   let combat=null;
   const archerCache=new Map();
+  const mobileArcherCache=new WeakMap();
   let archerRoster=[],nextArcherRosterAt=0,archerRosterSize=-1;
-  let tacticalRuleAccum=0,combatAnimFrame=0;
+  let tacticalRuleAccum=0;
   const PATROL_PATH_STEP=.75,PATROL_LOOP_STRIDE=2,PATROL_ROUTE_CACHE_MAX=512;
   let whiteBoundaryCache=[],whiteBoundaryLoopCache=[],whiteBoundarySignature='',whiteBoundaryRevision=0;
   let whiteBoundaryPending=false,patrolNavRevision=0;
   const patrolRouteCache=new Map();
 
 
-  function defaults(){return{version:2,fog:false,zones:true,brushRadius:5,strokes:[],units:[],enemy:[],storms:[],recall:false,recallMode:'off',seen:''};}
+  function defaults(){return{version:2,fog:false,zones:false,brushRadius:5,strokes:[],units:[],enemy:[],storms:[],recall:false,recallMode:'off',seen:''};}
   function restore(raw){
     combat=Object.assign(defaults(),raw&&[1,2].includes(raw.version)?raw:{});
     // This builder starts with the terrain explored (known) but not currently
@@ -56,11 +58,14 @@
     // DEV view defaults to fog OFF even for old snapshots saved with fog ON.
     // The player can still enable it with the Fog button at any time.
     combat.fog=false;
+    // Visibility toggle only: preserve zone geometry and simulation rules.
+    // Like Fog, Zones starts hidden for both fresh and restored games.
+    combat.zones=false;
     combat.recallMode=['off','green','hall'].includes(raw?.recallMode)?raw.recallMode:(combat.recall?'green':'off');
     combat.recall=combat.recallMode!=='off';
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units
-      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight','patrol'].includes(u.kind))
+      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight','patrol','infantry','archer'].includes(u.kind))
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
@@ -72,7 +77,7 @@
       .map(({legs,climbing,nextThink,engaged,gateway,...e})=>e):[];
     // Ladders and assault towers set against the walls (dev assault).
     combat.storms=Array.isArray(combat.storms)?combat.storms.filter(s=>s&&s.foot&&s.origin&&(['ladder','tower'].includes(s.kind)&&s.wallId||s.kind==='ram'&&s.gateId)):[];
-    for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??='infantry';}
+    for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??=e.kind==='archer'?'archer':e.kind==='knight'?'knight':'infantry';}
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
     visible.fill(0);paintFogBitmap();
@@ -630,7 +635,8 @@
         c.drawImage(fog,0,0,ZONE_SIZE,ZONE_SIZE);
       }
       if(combat.zones&&activeWell()){
-        c.imageSmoothingEnabled=false;
+        c.imageSmoothingEnabled=true;
+        c.imageSmoothingQuality='high';
         for(const mode of ['allow','yellow','green']){
           const mask=zoneImages[mode];
           c.globalAlpha=mode==='allow'?.055:mode==='yellow'?.07:.10;
@@ -648,7 +654,8 @@
     const a=w2sRaw({x:0,y:0},0),bx=w2sRaw({x:1/ZONE_PIXELS,y:0},0),by=w2sRaw({x:0,y:1/ZONE_PIXELS},0);
     g.save();
     g.setTransform(pixelRatio*(bx.x-a.x),pixelRatio*(bx.y-a.y),pixelRatio*(by.x-a.x),pixelRatio*(by.y-a.y),pixelRatio*a.x,pixelRatio*a.y);
-    g.imageSmoothingEnabled=false;
+    g.imageSmoothingEnabled=true;
+    g.imageSmoothingQuality='high';
     g.drawImage(backdrop,0,0);
     g.restore();
   }
@@ -750,6 +757,7 @@
         continue;
       }
       if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u,z});
+      else if(u.kind==='archer'||u.kind==='infantry')characters.push({p:u,type:u.kind==='archer'?'archer':'spearman',id:u.id,unit:u,z});
       else{
         const count=u.kind==='patrol'?2:5;
         // On a wall walk the men stand in file along the wall.
@@ -802,17 +810,16 @@
         }
         if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        drawPosedFigure(e,'spearman',e.id,livery,e,0,.08+(e.z||0));
+        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':'spearman';
+        drawPosedFigure(e,figure,e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
         if(e.torch)window.ConquerFire?.drawTorch(g,w2s(e,.08+(e.z||0)),State.view.scale,e.id);
         const p=w2s(e,.08+(e.z||0));g.strokeStyle='#e45151';g.lineWidth=2;
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
-    // Combat only advances while the calendar runs; a swing or fall already
-    // started still finishes smoothly when the player pauses.
-    if(anim?.active()&&State.clock.speed===0&&!combatAnimFrame)
-      combatAnimFrame=requestAnimationFrame(()=>{combatAnimFrame=0;draw()});
+    // Paused swings/falls share the simulation's visual scheduler with fire,
+    // collapses and scene requests, avoiding a second draw in the same RAF.
     // 2.5D view: assault ladders and towers as simple timber outlines (3D draws the models).
     if(combat.storms?.length&&!window.ConquerWorld3D?.active?.())withRenderContext(g,()=>{
       for(const s of combat.storms){
@@ -1255,6 +1262,17 @@
     archerRoster=out;
     return archerRoster;
   }
+  function mobileArchers(units){
+    const out=[];
+    for(const u of units){
+      if((u.kind!=='archer'&&u.combatKind!=='archer')||!livingUnit(u)||u.routing||u.climbing||u.campState)continue;
+      let shooter=mobileArcherCache.get(u);
+      if(!shooter){shooter={id:u.id,owner:u,clock:0,terrainAt:terrainElevation};mobileArcherCache.set(u,shooter)}
+      shooter.x=u.x;shooter.y=u.y;shooter.h=terrainElevation(u)+(u.z||0);shooter.visualZ=shooter.h+.6;
+      out.push(shooter);
+    }
+    return out;
+  }
   // ---------- walls: troops on the wall walks (settlement-wallwalk.js) ----------
   // A unit is on the ground, climbing (a tower stair or an assault ladder/tower) or on
   // a wall walk: u.wall={wallId,t}, u.z = height above the terrain. Orders become legs:
@@ -1434,7 +1452,9 @@
     for(const storm of combat.storms||[]){
       if(storm.kind!=='ram'||storm.done)continue;
       const gate=State.structures.find(s=>s.id===storm.gateId);
-      if(!gate||window.ConquerSiege?.doorStage(gate)==='broken'){breakIn(storm);continue}
+      // A lowered portcullis is battered first; the way is open with the door broken and no grate down.
+      const breached=g=>window.ConquerSiege?.gateBreached?window.ConquerSiege.gateBreached(g):window.ConquerSiege?.doorStage(g)==='broken';
+      if(!gate||breached(gate)){breakIn(storm);continue}
       const manned=ramCrew(storm).filter(c=>c.post&&!c.e.engaged&&!c.e.legs?.length&&Math.hypot(c.post.x-c.e.x,c.post.y-c.e.y)<.3);
       storm.manned=manned.length;
       if(manned.length<2)continue;
@@ -1442,7 +1462,7 @@
       if(!(before<RAM_BLOW&&after>=RAM_BLOW)&&!(after<before&&before<RAM_BLOW))continue;
       const out=window.ConquerSiege?.attackStructure(gate.id,'ram',manned.length*.5,'door');
       storm.blows=(storm.blows||0)+1;
-      if(out?.destroyed||window.ConquerSiege?.doorStage(gate)==='broken')breakIn(storm);
+      if((out?.destroyed&&out.part==='door'&&!window.ConquerGates?.portcullisBlocks?.(gate))||breached(gate))breakIn(storm);
     }
   }
   function breakIn(storm){
@@ -1615,7 +1635,7 @@
       if(!livingUnit(e)||e.routing)continue;
       if(e.assault)assaultThink(e,nowMs);
       else if(e.torch)torchThink(e,nowMs);
-      if(e.legs?.length&&stepLegs(e,dt,.8))moved=true;
+      if(e.legs?.length&&stepLegs(e,dt,e.kind==='knight'||e.combatKind==='knight'?1.5:.8))moved=true;
     }
     ramStep(dt);
     if(moved){visibilityDirty=true;maskDirty=true}
@@ -1630,11 +1650,11 @@
       // Neutral daytime fauna must not trigger tower roster scans or
       // expensive combat target acquisition.
       const hostiles=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&(!e.stats||e.stats.hp>0));
-      for(const e of hostiles){
-        e.h=terrainElevation(e)+(e.z||0);e.visualZ=e.h+.6;e.faction??='dev_hostile';
+      for(const e of combat.units.concat(hostiles)){
+        e.h=terrainElevation(e)+(e.z||0);e.visualZ=e.h+.6;
       }
-      rules.update(step,combat.units,combat.enemy,hostiles.length?archers():[],
-        (e,shooter)=>{
+      for(const e of hostiles)e.faction??='dev_hostile';
+      const sees=(e,shooter)=>{
           // An arrow slit can fire only through its own outward opening;
           // rooftop posts retain a full-circle field of fire.
           if(Number.isFinite(shooter.nx)){
@@ -1647,13 +1667,14 @@
           const height=clamp(Math.round(shooter.h),0,8);
           const range=Math.min(rules.shooterRange(shooter,e),combatVisionRadius(height));
           return sourceSees({x:shooter.x,y:shooter.y,h:shooter.h,visualZ:shooter.visualZ,r:range},e);
-        },
+        };
+      rules.update(step,combat.units,combat.enemy,hostiles.length?archers().concat(mobileArchers(combat.units)):[],sees,
         // Melee only between men on the same level: on the ground, or on the same joined walls.
         (a,b)=>{
           const la=levelOf(a);if(la!==levelOf(b)||la==='climb')return false;
           if(la!=='ground')return true;
           return safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1;
-        });
+        },mobileArchers(hostiles),sees);
       stoneDrops(step);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
@@ -1692,6 +1713,18 @@
       const s=structureAtScreen(pointerScreen(e))||structureAt(p);
       if(s?.type!=='gate'){status('Click a gate to set the ram against it');return}
       if(addRamStorm(s))setTool({kind:'select',label:'Select'});
+      syncButtons();draw();return;
+    }
+    if(kind==='combat-storm'&&State.tool.stormKind==='fill'){
+      e.preventDefault();e.stopImmediatePropagation();
+      const result=window.ConquerEarthworks?.start(p);
+      if(!result?.ok){status(result?.reason||'Earthworks unavailable');return}
+      for(let i=0;i<3;i++)combat.enemy.push({
+        id:uid(),x:p.x+(i-1)*.6,y:p.y+result.work.radius+1.2,
+        faction:'dev_hostile',combatKind:'infantry',digging:result.work.id
+      });
+      changed();setTool({kind:'select',label:'Select'});
+      status('Fill begun · '+result.levels+' level(s) to H '+result.work.targetZ.toFixed(1)+' · 3 squads digging');
       syncButtons();draw();return;
     }
     if(kind==='combat-storm'){
@@ -1792,7 +1825,7 @@
   const ui=document.createElement('div');
   ui.id='combatControls';
   ui.innerHTML='<h3>COMBAT · Fog / Command</h3>'+
-    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones ON</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
+    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones OFF</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button></div>'+
     '<div class="combat-row"><button id="combatPatrolAdd" title="Add two pikemen to patrol the White Zone border">Patrol + · 2 pikemen</button><button id="combatPatrolRemove">Patrol −</button></div>'+ 
@@ -1800,7 +1833,7 @@
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
     '<div class="combat-row"><button id="combatTorch" title="Place an attacker with a torch: he sets alight the nearest thing that burns">Torch-bearer</button><button data-combat-fire="arrows" title="Click a structure: a volley of fire arrows from outside">Fire arrows</button><button data-combat-fire="stone" title="Click a structure: a burning trebuchet stone">Fire stone</button><button id="combatBuckets" title="Bucket brigade: women run water from the nearest well to every fire">Buckets ON</button></div>'+
-    '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button><button data-combat-storm="ram" title="Set a ram against a gate: intruders batter it in">Assault · ram</button></div>'+
+    '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button><button data-combat-storm="ram" title="Set a ram against a gate: intruders batter it in">Assault · ram</button><button data-combat-storm="fill" title="Fill a ravine up to the plateau: three moat-fills per level, dug by infantry">Assault · fill</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
     '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>';

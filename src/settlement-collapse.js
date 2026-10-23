@@ -93,7 +93,12 @@
     cache.set(spec.id,out);
     return out;
   }
-  function duration(spec){return blocks(spec).reduce((m,b)=>Math.max(m,b.end),0)}
+  const durationMemo=new WeakMap();
+  function duration(spec){
+    const list=blocks(spec);
+    if(!durationMemo.has(list))durationMemo.set(list,list.reduce((m,b)=>Math.max(m,b.end),0));
+    return durationMemo.get(list);
+  }
   // Pose of one block at time t since the collapse started.
   function pose(b,t){
     const tau=Math.max(0,t-b.delay);

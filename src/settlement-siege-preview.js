@@ -219,6 +219,25 @@
     out.push(['distrutta',s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,0)}]);
     return out;
   }
+  // A complete structure for a gallery spec, centred on (x, y); walls run along +x.
+  // The Asset Lab builds its fortification entries with this too.
+  function galleryStructure(spec,x,y){
+    return['wall','palisade','built'].includes(spec.type)
+      ?{id:uid(),functions:[],flip:false,...spec,width:wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
+      :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
+  }
+  // Asset Lab (index.html?assetlab=1 in a hidden frame): world-space castle meshes of one gallery spec,
+  // built alone on flat ground and removed again. null when the spec has no 3D volume (wood, palisades).
+  let assetSpot=null;
+  function assetMesh(spec){
+    State.clock.speed=0;
+    const c=assetSpot||(assetSpot=flatSpot()),s=galleryStructure(spec,c.x,c.y);
+    if(!window.ConquerCastle3D?.castleVolume(s))return null;
+    const keep=State.structures;
+    State.structures=[s];invalidateSceneCache();
+    try{return{origin:c,...window.ConquerCastle3D.worldMeshes()}}
+    finally{State.structures=keep;invalidateSceneCache()}
+  }
   let galleryLabels=null;
   function gallery(kind='towers'){
     const rows=GALLERY[kind];if(!rows)throw new Error('gallery: towers|gates');
@@ -234,10 +253,7 @@
     const made=[];
     rows.forEach(([label,spec],j)=>phases(spec).forEach(([phase,apply])=>{
       const i=heads.indexOf(phase);
-      const x=c.x+i*DX,y=c.y+j*DY,linear=['wall','palisade'].includes(spec.type);
-      const s=linear
-        ?{id:uid(),functions:[],flip:false,...spec,width:wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
-        :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
+      const s=galleryStructure(spec,c.x+i*DX,c.y+j*DY);
       State.structures.push(s);made.push({s,apply});
     }));
     invalidateSceneCache();window.ConquerWallWalk?.invalidate();
@@ -275,7 +291,7 @@
   }
   // Labels on/off (contact sheets capture each cell alone, without them).
   function setGalleryLabels(on){if(!on)galleryLabels=null}
-  window.ConquerSiegePreview={start,stop,at,play,gallery,setGalleryLabels,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G,blocked:run.blocked}};
+  window.ConquerSiegePreview={start,stop,at,play,gallery,setGalleryLabels,GALLERY,galleryStructure,assetMesh,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G,blocked:run.blocked}};
   const q=new URLSearchParams(location.search),wanted=q.get('siege');
   if(wanted)window.addEventListener('load',()=>setTimeout(()=>{
     try{

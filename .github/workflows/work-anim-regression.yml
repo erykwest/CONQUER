@@ -1,0 +1,29 @@
+name: Work animation regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement-work-anim.js'
+      - 'src/settlement-industries.js'
+      - 'src/settlement-population-figures.js'
+      - 'src/settlement-render.js'
+      - 'qa/work-anim-regression.cjs'
+      - '.github/workflows/work-anim-regression.yml'
+  workflow_dispatch:
+jobs:
+  work-anim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check animation source and test syntax
+        run: |
+          node --check src/settlement-work-anim.js
+          node --check src/settlement-industries.js
+          node --check src/settlement-population-figures.js
+          node --check qa/work-anim-regression.cjs
+      - name: Run work-animation regression
+        run: node qa/work-anim-regression.cjs

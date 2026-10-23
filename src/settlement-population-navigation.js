@@ -12,13 +12,13 @@ const navPerf={
 };
 Object.assign(navPerf,window.__conquerPerf||{});
 window.__conquerPerf=navPerf;
-function invalidateNavigation(hard=true){
+function invalidateNavigation(hard=true,{urban=true}={}){
   // Destination trees depend on the exact road graph, so any topology change
   // drops them. Individual resident routes survive soft extensions.
   navPerf.navInvalidations=(navPerf.navInvalidations||0)+1;
   if(window.__conquerPerf)window.__conquerPerf.navInvalidations=navPerf.navInvalidations;
   roadNavGraphCache.dirty=true;
-  invalidateUrbanGeometry();
+  if(urban)invalidateUrbanGeometry();
   roadDestinationTreeCache.clear();
   window.ConquerCombat?.invalidateRoutes?.();
   if(!hard)return;
@@ -282,7 +282,15 @@ function syncPeasantPathCache(){
   peasantPathSignature=peasantObstacleSignature()||'empty';
   peasantPathCache.clear();
 }
-function pointBlockedForPeasant(p,sourceHouseId){
+function peasantObstacleSnapshot(){
+  // A search reads one topology. House annexes/footprints are expensive to derive
+  // and do not change between its thousands of collision samples.
+  const parts=new Map();
+  for(const s of State.structures)if(s.type==='house'||isCivic(s))parts.set(s,s.type==='house'?urbanHouseDisplayParts(s):civicParts(s));
+  parts.circles=State.structures.filter(s=>s.type==='well'||(['tower','ruin'].includes(s.type)&&s.shape==='round'));
+  return parts;
+}
+function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
   if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
   if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
@@ -296,7 +304,8 @@ function pointBlockedForPeasant(p,sourceHouseId){
     if(s.type==='gate'){
       if(window.ConquerCrossings?.drawbridgeBlocks(p,s))return true;
       // A closed gate with its door still whole shuts the passage (settlement-siege.js).
-      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s))return true;continue}
+      // So does a lowered portcullis (settlement-gate-fittings.js).
+      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s)||window.ConquerGates?.portcullisBlocks?.(s))return true;continue}
       const q=toLocalPoint(s,p),d=rectDims(s);
       if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
       continue;
@@ -309,7 +318,7 @@ function pointBlockedForPeasant(p,sourceHouseId){
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
     if((s.type==='tower'||s.type==='ruin')&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='house'||isCivic(s)){
-      const parts=s.type==='house'?urbanHouseDisplayParts(s):civicParts(s);
+      const parts=obstacleParts?.get(s)||(s.type==='house'?urbanHouseDisplayParts(s):civicParts(s));
       for(const part of parts){
         if(pointInPolygon(p,part.points))return true;
         for(let i=0;i<part.points.length;i++){const j=(i+1)%part.points.length;if(pointSegmentDistance(p,part.points[i],part.points[j])<=PEASANT_CLEARANCE)return true}
@@ -345,21 +354,30 @@ function peasantSegmentTravelCost(a,b){
   }
   return L*sum/steps;
 }
-function peasantSegmentClear(a,b,sourceHouseId){
+function peasantSegmentClear(a,b,sourceHouseId,obstacleParts=null){
   if(terrainSegmentCrossesCliff(a,b)&&!window.ConquerCrossings?.segmentCanCrossCliff(a,b))return false;
+  // Sampling alone can miss a tangent to the well between two samples. Such a
+  // shortcut passed A* smoothing, then failed on the woman's smaller walk step.
+  const circles=obstacleParts?.circles||State.structures.filter(s=>s.type==='well'||(['tower','ruin'].includes(s.type)&&s.shape==='round'));
+  for(const s of circles)if(s.id!==sourceHouseId&&pointSegmentDistance(s,a,b)<=(s.type==='well'?.62:s.r)+PEASANT_CLEARANCE)return false;
   const L=dist(a,b),steps=Math.max(2,Math.ceil(L/.22));
-  for(let i=0;i<=steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId))return false}
+  for(let i=0;i<=steps;i++){const t=i/steps,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};if(pointBlockedForPeasant(p,sourceHouseId,obstacleParts))return false}
   return true;
 }
-function smoothPeasantPath(points,sourceHouseId,allowedAt=null){
+function smoothPeasantPath(points,sourceHouseId,allowedAt=null,obstacleParts=null){
+  const work=smoothPeasantPathWork(points,sourceHouseId,allowedAt,obstacleParts);let result;
+  do{result=work.next()}while(!result.done);return result.value;
+}
+function* smoothPeasantPathWork(points,sourceHouseId,allowedAt=null,obstacleParts=null){
   if(points.length<=2)return points;
   const prefix=[0];
-  for(let i=0;i<points.length-1;i++)prefix.push(prefix.at(-1)+peasantSegmentTravelCost(points[i],points[i+1]));
+  for(let i=0;i<points.length-1;i++){prefix.push(prefix.at(-1)+peasantSegmentTravelCost(points[i],points[i+1]));if(i%32===0)yield}
   const out=[points[0]];let i=0;
   while(i<points.length-1){
     let chosen=i+1;
     for(let j=points.length-1;j>i+1;j--){
-      if(!peasantSegmentClear(points[i],points[j],sourceHouseId))continue;
+      if(j%8===0)yield;
+      if(!peasantSegmentClear(points[i],points[j],sourceHouseId,obstacleParts))continue;
       if(allowedAt){const length=dist(points[i],points[j]);let valid=true;for(let k=0;k<=Math.ceil(length/.5);k++){const t=k/Math.max(1,Math.ceil(length/.5));if(!allowedAt({x:points[i].x+(points[j].x-points[i].x)*t,y:points[i].y+(points[j].y-points[i].y)*t})){valid=false;break}}if(!valid)continue;}
       const originalCost=prefix[j]-prefix[i],shortcutCost=peasantSegmentTravelCost(points[i],points[j]);
       // Only simplify if the shortcut preserves the road preference found by A*.
@@ -376,37 +394,49 @@ class PeasantMinHeap{
   get length(){return this.a.length}
 }
 function findPeasantPath(start,goal,sourceHouseId,pad=8,allowedAt=null){
+  const work=findPeasantPathWork(start,goal,sourceHouseId,pad,allowedAt);let result;
+  do{result=work.next()}while(!result.done);return result.value;
+}
+function* findPeasantPathWork(start,goal,sourceHouseId,pad=8,allowedAt=null){
   const step=PEASANT_PATH_STEP;
+  const obstacleParts=peasantObstacleSnapshot(),blockedNodes=new Map(),costs=new Map();
+  const blocked=(x,y)=>{const k=key(x,y);if(!blockedNodes.has(k)){const p=pos(x,y);blockedNodes.set(k,pointBlockedForPeasant(p,sourceHouseId,obstacleParts)||!!(allowedAt&&!allowedAt(p)))}return blockedNodes.get(k)};
+  const cost=(x,y)=>{const k=key(x,y);if(!costs.has(k))costs.set(k,peasantTerrainCost(pos(x,y)));return costs.get(k)};
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
   const key=(x,y)=>x+','+y,pos=(x,y)=>({x:x*step,y:y*step});
-  function nearestFree(p){
+  function* nearestFree(p){
     const cx=Math.round(p.x/step),cy=Math.round(p.y/step);let best=null,bestD=Infinity;
-    for(let r=0;r<=4;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
+    for(let r=0;r<=4;r++){
+      for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
       if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
-      const x=cx+dx,y=cy+dy,q=pos(x,y);if(x<minX||x>maxX||y<minY||y>maxY||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q)))continue;
-      if(!peasantSegmentClear(p,q,sourceHouseId))continue;
+      const x=cx+dx,y=cy+dy,q=pos(x,y);if(x<minX||x>maxX||y<minY||y>maxY||blocked(x,y))continue;
+      if(!peasantSegmentClear(p,q,sourceHouseId,obstacleParts))continue;
       const d=dist(p,q);if(d<bestD){best={x,y,q};bestD=d}
+      }
+      // No point in a later ring can be closer than this lower bound.
+      if(bestD<=(r+.5)*step)break;
+      yield;
     }
     return best;
   }
-  const s=nearestFree(start),g=nearestFree(goal);if(!s||!g)return null;
+  const s=yield* nearestFree(start),g=yield* nearestFree(goal);if(!s||!g)return null;
   const open=new PeasantMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
   open.push({x:s.x,y:s.y,f:dist(s.q,g.q)*PEASANT_ROAD_COST});
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   let found=null,guard=0;
   while(open.length&&guard++<30000){
+    if(guard%16===0)yield;
     const cur=open.pop(),ck=key(cur.x,cur.y);if(closed.has(ck))continue;closed.add(ck);
     if(cur.x===g.x&&cur.y===g.y){found=cur;break}
     for(const [dx,dy] of dirs){
       const nx=cur.x+dx,ny=cur.y+dy;if(nx<minX||nx>maxX||ny<minY||ny>maxY)continue;
-      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||pointBlockedForPeasant(q,sourceHouseId)||(allowedAt&&!allowedAt(q))||!peasantSegmentClear(pos(cur.x,cur.y),q,sourceHouseId))continue;
+      const nk=key(nx,ny),q=pos(nx,ny);if(closed.has(nk)||blocked(nx,ny)||!peasantSegmentClear(pos(cur.x,cur.y),q,sourceHouseId,obstacleParts))continue;
       if(dx&&dy){
-        const q1=pos(cur.x+dx,cur.y),q2=pos(cur.x,cur.y+dy);
-        if(pointBlockedForPeasant(q1,sourceHouseId)||pointBlockedForPeasant(q2,sourceHouseId)||(allowedAt&&(!allowedAt(q1)||!allowedAt(q2))))continue;
+        if(blocked(cur.x+dx,cur.y)||blocked(cur.x,cur.y+dy))continue;
       }
       const baseStep=Math.hypot(dx,dy)*step;
-      const from=pos(cur.x,cur.y),moveCost=baseStep*(peasantTerrainCost(from)+peasantTerrainCost(q))*.5;
+      const moveCost=baseStep*(cost(cur.x,cur.y)+cost(nx,ny))*.5;
       const tentative=(gScore.get(ck)??Infinity)+moveCost;
       if(tentative<(gScore.get(nk)??Infinity)){
         gScore.set(nk,tentative);came.set(nk,ck);
@@ -418,5 +448,5 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8,allowedAt=null){
   if(!found)return null;
   const rev=[],startKey=key(s.x,s.y);let k=key(g.x,g.y);
   while(true){const [x,y]=k.split(',').map(Number);rev.push(pos(x,y));if(k===startKey)break;k=came.get(k);if(!k)return null}
-  rev.reverse();return smoothPeasantPath([start,...rev,goal],sourceHouseId,allowedAt);
+  rev.reverse();return yield* smoothPeasantPathWork([start,...rev,goal],sourceHouseId,allowedAt,obstacleParts);
 }

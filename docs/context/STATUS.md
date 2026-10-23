@@ -1,8 +1,69 @@
 # Livello 2 — Stato tecnico e prove
 
-> Snapshot **aggiornato il 19/10/2026** per il lavoro Terraforming; le sezioni storiche del 16/10 mantengono i propri limiti di verifica.
-> Base del lavoro: `main` a `a4adca0`; implementazione su branch `terraforming` al commit `fa9ef0d`. Il repository può cambiare: ricontrollare HEAD prima di intervenire.
+## Converge — riallineamento PR #61 alla main corrente (23/10/2026)
 
+- **BRANCH, NON MERGE:** `converge` riallineata a `main` `518e830547b66c12deefa0833487ea76b81c7746`. Divergenza iniziale: 9 commit propri e 37 mancanti. Conflitti risolti in `settlement-siege.js` e `DECISIONS.md`, preservando tutti gli aggiornamenti di main.
+- **D-031/D-032/D-042:** immunità dei nuclei anche lignei agli attacchi ordinari; grata abbassata ancora colpibile con la matrice corrente, fuoco attraverso le sbarre, porta/grata/torre indipendenti. Conservati `gateSection`, `gateBreached`, terrapieni, campate/brecce, crolli, levatoi, night watch e ridisegno coalescente. Nessun merge integrale della vecchia branch `assedio`.
+- **QA LOCALE:** 67/68 regressioni deterministiche PASS; unico FAIL `founding-regression.cjs` per slice strade >100 ms. Riprodotto anche sul checkout separato della stessa main (66/67 PASS), quindi non introdotto dalla PR. Sintassi di 148 moduli/test PASS prima dell'aggiunta della nuova QA browser. Checkout con fine riga del repository, senza modifiche ai contratti test.
+- **QA INTEGRAZIONE:** estese `gate-fittings-regression` (matrice, input invalidi, tre HP e persistenza) e `siege-damage-converge-regression` (scheduler condiviso). Nuova QA Chromium **PASS gameplay Canvas + avvio WebGL** del pannello «Test ram», torri lignee, fuoco e save/load; workflow `Converge siege integration`. Nella scena isolata il renderer WebGL può passare al fallback per `drawArrays: no buffer is bound to enabled attribute`: riprodotto anche sulla main `518e830`. Il report conserva lo stato finale del renderer; non certifica WebGL ininterrotto. CI sul commit pubblicato da verificare nella PR.
+- **QA BROWSER LEGACY:** `ui-combat-regression.mjs` fallisce sull'aspettativa del default DEV `daylightOverride === 'day'` (valore attuale `null`), anche sulla stessa main. Il test si arresta lì: le verifiche successive di quella suite non sono certificate da questa esecuzione; la QA assedio dedicata passa su entrambi i renderer.
+- **LIMITI:** questa integrazione non completa logistica/blocco/fame/resa né IA di scelta degli accessi (GATE-07). Nessun merge definitivo in main o deploy richiesto.
+
+## Asset Lab — catalogo completo: fortificazioni dal motore, lavori, manifest generato (branch `feat/asset-lab-complete-catalog`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** categoria **«Fortificazioni»** con 22 strutture in pietra (torri, mura con caditoie/hoardings, sezione costruita, porte) costruite dal gioco stesso: `figures-lab.html` apre in un iframe nascosto `index.html?assetlab=1&renderer=canvas2d` e `ConquerSiegePreview.assetMesh(spec)` monta una sola struttura delle varianti della galleria distruzione (`GALLERY`, ora esportata) e restituisce `ConquerCastle3D.worldMeshes()`. Miniature e inspector ruotabili a 15°, altezza in U nella scheda.
+- **Sandbox `?assetlab=1`:** nessun salvataggio locale (`saveLocal` esce, slot di lettura vuoto `conquer.assetlab.sandbox`), nessun Supabase (import e `initSupabase` saltati), nessuna telemetria remota. Il salvataggio del giocatore non viene letto né scritto (verificato in Chromium).
+- **Non incluse:** 7 varianti in legno (torri, porta lignea, palizzate), disegnate solo dal percorso 2.5D e senza volume `ConquerCastle3D`; lo stato è indicato nel Lab.
+- **Animazioni di lavoro:** 7 voci «Popolazione / Lavori» (pala, ascia, piccone, martello, zappa, semina, falce) con miniatura dal colpo di `settlement-work-anim.js` e apertura dell'animazione live sull'azione corretta.
+- **Manifest generato:** `tools/build-asset-manifest.cjs` produce `src/asset-manifest.js` (36 file + 2 set di rotazione `*_rotations`); la lista scritta a mano è stata rimossa. Campo taglialegna e cava mostrano i 24 fotogrammi con i pulsanti ±15°.
+- **Correzioni:** la ricerca non trova più la parola «undefined» sui campi mancanti; rimosso il codice morto per torri/mura/fossati in `renderSchema`; righe della griglia non più schiacciate (già difettoso su `main`).
+- **QA:** `qa/asset-catalog-regression.cjs` (manifest aggiornato, sandbox, 7 strumenti) e tutte le altre 65 regressioni statiche **PASS** in locale su checkout LF; `qa/asset-catalog-browser.mjs` **PASS** in locale con Chromium (fortificazioni, rotazione, nessun salvataggio, lavori, fotogrammi, ricerca). **CI della PR non ancora verificata in questa nota.**
+
+## Asset Lab — ispezione ruotabile e componenti reali (#80, integrato su `main` il 22/10/2026)
+
+- **Codice su `main` (squash `bf548ca`):** inspector destro con pulsanti −15° / +15° per i modelli 3D; ricalcolo della proiezione e dell'ordinamento delle facce per le preview statiche; direzione reale modificata negli animali, carri 3D e macchine d'assedio animate, interrompendo l'autorotazione quando si usa il comando manuale.
+- **Catalogazione corretta:** eliminata la falsa categoria «Fortificazioni», che conteneva soltanto texture di elementi e disegni SCHEMA di componenti procedurali non visualizzati dal gioco. Le texture reali `src/assets/architecture/*.png` sono ora in «Componenti» / «Elementi architettonici»; i 13 schemi simulati di fortificazione non sono più esposti. Nessuna modifica alle fortificazioni del Builder.
+- **QA aggiornata:** asserzioni statiche per classificazione e rotazioni + browser Chromium per cambiamento pixel 3D, reversibilità, direzione degli animali animati, auto-rotazione disabilitata e invisibilità controlli su sprite 2D. CI Asset Lab **PASS** sulla PR #80 prima del merge.
+
+> **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
+
+
+## Stato aggiornato da audit integrale (22/10/2026)
+
+- **13 feature Builder con core presente su main:** P0-01a/03/07; P1-12/13; P2-14/15/16/18/19/20; P3-21/22. **Non proporre più basamenti, alberi, scatter, araldica, palizzate, fossati, ponti e levatoi come implementazioni da zero.** I residui QA sono distinti.
+- **10 feature Builder parziali:** P0-01/02/04/05/06/08; P1-09/10/11; P2-17. Sono codificate in parte: completare soltanto i contratti mancanti. P2-17 ha taverna/tempio e routine già presenti, **non bonus**; P0-08 produce ancora `stone`, non `metal`.
+- **Clay su main:** cava d'argilla con validazione entro 6 U dall'acqua, `State.resources.clay`, costi `brick` in argilla, resa muraria e **HP all'80%**. QA `clay-material` e `clay-palette` presenti ma non rieseguite oggi. Le sezioni del 19/10 sulla branch `clay` sono storiche.
+- **Built Sections e assedio su main:** slot per piano, `ConquerSiege.capacity/transfer`, `siege.stock`, `starvationDays`, Mastio, slot arcieri, danni, incendi, porte con portone, scale/arieti/altre macchine, terrapieni. **Manca un assedio strategico completo**: `settlement-siege.js` dichiara `No automatic surrender in P0`. Lo stock assedio non è ancora dimostrato coerente con il ledger economico.
+- **Rami non integrati:** [#55](https://github.com/erykwest/CONQUER/pull/55) **DRAFT** — operai L1 cantieri/risorse/convogli parziali; [#61](https://github.com/erykwest/CONQUER/pull/61) danni; [#65](https://github.com/erykwest/CONQUER/pull/65) cutaway; [#72](https://github.com/erykwest/CONQUER/pull/72) su base `knights`; [#18](https://github.com/erykwest/CONQUER/pull/18) visual QA e [#16](https://github.com/erykwest/CONQUER/pull/16) hardening draft. Nessun merge è implicato dall'apertura.
+- **Test e limiti:** identificati `qa/fields-regression.cjs`, `qa/scatter-regression.cjs`, `qa/drawbridge-regression.cjs`, `qa/earthworks-regression.cjs`, `qa/gate-breach-regression.cjs`, `qa/economy-industries-regression.cjs`, `qa/clay-material-regression.cjs`; **non rieseguiti nel corso di questo audit**. Gli spike GPU e i due test falliti nel vecchio benchmark restano elementi da confermare/correggere.
+- **Priorità residua:** unificazione `State.resources` + `State.economy` + `State.siege.stock`; lavoro meccanico L1 ai cantieri; calendario/resa agricola; output miniera e officina; vertical slice con accessi/blocco/fame/resa; QA multipipeline.
+
+Tutti gli ID, prove e gap distinti per livello sono nell'[AUDIT-2026-10-22](AUDIT-2026-10-22.md). Non retrocedere a TODO una feature già presente perché richiede soltanto QA.
+
+## Snapshot attuale — main vs PR aperte (21/10/2026; storico)
+
+**MERGED / codice su main:** [#44](https://github.com/erykwest/CONQUER/pull/44) minimappa+LOD; [#53](https://github.com/erykwest/CONQUER/pull/53) /camp, pattuglie, lupi e notte; [#54](https://github.com/erykwest/CONQUER/pull/54) solare stagionale; [#57](https://github.com/erykwest/CONQUER/pull/57)/[#58](https://github.com/erykwest/CONQUER/pull/58) mulini/menu; [#63–69](https://github.com/erykwest/CONQUER/pull/69) terraforming e cache; [#70](https://github.com/erykwest/CONQUER/pull/70) performance; [#71](https://github.com/erykwest/CONQUER/pull/71) 7 utensili/lavoro/cantieri; [#73](https://github.com/erykwest/CONQUER/pull/73) terrapieni d'assalto.
+
+**OPEN / non su main:** [#55](https://github.com/erykwest/CONQUER/pull/55) ledger unificato e **squadre L1 che costruiscono**, commercio e convogli skeleton; [#61](https://github.com/erykwest/CONQUER/pull/61) matrice danni; [#65](https://github.com/erykwest/CONQUER/pull/65) cutaway arredato; [#72](https://github.com/erykwest/CONQUER/pull/72) cavalieri/messaggero/tributo su base `knights`, non `main`. Anche #18 e #16 restano aperte. Nessuna delle PR aperte è qui equiparata a release.
+
+**QA:** la PR #70 riporta 60/62 suite PASS e browser fixture 40/30 Canvas/WebGL PASS; due suite preesistenti falliscono, picchi GPU fino a 303,8 ms; questa ricognizione non riesegue i test. Per stato, prove, confini e milestone vedere [audit completo](AUDIT-2026-10-21.md). Le note locali precedenti sulla branch performance non descrivono più lo stato di rilascio.
+
+## Portoni — magnete strade, ante, grata, drappi e torce (22/10/2026)
+
+- **CODICE su branch `portoni`** (da `origin/main` `f739e51`), non su `main`. Nuovo modulo `src/settlement-gate-fittings.js` (`window.ConquerGates`) più agganci in castle3d/world3d, placement, input, navigazione, fuochi e pannello.
+- **Magnete:** il tool portone aggancia la strada più vicina (centro sulla mezzeria, passaggio lungo la strada, il movimento sceglie solo il fronte esterno). `roadUsesGatePassage` campiona la mezzeria: ammessa se entra ed esce dalle bocche, anche se termina o curva nel passaggio; il piazzamento non la tratta più come collisione.
+- **Strade verso il portone:** il tool strada principale ha un magnete su ciascuna delle due bocche del portone (anche cliccando dentro il corpo). La strada finisce al centro del portone dopo un tratto d'accesso dritto lungo il passaggio (`gateRoadPort`, `manualRoadLegs`), quindi due strade dalle due bocche condividono il nodo centrale e la rete resta continua. Provato nel browser con eventi puntatore reali: due tratti per lato, percorso pedonale attraverso il portone.
+- **3D:** nel solo renderer World 3D il corpo del portone in pietra è scavato (pilastri, volta ogivale, pavimento) con la stessa sagoma del decal `gatePortal`; cornici del portale su entrambe le bocche. Ante come mesh dinamiche che ruotano verso l'interno in ~1,4 s seguendo `gate.closed`; scure se danneggiate, assenti se sfondate. I percorsi Canvas mantengono il blocco pieno.
+- **Grata:** upgrade del portone in pietra (24 oro, 16 metallo, 6 legno), alza/abbassa animato ~2,2 s; abbassata (o in movimento) blocca i pedoni anche a portone aperto. **Strato difensivo separato (D-042):** sezione `portcullis` da 120 HP in `ConquerSiege.integrity`; ariete/macchine diretti alla porta colpiscono prima la grata abbassata (ariete ×4, catapulta ×2,5, trabucco ×6, ascia ×0,1, lancia e fuoco 0), il fuoco passa e brucia la porta. Distrutta resta piegata a 0,25, non sbarra, riparabile (8 oro, 10 metallo); abbassata sbarra anche a porta sfondata. L'assalto con ariete irrompe solo con `gateBreached` (porta sfondata e nessuna grata giù). Provato nel browser con il pulsante «Test ram» del pannello: 3 colpi da 40 distruggono la grata, porta 85/85 intatta.
+- **Drappi e torce:** due drappi con l'araldica del regno ai lati del portale esterno; due torce con staffa, fiamma e bagliore solo di notte, nascoste quando il fronte guarda via dalla camera.
+- **QA:** nuova `qa/gate-fittings-regression.cjs` PASS; aggiornati i pattern sorgente di `gate-breach`, `mills3d` e `refactor-app-population` (aggancio grata in navigazione). Batteria non-browser **64/64 PASS in un checkout con fine riga LF come la CI**; su un checkout Windows CRLF `refactor-app-population` e `wall-bays` falliscono anche su `main` perché confrontano testo con `\n`, non per un difetto del gioco. Controllo visivo nel browser locale: ante aperte/semiaperte/chiuse, grata, notte con torce, vista posteriore, fallback Canvas con grata e torce. Suite browser (`.mjs`) non eseguite; CI della PR #76 da verificare.
+- **LIMITI:** portone di legno solo con magnete; l'IA d'assedio non sceglie ancora fra grata, fuoco e altri accessi (GATE-07); un avviso WebGL preesistente ("no buffer is bound to enabled attribute") ha disattivato una volta il 3D durante le prove e non è stato riprodotto né attribuito a questo lavoro.
+
+## Integrazione performance con main aggiornato (21/10/2026)
+
+- **BASE E AUTORIZZAZIONE:** dopo la pubblicazione di `1520e00`, richiesto il merge. Integrato `origin/main` a `c94bdc1` nel branch `fix/construction-completion-perf` prima della PR/squash; le sezioni di audit sottostanti descrivono i rispettivi snapshot storici.
+- **CONFLITTI RISOLTI:** conservati firma completa delle modifiche di terraforming e confronto dei lotti reali per la texture terreno; macerie transitorie dei mulini e flag/cache delle macerie ferme; pale/ruote dei mulini nel painter Canvas comune. Anche il crollo del mulino usa il ridisegno coalescente.
+- **QA INTEGRAZIONE:** 60/62 suite PASS; soli fallimenti preesistenti `refactor-app-population-regression` e `wall-bays-regression`. Battaglia browser Canvas/WebGL completata a 298,1 s, stesso esito 37 contro 0, animazione in pausa e fallback con errore iniettato PASS. WebGL draw P95 16,9 ms / massimo 303,8 ms, Canvas 7,5 / 12,5 ms: i picchi GPU residui restano aperti. Artefatti locali `output/playwright/mass-battle/integration-main.json` e `regressions-integration.json`. Stato PR/CI/merge verificabile nella cronologia GitHub, senza anticipare il deploy.
 
 ## Convergenza regole assedio — branch `converge` (20/10/2026)
 
@@ -29,6 +90,42 @@
 - **BRANCH / PROGETTO:** `clay` deriva da `Civil` (HEAD sorgente `ba592cfaed7b76ae20e6f0192955fa68212de410`). Aggiunti documenti di progettazione/implementazione [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).
 - **NON CODICE:** nel commit documentale non vengono implementate argilla, nuova modalità cava, materiale mattoni, durabilità 80% né palette. Nessuna regressione runtime viene dichiarata superata.
 - **DA FARE:** implementare su `clay` rispettando l'attuale skeleton `Civil`, poi provare collocazione entro 6 U, output contabile, costi murari, rendering multipipeline, integrità e migrazioni.
+
+## Audit prestazioni completamenti (20/10/2026)
+
+- **CODICE LOCALE / NON RILASCIATO:** branch `fix/construction-completion-perf`, base `main` `996b4a4` aggiornata con pull. Manutenzione stradale dei completamenti distribuita in intervalli con budget 6 ms; cancellazione/ricalcolo su modifica della topologia; invalidazione del catasto limitata ai cambiamenti reali; controllo errori WebGL2 differito tramite fence.
+- **PROVE:** benchmark ripetibile Chromium/WebGL2 e Canvas, regressioni di completamento e controllo errori GPU. Misure, comandi, artefatti e fallimenti preesistenti sono nell'[audit del 20/10](../construction-performance-audit-2026-10-20.md).
+- **RISULTATI LOCALI:** mediana WebGL2 manutenzione + primo disegno: torre 686→15 ms, portale 535→14 ms, stress 8 torri/mura/portale 1.981→457 ms. Batteria conclusiva 53/55 suite PASS; i due test sorgente falliscono anche su main. Sintassi e whitespace PASS; errore GPU iniettato porta a un Canvas visibile. Persistono picchi grafici nel castello stress e nel ciclo attivo: non è una certificazione di fluidità generale.
+- **LIMITE:** modifiche nel working tree, nessun commit/push/PR/merge/deploy o CI remota; non dichiarate disponibili su `main`. Roadmap e priorità M0–M3 invariate.
+
+## Audit round 2 — fuoco, crolli e cutaway (20/10/2026)
+
+- **CODICE LOCALE / NON RILASCIATO:** continua `fix/construction-completion-perf` sopra il round 1. Ridisegni dei danni coalescenti nel RAF di simulazione, navigazione preservata per i soli HP, buffer GPU per macerie ferme, cache composita del cutaway senza includere gli occupanti animati.
+- **QA LOCALE:** 54/56 suite PASS; i due fallimenti sorgente sono quelli già riprodotti su main. Incendio browser su 32 strutture, 30 crolli/12 ceppi, 12 cutaway, brigata con sei addette e incendio naturale fino al collasso di 24 case. Pixel del cutaway verificati a due rotazioni e due palette; buffer statici verificati stabili fino alla rotazione.
+- **RISULTATI E LIMITI:** logica incendio 7,3 s→6 ms e crolli 1,23 s→15 ms nella campagna comparabile; il rendering è differito e non va contato come eliminato. Cutaway WebGL P50 20→6 ms per disegno; macerie ferme circa 1 ms. Restano crolli Canvas fino a 2,23 s, percorsi brigata 140–330 ms e variabilità della composizione. [Audit completo](../fire-collapse-cutaway-performance-audit-2026-10-20.md).
+- **STATO GIT:** working tree locale, nessun commit/push/PR/merge/deploy o CI remota. Priorità della roadmap invariate.
+
+## Audit round 3 — Canvas, brigata, mura e attacco (20/10/2026)
+
+- **CODICE LOCALE:** continua `fix/construction-completion-perf`. Cache composita delle macerie Canvas ferme; A* cooperativo della brigata con budget indicativo 4 ms e priorità rotante; sagome/costi locali alla ricerca; rimossi percorsi diretti attraverso ostacoli e corrette le tangenti al pozzo che bloccavano le addette.
+- **PROVE BROWSER:** due renderer, 12 crolli, incendio su 24 case/sei addette, un cavaliere con cinque squadre in salita/discesa e 20 assalitori con scala, camminamento, discesa e combattimento reale. Otto casi a tempo simulato e quattro osservazioni con rendering continuo; nessun fault del motore nelle osservazioni finali. Pixel verificati su rotazioni/pan/zoom/plan view e tre materiali.
+- **RISULTATI E RESIDUI:** peggior aggiornamento brigata circa 1,8–2,4 s→25–32 ms, zero attraversamenti nei segmenti controllati. Macerie Canvas ferme riusate in circa 0,5 ms; **il primo disegno dopo la caduta può ancora fermarsi per 3 s**, e i crolli attivi restano pesanti. RAF militare variabile, fino a P95 133–150 ms nel caso delle squadre: non è una dichiarazione di fluidità generale. [Audit completo](../movement-collapse-performance-audit-2026-10-20.md), decisione D-036.
+- **QA / STATO:** 55/57 suite locali PASS; restano i due fallimenti sorgente già riprodotti su main. Sintassi dei sorgenti e whitespace PASS. Working tree locale, nessun commit/push/PR/merge/deploy o CI remota. Roadmap e priorità invariate.
+
+## Scontro 40 contro 30 — prova fino all'eliminazione (21/10/2026)
+
+- **BASE:** `9e1b6a5` pubblicato su `fix/construction-completion-perf`, CI Civil PASS. Le correzioni di questa nuova prova sono ulteriori modifiche locali non pubblicate.
+- **SCENARIO E RISULTATO:** 15 arcieri/20 fanti/5 cavalieri difensori contro 10 arcieri/17 fanti/3 cavalieri attaccanti, come 70 entità singole. Campo aperto e seed 12345. Canvas e WebGL arrivano entrambi a 0 attaccanti dopo 298,1 s simulati; restano 15 arcieri, 19 fanti, 3 cavalieri difensori. Tutte le sei combinazioni lato/tipo infliggono danni; nessun HP azzerato dal driver di prova.
+- **CORREZIONI LOCALI:** persistenza/render dei tipi individuali, arcieri mobili di entrambi i lati, velocità dei cavalieri attaccanti e filtro di portata prima di collisioni/LOS costose. Nessun cambio ai valori di HP, armatura o dadi. Sette regressioni dedicate.
+- **QA FINALE:** 56/58 suite PASS; restano `refactor-app-population-regression.cjs` e `wall-bays-regression.cjs`, già falliti su main. Sintassi e whitespace PASS. Nessun nuovo commit/push o CI remota per questo round.
+- **PERFORMANCE:** logica P95 circa 1 ms; Canvas draw P95 7,3 ms nella campagna principale. WebGL variabile fra P95 8,7 e 132,9 ms nelle ripetizioni: il profilo principale trova circa 3 s in `getError`. Il tentativo di aggiungere fence ai passaggi successivi non ha dimostrato beneficio ed è stato rimosso. La prova accelerata non certifica FPS a 1×. [Audit e comandi](../mass-battle-performance-audit-2026-10-21.md).
+
+## Ulteriore audit rendering 40/30 (21/10/2026)
+
+- **CODICE LOCALE:** animazioni di combattimento in pausa nel ciclo visuale condiviso; controllo errori WebGL distanziato di almeno 1 s, checkpoint dopo front/luci e attesa della fence con limite per evitare verifiche rimandate all'infinito. Perdita del contesto ancora controllata a ogni disegno; fallback Canvas mantenuto.
+- **MISURE:** baseline WebGL strumentata 324 disegni / 10,72 s cumulativi; due prove finali 174/170 disegni e 2,97/1,89 s (**−72–82%**). P95 76,5/8,3 ms contro 163,4 ms; **restano singoli blocchi fino a 396 ms**, quindi fluidità generale non dichiarata. Canvas 177 disegni / 0,738 s contro 326 / 1,433 s della campagna precedente. [Dati e limiti](../mass-battle-performance-audit-2026-10-21.md#ulteriore-riduzione-dei-costi-di-rendering--21102026).
+- **COMPORTAMENTO:** stessa eliminazione a 298,1 s simulati e 37 difensori superstiti. Verificati nel browser colpo/termine animazione in pausa e fallback dipinto con errore GPU iniettato. Esperimenti framebuffer/backpressure scartati. Base `9e1b6a5`; nuove modifiche non pubblicate. D-038; roadmap invariata.
+- **QA CONCLUSIVA:** 57/59 suite PASS, con i soli due fallimenti preesistenti su main (`refactor-app-population-regression`, `wall-bays-regression`). Sintassi e whitespace PASS; hash runtime corrispondenti alla misura finale.
 
 ## Semaforo epistemico
 

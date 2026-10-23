@@ -20,11 +20,20 @@ function gatePointInPassage(gate,p,pad=.04){
 }
 function roadUsesGatePassage(road,gate){
   if(!road||!gate||gate.type!=='gate')return false;
-  const info=gatePassageInfo(gate),mid=closestPointOnSegment(info.center,road.a,road.b);
-  if(dist(mid,info.center)>info.halfWidth*.82)return false;
-  const dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
+  const info=gatePassageInfo(gate),dx=road.b.x-road.a.x,dy=road.b.y-road.a.y,L=Math.hypot(dx,dy)||1;
   const dot=Math.abs((dx/L)*info.ux+(dy/L)*info.uy);
-  return dot>=Math.cos(32*Math.PI/180);
+  if(dot<Math.cos(32*Math.PI/180))return false;
+  // Wherever the road strip meets the gatehouse its centreline must run inside the passage,
+  // entering and leaving by the mouths: a segment ending inside or bending there is fine.
+  const a=toLocalPoint(gate,road.a),b=toLocalPoint(gate,road.b),reach=rectDims(gate).h/2+(Number(road.width)||.3)/2;
+  const steps=Math.max(4,Math.ceil(L/.05));let inside=false;
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+    if(Math.abs(x)>info.halfLength+.02||Math.abs(y)>reach)continue;
+    if(Math.abs(y)>info.halfWidth*.82)return false;
+    inside=true;
+  }
+  return inside;
 }
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return dist(p,a);const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return dist(p,{x:a.x+t*dx,y:a.y+t*dy})}
 function segmentsIntersect(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);const a1=cr(a,b,c),a2=cr(a,b,d),a3=cr(c,d,a),a4=cr(c,d,b);return ((a1>0&&a2<0)||(a1<0&&a2>0))&&((a3>0&&a4<0)||(a3<0&&a4>0))}
@@ -296,9 +305,11 @@ function* simplifyRoadRepairWork(points,width=.30,ignoreIds=[],allowPrimaryNatur
 function reactiveRoadExists(a,b,eps=.24){
   return roadList().some(r=>(dist(r.a,a)<eps&&dist(r.b,b)<eps)||(dist(r.a,b)<eps&&dist(r.b,a)<eps));
 }
-function addReactiveRoadPolyline(points,template={},meta={}){
+function addReactiveRoadPolyline(...args){return finishRoadWork(addReactiveRoadWork(...args))}
+function* addReactiveRoadWork(points,template={},meta={},stillValid=()=>true){
   if(!points||points.length<2)return 0;
-  const width=Number(template.width)||.30,clean=simplifyRoadRepairPath(points,width,meta.ignoreIds||[]);
+  const width=Number(template.width)||.30,clean=yield* simplifyRoadRepairWork(points,width,meta.ignoreIds||[]);
+  if(!stillValid())return 0;
   let added=0,total=Math.max(1,clean.length-1);
   for(let i=0;i<clean.length-1;i++){
     const a=clean[i],b=clean[i+1];if(dist(a,b)<.24||reactiveRoadExists(a,b))continue;
@@ -551,7 +562,8 @@ function gateMainRouteContinuous(gate){
   }
   return Math.min(dist(cursor,endpoints[0]),dist(cursor,endpoints[1]))<=.90;
 }
-function buildGateMainConnection(gate,force=false){
+function buildGateMainConnection(...args){return finishRoadWork(buildGateMainConnectionWork(...args))}
+function* buildGateMainConnectionWork(gate,force=false,stillValid=()=>true){
   if(!gate||gate.type!=='gate'||underConstruction(gate)||mainRoadRouteDeleted(gateMainRouteId(gate)))return 0;
   const routeId=gateMainRouteId(gate),attemptKey=gateMainTopologyKey(gate);
 
@@ -576,13 +588,14 @@ function buildGateMainConnection(gate,force=false){
   const passage=gatePassageInfo(gate,trunk.point);if(!passage)return 0;
   const width=.62,ignore=[];
   let approach;
-  if(roadRepairSegmentClear(trunk.point,passage.near,width,ignore)){
+  if(yield* roadRepairSegmentWork(trunk.point,passage.near,width,ignore)){
     approach=[{...trunk.point},{...passage.near}];
   }else{
     // This is intentionally a short local repair search, not a settlement-wide
     // well→gate A*. The primary road already provides global connectivity.
-    approach=findRoadRepairPath(trunk.point,passage.near,width,10,ignore,18000);
+    approach=yield* findRoadRepairWork(trunk.point,passage.near,width,10,ignore,18000);
   }
+  if(!stillValid())return 0;
   if(!approach||approach.length<2){
     gate.gateMainAttemptKey=attemptKey;
     gate.gateMainBlocked=true;
@@ -593,14 +606,16 @@ function buildGateMainConnection(gate,force=false){
   for(const p of [passage.center,passage.far]){
     if(dist(full.at(-1),p)>.08)full.push({...p});
   }
-  if(!roadRepairSegmentClear(passage.near,passage.center,width,ignore)||
-     !roadRepairSegmentClear(passage.center,passage.far,width,ignore)){
+  if(!(yield* roadRepairSegmentWork(passage.near,passage.center,width,ignore))||
+     !(yield* roadRepairSegmentWork(passage.center,passage.far,width,ignore))){
+    if(!stillValid())return 0;
     gate.gateMainAttemptKey=attemptKey;
     gate.gateMainBlocked=true;
     return 0;
   }
 
-  const clean=simplifyRoadRepairPath(full,width,ignore),pts=subdivideRoadPolyline(clean,ROAD_RULES.arterialSegmentMax);
+  const clean=yield* simplifyRoadRepairWork(full,width,ignore),pts=subdivideRoadPolyline(clean,ROAD_RULES.arterialSegmentMax);
+  if(!stillValid())return 0;
   if(pts.length<2){
     gate.gateMainAttemptKey=attemptKey;
     gate.gateMainBlocked=true;
@@ -737,7 +752,8 @@ function removeTowerSecondaryBranch(towerId){
   if(removed)invalidateNavigation(false);
   return removed;
 }
-function ensureTowerSecondaryBranch(tower,instant=false){
+function ensureTowerSecondaryBranch(...args){return finishRoadWork(ensureTowerSecondaryBranchWork(...args))}
+function* ensureTowerSecondaryBranchWork(tower,instant=false,stillValid=()=>true){
   if(!tower||tower.type!=='tower'||tower.parentTowerId||underConstruction(tower))return 0;
   if(towerSecondaryRoads(tower.id).length)return 0;
 
@@ -749,17 +765,18 @@ function ensureTowerSecondaryBranch(tower,instant=false){
     if(target.type==='well')ignore.push(target.id);
 
     let path;
-    if(roadRepairSegmentClear(start,goal,width,ignore))path=[start,goal];
-    else path=findRoadRepairPath(start,goal,width,14,ignore,60000);
+    if(yield* roadRepairSegmentWork(start,goal,width,ignore))path=[start,goal];
+    else path=yield* findRoadRepairWork(start,goal,width,14,ignore,60000);
+    if(!stillValid())return 0;
     if(!path||path.length<2)continue;
 
-    const added=addReactiveRoadPolyline(path,{width},{
+    const added=yield* addReactiveRoadWork(path,{width},{
       accessFor:tower.id,
       branchTargetId:target.id,
       roadClass:'secondary-tower',
       ignoreIds:ignore,
       instant
-    });
+    },stillValid);
     if(added)return added;
   }
   return 0;
@@ -807,7 +824,8 @@ function rebuildSecondaryRoadsOnLoad(){
   invalidateNavigation();
   return removed;
 }
-function ensureSettlementRoadAccess(s,instant=false){
+function ensureSettlementRoadAccess(...args){return finishRoadWork(ensureSettlementRoadAccessWork(...args))}
+function* ensureSettlementRoadAccessWork(s,instant=false,stillValid=()=>true){
   if(!s||underConstruction(s))return 0;
   if(State.structures.some(r=>r.type==='road'&&r.accessFor===s.id))return 0;
   const nearest=nearestPrimaryRoadProjection(structureCenter(s));if(!nearest)return 0;
@@ -816,12 +834,13 @@ function ensureSettlementRoadAccess(s,instant=false){
   const width=s.type==='market'?.34:s.type==='field'?.26:.30;
   const ignore=[s.id];
   let path;
-  if(roadRepairSegmentClear(start,goal,width,ignore))path=[start,goal];
-  else path=findRoadRepairPath(start,goal,width,10,ignore,45000);
+  if(yield* roadRepairSegmentWork(start,goal,width,ignore))path=[start,goal];
+  else path=yield* findRoadRepairWork(start,goal,width,10,ignore,45000);
+  if(!stillValid())return 0;
   if(!path||path.length<2)return 0;
-  return addReactiveRoadPolyline(path,{width,parentRoadId:nearest.road.id},{
+  return yield* addReactiveRoadWork(path,{width,parentRoadId:nearest.road.id},{
     accessFor:s.id,roadClass:'access-primary',ignoreIds:ignore,instant
-  });
+  },stillValid);
 }
 function reconcileSettlementAccessRoads(limit=Infinity,instant=false){
   let changed=0,done=0;
@@ -1825,7 +1844,39 @@ function connectBorderMainRoadsInFrames(onDone=()=>{}){
   // Keep all initial and reloaded main-road routing off the input/load handler.
   setTimeout(tick,0);
 }
+// Road magnet on the two mouths of a gate: the road ends at the gate centre, after a straight
+// approach along the passage, so roads drawn to either mouth meet inside and join up.
+function gateRoadPort(p){
+  let best=null;
+  for(const gate of State.structures){
+    if(gate.type!=='gate')continue;
+    const info=gatePassageInfo(gate);if(!info)continue;
+    const q=toLocalPoint(gate,p),d=rectDims(gate);
+    for(const side of [-1,1]){
+      const mouth={x:gate.x+info.ux*side*d.w/2,y:gate.y+info.uy*side*d.w/2};
+      const inside=Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2&&Math.sign(q.x||side)===side;
+      const distance=inside?0:dist(p,mouth);
+      if(distance>ROAD_RULES.snapNodeDistance||(best&&distance>=best.distance))continue;
+      const reach=d.w/2+.75;
+      best={gateId:gate.id,distance,center:{x:gate.x,y:gate.y},
+        approach:{x:gate.x+info.ux*side*reach,y:gate.y+info.uy*side*reach}};
+    }
+  }
+  return best;
+}
+// The legs of a manual road whose ends may sit on gate mouths: A, its approach, B's approach, B.
+function manualRoadLegs(a,b,aPort=null,bPort=null){
+  const pts=[a];
+  if(aPort)pts.push(aPort.approach);
+  if(bPort&&!(aPort&&aPort.gateId===bPort.gateId))pts.push(bPort.approach);
+  pts.push(b);
+  const legs=[];
+  for(let i=0;i+1<pts.length;i++)if(dist(pts[i],pts[i+1])>.05)legs.push({a:{...pts[i]},b:{...pts[i+1]}});
+  return legs;
+}
 function mainRoadSnapAnchor(p){
+  const port=gateRoadPort(p);
+  if(port)return{point:{...port.center},magnet:true,gatePort:port};
   let best={point:{x:snapGrid(p.x),y:snapGrid(p.y)},distance:Infinity};
 
   const consider=q=>{

@@ -1,6 +1,92 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-23 — Converge: preparazione merge #61 sulla main aggiornata
+
+- Integrata main `518e830` nel branch `converge` (9 commit propri, 37 da recuperare), risolvendo i conflitti assedio/decisioni senza sostituire i moduli moderni. Preservati grata/porta/core indipendenti, terrapieni e ottimizzazioni di rendering; aggiunti guard compatibili con `portcullis`.
+- Rafforzate regressioni su grate, input invalidi, persistenza e scheduler; nuova QA del pannello reale PASS gameplay Canvas + avvio WebGL, con fallback grafico preesistente riprodotto sulla main e registrato nel report. Test locali 67/68 PASS; stesso FAIL temporale su fondazione strade presente anche sulla main (66/67). UI/Combat legacy fallisce sul default DEV anche in main. CI da attestare sulla PR prima del merge.
+- Aggiornati STATUS/BACKLOG/DECISIONS. ROADMAP invariata (nessun cambio di milestone/priorità). PR #61 ancora aperta; nessun merge in main e nessun deploy.
+
+## 2026-10-23 — Asset Lab: catalogo completo (branch `feat/asset-lab-complete-catalog`)
+
+- Fortificazioni in pietra reintrodotte con geometria reale: il Lab apre il gioco in sandbox (`index.html?assetlab=1`, senza salvataggi, cloud né telemetria) e chiede a `ConquerSiegePreview.assetMesh` le mesh `ConquerCastle3D` di ogni variante della galleria distruzione. Le 7 varianti in legno sono escluse e dichiarate.
+- Aggiunte le 7 animazioni di lavoro; il manifest dei file è generato da `tools/build-asset-manifest.cjs` (controllato in CI) e include i set di rotazione di campo taglialegna e cava.
+- Corretti ricerca («undefined»), codice morto di `renderSchema`, schede della griglia schiacciate. Aggiornati STATUS e BACKLOG; DECISIONS con il contratto della sandbox (D-LAB-01). ROADMAP invariata: strumento DEV, nessun cambio di priorità.
+- Corretto lo stato di #80 in STATUS: era indicato «non ancora `main`» ma è integrato (`bf548ca`).
+
+## 2026-10-22 — Asset Lab: rotazione ±15° e rimozione pseudo-fortificazioni (branch)
+
+- Su `fix/asset-lab-rotation-and-components`: comandi di rotazione sotto la preview dell'inspector, proiezione 3D orientabile a intervalli di 15°, rotazione delle anteprime native animate e disattivazione del giro automatico su interazione.
+- Eliminata la categoria «Fortificazioni» che sovrastimava semplici sottopezzi; sprite PNG reali riclassificati «Componenti», 13 schemi generici di fortificazione esclusi dalla griglia.
+- Rafforzate QA statiche e Chromium (rotazione effettiva, reversibilità, animazioni e categorie). **Esito CI nuovo ramo e merge ancora da verificare.** Invariati ROADMAP e DECISIONS: correzione di sola UX/accuratezza del catalogo.
+
+## 2026-10-22 — Asset Lab unificato (merge #79 su main)
+
+- Catalogo visuale in `figures-lab.html`, classificazione asset e modelli nativi; filtri, anteprime SVG/PNG, modelli 3D e figure animate.
+- Browser Chromium e regressione dedicata **PASS** sulla PR #79; squash merge `f576ac5` in `main`. I diagrammi SCHEMA delle strutture procedurali non certificavano modelli completi, problema affrontato nella nuova iterazione.
+
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
+
+## 2026-10-22 — Portoni: magnete strade e accessori
+
+- Branch `portoni`: magnete del portone sulle strade, passaggio voltato 3D con ante animate, upgrade grata per il portone in pietra, drappi araldici e torce notturne. Stato, prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026); requisiti GATE-01…06 nel [BACKLOG](BACKLOG.md#portoni--accessori-del-portone-branch-portoni-22102026).
+- Aggiunto il magnete delle strade principali sulle due bocche del portone (GATE-01b).
+- Decisa e implementata la grata come strato difensivo separato con HP propri (D-042, GATE-06); aperto GATE-07 per l'IA d'assedio. ROADMAP invariata.
+
+## 2026-10-22 — Revisione integrale backlog vs codice main
+
+- Audit **statico** della HEAD `c52b537` (sorgenti, 23 ID Builder, 25 requisiti S, CLAY, F/C/X, voice backlog, QA presente, PR aperte). Evidenze e limiti in [AUDIT-2026-10-22](AUDIT-2026-10-22.md).
+- Corretti falsi TODO: P2-16 basamenti; P2-18/19/20 araldica; P3-21 alberi sette SVG già collegati; P3-22 scatter contestuale 7 famiglie e ≥25 modelli; ponti, fossati, levatoi, palizzate. **13 nuclei Builder** su main e **10 voci** con residui meccanici/integrazione o QA. Una casella chiusa ora significa base di codice presente, non browser PASS.
+- Riconciliato **CLAY**: modalità cava argilla, `brick` e costi materiali, palette e durabilità 80% già codificati su main; precedente etichetta "DESIGN NON IMPLEMENTATO" rimane solo come nota storica 19/10.
+- Corretto il backlog assedi: Mastio, stock/capienze, HP, porte, fire spread, macchine e terrapieni sono implementazioni/prototipi reali; **blocco completo, resa automatica e strategia IA** non verificati e rimangono aperti.
+- Confermato output miniera `stone` su main, non `metal`; economia `State.resources` / `State.economy` / `State.siege.stock` separata; #55 draft, #61/#65 aperte, #72 con base `knights`. Nessuna PR è stata mergiata per questa sola revisione documentale.
+- Aggiornati [feature-backlog](../feature-backlog.md), [BACKLOG](BACKLOG.md), [STATUS](STATUS.md), [ROADMAP](ROADMAP.md). **Non rieseguite** suite QA e browser durante l'audit; non cambiate decisioni di design, solo stati verificati.
+
+## 2026-10-21 — Audit live main e guardia di coerenza per ogni PR
+
+- Ricontrollata la base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2), merge effettivi e PR aperte. Creata la [ricognizione datata](AUDIT-2026-10-21.md), senza trasformare report di PR in nuove QA eseguite.
+- **Mergiati:** `/camp` #53, solare #54, minimappa/LOD #44, mulini #57/#58, terraforming #63–69, performance #70, animazioni lavoro #71, terrapieni d'assalto #73. Superate le descrizioni precedenti delle rispettive branch come non integrate.
+- **PR aperte:** #55 ledger/cantieri L1/commercio/convogli, #61 danni, #65 cutaway arredato, #72 cavalieri/messaggero (base `knights`), oltre a #18 visual QA e #16 hardening. Queste non sono in `main`.
+- Aggiornati `STATUS`, `ROADMAP`, `BACKLOG`, [backlog Builder](../feature-backlog.md), `DECISIONS`, indice e [protocollo delle pull request](PR-WORKFLOW.md), con preservazione delle milestone M0–M5.
+- Aggiunti [GitHub Action](../../.github/workflows/context-governance.yml), [guardia JS](../../tools/context-guard.cjs), [test guardia](../../qa/context-guard-regression.cjs) e [template PR](../../.github/pull_request_template.md): ogni PR operativa verso qualunque branch deve **modificare STATUS + BACKLOG + CHANGELOG**. `ROADMAP`/`DECISIONS` condizionali. Si verificano i file nel diff, non la verità delle asserzioni.
+- **Attenzione:** `main` non aveva status checks obbligatori; l'Action segnala un fallimento, ma per bloccare il merge servirà protezione di `main`. Nessun gameplay modificato da questo lavoro; QA della guardia e check Actions da verificare separatamente.
+
+## 2026-10-21 — Integrazione performance prima del merge richiesto
+
+- Sincronizzato il branch performance con `origin/main` `c94bdc1`, preservando terraforming, mulini e le ottimizzazioni dei quattro audit; risolti i conflitti in firma terreno e macerie/renderer Canvas.
+- 60/62 suite PASS, con i due fallimenti sorgente preesistenti. Ripetuta fino all'eliminazione la battaglia su entrambi i renderer: stesso esito e verifiche di animazione/fallback PASS. I picchi GPU residui restano espliciti.
+
+## 2026-10-21 — Riduzione dei ridisegni e dei controlli GPU
+
+- Esteso l'audit 40/30 con baseline strumentata, due campagne finali, tempi dei singoli metodi GPU e verifica browser di animazioni in pausa/fallback.
+- Combattimento in pausa nel ciclo visuale comune; errori GL distanziati e checkpoint emesso dopo gli ultimi passaggi, senza permettere rinvii infiniti.
+- Rendering cumulativo WebGL ridotto del 72–82% nelle due prove; i blocchi isolati fino a circa 400 ms rimangono dichiarati. Framebuffer e rinvio dei frame scartati dopo misure, senza cambiare qualità grafica o danni. D-038, stato locale non pubblicato.
+- Batteria conclusiva 57/59 suite PASS; restano i due fallimenti preesistenti su main. Sintassi, whitespace e corrispondenza degli hash runtime alle misure PASS.
+
+## 2026-10-21 — Battaglia 40 contro 30 fino all'eliminazione
+
+- Aggiunti [audit](../mass-battle-performance-audit-2026-10-21.md), harness browser a 70 entità e sette controlli di regressione.
+- Corretti roster dei tipi individuali, tiro degli arcieri mobili su entrambi i lati, velocità della cavalleria ostile e controlli costosi applicati fuori portata.
+- Verificata eliminazione reale di tutti gli attaccanti a 298,1 secondi simulati su Canvas/WebGL; 37 difensori superstiti. Logica P95 circa 1 ms, picchi grafici WebGL ancora aperti e profilati in `getError`.
+- Base pubblicata `9e1b6a5`; nuove modifiche nel working tree, nessun nuovo commit/push/deploy. Roadmap invariata.
+
+## 2026-10-20 — Terzo audit: Canvas, percorsi e assalto
+
+- Aggiunti [audit round 3](../movement-collapse-performance-audit-2026-10-20.md), benchmark browser e regressioni dei percorsi cooperativi.
+- Cache delle macerie Canvas ferme e brigata con budget condiviso, priorità rotante e collisioni rispettate anche quando una rotta fallisce. Corretto il blocco al pozzo dovuto a tangenti non rilevate dal campionamento.
+- Verificati cavaliere/cinque squadre in salita e discesa e 20 assalitori con combattimento, su Canvas/WebGL e con rendering continuo. Documentati i residui: primo disegno Canvas ancora fino a 3 s, caduta attiva e intervalli RAF variabili. D-036 e stato aggiornati; nessun rilascio.
+- Batteria completa 55/57 suite PASS, con i due fallimenti sorgente preesistenti; sintassi e whitespace PASS.
+
+## 2026-10-20 — Secondo audit: incendio, distruzione e stanze
+
+- Aggiunti [audit round 2](../fire-collapse-cutaway-performance-audit-2026-10-20.md) e benchmark con incendio esteso, crolli, cutaway, brigata e incendio naturale fino alla distruzione delle case.
+- Eliminati i disegni sincroni e le invalidazioni per i soli HP; richieste visuali raccolte dal ciclo comune; macerie ferme su buffer GPU e superfici/arredi del cutaway nella cache esistente.
+- 54/56 suite locali PASS, due fallimenti preesistenti; dichiarati i residui su Canvas, pathfinding della brigata e composizione. Working tree locale senza rilascio. D-035 e stato aggiornati; roadmap invariata.
+
+## 2026-10-20 — Audit locale completamenti e freeze
+
+- Riprodotti e profilati i picchi al completamento di torri/portali su main `996b4a4`; aggiunto [audit ripetibile](../construction-performance-audit-2026-10-20.md).
+- Sul branch locale `fix/construction-completion-perf`: strade differite con generatori esistenti, cache del catasto preservata quando possibile e lettura errori WebGL2 dopo fence pronta.
+- Aggiornati contratto D-034 e stato con distinzione fra codice locale, prove e problemi già presenti su main. Priorità e milestone della roadmap invariate; nessun rilascio.
 
 ## 2026-10-20 — Chiarimento definitivo: gradone verticale color muro
 
