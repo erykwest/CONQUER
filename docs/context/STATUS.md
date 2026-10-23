@@ -59,6 +59,14 @@
 - **Catalogazione corretta:** eliminata la falsa categoria «Fortificazioni», che conteneva soltanto texture di elementi e disegni SCHEMA di componenti procedurali non visualizzati dal gioco. Le texture reali `src/assets/architecture/*.png` sono ora in «Componenti» / «Elementi architettonici»; i 13 schemi simulati di fortificazione non sono più esposti. Nessuna modifica alle fortificazioni del Builder.
 - **QA aggiornata:** asserzioni statiche per classificazione e rotazioni + browser Chromium per cambiamento pixel 3D, reversibilità, direzione degli animali animati, auto-rotazione disabilitata e invisibilità controlli su sprite 2D. CI Asset Lab **PASS** sulla PR #80 prima del merge.
 
+## Ponti — magnete strade (branch `feat/bridge-road-magnets`, 23/10/2026)
+
+- **Codice su branch (non ancora `main`):** il tool strada principale aggancia le due testate di ogni ponte (`bridgeRoadEnd` in `mainRoadSnapAnchor`, raggio `ROAD_RULES.snapNodeDistance`); cliccando sull'impalcato vale la testata più vicina. Vale per ponti di legno e pietra, in costruzione, ponti automatici delle strade principali e mezzoponti dei levatoi. Le bocche dei portoni restano prioritarie; un nodo stradale più vicino vince sulla testata.
+- **Collisione:** prima una strada che terminava esattamente su una testata veniva rifiutata («Footprint overlaps»). `roadMeetsBridgeEnd` ora ammette la strada che parte/arriva sulla testata e si allontana dall'impalcato, sia piazzando la strada sia piazzando il ponte; una strada che torna indietro sopra l'impalcato resta bloccata.
+- **UI:** con il tool strada le testate dei ponti sono disegnate come magneti (si illuminano sotto il puntatore, anche prima del primo clic); stato «⛓ Bridge magnet» / «Main road joined to the bridge».
+- **QA:** nuova `qa/bridge-road-magnet-regression.cjs` e workflow `Road magnet regression`; aggiornata `gate-fittings-regression`. Batteria `qa/*.cjs` in checkout LF: 68/72 PASS, le 4 suite `*-performance.cjs` falliscono identiche su `origin/main` senza modifiche. Browser locale con eventi puntatore reali: strada dalla testata est verso campagna e dalla campagna alla testata ovest, entrambe con estremo esatto sul ponte. CI della PR da verificare.
+- **LIMITI:** strada attraverso portone + levatoio sopra un fossato non verificata (BRIDGE-02).
+
 > **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
 
 

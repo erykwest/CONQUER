@@ -91,6 +91,15 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 | GATE-06 | Grata come strato difensivo separato (D-042): HP propri, colpita prima della porta, il fuoco passa, distrutta e riparabile, sbarra anche a porta sfondata | **MAIN · PR #76**; QA della PR |
 | GATE-07 | IA d'assedio che sceglie fra ariete sulla grata, fuoco sulla porta e altri accessi; riparazione della grata durante l'assedio | APERTO, dipende da S-15 |
 
+## Ponti — magnete strade (branch `feat/bridge-road-magnets`, 23/10/2026)
+
+**CODICE SU BRANCH, NON SU MAIN.** Prove e limiti in [STATUS](STATUS.md#ponti--magnete-strade-23102026).
+
+| ID | Requisito | Stato |
+|---|---|---|
+| BRIDGE-01 | Magnete delle strade principali sulle due testate di ogni ponte (legno, pietra, in costruzione, ponti automatici delle strade principali, mezzoponti dei levatoi); la strada che parte o arriva sulla testata non è una sovrapposizione | BRANCH + QA + controllo browser |
+| BRIDGE-02 | Strada attraverso portone + ponte levatoio sopra un fossato: l'accesso dritto del magnete portone finisce a metà impalcato e il fossato può bloccare il tracciato | DA VERIFICARE |
+
 ## Clay — specifica storica della branch `clay` (19/10); runtime più recente su main
 
 **NOTA STORICA:** il documento progettuale nacque su `Civil/clay` senza runtime; **sullo snapshot main del 22/10 buona parte è implementata** (`settlement-industries.js`, `settlement-core.js`, `settlement-siege.js`, `qa/clay-material-regression.cjs`). La tabella seguente specifica requisiti originali, **non una lista di attività totalmente mancanti**. Contratto completo in [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e verifiche in [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).

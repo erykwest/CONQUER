@@ -100,17 +100,19 @@ function linearEndpointSnap(p,type,radius=linearMagnetRadius()){
 }
 // Free wall/palisade ends you can continue from, drawn on the wall top while the
 // tool is active; the one under the pointer lights up (same look as moat magnets).
+// With the road tool the magnets are the two ends of every bridge, at deck level.
 function drawLinearMagnets(){
   const type=State.tool?.kind==='linear'?State.tool.linear:null;
-  if(!['wall','palisade'].includes(type))return;
-  const hover=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,shown=new Set();
+  if(!['wall','palisade','road'].includes(type))return;
+  const road=type==='road',linearHover=State.tool.linearHover;
+  const hover=(road?linearHover?.bridgeEnd:linearHover?.endpoint)?linearHover.point:null,shown=new Set();
   ctx.save();
   for(const s of State.structures){
-    if(s.type!==type||!s.a||!s.b)continue;
+    if(s.type!==(road?'bridge':type)||!s.a||!s.b)continue;
     for(const end of ['a','b']){
-      if(end==='a'?s.aSnap:s.bSnap)continue;
+      if(!road&&(end==='a'?s.aSnap:s.bSnap))continue;
       const q=s[end],key=q.x.toFixed(3)+','+q.y.toFixed(3);if(shown.has(key))continue;shown.add(key);
-      const v=w2s(q,structureHeight(s)),active=hover&&dist(q,hover)<.015;
+      const v=w2s(q,road?.09:structureHeight(s)),active=hover&&dist(q,hover)<.015;
       ctx.beginPath();ctx.arc(v.x,v.y,active?7:4,0,Math.PI*2);
       ctx.fillStyle=active?'#8dffbd':'#f3ce84';ctx.fill();
       ctx.lineWidth=active?2.5:1.5;ctx.strokeStyle='#314938';ctx.stroke();
