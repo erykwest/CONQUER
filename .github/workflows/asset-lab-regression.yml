@@ -4,16 +4,17 @@ on:
     paths:
       - figures-lab.html
       - src/asset-catalog.js
+      - src/asset-manifest.js
+      - src/assets/**
+      - tools/build-asset-manifest.cjs
+      - src/settlement-siege-preview.js
+      - src/settlement-castle3d.js
+      - src/settlement-app-persistence.js
+      - src/settlement-work-anim.js
       - qa/asset-catalog-regression.cjs
       - qa/asset-catalog-browser.mjs
       - index.html
       - .github/workflows/asset-lab-regression.yml
-  push:
-    branches: [feat/unified-visual-asset-lab]
-    paths:
-      - figures-lab.html
-      - src/asset-catalog.js
-      - qa/asset-catalog-regression.cjs
 jobs:
   asset-lab:
     runs-on: ubuntu-latest
@@ -23,7 +24,12 @@ jobs:
         with:
           node-version: '22'
       - run: node --check src/asset-catalog.js
+      - run: node --check src/asset-manifest.js
+      - run: node --check src/settlement-siege-preview.js
+      - name: Asset manifest is up to date
+        run: node tools/build-asset-manifest.cjs --check
       - run: node qa/asset-catalog-regression.cjs
+      - run: node qa/siege-assault-regression.cjs
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 15
