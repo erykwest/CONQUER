@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## CANS — attività contestuali e navigazione (branch `cans`, 23/10/2026)
+
+- **CANS-01 · FATTO SOLO SU BRANCH / SKELETON:** registro opt-in con domini/accessi/slot `worker` e `guest`, grafo locale multiaccesso, selezione raggiungibile, prenotazioni univoche, lifecycle, trasferimenti con doppia prenotazione temporanea, TTL, invalidazione layout, persistenza versionata, restore con verifica identità, trasformazione carrier. `src/settlement-cans.js` e `qa/cans-regression.cjs`; nessuna integrazione gameplay.
+- **CANS-02 · APERTO:** censimento/adapter per identità fisica e nav globale reali; pilot su chiesa o taverna con arredi e grafo costruiti dal layout; entrata/uscita effettive e aggancio dei save. Non sostituire routine esistenti o generare popolani dal renderer.
+- **CANS-03 · APERTO:** navigazione locale che pilotì il movimento reale, transizioni staff/guest e cutaway; prove browser Canvas/WebGL2, no teletrasporto.
+- **CANS-04 · APERTO:** mercato multiaccesso, campi a serpentina e target di bosco con adapter dei sistemi esistenti e parità economica; target mobili/veicoli solo in fase successiva.
+- **CANS-05 · IN CORSO (QA):** nove test logici del modulo passati in un harness JS; confermare Node/GitHub Actions e aggiungere integrazioni, stress/performance, migrazioni di partite e browser QA prima della PR pronta al merge.
+
+
 ## UX — Asset Lab / rotazione viewer e categorizzazione (22/10/2026)
 
 - **IN CORSO in `fix/asset-lab-rotation-and-components`:** viewer a destra con comandi manuali di ±15° per modelli 3D e anteprime native animate; nascondere i comandi per PNG/SVG, schemi 2D e figure piane. QA statiche + browser per angolo effettivo e reversibilità; non segnare come rilasciato prima della CI e del merge.
