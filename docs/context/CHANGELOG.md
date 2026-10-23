@@ -4,7 +4,7 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 
 ## 2026-10-23 — Eventi: CI della PR #78
 
-- Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (fallita in `menu-regression` e `settlement-qa`). In locale 64/66 regressioni PASS: `refactor-app-population` e `wall-bays` falliscono anche su `origin/main` pulito (fallimenti preesistenti già noti), quindi `settlement-qa` resta rosso per cause esterne a questa PR.
+- Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (causa dei fallimenti di `menu-regression` e `settlement-qa`); dopo la correzione entrambi i check PASS in CI. `refactor-app-population` e `wall-bays` falliscono solo in checkout Windows con `core.autocrlf=true` (i test cercano frammenti con fine riga LF): con checkout LF, come in CI, passano anche su `main`. Non sono fallimenti del codice.
 
 ## 2026-10-22 — Eventi: disposizione casuale senza collisioni
 
