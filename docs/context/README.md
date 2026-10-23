@@ -1,5 +1,8 @@
 # CONQUER — Piramide di contesto
 
+> **Riesame corrente 23/10/2026:** [AUDIT-2026-10-23](AUDIT-2026-10-23.md) — quattro nuove PR mergiate (#76, #79, #80, #81), gate e Asset Lab su main, altre PR aperte. Il riepilogo del 22/10 rimane baseline storica.
+
+
 > **Audit backlog aggiornato 22/10/2026:** [AUDIT-2026-10-22](AUDIT-2026-10-22.md) — riclassificazione verificata su main di 23 voci Builder, 25 assedio, Clay, feudi, QA e PR. Leggerlo prima di proporre feature già esistenti.
 
 
