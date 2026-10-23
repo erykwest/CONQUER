@@ -3,7 +3,15 @@
 > Triage delle **presenze nel codice** rinnovato al **22/10/2026** su `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), con [audit completo](AUDIT-2026-10-22.md). Ordine sistemico proposto, **non** certificazione browser/QA; la tabella del 21/10 sottostante conserva il proprio contesto storico.
 > Il backlog dettagliato P0–P3 del Builder è [docs/feature-backlog.md](../feature-backlog.md).
 
-## Riesame delle priorità — 22/10/2026
+## Aggiornamento verificato — 23/10/2026
+
+Nuova HEAD `main` [518e830](https://github.com/erykwest/CONQUER/commit/518e830547b66c12deefa0833487ea76b81c7746) dopo merge [#76](https://github.com/erykwest/CONQUER/pull/76), [#79](https://github.com/erykwest/CONQUER/pull/79), [#80](https://github.com/erykwest/CONQUER/pull/80), [#81](https://github.com/erykwest/CONQUER/pull/81). Vedi [audit completo 23/10](AUDIT-2026-10-23.md).
+
+**La sequenza M0–M5 non cambia:** i merge riguardano nuovi componenti e interazioni reali del **portone** e il **catalogo/controllo visivo degli asset**, non la chiusura del ledger o dell'assedio continuo. Portoni e Asset Lab non vanno risviluppati. Prima di promuovere altre PR, verificare i conflitti tra #61 (danni) e #76 (grata), e tra #77 (montaggio visivo) e #82 (audit delle fasi).
+
+**Ciclo principale:** M0 unico stock/ledger e produzione → M1 costruttori L1 realmente necessari → M2 capienze/presidi → M3 difesa con blocco/fame/resa. **Parallelo opzionale e delimitato:** #82 come QA per verificare regressioni grafiche (portoni danneggiati e cantieri a 25/50/75%) e #77 soltanto dopo integrazione sicura. #78 eventi e #72 convogli non accelerano M0–M3.
+
+## Riesame delle priorità — 22/10/2026 (baseline precedente, ancora applicabile)
 
 **Nessun riavvio dei sottosistemi già presenti.** I 13 nuclei Builder già su main e numerosi moduli difensivi/ambientali si considerano **BASELINE DELIVERED**, non nuove attività di sviluppo. L'effort futuro è dedicato a comportamento mancante, dati incoerenti e prova di funzionamento.
 

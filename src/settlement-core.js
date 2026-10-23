@@ -731,7 +731,7 @@ function pointRadius(s){
   function delta(name,p){return Math.max(0,finite(p[name])-finite(lastPerf[name]))}
   function sendRemote(sample){
     const now=performance.now();
-    if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
+    if(window.__CONQUER_ASSET_LAB__||!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
     lastRemoteAt=now;
     const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
     const row={
