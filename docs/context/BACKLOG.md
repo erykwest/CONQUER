@@ -1,5 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Igiene Git — esito e finalizzazione (23/10/2026)
+
+- Il run [#39982707805](https://github.com/erykwest/CONQUER/actions/runs/39982707805) ha eliminato **otto ref** con successo; il secondo trigger pulisce anche le due branch tecniche dell'operazione stessa (la seconda soltanto se GitHub conferma la PR merged con SHA uguale alla HEAD remota). **La rimozione effettiva delle ultime due va verificata sul run della PR successiva.** Nessuna modifica alle feature.
+
 ## Igiene Git — pulizia branch obsolete (23/10/2026)
 
 - **Operazione infrastrutturale separata dal gameplay:** otto ref candidati a rimozione con workflow condizionale, SHA fissa, ricontrollo PR aperte e presenza del merge. Nessun branch attivo/PR OPEN viene eliminato intenzionalmente; i branch divergenti o con commit non attribuiti restano da analizzare, **non automaticamente classificati come obsoleti**.
