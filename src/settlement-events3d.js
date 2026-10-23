@@ -407,5 +407,5 @@
     }
     return true;
   }
-  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes};
+  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld};
 })();

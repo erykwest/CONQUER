@@ -21,4 +21,5 @@ jobs:
       - name: Run event venue and civic 3D regressions
         run: |
           node qa/events3d-regression.cjs
+          node qa/joust-regression.cjs
           node qa/civic3d-regression.cjs

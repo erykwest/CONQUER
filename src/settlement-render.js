@@ -425,6 +425,7 @@ function draw(){
   // preserving the existing occlusion behaviour.
   window.ConquerLivestock?.draw();
   drawPeasants();
+  window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
   markPhase('population');

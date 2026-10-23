@@ -40,6 +40,8 @@ Livery: stands, arena and stages follow the realm heraldry (`State.heraldry` c1 
 
 Wind: pennons, bunting, gonfalons and the arena gate banners are marked as cloth in the builder (part `f`: weight 0 at the anchor .. 1 at the free end, wave direction). `settlement-events3d.js` keeps them out of the static scene and returns them every frame from `dynamicMeshes()` (WebGL `drawFront`, 2.5D overlay, like the mill sails): a travelling wave that grows with the weather's wind and runs only while the game runs.
 
+Joust life (`src/settlement-events-joust.js`, `window.ConquerJoust`): on an active `joust` ground, townsfolk sit on about two seats in three of the stands and cheer the clash; two knights in primary-colour liveries charge down either side of the tilt every 10 s, cross at mid-lists and one of them is unhorsed (thrown off the lane, lies in the sand, gets up and walks back to his horse); bouts alternate ends. Grooms hold spare horses at both ends and squires shuttle lances and shields between the tents and the lists. 2D figures (villagers, soldiers, the 2D horse of `ConquerAnimals.drawAnimal`) drawn with the population, on a clock that runs only while the game runs. `scene(venue, t)` is pure; QA `qa/joust-regression.cjs`.
+
 Leisure catalog (24 models): ![catalog](leisure-catalog.png) · arena views: ![arena](arena-views.png)
 
 ## Modules to integrate (future implementation)

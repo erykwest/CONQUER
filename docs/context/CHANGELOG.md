@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-23 — Eventi: giostra animata
+
+- Nuovo `settlement-events-joust.js`: pubblico sugli spalti (≈2/3 dei posti, esulta all'impatto), due cavalieri che caricano lungo le corsie e a ogni corsa uno viene disarcionato (cade, resta a terra, si rialza, torna al cavallo), corse alternate tra le testate; stallieri con cavalli di riserva e scudieri che portano lance e scudi tra tende e testate. Figure 2D (popolani, soldati, cavallo 2D `drawAnimal`): i modelli 3D degli animali sono superati (indicazione dell'utente). QA `joust-regression` (12 corse); verifica Canvas nel browser.
+
 ## 2026-10-23 — Eventi: CI della PR #78
 
 - Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (causa dei fallimenti di `menu-regression` e `settlement-qa`); dopo la correzione entrambi i check PASS in CI. `refactor-app-population` e `wall-bays` falliscono solo in checkout Windows con `core.autocrlf=true` (i test cercano frammenti con fine riga LF): con checkout LF, come in CI, passano anche su `main`. Non sono fallimenti del codice.
