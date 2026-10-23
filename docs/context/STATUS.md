@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## Follow-up pulizia branch — 23/10/2026
+
+- [GitHub Actions cleanup #39982707805](https://github.com/erykwest/CONQUER/actions/runs/39982707805) **SUCCESS**: otto branch eliminati e assenza verificata tramite elenco remoto. La PR [#84](https://github.com/erykwest/CONQUER/pull/84) è merge `7f7cfbe5`.
+- La presente iterazione completa l'igiene eliminando anche il proprio branch di servizio #84 dopo il merge, e il branch di questa iterazione stessa **solo previa verifica live** di PR merged + HEAD esatto. Workflow una-tantum, nessuna alterazione di codice del gioco.
+
 ## Branch cleanup automatizzata — 23/10/2026
 
 - Ricognizione live di 34 branch (`main` inclusa), HEAD `b79ea99`. **Otto candidati verificati** per rimozione: sei branch di PR merge con HEAD esattamente coincidente con la PR (#75, #76, #79, #80, #81, #83), e due branch senza commit esclusivi (`feature/bridge-earthworks-converge`, `fix/main-founding-dev-webgl-20261023`).
