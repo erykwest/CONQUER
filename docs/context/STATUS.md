@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## Asset Lab — ispezione ruotabile e componenti reali (branch `fix/asset-lab-rotation-and-components`, 22/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** inspector destro con pulsanti −15° / +15° per i modelli 3D; ricalcolo della proiezione e dell'ordinamento delle facce per le preview statiche; direzione reale modificata negli animali, carri 3D e macchine d'assedio animate, interrompendo l'autorotazione quando si usa il comando manuale.
+- **Catalogazione corretta:** eliminata la falsa categoria «Fortificazioni», che conteneva soltanto texture di elementi e disegni SCHEMA di componenti procedurali non visualizzati dal gioco. Le texture reali `src/assets/architecture/*.png` sono ora in «Componenti» / «Elementi architettonici»; i 13 schemi simulati di fortificazione non sono più esposti. Nessuna modifica alle fortificazioni del Builder.
+- **QA aggiornata:** asserzioni statiche per classificazione e rotazioni + browser Chromium per cambiamento pixel 3D, reversibilità, direzione degli animali animati, auto-rotazione disabilitata e invisibilità controlli su sprite 2D. **CI della branch non ancora verificata in questa nota**, prima di merge.
+
 > **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
 
 

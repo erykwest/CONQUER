@@ -1,5 +1,17 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## UX — Asset Lab / rotazione viewer e categorizzazione (22/10/2026)
+
+- **IN CORSO in `fix/asset-lab-rotation-and-components`:** viewer a destra con comandi manuali di ±15° per modelli 3D e anteprime native animate; nascondere i comandi per PNG/SVG, schemi 2D e figure piane. QA statiche + browser per angolo effettivo e reversibilità; non segnare come rilasciato prima della CI e del merge.
+- **Revisione tassonomia:** le texture architettoniche isolate non sono fortificazioni complete. Rimuovere i 13 schemi illustrativi di fortificazioni dal catalogo; mantenere i file realmente presenti nella nuova categoria «Componenti». Non modificare le strutture generate dal Builder.
+- **Residuo non incluso:** un futuro catalogo di fortificazioni complete richiede miniature di strutture **effettivamente montate** dal Builder, non un collage di sottopezzi.
+
+## UX — Asset Lab / catalogo visivo (integrato su main tramite #79, 22/10/2026)
+
+- **FATTO nella prima versione:** catalogo visivo derivato dalle sorgenti presenti; SVG/PNG, 3D, figure animate, araldica e schemi parametrici distinti con etichetta SCHEMA; navigazione categoria/famiglia/formato/ricerca e pannello di dettaglio.
+- **Evidenza:** PR #79 fusa in `main`, regressioni e Chromium **PASS** al momento del merge. Le correzioni di questa iterazione hanno test propri non ancora verificati al momento della stesura.
+- **Miglioramento futuro:** sostituire gli schemi delle strutture puramente procedurali con miniature renderizzate direttamente dal Builder, senza reinventare componenti che non esistono come asset autonomi.
+
 > Raccoglie *idee, requisiti e dipendenze*. Un requisito elencato qui **non prova** assenza né completamento nel software.
 > Non duplicare il backlog di 22 feature del Builder già mantenuto in [docs/feature-backlog.md](../feature-backlog.md): quello rimane il riferimento dettagliato per territorio/urbanistica/economia locale/araldica.
 
@@ -320,3 +332,14 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Selezione automatica:** variare l'abbigliamento in funzione di stagione, temperatura e meteo corrente, senza richiedere microgestione al giocatore; conservare ruolo e riconoscibilità del personaggio.
 - **Integrazione grafica:** riutilizzare animazioni e scheletri esistenti, prevedendo varianti di equipaggiamento/overlay compatibili con movimento e lavoro; evitare cambi istantanei visivamente incoerenti se possibile.
 - **Priorità e QA:** miglioramento visivo successivo alla meccanica del meteo; verificare performance con molti abitanti, corrette transizioni stagionali e nessuna interferenza con divise/attrezzi professionali.
+
+
+## Nota voice — overlay DEV FPS e grafico prestazioni (30 secondi)
+
+> Funzionalità richiesta per il backlog; **non implementata**.
+
+- **Overlay in gioco:** visualizzare in alto a sinistra un contatore FPS aggiornato in tempo reale e un piccolo grafico scorrevole degli **ultimi 30 secondi**.
+- **Controllo DEV:** aggiungere un toggle nel pannello DEV per mostrare/nascondere l'overlay senza riavviare la partita; disattivabile per non interferire con l'interfaccia ordinaria.
+- **Rilevazione lag:** rendere evidenti cali improvvisi di FPS e picchi di frame time; privilegiare una traccia dei tempi per frame (ms) oppure affiancarla agli FPS per distinguere meglio gli spike.
+- **Impatto minimo:** campionamento e rendering dell'overlay leggeri, buffer temporale limitato a 30 secondi e nessun costo significativo quando disattivato.
+- **QA:** verificare accuratezza, comportamento in pausa e a differenti frame rate, corretto reset della finestra temporale e funzionamento su renderer supportati.

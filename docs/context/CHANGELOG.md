@@ -6,6 +6,17 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 
 - Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (causa dei fallimenti di `menu-regression` e `settlement-qa`); dopo la correzione entrambi i check PASS in CI. `refactor-app-population` e `wall-bays` falliscono solo in checkout Windows con `core.autocrlf=true` (i test cercano frammenti con fine riga LF): con checkout LF, come in CI, passano anche su `main`. Non sono fallimenti del codice.
 
+## 2026-10-22 — Asset Lab: rotazione ±15° e rimozione pseudo-fortificazioni (branch)
+
+- Su `fix/asset-lab-rotation-and-components`: comandi di rotazione sotto la preview dell'inspector, proiezione 3D orientabile a intervalli di 15°, rotazione delle anteprime native animate e disattivazione del giro automatico su interazione.
+- Eliminata la categoria «Fortificazioni» che sovrastimava semplici sottopezzi; sprite PNG reali riclassificati «Componenti», 13 schemi generici di fortificazione esclusi dalla griglia.
+- Rafforzate QA statiche e Chromium (rotazione effettiva, reversibilità, animazioni e categorie). **Esito CI nuovo ramo e merge ancora da verificare.** Invariati ROADMAP e DECISIONS: correzione di sola UX/accuratezza del catalogo.
+
+## 2026-10-22 — Asset Lab unificato (merge #79 su main)
+
+- Catalogo visuale in `figures-lab.html`, classificazione asset e modelli nativi; filtri, anteprime SVG/PNG, modelli 3D e figure animate.
+- Browser Chromium e regressione dedicata **PASS** sulla PR #79; squash merge `f576ac5` in `main`. I diagrammi SCHEMA delle strutture procedurali non certificavano modelli completi, problema affrontato nella nuova iterazione.
+
 ## 2026-10-22 — Eventi: disposizione casuale senza collisioni
 
 - Il jitter di tende, scatter e attrezzature prova spostamenti decrescenti e scarta quelli che urtano oggetti già piazzati, posizioni di base degli oggetti successivi o il perimetro; in mancanza resta nella posizione di base (validata). QA su 25 seed per tutti gli allestimenti: nessuna collisione né uscita, 91% degli oggetti spostabili ancora spostati.
