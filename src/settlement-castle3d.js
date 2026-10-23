@@ -217,7 +217,10 @@
       if(point&&isRaisedPlacementCastlePoint(s))addFoundation(m,s);
       const run=fn=>point?withStructureGroundPlane(s,fn):fn();
       run(()=>{
-        m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
+        // In the world renderer stone gates are carved: piers and a vault around a passage you can
+        // see through, with door leaves as meshes. The Canvas paths keep the solid block and decals.
+        if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
+          m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
         if(s.type==='tower')addTower(m,s);
         m.tag='roof';
         if(s.type==='gate')addGate(m,s);

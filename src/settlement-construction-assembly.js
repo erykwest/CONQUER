@@ -38,7 +38,9 @@
     const C=window.ConquerCastle3D;
     if(!C?.structureWorld||!['tower','gate','wall','built'].includes(s.type)||call('isWoodTower',s)||call('isWoodGate',s))return null;
     const {tris,tags}=C.structureWorld(s),pos=[],col=[],tag=[];
-    const ground=groundOf(s),cut=s.type==='gate'?gatePassage(s,ground):null;
+    // Stone gates already come carved (ConquerGates.addGateBody: piers, vault, leaves);
+    // only a solid block needs its passage cut here.
+    const ground=groundOf(s),cut=s.type==='gate'&&!window.ConquerGates?.addGateBody?gatePassage(s,ground):null;
     const push=(poly,c,t)=>{if(poly.length<3)return;for(let i=1;i<poly.length-1;i++){for(const p of [poly[0],poly[i],poly[i+1]])pos.push(p[0],p[1],p[2]);col.push(c);tag.push(t)}};
     for(let t=0;t<tags.length;t++){
       const o=t*18,poly=[0,1,2].map(k=>[tris[o+k*6],tris[o+k*6+1],tris[o+k*6+2]]),c=toHex(tris[o+3],tris[o+4],tris[o+5]);

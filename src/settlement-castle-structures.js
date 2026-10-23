@@ -846,7 +846,7 @@ function battlementBrazierSources(){
   }
   return out;
 }
-function fireSources(){return towerTorchSources().concat(battlementBrazierSources())}
+function fireSources(){return towerTorchSources().concat(battlementBrazierSources(),window.ConquerGates?.torchSources()||[])}
 function fireFlicker(id){
   const seed=(peasantHash(String(id)+'-fire')%1000)/1000;
   return .88+Math.sin(visualCycleDay()*31+seed*Math.PI*2)*.10+Math.sin(visualCycleDay()*53+seed*9)*.04;
@@ -878,6 +878,8 @@ function drawBrazierFixture(src){
 }
 function drawCastleFireFixtures(){
   for(const src of towerTorchSources())drawTorchFixture(src);
+  // Gate torches have mesh brackets in the 3D world.
+  if(!window.ConquerWorld3D?.active?.())for(const src of window.ConquerGates?.torchSources()||[])drawTorchFixture(src);
   for(const src of battlementBrazierSources())drawBrazierFixture(src);
 }
 // WebGL2 owns the glow halo; only the small animated flame remains a Canvas effect.
