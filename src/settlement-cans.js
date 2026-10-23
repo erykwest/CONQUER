@@ -31,6 +31,20 @@
       actions:Array.isArray(s.actions)?copy(s.actions):[]
     }));
     if(slots.some(s=>!ROLES.has(s.role)))throw Error('CANS: unsupported slot role');
+    const sequences=(raw.sequences||[]).map(seq=>({
+      id:required(seq.id,'sequence id'),role:required(seq.role,'sequence role'),
+      steps:(seq.steps||[]).map(step=>({
+        id:required(step.id,'step id'),slotId:required(step.slotId,'step slot'),
+        action:required(step.action,'step action'),
+        duration:step.duration==null?null:number(step.duration,'step duration')
+      }))
+    }));
+    if(new Set(sequences.map(seq=>seq.id)).size!==sequences.length||
+      sequences.some(seq=>!ROLES.has(seq.role)||!seq.steps.length||
+        new Set(seq.steps.map(step=>step.id)).size!==seq.steps.length||
+        seq.steps.some(step=>step.duration!==null&&step.duration<0||
+          !slots.some(slot=>slot.id===step.slotId&&slot.role===seq.role))))
+      throw Error('CANS: invalid activity sequence');
     const nodes=(raw.graph?.nodes||[]).map(n=>({
       id:required(n.id,'node id'),x:number(n.x,'node x'),y:number(n.y,'node y')
     }));
@@ -53,7 +67,7 @@
       layoutRevision:Number.isInteger(raw.layoutRevision)&&raw.layoutRevision>=0?raw.layoutRevision:0,
       transform:{x:number(transform.x,'transform x'),y:number(transform.y,'transform y'),
         rotation:number(transform.rotation,'rotation')},
-      access,slots,graph:{nodes,edges}
+      access,slots,sequences,graph:{nodes,edges}
     };
   }
   function localRoute(domain,slotId,externalCost){
@@ -138,7 +152,13 @@
         }
         if(a.domainId===d.id){
           const before=old.slots.find(s=>s.id===a.slotId),after=d.slots.find(s=>s.id===a.slotId);
-          if(!before||!after||before.role!==after.role){assignments.delete(id);released++;continue}
+          if(!before||!after||before.role!==after.role||
+            before.nodeId!==after.nodeId||JSON.stringify(before.position)!==JSON.stringify(after.position)){
+            assignments.delete(id);released++;continue
+          }
+          if(a.sequenceId&&!d.sequences.some(seq=>seq.id===a.sequenceId)){
+            a.sequenceId=null;a.stepIndex=0;
+          }
         }
         if(a.pending?.domainId===d.id&&!available(d.id,a.pending.slotId,null,id))a.pending=null;
       }
@@ -164,15 +184,15 @@
       }
       return{state:'available',entityId:null};
     }
-    function reserve(entityId,domainId,slotId,{ttl=60000,externalCost}={}){
+    function reserve(entityId,domainId,slotId,{ttl=60000,externalCost,role}={}){
       entity(entityId);if(assignments.has(entityId))throw Error('CANS: entity already assigned');
-      if(!available(domainId,slotId))throw Error('CANS: slot unavailable or unreachable');
+      if(!available(domainId,slotId,role))throw Error('CANS: slot unavailable or unreachable');
       const path=localRoute(requireDomain(domainId),slotId,externalCost);
       if(!path)throw Error('CANS: no reachable access');
       if(!Number.isFinite(ttl)||ttl<=0)throw Error('CANS: invalid ttl');
       const token='cans:'+ ++sequence;
       const record={domainId,slotId,phase:'reserved',token,
-        accessId:path.accessId,expiresAt:now()+ttl,pending:null};
+        accessId:path.accessId,expiresAt:now()+ttl,pending:null,sequenceId:null,stepIndex:0};
       assignments.set(entityId,record);return{token,route:copy(path)};
     }
     function advance(entityId,token,phase){
@@ -184,6 +204,30 @@
       a.phase=phase;
       if(phase==='active')a.expiresAt=null;
       return snapshotAssignment(entityId);
+    }
+    function startSequence(entityId,sequenceId){
+      const a=assignments.get(entity(entityId));
+      if(!a||a.phase!=='active'||a.sequenceId)throw Error('CANS: sequence requires idle active slot');
+      const d=requireDomain(a.domainId),seq=d.sequences.find(s=>s.id===sequenceId);
+      const slot=d.slots.find(s=>s.id===a.slotId);
+      if(!seq||!slot||seq.role!==slot.role||seq.steps[0].slotId!==a.slotId)
+        throw Error('CANS: sequence first slot mismatch');
+      a.sequenceId=seq.id;a.stepIndex=0;
+      return copy(seq.steps[0]);
+    }
+    function advanceSequence(entityId){
+      const a=assignments.get(entity(entityId));
+      if(!a||a.phase!=='active'||!a.sequenceId)throw Error('CANS: no active sequence');
+      const d=requireDomain(a.domainId),seq=d.sequences.find(s=>s.id===a.sequenceId);
+      const step=seq?.steps[a.stepIndex];
+      if(!step||step.slotId!==a.slotId)throw Error('CANS: next sequence step requires traversal');
+      a.stepIndex++;
+      if(a.stepIndex===seq.steps.length){
+        a.sequenceId=null;a.stepIndex=0;
+        return {completed:true,nextStep:null};
+      }
+      const next=seq.steps[a.stepIndex];
+      return{completed:false,nextStep:copy(next),requiresTransfer:next.slotId!==a.slotId};
     }
     function startTransfer(entityId,domainId,slotId,{ttl=60000,externalCost}={}){
       const a=assignments.get(entity(entityId));
@@ -253,7 +297,13 @@
         if(occupied){discarded++;continue}
         const a={domainId:d.id,slotId:s.id,phase:item.phase,
           token:required(item.token,'restored token'),accessId:item.accessId,
-          expiresAt:item.phase==='active'?null:item.expiresAt,pending:null};
+          expiresAt:item.phase==='active'?null:item.expiresAt,pending:null,sequenceId:null,stepIndex:0};
+        const seq=d.sequences.find(seq=>seq.id===item.sequenceId);
+        if(item.phase==='active'&&seq&&Number.isInteger(item.stepIndex)&&
+          item.stepIndex>=0&&item.stepIndex<seq.steps.length&&
+          seq.steps[item.stepIndex].slotId===item.slotId){
+          a.sequenceId=seq.id;a.stepIndex=item.stepIndex;
+        }else if(item.sequenceId)discarded++;
         const p=item.pending,dp=incoming.get(p?.domainId),sp=dp?.slots.find(s=>s.id===p.slotId);
         if(p&&dp&&sp&&!sp.blocked&&PHASES.includes(p.phase)&&p.phase!=='active'&&
           Number.isFinite(p.expiresAt)&&p.expiresAt>at&&localRoute(dp,sp.id)&&
@@ -277,7 +327,7 @@
     }
     return Object.freeze({addDomain,updateDomain,removeDomain,getDomain:id=>getDomain(id)?copy(getDomain(id)):null,
       listDomains:()=>[...domains.keys()],route,choose,reserve,advance,occupancy,
-      startTransfer,advanceTransfer,completeTransfer,cancel,cancelTransfer,expire,
+      startSequence,advanceSequence,startTransfer,advanceTransfer,completeTransfer,cancel,cancelTransfer,expire,
       getAssignment:snapshotAssignment,serialize,restore,worldPoint});
   }
   return Object.freeze({SCHEMA_VERSION,normalizeDomain,createEngine});
