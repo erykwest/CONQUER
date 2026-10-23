@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-23 — CANS skeleton dati e registri su branch `cans`
+
+- Aggiunto `src/settlement-cans.js`: modello opt-in indipendente per domini, slot, accessi multipli e grafo locale; prenotazione/lifecycle, trasferimenti, invalidazione, snapshot versionati e coordinate locali.
+- Aggiunti `qa/cans-regression.cjs` (nove scenari) e workflow dedicato `.github/workflows/cans-regression.yml`. Test logici eseguiti in isolamento **PASS**; CI Node e prove browser **NON ANCORA VERIFICATE** in questa nota.
+- Nessun nuovo caricamento in `index.html`, nessun wiring con `State`, `ConquerEconomy`, renderer o residenti. Nessun merge/deploy su `main`; il resto della roadmap resta invariato.
+
+
 ## 2026-10-22 — Asset Lab: rotazione ±15° e rimozione pseudo-fortificazioni (branch)
 
 - Su `fix/asset-lab-rotation-and-components`: comandi di rotazione sotto la preview dell'inspector, proiezione 3D orientabile a intervalli di 15°, rotazione delle anteprime native animate e disattivazione del giro automatico su interazione.
