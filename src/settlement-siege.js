@@ -8,6 +8,9 @@
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
     spear:{stone:0,wood:0,door:0,portcullis:0},
+    arrow:{stone:0,wood:0,door:0},
+    bow:{stone:0,wood:0,door:0},
+    crossbow:{stone:0,wood:0,door:0},
     axe:{stone:0,wood:.45,door:.65,portcullis:.1},
     ram:{stone:0,wood:2.5,door:6,portcullis:4},
     torch:{stone:0,wood:2,door:2.5,portcullis:0},
@@ -18,6 +21,11 @@
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
     house:90,market:70,tavern:140,church:240,windmill:110,watermill:120});
   const isMill=s=>['windmill','watermill'].includes(s?.type);
+  // Structural cores require siege artillery: blades, arrows, rams and torches
+  // cannot demolish walls, towers, gatehouses or built sections, even in wood.
+  // Palisades, portoni and civilian buildings keep their own vulnerabilities.
+  const STRUCTURAL_CORES=new Set(['wall','tower','gate','built']);
+  const NON_STRUCTURAL_WEAPONS=new Set(['sword','spear','axe','arrow','bow','crossbow','ram','torch']);
   const STOCK_KEYS=['food','wood','stone','metal','equipment','horses','gold'];
   const MATERIAL_KEYS=['wood','stone','metal'];
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
@@ -278,11 +286,22 @@
     const existing=s.siegeIntegrity&&typeof s.siegeIntegrity==='object'?s.siegeIntegrity:null;
     if(!existing)s.siegeIntegrity={core:{hp:max,max},door:s.type==='gate'?{hp:85,max:85}:null};
     else{
-      if(!existing.core)existing.core={hp:max,max};
-      // Keep existing absolute damage when a tier/height upgrade changes maximum health.
-      const previous=Number(existing.core.max)||max,damage=Math.max(0,previous-(Number(existing.core.hp)||0));
-      existing.core.max=max;existing.core.hp=Math.max(0,max-damage);
-      if(s.type==='gate'&&!existing.door)existing.door={hp:85,max:85};
+      if(!existing.core||typeof existing.core!=='object')existing.core={hp:max,max};
+      // Keep absolute damage across upgrades and preserve destroyed (hp=0) parts
+      // on legacy/save reloads. Missing or corrupt values must not heal damage.
+      const previous=Number(existing.core.max);
+      const oldMax=Number.isFinite(previous)&&previous>0?previous:max;
+      const rawHp=Number(existing.core.hp);
+      const hp=Number.isFinite(rawHp)?Math.max(0,Math.min(oldMax,rawHp)):oldMax;
+      existing.core.max=max;existing.core.hp=Math.max(0,max-(oldMax-hp));
+      if(s.type==='gate'){
+        if(!existing.door||typeof existing.door!=='object')existing.door={hp:85,max:85};
+        const doorMax=Number(existing.door.max);
+        existing.door.max=Number.isFinite(doorMax)&&doorMax>0?doorMax:85;
+        const doorHp=Number(existing.door.hp);
+        existing.door.hp=Number.isFinite(doorHp)
+          ?Math.max(0,Math.min(existing.door.max,doorHp)):existing.door.max;
+      }
     }
     // An installed portcullis is a defence layer of its own, in front of the door.
     const grate=s.type==='gate'&&window.ConquerGates?.portcullis?.(s);
@@ -305,6 +324,8 @@
     return s.type==='palisade'||s.material==='wood'||['house','market','tavern'].includes(s.type)||isMill(s)?'wood':'stone';
   }
   function effectiveness(weapon,s,part='core'){
+    if(!s||!BASE_HEALTH[s.type]||(part!=='core'&&!(s.type==='gate'&&['door','portcullis'].includes(part))))return 0;
+    if(part==='core'&&STRUCTURAL_CORES.has(s.type)&&NON_STRUCTURAL_WEAPONS.has(weapon))return 0;
     return Math.max(0,WEAPONS[weapon]?.[targetMaterial(s,part)]||0);
   }
   // ---------- wall bays and breaches ----------
@@ -746,18 +767,33 @@
   });
   function attackStructure(id,weapon,force=1,part='core'){
     const s=State.structures.find(x=>x.id===id);
-    if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,reason:'Invalid or unfinished fortification'};
-    // Walls and palisades: part may name a bay (index) or the point of impact {x,y}.
-    if(isLinear(s))return attackWall(s,weapon,force,part==='core'?null:part);
+    if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,damage:0,reason:'Invalid or unfinished fortification'};
+    const power=Number(force);
+    if(!Number.isFinite(power)||power<=0)return{ok:false,damage:0,reason:'Invalid attack force'};
+    // Walls/palisades retain their per-bay hit positions. Reject invalid targets
+    // rather than silently redirecting a miss or a non-existent door to the core.
+    if(isLinear(s)){
+      const where=part==='core'?null:part;
+      const valid=where===null||
+        (Number.isInteger(where)&&where>=0&&where<bays(s).length)||
+        (where&&typeof where==='object'&&Number.isFinite(where.x)&&Number.isFinite(where.y));
+      if(!valid)return{ok:false,damage:0,reason:'Invalid wall bay or impact point'};
+      return attackWall(s,weapon,power,where);
+    }
+    // A finite world-space hit point is a valid CORE target for a tower or
+    // building and supplies the impact direction to storey/ruin collapses.
+    const impactPoint=part&&typeof part==='object'&&Number.isFinite(part.x)&&Number.isFinite(part.y);
+    if(part!=='core'&&!(part==='door'&&s.type==='gate')&&!impactPoint)
+      return{ok:false,damage:0,reason:'Invalid structure component'};
     const stats=integrity(s),section=gateSection(s,part,weapon),hp=stats[section];
     const factor=effectiveness(weapon,s,section);
     if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
     if(!hp||hp.hp<=0)return{ok:false,damage:0,reason:'Section already destroyed'};
-    const damage=Math.min(hp.hp,Math.max(0,Number(force)||0)*factor);
+    const damage=Math.min(hp.hp,power*factor);
     if(!damage)return{ok:false,damage:0,reason:'No force applied'};
     const stageBefore=doorStage(s);
     hp.hp=Math.max(0,hp.hp-damage);
-    const from=part&&Number.isFinite(part.x)?part:null;
+    const from=impactPoint?part:null;
     if(section==='portcullis'){
       if(hp.hp===0)window.ConquerGates?.wreckPortcullis?.(s);
       else{markDirty(false,false,true);redraw()}

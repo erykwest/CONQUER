@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## S-05 / S-16 / S-25 — riallineamento converge (#61, 23/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** restrizioni armi sui nuclei, validazione forze/componenti/campate e persistenza dei danni, integrate con main `bc82dbe`. Compatibilità con GATE-06/D-042: la grata resta una terza difesa danneggiabile; non può essere aggirata dal nuovo guard dei componenti.
+- **PROVE:** regressioni danni, grate, brecce, crolli, scheduler, terrapieni e terraforming PASS. Batteria locale 67/68; FAIL temporale di fondazione strade riprodotto anche su main. QA browser assedio PASS gameplay Canvas + avvio WebGL, con possibile fallback grafico preesistente verificato sulla main; suite UI/Combat legacy ferma sul default DEV, stesso FAIL su main. CI da verificare sul commit pubblicato (vedi PR #61).
+- **ANCORA APERTO:** GATE-07 (scelta tattica IA), S-17/S-24 end-to-end e vertical slice di assedio con scorte/guarnigione/blocco/resa. Non chiusi da questa PR. ROADMAP invariata: stesso ordine M0–M3; aggiornato il solo contratto d'integrazione D-031/D-032 con D-042.
+- **FOLLOW-UP MERGE AUTORIZZATO:** recuperati i 4 commit della main fino a `bc82dbe`; nuovo audit Asset Lab e relativi residui preservati. Nessuna ulteriore modifica alle regole/renderer. CI da ripetere sulla nuova integrazione.
+
 ## UX/QA — Asset Lab come motore di audit (23/10/2026)
 
 - **IN CORSO in `feat/asset-lab-audit`:** stati delle fortificazioni nel Lab (cantiere, danno, cutaway), audit automatico di ogni asset con baseline e deroghe, runner e CI, accesso diretto `/lab` senza partita. Chiude il residuo «fasi di danno non esposte nel Lab» della voce del 23/10 sotto.
