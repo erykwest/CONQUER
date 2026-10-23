@@ -27,7 +27,7 @@ intatta nel gioco, cantiere 25/50/75%, ogni fase di danno della galleria distruz
 | `cutaway-attivo` / `cutaway-diverso` | errore | il cutaway è attivo e si vede |
 | `altezza-per-livello` | errore | L1 < L2 < L3 per la stessa variante (mesh 3D) |
 
-Ogni render ha anche una **firma** (griglia 12×12 di luminanza): confrontata con `qa/asset-audit-baseline.json` dà `nuovo` (non c'era), `cambiato` (distanza > 0,05) o `sparito`.
+Ogni render ha anche una **firma** (griglia 12×12 di luminanza): confrontata con `qa/asset-audit-baseline.json` dà `nuovo` (non c'era), `cambiato` (distanza > 0,01) o `sparito`.
 
 Le catture sono ripetibili: mondo con seed fisso, luce di giorno, sole, orologio delle animazioni fermo, id stabili (stesse macerie a ogni giro), nessuna partita in corso (`?assetlab=1` non avvia la simulazione).
 
@@ -60,4 +60,4 @@ La CI (`Asset Lab regression` → `browser`) esegue l'audit su ogni PR che tocca
 ## Avvertenze
 
 - Il render 2.5D di **legno danneggiato o in costruzione è sbagliato con SwiftShader forzato** (`--use-angle=swiftshader`): l'audit lancia Chromium senza quel flag. Variabile `AUDIT_ARGS` per altri flag.
-- Firme generate su una macchina possono differire leggermente su un'altra: la soglia 0,05 assorbe le differenze di rasterizzazione; un «cambiato» va comunque guardato nel foglio.
+- Le catture sono deterministiche sulla stessa macchina (distanza 0 tra due giri). Su un'altra macchina (CI Linux) la rasterizzazione può differire di poco: un «cambiato» in CI senza modifiche visive va confrontato con il foglio provini prima di aggiornare la baseline.

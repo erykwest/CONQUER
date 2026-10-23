@@ -14,9 +14,9 @@
   'use strict';
   const C=()=>window.ConquerAssetCatalog,L=()=>window.ConquerAssetCatalog.lab;
   const byId=id=>document.getElementById(id);
-  // Signature distances: CHANGED vs the baseline; SAME = identical render; PROGRESS = construction steps
-  // that move (round towers measure 0.02-0.1, static sites stay under 0.006: the builders' own motion).
-  const SIG=12,CHANGED=.05,SAME=.002,PROGRESS=.01;
+  // Signature distances: CHANGED vs the baseline (captures are deterministic: the gate drapes of #76
+  // measure 0.016); SAME = identical render; PROGRESS = construction steps that move.
+  const SIG=12,CHANGED=.01,SAME=.002,PROGRESS=.01;
   const BASELINE_URL='./qa/asset-audit-baseline.json';
   let baselineCache=null;
 
