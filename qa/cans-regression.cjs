@@ -131,4 +131,41 @@ check('first compatible, reachable slot retains existing seat assignments',()=>{
   assert.equal(e.getAssignment('bob').slotId,'bench2');
   assert.equal(e.choose('chapel',{role:'guest'}).slotId,'bench1');
 });
+check('activity sequences advance only after real slot activation or transfer',()=>{
+  const d=domain();
+  d.sequences=[{id:'visit',role:'guest',steps:[
+    {id:'sit',slotId:'bench1',action:'sit',duration:2},
+    {id:'pray',slotId:'bench1',action:'pray',duration:4},
+    {id:'move',slotId:'bench2',action:'walk',duration:0},
+    {id:'leave',slotId:'bench2',action:'leave',duration:1}
+  ]}];
+  const e=createEngine({clock:()=>100});e.addDomain(d);
+  const first=e.reserve('alice','chapel','bench1',{role:'guest'});progress(e,'alice',first.token);
+  assert.equal(e.startSequence('alice','visit').action,'sit');
+  assert.equal(e.advanceSequence('alice').requiresTransfer,false);
+  assert.equal(e.advanceSequence('alice').requiresTransfer,true);
+  assert.throws(()=>e.advanceSequence('alice'),/requires traversal/);
+  const transfer=e.startTransfer('alice','chapel','bench2');
+  assert.throws(()=>e.advanceSequence('alice'),/no active sequence/);
+  for(const phase of ['approaching','entering','traversing'])e.advanceTransfer('alice',transfer.token,phase);
+  const saved=e.serialize();
+  const restored=createEngine({clock:()=>100});
+  restored.restore(saved);
+  assert.equal(restored.getAssignment('alice').stepIndex,2);
+  assert.equal(restored.getAssignment('alice').pending.slotId,'bench2');
+  restored.completeTransfer('alice',transfer.token);
+  assert.equal(restored.advanceSequence('alice').requiresTransfer,false);
+  assert.equal(restored.advanceSequence('alice').completed,true);
+  assert.equal(restored.getAssignment('alice').sequenceId,null);
+});
+check('roles, invalid sequences and moved furniture invalidate inconsistent state',()=>{
+  const d=domain();d.sequences=[{id:'bad',role:'guest',steps:[{id:'x',slotId:'altar',action:'pray'}]}];
+  assert.throws(()=>normalizeDomain(d),/invalid activity sequence/);
+  const e=createEngine({clock:()=>100});e.addDomain(domain());
+  assert.throws(()=>e.reserve('a','chapel','altar',{role:'guest'}),/unavailable/);
+  const r=e.reserve('a','chapel','bench1',{role:'guest'});progress(e,'a',r.token);
+  const moved=domain();moved.slots[0].position.x+=.5;
+  assert.equal(e.updateDomain(moved).released,1);
+  assert.equal(e.getAssignment('a'),null);
+});
 console.log('CANS tests passed:',count);
