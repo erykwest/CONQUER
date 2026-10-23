@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Igiene Git — pulizia branch obsolete (23/10/2026)
+
+- **Operazione infrastrutturale separata dal gameplay:** otto ref candidati a rimozione con workflow condizionale, SHA fissa, ricontrollo PR aperte e presenza del merge. Nessun branch attivo/PR OPEN viene eliminato intenzionalmente; i branch divergenti o con commit non attribuiti restano da analizzare, **non automaticamente classificati come obsoleti**.
+- **Rif.:** `.github/workflows/prune-obsolete-branches-20261023.yml`; vedere l'esito dell'Action dopo il merge. Il backlog di funzionalità e la roadmap M0–M5 non cambiano.
+
+
 ## Audit live del 23/10/2026 — stato prevalente
 
 > **Main `518e830`** dopo [#76](https://github.com/erykwest/CONQUER/pull/76), [#79](https://github.com/erykwest/CONQUER/pull/79), [#80](https://github.com/erykwest/CONQUER/pull/80), [#81](https://github.com/erykwest/CONQUER/pull/81). Inventario complessivo e prove in [AUDIT-2026-10-23.md](AUDIT-2026-10-23.md), da leggere prima delle sezioni storiche.
