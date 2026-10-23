@@ -37,6 +37,22 @@ try{
   await page.locator('#assetRotateLeft').click();
   const heights=await page.evaluate(()=>['l1','l3'].map(l=>window.ConquerAssetCatalog.items.find(x=>x.id==='castle:pietra-quadrata-'+l).format));
   assert.notEqual(heights[0],heights[1],'Levels must show their own height');
+  // Engine states: construction, damage and cutaway are game captures; wood variants are 2.5D only.
+  assert.ok(castles.some(x=>!x.mesh&&x.spec?.material==='wood'),'Wood fortifications must be listed (2.5D)');
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('castle:pietra-quadrata-l3','damage-crollo-1-piano'));
+  assert.ok(await page.locator('#assetStateBar button[data-state="cutaway"]').count(),'Cutaway state must be offered');
+  assert.equal(await page.locator('#assetStateBar button[aria-pressed="true"]').getAttribute('data-state'),'damage-crollo-1-piano');
+  await page.waitForFunction(()=>{const i=document.querySelector('#assetDetailPreview img.engine-capture');return i&&i.complete&&i.naturalWidth>40});
+  await page.locator('#assetRotateRight').click();
+  assert.equal(await page.locator('#assetRotationValue').textContent(),'90°','Game captures turn by the 90° camera views');
+  await page.locator('#assetStateBar button[data-state="3d"]').click();
+  assert.equal(await page.locator('#assetRotateRight').textContent(),'+15° ↷','3D meshes turn by 15°');
+  // The audit engine answers from the Lab itself.
+  const audit=await page.evaluate(async()=>{
+    const r=await window.ConquerAssetAudit.run({ids:['castle:porta-pietra-l2','model:ConquerCivicModels:church1']});
+    return{renders:r.summary.renders,fail:r.summary.fail,states:r.results.map(x=>x.state)};
+  });
+  assert.ok(audit.renders>=10&&audit.fail===0&&audit.states.includes('cutaway')===false&&audit.states.includes('damage-crollo-1-piano'),JSON.stringify(audit));
   // The sandbox must not write the player's settlement slot.
   assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(k=>/settlement|assetlab/.test(k)).length),0,'Sandbox must not save');
   await page.locator('#assetReset').click();
