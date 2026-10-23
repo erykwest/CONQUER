@@ -14,15 +14,28 @@ const unit = n => Number.isFinite(n) ? clamp(n, 0, 1) : 0;
 export function eligibleForWorkshop(house) {
   return Boolean(house && Number(house.level ?? house.tier) === 3 && house.completed !== false && house.accessible !== false && house.streetFacing !== false);
 }
-export function chooseWorkshopType({ demand = {}, supply = {}, prosperity = 0, random = Math.random } = {}) {
-  const choices = Object.entries(WORKSHOP_TYPES).map(([type, spec]) => ({
-    type, score: Math.max(0, (unit(demand[spec.demand] ?? 0.5) - unit(supply[type] ?? 0)) * spec.weight * (type === 'goldsmith' ? unit(prosperity) : 1)),
-  }));
-  const total = choices.reduce((sum, item) => sum + item.score, 0);
-  if (!total) return null;
-  let target = clamp(random(), 0, 0.999999) * total;
-  for (const item of choices) { target -= item.score; if (target < 0) return item.type; }
-  return choices[choices.length - 1].type;
+/** A city's workshop register: coverage counts, not player-managed jobs. */
+export function workshopRegistry(existing = []) {
+  const counts=Object.fromEntries(Object.keys(WORKSHOP_TYPES).map(type=>[type,0]));
+  for(const workshop of existing)if(Object.hasOwn(counts,workshop.type))counts[workshop.type]++;
+  return counts;
+}
+/** Gentle biases preserve diversity without guaranteeing every profession. */
+export function chooseWorkshopType({ demand = {}, supply = {}, registry = {}, resources = {}, prosperity = 0, random = Math.random } = {}) {
+  const choices = Object.entries(WORKSHOP_TYPES).map(([type, spec]) => {
+    const demandFactor=0.7+0.3*unit(demand[spec.demand]??0.5);
+    const availability=unit(resources[type]??0.5);
+    const resourceFactor=0.75+0.5*availability;
+    const count=registry[type]??supply[type]??0;
+    const diversityFactor=count===0?1.7:1/(1+0.25*count);
+    const luxuryFactor=type==='goldsmith'?0.25+0.75*unit(prosperity):1;
+    return {type,score:spec.weight*demandFactor*resourceFactor*diversityFactor*luxuryFactor};
+  });
+  const total=choices.reduce((sum,item)=>sum+item.score,0);
+  if(!total)return null;
+  let target=clamp(random(),0,0.999999)*total;
+  for(const item of choices){target-=item.score;if(target<0)return item.type;}
+  return choices[choices.length-1].type;
 }
 export function createWorkshop({ house, artisanId, type, day = 0 }) {
   if (!eligibleForWorkshop(house) || !artisanId || !WORKSHOP_TYPES[type]) return null;
@@ -34,18 +47,19 @@ export function updateWorkshop(workshop, { hour = 12, demand = 0.5, visitors = 0
   const state = !artisanAvailable ? 'vacant' : !open ? 'closed' : visitors > 0 ? 'selling' : demand > 0 ? 'working' : 'open';
   return { ...workshop, state, activity: open ? unit(demand) : 0, revenue: workshop.revenue + (state === 'selling' ? Math.max(0, visitors) * unit(demand) : 0) };
 }
-export function proposeWorkshops({ houses = [], artisans = [], existing = [], demand = {}, supply = {}, prosperity = 0, random = Math.random, day = 0 } = {}) {
+export function proposeWorkshops({ houses = [], artisans = [], existing = [], demand = {}, supply = {}, resources = {}, prosperity = 0, random = Math.random, day = 0 } = {}) {
   const occupied = new Set(existing.map(w => w.houseId));
   const assigned = new Set(existing.map(w => w.artisanId));
   const available = artisans.filter(a => (Number(a.level ?? a.tier) === 3) && !assigned.has(a.id) && a.available !== false);
   const proposals = [];
+  const registry=workshopRegistry(existing);
   for (const house of houses) {
     if (!eligibleForWorkshop(house) || occupied.has(house.id) || !available.length) continue;
-    const type = chooseWorkshopType({ demand, supply, prosperity, random });
+    const type = chooseWorkshopType({ demand, supply, registry, resources, prosperity, random });
     if (!type) continue;
     const artisan = available.shift();
     const workshop = createWorkshop({ house, artisanId: artisan.id, type, day });
-    if (workshop) { proposals.push(workshop); occupied.add(house.id); }
+    if (workshop) { proposals.push(workshop); occupied.add(house.id); registry[type]++; }
   }
   return proposals;
 }
