@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## Guardaroba stagionale dei popolani (branch `feature/seasonal-clothing`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** `src/settlement-wardrobe.js` (`window.ConquerWardrobe`) con 9 capi overlay (cappello di paglia, berretto di pelliccia, cappuccio di lana, cappuccio cerato, pelle di pecora, mantello di lana, mantello foderato di pelliccia, mantella antipioggia, scialle). Disegnati da `drawVillagerFigureUnmasked`, quindi valgono anche per lavoratori, costruttori e civili in fuga dagli incendi; l'outfit dipende da id residente, mese del calendario (o stagione DEV forzata) e `currentWeather()`. Nessuno stato persistito, nessun effetto economico.
+- **Asset Lab:** 9 voci «Popolazione / Abbigliamento stagionale», anteprima su popolano, artigiano e mercante; selettore stagione/meteo nel lab animato.
+- **QA:** nuova `qa/wardrobe-regression.cjs` (+ workflow) **PASS in locale**; `work-anim`, `asset-catalog`, `refactor-app-population`, `snow-tracks` **PASS in locale**. Verifica visiva nel lab (5 condizioni × classi × bambini) e probe delle condizioni live in `index.html` senza errori console. **Non verificato:** resa in partita con un villaggio popolato e costo per frame con molti abitanti; CI della branch.
+
 ## Asset Lab — ispezione ruotabile e componenti reali (branch `fix/asset-lab-rotation-and-components`, 22/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** inspector destro con pulsanti −15° / +15° per i modelli 3D; ricalcolo della proiezione e dell'ordinamento delle facce per le preview statiche; direzione reale modificata negli animali, carri 3D e macchine d'assedio animate, interrompendo l'autorotazione quando si usa il comando manuale.

@@ -119,6 +119,11 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <label id="ammoBox">Munizioni <select id="sAmmo"></select></label>
     <label id="balBox"><input id="sBallista" type="checkbox"> Balista</label>
   </div>
+  <label id="wardrobeBox">Stagione/meteo <select id="wardrobe">
+    <option value="summer|clear">Estate serena</option><option value="spring|wind">Primavera ventosa</option>
+    <option value="autumn|fog">Autunno nebbioso</option><option value="summer|rain">Pioggia</option>
+    <option value="autumn|storm">Temporale</option><option value="winter|clear">Inverno</option><option value="winter|snow">Neve</option>
+  </select></label>
   <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
   <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
 </div>
@@ -133,7 +138,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
       <select id="assetFormat" aria-label="Tipo di risorsa">
         <option value="">Tutti i formati</option><option value="file">SVG / PNG</option>
         <option value="model">Modelli 3D</option><option value="animal">Animali 3D</option>
-        <option value="figure">Animazioni</option><option value="schematic">Parametrici</option>
+        <option value="figure">Animazioni</option><option value="wardrobe">Abbigliamento</option><option value="schematic">Parametrici</option>
         <option value="symbol">Simboli araldici</option>
       </select>
       <button id="assetReset" type="button">Azzera</button>
@@ -174,7 +179,8 @@ function withProjectionGroundZ(g,fn){return fn()}
 function peasantHash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 function villagerHair(id){return['blonde','brown','black','gray','red'][peasantHash(id)%5]}
 </script>
-<script src="./src/settlement-population-figures.js?v=lab-1"></script>
+<script src="./src/settlement-wardrobe.js?v=lab-1"></script>
+<script src="./src/settlement-population-figures.js?v=lab-2"></script>
 <script src="./src/settlement-combat-anim.js?v=lab-1"></script>
 <script src="./src/settlement-work-anim.js?v=lab-1"></script>
 <script src="./src/settlement-animals.js?v=lab-2"></script>
@@ -217,6 +223,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     if(ammo){const was=$('sAmmo').value;$('sAmmo').innerHTML=ammo.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('');if(ammo.some(([k])=>k===was))$('sAmmo').value=was}
     resetHero();
   }
+  // Wardrobe preview: the lab has no calendar or weather, so the select stands in for both.
+  function setWardrobe(){const [season,weather]=$('wardrobe').value.split('|');window.ConquerWardrobe.preview={season,weather}}
+  $('wardrobe').onchange=setWardrobe;setWardrobe();
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
   $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
 

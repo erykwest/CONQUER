@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-23 — Guardaroba stagionale dei popolani (branch)
+
+- Su `feature/seasonal-clothing`: catalogo di 9 overlay di abbigliamento (pioggia, inverno, estate, mezze stagioni ventose) sopra la figura procedurale dei popolani, scelti automaticamente da mese e meteo, con transizioni graduali nei mesi di passaggio. Scelto l'overlay a strati invece delle skin alternative: i capi si combinano e la sagoma/colore di classe resta leggibile.
+- Voci nell'Asset Lab e selettore stagione/meteo nel lab animato; nuova regressione `wardrobe`. **CI e merge ancora da verificare.** Invariati ROADMAP e DECISIONS: miglioramento solo visivo, nessun contratto di simulazione toccato.
+
 ## 2026-10-22 — Asset Lab: rotazione ±15° e rimozione pseudo-fortificazioni (branch)
 
 - Su `fix/asset-lab-rotation-and-components`: comandi di rotazione sotto la preview dell'inspector, proiezione 3D orientabile a intervalli di 15°, rotazione delle anteprime native animate e disattivazione del giro automatico su interazione.

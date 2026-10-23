@@ -84,6 +84,11 @@
     items.push({id:'figure:'+key,title,category,family,kind:'figure',subject:key,
       format:'Animazione',source:'src/settlement-population-figures.js / src/settlement-wagons3d.js'});
   }
+  const wardrobe=window.ConquerWardrobe?.PIECES||{};
+  for(const key of Object.keys(wardrobe)){
+    items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
+      kind:'wardrobe',key,format:'Overlay',note:'Si attiva: '+wardrobe[key].when+'.',source:'src/settlement-wardrobe.js'});
+  }
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -219,6 +224,24 @@
       placeholder(canvas,'ANTEPRIMA DAL LAB');
     }finally{ctx=previous;State.view.scale=oldScale}
   }
+  // A wardrobe piece worn by the three civil classes, drawn by the game's own figure code.
+  function renderWardrobe(canvas,item){
+    const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,W=window.ConquerWardrobe;
+    g.clearRect(0,0,w,h);
+    const previous=ctx,oldScale=State.view.scale;
+    try{
+      ctx=g;State.view.scale=Math.min(w*.05,h*.1);
+      [['peasant',['#8c6b3f','#5d4a32'],'male'],['artisan',['#6d7f8c','#4a5560'],'female'],['merchant',['#7a4f7a','#c6a457'],'male']]
+        .forEach(([kind,colors,sex],i)=>{
+          const id='wardrobe-'+item.key+'-'+kind;
+          drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
+            outfit:W.compose([item.key],id),p:{x:w*(.25+i*.25),y:h*.74}});
+        });
+    }catch(error){
+      console.warn('Asset Lab wardrobe thumbnail could not render',item.key,error);
+      placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');
+    }finally{ctx=previous;State.view.scale=oldScale}
+  }
   function makePreview(item,container,large,rotationDegrees=0){
     container.replaceChildren();
     if(item.kind==='file'){
@@ -233,6 +256,7 @@
     if(item.kind==='schematic')return renderSchema(canvas,item);
     if(item.kind==='model'||item.kind==='animal')return renderModel(canvas,item,rotationDegrees);
     if(item.kind==='figure')return renderFigure(canvas,item,rotationDegrees);
+    if(item.kind==='wardrobe')return renderWardrobe(canvas,item);
 
   }
   let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null;
@@ -253,7 +277,7 @@
     const rotatable=item.kind==='model'||item.kind==='animal'||item.subject==='wagon3d';
     byId('assetRotationControls').hidden=!rotatable;
     byId('assetRotationValue').textContent=selectedRotation+'°';
-    const label=byId('assetPreviewNote');label.textContent=live?'Anteprima animata dal motore di gioco.':'';
+    const label=byId('assetPreviewNote');label.textContent=live?'Anteprima animata dal motore di gioco.':item.note||'';
     if(live)document.querySelector('[data-subject="'+item.subject+'"]').click();
     else makePreview(item,art,true,selectedRotation);
     const link=byId('assetBuilderLink');link.hidden=!item.builder;

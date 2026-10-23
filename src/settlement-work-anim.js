@@ -147,8 +147,8 @@
     const g=sack?{x:shoulder.x+dirOf(P.th,f).x*bodyW*.95,y:shoulder.y+dirOf(P.th,f).y*bodyW*.95}
       :{x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(P.th))};
     if(!sack)drawTool(tool,g,f,P.th,scale);
-    // Arm: shoulder to hand, in the darker tunic tone.
-    ctx.strokeStyle=darken(dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
+    // Arm: shoulder to hand, in the darker tunic tone (or the cloak's, when wearing one).
+    ctx.strokeStyle=darken(window.ConquerWardrobe?.outfitFor(dot)?.sleeve||dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(shoulder.x,shoulder.y);ctx.lineTo(g.x,g.y);ctx.stroke();
     ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(g.x,g.y,Math.max(.5,.55*scale),0,Math.PI*2);ctx.fill();
     // Effect origin: where the tool tip strikes (or the casting hand).
