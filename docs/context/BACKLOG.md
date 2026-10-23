@@ -1,8 +1,18 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
-## UX — Asset Lab / catalogo completo (23/10/2026)
+## Audit live del 23/10/2026 — stato prevalente
 
-- **IN CORSO in `feat/asset-lab-complete-catalog`:** fortificazioni in pietra montate dal motore di gioco (sandbox `index.html?assetlab=1`, `ConquerSiegePreview.assetMesh`), 7 animazioni di lavoro, manifest dei file generato con i set di rotazione, ricerca senza «undefined». Chiude il residuo del 22/10 sulle «fortificazioni effettivamente montate». Non segnare come rilasciato prima della CI e del merge.
+> **Main `518e830`** dopo [#76](https://github.com/erykwest/CONQUER/pull/76), [#79](https://github.com/erykwest/CONQUER/pull/79), [#80](https://github.com/erykwest/CONQUER/pull/80), [#81](https://github.com/erykwest/CONQUER/pull/81). Inventario complessivo e prove in [AUDIT-2026-10-23.md](AUDIT-2026-10-23.md), da leggere prima delle sezioni storiche.
+
+- **FATTO SU MAIN:** portoni con magneti su strada e viabilità, ante 3D animate, grata autonoma con HP/costo/riparazione/blocco, drappi e torce (**GATE-01/01b/02/03/04/06**, PR #76); Asset Lab catalogo di modelli reali, viewer ±15°, 22 fortificazioni in pietra montate dal motore, 7 azioni di lavoro consultabili, manifest generato e sandbox senza save/cloud (**#79/#80/#81**).
+- **APERTO:** GATE-05 portone ligneo e GATE-07 IA informata delle difese; #61 danni riallineata ma **non mergiata**; Asset Lab #82 (audit visivo dei 227 asset, 456 render, fasi danno/cantiere/cutaway) **NON SU MAIN**; cantieri progressivi #77, eventi #78, interni #65, L1/ledger #55 e cavalieri #72 **NON MERGIATI**.
+- **QA mirata:** #82 segnala, *sul proprio branch*, mancanza di differenza visiva tra cantieri 25/50/75% e possibile regressione delle ante `damaged/broken` dopo #76: verificare su `main` prima di accettare la catena visuale. Non spacciare l'osservazione di #82 per bug qui riprodotto.
+- **Priorità economica invariata:** singolo ledger fra Builder/economia/assedio, operai L1 realmente necessari, miniera `stone` vs `metal`, bonus civici, blocco/fame/resa. Le **13 feature core Builder** marcate `[x]` rimangono core già esistenti; nessuna di queste PR chiude automaticamente i 10 residui del backlog Builder.
+
+
+## UX — Asset Lab / catalogo completo (#81 MERGED su main, 23/10/2026)
+
+- **FATTO SU MAIN con PR #81** (sviluppato in `feat/asset-lab-complete-catalog`): fortificazioni in pietra montate dal motore di gioco (sandbox `index.html?assetlab=1`, `ConquerSiegePreview.assetMesh`), 7 animazioni di lavoro, manifest dei file generato con i set di rotazione, ricerca senza «undefined». Chiude il residuo del 22/10 sulle «fortificazioni effettivamente montate». PR [#81](https://github.com/erykwest/CONQUER/pull/81) **merged**; Asset Lab regression + controlli di CI su SHA `2e133d73` **PASS**. Il nuovo strumento di audit delle fasi è invece [#82](https://github.com/erykwest/CONQUER/pull/82) OPEN.
 - **Residui aperti:** (1) varianti in legno (torri, porta lignea, palizzate) senza volume 3D: servono una mesh `ConquerCastle3D` o una cattura 2.5D isolata; (2) fasi di danno della galleria distruzione (danneggiata, crollo, distrutta) non ancora esposte nel Lab; (3) case, pozzo, campi, strade, fiumi restano SCHEMA: valutare la stessa sandbox con i renderer urbani; (4) ponti, levatoi, fossati e terrapieni non catalogati.
 
 ## UX — Asset Lab / rotazione viewer e categorizzazione (integrato su main tramite #80, 22/10/2026)
@@ -20,7 +30,7 @@
 > Raccoglie *idee, requisiti e dipendenze*. Un requisito elencato qui **non prova** assenza né completamento nel software.
 > Non duplicare il backlog di 22 feature del Builder già mantenuto in [docs/feature-backlog.md](../feature-backlog.md): quello rimane il riferimento dettagliato per territorio/urbanistica/economia locale/araldica.
 
-## Stato di riferimento al 22/10/2026 — prevale sugli appunti datati
+## Stato di riferimento al 22/10/2026 — snapshot storico, superato dal 23/10 per merge successivi
 
 **Audit statico su `main` `c52b537`:** [riconciliazione integrale dei 23 ID Builder, dei 25 S-ID assedio, Clay, feudi, UX e note voice](AUDIT-2026-10-22.md). I requisiti progettuali riportati più sotto **non** vanno letti come assenza del codice; quando una feature è già implementata, il solo lavoro residuo è indicato nell'audit.
 
@@ -40,19 +50,19 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 - **APERTO:** QA browser interattiva, prestazioni picchi GPU e visual QA [#18](https://github.com/erykwest/CONQUER/pull/18); ledger unico/agricoltura; matrimonio danni→accessibilità→assedio/blocco/resa; filiera metallo; sistema feudale completo.
 - La presenza di un modulo o di un check non trasforma le righe S-xx in **FATTO**: valutare la sequenza di combattimento completa contro i criteri di accettazione.
 
-## Portoni — accessori del portone (branch `portoni`, 22/10/2026)
+## Portoni — accessori integrati su main con PR #76 (23/10/2026)
 
-**CODICE SU BRANCH, NON SU MAIN.** Prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026).
+**CODICE SU MAIN**, merge [#76](https://github.com/erykwest/CONQUER/pull/76), con nuovo modulo `ConquerGates`. QA sulla HEAD `a504ea65`: workflow routing, builder, camp, work animation, earthworks, context sync **PASS**. Restano GATE-05/GATE-07 e verifiche di stati danneggiati segnalate in #82. Prove e limiti originari in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026).
 
 | ID | Requisito | Stato |
 |---|---|---|
-| GATE-01 | Magnete del portone sulle strade esistenti: centro sulla mezzeria, passaggio allineato, strada mantenuta e percorribile | BRANCH + QA |
-| GATE-01b | Magnete delle strade principali sulle due bocche del portone, con accesso dritto e nodo comune al centro | BRANCH + QA + controllo browser |
-| GATE-02 | Ante del portone animate tra aperto e chiuso (pannello, chiusura notturna), passaggio voltato visibile nel 3D | BRANCH + QA + controllo visivo |
-| GATE-03 | Grata (saracinesca) come upgrade del solo portone in pietra, animata; abbassata blocca il passaggio | BRANCH + QA + controllo visivo |
-| GATE-04 | Due drappi araldici ai lati del portale e due torce accese di notte sul fronte esterno | BRANCH + QA + controllo visivo |
+| GATE-01 | Magnete del portone sulle strade esistenti: centro sulla mezzeria, passaggio allineato, strada mantenuta e percorribile | **MAIN · PR #76**; QA della PR |
+| GATE-01b | Magnete delle strade principali sulle due bocche del portone, con accesso dritto e nodo comune al centro | **MAIN · PR #76**; QA della PR |
+| GATE-02 | Ante del portone animate tra aperto e chiuso (pannello, chiusura notturna), passaggio voltato visibile nel 3D | **MAIN · PR #76**; QA della PR |
+| GATE-03 | Grata (saracinesca) come upgrade del solo portone in pietra, animata; abbassata blocca il passaggio | **MAIN · PR #76**; QA della PR |
+| GATE-04 | Due drappi araldici ai lati del portale e due torce accese di notte sul fronte esterno | **MAIN · PR #76**; QA della PR |
 | GATE-05 | Ante, grata, drappi e torce per il portone di legno (oggi solo il magnete) | APERTO |
-| GATE-06 | Grata come strato difensivo separato (D-042): HP propri, colpita prima della porta, il fuoco passa, distrutta e riparabile, sbarra anche a porta sfondata | BRANCH + QA + controllo browser |
+| GATE-06 | Grata come strato difensivo separato (D-042): HP propri, colpita prima della porta, il fuoco passa, distrutta e riparabile, sbarra anche a porta sfondata | **MAIN · PR #76**; QA della PR |
 | GATE-07 | IA d'assedio che sceglie fra ariete sulla grata, fuoco sulla porta e altri accessi; riparazione della grata durante l'assedio | APERTO, dipende da S-15 |
 
 ## Clay — specifica storica della branch `clay` (19/10); runtime più recente su main
