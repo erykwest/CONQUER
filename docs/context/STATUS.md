@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## Branch cleanup automatizzata — 23/10/2026
+
+- Ricognizione live di 34 branch (`main` inclusa), HEAD `b79ea99`. **Otto candidati verificati** per rimozione: sei branch di PR merge con HEAD esattamente coincidente con la PR (#75, #76, #79, #80, #81, #83), e due branch senza commit esclusivi (`feature/bridge-earthworks-converge`, `fix/main-founding-dev-webgl-20261023`).
+- Introdotto workflow di **esecuzione una tantum** `.github/workflows/prune-obsolete-branches-20261023.yml`, eseguito soltanto da push su `main` che introduce quel file. Prima di ogni DELETE deve ricontrollare ref SHA, protezione delle PR aperte, merge PR o discendenza da main; abortisce la rimozione del singolo ref se le condizioni cambiano. **Il risultato è verificabile dal relativo GitHub Actions run successivo al merge**; il commit documentale da solo non dimostra cancellazioni.
+- **Preservati:** tutti i branch HEAD di PR aperte (`converge`, `events`, `cans` se in lavoro, `feature/construction-props`, `feature/economic-balances-20261019`, `feature/cutaway-furniture-converge`, `feature/knights-messenger-caravans`, `knights`, `visual-qa`, `audit-hardening`, `feat/asset-lab-audit`) e tutti i branch divergenti non ancora attribuiti a merge. Anche `docs/context-sync-pr-governance-20261021` è **esclusa** perché avanzata dopo il suo merge #74. Nessun contenuto di gameplay viene modificato.
+
+
 ## Stato attuale verificato — 23/10/2026
 
 > **HEAD `main` [518e830](https://github.com/erykwest/CONQUER/commit/518e830547b66c12deefa0833487ea76b81c7746)** al momento della ricognizione. [Audit completo](AUDIT-2026-10-23.md) aggiornato da Git/PR e codice, **non da nuovo test end-to-end**. Le note sottostanti del 19–22/10 sono storiche quando dicono «solo branch».
