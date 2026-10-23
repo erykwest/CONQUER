@@ -2,8 +2,8 @@
 
 ## CANS — skeleton logico isolato (branch `cans`, 23/10/2026)
 
-- **PRESENTE SOLO SU BRANCH `cans`, NON SU `main`:** `src/settlement-cans.js` (API CommonJS e `window.ConquerCANS`, **non caricata** da `index.html`). Include `ActivityDomain` versionati, ingressi multipli, slot `worker`/`guest`, grafo locale, ricerca accesso raggiungibile, prenotazione esclusiva per entità, stati di attraversamento, trasferimento atomico, scadenza TTL, revisione layout, cancellazione, serializzazione/restore validato e coordinate locali del carrier.
-- **QA:** `qa/cans-regression.cjs` e workflow `cans-regression.yml` creati. Nove scenari eseguiti in un harness JavaScript isolato con esito PASS; **esecuzione Node CI/GitHub Actions ancora da confermare**, non equivale a browser QA.
+- **PRESENTE SOLO SU BRANCH `cans`, NON SU `main`:** `src/settlement-cans.js` (API CommonJS e `window.ConquerCANS`, **non caricata** da `index.html`). Include `ActivityDomain` versionati, ingressi multipli, slot `worker`/`guest`, grafo locale, ricerca accesso raggiungibile, prenotazione esclusiva per entità, sequenze di attività versionate e stati di attraversamento, trasferimento atomico, scadenza TTL, revisione layout, cancellazione, serializzazione/restore validato e coordinate locali del carrier.
+- **QA:** `qa/cans-regression.cjs` e workflow `cans-regression.yml` creati. Undici scenari eseguiti con esito **PASS** sia in harness JavaScript isolato sia nella CI Node/GitHub Actions ([run 39976214964](https://github.com/erykwest/CONQUER/actions/runs/39976214964)). Non equivale a browser QA.
 - **LIMITE ESPLICITO:** nessun adapter collegato a taverna/chiesa/campi/mercati, né ai residenti, al pathfinding, ai save del gioco, al cutaway o al renderer. Non ci sono nuove animazioni, economia o spawn; le sequenze usano solo transizioni di stato richieste dall'adapter, **non** movimento fisico automatico. Nessun merge su `main`. Contratti runtime ancora sperimentali: vedere [CANS](../CANS-ARCHITECTURE.md).
 
 
