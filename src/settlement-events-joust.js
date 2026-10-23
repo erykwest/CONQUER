@@ -134,9 +134,31 @@
     const a=w2s(p,0),b=w2s({x:p.x+h.x,y:p.y+h.y},0);
     return Math.abs(b.x-a.x)>.001?(b.x>a.x?1:-1):1;
   }
-  function horse(p,mode,heading,seed,t){
-    const sc=w2s(p,.07),size=Math.max(1.5,State.view.scale*5.75);
-    window.ConquerAnimals?.drawAnimal?.('horse',ctx,sc.x,sc.y,size,{t:t*34*.12,seed,facing:screenFacing(p,heading),mode,blend:mode==='browse'?.86:0});
+  function horse(p,mode,heading,seed,t,barding){
+    const sc=w2s(p,.07),size=Math.max(1.5,State.view.scale*5.75),facing=screenFacing(p,heading);
+    window.ConquerAnimals?.drawAnimal?.('horse',ctx,sc.x,sc.y,size,{t:t*34*.12,seed,facing,mode,blend:mode==='browse'?.86:0});
+    if(barding)caparison(sc,size,facing,barding,mode==='run'?t:0);
+  }
+  // Caparison over the 2D horse, in the horse art's own frame (cavallo_esteso.svg:
+  // body y 92..188, ground centre 134,246, scale 1.9): a cloth parted in the two
+  // colours of the knight, falling over the upper legs, with a gold hem.
+  function caparison(sc,size,facing,livery,t){
+    const s=size*1.9/256,sway=Math.sin(t*14)*3;
+    ctx.save();
+    ctx.translate(sc.x,sc.y);ctx.scale(facing*s,s);ctx.translate(-134,-246);
+    const lw=Math.max(.55,size*1.9/90)/s;
+    const cloth=new Path2D('M58 124 C62 106,88 94,124 94 C150 87,174 92,190 104 L208 122 C210 160,209 190,207 212 '+
+      'C196 218,186 210,176 216 C164 222,152 212,140 218 C126 224,114 212,100 218 C88 224,76 214,66 218 C60 196,56 160,58 124 Z');
+    ctx.save();ctx.clip(cloth);
+    ctx.fillStyle=livery.main;ctx.fillRect(40,80,190,150);
+    ctx.fillStyle=livery.alt;ctx.fillRect(134+sway*.3,80,100,150);   // per pale: front half in the second colour
+    ctx.fillStyle='#d2ad4b';ctx.fillRect(40,206+sway*.2,190,14);      // gold hem
+    ctx.restore();
+    ctx.strokeStyle='rgba(30,22,14,.85)';ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke(cloth);
+    // Crinet over the neck and a plume.
+    ctx.fillStyle=livery.alt;ctx.beginPath();ctx.moveTo(170,104);ctx.quadraticCurveTo(182,70,200,52);ctx.lineTo(210,60);ctx.quadraticCurveTo(196,84,188,110);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle=livery.main;ctx.beginPath();ctx.ellipse(214,26,7,13,-.3,0,Math.PI*2);ctx.fill();
+    ctx.restore();
   }
   function drawVenue(s,t){
     const sc=scene(s,t),W=(x,y)=>E().toWorld(s,x,y),dirW=(dx,dy)=>{const a=s.angle||0;return{x:dx*Math.cos(a)-dy*Math.sin(a),y:dx*Math.sin(a)+dy*Math.cos(a)}};
@@ -157,7 +179,7 @@
       const seed=(hash(seedOf(s)+k.who)%900)+50,livery=liveryOf(s,k.who);
       const hp=W(k.horse.x,k.horse.y),head=dirW(k.horse.heading,0),id='knight-'+k.who;
       list.push({p:hp,draw:()=>{
-        horse(hp,k.horse.mode,head,seed,clock);
+        horse(hp,k.horse.mode,head,seed,clock,livery);   // barded in the knight's colours
         if(k.rider){
           const rp=W(k.rider.x,k.rider.y);
           drawSoldierFigureUnmasked(rp,g+k.rider.z,'unarmed',id,0,livery);
@@ -207,5 +229,5 @@
     if(!venues.length)return;
     for(const s of venues)drawVenue(s,t);
   }
-  window.ConquerJoust={scene,draw,isJoust,liveryOf,BOUT,IMPACT,END,LANE,SEAT,clock:()=>clock};
+  window.ConquerJoust={scene,draw,isJoust,liveryOf,caparison,BOUT,IMPACT,END,LANE,SEAT,clock:()=>clock};
 })();

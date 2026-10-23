@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-23 — Eventi: bardatura dei cavalli, torneo, accampamento e teatro animati
+
+- I cavalli della giostra hanno una gualdrappa (drappo partito, orlo dorato, crinale e pennacchio) disegnata sul cavallo 2D con la **stessa coppia di colori casuali del cavaliere**. Nuovi slot `fight` per tre coppie nel recinto del torneo e una coppia che si allena nell'accampamento, `prepare` davanti alle tende di torneo e accampamento, `perform`/`wait` per attori e quinte del teatro; scene animate dello spiazzo per torneo, accampamento e teatro. QA estese; verifica nel browser.
+
 ## 2026-10-23 — Eventi: costruibili dal Builder
 
 - Nuova categoria **Eventi e svago** nel Builder con pulpito, palco, spiazzo eventi e arena; piazzamento a due clic con il preflight comune; agganci per impronta, nome, costo e durata; ispettore con veste del palco e scelta / avvio / chiusura dell'evento sullo spiazzo, ciclo `preparing → active → clearing → idle` sull'orologio di gioco. Spiazzo gratuito e senza cantiere; palco, pulpito e arena con costi in legno/oro e cantiere. QA `events-builder-regression`; collaudo nel browser con clic reali (piazzamento, selezione, avvio giostra, montaggio progressivo, persistenza dopo ricarica).

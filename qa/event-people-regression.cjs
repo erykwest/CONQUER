@@ -121,3 +121,30 @@ for(const [dressing,act] of [['players','perform'],['herald','announce']]){
   assert.ok(sc.actors.filter(a=>a.action==='watch').length>=2,'podium: listeners around');
 }
 console.log('PASS arena, stage (players / herald) and podium: combatants, squires, crowds and performers');
+// Tourney, knights' camp and theatre on the festival ground.
+{
+  const T=venue('tourney'),C=venue('camp'),Th=venue('theatre');
+  const act=(s,k)=>P.slots(s).filter(x=>x.action===k);
+  assert.equal(act(T,'fight').length,6,'tourney: three pairs of combatants in the field');
+  assert.equal(act(T,'prepare').length,4,'tourney: a squire before each of the four tents');
+  assert.ok(act(T,'sit').length>=272,'tourney: the stands seats');
+  assert.equal(act(C,'fight').length,2,'camp: a pair of knights sparring');
+  assert.equal(act(C,'prepare').length,6,'camp: a squire before each of the six tents');
+  assert.ok(act(Th,'perform').length>=3&&act(Th,'wait').length>=2,'theatre: actors on the stage and extras in the wings');
+  assert.ok(act(Th,'sit').length>0,'theatre: an audience on the stands');
+  for(const s of [T,C,Th]){
+    const {w,h}=E.sizeOf(s);
+    for(let t=0;t<12;t+=.5){
+      const a=P.venueScene(s,t).actors;
+      assert.ok(a.every(x=>Math.abs(x.x)<=w/2&&Math.abs(x.y)<=h/2),s.event.setup+': everyone on the ground');
+    }
+  }
+  // The tourney's pairs fight inside the fence (x within +-4.2, y within -2.4..1.8).
+  for(let t=0;t<12;t+=.25){
+    const f=P.venueScene(T,t).actors.filter(a=>a.fighter);
+    assert.equal(f.length,6,'six combatants');
+    assert.ok(f.every(a=>Math.abs(a.x)<4.1&&a.y>-2.35&&a.y<1.75),'the melee stays inside the fence');
+  }
+  assert.ok(P.venueScene(Th,1).actors.some(a=>a.action==='perform'&&a.z>.3),'theatre: actors up on the stage');
+}
+console.log('PASS tourney (melee, squires, stands), knights camp (sparring, squires) and theatre (actors, wings, audience)');

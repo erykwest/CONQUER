@@ -67,3 +67,11 @@ console.log('PASS spectators: '+sc.spectators.length+' on the stands, cheering a
  assert.ok(sq.filter(q=>q.kind==='squire').length>=4&&lances>20,'squires shuttle lances')}
 {const A=J.liveryOf(ground,'A'),B=J.liveryOf(ground,'B');assert.notEqual(A.main+A.alt,B.main+B.alt,'the two knights wear different colours')}
 console.log('PASS squires and grooms get the next bout ready');
+
+// The joust horses are barded: the knights' horses carry a caparison in their colours.
+{
+  const src=require('node:fs').readFileSync(require('node:path').join(__dirname,'..','src','settlement-events-joust.js'),'utf8');
+  assert.match(src,/horse\(hp,k\.horse\.mode,head,seed,clock,livery\)/,'knights horses drawn with their livery');
+  assert.match(src,/function caparison\(/,'caparison drawn over the 2D horse');
+  console.log('PASS joust horses barded in the knights colours');
+}

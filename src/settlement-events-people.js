@@ -40,6 +40,8 @@
     for(const q of meta.seats||[])out.push({x:q[0],y:q[1],z:q[2],role:'guest',action:'sit',face:q.length>3?{x:Math.cos(q[3]),y:Math.sin(q[3])}:face});
     for(const q of meta.standing||[])out.push({x:q[0],y:q[1],z:q[2],role:'guest',action:'stand',face});
     for(const q of meta.performers||[])out.push({x:q[0],y:q[1],z:q[2],role:'worker',action:'perform',face});
+    for(const q of meta.actors||[])out.push({x:q[0],y:q[1],z:q[2],role:'worker',action:'perform',face});      // theatre stage
+    for(const q of meta.wings||[])out.push({x:q[0],y:q[1],z:q[2],role:'worker',action:'wait',face});          // waiting in the wings
     if(meta.speaker)out.push({x:meta.speaker[0],y:meta.speaker[1],z:meta.speaker[2],role:'worker',action:'announce',face});
     if(ref==='stagePlayers'||ref==='stageHerald'){
       // An audience standing in an arc in front of the stage.
@@ -49,7 +51,7 @@
     }else if(ref==='arenaU'&&meta.field){
       // Two combatants in the middle of the sand, facing each other.
       const cx=(meta.field.arcCentre[0]+meta.field.openEnd[0])/2,cy=(meta.field.arcCentre[1]+meta.field.openEnd[1])/2;
-      for(const sx of [-1,1])out.push({x:cx+sx*.35,y:cy,z:0,role:'worker',action:'fight',face:{x:-sx,y:0}});
+      for(const sx of [-1,1])out.push({x:cx+sx*.35,y:cy,z:0,role:'worker',action:'fight',pair:0,face:{x:-sx,y:0}});
     }else if(ref==='circusBooth'){
       out.push({x:0,y:.02,z:0,role:'worker',action:'sell',face:{x:0,y:-1}});
       for(let i=0;i<4;i++)out.push({x:.03*(i%2?1:-1),y:-.42-.2*i,z:0,role:'guest',action:'queue',face:{x:0,y:1}});
@@ -70,16 +72,22 @@
     const key=JSON.stringify(items.map(i=>[i.m,+i.x.toFixed(4),+i.y.toFixed(4),+(i.a||0).toFixed(4),i.s||1]))+'|'+venueId(s);
     const hit=slotCache.get(s);if(hit&&hit.key===key)return hit.list;
     const list=[],count=new Map();
-    const camp=setupOf(s)==='arenaLot';
+    const setup=setupOf(s),camp=setup==='arenaLot'||setup==='tourney'||setup==='camp';
+    // Combatants on the ground itself: three pairs in the tourney's fenced field, one
+    // pair of knights sparring in the middle of the camp (venue frame, item -1).
+    const field=setup==='tourney'?[[-2.1,-.3],[0,-.3],[2.1,-.3]]:setup==='camp'?[[0,1.6]]:[];
+    field.forEach(([fx,fy],k)=>{for(const sx of [-1,1])
+      list.push({id:venueId(s)+':-1:fight:'+(k*2+(sx>0)),domain:venueId(s),item:-1,model:null,role:'worker',action:'fight',pair:k,
+        x:fx+sx*.35,y:fy,z:0,face:{x:-sx,y:0}})});
     items.forEach((it,k)=>{
       const c=Math.cos(it.a||0),sn=Math.sin(it.a||0),sc=it.s||1;
       const local=localSlots(it.m);
-      // The arena's participants' camp: a squire getting ready before each tent's door.
+      // Participants' camps (arena, tourney, knights' camp): a squire before each tent's door.
       const door=camp&&/^tent/.test(it.m)?M()[it.m]?.meta?.door:null;
       if(door)local.push({x:door[0],y:door[1]-.12,z:0,role:'worker',action:'prepare',face:{x:0,y:-1}});
       for(const q of local){
         const n=(count.get(k+q.action)||0);count.set(k+q.action,n+1);
-        list.push({id:venueId(s)+':'+k+':'+q.action+':'+n,domain:venueId(s),item:k,model:it.m,role:q.role,action:q.action,
+        list.push({id:venueId(s)+':'+k+':'+q.action+':'+n,domain:venueId(s),item:k,model:it.m,role:q.role,action:q.action,pair:q.pair,
           x:it.x+(q.x*c-q.y*sn)*sc,y:it.y+(q.x*sn+q.y*c)*sc,z:q.z*sc,
           face:{x:q.face.x*c-q.face.y*sn,y:q.face.x*sn+q.face.y*c}});
       }
@@ -189,12 +197,16 @@
   function venueScene(s,t){
     const occ=occupants(s),actors=[];
     const round=(t%DUEL)/DUEL,cheer=Math.exp(-((round-.93)**2)/.002);   // the crowd roars at the hit
-    const centre=(()=>{const f=slots(s).filter(x=>x.action==='fight');
-      return f.length?{x:f.reduce((a,b)=>a+b.x,0)/f.length,y:f.reduce((a,b)=>a+b.y,0)/f.length}:null})();
+    // Each pair of combatants circles about its own centre.
+    const centres=new Map();
+    for(const f of slots(s).filter(x=>x.action==='fight')){const k=(f.item)+'|'+(f.pair||0),c=centres.get(k)||{x:0,y:0,n:0};c.x+=f.x;c.y+=f.y;c.n++;centres.set(k,c)}
+    for(const c of centres.values()){c.x/=c.n;c.y/=c.n}
     for(const o of occ){
       const sl=o.slotRef,ph=hash(o.occupant)%628/100;
       const a={id:o.occupant,slot:sl.id,x:sl.x,y:sl.y,z:sl.z,action:sl.action,face:sl.face,provisional:o.provisional};
-      if(sl.action==='fight'&&centre){
+      const centre=sl.action==='fight'?centres.get(sl.item+'|'+(sl.pair||0)):null;
+      if(sl.action==='wait'){a.hop=.006*Math.sin(t*1.2+ph);a.arms=Math.sin(t*.6+ph)>.95?.4:0}
+      else if(sl.action==='fight'&&centre){
         // Circle each other about the middle of the sand, swords swinging.
         const side=Math.atan2(sl.y-centre.y,sl.x-centre.x),ang=side+t*.5,r=.32+.05*Math.sin(t*1.7);
         Object.assign(a,{x:centre.x+Math.cos(ang)*r,y:centre.y+Math.sin(ang)*r,fighter:true,swing:(t*1.6+ph)%1});
@@ -294,7 +306,8 @@
       let sc=null;
       if(s.venue==='festivalGround'){
         if(s.event?.phase!=='active')continue;
-        const setup=setupOf(s);sc=setup==='feast'?feastScene(s,t):setup==='circus'?circusScene(s,t):null;
+        const setup=setupOf(s);
+        sc=setup==='feast'?feastScene(s,t):setup==='circus'?circusScene(s,t):setup==='joust'?null:venueScene(s,t);   // tourney, camp, theatre
       }else sc=venueScene(s,t);                       // arena lot, stage, podium: always lived in
       if(!sc)continue;
       const list=drawActors(s,sc.actors,t);
