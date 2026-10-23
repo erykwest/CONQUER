@@ -156,8 +156,12 @@
             before.nodeId!==after.nodeId||JSON.stringify(before.position)!==JSON.stringify(after.position)){
             assignments.delete(id);released++;continue
           }
-          if(a.sequenceId&&!d.sequences.some(seq=>seq.id===a.sequenceId)){
-            a.sequenceId=null;a.stepIndex=0;
+          if(a.sequenceId){
+            const seq=d.sequences.find(seq=>seq.id===a.sequenceId);
+            const current=seq?.steps[a.stepIndex]?.slotId;
+            if(!seq||current!==a.slotId&&current!==a.pending?.slotId){
+              a.sequenceId=null;a.stepIndex=0;
+            }
           }
         }
         if(a.pending?.domainId===d.id&&!available(d.id,a.pending.slotId,null,id))a.pending=null;
@@ -217,7 +221,7 @@
     }
     function advanceSequence(entityId){
       const a=assignments.get(entity(entityId));
-      if(!a||a.phase!=='active'||!a.sequenceId)throw Error('CANS: no active sequence');
+      if(!a||a.phase!=='active'||!a.sequenceId||a.pending)throw Error('CANS: no active sequence');
       const d=requireDomain(a.domainId),seq=d.sequences.find(s=>s.id===a.sequenceId);
       const step=seq?.steps[a.stepIndex];
       if(!step||step.slotId!==a.slotId)throw Error('CANS: next sequence step requires traversal');
@@ -301,7 +305,7 @@
         const seq=d.sequences.find(seq=>seq.id===item.sequenceId);
         if(item.phase==='active'&&seq&&Number.isInteger(item.stepIndex)&&
           item.stepIndex>=0&&item.stepIndex<seq.steps.length&&
-          seq.steps[item.stepIndex].slotId===item.slotId){
+          (seq.steps[item.stepIndex].slotId===item.slotId||item.pending?.slotId===seq.steps[item.stepIndex].slotId)){
           a.sequenceId=seq.id;a.stepIndex=item.stepIndex;
         }else if(item.sequenceId)discarded++;
         const p=item.pending,dp=incoming.get(p?.domainId),sp=dp?.slots.find(s=>s.id===p.slotId);
@@ -313,6 +317,10 @@
           a.pending={domainId:dp.id,slotId:sp.id,phase:p.phase,token:p.token,
             accessId:p.accessId,expiresAt:p.expiresAt};
         }else if(p)discarded++;
+        if(a.sequenceId&&seq.steps[a.stepIndex].slotId!==a.slotId&&
+          (!a.pending||a.pending.slotId!==seq.steps[a.stepIndex].slotId)){
+          a.sequenceId=null;a.stepIndex=0;discarded++;
+        }
         records.set(id,a);
       }
       domains.clear();for(const [id,d] of incoming)domains.set(id,d);
