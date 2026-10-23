@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-23 — Guardaroba stagionale dei popolani (branch)
+
+- Su `feature/seasonal-clothing`: catalogo di 9 overlay di abbigliamento (pioggia, inverno, estate, mezze stagioni ventose) sopra la figura procedurale dei popolani, scelti automaticamente da mese e meteo, con transizioni graduali nei mesi di passaggio. Scelto l'overlay a strati invece delle skin alternative: i capi si combinano e la sagoma/colore di classe resta leggibile.
+- Colori dell'abbigliamento per classe: L1 grigio/beige, L2 verde/marrone, L3 primari desaturati, L4 primari accesi, condivisi da tuniche e capi in tessuto.
+- Voci nell'Asset Lab e selettore stagione/meteo nel lab animato; nuova regressione `wardrobe`. **CI e merge ancora da verificare.** Invariati ROADMAP e DECISIONS: miglioramento solo visivo, nessun contratto di simulazione toccato.
+
 ## 2026-10-23 — Converge: preparazione merge #61 sulla main aggiornata
 
 - Integrata main `518e830` nel branch `converge` (9 commit propri, 37 da recuperare), risolvendo i conflitti assedio/decisioni senza sostituire i moduli moderni. Preservati grata/porta/core indipendenti, terrapieni e ottimizzazioni di rendering; aggiunti guard compatibili con `portcullis`.

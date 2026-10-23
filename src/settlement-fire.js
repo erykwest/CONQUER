@@ -154,7 +154,7 @@
   // can douse it, so many fires at once overwhelm it. Water stops fire, not blows. From
   // the ground a bucket does half as much to a tower's roof. Burning rubble can be doused.
   const BRIGADE={size:6,speed:1.05,fill:1.1,throwT:.55,douse:.24,embers:9};
-  const WOMEN=[['#9a7b52','#6b5338'],['#8c6b3f','#5d4a32'],['#a0825a','#6e5639'],['#7f6a4e','#57452f']];
+  const WOMEN=[['#b4a58a','#8f8b82'],['#9c9078','#7d7a72'],['#c8bda6','#9c9078'],['#a39e93','#7d7a72']];   // L1 grey/beige
   function brigadeOn(){return store().brigadeOn!==false}
   function setBrigade(on){store().brigadeOn=!!on;if(!on)store().carriers=[]}
   function wells(){return State.structures.filter(s=>s.type==='well'&&!(typeof underConstruction==='function'&&underConstruction(s)))}
