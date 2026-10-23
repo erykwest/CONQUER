@@ -82,6 +82,17 @@ Tutti gli ID, prove e gap distinti per livello sono nell'[AUDIT-2026-10-22](AUDI
 
 **QA:** la PR #70 riporta 60/62 suite PASS e browser fixture 40/30 Canvas/WebGL PASS; due suite preesistenti falliscono, picchi GPU fino a 303,8 ms; questa ricognizione non riesegue i test. Per stato, prove, confini e milestone vedere [audit completo](AUDIT-2026-10-21.md). Le note locali precedenti sulla branch performance non descrivono più lo stato di rilascio.
 
+## Eventi — modelli 3D degli spazi (branch `events`, 22/10/2026)
+
+- **CODICE su `events`:** catalogo Blender [`tools/blender/build_events.py`](../../tools/blender/build_events.py) → `src/assets/event-models.js` (`window.ConquerEventModels`, 24 modelli, 24.362 triangoli) e modulo [`src/settlement-events3d.js`](../../src/settlement-events3d.js) (`window.ConquerEvents3D`) agganciato al painter 2.5D (`settlement-render.js`) e al builder WebGL (`settlement-world3d.js`).
+- **Contratto dati, non gameplay:** strutture `{type:'eventVenue', venue:'streetSpot'|'stage'|'festivalGround', dressing, event:{setup, phase, progress}}`. Podio per artisti di strada; palco 2,4 × 1,2 U nelle due vesti `players` / `herald`; spiazzo 14 × 10 U (D-044) verde da inattivo, con allestimenti `joust`, `tourney`, `circus`, `feast` (più `camp`, `theatre`); lotto permanente `arenaLot` 18 × 14 U con arena e accampamento visibili in `preparing` / `active` / `clearing`.
+- **Livree:** tribune, arena, palchi seguono `State.heraldry` (c1, c2, c4); tende dei cavalieri, rastrelliere lance/scudi e armature usano coppie casuali deterministiche su cinque smalti, uniche per tenda in ogni spazio, con rotazione/spostamento casuale di tende, scatter e attrezzature senza collisioni né uscite dal lotto; circo e festoni hanno colori fissi.
+- **Animazione vento:** stoffe (pennoni, festoni, gonfaloni, stendardi) sullo strato dinamico di entrambi i renderer, solo a gioco avviato; ~0,6 ms/frame sul lotto arena.
+- **Persone (tutti gli allestimenti, arena, palco, pulpito; cavalli bardati):** `settlement-events-people.js` + `settlement-events-joust.js` su slot e registro occupanti allineati a CANS; occupanti **provvisori** (figuranti marcati), non ancora residenti reali: l'adapter CANS sostituirà la sorgente.
+- **Builder:** categoria Eventi e svago (pulpito, palco, spiazzo, arena), piazzamento a due clic, ispettore con avvio/chiusura evento e ciclo sull'orologio; spazi salvati con la partita.
+- **NON PRESENTE:** calendario programmato degli eventi, effetti economici e sul morale, spostamento libero dello spiazzo; persone ancora figuranti provvisori.
+- **QA eseguita localmente (22/10/2026):** `qa/events3d-regression.cjs` PASS (catalogo, spazi, allestimenti dentro lo spiazzo senza sovrapposizioni, ciclo di vita, rotazione, livree) e `qa/civic3d-regression.cjs` PASS; nuova Action `events-regression.yml`. Controllo nel browser con spazi iniettati via console: Canvas 2D e renderer di default disegnano giostra, circo, sagra, podio e palchi senza errori in console. CI GitHub da verificare dopo il push.
+
 ## Portoni — magnete strade, ante, grata, drappi e torce (#76 MERGED 23/10; prove del branch 22/10)
 
 - **CODICE ORA SU MAIN** via #76 (sviluppato originariamente su branch `portoni` da `f739e51`). Nuovo modulo `src/settlement-gate-fittings.js` (`window.ConquerGates`) più agganci in castle3d/world3d, placement, input, navigazione, fuochi e pannello.

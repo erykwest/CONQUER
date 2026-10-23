@@ -12,6 +12,16 @@ function renderFunctionPanel(){
     slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
     return;
   }
+  if(window.ConquerEvents3D?.is(s)){
+    // Event venue (settlement-events3d.js): dressing, event setup and start / stop.
+    const E=window.ConquerEvents3D;
+    panel.classList.add('open');
+    info.innerHTML='<div class="kv"><span>Spazio eventi</span><b>'+E.label(s)+'</b></div><div class="cost-line">'+costText(s.buildCost||E.cost(s))+'</div>'+
+      (underConstruction(s)?'<div class="legend">In costruzione · '+remainingDays(s).toFixed(1)+'d</div>':'');
+    slots.innerHTML=E.panelHtml(s);
+    E.bindPanel(slots,s);
+    return;
+  }
   if(isCivicAnnex(s)){
     const parent=State.structures.find(p=>p.id===s.parentId),spec=civicAnnexDefinition(s,parent);
     panel.classList.add('open');
