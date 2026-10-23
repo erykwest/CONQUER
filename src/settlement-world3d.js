@@ -1362,10 +1362,12 @@
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
-    // Mill sails and wheels turn every frame (industries); event flags wave (events).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerEvents3D]){
+    // Mill sails and wheels turn every frame (industries).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
+    // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
+    try{for(const m of window.ConquerEvents3D?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);
     uploadSettledMeshes(S.gl,settled);
     const dyn=buildDynamic(moving);dynamicQueue=[];

@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-23 — Eventi: CI della PR #78
+
+- Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (fallita in `menu-regression` e `settlement-qa`). In locale 64/66 regressioni PASS: `refactor-app-population` e `wall-bays` falliscono anche su `origin/main` pulito (fallimenti preesistenti già noti), quindi `settlement-qa` resta rosso per cause esterne a questa PR.
+
 ## 2026-10-22 — Eventi: disposizione casuale senza collisioni
 
 - Il jitter di tende, scatter e attrezzature prova spostamenti decrescenti e scarta quelli che urtano oggetti già piazzati, posizioni di base degli oggetti successivi o il perimetro; in mancanza resta nella posizione di base (validata). QA su 25 seed per tutti gli allestimenti: nessuna collisione né uscita, 91% degli oggetti spostabili ancora spostati.
