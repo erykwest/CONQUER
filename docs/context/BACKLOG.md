@@ -6,7 +6,7 @@
 - **CANS-02 · APERTO:** censimento/adapter per identità fisica e nav globale reali; pilot su chiesa o taverna con arredi e grafo costruiti dal layout; entrata/uscita effettive e aggancio dei save. Non sostituire routine esistenti o generare popolani dal renderer.
 - **CANS-03 · APERTO:** navigazione locale che pilotì il movimento reale, transizioni staff/guest e cutaway; prove browser Canvas/WebGL2, no teletrasporto.
 - **CANS-04 · APERTO:** mercato multiaccesso, campi a serpentina e target di bosco con adapter dei sistemi esistenti e parità economica; target mobili/veicoli solo in fase successiva.
-- **CANS-05 · IN CORSO (QA):** nove test logici del modulo passati in un harness JS; confermare Node/GitHub Actions e aggiungere integrazioni, stress/performance, migrazioni di partite e browser QA prima della PR pronta al merge.
+- **CANS-05 · IN CORSO (QA):** undici test logici PASS in harness JS e nella CI Node/GitHub Actions ([run 39976214964](https://github.com/erykwest/CONQUER/actions/runs/39976214964)); aggiungere integrazioni, stress/performance, migrazioni di partite e browser QA prima della PR pronta al merge.
 
 
 ## UX — Asset Lab / rotazione viewer e categorizzazione (22/10/2026)
