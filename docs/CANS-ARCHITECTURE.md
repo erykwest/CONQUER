@@ -1,8 +1,8 @@
 # CONQUER — CANS: Contextual Activity & Navigation System
 
-> **Stato:** specifica architetturale V0.1, **solo documentazione**, 23/10/2026.
+> **Stato:** specifica V0.1 con **skeleton dati isolato in sviluppo su `cans`**, 23/10/2026; non integrato nel gioco.
 > **Branch di progettazione:** `cans` (creata da `main`).
-> **Nessuno skeleton/runtime/QA CANS è dichiarato implementato da questo documento.**
+> **Disponibile nel branch:** `src/settlement-cans.js`, `qa/cans-regression.cjs` (11 casi PASS su Node/GitHub Actions). **Nessun adapter gameplay collegato a `index.html`; no merge su `main`.**
 > **Principio:** unificare l'assegnazione di occupanti, postazioni, attività e navigazione contestuale senza sostituire i sistemi di economia, movimento o rendering esistenti.
 
 ## 1. Obiettivo
@@ -215,7 +215,7 @@ Per le vecchie partite: CANS deve essere **opt-in** fino alla fase di integrazio
 
 Non accorpare automaticamente i vecchi slot da combattimento o le routine agricole senza un adapter e regressioni: CANS deve riutilizzare i contratti già validi, non cambiarne silenziosamente significato.
 
-## 14. Skeleton consigliato (fase successiva, NON IMPLEMENTATO)
+## 14. Skeleton incrementale (fase 2 del modello dati presente solo su branch)
 
 Percorso incrementale per ridurre rischio e nuove branch:
 
@@ -227,6 +227,8 @@ Percorso incrementale per ridurre rischio e nuove branch:
 6. **Adapter produttivo:** riusare le traiettorie dei campi e l'attuale ricerca degli alberi; verificare che resa e calendario rimangano identici.
 7. **Target dinamici generici:** solo a quel punto preparare interfacce per caccia e pesca; **non** implementare animali/rotte commerciali fuori scope.
 8. **Carrier/mobile domain:** integrazione concreta con barche solo quando esiste un sistema nautico verificabile.
+
+**Stato verificato 23/10/2026 — branch `cans`:** implementata soltanto la base logica: `ConquerCANS.createEngine()` indipendente da rendering, economia e `State`; normalizzazione/validazione di domini versionati, accessi, slot e sequenze; grafo locale con scelta di ingresso raggiungibile; prenotazione univoca TTL, progressione esplicita di stati, trasferimento in due fasi e scadenza; invalidazione layout con rilascio sicuro; serializzazione e restore validato opt-in; trasformazione locale/mondo di domini carrier. `qa/cans-regression.cjs`: **11 PASS** su GitHub Actions [run 39976214964](https://github.com/erykwest/CONQUER/actions/runs/39976214964), solo QA logica (non browser). I passi 1 (inventario esaustivo), 3–8 e gli adapter reali **restano aperti**. Le sequenze dichiarano le fasi ma **non spostano fisicamente** un avatar e non producono risorse.
 
 Non aprire una branch per ogni adapter o sottosistema: sviluppare lo skeleton CANS unitariamente, con commit tematici e una PR dopo QA. Nessun merge automatico previsto da questa specifica.
 
