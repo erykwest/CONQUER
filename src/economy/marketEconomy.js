@@ -28,15 +28,23 @@ export function aggregateGoods(stock={},catalog=COMMODITIES){
 /** Stable staggering: one commodity per settlement per simulation tick.
  * Each commodity is repriced at most once per simulation week. */
 export function createMarketState(settlementId,prices={}){
-  return {settlementId,prices:{...prices},lastUpdatedWeek:{},cursor:0};
+  return {settlementId,prices:{...prices},lastUpdatedWeek:{},cursor:0,weeklyObservations:{}};
 }
-export function stepMarket(state,{week,demand={},supply={},importCost={},catalog=COMMODITIES}){
+/** Record a completed week's observations. They are never applied to prices
+ * in the same week: week N prices use observations from week N-1. */
+export function recordMarketWeek(state,{week,demand={},supply={},importCost={}}){
+  const weeklyObservations={...state.weeklyObservations,[week]:{demand:{...demand},supply:{...supply},importCost:{...importCost}}};
+  for(const key of Object.keys(weeklyObservations))if(Number(key)<week-3)delete weeklyObservations[key];
+  return {...state,weeklyObservations};
+}
+export function stepMarket(state,{week,catalog=COMMODITIES}){
   const ids=Object.keys(catalog);
   if(!ids.length)return state;
   const cursor=state.cursor%ids.length,id=ids[cursor],item=catalog[id];
   const prices={...state.prices},lastUpdatedWeek={...state.lastUpdatedWeek};
-  if(lastUpdatedWeek[id]!==week){
-    prices[id]=priceFromMarket({basePrice:item.basePrice,previousPrice:prices[id]??item.basePrice,demand:demand[id]??0,supply:supply[id]??0,importCost:importCost[id]??0});
+  const observation=state.weeklyObservations?.[week-1];
+  if(observation && lastUpdatedWeek[id]!==week){
+    prices[id]=priceFromMarket({basePrice:item.basePrice,previousPrice:prices[id]??item.basePrice,demand:observation.demand[id]??0,supply:observation.supply[id]??0,importCost:observation.importCost[id]??0});
     lastUpdatedWeek[id]=week;
   }
   return {...state,prices,lastUpdatedWeek,cursor:(cursor+1)%ids.length};
