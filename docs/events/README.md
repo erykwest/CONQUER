@@ -5,7 +5,7 @@ This folder defines the initial contracts for social events. It intentionally do
 ## Spaces
 - **Street performance spot**: player-placed small location; spontaneous performance by one artist or a pair, with a small audience.
 - **Stage**: player-placed permanent performance platform; group performances with audience.
-- **Festival ground**: player-placed, fixed 14 × 10 world-unit rectangular reservation (D-042; the first skeleton said 6 × 10), green when idle. It is not a constructed building: no materials, labor, or build time. Blocks houses, fields, pastures, buildings and other reservations, but allows normal civilian traversal while idle. Relocatable when no event is active or being assembled. No automatic scanning of empty terrain to discover event locations.
+- **Festival ground**: player-placed, fixed 14 × 10 world-unit rectangular reservation (D-044; the first skeleton said 6 × 10), green when idle. It is not a constructed building: no materials, labor, or build time. Blocks houses, fields, pastures, buildings and other reservations, but allows normal civilian traversal while idle. Relocatable when no event is active or being assembled. No automatic scanning of empty terrain to discover event locations.
 
 ## Event lifecycle
 `planned -> preparing -> active -> clearing -> idle` (cancellation allowed before active).

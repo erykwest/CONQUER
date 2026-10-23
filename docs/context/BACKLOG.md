@@ -45,12 +45,27 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 | EV-P0 | Registro spazi, posizionamento dal Builder, riserva del terreno senza cantiere, spostamento a evento inattivo | DA FARE | placement, Builder, save/load |
 | EV-P1 | Calendario e ciclo `planned → preparing → active → clearing → idle`, `progress` durante montaggio e smontaggio | DA FARE | orologio di gioco |
 | EV-P2 | Pubblico e artisti tramite routine esistenti (punti `seats`, `performers`, `speaker` nei meta dei modelli) | DA FARE | popolazione, navigazione |
-| EV-P3 | Taglia dello spiazzo: 14 × 10 U (D-042); eventuali taglie multiple | 14 × 10 DECISO, taglie multiple PROPOSTE | decisione di design |
+| EV-P3 | Taglia dello spiazzo: 14 × 10 U (D-044); eventuali taglie multiple | 14 × 10 DECISO, taglie multiple PROPOSTE | decisione di design |
 | EV-P6 | Tende non allineate (±40°, 75%; scatter 200%; senza collisioni né uscite dal lotto) e scatter/attrezzature disordinati e colori unici per spazio | CODICE + QA locale | `settlement-events3d.js` |
 | EV-A1 | Animazioni ambientali: bandiere, festoni e stendardi al vento | CODICE + QA locale | strato dinamico, meteo |
 | EV-A2 | Animazioni di persone: giostra (pubblico, cavalieri disarcionati, scudieri) FATTA come scena autonoma; artisti sui palchi e pubblico degli altri allestimenti DA FARE; collegamento alle routine reali della popolazione DA FARE | IN CORSO | routine popolazione |
 | EV-P5 | Arena a U arricchita e lotto dedicato `arenaLot` 18 × 14 | CODICE + QA locale; posizionamento da Builder DA FARE | design, placement |
 | EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |
+
+## Portoni — accessori del portone (branch `portoni`, 22/10/2026)
+
+**CODICE SU BRANCH, NON SU MAIN.** Prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026).
+
+| ID | Requisito | Stato |
+|---|---|---|
+| GATE-01 | Magnete del portone sulle strade esistenti: centro sulla mezzeria, passaggio allineato, strada mantenuta e percorribile | BRANCH + QA |
+| GATE-01b | Magnete delle strade principali sulle due bocche del portone, con accesso dritto e nodo comune al centro | BRANCH + QA + controllo browser |
+| GATE-02 | Ante del portone animate tra aperto e chiuso (pannello, chiusura notturna), passaggio voltato visibile nel 3D | BRANCH + QA + controllo visivo |
+| GATE-03 | Grata (saracinesca) come upgrade del solo portone in pietra, animata; abbassata blocca il passaggio | BRANCH + QA + controllo visivo |
+| GATE-04 | Due drappi araldici ai lati del portale e due torce accese di notte sul fronte esterno | BRANCH + QA + controllo visivo |
+| GATE-05 | Ante, grata, drappi e torce per il portone di legno (oggi solo il magnete) | APERTO |
+| GATE-06 | Grata come strato difensivo separato (D-042): HP propri, colpita prima della porta, il fuoco passa, distrutta e riparabile, sbarra anche a porta sfondata | BRANCH + QA + controllo browser |
+| GATE-07 | IA d'assedio che sceglie fra ariete sulla grata, fuoco sulla porta e altri accessi; riparazione della grata durante l'assedio | APERTO, dipende da S-15 |
 
 ## Clay — specifica storica della branch `clay` (19/10); runtime più recente su main
 

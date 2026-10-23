@@ -7,13 +7,14 @@
     nobleRoom:{knights:2},quarters:{soldiers:16}});
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
-    spear:{stone:0,wood:0,door:0},
-    axe:{stone:0,wood:.45,door:.65},
-    ram:{stone:0,wood:2.5,door:6},
-    torch:{stone:0,wood:2,door:2.5},
-    catapult:{stone:3,wood:3.8,door:3.5},
-    trebuchet:{stone:7,wood:8,door:7}
+    spear:{stone:0,wood:0,door:0,portcullis:0},
+    axe:{stone:0,wood:.45,door:.65,portcullis:.1},
+    ram:{stone:0,wood:2.5,door:6,portcullis:4},
+    torch:{stone:0,wood:2,door:2.5,portcullis:0},
+    catapult:{stone:3,wood:3.8,door:3.5,portcullis:2.5},
+    trebuchet:{stone:7,wood:8,door:7,portcullis:6}
   });
+  const PORTCULLIS_HEALTH=120;
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
     house:90,market:70,tavern:140,church:240,windmill:110,watermill:120});
   const isMill=s=>['windmill','watermill'].includes(s?.type);
@@ -283,9 +284,22 @@
       existing.core.max=max;existing.core.hp=Math.max(0,max-damage);
       if(s.type==='gate'&&!existing.door)existing.door={hp:85,max:85};
     }
+    // An installed portcullis is a defence layer of its own, in front of the door.
+    const grate=s.type==='gate'&&window.ConquerGates?.portcullis?.(s);
+    if(grate&&!s.siegeIntegrity.portcullis)s.siegeIntegrity.portcullis={hp:grate.wrecked?0:PORTCULLIS_HEALTH,max:PORTCULLIS_HEALTH};
+    else if(!grate)delete s.siegeIntegrity.portcullis;
     return s.siegeIntegrity;
   }
+  // The section a blow at a gate's way in lands on: a lowered portcullis shields the door
+  // from everything but fire, which reaches the timber through the bars.
+  function gateSection(s,part,weapon){
+    if(part!=='door'||s.type!=='gate')return'core';
+    return weapon!=='torch'&&window.ConquerGates?.portcullisBlocks?.(s)?'portcullis':'door';
+  }
+  // The way in is open once the door is broken and no portcullis bars it.
+  function gateBreached(g){return doorStage(g)==='broken'&&!window.ConquerGates?.portcullisBlocks?.(g)}
   function targetMaterial(s,part='core'){
+    if(part==='portcullis'&&s.type==='gate')return'portcullis';
     if(part==='door'&&s.type==='gate')return'door';
     // Houses, markets and taverns are timber-framed; the church is masonry.
     return s.type==='palisade'||s.material==='wood'||['house','market','tavern'].includes(s.type)||isMill(s)?'wood':'stone';
@@ -735,7 +749,7 @@
     if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,reason:'Invalid or unfinished fortification'};
     // Walls and palisades: part may name a bay (index) or the point of impact {x,y}.
     if(isLinear(s))return attackWall(s,weapon,force,part==='core'?null:part);
-    const stats=integrity(s),section=part==='door'&&s.type==='gate'?'door':'core',hp=stats[section];
+    const stats=integrity(s),section=gateSection(s,part,weapon),hp=stats[section];
     const factor=effectiveness(weapon,s,section);
     if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
     if(!hp||hp.hp<=0)return{ok:false,damage:0,reason:'Section already destroyed'};
@@ -744,7 +758,11 @@
     const stageBefore=doorStage(s);
     hp.hp=Math.max(0,hp.hp-damage);
     const from=part&&Number.isFinite(part.x)?part:null;
-    if(section==='door'&&hp.hp===0)breakDoor(s);
+    if(section==='portcullis'){
+      if(hp.hp===0)window.ConquerGates?.wreckPortcullis?.(s);
+      else{markDirty(false,false,true);redraw()}
+    }
+    else if(section==='door'&&hp.hp===0)breakDoor(s);
     else if(section==='door'&&doorStage(s)!==stageBefore){invalidateStructureScene(s);markDirty(false,false,true);redraw()}
     else if(section==='core'&&hp.hp===0)destroyStructure(s,from);
     else if(section==='core'&&storeyCollapse(s,from)){}
@@ -951,13 +969,13 @@
       const s=selectedStructure();if(!s)return;
       const part=s.type==='gate'&&btn.dataset.siegeTest!=='trebuchet'?'door':'core';
       const out=attackStructure(s.id,btn.dataset.siegeTest,10,part);
-      status(out.ok?(out.destroyed?'Defence breached · ':'Damage dealt · ')+out.damage.toFixed(1):out.reason);
+      status(out.ok?(out.destroyed?(out.part==='portcullis'?'Portcullis wrecked · ':'Defence breached · '):(out.part==='portcullis'?'Portcullis hit · ':'Damage dealt · '))+out.damage.toFixed(1):out.reason);
       renderFunctionPanel();
     });
   }
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
+    bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,gateBreached,PORTCULLIS_HEALTH,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();
