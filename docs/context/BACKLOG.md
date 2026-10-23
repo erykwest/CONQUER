@@ -2,7 +2,7 @@
 
 ## CANS — attività contestuali e navigazione (branch `cans`, 23/10/2026)
 
-- **CANS-01 · FATTO SOLO SU BRANCH / SKELETON:** registro opt-in con domini/accessi/slot `worker` e `guest`, grafo locale multiaccesso, selezione raggiungibile, prenotazioni univoche, lifecycle, trasferimenti con doppia prenotazione temporanea, TTL, invalidazione layout, persistenza versionata, restore con verifica identità, trasformazione carrier. `src/settlement-cans.js` e `qa/cans-regression.cjs`; nessuna integrazione gameplay.
+- **CANS-01 · FATTO SOLO SU BRANCH / SKELETON:** registro opt-in con domini/accessi/slot `worker` e `guest`, grafo locale multiaccesso, selezione raggiungibile, prenotazioni univoche, lifecycle e ActivitySequence, trasferimenti con doppia prenotazione temporanea, TTL, invalidazione layout, persistenza versionata, restore con verifica identità, trasformazione carrier. `src/settlement-cans.js` e `qa/cans-regression.cjs`; nessuna integrazione gameplay.
 - **CANS-02 · APERTO:** censimento/adapter per identità fisica e nav globale reali; pilot su chiesa o taverna con arredi e grafo costruiti dal layout; entrata/uscita effettive e aggancio dei save. Non sostituire routine esistenti o generare popolani dal renderer.
 - **CANS-03 · APERTO:** navigazione locale che pilotì il movimento reale, transizioni staff/guest e cutaway; prove browser Canvas/WebGL2, no teletrasporto.
 - **CANS-04 · APERTO:** mercato multiaccesso, campi a serpentina e target di bosco con adapter dei sistemi esistenti e parità economica; target mobili/veicoli solo in fase successiva.
