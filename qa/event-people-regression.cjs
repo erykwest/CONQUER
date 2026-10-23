@@ -86,3 +86,38 @@ console.log('PASS feast: diners, sellers, players, audience and strollers');
   assert.ok(entered,'ticket holders walk into the big top');
 }
 console.log('PASS circus: barker, juggler, booths, queues and ticket holders entering the big top');
+
+// Arena lot, stage and podium: always lived in, from the same register.
+{
+  const lot={id:'v-arena',type:'eventVenue',venue:'arenaLot',x:0,y:0,angle:0},{w,h}=E.sizeOf(lot);
+  const sl=P.slots(lot),act=k=>sl.filter(x=>x.action===k);
+  assert.equal(act('fight').length,2,'arena: two combatants in the sand');
+  assert.equal(act('prepare').length,8,'arena: a squire before each of the eight tents');
+  assert.ok(act('sit').length>=486,'arena: the tiers seats');
+  let cheerPeak=0,minGap=Infinity,lance=false;
+  for(let t=0;t<P.DUEL*2;t+=.1){
+    const sc=P.venueScene(lot,t),f=sc.actors.filter(a=>a.fighter);
+    assert.equal(f.length,2,'two combatants fighting');
+    minGap=Math.min(minGap,Math.hypot(f[0].x-f[1].x,f[0].y-f[1].y));
+    cheerPeak=Math.max(cheerPeak,sc.cheer);
+    assert.ok(sc.actors.every(a=>Math.abs(a.x)<=w/2&&Math.abs(a.y)<=h/2),'arena: everyone on the lot');
+    if(sc.actors.some(a=>a.carry==='lance'))lance=true;
+  }
+  assert.ok(minGap>.4&&minGap<.9,'the duellists keep fighting distance');
+  assert.ok(cheerPeak>.9,'the tiers roar at the hit');
+  assert.ok(lance,'squires carry lances between the tents');
+  const field=window.ConquerEventModels.models.arenaU.meta.field;
+  const f=P.venueScene(lot,1).actors.filter(a=>a.fighter);
+  assert.ok(f.every(a=>a.y<field.arcCentre[1]+.1&&a.y>field.openEnd[1]),'the duel is on the sand');
+}
+for(const [dressing,act] of [['players','perform'],['herald','announce']]){
+  const st={id:'v-stage-'+dressing,type:'eventVenue',venue:'stage',x:0,y:0,angle:0,dressing},sc=P.venueScene(st,1.3);
+  assert.ok(sc.actors.some(a=>a.action===act&&a.z>.2),'stage ('+dressing+'): '+act+' up on the platform');
+  assert.ok(sc.actors.some(a=>a.action==='watch'&&a.z===0),'stage ('+dressing+'): an audience below');
+}
+{
+  const pod={id:'v-pod',type:'eventVenue',venue:'streetSpot',x:0,y:0,angle:0},sc=P.venueScene(pod,2);
+  assert.equal(sc.actors.filter(a=>a.action==='perform').length,2,'podium: a musician and a storyteller');
+  assert.ok(sc.actors.filter(a=>a.action==='watch').length>=2,'podium: listeners around');
+}
+console.log('PASS arena, stage (players / herald) and podium: combatants, squires, crowds and performers');

@@ -46,6 +46,10 @@
       for(let i=0;i<7;i++){const a=Math.PI*(.18+.64*i/6);out.push({x:Math.cos(a)*.95,y:-.75-Math.sin(a)*.42,z:0,role:'guest',action:'watch',face:{x:-Math.cos(a)*.3,y:1}})}
     }else if(ref==='podiumStreet'){
       for(let i=0;i<5;i++){const a=-Math.PI*(.15+.7*i/4);out.push({x:Math.cos(a)*.62,y:Math.sin(a)*.62,z:0,role:'guest',action:'watch',face:{x:-Math.cos(a),y:-Math.sin(a)}})}
+    }else if(ref==='arenaU'&&meta.field){
+      // Two combatants in the middle of the sand, facing each other.
+      const cx=(meta.field.arcCentre[0]+meta.field.openEnd[0])/2,cy=(meta.field.arcCentre[1]+meta.field.openEnd[1])/2;
+      for(const sx of [-1,1])out.push({x:cx+sx*.35,y:cy,z:0,role:'worker',action:'fight',face:{x:-sx,y:0}});
     }else if(ref==='circusBooth'){
       out.push({x:0,y:.02,z:0,role:'worker',action:'sell',face:{x:0,y:-1}});
       for(let i=0;i<4;i++)out.push({x:.03*(i%2?1:-1),y:-.42-.2*i,z:0,role:'guest',action:'queue',face:{x:0,y:1}});
@@ -66,9 +70,14 @@
     const key=JSON.stringify(items.map(i=>[i.m,+i.x.toFixed(4),+i.y.toFixed(4),+(i.a||0).toFixed(4),i.s||1]))+'|'+venueId(s);
     const hit=slotCache.get(s);if(hit&&hit.key===key)return hit.list;
     const list=[],count=new Map();
+    const camp=setupOf(s)==='arenaLot';
     items.forEach((it,k)=>{
       const c=Math.cos(it.a||0),sn=Math.sin(it.a||0),sc=it.s||1;
-      for(const q of localSlots(it.m)){
+      const local=localSlots(it.m);
+      // The arena's participants' camp: a squire getting ready before each tent's door.
+      const door=camp&&/^tent/.test(it.m)?M()[it.m]?.meta?.door:null;
+      if(door)local.push({x:door[0],y:door[1]-.12,z:0,role:'worker',action:'prepare',face:{x:0,y:-1}});
+      for(const q of local){
         const n=(count.get(k+q.action)||0);count.set(k+q.action,n+1);
         list.push({id:venueId(s)+':'+k+':'+q.action+':'+n,domain:venueId(s),item:k,model:it.m,role:q.role,action:q.action,
           x:it.x+(q.x*c-q.y*sn)*sc,y:it.y+(q.x*sn+q.y*c)*sc,z:q.z*sc,
@@ -82,7 +91,7 @@
   // ---------- 2. occupancy register
   // Provisional source: about two in three guest seats taken, every worker slot manned,
   // the same ones every time; occupants are anonymous extras, never residents.
-  const FILL={sit:.66,stand:.6,watch:.75,browse:.5,queue:.85};
+  const FILL={sit:.66,stand:.6,watch:.75,browse:.5,queue:.85};   // workers (sell, perform, announce, fight, prepare): all
   function provisional(s,list){
     const out=[];
     for(const sl of list){
@@ -171,6 +180,41 @@
     return{actors,door};
   }
 
+  // ---------- 3c. arena lot, stage and podium (street spot): the same register drives
+  // spectators on the arena tiers, two combatants duelling in the sand and squires
+  // before the participants' tents; actors and their audience on a stage (players
+  // dressing) or a crier calling the crowd (herald dressing); a musician or a
+  // storyteller on the podium with listeners around.
+  const DUEL=6;                                    // a duel round: circle, exchange, a hit at its end
+  function venueScene(s,t){
+    const occ=occupants(s),actors=[];
+    const round=(t%DUEL)/DUEL,cheer=Math.exp(-((round-.93)**2)/.002);   // the crowd roars at the hit
+    const centre=(()=>{const f=slots(s).filter(x=>x.action==='fight');
+      return f.length?{x:f.reduce((a,b)=>a+b.x,0)/f.length,y:f.reduce((a,b)=>a+b.y,0)/f.length}:null})();
+    for(const o of occ){
+      const sl=o.slotRef,ph=hash(o.occupant)%628/100;
+      const a={id:o.occupant,slot:sl.id,x:sl.x,y:sl.y,z:sl.z,action:sl.action,face:sl.face,provisional:o.provisional};
+      if(sl.action==='fight'&&centre){
+        // Circle each other about the middle of the sand, swords swinging.
+        const side=Math.atan2(sl.y-centre.y,sl.x-centre.x),ang=side+t*.5,r=.32+.05*Math.sin(t*1.7);
+        Object.assign(a,{x:centre.x+Math.cos(ang)*r,y:centre.y+Math.sin(ang)*r,fighter:true,swing:(t*1.6+ph)%1});
+      }else if(sl.action==='prepare'){
+        // Back and forth between the tent and the camp's path, a lance on the shoulder.
+        const walk=4,cyc=(t+ph)%(2*walk+3),out=cyc<walk?cyc/walk:cyc<walk+1.5?1:cyc<2*walk+1.5?1-(cyc-walk-1.5)/walk:0;
+        const dx=-sl.x,dy=-sl.y,L=Math.hypot(dx,dy)||1,k=.55*smooth(out);
+        Object.assign(a,{x:sl.x+dx/L*k,y:sl.y+dy/L*k,carry:out>0&&out<1&&cyc<walk?'lance':null,action:out>0&&out<1?'walk':'prepare'});
+      }else if(sl.action==='perform'){a.hop=.05*Math.max(0,Math.sin(t*4+ph));a.arms=.5+.5*Math.sin(t*3+ph)}
+      else if(sl.action==='announce'){a.arms=.55+.45*Math.abs(Math.sin(t*1.9));a.hop=.015*Math.max(0,Math.sin(t*1.9))}
+      else if(sl.action==='watch'){a.hop=.01*Math.sin(t*2+ph);a.arms=Math.sin(t*.9+ph)>.9?.8:0}
+      else if(sl.action==='sit'){
+        const excite=cheer*(.6+.4*((hash(o.occupant+'e')%100)/100));
+        a.hop=.01*Math.sin(t*1.5+ph)+excite*.07*Math.abs(Math.sin(t*11+ph));a.arms=excite;
+      }
+      actors.push(a);
+    }
+    return{actors,cheer};
+  }
+
   // ---------- drawing helpers (shared with the joust)
   let clock=0,last=0;
   function tick(){
@@ -223,9 +267,19 @@
       const perf=a.action==='perform'||a.action==='announce';
       const c=perf?PLAYERS[hash(a.id)%PLAYERS.length]:TUNICS[hash(a.id)%TUNICS.length],kind=KINDS[hash(a.id+'k')%KINDS.length];
       const walk=a.action==='walk'?.015*Math.abs(Math.sin(t*6+hash(a.id)%7)):0;
+      if(a.fighter){
+        // A combatant: the soldier figure with shield and sword, in a pair of primaries.
+        const P=E().PAIRS,[m1,m2]=P[hash(seedOf(s)+'|'+a.id)%P.length];
+        list.push({p,draw:()=>drawSoldierFigureUnmasked(p,g+.1,'swordsman',a.id,a.swing,{main:m1,alt:m2,mainDark:m1,altDark:m2})});
+        continue;
+      }
       list.push({p,draw:()=>{
         ctx.save();if(a.fade!==undefined&&a.fade<1)ctx.globalAlpha*=Math.max(0,a.fade);
         const f=figureAt(p,z,a.id,kind,c,(a.hop||0)+walk);armsUp(f,a.arms||0);if(a.juggle)juggle(f,t);
+        if(a.carry==='lance'){
+          ctx.strokeStyle='#5a3d22';ctx.lineWidth=Math.max(1,f.scale*1.1);
+          ctx.beginPath();ctx.moveTo(f.base.x-f.bodyH*.35,f.bodyY+f.bodyH*.3);ctx.lineTo(f.base.x+f.bodyH*.9,f.bodyY-f.bodyH*2.2);ctx.stroke();
+        }
         ctx.restore();
       }});
     }
@@ -235,14 +289,18 @@
     if(!E()||typeof State==='undefined')return;
     const t=tick();
     for(const s of State.structures||[]){
-      if(!E().is(s)||s.venue!=='festivalGround'||s.event?.phase!=='active')continue;
-      const setup=setupOf(s),sc=setup==='feast'?feastScene(s,t):setup==='circus'?circusScene(s,t):null;
+      if(!E().is(s))continue;
+      let sc=null;
+      if(s.venue==='festivalGround'){
+        if(s.event?.phase!=='active')continue;
+        const setup=setupOf(s);sc=setup==='feast'?feastScene(s,t):setup==='circus'?circusScene(s,t):null;
+      }else sc=venueScene(s,t);                       // arena lot, stage, podium: always lived in
       if(!sc)continue;
       const list=drawActors(s,sc.actors,t);
       list.sort((a,b)=>viewDepthPoint(a.p)-viewDepthPoint(b.p));
       for(const it of list)it.draw();
     }
   }
-  window.ConquerEventPeople={slots,occupants,setOccupancySource,provisional,feastScene,circusScene,draw,
+  window.ConquerEventPeople={slots,occupants,setOccupancySource,provisional,feastScene,circusScene,venueScene,DUEL,draw,
     helpers:{hash,figureAt,armsUp,horse,screenFacing,TUNICS,KINDS,groundOf,tick:()=>tick(),clock:()=>clock}};
 })();

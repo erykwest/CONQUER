@@ -104,7 +104,7 @@
       {m:'sc:sackPile',x:1.4,y:6.5,a:0,s:1.3},
       {m:'wagonCargo',x:-5.0,y:-6.4,a:0},{m:'sc:barrelGroup',x:-3.2,y:-6.4,a:0,s:1.3},
       {m:'sc:crateStack',x:3.2,y:-6.4,a:.3,s:1.3},{m:'sc:firewood',x:4.4,y:-6.3,a:0,s:1.3},
-      {m:'sc:logPile',x:5.9,y:-6.4,a:0,s:1.3},{m:'circusBooth',x:-7.6,y:-6.2,a:0},
+      {m:'sc:logPile',x:5.9,y:-6.4,a:0,s:1.3},{m:'circusBooth',x:-7.6,y:-6.2,a:PI},   // faces the lot: its queue forms inside
       {m:'propBunting',x:-6.0,y:6.6,a:0},{m:'propBunting',x:6.0,y:6.6,a:0}]}
   };
   const SHOWN_PHASES=new Set(['preparing','active','clearing']);
