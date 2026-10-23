@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Hardening: cause strade / DEV / WebGL (23/10/2026)
+
+- **DIAGNOSTICATI, FIX APERTI** su `fix/main-founding-dev-webgl-20261023`: [prove e cause](../main-fixes-diagnosis-2026-10-23.md). WebGL: attributi orfani dopo eliminazione buffer; strade: finalizzazione e ponti fuori dal frazionamento cooperativo; suite DEV: aspettative obsolete dei preset forzati.
+- Priorità: stato GPU e regressione del renderer ancora attivo; frazionamento strade con cancellazione/revisioni coerenti; aggiornamento aspettative DEV senza cambiare il default automatico del prodotto. Le prove A/B sono diagnostiche, non completamenti di feature. Nessuna milestone o decisione architetturale cambiata.
+
 ## Igiene Git — pulizia branch obsolete (23/10/2026)
 
 - **Operazione infrastrutturale separata dal gameplay:** otto ref candidati a rimozione con workflow condizionale, SHA fissa, ricontrollo PR aperte e presenza del merge. Nessun branch attivo/PR OPEN viene eliminato intenzionalmente; i branch divergenti o con commit non attribuiti restano da analizzare, **non automaticamente classificati come obsoleti**.

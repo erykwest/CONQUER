@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## Diagnosi main: strade, DEV e WebGL (23/10/2026, branch di fix)
+
+- Base live verificata `b79ea99`; [report delle cause](../main-fixes-diagnosis-2026-10-23.md) sulla branch `fix/main-founding-dev-webgl-20261023`. **Diagnosi, non fix distribuiti.**
+- **WebGL confermato:** buffer delle varianti eliminati mentre attributi restano abilitati; il draw terrain successivo incontra un attributo senza buffer. Prova A/B: fallback ed errore 1282 in baseline, nessun errore e 3D attivo disabilitando gli attributi orfani solo nella strumentazione.
+- **DEV confermato:** la suite browser mantiene le aspettative dei preset del 14/10; il runtime e la QA dedicata sono passati intenzionalmente al default automatico il 15/10. Cambiando solo le tre aspettative in una copia diagnostica, la suite completa passa.
+- **Strade confermato:** finalizzazione della route e controlli dei ponti non cedono il controllo al budget cooperativo di 6 ms; 8/8 ripetizioni originali PASS sotto carico normale, precedenti FAIL >100 ms intermittenti. Esperimento di frazionamento: callback massima 25,6–30,0 → 12,6–16,9 ms con stessa geometria (82 segmenti, 2 ponti, 4 accessi). Non è ancora una correzione definitiva.
+- Sorgenti e test permanenti invariati; nessuna nuova CI/PR o attestazione di fix completati. ROADMAP/DECISIONS invariati.
+
 ## Branch cleanup automatizzata — 23/10/2026
 
 - Ricognizione live di 34 branch (`main` inclusa), HEAD `b79ea99`. **Otto candidati verificati** per rimozione: sei branch di PR merge con HEAD esattamente coincidente con la PR (#75, #76, #79, #80, #81, #83), e due branch senza commit esclusivi (`feature/bridge-earthworks-converge`, `fix/main-founding-dev-webgl-20261023`).

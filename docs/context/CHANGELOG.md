@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-23 — Diagnosi dei tre problemi sulla branch di fix
+
+- Riallineata la copia di lavoro alla main `b79ea99` e documentate le cause di fallback WebGL, test DEV e tempi della fondazione strade nel [report](../main-fixes-diagnosis-2026-10-23.md), con riproduzioni e prove A/B.
+- Aggiornati STATUS e BACKLOG: nessun sorgente runtime/test permanente modificato, nessun fix dichiarato completo. ROADMAP e DECISIONS invariati; nessuna nuova PR, merge o pubblicazione.
+
 ## 2026-10-23 — Workflow per eliminare branch obsolete in modo sicuro
 
 - Ricontrollate tutte le branch remote rispetto a `main`, PR aperte e merge. Pianificata la rimozione di **otto ref** già merge/totalmente assorbiti; i ref con HEAD post-merge, PR aperte o commit esclusivi sono deliberatamente preservati.
