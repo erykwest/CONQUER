@@ -22,4 +22,5 @@ jobs:
         run: |
           node qa/events3d-regression.cjs
           node qa/joust-regression.cjs
+          node qa/event-people-regression.cjs
           node qa/civic3d-regression.cjs

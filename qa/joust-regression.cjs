@@ -10,7 +10,7 @@ const vm=require('node:vm');
 const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
 const window={},State={seed:5,structures:[],clock:{speed:0}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,JSON,Float32Array,performance:{now:()=>0}});
-for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js','settlement-events-joust.js'])vm.runInContext(src(f),ctx);
+for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js','settlement-events-people.js','settlement-events-joust.js'])vm.runInContext(src(f),ctx);
 const J=window.ConquerJoust,E=window.ConquerEvents3D;
 const ground={id:'j1',type:'eventVenue',venue:'festivalGround',x:0,y:0,angle:0,event:{setup:'joust',phase:'active'}};
 assert.ok(J.isJoust(ground)&&!J.isJoust({...ground,event:{setup:'circus',phase:'active'}})&&!J.isJoust({...ground,event:{setup:'joust',phase:'preparing'}}),
@@ -53,9 +53,9 @@ console.log('PASS knights: cross at mid-lists, one unhorsed per pass, back in th
 
 // Spectators sit on the stands' seats, raised above the ground, about two in three taken.
 const sc=J.scene(ground,0),stands=E.placedItems(ground).filter(i=>i.m.startsWith('stand')).map(E.itemRect);
-const seatsTotal=E.placedItems(ground).filter(i=>i.m.startsWith('stand')).reduce((n,i)=>n+window.ConquerEventModels.models[i.m].meta.seats.length,0);
-assert.ok(sc.spectators.length>seatsTotal*.5&&sc.spectators.length<seatsTotal*.8,'about two in three seats taken ('+sc.spectators.length+'/'+seatsTotal+')');
-assert.ok(sc.spectators.every(q=>q.z>.2&&stands.some(r=>q.x>=r.x0&&q.x<=r.x1&&q.y>=r.y0&&q.y<=r.y1)),'spectators sit on the stands');
+const seatsTotal=E.placedItems(ground).filter(i=>i.m.startsWith('stand')).reduce((n,i)=>n+window.ConquerEventModels.models[i.m].meta.seats.length+(window.ConquerEventModels.models[i.m].meta.standing||[]).length,0);
+assert.ok(sc.spectators.length>seatsTotal*.5&&sc.spectators.length<seatsTotal*.8,'about two in three places taken ('+sc.spectators.length+'/'+seatsTotal+')');
+assert.ok(sc.spectators.every(q=>q.z>.2&&q.provisional===true&&stands.some(r=>q.x>=r.x0&&q.x<=r.x1&&q.y>=r.y0&&q.y<=r.y1)),'spectators sit on the stands');
 assert.deepEqual(JSON.stringify(J.scene(ground,0).spectators),JSON.stringify(sc.spectators),'the same seats every time');
 {const peak=J.scene(ground,J.IMPACT).cheer,calm=J.scene(ground,.2).cheer;assert.ok(peak>.9&&calm<.05,'the crowd cheers at the clash')}
 console.log('PASS spectators: '+sc.spectators.length+' on the stands, cheering at the clash');

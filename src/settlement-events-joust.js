@@ -81,24 +81,12 @@
     });
     return out;
   }
-  // Seats of the stands in the venue's local frame (U), from the stand models' meta.
-  const seatCache=new Map();
+  // Spectators: the registered occupants of the stands' guest slots (CANS register,
+  // settlement-events-people.js). An empty seat shows nobody.
   function seats(s){
-    const items=E().placedItems(s),key=JSON.stringify(items.map(i=>[i.m,i.x,i.y,i.a]));
-    const hit=seatCache.get(s);if(hit&&hit.key===key)return hit.list;
-    const list=[],M=window.ConquerEventModels?.models||{};
-    items.forEach((it,k)=>{
-      const meta=M[it.m]?.meta;if(!meta?.seats)return;
-      const c=Math.cos(it.a||0),sn=Math.sin(it.a||0),sc=it.s||1;
-      const facing=meta.facing?{x:meta.facing[0]*c-meta.facing[1]*sn,y:meta.facing[0]*sn+meta.facing[1]*c}:null;
-      meta.seats.forEach((q,j)=>{
-        // About two seats in three are taken, the same ones every time.
-        if(hash(seedOf(s)+'|seat|'+k+'|'+j)%3===0)return;
-        list.push({x:it.x+(q[0]*c-q[1]*sn)*sc,y:it.y+(q[0]*sn+q[1]*c)*sc,z:q[2]*sc,id:'spec-'+k+'-'+j,facing});
-      });
-    });
-    seatCache.set(s,{key,list});
-    return list;
+    const P=window.ConquerEventPeople;if(!P)return[];
+    return P.occupants(s).filter(o=>o.slotRef.role==='guest'&&(o.slotRef.action==='sit'||o.slotRef.action==='stand'))
+      .map(o=>({x:o.slotRef.x,y:o.slotRef.y,z:o.slotRef.z,id:o.occupant,slot:o.slot,facing:o.slotRef.face,provisional:o.provisional}));
   }
   const isJoust=s=>E()?.is(s)&&s.venue==='festivalGround'&&s.event?.setup==='joust'&&s.event.phase==='active';
   // Everything on the ground at time t (seconds): pure, local U.

@@ -53,7 +53,8 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 | EV-P3 | Taglia dello spiazzo: 14 × 10 U (D-044); eventuali taglie multiple | 14 × 10 DECISO, taglie multiple PROPOSTE | decisione di design |
 | EV-P6 | Tende non allineate (±40°, 75%; scatter 200%; senza collisioni né uscite dal lotto) e scatter/attrezzature disordinati e colori unici per spazio | CODICE + QA locale | `settlement-events3d.js` |
 | EV-A1 | Animazioni ambientali: bandiere, festoni e stendardi al vento | CODICE + QA locale | strato dinamico, meteo |
-| EV-A2 | Animazioni di persone: giostra (pubblico, cavalieri disarcionati, scudieri) FATTA come scena autonoma; artisti sui palchi e pubblico degli altri allestimenti DA FARE; collegamento alle routine reali della popolazione DA FARE | IN CORSO | routine popolazione |
+| EV-A2 | Animazioni di persone: giostra, sagra e circo FATTE su slot e registro occupanti allineati a CANS (sorgente provvisoria); torneo, teatro, accampamento, arena e palchi singoli DA FARE | IN CORSO | `settlement-events-people.js` |
+| EV-C1 | Adapter CANS: occupanti reali (residenti) al posto della sorgente provvisoria, prenotazione, arrivo e uscita dagli accessi | DA FARE, dipende dallo skeleton CANS | branch `cans` |
 | EV-P5 | Arena a U arricchita e lotto dedicato `arenaLot` 18 × 14 | CODICE + QA locale; posizionamento da Builder DA FARE | design, placement |
 | EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |
 
