@@ -993,32 +993,27 @@ function drawCastleSelection(){
   // remain legible after selecting them, including wood, civic, houses and sites.
   const s=State.structures?.find(item=>item.id===State.selectedId);
   if(!s||s.type==='road'||s.type==='moat'||s.type==='bridge')return;
-  const areas=s.type==='field'?[{points:fieldPoints(s),height:0}]:
-    s.type==='house'?urbanHouseDisplayParts(s).map(part=>({
-      points:part.points,height:part.bodyH||houseBodyHeight(s)
-    })):
-    isCivic(s)?civicParts(s).map(part=>({
-      points:part.points,height:part.role==='plaza'?.12:structureHeight(s)
-    })):[{points:footprintPoints(s),height:structureHeight(s)}];
+  // Only the ground perimeter (h 0): the parts of a house or civic building merge into one outline.
+  const parts=(s.type==='field'?[fieldPoints(s)]:s.type==='house'?urbanHouseDisplayParts(s).map(part=>part.points):
+    isCivic(s)?civicParts(s).map(part=>part.points):[footprintPoints(s)]).filter(points=>points?.length>=3);
+  if(!parts.length)return;
+  let rings=parts;
+  const pc=typeof window!=='undefined'?window.__polygonClipping:null;
+  if(pc&&parts.length>1){
+    try{rings=pc.union(...parts.map(points=>[points.map(p=>[p.x,p.y])])).flatMap(poly=>poly.map(cleanClipRing)).filter(r=>r.length>=3)}
+    catch{rings=parts}
+  }
   withStructureGroundPlane(s,()=>{
     ctx.save();
     ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash([]);
-    for(const item of areas){
-      if(!item.points?.length||item.points.length<3)continue;
-      const h=underConstruction(s)?Math.max(.10,item.height*constructionProgress(s)):item.height;
-      const bottom=projectPath(item.points,0),top=projectPath(item.points,h);
-      // Black keyline provides contrast over snow, sandstone and glowing roofs.
-      for(const [color,width] of [['rgba(24,16,10,.92)',4.5],['#ffc46e',2.25]]){
-        ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
-        for(const ring of [top,bottom]){
-          ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-          ctx.closePath();
-        }
-        if(h>.12)for(let i=0;i<top.length;i++){
-          ctx.moveTo(bottom[i].x,bottom[i].y);ctx.lineTo(top[i].x,top[i].y);
-        }
-        ctx.stroke();
+    // Black keyline provides contrast over snow, sandstone and grass.
+    for(const [color,width] of [['rgba(24,16,10,.92)',4.5],['#ffc46e',2.25]]){
+      ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
+      for(const ring of rings){
+        projectPath(ring,.02).forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+        ctx.closePath();
       }
+      ctx.stroke();
     }
     ctx.restore();
   });
