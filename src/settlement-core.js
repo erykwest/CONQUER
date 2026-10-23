@@ -302,13 +302,12 @@ const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
 });
-const PEASANT_PALETTE=Object.freeze([
-  '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
-  '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
-]);
-const ARTISAN_PALETTE=Object.freeze(['#765641','#8a6848','#6f7252','#707b70','#7f665b','#8b7755']);
-const MERCHANT_PALETTE=Object.freeze(['#a63e32','#355f9c','#c59a2d','#4f873e','#754d8c','#b86b2d']);
-const ELITE_PALETTE=Object.freeze(['#e34838','#3479d3','#f0bf2f','#62b94e','#a45fcb','#ef8731']);
+// Clothing by house level: L1 grey/beige, L2 green/brown, L3 muted primaries,
+// L4 bright primaries. Shared by tunics and the dyed pieces of the seasonal wardrobe.
+const PEASANT_PALETTE=Object.freeze(['#7d7a72','#8f8b82','#a39e93','#b9b2a3','#c8bda6','#d6c9ad','#9c9078','#b4a58a']);
+const ARTISAN_PALETTE=Object.freeze(['#5f6b3e','#6f7d47','#4f6140','#7a5a3a','#8a6845','#6b4e33']);
+const MERCHANT_PALETTE=Object.freeze(['#9a5550','#8a4f4a','#56708f','#4d6582','#b5a160','#a8955a']);
+const ELITE_PALETTE=Object.freeze(['#d83a2e','#c3261e','#2f6fd6','#2358b8','#f2c12e','#e8b020']);
 const HAIR_COLORS=Object.freeze({
   blonde:'#d5b65a',brown:'#65452f',black:'#262321',gray:'#9a9891',red:'#9b4a2d'
 });

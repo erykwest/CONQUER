@@ -87,6 +87,38 @@ W.preview=null;
 assert.equal(W.outfitFor({...crowd[0],outfit:null}),null,'explicit outfit wins');
 console.log('PASS live conditions, overrides and determinism');
 
+// Class palettes (settlement-core.js) dye the cloth pieces; the lab keeps an exact copy.
+const core=fs.readFileSync(path.join(__dirname,'..','src','settlement-core.js'),'utf8');
+const lab=fs.readFileSync(path.join(__dirname,'..','figures-lab.html'),'utf8');
+const palettes={};
+for(const name of ['PEASANT','ARTISAN','MERCHANT','ELITE']){
+  const re=new RegExp('const '+name+'_PALETTE=(?:Object\\.freeze\\()?(\\[[^\\]]*\\])');
+  const fromCore=JSON.parse(re.exec(core)[1].replace(/'/g,'"')),fromLab=JSON.parse(re.exec(lab)[1].replace(/'/g,'"'));
+  assert.deepEqual(fromLab,fromCore,name+' palette: lab copy matches core');
+  palettes[name]=fromCore;
+}
+const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const sat=h=>{const c=rgb(h),mx=Math.max(...c),mn=Math.min(...c);return mx?(mx-mn)/mx:0};
+const avgSat=list=>list.reduce((s,h)=>s+sat(h),0)/list.length;
+assert.ok(avgSat(palettes.PEASANT)<.2,'L1 grey/beige: low saturation');
+assert.ok(avgSat(palettes.ELITE)>avgSat(palettes.MERCHANT)+.25,'L4 brighter than L3');
+assert.ok(avgSat(palettes.MERCHANT)>avgSat(palettes.PEASANT),'L3 more coloured than L1');
+// Dye: with the palettes loaded, cloth comes from the wearer's class, natural materials do not.
+Object.assign(context,{PEASANT_PALETTE:palettes.PEASANT,ARTISAN_PALETTE:palettes.ARTISAN,MERCHANT_PALETTE:palettes.MERCHANT,ELITE_PALETTE:palettes.ELITE});
+const darkenHex=(h,k)=>'#'+rgb(h).map(v=>Math.round(v*k).toString(16).padStart(2,'0')).join('');
+for(const [kind,list] of [['peasant',palettes.PEASANT],['artisan',palettes.ARTISAN],['merchant',palettes.MERCHANT],['elite',palettes.ELITE]]){
+  for(let i=0;i<20;i++){
+    const id=kind+i,tunic=list[0];
+    const hood=W.compose(['woolHood'],id,kind,tunic).colors.head;
+    assert.ok(list.includes(hood),kind+' wool hood dyed from class palette');
+    assert.notEqual(hood,tunic,kind+' hood differs from the tunic');
+    assert.ok(list.map(c=>darkenHex(c,.72)).includes(W.compose(['rainCape'],id,kind,tunic).colors.body),kind+' rain cape: darkened class colour');
+    assert.ok(W.PIECES.strawHat.palette.includes(W.compose(['strawHat'],id,kind,tunic).colors.head),'straw stays straw');
+  }
+}
+assert.equal(W.outfitFor({id:'e1',kind:'elite',colors:['#d83a2e','#2f6fd6']},W.fromKind('winter','clear')).body,'furCloak','L4 fur cloak');
+console.log('PASS class palettes L1 grey/beige, L2 green/brown, L3 muted, L4 bright; cloth dyed by class');
+
 // Every piece draws, on adults and tiny figures.
 for(const k of Object.keys(W.PIECES))for(const s of [.5,3]){
   calls.fill=0;

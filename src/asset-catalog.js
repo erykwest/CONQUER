@@ -213,7 +213,7 @@
       const p={x:w*.5,y:h*.78};
       if(subject==='villager'){
         drawVillagerFigureUnmasked({id:'asset-lab-villager',kind:'peasant',sex:'male',age:'adult',
-          hair:'brown',colors:['#8c6b3f','#5d4a32'],p});
+          hair:'brown',colors:['#9c9078','#7d7a72'],p});
       }else{
         const unit={id:'asset-lab-'+subject,engaged:false};
         window.ConquerCombatAnim.drawFigure(p,0,subject,unit.id,0,null,
@@ -224,19 +224,18 @@
       placeholder(canvas,'ANTEPRIMA DAL LAB');
     }finally{ctx=previous;State.view.scale=oldScale}
   }
-  // A wardrobe piece worn by the three civil classes, drawn by the game's own figure code.
+  // A wardrobe piece worn by the four civil classes (L1-L4), drawn by the game's own figure code.
   function renderWardrobe(canvas,item){
     const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,W=window.ConquerWardrobe;
     g.clearRect(0,0,w,h);
     const previous=ctx,oldScale=State.view.scale;
     try{
-      ctx=g;State.view.scale=Math.min(w*.05,h*.1);
-      [['peasant',['#8c6b3f','#5d4a32'],'male'],['artisan',['#6d7f8c','#4a5560'],'female'],['merchant',['#7a4f7a','#c6a457'],'male']]
-        .forEach(([kind,colors,sex],i)=>{
-          const id='wardrobe-'+item.key+'-'+kind;
-          drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
-            outfit:W.compose([item.key],id),p:{x:w*(.25+i*.25),y:h*.74}});
-        });
+      ctx=g;State.view.scale=Math.min(w*.045,h*.1);
+      [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
+        const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
+        drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
+          outfit:W.compose([item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+      });
     }catch(error){
       console.warn('Asset Lab wardrobe thumbnail could not render',item.key,error);
       placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');

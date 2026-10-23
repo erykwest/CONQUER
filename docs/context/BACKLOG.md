@@ -314,6 +314,7 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 > - **Inverno:** mantello per classe (pelle di pecora popolani, lana artigiani, pelliccia mercanti) aperto sul davanti per lasciare visibile la tunica di classe; berretto di pelliccia o cappuccio di lana; con neve tutti col cappuccio.
 > - **Estate serena:** cappello di paglia (75% popolani, 45% artigiani, 30% mercanti); niente con la nebbia.
 > - **Mezze stagioni ventose/nebbiose:** scialle di lana per circa il 45%.
+> - **Colori per classe (tuniche e capi in tessuto):** L1 grigio/beige, L2 verde/marrone, L3 colori primari desaturati, L4 colori primari accesi. Cappucci di lana, mantelli, scialli e mantelle cerate (più scure) prendono la palette della classe ed evitano il colore della tunica; paglia, pelliccia e pelle di pecora restano nei colori naturali. Lavoratori anonimi e brigata antincendio sono L1.
 > - **Transizioni:** novembre e marzo vestono ~45% degli abitanti per l'inverno, maggio e settembre ~40% per l'estate; chi indossa il mantello a novembre lo tiene a dicembre. Il meteo cambia per giorno, quindi la pioggia veste tutti insieme.
 
 - **Skin stagionali dei popolani:** in inverno usare pelli, tuniche pesanti e mantelli; in estate cappelli di paglia e tuniche corte/leggere.

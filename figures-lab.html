@@ -171,6 +171,11 @@ let ctx=null;
 const State={view:{scale:1},heraldry:{}};
 const VILLAGER_SKIN='#d99a83',REIGN_COLOR_1='#b53636',REIGN_COLOR_2='#355fb8',REIGN_COLOR_1_DARK='#7f2323',REIGN_COLOR_2_DARK='#243f79';
 const HAIR_COLORS={blonde:'#d5b65a',brown:'#65452f',black:'#262321',gray:'#9a9891',red:'#9b4a2d'};
+// Class clothing palettes, copied from settlement-core.js (L1 grey/beige ... L4 bright primaries).
+const PEASANT_PALETTE=['#7d7a72','#8f8b82','#a39e93','#b9b2a3','#c8bda6','#d6c9ad','#9c9078','#b4a58a'];
+const ARTISAN_PALETTE=['#5f6b3e','#6f7d47','#4f6140','#7a5a3a','#8a6845','#6b4e33'];
+const MERCHANT_PALETTE=['#9a5550','#8a4f4a','#56708f','#4d6582','#b5a160','#a8955a'];
+const ELITE_PALETTE=['#d83a2e','#c3261e','#2f6fd6','#2358b8','#f2c12e','#e8b020'];
 function w2s(p){return{x:p.x,y:p.y}}
 function w2sRaw(p){return{x:p.x,y:p.y}}
 function withUrbanFigureOcclusion(p,z,fn){return fn()}
@@ -234,11 +239,11 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   function resetHero(){hero={id:'hero-'+subject,engaged:false};foe={id:'foe',engaged:false};nextHit=clock+.3;nextDeath=clock+.2;arrows=[]}
 
   const VILLAGERS=[
-    {kind:'peasant',sex:'male',age:'adult',colors:['#8c6b3f','#5d4a32']},
-    {kind:'peasant',sex:'female',age:'adult',colors:['#9a7b52','#6b5338']},
-    {kind:'artisan',sex:'male',age:'adult',colors:['#6d7f8c','#4a5560']},
-    {kind:'merchant',sex:'female',age:'adult',colors:['#7a4f7a','#c6a457']},
-    {kind:'peasant',sex:'male',age:'child',colors:['#a08060','#6b5338']}
+    {kind:'peasant',sex:'male',age:'adult',colors:['#9c9078','#7d7a72']},
+    {kind:'artisan',sex:'female',age:'adult',colors:['#6f7d47','#7a5a3a']},
+    {kind:'merchant',sex:'male',age:'adult',colors:['#56708f','#b5a160']},
+    {kind:'elite',sex:'female',age:'adult',colors:['#d83a2e','#2f6fd6']},
+    {kind:'peasant',sex:'male',age:'child',colors:['#c8bda6','#8f8b82']}
   ].map((v,i)=>({...v,id:'v'+i,hair:villagerHair('v'+i)}));
 
   function drawPerson(type,p,scale,unit,foePoint,livery,index=0){
