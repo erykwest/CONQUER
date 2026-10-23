@@ -1,0 +1,23 @@
+name: CANS skeleton regression
+on:
+  push:
+    branches: [cans]
+  pull_request:
+    paths:
+      - 'src/settlement-cans.js'
+      - 'qa/cans-regression.cjs'
+      - '.github/workflows/cans-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cans-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: CANS logical invariants and persistence
+        run: node qa/cans-regression.cjs
