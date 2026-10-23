@@ -463,12 +463,12 @@ function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
   if(!stillValid()||mainRoadRouteDeleted(routeId))return 0;
   if(!plan||!path||path.length<2)return 0;
 
-  // Only replace the route after a complete valid path has been found.
-  const oldRoadIds=new Set(routeRoads(routeId).map(r=>r.id));
-  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor));
+  // Prepare bridges cooperatively without publishing partial topology or forest
+  // cuts. A navigation change can cancel this entire replacement up to commit.
   const pts=subdivideRoadPolyline(alignedRiverRoadPolyline(path),ROAD_RULES.arterialSegmentMax);
-  let added=0,parent=null;
+  const prepared=[];let added=0,parent=null;
   for(let i=0;i<pts.length-1;i++){
+    if(!stillValid()||mainRoadRouteDeleted(routeId))return 0;
     const a=pts[i],b=pts[i+1];if(dist(a,b)<.18)continue;
     const road={
       id:uid(),type:'road',auto:true,roadClass:'arterial',routeId,routeSeq:added,
@@ -476,8 +476,15 @@ function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
       reactive:true,arterialRebuilt:true
     };
     // Route repair is topology restoration, not a new growth event: it becomes usable immediately.
-    State.structures.push(road);if(isPrimaryRoad(road))autoPrimaryRoadBridges(road);parent=road.id;added++;
+    const bridges=yield* primaryRoadBridgesWork(road,()=>stillValid()&&!mainRoadRouteDeleted(routeId));
+    if(!stillValid()||mainRoadRouteDeleted(routeId))return 0;
+    prepared.push(road,...bridges);parent=road.id;added++;
+    yield;
   }
+  if(!stillValid()||mainRoadRouteDeleted(routeId))return 0;
+  const oldRoadIds=new Set(routeRoads(routeId).map(r=>r.id));
+  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor)).concat(prepared);
+  for(const road of prepared)if(isPrimaryRoad(road))carveForestGroove(road);
   refreshStaleHouseRoadRefs();
   invalidateNavigation();
   return added;
@@ -1902,21 +1909,35 @@ function autoPrimaryRoadBridges(road){
   // Every main-road segment also opens its groove through a continuous woodland.
   carveForestGroove(road);
   if(State.structures.some(s=>s.type==='bridge'&&s.primaryBridgeFor===road.id))return 0;
+  const bridges=finishRoadWork(primaryRoadBridgesWork(road));
+  State.structures.push(...bridges);
+  return bridges.length;
+}
+// Shared by synchronous road tools and staged village founding. Only returns
+// bridge objects: it never changes structures, forest grooves or navigation.
+function* primaryRoadBridgesWork(road,stillValid=()=>true){
   const water=State.environment.filter(f=>['river','stream'].includes(f.type));
-  if(!water.length)return 0;
+  const bridges=[];if(!water.length)return bridges;
   const length=dist(road.a,road.b),steps=Math.max(3,Math.ceil(length/.20));
-  const waterAt=p=>water.some(f=>f.points.slice(1).some((end,i)=>
-    pointSegmentDistance(p,f.points[i],end)<=(Number(f.width)||1.25)/2+.07));
-  let start=-1,index=0,created=0;
-  function addSpan(from,to){
+  function* waterAt(p){
+    let checks=0;
+    for(const f of water)for(let i=1;i<f.points.length;i++){
+      if(++checks%16===0){yield;if(!stillValid())return false}
+      if(pointSegmentDistance(p,f.points[i-1],f.points[i])<=(Number(f.width)||1.25)/2+.07)return true;
+    }
+    return false;
+  }
+  let start=-1,index=0;
+  function* addSpan(from,to){
     if(to-from<.001)return;
     // Build over the local river normal, not along an oblique road segment.
     const midT=(from+to)/2,intersection={
       x:road.a.x+(road.b.x-road.a.x)*midT,
       y:road.a.y+(road.b.y-road.a.y)*midT
     };
-    let closest=null,best=Infinity;
+    let closest=null,best=Infinity,checks=0;
     for(const river of water)for(let i=1;i<river.points.length;i++){
+      if(++checks%16===0){yield;if(!stillValid())return}
       const p=river.points[i-1],q=river.points[i],distance=pointSegmentDistance(intersection,p,q);
       if(distance<best){best=distance;closest={river,p,q}}
     }
@@ -1930,24 +1951,26 @@ function autoPrimaryRoadBridges(road){
     if(!terrainSlopeKind(bankA)&&!terrainSlopeKind(bankB)){
       const za=terrainPlateauElevation(bankA),zb=terrainPlateauElevation(bankB);
       if(za!=null&&zb!=null&&Math.abs(za-zb)<=.01){
-        State.structures.push({id:'river-bridge-'+road.id+'-'+index++,
+        bridges.push({id:'river-bridge-'+road.id+'-'+index++,
           type:'bridge',auto:true,primaryBridgeFor:road.id,
           variant:'wood',a:bankA,b:bankB,
           width:Math.max(1.2,(road.width||.62)+.58),
           length:dist(bankA,bankB),groundZ:za,
           ...(road.construction?{construction:{...road.construction}}:{})});
-        created++;return;
+        return;
       }
     }
 
   }
   for(let i=0;i<=steps;i++){
+    if(i%8===0)yield;
+    if(!stillValid())return[];
     const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
-    if(waterAt(p)){if(start<0)start=t}
-    else if(start>=0){addSpan(start,(i-1)/steps);start=-1}
+    if(yield* waterAt(p)){if(start<0)start=t}
+    else if(start>=0){yield* addSpan(start,(i-1)/steps);start=-1}
   }
-  if(start>=0)addSpan(start,1);
-  return created;
+  if(start>=0)yield* addSpan(start,1);
+  return bridges;
 }
 function syncPrimaryRoadBridges(){
   const activeRoads=new Set(State.structures.filter(isPrimaryRoad).map(r=>r.id));

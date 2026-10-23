@@ -91,7 +91,32 @@ jobs:
           portoni|a504ea65ac2b8c748035fc8cc78420f2cb626d50|76
           feature/bridge-earthworks-converge|5228837185ac47a09b2170c25ceb1d630ef2403f|-
           fix/main-founding-dev-webgl-20261023|518e830547b66c12deefa0833487ea76b81c7746|-
+          chore/prune-merged-branches-20261023|d3eefcae5eeb4eec1231facd73efa35041c40909|84
           BRANCHES
+          # Self-clean this finalizer PR's merged source branch without guessing
+          # its SHA while authoring. Its SHA is obtained from the CLOSED/MERGED PR
+          # and must match the remote ref before deletion.
+          self_branch="chore/prune-cleanup-finalizer-20261023"
+          self_pr_sha=""
+          for attempt in 1 2 3; do
+            self_pr_sha="$(gh api "repos/$GH_REPO/pulls?state=closed&per_page=100" --jq '.[] | select(.head.ref == "chore/prune-cleanup-finalizer-20261023" and .merged_at != null) | .head.sha' | head -n 1)"
+            [[ -n "$self_pr_sha" ]] && break
+            sleep 3
+          done
+          self_head="$(gh api "repos/$GH_REPO/git/ref/heads/$self_branch" --jq '.object.sha' 2>/dev/null)" || self_head=""
+          if [[ -n "$self_pr_sha" && "$self_pr_sha" == "$self_head" ]] && ! grep -Fxq "$self_branch" <<< "$protected"; then
+            if gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$self_branch" >/dev/null; then
+              echo "DELETED self-cleanup: $self_branch"
+              echo "- DELETED self-cleanup: \`$self_branch\`" >> "$GITHUB_STEP_SUMMARY"
+              removed=$((removed+1))
+            else
+              echo "FAILED self-cleanup: $self_branch"
+              failures=$((failures+1))
+            fi
+          else
+            echo "SKIP self-cleanup (merged PR not verified or SHA moved): $self_branch"
+            skipped=$((skipped+1))
+          fi
           echo "Result: $removed removed; $skipped safely skipped; $failures failed"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Result: $removed removed; $skipped skipped; $failures failed." >> "$GITHUB_STEP_SUMMARY"

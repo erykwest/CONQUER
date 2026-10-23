@@ -1,5 +1,25 @@
 # Diagnosi: fondazione strade, test DEV e fallback WebGL
 
+## Correzioni implementate dopo la diagnosi — 23/10/2026
+
+Branch `fix/main-founding-dev-webgl-20261023`, riallineata alla main `bc82dbee5c8da30bebea9e93049c6f85701c7e51`, compreso l'Asset Lab #82. La diagnosi originale sotto è conservata come evidenza storica.
+
+- **WebGL:** un VAO per programma separa gli attributi dei vari passaggi. La regressione browser falliva prima del fix con renderer disattivato; ora passa dopo cinque colpi d'ariete, ricreazioni dei buffer, rotazioni e cambi giorno/notte, senza errori GPU osservati. Il test induce poi una vera perdita del contesto e verifica il fallback Canvas con gli stessi danni al portone. Nessun errore viene mascherato, nessuna query GPU aggiunta per draw.
+- **Strade:** `primaryRoadBridgesWork` prepara i ponti senza mutare lo stato e cede il controllo nelle scansioni geometriche. `rebuildArterialWork` prepara l'intera route e sostituisce quella vecchia soltanto se la revisione è ancora valida; solo allora apre i corridoi forestali. La regressione di lavoro massimo per avanzamento falliva prima con 155.287 controlli di distanza; ora il massimo è 24 su un fiume di 201 punti. L'annullamento durante la scansione preserva strada e ponte precedenti, edificio sopraggiunto e bosco.
+- **DEV:** aggiornate solo le tre aspettative della suite browser a `null`, aggiungendo clic sui controlli reali e ritorno alla modalità automatica. I default runtime restano quelli intenzionali del 15/10.
+
+### Verifica del codice corretto
+
+- **68 suite deterministiche** `qa/*-regression.cjs` PASS e **152 file** di sorgenti/test con sintassi valida. Il successivo affinamento del checkpoint di cancellazione è stato riverificato con la nuova regressione stradale; la CI ripete tutta la batteria sul commit finale.
+- **Browser Chromium:** `qa/main-fixes-browser.mjs` e `qa/ui-combat-regression.mjs` PASS; WebGL attivo, vero context-loss gestito, override DEV e suite UI/Combat completa. Le prove non certificano tutti i driver GPU.
+- **Foresta seed 4242, tre ripetizioni:** massimi callback 7,38 / 6,47 / 7,02 ms; 28 / 26 / 25 callback; rispettivamente 177 / 158 / 155 ms cumulativi. Sempre 82 strade, 2 ponti, 4 collegamenti e SHA-256 geometrico `7554422d74f781a9e32a2c5a123a5a7b7d3abb74a66f20a285cadf750cafc540`, uguale alla baseline. Nessuna soglia temporale dei test aumentata. Un'esecuzione simultanea a Chromium ha superato 100 ms in un caso della suite originale; il giro isolato è passato: carico dell'host e pause del runtime restano limiti delle misure temporali, non garanzie di 6 ms.
+- **Audit Lab:** 456 render, 0 errori, 49 avvisi preesistenti; 11 firme cambiate su torri/porta in legno, lo stesso insieme già segnalato dalla CI di #82 rispetto alla baseline. Rivisti i fogli porte, torri e mura: nessuna variazione di asset introdotta dal fix. Conservata la baseline; cantieri non progressivi e danno visivo dei portoni restano nel backlog separato.
+- **CI ripetibile:** `.github/workflows/main-fixes-regression.yml` esegue su push della branch regressioni, sintassi, Context sync, due suite browser e audit Lab, pubblicando gli artefatti. Lo stato reale della CI si legge sul run del commit pubblicato.
+
+STATUS, BACKLOG, CHANGELOG e DECISIONS aggiornati nello stesso branch. ROADMAP invariata. Nessun merge in main né deploy. Le sezioni seguenti descrivono il commit di sola diagnosi `88c899f`.
+
+## Diagnosi originale
+
 Data: 23/10/2026. Branch: `fix/main-founding-dev-webgl-20261023`.
 Base verificata: main `b79ea998b8127fefb909a6644e0c12b7413aa171`.
 Il commit nuovo di main rispetto a `518e830` modifica solo documentazione: i tre percorsi runtime sono gli stessi della precedente riproduzione.
