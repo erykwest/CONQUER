@@ -2,8 +2,8 @@
 
 ## 2026-10-23 — CANS skeleton dati e registri su branch `cans`
 
-- Aggiunto `src/settlement-cans.js`: modello opt-in indipendente per domini, slot, accessi multipli e grafo locale; prenotazione/lifecycle, trasferimenti, invalidazione, snapshot versionati e coordinate locali.
-- Aggiunti `qa/cans-regression.cjs` (nove scenari) e workflow dedicato `.github/workflows/cans-regression.yml`. Test logici eseguiti in isolamento **PASS**; CI Node e prove browser **NON ANCORA VERIFICATE** in questa nota.
+- Aggiunto `src/settlement-cans.js`: modello opt-in indipendente per domini, slot, accessi multipli, ActivitySequence e grafo locale; prenotazione/lifecycle, trasferimenti, invalidazione, snapshot versionati e coordinate locali.
+- Aggiunti `qa/cans-regression.cjs` (undici scenari) e workflow dedicato `.github/workflows/cans-regression.yml`. Test logici isolati **PASS** e CI Node/GitHub Actions **PASS** ([run 39976214964](https://github.com/erykwest/CONQUER/actions/runs/39976214964)); prove browser **NON ESEGUITE**.
 - Nessun nuovo caricamento in `index.html`, nessun wiring con `State`, `ConquerEconomy`, renderer o residenti. Nessun merge/deploy su `main`; il resto della roadmap resta invariato.
 
 
