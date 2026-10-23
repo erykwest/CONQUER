@@ -38,12 +38,12 @@ header h1{font-size:18px;white-space:nowrap}
 .asset-tools input,.asset-tools select{color:var(--text);background:#201d19;border:1px solid var(--line);border-radius:6px;padding:8px;max-width:100%;font:inherit}
 .asset-tools #assetSearch{min-width:160px;flex:1}
 .asset-tools select{max-width:190px}
-#assetCount{font-size:12px;color:var(--muted);white-space:nowrap}
-#assetGallery{height:min(58vh,740px);min-height:280px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));align-content:start;gap:10px;padding:12px;scrollbar-width:thin}
+#assetCount,#assetEngineStatus{font-size:12px;color:var(--muted);white-space:nowrap}
+#assetGallery{height:min(58vh,740px);min-height:280px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));grid-auto-rows:max-content;align-content:start;gap:10px;padding:12px;scrollbar-width:thin}
 .asset-card{padding:0 0 10px;text-align:left;background:#352f27;border:1px solid #514536;border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
 .asset-card:hover{border-color:var(--accent);background:#433729}
 .asset-card[aria-selected="true"]{outline:2px solid var(--accent);outline-offset:-2px;background:#453622}
-.asset-card-visual{display:flex;align-items:center;justify-content:center;height:122px;width:100%;background:radial-gradient(ellipse at 50% 65%,#645543 0,#312d26 70%);overflow:hidden}
+.asset-card-visual{flex:none;display:flex;align-items:center;justify-content:center;height:122px;width:100%;background:radial-gradient(ellipse at 50% 65%,#645543 0,#312d26 70%);overflow:hidden}
 .asset-card-visual img,.asset-card-visual svg{width:100%;height:100%;object-fit:contain;padding:6px}
 .asset-card-visual canvas{width:100%;height:100%;object-fit:contain}
 .asset-card strong,.asset-card small{margin:0 10px;overflow:hidden;text-overflow:ellipsis}
@@ -125,19 +125,20 @@ body.asset-catalog-static #labLegacyControls{display:none}
 </header>
 <main class="asset-layout">
   <section class="asset-browser" aria-label="Catalogo asset">
-    <div><h2>Catalogo visivo degli asset</h2><p>Asset originali SVG/PNG, modelli 3D e strutture parametriche. Seleziona un elemento per ispezionarlo.</p></div>
+    <div><h2>Catalogo visivo degli asset</h2><p>Asset originali SVG/PNG, modelli 3D, fortificazioni costruite dal motore e strutture parametriche. Seleziona un elemento per ispezionarlo.</p></div>
     <nav id="assetCategoryFilters" class="asset-filters" role="group" aria-label="Categorie asset"></nav>
     <div class="asset-tools">
       <input id="assetSearch" type="search" placeholder="Cerca asset, modello o sorgente..." aria-label="Cerca asset">
       <select id="assetFamily" aria-label="Famiglia asset"><option value="">Tutte le famiglie</option></select>
       <select id="assetFormat" aria-label="Tipo di risorsa">
         <option value="">Tutti i formati</option><option value="file">SVG / PNG</option>
-        <option value="model">Modelli 3D</option><option value="animal">Animali 3D</option>
+        <option value="model">Modelli 3D</option><option value="castle">Fortificazioni 3D</option><option value="animal">Animali 3D</option>
         <option value="figure">Animazioni</option><option value="schematic">Parametrici</option>
         <option value="symbol">Simboli araldici</option>
       </select>
       <button id="assetReset" type="button">Azzera</button>
       <span id="assetCount" aria-live="polite"></span>
+      <span id="assetEngineStatus" aria-live="polite"></span>
     </div>
     <div id="assetGallery" tabindex="0" aria-label="Griglia asset"></div>
   </section>
@@ -502,6 +503,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/assets/industry-models.js?v=asset-lab-1"></script>
 <script src="./src/assets/scatter-model.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
-<script src="./src/asset-catalog.js?v=asset-lab-2"></script>
+<script src="./src/asset-manifest.js?v=asset-lab-3"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-5"></script>
 </body>
 </html>

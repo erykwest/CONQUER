@@ -1,10 +1,20 @@
 # Livello 2 — Stato tecnico e prove
 
-## Asset Lab — ispezione ruotabile e componenti reali (branch `fix/asset-lab-rotation-and-components`, 22/10/2026)
+## Asset Lab — catalogo completo: fortificazioni dal motore, lavori, manifest generato (branch `feat/asset-lab-complete-catalog`, 23/10/2026)
 
-- **Codice presente su branch (non ancora `main`):** inspector destro con pulsanti −15° / +15° per i modelli 3D; ricalcolo della proiezione e dell'ordinamento delle facce per le preview statiche; direzione reale modificata negli animali, carri 3D e macchine d'assedio animate, interrompendo l'autorotazione quando si usa il comando manuale.
+- **Codice presente su branch (non ancora `main`):** categoria **«Fortificazioni»** con 22 strutture in pietra (torri, mura con caditoie/hoardings, sezione costruita, porte) costruite dal gioco stesso: `figures-lab.html` apre in un iframe nascosto `index.html?assetlab=1&renderer=canvas2d` e `ConquerSiegePreview.assetMesh(spec)` monta una sola struttura delle varianti della galleria distruzione (`GALLERY`, ora esportata) e restituisce `ConquerCastle3D.worldMeshes()`. Miniature e inspector ruotabili a 15°, altezza in U nella scheda.
+- **Sandbox `?assetlab=1`:** nessun salvataggio locale (`saveLocal` esce, slot di lettura vuoto `conquer.assetlab.sandbox`), nessun Supabase (import e `initSupabase` saltati), nessuna telemetria remota. Il salvataggio del giocatore non viene letto né scritto (verificato in Chromium).
+- **Non incluse:** 7 varianti in legno (torri, porta lignea, palizzate), disegnate solo dal percorso 2.5D e senza volume `ConquerCastle3D`; lo stato è indicato nel Lab.
+- **Animazioni di lavoro:** 7 voci «Popolazione / Lavori» (pala, ascia, piccone, martello, zappa, semina, falce) con miniatura dal colpo di `settlement-work-anim.js` e apertura dell'animazione live sull'azione corretta.
+- **Manifest generato:** `tools/build-asset-manifest.cjs` produce `src/asset-manifest.js` (36 file + 2 set di rotazione `*_rotations`); la lista scritta a mano è stata rimossa. Campo taglialegna e cava mostrano i 24 fotogrammi con i pulsanti ±15°.
+- **Correzioni:** la ricerca non trova più la parola «undefined» sui campi mancanti; rimosso il codice morto per torri/mura/fossati in `renderSchema`; righe della griglia non più schiacciate (già difettoso su `main`).
+- **QA:** `qa/asset-catalog-regression.cjs` (manifest aggiornato, sandbox, 7 strumenti) e tutte le altre 65 regressioni statiche **PASS** in locale su checkout LF; `qa/asset-catalog-browser.mjs` **PASS** in locale con Chromium (fortificazioni, rotazione, nessun salvataggio, lavori, fotogrammi, ricerca). **CI della PR non ancora verificata in questa nota.**
+
+## Asset Lab — ispezione ruotabile e componenti reali (#80, integrato su `main` il 22/10/2026)
+
+- **Codice su `main` (squash `bf548ca`):** inspector destro con pulsanti −15° / +15° per i modelli 3D; ricalcolo della proiezione e dell'ordinamento delle facce per le preview statiche; direzione reale modificata negli animali, carri 3D e macchine d'assedio animate, interrompendo l'autorotazione quando si usa il comando manuale.
 - **Catalogazione corretta:** eliminata la falsa categoria «Fortificazioni», che conteneva soltanto texture di elementi e disegni SCHEMA di componenti procedurali non visualizzati dal gioco. Le texture reali `src/assets/architecture/*.png` sono ora in «Componenti» / «Elementi architettonici»; i 13 schemi simulati di fortificazione non sono più esposti. Nessuna modifica alle fortificazioni del Builder.
-- **QA aggiornata:** asserzioni statiche per classificazione e rotazioni + browser Chromium per cambiamento pixel 3D, reversibilità, direzione degli animali animati, auto-rotazione disabilitata e invisibilità controlli su sprite 2D. **CI della branch non ancora verificata in questa nota**, prima di merge.
+- **QA aggiornata:** asserzioni statiche per classificazione e rotazioni + browser Chromium per cambiamento pixel 3D, reversibilità, direzione degli animali animati, auto-rotazione disabilitata e invisibilità controlli su sprite 2D. CI Asset Lab **PASS** sulla PR #80 prima del merge.
 
 > **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
 
