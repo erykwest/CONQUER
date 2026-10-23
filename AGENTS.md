@@ -20,6 +20,9 @@ Goal: many development commits and CI checks, **one automatic production deploym
 - La protezione `main` deve richiedere il check `Context sync` per bloccare realmente PR incomplete; senza required status check il fallimento è solo segnalato. Non aggirare la regola con un merge manuale.
 - Questa policy vale anche quando il lavoro viene svolto da assistenti/agent: **chi scrive il codice aggiorna la piramide**, non l'utente.
 
+## Asset visivi: audit obbligatorio
+- Ogni PR che aggiunge o cambia un asset visivo (SVG/PNG, modelli 3D, varianti di torri/mura/porte, renderer di cantiere, danno o cutaway) esegue l'audit del Lab (`node qa/asset-audit.mjs`), rivede i fogli provini e aggiorna `qa/asset-audit-baseline.json` dopo la revisione. Procedura completa: [docs/ASSET-LAB-AUDIT.md](docs/ASSET-LAB-AUDIT.md).
+
 ## Product context / continuity
 - Before estimating scope or starting implementation, read [docs/context/README.md](docs/context/README.md) and follow its links to vision, roadmap, branch-specific status, decisions, and subsystem backlog. Verify the live branch/HEAD and actual source before declaring a feature complete.
 - Preserve the pyramid in the same PR whenever priorities, implementation status, architectural contracts or design decisions change; keep proposals distinct from code, and code distinct from executed tests.

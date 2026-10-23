@@ -286,4 +286,5 @@ function simulationFrame(now){
     requestAnimationFrame(simulationFrame);
   }
 }
-requestAnimationFrame(simulationFrame);
+// Asset Lab sandbox: no match runs — no clock, no simulation; the Lab asks for each draw itself.
+if(!window.__CONQUER_ASSET_LAB__)requestAnimationFrame(simulationFrame);

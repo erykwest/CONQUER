@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## UX/QA — Asset Lab come motore di audit (23/10/2026)
+
+- **IN CORSO in `feat/asset-lab-audit`:** stati delle fortificazioni nel Lab (cantiere, danno, cutaway), audit automatico di ogni asset con baseline e deroghe, runner e CI, accesso diretto `/lab` senza partita. Chiude il residuo «fasi di danno non esposte nel Lab» della voce del 23/10 sotto.
+- **APERTO — trovato dall'audit, da correggere nel gioco:**
+  - **Cantiere non progressivo:** torri quadrate, mura, palizzate, porte e sezione costruita mostrano lo stesso cantiere a 25/50/75% (`cantiere-progressivo`, 26 avvisi). La muratura dovrebbe salire con `constructionProgress`.
+  - **Danno al portone (regressione di #76):** «portone incrinato» e «portone sfondato» non si vedono più su nessuna porta (`danno-visibile`); prima di #76 lo sfondato era visibile sulle porte in pietra. Le nuove ante animate devono mostrare l'integrità del portone.
+  - **Legno con rendering software:** con SwiftShader forzato il legno danneggiato o in costruzione scompare (riprodotto in Chromium headless); verificare il percorso di disegno su macchine senza GPU.
+- **Residui dell'audit:** gli schemi (case, pozzo, campi, strade, fiumi, foresta, rilievo) restano non-gioco (`render-del-gioco`); ponti, levatoi, fossati, terrapieni non ancora nella sandbox.
+
 ## Igiene Git — esito e finalizzazione (23/10/2026)
 
 - Il run [#39982707805](https://github.com/erykwest/CONQUER/actions/runs/39982707805) ha eliminato **otto ref** con successo; il secondo trigger pulisce anche le due branch tecniche dell'operazione stessa (la seconda soltanto se GitHub conferma la PR merged con SHA uguale alla HEAD remota). **La rimozione effettiva delle ultime due va verificata sul run della PR successiva.** Nessuna modifica alle feature.
