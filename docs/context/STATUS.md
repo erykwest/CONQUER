@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## Asset Lab — motore di audit visivo, stati delle fortificazioni, accesso `/lab` (branch `feat/asset-lab-audit` da `main` `518e830`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** `src/settlement-asset-stage.js` (solo con `?assetlab=1`) monta una variante della galleria da sola e cattura il render 2.5D del gioco con il terreno rimosso, negli stati intatta, cantiere 25/50/75%, ogni fase di danno di `galleryPhases`, cutaway. Catture ripetibili: seed fisso, giorno, sole, `performance.now` e `crypto.randomUUID` fermati durante la cattura, macerie assestate con `ConquerSiege.restore`.
+- **Lab:** 29 fortificazioni (22 anche in 3D, 7 in legno solo 2.5D); barra degli stati nell'ispettore; rotazione 15° per le mesh e 90° (viste della camera) per le catture. `/lab` apre direttamente il Lab; la sandbox non avvia più il ciclo di simulazione (nessuna partita).
+- **Audit (`src/asset-audit.js`, `ConquerAssetAudit`):** 456 render di 227 asset con controlli automatici, firma 12×12, confronto con `qa/asset-audit-baseline.json` (nuovi/cambiati/spariti) e deroghe; pulsante «Audit» con elenco cliccabile; runner `qa/asset-audit.mjs` con report e fogli provini. Procedura: [ASSET-LAB-AUDIT](../ASSET-LAB-AUDIT.md).
+- **Esito in locale (Chromium headless, LF):** 456 render, **0 errori**, 49 avvisi, 0 nuovi e 0 cambiati in due giri consecutivi dopo la baseline (~70 s). `qa/asset-catalog-regression.cjs` e `qa/asset-catalog-browser.mjs` **PASS**. Un asset aggiunto per prova risulta «nuovo». CI della PR #82 **PASS** 7/7 su `5be381d`; l'audit in CI (Linux) dà 0 errori, 49 avvisi e 11 «cambiati» per la rasterizzazione diversa dalla baseline generata su Windows (non bloccanti).
+- **Riscontri sul gioco (avvisi, non corretti qui):** cantieri identici a 25/50/75% (si muove solo la barra; avanzano solo le torri rotonde); con SwiftShader forzato il legno danneggiato o in costruzione non viene disegnato. **Regressione di #76 (Portoni) colta dall'audit dopo il rebase su `main` `518e830`:** «portone incrinato» e «portone sfondato» non si vedono più su nessuna porta (10 pixel diversi dall'intatta sulle porte in pietra, 0 sulla porta di legno); prima di #76 il portone sfondato era visibile sulle porte in pietra.
+- **Baseline:** rigenerata dopo la revisione dei fogli su `main` con #76 (drappi, torce, ante nuove); soglia «cambiato» 0,01 perché le catture sono deterministiche.
+
 ## Follow-up pulizia branch — 23/10/2026
 
 - [GitHub Actions cleanup #39982707805](https://github.com/erykwest/CONQUER/actions/runs/39982707805) **SUCCESS**: otto branch eliminati e assenza verificata tramite elenco remoto. La PR [#84](https://github.com/erykwest/CONQUER/pull/84) è merge `7f7cfbe5`.
