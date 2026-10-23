@@ -23,6 +23,29 @@ function makePlacementPreview(q,angle=0){
   }
   return null;
 }
+// Road magnet for gates: the centre lands on the nearest road centreline and the passage
+// turns along the road, so the gate sits over it without cutting the way.
+function gateRoadSnap(p){
+  const radius=Math.max(1.2,linearMagnetRadius());let best=null;
+  for(const r of roadList(false)){
+    if(!r.a||!r.b||dist(r.a,r.b)<.05)continue;
+    const q=closestPointOnSegment(p,r.a,r.b),d=dist(p,q);
+    if(d<=radius&&(!best||d<best.d))best={d,point:q,road:r};
+  }
+  if(!best)return null;
+  const r=best.road;
+  return{point:{x:best.point.x,y:best.point.y},axis:snapStructureAngle(Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)),roadId:r.id};
+}
+// Orientation while the second click is pending: a locked angle wins; a road-snapped gate
+// keeps its passage on the road and only chooses which mouth faces out.
+function orientedDraftAngle(p){
+  const d=State.draft;
+  if(Number.isFinite(d?.lockedAngle))return d.lockedAngle;
+  const free=placementAngle(d.center,p);
+  if(!Number.isFinite(d?.roadAxis))return free;
+  const off=x=>Math.abs(Math.atan2(Math.sin(free-x),Math.cos(free-x)));
+  return snapStructureAngle(off(d.roadAxis)<=off(d.roadAxis+Math.PI)?d.roadAxis:d.roadAxis+Math.PI);
+}
 function commitOrientedPlacement(center,angle){
   const spec=orientedToolSpec();if(!spec)return false;
   const snap=spec.type==='tower'?{

@@ -1452,7 +1452,9 @@
     for(const storm of combat.storms||[]){
       if(storm.kind!=='ram'||storm.done)continue;
       const gate=State.structures.find(s=>s.id===storm.gateId);
-      if(!gate||window.ConquerSiege?.doorStage(gate)==='broken'){breakIn(storm);continue}
+      // A lowered portcullis is battered first; the way is open with the door broken and no grate down.
+      const breached=g=>window.ConquerSiege?.gateBreached?window.ConquerSiege.gateBreached(g):window.ConquerSiege?.doorStage(g)==='broken';
+      if(!gate||breached(gate)){breakIn(storm);continue}
       const manned=ramCrew(storm).filter(c=>c.post&&!c.e.engaged&&!c.e.legs?.length&&Math.hypot(c.post.x-c.e.x,c.post.y-c.e.y)<.3);
       storm.manned=manned.length;
       if(manned.length<2)continue;
@@ -1460,7 +1462,7 @@
       if(!(before<RAM_BLOW&&after>=RAM_BLOW)&&!(after<before&&before<RAM_BLOW))continue;
       const out=window.ConquerSiege?.attackStructure(gate.id,'ram',manned.length*.5,'door');
       storm.blows=(storm.blows||0)+1;
-      if(out?.destroyed||window.ConquerSiege?.doorStage(gate)==='broken')breakIn(storm);
+      if((out?.destroyed&&out.part==='door'&&!window.ConquerGates?.portcullisBlocks?.(gate))||breached(gate))breakIn(storm);
     }
   }
   function breakIn(storm){

@@ -125,6 +125,8 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
 **D-041 · CODICE SU MAIN / limite assedio:** [PR #73](https://github.com/erykwest/CONQUER/pull/73) aggiunge terra di riporto d'assalto compatibile col terrain boolean corrente; **non** implica implementazione di tutte le macchine o condizione di resa per blocco. Requisiti S-01–S-25 rimangono chiusi solo con prova di comportamento di ogni sistema.
 
+**D-042 · DECISIONE ESPLICITA + CODICE SU BRANCH `portoni` (22/10/2026):** la **grata (saracinesca)** è uno **strato difensivo separato**, non un bonus di resistenza della porta. Estende D-032: il portone in pietra con grata ha tre durabilità indipendenti (torre-porta `core`, grata `portcullis` 120 HP, porta `door`). Una grata abbassata assorbe i colpi diretti alla porta (ariete, macchine) finché non è distrutta; il **fuoco** la attraversa e colpisce la porta. Abbassata sbarra il passaggio anche a porta aperta o sfondata; distrutta resta piegata e mezza alzata, non sbarra nulla e va riparata. L'accesso è violato solo con porta sfondata **e** nessuna grata abbassata (`gateBreached`).
+
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
 ## Conflitti decisionali da risolvere esplicitamente
