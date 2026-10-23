@@ -46,6 +46,9 @@ People and CANS (`src/settlement-events-people.js`, `window.ConquerEventPeople`)
 
 Leisure catalog (24 models): ![catalog](leisure-catalog.png) · arena views: ![arena](arena-views.png)
 
+## Builder (present on `events`)
+Palette group **Eventi e svago** with four buttons (`data-event-venue`): Pulpito (`streetSpot`, 6 wood, 0.5 d), Palco (`stage`, 24 wood + 10 gold, 2 d), Spiazzo eventi (`festivalGround`, free, no building site — a reservation), Arena (`arenaLot`, 160 wood + 80 gold, 12 d). Two-click oriented placement like the other point buildings (centre, then rotation), the shared placement preflight (whitezone, flat terrace, collisions; auto houses are cleared). Inspector: stage dressing (artisti / annunci); festival ground setup (giostra, torneo, circo, sagra, accampamento, teatro) with **Avvia evento** / **Chiudi evento**: `preparing` (0.25 game day, props arrive one after another) → `active` → `clearing` (0.15 day) → `idle`; rotation. Venues and event state are saved with the game. QA `qa/events-builder-regression.cjs`.
+
 ## Modules to integrate (future implementation)
 1. Venue registry and placement validation / occupancy reservations.
 2. Event catalog with venue compatibility, capacity and resource hooks.

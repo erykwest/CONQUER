@@ -288,8 +288,9 @@
   function draw(){
     if(!E()||typeof State==='undefined')return;
     const t=tick();
+    E().tickEvents?.();                            // festival grounds: setting up / clearing on the game clock
     for(const s of State.structures||[]){
-      if(!E().is(s))continue;
+      if(!E().is(s)||(typeof underConstruction==='function'&&underConstruction(s)))continue;
       let sc=null;
       if(s.venue==='festivalGround'){
         if(s.event?.phase!=='active')continue;

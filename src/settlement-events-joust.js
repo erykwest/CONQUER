@@ -202,7 +202,7 @@
   }
   function draw(){
     if(!E()||typeof State==='undefined')return;
-    const venues=(State.structures||[]).filter(isJoust);
+    const venues=(State.structures||[]).filter(s=>isJoust(s)&&!(typeof underConstruction==='function'&&underConstruction(s)));
     const t=tick();
     if(!venues.length)return;
     for(const s of venues)drawVenue(s,t);

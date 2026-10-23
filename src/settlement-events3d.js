@@ -407,5 +407,87 @@
     }
     return true;
   }
-  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld};
+  // ---------- Builder: venues as placeable structures
+  // The festival ground is a reservation, not a building (docs/events): no materials, no
+  // building site. Podium, stage and arena are timber works with a short building site.
+  const BUILD={
+    streetSpot:{name:'Pulpito',cost:{wood:6},days:.5},
+    stage:{name:'Palco',cost:{wood:24,gold:10},days:2},
+    festivalGround:{name:'Spiazzo eventi',cost:{},days:0},
+    arenaLot:{name:'Arena',cost:{wood:160,gold:80},days:12}
+  };
+  const SETUP_NAMES={joust:'Giostra',tourney:'Torneo',circus:'Circo',feast:'Sagra',camp:'Accampamento',theatre:'Teatro'};
+  const PHASE_NAMES={idle:'libero',preparing:'allestimento',active:'in corso',clearing:'smontaggio'};
+  const PREPARE_DAYS=.25,CLEAR_DAYS=.15;          // game days to set up / clear a festival ground
+  function make(venue,opts={}){
+    const {w,h}=VENUES[venue];
+    const s={type:'eventVenue',venue,w,h,shape:'rect',functions:[]};
+    if(venue==='stage')s.dressing=opts.dressing==='herald'?'herald':'players';
+    if(venue==='festivalGround')s.event={setup:'joust',phase:'idle',progress:0};
+    return s;
+  }
+  function label(s){
+    const b=BUILD[s.venue],{w,h}=sizeOf(s);let t=b.name+' · '+w+'×'+h+'U';
+    if(s.venue==='stage')t+=' · '+(s.dressing==='herald'?'annunci':'artisti di strada');
+    if(s.venue==='festivalGround'&&s.event)t+=' · '+SETUP_NAMES[s.event.setup]+' · '+PHASE_NAMES[s.event.phase];
+    return t;
+  }
+  const cost=s=>({...(BUILD[s.venue]?.cost||{})});
+  const buildDays=s=>BUILD[s.venue]?.days||0;
+  // Lifecycle of the festival grounds on the game clock: preparing -> active, clearing -> idle;
+  // the static scene is refreshed only when the number of props on the ground changes.
+  function tickEvents(){
+    if(typeof State==='undefined')return;
+    const day=State.clock?.day||0;let changed=false;
+    for(const s of State.structures||[]){
+      if(!is(s)||s.venue!=='festivalGround'||!s.event)continue;
+      const ev=s.event,before=setupItems(s).length;
+      if(ev.phase==='preparing'){
+        ev.progress=Math.min(1,(day-(ev.since??day))/PREPARE_DAYS);
+        if(ev.progress>=1){ev.phase='active';ev.progress=1;ev.since=day}
+      }else if(ev.phase==='clearing'){
+        ev.progress=Math.min(1,(day-(ev.since??day))/CLEAR_DAYS);
+        if(ev.progress>=1){ev.phase='idle';ev.progress=0;ev.since=day}
+      }
+      if(setupItems(s).length!==before)changed=true;
+    }
+    if(changed)refresh();
+  }
+  function refresh(){
+    if(typeof invalidateSceneCache==='function')invalidateSceneCache();
+    window.ConquerWorld3D?.invalidate?.();
+  }
+  function setEvent(s,patch){
+    const ev=s.event||(s.event={setup:'joust',phase:'idle',progress:0});
+    Object.assign(ev,patch);
+    refresh();
+  }
+  // Inspector: stage dressing, festival-ground setup and start / stop, rotation.
+  function panelHtml(s){
+    let html='';
+    if(s.venue==='stage'){
+      html+='<div class="slot"><div class="slot-label">Allestimento del palco</div><div class="grid">'+
+        [['players','Artisti di strada'],['herald','Annunci pubblici']].map(([k,l])=>'<button data-event-dressing="'+k+'" class="'+((s.dressing||'players')===k?'active':'')+'">'+l+'</button>').join('')+'</div></div>';
+    }
+    if(s.venue==='festivalGround'){
+      const ev=s.event||{setup:'joust',phase:'idle'},busy=ev.phase!=='idle';
+      html+='<div class="slot"><div class="slot-label">Evento · '+PHASE_NAMES[ev.phase]+(ev.phase==='preparing'||ev.phase==='clearing'?' '+Math.round((ev.progress||0)*100)+'%':'')+'</div><div class="grid">'+
+        setupsFor(s).map(k=>'<button data-event-setup="'+k+'" class="'+(ev.setup===k?'active':'')+'" '+(busy?'disabled':'')+'>'+SETUP_NAMES[k]+'</button>').join('')+'</div>'+
+        '<div class="grid"><button data-event-start '+(busy?'disabled':'')+'>Avvia evento</button><button data-event-stop '+(ev.phase==='active'||ev.phase==='preparing'?'':'disabled')+'>Chiudi evento</button></div>'+
+        '<div class="legend">Spiazzo riservato: niente case, campi o edifici. Durante l\'evento gli allestimenti vengono montati e poi smontati.</div></div>';
+    }
+    const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
+    html+='<div class="slot"><div class="slot-label">Rotazione · '+deg+'°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>';
+    return html;
+  }
+  function bindPanel(root,s){
+    const done=()=>{if(typeof draw==='function')draw();if(typeof renderFunctionPanel==='function')renderFunctionPanel();if(typeof saveLocal==='function')saveLocal()};
+    root.querySelectorAll('[data-event-dressing]').forEach(b=>b.onclick=()=>{s.dressing=b.dataset.eventDressing;refresh();done()});
+    root.querySelectorAll('[data-event-setup]').forEach(b=>b.onclick=()=>{setEvent(s,{setup:b.dataset.eventSetup});done()});
+    root.querySelector('[data-event-start]')?.addEventListener('click',()=>{setEvent(s,{phase:'preparing',progress:0,since:State.clock?.day||0});done()});
+    root.querySelector('[data-event-stop]')?.addEventListener('click',()=>{setEvent(s,{phase:'clearing',progress:0,since:State.clock?.day||0});done()});
+    root.querySelectorAll('[data-point-rotate]').forEach(b=>b.onclick=()=>{if(typeof rotatePointStructure==='function')rotatePointStructure(s,Number(b.dataset.pointRotate)||1);refresh();done()});
+  }
+  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,BUILD,SETUP_NAMES,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld,
+    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel};
 })();
