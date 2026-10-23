@@ -1,10 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
-## UX — Asset Lab / rotazione viewer e categorizzazione (22/10/2026)
+## UX — Asset Lab / catalogo completo (23/10/2026)
 
-- **IN CORSO in `fix/asset-lab-rotation-and-components`:** viewer a destra con comandi manuali di ±15° per modelli 3D e anteprime native animate; nascondere i comandi per PNG/SVG, schemi 2D e figure piane. QA statiche + browser per angolo effettivo e reversibilità; non segnare come rilasciato prima della CI e del merge.
-- **Revisione tassonomia:** le texture architettoniche isolate non sono fortificazioni complete. Rimuovere i 13 schemi illustrativi di fortificazioni dal catalogo; mantenere i file realmente presenti nella nuova categoria «Componenti». Non modificare le strutture generate dal Builder.
-- **Residuo non incluso:** un futuro catalogo di fortificazioni complete richiede miniature di strutture **effettivamente montate** dal Builder, non un collage di sottopezzi.
+- **IN CORSO in `feat/asset-lab-complete-catalog`:** fortificazioni in pietra montate dal motore di gioco (sandbox `index.html?assetlab=1`, `ConquerSiegePreview.assetMesh`), 7 animazioni di lavoro, manifest dei file generato con i set di rotazione, ricerca senza «undefined». Chiude il residuo del 22/10 sulle «fortificazioni effettivamente montate». Non segnare come rilasciato prima della CI e del merge.
+- **Residui aperti:** (1) varianti in legno (torri, porta lignea, palizzate) senza volume 3D: servono una mesh `ConquerCastle3D` o una cattura 2.5D isolata; (2) fasi di danno della galleria distruzione (danneggiata, crollo, distrutta) non ancora esposte nel Lab; (3) case, pozzo, campi, strade, fiumi restano SCHEMA: valutare la stessa sandbox con i renderer urbani; (4) ponti, levatoi, fossati e terrapieni non catalogati.
+
+## UX — Asset Lab / rotazione viewer e categorizzazione (integrato su main tramite #80, 22/10/2026)
+
+- **FATTO:** viewer a destra con comandi manuali di ±15° per modelli 3D e anteprime native animate; comandi nascosti per PNG/SVG, schemi 2D e figure piane. QA statiche + browser per angolo effettivo e reversibilità.
+- **Revisione tassonomia:** le texture architettoniche isolate non sono fortificazioni complete. Rimossi i 13 schemi illustrativi di fortificazioni; file reali nella categoria «Componenti». Strutture del Builder invariate.
+- **Residuo (ripreso il 23/10):** un catalogo di fortificazioni complete richiede strutture **effettivamente montate** dal gioco, non un collage di sottopezzi.
 
 ## UX — Asset Lab / catalogo visivo (integrato su main tramite #79, 22/10/2026)
 
