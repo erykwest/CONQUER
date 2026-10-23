@@ -291,7 +291,7 @@
   }
   // Labels on/off (contact sheets capture each cell alone, without them).
   function setGalleryLabels(on){if(!on)galleryLabels=null}
-  window.ConquerSiegePreview={start,stop,at,play,gallery,setGalleryLabels,GALLERY,galleryStructure,assetMesh,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G,blocked:run.blocked}};
+  window.ConquerSiegePreview={start,stop,at,play,gallery,setGalleryLabels,GALLERY,galleryStructure,galleryPhases:phases,assetMesh,state:()=>run&&{kind:run.kind,t:time(),G:run.target.G,blocked:run.blocked}};
   const q=new URLSearchParams(location.search),wanted=q.get('siege');
   if(wanted)window.addEventListener('load',()=>setTimeout(()=>{
     try{

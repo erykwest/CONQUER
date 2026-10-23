@@ -67,6 +67,22 @@ header h1{font-size:18px;white-space:nowrap}
 .asset-rotate button:hover{background:#725332;border-color:var(--accent)}
 #assetRotationValue{min-width:45px;text-align:center;font-variant-numeric:tabular-nums;color:#edc98f;font-size:13px}
 #assetBuilderLink{display:inline-block;margin-top:6px}
+.asset-states{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:0 0 10px}
+.asset-states[hidden]{display:none}
+.asset-states span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 2px 0 6px}
+.asset-states span:first-child{margin-left:0}
+.asset-states button{font:inherit;font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid var(--line);background:#3a3127;color:var(--text);cursor:pointer}
+.asset-states button[aria-pressed="true"]{background:#725332;border-color:var(--accent)}
+#assetDetailPreview img.engine-capture{object-fit:contain;image-rendering:auto}
+.asset-audit{border-top:1px solid var(--line);padding:12px 14px}
+.asset-audit h2{margin:0 0 4px}
+#assetAuditList{display:flex;flex-direction:column;gap:3px;max-height:240px;overflow-y:auto}
+.audit-row{text-align:left;font:inherit;font-size:11px;padding:5px 8px;border-radius:5px;border:1px solid var(--line);background:#30291f;color:var(--text);cursor:pointer;border-left-width:4px}
+.audit-row[data-status="fail"],.asset-card[data-audit="fail"]{border-left-color:#d65c5c}
+.audit-row[data-status="warn"],.asset-card[data-audit="warn"]{border-left-color:#d6a15c}
+.audit-row[data-status="new"],.asset-card[data-audit="new"]{border-left-color:#5f8fd6}
+.audit-row[data-status="changed"],.asset-card[data-audit="changed"]{border-left-color:#c77ad6}
+.asset-card[data-audit]{border-left-width:4px}
 .symbol-preview{fill:#d9b77c}
 body.asset-catalog-static #c,body.asset-catalog-static .note{display:none}
 body.asset-catalog-static #labLegacyControls{display:none}
@@ -137,14 +153,21 @@ body.asset-catalog-static #labLegacyControls{display:none}
         <option value="symbol">Simboli araldici</option>
       </select>
       <button id="assetReset" type="button">Azzera</button>
+      <button id="assetAuditRun" type="button" title="Verifica ogni asset in ogni stato con i render del Lab">Audit</button>
       <span id="assetCount" aria-live="polite"></span>
       <span id="assetEngineStatus" aria-live="polite"></span>
     </div>
     <div id="assetGallery" tabindex="0" aria-label="Griglia asset"></div>
+    <section id="assetAudit" class="asset-audit" aria-label="Audit visivo" hidden>
+      <h2>Audit visivo</h2>
+      <p id="assetAuditSummary" aria-live="polite"></p>
+      <div id="assetAuditList"></div>
+    </section>
   </section>
   <aside id="assetDetail" class="asset-inspector" aria-label="Anteprima asset" hidden>
     <h2 id="assetDetailName"></h2>
     <div id="assetDetailMeta"></div>
+    <div id="assetStateBar" class="asset-states" role="group" aria-label="Stato della struttura" hidden></div>
     <div id="assetDetailPreview"></div>
     <div id="assetAnimationPanel" hidden></div>
     <div id="assetRotationControls" class="asset-rotate" role="group" aria-label="Rotazione del modello 3D" hidden>
@@ -504,6 +527,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/assets/scatter-model.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>
-<script src="./src/asset-catalog.js?v=asset-lab-5"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-7"></script>
+<script src="./src/asset-audit.js?v=asset-lab-7"></script>
 </body>
 </html>

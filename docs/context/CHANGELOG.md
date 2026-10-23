@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-23 — Asset Lab: motore di audit visivo (branch `feat/asset-lab-audit`)
+
+- Il Lab diventa il motore di audit: `ConquerAssetStage` cattura ogni fortificazione negli stati di cantiere, danno e cutaway con il render del gioco; `ConquerAssetAudit` controlla tutti gli asset, confronta con la baseline revisionata e gestisce le deroghe; `qa/asset-audit.mjs` produce report e fogli provini anche in CI.
+- `/lab` apre il Lab direttamente; la sandbox `?assetlab=1` non avvia la simulazione e usa un mondo fisso.
+- Nuova procedura [ASSET-LAB-AUDIT](../ASSET-LAB-AUDIT.md) e regola in `AGENTS.md`. Riscontri del primo audit registrati nel BACKLOG (cantiere non progressivo, danno al portone, legno con SwiftShader). DECISIONS: D-LAB-02. ROADMAP invariata.
+
 ## 2026-10-23 — Asset Lab: catalogo completo (branch `feat/asset-lab-complete-catalog`)
 
 - Fortificazioni in pietra reintrodotte con geometria reale: il Lab apre il gioco in sandbox (`index.html?assetlab=1`, senza salvataggi, cloud né telemetria) e chiede a `ConquerSiegePreview.assetMesh` le mesh `ConquerCastle3D` di ogni variante della galleria distruzione. Le 7 varianti in legno sono escluse e dichiarate.

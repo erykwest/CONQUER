@@ -7,6 +7,8 @@
 
 **D-LAB-01 · CODICE su branch `feat/asset-lab-complete-catalog`:** il Lab non duplica la geometria del castello. Per le strutture che dipendono dall'intero motore (terreno, impronte, merli, tetti) carica il gioco in un iframe nascosto `index.html?assetlab=1`: in questa modalità `window.__CONQUER_ASSET_LAB__` blocca `saveLocal`, legge uno slot vuoto, salta Supabase e telemetria remota. Le varianti mostrate sono quelle di `ConquerSiegePreview.GALLERY`; le nuove varianti si aggiungono lì, non nel Lab.
 
+**D-LAB-02 · CODICE su branch `feat/asset-lab-audit`:** l'audit visivo usa i renderer del Lab e del gioco, mai un renderer parallelo. Gli stati delle fortificazioni sono quelli del gioco (`constructionProgress`, fasi di `galleryPhases` via `ConquerSiege`, `structureCutaway`). La baseline `qa/asset-audit-baseline.json` si aggiorna solo dopo la revisione dei fogli provini; i problemi accettati si registrano come deroghe con motivo, non abbassando le soglie. In sandbox `?assetlab=1` non gira la simulazione e il seed è fisso.
+
 ## Aggiornamento clay (19/10/2026) — solo design, non codice
 
 **D-CLAY-01 · DESIGN:** introdurre Argilla (`clay`) come materia prima e mattoni cotti (`brick`) come materiale alternativo alla pietra per costruzioni murarie e fortificazioni; variante rosso/marrone della muratura esistente e **durabilità massima 80%** rispetto alla pietra, senza duplicare geometrie o sistemi di combattimento.

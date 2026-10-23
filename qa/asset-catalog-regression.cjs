@@ -57,7 +57,7 @@ assert(!source.includes("['tower-square'")&&!/\['(wall|gate|palisade|moat)','/.t
 assert(source.includes('index.html?assetlab=1')&&source.includes('ConquerSiegePreview.assetMesh'),'Fortifications must come from the engine sandbox');
 const preview=read('src/settlement-siege-preview.js');
 assert(/function assetMesh\(spec\)/.test(preview)&&preview.includes('ConquerCastle3D.worldMeshes()'),'assetMesh must mesh with ConquerCastle3D');
-assert(/GALLERY,galleryStructure,assetMesh/.test(preview),'Gallery variants must be exported for the Lab');
+assert(/window\.ConquerSiegePreview=\{[^}]*GALLERY,galleryStructure,[^}]*assetMesh/.test(preview),'Gallery variants must be exported for the Lab');
 // The sandbox never touches the player's save, the cloud or telemetry.
 const index=read('index.html'),persistence=read('src/settlement-app-persistence.js'),core=read('src/settlement-core.js');
 assert(index.includes("window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1'"));
@@ -80,6 +80,30 @@ for(const expression of ['IntersectionObserver','aria-selected','aria-pressed','
   assert(source.includes(expression),'Missing filtering / accessibility / rendering contract '+expression);
 }
 assert(/filter\(Boolean\)/.test(source.match(/const searchText=.*$/m)[0]),'Search must skip missing fields');
+
+// Audit engine: the Lab stages every fortification state in the idle sandbox and audits what it shows.
+const stage=read('src/settlement-asset-stage.js'),audit=read('src/asset-audit.js'),simulation=read('src/settlement-app-simulation.js');
+assert(stage.includes('if(!window.__CONQUER_ASSET_LAB__)return;'),'Asset stage must only exist in the sandbox');
+assert(index.indexOf('settlement-asset-stage.js')>index.indexOf('settlement-siege-preview.js'),'Stage loads after the gallery variants');
+for(const s of ['build-','damage-','cutaway','galleryPhases','structureCutaway','constructionProgress'])assert(stage.includes(s),'Stage state '+s);
+assert(stage.includes("performance.now=()=>FROZEN_MS")&&stage.includes('delete performance.now'),'Captures freeze the animation clock and restore it');
+assert(stage.includes("id:'assetlab-'+id")&&stage.includes('delete crypto.randomUUID'),'Captures use stable ids for rubble seeds');
+assert(preview.includes('galleryPhases:phases'),'Damage phases must come from the destruction gallery');
+assert(/if\(!window\.__CONQUER_ASSET_LAB__\)requestAnimationFrame\(simulationFrame\);/.test(simulation),'Sandbox must not run a match');
+assert(/if\(window\.__CONQUER_ASSET_LAB__\)return 20261023;/.test(core),'Sandbox world must be fixed');
+assert(read('lab/index.html').includes("location.replace('../figures-lab.html'"),'/lab must open the Lab directly');
+assert(html.indexOf('./src/asset-audit.js')>html.indexOf('./src/asset-catalog.js'),'Audit loads after the catalogue');
+for(const id of ['assetStateBar','assetAuditRun','assetAudit','assetAuditSummary','assetAuditList'])assert(html.includes('id="'+id+'"'),'Missing audit UI '+id);
+for(const s of ['catalog','inspect','run','sheet','baseline'])assert(new RegExp('window\\.ConquerAssetAudit=\\{[^}]*\\b'+s+'\\b').test(audit),'Audit API '+s);
+for(const c of ['visibile','avanzamento-cantiere','piani-crollati','distrutta-rovina','cutaway-attivo','cantiere-progressivo',
+  'danno-visibile','sagoma-conservata','altezza-per-livello','mesh-finita','fotogrammi-rotazione'])assert(audit.includes("'"+c+"'"),'Audit check '+c);
+const baseline=JSON.parse(read('qa/asset-audit-baseline.json'));
+const entries=Object.entries(baseline.entries||{});
+assert(entries.length>=400,'Audit baseline must cover every render: '+entries.length);
+assert(entries.every(([k,v])=>/\|/.test(k)&&Array.isArray(v.signature)&&v.signature.length===144),'Baseline entries: id|state -> 12x12 signature');
+assert(entries.some(([k])=>/^castle:.+\|damage-/.test(k))&&entries.some(([k])=>/^castle:.+\|cutaway$/.test(k))&&entries.some(([k])=>/^castle:.+\|build-50$/.test(k)),
+  'Baseline must hold construction, damage and cutaway states');
+assert(baseline.waivers&&typeof baseline.waivers==='object','Baseline keeps its waivers');
 assert(source.includes("SCHEMA"),'Parametric diagrams must be explicitly labelled');
 console.log('Asset Lab regression PASS: '+manifest.length+' files, '+Object.keys(rotations).length+' rotation sets, '+
   workTools.length+' work tools, registries, engine sandbox and UI contracts.');

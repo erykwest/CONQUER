@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## Asset Lab — motore di audit visivo, stati delle fortificazioni, accesso `/lab` (branch `feat/asset-lab-audit`, base `feat/asset-lab-complete-catalog`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`, base PR #81 non ancora fusa):** `src/settlement-asset-stage.js` (solo con `?assetlab=1`) monta una variante della galleria da sola e cattura il render 2.5D del gioco con il terreno rimosso, negli stati intatta, cantiere 25/50/75%, ogni fase di danno di `galleryPhases`, cutaway. Catture ripetibili: seed fisso, giorno, sole, `performance.now` e `crypto.randomUUID` fermati durante la cattura, macerie assestate con `ConquerSiege.restore`.
+- **Lab:** 29 fortificazioni (22 anche in 3D, 7 in legno solo 2.5D); barra degli stati nell'ispettore; rotazione 15° per le mesh e 90° (viste della camera) per le catture. `/lab` apre direttamente il Lab; la sandbox non avvia più il ciclo di simulazione (nessuna partita).
+- **Audit (`src/asset-audit.js`, `ConquerAssetAudit`):** 456 render di 227 asset con controlli automatici, firma 12×12, confronto con `qa/asset-audit-baseline.json` (nuovi/cambiati/spariti) e deroghe; pulsante «Audit» con elenco cliccabile; runner `qa/asset-audit.mjs` con report e fogli provini. Procedura: [ASSET-LAB-AUDIT](../ASSET-LAB-AUDIT.md).
+- **Esito in locale (Chromium headless, LF):** 456 render, **0 errori**, 45 avvisi, 0 nuovi e 0 cambiati in due giri consecutivi dopo la baseline (~70 s). `qa/asset-catalog-regression.cjs` e `qa/asset-catalog-browser.mjs` **PASS**. Un asset aggiunto per prova risulta «nuovo». **CI della PR non ancora verificata in questa nota.**
+- **Riscontri sul gioco (avvisi, non corretti qui):** 26 cantieri identici a 25/50/75% (si muove solo la barra; avanzano solo le torri rotonde); il danno al portone è quasi invisibile sulle porte in pietra (~20 pixel) e nullo sulla porta di legno; con SwiftShader forzato il legno danneggiato o in costruzione non viene disegnato.
+
 ## Asset Lab — catalogo completo: fortificazioni dal motore, lavori, manifest generato (branch `feat/asset-lab-complete-catalog`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** categoria **«Fortificazioni»** con 22 strutture in pietra (torri, mura con caditoie/hoardings, sezione costruita, porte) costruite dal gioco stesso: `figures-lab.html` apre in un iframe nascosto `index.html?assetlab=1&renderer=canvas2d` e `ConquerSiegePreview.assetMesh(spec)` monta una sola struttura delle varianti della galleria distruzione (`GALLERY`, ora esportata) e restituisce `ConquerCastle3D.worldMeshes()`. Miniature e inspector ruotabili a 15°, altezza in U nella scheda.
