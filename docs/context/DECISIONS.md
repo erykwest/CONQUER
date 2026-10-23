@@ -1,11 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+> **Stato codice riconciliato al 23/10/2026:** D-LAB-01 e D-042 sono implementati in `main`. Le specifiche e decisioni sono invariate; cambia soltanto il riferimento di integrazione. [Audit](AUDIT-2026-10-23.md).
+
+
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
 
 ## Asset Lab (23/10/2026)
 
-**D-LAB-01 · CODICE su branch `feat/asset-lab-complete-catalog`:** il Lab non duplica la geometria del castello. Per le strutture che dipendono dall'intero motore (terreno, impronte, merli, tetti) carica il gioco in un iframe nascosto `index.html?assetlab=1`: in questa modalità `window.__CONQUER_ASSET_LAB__` blocca `saveLocal`, legge uno slot vuoto, salta Supabase e telemetria remota. Le varianti mostrate sono quelle di `ConquerSiegePreview.GALLERY`; le nuove varianti si aggiungono lì, non nel Lab.
+**D-LAB-01 · CODICE SU MAIN dopo PR #81 (originariamente branch `feat/asset-lab-complete-catalog`):** il Lab non duplica la geometria del castello. Per le strutture che dipendono dall'intero motore (terreno, impronte, merli, tetti) carica il gioco in un iframe nascosto `index.html?assetlab=1`: in questa modalità `window.__CONQUER_ASSET_LAB__` blocca `saveLocal`, legge uno slot vuoto, salta Supabase e telemetria remota. Le varianti mostrate sono quelle di `ConquerSiegePreview.GALLERY`; le nuove varianti si aggiungono lì, non nel Lab.
 
 **D-LAB-02 · CODICE su branch `feat/asset-lab-audit`:** l'audit visivo usa i renderer del Lab e del gioco, mai un renderer parallelo. Gli stati delle fortificazioni sono quelli del gioco (`constructionProgress`, fasi di `galleryPhases` via `ConquerSiege`, `structureCutaway`). La baseline `qa/asset-audit-baseline.json` si aggiorna solo dopo la revisione dei fogli provini; i problemi accettati si registrano come deroghe con motivo, non abbassando le soglie. In sandbox `?assetlab=1` non gira la simulazione e il seed è fisso.
 
@@ -131,7 +134,7 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
 **D-041 · CODICE SU MAIN / limite assedio:** [PR #73](https://github.com/erykwest/CONQUER/pull/73) aggiunge terra di riporto d'assalto compatibile col terrain boolean corrente; **non** implica implementazione di tutte le macchine o condizione di resa per blocco. Requisiti S-01–S-25 rimangono chiusi solo con prova di comportamento di ogni sistema.
 
-**D-042 · DECISIONE ESPLICITA + CODICE SU BRANCH `portoni` (22/10/2026):** la **grata (saracinesca)** è uno **strato difensivo separato**, non un bonus di resistenza della porta. Estende D-032: il portone in pietra con grata ha tre durabilità indipendenti (torre-porta `core`, grata `portcullis` 120 HP, porta `door`). Una grata abbassata assorbe i colpi diretti alla porta (ariete, macchine) finché non è distrutta; il **fuoco** la attraversa e colpisce la porta. Abbassata sbarra il passaggio anche a porta aperta o sfondata; distrutta resta piegata e mezza alzata, non sbarra nulla e va riparata. L'accesso è violato solo con porta sfondata **e** nessuna grata abbassata (`gateBreached`).
+**D-042 · DECISIONE ESPLICITA + CODICE SU MAIN dopo PR #76 (23/10/2026; originariamente branch `portoni`):** la **grata (saracinesca)** è uno **strato difensivo separato**, non un bonus di resistenza della porta. Estende D-032: il portone in pietra con grata ha tre durabilità indipendenti (torre-porta `core`, grata `portcullis` 120 HP, porta `door`). Una grata abbassata assorbe i colpi diretti alla porta (ariete, macchine) finché non è distrutta; il **fuoco** la attraversa e colpisce la porta. Abbassata sbarra il passaggio anche a porta aperta o sfondata; distrutta resta piegata e mezza alzata, non sbarra nulla e va riparata. L'accesso è violato solo con porta sfondata **e** nessuna grata abbassata (`gateBreached`).
 
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
