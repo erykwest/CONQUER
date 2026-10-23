@@ -6,6 +6,38 @@
 - Colori dell'abbigliamento per classe: L1 grigio/beige, L2 verde/marrone, L3 primari desaturati, L4 primari accesi, condivisi da tuniche e capi in tessuto.
 - Voci nell'Asset Lab e selettore stagione/meteo nel lab animato; nuova regressione `wardrobe`. **CI e merge ancora da verificare.** Invariati ROADMAP e DECISIONS: miglioramento solo visivo, nessun contratto di simulazione toccato.
 
+## 2026-10-23 — Asset Lab: motore di audit visivo (branch `feat/asset-lab-audit`)
+
+- Il Lab diventa il motore di audit: `ConquerAssetStage` cattura ogni fortificazione negli stati di cantiere, danno e cutaway con il render del gioco; `ConquerAssetAudit` controlla tutti gli asset, confronta con la baseline revisionata e gestisce le deroghe; `qa/asset-audit.mjs` produce report e fogli provini anche in CI.
+- `/lab` apre il Lab direttamente; la sandbox `?assetlab=1` non avvia la simulazione e usa un mondo fisso.
+- Nuova procedura [ASSET-LAB-AUDIT](../ASSET-LAB-AUDIT.md) e regola in `AGENTS.md`. Riscontri del primo audit registrati nel BACKLOG (cantiere non progressivo, danno al portone, legno con SwiftShader). DECISIONS: D-LAB-02. ROADMAP invariata.
+## 2026-10-23 — Pulizia Git verificata e finalizzazione
+
+- Workflow [#39982707805](https://github.com/erykwest/CONQUER/actions/runs/39982707805) completato **SUCCESS** e otto branch non più presenti nell'elenco remoto.
+- Aggiornato lo stesso workflow per eliminare anche la branch della prima PR di manutenzione #84 e **autocancellare** la propria branch sorgente solo dopo controllo GitHub PR merged e confronto SHA, evitando di lasciare branch tecniche aggiuntive. Nessun nuovo gameplay o cambiamento di scope; ROADMAP/DECISIONS invariati.
+
+## 2026-10-23 — Workflow per eliminare branch obsolete in modo sicuro
+
+- Ricontrollate tutte le branch remote rispetto a `main`, PR aperte e merge. Pianificata la rimozione di **otto ref** già merge/totalmente assorbiti; i ref con HEAD post-merge, PR aperte o commit esclusivi sono deliberatamente preservati.
+- Aggiunto workflow a trigger unico su merge in `main`, con lista esplicita nome + SHA, controllo PR merge o vera discendenza Git, e confronto HEAD prima di eseguire ogni DELETE. I risultati reali della rimozione devono essere letti nei log GitHub Actions; **questo changelog non anticipa il risultato**.
+- Nessun ref viene cancellato o forzato dal solo aggiornamento documentale; nessuna modifica al gameplay. ROADMAP/DECISIONS invariati.
+
+
+## 2026-10-23 — Nuovo audit main dopo le PR #76 e #79–81
+
+- HEAD `main` `518e830`, **sei commit** successivi al merge documentale #75, quattro PR funzionali **MERGED**: #76 Portoni, #79 Asset Lab unificato, #80 rotazione 3D, #81 22 fortificazioni reali/manifest/lavori. Audit documentato in [AUDIT-2026-10-23](AUDIT-2026-10-23.md).
+- Corrette in `BACKLOG` e `STATUS` le diciture **«solo branch»** diventate false dopo i merge. GATE-01/01b/02/03/04/06 ora MAIN, GATE-05/GATE-07 ancora aperti; Asset Lab #81 MAIN, audit #82 ancora OPEN.
+- Segnalati residui ancora su PR #61 (danni), #77 (montaggio per fasi + case), #78 (Eventi), #82 (audit visuale), #55 (costruttori/ledger), #65 (interni), #72 (cavalieri su `knights`), #18/#16 (draft).
+- **Rischio non riprodotto qui:** #82 segnala, sulla propria branch, portoni danneggiati/sfondati visivamente mancanti dopo #76 e cantieri con 25/50/75% quasi identici: riportati come **test da fare su main**, non come guasto confermato.
+- Riconfermato che **13 core Builder** sono presenti e **10 residui** restano di integrazione; roadmap M0–M5 invariata. CI #76 e #81 verificate PASS sulle rispettive HEAD; nessun nuovo test runtime/browser eseguito per questo audit. Nessuna decisione progettuale nuova.
+
+## 2026-10-23 — Asset Lab: catalogo completo (branch `feat/asset-lab-complete-catalog`)
+
+- Fortificazioni in pietra reintrodotte con geometria reale: il Lab apre il gioco in sandbox (`index.html?assetlab=1`, senza salvataggi, cloud né telemetria) e chiede a `ConquerSiegePreview.assetMesh` le mesh `ConquerCastle3D` di ogni variante della galleria distruzione. Le 7 varianti in legno sono escluse e dichiarate.
+- Aggiunte le 7 animazioni di lavoro; il manifest dei file è generato da `tools/build-asset-manifest.cjs` (controllato in CI) e include i set di rotazione di campo taglialegna e cava.
+- Corretti ricerca («undefined»), codice morto di `renderSchema`, schede della griglia schiacciate. Aggiornati STATUS e BACKLOG; DECISIONS con il contratto della sandbox (D-LAB-01). ROADMAP invariata: strumento DEV, nessun cambio di priorità.
+- Corretto lo stato di #80 in STATUS: era indicato «non ancora `main`» ma è integrato (`bf548ca`).
+
 ## 2026-10-22 — Asset Lab: rotazione ±15° e rimozione pseudo-fortificazioni (branch)
 
 - Su `fix/asset-lab-rotation-and-components`: comandi di rotazione sotto la preview dell'inspector, proiezione 3D orientabile a intervalli di 15°, rotazione delle anteprime native animate e disattivazione del giro automatico su interazione.
@@ -18,6 +50,12 @@
 - Browser Chromium e regressione dedicata **PASS** sulla PR #79; squash merge `f576ac5` in `main`. I diagrammi SCHEMA delle strutture procedurali non certificavano modelli completi, problema affrontato nella nuova iterazione.
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
+
+## 2026-10-22 — Portoni: magnete strade e accessori
+
+- Branch `portoni`: magnete del portone sulle strade, passaggio voltato 3D con ante animate, upgrade grata per il portone in pietra, drappi araldici e torce notturne. Stato, prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026); requisiti GATE-01…06 nel [BACKLOG](BACKLOG.md#portoni--accessori-del-portone-branch-portoni-22102026).
+- Aggiunto il magnete delle strade principali sulle due bocche del portone (GATE-01b).
+- Decisa e implementata la grata come strato difensivo separato con HP propri (D-042, GATE-06); aperto GATE-07 per l'IA d'assedio. ROADMAP invariata.
 
 ## 2026-10-22 — Revisione integrale backlog vs codice main
 

@@ -14,13 +14,62 @@ try{
   await page.waitForFunction(()=>window.ConquerAssetCatalog?.items?.length>150,{timeout:30000});
   const inventory=await page.evaluate(()=>{
     const list=window.ConquerAssetCatalog.items;
-    return{total:list.length,files:list.filter(x=>x.kind==='file').length,
+    return{total:list.length,files:list.filter(x=>x.kind==='file').length,castles:list.filter(x=>x.kind==='castle').length,
       models:list.filter(x=>x.kind==='model').length,
       categories:new Set(list.map(x=>x.category)).size,nav:document.querySelectorAll('#assetCategoryFilters button').length};
   });
   assert.ok(inventory.total>=150&&inventory.files>=36&&inventory.models>=100,JSON.stringify(inventory));
   assert.ok(inventory.categories>=11&&inventory.nav>=11,JSON.stringify(inventory));
-  assert.equal(await page.getByRole('button',{name:'Fortificazioni',exact:true}).count(),0,'Do not advertise incomplete fortress schematics');
+
+  // Fortifications: meshed by the game in the sandbox frame, stone towers / walls / gates.
+  await page.waitForFunction(()=>window.ConquerAssetCatalog.engineReady,{timeout:90000});
+  await page.getByRole('button',{name:'Fortificazioni',exact:true}).click();
+  const castles=await page.evaluate(()=>[...document.querySelectorAll('.asset-card')].map(b=>window.ConquerAssetCatalog.items.find(x=>x.id===b.dataset.id)));
+  assert.ok(castles.length>=15&&castles.every(x=>x.kind==='castle'),'Fortifications must be engine meshes: '+castles.length);
+  for(const family of ['Torri','Mura','Porte'])assert.ok(castles.some(x=>x.family===family),'Missing fortification family '+family);
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('castle:pietra-quadrata-l3'));
+  const castlePixels=await page.locator('#assetDetailPreview canvas').evaluate(c=>{
+    const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let p=3;p<d.length;p+=4)if(d[p])n++;return n});
+  assert.ok(castlePixels>5000,'Castle tower should draw real geometry: '+castlePixels);
+  const castleBefore=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  await page.locator('#assetRotateRight').click();
+  assert.notEqual(await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL()),castleBefore,'Castle meshes must rotate');
+  await page.locator('#assetRotateLeft').click();
+  const heights=await page.evaluate(()=>['l1','l3'].map(l=>window.ConquerAssetCatalog.items.find(x=>x.id==='castle:pietra-quadrata-'+l).format));
+  assert.notEqual(heights[0],heights[1],'Levels must show their own height');
+  // Engine states: construction, damage and cutaway are game captures; wood variants are 2.5D only.
+  assert.ok(castles.some(x=>!x.mesh&&x.spec?.material==='wood'),'Wood fortifications must be listed (2.5D)');
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('castle:pietra-quadrata-l3','damage-crollo-1-piano'));
+  assert.ok(await page.locator('#assetStateBar button[data-state="cutaway"]').count(),'Cutaway state must be offered');
+  assert.equal(await page.locator('#assetStateBar button[aria-pressed="true"]').getAttribute('data-state'),'damage-crollo-1-piano');
+  await page.waitForFunction(()=>{const i=document.querySelector('#assetDetailPreview img.engine-capture');return i&&i.complete&&i.naturalWidth>40});
+  await page.locator('#assetRotateRight').click();
+  assert.equal(await page.locator('#assetRotationValue').textContent(),'90°','Game captures turn by the 90° camera views');
+  await page.locator('#assetStateBar button[data-state="3d"]').click();
+  assert.equal(await page.locator('#assetRotateRight').textContent(),'+15° ↷','3D meshes turn by 15°');
+  // The audit engine answers from the Lab itself.
+  const audit=await page.evaluate(async()=>{
+    const r=await window.ConquerAssetAudit.run({ids:['castle:porta-pietra-l2','model:ConquerCivicModels:church1']});
+    return{renders:r.summary.renders,fail:r.summary.fail,states:r.results.map(x=>x.state)};
+  });
+  assert.ok(audit.renders>=10&&audit.fail===0&&audit.states.includes('cutaway')===false&&audit.states.includes('damage-crollo-1-piano'),JSON.stringify(audit));
+  // The sandbox must not write the player's settlement slot.
+  assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(k=>/settlement|assetlab/.test(k)).length),0,'Sandbox must not save');
+  await page.locator('#assetReset').click();
+
+  // Work animations open the live villager on the right tool.
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('figure:work:chop'));
+  assert.equal(await page.locator('#actions [aria-pressed="true"]').getAttribute('data-action'),'chop');
+  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.items.filter(x=>x.family==='Lavori').length),7);
+  // Rotation sets step through their pre-rendered frames.
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('file:src/assets/economy/stone_quarry.svg'));
+  await page.locator('#assetRotateRight').click();
+  assert.match(await page.locator('#assetDetailPreview img').getAttribute('src'),/stone_quarry_015\.svg$/);
+  // Search only looks at real fields.
+  await page.locator('#assetSearch').fill('undefined');
+  assert.equal(await page.locator('.asset-card').count(),0,'Missing fields must not be searchable');
+  await page.locator('#assetReset').click();
+
   await page.getByRole('button',{name:'Componenti',exact:true}).click();
   const realComponents=await page.evaluate(()=>[...document.querySelectorAll('.asset-card')].map(b=>window.ConquerAssetCatalog.items.find(x=>x.id===b.dataset.id)));
   assert.ok(realComponents.length>=8&&realComponents.every(x=>x.kind==='file'&&x.source.includes('/architecture/')),'Components must contain real architectural texture fragments only');
@@ -62,7 +111,7 @@ try{
   await selected('file:src/assets/architecture/gate_portal.png','asset-catalog-static');
   assert.match(await page.locator('#assetDetailMeta').textContent(),/Componenti/);
   assert.equal(await page.locator('#assetRotationControls:visible').count(),0,'Architecture textures are 2D components');
-  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.items.some(x=>x.id==='procedural:wall')),false,'Fabricated whole fortifications should be gone');
+  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.items.some(x=>x.id==='procedural:wall')),false,'Fabricated whole fortifications should stay gone');
   await selected('procedural:house1','asset-catalog-static');
   assert.ok(await page.locator('#assetBuilderLink:visible').count(),'Parametric asset should link to Builder');
 

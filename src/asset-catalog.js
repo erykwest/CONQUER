@@ -1,5 +1,6 @@
 /* CONQUER visual asset catalogue: native model registries + actual repository art.
- * Source of truth for static art is the checked-in manifest. Models are read at runtime.
+ * Static art comes from the generated manifest (src/asset-manifest.js). Models are read at runtime.
+ * Fortifications are built by the game itself in a sandboxed engine frame (index.html?assetlab=1).
  * Schematic entries are explicitly labelled, never passed off as game renders.
  */
 (function(){
@@ -7,8 +8,8 @@
   const byId=id=>document.getElementById(id);
   const gallery=byId('assetGallery'),filters=byId('assetCategoryFilters'),details=byId('assetDetail');
   if(!gallery||!filters||!details)return;
-  const STATIC_FILES=["src/assets/animals/capra_estesa.svg","src/assets/animals/cavallo_esteso.svg","src/assets/animals/mucca_estesa.svg","src/assets/animals/pecora_estesa.svg","src/assets/architecture/arcade_2.png","src/assets/architecture/arcade_3.png","src/assets/architecture/arrow_slit.png","src/assets/architecture/gate_portal.png","src/assets/architecture/gate_portal_broken.png","src/assets/architecture/gate_portal_damaged.png","src/assets/architecture/gothic_l1.png","src/assets/architecture/gothic_l2.png","src/assets/architecture/gothic_l3.png","src/assets/architecture/tower_door.png","src/assets/bushes/bush_01_tondo.svg","src/assets/bushes/bush_02_globulare.svg","src/assets/bushes/bush_03_stratificato_globulare.svg","src/assets/bushes/bush_04_largo.svg","src/assets/bushes/bush_05_asimmetrico.svg","src/assets/bushes/bush_06_multilobato.svg","src/assets/bushes/bush_07_spinoso.svg","src/assets/economy/logging_camp.svg","src/assets/economy/mine.svg","src/assets/economy/stone_quarry.svg","src/assets/forest/tree_01_tonda.svg","src/assets/forest/tree_02_affusolata.svg","src/assets/forest/tree_03_conica.svg","src/assets/forest/tree_04_ombrello.svg","src/assets/forest/tree_05_goccia.svg","src/assets/forest/tree_06_stratificata.svg","src/assets/forest/tree_07_asimmetrica.svg","src/assets/heraldry/her1.svg","src/assets/heraldry/her2.svg","src/assets/interior/barrel.svg","src/assets/interior/crate.svg","src/assets/tree-svgrepo-com.svg"];
-  const CATEGORY_ORDER=['Tutti','Edifici','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
+  const STATIC_FILES=window.CONQUER_ASSET_FILES||[],ROTATION_SETS=window.CONQUER_ASSET_ROTATIONS||{};
+  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
   const MODEL_SOURCES=[
     {global:'ConquerCivicModels',collection:'models',category:'Edifici',family:'Edifici civili'},
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
@@ -22,6 +23,9 @@
     ['knight','Cavaliere','Truppe','Militari'],['wagon','Carro animato 2D','Veicoli','Carri'],
     ['wagon3d','Carro animato 3D','Veicoli','Carri']
   ];
+  // Work animations: the villager with each tool of settlement-work-anim.js (action -> tool as in the Lab).
+  const WORK=[['dig','shovel','Scavatore (pala)'],['chop','axe','Taglialegna (ascia)'],['pick','pickaxe','Cavatore (piccone)'],
+    ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)']];
   const SCHEMATICS=[
     ['well','Pozzo','Edifici','Servizi'],
     ['house1','Abitazione L1','Edifici','Abitazioni'],
@@ -55,6 +59,19 @@
     items.push({id:'file:'+path,title:prettify(file),category:fileCategory(path),family:fileFamily(path),
       kind:'file',url:'./'+path,source:path,format:path.endsWith('.png')?'PNG':'SVG'});
   }
+  // Pre-rendered heading sets (name_rotations/name_000.svg ...) belong to their base sprite:
+  // the inspector steps through the frames with the 15° controls.
+  for(const [dir,frames] of Object.entries(ROTATION_SETS)){
+    const basePath=dir.replace(/_rotations$/,'')+frames[0].file.slice(frames[0].file.lastIndexOf('.'));
+    let item=items.find(x=>x.source===basePath);
+    if(!item){
+      const path=frames[0].file;
+      item={id:'file:'+path,title:prettify(basePath.split('/').pop().replace(/\.(svg|png)$/i,'')),category:fileCategory(path),
+        family:fileFamily(path),kind:'file',url:'./'+path,source:path,format:path.endsWith('.png')?'PNG':'SVG'};
+      items.push(item);
+    }
+    item.rotations=frames;item.format+=' · '+frames.length+' rotazioni';item.source+=' + '+dir+'/';
+  }
   for(const source of MODEL_SOURCES){
     const registry=window[source.global],collection=registry&&registry[source.collection];
     if(!collection)continue;
@@ -84,6 +101,10 @@
     items.push({id:'figure:'+key,title,category,family,kind:'figure',subject:key,
       format:'Animazione',source:'src/settlement-population-figures.js / src/settlement-wagons3d.js'});
   }
+  for(const [action,tool,title] of WORK){
+    items.push({id:'figure:work:'+action,title,category:'Popolazione',family:'Lavori',kind:'figure',subject:'villager',
+      action,tool,key:tool,format:'Animazione',source:'src/settlement-work-anim.js'});
+  }
   const wardrobe=window.ConquerWardrobe?.PIECES||{};
   for(const key of Object.keys(wardrobe)){
     items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
@@ -100,12 +121,85 @@
     }
   }
 
+  // ---------- fortifications from the game engine ----------
+  // Castle geometry needs the whole game (terrain, footprints, battlements, roofs), so the game runs in
+  // a hidden sandbox frame (no saves, no cloud, no telemetry). Each entry is one structure of the
+  // destruction gallery's variant list, meshed by ConquerCastle3D.worldMeshes(): the castle the player sees.
+  const ENGINE_URL='./index.html?assetlab=1&renderer=canvas2d';
+  const status=text=>{const el=byId('assetEngineStatus');if(el)el.textContent=text};
+  let engine=null;
+  const slug=s=>s.toLocaleLowerCase('it').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  function loadEngine(){
+    const frame=document.createElement('iframe');
+    frame.src=ENGINE_URL;frame.title='Motore CONQUER (sandbox Asset Lab)';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');
+    // 560 px is enough for the tallest tower at the stage scale; fewer pixels keep captures fast.
+    frame.style.cssText='position:fixed;left:-12000px;top:0;width:560px;height:560px;border:0;visibility:hidden;pointer-events:none';
+    document.body.appendChild(frame);
+    status('Fortificazioni: avvio del motore di gioco…');
+    const started=performance.now();
+    (function poll(){
+      let w=null;try{w=frame.contentWindow}catch{}
+      const core=w&&w.ConquerCastle3D&&w.ConquerSiegePreview?.assetMesh&&w.ConquerAssetStage&&w.document.readyState==='complete';
+      // Footprint unions use polygon-clipping (loaded from a CDN): give it a few seconds.
+      if(core&&(w.__polygonClipping||performance.now()-started>8000)){
+        try{onEngine(w)}catch(error){console.warn('Asset Lab engine',error);status('Fortificazioni non disponibili: '+error.message)}
+        return;
+      }
+      if(performance.now()-started>60000){status('Fortificazioni non disponibili: il motore non si è avviato');return}
+      setTimeout(poll,250);
+    })();
+  }
+  // Every variant of ConquerAssetStage (the gallery list): a 3D mesh when ConquerCastle3D has a volume
+  // for it, and in every case the engine's own states — as drawn in the game, under construction,
+  // each damage phase, cutaway — captured on demand by the stage.
+  function onEngine(w){
+    engine=w;
+    let meshes=0;
+    for(const v of w.ConquerAssetStage.variants()){
+      // Wood towers, wood gates and palisades have no ConquerCastle3D volume: 2.5D captures only.
+      const mesh=toLabMesh(w.ConquerSiegePreview.assetMesh(v.spec));
+      // Thumbnails are fitted to the card: the height tells L1 from L3.
+      let top=0;if(mesh)for(let i=2;i<mesh.pos.length;i+=3)top=Math.max(top,mesh.pos[i]);
+      const states=[...(mesh?[{id:'3d',label:'Modello 3D',group:'3d'}]:[]),...w.ConquerAssetStage.states(v.id)];
+      items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
+        key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Solo 2.5D')+' · '+(states.length-(mesh?1:0))+' stati',
+        source:'src/settlement-asset-stage.js · '+(mesh?'src/settlement-castle3d.js':'percorso 2.5D')+' (varianti: src/settlement-siege-preview.js)',builder:true});
+      if(mesh)meshes++;
+    }
+    const total=items.filter(x=>x.kind==='castle').length;
+    status(total+' fortificazioni dal motore · '+meshes+' in 3D · '+(total-meshes)+' solo 2.5D');
+    refresh();
+  }
+  // Engine captures: the game's 2.5D render of one state, ground removed. Cached per view.
+  const captureCache=new Map();
+  function engineCapture(item,stateId,rotation=0){
+    if(!engine||!item.stageId)return null;
+    const key=item.stageId+'|'+stateId+'|'+rotation;
+    if(!captureCache.has(key))captureCache.set(key,engine.ConquerAssetStage.capture(item.stageId,stateId,{rotation}));
+    return captureCache.get(key);
+  }
+  const defaultState=item=>item.states?.[0]?.id||null;
+  const hex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join('');
+  // Engine meshes: 6 floats per vertex (x, y, z, r, g, b), 3 vertices per triangle, colours already
+  // side-shaded. Re-centred on the structure and dropped to z = 0 for the Lab's own iso view.
+  function toLabMesh(m){
+    if(!m)return null;
+    const sets=[m.body,m.front],pos=[],col=[];let zMin=Infinity;
+    for(const t of sets)for(let i=2;i<t.length;i+=6)zMin=Math.min(zMin,t[i]);
+    for(const t of sets)for(let i=0;i+17<t.length;i+=18){
+      for(let v=0;v<3;v++){const o=i+v*6;pos.push(t[o]-m.origin.x,t[o+1]-m.origin.y,t[o+2]-zMin)}
+      col.push(hex(t[i+3],t[i+4],t[i+5]));
+    }
+    return col.length?{pos:new Float32Array(pos),col}:null;
+  }
+
   // The same indexed/triangle Blender geometry used by the game, not screenshots or illustrations.
   const meshCache=new Map();
   function modelMesh(item){
     if(meshCache.has(item.id))return meshCache.get(item.id);
     let mesh;
-    if(item.kind==='animal'&&window.ConquerAnimals3D){
+    if(item.kind==='castle')mesh=item.mesh;
+    else if(item.kind==='animal'&&window.ConquerAnimals3D){
       mesh=window.ConquerAnimals3D.triangles(item.key,{x:0,y:0,heading:0},{mode:'idle',t:0,seed:1},
         window.ConquerAnimals3D.coatColors(item.key,'brown'));
     }else{
@@ -163,19 +257,15 @@
     const line=(x,y,X,Y)=>{g.beginPath();g.moveTo(x,y);g.lineTo(X,Y);g.stroke()};
     const poly=(pts,fill)=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();g.fillStyle=fill;g.fill();g.stroke()};
     g.strokeStyle='#d4bc92';g.lineWidth=2;
-    const tower=key.includes('tower')||key==='gate'||key.startsWith('house')||key==='well';
-    const linear=['wall','built','palisade','hoarding','bridge','drawbridge','road','earthworks','moat'].includes(key);
-    if(tower){
+    if(key.startsWith('house')||key==='well'){
       poly([[cx-s*.7,cy-s*.4],[cx,cy-s*.75],[cx+s*.7,cy-s*.4],[cx,cy]],'#796958');
       poly([[cx-s*.7,cy-s*.4],[cx,cy],[cx,cy+s*.75],[cx-s*.7,cy+s*.30]],'#514b43');
       poly([[cx,cy],[cx+s*.7,cy-s*.4],[cx+s*.7,cy+s*.3],[cx,cy+s*.75]],'#9c8570');
-      if(key==='tower-round'||key==='well'){
+      if(key==='well'){
         g.beginPath();g.ellipse(cx,cy-s*.45,s*.65,s*.30,0,0,Math.PI*2);g.fillStyle='#9c8570';g.fill();g.stroke();
       }
-      if(key==='gate'){g.fillStyle='#312920';g.fillRect(cx-s*.24,cy+s*.1,s*.48,s*.5)}
-    }else if(linear){
-      poly([[cx-s*1.5,cy],[cx+s*.6,cy-s*.8],[cx+s*1.45,cy-s*.33],[cx-s*.65,cy+s*.55]],key==='moat'?'#426676':key==='road'?'#817b69':'#8e7b64');
-      if(!['road','moat','earthworks'].includes(key))poly([[cx-s*.65,cy+s*.55],[cx+s*1.45,cy-s*.33],[cx+s*1.45,cy+s*.10],[cx-s*.65,cy+s]],'#594e43');
+    }else if(key==='road'){
+      poly([[cx-s*1.5,cy],[cx+s*.6,cy-s*.8],[cx+s*1.45,cy-s*.33],[cx-s*.65,cy+s*.55]],'#817b69');
     }else{
       poly([[cx-s,cy],[cx,cy-s*.5],[cx+s,cy],[cx,cy+s*.5]],key==='river'?'#3b7989':'#65835b');
       if(key==='field'){g.strokeStyle='#c8ac6a';for(let i=-3;i<=3;i++)line(cx-s*.75,cy+i*s*.085,cx+s*.75,cy+i*s*.085)}
@@ -195,6 +285,7 @@
   }
   // Thumbnail figures use the very same drawing calls as the live Figure Lab.
   // Each call temporarily swaps the classic-script canvas context, then restores it.
+  const LAB_VILLAGER={id:'asset-lab-villager',kind:'peasant',sex:'male',age:'adult',hair:'brown',colors:['#9c9078','#7d7a72']};
   function renderFigure(canvas,item,rotationDegrees=0){
     const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,subject=item.subject;
     g.clearRect(0,0,w,h);
@@ -211,9 +302,12 @@
     try{
       ctx=g;State.view.scale=Math.min(w*.09,h*.14);
       const p={x:w*.5,y:h*.78};
-      if(subject==='villager'){
-        drawVillagerFigureUnmasked({id:'asset-lab-villager',kind:'peasant',sex:'male',age:'adult',
-          hair:'brown',colors:['#9c9078','#7d7a72'],p});
+      if(item.tool&&window.ConquerWorkAnim){
+        // Frozen at the stroke, where the pose and the tool read best.
+        const T=window.ConquerWorkAnim.TOOLS[item.tool];
+        window.ConquerWorkAnim.drawWorkerUnmasked({...LAB_VILLAGER,id:'asset-lab-worker-'+item.tool,p},item.tool,T?T.period*T.hit:0,1);
+      }else if(subject==='villager'){
+        drawVillagerFigureUnmasked({...LAB_VILLAGER,p});
       }else{
         const unit={id:'asset-lab-'+subject,engaged:false};
         window.ConquerCombatAnim.drawFigure(p,0,subject,unit.id,0,null,
@@ -241,10 +335,26 @@
       placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');
     }finally{ctx=previous;State.view.scale=oldScale}
   }
-  function makePreview(item,container,large,rotationDegrees=0){
+  // Rotation sets: the pre-rendered frame closest to the requested heading.
+  function rotationFrame(item,rotationDegrees){
+    const want=((rotationDegrees%360)+360)%360;
+    return item.rotations.reduce((best,f)=>{
+      const d=Math.min(Math.abs(f.deg-want),360-Math.abs(f.deg-want)),b=Math.min(Math.abs(best.deg-want),360-Math.abs(best.deg-want));
+      return d<b?f:best;
+    });
+  }
+  // stateId: for fortifications, '3d' (the mesh) or an engine state (a 2.5D capture; rotation in 90° views).
+  function makePreview(item,container,large,rotationDegrees=0,stateId=defaultState(item)){
     container.replaceChildren();
+    if(item.kind==='castle'&&stateId&&stateId!=='3d'){
+      const c=engineCapture(item,stateId,Math.round(rotationDegrees/90)%4);
+      if(!c?.dataUrl){container.textContent='Cattura non disponibile';return}
+      const im=document.createElement('img');im.src=c.dataUrl;im.alt=item.title+' · '+stateId;im.className='engine-capture';
+      container.appendChild(im);return;
+    }
     if(item.kind==='file'){
-      const im=document.createElement('img');im.src=item.url;im.alt=item.title;im.loading=large?'eager':'lazy';
+      const url=item.rotations&&rotationDegrees?'./'+rotationFrame(item,rotationDegrees).file:item.url;
+      const im=document.createElement('img');im.src=url;im.alt=item.title;im.loading=large?'eager':'lazy';
       im.decoding='async';im.addEventListener('error',()=>{container.textContent='File non caricabile';});
       container.appendChild(im);return;
     }
@@ -253,17 +363,47 @@
     canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Anteprima '+item.title);
     container.appendChild(canvas);
     if(item.kind==='schematic')return renderSchema(canvas,item);
-    if(item.kind==='model'||item.kind==='animal')return renderModel(canvas,item,rotationDegrees);
+    if(item.kind==='model'||item.kind==='animal'||item.kind==='castle')return renderModel(canvas,item,rotationDegrees);
     if(item.kind==='figure')return renderFigure(canvas,item,rotationDegrees);
     if(item.kind==='wardrobe')return renderWardrobe(canvas,item);
-
   }
-  let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null;
+  let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null,selectedState=null;
   let observer=null;
-  function selectItem(item){
+  const snapshotMode=()=>selectedItem?.kind==='castle'&&selectedState&&selectedState!=='3d';
+  function renderStateBar(item){
+    const bar=byId('assetStateBar');if(!bar)return;
+    bar.replaceChildren();bar.hidden=!item.states;
+    if(!item.states)return;
+    let group=null;
+    for(const st of item.states){
+      if(st.group!==group){group=st.group;const tag=document.createElement('span');tag.textContent=group;bar.appendChild(tag)}
+      const b=document.createElement('button');b.type='button';b.textContent=st.label;b.dataset.state=st.id;
+      b.setAttribute('aria-pressed',String(st.id===selectedState));
+      b.onclick=()=>selectState(st.id);bar.appendChild(b);
+    }
+  }
+  function selectState(stateId){
+    if(!selectedItem?.states?.some(s=>s.id===stateId))return;
+    const wasSnapshot=snapshotMode();selectedState=stateId;
+    if(wasSnapshot!==snapshotMode())selectedRotation=0;
+    renderStateBar(selectedItem);updateRotationLabels();
+    byId('assetRotationValue').textContent=selectedRotation+'°';
+    byId('assetPreviewNote').textContent=snapshotMode()?'Render 2.5D del gioco (ConquerAssetStage), terreno rimosso.':'Geometria costruita dal motore di gioco (ConquerCastle3D).';
+    makePreview(selectedItem,byId('assetDetailPreview'),true,selectedRotation,selectedState);
+  }
+  // 3D meshes turn by 15°, game captures by the camera's four 90° views.
+  function updateRotationLabels(){
+    const step=snapshotMode()?90:15;
+    byId('assetRotateLeft').textContent='↶ −'+step+'°';byId('assetRotateRight').textContent='+'+step+'° ↷';
+    byId('assetRotateLeft').setAttribute('aria-label','Ruota di '+step+' gradi a sinistra');
+    byId('assetRotateRight').setAttribute('aria-label','Ruota di '+step+' gradi a destra');
+  }
+  function selectItem(item,stateId){
     if(!item)return;
     if(selectedId!==item.id)selectedRotation=0;
     selectedItem=item;selectedId=item.id;
+    selectedState=item.states?.some(s=>s.id===stateId)?stateId:defaultState(item);
+    renderStateBar(item);updateRotationLabels();
     document.querySelectorAll('.asset-card').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.id===item.id)));
     byId('assetDetailName').textContent=item.title;
     byId('assetDetailMeta').textContent=item.category+' / '+item.family+' · '+item.format;
@@ -273,22 +413,27 @@
     document.body.classList.toggle('asset-catalog-static',!live);
     const art=byId('assetDetailPreview');art.hidden=live;
     byId('assetAnimationPanel').hidden=!live;
-    const rotatable=item.kind==='model'||item.kind==='animal'||item.subject==='wagon3d';
+    const rotatable=item.kind==='model'||item.kind==='animal'||item.kind==='castle'||item.subject==='wagon3d'||!!item.rotations;
     byId('assetRotationControls').hidden=!rotatable;
     byId('assetRotationValue').textContent=selectedRotation+'°';
-    const label=byId('assetPreviewNote');label.textContent=live?'Anteprima animata dal motore di gioco.':item.note||'';
-    if(live)document.querySelector('[data-subject="'+item.subject+'"]').click();
-    else makePreview(item,art,true,selectedRotation);
+    const label=byId('assetPreviewNote');
+    label.textContent=live?'Anteprima animata dal motore di gioco.':snapshotMode()?'Render 2.5D del gioco (ConquerAssetStage), terreno rimosso.':
+      item.kind==='castle'?'Geometria costruita dal motore di gioco (ConquerCastle3D).':item.rotations?'Fotogrammi pre-renderizzati ogni 15°.':item.note||'';
+    if(live){
+      document.querySelector('[data-subject="'+item.subject+'"]').click();
+      if(item.action)document.querySelector('#actions [data-action="'+item.action+'"]')?.click();
+    }else makePreview(item,art,true,selectedRotation,selectedState);
     const link=byId('assetBuilderLink');link.hidden=!item.builder;
     details.hidden=false;
   }
   function rotateSelection(delta){
     if(!selectedItem||byId('assetRotationControls').hidden)return;
+    if(snapshotMode())delta=Math.sign(delta)*90;
     selectedRotation=((selectedRotation+delta)%360+360)%360;
     byId('assetRotationValue').textContent=selectedRotation+'°';
     const live=!byId('assetAnimationPanel').hidden;
     if(live)window.ConquerLab?.rotate3d(delta);
-    else makePreview(selectedItem,byId('assetDetailPreview'),true,selectedRotation);
+    else makePreview(selectedItem,byId('assetDetailPreview'),true,selectedRotation,selectedState);
   }
   byId('assetRotateLeft').addEventListener('click',()=>rotateSelection(-15));
   byId('assetRotateRight').addEventListener('click',()=>rotateSelection(15));
@@ -307,11 +452,13 @@
     }
     fam.value=currentFamily;
   }
+  // Only real fields are searchable: a missing key must not match the word "undefined".
+  const searchText=x=>[x.title,x.family,x.category,x.key,x.source,x.format].filter(Boolean).join(' ').toLocaleLowerCase('it');
   function refresh(){
     updateFilters();
     const subset=items.filter(x=>(currentCategory==='Tutti'||x.category===currentCategory)&&
       (!currentFamily||x.family===currentFamily)&&(!currentFormat||x.kind===currentFormat)&&
-      (!query||(x.title+' '+x.family+' '+x.category+' '+x.key+' '+x.source).toLocaleLowerCase('it').includes(query)));
+      (!query||searchText(x).includes(query)));
     byId('assetCount').textContent=subset.length+' / '+items.length+' asset';
     gallery.replaceChildren();
     if(observer)observer.disconnect();
@@ -344,9 +491,15 @@
   byId('assetFormat').addEventListener('change',e=>{currentFormat=e.target.value;refresh()});
   byId('assetReset').addEventListener('click',()=>{currentCategory='Tutti';currentFamily='';currentFormat='';query='';
     byId('assetSearch').value='';byId('assetFormat').value='';refresh()});
-  window.ConquerAssetCatalog={items,refresh,select:id=>{const item=items.find(x=>x.id===id);if(item)selectItem(item)},get selected(){return selectedId},get rotation(){return selectedRotation}};
+  window.ConquerAssetCatalog={items,refresh,select:(id,state)=>{const item=items.find(x=>x.id===id);if(item)selectItem(item,state)},
+    selectState,get selected(){return selectedId},get state(){return selectedState},get rotation(){return selectedRotation},
+    get engineReady(){return !!engine},
+    // The Lab's own renderers, for src/asset-audit.js: the audit looks at exactly what the Lab shows.
+    lab:{makePreview,modelMesh,engineCapture,defaultState,rotationFrame}};
   // Reparent the existing native animation canvas: the animator retains its context.
   const liveCanvas=byId('c');if(liveCanvas)byId('assetAnimationPanel').appendChild(liveCanvas);
   refresh();
   selectItem(items.find(x=>x.id==='animal:sheep')||items[0]);
+  // The engine frame is heavy: start it once the catalogue is on screen.
+  setTimeout(loadEngine,0);
 })();

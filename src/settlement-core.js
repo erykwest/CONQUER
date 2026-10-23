@@ -111,7 +111,8 @@ const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
-const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
+// Asset Lab sandbox: one fixed world, so audit captures repeat across runs and machines.
+const initialSeed=(()=>{if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
 const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},buildMasonryMaterial:'stone',resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 // DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
 const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
@@ -666,7 +667,7 @@ function pointRadius(s){
   function delta(name,p){return Math.max(0,finite(p[name])-finite(lastPerf[name]))}
   function sendRemote(sample){
     const now=performance.now();
-    if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
+    if(window.__CONQUER_ASSET_LAB__||!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
     lastRemoteAt=now;
     const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
     const row={
