@@ -40,6 +40,21 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 - **APERTO:** QA browser interattiva, prestazioni picchi GPU e visual QA [#18](https://github.com/erykwest/CONQUER/pull/18); ledger unico/agricoltura; matrimonio danni→accessibilità→assedio/blocco/resa; filiera metallo; sistema feudale completo.
 - La presenza di un modulo o di un check non trasforma le righe S-xx in **FATTO**: valutare la sequenza di combattimento completa contro i criteri di accettazione.
 
+## Portoni — accessori del portone (branch `portoni`, 22/10/2026)
+
+**CODICE SU BRANCH, NON SU MAIN.** Prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026).
+
+| ID | Requisito | Stato |
+|---|---|---|
+| GATE-01 | Magnete del portone sulle strade esistenti: centro sulla mezzeria, passaggio allineato, strada mantenuta e percorribile | BRANCH + QA |
+| GATE-01b | Magnete delle strade principali sulle due bocche del portone, con accesso dritto e nodo comune al centro | BRANCH + QA + controllo browser |
+| GATE-02 | Ante del portone animate tra aperto e chiuso (pannello, chiusura notturna), passaggio voltato visibile nel 3D | BRANCH + QA + controllo visivo |
+| GATE-03 | Grata (saracinesca) come upgrade del solo portone in pietra, animata; abbassata blocca il passaggio | BRANCH + QA + controllo visivo |
+| GATE-04 | Due drappi araldici ai lati del portale e due torce accese di notte sul fronte esterno | BRANCH + QA + controllo visivo |
+| GATE-05 | Ante, grata, drappi e torce per il portone di legno (oggi solo il magnete) | APERTO |
+| GATE-06 | Grata come strato difensivo separato (D-042): HP propri, colpita prima della porta, il fuoco passa, distrutta e riparabile, sbarra anche a porta sfondata | BRANCH + QA + controllo browser |
+| GATE-07 | IA d'assedio che sceglie fra ariete sulla grata, fuoco sulla porta e altri accessi; riparazione della grata durante l'assedio | APERTO, dipende da S-15 |
+
 ## Clay — specifica storica della branch `clay` (19/10); runtime più recente su main
 
 **NOTA STORICA:** il documento progettuale nacque su `Civil/clay` senza runtime; **sullo snapshot main del 22/10 buona parte è implementata** (`settlement-industries.js`, `settlement-core.js`, `settlement-siege.js`, `qa/clay-material-regression.cjs`). La tabella seguente specifica requisiti originali, **non una lista di attività totalmente mancanti**. Contratto completo in [CLAY-DEVELOPMENT](../CLAY-DEVELOPMENT.md) e verifiche in [CLAY-REGRESSION-PLAN](../CLAY-REGRESSION-PLAN.md).

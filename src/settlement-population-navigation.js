@@ -304,7 +304,8 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
     if(s.type==='gate'){
       if(window.ConquerCrossings?.drawbridgeBlocks(p,s))return true;
       // A closed gate with its door still whole shuts the passage (settlement-siege.js).
-      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s))return true;continue}
+      // So does a lowered portcullis (settlement-gate-fittings.js).
+      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s)||window.ConquerGates?.portcullisBlocks?.(s))return true;continue}
       const q=toLocalPoint(s,p),d=rectDims(s);
       if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
       continue;
