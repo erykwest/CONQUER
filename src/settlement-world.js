@@ -35,6 +35,19 @@ function roadUsesGatePassage(road,gate){
   }
   return inside;
 }
+// A road that ends on a bridge end and leaves away from the deck joins the bridge
+// instead of overlapping it.
+function roadMeetsBridgeEnd(road,bridge){
+  if(!road?.a||!road?.b||bridge?.type!=='bridge'||!bridge.a||!bridge.b)return false;
+  for(const [end,other] of [['a','b'],['b','a']]){
+    const e=bridge[end],o=bridge[other];
+    for(const [p,q] of [[road.a,road.b],[road.b,road.a]]){
+      if(dist(p,e)>.05)continue;
+      if((q.x-e.x)*(e.x-o.x)+(q.y-e.y)*(e.y-o.y)>0)return true;
+    }
+  }
+  return false;
+}
 function pointSegmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return dist(p,a);const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/L2,0,1);return dist(p,{x:a.x+t*dx,y:a.y+t*dy})}
 function segmentsIntersect(a,b,c,d){const cr=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);const a1=cr(a,b,c),a2=cr(a,b,d),a3=cr(c,d,a),a4=cr(c,d,b);return ((a1>0&&a2<0)||(a1<0&&a2>0))&&((a3>0&&a4<0)||(a3<0&&a4>0))}
 function roadTouchesPolygon(road,poly,pad=.08){
@@ -53,6 +66,7 @@ function manualRoadConflict(road,manual){
   // The market is a paved public square; castle gates contain a real traversable passage.
   if(manual.type==='market')return false;
   if(manual.type==='gate'&&roadUsesGatePassage(road,manual))return false;
+  if(manual.type==='bridge'&&roadMeetsBridgeEnd(road,manual))return false;
   if(['wall','palisade','built'].includes(manual.type)){
     return segmentsIntersect(road.a,road.b,manual.a,manual.b)||
       pointSegmentDistance(manual.a,road.a,road.b)<=manual.width/2+(road.width||.3)/2||
@@ -1874,9 +1888,27 @@ function manualRoadLegs(a,b,aPort=null,bPort=null){
   for(let i=0;i+1<pts.length;i++)if(dist(pts[i],pts[i+1])>.05)legs.push({a:{...pts[i]},b:{...pts[i+1]}});
   return legs;
 }
+// Road magnet on the two ends of every bridge (also under construction, main-road decks and
+// gate half-bridges): the road lands exactly on the end. A pointer on the deck takes the nearer end.
+function bridgeRoadEnd(p){
+  let best=null;
+  for(const s of State.structures){
+    if(s.type!=='bridge'||!s.a||!s.b)continue;
+    const L=dist(s.a,s.b)||1,ux=(s.b.x-s.a.x)/L,uy=(s.b.y-s.a.y)/L;
+    const along=(p.x-s.a.x)*ux+(p.y-s.a.y)*uy,across=Math.abs((p.x-s.a.x)*-uy+(p.y-s.a.y)*ux);
+    const onDeck=along>=0&&along<=L&&across<=(Number(s.width)||1.2)/2;
+    for(const end of ['a','b']){
+      const distance=onDeck&&(end==='a')===(along<=L/2)?0:dist(p,s[end]);
+      if(distance>ROAD_RULES.snapNodeDistance||(best&&distance>=best.distance))continue;
+      best={bridgeId:s.id,end,distance,point:{x:s[end].x,y:s[end].y}};
+    }
+  }
+  return best;
+}
 function mainRoadSnapAnchor(p){
   const port=gateRoadPort(p);
   if(port)return{point:{...port.center},magnet:true,gatePort:port};
+  const bridge=bridgeRoadEnd(p);
   let best={point:{x:snapGrid(p.x),y:snapGrid(p.y)},distance:Infinity};
 
   const consider=q=>{
@@ -1894,6 +1926,7 @@ function mainRoadSnapAnchor(p){
     const q=closestPointOnSegment(p,road.a,road.b),d=dist(p,q);
     if(d<=ROAD_RULES.snapNodeDistance&&d<best.distance)best={point:q,distance:d};
   }
+  if(bridge&&bridge.distance<=best.distance)return{point:bridge.point,magnet:true,bridgeEnd:bridge};
   return{point:best.point,magnet:Number.isFinite(best.distance)};
 }
 // Major roads cut through riverbeds on existing, selectable wooden decks.

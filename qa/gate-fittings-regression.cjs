@@ -35,7 +35,7 @@ const read=f=>fs.readFileSync(root+f,'utf8');
   // Roads drawn to a gate snap to its two mouths: a free leg to a straight approach, then
   // through the mouth to the gate centre, where roads from both sides meet.
   vm.runInContext('var State={structures:[gate],village:{}};var ROAD_RULES={snapNodeDistance:1.15};'+
-    ['gateRoadPort','manualRoadLegs','mainRoadSnapAnchor'].map(n=>fn(world,n)).join('\n'),Object.assign(ctx,{gate,snapGrid:v=>Math.round(v*2)/2,ensureBorderEntrySelection:()=>[],roadList:()=>[],closestPointOnSegment:p=>p}));
+    ['gateRoadPort','manualRoadLegs','bridgeRoadEnd','mainRoadSnapAnchor'].map(n=>fn(world,n)).join('\n'),Object.assign(ctx,{gate,snapGrid:v=>Math.round(v*2)/2,ensureBorderEntrySelection:()=>[],roadList:()=>[],closestPointOnSegment:p=>p}));
   const west=ctx.mainRoadSnapAnchor({x:-.9,y:.3}),east=ctx.mainRoadSnapAnchor({x:.5,y:-.2});
   assert.ok(west.gatePort&&east.gatePort,'both mouths are magnets, also from inside the gatehouse');
   assert.ok(west.point.x===0&&west.point.y===0,'the road ends at the gate centre');
