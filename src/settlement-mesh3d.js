@@ -37,7 +37,7 @@
     const f=shadeFactor(nx,ny,nz,0,base);
     return toHex(base.map(c=>c*f));
   }
-  // Depth-sorted painter. meshes: [{pos,col,gi?,groups?,groupBias?}] in world space;
+  // Depth-sorted painter. meshes: [{pos,col,gi?,groups?,groupBias?,flat?}] in world space;
   // view: {project(x,y,z)->{x,y}, depth(x,y,z) (larger = nearer), turns}. Meshes with
   // groups sort part by part (part centre first, then triangle).
   function drawMeshes(ctx,meshes,view,sprites=[]){
@@ -49,7 +49,8 @@
       if(!mesh._fills||mesh._turns!==turns){
         mesh._turns=turns;mesh._fills=new Array(n);
         for(let t=0;t<n;t++){
-          const [nx,ny,nz]=triNormal(pos,t*9),[r,g,b]=rgb(col[t]),f=shadeFactor(nx,ny,nz,turns,[r,g,b]);
+          // flat meshes carry colours already shaded by their builder (castle volumes).
+          const [nx,ny,nz]=triNormal(pos,t*9),[r,g,b]=rgb(col[t]),f=mesh.flat?1:shadeFactor(nx,ny,nz,turns,[r,g,b]);
           mesh._fills[t]='rgb('+(r*f|0)+','+(g*f|0)+','+(b*f|0)+')';
         }
       }
@@ -71,6 +72,50 @@
     ctx.restore();
     return items.length;
   }
+  // Cached painting for meshes that change rarely but are drawn every frame (construction
+  // sites): painted once into an offscreen canvas and blitted at the projected anchor.
+  // Panning only moves the anchor; a zoom stretches the old bitmap until the scale has been
+  // steady for REPAINT_MS, then repaints. key: anything that changes the picture.
+  const sprites=new Map(),REPAINT_MS=250,MAX_SIDE=4096,FRAME_MS=12;
+  let lastScale=null,lastScaleAt=0,lastRepaint=-Infinity;
+  function drawCached(ctx,id,key,build,anchor){
+    const now=typeof performance!=='undefined'?performance.now():Date.now(),scale=State.view.scale;
+    if(scale!==lastScale){lastScale=scale;lastScaleAt=now}
+    const view=gameView(),dpr=(typeof devicePixelRatio==='number'&&devicePixelRatio)||1;
+    const full=[key,State.view.rotation||0,typeof isPlanView==='function'&&isPlanView()?1:0,dpr,State.season].join('|');
+    let e=sprites.get(id);
+    // At most one repaint per frame (load, view turn, stage change, end of a zoom): the
+    // others keep showing their previous bitmap (stretched to the zoom) until their turn.
+    const settling=now-lastScaleAt<REPAINT_MS,turn=now-lastRepaint>=FRAME_MS;
+    const want=!e||e.key!==full||e.scale!==scale;
+    // A deferred repaint asks for another frame (the paused game draws only on request).
+    if(want&&(!turn||settling)&&typeof requestSceneDraw==='function')requestSceneDraw();
+    if(want&&!turn&&!e)return 0;
+    if(want&&turn&&!(e&&e.key===full&&settling)){
+      lastRepaint=now;
+      const meshes=build().filter(m=>m&&m.col.length);
+      if(!meshes.length){sprites.delete(id);return 0}
+      let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      for(const m of meshes)for(let i=0;i<m.pos.length;i+=3){
+        const p=view.project(m.pos[i],m.pos[i+1],m.pos[i+2]);
+        if(p.x<x0)x0=p.x;if(p.x>x1)x1=p.x;if(p.y<y0)y0=p.y;if(p.y>y1)y1=p.y;
+      }
+      x0-=2;y0-=2;x1+=2;y1+=2;
+      const w=Math.ceil((x1-x0)*dpr),h=Math.ceil((y1-y0)*dpr);
+      if(!(w>0&&h>0)||w>MAX_SIDE||h>MAX_SIDE||typeof document==='undefined'){sprites.delete(id);return drawMeshes(ctx,meshes,view)}
+      const canvas=e?.canvas||document.createElement('canvas');canvas.width=w;canvas.height=h;
+      const g=canvas.getContext('2d');g.setTransform(dpr,0,0,dpr,-x0*dpr,-y0*dpr);g.clearRect(x0,y0,x1-x0,y1-y0);
+      drawMeshes(g,meshes,view);
+      const a=view.project(anchor.x,anchor.y,anchor.z||0);
+      e={key:full,scale,canvas,dx:x0-a.x,dy:y0-a.y,w:x1-x0,h:y1-y0};
+      sprites.set(id,e);
+    }
+    e.used=now;
+    const a=view.project(anchor.x,anchor.y,anchor.z||0),r=scale/e.scale;
+    ctx.drawImage(e.canvas,a.x+e.dx*r,a.y+e.dy*r,e.w*r,e.h*r);
+    if(sprites.size>96)for(const [k,v] of sprites)if(now-v.used>10000)sprites.delete(k);
+    return 1;
+  }
   // The game's own projection (w2sRaw / rotateViewPoint / plan view) as a painter view.
   function gameView(){
     const plan=typeof isPlanView==='function'&&isPlanView();
@@ -78,5 +123,5 @@
       project:(x,y,z)=>w2sRaw({x,y},z),
       depth:(x,y,z)=>{if(plan)return z;const q=rotateViewPoint({x,y});return q.x+q.y+ISO_Z*z}};
   }
-  window.ConquerMesh3D={rgb,toHex,rotDir,shadeFactor,shadedHex,drawMeshes,gameView};
+  window.ConquerMesh3D={rgb,toHex,rotDir,shadeFactor,shadedHex,drawMeshes,drawCached,gameView};
 })();
