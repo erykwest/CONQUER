@@ -128,7 +128,10 @@ console.log('PASS arena, stage (players / herald) and podium: combatants, squire
   assert.equal(act(T,'fight').length,6,'tourney: three pairs of combatants in the field');
   assert.equal(act(T,'prepare').length,4,'tourney: a squire before each of the four tents');
   assert.ok(act(T,'sit').length>=272,'tourney: the stands seats');
-  assert.equal(act(C,'fight').length,2,'camp: a pair of knights sparring');
+  assert.equal(act(C,'fight').length,6,'camp: three pairs of knights sparring');
+  assert.equal(act(C,'chat').length,18,'camp: a knot of three people before each of the six tents');
+  assert.ok(act(C,'tend').length>=16,'camp: two hands at every rack and armour stand');
+  assert.ok(P.venueScene(C,1).actors.length>=40,'camp: a crowded camp ('+P.venueScene(C,1).actors.length+' people)');
   assert.equal(act(C,'prepare').length,6,'camp: a squire before each of the six tents');
   assert.ok(act(Th,'perform').length>=3&&act(Th,'wait').length>=2,'theatre: actors on the stage and extras in the wings');
   assert.ok(act(Th,'sit').length>0,'theatre: an audience on the stands');

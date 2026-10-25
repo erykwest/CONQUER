@@ -2,6 +2,10 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-25 — Eventi: accampamento affollato
+
+- L'accampamento dei cavalieri ha tre coppie che si allenano, un gruppo di tre persone che chiacchiera davanti a ogni tenda (slot `chat`) e due inservienti a ogni rastrelliera e armatura (slot `tend`), oltre agli scudieri: oltre 40 persone. QA estesa.
+
 ## 2026-10-23 — Eventi: bardatura dei cavalli, torneo, accampamento e teatro animati
 
 - I cavalli della giostra hanno una gualdrappa (drappo partito, orlo dorato, crinale e pennacchio) disegnata sul cavallo 2D con la **stessa coppia di colori casuali del cavaliere**. Nuovi slot `fight` per tre coppie nel recinto del torneo e una coppia che si allena nell'accampamento, `prepare` davanti alle tende di torneo e accampamento, `perform`/`wait` per attori e quinte del teatro; scene animate dello spiazzo per torneo, accampamento e teatro. QA estese; verifica nel browser.

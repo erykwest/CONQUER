@@ -75,7 +75,7 @@
     const setup=setupOf(s),camp=setup==='arenaLot'||setup==='tourney'||setup==='camp';
     // Combatants on the ground itself: three pairs in the tourney's fenced field, one
     // pair of knights sparring in the middle of the camp (venue frame, item -1).
-    const field=setup==='tourney'?[[-2.1,-.3],[0,-.3],[2.1,-.3]]:setup==='camp'?[[0,1.6]]:[];
+    const field=setup==='tourney'?[[-2.1,-.3],[0,-.3],[2.1,-.3]]:setup==='camp'?[[-2.4,1.6],[0,1.6],[2.4,1.6]]:[];
     field.forEach(([fx,fy],k)=>{for(const sx of [-1,1])
       list.push({id:venueId(s)+':-1:fight:'+(k*2+(sx>0)),domain:venueId(s),item:-1,model:null,role:'worker',action:'fight',pair:k,
         x:fx+sx*.35,y:fy,z:0,face:{x:-sx,y:0}})});
@@ -85,6 +85,14 @@
       // Participants' camps (arena, tourney, knights' camp): a squire before each tent's door.
       const door=camp&&/^tent/.test(it.m)?M()[it.m]?.meta?.door:null;
       if(door)local.push({x:door[0],y:door[1]-.12,z:0,role:'worker',action:'prepare',face:{x:0,y:-1}});
+      if(setup==='camp'){
+        // The knights' camp is crowded: a knot of people chatting before each tent,
+        // two hands at every rack and armour stand.
+        if(door)for(const [dx,dy] of [[-.32,-.28],[.3,-.3],[.02,-.52]])
+          local.push({x:door[0]+dx,y:door[1]+dy,z:0,role:'guest',action:'chat',face:{x:-dx,y:-dy}});
+        if(/^prop(Weapon|Spear|Shield|Lance)Rack|^propArmour/.test(it.m))for(const sx of [-1,1])
+          local.push({x:sx*.22,y:-.3,z:0,role:'worker',action:'tend',face:{x:-sx*.5,y:1}});
+      }
       for(const q of local){
         const n=(count.get(k+q.action)||0);count.set(k+q.action,n+1);
         list.push({id:venueId(s)+':'+k+':'+q.action+':'+n,domain:venueId(s),item:k,model:it.m,role:q.role,action:q.action,pair:q.pair,
@@ -99,7 +107,7 @@
   // ---------- 2. occupancy register
   // Provisional source: about two in three guest seats taken, every worker slot manned,
   // the same ones every time; occupants are anonymous extras, never residents.
-  const FILL={sit:.66,stand:.6,watch:.75,browse:.5,queue:.85};   // workers (sell, perform, announce, fight, prepare): all
+  const FILL={sit:.66,stand:.6,watch:.75,browse:.5,queue:.85,chat:.85};   // workers (sell, perform, announce, fight, prepare): all
   function provisional(s,list){
     const out=[];
     for(const sl of list){
@@ -206,6 +214,8 @@
       const a={id:o.occupant,slot:sl.id,x:sl.x,y:sl.y,z:sl.z,action:sl.action,face:sl.face,provisional:o.provisional};
       const centre=sl.action==='fight'?centres.get(sl.item+'|'+(sl.pair||0)):null;
       if(sl.action==='wait'){a.hop=.006*Math.sin(t*1.2+ph);a.arms=Math.sin(t*.6+ph)>.95?.4:0}
+      else if(sl.action==='chat'){a.hop=.006*Math.sin(t*1.7+ph);a.arms=Math.sin(t*1.3+ph)>.75?.45:0}       // talking with their hands
+      else if(sl.action==='tend'){a.arms=.25+.25*Math.abs(Math.sin(t*3.4+ph));a.hop=.01*Math.max(0,Math.sin(t*3.4+ph))}   // polishing, mending
       else if(sl.action==='fight'&&centre){
         // Circle each other about the middle of the sand, swords swinging.
         const side=Math.atan2(sl.y-centre.y,sl.x-centre.x),ang=side+t*.5,r=.32+.05*Math.sin(t*1.7);
