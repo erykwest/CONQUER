@@ -93,6 +93,31 @@ Tutti gli ID, prove e gap distinti per livello sono nell'[AUDIT-2026-10-22](AUDI
 - **NON PRESENTE:** calendario programmato degli eventi, effetti economici e sul morale, spostamento libero dello spiazzo; persone ancora figuranti provvisori.
 - **QA eseguita localmente (22/10/2026):** `qa/events3d-regression.cjs` PASS (catalogo, spazi, allestimenti dentro lo spiazzo senza sovrapposizioni, ciclo di vita, rotazione, livree) e `qa/civic3d-regression.cjs` PASS; nuova Action `events-regression.yml`. Controllo nel browser con spazi iniettati via console: Canvas 2D e renderer di default disegnano giostra, circo, sagra, podio e palchi senza errori in console. CI GitHub da verificare dopo il push.
 
+## Case L2+: basamento più basso con sporto, porte libere, torrette solo d'angolo (21/10/2026)
+
+- **BASAMENTO:** il piano terra in pietra scende dal 50% al 42% del muro (`HOUSE_FLOOR_BREAK`, condiviso da WebGL2, Canvas, graticcio e torrette). Righe finestre invariate.
+- **SPORTO (jetty):** sulle case L2+ il basamento è arretrato di 0,07 U sul lato porta e su quello opposto (assi ±Y locali), i piani superiori sporgono; i lati/muri di confine restano a filo. In WebGL2 c'è il sottosporto in legno; porta e finestre del piano terra stanno sul muro arretrato. Collisioni e navigazione usano ancora la sagoma piena.
+- **PORTA:** nessuna finestra del piano terra sulla porta o sopra di essa: resta a 6 cm dall'anta oppure viene tolta (`houseFacadeDoorCut`).
+- **TORRETTE SOLO D'ANGOLO:** a schiera solo l'edificio di testa di un fronte il cui vertice del lotto tocca un'altra strada; isolate solo se due strade non parallele passano vicino. La torretta va verso la strada laterale e la porta si sposta nell'altra metà della facciata. Le altre L4 si distinguono per gli abbaini. Il catalogo prerender (case isolate senza strade) ora mostra L4 senza torretta.
+- **QA:** `houses3d`, `urban-density`, `urban-regression` aggiornate; 63/69 (stessi 6 fallimenti di main).
+
+## Case L3/L4: tipo con timpano su strada, torrette d'angolo, abbaini (21/10/2026)
+
+- **BRANCH:** `case`, sopra l'audit sottostante.
+- **TIPO A TIMPANO (L3/L4 a schiera):** ogni lotto sceglie in modo deterministico (hash dell'id) tra il tipo con gronda su strada e il nuovo tipo con lato corto su strada: edifici stretti (1,0–1,08 U) e profondi (1,45–1,55 U), colmo perpendicolare alla strada, ala posteriore trasversale (pianta L/T). Se il lotto non è abbastanza profondo resta il tipo a gronda.
+- **TORRETTA L4:** sempre su un angolo verso strada. A schiera: a filo del muro di confine, sporge di ¾ del raggio oltre la facciata e l'edificio arretra della stessa misura (resta nel lotto). Isolata: lato porta, sul corpo più avanzato con un angolo libero dalla porta. Le finestre e le travi della facciata coperte dalla torretta vengono tolte; la porta della casa a schiera si sposta dal lato opposto alla torretta.
+- **FACCIATA TORRETTA:** graticcio (anelli/traversi a fascia, gronda e sommità, montanti) e due file di finestre verso l'esterno (rotonda 3+5, quadrata 2+4), in WebGL2 (decal + luci notturne) e Canvas.
+- **ABBAINI L4:** due per falda sul corpo principale di ogni edificio, evitando torretta e camini; finestra con luce notturna. Una torretta grande di casa isolata può togliere un abbaino per falda.
+- **QA:** `qa/houses3d-regression.cjs` estesa (tipo a timpano, angolo su strada, ≥3 finestre e graticcio della torretta, taglio facciata, abbaini). Verifica visiva WebGL2 e Canvas su due seed; prerender catalogo case PASS.
+
+## Audit grafico case L1–L4 (21/10/2026)
+
+- **BRANCH:** `case` da `main` `7d9328a`.
+- **CAUSA PRINCIPALE:** le tettoie aperte (lotti bovini L2, cortili L3/L4) hanno un muro in meno; `addOutbuilding` del builder WebGL2 leggeva il tetto da `faces[n]` (inesistente) e il renderer 3D andava in errore, ricadendo in silenzio sul Canvas 2.5D. Regressione introdotta con il lato aperto delle tettoie (`9a11a14`). Gli "errori L4" visti in gioco erano in buona parte artefatti del fallback Canvas: ordine pittore delle ali T/L e travi/finestre di una casa disegnate sopra i tetti delle case vicine.
+- **CORREZIONI:** tetto della tettoia = ultima faccia; torrette L4 con altezze relative ai muri (corpo +0,90, cono +1,70, fascia grigia a metà muro), invariate per le L4 manuali da 1,72 U; righe finestre L2+ proporzionali all'altezza del muro (0,52/1,34 invariate a 1,72 U, centrate nel piano alto delle L4 da 2,38 U).
+- **QA:** nuova `qa/houses3d-regression.cjs` (fallisce su main, passa sul branch), aggiunta alla CI Civil. Suite locali 63/69: i 6 fallimenti (4 benchmark che richiedono browser e `refactor-app-population`, `wall-bays`) falliscono identici su main. Verifica visiva WebGL2 nel browser su villaggio generato con L1–L4, quattro rotazioni; prerender catalogo case 24 famiglie × 24 angoli PASS.
+- **APERTI:** nel solo fallback Canvas restano l'ordine pittore delle ali T/L (L3/L4) e le facciate di una casa visibili attraverso i tetti delle vicine; nel WebGL2 una sottile cucitura tratteggiata dove due case a schiera L4 si sovrappongono.
+
 ## Portoni — magnete strade, ante, grata, drappi e torce (#76 MERGED 23/10; prove del branch 22/10)
 
 - **CODICE ORA SU MAIN** via #76 (sviluppato originariamente su branch `portoni` da `f739e51`). Nuovo modulo `src/settlement-gate-fittings.js` (`window.ConquerGates`) più agganci in castle3d/world3d, placement, input, navigazione, fuochi e pannello.
@@ -205,6 +230,8 @@ Tutti gli ID, prove e gap distinti per livello sono nell'[AUDIT-2026-10-22](AUDI
 | Sottosistema | Evidenza principale su main | Stato documentabile e limiti |
 |---|---|---|
 | Builder / castello | [index.html](../../index.html), [README.md](../../README.md), `src/settlement-castle.js` | **CODICE**: torri, mura, porte, costruzioni, livelli, slot e interfaccia. Interfaccia avanzata rispetto alla README storica. Non basta a certificare tutte le funzioni degli slot. |
+| Oggetti di cantiere | [settlement-construction-props.js](../../src/settlement-construction-props.js), [QA](../../qa/construction-props-regression.cjs), `tools/blender/build_construction.py` | **CODICE + QA su branch `feature/construction-props`**: impalcature, scale, materiali, banchi, paranco e gru a ruota per fase di `constructionProgress`, Canvas e WebGL2 (layer dinamico). Solo visivo; non legato a operai/risorse reali. |
+| Montaggio progressivo dei cantieri | [settlement-construction-assembly.js](../../src/settlement-construction-assembly.js), [QA](../../qa/construction-assembly-regression.cjs) | **PROTOTIPO + QA su branch `feature/construction-props`**: edificio tagliato da una quota di cantiere (corsi, conci, telaio, puntoni/listelli/tegole) al posto del fantasma traslucido; provato su torri quadrate e tonde, porta, muro e palizzata (avanzamento orizzontale), `built`, chiesa, taverna, mercato e case L1–L4; ponteggi su tutti i lati di torri e porte; cache a immagine per cantiere (2–6 ms/frame con 10 cantieri). Torri/porte in legno ancora col fantasma. |
 | Terreno, orografia, natura | `src/settlement-landscape.js`, `qa/p1-terrain-regression.cjs`, `qa/organic-forest-regression.cjs` | **CODICE + QA individuata**: rilievi e foreste hanno sistemi esistenti; non ricrearli. Sfruttamento/deplezione forestale non dimostrato. |
 | Pozzo e urbanistica | `src/settlement-urban.js`, [urban-fixes](../urban-fixes.md), `qa/urban-regression.cjs` | **CODICE + QA**: crescita procedurale, viabilità/lotti e migrazioni documentati. Accettazione end-to-end non riauditata. |
 | Campi | [settlement-fields.js](../../src/settlement-fields.js), [QA campi](../../qa/fields-regression.cjs) | **CODICE + QA**: quadrilateri Voronoi, lato 1–6 U, `floor(area/4)` slot, serpentina 0,5 U, fasi persistenti. Calendario fisico non ancora concordato con l'accounting. |

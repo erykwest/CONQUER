@@ -151,10 +151,11 @@ function visibleFacadeEdges(s){
       faces.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2});
     }
     faces.sort((a,b)=>b.depth-a.depth);
-    edges.push(...(parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?faces.slice(0,2):faces));
+    edges.push(...(parts?.length>1||(parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3)?faces.slice(0,2):faces));
   }
   edges.sort((a,b)=>b.depth-a.depth);
-  return parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?edges:edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
+  // Multi-volume houses (L/T plans, townhouse rows) keep the two camera-facing walls of every volume.
+  return parts?.length>1||(parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3)?edges:edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
 }
 function cutawayOpenEdgeIndexes(s){
   if(!structureCutaway(s))return null;
@@ -468,8 +469,9 @@ function drawHouseFacadeWindows(s,lit=false,nf=1){
   const key=(a,b)=>a.x.toFixed(4)+','+a.y.toFixed(4)+'|'+b.x.toFixed(4)+','+b.y.toFixed(4);
   const walls=new Map(),entry=urbanHouseGeometry().find(e=>e.house.id===s.id);
   for(const part of entry?.parts||[])part.points.forEach((a,i)=>walls.set(key(a,part.points[(i+1)%part.points.length]),{part,edge:{a,b:part.points[(i+1)%part.points.length]}}));
-  // Canvas has no depth buffer: a wall whose centre lies behind a nearer part of the same
-  // house (townhouse wings, L/T extensions) keeps neither its frame nor its windows.
+  // Canvas has no depth buffer: each window and timber beam behind a nearer part of the same
+  // house (townhouse wings, L/T extensions) is dropped on its own, so a partly covered wall keeps
+  // the frame and windows of its visible stretch.
   const screenFaces=new Map();
   const hidden=(part,mid,z)=>{
     const depth=viewDepthPoint(mid),sp=w2s(mid,z);
@@ -489,20 +491,27 @@ function drawHouseFacadeWindows(s,lit=false,nf=1){
     const wall=walls.get(key(visible.a,visible.b));if(!wall)continue;
     const {part,edge}=wall,plan=houseFacadePlan(s,part,edge),L=dist(edge.a,edge.b)||1;
     const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
-    if(entry.parts.length>1&&hidden(part,{x:mx,y:my},(part.bodyH??houseBodyHeight(s))*.75))continue;
+    const multi=entry.parts.length>1,at=off=>({x:mx+ux*off,y:my+uy*off});
     if(!lit&&plan.beams.length){
       ctx.save();ctx.strokeStyle='#3b2a1e';ctx.lineCap='square';
       ctx.lineWidth=Math.max(.8,HOUSE_TIMBER_W*U*State.view.scale);
       ctx.beginPath();
       for(const [p0,p1] of plan.beams){
+        if(multi&&hidden(part,at((p0.off+p1.off)/2),(p0.z+p1.z)/2))continue;
         const a=w2s({x:mx+ux*p0.off,y:my+uy*p0.off},p0.z),b=w2s({x:mx+ux*p1.off,y:my+uy*p1.off},p1.z);
         ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
       }
       ctx.stroke();ctx.restore();
     }
+    // Ground-floor windows of a jettied side (edges 0 and 2) sit on the recessed stone wall.
+    const index=part.points.indexOf(edge.a),recess=part.basePoints&&(index===0||index===2)?houseJetty(s):0;
+    let nx=-uy,ny=ux;if(nx*(mx-part.center.x)+ny*(my-part.center.y)<0){nx=-nx;ny=-ny}
+    const fb=houseFloorBreak(part.bodyH??houseBodyHeight(s));
     for(const w of plan.windows){
-      const a=w2s(edge.a,w.z),b=w2s(edge.b,w.z),px=w.off*Math.hypot(b.x-a.x,b.y-a.y)/L;
-      drawWindowOnEdge(edge,w.z,lit,nf,px);
+      if(multi&&hidden(part,at(w.off),w.z))continue;
+      const k=w.z<fb?recess:0,e=k?{a:{x:edge.a.x-nx*k,y:edge.a.y-ny*k},b:{x:edge.b.x-nx*k,y:edge.b.y-ny*k}}:edge;
+      const a=w2s(e.a,w.z),b=w2s(e.b,w.z),px=w.off*Math.hypot(b.x-a.x,b.y-a.y)/L;
+      drawWindowOnEdge(e,w.z,lit,nf,px);
     }
   }
 }

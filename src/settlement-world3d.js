@@ -481,32 +481,7 @@
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
-      withStructureVisualMaterial(house,()=>{
-      const lvl=houseLevel(house);
-      for(const part of entry.parts){
-        if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
-        const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
-        const split=part.kind==='turret'?base+1.02:base+part.bodyH*.5;
-        for(let i=0;i<n;i++){
-          const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
-          if(lvl===1&&part.kind!=='turret'){m.face([a,b,c,d],i%2?'#4e392d':'#654936');continue}
-          const sa={...a,z:split},sb={...b,z:split};
-          m.face([a,b,sb,sa],i%2?'#4f4b47':'#625e59');m.face([sa,sb,c,d],i%2?'#c8ae70':'#e0ca91');
-        }
-        const roof=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
-        if(part.kind==='turret'){
-          for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
-        }else{
-          const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
-          const gable=lvl===1?'#654936':'#d9c184';
-          m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
-        }
-      }
-      for(const c of chimneySpecs(house)){
-        const g=terrainElevation(c.center);
-        m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
-      }
-      });
+      withStructureVisualMaterial(house,()=>addHouse(m,entry,winter));
     }
     // Urban boundaries (urbanFenceSegments): fences and low walls as solids, hedges are billboards.
     for(const e of urbanFenceSegments()){
@@ -537,19 +512,69 @@
     }
     return new Float32Array(m.tris);
   }
+  // One urban house (an urbanHouseGeometry entry) into a mesh builder. Builders may offer
+  // tag(kind) to learn what the next faces are (body / upper / beam / gable / roof): the
+  // construction assembly (settlement-construction-assembly.js) uses it to build the
+  // house piece by piece; the WebGL builder has no tag and ignores it.
+  function addHouse(m,entry,winter){
+    const house=entry.house,lvl=houseLevel(house);
+    for(const part of entry.parts){
+      if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
+      const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
+      const split=base+(part.kind==='turret'?part.floorZ:houseFloorBreak(part.bodyH));
+      const bp=part.basePoints;
+      for(let i=0;i<n;i++){
+        const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
+        if(lvl===1&&part.kind!=='turret'){m.tag?.('body');m.face([a,b,c,d],i%2?'#4e392d':'#654936');continue}
+        const sa={...a,z:split},sb={...b,z:split};
+        // Recessed stone ground floor (basePoints) under the jettied timber floors.
+        const ga=bp?{x:bp[i].x,y:bp[i].y,z:a.z}:a,gb=bp?{x:bp[(i+1)%n].x,y:bp[(i+1)%n].y,z:b.z}:b;
+        m.tag?.('body');m.face([ga,gb,{...gb,z:split},{...ga,z:split}],i%2?'#4f4b47':'#625e59');
+        m.tag?.('upper');m.face([sa,sb,c,d],i%2?'#c8ae70':'#e0ca91');
+        // Jetty underside: joists between the upper wall line and the recessed ground floor.
+        m.tag?.('beam');if(bp&&(i===0||i===2))m.face([sa,sb,{...gb,z:split},{...ga,z:split}],'#4a3626');
+      }
+      const roof=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
+      m.tag?.('roof');
+      if(part.kind==='turret'){
+        for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
+      }else{
+        const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
+        const gable=lvl===1?'#654936':'#d9c184';
+        m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);
+        m.tag?.('gable');m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
+      }
+    }
+    // L4 dormers (urbanHouseDormers): cream front and cheeks, slate gable roof.
+    const dormerColors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
+      roofA:winter?WINTER_ROOF[0]:'#303237',roofB:winter?WINTER_ROOF[1]:'#3a3d42'};
+    m.tag?.('roof');
+    for(const dormer of entry.dormers||[]){
+      const g=terrainElevation(dormer.partCenter);
+      for(const f of dormer.faces)m.face(f.pts.map(({p,z})=>({x:p.x,y:p.y,z:g+z})),dormerColors[f.kind]);
+    }
+    for(const c of chimneySpecs(house)){
+      const g=terrainElevation(c.center);
+      m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
+    }
+  }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
     const faces=urbanHouseFaces(house,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
     const roofA=winter?WINTER_ROOF[0]:'#5b3d30',roofB=winter?WINTER_ROOF[1]:'#6b4938';
     if(part.type==='store'){
-      for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
-      m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
+      m.tag?.('body');for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
+      m.tag?.('roof');m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);
+      m.tag?.('gable');m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
       return;
     }
     const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=terrainElevation(c);
     const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
-    for(let i=0;i<n;i++)if(faces[i].slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(faces[i]),'#5d4431');
-    m.face(P(faces[n]),roofB);
+    // The courtyard side is open, so a lean-to has fewer than n walls: the roof is the last face.
+    const walls=faces.slice(0,-1),roof=faces[faces.length-1];
+    m.tag?.('body');for(const wall of walls)if(wall.slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(wall),'#5d4431');
+    m.tag?.('roof');m.face(P(roof),roofB);
+    m.tag?.('beam');
     for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
       const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
       m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');
@@ -829,8 +854,28 @@
       }else if(s.type==='house'){
         const WIN=[35/255*.82,29/255*.82,24/255*.82,.82],TIMBER=[59/255,42/255,30/255,1];
         const entry=houseGeometry.get(s.id);
+        // World-space beam from {p,z} a to b on a surface with horizontal outward normal n.
+        const beam=(a,b,n,ground,push)=>{
+          const uv=atlas.map.get('__white');if(!uv)return;
+          const dx=b.p.x-a.p.x,dy=b.p.y-a.p.y,dz=b.z-a.z;
+          let wx=n.y*dz,wy=-n.x*dz,wz=n.x*dy-n.y*dx;const wl=Math.hypot(wx,wy,wz)||1,k=HOUSE_TIMBER_W/2/wl;wx*=k;wy*=k;wz*=k;
+          const c=(q,sgn)=>({x:q.p.x+n.x*push+wx*sgn,y:q.p.y+n.y*push+wy*sgn,z:ground+q.z+wz*sgn});
+          const P=[c(a,1),c(b,1),c(b,-1),c(a,-1)],[u0,v0,u1,v1]=uv;
+          for(const k2 of [0,1,2,0,2,3]){const q=P[k2];v.push(q.x,q.y,q.z,k2===1||k2===2?u1:u0,k2<2?v0:v1,TIMBER[0],TIMBER[1],TIMBER[2],TIMBER[3])}
+        };
+        const pane=(w,ground,push)=>{
+          const t=w.tangent,a={x:w.p.x-t.x*w.hw,y:w.p.y-t.y*w.hw},b={x:w.p.x+t.x*w.hw,y:w.p.y+t.y*w.hw};
+          quad(a,b,ground+w.z-w.hh,ground+w.z+w.hh,'__white',w.normal,WIN,push);
+          lightWindow({a:{x:w.p.x-t.x*.5,y:w.p.y-t.y*.5},b:{x:w.p.x+t.x*.5,y:w.p.y+t.y*.5}},w.z,w.hw*2,w.hh*2,0,ground,w.normal);
+        };
         for(const part of entry?.parts||[]){
-          if(part.kind==='turret'||part.kind==='outbuilding')continue;
+          if(part.kind==='turret'){
+            const ground=terrainElevation(part.center),plan=houseTurretFacade(part);
+            for(const b of plan.beams)beam(b.a,b.b,b.normal,ground,.015);
+            for(const w of plan.windows)pane(w,ground,.022);
+            continue;
+          }
+          if(part.kind==='outbuilding')continue;
           const ground=terrainElevation(part.center);
           for(const edge of edgesOf(part.points)){
             const o=outward(edge,part.center),m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};
@@ -839,15 +884,19 @@
             // Timber frame strips sit just under the windows (smaller wall offset).
             for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
             // drawWindowOnEdge: 2.1 x 3.25 px per view-scale unit -> .175U x ~.30U
+            // Ground-floor openings on a jettied side sit on the recessed stone wall.
+            const fb=houseFloorBreak(part.bodyH),recess=part.basePoints&&(edge.index===0||edge.index===2)?houseJetty(s):0;
             for(const w of plan.windows){
-              const c=at(w.off);
-              quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
-              lightWindow(edge,w.z,hw*2,hh*2,w.off,ground,o);
+              const k=w.z<fb?recess:0,c=at(w.off),e={a:{x:edge.a.x-o.x*k,y:edge.a.y-o.y*k},b:{x:edge.b.x-o.x*k,y:edge.b.y-o.y*k}};
+              quad({x:c.x-ux*hw-o.x*k,y:c.y-uy*hw-o.y*k},{x:c.x+ux*hw-o.x*k,y:c.y+uy*hw-o.y*k},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
+              lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
             }
           }
         }
+        for(const dormer of entry?.dormers||[])pane(dormer.window,terrainElevation(dormer.partCenter),.012);
         const d=houseDoorInfo(s),hw=Math.min(.08,(Number(s.w)||1.5)*.0533),g=terrainElevation(d.surface),DOOR=[57/255,39/255,30/255,1];
-        quad({x:d.surface.x-d.tangent.x*hw,y:d.surface.y-d.tangent.y*hw},{x:d.surface.x+d.tangent.x*hw,y:d.surface.y+d.tangent.y*hw},g+.04,g+.552,'__white',d.normal,DOOR);
+        const ds={x:d.surface.x-d.normal.x*houseJetty(s),y:d.surface.y-d.normal.y*houseJetty(s)};
+        quad({x:ds.x-d.tangent.x*hw,y:ds.y-d.tangent.y*hw},{x:ds.x+d.tangent.x*hw,y:ds.y+d.tangent.y*hw},g+.04,g+HOUSE_DOOR_TOP,'__white',d.normal,DOOR);
       }
     }
     return{decals:new Float32Array(v),lights:new Float32Array(lights)};
@@ -1408,7 +1457,7 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

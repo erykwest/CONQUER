@@ -77,14 +77,15 @@
     return{col:Math.cos(2*(angle-Math.PI/6))>=0?pal[1]:pal[2],top:false};
   }
   function makeMesh(){
-    const tris=[],lines=[];
+    const tris=[],lines=[],tags=[];
     return{
-      tris,lines,
+      tris,lines,tags,
+      tag:'body',          // what the next faces are (body / roof): read by the construction assembly
       // face: vertices [{p,z}], colour: hex or palette array (top faces of stroked palettes get an outline)
       face(points,color){
         const vs=points.map(({p,z})=>vert(p,z));if(vs.length<3)return;
         const sh=Array.isArray(color)?shadeFor(vs,color):{col:color,top:false},c=rgb(sh.col);
-        for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.d,c[0],c[1],c[2]);
+        for(let i=1;i<vs.length-1;i++){for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.d,c[0],c[1],c[2]);tags.push(this.tag)}
         if(sh.top&&Array.isArray(color)&&color[3]){
           const o=rgb(color[3]);
           for(let i=0;i<vs.length;i++)for(const v of [vs[i],vs[(i+1)%vs.length]])lines.push(v.x,v.y,v.d,o[0],o[1],o[2]);
@@ -130,6 +131,7 @@
       }
     }
     if(towerRoofStyle(s)==='pitched'){
+      m.tag='roof';
       const ring=towerRoofFootprintPoints(s),apex={x:s.x,y:s.y},apexZ=towerVisualTopHeight(s);
       if(s.shape==='round'){
         const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
@@ -153,8 +155,10 @@
     m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:'#34363a');
     m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:'#42454a');
     // Gable ends are left open in 2.5D; a closed volume needs them.
+    const roofTag=m.tag;m.tag='gable';
     m.face([{p:p0,z:H},{p:ra,z:R},{p:p3,z:H}],PAL.stone());
     m.face([{p:p1,z:H},{p:p2,z:H},{p:rb,z:R}],PAL.stone());
+    m.tag=roofTag;
     for(const c of chimneySpecs(s))m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),c.z0,c.z1,PAL.chimney());
   }
   function addHoarding(m,s){
@@ -218,8 +222,10 @@
         if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
           m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
         if(s.type==='tower')addTower(m,s);
+        m.tag='roof';
         if(s.type==='gate')addGate(m,s);
         if(s.type==='built')addBuilt(m,s);
+        m.tag='body';
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());
@@ -229,7 +235,7 @@
     return withLines(m);
   }
   // Triangle arrays carry their top-face outlines along (same 6-float vertex layout, GL_LINES pairs).
-  function withLines(m){const t=m.tris;t.lines=m.lines;return t}
+  function withLines(m){const t=m.tris;t.lines=m.lines;t.tags=m.tags;return t}
   function buildBodyUncached(){return bodyMesh(castleParts(),true)}
   // Full volumes of cutaway structures, used only as depth occluders (their look stays 2.5D).
   function buildCutawayDepth(){return memoGround(()=>bodyMesh(cutawayParts()))}
@@ -399,7 +405,23 @@
       });
     }finally{worldOut=false}
   }
-  window.ConquerCastle3D={active,supported,setEnabled,drawBody,drawFront,worldMeshes,castleParts:()=>castleParts(),
+  // One structure as world triangles (x,y,z,r,g,b per vertex, already shaded) with a tag per
+  // triangle (body / roof / crown), whatever its construction state: the construction assembly
+  // reveals it piece by piece while it is being built.
+  function structureWorld(s){
+    worldOut=true;
+    try{
+      return memoGround(()=>{
+        const body=bodyMesh([s]),m=makeMesh();m.tag='crown';
+        withStructureVisualMaterial(s,()=>{
+          const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+          for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+        });
+        return{tris:body.concat(m.tris),tags:body.tags.concat(m.tags)};
+      });
+    }finally{worldOut=false}
+  }
+  window.ConquerCastle3D={active,supported,setEnabled,drawBody,drawFront,worldMeshes,structureWorld,castleParts:()=>castleParts(),
     castleVolume:s=>castleVolume(s),PAL,
     status:()=>({enabled,supported:supported(),failed:gpu.failed,bodyMs:perf().castle3dBodyMs,frontMs:perf().castle3dFrontMs,bodyTris:perf().castle3dBodyTris,frontTris:perf().castle3dFrontTris}),
     _build:{body:buildBody,front:buildFront}};

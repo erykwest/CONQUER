@@ -292,6 +292,14 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 - **VERIFICA DA ESEGUIRE**: test browser su percorso, UI mobile, ritorni ostacolati, campi in elevazione, salvataggi e rendering WebGL2/Canvas; le sorgenti da sole non dimostrano QA superata.
 
 
+## 2026-10-22 — Oggetti di cantiere per fase (branch `feature/construction-props`)
+
+- Scelto come ambito del backlog la **progressione visiva dei cantieri**; prima tappa: kit modulare di oggetti Blender e loro comparsa/rimozione per fase (`prep`/`raise`/`finish`). Aggiornati [BACKLOG](BACKLOG.md) (voce *Elementi di cantiere animati*, con residui) e [STATUS](STATUS.md). ROADMAP e DECISIONS invariati: nessun contratto o priorità cambiati.
+- Allineato a `main` dopo #76 (portoni), #79/#80 (Asset Lab): conflitti in `index.html`, `STATUS.md`, `CHANGELOG.md` risolti tenendo entrambe le parti; le porte in cantiere usano ora il corpo scavato di `ConquerGates.addGateBody` (il ritaglio del varco del montaggio resta solo come ripiego).
+- Montaggio esteso a torre tonda, porta, muro, palizzata, `built`, taverna e mercato; avanzamento orizzontale per muri e palizzate; ponteggi su tutti i lati di torri e porte; cache a immagine per cantiere (prestazioni da ~1 s a 2–6 ms per frame con 10 cantieri).
+- Unito il branch `case` in `feature/construction-props` (conflitti solo in `index.html` e `STATUS.md`, tenute entrambe le parti); il montaggio delle case ora riusa `ConquerWorld3D.addHouse`.
+- Aggiunto il prototipo di **montaggio pezzo per pezzo** (quota di cantiere che taglia l'edificio finito) provato su torre T2 H2, chiesa L2 e casa L3; registrati in BACKLOG e STATUS i residui (dettagli 2.5D, tipi non provati, animazione di posa, prestazioni).
+
 ## 2026-10-22 — Portoni: magnete strade e accessori
 
 - Branch `portoni`: magnete del portone sulle strade, passaggio voltato 3D con ante animate, upgrade grata per il portone in pietra, drappi araldici e torce notturne. Stato, prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026); requisiti GATE-01…06 nel [BACKLOG](BACKLOG.md#portoni--accessori-del-portone-branch-portoni-22102026).

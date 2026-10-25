@@ -28,7 +28,10 @@ function drawConstructionProgress(s){
 function drawStructure(s,preview=false){
   if(s?.type==='road'){drawAutoStructure(s,preview);return}
   if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
+  // A site with an assembly is drawn piece by piece (opaque) instead of as a translucent ghost.
+  const assembled=!preview&&underConstruction(s)&&window.ConquerAssembly?.has(s);
   const render=()=>{
+    if(assembled&&window.ConquerAssembly.draw(s))return;
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
@@ -418,7 +421,8 @@ function draw(){
   const dynamicSites=State.structures
     .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  // Each site is followed by its scaffold, lifting gear and materials for the current phase.
+  for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else{drawStructure(s);window.ConquerConstructionProps?.drawSite(s)}}
 
   markPhase('scene-caches');
   // Population remains between settlement massing and completed castle massing,
