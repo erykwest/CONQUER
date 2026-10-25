@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/settlement-main-roads-house-spawn-20261014
+      - urban
   pull_request:
     branches:
       - main

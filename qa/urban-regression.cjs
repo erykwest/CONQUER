@@ -17,7 +17,7 @@ navigator:{},fetch:()=>new Promise(()=>{}),atob:s=>Buffer.from(s,'base64').toStr
 const context=vm.createContext(sandbox);
 function run(s){return vm.runInContext(s,context)}
 function moduleFile(n){const groups={castle:['castle','landscape','castle-placement','castle-structures','buildings'],population:['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'],app:['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap']};const files=groups[n]||[n];return files.map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n')}
-for(const n of ['core','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
+for(const n of ['core','civic-annexes','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
 const appSource=moduleFile('app');
 run(appSource.split('function pointerScreen')[0]);
@@ -116,6 +116,21 @@ test('shared parcel fences are merged once, including partial collinear overlaps
  run("State.structures=[{id:'a',type:'house',x:98,y:100,w:1.5,h:1},{id:'b',type:'house',x:102,y:100,w:1.5,h:1}];invalidateNavigation();globalThis.fenceFixture=[{houseId:'a',points:[{x:96,y:98},{x:100,y:98},{x:100,y:102},{x:96,y:102}]},{houseId:'b',points:[{x:100,y:98},{x:104,y:98},{x:104,y:102},{x:100,y:102}]}]");
  assert.equal(run('urbanFenceSegments(fenceFixture).filter(e=>Math.abs(e.a.x-100)<.0001&&Math.abs(e.b.x-100)<.0001).length'),1);
 });
+test('Voronoi fence lines obstruct pedestrians and soldiers but leave their gate traversable',()=>{
+ run("State.structures=[{id:'home',type:'house',x:100,y:100,w:1.5,h:1,angle:0}];State.village={founded:true,wellId:null};State.combat.strokes=[];invalidateNavigation();globalThis.savedUrbanLots=urbanLots;urbanLots=()=>[{houseId:'home',points:[{x:98,y:98},{x:102,y:98},{x:102,y:102},{x:98,y:102}]}]");
+ try{
+   const segments=run('urbanFenceSegments()');
+   assert.ok(segments.length>=4,'parcel must have enclosure segments');
+   assert.equal(run('urbanFencePointBlocked({x:102,y:101},PEASANT_CLEARANCE)'),true);
+   assert.equal(run("peasantSegmentClear({x:101.5,y:101},{x:103,y:101},'civilian')"),false);
+   assert.equal(run("window.ConquerCombat.__qa.safeMilitarySegment({x:101.5,y:101},{x:103,y:101},'squad','squad')"),false);
+   const opening=run('(()=>{let pts=[];for(let y=97.6;y<=102.4;y+=.04)if(!urbanFencePointBlocked({x:100,y},PEASANT_CLEARANCE))pts.push(y);return pts})()');
+   assert.ok(opening.length>0,'entrance remains walkable');
+   const route=run("findPeasantPath({x:101.5,y:101},{x:103,y:101},'civilian',8)");
+   assert.ok(route?.length>2,'path must detour through the entrance');
+   assert.equal(run("peasantSegmentClear({x:100,y:97},{x:100,y:99},'civilian')"),true,'entrance crosses fence without colliding');
+ }finally{run('urbanLots=savedUrbanLots;invalidateNavigation()')}
+});
 test('neighbouring Voronoi lots share their common border instead of leaving a gap',()=>{
  run("State.structures=[{id:'well',type:'well',x:80,y:80}];State.village={founded:true,wellId:'well'};State.combat.strokes=[{x:100,y:100,r:50,mode:'yellow'}];State.structures.push({id:'a',type:'house',auto:true,x:98,y:100,w:1.5,h:1,angle:0},{id:'b',type:'house',auto:true,x:102.4,y:100.7,w:1.5,h:1,angle:.3});invalidateNavigation();invalidateUrbanGeometry()");
  // Every point on the bisector between the two homes, inside both reach boxes, belongs to both lots' boundary.
@@ -143,17 +158,19 @@ test('corner trees: one roll per shared corner, never two trees on one site',()=
  }finally{run("URBAN_CORNER_TREE_CHANCE=qaChance")}
 });
 test('facades: two windows per floor on long sides of L2+, timber frame on upper floors and gables',()=>{
- const plans=level=>run("(()=>{State.structures=[{id:'fp',type:'house',x:100,y:100,w:1.8,h:1.1,angle:0,houseLevel:"+level+"}];invalidateUrbanGeometry();const e=urbanHouseGeometry()[0],p=e.parts[0];return p.points.map((a,i)=>{const edge={a,b:p.points[(i+1)%p.points.length]},pl=houseFacadePlan(e.house,p,edge);return{L:dist(edge.a,edge.b),wall:p.bodyH,ridge:p.roofH,...pl}})})()");
+ const plans=level=>run("(()=>{State.structures=[{id:'fp',type:'house',x:100,y:100,w:1.8,h:1.1,angle:0,houseLevel:"+level+"}];invalidateUrbanGeometry();const e=urbanHouseGeometry()[0],p=e.parts[0];return p.points.map((a,i)=>{const edge={a,b:p.points[(i+1)%p.points.length]},pl=houseFacadePlan(e.house,{...p,turret:null},edge);return{L:dist(edge.a,edge.b),wall:p.bodyH,ridge:p.roofH,...pl}})})()");
  for(const w of plans(1)){assert.equal(w.windows.length,1);assert.equal(w.beams.length,0)}
  for(const level of [2,3,4]){
   const walls=plans(level),long=walls.filter(w=>w.L>1.5),short=walls.filter(w=>w.L<1.5);
   assert.ok(long.length>=1&&short.length>=1);
-  for(const w of long)assert.equal(w.windows.length,4,'L'+level+' long side: 2 windows x 2 floors');
+  // The door wall loses the ground-floor window next to the door (houseFacadeDoorCut).
+  for(const w of long)assert.ok(w.windows.length===4||w.windows.length===3&&w.windows.filter(x=>x.z>w.wall*.475).length===2,'L'+level+' long side: 2 windows x 2 floors');
+  assert.ok(long.some(w=>w.windows.length===4),'L'+level+' wall without door keeps all four');
   for(const w of short)assert.equal(w.windows.length,2,'L'+level+' short side: 1 window x 2 floors');
   for(const w of walls){
    assert.ok(w.beams.length>=6,'L'+level+' timber frame');
    // Frame stays on the upper floor (or the gable above it) and within the wall width.
-   assert.ok(w.beams.every(b=>b.every(p=>p.z>=w.wall*.5-1e-6&&p.z<=w.ridge+1e-6&&Math.abs(p.off)<=w.L/2+1e-6)));
+   assert.ok(w.beams.every(b=>b.every(p=>p.z>=w.wall*.475-1e-6&&p.z<=w.ridge+1e-6&&Math.abs(p.off)<=w.L/2+1e-6)));
   }
   assert.ok(short.some(w=>w.beams.some(b=>b.some(p=>p.z>w.wall+.1))),'gable end carries king post / collar');
   assert.ok(long.every(w=>w.beams.every(b=>b.every(p=>p.z<=w.wall+1e-6))),'eave sides have no gable timber');
@@ -275,6 +292,34 @@ test('active civilians block spawning without changing their routines or movemen
  run("State.combat.units=[];State.combat.enemy=[];State.structures.push({id:'resident-home',type:'house',auto:true,x:104,y:104,w:1.5,h:1,angle:0});State.clock.day=10.35;invalidateNavigation();globalThis.positions=urbanSpawnOccupants()");
  assert.ok(run('positions.length>0'));
  assert.equal(run("urbanLotUnitConflict({points:[{x:90,y:90},{x:113,y:90},{x:113,y:113},{x:90,y:113}]})"),true);
+});
+test('church and tavern have Voronoi curtilage; market and public piazza do not',()=>{
+  zoningFixture();
+  run("State.structures.push({id:'civic-church',type:'church',x:116,y:117,angle:0},{id:'civic-tavern',type:'tavern',x:132,y:117,angle:0},{id:'civic-market',type:'market',x:140,y:132,angle:0},{id:'civic-plaza',type:'plaza',x:145,y:132,angle:0});invalidateNavigation()");
+  const lots=run('urbanLots().filter(l=>l.civicId)');
+  assert.deepEqual(Array.from(lots,l=>l.civicId).sort(),['civic-church','civic-tavern']);
+  assert.equal(run('urbanLots().every(qaConvexLot)'),true);
+  assert.equal(run("urbanLots().filter(l=>l.civicId).every(l=>urbanSiteFootprint(State.structures.find(s=>s.id===l.civicId)).every(p=>urbanContains(l.points,p,.15)))"),true);
+  assert.equal(run("urbanLots().some(l=>['civic-market','civic-plaza'].includes(l.civicId))"),false);
+  assert.ok(run('urbanFenceSegments().length')>=8,'civic parcels have physical boundaries');
+});
+test('church L1 includes cemetery plots inside its real Voronoi lot',()=>{
+  zoningFixture();
+  run("State.structures.push({id:'chapel',type:'church',x:117,y:117,angle:0,civicLevel:1});invalidateNavigation()");
+  const result=run("civicCemeteryArea(State.structures.find(s=>s.id==='chapel'))");
+  assert.ok(result,'A church with a free lot must have a burial area');
+  assert.equal(run("civicCemeteryGraves(State.structures[1]).length"),6);
+  assert.equal(run("civicCemeteryArea(State.structures[1]).points.every(p=>urbanContains(urbanLots().find(l=>l.civicId==='chapel').points,p,.09))"),true);
+  assert.equal(run("civicCemeteryArea(State.structures[1]).points.every(p=>!civicParts(State.structures[1]).some(part=>urbanContains(part.points,p)))"),true);
+});
+test('civil development defaults, level clamping and three piazza variants normalize',()=>{
+  const result=run("[{id:'c',type:'church',x:110,y:110,civicLevel:12},{id:'t',type:'tavern',x:120,y:110},{id:'p',type:'plaza',x:130,y:110,civicLevel:2,plazaVariant:'garden'},{id:'bad',type:'plaza',x:140,y:110,plazaVariant:'invalid'}].map(normalizeCivicDevelopment)");
+  assert.deepEqual(Array.from(result,s=>s.civicLevel),[3,1,2,1]);
+  assert.equal(result[2].plazaVariant,'garden');
+  assert.equal(result[3].plazaVariant,'paved');
+  assert.equal(run('PLAZA_VARIANTS.length'),3);
+  assert.equal(run("civicParts({type:'plaza',x:130,y:120}).length"),1);
+  assert.equal(run("CIVIC_TYPES.includes('market')&&CIVIC_TYPES.includes('plaza')"),true);
 });
 console.log(passed+' urban regression checks passed.');
 

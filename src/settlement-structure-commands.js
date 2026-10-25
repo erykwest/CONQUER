@@ -97,6 +97,34 @@ const StructureCommands=(()=>{
     const target=find(id);if(target?.type!=='house')return false;
     changeHouseDensity(target,clamp(houseLevel(target)+delta,1,4));return true;
   }
+  function setTowerWeapon(id,weapon){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    if(!setStructureVariant(target,'topWeapon',weapon))return false;
+    refresh(target);
+    status('Tower weapon: '+({none:'none',mangonel:'mangonel',ballista:'ballista'}[target.topWeapon])+(towerTopWeaponAllowed(target)?'':' (needs a T2 tower without a pitched roof)'));
+    return true;
+  }
+  function setCivicLevel(id,level){
+    const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
+    if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
+      status('Remove annexes requiring a higher level before downgrading');return false;
+    }
+    target.civicLevel=level;normalizeCivicDevelopment(target);
+    refresh(target);status(structureLabel(target)+' · skeleton stage only');return true;
+  }
+  function setPlazaVariant(id,variant){
+    const target=find(id);if(!isPlazaLike(target))return false;
+    target.plazaVariant=variant;normalizeCivicDevelopment(target);
+    refresh(target);return true;
+  }
+  function setGateClosed(id,closed){
+    const target=find(id);if(target?.type!=='gate'||!window.ConquerSiege?.setGateClosed)return false;
+    window.ConquerSiege.setGateClosed(id,!!closed);renderFunctionPanel();return true;
+  }
+  function setGateNightClose(id,on){
+    const target=find(id);if(target?.type!=='gate')return false;
+    target.nightClose=!!on;markDirty(false,false,true);renderFunctionPanel();return true;
+  }
   function toggleMastio(id){window.ConquerSiege?.assignMastio(id);return true}
   function changeArchers(id,delta){
     const target=find(id);if(target?.type!=='tower')return false;
@@ -117,11 +145,16 @@ const StructureCommands=(()=>{
     const cost=s.buildCost||constructionCost(s);
     d.cost=cost;
     if(industry){
-      const spec=window.ConquerIndustries.TYPES[s.type],econ=window.ConquerEconomy;
+      const spec=window.ConquerIndustries.definition?.(s)||window.ConquerIndustries.TYPES[s.type],econ=window.ConquerEconomy;
       const details=econ?.state()?.activities?.[s.id];
       d.industry={workers:econ?.staffing?.()[s.id]||0,max:spec.workers,tier:spec.tier,good:spec.good,
         owner:(details?.owner||(s.economicOwner==='lord'?'lord':'private'))};
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
+      return d;
+    }
+    if(typeof isCivicAnnex==='function'&&isCivicAnnex(s)){
+      const parent=State.structures.find(p=>p.id===s.parentId),spec=civicAnnexDefinition(s,parent);
+      d.annex={label:spec?.label||null,parentId:parent?.id||null,size:spec?spec.w+'×'+spec.h+'U':null};
       return d;
     }
     if(['moat','bridge'].includes(s.type)){
@@ -136,7 +169,9 @@ const StructureCommands=(()=>{
       d.facts.push({key:'household',value:pop.total},{key:'residents',value:pop.male+' · '+pop.female+' · '+pop.children});
       d.house={level,canDown:level>1,canUp:level<4};
     }
-    if(['house','market','tavern','church','training'].includes(s.type))
+    const masonry=typeof masonryMaterial==='function'?masonryMaterial(s):null;
+    if(masonry)d.facts.push({key:'masonry',value:masonry});
+    if(['house','market','tavern','church','training','plaza'].includes(s.type))
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};
@@ -160,11 +195,20 @@ const StructureCommands=(()=>{
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
+        d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
         d.controls.push(choice('base','setTowerBase',[{value:'standard',word:'standard'},{value:'buttress',word:'buttress'},{value:'splayed',word:'splayed'}],towerBaseStyle(s)));
         if(s.parentTowerId)d.facts.push({key:'subtower',value:structureLabel(State.structures.find(x=>x.id===s.parentTowerId)||s)});
       }
     }
     if(s.type==='gate'&&!woodGate)d.controls.push(choice('roof','setGateRoof',[{value:'battlement',word:'battlement'},{value:'pitched',word:'pitched'}],gateRoofStyle(s)));
+    if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
+      d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
+    if(typeof isPlazaLike==='function'&&isPlazaLike(s))
+      d.controls.push(choice('plaza','setPlazaVariant',PLAZA_VARIANTS.map(v=>({value:v,word:v})),plazaVariant(s)));
+    if(s.type==='gate'&&!building&&window.ConquerSiege?.doorStage){
+      const stage=window.ConquerSiege.doorStage(s),closed=!!s.closed&&stage!=='broken';
+      d.gate={stage,closed,broken:stage==='broken',nightClose:s.nightClose!==false};
+    }
     if(s.type==='built')d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
@@ -181,11 +225,17 @@ const StructureCommands=(()=>{
     }
     if(['tower','gate','built'].includes(s.type)){
       const hp=window.ConquerSiege?.integrity(s);
-      if(hp)d.integrity={core:Math.ceil(hp.core.hp),coreMax:hp.core.max,door:hp.door?Math.ceil(hp.door.hp):null,doorMax:hp.door?.max??null};
+      if(hp)d.integrity={core:Math.ceil(hp.core.hp),coreMax:hp.core.max,door:hp.door?Math.ceil(hp.door.hp):null,doorMax:hp.door?.max??null,
+        portcullis:hp.portcullis?Math.ceil(hp.portcullis.hp):null,portcullisMax:hp.portcullis?.max??null};
+    }
+    if(['wall','palisade'].includes(s.type)&&!building){
+      const bays=window.ConquerSiege?.bays?.(s);
+      if(bays)d.bays=bays.map(b=>({hp:Math.ceil(b.hp),max:Math.round(b.max)}));
     }
     return d;
   }
 
   return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setWoodRoof,setGateRoof,setSkin,toggleCutaway,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,changeArchers,describeStructure};
+    setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    describeStructure};
 })();

@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CONQUER — Asset Lab</title>
+<style>
+  :root{--bg:#1d1a16;--panel:#2a251f;--text:#efe6d6;--muted:#b4a68f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif}
+  header{padding:10px 16px;display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;background:var(--panel)}
+  h1{font-size:16px;margin:0;letter-spacing:.04em}
+  .group{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .group span{color:var(--muted);margin-right:4px}
+  label{color:var(--muted);display:flex;gap:6px;align-items:center}
+  button{background:#3b342b;color:var(--text);border:1px solid #574c3e;border-radius:6px;padding:5px 10px;cursor:pointer}
+  button[aria-pressed="true"]{background:#c98a3c;border-color:#c98a3c;color:#1d1a16}
+  [hidden]{display:none!important}
+  canvas{display:block;width:100%;height:auto}
+  .note{color:var(--muted);padding:8px 16px;margin:0}
+  .btnlink{display:inline-block;padding:4px 9px;border-radius:6px;background:#3a3127;color:#f3e6cf;text-decoration:none;font:inherit;font-size:12px;margin:2px}
+  .btnlink:hover{background:#5a4733}
+
+/* Asset Lab — catalogue and visual inspector */
+:root{--line:#584c3e;--accent:#d6a15c;--surface:#29241f}
+header{position:relative;z-index:2;border-bottom:1px solid var(--line)}
+header h1{font-size:18px;white-space:nowrap}
+#labLegacyControls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
+#labLegacyControls .group:has(>button[data-subject]){display:none}
+.asset-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:16px;padding:16px;align-items:start}
+.asset-browser,.asset-inspector{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0;overflow:hidden}
+.asset-browser>div:first-child{padding:14px 14px 0}
+.asset-browser h2,.asset-inspector h2{font-size:16px;margin:0}
+.asset-browser p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.asset-filters{display:flex;gap:6px;overflow-x:auto;padding:12px 14px;scrollbar-width:thin;border-bottom:1px solid var(--line)}
+.asset-filters button{white-space:nowrap;border-radius:16px}
+.asset-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#30291f}
+.asset-tools input,.asset-tools select{color:var(--text);background:#201d19;border:1px solid var(--line);border-radius:6px;padding:8px;max-width:100%;font:inherit}
+.asset-tools #assetSearch{min-width:160px;flex:1}
+.asset-tools select{max-width:190px}
+#assetCount,#assetEngineStatus{font-size:12px;color:var(--muted);white-space:nowrap}
+#assetGallery{height:min(58vh,740px);min-height:280px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));grid-auto-rows:max-content;align-content:start;gap:10px;padding:12px;scrollbar-width:thin}
+.asset-card{padding:0 0 10px;text-align:left;background:#352f27;border:1px solid #514536;border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.asset-card:hover{border-color:var(--accent);background:#433729}
+.asset-card[aria-selected="true"]{outline:2px solid var(--accent);outline-offset:-2px;background:#453622}
+.asset-card-visual{flex:none;display:flex;align-items:center;justify-content:center;height:122px;width:100%;background:radial-gradient(ellipse at 50% 65%,#645543 0,#312d26 70%);overflow:hidden}
+.asset-card-visual img,.asset-card-visual svg{width:100%;height:100%;object-fit:contain;padding:6px}
+.asset-card-visual canvas{width:100%;height:100%;object-fit:contain}
+.asset-card strong,.asset-card small{margin:0 10px;overflow:hidden;text-overflow:ellipsis}
+.asset-card strong{font-size:12px;line-height:1.4;margin-top:8px}
+.asset-card small{font-size:10px;color:var(--muted);margin-top:4px}
+.catalog-empty{color:var(--muted);padding:20px}
+.asset-inspector{padding:16px;position:sticky;top:12px}
+.asset-inspector .caption{font-size:12px;color:var(--muted)}
+.asset-inspector #assetDetailMeta{margin:6px 0 12px;color:#d6b888;font-size:12px}
+.asset-inspector #assetDetailSource{display:block;overflow-wrap:anywhere;font-size:11px;color:#ab9b85;margin-top:10px}
+#assetDetailPreview{height:260px;background:radial-gradient(ellipse at center,#5e5347,#322b23);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#assetDetailPreview[hidden]{display:none}
+#assetDetailPreview img,#assetDetailPreview svg{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%;padding:8px}
+#assetDetailPreview canvas{max-width:100%;height:100%;object-fit:contain}
+#assetAnimationPanel{background:#342f28;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+#assetAnimationPanel canvas{width:100%;height:auto;max-width:100%;margin:0;border:0}
+#assetPreviewNote{color:var(--muted);font-size:12px;margin:10px 0}
+.asset-rotate{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;padding:8px;border-radius:7px;background:#30291f}
+.asset-rotate[hidden]{display:none}
+.asset-rotate button{min-width:70px;min-height:34px;font:inherit;font-weight:700;border:1px solid var(--line);border-radius:6px;background:#4d3d2b;color:var(--text);cursor:pointer}
+.asset-rotate button:hover{background:#725332;border-color:var(--accent)}
+#assetRotationValue{min-width:45px;text-align:center;font-variant-numeric:tabular-nums;color:#edc98f;font-size:13px}
+#assetBuilderLink{display:inline-block;margin-top:6px}
+.asset-states{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:0 0 10px}
+.asset-states[hidden]{display:none}
+.asset-states span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 2px 0 6px}
+.asset-states span:first-child{margin-left:0}
+.asset-states button{font:inherit;font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid var(--line);background:#3a3127;color:var(--text);cursor:pointer}
+.asset-states button[aria-pressed="true"]{background:#725332;border-color:var(--accent)}
+#assetDetailPreview img.engine-capture{object-fit:contain;image-rendering:auto}
+.asset-audit{border-top:1px solid var(--line);padding:12px 14px}
+.asset-audit h2{margin:0 0 4px}
+#assetAuditList{display:flex;flex-direction:column;gap:3px;max-height:240px;overflow-y:auto}
+.audit-row{text-align:left;font:inherit;font-size:11px;padding:5px 8px;border-radius:5px;border:1px solid var(--line);background:#30291f;color:var(--text);cursor:pointer;border-left-width:4px}
+.audit-row[data-status="fail"],.asset-card[data-audit="fail"]{border-left-color:#d65c5c}
+.audit-row[data-status="warn"],.asset-card[data-audit="warn"]{border-left-color:#d6a15c}
+.audit-row[data-status="new"],.asset-card[data-audit="new"]{border-left-color:#5f8fd6}
+.audit-row[data-status="changed"],.asset-card[data-audit="changed"]{border-left-color:#c77ad6}
+.asset-card[data-audit]{border-left-width:4px}
+.symbol-preview{fill:#d9b77c}
+body.asset-catalog-static #c,body.asset-catalog-static .note{display:none}
+body.asset-catalog-static #labLegacyControls{display:none}
+#c{max-width:1200px;margin:0 auto 22px;border:1px solid #514536;border-radius:8px}
+@media(max-width:900px){.asset-layout{grid-template-columns:minmax(0,1fr)}.asset-inspector{position:static}#assetGallery{height:min(53vh,660px)}#assetDetailPreview{height:220px}}
+@media(max-width:500px){.asset-layout{padding:8px;gap:8px}#assetGallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.asset-tools select{max-width:125px}}
+
+</style>
+</head>
+<body>
+<header>
+  <h1>CONQUER · Asset Lab</h1>
+  <div id="labLegacyControls">
+  <div class="group" role="group" aria-label="Animali"><span>Animali</span>
+    <button data-subject="sheep">Pecora</button><button data-subject="goat">Capra</button>
+    <button data-subject="cow">Mucca</button><button data-subject="horse">Cavallo</button>
+  </div>
+  <div class="group" role="group" aria-label="Selvatici"><span>Selvatici</span>
+    <button data-subject="deer">Cerva</button><button data-subject="stag">Cervo</button>
+    <button data-subject="wolf">Lupo</button><button data-subject="bear">Orso</button><button data-subject="boar">Cinghiale</button>
+  </div>
+  <div class="group" role="group" aria-label="Persone"><span>Persone</span>
+    <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
+    <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
+  </div>
+  <div class="group" role="group" aria-label="Assedio"><span>Assedio</span>
+    <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Mangano</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button><button data-subject="siege:mantlet">Mantelletto</button><button data-subject="siege:ballista">Balista</button>
+  </div>
+  <div class="group" role="group" aria-label="Assalto"><span>Assalto nel gioco (muro H1 vero)</span>
+    <a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ram">Ariete</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=mantlet">Mantelletto</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ladder">Scala</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=tower">Torre</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=moat">Fossato</a>
+  </div>
+  <div class="group" role="group" aria-label="Veicoli"><span>Veicoli</span>
+    <button data-subject="wagon">Carro</button><button data-subject="wagon3d">Carro 3D</button>
+  </div>
+  <div class="group" role="group" aria-label="Azione" id="actions"></div>
+  <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
+  <label id="coatBox">Manto <select id="coat"><option value="brown">marrone</option><option value="black">nero</option><option value="grey">grigio</option><option value="white">bianco</option></select></label>
+  <div class="group" id="wagonBox">
+    <label>Telaio <select id="wChassis"><option value="wagon">carro 4 ruote</option><option value="cart">carretto 2 ruote</option><option value="carriage">carrozza nobile</option></select></label>
+    <label>Cavalli <select id="wTeam"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label>
+    <label>Guidatore <select id="wDriver"><option value="villager">popolano</option><option value="spearman">guerriero</option><option value="knight">cavaliere</option><option value="">nessuno</option></select></label>
+    <label>Carico <select id="wCargo"><option value="mixed">misto</option><option value="sack">sacchi</option><option value="crate">casse</option><option value="barrel">botti</option><option value="hay">fieno</option><option value="logs">legna</option><option value="stone">pietra</option><option value="none">vuoto</option></select></label>
+  </div>
+  <div class="group" id="wagon3dBox">
+    <label>Direzione <input id="w3Heading" type="range" min="0" max="359" step="1" value="210"></label>
+    <label><input id="w3Auto" type="checkbox" checked> Gira da solo</label>
+    <label>Telecamera <select id="w3Turns"><option value="0">0°</option><option value="1">90°</option><option value="2">180°</option><option value="3">270°</option></select></label>
+  </div>
+  <div class="group" id="siegeUpBox"><span>Potenziamenti</span>
+    <label id="ammoBox">Munizioni <select id="sAmmo"></select></label>
+    <label id="balBox"><input id="sBallista" type="checkbox"> Balista</label>
+  </div>
+  <label id="flipBox"><input id="flip" type="checkbox"> Verso destra</label>
+  <label>Zoom scena <input id="zoom" type="range" min="1" max="5" step="0.1" value="2.6"></label>
+</div>
+</header>
+<main class="asset-layout">
+  <section class="asset-browser" aria-label="Catalogo asset">
+    <div><h2>Catalogo visivo degli asset</h2><p>Asset originali SVG/PNG, modelli 3D, fortificazioni costruite dal motore e strutture parametriche. Seleziona un elemento per ispezionarlo.</p></div>
+    <nav id="assetCategoryFilters" class="asset-filters" role="group" aria-label="Categorie asset"></nav>
+    <div class="asset-tools">
+      <input id="assetSearch" type="search" placeholder="Cerca asset, modello o sorgente..." aria-label="Cerca asset">
+      <select id="assetFamily" aria-label="Famiglia asset"><option value="">Tutte le famiglie</option></select>
+      <select id="assetFormat" aria-label="Tipo di risorsa">
+        <option value="">Tutti i formati</option><option value="file">SVG / PNG</option>
+        <option value="model">Modelli 3D</option><option value="castle">Fortificazioni 3D</option><option value="animal">Animali 3D</option>
+        <option value="figure">Animazioni</option><option value="schematic">Parametrici</option>
+        <option value="symbol">Simboli araldici</option>
+      </select>
+      <button id="assetReset" type="button">Azzera</button>
+      <button id="assetAuditRun" type="button" title="Verifica ogni asset in ogni stato con i render del Lab">Audit</button>
+      <span id="assetCount" aria-live="polite"></span>
+      <span id="assetEngineStatus" aria-live="polite"></span>
+    </div>
+    <div id="assetGallery" tabindex="0" aria-label="Griglia asset"></div>
+    <section id="assetAudit" class="asset-audit" aria-label="Audit visivo" hidden>
+      <h2>Audit visivo</h2>
+      <p id="assetAuditSummary" aria-live="polite"></p>
+      <div id="assetAuditList"></div>
+    </section>
+  </section>
+  <aside id="assetDetail" class="asset-inspector" aria-label="Anteprima asset" hidden>
+    <h2 id="assetDetailName"></h2>
+    <div id="assetDetailMeta"></div>
+    <div id="assetStateBar" class="asset-states" role="group" aria-label="Stato della struttura" hidden></div>
+    <div id="assetDetailPreview"></div>
+    <div id="assetAnimationPanel" hidden></div>
+    <div id="assetRotationControls" class="asset-rotate" role="group" aria-label="Rotazione del modello 3D" hidden>
+      <button id="assetRotateLeft" type="button" aria-label="Ruota modello di 15 gradi a sinistra">↶ −15°</button>
+      <output id="assetRotationValue" aria-live="polite">0°</output>
+      <button id="assetRotateRight" type="button" aria-label="Ruota modello di 15 gradi a destra">+15° ↷</button>
+    </div>
+    <p id="assetPreviewNote"></p>
+    <span class="caption">Sorgente effettiva</span>
+    <code id="assetDetailSource"></code>
+    <a id="assetBuilderLink" class="btnlink" href="./index.html?world3d=1" target="_blank" rel="noopener" hidden>Apri nel Builder ↗</a>
+  </aside>
+</main>
+<p class="note">Anteprima animata nel motore del gioco: soggetto principale e scena in scala, con controlli di movimento e varianti.</p>
+<canvas id="c" width="1200" height="800"></canvas>
+<script>
+// Minimal stand-ins for the game globals the figure drawers rely on: a flat
+// screen-space world (w2s = identity), no urban occlusion, no terrain.
+let ctx=null;
+const State={view:{scale:1},heraldry:{}};
+const VILLAGER_SKIN='#d99a83',REIGN_COLOR_1='#b53636',REIGN_COLOR_2='#355fb8',REIGN_COLOR_1_DARK='#7f2323',REIGN_COLOR_2_DARK='#243f79';
+const HAIR_COLORS={blonde:'#d5b65a',brown:'#65452f',black:'#262321',gray:'#9a9891',red:'#9b4a2d'};
+function w2s(p){return{x:p.x,y:p.y}}
+function w2sRaw(p){return{x:p.x,y:p.y}}
+function withUrbanFigureOcclusion(p,z,fn){return fn()}
+function terrainElevation(){return 0}
+function withProjectionGroundZ(g,fn){return fn()}
+function peasantHash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function villagerHair(id){return['blonde','brown','black','gray','red'][peasantHash(id)%5]}
+</script>
+<script src="./src/settlement-population-figures.js?v=lab-1"></script>
+<script src="./src/settlement-combat-anim.js?v=lab-1"></script>
+<script src="./src/settlement-work-anim.js?v=lab-1"></script>
+<script src="./src/settlement-animals.js?v=lab-2"></script>
+<script src="./src/settlement-wagons.js?v=lab-1"></script>
+<script src="./src/assets/wagon-model.js?v=lab-1"></script>
+<script src="./src/settlement-wagons3d.js?v=lab-2"></script>
+<script src="./src/assets/animal-models.js?v=lab-1"></script>
+<script src="./src/settlement-animals3d.js?v=lab-1"></script>
+<script src="./src/assets/siege-engines-model.js?v=lab-5"></script>
+<script src="./src/settlement-siege-engines3d.js?v=lab-5"></script>
+<script>
+(function(){
+  const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,WA=window.ConquerWorkAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
+  const $=id=>document.getElementById(id);
+  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
+  const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo'],['dig','Pala'],['chop','Ascia'],['pick','Piccone'],['build','Martello'],['plough','Zappa'],['sow','Semina'],['harvest','Falce']]};
+  // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
+  function siegeActions(e){
+    const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:'Tiro balista',ballista:'Tiro'}[e];
+    return[['idle',e==='ladder'?'Trasporto':'Fermo'],['move','In marcia']].concat(fire?[['fire',fire]]:[],e==='trebuchet'?[['setup','Allestimento']]:[]);
+  }
+  // Upgrades: incendiary shots for the trebuchet, scatter shot for the mangonel,
+  // a ballista behind the mantlet's embrasure.
+  const AMMO={trebuchet:[['stone','Pietra'],['fire','Incendiaria']],catapult:[['stone','Pietra'],['scatter','Sassaiola']]};
+  const WORK_TOOL={dig:'shovel',chop:'axe',pick:'pickaxe',build:'hammer',plough:'hoe',sow:'seeds',harvest:'sickle'};
+  const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
+  let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
+  const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  function renderButtons(){
+    document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
+    const acts=kindOf(subject)==='animal'?animalActions(subject):kindOf(subject)==='siege'?siegeActions(subject.split(':')[1]):ACTIONS[kindOf(subject)];
+    if(!acts.some(([k])=>k===action))action=acts[0][0];
+    $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
+    $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
+    $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
+    $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege'].includes(kindOf(subject)));
+    $('flipBox').hidden=subject!=='wagon';
+    const eng=kindOf(subject)==='siege'?subject.split(':')[1]:'',ammo=AMMO[eng];
+    $('siegeUpBox').hidden=!ammo&&eng!=='mantlet';$('ammoBox').hidden=!ammo;$('balBox').hidden=eng!=='mantlet';
+    if(ammo){const was=$('sAmmo').value;$('sAmmo').innerHTML=ammo.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('');if(ammo.some(([k])=>k===was))$('sAmmo').value=was}
+    resetHero();
+  }
+  document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
+  $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
+
+  // Hero soldier state: the three sizes share one fighter and one dummy foe.
+  let hero,foe,nextHit=0,nextDeath=0,arrows=[];
+  function resetHero(){hero={id:'hero-'+subject,engaged:false};foe={id:'foe',engaged:false};nextHit=clock+.3;nextDeath=clock+.2;arrows=[]}
+
+  const VILLAGERS=[
+    {kind:'peasant',sex:'male',age:'adult',colors:['#8c6b3f','#5d4a32']},
+    {kind:'peasant',sex:'female',age:'adult',colors:['#9a7b52','#6b5338']},
+    {kind:'artisan',sex:'male',age:'adult',colors:['#6d7f8c','#4a5560']},
+    {kind:'merchant',sex:'female',age:'adult',colors:['#7a4f7a','#c6a457']},
+    {kind:'peasant',sex:'male',age:'child',colors:['#a08060','#6b5338']}
+  ].map((v,i)=>({...v,id:'v'+i,hair:villagerHair('v'+i)}));
+
+  function drawPerson(type,p,scale,unit,foePoint,livery,index=0){
+    State.view.scale=scale;ctx=g;
+    CA.drawFigure(p,0,type,unit.id,clock*.2,livery,CA.pose(unit,index,p,foePoint));
+  }
+  function drawArrows(){
+    const at=(a,k)=>({x:a.from.x+(a.to.x-a.from.x)*k,y:a.from.y+(a.to.y-a.from.y)*k-Math.sin(Math.PI*k)*a.arc});
+    for(const a of arrows){
+      const k=(clock-a.at)/a.dur;if(k<0||k>1)continue;
+      const p=at(a,k),q=at(a,Math.min(1,k+.06));
+      g.strokeStyle='#d7c6a1';g.lineWidth=a.w;g.beginPath();g.moveTo(p.x,p.y);g.lineTo(q.x,q.y);g.stroke();
+    }
+    arrows=arrows.filter(a=>clock-a.at<a.dur+.1);
+  }
+  function heroSoldiers(W,H,k){
+    const sizes=[[W*.18,H*.5,10*k],[W*.6,H*.5,5*k],[W*.84,H*.5,2.5*k]];
+    hero.engaged=foe.engaged=action!=='guard';
+    if(action==='attack'&&clock>=nextHit){
+      CA.strike(hero,foe);
+      if(subject==='archer'){
+        for(const [x,y,s] of sizes)arrows.push({from:{x:x+2*s,y:y-6*s},to:{x:x+15*s,y:y-4*s},at:clock,dur:.35,arc:3*s,w:Math.max(1,s*.35)});
+        CA.hurt(foe,.35);nextHit=clock+2;
+      }else{CA.strike(foe,hero);CA.hurt(foe,CA.TIMING.IMPACT);nextHit=clock+1.1}
+    }
+    if(action==='die'&&clock>=nextDeath){resetHero();hero.engaged=foe.engaged=true;CA.strike(foe,hero);CA.fall(hero,CA.TIMING.IMPACT,foe);nextDeath=clock+3.2}
+    for(const [x,y,s] of sizes){
+      const hp={x,y},fp={x:x+(subject==='archer'?16:13)*s,y};
+      drawPerson(subject,hp,s*2,hero,fp,null);
+      drawPerson('spearman',fp,s*2,foe,hp,HOSTILE);
+    }
+    drawArrows();
+  }
+  function heroVillagers(W,H,k){
+    const tool=WORK_TOOL[action];
+    if(!tool){VILLAGERS.forEach((v,i)=>{State.view.scale=18*k;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:W*(.14+i*.17),y:H*.5}})});return}
+    // The worker at three sizes, facing both ways.
+    [[W*.22,H*.62,22*k,1],[W*.58,H*.62,11*k,-1],[W*.82,H*.62,5*k,1]].forEach(([x,y,s,f],i)=>{
+      State.view.scale=s;ctx=g;WA.drawWorkerUnmasked({...VILLAGERS[i===1?2:0],id:'worker'+i,p:{x,y}},tool,clock,f)});
+  }
+  // Animals are 3D: the Blender-built models at any heading, driven by the shared gaits.
+  function animalActions(species){
+    const labels=Object.fromEntries(A.SPECIES[species].modes);labels.run=labels.run||'Corsa';
+    return A3.modesOf(species).map(m=>[m,labels[m]||m]);
+  }
+  function headingInput(dt){
+    if($('w3Auto').checked){w3Heading=(w3Heading+dt*25)%360;$('w3Heading').value=Math.round(w3Heading)}else w3Heading=Number($('w3Heading').value);
+    return w3Heading*Math.PI/180;
+  }
+  function heroAnimals(W,H,k,dt){
+    trans=Math.min(1,trans+dt/.45);
+    const heading=headingInput(dt),turns=Number($('w3Turns').value),coat=$('coat').value,M=window.ConquerAnimalModels[subject];
+    // Big view framed to the animal's height; the small one is at game scale.
+    [[W*.38,H*.6,12*(5.2/M.height)*k],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>
+      W3.drawMeshes(g,[A3.triangles(subject,{x:0,y:0,heading},{from:fromAction,mode:action,blend:trans,t:clock},A3.coatColors(subject,coat))],isoView(cx,cy,s,turns)));
+  }
+  // Wagon: every module comes from the selects; the driver is drawn by the
+  // game's own figure code on the seat anchor the wagon provides.
+  const CARGO_PRESETS={mixed:['sack','crate','barrel','hay','sack','crate'],sack:Array(6).fill('sack'),crate:Array(6).fill('crate'),
+    barrel:Array(6).fill('barrel'),hay:Array(6).fill('hay'),logs:['logs','logs','logs','logs'],stone:Array(6).fill('stone'),none:[]};
+  let wagonDistance=0;
+  function driverFor(type){
+    if(!type)return null;
+    return(gx,x,y,size)=>{
+      State.view.scale=size/4.9;ctx=gx;
+      if(type==='villager')drawVillagerFigureUnmasked({...VILLAGERS[0],p:{x,y}});
+      else CA.drawFigure({x,y},0,type,'driver-'+type,0,null,CA.pose({engaged:false},0));
+    };
+  }
+  function wagonSpec(){
+    const coat=$('coat').value,team=Number($('wTeam').value);
+    return{chassis:$('wChassis').value,cargo:CARGO_PRESETS[$('wCargo').value],
+      team:Array.from({length:team},(_,i)=>({coat:i?(coat==='white'?'grey':'white'):coat})),driver:driverFor($('wDriver').value)};
+  }
+  function heroWagon(W,H,k,dt){
+    const moving=action==='move',facing=$('flip').checked?-1:1;
+    if(moving)wagonDistance+=dt*60;
+    const spec=wagonSpec();
+    W2.drawWagon(g,W*(facing>0?.2:.62),H*.55,100*k,{...spec,facing,t:clock,distance:wagonDistance,moving});
+    W2.drawWagon(g,W*(facing>0?.8:.9),H*.55,32*k,{...spec,facing,t:clock,distance:wagonDistance,moving});
+  }
+
+  // Wagon 3D: the Blender-built model at any heading, drawn with the game's iso
+  // projection (px per U = 12 x zoom, like w2sRaw); team and driver are sprites
+  // sorted into the same depth order.
+  const W3=window.ConquerWagons3D,A3=window.ConquerAnimals3D;let w3Distance=0,w3Heading=210;
+  function isoView(cx,cy,pxPerU,turns){
+    const rot=(x,y)=>W3.rotDir(x,y,turns);
+    return{turns,
+      project:(x,y,z)=>{const [qx,qy]=rot(x,y);return{x:cx+(qx-qy)*pxPerU*.8660254,y:cy+(qx+qy)*pxPerU*.5-z*pxPerU*.9}},
+      depth:(x,y,z)=>{const [qx,qy]=rot(x,y);return qx+qy+.9*z}};
+  }
+  function wagon3dAt(cx,cy,pxPerU,spec,moving,turns){
+    const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12;
+    const pose={x:0,y:0,heading:w3Heading*Math.PI/180,distance:w3Distance,bob:moving?Math.sin(w3Distance*40)*.004:0};
+    const anchors=W3.anchors(spec,pose),sprites=[];
+    // The team is 3D too: it turns with the wagon and sorts with it in one depth order.
+    const team=anchors.horses.map((h,i)=>A3.triangles('horse',{...h,heading:pose.heading},
+      {mode:moving?'walk':'idle',t:clock+i*.12,seed:i},A3.coatColors('horse',spec.team[i]?.coat)));
+    if(anchors.seat&&spec.driver)sprites.push({...anchors.seat,z:anchors.seat.z+.12,draw:()=>{const s=view.project(anchors.seat.x,anchors.seat.y,anchors.seat.z);spec.driver(g,s.x,s.y,4.9*zoom)}});
+    return W3.draw(g,spec,pose,view,sprites,team);
+  }
+  // Siege engines: Blender models with their shot animated; the crew are the
+  // game's own 2D soldiers on the engine's crew anchors; the stone flies as a sprite.
+  const SE=window.ConquerSiegeEngines3D;let siegeDistance=0;
+  // A flickering flame (and its glow) at a screen point; r in px.
+  function flame(x,y,r,seed=0){
+    const f=1+.18*Math.sin(clock*23+seed)+.1*Math.sin(clock*37+seed*2);
+    g.fillStyle='rgba(255,150,40,.25)';g.beginPath();g.arc(x,y-r*.6,r*2.2,0,Math.PI*2);g.fill();
+    for(const [c,k] of [['#d8461c',1],['#f59a2a',.7],['#ffe08a',.38]]){
+      const h=r*2.4*k*f,w=r*k;
+      g.fillStyle=c;g.beginPath();g.moveTo(x-w,y);g.quadraticCurveTo(x-w,y-h*.55,x+Math.sin(clock*9+seed)*w*.4,y-h);g.quadraticCurveTo(x+w,y-h*.55,x+w,y);g.closePath();g.fill();
+    }
+  }
+  function siegeAt(engine,cx,cy,pxPerU,turns,heading){
+    const view=isoView(cx,cy,pxPerU,turns),zoom=pxPerU/12;
+    const state={mode:action,t:clock,distance:siegeDistance,ammo:$('sAmmo').value,ballista:$('sBallista').checked};
+    const place={x:0,y:0,heading},sprites=[];
+    SE.crew(engine,place,state).forEach((p,i)=>sprites.push({...p,draw:()=>{
+      const s=view.project(p.x,p.y,p.z),lean=action==='move'?Math.sin(clock*6+i)*.6:0;
+      State.view.scale=zoom;ctx=g;CA.drawFigure({x:s.x+lean,y:s.y},0,'spearman','crew'+i,0,null,CA.pose({engaged:false},i));
+    }}));
+    // A 0.4 m stone: sizes follow the world scale, not the figure zoom.
+    const r=Math.max(2,pxPerU*.06);
+    const ball=(p,rr,fill)=>{
+      const sh=view.project(p.x,p.y,0),s=view.project(p.x,p.y,p.z);
+      g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(sh.x,sh.y,rr*1.4,rr*.7,0,0,Math.PI*2);g.fill();
+      g.fillStyle=fill;g.strokeStyle='#4a4844';g.lineWidth=1;g.beginPath();g.arc(s.x,s.y,rr,0,Math.PI*2);g.fill();g.stroke();
+      return s;
+    };
+    const shot=SE.projectile(engine,place,state);
+    if(shot)sprites.push({...shot,draw:()=>{
+      if(shot.ammo==='scatter'){shot.pellets.forEach(p=>ball(p,r*.45,'#8f8d88'));return}
+      if(shot.ammo==='bolt'){
+        // Flat and fast: a short dark shaft along the heading, with a faint streak.
+        const s=view.project(shot.x,shot.y,shot.z),b=view.project(shot.x-Math.cos(shot.heading)*.35,shot.y-Math.sin(shot.heading)*.35,shot.z);
+        g.strokeStyle='rgba(255,255,255,.3)';g.lineWidth=1;g.beginPath();g.moveTo(b.x+(b.x-s.x)*3,b.y+(b.y-s.y)*3);g.lineTo(b.x,b.y);g.stroke();
+        g.strokeStyle='#3b2a1a';g.lineWidth=Math.max(1.5,pxPerU*.02);g.beginPath();g.moveTo(b.x,b.y);g.lineTo(s.x,s.y);g.stroke();
+        return;
+      }
+      if(shot.ammo==='fire'){
+        // Smoke trail from where the ball was a moment ago.
+        for(let i=6;i>=1;i--){
+          const p=SE.projectile(engine,place,{...state,t:clock-i*.05});if(!p)continue;
+          const q=view.project(p.x,p.y,p.z);g.fillStyle='rgba(60,55,50,'+(.32-i*.04)+')';g.beginPath();g.arc(q.x,q.y,r*(1+i*.25),0,Math.PI*2);g.fill();
+        }
+        const s=ball(shot,r,'#2b1a10');flame(s.x,s.y,Math.max(2.5,r*1.2));return;
+      }
+      ball(shot,r,'#8f8d88');
+    }});
+    const mesh=SE.triangles(engine,place,state);
+    W3.drawMeshes(g,[mesh],view,sprites);
+    // The incendiary ball burns while it waits in the sling: flames are drawn over
+    // the engine (they rise above the trough and give light).
+    mesh.burning.forEach((b,i)=>{const s=view.project(b.x,b.y,b.z);flame(s.x,s.y,Math.max(2.5,pxPerU*.07),i)});
+  }
+  function heroSiege(W,H,k,dt){
+    const engine=subject.split(':')[1],turns=Number($('w3Turns').value),heading=headingInput(dt);
+    if(action==='move')siegeDistance+=dt*.3;
+    const len=window.ConquerSiegeModel.engines[engine].length;
+    siegeAt(engine,W*.34,H*.6,Math.min(W*.26/len,H*.3/len),turns,heading);
+    siegeAt(engine,W*.84,H*.62,12*2.6*k,turns,heading);
+  }
+  function heroWagon3D(W,H,k,dt){
+    const moving=action==='move',turns=Number($('w3Turns').value);
+    headingInput(dt);
+    if(moving)w3Distance+=dt*.35;
+    const spec=wagonSpec();
+    wagon3dAt(W*.4,H*.5,12*8*k,spec,moving,turns);
+    wagon3dAt(W*.84,H*.52,12*2.6*k,spec,moving,turns);
+  }
+
+  // Game-scale scene: mixed flock, villagers, a looping skirmish.
+  // Game-scale meadow in world units: every animal wanders in any direction,
+  // switches between its actions, and sorts in one depth order with a 3D wagon.
+  const COATS=['brown','black','grey','white'];
+  const HERD=['sheep','sheep','sheep','goat','goat','cow','cow','horse','horse','deer','stag','wolf','bear','boar'];
+  const herd=HERD.map((species,i)=>({species,x:Math.cos(i*2.4)*3.6,y:Math.sin(i*2.4)*3.6,heading:i*1.3,seed:i*1.7,
+    mode:'walk',from:'walk',trans:1,until:1+i*.4,coat:COATS[i%4]}));
+  function wander(a,dt){
+    const modes=A3.modesOf(a.species);
+    a.until-=dt;a.trans=Math.min(1,a.trans+dt/.45);
+    if(a.until<=0){
+      // Grazers mostly alternate walk and browse; wildlife cycles its own actions.
+      const next=modes.includes('browse')&&Math.random()<.6?(a.mode==='walk'?'browse':'walk'):modes[(modes.indexOf(a.mode)+1)%modes.length];
+      a.from=a.mode;a.mode=next;a.trans=0;a.until=2+Math.random()*3;
+    }
+    const speed=a.mode==='walk'?.16:a.mode==='run'?.55:0;
+    if(speed){
+      const d=Math.hypot(a.x,a.y);
+      if(d>5.2)a.heading+=Math.sign(Math.sin(Math.atan2(-a.y,-a.x)-a.heading))*dt*1.2;   // turn back to the meadow
+      else a.heading+=Math.sin(clock*.3+a.seed)*dt*.4;
+      a.x+=Math.cos(a.heading)*speed*dt;a.y+=Math.sin(a.heading)*speed*dt;
+    }
+  }
+  let sceneWagonA=0;  const fighters=[0,1,2].map(i=>({ally:{id:'ally'+i,engaged:true},enemy:{id:'enemy'+i,engaged:true},next:i*.37}));
+  const sceneArcher={id:'scene-archer',engaged:true},sceneKnight={id:'scene-knight',engaged:true},knightFoe={id:'kfoe',engaged:true};
+  let archerNext=.5,knightNext=.2;
+  function scene(W,H,k,dt){
+    const z=Number($('zoom').value)*k;
+    g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,H*.66,W,2);
+    const animalSize=4.9*z,view=isoView(W*.3,H*.8,12*z,0),meshes=[],sprites=[];
+    for(const a of herd){
+      wander(a,dt);
+      meshes.push(A3.triangles(a.species,a,{from:a.from,mode:a.mode,blend:a.trans,t:clock,seed:a.seed},A3.coatColors(a.species,a.coat)));
+    }
+    // A supply wagon circling the meadow with its 3D team and a seated driver.
+    sceneWagonA+=dt*.06;
+    const wp={x:Math.cos(sceneWagonA)*6.2,y:Math.sin(sceneWagonA)*6.2,heading:sceneWagonA+Math.PI/2,distance:sceneWagonA*6.2},
+      wspec={chassis:'wagon',cargo:CARGO_PRESETS.mixed,team:[{coat:'brown'},{coat:'grey'}]},an=W3.anchors(wspec,wp);
+    meshes.push(W3.worldTriangles(wspec,wp));
+    an.horses.forEach((h,i)=>meshes.push(A3.triangles('horse',{...h,heading:wp.heading},{mode:'walk',t:clock+i*.12,seed:i},A3.coatColors('horse',wspec.team[i].coat))));
+    const drv=driverFor('villager');
+    sprites.push({...an.seat,z:an.seat.z+.12,draw:()=>{const p=view.project(an.seat.x,an.seat.y,an.seat.z);drv(g,p.x,p.y,animalSize)}});
+    W3.drawMeshes(g,meshes,view,sprites);
+    VILLAGERS.forEach((v,i)=>{State.view.scale=z;ctx=g;drawVillagerFigureUnmasked({...v,p:{x:(840+i*22)*k,y:(650+(i%2)*14)*k}})});
+    // A work crew at game scale: one worker per tool.
+    Object.values(WORK_TOOL).forEach((tool,i)=>{State.view.scale=z;ctx=g;WA.drawWorkerUnmasked({...VILLAGERS[i%2?2:0],id:'crew'+i,p:{x:(640+i*26)*k,y:(560+(i%2)*12)*k}},tool,clock,i%2?-1:1)});    // Skirmish: pikemen vs hostiles, an archer behind, a knight on the flank.
+    fighters.forEach((f,i)=>{
+      const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};
+      if(clock>=f.next){CA.strike(f.ally,f.enemy);CA.strike(f.enemy,f.ally);if(Math.random()<.5)CA.hurt(Math.random()<.5?f.ally:f.enemy,CA.TIMING.IMPACT);f.next=clock+1+Math.random()*.3}
+      drawPerson('spearman',ap,z,f.ally,ep,null,i);
+      drawPerson('spearman',ep,z,f.enemy,ap,HOSTILE,i);
+    });
+    const arP={x:830*k,y:770*k},target={x:964*k,y:748*k};
+    if(clock>=archerNext){CA.strike(sceneArcher,null);arrows.push({from:{x:arP.x+z,y:arP.y-3*z},to:target,at:clock,dur:.5,arc:4*z,w:Math.max(1,z*.4)});archerNext=clock+2}
+    drawPerson('archer',arP,z,sceneArcher,target,null);
+    const kp={x:1060*k,y:720*k},kf={x:kp.x+2.6*z,y:kp.y+.5*z};
+    if(clock>=knightNext){CA.strike(sceneKnight,knightFoe);CA.strike(knightFoe,sceneKnight);knightNext=clock+1.2}
+    drawPerson('knight',kp,z,sceneKnight,kf,null);
+    drawPerson('spearman',kf,z,knightFoe,kp,HOSTILE);
+    drawArrows();
+  }
+  function resize(){const w=Math.min(1200,c.clientWidth||1200);if(c.width!==w){c.width=w;c.height=Math.round(w*.667)}}
+  function frame(now){
+    render(Math.min(.05,(now-last)/1000)*Number($('speed').value));last=now;
+    requestAnimationFrame(frame);
+  }
+  function render(dt){
+    if(document.body.classList.contains('asset-catalog-static')){clock+=dt;return}
+    resize();clock+=dt;
+    CA.setClock(clock); // the speed slider drives combat timing too
+    const W=c.width,H=c.height,k=W/1200;
+    g.fillStyle='#6f9a48';g.fillRect(0,0,W,H);
+    g.fillStyle='#5f8a3e';for(let i=0;i<70;i++){const x=(i*197)%W,y=(i*131)%H;g.fillRect(x,y,3*k,8*k)}
+    const kind=kindOf(subject);
+    if(kind==='siege')heroSiege(W,H,k,dt);
+    else if(subject==='wagon3d')heroWagon3D(W,H,k,dt);
+    else if(kind==='vehicle')heroWagon(W,H,k,dt);
+    else if(kind==='animal')heroAnimals(W,H,k,dt);
+    else if(kind==='soldier')heroSoldiers(W,H,k);
+    else heroVillagers(W,H,k);
+    scene(W,H,k,dt);
+  }
+  // Manual stepping for automated checks (rAF pauses in background tabs).
+  window.ConquerLab={step:(dt=1/60)=>render(dt),at:t=>{clock=t;render(0)},
+    rotate3d:delta=>{
+      $('w3Auto').checked=false;
+      w3Heading=((Number($('w3Heading').value)+delta)%360+360)%360;
+      $('w3Heading').value=Math.round(w3Heading)%360;
+      render(0);
+      return w3Heading;
+    }};
+  renderButtons();
+  requestAnimationFrame(frame);
+})();
+</script>
+<script src="./src/settlement-mesh3d.js?v=asset-lab-1"></script>
+<script src="./src/assets/civic-models.js?v=asset-lab-1"></script>
+<script src="./src/assets/industry-models.js?v=asset-lab-1"></script>
+<script src="./src/assets/scatter-model.js?v=asset-lab-1"></script>
+<script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
+<script src="./src/asset-manifest.js?v=asset-lab-3"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-7"></script>
+<script src="./src/asset-audit.js?v=asset-lab-7"></script>
+</body>
+</html>

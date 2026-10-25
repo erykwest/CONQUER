@@ -229,6 +229,7 @@ function drawRelief(){
     const top=projectClippedTerrain(level.top.map(p=>({...p,z:level.z1})));
     if(top.length>=3&&screenPolygonVisible(top,96))pathPolygon(top,baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
   }
+  window.ConquerTerraforming?.drawCommitted();
   if(window.__conquerPerf)window.__conquerPerf.reliefBandsDrawn=bandsDrawn;
 }
 const SPRING_FLOWER_PALETTE=['#f7d7e8','#f3e37b','#f4f1dc','#d9b3ef','#e7a6b8'];
@@ -716,7 +717,7 @@ function drawBuildArea(){
   // The buildable-zone perimeter is a placement aid, not permanent landscape.
   // Include every construction tool used by the current Builder (including
   // industry sites and the bridge/moat crossing palette).
-  if(!['well','tower','gate','civic','linear','industry','crossing'].includes(State.tool?.kind))return;
+  if(!['well','tower','gate','civic','linear','industry','crossing','terraform'].includes(State.tool?.kind))return;
   const pts=projectPath([{x:BUILD_MIN,y:BUILD_MIN},{x:BUILD_MAX,y:BUILD_MIN},{x:BUILD_MAX,y:BUILD_MAX},{x:BUILD_MIN,y:BUILD_MAX}]);
   ctx.save();ctx.fillStyle='rgba(224,138,60,.028)';pathPolygon(pts,'rgba(224,138,60,.028)',null);ctx.strokeStyle='rgba(224,138,60,.9)';ctx.lineWidth=2;ctx.setLineDash([8,7]);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.setLineDash([]);
   const label=w2s({x:BUILD_MIN,y:BUILD_MIN});ctx.fillStyle='rgba(242,230,211,.72)';ctx.font='11px system-ui';ctx.fillText('BUILDABLE 100×100U',label.x+8,label.y+15);ctx.restore();

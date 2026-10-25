@@ -1,0 +1,106 @@
+{
+  "asset": "logging_camp",
+  "angle_increment": 15,
+  "angles": 24,
+  "viewBox": "0 0 1024 1024",
+  "projection": "world-rotated isometric vector",
+  "transparent": true,
+  "sprites": [
+    {
+      "degrees": 0,
+      "path": "./logging_camp_rotations/logging_camp_000.svg"
+    },
+    {
+      "degrees": 15,
+      "path": "./logging_camp_rotations/logging_camp_015.svg"
+    },
+    {
+      "degrees": 30,
+      "path": "./logging_camp_rotations/logging_camp_030.svg"
+    },
+    {
+      "degrees": 45,
+      "path": "./logging_camp_rotations/logging_camp_045.svg"
+    },
+    {
+      "degrees": 60,
+      "path": "./logging_camp_rotations/logging_camp_060.svg"
+    },
+    {
+      "degrees": 75,
+      "path": "./logging_camp_rotations/logging_camp_075.svg"
+    },
+    {
+      "degrees": 90,
+      "path": "./logging_camp_rotations/logging_camp_090.svg"
+    },
+    {
+      "degrees": 105,
+      "path": "./logging_camp_rotations/logging_camp_105.svg"
+    },
+    {
+      "degrees": 120,
+      "path": "./logging_camp_rotations/logging_camp_120.svg"
+    },
+    {
+      "degrees": 135,
+      "path": "./logging_camp_rotations/logging_camp_135.svg"
+    },
+    {
+      "degrees": 150,
+      "path": "./logging_camp_rotations/logging_camp_150.svg"
+    },
+    {
+      "degrees": 165,
+      "path": "./logging_camp_rotations/logging_camp_165.svg"
+    },
+    {
+      "degrees": 180,
+      "path": "./logging_camp_rotations/logging_camp_180.svg"
+    },
+    {
+      "degrees": 195,
+      "path": "./logging_camp_rotations/logging_camp_195.svg"
+    },
+    {
+      "degrees": 210,
+      "path": "./logging_camp_rotations/logging_camp_210.svg"
+    },
+    {
+      "degrees": 225,
+      "path": "./logging_camp_rotations/logging_camp_225.svg"
+    },
+    {
+      "degrees": 240,
+      "path": "./logging_camp_rotations/logging_camp_240.svg"
+    },
+    {
+      "degrees": 255,
+      "path": "./logging_camp_rotations/logging_camp_255.svg"
+    },
+    {
+      "degrees": 270,
+      "path": "./logging_camp_rotations/logging_camp_270.svg"
+    },
+    {
+      "degrees": 285,
+      "path": "./logging_camp_rotations/logging_camp_285.svg"
+    },
+    {
+      "degrees": 300,
+      "path": "./logging_camp_rotations/logging_camp_300.svg"
+    },
+    {
+      "degrees": 315,
+      "path": "./logging_camp_rotations/logging_camp_315.svg"
+    },
+    {
+      "degrees": 330,
+      "path": "./logging_camp_rotations/logging_camp_330.svg"
+    },
+    {
+      "degrees": 345,
+      "path": "./logging_camp_rotations/logging_camp_345.svg"
+    }
+  ]
+}

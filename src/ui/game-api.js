@@ -69,6 +69,10 @@
       width: t.width ?? null,
       civic: t.placementSpec?.type && t.kind === 'civic' ? t.placementSpec.type : null,
       industry: t.industry || null,
+      extraction: t.placementSpec?.extractionMode || null,
+      mode: t.mode || null,
+      radius: t.radius ?? null,
+      delta: t.delta ?? null,
       label: t.label || ''
     };
   }
@@ -87,6 +91,13 @@
       tool: tool(),
       levels: { ...State.buildLevels },
       crossingWidth: Number(findLegacy('[data-crossing-width].active')?.dataset.crossingWidth) || 2,
+      terraform: {
+        shape: findLegacy('[data-terraform-shape].active')?.dataset.terraformShape || 'round',
+        delta: Number(findLegacy('[data-terraform-delta].active')?.dataset.terraformDelta) || 1,
+        radius: Number(findLegacy('[data-terraform-radius].active')?.dataset.terraformRadius) || 4
+      },
+      masonry: State.buildMasonryMaterial === 'brick' ? 'brick' : 'stone',
+      privateMasonry: findLegacy('[data-private-masonry].active')?.dataset.privateMasonry || 'stone',
       selection: selection(),
       village: State.village?.name || null,
       status: document.getElementById('status')?.textContent || '',
@@ -123,6 +134,7 @@
       return out;
     },
     demolish: id => { deleteStructure(id); emit(); },
+    select: id => { selectStructure(State.structures.find(s => s.id === id) || null); emit(); },
     openProfile: () => press('#profileBtn'),
     toggleDev: () => press('#devToggle'),
 
@@ -174,7 +186,7 @@
           profit: a.profit ?? null, abandoned: !!a.abandoned }));
       return {
         welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
-        goods: ECON_GOODS.map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],
+        goods: (econ.GOODS || ECON_GOODS).map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],
           share: e.saleShare[g], reserve: e.target[g] })),
         activities, events: (e.events || []).slice(0, 8), lastTrade: e.lastTrade || null, weekday: s.weekday
       };

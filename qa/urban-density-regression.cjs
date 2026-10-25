@@ -24,7 +24,7 @@ function peasantHash(id){
   return h>>>0;
 }
 const sandbox={
-  State,window:{},dist,rectWorldPoints,peasantHash,biomeHash:peasantHash,
+  State,window:{},dist,rectWorldPoints,isCivicAnnex:()=>false,civicAnnexFootprint:()=>[],peasantHash,biomeHash:peasantHash,
   segmentDistance:(a,b,c,d)=>Math.min(
     dist(a,closestPointOnSegment(a,c,d)),dist(b,closestPointOnSegment(b,c,d)),
     dist(c,closestPointOnSegment(c,a,b)),dist(d,closestPointOnSegment(d,a,b))),
@@ -94,6 +94,21 @@ test('L1 and L2 remain single-house lots',()=>{
   house.houseLevel=1;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
   house.houseLevel=2;assert.equal(run('urbanDenseParts(State.structures[0]).length'),0);
 });
+test('L2 cow plots gain exactly one lean-to, while L2 gardens have none',()=>{
+  house.houseLevel=2;run('urbanRevision++');
+  run("window.ConquerLivestock={lotKindForHouse:()=> 'cow'}");
+  const cattle=run('urbanLotOutbuildings(State.structures[0])');
+  assert.equal(cattle.length,1);
+  assert.equal(cattle[0].type,'shed');
+  assert.ok(cattle[0].points.every(p=>run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(p)+',.04)')));
+  const body=run('houseFootprintParts(State.structures[0])');
+  assert.ok(body.every(p=>run('urbanPolygonIntersectionArea('+JSON.stringify(p.points)+','+JSON.stringify(cattle[0].points)+')')<1e-6));
+  assert.equal(run('urbanHouseDisplayParts(State.structures[0]).length'),body.length+1);
+  run("window.ConquerLivestock={lotKindForHouse:()=> 'garden'}");
+  assert.equal(run('urbanLotOutbuildings(State.structures[0]).length'),0);
+  run('window.ConquerLivestock=null;urbanRevision++');
+  house.houseLevel=3;
+});
 test('L3 frontage creates three houses within a 6 U street-facing plot',()=>{
   house.houseLevel=3;
   assert.equal(run('urbanLotRoadFrontages(urbanLotCache[0]).length'),1);
@@ -112,6 +127,7 @@ test('L3/L4 yards get sheds and storehouses on non-street sides, never counted a
     const out=run('urbanLotOutbuildings(State.structures[0])'),dense=run('urbanDenseParts(State.structures[0])');
     assert.ok(out.length>=1,'L'+level+' yard has outbuildings');
     assert.ok(out.every(p=>p.kind==='outbuilding'&&['shed','store'].includes(p.type)));
+    assert.ok(out.some(p=>p.type==='shed'),'every developed L3/L4 yard offers a horse shelter');
     assert.ok(out.every(p=>p.points.every(q=>run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(q)+',.035)'))));
     // Not on the street side and clear of the townhouses.
     assert.ok(out.every(p=>p.points.every(q=>q.y>1)));
@@ -140,7 +156,7 @@ test('every L3 building restores its deterministic L or T plan',()=>{
     assert.equal(own.filter(p=>p.kind==='turret').length,0);
   }
 });
-test('every L4 townhouse restores a turret in addition to its L/T extensions',()=>{
+test('L4 townhouses keep their L/T extensions; only a street-corner building gets a turret',()=>{
   house.houseLevel=4;run('urbanRevision++');
   const parts=run('urbanDenseParts(State.structures[0])');
   const keys=[...new Set(parts.map(p=>p.buildingKey))];
@@ -148,13 +164,20 @@ test('every L4 townhouse restores a turret in addition to its L/T extensions',()
   for(const key of keys){
     const own=parts.filter(p=>p.buildingKey===key);
     const plan=run('housePlanType({id:'+JSON.stringify(key)+'})');
-    const towerType=run('houseTurretType({id:'+JSON.stringify(key)+'})');
     assert.equal(own.filter(p=>p.kind==='body').length,plan==='L'?2:3);
-    assert.equal(own.filter(p=>p.kind==='turret').length,1);
-    assert.equal(own.find(p=>p.kind==='turret').type,towerType);
+    assert.equal(own.filter(p=>p.kind==='turret').length,0,'a mid-block plot has no corner');
   }
   const before=JSON.stringify(parts);run('urbanRevision++');
   assert.equal(JSON.stringify(run('urbanDenseParts(State.structures[0])')),before);
+  // A side street at x=6.45 turns the (6,0) lot corner into a street corner.
+  State.structures.push(side);run('urbanRevision++');
+  const corner=run('urbanDenseParts(State.structures[0])'),turrets=corner.filter(p=>p.kind==='turret');
+  assert.ok(turrets.length>=1,'the corner building gets a turret');
+  for(const t of turrets){
+    assert.ok(dist(t.center,{x:6,y:0})<1.2,'turret on the street corner '+JSON.stringify(t.center));
+    assert.equal(t.type,run('houseTurretType({id:'+JSON.stringify(corner.find(p=>p.turret===t||p===t).buildingKey)+'})'));
+  }
+  State.structures.splice(State.structures.indexOf(side),1);run('urbanRevision++');
 });
 test('250 seeded plots retain L/T and L4 turret with valid geometry',()=>{
   const previousId=house.id;
@@ -164,12 +187,16 @@ test('250 seeded plots retain L/T and L4 turret with valid geometry',()=>{
       house.id='seeded-'+i;run('urbanLotCache[0].houseId=State.structures[0].id;urbanRevision++');
       const parts=run('urbanDenseParts(State.structures[0])');
       const keys=[...new Set(parts.map(p=>p.buildingKey))];
-      assert.equal(keys.length,level===3?3:4,'frontage count changed for plot '+i);
+      // Each lot keeps one street type: eaves to the street or gable-front (narrower, deeper houses).
+      const gable=run("(peasantHash(State.structures[0].id+'|gable-front')&1)===1");
+      assert.equal(parts[0].roofTurn>1e-6,gable,'street type follows the lot hash for plot '+i);
+      assert.equal(keys.length,gable?5:(level===3?3:4),'frontage count changed for plot '+i+' (L'+level+(gable?' gable':'')+')');
       for(const key of keys){
         const group=parts.filter(p=>p.buildingKey===key);
         const expected=run('housePlanType({id:'+JSON.stringify(key)+'})');
-        assert.equal(group.filter(p=>p.kind==='body').length,expected==='L'?2:3);
-        assert.equal(group.filter(p=>p.kind==='turret').length,level===4?1:0);
+        assert.equal(group.filter(p=>p.kind==='body').length,gable||expected==='L'?2:3);
+        // The fixture lot has a single street: no corner, so no turret at any level.
+        assert.equal(group.filter(p=>p.kind==='turret').length,0);
         for(const shape of group)for(const vertex of shape.points)
           assert.ok(run('urbanContains(urbanLotCache[0].points,'+JSON.stringify(vertex)+',.035)'),
             'extension or turret exceeds parcel '+i);
@@ -183,7 +210,12 @@ test('L3 and L4 original standalone house shapes retain extensions and turret',(
   assert.ok(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="body").length')>=2);
   assert.equal(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="turret").length'),0);
   house.houseLevel=4;
-  assert.equal(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="turret").length'),1);
+  assert.equal(run('houseFootprintParts(State.structures[0]).filter(p=>p.kind==="turret").length'),0,'not a corner house');
+  // Near both the main road and a side street the detached L4 is a corner house.
+  State.structures.push(side);house.x=5.2;run("roadList=()=>State.structures.filter(s=>s.type==='road')");
+  const turret=run('houseFootprintParts(State.structures[0]).find(p=>p.kind==="turret")');
+  assert.ok(turret&&turret.sx===1,'corner turret towards the side street');
+  run('delete globalThis.roadList');house.x=3;State.structures.splice(State.structures.indexOf(side),1);
   house.auto=true;house.houseLevel=4;
 });
 test('frontage on an additional primary road produces more infill units',()=>{

@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CONQUER — Settlement Builder</title>
 <script>
+// ?assetlab=1: geometry sandbox for the Asset Lab (figures-lab.html) — no saves, no cloud, no telemetry.
+window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1';
 (() => {
-  import('https://esm.sh/@supabase/supabase-js@2.117.1')
+  if (!window.__CONQUER_ASSET_LAB__) import('https://esm.sh/@supabase/supabase-js@2.117.1')
     .then(mod => { window.__createSupabaseClient = mod.createClient; })
     .catch(err => console.warn('Supabase unavailable; local persistence remains active.', err));
 
@@ -20,11 +22,11 @@
     .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
 })();
 </script>
-<link rel="stylesheet" href="./src/settlement.css?v=antiregression-1">
+<link rel="stylesheet" href="./src/settlement.css?v=dev-scroll-mills-1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="./src/ui/theme.css?v=ui2-3">
+<link rel="stylesheet" href="./src/ui/theme.css?v=ui2-4">
 </head>
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
@@ -36,6 +38,8 @@
   <aside id="builder" class="panel">
     <h2>Builder</h2>
     <div class="grid"><button data-tool="select" class="active">↖ Select</button><button data-tool="delete">⌫ Delete</button></div>
+    <h3>Muratura prossimi cantieri</h3>
+    <div class="grid"><button type="button" data-build-masonry="stone" aria-pressed="true" class="active">🪨 Pietra</button><button type="button" data-build-masonry="brick" aria-pressed="false">🧱 Argilla</button></div>
     <h3>Square towers</h3>
     <div class="grid3"><button data-tower="square" data-size="1">1U</button><button data-tower="square" data-size="1.5">1.5U</button><button data-tower="square" data-size="2">2U</button></div>
     <h3>Round towers</h3>
@@ -51,10 +55,16 @@
     <h3>Wall height</h3>
     <div class="grid"><button data-wall-level="1" class="active">1 level</button><button data-wall-level="2">2 levels</button></div>
     <h3>Gate</h3>
-    <div class="grid"><button data-gate>Stone gate<br><span class="small">1.5×1.5U</span></button><button data-wood-gate>Wood gate<br><span class="small">1.5×1U · H1</span></button></div>
+    <div class="grid"><button data-gate>Masonry gate<br><span class="small">1.5×1.5U</span></button><button data-wood-gate>Wood gate<br><span class="small">1.5×1U · H1</span></button></div>
     <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <h3>Roads</h3><button class="full" data-main-road>═ Main road</button>
+    <h3>Terraforming</h3>
+    <div class="grid3"><button data-terraform="terrain">Sloped</button><button data-terraform="walled">Walled terrace</button><button data-terraform="flat">Flat H0</button></div>
+    <div class="grid"><button data-terraform-shape="round" class="active">◯ Round</button><button data-terraform-shape="square">□ Square</button></div>
+    <div class="grid"><button data-terraform-delta="-1">↓ Dig 1U</button><button data-terraform-delta="1" class="active">↑ Raise 1U</button></div>
+    <div class="grid3"><button data-terraform-radius="2">R2</button><button data-terraform-radius="4" class="active">R4</button><button data-terraform-radius="6">R6</button></div>
+    <div class="legend">Round / Square applies to hills and walled terraces. Union is automatic for Sloped and Walled terrace. The second overlapping shape inherits the shared height. Flat H0 subtracts existing terrain/terraces in the selected Round or Square footprint. Heights below H0 are never allowed. R defines radius or square half-side; point height rounds up to an integer.</div>
 <h3>Fossati</h3><div class="grid"><button data-crossing="dry">⛏ Asciutto</button><button data-crossing="water">💧 Allagato H0</button></div>
 <h3>Ponti</h3><div class="grid"><button data-crossing="wood">🪵 Legno</button><button data-crossing="stone">🪨 Pietra</button></div>
 <div class="slot-label">Larghezza fossati e ponti</div><div class="grid3"><button data-crossing-width="1">1U</button><button data-crossing-width="2" class="active">2U</button><button data-crossing-width="3">3U</button></div>
@@ -63,17 +73,21 @@
     <div class="grid3">
       <button data-civic="market">Market<br><span class="small">4×4U</span></button>
       <button data-civic="tavern">Tavern<br><span class="small">Double T</span></button>
-      <button data-civic="church">Church<br><span class="small">Large</span></button>
+      <button data-civic="church">Church<br><span class="small">Large · L1–L3</span></button>
+      <button data-civic="plaza">Piazza<br><span class="small">3 levels · 3 variants</span></button>
       <button data-civic="training">Training field<br><span class="small">5×4U</span></button>
     </div>
     <div class="legend">Point buildings: click to fix the centre → move the mouse to rotate the ghost (15° steps) → click again to place.</div>
     <h3>Industry · Economy placeholders</h3>
     <div class="grid3">
       <button data-industry="loggingCamp">Logging<br><span class="small">2×2U · L1×2</span></button>
-      <button data-industry="quarry">Quarry<br><span class="small">3×3U · L2×2</span></button>
+      <button data-industry="quarry">Stone quarry<br><span class="small">3×3U · L2×2</span></button>
+      <button data-industry="quarry" data-extraction-mode="clay">Clay pit<br><span class="small">4×4U · H0 · ≤6U acqua</span></button>
       <button data-industry="mine">Mine<br><span class="small">1×1U · L2×2</span></button>
+      <button data-industry="windmill">Windmill<br><span class="small">2×2U · H+1</span></button>
+      <button data-industry="watermill">Watermill<br><span class="small">2×2U · river bank</span></button>
     </div>
-    <div class="legend">Click centre → move mouse to rotate → click again to build. Whole footprint in the whitezone. Logging within 10U of forest; quarry (3×3U) must partially overlap a rocky slope; mine (1×1U) must have its centre directly on the rocky slope.</div>
+    <div class="legend">Click centre → move mouse to rotate → click again to build. Whole footprint in the whitezone. Windmill at H+1; watermill wheel aligned to river/stream; logging within 10U of forest; stone quarry (3×3U) must partially overlap a rocky slope; clay pit (4×4U) requires its centre at H0 within 6U of river, stream or lake shoreline (not sea); mine (1×1U) must have its centre directly on the rocky slope.</div>
     <hr/>
     <div class="legend">Wood towers: watchtower 1×1 H1 · medium 1.5×1.5 H1 with open/pitched roof variant.<br>Wood gate: 1.5×1U · fixed H1 · flat roof.<br>Wall: T1 0.2U · T2 0.5U · T3 1U · 1–8U long<br>Palisade: T1 stakes · T2 inner walkway · T3 inner 45° earthwork · fixed height · 1–8U long<br>Built section: 1U wide · 1–4U long<br>Click A → move for preview → click B.<br>Endpoints snap to tower/gate boundaries.<br><br><b>Build times</b>: tower 4 / 7 / 11d · gate 9d · well 2d · walls and built sections scale with length.<br><br>Player construction removes overlapping auto-spawned houses, fields and road segments.</div>
     <hr/>
@@ -107,6 +121,9 @@
     <div class="kv"><span>Growth pulse</span><b>~2.5 days</b></div>
     <div class="kv"><span>Road model</span><b>radial / border-linked</b></div>
     <div class="kv"><span>Time</span><b>paused on load</b></div>
+    <h3>Nuove case private · spawn automatico</h3>
+    <div class="grid"><button type="button" data-private-masonry="stone" aria-pressed="true" class="active">🪨 Pietra</button><button type="button" data-private-masonry="brick" aria-pressed="false">🧱 Argilla</button></div>
+    <div class="legend">La preferenza vale solo per le nuove case generate automaticamente. Non modifica gli edifici già presenti.</div>
     <h3>Policies</h3>
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
     <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
@@ -164,6 +181,14 @@
     <div id="devPanel" hidden>
       <div class="dev-section"><span class="dev-label">MAPPA</span><button class="full" id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></div>
       <div class="dev-section">
+        <span class="dev-label">ANTEPRIMA GRAFICA · solo estetica</span>
+        <div class="dev-row" role="group" aria-label="Palette grafica globale">
+          <button type="button" data-visual-palette="stone" aria-pressed="true" title="Pietra e tetti in antracite">Stone</button>
+          <button type="button" data-visual-palette="clay" aria-pressed="false" title="Mattoni, piani terra L2–L4 in laterizio e tetti in tegola">Clay</button>
+        </div>
+        <span class="dev-hint">Stone: visualizza i materiali effettivi. Clay: forza il colore mattone su tutta la scena. Il comando DEV non modifica costi né materiali.</span>
+      </div>
+      <div class="dev-section">
         <span class="dev-label">LUCE</span>
         <div class="dev-row">
           <button data-light-override="day" title="Force day">☀︎ Giorno</button>
@@ -190,6 +215,7 @@
       </div>
       <div class="dev-section">
         <span class="dev-label">ASSET PIPELINE</span>
+        <div class="dev-row"><button type="button" onclick="window.open('./figures-lab.html','_blank','noopener')" title="Apri il catalogo visivo di tutti gli asset">🗂 Asset Lab</button></div>
         <div id="assetCompileReadout" class="dev-hint">Non compilato</div>
         <div id="castleCacheReadout" class="dev-hint">Castle bitmap: —</div>
         <div class="dev-row">
@@ -230,54 +256,83 @@
   <div id="status">Select a build tool</div>
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
-<script src="./src/settlement-core.js"></script>
+<script src="./src/settlement-core.js?v=case-l4-6"></script>
+<script src="./src/settlement-civic-annexes.js?v=civil-annex-1"></script>
+<script src="./src/assets/civic-models.js?v=civic3d-1"></script>
+<script src="./src/settlement-mesh3d.js?v=cantiere-case-3"></script>
+<script src="./src/settlement-civic3d.js?v=civic3d-1"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
-<script src="./src/settlement-world.js"></script>
+<script src="./src/settlement-world.js?v=portoni-3"></script>
 <script src="./src/settlement-castle.js?v=refactor-1"></script>
+<script src="./src/settlement-terraforming.js?v=terraform-blockers-flat-cut-1"></script>
 <script src="./src/settlement-landscape.js?v=refactor-1"></script>
-<script src="./src/settlement-castle-placement.js?v=refactor-1"></script>
-<script src="./src/settlement-castle-structures.js?v=refactor-1"></script>
-<script src="./src/settlement-buildings.js?v=refactor-1"></script>
-<script src="./src/settlement-urban.js"></script>
+<script src="./src/settlement-castle-placement.js?v=portoni-2"></script>
+<script src="./src/settlement-castle-structures.js?v=portoni-2"></script>
+<script src="./src/settlement-buildings.js?v=cantiere-case-1"></script>
+<script src="./src/settlement-urban.js?v=case-l4-4"></script>
 <script src="./src/settlement-fields.js"></script>
 <script src="./src/settlement-boundaries.js"></script>
 <script src="./src/settlement-industries.js?v=industry-1"></script>
-<script src="./src/settlement-placement.js?v=builder-ghost-1"></script>
-<script src="./src/settlement-siege.js?v=assedio-p0"></script>
+<script src="./src/assets/industry-models.js?v=ind-1"></script>
+<script src="./src/settlement-mesh3d.js?v=cantiere-case-3"></script>
+<script src="./src/settlement-industries3d.js?v=ind-1"></script>
+<script src="./src/assets/construction-models.js?v=cantiere-case-3"></script>
+<script src="./src/settlement-construction-props.js?v=cantiere-case-3"></script>
+<script src="./src/settlement-construction-assembly.js?v=cantiere-case-3"></script>
+<script src="./src/settlement-placement.js?v=portoni-2"></script>
+<script src="./src/settlement-collapse.js?v=collapse-1"></script>
+<script src="./src/settlement-siege.js?v=portoni-4"></script>
+<script src="./src/settlement-earthworks.js?v=earthworks-2"></script>
+<script src="./src/settlement-fire.js?v=fire-1"></script>
 <script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5"></script>
+<script src="./src/settlement-gate-fittings.js?v=portoni-4"></script>
 <script src="./src/settlement-population.js"></script>
-<script src="./src/settlement-population-fields.js?v=refactor-2"></script>
-<script src="./src/settlement-population-navigation.js?v=refactor-2"></script>
+<script src="./src/settlement-population-fields.js?v=livestock-tiers-1"></script>
+<script src="./src/settlement-population-navigation.js?v=portoni-2"></script>
 <script src="./src/settlement-population-routines.js?v=refactor-2"></script>
-<script src="./src/settlement-population-residents.js?v=refactor-2"></script>
+<script src="./src/settlement-population-residents.js?v=livestock-tiers-1"></script>
 <script src="./src/settlement-population-figures.js?v=refactor-2"></script>
 <script src="./src/settlement-population-garrisons.js?v=refactor-2"></script>
+<script src="./src/settlement-animals.js?v=merge-urban-1"></script>
+<script src="./src/settlement-livestock.js?v=pasture-buildings-1"></script>
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
-<script src="./src/settlement-architecture.js?v=refactor-1"></script>
+<script src="./src/settlement-architecture.js?v=case-l4-7"></script>
 <script src="./src/settlement-weather.js?v=refactor-1"></script>
 <script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
-<script src="./src/settlement-render.js?v=ambient-light-1"></script>
-<script src="./src/settlement-castle3d.js?v=prototype-1"></script>
-<script src="./src/settlement-world3d.js?v=default-1"></script>
+<script src="./src/settlement-render.js?v=merge-77"></script>
+<script src="./src/settlement-castle3d.js?v=merge-77"></script>
+<script src="./src/settlement-wagons3d.js?v=scatter-1"></script>
+<script src="./src/assets/scatter-model.js?v=scatter-1"></script>
+<script src="./src/settlement-scatter.js?v=scatter-1"></script>
+<script src="./src/settlement-world3d.js?v=merge-77"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
 <script src="./src/settlement-economy.js?v=economy-1"></script>
 <script src="./src/settlement-app.js"></script>
-<script src="./src/settlement-app-rooms.js?v=ui2-2"></script>
-<script src="./src/settlement-structure-commands.js?v=ui2-2"></script>
-<script src="./src/settlement-app-input.js?v=refactor-2"></script>
-<script src="./src/settlement-app-persistence.js?v=refactor-2"></script>
+<script src="./src/settlement-app-rooms.js?v=ui2-4"></script>
+<script src="./src/settlement-structure-commands.js?v=ui2-4"></script>
+<script src="./src/settlement-app-input.js?v=portoni-3"></script>
+<script src="./src/settlement-app-persistence.js?v=assetlab-sandbox-1"></script>
 <script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
-<script src="./src/settlement-app-simulation.js?v=refactor-2"></script>
+<script src="./src/settlement-app-simulation.js?v=assetlab-studio-1"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
 <script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
-<script src="./src/settlement-combat-rules.js?v=combat-3"></script>
-<script src="./src/settlement-combat.js?v=combat-4"></script>
+<script src="./src/settlement-wallwalk.js?v=wallwalk-1"></script>
+<script src="./src/settlement-combat-anim.js?v=anim-1"></script>
+<script src="./src/settlement-work-anim.js?v=work-1"></script>
+<script src="./src/settlement-combat-rules.js?v=combat-5"></script>
+<script src="./src/settlement-combat.js?v=zones-hd-off-1"></script>
 <script src="./src/heraldry-symbols.js"></script>
 <script src="./src/settlement-heraldry.js"></script>
-<script src="./src/ui/game-api.js?v=ui2-3"></script>
-<script src="./src/settlement-builder-ux.js?v=antiregression-2"></script>
-<script type="module" src="./src/ui/shell.js?v=ui2-3"></script>
+<script src="./src/ui/game-api.js?v=ui2-4"></script>
+<script src="./src/settlement-builder-ux.js?v=terraform-flat-h0-1"></script>
+<script src="./src/assets/siege-engines-model.js?v=siege-2"></script>
+<script src="./src/settlement-siege-engines3d.js?v=siege-2"></script>
+<script src="./src/settlement-siege-assault.js?v=siege-1"></script>
+<script src="./src/settlement-siege-preview.js?v=assetlab-audit-1"></script>
+<script src="./src/settlement-asset-stage.js?v=assetlab-audit-2"></script>
+<script src="./src/settlement-tower-weapons.js?v=siege-1"></script>
+<script type="module" src="./src/ui/shell.js?v=ui2-4"></script>
 </body>
 </html>

@@ -5,9 +5,26 @@ const assert=require('node:assert/strict');
 const crypto=require('node:crypto');
 const fs=require('node:fs');
 const root=__dirname+'/../';
-const read=name=>fs.readFileSync(root+'src/settlement-'+name+'.js','utf8');
+// Siege hooks in the navigation: ruined stumps and the high core of collapse heaps block
+// movement. Each must appear exactly once; removing them gives back the original source.
+const siegeHooks={'population-garrisons':[
+  ["const guards=window.ConquerCrossings?.drawbridgeGuards?.(gate)||gateGuardPositions(gate);   // on a lowered drawbridge: at its far end","const guards=gateGuardPositions(gate);"],
+  ["const p=guards[i],z=p.z??.08;","const p=guards[i],z=.08;"],
+  ["    if(window.ConquerSiege?.gateClosed?.(gate))continue;   // closed: the guards are inside\n",'']
+],'population-navigation':[
+  ["  if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap\n",''],
+  ["'civicAnnex','ruin'].includes(s.type))continue;","'civicAnnex'].includes(s.type))continue;"],
+  ["if((s.type==='tower'||s.type==='ruin')&&s.shape==='round')","if(s.type==='tower'&&s.shape==='round')"],
+  // A closed gate with its door still whole shuts the passage, and so does a lowered portcullis.
+  ["      // A closed gate with its door still whole shuts the passage (settlement-siege.js).\n      // So does a lowered portcullis (settlement-gate-fittings.js).\n      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s)||window.ConquerGates?.portcullisBlocks?.(s))return true;continue}",
+   "      if(gatePointInPassage(s,p,.08))continue;"]
+]};
+const read=name=>(siegeHooks[name]||[]).reduce((src,[hooked,original])=>{
+  assert.equal(src.split(hooked).length,2,'Expected exactly one siege hook: '+hooked.trim().slice(0,60));
+  return src.replace(hooked,()=>original);
+},fs.readFileSync(root+'src/settlement-'+name+'.js','utf8'));
 const blob=src=>crypto.createHash('sha1').update('blob '+Buffer.byteLength(src)+'\0'+src).digest('hex');
-const header=/^'use strict';\n\/\/ [^\n]+\n/;
+const header=/^'use strict';\r?\n\/\/ [^\r\n]+\r?\n/;
 const parts={
   population:['population','population-fields','population-navigation',
     'population-routines','population-residents','population-figures','population-garrisons'],

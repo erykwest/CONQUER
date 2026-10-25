@@ -101,7 +101,8 @@ function drawPeasants(){
       dots.push({
         p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
         hair:resident.hair,colors:resident.colors,
-        militia:window.ConquerCombat?.recruitedResident(resident.id)||false
+        militia:window.ConquerCombat?.recruitedResident(resident.id)||false,
+        work:fieldWork(p,assignment,house,resident)
       });
       activeAgents++;
     }
@@ -111,10 +112,21 @@ function drawPeasants(){
     window.__conquerPerf.representedPopulation=representedPopulation;
     window.__conquerPerf.visibleVillagers=activeAgents;
   }
+  const workClock=window.ConquerWorkAnim?.now();
   for(const dot of dots){
     if(dot.militia)drawSoldierFigure(dot.p,.10,'spearman',dot.id,day);
+    else if(dot.work)window.ConquerWorkAnim.drawWorker(dot,dot.work.tool,workClock,dot.work.facing);
     else drawVillagerFigure(dot);
   }
+}
+// A farmer standing at his field spot works it with the tool of the season:
+// hoe for ploughing, seed sack for sowing, sickle for the harvest.
+function fieldWork(p,assignment,house,resident){
+  if(!window.ConquerWorkAnim||!assignment||resident.sex!=='male'||resident.age!=='adult'||houseLevel(house)>2)return null;
+  const spot=fieldWorkerPosition(assignment.field,assignment.cell);
+  if(!spot||Math.hypot(p.x-spot.x,p.y-spot.y)>.02)return null;
+  const tool=window.ConquerWorkAnim.FIELD_TOOL[fieldCrop(assignment.field).phase];
+  return tool?{tool,facing:(peasantHash(resident.id)&1)?1:-1}:null;
 }
 function militaryScale(){
   // World-size figures track the camera across its full .18x–3x zoom range.

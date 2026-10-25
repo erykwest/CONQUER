@@ -34,7 +34,10 @@ function harness(){
     State,window,BUILD_MIN:50,BUILD_MAX:150,
     houseFootprintParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     wellPlazaPoints:s=>square(s.x,s.y,3,3,0),
-    isCivic:s=>['market','tavern','church','training'].includes(s.type),
+    isCivicAnnex:s=>s?.type==='civicAnnex',
+     civicAnnexFootprint:s=>square(s.x,s.y,s.w||2,s.h||2,s.angle||0),
+     civicAnnexPlacementCheck:()=>({ok:true}),
+     isCivic:s=>['market','tavern','church','training','plaza'].includes(s.type),
     civicParts:s=>[{points:square(s.x,s.y,s.w||2,s.h||2,s.angle||0)}],
     structureGroundContactPolygons:s=>s.a?[square((s.a.x+s.b.x)/2,(s.a.y+s.b.y)/2,
       Math.hypot(s.a.x-s.b.x,s.a.y-s.b.y),s.width||.5,Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x))]:
@@ -48,6 +51,7 @@ function harness(){
     environmentBlocksPoint:()=>blocked,
     TYPES:{road:{min:1}},
     manualRoadConflict:(road,other)=>other.type==='house',
+    isPrimaryRoad:()=>false,
     roadTouchesPolygon:(road,polygon)=>polygon.some(p=>dseg(p,road.a,road.b)<.25),
     constructionCost:()=>({gold:10}),canAfford:()=>cash>=10,costText:()=>'10 gold',
     Math,Number,Object,Array
@@ -115,11 +119,12 @@ function extractSpan(text,start,end){
   assert.ok(i>=0&&j>i,'Expected mouse placement handlers and castle helpers');
   return text.slice(i,j);
 }
-function mousePlacementHarness(type){
-  const industry=['loggingCamp','quarry','mine'].includes(type);
+function mousePlacementHarness(type,options={}){
+  const tower=type==='tower',industry=['loggingCamp','quarry','mine'].includes(type);
   const spec={type,shape:industry?'industry':'civic',w:2,h:2,...(industry?{economicOwner:'lord'}:{})};
-  const State={tool:{kind:industry?'industry':'civic',placementSpec:spec},
-    draft:null,structures:[]};
+  const tool=tower?{kind:'tower',shape:options.shape||'round',size:options.size??.75,level:2,material:'stone'}
+    :{kind:industry?'industry':'civic',placementSpec:spec};
+  const State={tool,draft:null,structures:[]};
   const listeners={},messages=[];
   let allowBuild=true;
   const step=Math.PI/12;
@@ -131,11 +136,11 @@ function mousePlacementHarness(type){
     s2w:(x,y)=>({x,y}),pointerWorld:e=>({x:e.x,y:e.y}),
     snapGrid:x=>Math.round(x*2)/2,
     inBuild:p=>p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150,
-    towerPlacementSnap:()=>null,
+    towerPlacementSnap:p=>options.snap||{point:{x:Math.round(p.x*2)/2,y:Math.round(p.y*2)/2},wallId:null,parentTowerId:null,angle:0},
     placementAngle:(center,p)=>snapAngle(Math.atan2(p.y-center.y,p.x-center.x)),
     snapStructureAngle:snapAngle,structureRotationStep:a=>Math.round(a/step),
     addStructure:s=>{if(!allowBuild)return false;State.structures.push(s);return true},
-    addTowerWithPlacement:()=>false,uid:()=>type+'-built',
+    addTowerWithPlacement:(s,snap)=>{if(!allowBuild)return false;State.structures.push({...s,placementSnap:{...snap}});return true},uid:()=>type+'-built',
     draw:()=>{},status:message=>messages.push(message)
   };
   const helpers=extractSpan(castle,'function orientedToolSpec(){','function boundaryPoint(');
@@ -184,4 +189,86 @@ test('a rejected second click retains oriented ghost and can be retried',()=>{
   assert.equal(h.State.draft,null);
 });
 
+test('round towers of all radii use two-click orientation without early construction',()=>{
+  for(const size of [.5,.75,1]){
+    const h=mousePlacementHarness('tower',{shape:'round',size});
+    h.listeners.pointerdown({button:0,x:100,y:100});
+    assert.equal(h.State.structures.length,0,'First click must not build round R'+size);
+    assert.equal(h.State.draft.mode,'orient');
+    assert.equal(h.State.draft.preview.r,size);
+    assert.equal(h.State.draft.preview.angle,0);
+    h.listeners.pointermove({x:105,y:105});
+    assert.equal(h.State.draft.preview.shape,'round');
+    assert.ok(Math.abs(h.State.draft.preview.angle-Math.PI/4)<1e-8);
+    assert.equal(h.State.draft.preview.rotationStep,3);
+    h.listeners.pointerdown({button:0,x:105,y:105});
+    assert.equal(h.State.structures.length,1);
+    assert.equal(h.State.structures[0].r,size);
+    assert.equal(h.State.structures[0].rotationStep,3);
+    assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/4)<1e-8);
+    assert.equal(h.State.draft,null);
+  }
+});
+test('round tower wall snaps keep center/socket while allowing door-facing rotation',()=>{
+  const snap={point:{x:100,y:100},wallId:'wall-1',wallEnd:'a',angle:0};
+  const h=mousePlacementHarness('tower',{shape:'round',snap});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  assert.equal(h.State.draft.wallSnapId,'wall-1');
+  assert.equal(h.State.draft.lockedAngle,null);
+  h.listeners.pointermove({x:100,y:105});
+  assert.ok(Math.abs(h.State.draft.preview.angle-Math.PI/2)<1e-8);
+  h.listeners.pointerdown({button:0,x:100,y:105});
+  assert.equal(h.State.structures.length,1);
+  assert.equal(h.State.structures[0].placementSnap.wallId,'wall-1');
+  assert.equal(h.State.structures[0].placementSnap.wallEnd,'a');
+  assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/2)<1e-8);
+});
+test('round subtowers preserve radial socket metadata while independently rotating',()=>{
+  const snap={point:{x:100,y:100},parentTowerId:'tower-1',subtowerSocket:'radial',subtowerAngle:Math.PI/4,angle:0};
+  const h=mousePlacementHarness('tower',{shape:'round',snap});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  assert.equal(h.State.draft.lockedAngle,null);
+  h.listeners.pointermove({x:105,y:100});
+  h.listeners.pointerdown({button:0,x:105,y:100});
+  assert.equal(h.State.structures.length,1);
+  assert.equal(h.State.structures[0].placementSnap.parentTowerId,'tower-1');
+  assert.equal(h.State.structures[0].placementSnap.subtowerSocket,'radial');
+  assert.equal(h.State.structures[0].placementSnap.subtowerAngle,Math.PI/4);
+});
+test('square tower wall sockets continue locking their placement angle',()=>{
+  const snap={point:{x:100,y:100},wallId:'wall-1',wallEnd:'a',angle:Math.PI/2};
+  const h=mousePlacementHarness('tower',{shape:'square',size:1.5,snap});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  assert.ok(Math.abs(h.State.draft.lockedAngle-Math.PI/2)<1e-8);
+  h.listeners.pointermove({x:105,y:100});
+  assert.ok(Math.abs(h.State.draft.preview.angle-Math.PI/2)<1e-8);
+  h.listeners.pointerdown({button:0,x:105,y:100});
+  assert.ok(Math.abs(h.State.structures[0].angle-Math.PI/2)<1e-8);
+});
+test('rejected second click keeps round tower orientation preview for retry',()=>{
+  const h=mousePlacementHarness('tower',{shape:'round'});
+  h.listeners.pointerdown({button:0,x:100,y:100});
+  h.listeners.pointermove({x:105,y:105});
+  h.allow(false);
+  h.listeners.pointerdown({button:0,x:105,y:105});
+  assert.equal(h.State.structures.length,0);
+  assert.equal(h.State.draft.mode,'orient');
+  h.allow(true);
+  h.listeners.pointerdown({button:0,x:105,y:105});
+  assert.equal(h.State.structures.length,1);
+  assert.equal(h.State.draft,null);
+});
+test('tower selection retains post-build rotation controls',()=>{
+  assert.match(app,/data-tower-rotate="-1"/);
+  assert.match(app,/data-tower-rotate="1"/);
+});
+
+test('a public piazza allows road crossings like the market',()=>{
+  const h=harness();
+  const road={id:'road-a',type:'road',a:{x:96,y:100},b:{x:104,y:100},width:.62};
+  h.State.structures.push(road);
+  assert.equal(h.check({type:'plaza',x:100,y:100,w:5,h:5}).ok,true);
+  h.State.structures=[{id:'plaza-a',type:'plaza',x:100,y:100,w:5,h:5}];
+  assert.equal(h.check({type:'road',a:{x:96,y:100},b:{x:104,y:100},width:.62}).ok,true);
+});
 console.log('Builder placement regression: all checks passed.');

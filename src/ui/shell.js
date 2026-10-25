@@ -23,6 +23,7 @@ const ICON = {
   civic: 'M4 21V10l8-6 8 6v11M9 21v-6h6v6',
   production: 'M12 21V9M12 9c-3 0-5-2-5-5 3 0 5 2 5 5zM12 14c3 0 5-2 5-5-3 0-5 2-5 5z',
   well: 'M5 10h14M7 10v10h10V10M8 10V5h8v5',
+  terrain: 'M2 19l6-8 4 5 3-4 7 7zM14 6h6M17 3v6',
   delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
   rotateLeft: 'M4 12a8 8 0 1 0 3-6.2M4 4v5h5',
@@ -44,6 +45,18 @@ const Icon = ({ name, size = 20 }) => html`
 // ---------- build catalog: each entry drives a legacy control in phase 1 ----------
 const V = T.values, O = T.options;
 const opt = (label, selector, active) => ({ label, selector, active });
+// Masonry of the next stone/brick sites (State.buildMasonryMaterial), shared by every masonry tool.
+const masonryRow = s => ({ label: O.masonry, options: [
+  opt(V.stone, '[data-build-masonry="stone"]', s.masonry === 'stone'),
+  opt(V.brick, '[data-build-masonry="brick"]', s.masonry === 'brick')] });
+const INDUSTRIES = [
+  ['loggingCamp', '[data-industry="loggingCamp"]', t => t.industry === 'loggingCamp'],
+  ['quarry', '[data-industry="quarry"]:not([data-extraction-mode])', t => t.industry === 'quarry' && t.extraction !== 'clay'],
+  ['clayPit', '[data-industry="quarry"][data-extraction-mode="clay"]', t => t.industry === 'quarry' && t.extraction === 'clay'],
+  ['mine', '[data-industry="mine"]', t => t.industry === 'mine'],
+  ['windmill', '[data-industry="windmill"]', t => t.industry === 'windmill'],
+  ['watermill', '[data-industry="watermill"]', t => t.industry === 'watermill']
+];
 const CATALOG = [
   { id: 'select', hint: T.hints.select, press: '[data-tool="select"]', is: s => s.tool.kind === 'select' },
   { id: 'towers', hint: T.hints.point, press: '[data-tower="square"][data-size="1.5"]', is: s => s.tool.kind === 'tower',
@@ -59,6 +72,7 @@ const CATALOG = [
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
         opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone) rows.push({ label: O.level, options: [1, 2, 3].map(n => opt(String(n), `[data-tower-level="${n}"]`, s.levels.tower === n)) });
+      if (stone) rows.push(masonryRow(s));
       return rows;
     } },
   { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => s.tool.kind === 'linear' && s.tool.linear !== 'road',
@@ -69,6 +83,7 @@ const CATALOG = [
         opt(V.built, '[data-linear="built"]', kind === 'built')] }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
       if (kind !== 'palisade') rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, s.levels.wall === n)) });
+      if (kind !== 'palisade') rows.push(masonryRow(s));
       return rows;
     } },
   { id: 'gates', hint: T.hints.point, press: '[data-gate]', is: s => s.tool.kind === 'gate',
@@ -76,6 +91,23 @@ const CATALOG = [
       const stone = s.tool.material !== 'wood', rows = [{ label: O.material, options: [
         opt(V.stone, '[data-gate]', stone), opt(V.wood, '[data-wood-gate]', !stone)] }];
       if (stone) rows.push({ label: O.height, options: [1, 2, 3].map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
+      if (stone) rows.push(masonryRow(s));
+      return rows;
+    } },
+  { id: 'terrain', hint: T.hints.terrain, press: '[data-terraform="terrain"]', is: s => s.tool.kind === 'terraform',
+    rows: s => {
+      const t = s.tool, rows = [
+        { label: O.type, options: [
+          opt(V.sloped, '[data-terraform="terrain"]', t.mode === 'terrain'),
+          opt(V.walled, '[data-terraform="walled"]', t.mode === 'walled'),
+          opt(V.flat, '[data-terraform="flat"]', t.mode === 'flat')] },
+        { label: O.shape, options: [
+          opt(V.round, '[data-terraform-shape="round"]', (t.shape || s.terraform.shape) === 'round'),
+          opt(V.square, '[data-terraform-shape="square"]', (t.shape || s.terraform.shape) === 'square')] }];
+      if (t.mode !== 'flat') rows.push({ label: O.action, options: [
+        opt(V.dig, '[data-terraform-delta="-1"]', (t.delta ?? s.terraform.delta) < 0),
+        opt(V.raise, '[data-terraform-delta="1"]', (t.delta ?? s.terraform.delta) > 0)] });
+      rows.push({ label: O.radius, options: [2, 4, 6].map(n => opt('R' + n, `[data-terraform-radius="${n}"]`, (t.radius ?? s.terraform.radius) === n)) });
       return rows;
     } },
   { id: 'roads', hint: T.hints.linear, press: '[data-main-road]', is: s => s.tool.kind === 'linear' && s.tool.linear === 'road' },
@@ -88,12 +120,11 @@ const CATALOG = [
         opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone')] },
       { label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) }] },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
-    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training'].map(k =>
-      opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }] },
+    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza'].map(k =>
+      opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
   { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
-    rows: s => [{ label: O.building, options: ['loggingCamp', 'quarry', 'mine'].map(k =>
-      opt(V[k], `[data-industry="${k}"]`, s.tool.industry === k)) }] },
-  { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well' },
+    rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },
+  { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well', rows: s => [masonryRow(s)] },
   { id: 'delete', hint: T.hints.delete, press: '[data-tool="delete"]', is: s => s.tool.kind === 'delete' }
 ];
 const activeEntry = snap => CATALOG.find(e => e.is(snap)) || CATALOG[0];
@@ -141,7 +172,7 @@ function ToolCard({ snap, cmd }) {
       <button type="button" class="u2-close" aria-label=${T.close} onClick=${() => cmd.press('[data-tool="select"]')}>×</button></header>
     ${rows.length > 0 && html`<div class="u2-rows">
       ${rows.map(row => html`<div class="u2-row"><span>${row.label}</span>
-        <div class="u2-seg u2-seg-sm">${row.options.map(o => html`
+        <div class=${'u2-seg u2-seg-sm' + (row.wrap ? ' u2-wrap' : '')}>${row.options.map(o => html`
           <button type="button" class=${o.active ? 'on' : ''} aria-pressed=${o.active} onClick=${() => cmd.press(o.selector)}>${o.label}</button>`)}
         </div></div>`)}
     </div>`}
@@ -213,7 +244,19 @@ function Inspector({ snap, cmd }) {
       <button type="button" class="u2-close" aria-label=${T.close} onClick=${cmd.deselect}>×</button></header>
     ${d.building && html`<div class="u2-progress"><i style=${'width:' + Math.round(d.building.progress * 100) + '%'}></i></div>`}
     <div class="u2-scroll">
-      ${d.facts.length > 0 && html`<dl class="u2-facts">${d.facts.map(f => html`<dt>${I.facts[f.key]}</dt><dd>${f.value}</dd>`)}</dl>`}
+      ${d.facts.length > 0 && html`<dl class="u2-facts">${d.facts.map(f => html`<dt>${I.facts[f.key]}</dt>
+        <dd>${f.key === 'masonry' ? I.masonryValues[f.value] || f.value : f.value}</dd>`)}</dl>`}
+      ${d.annex && html`<${Facts} rows=${[[I.annex, (d.annex.label || '—') + (d.annex.size ? ' · ' + d.annex.size : '')]]} />
+        <p class="u2-note">${I.annexHelp}</p>
+        ${d.annex.parentId && html`<button type="button" class="u2-small-btn" onClick=${() => cmd.select(d.annex.parentId)}>${I.annexParent}</button>`}`}
+      ${d.gate && html`<div class="u2-row"><span>${I.gate} · ${I.gateStage[d.gate.stage] || d.gate.stage}</span>
+        <div class="u2-seg u2-seg-sm">
+          <button type="button" class=${!d.gate.closed ? 'on' : ''} onClick=${() => run('setGateClosed', false)}>${I.gateOpen}</button>
+          <button type="button" class=${d.gate.closed ? 'on' : ''} disabled=${d.gate.broken} onClick=${() => run('setGateClosed', true)}>${I.gateClosed}</button></div></div>
+        <div class="u2-row u2-row-inline"><span>${I.nightClose}</span><div class="u2-seg u2-seg-sm">
+          <button type="button" class=${d.gate.nightClose ? 'on' : ''} aria-pressed=${d.gate.nightClose}
+            onClick=${() => run('setGateNightClose', !d.gate.nightClose)}>${d.gate.nightClose ? I.on : I.off}</button></div></div>
+        <p class="u2-note">${I.gateHelp}</p>`}
       ${d.industry && html`<dl class="u2-facts">
         <dt>${I.workers} · L${d.industry.tier}</dt><dd>${d.industry.workers} / ${d.industry.max}</dd>
         <dt>${I.owner}</dt><dd>${d.industry.owner === 'lord' ? I.ownerLord : I.ownerPrivate}</dd></dl>`}
@@ -237,7 +280,10 @@ function Inspector({ snap, cmd }) {
             </select></label>`)}</section>`}
       ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
       ${d.integrity && html`<dl class="u2-facts"><dt>${I.integrity} · ${I.masonry}</dt><dd>${d.integrity.core} / ${d.integrity.coreMax}</dd>
-        ${d.integrity.door != null && html`<dt>${I.door}</dt><dd>${d.integrity.door} / ${d.integrity.doorMax}</dd>`}</dl>`}
+        ${d.integrity.door != null && html`<dt>${I.door}</dt><dd>${d.integrity.door} / ${d.integrity.doorMax}</dd>`}
+        ${d.integrity.portcullis != null && html`<dt>${I.portcullis}</dt><dd>${d.integrity.portcullis} / ${d.integrity.portcullisMax}</dd>`}</dl>`}
+      ${d.bays && html`<dl class="u2-facts"><dt>${I.integrity}</dt><dd>${I.bays(d.bays.length)}</dd>
+        ${d.bays.map((b, i) => html`<dt>${I.bay(i + 1)}</dt><dd>${b.hp} / ${b.max}</dd>`)}</dl>`}
     </div>
     <footer class="u2-actions"><span>${I.cost}: ${costLine(d.cost)}</span>
       <button type="button" class="u2-danger" onClick=${() => cmd.demolish(d.id)}>${I.demolish}</button></footer>
@@ -276,11 +322,15 @@ function Overview({ game }) {
     ${e?.events?.length > 0 && html`<h3>${M.events}</h3><ul class="u2-log">${e.events.map(x => html`<li>${x.label}</li>`)}</ul>`}`;
 }
 function Policies({ game }) {
-  const p = game.read.policies();
+  const p = game.read.policies(), snap = game.snapshot();
   return html`${['tax', 'rations', 'levy'].map(k => html`
     <label class="u2-slider"><span>${M.policies[k]}<b>${p[k]}%</b></span>
       <input type="range" min="0" max="100" value=${p[k]} onInput=${e => { game.commands.setPolicy(k, e.currentTarget.value); game.emit(); }} />
-      <small>${M.policyHelp[k]}</small></label>`)}`;
+      <small>${M.policyHelp[k]}</small></label>`)}
+    <div class="u2-row"><span>${M.privateMasonry}</span><div class="u2-seg u2-seg-sm">${['stone', 'brick'].map(m => html`
+      <button type="button" class=${snap.privateMasonry === m ? 'on' : ''} aria-pressed=${snap.privateMasonry === m}
+        onClick=${() => game.commands.press('[data-private-masonry="' + m + '"]')}>${T.values[m]}</button>`)}</div>
+      <small>${M.privateMasonryHelp}</small></div>`;
 }
 function Market({ game }) {
   const e = game.read.economy();

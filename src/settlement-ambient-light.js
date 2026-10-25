@@ -24,12 +24,12 @@
   const bell=(x,center,width)=>Math.exp(-Math.pow((x-center)/width,2));
   const rgba=(r,g,b,a)=>'rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+','+bound(a).toFixed(4)+')';
 
-  function profileAt({fraction=0,night=0,season='summer',weather='clear'}={}){
+  function profileAt({fraction=0,night=0,season='summer',weather='clear',sunrise=6,sunset=18}={}){
     const part=((Number(fraction)||0)%1+1)%1;
     const nf=bound(Number(night)||0);
-    const daylight=16/24; // Same ratio used by population and sun shadows.
-    const sunPhase=part/daylight;
-    const daylightMask=part<daylight?1:0;
+    const hour=part*24,daylight=Math.max(1,sunset-sunrise);
+    const sunPhase=(hour-sunrise)/daylight;
+    const daylightMask=hour>=sunrise&&hour<sunset?1:0;
     const condition=typeof weather==='string'?{kind:weather}:weather||{};
     const kind=Object.hasOwn(WEATHER,condition.kind)?condition.kind:'clear';
     const climate=SEASON[season]||SEASON.summer;

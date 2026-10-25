@@ -31,11 +31,12 @@ test('migration stays inside the previous footprint and preserves saved crop sta
  assert.equal(run('fieldQuadValid(fieldPoints(legacy))'),true);
  assert.equal(run('fieldCrop(restored).phase'),'sow');assert.equal(run('fieldCrop(restored).work[0]'),.7);
 });
-test('whole field respects yellow zone, forests, buildings, roads, other fields and units',()=>{
- farm();assert.equal(run('fieldAllowed(qaField)'),true);
- run("State.combat.strokes=[{x:105,y:104,r:.1,mode:'eraseYellow'}];invalidateUrbanGeometry()");assert.equal(run('fieldAllowed(qaField)'),false);
+test('rural field rejects yellow zoning, forests, buildings, roads, other fields and units',()=>{
+ farm();run("State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:5,mode:'eraseGreen'}];invalidateUrbanGeometry()");
+ assert.equal(run('fieldAllowed(qaField)'),true);
+ run("State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:5,mode:'eraseGreen'},{x:105,y:104,r:.1,mode:'yellow'}];invalidateUrbanGeometry()");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.combat.strokes=[];State.environment=[{type:'forest',points:[{x:104,y:104},{x:105,y:104},{x:105,y:104.1},{x:104,y:104.1}]}];invalidateUrbanGeometry()");assert.equal(run('fieldAllowed(qaField)'),false);
- run("State.environment=[];State.structures.push({id:'t',type:'tower',shape:'square',size:1,x:105,y:104})");assert.equal(run('fieldAllowed(qaField)'),false);
+ run("State.environment=[];State.combat.strokes=[{x:105,y:104,r:5,mode:'eraseYellow'},{x:105,y:104,r:5,mode:'eraseGreen'}];State.structures.push({id:'t',type:'tower',shape:'square',size:1,x:105,y:104})");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.structures.pop();State.structures.push({id:'r',type:'road',a:{x:102,y:104},b:{x:108,y:104},width:.5})");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.structures.pop();State.structures.push({...qaField,id:'f2'})");assert.equal(run('fieldAllowed(qaField)'),false);
  run("State.structures.pop();window.ConquerCombat.spawnOccupants=()=>[{x:105,y:104,r:.2}]");assert.equal(run('fieldAllowed(qaField)'),false);
@@ -44,7 +45,7 @@ test('whole field respects yellow zone, forests, buildings, roads, other fields 
 
 run("function qaMonthStart(month,year){for(let d=0;d<950;d++){const date=calendarDateFromDay(d);if(date.month===month&&date.year===year&&date.day===1)return d}throw Error('Calendar month missing')}");
 test('work progresses only during scheduled months and only on working weekdays',()=>{
- farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});State.clock.day=1;tickFields(1)");
+ farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,level:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,level:1});State.clock.day=1;globalThis.qaOriginalPeasantPath=peasantPath;peasantPath=(h,a)=>[houseDoorInfo(h).outside,a.cell.world];tickFields(1)");
  assert.equal(run("fieldCrop(qaField).work.reduce((a,b)=>a+b,0)"),0,'June has no ploughing');
  assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'no idle-season worker allocations');
  run("globalThis.c=fieldCrop(qaField);c.lastDay=qaAutumn-1;State.clock.day=qaAutumn;tickFields(qaAutumn)");
@@ -116,18 +117,19 @@ test('harvest strips cover entire irregular polygon before work and remove the g
  run('drawFieldCropPolygon=drawCropOriginal');assert.equal(run('FIELD_RULES.cropHeight'),.1);
 });
 
-test('real village growth spawns valid four-corner fields within the build zone',()=>{
+run("peasantPath=qaOriginalPeasantPath");
+test('real village growth spawns four-corner H0 fields outside yellow zoning',()=>{
  fixture();run("State.clock.day=1;State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5});for(let i=0;i<5;i++)State.structures.push({id:'farmhouse'+i,type:'house',auto:true,x:96+i*2,y:97,w:1.5,h:1,angle:0});State.village.nextGrowthDay=2;invalidateNavigation();let spawned=0;for(let step=0;step<12;step++)if(spawnField(step))spawned++;");
  assert.ok(run('spawned')>0,'real spawn must find space');
- assert.equal(run("State.structures.filter(s=>s.type==='field').every(f=>fieldQuadValid(f.points)&&urbanYellowContains(f.points))"),true);
+ assert.equal(run("State.structures.filter(s=>s.type==='field').every(f=>fieldQuadValid(f.points)&&f.points.every(p=>!window.ConquerCombat.areaState(p).yellow&&terrainPlateauElevation(p)===0))"),true);
 });
 test('idle L2 workers open a field in the ploughing window without five houses',()=>{
   fixture();
   run("State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5},{id:'artisan',type:'house',auto:true,x:101,y:108,w:1.5,h:1,houseLevel:2});invalidateNavigation();globalThis.qaFirstAutumnMonday=qaAutumn+((7-qaAutumn%7)%7);State.clock.day=qaFirstAutumnMonday+.40;tickFields(State.clock.day);globalThis.qaL2Field=State.structures.find(s=>s.openedByL2==='artisan')");
   assert.equal(run('Boolean(qaL2Field)'),true,'an idle L2 should create farmland independently of five-house threshold');
   assert.equal(run('underConstruction(qaL2Field)'),false,'opening farmland should not require a construction delay');
-  assert.equal(run('fieldLayout(qaL2Field).cells.length'),1,'a new L2 field must fit one worker slot');
-  assert.equal(run('fieldQuadValid(qaL2Field.points)&&urbanYellowContains(qaL2Field.points)'),true);
+  assert.ok(run('fieldLayout(qaL2Field).cells.length')>=1,'a new L2 field must have worker slots scaled to area');
+  assert.equal(run('fieldQuadValid(qaL2Field.points)&&qaL2Field.points.every(p=>!window.ConquerCombat.areaState(p).yellow&&terrainPlateauElevation(p)===0)'),true);
   assert.equal(run('fieldWorkAssignments(completedSettlement("house"),completedSettlement("field")).get("artisan")?.field.id'),run('qaL2Field.id'),'L2 must be assigned to its newly opened field');
   run("globalThis.qaL2Crop=fieldCrop(qaL2Field);qaL2Crop.lastDay=qaFirstAutumnMonday+.40;State.clock.day=qaFirstAutumnMonday+1.40;tickFields(State.clock.day)");
   assert.ok(run('qaL2Crop.work.reduce((a,b)=>a+b,0)')>0,'L2 must actually plough after opening the new field');
