@@ -123,7 +123,7 @@ canvas.addEventListener('pointerdown',e=>{
     if(!State.draft){
       const s=snapFn(p);
       State.draft={a:s.point,aSnap:s.structureId||null,aGatePort:s.gatePort||null,preview:null,previewSegments:null};
-      status(s.gatePort?'Main road: starts at the gate — choose point B':mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
+      status(s.gatePort?'Main road: starts at the gate — choose point B':s.bridgeEnd?'Main road: starts at the bridge — choose point B':mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
       draw();
     }else{
       const e2=snapFn(p),spec=currentLinearSpec();
@@ -140,7 +140,7 @@ canvas.addEventListener('pointerdown',e=>{
         if(n&&n.length>=spec.min-.001){
           if(addManualMainRoad(n.a,n.b)){
             State.draft=null;
-            status('Main road added — choose next segment');
+            status(e2.bridgeEnd?'Main road joined to the bridge — choose next segment':'Main road added — choose next segment');
           }
         }else status('Segment too short');
       }else{
@@ -199,16 +199,17 @@ canvas.addEventListener('pointermove',e=>{
       error||((snap?'⛓ Magnet · ':'')+type+' '+preview.length.toFixed(1)+'U · flat level banks'));
     draw();return;
   }
-  if(State.tool.kind==='linear'&&!State.draft&&['wall','palisade'].includes(State.tool.linear)){
-    // Light the wall-end magnet under the pointer before the first click too.
-    const hover=snapAnchor(p),was=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,now=hover.endpoint?hover.point:null;
+  if(State.tool.kind==='linear'&&!State.draft&&['wall','palisade','road'].includes(State.tool.linear)){
+    // Light the wall-end (or bridge-end, for roads) magnet under the pointer before the first click too.
+    const road=State.tool.linear==='road',hover=(road?mainRoadSnapAnchor:snapAnchor)(p),lit=s=>s?.endpoint||s?.bridgeEnd?s.point:null;
+    const was=lit(State.tool.linearHover),now=lit(hover);
     State.tool.linearHover=hover;
     if(!!was!==!!now||(was&&now&&dist(was,now)>1e-6))draw();
     return;
   }
   if(State.tool.kind==='linear'&&State.draft){
     const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec();
-    if(!mainRoad)State.tool.linearHover=snap;
+    State.tool.linearHover=snap;
     if(mainRoad&&(State.draft.aGatePort||snap.gatePort)){
       const legs=manualRoadLegs(State.draft.a,snap.point,State.draft.aGatePort,snap.gatePort);
       State.draft.preview=null;State.draft.invalidPreview=null;
@@ -223,7 +224,7 @@ canvas.addEventListener('pointermove',e=>{
         State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:true};
         State.draft.previewSegments=null;State.draft.invalidPreview=null;
         const verdict=window.ConquerPlacement?.check(State.draft.preview);
-        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`Main road: ${n.length.toFixed(2)}U — click to confirm`);
+        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`${snap.bridgeEnd?'⛓ Bridge magnet · ':''}Main road: ${n.length.toFixed(2)}U — click to confirm`);
         draw();
       }else{
         State.draft.preview=null;State.draft.invalidPreview={type:'road',a:State.draft.a,b:snap.point,width:spec.width};draw();

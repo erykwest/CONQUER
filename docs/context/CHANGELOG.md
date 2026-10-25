@@ -34,6 +34,11 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 ## 2026-10-23 — Eventi: CI della PR #78
 
 - Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (causa dei fallimenti di `menu-regression` e `settlement-qa`); dopo la correzione entrambi i check PASS in CI. `refactor-app-population` e `wall-bays` falliscono solo in checkout Windows con `core.autocrlf=true` (i test cercano frammenti con fine riga LF): con checkout LF, come in CI, passano anche su `main`. Non sono fallimenti del codice.
+## 2026-10-23 — Ponti: magnete strade
+
+- Branch `feat/bridge-road-magnets`: le strade principali si agganciano alle due testate di ogni ponte e una strada su una testata non è più rifiutata come sovrapposizione. Stato e prove in [STATUS](STATUS.md#ponti--magnete-strade-23102026); requisiti BRIDGE-01/02 nel [BACKLOG](BACKLOG.md#ponti--magnete-strade-branch-featbridge-road-magnets-23102026).
+- ROADMAP e DECISIONS invariate: estensione del magnete esistente dei portoni, nessun nuovo contratto.
+
 
 ## 2026-10-23 — Guardaroba stagionale dei popolani (branch)
 

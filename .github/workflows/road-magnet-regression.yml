@@ -1,0 +1,34 @@
+name: Road magnet regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement-world.js'
+      - 'src/settlement-placement.js'
+      - 'src/settlement-castle-placement.js'
+      - 'src/settlement-app-input.js'
+      - 'qa/bridge-road-magnet-regression.cjs'
+      - 'qa/gate-fittings-regression.cjs'
+      - 'qa/linear-magnet-regression.cjs'
+      - '.github/workflows/road-magnet-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  road-magnets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check affected scripts
+        run: |
+          for file in src/settlement-world.js src/settlement-placement.js src/settlement-castle-placement.js src/settlement-app-input.js; do node --check "$file"; done
+      - name: Bridge, gate and wall magnets
+        run: |
+          node qa/bridge-road-magnet-regression.cjs
+          node qa/gate-fittings-regression.cjs
+          node qa/linear-magnet-regression.cjs
+          node qa/builder-placement-regression.cjs
