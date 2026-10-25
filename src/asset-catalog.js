@@ -105,6 +105,11 @@
     items.push({id:'figure:work:'+action,title,category:'Popolazione',family:'Lavori',kind:'figure',subject:'villager',
       action,tool,key:tool,format:'Animazione',source:'src/settlement-work-anim.js'});
   }
+  const wardrobe=window.ConquerWardrobe?.PIECES||{};
+  for(const key of Object.keys(wardrobe)){
+    items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
+      kind:'wardrobe',key,format:'Overlay',note:'Si attiva: '+wardrobe[key].when+'.',source:'src/settlement-wardrobe.js'});
+  }
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -280,7 +285,7 @@
   }
   // Thumbnail figures use the very same drawing calls as the live Figure Lab.
   // Each call temporarily swaps the classic-script canvas context, then restores it.
-  const LAB_VILLAGER={id:'asset-lab-villager',kind:'peasant',sex:'male',age:'adult',hair:'brown',colors:['#8c6b3f','#5d4a32']};
+  const LAB_VILLAGER={id:'asset-lab-villager',kind:'peasant',sex:'male',age:'adult',hair:'brown',colors:['#9c9078','#7d7a72']};
   function renderFigure(canvas,item,rotationDegrees=0){
     const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,subject=item.subject;
     g.clearRect(0,0,w,h);
@@ -313,6 +318,23 @@
       placeholder(canvas,'ANTEPRIMA DAL LAB');
     }finally{ctx=previous;State.view.scale=oldScale}
   }
+  // A wardrobe piece worn by the four civil classes (L1-L4), drawn by the game's own figure code.
+  function renderWardrobe(canvas,item){
+    const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,W=window.ConquerWardrobe;
+    g.clearRect(0,0,w,h);
+    const previous=ctx,oldScale=State.view.scale;
+    try{
+      ctx=g;State.view.scale=Math.min(w*.045,h*.1);
+      [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
+        const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
+        drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
+          outfit:W.compose([item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+      });
+    }catch(error){
+      console.warn('Asset Lab wardrobe thumbnail could not render',item.key,error);
+      placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');
+    }finally{ctx=previous;State.view.scale=oldScale}
+  }
   // Rotation sets: the pre-rendered frame closest to the requested heading.
   function rotationFrame(item,rotationDegrees){
     const want=((rotationDegrees%360)+360)%360;
@@ -343,6 +365,7 @@
     if(item.kind==='schematic')return renderSchema(canvas,item);
     if(item.kind==='model'||item.kind==='animal'||item.kind==='castle')return renderModel(canvas,item,rotationDegrees);
     if(item.kind==='figure')return renderFigure(canvas,item,rotationDegrees);
+    if(item.kind==='wardrobe')return renderWardrobe(canvas,item);
   }
   let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null,selectedState=null;
   let observer=null;
@@ -395,7 +418,7 @@
     byId('assetRotationValue').textContent=selectedRotation+'°';
     const label=byId('assetPreviewNote');
     label.textContent=live?'Anteprima animata dal motore di gioco.':snapshotMode()?'Render 2.5D del gioco (ConquerAssetStage), terreno rimosso.':
-      item.kind==='castle'?'Geometria costruita dal motore di gioco (ConquerCastle3D).':item.rotations?'Fotogrammi pre-renderizzati ogni 15°.':'';
+      item.kind==='castle'?'Geometria costruita dal motore di gioco (ConquerCastle3D).':item.rotations?'Fotogrammi pre-renderizzati ogni 15°.':item.note||'';
     if(live){
       document.querySelector('[data-subject="'+item.subject+'"]').click();
       if(item.action)document.querySelector('#actions [data-action="'+item.action+'"]')?.click();

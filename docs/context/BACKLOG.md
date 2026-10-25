@@ -220,7 +220,7 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **E-03 — Tempo e feedback militare:** giorno di lavoro → output reale, mercato sabato, riposo domenica, bilanci annuali; assedio/incursione deve interrompere la produzione senza inventari concorrenti.
 - **V-01 — Renderer 3D WebGL2 vs sprite:** **CODICE SU MAIN**: castello/scena [db6857c](https://github.com/erykwest/CONQUER/commit/db6857c2af21b4010077107876f59cc300374697) e default WebGL2 con fallback Canvas [cc6830a](https://github.com/erykwest/CONQUER/commit/cc6830ac2b61d6a0769a4e0a9302ab639295caf0). **RESTANO DA VERIFICARE**: confronti ripetibili su cutaway, stati di cantiere, danni, prestazioni RAM/VRAM, e pipeline finale di asset.
 - **V-02 — Cache e prestazioni:** misurare 192 voci bitmap e 32 MiB nominali dei compositi, ora confrontando **WebGL2 3D predefinito e Canvas fallback**; identificare VRAM/RAM, eviction e perf prima di creare loader concorrenti.
-- **V-03 — Animazioni lavoro popolani:** **MERGED SU MAIN** con sette utensili e fasi contestuali in [#71](https://github.com/erykwest/CONQUER/pull/71); restano QA visiva/performance e accessori stagionali **PROPOSTA**. Non confondere animazioni con lavoro economico/operai L1 della #55.
+- **V-03 — Animazioni lavoro popolani:** **MERGED SU MAIN** con sette utensili e fasi contestuali in [#71](https://github.com/erykwest/CONQUER/pull/71); restano QA visiva/performance; accessori stagionali **CODICE SU BRANCH** `feature/seasonal-clothing` (overlay guardaroba, braccio col colore del mantello). Non confondere animazioni con lavoro economico/operai L1 della #55.
 - **V-04 — Audio:** streaming musica current+next, SFX e ambience on demand, crossfade, controllo licenze/tracce Suno; **DIREZIONE**, non audio già pubblicato. Fonte SFX distinta: [playlist Pixabay e inventario Drive](sources/PIXABAY-SOUNDS-2026-10-14.md), da verificare file per file.
 - **UI-01 — Minimappa + LOD:** **CODICE MERGIATO SU MAIN** il 16/10 via [PR #44](https://github.com/erykwest/CONQUER/pull/44) ([2e7582d](https://github.com/erykwest/CONQUER/commit/2e7582d33575fcbdfa76605a08b09746327457c9)); **DA VALIDARE** nel browser ISO/plan, rotazioni, selezione, fog, mobile e benchmark. Il Building LOD semplificato è nella minimappa, **non** nel mondo 3D principale.
 
@@ -367,7 +367,14 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 
 ## Nota voice — abbigliamento stagionale e meteo degli abitanti
 
-> Proposta estetico-funzionale da sviluppare; **non implementata**.
+> **CODICE SU BRANCH `feature/seasonal-clothing` (23/10/2026), non ancora su main.** Scelta: **overlay a strati** sopra la figura procedurale, non skin alternative. Catalogo di 9 capi in `src/settlement-wardrobe.js`, visibile nell'Asset Lab (formato «Abbigliamento»). Restano aperti: QA visiva in partita con molti abitanti, performance misurata, la «temperatura» (oggi solo mese + meteo) e le divise/attrezzi professionali (i soldati non indossano capi stagionali).
+>
+> - **Pioggia/temporale:** mantella cerata + cappuccio per tutti, in ogni stagione.
+> - **Inverno:** mantello per classe (pelle di pecora popolani, lana artigiani, pelliccia mercanti) aperto sul davanti per lasciare visibile la tunica di classe; berretto di pelliccia o cappuccio di lana; con neve tutti col cappuccio.
+> - **Estate serena:** cappello di paglia (75% popolani, 45% artigiani, 30% mercanti); niente con la nebbia.
+> - **Mezze stagioni ventose/nebbiose:** scialle di lana per circa il 45%.
+> - **Colori per classe (tuniche e capi in tessuto):** L1 grigio/beige, L2 verde/marrone, L3 colori primari desaturati, L4 colori primari accesi. Cappucci di lana, mantelli, scialli e mantelle cerate (più scure) prendono la palette della classe ed evitano il colore della tunica; paglia, pelliccia e pelle di pecora restano nei colori naturali. Lavoratori anonimi e brigata antincendio sono L1.
+> - **Transizioni:** novembre e marzo vestono ~45% degli abitanti per l'inverno, maggio e settembre ~40% per l'estate; chi indossa il mantello a novembre lo tiene a dicembre. Il meteo cambia per giorno, quindi la pioggia veste tutti insieme.
 
 - **Skin stagionali dei popolani:** in inverno usare pelli, tuniche pesanti e mantelli; in estate cappelli di paglia e tuniche corte/leggere.
 - **Pioggia:** aggiungere mantelli antipioggia o coperture appropriate durante le precipitazioni, indipendentemente dalla stagione.
