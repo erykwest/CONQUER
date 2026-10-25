@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## Guardaroba stagionale dei popolani (branch `feature/seasonal-clothing`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** `src/settlement-wardrobe.js` (`window.ConquerWardrobe`) con 9 capi overlay (cappello di paglia, berretto di pelliccia, cappuccio di lana, cappuccio cerato, pelle di pecora, mantello di lana, mantello foderato di pelliccia, mantella antipioggia, scialle). Disegnati da `drawVillagerFigureUnmasked`, quindi valgono anche per lavoratori, costruttori e civili in fuga dagli incendi; l'outfit dipende da id residente, mese del calendario (o stagione DEV forzata) e `currentWeather()`. Nessuno stato persistito, nessun effetto economico.
+- **Palette per classe:** `PEASANT/ARTISAN/MERCHANT/ELITE_PALETTE` in `settlement-core.js` ridefinite come L1 grigio/beige, L2 verde/marrone, L3 primari desaturati, L4 primari accesi; tingono tuniche e capi in tessuto del guardaroba. Lavoratori anonimi (`settlement-work-anim.js`) e brigata antincendio (`settlement-fire.js`) passati a L1. La copia delle palette in `figures-lab.html` è verificata uguale a core dalla regressione.
+- **Asset Lab:** 9 voci «Popolazione / Abbigliamento stagionale», anteprima sulle quattro classi L1–L4; selettore stagione/meteo nel lab animato.
+- **QA:** nuova `qa/wardrobe-regression.cjs` (+ workflow) **PASS in locale**; `work-anim`, `asset-catalog`, `refactor-app-population`, `snow-tracks` **PASS in locale**. Verifica visiva nel lab (5 condizioni × classi × bambini) e probe delle condizioni live in `index.html` senza errori console. Dopo il merge di `main` (audit visivo #82): `qa/asset-audit.mjs` locale 465 render, **0 falliti**; 9 nuovi (guardaroba) e 8 cambiati (popolano e 7 lavori, nuova palette L1), rivisti nel foglio provini e registrati in `qa/asset-audit-baseline.json`. **Non verificato:** resa in partita con un villaggio popolato e costo per frame con molti abitanti; CI della branch.
+
 ## Converge — riallineamento PR #61 alla main corrente (23/10/2026)
 
 - **BRANCH, NON MERGE:** `converge` riallineata a `main` `bc82dbee5c8da30bebea9e93049c6f85701c7e51`. Divergenza iniziale: 9 commit propri e 37 mancanti. Conflitti risolti in `settlement-siege.js` e `DECISIONS.md`, preservando tutti gli aggiornamenti di main.
