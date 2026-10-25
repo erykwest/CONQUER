@@ -214,8 +214,12 @@
         }
       })});
     }
-    list.sort((a,b)=>viewDepthPoint(a.p)-viewDepthPoint(b.p));
-    for(const it of list)it.draw();
+    // Balustrades, hangings and backrests in front of a spectator cover him (people.js).
+    for(const o of window.ConquerEventPeople?.occluderItems?.(s)||[])list.push(o);
+    for(const it of list)it.d=viewDepthPoint(it.p);   // once per item, not per comparison
+    list.sort((a,b)=>a.d-b.d);
+    const P=window.ConquerEventPeople;
+    if(P?.paintList)P.paintList(list);else for(const it of list)if(it.draw)it.draw();
   }
   // The two knights' colours: a pair of primaries each, never the same pair.
   function liveryOf(s,who){

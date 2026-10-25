@@ -90,6 +90,7 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 | EV-P6 | Tende non allineate (±40°, 75%; scatter 200%; senza collisioni né uscite dal lotto) e scatter/attrezzature disordinati e colori unici per spazio | CODICE + QA locale | `settlement-events3d.js` |
 | EV-A1 | Animazioni ambientali: bandiere, festoni e stendardi al vento | CODICE + QA locale | strato dinamico, meteo |
 | EV-A2 | Animazioni di persone: tutti gli spazi e allestimenti FATTI su slot e registro occupanti allineati a CANS (sorgente provvisoria); cavalli della giostra bardati | IN CORSO | `settlement-events-people.js` |
+| EV-A3 | Occlusione del pubblico: balaustre, drappi, schienali e pareti dell'arena sopra le figure FATTO; figure sotto gli edifici di altre strutture davanti allo spazio DA FARE | IN CORSO | `settlement-events-people.js`, overlay popolazione |
 | EV-C1 | Adapter CANS: occupanti reali (residenti) al posto della sorgente provvisoria, prenotazione, arrivo e uscita dagli accessi | DA FARE, dipende dallo skeleton CANS | branch `cans` |
 | EV-P5 | Arena a U arricchita e lotto dedicato `arenaLot` 18 × 14 | CODICE + QA locale; posizionamento da Builder DA FARE | design, placement |
 | EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |

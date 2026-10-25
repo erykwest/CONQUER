@@ -150,4 +150,13 @@ console.log('PASS arena, stage (players / herald) and podium: combatants, squire
   }
   assert.ok(P.venueScene(Th,1).actors.some(a=>a.action==='perform'&&a.z>.3),'theatre: actors up on the stage');
 }
-console.log('PASS tourney (melee, squires, stands), knights camp (sparring, squires) and theatre (actors, wings, audience)');
+console.log('PASS tourney (melee, squires, stands), knights camp (sparring, squires) and theatre (actors, wings, audience)');// The stands' balustrade and backrest are repainted over the crowd: each piece sorts at
+// its band edge pushed outward, so it covers the row behind it and never the row in front.
+{
+  const J=venue('joust'),o=P.occluders(J);
+  assert.ok(o.length>100,'joust: the stands give occluder triangles ('+o.length+')');
+  assert.ok(o.every(q=>q.tri.length===9&&Number.isFinite(q.p.x)&&Number.isFinite(q.p.y)&&q.col),'occluders: well-formed');
+  assert.equal(P.occluders(J),o,'occluders: cached while the venue is unchanged');
+  assert.equal(P.occluders(venue('circus')).length,0,'circus: no stands, no occluders');
+}
+console.log('PASS occluders: stands balustrade and backrest repainted over the crowd');

@@ -2,6 +2,11 @@
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
 
+## 2026-10-25 — Eventi: pubblico nascosto da balaustre e schienali
+
+- Le figure sulle tribune (giostra, torneo, teatro) e nell'arena vengono coperte dalla balaustra, dai drappi e dallo schienale. Questi pezzi vengono ridisegnati in ordine di profondità insieme alle figure: ogni pezzo si ordina sul bordo della tribuna, spinto di 0,4 U verso l'esterno. Le figure vengono disegnate a gruppi tra un occlusore e l'altro, così un fotogramma della giostra costa circa 14 ms. QA in `event-people-regression`.
+- Resta aperto: le figure sono disegnate sopra gli edifici di altre strutture che stanno davanti allo spazio (sovrapposizione 2D, come i paesani).
+
 ## 2026-10-25 — Eventi: accampamento affollato
 
 - L'accampamento dei cavalieri ha tre coppie che si allenano, un gruppo di tre persone che chiacchiera davanti a ogni tenda (slot `chat`) e due inservienti a ogni rastrelliera e armatura (slot `tend`), oltre agli scudieri: oltre 40 persone. QA estesa.

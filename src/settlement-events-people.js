@@ -237,6 +237,92 @@
     return{actors,cheer};
   }
 
+  // ---------- occluders: the people are 2D figures on the population pass, after the
+  // scene, so the parts of the stands that stand in front of them are painted again in
+  // the same depth order as the figures: the stands' front band (balustrade and its
+  // hangings) and back band (backrest), the arena's barrier, hangings and outer wall.
+  // Triangles keep the scene's fixed-light shading, so the repaint matches the scene.
+  const OCCLUDE={
+    standOpen:{parts:{drapes:'all',structure:'bands'}},
+    standCovered:{parts:{drapes:'all',structure:'bands'}},
+    arenaU:{parts:{walls:'all',drapes:'all'}}
+  };
+  const BAND=.4;
+  // Halve a triangle across its longest edge until no edge is longer than max (U).
+  function split(tri,max=.7,out=[]){
+    const P=k=>[tri[k*3],tri[k*3+1],tri[k*3+2]],d=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+    const v=[P(0),P(1),P(2)],e=[d(v[0],v[1]),d(v[1],v[2]),d(v[2],v[0])],i=e.indexOf(Math.max(...e));
+    if(e[i]<=max||out.length>64){out.push(tri);return out}
+    const a=v[i],b=v[(i+1)%3],c=v[(i+2)%3],m=[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];
+    split([...a,...m,...c],max,out);split([...m,...b,...c],max,out);
+    return out;
+  }
+  const occCache=new Map();
+  function occluders(s){
+    const g=groundOf(s),items=E().placedItems(s);
+    const key=JSON.stringify(items.map(i=>[i.m,i.x,i.y,i.a]))+'|'+g+'|'+(s.angle||0)+'|'+s.x+'|'+s.y;
+    const hit=occCache.get(s);if(hit&&hit.key===key)return hit.list;
+    const list=[];
+    items.forEach(it=>{
+      const spec=OCCLUDE[it.m];if(!spec)return;
+      const parts=E().parts(it.m).filter(p=>!p.cloth),p=E().toWorld(s,it.x,it.y);
+      const mesh=E().triangles(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1},g,null,{only:'fixed'});
+      if(!mesh)return;
+      // Bands of the structure in model space: within 0.12 U of its front and back edges.
+      let y0=Infinity,y1=-Infinity;
+      for(const q of parts)if(q.name==='structure')for(let i=1;i<q.v.length;i+=3){y0=Math.min(y0,q.v[i]);y1=Math.max(y1,q.v[i])}
+      // In the isometric view a part lower than the lowest seat can never cover a seated
+      // figure (it projects below it): only what rises to seat height is kept.
+      const seats=M()[it.m]?.meta?.seats||[],zMin=(seats.length?Math.min(...seats.map(q=>q[2])):0)-.12;
+      // A band piece sorts at its edge pushed BAND outward (away from the seats), so the
+      // front-row figure it covers stays behind it even when the piece sits a little to
+      // one side (and a back-row figure stays in front of the backrest).
+      const ang=(s.angle||0)+(it.a||0),ky=it.s||1,ax=-Math.sin(ang)*ky,ay=Math.cos(ang)*ky;
+      let t=0;
+      for(const q of parts){
+        const mode=spec.parts[q.name];
+        for(let k=0;k<q.c.length;k++,t++){
+          if(!mode)continue;
+          if(Math.max(q.v[k*9+2],q.v[k*9+5],q.v[k*9+8])<zMin)continue;
+          if(mode==='bands'){
+            const ys=[q.v[k*9+1],q.v[k*9+4],q.v[k*9+7]];
+            if(!(Math.max(...ys)<y0+.12||Math.min(...ys)>y1-.12))continue;
+          }
+          const o=t*9,P=mesh.pos,col=window.ConquerMesh3D?.shadedHex?.(mesh,t)||mesh.col[t];
+          const ly=(q.v[k*9+1]+q.v[k*9+4]+q.v[k*9+7])/3,edge=isFinite(y0)?(ly<(y0+y1)/2?y0-BAND:y1+BAND):ly,dy=edge-ly;
+          // A long plank sorts badly by one centroid: split it so each piece sorts on its own.
+          for(const tri of split([P[o],P[o+1],P[o+2],P[o+3],P[o+4],P[o+5],P[o+6],P[o+7],P[o+8]],.35))
+            list.push({tri,col,p:{x:(tri[0]+tri[3]+tri[6])/3+ax*dy,y:(tri[1]+tri[4]+tri[7])/3+ay*dy}});
+        }
+      }
+    });
+    occCache.set(s,{key,list});
+    return list;
+  }
+  // Painter items for the occluders of a venue, to sort with its figures.
+  function occluderItems(s){
+    return occluders(s).map(o=>({p:o.p,occluder:o}));
+  }
+  // Paint a depth-sorted list of figures and occluder triangles. The triangles between
+  // two figures are batched into one path per colour: switching between clipped figure
+  // drawing and thousands of single fills is what costs, not the fills themselves.
+  function paintList(list){
+    let run=new Map();
+    const flush=()=>{
+      if(!run.size)return;
+      ctx.save();ctx.lineWidth=.6;ctx.lineJoin='round';
+      for(const [col,path] of run){ctx.fillStyle=ctx.strokeStyle=col;ctx.fill(path);ctx.stroke(path)}
+      ctx.restore();run=new Map();
+    };
+    for(const it of list){
+      if(!it.occluder){flush();it.draw();continue}
+      const o=it.occluder,T=o.tri,a=w2sRaw({x:T[0],y:T[1]},T[2]),b=w2sRaw({x:T[3],y:T[4]},T[5]),c=w2sRaw({x:T[6],y:T[7]},T[8]);
+      let path=run.get(o.col);if(!path){path=new Path2D();run.set(o.col,path)}
+      path.moveTo(a.x,a.y);path.lineTo(b.x,b.y);path.lineTo(c.x,c.y);path.closePath();
+    }
+    flush();
+  }
+
   // ---------- drawing helpers (shared with the joust)
   let clock=0,last=0;
   function tick(){
@@ -320,11 +406,12 @@
         sc=setup==='feast'?feastScene(s,t):setup==='circus'?circusScene(s,t):setup==='joust'?null:venueScene(s,t);   // tourney, camp, theatre
       }else sc=venueScene(s,t);                       // arena lot, stage, podium: always lived in
       if(!sc)continue;
-      const list=drawActors(s,sc.actors,t);
-      list.sort((a,b)=>viewDepthPoint(a.p)-viewDepthPoint(b.p));
-      for(const it of list)it.draw();
+      const list=drawActors(s,sc.actors,t).concat(occluderItems(s));
+      for(const it of list)it.d=viewDepthPoint(it.p);   // once per item, not per comparison
+      list.sort((a,b)=>a.d-b.d);
+      paintList(list);
     }
   }
-  window.ConquerEventPeople={slots,occupants,setOccupancySource,provisional,feastScene,circusScene,venueScene,DUEL,draw,
+  window.ConquerEventPeople={slots,occupants,setOccupancySource,provisional,feastScene,circusScene,venueScene,DUEL,draw,occluders,occluderItems,paintList,
     helpers:{hash,figureAt,armsUp,horse,screenFacing,TUNICS,KINDS,groundOf,tick:()=>tick(),clock:()=>clock}};
 })();
