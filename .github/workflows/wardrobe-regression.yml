@@ -1,0 +1,27 @@
+name: Wardrobe regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement-wardrobe.js'
+      - 'src/settlement-population-figures.js'
+      - 'src/settlement-work-anim.js'
+      - 'qa/wardrobe-regression.cjs'
+      - '.github/workflows/wardrobe-regression.yml'
+  workflow_dispatch:
+jobs:
+  wardrobe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check wardrobe source and test syntax
+        run: |
+          node --check src/settlement-wardrobe.js
+          node --check src/settlement-population-figures.js
+          node --check qa/wardrobe-regression.cjs
+      - name: Run wardrobe regression
+        run: node qa/wardrobe-regression.cjs
