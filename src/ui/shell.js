@@ -36,7 +36,12 @@ const ICON = {
   market: 'M4 10l2-6h12l2 6M4 10h16M6 10v10h12V10M10 20v-5h4v5',
   activities: 'M14 6l4 4M4 20l9-9M12 4l8 8-3 3-8-8z',
   castle: 'M4 21V9h3V5h3v4h4V5h3v4h3v12M4 14h16M10 21v-4h4v4',
-  game: 'M5 3h12l4 4v14H3V3h2M7 3v6h9V3M7 21v-7h10v7'
+  game: 'M5 3h12l4 4v14H3V3h2M7 3v6h9V3M7 21v-7h10v7',
+  command: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  zones: 'M4 20c3 0 4-2 4-4 0-1.5 1-3 3-3s3 1.5 3 3M14 13l6-9M9 20h11',
+  patrols: 'M7 21l2-7M9 14l-3-4 4-2 3 3 3-1M10 4.5a1.5 1.5 0 1 0 0 .01M17 3v18',
+  alarm: 'M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4',
+  tests: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 11v2'
 };
 const Icon = ({ name, size = 20 }) => html`
   <svg class="u2-icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -249,19 +254,6 @@ function ToolCard({ snap, cmd }) {
     ${rows.length === 0 && html`<p class="u2-hint">${entry.hint}</p>`}
   </${Card}>`;
 }
-// Hosts an existing, event-bound legacy panel inside a tablet without recreating it (Difendi, phase 4).
-function LegacyCard({ title, selector }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const el = document.querySelector(selector);
-    if (!el || !ref.current) return;
-    const home = el.parentNode, next = el.nextSibling;
-    ref.current.appendChild(el);
-    el.classList.add('u2-hosted');
-    return () => { el.classList.remove('u2-hosted'); home.insertBefore(el, next); };
-  }, [selector]);
-  return html`<${Card} title=${title}><div class="u2-legacy" ref=${ref}></div></${Card}>`;
-}
 
 // ---------- selected-structure inspector ----------
 const I = T.inspector;
@@ -453,6 +445,65 @@ function ManageCard({ section, game }) {
   return html`<${Card} title=${M.sections[section]} wide=${section === 'market' || section === 'activities'}>${View && html`<${View} game=${game} />`}</${Card}>`;
 }
 
+// ---------- Difendi ----------
+const D = T.defend, DT = T.defendTips;
+const DEFEND_SECTIONS = ['command', 'zones', 'patrols', 'alarm'].concat(devEnabled ? ['tests'] : []);
+function DefendRail({ section, setSection }) {
+  return html`<nav class="u2-tablet u2-rail" aria-label=${T.modes.defend}>
+    ${DEFEND_SECTIONS.map(id => html`
+      <button type="button" class=${'u2-tool' + (section === id ? ' on' : '')} aria-label=${D.sections[id]}
+        aria-pressed=${section === id} data-tip=${D.sections[id]} onClick=${() => setSection(id)}><${Icon} name=${id} size=${22} /></button>`)}
+  </nav>`;
+}
+function DefendCard({ section, game, snap }) {
+  const s = game.read.defense(), def = game.commands.defense, tool = snap.tool;
+  if (!s || !s.active) return html`<${Card} title=${D.title}><p class="u2-hint">${D.notActive}</p></${Card}>`;
+  const opt = (label, tipKey, extra = {}) => ({ label, tip: label, tipBody: DT[tipKey] || null, ...extra });
+  let body = null;
+  if (section === 'command') body = html`
+    <${Row} label=${D.orders} tip=${DT.orders}><${Seg} options=${[
+      opt(D.orders, 'orders', { active: tool.kind === 'combat-orders', a: 'orders' }),
+      opt(D.deselect, null, { disabled: s.selected === 0, a: 'deselect' })]} onPick=${o => def(o.a)} /></${Row}>
+    ${s.focused && html`<div class="u2-stats">
+      <${Stat} label=${D.selected} value=${s.selected > 1 ? s.selected : D.focused[s.focused.kind] || s.focused.kind} />
+      <${Stat} label=${D.hp} value=${s.focused.hp != null ? s.focused.hp + '/' + s.focused.maxHp : '—'}>
+        ${s.focused.hp != null && html`<${Bar} value=${s.focused.hp} max=${s.focused.maxHp} />`}</${Stat}></div>`}`;
+  if (section === 'zones') body = html`
+    <${Row} label=${D.brush} tip=${DT.brush}><${Seg} options=${Object.keys(D.brushes).map(k =>
+      ({ label: D.brushes[k], active: tool.kind === 'combat-brush' && tool.combatBrush === k, k }))} onPick=${o => def('brush', o.k)} /></${Row}>
+    <${Row} label=${D.radius} tip=${DT.radius}><div class="u2-slider">
+      <input type="range" min="1" max="16" value=${s.brushRadius} aria-label=${D.radius} onInput=${e => def('brushRadius', e.currentTarget.value)} />
+      <b>${s.brushRadius}U</b></div></${Row}>`;
+  if (section === 'patrols') body = html`
+    <${Row} label=${D.patrols + ' ' + s.patrols} tip=${DT.patrols}><${Seg} options=${[
+      { label: D.patrolRemove, disabled: s.patrols === 0, a: 'patrolRemove' }, { label: D.patrolAdd, a: 'patrolAdd' }]} onPick=${o => def(o.a)} /></${Row}>`;
+  if (section === 'alarm') body = html`
+    <${Row} label=${D.bell} tip=${DT.bell}><${Seg} options=${['off', 'green', 'hall'].map(m =>
+      ({ label: D.alarmModes[m], active: s.alarm === m, m }))} onPick=${o => def('alarm', o.m)} /></${Row}>
+    ${s.buckets != null && html`<${Row} label=${D.buckets} tip=${DT.buckets}>
+      <${Seg} options=${[{ label: s.buckets ? I.on : I.off, active: s.buckets }]} onPick=${() => def('buckets')} /></${Row}>`}`;
+  if (section === 'tests') body = html`
+    <${Row} label=${D.testGroups.place} tip=${DT.tests}><${Seg} options=${[
+      opt(D.tests.intruder, 'intruder', { active: tool.kind === 'combat-intruder' && !tool.torch, a: 'intruder' }),
+      opt(D.tests.torch, 'torch', { active: tool.kind === 'combat-intruder' && tool.torch, a: 'torch' }),
+      opt(D.tests.clear, 'clear', { a: 'clearEnemies' })]} onPick=${o => def(o.a)} /></${Row}>
+    <${Row} label=${D.testGroups.fire}><${Seg} options=${['arrows', 'stone'].map(k =>
+      opt(D.tests[k], k, { active: tool.kind === 'combat-fire' && tool.fireKind === k, k }))} onPick=${o => def('fire', o.k)} /></${Row}>
+    <${Row} label=${D.testGroups.assault}><${Seg} options=${['ladder', 'tower', 'ram', 'fill'].map(k =>
+      opt(D.tests[k], k, { active: tool.kind === 'combat-storm' && tool.stormKind === k, k }))} onPick=${o => def('storm', o.k)} /></${Row}>`;
+  return html`<${Card} title=${D.sections[section]} sub=${D.alert[s.alert] || ''}>
+    <div class="u2-stats u2-stats-4">
+      <${Stat} label="Stato" value=${D.alert[s.alert] || s.alert} tip=${DT.alert} />
+      <${Stat} label=${D.units} value=${s.units} />
+      <${Stat} label=${D.hostiles} value=${s.hostiles} />
+      <${Stat} label=${D.patrols} value=${s.patrols} tip=${DT.patrols} />
+    </div>
+    <${Row} label=${D.view}><${Seg} options=${[
+      opt(D.fog, 'fog', { active: s.fog, a: 'fog' }), opt(D.zones, 'zones', { active: s.zones, a: 'zones' })]} onPick=${o => def(o.a)} /></${Row}>
+    ${body}
+  </${Card}>`;
+}
+
 function TimeBar({ snap, cmd }) {
   const c = snap.clock;
   return html`<div class="u2-tablet u2-timebar">
@@ -481,6 +532,8 @@ function App() {
   const setMode = m => { setModeState(m); remember(MODE_KEY, m); if (m !== 'build') game.commands.press('[data-tool="select"]'); };
   const [section, setSectionState] = useState(MANAGE_SECTIONS.includes(recall('conquer.ui.manage')) ? recall('conquer.ui.manage') : 'overview');
   const setSection = s => { setSectionState(s); remember('conquer.ui.manage', s); };
+  const [defSection, setDefSectionState] = useState(DEFEND_SECTIONS.includes(recall('conquer.ui.defend')) ? recall('conquer.ui.defend') : 'command');
+  const setDefSection = s => { setDefSectionState(s); remember('conquer.ui.defend', s); };
   useEffect(() => game.subscribe(setSnap), []);
   useEffect(() => {
     document.body.dataset.u2Mode = mode;
@@ -500,7 +553,7 @@ function App() {
     ${mode === 'build' && html`<${ToolRail} snap=${snap} cmd=${cmd} />${snap.selection?.detail
       ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${ToolCard} snap=${snap} cmd=${cmd} />`}`}
     ${mode === 'manage' && html`<${ManageRail} section=${section} setSection=${setSection} /><${ManageCard} section=${section} game=${game} />`}
-    ${mode === 'defend' && html`<${LegacyCard} title=${T.defendTitle} selector="#combatControls" />`}
+    ${mode === 'defend' && html`<${DefendRail} section=${defSection} setSection=${setDefSection} /><${DefendCard} section=${defSection} game=${game} snap=${snap} />`}
     <${TimeBar} snap=${snap} cmd=${cmd} />
     <${Toast} snap=${snap} />
     <${Tooltip} />`;
