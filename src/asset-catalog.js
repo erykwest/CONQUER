@@ -437,6 +437,26 @@
   }
   byId('assetRotateLeft').addEventListener('click',()=>rotateSelection(-15));
   byId('assetRotateRight').addEventListener('click',()=>rotateSelection(15));
+  // A 512 x 512 PNG of an entry as the Lab shows it (state and rotation included): meshes are
+  // re-rendered at that size, captures, files and symbols are fitted into the square.
+  async function exportImage(item,stateId=defaultState(item),rotationDegrees=0,size=512){
+    const out=document.createElement('canvas');out.width=out.height=size;
+    if(item.kind==='model'||item.kind==='animal'||item.kind==='castle'&&(!stateId||stateId==='3d')){
+      renderModel(out,item,rotationDegrees);return out.toDataURL('image/png');
+    }
+    const box=document.createElement('div');makePreview(item,box,true,rotationDegrees,stateId);
+    let el=box.querySelector('canvas,img,svg');if(!el)throw new Error('export: nessun render per '+item.id);
+    if(el.tagName.toLowerCase()==='svg'){const im=new Image();im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(el));el=im}
+    if(el.tagName==='IMG'&&!(el.complete&&el.naturalWidth))await new Promise(res=>{el.onload=el.onerror=res});
+    const w=el.naturalWidth||el.width,h=el.naturalHeight||el.height,k=Math.min((size-16)/(w||1),(size-16)/(h||1));
+    out.getContext('2d').drawImage(el,(size-w*k)/2,(size-h*k)/2,w*k,h*k);
+    return out.toDataURL('image/png');
+  }
+  byId('assetExportPng')?.addEventListener('click',async()=>{
+    if(!selectedItem)return;
+    const a=document.createElement('a');a.href=await exportImage(selectedItem,selectedState,selectedRotation);
+    a.download=selectedItem.id+(selectedState&&selectedState!=='3d'?'-'+selectedState:'')+(selectedRotation?'-r'+selectedRotation:'')+'-512.png';a.click();
+  });
   function updateFilters(){
     filters.replaceChildren();
     for(const category of CATEGORY_ORDER.filter(c=>c==='Tutti'||items.some(x=>x.category===c))){
@@ -495,7 +515,7 @@
     selectState,get selected(){return selectedId},get state(){return selectedState},get rotation(){return selectedRotation},
     get engineReady(){return !!engine},
     // The Lab's own renderers, for src/asset-audit.js: the audit looks at exactly what the Lab shows.
-    lab:{makePreview,modelMesh,engineCapture,defaultState,rotationFrame}};
+    lab:{makePreview,modelMesh,engineCapture,defaultState,rotationFrame},exportImage};
   // Reparent the existing native animation canvas: the animator retains its context.
   const liveCanvas=byId('c');if(liveCanvas)byId('assetAnimationPanel').appendChild(liveCanvas);
   refresh();
