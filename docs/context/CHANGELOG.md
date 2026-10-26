@@ -4,6 +4,7 @@
 
 - `ConquerMesh3D.shadeFactor` riconosce le facce superiori da `|nz|`. Gli export di Blender non hanno un ordine dei vertici coerente, quindi metà dei triangoli di uno stesso tetto (taverna, birrificio, loggia…) risultava scura (0,5). Ora il tono è uniforme in Canvas 2D, WebGL e Lab. Audit del Lab: 465 render, 0 errori, 128 cambiati; baseline aggiornata dopo la revisione.
 - Il Lab disegna i modelli con un depth buffer software (2× supersample), come la WebGL del gioco. Il painter 2.5D ordina per triangolo e tagliava i telai a graticcio e le finestre quasi complanari ai muri, quindi mostrava difetti che in WebGL non ci sono; restano solo nel fallback Canvas 2D del gioco. Revisione a 512 di tutti i 109 modelli; audit: 0 errori, baseline aggiornata.
+- Asset Lab: occupazione forzata («Occupazione»: no / occlusione corretta / come nel gioco), con popolani su terreno, pavimenti e portici, per verificare l'occlusione delle figure.
 - Asset Lab: pulsante «Esporta PNG 512», che esporta l'anteprima corrente (stato e rotazione) in 512 × 512, e la funzione `ConquerAssetCatalog.exportImage`.
 
 ## 2026-10-23 — Ponti: magnete strade

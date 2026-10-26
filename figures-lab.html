@@ -180,7 +180,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
       <output id="assetRotationValue" aria-live="polite">0°</output>
       <button id="assetRotateRight" type="button" aria-label="Ruota modello di 15 gradi a destra">+15° ↷</button>
     </div>
-    <div class="asset-rotate"><button id="assetExportPng" type="button" title="Scarica l'anteprima corrente (stato e rotazione) in PNG 512 × 512">Esporta PNG 512</button></div>
+    <div class="asset-rotate"><button id="assetOccupancy" type="button" title="Popolani su terreno, pavimenti e portici del modello 3D: occlusione col depth buffer, o disegnati sopra come fa oggi il gioco">Occupazione: no</button><button id="assetExportPng" type="button" title="Scarica l'anteprima corrente (stato e rotazione) in PNG 512 × 512">Esporta PNG 512</button></div>
     <p id="assetPreviewNote"></p>
     <span class="caption">Sorgente effettiva</span>
     <code id="assetDetailSource"></code>
@@ -536,13 +536,13 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   requestAnimationFrame(frame);
 })();
 </script>
-<script src="./src/settlement-mesh3d.js?v=asset-lab-1"></script>
+<script src="./src/settlement-mesh3d.js?v=asset-lab-2"></script>
 <script src="./src/assets/civic-models.js?v=asset-lab-1"></script>
 <script src="./src/assets/industry-models.js?v=asset-lab-1"></script>
 <script src="./src/assets/scatter-model.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>
-<script src="./src/asset-catalog.js?v=asset-lab-7"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-8"></script>
 <script src="./src/asset-audit.js?v=asset-lab-7"></script>
 </body>
 </html>

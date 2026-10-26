@@ -19,7 +19,7 @@
 
 ## Mesh e Lab — facce bicolori corrette, export PNG 512 (branch `fix/lab-export-normals`, 26/10/2026)
 
-- Lo shading delle mesh Blender non dipende più dall'ordine dei vertici: le facce superiori si riconoscono da `|nz|`. Il Lab ha il pulsante «Esporta PNG 512». Audit eseguito localmente: 0 errori, 128 render cambiati e rivisti; baseline aggiornata. CI da verificare dopo il push.
+- Lo shading delle mesh Blender non dipende più dall'ordine dei vertici: le facce superiori si riconoscono da `|nz|`. Il Lab ha il pulsante «Esporta PNG 512», disegna i modelli con depth buffer (come la WebGL) e ha l'occupazione forzata per verificare l'occlusione dei popolani. Audit eseguito localmente: 0 errori, 128 render cambiati e rivisti; baseline aggiornata. CI da verificare dopo il push.
 
 ## Asset Lab — motore di audit visivo, stati delle fortificazioni, accesso `/lab` (branch `feat/asset-lab-audit` da `main` `518e830`, 23/10/2026)
 
