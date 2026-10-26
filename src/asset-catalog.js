@@ -244,8 +244,31 @@
     const view={turns:0,
       project:(x,y,z)=>{const [rx,ry]=rotate(x,y);return{x:w/2+((rx-ry)*.866-mx)*scale,y:h/2+((rx+ry)*.5-z*.95-my)*scale}},
       depth:(x,y,z)=>{const [rx,ry]=rotate(x,y);return rx+ry+z*.55}};
-    if(window.ConquerMesh3D?.drawMeshes)window.ConquerMesh3D.drawMeshes(g,[mesh],view);
+    if(window.ConquerMesh3D?.shadedHex)depthRender(g,mesh,view,w,h);
     else placeholder(canvas,'RENDERER NON DISPONIBILE');
+  }
+  // The game draws meshes with WebGL and a depth buffer; the Lab does the same in software
+  // (2x supersampled). The 2.5D painter sorts whole triangles and cuts the timber frames
+  // and windows that lie almost on the wall, so it would show defects the game has not.
+  function depthRender(g,mesh,view,w,h,ss=2){
+    const W=w*ss,H=h*ss,p=mesh.pos,n=mesh.col.length,zb=new Float32Array(W*H).fill(-Infinity),img=new ImageData(W,H),d=img.data;
+    for(let t=0;t<n;t++){
+      const o=t*9,hex=window.ConquerMesh3D.shadedHex(mesh,t),r=parseInt(hex.slice(1,3),16),gr=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+      const V=[0,3,6].map(k=>{const q=view.project(p[o+k],p[o+k+1],p[o+k+2]);return[q.x*ss,q.y*ss,view.depth(p[o+k],p[o+k+1],p[o+k+2])]});
+      const ar=(V[1][0]-V[0][0])*(V[2][1]-V[0][1])-(V[2][0]-V[0][0])*(V[1][1]-V[0][1]);if(Math.abs(ar)<1e-9)continue;
+      const x0=Math.max(0,Math.floor(Math.min(V[0][0],V[1][0],V[2][0]))),x1=Math.min(W-1,Math.ceil(Math.max(V[0][0],V[1][0],V[2][0])));
+      const y0=Math.max(0,Math.floor(Math.min(V[0][1],V[1][1],V[2][1]))),y1=Math.min(H-1,Math.ceil(Math.max(V[0][1],V[1][1],V[2][1])));
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const px=x+.5,py=y+.5;
+        const w0=((V[1][0]-px)*(V[2][1]-py)-(V[2][0]-px)*(V[1][1]-py))/ar,w1=((V[2][0]-px)*(V[0][1]-py)-(V[0][0]-px)*(V[2][1]-py))/ar,w2=1-w0-w1;
+        if(w0<-1e-6||w1<-1e-6||w2<-1e-6)continue;
+        const z=w0*V[0][2]+w1*V[1][2]+w2*V[2][2],i=y*W+x;
+        if(z<=zb[i])continue;
+        zb[i]=z;d[i*4]=r;d[i*4+1]=gr;d[i*4+2]=b;d[i*4+3]=255;
+      }
+    }
+    const big=document.createElement('canvas');big.width=W;big.height=H;big.getContext('2d').putImageData(img,0,0);
+    g.imageSmoothingQuality='high';g.drawImage(big,0,0,w,h);
   }
   function placeholder(canvas,message){
     const g=canvas.getContext('2d');g.clearRect(0,0,canvas.width,canvas.height);

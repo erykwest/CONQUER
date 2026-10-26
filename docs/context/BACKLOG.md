@@ -15,6 +15,12 @@
   - **Danno al portone (regressione di #76):** «portone incrinato» e «portone sfondato» non si vedono più su nessuna porta (`danno-visibile`); prima di #76 lo sfondato era visibile sulle porte in pietra. Le nuove ante animate devono mostrare l'integrità del portone.
   - **Legno con rendering software:** con SwiftShader forzato il legno danneggiato o in costruzione scompare (riprodotto in Chromium headless); verificare il percorso di disegno su macchine senza GPU.
 - **FATTO in `fix/lab-export-normals` (26/10):** facce bicolori dovute all'ordine dei vertici incoerente negli export Blender (shading da `|nz|`); export PNG 512 dal Lab. Possibile seguito: le falde opposte di un tetto ora hanno lo stesso tono, e si potrebbe ombreggiarle in base all'esposizione.
+- **APERTO — difetti di geometria visti nella revisione a 512 (26/10), da correggere in Blender:**
+  - coperchi di botti e secchi con spicchi grigi (cerchio e coperchio complanari): `barrelGroup`, `buckets`, `cargoBarrel`, `goodsMixed`;
+  - pannelli a patchwork sulle torri d'assedio: `tower`, `tower2`;
+  - fessure e spicchi nei tetti: `tavern1`, `stables`, `storage`, `loggia`, angolo interno di `cloister`, `watermill`.
+- **APERTO:** il fallback Canvas 2D del gioco usa ancora il painter e taglia telai e finestre; valutare una correzione del painter o sprite pre-renderizzati.
+- **PROPOSTO:** occupazione forzata nel Lab (popolani e occupanti sugli slot) per verificare l'occlusione delle figure.
 - **Residui dell'audit:** gli schemi (case, pozzo, campi, strade, fiumi, foresta, rilievo) restano non-gioco (`render-del-gioco`); ponti, levatoi, fossati, terrapieni non ancora nella sandbox.
 
 ## Igiene Git — esito e finalizzazione (23/10/2026)
