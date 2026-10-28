@@ -269,9 +269,9 @@ function drawTowerDoorSpec(tower,spec){
     ctx.save();ctx.globalAlpha*=opacity;drawFacadeAssetBackdrop(edge,centerZ,width,height,0,'#211713');ctx.restore();
   };
   const occ=towerDoorOccluders(tower,spec,apexZ);if(!occ.length){drawDoor();return}
-  const rr=wrap.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(-48,-48,rr.width+96,rr.height+96);
-  for(const o of occ){const hull=structureScreenSilhouette(o);if(hull.length<3)continue;ctx.moveTo(hull[0].x,hull[0].y);for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);ctx.closePath()}
-  ctx.clip('evenodd');drawDoor();ctx.restore();
+  const rr=wrap.getBoundingClientRect();ctx.save();
+  clipOutsideHulls(occ.map(structureScreenSilhouette),-48,-48,rr.width+96,rr.height+96);
+  drawDoor();ctx.restore();
 }
 function drawTowerDoors(){
   for(const tower of State.structures){

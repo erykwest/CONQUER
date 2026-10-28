@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## Occlusione 2.5D — sagome sovrapposte (branch `fix/occlusion-clip-union`, 28/10/2026; da #18)
+
+- **Codice presente su branch (non ancora `main`):** nel renderer Canvas 2.5D le sagome che coprono dettagli, tetti, merli, connessioni delle palizzate, tetti a punta e porte delle torri erano unite in un unico percorso con `clip('evenodd')`: dove due sagome si sovrapponevano si annullavano e i dettagli nascosti tornavano visibili. Ora `clipOutsideHulls()` (`settlement-castle-structures.js`) applica un clip separato per ogni sagoma; usata nelle 5 funzioni di occlusione di `settlement-castle-structures.js` e nella porta delle torri di `settlement-architecture.js`. La correzione di #18 copriva 3 delle 6 funzioni.
+- **QA locale:** nuova `qa/occlusion-clip-regression.cjs` PASS sul branch e FAIL su `main`; 82/86 `qa/*.cjs` PASS (FAIL solo le 4 prove di performance senza Playwright locale). Audit del Lab (Chrome locale): con la correzione 465 render, 0 cambiati rispetto alla baseline rivista del 26/10; `main` attuale sullo stesso browser dà 137 render di fortificazioni cambiati (distanza media 0,02), che la correzione riporta alla baseline. Differenze non distinguibili a occhio nei fogli provini; quale merge le abbia introdotte non è stato individuato.
+
 ## Audio — mixer a 4 livelli e colonna sonora stagionale (branch `sound`, 17–19/10/2026; riallineato 28/10)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-sound.js` (`ConquerSound`, mixer Web Audio con bus Ambiente / Locale / Effetti / Notifiche, EQ e normalizzazione LUFS), `settlement-sound-catalog.js`, `settlement-sound-bridge.js` (ambiente da stagione, notte e meteo; suoni locali dall'edificio selezionato e dai due più vicini sopra una soglia di zoom; tuoni nei temporali), `settlement-music.js` + catalogo (9 brani stagionali, playlist automatica per stagione). Controlli solo nel pannello DEV (`settlement-sound-dev.js`, `settlement-music-dev.js`). Unico aggancio nel gioco: `ConquerSoundBridge.tick` in `simulationFrame`. **Audio spento di default**, si attiva a mano.

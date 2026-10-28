@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## QA visiva — occlusione e scene intere (da #18, 28/10/2026)
+
+- **FATTO SU BRANCH `fix/occlusion-clip-union`, NON MERGE:** clip di occlusione separati per sagoma (niente più dettagli che riappaiono dove due occlusori si sovrappongono).
+- **APERTO (deciso il 28/10, da fare dopo):** portare il runner di regressione a scena intera di #18 (12 scene × 4 rotazioni, maschere di occlusione) come complemento all'audit per singolo asset del Lab; baseline da rigenerare.
+- **APERTO:** separare il disegno della sovrapposizione di combattimento (`drawMapCircle`, `renderOverlay`) da `settlement-combat.js` (idea del vecchio branch `combat`, chiuso).
+
 ## Presentazione — audio e musica (branch `sound`, riallineato 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** mixer a 4 livelli, ambiente da stagione/meteo, suoni locali degli edifici, colonna sonora stagionale; controlli solo DEV, audio spento di default.
