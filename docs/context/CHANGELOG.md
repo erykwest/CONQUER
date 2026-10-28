@@ -66,12 +66,22 @@
 - Su `events` aggiunti catalogo Blender (`tools/blender/build_events.py`, `src/assets/event-models.js`), modulo `src/settlement-events3d.js`, agganci nei renderer 2.5D e WebGL, QA `events3d-regression` e relativa Action.
 - [docs/events/README.md](../events/README.md) descrive il contratto `eventVenue`, gli allestimenti e le regole di livrea; STATUS e BACKLOG distinguono i modelli presenti dal gameplay ancora da fare.
 - ROADMAP e DECISIONS invariati: le taglie dello spiazzo oltre 6 × 10 restano una proposta (EV-P3)
+## 2026-10-23 — Fix fondazione strade, DEV e fallback WebGL nel branch
 
-2026-10-23 — Ponti: magnete strade
+- Riallineata `fix/main-founding-dev-webgl-20261023` a main `bc82dbe`, conservando gli aggiornamenti Lab e manutenzione.
+- Isolati gli attributi GPU con VAO per shader; preparati in modo cooperativo strade/ponti prima della sostituzione atomica; aggiornata la QA DEV ai default automatici con prova dei controlli reali.
+- Nuove regressioni per lavoro geometrico per avanzamento, annullamento senza effetti parziali, renderer ancora attivo dopo rebuild e fallback da vera perdita del contesto. 68 suite, 152 controlli di sintassi e due suite browser PASS locali; audit Lab 456 render/0 errori/49 avvisi/11 firme cambiate preesistenti, fogli fortificazioni rivisti e baseline invariata.
+- Aggiunta CI di branch/PR con regressioni complete, browser, audit e Context sync. STATUS/BACKLOG aggiornati e D-FIX-01 registrato; ROADMAP invariata perché sono correzioni, non nuove milestone. Nessun merge in main o deploy.
+
+## 2026-10-23 — Diagnosi dei tre problemi sulla branch di fix
+
+- Riallineata la copia di lavoro alla main `b79ea99` e documentate le cause di fallback WebGL, test DEV e tempi della fondazione strade nel [report](../main-fixes-diagnosis-2026-10-23.md), con riproduzioni e prove A/B.
+- Aggiornati STATUS e BACKLOG: nessun sorgente runtime/test permanente modificato, nessun fix dichiarato completo. ROADMAP e DECISIONS invariati; nessuna nuova PR, merge o pubblicazione.
+
+## 2026-10-23 — Ponti: magnete strade
 
 - Branch `feat/bridge-road-magnets`: le strade principali si agganciano alle due testate di ogni ponte e una strada su una testata non è più rifiutata come sovrapposizione. Stato e prove in [STATUS](STATUS.md#ponti--magnete-strade-23102026); requisiti BRIDGE-01/02 nel [BACKLOG](BACKLOG.md#ponti--magnete-strade-branch-featbridge-road-magnets-23102026).
 - ROADMAP e DECISIONS invariate: estensione del magnete esistente dei portoni, nessun nuovo contratto.
-
 
 ## 2026-10-23 — Guardaroba stagionale dei popolani (branch)
 
@@ -102,7 +112,6 @@
 - Ricontrollate tutte le branch remote rispetto a `main`, PR aperte e merge. Pianificata la rimozione di **otto ref** già merge/totalmente assorbiti; i ref con HEAD post-merge, PR aperte o commit esclusivi sono deliberatamente preservati.
 - Aggiunto workflow a trigger unico su merge in `main`, con lista esplicita nome + SHA, controllo PR merge o vera discendenza Git, e confronto HEAD prima di eseguire ogni DELETE. I risultati reali della rimozione devono essere letti nei log GitHub Actions; **questo changelog non anticipa il risultato**.
 - Nessun ref viene cancellato o forzato dal solo aggiornamento documentale; nessuna modifica al gameplay. ROADMAP/DECISIONS invariati.
-
 
 ## 2026-10-23 — Nuovo audit main dopo le PR #76 e #79–81
 

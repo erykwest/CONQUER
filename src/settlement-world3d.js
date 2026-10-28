@@ -118,7 +118,8 @@
         for(let i=0;i<n;i++){const u=gl.getActiveUniform(p,i);loc[u.name]=gl.getUniformLocation(p,u.name)}
         const an=gl.getProgramParameter(p,gl.ACTIVE_ATTRIBUTES);
         for(let i=0;i<an;i++){const a=gl.getActiveAttrib(p,i);loc[a.name]=gl.getAttribLocation(p,a.name)}
-        S.prog[name]={p,loc};
+        const vao=gl.createVertexArray();if(!vao)throw new Error('webgl2-vertex-array-unavailable');
+        S.prog[name]={p,loc,vao};
       }
       S.aniso=gl.getExtension('EXT_texture_filter_anisotropic');
       c.addEventListener('webglcontextlost',e=>{e.preventDefault();S.gl=null;S.errorFence=null;S.failed='context-lost'});
@@ -1091,6 +1092,10 @@
   }
 
   // ---------- drawing ----------
+  // Attribute enables and buffer bindings belong to each shader's VAO. A
+  // castle/scatter rebuild may delete the last mesh buffer; its orphaned colour
+  // attribute must never leak into the terrain (position-only) draw.
+  function useProgram(gl,prog){gl.useProgram(prog.p);gl.bindVertexArray(prog.vao)}
   function setCamera(gl,prog,r){
     const L=prog.loc,plan=isPlanView();
     gl.uniform1i(L.uRot,((State.view.rotation||0)%4+4)%4);gl.uniform1f(L.uS,U*State.view.scale);
@@ -1103,7 +1108,7 @@
   }
   function drawMesh(gl,r,name,mode=gl.TRIANGLES){
     const n=S.buf[name+'#n'];if(!n)return;
-    const pr=S.prog.mesh;gl.useProgram(pr.p);setCamera(gl,pr,r);
+    const pr=S.prog.mesh;useProgram(gl,pr);setCamera(gl,pr,r);
     bindAttrib(gl,pr,'aPos',S.buf[name],3,24,0);bindAttrib(gl,pr,'aCol',S.buf[name],3,24,12);
     gl.drawArrays(mode,0,n/6);
   }
@@ -1117,7 +1122,7 @@
     gl.clearColor(32/255,36/255,25/255,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.depthMask(true);gl.disable(gl.BLEND);
     // terrain
-    const tp=S.prog.terrain;gl.useProgram(tp.p);setCamera(gl,tp,r);
+    const tp=S.prog.terrain;useProgram(gl,tp);setCamera(gl,tp,r);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.world);gl.uniform1i(tp.loc.uWorld,0);
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,S.tex.detail);gl.uniform1i(tp.loc.uDetail,1);
     gl.uniform3f(tp.loc.uDetailRect,DETAIL.x0,DETAIL.y0,DETAIL.size);
@@ -1126,7 +1131,7 @@
     gl.disable(gl.POLYGON_OFFSET_FILL);
     // sun shadows on the ground (blended, no depth write)
     if(S.buf['shadow#n']&&S.shadowAlpha>0){
-      const fp=S.prog.flat;gl.useProgram(fp.p);setCamera(gl,fp,r);gl.uniform4f(fp.loc.uColor,4/255,5/255,7/255,S.shadowAlpha);
+      const fp=S.prog.flat;useProgram(gl,fp);setCamera(gl,fp,r);gl.uniform4f(fp.loc.uColor,4/255,5/255,7/255,S.shadowAlpha);
       gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
       bindAttrib(gl,fp,'aPos',S.buf.shadow,3,12,0);gl.drawArrays(gl.TRIANGLES,0,S.buf['shadow#n']/3);
       gl.depthMask(true);gl.disable(gl.BLEND);
@@ -1138,7 +1143,7 @@
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write
     if(S.buf['decals#n']&&S.tex.decalAtlas){
-      const dp=S.prog.decal;gl.useProgram(dp.p);setCamera(gl,dp,r);
+      const dp=S.prog.decal;useProgram(gl,dp);setCamera(gl,dp,r);
       gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(dp.loc.uAtlas,0);
       gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
       const b=S.buf.decals;bindAttrib(gl,dp,'aPos',b,3,36,0);bindAttrib(gl,dp,'aUV',b,2,36,12);bindAttrib(gl,dp,'aCol',b,4,36,20);
@@ -1147,7 +1152,7 @@
     }
     // trees
     if(S.buf['trees#n']&&S.tex.atlas){
-      const sp=S.prog.sprite;gl.useProgram(sp.p);setCamera(gl,sp,r);
+      const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
       gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.atlas);gl.uniform1i(sp.loc.uAtlas,0);
       const b=S.buf.trees;bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
       gl.drawArrays(gl.TRIANGLES,0,S.buf['trees#n']/8);
@@ -1162,7 +1167,7 @@
     gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     if(S.buf['nightWindows#n']&&S.tex.decalAtlas){
-      const pr=S.prog.light;gl.useProgram(pr.p);setCamera(gl,pr,r);
+      const pr=S.prog.light;useProgram(gl,pr);setCamera(gl,pr,r);
       gl.uniform1f(pr.loc.uNight,nf);
       gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(pr.loc.uAtlas,0);
       bindAttrib(gl,pr,'aPos',S.buf.nightWindows,3,36,0);
@@ -1171,7 +1176,7 @@
       gl.drawArrays(gl.TRIANGLES,0,S.buf['nightWindows#n']/9);
     }
     if(S.buf['fireLights#n']&&S.tex.decalAtlas){
-      const pr=S.prog.fireLight;gl.useProgram(pr.p);setCamera(gl,pr,r);
+      const pr=S.prog.fireLight;useProgram(gl,pr);setCamera(gl,pr,r);
       gl.uniform1f(pr.loc.uNight,nf);gl.uniform1f(pr.loc.uTime,visualCycleDay());
       gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(pr.loc.uAtlas,0);
       bindAttrib(gl,pr,'aAnchor',S.buf.fireLights,3,36,0);
@@ -1194,7 +1199,7 @@
     if(dynamic&&dynamic.length){
       let b=S.buf.dynamic;if(!b){b=gl.createBuffer();S.buf.dynamic=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,dynamic,gl.STREAM_DRAW);
-      const pr=S.prog.mesh;gl.useProgram(pr.p);setCamera(gl,pr,r);
+      const pr=S.prog.mesh;useProgram(gl,pr);setCamera(gl,pr,r);
       bindAttrib(gl,pr,'aPos',b,3,24,0);bindAttrib(gl,pr,'aCol',b,3,24,12);
       gl.drawArrays(gl.TRIANGLES,0,dynamic.length/6);
     }
@@ -1202,7 +1207,7 @@
       if(soldierAtlas.dirty){uploadTexture(gl,'soldierAtlas',soldierAtlas.canvas);soldierAtlas.dirty=false}
       let b=S.buf.soldiers;if(!b){b=gl.createBuffer();S.buf.soldiers=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,soldiers,gl.STREAM_DRAW);
-      const sp=S.prog.sprite;gl.useProgram(sp.p);setCamera(gl,sp,r);
+      const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
       gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
       bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
       gl.drawArrays(gl.TRIANGLES,0,soldiers.length/8);
