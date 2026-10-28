@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Capitano, cavalieri e diplomazia portati su `main`, solo 2D (sostituisce PR #72)
+
+- Il gameplay della PR #72 (`feature/knights-messenger-caravans`, che contiene `knights`) è portato in modo selettivo su un branch nuovo da `main`: capitano distinto dai cavalieri, cavalieri a cavallo limitati da stanze nobili e scuderie, messaggero periodico con richiesta di tributo e pianificatore di carovane, `State.diplomacy` salvato. Comandi nella UI v2 (Difendi › Pattuglie, Gestisci › Scorte del castello). Stato e prove in [STATUS](STATUS.md).
+- Scartate le figure 3D della PR #72 (modelli Blender di cavalieri, `ConquerKnights3D`, stile «flat» delle mesh): cavalieri e messaggero usano il cavallo 2D approvato. Nuova decisione [D-046](DECISIONS.md#cavalieri-e-diplomazia-pr-72-portata-su-main-in-2d-28102026). ROADMAP invariata.
+
 ## 2026-10-28 — Cutaway arredato riallineato a `main` (PR #65)
 
 - Merge di `main` `1194f5e`: il cutaway arredato del castello e il cutaway civico (#90) disegnano insieme in WebGL2; strade alle porte secondo la logica di main (`gateRoadPort`), test del branch adeguato. Baseline dell'audit del Lab con i 4 nuovi cutaway delle porte in pietra. Stato e prove in [STATUS](STATUS.md).
