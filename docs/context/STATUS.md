@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## Salvataggi sicuri (branch `fix/save-safety`, 28/10/2026; porting parziale di #16)
+
+- **Codice presente su branch (non ancora `main`):** `saveLocal()` intercetta gli errori di `localStorage` (quota piena, storage bloccato): avviso in console, indicatore «local save failed», evento `LOCAL_SAVE_ERROR`, ritorna `false` invece di interrompere l'autosave. Al caricamento (locale e cloud) le risorse non vengono più portate ad almeno 10000: il minimo vale solo in DEV (`?dev=1` o flag ricordato `conquer.dev`, lo stesso della UI v2), altrimenti resta il valore salvato. Le partite nuove partono ancora da 10000 per il default di `State` in core (non toccato).
+- **Escluso per scelta:** la parte telemetria di #16 (`/api/telemetry` pubblica, `sendRemote` verso Supabase) resta invariata.
+- **QA locale:** nuova `qa/save-safety-regression.cjs` PASS; 81/85 `qa/*.cjs` PASS (FAIL solo le 4 prove di performance senza Playwright locale). Browser (Chrome): con `setItem` che lancia `QuotaExceededError` il salvataggio ritorna `false` e l'indicatore mostra l'errore, il successivo riesce; legna 50 salvata e ricaricata = 50 senza DEV, 10000 con `?dev=1`; nessun errore in console.
+
 ## Audio — mixer a 4 livelli e colonna sonora stagionale (branch `sound`, 17–19/10/2026; riallineato 28/10)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-sound.js` (`ConquerSound`, mixer Web Audio con bus Ambiente / Locale / Effetti / Notifiche, EQ e normalizzazione LUFS), `settlement-sound-catalog.js`, `settlement-sound-bridge.js` (ambiente da stagione, notte e meteo; suoni locali dall'edificio selezionato e dai due più vicini sopra una soglia di zoom; tuoni nei temporali), `settlement-music.js` + catalogo (9 brani stagionali, playlist automatica per stagione). Controlli solo nel pannello DEV (`settlement-sound-dev.js`, `settlement-music-dev.js`). Unico aggancio nel gioco: `ConquerSoundBridge.tick` in `simulationFrame`. **Audio spento di default**, si attiva a mano.

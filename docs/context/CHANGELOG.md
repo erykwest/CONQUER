@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Salvataggi sicuri (branch `fix/save-safety`)
+
+- Ripresa da #16 (audit-hardening) solo la parte salvataggi: autosave che non si interrompe con lo storage pieno e minimo 10000 risorse al caricamento limitato a DEV. Telemetria esclusa per scelta. Stato e prove in [STATUS](STATUS.md#salvataggi-sicuri-branch-fixsave-safety-28102026-porting-parziale-di-16). La PR #16 viene chiusa.
+- ROADMAP e DECISIONS invariate.
+
 ## 2026-10-28 — Audio e colonna sonora stagionale (branch `sound`)
 
 - Branch del 17–19/10 riallineato a `main` `5ddefa6` (350 commit): mixer Web Audio a 4 livelli, ambiente da stagione e meteo, suoni degli edifici vicini, 9 brani stagionali; controlli nel pannello DEV, audio spento di default. Stato e prove in [STATUS](STATUS.md#audio--mixer-a-4-livelli-e-colonna-sonora-stagionale-branch-sound-1719102026-riallineato-2810).
