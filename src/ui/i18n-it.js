@@ -145,6 +145,7 @@ export const T = {
     autonomy: 'Autonomia', days: n => n == null ? '∞' : n + ' giorni', dailyNeed: 'Consumo giornaliero',
     capacity: 'Cucina · caserme · cavalieri', shortfall: d => 'Scorte insufficienti da ' + d.toFixed(1).replace('.', ',') + ' giorni',
     storeHelp: 'Ogni clic sposta fino a 50 unità dalle risorse del villaggio. La capienza dipende dalle stanze.',
+    caravans: n => 'Carovane (' + n + ')',
     store: 'Deposita', seed: 'Seme della mappa', biome: 'Bioma', save: 'Salva sul cloud',
     saveHelp: 'Il salvataggio locale è automatico. Il cloud si attiva con un account.',
     biomes: { plains: 'Pianura', hills: 'Colline', valley: 'Vallata', river: 'Fiume', forest: 'Foresta', mountains: 'Montagne', sea: 'Mare' }
@@ -184,6 +185,7 @@ export const T = {
     store: 'Sposta fino a 50 unità dalle risorse del villaggio. La capienza dipende dalle stanze.',
     autonomy: 'Giorni di cibo per la guarnigione con le scorte attuali.',
     capacity: 'Pasti al giorno, posti in caserma e cavalieri, dalle stanze del castello.',
+    caravans: 'Carovane verso le province vicine: nascono accettando le richieste del messaggero a cavallo. Carico, scorta e partenza si pianificano qui.',
     save: 'Il salvataggio locale è automatico. Il cloud si attiva con un account.'
   },
   defend: {
@@ -193,7 +195,8 @@ export const T = {
     units: 'Unità', hostiles: 'Ostili', patrols: 'Pattuglie', selected: 'Selezionate',
     fog: 'Nebbia', zones: 'Zone', view: 'Vista',
     orders: 'Ordini', deselect: 'Deseleziona',
-    focused: { squad: 'Picchieri ×5', patrol: 'Pattuglia', knight: 'Cavaliere' },
+    focused: { squad: 'Picchieri ×5', patrol: 'Pattuglia', knight: 'Cavaliere', captain: 'Capitano' },
+    knights: 'Cavalieri', recruitKnight: '+ Cavaliere',
     hp: 'Salute',
     brush: 'Pennello', radius: 'Raggio',
     brushes: { allow: 'Bianca +', deny: 'Bianca −', yellow: 'Gialla', green: 'Verde', eraseYellow: '− Gialla', eraseGreen: '− Verde' },
@@ -212,6 +215,7 @@ export const T = {
     brush: 'Dipingi le zone: bianca = area di pattuglia, gialla = allerta, verde = rifugio dei civili. − cancella.',
     radius: 'Raggio del pennello in unità.',
     patrols: 'Ogni pattuglia sono 2 picchieri che percorrono il bordo della zona bianca.',
+    knights: 'Ogni cavaliere richiede una stanza nobile e un posto in scuderia (5 cavalli per scuderia). Il capitano, a piedi, comanda i picchieri entro 16U.',
     bell: 'Zone verdi: i civili si radunano nelle zone sicure. Mastio: donne e bambini nella sala comune. Rilascia li rimanda al lavoro.',
     buckets: 'Le donne portano acqua dal pozzo più vicino agli incendi.',
     tests: 'Strumenti di prova: piazzano attaccanti, fuoco o macchine d\'assalto per verificare la difesa.',
