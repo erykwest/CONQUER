@@ -98,7 +98,8 @@ try{
   assert.equal(denseBrowser.n3,3,'Real browser must render three L3 frontage houses');
   assert.equal(denseBrowser.n4,4,'Real browser must render four L4 frontage houses');
   assert.ok(denseBrowser.l3Bodies>=6,'L3 frontage modules must preserve L/T wings');
-  assert.equal(denseBrowser.l4Turrets,4,'Each L4 module needs its own turret');
+  // L4 turrets sit only on the head building of a frontage at a street corner (STATUS 21/10/2026).
+  assert.ok(denseBrowser.l4Turrets<=2&&denseBrowser.l4Turrets<denseBrowser.n4,'L4 frontage turrets only on corner buildings, got '+denseBrowser.l4Turrets);
   assert.equal(denseBrowser.physicalParts,true);
 
   await page.getByRole('button',{name:'Combattimento e allarmi'}).click();
