@@ -1,5 +1,22 @@
 # Livello 2 — Stato tecnico e prove
 
+## UI v2 «Isole» — modalità Difendi (branch `feature/ui-defend`, 26/10/2026)
+
+- **Su `main` (`5ddefa6`, squash di `feature/ui-shell`):** UI v2 opt-in con `?ui=2`: `src/ui/game-api.js` (`window.ConquerGame`, comandi + letture di stato), `src/ui/shell.js` (Preact+htm vendorizzato, nessun build), `src/ui/i18n-it.js` (tutte le stringhe in italiano), `src/ui/theme.css`; modalità Costruisci e Gestisci con rail e scheda ispettore; `src/settlement-structure-commands.js` per le regole sulla struttura selezionata. La UI legacy resta il default.
+- **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
+- **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
+- **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
+
+## Fix main: strade, DEV e WebGL (23/10/2026, branch di fix)
+
+- **IMPLEMENTATI NEL BRANCH** `fix/main-founding-dev-webgl-20261023`, riallineato alla main `bc82dbe` includendo integralmente l'audit Lab #82. [Cause, correzioni e prove](../main-fixes-diagnosis-2026-10-23.md). Non ancora integrati in main.
+- **WebGL:** VAO separato per programma shader; la ricreazione di mesh non lascia attributi abilitati di un altro programma senza buffer. Chromium/SwiftShader PASS dopo cinque colpi d'ariete, rebuild, rotazioni e giorno/notte: 3D ancora attivo, nessuna eccezione. Una vera perdita del contesto attiva ancora il fallback Canvas. Polling errori differito e fence invariati.
+- **Fondazione strade:** preparazione cooperativa dei segmenti e delle intersezioni con l'acqua; pubblicazione atomica solo a revisione ancora valida. Annullare lascia disponibili strada/ponti precedenti e non taglia il bosco. Regressione con fiume di 201 punti: massimo 24 controlli geometrici per avanzamento, contro 155.287 prima del fix. Foresta seed 4242: callback massime 7,38 / 6,47 / 7,02 ms, 82 tratti, 2 ponti, 4 accessi, stessa firma geometrica della baseline. Il budget di 6 ms resta cooperativo, non una garanzia temporale dell'host.
+- **DEV:** test aggiornato ai default automatici (`null`); i pulsanti reali forzano giorno/estate/sole e al secondo clic tornano automatici. Suite UI/Combat completa PASS, senza cambiare i default del gioco.
+- **QA locale:** 68 suite `*-regression.cjs`, sintassi di 152 file JS/CJS/MJS, nuova regressione WebGL e UI/Combat PASS. Audit Lab: 456 render, 0 errori, 49 avvisi già presenti, 11 firme cambiate sulle varianti lignee (stesso insieme segnalato dalla CI di #82). Rivisti i fogli porte/torri/mura; baseline mantenuta perché non cambia alcun asset e le differenze di rasterizzazione sono preesistenti.
+- **CI:** workflow `Main fixes regression` su push della branch e PR: intera batteria, sintassi, Context sync, browser e audit Lab; l'esito effettivo è quello del run GitHub associato al commit. ROADMAP invariata; contratti tecnici registrati in D-FIX-01. Nessun merge o deploy.
+- **Riallineamento 28/10/2026:** merge di `main` `5ddefa6`; conflitti solo nelle prime sezioni di STATUS/BACKLOG/CHANGELOG, risolti mantenendo entrambe le voci. Il codice di main (World 3D, strade) si fonde senza conflitti con i VAO e la fondazione cooperativa. QA locale dopo il merge: 74/78 `qa/*.cjs` PASS (FAIL solo le 4 prove di performance senza Playwright locale). `ui-combat-regression.mjs`, che ora supera il default DEV, si fermava sull'aspettativa «una torretta per ogni L4 a schiera», superata dalla regola «torrette solo d'angolo» del 21/10: aggiornata a «al più le teste del fronte»; suite completa PASS in locale (Chrome).
+
 ## Guardaroba stagionale dei popolani (branch `feature/seasonal-clothing`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-wardrobe.js` (`window.ConquerWardrobe`) con 9 capi overlay (cappello di paglia, berretto di pelliccia, cappuccio di lana, cappuccio cerato, pelle di pecora, mantello di lana, mantello foderato di pelliccia, mantella antipioggia, scialle). Disegnati da `drawVillagerFigureUnmasked`, quindi valgono anche per lavoratori, costruttori e civili in fuga dagli incendi; l'outfit dipende da id residente, mese del calendario (o stagione DEV forzata) e `currentWeather()`. Nessuno stato persistito, nessun effetto economico.
@@ -41,7 +58,6 @@
 - Introdotto workflow di **esecuzione una tantum** `.github/workflows/prune-obsolete-branches-20261023.yml`, eseguito soltanto da push su `main` che introduce quel file. Prima di ogni DELETE deve ricontrollare ref SHA, protezione delle PR aperte, merge PR o discendenza da main; abortisce la rimozione del singolo ref se le condizioni cambiano. **Il risultato è verificabile dal relativo GitHub Actions run successivo al merge**; il commit documentale da solo non dimostra cancellazioni.
 - **Preservati:** tutti i branch HEAD di PR aperte (`converge`, `events`, `cans` se in lavoro, `feature/construction-props`, `feature/economic-balances-20261019`, `feature/cutaway-furniture-converge`, `feature/knights-messenger-caravans`, `knights`, `visual-qa`, `audit-hardening`, `feat/asset-lab-audit`) e tutti i branch divergenti non ancora attribuiti a merge. Anche `docs/context-sync-pr-governance-20261021` è **esclusa** perché avanzata dopo il suo merge #74. Nessun contenuto di gameplay viene modificato.
 
-
 ## Stato attuale verificato — 23/10/2026
 
 > **HEAD `main` [518e830](https://github.com/erykwest/CONQUER/commit/518e830547b66c12deefa0833487ea76b81c7746)** al momento della ricognizione. [Audit completo](AUDIT-2026-10-23.md) aggiornato da Git/PR e codice, **non da nuovo test end-to-end**. Le note sottostanti del 19–22/10 sono storiche quando dicono «solo branch».
@@ -52,7 +68,6 @@
 - **Non merge ancora:** [#61](https://github.com/erykwest/CONQUER/pull/61) danni (aggiornata e riallineata su `main` il 23/10, HEAD `92be4249`, ancora OPEN), [#77](https://github.com/erykwest/CONQUER/pull/77) cantieri assemblati per fasi + branch `case`, [#78](https://github.com/erykwest/CONQUER/pull/78) spazi eventi, [#82](https://github.com/erykwest/CONQUER/pull/82) audit visivo con 456 render, [#65](https://github.com/erykwest/CONQUER/pull/65) cutaway arredi, [#55](https://github.com/erykwest/CONQUER/pull/55) ledger/cantieri L1 (draft), [#72](https://github.com/erykwest/CONQUER/pull/72) cavalieri/convogli (base `knights`), [#18](https://github.com/erykwest/CONQUER/pull/18) visual QA (draft) e [#16](https://github.com/erykwest/CONQUER/pull/16) hardening (draft).
 - **Rischio concreto da verificare:** #82, ancora solo branch, ha **segnalato** porte damage/broken non distinte dopo #76 e cantieri 25/50/75% visivamente identici in gran parte delle varianti. Segnalazioni **non riprodotte su main in questa ricognizione**. Collegare la QA del Lab alle implementazioni #76/#77/#61 prima della loro accettazione congiunta.
 - **Priorità sistemica invariata:** `State.resources` vs `State.economy` vs `State.siege.stock`, manodopera L1 ai cantieri, miniera `stone` vs `metal`, bonus taverna/chiesa, difesa e assedio **continuo** con blocco/fame/resa. 13 core Builder e 10 residui dal precedente audit restano validi.
-
 
 ## Asset Lab — catalogo completo: fortificazioni dal motore, lavori, manifest generato (#81 MERGED; note QA originali del branch)
 
@@ -79,7 +94,6 @@
 - **LIMITI:** strada attraverso portone + levatoio sopra un fossato non verificata (BRIDGE-02).
 
 > **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
-
 
 ## Stato aggiornato da audit integrale (22/10/2026)
 
