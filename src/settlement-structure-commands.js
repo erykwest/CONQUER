@@ -74,7 +74,7 @@ const StructureCommands=(()=>{
     const target=find(id);if(!cutawayEligible(target))return false;
     target.cutaway=!structureCutaway(target);
     refresh(target,false);
-    status((target.type==='tower'?'Tower':'Built section')+' cutaway '+(target.cutaway?'enabled':'disabled'));
+    status((target.type==='tower'?'Tower':target.type==='gate'?'Gatehouse':'Built section')+' cutaway '+(target.cutaway?'enabled':'disabled'));
     return true;
   }
   function flipSide(id){
