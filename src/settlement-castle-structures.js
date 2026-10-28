@@ -124,18 +124,24 @@ function palisadeConnectionOccluders(s){
   }
   return out;
 }
+// Clips drawing to the area outside every hull. Each hull gets its own even-odd clip (frame +
+// hull): a single compound path would XOR overlapping hulls and reveal what both of them hide.
+function clipOutsideHulls(hulls,x,y,w,h){
+  for(const hull of hulls){
+    if(hull.length<3)continue;
+    ctx.beginPath();ctx.rect(x,y,w,h);
+    ctx.moveTo(hull[0].x,hull[0].y);
+    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
+    ctx.closePath();ctx.clip('evenodd');
+  }
+}
 function withPalisadeConnectionOcclusion(s,drawFn){
   const occluders=palisadeConnectionOccluders(s);
   if(!occluders.length){drawFn();return}
   const r=wrap.getBoundingClientRect();
-  ctx.save();ctx.beginPath();ctx.rect(-48,-48,r.width+96,r.height+96);
-  for(const o of occluders){
-    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-  ctx.clip('evenodd');drawFn();ctx.restore();
+  ctx.save();
+  clipOutsideHulls(occluders.map(structureScreenSilhouette),-48,-48,r.width+96,r.height+96);
+  drawFn();ctx.restore();
 }
 function palisadePostOffsetAt(g,along){
   let factor=1;
@@ -363,15 +369,7 @@ function withStructureDetailOcclusion(owner,z,drawFn){
   if(!occluders.length){drawFn();return}
   const r=wrap.getBoundingClientRect();
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(-48,-48,r.width+96,r.height+96);
-  for(const o of occluders){
-    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-  ctx.clip('evenodd');
+  clipOutsideHulls(occluders.map(structureScreenSilhouette),-48,-48,r.width+96,r.height+96);
   drawFn();
   ctx.restore();
 }
@@ -400,17 +398,7 @@ function withBuiltRoofOcclusionClip(s,drawFn){
 
   const r=wrap.getBoundingClientRect();
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(-32,-32,r.width+64,r.height+64);
-
-  for(const target of occluders){
-    const hull=structureScreenSilhouette(target);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-
-  ctx.clip('evenodd');
+  clipOutsideHulls(occluders.map(structureScreenSilhouette),-32,-32,r.width+64,r.height+64);
   drawFn();
   ctx.restore();
 }
@@ -548,15 +536,7 @@ function withTowerBattlementOcclusion(piece,frame,drawFn){
   const occluders=castleBattlementOccluders(piece,frame);
   if(!occluders.length){drawFn();return}
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(-48,-48,frame.viewportW+96,frame.viewportH+96);
-  for(const entry of occluders){
-    const hull=battlementOccluderHull(entry);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-  ctx.clip('evenodd');
+  clipOutsideHulls(occluders.map(battlementOccluderHull),-48,-48,frame.viewportW+96,frame.viewportH+96);
   drawFn();
   ctx.restore();
 }
@@ -692,15 +672,7 @@ function withPointRoofOcclusion(s,drawFn){
   if(!occluders.length){drawFn();return}
   const r=wrap.getBoundingClientRect();
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(-48,-48,r.width+96,r.height+96);
-  for(const o of occluders){
-    const hull=structureScreenSilhouette(o);if(hull.length<3)continue;
-    ctx.moveTo(hull[0].x,hull[0].y);
-    for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);
-    ctx.closePath();
-  }
-  ctx.clip('evenodd');
+  clipOutsideHulls(occluders.map(structureScreenSilhouette),-48,-48,r.width+96,r.height+96);
   drawFn();
   ctx.restore();
 }

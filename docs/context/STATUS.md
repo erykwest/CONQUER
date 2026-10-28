@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## Occlusione 2.5D — sagome sovrapposte (branch `fix/occlusion-clip-union`, 28/10/2026; da #18)
+
+- **Codice presente su branch (non ancora `main`):** nel renderer Canvas 2.5D le sagome che coprono dettagli, tetti, merli, connessioni delle palizzate, tetti a punta e porte delle torri erano unite in un unico percorso con `clip('evenodd')`: dove due sagome si sovrapponevano si annullavano e i dettagli nascosti tornavano visibili. Ora `clipOutsideHulls()` (`settlement-castle-structures.js`) applica un clip separato per ogni sagoma; usata nelle 5 funzioni di occlusione di `settlement-castle-structures.js` e nella porta delle torri di `settlement-architecture.js`. La correzione di #18 copriva 3 delle 6 funzioni.
+- **QA locale:** nuova `qa/occlusion-clip-regression.cjs` PASS sul branch e FAIL su `main`; 82/86 `qa/*.cjs` PASS (FAIL solo le 4 prove di performance senza Playwright locale). Audit del Lab (Chrome locale): con la correzione 465 render, 0 cambiati rispetto alla baseline rivista del 26/10; `main` attuale sullo stesso browser dà 137 render di fortificazioni cambiati (distanza media 0,02), che la correzione riporta alla baseline. Differenze non distinguibili a occhio nei fogli provini; quale merge le abbia introdotte non è stato individuato.
+
 ## Salvataggi sicuri (branch `fix/save-safety`, 28/10/2026; porting parziale di #16)
 
 - **Codice presente su branch (non ancora `main`):** `saveLocal()` intercetta gli errori di `localStorage` (quota piena, storage bloccato): avviso in console, indicatore «local save failed», evento `LOCAL_SAVE_ERROR`, ritorna `false` invece di interrompere l'autosave. Al caricamento (locale e cloud) le risorse non vengono più portate ad almeno 10000: il minimo vale solo in DEV (`?dev=1` o flag ricordato `conquer.dev`, lo stesso della UI v2), altrimenti resta il valore salvato. Le partite nuove partono ancora da 10000 per il default di `State` in core (non toccato).

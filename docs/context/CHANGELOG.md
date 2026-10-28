@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Occlusione 2.5D: sagome sovrapposte (branch `fix/occlusion-clip-union`)
+
+- Ripresa da #18 (visual-qa) ed estesa a tutte le 6 funzioni di occlusione: un clip per sagoma invece di un unico percorso even-odd. Stato e prove in [STATUS](STATUS.md#occlusione-25d--sagome-sovrapposte-branch-fixocclusion-clip-union-28102026-da-18). Il runner a scene intere di #18 resta nel BACKLOG; #18 viene chiusa. Riconciliazione branch del 28/10: chiusi senza porting `assedio`, `combat`, `feature/landscape-forests`, `fix/forest-water-road-routing-20261014`, `docs/context-sync-pr-governance-20261021` (superati da `main`; commit conservati nei tag `archive/*`).
+- ROADMAP e DECISIONS invariate.
+
 ## 2026-10-28 — Salvataggi sicuri (branch `fix/save-safety`)
 
 - Ripresa da #16 (audit-hardening) solo la parte salvataggi: autosave che non si interrompe con lo storage pieno e minimo 10000 risorse al caricamento limitato a DEV. Telemetria esclusa per scelta. Stato e prove in [STATUS](STATUS.md#salvataggi-sicuri-branch-fixsave-safety-28102026-porting-parziale-di-16). La PR #16 viene chiusa.
