@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## Giunzioni delle sottotorri (branch `fix/cutaway-junctions`, 28/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** recuperate dalla vecchia branch locale `feature/cutaway-furniture` (commit `6cdbf6a`, solo queste parti): `towerRoofDoorSpecs` in `settlement-architecture.js` (la più alta di una coppia torre/sottotorre apre una porta sul tetto dell'altra, al livello di quel tetto), `withoutBuriedBattlements` in `settlement-castle-structures.js` (torri e porte perdono i merli che cadono dentro la struttura attaccata più alta), `drawMastioWindowDrape` non disegna il drappo su un mastio in cutaway. Non portati: porta nel muro divisorio del cutaway 3D e magneti dei muri dello stesso commit.
+- **QA locale:** nuova `qa/subtower-junctions-regression.cjs` PASS; `mastio-selection-zoom-regression` aggiornata alla guardia del cutaway; 83/87 `qa/*.cjs` PASS (FAIL solo le 4 prove `*-performance` senza Playwright, come su `main`). Browser (Chrome, World 3D): torre L3 con sottotorre L1, merli della sottotorre solo sul lato esterno e porta ad arco della torre sul tetto della sottotorre. CI della PR da verificare.
+
 ## Cutaway furniture + WebGL2 — branch `feature/cutaway-furniture-converge` (21/10/2026; riallineato 28/10)
 
 - **Riallineamento 28/10/2026 (PR #65):** merge di `main` `1194f5e` (cutaway civico #90, eventi #78, audio #92). In `settlement-world3d.js` convivono i buffer `civicCutaway` e `cutaway`/`cutawayShell`, l'export `finishFrame`/`addHouse` di main con `drawEmissive`, le mesh assestate/dinamiche degli eventi con `S.frameColliders`; il 2.5D `drawCutawayStaticOverlay` resta in `settlement-render.js` (prova di performance) ma il percorso 3D non lo chiama più: le stanze sono WebGL2. Pannello: etichetta del piano con lo sfasamento della porta in `settlement-app-rooms.js`, stato «Gatehouse cutaway» in `settlement-structure-commands.js`. Strade e porte: tenuta la logica di main (`gateRoadPort` al centro della porta con avvicinamento dalla bocca, passaggio campionato); `qa/gate-roads-regression.cjs` aggiornata a questa semantica, le 6 prese delle sottotorri invariate.

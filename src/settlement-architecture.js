@@ -239,7 +239,21 @@ function towerDoorSpecs(tower){
     });
     if(!duplicate)specs.push(spec);
   }
+  for(const spec of towerRoofDoorSpecs(tower))specs.push(spec);
   return specs;
+}
+// Parent/subtower pairs: the taller one opens a door onto the roof of the lower one, on the
+// face looking at it, at that roof's level (like the wall-walk doors).
+function towerRoofDoorSpecs(tower){
+  const out=[],h=structureHeight(tower);
+  for(const o of State.structures){
+    if(o===tower||underConstruction(o)||!['tower','gate'].includes(o.type))continue;
+    if(o.id!==tower.parentTowerId&&o.parentTowerId!==tower.id)continue;
+    if(structureHeight(o)>h-.6)continue;
+    const spec=towerDoorContactSpec(tower,boundaryPoint(tower,{x:o.x,y:o.y}),o,'roof');
+    if(spec)out.push(spec);
+  }
+  return out;
 }
 function towerDoorVisible(tower,spec){
   // Cutaway keeps doors as 20% ghosted architectural references instead of
@@ -303,7 +317,7 @@ function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
 // Mastio heraldry hangs below the sill of the castle-interior-facing window.
 // Paint in the same projected facade plane as the existing architectural art.
 function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1){
-  if(!s.isMastio||!edge)return;
+  if(!s.isMastio||!edge||structureCutaway(s))return;   // no drape on an opened (cutaway) keep
   const width=Math.max(.30,windowWidth*1.08),height=.64;
   const topZ=windowZ-windowHeight/2-.055;
   const span=facadeAssetWorldSpan(edge,width),lt=w2s(span.a,topZ),rt=w2s(span.b,topZ),lb=w2s(span.a,topZ-height);

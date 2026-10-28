@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Giunzioni delle sottotorri (branch `fix/cutaway-junctions`)
+
+- Dopo il merge di #65, portate su `main` le tre correzioni rimaste solo sulla vecchia branch `feature/cutaway-furniture`: porta sul tetto della sottotorre più bassa, niente merli sepolti nella struttura attaccata più alta, niente drappo sul mastio in cutaway. Stato e prove in [STATUS](STATUS.md).
+- ROADMAP e DECISIONS invariate.
+
 ## 2026-10-28 — Cutaway arredato riallineato a `main` (PR #65)
 
 - Merge di `main` `1194f5e`: il cutaway arredato del castello e il cutaway civico (#90) disegnano insieme in WebGL2; strade alle porte secondo la logica di main (`gateRoadPort`), test del branch adeguato. Baseline dell'audit del Lab con i 4 nuovi cutaway delle porte in pietra. Stato e prove in [STATUS](STATUS.md).
