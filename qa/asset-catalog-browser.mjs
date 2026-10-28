@@ -52,7 +52,7 @@ try{
     const r=await window.ConquerAssetAudit.run({ids:['castle:porta-pietra-l2','model:ConquerCivicModels:church1']});
     return{renders:r.summary.renders,fail:r.summary.fail,states:r.results.map(x=>x.state)};
   });
-  assert.ok(audit.renders>=10&&audit.fail===0&&audit.states.includes('cutaway')===false&&audit.states.includes('damage-crollo-1-piano'),JSON.stringify(audit));
+  assert.ok(audit.renders>=10&&audit.fail===0&&audit.states.includes('cutaway')&&audit.states.includes('damage-crollo-1-piano'),JSON.stringify(audit));
   // The sandbox must not write the player's settlement slot.
   assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(k=>/settlement|assetlab/.test(k)).length),0,'Sandbox must not save');
   await page.locator('#assetReset').click();
