@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## UI v2 «Isole» — modalità Difendi (branch `feature/ui-defend`, 26/10/2026)
+
+- **Su `main` (`5ddefa6`, squash di `feature/ui-shell`):** UI v2 opt-in con `?ui=2`: `src/ui/game-api.js` (`window.ConquerGame`, comandi + letture di stato), `src/ui/shell.js` (Preact+htm vendorizzato, nessun build), `src/ui/i18n-it.js` (tutte le stringhe in italiano), `src/ui/theme.css`; modalità Costruisci e Gestisci con rail e scheda ispettore; `src/settlement-structure-commands.js` per le regole sulla struttura selezionata. La UI legacy resta il default.
+- **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
+- **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
+- **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
+
 ## Fix main: strade, DEV e WebGL (23/10/2026, branch di fix)
 
 - **IMPLEMENTATI NEL BRANCH** `fix/main-founding-dev-webgl-20261023`, riallineato alla main `bc82dbe` includendo integralmente l'audit Lab #82. [Cause, correzioni e prove](../main-fixes-diagnosis-2026-10-23.md). Non ancora integrati in main.

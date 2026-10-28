@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
+
+- **FASI 1–3 SU MAIN (`5ddefa6`):** guscio, API di gioco, Costruisci, Gestisci, comandi struttura.
+- **FASE 4 SU BRANCH `feature/ui-defend`, NON MERGE:** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **ANCORA APERTO — fase 5:** messaggi di stato/log tradotti, pannello attraversamenti come dati, UI v2 default, rimozione `settlement-builder-ux.js` e aggiornamento degli id usati da `qa/ui-combat-regression.mjs`.
+
 ## Hardening: cause strade / DEV / WebGL (23/10/2026)
 
 - **FIX IMPLEMENTATI E VERIFICATI IN LOCALE**, non ancora su main, in `fix/main-founding-dev-webgl-20261023` basata su `bc82dbe`: [prove e cause](../main-fixes-diagnosis-2026-10-23.md). WebGL: VAO per shader, renderer attivo anche dopo rebuild; strade: preparazione cooperativa e commit atomico con cancellazione; DEV: test dei default automatici e dei pulsanti di override.

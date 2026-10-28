@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — UI v2: modalità Difendi (branch `feature/ui-defend`)
+
+- Quarta fase della UI v2 opt-in (`?ui=2`): modalità Difendi con rail e scheda, stato del combattimento letto da `ConquerCombat.uiState()`. Registrate anche le fasi 1–3 già su `main` (`5ddefa6`) che non avevano voce nella piramide. Stato e prove in [STATUS](STATUS.md#ui-v2-isole--modalità-difendi-branch-featureui-defend-26102026), fasi aperte nel [BACKLOG](BACKLOG.md#ux--ui-v2-isole-opt-in-ui2-26102026).
+- ROADMAP e DECISIONS invariate: la UI v2 resta opt-in, nessun contratto di simulazione toccato.
+
 ## 2026-10-23 — Fix fondazione strade, DEV e fallback WebGL nel branch
 
 - Riallineata `fix/main-founding-dev-webgl-20261023` a main `bc82dbe`, conservando gli aggiornamenti Lab e manutenzione.
