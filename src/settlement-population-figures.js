@@ -80,11 +80,23 @@ function worldPointVisible(p,z=0,pad=48){
 }
 function drawPeasants(){
   const houses=completedSettlement('house'),fields=completedSettlement('field');
-  if(!houses.length)return;
+  const founders=window.ConquerEconomy?.foundingWorkers?.()||0;
+  if(!houses.length&&!founders)return;
   const day=peasantVisualDay(),dots=[];
   let representedPopulation=0,activeAgents=0;
   const farmHouses=houses.filter(h=>houseLevel(h)===1||houseLevel(h)===2);
   const assignments=fieldWorkAssignments(farmHouses,fields);
+  // Read the exact same named crews used by the manual construction tick.
+  const constructionJobs=new Map();
+  for(const [siteId,workers] of constructionCrewAssignments(State.clock.day)){
+    const site=State.structures.find(s=>s.id===siteId);
+    if(!site)continue;
+    for(const worker of workers)constructionJobs.set(worker.id,{site,worker});
+  }
+  const economy=window.ConquerEconomy;
+  const unavailableFounders=new Set(Object.values(economy?.laborAllocation?.(State.clock.day)?.assignedL1||{})
+    .flat().filter(w=>w.founderIndex!=null).map(w=>w.id));
+  const workday=(economy?.weekday?.(State.clock.day)??6)<5;
 
   const residentStride=State.view.scale<.30?3:State.view.scale<.55?2:1;
   for(const house of houses){
@@ -93,8 +105,11 @@ function drawPeasants(){
     for(const resident of houseResidents(house)){
       // Alarm destinations are computed even for residents not selected by
       // distant-camera LOD, so mobilization does not depend on zoom level.
-      let p=residentClassPosition(house,resident,day,assignment);
-      if(p&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
+      const building=constructionJobs.get(resident.id);
+      let p=building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
+        residentClassPosition(house,resident,day,assignment);
+      if(p&&!building&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))
+        p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
       // Footsteps follow every resident's actual position, independent of LOD.
@@ -110,6 +125,29 @@ function drawPeasants(){
       });
       activeAgents++;
     }
+  }
+  // Founding crew has no house yet: render it near the village well without
+  // inventing a household or an independent individual accounting ledger.
+  const well=founders&&State.structures.find(s=>s.type==='well'&&s.id===State.village?.wellId);
+  if(well)for(let i=0;i<founders;i++){
+    representedPopulation++;
+    const id='founder:'+well.id+':'+i,phase=day*.13+i*.8;
+    const angle=i*(Math.PI*2/Math.max(1,founders))+.17;
+    const distance=2.05+(i%2)*.32;
+    const building=constructionJobs.get(id);
+    if(!building&&workday&&unavailableFounders.has(id))continue;
+    const p=building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
+      {x:well.x+Math.cos(angle)*distance+Math.cos(phase)*.06,
+        y:well.y+Math.sin(angle)*distance+Math.sin(phase)*.06};
+    if(!p)continue;
+    window.ConquerSnowTracks?.observe(id,p,State.clock.day,'person');
+    if(!worldPointVisible(p,0,40))continue;
+    const hash=peasantHash(id+'-lod');
+    if(residentStride>1&&hash%residentStride!==0)continue;
+    const rp=rotateViewPoint(p);
+    dots.push({p,depth:rp.x+rp.y,id,kind:'peasant',sex:'male',age:'adult',
+      hair:villagerHair(id),colors:villagerBodyColors(id,'peasant'),militia:false});
+    activeAgents++;
   }
   dots.sort((a,b)=>a.depth-b.depth);
   if(window.__conquerPerf){

@@ -113,7 +113,8 @@ const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 // Asset Lab sandbox: one fixed world, so audit captures repeat across runs and machines.
 const initialSeed=(()=>{if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},buildMasonryMaterial:'stone',resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const PROVISIONAL_RESOURCES=Object.freeze({gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000});
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},buildMasonryMaterial:'stone',resources:{...PROVISIONAL_RESOURCES},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 // DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
 const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
 State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
@@ -662,9 +663,27 @@ function constructionCost(s){
   return cost;
 }
 function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
-function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v)}
-function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
-function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
+// Before founding, the sandbox only permits placement of the founding well.
+// Once founded, the economic treasury and castle store own all construction assets.
+function canAfford(cost){
+  if(State.village?.founded&&window.ConquerEconomy?.canBuild)
+    return window.ConquerEconomy.canBuild(cost);
+  return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v);
+}
+function spendCost(cost){
+  if(State.village?.founded&&window.ConquerEconomy?.spendBuild){
+    if(!window.ConquerEconomy.spendBuild(cost))return false;
+  }else for(const [k,v] of Object.entries(cost||{}))
+    State.resources[k]=(State.resources[k]||0)-v;
+  renderUI();return true;
+}
+function refundCost(cost){
+  if(State.village?.founded&&window.ConquerEconomy?.refundBuild)
+    window.ConquerEconomy.refundBuild(cost);
+  else for(const [k,v] of Object.entries(cost||{}))
+    State.resources[k]=(State.resources[k]||0)+v;
+  renderUI();
+}
 function buildDuration(s){
   if(s.type==='tower'){
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
@@ -686,18 +705,156 @@ function buildDuration(s){
   if(s.type==='field')return BUILD_DAYS.field;
   return 0;
 }
+// Construction V2: manual projects use paid-for work units, not a calendar deadline.
+// The pre-existing procedural roads/houses/fields keep their bootstrap timers.
+const CONSTRUCTION_MAX_WORKERS=3;
+function constructionWorkClock(day){
+  // Same 5-day labor week / work shift used by the agricultural simulation.
+  const whole=Math.floor(day),week=Math.floor(whole/7),wd=((whole%7)+7)%7;
+  return week*5+Math.min(wd,5)+(wd<5?clamp((day-whole-.14)/.38,0,1):0);
+}
 function beginConstruction(s,delay=0){
   const d=buildDuration(s);if(d<=0)return s;
-  s.construction={startedDay:State.clock.day+delay,completeDay:State.clock.day+delay+d};return s;
+  const startedDay=State.clock.day+delay;
+  if(s.auto){
+    s.construction={startedDay,completeDay:startedDay+d};
+    // Autonomous growth carries its own labor valuation at spawn. The lord
+    // is never billed again during construction and candidates are not booked.
+    if(!s.spawnCost){
+      const quote=window.ConquerEconomy?.spontaneousSpawnQuote?.(d)||
+        {laborDays:d,laborGold:Math.round(d/20*1000)/1000};
+      s.spawnCost={laborDays:quote.laborDays,laborGold:quote.laborGold,
+        totalGold:quote.laborGold,payer:'spontaneous'};
+    }
+    return s;
+  }
+  s.construction={version:2,startedDay,workRequired:d,workDone:0,
+    lastWorkDay:startedDay,workers:0,completedDay:null};
+  return s;
 }
 function constructionProgress(s){
   if(!s?.construction)return 1;
-  const a=s.construction.startedDay,b=s.construction.completeDay;
+  const c=s.construction;
+  if(c.version===2)return clamp((Number(c.workDone)||0)/Math.max(0.001,Number(c.workRequired)||1),0,1);
+  const a=c.startedDay,b=c.completeDay;
   if(State.clock.day<=a)return 0;if(State.clock.day>=b)return 1;
   return clamp((State.clock.day-a)/(b-a),0,1);
 }
 function underConstruction(s){return constructionProgress(s)<1}
-function remainingDays(s){return s?.construction?Math.max(0,s.construction.completeDay-State.clock.day):0}
+function remainingDays(s){
+  if(!s?.construction)return 0;
+  const c=s.construction;
+  if(c.version===2)return Math.max(0,Number(c.workRequired)-Number(c.workDone))/Math.max(1,Number(c.workers)||1);
+  return Math.max(0,c.completeDay-State.clock.day);
+}
+function constructionWorkStatus(s){
+  const c=s?.construction;
+  if(!c||!underConstruction(s))return '';
+  if(c.version!==2)return 'Procedural construction';
+  const wd=((Math.floor(State.clock.day)%7)+7)%7;
+  if(wd>=5)return 'Workers resting (weekend)';
+  if(c.unfunded||(window.ConquerEconomy?.constructionWagePerWorkday?.()||0)>0&&
+      (window.ConquerEconomy?.state?.().castleGold||0)<=1e-8)
+    return 'Paused: insufficient lord treasury for wages';
+  return c.workers>0?c.workers+' L1 assigned':'Waiting for idle L1 workers';
+}
+function migrateConstructionSites(){
+  if(!State.village?.founded)return 0;
+  let changed=0;
+  for(const s of State.structures||[]){
+    const c=s.construction;
+    if(s.auto||!c||c.version===2||constructionProgress(s)>=1)continue;
+    const a=Number(c.startedDay),b=Number(c.completeDay);
+    if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a)continue;
+    // Never restart partial old-build progress or grant free work at migration.
+    const completedRatio=clamp((State.clock.day-a)/(b-a),0,1);
+    s.construction={version:2,startedDay:a,workRequired:b-a,
+      workDone:(b-a)*completedRatio,lastWorkDay:Math.max(State.clock.day,a),
+      workers:0,completedDay:null};
+    changed++;
+  }
+  return changed;
+}
+function constructionCrewAssignments(day=State.clock.day,cutoff=day){
+  const slots=new Map();
+  if(!State.village?.founded)return slots;
+  const dayOfWeek=((Math.floor(day)%7)+7)%7;
+  if(dayOfWeek>=5)return slots;
+  const candidates=window.ConquerEconomy?.availableBuilderIds?.(day)||[];
+  const sites=(State.structures||[]).filter(s=>!s.auto&&
+    s.construction?.version===2&&underConstruction(s)&&
+    s.construction.startedDay<=cutoff).sort((a,b)=>
+    a.construction.startedDay-b.construction.startedDay||
+    String(a.id).localeCompare(String(b.id)));
+  for(const s of sites)slots.set(s.id,[]);
+  const used=new Set();
+  // One worker per open job first, then the second/third if still spare.
+  // In the live world, reachable pedestrian routes are required; no phantom
+  // building progress can be produced by a worker stranded behind barriers.
+  for(let pass=0;pass<CONSTRUCTION_MAX_WORKERS&&used.size<candidates.length;pass++)
+    for(const s of sites){
+      if(used.size>=candidates.length)break;
+      const worker=candidates.find(w=>!used.has(w.id)&&
+        (typeof constructionWorkerPath!=='function'||constructionWorkerPath(w,s)));
+      if(!worker)continue;
+      used.add(worker.id);slots.get(s.id).push(worker);
+    }
+  return slots;
+}
+function tickConstructionWork(fromDay,toDay){
+  if(!State.village?.founded)return[];
+  migrateConstructionSites();
+  const start=Number(fromDay),end=Number(toDay);
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return[];
+  const completed=[];
+  const pending=(State.structures||[]).filter(s=>
+    !s.auto&&s.construction?.version===2&&underConstruction(s));
+  if(!pending.length)return completed;
+  // Loaded games may resume at day 2000 with simLogicDay still at zero.
+  // Progress was already settled through each site's lastWorkDay.
+  const earliest=Math.min(...pending.map(s=>Math.max(s.construction.startedDay,
+    Number(s.construction.lastWorkDay)||s.construction.startedDay)));
+  let t=Math.max(0,start,Math.min(end,earliest)),guard=0;
+  while(t<end-1e-9&&guard++<10000){
+    const next=Math.min(end,Math.floor(t)+1);
+    if(next<=t+1e-9)break;
+    const workerDay=constructionWorkClock(next)-constructionWorkClock(t);
+    const sites=(State.structures||[]).filter(s=>
+      !s.auto&&s.construction?.version===2&&underConstruction(s)&&
+      s.construction.startedDay<next
+    ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
+      String(a.id).localeCompare(String(b.id)));
+    if(sites.length){
+      const assigned=workerDay>0?constructionCrewAssignments(t,next):new Map();
+      for(const s of sites){
+        const c=s.construction,n=assigned.get(s.id)?.length||0;
+        const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
+        const requested=Math.min(Math.max(0,c.workRequired-c.workDone),
+          Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n);
+        // Only actual funded work advances construction. Materials were paid
+        // at placement; labor is paid as its shifts are performed.
+        const payroll=requested>0?
+          window.ConquerEconomy?.payConstructionWork?.(s,requested)||{work:requested,paid:0}:
+          {work:0,paid:0};
+        const work=payroll.work;
+        c.unfunded=requested>1e-9&&work<=1e-9;
+        c.workers=work>0?n:0;
+        if(work>0){
+          c.workDone=Math.min(c.workRequired,c.workDone+work);
+          State.dirty=true;
+        }
+        c.lastWorkDay=Math.max(next,Number(c.lastWorkDay)||0);
+        if(c.workDone>=c.workRequired-1e-8){
+          c.workDone=c.workRequired;c.completedDay=next;c.workers=0;
+          completed.push(s);
+        }
+      }
+    }
+    t=next;
+    if(completed.length===pending.length)break;
+  }
+  return completed;
+}
 function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
@@ -861,7 +1018,7 @@ function pointRadius(s){
       scene:{
         structures:all.length,
         roads:all.reduce((n,x)=>n+(x?.type==='road'?1:0),0),
-        construction:all.reduce((n,x)=>n+(x?.construction&&finite(x.construction.completeDay)>day?1:0),0)
+        construction:all.reduce((n,x)=>n+(x?.construction&&underConstruction(x)?1:0),0)
       }
     };
     samples.push(s);trim(samples,MAX_SAMPLES);

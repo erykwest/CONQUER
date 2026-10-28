@@ -470,7 +470,8 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
   const borderEntries=ensureBorderEntrySelection();
-  State.village={...State.village,name,wellId:well.id,founded:true,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  State.village={...State.village,name,wellId:well.id,founded:true,foundingWorkers:4,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  window.ConquerEconomy?.foundingCharter?.(well.id);
   closeVillageModal();
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
