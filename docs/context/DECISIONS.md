@@ -173,3 +173,7 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 ## Regola per le nuove decisioni
 
 Aggiungere un ID, classe, data di registrazione, **motivazione**, alternative scartate, impatto su file/test, issue/PR/commit. Non sovrascrivere silenziosamente una decisione: segnarla **SUPERATA DA D-xxx**, mantenendo la traccia. Per le proposte usare «PROPOSTA» fino a conferma esplicita.
+
+
+### CIRCLE — 2026-10-28
+2026-10-28 — CIRCLE design: white/yellow/green painted zones remain independent. Defensive compartments close only with fortifications or genuinely impassable natural terrain (cliffs/sea); ordinary civilian buildings excluded. Capture requires military control, not tower collapse. Supplies fill deepest compatible depots first; capture removes local stores. Civilian withdrawal proceeds by reachable secure compartment, not direct teleport to keep. Implementation is skeleton only.
