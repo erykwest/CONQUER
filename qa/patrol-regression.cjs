@@ -210,9 +210,9 @@ assert.ok(extended.slice(1).every((p,i)=>rectangleSegment(extended[i],p)),
  'long detour never intersects the obstacle');
 assert.ok(routeContext.window.__conquerPerf.patrolSearchLastPad>=7,
  'A* actually expands its local search window to find the detour');
-// Individual field troops extend the roster; patrols still survive restoration.
+// Individual field troops extend the roster; patrols and the captain still survive restoration.
 // The actual mixed-roster round trip is exercised by mass-battle-regression.cjs.
-assert.match(runtimeSource,/\['squad','knight','patrol','infantry','archer'\]\.includes\(u\.kind\)/,'patrol survives save restoration');
+assert.match(runtimeSource,/\['squad','knight','captain','patrol','infantry','archer'\]\.includes\(u\.kind\)/,'patrol and the captain survive save restoration');
 assert.match(runtimeSource,/id="combatPatrolAdd"/,'Patrol + action is in the combat panel');
 assert.match(runtimeSource,/id="combatPatrolRemove"/,'Patrol - action is in the combat panel');
 assert.match(runtimeSource,/u\.kind==='patrol'\?2:5/,'Patrol renders two pikemen, not five');

@@ -1,0 +1,55 @@
+name: Gate six-socket and cutaway regression
+on:
+  push:
+    branches: [feature/cutaway-furniture-converge]
+    paths:
+      - 'src/settlement-castle-placement.js'
+      - 'src/settlement-world.js'
+      - 'qa/gate-roads-regression.cjs'
+      - 'qa/cutaway-furniture-regression.cjs'
+      - '.github/workflows/gate-six-sockets-regression.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement-castle-placement.js'
+      - 'src/settlement-world.js'
+      - 'qa/gate-roads-regression.cjs'
+      - 'qa/cutaway-furniture-regression.cjs'
+      - '.github/workflows/gate-six-sockets-regression.yml'
+jobs:
+  gate-cutaway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify syntax
+        run: |
+          node --check src/settlement-castle-placement.js
+          node --check qa/gate-roads-regression.cjs
+          node --check qa/cutaway-furniture-regression.cjs
+      - name: Test gate road and six subtower sockets
+        run: node qa/gate-roads-regression.cjs
+      - name: Test furnished cutaway
+        run: node qa/cutaway-furniture-regression.cjs
+  settlement-all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: All deterministic settlement regressions
+        run: |
+          for test in qa/*-regression.cjs; do
+            echo "Running $test"
+            node "$test"
+          done
+      - name: Compile all classic script modules
+        run: |
+          for source in src/*.js; do
+            node --check "$source"
+          done
