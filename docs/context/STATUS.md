@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## Salvataggi sicuri (branch `fix/save-safety`, 28/10/2026; porting parziale di #16)
+
+- **Codice presente su branch (non ancora `main`):** `saveLocal()` intercetta gli errori di `localStorage` (quota piena, storage bloccato): avviso in console, indicatore «local save failed», evento `LOCAL_SAVE_ERROR`, ritorna `false` invece di interrompere l'autosave. Al caricamento (locale e cloud) le risorse non vengono più portate ad almeno 10000: il minimo vale solo in DEV (`?dev=1` o flag ricordato `conquer.dev`, lo stesso della UI v2), altrimenti resta il valore salvato. Le partite nuove partono ancora da 10000 per il default di `State` in core (non toccato).
+- **Escluso per scelta:** la parte telemetria di #16 (`/api/telemetry` pubblica, `sendRemote` verso Supabase) resta invariata.
+- **QA locale:** nuova `qa/save-safety-regression.cjs` PASS; 81/85 `qa/*.cjs` PASS (FAIL solo le 4 prove di performance senza Playwright locale). Browser (Chrome): con `setItem` che lancia `QuotaExceededError` il salvataggio ritorna `false` e l'indicatore mostra l'errore, il successivo riesce; legna 50 salvata e ricaricata = 50 senza DEV, 10000 con `?dev=1`; nessun errore in console.
+
 ## Capitano, cavalieri a cavallo e diplomazia — branch `feature/knights-diplomacy-2d` (28/10/2026, sostituisce PR #72)
 
 - **CODICE:** portato in modo selettivo da `origin/feature/knights-messenger-caravans` (PR #72, contiene `knights`) su un branch nuovo da `main`. `settlement-combat.js`: unità `captain` (comandante iniziale, raggio 16U; nei salvataggi vecchi `combat-knight-*` diventa capitano), `recruitKnight` / `knightRecruitment` con limite min(`knights`, `horses`) dalla capienza del castello; `settlement-siege.js`: stanza nobile = 1 cavaliere, scuderia = 5 cavalli, senza moltiplicatore della taglia della stanza. `settlement-camp.js`, `settlement-minimap.js` e `settlement-earthworks.js` trattano il capitano come il vecchio comandante. `settlement-diplomacy.js` (`window.ConquerDiplomacy`: `tick`, `reset`, `state`, `draw`, `spawn`, `travel`, `openLetter`, `openCaravans`, `refreshUI`, `positionLetter`) con la sua CSS; tick nel ciclo giornaliero di `simulationFrame`; `State.diplomacy` in `saveLocal`/`loadLocal` e nel payload cloud (`policies.diplomacy`), azzerato su mappa nuova.

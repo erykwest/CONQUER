@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Salvataggi sicuri (branch `fix/save-safety`)
+
+- Ripresa da #16 (audit-hardening) solo la parte salvataggi: autosave che non si interrompe con lo storage pieno e minimo 10000 risorse al caricamento limitato a DEV. Telemetria esclusa per scelta. Stato e prove in [STATUS](STATUS.md#salvataggi-sicuri-branch-fixsave-safety-28102026-porting-parziale-di-16). La PR #16 viene chiusa.
+- ROADMAP e DECISIONS invariate.
+
 ## 2026-10-28 — Capitano, cavalieri e diplomazia portati su `main`, solo 2D (sostituisce PR #72)
 
 - Il gameplay della PR #72 (`feature/knights-messenger-caravans`, che contiene `knights`) è portato in modo selettivo su un branch nuovo da `main`: capitano distinto dai cavalieri, cavalieri a cavallo limitati da stanze nobili e scuderie, messaggero periodico con richiesta di tributo e pianificatore di carovane, `State.diplomacy` salvato. Comandi nella UI v2 (Difendi › Pattuglie, Gestisci › Scorte del castello). Stato e prove in [STATUS](STATUS.md).
@@ -15,7 +20,6 @@
 - Integrati catalogo mobili generato da Blender, disposizione funzionale delle stanze e arredi non sovrapposti, mantenendo le postazioni degli arcieri e il corridoio delle porte.
 - Aggiunti interni depth-tested nel renderer WebGL2 con mesh separate per ambienti, guscio e superfici luminose, cache su rotazione, pass notturno e fallback Canvas.
 - Contenuti della vecchia branch `feature/cutaway-furniture` portati su `feature/cutaway-furniture-converge` aggiornata con le novità Terraforming di `main`. PR #65, GitHub Actions suite integrale [#39508539592](https://github.com/erykwest/CONQUER/actions/runs/39508539592) **PASS**, CAMP e Builder PASS. Validazione visuale browser ancora aperta.
-
 
 ## 2026-10-28 — Audio e colonna sonora stagionale (branch `sound`)
 

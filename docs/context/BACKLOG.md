@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Persistenza e telemetria (audit #16, 28/10/2026)
+
+- **FATTO SU BRANCH `fix/save-safety`, NON MERGE:** autosave locale resistente agli errori di storage; minimo 10000 risorse al caricamento solo in DEV.
+- **APERTO (escluso per scelta dell'utente il 28/10):** `/api/telemetry` espone in GET gli ultimi 120 campioni senza autenticazione e accetta POST senza limiti; `sendRemote()` scrive su `simulation_telemetry` con la chiave pubblica, policy RLS non versionata. Versioning coerente degli script in `index.html`.
+
 ## Combat / feudi — capitano, cavalieri e diplomazia (branch `feature/knights-diplomacy-2d`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, IN MERGE (sostituisce #72):** capitano con identità propria e raggio di comando 16U; cavalieri a cavallo reclutabili fino a min(stanze nobili, posti in scuderia) — C-04 in parte; messaggero a cavallo periodico verso il mastio, richiesta di 100 monete, accetta/rifiuta, pianificatore di carovane con carico, scorta, partenza e provviste — prototipo di F-05; tutte le figure a cavallo in 2D (D-046).
