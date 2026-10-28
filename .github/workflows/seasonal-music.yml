@@ -1,0 +1,40 @@
+name: Assemble seasonal CONQUER music
+
+on:
+  push:
+    branches: [sound]
+    paths:
+      - scripts/assemble-seasonal-music.py
+      - .github/workflows/seasonal-music.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install media analysis and encoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Assemble nine seasonal MP3s, optimize and measure
+        run: python3 scripts/assemble-seasonal-music.py
+      - name: Verify assembled catalog and playback
+        run: |
+          node qa/sound-regression.cjs
+          node qa/music-regression.cjs
+      - name: Commit real MP3 files and clean temporary chunks
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- .music-staging src/assets/sounds/music src/settlement-music-catalog.js docs/music-compression-report.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Music: import and level nine seasonal scores, remove transfer chunks"
+            git push origin HEAD:sound
+          fi

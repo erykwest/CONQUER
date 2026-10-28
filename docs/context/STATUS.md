@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## Audio — mixer a 4 livelli e colonna sonora stagionale (branch `sound`, 17–19/10/2026; riallineato 28/10)
+
+- **Codice presente su branch (non ancora `main`):** `src/settlement-sound.js` (`ConquerSound`, mixer Web Audio con bus Ambiente / Locale / Effetti / Notifiche, EQ e normalizzazione LUFS), `settlement-sound-catalog.js`, `settlement-sound-bridge.js` (ambiente da stagione, notte e meteo; suoni locali dall'edificio selezionato e dai due più vicini sopra una soglia di zoom; tuoni nei temporali), `settlement-music.js` + catalogo (9 brani stagionali, playlist automatica per stagione). Controlli solo nel pannello DEV (`settlement-sound-dev.js`, `settlement-music-dev.js`). Unico aggancio nel gioco: `ConquerSoundBridge.tick` in `simulationFrame`. **Audio spento di default**, si attiva a mano.
+- **Asset:** 14 clip ambiente/effetti (freesound/Pixabay, fonti in [sound-assets](../sound-assets.md)) e 9 brani normalizzati in `src/assets/sounds/` (~40 MB MP3). Script di preparazione in `scripts/`, workflow `sound-regression`, `seasonal-music`, `sound-optimize`.
+- **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 75/79 `qa/*.cjs` PASS (incluse `sound-regression` e `music-regression`); i 4 FAIL sono le prove di performance che richiedono Playwright, uguali su `main`. Browser (Chrome): pagina caricata senza errori in console, World 3D attivo, 9 brani nel selettore, stato «Audio OFF». **Non eseguite:** ascolto reale dei mix in partita; CI della PR.
+- **Merge di `main`:** unico conflitto in `index.html` (script dev audio accanto a quelli di combattimento aggiornati da main), risolto mantenendo entrambi.
+
 ## Cutaway civico e contorno di selezione (branch `feature/civic-cutaway`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** chiesa o locanda selezionata mostrata in sezione: piano di taglio rivolto alla camera che taglia il guscio Blender a davanzale, toglie tetti e gronde; arredi (panche, altare, fonte, pulpito per la chiesa; tavoli, bancone, botti, focolari per la locanda). In WebGL l'edificio selezionato ha un buffer `civicCutaway` ricostruito a ogni quarto di giro; Esc invalida entrambi i renderer (`src/settlement-civic3d.js`, `settlement-world3d.js`, `settlement-castle.js`, `settlement-render.js`).
