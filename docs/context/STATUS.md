@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## Cutaway civico e contorno di selezione (branch `feature/civic-cutaway`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** chiesa o locanda selezionata mostrata in sezione: piano di taglio rivolto alla camera che taglia il guscio Blender a davanzale, toglie tetti e gronde; arredi (panche, altare, fonte, pulpito per la chiesa; tavoli, bancone, botti, focolari per la locanda). In WebGL l'edificio selezionato ha un buffer `civicCutaway` ricostruito a ogni quarto di giro; Esc invalida entrambi i renderer (`src/settlement-civic3d.js`, `settlement-world3d.js`, `settlement-castle.js`, `settlement-render.js`).
+- **Builder:** il contorno di selezione disegna solo l'impronta unita a h0; mura, palizzate e sezioni costruite non si piazzano dentro le foreste; ogni edificio controlla anche le chiome degli alberi realmente disegnati (`settlement-placement.js`).
+- **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 73/77 `qa/*.cjs` PASS (incluse `civic3d`, `builder-placement`, `organic-forest`); i 4 FAIL sono le prove di performance che richiedono Playwright, assente in questo checkout. Audit del Lab (`qa/asset-audit.mjs`, Chrome locale): 465 render, 0 falliti, firme identiche a quelle di `main` sullo stesso browser (il cutaway civico appare solo in partita con l'edificio selezionato); baseline invariata. **Non eseguite:** verifica visiva del cutaway in partita su entrambi i renderer; CI della PR.
+
 ## Guardaroba stagionale dei popolani (branch `feature/seasonal-clothing`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-wardrobe.js` (`window.ConquerWardrobe`) con 9 capi overlay (cappello di paglia, berretto di pelliccia, cappuccio di lana, cappuccio cerato, pelle di pecora, mantello di lana, mantello foderato di pelliccia, mantella antipioggia, scialle). Disegnati da `drawVillagerFigureUnmasked`, quindi valgono anche per lavoratori, costruttori e civili in fuga dagli incendi; l'outfit dipende da id residente, mese del calendario (o stagione DEV forzata) e `currentWeather()`. Nessuno stato persistito, nessun effetto economico.

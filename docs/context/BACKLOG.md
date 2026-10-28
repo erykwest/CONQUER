@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Civili — cutaway di chiesa e locanda (branch `feature/civic-cutaway`, 23/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
+- **ANCORA APERTO:** cutaway per gli altri edifici civici (mercato, mulini, botteghe) e persone all'interno durante le attività.
+
 ## S-05 / S-16 / S-25 — riallineamento converge (#61, 23/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** restrizioni armi sui nuclei, validazione forze/componenti/campate e persistenza dei danni, integrate con main `bc82dbe`. Compatibilità con GATE-06/D-042: la grata resta una terza difesa danneggiabile; non può essere aggirata dal nuovo guard dei componenti.

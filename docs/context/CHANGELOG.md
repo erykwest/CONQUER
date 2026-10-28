@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Cutaway di chiesa e locanda (branch `feature/civic-cutaway`)
+
+- La chiesa o la locanda selezionata si apre in sezione con arredi; il contorno di selezione segue l'impronta a terra; mura ed edifici non si piazzano più dentro le foreste o sotto le chiome. Allineato a `main` `5ddefa6`. Stato e prove in [STATUS](STATUS.md#cutaway-civico-e-contorno-di-selezione-branch-featurecivic-cutaway-23102026).
+- ROADMAP e DECISIONS invariate: estende il cutaway esistente agli edifici civici, nessun nuovo contratto.
+
 ## 2026-10-23 — Ponti: magnete strade
 
 - Branch `feat/bridge-road-magnets`: le strade principali si agganciano alle due testate di ogni ponte e una strada su una testata non è più rifiutata come sovrapposizione. Stato e prove in [STATUS](STATUS.md#ponti--magnete-strade-23102026); requisiti BRIDGE-01/02 nel [BACKLOG](BACKLOG.md#ponti--magnete-strade-branch-featbridge-road-magnets-23102026).
