@@ -73,6 +73,10 @@
       mode: t.mode || null,
       radius: t.radius ?? null,
       delta: t.delta ?? null,
+      combatBrush: t.combatBrush || null,
+      stormKind: t.stormKind || null,
+      fireKind: t.fireKind || null,
+      torch: !!t.torch,
       label: t.label || ''
     };
   }
@@ -163,12 +167,30 @@
       emit();
       return !!out.accepted;
     },
-    saveCloud: () => press('#saveBtn')
+    saveCloud: () => press('#saveBtn'),
+
+    // ---- Difendi: the combat module's own controls stay the single implementation ----
+    defense: (action, arg) => {
+      const ids = { fog: '#combatFog', zones: '#combatZones', bell: '#combatRecall', release: '#combatMute',
+        orders: '#combatOrders', deselect: '#combatDeselect', patrolAdd: '#combatPatrolAdd', patrolRemove: '#combatPatrolRemove',
+        intruder: '#combatIntruder', torch: '#combatTorch', clearEnemies: '#combatClearEnemies', buckets: '#combatBuckets' };
+      if (action === 'brush') return press('[data-combat-brush="' + arg + '"]');
+      if (action === 'fire') return press('[data-combat-fire="' + arg + '"]');
+      if (action === 'storm') return press('[data-combat-storm="' + arg + '"]');
+      if (action === 'alarm') { window.ConquerCombat?.setAlarmMode?.(arg); emit(); return true; }
+      if (action === 'brushRadius') {
+        const el = document.getElementById('combatBrushSize');
+        if (!el) return false;
+        el.value = arg; el.dispatchEvent(new Event('input', { bubbles: true })); emit(); return true;
+      }
+      return ids[action] ? press(ids[action]) : false;
+    }
   };
 
   // ---- read models for the panels that are not part of every snapshot ----
   const ECON_GOODS = ['food', 'wood', 'stone', 'metal', 'equipment', 'luxury'];
   const read = {
+    defense() { return window.ConquerCombat?.uiState?.() || null; },
     village() {
       return {
         name: State.village?.name || null, founded: !!State.village?.founded, seed: State.seed,
