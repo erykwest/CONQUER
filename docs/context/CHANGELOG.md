@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Rendering: niente più picchi dal terreno 3D e dalla nebbia (branch `perf/render-spikes-v2`)
+
+- Una modifica a strade, campi, case o lotti ricuoce solo le tessere da 512 px toccate, una per frame, invece delle due texture 4096² del terreno. Terraforming, stagione, rilievo e foreste rifanno ancora tutto. La nebbia di combattimento rifà il raycast ogni 12 s solo se il contenuto è cambiato. La telemetria remota dice quale renderer è attivo (evento `RENDERER`). Misure e confronti in [STATUS](STATUS.md#rendering--picchi-del-terreno-3d-e-della-nebbia-branch-perfrender-spikes-v2-28102026): P95 del frame dopo una modifica dimezzato (115 → 56 ms).
+- Corretto un bug: strade e campi del terreno 3D ricevevano l'indice dell'array come `preview`; l'aspetto resta quello di prima.
+- ROADMAP e DECISIONS invariate: ottimizzazione di rendering, nessun contratto toccato. Sostituisce il branch `fix/render-spikes`.
+
 ## 2026-10-28 — Audio e colonna sonora stagionale (branch `sound`)
 
 - Branch del 17–19/10 riallineato a `main` `5ddefa6` (350 commit): mixer Web Audio a 4 livelli, ambiente da stagione e meteo, suoni degli edifici vicini, 9 brani stagionali; controlli nel pannello DEV, audio spento di default. Stato e prove in [STATUS](STATUS.md#audio--mixer-a-4-livelli-e-colonna-sonora-stagionale-branch-sound-1719102026-riallineato-2810).

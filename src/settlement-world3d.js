@@ -444,23 +444,54 @@
     });
     return new Float32Array(m.tris);
   }
-  // Bake the existing 2D ground drawing in plan view (rotation 0) into a canvas covering [x0,x0+size]².
-  function bakeGround(x0,y0,size){
-    const N=TEX_SIZE,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
+  // Bake the existing 2D ground drawing in plan view (rotation 0) into a TEX_SIZE² canvas covering
+  // [x0,x0+size]². With `tile` ({ox,oy}) only that TILE_PX² window of the same texture is painted:
+  // the mapping stays the full texture's, translated, so repeating ground patterns line up across tiles.
+  function bakeGround(x0,y0,size,tile=null){
+    const N=tile?TILE_PX:TEX_SIZE,ox=tile?.ox||0,oy=tile?.oy||0;
+    const c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
     const keepView=State.view,keepRect=wrap.getBoundingClientRect,keepTrees=forestTreeSpritesReady,keepFences=urbanFenceSegments;
-    const px=N/size;
+    const px=TEX_SIZE/size;
     State.view={...keepView,plan:true,rotation:0,scale:px/U,x:-x0*px,y:-y0*px};
-    wrap.getBoundingClientRect=()=>({x:0,y:0,left:0,top:0,right:N,bottom:N,width:N,height:N});
+    wrap.getBoundingClientRect=()=>({x:0,y:0,left:0,top:0,right:ox+N,bottom:oy+N,width:ox+N,height:oy+N});
     forestTreeSpritesReady=false;           // trees become 3D billboards, not ground paint
     urbanFenceSegments=()=>[];              // fences, walls and hedges become 3D geometry / billboards
+    // World window actually painted, for culling roads and fields.
+    const wx0=x0+ox/px,wy0=y0+oy/px,wsize=N/px;
+    const inside=s=>{if(!tile)return true;const b=groundItemBounds(s);return !b||(b.x0<wx0+wsize&&b.x1>wx0&&b.y0<wy0+wsize&&b.y1>wy0)};
+    // The landscape culls against [0,width]² of the rect, which for a translated tile still holds
+    // everything above and left of it: a far tile would cost a full bake. Cull to the tile instead.
+    const keepCull=[screenPointVisibleRaw,screenPolygonVisible,forestLikelyVisible];
+    if(tile){
+      const hit=(ax,ay,bx,by,m)=>bx>=ox-m&&by>=oy-m&&ax<=ox+N+m&&ay<=oy+N+m;
+      screenPointVisibleRaw=(p,z=0,pad=72)=>{const q=w2sRaw(p,z);return hit(q.x,q.y,q.x,q.y,pad+staticCullOverscan())};
+      screenPolygonVisible=(poly,pad=72)=>{
+        if(!poly?.length)return false;
+        let ax=Infinity,ay=Infinity,bx=-Infinity,by=-Infinity;
+        for(const p of poly){ax=Math.min(ax,p.x);ay=Math.min(ay,p.y);bx=Math.max(bx,p.x);by=Math.max(by,p.y)}
+        return hit(ax,ay,bx,by,pad+staticCullOverscan());
+      };
+      forestLikelyVisible=(f,pad=100)=>{
+        const p={x:Number(f.x)||0,y:Number(f.y)||0},s=w2sRaw(p,terrainElevation(p));
+        return hit(s.x,s.y,s.x,s.y,Math.hypot(f.rx||5,f.ry||4)*1.4*U*State.view.scale*1.55+pad+staticCullOverscan());
+      };
+    }
     try{
+      g.translate(-ox,-oy);
       withRenderContext(g,()=>{
-        g.fillStyle='#202419';g.fillRect(0,0,N,N);
+        g.fillStyle='#202419';g.fillRect(ox,oy,N,N);
         drawTerrain();drawEnvironment();
-        State.structures.filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&!underConstruction(s)).forEach(drawAutoStructure);
+        // Roads/fields are the bulk of the bake: a tile only paints those overlapping it. They are drawn
+        // with the preview alpha (.58): the 3D ground has always looked so, since forEach passed the index
+        // as `preview` (only the first item was opaque). Explicit now, so a tile matches the full bake.
+        State.structures.filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&!underConstruction(s)&&inside(s))
+          .forEach(s=>drawAutoStructure(s,true));
         drawPuddleLayer();drawUrbanLots();window.ConquerCrossings?.drawGround();
       });
-    }finally{State.view=keepView;wrap.getBoundingClientRect=keepRect;forestTreeSpritesReady=keepTrees;urbanFenceSegments=keepFences}
+    }finally{
+      State.view=keepView;wrap.getBoundingClientRect=keepRect;forestTreeSpritesReady=keepTrees;urbanFenceSegments=keepFences;
+      [screenPointVisibleRaw,screenPolygonVisible,forestLikelyVisible]=keepCull;
+    }
     return c;
   }
   function uploadTexture(gl,name,source){
@@ -473,6 +504,83 @@
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     if(S.aniso)gl.texParameterf(gl.TEXTURE_2D,S.aniso.TEXTURE_MAX_ANISOTROPY_EXT,8);
+  }
+
+  // ---------- incremental ground re-bake ----------
+  // A full bake of both ground textures costs 200+ ms. While the settlement grows, only the tiles
+  // around what changed are re-baked, one per frame, and patched in with texSubImage2D.
+  const GROUND_TEX=[{name:'world',x0:0,y0:0,size:WORLD},{name:'detail',x0:DETAIL.x0,y0:DETAIL.y0,size:DETAIL.size}];
+  const TILE_PX=512,TILES=TEX_SIZE/TILE_PX,GROUND_PAD_U=4,GROUND_TILE_LIMIT=24;
+  S.groundQueue=[];
+  function groundItemBounds(s){
+    const pts=[];
+    for(const p of [s,s.a,s.b])if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y))pts.push(p);
+    for(const p of s.points||[])if(Number.isFinite(p?.x)&&Number.isFinite(p?.y))pts.push(p);
+    if(!pts.length)return null;
+    const r=Math.max(Number(s.r)||0,Number(s.size)||0,Number(s.width)||0,Number(s.w)||0,Number(s.h)||0)*.75+GROUND_PAD_U;
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const p of pts){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)}
+    return{x0:x0-r,y0:y0-r,x1:x1+r,y1:y1+r};
+  }
+  // Per-item hashes of everything the ground bake paints from structures (the 'ground' signature
+  // category) and of the urban lots, with the same fields groundLotsSignature() watches.
+  function groundItems(){
+    const out=new Map(),hash=str=>{let h=0;for(let i=0;i<str.length;i++)h=(Math.imul(h,31)+str.charCodeAt(i))|0;return h};
+    const byId=new Map();
+    for(const s of State.structures){
+      byId.set(s.id,s);
+      if(!SIG_CATEGORIES[0].test(s))continue;
+      out.set(s.id,{h:hash(structureKey(s)+'|'+(s.w??'')+'|'+(s.h??'')+'|'+(s.points?.length||0)),b:groundItemBounds(s)});
+    }
+    try{
+      for(const lot of urbanLots()){
+        const s=byId.get(lot.civicId||lot.houseId);
+        const key=JSON.stringify([lot.civicId,s?.type,!!(s?.auto||s?.urbanRedeveloped)&&houseLevel(s)>=3,
+          window.ConquerLivestock?.lotKindForHouse(s),lot.points]);
+        out.set('lot:'+(lot.civicId||lot.houseId),{h:hash(key),b:groundItemBounds({points:lot.points})});
+      }
+    }catch{}
+    return out;
+  }
+  function changedGroundRects(prev,next){
+    const rects=[];
+    for(const [id,v] of next){const o=prev.get(id);if(!o||o.h!==v.h){if(v.b)rects.push(v.b);if(o?.b)rects.push(o.b)}}
+    for(const [id,o] of prev)if(!next.has(id)&&o.b)rects.push(o.b);
+    return rects;
+  }
+  // The terrain shader samples the world texture only outside the detail rect: world tiles lying
+  // inside it (1U margin for mipmap footprints) are never seen and wait for the next full bake.
+  const hiddenUnderDetail=(x0,y0,tileU)=>x0>=DETAIL.x0+1&&y0>=DETAIL.y0+1&&x0+tileU<=DETAIL.x0+DETAIL.size-1&&y0+tileU<=DETAIL.y0+DETAIL.size-1;
+  function queueGroundTiles(rects){
+    const pending=new Set(S.groundQueue.map(t=>t.key));
+    for(const tex of GROUND_TEX){
+      const tileU=tex.size/TILES;
+      for(let ty=0;ty<TILES;ty++)for(let tx=0;tx<TILES;tx++){
+        const x0=tex.x0+tx*tileU,y0=tex.y0+ty*tileU,key=tex.name+':'+tx+':'+ty;
+        if(pending.has(key)||tex.name==='world'&&hiddenUnderDetail(x0,y0,tileU))continue;
+        if(!rects.some(r=>r.x0<x0+tileU&&r.x1>x0&&r.y0<y0+tileU&&r.y1>y0))continue;
+        S.groundQueue.push({key,tex:tex.name,x0:tex.x0,y0:tex.y0,size:tex.size,ox:tx*TILE_PX,oy:ty*TILE_PX});pending.add(key);
+      }
+    }
+  }
+  function bakeGroundFull(gl){
+    for(const t of GROUND_TEX)uploadTexture(gl,t.name,bakeGround(t.x0,t.y0,t.size));
+    S.groundQueue=[];
+  }
+  // One tile per frame: a tile costs a few ms, the whole queue of a typical edit (2-6 tiles) is gone
+  // before the construction site is noticed. Mipmaps of a 4096² texture are rebuilt once, when its
+  // last queued tile is in (until then the minified levels show the previous ground for a few frames).
+  function pumpGroundTiles(gl){
+    const t=S.groundQueue.shift();if(!t)return;
+    const t0=performance.now(),c=bakeGround(t.x0,t.y0,t.size,t);
+    gl.bindTexture(gl.TEXTURE_2D,S.tex[t.tex]);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,t.ox,t.oy,gl.RGBA,gl.UNSIGNED_BYTE,c);
+    if(!S.groundQueue.some(q=>q.tex===t.tex))gl.generateMipmap(gl.TEXTURE_2D);
+    S.stats.groundTiles=(S.stats.groundTiles||0)+1;S.stats.groundTileMs=performance.now()-t0;
+    // The running clock redraws continuously; when paused, ask for the frames that finish the queue.
+    if(S.groundQueue.length&&!(State.clock?.speed>0)&&!S.groundRaf)
+      S.groundRaf=requestAnimationFrame(()=>{S.groundRaf=0;if(active())draw()});
   }
 
   // ---------- buildings (non-castle) ----------
@@ -961,16 +1069,19 @@
   // One pass per check: each structure is hashed once and folded into the categories it belongs to.
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
+  function structureKey(s){
+    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+      // Moat fill patches are baked into the ground: filling must re-bake it.
+      +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
+      // The gate door's state swaps its facade decal.
+      +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
+      // Mills swap to their gutted model mid-fire.
+      +(window.ConquerIndustries3D?.variant?.(s)||'');
+  }
   function computeSigPass(){
     const acc=new Map();
     for(const s of State.structures){
-      const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
-        // Moat fill patches are baked into the ground: filling must re-bake it.
-        +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
-        // The gate door's state swaps its facade decal.
-        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
-        // Mills swap to their gutted model mid-fire.
-        +(window.ConquerIndustries3D?.variant?.(s)||'');
+      const str=structureKey(s);
       let h=0;for(let i=0;i<str.length;i++)h=(Math.imul(h,31)+str.charCodeAt(i))|0;
       for(const cat of SIG_CATEGORIES)if(cat.test(s))acc.set(cat.name,(Math.imul(acc.get(cat.name)||0,33)^h)|0);
     }
@@ -1017,7 +1128,7 @@
   function ensureContent(gl){
     // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
     const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
-    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut){S.stats.ensureMs=0;return}
+    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
     S.civicCut=civicCut;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
@@ -1026,14 +1137,27 @@
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
     const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.baseZ,e.radius,e.shape,e.rotation,e.center.x,e.center.y,e.edgeWidth,e.mode,e.material].join(':')).join(',');
-    const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),groundLotsSignature(),structuresSig('ground')].join('|');
+    // Relief, terraforming and forests shape the terrain meshes: those rebuild them and re-bake the
+    // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
+    // re-bake the tiles they touch, one per frame (pumpGroundTiles).
+    const meshSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
+    const gSig=[meshSig,wet()].join('|');
+    const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
-      const a=performance.now();
-      upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());upload(gl,'terrainEdges',buildTerrainEdges());
-      uploadTexture(gl,'world',bakeGround(0,0,WORLD));
-      uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
-      S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
+      const a=performance.now(),items=groundItems();
+      if(S.sig.terrainMesh!==meshSig){
+        upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());upload(gl,'terrainEdges',buildTerrainEdges());
+        S.sig.terrainMesh=meshSig;
+      }
+      if(S.sig.ground!==gSig||!S.tex.world||!S.groundItems){bakeGroundFull(gl);S.sig.ground=gSig}
+      else{
+        queueGroundTiles(changedGroundRects(S.groundItems,items));
+        // Wide edits (a long road, a district rebuild) are cheaper as one full bake than as many tiles.
+        if(S.groundQueue.length>GROUND_TILE_LIMIT)bakeGroundFull(gl);
+      }
+      S.groundItems=items;S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
     }
+    pumpGroundTiles(gl);
     const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
