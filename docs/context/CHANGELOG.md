@@ -1,5 +1,72 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-25 — Eventi: pubblico nascosto da balaustre e schienali
+
+- Le figure sulle tribune (giostra, torneo, teatro) e nell'arena vengono coperte dalla balaustra, dai drappi e dallo schienale. Questi pezzi vengono ridisegnati in ordine di profondità insieme alle figure: ogni pezzo si ordina sul bordo della tribuna, spinto di 0,4 U verso l'esterno. Le figure vengono disegnate a gruppi tra un occlusore e l'altro, così un fotogramma della giostra costa circa 14 ms. QA in `event-people-regression`.
+- Resta aperto: le figure sono disegnate sopra gli edifici di altre strutture che stanno davanti allo spazio (sovrapposizione 2D, come i paesani).
+
+## 2026-10-25 — Eventi: accampamento affollato
+
+- L'accampamento dei cavalieri ha tre coppie che si allenano, un gruppo di tre persone che chiacchiera davanti a ogni tenda (slot `chat`) e due inservienti a ogni rastrelliera e armatura (slot `tend`), oltre agli scudieri: oltre 40 persone. QA estesa.
+
+## 2026-10-23 — Eventi: bardatura dei cavalli, torneo, accampamento e teatro animati
+
+- I cavalli della giostra hanno una gualdrappa (drappo partito, orlo dorato, crinale e pennacchio) disegnata sul cavallo 2D con la **stessa coppia di colori casuali del cavaliere**. Nuovi slot `fight` per tre coppie nel recinto del torneo e una coppia che si allena nell'accampamento, `prepare` davanti alle tende di torneo e accampamento, `perform`/`wait` per attori e quinte del teatro; scene animate dello spiazzo per torneo, accampamento e teatro. QA estese; verifica nel browser.
+
+## 2026-10-23 — Eventi: costruibili dal Builder
+
+- Nuova categoria **Eventi e svago** nel Builder con pulpito, palco, spiazzo eventi e arena; piazzamento a due clic con il preflight comune; agganci per impronta, nome, costo e durata; ispettore con veste del palco e scelta / avvio / chiusura dell'evento sullo spiazzo, ciclo `preparing → active → clearing → idle` sull'orologio di gioco. Spiazzo gratuito e senza cantiere; palco, pulpito e arena con costi in legno/oro e cantiere. QA `events-builder-regression`; collaudo nel browser con clic reali (piazzamento, selezione, avvio giostra, montaggio progressivo, persistenza dopo ricarica).
+
+## 2026-10-23 — Eventi: persone in arena, palco e pulpito
+
+- Nuovi slot CANS `fight` (due combattenti nella sabbia dell'arena) e `prepare` (uno scudiero per tenda del lotto arena). Scena `venueScene` per lotto arena, palco (attori e pubblico / banditore e folla) e pulpito (musico e cantastorie con ascoltatori), sempre animata; il pubblico dell'arena esulta a ogni colpo. Biglietteria del lotto arena girata verso l'interno perché la coda resti nel lotto. QA `event-people-regression` estesa; verifica Canvas nel browser.
+
+## 2026-10-23 — Eventi: persone allineate a CANS, sagra e circo animati
+
+- Nuovo `settlement-events-people.js`: slot con ID stabile, ruolo `guest`/`worker` e azione ricavati dai modelli (dominio = spazio evento) e registro occupanti con invarianti CANS (un occupante per slot e uno slot per occupante); sorgente **provvisoria** deterministica di figuranti marcati `provisional`, sostituibile da un adapter CANS. Giostra, sagra e circo disegnano solo occupanti registrati. Sagra: commensali, venditori, attori, cantastorie e pubblico, clienti che passeggiano tra le bancarelle; circo: imbonitore, giocoliere, biglietterie, code e ingresso nel tendone. QA `event-people-regression` e `joust-regression` PASS; verifica Canvas nel browser. Nessun runtime CANS implementato.
+
+## 2026-10-23 — Eventi: giostra animata
+
+- Nuovo `settlement-events-joust.js`: pubblico sugli spalti (≈2/3 dei posti, esulta all'impatto), due cavalieri che caricano lungo le corsie e a ogni corsa uno viene disarcionato (cade, resta a terra, si rialza, torna al cavallo), corse alternate tra le testate; stallieri con cavalli di riserva e scudieri che portano lance e scudi tra tende e testate. Figure 2D (popolani, soldati, cavallo 2D `drawAnimal`): i modelli 3D degli animali sono superati (indicazione dell'utente). QA `joust-regression` (12 corse); verifica Canvas nel browser.
+
+## 2026-10-23 — Eventi: CI della PR #78
+
+- Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (causa dei fallimenti di `menu-regression` e `settlement-qa`); dopo la correzione entrambi i check PASS in CI. `refactor-app-population` e `wall-bays` falliscono solo in checkout Windows con `core.autocrlf=true` (i test cercano frammenti con fine riga LF): con checkout LF, come in CI, passano anche su `main`. Non sono fallimenti del codice
+
+2026-10-22 — Eventi: disposizione casuale senza collisioni
+
+- Il jitter di tende, scatter e attrezzature prova spostamenti decrescenti e scarta quelli che urtano oggetti già piazzati, posizioni di base degli oggetti successivi o il perimetro; in mancanza resta nella posizione di base (validata). QA su 25 seed per tutti gli allestimenti: nessuna collisione né uscita, 91% degli oggetti spostabili ancora spostati.
+
+## 2026-10-22 — Eventi: bandiere al vento
+
+- Pennoni, festoni, gonfaloni e stendardi ondeggiano: pesi di stoffa esportati dal builder (parte `f`), strato dinamico come le pale dei mulini (WebGL e 2.5D), ampiezza legata al vento del meteo, fermi a gioco in pausa. Costo misurato ~0,6 ms per frame sul lotto arena (916 triangoli di stoffa). QA `events3d-regression` estesa; nel browser verificati movimento e assenza di errori (pannello nascosto: frame forzati a mano).
+
+## 2026-10-22 — Eventi: disposizione più casuale
+
+- Jitter delle tende portato a ±40° / 75% (prima 12%), scatter e attrezzature fino al 200% (su richiesta esplicita, possibili contatti tra oggetti); esteso a scatter, rastrelliere e armature in tutti gli allestimenti (D-045).
+
+## 2026-10-22 — Eventi: tende non allineate e tutte diverse
+
+- In arena, torneo e circo le tende ruotano di ±25° e si spostano fino al 5% della loro misura (deterministico per partita). Le coppie di colori delle tende sono uniche in ogni spazio, su cinque smalti (D-045 aggiornata). QA estesa.
+
+## 2026-10-22 — Eventi: arena arricchita in lotto dedicato
+
+- `arenaU` ora ha campo in sabbia, palco d'onore coperto con gonfaloni araldici e torri d'ingresso con stendardi. Nuovo spazio permanente `arenaLot` 18 × 14 U con 8 tende dei partecipanti, rastrelliere, armature, carri e merci scatter; l'arena esce dagli allestimenti dello spiazzo 14 × 10. QA aggiornata, verifica Canvas nel browser.
+
+## 2026-10-22 — Eventi: torneo, circo e sagra ampliati, catalogo leisure
+
+- Nuovo allestimento `tourney` (campo recintato, 4 tribune, 4 tende); circo con biglietterie, giocoliere, festoni e merci scatter; sagra con 16 tavoli. Nuovi modelli `circusBooth`, `propBunting`, `propFence`; gli allestimenti possono usare asset scatter (`sc:`). Catalogo illustrato in docs/events. QA aggiornata.
+
+## 2026-10-22 — Eventi: spiazzo polivalente 14 × 10
+
+- Lo spiazzo eventi passa da 6 × 10 a 14 × 10 U su richiesta esplicita (D-044); ridisegnati a grandezza piena i layout di giostra, circo, sagra, accampamento, teatro e arena. Registrate in DECISIONS anche le regole di livrea (D-045). QA `events3d-regression` aggiornata (tutti gli allestimenti nel 14 × 10, nessuno nel 6 × 10).
+
+## 2026-10-22 — Eventi: modelli 3D di podio, palchi e spiazzo polivalente
+
+- Su `events` aggiunti catalogo Blender (`tools/blender/build_events.py`, `src/assets/event-models.js`), modulo `src/settlement-events3d.js`, agganci nei renderer 2.5D e WebGL, QA `events3d-regression` e relativa Action.
+- [docs/events/README.md](../events/README.md) descrive il contratto `eventVenue`, gli allestimenti e le regole di livrea; STATUS e BACKLOG distinguono i modelli presenti dal gameplay ancora da fare.
+- ROADMAP e DECISIONS invariati: le taglie dello spiazzo oltre 6 × 10 restano una proposta (EV-P3)
+
 ## 2026-10-28 — Cutaway di chiesa e locanda (branch `feature/civic-cutaway`)
 
 - La chiesa o la locanda selezionata si apre in sezione con arredi; il contorno di selezione segue l'impronta a terra; mura ed edifici non si piazzano più dentro le foreste o sotto le chiome. Allineato a `main` `5ddefa6`. Stato e prove in [STATUS](STATUS.md#cutaway-civico-e-contorno-di-selezione-branch-featurecivic-cutaway-23102026).
@@ -51,8 +118,9 @@
 
 - Il Lab diventa il motore di audit: `ConquerAssetStage` cattura ogni fortificazione negli stati di cantiere, danno e cutaway con il render del gioco; `ConquerAssetAudit` controlla tutti gli asset, confronta con la baseline revisionata e gestisce le deroghe; `qa/asset-audit.mjs` produce report e fogli provini anche in CI.
 - `/lab` apre il Lab direttamente; la sandbox `?assetlab=1` non avvia la simulazione e usa un mondo fisso.
-- Nuova procedura [ASSET-LAB-AUDIT](../ASSET-LAB-AUDIT.md) e regola in `AGENTS.md`. Riscontri del primo audit registrati nel BACKLOG (cantiere non progressivo, danno al portone, legno con SwiftShader). DECISIONS: D-LAB-02. ROADMAP invariata.
-## 2026-10-23 — Pulizia Git verificata e finalizzazione
+- Nuova procedura [ASSET-LAB-AUDIT](../ASSET-LAB-AUDIT.md) e regola in `AGENTS.md`. Riscontri del primo audit registrati nel BACKLOG (cantiere non progressivo, danno al portone, legno con SwiftShader). DECISIONS: D-LAB-02. ROADMAP invariata
+
+2026-10-23 — Pulizia Git verificata e finalizzazione
 
 - Workflow [#39982707805](https://github.com/erykwest/CONQUER/actions/runs/39982707805) completato **SUCCESS** e otto branch non più presenti nell'elenco remoto.
 - Aggiornato lo stesso workflow per eliminare anche la branch della prima PR di manutenzione #84 e **autocancellare** la propria branch sorgente solo dopo controllo GitHub PR merged e confronto SHA, evitando di lasciare branch tecniche aggiuntive. Nessun nuovo gameplay o cambiamento di scope; ROADMAP/DECISIONS invariati.
@@ -179,8 +247,9 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 - Reso vincolante il divieto di sovrapporre un terrazzamento murato a un altro; aggiunto magnete bidirezionale fra bordo del terrazzamento e faccia del muro, compensando metà dello spessore.
 - Integrata la quota modificata nel contratto comune del terreno, nel rendering Canvas e nella mesh WebGL2, con persistenza dentro `State.relief` e invalidazione solo al commit.
 - Verifica locale: intera batteria `qa/*.cjs` PASS, 7 controlli Terraforming, sintassi JS e whitespace PASS; prova Chromium via HTTP di ghost, rifiuto sovrapposizione, reload e muro a filo PASS.
-- Stato distribuzione: branch soltanto; `main`, PR e deploy non modificati.
-## 2026-10-19 — clay: palette DEV Stone/Clay
+- Stato distribuzione: branch soltanto; `main`, PR e deploy non modificati
+
+2026-10-19 — clay: palette DEV Stone/Clay
 
 - Aggiunto selettore globale DEV con visualizzazione alternativa mattone/tegola e piani terra delle case L2–L4, colori condivisi tra Canvas e WebGL2, preference locale e invalidazione della scena; nessun cambiamento economico o all'integrità.
 - Aggiunta regressione e workflow GitHub Actions dedicata alla branch `clay`, preservando la suite `Civil`; [CI 39271126852](https://github.com/erykwest/CONQUER/actions/runs/39271126852) **PASS** sulla HEAD `bbe5a27`. Corretto il mock degli annessi civili nella QA industriale, senza alterare il runtime.
@@ -266,8 +335,9 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 
 ## Modello per le prossime righe
 
-```md
-## YYYY-MM-DD — [evento]
+```m
+
+YYYY-MM-DD — [evento]
 - Roadmap: Mx → My (motivo).
 - Stato: ID, branch, commit e QA [PASS/FAIL/NON ESEGUITA].
 - Decisioni: D-xxx / O-xxx risolto (link).

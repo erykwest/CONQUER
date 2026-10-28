@@ -64,7 +64,7 @@ canvas.addEventListener('pointerdown',e=>{
     State.draft={mode:'orient',center:q,angle,roadAxis:road?road.axis:null,preview:makePlacementPreview(q,angle)};
     status(road?'Gate magnetized to the road — move cursor to choose the outer front, click to confirm':'Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
-  if(State.tool.kind==='civic'||State.tool.kind==='industry'){
+  if(State.tool.kind==='civic'||State.tool.kind==='industry'||State.tool.kind==='event'){
     // Two-click oriented placement shared by all point buildings:
     // first click fixes the centre, pointer movement rotates the ghost,
     // second click commits the final angle.
@@ -457,6 +457,13 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    setTool({kind:'industry',industry:type,
      placementSpec:candidate,
      label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
+ };
+ // Event venues (settlement-events3d.js): podium, stage, festival ground, arena lot.
+ for(const b of document.querySelectorAll('[data-event-venue]'))b.onclick=()=>{
+   const E=window.ConquerEvents3D;if(!E)return;
+   const candidate=E.make(b.dataset.eventVenue);
+   setTool({kind:'event',venue:candidate.venue,placementSpec:candidate,
+     label:E.label(candidate)+' · '+(E.buildDays(candidate)?E.buildDays(candidate)+'d · ':'')+costText(E.cost(candidate)),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{

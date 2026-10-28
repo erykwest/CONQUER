@@ -98,6 +98,25 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 - **APERTO:** QA browser interattiva, prestazioni picchi GPU e visual QA [#18](https://github.com/erykwest/CONQUER/pull/18); ledger unico/agricoltura; matrimonio danni→accessibilità→assedio/blocco/resa; filiera metallo; sistema feudale completo.
 - La presenza di un modulo o di un check non trasforma le righe S-xx in **FATTO**: valutare la sequenza di combattimento completa contro i criteri di accettazione.
 
+## Eventi — spazi e allestimenti (branch `events`, 22/10/2026)
+
+**MODELLI 3D PRESENTI SU `events`, GAMEPLAY NON IMPLEMENTATO.** Contratto in [docs/events/README.md](../events/README.md).
+
+| ID | Requisito | Stato | Dipendenze |
+|---|---|---|---|
+| EV-3D | Modelli e rendering di podio, palco (players / herald), spiazzo 14 × 10 con allestimenti giostra / torneo / circo / sagra (+ accampamento, teatro, arena) | CODICE + QA locale | `settlement-events3d.js`, renderer |
+| EV-P0 | Registro spazi, posizionamento dal Builder, riserva del terreno senza cantiere, spostamento a evento inattivo | Builder, piazzamento, riserva e salvataggio FATTI; spostamento libero a evento inattivo DA FARE (oggi demolisci e ripiazza) | placement, Builder, save/load |
+| EV-P1 | Calendario e ciclo `planned → preparing → active → clearing → idle`, `progress` durante montaggio e smontaggio | Avvio / chiusura manuale e ciclo sull'orologio FATTI; calendario programmato (`planned`) e costi/effetti economici DA FARE | orologio di gioco |
+| EV-P2 | Pubblico e artisti tramite routine esistenti (punti `seats`, `performers`, `speaker` nei meta dei modelli) | DA FARE | popolazione, navigazione |
+| EV-P3 | Taglia dello spiazzo: 14 × 10 U (D-044); eventuali taglie multiple | 14 × 10 DECISO, taglie multiple PROPOSTE | decisione di design |
+| EV-P6 | Tende non allineate (±40°, 75%; scatter 200%; senza collisioni né uscite dal lotto) e scatter/attrezzature disordinati e colori unici per spazio | CODICE + QA locale | `settlement-events3d.js` |
+| EV-A1 | Animazioni ambientali: bandiere, festoni e stendardi al vento | CODICE + QA locale | strato dinamico, meteo |
+| EV-A2 | Animazioni di persone: tutti gli spazi e allestimenti FATTI su slot e registro occupanti allineati a CANS (sorgente provvisoria); cavalli della giostra bardati | IN CORSO | `settlement-events-people.js` |
+| EV-A3 | Occlusione del pubblico: balaustre, drappi, schienali e pareti dell'arena sopra le figure FATTO; figure sotto gli edifici di altre strutture davanti allo spazio DA FARE | IN CORSO | `settlement-events-people.js`, overlay popolazione |
+| EV-C1 | Adapter CANS: occupanti reali (residenti) al posto della sorgente provvisoria, prenotazione, arrivo e uscita dagli accessi | DA FARE, dipende dallo skeleton CANS | branch `cans` |
+| EV-P5 | Arena a U arricchita e lotto dedicato `arenaLot` 18 × 14 | CODICE + QA locale; posizionamento da Builder DA FARE | design, placement |
+| EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |
+
 ## Portoni — accessori integrati su main con PR #76 (23/10/2026)
 
 **CODICE SU MAIN**, merge [#76](https://github.com/erykwest/CONQUER/pull/76), con nuovo modulo `ConquerGates`. QA sulla HEAD `a504ea65`: workflow routing, builder, camp, work animation, earthworks, context sync **PASS**. Restano GATE-05/GATE-07 e verifiche di stati danneggiati segnalate in #82. Prove e limiti originari in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026).
