@@ -88,6 +88,8 @@ body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap)}
 /* stats (compact facts) */
 #ui2 .u2-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
 #ui2 .u2-stats-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+#ui2 .u2-stats-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+#ui2 .u2-stats-4 .u2-stat b{font-size:13px}
 #ui2 .u2-stat{display:flex;flex-direction:column;gap:1px;min-width:0;padding:5px 7px;border-radius:6px;background:var(--u2-chip);cursor:default}
 #ui2 .u2-stat span{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--u2-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #ui2 .u2-stat b{font-size:14px;font-variant-numeric:tabular-nums;color:var(--u2-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

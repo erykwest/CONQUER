@@ -66,6 +66,24 @@
 - Su `events` aggiunti catalogo Blender (`tools/blender/build_events.py`, `src/assets/event-models.js`), modulo `src/settlement-events3d.js`, agganci nei renderer 2.5D e WebGL, QA `events3d-regression` e relativa Action.
 - [docs/events/README.md](../events/README.md) descrive il contratto `eventVenue`, gli allestimenti e le regole di livrea; STATUS e BACKLOG distinguono i modelli presenti dal gameplay ancora da fare.
 - ROADMAP e DECISIONS invariati: le taglie dello spiazzo oltre 6 × 10 restano una proposta (EV-P3)
+
+## 2026-10-28 — Cutaway di chiesa e locanda (branch `feature/civic-cutaway`)
+
+- La chiesa o la locanda selezionata si apre in sezione con arredi; il contorno di selezione segue l'impronta a terra; mura ed edifici non si piazzano più dentro le foreste o sotto le chiome. Allineato a `main` `5ddefa6`. Stato e prove in [STATUS](STATUS.md#cutaway-civico-e-contorno-di-selezione-branch-featurecivic-cutaway-23102026).
+- ROADMAP e DECISIONS invariate: estende il cutaway esistente agli edifici civici, nessun nuovo contratto.
+
+## 2026-10-26 — Mesh: niente più facce bicolori; export PNG 512 dal Lab
+
+- `ConquerMesh3D.shadeFactor` riconosce le facce superiori da `|nz|`. Gli export di Blender non hanno un ordine dei vertici coerente, quindi metà dei triangoli di uno stesso tetto (taverna, birrificio, loggia…) risultava scura (0,5). Ora il tono è uniforme in Canvas 2D, WebGL e Lab. Audit del Lab: 465 render, 0 errori, 128 cambiati; baseline aggiornata dopo la revisione.
+- Il Lab disegna i modelli con un depth buffer software (2× supersample), come la WebGL del gioco. Il painter 2.5D ordina per triangolo e tagliava i telai a graticcio e le finestre quasi complanari ai muri, quindi mostrava difetti che in WebGL non ci sono; restano solo nel fallback Canvas 2D del gioco. Revisione a 512 di tutti i 109 modelli; audit: 0 errori, baseline aggiornata.
+- Asset Lab: occupazione forzata («Occupazione»: no / occlusione corretta / come nel gioco), con popolani su terreno, pavimenti e portici, per verificare l'occlusione delle figure.
+- Asset Lab: pulsante «Esporta PNG 512», che esporta l'anteprima corrente (stato e rotazione) in 512 × 512, e la funzione `ConquerAssetCatalog.exportImage`.
+
+## 2026-10-28 — UI v2: modalità Difendi (branch `feature/ui-defend`)
+
+- Quarta fase della UI v2 opt-in (`?ui=2`): modalità Difendi con rail e scheda, stato del combattimento letto da `ConquerCombat.uiState()`. Registrate anche le fasi 1–3 già su `main` (`5ddefa6`) che non avevano voce nella piramide. Stato e prove in [STATUS](STATUS.md#ui-v2-isole--modalità-difendi-branch-featureui-defend-26102026), fasi aperte nel [BACKLOG](BACKLOG.md#ux--ui-v2-isole-opt-in-ui2-26102026).
+- ROADMAP e DECISIONS invariate: la UI v2 resta opt-in, nessun contratto di simulazione toccato.
+
 ## 2026-10-23 — Fix fondazione strade, DEV e fallback WebGL nel branch
 
 - Riallineata `fix/main-founding-dev-webgl-20261023` a main `bc82dbe`, conservando gli aggiornamenti Lab e manutenzione.

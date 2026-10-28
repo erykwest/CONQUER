@@ -374,7 +374,12 @@ function ensureStaticSceneCaches(){
   const ms=performance.now()-t0;
   window.__conquerAnalytics?.measure('CACHE_STAGE',ms,{layer:name,remaining:dirty.length-1});
 }
+let lastCivicCutawayId=null;
 function draw(){
+  // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
+  // panel's close button deselect without invalidating it.
+  const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
+  if(civicCut!==lastCivicCutawayId){lastCivicCutawayId=civicCut;invalidateSceneCache('base')}
   const r=wrap.getBoundingClientRect();
   const phaseStart=performance.now(),phaseStats={};
   let phaseAt=phaseStart;

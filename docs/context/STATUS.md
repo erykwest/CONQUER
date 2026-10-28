@@ -1,5 +1,18 @@
 # Livello 2 — Stato tecnico e prove
 
+## Cutaway civico e contorno di selezione (branch `feature/civic-cutaway`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** chiesa o locanda selezionata mostrata in sezione: piano di taglio rivolto alla camera che taglia il guscio Blender a davanzale, toglie tetti e gronde; arredi (panche, altare, fonte, pulpito per la chiesa; tavoli, bancone, botti, focolari per la locanda). In WebGL l'edificio selezionato ha un buffer `civicCutaway` ricostruito a ogni quarto di giro; Esc invalida entrambi i renderer (`src/settlement-civic3d.js`, `settlement-world3d.js`, `settlement-castle.js`, `settlement-render.js`).
+- **Builder:** il contorno di selezione disegna solo l'impronta unita a h0; mura, palizzate e sezioni costruite non si piazzano dentro le foreste; ogni edificio controlla anche le chiome degli alberi realmente disegnati (`settlement-placement.js`).
+- **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 73/77 `qa/*.cjs` PASS (incluse `civic3d`, `builder-placement`, `organic-forest`); i 4 FAIL sono le prove di performance che richiedono Playwright, assente in questo checkout. Audit del Lab (`qa/asset-audit.mjs`, Chrome locale): 465 render, 0 falliti, firme identiche a quelle di `main` sullo stesso browser (il cutaway civico appare solo in partita con l'edificio selezionato); baseline invariata. **Non eseguite:** verifica visiva del cutaway in partita su entrambi i renderer; CI della PR.
+
+## UI v2 «Isole» — modalità Difendi (branch `feature/ui-defend`, 26/10/2026)
+
+- **Su `main` (`5ddefa6`, squash di `feature/ui-shell`):** UI v2 opt-in con `?ui=2`: `src/ui/game-api.js` (`window.ConquerGame`, comandi + letture di stato), `src/ui/shell.js` (Preact+htm vendorizzato, nessun build), `src/ui/i18n-it.js` (tutte le stringhe in italiano), `src/ui/theme.css`; modalità Costruisci e Gestisci con rail e scheda ispettore; `src/settlement-structure-commands.js` per le regole sulla struttura selezionata. La UI legacy resta il default.
+- **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
+- **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
+- **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
+
 ## Fix main: strade, DEV e WebGL (23/10/2026, branch di fix)
 
 - **IMPLEMENTATI NEL BRANCH** `fix/main-founding-dev-webgl-20261023`, riallineato alla main `bc82dbe` includendo integralmente l'audit Lab #82. [Cause, correzioni e prove](../main-fixes-diagnosis-2026-10-23.md). Non ancora integrati in main.
@@ -26,6 +39,10 @@
 - **QA BROWSER LEGACY:** `ui-combat-regression.mjs` fallisce sull'aspettativa del default DEV `daylightOverride === 'day'` (valore attuale `null`), anche sulla stessa main. Il test si arresta lì: le verifiche successive di quella suite non sono certificate da questa esecuzione; la QA assedio dedicata passa su entrambi i renderer.
 - **LIMITI:** questa integrazione non completa logistica/blocco/fame/resa né IA di scelta degli accessi (GATE-07). Merge definitivo autorizzato il 23/10, ancora da eseguire dopo la nuova CI; lo stato effettivo resta verificabile nella PR #61.
 - **AGGIORNAMENTO PRIMA DEL MERGE AUTORIZZATO:** integrati anche i quattro commit successivi della main fino a `bc82dbe` (#82 Asset Lab e manutenzione/documentazione). Conflitti soltanto in STATUS/BACKLOG/CHANGELOG, risolti mantenendo entrambe le cronologie; tutti i file runtime di questa main, salvo le regole assedio della PR, restano identici. CI precedente su `92be424` verde (68/68 + browser gameplay); nuova CI da verificare sulla HEAD aggiornata.
+
+## Mesh e Lab — facce bicolori corrette, export PNG 512 (branch `fix/lab-export-normals`, 26/10/2026)
+
+- Lo shading delle mesh Blender non dipende più dall'ordine dei vertici: le facce superiori si riconoscono da `|nz|`. Il Lab ha il pulsante «Esporta PNG 512», disegna i modelli con depth buffer (come la WebGL) e ha l'occupazione forzata per verificare l'occlusione dei popolani. Audit eseguito localmente: 0 errori, 128 render cambiati e rivisti; baseline aggiornata. CI da verificare dopo il push.
 
 ## Asset Lab — motore di audit visivo, stati delle fortificazioni, accesso `/lab` (branch `feat/asset-lab-audit` da `main` `518e830`, 23/10/2026)
 
