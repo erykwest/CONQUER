@@ -396,5 +396,5 @@
     render(true);
   }
   window.ConquerEconomy=Object.freeze({GOODS,KIND,weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
-    setShare,setTarget,setExternalDemand,transfer,snapshot,population});
+    setShare,setTarget,setExternalDemand,transfer,assetValue,snapshot,population});
 })();
