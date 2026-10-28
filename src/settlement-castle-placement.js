@@ -23,6 +23,29 @@ function makePlacementPreview(q,angle=0){
   }
   return null;
 }
+// Road magnet for gates: the centre lands on the nearest road centreline and the passage
+// turns along the road, so the gate sits over it without cutting the way.
+function gateRoadSnap(p){
+  const radius=Math.max(1.2,linearMagnetRadius());let best=null;
+  for(const r of roadList(false)){
+    if(!r.a||!r.b||dist(r.a,r.b)<.05)continue;
+    const q=closestPointOnSegment(p,r.a,r.b),d=dist(p,q);
+    if(d<=radius&&(!best||d<best.d))best={d,point:q,road:r};
+  }
+  if(!best)return null;
+  const r=best.road;
+  return{point:{x:best.point.x,y:best.point.y},axis:snapStructureAngle(Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)),roadId:r.id};
+}
+// Orientation while the second click is pending: a locked angle wins; a road-snapped gate
+// keeps its passage on the road and only chooses which mouth faces out.
+function orientedDraftAngle(p){
+  const d=State.draft;
+  if(Number.isFinite(d?.lockedAngle))return d.lockedAngle;
+  const free=placementAngle(d.center,p);
+  if(!Number.isFinite(d?.roadAxis))return free;
+  const off=x=>Math.abs(Math.atan2(Math.sin(free-x),Math.cos(free-x)));
+  return snapStructureAngle(off(d.roadAxis)<=off(d.roadAxis+Math.PI)?d.roadAxis:d.roadAxis+Math.PI);
+}
 function commitOrientedPlacement(center,angle){
   const spec=orientedToolSpec();if(!spec)return false;
   const snap=spec.type==='tower'?{
@@ -77,17 +100,19 @@ function linearEndpointSnap(p,type,radius=linearMagnetRadius()){
 }
 // Free wall/palisade ends you can continue from, drawn on the wall top while the
 // tool is active; the one under the pointer lights up (same look as moat magnets).
+// With the road tool the magnets are the two ends of every bridge, at deck level.
 function drawLinearMagnets(){
   const type=State.tool?.kind==='linear'?State.tool.linear:null;
-  if(!['wall','palisade'].includes(type))return;
-  const hover=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,shown=new Set();
+  if(!['wall','palisade','road'].includes(type))return;
+  const road=type==='road',linearHover=State.tool.linearHover;
+  const hover=(road?linearHover?.bridgeEnd:linearHover?.endpoint)?linearHover.point:null,shown=new Set();
   ctx.save();
   for(const s of State.structures){
-    if(s.type!==type||!s.a||!s.b)continue;
+    if(s.type!==(road?'bridge':type)||!s.a||!s.b)continue;
     for(const end of ['a','b']){
-      if(end==='a'?s.aSnap:s.bSnap)continue;
+      if(!road&&(end==='a'?s.aSnap:s.bSnap))continue;
       const q=s[end],key=q.x.toFixed(3)+','+q.y.toFixed(3);if(shown.has(key))continue;shown.add(key);
-      const v=w2s(q,structureHeight(s)),active=hover&&dist(q,hover)<.015;
+      const v=w2s(q,road?.09:structureHeight(s)),active=hover&&dist(q,hover)<.015;
       ctx.beginPath();ctx.arc(v.x,v.y,active?7:4,0,Math.PI*2);
       ctx.fillStyle=active?'#8dffbd':'#f3ce84';ctx.fill();
       ctx.lineWidth=active?2.5:1.5;ctx.strokeStyle='#314938';ctx.stroke();
@@ -609,4 +634,4 @@ function normalizeFunctions(s){
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
+function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}

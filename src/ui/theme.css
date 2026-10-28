@@ -1,0 +1,169 @@
+/* CONQUER interface v2 ("Isole"): wood and gold, minimal symbols, compact rows.
+   Explanations live in the hover/focus tooltip (.u2-tip), not inside the panels. Active only with body.ui2. */
+:root{
+  --u2-panel:rgba(38,26,17,.95);--u2-sunken:#1c130d;--u2-chip:#31221a;--u2-chip-hi:#47321f;
+  --u2-line:#4f3a22;--u2-line-gold:#86663a;--u2-gold:#e3b45c;--u2-gold-fill:#c3933f;--u2-ink:#1c140e;
+  --u2-text:#efe4cf;--u2-strong:#f7eddb;--u2-muted:#a8977c;--u2-soft:#cdbb9b;--u2-good:#9cc28a;--u2-bad:#e6a28f;
+  --u2-radius:9px;--u2-gap:14px;--u2-top:68px;--u2-row:28px;--u2-mini:262px;
+  --u2-display:'Cormorant SC',Georgia,serif;--u2-body:'Alegreya Sans','Segoe UI',system-ui,sans-serif;
+}
+
+/* Legacy chrome replaced by the tablets (kept in the DOM: handlers stay bound). */
+body.ui2>header,body.ui2 #builder,body.ui2 #timePanel,body.ui2 #status,body.ui2 #saveState,body.ui2 #functionPanel{display:none!important}
+body.ui2 #policy:not(.u2-hosted){display:none!important}
+body.ui2:not(.ui2-dev) #devTools{display:none!important}
+body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap)}
+
+#ui2{position:absolute;inset:0;z-index:10;pointer-events:none;font-family:var(--u2-body);font-size:14px;line-height:1.25;color:var(--u2-text)}
+#ui2 button,#ui2 select,#ui2 input{font:inherit;color:inherit}
+#ui2 button{cursor:pointer}
+#ui2 button:focus-visible,#ui2 [tabindex]:focus-visible,#ui2 select:focus-visible,#ui2 input:focus-visible{outline:2px solid var(--u2-gold);outline-offset:1px}
+#ui2 .u2-tablet{position:absolute;pointer-events:auto;background:var(--u2-panel);border:1px solid var(--u2-line-gold);border-radius:var(--u2-radius);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+#ui2 .u2-icon{display:block}
+
+/* ---- tooltip ---- */
+#ui2 .u2-tip{position:absolute;z-index:40;max-width:260px;padding:7px 10px;border-radius:7px;background:#f0dfb8;color:var(--u2-ink);box-shadow:0 6px 16px rgba(0,0,0,.4);pointer-events:none;display:flex;flex-direction:column;gap:2px;font-size:13px}
+#ui2 .u2-tip b{font-weight:700}
+#ui2 .u2-tip span{font-size:12px;line-height:1.35;color:#4a3826}
+#ui2 .u2-tip-left{transform:translate(-100%,-50%)}
+#ui2 .u2-tip-right{transform:translate(0,-50%)}
+#ui2 .u2-tip-top{transform:translate(-50%,-100%)}
+
+/* ---- segmented control ---- */
+#ui2 .u2-seg{display:flex;gap:2px;padding:2px;background:var(--u2-sunken);border-radius:6px}
+#ui2 .u2-seg button{flex:1 1 0;min-width:0;height:var(--u2-row);padding:0 6px;border:0;border-radius:4px;background:transparent;color:var(--u2-soft);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ui2 .u2-seg button:hover:not(:disabled){color:var(--u2-strong);background:var(--u2-chip)}
+#ui2 .u2-seg button.on{background:var(--u2-chip-hi);color:var(--u2-strong);font-weight:700;box-shadow:inset 0 0 0 1px var(--u2-gold)}
+#ui2 .u2-seg button:disabled{opacity:.35;cursor:default}
+#ui2 .u2-seg.u2-wrap{flex-wrap:wrap}
+#ui2 .u2-seg.u2-wrap button{flex:1 1 30%}
+#ui2 .u2-seg-lg button{flex:0 0 auto;height:30px;padding:0 11px;font-size:14px;font-weight:700}
+#ui2 .u2-seg-lg button.on{background:var(--u2-gold-fill);color:var(--u2-ink);box-shadow:none}
+
+#ui2 .u2-icon-btn{width:32px;height:32px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:0;border-radius:6px;background:var(--u2-chip);color:#d9c39a}
+#ui2 .u2-icon-btn:hover{background:var(--u2-chip-hi);color:var(--u2-strong)}
+#ui2 .u2-icon-btn.on{background:var(--u2-gold-fill);color:var(--u2-ink)}
+#ui2 .u2-icon-btn.u2-gold{border:1px solid var(--u2-line-gold);background:#3b2a1c;color:var(--u2-gold)}
+#ui2 .u2-icon-btn.u2-danger{background:transparent;border:1px solid #6e3527;color:var(--u2-bad)}
+#ui2 .u2-icon-btn.u2-danger:hover{background:#3a1d16}
+
+/* ---- top bars ---- */
+#ui2 .u2-modebar{left:var(--u2-gap);top:var(--u2-gap);display:flex;align-items:center;gap:12px;padding:5px 6px 5px 14px}
+#ui2 .u2-brand{font-family:var(--u2-display);font-weight:700;font-size:21px;letter-spacing:.08em;color:var(--u2-gold);text-transform:uppercase}
+#ui2 .u2-resbar{right:var(--u2-gap);top:var(--u2-gap);display:flex;align-items:center;gap:4px;padding:5px}
+#ui2 .u2-resbar ul{display:flex;gap:2px;margin:0;padding:0;list-style:none}
+#ui2 .u2-resbar li{display:flex;align-items:baseline;gap:5px;height:30px;padding:0 9px;align-items:center;border-radius:5px;background:var(--u2-chip);cursor:default}
+#ui2 .u2-resbar li span{font-size:11px;color:var(--u2-muted)}
+#ui2 .u2-resbar li b{font-variant-numeric:tabular-nums;color:var(--u2-strong)}
+
+/* ---- left rail ---- */
+#ui2 .u2-rail{left:var(--u2-gap);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:3px;padding:5px}
+#ui2 .u2-tool{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:7px;background:transparent;color:#d9c39a}
+#ui2 .u2-tool:hover{background:var(--u2-chip);color:var(--u2-strong)}
+#ui2 .u2-tool.on{background:var(--u2-gold-fill);border-color:var(--u2-gold);color:var(--u2-ink)}
+#ui2 .u2-sep{height:1px;margin:3px 6px;background:var(--u2-line)}
+
+/* ---- cards ---- */
+#ui2 .u2-card{right:var(--u2-gap);top:var(--u2-top);width:304px;max-height:calc(100% - var(--u2-top) - var(--u2-mini));display:flex;flex-direction:column;overflow:hidden}
+#ui2 .u2-card-wide{width:384px}
+#ui2 .u2-card header{display:flex;align-items:baseline;gap:8px;padding:9px 8px 7px 12px;border-bottom:1px solid var(--u2-line)}
+#ui2 .u2-card h2{margin:0;font-family:var(--u2-display);font-weight:700;font-size:19px;line-height:1.1;color:var(--u2-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ui2 .u2-sub{flex:1 1 auto;font-size:12px;color:var(--u2-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ui2 .u2-card header .u2-close{margin-left:auto}
+#ui2 .u2-close{width:24px;height:24px;flex:0 0 auto;border:0;border-radius:5px;background:transparent;color:var(--u2-muted);font-size:18px;line-height:1}
+#ui2 .u2-close:hover{background:var(--u2-chip);color:var(--u2-strong)}
+#ui2 .u2-body{flex:1 1 auto;min-height:0;overflow:auto;padding:8px 10px 10px 12px;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin;scrollbar-color:var(--u2-line) transparent}
+#ui2 .u2-card footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 6px 12px;border-top:1px solid var(--u2-line);background:rgba(0,0,0,.18)}
+
+/* label + control on one line */
+#ui2 .u2-row{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:center;gap:6px}
+#ui2 .u2-label{display:flex;align-items:center;gap:4px;min-width:0;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--u2-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ui2 .u2-label i{flex:0 0 auto;width:13px;height:13px;border-radius:50%;border:1px solid var(--u2-line-gold);font-style:normal;font-size:9px;line-height:11px;text-align:center;color:var(--u2-gold);text-transform:none}
+#ui2 .u2-label[data-tip]{cursor:help}
+#ui2 .u2-ctl{min-width:0}
+#ui2 .u2-hint{margin:2px 0;font-size:12px;color:var(--u2-muted)}
+#ui2 .u2-warn{margin:0;font-size:12px;color:var(--u2-bad)}
+#ui2 .u2-group{display:flex;flex-direction:column;gap:4px;padding-top:4px;border-top:1px solid var(--u2-line)}
+
+/* stats (compact facts) */
+#ui2 .u2-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+#ui2 .u2-stats-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+#ui2 .u2-stats-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+#ui2 .u2-stats-4 .u2-stat b{font-size:13px}
+#ui2 .u2-stat{display:flex;flex-direction:column;gap:1px;min-width:0;padding:5px 7px;border-radius:6px;background:var(--u2-chip);cursor:default}
+#ui2 .u2-stat span{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--u2-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ui2 .u2-stat b{font-size:14px;font-variant-numeric:tabular-nums;color:var(--u2-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ui2 .u2-stat .u2-bar{margin-top:3px}
+
+/* bars */
+#ui2 .u2-bar{height:6px;border-radius:3px;background:var(--u2-sunken);overflow:hidden}
+#ui2 .u2-bar i{display:block;height:100%;border-radius:3px;background:var(--u2-gold-fill)}
+#ui2 .u2-meter{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px;cursor:default}
+#ui2 .u2-meter small{font-size:11px;color:var(--u2-muted)}
+#ui2 .u2-bays{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px}
+
+/* rooms */
+#ui2 .u2-rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+#ui2 .u2-room{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px}
+#ui2 .u2-room span{font-size:11px;font-weight:700;color:var(--u2-gold)}
+#ui2 select,#ui2 input[type=number]{height:var(--u2-row);padding:0 6px;border:1px solid var(--u2-line);border-radius:5px;background:var(--u2-sunken);color:var(--u2-text);font-size:13px;min-width:0}
+
+/* cost tokens */
+#ui2 .u2-cost{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--u2-strong);cursor:default}
+#ui2 .u2-cost small{margin-right:3px;font-size:10px;text-transform:uppercase;color:var(--u2-muted)}
+
+/* tables (market, activities) */
+#ui2 .u2-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+#ui2 .u2-table th,#ui2 .u2-table td{height:30px;padding:0 4px;text-align:right;border-bottom:1px solid rgba(94,69,39,.55)}
+#ui2 .u2-table thead th{height:22px;font-size:10px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--u2-muted);cursor:help}
+#ui2 .u2-table tbody th{text-align:left;font-weight:700;color:var(--u2-strong);white-space:nowrap}
+#ui2 .u2-table select{width:60px;padding:0 2px}
+#ui2 .u2-table input[type=number]{width:52px;padding:0 4px;text-align:right}
+#ui2 .u2-dim{opacity:.5}
+#ui2 .u2-mini{min-width:26px;height:24px;padding:0 6px;border:1px solid var(--u2-line-gold);border-radius:5px;background:#3b2a1c;color:var(--u2-gold);font-size:12px;font-weight:700}
+#ui2 .u2-mini:disabled{opacity:.35;cursor:default}
+
+/* sliders, stores, log */
+#ui2 .u2-slider{display:grid;grid-template-columns:minmax(0,1fr) 38px;align-items:center;gap:6px}
+#ui2 .u2-slider input{width:100%;accent-color:var(--u2-gold-fill)}
+#ui2 .u2-slider b{text-align:right;font-variant-numeric:tabular-nums;color:var(--u2-strong)}
+#ui2 .u2-store{display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:8px}
+#ui2 .u2-store .u2-meter{grid-template-columns:minmax(0,1fr)}
+#ui2 .u2-store-add{display:flex;gap:3px}
+#ui2 .u2-log{margin:2px 0 0;padding-left:14px;font-size:11px;color:var(--u2-muted)}
+#ui2 .u2-primary{height:32px;border:1px solid var(--u2-gold-fill);border-radius:6px;background:#b5843a;color:var(--u2-ink);font-weight:700}
+
+/* ---- bottom ---- */
+#ui2 .u2-timebar{left:50%;bottom:var(--u2-gap);transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px}
+#ui2 .u2-date{display:flex;flex-direction:column;padding:0 10px;line-height:1.15;white-space:nowrap;cursor:default}
+#ui2 .u2-date b{font-weight:700}
+#ui2 .u2-date span{font-size:11px;color:var(--u2-muted)}
+#ui2 .u2-toast{position:absolute;left:var(--u2-gap);bottom:var(--u2-gap);width:min(320px,calc(50% - 250px));display:flex;flex-direction:column;gap:4px;pointer-events:none}
+#ui2 .u2-status{position:static;padding:6px 10px;border-color:var(--u2-line);font-size:12px;color:var(--u2-soft)}
+#ui2 .u2-saved{padding:0 10px;font-size:11px;color:var(--u2-good)}
+#ui2 .u2-saved.bad{color:var(--u2-bad)}
+
+/* Legacy panels hosted inside a tablet (Difendi, crossings): flatten their own chrome. */
+#ui2 .u2-hosted{position:static!important;display:block!important;width:auto!important;max-height:none!important;margin:0;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;color:var(--u2-text)}
+#ui2 .u2-hosted>h2:first-child{display:none}
+#ui2 .u2-legacy{font-size:12px}
+
+/* Minimap: bottom-right tablet; cards stop above it (or lower when it is collapsed). */
+body.ui2 #conquerMinimap{right:var(--u2-gap);bottom:var(--u2-gap);z-index:11;background:var(--u2-panel);border-color:var(--u2-line-gold);border-radius:var(--u2-radius)}
+body.ui2 #conquerMinimap .minimap-head{font-family:var(--u2-display);font-size:13px;letter-spacing:.08em;color:var(--u2-gold)}
+body.ui2:has(#conquerMinimap.collapsed) #ui2 .u2-card{max-height:calc(100% - var(--u2-top) - 70px)}
+body.ui2:not(:has(#conquerMinimap)) #ui2 .u2-card{max-height:calc(100% - var(--u2-top) - 70px)}
+
+/* Short windows: a smaller minimap leaves the cards more height. */
+@media(max-height:820px){
+  :root{--u2-mini:196px}
+  body.ui2 #conquerMinimap{width:160px}
+  body.ui2 #conquerMinimap canvas{width:100%!important;height:auto!important}
+}
+/* Narrow windows: resources wrap onto two rows instead of losing their labels. */
+@media(max-width:1040px){
+  :root{--u2-top:104px}
+  #ui2 .u2-resbar{max-width:calc(100% - 420px)}
+  #ui2 .u2-resbar ul{flex-wrap:wrap;justify-content:flex-end}
+  #ui2 .u2-resbar li{height:26px;padding:0 7px}
+}

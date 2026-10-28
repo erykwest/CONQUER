@@ -403,7 +403,7 @@ function drawHouseTurretRoof(s,turret,selected=false){
   for(const f of faces)pathPolygon(f.poly,State.season==='winter'?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#303943':'#394550'),State.season==='winter'?(selected?'#f4b76f':WINTER_SNOW_STROKE):stroke,.75);
 }
 function drawHouseTurret(s,turret,selected=false){
-  const stroke=selected?'#f4b76f':'#918d86',breakZ=1.02;
+  const stroke=selected?'#f4b76f':'#918d86',breakZ=turret.floorZ;
   // L4 turret follows the elite-house language: grey lower floor, warm cream upper floors.
   extrudePolygonAt(turret.points,0,breakZ,{
     top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null
@@ -411,13 +411,37 @@ function drawHouseTurret(s,turret,selected=false){
   extrudePolygonAt(turret.points,breakZ,turret.bodyH,{
     top:'#d6bf82',sideA:'#c8ae70',sideB:'#e0ca91',stroke
   });
+  // Timber frame and windows (houseTurretFacade), only on the turret's camera-facing side.
+  const plan=houseTurretFacade(turret),facing=(p,n)=>viewDepthPoint({x:p.x+n.x*.1,y:p.y+n.y*.1})>viewDepthPoint(p);
+  ctx.save();ctx.strokeStyle='#3b2a1e';ctx.lineCap='square';ctx.lineWidth=Math.max(.8,HOUSE_TIMBER_W*U*State.view.scale);
+  ctx.beginPath();
+  for(const b of plan.beams){
+    if(!facing({x:(b.a.p.x+b.b.p.x)/2,y:(b.a.p.y+b.b.p.y)/2},b.normal))continue;
+    const a=w2s(b.a.p,b.a.z),c=w2s(b.b.p,b.b.z);ctx.moveTo(a.x,a.y);ctx.lineTo(c.x,c.y);
+  }
+  ctx.stroke();ctx.restore();
+  for(const w of plan.windows)if(facing(w.p,w.normal))drawHouseFacadePane(w);
   drawHouseTurretRoof(s,turret,selected);
-
-  // Small high window so the tower reads immediately as inhabited rather than defensive.
-  const p=w2s(turret.center,breakZ+(turret.bodyH-breakZ)*.55);
-  const ww=1.75*State.view.scale,wh=2.8*State.view.scale;
-  ctx.save();ctx.fillStyle='rgba(31,29,28,.86)';ctx.fillRect(p.x-ww/2,p.y-wh/2,ww,wh);
-  ctx.strokeStyle='rgba(190,178,155,.42)';ctx.lineWidth=.7;ctx.strokeRect(p.x-ww/2,p.y-wh/2,ww,wh);ctx.restore();
+}
+// A small dark window pane {p,z,tangent,hw,hh} in world space (turrets, dormers).
+function drawHouseFacadePane(w){
+  const t=w.tangent,l={x:w.p.x-t.x*w.hw,y:w.p.y-t.y*w.hw},r={x:w.p.x+t.x*w.hw,y:w.p.y+t.y*w.hw};
+  pathPolygon([w2s(l,w.z-w.hh),w2s(r,w.z-w.hh),w2s(r,w.z+w.hh),w2s(l,w.z+w.hh)],'rgba(31,29,28,.86)','rgba(190,178,155,.42)',.7);
+}
+// L4 roof dormers of one part (urbanHouseDormers), on the slope facing the camera.
+function drawHouseDormers(dormers,part){
+  const winter=State.season==='winter';
+  const colors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
+    roofA:winter?WINTER_SNOW_A:'#303237',roofB:winter?WINTER_SNOW_B:'#3a3d42'};
+  for(const d of dormers){
+    if(Math.abs(d.partCenter.x-part.center.x)>1e-6||Math.abs(d.partCenter.y-part.center.y)>1e-6)continue;
+    const n=d.normal;
+    if(viewDepthPoint({x:d.center.x+n.x*.1,y:d.center.y+n.y*.1})<=viewDepthPoint(d.center))continue;
+    const faces=d.faces.map(f=>{const screen=f.pts.map(v=>w2s(v.p,v.z));return{f,screen,depth:screen.reduce((a,p)=>a+p.y,0)/screen.length}});
+    faces.sort((a,b)=>a.depth-b.depth);
+    for(const {f,screen} of faces)pathPolygon(screen,colors[f.kind],f.kind.startsWith('roof')?'#55585e':'rgba(126,116,102,.55)',.6);
+    drawHouseFacadePane(d.window);
+  }
 }
 // Yard outbuildings of L3/L4 plots (urbanLotOutbuildings): timber storehouse with a gabled
 // shingle roof, or an open lean-to on posts whose high side backs onto the plot boundary.
@@ -462,14 +486,17 @@ function drawHouse(s){
       drawHouseRoofPart(s,part,wallH,part.ridgeH,'thatch',null);
     }
   }else{
-    const floorBreak=wallH*.50;
+    const floorBreak=houseFloorBreak(wallH);
     const creamTop='#d6bf82',creamA='#c8ae70',creamB='#e0ca91',creamGable='#d9c184';
+    const dormers=level===4?urbanHouseGeometry().find(e=>e.house.id===s.id)?.dormers||[]:[];
     for(const part of parts){
       if(part.kind==='outbuilding'){drawUrbanOutbuilding(s,part,selected);continue}
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
-      extrudePolygonAt(part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
+      // Recessed stone ground floor; the jettied upper floor overhangs it on the door side and opposite.
+      extrudePolygonAt(part.basePoints||part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
       extrudePolygonAt(part.points,floorBreak,wallH,{top:creamTop,sideA:creamA,sideB:creamB,stroke});
       drawHouseRoofPart(s,part,wallH,part.ridgeH,true,creamGable);
+      if(dormers.length)drawHouseDormers(dormers,part);
     }
   }
   if(!underConstruction(s))drawHouseChimneys(s);
@@ -499,7 +526,9 @@ function houseDoorInfo(house){
   const side=Number(house.doorSide)>=0?1:-1,ca=Math.cos(house.angle||0),sa=Math.sin(house.angle||0);
   const size=houseFootprintDimensions(house);
   const tangent={x:ca,y:sa},normal={x:-sa*side,y:ca*side},half=size.h/2;
-  const lateralSign=(peasantHash(house.id)&2)?1:-1;
+  // The door takes the half of the facade away from an L4 corner turret.
+  const turret=houseTurretInfo(house),hashSign=(peasantHash(house.id)&2)?1:-1;
+  const lateralSign=turret&&turret.sx===hashSign?-hashSign:hashSign;
   const lateralOffset=size.w*.24*lateralSign;
   // Extensions and L4 turrets may cover the original base-wall entrance.
   // Put the door on the outermost exposed footprint along its outward ray.
@@ -535,9 +564,11 @@ function drawHouseDoor(house){
   const d=houseDoorInfo(house),halfW=Math.min(.08,(Number(house.w)||1.5)*.0533);
   const visible=visibleFacadeEdges(house).some(e=>pointSegmentDistance(d.surface,e.a,e.b)<.08);
   if(!visible)return;
-  const l={x:d.surface.x-d.tangent.x*halfW,y:d.surface.y-d.tangent.y*halfW};
-  const r={x:d.surface.x+d.tangent.x*halfW,y:d.surface.y+d.tangent.y*halfW};
-  const poly=[w2s(l,.04),w2s(r,.04),w2s(r,.552),w2s(l,.552)];
+  // The door opens in the recessed ground floor, under the jetty.
+  const j=houseJetty(house),c={x:d.surface.x-d.normal.x*j,y:d.surface.y-d.normal.y*j};
+  const l={x:c.x-d.tangent.x*halfW,y:c.y-d.tangent.y*halfW};
+  const r={x:c.x+d.tangent.x*halfW,y:c.y+d.tangent.y*halfW};
+  const poly=[w2s(l,.04),w2s(r,.04),w2s(r,HOUSE_DOOR_TOP),w2s(l,HOUSE_DOOR_TOP)];
   pathPolygon(poly,'#39271e','rgba(170,139,96,.50)',.7);
 }
 function drawAutoStructure(s,preview=false){
@@ -546,8 +577,13 @@ function drawAutoStructure(s,preview=false){
     drawField(s);
   }else if(s.type==='road'){
     const a=w2s(s.a),b=w2s(s.b);ctx.strokeStyle='rgba(126,106,82,.70)';ctx.lineWidth=Math.max(2,s.width*U*State.view.scale*.72);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  }else if(s.type==='house')withStructureVisualMaterial(s,()=>drawHouse(s));
-  ctx.restore();if(underConstruction(s))drawConstructionProgress(s);
+  }else if(s.type==='house'){
+    // A house being built is assembled piece by piece (opaque) when the assembly is loaded.
+    if(!preview&&underConstruction(s)&&window.ConquerAssembly?.has(s)){ctx.globalAlpha=1;window.ConquerAssembly.draw(s)}
+    else withStructureVisualMaterial(s,()=>drawHouse(s));
+  }
+  ctx.restore();
+  if(underConstruction(s)){if(!preview)window.ConquerConstructionProps?.drawSite(s);drawConstructionProgress(s)}
 }
 function structureCenter(s){if(s.x!=null)return{x:s.x,y:s.y};if(s.a&&s.b)return{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};return{x:0,y:0}}
 

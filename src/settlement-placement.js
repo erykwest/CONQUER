@@ -55,6 +55,29 @@
       ['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.10)
     );
   }
+  // The forest outline only holds the trunks: canopies of edge trees overhang clearings
+  // and meadows by about 0.75U. Test the trees actually drawn against the footprint.
+  const TREE_CANOPY_CLEARANCE=.75;
+  function blockedByTrees(polys){
+    if(typeof forestTreeLayout!=='function')return false;
+    const pad=TREE_CANOPY_CLEARANCE*1.2;
+    for(const poly of polys){
+      const b=environmentPolygonBounds(poly);
+      for(const f of State.environment||[]){
+        if(f.type!=='forest'||!f.points?.length)continue;
+        const fb=environmentPolygonBounds(f.points);
+        if(fb.maxX<b.minX-pad||fb.minX>b.maxX+pad||fb.maxY<b.minY-pad||fb.minY>b.maxY+pad)continue;
+        for(const t of forestTreeLayout(f)){
+          const p=t.p;
+          if(p.x<b.minX-pad||p.x>b.maxX+pad||p.y<b.minY-pad||p.y>b.maxY+pad)continue;
+          if(pointInPolygon(p,poly))return true;
+          const r=TREE_CANOPY_CLEARANCE*(t.scale||1);
+          if(poly.some((a,i)=>pointSegmentDistance(p,a,poly[(i+1)%poly.length])<r))return true;
+        }
+      }
+    }
+    return false;
+  }
   function regularCollision(s,other,polys,options={}){
     if(s.type==='house'&&other.type==='road'&&other.accessFor===s.id)return false;
     // Castle pieces deliberately join walls/gates/towers at their sockets.
@@ -65,6 +88,8 @@
     if(['wall','built','palisade'].includes(s.type)&&['tower','gate','wall','built','palisade'].includes(other.type))return false;
     if(other.type==='road'){
       if(s.type==='market'||s.type==='plaza')return false; // public squares allow crossing roads.
+      if(s.type==='gate'&&roadUsesGatePassage(other,s))return false; // the road runs through the passage.
+      if(s.type==='bridge'&&roadMeetsBridgeEnd(other,s))return false; // the road leads onto the deck.
       return polys.some(poly=>roadTouchesPolygon(other,poly,.04));
     }
     if(s.type==='road'){
@@ -99,6 +124,10 @@
         }
       }else if(buildableTerrainElevationForStructure(s)==null){
         return invalid('Wall segment crosses incompatible terrain');
+      }else{
+        // Walls, palisades and built sections only checked the terrain: they ran through woods.
+        const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
+        if(samples(polys).some(inForest)||blockedByTrees(polys))return invalid('Wall segment crosses a forest');
       }
     }else{
       const foundation=isPlacementFoundationBuilding(s);
@@ -106,6 +135,7 @@
         return invalid('Structure needs a flat, stable terrace');
       for(const p of samples(polys))
         if(blockedNature(p,foundation))return invalid('Placement intersects forest, water, obstacle or slope');
+      if(blockedByTrees(polys))return invalid('Placement intersects forest trees');
     }
     // New manual buildings may replace auto-created houses, fields and roads.
     // Rotation of an existing auto house must still respect other auto buildings.

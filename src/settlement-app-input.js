@@ -14,8 +14,7 @@ canvas.addEventListener('pointerdown',e=>{
   // Once the centre is fixed, the second click only defines orientation.
   // It may be anywhere on screen; only the building centre must lie in the build area.
   if(State.draft?.mode==='orient'&&orientedToolSpec()){
-    const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
-    commitOrientedPlacement(State.draft.center,angle);return
+    commitOrientedPlacement(State.draft.center,orientedDraftAngle(p));return
   }
 
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
@@ -29,7 +28,7 @@ canvas.addEventListener('pointerdown',e=>{
       if(typeof springFlowerLayoutCache!=='undefined')springFlowerLayoutCache=null;
       markDirty(true,'all');
       State.draft=null;
-      status((ghost.mode==='walled'?'Walled terrace':'Terrain')+' applied · H '+ghost.targetZ.toFixed(1));
+      status((ghost.mode==='flat'?'Flat':ghost.mode==='walled'?'Walled terrace':'Sloped')+' applied · H '+ghost.targetZ.toFixed(0));
       draw();
     }
     return;
@@ -61,11 +60,11 @@ canvas.addEventListener('pointerdown',e=>{
     draw();return
   }
   if(State.tool.kind==='gate'){
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-    State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
-    status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
+    const road=gateRoadSnap(p),q=road?road.point:{x:snapGrid(p.x),y:snapGrid(p.y)},angle=road?road.axis:0;
+    State.draft={mode:'orient',center:q,angle,roadAxis:road?road.axis:null,preview:makePlacementPreview(q,angle)};
+    status(road?'Gate magnetized to the road — move cursor to choose the outer front, click to confirm':'Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
-  if(State.tool.kind==='civic'||State.tool.kind==='industry'){
+  if(State.tool.kind==='civic'||State.tool.kind==='industry'||State.tool.kind==='event'){
     // Two-click oriented placement shared by all point buildings:
     // first click fixes the centre, pointer movement rotates the ghost,
     // second click commits the final angle.
@@ -123,17 +122,25 @@ canvas.addEventListener('pointerdown',e=>{
     const mainRoad=State.tool.linear==='road',snapFn=mainRoad?mainRoadSnapAnchor:snapAnchor;
     if(!State.draft){
       const s=snapFn(p);
-      State.draft={a:s.point,aSnap:s.structureId||null,preview:null,previewSegments:null};
-      status(mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
+      State.draft={a:s.point,aSnap:s.structureId||null,aGatePort:s.gatePort||null,preview:null,previewSegments:null};
+      status(s.gatePort?'Main road: starts at the gate — choose point B':s.bridgeEnd?'Main road: starts at the bridge — choose point B':mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
       draw();
     }else{
       const e2=snapFn(p),spec=currentLinearSpec();
-      if(mainRoad){
+      if(mainRoad&&(State.draft.aGatePort||e2.gatePort)){
+        // A gate mouth is reached exactly: a free leg, then a straight approach into the passage.
+        const legs=manualRoadLegs(State.draft.a,e2.point,State.draft.aGatePort,e2.gatePort);
+        const bad=legs.find(l=>dist(l.a,l.b)<spec.min-.001||dist(l.a,l.b)>spec.max+.001);
+        const blocked=legs.map(l=>window.ConquerPlacement?.check({type:'road',manualMain:true,width:spec.width,...l})).find(v=>v&&!v.ok);
+        if(bad)status('Road to the gate: each leg must be '+spec.min+'–'+spec.max+'U');
+        else if(blocked)status('Road blocked: '+blocked.reason);
+        else if(legs.every(l=>addManualMainRoad(l.a,l.b))){State.draft=null;status('Main road joined to the gate — choose next segment')}
+      }else if(mainRoad){
         const n=normalizeLinear(State.draft.a,e2.point,spec,false);
         if(n&&n.length>=spec.min-.001){
           if(addManualMainRoad(n.a,n.b)){
             State.draft=null;
-            status('Main road added — choose next segment');
+            status(e2.bridgeEnd?'Main road joined to the bridge — choose next segment':'Main road added — choose next segment');
           }
         }else status('Segment too short');
       }else{
@@ -171,7 +178,7 @@ canvas.addEventListener('pointermove',e=>{
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};
     status(!ghost?.ok?'Terraforming blocked: '+(ghost?.reason||'invalid terrain'):
-      (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='walled'?'Walled terrace':'Terrain')+' · H '+ghost.targetZ.toFixed(1)+' — click to apply');
+      (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='flat'?'Flat subtraction':ghost.mode==='walled'?'Walled terrace':'Sloped')+' · H '+ghost.targetZ.toFixed(0)+' — click to apply');
     draw();return;
   }
   if(State.tool.kind==='crossing'){
@@ -192,23 +199,32 @@ canvas.addEventListener('pointermove',e=>{
       error||((snap?'⛓ Magnet · ':'')+type+' '+preview.length.toFixed(1)+'U · flat level banks'));
     draw();return;
   }
-  if(State.tool.kind==='linear'&&!State.draft&&['wall','palisade'].includes(State.tool.linear)){
-    // Light the wall-end magnet under the pointer before the first click too.
-    const hover=snapAnchor(p),was=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,now=hover.endpoint?hover.point:null;
+  if(State.tool.kind==='linear'&&!State.draft&&['wall','palisade','road'].includes(State.tool.linear)){
+    // Light the wall-end (or bridge-end, for roads) magnet under the pointer before the first click too.
+    const road=State.tool.linear==='road',hover=(road?mainRoadSnapAnchor:snapAnchor)(p),lit=s=>s?.endpoint||s?.bridgeEnd?s.point:null;
+    const was=lit(State.tool.linearHover),now=lit(hover);
     State.tool.linearHover=hover;
     if(!!was!==!!now||(was&&now&&dist(was,now)>1e-6))draw();
     return;
   }
   if(State.tool.kind==='linear'&&State.draft){
     const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec();
-    if(!mainRoad)State.tool.linearHover=snap;
+    State.tool.linearHover=snap;
+    if(mainRoad&&(State.draft.aGatePort||snap.gatePort)){
+      const legs=manualRoadLegs(State.draft.a,snap.point,State.draft.aGatePort,snap.gatePort);
+      State.draft.preview=null;State.draft.invalidPreview=null;
+      State.draft.previewSegments=legs.map(l=>({type:'road',manualMain:true,width:spec.width,...l,length:dist(l.a,l.b)}));
+      const blocked=State.draft.previewSegments.map(s=>window.ConquerPlacement?.check(s)).find(v=>v&&!v.ok);
+      status(blocked?'Road blocked: '+blocked.reason:'Road magnet on the gate — click to confirm');
+      draw();return;
+    }
     if(mainRoad){
       const n=normalizeLinear(State.draft.a,snap.point,spec,false);
       if(n){
         State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:true};
         State.draft.previewSegments=null;State.draft.invalidPreview=null;
         const verdict=window.ConquerPlacement?.check(State.draft.preview);
-        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`Main road: ${n.length.toFixed(2)}U — click to confirm`);
+        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`${snap.bridgeEnd?'⛓ Bridge magnet · ':''}Main road: ${n.length.toFixed(2)}U — click to confirm`);
         draw();
       }else{
         State.draft.preview=null;State.draft.invalidPreview={type:'road',a:State.draft.a,b:snap.point,width:spec.width};draw();
@@ -249,11 +265,11 @@ canvas.addEventListener('pointermove',e=>{
   const oriented=orientedToolSpec();
   if(oriented){
     if(State.draft?.mode==='orient'){
-      const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
+      const angle=orientedDraftAngle(p);
       State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
       const ghost=window.ConquerPlacement?.check({...State.draft.preview,parentTowerId:State.draft.parentTowerId||null,wallSnapId:State.draft.wallSnapId||null});
       let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
-      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:Number.isFinite(State.draft.roadAxis)?`Road magnet · front ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
       draw();return
     }
     if(State.tool.kind==='tower'){
@@ -269,10 +285,12 @@ canvas.addEventListener('pointermove',e=>{
       };
       if(snap.parentTowerId)status('Subtower socket');
     }else{
-      const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-      State.draft={mode:'hover',preview:makePlacementPreview(q,0)};
+      const road=State.tool.kind==='gate'?gateRoadSnap(p):null;
+      const q=road?road.point:{x:snapGrid(p.x),y:snapGrid(p.y)};
+      State.draft={mode:'hover',preview:makePlacementPreview(q,road?road.axis:0)};
       const ghost=window.ConquerPlacement?.check(State.draft.preview);
       if(ghost&&!ghost.ok)status('Placement blocked: '+ghost.reason);
+      else if(road)status('Road magnet — click to place the gate over the road');
     }
     draw();return
   }
@@ -357,10 +375,9 @@ document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',lin
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
   const radius=Number(document.querySelector('[data-terraform-radius].active')?.dataset.terraformRadius)||4;
   const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
-  const mode=b.dataset.terraform==='walled'?'walled':'terrain';
+  const mode=b.dataset.terraform==='walled'?'walled':b.dataset.terraform==='flat'?'flat':'terrain';
   const shape=document.querySelector('[data-terraform-shape].active')?.dataset.terraformShape==='square'?'square':'round';
-  const boolean=document.querySelector('[data-terraform-boolean].active')?.dataset.terraformBoolean==='union'?'union':'normal';
-  setTool({kind:'terraform',mode,shape,boolean,radius,delta,label:(mode==='walled'?'Walled terrace':'Terrain')+' · '+shape+(mode==='walled'&&boolean==='union'?' · BOOLEAN UNION':'')+' · '+(delta<0?'dig':'raise')+' 1U · R'+radius,el:b});
+  setTool({kind:'terraform',mode,shape,radius,delta,label:(mode==='flat'?'Flat H0':mode==='walled'?'Walled terrace':'Sloped')+' · '+shape+(mode==='flat'?' · SUBTRACT':(delta<0?' · lower':' · raise')+' 1U')+' · R'+radius,el:b});
 };
 for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=>{
   const shape=b.dataset.terraformShape==='square'?'square':'round';
@@ -368,14 +385,6 @@ for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=
   if(State.tool.kind==='terraform'){
     State.tool.shape=shape;State.draft=null;
     status('Terraforming shape: '+shape);draw();
-  }
-};
-for(const b of document.querySelectorAll('[data-terraform-boolean]'))b.onclick=()=>{
-  const boolean=b.dataset.terraformBoolean==='union'?'union':'normal';
-  document.querySelectorAll('[data-terraform-boolean]').forEach(x=>x.classList.toggle('active',x===b));
-  if(State.tool.kind==='terraform'){
-    State.tool.boolean=boolean;State.draft=null;
-    status(boolean==='union'?'Walled terrace: boolean union · matching H only':'Walled terrace: separate, no overlap');draw();
   }
 };
 for(const b of document.querySelectorAll('[data-terraform-delta]'))b.onclick=()=>{
@@ -448,6 +457,13 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    setTool({kind:'industry',industry:type,
      placementSpec:candidate,
      label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
+ };
+ // Event venues (settlement-events3d.js): podium, stage, festival ground, arena lot.
+ for(const b of document.querySelectorAll('[data-event-venue]'))b.onclick=()=>{
+   const E=window.ConquerEvents3D;if(!E)return;
+   const candidate=E.make(b.dataset.eventVenue);
+   setTool({kind:'event',venue:candidate.venue,placementSpec:candidate,
+     label:E.label(candidate)+' · '+(E.buildDays(candidate)?E.buildDays(candidate)+'d · ':'')+costText(E.cost(candidate)),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{

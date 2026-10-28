@@ -75,7 +75,13 @@ function reliefBandAt(p){
   }
   return gentle;
 }
-function terrainSlopeKind(p){return window.ConquerTerraforming?.slopeAt(p)||reliefBandAt(p)?.kind||null}
+function terrainSlopeKind(p){
+  const edited=window.ConquerTerraforming?.slopeAt(p);
+  if(edited)return edited;
+  // A Flat H0 cut overrides even a naturally sloped relief band.
+  if(window.ConquerTerraforming?.isFlatAt(p))return null;
+  return reliefBandAt(p)?.kind||null;
+}
 // A cliff is an impassable STEEP band, not just a large elevation delta.
 // Gentle ascent remains traversable, including different H plateaux reached
 // by a ramp. Sampling the segment prevents tunnelling through thin cliff bands.
@@ -250,6 +256,7 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   if(s.type==='field')return fieldPoints(s);
+  if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.footprint(s);   // event venues (settlement-events3d.js)
   if(isCivicAnnex(s))return civicAnnexFootprint(s);
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){
@@ -1015,32 +1022,27 @@ function drawCastleSelection(){
   // remain legible after selecting them, including wood, civic, houses and sites.
   const s=State.structures?.find(item=>item.id===State.selectedId);
   if(!s||s.type==='road'||s.type==='moat'||s.type==='bridge')return;
-  const areas=s.type==='field'?[{points:fieldPoints(s),height:0}]:
-    s.type==='house'?urbanHouseDisplayParts(s).map(part=>({
-      points:part.points,height:part.bodyH||houseBodyHeight(s)
-    })):
-    isCivic(s)?civicParts(s).map(part=>({
-      points:part.points,height:part.role==='plaza'?.12:structureHeight(s)
-    })):[{points:footprintPoints(s),height:structureHeight(s)}];
+  // Only the ground perimeter (h 0): the parts of a house or civic building merge into one outline.
+  const parts=(s.type==='field'?[fieldPoints(s)]:s.type==='house'?urbanHouseDisplayParts(s).map(part=>part.points):
+    isCivic(s)?civicParts(s).map(part=>part.points):[footprintPoints(s)]).filter(points=>points?.length>=3);
+  if(!parts.length)return;
+  let rings=parts;
+  const pc=typeof window!=='undefined'?window.__polygonClipping:null;
+  if(pc&&parts.length>1){
+    try{rings=pc.union(...parts.map(points=>[points.map(p=>[p.x,p.y])])).flatMap(poly=>poly.map(cleanClipRing)).filter(r=>r.length>=3)}
+    catch{rings=parts}
+  }
   withStructureGroundPlane(s,()=>{
     ctx.save();
     ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash([]);
-    for(const item of areas){
-      if(!item.points?.length||item.points.length<3)continue;
-      const h=underConstruction(s)?Math.max(.10,item.height*constructionProgress(s)):item.height;
-      const bottom=projectPath(item.points,0),top=projectPath(item.points,h);
-      // Black keyline provides contrast over snow, sandstone and glowing roofs.
-      for(const [color,width] of [['rgba(24,16,10,.92)',4.5],['#ffc46e',2.25]]){
-        ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
-        for(const ring of [top,bottom]){
-          ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-          ctx.closePath();
-        }
-        if(h>.12)for(let i=0;i<top.length;i++){
-          ctx.moveTo(bottom[i].x,bottom[i].y);ctx.lineTo(top[i].x,top[i].y);
-        }
-        ctx.stroke();
+    // Black keyline provides contrast over snow, sandstone and grass.
+    for(const [color,width] of [['rgba(24,16,10,.92)',4.5],['#ffc46e',2.25]]){
+      ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
+      for(const ring of rings){
+        projectPath(ring,.02).forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+        ctx.closePath();
       }
+      ctx.stroke();
     }
     ctx.restore();
   });

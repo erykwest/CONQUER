@@ -30,10 +30,14 @@ function drawConstructionProgress(s){
 function drawStructure(s,preview=false){
   if(s?.type==='road'){drawAutoStructure(s,preview);return}
   if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
+  // A site with an assembly is drawn piece by piece (opaque) instead of as a translucent ghost.
+  const assembled=!preview&&underConstruction(s)&&window.ConquerAssembly?.has(s);
   const render=()=>{
+    if(assembled&&window.ConquerAssembly.draw(s))return;
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
@@ -227,6 +231,18 @@ function drawCastleBodyBitmap(){
   if(!result?.ok){renderCastleBodyContent();return{mode:'fallback',hit:false,reason:result?.reason||'cache-failed'}}
   return{mode:result.hit?'hit':'miss',hit:!!result.hit,ms:result.ms||0,bytes:result.bytes||0};
 }
+function drawCutawayStaticOverlay(){
+  const api=window.__conquerAssetCompiler,bounds=castleBodyCompositeBounds();
+  if(!api?.renderComposite||!bounds){drawCutawayStructures();return}
+  // Occupants remain in drawCutawayOccupants, animated every visual frame.
+  // Reuse the existing bounded 32 MiB composite cache for shell, floors and props.
+  const props=Object.keys(cutawayPropSprites).filter(k=>cutawayPropSprite(k)).join(',');
+  const key='cutaway|'+castleBodyVisualSignature()+'|'+props+'|'+(State.selectedId||'')+'|'+State.relief?.seed+'|'+JSON.stringify(State.relief?.terraforming||[]);
+  const result=api.renderComposite('cutaway',key,bounds,drawCutawayStructures);
+  if(!result?.ok)drawCutawayStructures();
+  const perf=window.__conquerPerf;
+  if(perf){perf.cutawayCacheHits=(perf.cutawayCacheHits||0)+(result?.hit?1:0);perf.cutawayCacheBuilds=(perf.cutawayCacheBuilds||0)+(result?.ok&&!result.hit?1:0)}
+}
 function updateCastleCacheControls(){
   const btn=document.getElementById('castleCacheToggle');
   if(btn){btn.textContent='Castle cache '+(castleBodyBitmapEnabled?'ON':'OFF');btn.classList.toggle('active',castleBodyBitmapEnabled)}
@@ -360,7 +376,12 @@ function ensureStaticSceneCaches(){
   const ms=performance.now()-t0;
   window.__conquerAnalytics?.measure('CACHE_STAGE',ms,{layer:name,remaining:dirty.length-1});
 }
+let lastCivicCutawayId=null;
 function draw(){
+  // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
+  // panel's close button deselect without invalidating it.
+  const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
+  if(civicCut!==lastCivicCutawayId){lastCivicCutawayId=civicCut;invalidateSceneCache('base')}
   const r=wrap.getBoundingClientRect();
   const phaseStart=performance.now(),phaseStats={};
   let phaseAt=phaseStart;
@@ -407,14 +428,18 @@ function draw(){
   const dynamicSites=State.structures
     .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&underConstruction(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else drawStructure(s)}
+  // Each site is followed by its scaffold, lifting gear and materials for the current phase.
+  for(const s of dynamicSites){if(s.auto)drawAutoStructure(s);else{drawStructure(s);window.ConquerConstructionProps?.drawSite(s)}}
 
   markPhase('scene-caches');
   // Population remains between settlement massing and completed castle massing,
   // preserving the existing occlusion behaviour.
   window.ConquerLivestock?.draw();
   drawPeasants();
+  window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
+  window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerIndustries?.drawWorkers();
+  window.ConquerWorkAnim?.drawBuilders();
   markPhase('population');
   drawTrainingSoldiers();
   if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');
@@ -433,6 +458,7 @@ function draw(){
   if(world3d)window.ConquerWorld3D.drawMastioDrapes();
   else{drawFacadeWindows(false,1,false);drawGatePortals()}
   window.ConquerCrossings?.drawDynamic();
+  window.ConquerGates?.tick();
   drawChimneysAndSmoke();
 
   if(State.draft?.mode==='terraform'){
@@ -471,6 +497,10 @@ function draw(){
   // Canvas keeps its original complete night path as the fallback.
   if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);
   else drawNightLights();
+  if(world3d&&!window.ConquerWorld3D.finishFrame()){
+    // A failed checkpoint must still leave a complete Canvas frame visible.
+    draw();return;
+  }
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   endPopulationFrame();

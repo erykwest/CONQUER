@@ -98,7 +98,7 @@ console.log('PASS visual outline on houses and wood towers, not a permanent road
 assert.match(population,/const base=w2s\(dot\.p,\.10\),scale=State\.view\.scale\*\.5/);
 assert.match(population,/function militaryScale\(\)\{[\s\S]*?return State\.view\.scale\*\.5;/);
 assert.match(render,/const ww=2\.1\*State\.view\.scale,wh=3\.25\*State\.view\.scale;/);
-assert.match(castle,/const ww=1\.75\*State\.view\.scale,wh=2\.8\*State\.view\.scale;/);
+assert.match(castle,/for\(const w of plan\.windows\)if\(facing\(w\.p,w\.normal\)\)drawHouseFacadePane\(w\);/);
 console.log('PASS civilians, troops and windows zoom with full world projection');
 
 assert.match(render,/function drawMastioWindowDrape\(/);

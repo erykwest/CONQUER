@@ -268,7 +268,10 @@
     }
     return distance<=TYPES.loggingCamp.radius?best:null;
   }
-  // Purely visual anonymized workforce. No chopping animation or forest depletion.
+  // Quarry and mine crews stand at the face (local spots, facing local -x).
+  const CREW_SPOTS={quarry:[[-.95,-.7],[-.95,.65],[-.6,0]],mine:[[.85,-.3],[.85,.3]]};
+  // Purely visual anonymized workforce (no forest depletion): woodcutters walk to
+  // the forest edge and chop with the axe, quarrymen and miners swing the pickaxe.
   function drawWorkers(){
     if(!window.ConquerEconomy||window.ConquerEconomy.weekday(State.clock.day)>=5)return;
     if((window.ConquerCombat?.alarmMode?.()||'off')!=='off')return;
@@ -287,11 +290,26 @@
         else if(t<.63)progress=1-(t-.47)/.16;
         else progress=0;
         progress=Math.max(0,Math.min(1,progress));
-        const point={x:start.x+(end.x-start.x)*progress,y:start.y+(end.y-start.y)*progress};
-        const screen=w2s(point,terrainElevation(point)+.14);
-        ctx.save();ctx.fillStyle='#b5a17e';ctx.strokeStyle='#423124';ctx.lineWidth=1;
-        ctx.beginPath();ctx.arc(screen.x+(i?2:-2),screen.y,Math.max(2,U*State.view.scale*.13),0,Math.PI*2);
-        ctx.fill();ctx.stroke();ctx.restore();
+        const side=i?.35:-.35,len=Math.hypot(end.x-start.x,end.y-start.y)||1;
+        const point={x:start.x+(end.x-start.x)*progress-(end.y-start.y)/len*side,y:start.y+(end.y-start.y)*progress+(end.x-start.x)/len*side};
+        const WA=window.ConquerWorkAnim;
+        if(!WA||!worldPointVisible(point,0,40))continue;
+        const dot=WA.anonymous(s.id+':woodcutter'+i,point),back=t>=.47;
+        const facing=WA.facingOf(point,(end.x-start.x)*(back?-1:1),(end.y-start.y)*(back?-1:1));
+        if(t>=.25&&t<.47)WA.drawWorker(dot,'axe',WA.now(),facing);else WA.drawCarrier(dot,'axe',facing);
+      }
+    }
+    // Quarrymen and miners at the face, Mon-Fri during the working hours.
+    if(frac>.63||!window.ConquerWorkAnim)return;
+    const WA=window.ConquerWorkAnim,clock=WA.now();
+    for(const s of State.structures||[]){
+      const spots=CREW_SPOTS[s.type];
+      if(!spots||underConstruction(s)||s.economyDisabled)continue;
+      const count=Math.min(spots.length,allocated[s.id]||0),a=s.angle||0,c=Math.cos(a),sn=Math.sin(a);
+      for(let i=0;i<count;i++){
+        const [lx,ly]=spots[i],p={x:s.x+lx*c-ly*sn,y:s.y+lx*sn+ly*c};
+        if(!worldPointVisible(p,0,40))continue;
+        WA.drawWorker(WA.anonymous(s.id+':'+s.type+i,p),'pickaxe',clock,WA.facingOf(p,-c,-sn));
       }
     }
   }

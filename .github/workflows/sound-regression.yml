@@ -1,0 +1,17 @@
+name: Sound branch regression
+
+on:
+  push:
+    branches: [sound]
+  workflow_dispatch:
+
+jobs:
+  sound-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate four-layer mixer and DEV integration
+        run: node qa/sound-regression.cjs
+      - name: Validate nine seasonal music tracks and playback mixer
+        run: node qa/music-regression.cjs
