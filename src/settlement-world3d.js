@@ -121,24 +121,50 @@
         S.prog[name]={p,loc};
       }
       S.aniso=gl.getExtension('EXT_texture_filter_anisotropic');
-      c.addEventListener('webglcontextlost',e=>{e.preventDefault();S.gl=null;S.failed='context-lost'});
+      c.addEventListener('webglcontextlost',e=>{e.preventDefault();S.gl=null;S.errorFence=null;S.failed='context-lost'});
       S.canvas=c;S.gl=gl;
       return gl;
     }catch(err){S.failed=String(err?.message||err);console.warn('World 3D unavailable:',S.failed);return null}
   }
 
+  function pollRendererError(gl){
+    if(gl.isContextLost())throw new Error('WebGL2 renderer failure');
+    if(!S.errorFence)return;
+    // Poll without waiting, but bound the grace period so a constantly busy
+    // queue cannot indefinitely postpone error detection.
+    const ready=gl.clientWaitSync(S.errorFence,0,0);
+    if(ready===gl.TIMEOUT_EXPIRED&&performance.now()-S.errorFenceAt<1000)return;
+    gl.deleteSync(S.errorFence);S.errorFence=null;
+    if(ready===gl.WAIT_FAILED||gl.getError()!==gl.NO_ERROR)throw new Error('WebGL2 renderer failure');
+    // Even a signalled fence does not make the browser's error query free:
+    // getError can synchronise its command decoder. Keep it off the hot path;
+    // context loss is still checked every frame above.
+    S.errorCheckAfter=performance.now()+1000;
+  }
+  function deferRendererError(gl){
+    if(performance.now()<(S.errorCheckAfter||0))return;
+    // Cover the latest complete frame, retaining the first checkpoint's age.
+    if(S.errorFence)gl.deleteSync(S.errorFence);
+    else S.errorFenceAt=performance.now();
+    S.errorFence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
+    if(!S.errorFence)throw new Error('WebGL2 sync allocation failed');
+    gl.flush();
+  }
+
   // ---------- small geometry helpers (world space, absolute z) ----------
   const rgbCache=new Map();
-  function rgb(hex){
-    let v=rgbCache.get(hex);if(v)return v;
-    const h=String(hex).replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);rgbCache.set(hex,v);return v;
+  function rgb(hex,usePalette=false){
+    // Preserve terrain and elevation tones when the architectural palette changes.
+    const color=usePalette?visualPaletteColor(hex):hex;
+    let v=rgbCache.get(color);if(v)return v;
+    const h=String(color).replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);rgbCache.set(color,v);return v;
   }
-  function meshBuilder(){
+  function meshBuilder(usePalette=false){
     const tris=[];
     const api={
       tris,
       face(vs,hex){                       // vs: [{x,y,z}] convex
-        const c=rgb(hex);
+        const c=rgb(hex,usePalette);
         for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.z,c[0],c[1],c[2]);
       },
       // Prism over a footprint with absolute base z; sides alternate like extrudePolygon (i%2 ? A : B).
@@ -193,17 +219,177 @@
   }
   function buildTerrain(){
     const v=[],push=(x,y,z)=>v.push(x,y,z);
-    // Base plain (z=0) slightly larger than the world so edges never show the clear colour.
+    // Hills crossing the map edge are cut at the world square, like the 2.5D relief
+    // (clipTerrainPolygon), instead of spilling past the map.
+    const clipped=tri=>{
+      const poly=clipTerrainPolygon(tri);
+      for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z);
+    };
     const W=WORLD;
+    const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
+    if(terraformEdits.length){
+      const terraces=terraformEdits.filter(e=>e.mode==='walled');
+      // Reuse exactly the visible surface fragments both for clipping the
+      // underlying ground and emitting plateau tops. Flat cuts must not leave
+      // invisible ground holes or overlapping faces after a subtraction.
+      const terraceBounds=terraces.flatMap(edit=>
+        (window.ConquerTerraforming?.visibleTerracePieces?.(edit)||[edit.top]).map(top=>{
+          const xs=top.map(p=>p.x),ys=top.map(p=>p.y);
+          return{edit,top,minX:Math.min(...xs),maxX:Math.max(...xs),
+            minY:Math.min(...ys),maxY:Math.max(...ys)};
+        }));
+      const flatBounds=terraformEdits.filter(edit=>edit.mode==='flat').map(edit=>{
+        const xs=edit.top.map(p=>p.x),ys=edit.top.map(p=>p.y);
+        return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
+          minY:Math.min(...ys),maxY:Math.max(...ys)};
+      });
+      // Broadphase: register edit bounds in 8U buckets once. A 100×100U
+      // 0.5U terrain rebuild has 40,000 cells; almost all must bypass CSG
+      // clipping entirely instead of scanning every authored polygon.
+      const BIN=8,bins=new Map(),binKey=(x,y)=>x+','+y;
+      const register=(bound,kind)=>{
+        const x0=Math.floor(bound.minX/BIN),x1=Math.floor(bound.maxX/BIN);
+        const y0=Math.floor(bound.minY/BIN),y1=Math.floor(bound.maxY/BIN);
+        for(let ix=x0;ix<=x1;ix++)for(let iy=y0;iy<=y1;iy++){
+          const key=binKey(ix,iy);
+          if(!bins.has(key))bins.set(key,{flat:[],terrace:[]});
+          bins.get(key)[kind].push(bound);
+        }
+      };
+      flatBounds.forEach(bound=>register(bound,'flat'));
+      terraceBounds.forEach(bound=>register(bound,'terrace'));
+      const EMPTY_NEAR={flat:[],terrace:[]};
+      const touching=(item,x0,y0,x1,y1)=>
+        item.minX<=x1&&item.maxX>=x0&&item.minY<=y1&&item.maxY>=y0;
+      const nearCell=(x0,y0,x1,y1)=>{
+        const bx0=Math.floor(x0/BIN),by0=Math.floor(y0/BIN);
+        const bx1=Math.floor(x1/BIN),by1=Math.floor(y1/BIN);
+        // Almost every cell belongs to a single spatial bucket.
+        if(bx0===bx1&&by0===by1){
+          const bucket=bins.get(binKey(bx0,by0));
+          if(!bucket)return EMPTY_NEAR;
+          return{flat:bucket.flat.filter(item=>touching(item,x0,y0,x1,y1)),
+            terrace:bucket.terrace.filter(item=>touching(item,x0,y0,x1,y1))};
+        }
+        const selectedFlat=new Set(),selectedTerrace=new Set();
+        for(let ix=bx0;ix<=bx1;ix++)for(let iy=by0;iy<=by1;iy++){
+          const bucket=bins.get(binKey(ix,iy));
+          if(!bucket)continue;
+          for(const item of bucket.flat)
+            if(touching(item,x0,y0,x1,y1))selectedFlat.add(item);
+          for(const item of bucket.terrace)
+            if(touching(item,x0,y0,x1,y1))selectedTerrace.add(item);
+        }
+        return selectedFlat.size||selectedTerrace.size?
+          {flat:[...selectedFlat],terrace:[...selectedTerrace]}:EMPTY_NEAR;
+      };
+      const gridHeights=new Map();
+      const sampleHeight=p=>{
+        const key=p.x+','+p.y;
+        if(gridHeights.has(key))return gridHeights.get(key);
+        const z=window.ConquerTerraforming.elevationAt(
+          p,terrainBaseElevation(p),{excludeWalled:true});
+        gridHeights.set(key,z);
+        return z;
+      };
+      // Cut the ground exactly at terrace edges. Sampling a height discontinuity
+      // would create diagonal triangles instead of a vertical masonry wall.
+      const halfPlane=(poly,a,b,inside)=>{
+        const result=[],side=p=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);
+        for(let i=0;i<poly.length;i++){
+          const p=poly[i],q=poly[(i+1)%poly.length],dp=side(p),dq=side(q);
+          const pin=inside?dp>=0:dp<=0,qin=inside?dq>=0:dq<=0;
+          if(pin)result.push(p);
+          if(pin!==qin){const t=dp/(dp-dq);result.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t,z:p.z+(q.z-p.z)*t})}
+        }
+        return result;
+      };
+      const emit=poly=>{for(let i=1;i<poly.length-1;i++)for(const p of [poly[0],poly[i],poly[i+1]])push(p.x,p.y,p.z)};
+      const ground=(tri,near)=>{
+        if(!near.flat.length&&!near.terrace.length){emit(tri);return;}
+        let pieces=[tri],nearFlat=false;
+        // The ground must be cut exactly on every Flat edge. Without this
+        // split, the .5U grid bridges the H0 hole with a diagonal ramp,
+        // leaving a gap or hiding the new vertical retaining wall.
+        for(const {edit,minX,maxX,minY,maxY} of near.flat){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
+          nearFlat=true;
+          const next=[];
+          for(const piece of pieces){
+            let inner=piece;
+            for(let i=0;i<edit.top.length&&inner.length>=3;i++){
+              const a=edit.top[i],b=edit.top[(i+1)%edit.top.length];
+              const outside=halfPlane(inner,a,b,false);
+              if(outside.length>=3)next.push(outside);
+              inner=halfPlane(inner,a,b,true);
+            }
+            if(inner.length>=3)next.push(inner);
+          }
+          pieces=next;
+        }
+        for(const {top,minX,maxX,minY,maxY} of near.terrace){
+          if(tri.every(p=>p.x<minX)||tri.every(p=>p.x>maxX)||
+             tri.every(p=>p.y<minY)||tri.every(p=>p.y>maxY))continue;
+          const next=[];
+          for(const piece of pieces){
+            let inner=piece;
+            for(let i=0;i<top.length&&inner.length>=3;i++){
+              const a=top[i],b=top[(i+1)%top.length];
+              const outside=halfPlane(inner,a,b,false);
+              if(outside.length>=3)next.push(outside);
+              inner=halfPlane(inner,a,b,true);
+            }
+          }
+          pieces=next;
+        }
+        for(const poly of pieces){
+          if(!nearFlat){emit(poly);continue;}
+          const centroid={x:poly.reduce((v,p)=>v+p.x,0)/poly.length,
+            y:poly.reduce((v,p)=>v+p.y,0)/poly.length};
+          // A vertex exactly on the seam has two heights. Evaluate it just
+          // inside its own polygon fragment to keep both sides discontinuous.
+          emit(poly.map(p=>{
+            const dx=centroid.x-p.x,dy=centroid.y-p.y,L=Math.hypot(dx,dy)||1;
+            const q={x:p.x+dx/L*.002,y:p.y+dy/L*.002};
+            return{...p,z:window.ConquerTerraforming.elevationAt(
+              q,terrainBaseElevation(q),{excludeWalled:true})};
+          }));
+        }
+      };
+      // Visible plateau fragments are already clipped and non-overlapping.
+      const drawTerraceTops=()=>{
+        for(const {edit,top} of terraceBounds)emit(top.map(p=>({...p,z:edit.targetZ})));
+      };
+      // Once the player edits elevation, sample the single authoritative terrainElevation
+      // contract. A denser build-area grid preserves terrace and excavation silhouettes;
+      // the untouched world buffer stays coarse to limit upload cost.
+      const grid=(x0,y0,x1,y1,step)=>{
+        for(let y=y0;y<y1-1e-6;y+=step)for(let x=x0;x<x1-1e-6;x+=step){
+          const xa=Math.min(x1,x+step),ya=Math.min(y1,y+step);
+          const p00={x,y},p10={x:xa,y},p11={x:xa,y:ya},p01={x,y:ya};
+          for(const p of [p00,p10,p11,p01])p.z=sampleHeight(p);
+          const near=nearCell(x,y,xa,ya);
+          ground([p00,p10,p11],near);ground([p00,p11,p01],near);
+        }
+      };
+      grid(0,0,W,BUILD_MIN,2);
+      grid(0,BUILD_MAX,W,W,2);
+      grid(0,BUILD_MIN,BUILD_MIN,BUILD_MAX,2);
+      grid(BUILD_MAX,BUILD_MIN,W,BUILD_MAX,2);
+      grid(BUILD_MIN,BUILD_MIN,BUILD_MAX,BUILD_MAX,.5);
+      drawTerraceTops();
+      return new Float32Array(v);
+    }
     for(const [x,y] of [[0,0],[W,0],[W,W],[0,0],[W,W],[0,W]])push(x,y,0);
     for(const level of reliefLevels()){
       const top=level.top||[];if(top.length<3)continue;
       const tri=earcut(top);
-      for(const i of tri)push(top[i].x,top[i].y,level.z1);
+      for(let i=0;i<tri.length;i+=3)clipped([tri[i],tri[i+1],tri[i+2]].map(k=>({x:top[k].x,y:top[k].y,z:level.z1})));
       for(const band of reliefEdgeBands(level)){
         const [oa,ob,b,a]=band.poly;
-        push(oa.x,oa.y,band.z0);push(ob.x,ob.y,band.z0);push(b.x,b.y,band.z1);
-        push(oa.x,oa.y,band.z0);push(b.x,b.y,band.z1);push(a.x,a.y,band.z1);
+        clipped([{...oa,z:band.z0},{...ob,z:band.z0},{...b,z:band.z1}]);
+        clipped([{...oa,z:band.z0},{...b,z:band.z1},{...a,z:band.z1}]);
       }
     }
     return new Float32Array(v);
@@ -226,6 +412,35 @@
         if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
       }
     }
+    return new Float32Array(m.tris);
+  }
+  // Vertical cross-section closing hills where the map edge cuts them: follows the terrain
+  // height along each border so the section meets the clipped surface.
+  const EDGE_STEP=.1,EDGE_SECTION=['#5d5144','#4e443a'];
+  function buildTerrainEdges(){
+    const m=meshBuilder(),W=WORLD,n=Math.round(W/EDGE_STEP);
+    for(const edit of window.ConquerTerraforming?.edits?.()||[]){
+      if(edit.mode==='walled'){
+        for(let i=0;i<edit.top.length;i++){
+          const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
+            [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
+          for(const {a,b} of segments)
+            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+        }
+      }else if(edit.mode==='flat'){
+        for(const {a,b,baseZ,baseZB,targetZ,targetZB} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
+          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],'#686057');
+      }
+    }
+    const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
+    borders.forEach((at,side)=>{
+      let prev=at(0),hp=terrainElevation(prev);
+      for(let i=1;i<=n;i++){
+        const p=at(i*EDGE_STEP),h=terrainElevation(p);
+        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],EDGE_SECTION[side%2]);
+        prev=p;hp=h;
+      }
+    });
     return new Float32Array(m.tris);
   }
   // Bake the existing 2D ground drawing in plan view (rotation 0) into a canvas covering [x0,x0+size]².
@@ -262,34 +477,11 @@
   // ---------- buildings (non-castle) ----------
   const WINTER_ROOF=['#e7ece8','#dce3de'];
   function buildBuildings(){
-    const m=meshBuilder(),winter=State.season==='winter';
+    const m=meshBuilder(true),winter=State.season==='winter';
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
-      const lvl=houseLevel(house);
-      for(const part of entry.parts){
-        if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
-        const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
-        const split=part.kind==='turret'?base+1.02:base+part.bodyH*.5;
-        for(let i=0;i<n;i++){
-          const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
-          if(lvl===1&&part.kind!=='turret'){m.face([a,b,c,d],i%2?'#4e392d':'#654936');continue}
-          const sa={...a,z:split},sb={...b,z:split};
-          m.face([a,b,sb,sa],i%2?'#4f4b47':'#625e59');m.face([sa,sb,c,d],i%2?'#c8ae70':'#e0ca91');
-        }
-        const roof=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
-        if(part.kind==='turret'){
-          for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
-        }else{
-          const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
-          const gable=lvl===1?'#654936':'#d9c184';
-          m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
-        }
-      }
-      for(const c of chimneySpecs(house)){
-        const g=terrainElevation(c.center);
-        m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
-      }
+      withStructureVisualMaterial(house,()=>addHouse(m,entry,winter));
     }
     // Urban boundaries (urbanFenceSegments): fences and low walls as solids, hedges are billboards.
     for(const e of urbanFenceSegments()){
@@ -305,40 +497,109 @@
     }
     for(const s of State.structures){
       if(underConstruction(s))continue;
-      if(isCivic(s))addCivic(m,s,winter);
+      if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
+      else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
-        const def=ConquerIndustries.TYPES[s.type],g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
-        m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
-      }else if(s.type==='well'){
+        const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
+        if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
+      }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
         const g=terrainElevation(s);
         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,'#8d816e','#655b4f','#74695a');
         m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,'#84796d','#4e4740','#5d554d');
         m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
-      }
+      });
     }
     return new Float32Array(m.tris);
+  }
+  // One urban house (an urbanHouseGeometry entry) into a mesh builder. Builders may offer
+  // tag(kind) to learn what the next faces are (body / upper / beam / gable / roof): the
+  // construction assembly (settlement-construction-assembly.js) uses it to build the
+  // house piece by piece; the WebGL builder has no tag and ignores it.
+  function addHouse(m,entry,winter){
+    const house=entry.house,lvl=houseLevel(house);
+    for(const part of entry.parts){
+      if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
+      const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
+      const split=base+(part.kind==='turret'?part.floorZ:houseFloorBreak(part.bodyH));
+      const bp=part.basePoints;
+      for(let i=0;i<n;i++){
+        const [a,b,c,d]=faces[i].map(({p,z})=>({x:p.x,y:p.y,z}));
+        if(lvl===1&&part.kind!=='turret'){m.tag?.('body');m.face([a,b,c,d],i%2?'#4e392d':'#654936');continue}
+        const sa={...a,z:split},sb={...b,z:split};
+        // Recessed stone ground floor (basePoints) under the jettied timber floors.
+        const ga=bp?{x:bp[i].x,y:bp[i].y,z:a.z}:a,gb=bp?{x:bp[(i+1)%n].x,y:bp[(i+1)%n].y,z:b.z}:b;
+        m.tag?.('body');m.face([ga,gb,{...gb,z:split},{...ga,z:split}],i%2?'#4f4b47':'#625e59');
+        m.tag?.('upper');m.face([sa,sb,c,d],i%2?'#c8ae70':'#e0ca91');
+        // Jetty underside: joists between the upper wall line and the recessed ground floor.
+        m.tag?.('beam');if(bp&&(i===0||i===2))m.face([sa,sb,{...gb,z:split},{...ga,z:split}],'#4a3626');
+      }
+      const roof=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
+      m.tag?.('roof');
+      if(part.kind==='turret'){
+        for(let i=n;i<faces.length;i++)m.face(roof(faces[i]),winter?WINTER_ROOF[i%2]:(i%2?'#303943':'#394550'));
+      }else{
+        const rA=winter?WINTER_ROOF[0]:lvl===1?HOUSE_THATCH.a:'#303237',rB=winter?WINTER_ROOF[1]:lvl===1?HOUSE_THATCH.b:'#3a3d42';
+        const gable=lvl===1?'#654936':'#d9c184';
+        m.face(roof(faces[n]),rA);m.face(roof(faces[n+1]),rB);
+        m.tag?.('gable');m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
+      }
+    }
+    // L4 dormers (urbanHouseDormers): cream front and cheeks, slate gable roof.
+    const dormerColors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
+      roofA:winter?WINTER_ROOF[0]:'#303237',roofB:winter?WINTER_ROOF[1]:'#3a3d42'};
+    m.tag?.('roof');
+    for(const dormer of entry.dormers||[]){
+      const g=terrainElevation(dormer.partCenter);
+      for(const f of dormer.faces)m.face(f.pts.map(({p,z})=>({x:p.x,y:p.y,z:g+z})),dormerColors[f.kind]);
+    }
+    for(const c of chimneySpecs(house)){
+      const g=terrainElevation(c.center);
+      m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
+    }
   }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
     const faces=urbanHouseFaces(house,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
     const roofA=winter?WINTER_ROOF[0]:'#5b3d30',roofB=winter?WINTER_ROOF[1]:'#6b4938';
     if(part.type==='store'){
-      for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
-      m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
+      m.tag?.('body');for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
+      m.tag?.('roof');m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);
+      m.tag?.('gable');m.face(P(faces[n+2]),'#6b4f39');m.face(P(faces[n+3]),'#6b4f39');
       return;
     }
     const c=part.center,sa=Math.sin(part.roofAngle),ca=Math.cos(part.roofAngle),base=terrainElevation(c);
     const ly=p=>-(p.x-c.x)*sa+(p.y-c.y)*ca;
-    for(let i=0;i<n;i++)if(faces[i].slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(faces[i]),'#5d4431');
-    m.face(P(faces[n]),roofB);
+    // The courtyard side is open, so a lean-to has fewer than n walls: the roof is the last face.
+    const walls=faces.slice(0,-1),roof=faces[faces.length-1];
+    m.tag?.('body');for(const wall of walls)if(wall.slice(0,2).every(v=>Math.abs(ly(v.p)+part.h/2)<1e-6))m.face(P(wall),'#5d4431');
+    m.tag?.('roof');m.face(P(roof),roofB);
+    m.tag?.('beam');
     for(const t of part.w>1.3?[-.5,0,.5]:[-.5,.5]){
       const x=t*(part.w-.08),y=part.h/2-.04,p={x:c.x+x*ca-y*sa,y:c.y+x*sa+y*ca};
       m.prism(rectWorldPoints(p.x,p.y,.07,.07,part.roofAngle),base,base+part.bodyH,'#4a3626','#3d2c1f','#4a3626');
     }
   }
+  function addCivicAnnex(m,s,winter){
+    const spec=civicAnnexDefinition(s);if(!spec)return;
+    const g=Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(s),kind=spec.kind,poly=civicAnnexFootprint(s);
+    if(window.ConquerCivic3D?.addToBuilder(m,s,g))return;
+    const height=kind==='garden'?.13:kind==='yard'?.09:kind==='stall'?.75:1.32;
+    const color=kind==='garden'?'#6a8452':kind==='yard'?'#ad9a7a':kind==='stone'?'#85847d':'#9b7c57';
+    m.prism(poly,g,g+height,color,kind==='stone'?'#696862':'#79563b',kind==='stone'?'#777671':'#876446');
+    if(kind==='garden'){
+      for(const offset of [-.45,0,.45]){
+        const p=houseLocalToWorld(s,offset,0);
+        m.prism(rectWorldPoints(p.x,p.y,.08,1.4,s.angle||0),g+.13,g+.19,'#426738','#385d30','#426738');
+      }
+    }else if(kind!=='yard'&&kind!=='stall'){
+      const roof=winter?WINTER_ROOF[0]:kind==='stone'?'#595a60':'#694a38';
+      m.gabled({x:s.x,y:s.y},spec.w,spec.h,0,s.angle||0,g+height,.001,.34,color,color,roof,roof,color);
+    }
+  }
   function addCivic(m,s,winter){
     const g=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s),angle=s.angle||0;
     const L=(x,y)=>houseLocalToWorld(s,x,y);
+    if(window.ConquerCivic3D?.addToBuilder(m,s,g))return;   // Blender model (+ cemetery)
     for(const part of civicParts(s)){
       const turn=part.roofTurn||0;
       if(s.type==='market'){
@@ -348,6 +609,29 @@
           const c=L(sx*1.05,sy*1.0);
           m.prism(rectWorldPoints(c.x,c.y,1.15,.72,angle),g+.12,g+.46,'#654b34','#4b3826','#5a4430');
           m.prism(rectWorldPoints(c.x,c.y,1.38,.92,angle),g+.58,g+.66,canopy[k%4],canopy[k%4],canopy[k%4]);k++;
+        }
+      }else if(s.type==='plaza'){
+        const level=civicLevel(s),variant=plazaVariant(s);
+        m.prism(part.points,g,g+.10,
+          variant==='garden'?'#8c9776':variant==='fountain'?'#a5a9a8':'#b3a28e',
+          '#777269','#868076');
+        if(variant==='garden'){
+          for(const x of [-1.08,1.08])for(const y of [-1.08,1.08]){
+            const c=L(x,y);
+            m.prism(rectWorldPoints(c.x,c.y,1.15,1.15,angle),g+.10,g+.15,'#698555','#80725b','#80725b');
+          }
+        }else{
+          const c=L(0,0),size=variant==='fountain'?1.45:1.25;
+          m.prism(rectWorldPoints(c.x,c.y,size,size,angle),g+.10,g+(variant==='fountain'?.29:.135),
+            variant==='fountain'?'#697e82':'#c2b7a4','#787c7b','#8c9190');
+          if(variant==='fountain')m.prism(rectWorldPoints(c.x,c.y,.65,.65,angle),g+.29,g+.35+level*.12,
+            '#b3b8b5','#858c89','#969e9b');
+          else if(level>=3)m.prism(rectWorldPoints(c.x,c.y,.45,.45,angle),g+.135,g+.60,
+            '#c0b7a9','#827b72','#938a80');
+        }
+        if(level>=2)for(const x of [-2,2])for(const y of [-2,2]){
+          const c=L(x,y);
+          m.prism(rectWorldPoints(c.x,c.y,.24,.24,angle),g+.10,g+.27,'#a49c8c','#696659','#777164');
         }
       }else if(s.type==='training'){
         m.prism(part.points,g,g+.10,'#70502e','#5a3f24','#664729');
@@ -363,6 +647,17 @@
           m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.88,2.52,'#6b6863','#7d7973',winter?WINTER_ROOF[0]:'#41454a',winter?WINTER_ROOF[1]:'#4c5054','#85817a');
         }
       }
+    }
+    if(s.type==='church')addCivicCemetery(m,s,g);
+  }
+  function addCivicCemetery(m,church,ground){
+    const area=civicCemeteryArea(church);if(!area)return;
+    m.prism(area.points,ground,ground+.035,'#827b69','#665e51','#756d5d');
+    for(const grave of civicCemeteryGraves(church)){
+      m.prism(grave.points,ground+.035,ground+.08,'#675c4f','#4b443c','#5b5146');
+      const head=houseLocalToWorld({x:grave.center.x,y:grave.center.y,angle:grave.angle},0,-.23);
+      m.prism(rectWorldPoints(head.x,head.y,.25,.14,grave.angle),
+        ground+.08,ground+.39,'#b5b1a6','#78766f','#96928b');
     }
   }
 
@@ -424,9 +719,10 @@
   // ---------- facade decals (architecture PNGs + house windows/doors) ----------
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
-  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3'];
+  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken','gatePortalFrame','gateBanner'];
   function buildDecalAtlas(){
-    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=3*T;
+    window.ConquerGates?.ensureSprites();
+    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=4*T;
     const g=c.getContext('2d'),map=new Map();
     const tiles=[...DECAL_KEYS,'__white','__glow'];
     tiles.forEach((k,i)=>{
@@ -520,9 +816,14 @@
       }else if(s.type==='gate'&&!isWoodGate(s)){
         const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
         const interior=interiorFacadeEdgeIndex(s),key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
+        // Portal frames around the carved passage and the outer banners; the door leaves and
+        // the portcullis are meshes (settlement-gate-fittings.js).
+        const fittings=window.ConquerGates?.decalSpecs(s)||[];
+        for(const d of fittings)onEdge(d.edge,d.centerZ,d.width,d.height,d.key,d.offset,ground,d.edge.normal);
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
-          if(edge.index===1||edge.index===3)onEdge(edge,.705,.90,1.35,'gatePortal',0,ground,o);   // front / rear
+          // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
+          if(!fittings.length&&(edge.index===1||edge.index===3))onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
             else onEdge(edge,z,.24,.62,'arrowSlit',0,ground,o);
@@ -552,8 +853,28 @@
       }else if(s.type==='house'){
         const WIN=[35/255*.82,29/255*.82,24/255*.82,.82],TIMBER=[59/255,42/255,30/255,1];
         const entry=houseGeometry.get(s.id);
+        // World-space beam from {p,z} a to b on a surface with horizontal outward normal n.
+        const beam=(a,b,n,ground,push)=>{
+          const uv=atlas.map.get('__white');if(!uv)return;
+          const dx=b.p.x-a.p.x,dy=b.p.y-a.p.y,dz=b.z-a.z;
+          let wx=n.y*dz,wy=-n.x*dz,wz=n.x*dy-n.y*dx;const wl=Math.hypot(wx,wy,wz)||1,k=HOUSE_TIMBER_W/2/wl;wx*=k;wy*=k;wz*=k;
+          const c=(q,sgn)=>({x:q.p.x+n.x*push+wx*sgn,y:q.p.y+n.y*push+wy*sgn,z:ground+q.z+wz*sgn});
+          const P=[c(a,1),c(b,1),c(b,-1),c(a,-1)],[u0,v0,u1,v1]=uv;
+          for(const k2 of [0,1,2,0,2,3]){const q=P[k2];v.push(q.x,q.y,q.z,k2===1||k2===2?u1:u0,k2<2?v0:v1,TIMBER[0],TIMBER[1],TIMBER[2],TIMBER[3])}
+        };
+        const pane=(w,ground,push)=>{
+          const t=w.tangent,a={x:w.p.x-t.x*w.hw,y:w.p.y-t.y*w.hw},b={x:w.p.x+t.x*w.hw,y:w.p.y+t.y*w.hw};
+          quad(a,b,ground+w.z-w.hh,ground+w.z+w.hh,'__white',w.normal,WIN,push);
+          lightWindow({a:{x:w.p.x-t.x*.5,y:w.p.y-t.y*.5},b:{x:w.p.x+t.x*.5,y:w.p.y+t.y*.5}},w.z,w.hw*2,w.hh*2,0,ground,w.normal);
+        };
         for(const part of entry?.parts||[]){
-          if(part.kind==='turret'||part.kind==='outbuilding')continue;
+          if(part.kind==='turret'){
+            const ground=terrainElevation(part.center),plan=houseTurretFacade(part);
+            for(const b of plan.beams)beam(b.a,b.b,b.normal,ground,.015);
+            for(const w of plan.windows)pane(w,ground,.022);
+            continue;
+          }
+          if(part.kind==='outbuilding')continue;
           const ground=terrainElevation(part.center);
           for(const edge of edgesOf(part.points)){
             const o=outward(edge,part.center),m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};
@@ -562,15 +883,19 @@
             // Timber frame strips sit just under the windows (smaller wall offset).
             for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
             // drawWindowOnEdge: 2.1 x 3.25 px per view-scale unit -> .175U x ~.30U
+            // Ground-floor openings on a jettied side sit on the recessed stone wall.
+            const fb=houseFloorBreak(part.bodyH),recess=part.basePoints&&(edge.index===0||edge.index===2)?houseJetty(s):0;
             for(const w of plan.windows){
-              const c=at(w.off);
-              quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
-              lightWindow(edge,w.z,hw*2,hh*2,w.off,ground,o);
+              const k=w.z<fb?recess:0,c=at(w.off),e={a:{x:edge.a.x-o.x*k,y:edge.a.y-o.y*k},b:{x:edge.b.x-o.x*k,y:edge.b.y-o.y*k}};
+              quad({x:c.x-ux*hw-o.x*k,y:c.y-uy*hw-o.y*k},{x:c.x+ux*hw-o.x*k,y:c.y+uy*hw-o.y*k},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
+              lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
             }
           }
         }
+        for(const dormer of entry?.dormers||[])pane(dormer.window,terrainElevation(dormer.partCenter),.012);
         const d=houseDoorInfo(s),hw=Math.min(.08,(Number(s.w)||1.5)*.0533),g=terrainElevation(d.surface),DOOR=[57/255,39/255,30/255,1];
-        quad({x:d.surface.x-d.tangent.x*hw,y:d.surface.y-d.tangent.y*hw},{x:d.surface.x+d.tangent.x*hw,y:d.surface.y+d.tangent.y*hw},g+.04,g+.552,'__white',d.normal,DOOR);
+        const ds={x:d.surface.x-d.normal.x*houseJetty(s),y:d.surface.y-d.normal.y*houseJetty(s)};
+        quad({x:ds.x-d.tangent.x*hw,y:ds.y-d.tangent.y*hw},{x:ds.x+d.tangent.x*hw,y:ds.y+d.tangent.y*hw},g+.04,g+HOUSE_DOOR_TOP,'__white',d.normal,DOOR);
       }
     }
     return{decals:new Float32Array(v),lights:new Float32Array(lights)};
@@ -578,7 +903,7 @@
   // All world-space torch anchors are camera-independent: depth testing, not
   // towerDoorVisible(), decides which flames are hidden behind a tower.
   function allWorldFireSources(){
-    const sources=battlementBrazierSources();
+    const sources=battlementBrazierSources().concat(window.ConquerGates?.torchSources(false)||[]);
     for(const tower of State.structures){
       if(tower.type!=='tower'||underConstruction(tower))continue;
       for(const spec of towerDoorSpecs(tower)){
@@ -619,7 +944,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','civicAnnex'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}
@@ -637,7 +962,13 @@
   function computeSigPass(){
     const acc=new Map();
     for(const s of State.structures){
-      const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0);
+      const str=s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+        // Moat fill patches are baked into the ground: filling must re-bake it.
+        +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
+        // The gate door's state swaps its facade decal.
+        +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
+        // Mills swap to their gutted model mid-fire.
+        +(window.ConquerIndustries3D?.variant?.(s)||'');
       let h=0;for(let i=0;i<str.length;i++)h=(Math.imul(h,31)+str.charCodeAt(i))|0;
       for(const cat of SIG_CATEGORIES)if(cat.test(s))acc.set(cat.name,(Math.imul(acc.get(cat.name)||0,33)^h)|0);
     }
@@ -653,6 +984,20 @@
   function structuresSig(name){return sigPass?.get(name)||0}
   // Urban lots/fences are regenerated by the game (urbanRevision) without any structure field changing.
   function urbanRev(){try{return typeof urbanRevision!=='undefined'?urbanRevision:0}catch{return 0}}
+  let groundLotRevision=-1,groundLotSeed=null,groundLotSig='';
+  function groundLotsSignature(){
+    if(groundLotRevision===urbanRev()&&groundLotSeed===State.seed)return groundLotSig;
+    groundLotRevision=urbanRev();groundLotSeed=State.seed;
+    const structures=new Map(State.structures.map(s=>[s.id,s]));
+    // Navigation/collider updates invalidate the parcel cache conservatively.
+    // Only rebake the two 4096px ground textures if the painted lots changed.
+    groundLotSig=JSON.stringify(urbanLots().map(lot=>{
+      const s=structures.get(lot.civicId||lot.houseId);
+      return[lot.houseId,lot.civicId,s?.type,!!(s?.auto||s?.urbanRedeveloped)&&houseLevel(s)>=3,
+        window.ConquerLivestock?.lotKindForHouse(s),lot.points];
+    }));
+    return groundLotSig;
+  }
   function wet(){try{return typeof weatherGroundWet==='function'?weatherGroundWet():!!State.weather?.wet}catch{return false}}
 
   function upload(gl,name,data){
@@ -674,19 +1019,21 @@
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
-    const tSig=[season,State.biome,State.relief?.seed,(State.environment||[]).length,envRev,wet(),urbanRev(),structuresSig('ground')].join('|');
+    const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
+    const terraformSig=terraformEdits.map(e=>[e.id,e.targetZ,e.baseZ,e.radius,e.shape,e.rotation,e.center.x,e.center.y,e.edgeWidth,e.mode,e.material].join(':')).join(',');
+    const tSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,wet(),groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now();
-      upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());
+      upload(gl,'terrain',buildTerrain());upload(gl,'mountains',buildMountains());upload(gl,'terrainEdges',buildTerrainEdges());
       uploadTexture(gl,'world',bakeGround(0,0,WORLD));
       uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
       S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
     }
-    const bSig=[season,urbanRev(),structuresSig('buildings')].join('|');
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings')].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
-    const castleContent=[season,structuresSig('castle')].join('|');
+    const castleContent=[season,State.visualPalette,structuresSig('castle')].join('|');
     if(S.castleContent!==castleContent){
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();
@@ -710,7 +1057,7 @@
       if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
       upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
-    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length].join('|');
+    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
       const baked=buildDecals(atlas);
@@ -718,6 +1065,24 @@
       upload(gl,'nightWindows',baked.lights);
       upload(gl,'fireLights',buildFireLights(atlas));
       S.sig.decals=dSig;st.decalsMs=performance.now()-a;
+    }
+    // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
+    // side shading follows the camera quarter-turn, so keep one buffer per rotation.
+    if(window.ConquerScatter&&window.ConquerScatterModel){
+      const scContent=[season,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
+      if(S.scatterContent!==scContent){
+        const a=performance.now();
+        for(const v of S.scatterVariants?.values()||[])gl.deleteBuffer(v.b);
+        S.scatterContent=scContent;S.scatterVariants=new Map();S.scatterProps=ConquerScatter.layout();
+        st.scatterLayoutMs=performance.now()-a;st.scatterProps=S.scatterProps.length;
+      }
+      let v=S.scatterVariants.get(rot);
+      if(!v){
+        const a=performance.now(),d=ConquerScatter.worldMesh(S.scatterProps,rot),b=gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,gl.STATIC_DRAW);
+        v={b,n:d.length};S.scatterVariants.set(rot,v);st.scatterMeshMs=performance.now()-a;
+      }
+      S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
@@ -767,7 +1132,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'mountains');drawMesh(gl,r,'buildings');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write
@@ -817,11 +1182,21 @@
     }
     gl.disable(gl.BLEND);gl.depthMask(true);
   }
-  function renderFront(r,soldiers){
+  function renderFront(r,soldiers,dynamic){
     // Soldiers and near-half battlements, depth-tested against the back pass (depth kept): masonry in
     // front of a soldier hides it, merlons on the near edge cover the patrol's legs, far ones do not.
     const gl=S.gl;gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);gl.depthMask(true);
+    drawMesh(gl,r,'settledRubble');
+    // Moving meshes (siege engines and their loads), uploaded every frame, depth-tested and written
+    // so the soldiers sort against them too.
+    if(dynamic&&dynamic.length){
+      let b=S.buf.dynamic;if(!b){b=gl.createBuffer();S.buf.dynamic=b}
+      gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,dynamic,gl.STREAM_DRAW);
+      const pr=S.prog.mesh;gl.useProgram(pr.p);setCamera(gl,pr,r);
+      bindAttrib(gl,pr,'aPos',b,3,24,0);bindAttrib(gl,pr,'aCol',b,3,24,12);
+      gl.drawArrays(gl.TRIANGLES,0,dynamic.length/6);
+    }
     if(soldiers.length&&soldierAtlas.canvas){
       if(soldierAtlas.dirty){uploadTexture(gl,'soldierAtlas',soldierAtlas.canvas);soldierAtlas.dirty=false}
       let b=S.buf.soldiers;if(!b){b=gl.createBuffer();S.buf.soldiers=b}
@@ -940,6 +1315,8 @@
   }
   function drawBack(r){
     const t0=performance.now(),gl=ensureGL();if(!gl)return false;
+    try{
+    pollRendererError(gl);
     collecting=[];                           // soldiers drawn this frame go to the 3D front pass
     const gpu=document.getElementById('gpuCanvas');if(gpu&&gpu.style.visibility!=='hidden')gpu.style.visibility='hidden';
     ensureContent(gl);
@@ -954,6 +1331,21 @@
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
     return true;
+    }catch(err){
+      // Never leave gameplay blank when the optional renderer fails.
+      disableRenderer(err);
+      return false;
+    }
+  }
+  function disableRenderer(err){
+    S.failed='world3d-draw: '+String(err?.message||err);enabled=false;collecting=null;
+    const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
+    window.ConquerWebGPU?.invalidate?.();invalidateSceneCache();
+    console.warn('World 3D disabled; Canvas fallback:',S.failed);
+  }
+  function finishFrame(){
+    try{deferRendererError(S.gl);return true}
+    catch(err){disableRenderer(err);return false}
   }
   function nightLightsEnabled(){return useGpuNightLights}
   function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}
@@ -976,7 +1368,7 @@
   }
   function drawCastleOverlays(){
     // Arcades are 3D decals now; only cutaway interiors keep their 2.5D drawing.
-    if(State.structures.some(s=>structureCutaway(s)&&!underConstruction(s)))drawCutawayStructures();
+    if(State.structures.some(s=>structureCutaway(s)&&!underConstruction(s)))drawCutawayStaticOverlay();
   }
   // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
   function drawMastioDrapes(){
@@ -984,9 +1376,54 @@
     if(!mastio.length)return;
     try{State.structures=mastio;drawFacadeWindows(false,1,false)}finally{State.structures=all}
   }
+  // ---------- dynamic meshes: queued during the frame like soldiers ----------
+  // mesh: {pos: 9 world coords per triangle, col: one CSS hex per triangle}. Flat colours take the
+  // castle's two-tone side shading for the current view rotation (tops full, sides light/dark).
+  let dynamicQueue=[];
+  function addMesh(mesh){if(collecting&&mesh&&mesh.col&&mesh.col.length)dynamicQueue.push(mesh)}
+  const hexRgb=new Map();
+  function meshRgb(hex){
+    let v=hexRgb.get(hex);if(v)return v;
+    const h=hex.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);hexRgb.set(hex,v);return v;
+  }
+  function buildDynamic(list){
+    let n=0;for(const m of list)n+=m.col.length;
+    const out=new Float32Array(n*18);let o=0;
+    for(const m of list){
+      const p=m.pos;
+      for(let t=0;t<m.col.length;t++){
+        const i=t*9,ux=p[i+3]-p[i],uy=p[i+4]-p[i+1],uz=p[i+5]-p[i+2],vx=p[i+6]-p[i],vy=p[i+7]-p[i+1],vz=p[i+8]-p[i+2];
+        const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,len=Math.hypot(nx,ny,nz)||1;
+        let f;
+        if(nz/len>.5)f=1;else if(nz/len<-.5)f=.5;
+        else{const q=rotateViewPoint({x:-ny,y:nx}),z0=rotateViewPoint({x:0,y:0});f=Math.cos(2*(Math.atan2(q.y-z0.y,q.x-z0.x)-Math.PI/6))>=0?.84:.68}
+        const c=meshRgb(m.col[t]),pale=(c[0]+c[1]+c[2])/3>.7;if(pale)f=1-(1-f)*.55;
+        for(let k=0;k<3;k++){out[o++]=p[i+k*3];out[o++]=p[i+k*3+1];out[o++]=p[i+k*3+2];out[o++]=c[0]*f;out[o++]=c[1]*f;out[o++]=c[2]*f}
+      }
+    }
+    return out;
+  }
+  let settledMeshRefs=[],settledMeshRotation=-1;
+  function uploadSettledMeshes(gl,meshes){
+    const rotation=State.view.rotation||0;
+    if(rotation===settledMeshRotation&&meshes.length===settledMeshRefs.length&&meshes.every((m,i)=>m===settledMeshRefs[i]))return;
+    const t0=performance.now();
+    upload(gl,'settledRubble',buildDynamic(meshes));
+    settledMeshRefs=meshes.slice();settledMeshRotation=rotation;
+    const p=perf();p.settledRubbleUploads=(p.settledRubbleUploads||0)+1;p.settledRubbleBuildMs=performance.now()-t0;
+  }
   function drawFront(r){
     const t0=performance.now(),list=collecting||[];collecting=null;
-    renderFront(r,buildSoldiers(list));ctx.drawImage(S.canvas,0,0,r.width,r.height);
+    // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
+    // Mill sails and wheels turn every frame (industries).
+    // Gate door leaves, portcullis and torch brackets (gate fittings).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates]){
+      try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
+    }
+    const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);
+    uploadSettledMeshes(S.gl,settled);
+    const dyn=buildDynamic(moving);dynamicQueue=[];
+    renderFront(r,buildSoldiers(list),dyn);ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
     // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
     // frame is expensive, so skip the call entirely when none of them is present.
@@ -1016,8 +1453,8 @@
     draw();
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
-    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,
+    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,finishFrame,_setActiveForTest,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

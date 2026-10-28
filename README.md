@@ -1,5 +1,9 @@
 # CONQUER
 
+> **Punto di ingresso aggiornato per roadmap, decisioni, stato Git e handoff:** [CONTEXT PYRAMID](docs/context/README.md). La sezione V0.11 sottostante è documentazione storica di una fase del prototipo, non lo stato completo al 16/10/2026.
+
+**Stato Git verificato al 21/10/2026:** [audit delle PR integrate e aperte](docs/context/AUDIT-2026-10-21.md) (base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2)). Per ogni nuova PR operativa, anche verso branch di lavoro: [procedura di aggiornamento della piramide](docs/context/PR-WORKFLOW.md) + check CI `Context sync`, `STATUS`, `BACKLOG`, `CHANGELOG`. `ROADMAP` e `DECISIONS` cambiano solo se necessario. La sezione storica V0.11 sotto non descrive lo stato corrente.
+
 Settlement builder / manager prototype.
 
 ## V0.11 scope

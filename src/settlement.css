@@ -37,9 +37,9 @@ select{width:100%;border:1px solid var(--line-strong);background:var(--sunken);c
 #rotateLeft,#rotateRight,#planToggle{font-size:20px;line-height:1}
 #timePanel button.active{background:var(--accent);color:#1b130f;border-color:var(--accent)}
 #timePanel .time-readout{min-width:76px;text-align:center;font-size:11px;color:var(--text-2);padding:0 4px}
-#devTools{position:absolute;right:12px;top:12px;z-index:9;width:246px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-#devToggle{min-width:74px;height:34px;padding:0 10px;border-radius:9px;font-size:12px;font-weight:900;letter-spacing:.08em;background:rgba(23,15,12,.94)}
-#devPanel{width:100%;padding:10px;background:rgba(23,15,12,.96);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.32);backdrop-filter:blur(8px)}
+#devTools{position:absolute;right:12px;top:12px;z-index:9;width:246px;max-height:calc(100% - 24px);display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+#devToggle{flex:0 0 34px;min-width:74px;height:34px;padding:0 10px;border-radius:9px;font-size:12px;font-weight:900;letter-spacing:.08em;background:rgba(23,15,12,.94)}
+#devPanel{flex:0 1 auto;min-height:0;width:100%;padding:10px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;background:rgba(23,15,12,.96);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.32);backdrop-filter:blur(8px)}
 #devPanel[hidden]{display:none}
 .dev-section+.dev-section{margin-top:10px;padding-top:9px;border-top:1px solid var(--line-strong)}
 .dev-label{display:block;margin-bottom:6px;font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--text-2)}

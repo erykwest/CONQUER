@@ -31,6 +31,7 @@ function structureSceneLayers(s){
   if(['road','moat','bridge'].includes(s.type))return['ground','base'];
   if(s.auto&&s.type==='field')return['ground'];
   if(s.type==='house')return['ground','shadow','base'];
+  if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
@@ -110,8 +111,93 @@ const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
-const initialSeed=(()=>{const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+// Asset Lab sandbox: one fixed world, so audit captures repeat across runs and machines.
+const initialSeed=(()=>{if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},buildMasonryMaterial:'stone',resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+// DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
+const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
+State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
+const CLAY_VISUAL_SWATCHES=Object.freeze({
+  '#9a8e82':'#be7254',
+  '#635951':'#98523e',
+  '#514a44':'#763b30',
+  '#887d72':'#ad654b',
+  '#554d46':'#804130',
+  '#403b36':'#653226',
+  '#9f9183':'#c18260',
+  '#c8b9a9':'#dc9b78',
+  '#918579':'#b87355',
+  '#605750':'#98503c',
+  '#4a443e':'#75392d',
+  '#b3a596':'#d18e6d',
+  '#948779':'#b77357',
+  '#625a52':'#9c5540',
+  '#4b4540':'#743c2f',
+  '#8f857a':'#b77558',
+  '#82776c':'#9d563f',
+  '#61574f':'#824332',
+  '#5a514a':'#774032',
+  '#49443f':'#774034',
+  '#686057':'#a35b46',
+  '#84796d':'#b37355',
+  '#4e4740':'#7d4232',
+  '#5d554d':'#97523d',
+  '#88796b':'#b67456',
+  '#62584f':'#995741',
+  '#8c7b69':'#b67354',
+  '#554b42':'#824432',
+  '#66594d':'#a45a44',
+  '#9f9285':'#c18665',
+  '#8d877c':'#b97758',
+  '#716c64':'#96513d',
+  '#7f796f':'#af6c50',
+  '#4c4842':'#783d31',
+  '#5a554d':'#8d4837',
+  '#a59b8d':'#c58a6a',
+  '#b8aa99':'#d09270',
+  '#676a6c':'#b66e51',
+  '#66635f':'#93503d',
+  '#77736e':'#a85d46',
+  '#6b6863':'#a96047',
+  '#7d7973':'#b87559',
+  '#85817a':'#c07c5c',
+  '#696862':'#96513e',
+  '#777671':'#ae684d',
+  '#85847d':'#bb7456',
+  '#625e59':'#ae664d',
+  '#4f4b47':'#864330',
+  '#303237':'#a94e36',
+  '#3a3d42':'#bf6345',
+  '#303943':'#a44c34',
+  '#394550':'#c06946',
+  '#34363a':'#a85239',
+  '#42454a':'#c26a4a',
+  '#303236':'#99442f',
+  '#44474c':'#cb7350',
+  '#3d4145':'#ab5038',
+  '#484c50':'#c26b49',
+  '#41454a':'#ae573d',
+  '#4c5054':'#c4714c',
+  '#595a60':'#b35d40',
+  '#3b302b':'#a85037',
+  '#493930':'#bd6647'
+});
+let structureVisualMaterial=null;
+function masonryMaterial(s){
+  if(!s||s.material==='wood'||s.type==='palisade'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
+  return s.masonryMaterial==='brick'?'brick':'stone';
+}
+function withStructureVisualMaterial(s,paint){
+  const previous=structureVisualMaterial;
+  structureVisualMaterial=masonryMaterial(s);
+  try{return paint()}finally{structureVisualMaterial=previous}
+}
+function visualPaletteColor(color){
+  if(typeof color!=='string')return color;
+  return (State.visualPalette==='clay'||structureVisualMaterial==='brick')
+    ?CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color:color;
+}
+// DEV VISUAL PALETTE END
 const STRUCTURE_ANGLE_STEP_DEG=15;
 const STRUCTURE_ANGLE_STEPS=360/STRUCTURE_ANGLE_STEP_DEG;
 const STRUCTURE_ANGLE_STEP=Math.PI*2/STRUCTURE_ANGLE_STEPS;
@@ -128,7 +214,7 @@ function structureAngleFromStep(step){
 }
 function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
 function structureUsesDiscreteAngle(s){
-  return !!s&&['tower','gate','house','market','tavern','church','training'].includes(s.type);
+  return !!s&&['tower','gate','house','market','tavern','church','training','plaza'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
   if(!s)return 0;
@@ -157,9 +243,10 @@ const COSTS={
   market:{gold:120,stone:70,wood:85},
   tavern:{gold:190,stone:65,wood:145},
   church:{gold:320,stone:360,wood:110,metal:18},
+  plaza:{gold:90,stone:80,wood:10},
   training:{gold:90,stone:24,wood:70}
 };
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -167,10 +254,19 @@ const BASE_DAYS_PER_SECOND=1/48;
 // Villager routines and procedural daylight use the same simulated day as crops,
 // seasons and the calendar (a full visual day now takes 48 s at 1×).
 const PEASANT_VISUAL_SPEED=1;
-const VISUAL_DAYLIGHT_RATIO=16/24;
-const VISUAL_NIGHT_RATIO=8/24;
+// The simulated calendar fraction is a true clock: 0 = midnight, .5 = noon.
+// Sunrise/sunset are civil hours. Spring and autumn intentionally share 06–18.
+const SEASONAL_SUN_HOURS=Object.freeze({
+  spring:Object.freeze({sunrise:6,sunset:18}),
+  summer:Object.freeze({sunrise:5,sunset:21}),
+  autumn:Object.freeze({sunrise:6,sunset:18}),
+  winter:Object.freeze({sunrise:8,sunset:16})
+});
+function solarHours(season=State.season){
+  return SEASONAL_SUN_HOURS[season]||SEASONAL_SUN_HOURS.spring;
+}
+const SOLAR_TWILIGHT_HOURS=1;
 const NIGHT_OVERLAY_MAX=.48;
-const VISUAL_TWILIGHT=1/24;
 const BATTLEMENT_SPACING=.62;
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
@@ -188,7 +284,8 @@ const STRUCTURE_VARIANT_VERSION=2;
 const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
     roofStyle:Object.freeze(['battlement','machicolation','pitched']),
-    baseStyle:Object.freeze(['standard','buttress','splayed'])
+    baseStyle:Object.freeze(['standard','buttress','splayed']),
+    topWeapon:Object.freeze(['none','mangonel','ballista'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat'])
@@ -201,18 +298,17 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none'}),
   gate:Object.freeze({roofStyle:'battlement'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
 });
-const PEASANT_PALETTE=Object.freeze([
-  '#6f5135','#87613c','#9a713f','#b08a55','#c1a779',
-  '#756b3f','#6f7a45','#82924c','#9aa556','#b0ad63'
-]);
-const ARTISAN_PALETTE=Object.freeze(['#765641','#8a6848','#6f7252','#707b70','#7f665b','#8b7755']);
-const MERCHANT_PALETTE=Object.freeze(['#a63e32','#355f9c','#c59a2d','#4f873e','#754d8c','#b86b2d']);
-const ELITE_PALETTE=Object.freeze(['#e34838','#3479d3','#f0bf2f','#62b94e','#a45fcb','#ef8731']);
+// Clothing by house level: L1 grey/beige, L2 green/brown, L3 muted primaries,
+// L4 bright primaries. Shared by tunics and the dyed pieces of the seasonal wardrobe.
+const PEASANT_PALETTE=Object.freeze(['#7d7a72','#8f8b82','#a39e93','#b9b2a3','#c8bda6','#d6c9ad','#9c9078','#b4a58a']);
+const ARTISAN_PALETTE=Object.freeze(['#5f6b3e','#6f7d47','#4f6140','#7a5a3a','#8a6845','#6b4e33']);
+const MERCHANT_PALETTE=Object.freeze(['#9a5550','#8a4f4a','#56708f','#4d6582','#b5a160','#a8955a']);
+const ELITE_PALETTE=Object.freeze(['#d83a2e','#c3261e','#2f6fd6','#2358b8','#f2c12e','#e8b020']);
 const HAIR_COLORS=Object.freeze({
   blonde:'#d5b65a',brown:'#65452f',black:'#262321',gray:'#9a9891',red:'#9b4a2d'
 });
@@ -246,7 +342,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const snapGrid=v=>Math.round(v/GRID)*GRID;
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
-const RES_ORDER=['gold','stone','wood','metal'];
+const RES_ORDER=['gold','stone','clay','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
 function variantSchema(s){return s&&STRUCTURE_VARIANTS[s.type]||null}
 function variantDefaults(s){return s&&STRUCTURE_VARIANT_DEFAULTS[s.type]||null}
@@ -271,7 +367,15 @@ function setStructureVariant(s,key,value){
   s.variantVersion=STRUCTURE_VARIANT_VERSION;
   return true;
 }
-function towerRoofStyle(s){return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined}
+// A storey brought down from the top leaves a broken crown: no roof, merlons or deck.
+function towerRoofStyle(s){
+  if(s?.type==='tower'&&s.brokenTop&&!isWoodTower(s))return'broken';
+  return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined;
+}
+// Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
+// at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))}
+function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';
@@ -286,6 +390,7 @@ function woodTowerRoof(s){
 function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
 function gateRoofStyle(s){
   if(isWoodGate(s))return'flat';
+  if(s?.type==='gate'&&s.brokenTop)return'broken';
   return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined
 }
 function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
@@ -350,29 +455,84 @@ function houseLocalToWorld(s,x,y){
   const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
 }
-function houseTurretInfo(s){
+// L2+ houses: the stone ground floor takes the lower 47.5% of the wall; the timbered upper floors
+// jetty out over it by HOUSE_JETTY on the door side and the opposite side (local ±Y).
+const HOUSE_FLOOR_BREAK=.475,HOUSE_JETTY=.07;
+function houseFloorBreak(wallH){return wallH*HOUSE_FLOOR_BREAK}
+function houseJetty(s){return houseLevel(s)>=2?HOUSE_JETTY:0}
+function houseTurretInfo(s,bodies=null){
   if(houseLevel(s)<4)return null;
-  const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s),hash=peasantHash((s.id||'house')+'-turret-pos');
-  const sx=(hash&2)?1:-1,sy=s.urbanCompact?1:(hash&4)?1:-1,type=houseTurretType(s);
-  // Compact L4 keeps its turret, but positions it behind the frontage
-  // instead of projecting into a neighbouring townhouse.
-  const cx=s.urbanCompact?sx*w*.18:sx*w*.60,cy=sy*h*(s.urbanCompact?.65:.58);
-  const center=houseLocalToWorld(s,cx,cy);
-  const bodyH=2.62,roofH=3.42;
-  if(type==='round'){
-    const r=s.urbanCompact?Math.min(.37,w*.22,h*.33):.52;
-    return{kind:'turret',type,cx,cy,center,r,bodyH,roofH,points:circleWorldPoints(center.x,center.y,r,20)};
+  if(!bodies)return houseFootprintParts(s).find(p=>p.kind==='turret')||null;
+  const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s);
+  const type=houseTurretType(s);
+  const r=s.urbanCompact?Math.min(.37,w*.25,h*.33):.52,size=s.urbanCompact?Math.min(.70,w*.42,h*.60):.92;
+  const rad=type==='round'?r:size/2;
+  // Only a corner house gets a turret, on its street-front corner towards the side street. A
+  // townhouse (street on local -Y; urbanDenseLayout sets turretCorner on the end building of a row
+  // that meets another street) keeps it flush with its party wall and pushes it 3/4 of a radius
+  // past the facade: the layout steps the building back by `front`, so it reaches the street line.
+  // A detached house turns it to its door side, on the frontmost body wide enough for it (L/T wings
+  // grow towards +Y); houseDoorInfo then keeps the door on the other half of the facade.
+  // Both mirror positions (sx = ±1) are built and the one nearer the street corner wins.
+  let place,sy,front=0,corner;
+  if(s.urbanCompact){
+    corner=s.turretCorner;if(!corner)return null;
+    sy=-1;front=rad*.75;place=k=>({cx:k*(w/2-rad),cy:-(h/2+front-rad)});
+  }else{
+    corner=houseCornerSide(s);if(!corner)return null;
+    sy=houseStreetSide(s);
+    const reach=p=>sy*p.cy+p.h/2,host=bodies.filter(p=>p.w>=2*rad).sort((a,b)=>reach(b)-reach(a))[0]||bodies[0];
+    place=k=>({cx:host.cx+k*(host.w/2-rad*.55),cy:host.cy+sy*(host.h/2-rad*.55)});
   }
-  const size=s.urbanCompact?Math.min(.70,w*.4,h*.60):.92;
-  return{kind:'turret',type,cx,cy,center,size,bodyH,roofH,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
+  const near=k=>{const p=place(k),c=houseLocalToWorld(s,p.cx,p.cy);return corner.point?Math.hypot(c.x-corner.point.x,c.y-corner.point.y):-k*corner.side};
+  const sx=near(1)<=near(-1)?1:-1,{cx,cy}=place(sx),center=houseLocalToWorld(s,cx,cy);
+  // Heights follow the house walls (2.62/3.42 on a 1.72 U body): with the taller
+  // auto/streetfront L4 body fixed values would bury the turret in the main roof.
+  const wallH=houseBodyHeight(s),bodyH=wallH+.90,roofH=wallH+1.70,floorZ=houseFloorBreak(wallH);
+  const base={kind:'turret',type,cx,cy,sx,sy,center,rad,front,wallH,bodyH,roofH,floorZ,angle:s.angle||0};
+  if(type==='round')return{...base,r,points:circleWorldPoints(center.x,center.y,r,20)};
+  return{...base,size,points:rectWorldPoints(center.x,center.y,size,size,s.angle||0)};
+}
+// Local Y sign of the side a detached house shows to its road (its door side).
+function houseStreetSide(s){
+  if(s.doorSide!=null&&Number.isFinite(Number(s.doorSide)))return Number(s.doorSide)>=0?1:-1;
+  return typeof inferHouseDoorSide==='function'?inferHouseDoorSide(s):1;
+}
+// A detached house stands on a corner when two non-parallel streets (access spurs excluded) pass
+// close by. Returns {side: local X sign towards the side street, point: where the two street axes
+// cross}, or null.
+function houseCornerSide(s){
+  if(typeof roadList!=='function')return null;
+  const {w,h}=houseFootprintDimensions(s),reach=Math.max(w,h)/2+1.8,ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+  const near=[];
+  for(const road of roadList(true)){
+    if(road.accessFor||!road.a||!road.b)continue;
+    const L=Math.hypot(road.b.x-road.a.x,road.b.y-road.a.y);if(L<.5)continue;
+    const t=Math.max(0,Math.min(1,((s.x-road.a.x)*(road.b.x-road.a.x)+(s.y-road.a.y)*(road.b.y-road.a.y))/(L*L)));
+    const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
+    if(Math.hypot(q.x-s.x,q.y-s.y)<=reach)near.push({a:road.a,ux:(road.b.x-road.a.x)/L,uy:(road.b.y-road.a.y)/L,lx:(q.x-s.x)*ca+(q.y-s.y)*sa});
+  }
+  for(let i=0;i<near.length;i++)for(let j=i+1;j<near.length;j++){
+    const p=near[i],q=near[j],cross=p.ux*q.uy-p.uy*q.ux;
+    if(Math.abs(cross)<.7)continue;
+    const t=((q.a.x-p.a.x)*q.uy-(q.a.y-p.a.y)*q.ux)/cross;
+    const side=Math.abs(p.lx)>Math.abs(q.lx)?p.lx:q.lx;
+    return{side:side>=0?1:-1,point:{x:p.a.x+p.ux*t,y:p.a.y+p.uy*t}};
+  }
+  return null;
 }
 function houseFootprintParts(s){
   // Streetfront volumes have already received their independent ±20% sizes.
   const {w,h}=s.urbanCompact?{w:Number(s.w)||1.5,h:Number(s.h)||1}:houseFootprintDimensions(s);
-  const parts=[{kind:'body',cx:0,cy:0,w,h,roofTurn:0}];
+  const gable=!!s.gableFront;
+  const parts=[{kind:'body',cx:0,cy:0,w,h,roofTurn:gable?Math.PI/2:0}];
   if(houseLevel(s)>=3){
     const sign=(peasantHash(s.id)&2)?1:-1,plan=housePlanType(s);
-    if(plan==='L'){
+    if(gable){
+      // Gable-front townhouse: the ridge runs away from the street, a lower cross wing closes the back.
+      if(plan==='L')parts.push({kind:'body',cx:sign*w*.18,cy:h*.52,w:w*.64,h:h*.34,roofTurn:0});
+      else parts.push({kind:'body',cx:0,cy:h*.50,w,h:h*.32,roofTurn:0});
+    }else if(plan==='L'){
       parts.push({kind:'body',cx:sign*w*(s.urbanCompact?.25:.38),
         cy:h*(s.urbanCompact?.40:.56),w:w*(s.urbanCompact?.48:.55),
         h:h*(s.urbanCompact?.68:.95),roofTurn:Math.PI/2});
@@ -385,11 +545,20 @@ function houseFootprintParts(s){
         roofTurn:Math.PI/2});
     }
   }
-  const out=parts.map(p=>{const q=houseLocalToWorld(s,p.cx,p.cy);return{...p,center:q,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)}});
-  const turret=houseTurretInfo(s);if(turret)out.push(turret);
+  const jetty=houseJetty(s);
+  const out=parts.map(p=>{
+    const q=houseLocalToWorld(s,p.cx,p.cy),part={...p,center:q,points:rectWorldPoints(q.x,q.y,p.w,p.h,s.angle||0)};
+    // Ground floor recessed on local ±Y (rectWorldPoints edges 0 and 2), same vertex order as points.
+    if(jetty)part.basePoints=rectWorldPoints(q.x,q.y,p.w,Math.max(.2,p.h-2*jetty),s.angle||0);
+    return part;
+  });
+  // Bodies keep a link to their turret so facades can leave the walls it covers bare.
+  const turret=houseTurretInfo(s,parts);if(turret){for(const p of out)p.turret=turret;out.push(turret)}
   return out;
 }
-function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?2.38:1.72}
+// L2+ walls (was 1.72 / 2.38 U): storeys lowered ~10%, then the upper floors a further 20% with the
+// ground floor unchanged (HOUSE_FLOOR_BREAK rises from .42 to .475 accordingly).
+function houseBodyHeight(s){return houseLevel(s)===1?.95:(s.auto||s.urbanCompact)&&houseLevel(s)===4?1.89:1.37}
 // L2+ gabled roofs are steep (60°, medieval): the ridge rises tan(60°)·half-span above the eaves,
 // where the span is the part's side perpendicular to its ridge. L1 cottages keep their low thatch.
 const HOUSE_ROOF_PITCH=Math.tan(60*Math.PI/180);
@@ -416,8 +585,18 @@ function houseRidgeHeight(s){
   return housePartRidge(s,houseFootprintParts(s)[0]);
 }
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
-const CIVIC_TYPES=Object.freeze(['market','tavern','church','training']);
+const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza']);
+const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza']);
+const PLAZA_VARIANTS=Object.freeze(['paved','fountain','garden']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
+function civicLevel(s){return Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1)))}
+function plazaVariant(s){return PLAZA_VARIANTS.includes(s?.plazaVariant)?s.plazaVariant:'paved'}
+const isPlazaLike=s=>s?.type==='plaza'||s?.type==='civicAnnex'&&s.annexType==='square';
+function normalizeCivicDevelopment(s){
+  if(CIVIC_LEVEL_TYPES.includes(s?.type))s.civicLevel=civicLevel(s);
+  if(s?.type==='plaza')s.plazaVariant=plazaVariant(s);
+  return s;
+}
 function civicLocalParts(s){
   if(s.type==='market')return[{cx:0,cy:0,w:4,h:4,role:'plaza',roofTurn:0}];
   if(s.type==='tavern')return[
@@ -431,6 +610,7 @@ function civicLocalParts(s){
     {cx:0,cy:-2.65,w:1.85,h:1.85,role:'tower',roofTurn:0}
   ];
   if(s.type==='training')return[{cx:0,cy:0,w:5,h:4,role:'training',roofTurn:0}];
+  if(s.type==='plaza')return[{cx:0,cy:0,w:5,h:5,role:'square',roofTurn:0}];
   return[];
 }
 function civicParts(s){
@@ -452,7 +632,7 @@ function levelCostFactor(s){
   return[1,1.8][l-1];
 }
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
-function constructionCost(s){
+function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
@@ -467,14 +647,20 @@ function constructionCost(s){
       :{gold:5*(s.length||1)*factor,wood:18*(s.length||1)*factor});
   }
   if(s.type==='well')return {...COSTS.well};
-  if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.TYPES[s.type].cost};
+  if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.definition(s).cost};
+  if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   return{};
 }
-function costText(cost){const icons={gold:'🪙',stone:'🪨',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
+function constructionCost(s){
+  const cost=baseConstructionCost(s);
+  if(s?.masonryMaterial==='brick'&&cost.stone>0){cost.clay=(cost.clay||0)+cost.stone;delete cost.stone}
+  return cost;
+}
+function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
 function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v)}
 function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
 function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
@@ -485,7 +671,8 @@ function buildDuration(s){
   }
   if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
-  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.TYPES[s.type].days;
+  if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.definition(s).days;
+  if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
@@ -515,6 +702,7 @@ function pointRadius(s){
   if(s.type==='well')return .75;
   if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
   if(s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(isCivicAnnex(s))return Math.hypot(s.w||1,s.h||1)/2;
   if(isCivic(s))return civicRadius(s);
   return .5;
 }
@@ -543,7 +731,7 @@ function pointRadius(s){
   function delta(name,p){return Math.max(0,finite(p[name])-finite(lastPerf[name]))}
   function sendRemote(sample){
     const now=performance.now();
-    if(!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
+    if(window.__CONQUER_ASSET_LAB__||!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
     lastRemoteAt=now;
     const recentEvents=events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8);
     const row={

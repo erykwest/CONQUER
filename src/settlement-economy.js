@@ -2,14 +2,17 @@
 // CONQUER Economy V1: aggregate cohorts, deterministic periodic accounting.
 // Builder test resources deliberately remain separate from economic inventories.
 (() => {
-  const GOODS = Object.freeze(['food','wood','stone','metal','equipment','luxury']);
-  const BASE = Object.freeze({food:2,wood:3,stone:4,metal:7,equipment:17,luxury:20});
-  const TARGET = Object.freeze({food:100,wood:70,stone:70,metal:35,equipment:30,luxury:10});
+  const GOODS = Object.freeze(['food','wood','stone','clay','metal','equipment','luxury']);
+  const BASE = Object.freeze({food:2,wood:3,stone:4,clay:3,metal:7,equipment:17,luxury:20});
+  const TARGET = Object.freeze({food:100,wood:70,stone:70,clay:70,metal:35,equipment:30,luxury:10});
   const KIND = Object.freeze({
     field:{good:'food',classId:1,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
     quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
     mine:{good:'stone',classId:2,workers:2,rate:2,build:95},
+    // Optional mills process unmarketed crop stock. No additional tradeable good.
+    windmill:{good:'food',classId:1,workers:0,rate:12,build:40},
+    watermill:{good:'food',classId:1,workers:0,rate:12,build:45},
     workshop:{good:'equipment',classId:3,workers:1,rate:.5,inputs:{metal:.6,wood:.3},build:130},
     vineyard:{good:'luxury',classId:1,workers:2,build:90}
   });
@@ -36,14 +39,27 @@
       lots:Object.fromEntries(GOODS.map(g=>[g,[]])),
       prices:{...BASE},externalDemand:empty(),externalOffers:empty(),
       wallet:{L1:24,L2:40,L3:60,L4:300},welfare:50,
-      wage:{L1:1,L2:2,L3:3},activities:{},
+      wage:{L1:1,L2:2,L3:3},activities:{},cropStock:{lord:0,private:0},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
       weeks:0,months:0,years:0
     };
   }
   function state(){
     if(!State.economy||State.economy.version!==1)State.economy=makeState();
-    return State.economy;
+    // Upgrade pre-clay economy saves without erasing stocks, activities or historical books.
+    const e=State.economy;
+    for(const good of GOODS){
+      e.castle??={};e.target??={};e.saleShare??={};e.lots??={};
+      e.prices??={};e.externalDemand??={};e.externalOffers??={};
+      if(!Number.isFinite(e.castle[good]))e.castle[good]=0;
+      if(!Number.isFinite(e.target[good]))e.target[good]=TARGET[good];
+      if(!Number.isFinite(e.saleShare[good]))e.saleShare[good]=50;
+      if(!Array.isArray(e.lots[good]))e.lots[good]=[];
+      if(!Number.isFinite(e.prices[good]))e.prices[good]=BASE[good];
+      if(!Number.isFinite(e.externalDemand[good]))e.externalDemand[good]=0;
+      if(!Number.isFinite(e.externalOffers[good]))e.externalOffers[good]=0;
+    }
+    return e;
   }
   function reset(){State.economy=makeState();render(true)}
   function note(e,label){
@@ -54,6 +70,7 @@
   }
   function sync(){
     const e=state();
+    e.cropStock||={lord:0,private:0}; // migrate earlier saved economies in place
     const present=new Set((State.structures||[]).filter(s=>KIND[s.type]).map(s=>s.id));
     for(const id of Object.keys(e.activities))if(!present.has(id))delete e.activities[id];
     for(const s of activeStructures()){
@@ -113,9 +130,30 @@
   function daily(day){
     const e=sync();if(weekday(day)>=5)return;
     const staffing=activeCapacity(),date=dateAt(day);
-    for(const s of activeStructures()){
+    const active=activeStructures(),hasMill=active.some(s=>
+      ['windmill','watermill'].includes(s.type)&&
+      !s.economyDisabled&&!s.destroyed&&!s.abandoned&&!s.burnt);
+    for(const s of active){
       const a=e.activities[s.id],spec=KIND[s.type],staff=staffing[s.id]||0;
-      if(!staff||s.economyDisabled||s.destroyed||s.abandoned||a.abandoned)continue;
+      if(s.economyDisabled||s.destroyed||s.abandoned||a.abandoned||s.burnt)continue;
+      if(['windmill','watermill'].includes(s.type)){
+        // Milling is an optional service, even when no workforce is free.
+        // Rural auto-fields are often privately owned while player mills
+        // belong to the lord. A mill serves both owners without confiscating
+        // their produce: each converted lot keeps the original crop owner.
+        let capacity=spec.rate;
+        for(const cropOwner of [a.owner,a.owner==='lord'?'private':'lord']){
+          const available=Math.max(0,e.cropStock[cropOwner]||0);
+          const amount=round(Math.min(capacity,available));
+          if(amount<=0)continue;
+          e.cropStock[cropOwner]=round(available-amount);
+          put(e,'food',amount,cropOwner,s.id);
+          capacity=round(capacity-amount);
+          if(capacity<=0)break;
+        }
+        continue;
+      }
+      if(!staff)continue;
       if(s.type!=='field'&&(window.ConquerCombat?.alarmMode?.()||'off')!=='off')continue;
       if(s.type==='field'||s.type==='vineyard'){
         // Field visual cycles are tracked independently. Economic harvest occurs
@@ -126,7 +164,9 @@
           ?fieldLayout(s).area:Math.max(4,finite(s.w,3)*finite(s.h,2));
         const quantity=round(area*(s.type==='field'?2.5:1.1)*Math.min(1,staff/workerDemand(s).count));
         if(quantity<=0)continue;
-        put(e,spec.good,quantity,a.owner,s.id);
+        if(s.type==='field'&&hasMill){
+          e.cropStock[a.owner]=round((e.cropStock[a.owner]||0)+quantity);
+        }else put(e,spec.good,quantity,a.owner,s.id);
         a.cyclesSeen=finite(s.crop?.cycles,a.cyclesSeen);
         a.lastHarvestYear=date.year;
         continue;
@@ -141,7 +181,7 @@
           a.inputs[good]=round(Math.max(0,(a.inputs[good]||0)-produced/spec.rate*need));
         }
       }
-      if(produced>0)put(e,spec.good,produced,a.owner,s.id);
+      if(produced>0)put(e,s.type==='quarry'&&s.extractionMode==='clay'?'clay':spec.good,produced,a.owner,s.id);
     }
   }
   function fulfill(e,good,amount,consumer){
@@ -168,7 +208,12 @@
   }
   function market(day){
     const e=sync(),pop=population();
-    const demand={food:0,wood:0,stone:0,metal:0,equipment:0,luxury:0};
+    // Mills are never required to sustain the food economy.
+    for(const owner of ['lord','private']){
+      const raw=Math.max(0,e.cropStock[owner]||0);
+      if(raw>0){put(e,'food',raw,owner,'unmilled-'+owner);e.cropStock[owner]=0}
+    }
+    const demand=empty();
     for(let tier=1;tier<=4;tier++){
       const count=pop[classKey(tier)];
       demand.food+=count*.55;
@@ -351,5 +396,5 @@
     render(true);
   }
   window.ConquerEconomy=Object.freeze({GOODS,KIND,weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
-    setShare,setTarget,setExternalDemand,transfer,snapshot,population});
+    setShare,setTarget,setExternalDemand,transfer,assetValue,snapshot,population});
 })();

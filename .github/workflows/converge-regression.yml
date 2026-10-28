@@ -1,0 +1,48 @@
+name: Converge siege integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/settlement-siege.js
+      - src/settlement-gate-fittings.js
+      - qa/siege-damage-converge-regression.cjs
+      - qa/siege-damage-converge-browser.mjs
+      - qa/gate-fittings-regression.cjs
+      - .github/workflows/converge-regression.yml
+jobs:
+  siege-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify damage, gate and collapse contracts
+        run: |
+          node qa/siege-damage-converge-regression.cjs
+          node qa/gate-fittings-regression.cjs
+          node qa/gate-breach-regression.cjs
+          node qa/collapse-regression.cjs
+          node qa/paused-render-regression.cjs
+      - name: Install Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install chromium
+      - name: Start local server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/converge-http.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/index.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/converge-http.log
+          exit 1
+      - name: Exercise real gate controls in Canvas and WebGL
+        run: node qa/siege-damage-converge-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: converge-siege-browser
+          path: output/playwright/converge/
+          retention-days: 7

@@ -1,0 +1,32 @@
+name: Builder menu regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement.css'
+      - 'src/settlement-builder-ux.js'
+      - 'index.html'
+      - 'qa/builder-menu-regression.cjs'
+      - '.github/workflows/builder-menu-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  menu-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check affected scripts
+        run: |
+          node --check src/settlement-builder-ux.js
+          node --check qa/builder-menu-regression.cjs
+      - name: Verify DEV scrolling and mill tool registration
+        run: node qa/builder-menu-regression.cjs
+      - name: Check existing mill models and placements
+        run: |
+          node qa/mills3d-regression.cjs
+          node qa/builder-placement-regression.cjs

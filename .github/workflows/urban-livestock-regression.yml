@@ -1,0 +1,19 @@
+name: Urban livestock regression
+on:
+  push:
+    branches:
+      - urban
+  workflow_dispatch:
+jobs:
+  livestock-and-refactor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify population module extraction
+        run: node qa/refactor-app-population-regression.cjs
+      - name: Verify L1 herd routines and scale
+        run: node qa/urban-livestock-regression.cjs

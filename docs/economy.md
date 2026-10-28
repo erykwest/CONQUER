@@ -85,3 +85,9 @@ This behavior is **shared across the Builder**, not a special rule of industrial
 - The shared `src/settlement-placement.js` validator checks whitezone boundaries, ground/terrain, nature obstacles, manual collisions, village-well uniqueness and construction affordability. Existing intended tower/gate/wall sockets and market-road crossings are preserved.
 - Industry 2×2 / 3×3 / 1×1U placeholders include a direction marker so rotations are visually distinguishable before their SVGs are introduced.
 - Tests: `node qa/builder-placement-regression.cjs`. The Builder remains a classic-script Canvas application; no extra rendering dependencies.
+
+## Proposal: clay construction alternative (branch `clay`, 2026-10-19)
+
+**DOCUMENTATION ONLY — not present in the economy engine yet.** The approved design adds `clay` to the economic commodities without adding a separate brick good. A `quarry` placed within 6 U of a river/stream/lake bank may specialize in `clay`; existing stone quarries remain unchanged. Stone-consuming construction costs may be substituted 1:1 in quantity with clay when `brick` is selected as the building material, yielding a brown/red visual variant and 80% of the equivalent masonry structural integrity. The already noted gap between ledger goods and `State.resources` must be handled without inventing an independent clay storage system. No kilns, pottery or additional production chain in the first implementation.
+
+See [clay development guide](CLAY-DEVELOPMENT.md) and [clay QA](CLAY-REGRESSION-PLAN.md).

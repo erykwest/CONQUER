@@ -1,0 +1,33 @@
+name: Siege earthworks regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'src/settlement-earthworks.js'
+      - 'src/settlement-siege.js'
+      - 'src/settlement-combat.js'
+      - 'src/settlement-terraforming.js'
+      - 'qa/earthworks-regression.cjs'
+      - 'qa/terraforming-regression.cjs'
+      - '.github/workflows/earthworks-regression.yml'
+jobs:
+  earthworks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile modified modules and tests
+        run: |
+          node --check src/settlement-earthworks.js
+          node --check src/settlement-siege.js
+          node --check src/settlement-combat.js
+          node --check src/settlement-terraforming.js
+          node --check qa/earthworks-regression.cjs
+      - name: Test earthworks and modern terrain
+        run: |
+          node qa/earthworks-regression.cjs
+          node qa/terraforming-regression.cjs

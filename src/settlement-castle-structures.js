@@ -458,7 +458,7 @@ function drawMachicolationFloor(s){
 }
 function drawMachicolationFloors(){
   const items=State.structures.filter(s=>!underConstruction(s)&&hasMachicolation(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of items)drawMachicolationFloor(s);
+  for(const s of items)withStructureVisualMaterial(s,()=>drawMachicolationFloor(s));
 }
 
 function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
@@ -594,7 +594,8 @@ function drawBattlementPiece(piece,frame){
 }
 function renderBattlementPieces(pieces,frame){
   pieces.sort((a,b)=>a.depth-b.depth);
-  for(const piece of pieces)drawBattlementPiece(piece,frame);
+  const owners=new Map(State.structures.map(s=>[s.id,s]));
+  for(const piece of pieces)withStructureVisualMaterial(owners.get(piece.ownerId),()=>drawBattlementPiece(piece,frame));
 }
 function wallExteriorSide(s){return s?.flip?-1:1}
 function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
@@ -741,7 +742,7 @@ function drawTowerRoofs(){
   const towers=State.structures
     .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of towers)drawTowerRoof(s);
+  for(const s of towers)withStructureVisualMaterial(s,()=>drawTowerRoof(s));
 }
 function drawGateRoof(s){
   if(!s||s.type!=='gate'||isWoodGate(s)||underConstruction(s)||gateRoofStyle(s)!=='pitched')return;
@@ -765,7 +766,7 @@ function drawGateRoofs(){
   const gates=State.structures
     .filter(s=>s.type==='gate'&&!underConstruction(s)&&gateRoofStyle(s)==='pitched')
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of gates)drawGateRoof(s);
+  for(const s of gates)withStructureVisualMaterial(s,()=>drawGateRoof(s));
 }
 function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function drawQuarteredTowerFlag(tower){
@@ -845,7 +846,7 @@ function battlementBrazierSources(){
   }
   return out;
 }
-function fireSources(){return towerTorchSources().concat(battlementBrazierSources())}
+function fireSources(){return towerTorchSources().concat(battlementBrazierSources(),window.ConquerGates?.torchSources()||[])}
 function fireFlicker(id){
   const seed=(peasantHash(String(id)+'-fire')%1000)/1000;
   return .88+Math.sin(visualCycleDay()*31+seed*Math.PI*2)*.10+Math.sin(visualCycleDay()*53+seed*9)*.04;
@@ -877,6 +878,8 @@ function drawBrazierFixture(src){
 }
 function drawCastleFireFixtures(){
   for(const src of towerTorchSources())drawTorchFixture(src);
+  // Gate torches have mesh brackets in the 3D world.
+  if(!window.ConquerWorld3D?.active?.())for(const src of window.ConquerGates?.torchSources()||[])drawTorchFixture(src);
   for(const src of battlementBrazierSources())drawBrazierFixture(src);
 }
 // WebGL2 owns the glow halo; only the small animated flame remains a Canvas effect.

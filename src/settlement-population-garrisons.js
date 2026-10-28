@@ -13,7 +13,15 @@ function drawCutawayOccupants(){
     const render=()=>{
       for(const slot of cutawayRoomSlots(s)){
         let count=0,kind=null;
-        if(slot.role==='barracks'||slot.role==='quarters'){count=3;kind='soldier'}
+        if(slot.role==='barracks'||slot.role==='quarters'){
+          count=3;kind='soldier';
+          if(window.__CONQUER_CAMP_MODE__&&slot.role==='barracks'){
+            // Camp roster is authoritative: no decorative soldiers in an empty room.
+            const housed=window.ConquerCombat?.units()?.filter(u=>u.kind==='squad'
+              &&u.barracksId===s.id+':'+slot.index&&u.campState==='barracks')||[];
+            count=Math.min(4,housed.length*2);
+          }
+        }
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
         if(!count)continue;
         const positions=cutawayOccupantLayout(count),items=[];
@@ -92,9 +100,10 @@ function drawCastleSoldiers(){
   // plane, so guards remain planted correctly on sloped approaches.
   for(const gate of State.structures){
     if(gate.type!=='gate'||underConstruction(gate))continue;
-    const guards=gateGuardPositions(gate);
+    if(window.ConquerSiege?.gateClosed?.(gate))continue;   // closed: the guards are inside
+    const guards=window.ConquerCrossings?.drawbridgeGuards?.(gate)||gateGuardPositions(gate);   // on a lowered drawbridge: at its far end
     for(let i=0;i<guards.length;i++){
-      const p=guards[i],z=.08;
+      const p=guards[i],z=p.z??.08;
       if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',gate.id+':gate-guard:'+i,day+i*.5);
     }
   }

@@ -35,7 +35,16 @@ function fieldVoronoiQuad(field,rnd,limit=null){
       const nx=other.x-site.x,ny=other.y-site.y;
       cell=urbanClip(cell,nx,ny,(other.x*other.x+other.y*other.y-site.x*site.x-site.y*site.y)/2);
     }
-    const quad=fieldQuadFromCell(cell,site);if(quad)return quad;
+    const quad=fieldQuadFromCell(cell,site);
+    if(quad){
+      // Approx. twice the area of the old farm while preserving the 6U
+      // side-length contract. Never enlarge legacy/migrated footprints.
+      const longest=Math.max(...quad.map((p,i)=>dist(p,quad[(i+1)%4])));
+      const factor=limit?1:Math.min(Math.SQRT2,FIELD_RULES.maxSide/longest);
+      return factor<=1?quad:quad.map(p=>({
+        x:site.x+(p.x-site.x)*factor,y:site.y+(p.y-site.y)*factor
+      }));
+    }
   }
   return null;
 }
@@ -50,7 +59,7 @@ function fieldPoints(field){
 }
 function fieldAllowed(field,spawnContext=null){
   const poly=fieldPoints(field);
-  if(!fieldQuadValid(poly)||!urbanParcelAllowed(poly,field.id))return false;
+  if(!fieldQuadValid(poly)||!urbanFieldParcelAllowed(poly,field.id))return false;
   if(urbanLots().some(lot=>urbanPolygonsOverlap(poly,lot.points)))return false;
   // Candidate evaluation can run dozens of times in one growth step.
   // Reuse the live occupants snapshot instead of recomputing all residents
@@ -62,9 +71,8 @@ function fieldAllowed(field,spawnContext=null){
     if(s.type==='field'&&urbanPolygonsOverlap(poly,fieldPoints(s)))return false;
     if(s.type==='road'&&roadTouchesPolygon(s,poly,.12))return false;
   }
-  // urbanParcelAllowed already checked the *entire* polygon, including
-  // rivers/forests/steep slopes. Do not use environmentBlocksPoint('settlement')
-  // here: that legacy point validator also rejects ordinary gentle hills.
+  // urbanFieldParcelAllowed checked the complete whitezone/H0 polygon,
+  // including rivers, forests and hillside terraces.
   return true;
 }
 function fieldLayout(field){

@@ -19,7 +19,7 @@ test('materials remain stable with reversed sides, camera, reload and unrelated 
 test('completed fields get four sided boundaries and an open access',()=>{
  run("var field={id:'farm',type:'field',auto:true,x:105,y:104,points:[{x:103,y:103},{x:107,y:103},{x:107,y:105},{x:103,y:105}]};State.structures.push(field);invalidateNavigation();var fieldEdges=urbanFenceSegments([], [field])");
  assert.ok(run('fieldEdges.length')>=4);assert.equal(run("fieldEdges.every(e=>['fence','wall','hedge'].includes(e.material))"),true);
- assert.ok(Math.abs(run('fieldEdges.reduce((n,e)=>n+dist(e.a,e.b),0)')-11.04)<1e-7);
+ assert.ok(Math.abs(run('fieldEdges.reduce((n,e)=>n+dist(e.a,e.b),0)')-10.2)<1e-7);
  run("field.construction={startedDay:0,completeDay:10};");assert.equal(run('urbanFenceSegments([]).length'),0);run('delete field.construction');
 });
 test('shared and partially shared field edges render once, regardless of input order',()=>{
