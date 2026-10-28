@@ -10,6 +10,12 @@
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
 
+## Converge — regole assedio (20/10/2026)
+
+**Applicazione D-031/D-032 sulla branch `converge`:** le restrizioni delle armi contro mura, torri e gatehouse sono implementate nel motore attuale, preservando il sistema di campate, le brecce e la separazione fra portone e torre-porta. Test dedicati disponibili, QA su pull request necessaria. La vecchia branch `assedio` non va fusa integralmente.
+
+**Riallineamento PR #61 (23/10/2026):** D-031/D-032 si applicano insieme a D-042: le immunità dei nuclei non proteggono la grata. I colpi alla porta continuano a raggiungere prima la grata abbassata, il fuoco la attraversa; restano tre integrità indipendenti. Conservati gli aggiornamenti di `main` fino a `518e830`, inclusi terrapieni e ridisegno coalescente.
+
 ## Asset Lab (23/10/2026)
 
 **D-LAB-01 · CODICE SU MAIN dopo PR #81 (originariamente branch `feat/asset-lab-complete-catalog`):** il Lab non duplica la geometria del castello. Per le strutture che dipendono dall'intero motore (terreno, impronte, merli, tetti) carica il gioco in un iframe nascosto `index.html?assetlab=1`: in questa modalità `window.__CONQUER_ASSET_LAB__` blocca `saveLocal`, legge uno slot vuoto, salta Supabase e telemetria remota. Le varianti mostrate sono quelle di `ConquerSiegePreview.GALLERY`; le nuove varianti si aggiungono lì, non nel Lab.

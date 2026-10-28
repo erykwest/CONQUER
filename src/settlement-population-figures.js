@@ -56,9 +56,13 @@ function drawVillagerFigureUnmasked(dot){
   const base=w2s(dot.p,.10),scale=State.view.scale*.5;
   const kind=dot.kind,sizeFactor=dot.age==='child'?.5:1;
   const bodyW=6.0*scale*sizeFactor,bodyH=8.0*scale*sizeFactor;
-  const headR=2.35*scale*sizeFactor,bodyY=base.y-bodyH*.16;
+  const headR=2.35*scale*sizeFactor,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
+  // Seasonal wardrobe overlays (cloak, hood, hat) for cold months and bad weather.
+  const outfit=window.ConquerWardrobe?.outfitFor(dot);
   drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
-  drawVillagerHead(dot.id,base.x,bodyY-bodyH/2-headR*.68,headR,dot.sex,dot.hair);
+  if(outfit)window.ConquerWardrobe.drawBody(outfit,dot,base.x,bodyY,bodyW,bodyH);
+  drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
+  if(outfit)window.ConquerWardrobe.drawHead(outfit,base.x,headY,headR);
 }
 let populationFrameBounds=null;
 function beginPopulationFrame(r){
