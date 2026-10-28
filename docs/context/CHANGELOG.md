@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Audio e colonna sonora stagionale (branch `sound`)
+
+- Branch del 17–19/10 riallineato a `main` `5ddefa6` (350 commit): mixer Web Audio a 4 livelli, ambiente da stagione e meteo, suoni degli edifici vicini, 9 brani stagionali; controlli nel pannello DEV, audio spento di default. Stato e prove in [STATUS](STATUS.md#audio--mixer-a-4-livelli-e-colonna-sonora-stagionale-branch-sound-1719102026-riallineato-2810).
+- ROADMAP e DECISIONS invariate: presentazione, nessun contratto di simulazione toccato.
+
 ## 2026-10-23 — Ponti: magnete strade
 
 - Branch `feat/bridge-road-magnets`: le strade principali si agganciano alle due testate di ogni ponte e una strada su una testata non è più rifiutata come sovrapposizione. Stato e prove in [STATUS](STATUS.md#ponti--magnete-strade-23102026); requisiti BRIDGE-01/02 nel [BACKLOG](BACKLOG.md#ponti--magnete-strade-branch-featbridge-road-magnets-23102026).

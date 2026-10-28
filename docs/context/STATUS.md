@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## Audio — mixer a 4 livelli e colonna sonora stagionale (branch `sound`, 17–19/10/2026; riallineato 28/10)
+
+- **Codice presente su branch (non ancora `main`):** `src/settlement-sound.js` (`ConquerSound`, mixer Web Audio con bus Ambiente / Locale / Effetti / Notifiche, EQ e normalizzazione LUFS), `settlement-sound-catalog.js`, `settlement-sound-bridge.js` (ambiente da stagione, notte e meteo; suoni locali dall'edificio selezionato e dai due più vicini sopra una soglia di zoom; tuoni nei temporali), `settlement-music.js` + catalogo (9 brani stagionali, playlist automatica per stagione). Controlli solo nel pannello DEV (`settlement-sound-dev.js`, `settlement-music-dev.js`). Unico aggancio nel gioco: `ConquerSoundBridge.tick` in `simulationFrame`. **Audio spento di default**, si attiva a mano.
+- **Asset:** 14 clip ambiente/effetti (freesound/Pixabay, fonti in [sound-assets](../sound-assets.md)) e 9 brani normalizzati in `src/assets/sounds/` (~40 MB MP3). Script di preparazione in `scripts/`, workflow `sound-regression`, `seasonal-music`, `sound-optimize`.
+- **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 75/79 `qa/*.cjs` PASS (incluse `sound-regression` e `music-regression`); i 4 FAIL sono le prove di performance che richiedono Playwright, uguali su `main`. Browser (Chrome): pagina caricata senza errori in console, World 3D attivo, 9 brani nel selettore, stato «Audio OFF». **Non eseguite:** ascolto reale dei mix in partita; CI della PR.
+- **Merge di `main`:** unico conflitto in `index.html` (script dev audio accanto a quelli di combattimento aggiornati da main), risolto mantenendo entrambi.
+
 ## Guardaroba stagionale dei popolani (branch `feature/seasonal-clothing`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-wardrobe.js` (`window.ConquerWardrobe`) con 9 capi overlay (cappello di paglia, berretto di pelliccia, cappuccio di lana, cappuccio cerato, pelle di pecora, mantello di lana, mantello foderato di pelliccia, mantella antipioggia, scialle). Disegnati da `drawVillagerFigureUnmasked`, quindi valgono anche per lavoratori, costruttori e civili in fuga dagli incendi; l'outfit dipende da id residente, mese del calendario (o stagione DEV forzata) e `currentWeather()`. Nessuno stato persistito, nessun effetto economico.
