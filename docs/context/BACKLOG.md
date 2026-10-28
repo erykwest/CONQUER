@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
+
+- **FASI 1–3 SU MAIN (`5ddefa6`):** guscio, API di gioco, Costruisci, Gestisci, comandi struttura.
+- **FASE 4 SU BRANCH `feature/ui-defend`, NON MERGE:** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **ANCORA APERTO — fase 5:** messaggi di stato/log tradotti, pannello attraversamenti come dati, UI v2 default, rimozione `settlement-builder-ux.js` e aggiornamento degli id usati da `qa/ui-combat-regression.mjs`.
+
 ## S-05 / S-16 / S-25 — riallineamento converge (#61, 23/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** restrizioni armi sui nuclei, validazione forze/componenti/campate e persistenza dei danni, integrate con main `bc82dbe`. Compatibilità con GATE-06/D-042: la grata resta una terza difesa danneggiabile; non può essere aggirata dal nuovo guard dei componenti.

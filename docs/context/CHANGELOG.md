@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — UI v2: modalità Difendi (branch `feature/ui-defend`)
+
+- Quarta fase della UI v2 opt-in (`?ui=2`): modalità Difendi con rail e scheda, stato del combattimento letto da `ConquerCombat.uiState()`. Registrate anche le fasi 1–3 già su `main` (`5ddefa6`) che non avevano voce nella piramide. Stato e prove in [STATUS](STATUS.md#ui-v2-isole--modalità-difendi-branch-featureui-defend-26102026), fasi aperte nel [BACKLOG](BACKLOG.md#ux--ui-v2-isole-opt-in-ui2-26102026).
+- ROADMAP e DECISIONS invariate: la UI v2 resta opt-in, nessun contratto di simulazione toccato.
+
 ## 2026-10-23 — Ponti: magnete strade
 
 - Branch `feat/bridge-road-magnets`: le strade principali si agganciano alle due testate di ogni ponte e una strada su una testata non è più rifiutata come sovrapposizione. Stato e prove in [STATUS](STATUS.md#ponti--magnete-strade-23102026); requisiti BRIDGE-01/02 nel [BACKLOG](BACKLOG.md#ponti--magnete-strade-branch-featbridge-road-magnets-23102026).

@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## UI v2 «Isole» — modalità Difendi (branch `feature/ui-defend`, 26/10/2026)
+
+- **Su `main` (`5ddefa6`, squash di `feature/ui-shell`):** UI v2 opt-in con `?ui=2`: `src/ui/game-api.js` (`window.ConquerGame`, comandi + letture di stato), `src/ui/shell.js` (Preact+htm vendorizzato, nessun build), `src/ui/i18n-it.js` (tutte le stringhe in italiano), `src/ui/theme.css`; modalità Costruisci e Gestisci con rail e scheda ispettore; `src/settlement-structure-commands.js` per le regole sulla struttura selezionata. La UI legacy resta il default.
+- **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
+- **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
+- **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
+
 ## Guardaroba stagionale dei popolani (branch `feature/seasonal-clothing`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-wardrobe.js` (`window.ConquerWardrobe`) con 9 capi overlay (cappello di paglia, berretto di pelliccia, cappuccio di lana, cappuccio cerato, pelle di pecora, mantello di lana, mantello foderato di pelliccia, mantella antipioggia, scialle). Disegnati da `drawVillagerFigureUnmasked`, quindi valgono anche per lavoratori, costruttori e civili in fuga dagli incendi; l'outfit dipende da id residente, mese del calendario (o stagione DEV forzata) e `currentWeather()`. Nessuno stato persistito, nessun effetto economico.
