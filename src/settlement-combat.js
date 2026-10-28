@@ -65,12 +65,13 @@
     combat.recall=combat.recallMode!=='off';
     combat.strokes=Array.isArray(combat.strokes)?combat.strokes.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r)&&['allow','deny','yellow','green','eraseYellow','eraseGreen'].includes(s.mode)).slice(-2500):[];
     combat.units=Array.isArray(combat.units)?combat.units
-      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight','patrol','infantry','archer'].includes(u.kind))
+      .filter(u=>Number.isFinite(u.x)&&Number.isFinite(u.y)&&['squad','knight','captain','patrol','infantry','archer'].includes(u.kind))
       .map(u=>{
         // Navigation routes are volatile and can contain references to their
         // source unit in old saves. Rebuild them from the destination instead.
+        // Old saves stored the commander as the settlement's 'knight': it is the captain.
         const {path,pathIndex,engaged,nextPatrolAt,patrolLoopPosition,patrolBoundaryIndex,patrolPreviousIndex,patrolAnchorIndex,patrolProbeOffset,legs,climbing,stoneClock,...stored}=u;
-        return {...stored,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
+        return {...stored,kind:u.kind==='knight'&&String(u.id).startsWith('combat-knight-')?'captain':u.kind,target:u.target&&Number.isFinite(u.target.x)&&Number.isFinite(u.target.y)
           ?{x:u.target.x,y:u.target.y}:null};
       }): [];
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y))
@@ -120,9 +121,9 @@
   function startUnits(){
     const well=activeWell();if(!well||combat.units.length)return;
     combat.units=window.__CONQUER_CAMP_MODE__
-      ?[{id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}]
+      ?[{id:'combat-captain-'+well.id,kind:'captain',x:well.x+4,y:well.y+2,target:null}]
       :[{id:'combat-squad-'+well.id,kind:'squad',x:well.x+2,y:well.y+2,target:null,experience:0},
-        {id:'combat-knight-'+well.id,kind:'knight',x:well.x+4,y:well.y+2,target:null}];changed();
+        {id:'combat-captain-'+well.id,kind:'captain',x:well.x+4,y:well.y+2,target:null}];changed();
   }
   function circles(){
     const well=activeWell();if(!well)return [];
@@ -739,7 +740,41 @@
     // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
     const foe=anim.foeOf(unit);
     const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
+    if(type==='knight'&&drawMountedKnight(p,id,livery,unit,pose,foe,z))return;
+    // The captain commands on foot, drawn as the knight figure.
+    if(type==='captain')return anim.drawFigure(p,z,'knight',id,State.clock.day,livery,pose);
     anim.drawFigure(p,z,type,id,State.clock.day,livery,pose);
+  }
+  // Knights ride (settlement-mounted2d.js): the flat 2D horse with caparison, lance
+  // and shield in the realm's arms, in the foot soldiers' style. Heading follows the
+  // path, then the foe (the figure faces left or right on screen); the gait follows
+  // movement (a charge when moving engaged).
+  const riders=new WeakMap(),HORSE_COATS=['brown','black','grey','white'];
+  function drawMountedKnight(p,id,livery,unit,pose,foe,z=.08){
+    const M2=window.ConquerMounted2D;
+    if(!M2||!window.ConquerAnimals||window.ConquerLOD?.militaryTier()==='dot')return false;
+    let r=riders.get(unit);
+    // Start in a three-quarter view rather than facing the camera head-on.
+    if(!r){r={heading:Math.PI/4+1.05,t:0,last:performance.now()/1000};riders.set(unit,r)}
+    const now=performance.now()/1000,dt=Math.min(.1,Math.max(0,now-r.last));r.last=now;
+    const next=unit.path?.[unit.pathIndex],moving=!!next&&!unit.defeated&&State.clock.speed>0;
+    const aim=moving?next:foe&&!foe.defeated?foe:null;
+    if(aim&&Math.hypot(aim.x-unit.x,aim.y-unit.y)>.05){
+      const want=Math.atan2(aim.y-unit.y,aim.x-unit.x),d=Math.atan2(Math.sin(want-r.heading),Math.cos(want-r.heading));
+      r.heading+=d*Math.min(1,dt*6);
+    }
+    const mode=moving?(unit.engaged?'run':'walk'):'idle';
+    if(mode!==r.mode){r.from=r.mode||mode;r.mode=mode;r.blend=0}
+    r.blend=Math.min(1,(r.blend??1)+dt/.45);r.t+=dt*(moving?Math.min(2,.6+State.clock.speed*.1):1);
+    const paint=livery?null:window.__conquerHeraldryCanvas?.paint;
+    const a=w2sRaw(p,0),b=w2sRaw({x:p.x+Math.cos(r.heading),y:p.y+Math.sin(r.heading)},0);
+    withUrbanFigureOcclusion(p,z,()=>{
+      const s=w2s(p,z);
+      M2.draw(ctx,s.x,s.y,Math.max(1.5,State.view.scale*5.75),{kind:'knight',facing:b.x>=a.x?1:-1,
+        mode:r.mode,from:r.from,blend:r.blend,t:r.t,seed:peasantHash(id)%7,coat:HORSE_COATS[peasantHash(id)%7%4],
+        pose,livery:livery||soldierLivery(id),paint});
+    });
+    return true;
   }
   function renderOverlay(){
     if(!combat)return;
@@ -753,12 +788,12 @@
     if(activeWell())refreshFog();
     renderTacticalBackdrop(d);
     if(!activeWell())return;
-    const king=combat.units.find(u=>u.kind==='knight');
+    const captain=combat.units.find(u=>u.kind==='captain');
     for(const u of combat.units){
       if(!selectedIds.has(u.id)||u.defeated||u.campState)continue;
-      g.strokeStyle=u.kind==='knight'?'rgba(255,211,116,.86)':'#e3fcac';
+      g.strokeStyle=u.kind==='captain'?'rgba(255,211,116,.86)':'#e3fcac';
       g.lineWidth=1.5;g.setLineDash([5,4]);
-      drawMapCircle({...u,r:u.kind==='knight'?16:6,groundZ:terrainElevation(u)+(u.z||0)},true);
+      drawMapCircle({...u,r:u.kind==='captain'?16:6,groundZ:terrainElevation(u)+(u.z||0)},true);
       g.setLineDash([]);
     }
     window.ConquerCamp?.drawEncampments(g);
@@ -772,12 +807,12 @@
       if(u.campState==='camped'&&!u.defeated){
         // Preserve the cavalry figure for a lone knight; larger formations
         // leave just one visible sentry while the remainder rests in tents.
-        const soloKnight=u.kind==='knight';
+        const soloKnight=u.kind==='knight'||u.kind==='captain';
         characters.push({p:soloKnight?u:{x:u.x+.15,y:u.y+.85},
-          type:soloKnight?'knight':'spearman',id:u.id+':camp-guard',unit:u,index:0,z:.08});
+          type:soloKnight?u.kind:'spearman',id:u.id+':camp-guard',unit:u,index:0,z:.08});
         continue;
       }
-      if(u.kind==='knight')characters.push({p:u,type:'knight',id:u.id,unit:u,z});
+      if(u.kind==='knight'||u.kind==='captain')characters.push({p:u,type:u.kind,id:u.id,unit:u,z});
       else if(u.kind==='archer'||u.kind==='infantry')characters.push({p:u,type:u.kind==='archer'?'archer':'spearman',id:u.id,unit:u,z});
       else{
         const count=u.kind==='patrol'?2:5;
@@ -854,13 +889,14 @@
       }
     });
     window.ConquerCombatRules?.drawEffects(g,(p,z)=>w2sRaw(p,z));
+    window.ConquerDiplomacy?.draw(g);
     const focused=combat.units.find(u=>u.id===selected);
     // The Builder layout may be replaced by another UI shell. Missing optional
     // HUD controls must never interrupt render/simulation or the combat canvas.
     const selectionLabel=document.getElementById('combatSelection');
     if(selectionLabel)selectionLabel.textContent=selectedIds.size>1
       ?selectedIds.size+' units selected · click destination / Shift to add'
-      :selected?((focused?.kind==='squad'?'Pikemen ×5':focused?.kind==='patrol'?'Patrol':'Knight')+' selected · click destination')
+      :selected?((focused?.kind==='squad'?'Pikemen ×5':focused?.kind==='patrol'?'Patrol':focused?.kind==='captain'?'Captain':'Knight')+' selected · click destination')
       :'Select units · drag a box, Shift+click to add';
     const panel=document.getElementById('combatStats');
     if(panel){
@@ -1044,7 +1080,7 @@
     selectedIds.clear();selected=null;selectionDrag=null;syncButtons();
   }
   function commanderCoversOrder(unit,target){
-    const commander=combat.units.find(u=>u.kind==='knight'&&!u.defeated&&!u.routing);
+    const commander=combat.units.find(u=>u.kind==='captain'&&!u.defeated&&!u.routing);
     return !!commander&&dist(unit,commander)<=16&&dist(target,commander)<=16;
   }
   function issueMove(unit,p,quiet=false){
@@ -1058,7 +1094,7 @@
     // beyond the yellow settlement radius to establish a field camp.
     // Preserve the 16U knight command rule for the regular combat mode.
     if(unit.kind==='squad'&&!window.__CONQUER_CAMP_MODE__&&!commanderCoversOrder(unit,p)){
-      if(!quiet)status('Out of knight command beacon (16U)');
+      if(!quiet)status('Out of captain command beacon (16U)');
       return false;
     }
     // A unit on the walls comes down by the nearest stair first.
@@ -1075,7 +1111,7 @@
       return false;
     }
     unit.target=target;unit.path=path.map(p=>({x:p.x,y:p.y}));unit.pathIndex=1;
-    if(!quiet){changed();status((unit.kind==='squad'?'Pikemen':unit.kind==='patrol'?'Patrol':'Knight')+' marching via valid terrain')}
+    if(!quiet){changed();status((unit.kind==='squad'?'Pikemen':unit.kind==='patrol'?'Patrol':unit.kind==='captain'?'Captain':'Knight')+' marching via valid terrain')}
     return true;
   }
   // Barracks recall is an internal duty order, not subject to the knight beacon.
@@ -1106,7 +1142,7 @@
       status(moved+'/'+units.length+' ordini ricevuti · tempo in pausa: premi 1× per muovere le truppe');
     else if(outsideCommand||unreachable)
       status(moved+'/'+units.length+' ordini accettati'+
-        (outsideCommand?' · '+outsideCommand+' fuori raggio cavaliere (16U)':'')+
+        (outsideCommand?' · '+outsideCommand+' fuori raggio capitano (16U)':'')+
         (unreachable?' · '+unreachable+' senza percorso':''));
     else status(moved+' unit(s) marching');
   }
@@ -1210,6 +1246,22 @@
         }
       }
     }
+  }
+  function recruitKnight(){
+    startUnits();
+    const cap=window.ConquerSiege?.capacity?.()||{};
+    const limit=Math.min(cap.knights||0,cap.horses||0);
+    const active=combat.units.filter(u=>u.kind==='knight'&&!u.defeated).length;
+    if(active>=limit){status('Recruitment requires 1 noble room and 1 stable space per knight (5 horses per stable).');return false}
+    const quarters=State.structures.find(s=>!s.destroyed&&!underConstruction(s)&&
+      ['tower','built','gate'].includes(s.type)&&s.functions?.includes('nobleRoom'));
+    const home=quarters?structureCenter(quarters):activeWell();
+    if(!home){status('No eligible completed noble quarters or settlement origin');return false}
+    const base=point(home.x+1.25,home.y+.9);
+    const spawn=pointBlockedForPeasant(base,'new-knight')?point(home.x,home.y):base;
+    combat.units.push({id:'combat-recruited-knight-'+uid(),kind:'knight',x:spawn.x,y:spawn.y,target:null});
+    visibilityDirty=true;changed();status('Mounted knight recruited · '+(active+1)+' / '+limit);
+    draw();return true;
   }
   function addPatrol(){
     const well=activeWell();
@@ -1928,6 +1980,10 @@
   window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     dynamicMeshes,addStorm,addRamStorm,issueWallOrder,planLegs,
     units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
+    recruitKnight,knightRecruitment:()=>{
+      const cap=window.ConquerSiege?.capacity?.()||{},current=(combat?.units||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;
+      return {current,limit:Math.min(cap.knights||0,cap.horses||0),rooms:cap.knights||0,horses:cap.horses||0};
+    },
     // Wolves are regular persistent combat entities, but their spawning
     // lifecycle belongs to the dedicated fauna simulation.
     registerWolves:(token,wolves)=>{
@@ -1959,3 +2015,6 @@
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
   draw();
 })();
+
+// Nobility recruitment uses the authoritative combat roster and castle room limits.
+document.getElementById('recruitKnight')?.addEventListener('click',()=>window.ConquerCombat?.recruitKnight());
