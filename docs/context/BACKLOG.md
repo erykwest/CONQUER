@@ -6,6 +6,21 @@
 - **APERTO (deciso il 28/10, da fare dopo):** portare il runner di regressione a scena intera di #18 (12 scene × 4 rotazioni, maschere di occlusione) come complemento all'audit per singolo asset del Lab; baseline da rigenerare.
 - **APERTO:** separare il disegno della sovrapposizione di combattimento (`drawMapCircle`, `renderOverlay`) da `settlement-combat.js` (idea del vecchio branch `combat`, chiuso).
 
+## Persistenza e telemetria (audit #16, 28/10/2026)
+
+- **FATTO SU BRANCH `fix/save-safety`, NON MERGE:** autosave locale resistente agli errori di storage; minimo 10000 risorse al caricamento solo in DEV.
+- **APERTO (escluso per scelta dell'utente il 28/10):** `/api/telemetry` espone in GET gli ultimi 120 campioni senza autenticazione e accetta POST senza limiti; `sendRemote()` scrive su `simulation_telemetry` con la chiave pubblica, policy RLS non versionata. Versioning coerente degli script in `index.html`.
+
+## Combat / feudi — capitano, cavalieri e diplomazia (branch `feature/knights-diplomacy-2d`, 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, IN MERGE (sostituisce #72):** capitano con identità propria e raggio di comando 16U; cavalieri a cavallo reclutabili fino a min(stanze nobili, posti in scuderia) — C-04 in parte; messaggero a cavallo periodico verso il mastio, richiesta di 100 monete, accetta/rifiuta, pianificatore di carovane con carico, scorta, partenza e provviste — prototipo di F-05; tutte le figure a cavallo in 2D (D-046).
+- **ANCORA APERTO:** unificare le carovane della diplomazia con i convogli dell'economia (#55) passando da `window.ConquerDiplomacy`; carovane visibili in mappa e intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
+
+## Castello — cutaway arredato di torri, porte e sezioni (PR #65, riallineata 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, IN MERGE:** 50 arredi Blender nelle stanze in sezione, stanze WebGL2 con depth test e luce notturna, 6 prese per le sottotorri delle porte, arcieri alle feritoie; convive con il cutaway civico di chiesa e locanda.
+- **ANCORA APERTO:** tre correzioni rimaste solo sulla vecchia branch locale `feature/cutaway-furniture` (porta dalla torre madre sul tetto della sottotorre più bassa, merli sepolti in una torre o porta attaccata più alta, niente drappo sul mastio in cutaway), da portare in una PR separata dopo il merge.
+
 ## Presentazione — audio e musica (branch `sound`, riallineato 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** mixer a 4 livelli, ambiente da stagione/meteo, suoni locali degli edifici, colonna sonora stagionale; controlli solo DEV, audio spento di default.
@@ -249,7 +264,7 @@ Confini di lotti e campi: staccionate, muretti e siepi con pesi di progetto **50
 | F-02 | Sviluppo di piccoli insediamenti intorno a poli economici e strade | Village Core + produzione | PARZIALE · nuclei urbani sì |
 | F-03 | Capitale feudale raccoglie, immagazzina, trasforma e redistribuisce; castello presidia | M1 + stock | PARZIALE · castello/stock locali sì |
 | F-04 | Più feudi versano tributi alla capitale del regno e contingenti militari | F-03 | FUTURO · tributi multi-feudo |
-| F-05 | Tributi e rifornimenti importanti viaggiano come convogli con inventario e scorta | F-04 + World nav | PR #55/#72 OPEN · non su main |
+| F-05 | Tributi e rifornimenti importanti viaggiano come convogli con inventario e scorta | F-04 + World nav | PARZIALE · carovane della diplomazia (ex #72) in merge; convogli #55 OPEN, da unificare |
 | F-06 | Intercettazione/imboscata carovana passa al Combat; bottino modifica davvero le scorte | F-05 + Combat stabile | FUTURO · trasferimento World→Combat→stock |
 | F-07 | Import/export e mercato inter-feudale, eventi economici, eventuale scarsità/prezzi | F-03 + test | FUTURO · mercato locale già presente |
 

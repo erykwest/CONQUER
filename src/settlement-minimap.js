@@ -107,9 +107,9 @@ window.ConquerMinimap=(()=>{
       if(!valid(unit))continue;
       const isEnemy=unit.side==='enemy';
       const color=isEnemy?'#e85d54':
-        unit.kind==='knight'?'#ffd27a':
+        unit.kind==='knight'||unit.kind==='captain'?'#ffd27a':
         unit.kind==='patrol'?'#a7dadd':'#a8d3fc';
-      const radius=unit.kind==='squad'?3.25:unit.kind==='knight'?3:2.45;
+      const radius=unit.kind==='squad'?3.25:unit.kind==='knight'||unit.kind==='captain'?3:2.45;
       if(unit.selected)dot(unit,radius+2.2,'#f8df93','#22251c');
       dot(unit,radius,color,isEnemy?'#4d211e':'#233947');
     }

@@ -5,6 +5,27 @@
 - Ripresa da #18 (visual-qa) ed estesa a tutte le 6 funzioni di occlusione: un clip per sagoma invece di un unico percorso even-odd. Stato e prove in [STATUS](STATUS.md#occlusione-25d--sagome-sovrapposte-branch-fixocclusion-clip-union-28102026-da-18). Il runner a scene intere di #18 resta nel BACKLOG; #18 viene chiusa. Riconciliazione branch del 28/10: chiusi senza porting `assedio`, `combat`, `feature/landscape-forests`, `fix/forest-water-road-routing-20261014`, `docs/context-sync-pr-governance-20261021` (superati da `main`; commit conservati nei tag `archive/*`).
 - ROADMAP e DECISIONS invariate.
 
+## 2026-10-28 — Salvataggi sicuri (branch `fix/save-safety`)
+
+- Ripresa da #16 (audit-hardening) solo la parte salvataggi: autosave che non si interrompe con lo storage pieno e minimo 10000 risorse al caricamento limitato a DEV. Telemetria esclusa per scelta. Stato e prove in [STATUS](STATUS.md#salvataggi-sicuri-branch-fixsave-safety-28102026-porting-parziale-di-16). La PR #16 viene chiusa.
+- ROADMAP e DECISIONS invariate.
+
+## 2026-10-28 — Capitano, cavalieri e diplomazia portati su `main`, solo 2D (sostituisce PR #72)
+
+- Il gameplay della PR #72 (`feature/knights-messenger-caravans`, che contiene `knights`) è portato in modo selettivo su un branch nuovo da `main`: capitano distinto dai cavalieri, cavalieri a cavallo limitati da stanze nobili e scuderie, messaggero periodico con richiesta di tributo e pianificatore di carovane, `State.diplomacy` salvato. Comandi nella UI v2 (Difendi › Pattuglie, Gestisci › Scorte del castello). Stato e prove in [STATUS](STATUS.md).
+- Scartate le figure 3D della PR #72 (modelli Blender di cavalieri, `ConquerKnights3D`, stile «flat» delle mesh): cavalieri e messaggero usano il cavallo 2D approvato. Nuova decisione [D-046](DECISIONS.md#cavalieri-e-diplomazia-pr-72-portata-su-main-in-2d-28102026). ROADMAP invariata.
+
+## 2026-10-28 — Cutaway arredato riallineato a `main` (PR #65)
+
+- Merge di `main` `1194f5e`: il cutaway arredato del castello e il cutaway civico (#90) disegnano insieme in WebGL2; strade alle porte secondo la logica di main (`gateRoadPort`), test del branch adeguato. Baseline dell'audit del Lab con i 4 nuovi cutaway delle porte in pietra. Stato e prove in [STATUS](STATUS.md).
+- ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
+## 2026-10-21 — Cutaway arredato e WebGL2, branch di convergenza
+
+- Integrati catalogo mobili generato da Blender, disposizione funzionale delle stanze e arredi non sovrapposti, mantenendo le postazioni degli arcieri e il corridoio delle porte.
+- Aggiunti interni depth-tested nel renderer WebGL2 con mesh separate per ambienti, guscio e superfici luminose, cache su rotazione, pass notturno e fallback Canvas.
+- Contenuti della vecchia branch `feature/cutaway-furniture` portati su `feature/cutaway-furniture-converge` aggiornata con le novità Terraforming di `main`. PR #65, GitHub Actions suite integrale [#39508539592](https://github.com/erykwest/CONQUER/actions/runs/39508539592) **PASS**, CAMP e Builder PASS. Validazione visuale browser ancora aperta.
+
 ## 2026-10-28 — Audio e colonna sonora stagionale (branch `sound`)
 
 - Branch del 17–19/10 riallineato a `main` `5ddefa6` (350 commit): mixer Web Audio a 4 livelli, ambiente da stagione e meteo, suoni degli edifici vicini, 9 brani stagionali; controlli nel pannello DEV, audio spento di default. Stato e prove in [STATUS](STATUS.md#audio--mixer-a-4-livelli-e-colonna-sonora-stagionale-branch-sound-1719102026-riallineato-2810).

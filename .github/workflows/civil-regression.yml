@@ -28,3 +28,4 @@ jobs:
           node qa/civic-annex-regression.cjs
           node qa/civic3d-regression.cjs
           node qa/houses3d-regression.cjs
+          node qa/diplomacy-regression.cjs

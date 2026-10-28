@@ -511,20 +511,39 @@ function cutawayPropSprite(key){const img=cutawayPropSprites[key];return img&&im
 function cutawayEligible(s){
   if(!s||underConstruction(s))return false;
   if(s.type==='built')return true;
+  // Stone gates open like square towers: the passage on the ground floor, rooms above.
+  if(s.type==='gate')return !isWoodGate(s);
   // T1 towers are too small to read as useful rooms. Keep them solid until
   // they receive a dedicated spiral-stair interior treatment.
   return s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
 }
+// A subtower follows its parent tower/gate: one switch on the parent opens the attached
+// subtowers too (T1 subtowers stay solid, like any T1 tower).
 function structureCutaway(s){
+  if(s?.parentTowerId){
+    const parent=State.structures.find(o=>o.id===s.parentTowerId);
+    if(parent&&parent!==s)return structureCutaway(parent)&&cutawayEligible(s);
+  }
   return !!s?.cutaway&&cutawayEligible(s);
+}
+// Footprints that cut into a cutaway room, up to the height they occupy: the parent of a
+// subtower, the subtowers of a parent. Above that height the room's own walls continue.
+function cutawayBlockers(s){
+  if(!s)return[];
+  const out=[];
+  // The parent stays intact: only a subtower is cut where it meets its parent (a dividing
+  // wall closes it there, see the World 3D cutaway mesh).
+  if(s.parentTowerId){const p=State.structures.find(o=>o.id===s.parentTowerId);if(p)out.push({pts:footprintPoints(p),h:structureHeight(p),parent:true})}
+  return out.filter(b=>b.pts?.length>2);
 }
 function cutawayWallThickness(s){
   if(s.type==='built')return clamp((Number(s.width)||1)*.14,.11,.17);
+  if(s.type==='gate')return .16;
   return clamp(.11+towerTier(s)*.025,.13,.19);
 }
 function cutawayWallGeometry(s){
   const thickness=cutawayWallThickness(s);
-  if(s.type==='tower'){
+  if(s.type==='tower'||s.type==='gate'){
     if(s.shape==='round'){
       const outer=footprintPoints(s),r=Math.max(.12,(Number(s.r)||.5)-thickness);
       return{outer,inner:circleWorldPoints(s.x,s.y,r,24),thickness};
@@ -624,12 +643,13 @@ function drawCutawayFloors(s,g){
   }
 }
 function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
-  const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),cap=Math.min(functionCapacity(s),floors.length);
+  // slot i is the room on floor i+offset (gates: the ground floor is the passage, no room).
+  const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),off=functionFloorOffset(s),cap=Math.min(functionCapacity(s),floors.length-off);
   const roles=Array.isArray(s.functions)?s.functions:[];
   const out=[];
   for(let i=0;i<cap;i++)out.push({
-    index:i,role:roles[i]||null,size:functionSlotSize(s,i),
-    z:floors[i].z,basis,g
+    index:i,floor:i+off,role:roles[i]||null,size:functionSlotSize(s,i),
+    z:floors[i+off].z,basis,g
   });
   return out;
 }
@@ -668,7 +688,17 @@ function drawNobleRoomProps(slot){
   drawCutawayInteriorBox(slot,.42,.42,.22,.22,.16,'#8b633b','#4b3424','#60452d');
   if(slot.size==='large')drawCutawayInteriorBox(slot,-.62,.42,.26,.18,.13,'#8a6238','#4b3424','#60452d');
 }
+function drawCutawayFloorsAndProps(s,g){
+  const F=window.ConquerCutawayFurniture;
+  if(!F){drawCutawayFloors(s,g);drawCutawayInteriorProps(s,g);return}
+  cutawayFloorLevels(s).forEach((floor,i)=>{
+    if(floor.material==='stone')drawStoneTileFloor(s,g,floor.z);else drawWoodFloor(s,g,floor.z);
+    F.draw(s,g,i);
+  });
+}
 function drawCutawayInteriorProps(s,g){
+  // Furniture library (settlement-cutaway-furniture.js); the boxes below are the fallback.
+  if(window.ConquerCutawayFurniture?.draw(s,g))return;
   for(const slot of cutawayRoomSlots(s,g)){
     if(slot.role==='storage')drawStorageRoomProps(slot);
     else if(slot.role==='barracks'||slot.role==='quarters')drawBarracksRoomProps(slot);
@@ -829,8 +859,7 @@ function drawCutawayStructure(s){
     if(s.type==='built'){
       // Dedicated built-section cutaway: one rear wall, zero short end walls.
       drawBuiltCutawayShell(s,g,height);
-      drawCutawayFloors(s,g);
-      drawCutawayInteriorProps(s,g);
+      drawCutawayFloorsAndProps(s,g);
       drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
       drawBuiltDetails(s,false);
       if(builtSkin(s)==='arcade'){
@@ -841,8 +870,7 @@ function drawCutawayStructure(s){
 
     const shell=cutawayShellFaces(s,g,height);
     drawCutawayShellFaces(shell.faces,false);
-    drawCutawayFloors(s,g);
-    drawCutawayInteriorProps(s,g);
+    drawCutawayFloorsAndProps(s,g);
     drawCutawaySectionJambs(g,height,shell.transparent);
     drawCutawayShellFaces(shell.faces,true);
     drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
@@ -852,7 +880,7 @@ function drawCutawayStructure(s){
       ctx.save();ctx.globalAlpha*=.28;drawStoneTowerBase(s,false);ctx.restore();
     }
   };
-  if(s.type==='tower')withStructureGroundPlane(s,render);else render();
+  if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,render);else render();
 }
 function drawCutawayStructures(){
   State.structures
