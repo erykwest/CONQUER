@@ -7,6 +7,29 @@
 - **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 75/79 `qa/*.cjs` PASS (incluse `sound-regression` e `music-regression`); i 4 FAIL sono le prove di performance che richiedono Playwright, uguali su `main`. Browser (Chrome): pagina caricata senza errori in console, World 3D attivo, 9 brani nel selettore, stato «Audio OFF». **Non eseguite:** ascolto reale dei mix in partita; CI della PR.
 - **Merge di `main`:** unico conflitto in `index.html` (script dev audio accanto a quelli di combattimento aggiornati da main), risolto mantenendo entrambi.
 
+## Cutaway civico e contorno di selezione (branch `feature/civic-cutaway`, 23/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** chiesa o locanda selezionata mostrata in sezione: piano di taglio rivolto alla camera che taglia il guscio Blender a davanzale, toglie tetti e gronde; arredi (panche, altare, fonte, pulpito per la chiesa; tavoli, bancone, botti, focolari per la locanda). In WebGL l'edificio selezionato ha un buffer `civicCutaway` ricostruito a ogni quarto di giro; Esc invalida entrambi i renderer (`src/settlement-civic3d.js`, `settlement-world3d.js`, `settlement-castle.js`, `settlement-render.js`).
+- **Builder:** il contorno di selezione disegna solo l'impronta unita a h0; mura, palizzate e sezioni costruite non si piazzano dentro le foreste; ogni edificio controlla anche le chiome degli alberi realmente disegnati (`settlement-placement.js`).
+- **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 73/77 `qa/*.cjs` PASS (incluse `civic3d`, `builder-placement`, `organic-forest`); i 4 FAIL sono le prove di performance che richiedono Playwright, assente in questo checkout. Audit del Lab (`qa/asset-audit.mjs`, Chrome locale): 465 render, 0 falliti, firme identiche a quelle di `main` sullo stesso browser (il cutaway civico appare solo in partita con l'edificio selezionato); baseline invariata. **Non eseguite:** verifica visiva del cutaway in partita su entrambi i renderer; CI della PR.
+
+## UI v2 «Isole» — modalità Difendi (branch `feature/ui-defend`, 26/10/2026)
+
+- **Su `main` (`5ddefa6`, squash di `feature/ui-shell`):** UI v2 opt-in con `?ui=2`: `src/ui/game-api.js` (`window.ConquerGame`, comandi + letture di stato), `src/ui/shell.js` (Preact+htm vendorizzato, nessun build), `src/ui/i18n-it.js` (tutte le stringhe in italiano), `src/ui/theme.css`; modalità Costruisci e Gestisci con rail e scheda ispettore; `src/settlement-structure-commands.js` per le regole sulla struttura selezionata. La UI legacy resta il default.
+- **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
+- **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
+- **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
+
+## Fix main: strade, DEV e WebGL (23/10/2026, branch di fix)
+
+- **IMPLEMENTATI NEL BRANCH** `fix/main-founding-dev-webgl-20261023`, riallineato alla main `bc82dbe` includendo integralmente l'audit Lab #82. [Cause, correzioni e prove](../main-fixes-diagnosis-2026-10-23.md). Non ancora integrati in main.
+- **WebGL:** VAO separato per programma shader; la ricreazione di mesh non lascia attributi abilitati di un altro programma senza buffer. Chromium/SwiftShader PASS dopo cinque colpi d'ariete, rebuild, rotazioni e giorno/notte: 3D ancora attivo, nessuna eccezione. Una vera perdita del contesto attiva ancora il fallback Canvas. Polling errori differito e fence invariati.
+- **Fondazione strade:** preparazione cooperativa dei segmenti e delle intersezioni con l'acqua; pubblicazione atomica solo a revisione ancora valida. Annullare lascia disponibili strada/ponti precedenti e non taglia il bosco. Regressione con fiume di 201 punti: massimo 24 controlli geometrici per avanzamento, contro 155.287 prima del fix. Foresta seed 4242: callback massime 7,38 / 6,47 / 7,02 ms, 82 tratti, 2 ponti, 4 accessi, stessa firma geometrica della baseline. Il budget di 6 ms resta cooperativo, non una garanzia temporale dell'host.
+- **DEV:** test aggiornato ai default automatici (`null`); i pulsanti reali forzano giorno/estate/sole e al secondo clic tornano automatici. Suite UI/Combat completa PASS, senza cambiare i default del gioco.
+- **QA locale:** 68 suite `*-regression.cjs`, sintassi di 152 file JS/CJS/MJS, nuova regressione WebGL e UI/Combat PASS. Audit Lab: 456 render, 0 errori, 49 avvisi già presenti, 11 firme cambiate sulle varianti lignee (stesso insieme segnalato dalla CI di #82). Rivisti i fogli porte/torri/mura; baseline mantenuta perché non cambia alcun asset e le differenze di rasterizzazione sono preesistenti.
+- **CI:** workflow `Main fixes regression` su push della branch e PR: intera batteria, sintassi, Context sync, browser e audit Lab; l'esito effettivo è quello del run GitHub associato al commit. ROADMAP invariata; contratti tecnici registrati in D-FIX-01. Nessun merge o deploy.
+- **Riallineamento 28/10/2026:** merge di `main` `5ddefa6`; conflitti solo nelle prime sezioni di STATUS/BACKLOG/CHANGELOG, risolti mantenendo entrambe le voci. Il codice di main (World 3D, strade) si fonde senza conflitti con i VAO e la fondazione cooperativa. QA locale dopo il merge: 74/78 `qa/*.cjs` PASS (FAIL solo le 4 prove di performance senza Playwright locale). `ui-combat-regression.mjs`, che ora supera il default DEV, si fermava sull'aspettativa «una torretta per ogni L4 a schiera», superata dalla regola «torrette solo d'angolo» del 21/10: aggiornata a «al più le teste del fronte»; suite completa PASS in locale (Chrome).
+
 ## Guardaroba stagionale dei popolani (branch `feature/seasonal-clothing`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-wardrobe.js` (`window.ConquerWardrobe`) con 9 capi overlay (cappello di paglia, berretto di pelliccia, cappuccio di lana, cappuccio cerato, pelle di pecora, mantello di lana, mantello foderato di pelliccia, mantella antipioggia, scialle). Disegnati da `drawVillagerFigureUnmasked`, quindi valgono anche per lavoratori, costruttori e civili in fuga dagli incendi; l'outfit dipende da id residente, mese del calendario (o stagione DEV forzata) e `currentWeather()`. Nessuno stato persistito, nessun effetto economico.
@@ -23,6 +46,10 @@
 - **QA BROWSER LEGACY:** `ui-combat-regression.mjs` fallisce sull'aspettativa del default DEV `daylightOverride === 'day'` (valore attuale `null`), anche sulla stessa main. Il test si arresta lì: le verifiche successive di quella suite non sono certificate da questa esecuzione; la QA assedio dedicata passa su entrambi i renderer.
 - **LIMITI:** questa integrazione non completa logistica/blocco/fame/resa né IA di scelta degli accessi (GATE-07). Merge definitivo autorizzato il 23/10, ancora da eseguire dopo la nuova CI; lo stato effettivo resta verificabile nella PR #61.
 - **AGGIORNAMENTO PRIMA DEL MERGE AUTORIZZATO:** integrati anche i quattro commit successivi della main fino a `bc82dbe` (#82 Asset Lab e manutenzione/documentazione). Conflitti soltanto in STATUS/BACKLOG/CHANGELOG, risolti mantenendo entrambe le cronologie; tutti i file runtime di questa main, salvo le regole assedio della PR, restano identici. CI precedente su `92be424` verde (68/68 + browser gameplay); nuova CI da verificare sulla HEAD aggiornata.
+
+## Mesh e Lab — facce bicolori corrette, export PNG 512 (branch `fix/lab-export-normals`, 26/10/2026)
+
+- Lo shading delle mesh Blender non dipende più dall'ordine dei vertici: le facce superiori si riconoscono da `|nz|`. Il Lab ha il pulsante «Esporta PNG 512», disegna i modelli con depth buffer (come la WebGL) e ha l'occupazione forzata per verificare l'occlusione dei popolani. Audit eseguito localmente: 0 errori, 128 render cambiati e rivisti; baseline aggiornata. CI da verificare dopo il push.
 
 ## Asset Lab — motore di audit visivo, stati delle fortificazioni, accesso `/lab` (branch `feat/asset-lab-audit` da `main` `518e830`, 23/10/2026)
 
@@ -44,7 +71,6 @@
 - Introdotto workflow di **esecuzione una tantum** `.github/workflows/prune-obsolete-branches-20261023.yml`, eseguito soltanto da push su `main` che introduce quel file. Prima di ogni DELETE deve ricontrollare ref SHA, protezione delle PR aperte, merge PR o discendenza da main; abortisce la rimozione del singolo ref se le condizioni cambiano. **Il risultato è verificabile dal relativo GitHub Actions run successivo al merge**; il commit documentale da solo non dimostra cancellazioni.
 - **Preservati:** tutti i branch HEAD di PR aperte (`converge`, `events`, `cans` se in lavoro, `feature/construction-props`, `feature/economic-balances-20261019`, `feature/cutaway-furniture-converge`, `feature/knights-messenger-caravans`, `knights`, `visual-qa`, `audit-hardening`, `feat/asset-lab-audit`) e tutti i branch divergenti non ancora attribuiti a merge. Anche `docs/context-sync-pr-governance-20261021` è **esclusa** perché avanzata dopo il suo merge #74. Nessun contenuto di gameplay viene modificato.
 
-
 ## Stato attuale verificato — 23/10/2026
 
 > **HEAD `main` [518e830](https://github.com/erykwest/CONQUER/commit/518e830547b66c12deefa0833487ea76b81c7746)** al momento della ricognizione. [Audit completo](AUDIT-2026-10-23.md) aggiornato da Git/PR e codice, **non da nuovo test end-to-end**. Le note sottostanti del 19–22/10 sono storiche quando dicono «solo branch».
@@ -55,7 +81,6 @@
 - **Non merge ancora:** [#61](https://github.com/erykwest/CONQUER/pull/61) danni (aggiornata e riallineata su `main` il 23/10, HEAD `92be4249`, ancora OPEN), [#77](https://github.com/erykwest/CONQUER/pull/77) cantieri assemblati per fasi + branch `case`, [#78](https://github.com/erykwest/CONQUER/pull/78) spazi eventi, [#82](https://github.com/erykwest/CONQUER/pull/82) audit visivo con 456 render, [#65](https://github.com/erykwest/CONQUER/pull/65) cutaway arredi, [#55](https://github.com/erykwest/CONQUER/pull/55) ledger/cantieri L1 (draft), [#72](https://github.com/erykwest/CONQUER/pull/72) cavalieri/convogli (base `knights`), [#18](https://github.com/erykwest/CONQUER/pull/18) visual QA (draft) e [#16](https://github.com/erykwest/CONQUER/pull/16) hardening (draft).
 - **Rischio concreto da verificare:** #82, ancora solo branch, ha **segnalato** porte damage/broken non distinte dopo #76 e cantieri 25/50/75% visivamente identici in gran parte delle varianti. Segnalazioni **non riprodotte su main in questa ricognizione**. Collegare la QA del Lab alle implementazioni #76/#77/#61 prima della loro accettazione congiunta.
 - **Priorità sistemica invariata:** `State.resources` vs `State.economy` vs `State.siege.stock`, manodopera L1 ai cantieri, miniera `stone` vs `metal`, bonus taverna/chiesa, difesa e assedio **continuo** con blocco/fame/resa. 13 core Builder e 10 residui dal precedente audit restano validi.
-
 
 ## Asset Lab — catalogo completo: fortificazioni dal motore, lavori, manifest generato (#81 MERGED; note QA originali del branch)
 
@@ -83,7 +108,6 @@
 
 > **Snapshot di riferimento: 22/10/2026**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), [audit integrale del backlog](AUDIT-2026-10-22.md). Il precedente [audit 21/10](AUDIT-2026-10-21.md) resta uno snapshot storico, utile per test già eseguiti allora. **Questa ricognizione è statica e non ha rieseguito le suite.**
 
-
 ## Stato aggiornato da audit integrale (22/10/2026)
 
 - **13 feature Builder con core presente su main:** P0-01a/03/07; P1-12/13; P2-14/15/16/18/19/20; P3-21/22. **Non proporre più basamenti, alberi, scatter, araldica, palizzate, fossati, ponti e levatoi come implementazioni da zero.** I residui QA sono distinti.
@@ -103,6 +127,18 @@ Tutti gli ID, prove e gap distinti per livello sono nell'[AUDIT-2026-10-22](AUDI
 **OPEN / non su main:** [#55](https://github.com/erykwest/CONQUER/pull/55) ledger unificato e **squadre L1 che costruiscono**, commercio e convogli skeleton; [#61](https://github.com/erykwest/CONQUER/pull/61) matrice danni; [#65](https://github.com/erykwest/CONQUER/pull/65) cutaway arredato; [#72](https://github.com/erykwest/CONQUER/pull/72) cavalieri/messaggero/tributo su base `knights`, non `main`. Anche #18 e #16 restano aperte. Nessuna delle PR aperte è qui equiparata a release.
 
 **QA:** la PR #70 riporta 60/62 suite PASS e browser fixture 40/30 Canvas/WebGL PASS; due suite preesistenti falliscono, picchi GPU fino a 303,8 ms; questa ricognizione non riesegue i test. Per stato, prove, confini e milestone vedere [audit completo](AUDIT-2026-10-21.md). Le note locali precedenti sulla branch performance non descrivono più lo stato di rilascio.
+
+## Eventi — modelli 3D degli spazi (branch `events`, 22/10/2026)
+
+- **CODICE su `events`:** catalogo Blender [`tools/blender/build_events.py`](../../tools/blender/build_events.py) → `src/assets/event-models.js` (`window.ConquerEventModels`, 24 modelli, 24.362 triangoli) e modulo [`src/settlement-events3d.js`](../../src/settlement-events3d.js) (`window.ConquerEvents3D`) agganciato al painter 2.5D (`settlement-render.js`) e al builder WebGL (`settlement-world3d.js`).
+- **Contratto dati, non gameplay:** strutture `{type:'eventVenue', venue:'streetSpot'|'stage'|'festivalGround', dressing, event:{setup, phase, progress}}`. Podio per artisti di strada; palco 2,4 × 1,2 U nelle due vesti `players` / `herald`; spiazzo 14 × 10 U (D-044) verde da inattivo, con allestimenti `joust`, `tourney`, `circus`, `feast` (più `camp`, `theatre`); lotto permanente `arenaLot` 18 × 14 U con arena e accampamento visibili in `preparing` / `active` / `clearing`.
+- **Livree:** tribune, arena, palchi seguono `State.heraldry` (c1, c2, c4); tende dei cavalieri, rastrelliere lance/scudi e armature usano coppie casuali deterministiche su cinque smalti, uniche per tenda in ogni spazio, con rotazione/spostamento casuale di tende, scatter e attrezzature senza collisioni né uscite dal lotto; circo e festoni hanno colori fissi.
+- **Animazione vento:** stoffe (pennoni, festoni, gonfaloni, stendardi) sullo strato dinamico di entrambi i renderer, solo a gioco avviato; ~0,6 ms/frame sul lotto arena.
+- **Persone (tutti gli allestimenti, arena, palco, pulpito; cavalli bardati):** `settlement-events-people.js` + `settlement-events-joust.js` su slot e registro occupanti allineati a CANS; occupanti **provvisori** (figuranti marcati), non ancora residenti reali: l'adapter CANS sostituirà la sorgente. Balaustre, drappi e schienali delle tribune e le pareti dell'arena coprono il pubblico (occlusori ordinati con le figure); le figure restano disegnate sopra gli edifici di altre strutture davanti allo spazio.
+- **Builder:** categoria Eventi e svago (pulpito, palco, spiazzo, arena), piazzamento a due clic, ispettore con avvio/chiusura evento e ciclo sull'orologio; spazi salvati con la partita.
+- **NON PRESENTE:** calendario programmato degli eventi, effetti economici e sul morale, spostamento libero dello spiazzo; persone ancora figuranti provvisori.
+- **QA eseguita localmente (22/10/2026):** `qa/events3d-regression.cjs` PASS (catalogo, spazi, allestimenti dentro lo spiazzo senza sovrapposizioni, ciclo di vita, rotazione, livree) e `qa/civic3d-regression.cjs` PASS; nuova Action `events-regression.yml`. Controllo nel browser con spazi iniettati via console: Canvas 2D e renderer di default disegnano giostra, circo, sagra, podio e palchi senza errori in console. CI GitHub da verificare dopo il push.
+- **Riallineamento 28/10/2026:** merge di `main` `5ddefa6` senza conflitti; `settlement-app.js`, `settlement-builder-ux.js`, `settlement-castle.js` e `docs/events/README.md` riportati a fine riga LF (erano stati committati in CRLF: diff apparente di ~1.600 righe, reale di 15); CHANGELOG ricostruito da quello di `main` più le sole voci Eventi (i merge precedenti avevano duplicato ~160 righe di storia). QA locale: 76/81 `qa/*.cjs` PASS; FAIL le 4 prove di performance che richiedono Playwright (assente in questo checkout) e `refactor-app-population`, che fallisce solo con checkout CRLF (vedi voce CI #78). Verifica visiva non ripetuta.
 
 ## Case L2+: basamento più basso con sporto, porte libere, torrette solo d'angolo (21/10/2026)
 

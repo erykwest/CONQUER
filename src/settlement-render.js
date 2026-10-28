@@ -35,6 +35,7 @@ function drawStructure(s,preview=false){
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
@@ -373,7 +374,12 @@ function ensureStaticSceneCaches(){
   const ms=performance.now()-t0;
   window.__conquerAnalytics?.measure('CACHE_STAGE',ms,{layer:name,remaining:dirty.length-1});
 }
+let lastCivicCutawayId=null;
 function draw(){
+  // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
+  // panel's close button deselect without invalidating it.
+  const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
+  if(civicCut!==lastCivicCutawayId){lastCivicCutawayId=civicCut;invalidateSceneCache('base')}
   const r=wrap.getBoundingClientRect();
   const phaseStart=performance.now(),phaseStats={};
   let phaseAt=phaseStart;
@@ -428,6 +434,8 @@ function draw(){
   // preserving the existing occlusion behaviour.
   window.ConquerLivestock?.draw();
   drawPeasants();
+  window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
+  window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
   markPhase('population');

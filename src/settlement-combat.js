@@ -1917,6 +1917,16 @@
     wolfSpawnedFor:()=>combat?.wolvesSpawnedFor||null,
     recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
     alarmMode,setAlarmMode,recruitedResident,
+    // Read-only summary for UI shells (UI v2 Difendi): no side effects.
+    uiState:()=>{
+      const allies=combat?.units.filter(u=>!u.defeated)||[],hostiles=combat?.enemy.filter(e=>!e.defeated&&!e.neutral)||[];
+      const focused=allies.find(u=>selectedIds.has(u.id));
+      return{active:!!combat,fog:!!combat?.fog,zones:!!combat?.zones,alarm:alarmMode(),alert:alertState,
+        brushRadius:combat?.brushRadius||5,patrols:allies.filter(u=>u.kind==='patrol').length,
+        units:allies.length,hostiles:hostiles.length,selected:selectedIds.size,
+        focused:focused?{kind:focused.kind,hp:focused.stats?Math.max(0,Math.round(focused.stats.hp)):null,maxHp:focused.stats?.maxHp??null}:null,
+        buckets:window.ConquerFire?window.ConquerFire.brigade.on()!==false:null};
+    },
     selectedUnitIds:()=>[...selectedIds],commandAuthorityAt:(unitId,p)=>{
       const unit=combat?.units.find(u=>u.id===unitId);return !!unit&&commanderCoversOrder(unit,p);
     },

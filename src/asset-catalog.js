@@ -226,26 +226,114 @@
     meshCache.set(item.id,mesh);
     return mesh;
   }
-  function renderModel(canvas,item,rotationDegrees=0){return renderMesh(canvas,modelMesh(item),rotationDegrees)}
-  function renderMesh(canvas,mesh,rotationDegrees=0){
+  // Forced occupancy: 'off', 'depth' (figures tested against the depth buffer, the correct
+  // occlusion) or 'overlay' (figures painted over the scene, as the game's 2D population pass).
+  let occupancyMode='off';
+  function renderModel(canvas,item,rotationDegrees=0,occupancy=occupancyMode){return renderMesh(canvas,modelMesh(item),rotationDegrees,occupancy)}
+  function renderMesh(canvas,mesh,rotationDegrees=0,occupancy='off'){
     const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height;g.clearRect(0,0,w,h);
     if(!mesh)return placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');
     const angle=rotationDegrees*Math.PI/180,cos=Math.cos(angle),sin=Math.sin(angle);
     const rotate=(x,y)=>[x*cos-y*sin,x*sin+y*cos];
     const p=mesh.pos;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-    for(let i=0;i<p.length;i+=3){
-      const [rx,ry]=rotate(p[i],p[i+1]);
-      const x=(rx-ry)*.866,y=(rx+ry)*.5-p[i+2]*.95;
+    const people=occupancy!=='off'?occupants(mesh):[];
+    const fit=(px,py,pz)=>{
+      const [rx,ry]=rotate(px,py);
+      const x=(rx-ry)*.866,y=(rx+ry)*.5-pz*.95;
       minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
-    }
+    };
+    for(let i=0;i<p.length;i+=3)fit(p[i],p[i+1],p[i+2]);
+    for(const q of people){fit(q.x,q.y,q.z);fit(q.x,q.y,q.z+.6)}
     if(!Number.isFinite(minX))return placeholder(canvas,'MODELLO VUOTO');
     const scale=Math.min((w-28)/Math.max(.01,maxX-minX),(h-28)/Math.max(.01,maxY-minY),900);
     const mx=(minX+maxX)/2,my=(minY+maxY)/2;
     const view={turns:0,
       project:(x,y,z)=>{const [rx,ry]=rotate(x,y);return{x:w/2+((rx-ry)*.866-mx)*scale,y:h/2+((rx+ry)*.5-z*.95-my)*scale}},
       depth:(x,y,z)=>{const [rx,ry]=rotate(x,y);return rx+ry+z*.55}};
-    if(window.ConquerMesh3D?.drawMeshes)window.ConquerMesh3D.drawMeshes(g,[mesh],view);
-    else placeholder(canvas,'RENDERER NON DISPONIBILE');
+    if(!window.ConquerMesh3D?.shadedHex)return placeholder(canvas,'RENDERER NON DISPONIBILE');
+    const zb=depthRender(g,mesh,view,w,h);
+    if(people.length)drawOccupants(g,people,view,zb,w,h,scale,occupancy);
+  }
+  // Standing points on a 0.6 U grid over the model and a 1 U ring around it: on the ground or
+  // on a floor / platform up to 0.8 U, wherever 0.6 U of headroom is free (not inside a wall).
+  const occupantCache=new WeakMap();
+  function occupants(mesh){
+    if(occupantCache.has(mesh))return occupantCache.get(mesh);
+    const p=mesh.pos,n=mesh.col.length;let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+    for(let i=0;i<p.length;i+=3){x0=Math.min(x0,p[i]);x1=Math.max(x1,p[i]);y0=Math.min(y0,p[i+1]);y1=Math.max(y1,p[i+1])}
+    // Height of every triangle over a ground point (null when the point is outside it in plan).
+    const zAt=(t,x,y)=>{
+      const o=t*9,ax=p[o],ay=p[o+1],bx=p[o+3],by=p[o+4],cx=p[o+6],cy=p[o+7];
+      const ar=(bx-ax)*(cy-ay)-(cx-ax)*(by-ay);if(Math.abs(ar)<1e-9)return null;
+      const u=((bx-x)*(cy-y)-(cx-x)*(by-y))/ar,v=((cx-x)*(ay-y)-(ax-x)*(cy-y))/ar,w=1-u-v;
+      return u<-1e-6||v<-1e-6||w<-1e-6?null:u*p[o+2]+v*p[o+5]+w*p[o+8];
+    };
+    const out=[],step=.6;let k=0;
+    for(let y=y0-1;y<=y1+1;y+=step)for(let x=x0-1;x<=x1+1;x+=step){
+      const hits=[];for(let t=0;t<n;t++){const z=zAt(t,x,y);if(z!=null)hits.push(z)}
+      const floor=Math.max(0,...hits.filter(z=>z<=.8));
+      if(hits.some(z=>z>floor+.05&&z<floor+.6))continue;
+      out.push({x,y,z:floor,id:'lab-occupant-'+(k++)});
+    }
+    occupantCache.set(mesh,out);
+    return out;
+  }
+  const OCCUPANT_COLORS=[['#8a5a3b','#5f4b3a'],['#6f7f4a','#4e5a35'],['#5d6f86','#3f4b5d'],['#8e4d4d','#5e3434'],['#a58b5b','#6f5c3c'],['#6b5a7d','#483c57']];
+  // Each figure is drawn alone with the villager renderer, then its pixels are kept only where
+  // they are nearer than the model: a standing billboard at the foot point, rising in z.
+  function drawOccupants(g,people,view,zb,w,h,scale,mode){
+    if(typeof drawVillagerFigureUnmasked!=='function')return;
+    const layer=document.createElement('canvas');layer.width=w;layer.height=h;
+    const lg=layer.getContext('2d',{willReadFrequently:true}),ss=zb.ss;
+    const order=people.map(q=>({q,d:view.depth(q.x,q.y,q.z)})).sort((a,b)=>a.d-b.d);
+    const previous=ctx,oldView={...State.view};
+    try{
+      ctx=lg;
+      // The Lab's w2s is the identity (p is the foot on screen); figures are sized as in the
+      // game, where 1 U = 12 * State.view.scale px.
+      State.view.scale=scale/12;
+      const out=g.getImageData(0,0,w,h),od=out.data;
+      for(const {q,d} of order){
+        lg.clearRect(0,0,w,h);
+        const i=+q.id.split('-').pop(),foot=view.project(q.x,q.y,q.z);
+        drawVillagerFigureUnmasked({...LAB_VILLAGER,id:q.id,colors:OCCUPANT_COLORS[i%OCCUPANT_COLORS.length],
+          sex:i%3?'male':'female',hair:['brown','black','blond'][i%3],p:foot});
+        const fd=lg.getImageData(0,0,w,h).data;
+        for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+          const j=(y*w+x)*4,a=fd[j+3];if(!a)continue;
+          if(mode==='depth'){
+            const zf=Math.max(0,(foot.y-y)/(.95*scale)),z=zb.z[Math.min(zb.H-1,y*ss+1)*zb.W+Math.min(zb.W-1,x*ss+1)];
+            if(z>d+.55*zf+.02)continue;
+          }
+          const k=a/255;for(let c=0;c<3;c++)od[j+c]=od[j+c]*(1-k)+fd[j+c]*k;od[j+3]=Math.max(od[j+3],a);
+        }
+      }
+      g.putImageData(out,0,0);
+    }finally{ctx=previous;Object.assign(State.view,oldView)}
+  }
+  // The game draws meshes with WebGL and a depth buffer; the Lab does the same in software
+  // (2x supersampled). The 2.5D painter sorts whole triangles and cuts the timber frames
+  // and windows that lie almost on the wall, so it would show defects the game has not.
+  function depthRender(g,mesh,view,w,h,ss=2){
+    const W=w*ss,H=h*ss,p=mesh.pos,n=mesh.col.length,zb=new Float32Array(W*H).fill(-Infinity),img=new ImageData(W,H),d=img.data;
+    for(let t=0;t<n;t++){
+      const o=t*9,hex=window.ConquerMesh3D.shadedHex(mesh,t),r=parseInt(hex.slice(1,3),16),gr=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+      const V=[0,3,6].map(k=>{const q=view.project(p[o+k],p[o+k+1],p[o+k+2]);return[q.x*ss,q.y*ss,view.depth(p[o+k],p[o+k+1],p[o+k+2])]});
+      const ar=(V[1][0]-V[0][0])*(V[2][1]-V[0][1])-(V[2][0]-V[0][0])*(V[1][1]-V[0][1]);if(Math.abs(ar)<1e-9)continue;
+      const x0=Math.max(0,Math.floor(Math.min(V[0][0],V[1][0],V[2][0]))),x1=Math.min(W-1,Math.ceil(Math.max(V[0][0],V[1][0],V[2][0])));
+      const y0=Math.max(0,Math.floor(Math.min(V[0][1],V[1][1],V[2][1]))),y1=Math.min(H-1,Math.ceil(Math.max(V[0][1],V[1][1],V[2][1])));
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const px=x+.5,py=y+.5;
+        const w0=((V[1][0]-px)*(V[2][1]-py)-(V[2][0]-px)*(V[1][1]-py))/ar,w1=((V[2][0]-px)*(V[0][1]-py)-(V[0][0]-px)*(V[2][1]-py))/ar,w2=1-w0-w1;
+        if(w0<-1e-6||w1<-1e-6||w2<-1e-6)continue;
+        const z=w0*V[0][2]+w1*V[1][2]+w2*V[2][2],i=y*W+x;
+        if(z<=zb[i])continue;
+        zb[i]=z;d[i*4]=r;d[i*4+1]=gr;d[i*4+2]=b;d[i*4+3]=255;
+      }
+    }
+    const big=document.createElement('canvas');big.width=W;big.height=H;big.getContext('2d').putImageData(img,0,0);
+    g.imageSmoothingQuality='high';g.drawImage(big,0,0,w,h);
+    return{z:zb,W,H,ss};
   }
   function placeholder(canvas,message){
     const g=canvas.getContext('2d');g.clearRect(0,0,canvas.width,canvas.height);
@@ -437,6 +525,32 @@
   }
   byId('assetRotateLeft').addEventListener('click',()=>rotateSelection(-15));
   byId('assetRotateRight').addEventListener('click',()=>rotateSelection(15));
+  // A 512 x 512 PNG of an entry as the Lab shows it (state and rotation included): meshes are
+  // re-rendered at that size, captures, files and symbols are fitted into the square.
+  async function exportImage(item,stateId=defaultState(item),rotationDegrees=0,size=512,occupancy=occupancyMode){
+    const out=document.createElement('canvas');out.width=out.height=size;
+    if(item.kind==='model'||item.kind==='animal'||item.kind==='castle'&&(!stateId||stateId==='3d')){
+      renderModel(out,item,rotationDegrees,occupancy);return out.toDataURL('image/png');
+    }
+    const box=document.createElement('div');makePreview(item,box,true,rotationDegrees,stateId);
+    let el=box.querySelector('canvas,img,svg');if(!el)throw new Error('export: nessun render per '+item.id);
+    if(el.tagName.toLowerCase()==='svg'){const im=new Image();im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(el));el=im}
+    if(el.tagName==='IMG'&&!(el.complete&&el.naturalWidth))await new Promise(res=>{el.onload=el.onerror=res});
+    const w=el.naturalWidth||el.width,h=el.naturalHeight||el.height,k=Math.min((size-16)/(w||1),(size-16)/(h||1));
+    out.getContext('2d').drawImage(el,(size-w*k)/2,(size-h*k)/2,w*k,h*k);
+    return out.toDataURL('image/png');
+  }
+  const OCCUPANCY_LABEL={off:'Occupazione: no',depth:'Occupazione: occlusione corretta',overlay:'Occupazione: come nel gioco (sopra)'};
+  byId('assetOccupancy')?.addEventListener('click',e=>{
+    occupancyMode={off:'depth',depth:'overlay',overlay:'off'}[occupancyMode];
+    e.currentTarget.textContent=OCCUPANCY_LABEL[occupancyMode];
+    if(selectedItem)makePreview(selectedItem,byId('assetDetailPreview'),true,selectedRotation,selectedState);
+  });
+  byId('assetExportPng')?.addEventListener('click',async()=>{
+    if(!selectedItem)return;
+    const a=document.createElement('a');a.href=await exportImage(selectedItem,selectedState,selectedRotation);
+    a.download=selectedItem.id+(selectedState&&selectedState!=='3d'?'-'+selectedState:'')+(selectedRotation?'-r'+selectedRotation:'')+'-512.png';a.click();
+  });
   function updateFilters(){
     filters.replaceChildren();
     for(const category of CATEGORY_ORDER.filter(c=>c==='Tutti'||items.some(x=>x.category===c))){
@@ -495,7 +609,7 @@
     selectState,get selected(){return selectedId},get state(){return selectedState},get rotation(){return selectedRotation},
     get engineReady(){return !!engine},
     // The Lab's own renderers, for src/asset-audit.js: the audit looks at exactly what the Lab shows.
-    lab:{makePreview,modelMesh,engineCapture,defaultState,rotationFrame}};
+    lab:{makePreview,modelMesh,engineCapture,defaultState,rotationFrame},exportImage};
   // Reparent the existing native animation canvas: the animator retains its context.
   const liveCanvas=byId('c');if(liveCanvas)byId('assetAnimationPanel').appendChild(liveCanvas);
   refresh();
