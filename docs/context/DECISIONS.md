@@ -152,6 +152,10 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
 **D-042 · DECISIONE ESPLICITA + CODICE SU MAIN dopo PR #76 (23/10/2026; originariamente branch `portoni`):** la **grata (saracinesca)** è uno **strato difensivo separato**, non un bonus di resistenza della porta. Estende D-032: il portone in pietra con grata ha tre durabilità indipendenti (torre-porta `core`, grata `portcullis` 120 HP, porta `door`). Una grata abbassata assorbe i colpi diretti alla porta (ariete, macchine) finché non è distrutta; il **fuoco** la attraversa e colpisce la porta. Abbassata sbarra il passaggio anche a porta aperta o sfondata; distrutta resta piegata e mezza alzata, non sbarra nulla e va riparata. L'accesso è violato solo con porta sfondata **e** nessuna grata abbassata (`gateBreached`).
 
+## Cavalieri e diplomazia (PR #72 portata su main in 2D, 28/10/2026)
+
+**D-046 · DECISIONE ESPLICITA DELL'UTENTE (28/10/2026):** umani e animali, cavalli compresi, restano **figure 2D** (disegno piano / billboard). Le mesh 3D generate con Blender per figure umane e animali sono scartate: niente `settlement-knights3d.js`, `knight-models.js`, `tools/blender/build_knights.py` né stile «flat» delle mesh 3D. Cavalieri a cavallo e messaggero usano solo `ConquerMounted2D` (`src/settlement-mounted2d.js`, il cavallo 2D approvato di `settlement-animals.js` con l'aggancio `onBody`). **Alternative scartate:** cavaliere 3D disegnato piatto (PR #72) e 3D a facce ombreggiate. **Impatto:** `drawMountedKnight` in `settlement-combat.js` e `ConquerDiplomacy.draw`; `qa/diplomacy-regression.cjs` fallisce se ricompaiono `ConquerKnights3D`/`ConquerKnightModels`. Le carovane della diplomazia restano separate dai convogli dell'economia (#55): l'unificazione è un lavoro successivo, attraverso l'interfaccia `window.ConquerDiplomacy`.
+
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
 ## Conflitti decisionali da risolvere esplicitamente

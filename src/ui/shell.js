@@ -413,7 +413,7 @@ function Activities({ game }) {
 }
 const STORE_KEYS = { food: ['food'], materials: ['wood', 'stone', 'metal'], equipment: ['equipment'], horses: ['horses'], gold: ['gold'] };
 function CastleStores({ game }) {
-  const l = game.read.logistics();
+  const l = game.read.logistics(), caravans = game.read.caravans();
   if (!l) return null;
   const transfers = Object.fromEntries(l.transfers.map(t => [t.id, t]));
   return html`<div class="u2-stats">
@@ -428,7 +428,9 @@ function CastleStores({ game }) {
         <button type="button" class="u2-mini" disabled=${!transfers[k]?.enabled} aria-label=${M.store + ' ' + (M.goods[k] || M.stores[k] || k)}
           data-tip=${M.store + ' ' + (M.goods[k] || M.stores[k] || k)} data-tip-body=${TIP.store}
           onClick=${() => game.commands.storeInCastle(k)}>+${STORE_KEYS[s.id].length > 1 ? (M.goods[k] || k).slice(0, 1) : ''}</button>`)}</div>
-    </div>`)}`;
+    </div>`)}
+    ${caravans != null && html`<button type="button" class="u2-primary" data-tip=${M.caravans(caravans)} data-tip-body=${TIP.caravans}
+      onClick=${game.commands.openCaravans}>${M.caravans(caravans)}</button>`}`;
 }
 function GameInfo({ game }) {
   const v = game.read.village();
@@ -474,9 +476,13 @@ function DefendCard({ section, game, snap }) {
     <${Row} label=${D.radius} tip=${DT.radius}><div class="u2-slider">
       <input type="range" min="1" max="16" value=${s.brushRadius} aria-label=${D.radius} onInput=${e => def('brushRadius', e.currentTarget.value)} />
       <b>${s.brushRadius}U</b></div></${Row}>`;
+  const k = game.read.knights();
   if (section === 'patrols') body = html`
     <${Row} label=${D.patrols + ' ' + s.patrols} tip=${DT.patrols}><${Seg} options=${[
-      { label: D.patrolRemove, disabled: s.patrols === 0, a: 'patrolRemove' }, { label: D.patrolAdd, a: 'patrolAdd' }]} onPick=${o => def(o.a)} /></${Row}>`;
+      { label: D.patrolRemove, disabled: s.patrols === 0, a: 'patrolRemove' }, { label: D.patrolAdd, a: 'patrolAdd' }]} onPick=${o => def(o.a)} /></${Row}>
+    ${k && html`<${Row} label=${D.knights + ' ' + k.current + '/' + k.limit} tip=${DT.knights}><${Seg} options=${[
+      { label: D.recruitKnight, tip: D.recruitKnight, tipBody: DT.knights, disabled: k.current >= k.limit }]}
+      onPick=${() => game.commands.recruitKnight()} /></${Row}>`}`;
   if (section === 'alarm') body = html`
     <${Row} label=${D.bell} tip=${DT.bell}><${Seg} options=${['off', 'green', 'hall'].map(m =>
       ({ label: D.alarmModes[m], active: s.alarm === m, m }))} onPick=${o => def('alarm', o.m)} /></${Row}>

@@ -49,7 +49,7 @@
     const reach=w.radius+EDGE+1;let n=0;
     const all=[...(window.ConquerCombat?.units?.()||[]),...(window.ConquerCombat?.enemy?.()||[])];
     for(const u of all){
-      if(u.defeated||u.kind==='knight'||u.kind==='wolf'||u.routing)continue;
+      if(u.defeated||u.kind==='knight'||u.kind==='captain'||u.kind==='wolf'||u.routing)continue;
       if(Math.hypot(u.x-w.center.x,u.y-w.center.y)>reach)continue;
       n+=u.kind==='patrol'?.4:1;
     }

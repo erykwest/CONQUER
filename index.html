@@ -24,6 +24,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 </script>
 <link rel="stylesheet" href="./src/settlement.css?v=dev-scroll-mills-1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
+<link rel="stylesheet" href="./src/settlement-diplomacy.css?v=knights2d-1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="./src/ui/theme.css?v=ui2-6">
@@ -136,6 +137,10 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
       <summary>Economy · Production and Market</summary>
       <div id="economyOverview" aria-live="off">Economy initializes when the settlement loads.</div>
     </details>
+    <h3>Forze nobiliari</h3>
+    <div class="legend" id="knightRoster">Cavalieri 0/0 · Occorrono Noble room e Stalla</div>
+    <button class="full" id="recruitKnight" type="button" disabled>⚔ Recluta cavaliere a cavallo</button>
+    <button class="full" id="caravanOpen" type="button">📦 Carovane (0)</button>
     <h3>Persistence</h3>
     <button class="full" id="saveBtn">Save settlement</button>
     <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
@@ -351,8 +356,8 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-construction-assembly.js?v=cantiere-case-3"></script>
 <script src="./src/settlement-placement.js?v=bridge-magnet-1"></script>
 <script src="./src/settlement-collapse.js?v=collapse-1"></script>
-<script src="./src/settlement-siege.js?v=portoni-4"></script>
-<script src="./src/settlement-earthworks.js?v=earthworks-2"></script>
+<script src="./src/settlement-siege.js?v=knights2d-1"></script>
+<script src="./src/settlement-earthworks.js?v=knights2d-1"></script>
 <script src="./src/settlement-fire.js?v=fire-1"></script>
 <script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5"></script>
 <script src="./src/settlement-gate-fittings.js?v=portoni-4"></script>
@@ -364,7 +369,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-wardrobe.js?v=wardrobe-1"></script>
 <script src="./src/settlement-population-figures.js?v=wardrobe-1"></script>
 <script src="./src/settlement-population-garrisons.js?v=refactor-2"></script>
-<script src="./src/settlement-animals.js?v=merge-urban-1"></script>
+<script src="./src/settlement-animals.js?v=knights2d-1"></script>
 <script src="./src/settlement-livestock.js?v=pasture-buildings-1"></script>
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
 <script src="./src/settlement-architecture.js?v=case-l4-7"></script>
@@ -390,22 +395,23 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-app-rooms.js?v=ui2-4"></script>
 <script src="./src/settlement-structure-commands.js?v=ui2-4"></script>
 <script src="./src/settlement-app-input.js?v=bridge-magnet-1"></script>
-<script src="./src/settlement-app-persistence.js?v=assetlab-sandbox-1"></script>
-<script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
-<script src="./src/settlement-app-simulation.js?v=assetlab-studio-1"></script>
+<script src="./src/settlement-app-persistence.js?v=knights2d-1"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=knights2d-1"></script>
+<script src="./src/settlement-app-simulation.js?v=knights2d-1"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
-<script src="./src/settlement-minimap.js?v=minimap-1"></script>
+<script src="./src/settlement-minimap.js?v=knights2d-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
 <script src="./src/settlement-music-dev.js?v=music-1"></script>
 <script src="./src/settlement-sound-dev.js?v=sound-2"></script>
 <script src="./src/settlement-wallwalk.js?v=wallwalk-1"></script>
+<script src="./src/settlement-mounted2d.js?v=knights2d-1"></script>
 <script src="./src/settlement-combat-anim.js?v=anim-1"></script>
 <script src="./src/settlement-work-anim.js?v=work-1"></script>
-<script src="./src/settlement-combat-rules.js?v=combat-5"></script>
-<script src="./src/settlement-combat.js?v=zones-hd-off-1-ui2"></script>
+<script src="./src/settlement-combat-rules.js?v=knights2d-1"></script>
+<script src="./src/settlement-combat.js?v=zones-hd-off-1-knights2d"></script>
 <script src="./src/heraldry-symbols.js"></script>
 <script src="./src/settlement-heraldry.js"></script>
-<script src="./src/ui/game-api.js?v=ui2-6"></script>
+<script src="./src/ui/game-api.js?v=knights2d-1"></script>
 <script src="./src/settlement-builder-ux.js?v=terraform-flat-h0-1"></script>
 <script src="./src/assets/siege-engines-model.js?v=siege-2"></script>
 <script src="./src/settlement-siege-engines3d.js?v=siege-2"></script>
@@ -413,6 +419,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-siege-preview.js?v=assetlab-audit-1"></script>
 <script src="./src/settlement-asset-stage.js?v=assetlab-audit-2"></script>
 <script src="./src/settlement-tower-weapons.js?v=siege-1"></script>
-<script type="module" src="./src/ui/shell.js?v=ui2-6"></script>
+<script src="./src/settlement-diplomacy.js?v=knights2d-1"></script>
+<script type="module" src="./src/ui/shell.js?v=knights2d-1"></script>
 </body>
 </html>
