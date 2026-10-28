@@ -1014,7 +1014,10 @@
     invalidateSceneCache=function(...args){S.contentDirty=true;return orig.apply(this,args)};
   }
   function ensureContent(gl){
-    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()){S.stats.ensureMs=0;return}
+    // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
+    const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
+    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut){S.stats.ensureMs=0;return}
+    S.civicCut=civicCut;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
@@ -1030,8 +1033,15 @@
       uploadTexture(gl,'detail',bakeGround(DETAIL.x0,DETAIL.y0,DETAIL.size));
       S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
     }
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings')].join('|');
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
+    // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
+    const cutSig=[bSig,rot,plan].join('|');
+    if(S.sig.civicCutaway!==cutSig){
+      const m=meshBuilder(true),s=civicCut&&State.structures.find(x=>x.id===civicCut);
+      if(s)withStructureVisualMaterial(s,()=>ConquerCivic3D.addCutawayToBuilder(m,Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)));
+      upload(gl,'civicCutaway',new Float32Array(m.tris));S.sig.civicCutaway=cutSig;
+    }
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
     const castleContent=[season,State.visualPalette,structuresSig('castle')].join('|');
@@ -1137,7 +1147,7 @@
     }
     // solids, then top-face outlines without polygon offset
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');
+    drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'civicCutaway');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
     // facade decals: blended over their walls, depth-tested, no depth write
