@@ -82,12 +82,13 @@ const CATALOG = [
     } },
   { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => s.tool.kind === 'linear' && s.tool.linear !== 'road',
     rows: s => {
-      const kind = s.tool.linear, rows = [{ label: O.type, options: [
+      const kind = s.tool.linear, wide = kind === 'built' && s.tool.span === 'wide', rows = [{ label: O.type, options: [
         opt(V.wall, '[data-linear="wall"]', kind === 'wall'),
         opt(V.palisade, '[data-linear="palisade"]', kind === 'palisade'),
-        opt(V.built, '[data-linear="built"]', kind === 'built')] }];
+        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide),
+        opt(V.builtWide, '[data-linear="builtWide"]', wide)] }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
-      if (kind !== 'palisade') rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, s.levels.wall === n)) });
+      if (kind !== 'palisade') rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
       if (kind !== 'palisade') rows.push(masonryRow(s));
       return rows;
     } },

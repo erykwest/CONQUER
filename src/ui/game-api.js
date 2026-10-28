@@ -65,6 +65,7 @@
       size: t.size ?? null,
       woodStyle: t.woodStyle || null,
       linear: t.linear || null,
+      span: t.span || null,
       crossing: t.crossing || null,
       width: t.width ?? null,
       civic: t.placementSpec?.type && t.kind === 'civic' ? t.placementSpec.type : null,

@@ -9,7 +9,8 @@ function migrateStructures(list){
     if(s.type==='house')s.houseLevel=houseLevel(s);
     normalizeCivicDevelopment(s);
     if(s.type==='built'){
-      s.width=1;
+      if(s.span!=='wide')delete s.span;
+      s.width=builtWidth(s);
       if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);
       s.level=clamp(Math.round(Number(s.level)||1),1,2);
     }

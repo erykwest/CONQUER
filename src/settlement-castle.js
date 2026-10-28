@@ -570,7 +570,8 @@ function cutawayFloorBasis(s,g){
   };
 }
 function cutawayFloorLevels(s){
-  const level=structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
+  // Wide halls keep the full height free: a single ground floor at L2.
+  const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(level<=1)return floors;
   for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
   return floors;
@@ -668,11 +669,53 @@ function drawNobleRoomProps(slot){
   drawCutawayInteriorBox(slot,.42,.42,.22,.22,.16,'#8b633b','#4b3424','#60452d');
   if(slot.size==='large')drawCutawayInteriorBox(slot,-.62,.42,.26,.18,.13,'#8a6238','#4b3424','#60452d');
 }
+function drawCutawayRug(slot,nx0,nx1,dFrac,fill,stroke){
+  const b=slot.basis,x0=nx0*b.w*.40,x1=nx1*b.w*.40,half=b.h*dFrac/2;
+  pathPolygon(projectPath(cutawayLocalRect(b.center,b.angle,x0,-half,x1,half),slot.z+.006),fill,stroke,.6);
+}
+// Hall rooms read along the long axis: the "head" end (+x) carries altar, hearth or dais.
+// Sizes are world units: the room-box clamps are tuned for the narrow 1U range.
+const HALL_WOOD=['#7e5a38','#4b3424','#5c4028'],HALL_DARK_WOOD=['#6b4a30','#422e20','#533923'],HALL_GOLD=['#d9b55a','#8a6a2a','#a07c34'];
+function drawCutawayHallBox(slot,nx,ny,w,d,height,[top,sideA,sideB],z0=0){
+  const p=cutawayRoomPoint(slot,nx,ny),pts=rectWorldPoints(p.x,p.y,Math.min(w,slot.basis.w*.96),Math.min(d,slot.basis.h*.96),slot.basis.angle);
+  extrudePolygonAt(pts,slot.z+.012+z0,slot.z+.012+z0+height,{top,sideA,sideB,stroke:'#3d2a1c'});
+}
+// Rear row first: the painter order follows the camera-facing side of the slot.
+function hallRows(slot,ys){
+  const depth=ny=>viewDepthPoint(cutawayRoomPoint(slot,0,ny));
+  return ys.slice().sort((a,c)=>depth(a)-depth(c));
+}
+function drawChapelRoomProps(slot){
+  drawCutawayRug(slot,-.95,.78,.20,'#6f2f2c','rgba(196,150,96,.55)');
+  for(const y of hallRows(slot,[-.62,.62]))for(const x of [-.78,-.55,-.32,-.09,.14,.37])drawCutawayHallBox(slot,x,y,.14,.52,.10,HALL_WOOD);
+  drawCutawayHallBox(slot,.90,0,.26,.62,.20,['#d8cfc0','#8f877c','#a39a8d']);
+  drawCutawayHallBox(slot,.90,0,.05,.05,.26,HALL_GOLD,.20);
+  for(const y of [-.30,.30])drawCutawayHallBox(slot,.90,y,.04,.04,.10,['#f2e2b0','#a69062','#bba574'],.20);
+}
+function drawCommonHallRoomProps(slot){
+  const len=slot.basis.w*.58;
+  for(const y of hallRows(slot,[-.46,.46]))for(const side of hallRows(slot,[-.17,0,.17]).map(v=>v+y)){
+    if(side===y)drawCutawayHallBox(slot,-.12,y,len,.24,.11,HALL_WOOD);
+    else drawCutawayHallBox(slot,-.12,side,len*.94,.07,.06,HALL_DARK_WOOD);
+  }
+  drawCutawayHallBox(slot,.92,0,.22,.56,.42,['#5d5650','#3c3732','#4a443e']);
+  drawCutawayHallBox(slot,.84,0,.10,.30,.06,['#d9772c','#8a3f1c','#a24c20']);
+}
+function drawThroneHallRoomProps(slot){
+  drawCutawayRug(slot,-.95,.68,.28,'#7e2a2a','rgba(217,181,90,.70)');
+  for(const y of hallRows(slot,[-.70,.70]))for(const x of [-.62,-.18,.26])drawCutawayHallBox(slot,x,y,.12,.12,.72,['#c9b98f','#7d6f54','#94845f']);
+  drawCutawayHallBox(slot,.84,0,.50,1.00,.08,['#8d877c','#5a554d','#6b655c']);
+  drawCutawayHallBox(slot,.88,0,.20,.28,.22,['#8e2f2f','#5a1f1f','#6e2626'],.08);
+  drawCutawayHallBox(slot,.93,0,.05,.30,.46,HALL_GOLD,.08);
+}
 function drawCutawayInteriorProps(s,g){
   for(const slot of cutawayRoomSlots(s,g)){
     if(slot.role==='storage')drawStorageRoomProps(slot);
     else if(slot.role==='barracks'||slot.role==='quarters')drawBarracksRoomProps(slot);
     else if(slot.role==='nobleRoom')drawNobleRoomProps(slot);
+    else if(slot.role==='chapel')drawChapelRoomProps(slot);
+    else if(slot.role==='commonHall')drawCommonHallRoomProps(slot);
+    else if(slot.role==='throneHall')drawThroneHallRoomProps(slot);
   }
 }
 function drawCutawayWallRing(g,z,alpha=.72){

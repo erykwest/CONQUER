@@ -57,6 +57,7 @@
       ['[data-linear="wall"]','Mura','wall'],
       ['[data-linear="palisade"]','Palizzata','fence'],
       ['[data-linear="built"]','Sezione costruita','built'],
+      ['[data-linear="builtWide"]','Sala larga 2U · doppia altezza','built'],
       ['[data-gate]','Porta muraria','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[

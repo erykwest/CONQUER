@@ -11,7 +11,9 @@ const ARCHITECTURE_ASSET_PATHS=Object.freeze({
   gothicL2:'./src/assets/architecture/gothic_l2.png',
   gothicL3:'./src/assets/architecture/gothic_l3.png',
   arcade2:'./src/assets/architecture/arcade_2.png',
-  arcade3:'./src/assets/architecture/arcade_3.png'
+  arcade3:'./src/assets/architecture/arcade_3.png',
+  // Two-light lancet for wide halls, modelled and rendered in Blender (ASSETS/blender/build_hall_window.py).
+  hallLancet:'./src/assets/architecture/hall_lancet.png'
 });
 const architectureSprites={};
 function prepareArchitectureSprite(img){
@@ -452,14 +454,34 @@ function drawWallHoarding(s,occlusionFrame=null){
     }
   });
 }
-function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60){
+// A fixed count (wide-hall lancets) drops windows whose bay could not hold them undistorted
+// (drawn width = min(asset width, bay * .82)).
+function builtWindowCount(edge,density,fixed,assetWidth=.24){
+  return fixed?clamp(Math.floor(edge.length*.82/assetWidth),1,fixed):Math.max(1,Math.round(edge.length*density));
+}
+function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60,fixed=0){
   if(side!==linearFrontSide(s))return;
-  const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count,opacity=cutawayFacadeOpacity(s);
+  const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,assetWidth),cell=edge.length/count,opacity=cutawayFacadeOpacity(s);
   for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf,opacity)}
 }
-function drawBuiltWindows(s,lit=false,nf=1){
+// Facade rows shared by the 2.5D and 3D renderers: [side,z,density,key,width,height,lit,fixedCount].
+const HALL_LANCET_ASPECT=640/1566;   // hall_lancet.png: keep the Blender render undistorted
+function builtWindowRows(s){
   const l=structureLevel(s),outside=wallExteriorSide(s),inside=-outside,lowerZ=.86,upperZ=2.22;
-  withBuiltRoofOcclusionClip(s,()=>{if(l>=2)drawBuiltWindowRow(s,inside,upperZ,.42,lit,nf,'gothicL3',.92,.78);drawBuiltWindowRow(s,outside,lowerZ,.72,false,nf,'arrowSlit',.23,.58);if(l>=2)drawBuiltWindowRow(s,outside,upperZ,.72,false,nf,'arrowSlit',.23,.58)})
+  if(isWideBuilt(s)){
+    // One free-height hall: four lancets rising through both storeys, slits outside.
+    // A portico takes the interior ground floor, so the hall falls back to clerestory lights.
+    const arcade=builtSkin(s)==='arcade',slits=[[outside,.86,.72,'arrowSlit',.23,.58,false]];
+    const lancet=h=>[inside,.24+h/2,0,'hallLancet',h*HALL_LANCET_ASPECT,h,true,4];
+    if(l<2)return arcade?slits:[lancet(1.30),...slits];
+    return[arcade?[inside,upperZ,.42,'gothicL3',.92,.78,true]:lancet(2.12),...slits,[outside,upperZ,.72,'arrowSlit',.23,.58,false]];
+  }
+  const rows=[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
+  if(l>=2)rows.unshift([inside,upperZ,.42,'gothicL3',.92,.78,true]),rows.push([outside,upperZ,.72,'arrowSlit',.23,.58,false]);
+  return rows;
+}
+function drawBuiltWindows(s,lit=false,nf=1){
+  withBuiltRoofOcclusionClip(s,()=>{for(const [side,z,density,key,w,h,canLight,fixed] of builtWindowRows(s))drawBuiltWindowRow(s,side,z,density,canLight&&lit,nf,key,w,h,fixed)})
 }
 function drawHouseFacadeWindows(s,lit=false,nf=1){
   // At high zoom most homes are offscreen; skip the expensive L/T occlusion
