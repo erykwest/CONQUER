@@ -300,6 +300,29 @@ function builtRoofGeometry(s){
   const ridgeB={x:(p[1].x+p[2].x)/2,y:(p[1].y+p[2].y)/2};
   return{p,h,rise,ridgeA,ridgeB,ridgeH:h+rise};
 }
+// Wide-hall buttresses on the lancet facade, one on every bay line (n lancets -> n+1).
+// Each buttress is a list of frustum pieces {bottom,top,z0,z1}: a deep plinth, a sloped
+// weathering, a shallower upper stage and a final slope back into the wall.
+function wideHallButtresses(s){
+  if(!isWideBuilt(s))return[];
+  const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side);
+  const lancet=builtWindowRows(s).find(r=>r[3]==='hallLancet');
+  const n=builtWindowCount(edge,0,4,lancet?lancet[4]:.86),cell=edge.length/n;
+  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L},o={x:-u.y*side,y:u.x*side};
+  const mid={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2},w=.22,h=structureHeight(s);
+  const rect=(t,d)=>[[t-w/2,-.02],[t+w/2,-.02],[t+w/2,d],[t-w/2,d]].map(([a,b])=>({x:mid.x+u.x*a+o.x*b,y:mid.y+u.y*a+o.y*b}));
+  const z=[0,h*.48,h*.53,h*.86,h*.94],out=[];
+  for(let k=0;k<=n;k++){
+    const t=clamp(k*cell-edge.length/2,-edge.length/2+w/2,edge.length/2-w/2);
+    out.push([
+      {bottom:rect(t,.30),top:rect(t,.30),z0:z[0],z1:z[1]},
+      {bottom:rect(t,.30),top:rect(t,.18),z0:z[1],z1:z[2]},
+      {bottom:rect(t,.18),top:rect(t,.18),z0:z[2],z1:z[3]},
+      {bottom:rect(t,.18),top:rect(t,.03),z0:z[3],z1:z[4]}
+    ]);
+  }
+  return out;
+}
 function viewDepthPoint(p){
   const q=rotateViewPoint(p);
   return q.x+q.y;

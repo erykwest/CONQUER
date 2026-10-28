@@ -482,6 +482,18 @@ function extrudePolygonAt(worldPts,z0,z1,{top:topColor='#8c7b69',sideA='#554b42'
   for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,null);
   pathPolygon(topPts,topColor,stroke,1);
 }
+// extrudePolygonAt with a different top ring (same vertex count): splays and sloped caps.
+function extrudeFrustumAt(bottom,top,z0,z1,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
+  if(!bottom?.length||bottom.length!==top?.length||z1<=z0)return;
+  const base=projectPath(bottom,z0),topPts=projectPath(top,z1),faces=[];
+  for(let i=0;i<bottom.length;i++){
+    const j=(i+1)%bottom.length;
+    faces.push({quad:[base[i],base[j],topPts[j],topPts[i]],depth:(base[i].y+base[j].y)/2,i});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,stroke,.6);
+  pathPolygon(topPts,topColor,stroke,.8);
+}
 let castleUnionCache={key:null,bands:null};
 const CUTAWAY_NEAR_ALPHA=.035;
 const CUTAWAY_FAR_ALPHA=1;

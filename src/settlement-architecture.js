@@ -481,7 +481,31 @@ function builtWindowRows(s){
   return rows;
 }
 function drawBuiltWindows(s,lit=false,nf=1){
-  withBuiltRoofOcclusionClip(s,()=>{for(const [side,z,density,key,w,h,canLight,fixed] of builtWindowRows(s))drawBuiltWindowRow(s,side,z,density,canLight&&lit,nf,key,w,h,fixed)})
+  const buttresses=visibleHallButtresses(s);
+  withBuiltRoofOcclusionClip(s,()=>{
+    withoutScreenHulls(buttresses.map(b=>convexHull(b.flatMap(p=>[...projectPath(p.bottom,p.z0),...projectPath(p.top,p.z1)]))),()=>{
+      for(const [side,z,density,key,w,h,canLight,fixed] of builtWindowRows(s))drawBuiltWindowRow(s,side,z,density,canLight&&lit,nf,key,w,h,fixed);
+    });
+    // Buttresses stand in front of the lancets: painted in this pass, after them. The night pass
+    // only re-lights the windows (clipped around the buttresses), so the masonry keeps its shade.
+    if(!lit)for(const b of buttresses)for(const p of b)extrudeFrustumAt(p.bottom,p.top,p.z0,p.z1,{
+      top:winterSnowColor('#948779'),sideA:'#4b4540',sideB:'#625a52',stroke:'rgba(159,146,133,.75)'
+    });
+  });
+}
+// The camera-facing lancet facade only (a rear buttress would paint over the hall body), far first.
+function visibleHallButtresses(s){
+  if(!isWideBuilt(s)||structureCutaway(s)||-wallExteriorSide(s)!==linearFrontSide(s))return[];
+  const depth=b=>viewDepthPoint(b[0].bottom[2]);
+  return wideHallButtresses(s).sort((a,b)=>depth(a)-depth(b));
+}
+function withoutScreenHulls(hulls,drawFn){
+  hulls=hulls.filter(h=>h.length>=3);
+  if(!hulls.length){drawFn();return}
+  const r=wrap.getBoundingClientRect();
+  ctx.save();ctx.beginPath();ctx.rect(-48,-48,r.width+96,r.height+96);
+  for(const hull of hulls){hull.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath()}
+  ctx.clip('evenodd');drawFn();ctx.restore();
 }
 function drawHouseFacadeWindows(s,lit=false,nf=1){
   // At high zoom most homes are offscreen; skip the expensive L/T occlusion

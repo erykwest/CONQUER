@@ -226,6 +226,10 @@
         if(s.type==='gate')addGate(m,s);
         if(s.type==='built')addBuilt(m,s);
         m.tag='body';
+        for(const b of wideHallButtresses(s))for(const p of b){
+          if(p.top===p.bottom||p.top.every((q,i)=>q.x===p.bottom[i].x&&q.y===p.bottom[i].y))m.prism(p.bottom,p.z0,p.z1,PAL.buttress());
+          else m.frustum(p.bottom,p.top,p.z0,p.z1,PAL.buttress());
+        }
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());

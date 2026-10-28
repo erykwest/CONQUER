@@ -2,8 +2,8 @@
 
 ## Castello — sala larga a doppia altezza (branch `feature/wide-built-hall`, 28/10/2026)
 
-- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione costruita larga 2U, H2 senza solaio, una stanza LARGE; finestroni Blender a tutta altezza, 2 camini, cutaway con arredi di cappella, sala comune e sala del trono.
-- **ANCORA APERTO:** effetti di gioco specifici delle sale (per ora valgono le regole generiche delle stanze), figure all'interno nel cutaway (cerimonie, banchetti, udienze), verifica nel World 3D.
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione costruita larga 2U, H2 senza solaio, una stanza LARGE; finestroni Blender a tutta altezza, 5 contrafforti sul lato finestroni, 2 camini, cutaway con arredi di cappella, sala comune e sala del trono.
+- **ANCORA APERTO:** effetti di gioco specifici delle sale (per ora valgono le regole generiche delle stanze), figure all'interno nel cutaway (cerimonie, banchetti, udienze), contrafforti nell'impronta di collisione/piazzamento.
 
 ## Presentazione — audio e musica (branch `sound`, riallineato 28/10/2026)
 
