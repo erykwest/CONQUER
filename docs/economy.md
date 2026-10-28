@@ -121,6 +121,17 @@ The monthly `investmentCapacity` can be positive only when an actual L4 housing 
 
 Tests: `qa/economy-regression.cjs`, `qa/economy-industries-regression.cjs`, `qa/economy-balance-regression.cjs`, run in `.github/workflows/economy-flows-regression.yml`. [CI success, branch](https://github.com/erykwest/CONQUER/actions/runs/39253184968). The workflow is deterministic Node QA, **not** a browser or live simulation certification.
 
+## Single L1 allocator, grazing, logging, rations and happiness (28 October 2026, `feature/economy-labour`)
+
+`laborAllocation(day)` is the only L1 scheduler (the `jobmanager` branch's `ConquerJobManager` was not ported). Order: industries → protected herders → construction crews → logging fill → herders back to flocks → idle.
+
+- **Herders:** L1 houses whose lot is `goat` or `shepherd`. At least one herds while any flock exists; more while accessible food (market lots, plus castle food only under a ration order) covers less than 14 days of household food need. Each herder adds 0.9 private food per working day; alarms stop grazing.
+- **Logging:** while castle + market wood is below min(20, wood reserve) up to two L1 go to logging camps before construction; otherwise camps take the L1 left after open sites (3 per site) are staffed. Loggers walk to the camp like builders.
+- **Rations:** `State.policies.rations` = `market` (default), `half`, `full`. At the Saturday market the castle issues need × 0, ½ or 1, proportionally when stock is short; households buy the rest.
+- **Happiness:** `economy.happiness.L1..L4`, 0–100. Fully fed +0.2/week, hungry −max(0.5, 5×shortfall), half rations −1.2, full rations up to +0.8. `welfare` is the resident-weighted mean.
+- **Open:** whether L1 may farm (decision D-051).
+
+Regression: `node qa/labor-jobs-regression.cjs`, `node qa/economy-rations-regression.cjs`.
 ## Regression
 Run `node qa/economy-regression.cjs` in a local checkout. The test suite covers labor weekends, aggregate cohorts, reserve saturation, sales, exports, ownership, and monthly boundaries.
 

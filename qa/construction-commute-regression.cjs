@@ -111,7 +111,8 @@ check('industrial jobs reserve founders and they do not remain idle at the well'
   const h=harness({founders:4,industry:1}),site=h.add('tower-c');
   const crew=h.crew(.3).get(site.id);
   assert.deepEqual(Array.from(crew,w=>w.id),['founder:well:2','founder:well:3']);
-  assert.equal(h.draw(.3).length,2,'two at construction, two represented by industry');
+  // Low wood: the camp keeps its two loggers, who walk to it like builders.
+  assert.equal(h.draw(.3).length,4,'two at construction, two commuting to the logging camp');
 });
 check('unreachable construction stops instead of teleporting builders',()=>{
   const h=harness({founders:2,reachable:false}),site=h.add('tower-d');

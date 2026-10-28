@@ -86,8 +86,9 @@ test('industrial workers cannot be counted again as builders',()=>{
 });
 test('construction pauses when L1 staffing is exhausted; resumes after industry disabled',()=>{
   const h=harness({workers:4});
-  h.State.structures.push({id:'camp1',type:'loggingCamp',economicOwner:'lord',economyDisabled:false});
-  h.State.structures.push({id:'camp2',type:'loggingCamp',economicOwner:'lord',economyDisabled:false});
+  // Vineyards are ordinary L1 industry; logging camps follow the wood-reserve rule.
+  h.State.structures.push({id:'camp1',type:'vineyard',economicOwner:'lord',economyDisabled:false});
+  h.State.structures.push({id:'camp2',type:'vineyard',economicOwner:'lord',economyDisabled:false});
   const s=h.add('gate',5);
   h.tick(0,.52);close(s.construction.workDone,0,'both industries reserve all workers');
   h.State.structures.find(s=>s.id==='camp2').economyDisabled=true;

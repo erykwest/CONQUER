@@ -94,9 +94,17 @@ function drawPeasants(){
     for(const worker of workers)constructionJobs.set(worker.id,{site,worker});
   }
   const economy=window.ConquerEconomy;
-  const unavailableFounders=new Set(Object.values(economy?.laborAllocation?.(State.clock.day)?.assignedL1||{})
+  const labor=economy?.laborAllocation?.(State.clock.day);
+  const unavailableFounders=new Set(Object.values(labor?.assignedL1||{})
     .flat().filter(w=>w.founderIndex!=null).map(w=>w.id));
   const workday=(economy?.weekday?.(State.clock.day)??6)<5;
+  // Loggers walk the same commute to their camp as construction crews.
+  if(workday&&(window.ConquerCombat?.alarmMode?.()||'off')==='off')
+    for(const [siteId,workers] of Object.entries(labor?.assignedL1||{})){
+      const site=State.structures.find(s=>s.id===siteId&&s.type==='loggingCamp');
+      if(site)for(const worker of workers)
+        if(!constructionJobs.has(worker.id))constructionJobs.set(worker.id,{site,worker});
+    }
 
   const residentStride=State.view.scale<.30?3:State.view.scale<.55?2:1;
   for(const house of houses){

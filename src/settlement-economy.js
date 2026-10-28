@@ -19,6 +19,11 @@
     L3:Object.freeze({food:.55,wood:.10,luxury:.08}),
     L4:Object.freeze({food:.55,wood:.12,luxury:.25})
   });
+  // Lord's castle food order. 'market' is the default: no entitlement to castle stores.
+  const RATIONS = Object.freeze({market:0,half:.5,full:1});
+  const HAPPINESS_GROUPS = Object.freeze(['L1','L2','L3','L4']);
+  // Supervised grazing: food per herding L1 per working day.
+  const HERD_FOOD_PER_DAY = .9;
   const KIND = Object.freeze({
     field:{good:'food',classId:1,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
@@ -55,6 +60,7 @@
       lots:Object.fromEntries(GOODS.map(g=>[g,[]])),
       prices:{...BASE},externalDemand:empty(),externalOffers:empty(),
       wallet:{L1:24,L2:40,L3:60,L4:300},welfare:50,
+      happiness:{L1:50,L2:50,L3:50,L4:50},
       wage:{L1:1,L2:2,L3:3},activities:{},cropStock:{lord:0,private:0},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
       constructionPayroll:{total:0,bySite:{}},
@@ -78,6 +84,10 @@
       if(!Number.isFinite(e.externalDemand[good]))e.externalDemand[good]=0;
       if(!Number.isFinite(e.externalOffers[good]))e.externalOffers[good]=0;
     }
+    // Four class happiness tracks; older saves start from their aggregate welfare.
+    if(!e.happiness||typeof e.happiness!=='object')e.happiness={};
+    for(const group of HAPPINESS_GROUPS)
+      e.happiness[group]=clamp(finite(e.happiness[group],finite(e.welfare,50)),0,100);
     return e;
   }
   // Existing version-1 saves migrate lazily without resetting wallets or inventories.
@@ -90,6 +100,13 @@
     return e;
   }
   function reset(){State.economy=makeState();render(true)}
+  // State.policies.rations holds the order; legacy numeric slider values mean 'market'.
+  function rationMode(){
+    const policies=State.policies||(State.policies={});
+    if(!Object.hasOwn(RATIONS,policies.rations))policies.rations='market';
+    return policies.rations;
+  }
+  function rationFactor(){return RATIONS[rationMode()]}
   function foundingCharter(wellId){
     if(!wellId)return false;
     const e=ensureFlows(state());
@@ -253,28 +270,44 @@
     const wellId=State.village?.wellId||'well';
     // IDs represent the same household's single working adult and the four
     // founding laborers. The economic accounting remains aggregate.
-    // A household adult responsible for livestock is already at work; do not
-    // send that same person to an industrial shift or a construction crew.
-    const workingHouses=houses.filter(h=>!['shepherd','cow'].includes(
-      window.ConquerLivestock?.lotKindForHouse?.(h)));
+    // Goat and sheep households are qualified herders: they join the pool last,
+    // so other L1 take industry and construction jobs before a flock is left.
+    const herdHouse=h=>['goat','shepherd'].includes(window.ConquerLivestock?.lotKindForHouse?.(h));
+    const worker=h=>({id:String(h.id)+':m:0',houseId:h.id});
+    const herdPool=houses.filter(herdHouse).map(worker);
     const l1Available=[
-      ...workingHouses.map(h=>({id:String(h.id)+':m:0',houseId:h.id})),
+      ...houses.filter(h=>!herdHouse(h)).map(worker),
       ...Array.from({length:foundingWorkers()},(_,i)=>({
         id:'founder:'+wellId+':'+i,founderIndex:i
       }))
     ];
+    // Supervised grazing protects a 14-day food cover: at least one herder
+    // stays with any existing flock, more while accessible food runs short.
+    const e=state(),foodWeekly=Object.entries(HOUSEHOLD_NEEDS)
+      .reduce((sum,[group,needs])=>sum+pop[group]*(needs.food||0),0);
+    const foodGap=Math.max(0,foodWeekly*2-accessibleFood(e));
+    const herdReserve=herdPool.length?
+      clamp(Math.ceil(foodGap/(HERD_FOOD_PER_DAY*10)),1,herdPool.length):0;
+    const herders=herdPool.splice(0,herdReserve);
+    l1Available.push(...herdPool);
     remaining.L1=Math.min(remaining.L1,l1Available.length);
+    const logging=[],woodLow=woodStock(e)<Math.min(20,finite(e.target?.wood,20));
+    let woodReserve=woodLow?2:0;
     // Industry positions are staffed before assigning only spare L1 to manual
     // construction. An out-of-season field does not reserve a worker forever.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
-      const activity=state().activities[s.id];
+      const activity=e.activities[s.id];
       if(s.economyDisabled||s.destroyed||s.abandoned||activity?.abandoned||
           s.type==='field'&&typeof fieldCropReady==='function'&&!fieldCropReady(s,day)){
         allocated[s.id]=0;continue;
       }
       const req=workerDemand(s),group=classKey(req.tier);
-      let count=Math.min(req.count,remaining[group]);
+      // Logging is essential only while wood is low; otherwise camps take
+      // the L1 still free once construction crews have been reserved.
+      const wanted=s.type==='loggingCamp'?Math.min(req.count,woodReserve):req.count;
+      let count=Math.min(wanted,remaining[group]);
       remaining[group]-=count;
+      if(s.type==='loggingCamp'){woodReserve-=count;logging.push(s)}
       if(group==='L1')assignedL1[s.id]=l1Available.splice(0,count);
       if(s.type==='field'&&count<req.count){
         // Idle L2 may tend the remaining field slots.
@@ -283,7 +316,36 @@
       }
       allocated[s.id]=count;
     }
-    return{allocated,remaining,limits,assignedL1,spareL1:l1Available};
+    const builders=l1Available.splice(0,Math.min(l1Available.length,constructionDemand(day)));
+    for(const s of logging){
+      const free=Math.min(KIND.loggingCamp.workers-allocated[s.id],l1Available.length);
+      if(free<=0)continue;
+      assignedL1[s.id].push(...l1Available.splice(0,free));
+      allocated[s.id]+=free;remaining.L1-=free;
+    }
+    // Unneeded herders return to their flocks; everyone else waits as idle labor.
+    const idle=[],herdIds=new Set(houses.filter(herdHouse).map(h=>h.id));
+    for(const w of l1Available)(herdIds.has(w.houseId)?herders:idle).push(w);
+    remaining.L1=Math.max(0,Math.min(remaining.L1,builders.length+idle.length));
+    return{allocated,remaining,limits,assignedL1,spareL1:[...builders,...idle],
+      herders,herdReserve,idle,foodWeekly:round(foodWeekly)};
+  }
+  // Food the households can actually reach: market lots, plus castle stores
+  // only while the lord orders full or half rations.
+  function accessibleFood(e){
+    const market=(e.lots?.food||[]).reduce((sum,l)=>sum+finite(l.qty),0);
+    return market+(rationFactor()>0?finite(e.castle?.food):0);
+  }
+  function woodStock(e){
+    return finite(e.castle?.wood)+(e.lots?.wood||[]).reduce((sum,l)=>sum+finite(l.qty),0);
+  }
+  // Open manual sites can each take up to three L1 (core CONSTRUCTION_MAX_WORKERS).
+  function constructionDemand(day){
+    if(!State.village?.founded||!buildersFunded()||
+        (window.ConquerCombat?.alarmMode?.()||'off')!=='off')return 0;
+    const perSite=typeof CONSTRUCTION_MAX_WORKERS==='number'?CONSTRUCTION_MAX_WORKERS:3;
+    return(State.structures||[]).filter(s=>!s.auto&&s.construction?.version===2&&
+      !complete(s)&&finite(s.construction.startedDay)<=finite(day)).length*perSite;
   }
   function activeCapacity(){return laborAllocation().allocated}
   function buildersFunded(){
@@ -302,7 +364,10 @@
   }
   function daily(day){
     const e=sync();if(weekday(day)>=5)return;
-    const staffing=activeCapacity(),date=dateAt(day);
+    const labor=laborAllocation(day),staffing=labor.allocated,date=dateAt(day);
+    // Supervised grazing is L1 husbandry: each herder's flock yields private food.
+    if((window.ConquerCombat?.alarmMode?.()||'off')==='off')
+      for(const w of labor.herders)put(e,'food',HERD_FOOD_PER_DAY,'private',w.houseId+':herd');
     const active=activeStructures(),hasMill=active.some(s=>
       ['windmill','watermill'].includes(s.type)&&
       !s.economyDisabled&&!s.destroyed&&!s.abandoned&&!s.burnt);
@@ -418,13 +483,27 @@
       const pressure=(demand[good]+Math.max(0,finite(e.externalDemand[good]))+1)/(offered[good]+1);
       e.prices[good]=round(BASE[good]*clamp(Math.sqrt(pressure),.4,2.5));
     }
-    const last={day,domestic:{},exports:{},unmet:{},unmetSupply:empty(),unmetBudget:empty()};
+    // Castle rations are issued only on the lord's order and really leave the store.
+    const mode=rationMode(),factor=RATIONS[mode];
+    const foodNeed=Object.fromEntries(HAPPINESS_GROUPS.map(g=>[g,round(pop[g]*(HOUSEHOLD_NEEDS[g].food||0))]));
+    const ordered=HAPPINESS_GROUPS.reduce((sum,g)=>sum+foodNeed[g]*factor,0);
+    const share=ordered>0?Math.min(1,Math.max(0,finite(e.castle.food))/ordered):0;
+    const rationed={L1:0,L2:0,L3:0,L4:0};
+    for(const g of HAPPINESS_GROUPS){
+      rationed[g]=round(Math.min(Math.max(0,finite(e.castle.food)),foodNeed[g]*factor*share));
+      e.castle.food=round(Math.max(0,finite(e.castle.food)-rationed[g]));
+      e.weekConsumed.food=round((e.weekConsumed.food||0)+rationed[g]);
+    }
+    const last={day,rationMode:mode,castleRations:{...rationed},marketFoodByClass:{},domestic:{},exports:{},unmet:{},unmetSupply:empty(),unmetBudget:empty()};
     for(const good of GOODS)fulfilled[good]=round(e.weekBuildDemand[good]||0);
+    fulfilled.food=round(fulfilled.food+Object.values(rationed).reduce((a,b)=>a+b,0));
+    const fedFood={L1:0,L2:0,L3:0,L4:0};
     for(let tier=1;tier<=4;tier++){
       const group=classKey(tier),count=pop[group];
       for(const [good,perResident] of Object.entries(HOUSEHOLD_NEEDS[group])){
-        const want=round(count*perResident);
+        const want=good==='food'?round(Math.max(0,count*perResident-rationed[group])):round(count*perResident);
         const bought=fulfill(e,good,want,group);
+        if(good==='food'){fedFood[group]=round(rationed[group]+bought.sold);last.marketFoodByClass[group]=bought.sold}
         fulfilled[good]=round(fulfilled[good]+bought.sold);
         e.weekConsumed[good]=round((e.weekConsumed[good]||0)+bought.sold);
         last.domestic[good]=round((last.domestic[good]||0)+bought.sold);
@@ -498,8 +577,17 @@
     e.weekProduced=empty();e.weekConsumed=empty();e.weekBuildDemand=empty();e.weekRecovered=empty();
     e.lastTrade=last;e.weeks++;
     syncBuilderResources();
-    const foodNeed=demand.food||0,foodUnmet=goods.food.unmet;
-    e.welfare=clamp(round(e.welfare+(foodNeed>0?(1-2*foodUnmet/foodNeed)*.6:0)),0,100);
+    // Each class keeps its own happiness: hunger hurts, half rations hurt morale,
+    // full castle rations please. Welfare is the resident-weighted average.
+    for(const g of HAPPINESS_GROUPS){
+      if(!(pop[g]>0)||!(foodNeed[g]>0))continue;
+      const fed=clamp(fedFood[g]/foodNeed[g],0,1);
+      const hunger=fed>=.999?.2:-Math.max(.5,5*(1-fed));
+      const order=mode==='half'?-1.2:mode==='full'?.8*clamp(rationed[g]/foodNeed[g],0,1):0;
+      e.happiness[g]=clamp(round(e.happiness[g]+hunger+order),0,100);
+    }
+    const residents=HAPPINESS_GROUPS.reduce((sum,g)=>sum+pop[g],0);
+    if(residents>0)e.welfare=round(HAPPINESS_GROUPS.reduce((sum,g)=>sum+e.happiness[g]*pop[g],0)/residents);
   }
   function monthly(day){
     const e=sync(),staff=activeCapacity(),grouped={L1:0,L2:0},pop=population();
@@ -552,6 +640,28 @@
       if(today.year!==tomorrow.year)annual(day);
     }
   }
+  function setRations(mode){
+    if(!Object.hasOwn(RATIONS,mode))return false;
+    const e=state();
+    if(rationMode()!==mode){
+      State.policies.rations=mode;
+      note(e,mode==='market'?'Castle rationing ended':mode==='full'?'Full rations authorized':'Half rations authorized');
+      if(typeof markDirty==='function')markDirty(false,false,true);
+    }
+    render(true);return true;
+  }
+  // Daily L1 job roster, for the panels: same allocation the simulation uses.
+  function jobSummary(day=State.clock?.day){
+    const labor=laborAllocation(day),loggers=Object.entries(labor.assignedL1)
+      .filter(([id])=>State.structures.find(s=>s.id===id)?.type==='loggingCamp')
+      .reduce((n,[,list])=>n+list.length,0);
+    const industry=Object.values(labor.assignedL1).reduce((n,list)=>n+list.length,0)-loggers;
+    const builders=labor.spareL1.length-labor.idle.length;
+    return{herding:labor.herders.length,protectedHerders:labor.herdReserve,logging:loggers,industry,
+      building:builders,idle:labor.idle.length,foodWeekly:labor.foodWeekly,
+      foodStock:round(accessibleFood(state())),
+      foodRisk:accessibleFood(state())+labor.herders.length*HERD_FOOD_PER_DAY*10<labor.foodWeekly*2};
+  }
   function setShare(good,pct){
     if(!GOODS.includes(good)||![0,25,50,75,100].includes(+pct))return false;
     const e=state();e.saleShare[good]=+pct;render(true);return true;
@@ -589,7 +699,9 @@
       capital:round(e.wallet.L4),castleGold:round(finite(e.castleGold)),
       constructionPayroll:round(finite(e.constructionPayroll?.total)),
       spontaneousSpawnLabor:spontaneousLabor,spontaneousSpawnCount:spontaneous.length,
-      welfare:e.welfare,activities:Object.keys(e.activities).length,
+      welfare:e.welfare,happiness:{...e.happiness},rationMode:rationMode(),
+      castleFoodIssued:round(Object.values(e.lastTrade?.castleRations||{}).reduce((a,b)=>a+finite(b),0)),
+      activities:Object.keys(e.activities).length,
       balance:e.lastBalance||null,investmentCapacity:round(finite(e.investmentCapacity)),
       weeks:e.weeks,months:e.months,years:e.years};
   }
@@ -597,12 +709,19 @@
     const target=typeof document!=='undefined'?document.getElementById('economyOverview'):null;
     if(!target)return;
     const e=sync(),s=snapshot();
-    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.castleGold+'|'+s.constructionPayroll+'|'+s.spontaneousSpawnCount+'|'+(target.dataset.force||'');
+    const policy=document.getElementById('rations');
+    if(policy&&policy.value!==s.rationMode)policy.value=s.rationMode;
+    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.rationMode+'|'+s.castleGold+'|'+s.constructionPayroll+'|'+s.spontaneousSpawnCount+'|'+(target.dataset.force||'');
     if(!force&&target.dataset.stamp===stamp)return;
     target.dataset.stamp=stamp;
     const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:1});
     const info=g=>s.balance?.goods?.[g];
-    target.innerHTML='<div class="kv"><span>Welfare / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
+    const jobs=jobSummary();
+    target.innerHTML='<div class="kv"><span>Average happiness / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
+      '<div class="kv"><span>Happiness L1 · L2 · L3 · L4</span><b>'+HAPPINESS_GROUPS.map(g=>fmt(s.happiness[g])).join(' · ')+'</b></div>'+
+      '<div class="kv"><span>Food policy · castle food issued</span><b>'+({market:'Market only',full:'Full rations',half:'Half rations'}[s.rationMode])+' · '+fmt(s.castleFoodIssued)+'</b></div>'+
+      '<div class="kv"><span>L1 builders / herders / loggers / idle</span><b>'+jobs.building+' / '+jobs.herding+' / '+jobs.logging+' / '+jobs.idle+'</b></div>'+
+      (jobs.foodRisk?'<div class="legend">⚠ Food supply at risk · protected herders: '+jobs.protectedHerders+'</div>':'')+
       '<div class="kv"><span>Castle economic gold</span><b>'+fmt(s.castleGold)+'</b></div>'+
       '<div class="kv"><span>L1 builders paid by lord</span><b>'+fmt(s.constructionPayroll)+' gold</b></div>'+
       '<div class="kv"><span>Spontaneous spawn labor (embedded estimate)</span><b>'+fmt(s.spontaneousSpawnLabor)+' gold</b></div>'+
@@ -626,6 +745,10 @@
   function bind(){
     const target=document.getElementById('economyOverview');
     if(!target)return;
+    const policy=document.getElementById('rations');
+    if(policy)policy.addEventListener('change',event=>{
+      if(setRations(event.target.value)&&typeof scheduleLocalSave==='function')scheduleLocalSave(200);
+    });
     target.addEventListener('change',event=>{
       const node=event.target;
       const good=node.dataset.econSale||node.dataset.econTarget;
@@ -643,6 +766,6 @@
     weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
     foundingCharter,foundingWorkers,syncBuilderResources,applyDevFloor,canBuild,spendBuild,refundBuild,
     constructionWagePerWorkday,payConstructionWork,spontaneousSpawnQuote,
-    availableBuilders,availableBuilderIds,laborAllocation,
+    availableBuilders,availableBuilderIds,laborAllocation,jobSummary,RATIONS,HERD_FOOD_PER_DAY,rationMode,setRations,
     setShare,setTarget,setExternalDemand,transfer,assetValue,snapshot,population});
 })();
