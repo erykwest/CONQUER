@@ -195,6 +195,9 @@
   function draw(s,preview=false){
     if(!handles(s))return false;
     const geo=geometry(s),list=[geo.foundation,geo.mesh,geo.flat].filter(m=>m&&m.col.length);
+    // The gate's door leaves (ConquerGates, shared with the stone gates); world3d adds them per frame.
+    const leaves=isWoodGate(s)&&!preview?window.ConquerGates?.gateMesh?.(s):null;
+    if(leaves&&leaves.col.length)list.push(leaves);
     window.ConquerMesh3D.drawMeshes(ctx,list,window.ConquerMesh3D.gameView());
     return true;
   }

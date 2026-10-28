@@ -283,8 +283,9 @@ def palisade_tower(mdl, roofed):
     deck(dk, size - .10, deck0, deck1, top='plank' if roofed else 'roofDeck', joists=4)
     mdl.done('deck', dk)
     top = mdl.part('top')
+    # The open tower's pointed parapet, also under the roof of the roofed one.
+    stake_parapet(top, half, half, deck1, 2.03, 2.22)
     if roofed:
-        rail(top, (size - .08) / 2 - .055, deck1, 2.02)
         rh, eave, apex = .61, 2.55, 2.95
         for x, y in [(-rh, -rh), (rh, -rh), (rh, rh), (-rh, rh)]:
             log(top, x, y, .055, deck1, eave, top=None)
@@ -295,29 +296,36 @@ def palisade_tower(mdl, roofed):
         box(top, 0, 0, eave - .05, 1.30, 1.30, .05, 'beam', 'beam')
         hip_roof(top, .85, eave, apex, courses=3)
     else:
-        seen = set()
-        for e in range(4):
-            a, b = cs[e], cs[(e + 1) % 4]
-            n = max(1, math.ceil(math.hypot(b[0] - a[0], b[1] - a[1]) / .245))
-            for i in range(n + 1):
-                x, y = a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n
-                k = (round(x, 3), round(y, 3))
-                if k in seen:
-                    continue
-                seen.add(k)
-                pointed(top, x, y, .072, deck1, 2.03 + rng.uniform(-.015, .015), 2.22 + rng.uniform(-.02, .02))
-        for e in range(4):                                           # inner rail tying the parapet
-            a, b = cs[e], cs[(e + 1) % 4]
-            s = (half - .1) / half
-            beam(top, (a[0] * s, a[1] * s, 1.98), (b[0] * s, b[1] * s, 1.98), .04, .05, 'beam')
         ladder(top, -.3, .3, deck1 - .62, deck1 + .25, axis_y=False, w=.14, rungs=3)
     mdl.done('top', top)
 
 
+def stake_parapet(p, hx, hy, z0, body, tip, r=.072, step=.245):
+    """Pointed stakes around a hx x hy deck edge (open palisade tower), tied by an inner rail."""
+    cs = [(-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)]
+    seen = set()
+    for e in range(4):
+        a, b = cs[e], cs[(e + 1) % 4]
+        n = max(1, math.ceil(math.hypot(b[0] - a[0], b[1] - a[1]) / step))
+        for i in range(n + 1):
+            x, y = a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n
+            k = (round(x, 3), round(y, 3))
+            if k in seen:
+                continue
+            seen.add(k)
+            pointed(p, x, y, r, z0, body + rng.uniform(-.015, .015), tip + rng.uniform(-.02, .02))
+    for e in range(4):
+        a, b = cs[e], cs[(e + 1) % 4]
+        sx, sy = (hx - .1) / hx, (hy - .1) / hy
+        beam(p, (a[0] * sx, a[1] * sy, body - .05), (b[0] * sx, b[1] * sy, body - .05), .04, .05, 'beam')
+
+
 def wood_gate(mdl):
     """drawWoodGate (w 1 U along the passage x, h 1.5 U across): two piers of posts at
-    y = +-0.66, jambs, a fighting deck 1.48-1.62 U, lintels and merlons to 1.94 U, a double
-    door on the +x mouth. Added: knee braces at the mouths, a bar bracket, plank merlons."""
+    y = +-0.66, jambs, a fighting deck 1.48-1.62 U with the palisade towers' pointed parapet
+    to ~1.94 U, lintels and knee braces at the mouths. The door leaves are not part of the
+    model: ConquerGates (settlement-gate-fittings.js) hangs the stone gate's leaves in the
+    +x mouth, so they swing open and show the siege damage like every other gate."""
     w, h, body_top, roof_top = 1.0, 1.5, 1.48, 1.62
     half_x, half_y = w / 2, h / 2
     side_y, step = half_y - .09, .205
@@ -344,29 +352,8 @@ def wood_gate(mdl):
     for i in range(1, 8):
         x = -(w + .06) / 2 + (w + .06) * i / 8
         box(dk, x, 0, roof_top, .008, h, .004, 'plankDark')
-    hx, hy = half_x + .015, half_y + .015
-    items = [(x, y, .18, .16) for x in (-hx, hx) for y in (-hy, hy)]
-    items += [(x, y, .18, .16) for y in (-hy, hy) for x in (-hx * .34, hx * .34)]
-    items += [(x, 0, .16, .18) for x in (-hx, hx)]
-    for x, y, mw, md in items:
-        box(dk, x, y, roof_top, mw, md, .32, 'log', 'roofDeck')
-        # plank seams on the merlon face
-        box(dk, x, y, roof_top + .02, mw * .1, md + .006, .28, 'plankDark')
+    stake_parapet(dk, half_x - .01, half_y - .01, roof_top, 1.80, 1.96, r=.066)
     mdl.done('deck', dk)
-    door = mdl.part('door')
-    door_half = min(.34, h * .32)
-    x = half_x + .012
-    for sgn in (-1, 1):
-        box(door, x, sgn * door_half / 2, .035, .04, door_half - .01, 1.045, 'door')
-        for k in range(1, 3):
-            y = sgn * door_half * k / 3
-            box(door, x + .021, y, .06, .004, .012, .99, 'doorPlank')
-        for z in (.34, .78):
-            box(door, x + .024, sgn * door_half / 2, z, .008, door_half - .07, .045, 'iron')
-        box(door, x + .028, sgn * .06, .55, .012, .03, .03, 'iron')            # ring handle
-    box(door, x + .002, 0, .035, .046, .012, 1.045, 'dark')                      # meeting seam
-    box(door, x - .01, 0, 1.08, .06, door_half * 2 + .1, .1, 'beam')            # head beam
-    mdl.done('door', door)
 
 
 BUILD = [('stake', stake), ('watchtower', watchtower),
