@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.
+- **ANCORA APERTO:** leggere il P95 reale nella telemetria `RENDERER` dopo il merge; verificare la nebbia in una partita di combattimento; le altre cause di frame lenti viste nelle misure (fase `population` fino a secondi dopo un piazzamento, cache di scena 2D da 100–300 ms in World 3D, ricucitura strade di diversi secondi su `addStructure`) restano da diagnosticare.
+
 ## Castello — cutaway arredato di torri, porte e sezioni (PR #65, mergiata 28/10/2026)
 
 ## QA visiva — occlusione e scene intere (da #18, 28/10/2026)
