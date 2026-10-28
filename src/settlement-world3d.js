@@ -497,6 +497,8 @@
     }
     for(const s of State.structures){
       if(underConstruction(s))continue;
+      // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
+      if(window.ConquerWood3D?.addToBuilder(m,s))continue;
       if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
@@ -976,7 +978,8 @@
   }
   const SIG_CATEGORIES=[
     {name:'ground',test:s=>s.type==='road'||s.type==='field'||s.type==='house'||s.type==='moat'||s.type==='bridge'||s.type==='palisade'},
-    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]},
+    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
+      ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)},
     {name:'castle',test:s=>!s.auto&&['tower','gate','wall','built'].includes(s.type)},
     {name:'hedges',test:s=>s.type==='house'||s.type==='field'},
     {name:'all',test:()=>true}
@@ -1098,7 +1101,11 @@
   }
   function bindAttrib(gl,prog,name,buf,size,stride,offset){
     const loc=prog.loc[name];if(loc==null||loc<0)return;
-    gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,stride,offset);
+    // Switching program: turn off the arrays the previous one left enabled. A leftover array on a
+    // small buffer (a few soldier billboards) makes the next large draw read out of range, which is
+    // INVALID_OPERATION and drops the whole renderer to the Canvas fallback.
+    if(S.attribProg!==prog){for(const l of S.attribLocs||[])gl.disableVertexAttribArray(l);S.attribLocs=new Set();S.attribProg=prog}
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.enableVertexAttribArray(loc);S.attribLocs.add(loc);gl.vertexAttribPointer(loc,size,gl.FLOAT,false,stride,offset);
   }
   function drawMesh(gl,r,name,mode=gl.TRIANGLES){
     const n=S.buf[name+'#n'];if(!n)return;
@@ -1308,8 +1315,9 @@
   function supported(){return !!ensureGL()}
   function active(){return enabled&&supported()}
   function residual2D(){
-    // Not ported yet: palisades, wood towers and wood gates keep their 2.5D drawing (per frame).
-    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)))
+    // Palisades, wood towers and wood gates are 3D (settlement-wood3d.js); without their models
+    // they keep the 2.5D drawing (per frame).
+    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!window.ConquerWood3D?.handles(s))
       .sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of items)drawStructure(s);
   }
@@ -1425,11 +1433,11 @@
     const dyn=buildDynamic(moving);dynamicQueue=[];
     renderFront(r,buildSoldiers(list),dyn);ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
-    // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
-    // frame is expensive, so skip the call entirely when none of them is present.
-    const all=State.structures;
-    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||structureCutaway(s)));
-    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s)||structureCutaway(s));drawCastleBattlements()}finally{State.structures=all}}
+    // 2.5D front pieces only exist for cutaways (and palisades / wood towers without their 3D
+    // models); the battlement occlusion frame is expensive, so skip the call when none is present.
+    const all=State.structures,wood3d=s=>!!window.ConquerWood3D?.handles(s);
+    const residual=all.filter(s=>!underConstruction(s)&&((s.type==='palisade'||isWoodTower(s))&&!wood3d(s)||structureCutaway(s)));
+    if(residual.length){try{State.structures=all.filter(s=>(!window.ConquerCastle3D?.castleVolume?.(s)&&!wood3d(s))||structureCutaway(s));drawCastleBattlements()}finally{State.structures=all}}
     perf().world3dFrontMs=performance.now()-t0;
   }
   function setEnabled(on){enabled=!!on;try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}location.reload()}

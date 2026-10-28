@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Render 3D — fortificazioni in legno da Blender (28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE (`feature/wood-fortifications-3d`):** palizzate T1–T3, torre di vedetta, torri a palizzata e porta in legno come modelli Blender nel renderer 3D; chiuso l'ultimo residuo 2.5D del castello nel world3d (restano cutaway e cantieri). Corretto il fallback WebGL dovuto agli array di vertici rimasti attivi (vedi STATUS).
+- **APERTO:** stati di danno visibili per il legno (oggi assenti anche in 2.5D); cantiere del legno ancora col fantasma traslucido; percorso Canvas 2.5D non usa i nuovi modelli (fallback invariato).
+- **PROSSIMO (deciso il 28/10):** arredi del cutaway come modelli Blender, dopo aver portato il cutaway nel 3D. Niente modelli 3D per umani e animali: lo stile 3D delle figure è stato scartato.
+
 ## S-05 / S-16 / S-25 — riallineamento converge (#61, 23/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** restrizioni armi sui nuclei, validazione forze/componenti/campate e persistenza dei danni, integrate con main `bc82dbe`. Compatibilità con GATE-06/D-042: la grata resta una terza difesa danneggiabile; non può essere aggirata dal nuovo guard dei componenti.

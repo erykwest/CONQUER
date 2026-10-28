@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Fortificazioni in legno in 3D (branch)
+
+- Su `feature/wood-fortifications-3d`: vedetta, torri a palizzata, porta in legno e palo di palizzata modellati in Blender (`tools/blender/build_wood_fort.py`) e posati dal nuovo `settlement-wood3d.js`; le palizzate seguono il layout del gioco con camminamento e terrapieno. Il world3d non ridisegna più il legno in 2.5D a ogni frame. Stato e prove in [STATUS](STATUS.md#fortificazioni-in-legno-in-3d-branch-featurewood-fortifications-3d-28102026).
+- Fix del fallback WebGL con soldati di ronda (array di vertici non disabilitati al cambio di programma), preesistente su main.
+- Asset Lab: legno e palizzate ora con «Modello 3D»; baseline estesa con i 12 render nuovi. ROADMAP e DECISIONS invariate: promozione visiva sullo schema già deciso per i modelli Blender (civili, industrie, assedio), nessun nuovo contratto.
+
 ## 2026-10-23 — Ponti: magnete strade
 
 - Branch `feat/bridge-road-magnets`: le strade principali si agganciano alle due testate di ogni ponte e una strada su una testata non è più rifiutata come sovrapposizione. Stato e prove in [STATUS](STATUS.md#ponti--magnete-strade-23102026); requisiti BRIDGE-01/02 nel [BACKLOG](BACKLOG.md#ponti--magnete-strade-branch-featbridge-road-magnets-23102026).

@@ -15,7 +15,8 @@
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
-    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'}
+    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
+    {global:'ConquerWoodFortModels',collection:'models',category:'Fortificazioni',family:'Legno 3D (Blender)'}
   ];
   const SUBJECTS=[
     ['villager','Popolano','Popolazione','Civili'],
@@ -47,7 +48,9 @@
     loggingCamp:'Campo taglialegna',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
     sheep:'Pecora',goat:'Capra',cow:'Mucca',horse:'Cavallo',deer:'Cerva',stag:'Cervo',wolf:'Lupo',bear:'Orso',boar:'Cinghiale',
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
-    ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista'};
+    ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
+    stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
+    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const m=/^(church|tavern|market|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
@@ -87,7 +90,7 @@
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
-            ConquerSiegeModel:'siege-engines-model.js'}[source.global]),
+            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key:null});
     }
   }
@@ -156,14 +159,14 @@
     engine=w;
     let meshes=0;
     for(const v of w.ConquerAssetStage.variants()){
-      // Wood towers, wood gates and palisades have no ConquerCastle3D volume: 2.5D captures only.
+      // Wood towers, wood gates and palisades are meshed by ConquerWood3D (Blender models).
       const mesh=toLabMesh(w.ConquerSiegePreview.assetMesh(v.spec));
       // Thumbnails are fitted to the card: the height tells L1 from L3.
       let top=0;if(mesh)for(let i=2;i<mesh.pos.length;i+=3)top=Math.max(top,mesh.pos[i]);
       const states=[...(mesh?[{id:'3d',label:'Modello 3D',group:'3d'}]:[]),...w.ConquerAssetStage.states(v.id)];
       items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
         key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Solo 2.5D')+' · '+(states.length-(mesh?1:0))+' stati',
-        source:'src/settlement-asset-stage.js · '+(mesh?'src/settlement-castle3d.js':'percorso 2.5D')+' (varianti: src/settlement-siege-preview.js)',builder:true});
+        source:'src/settlement-asset-stage.js · '+(!mesh?'percorso 2.5D':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
       if(mesh)meshes++;
     }
     const total=items.filter(x=>x.kind==='castle').length;
