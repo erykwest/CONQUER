@@ -2,7 +2,8 @@
 // Resident families, demographics and appearance. Extracted verbatim from settlement-population.js.
 function peasantAnimationActive(){
   const day=peasantVisualDay(),frac=day-Math.floor(day);
-  return frac>=.035&&frac<=.67&&completedSettlement('house').length>0;
+  // Men's leisure runs until 23:00 (ConquerMaleRoutines).
+  return frac>=.035&&frac<=.96&&completedSettlement('house').length>0;
 }
 function housePopulationCapacity(house){
   const level=houseLevel(house);
@@ -74,17 +75,25 @@ function familyPosition(house,day){
   return routineTravel(house,dest,home,frac,leave,homeAt,'family-home');
 }
 function residentClassPosition(house,resident,day,assignment){
-  // Flocks need their shepherd even on market/rest days.
+  // Men's leisure after 18:00 and the weekend market/church/leisure cycle take
+  // precedence over every day job, livestock included. Builders and loggers
+  // are drawn by the construction commute in drawPeasants on weekdays.
+  if(resident.sex==='male'&&resident.age==='adult'&&
+      window.ConquerMaleRoutines?.handles(State.clock.day))
+    return window.ConquerMaleRoutines.position(house,resident,State.clock.day);
+  // Flocks need their shepherd during the working day.
   if((houseLevel(house)===1||houseLevel(house)===2)&&resident.sex==='male'&&
       resident.age==='adult'&&resident.index===0&&
       ['shepherd','cow'].includes(window.ConquerLivestock?.lotKindForHouse(house)))
     return window.ConquerLivestock.shepherdPosition(house);
-  const weekly=window.ConquerEconomy?.weekday(State.clock.day);
-  if(weekly===6)return null; // Sunday rest: no scheduled civilian trips or labor.
-  if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip for all classes.
+  const weekly=window.ConquerEconomy?.weekday(State.clock.day)??((Math.floor(State.clock.day)%7+7)%7);
   const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
+  // Adult women follow their own week: lot work, market, Sunday mass, leisure.
+  if(resident.sex==='female'&&resident.age==='adult')
+    return window.ConquerFemaleRoutines?.position(house,resident,State.clock.day)??null;
+  if(weekly===6)return null; // Children keep the Sunday rest.
+  if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip.
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
-  if(resident.sex==='female'&&level===1)return familyPosition(house,shiftedDay);
   // Both L1 and unoccupied L2 workers use the real serpentine field route.
   if(resident.sex==='male'&&assignment&&(level===1||level===2))
     return peasantPosition(house,assignment,State.clock.day);
