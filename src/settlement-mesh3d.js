@@ -21,8 +21,10 @@
   function shadeFactor(nx,ny,nz,turns,base){
     const len=Math.hypot(nx,ny,nz)||1;
     let f;
-    if(nz/len>.5)f=1;
-    else if(nz/len<-.5)f=.5;
+    // Blender exports do not keep a consistent winding, so the normal's sign is unreliable:
+    // a flipped roof triangle would turn dark next to its twin. Seen from above, every face
+    // that shows is an upper face, so tops are told by |nz| (sides already ignore the sign).
+    if(Math.abs(nz)/len>.5)f=1;
     else{const [ex,ey]=rotDir(-ny,nx,turns);f=Math.cos(2*(Math.atan2(ey,ex)-Math.PI/6))>=0?.84:.68}
     if(base&&(base[0]+base[1]+base[2])/765>.7)f=1-(1-f)*.55;
     return f;

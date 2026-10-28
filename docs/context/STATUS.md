@@ -34,6 +34,10 @@
 - **LIMITI:** questa integrazione non completa logistica/blocco/fame/resa né IA di scelta degli accessi (GATE-07). Merge definitivo autorizzato il 23/10, ancora da eseguire dopo la nuova CI; lo stato effettivo resta verificabile nella PR #61.
 - **AGGIORNAMENTO PRIMA DEL MERGE AUTORIZZATO:** integrati anche i quattro commit successivi della main fino a `bc82dbe` (#82 Asset Lab e manutenzione/documentazione). Conflitti soltanto in STATUS/BACKLOG/CHANGELOG, risolti mantenendo entrambe le cronologie; tutti i file runtime di questa main, salvo le regole assedio della PR, restano identici. CI precedente su `92be424` verde (68/68 + browser gameplay); nuova CI da verificare sulla HEAD aggiornata.
 
+## Mesh e Lab — facce bicolori corrette, export PNG 512 (branch `fix/lab-export-normals`, 26/10/2026)
+
+- Lo shading delle mesh Blender non dipende più dall'ordine dei vertici: le facce superiori si riconoscono da `|nz|`. Il Lab ha il pulsante «Esporta PNG 512», disegna i modelli con depth buffer (come la WebGL) e ha l'occupazione forzata per verificare l'occlusione dei popolani. Audit eseguito localmente: 0 errori, 128 render cambiati e rivisti; baseline aggiornata. CI da verificare dopo il push.
+
 ## Asset Lab — motore di audit visivo, stati delle fortificazioni, accesso `/lab` (branch `feat/asset-lab-audit` da `main` `518e830`, 23/10/2026)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-asset-stage.js` (solo con `?assetlab=1`) monta una variante della galleria da sola e cattura il render 2.5D del gioco con il terreno rimosso, negli stati intatta, cantiere 25/50/75%, ogni fase di danno di `galleryPhases`, cutaway. Catture ripetibili: seed fisso, giorno, sole, `performance.now` e `crypto.randomUUID` fermati durante la cattura, macerie assestate con `ConquerSiege.restore`.
