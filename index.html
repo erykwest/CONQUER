@@ -246,6 +246,68 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
         </div>
         <span class="dev-hint">Nessuna selezione = procedurale</span>
       </div>
+      <div id="devSound" class="dev-section dev-sound">
+        <span class="dev-label">SOUND · MIXER 4 LAYER</span>
+        <div class="dev-row">
+          <button type="button" id="soundEnable">🔇 Audio OFF</button>
+          <label class="sound-master">Master <input id="soundMaster" type="range" min="0" max="100" value="75" aria-label="Volume master"><output id="soundMasterValue">75%</output></label>
+        </div>
+        <div class="sound-channel" data-sound-layer="environment"><span>1 Ambiente</span><input type="range" min="0" max="100" aria-label="Volume ambiente"><output>65%</output><button type="button" aria-label="Mute ambiente">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
+        <div class="sound-channel" data-sound-layer="local"><span>2 Locale</span><input type="range" min="0" max="100" aria-label="Volume locale"><output>75%</output><button type="button" aria-label="Mute locale">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
+        <div class="sound-channel" data-sound-layer="effects"><span>3 Effetti</span><input type="range" min="0" max="100" aria-label="Volume effetti"><output>80%</output><button type="button" aria-label="Mute effetti">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
+        <div class="sound-channel" data-sound-layer="notifications"><span>4 Notifiche</span><input type="range" min="0" max="100" aria-label="Volume notifiche"><output>85%</output><button type="button" aria-label="Mute notifiche">On</button><button type="button" data-sound-test title="Test bus">▶</button></div>
+        <div class="sound-zoom-settings">
+          <span class="dev-label">AUDIO LOCALE · SOGLIE ZOOM</span>
+          <label>Attiva <input id="soundZoomOn" type="range" min="20" max="80" step="1" value="30"><output id="soundZoomOnValue">30%</output></label>
+          <label>Disattiva <input id="soundZoomOff" type="range" min="15" max="75" step="1" value="25"><output id="soundZoomOffValue">25%</output></label>
+          <span class="dev-hint">Isteresi per evitare accensione/spegnimento continuo</span>
+        </div>
+        <div class="sound-equalizers">
+          <span class="dev-label">EQUALIZZATORE PER LAYER</span>
+          <details data-sound-eq="environment"><summary>1 · Ambiente</summary></details>
+          <details data-sound-eq="local"><summary>2 · Locale</summary></details>
+          <details data-sound-eq="effects"><summary>3 · Effetti</summary></details>
+          <details data-sound-eq="notifications"><summary>4 · Notifiche</summary></details>
+        </div>
+        <label class="sound-normalize"><input id="soundNormalize" type="checkbox" checked> Normalizzazione LUFS (picchi protetti)</label>
+        <div class="sound-music">
+          <span class="dev-label">MUSIC · COLONNA SONORA</span>
+          <div class="dev-row"><button id="musicEnable" type="button">♫ Musica OFF</button>
+            <label class="sound-master">Volume <input id="musicVolume" type="range" min="0" max="100" value="40"><output id="musicVolumeValue">40%</output></label></div>
+          <label><input id="musicAuto" type="checkbox" checked> Playlist automatica stagionale</label>
+          <label><input id="musicNormalize" type="checkbox" checked> Normalizzazione musicale LUFS</label>
+          <select id="musicTrack" aria-label="Seleziona brano musicale"></select>
+          <div class="dev-row"><button id="musicListen" type="button">▶ Ascolta</button>
+            <button id="musicNext" type="button">⏭ Prossimo</button><button id="musicStop" type="button">■ Stop</button></div>
+          <details class="sound-music-eq">
+            <summary>Equalizzatore musicale · 3 bande</summary>
+            <div id="musicEq"></div>
+            <button type="button" id="musicEqReset">EQ flat (0 dB)</button>
+          </details>
+          <span id="musicReadout" class="dev-hint">9 brani stagionali · 3 primavera, 2 estate, 2 autunno, 2 inverno</span>
+        </div>
+        <div class="sound-preview">
+          <select id="soundPreviewClip" aria-label="File audio da ascoltare">
+            <option value="spring">Primavera · bosco</option>
+            <option value="summer">Estate · cicale</option>
+            <option value="wind">Vento</option>
+            <option value="rain">Pioggia · compressa</option>
+            <option value="thunder">Tuono</option>
+            <option value="market">Mercato</option>
+            <option value="tavern">Taverna</option>
+            <option value="choir">Chiesa · coro</option>
+            <option value="bells">Campane</option>
+            <option value="chopping">Taglialegna</option>
+            <option value="mining">Minatori</option>
+            <option value="pickaxe">Piccone</option>
+            <option value="marching">Marcia</option>
+            <option value="training">Addestramento</option>
+          </select>
+          <div class="dev-row"><button type="button" id="soundPreviewPlay">▶ Ascolta file</button><button type="button" id="soundPreviewStop">■ Stop preview</button></div>
+        </div>
+        <span id="soundReadout" class="dev-hint" role="status">Audio in attesa</span>
+        <span class="dev-hint">Attiva 30% · disattiva 25% · selezione sempre attiva. ▶ prova ogni canale senza MP3.</span>
+      </div>
       <div class="dev-section">
         <span class="dev-label">CUTAWAY</span>
         <div class="dev-row"><button id="devCutawayAll" type="button" title="Toggle cutaway on all eligible built sections and T2/T3 stone towers">Cutaway ALL</button></div>
@@ -307,6 +369,11 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
 <script src="./src/settlement-architecture.js?v=case-l4-7"></script>
 <script src="./src/settlement-weather.js?v=refactor-1"></script>
+<script src="./src/settlement-music-catalog.js?v=music-1"></script>
+<script src="./src/settlement-music.js?v=music-1"></script>
+<script src="./src/settlement-sound-catalog.js?v=sound-2"></script>
+<script src="./src/settlement-sound.js?v=sound-2"></script>
+<script src="./src/settlement-sound-bridge.js?v=sound-2"></script>
 <script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
 <script src="./src/settlement-render.js?v=merge-77"></script>
 <script src="./src/settlement-castle3d.js?v=merge-77"></script>
@@ -327,6 +394,8 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-lod.js?v=lod-1"></script>
 <script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
+<script src="./src/settlement-music-dev.js?v=music-1"></script>
+<script src="./src/settlement-sound-dev.js?v=sound-2"></script>
 <script src="./src/settlement-wallwalk.js?v=wallwalk-1"></script>
 <script src="./src/settlement-combat-anim.js?v=anim-1"></script>
 <script src="./src/settlement-work-anim.js?v=work-1"></script>

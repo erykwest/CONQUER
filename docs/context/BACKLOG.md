@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Presentazione — audio e musica (branch `sound`, riallineato 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** mixer a 4 livelli, ambiente da stagione/meteo, suoni locali degli edifici, colonna sonora stagionale; controlli solo DEV, audio spento di default.
+- **ANCORA APERTO:** controlli audio per il giocatore nella UI (UI v2), campioni per autunno e notte, effetti di battaglia, assedio e cantiere, eventuale caricamento differito dei brani per ridurre il peso della pagina.
+
 ## Civili — cutaway di chiesa e locanda (branch `feature/civic-cutaway`, 23/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
