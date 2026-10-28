@@ -2,9 +2,29 @@
 
 ## Render 3D — fortificazioni in legno da Blender (28/10/2026)
 
-- **IMPLEMENTATO SU BRANCH, NON MERGE (`feature/wood-fortifications-3d`):** palizzate T1–T3, torre di vedetta, torri a palizzata e porta in legno come modelli Blender nel renderer 3D; chiuso l'ultimo residuo 2.5D del castello nel world3d (restano cutaway e cantieri). Corretto il fallback WebGL dovuto agli array di vertici rimasti attivi (vedi STATUS).
+- **IMPLEMENTATO SU BRANCH, NON MERGE (`feature/wood-fortifications-3d`):** palizzate T1–T3, torre di vedetta, torri a palizzata e porta in legno come modelli Blender nel renderer 3D; chiuso l'ultimo residuo 2.5D del castello nel world3d (resta il cutaway). Cantieri del legno montati pezzo per pezzo dai modelli.
 - **APERTO:** stati di danno visibili per il legno (oggi assenti anche in 2.5D); cantiere del legno ancora col fantasma traslucido; percorso Canvas 2.5D non usa i nuovi modelli (fallback invariato).
 - **PROSSIMO (deciso il 28/10):** arredi del cutaway come modelli Blender, dopo aver portato il cutaway nel 3D. Niente modelli 3D per umani e animali: lo stile 3D delle figure è stato scartato.
+## Presentazione — audio e musica (branch `sound`, riallineato 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** mixer a 4 livelli, ambiente da stagione/meteo, suoni locali degli edifici, colonna sonora stagionale; controlli solo DEV, audio spento di default.
+- **ANCORA APERTO:** controlli audio per il giocatore nella UI (UI v2), campioni per autunno e notte, effetti di battaglia, assedio e cantiere, eventuale caricamento differito dei brani per ridurre il peso della pagina.
+
+## Civili — cutaway di chiesa e locanda (branch `feature/civic-cutaway`, 23/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
+- **ANCORA APERTO:** cutaway per gli altri edifici civici (mercato, mulini, botteghe) e persone all'interno durante le attività.
+
+## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
+
+- **FASI 1–3 SU MAIN (`5ddefa6`):** guscio, API di gioco, Costruisci, Gestisci, comandi struttura.
+- **FASE 4 SU BRANCH `feature/ui-defend`, NON MERGE:** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **ANCORA APERTO — fase 5:** messaggi di stato/log tradotti, pannello attraversamenti come dati, UI v2 default, rimozione `settlement-builder-ux.js` e aggiornamento degli id usati da `qa/ui-combat-regression.mjs`.
+
+## Hardening: cause strade / DEV / WebGL (23/10/2026)
+
+- **FIX IMPLEMENTATI E VERIFICATI IN LOCALE**, non ancora su main, in `fix/main-founding-dev-webgl-20261023` basata su `bc82dbe`: [prove e cause](../main-fixes-diagnosis-2026-10-23.md). WebGL: VAO per shader, renderer attivo anche dopo rebuild; strade: preparazione cooperativa e commit atomico con cancellazione; DEV: test dei default automatici e dei pulsanti di override.
+- 68 suite deterministiche, sintassi, WebGL reale con fallback per perdita del contesto e UI/Combat PASS; nuovo workflow di CI sulla branch. Rimangono separati i 49 avvisi preesistenti del Lab e i picchi GPU su hardware reale: questo fix non attesta FPS o assenza di ogni pausa. Nessuna milestone modificata; D-FIX-01 documenta i contratti tecnici.
 
 ## S-05 / S-16 / S-25 — riallineamento converge (#61, 23/10/2026)
 
@@ -20,6 +40,14 @@
   - **Cantiere non progressivo:** torri quadrate, mura, palizzate, porte e sezione costruita mostrano lo stesso cantiere a 25/50/75% (`cantiere-progressivo`, 26 avvisi). La muratura dovrebbe salire con `constructionProgress`.
   - **Danno al portone (regressione di #76):** «portone incrinato» e «portone sfondato» non si vedono più su nessuna porta (`danno-visibile`); prima di #76 lo sfondato era visibile sulle porte in pietra. Le nuove ante animate devono mostrare l'integrità del portone.
   - **Legno con rendering software:** con SwiftShader forzato il legno danneggiato o in costruzione scompare (riprodotto in Chromium headless); verificare il percorso di disegno su macchine senza GPU.
+- **FATTO in `fix/lab-export-normals` (26/10):** facce bicolori dovute all'ordine dei vertici incoerente negli export Blender (shading da `|nz|`); export PNG 512 dal Lab. Possibile seguito: le falde opposte di un tetto ora hanno lo stesso tono, e si potrebbe ombreggiarle in base all'esposizione.
+- **APERTO — difetti di geometria visti nella revisione a 512 (26/10), da correggere in Blender:**
+  - coperchi di botti e secchi con spicchi grigi (cerchio e coperchio complanari): `barrelGroup`, `buckets`, `cargoBarrel`, `goodsMixed`;
+  - pannelli a patchwork sulle torri d'assedio: `tower`, `tower2`;
+  - fessure e spicchi nei tetti: `tavern1`, `stables`, `storage`, `loggia`, angolo interno di `cloister`, `watermill`.
+- **APERTO:** il fallback Canvas 2D del gioco usa ancora il painter e taglia telai e finestre; valutare una correzione del painter o sprite pre-renderizzati.
+- **FATTO (26/10):** occupazione forzata nel Lab. Il pulsante «Occupazione» passa tra tre modi: no, occlusione corretta (figure provate contro il depth buffer) e come nel gioco (figure disegnate sopra). I popolani sono su una griglia di 0,6 U su terreno, pavimenti e portici con spazio libero; l'export PNG 512 rispetta il modo scelto. Non usa ancora gli slot CANS o degli eventi (non su `main`).
+- **APERTO:** nel gioco le figure sono uno strato 2D sopra gli edifici: il modo «come nel gioco» mostra popolani sui tetti e davanti ai muri che dovrebbero coprirli.
 - **Residui dell'audit:** gli schemi (case, pozzo, campi, strade, fiumi, foresta, rilievo) restano non-gioco (`render-del-gioco`); ponti, levatoi, fossati, terrapieni non ancora nella sandbox.
 
 ## Igiene Git — esito e finalizzazione (23/10/2026)
@@ -31,7 +59,6 @@
 - **Operazione infrastrutturale separata dal gameplay:** otto ref candidati a rimozione con workflow condizionale, SHA fissa, ricontrollo PR aperte e presenza del merge. Nessun branch attivo/PR OPEN viene eliminato intenzionalmente; i branch divergenti o con commit non attribuiti restano da analizzare, **non automaticamente classificati come obsoleti**.
 - **Rif.:** `.github/workflows/prune-obsolete-branches-20261023.yml`; vedere l'esito dell'Action dopo il merge. Il backlog di funzionalità e la roadmap M0–M5 non cambiano.
 
-
 ## Audit live del 23/10/2026 — stato prevalente
 
 > **Main `518e830`** dopo [#76](https://github.com/erykwest/CONQUER/pull/76), [#79](https://github.com/erykwest/CONQUER/pull/79), [#80](https://github.com/erykwest/CONQUER/pull/80), [#81](https://github.com/erykwest/CONQUER/pull/81). Inventario complessivo e prove in [AUDIT-2026-10-23.md](AUDIT-2026-10-23.md), da leggere prima delle sezioni storiche.
@@ -40,7 +67,6 @@
 - **APERTO:** GATE-05 portone ligneo e GATE-07 IA informata delle difese; #61 danni riallineata ma **non mergiata**; Asset Lab #82 (audit visivo dei 227 asset, 456 render, fasi danno/cantiere/cutaway) **NON SU MAIN**; cantieri progressivi #77, eventi #78, interni #65, L1/ledger #55 e cavalieri #72 **NON MERGIATI**.
 - **QA mirata:** #82 segnala, *sul proprio branch*, mancanza di differenza visiva tra cantieri 25/50/75% e possibile regressione delle ante `damaged/broken` dopo #76: verificare su `main` prima di accettare la catena visuale. Non spacciare l'osservazione di #82 per bug qui riprodotto.
 - **Priorità economica invariata:** singolo ledger fra Builder/economia/assedio, operai L1 realmente necessari, miniera `stone` vs `metal`, bonus civici, blocco/fame/resa. Le **13 feature core Builder** marcate `[x]` rimangono core già esistenti; nessuna di queste PR chiude automaticamente i 10 residui del backlog Builder.
-
 
 ## UX — Asset Lab / catalogo completo (#81 MERGED su main, 23/10/2026)
 
@@ -81,6 +107,25 @@ La [ricognizione dello stato Git](AUDIT-2026-10-21.md) prevale sugli snapshot st
 - **IN CORSO / NON MERGE:** **L1 costruttori con lavoro meccanico e scorte reali** + commercio/convogli [#55](https://github.com/erykwest/CONQUER/pull/55); regole danni [#61](https://github.com/erykwest/CONQUER/pull/61); arredi/cutaway [#65](https://github.com/erykwest/CONQUER/pull/65); cavalieri e messaggeri [#72](https://github.com/erykwest/CONQUER/pull/72) su base `knights`.
 - **APERTO:** QA browser interattiva, prestazioni picchi GPU e visual QA [#18](https://github.com/erykwest/CONQUER/pull/18); ledger unico/agricoltura; matrimonio danni→accessibilità→assedio/blocco/resa; filiera metallo; sistema feudale completo.
 - La presenza di un modulo o di un check non trasforma le righe S-xx in **FATTO**: valutare la sequenza di combattimento completa contro i criteri di accettazione.
+
+## Eventi — spazi e allestimenti (branch `events`, 22/10/2026)
+
+**MODELLI 3D PRESENTI SU `events`, GAMEPLAY NON IMPLEMENTATO.** Contratto in [docs/events/README.md](../events/README.md).
+
+| ID | Requisito | Stato | Dipendenze |
+|---|---|---|---|
+| EV-3D | Modelli e rendering di podio, palco (players / herald), spiazzo 14 × 10 con allestimenti giostra / torneo / circo / sagra (+ accampamento, teatro, arena) | CODICE + QA locale | `settlement-events3d.js`, renderer |
+| EV-P0 | Registro spazi, posizionamento dal Builder, riserva del terreno senza cantiere, spostamento a evento inattivo | Builder, piazzamento, riserva e salvataggio FATTI; spostamento libero a evento inattivo DA FARE (oggi demolisci e ripiazza) | placement, Builder, save/load |
+| EV-P1 | Calendario e ciclo `planned → preparing → active → clearing → idle`, `progress` durante montaggio e smontaggio | Avvio / chiusura manuale e ciclo sull'orologio FATTI; calendario programmato (`planned`) e costi/effetti economici DA FARE | orologio di gioco |
+| EV-P2 | Pubblico e artisti tramite routine esistenti (punti `seats`, `performers`, `speaker` nei meta dei modelli) | DA FARE | popolazione, navigazione |
+| EV-P3 | Taglia dello spiazzo: 14 × 10 U (D-044); eventuali taglie multiple | 14 × 10 DECISO, taglie multiple PROPOSTE | decisione di design |
+| EV-P6 | Tende non allineate (±40°, 75%; scatter 200%; senza collisioni né uscite dal lotto) e scatter/attrezzature disordinati e colori unici per spazio | CODICE + QA locale | `settlement-events3d.js` |
+| EV-A1 | Animazioni ambientali: bandiere, festoni e stendardi al vento | CODICE + QA locale | strato dinamico, meteo |
+| EV-A2 | Animazioni di persone: tutti gli spazi e allestimenti FATTI su slot e registro occupanti allineati a CANS (sorgente provvisoria); cavalli della giostra bardati | IN CORSO | `settlement-events-people.js` |
+| EV-A3 | Occlusione del pubblico: balaustre, drappi, schienali e pareti dell'arena sopra le figure FATTO; figure sotto gli edifici di altre strutture davanti allo spazio DA FARE | IN CORSO | `settlement-events-people.js`, overlay popolazione |
+| EV-C1 | Adapter CANS: occupanti reali (residenti) al posto della sorgente provvisoria, prenotazione, arrivo e uscita dagli accessi | DA FARE, dipende dallo skeleton CANS | branch `cans` |
+| EV-P5 | Arena a U arricchita e lotto dedicato `arenaLot` 18 × 14 | CODICE + QA locale; posizionamento da Builder DA FARE | design, placement |
+| EV-P4 | Stemma del regno dipinto sui decal (`arms` di tribune e stendardi) | DA FARE | araldica SVG |
 
 ## Portoni — accessori integrati su main con PR #76 (23/10/2026)
 
@@ -161,7 +206,6 @@ Confini di lotti e campi: staccionate, muretti e siepi con pesi di progetto **50
 | S-13 | Danno strutturale per stati: integro → crepe/merlature → breccia/angolo → tetto crollato con ricadute sugli occupanti; **nessuna perdita di HP per colpi ordinari o frecce contro mura/torri** | S-05,S-11 | MAIN BASE · stati danni/crolli; #61 OPEN |
 | S-14 | Pattuglie e controllo territoriale; nemici/wildlife con stance neutrale, aggressiva, elusiva e notte | Combat + territorio | MAIN BASE · pattuglie/lupi #53 |
 | S-15 | IA di assalto sceglie assalto, attesa, costruzione, blocco, ripiegamento in base a informazioni vere | S-01…S-14 | DESIGN · IA strategica ancora aperta |
-
 
 ### Nuove richieste esplicite — assedio (16 ottobre 2026; triage runtime 22/10)
 
@@ -247,7 +291,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 4. Aggiornare la [roadmap](ROADMAP.md) solo se cambia davvero l'ordine delle priorità.
 5. Chiudere soltanto con prova riportata in [STATUS.md](STATUS.md).
 
-
 ## Nota voice — 21 ottobre 2026 — priorità per ciclo giocabile
 
 > Annotazione progettuale, **non implementazione né certificazione QA**. Tenere distinte funzionalità su `main`, PR aperte e test superati.
@@ -262,7 +305,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Scope:** rinviare diplomazia avanzata, filiere lunghe, professioni/materiali aggiuntivi e polish grafico non necessario. Feudi/tributi/carovane solo dopo economia locale stabile.
 - **Criterio di demo:** il giocatore sviluppa un insediamento, costruisce e rifornisce una fortezza, affronta un assedio con esito motivato e continua nel mondo modificato.
 
-
 ## Nota voice — ordine pubblico, criminalità e giustizia cittadina
 
 > Proposta di design da valutare, **non implementata**. Trattare le punizioni pubbliche come elemento storico-sociale contestualizzato, non spettacolo grafico.
@@ -276,7 +318,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Integrazioni:** connettere ordine pubblico a popolani, lavoro, economia, commercio, guardie, allarmi, calendario giorno/notte e reputazione cittadina; non creare un minigioco separato.
 - **Priorità:** prima modello aggregato di criminalità, guardie/ronde e impatto sul commercio; poi eventi di giustizia e rappresentazione pubblica. QA con simulazioni su più stagioni e test di equilibrio fra sicurezza, costo delle guardie e prosperità.
 
-
 ## Nota voice — filiera alimentare, colture e foraggio invernale
 
 > Proposta progettuale da valutare, **non implementata**.
@@ -288,7 +329,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Scorte stagionali:** bilanciare raccolto, consumo umano, mangime animale e riserva per semina. Se il foraggio non basta, conseguenze su salute, mortalità e produttività degli animali; impatto successivo sulla disponibilità di carne e altri prodotti zootecnici.
 - **Dipendenze:** integrare campi, calendario e inverno, magazzini, mulini, allevamenti, consumo popolazione, mercato e ledger economico unico. Evitare duplicazione tra risorse visuali e contabili.
 - **Test richiesti:** simulazioni multianno di semina/raccolta, capacità di molitura, approvvigionamento alimentare e sopravvivenza del bestiame durante inverni lunghi; verificare che i cicli siano sostenibili senza microgestione eccessiva.
-
 
 ## Nota voice — controlli DEV e progressione visiva dei cantieri
 
@@ -304,7 +344,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
   - **RESIDUI:** oggetti statici (nessuna animazione di sollevamento/posa); case e strutture `auto` del villaggio escluse; nessun legame con operai L1 effettivamente assegnati (PR #55) né con le risorse consegnate; geometria della struttura non ancora progressiva (il volume finale semitrasparente avvolge la gru in quota).
 - **Integrazione e QA:** sincronizzare percentuale di avanzamento, geometria, operai assegnati e risorse effettivamente spese; verificare che i due toggle DEV funzionino separatamente e insieme, non contaminino i salvataggi normali e permettano il ripristino della simulazione standard.
 
-
 ## Nota voice — tempi di scavo per terraforming e fossati
 
 > Requisito progettuale da implementare; **non indica funzionalità già completata**.
@@ -315,7 +354,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Avanzamento effettivo:** collegare la durata a volume di terra movimentata, estensione/profondità e disponibilità di lavoratori, in coerenza con il sistema cantieri; mostrare lo scavo in fasi progressive, senza completamento istantaneo nella partita ordinaria.
 - **Modalità DEV:** `Instant Build` può saltare l'attesa per test; `No Resource Consumption` non modifica i tempi di scavo, dato che il terraforming non consuma materiali già di suo.
 - **QA:** verificare durata e proporzionalità per fossati piccoli/grandi e lavori di terra, sospensione/ripresa dei cantieri, save/load, navigabilità e aggiornamento delle difese durante e dopo lo scavo.
-
 
 ## Nota voice — meteo con effetti reali su cantieri e lavoratori
 
@@ -328,7 +366,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Feedback al giocatore:** mostrare causa e peso del rallentamento nei pannelli del cantiere (es. `Rallentato dalla pioggia`) e aggiornare le stime di completamento in modo comprensibile.
 - **Modalità DEV:** `Instant Build` deve permettere test immediati anche con meteo avverso; in partita normale il meteo incide sempre sulla produttività.
 - **QA/bilanciamento:** simulare cantieri in tutte le stagioni e condizioni, verificare accumulo corretto dell'avanzamento, pause/riprese, salvataggi e assenza di blocchi permanenti; evitare che il clima renda impossibile la progressione.
-
 
 ## Nota voice — spedizioni militari, convogli di rifornimento e accampamenti d'assedio
 
@@ -343,7 +380,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Persistenza e UX:** il campo resta finché non viene smantellato, abbandonato o distrutto; distinguere chiaramente nel comando UI 'bivacco notturno' da 'stabilisci campo d'assedio'.
 - **QA:** testare spedizioni, consumo scorte, continuità dei carri, costruzione delle difese leggere, pathfinding di grandi colonne, assalti/sortite, interruzione rifornimenti e save/load durante assedi lunghi.
 
-
 ## Nota voice — navigazione mercantile e militare (orizzonte futuro)
 
 > **Backlog di lungo periodo**, non priorità per il ciclo giocabile attuale; nessuna implementazione richiesta ora.
@@ -354,7 +390,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Combattimento navale:** riconosciuto come sottosistema complesso (movimento, ingaggi, armi di bordo, unità trasportate e possibile abbordaggio). Rimandare progettazione dettagliata e implementazione a una fase successiva, evitando che blocchi economia, cantieri e assedi terrestri.
 - **Sequenza suggerita:** commercio marittimo e navi-cargo → trasporto truppe → armamento e scontri navali. Testare a ogni fase la compatibilità con convogli terrestri, risorse e persistenza.
 
-
 ## Nota voice — varianti regionali e commercio interregionale (lungo periodo)
 
 > **Visione di lungo periodo, non implementata.** Distinguere quattro ambientazioni/istanze di gioco da quattro server fisici: l'eventuale architettura di hosting va decisa solo in seguito, in base a necessità reali.
@@ -364,7 +399,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Beni locali ed esotici:** valutare produzione regionale di **vino** e altri beni distintivi, oltre a merci importate come **spezie** e vini di altre regioni; le merci esotiche possono esistere inizialmente solo come prodotti di commercio, senza richiedere una filiera locale completa.
 - **Geografia commerciale:** attribuire rilevanza alle rotte marittime e ai collegamenti verso regioni/climi più settentrionali o meridionali; disponibilità, prezzo e convenienza dei beni dipendono da provenienza, accessibilità e trasporto.
 - **Architettura e scope:** preferire configurazioni/data pack regionali sopra una simulazione condivisa, evitando quattro fork divergenti del codice. Prima consolidare economia, trasporti e gameplay locale; poi introdurre asset regionali, mercati interregionali e infine eventuali piccole differenze meccaniche.
-
 
 ## Nota voice — revisione urgente pannelli amministrativi e dashboard storiche
 
@@ -378,7 +412,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Prerequisito tecnico:** verificare quali serie storiche esistono davvero; aggiungere raccolta periodica e persistenza di snapshot aggregati solo dove mancano, usando un unico ledger economico affidabile. Evitare grafici che inventino storico o prezzi in assenza di meccaniche reali.
 - **QA e prestazioni:** confrontare valori dei grafici con stato effettivo della simulazione, testare salvataggio/caricamento e anni multipli, mantenere basso il costo di aggiornamento UI.
 - **Sequenza suggerita:** prima pannelli economia/mercato/popolazione con serie disponibili, poi approfondimenti e strumenti di confronto; la complessità UI può essere contenuta, ma va verificata la disponibilità dei dati storici.
-
 
 ## Nota voice — abbigliamento stagionale e meteo degli abitanti
 
@@ -396,7 +429,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Selezione automatica:** variare l'abbigliamento in funzione di stagione, temperatura e meteo corrente, senza richiedere microgestione al giocatore; conservare ruolo e riconoscibilità del personaggio.
 - **Integrazione grafica:** riutilizzare animazioni e scheletri esistenti, prevedendo varianti di equipaggiamento/overlay compatibili con movimento e lavoro; evitare cambi istantanei visivamente incoerenti se possibile.
 - **Priorità e QA:** miglioramento visivo successivo alla meccanica del meteo; verificare performance con molti abitanti, corrette transizioni stagionali e nessuna interferenza con divise/attrezzi professionali.
-
 
 ## Nota voice — overlay DEV FPS e grafico prestazioni (30 secondi)
 

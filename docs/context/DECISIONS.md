@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## Hardening strade e WebGL (23/10/2026)
+
+**D-FIX-01 · CODICE SU BRANCH `fix/main-founding-dev-webgl-20261023`:** ogni programma shader WebGL2 possiede il proprio VAO: abilitazioni e associazioni degli attributi non passano a programmi diversi quando viene eliminato un buffer di mesh. Rimangono il polling differito di D-038 e il fallback Canvas per errori veri; nessuna nuova query GPU sincrona nel disegno. La riparazione delle arterie prepara segmenti e ponti cedendo il controllo anche durante le scansioni dei fiumi; sostituisce la route e apre i corridoi forestali solo dopo una verifica finale della revisione di navigazione. Annullare la preparazione non pubblica topologia parziale e conserva quella precedente. Il percorso sincrono usa lo stesso generatore di ponti. Motivazioni e prove nel [report](../main-fixes-diagnosis-2026-10-23.md); nessuna modifica al contratto dei default DEV automatici o alla roadmap.
+
 > **Stato codice riconciliato al 23/10/2026:** D-LAB-01 e D-042 sono implementati in `main`. Le specifiche e decisioni sono invariate; cambia soltanto il riferimento di integrazione. [Audit](AUDIT-2026-10-23.md).
 
 
@@ -139,6 +143,12 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 **D-040 · CODICE SU MAIN / limite funzionale:** [PR #71](https://github.com/erykwest/CONQUER/pull/71) implementa rappresentazione e utensili dei lavoratori/cantieri; **non** dimostra da sola consumo reale di lavoro L1 e scorte. Tale integrazione è dichiarata in [PR #55](https://github.com/erykwest/CONQUER/pull/55) tuttora OPEN. Animazione = osservabilità; contabilità/squadre disponibili = meccanica, da provare separatamente.
 
 **D-041 · CODICE SU MAIN / limite assedio:** [PR #73](https://github.com/erykwest/CONQUER/pull/73) aggiunge terra di riporto d'assalto compatibile col terrain boolean corrente; **non** implica implementazione di tutte le macchine o condizione di resa per blocco. Requisiti S-01–S-25 rimangono chiusi solo con prova di comportamento di ogni sistema.
+
+## Eventi (branch `events`, 22/10/2026)
+
+**D-044 · VINCOLO DI DESIGN ESPLICITO (EVENTI 22/10; registrata sulla branch come D-042, rinumerata al merge per la collisione con D-042 portoni):** lo spiazzo polivalente per eventi programmati misura **14 × 10 U** (lato lungo sull'asse x locale, fronte a −y), non più 6 × 10 come nello skeleton iniziale. **Motivazione:** il 6 × 10 risultava evidentemente troppo piccolo per giostra, circo e sagra a grandezza reale; con 14 × 10 entrano liste di oltre 10 U con quattro tribune, il tendone con carri e tende, la sagra con quattro bancarelle e otto tavoli, e anche l'arena a U. **Alternative scartate:** 6 × 10 con oggetti rimpiccioliti; taglie multiple (rinviate). **Impatto:** `VENUES.festivalGround` e `SETUPS` in `src/settlement-events3d.js`, `qa/events3d-regression.cjs`, [docs/events/README.md](../events/README.md).
+
+**D-045 · VINCOLO DI DESIGN ESPLICITO (EVENTI 22/10; già D-043 sulla branch):** tribune, arena e palchi seguono l'araldica del regno; tende dei cavalieri, rastrelliere e armature usano coppie casuali tra rosso, blu, giallo, verde e bianco (estesi oltre i primari perché le 8 tende dell'arena superano le 6 coppie possibili), **mai due tende con la stessa coppia nello stesso spazio**; in arena, torneo e circo le tende hanno rotazione casuale ±40° e spostamento fino al 75% della loro misura; merci scatter, rastrelliere e armature in ogni allestimento hanno orientamento libero (scatter) o ±35° e spostamento fino al 200%; ogni spostamento è scartato se urta un altro oggetto o esce dal lotto (si riprova più vicino, al limite resta nella posizione di base); festoni, circo e stoffe del palco degli artisti mantengono colori festosi fissi.
 
 **D-042 · DECISIONE ESPLICITA + CODICE SU MAIN dopo PR #76 (23/10/2026; originariamente branch `portoni`):** la **grata (saracinesca)** è uno **strato difensivo separato**, non un bonus di resistenza della porta. Estende D-032: il portone in pietra con grata ha tre durabilità indipendenti (torre-porta `core`, grata `portcullis` 120 HP, porta `door`). Una grata abbassata assorbe i colpi diretti alla porta (ariete, macchine) finché non è distrutta; il **fuoco** la attraversa e colpisce la porta. Abbassata sbarra il passaggio anche a porta aperta o sfondata; distrutta resta piegata e mezza alzata, non sbarra nulla e va riparata. L'accesso è violato solo con porta sfondata **e** nessuna grata abbassata (`gateBreached`).
 

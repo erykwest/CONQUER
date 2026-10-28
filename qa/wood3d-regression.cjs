@@ -85,11 +85,10 @@ assert.ok(summer.has(roof)&&!winter.has(roof),'shingle roofs turn white in winte
 assert.ok(winter.has(log),'timber keeps its colour');
 console.log('PASS winter roofs');
 
-// World renderer wiring: timber leaves the per-frame 2.5D residue, and a program switch turns off the
-// vertex arrays the previous program enabled (soldier billboards on a palisade walk used to leave a
-// 6-vertex array on, the next terrain draw read out of range and world3d fell back to Canvas).
-const world=src('settlement-world3d.js');
+// World renderer wiring: timber leaves the per-frame 2.5D residue; construction sites are
+// assembled from the same models.
+const world=src('settlement-world3d.js'),assembly=src('settlement-construction-assembly.js');
 assert.match(world,/ConquerWood3D\?\.addToBuilder\(m,s\)/,'buildings pass adds the timber models');
 assert.match(world,/&&!window\.ConquerWood3D\?\.handles\(s\)\)/,'residual 2.5D skips timber drawn in 3D');
-assert.match(world,/if\(S\.attribProg!==prog\)\{for\(const l of S\.attribLocs\|\|\[\]\)gl\.disableVertexAttribArray\(l\)/,'stale vertex arrays are disabled on program switch');
-console.log('PASS world3d wiring and vertex-array hygiene');
+assert.match(assembly,/woodSource\(s\)\|\|palisadeSource\(s\)/,'timber sites are assembled from the models');
+console.log('PASS world3d wiring and timber construction sites');
