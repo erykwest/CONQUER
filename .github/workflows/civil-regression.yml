@@ -5,6 +5,7 @@ on:
     branches:
       - Civil
       - civil-3d
+      - case
   workflow_dispatch:
 
 jobs:
@@ -26,3 +27,4 @@ jobs:
           node qa/builder-placement-regression.cjs
           node qa/civic-annex-regression.cjs
           node qa/civic3d-regression.cjs
+          node qa/houses3d-regression.cjs

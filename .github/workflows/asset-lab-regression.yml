@@ -11,8 +11,16 @@ on:
       - src/settlement-castle3d.js
       - src/settlement-app-persistence.js
       - src/settlement-work-anim.js
+      - src/settlement-asset-stage.js
+      - src/asset-audit.js
+      - src/settlement-app-simulation.js
+      - src/settlement-siege.js
+      - src/settlement-castle*.js
+      - lab/**
       - qa/asset-catalog-regression.cjs
       - qa/asset-catalog-browser.mjs
+      - qa/asset-audit.mjs
+      - qa/asset-audit-baseline.json
       - index.html
       - .github/workflows/asset-lab-regression.yml
 jobs:
@@ -26,6 +34,8 @@ jobs:
       - run: node --check src/asset-catalog.js
       - run: node --check src/asset-manifest.js
       - run: node --check src/settlement-siege-preview.js
+      - run: node --check src/settlement-asset-stage.js
+      - run: node --check src/asset-audit.js
       - name: Asset manifest is up to date
         run: node tools/build-asset-manifest.cjs --check
       - run: node qa/asset-catalog-regression.cjs
@@ -53,10 +63,17 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run gallery browser QA
         run: node qa/asset-catalog-browser.mjs
+      - name: Visual audit (every asset, every fortification state)
+        run: node qa/asset-audit.mjs
+      - name: Audit summary
+        if: always()
+        run: test -f artifacts/asset-audit/report.md && cat artifacts/asset-audit/report.md >> "$GITHUB_STEP_SUMMARY" || true
       - name: Save visual diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: asset-lab-visual-qa
-          path: artifacts/asset-lab-browser.png
-          retention-days: 7
+          path: |
+            artifacts/asset-lab-browser.png
+            artifacts/asset-audit/
+          retention-days: 14

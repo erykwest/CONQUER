@@ -35,7 +35,7 @@ const read=f=>fs.readFileSync(root+f,'utf8');
   // Roads drawn to a gate snap to its two mouths: a free leg to a straight approach, then
   // through the mouth to the gate centre, where roads from both sides meet.
   vm.runInContext('var State={structures:[gate],village:{}};var ROAD_RULES={snapNodeDistance:1.15};'+
-    ['gateRoadPort','manualRoadLegs','mainRoadSnapAnchor'].map(n=>fn(world,n)).join('\n'),Object.assign(ctx,{gate,snapGrid:v=>Math.round(v*2)/2,ensureBorderEntrySelection:()=>[],roadList:()=>[],closestPointOnSegment:p=>p}));
+    ['gateRoadPort','manualRoadLegs','bridgeRoadEnd','mainRoadSnapAnchor'].map(n=>fn(world,n)).join('\n'),Object.assign(ctx,{gate,snapGrid:v=>Math.round(v*2)/2,ensureBorderEntrySelection:()=>[],roadList:()=>[],closestPointOnSegment:p=>p}));
   const west=ctx.mainRoadSnapAnchor({x:-.9,y:.3}),east=ctx.mainRoadSnapAnchor({x:.5,y:-.2});
   assert.ok(west.gatePort&&east.gatePort,'both mouths are magnets, also from inside the gatehouse');
   assert.ok(west.point.x===0&&west.point.y===0,'the road ends at the gate centre');
@@ -167,10 +167,29 @@ function fixture({night=0,rotation=0}={}){
   G.installPortcullis(gate);G.togglePortcullis(gate);
   const hp=S.integrity(gate).portcullis;
   assert.ok(hp&&hp.max===S.PORTCULLIS_HEALTH&&hp.hp===hp.max,'its own health');
+  // Converge's structural immunity and input guards must coexist with all
+  // three defence layers introduced on main (D-031/D-032/D-042).
+  const core=S.integrity(gate).core.hp;
+  for(const weapon of ['sword','spear','axe','arrow','bow','crossbow','ram','torch']){
+    assert.equal(S.attackStructure('g',weapon,10,'core').damage,0,weapon+' cannot damage the gatehouse');
+  }
+  for(const weapon of ['sword','spear','arrow','bow','crossbow'])
+    assert.equal(S.attackStructure('g',weapon,10,'door').damage,0,weapon+' cannot damage the grate');
+  const unchanged=JSON.stringify(S.integrity(gate));
+  for(const force of [NaN,Infinity,-Infinity,0,-1,'bad'])
+    assert.equal(S.attackStructure('g','ram',force,'door').ok,false,'invalid force cannot reach the grate');
+  for(const target of ['unknown',{x:0,y:NaN},{x:Infinity,y:0}])
+    assert.equal(S.attackStructure('g','ram',10,target).ok,false,'invalid target cannot bypass the grate');
+  assert.equal(JSON.stringify(S.integrity(gate)),unchanged,'rejected attacks preserve all three layers');
   const door=S.integrity(gate).door.hp;
   const hit=S.attackStructure('g','ram',5,'door');
+  assert.equal(hit.damage,20,'the modern ram/grate damage multiplier is preserved');
   assert.equal(hit.part,'portcullis','the ram hits the lowered portcullis first');
   assert.equal(S.integrity(gate).door.hp,door,'the door behind is untouched');
+  const saved=JSON.parse(JSON.stringify(gate));
+  assert.equal(S.integrity(saved).portcullis.hp,hp.max-20,'saved grate damage survives normalization');
+  assert.equal(S.integrity(saved).door.hp,door,'saved door keeps its independent health');
+  assert.equal(S.integrity(saved).core.hp,core,'saved gatehouse keeps its independent health');
   assert.equal(S.attackStructure('g','spear',5,'door').ok,false,'spears do nothing to iron');
   const burn=S.attackStructure('g','torch',2,'door');
   assert.equal(burn.part,'door','fire reaches the door through the bars');
@@ -180,6 +199,7 @@ function fixture({night=0,rotation=0}={}){
   assert.equal(S.gateBreached(gate),false,'the door still holds');
   while(S.doorStage(gate)!=='broken')S.attackStructure('g','ram',10,'door');
   assert.equal(S.gateBreached(gate),true,'door broken, no grate: the way is open');
+  assert.equal(S.integrity(gate).core.hp,core,'breaching both outer layers never damages the gatehouse');
   G.repairPortcullis(gate);G.togglePortcullis(gate);
   assert.equal(S.integrity(gate).portcullis.hp,S.PORTCULLIS_HEALTH,'repaired to full health');
   assert.equal(S.gateBreached(gate),false,'a portcullis dropped behind a broken door bars the way again');
