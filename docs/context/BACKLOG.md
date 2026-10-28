@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — cutaway arredato di torri, porte e sezioni (PR #65, mergiata 28/10/2026)
+
 ## QA visiva — occlusione e scene intere (da #18, 28/10/2026)
 
 - **FATTO SU BRANCH `fix/occlusion-clip-union`, NON MERGE:** clip di occlusione separati per sagoma (niente più dettagli che riappaiono dove due occlusori si sovrappongono).
@@ -18,8 +20,8 @@
 
 ## Castello — cutaway arredato di torri, porte e sezioni (PR #65, riallineata 28/10/2026)
 
-- **IMPLEMENTATO SU BRANCH, IN MERGE:** 50 arredi Blender nelle stanze in sezione, stanze WebGL2 con depth test e luce notturna, 6 prese per le sottotorri delle porte, arcieri alle feritoie; convive con il cutaway civico di chiesa e locanda.
-- **ANCORA APERTO:** tre correzioni rimaste solo sulla vecchia branch locale `feature/cutaway-furniture` (porta dalla torre madre sul tetto della sottotorre più bassa, merli sepolti in una torre o porta attaccata più alta, niente drappo sul mastio in cutaway), da portare in una PR separata dopo il merge.
+- **SU MAIN (`e9a89c6`):** 50 arredi Blender nelle stanze in sezione, stanze WebGL2 con depth test e luce notturna, 6 prese per le sottotorri delle porte, arcieri alle feritoie; convive con il cutaway civico di chiesa e locanda.
+- **IN CORSO su `fix/cutaway-junctions`, NON MERGE:** le tre correzioni rimaste sulla vecchia branch locale `feature/cutaway-furniture`: porta dalla torre madre sul tetto della sottotorre più bassa, merli sepolti in una torre o porta attaccata più alta, niente drappo sul mastio in cutaway.
 
 ## Presentazione — audio e musica (branch `sound`, riallineato 28/10/2026)
 

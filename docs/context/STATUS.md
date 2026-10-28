@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## Giunzioni delle sottotorri (branch `fix/cutaway-junctions`, 28/10/2026)
+
+- **Codice presente su branch (non ancora `main`):** recuperate dalla vecchia branch locale `feature/cutaway-furniture` (commit `6cdbf6a`, solo queste parti): `towerRoofDoorSpecs` in `settlement-architecture.js` (la più alta di una coppia torre/sottotorre apre una porta sul tetto dell'altra, al livello di quel tetto), `withoutBuriedBattlements` in `settlement-castle-structures.js` (torri e porte perdono i merli che cadono dentro la struttura attaccata più alta), `drawMastioWindowDrape` non disegna il drappo su un mastio in cutaway. Non portati: porta nel muro divisorio del cutaway 3D e magneti dei muri dello stesso commit.
+- **QA locale:** nuova `qa/subtower-junctions-regression.cjs` PASS; `mastio-selection-zoom-regression` aggiornata alla guardia del cutaway; 83/87 `qa/*.cjs` PASS (FAIL solo le 4 prove `*-performance` senza Playwright, come su `main`). Browser (Chrome, World 3D): torre L3 con sottotorre L1, merli della sottotorre solo sul lato esterno e porta ad arco della torre sul tetto della sottotorre. CI della PR da verificare.
+
 ## Occlusione 2.5D — sagome sovrapposte (branch `fix/occlusion-clip-union`, 28/10/2026; da #18)
 
 - **Codice presente su branch (non ancora `main`):** nel renderer Canvas 2.5D le sagome che coprono dettagli, tetti, merli, connessioni delle palizzate, tetti a punta e porte delle torri erano unite in un unico percorso con `clip('evenodd')`: dove due sagome si sovrapponevano si annullavano e i dettagli nascosti tornavano visibili. Ora `clipOutsideHulls()` (`settlement-castle-structures.js`) applica un clip separato per ogni sagoma; usata nelle 5 funzioni di occlusione di `settlement-castle-structures.js` e nella porta delle torri di `settlement-architecture.js`. La correzione di #18 copriva 3 delle 6 funzioni.

@@ -655,7 +655,19 @@ function roundTowerBattlementPieces(s){
 }
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
-  return s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s);
+  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s));
+}
+// Parent/subtower pairs overlap: merlons of the lower one that fall inside the footprint of the
+// taller attached structure would stick out of its walls. Drop them (parent or subtower alike).
+function withoutBuriedBattlements(s,pieces){
+  const related=State.structures.filter(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&
+    (o.id===s.parentTowerId||o.parentTowerId===s.id));
+  if(!related.length||!pieces.length)return pieces;
+  const taller=related.map(o=>({pts:footprintPoints(o),h:structureHeight(o)})).filter(o=>o.pts?.length>2);
+  return pieces.filter(p=>{
+    const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
+    return !taller.some(o=>o.h>p.z0+.01&&pointInPolygon(c,o.pts));
+  });
 }
 function pointRoofOccluders(s){
   if(!s||!['tower','gate'].includes(s.type))return[];
@@ -904,7 +916,7 @@ function gateBattlementPieces(s){
       ));
     }
   }
-  return pieces;
+  return withoutBuriedBattlements(s,pieces);
 }
 function fortificationFrontPiece(owner,kind,center,r,angle,z0,bodyZ,tipZ){
   const pts=palisadeOctagon(center,r,angle);
