@@ -29,11 +29,12 @@ from cq_blender import Part, fresh_collection, export_part_indexed
 S = 3.5   # metres per game unit
 COLORS = {
     'log': '#795134', 'logEnd': '#8a6342', 'cut': '#c29a6b', 'cutDark': '#b68a5e',
-    'plank': '#8b6845', 'plankDark': '#6e5136', 'beam': '#5a3e28', 'brace': '#68472e',
+    'plank': '#8b6845', 'plankDark': '#765639', 'beam': '#6e4b30', 'brace': '#7a5537',
     'ladder': '#9a7550', 'door': '#4f3220', 'doorPlank': '#5f3e27', 'iron': '#3b3936',
     'rope': '#a88d62', 'dark': '#1e1712',
     # winter: white
-    'roofShingle': '#5a3d2e', 'roofShingleDark': '#4d3427', 'roofRidge': '#3f2b20', 'roofDeck': '#8b6845',
+    # Kept clear of the dark ground tones: the Asset Lab cuts out pixels close to the empty view.
+    'roofShingle': '#654535', 'roofShingleDark': '#5a3d2e', 'roofRidge': '#7a5640', 'roofDeck': '#8b6845',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_WoodFort'
@@ -105,15 +106,21 @@ def beam(p, a, b, w, h, key):
     p.beam(m(*a), m(*b), w * S, h * S, key)
 
 
-def hip_roof(p, half, eave, apex, keys=('roofShingle', 'roofShingleDark'), courses=3, lip=.045, drop=.05):
-    """Hip roof over a square of half-side `half` (U): shingle courses that each start a
-    little wider and lower than the top of the course below (a visible step), hip ridges
-    and a short finial. Faces alternate the two roof tones like drawWoodHipRoof."""
+def hip_roof(p, half, eave, apex, keys=('roofShingle', 'roofShingleDark'), courses=3, lip=.045):
+    """Hip roof over a square of half-side `half` (U): shingle courses, each starting a little
+    wider than the top of the course below, with a flat step ring closing the joint (no gap to
+    look into, so the depth-sorted 2.5D painter and the Lab draw it whole), hip ridges and a
+    short finial. Faces alternate the two roof tones like drawWoodHipRoof."""
     zs = [eave + (apex - eave) * k / courses for k in range(courses + 1)]
     hs = [half * (1 - k / courses) for k in range(courses + 1)]
     for k in range(courses):
-        bh, bz = hs[k] + (lip if k else 0), zs[k] - (drop if k else 0)
+        bh, bz = hs[k] + (lip if k else 0), zs[k]
         ring = [(x * S, y * S, bz * S) for x, y in rect(0, 0, bh * 2, bh * 2)]
+        if k:
+            inner = [(x * S, y * S, bz * S) for x, y in rect(0, 0, hs[k] * 2, hs[k] * 2)]
+            vs = ring + inner
+            for i in range(4):
+                p.quads(vs, [(i, (i + 1) % 4, 4 + (i + 1) % 4, 4 + i)], keys[1])
         if k == courses - 1:
             for i in range(4):
                 p.quads([ring[i], ring[(i + 1) % 4], (0, 0, apex * S)], [(0, 1, 2)], keys[i % 2])

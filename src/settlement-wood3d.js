@@ -161,11 +161,18 @@
   function geometry(s){
     const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.w,s.h,s.size,
       s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length].join('|');
-    const hit=cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
+    const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
     let geo;
     if(s.type==='palisade')geo=palisade(s);
     else geo={mesh:pointModel(s),faces:[],foundation:foundation(s)};
-    cache.set(s.id,{sig,geo});
+    // Pre-shaded faces as one flat mesh for the 2.5D painter.
+    const flat={pos:[],col:[],flat:true};
+    for(const f of geo.faces)for(let i=1;i<f.pts.length-1;i++){
+      for(const v of [f.pts[0],f.pts[i],f.pts[i+1]])flat.pos.push(v.x,v.y,v.z);
+      flat.col.push(f.hex);
+    }
+    geo.flat=flat;
+    if(s.id)cache.set(s.id,{sig,geo});
     if(cache.size>512)cache.clear();
     return geo;
   }
@@ -184,13 +191,25 @@
     for(const f of geo.faces)m.face(f.pts,f.hex);
     return true;
   }
+  // 2.5D Canvas: the same triangles through the depth-sorted painter (shaded per camera turn).
+  function draw(s,preview=false){
+    if(!handles(s))return false;
+    const geo=geometry(s),list=[geo.foundation,geo.mesh,geo.flat].filter(m=>m&&m.col.length);
+    window.ConquerMesh3D.drawMeshes(ctx,list,window.ConquerMesh3D.gameView());
+    return true;
+  }
   // Interleaved x,y,z,r,g,b triangles (the world3d buffer layout) of some structures: the Asset Lab
-  // shows and audits these through ConquerSiegePreview.assetMesh.
+  // shows and audits these through ConquerSiegePreview.assetMesh. Model triangles keep their base
+  // colours here, because the Lab's painter shades faces itself (shading twice darkens the timber).
   function worldTriangles(list){
     const out=[],rgb=hex=>{const h=hex.replace('#','');return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255)};
-    const m={face(vs,hex){const c=rgb(hex);for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])out.push(v.x,v.y,v.z,c[0],c[1],c[2])}};
-    for(const s of list)addToBuilder(m,s);
+    const push=(p,o,hex)=>{const c=rgb(hex);for(let k=0;k<3;k++)out.push(p[o+k*3],p[o+k*3+1],p[o+k*3+2],c[0],c[1],c[2])};
+    for(const s of list){
+      if(!handles(s))continue;
+      const geo=geometry(s);
+      for(const m of [geo.foundation,geo.mesh,geo.flat])if(m)for(let t=0;t<m.col.length;t++)push(m.pos,t*9,m.col[t]);
+    }
     return new Float32Array(out);
   }
-  window.ConquerWood3D={modelKey,handles,parts,geometry,addToBuilder,worldTriangles};
+  window.ConquerWood3D={modelKey,handles,parts,geometry,addToBuilder,draw,worldTriangles};
 })();
