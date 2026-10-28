@@ -79,7 +79,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='house'){
     const level=houseLevel(s);
-    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 3 residents · L2: 6 · L3: 9 · L4: 12. L3: extended ${housePlanType(s)} plan · L4: elite house with ${houseTurretType(s)} turret.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">House social level</div><div class="grid"><button data-house-down ${level<=1?'disabled':''}>− Downgrade</button><button data-house-up ${level>=4?'disabled':''}>+ Upgrade</button></div><div class="legend">L1: 3 residents · L2: 6 · L3: 9 · L4: 12. L3: extended ${housePlanType(s)} plan · L4: elite house with dormers; a corner plot adds a ${houseTurretType(s)} turret.</div></div>`;
   }
   if(canTier){
     const current=['wall','palisade'].includes(s.type)?wallTier(s):towerTier(s);
@@ -162,6 +162,7 @@ function renderFunctionPanel(){
     const hp=window.ConquerSiege?.integrity(s);
     if(hp)html+='<div class="slot"><div class="slot-label">Defensive integrity</div>'+
       '<div class="legend">Masonry '+Math.ceil(hp.core.hp)+' / '+hp.core.max+
+      (hp.portcullis?' · Grata '+Math.ceil(hp.portcullis.hp)+' / '+hp.portcullis.max:'')+
       (hp.door?' · Door '+Math.ceil(hp.door.hp)+' / '+hp.door.max:'')+'</div>'+
       '<div class="grid3"><button data-siege-test="axe" type="button">Test axe</button><button data-siege-test="ram" type="button">Test ram</button><button data-siege-test="trebuchet" type="button">Test trebuchet</button></div>'+
       '<div class="legend">Prototype damage controls; only effective tools can harm each material. Towers and gates lose their top storey at 2/3 and 1/3 of their health.</div></div>';
@@ -170,102 +171,35 @@ function renderFunctionPanel(){
     html+=window.ConquerSiege?.summaryHtml()||'';
   }
   html+=window.ConquerCrossings?.panel(s)||'';
+  html+=window.ConquerGates?.panel(s)||'';
   slots.innerHTML=html;
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
-  slots.querySelectorAll('[data-house-up]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();if(target?.type==='house')changeHouseDensity(target,clamp(houseLevel(target)+1,1,4));
-  });
-  slots.querySelectorAll('[data-house-down]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();if(target?.type==='house')changeHouseDensity(target,clamp(houseLevel(target)-1,1,4));
-  });
-  slots.querySelectorAll('[data-structure-tier]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();if(!target)return;
-    const requested=Number(btn.dataset.structureTier);
-
-    if(target.type==='tower'){
-      const parent=target.parentTowerId&&State.structures.find(s=>s.id===target.parentTowerId&&s.type==='tower');
-       if(parent&&requested>=towerTier(parent)){
-        status('Subtower must remain smaller than its parent tower');return;
-      }
-      const children=subtowerChildren(target.id);
-      if(children.some(child=>towerTier(child)>=requested)){
-        status('Parent tower must remain larger than all attached subtorri');return;
-      }
-    }
-
-    applyStructureTier(target,requested);
-    target.tier=['wall','palisade'].includes(target.type)?wallTier(target):towerTier(target);
-    target.buildCost=constructionCost(target);
-
-    if(target.type==='tower'){
-      repositionSubtower(target);
-      syncSubtowerTree(target.id);
-    }
-
-    markStructureDirty(target);renderFunctionPanel();draw();
-  });
-  slots.querySelectorAll('[data-height-level]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target)return;const level=Number(btn.dataset.heightLevel);if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall'}target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);markStructureDirty(target,false);renderFunctionPanel();draw()});
-  slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
-  slots.querySelectorAll('[data-civic-level]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return;
-    const level=Number(btn.dataset.civicLevel);
-    if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
-      status('Remove annexes requiring a higher level before downgrading');return;
-    }
-    target.civicLevel=level;
-    normalizeCivicDevelopment(target);
-    markStructureDirty(target);renderFunctionPanel();draw();
-    status(structureLabel(target)+' · skeleton stage only');
-  });
-  slots.querySelectorAll('[data-civic-annex]').forEach(btn=>btn.onclick=()=>startCivicAnnexPlacement(selectedStructure(),btn.dataset.civicAnnex));
+  // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
+  const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
+  on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));
+  on('[data-house-down]',id=>StructureCommands.changeHouseLevel(id,-1));
+  on('[data-structure-tier]',(id,el)=>StructureCommands.setTier(id,Number(el.dataset.structureTier)));
+  on('[data-height-level]',(id,el)=>StructureCommands.setHeight(id,Number(el.dataset.heightLevel)));
+  on('[data-point-rotate]',(id,el)=>{const n=Number(el.dataset.pointRotate)||1;StructureCommands.rotate(id,n===12?'flip':n)});
+  on('[data-tower-flip]',id=>StructureCommands.rotate(id,'flip'));
+  on('[data-tower-rotate]',(id,el)=>StructureCommands.rotate(id,Number(el.dataset.towerRotate)||1));
+  on('[data-gate-flip]',id=>StructureCommands.rotate(id,'flip'));
+  on('[data-gate-rotate]',(id,el)=>StructureCommands.rotate(id,Number(el.dataset.gateRotate)||1));
+  on('[data-tower-base]',(id,el)=>StructureCommands.setTowerBase(id,el.dataset.towerBase));
+  on('[data-tower-roof]',(id,el)=>StructureCommands.setTowerRoof(id,el.dataset.towerRoof));
+  on('[data-wood-roof]',(id,el)=>StructureCommands.setWoodRoof(id,el.dataset.woodRoof));
+  on('[data-gate-roof]',(id,el)=>StructureCommands.setGateRoof(id,el.dataset.gateRoof));
+  on('[data-built-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.builtSkin));
+  on('[data-wall-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.wallSkin));
+  on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));
+  on('[data-linear-flip]',id=>StructureCommands.flipSide(id));
+  on('[data-function-slot]',(id,el)=>StructureCommands.setRoom(id,Number(el.dataset.functionSlot),el.value),'onchange');
+  window.ConquerGates?.bindPanel(slots);
+  on('[data-civic-level]',(id,el)=>StructureCommands.setCivicLevel(id,Number(el.dataset.civicLevel)));
+  on('[data-civic-annex]',(id,el)=>startCivicAnnexPlacement(selectedStructure(),el.dataset.civicAnnex));
   slots.querySelectorAll('[data-civic-annex-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.civicAnnexChild)));
-  slots.querySelectorAll('[data-plaza-variant]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();if(!isPlazaLike(target))return;
-    target.plazaVariant=btn.dataset.plazaVariant;
-    normalizeCivicDevelopment(target);
-    markStructureDirty(target);renderFunctionPanel();draw();
-  });
-  slots.querySelectorAll('[data-tower-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();turnTower(target,Math.PI,'Tower front flipped')});
-  slots.querySelectorAll('[data-tower-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.towerRotate)||1;turnTower(target,STRUCTURE_ANGLE_STEP*dir,`Tower rotated ${dir<0?'−':'+'}15°`)});
-  slots.querySelectorAll('[data-gate-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();flipGate(target)});
-  slots.querySelectorAll('[data-gate-rotate]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure(),dir=Number(btn.dataset.gateRotate)||1;turnGate(target,STRUCTURE_ANGLE_STEP*dir,`Gate rotated ${dir<0?'−':'+'}15°`)});
-  slots.querySelectorAll('[data-tower-base]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();
-    if(!target||target.type!=='tower'||isWoodTower(target))return;
-    if(!setStructureVariant(target,'baseStyle',btn.dataset.towerBase))return;
-
-    // Base style can enlarge the actual ground-contact footprint. Recompute
-    // the rigid placement plane so its foundations never float or cut into terrain.
-    const profile=placementFoundationProfile(target);
-    if(profile){
-      target.groundZ=profile.baseZ;
-      target.foundationMinZ=profile.minZ;
-      target.foundationVersion=1;
-    }
-
-    target.wallColliderSyncSignature=null;
-    invalidateCastleColliderGeometry(target);
-    markStructureDirty(target,true);
-    renderFunctionPanel();
-    draw();
-    status('Tower base: '+(target.baseStyle==='buttress'?'buttressed':target.baseStyle==='splayed'?'splayed 10°':'standard'));
-  });
-  slots.querySelectorAll('[data-tower-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.towerRoof))return;markStructureDirty(target);renderFunctionPanel();draw();status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?'machicolation':'battlement'))});
-  slots.querySelectorAll('[data-tower-weapon]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='tower')return;if(!setStructureVariant(target,'topWeapon',btn.dataset.towerWeapon))return;markStructureDirty(target);renderFunctionPanel();draw();status('Tower weapon: '+({none:'none',mangonel:'mangonel',ballista:'ballista'}[target.topWeapon])+(towerTopWeaponAllowed(target)?'':' (needs a T2 tower without a pitched roof)'))});
-  slots.querySelectorAll('[data-wood-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return;target.woodRoof=btn.dataset.woodRoof==='pitched'?'pitched':'open';markStructureDirty(target);renderFunctionPanel();draw();status('Wood tower roof: '+target.woodRoof)});
-  slots.querySelectorAll('[data-gate-roof]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='gate')return;if(!setStructureVariant(target,'roofStyle',btn.dataset.gateRoof))return;markStructureDirty(target);renderFunctionPanel();draw();status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'))});
-  slots.querySelectorAll('[data-built-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='built')return;if(!setStructureVariant(target,'skin',btn.dataset.builtSkin))return;markStructureDirty(target);renderFunctionPanel();draw();status('Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'))});
-  slots.querySelectorAll('[data-wall-skin]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||target.type!=='wall')return;if(btn.dataset.wallSkin==='machicolation'&&wallTier(target)===1){status('Machicolation requires a T2 or T3 wall');return}if(!setStructureVariant(target,'skin',btn.dataset.wallSkin))return;markStructureDirty(target);renderFunctionPanel();draw();status('Wall skin: '+target.skin)});
-  slots.querySelectorAll('[data-cutaway-toggle]').forEach(btn=>btn.onclick=()=>{
-    const target=selectedStructure();
-    if(!cutawayEligible(target))return;
-    target.cutaway=!structureCutaway(target);
-    markStructureDirty(target,false);
-    renderFunctionPanel();draw();
-    status((target.type==='tower'?'Tower':'Built section')+' cutaway '+(target.cutaway?'enabled':'disabled'));
-  });
-  slots.querySelectorAll('[data-linear-flip]').forEach(btn=>btn.onclick=()=>{const target=selectedStructure();if(!target||!['wall','palisade','built'].includes(target.type))return;target.flip=!target.flip;markStructureDirty(target);renderFunctionPanel();draw();status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped')});
-  slots.querySelectorAll('[data-function-slot]').forEach(sel=>sel.onchange=e=>{const target=selectedStructure();if(!target)return;normalizeFunctions(target);const i=Number(e.target.dataset.functionSlot),fn=e.target.value||null;if(target.isMastio&&target.functions[i]==='commonHall'&&fn!=='commonHall'&&!target.functions.some((f,j)=>j!==i&&f==='commonHall')){status('Mastio requires its Common Hall — reassign the Mastio first.');renderFunctionPanel();return}if(fn&&!window.ConquerSiege.allowed(target,i,fn)){status('Function not permitted at this floor/access');renderFunctionPanel();return}target.functions[i]=fn;markStructureDirty(target);renderFunctionPanel();draw()});
+  on('[data-plaza-variant]',(id,el)=>StructureCommands.setPlazaVariant(id,el.dataset.plazaVariant));
+  on('[data-tower-weapon]',(id,el)=>StructureCommands.setTowerWeapon(id,el.dataset.towerWeapon));
 }
 let pan=null;

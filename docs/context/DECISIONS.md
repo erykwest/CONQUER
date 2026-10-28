@@ -1,5 +1,11 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+> **Stato codice riconciliato al 23/10/2026:** D-LAB-01 e D-042 sono implementati in `main`. Le specifiche e decisioni sono invariate; cambia soltanto il riferimento di integrazione. [Audit](AUDIT-2026-10-23.md).
+
+
+> Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
+> Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
+
 ## CANS — contratti provvisori dello skeleton (23/10/2026)
 
 **D-CANS-01 · CODICE SOLO BRANCH `cans`, CONTRATTO DA VALIDARE CON ADAPTER:** modulo opt-in `ConquerCANS.createEngine()` con slot `worker`/`guest`, ingressi e grafo locali, ActivitySequence con passi espliciti, prenotazioni tramite token, progressione di fasi confermata dall'esterno, riserva TTL, trasferimento con nuovo slot prenotato prima di liberare il precedente, snapshot con `schemaVersion=1` e ricostruzione senza dipendenze di rendering/economia. Motivazione: evitare cittadini fantasma, duplicazione di lavoro economico e teletrasporti mascherati. Alternative escluse per ora: renderer come fonte di occupanti, pathfinding completo nel modulo, spawn automatico su slot vuoto. File: `src/settlement-cans.js`; QA: `qa/cans-regression.cjs`. **Scelte tecniche provvisorie**, da verificare su identità residenti, save del gioco, campi e movimento; non decisione di bilanciamento né feature rilasciata.
@@ -7,6 +13,18 @@
 
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
+
+## Converge — regole assedio (20/10/2026)
+
+**Applicazione D-031/D-032 sulla branch `converge`:** le restrizioni delle armi contro mura, torri e gatehouse sono implementate nel motore attuale, preservando il sistema di campate, le brecce e la separazione fra portone e torre-porta. Test dedicati disponibili, QA su pull request necessaria. La vecchia branch `assedio` non va fusa integralmente.
+
+**Riallineamento PR #61 (23/10/2026):** D-031/D-032 si applicano insieme a D-042: le immunità dei nuclei non proteggono la grata. I colpi alla porta continuano a raggiungere prima la grata abbassata, il fuoco la attraversa; restano tre integrità indipendenti. Conservati gli aggiornamenti di `main` fino a `518e830`, inclusi terrapieni e ridisegno coalescente.
+
+## Asset Lab (23/10/2026)
+
+**D-LAB-01 · CODICE SU MAIN dopo PR #81 (originariamente branch `feat/asset-lab-complete-catalog`):** il Lab non duplica la geometria del castello. Per le strutture che dipendono dall'intero motore (terreno, impronte, merli, tetti) carica il gioco in un iframe nascosto `index.html?assetlab=1`: in questa modalità `window.__CONQUER_ASSET_LAB__` blocca `saveLocal`, legge uno slot vuoto, salta Supabase e telemetria remota. Le varianti mostrate sono quelle di `ConquerSiegePreview.GALLERY`; le nuove varianti si aggiungono lì, non nel Lab.
+
+**D-LAB-02 · CODICE su branch `feat/asset-lab-audit`:** l'audit visivo usa i renderer del Lab e del gioco, mai un renderer parallelo. Gli stati delle fortificazioni sono quelli del gioco (`constructionProgress`, fasi di `galleryPhases` via `ConquerSiege`, `structureCutaway`). La baseline `qa/asset-audit-baseline.json` si aggiorna solo dopo la revisione dei fogli provini; i problemi accettati si registrano come deroghe con motivo, non abbassando le soglie. In sandbox `?assetlab=1` non gira la simulazione e il seed è fisso.
 
 ## Aggiornamento clay (19/10/2026) — solo design, non codice
 
@@ -129,6 +147,8 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 **D-040 · CODICE SU MAIN / limite funzionale:** [PR #71](https://github.com/erykwest/CONQUER/pull/71) implementa rappresentazione e utensili dei lavoratori/cantieri; **non** dimostra da sola consumo reale di lavoro L1 e scorte. Tale integrazione è dichiarata in [PR #55](https://github.com/erykwest/CONQUER/pull/55) tuttora OPEN. Animazione = osservabilità; contabilità/squadre disponibili = meccanica, da provare separatamente.
 
 **D-041 · CODICE SU MAIN / limite assedio:** [PR #73](https://github.com/erykwest/CONQUER/pull/73) aggiunge terra di riporto d'assalto compatibile col terrain boolean corrente; **non** implica implementazione di tutte le macchine o condizione di resa per blocco. Requisiti S-01–S-25 rimangono chiusi solo con prova di comportamento di ogni sistema.
+
+**D-042 · DECISIONE ESPLICITA + CODICE SU MAIN dopo PR #76 (23/10/2026; originariamente branch `portoni`):** la **grata (saracinesca)** è uno **strato difensivo separato**, non un bonus di resistenza della porta. Estende D-032: il portone in pietra con grata ha tre durabilità indipendenti (torre-porta `core`, grata `portcullis` 120 HP, porta `door`). Una grata abbassata assorbe i colpi diretti alla porta (ariete, macchine) finché non è distrutta; il **fuoco** la attraversa e colpisce la porta. Abbassata sbarra il passaggio anche a porta aperta o sfondata; distrutta resta piegata e mezza alzata, non sbarra nulla e va riparata. L'accesso è violato solo con porta sfondata **e** nessuna grata abbassata (`gateBreached`).
 
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
