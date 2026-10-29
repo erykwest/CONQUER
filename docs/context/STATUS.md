@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## Comunicazioni feudali — posta e rapporti (branch messages, 29/10/2026)
+
+- **PRESENTE NEL BRANCH, NON SU MAIN:** src/settlement-messages.js introduce lettere datate fra capitale e quattro province esterne astratte, trasporto messaggero/piccione con ETA in giorni simulati, ordini/rapporti/allarmi, inbox, routine 1/7/30 giorni, piccionaie configurabili e requisito di doppia piccionaia. pigeonLoft aggiunto agli slot di torre/Built Section. Persistenza locale e cloud (policies) e reset Nuova mappa.
+- **QA DISPONIBILE, ESECUZIONE DA VERIFICARE:** qa/messages-regression.cjs; CI e prova browser non ancora verificate in questa sessione.
+- **LIMITI DICHIARATI:** province esterne astratte, messaggeri non ancora fisici/intercettabili, ordini consegnati ma non eseguiti da IA provinciale. Contratto: [MESSAGES-SYSTEM](../MESSAGES-SYSTEM.md). Roadmap generale invariata.
+
+
 ## Economia — routine settimanali di uomini e donne (branch `feature/economy-routines`, 28/10/2026; tappa 2 di 5, da `jobmanager`)
 
 - **Codice presente su branch (non ancora `main`):** `src/settlement-population-male.js` (`ConquerMaleRoutines`) e `src/settlement-population-female.js` (`ConquerFemaleRoutines`) di `jobmanager`, collegati in `residentClassPosition`. Uomini adulti L1–L4: lavoro normale lun–ven fino alle 18:00, poi svago (locanda, altrimenti piazza del mercato, altrimenti pozzo) e ritorno a casa entro le 23; sabato mattina mercato, domenica mattina messa, pomeriggi di svago. Donne adulte: L1/L2 lavoro nel lotto fino a mezzogiorno, L3 mercato ogni mattina, L4 svago; sabato mercato, domenica messa; pomeriggi di svago (piazza, pozzo o giardino raggiungibile). Senza mercato o chiesa nessuno viene mandato altrove. Lo svago serale degli uomini ha la precedenza anche sui pastori; operai e taglialegna restano disegnati dal tragitto di cantiere (finisce alle 15). Animazione dei residenti attiva fino alle 23 invece delle 16. Le routine non toccano produzione né consumi.
