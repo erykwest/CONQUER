@@ -5,7 +5,7 @@
 Una lettera è un evento del tempo simulato con origine, destinazione, genere, trasporto, giorno di redazione, ETA e stato. Il destinatario riceve una **istantanea**, non una lettura in tempo reale dell'altro feudo.
 
 - Nodi disponibili: capitale locale (court) e quattro feudi cardinali astratti (north/east/south/west), in coerenza con il sistema diplomatico. Comunicazioni fra due province esterne escluse finché non esiste la World Map.
-- **Messaggero:** disponibile dopo la fondazione; tempo convenzionale minimo 1 giorno, distanza astratta / 22 U-giorno. Non è ancora un'entità fisica intercettabile; la mobilità dei corrieri di ConquerDiplomacy è il futuro punto di integrazione.
+- **Messaggero:** disponibile dopo la fondazione; tempo convenzionale minimo 1 giorno, distanza astratta / 22 U-giorno. Un figurante montato è visibile sulla tratta locale usando ConquerMounted2D e il grafo stradale; non è ancora un'entità fisica intercettabile e il tratto extra-mappa resta astratto.
 - **Piccione:** entrambe le estremità devono avere la piccionaia; /160 U-giorno, minimo 0,25 giorni; con temporale alla partenza il tempo raddoppia. La piccionaia della capitale è una funzione di torre/Built Section completata, e i feudi esterni hanno temporaneamente un flag impostabile nel pannello Rete.
 - **Ordine / rapporto / allarme:** categorie distinte. L'ordine viene consegnato, ma non modifica automaticamente strutture o politiche dei feudi esterni astratti.
 - **Routine:** sorgente, destinazione, frequenza (1/7/30 giorni), canale e sezioni. Un report viene redatto al tempo di simulazione effettivo; salti temporali non generano falsi rapporti arretrati. Errori di rete sono riportati sulla routine e ritentati al ciclo successivo.
@@ -15,10 +15,10 @@ Una lettera è un evento del tempo simulato con origine, destinazione, genere, t
 
 ## Integrazioni e limiti attuali
 
-La World Map, le rotte effettive e l'intercettazione dei messaggeri non sono ancora disponibili. La distanza è convenzionale; la UI non deve dichiarare una consegna fisicamente rappresentata. Occorrerà collegare i nodi a feudi realmente simulati e unificare i movimenti con ConquerDiplomacy/carovane, senza duplicare unità. Non è ancora implementata la risposta del destinatario a un ordine.
+La World Map, le rotte strategiche esterne e l'intercettazione dei messaggeri non sono ancora disponibili. La tratta locale è visualizzata su strada in 2D. La distanza è convenzionale; la UI non deve dichiarare una consegna fisicamente rappresentata. Occorrerà collegare i nodi a feudi realmente simulati e unificare i movimenti con ConquerDiplomacy/carovane, senza duplicare unità. Non è ancora implementata la risposta del destinatario a un ordine.
 
 ## QA
 
 Eseguire: node qa/messages-regression.cjs. Copre vettori, ETA, consegna non anticipata, report immutabili, routine, salti temporali, reset e salvataggi; preservare qa/diplomacy-regression.cjs.
 
-La presenza del file QA non costituisce prova di esecuzione: registrare separatamente i risultati CI o locali.
+CI: [primo run Messages regression](https://github.com/erykwest/CONQUER/actions/runs/40799950473) completato con successo; test rider aggiunto successivamente. La prova browser non è stata eseguita.
