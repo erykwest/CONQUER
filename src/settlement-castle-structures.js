@@ -180,7 +180,8 @@ function drawWatchtowerPalisadeJunction(s,g){
 }
 function drawPalisade(s,preview=false){
   const g=palisadeLayout(s),selected=State.selectedId===s.id;
-  withPalisadeConnectionOcclusion(s,()=>{
+  // Blender stakes, walkway and rampart (settlement-wood3d.js); the drawing below is the fallback.
+  if(!window.ConquerWood3D?.draw(s,preview))withPalisadeConnectionOcclusion(s,()=>{
     if(g.tier===2)drawPalisadeWalkway(s,g);
     else if(g.tier===3)drawPalisadeEarthwork(s,g);
     drawWatchtowerPalisadeJunction(s,g);
@@ -274,7 +275,8 @@ function drawMediumWoodTower(s){
   }
 }
 function drawWoodTower(s,preview=false){
-  if(woodTowerStyle(s)==='watchtower')drawWatchtowerWood(s);
+  if(window.ConquerWood3D?.draw(s,preview)){}       // Blender model (settlement-wood3d.js)
+  else if(woodTowerStyle(s)==='watchtower')drawWatchtowerWood(s);
   else drawMediumWoodTower(s);
   if(State.selectedId===s.id){
     pathPolygon(projectPath(footprintPoints(s),.025),null,'#f4b76f',2);
@@ -979,6 +981,7 @@ function fortificationFrontPiece(owner,kind,center,r,angle,z0,bodyZ,tipZ){
 }
 function palisadeFrontPieces(s){
   if(s.type!=='palisade'||underConstruction(s))return[];
+  if(window.ConquerWood3D?.handles(s))return[];   // the Blender stakes are drawn whole, depth-sorted
   const g=palisadeLayout(s);
   if(linearFrontSide(s)!==g.side)return[];
   const spacing=.205,count=Math.max(1,Math.ceil(g.L/spacing)),pieces=[];
@@ -999,6 +1002,7 @@ function woodTowerFrontEdges(s){
 }
 function woodTowerFrontPieces(s){
   if(!isWoodTower(s)||underConstruction(s))return[];
+  if(window.ConquerWood3D?.handles(s))return[];
   const pieces=[],angle=s.angle||0;
   if(woodTowerStyle(s)==='watchtower'){
     for(const edge of woodTowerFrontEdges(s)){
