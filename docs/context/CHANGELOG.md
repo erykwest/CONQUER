@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
+
+- `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.
+- Correzioni: la sezione scelta resta attiva alla riapertura; il selettore produzione elenca solo i siti del signore (niente linea a 0 per i privati); le barre delle riserve scalano sul massimo tra scorta e target.
+- Aggiornamento live tramite `ConquerGame.subscribe` (throttle 500 ms) più heartbeat di 4 s al posto del ridisegno ogni 1,8 s; scroll orizzontale delle tabelle conservato.
+- Restyling `settlement-panels.css`: navigazione su una riga scorrevole con badge avvisi, intestazione di sezione, KPI con accento di stato (ok/attenzione/critico), card larghe per grafici e tabelle, intestazioni tabella fisse. Cache `?v=panels-3`.
+- QA: `qa/panels-regression.cjs` (+ sezione persistente e selettore solo signore) e `qa/economy-panel-history-regression.cjs` PASS in locale; verifica visiva nel browser con dati dimostrativi, nessun errore in console. CI non ancora eseguita su questo commit.
 ## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
 
 - Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.

@@ -80,6 +80,12 @@ assert.deepEqual(x.calls[2],['transfer','farm-1','private']);
 x.tab('diplomacy');
 x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-action="caravans"]'?{}:null}});
 assert.deepEqual(x.calls[3],['caravans']);
+// Reopening keeps the selected section; the estate picker lists only lord sites.
+x.context.window.ConquerPanels.open();
+assert.match(x.elements.controlBody.innerHTML,/Diplomazia/);
+x.tab('estate');
+assert.match(x.elements.controlBody.innerHTML,/<option value="farm-1"/);
+assert.doesNotMatch(x.elements.controlBody.innerHTML,/<option value="farm-1"[^>]*>[^<]*·[^<]*<\/option><option value="mill/);
 const y=fixture(false);
 y.context.window.ConquerPanels.open();
 assert.match(y.elements.controlBody.innerHTML,/non fondato/);
