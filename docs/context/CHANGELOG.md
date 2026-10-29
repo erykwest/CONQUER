@@ -5,13 +5,13 @@
 - Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
 - Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
 - Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
-- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+- QA 29/10: PASS 8/8 check GitHub Actions su `38ea7ab`, inclusi regressione store 26 settimane e screenshot Chromium 9 immagini da fixture dichiarata demo. [Run](https://github.com/erykwest/CONQUER/actions/runs/40800506799). Non ancora su main.
 
 ## 2026-10-29 — Centro di controllo degli insediamenti (branch `panels`)
 
 - Creati nove pannelli sotto Profilo (generale, popolazione, economia, proprietà, scorte, militare, cantieri, diplomazia, avvisi), CSS responsive, grafici alimentari da storico settimanale e controlli già supportati dal motore.
 - Separati esplicitamente magazzino economico e scorte assedio; organico presente e capacità edifici; valori effettivi e placeholder futuri. Aggiunto test fixture `qa/panels-regression.cjs` e design [management-panels](../management-panels.md).
-- Stato: codice sulla branch, non su main. Parsing JS e smoke fixture eseguiti, suite Node/CI e visual QA in browser ancora richiesti. ROADMAP invariata: pannelli di osservazione, non nuove regole economiche.
+- Stato: codice sulla branch, non su main. Parsing JS, regressioni Node/CI e acquisizione Chromium PASS; revisione visiva dell'utente ancora attesa. ROADMAP invariata: pannelli di osservazione, non nuove regole economiche.
 
 ## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
 
