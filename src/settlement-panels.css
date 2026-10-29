@@ -1,0 +1,36 @@
+/* Settlement management: data-dense parchment dashboard inside the existing profile overlay. */
+#profileControl{padding:14px 18px}
+.cp-nav{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:15px;border-bottom:1px solid var(--line)}
+.cp-nav button{font-size:11px;font-weight:800;padding:8px 12px;border:1px solid var(--line-strong);border-radius:6px}
+.cp-nav button.active{background:#58412a;border-color:var(--accent);color:#ffe3ae}
+.cp-body{display:grid;gap:14px}
+.cp-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.cp-kpi{display:flex;flex-direction:column;gap:6px;padding:13px;background:var(--sunken);border:1px solid var(--line);border-radius:8px;min-width:0}
+.cp-kpi span{font-size:11px;color:var(--muted)}.cp-kpi strong{font-size:25px;line-height:1.05;color:#f3d29b;font-variant-numeric:tabular-nums}
+.cp-kpi small{font-size:10px;color:var(--muted);min-height:1em}
+.cp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cp-card{padding:14px;background:rgba(17,13,10,.42);border:1px solid var(--line);border-radius:9px;min-width:0}
+.cp-card h3{font-size:12px;margin:0 0 12px;color:#e7c797;letter-spacing:.055em}
+.cp-foot{font-size:11px;line-height:1.5;color:var(--muted);margin:12px 0 0}
+.cp-empty{font-size:12px;color:var(--muted);line-height:1.6;margin:4px 0}
+.cp-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:12px}
+.cp-line b{font-variant-numeric:tabular-nums}
+.cp-bars{display:grid;gap:12px}
+.cp-bar{display:grid;grid-template-columns:96px minmax(0,1fr) 56px;align-items:center;gap:10px;font-size:11px}
+.cp-bar>span{overflow-wrap:anywhere}
+.cp-bar>b{text-align:right;font-variant-numeric:tabular-nums}
+.cp-bar>i,.cp-site>i{height:9px;display:block;background:#30271f;border:1px solid #69533b;border-radius:5px;overflow:hidden}
+.cp-bar em,.cp-site em{display:block;height:100%;background:linear-gradient(90deg,#809867,#d9c785);border-radius:5px}
+.cp-graph{margin:4px 0}.cp-graph svg{width:100%;height:auto;display:block;overflow:visible}
+.cp-graph figcaption{font-size:10px;color:var(--muted);line-height:1.5}
+.cp-input{display:flex;flex-direction:column;gap:8px;margin:10px 0;font-size:12px}
+.cp-input input,.cp-input select{width:100%;max-width:360px}
+.cp-scroll{max-width:100%;overflow-x:auto}
+.cp-table{width:100%;border-collapse:collapse;font-size:11px;text-align:left}
+.cp-table th,.cp-table td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.cp-table th{color:#dcc09e}.cp-table select{font-size:11px;min-width:64px}
+.cp-table button,.cp-card>button{padding:6px 10px;font-size:11px}
+.cp-site{margin:12px 0}.cp-site>div{font-size:12px;margin-bottom:6px}
+.cp-warn{padding:10px;background:rgba(185,101,54,.12);border-left:3px solid #d29a64;font-size:12px;line-height:1.5}
+@media(max-width:760px){.cp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cp-grid{grid-template-columns:1fr}.cp-bar{grid-template-columns:70px minmax(0,1fr) 44px;gap:6px}.cp-nav button{padding:7px 8px}.cp-kpi strong{font-size:21px}}
+@media(max-width:460px){.cp-kpis{grid-template-columns:1fr 1fr}.cp-kpi{padding:9px}.cp-kpi strong{font-size:19px}}
