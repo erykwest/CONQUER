@@ -5,9 +5,15 @@
 - Nuova variante della sezione costruita: larga 2U, H2 di default, solo piano terra a doppia altezza, per sale comuni, cappelle e sale del trono. Finestrone a lancetta modellato in Blender, 5 contrafforti a due stadi tra le lancette, 2 camini, cutaway a piano unico (arredi della libreria cutaway di main). Stato e prove in [STATUS](STATUS.md).
 - Fix: i contrafforti delle torri in pietra usano lo stesso profilo a gradoni e non attraversano più le facciate dal retro.
 - ROADMAP invariata. DECISIONS invariate: la variante segue il contratto esistente «varianti, non tipi duplicati» (`span` sul tipo `built`).
+
+## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
+
+- Uomini e donne L1–L4 hanno la settimana di `jobmanager`: svago maschile dalle 18, mercato il sabato e messa la domenica, lavoro femminile nei lotti. Solo visuale. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-052 in DECISIONS.
+
 ## 2026-10-28 — Economia, tappa 1: lavoro L1 e cantieri (branch `feature/economy-labour`)
 
 - Portata su `main` la parte economica di #55 (bilancio settimanale, fondazione con 4 L1, Builder che paga dal castello, cantieri a giornate-operaio pagati dal signore) unita a `jobmanager` (pastori protetti, taglio legna, razioni, felicità per ceto) in un solo allocatore L1. Stato e prove in [STATUS](STATUS.md). Nuove decisioni D-047…D-051 in [DECISIONS](DECISIONS.md#economia--lavoro-l1-unico-28102026); ROADMAP invariata.
+
 ## 2026-10-28 — Rendering: niente più picchi dal terreno 3D e dalla nebbia (branch `perf/render-spikes-v2`)
 
 - Una modifica a strade, campi, case o lotti ricuoce solo le tessere da 512 px toccate, una per frame, invece delle due texture 4096² del terreno. Terraforming, stagione, rilievo e foreste rifanno ancora tutto. La nebbia di combattimento rifà il raycast ogni 12 s solo se il contenuto è cambiato. La telemetria remota dice quale renderer è attivo (evento `RENDERER`). Misure e confronti in [STATUS](STATUS.md#rendering--picchi-del-terreno-3d-e-della-nebbia-branch-perfrender-spikes-v2-28102026): P95 del frame dopo una modifica dimezzato (115 → 56 ms).

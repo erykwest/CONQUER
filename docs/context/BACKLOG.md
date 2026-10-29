@@ -6,9 +6,10 @@
 - **ANCORA APERTO:** effetti di gioco specifici delle sale (per ora valgono le regole generiche delle stanze), figure all'interno nel cutaway (cerimonie, banchetti, udienze), contrafforti nell'impronta di collisione/piazzamento.
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
-- **TAPPA 1 SU BRANCH `feature/economy-labour`, NON MERGE:** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
+- **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
 - **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
-- **DA FARE:** tappa 2 routine settimanali uomini/donne; tappa 3 commercio L3/L4 + `src/economy/*`; tappa 4 convogli unificati con `ConquerDiplomacy`; tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
+- **TAPPA 2 SU BRANCH `feature/economy-routines`, NON MERGE:** routine settimanali di uomini e donne.
+- **DA FARE:** tappa 3 commercio L3/L4 + `src/economy/*`; tappa 4 convogli unificati con `ConquerDiplomacy`; tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.
