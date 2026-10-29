@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const moduleText=fs.readFileSync(path.join(root,'src/settlement-messages.js'),'utf8');
 function fixture(){
-  const State={clock:{day:0},seed:17,village:{founded:true,name:'Roccaluce'},
+  const State={clock:{day:0},view:{scale:1},seed:17,village:{founded:true,name:'Roccaluce'},
     structures:[{type:'tower',x:100,y:100,functions:['pigeonLoft'],destroyed:false}],
     resources:{gold:120,food:42,wood:11,stone:22,metal:2,population:15},
     economy:{castleGold:90,castle:{food:37,wood:10,stone:20,metal:1}},messages:null};
