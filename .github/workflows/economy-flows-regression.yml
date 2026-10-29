@@ -7,6 +7,7 @@ on:
       - 'src/settlement-panels.css'
       - 'src/settlement-heraldry.js'
       - 'qa/panels-regression.cjs'
+      - 'qa/economy-panel-history-regression.cjs'
       - 'index.html'
       - 'src/settlement-population-figures.js'
       - 'src/ui/**'
@@ -21,13 +22,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Economy and construction-worker regressions
         run: |
           node qa/panels-regression.cjs
+          node qa/economy-panel-history-regression.cjs
           node qa/economy-regression.cjs
           node qa/economy-industries-regression.cjs
           node qa/economy-balance-regression.cjs
