@@ -4,8 +4,9 @@
  * All geometry, terrain passability and siege occupancy must come from adapters.
  */
 export const CIRCLE_STATES = Object.freeze({
-  SECURE: 'secure', ALERT: 'alert', THREATENED: 'threatened',
-  INFILTRATED: 'infiltrated', CONTESTED: 'contested', CAPTURED: 'captured'
+  UNASSESSED: 'unassessed', SECURE: 'secure', ALERT: 'alert',
+  THREATENED: 'threatened', INFILTRATED: 'infiltrated',
+  INVADED: 'invaded', CONTESTED: 'contested', CAPTURED: 'captured'
 });
 export const CIRCLE_BARRIER_KINDS = Object.freeze({
   FORTIFICATION: 'fortification', NATURAL: 'natural'
