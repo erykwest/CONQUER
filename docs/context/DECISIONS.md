@@ -2,7 +2,7 @@
 
 ## D-PANELS-01 · Centro di controllo del feudo (29/10/2026)
 
-**DESIGN e codice sulla branch \`panels\`, non su \`main\`:** i pannelli di controllo sono un livello di osservazione/gestione nel Profilo della partita, non uno stato economico parallelo. Nove aree (Generale, Popolazione, Economia, Proprietà, Scorte, Militare, Cantieri, Diplomazia, Avvisi), usando \`ConquerGame.read\` e comandi del motore. Lo storico è mostrato solo dove esiste (\`balanceHistory\` mercato settimanale); nessuna serie fittizia. Distinguere scorte economia/Siege e numero di soldati effettivi/capienza caserme. **Festività, diplomazia avanzata e leve reali restano TBD**, come descritto in [management-panels](../management-panels.md). Nessuna modifica alle priorità della roadmap M0–M5.
+**DESIGN e codice sulla branch `panels`, non su `main`:** i pannelli di controllo sono un livello di osservazione/gestione nel Profilo della partita, non uno stato economico parallelo. Nove aree (Generale, Popolazione, Economia, Proprietà, Scorte, Militare, Cantieri, Diplomazia, Avvisi), usando `ConquerGame.read` e comandi del motore. Lo storico è mostrato solo dove esiste (`balanceHistory` mercato settimanale); nessuna serie fittizia. Distinguere scorte economia/Siege e numero di soldati effettivi/capienza caserme. **Festività, diplomazia avanzata e leve reali restano TBD**, come descritto in [management-panels](../management-panels.md). Nessuna modifica alle priorità della roadmap M0–M5.
 
 ## Hardening strade e WebGL (23/10/2026)
 
