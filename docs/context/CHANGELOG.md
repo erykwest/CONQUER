@@ -404,3 +404,9 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 - Motore di riconoscimento topologico indipendente dalla navigazione: rasterizza mura/palizzate/torri/porte/built sections realmente costruite e ostacoli naturali effettivamente invalicabili. Identifica cerchie e compartimenti laterali, profondità, portali e ingresso del Mastio. Tiene aperta la distinzione tra accesso e conquista.
 - Hook runtime `window.ConquerCircle`, caricamento in `index.html`, invalidazione su variazioni topologiche e cantieri completati, test topologia 11/11 e adapter runtime 5/5 PASS nel harness JavaScript isolato.
 - Limitazioni: non cablato a IA civile, occupazione militare, scorte economiche reali o overlay; test browser/Node CLI non eseguiti; `main` invariata.
+
+
+### 2026-10-29 — /circle — stati militari dei compartimenti (branch `circle`)
+- Introdotto `src/circle/defensive-control.mjs`, valutatore deterministico di `secure`/`alert`/`threatened`/`infiltrated`/`invaded`/`contested` basato su nemici e difensori presenti realmente, inclusi combattimenti sui camminamenti. `captured` non viene attribuito automaticamente.
+- Collegato a `ConquerCombat` via `window.ConquerCircle`; aggiornamenti periodici e su modifiche esplicite, transizioni evento, riepilogo nel pannello Combat. Corretta sincronizzazione quando si cancellano i nemici o si disegnano allarmi a gioco fermo. Allineato il vocabolario degli stati dello skeleton.
+- Verifiche: 39/39 test isolati PASS e parsing JS dei moduli runtime; Node CLI e prova browser NON eseguiti. Nessuna modifica a `main`.
