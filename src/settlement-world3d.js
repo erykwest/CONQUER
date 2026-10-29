@@ -1363,7 +1363,8 @@
       S.groundItems=items;S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
     }
     pumpGroundTiles(gl);
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut].join('|');
+    // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');

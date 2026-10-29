@@ -34,14 +34,17 @@
     }
     expanded.set(key,out);return out;
   }
-  // Palette with roofs, exposed decks and merlon tops whitened in winter.
+  // Palette with roofs, exposed decks and merlon tops whitened in winter, and the flags and
+  // drapes in the realm's heraldry (as the cutaway furniture and the stone gate banners).
+  const heraldry=()=>{const h=State.heraldry||{};
+    return{heraldA:h.c1||(typeof REIGN_COLOR_1==='string'?REIGN_COLOR_1:'#b53636'),heraldB:h.c2||(typeof REIGN_COLOR_2==='string'?REIGN_COLOR_2:'#355fb8')}};
   let palCache=null;
   function palette(){
-    const data=DATA(),winter=State.season==='winter';
-    if(palCache&&palCache.data===data&&palCache.winter===winter)return palCache.pal;
+    const data=DATA(),winter=State.season==='winter',her=heraldry(),herKey=her.heraldA+her.heraldB;
+    if(palCache&&palCache.data===data&&palCache.winter===winter&&palCache.herKey===herKey)return palCache.pal;
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];
-      return winter&&k.startsWith('roof')?WINTER[/Dark$|Ridge$/.test(k)?1:0]:hex});
-    palCache={data,winter,pal};return pal;
+      return her[k]||(winter&&k.startsWith('roof')?WINTER[/Dark$|Ridge$/.test(k)?1:0]:hex)});
+    palCache={data,winter,herKey,pal};return pal;
   }
   // Model parts into a {pos,col} mesh. place: {x,y,angle,sx,sy,sz}; only = part names to keep.
   function addModel(mesh,key,place,z0,only=null){
@@ -177,7 +180,7 @@
   function geometry(s){
     const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.w,s.h,s.size,
       s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length,
-      cutaway(s)?'cut'+[...openSides(s)].join(','):''].join('|');
+      cutaway(s)?'cut'+[...openSides(s)].join(','):'',Object.values(heraldry()).join('')].join('|');
     const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
     let geo;
     if(s.type==='palisade')geo=palisade(s);

@@ -41,7 +41,8 @@ console.log('PASS '+Object.keys(M.models).length+' timber models, keys by style 
 // Heights (structureHeight) and footprints of the 2.5D drawing.
 function bounds(key){
   let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity,z1=-Infinity,z0=Infinity;
-  for(const p of Object.values(M.models[key].parts))for(let i=0;i<p.p.length;i+=3){
+  // The flag pole rises above the roof and is not part of structureHeight.
+  for(const [name,p] of Object.entries(M.models[key].parts))if(name!=='flag')for(let i=0;i<p.p.length;i+=3){
     x0=Math.min(x0,p.p[i]);x1=Math.max(x1,p.p[i]);y0=Math.min(y0,p.p[i+1]);y1=Math.max(y1,p.p[i+1]);z0=Math.min(z0,p.p[i+2]);z1=Math.max(z1,p.p[i+2]);
   }
   return{x0,x1,y0,y1,z0,z1};
@@ -84,6 +85,16 @@ const roof=M.palette[M.paletteKeys.indexOf('roofShingle')],log=M.palette[M.palet
 assert.ok(summer.has(roof)&&!winter.has(roof),'shingle roofs turn white in winter');
 assert.ok(winter.has(log),'timber keeps its colour');
 console.log('PASS winter roofs');
+
+// Flags (roofed palisade tower, watchtower) and the gate's two drapes wear the realm's heraldry.
+assert.ok(M.models.watchtower.parts.flag&&M.models.palisadeTower_roofed.parts.flag,'roofed towers fly a flag');
+assert.ok(!M.models.palisadeTower_open.parts.flag,'the open tower has no roof to fly it from');
+assert.ok(M.models.woodGate.parts.banners,'the timber gate has its drapes');
+State.heraldry={c1:'#123456',c2:'#abcdef'};
+const her=new Set(W.geometry({...tower,id:'her'}).mesh.col);
+assert.ok(her.has('#123456')&&her.has('#abcdef'),'flag in the heraldry colours');
+State.heraldry=null;
+console.log('PASS flags and drapes in the heraldry');
 
 // World renderer wiring: timber leaves the per-frame 2.5D residue; construction sites are
 // assembled from the same models.

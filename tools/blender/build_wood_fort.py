@@ -31,7 +31,9 @@ COLORS = {
     'log': '#795134', 'logEnd': '#8a6342', 'cut': '#c29a6b', 'cutDark': '#b68a5e',
     'plank': '#8b6845', 'plankDark': '#765639', 'beam': '#6e4b30', 'brace': '#7a5537',
     'ladder': '#9a7550', 'door': '#4f3220', 'doorPlank': '#5f3e27', 'iron': '#3b3936',
-    'rope': '#a88d62', 'dark': '#1e1712',
+    'rope': '#a88d62', 'dark': '#1e1712', 'pole': '#5f4630',
+    # the realm's heraldry, replaced in game (State.heraldry c1 / c2)
+    'heraldA': '#b53636', 'heraldB': '#355fb8',
     # winter: white
     # Kept clear of the dark ground tones: the Asset Lab cuts out pixels close to the empty view.
     'roofShingle': '#654535', 'roofShingleDark': '#5a3d2e', 'roofRidge': '#7a5640', 'roofDeck': '#8b6845',
@@ -242,6 +244,7 @@ def watchtower(mdl):
     box(roof, 0, 0, eave - .05, 1.12, 1.12, .05, 'beam', 'beam')    # wall plate
     hip_roof(roof, .64, eave, apex)
     mdl.done('roof', roof)
+    flag(mdl, apex + .1, pole_h=.42, length=.28, height=.16)
 
 
 def palisade_tower(mdl, roofed):
@@ -315,6 +318,44 @@ def palisade_tower(mdl, roofed):
     else:
         ladder(top, -.3, .3, deck1 - .62, deck1 + .25, axis_y=False, w=.14, rungs=3)
     mdl.done('top', top)
+    if roofed:
+        flag(mdl, apex + .1)
+
+
+def cloth(p, pts, key):
+    """A thin cloth panel through world points (U), drawn as one quad strip."""
+    p.quads([m(*q) for q in pts], [tuple(range(len(pts)))], key)
+
+
+def flag(mdl, z0, pole_h=.5, length=.34, height=.2):
+    """Pole on the roof apex with a waving two-colour heraldic flag (part 'flag')."""
+    f = mdl.part('flag')
+    log(f, 0, 0, .018, z0, z0 + pole_h, 'pole', top='iron')
+    zt = z0 + pole_h - .02
+    zm, zb = zt - height / 2, zt - height
+    # Four vertical folds along +x, alternating a little in y; top half A, bottom half B.
+    xs = [0, length * .3, length * .62, length]
+    ys = [0, .025, -.02, .03]
+    for k in range(3):
+        a, b = (xs[k] + .018, ys[k]), (xs[k + 1] + .018, ys[k + 1])
+        cloth(f, [(a[0], a[1], zt), (b[0], b[1], zt - .01 * k), (b[0], b[1], zm - .01 * k), (a[0], a[1], zm)], 'heraldA')
+        cloth(f, [(a[0], a[1], zm), (b[0], b[1], zm - .01 * k), (b[0], b[1], zb - .01 * k), (a[0], a[1], zb)], 'heraldB')
+    mdl.done('flag', f)
+
+
+def drapes(mdl, x, ys, top, length=.72, w=.2):
+    """Heraldic drapes hung from an iron rod on a facade at local x (part 'banners'):
+    field A with a B stripe down the middle, ending in a point."""
+    b = mdl.part('banners')
+    for y in ys:
+        beam(b, (x, y - w / 2 - .03, top), (x, y + w / 2 + .03, top), .02, .02, 'iron')
+        bot, tip = top - length, top - length - .1
+        cloth(b, [(x, y - w / 2, top), (x, y - w / 6, top), (x, y - w / 6, bot - .033), (x, y - w / 2, bot)], 'heraldA')
+        cloth(b, [(x, y + w / 6, top), (x, y + w / 2, top), (x, y + w / 2, bot), (x, y + w / 6, bot - .033)], 'heraldA')
+        cloth(b, [(x, y - w / 6, top), (x, y + w / 6, top), (x, y + w / 6, bot - .033), (x, y, tip), (x, y - w / 6, bot - .033)], 'heraldB')
+        cloth(b, [(x, y - w / 2, bot), (x, y - w / 6, bot - .033), (x, y, tip)], 'heraldA')
+        cloth(b, [(x, y + w / 6, bot - .033), (x, y + w / 2, bot), (x, y, tip)], 'heraldA')
+    mdl.done('banners', b)
 
 
 def stake_parapet(p, hx, hy, z0, body, tip, r=.072, step=.245):
@@ -371,6 +412,8 @@ def wood_gate(mdl):
         box(dk, x, 0, roof_top, .008, h, .004, 'plankDark')
     stake_parapet(dk, half_x - .01, half_y - .01, roof_top, 1.80, 1.96, r=.066)
     mdl.done('deck', dk)
+    # Two heraldic drapes flanking the door on the outer (+x) front, under the fighting deck.
+    drapes(mdl, half_x + .045, (-.62, .62), body_top - .05)
 
 
 BUILD = [('stake', stake), ('watchtower', watchtower),
