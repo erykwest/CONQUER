@@ -466,3 +466,9 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 
 ### CIRCLE — 2026-10-28
 2026-10-28 — CIRCLE skeleton (branch `circle`): domain states, barrier eligibility, compartment/depot contracts, deep-first storage, capture ledger and civilian fallback added. TODO: actual geometry loops, natural terrain impassability, gate/access orientation, siege control, civilian pathfinding, persistence, runtime integration, visual and automated regression.
+
+
+### CIRCLE — avanzamento 2026-10-29 (branch `circle`)
+- **Fatto nel branch:** detector di compartimenti chiusi (fortificazioni complete, scarpate ripide, mare/montagne, terraforming), due settori laterali, cerchie annidate, taglio brecce, accessi gate aperto/chiuso, ponti praticabili, profondità e collegamenti, API `window.ConquerCircle`.
+- **Aperto:** verifica visuale e prestazionale su scenari reali; interfaccia debug/overlay; identità persistente dei compartimenti; aggancio a controllo militare/ingressi nemici (scale, torri d'assedio); scelta sicura delle destinazioni di fuga e relativa IA; accessi lato costruzioni, deposito interno per built senza ingresso certo; scorte fisiche e produzione settoriale; QA end-to-end e protezione regressioni di navigazione.
+- **Vincolo:** edifici civili, recinti e siepi non chiudono compartimenti; le zone dipinte white/yellow/green non vengono sostituite. Le brecce non implicano automaticamente conquista.
