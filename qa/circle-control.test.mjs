@@ -106,3 +106,18 @@ test('a defending wall archer keeps a ground invasion contested',()=>{
     wallSectors:()=>['west']});
   assert.equal(out.compartments[0].state,'contested');
 });
+
+test('a breached historical compartment remains compromised without enemies',()=>{
+  const broken={...sector('west'),breached:true};
+  const out=assess({compartments:[broken],alert:true});
+  assert.equal(out.compartments[0].state,'compromised');
+  assert.equal(out.compartments[0].safe,false);
+  assert.equal(out.summary.compromised,1);
+});
+test('enemy entry turns compromised territory invaded, retreat alone never recertifies it safe',()=>{
+  const broken={...sector('west'),breached:true};
+  const enemy=assess({compartments:[broken],hostiles:[{x:4,y:4}]});
+  assert.equal(enemy.compartments[0].state,'invaded');
+  const gone=assess({compartments:[broken]});
+  assert.equal(gone.compartments[0].state,'compromised');
+});
