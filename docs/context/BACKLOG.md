@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — parapetto delle merlature (branch `feature/battlement-parapet`, 29/10/2026)
+
+- **IN CORSO su branch, NON MERGE:** parapetto continuo tra i merli di torri, porte e mura in pietra; più merli sulle torri tonde. Dettagli in [STATUS](STATUS.md).
+- **Aperto:** la firma 12×12 dell'audit del Lab non vede dettagli di questa scala (0 render cambiati): valutare una griglia più fine o un ritaglio sulla corona.
+
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
