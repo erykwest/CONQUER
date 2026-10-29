@@ -183,6 +183,7 @@ function deleteStructure(id){
     State.combat=null;window.ConquerCombat?.restore(null);
     const borderEntries=ensureBorderEntrySelection();
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
+    window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
   if(target.type==='tower')window.ConquerSiege?.syncAutoMastio?.();

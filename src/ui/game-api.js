@@ -145,7 +145,8 @@
 
     // ---- Gestisci ----
     setPolicy: (key, value) => {
-      if (!['tax', 'rations', 'levy'].includes(key)) return false;
+      if (key === 'rations') { const ok = window.ConquerEconomy?.setRations(value); if (ok) scheduleLocalSave(200); return !!ok; }
+      if (!['tax', 'levy'].includes(key)) return false;
       State.policies[key] = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
       const slider = document.getElementById(key);
       if (slider) slider.value = State.policies[key];
@@ -169,6 +170,8 @@
       return !!out.accepted;
     },
     saveCloud: () => press('#saveBtn'),
+    openCaravans: () => { window.ConquerDiplomacy?.openCaravans(); emit(); },
+    recruitKnight: () => { const ok = !!window.ConquerCombat?.recruitKnight?.(); emit(); return ok; },
 
     // ---- Difendi: the combat module's own controls stay the single implementation ----
     defense: (action, arg) => {
@@ -192,6 +195,11 @@
   const ECON_GOODS = ['food', 'wood', 'stone', 'metal', 'equipment', 'luxury'];
   const read = {
     defense() { return window.ConquerCombat?.uiState?.() || null; },
+    knights() { return window.ConquerCombat?.knightRecruitment?.() || null; },
+    caravans() {
+      const d = window.ConquerDiplomacy;
+      return d ? d.state().caravans.filter(c => c.status !== 'completed').length : null;
+    },
     village() {
       return {
         name: State.village?.name || null, founded: !!State.village?.founded, seed: State.seed,
@@ -208,6 +216,8 @@
         .map(([id, a]) => ({ id, type: a.type, owner: a.owner, value: econ.assetValue(a), workers: staff[id] || 0,
           profit: a.profit ?? null, abandoned: !!a.abandoned }));
       return {
+        happiness: s.happiness, rationMode: s.rationMode, castleFoodIssued: s.castleFoodIssued,
+        jobs: econ.jobSummary?.() || null,
         welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
         goods: (econ.GOODS || ECON_GOODS).map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],
           share: e.saleShare[g], reserve: e.target[g] })),

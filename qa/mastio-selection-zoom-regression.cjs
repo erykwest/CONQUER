@@ -11,7 +11,7 @@ const population=['population','population-fields','population-navigation','popu
 const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>fs.readFileSync(root+'settlement-'+part+'.js','utf8')).join('\n');
 
 const capacitySrc=castle.match(/function functionCapacity\(s\)\{[\s\S]*?\n\}/)?.[0];
-const normaliseSrc=castle.match(/function normalizeFunctions\(s\)\{[^\n]*\}/)?.[0];
+const normaliseSrc=castle.match(/function normalizeFunctions\(s\)\{[\s\S]*?\n\}/)?.[0];
 assert.ok(capacitySrc&&normaliseSrc,'Use actual castle room allocation');
 function fixture(){
   const State={clock:{day:10},structures:[],siege:null,heraldry:{}},events=[];
@@ -102,7 +102,7 @@ assert.match(castle,/for\(const w of plan\.windows\)if\(facing\(w\.p,w\.normal\)
 console.log('PASS civilians, troops and windows zoom with full world projection');
 
 assert.match(render,/function drawMastioWindowDrape\(/);
-assert.match(render,/if\(!s\.isMastio\|\|!edge\)return/);
+assert.match(render,/if\(!s\.isMastio\|\|!edge\|\|structureCutaway\(s\)\)return/);
 assert.match(render,/s\.isMastio\)rows\.push\(\{floor:1,z:1\.53\}\)/);
 assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge/);
 assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge,row\.z/);

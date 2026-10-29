@@ -262,7 +262,7 @@
   function addPieces(m,which){
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
-    for(const s of castleParts()){
+    for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
       withStructureVisualMaterial(s,()=>{
       const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){
