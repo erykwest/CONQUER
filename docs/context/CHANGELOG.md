@@ -2,8 +2,8 @@
 
 ## 2026-10-29 — Comunicazioni feudali (branch messages)
 
-- Aggiunti ConquerMessages, inbox, invio manuale e routine, piccionaia assegnabile a torre/Built Section, tempi simulati, snapshot di partenza, persistenza locale/cloud e reset.
-- Nuova QA qa/messages-regression.cjs (disponibile, non ancora eseguita); contratto [MESSAGES-SYSTEM](../MESSAGES-SYSTEM.md). Main non modificato.
+- Aggiunti ConquerMessages, inbox, invio manuale e routine, piccionaia assegnabile a torre/Built Section, tempi simulati, messaggeri visualizzati in 2D sulle strade locali, snapshot di partenza, persistenza locale/cloud e reset.
+- Nuova QA qa/messages-regression.cjs (GitHub Actions primo run passato; QA visuale browser da eseguire); contratto [MESSAGES-SYSTEM](../MESSAGES-SYSTEM.md). Main non modificato.
 
 
 ## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
