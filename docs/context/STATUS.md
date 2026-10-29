@@ -459,3 +459,8 @@ Aggiornare questo livello dopo ogni PR che modifica una milestone, non dopo ogni
 - **SALVATAGGI:** `State.siege.circle.captures` e `capturedRoomIds` attraversano `ConquerSiege.restore`, persistenza local/cloud preesistente e ricostruzione dei compartimenti breach/ghost. I record di conquista ancora attivi non vengono eliminati dai limiti della cronologia.
 - **QA:** **65/65** test comportamentali PASS in harness JavaScript isolato sul codice GitHub: topologia, controllo bellico, inventari, adapter, modulo vero `ConquerSiege` e casi combinati `ConquerSiege`+`ConquerCircle` con capture/reload/reclaim. Parsing JS dei moduli runtime PASS. **Node CLI nativo, CI e browser/WebGL/partita interattiva non eseguiti** (network GitHub non raggiungibile dal runtime di collaudo). `main` NON modificata.
 - **Aperto:** ripiegamento automatico civili per compartimenti, economia/produttività residua nei settori sicuri, UI di gestione dei depositi e bottino lato attaccante, test browser e profiling; ledger di depositi deterministico anziché fisicamente movimentato dai singoli popolani.
+
+
+### CIRCLE — CI eseguita su GitHub Actions (2026-10-29)
+- **SUPERATA:** workflow [CIRCLE regression, run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993), commit codice `68533977ff48b200061828141f9eafbee9b0570f`. Test eseguiti con Node.js 22 su GitHub: **65 test, 65 PASS, 0 FAIL, 0 SKIP**; controllo sintassi JS PASS. Questo *sostituisce* la precedente nota "Node CLI non eseguito".
+- **Non ancora verificati:** esecuzione browser WebGL2/Canvas, assedio manuale in partita con molti compartimenti, profiling sul numero di strutture e popolani. `main` resta intatto.  
