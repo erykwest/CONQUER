@@ -470,7 +470,8 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
   const borderEntries=ensureBorderEntrySelection();
-  State.village={...State.village,name,wellId:well.id,founded:true,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  State.village={...State.village,name,wellId:well.id,founded:true,foundingWorkers:4,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  window.ConquerEconomy?.foundingCharter?.(well.id);
   closeVillageModal();
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
@@ -489,4 +490,4 @@ document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
-['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
+['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});

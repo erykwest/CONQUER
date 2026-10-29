@@ -1,0 +1,37 @@
+name: Economy flows regression
+on:
+  pull_request:
+    paths:
+      - 'src/settlement-economy.js'
+      - 'src/settlement-population-figures.js'
+      - 'src/ui/**'
+      - 'qa/labor*.cjs'
+      - 'qa/economy*.cjs'
+      - 'qa/construction*.cjs'
+      - 'src/settlement-core.js'
+      - '.github/workflows/economy-flows-regression.yml'
+  workflow_dispatch:
+jobs:
+  economic-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Economy and construction-worker regressions
+        run: |
+          node qa/economy-regression.cjs
+          node qa/economy-industries-regression.cjs
+          node qa/economy-balance-regression.cjs
+          node qa/economy-builder-integration.cjs
+          node qa/construction-workers-regression.cjs
+          node qa/construction-payroll-regression.cjs
+          node qa/construction-commute-regression.cjs
+          node qa/labor-jobs-regression.cjs
+          node qa/economy-rations-regression.cjs
+          node qa/save-safety-regression.cjs
+          node qa/founding-regression.cjs
+          node qa/builder-placement-regression.cjs
+          node qa/refactor-app-population-regression.cjs
