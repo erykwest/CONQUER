@@ -95,6 +95,19 @@
       card('Bilancio alimentare',foodChart(d))+'</div>'+
       card('Mercato, prezzi e vendite',table,'La domanda esterna non viene generata automaticamente.');
   }
+
+  function estate(d) {
+    const items=d.economy?.activities||[],lord=items.filter(a=>a.owner==='lord');
+    const total=lord.reduce((n,a)=>n+num(a.value),0);
+    const table=items.length?'<div class="cp-scroll"><table class="cp-table"><thead><tr><th>Attività</th><th>Proprietà</th><th>Lav.</th><th>Valore</th><th>Utile annuo</th><th>Azione</th></tr></thead><tbody>'+
+      items.map(a=>'<tr><th>'+esc(a.type)+'</th><td>'+esc(a.owner==='lord'?'Signore':'Privati L4')+'</td><td>'+fmt(a.workers)+'</td><td>'+fmt(a.value)+'</td><td>'+fmt(a.profit)+'</td><td><button type="button" data-cp-transfer="'+esc(a.id)+'" data-cp-owner="'+(a.owner==='lord'?'private':'lord')+'">'+(a.owner==='lord'?'Vendi':'Acquista')+'</button></td></tr>').join('')+
+      '</tbody></table></div>':empty('Nessuna attività registrata.');
+    return '<div class="cp-kpis">'+kpi('Proprietà signore',fmt(lord.length))+
+      kpi('Imprese private',fmt(items.length-lord.length))+
+      kpi('Valore proprietà',fmt(total),'Oro stimato')+'</div>'+
+      card('Titolarità delle attività',bars([['Signore',lord.length],['Settore L4',items.length-lord.length]],Math.max(1,items.length)))+
+      card('Produzione e proprietà',table,'Utili annui solo dopo la chiusura del primo esercizio. Compravendite gestite dal ledger economico.');
+  }
   function render() {
     const root=$('profileControl'); if(!root || root.hidden)return;
     const d=get();
@@ -105,7 +118,7 @@
       (typeof view==='function'?view(d):empty('Pannello in preparazione.'));
   }
   function open(){current='general';render();}
-  const views={general,people,economy};
+  const views={general,people,economy,estate};
   const root=$('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
