@@ -59,3 +59,6 @@ La paga mercenaria non sottrae soldi alla classe L2: l'importo è **tarato** sul
 ## Unified convoy system (29 October 2026, `feature/economy-convoys`)
 
 Diplomatic caravans (#96) are now lord convoys (`source:'diplomacy'`). Lifecycle: `draft` → (`reserveLordConvoy` → `ready`) → `scheduleLordConvoy` → `planned` → departure on `departDay` → `outbound` → `returning` → `completed`; `blocked` while the castle lacks gold, goods or provisions. Travel: `ceil((road + 40U) / 22U)` days each way; provisions `ceil((escort + 2) × days × 2 × 0.35)` food. `ConquerConvoys.tick(from,to)` runs from the simulation loop. Saved `State.diplomacy.caravans` migrate once. Outbound and returning convoys are drawn on their arterial road by `ConquerRoadSignTests.draw` while inside the map.
+## Vehicles on the road network (29 October 2026, `feature/economy-vehicles`)
+
+`ConquerVehicles` (2D only) routes convoys over completed road segments (`route`: Dijkstra, T-junction splits, snapped ends; `smooth`: Chaikin), moves them (`advance`: ease-in, slow for bends, brake to the end) and draws them with main's `ConquerWagons.drawWagon` and the 2D horse team at `scale × 5.75`. `ConquerRoadSignTests.drivePath(kind, route)` drives from the keep (merchants: market; coaches: an L4 house) to the border; real lord convoys use it while inside the map.

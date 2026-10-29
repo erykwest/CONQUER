@@ -6,6 +6,10 @@
 - Fix: i contrafforti delle torri in pietra usano lo stesso profilo a gradoni e non attraversano più le facciate dal retro.
 - ROADMAP invariata. DECISIONS invariate: la variante segue il contratto esistente «varianti, non tipi duplicati» (`span` sul tipo `built`).
 
+## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (branch `feature/economy-vehicles`)
+
+- I convogli percorrono davvero la rete stradale dal mastio (o dal mercato) al confine con carri, carretti e carrozze disegnati in 2D e cavalli 2D. Scartato il 3D del branch d'origine. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-055 in DECISIONS.
+
 ## 2026-10-29 — Parapetto delle merlature (branch `feature/battlement-parapet`)
 
 - Torri, porte e mura in pietra hanno un parapetto continuo tra i merli invece di soli blocchi isolati; le torri tonde hanno più merli (8/12/18). Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate: dettaglio visivo, nessun contratto toccato.
