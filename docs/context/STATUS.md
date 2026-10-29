@@ -5,15 +5,15 @@
 - Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
 - Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
 - Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
-- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+- **QA completata su `38ea7ab` (29/10):** tutti gli 8 check GitHub Actions PASS, inclusi suite economica, regressione 26 settimane e catture Chromium di 9 schermate (6 viste + 3 dettagli), senza pageerror. [Workflow e artefatto screenshot](https://github.com/erykwest/CONQUER/actions/runs/40800506799). PR draft #103 resta aperta e non mergiata.
 
 
 ## Centro di controllo dell’insediamento — branch `panels` (29/10/2026)
 
 - **Codice presente su branch, non su `main`:** nuova scheda `CENTRO DI CONTROLLO` nel Profilo (index.html, settlement-heraldry.js) e viste classic-script indipendenti (settlement-panels.js/.css). Nove viste: generale, popolazione/tasse/razioni, economia/mercato/occupazione, proprietà produttive del signore, scorte economiche vs scorte di assedio, capacità militare, cantieri L1, diplomazia e avvisi.
-- **Contratto dati:** `ConquerGame.read` con snapshot `ConquerEconomy`, `ConquerSiege`, `ConquerCombat` e `ConquerDiplomacy`; i grafici storici alimentari usano `balanceHistory` effettiva, mentre la felicità è un valore corrente. Comandi delegati a `ConquerGame.commands`: aliquota, razioni, vendita mercantile, passaggi di proprietà e apertura carovane.
-- **Non implementato:** calendario delle festività straordinarie, storico di welfare/prezzi, leva con effetto mobilitazione, capacità reale distinta dalle capienze, relazioni diplomatiche avanzate. Empty state prima della fondazione; nessuna reinterpretazione delle risorse DEV come ledger.
-- **Verifica:** sintassi JS compilata in runtime V8 e fixture interattiva con 9/9 viste e grafico settimanale renderizzati (sessione 29/10); aggiunto `qa/panels-regression.cjs`, **non ancora eseguito via Node/CI**; QA visuale browser non eseguita. Revisione e CI richieste prima del merge. Specifica: [management-panels](../management-panels.md).
+- **Contratto dati:** `ConquerGame.read` con snapshot `ConquerEconomy`, `ConquerSiege`, `ConquerCombat` e `ConquerDiplomacy`; produzione/domanda cibo usa `balanceHistory` effettiva (8 settimane) e felicità, prezzi, mansioni L1 e produzione per impresa hanno uno storico persistente `panelHistory` (26 settimane). Comandi delegati a `ConquerGame.commands`: aliquota, razioni, vendita mercantile, passaggi di proprietà e apertura carovane.
+- **Non implementato:** calendario delle festività straordinarie, leva con effetto mobilitazione, capacità reale distinta dalle capienze, relazioni diplomatiche avanzate. Empty state prima della fondazione; nessuna reinterpretazione delle risorse DEV come ledger.
+- **Verifica:** sintassi JS compilata in runtime V8 e fixture interattiva con 9/9 viste e grafico settimanale renderizzati (sessione 29/10); aggiunto `qa/panels-regression.cjs`, **PASS in GitHub Actions**; browser Chromium con 9 screenshot da fixture demo PASS, errori pagina 0. Revisione visiva utente ancora attesa prima del merge. Specifica: [management-panels](../management-panels.md).
 
 ## Economia — routine settimanali di uomini e donne (branch `feature/economy-routines`, 28/10/2026; tappa 2 di 5, da `jobmanager`)
 
