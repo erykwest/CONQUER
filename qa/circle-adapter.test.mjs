@@ -6,7 +6,7 @@ import * as topology from '../src/circle/defensive-topology.mjs';
 import * as control from '../src/circle/defensive-control.mjs';
 import * as logistics from '../src/circle/defensive-logistics.mjs';
 const script=readFileSync(new URL('../src/settlement-circle.js',import.meta.url),'utf8')
-  .replace("Promise.all([\n    import('./circle/defensive-topology.mjs?v=circle-1'),\n    import('./circle/defensive-control.mjs?v=circle-1'),\n    import('./circle/defensive-logistics.mjs?v=circle-1')\n  ]).then",
+  .replace("Promise.all([\n    import('./circle/defensive-topology.mjs?v=circle-2'),\n    import('./circle/defensive-control.mjs?v=circle-2'),\n    import('./circle/defensive-logistics.mjs?v=circle-2')\n  ]).then",
     'Promise.resolve([circleModule,controlModule,logisticsModule]).then');
 const rect=(a,b,c,d)=>[{x:a,y:b},{x:c,y:b},{x:c,y:d},{x:a,y:d}];
 const piece=(id,type,a,b,c,d,extra={})=>({
