@@ -230,16 +230,28 @@
       return null;
     }
   }
-  function captureRecordFor(sector,locate,records){
+  function assignCaptureRecords(sectors,locate,records){
+    const assigned=new Map(),ids=new Set(sectors.map(c=>c.id));
     for(const record of records){
-      if(record.id===sector.captureRecordId)return record;
-      // Sector raster indices can change on a rebuild: never match merely
-      // on the old "circle-1" name. Always locate saved interior anchors.
-      const anchors=(record.anchors||[]).filter(p=>p&&
-        Number.isFinite(p.x)&&Number.isFinite(p.y));
-      if(anchors.length&&anchors.some(p=>locate(p)===sector.id))return record;
+      let id=sectors.find(c=>c.captureRecordId===record.id)?.id||null;
+      if(!id){
+        // Old raster indices are not permanent ownership IDs. Vote by
+        // multiple saved passable anchors; a newly split compartment must
+        // NOT cause one old capture to conquer both successor sectors.
+        const votes=new Map();
+        for(const p of record.anchors||[]){
+          if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))continue;
+          const key=locate(p);
+          if(ids.has(key))votes.set(key,(votes.get(key)||0)+1);
+        }
+        id=[...votes.entries()].sort((a,b)=>
+          b[1]-a[1]||String(a[0]).localeCompare(String(b[0])))[0]?.[0]||null;
+      }
+      if(!id)continue;
+      if(!assigned.has(id))assigned.set(id,[]);
+      assigned.get(id).push(record);
     }
-    return null;
+    return assigned;
   }
   function updateControl(force=false) {
     if(!topology||!controlEngine)return snapshot;
@@ -261,10 +273,13 @@
         alert:ui?.alarm!=='off'&&!!ui?.alarm||!!ui?.alert&&ui.alert!=='clear'
       });
       const captures=window.ConquerSiege?.circleCaptureRecords?.()||[];
+      const assignments=assignCaptureRecords(assessed.compartments,
+        snapshot.sectorAt,captures);
       const summary={...assessed.summary,captured:0};
       const marked=assessed.compartments.map(sector=>{
-        const record=captureRecordFor(sector,snapshot.sectorAt,captures);
-        if(!record)return{...sector,captured:false,captureRecordId:null};
+        const records=assignments.get(sector.id)||[];
+        if(!records.length)return{...sector,captured:false,
+          captureRecordId:null,captureRecordIds:[]};
         summary[sector.state]=Math.max(0,(summary[sector.state]||0)-1);
         summary.captured++;
         if(sector.safe){
@@ -272,7 +287,7 @@
           summary.occupied++;
         }
         return{...sector,state:'captured',safe:false,captured:true,
-          captureRecordId:record.id};
+          captureRecordId:records[0].id,captureRecordIds:records.map(r=>r.id)};
       });
       snapshot={...snapshot,compartments:marked,controlSummary:summary};
       lastControlAt=now;controlDirty=false;
@@ -283,7 +298,7 @@
       if(transitions.length){
         controlRevision++;
         window.dispatchEvent(new CustomEvent('conquer-circle-control-updated',{
-          detail:{revision:controlRevision,transitions,summary:assessed.summary}
+          detail:{revision:controlRevision,transitions,summary}
         }));
       }
     }catch(error){
@@ -325,11 +340,17 @@
     for(const id of reclaim.reclaimed){
       const sector=latest.compartments.find(c=>c.id===id);
       if(!sector?.captureRecordId)continue;
-      const result=window.ConquerSiege.releaseCircleSector?.(sector.captureRecordId);
-      if(result?.ok) {
-        events.push({type:'reclaimed',id});
+      const records=sector.captureRecordIds?.length?
+        sector.captureRecordIds:[sector.captureRecordId];
+      let reclaimed=0;
+      for(const recordId of records) {
+        const result=window.ConquerSiege.releaseCircleSector?.(recordId);
+        if(result?.ok)reclaimed++;
+      }
+      if(reclaimed) {
+        events.push({type:'reclaimed',id,records:reclaimed});
         window.dispatchEvent(new CustomEvent('conquer-circle-reclaimed',
-          {detail:{id,day}}));
+          {detail:{id,day,records:reclaimed}}));
       }
     }
     if(events.some(e=>e.type==='reclaimed'))updateControl(true);
