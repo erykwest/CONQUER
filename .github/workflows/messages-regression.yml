@@ -1,0 +1,40 @@
+name: Messages regression
+on:
+  push:
+    branches: [messages]
+    paths:
+      - 'src/settlement-messages.js'
+      - 'src/settlement-messages.css'
+      - 'src/settlement-core.js'
+      - 'src/settlement-siege.js'
+      - 'src/settlement-combat.js'
+      - 'src/settlement-app-simulation.js'
+      - 'src/settlement-app-persistence.js'
+      - 'src/settlement-app-calendar-ui.js'
+      - 'index.html'
+      - 'qa/messages-regression.cjs'
+      - '.github/workflows/messages-regression.yml'
+  pull_request:
+    paths:
+      - 'src/settlement-messages.js'
+      - 'src/settlement-messages.css'
+      - 'src/settlement-core.js'
+      - 'src/settlement-siege.js'
+      - 'src/settlement-combat.js'
+      - 'src/settlement-app-simulation.js'
+      - 'src/settlement-app-persistence.js'
+      - 'src/settlement-app-calendar-ui.js'
+      - 'index.html'
+      - 'qa/messages-regression.cjs'
+jobs:
+  messages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Feudal post regression
+        run: node qa/messages-regression.cjs
+      - name: Diplomacy compatibility regression
+        run: node qa/diplomacy-regression.cjs
