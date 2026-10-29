@@ -44,6 +44,17 @@ history=economy.snapshot().panelHistory;
 assert.equal(history.length,26,'history retention is bounded to 26 markets');
 assert.equal(history[history.length-1].day,215);
 assert.equal(economy.state().panelHistory.length,26,'history persists in economy state');
+// A sale inside an accounting week splits actual output between both owners.
+const mid=harness();
+mid.economy.tick(-1,1);
+const amountBeforeSale=mid.economy.state().weekProduced.wood;
+assert.ok(amountBeforeSale>0);
+assert.equal(mid.economy.transfer('forest','private'),true);
+mid.economy.tick(1,5);
+const ownedProduction=mid.economy.snapshot().panelHistory[0].production.filter(x=>x.id==='forest');
+assert.equal(ownedProduction.length,2,'sale within week must create two ownership records');
+assert.ok(ownedProduction.find(x=>x.owner==='lord').goods.wood>0);
+assert.ok(ownedProduction.find(x=>x.owner==='private').goods.wood>0);
 delete economy.state().panelHistory;
 delete economy.state().weekProducedSites;
 assert.ok(Array.isArray(economy.state().panelHistory),'older saves migrate without reset');
