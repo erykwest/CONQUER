@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Pannelli gestionali dell’insediamento — branch \`panels\` (29/10/2026)
+
+- **IN BRANCH, NON MERGE:** nove viste nel Profilo con grafici reali del ledger, istogrammi sociali e di scorte, controlli esistenti (tax/rations/quote vendita/trasferimenti) e indicatori militari/cantieri/diplomazia. [Specifiche](../management-panels.md).
+- **DA VERIFICARE:** \`qa/panels-regression.cjs\`, smoke browser, persistenza policy e interazioni, suite GitHub Actions. Non considerare completato fino a QA.
+- **TBD:** festività straordinarie con effetti veri su felicità e produzione, storico pop/welfare/prezzi, statistiche occupazione L2–L4, bilanci individuali dei beni del signore, organico militare reale, relazioni diplomatiche e avvisi avanzati. Il pannello non deve introdurre stato duplicato.
+
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
 - **TAPPA 1 SU BRANCH `feature/economy-labour`, NON MERGE:** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
