@@ -664,6 +664,7 @@
       e.lastDay=day;
       daily(day);
       if(weekday(day)===5)market(day); // Saturday market; no civilian production
+      window.ConquerCommerce?.daily?.(day); // L3 workshops and their goods market
       const today=dateAt(day),tomorrow=dateAt(day+1);
       if(today.month!==tomorrow.month||today.year!==tomorrow.year)monthly(day);
       if(today.year!==tomorrow.year)annual(day);
@@ -732,6 +733,7 @@
       castleFoodIssued:round(Object.values(e.lastTrade?.castleRations||{}).reduce((a,b)=>a+finite(b),0)),
       activities:Object.keys(e.activities).length,
       balance:e.lastBalance||null,investmentCapacity:round(finite(e.investmentCapacity)),
+      commerce:window.ConquerCommerce?.snapshot?.()||null,
       weeks:e.weeks,months:e.months,years:e.years,panelHistory:e.panelHistory?.slice(-26)||[]};
   }
   function render(force=false){
@@ -740,7 +742,7 @@
     const e=sync(),s=snapshot();
     const policy=document.getElementById('rations');
     if(policy&&policy.value!==s.rationMode)policy.value=s.rationMode;
-    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.rationMode+'|'+s.castleGold+'|'+s.constructionPayroll+'|'+s.spontaneousSpawnCount+'|'+(target.dataset.force||'');
+    const stamp=s.day+'|'+Object.keys(e.activities).length+'|'+s.welfare+'|'+s.rationMode+'|'+(s.commerce?Object.values(s.commerce).join('|'):'no-commerce')+'|'+s.castleGold+'|'+s.constructionPayroll+'|'+s.spontaneousSpawnCount+'|'+(target.dataset.force||'');
     if(!force&&target.dataset.stamp===stamp)return;
     target.dataset.stamp=stamp;
     const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:1});
@@ -756,6 +758,11 @@
       '<div class="kv"><span>Spontaneous spawn labor (embedded estimate)</span><b>'+fmt(s.spontaneousSpawnLabor)+' gold</b></div>'+
       '<div class="kv"><span>L4 investment capacity</span><b>'+fmt(s.investmentCapacity)+' gold</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
+      (s.commerce?
+        '<div class="kv"><span>L3 workshops / services</span><b>'+s.commerce.l3Shops+' / '+s.commerce.l3Services+'</b></div>'+
+        '<div class="kv"><span>L3 goods in stock · reference value</span><b>'+fmt(s.commerce.l3Goods)+' · '+fmt(s.commerce.l3GoodsValue)+' gold</b></div>'+
+        '<div class="kv"><span>L4+ intercity manifests / present</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
+        '<div class="kv"><span>Inn beds available</span><b>'+Math.max(0,s.commerce.innBeds-s.commerce.innOccupied)+' / '+s.commerce.innBeds+'</b></div>':'')+
       '<div class="legend">Mon–Fri work · Saturday market · Sunday rest. Wages monthly, rates/returns yearly.</div>'+
       '<div class="economy-goods">'+GOODS.map(g=>
         '<div class="economy-good"><b>'+g+'</b><small>Price '+fmt(s.prices[g])+' · market '+fmt(s.market[g])+
