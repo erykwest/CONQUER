@@ -8,7 +8,11 @@ canvas.addEventListener('pointerdown',e=>{
     return
   }
   const sp=pointerScreen(e),p=s2w(sp.x,sp.y);
-  if(State.tool.kind==='select'){selectStructure(structureAtScreen(sp)||structureAt(p));return}
+  if(State.tool.kind==='select'){
+    const sign=window.ConquerRoadSignTests?.hit?.(sp);
+    if(sign){window.ConquerRoadSignTests.open(sign);return}
+    selectStructure(structureAtScreen(sp)||structureAt(p));return
+  }
   if(State.tool.kind==='delete'){const hit=structureAtScreen(sp)||structureAt(p);if(hit)deleteStructure(hit.id);return}
 
   // Once the centre is fixed, the second click only defines orientation.
@@ -174,6 +178,8 @@ canvas.addEventListener('pointermove',e=>{
     return
   }
   const p=pointerWorld(e);
+  // Four signposts behave like interactive wayfinding markers in select mode.
+  if(canvas.style)canvas.style.cursor=State.tool.kind==='select'&&window.ConquerRoadSignTests?.hit?.(pointerScreen(e))?'pointer':'';
   if(State.tool.kind==='terraform'){
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};

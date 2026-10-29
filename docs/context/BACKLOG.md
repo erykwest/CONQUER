@@ -5,22 +5,27 @@
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione costruita larga 2U, H2 senza solaio, una stanza LARGE; finestroni Blender a tutta altezza, 5 contrafforti sul lato finestroni, 2 camini, cutaway a piano unico con gli arredi della libreria di main. Stesso profilo a gradoni anche per le torri con base «Contrafforti» (fix del disegno attraverso le facciate).
 - **ANCORA APERTO:** effetti di gioco specifici delle sale (per ora valgono le regole generiche delle stanze), figure all'interno nel cutaway (cerimonie, banchetti, udienze), contrafforti nell'impronta di collisione/piazzamento.
 
+## Castello — parapetto delle merlature (branch `feature/battlement-parapet`, 29/10/2026)
+
+- **IN CORSO su branch, NON MERGE:** parapetto continuo tra i merli di torri, porte e mura in pietra; più merli sulle torri tonde. Dettagli in [STATUS](STATUS.md).
+- **Aperto:** la firma 12×12 dell'audit del Lab non vede dettagli di questa scala (0 render cambiati): valutare una griglia più fine o un ritaglio sulla corona.
+
 ## Render 3D — fortificazioni in legno da Blender (28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE (`feature/wood-fortifications-3d`):** palizzate T1–T3, torre di vedetta, torri a palizzata e porta in legno come modelli Blender nel renderer 3D; chiuso l'ultimo residuo 2.5D del castello nel world3d Cantieri del legno montati pezzo per pezzo dai modelli; cutaway della torre a palizzata con gli arredi delle stanze; bandiere e drappi araldici (statici, senza vento).
 - **APERTO (legno):** cutaway della porta in legno (le porte in pietra lo hanno da #65); nel Lab le celle «Cantiere» non mostrano il montaggio (cattura prima del ridisegno in cache, vale anche per la pietra).
 - **APERTO:** stati di danno visibili per il legno (oggi assenti anche in 2.5D); cantiere del legno ancora col fantasma traslucido; percorso Canvas 2.5D non usa i nuovi modelli (fallback invariato).
 - **PROSSIMO (deciso il 28/10):** arredi del cutaway come modelli Blender, dopo aver portato il cutaway nel 3D. Niente modelli 3D per umani e animali: lo stile 3D delle figure è stato scartato.
-
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
 - **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
 - **TAPPA 2 SU MAIN (#99, `cdb2af9`):** routine settimanali di uomini e donne.
-- **TAPPA 3 SU BRANCH `feature/economy-commerce`, NON MERGE:** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
+- **TAPPA 3 SU MAIN (#101, `e1fdb20`):** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
 - **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda.
-- **DA FARE:** tappa 4 convogli unificati con `ConquerDiplomacy`; tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
-
+- **TAPPA 4 SU BRANCH `feature/economy-convoys`, NON MERGE:** un solo sistema di convogli (carovane della diplomazia comprese), cartelli di prova, convogli visibili sulla strada maestra.
+- **DA FARE (CI):** aggiungere a `.github/workflows/economy-flows-regression.yml` le nuove regressioni economiche (rations, labor-jobs, routines, commerce, urban-workshops, convoys, road-sign, diplomacy, vehicles): PR separata, il token di `gh` non ha lo scope `workflow`.
+- **DA FARE:** tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.
@@ -42,7 +47,7 @@
 ## Combat / feudi — capitano, cavalieri e diplomazia (branch `feature/knights-diplomacy-2d`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, IN MERGE (sostituisce #72):** capitano con identità propria e raggio di comando 16U; cavalieri a cavallo reclutabili fino a min(stanze nobili, posti in scuderia) — C-04 in parte; messaggero a cavallo periodico verso il mastio, richiesta di 100 monete, accetta/rifiuta, pianificatore di carovane con carico, scorta, partenza e provviste — prototipo di F-05; tutte le figure a cavallo in 2D (D-046).
-- **ANCORA APERTO:** unificare le carovane della diplomazia con i convogli dell'economia (#55) passando da `window.ConquerDiplomacy`; carovane visibili in mappa e intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
+- **ANCORA APERTO:** (unificazione con i convogli dell'economia e carovane visibili sulla strada: tappa 4 dell'economia) carovane intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
 
 ## Castello — cutaway arredato di torri, porte e sezioni (PR #65, riallineata 28/10/2026)
 
