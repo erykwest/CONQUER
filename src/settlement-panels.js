@@ -106,6 +106,7 @@
       kpi('Imprese private',fmt(items.length-lord.length))+
       kpi('Valore proprietà',fmt(total),'Oro stimato')+'</div>'+
       card('Titolarità delle attività',bars([['Signore',lord.length],['Settore L4',items.length-lord.length]],Math.max(1,items.length)))+
+      card('Produzione complessiva · ultima settimana',d.snapshot?.balance?.goods?bars(Object.entries(d.snapshot.balance.goods).map(([g,x])=>[labels[g]||g,x.produced]),Math.max(1,...Object.values(d.snapshot.balance.goods).map(x=>num(x.produced)))):empty('La prima settimana contabile non è ancora conclusa.'),'Totale territoriale: il ledger attuale non distingue ancora la quota prodotta dalle sole proprietà del signore.')+
       card('Produzione e proprietà',table,'Utili annui solo dopo la chiusura del primo esercizio. Compravendite gestite dal ledger economico.');
   }
 
