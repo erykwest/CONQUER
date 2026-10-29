@@ -484,3 +484,8 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Fatto solo su `circle`:** certificazione automatica dopo occupazione non contestata per 0,5 giorni di gioco, persistenza `captured`, perdita one-shot delle scorte assegnate alle stanze conquistate, capacità disabilitata fino a riconquista; ricattura dopo 0,5 giorni con difensori presenti, senza restituire le risorse sottratte.
 - **Ancora da fare:** A) ritirata progressiva dei civili attraverso i portali effettivamente aperti verso il compartimento contiguo più sicuro; B) produzione residua negli edifici dei compartimenti non invasi e riduzione della manodopera disponibile; C) bottino lato assalitore e pannello logistico per singolo deposito; D) browser QA reale, benchmark performance, ID di settore di lunga durata oltre la ricostruzione procedurale, verifica collisioni/porte e scenari complessi di assedi simultanei.
 - **NOTA:** la distribuzione dello stock per stanza è un'allocazione deterministica, non una simulazione di trasporto con popolani; l'economia `ConquerEconomy` e le risorse builder NON sono state fuse.
+
+
+### CIRCLE — QA baseline 29 ottobre 2026
+- **Verificato:** Node 22 CI [run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993), 65/65 PASS; workflow automatico attivo su `circle`.
+- **QA aperta:** prova gameplay browser sulla branch `circle`, assedio contemporaneo di cerchie concentriche/radiali, salvataggi dopo molte campagne, prestazioni della topologia raster e controllo UI in pausa.
