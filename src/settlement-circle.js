@@ -20,18 +20,30 @@
     }
     return out;
   }
-  function naturalBarriers() {
+  function invariantNatural() {
     const out=[];
     for(const feature of State.environment||[]) {
-      // Rivers, ponds, forest, civilian hedges and gentle terrain do NOT seal
-      // a defensive ring. Mountains/sea are already impassable in world nav.
+      // Rivers, ponds, forests, civic hedges and gentle slopes do not seal rings.
       if(!['sea','mountain'].includes(feature.type)||feature.points?.length<3)continue;
       out.push({id:feature.id,polygon:feature.points});
     }
+    return out;
+  }
+  function naturalBarriers() {
+    const out=[];
     for(const level of (State.relief?.hills||[]).flatMap(h=>h.levels||[])) {
       for(const band of reliefEdgeBands(level))if(band.kind==='steep'&&band.poly?.length>=3)
         out.push({id:band.levelId+'-'+band.index,polygon:band.poly});
     }
+    return out;
+  }
+  function naturalCuts() {
+    return (window.ConquerTerraforming?.edits?.()||[])
+      .filter(edit=>edit.mode==='flat'&&edit.top?.length>=3)
+      .map(edit=>({id:edit.id,polygon:edit.top}));
+  }
+  function terrainBarriers() {
+    const out=[];
     const terrain=window.ConquerTerraforming;
     for(const edit of terrain?.edits?.()||[]) {
       const segments=edit.mode==='walled'
@@ -87,7 +99,9 @@
         maxX:BUILD_MAX+settings.margin,maxY:BUILD_MAX+settings.margin},
       cellSize:settings.cellSize,
       fortifications:fortifications(),natural:naturalBarriers(),
-      crossings:crossings(),gates:gates(),mastioPoint:mastioEntrance()
+      invariantNatural:invariantNatural(),naturalCuts:naturalCuts(),
+      terrainBarriers:terrainBarriers(),crossings:crossings(),gates:gates(),
+      mastioPoint:mastioEntrance()
     };
   }
   function recompute(){
