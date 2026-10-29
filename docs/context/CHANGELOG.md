@@ -7,6 +7,9 @@
 - Bandiere araldiche su torre coperta e vedetta, due drappi ai lati della porta in legno.
 - Cutaway della torre a palizzata in legno sul cutaway WebGL di #65: lati verso la camera aperti, pavimento, scala e arredi della funzione. Il fallback WebGL con soldati di ronda, riprodotto qui, è risolto in main da #91 (VAO per programma): il fix locale è stato tolto al merge.
 - Asset Lab: legno e palizzate ora con «Modello 3D»; baseline estesa con i 12 render nuovi. ROADMAP e DECISIONS invariate: promozione visiva sullo schema già deciso per i modelli Blender (civili, industrie, assedio), nessun nuovo contratto.
+## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
+
+- Uomini e donne L1–L4 hanno la settimana di `jobmanager`: svago maschile dalle 18, mercato il sabato e messa la domenica, lavoro femminile nei lotti. Solo visuale. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-052 in DECISIONS.
 ## 2026-10-28 — Economia, tappa 1: lavoro L1 e cantieri (branch `feature/economy-labour`)
 
 - Portata su `main` la parte economica di #55 (bilancio settimanale, fondazione con 4 L1, Builder che paga dal castello, cantieri a giornate-operaio pagati dal signore) unita a `jobmanager` (pastori protetti, taglio legna, razioni, felicità per ceto) in un solo allocatore L1. Stato e prove in [STATUS](STATUS.md). Nuove decisioni D-047…D-051 in [DECISIONS](DECISIONS.md#economia--lavoro-l1-unico-28102026); ROADMAP invariata.
