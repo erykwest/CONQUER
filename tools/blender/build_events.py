@@ -55,6 +55,7 @@ COLORS = {
     'rope': '#b9a57a', 'steel': '#9aa3aa', 'steelDark': '#5d656c', 'gold': '#d8b14a',
     'mail': '#7d858b', 'leather': '#6b4a2e', 'leatherDark': '#45301f',
     'curtain': '#7c2a33', 'curtainDark': '#5e1f27', 'festYellow': '#d9b13b', 'festGreen': '#6f8a3c',
+    'tentBrown': '#7b5a3e', 'tentKhaki': '#9a8460', 'tentStripe': '#c99a3e', 'tentShade': '#5c4430',
     'circusRed': '#b8322c', 'hay': '#d4b35b', 'barrel': '#8b5e35', 'iron': '#4f5357', 'sand': '#cdb98a',
 }
 KEYS = list(COLORS.keys())
@@ -332,6 +333,49 @@ def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
 def tent_octagon(m):
     pavilion(m, 8, 2.7, 2, 2.0, 4.9, 6.0, rope_step=2, roles=True)
     m.livery = 'pair'
+
+
+def ridge_tent(m, body, stripe=None, W=1.25, L=1.6, e=.35, H=1.95, eaves=False):
+    """Soldiers' ridge tent: low side walls, pitched roof along y, door flap at the
+    front (-y) gable, poles and four guy ropes. Plain canvas: troops carry no livery.
+    eaves: stripe bands along both eaves too (the company tent)."""
+    p = m.part('tent')
+    verts = [(-W, -L, 0), (W, -L, 0), (W, L, 0), (-W, L, 0),
+             (-W, -L, e), (W, -L, e), (W, L, e), (-W, L, e), (0, -L, H), (0, L, H)]
+    mesh(p, verts, [((3, 2, 1, 0), 'tentShade'), ((1, 2, 6, 5), body), ((3, 0, 4, 7), body),
+                    ((5, 6, 9, 8), body), ((7, 4, 8, 9), body),
+                    ((0, 1, 5, 8, 4), 'tentShade'), ((2, 3, 7, 9, 6), 'tentShade')])
+    if stripe:
+        p.box((0, 0, H + .02), (.14, 2 * L + .04, .06), stripe)
+        if eaves:
+            for sx in (-1, 1):
+                p.box((sx * (W + .02), 0, e - .05), (.04, 2 * L + .04, .22), stripe)
+    door = min(.38, W * .35) if not eaves else .7
+    plate(p, (0, -L), (0, -1), [(-door, 0), (door, 0), (0, H - .2)], 'dark', 0, .02)
+    m.done('tent', p)
+    p = m.part('ropes')
+    for sy in (-1, 1):
+        p.beam((0, sy * L, 0), (0, sy * (L + .05), H + .25), .05, .05, 'woodDark')
+        p.beam((0, sy * L, H), (0, sy * (L + 1.0), .05), .03, .03, 'rope')
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            p.beam((sx * W, sy * L * .6, e), (sx * (W + .7), sy * L * .6, .05), .025, .025, 'rope')
+    m.done('ropes', p)
+    m.meta = {'door': u(0, -L - .6, 0), 'radius': u(W + .8)[0]}
+
+
+def tent_ridge(m):
+    ridge_tent(m, 'tentBrown', 'tentStripe')
+
+
+def tent_ridge_plain(m):
+    ridge_tent(m, 'tentKhaki')
+
+
+def tent_company(m):
+    # Company tent: a 4 x 5.8 m ridge tent with tall side walls, about a pavilion's size,
+    # sleeping a whole company; brown canvas with ochre ridge and eave bands.
+    ridge_tent(m, 'tentBrown', 'tentStripe', W=2.0, L=2.9, e=1.1, H=3.1, eaves=True)
 
 
 def tent_square(m):
@@ -1140,14 +1184,16 @@ MODELS = [('tentOctagon', tent_octagon), ('tentSquare', tent_square), ('standOpe
           ('stageHerald', stage_herald), ('stageTheatre', stage_theatre), ('podiumStreet', podium_street),
           ('stagePlayers', stage_players), ('circusTent', circus_tent), ('wagonCaravan', wagon_caravan),
           ('wagonCage', wagon_cage), ('wagonCargo', wagon_cargo), ('circusBooth', circus_booth),
-          ('propBunting', bunting_line), ('propFence', lists_fence)]
+          ('propBunting', bunting_line), ('propFence', lists_fence),
+          ('tentRidge', tent_ridge), ('tentRidgePlain', tent_ridge_plain), ('tentCompany', tent_company)]
 LAYOUT = {'tentOctagon': (0, 0), 'tentSquare': (12, 0), 'standOpen': (0, 16), 'standCovered': (20, 16),
           'arenaU': (10, 52), 'propTilt': (0, -10), 'propLanceRack': (12, -10),
           'propWeaponRack': (17, -10), 'propSpearRack': (22, -10), 'propShieldRack': (27, -10),
           'propArmourPile': (17, -15), 'propArmourCrate': (22, -15), 'propArmourStand': (27, -15),
           'stageHerald': (0, -25), 'stageTheatre': (14, -25), 'podiumStreet': (-10, -25), 'stagePlayers': (0, -35),
           'circusTent': (-30, 0), 'wagonCaravan': (-30, -14), 'wagonCage': (-24, -14), 'wagonCargo': (-18, -14),
-          'circusBooth': (-30, -20), 'propBunting': (-25, -20), 'propFence': (-18, -20)}
+          'circusBooth': (-30, -20), 'propBunting': (-25, -20), 'propFence': (-18, -20),
+          'tentRidge': (-10, 0), 'tentRidgePlain': (-10, 5), 'tentCompany': (-10, 12)}
 
 
 def main(out_path):

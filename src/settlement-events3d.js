@@ -513,6 +513,95 @@
     root.querySelector('[data-event-stop]')?.addEventListener('click',()=>{setEvent(s,{phase:'clearing',progress:0,since:State.clock?.day||0});done()});
     root.querySelectorAll('[data-point-rotate]').forEach(b=>b.onclick=()=>{if(typeof rotatePointStructure==='function')rotatePointStructure(s,Number(b.dataset.pointRotate)||1);refresh();done()});
   }
+  // ---------- Bivouac: a night field camp laid out like a real one (docs/events, camp).
+  // Units camped close together share one camp. The leader's pavilion in the realm livery
+  // stands at the centre, a little gear beside it; each squad pitches two plain ridge
+  // tents (brown with an ochre ridge or khaki, one kind per squad) on wavy, staggered
+  // arcs facing the centre, its fire between tents and pavilion. No grid, no repeats.
+  // units: [{id,kind,x,y}] -> {camps:[{x,y,items:[{m,x,y,a,pair?}],fires:[{x,y,id}]}]}
+  function bivouac(units,opts={}){
+    const seed=opts.seed??((typeof State!=='undefined'&&State.seed)||1),h=opts.heraldry||(typeof State!=='undefined'&&State.heraldry)||{};
+    const blocked=opts.blocked||(()=>false);
+    const rnd=(key)=>hash(seed+'|biv|'+key)/4294967296;
+    const groups=[];
+    for(const u of units){
+      const g=groups.find(g=>g.some(v=>Math.hypot(v.x-u.x,v.y-u.y)<3));
+      g?g.push(u):groups.push([u]);
+    }
+    return{camps:groups.map(group=>{
+      const key=group.map(u=>u.id).sort().join(',');
+      const leader=group.find(u=>u.kind==='knight'||u.kind==='captain');
+      const squads=group.filter(u=>u!==leader);
+      const cx=leader?leader.x:group.reduce((s,u)=>s+u.x,0)/group.length;
+      const cy=leader?leader.y:group.reduce((s,u)=>s+u.y,0)/group.length;
+      const items=[],fires=[];
+      const put=it=>{if(!blocked({x:it.x,y:it.y}))items.push(it)};
+      if(leader){
+        put({m:'tentOctagon',x:cx,y:cy,a:(rnd(key+'pa')-.5)*.6,pair:[h.c1||'#b8322c',h.c2||'#ece6d6',SCHEME_KEYS[hash(seed+'|'+key)%SCHEME_KEYS.length]]});
+        const ga=rnd(key+'ga')*Math.PI*2;
+        put({m:rnd(key+'gm')<.5?'propArmourCrate':'propWeaponRack',x:cx+Math.cos(ga)*1.15,y:cy+Math.sin(ga)*1.15,a:ga});
+      }else fires.push({x:cx,y:cy,id:key+':fire'});
+      // Arcs round the centre: ~0.8 U between tents, a gap left as the camp's way in.
+      const r0=leader?2.1:1.5,start=rnd(key+'st')*Math.PI*2,gap=.7;
+      let row=0,theta=0,pitched=0;
+      // Every three squads share one big company tent, pitched on the outer ring.
+      const companies=Math.floor(squads.length/3),loose=squads.slice(companies*3);
+      const rows=Math.ceil(loose.length*2*1.1/(Math.PI*2*r0))||0,rc=r0+Math.max(0,rows-1)*1.3+1.6;
+      for(let k=0;k<companies;k++){
+        const th=start+gap/2+(k+.5)*(Math.PI*2-gap)/companies+(rnd(key+'ct'+k)-.5)*.3/companies;
+        const rr=rc+(rnd(key+'cr'+k)-.5)*.3,x=cx+Math.cos(th)*rr,y=cy+Math.sin(th)*rr;
+        put({m:'tentCompany',x,y,a:th-Math.PI/2+(rnd(key+'ca'+k)-.5)*.25});
+        fires.push({x:cx+Math.cos(th)*(rr-1.25),y:cy+Math.sin(th)*(rr-1.25),id:squads[k*3].id+':fire'});
+      }
+      loose.forEach((sq,si)=>{
+        const model=rnd(key+'kind'+si)<.55?'tentRidge':'tentRidgePlain';
+        let fx=0,fy=0;
+        for(let t=0;t<2;t++){
+          if(theta+1/(r0+row*1.3)>Math.PI*2-gap){row++;theta=0}
+          const r=r0+row*1.3;
+          const wob=Math.sin(pitched*1.7+rnd(key+'w')*6)*.18+(rnd(key+'r'+pitched)-.5)*.16;
+          const th=start+theta+(row%2)*.4/r,rr=r+wob;
+          const x=cx+Math.cos(th)*rr,y=cy+Math.sin(th)*rr;
+          put({m:model,x,y,a:th-Math.PI/2+(rnd(key+'a'+pitched)-.5)*.35});
+          fx+=x;fy+=y;theta+=(1+rnd(key+'s'+pitched)*.22)/r;pitched++;
+        }
+        // The squad's fire sits inward of its two tents.
+        fx/=2;fy/=2;const k=(Math.hypot(fx-cx,fy-cy)-.75)/Math.max(.01,Math.hypot(fx-cx,fy-cy));
+        fires.push({x:cx+(fx-cx)*k,y:cy+(fy-cy)*k,id:sq.id+':fire'});
+      });
+      return{x:cx,y:cy,key,items,fires};
+    })};
+  }
+  // Meshes of a bivouac for drawMeshes / the Lab (ground: number or function of a point).
+  function bivouacMeshes(camps,ground=0){
+    const z=typeof ground==='function'?ground:()=>ground,out=[];
+    for(const c of camps)for(const it of c.items){
+      const m=triangles(it.m,{x:it.x,y:it.y,angle:it.a,scale:1,key:c.key+':'+it.m+':'+it.x.toFixed(2)},z(it),it.pair||null);
+      if(m)out.push(m);
+    }
+    return out;
+  }
+  // A bivouac as one catalog model (event palette, origin at the camp centre) for the Lab.
+  function bivouacModel(camp){
+    const p=[],c=[];
+    for(const it of camp.items){
+      const co=Math.cos(it.a||0),sn=Math.sin(it.a||0);
+      for(const part of parts(it.m)||[]){
+        for(let k=0;k<part.v.length;k+=3){const x=part.v[k],y=part.v[k+1];p.push(it.x-camp.x+x*co-y*sn,it.y-camp.y+x*sn+y*co,part.v[k+2])}
+        c.push(...part.c);
+      }
+    }
+    return{parts:{camp:{p,i:p.map((_,k)=>k).slice(0,p.length/3),c}},meta:{},livery:'realm'};
+  }
   window.ConquerEvents3D={VENUES,SETUPS,PAIRS,BUILD,SETUP_NAMES,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld,
-    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel};
+    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel};
+  // Lab scenes: sample bivouacs in the Asset Lab catalog (ConquerCampScenes).
+  if(window.ConquerEventModels){
+    const M=window.ConquerEventModels,sq=(n,x=0)=>Array.from({length:n},(_,k)=>({id:'s'+k,kind:'squad',x:x+(k%3)*.4,y:Math.floor(k/3)*.4}));
+    const scene=units=>bivouacModel(bivouac(units,{seed:7}).camps[0]);
+    window.ConquerCampScenes={palette:M.palette,paletteKeys:M.paletteKeys,models:{
+      bivouacSquads:scene(sq(2)),
+      bivouacCaptain:scene([{id:'cap',kind:'captain',x:0,y:0},...sq(5)]),
+      bivouacKnightLarge:scene([{id:'kn',kind:'knight',x:0,y:0},...sq(9)])}};
+  }
 })();

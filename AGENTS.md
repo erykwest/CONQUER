@@ -22,6 +22,7 @@ Goal: many development commits and CI checks, **one automatic production deploym
 
 ## Verifica visiva: usare il Lab, non catture in gioco
 - Per controllare un asset o un renderer (modelli 3D, tende, accampamenti, livree, varianti) gli agent aprono l'**Asset Lab** (`/figures-lab.html`, o `/lab`) e ispezionano lì l'elemento, oppure usano `ConquerAssetAudit.inspect(id, stato)` / `ConquerAssetAudit.sheet({family})` dalla console. **Non** si avvia una partita né si costruiscono scene in gioco solo per fare screenshot: è lento e non ripetibile.
+- **Ogni nuovo modello (o registro di modelli, o composizione come un accampamento) va inserito nel Lab nella stessa PR in cui nasce**: un modello che non compare nel catalogo non è finito.
 - Se l'elemento non c'è nel Lab, prima lo si aggiunge al catalogo (`src/asset-catalog.js`, `MODEL_SOURCES`, e lo script del registro in `figures-lab.html`), poi lo si verifica. La cattura in gioco serve solo per comportamenti che il Lab non può mostrare (simulazione, IA, input).
 
 ## Asset visivi: audit obbligatorio
