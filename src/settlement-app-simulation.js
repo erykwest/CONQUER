@@ -187,6 +187,7 @@ function simulationFrame(now){
       tickFields(State.clock.day);
       window.ConquerEconomy?.tick(previousDay,State.clock.day);
       window.ConquerDiplomacy?.tick(previousDay,State.clock.day);
+      window.ConquerMessages?.tick(simLogicDay,State.clock.day);
       // Player-build projects progress only when available L1 staff actually
       // complete shift work; procedural road/house generation retains V1 clocks.
       const laborCompletions=tickConstructionWork(simLogicDay,State.clock.day);
