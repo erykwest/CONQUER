@@ -2,8 +2,8 @@
 
 ## Feudi — comunicazioni e rapporti (branch messages, 29/10/2026)
 
-- **IMPLEMENTATO SU BRANCH:** posta con stato in transito/consegnato, ordini/allarmi, report con dati locali al momento della redazione, editor routine (1/7/30 giorni), piccionaia come slot castello con due estremità, UI e salvataggi, QA aggiunta.
-- **APERTO:** feudi esterni realmente simulati, ordini eseguiti dai destinatari, corpo fisico del messaggero e intercettazione sulla World Map, logistica colombi bidirezionale, unificazione del movimento con ConquerDiplomacy, esecuzione delle regressioni e verifica browser.
+- **IMPLEMENTATO SU BRANCH:** posta con stato in transito/consegnato, ordini/allarmi, report con dati locali al momento della redazione, editor routine (1/7/30 giorni), piccionaia come slot castello con due estremità, UI e salvataggi, QA aggiunta, primo run GitHub Actions superato.
+- **APERTO:** feudi esterni realmente simulati, ordini eseguiti dai destinatari, intercettazione e percorso completo dei messaggeri sulla World Map, logistica colombi bidirezionale, unificazione del movimento con ConquerDiplomacy, esecuzione delle regressioni e verifica browser.
 - **Ownership:** [MESSAGES-SYSTEM](../MESSAGES-SYSTEM.md).
 
 
