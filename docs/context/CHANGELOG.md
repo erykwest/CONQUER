@@ -3,6 +3,7 @@
 ## 2026-10-28 — Sala larga (branch `feature/wide-built-hall`)
 
 - Nuova variante della sezione costruita: larga 2U, H2 di default, solo piano terra a doppia altezza, per sale comuni, cappelle e sale del trono. Finestrone a lancetta modellato in Blender, 5 contrafforti a due stadi tra le lancette, 2 camini, cutaway con arredi delle tre sale. Stato e prove in [STATUS](STATUS.md).
+- Fix: i contrafforti delle torri in pietra usano lo stesso profilo a gradoni e non attraversano più le facciate dal retro.
 - ROADMAP invariata. DECISIONS invariate: la variante segue il contratto esistente «varianti, non tipi duplicati» (`span` sul tipo `built`).
 
 ## 2026-10-28 — Audio e colonna sonora stagionale (branch `sound`)

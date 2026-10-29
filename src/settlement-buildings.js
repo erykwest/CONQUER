@@ -296,13 +296,15 @@ function drawStoneTowerBase(s,preview=false){
 
   const stroke=State.selectedId===s.id?'#f4b76f':'#9f9285';
   if(style==='buttress'){
-    const buttressTop=(2.35+(towerTier(s)-1)*.12)*.5;
-    for(const pts of stoneTowerButtressFootprints(s)){
-      extrudePolygonAt(pts,0,buttressTop,{
-        top:winterSnowColor('#948779'),
-        sideA:'#4b4540',sideB:'#625a52',stroke
-      });
-    }
+    // Painted after the tower body: buttresses on the far faces only show outside the
+    // tower silhouette (where they stick out past its edge), never across its walls.
+    const colors={top:winterSnowColor('#948779'),sideA:'#4b4540',sideB:'#625a52',stroke:State.selectedId===s.id?stroke:'rgba(159,146,133,.75)'};
+    const facing=b=>viewDepthPoint({x:b.anchor.x+b.outward.x,y:b.anchor.y+b.outward.y})>viewDepthPoint(b.anchor);
+    const all=stoneTowerButtresses(s).sort((a,b)=>viewDepthPoint(a.anchor)-viewDepthPoint(b.anchor));
+    const paint=b=>{for(const p of b)extrudeFrustumAt(p.bottom,p.top,p.z0,p.z1,colors)};
+    const fp=footprintPoints(s),h=structureHeight(s),body=convexHull([...projectPath(fp,0),...projectPath(fp,h)]);
+    withoutScreenHulls([body],()=>all.filter(b=>!facing(b)).forEach(paint));
+    all.filter(facing).forEach(paint);
     return;
   }
 

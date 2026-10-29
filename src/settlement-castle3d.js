@@ -119,13 +119,18 @@
   function cutawayParts(){return State.structures.filter(s=>castleVolume(s)&&structureCutaway(s))}
   const winter=()=>State.season==='winter';
 
+  function addButtress(m,pieces){
+    for(const p of pieces){
+      if(buttressPieceIsPrism(p))m.prism(p.bottom,p.z0,p.z1,PAL.buttress());
+      else{m.frustum(p.bottom,p.top,p.z0,p.z1);m.face(p.top.map(q=>({p:q,z:p.z1})),PAL.buttress())}
+    }
+  }
   function addTower(m,s){
     const h=structureHeight(s);
     if(isStoneTowerStructure(s)){
       const base=towerBaseStyle(s);
       if(base==='buttress'){
-        const top=(2.35+(towerTier(s)-1)*.12)*.5;
-        for(const pts of stoneTowerButtressFootprints(s))m.prism(pts,0,top,PAL.buttress());
+        for(const b of stoneTowerButtresses(s))addButtress(m,b);
       }else if(base==='splayed'){
         m.frustum(stoneTowerSplayedFootprint(s),footprintPoints(s),0,STONE_TOWER_BASE_HEIGHT);
       }
@@ -226,10 +231,7 @@
         if(s.type==='gate')addGate(m,s);
         if(s.type==='built')addBuilt(m,s);
         m.tag='body';
-        for(const b of wideHallButtresses(s))for(const p of b){
-          if(p.top===p.bottom||p.top.every((q,i)=>q.x===p.bottom[i].x&&q.y===p.bottom[i].y))m.prism(p.bottom,p.z0,p.z1,PAL.buttress());
-          else m.frustum(p.bottom,p.top,p.z0,p.z1,PAL.buttress());
-        }
+        for(const b of wideHallButtresses(s))addButtress(m,b);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());
