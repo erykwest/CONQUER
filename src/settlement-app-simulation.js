@@ -178,8 +178,12 @@ function simulationFrame(now){
     }
     // Sector occupation follows real combat positions, not fog or brush zones.
     // The circle controller throttles evaluations; errors cannot stop gameplay.
-    try{window.ConquerCircle?.updateControl?.()}
-    catch(err){console.warn('CONQUER_CIRCLE_TICK_ERROR',err)}
+    try{
+      window.ConquerCircle?.updateControl?.();
+      // Only advancing game time can confirm a sector's occupation.
+      // The controller requires sustained uncontested enemy ground presence.
+      window.ConquerCircle?.tickOccupation?.(State.clock.day);
+    }catch(err){console.warn('CONQUER_CIRCLE_TICK_ERROR',err)}
     if(syncSeasonToCalendar())scheduleLocalSave(100);
 
     // Time itself remains frame-continuous, but expensive simulation decisions
