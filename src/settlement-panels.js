@@ -147,6 +147,21 @@
       card('Lavoratori allocati',bars(work,Math.max(1,...work.map(x=>num(x[1])))))+
       card('Progresso lavori',tasks||empty('Nessun cantiere in corso.'),'Tempi e lavoro derivano dalla simulazione L1 già attiva.');
   }
+
+  function diplomacy(d) {
+    const s=d.diplomacy||{},active=(s.caravans||[]).filter(c=>c.status!=='completed');
+    return '<div class="cp-kpis">'+kpi('Carovane attive',fmt(active.length))+
+      kpi('Messaggio in attesa',s.incoming?'Sì':'No')+
+      kpi('Eventi registrati',fmt(s.history?.length||0))+'</div>'+
+      card('Messaggeri e carovane',line('Convogli in corso',fmt(active.length))+
+        '<button type="button" data-cp-action="caravans">Apri gestione carovane</button>')+
+      card('Relazioni tra feudi',empty('TBD: alleanze, trattati, reputazione e vassallaggio non hanno ancora un modello completo. Non mostriamo valori fittizi.'));
+  }
+  function alerts(d) {
+    const list=warnings(d);
+    return card('Monitoraggio insediamento',list.length?list.map(x=>'<p class="cp-warn">⚠ '+esc(x)+'</p>').join(''):empty('Nessun allarme nei controlli disponibili.'))+
+      card('Copertura del sistema',empty('Monitorati: domanda alimentare, razioni difensive e cantieri L1. Epidemie, tumulti e altri avvisi richiedono nuovi contratti dati.'));
+  }
   function render() {
     const root=$('profileControl'); if(!root || root.hidden)return;
     const d=get();
@@ -157,12 +172,22 @@
       (typeof view==='function'?view(d):empty('Pannello in preparazione.'));
   }
   function open(){current='general';render();}
-  const views={general,people,economy,estate,stores,military,building};
+  const views={general,people,economy,estate,stores,military,building,diplomacy,alerts};
   const root=$('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
       const tab=ev.target.closest('[data-cp-tab]');
-      if(tab){current=tab.dataset.cpTab;render();}
+      if(tab){current=tab.dataset.cpTab;render();return;}
+      const trade=ev.target.closest('[data-cp-transfer]');
+      if(trade){window.ConquerGame?.commands?.transferActivity?.(trade.dataset.cpTransfer,trade.dataset.cpOwner);render();return;}
+      if(ev.target.closest('[data-cp-action="caravans"]'))window.ConquerGame?.commands?.openCaravans?.();
+    });
+    root.addEventListener('input',ev=>{if(ev.target.dataset.cpPolicy==='tax'){const badge=ev.target.closest('.cp-input')?.querySelector('b');if(badge)badge.textContent=ev.target.value+'%';}});
+    root.addEventListener('change',ev=>{
+      const el=ev.target,cmd=window.ConquerGame?.commands;
+      if(el.dataset.cpPolicy)cmd?.setPolicy?.(el.dataset.cpPolicy,el.value);
+      if(el.dataset.cpShare)cmd?.setSaleShare?.(el.dataset.cpShare,num(el.value));
+      render();
     });
     setInterval(()=>{if(!$('profileOverlay')?.hidden&&!root.hidden&&!root.contains(document.activeElement))render();},1800);
   }
