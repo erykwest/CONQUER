@@ -59,7 +59,10 @@
       starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
       earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[],
       circle:{
-        captures:Array.isArray(raw.circle?.captures)?raw.circle.captures.slice(-150):[],
+        // Never discard an ACTIVE conquest when loading a long campaign.
+        captures:Array.isArray(raw.circle?.captures)?raw.circle.captures.filter(
+          (r,i,all)=>r&&!r.reclaimed||i>=all.length-100
+        ):[],
         capturedRoomIds:Array.isArray(raw.circle?.capturedRoomIds)?
           [...new Set(raw.circle.capturedRoomIds.filter(id=>typeof id==='string'))]:[]
       }
@@ -204,6 +207,8 @@
       return{ok:false,reason:'Sector already captured'};
     const ledger=fn({sectorId:sector.id,stock:siege.stock,
       depots:circleDepots(),capturedRoomIds:siege.circle.capturedRoomIds});
+    if(!ledger?.stock||!Array.isArray(ledger.rooms))
+      return{ok:false,reason:'Physical depot distribution unavailable'};
     const record={
       id:'captured-'+State.clock.day.toFixed(5)+'-'+records.length,
       originId:sector.id,day:State.clock.day,depth:sector.depth,
@@ -213,7 +218,13 @@
     siege.stock=ledger.stock;
     siege.circle.capturedRoomIds=ledger.capturedRoomIds;
     siege.circle.captures.push(record);
-    if(siege.circle.captures.length>150)siege.circle.captures.shift();
+    // Bound completed history only. Active captures and their ownership
+    // evidence must survive regardless of campaign duration.
+    const history=siege.circle.captures.filter(r=>r.reclaimed);
+    if(history.length>100){
+      const evict=new Set(history.slice(0,history.length-100));
+      siege.circle.captures=siege.circle.captures.filter(r=>!evict.has(r));
+    }
     if(typeof markDirty==='function')markDirty(false,false,true);
     if(typeof renderUI==='function')renderUI();
     circle?.invalidateControl?.();
