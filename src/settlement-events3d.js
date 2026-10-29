@@ -196,6 +196,19 @@
   function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
   // Deterministic pair for an instance key (map seed + venue + item).
   const pairFor=key=>PAIRS[hash(((typeof State!=='undefined'&&State.seed)||1)+'|'+key)%PAIRS.length];
+  // Pavilions add a scheme to their pair [A,B,scheme]: how the two colours fill walls,
+  // roof gores and valance (A/B alternating per role), so one pair gives several tents.
+  // gored: striped walls, countercoloured gores; solid: all A with a B valance;
+  // roof: plain B walls under A/B gores; inverted: plain A walls, plain B roof.
+  const SCHEMES={
+    gored:(a,b)=>({wallA:a,wallB:b,roofA:b,roofB:a,valA:a,valB:b}),
+    solid:(a,b)=>({wallA:a,wallB:a,roofA:a,roofB:a,valA:b,valB:b}),
+    roof:(a,b)=>({wallA:b,wallB:b,roofA:a,roofB:b,valA:a,valB:a}),
+    inverted:(a,b)=>({wallA:a,wallB:a,roofA:b,roofB:b,valA:a,valB:b})
+  };
+  const SCHEME_KEYS=Object.keys(SCHEMES);
+  // Warm, cool or neutral: neighbouring tents never share a colour nor a warm lead colour.
+  const WARMTH={'#b8322c':'w','#d9b43a':'w','#2f56a6':'c','#3f7d3a':'c','#ece6d6':'n'};
   const liveryOf=ref=>{const {data,key}=catalog(ref);return data?.models?.[key]?.livery||'realm'};
   // Palette of a catalog: the livery keys follow the realm heraldry (c1, c2 field,
   // c4 outline), or the instance's primary pair for 'pair' models.
@@ -206,7 +219,7 @@
     const usePair=pair&&liveryOf(ref)==='pair';
     const tag=(civic?ref.slice(0,ref.indexOf(':')+1):'event|')+(usePair?'pair|'+pair.join('|'):[h.c1,h.c2,h.c4].join('|'));
     const hit=palCache.get(tag);if(hit&&hit.data===data)return hit.pal;
-    const over=usePair?{heraldA:pair[0],heraldB:pair[1]}:{heraldA:h.c1,heraldB:h.c2,heraldTrim:h.c4};
+    const over=usePair?{heraldA:pair[0],heraldB:pair[1],...SCHEMES[pair[2]||'gored'](pair[0],pair[1])}:{heraldA:h.c1,heraldB:h.c2,heraldTrim:h.c4,...SCHEMES.gored(h.c1,h.c2)};
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];return valid(over[k])?over[k]:hex});
     palCache.set(tag,{data,pal});return pal;
   }
@@ -350,10 +363,22 @@
     const tentDeck=shuffle(PAIRS.filter(([a,b])=>PRIMARY.indexOf(a)<PRIMARY.indexOf(b)),'tents')
       .map((p,k)=>hash(seed+'|flip|'+id+'|'+k)%2?[p[1],p[0]]:p);
     const deck=shuffle(PAIRS,'gear');
-    let dealt=0,tents=0;
+    let dealt=0;
+    // Tents: the first pair left in the deck that shares no colour with the nearest tent
+    // already pitched and does not put warm next to warm; then a scheme other than its.
+    const pitched=[],left=[...tentDeck];
+    const tentPair=(it,i)=>{
+      const near=pitched.reduce((m,t)=>{const d=Math.hypot(t.x-it.x,t.y-it.y);return!m||d<m.d?{d,t}:m},null)?.t;
+      const ok=p=>!near||!p.some(c=>near.pair.includes(c))&&!(WARMTH[p[0]]==='w'&&WARMTH[near.pair[0]]==='w');
+      if(!left.length)left.push(...tentDeck);
+      const k=Math.max(0,left.findIndex(ok)),p=left.splice(k,1)[0];
+      let sc=SCHEME_KEYS[hash(seed+'|scheme|'+id+'|'+i)%SCHEME_KEYS.length];
+      if(near&&sc===near.pair[2])sc=SCHEME_KEYS[(SCHEME_KEYS.indexOf(sc)+1)%SCHEME_KEYS.length];
+      const pair=[p[0],p[1],sc];pitched.push({x:it.x,y:it.y,pair});return pair;
+    };
     placedItems(s).forEach((it,i)=>{
       const p=toWorld(s,it.x,it.y);
-      const pair=liveryOf(it.m)!=='pair'?null:/^tent/.test(it.m)?tentDeck[tents++%tentDeck.length]:deck[dealt++%deck.length];
+      const pair=liveryOf(it.m)!=='pair'?null:/^tent/.test(it.m)?tentPair(it,i):deck[dealt++%deck.length];
       const mesh=place(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},pair);
       if(mesh)list.push(mesh);
     });

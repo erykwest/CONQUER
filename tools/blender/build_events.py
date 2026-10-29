@@ -46,6 +46,10 @@ from build_civic import circ, prism, slab, plate, blob, pyramid
 
 COLORS = {
     'heraldA': '#b53636', 'heraldB': '#355fb8', 'heraldTrim': '#d2ad4b',
+    # Pavilion roles (walls, roof gores, valance tongues), A/B alternating: the game
+    # fills them from the tent's livery scheme (settlement-events3d.js tentScheme).
+    'wallA': '#b53636', 'wallB': '#355fb8', 'roofA': '#355fb8', 'roofB': '#b53636',
+    'valA': '#b53636', 'valB': '#355fb8',
     'canvas': '#e8dcc0', 'canvasShade': '#c9bb98', 'dark': '#211d1a',
     'wood': '#9a6a3f', 'woodLight': '#ba8a55', 'woodDark': '#6a4529', 'beam': '#4d3423',
     'rope': '#b9a57a', 'steel': '#9aa3aa', 'steelDark': '#5d656c', 'gold': '#d8b14a',
@@ -262,10 +266,13 @@ def mail_heap(p, x, y, r, h, n=8):
 
 # ------------------------------------------------------------------ pavilions
 def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
-             keys=('heraldA', 'heraldB'), trim='heraldTrim', door=.5):
+             keys=('heraldA', 'heraldB'), trim='heraldTrim', door=.5, roles=False):
     """Camp pavilion on an n-sided plan (circumradius R, a flat side to the front),
-    each side parted into k vertical stripes of the two keys."""
+    each side parted into k vertical stripes of the two keys. With roles=True walls,
+    roof gores and valance take their own A/B keys (wallA/B, roofA/B, valA/B)."""
     tincture = lambda i: keys[i % 2]
+    wall_t, roof_t, val_t = ((lambda i: ('wallA', 'wallB')[i % 2]), (lambda i: ('roofA', 'roofB')[i % 2]),
+                             (lambda i: ('valA', 'valB')[i % 2])) if roles else (tincture, lambda i: tincture(i + 1), tincture)
     a0 = math.pi / n
     corners = circ(0, 0, 1, n, a0)
     ring = []   # unit plan points along the perimeter, k per side
@@ -282,9 +289,9 @@ def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
     faces = [(tuple(range(N - 1, -1, -1)), 'canvasShade')]
     for s in range(N):
         t = (s + 1) % N
-        faces += [((s, t, N + t, N + s), tincture(s)),
+        faces += [((s, t, N + t, N + s), wall_t(s)),
                   ((N + s, N + t, 2 * N + t, 2 * N + s), 'canvasShade'),
-                  ((2 * N + s, 2 * N + t, 3 * N), tincture(s + 1))]
+                  ((2 * N + s, 2 * N + t, 3 * N), roof_t(s))]
     mesh(p, verts, faces)
     # Valance: a gold band and one tongue per stripe, countercoloured to the gore above.
     for s in range(N):
@@ -292,7 +299,7 @@ def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
         o = ((a[0] + b[0]) / 2 * E, (a[1] + b[1]) / 2 * E)
         w = math.hypot(b[0] - a[0], b[1] - a[1]) * E
         nn = side_n(s)
-        plate(p, o, nn, tongue(w, ze + .02, .4), tincture(s), 0, .03)
+        plate(p, o, nn, tongue(w, ze + .02, .4), val_t(s), 0, .03)
         plate(p, o, nn, [(-w / 2, ze - .04), (w / 2, ze - .04), (w / 2, ze + .06), (-w / 2, ze + .06)], trim, .03, .045)
     # Door on the front side, flaps tied back.
     ap = R * math.cos(a0)
@@ -323,13 +330,13 @@ def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
 
 
 def tent_octagon(m):
-    pavilion(m, 8, 2.7, 2, 2.0, 4.9, 6.0, rope_step=2)
+    pavilion(m, 8, 2.7, 2, 2.0, 4.9, 6.0, rope_step=2, roles=True)
     m.livery = 'pair'
 
 
 def tent_square(m):
     # Circumradius 3.0: a 4.2 m square, four stripes a side; ropes at corners and mid sides.
-    pavilion(m, 4, 3.0, 4, 2.0, 4.3, 5.3, rope_step=2)
+    pavilion(m, 4, 3.0, 4, 2.0, 4.3, 5.3, rope_step=2, roles=True)
     m.livery = 'pair'
 
 

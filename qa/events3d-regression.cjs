@@ -124,6 +124,9 @@ for(const g of [venue('arenaLot',{id:'u1'}),venue('festivalGround',{id:'u2',even
  items.forEach((it,i)=>{if(!it.m.startsWith('tent'))return;const c=[...new Set(ms[i+1].col)].filter(x=>PRIMARY.has(x)).sort();const k=c.join();
   assert.ok(!seen.has(k),(g.venue+'/'+(g.event?.setup||''))+': two tents share colours '+k);seen.add(k)});
  assert.ok(seen.size>=4,'venue deals several pairs')}
+// Pavilion schemes: one pair fills walls, gores and valance in different ways.
+{const red=sc=>E.triangles('tentOctagon',{x:0,y:0},0,['#b8322c','#2f56a6',sc]).col.filter(c=>c==='#b8322c').length;
+ assert.equal(new Set(['gored','solid','roof','inverted'].map(red)).size,4,'each scheme fills the pavilion differently')}
 console.log('PASS livery: realm heraldry on stands and stages, primary pairs on knights\' gear');
 
 // Wind: cloth (pennons, bunting, banners) leaves the static scene and waves on the
