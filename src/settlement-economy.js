@@ -88,6 +88,8 @@
     if(!e.happiness||typeof e.happiness!=='object')e.happiness={};
     for(const group of HAPPINESS_GROUPS)
       e.happiness[group]=clamp(finite(e.happiness[group],finite(e.welfare,50)),0,100);
+    if(!Array.isArray(e.panelHistory))e.panelHistory=[];
+    if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
     return e;
   }
   // Existing version-1 saves migrate lazily without resetting wallets or inventories.
