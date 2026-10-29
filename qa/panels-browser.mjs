@@ -89,7 +89,7 @@ try{
     const tag=document.createElement('span');
     tag.textContent='ANTEPRIMA · DATI DIMOSTRATIVI';
     tag.className='cp-demo-tag';
-    document.querySelector('.profile-titlebar').appendChild(tag);
+    document.querySelector('.profile-titlebar').insertBefore(tag,document.getElementById('profileClose'));
     const note=document.createElement('style');
     note.textContent='.cp-demo-tag{font:700 11px Arial,sans-serif;color:#ffe6a6;border:1px solid #9f7f41;border-radius:7px;padding:8px 10px;margin-left:auto;margin-right:12px;background:#48331d}.profile-overlay{background:rgba(9,7,5,.85)}';
     document.head.appendChild(note);
