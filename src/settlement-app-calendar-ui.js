@@ -216,6 +216,7 @@ function generateNewMap(){
   State.heraldry=null;
   State.diplomacy=null;
   window.ConquerDiplomacy?.reset();
+   window.ConquerMessages?.reset();
   window.__conquerHeraldry?.reset();
   localStorage.setItem('conquer.seed.0.0',String(State.seed));
 
