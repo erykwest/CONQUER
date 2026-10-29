@@ -21,4 +21,4 @@ La World Map, le rotte strategiche esterne e l'intercettazione dei messaggeri no
 
 Eseguire: node qa/messages-regression.cjs. Copre vettori, ETA, consegna non anticipata, report immutabili, routine, salti temporali, reset e salvataggi; preservare qa/diplomacy-regression.cjs.
 
-CI: [primo run Messages regression](https://github.com/erykwest/CONQUER/actions/runs/40799950473) completato con successo; test rider aggiunto successivamente. La prova browser non è stata eseguita.
+CI: [Messages regression](https://github.com/erykwest/CONQUER/actions/runs/40800177719) **PASS**, inclusa la prova del figurante a cavallo e compatibilità diplomazia. La prova browser end-to-end non è stata eseguita.
