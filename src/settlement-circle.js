@@ -416,9 +416,9 @@
       error:lastError&&String(lastError)})
   });
   Promise.all([
-    import('./circle/defensive-topology.mjs?v=circle-1'),
-    import('./circle/defensive-control.mjs?v=circle-1'),
-    import('./circle/defensive-logistics.mjs?v=circle-1')
+    import('./circle/defensive-topology.mjs?v=circle-2'),
+    import('./circle/defensive-control.mjs?v=circle-2'),
+    import('./circle/defensive-logistics.mjs?v=circle-2')
   ]).then(([top,control,stores])=>{
     topology=top;controlEngine=control;logistics=stores;
     invalidate('initial');updateControl(true);
