@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-29 — Economia, tappa 4: un solo sistema di convogli (branch `feature/economy-convoys`)
+
+- Carovane della diplomazia, convogli del mastio, manifesti mercantili e carrozze nobiliari sono un solo sistema (`ConquerConvoys`) che preleva davvero dal castello; corretto il tributo gratuito introdotto con #98. Quattro cartelli di prova sulle arterie e convogli visibili sulla strada maestra. Stato e prove in [STATUS](STATUS.md). D-054 in DECISIONS; ROADMAP invariata.
 ## 2026-10-29 — Economia, tappa 3: commercio e botteghe L3 autonome (branch `feature/economy-commerce`)
 
 - Il commercio di #55 e l'economia urbana autonoma sono un solo sistema collegato al calendario: le case L3 aprono botteghe da sole, producono Beni L3 venduti il sabato con i prezzi della settimana prima. Stato e prove in [STATUS](STATUS.md). D-053 in DECISIONS; ROADMAP invariata.
