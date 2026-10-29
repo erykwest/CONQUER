@@ -1146,8 +1146,20 @@
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
     const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
     const W3=window.ConquerWagons3D,FU=window.ConquerCutawayFurniture;
+    // Furniture and ladders (world xy, z on the structure plane).
+    const addFurniture=s=>{
+      const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
+      for(const f of FU?.worldFaces(s)||[]){
+        const pts=f.pts.map(p=>({x:p[0],y:p[1],z:(plane?G0:terrainElevation({x:p[0],y:p[1]}))+p[2]}));
+        const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1;
+        m.face(pts,shadeHex(f.hex,k));
+        if(f.emissive)em.face(pts,f.hex);
+      }
+    };
     for(const s of State.structures){
       if(!structureCutaway(s)||underConstruction(s))continue;
+      // Timber tower: the Blender model minus the sides facing this quarter-turn, then its room.
+      if(window.ConquerWood3D?.addCutawayToBuilder?.(sh,s)){addFurniture(s);continue}
       const g0=cutawayWallGeometry(s),H=structureHeight(s),n=Math.min(g0.outer.length,g0.inner.length);
       // Inner ring re-indexed so inner[i] is the vertex nearest outer[i] (built sections list them
       // in another order, which made the crest quads cross over the whole room).
@@ -1252,13 +1264,7 @@
           openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05,.78,'#1f1712');
         }
       }
-      // Furniture and ladders (world xy, z on the structure plane).
-      for(const f of FU?.worldFaces(s)||[]){
-        const pts=f.pts.map(p=>({x:p[0],y:p[1],z:(plane?G0:terrainElevation({x:p[0],y:p[1]}))+p[2]}));
-        const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1;
-        m.face(pts,shadeHex(f.hex,k));
-        if(f.emissive)em.face(pts,f.hex);
-      }
+      addFurniture(s);
     }
     return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris)};
   }

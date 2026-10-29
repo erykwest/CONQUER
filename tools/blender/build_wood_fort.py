@@ -247,11 +247,15 @@ def watchtower(mdl):
 def palisade_tower(mdl, roofed):
     """drawMediumWoodTower (1.5 U): closed body of stakes to the deck at 1.72-1.82 U, then a
     pointed parapet (open) or a rail with four posts and a hip roof to 2.95 U (roofed).
-    Added: two outer walers, a door, loopholes, joist ends under the deck."""
+    Added: two outer walers, a door, loopholes, joist ends under the deck.
+    The body is one part per side (side_yn, side_xp, side_yp, side_xn: stakes, walers, door,
+    slits), so the cutaway can leave out the two sides facing the camera; 'floor' and
+    'interior' (plank floor, ladder to the deck) only show in cutaway."""
     size, deck0, deck1 = 1.5, 1.72, 1.82
     half = size / 2 - .07
     cs = [(-half, -half), (half, -half), (half, half), (-half, half)]
-    body = mdl.part('body')
+    names = ['side_yn', 'side_xp', 'side_yp', 'side_xn']            # edge e of cs, outward side
+    sides = [mdl.part(n) for n in names]
     seen = set()
     for e in range(4):
         a, b = cs[e], cs[(e + 1) % 4]
@@ -263,22 +267,35 @@ def palisade_tower(mdl, roofed):
                 continue
             seen.add(k)
             lean = (rng.uniform(-.008, .008), rng.uniform(-.008, .008))
-            log(body, x, y, .09 if (abs(abs(x) - half) < 1e-6 and abs(abs(y) - half) < 1e-6) else .085,
+            log(sides[e], x, y, .09 if (abs(abs(x) - half) < 1e-6 and abs(abs(y) - half) < 1e-6) else .085,
                 0, deck0 + rng.uniform(-.02, .0), lean=lean)
     out = half + .1
     for z in (.32, 1.30):                                            # walers
         for e in range(4):
             a, b = cs[e], cs[(e + 1) % 4]
             s = out / half
-            beam(body, (a[0] * s, a[1] * s, z), (b[0] * s, b[1] * s, z), .06, .07, 'beam')
+            beam(sides[e], (a[0] * s, a[1] * s, z), (b[0] * s, b[1] * s, z), .06, .07, 'beam')
     # door on the -x face: dark doorway, a plank leaf ajar, a lintel
-    box(body, -out - .002, 0, 0, .012, .34, .62, 'dark')
-    box(body, -out - .02, .1, 0, .04, .15, .6, 'door')
-    box(body, -out - .01, 0, .62, .06, .46, .07, 'beam')
-    for face in ('x+', 'y+', 'y-'):
+    door = sides[3]
+    box(door, -out - .002, 0, 0, .012, .34, .62, 'dark')
+    box(door, -out - .02, .1, 0, .04, .15, .6, 'door')
+    box(door, -out - .01, 0, .62, .06, .46, .07, 'beam')
+    for face, e in (('x+', 1), ('y+', 2), ('y-', 0)):
         for along in (-.3, .3):
-            slit(body, face, along, 1.02, half=half + .085)
-    mdl.done('body', body)
+            slit(sides[e], face, along, 1.02, half=half + .085)
+    for n, p in zip(names, sides):
+        mdl.done(n, p)
+    # Inside, seen only in cutaway: a plank floor and the ladder to a hatch in the deck.
+    fl = mdl.part('floor')
+    inner = half - .1
+    box(fl, 0, 0, 0, inner * 2, inner * 2, .03, 'plankDark', 'plank')
+    for i in range(1, 7):
+        box(fl, -inner + inner * 2 * i / 7, 0, .03, .008, inner * 2 * .98, .003, 'plankDark')
+    mdl.done('floor', fl)
+    inside = mdl.part('interior')
+    ladder(inside, inner - .1, inner - .12, .03, deck0, axis_y=True, w=.16, rungs=8)
+    box(inside, inner - .1, inner - .12, deck0 - .005, .22, .22, .006, 'dark')   # hatch, seen from below
+    mdl.done('interior', inside)
     dk = mdl.part('deck')
     deck(dk, size - .10, deck0, deck1, top='plank' if roofed else 'roofDeck', joists=4)
     mdl.done('deck', dk)

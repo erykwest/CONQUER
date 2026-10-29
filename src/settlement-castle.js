@@ -513,9 +513,12 @@ function cutawayEligible(s){
   if(s.type==='built')return true;
   // Stone gates open like square towers: the passage on the ground floor, rooms above.
   if(s.type==='gate')return !isWoodGate(s);
+  // The timber palisade tower opens its Blender model (settlement-wood3d.js); the watchtower
+  // has no walls to open.
+  if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 towers are too small to read as useful rooms. Keep them solid until
   // they receive a dedicated spiral-stair interior treatment.
-  return s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
+  return s.type==='tower'&&towerTier(s)>=2;
 }
 // A subtower follows its parent tower/gate: one switch on the parent opens the attached
 // subtowers too (T1 subtowers stay solid, like any T1 tower).
@@ -853,6 +856,9 @@ function drawBuiltCutawayShell(s,g,height){
 }
 function drawCutawayStructure(s){
   if(!structureCutaway(s)||underConstruction(s))return;
+  // Timber tower: its model, minus the camera-facing sides, is drawn with the structures
+  // (ConquerWood3D.draw); only the room's furnishings belong here.
+  if(isWoodTower(s)){withStructureGroundPlane(s,()=>window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s)));return}
   const render=()=>{
     const g=cutawayWallGeometry(s),height=structureHeight(s);
 

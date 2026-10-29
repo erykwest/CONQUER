@@ -147,20 +147,37 @@
     }
     return mesh;
   }
+  // Palisade tower sides (outward normal in model space). In cutaway the two sides facing the
+  // camera quarter-turn are left out and the room inside (floor, ladder) shows; otherwise the
+  // interior parts stay out (the 2.5D painter has no depth buffer to hide them).
+  const SIDES={side_xp:[1,0],side_xn:[-1,0],side_yp:[0,1],side_yn:[0,-1]};
+  const INTERIOR=['floor','interior'];
+  function openSides(s){
+    if(typeof isPlanView==='function'&&isPlanView())return new Set();
+    const a=s.angle||0,c=Math.cos(a),sn=Math.sin(a),d0=viewDepthPoint({x:s.x,y:s.y}),out=new Set();
+    for(const [name,[x,y]] of Object.entries(SIDES))if(viewDepthPoint({x:s.x+x*c-y*sn,y:s.y+x*sn+y*c})>d0+1e-6)out.add(name);
+    return out;
+  }
+  const cutaway=s=>typeof structureCutaway==='function'&&structureCutaway(s);
   function pointModel(s){
     const key=modelKey(s),ground=groundOf(s),mesh={pos:[],col:[]};
     if(key==='woodGate'){
       // Model is 1 U along the passage (x) by 1.5 U across: older saves may carry other w/h.
       const d=rectDims(s);
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0,sx:d.w/1,sy:d.h/1.5},ground);
-    }else addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground);
+    }else{
+      const names=parts(key).map(p=>p.name),open=cutaway(s)?openSides(s):null;
+      const only=names.filter(n=>open?!open.has(n):!INTERIOR.includes(n));
+      addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
+    }
     return mesh;
   }
   // World geometry of one structure: model meshes (shaded by face normal) + pre-shaded faces.
   const cache=new Map();
   function geometry(s){
     const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.w,s.h,s.size,
-      s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length].join('|');
+      s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length,
+      cutaway(s)?'cut'+[...openSides(s)].join(','):''].join('|');
     const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
     let geo;
     if(s.type==='palisade')geo=palisade(s);
@@ -176,9 +193,18 @@
     if(cache.size>512)cache.clear();
     return geo;
   }
-  // WebGL: add to a world3d meshBuilder with fixed-light shaded colours.
+  // WebGL: add to a world3d meshBuilder with fixed-light shaded colours. An opened (cutaway)
+  // tower belongs to the cutaway pass instead, rebuilt per camera quarter-turn.
   function addToBuilder(m,s){
     if(!handles(s))return false;
+    if(cutaway(s))return true;
+    return emit(m,s);
+  }
+  function addCutawayToBuilder(m,s){
+    if(!handles(s)||!cutaway(s))return false;
+    return emit(m,s);
+  }
+  function emit(m,s){
     const geo=geometry(s);
     for(const mesh of [geo.foundation,geo.mesh]){
       if(!mesh)continue;
@@ -214,5 +240,5 @@
     }
     return new Float32Array(out);
   }
-  window.ConquerWood3D={modelKey,handles,parts,geometry,addToBuilder,draw,worldTriangles};
+  window.ConquerWood3D={modelKey,handles,parts,geometry,addToBuilder,addCutawayToBuilder,openSides,draw,worldTriangles};
 })();
