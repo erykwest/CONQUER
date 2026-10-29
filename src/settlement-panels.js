@@ -81,6 +81,20 @@
       card('Tassazione e razioni',policy)+
       card('Festività',line('Sabato','Mercato')+line('Domenica','Riposo')+empty('Festività straordinarie e loro effetti sulla felicità: TBD.'));
   }
+
+  function economy(d) {
+    const e=d.economy||{},j=e.jobs||{},goods=e.goods||[];
+    const jobs=[['Pastori',j.herding],['Boscaioli',j.logging],['Industrie L1',j.industry],['Costruttori',j.building],['L1 inattivi',j.idle]];
+    const table=goods.length?'<div class="cp-scroll"><table class="cp-table"><thead><tr><th>Bene</th><th>Prezzo</th><th>Mercato</th><th>Castello</th><th>Vendita</th></tr></thead><tbody>'+
+      goods.map(g=>'<tr><th>'+esc(labels[g.id]||g.id)+'</th><td>'+fmt(g.price)+'</td><td>'+fmt(g.market)+'</td><td>'+fmt(g.castle)+'</td><td><select data-cp-share="'+esc(g.id)+'" aria-label="Quota vendita '+esc(labels[g.id]||g.id)+'">'+
+      [0,25,50,75,100].map(n=>'<option value="'+n+'"'+(num(g.share)===n?' selected':'')+'>'+n+'%</option>').join('')+
+      '</select></td></tr>').join('')+'</tbody></table></div>':empty('Mercato non inizializzato.');
+    return '<div class="cp-kpis">'+kpi('Capitale L4',fmt(e.capital),'Oro privato')+
+      kpi('Tesoreria',fmt(e.castleGold),'Oro signore')+kpi('Mercati',fmt(d.snapshot?.weeks),'Cicli settimanali')+'</div>'+
+      '<div class="cp-grid">'+card('Occupazione L1',bars(jobs,Math.max(1,...jobs.map(x=>num(x[1])))))+
+      card('Bilancio alimentare',foodChart(d))+'</div>'+
+      card('Mercato, prezzi e vendite',table,'La domanda esterna non viene generata automaticamente.');
+  }
   function render() {
     const root=$('profileControl'); if(!root || root.hidden)return;
     const d=get();
@@ -91,7 +105,7 @@
       (typeof view==='function'?view(d):empty('Pannello in preparazione.'));
   }
   function open(){current='general';render();}
-  const views={general,people};
+  const views={general,people,economy};
   const root=$('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
