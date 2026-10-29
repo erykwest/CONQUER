@@ -55,6 +55,8 @@ function segmentStrip(a,b,width) {
   return [{x:a.x+dx,y:a.y+dy},{x:b.x+dx,y:b.y+dy},
           {x:b.x-dx,y:b.y-dy},{x:a.x-dx,y:a.y-dy}];
 }
+function leftOf(index,grid){return grid.left+(index%grid.w+.5)*grid.step}
+function topOf(index,grid){return grid.top+(Math.floor(index/grid.w)+.5)*grid.step}
 function signedArea(poly) {
   return poly.reduce((sum,p,i)=>{const q=poly[(i+1)%poly.length];return sum+p.x*q.y-q.x*p.y},0)/2;
 }
@@ -209,7 +211,13 @@ export function detectDefensiveCompartments(source={}) {
       boundaries:loops,area,depth:Math.max(1,depth.get(r.code)??1),
       adjacentIds:[...portalAdj.get(r.code)].sort(),
       mastio:r.code===mastioCode,state:'unassessed',
-      centroid:{x:grid.left+r.sumX/r.cells.length*step,y:grid.top+r.sumY/r.cells.length*step}
+      centroid:{x:grid.left+r.sumX/r.cells.length*step,y:grid.top+r.sumY/r.cells.length*step},
+      // Anchors are guaranteed passable sector cells; a centroid could lie
+      // inside a nested keep's hole, so it cannot identify a lost outer ring.
+      anchors:[0,.25,.5,.75,1].map(t=>{
+        const index=r.cells[Math.min(r.cells.length-1,Math.floor(t*(r.cells.length-1)))];
+        return{x:leftOf(index,grid),y:topOf(index,grid)};
+      })
     };
   });
   const compAt=(p)=>ids.get(regionAt(p))||null;
