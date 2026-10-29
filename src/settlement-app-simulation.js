@@ -193,6 +193,7 @@ function simulationFrame(now){
 
     // Maintenance follows actual topology events, NOT render frames.
     if(completed.length){
+      window.ConquerCircle?.invalidate?.('construction completed');
       runSettlementMaintenance('completion',completed);
       if(completed.some(s=>s.type==='tower'))window.ConquerSiege?.syncAutoMastio?.();
       simMaintenanceAt=now;
