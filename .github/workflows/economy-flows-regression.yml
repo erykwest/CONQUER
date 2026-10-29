@@ -9,6 +9,21 @@ on:
       - 'qa/economy*.cjs'
       - 'qa/construction*.cjs'
       - 'src/settlement-core.js'
+      - 'src/settlement-population-*.js'
+      - 'src/settlement-commerce.js'
+      - 'src/settlement-urban-economy.js'
+      - 'src/settlement-market-economy.js'
+      - 'src/settlement-convoys.js'
+      - 'src/settlement-diplomacy.js'
+      - 'src/settlement-road-sign-tests.js'
+      - 'src/settlement-vehicles.js'
+      - 'src/settlement-wagons.js'
+      - 'qa/*routines*.cjs'
+      - 'qa/commerce*.cjs'
+      - 'qa/urban-workshops*.cjs'
+      - 'qa/convoys*.cjs'
+      - 'qa/road-sign*.cjs'
+      - 'qa/vehicles*.cjs'
       - '.github/workflows/economy-flows-regression.yml'
   workflow_dispatch:
 jobs:
@@ -35,3 +50,13 @@ jobs:
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs
+      - name: Routines, commerce, convoys and vehicles regressions
+        run: |
+          node qa/male-routines-regression.cjs
+          node qa/female-routines-regression.cjs
+          node qa/commerce-skeleton-regression.cjs
+          node qa/urban-workshops-regression.cjs
+          node qa/convoys-skeleton-regression.cjs
+          node qa/road-sign-convoy-regression.cjs
+          node qa/diplomacy-regression.cjs
+          node qa/vehicles-regression.cjs
