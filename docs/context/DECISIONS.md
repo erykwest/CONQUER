@@ -185,3 +185,11 @@ Aggiungere un ID, classe, data di registrazione, **motivazione**, alternative sc
 - L'appartenenza del Mastio viene valutata dal lato dell'ingresso, non dal centro dell'edificio pieno. Per le built sections senza ingresso identificabile, l'attribuzione alle riserve resta non determinata.
 - Le cerchie annidate e settori laterali hanno identità logiche distinte. Una breccia modifica la topologia ma non è una conquista automatica: senza un controller militare i settori sono `unassessed`; non devono essere scelti come rifugi per default.
 - Il riconoscimento raster attuale è un primo contratto runtime, non sostituisce collisioni, pathfinding e simulazione d'assedio esistenti.
+
+
+### CIRCLE — controllo militare dei compartimenti — 2026-10-29
+- **La condizione `secure` dipende dall'assenza di combattenti ostili effettivamente presenti nel compartimento.** La visibilità della fog of war non è una fonte attendibile di sicurezza: un nemico non avvistato rende comunque insicura la zona.
+- **`alert` non significa occupato.** Gli allarmi esistenti (yellow/green e campana) restano indipendenti dalla classificazione di occupazione; `secure` e `alert` restano eleggibili come rifugi nel contratto `/circle`.
+- **Scale/torri d'assedio e camminamenti:** salita=`threatened`, ostile sul camminamento=`infiltrated`, scontro tra difensori e assalitori sul camminamento=`contested`. Solo presenza a terra dentro un compartimento genera `invaded`, oppure `contested` se ci sono difensori.
+- **`invaded` non equivale a `captured`.** Il controllo definitivo, la perdita delle scorte e la produzione interrotta richiederanno un evento esplicito di conquista confermata; questa iterazione non trasferisce risorse né altera i pennelli e le collisioni esistenti.
+- I compartimenti non più geometricamente chiusi richiedono successivamente memoria storica dei settori perduti, senza farli passare erroneamente per sicuri.
