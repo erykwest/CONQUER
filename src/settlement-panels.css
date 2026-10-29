@@ -94,7 +94,12 @@
   #profileControl{padding:12px}
   .cp-grid{grid-template-columns:1fr}
   .cp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .cp-bar{grid-template-columns:80px minmax(0,1fr) 44px;gap:6px}
+  .cp-bar{grid-template-columns:88px minmax(0,1fr) 44px;gap:6px}
+  .cp-bar>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+  /* Wide history charts scroll sideways instead of shrinking their labels. */
+  .cp-history{overflow-x:auto;scrollbar-width:thin}
+  .cp-history svg{min-width:620px}
+  .cp-history .cp-graph-legend{position:sticky;left:0}
   .cp-kpi strong{font-size:20px}
   .cp-head h2{font-size:20px}
 }

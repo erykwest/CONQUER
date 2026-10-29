@@ -57,8 +57,10 @@
   // ---- Charts -----------------------------------------------------------------
   // One SVG line chart for every series: y grid, day labels, point tooltips.
   // Null values break the line; nothing is interpolated or reconstructed.
-  const W = 360, H = 132, L = 34, R = 346, T = 10, B = 106;
-  function chart(points,series,caption,extraClass='') {
+  // Wide charts (full-width cards) get a wider canvas instead of being scaled up.
+  const H = 132, L = 34, T = 10, B = 106;
+  function chart(points,series,caption,extraClass='',W=360) {
+    const R = W-14;
     const values = series.flatMap(s=>s.values.filter(v=>v!==null));
     const min = Math.min(0,...values), max = Math.max(1,...values), span = Math.max(1,max-min);
     const x = i => L+(R-L)*i/Math.max(1,points.length-1);
@@ -108,7 +110,7 @@
       return raw==null||!Number.isFinite(Number(raw))?null:Number(raw);
     })})).filter(s=>s.values.some(v=>v!==null));
     if(!lines.length)return empty('Nessun dato rilevato per questa serie.');
-    return chart(weeks.map(w=>({label:dayLabel(w.day)})),lines,caption+': '+weeks.length+' rilevazioni settimanali','cp-history');
+    return chart(weeks.map(w=>({label:dayLabel(w.day)})),lines,caption+': '+weeks.length+' rilevazioni settimanali','cp-history',760);
   }
   const welfareTrend = d => historical(d,[{label:'Felicità media',color:COLORS[0],read:w=>w.welfare}],'Felicità della popolazione');
   const classTrend = d => historical(d,CLASSES.map((k,i)=>({label:k,color:COLORS[i],read:w=>w.population?.[k]>0?w.happiness?.[k]:null})),'Felicità per classe');
