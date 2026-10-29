@@ -200,6 +200,8 @@
     const slots=cutawayRoomSlots(s,g).map(x=>({...x,floor:x.floor??x.index}));
     // Gates: the ground floor is the entrance passage, no room; it only holds the ladder up.
     if(functionFloorOffset(s)&&levels>1)slots.unshift({index:-1,floor:0,role:null,size:'normal',z:floors[0].z,basis:cutawayFloorBasis(s,g),g});
+    // Small towers: a spiral stair fills the shaft, no room furniture nor ladder.
+    if(spiralTower(s))return out;
     for(const slot of slots){
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
@@ -244,6 +246,57 @@
       boxWorld(F,L.u,L.v,z-.008,sideU?LADDER_W:.02,sideU?.02:LADDER_W,.016,'#b98652',out,floor);
     }
   }
+  // ---------- spiral stair (small T1 towers)
+  const STAIR_STEPS_PER_TURN=14,STAIR_RISE=.11,STAIR_MIN_R=.1;
+  function spiralTower(s){return typeof cutawaySpiralStair==='function'&&cutawaySpiralStair(s)}
+  // Axis and radius: the widest circle inside the shaft and outside the parent footprint
+  // (a subtower is cut by its parent; the stair moves into the free part). Local (u,v) frame.
+  function spiralStair(s,g){
+    const b=cutawayFloorBasis(s,g),ca=Math.cos(b.angle),sa=Math.sin(b.angle),hu=b.w/2,hv=b.h/2,round=s.shape==='round';
+    const toWorld=(u,v)=>({x:b.center.x+u*ca-v*sa,y:b.center.y+u*sa+v*ca});
+    const blocks=(typeof cutawayBlockers==='function'?cutawayBlockers(s):[]).map(k=>k.pts);
+    const room=(u,v)=>round?hu-Math.hypot(u,v):Math.min(hu-Math.abs(u),hv-Math.abs(v));
+    const clear=(u,v)=>{
+      let r=room(u,v);const p=toWorld(u,v);
+      for(const B of blocks){
+        if(pointInPolygon(p,B))return -1;
+        for(let i=0;i<B.length;i++)r=Math.min(r,pointSegmentDistance(p,B[i],B[(i+1)%B.length]));
+      }
+      return r;
+    };
+    let best=null;
+    for(let u=-hu;u<=hu+1e-9;u+=.025)for(let v=-hv;v<=hv+1e-9;v+=.025){
+      // Ties go to the shaft centre.
+      const r=clear(u,v)-.012,score=r-Math.hypot(u,v)*1e-3;
+      if(r>0&&(!best||score>best.score))best={u,v,R:r,score};
+    }
+    if(!best||best.R<STAIR_MIN_R)return null;
+    // The first step starts at the entrance: the ground door, else (subtower) the parent side.
+    const doors=typeof towerDoorSpecs==='function'?towerDoorSpecs(s).slice().sort((p,q)=>p.baseZ-q.baseZ):[];
+    const parent=s.parentTowerId&&State.structures.find(o=>o.id===s.parentTowerId);
+    const c=toWorld(best.u,best.v),dir=doors[0]?doors[0].outward:parent?{x:parent.x-c.x,y:parent.y-c.y}:{x:ca,y:sa};
+    const start=Math.atan2(dir.y,dir.x)-b.angle;
+    const z0=cutawayFloorLevels(s)[0].z,z1=structureHeight(s)-.06;
+    return{u:best.u,v:best.v,R:best.R,newel:Math.min(.045,best.R*.2),start,z0,z1,steps:Math.max(1,Math.floor((z1-z0)/STAIR_RISE)),toWorld,angle:b.angle};
+  }
+  // Stone wedge steps around a newel post, each overlapping the one below like a solid
+  // helical stair (no undersides: the camera never looks up).
+  function spiralStairWorld(st,out){
+    const da=Math.PI*2/STAIR_STEPS_PER_TURN,rise=(st.z1-st.z0)/st.steps,{u,v,R,newel}=st;
+    const P=(a,r,z)=>{const p=st.toWorld(u+Math.cos(a)*r,v+Math.sin(a)*r);return[p.x,p.y,z]};
+    const N=(a)=>[Math.cos(a+st.angle),Math.sin(a+st.angle),0];
+    for(let k=0;k<st.steps;k++){
+      const a0=st.start+k*da,a1=a0+da*1.04,am=(a0+a1)/2,top=st.z0+(k+1)*rise,bot=Math.max(st.z0,top-rise-.035);
+      out.push({pts:[P(a0,newel,top),P(a0,R,top),P(am,R,top),P(a1,R,top),P(a1,newel,top)],hex:'#8d877c',n:[0,0,1],floor:0});
+      out.push({pts:[P(a0,newel,bot),P(a0,R,bot),P(a0,R,top),P(a0,newel,top)],hex:'#6f6a62',n:N(a0-Math.PI/2),floor:0});
+      out.push({pts:[P(a1,R,bot),P(a1,newel,bot),P(a1,newel,top),P(a1,R,top)],hex:'#6f6a62',n:N(a1+Math.PI/2),floor:0});
+      for(const [p,q] of [[a0,am],[am,a1]])out.push({pts:[P(p,R,bot),P(q,R,bot),P(q,R,top),P(p,R,top)],hex:'#77716a',n:N((p+q)/2),floor:0});
+    }
+    // Newel: an octagonal post with a cap above the last step.
+    const zt=st.z1+.04;
+    for(let i=0;i<8;i++){const p=i*Math.PI/4,q=p+Math.PI/4;out.push({pts:[P(p,newel,st.z0),P(q,newel,st.z0),P(q,newel,zt),P(p,newel,zt)],hex:'#7a7268',n:N((p+q)/2),floor:0})}
+    out.push({pts:Array.from({length:8},(_,i)=>P(i*Math.PI/4,newel,zt)),hex:'#8d877c',n:[0,0,1],floor:0});
+  }
   const cache=new Map();
   function structureFaces(s,g){
     // Cheap key: archer posts follow the wall junctions and the tower shape, not the archer
@@ -257,6 +310,7 @@
       if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.floor);
       spots.set(room.slot.index,freeSpots(room));
     }
+    if(spiralTower(s)){const st=spiralStair(s,g);if(st)spiralStairWorld(st,faces)}
     const res={key,faces,lights,spots};cache.set(s.id,res);return res;
   }
   // Standing spots for room occupants: grid points clear of furniture footprints.
@@ -336,5 +390,5 @@
     }
   }
   function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces:[]}
-  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,pieceFaces,clear:()=>cache.clear()};
+  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();
