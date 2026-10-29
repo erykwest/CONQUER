@@ -472,3 +472,9 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Fatto nel branch:** detector di compartimenti chiusi (fortificazioni complete, scarpate ripide, mare/montagne, terraforming), due settori laterali, cerchie annidate, taglio brecce, accessi gate aperto/chiuso, ponti praticabili, profondità e collegamenti, API `window.ConquerCircle`.
 - **Aperto:** verifica visuale e prestazionale su scenari reali; interfaccia debug/overlay; identità persistente dei compartimenti; aggancio a controllo militare/ingressi nemici (scale, torri d'assedio); scelta sicura delle destinazioni di fuga e relativa IA; accessi lato costruzioni, deposito interno per built senza ingresso certo; scorte fisiche e produzione settoriale; QA end-to-end e protezione regressioni di navigazione.
 - **Vincolo:** edifici civili, recinti e siepi non chiudono compartimenti; le zone dipinte white/yellow/green non vengono sostituite. Le brecce non implicano automaticamente conquista.
+
+
+### CIRCLE — stato invaso/sicuro — 2026-10-29
+- **Branch `circle` presente:** classificazione militare sulle posizioni reali delle unità, con distinzioni minaccia da scala, infiltrazione sulle mura, invasione a terra, contesa con difensori, allerta e sicuro; readout Combat e API read-only; refresh durante tick, spawn, eliminazione nemici, pennelli/allarmi. Test di controllo e adapter aggiunti.
+- **Da completare:** identità persistente dei compartimenti anche dopo breccia; controllo e cattura confermata, riconquista e ripristino della sicurezza; connessione all'IA ritirata civili e al sistema economico (depositi localizzati, perdita scorte solo alla conquista, produzione residuale), test browser, regressione reale e profiling. Distinguere effetti delle truppe sulle mura da vera occupazione a terra.
+- **Non cambiare:** white/yellow/green zone territoriali e gestione della nebbia di guerra non definiscono il possesso militare.
