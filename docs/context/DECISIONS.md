@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-PANELS-01 · Centro di controllo del feudo (29/10/2026)
+
+**DESIGN e codice sulla branch \`panels\`, non su \`main\`:** i pannelli di controllo sono un livello di osservazione/gestione nel Profilo della partita, non uno stato economico parallelo. Nove aree (Generale, Popolazione, Economia, Proprietà, Scorte, Militare, Cantieri, Diplomazia, Avvisi), usando \`ConquerGame.read\` e comandi del motore. Lo storico è mostrato solo dove esiste (\`balanceHistory\` mercato settimanale); nessuna serie fittizia. Distinguere scorte economia/Siege e numero di soldati effettivi/capienza caserme. **Festività, diplomazia avanzata e leve reali restano TBD**, come descritto in [management-panels](../management-panels.md). Nessuna modifica alle priorità della roadmap M0–M5.
+
 ## Hardening strade e WebGL (23/10/2026)
 
 **D-FIX-01 · CODICE SU BRANCH `fix/main-founding-dev-webgl-20261023`:** ogni programma shader WebGL2 possiede il proprio VAO: abilitazioni e associazioni degli attributi non passano a programmi diversi quando viene eliminato un buffer di mesh. Rimangono il polling differito di D-038 e il fallback Canvas per errori veri; nessuna nuova query GPU sincrona nel disegno. La riparazione delle arterie prepara segmenti e ponti cedendo il controllo anche durante le scansioni dei fiumi; sostituisce la route e apre i corridoi forestali solo dopo una verifica finale della revisione di navigazione. Annullare la preparazione non pubblica topologia parziale e conserva quella precedente. Il percorso sincrono usa lo stesso generatore di ponti. Motivazioni e prove nel [report](../main-fixes-diagnosis-2026-10-23.md); nessuna modifica al contratto dei default DEV automatici o alla roadmap.
