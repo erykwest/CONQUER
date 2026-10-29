@@ -1,5 +1,12 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## Posta feudale — branch messages (29/10/2026)
+
+- [x] **Sul branch, non su main:** piccionaia come funzione castello, recapito ritardato messaggero/piccione, archivio e routine di rapporti.
+- [ ] **Prossima integrazione:** feudi realmente simulati e ordini effettivi, mappe delle tratte e intercettazioni con il sistema delle carovane.
+- Riferimenti: [specifica MESSAGES-SYSTEM](MESSAGES-SYSTEM.md), [STATUS](context/STATUS.md).
+
+
 > **Nuova verifica Git 23/10:** [audit integrale aggiornato](context/AUDIT-2026-10-23.md) su main `518e830` dopo #76 e #79–81. **13 nuclei Builder già presenti e 10 voci con residui: conteggi invariati**. Le nuove feature Portoni GATE-01/01b/02/03/04/06 sono **main** e sono catalogate nel [backlog inter-sistemi](context/BACKLOG.md); Asset Lab è tooling, non nuova meccanica economica.
 
 > **Stato ricontrollato: 2026-10-22**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e). [Audit completo e matrice dei 23 ID](context/AUDIT-2026-10-22.md).
