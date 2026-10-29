@@ -1,5 +1,13 @@
 # CONQUER — Settlement control center (branch panels)
 
+## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+
+- Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
+- Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
+- Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
+- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+
+
 ## Obiettivo
 
 Un **centro di controllo** dentro il Profilo della partita, accessibile dalla scheda «CENTRO DI CONTROLLO». Non è un secondo motore economico: offre dati aggregati e azioni delegate a `ConquerGame.commands` e ai sottosistemi esistenti.
