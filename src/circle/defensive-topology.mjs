@@ -92,7 +92,8 @@ function outline(label,region,grid) {
 /**
  * @param {object} source
  * bounds {minX,minY,maxX,maxY}, cellSize, fortifications [{id,polygon}],
- * natural [{id,polygon}], crossings [{id,polygon}], gates
+ * natural [{id,polygon}], naturalCuts [{id,polygon}],
+ * terrainBarriers [{id,polygon}], crossings [{id,polygon}], gates
  * [{id,sideA,sideB,open}], mastioPoint {x,y}, minArea.
  *
  * Open gates still seal the *defensive boundary*; open is route accessibility.
@@ -108,6 +109,10 @@ export function detectDefensiveCompartments(source={}) {
   const grid={left:b.minX,top:b.minY,step,w,h};
   const naturalMask=new Uint8Array(w*h),blocked=new Uint8Array(w*h);
   for(const natural of source.natural||[])rasterPoly(natural.polygon,naturalMask,grid,1);
+  // Flat H0 edits cancel older natural relief, then expose any surviving
+  // vertical faces of their own. Bridges carve traversable corridors last.
+  for(const cut of source.naturalCuts||[])rasterPoly(cut.polygon,naturalMask,grid,0);
+  for(const edge of source.terrainBarriers||[])rasterPoly(edge.polygon,naturalMask,grid,1);
   for(const crossing of source.crossings||[])if(crossing.open!==false)
     rasterPoly(crossing.polygon,naturalMask,grid,0);
   blocked.set(naturalMask);
@@ -201,7 +206,7 @@ export function detectDefensiveCompartments(source={}) {
       id:ids.get(r.code),code:r.code,polygon:loops[0]||[],
       boundaries:loops,area,depth:Math.max(1,depth.get(r.code)??1),
       adjacentIds:[...portalAdj.get(r.code)].sort(),
-      mastio:r.code===mastioCode,state:'secure',
+      mastio:r.code===mastioCode,state:'unassessed',
       centroid:{x:grid.left+r.sumX/r.cells.length*step,y:grid.top+r.sumY/r.cells.length*step}
     };
   });
@@ -217,7 +222,7 @@ export function detectDefensiveCompartments(source={}) {
       compartments:compartments.length}};
 }
 /** Safe-adjacent fallback via *open* gates, never a teleport across walls. */
-export function findNextCircleRefuge(fromId, snapshot, stateFor=()=> 'secure') {
+export function findNextCircleRefuge(fromId, snapshot, stateFor=()=> 'unassessed') {
   if(!fromId||!snapshot?.compartments)return null;
   const sectors=new Map(snapshot.compartments.map(c=>[c.id,c]));
   if(!sectors.has(fromId))return null;
