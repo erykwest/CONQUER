@@ -130,3 +130,48 @@ test('a defender fighting the attacker on a wall keeps the sector contested',asy
   const {api}=await boot(walls(),[],{hills:[]},battle,wallwalk);
   assert.equal(api.getSnapshot().compartments[0].state,'contested');
 });
+
+test('a siege breach preserves its former sector as compromised until rebuilt',async()=>{
+  const structures=walls(),enemy=[];
+  const battle={units:()=>[],enemy:()=>enemy,uiState:()=>({alarm:'off',alert:'clear'})};
+  const {State,api}=await boot(structures,[],{hills:[]},battle);
+  assert.equal(api.getSnapshot().compartments[0].state,'secure');
+  api.markBreach(structures[0],{x:9,y:4.25},{x:11,y:4.25});
+  State.structures=structures.slice(1);
+  api.invalidate('siege breach');
+  const breached=api.getSnapshot().compartments;
+  assert.equal(breached.length,1);
+  assert.equal(breached[0].breached,true);
+  assert.equal(breached[0].state,'compromised');
+  assert.equal(api.sectorAt({x:10,y:10}),breached[0].id);
+  enemy.push({id:'intruder',x:10,y:10});
+  api.invalidateControl();api.updateControl(true);
+  assert.equal(api.controlState(breached[0].id).state,'invaded');
+  enemy.splice(0);
+  api.invalidateControl();api.updateControl(true);
+  assert.equal(api.controlState(breached[0].id).state,'compromised');
+  State.structures=walls();
+  api.invalidate('repaired walls');
+  const rebuilt=api.getSnapshot();
+  assert.equal(rebuilt.compartments.length,1);
+  assert.equal(rebuilt.compartments[0].breached,undefined);
+  assert.equal(rebuilt.compartments[0].state,'secure');
+});
+test('breached outer ring does not compromise independently closed inner refuge',async()=>{
+  const outer=walls(),inner=[
+    piece('inner-n','wall',7,7,13,7.5),piece('inner-s','wall',7,12.5,13,13),
+    piece('inner-w','wall',7,7,7.5,13),piece('inner-e','wall',12.5,7,13,13)
+  ];
+  const enemy=[{x:6,y:10}];
+  const battle={units:()=>[],enemy:()=>enemy,uiState:()=>({alarm:'off',alert:'clear'})};
+  const {State,api}=await boot([...outer,...inner],[],{hills:[]},battle);
+  assert.equal(api.getSnapshot().compartments.length,2);
+  api.markBreach(outer[0],{x:9,y:4.25},{x:11,y:4.25});
+  State.structures=[...outer.slice(1),...inner];
+  api.invalidate('outer wall down');
+  const out=api.getSnapshot();
+  const keepId=api.sectorAt({x:10,y:10}),outerId=api.sectorAt({x:6,y:10});
+  assert.ok(outerId&&keepId&&outerId!==keepId);
+  assert.equal(api.controlState(outerId).state,'invaded');
+  assert.equal(api.controlState(keepId).state,'secure');
+});
