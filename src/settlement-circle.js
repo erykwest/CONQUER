@@ -3,10 +3,11 @@
 // settlement State/functions; only the topology algorithm is an ES module.
 // This module never writes to painted civilian/alarm/safe zone systems.
 (function() {
-  let topology=null, controlEngine=null, snapshot=null, dirty=true, controlDirty=true;
+  let topology=null, controlEngine=null, logistics=null, snapshot=null, dirty=true, controlDirty=true;
   let timer=null, lastError=null, revision=0, controlRevision=0, lastControlAt=0;
   const pendingBreachIds=new Set();
-  let breachSerial=0;
+  let breachSerial=0, captureHolds={},recaptureHolds={};
+  const CAPTURE_DAYS=.5;
   const settings=Object.freeze({cellSize:.25,margin:2});
   const eligible=s=>!!s&&!underConstruction(s)&&!s.destroyed;
   const physicalTypes=new Set(['wall','palisade','built','tower','gate']);
@@ -133,7 +134,7 @@
     else el.textContent='Compartimenti · '+totals.safe+' sicuri · '+
       totals.invaded+' invasi · '+totals.contested+' contesi · '+
       totals.infiltrated+' infiltrati · '+totals.threatened+' minacciati · '+
-      totals.compromised+' compromessi';
+      totals.compromised+' compromessi · '+(totals.captured||0)+' conquistati';
     el.dataset.danger=totals?.occupied>0?'1':'0';
   }
   function insidePolygon(p,poly){
@@ -171,6 +172,22 @@
       });
     }
     pendingBreachIds.clear();
+    // A captured sector is persisted in the siege save. Restore its footprint
+    // even after reload, when the original outer wall has been breached.
+    for(const record of window.ConquerSiege?.circleCaptureRecords?.()||[]){
+      if(!record?.id||!Array.isArray(record.polygon))continue;
+      const probes=record.anchors?.length?record.anchors:[record.centroid];
+      const mapped=probes.map(p=>p&&fresh.sectorAt(p));
+      if(mapped[0]&&mapped.every(id=>id===mapped[0]))continue;
+      if(ghosts.some(g=>g.captureRecordId===record.id||
+        g.originId===record.originId))continue;
+      ghosts.push({
+        id:record.id,originId:record.originId,captureRecordId:record.id,
+        polygon:record.polygon,boundaries:record.boundaries||[record.polygon],
+        anchors:record.anchors||[],depth:record.depth||1,
+        breached:true,captured:true,state:'captured',safe:false
+      });
+    }
     if(!ghosts.length)return fresh;
     ghosts.sort((a,b)=>b.depth-a.depth);
     const locate=fresh.sectorAt;
@@ -213,6 +230,17 @@
       return null;
     }
   }
+  function captureRecordFor(sector,locate,records){
+    for(const record of records){
+      if(record.id===sector.captureRecordId||
+         record.originId===sector.originId||record.originId===sector.id)
+        return record;
+      const anchors=(record.anchors||[]).filter(p=>p&&
+        Number.isFinite(p.x)&&Number.isFinite(p.y));
+      if(anchors.length&&anchors.some(p=>locate(p)===sector.id))return record;
+    }
+    return null;
+  }
   function updateControl(force=false) {
     if(!topology||!controlEngine)return snapshot;
     if(dirty||!snapshot)recompute();
@@ -232,10 +260,20 @@
         wallSectors:u=>wallAdjacentSectors(u,snapshot.sectorAt),
         alert:ui?.alarm!=='off'&&!!ui?.alarm||!!ui?.alert&&ui.alert!=='clear'
       });
-      snapshot={...snapshot,compartments:assessed.compartments,
-        controlSummary:assessed.summary};
+      const captures=window.ConquerSiege?.circleCaptureRecords?.()||[];
+      const summary={...assessed.summary,captured:0};
+      const marked=assessed.compartments.map(sector=>{
+        const record=captureRecordFor(sector,snapshot.sectorAt,captures);
+        if(!record)return{...sector,captured:false,captureRecordId:null};
+        summary[sector.state]=Math.max(0,(summary[sector.state]||0)-1);
+        summary.captured++;
+        if(sector.safe)summary.safe=Math.max(0,summary.safe-1);
+        return{...sector,state:'captured',safe:false,captured:true,
+          captureRecordId:record.id};
+      });
+      snapshot={...snapshot,compartments:marked,controlSummary:summary};
       lastControlAt=now;controlDirty=false;
-      const transitions=assessed.compartments.filter(c=>previous.get(c.id)!==c.state)
+      const transitions=marked.filter(c=>previous.get(c.id)!==c.state)
         .map(c=>({id:c.id,from:previous.get(c.id)||'unassessed',
           to:c.state,groundEnemies:c.control.groundEnemies}));
       controlBanner();
@@ -255,6 +293,44 @@
     if(dirty||!snapshot)recompute();
     if(controlDirty)updateControl(true);
     return snapshot;
+  }
+  function tickOccupation(day=State.clock.day) {
+    if(!logistics||!window.ConquerSiege||!Number.isFinite(day))return null;
+    const current=updateControl();
+    if(!current)return null;
+    // Called only from the advancing simulation: paused games do not capture.
+    const advancing=logistics.advanceCircleOccupation(
+      captureHolds,current.compartments,day,CAPTURE_DAYS);
+    captureHolds=advancing.holds;
+    const events=[];
+    for(const id of advancing.confirmed) {
+      const sector=current.compartments.find(c=>c.id===id);
+      if(!sector)continue;
+      const result=window.ConquerSiege.captureCircleSector?.(sector);
+      if(result?.ok) {
+        events.push({type:'captured',id,lost:result.lost});
+        window.dispatchEvent(new CustomEvent('conquer-circle-captured',{
+          detail:{id,day,lost:result.lost}
+        }));
+      }
+    }
+    if(events.length)updateControl(true);
+    const latest=getSnapshot()||current;
+    const reclaim=logistics.advanceCircleRecapture(
+      recaptureHolds,latest.compartments,day,CAPTURE_DAYS);
+    recaptureHolds=reclaim.holds;
+    for(const id of reclaim.reclaimed){
+      const sector=latest.compartments.find(c=>c.id===id);
+      if(!sector?.captureRecordId)continue;
+      const result=window.ConquerSiege.releaseCircleSector?.(sector.captureRecordId);
+      if(result?.ok) {
+        events.push({type:'reclaimed',id});
+        window.dispatchEvent(new CustomEvent('conquer-circle-reclaimed',
+          {detail:{id,day}}));
+      }
+    }
+    if(events.some(e=>e.type==='reclaimed'))updateControl(true);
+    return events;
   }
   function invalidate(reason='topology') {
     revision++;dirty=true;controlDirty=true;
@@ -302,17 +378,20 @@
     return data?topology.findNextCircleRefuge(fromId,data,stateFor):null;
   }
   window.ConquerCircle=Object.freeze({
-    invalidate,invalidateControl,markBreach,recompute,updateControl,getSnapshot,
+    invalidate,invalidateControl,markBreach,recompute,updateControl,tickOccupation,getSnapshot,
+    distributeStores:(stock,depots,blocked)=>logistics?.distributeCircleStores(stock,depots,blocked),
+    captureStores:args=>logistics?.captureCircleStores(args),
     sectorAt,sectorForStructure,controlState,nextRefuge,
-    getStatus:()=>({ready:!!topology&&!!controlEngine,dirty,controlDirty,
+    getStatus:()=>({ready:!!topology&&!!controlEngine&&!!logistics,dirty,controlDirty,
       revision,controlRevision,summary:snapshot?.controlSummary||null,
       error:lastError&&String(lastError)})
   });
   Promise.all([
     import('./circle/defensive-topology.mjs?v=circle-1'),
-    import('./circle/defensive-control.mjs?v=circle-1')
-  ]).then(([top,control])=>{
-    topology=top;controlEngine=control;
+    import('./circle/defensive-control.mjs?v=circle-1'),
+    import('./circle/defensive-logistics.mjs?v=circle-1')
+  ]).then(([top,control,stores])=>{
+    topology=top;controlEngine=control;logistics=stores;
     invalidate('initial');updateControl(true);
   }).catch(err=>{lastError=err;console.error('CONQUER_CIRCLE_IMPORT_ERROR',err)});
 })();
