@@ -43,7 +43,8 @@
 ## Combat / feudi — capitano, cavalieri e diplomazia (branch `feature/knights-diplomacy-2d`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, IN MERGE (sostituisce #72):** capitano con identità propria e raggio di comando 16U; cavalieri a cavallo reclutabili fino a min(stanze nobili, posti in scuderia) — C-04 in parte; messaggero a cavallo periodico verso il mastio, richiesta di 100 monete, accetta/rifiuta, pianificatore di carovane con carico, scorta, partenza e provviste — prototipo di F-05; tutte le figure a cavallo in 2D (D-046).
-- **ANCORA APERTO:** (unificazione con i convogli dell'economia e carovane visibili sulla strada: tappa 4 dell'economia) carovane intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
+- **FATTO:** carovane unificate con i convogli dell'economia (tappa 4, #105, 29/10/2026); visibili sulle strade con la tappa 5 (#108).
+- **ANCORA APERTO:** carovane intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
 
 ## Castello — cutaway arredato di torri, porte e sezioni (PR #65, riallineata 28/10/2026)
 
