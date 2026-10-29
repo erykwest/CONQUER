@@ -8,6 +8,7 @@
   const labels = {food:'Cibo',wood:'Legno',stone:'Pietra',clay:'Argilla',metal:'Metallo',equipment:'Equipaggiamento',luxury:'Lusso',materials:'Materiali',horses:'Cavalli',gold:'Oro'};
   const tabs = [['general','Generale'],['people','Popolazione'],['economy','Economia'],['estate','Proprietà'],['stores','Scorte'],['military','Militare'],['building','Cantieri'],['diplomacy','Diplomazia'],['alerts','Avvisi']];
   let current = 'general';
+  let priceGood = 'food', productionSite = 'all';
   function card(title,body,foot='') { return '<section class="cp-card"><h3>'+esc(title)+'</h3>'+body+(foot?'<p class="cp-foot">'+esc(foot)+'</p>':'')+'</section>'; }
   function kpi(name,value,foot='') { return '<div class="cp-kpi"><span>'+esc(name)+'</span><strong>'+esc(value)+'</strong><small>'+esc(foot)+'</small></div>'; }
   function line(label,value) { return '<div class="cp-line"><span>'+esc(label)+'</span><b>'+esc(value)+'</b></div>'; }
@@ -44,6 +45,80 @@
       '<text x="1" y="12" fill="#c8bba9" font-size="10">'+fmt(max)+'</text></svg>'+
       '<figcaption>🟢 Produzione · 🟠 Domanda · storico reale degli ultimi '+recent.length+' mercati</figcaption></figure>';
   }
+
+  // The only time series in these views comes from the Saturday ledger snapshots.
+  // Do not interpolate simulated events or reconstruct missing weeks.
+  function historical(d,series,caption) {
+    const weeks=(d.books?.panelHistory||[]).filter(w=>w&&Number.isFinite(Number(w.day))).slice(-26);
+    if(weeks.length<2)return empty('Storico disponibile dopo due mercati successivi all’aggiornamento.');
+    const lines=series.map(spec=>({
+      ...spec,
+      values:weeks.map(w=>{
+        const raw=spec.read(w);
+        return raw===null||raw===undefined||!Number.isFinite(Number(raw))?null:Number(raw);
+      })
+    })).filter(spec=>spec.values.some(v=>v!==null));
+    if(!lines.length)return empty('Nessun dato rilevato per questa serie.');
+    const values=lines.flatMap(x=>x.values.filter(v=>v!==null));
+    const min=Math.min(0,...values),max=Math.max(1,...values),span=Math.max(1,max-min);
+    const x=i=>30+310*i/Math.max(1,weeks.length-1);
+    const y=v=>104-90*(v-min)/span;
+    const paths=lines.map((spec,seriesIndex)=>{
+      let parts=[],chunk=[];
+      function end(){if(chunk.length){parts.push('<polyline points="'+chunk.join(' ')+'" fill="none" stroke="'+spec.color+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>');chunk=[];}}
+      spec.values.forEach((value,i)=>value===null?end():chunk.push(x(i).toFixed(2)+','+y(value).toFixed(2)));
+      end();
+      return parts.join('');
+    }).join('');
+    const legend=lines.map(spec=>'<span><i style="background:'+spec.color+'"></i>'+esc(spec.label)+'</span>').join('');
+    return '<figure class="cp-graph cp-history"><svg viewBox="0 0 360 128" role="img" aria-label="'+esc(caption)+': '+weeks.length+' rilevazioni settimanali">'+
+      '<path d="M28 8V108H342" fill="none" stroke="#816d55"/>'+
+      '<path d="M28 60H342" fill="none" stroke="#665343" stroke-dasharray="3 4" stroke-width=".6"/>'+
+      paths+'<text x="2" y="13" fill="#c8bba9" font-size="10">'+fmt(max)+'</text>'+
+      '<text x="2" y="107" fill="#c8bba9" font-size="10">'+fmt(min)+'</text>'+
+      '<text x="29" y="123" fill="#c8bba9" font-size="10">G'+fmt(weeks[0].day)+'</text>'+
+      '<text x="295" y="123" fill="#c8bba9" font-size="10">G'+fmt(weeks[weeks.length-1].day)+'</text></svg>'+
+      '<figcaption class="cp-graph-legend">'+legend+'</figcaption></figure>';
+  }
+  function welfareTrend(d) {
+    return historical(d,[{label:'Felicità media',color:'#bcd18b',read:w=>w.welfare}], 'Felicità della popolazione');
+  }
+  function classTrend(d) {
+    return historical(d,[
+      {label:'L1',color:'#bcd18b',read:w=>w.population?.L1>0?w.happiness?.L1:null},
+      {label:'L2',color:'#e7ac77',read:w=>w.population?.L2>0?w.happiness?.L2:null},
+      {label:'L3',color:'#97bfd9',read:w=>w.population?.L3>0?w.happiness?.L3:null},
+      {label:'L4',color:'#d9a4cf',read:w=>w.population?.L4>0?w.happiness?.L4:null}
+    ],'Felicità per classe');
+  }
+  function jobsTrend(d) {
+    return historical(d,[
+      {label:'Costruttori',color:'#e7ac77',read:w=>w.jobs?.building},
+      {label:'Pascolo',color:'#bcd18b',read:w=>w.jobs?.herding},
+      {label:'Boscaioli',color:'#97bfd9',read:w=>w.jobs?.logging},
+      {label:'Industrie',color:'#d9a4cf',read:w=>w.jobs?.industry},
+      {label:'Inattivi',color:'#d9c0a4',read:w=>w.jobs?.idle}
+    ],'Occupazione L1 per mansione');
+  }
+  function priceTrend(d) {
+    return historical(d,[{label:labels[priceGood]||priceGood,color:'#e7ac77',read:w=>w.prices?.[priceGood]}],'Prezzo settimanale');
+  }
+  function estateTrend(d) {
+    const current=d.economy?.activities||[];
+    const owned=new Set(current.filter(a=>a.owner==='lord').map(a=>a.id));
+    if(productionSite!=='all'&&!current.some(a=>a.id===productionSite))productionSite='all';
+    return historical(d,[{
+      label:productionSite==='all'?'Produzione dei siti attualmente del signore':'Produzione del sito selezionato',
+      color:'#bcd18b',
+      read:w=>{
+        // Historical ownership is kept on every sample; transfers are never retroactively relabelled.
+        const outputs=(w.production||[]).filter(a=>a.owner==='lord'&&
+          (productionSite==='all'||a.id===productionSite));
+        return outputs.reduce((sum,site)=>sum+Object.values(site.goods||{}).reduce((n,q)=>n+num(q),0),0);
+      }
+    }], 'Produzione settimanale dei siti del signore');
+  }
+
   function warnings(d) {
     const all=[];
     if(d.economy?.jobs?.foodRisk)all.push('Possibile carenza alimentare rispetto al fabbisogno stimato.');
@@ -63,6 +138,7 @@
       kpi('Avvisi',fmt(warnings(d).length))+'</div>'+
       '<div class="cp-grid">'+card('Classi sociali',bars(['L1','L2','L3','L4'].map(k=>[k,p[k]]),Math.max(1,...Object.values(p).map(num))))+
       card('Cibo: produzione e domanda',foodChart(d))+'</div>'+
+      card('Evoluzione della felicità',welfareTrend(d))+
       card('Segnalazioni',warnings(d).length?warnings(d).map(x=>'<p class="cp-warn">⚠ '+esc(x)+'</p>').join(''):empty('Nessun allarme rilevato.'));
   }
 
@@ -78,6 +154,7 @@
       kpi('Felicità media',fmt(d.economy?.welfare)+'/100')+kpi('Aliquota',fmt(tax)+'%')+'</div>'+
       '<div class="cp-grid">'+card('Classi sociali',bars(['L1','L2','L3','L4'].map(k=>[k,p[k]]),Math.max(1,...Object.values(p).map(num))))+
       card('Felicità L1–L4',active.length?bars(active.map(k=>[k,h[k]]),100):empty('Nessun residente'),'Valori correnti, non storici.')+'</div>'+
+      card('Tendenza felicità L1–L4',classTrend(d))+
       card('Tassazione e razioni',policy)+
       card('Festività',line('Sabato','Mercato')+line('Domenica','Riposo')+empty('Festività straordinarie e loro effetti sulla felicità: TBD.'));
   }
@@ -93,6 +170,8 @@
       kpi('Tesoreria',fmt(e.castleGold),'Oro signore')+kpi('Mercati',fmt(d.snapshot?.weeks),'Cicli settimanali')+'</div>'+
       '<div class="cp-grid">'+card('Occupazione L1',bars(jobs,Math.max(1,...jobs.map(x=>num(x[1])))))+
       card('Bilancio alimentare',foodChart(d))+'</div>'+
+      card('Evoluzione dell’occupazione L1',jobsTrend(d))+
+      card('Storico prezzi · singolo bene','<label class="cp-input">Bene <select data-cp-price>'+Object.keys(labels).filter(k=>!['materials','horses','gold'].includes(k)).map(k=>'<option value="'+k+'"'+(priceGood===k?' selected':'')+'>'+esc(labels[k])+'</option>').join('')+'</select></label>'+priceTrend(d))+
       card('Mercato, prezzi e vendite',table,'La domanda esterna non viene generata automaticamente.');
   }
 
@@ -107,6 +186,7 @@
       kpi('Valore proprietà',fmt(total),'Oro stimato')+'</div>'+
       card('Titolarità delle attività',bars([['Signore',lord.length],['Settore L4',items.length-lord.length]],Math.max(1,items.length)))+
       card('Produzione complessiva · ultima settimana',d.snapshot?.balance?.goods?bars(Object.entries(d.snapshot.balance.goods).map(([g,x])=>[labels[g]||g,x.produced]),Math.max(1,...Object.values(d.snapshot.balance.goods).map(x=>num(x.produced)))):empty('La prima settimana contabile non è ancora conclusa.'),'Totale territoriale: il ledger attuale non distingue ancora la quota prodotta dalle sole proprietà del signore.')+
+      card('Produzione settimanale delle proprietà','<label class="cp-input">Attività <select data-cp-estate><option value="all">Tutte le proprietà del signore</option>'+items.map(a=>'<option value="'+esc(a.id)+'"'+(productionSite===a.id?' selected':'')+'>'+esc(a.type)+' · '+esc(a.id)+'</option>').join('')+'</select></label>'+estateTrend(d),'Registra le quantità effettive per sito al momento della produzione; passaggi di proprietà non retroattivi.')+
       card('Produzione e proprietà',table,'Utili annui solo dopo la chiusura del primo esercizio. Compravendite gestite dal ledger economico.');
   }
 
@@ -188,6 +268,8 @@
       const el=ev.target,cmd=window.ConquerGame?.commands;
       if(el.dataset.cpPolicy)cmd?.setPolicy?.(el.dataset.cpPolicy,el.value);
       if(el.dataset.cpShare)cmd?.setSaleShare?.(el.dataset.cpShare,num(el.value));
+      if(el.matches?.('[data-cp-price]'))priceGood=el.value;
+      if(el.matches?.('[data-cp-estate]'))productionSite=el.value;
       render();
     });
     setInterval(()=>{if(!$('profileOverlay')?.hidden&&!root.hidden&&!root.contains(document.activeElement))render();},1800);
