@@ -204,7 +204,7 @@ test('sustained uncontested occupation confirms capture, defeat alone does not',
   assert.ok(events.some(e=>e.type==='conquer-circle-captured'));
   enemies.splice(0);api.invalidateControl();api.updateControl(true);
   assert.equal(api.controlState(id).state,'captured');
-  friends.push({x:10,y:10});
+  friends.push({x:10,y:10});api.invalidateControl();
   assert.equal(api.tickOccupation(3).length,0);
   assert.equal(api.tickOccupation(3.5).length,1);
   assert.equal(api.controlState(id).state,'secure');
