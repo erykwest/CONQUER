@@ -165,6 +165,7 @@
       const probes=old.anchors?.length?old.anchors:[old.centroid];
       // When the perimeter is rebuilt, all former interior probes belong to
       // a newly closed region, so the compromised region expires.
+      if(old.captureRecordId&&probes.some(p=>p&&fresh.sectorAt(p)))continue;
       if(probes.every(p=>p&&fresh.sectorAt(p)))continue;
       ghosts.push({
         ...old,id:old.breached?old.id:'breached-'+(++breachSerial)+'-'+old.id,
@@ -178,7 +179,9 @@
       if(!record?.id||!Array.isArray(record.polygon))continue;
       const probes=record.anchors?.length?record.anchors:[record.centroid];
       const mapped=probes.map(p=>p&&fresh.sectorAt(p));
-      if(mapped[0]&&mapped.every(id=>id===mapped[0]))continue;
+      // If any successor sector is closed, assign this capture by the
+      // majority of its old anchors, without adding an overlapping ghost.
+      if(mapped.some(Boolean))continue;
       if(ghosts.some(g=>g.captureRecordId===record.id||
         g.originId===record.originId))continue;
       ghosts.push({
