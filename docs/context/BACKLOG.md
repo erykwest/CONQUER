@@ -3,7 +3,7 @@
 ## Castello — cutaway delle torri T1 con scala a chiocciola (29/10/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/cutaway-spiral-stairs`, NON MERGE:** torri T1 in pietra e sottotorri T1 apribili in sezione, con scala a chiocciola al posto delle stanze.
-- **APERTO:** audit del Lab e baseline; mastio T1 (Sala comune) in sezione; posti degli occupanti sulla scala.
+- **APERTO:** torri T1 in pietra nella galleria del Lab (oggi l'audit non le cattura); mastio T1 (Sala comune) in sezione; posti degli occupanti sulla scala.
 
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
