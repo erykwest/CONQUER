@@ -1,6 +1,6 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
-## Settlement management panels — \`panels\` (29/10/2026)
+## Settlement management panels — `panels` (29/10/2026)
 
 - **Presente sulla branch (verifica browser/CI da completare):** centro di controllo Profilo a 9 viste, dati dal ledger economico e dai sottosistemi esistenti, grafico settimanale cibo, istogrammi, gestione tasse/razioni, quote vendita, acquisto/vendita proprietà, carovane.
 - **Non implementato:** festività sociali realmente simulate, serie storica felicità/occupazione/prezzi, produzione annua per proprietà e indicatori tributari di feudo, rapporto diplomatico persistente, allarmi epidemie/disordini/incendi. Per contratti e priorità vedere [management-panels.md](management-panels.md).
