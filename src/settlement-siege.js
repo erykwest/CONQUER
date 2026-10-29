@@ -385,6 +385,9 @@
       startCollapse(s,g+z0,g+z1,{cause:'breach-'+skin,parts:[strip],
         ...(skin==='hoarding'?{material:'wood',palette:{side:['#7a5534','#5e4128','#8a6a42','#6b4a2e'],top:['#6b4a2e','#7a5534']}}:{})});
     }
+    // Remember the sector this specific hostile breach exposed before the
+    // bay geometry is removed; ordinary Builder deletions do not claim land.
+    window.ConquerCircle?.markBreach?.(s,p0,p1);
     const idx=State.structures.findIndex(t=>t.id===s.id);
     if(idx>=0)State.structures.splice(idx,1,...pieces);
     // Towers keep their links: the a end now belongs to the left stretch, the b end to the right.
