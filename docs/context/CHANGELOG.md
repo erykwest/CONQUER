@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-29 — Comunicazioni feudali (branch messages)
+
+- Aggiunti ConquerMessages, inbox, invio manuale e routine, piccionaia assegnabile a torre/Built Section, tempi simulati, snapshot di partenza, persistenza locale/cloud e reset.
+- Nuova QA qa/messages-regression.cjs (disponibile, non ancora eseguita); contratto [MESSAGES-SYSTEM](../MESSAGES-SYSTEM.md). Main non modificato.
+
+
 ## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
 
 - Uomini e donne L1–L4 hanno la settimana di `jobmanager`: svago maschile dalle 18, mercato il sabato e messa la domenica, lavoro femminile nei lotti. Solo visuale. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-052 in DECISIONS.
