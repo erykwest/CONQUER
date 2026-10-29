@@ -80,6 +80,31 @@
       // One section per post, centred on it.
       run:{...alongAxis(g.a,g.b,()=>count+1),u0:g.a.x*g.dx/g.L+g.a.y*g.dy/g.L-g.L/count/2,L:g.L*(count+1)/count}};
   }
+  // Timber fortifications (settlement-wood3d.js): the Blender models and stakes, shaded for a
+  // fixed light; roofs, roof ridges and the exposed decks' snow go up last. A palisade is
+  // still driven post by post along its axis, with its walkway or rampart.
+  function woodSource(s){
+    const W=window.ConquerWood3D,D=window.ConquerWoodFortModels,M=window.ConquerMesh3D;
+    if(!W?.handles?.(s)||!D||!M)return null;
+    const geo=W.geometry(s),keyOf=new Map(D.palette.map((hex,i)=>[hex,D.paletteKeys[i]]));
+    const pos=[],col=[],tag=[];
+    const add=(mesh,t,c,tg)=>{for(let k=0;k<9;k++)pos.push(mesh.pos[t*9+k]);col.push(c);tag.push(tg)};
+    for(const [mesh,kind] of [[geo.foundation,'ground'],[geo.mesh,'model'],[geo.flat,'flat']]){
+      if(!mesh)continue;
+      for(let t=0;t<mesh.col.length;t++){
+        const hex=mesh.col[t],key=keyOf.get(hex)||'';
+        if(kind==='flat'){add(mesh,t,hex,'body');continue}
+        add(mesh,t,M.shadedHex(mesh,t),kind==='ground'?'ground':/^roof(Shingle|Ridge)/.test(key)||(!key&&State.season==='winter')?'roof':'body');
+      }
+    }
+    let ground=groundOf(s),run=null;
+    if(s.type==='palisade'){
+      const g=palisadeLayout(s),count=Math.max(1,Math.ceil(g.L/.205));
+      ground=call('terrainElevation',call('structureCenter',s))||0;
+      run={...alongAxis(g.a,g.b,()=>count+1),u0:g.a.x*g.dx/g.L+g.a.y*g.dy/g.L-g.L/count/2,L:g.L*(count+1)/count};
+    }
+    return{pos,col,tag,flat:true,ground,run};
+  }
   // The gate passage (gatePassageInfo): a box along the gate axis, as wide as the road
   // through it and up to its vault; the castle volume is a plain prism, the opening is
   // otherwise only painted on its faces.
@@ -152,7 +177,7 @@
     if(!s||s.type==='ruin')return null;
     const site=s.construction;
     if(site)delete s.construction;
-    try{return castleSource(s)||civicSource(s)||houseSource(s)||palisadeSource(s)}
+    try{return castleSource(s)||civicSource(s)||houseSource(s)||woodSource(s)||palisadeSource(s)}
     finally{if(site)s.construction=site}
   }
   // Stone castle parts, civic buildings with a model, and urban houses (village-grown, auto).
@@ -161,7 +186,8 @@
     if(s.type==='house')return true;
     if(s.auto)return false;
     if(s.type==='palisade')return !!s.a&&!!s.b;
-    if(['tower','gate','wall','built'].includes(s.type))return !call('isWoodTower',s)&&!call('isWoodGate',s);
+    if(['tower','gate'].includes(s.type)&&(call('isWoodTower',s)||call('isWoodGate',s)))return !!window.ConquerWood3D?.modelKey?.(s);
+    if(['tower','gate','wall','built'].includes(s.type))return true;
     return !!window.ConquerCivic3D?.has?.(s)&&s.type!=='civicAnnex';
   }
   const seedOf=s=>{let h=0;for(const ch of String(s.id))h=Math.imul(h^ch.charCodeAt(0),16777619);return h|0};
@@ -295,6 +321,7 @@
   const cache=new Map();
   function geomKey(s){
     return[s.type,s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.size,s.r,s.w,s.h,s.level,s.civicLevel,s.houseLevel,s.roofStyle,s.baseStyle,
+      s.material,s.woodStyle,s.woodRoof,s.tier,s.width,s.flip?1:0,
       s.masonryMaterial,s.groundZ,State.season,State.view?.rotation||0].join('|');
   }
   function entry(s){

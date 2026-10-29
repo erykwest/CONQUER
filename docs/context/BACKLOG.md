@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Render 3D — fortificazioni in legno da Blender (28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE (`feature/wood-fortifications-3d`):** palizzate T1–T3, torre di vedetta, torri a palizzata e porta in legno come modelli Blender nel renderer 3D; chiuso l'ultimo residuo 2.5D del castello nel world3d Cantieri del legno montati pezzo per pezzo dai modelli; cutaway della torre a palizzata con gli arredi delle stanze; bandiere e drappi araldici (statici, senza vento).
+- **APERTO (legno):** cutaway della porta in legno (le porte in pietra lo hanno da #65); nel Lab le celle «Cantiere» non mostrano il montaggio (cattura prima del ridisegno in cache, vale anche per la pietra).
+- **APERTO:** stati di danno visibili per il legno (oggi assenti anche in 2.5D); cantiere del legno ancora col fantasma traslucido; percorso Canvas 2.5D non usa i nuovi modelli (fallback invariato).
+- **PROSSIMO (deciso il 28/10):** arredi del cutaway come modelli Blender, dopo aver portato il cutaway nel 3D. Niente modelli 3D per umani e animali: lo stile 3D delle figure è stato scartato.
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
