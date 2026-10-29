@@ -579,6 +579,45 @@ function renderBattlementPieces(pieces,frame){
   const owners=new Map(State.structures.map(s=>[s.id,s]));
   for(const piece of pieces)withStructureVisualMaterial(owners.get(piece.ownerId),()=>drawBattlementPiece(piece,frame));
 }
+// Breastwork between merlons: one low block per crenel, spanning exactly from the facing side of a
+// merlon to the facing side of the next (a quad, so round towers close without wedge gaps). Kept to
+// the gap so the 2.5D painter never draws a parapet top across a merlon face; a hair thinner than
+// the merlons so the 3D prisms do not z-fight on the shared faces.
+const PARAPET_HEIGHT=.11,ROUND_MERLON_SPACING=.32;
+// A merlon seen from a run along `runAngle`: its half extent along the run (hw) and across it (hd).
+// Corner merlons keep the tower's angle, so on two of the four sides they sit rotated 90° to the run.
+function merlonNode(center,angle,w,d,runAngle=angle){
+  const c=Math.abs(Math.cos(runAngle-angle)),s=Math.abs(Math.sin(runAngle-angle));
+  return{c:center,angle:runAngle,hw:(w*c+d*s)/2,hd:(w*s+d*c)/2-.008};
+}
+function parapetPieces(nodes,z,owner,closed=false,crest=null){
+  const pieces=[],n=nodes.length;
+  for(let i=0;i<(closed?n:n-1);i++){
+    const A=nodes[i],B=nodes[(i+1)%n];if(!A||!B||A===B)continue;
+    const face=(N,toward)=>{
+      const ux=Math.cos(N.angle),uy=Math.sin(N.angle),nx=-uy,ny=ux;
+      const s=((toward.x-N.c.x)*ux+(toward.y-N.c.y)*uy)>=0?1:-1,fx=N.c.x+ux*N.hw*s,fy=N.c.y+uy*N.hw*s;
+      return{fx,fy,nx,ny,along:s};
+    };
+    const fa=face(A,B.c),fb=face(B,A.c);
+    const gap=Math.hypot(fb.fx-fa.fx,fb.fy-fa.fy);
+    if(gap<.02||Math.hypot(B.c.x-A.c.x,B.c.y-A.c.y)<A.hw+B.hw+.01)continue;
+    // Match the ±normal corners of both faces so the quad never self-intersects.
+    const flip=(fa.nx*fb.nx+fa.ny*fb.ny)<0?-1:1;
+    const pts=[
+      {x:fa.fx-fa.nx*A.hd,y:fa.fy-fa.ny*A.hd},
+      {x:fb.fx-fb.nx*B.hd*flip,y:fb.fy-fb.ny*B.hd*flip},
+      {x:fb.fx+fb.nx*B.hd*flip,y:fb.fy+fb.ny*B.hd*flip},
+      {x:fa.fx+fa.nx*A.hd,y:fa.fy+fa.ny*A.hd}
+    ];
+    let area=0;for(let k=0;k<4;k++){const p=pts[k],q=pts[(k+1)%4];area+=p.x*q.y-q.x*p.y}
+    if(area<0)pts.reverse();
+    const piece=battlementPolygonPiece('parapet',pts,z,z+PARAPET_HEIGHT,owner);
+    if(crest)piece.wallCrest=crest;
+    pieces.push(piece);
+  }
+  return pieces;
+}
 function wallExteriorSide(s){return s?.flip?-1:1}
 function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
   return Math.max(1,Math.round(Math.max(.001,length)/spacing));
@@ -602,7 +641,7 @@ function wallBattlementPieces(s){
   if(s.type!=='wall'||underConstruction(s)||wallSkin(s)==='hoarding')return[];
   const g=wallExteriorLayout(s),depth=Math.min(.28,Math.max(.18,g.width*.46)),mach=hasMachicolation(s),pieces=[];
   const edgeOffset=mach?g.width/2+depth/2+.045:Math.max(0,g.width/2-depth/2-.012);
-  const intervals=battlementIntervalCount(g.usable),step=g.usable/intervals;
+  const intervals=battlementIntervalCount(g.usable),step=g.usable/intervals,nodes=[];
   for(let i=0;i<=intervals;i++){
     const along=g.startPad+step*i,t=clamp(along/g.L,0,1);
     const center={x:s.a.x+g.dx*t+g.nx*edgeOffset*g.side,y:s.a.y+g.dy*t+g.ny*edgeOffset*g.side};
@@ -613,13 +652,14 @@ function wallBattlementPieces(s){
     const piece=battlementPiece(center,g.angle,g.z,.28,depth,.24,s);
     if(!mach)piece.wallCrest=g.crest;
     pieces.push(piece);
+    nodes.push(merlonNode(center,g.angle,.28,depth));
   }
-  return pieces;
+  return pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
 }
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s);
-  const perSide=[0,3,4,5][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115;
+  const perSide=[0,3,4,5][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[];
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1,mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
     if(mach){
@@ -627,10 +667,13 @@ function squareTowerBattlementPieces(s){
       pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.115,.15,cornerAngle),z-.23,z+.015,s));
     }
     pieces.push(battlementPiece(mc,cornerAngle,z,.27,.23,.25,s));
+    corners.push(mc);
   }
+  const parapets=[];
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
+    const run=[merlonNode(corners[e],cornerAngle,.27,.23,angle)];
     for(let i=1;i<intervals;i++){
       const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
       if(mach){
@@ -638,22 +681,28 @@ function squareTowerBattlementPieces(s){
         pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.11,.15,angle),z-.23,z+.015,s));
       }
       pieces.push(battlementPiece(mc,angle,z,.25,.22,.24,s));
+      run.push(merlonNode(mc,angle,.25,.22));
     }
+    run.push(merlonNode(corners[(e+1)%fp.length],cornerAngle,.27,.23,angle));
+    parapets.push(...parapetPieces(run,z,s));
   }
-  return pieces;
+  return pieces.concat(parapets);
 }
 function roundTowerBattlementPieces(s){
   const z=structureHeight(s),mach=hasMachicolation(s),baseR=Number(s.r)||.5,r=Math.max(.16,baseR+(mach?.075:-.09));
-  const count=[0,6,8,12][towerTier(s)]||6,pieces=[];
+  // Even merlon count from the ring's circumference: denser and narrower than on square towers so
+  // the crown reads as a round crenellation (tier 1/2/3 → 8/12/18 merlons, more with machicolations).
+  const count=Math.max(8,2*Math.round(Math.PI*2*r/ROUND_MERLON_SPACING/2)),pieces=[],nodes=[];
   for(let i=0;i<count;i++){
     const a=i/count*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
     if(mach){
       const cr=baseR+.005,cc={x:s.x+Math.cos(a)*cr,y:s.y+Math.sin(a)*cr};
-      pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.105,.15,a+Math.PI/2),z-.23,z+.015,s));
+      pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.095,.15,a+Math.PI/2),z-.23,z+.015,s));
     }
-    pieces.push(battlementPiece(center,a+Math.PI/2,z,.23,.18,.23,s));
+    pieces.push(battlementPiece(center,a+Math.PI/2,z,.17,.18,.23,s));
+    nodes.push(merlonNode(center,a+Math.PI/2,.17,.18));
   }
-  return pieces;
+  return pieces.concat(parapetPieces(nodes,z,s,true));
 }
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
@@ -897,26 +946,26 @@ function drawFireGlows(nf){
 function gateBattlementPieces(s){
   if(s.type!=='gate'||isWoodGate(s)||underConstruction(s)||gateRoofStyle(s)!=='battlement')return[];
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
-  const pieces=[],center={x:s.x,y:s.y},perSide=4,intervals=perSide-1,inset=.11;
+  const pieces=[],center={x:s.x,y:s.y},perSide=4,intervals=perSide-1,inset=.11,cornerAngle=s.angle||0,corners=[];
 
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;
-    pieces.push(battlementPiece(
-      {x:corner.x+dx/L*inset,y:corner.y+dy/L*inset},
-      s.angle||0,z,.27,.23,.25,s
-    ));
+    const mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
+    pieces.push(battlementPiece(mc,cornerAngle,z,.27,.23,.25,s));
+    corners.push(mc);
   }
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
     const angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
+    const run=[merlonNode(corners[e],cornerAngle,.27,.23,angle)];
     for(let i=1;i<intervals;i++){
-      const t=i/intervals;
-      pieces.push(battlementPiece(
-        {x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset},
-        angle,z,.25,.22,.24,s
-      ));
+      const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
+      pieces.push(battlementPiece(mc,angle,z,.25,.22,.24,s));
+      run.push(merlonNode(mc,angle,.25,.22));
     }
+    run.push(merlonNode(corners[(e+1)%fp.length],cornerAngle,.27,.23,angle));
+    pieces.push(...parapetPieces(run,z,s));
   }
   return withoutBuriedBattlements(s,pieces);
 }

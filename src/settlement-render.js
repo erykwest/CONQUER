@@ -503,9 +503,15 @@ function draw(){
   }
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
+  // Road signposts and convoys on the arterial roads, above scene caches;
+  // they never change pathfinding or collision geometry.
+  window.ConquerRoadSignTests?.draw?.();
   endPopulationFrame();
   markPhase('castle-facades-effects');
   if(window.__conquerPerf)window.__conquerPerf.renderPhases=phaseStats;
   window.ConquerMinimap?.requestDraw();
 }
 
+
+// Explicit redraw hook for the opt-in convoy animation (without invalidating caches).
+window.__drawConquerScene=draw;

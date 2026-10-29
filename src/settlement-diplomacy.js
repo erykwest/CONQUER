@@ -2,8 +2,9 @@
 // Diplomatic courier and caravan domain. The outside province is abstract until the world-map layer exists.
 (function(){
   const DAYS_PER_COURIER_UNIT=1/22;
-  const GOODS=['gold','food','wood','stone','metal','equipment'];
-  const LABELS={gold:'Monete',food:'Cibo',wood:'Legno',stone:'Pietra',metal:'Metallo',equipment:'Equipaggiamento'};
+  // Caravans are lord convoys of ConquerConvoys: gold in the chest, each good in its own wagon.
+  const GOODS=['gold','food','wood','stone','clay','metal','equipment'];
+  const LABELS={gold:'Monete',food:'Cibo',wood:'Legno',stone:'Pietra',clay:'Argilla',metal:'Metallo',equipment:'Equipaggiamento'};
   const EDGES={north:'Nord',south:'Sud',east:'Est',west:'Ovest'};
   const DEFAULT_REQUEST=100;
   const byId=id=>document.getElementById(id);
@@ -76,35 +77,20 @@
     m.phase='returning';m.departDay=day();m.returnDay=day()+Math.max(.5,routeLength(m.route)*DAYS_PER_COURIER_UNIT);
     byId('courierLetter').hidden=true;byId('courierDialog').hidden=true;
     if(accepted){
-      const cargo={gold:DEFAULT_REQUEST,food:0,wood:0,stone:0,metal:0,equipment:0};
       const id='caravan-'+m.id;
-      if(!x.caravans.some(c=>c.id===id))x.caravans.push({
-        id,edge:m.edge,routeDistance:routeLength(m.route),cargo,escort:0,
-        departDay:Math.ceil(day())+1,status:'draft',requested:DEFAULT_REQUEST
-      });
+      window.ConquerConvoys?.planLordConvoy({id,kind:'tribute',destinationId:'province-'+m.edge,
+        coinGold:DEFAULT_REQUEST,minGold:DEFAULT_REQUEST,edge:m.edge,routeDistance:routeLength(m.route),
+        departDay:Math.ceil(day())+1,source:'diplomacy'});
       openCaravans(id);
     }
     changed();refreshUI();
   }
-  function travel(c){
-    // A notional 40U continues past the border toward the adjacent provincial hub.
-    const outward=Math.max(1,Math.ceil((num(c.routeDistance)+40)/22));
-    const food=Math.ceil((Math.max(0,num(c.escort))+2)*outward*2*.35);
-    return{outward,food,arrival:num(c.departDay)+outward,returnDay:num(c.departDay)+2*outward};
-  }
-  function shortage(c,travelInfo=travel(c)){
-    for(const good of GOODS){const amount=Math.max(0,Math.floor(num(c.cargo?.[good])));if(amount>Math.floor(num(State.resources[good])))return LABELS[good]}
-    if(travelInfo.food+Math.max(0,num(c.cargo?.food))>Math.floor(num(State.resources.food)))return 'Cibo e provviste';
-    return null;
-  }
-  function dispatch(c){
-    const metrics=travel(c);
-    const missing=shortage(c,metrics);
-    if(missing){c.status='blocked';c.blockedBy=missing;changed();return false}
-    for(const good of GOODS){State.resources[good]-=Math.floor(Math.max(0,num(c.cargo[good])))}
-    State.resources.food-=metrics.food;
-    c.status='outbound';c.actualDepartDay=day();c.arrivalDay=c.actualDepartDay+metrics.outward;c.returnDay=c.actualDepartDay+metrics.outward*2;
-    c.provisionsSpent=metrics.food;c.blockedBy=null;changed();return true;
+  const convoys=()=>window.ConquerConvoys;
+  function caravans(){return Object.values(convoys()?.state?.()?.lordConvoys||{})}
+  const travel=c=>convoys()?.travel?.(c);
+  function shortage(c,metrics=travel(c)){
+    const missing=convoys()?.missingStock?.(c,metrics?.food||0);
+    return missing?LABELS[missing]||(missing==='provisions'?'Cibo e provviste':missing):null;
   }
   function tick(from,to){
     if(to<=from)return;
@@ -118,14 +104,9 @@
       // Never spawn without a completed mastio; retry on the next day.
       if(!spawn(to))x.nextEventDay=Math.floor(to)+1;
     }
-    for(const c of x.caravans){
-      if((c.status==='planned'||c.status==='blocked')&&to>=c.departDay)dispatch(c);
-      if(c.status==='outbound'&&to>=c.arrivalDay){c.status='returning';changed()}
-      if(c.status==='returning'&&to>=c.returnDay){c.status='completed';changed()}
-    }
+    // Caravan departures and returns are ticked by ConquerConvoys.
     positionLetter();
-  }
-  function dateLabel(value){
+  }  function dateLabel(value){
     const cal=typeof calendarDateFromDay==='function'?calendarDateFromDay(value):null;
     return cal?cal.day+' '+cal.name+' A'+cal.year+' (g. '+(+value).toFixed(0)+')':'Giorno '+(+value).toFixed(0);
   }
@@ -139,44 +120,51 @@
   function closeLetter(){byId('courierDialog').hidden=true;positionLetter()}
   function hidePanels(){if(byId('courierDialog'))byId('courierDialog').hidden=true;if(byId('caravanDialog'))byId('caravanDialog').hidden=true}
   function openCaravans(focusedId){
-    const x=state(),panel=byId('caravanDialog');if(!panel)return;
-    const selected=x.caravans.find(c=>c.id===focusedId)||x.caravans.find(c=>['draft','planned','blocked'].includes(c.status))||x.caravans.at(-1);
+    const list=caravans(),panel=byId('caravanDialog');if(!panel)return;
+    const selected=list.find(c=>c.id===focusedId)||list.find(c=>['draft','planned','blocked'].includes(c.status))||list.at(-1);
     panel.dataset.selected=selected?.id||'';
     panel.hidden=false;renderCaravans();
   }
   function renderCaravans(){
     const panel=byId('caravanDialog');if(!panel||panel.hidden)return;
-    const x=state(),list=byId('caravanList');
-    list.innerHTML=x.caravans.length?x.caravans.slice().reverse().map(c=>'<button type="button" data-caravan-open="'+htmlEscape(c.id)+'">'+htmlEscape(c.id)+' · '+htmlEscape(c.status)+'</button>').join(''):'Nessuna carovana.';
-    const c=x.caravans.find(v=>v.id===panel.dataset.selected);
+    const all=caravans(),list=byId('caravanList');
+    list.innerHTML=all.length?all.slice().reverse().map(c=>'<button type="button" data-caravan-open="'+htmlEscape(c.id)+'">'+htmlEscape(c.id)+' · '+htmlEscape(c.status)+'</button>').join(''):'Nessuna carovana.';
+    const c=all.find(v=>v.id===panel.dataset.selected);
     const editor=byId('caravanEditor');
     if(!c){editor.innerHTML='<p>Accetta una richiesta per creare una carovana.</p>';return}
-    const editable=['draft','planned','blocked'].includes(c.status),t=travel(c),blocked=shortage(c,t);
+    const editable=['draft','planned','blocked'].includes(c.status),t=travel(c),blocked=editable?shortage(c,t):null;
+    const qty=g=>g==='gold'?Math.floor(num(c.chest?.gold)):Math.floor(num(c.cargo.find(l=>l.good===g)?.qty));
+    const guardCap=convoys()?.availableGuardSlots?.(c.id)??0;
     editor.innerHTML='<h3>Destinazione: provincia '+htmlEscape(EDGES[c.edge]||c.edge)+'</h3>'+
-      '<p class="courier-note">Distanza stimata: '+Math.ceil(c.routeDistance+40)+'U a tratta, incluso collegamento extra-mappa convenzionale di 40U.</p>'+
-      '<div class="caravan-grid">'+GOODS.map(g=>'<label>'+LABELS[g]+'<input type="number" min="'+(g==='gold'?c.requested:0)+'" max="999999" step="1" data-caravan-good="'+g+'" value="'+Math.floor(num(c.cargo?.[g]))+'" '+(editable?'':'disabled')+'></label>').join('')+
-      '<label>Scorta (soldati)<input type="number" min="0" max="50" step="1" data-caravan-escort value="'+Math.floor(num(c.escort))+'" '+(editable?'':'disabled')+'></label>'+
+      '<p class="courier-note">Distanza stimata: '+Math.ceil(num(c.routeDistance)+40)+'U a tratta, incluso collegamento extra-mappa convenzionale di 40U. Oro e merci escono dal castello; ogni merce viaggia su un carro proprio ('+(c.transport?.wagons||0)+' carri).</p>'+
+      '<div class="caravan-grid">'+GOODS.map(g=>'<label>'+LABELS[g]+'<input type="number" min="'+(g==='gold'?num(c.minGold):0)+'" max="999999" step="1" data-caravan-good="'+g+'" value="'+qty(g)+'" '+(editable?'':'disabled')+'></label>').join('')+
+      '<label>Scorta (posti di caserma: '+guardCap+')<input type="number" min="0" max="'+guardCap+'" step="1" data-caravan-escort value="'+Math.floor(num(c.escorts?.requested))+'" '+(editable?'':'disabled')+'></label>'+
       '<label>Partenza (giorno simulato)<input type="number" min="'+Math.ceil(day())+'" step="1" data-caravan-depart value="'+Math.ceil(c.departDay)+'" '+(editable?'':'disabled')+'></label></div>'+
       '<div class="caravan-preview"><strong>Anteprima logistica</strong>'+
-      '<p>Carico: '+GOODS.map(g=>LABELS[g]+' '+Math.floor(num(c.cargo?.[g]))).join(' · ')+'</p>'+
-      '<p>Provviste di viaggio aggiuntive: <b>'+t.food+' cibo</b> (2 conducenti + '+c.escort+' scorta, andata e ritorno).</p>'+
-      '<p>Arrivo: <b>'+dateLabel(t.arrival)+'</b> · Ritorno: <b>'+dateLabel(t.returnDay)+'</b> · '+t.outward+' giorni per tratta.</p>'+
+      '<p>Carico: '+GOODS.map(g=>LABELS[g]+' '+qty(g)).join(' · ')+'</p>'+
+      '<p>Provviste di viaggio aggiuntive: <b>'+t.food+' cibo</b> (2 conducenti + '+num(c.escorts?.requested)+' scorta, andata e ritorno).</p>'+
+      '<p>Arrivo: <b>'+dateLabel(c.arrivalDay??t.arrival)+'</b> · Ritorno: <b>'+dateLabel(c.returnDay??t.returnDay)+'</b> · '+t.outward+' giorni per tratta.</p>'+
       '<p class="'+(blocked?'caravan-warning':'')+'">'+(blocked?'Risorse insufficienti: '+blocked:'Risorse disponibili per la partenza')+'</p></div>'+
       (editable?'<button type="button" id="caravanConfirm" '+(blocked?'disabled':'')+'>✅ '+(c.status==='draft'?'Programma partenza':'Aggiorna carovana')+'</button>':'<p>Stato: '+htmlEscape(c.status)+(c.status==='completed'?' · Equipaggio rientrato':'')+'</p>');
   }
   function updateDraft(target){
-    const id=byId('caravanDialog')?.dataset.selected,c=state().caravans.find(v=>v.id===id);
+    const id=byId('caravanDialog')?.dataset.selected,c=caravans().find(v=>v.id===id);
     if(!c||!['draft','planned','blocked'].includes(c.status))return;
+    const value=Math.min(999999,Math.max(0,Math.floor(num(target.value))));
+    let ok=true;
     if(target.dataset.caravanGood){
-      const key=target.dataset.caravanGood;c.cargo[key]=Math.min(999999,Math.max(key==='gold'?c.requested:0,Math.floor(num(target.value))));
-    }else if(target.hasAttribute('data-caravan-escort'))c.escort=Math.min(50,Math.max(0,Math.floor(num(target.value))));
-    else if(target.hasAttribute('data-caravan-depart'))c.departDay=Math.max(Math.ceil(day()),Math.ceil(num(target.value,Math.ceil(day()))));
+      const key=target.dataset.caravanGood;
+      if(key==='gold')ok=convoys().updateLordConvoy(id,{coinGold:Math.max(num(c.minGold),value)});
+      else ok=convoys().updateLordConvoy(id,{cargo:[...c.cargo.filter(l=>l.good!==key),...(value>0?[{good:key,qty:value}]:[])]});
+    }else if(target.hasAttribute('data-caravan-escort'))ok=convoys().updateLordConvoy(id,{guards:value});
+    else if(target.hasAttribute('data-caravan-depart'))ok=convoys().updateLordConvoy(id,{departDay:Math.max(Math.ceil(day()),value)});
+    if(!ok)status('Valore non valido: controlla scorte e posti di caserma');
     changed();renderCaravans();
   }
   function confirmPlan(){
-    const panel=byId('caravanDialog'),c=state().caravans.find(v=>v.id===panel?.dataset.selected);
-    if(!c||shortage(c))return;
-    c.status='planned';c.blockedBy=null;changed();renderCaravans();
+    const panel=byId('caravanDialog'),c=caravans().find(v=>v.id===panel?.dataset.selected);
+    if(!c||shortage(c)||!convoys().scheduleLordConvoy(c.id))return;
+    changed();renderCaravans();
     status('Carovana programmata per '+dateLabel(c.departDay));
   }
   function positionLetter(){
@@ -203,7 +191,7 @@
     }
   }
   function refreshUI(){
-    const b=byId('caravanOpen');if(b)b.textContent='📦 Carovane ('+state().caravans.filter(c=>c.status!=='completed').length+')';
+    const b=byId('caravanOpen');if(b)b.textContent='📦 Carovane ('+caravans().filter(c=>c.status!=='completed').length+')';
     positionLetter();if(byId('caravanDialog')&&!byId('caravanDialog').hidden)renderCaravans();
   }
   function initUI(){
@@ -231,7 +219,7 @@
     });
     refreshUI();
   }
-  window.ConquerDiplomacy={tick,reset,state,draw,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans};
+  window.ConquerDiplomacy={tick,reset,state,caravans,draw,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans};
   initUI();
   // Combat has already wrapped the scene draw; retain its layering and only move the DOM letter.
   const drawSettlement=window.draw;
