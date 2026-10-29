@@ -3,7 +3,8 @@
 // settlement State/functions; only the topology algorithm is an ES module.
 // This module never writes to painted civilian/alarm/safe zone systems.
 (function() {
-  let topology=null, snapshot=null, dirty=true, timer=null, lastError=null, revision=0;
+  let topology=null, controlEngine=null, snapshot=null, dirty=true, controlDirty=true;
+  let timer=null, lastError=null, revision=0, controlRevision=0, lastControlAt=0;
   const settings=Object.freeze({cellSize:.25,margin:2});
   const eligible=s=>!!s&&!underConstruction(s)&&!s.destroyed;
   const physicalTypes=new Set(['wall','palisade','built','tower','gate']);
@@ -104,11 +105,40 @@
       mastioPoint:mastioEntrance()
     };
   }
+  // The same physical wall may border an outer and an inner sector. A hostile
+  // on its walkway threatens both sides but occupies neither ground sector.
+  function wallAdjacentSectors(unit,locate) {
+    const ww=window.ConquerWallWalk;
+    const loc=unit.wall||unit.legs?.find(l=>l.kind==='climb')?.toWall||
+      (unit.climbing?ww?.locate?.(unit,1.5):null);
+    if(!loc||!ww?.frame||!ww?.at)return[];
+    const frame=ww.frame(loc),at=ww.at(loc);
+    if(!frame||!at)return[];
+    const found=new Set(),half=Number(frame.half)||.25;
+    for(const side of [-1,1])for(const offset of [half+.45,half+.9,half+1.4]){
+      const id=locate({x:at.x+frame.ex*side*offset,y:at.y+frame.ey*side*offset});
+      if(id){found.add(id);break}
+    }
+    return [...found];
+  }
+  function controlBanner() {
+    if(typeof document==='undefined')return;
+    const el=document.getElementById('combatCircleStatus');
+    if(!el)return;
+    const totals=snapshot?.controlSummary;
+    if(!snapshot?.compartments?.length)el.textContent='Compartimenti · nessun perimetro difensivo chiuso';
+    else if(!totals)el.textContent='Compartimenti · controllo militare in attesa';
+    else el.textContent='Compartimenti · '+totals.safe+' sicuri · '+
+      totals.invaded+' invasi · '+totals.contested+' contesi · '+
+      totals.infiltrated+' infiltrati · '+totals.threatened+' minacciati';
+    el.dataset.danger=totals?.occupied>0?'1':'0';
+  }
   function recompute(){
     if(!topology)return null;
     try{
       snapshot=topology.detectDefensiveCompartments(collect());
-      lastError=null;dirty=false;
+      lastError=null;dirty=false;controlDirty=true;
+      controlBanner();
       // This notification is a read-only integration contract. No gameplay or
       // persistence code is called from detection.
       window.dispatchEvent(new CustomEvent('conquer-circle-updated',{
@@ -120,17 +150,58 @@
       return null;
     }
   }
+  function updateControl(force=false) {
+    if(!topology||!controlEngine)return snapshot;
+    if(dirty||!snapshot)recompute();
+    if(!snapshot)return null;
+    const battle=window.ConquerCombat;
+    if(!battle?.units||!battle?.enemy)return snapshot;
+    const now=typeof performance!=='undefined'?performance.now():Date.now();
+    if(!force&&!controlDirty&&now-lastControlAt<250)return snapshot;
+    const previous=new Map(snapshot.compartments.map(c=>[c.id,c.state]));
+    try{
+      const ui=battle.uiState?.();
+      const assessed=controlEngine.assessDefensiveControl({
+        compartments:snapshot.compartments,
+        sectorAt:snapshot.sectorAt,
+        hostiles:battle.enemy(),
+        defenders:battle.units(),
+        wallSectors:u=>wallAdjacentSectors(u,snapshot.sectorAt),
+        alert:ui?.alarm!=='off'&&!!ui?.alarm||!!ui?.alert&&ui.alert!=='clear'
+      });
+      snapshot={...snapshot,compartments:assessed.compartments,
+        controlSummary:assessed.summary};
+      lastControlAt=now;controlDirty=false;
+      const transitions=assessed.compartments.filter(c=>previous.get(c.id)!==c.state)
+        .map(c=>({id:c.id,from:previous.get(c.id)||'unassessed',
+          to:c.state,groundEnemies:c.control.groundEnemies}));
+      controlBanner();
+      if(transitions.length){
+        controlRevision++;
+        window.dispatchEvent(new CustomEvent('conquer-circle-control-updated',{
+          detail:{revision:controlRevision,transitions,summary:assessed.summary}
+        }));
+      }
+    }catch(error){
+      lastError=error;console.warn('CONQUER_CIRCLE_CONTROL_ERROR',error);
+    }
+    return snapshot;
+  }
   function getSnapshot() {
     if(!topology)return null;
-    return dirty||!snapshot?recompute():snapshot;
+    if(dirty||!snapshot)recompute();
+    if(controlDirty)updateControl(true);
+    return snapshot;
   }
   function invalidate(reason='topology') {
-    revision++;dirty=true;
+    revision++;dirty=true;controlDirty=true;
     if(timer!==null)clearTimeout(timer);
     // A run of construction completions / wall fragments is one update.
     timer=setTimeout(()=>{timer=null;recompute()},120);
   }
+  function invalidateControl(){controlDirty=true}
   function sectorAt(p){return getSnapshot()?.sectorAt(p)||null}
+  function controlState(id){return getSnapshot()?.compartments.find(c=>c.id===id)||null}
   function sectorForStructure(s){
     if(!s)return null;
     if(s.type==='tower'&&s.isMastio)return sectorAt(mastioEntrance());
@@ -168,10 +239,17 @@
     return data?topology.findNextCircleRefuge(fromId,data,stateFor):null;
   }
   window.ConquerCircle=Object.freeze({
-    invalidate,recompute,getSnapshot,sectorAt,sectorForStructure,nextRefuge,
-    getStatus:()=>({ready:!!topology,dirty,revision,error:lastError&&String(lastError)})
+    invalidate,invalidateControl,recompute,updateControl,getSnapshot,
+    sectorAt,sectorForStructure,controlState,nextRefuge,
+    getStatus:()=>({ready:!!topology&&!!controlEngine,dirty,controlDirty,
+      revision,controlRevision,summary:snapshot?.controlSummary||null,
+      error:lastError&&String(lastError)})
   });
-  import('./circle/defensive-topology.mjs?v=circle-1').then(mod=>{
-    topology=mod;invalidate('initial');
+  Promise.all([
+    import('./circle/defensive-topology.mjs?v=circle-1'),
+    import('./circle/defensive-control.mjs?v=circle-1')
+  ]).then(([top,control])=>{
+    topology=top;controlEngine=control;
+    invalidate('initial');updateControl(true);
   }).catch(err=>{lastError=err;console.error('CONQUER_CIRCLE_IMPORT_ERROR',err)});
 })();
