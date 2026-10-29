@@ -108,6 +108,45 @@
       card('Titolarità delle attività',bars([['Signore',lord.length],['Settore L4',items.length-lord.length]],Math.max(1,items.length)))+
       card('Produzione e proprietà',table,'Utili annui solo dopo la chiusura del primo esercizio. Compravendite gestite dal ledger economico.');
   }
+
+  function stores(d) {
+    const economic=d.economy?.goods||[],siege=d.logistics?.stores||[];
+    const econBars=bars(economic.map(g=>[labels[g.id]||g.id,g.castle]),Math.max(1,...economic.map(g=>num(g.reserve))));
+    const siegeBars=bars(siege.map(g=>[labels[g.id]||g.id,g.stock]),Math.max(1,...siege.map(g=>num(g.cap))));
+    return '<div class="cp-kpis">'+kpi('Tesoreria',fmt(d.economy?.castleGold),'Oro economico')+
+      kpi('Autonomia di assedio',d.logistics?.autonomy==null?'—':fmt(d.logistics.autonomy)+' giorni')+
+      kpi('Fabbisogno giornaliero',fmt(d.logistics?.daily),'Razioni in difesa')+'</div>'+
+      '<div class="cp-grid">'+card('Riserve del signore',econBars,'Scorte del ledger economico rispetto ai target impostati.')+
+      card('Scorte per la difesa',siegeBars,'Depositi fisici del castello: non sommare queste scorte a quelle economiche.')+'</div>'+
+      card('Capienza dei magazzini',siege.map(g=>line(labels[g.id]||g.id,fmt(g.stock)+' / '+fmt(g.cap))).join('')||empty('Nessun deposito assegnato.'));
+  }
+  function military(d) {
+    const c=d.defense||{},k=d.knights||{},l=d.logistics||{};
+    return '<div class="cp-kpis">'+kpi('Unità alleate',c.active?fmt(c.units):'—','Presenti nel combat')+
+      kpi('Pattuglie',c.active?fmt(c.patrols):'—')+
+      kpi('Cavalieri',k.current==null?'—':fmt(k.current)+' / '+fmt(k.limit))+
+      kpi('Capienza caserme',fmt(l.soldiers),'Posti, non soldati')+
+      kpi('Nemici rilevati',c.active?fmt(c.hostiles):'—')+
+      kpi('Allarme',c.alarm||'—')+'</div>'+
+      card('Cavalleria disponibile',bars([['Cavalieri reclutati',k.current],['Posti disponibili',k.limit]],Math.max(1,num(k.limit))))+
+      card('Leva del feudo',line('Aliquota impostata',fmt(d.policy.levy)+'%')+
+        empty('Leva e mobilitazione non sono ancora collegate. La capienza non costituisce un organico effettivo.'));
+  }
+  function building(d) {
+    const j=d.economy?.jobs||{};
+    const tasks=d.sites.map(s=>{
+      const value=typeof constructionProgress==='function'?num(constructionProgress(s)):0;
+      const pct=Math.max(0,Math.min(100,100*value));
+      return '<div class="cp-site"><div>'+esc(s.type)+' · '+fmt(pct)+'%</div><i><em style="width:'+pct.toFixed(1)+'%"></em></i></div>';
+    }).join('');
+    const work=[['Cantieri',j.building],['Pastori',j.herding],['Legname',j.logging],['Industrie',j.industry],['Inattivi',j.idle]];
+    return '<div class="cp-kpis">'+kpi('Cantieri',fmt(d.sites.length))+
+      kpi('Costruttori L1',fmt(j.building),'Oggi')+
+      kpi('L1 inattivi',fmt(j.idle))+
+      kpi('Salari cantieri',fmt(d.snapshot?.constructionPayroll),'Oro già pagato')+'</div>'+
+      card('Lavoratori allocati',bars(work,Math.max(1,...work.map(x=>num(x[1])))))+
+      card('Progresso lavori',tasks||empty('Nessun cantiere in corso.'),'Tempi e lavoro derivano dalla simulazione L1 già attiva.');
+  }
   function render() {
     const root=$('profileControl'); if(!root || root.hidden)return;
     const d=get();
@@ -118,7 +157,7 @@
       (typeof view==='function'?view(d):empty('Pannello in preparazione.'));
   }
   function open(){current='general';render();}
-  const views={general,people,economy,estate};
+  const views={general,people,economy,estate,stores,military,building};
   const root=$('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
