@@ -112,6 +112,8 @@ export function detectDefensiveCompartments(source={}) {
   // Flat H0 edits cancel older natural relief, then expose any surviving
   // vertical faces of their own. Bridges carve traversable corridors last.
   for(const cut of source.naturalCuts||[])rasterPoly(cut.polygon,naturalMask,grid,0);
+  // Seas/mountain barriers do not disappear merely because a slope is flattened.
+  for(const natural of source.invariantNatural||[])rasterPoly(natural.polygon,naturalMask,grid,1);
   for(const edge of source.terrainBarriers||[])rasterPoly(edge.polygon,naturalMask,grid,1);
   for(const crossing of source.crossings||[])if(crossing.open!==false)
     rasterPoly(crossing.polygon,naturalMask,grid,0);
