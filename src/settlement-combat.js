@@ -1886,6 +1886,8 @@
     whiteBoundaryPending=false;whiteBoundarySignature='';patrolNavRevision++;patrolRouteCache.clear();
     for(const u of combat.units)if(u.kind==='patrol'){u.target=null;u.path=null;u.nextPatrolAt=0}
     if(activeWell())updateAlert(observers());
+    window.ConquerCircle?.invalidateControl?.('alarm zone brush changed');
+    window.ConquerCircle?.updateControl?.(true);
     scheduleLocalSave();requestToolDraw();
   },true);
   window.addEventListener?.('keydown',e=>{
