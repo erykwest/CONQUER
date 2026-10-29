@@ -214,9 +214,11 @@ function renderFunctionPanel(){
   if(['tower','gate','built'].includes(s.type)){
     html+=window.ConquerSiege?.summaryHtml()||'';
   }
+  html+=window.ConquerConvoys?.panelHtml?.(s)||'';
   html+=window.ConquerCrossings?.panel(s)||'';
   html+=window.ConquerGates?.panel(s)||'';
   slots.innerHTML=html;
+  window.ConquerConvoys?.bindPanel?.(slots);
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
