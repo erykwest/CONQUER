@@ -374,6 +374,7 @@ function Overview({ game }) {
       <${Stat} label=${M.welfare} value=${num(e.welfare, 0)} tip=${TIP.welfare}><${Bar} value=${e.welfare} max=${100} /></${Stat}>
       <${Stat} label=${M.happiness} value=${['L1', 'L2', 'L3', 'L4'].map(g => num(e.happiness?.[g], 0)).join(' · ')} tip=${TIP.happiness} />
       ${e.jobs && html`<${Stat} label=${M.jobs} value=${M.jobsValue(e.jobs)} tip=${TIP.jobs + (e.jobs.foodRisk ? ' ⚠' : '')} />`}
+      ${e.commerce && html`<${Stat} label=${M.workshops} value=${e.commerce.l3Shops + ' · ' + num(e.commerce.l3Goods, 0) + ' ' + M.l3Goods} tip=${TIP.workshops} />`}
       <${Stat} label="Oro castello" value=${num(e.castleGold, 0)} tip=${TIP.castleGold} />
       <${Stat} label="Capitale L4" value=${num(e.capital, 0)} tip=${TIP.capital} />
       <${Stat} label="Salari" value=${[e.wage.L1, e.wage.L2, e.wage.L3].map(w => num(w, 1)).join(' · ')} tip=${TIP.wages + ' ' + TIP.schedule} />

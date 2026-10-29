@@ -1,5 +1,17 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-29 — Economia, tappa 3: commercio e botteghe L3 autonome (branch `feature/economy-commerce`)
+
+- Il commercio di #55 e l'economia urbana autonoma sono un solo sistema collegato al calendario: le case L3 aprono botteghe da sole, producono Beni L3 venduti il sabato con i prezzi della settimana prima. Stato e prove in [STATUS](STATUS.md). D-053 in DECISIONS; ROADMAP invariata.
+
+## 2026-10-28 — Fortificazioni in legno in 3D (branch)
+
+- Su `feature/wood-fortifications-3d`: vedetta, torri a palizzata, porta in legno e palo di palizzata modellati in Blender (`tools/blender/build_wood_fort.py`) e posati dal nuovo `settlement-wood3d.js`; le palizzate seguono il layout del gioco con camminamento e terrapieno. Il world3d non ridisegna più il legno in 2.5D a ogni frame. Stato e prove in [STATUS](STATUS.md#fortificazioni-in-legno-in-3d-branch-featurewood-fortifications-3d-28102026).
+- Cantieri del legno montati pezzo per pezzo (torri, porte, palizzate) invece del fantasma traslucido.
+- Bandiere araldiche su torre coperta e vedetta, due drappi ai lati della porta in legno.
+- Cutaway della torre a palizzata in legno sul cutaway WebGL di #65: lati verso la camera aperti, pavimento, scala e arredi della funzione. Il fallback WebGL con soldati di ronda, riprodotto qui, è risolto in main da #91 (VAO per programma): il fix locale è stato tolto al merge.
+- Asset Lab: legno e palizzate ora con «Modello 3D»; baseline estesa con i 12 render nuovi. ROADMAP e DECISIONS invariate: promozione visiva sullo schema già deciso per i modelli Blender (civili, industrie, assedio), nessun nuovo contratto.
+
 ## 2026-10-28 — Cutaway civico: verifica nel Lab e fix delle locande (branch `fix/civic-cutaway-lab`)
 
 - Foglio provini del cutaway di chiesa e locanda (L1–L3, 4 rotazioni) sul palco del Lab: nelle locande la faccia inferiore del primo piano copriva il pianterreno; tolta, con nuovo controllo in `civic3d-regression`. Audit del Lab su `main` senza errori. Stato in [STATUS](STATUS.md#cutaway-civico-e-contorno-di-selezione-su-main-con-90-54a7508-fix-fixcivic-cutaway-lab-28102026).
@@ -12,6 +24,7 @@
 ## 2026-10-28 — Economia, tappa 1: lavoro L1 e cantieri (branch `feature/economy-labour`)
 
 - Portata su `main` la parte economica di #55 (bilancio settimanale, fondazione con 4 L1, Builder che paga dal castello, cantieri a giornate-operaio pagati dal signore) unita a `jobmanager` (pastori protetti, taglio legna, razioni, felicità per ceto) in un solo allocatore L1. Stato e prove in [STATUS](STATUS.md). Nuove decisioni D-047…D-051 in [DECISIONS](DECISIONS.md#economia--lavoro-l1-unico-28102026); ROADMAP invariata.
+
 ## 2026-10-28 — Rendering: niente più picchi dal terreno 3D e dalla nebbia (branch `perf/render-spikes-v2`)
 
 - Una modifica a strade, campi, case o lotti ricuoce solo le tessere da 512 px toccate, una per frame, invece delle due texture 4096² del terreno. Terraforming, stagione, rilievo e foreste rifanno ancora tutto. La nebbia di combattimento rifà il raycast ogni 12 s solo se il contenuto è cambiato. La telemetria remota dice quale renderer è attivo (evento `RENDERER`). Misure e confronti in [STATUS](STATUS.md#rendering--picchi-del-terreno-3d-e-della-nebbia-branch-perfrender-spikes-v2-28102026): P95 del frame dopo una modifica dimezzato (115 → 56 ms).

@@ -216,7 +216,7 @@
           profit: a.profit ?? null, abandoned: !!a.abandoned }));
       return {
         happiness: s.happiness, rationMode: s.rationMode, castleFoodIssued: s.castleFoodIssued,
-        jobs: econ.jobSummary?.() || null,
+        jobs: econ.jobSummary?.() || null, commerce: s.commerce || null,
         welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
         goods: (econ.GOODS || ECON_GOODS).map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],
           share: e.saleShare[g], reserve: e.target[g] })),
