@@ -60,6 +60,7 @@
     if(!fn)return true;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
+    if(fn==='pigeonLoft')return s.type==='tower'||s.type==='built';
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
     if(['granary','storage','kitchen','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
