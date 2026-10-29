@@ -25,6 +25,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <link rel="stylesheet" href="./src/settlement.css?v=dev-scroll-mills-1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 <link rel="stylesheet" href="./src/settlement-diplomacy.css?v=knights2d-1">
+<link rel="stylesheet" href="./src/settlement-messages.css?v=messages-1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="./src/ui/theme.css?v=ui2-6">
@@ -141,6 +142,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
     <div class="legend" id="knightRoster">Cavalieri 0/0 · Occorrono Noble room e Stalla</div>
     <button class="full" id="recruitKnight" type="button" disabled>⚔ Recluta cavaliere a cavallo</button>
     <button class="full" id="caravanOpen" type="button">📦 Carovane (0)</button>
+    <button class="full" id="messagesOpen" type="button">✉️ Posta feudale</button>
     <h3>Persistence</h3>
     <button class="full" id="saveBtn">Save settlement</button>
     <div class="legend" id="dbNote" style="margin-top:8px">Local autosave active. Supabase sync activates when an authenticated session exists.</div>
@@ -422,6 +424,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-asset-stage.js?v=assetlab-audit-2"></script>
 <script src="./src/settlement-tower-weapons.js?v=siege-1"></script>
 <script src="./src/settlement-diplomacy.js?v=knights2d-1"></script>
+<script src="./src/settlement-messages.js?v=messages-1"></script>
 <script type="module" src="./src/ui/shell.js?v=economy-labour-1"></script>
 </body>
 </html>
