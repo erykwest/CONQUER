@@ -417,3 +417,7 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 - Magazzini veri delle strutture fortificate: deposito prioritario all'interno, materiali con capienza condivisa, riserva globale `siege.stock` autoritativa; perdita one-shot per ogni stanza in compartimento conquistato; riconquista non rimborsa i viveri persi. Capacità delle stanze conquistate sospesa. Facciata interna delle `built` usata per assegnare il settore.
 - Salvataggi: record di cattura e stanze perdute all'interno di `State.siege.circle`; ripristino in `ConquerSiege.restore`, compatibile con il payload locale/cloud. La mappa riporta i compartimenti conquistati anche dopo salvataggio di una breccia; una suddivisione successiva non segna automaticamente tutti i settori eredi come conquistati.
 - QA: 65/65 test isolati PASS inclusi i moduli veri di assedio e controllo, syntax checks PASS; Node nativo, CI e test browser ancora non eseguiti. `main` invariata.
+
+
+### 2026-10-29 — CIRCLE QA GitHub Actions
+- Creato workflow `.github/workflows/circle-regression.yml` per test Node.js 22 e syntax checks ad ogni push rilevante su `circle`. [Run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993) su codice `68533977`: **PASS 65/65 test**. Restano da eseguire smoke test browser/UI e profiling dinamico.
