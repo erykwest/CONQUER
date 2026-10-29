@@ -11,7 +11,9 @@
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
 - **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
 - **TAPPA 2 SU BRANCH `feature/economy-routines`, NON MERGE:** routine settimanali di uomini e donne.
-- **DA FARE:** tappa 3 commercio L3/L4 + `src/economy/*`; tappa 4 convogli unificati con `ConquerDiplomacy`; tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
+- **TAPPA 3 SU BRANCH `feature/economy-commerce`, NON MERGE:** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
+- **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda.
+- **DA FARE:** tappa 4 convogli unificati con `ConquerDiplomacy`; tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.

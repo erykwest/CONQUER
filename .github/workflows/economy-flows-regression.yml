@@ -6,6 +6,13 @@ on:
       - 'src/settlement-population-figures.js'
       - 'src/ui/**'
       - 'qa/labor*.cjs'
+      - 'qa/commerce*.cjs'
+      - 'qa/urban-workshops*.cjs'
+      - 'qa/*-routines-regression.cjs'
+      - 'src/settlement-commerce.js'
+      - 'src/settlement-urban-economy.js'
+      - 'src/settlement-market-economy.js'
+      - 'src/settlement-population-*.js'
       - 'qa/economy*.cjs'
       - 'qa/construction*.cjs'
       - 'src/settlement-core.js'
@@ -32,6 +39,10 @@ jobs:
           node qa/labor-jobs-regression.cjs
           node qa/economy-rations-regression.cjs
           node qa/save-safety-regression.cjs
+          node qa/male-routines-regression.cjs
+          node qa/female-routines-regression.cjs
+          node qa/commerce-skeleton-regression.cjs
+          node qa/urban-workshops-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs
