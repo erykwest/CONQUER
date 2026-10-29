@@ -215,7 +215,8 @@
     if(['wall','palisade'].includes(spec.type))return wallPhases();
     const L=spec.level||1,wood=spec.material==='wood',out=[['intatta',()=>{}],['danneggiata',s=>hpTo(s,.85)]];
     if(spec.type==='gate')out.push(['portone incrinato',s=>doorTo(s,.5)],['portone sfondato',s=>doorTo(s,0)]);
-    if(!wood)for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
+    // Only towers and gatehouses fail a storey at a time (settlement-siege.js storeyCollapse).
+    if(!wood&&['tower','gate'].includes(spec.type))for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
     out.push(['distrutta',s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,0)}]);
     return out;
   }
@@ -223,7 +224,7 @@
   // The Asset Lab builds its fortification entries with this too.
   function galleryStructure(spec,x,y){
     return['wall','palisade','built'].includes(spec.type)
-      ?{id:uid(),functions:[],flip:false,...spec,width:wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
+      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
       :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
   }
   // Asset Lab (index.html?assetlab=1 in a hidden frame): world-space castle meshes of one gallery spec,

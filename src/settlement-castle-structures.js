@@ -303,11 +303,28 @@ function builtRoofFootprintPoints(s){
 }
 function builtRoofGeometry(s){
   const p=builtRoofFootprintPoints(s);if(!p||p.length<4)return null;
-  const h=structureHeight(s),rise=clamp((Number(s.width)||1)*.46,.32,.56);
+  const h=structureHeight(s),rise=clamp((Number(s.width)||1)*.46,.32,isWideBuilt(s)?.92:.56);
   const ridgeA={x:(p[0].x+p[3].x)/2,y:(p[0].y+p[3].y)/2};
   const ridgeB={x:(p[1].x+p[2].x)/2,y:(p[1].y+p[2].y)/2};
   return{p,h,rise,ridgeA,ridgeB,ridgeH:h+rise};
 }
+// Wide-hall buttresses on the lancet facade, one on every bay line (n lancets -> n+1),
+// with the stepped profile of steppedButtressPieces (shared with buttressed towers).
+function wideHallButtresses(s){
+  if(!isWideBuilt(s))return[];
+  const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side);
+  const lancet=builtWindowRows(s).find(r=>r[3]==='hallLancet');
+  const n=builtWindowCount(edge,0,4,lancet?lancet[4]:.86),cell=edge.length/n;
+  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L},o={x:-u.y*side,y:u.x*side};
+  const mid={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2},w=.22,h=structureHeight(s),out=[];
+  for(let k=0;k<=n;k++){
+    const t=clamp(k*cell-edge.length/2,-edge.length/2+w/2,edge.length/2-w/2);
+    out.push(steppedButtressPieces({x:mid.x+u.x*t,y:mid.y+u.y*t},u,o,h,w));
+  }
+  return out;
+}
+// One renderer for both 3D paths: flat pieces as prisms, sloped ones as frustums.
+function buttressPieceIsPrism(p){return p.top===p.bottom}
 function viewDepthPoint(p){
   const q=rotateViewPoint(p);
   return q.x+q.y;
@@ -1075,7 +1092,8 @@ function chimneySpecs(s){
     const g=builtRoofGeometry(s);if(!g)return[];
     const dx=g.ridgeB.x-g.ridgeA.x,dy=g.ridgeB.y-g.ridgeA.y;
     const ridgeLength=Math.hypot(dx,dy);
-    const count=Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
+    // A hall has one hearth per end: two stacks, whatever its length.
+    const count=isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
     for(let i=0;i<count;i++){
       const t=(i+1)/(count+1);
       specs.push({

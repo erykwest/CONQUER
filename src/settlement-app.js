@@ -136,6 +136,7 @@ function linearRouteStructures(route,endSnapId,spec){
       tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,
       flip:false,functions:[],masonryMaterial:State.buildMasonryMaterial
     };
+    if(State.tool.span==='wide')s.span='wide';
     if(i===0&&State.draft?.aSnap)s.aSnap=State.draft.aSnap;
     if(i===route.segments.length-1&&endSnapId)s.bSnap=endSnapId;
     if(groupId)s.routeGroupId=groupId;

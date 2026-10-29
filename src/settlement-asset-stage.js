@@ -22,7 +22,8 @@
   function variants(){
     const G=SP().GALLERY;
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
-      ['Mura',['Sezione costruita T2',{type:'built',tier:2,level:1}]],...G.gates.map(r=>['Porte',r])]
+      ['Mura',['Sezione costruita T2',{type:'built',tier:2,level:1}]],
+      ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec}));
   }
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}
