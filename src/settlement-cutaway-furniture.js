@@ -247,22 +247,32 @@
     }
   }
   // ---------- spiral stair (small T1 towers)
-  const STAIR_STEPS_PER_TURN=14,STAIR_RISE=.11,STAIR_MIN_R=.1;
+  const STAIR_RISE=.11,STAIR_MIN_R=.1;
   function spiralTower(s){return typeof cutawaySpiralStair==='function'&&cutawaySpiralStair(s)}
-  // Axis and radius: the widest circle inside the shaft and outside the parent footprint
-  // (a subtower is cut by its parent; the stair moves into the free part). Local (u,v) frame.
+  // Axis and size: the widest circle (round tower) or axis-aligned square (square tower)
+  // inside the shaft and outside the parent footprint (a subtower is cut by its parent; the
+  // stair moves into the free part). Local (u,v) frame; R is the radius / half side.
   function spiralStair(s,g){
     const b=cutawayFloorBasis(s,g),ca=Math.cos(b.angle),sa=Math.sin(b.angle),hu=b.w/2,hv=b.h/2,round=s.shape==='round';
     const toWorld=(u,v)=>({x:b.center.x+u*ca-v*sa,y:b.center.y+u*sa+v*ca});
     const blocks=(typeof cutawayBlockers==='function'?cutawayBlockers(s):[]).map(k=>k.pts);
+    const local=blocks.flat().map(p=>{const dx=p.x-b.center.x,dy=p.y-b.center.y;return[dx*ca+dy*sa,-dx*sa+dy*ca]});
     const room=(u,v)=>round?hu-Math.hypot(u,v):Math.min(hu-Math.abs(u),hv-Math.abs(v));
+    const inBlock=(u,v)=>{const p=toWorld(u,v);return blocks.some(B=>pointInPolygon(p,B))};
+    // Square of half side h at (u,v): no perimeter sample in a blocker, no blocker corner inside.
+    const squareFree=(u,v,h)=>{
+      if(local.some(([x,y])=>Math.abs(x-u)<h-1e-6&&Math.abs(y-v)<h-1e-6))return false;
+      for(let i=0;i<=8;i++){const t=-h+2*h*i/8;if(inBlock(u+t,v-h)||inBlock(u+t,v+h)||inBlock(u-h,v+t)||inBlock(u+h,v+t))return false}
+      return true;
+    };
     const clear=(u,v)=>{
-      let r=room(u,v);const p=toWorld(u,v);
-      for(const B of blocks){
-        if(pointInPolygon(p,B))return -1;
-        for(let i=0;i<B.length;i++)r=Math.min(r,pointSegmentDistance(p,B[i],B[(i+1)%B.length]));
-      }
-      return r;
+      let r=room(u,v);
+      if(!blocks.length)return r;
+      if(inBlock(u,v))return -1;
+      if(round){const p=toWorld(u,v);for(const B of blocks)for(let i=0;i<B.length;i++)r=Math.min(r,pointSegmentDistance(p,B[i],B[(i+1)%B.length]));return r}
+      if(squareFree(u,v,r))return r;
+      let lo=0;for(let k=0;k<8;k++){const m=(lo+r)/2;if(squareFree(u,v,m))lo=m;else r=m}
+      return lo;
     };
     let best=null;
     for(let u=-hu;u<=hu+1e-9;u+=.025)for(let v=-hv;v<=hv+1e-9;v+=.025){
@@ -275,27 +285,34 @@
     const doors=typeof towerDoorSpecs==='function'?towerDoorSpecs(s).slice().sort((p,q)=>p.baseZ-q.baseZ):[];
     const parent=s.parentTowerId&&State.structures.find(o=>o.id===s.parentTowerId);
     const c=toWorld(best.u,best.v),dir=doors[0]?doors[0].outward:parent?{x:parent.x-c.x,y:parent.y-c.y}:{x:ca,y:sa};
-    const start=Math.atan2(dir.y,dir.x)-b.angle;
+    // Square stairs: 16 steps a turn and the start on a multiple of the step angle, so the
+    // corners (45°, 135°, ...) fall between two steps and every outer edge is straight.
+    const perTurn=round?14:16,da=Math.PI*2/perTurn;
+    let start=Math.atan2(dir.y,dir.x)-b.angle;if(!round)start=Math.round(start/da)*da;
     const z0=cutawayFloorLevels(s)[0].z,z1=structureHeight(s)-.06;
-    return{u:best.u,v:best.v,R:best.R,newel:Math.min(.045,best.R*.2),start,z0,z1,steps:Math.max(1,Math.floor((z1-z0)/STAIR_RISE)),toWorld,angle:b.angle};
+    return{u:best.u,v:best.v,R:best.R,newel:Math.min(.045,best.R*.2),square:!round,perTurn,start,z0,z1,steps:Math.max(1,Math.floor((z1-z0)/STAIR_RISE)),toWorld,angle:b.angle};
   }
   // Stone wedge steps around a newel post, each overlapping the one below like a solid
-  // helical stair (no undersides: the camera never looks up).
+  // helical stair (no undersides: the camera never looks up). A square stair runs the same
+  // angles out to a square wall line around a square newel.
   function spiralStairWorld(st,out){
-    const da=Math.PI*2/STAIR_STEPS_PER_TURN,rise=(st.z1-st.z0)/st.steps,{u,v,R,newel}=st;
-    const P=(a,r,z)=>{const p=st.toWorld(u+Math.cos(a)*r,v+Math.sin(a)*r);return[p.x,p.y,z]};
+    const da=Math.PI*2/st.perTurn,rise=(st.z1-st.z0)/st.steps,{u,v,R,newel,square}=st;
+    const rad=(a,r)=>square?r/Math.max(Math.abs(Math.cos(a)),Math.abs(Math.sin(a))):r;
+    const P=(a,r,z)=>{const rr=rad(a,r),p=st.toWorld(u+Math.cos(a)*rr,v+Math.sin(a)*rr);return[p.x,p.y,z]};
     const N=(a)=>[Math.cos(a+st.angle),Math.sin(a+st.angle),0];
+    // Outward normal of the wall line at angle a (radial, or the square side it hits).
+    const side=a=>{if(!square)return N(a);const c=Math.cos(a),s=Math.sin(a);return N(Math.abs(c)>=Math.abs(s)?(c>0?0:Math.PI):(s>0?Math.PI/2:-Math.PI/2))};
     for(let k=0;k<st.steps;k++){
-      const a0=st.start+k*da,a1=a0+da*1.04,am=(a0+a1)/2,top=st.z0+(k+1)*rise,bot=Math.max(st.z0,top-rise-.035);
+      const a0=st.start+k*da,a1=a0+da*(square?1:1.04),am=(a0+a1)/2,top=st.z0+(k+1)*rise,bot=Math.max(st.z0,top-rise-.035);
       out.push({pts:[P(a0,newel,top),P(a0,R,top),P(am,R,top),P(a1,R,top),P(a1,newel,top)],hex:'#8d877c',n:[0,0,1],floor:0});
       out.push({pts:[P(a0,newel,bot),P(a0,R,bot),P(a0,R,top),P(a0,newel,top)],hex:'#6f6a62',n:N(a0-Math.PI/2),floor:0});
       out.push({pts:[P(a1,R,bot),P(a1,newel,bot),P(a1,newel,top),P(a1,R,top)],hex:'#6f6a62',n:N(a1+Math.PI/2),floor:0});
-      for(const [p,q] of [[a0,am],[am,a1]])out.push({pts:[P(p,R,bot),P(q,R,bot),P(q,R,top),P(p,R,top)],hex:'#77716a',n:N((p+q)/2),floor:0});
+      for(const [p,q] of [[a0,am],[am,a1]])out.push({pts:[P(p,R,bot),P(q,R,bot),P(q,R,top),P(p,R,top)],hex:'#77716a',n:side((p+q)/2),floor:0});
     }
-    // Newel: an octagonal post with a cap above the last step.
-    const zt=st.z1+.04;
-    for(let i=0;i<8;i++){const p=i*Math.PI/4,q=p+Math.PI/4;out.push({pts:[P(p,newel,st.z0),P(q,newel,st.z0),P(q,newel,zt),P(p,newel,zt)],hex:'#7a7268',n:N((p+q)/2),floor:0})}
-    out.push({pts:Array.from({length:8},(_,i)=>P(i*Math.PI/4,newel,zt)),hex:'#8d877c',n:[0,0,1],floor:0});
+    // Newel: an octagonal (square: four-sided) post with a cap above the last step.
+    const zt=st.z1+.04,n=square?4:8,a0=square?Math.PI/4:0,ring=Array.from({length:n},(_,i)=>a0+i*Math.PI*2/n);
+    for(let i=0;i<n;i++){const p=ring[i],q=ring[(i+1)%n]+(i===n-1?Math.PI*2:0);out.push({pts:[P(p,newel,st.z0),P(q,newel,st.z0),P(q,newel,zt),P(p,newel,zt)],hex:'#7a7268',n:N((p+q)/2),floor:0})}
+    out.push({pts:ring.map(a=>P(a,newel,zt)),hex:'#8d877c',n:[0,0,1],floor:0});
   }
   const cache=new Map();
   function structureFaces(s,g){

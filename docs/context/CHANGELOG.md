@@ -2,7 +2,7 @@
 
 ## 2026-10-29 — Cutaway delle torri piccole con scala a chiocciola (branch `feature/cutaway-spiral-stairs`)
 
-- Le torri T1 in pietra, comprese le sottotorri, si aprono in sezione e mostrano una scala a chiocciola in pietra dalla porta alla cima. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
+- Le torri T1 in pietra, comprese le sottotorri, si aprono in sezione e mostrano una scala a chiocciola in pietra dalla porta alla cima: tonda nelle torri tonde, quadrata nelle torri quadrate. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
 
 ## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
 
