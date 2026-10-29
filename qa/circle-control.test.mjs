@@ -90,3 +90,19 @@ test('assessment is pure and never sets captured or transfers ownership',()=>{
 test('assess requires an actual topology locator',()=>{
   assert.throws(()=>assessDefensiveControl({compartments:[]}),TypeError);
 });
+
+test('both armies fighting on a wall contest its bordering defensive sectors',()=>{
+  const out=assess({hostiles:[{x:10,y:1,wall:{wallId:'wall',t:.5}}],
+    defenders:[{x:10,y:1,wall:{wallId:'wall',t:.6}}],
+    wallSectors:()=>['west']});
+  assert.equal(out.compartments[0].state,'contested');
+  assert.equal(out.compartments[0].control.groundEnemies,0);
+  assert.equal(out.compartments[0].control.wallDefenders,1);
+  assert.equal(out.summary.wallDefenders,1);
+});
+test('a defending wall archer keeps a ground invasion contested',()=>{
+  const out=assess({hostiles:[{x:3,y:3}],
+    defenders:[{x:10,y:1,wall:{wallId:'wall',t:.3}}],
+    wallSectors:()=>['west']});
+  assert.equal(out.compartments[0].state,'contested');
+});
