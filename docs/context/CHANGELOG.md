@@ -4,6 +4,14 @@
 
 - Le torri T1 in pietra, comprese le sottotorri, si aprono in sezione e mostrano una scala a chiocciola in pietra dalla porta alla cima: tonda nelle torri tonde, quadrata nelle torri quadrate. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
 
+## 2026-10-29 — Parapetto delle merlature (branch `feature/battlement-parapet`)
+
+- Torri, porte e mura in pietra hanno un parapetto continuo tra i merli invece di soli blocchi isolati; le torri tonde hanno più merli (8/12/18). Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate: dettaglio visivo, nessun contratto toccato.
+
+## 2026-10-29 — Economia, tappa 4: un solo sistema di convogli (branch `feature/economy-convoys`)
+
+- Carovane della diplomazia, convogli del mastio, manifesti mercantili e carrozze nobiliari sono un solo sistema (`ConquerConvoys`) che preleva davvero dal castello; corretto il tributo gratuito introdotto con #98. Quattro cartelli di prova sulle arterie e convogli visibili sulla strada maestra. Stato e prove in [STATUS](STATUS.md). D-054 in DECISIONS; ROADMAP invariata.
+
 ## 2026-10-29 — Economia, tappa 3: commercio e botteghe L3 autonome (branch `feature/economy-commerce`)
 
 - Il commercio di #55 e l'economia urbana autonoma sono un solo sistema collegato al calendario: le case L3 aprono botteghe da sole, producono Beni L3 venduti il sabato con i prezzi della settimana prima. Stato e prove in [STATUS](STATUS.md). D-053 in DECISIONS; ROADMAP invariata.

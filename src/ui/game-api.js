@@ -197,7 +197,7 @@
     knights() { return window.ConquerCombat?.knightRecruitment?.() || null; },
     caravans() {
       const d = window.ConquerDiplomacy;
-      return d ? d.state().caravans.filter(c => c.status !== 'completed').length : null;
+      return d ? (d.caravans?.() || []).filter(c => c.status !== 'completed').length : null;
     },
     village() {
       return {
