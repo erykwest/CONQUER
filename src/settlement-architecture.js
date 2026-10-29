@@ -239,7 +239,21 @@ function towerDoorSpecs(tower){
     });
     if(!duplicate)specs.push(spec);
   }
+  for(const spec of towerRoofDoorSpecs(tower))specs.push(spec);
   return specs;
+}
+// Parent/subtower pairs: the taller one opens a door onto the roof of the lower one, on the
+// face looking at it, at that roof's level (like the wall-walk doors).
+function towerRoofDoorSpecs(tower){
+  const out=[],h=structureHeight(tower);
+  for(const o of State.structures){
+    if(o===tower||underConstruction(o)||!['tower','gate'].includes(o.type))continue;
+    if(o.id!==tower.parentTowerId&&o.parentTowerId!==tower.id)continue;
+    if(structureHeight(o)>h-.6)continue;
+    const spec=towerDoorContactSpec(tower,boundaryPoint(tower,{x:o.x,y:o.y}),o,'roof');
+    if(spec)out.push(spec);
+  }
+  return out;
 }
 function towerDoorVisible(tower,spec){
   // Cutaway keeps doors as 20% ghosted architectural references instead of
@@ -269,9 +283,9 @@ function drawTowerDoorSpec(tower,spec){
     ctx.save();ctx.globalAlpha*=opacity;drawFacadeAssetBackdrop(edge,centerZ,width,height,0,'#211713');ctx.restore();
   };
   const occ=towerDoorOccluders(tower,spec,apexZ);if(!occ.length){drawDoor();return}
-  const rr=wrap.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.rect(-48,-48,rr.width+96,rr.height+96);
-  for(const o of occ){const hull=structureScreenSilhouette(o);if(hull.length<3)continue;ctx.moveTo(hull[0].x,hull[0].y);for(let i=1;i<hull.length;i++)ctx.lineTo(hull[i].x,hull[i].y);ctx.closePath()}
-  ctx.clip('evenodd');drawDoor();ctx.restore();
+  const rr=wrap.getBoundingClientRect();ctx.save();
+  clipOutsideHulls(occ.map(structureScreenSilhouette),-48,-48,rr.width+96,rr.height+96);
+  drawDoor();ctx.restore();
 }
 function drawTowerDoors(){
   for(const tower of State.structures){
@@ -303,7 +317,7 @@ function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
 // Mastio heraldry hangs below the sill of the castle-interior-facing window.
 // Paint in the same projected facade plane as the existing architectural art.
 function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1){
-  if(!s.isMastio||!edge)return;
+  if(!s.isMastio||!edge||structureCutaway(s))return;   // no drape on an opened (cutaway) keep
   const width=Math.max(.30,windowWidth*1.08),height=.64;
   const topZ=windowZ-windowHeight/2-.055;
   const span=facadeAssetWorldSpan(edge,width),lt=w2s(span.a,topZ),rt=w2s(span.b,topZ),lb=w2s(span.a,topZ-height);
@@ -331,22 +345,74 @@ function towerLevelHeight(s,level){
   const t=towerTier(s);
   return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
 }
+// One source of truth for tower floors, windows, arrow slits and archer slots:
+// the cutaway floor of each level, and openings at standing eye height above it.
+const TOWER_OPENING_EYE_Z=.44;
+function towerFloorZ(s,floor){
+  const level=structureLevel(s);
+  return floor<=1?.055:structureHeight(s)*(Math.min(floor,level)-1)/level;
+}
+function towerOpeningZ(s,floor){return towerFloorZ(s,floor)+TOWER_OPENING_EYE_Z}
+// Unit outward direction of each tower face: footprint edges for square towers, the
+// four quarter directions for round ones (face 0 looks at the castle interior).
+function towerFaceDirections(s){
+  if(s.shape==='round'){
+    const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x);
+    return[0,1,2,3].map(i=>({face:i,nx:Math.cos(base+i*Math.PI/2),ny:Math.sin(base+i*Math.PI/2),interior:i===0}));
+  }
+  const fp=footprintPoints(s),interior=interiorFacadeEdgeIndex(s);
+  return fp.map((a,i)=>{
+    const b=fp[(i+1)%fp.length],nx=(a.x+b.x)/2-s.x,ny=(a.y+b.y)/2-s.y,L=Math.hypot(nx,ny)||1;
+    return{face:i,nx:nx/L,ny:ny/L,interior:i===interior};
+  });
+}
+// A wall, built section or palisade snapped to the tower covers the face it meets
+// up to its own height: no arrow slit is drawn there and no archer can use it.
+function towerFaceBlocked(s,dir,floor){
+  if(towerFaceOnDivider(s,dir,towerOpeningZ(s,floor)))return true;
+  return State.structures.some(wall=>{
+    if(underConstruction(wall)||!['wall','built','palisade'].includes(wall.type))return false;
+    if(wall.aSnap!==s.id&&wall.bSnap!==s.id)return false;
+    if(structureLevel(wall)<floor)return false;
+    const contact=wall.aSnap===s.id?wall.a:wall.b;if(!contact)return false;
+    const dx=contact.x-s.x,dy=contact.y-s.y,L=Math.hypot(dx,dy)||1;
+    // Corner junctions disable both adjacent wall faces.
+    return (dir.nx*dx+dir.ny*dy)/L>=.65;
+  });
+}
+// Parent/subtower pairs: a face whose middle runs into the attached structure is a dividing
+// wall up to that structure's height - no arrow slit, window or door opens onto it.
+function towerFaceOnDivider(s,dir,z){
+  const half=s.shape==='round'?(Number(s.r)||.5):Math.max(rectDims(s).w,rectDims(s).h)/2;
+  const probe={x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
+  return State.structures.some(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&
+    (o.id===s.parentTowerId||o.parentTowerId===s.id)&&structureHeight(o)>z&&pointInPolygon(probe,footprintPoints(o)));
+}
+// Same rule for an edge (facade asset placement): its middle's direction from the tower centre.
+function towerEdgeOnDivider(s,edge,z){
+  const mx=(edge.a.x+edge.b.x)/2-s.x,my=(edge.a.y+edge.b.y)/2-s.y,L=Math.hypot(mx,my)||1;
+  return towerFaceOnDivider(s,{nx:mx/L,ny:my/L},z);
+}
+function towerSlitFace(s,face,floor){
+  const dir=towerFaceDirections(s).find(d=>d.face===face);
+  return !!dir&&!dir.interior&&floor>=2&&!towerFaceBlocked(s,dir,floor);
+}
 function towerWindowRows(s){
   const l=structureLevel(s),rows=[];
   // P1 keeps its defensive blind walls, except an interior window for the mastio
   // so even the first completed T1 stone tower can display the hanging heraldry.
   if(l===1&&s.isMastio)rows.push({floor:1,z:1.53});
-  if(l>=2)rows.push({floor:2,z:2.48});
-  if(l>=3)rows.push({floor:3,z:3.62});
+  for(let floor=2;floor<=l;floor++)rows.push({floor,z:towerOpeningZ(s,floor)});
   return rows.filter(r=>r.z<structureHeight(s)-.28);
 }
 function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
   const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row),opacity=cutawayFacadeOpacity(s);if(!key)return;
   for(const edge of roundTowerFacadeEdges(s)){
     if(edge.interior){
+      if(towerEdgeOnDivider(s,edge,row.z))continue;   // window would open onto a dividing wall
       drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
       if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w*.86,sz.h,opacity);
-    }else if(row.floor>=2)drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+    }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
   }
 }
 function linearFrontSide(s){
@@ -559,7 +625,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
               if(isInteriorFacadeEdge(s,edge)){
                 drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
                 if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
-              }else if(row.floor>=2)drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
             }
           });
         }

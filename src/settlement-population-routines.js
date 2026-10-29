@@ -170,6 +170,63 @@ function routineTravel(house,start,goal,frac,t0,t1,tag){
   const path=villagerPathBetween(house,start,goal,tag);
   return pointAlongPath(path,routineSmooth((frac-t0)/Math.max(.001,t1-t0)));
 }
+// A physical figure is a projection of an already-assigned aggregate L1.
+// Routes are cached with the existing pedestrian topology cache.
+function constructionWorkerHome(worker){
+  if(!worker)return null;
+  if(worker.houseId!=null){
+    const house=State.structures.find(s=>s.id===worker.houseId&&s.type==='house'&&!underConstruction(s));
+    if(!house)return null;
+    return{point:houseDoorInfo(house).outside,sourceId:house.id};
+  }
+  if(worker.founderIndex==null)return null;
+  const well=State.structures.find(s=>s.id===State.village?.wellId&&s.type==='well');
+  if(!well)return null;
+  const founders=Math.max(1,window.ConquerEconomy?.foundingWorkers?.()||1);
+  const angle=worker.founderIndex*Math.PI*2/founders+.17;
+  const r=2.05+(worker.founderIndex%2)*.32;
+  return{point:{x:well.x+Math.cos(angle)*r,y:well.y+Math.sin(angle)*r},sourceId:worker.id};
+}
+function constructionWorkerGoal(site,from,id){
+  if(site?.a&&site?.b){
+    const mid={x:(site.a.x+site.b.x)*.5,y:(site.a.y+site.b.y)*.5};
+    const dx=site.b.x-site.a.x,dy=site.b.y-site.a.y,L=Math.hypot(dx,dy)||1;
+    const nx=-dy/L,ny=dx/L,side=(from.x-mid.x)*nx+(from.y-mid.y)*ny>=0?1:-1;
+    const jitter=((peasantHash(String(id)+':work-offset')>>>5)%9-4)*.11;
+    const off=(Number(site.width)||.65)*.5+(typeof PEASANT_CLEARANCE==='number'?PEASANT_CLEARANCE:.22)+.22;
+    return{x:mid.x+dx/L*jitter+nx*off*side,y:mid.y+dy/L*jitter+ny*off*side};
+  }
+  return structureAccessPoint(site,from,id);
+}
+function constructionWorkerPath(worker,site){
+  if(!site||!worker)return null;
+  const home=constructionWorkerHome(worker);
+  if(!home)return null;
+  const dest=constructionWorkerGoal(site,home.point,worker.id);
+  if(!dest)return null;
+  syncPeasantPathCache();
+  const key='construction:'+worker.id+'>'+site.id;
+  if(peasantPathCache.has(key))return peasantPathCache.get(key);
+  let path=roadNetworkPath(home.point,dest,home.sourceId);
+  if(!path&&peasantSegmentClear(home.point,dest,home.sourceId))
+    path=[home.point,dest];
+  if(!path&&dist(home.point,dest)<=25)
+    path=findPeasantPath(home.point,dest,home.sourceId,5)||
+      findPeasantPath(home.point,dest,home.sourceId,9);
+  // An unreachable building is not staffed by invisible teleporting workers.
+  if(!path?.length||dist(path.at(-1),dest)>.28)path=null;
+  peasantPathCache.set(key,path);
+  return path;
+}
+function constructionWorkerPosition(worker,site,day){
+  const f=day-Math.floor(day);
+  if(f<.055||f>.63)return null;
+  const route=constructionWorkerPath(worker,site);
+  if(!route)return null;
+  if(f<.14)return pointAlongPath(route,routineSmooth((f-.055)/.085));
+  if(f<=.52)return residentIdlePoint(route.at(-1),worker.id+':build',day,.11);
+  return pointAlongPath(route,1-routineSmooth((f-.52)/.11));
+}
 function residentIdlePoint(anchor,id,day,radius=.16){
   if(!anchor)return null;
   const h=peasantHash(String(id)+'-idle');

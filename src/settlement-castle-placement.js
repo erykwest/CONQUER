@@ -177,13 +177,17 @@ function roundParentSubtowerAttachment(parent,child,radialAngle){
     subtowerAngle:a
   };
 }
-function gateSubtowerAttachment(parent,child,frontIndex){
+// Gate subtower sockets: the four corners (front fp[1], fp[2]; rear fp[0], fp[3]) and the middle of
+// the two flanks (fp[0]->fp[1], fp[2]->fp[3]). Gate "front" is facade fp[1] -> fp[2].
+const GATE_SUBTOWER_SOCKETS=['gate-front:1','gate-front:2','gate-rear:0','gate-rear:3','gate-side:0','gate-side:2'];
+function gateSubtowerAttachment(parent,child,socketOrFront){
   const fp=footprintPoints(parent);if(fp.length<4)return null;
-  // Gate "front" is facade fp[1] -> fp[2], therefore it has exactly two sockets.
   // Exception to normal subtowers: here the socket marks the CONTACT point,
-  // not the child centre. The child is pushed out along the corner ray until
-  // its own perimeter touches the gate perimeter, keeping the portal clear.
-  const i=Number(frontIndex)===2?2:1,corner=fp[i];
+  // not the child centre. The child is pushed out along the ray from the gate
+  // centre until its own perimeter touches the gate perimeter, keeping the portal clear.
+  const socket=typeof socketOrFront==='string'?socketOrFront:'gate-front:'+(Number(socketOrFront)===2?2:1);
+  const m=socket.match(/^gate-(front|rear|side):(\d)$/);if(!m)return null;
+  const i=Number(m[2]),corner=m[1]==='side'?{x:(fp[i].x+fp[(i+1)%4].x)/2,y:(fp[i].y+fp[(i+1)%4].y)/2}:fp[i];
   let ux=corner.x-parent.x,uy=corner.y-parent.y,L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
   const angle=child.shape==='square'?(parent.angle||0):0;
   let support;
@@ -195,15 +199,14 @@ function gateSubtowerAttachment(parent,child,frontIndex){
   return{
     point:{x:corner.x+ux*support,y:corner.y+uy*support},
     angle,
-    subtowerSocket:'gate-front:'+i,
+    subtowerSocket:socket,
     subtowerAngle:null
   };
 }
 function subtowerAttachmentAtSocket(parent,child,socket,radialAngle){
   if(!parent||!['tower','gate'].includes(parent.type)||!child||child.type!=='tower')return null;
   if(parent.type==='gate'){
-    const m=String(socket||'').match(/^gate-front:(1|2)$/);
-    return gateSubtowerAttachment(parent,child,m?Number(m[1]):1);
+    return gateSubtowerAttachment(parent,child,GATE_SUBTOWER_SOCKETS.includes(socket)?socket:'gate-front:1');
   }
   if(parent.shape==='round')return roundParentSubtowerAttachment(parent,child,radialAngle);
   const m=String(socket||'').match(/^corner:(\d)$/);
@@ -233,10 +236,10 @@ function nearestSubtowerPlacementSnap(p){
     // Tower parent: classic hierarchy, child must be strictly smaller.
     if(parent.type==='tower'&&towerTier(parent)<=childTier)continue;
 
-    // Gate parent: exactly two front-corner nodes; child size is unrestricted.
+    // Gate parent: four corner sockets and two flank-centre sockets.
     if(parent.type==='gate'){
-      for(const i of [1,2]){
-        const attachment=gateSubtowerAttachment(parent,child,i);if(!attachment)continue;
+      for(const socket of GATE_SUBTOWER_SOCKETS){
+        const attachment=gateSubtowerAttachment(parent,child,socket);if(!attachment)continue;
         const score=dist(p,attachment.point);
         if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
           best={...attachment,parentTowerId:parent.id,parentType:'gate',distance:score,wallId:null};
@@ -516,7 +519,7 @@ function addTowerWithPlacement(tower,snap={}){
 
   if(snap.parentTowerId){
     const parent=State.structures.find(s=>s.id===snap.parentTowerId);
-    status(parent?.type==='gate'?'Subtower attached to gate front corner':'Subtower attached to '+(parent?.shape==='round'?'tower perimeter':'tower corner'));
+    status(parent?.type==='gate'?'Subtower attached to gate '+(String(tower.subtowerSocket).startsWith('gate-side')?'flank':String(tower.subtowerSocket).startsWith('gate-rear')?'rear corner':'front corner'):'Subtower attached to '+(parent?.shape==='round'?'tower perimeter':'tower corner'));
     return true;
   }
 
@@ -603,9 +606,11 @@ function functionSlotSize(s,index=0){
   return'normal';
 }
 function functionSlotUnits(s,index=0){return functionSlotSize(s,index)==='large'?2:1}
+// The gate ground floor is an entrance passage; its functional rooms start upstairs.
+function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
-  if(s.type==='gate')return structureLevel(s);
+  if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
   if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
   if(s.type==='built')return Number(s.length)>=2?structureLevel(s):0;
   return 0;
@@ -613,7 +618,17 @@ function functionCapacity(s){
 function functionCapacityUnits(s){
   let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
-function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);while(s.functions.length<cap)s.functions.push(null);return s}
+function normalizeFunctions(s){
+  const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];
+  // Migrate once: prior saves placed a functional room on the traversable gate floor.
+  if(s.type==='gate'&&!s.gateGroundIsPassage){
+    if(s.functions.length>cap)s.functions=s.functions.slice(1);
+    s.gateGroundIsPassage=true;
+  }
+  s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);
+  while(s.functions.length<cap)s.functions.push(null);
+  return s;
+}
 // Variant contract:
  // tower/gate -> roofStyle
  // wall/built -> skin

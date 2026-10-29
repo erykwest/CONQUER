@@ -44,7 +44,7 @@
     const tactical=window.ConquerCombat;if(!tactical)return;
     const nowNight=night(),rooms=barracks();let changed=false;
     for(const unit of units()){
-      if(!['squad','patrol','knight'].includes(unit.kind)||unit.defeated||unit.routing)continue;
+      if(!['squad','patrol','knight','captain'].includes(unit.kind)||unit.defeated||unit.routing)continue;
       // White Zone patrols remain active day and night, even beyond Yellow.
       // Recover saved patrols that were incorrectly put into a field camp.
       if(unit.kind==='patrol'){
@@ -192,7 +192,7 @@
   }
   function drawEncampments(g){
     const campers=units().filter(u=>u.campState==='camped'&&!u.defeated&&
-      ['squad','knight'].includes(u.kind));
+      ['squad','knight','captain'].includes(u.kind));
     if(!campers.length)return;
     withRenderContext(g,()=>{
       for(const unit of campers){

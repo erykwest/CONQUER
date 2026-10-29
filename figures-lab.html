@@ -108,6 +108,9 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
+  <div class="group" role="group" aria-label="A cavallo"><span>A cavallo</span>
+    <button data-subject="mounted">Cavaliere a cavallo</button><button data-subject="messenger">Messaggero</button>
+  </div>
   <div class="group" role="group" aria-label="Assedio"><span>Assedio</span>
     <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Mangano</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button><button data-subject="siege:mantlet">Mantelletto</button><button data-subject="siege:ballista">Balista</button>
   </div>
@@ -213,7 +216,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-population-figures.js?v=lab-2"></script>
 <script src="./src/settlement-combat-anim.js?v=lab-1"></script>
 <script src="./src/settlement-work-anim.js?v=lab-1"></script>
-<script src="./src/settlement-animals.js?v=lab-2"></script>
+<script src="./src/settlement-animals.js?v=lab-3"></script>
+<script src="./src/settlement-mounted2d.js?v=lab-1"></script>
 <script src="./src/settlement-wagons.js?v=lab-1"></script>
 <script src="./src/assets/wagon-model.js?v=lab-1"></script>
 <script src="./src/settlement-wagons3d.js?v=lab-2"></script>
@@ -225,8 +229,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,WA=window.ConquerWorkAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
-  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'];
-  const ACTIONS={siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo'],['dig','Pala'],['chop','Ascia'],['pick','Piccone'],['build','Martello'],['plough','Zappa'],['sow','Semina'],['harvest','Falce']]};
+  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'],RIDERS=['mounted','messenger'];
+  const ACTIONS={rider:[['idle','Fermo'],['walk','Passo'],['run','Carica'],['attack','Attacco'],['die','Caduta']],siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo'],['dig','Pala'],['chop','Ascia'],['pick','Piccone'],['build','Martello'],['plough','Zappa'],['sow','Semina'],['harvest','Falce']]};
   // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
   function siegeActions(e){
     const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:'Tiro balista',ballista:'Tiro'}[e];
@@ -238,13 +242,13 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   const WORK_TOOL={dig:'shovel',chop:'axe',pick:'pickaxe',build:'hammer',plough:'hoe',sow:'seeds',harvest:'sickle'};
   const HOSTILE={main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'};
   let subject='sheep',action='walk',fromAction='walk',trans=1,blend=0,last=performance.now(),clock=0;
-  const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':'villager';
+  const kindOf=s=>s.startsWith('siege:')?'siege':s==='wagon'||s==='wagon3d'?'vehicle':ANIMALS.includes(s)?'animal':SOLDIERS.includes(s)?'soldier':RIDERS.includes(s)?'rider':'villager';
   function renderButtons(){
     document.querySelectorAll('[data-subject]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.subject===subject));
     const acts=kindOf(subject)==='animal'?animalActions(subject):kindOf(subject)==='siege'?siegeActions(subject.split(':')[1]):ACTIONS[kindOf(subject)];
     if(!acts.some(([k])=>k===action))action=acts[0][0];
     $('actions').innerHTML='<span>Azione</span>'+acts.map(([k,l])=>'<button data-action="'+k+'" aria-pressed="'+(k===action)+'">'+l+'</button>').join('');
-    $('coatBox').hidden=!['horse','wagon','wagon3d'].includes(subject);
+    $('coatBox').hidden=!['horse','wagon','wagon3d','mounted','messenger'].includes(subject);
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
     $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
@@ -324,6 +328,31 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     // Big view framed to the animal's height; the small one is at game scale.
     [[W*.38,H*.6,12*(5.2/M.height)*k],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>
       W3.drawMeshes(g,[A3.triangles(subject,{x:0,y:0,heading},{from:fromAction,mode:action,blend:trans,t:clock},A3.coatColors(subject,coat))],isoView(cx,cy,s,turns)));
+  }
+  // Mounted figures in flat 2D (settlement-mounted2d.js, as in game): the approved
+  // 2D horse with gear and rider, lance and fall from the combat poses, realm arms
+  // painted on the shield and caparison (a test coat here: azure, a gold bend and a
+  // red chief, asymmetric so a mirrored print would show). Large and at game scale.
+  const LIVERY={main:REIGN_COLOR_1,alt:REIGN_COLOR_2};
+  function labArms(gx,x,y,w,h){
+    gx.save();gx.fillStyle='#2d4f9e';gx.fillRect(x,y,w,h);
+    gx.fillStyle='#e2b93b';gx.beginPath();gx.moveTo(x,y+h*.18);gx.lineTo(x+w*.2,y+h*.18);gx.lineTo(x+w,y+h*.82);gx.lineTo(x+w,y+h);gx.lineTo(x+w*.8,y+h);gx.lineTo(x,y+h*.36);gx.closePath();gx.fill();
+    gx.fillStyle='#b53636';gx.fillRect(x,y,w,h*.22);
+    gx.restore();return true;
+  }
+  let riderNext=0;
+  function heroRiders(W,H,k,dt){
+    trans=Math.min(1,trans+dt/.45);
+    const kind=subject==='mounted'?'knight':'messenger',coat=$('coat').value;
+    hero.engaged=foe.engaged=action==='attack';
+    if(action==='attack'&&clock>=riderNext){CA.strike(hero,foe);riderNext=clock+1.2}
+    if(action==='die'&&clock>=nextDeath){resetHero();CA.fall(hero,.1,foe);nextDeath=clock+3.4}
+    const mode=action==='walk'?'walk':action==='run'?'run':'idle';
+    const from=fromAction==='run'?'run':fromAction==='walk'?'walk':'idle';
+    const flat={kind,mode,from,blend:trans,t:clock,coat,pose:CA.pose(hero,0),livery:LIVERY,paint:labArms};
+    window.ConquerMounted2D.draw(g,W*.3,H*.66,200*k,{...flat,facing:1});
+    window.ConquerMounted2D.draw(g,W*.68,H*.62,5.75*2.6*k,{...flat,facing:1});
+    window.ConquerMounted2D.draw(g,W*.84,H*.62,5.75*2.6*k,{...flat,facing:-1});
   }
   // Wagon: every module comes from the selects; the driver is drawn by the
   // game's own figure code on the seat anchor the wagon provides.
@@ -498,7 +527,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     drawPerson('archer',arP,z,sceneArcher,target,null);
     const kp={x:1060*k,y:720*k},kf={x:kp.x+2.6*z,y:kp.y+.5*z};
     if(clock>=knightNext){CA.strike(sceneKnight,knightFoe);CA.strike(knightFoe,sceneKnight);knightNext=clock+1.2}
-    drawPerson('knight',kp,z,sceneKnight,kf,null);
+    // The knight fights mounted (flat 2D, as in game), facing its foe.
+    window.ConquerMounted2D.draw(g,kp.x,kp.y,5.75*z,{kind:'knight',facing:1,mode:'idle',t:clock,coat:'black',pose:CA.pose(sceneKnight,0),livery:LIVERY,paint:labArms});
     drawPerson('spearman',kf,z,knightFoe,kp,HOSTILE);
     drawArrows();
   }
@@ -520,6 +550,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     else if(kind==='vehicle')heroWagon(W,H,k,dt);
     else if(kind==='animal')heroAnimals(W,H,k,dt);
     else if(kind==='soldier')heroSoldiers(W,H,k);
+    else if(kind==='rider')heroRiders(W,H,k,dt);
     else heroVillagers(W,H,k);
     scene(W,H,k,dt);
   }
