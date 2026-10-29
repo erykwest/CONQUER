@@ -1,0 +1,47 @@
+name: CIRCLE regression
+
+on:
+  push:
+    branches: [circle]
+    paths:
+      - 'src/circle/**'
+      - 'src/settlement-circle.js'
+      - 'src/settlement-siege.js'
+      - 'src/settlement-combat.js'
+      - 'src/settlement-app-simulation.js'
+      - 'src/settlement-population-navigation.js'
+      - 'index.html'
+      - 'qa/circle-*.test.mjs'
+      - '.github/workflows/circle-regression.yml'
+  pull_request:
+    paths:
+      - 'src/circle/**'
+      - 'src/settlement-circle.js'
+      - 'src/settlement-siege.js'
+      - 'src/settlement-combat.js'
+      - 'src/settlement-app-simulation.js'
+      - 'qa/circle-*.test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  circle-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check core JavaScript syntax
+        run: |
+          node --check src/settlement-circle.js
+          node --check src/settlement-siege.js
+          node --check src/settlement-app-simulation.js
+          node --check src/settlement-combat.js
+          node --check src/circle/defensive-logistics.mjs
+          node --check src/circle/defensive-control.mjs
+          node --check src/circle/defensive-topology.mjs
+      - name: Run CIRCLE unit and integration regressions
+        run: node --test qa/circle-*.test.mjs
