@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
+
+- Uomini e donne L1–L4 hanno la settimana di `jobmanager`: svago maschile dalle 18, mercato il sabato e messa la domenica, lavoro femminile nei lotti. Solo visuale. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-052 in DECISIONS.
 ## 2026-10-28 — Economia, tappa 1: lavoro L1 e cantieri (branch `feature/economy-labour`)
 
 - Portata su `main` la parte economica di #55 (bilancio settimanale, fondazione con 4 L1, Builder che paga dal castello, cantieri a giornate-operaio pagati dal signore) unita a `jobmanager` (pastori protetti, taglio legna, razioni, felicità per ceto) in un solo allocatore L1. Stato e prove in [STATUS](STATUS.md). Nuove decisioni D-047…D-051 in [DECISIONS](DECISIONS.md#economia--lavoro-l1-unico-28102026); ROADMAP invariata.
