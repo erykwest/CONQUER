@@ -120,3 +120,13 @@ test('visible yellow/green alerts never substitute military presence',async()=>{
   assert.equal(sector.state,'alert');
   assert.equal(sector.safe,true);
 });
+
+test('a defender fighting the attacker on a wall keeps the sector contested',async()=>{
+  const enemy=[{x:4.2,y:10,wall:{wallId:'west',t:.5}}];
+  const allies=[{x:4.2,y:10,wall:{wallId:'west',t:.6}}];
+  const battle={units:()=>allies,enemy:()=>enemy,
+    uiState:()=>({alarm:'off',alert:'clear'})};
+  const wallwalk={at:()=>({x:4.25,y:10}),frame:()=>({ex:1,ey:0,half:.25})};
+  const {api}=await boot(walls(),[],{hills:[]},battle,wallwalk);
+  assert.equal(api.getSnapshot().compartments[0].state,'contested');
+});
