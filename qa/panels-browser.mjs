@@ -106,8 +106,14 @@ try{
     await page.locator('.profile-window').evaluate(node=>node.scrollTop=0);
     await page.locator('.profile-window').screenshot({path:output+'/'+id+'.png'});
   }
+  // Detail captures show the rest of the scrolling panels and their controls.
+  for(const id of ['people','economy','estate']){
+    await page.locator('[data-cp-tab="'+id+'"]').click();
+    await page.locator('.profile-window').evaluate(node=>{node.scrollTop=410;});
+    await page.locator('.profile-window').screenshot({path:output+'/'+id+'-details.png'});
+  }
   fs.writeFileSync(output+'/report.json',JSON.stringify({
-    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
+    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,detailTabs:['people','economy','estate'],errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
   },null,2));
   console.log('PASS real CONQUER UI screenshots: '+requested.join(', '));
 }finally{
