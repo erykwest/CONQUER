@@ -3,7 +3,7 @@
 ## Comunicazioni feudali — posta e rapporti (branch messages, 29/10/2026)
 
 - **PRESENTE NEL BRANCH, NON SU MAIN:** src/settlement-messages.js introduce lettere datate fra capitale e quattro province esterne astratte, trasporto messaggero/piccione con ETA in giorni simulati, ordini/rapporti/allarmi, inbox, routine 1/7/30 giorni, piccionaie configurabili e requisito di doppia piccionaia. pigeonLoft aggiunto agli slot di torre/Built Section. Persistenza locale e cloud (policies) e reset Nuova mappa.
-- **QA:** [GitHub Actions Messages regression](https://github.com/erykwest/CONQUER/actions/runs/40799950473) superata (nuovo test e regressione diplomazia); successiva verifica CI estesa al movimento 2D in corso. Prova browser non eseguita.
+- **QA:** [GitHub Actions Messages regression](https://github.com/erykwest/CONQUER/actions/runs/40800177719) **PASS** dopo integrazione 2D e caricamento cloud: test posta feudale e regressione diplomazia. Prova browser end-to-end non eseguita.
 - **LIMITI DICHIARATI:** province esterne astratte, messaggeri visibili in 2D sulla tratta locale ma non ancora intercettabili o simulati nella World Map, ordini consegnati ma non eseguiti da IA provinciale. Contratto: [MESSAGES-SYSTEM](../MESSAGES-SYSTEM.md). Roadmap generale invariata.
 
 
