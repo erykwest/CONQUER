@@ -37,7 +37,7 @@ export function assessDefensiveControl({
   if (typeof sectorAt !== 'function' || !Array.isArray(compartments))
     throw new TypeError('Control assessment requires a topology locator and compartments');
   const counts = new Map(compartments.map(c => [c.id, {
-    groundEnemies: 0, groundDefenders: 0, wallEnemies: 0, climbingEnemies: 0
+    groundEnemies: 0, groundDefenders: 0, wallEnemies: 0, wallDefenders: 0, climbingEnemies: 0
   }]));
   const record = (id, field) => {
     const bucket = counts.get(id);
@@ -56,21 +56,28 @@ export function assessDefensiveControl({
     record(sectorAt(unit), 'groundEnemies');
   }
   for (const unit of defenders) {
-    if (!activeDefender(unit) || unit.wall || unit.climbing) continue;
+    if (!activeDefender(unit)) continue;
+    if (unit.wall) {
+      const sectorIds = wallSectors(unit);
+      if (Array.isArray(sectorIds))
+        for (const id of new Set(sectorIds)) record(id, 'wallDefenders');
+      continue;
+    }
+    if (unit.climbing) continue;
     record(sectorAt(unit), 'groundDefenders');
   }
   const summary = {
     total: compartments.length, unassessed: 0, secure: 0, alert: 0,
     threatened: 0, infiltrated: 0, invaded: 0, contested: 0,
-    occupied: 0, safe: 0, groundEnemies: 0, wallEnemies: 0
+    occupied: 0, safe: 0, groundEnemies: 0, wallEnemies: 0, wallDefenders: 0
   };
   const sectors = compartments.map(c => {
     const control = counts.get(c.id);
     let state;
     if (control.groundEnemies > 0)
-      state = control.groundDefenders > 0 ? 'contested' : 'invaded';
+      state = control.groundDefenders + control.wallDefenders > 0 ? 'contested' : 'invaded';
     else if (control.wallEnemies > 0)
-      state = 'infiltrated';
+      state = control.wallDefenders > 0 ? 'contested' : 'infiltrated';
     else if (control.climbingEnemies > 0)
       state = 'threatened';
     else
@@ -81,6 +88,7 @@ export function assessDefensiveControl({
     else summary.occupied += 1;
     summary.groundEnemies += control.groundEnemies;
     summary.wallEnemies += control.wallEnemies;
+    summary.wallDefenders += control.wallDefenders;
     return { ...c, state, safe, control: { ...control } };
   });
   return { compartments: sectors, summary };
