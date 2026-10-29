@@ -39,3 +39,7 @@
 .cp-graph-legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .cp-graph-legend>span{display:inline-flex;gap:5px;align-items:center}
 .cp-graph-legend i{display:inline-block;width:11px;height:4px;border-radius:2px;flex:none}
+
+/* Readable navigation and long Italian resource names at desktop resolutions. */
+#profileOverlay .profile-tabs button[data-profile-tab="control"].active{color:#fbe0aa!important;background:#4d3322!important}
+@media(min-width:761px){.cp-bar{grid-template-columns:126px minmax(0,1fr) 56px}}
