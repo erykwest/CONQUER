@@ -101,6 +101,52 @@ check('gates: no room on the passage floor, furnished rooms above',()=>{
   }
 });
 
+check('small (T1) towers open on a spiral stair, subtowers keep it clear of the parent',()=>{
+  run(\`State.structures.push(
+    {id:'s1',type:'tower',shape:'round',r:.5,x:110,y:100,level:2,material:'stone',angle:0,functions:[],cutaway:true},
+    {id:'s2',type:'tower',shape:'square',size:1,x:116,y:100,level:1,material:'stone',angle:0,functions:[],cutaway:true},
+    {id:'s3',type:'tower',shape:'round',r:.5,x:97,y:99,level:1,material:'stone',angle:0,functions:[],parentTowerId:'t3',subtowerSocket:'corner:0'},
+    {id:'s4',type:'tower',shape:'square',size:1,x:95,y:101,level:1,material:'stone',angle:0,functions:[],parentTowerId:'t3',subtowerSocket:'corner:2'},
+    {id:'w0',type:'tower',shape:'round',r:.5,x:120,y:100,level:1,material:'wood',angle:0,functions:[],cutaway:true});
+    window.ConquerCutawayFurniture.clear()\`);
+  const get=id=>run("State.structures.find(x=>x.id==='"+id+"')"),cut=run('structureCutaway'),spiral=run('cutawaySpiralStair');
+  assert.ok(cut(get('s1'))&&cut(get('s2')),'stone T1 towers open in cutaway');
+  assert.ok(cut(get('s3')),'a T1 subtower opens with its parent');
+  assert.ok(!cut(get('w0'))&&!spiral(get('w0')),'wood towers stay solid');
+  assert.ok(!spiral(get('t2'))&&!spiral(get('t3')),'T2/T3 towers keep their rooms');
+  assert.equal(run('cutawayFloorLevels')(get('s1')).length,1,'the stair shaft has no wooden floors');
+  assert.ok(cut(get('s4')),'a square T1 subtower opens with its parent');
+  for(const id of ['s1','s2','s3','s4']){
+    const s=get(id),g=run('cutawayWallGeometry')(s),st=F().spiralStair(s,g);
+    assert.ok(st&&st.R>=.1,id+': a stair fits ('+(st&&st.R.toFixed(2))+')');
+    assert.ok(st.steps*.11<=run('structureHeight')(s)&&st.steps>=10,id+': steps up to the top: '+st.steps);
+    assert.equal(F().layoutStructure(s,g).length,0,id+': no room furniture nor ladder');
+    const faces=F().worldFaces(s);
+    assert.ok(faces.length>st.steps*4,id+': stair faces');
+    assert.ok(faces.every(f=>f.floor===0&&f.pts.every(p=>p.every(Number.isFinite))),id+': finite, on the ground floor');
+    const H=run('structureHeight')(s),zs=faces.flatMap(f=>f.pts.map(p=>p[2]));
+    assert.ok(Math.max(...zs)<=H&&Math.min(...zs)>=0,id+': inside the tower height');
+    // Every stair point stays in the shaft, out of the parent footprint.
+    const inner=g.inner,parent=s.parentTowerId&&get(s.parentTowerId),pip=run('pointInPolygon');
+    for(const f of faces)for(const p of f.pts){
+      const q={x:p[0],y:p[1]};
+      assert.ok(Math.hypot(q.x-s.x,q.y-s.y)<=(s.r||s.size*.71)-.1,id+': inside the walls');
+      if(parent)assert.ok(!pip(q,run('footprintPoints')(parent)),id+': clear of the parent');
+    }
+    // Square towers: square stair (straight outer edges on a square of half side R).
+    assert.equal(st.square,s.shape==='square',id+': stair shape follows the tower');
+    if(st.square){
+      const tops=faces.filter(f=>f.n[2]===1&&f.pts.length===5),b=run('cutawayFloorBasis')(s,g),ca=Math.cos(b.angle),sa=Math.sin(b.angle);
+      for(const f of tops)for(const p of f.pts.slice(1,4)){
+        const dx=p[0]-b.center.x,dy=p[1]-b.center.y,lu=dx*ca+dy*sa-st.u,lv=-dx*sa+dy*ca-st.v;
+        assert.ok(Math.abs(Math.max(Math.abs(lu),Math.abs(lv))-st.R)<1e-6,id+': outer edge on the square');
+      }
+      assert.ok(Math.abs(Math.round(st.start/(Math.PI/8))*(Math.PI/8)-st.start)<1e-9,id+': corners fall between steps');
+    }
+  }
+  run("State.structures=State.structures.filter(s=>!['s1','s2','s3','s4','w0'].includes(s.id))");
+});
+
 check('Canvas fallback paints each level and never calls a missing floor function',()=>{
   assert.equal(run('typeof drawCutawayFloorsAndProps'),'function','Canvas 2.5D cutaway floor painter must be available');
   const cube=run("State.structures.find(x=>x.id==='t2')");

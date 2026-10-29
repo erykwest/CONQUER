@@ -538,12 +538,14 @@ function cutawayEligible(s){
   // The timber palisade tower opens its Blender model (settlement-wood3d.js); the watchtower
   // has no walls to open.
   if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
-  // T1 towers are too small to read as useful rooms. Keep them solid until
-  // they receive a dedicated spiral-stair interior treatment.
-  return s.type==='tower'&&towerTier(s)>=2;
+  // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
+  return s.type==='tower';
 }
+// Small (T1) stone towers are a stair shaft: no wooden floors, one stone newel stair from
+// the ground to the top (settlement-cutaway-furniture.js builds the steps).
+function cutawaySpiralStair(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===1}
 // A subtower follows its parent tower/gate: one switch on the parent opens the attached
-// subtowers too (T1 subtowers stay solid, like any T1 tower).
+// subtowers too.
 function structureCutaway(s){
   if(s?.parentTowerId){
     const parent=State.structures.find(o=>o.id===s.parentTowerId);
@@ -616,7 +618,7 @@ function cutawayFloorBasis(s,g){
 function cutawayFloorLevels(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
-  if(level<=1)return floors;
+  if(level<=1||cutawaySpiralStair(s))return floors;
   for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
   return floors;
 }
