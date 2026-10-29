@@ -5,7 +5,7 @@
 - Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
 - Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
 - Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
-- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+- QA GitHub Actions **8/8 PASS su `38ea7ab`**; Chromium ha acquisito 9 screenshot senza errori pagina: [Run e artefatto immagini](https://github.com/erykwest/CONQUER/actions/runs/40800506799). Resta la revisione visiva prima del merge.
 
 
 ## Obiettivo
@@ -17,9 +17,9 @@ Un **centro di controllo** dentro il Profilo della partita, accessibile dalla sc
 | Vista | Dati e grafici presenti su branch `panels` | Limiti / follow-up |
 | --- | --- | --- |
 | Generale | Residenti, welfare, tesoreria, cantieri, cavalieri, alert; istogramma classi e linee produzione/domanda cibo | Solo eventi coperti dai sistemi esistenti |
-| Popolazione | Residenti L1–L4, felicità per classe; controllo aliquota e razioni; giorni mercato/riposo | **Festività straordinarie TBD**, nessun bonus simulato; manca storia della felicità |
-| Economia | L1 per mansione, capitale L4, oro signore, beni/prezzi/giacenze, vendite %, storico 8 mercati cibo | Occupazione L2/L3/L4 da sviluppare, come pure cronologia prezzi |
-| Proprietà | Imprese per proprietà signore/settore L4, valore, manodopera, utile annuo quando disponibile, acquisto/vendita | Non simulare una produzione individuale del nobile; utili sono annuali, non proiezioni |
+| Popolazione | Residenti L1–L4, felicità per classe; controllo aliquota e razioni; giorni mercato/riposo | **Festività straordinarie TBD**, nessun bonus simulato; storico felicità disponibile da ora, non retroattivo |
+| Economia | L1 per mansione, capitale L4, oro signore, beni/prezzi/giacenze, vendite %, storico 8 mercati cibo | Occupazione L2/L3/L4 da sviluppare; prezzi settimanali ora storicizzati |
+| Proprietà | Imprese per proprietà signore/settore L4, valore, manodopera, utile annuo quando disponibile, acquisto/vendita | Produzione settimanale per sito e proprietà registrata al momento del lavoro; utili annuali, non proiezioni |
 | Scorte del castello | Magazzino **economico** (ledger) e deposito **difensivo** (Siege) separati, capienze e autonomia | I due inventari non devono essere sommati; target economico non è capienza fisica |
 | Militare | Unità combat, pattuglie, nemici, cavalieri presenti/limite, posti caserme, allarme | Capienza non significa soldati esistenti; **effetti leva TBD** |
 | Cantieri | Cantieri in corso, percentuale avanzamento, occupazione L1, retribuzione cantieri | Grafico per cantiere senza inventare un ETA se il sistema non lo conosce |
@@ -35,9 +35,9 @@ Un **centro di controllo** dentro il Profilo della partita, accessibile dalla sc
 5. **UI leggera:** un JS classico e un CSS indipendenti, senza nuove dipendenze o grafici canvas costosi, senza cambio del modello `State`, aggiornamento a intervalli solo quando la scheda è visibile e non ha il focus.
 6. **Interfaccia esistente:** preservare Profilo/Partita e Araldica, senza replicare il pannello laterale «Gestisci» della UI v2; i pannelli sono una vista di analisi estesa, non un sostituto del menu operativo.
 
-## Iterazioni proposte (non implementate)
+## Iterazioni successive (non implementate)
 
-- P1: storico settimanale welfare e felicità L1–L4, prezzi, redditi/imposte, occupazione per tier e rendimento per singolo asset del signore, con registrazione nell'economia persistente.
+- P1: storici di redditi/imposte, occupazione L2–L4 e margine/profitto per impresa su più esercizi. Già implementati nella branch gli storici settimanali di felicità, prezzi, occupazione L1 e quantità prodotte per sito.
 - P1: un **calendario delle festività** con calendario canonico, costi, sospensione del lavoro ed effetti economico-sociali simulati; evitare festività puramente decorative.
 - P2: pannello difensivo di **prontezza** (personale armato, attrezzature, presidio degli accessi, scorte, autonomia), solo dopo integrazione del roster militare.
 - P2: diplomazia inter-feudo, rapporti, obbligazioni tributarie, alleanze, richieste, progressione storica delle relazioni; modellare prima i dati.
@@ -46,5 +46,5 @@ Un **centro di controllo** dentro il Profilo della partita, accessibile dalla sc
 ## Verifica
 
 - Smoke test isolato in runtime JavaScript con dati sintetici: parsing JS valido, 9/9 viste renderizzate, KPI e line chart prodotti da `balanceHistory` (29/10/2026).
-- **Non eseguite** suite Node e QA browser end-to-end in questa sessione. Prima del merge eseguire `node qa/panels-regression.cjs` e la suite CI del repository, poi una prova browser reale della navigazione Profilo e degli input/persistenza.
+- **Eseguite con esito PASS** in GitHub Actions su commit `38ea7ab`: `qa/panels-regression.cjs`, `qa/economy-panel-history-regression.cjs`, suite generale, browser Chromium reale e acquisizione di nove screenshot con fixture esplicitamente demo, senza pageerror. [Run](https://github.com/erykwest/CONQUER/actions/runs/40800506799).
 - Stato: **codice su `panels`, non su `main`** finché non passano QA e revisione.
