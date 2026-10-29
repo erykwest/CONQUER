@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - 'src/settlement-economy.js'
+      - 'src/settlement-panels.js'
+      - 'src/settlement-panels.css'
+      - 'src/settlement-heraldry.js'
+      - 'qa/panels-regression.cjs'
+      - 'index.html'
       - 'src/settlement-population-figures.js'
       - 'src/ui/**'
       - 'qa/labor*.cjs'
@@ -22,6 +27,7 @@ jobs:
           node-version: '22'
       - name: Economy and construction-worker regressions
         run: |
+          node qa/panels-regression.cjs
           node qa/economy-regression.cjs
           node qa/economy-industries-regression.cjs
           node qa/economy-balance-regression.cjs
