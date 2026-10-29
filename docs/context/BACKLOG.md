@@ -144,9 +144,9 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 - **TAPPA 2 SU MAIN (#99, `cdb2af9`):** routine settimanali di uomini e donne.
 - **TAPPA 3 SU MAIN (#101, `e1fdb20`):** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
 - **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda.
-- **TAPPA 4 SU BRANCH `feature/economy-convoys`, NON MERGE:** un solo sistema di convogli (carovane della diplomazia comprese), cartelli di prova, convogli visibili sulla strada maestra.
-- **DA FARE (CI):** aggiungere a `.github/workflows/economy-flows-regression.yml` le nuove regressioni economiche (rations, labor-jobs, routines, commerce, urban-workshops, convoys, road-sign, diplomacy, vehicles): PR separata, il token di `gh` non ha lo scope `workflow`.
-- **TAPPA 5 SU BRANCH `feature/economy-vehicles`, NON MERGE:** veicoli instradati sulle strade, solo 2D.
+- **FATTO (tappa 4, #105, 29/10/2026):** un solo sistema di convogli (carovane della diplomazia comprese), cartelli di prova, convogli visibili sulla strada maestra.
+- **IN MERGE (CI, #109):** le nuove regressioni economiche (routines, commerce, urban-workshops, convoys, road-sign, diplomacy, vehicles) entrano in `.github/workflows/economy-flows-regression.yml`. Rations, labor-jobs e save-safety erano già in CI.
+- **FATTO (tappa 5, #108, 29/10/2026):** veicoli instradati sulle strade, solo 2D.
 - **APERTO:** traffico automatico di carri e carrozze senza convoglio (oggi solo convogli reali, prove e carrozza dimostrativa); decidere se rimuovere da main i moduli 3D di animali e carri non usati dal gioco. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
