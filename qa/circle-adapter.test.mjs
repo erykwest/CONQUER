@@ -234,3 +234,23 @@ test('after reload a captured breached sector remains blocked and identifiable',
   assert.equal(loaded.api.getSnapshot().compartments[0].state,'captured');
   assert.equal(loaded.api.sectorAt({x:10,y:10}),loaded.api.getSnapshot().compartments[0].id);
 });
+
+
+test('captured original sector split into two successors does not capture both',async()=>{
+  const records=[],siege={circleCaptureRecords:()=>records};
+  const first=walls();
+  const {State,api}=await boot(first,[],{hills:[]},null,null,siege);
+  const original=api.getSnapshot().compartments[0];
+  records.push({id:'split-capture',originId:original.id,
+    anchors:original.anchors,polygon:original.polygon,
+    boundaries:original.boundaries,depth:original.depth});
+  api.invalidateControl();api.updateControl(true);
+  assert.equal(api.getSnapshot().controlSummary.captured,1);
+  State.structures=[...first,piece('divider','wall',9.75,4,10.25,16)];
+  api.invalidate('compartment divided by new wall');
+  const next=api.getSnapshot();
+  assert.equal(next.compartments.length,2);
+  assert.equal(next.controlSummary.captured,1);
+  assert.equal(next.controlSummary.safe,1);
+  assert.equal(next.compartments.filter(c=>c.captured).length,1);
+});
