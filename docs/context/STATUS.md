@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+
+- Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
+- Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
+- Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
+- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+
+
 ## Centro di controllo dell’insediamento — branch `panels` (29/10/2026)
 
 - **Codice presente su branch, non su `main`:** nuova scheda `CENTRO DI CONTROLLO` nel Profilo (index.html, settlement-heraldry.js) e viste classic-script indipendenti (settlement-panels.js/.css). Nove viste: generale, popolazione/tasse/razioni, economia/mercato/occupazione, proprietà produttive del signore, scorte economiche vs scorte di assedio, capacità militare, cantieri L1, diplomazia e avvisi.
