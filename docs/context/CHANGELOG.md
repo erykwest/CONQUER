@@ -402,5 +402,5 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 
 ### 2026-10-29 — CIRCLE — branch `circle`
 - Motore di riconoscimento topologico indipendente dalla navigazione: rasterizza mura/palizzate/torri/porte/built sections realmente costruite e ostacoli naturali effettivamente invalicabili. Identifica cerchie e compartimenti laterali, profondità, portali e ingresso del Mastio. Tiene aperta la distinzione tra accesso e conquista.
-- Hook runtime `window.ConquerCircle`, caricamento in `index.html`, invalidazione su variazioni topologiche e cantieri completati, test topologia 11/11 PASS nel harness JavaScript isolato.
+- Hook runtime `window.ConquerCircle`, caricamento in `index.html`, invalidazione su variazioni topologiche e cantieri completati, test topologia 11/11 e adapter runtime 5/5 PASS nel harness JavaScript isolato.
 - Limitazioni: non cablato a IA civile, occupazione militare, scorte economiche reali o overlay; test browser/Node CLI non eseguiti; `main` invariata.
