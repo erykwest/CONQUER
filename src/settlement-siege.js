@@ -28,9 +28,14 @@
   const NON_STRUCTURAL_WEAPONS=new Set(['sword','spear','axe','arrow','bow','crossbow','ram','torch']);
   const STOCK_KEYS=['food','wood','stone','metal','equipment','horses','gold'];
   const MATERIAL_KEYS=['wood','stone','metal'];
+  const CIRCLE_DEPOT_GROUP=Object.freeze({
+    granary:'food',storage:'materials',armory:'equipment',
+    stables:'horses',treasury:'gold'
+  });
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
-    lastDay:State.clock.day,starvationDays:0,ruins:[],earthworks:[]}}
+    lastDay:State.clock.day,starvationDays:0,ruins:[],earthworks:[],
+    circle:{captures:[],capturedRoomIds:[]}}}
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
     const x=State.siege;
@@ -38,6 +43,9 @@
     for(const k of STOCK_KEYS)x.stock[k]=Math.max(0,Number(x.stock[k])||0);
     if(!Array.isArray(x.ruins))x.ruins=[];
     if(!Array.isArray(x.earthworks))x.earthworks=[];
+    if(!x.circle||typeof x.circle!=='object')x.circle={captures:[],capturedRoomIds:[]};
+    if(!Array.isArray(x.circle.captures))x.circle.captures=[];
+    if(!Array.isArray(x.circle.capturedRoomIds))x.circle.capturedRoomIds=[];
     if(!Number.isFinite(x.lastDay))x.lastDay=State.clock.day;
     if(!Number.isFinite(x.starvationDays))x.starvationDays=0;
     return x;
@@ -49,7 +57,12 @@
     State.siege=raw&&typeof raw==='object'?{
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
       starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
-      earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[]
+      earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[],
+      circle:{
+        captures:Array.isArray(raw.circle?.captures)?raw.circle.captures.slice(-150):[],
+        capturedRoomIds:Array.isArray(raw.circle?.capturedRoomIds)?
+          [...new Set(raw.circle.capturedRoomIds.filter(id=>typeof id==='string'))]:[]
+      }
     }:initial();
     state();normalizeMastio();
     rubbleGrid=null;                                  // rubble of the loaded game
@@ -146,13 +159,89 @@
     status(already?'Mastio designation removed':'Mastio designated — Common Hall secured');
     return true;
   }
+  function capturedRoomIds(){
+    return new Set(state().circle.capturedRoomIds);
+  }
+  function circleCaptureRecords(){
+    return state().circle.captures.filter(r=>r&&r.reclaimed!==true);
+  }
+  function circleDepots(){
+    const circle=window.ConquerCircle,levelById=new Map(
+      (circle?.getSnapshot?.()?.compartments||[]).map(c=>[c.id,c.depth])
+    );
+    const rooms=[];
+    for(const s of State.structures){
+      if(!eligibleRoom(s)||s.destroyed)continue;
+      normalizeFunctions(s);
+      const sectorId=circle?.sectorForStructure?.(s)||null;
+      s.functions.forEach((fn,index)=>{
+        if(!fn||!allowed(s,index,fn)||!CIRCLE_DEPOT_GROUP[fn])return;
+        rooms.push({id:s.id+':'+index,structureId:s.id,index,kind:fn,
+          sectorId,depth:sectorId?levelById.get(sectorId)||0:0,
+          capacity:CAPACITY[fn][CIRCLE_DEPOT_GROUP[fn]]*(
+            fn==='stables'?1:functionSlotUnits(s,index))
+        });
+      });
+    }
+    return rooms;
+  }
+  // Independent deterministic distribution: no extra bank or second source
+  // of truth. The existing siege.stock remains the only resource balance.
+  function circleStoreInventory(){
+    const distribute=window.ConquerCircle?.distributeStores;
+    if(!distribute)return null;
+    return distribute(state().stock,circleDepots(),state().circle.capturedRoomIds);
+  }
+  function captureCircleSector(sector){
+    if(!sector?.id||sector.state!=='invaded'||sector.captured||
+       !(sector.control?.groundEnemies>0)||
+       sector.control?.groundDefenders>0||sector.control?.wallDefenders>0)
+      return{ok:false,reason:'Sector is not under uncontested ground occupation'};
+    const circle=window.ConquerCircle,fn=circle?.captureStores;
+    if(typeof fn!=='function')return{ok:false,reason:'Circle stock ledger not ready'};
+    const siege=state(),records=siege.circle.captures;
+    if(records.some(r=>r&&!r.reclaimed&&r.originId===sector.id))
+      return{ok:false,reason:'Sector already captured'};
+    const ledger=fn({sectorId:sector.id,stock:siege.stock,
+      depots:circleDepots(),capturedRoomIds:siege.circle.capturedRoomIds});
+    const record={
+      id:'captured-'+State.clock.day.toFixed(5)+'-'+records.length,
+      originId:sector.id,day:State.clock.day,depth:sector.depth,
+      polygon:sector.polygon,boundaries:sector.boundaries,
+      anchors:sector.anchors||[sector.centroid],rooms:ledger.rooms,lost:ledger.lost
+    };
+    siege.stock=ledger.stock;
+    siege.circle.capturedRoomIds=ledger.capturedRoomIds;
+    siege.circle.captures.push(record);
+    if(siege.circle.captures.length>150)siege.circle.captures.shift();
+    if(typeof markDirty==='function')markDirty(false,false,true);
+    if(typeof renderUI==='function')renderUI();
+    circle?.invalidateControl?.();
+    return{ok:true,record,lost:ledger.lost};
+  }
+  function releaseCircleSector(recordId){
+    const siege=state();
+    const record=siege.circle.captures.find(r=>r.id===recordId&&!r.reclaimed);
+    if(!record)return{ok:false,reason:'Unknown captured sector'};
+    record.reclaimed=true;record.reclaimedDay=State.clock.day;
+    const activeRooms=new Set(siege.circle.captures.filter(r=>r&&!r.reclaimed)
+      .flatMap(r=>r.rooms||[]));
+    siege.circle.capturedRoomIds=siege.circle.capturedRoomIds
+      .filter(id=>activeRooms.has(id));
+    // Reclaim opens the empty rooms; stolen goods do not reappear.
+    if(typeof markDirty==='function')markDirty(false,false,true);
+    window.ConquerCircle?.invalidateControl?.();
+    return{ok:true,record};
+  }
   function capacity(){
+    const unavailable=capturedRoomIds();
     const out={food:0,materials:0,equipment:0,horses:0,gold:0,meals:0,soldiers:0,knights:0};
     for(const s of State.structures){
       if(!eligibleRoom(s)||s.destroyed)continue;
       normalizeFunctions(s);
       s.functions.forEach((fn,i)=>{
-        const spec=CAPACITY[fn];if(!spec||!allowed(s,i,fn))return;
+        const spec=CAPACITY[fn];
+        if(!spec||!allowed(s,i,fn)||unavailable.has(s.id+':'+i))return;
         const units=(fn==='stables'||fn==='nobleRoom')?1:functionSlotUnits(s,i);
         for(const [k,v] of Object.entries(spec))out[k]+=v*units;
       });
@@ -991,6 +1080,8 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
+    circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
+    releaseCircleSector,
     bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,gateBreached,PORTCULLIS_HEALTH,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
     archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
 })();
