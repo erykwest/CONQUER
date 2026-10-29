@@ -1,5 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+
+## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+
+- Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
+- Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
+- Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
+- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+
 ## 2026-10-29 — Centro di controllo degli insediamenti (branch `panels`)
 
 - Creati nove pannelli sotto Profilo (generale, popolazione, economia, proprietà, scorte, militare, cantieri, diplomazia, avvisi), CSS responsive, grafici alimentari da storico settimanale e controlli già supportati dal motore.
