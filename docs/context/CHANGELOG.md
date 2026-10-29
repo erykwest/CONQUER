@@ -1,9 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-## 2026-10-29 — Centro di controllo degli insediamenti (branch \`panels\`)
+## 2026-10-29 — Centro di controllo degli insediamenti (branch `panels`)
 
 - Creati nove pannelli sotto Profilo (generale, popolazione, economia, proprietà, scorte, militare, cantieri, diplomazia, avvisi), CSS responsive, grafici alimentari da storico settimanale e controlli già supportati dal motore.
-- Separati esplicitamente magazzino economico e scorte assedio; organico presente e capacità edifici; valori effettivi e placeholder futuri. Aggiunto test fixture \`qa/panels-regression.cjs\` e design [management-panels](../management-panels.md).
+- Separati esplicitamente magazzino economico e scorte assedio; organico presente e capacità edifici; valori effettivi e placeholder futuri. Aggiunto test fixture `qa/panels-regression.cjs` e design [management-panels](../management-panels.md).
 - Stato: codice sulla branch, non su main. Parsing JS e smoke fixture eseguiti, suite Node/CI e visual QA in browser ancora richiesti. ROADMAP invariata: pannelli di osservazione, non nuove regole economiche.
 
 ## 2026-10-28 — Economia, tappa 1: lavoro L1 e cantieri (branch `feature/economy-labour`)
