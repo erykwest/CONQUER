@@ -1,6 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (branch `feature/economy-vehicles`)
+## 2026-10-29 — Economia: regressioni delle tappe 2–5 in CI (branch `ci/economy-regressions`)
+
+- `economy-flows-regression.yml` esegue anche routine, commercio, botteghe L3, convogli, cartelli, diplomazia e veicoli. Tappa 5 mergiata come #108. Stato in [STATUS](STATUS.md) e [BACKLOG](BACKLOG.md).
+
+## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (PR #108)
 
 - I convogli percorrono davvero la rete stradale dal mastio (o dal mercato) al confine con carri, carretti e carrozze disegnati in 2D e cavalli 2D. Scartato il 3D del branch d'origine. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-055 in DECISIONS.
 
