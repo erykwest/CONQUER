@@ -65,6 +65,22 @@
       card('Cibo: produzione e domanda',foodChart(d))+'</div>'+
       card('Segnalazioni',warnings(d).length?warnings(d).map(x=>'<p class="cp-warn">⚠ '+esc(x)+'</p>').join(''):empty('Nessun allarme rilevato.'));
   }
+
+  function people(d) {
+    const p=d.economy?.population||{};
+    const h=d.books?.happiness||{};
+    const active=['L1','L2','L3','L4'].filter(k=>num(p[k])>0);
+    const tax=num(d.policy.tax),ration=d.economy?.rationMode||'market';
+    const policy='<label class="cp-input">Aliquota <b>'+fmt(tax)+'%</b><input type="range" data-cp-policy="tax" min="0" max="100" value="'+tax+'"></label>'+
+      '<label class="cp-input">Razioni <select data-cp-policy="rations">'+
+      [['market','Solo mercato'],['half','Mezze razioni'],['full','Razioni complete']].map(x=>'<option value="'+x[0]+'"'+(ration===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select></label>';
+    return '<div class="cp-kpis">'+kpi('Residenti',fmt(Object.values(p).reduce((n,x)=>n+num(x),0)))+
+      kpi('Felicità media',fmt(d.economy?.welfare)+'/100')+kpi('Aliquota',fmt(tax)+'%')+'</div>'+
+      '<div class="cp-grid">'+card('Classi sociali',bars(['L1','L2','L3','L4'].map(k=>[k,p[k]]),Math.max(1,...Object.values(p).map(num))))+
+      card('Felicità L1–L4',active.length?bars(active.map(k=>[k,h[k]]),100):empty('Nessun residente'),'Valori correnti, non storici.')+'</div>'+
+      card('Tassazione e razioni',policy)+
+      card('Festività',line('Sabato','Mercato')+line('Domenica','Riposo')+empty('Festività straordinarie e loro effetti sulla felicità: TBD.'));
+  }
   function render() {
     const root=$('profileControl'); if(!root || root.hidden)return;
     const d=get();
@@ -75,7 +91,7 @@
       (typeof view==='function'?view(d):empty('Pannello in preparazione.'));
   }
   function open(){current='general';render();}
-  const views={general};
+  const views={general,people};
   const root=$('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
