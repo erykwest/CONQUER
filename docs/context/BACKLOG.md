@@ -5,14 +5,14 @@
 - Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
 - Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
 - Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
-- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+- **QA PASS su `38ea7ab`:** 8 check GitHub Actions verdi, regressione storici 26 settimane e browser con 9 catture demo. [Workflow screenshot](https://github.com/erykwest/CONQUER/actions/runs/40800506799). Revisione visiva utente e merge ancora aperti.
 
 
 ## Pannelli gestionali dell’insediamento — branch `panels` (29/10/2026)
 
 - **IN BRANCH, NON MERGE:** nove viste nel Profilo con grafici reali del ledger, istogrammi sociali e di scorte, controlli esistenti (tax/rations/quote vendita/trasferimenti) e indicatori militari/cantieri/diplomazia. [Specifiche](../management-panels.md).
-- **DA VERIFICARE:** `qa/panels-regression.cjs`, smoke browser, persistenza policy e interazioni, suite GitHub Actions. Non considerare completato fino a QA.
-- **TBD:** festività straordinarie con effetti veri su felicità e produzione, storico pop/welfare/prezzi, statistiche occupazione L2–L4, bilanci individuali dei beni del signore, organico militare reale, relazioni diplomatiche e avvisi avanzati. Il pannello non deve introdurre stato duplicato.
+- **FATTO SU BRANCH / QA PASS:** `qa/panels-regression.cjs`, `qa/economy-panel-history-regression.cjs`, suite economica e QA Chromium con 9 screenshot; prova della persistenza storica nel ledger. Revisione visiva utente ancora da acquisire.
+- **TBD:** festività straordinarie con effetti veri su felicità e produzione, statistiche occupazione L2–L4, bilanci individuali dei beni del signore, organico militare reale, relazioni diplomatiche e avvisi avanzati. Il pannello non deve introdurre stato duplicato.
 
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
