@@ -8,6 +8,10 @@
   const DOOR_SECONDS=1.4,PORTCULLIS_SECONDS=2.2,DOOR_OPEN=88*Math.PI/180;
   const clamp01=v=>Math.max(0,Math.min(1,Number(v)||0));
   const stoneGate=s=>s?.type==='gate'&&!isWoodGate(s);
+  // Door leaves hang in every gate; the timber gate (settlement-wood3d.js) has a square-headed
+  // mouth between its jambs instead of the pointed portal, and no portcullis, torches or banners.
+  const doorGate=s=>s?.type==='gate';
+  const WOOD_OPENING={half:.43,spring:1.18,apex:1.18,arc:[{c:.43,z:1.18},{c:0,z:1.18}]};   // up to the lintels
   // The portal decal (gate_portal.png, 256 px tile) and the opening carved behind it share one
   // outline: straight jambs at x 64..192 below y=122, then a pointed arch (two arcs centred on
   // the opposite springs) up to the apex at y=44.
@@ -124,7 +128,7 @@
     const now=performance.now(),dt=lastTick?Math.min(.08,(now-lastTick)/1000):0;lastTick=now;
     let moving=false;
     for(const g of State.structures){
-      if(!stoneGate(g)||underConstruction(g))continue;
+      if(!doorGate(g)||underConstruction(g))continue;
       const target=doorTarget(g);
       if(!Number.isFinite(g.doorOpen))g.doorOpen=target;
       else if(Math.abs(g.doorOpen-target)>.001){
@@ -160,8 +164,8 @@
   // Leaf hinged on the jamb at `side` (+1/-1 across), swung inward by theta. Outline coordinates:
   // u from the hinge toward the centre line, z up; t is the thickness, toward the outer front
   // when closed and toward the passage axis when open.
-  function addLeaf(b,s,f,ground,side,theta,leafColor,bandColor){
-    const o=opening(),hingeA=f.L/2-.22,T=.06,w=o.half-.012;
+  function addLeaf(b,s,f,ground,side,theta,leafColor,bandColor,o=opening()){
+    const hingeA=f.L/2-.22,T=.06,w=o.half-.012;
     const d={a:-Math.sin(theta),c:-side*Math.cos(theta)},n={a:Math.cos(theta),c:-side*Math.sin(theta)};
     const world=(u,z,t)=>{const p=at(f,hingeA+d.a*u+n.a*t,o.half*side+d.c*u+n.c*t);return[p.x,p.y,ground+z]};
     const top=o.arc.slice().reverse().map(q=>({u:Math.min(w,o.half-q.c),z:q.z-.015}));
@@ -208,8 +212,8 @@
   }
   const meshCache=new Map();
   function gateMesh(s){
-    if(!stoneGate(s)||underConstruction(s))return null;
-    const p=portcullis(s),stage=window.ConquerSiege?.doorStage?.(s)||'intact';
+    if(!doorGate(s)||underConstruction(s))return null;
+    const wood=!stoneGate(s),p=portcullis(s),stage=window.ConquerSiege?.doorStage?.(s)||'intact';
     const door=Number.isFinite(s.doorOpen)?s.doorOpen:doorTarget(s),pc=p?p.progress:0;
     const pcRest=p?(p.wrecked?WRECKED_HANG:p.lowered?1:0):0;
     const settled=(door===0||door===1)&&pc===pcRest;
@@ -218,11 +222,11 @@
     const f=frame(s),ground=groundOf(s),b=meshBuilder();
     if(stage!=='broken'){
       const theta=door*DOOR_OPEN,leaf=stage==='damaged'?'#5f4129':'#7a5233';
-      for(const side of [-1,1])addLeaf(b,s,f,ground,side,theta,leaf,'#2f2b29');
+      for(const side of [-1,1])addLeaf(b,s,f,ground,side,theta,leaf,'#2f2b29',wood?WOOD_OPENING:opening());
     }
     // Raised, it sits hidden in the masonry above the vault; it stands even with the door gone.
     if(p)addPortcullis(b,f,ground,pc,!!p.wrecked);
-    addTorchBrackets(b,f,ground);
+    if(!wood)addTorchBrackets(b,f,ground);
     const mesh={pos:b.pos,col:b.col,static:settled};
     meshCache.set(s.id,{key,mesh});
     return mesh;

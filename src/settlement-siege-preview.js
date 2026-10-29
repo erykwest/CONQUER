@@ -228,15 +228,17 @@
       :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
   }
   // Asset Lab (index.html?assetlab=1 in a hidden frame): world-space castle meshes of one gallery spec,
-  // built alone on flat ground and removed again. null when the spec has no 3D volume (wood, palisades).
+  // built alone on flat ground and removed again. Timber towers, timber gates and palisades come from
+  // their Blender models (ConquerWood3D); null when the spec has no 3D volume.
   let assetSpot=null;
   function assetMesh(spec){
     State.clock.speed=0;
     const c=assetSpot||(assetSpot=flatSpot()),s=galleryStructure(spec,c.x,c.y);
-    if(!window.ConquerCastle3D?.castleVolume(s))return null;
+    const castle=!!window.ConquerCastle3D?.castleVolume(s),wood=!castle&&!!window.ConquerWood3D?.handles(s);
+    if(!castle&&!wood)return null;
     const keep=State.structures;
     State.structures=[s];invalidateSceneCache();
-    try{return{origin:c,...window.ConquerCastle3D.worldMeshes()}}
+    try{return wood?{origin:c,body:window.ConquerWood3D.worldTriangles([s]),front:new Float32Array(0)}:{origin:c,...window.ConquerCastle3D.worldMeshes()}}
     finally{State.structures=keep;invalidateSceneCache()}
   }
   let galleryLabels=null;

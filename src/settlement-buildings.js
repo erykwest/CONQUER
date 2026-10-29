@@ -252,6 +252,11 @@ function drawWoodGate(s,preview=false){
   const postR=.075,bodyTop=1.48,roofTop=1.62;
   const sideY=halfY-.09,step=.205;
   const selected=State.selectedId===s.id;
+  // Blender model (settlement-wood3d.js); the drawing below is the fallback.
+  if(window.ConquerWood3D?.draw(s,preview)){
+    if(selected)pathPolygon(projectPath(footprintPoints(s),.025),null,'#f4b76f',2);
+    return;
+  }
 
   // Two palisade-like side piers leave the central corridor physically open.
   for(const sy of [-sideY,sideY]){

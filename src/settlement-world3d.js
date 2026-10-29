@@ -606,6 +606,8 @@
     }
     for(const s of State.structures){
       if(underConstruction(s))continue;
+      // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
+      if(window.ConquerWood3D?.addToBuilder(m,s))continue;
       if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
       else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
@@ -1142,8 +1144,20 @@
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
     const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
     const W3=window.ConquerWagons3D,FU=window.ConquerCutawayFurniture;
+    // Furniture and ladders (world xy, z on the structure plane).
+    const addFurniture=s=>{
+      const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
+      for(const f of FU?.worldFaces(s)||[]){
+        const pts=f.pts.map(p=>({x:p[0],y:p[1],z:(plane?G0:terrainElevation({x:p[0],y:p[1]}))+p[2]}));
+        const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1;
+        m.face(pts,shadeHex(f.hex,k));
+        if(f.emissive)em.face(pts,f.hex);
+      }
+    };
     for(const s of State.structures){
       if(!structureCutaway(s)||underConstruction(s))continue;
+      // Timber tower: the Blender model minus the sides facing this quarter-turn, then its room.
+      if(window.ConquerWood3D?.addCutawayToBuilder?.(sh,s)){addFurniture(s);continue}
       const g0=cutawayWallGeometry(s),H=structureHeight(s),n=Math.min(g0.outer.length,g0.inner.length);
       // Inner ring re-indexed so inner[i] is the vertex nearest outer[i] (built sections list them
       // in another order, which made the crest quads cross over the whole room).
@@ -1248,13 +1262,7 @@
           openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05,.78,'#1f1712');
         }
       }
-      // Furniture and ladders (world xy, z on the structure plane).
-      for(const f of FU?.worldFaces(s)||[]){
-        const pts=f.pts.map(p=>({x:p[0],y:p[1],z:(plane?G0:terrainElevation({x:p[0],y:p[1]}))+p[2]}));
-        const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1;
-        m.face(pts,shadeHex(f.hex,k));
-        if(f.emissive)em.face(pts,f.hex);
-      }
+      addFurniture(s);
     }
     return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris)};
   }
@@ -1283,7 +1291,8 @@
   }
   const SIG_CATEGORIES=[
     {name:'ground',test:s=>s.type==='road'||s.type==='field'||s.type==='house'||s.type==='moat'||s.type==='bridge'||s.type==='palisade'},
-    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]},
+    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
+      ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)},
     {name:'castle',test:s=>!s.auto&&['tower','gate','wall','built'].includes(s.type)},
     {name:'hedges',test:s=>s.type==='house'||s.type==='field'},
     {name:'all',test:()=>true}
@@ -1352,7 +1361,8 @@
       S.groundItems=items;S.sig.terrain=tSig;st.groundBakeMs=performance.now()-a;
     }
     pumpGroundTiles(gl);
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut].join('|');
+    // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
@@ -1658,8 +1668,9 @@
   function supported(){return !!ensureGL()}
   function active(){return enabled&&supported()}
   function residual2D(){
-    // Not ported yet: palisades, wood towers and wood gates keep their 2.5D drawing (per frame).
-    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)))
+    // Palisades, wood towers and wood gates are 3D (settlement-wood3d.js); without their models
+    // they keep the 2.5D drawing (per frame).
+    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!window.ConquerWood3D?.handles(s))
       .sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of items)drawStructure(s);
   }
@@ -1798,11 +1809,12 @@
     const dyn=buildDynamic(moving);dynamicQueue=[];
     renderFront(r,buildSoldiers(list),dyn);S.frameColliders=colliders;ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
-    // 2.5D front pieces only exist for palisades, wood towers and cutaways; the battlement occlusion
-    // frame is expensive, so skip the call entirely when none of them is present.
-    const all=State.structures;
-    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)));
-    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s));drawCastleBattlements()}finally{State.structures=all}}
+    // 2.5D front pieces only exist for palisades, wood towers and wood gates without their 3D models
+    // (settlement-wood3d.js); the battlement occlusion frame is expensive, so skip the call entirely
+    // when none of them is present.
+    const all=State.structures,wood3d=s=>!!window.ConquerWood3D?.handles(s);
+    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!wood3d(s));
+    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s)&&!wood3d(s));drawCastleBattlements()}finally{State.structures=all}}
     perf().world3dFrontMs=performance.now()-t0;
   }
   function setEnabled(on){enabled=!!on;try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}location.reload()}
