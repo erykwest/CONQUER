@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Feudi — comunicazioni e rapporti (branch messages, 29/10/2026)
+
+- **IMPLEMENTATO SU BRANCH:** posta con stato in transito/consegnato, ordini/allarmi, report con dati locali al momento della redazione, editor routine (1/7/30 giorni), piccionaia come slot castello con due estremità, UI e salvataggi, QA aggiunta.
+- **APERTO:** feudi esterni realmente simulati, ordini eseguiti dai destinatari, corpo fisico del messaggero e intercettazione sulla World Map, logistica colombi bidirezionale, unificazione del movimento con ConquerDiplomacy, esecuzione delle regressioni e verifica browser.
+- **Ownership:** [MESSAGES-SYSTEM](../MESSAGES-SYSTEM.md).
+
+
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
