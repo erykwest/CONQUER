@@ -4,9 +4,10 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import * as topology from '../src/circle/defensive-topology.mjs';
 import * as control from '../src/circle/defensive-control.mjs';
+import * as logistics from '../src/circle/defensive-logistics.mjs';
 const script=readFileSync(new URL('../src/settlement-circle.js',import.meta.url),'utf8')
-  .replace("Promise.all([\n    import('./circle/defensive-topology.mjs?v=circle-1'),\n    import('./circle/defensive-control.mjs?v=circle-1')\n  ]).then",
-    'Promise.resolve([circleModule,controlModule]).then');
+  .replace("Promise.all([\n    import('./circle/defensive-topology.mjs?v=circle-1'),\n    import('./circle/defensive-control.mjs?v=circle-1'),\n    import('./circle/defensive-logistics.mjs?v=circle-1')\n  ]).then",
+    'Promise.resolve([circleModule,controlModule,logisticsModule]).then');
 const rect=(a,b,c,d)=>[{x:a,y:b},{x:c,y:b},{x:c,y:d},{x:a,y:d}];
 const piece=(id,type,a,b,c,d,extra={})=>({
   id,type,polygon:rect(a,b,c,d),...extra
@@ -15,20 +16,20 @@ const walls=()=>[
   piece('north','wall',4,4,16,4.5),piece('south','wall',4,15.5,16,16),
   piece('west','wall',4,4,4.5,16),piece('east','wall',15.5,4,16,16)
 ];
-async function boot(structures,environment=[],relief={hills:[]},battle=null,wallwalk=null) {
-  const State={structures,environment,relief};
+async function boot(structures,environment=[],relief={hills:[]},battle=null,wallwalk=null,siege=null) {
+  const State={structures,environment,relief,clock:{day:0,speed:1}};
   const events=[];
   const window={dispatchEvent(e){events.push(e)},ConquerTerraforming:{edits:()=>[]},
     ConquerCombat:battle||{
       units:()=>[],enemy:()=>[],uiState:()=>({alarm:'off',alert:'clear'})
-    },ConquerWallWalk:wallwalk};
+    },ConquerWallWalk:wallwalk,ConquerSiege:siege};
   const context={State,window,BUILD_MIN:0,BUILD_MAX:20,
     underConstruction:s=>!!s.incomplete,
     footprintPoints:s=>s.polygon,reliefEdgeBands:()=>[],
     towerDoorSpecs:()=>[],gatePassageInfo:()=>null,
     setTimeout:fn=>{fn();return 1},clearTimeout:()=>{},
     CustomEvent:class{constructor(name,opts){this.type=name;this.detail=opts.detail}},
-    circleModule:topology,controlModule:control,console};
+    circleModule:topology,controlModule:control,logisticsModule:logistics,console};
   runInNewContext(script,context,{filename:'settlement-circle.js'});
   await Promise.resolve();
   return{State,api:window.ConquerCircle,events};
@@ -174,4 +175,62 @@ test('breached outer ring does not compromise independently closed inner refuge'
   assert.ok(outerId&&keepId&&outerId!==keepId);
   assert.equal(api.controlState(outerId).state,'invaded');
   assert.equal(api.controlState(keepId).state,'secure');
+});
+
+test('sustained uncontested occupation confirms capture, defeat alone does not',async()=>{
+  const enemies=[{id:'intruder',x:10,y:10}],friends=[];
+  const captures=[],siege={
+    circleCaptureRecords:()=>captures.filter(r=>!r.reclaimed),
+    captureCircleSector(sector){
+      const record={id:'capture-record',originId:sector.id,polygon:sector.polygon,
+        boundaries:sector.boundaries,anchors:sector.anchors,depth:sector.depth};
+      captures.push(record);return{ok:true,record,lost:{food:0}};
+    },
+    releaseCircleSector(id){
+      const r=captures.find(r=>r.id===id);if(!r)return{ok:false};
+      r.reclaimed=true;return{ok:true,record:r};
+    }
+  };
+  const battle={enemy:()=>enemies,units:()=>friends,
+    uiState:()=>({alarm:'off',alert:'clear'})};
+  const {api,events}=await boot(walls(),[],{hills:[]},battle,null,siege);
+  const id=api.getSnapshot().compartments[0].id;
+  assert.equal(api.tickOccupation(2).length,0);
+  assert.equal(api.tickOccupation(2.49).length,0);
+  assert.equal(api.controlState(id).state,'invaded');
+  assert.equal(api.tickOccupation(2.5).length,1);
+  assert.equal(api.controlState(id).state,'captured');
+  assert.equal(captures.length,1);
+  assert.ok(events.some(e=>e.type==='conquer-circle-captured'));
+  enemies.splice(0);api.invalidateControl();api.updateControl(true);
+  assert.equal(api.controlState(id).state,'captured');
+  friends.push({x:10,y:10});
+  assert.equal(api.tickOccupation(3).length,0);
+  assert.equal(api.tickOccupation(3.5).length,1);
+  assert.equal(api.controlState(id).state,'secure');
+  assert.ok(events.some(e=>e.type==='conquer-circle-reclaimed'));
+});
+test('after reload a captured breached sector remains blocked and identifiable',async()=>{
+  const captures=[],siege={
+    circleCaptureRecords:()=>captures,
+    captureCircleSector(sector){
+      const record={id:'persistent-sector',originId:sector.id,polygon:sector.polygon,
+        boundaries:sector.boundaries,anchors:sector.anchors,depth:sector.depth};
+      captures.push(record);return{ok:true,record,lost:{food:900}};
+    },
+    releaseCircleSector:()=>({ok:false})
+  };
+  const battle={enemy:()=>[{x:10,y:10}],units:()=>[],
+    uiState:()=>({alarm:'off',alert:'clear'})};
+  const original=walls();
+  const {api,State}=await boot(original,[],{hills:[]},battle,null,siege);
+  api.markBreach(original[0],{x:9,y:4.25},{x:11,y:4.25});
+  State.structures=original.slice(1);api.invalidate('siege breach');
+  assert.equal(api.getSnapshot().compartments[0].state,'invaded');
+  api.tickOccupation(1);api.tickOccupation(1.5);
+  assert.equal(api.getSnapshot().compartments[0].state,'captured');
+  const loaded=await boot(original.slice(1),[],{hills:[]},battle,null,siege);
+  assert.equal(loaded.api.getSnapshot().compartments.length,1);
+  assert.equal(loaded.api.getSnapshot().compartments[0].state,'captured');
+  assert.equal(loaded.api.sectorAt({x:10,y:10}),loaded.api.getSnapshot().compartments[0].id);
 });
