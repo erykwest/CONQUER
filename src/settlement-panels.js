@@ -180,7 +180,7 @@
       if(tab){current=tab.dataset.cpTab;render();return;}
       const trade=ev.target.closest('[data-cp-transfer]');
       if(trade){window.ConquerGame?.commands?.transferActivity?.(trade.dataset.cpTransfer,trade.dataset.cpOwner);render();return;}
-      if(ev.target.closest('[data-cp-action="caravans"]'))window.ConquerGame?.commands?.openCaravans?.();
+      if(ev.target.closest('[data-cp-action="caravans"]')){$('profileOverlay').hidden=true;window.ConquerGame?.commands?.openCaravans?.();}
     });
     root.addEventListener('input',ev=>{if(ev.target.dataset.cpPolicy==='tax'){const badge=ev.target.closest('.cp-input')?.querySelector('b');if(badge)badge.textContent=ev.target.value+'%';}});
     root.addEventListener('change',ev=>{
