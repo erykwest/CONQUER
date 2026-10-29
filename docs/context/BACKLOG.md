@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — sala larga a doppia altezza (branch `feature/wide-built-hall`, 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione costruita larga 2U, H2 senza solaio, una stanza LARGE; finestroni Blender a tutta altezza, 5 contrafforti sul lato finestroni, 2 camini, cutaway a piano unico con gli arredi della libreria di main. Stesso profilo a gradoni anche per le torri con base «Contrafforti» (fix del disegno attraverso le facciate).
+- **ANCORA APERTO:** effetti di gioco specifici delle sale (per ora valgono le regole generiche delle stanze), figure all'interno nel cutaway (cerimonie, banchetti, udienze), contrafforti nell'impronta di collisione/piazzamento.
+
 ## Castello — parapetto delle merlature (branch `feature/battlement-parapet`, 29/10/2026)
 
 - **IN CORSO su branch, NON MERGE:** parapetto continuo tra i merli di torri, porte e mura in pietra; più merli sulle torri tonde. Dettagli in [STATUS](STATUS.md).

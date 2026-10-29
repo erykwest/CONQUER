@@ -831,7 +831,7 @@
   // ---------- facade decals (architecture PNGs + house windows/doors) ----------
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
-  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken','gatePortalFrame','gateBanner'];
+  const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken','gatePortalFrame','gateBanner','hallLancet'];
   function buildDecalAtlas(){
     window.ConquerGates?.ensureSprites();
     const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=4*T;
@@ -943,11 +943,9 @@
           }
         }
       }else if(s.type==='built'){
-        const l=structureLevel(s),outside=wallExteriorSide(s),inside=-outside;
-        const rows=[[outside,.86,.72,'arrowSlit',.23,.58]];
-        if(l>=2)rows.push([inside,2.22,.42,'gothicL3',.92,.78],[outside,2.22,.72,'arrowSlit',.23,.58]);
-        for(const [side,z,density,key,aw,ah] of rows){
-          const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count;
+        const inside=-wallExteriorSide(s);
+        for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
+          const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
           for(let i=0;i<count;i++)onEdge(edge,z,Math.min(aw,cell*.82),ah,key,(i+.5)*cell-edge.length/2,ground,o);
         }

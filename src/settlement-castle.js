@@ -287,33 +287,43 @@ function stoneTowerSplayedFootprint(s){
     s.angle||0
   );
 }
-function stoneTowerButtressFootprints(s){
+// Stepped Gothic buttress against a wall point p (u along the wall, o outward), h tall:
+// deep plinth, sloped weathering, shallower upper stage, final slope back into the wall.
+// Frustum pieces {bottom,top,z0,z1}; shared by wide halls and buttressed stone towers.
+function steppedButtressPieces(p,u,o,h,w=.22){
+  const rect=d=>[[-w/2,-.02],[w/2,-.02],[w/2,d],[-w/2,d]].map(([a,b])=>({x:p.x+u.x*a+o.x*b,y:p.y+u.y*a+o.y*b}));
+  const z=[0,h*.48,h*.53,h*.86,h*.94],deep=rect(.30),shallow=rect(.18);
+  const pieces=[
+    {bottom:deep,top:deep,z0:z[0],z1:z[1]},
+    {bottom:deep,top:shallow,z0:z[1],z1:z[2]},
+    {bottom:shallow,top:shallow,z0:z[2],z1:z[3]},
+    {bottom:shallow,top:rect(.03),z0:z[3],z1:z[4]}
+  ];
+  pieces.anchor=p;pieces.outward=o;
+  return pieces;
+}
+// Buttresses rise through the first storey (the L1 tower height), whatever the tower level.
+function stoneTowerButtresses(s){
   if(!isStoneTowerStructure(s))return[];
-  const depth=.16,width=.16,out=[];
+  const h=Math.min(structureHeight(s),2.35+(towerTier(s)-1)*.12),out=[];
   if(s.shape==='round'){
     const r=Number(s.r)||.5;
     for(let i=0;i<8;i++){
-      const a=i*Math.PI/4,ux=Math.cos(a),uy=Math.sin(a);
-      const c={x:s.x+ux*(r+depth/2-.018),y:s.y+uy*(r+depth/2-.018)};
-      out.push(rectWorldPoints(c.x,c.y,depth,width,a));
+      const a=i*Math.PI/4,o={x:Math.cos(a),y:Math.sin(a)};
+      out.push(steppedButtressPieces({x:s.x+o.x*r,y:s.y+o.y*r},{x:-o.y,y:o.x},o,h));
     }
     return out;
   }
-
   const fp=footprintPoints(s),center={x:s.x,y:s.y};
   for(let i=0;i<fp.length;i++){
     const a=fp[i],b=fp[(i+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
-    const tx=dx/L,ty=dy/L,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-    let nx=mid.x-center.x,ny=mid.y-center.y,NL=Math.hypot(nx,ny)||1;nx/=NL;ny/=NL;
-    const normalAngle=Math.atan2(ny,nx);
-    for(const t of [1/3,2/3]){
-      const edge={x:a.x+dx*t,y:a.y+dy*t};
-      const c={x:edge.x+nx*(depth/2-.018),y:edge.y+ny*(depth/2-.018)};
-      out.push(rectWorldPoints(c.x,c.y,depth,width,normalAngle));
-    }
+    const u={x:dx/L,y:dy/L},mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    let nx=mid.x-center.x,ny=mid.y-center.y,NL=Math.hypot(nx,ny)||1;
+    for(const t of [1/3,2/3])out.push(steppedButtressPieces({x:a.x+dx*t,y:a.y+dy*t},u,{x:nx/NL,y:ny/NL},h));
   }
   return out;
 }
+function stoneTowerButtressFootprints(s){return stoneTowerButtresses(s).map(b=>b[0].bottom)}
 function structureGroundContactPolygons(s){
   if(isStoneTowerStructure(s)){
     const style=towerBaseStyle(s);
@@ -482,6 +492,18 @@ function extrudePolygonAt(worldPts,z0,z1,{top:topColor='#8c7b69',sideA='#554b42'
   for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,null);
   pathPolygon(topPts,topColor,stroke,1);
 }
+// extrudePolygonAt with a different top ring (same vertex count): splays and sloped caps.
+function extrudeFrustumAt(bottom,top,z0,z1,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
+  if(!bottom?.length||bottom.length!==top?.length||z1<=z0)return;
+  const base=projectPath(bottom,z0),topPts=projectPath(top,z1),faces=[];
+  for(let i=0;i<bottom.length;i++){
+    const j=(i+1)%bottom.length;
+    faces.push({quad:[base[i],base[j],topPts[j],topPts[i]],depth:(base[i].y+base[j].y)/2,i});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,stroke,.6);
+  pathPolygon(topPts,topColor,stroke,.8);
+}
 let castleUnionCache={key:null,bands:null};
 const CUTAWAY_NEAR_ALPHA=.035;
 const CUTAWAY_FAR_ALPHA=1;
@@ -592,7 +614,8 @@ function cutawayFloorBasis(s,g){
   };
 }
 function cutawayFloorLevels(s){
-  const level=structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
+  // Wide halls keep the full height free: a single ground floor at L2.
+  const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(level<=1)return floors;
   for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
   return floors;

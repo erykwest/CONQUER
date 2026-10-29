@@ -48,7 +48,7 @@ export const T = {
   },
   values: {
     square: 'Quadrata', round: 'Rotonda', watchtower: 'Guardia', woodTower: 'Lignea',
-    wall: 'Mura', palisade: 'Palizzata', built: 'Sezione',
+    wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga',
     stone: 'Pietra', wood: 'Legno',
     dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra',
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
