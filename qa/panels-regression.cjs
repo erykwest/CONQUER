@@ -21,7 +21,11 @@ function fixture(founded=true,markets=2) {
     activities:[{id:'farm-1',type:'field',owner:'lord',workers:1,value:50,profit:null}]
   };
   const books={happiness:{L1:55,L2:45,L3:50,L4:70},
-    balanceHistory:Array.from({length:markets},(_,i)=>({day:i*7+5,goods:{food:{produced:12+i,demand:14}}}))};
+    balanceHistory:Array.from({length:markets},(_,i)=>({day:i*7+5,goods:{food:{produced:12+i,demand:14}}})),
+    panelHistory:Array.from({length:markets},(_,i)=>({day:i*7+5,welfare:51+i,
+      population:{L1:9,L2:3,L3:0,L4:1},happiness:{L1:54+i,L2:45+i,L3:50,L4:70},
+      prices:{food:2+i*.1,wood:3+i*.2},jobs:{building:2,herding:1,logging:1,industry:1,idle:0},
+      production:[{id:'farm-1',type:'field',owner:'lord',goods:{food:12+i}}]}))};
   const commands={
     setPolicy:(...args)=>calls.push(['policy',...args]),
     setSaleShare:(...args)=>calls.push(['share',...args]),
@@ -58,12 +62,19 @@ for(const id of x.context.window.ConquerPanels.tabs){
 x.tab('people');
 assert.match(x.elements.controlBody.innerHTML,/Festivit/);
 assert.match(x.elements.controlBody.innerHTML,/TBD/);
+assert.match(x.elements.controlBody.innerHTML,/Tendenza felicità/);
+assert.match(x.elements.controlBody.innerHTML,/cp-history/);
 x.elements.profileControl.events.change({target:{dataset:{cpPolicy:'tax'},value:'35'}});
 assert.deepEqual(x.calls[0],['policy','tax','35']);
 x.tab('economy');
 x.elements.profileControl.events.change({target:{dataset:{cpShare:'food'},value:'75'}});
 assert.deepEqual(x.calls[1],['share','food',75]);
+assert.match(x.elements.controlBody.innerHTML,/Storico prezzi/);
+x.elements.profileControl.events.change({target:{dataset:{},value:'wood',matches:selector=>selector==='[data-cp-price]'}});
+assert.match(x.elements.controlBody.innerHTML,/Legno/);
 x.tab('estate');
+assert.match(x.elements.controlBody.innerHTML,/Produzione settimanale delle proprietà/);
+assert.match(x.elements.controlBody.innerHTML,/cp-history/);
 x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-transfer]'?{dataset:{cpTransfer:'farm-1',cpOwner:'private'}}:null}});
 assert.deepEqual(x.calls[2],['transfer','farm-1','private']);
 x.tab('diplomacy');
@@ -76,4 +87,4 @@ assert.doesNotMatch(y.elements.controlBody.innerHTML,/Tesoreria/);
 const z=fixture(true,0);
 z.context.window.ConquerPanels.open();
 assert.match(z.elements.controlBody.innerHTML,/Dati storici disponibili/);
-console.log('panels-regression PASS (9 views, ledger graph, controls, unbuilt and empty history)');
+console.log('panels-regression PASS (9 views, weekly welfare/prices/jobs/production, commands, unbuilt/empty history)');
