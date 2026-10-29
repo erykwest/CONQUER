@@ -4,6 +4,13 @@
 
 - Le torri T1 in pietra, comprese le sottotorri, si aprono in sezione e mostrano una scala a chiocciola in pietra dalla porta alla cima: tonda nelle torri tonde, quadrata nelle torri quadrate. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
 
+## 2026-10-28 — Fortificazioni in legno in 3D (branch)
+
+- Su `feature/wood-fortifications-3d`: vedetta, torri a palizzata, porta in legno e palo di palizzata modellati in Blender (`tools/blender/build_wood_fort.py`) e posati dal nuovo `settlement-wood3d.js`; le palizzate seguono il layout del gioco con camminamento e terrapieno. Il world3d non ridisegna più il legno in 2.5D a ogni frame. Stato e prove in [STATUS](STATUS.md#fortificazioni-in-legno-in-3d-branch-featurewood-fortifications-3d-28102026).
+- Cantieri del legno montati pezzo per pezzo (torri, porte, palizzate) invece del fantasma traslucido.
+- Bandiere araldiche su torre coperta e vedetta, due drappi ai lati della porta in legno.
+- Cutaway della torre a palizzata in legno sul cutaway WebGL di #65: lati verso la camera aperti, pavimento, scala e arredi della funzione. Il fallback WebGL con soldati di ronda, riprodotto qui, è risolto in main da #91 (VAO per programma): il fix locale è stato tolto al merge.
+- Asset Lab: legno e palizzate ora con «Modello 3D»; baseline estesa con i 12 render nuovi. ROADMAP e DECISIONS invariate: promozione visiva sullo schema già deciso per i modelli Blender (civili, industrie, assedio), nessun nuovo contratto.
 ## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
 
 - Uomini e donne L1–L4 hanno la settimana di `jobmanager`: svago maschile dalle 18, mercato il sabato e messa la domenica, lavoro femminile nei lotti. Solo visuale. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-052 in DECISIONS.
