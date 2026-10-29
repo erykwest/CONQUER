@@ -1952,7 +1952,7 @@
   document.querySelectorAll('[data-combat-fire]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-fire',fireKind:b.dataset.combatFire,label:'Click a structure to shoot at it'});syncButtons();
   });
-  $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerCombatRules?.reset();alertState='clear';changed();draw()};
   document.querySelectorAll('[data-combat-storm]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-storm',stormKind:b.dataset.combatStorm,label:'Click the top of a wall to storm it'});syncButtons();
   });
