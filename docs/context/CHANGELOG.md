@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-29 — Centro di controllo degli insediamenti (branch \`panels\`)
+
+- Creati nove pannelli sotto Profilo (generale, popolazione, economia, proprietà, scorte, militare, cantieri, diplomazia, avvisi), CSS responsive, grafici alimentari da storico settimanale e controlli già supportati dal motore.
+- Separati esplicitamente magazzino economico e scorte assedio; organico presente e capacità edifici; valori effettivi e placeholder futuri. Aggiunto test fixture \`qa/panels-regression.cjs\` e design [management-panels](../management-panels.md).
+- Stato: codice sulla branch, non su main. Parsing JS e smoke fixture eseguiti, suite Node/CI e visual QA in browser ancora richiesti. ROADMAP invariata: pannelli di osservazione, non nuove regole economiche.
+
 ## 2026-10-28 — Economia, tappa 1: lavoro L1 e cantieri (branch `feature/economy-labour`)
 
 - Portata su `main` la parte economica di #55 (bilancio settimanale, fondazione con 4 L1, Builder che paga dal castello, cantieri a giornate-operaio pagati dal signore) unita a `jobmanager` (pastori protetti, taglio legna, razioni, felicità per ceto) in un solo allocatore L1. Stato e prove in [STATUS](STATUS.md). Nuove decisioni D-047…D-051 in [DECISIONS](DECISIONS.md#economia--lavoro-l1-unico-28102026); ROADMAP invariata.
