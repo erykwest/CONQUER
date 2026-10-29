@@ -131,6 +131,13 @@
     const j=active();if(!j||j.status!=='moving'||!j.path?.length)return;
     drawConvoyAt(j);
   }
+  // Routed 2D convoy (settlement-vehicles.js) when loaded, else the simple strip.
+  function drawConvoyAt(j){
+    const V=window.ConquerVehicles;
+    if(V)return V.draw({...j,qty:j.qty??j.cargo?.[0]?.qty??0,
+      livery:j.kind==='merchant'?{main:'#79553b',alt:'#b08a65'}:null},j.path);
+    drawConvoyStrip(j);
+  }
   // Real lord convoys: on the road while the outward or return leg is still
   // inside the map (road length out of road + 40U beyond the border).
   function drawLiveConvoys(){
@@ -138,20 +145,22 @@
     for(const j of Object.values(c.lordConvoys||{})){
       if(!['outbound','returning'].includes(j.status)||!j.edge)continue;
       const route=routeFor(j.edge);if(!route)continue;
-      const leg=Math.max(.001,(j.arrivalDay-j.actualDepartDay)),total=route.distance+40;
+      // From the keep through the streets to the border, then 40U beyond the map.
+      const path=j.drivePath||(j.drivePath=drivePath(j.kind,route)),length=pathLength(path);
+      const leg=Math.max(.001,(j.arrivalDay-j.actualDepartDay)),total=length+40;
       const f=j.status==='outbound'?(State.clock.day-j.actualDepartDay)/leg:(j.returnDay-State.clock.day)/leg;
       const distance=Math.max(0,Math.min(1,f))*total;
-      if(distance>route.distance)continue;
-      drawConvoyAt({id:j.id,kind:j.kind,path:route.points,distance,vehicle:j.transport?.mode||'wagon',
+      if(distance>length)continue;
+      drawConvoyAt({id:j.id,kind:j.kind,path,distance,speed:1,qty:j.cargo?.[0]?.qty||0,vehicle:j.transport?.mode||'wagon',
         vehicles:j.transport?.wagons||1,guards:j.escorts?.requested||0,good:j.cargo?.[0]?.good||''});
     }
   }
-  function drawConvoyAt(j){
+  function drawConvoyStrip(j){
     const lead=pointAlong(j.path,j.distance||0),lag=pointAlong(j.path,Math.max(0,(j.distance||0)-.4));
     const d={x:lead.x-lag.x,y:lead.y-lag.y},right={x:d.y,y:-d.x},
       L=Math.hypot(d.x,d.y)||1,norm={x:right.x/L,y:right.y/L};
     // Same world scale as the map: no screen-size floor that dwarfs the houses.
-    const count=Math.min(6,j.vehicles||1),size=Math.max(3,16*State.view.scale);
+    const count=Math.min(6,j.vehicles||1),size=Math.max(1.5,5.75*State.view.scale);
     for(let i=count-1;i>=0;i--){
       const distBehind=Math.max(0,(j.distance||0)-i*1.95);
       const p=pointAlong(j.path,distBehind),scr=w2s(p,.15);
@@ -178,6 +187,7 @@
     if(!well())return;
     for(const sign of signs())drawSign(sign);
     drawConvoy();drawLiveConvoys();
+    window.ConquerVehicles?.drawTrips?.();
   }
   // Read-only road continuity validation: do not teleport across unfinished
   // arterial branches, or charge anything before route can be followed.
@@ -193,6 +203,24 @@
     const path=[start,...s.path.slice(first+1)];
     // Sign-stage tests animate over the VERIFIED outbound main road only.
     return{sign:s,points:path,distance:totalLength(path)};
+  }
+  const pathLength=points=>window.ConquerVehicles?window.ConquerVehicles.makePath(points).total:totalLength(points);
+  // Where a trip starts: the keep for lord convoys, the market (or an L4 house)
+  // for merchants, an L4 house for a noble coach; the well as last resort.
+  function originFor(kind){
+    const done=s=>!(typeof underConstruction==='function'&&underConstruction(s));
+    const l4=State.structures.find(s=>s.type==='house'&&done(s)&&(typeof houseLevel==='function'?houseLevel(s):s.houseLevel)>=4);
+    if(kind==='merchant')return State.structures.find(s=>s.type==='market'&&done(s))||l4||well();
+    if(kind==='coach')return l4||window.ConquerSiege?.mastio?.()||well();
+    return window.ConquerSiege?.mastio?.()||well();
+  }
+  // Full drive from the origin to the border over the road graph (Dijkstra in
+  // ConquerVehicles), falling back to the verified arterial from the sign.
+  function drivePath(kind,r){
+    const V=window.ConquerVehicles,o=originFor(kind),end=r.points[r.points.length-1];
+    const raw=V&&o?V.route(o,end):null;
+    const pts=raw&&raw.length>1&&Math.hypot(raw[raw.length-1].x-end.x,raw[raw.length-1].y-end.y)<.7?raw:r.points;
+    return V?V.smooth(pts):pts;
   }
   function testRecord(){
     const c=convoys()?.state?.();return c?.roadSignTest||null;
@@ -236,8 +264,9 @@
       c.lordConvoys[id].status='test-moving';
     }
     const quote=kind==='merchant'?convoys().quoteJourneyCost(id,1):null;
-    c.roadSignTest={id,kind,edge,status:'moving',path:route.points,
-      total:route.distance,distance:0,vehicle,
+    const path=drivePath(kind,route);
+    c.roadSignTest={id,kind,edge,status:'moving',path,
+      total:pathLength(path),distance:0,speed:0,vehicle,
       vehicles:kind==='merchant'?c.journeys[id].transport.wagons:c.lordConvoys[id].transport.wagons,
       guards,good,cargo,coinGold,escortDailyGold:quote?.escortPerDay||0,
       startedDay:State.clock.day};
@@ -245,6 +274,11 @@
     if(typeof scheduleLocalSave==='function')scheduleLocalSave(200);
     if(typeof status==='function')status('TEST '+labels[edge]+' avviato: merci e monete REALI accantonate');
     return{ok:true,id};
+  }
+  // A noble coach: pure animation over the road network, no ledger involved.
+  function launchCoach(edge){
+    const r=routeFor(edge),V=window.ConquerVehicles;if(!r||!V)return null;
+    return V.spawn({vehicle:'coach',points:drivePath('coach',r),guards:2});
   }
   function restore(){
     const c=convoys()?.state?.(),j=c?.roadSignTest;
@@ -266,12 +300,17 @@
   function tick(dt){
     // Near-zero overhead when no test is active; the economy state/route graph
     // should never be scanned at 60 Hz just to discover an absent convoy.
-    const job=active();
+    const job=active(),trips=window.ConquerVehicles?.tick?.(dt);
+    if(trips&&!(job&&job.status==='moving')){
+      const now=typeof performance!=='undefined'?performance.now():0;
+      if(now-lastFrame>=55){lastFrame=now;if(typeof window.__drawConquerScene==='function')window.__drawConquerScene()}
+    }
     if(!job||job.status!=='moving'||!Number.isFinite(dt)||dt<=0)return;
     const c=convoys()?.state?.();
     if(!c)return;
-    job.distance=Math.min(job.total,(job.distance||0)+dt*6);
-    if(job.distance>=job.total){
+    const V=window.ConquerVehicles;
+    if(V)V.advance(job,job.path,dt);else job.distance=Math.min(job.total,(job.distance||0)+dt*6);
+    if(job.distance>=job.total-1e-6){
       job.status='exited';
       const entry=(job.kind==='merchant'?c.journeys:c.lordConvoys)?.[job.id];
       if(entry)entry.status='test-exited';
@@ -324,6 +363,7 @@
         '<div style="opacity:.8">Guardie signorili: massimo '+available+
         ' posti caserma disponibili. Per mercanti: scorta di prova marrone, paga futura 2× L2.</div>'+
         '<button type="button" data-road-launch '+(!r?'disabled':'')+'>▶ TEST: carico, scorta, percorrenza</button>')+
+      '<button type="button" data-road-coach '+(!r?'disabled':'')+' style="margin-top:6px">▶ Carrozza nobile (solo animazione)</button>'+
       '<p style="opacity:.7">Modalità QA locale: la partenza internazionale non è attiva; nessuna merce viene consegnata ad altri feudi.</p>';
     panel.querySelector('[data-road-close]').onclick=()=>{opened=null;refreshPanel();if(window.__drawConquerScene)window.__drawConquerScene()};
     const restoreButton=panel.querySelector('[data-road-restore]');
@@ -342,6 +382,11 @@
       if(qtyPicker){qtyPicker.disabled=merchant;qtyPicker.value=merchant?'0':'1'}
       if(goldPicker&&merchant&&Number(goldPicker.value)===0)goldPicker.value='10';
     };
+    const coachButton=panel.querySelector('[data-road-coach]');
+    if(coachButton)coachButton.onclick=()=>{
+      const trip=launchCoach(opened);
+      if(typeof status==='function')status(trip?'Carrozza in viaggio verso il confine (nessuna risorsa usata)':'Nessun percorso stradale per la carrozza');
+    };
     const launchButton=panel.querySelector('[data-road-launch]');
     if(launchButton)launchButton.onclick=()=>{
       const q=k=>panel.querySelector('[data-road-'+k+']'),kind=q('kind').value;
@@ -354,5 +399,5 @@
     };
   }
   window.ConquerRoadSignTests=Object.freeze({signs,hit,open,draw,tick,
-    routeFor,launch,restore,active:testRecord,refreshPanel});
+    routeFor,drivePath,launch,launchCoach,restore,active:testRecord,refreshPanel});
 })();

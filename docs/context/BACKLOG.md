@@ -20,7 +20,8 @@
 - **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda.
 - **TAPPA 4 SU BRANCH `feature/economy-convoys`, NON MERGE:** un solo sistema di convogli (carovane della diplomazia comprese), cartelli di prova, convogli visibili sulla strada maestra.
 - **DA FARE (CI):** aggiungere a `.github/workflows/economy-flows-regression.yml` le nuove regressioni economiche (rations, labor-jobs, routines, commerce, urban-workshops, convoys, road-sign, diplomacy, vehicles): PR separata, il token di `gh` non ha lo scope `workflow`.
-- **DA FARE:** tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
+- **TAPPA 5 SU BRANCH `feature/economy-vehicles`, NON MERGE:** veicoli instradati sulle strade, solo 2D.
+- **APERTO:** traffico automatico di carri e carrozze senza convoglio (oggi solo convogli reali, prove e carrozza dimostrativa); decidere se rimuovere da main i moduli 3D di animali e carri non usati dal gioco. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.
@@ -42,7 +43,8 @@
 ## Combat / feudi — capitano, cavalieri e diplomazia (branch `feature/knights-diplomacy-2d`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, IN MERGE (sostituisce #72):** capitano con identità propria e raggio di comando 16U; cavalieri a cavallo reclutabili fino a min(stanze nobili, posti in scuderia) — C-04 in parte; messaggero a cavallo periodico verso il mastio, richiesta di 100 monete, accetta/rifiuta, pianificatore di carovane con carico, scorta, partenza e provviste — prototipo di F-05; tutte le figure a cavallo in 2D (D-046).
-- **ANCORA APERTO:** (unificazione con i convogli dell'economia e carovane visibili sulla strada: tappa 4 dell'economia) carovane intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
+- **FATTO:** carovane unificate con i convogli dell'economia (tappa 4, #105, 29/10/2026); visibili sulle strade con la tappa 5 (#108).
+- **ANCORA APERTO:** carovane intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
 
 ## Castello — cutaway arredato di torri, porte e sezioni (PR #65, riallineata 28/10/2026)
 
