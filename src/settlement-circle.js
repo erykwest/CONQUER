@@ -5,6 +5,8 @@
 (function() {
   let topology=null, controlEngine=null, snapshot=null, dirty=true, controlDirty=true;
   let timer=null, lastError=null, revision=0, controlRevision=0, lastControlAt=0;
+  const pendingBreachIds=new Set();
+  let breachSerial=0;
   const settings=Object.freeze({cellSize:.25,margin:2});
   const eligible=s=>!!s&&!underConstruction(s)&&!s.destroyed;
   const physicalTypes=new Set(['wall','palisade','built','tower','gate']);
@@ -130,13 +132,74 @@
     else if(!totals)el.textContent='Compartimenti · controllo militare in attesa';
     else el.textContent='Compartimenti · '+totals.safe+' sicuri · '+
       totals.invaded+' invasi · '+totals.contested+' contesi · '+
-      totals.infiltrated+' infiltrati · '+totals.threatened+' minacciati';
+      totals.infiltrated+' infiltrati · '+totals.threatened+' minacciati · '+
+      totals.compromised+' compromessi';
     el.dataset.danger=totals?.occupied>0?'1':'0';
+  }
+  function insidePolygon(p,poly){
+    if(!Array.isArray(poly)||poly.length<3)return false;
+    let inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const a=poly[i],b=poly[j];
+      if((a.y>p.y)!==(b.y>p.y)&&
+         p.x<(b.x-a.x)*(p.y-a.y)/((b.y-a.y)||1e-9)+a.x)inside=!inside;
+    }
+    return inside;
+  }
+  function historicalSectorAt(p,sectors) {
+    if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))return null;
+    for(const c of sectors) {
+      const loops=c.boundaries?.length?c.boundaries:[c.polygon];
+      if(loops.reduce((contained,loop)=>contained!==insidePolygon(p,loop),false))
+        return c.id;
+    }
+    return null;
+  }
+  function retainSiegeBreaches(fresh,previous) {
+    // Only wall bays lost to a documented SIEGE breach create lost sectors.
+    // Player demolition or ordinary editing does not generate ghost territory.
+    const ghosts=[];
+    for(const old of previous?.compartments||[]) {
+      if(!old.breached&&!pendingBreachIds.has(old.id))continue;
+      const probes=old.anchors?.length?old.anchors:[old.centroid];
+      // When the perimeter is rebuilt, all former interior probes belong to
+      // a newly closed region, so the compromised region expires.
+      if(probes.every(p=>p&&fresh.sectorAt(p)))continue;
+      ghosts.push({
+        ...old,id:old.breached?old.id:'breached-'+(++breachSerial)+'-'+old.id,
+        originId:old.originId||old.id,breached:true,state:'compromised',safe:false
+      });
+    }
+    pendingBreachIds.clear();
+    if(!ghosts.length)return fresh;
+    ghosts.sort((a,b)=>b.depth-a.depth);
+    const locate=fresh.sectorAt;
+    return{
+      ...fresh,compartments:[...fresh.compartments,...ghosts],
+      sectorAt:p=>locate(p)||historicalSectorAt(p,ghosts),
+      stats:{...fresh.stats,breachedCompartments:ghosts.length}
+    };
+  }
+  function markBreach(wall,from,to) {
+    if(!wall||!from||!to)return;
+    const current=getSnapshot();
+    if(!current)return;
+    const dx=to.x-from.x,dy=to.y-from.y,L=Math.hypot(dx,dy);
+    if(L<=1e-6)return;
+    const nx=-dy/L,ny=dx/L,half=(Number(wall.width)||.5)/2;
+    for(const t of [.25,.5,.75])for(const sign of [-1,1]){
+      const p={x:from.x+dx*t,y:from.y+dy*t};
+      for(const offset of [half+.45,half+.95,half+1.45]) {
+        const id=current.sectorAt({x:p.x+nx*sign*offset,y:p.y+ny*sign*offset});
+        if(id){pendingBreachIds.add(id);break}
+      }
+    }
   }
   function recompute(){
     if(!topology)return null;
     try{
-      snapshot=topology.detectDefensiveCompartments(collect());
+      const fresh=topology.detectDefensiveCompartments(collect());
+      snapshot=retainSiegeBreaches(fresh,snapshot);
       lastError=null;dirty=false;controlDirty=true;
       controlBanner();
       // This notification is a read-only integration contract. No gameplay or
@@ -239,7 +302,7 @@
     return data?topology.findNextCircleRefuge(fromId,data,stateFor):null;
   }
   window.ConquerCircle=Object.freeze({
-    invalidate,invalidateControl,recompute,updateControl,getSnapshot,
+    invalidate,invalidateControl,markBreach,recompute,updateControl,getSnapshot,
     sectorAt,sectorForStructure,controlState,nextRefuge,
     getStatus:()=>({ready:!!topology&&!!controlEngine,dirty,controlDirty,
       revision,controlRevision,summary:snapshot?.controlSummary||null,
