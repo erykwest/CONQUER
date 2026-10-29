@@ -99,13 +99,15 @@ function residentClassPosition(house,resident,day,assignment){
     return peasantPosition(house,assignment,State.clock.day);
   if(level===1)return null;
   if(level===2)return artisanPosition(house,shiftedDay);
-  if(level===3)return merchantPosition(house,shiftedDay);
+  // L3 residents work local shops/services. Traveling merchants are L4+
+  // manifests and must never be silently created by a resident daily routine.
+  if(level===3)return artisanPosition(house,shiftedDay);
   return elitePosition(house,shiftedDay);
 }
 function villagerClass(house){
   const level=houseLevel(house);
   if(level>=4)return'elite';
-  if(level===3)return'merchant';
+  if(level===3)return'artisan';
   if(level===2)return'artisan';
   return'peasant';
 }
