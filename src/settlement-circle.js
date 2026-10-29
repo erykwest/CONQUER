@@ -232,9 +232,9 @@
   }
   function captureRecordFor(sector,locate,records){
     for(const record of records){
-      if(record.id===sector.captureRecordId||
-         record.originId===sector.originId||record.originId===sector.id)
-        return record;
+      if(record.id===sector.captureRecordId)return record;
+      // Sector raster indices can change on a rebuild: never match merely
+      // on the old "circle-1" name. Always locate saved interior anchors.
       const anchors=(record.anchors||[]).filter(p=>p&&
         Number.isFinite(p.x)&&Number.isFinite(p.y));
       if(anchors.length&&anchors.some(p=>locate(p)===sector.id))return record;
@@ -267,7 +267,10 @@
         if(!record)return{...sector,captured:false,captureRecordId:null};
         summary[sector.state]=Math.max(0,(summary[sector.state]||0)-1);
         summary.captured++;
-        if(sector.safe)summary.safe=Math.max(0,summary.safe-1);
+        if(sector.safe){
+          summary.safe=Math.max(0,summary.safe-1);
+          summary.occupied++;
+        }
         return{...sector,state:'captured',safe:false,captured:true,
           captureRecordId:record.id};
       });
@@ -361,11 +364,13 @@
       if(s.a&&s.b){
         const cx=(s.a.x+s.b.x)/2,cy=(s.a.y+s.b.y)/2;
         const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1;
-        // Built sections lacking a known entrance have ambiguous membership;
-        // don't silently attribute their supplies to an arbitrary side.
-        const left=sectorAt({x:cx-dy/L*.9,y:cy+dx/L*.9});
-        const right=sectorAt({x:cx+dy/L*.9,y:cy-dx/L*.9});
-        return left&&left===right?left:null;
+        // A built section has exterior arrow slits and an INTERIOR façade
+        // (doors/portico). The flip selects its exterior, so supplies belong
+        // to the opposite, accessible side of this fortification.
+        const inside=-(typeof wallExteriorSide==='function'
+          ?wallExteriorSide(s):(s.flip?-1:1));
+        return sectorAt({x:cx-dy/L*inside*.9,
+          y:cy+dx/L*inside*.9});
       }
     }
     return s.x!=null&&s.y!=null?sectorAt({x:s.x,y:s.y}):null;
