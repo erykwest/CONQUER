@@ -12,6 +12,7 @@ export const CIRCLE_CONTROL_STATES = Object.freeze({
   THREATENED: 'threatened',
   INFILTRATED: 'infiltrated',
   INVADED: 'invaded',
+  COMPROMISED: 'compromised',
   CONTESTED: 'contested',
   CAPTURED: 'captured'
 });
@@ -68,7 +69,7 @@ export function assessDefensiveControl({
   }
   const summary = {
     total: compartments.length, unassessed: 0, secure: 0, alert: 0,
-    threatened: 0, infiltrated: 0, invaded: 0, contested: 0,
+    threatened: 0, infiltrated: 0, invaded: 0, contested: 0, compromised: 0,
     occupied: 0, safe: 0, groundEnemies: 0, wallEnemies: 0, wallDefenders: 0
   };
   const sectors = compartments.map(c => {
@@ -81,7 +82,7 @@ export function assessDefensiveControl({
     else if (control.climbingEnemies > 0)
       state = 'threatened';
     else
-      state = alert ? 'alert' : 'secure';
+      state = c.breached ? 'compromised' : alert ? 'alert' : 'secure';
     const safe = CIRCLE_SAFE_STATES.includes(state);
     summary[state] += 1;
     if (safe) summary.safe += 1;
