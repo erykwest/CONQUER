@@ -23,6 +23,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 })();
 </script>
 <link rel="stylesheet" href="./src/settlement.css?v=dev-scroll-mills-1">
+<link rel="stylesheet" href="./src/settlement-panels.css?v=panels-1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 <link rel="stylesheet" href="./src/settlement-diplomacy.css?v=knights2d-1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -148,12 +149,13 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
   <div id="profileOverlay" class="profile-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="profileTitle">
     <section class="profile-window">
       <div class="profile-titlebar"><h2 id="profileTitle">PROFILE <small>· Partita corrente</small></h2><button type="button" id="profileClose" aria-label="Chiudi">✕</button></div>
-      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button></nav>
+      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button><button type="button" data-profile-tab="control">CENTRO DI CONTROLLO</button></nav>
       <section class="profile-section" id="profileGeneral">
         <h3>DATI DELLA PARTITA</h3>
         <div class="profile-facts"><div>Insediamento <strong id="profileVillage">—</strong></div><div>Seed <strong id="profileSeed">—</strong></div><div>Bioma <strong id="profileBiome">—</strong></div><div>Giorno <strong id="profileDay">—</strong></div><div>Cella mondo <strong>0, 0</strong></div></div>
         <p class="profile-help">Questi dati appartengono alla partita, non all'account del giocatore.</p>
       </section>
+      <section class="profile-section" id="profileControl" hidden><nav id="controlNav" class="cp-nav" role="tablist" aria-label="Settori della gestione dell’insediamento"></nav><div id="controlBody" class="cp-body" aria-live="off"></div></section>
       <section class="profile-section" id="profileHeraldry" hidden>
         <div class="heraldry-editor">
           <div><h3>PARTIZIONE DEL CAMPO</h3><div id="heraldryPatterns" class="heraldry-patterns"></div>
@@ -420,6 +422,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-asset-stage.js?v=assetlab-audit-2"></script>
 <script src="./src/settlement-tower-weapons.js?v=siege-1"></script>
 <script src="./src/settlement-diplomacy.js?v=knights2d-1"></script>
+<script src="./src/settlement-panels.js?v=panels-1"></script>
 <script type="module" src="./src/ui/shell.js?v=economy-labour-1"></script>
 </body>
 </html>
