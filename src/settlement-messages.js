@@ -130,7 +130,61 @@
     for(const m of s.letters)if(m.status==='transit'&&m.arrivalDay<=to){m.status='delivered';changed=true}
     if(changed)dirty();
   }
-  function reset(){State.messages=empty();const panel=byId('messagesDialog');if(panel)panel.hidden=true;dirty()}
+  // Messengers reuse the existing 2D mounted figure and settlement road graph.
+  // Only the locally visible leg is rendered; the external province remains abstract.
+  const courierRoutes=new Map();
+  function courierRoute(letter){
+    if(courierRoutes.has(letter.id))return courierRoutes.get(letter.id);
+    const edge=letter.from==='court'?letter.to:letter.from;
+    const entries=typeof ensureBorderEntrySelection==='function'?ensureBorderEntrySelection():
+      (State.village?.borderEntries||[]);
+    const side=entries?.find(e=>e.edge===edge);
+    const fallback={x:edge==='west'?0:edge==='east'?WORLD:WORLD/2,
+      y:edge==='north'?0:edge==='south'?WORLD:WORLD/2};
+    const entry={x:Number(side?.x??fallback.x),y:Number(side?.y??fallback.y)};
+    const castle=window.ConquerSiege?.mastio?.()||State.structures?.find(s=>s.type==='well');
+    if(!castle)return null;
+    const goal={x:Number(castle.x)||WORLD/2,y:Number(castle.y)||WORLD/2};
+    let route=null;
+    try{route=typeof roadNetworkPath==='function'?roadNetworkPath(entry,goal,'post-'+letter.id):null}
+    catch(err){console.warn('Postal road navigation fallback',err)}
+    if(!Array.isArray(route)||route.length<2)route=[entry,goal];
+    route=route.filter(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)).map(p=>({x:p.x,y:p.y}));
+    if(route.length<2)route=[entry,goal];
+    if(letter.from==='court')route.reverse();
+    courierRoutes.set(letter.id,route);
+    return route;
+  }
+  function courierPosition(points,progress){
+    const lengths=points.slice(1).map((p,i)=>Math.hypot(p.x-points[i].x,p.y-points[i].y));
+    const total=lengths.reduce((sum,x)=>sum+x,0),target=Math.max(0,Math.min(1,progress))*total;
+    let used=0;
+    for(let i=1;i<points.length;i++){
+      const span=lengths[i-1],a=points[i-1],b=points[i];
+      if(i===points.length-1||used+span>=target){
+        const t=Math.max(0,Math.min(1,(target-used)/Math.max(.0001,span)));
+        return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,heading:Math.atan2(b.y-a.y,b.x-a.x)};
+      }
+      used+=span;
+    }
+    return{...points.at(-1),heading:0};
+  }
+  function draw(g){
+    const riders=state().letters.filter(m=>m.status==='transit'&&m.carrier==='messenger').slice(-12);
+    const M2=window.ConquerMounted2D;
+    if(!g||!M2||!window.ConquerAnimals||window.ConquerLOD?.militaryTier?.()==='dot')return;
+    for(const m of riders){
+      const path=courierRoute(m);if(!path)continue;
+      const duration=Math.max(.001,m.arrivalDay-m.sentDay);
+      const p=courierPosition(path,(day()-m.sentDay)/duration);
+      if(typeof worldPointVisible==='function'&&!worldPointVisible(p,.15,70))continue;
+      const s=w2s(p,.1),a=w2sRaw(p,0),b=w2sRaw({x:p.x+Math.cos(p.heading),y:p.y+Math.sin(p.heading)},0);
+      M2.draw(g,s.x,s.y,Math.max(1.5,State.view.scale*5.75),
+        {kind:'messenger',facing:b.x>=a.x?1:-1,mode:'walk',from:'walk',blend:1,t:day()*7,
+         seed:m.id.length%7,coat:'brown',livery:typeof soldierLivery==='function'?soldierLivery(m.id):null});
+    }
+  }
+  function reset(){courierRoutes.clear();State.messages=empty();const panel=byId('messagesDialog');if(panel)panel.hidden=true;dirty()}
   function refreshUI(){
     const s=state(),unread=s.letters.filter(m=>m.to==='court'&&m.status==='delivered'&&!m.read).length;
     const btn=byId('messagesOpen');
@@ -231,6 +285,6 @@
     });
     refreshUI();
   }
-  window.ConquerMessages={state,send,report,transport,addRoutine,removeRoutine,setRoutineEnabled,setProvinceLoft,read,tick,reset,refreshUI,open,hasLoft};
+  window.ConquerMessages={state,send,report,transport,addRoutine,removeRoutine,setRoutineEnabled,setProvinceLoft,read,tick,draw,reset,refreshUI,open,hasLoft};
   if(!window.__CONQUER_ASSET_LAB__)init();
 })();
