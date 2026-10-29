@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## Centro di controllo dell’insediamento — branch \`panels\` (29/10/2026)
+
+- **Codice presente su branch, non su \`main\`:** nuova scheda \`CENTRO DI CONTROLLO\` nel Profilo (index.html, settlement-heraldry.js) e viste classic-script indipendenti (settlement-panels.js/.css). Nove viste: generale, popolazione/tasse/razioni, economia/mercato/occupazione, proprietà produttive del signore, scorte economiche vs scorte di assedio, capacità militare, cantieri L1, diplomazia e avvisi.
+- **Contratto dati:** \`ConquerGame.read\` con snapshot \`ConquerEconomy\`, \`ConquerSiege\`, \`ConquerCombat\` e \`ConquerDiplomacy\`; i grafici storici alimentari usano \`balanceHistory\` effettiva, mentre la felicità è un valore corrente. Comandi delegati a \`ConquerGame.commands\`: aliquota, razioni, vendita mercantile, passaggi di proprietà e apertura carovane.
+- **Non implementato:** calendario delle festività straordinarie, storico di welfare/prezzi, leva con effetto mobilitazione, capacità reale distinta dalle capienze, relazioni diplomatiche avanzate. Empty state prima della fondazione; nessuna reinterpretazione delle risorse DEV come ledger.
+- **Verifica:** sintassi JS compilata in runtime V8 e fixture interattiva con 9/9 viste e grafico settimanale renderizzati (sessione 29/10); aggiunto \`qa/panels-regression.cjs\`, **non ancora eseguito via Node/CI**; QA visuale browser non eseguita. Revisione e CI richieste prima del merge. Specifica: [management-panels](../management-panels.md).
+
 ## Economia — lavoro L1 e cantieri (branch `feature/economy-labour`, 28/10/2026; tappa 1 di 5 da #55 + `jobmanager`)
 
 - **Codice presente su branch (non ancora `main`):** portata su main la parte economica di #55 fino a `a057f6a` (bilancio settimanale per bene con trend e segnali, dotazione di fondazione una tantum con 4 L1 fondatori presso il pozzo, Builder che paga materiali dalla tesoreria e dal magazzino di `ConquerEconomy`, cantieri manuali a giornate-operaio con al massimo 3 L1 per cantiere, salario L1 pagato dal signore per lavoro svolto, pendolarismo visibile degli operai). Conflitti risolti con argilla, mulini, diplomazia (#96) e minimo DEV dei salvataggi (#93): con `?dev=1` il minimo vale ora sulle scorte del castello (`applyDevFloor`).
