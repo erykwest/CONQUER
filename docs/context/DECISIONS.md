@@ -177,3 +177,11 @@ Aggiungere un ID, classe, data di registrazione, **motivazione**, alternative sc
 
 ### CIRCLE — 2026-10-28
 2026-10-28 — CIRCLE design: white/yellow/green painted zones remain independent. Defensive compartments close only with fortifications or genuinely impassable natural terrain (cliffs/sea); ordinary civilian buildings excluded. Capture requires military control, not tower collapse. Supplies fill deepest compatible depots first; capture removes local stores. Civilian withdrawal proceeds by reachable secure compartment, not direct teleport to keep. Implementation is skeleton only.
+
+
+### CIRCLE — decisioni operative 2026-10-29
+- La chiusura fisica riguarda **solo** fortificazioni finite e barriere naturali realmente invalicabili. Edifici civili e siepi restano semplici ostacoli di navigazione e non chiudono un compartimento.
+- Una porta aperta mantiene la demarcazione *difensiva* ma consente il transito; le porte chiuse non costituiscono collegamento percorribile. I ponti possono interrompere una chiusura naturale.
+- L'appartenenza del Mastio viene valutata dal lato dell'ingresso, non dal centro dell'edificio pieno. Per le built sections senza ingresso identificabile, l'attribuzione alle riserve resta non determinata.
+- Le cerchie annidate e settori laterali hanno identità logiche distinte. Una breccia modifica la topologia ma non è una conquista automatica: senza un controller militare i settori sono `unassessed`; non devono essere scelti come rifugi per default.
+- Il riconoscimento raster attuale è un primo contratto runtime, non sostituisce collisioni, pathfinding e simulazione d'assedio esistenti.
