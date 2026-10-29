@@ -45,7 +45,7 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 - Economic state persisted to localStorage and in the cloud settlement policies document.
 - Economy tab nested in the Settlement sidebar shows stocks, prices, welfare, cohort population, sale shares, reserve targets, and activity transfers.
 - Physically constructed **fields** register as economic activities. Other industry types are supported by the engine contract (`loggingCamp`, `quarry`, `mine`, `workshop`, `vineyard`) but still require Builder/urban placement and rendering implementation.
-- Construction-testing resources (`State.resources`, currently initialized at 10,000) remain separate from the economic ledger intentionally until construction and troop provisioning are migrated.
+- On this branch, post-founding `State.resources` reflects the economic castle inventory and treasury. Troop provisioning remains outside the unified ledger.
 
 ## Deliberately not claimed as implemented
 - No complete region-to-region trading system or dynamically discovered foreign demand yet; export orders are injected via API.
@@ -53,8 +53,85 @@ The **work clock** for field labor skips both Saturday and Sunday; plant growth 
 - Existing visual field cropping phases have a faster cycle: the economic layer only books at most one autumn harvest; season-specific visual field calendar still needs reconciliation.
 - No fully modeled extraction depletion, multi-crop substitutions, housing promotion, alternative commodity quality, collective market storage capacity, or spoilage yet.
 - No physical capacity mapping for castle built-sections; reserve targets currently function as provisional per-good caps.
-- No automatic matching of army/castle construction resource costs to the economic reserve (testing inventory is separate).
+- Manual Builder construction now consumes economic castle reserves on the feature branch; army provisioning and castle upkeep remain separate.
 
+## Builder wages: lord contracts vs spontaneous growth (20 October 2026, PR #55)
+
+**User direction:** the lord hires and pays L1 builders for projects ordered by the player. When a structure emerges from spontaneous village growth, the wage equivalent is a component of its **spawn cost**, not a second invoice to the lord.
+
+- **Manual, lord-financed:** placement still charges materials and the fixed `constructionCost.gold` from `State.economy.castleGold`. As each manual construction V2 progresses, `ConquerEconomy.payConstructionWork(site,workerDays)` transfers actual wages from castle gold to the aggregate `wallet.L1`. The price is `wage.L1 / 20` gold per completed worker-day (at the initial 1 gold/month rate: **0.05 gold/worker-day**). The builder is paid for *actual work performed*, not for merely being shown or reserved, and not again at month-end. Annual wage repricing automatically affects subsequent work, while the original fixed building cost is not changed.
+- **No money, no progress:** if lord's available treasury is insufficient, work is limited proportionally to the affordable fraction and then pauses; it resumes as soon as treasury money is available. The same named construction crew and route remain in effect; no separate fictitious workers. The current pay is recorded as `construction.wagesPaid`, and an aggregated, persistent `State.economy.constructionPayroll.total/bySite` supports audit/UI. The values survive existing local/cloud saves and do not replay on repeated simulation ticks.
+- **Cancellation/refunds:** the old rule refunds fixed `buildCost` at deletion, but **previous wages are never refunded**. This separates recoverable goods/capital commitments from consumed labor, without rolling back L1 household wages.
+- **Spontaneous spawn:** `beginConstruction(auto)` attaches `spawnCost: {laborDays,laborGold,totalGold,payer:'spontaneous'}` to procedural houses/fields/roads. The quote uses the same current L1 wage-rate equivalence. It is **embedded once in the candidate's spawn valuation** and becomes part of the aggregate `spontaneousSpawnLabor` only when the structure actually exists in `State.structures`. Rejected candidates have no budget effect. Procedural building does not call manual payroll, and the lord is **not** debited. This is an *imputed self-organized cost*: the existing autonomous growth system has no owner-level cash budget or actual payment origin yet, so no fake wage transfer is invented.
+- **UI:** economy overview displays lord payroll paid and aggregate spontaneous labor value separately; the selected manual building displays wages paid and estimated remaining wages at the current rate, while spontaneous buildings display the wage component included in spawn.
+
+**Limitations:** the autonomous cost currently models labor only, not a complete materials recipe or a true private finance source; additional resource costs should be added to `spawnCost` when the economic ownership and supply chain exist. Do not confuse this virtual spawn valuation with cash spent by the lord or with actual household income. Browser visual checks and balancing are separate.
+
+Regression: `qa/construction-payroll-regression.cjs` tests partial treasury, pausing/resuming, L1 payments, wages vs fixed material refunds, spontaneous valuation, candidates not committed, re-pricing and save migration.
+
+## Manual construction staffed by idle L1 (20 October 2026, PR #55)
+
+Manual structures (castle towers, gates, walls, palisades, built sections, manually placed roads and industries) now use **construction V2**: a persistent quantity of worker-days, rather than automatically completing after calendar time. The pre-existing `buildDuration` values are interpreted as the effort required from **one L1 builder**. A site may receive up to **three** simultaneously allocated L1s. Workers are distributed breadth-first by stable creation order, one per site before second/third workers, and **cannot be counted again** in an industrial or agricultural workplace.
+
+`ConquerEconomy.availableBuilders()` calculates remaining L1 after industry/active field assignments; finished or seasonally inactive fields no longer reserve L1 forever. If no L1 remains, construction progress freezes. Work is accrued in the same weekday shift window as fields, 0.14–0.52 of each Monday–Friday day; Saturday market and Sunday rest do not add work. Alarm mode suspends the construction pool. The game simulation ticks construction alongside the economy and issues completion/scene maintenance only on a real work-based completion.
+
+Each V2 structure persists `{version,startedDay,workRequired,workDone,lastWorkDay,workers,completedDay}`. Manually built structures saved with V1 deadlines are converted lazily, preserving their already-completed fraction. Already-finished V1 structures remain finished. Existing **procedurally spawned** houses, fields and roads deliberately keep the old timer in this iteration: gating automated founding infrastructure behind L1 work could deadlock settlement population growth. This is a scoped milestone, not a claim that all urban generation is work-driven.
+
+Progress bars and selection UI show worker allocation and remaining effort, with a small builder count above manually constructed sites. The four founding L1s can supply early manual work without requiring a completed house.
+
+**Visual commutes (20/10 tranche):** Each L1 worker has a deterministic display identity, either the working male resident of an L1 house (`houseId:m:0`) or one of the founding L1s near the well. `ConquerEconomy.laborAllocation()` reserves individuals already committed to industry, fields or livestock and provides spare IDs; `constructionCrewAssignments()` is called by BOTH the simulation and figure rendering. There is no parallel decorative pool of constructors. Each builder has a cached pedestrian route from the house door or the well to the actual building's access side, with a morning trip (0.055–0.14 day), presence at the site during paid-work hours (0.14–0.52) and return (0.52–0.63). If no pedestrian route is found, that worker **is not assigned and generates no construction effort**. Industry-assigned founders are hidden from the free crew near the well rather than duplicated. The route cache follows existing navigation invalidation; winter footprints use the actual walking position.
+
+**Further work:** balancing/job policy between urgent repairs, agriculture and industries; integrating construction among automatically generated settlements after bootstrap safeguards; browser end-to-end validation of pathfinding for different building geometries and old saves. Figures are a visual projection of aggregate labor, not separate economic persons. The economy remains aggregate and should not invent personal accounts for each worker.
+
+Regression: `qa/construction-workers-regression.cjs` and `qa/construction-commute-regression.cjs`, alongside the economy, founding, placement and population suites in `.github/workflows/economy-flows-regression.yml`.
+
+## Real construction inventory and founding labor (20 October 2026, feature branch)
+
+The Builder and economic simulation now share a source of truth:
+- **Gold:** `State.economy.castleGold`.
+- **Construction goods:** `State.economy.castle[good]`. A good offered in `lots` belongs to market sellers and is **not** free construction material: it must be acquired first in a later trade/procurement iteration.
+- **`State.resources` is a display/backward-compatible projection** after founding, not a separate source of construction credit. Pre-founding test values of 10,000 are discarded once the charter is initialized.
+- Placement preflight and building payments call `ConquerEconomy.canBuild/spendBuild`, with atomic refusal of unaffordable builds. Undo/deletion calls `refundBuild`; existing **full-cost refund semantics** are preserved for now and count as material recovery, not new production.
+- Weekly economic balances include actual material spending on constructions as immediate `construction` demand/consumption and material refunds as `recovered`. Gold is a monetary expenditure rather than a physical commodity.
+- Initial settlement charter (**one-time, balancing placeholders**): castle food 45, wood 200, stone 180, metal 16, gold +400 on top of the previous economic treasury; lord-owned local market food 55 and wood 20. Founding the well is the start trigger. Without a market food lot, initial residents would starve while food sat locked in castle reserves.
+- Founding creates **four visible adult L1 workers without housing**, recorded as `State.village.foundingWorkers` and included in the economic population and labor available to productive buildings. They are not four L1 houses and do not fabricate L4 owners.
+- Existing founded savegames with no charter marker receive a **one-time migration charter**. Their legacy 10,000-unit construction-test inventory is never interpreted as genuine stock. The charter marker, workers, stocks and balances persist in existing local/cloud saves.
+- Reset/new map returns to the pre-founding provisional environment; deleting the founding well removes that village's economic ledger.
+
+**Not yet implemented:** construction duration staffed by L1 (the old time-based construction progress remains); physical provisioning of troops and castle upkeep; direct purchasing of private market lots for construction; warehouse capacity; realistic salvage fractions; mine stone/metal decision; unified agricultural seasons. This is the Builder/treasury resource connection, not full territorial logistics or a self-building city.
+
+Tests: `qa/economy-builder-integration.cjs`, `qa/economy-balance-regression.cjs`, `qa/founding-regression.cjs`, `qa/builder-placement-regression.cjs`, `qa/refactor-app-population-regression.cjs` in `.github/workflows/economy-flows-regression.yml`.
+
+## Weekly production, consumption and shortage accounting (19 October 2026, feature branch)
+
+The existing economic tick retains its cadence: Mon–Fri production, Saturday household purchases, enterprise input procurement and market settlement, Sunday rest. A **per-good balance** now records gross workday production, intended weekly demand, demand fulfilled by actual transfers, physically consumed units, external exports, remaining market/castle/industry-buffer stocks and unmet demand.
+
+The distinction matters:
+- `unmetSupply`: goods missing from **accessible market lots**.
+- `unmetBudget`: unsatisfied purchasing power while goods remain for sale.
+- `netProduction = produced - demand`: a structural flow mismatch, not a storage delta.
+- `netPhysical = produced - consumed - exported`: actual change in the local physical resource pool, including industry buffers and castle reserves.
+- `reserveGap`: target castle stock still unmet; a strategic target, **not** a fabricated purchase or consumption.
+
+For households, weekly baseline food is 0.55 per resident in every cohort, luxury is 0.08 for L3 and 0.25 for L4; these preexisting coefficients are preserved. **New provisional need:** domestic fuel/general upkeep consumes wood per resident per week: L1 0.06, L2 0.08, L3 0.10, L4 0.12. All are balancing parameters, not historical realism claims. Industry input purchases replenish buffers; input goods count as *consumed* only when production actually uses them. Stone, equipment and other strategic categories do **not** acquire arbitrary demand before construction, garrison and castle upkeep draw from the same ledger.
+
+Each Saturday stores a result under `State.economy.lastBalance.goods[good]`; up to eight weeks of history survive save/load and the last four completed markets supply a rolling production/demand signal. The categories are `supply-shortage`, `purchasing-power`, `production-deficit`, `surplus` and `balanced`. Signals are diagnostic, **not automatic construction orders**. Existing v1 saves lazily get flow counters without resetting money or stock.
+
+The monthly `investmentCapacity` can be positive only when an actual L4 housing cohort is present; the private sector's initial capital balance by itself does not authorize spontaneous enterprises. **Not implemented:** automatic business creation or housing promotion, forecast investment profitability, genuine castle/Builder consumption, military provisioning, and full region-to-region flow.
+
+Tests: `qa/economy-regression.cjs`, `qa/economy-industries-regression.cjs`, `qa/economy-balance-regression.cjs`, run in `.github/workflows/economy-flows-regression.yml`. [CI success, branch](https://github.com/erykwest/CONQUER/actions/runs/39253184968). The workflow is deterministic Node QA, **not** a browser or live simulation certification.
+
+## Single L1 allocator, grazing, logging, rations and happiness (28 October 2026, `feature/economy-labour`)
+
+`laborAllocation(day)` is the only L1 scheduler (the `jobmanager` branch's `ConquerJobManager` was not ported). Order: industries → protected herders → construction crews → logging fill → herders back to flocks → idle.
+
+- **Herders:** L1 houses whose lot is `goat` or `shepherd`. At least one herds while any flock exists; more while accessible food (market lots, plus castle food only under a ration order) covers less than 14 days of household food need. Each herder adds 0.9 private food per working day; alarms stop grazing.
+- **Logging:** while castle + market wood is below min(20, wood reserve) up to two L1 go to logging camps before construction; otherwise camps take the L1 left after open sites (3 per site) are staffed. Loggers walk to the camp like builders.
+- **Rations:** `State.policies.rations` = `market` (default), `half`, `full`. At the Saturday market the castle issues need × 0, ½ or 1, proportionally when stock is short; households buy the rest.
+- **Happiness:** `economy.happiness.L1..L4`, 0–100. Fully fed +0.2/week, hungry −max(0.5, 5×shortfall), half rations −1.2, full rations up to +0.8. `welfare` is the resident-weighted mean.
+- **Open:** whether L1 may farm (decision D-051).
+
+Regression: `node qa/labor-jobs-regression.cjs`, `node qa/economy-rations-regression.cjs`.
 ## Regression
 Run `node qa/economy-regression.cjs` in a local checkout. The test suite covers labor weekends, aggregate cohorts, reserve saturation, sales, exports, ownership, and monthly boundaries.
 

@@ -108,7 +108,7 @@
     <div class="kv"><span>Time</span><b>paused on load</b></div>
     <h3>Policies</h3>
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
-    <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
+    <div class="policy"><label for="rations">Rations</label><select id="rations" aria-label="Lord's castle food order"><option value="market">Market only</option><option value="half">Half castle rations</option><option value="full">Full castle rations</option></select></div>
     <div class="policy"><span>Levy</span><input id="levy" type="range" min="0" max="100" value="10"></div>
     <details id="economyDetails" class="economy-details" open>
       <summary>Economy · Production and Market</summary>
@@ -229,7 +229,7 @@
   <div id="status">Select a build tool</div>
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
-<script src="./src/settlement-core.js"></script>
+<script src="./src/settlement-core.js?v=economy-labour-1"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js?v=bridge-magnet-1"></script>
 <script src="./src/settlement-castle.js?v=refactor-1"></script>
@@ -248,9 +248,9 @@
 <script src="./src/settlement-population.js"></script>
 <script src="./src/settlement-population-fields.js?v=refactor-2"></script>
 <script src="./src/settlement-population-navigation.js?v=portoni-2"></script>
-<script src="./src/settlement-population-routines.js?v=refactor-2"></script>
+<script src="./src/settlement-population-routines.js?v=economy-labour-1"></script>
 <script src="./src/settlement-population-residents.js?v=refactor-2"></script>
-<script src="./src/settlement-population-figures.js?v=refactor-2"></script>
+<script src="./src/settlement-population-figures.js?v=economy-labour-1"></script>
 <script src="./src/settlement-population-garrisons.js?v=refactor-2"></script>
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
 <script src="./src/settlement-architecture.js?v=clip-union-1"></script>
@@ -261,13 +261,13 @@
 <script src="./src/settlement-world3d.js?v=portoni-2"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
-<script src="./src/settlement-economy.js?v=economy-1"></script>
-<script src="./src/settlement-app.js"></script>
-<script src="./src/settlement-app-rooms.js?v=portoni-4"></script>
-<script src="./src/settlement-app-input.js?v=bridge-magnet-1"></script>
-<script src="./src/settlement-app-persistence.js?v=save-safety-2"></script>
-<script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
-<script src="./src/settlement-app-simulation.js?v=refactor-2"></script>
+<script src="./src/settlement-economy.js?v=economy-labour-1"></script>
+<script src="./src/settlement-app.js?v=economy-labour-1"></script>
+<script src="./src/settlement-app-rooms.js?v=economy-labour-1"></script>
+<script src="./src/settlement-app-input.js?v=economy-labour-1"></script>
+<script src="./src/settlement-app-persistence.js?v=economy-labour-1"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1"></script>
+<script src="./src/settlement-app-simulation.js?v=economy-labour-1"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
 <script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>

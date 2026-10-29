@@ -156,6 +156,20 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
 **D-046 · DECISIONE ESPLICITA DELL'UTENTE (28/10/2026):** umani e animali, cavalli compresi, restano **figure 2D** (disegno piano / billboard). Le mesh 3D generate con Blender per figure umane e animali sono scartate: niente `settlement-knights3d.js`, `knight-models.js`, `tools/blender/build_knights.py` né stile «flat» delle mesh 3D. Cavalieri a cavallo e messaggero usano solo `ConquerMounted2D` (`src/settlement-mounted2d.js`, il cavallo 2D approvato di `settlement-animals.js` con l'aggancio `onBody`). **Alternative scartate:** cavaliere 3D disegnato piatto (PR #72) e 3D a facce ombreggiate. **Impatto:** `drawMountedKnight` in `settlement-combat.js` e `ConquerDiplomacy.draw`; `qa/diplomacy-regression.cjs` fallisce se ricompaiono `ConquerKnights3D`/`ConquerKnightModels`. Le carovane della diplomazia restano separate dai convogli dell'economia (#55): l'unificazione è un lavoro successivo, attraverso l'interfaccia `window.ConquerDiplomacy`.
 
+
+## Economia — lavoro L1 unico (28/10/2026)
+
+Le decisioni D-033…D-038 delle branch #55 e `jobmanager` avevano numeri già usati su `main` per altri temi: sono riportate qui con numeri nuovi.
+
+**D-047 · CODICE SU BRANCH `feature/economy-labour` (da #55, 19–20/10):** dopo la fondazione il Builder usa le scorte e la tesoreria di `ConquerEconomy`; `State.resources` è solo la proiezione per la UI. La fondazione dà una dotazione una tantum e 4 L1 fondatori senza casa. Bilancio settimanale per bene: prodotto, domanda, soddisfatto, carenza per offerta o per denaro, trend a 4 settimane. Con `?dev=1` il minimo di 10000 si applica alle scorte del castello.
+
+**D-048 · CODICE SU BRANCH (da #55, 20/10):** i cantieri manuali avanzano solo con L1 reali: giornate-operaio lun–ven, al massimo 3 L1 per cantiere, percorso pedonale raggiungibile, salario pagato dal signore per il lavoro svolto (cantiere fermo se la tesoreria è vuota). Strade, case e campi procedurali conservano i timer.
+
+**D-049 · CODICE SU BRANCH (unifica #55 e `jobmanager`):** un solo allocatore L1, `ConquerEconomy.laborAllocation`. Ordine: industrie; pastori protetti (case `goat`/`shepherd`, almeno uno per gregge, di più se il cibo accessibile copre meno di 14 giorni); cantieri; taglialegna (prima dei cantieri solo con legna bassa); pastori di ritorno al gregge; liberi. Il pascolo produce 0,9 cibo privato per pastore e giorno lavorativo. Non si porta `ConquerJobManager`. **Alternativa scartata:** il modello di cantiere di `jobmanager` (`workRequired` con priorità), che duplicava D-048.
+
+**D-050 · CODICE SU BRANCH (da `jobmanager` D-034, 20/10):** il villaggio compra il cibo al mercato; il castello dà razioni solo per ordine del signore, salvato in `State.policies.rations` (`market` predefinito, `half`, `full`; i vecchi valori numerici valgono `market`). Le razioni escono davvero dal magazzino. Felicità separata L1–L4: sale se la classe mangia, scende con fame e mezze razioni, sale con razioni piene; il benessere è la media pesata. Servi L1/L2 vincolati al feudo, L3/L4 liberi: la migrazione non è implementata.
+
+**D-051 · APERTO:** `jobmanager` (vincolo esplicito del 20/10) vuole **nessun L1 nei campi**, solo L2; #55 e `main` lasciano gli L1 sui campi e gli L2 liberi a completarli. La tappa 1 mantiene il comportamento di #55/`main`. Serve una scelta dell'utente: applicare il vincolo cambia campi, figure e bilancio alimentare iniziale.
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
 ## Conflitti decisionali da risolvere esplicitamente

@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
+
+- **TAPPA 1 SU BRANCH `feature/economy-labour`, NON MERGE:** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
+- **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
+- **DA FARE:** tappa 2 routine settimanali uomini/donne; tappa 3 commercio L3/L4 + `src/economy/*`; tappa 4 convogli unificati con `ConquerDiplomacy`; tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.
