@@ -7,14 +7,16 @@ const root=path.resolve(__dirname,'..');
 const moduleText=fs.readFileSync(path.join(root,'src/settlement-messages.js'),'utf8');
 function fixture(){
   const State={clock:{day:0},seed:17,village:{founded:true,name:'Roccaluce'},
-    structures:[{type:'tower',functions:['pigeonLoft'],destroyed:false}],
+    structures:[{type:'tower',x:100,y:100,functions:['pigeonLoft'],destroyed:false}],
     resources:{gold:120,food:42,wood:11,stone:22,metal:2,population:15},
     economy:{castleGold:90,castle:{food:37,wood:10,stone:20,metal:1}},messages:null};
   let saves=0;
-  const window={__CONQUER_ASSET_LAB__:true,ConquerSiege:{}};
+  const window={__CONQUER_ASSET_LAB__:true,ConquerSiege:{mastio:()=>State.structures[0]}};
   const context={window,State,document:{getElementById:()=>null},console,
     currentWeather:()=>({kind:'clear'}),calendarDateFromDay:d=>({name:'Giu',day:Math.floor(d)+1,year:1}),
-    underConstruction:()=>false,markDirty(){},scheduleLocalSave(){saves++}};
+    underConstruction:()=>false,markDirty(){},scheduleLocalSave(){saves++},
+    WORLD:200,ensureBorderEntrySelection:()=>[{edge:'north',x:100,y:0}],
+    w2s:p=>p,w2sRaw:p=>p,worldPointVisible:()=>true,soldierLivery:()=>null};
   vm.runInNewContext(moduleText,context);
   return{State,window,api:window.ConquerMessages,saves:()=>saves};
 }
@@ -71,6 +73,18 @@ function fixture(){
   assert.match(api.send({from:'court',to:'bad',title:'X',body:'Y'}).error,/non valida/);
   assert.equal(api.hasLoft('east'),false);
 }
+{
+  const {State,window,api}=fixture();
+  const calls=[];
+  window.ConquerMounted2D={draw:(g,x,y,size,opts)=>calls.push({x,y,opts})};
+  window.ConquerAnimals={};window.ConquerLOD={militaryTier:()=>'full'};
+  const m=api.send({from:'north',to:'court',title:'Corriere',body:'Sul cammino',carrier:'messenger'});
+  State.clock.day=(m.sentDay+m.arrivalDay)/2;
+  api.draw({});
+  assert.equal(calls.length,1,'messenger must appear on the local road leg');
+  assert.equal(calls[0].opts.kind,'messenger');
+  assert.ok(Number.isFinite(calls[0].x)&&Number.isFinite(calls[0].y));
+}
 const core=fs.readFileSync(path.join(root,'src/settlement-core.js'),'utf8');
 const siege=fs.readFileSync(path.join(root,'src/settlement-siege.js'),'utf8');
 const runtime=fs.readFileSync(path.join(root,'src/settlement-app-simulation.js'),'utf8');
@@ -83,6 +97,7 @@ assert.match(persist,/messages:State\.messages\|\|null/);
 assert.match(persist,/State\.messages=x\.messages\|\|null/);
 assert.match(persist,/State\.messages=cloudPolicies\.messages\|\|null/);
 assert.match(page,/settlement-messages\.js/);
+assert.match(fs.readFileSync(path.join(root,'src/settlement-combat.js'),'utf8'),/ConquerMessages\?\.draw\(g\)/);
 assert.match(page,/id="messagesOpen"/);
 assert.match(fs.readFileSync(path.join(root,'src/settlement-app-calendar-ui.js'),'utf8'),/ConquerMessages\?\.reset/);
 console.log('Feudal postal network regression: PASS');
