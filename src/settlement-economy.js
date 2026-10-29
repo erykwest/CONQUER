@@ -238,7 +238,8 @@
     // Preserve the actual productive site without fabricating output for a silent building.
     if(e.activities?.[id]){
       const site=e.weekProducedSites[id]||(e.weekProducedSites[id]={});
-      site[good]=round((site[good]||0)+quantity);
+      const ownerGoods=site[owner]||(site[owner]={});
+      ownerGoods[good]=round((ownerGoods[good]||0)+quantity);
     }
     if(owner==='lord'){
       const keep=quantity*(100-(e.saleShare[good]||0))/100;
@@ -600,10 +601,12 @@
     // Historical panels capture at the end of each real Saturday market, after
     // prices, trade and weighted happiness are updated. No sampling per render frame.
     const worker=jobSummary(day);
-    const siteOutput=Object.entries(e.weekProducedSites||{}).map(([id,goods])=>{
+    const siteOutput=Object.entries(e.weekProducedSites||{}).flatMap(([id,owners])=>{
       const a=e.activities[id];
-      return a?{id,type:a.type,owner:a.owner,goods:{...goods}}:null;
-    }).filter(Boolean);
+      return a?Object.entries(owners).map(([owner,goods])=>({
+        id,type:a.type,owner,goods:{...goods}
+      })):[];
+    });
     e.panelHistory.push({
       day,population:{...pop},welfare:round(e.welfare),happiness:{...e.happiness},
       prices:{...e.prices},jobs:{
