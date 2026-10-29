@@ -15,8 +15,8 @@
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
-    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
-    {global:'ConquerWoodFortModels',collection:'models',category:'Fortificazioni',family:'Legno 3D (Blender)'}
+    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'}
+    // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
     ['villager','Popolano','Popolazione','Civili'],
