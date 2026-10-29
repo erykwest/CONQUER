@@ -6,7 +6,8 @@
 export const CIRCLE_STATES = Object.freeze({
   UNASSESSED: 'unassessed', SECURE: 'secure', ALERT: 'alert',
   THREATENED: 'threatened', INFILTRATED: 'infiltrated',
-  INVADED: 'invaded', CONTESTED: 'contested', CAPTURED: 'captured'
+  INVADED: 'invaded', COMPROMISED: 'compromised',
+  CONTESTED: 'contested', CAPTURED: 'captured'
 });
 export const CIRCLE_BARRIER_KINDS = Object.freeze({
   FORTIFICATION: 'fortification', NATURAL: 'natural'
