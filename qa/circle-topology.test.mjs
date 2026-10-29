@@ -45,7 +45,7 @@ test('open gate keeps defensive sectors separate but permits fallback',()=>{
   const out=gateScenario(true);
   assert.equal(out.compartments.length,2);
   assert.equal(out.portals.length,1);
-  assert.ok(findNextCircleRefuge(out.compartments[0].id,out));
+  assert.ok(findNextCircleRefuge(out.compartments[0].id,out,()=> 'secure'));
 });
 test('closed gate remains defensive and does not permit civilian crossing',()=>{
   const out=gateScenario(false);
@@ -68,4 +68,16 @@ test('mastio assignment uses its entrance point rather than solid centre',()=>{
     mastioPoint:{x:12,y:12}};
   assert.equal(compute(source).compartments.filter(c=>c.mastio).length,1);
   assert.equal(compute({...source,mastioPoint:{x:2,y:2}}).compartments.filter(c=>c.mastio).length,0);
+});
+
+test('an unassessed sector cannot be used as a refuge without combat control',()=>{
+  const out=gateScenario(true);
+  assert.equal(findNextCircleRefuge(out.compartments[0].id,out),null);
+});
+test('flat cuts cannot erase invariant sea barriers',()=>{
+  const src={natural:[rect(0,0,4.5,24,'cliff')],
+    invariantNatural:[rect(0,0,4.5,24,'sea')],
+    naturalCuts:[rect(0,0,4.5,24,'flat')],
+    fortifications:[rect(4.25,4,20,4.5),rect(4.25,19.5,20,20),rect(19.5,4,20,20)]};
+  assert.equal(compute(src).compartments.length,1);
 });
