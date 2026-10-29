@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## Comunicazioni feudali — sistema messages (29/10/2026)
+
+**D-MSG-01 · DESIGN E CODICE SU BRANCH messages:** il comando a distanza non è telepatico. Ogni lettera conserva il momento di redazione, viaggia in giorni simulati e raggiunge il destinatario solo alla consegna; rapporti programmati non ricalcolano il contenuto durante il trasporto.
+
+**D-MSG-02 · DESIGN E CODICE SU BRANCH messages:** piccionaia come funzione delle strutture esistenti (torre/Built Section), non nuova filiera produttiva. Due estremità abilitate. Province esterne configurate astrattamente finché la World Map non espone edifici e inventari.
+
+**D-MSG-03 · APERTO:** vie reali, rischio intercettazione, ordini applicati da IA feudali e sincronizzazione con messaggero 2D/convogli di ConquerDiplomacy. ETA astratto non equivale a traiettoria realmente percorsa.
+
+
 ## Hardening strade e WebGL (23/10/2026)
 
 **D-FIX-01 · CODICE SU BRANCH `fix/main-founding-dev-webgl-20261023`:** ogni programma shader WebGL2 possiede il proprio VAO: abilitazioni e associazioni degli attributi non passano a programmi diversi quando viene eliminato un buffer di mesh. Rimangono il polling differito di D-038 e il fallback Canvas per errori veri; nessuna nuova query GPU sincrona nel disegno. La riparazione delle arterie prepara segmenti e ponti cedendo il controllo anche durante le scansioni dei fiumi; sostituisce la route e apre i corridoi forestali solo dopo una verifica finale della revisione di navigazione. Annullare la preparazione non pubblica topologia parziale e conserva quella precedente. Il percorso sincrono usa lo stesso generatore di ponti. Motivazioni e prove nel [report](../main-fixes-diagnosis-2026-10-23.md); nessuna modifica al contratto dei default DEV automatici o alla roadmap.
