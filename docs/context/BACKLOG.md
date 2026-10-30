@@ -5,6 +5,26 @@
 - **IMPLEMENTATO SU BRANCH `feature/half-d-towers`, NON MERGE:** semitorre aperta alla gola (T1 piccola, T2 media) e torre a D (T2 media, T3 grande) in pietra; aggancio al muro con retro sul muro e fronte sul lato del puntatore; D sui fianchi della porta con il retro allineato.
 - **APERTO:** cutaway delle torri a D (oggi disattivato) e arredi sui solai della semitorre; collisioni e navigazione usano il rettangolo che le contiene (gli angoli davanti alla D sono pieni); semitorre e D a metà di un muro esistente (oggi solo alla fine di un muro, come le altre torri); costo dedicato (oggi lo stesso della torre quadrata dello stesso tier).
 
+## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
+
+- `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.
+- Correzioni: la sezione scelta resta attiva alla riapertura; il selettore produzione elenca solo i siti del signore (niente linea a 0 per i privati); le barre delle riserve scalano sul massimo tra scorta e target.
+- Aggiornamento live tramite `ConquerGame.subscribe` (throttle 500 ms) più heartbeat di 4 s al posto del ridisegno ogni 1,8 s; scroll orizzontale delle tabelle conservato.
+- Restyling `settlement-panels.css`: navigazione su una riga scorrevole con badge avvisi, intestazione di sezione, KPI con accento di stato (ok/attenzione/critico), card larghe per grafici e tabelle, intestazioni tabella fisse. Cache `?v=panels-3`.
+- QA: `qa/panels-regression.cjs` (+ sezione persistente e selettore solo signore) e `qa/economy-panel-history-regression.cjs` PASS in locale; verifica visiva nel browser con dati dimostrativi, nessun errore in console. CI non ancora eseguita su questo commit.
+## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+
+- Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
+- Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
+- Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
+- **QA PASS su `38ea7ab`:** 8 check GitHub Actions verdi, regressione storici 26 settimane e browser con 9 catture demo. [Workflow screenshot](https://github.com/erykwest/CONQUER/actions/runs/40800506799). Revisione visiva utente e merge ancora aperti.
+
+
+## Pannelli gestionali dell’insediamento — branch `panels` (29/10/2026)
+
+- **IN BRANCH, NON MERGE:** nove viste nel Profilo con grafici reali del ledger, istogrammi sociali e di scorte, controlli esistenti (tax/rations/quote vendita/trasferimenti) e indicatori militari/cantieri/diplomazia. [Specifiche](../management-panels.md).
+- **FATTO SU BRANCH / QA PASS:** `qa/panels-regression.cjs`, `qa/economy-panel-history-regression.cjs`, suite economica e QA Chromium con 9 screenshot; prova della persistenza storica nel ledger. Revisione visiva utente ancora da acquisire.
+- **TBD:** festività straordinarie con effetti veri su felicità e produzione, statistiche occupazione L2–L4, bilanci individuali dei beni del signore, organico militare reale, relazioni diplomatiche e avvisi avanzati. Il pannello non deve introdurre stato duplicato.
 ## Castello — cutaway delle torri T1 con scala a chiocciola (29/10/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/cutaway-spiral-stairs`, NON MERGE:** torri T1 in pietra e sottotorri T1 apribili in sezione, con scala a chiocciola al posto delle stanze.
