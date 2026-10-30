@@ -119,3 +119,24 @@ for(const level of [1,2]){
   assert.ok(props.every(p=>inside(p,LOT)),'tables stay in the lot');
 }
 console.log('PASS inn tables in the lot');
+
+// Cutaway of the selected inn: nothing horizontal above the sill covers the ground-floor
+// floor, from any camera quarter-turn (upper-floor slabs and jetty soffits face down).
+Object.assign(ctx,{isPlanView:()=>false,
+  rotateViewPoint:(p,t)=>{const q=((t%4)+4)%4;return q===1?{x:-p.y,y:p.x}:q===2?{x:-p.x,y:-p.y}:q===3?{x:p.y,y:-p.x}:{x:p.x,y:p.y}}});
+for(const level of [1,2,3])for(let turn=0;turn<4;turn++){
+  State.structures=[{id:'tv',type:'tavern',x:100,y:52,angle:0,civicLevel:level}];State.selectedId='tv';
+  ctx.rotateViewPoint=((rot)=>p=>rot(p,turn))(ctx.rotateViewPoint.base||(ctx.rotateViewPoint.base=ctx.rotateViewPoint));
+  assert.equal(C3.cutawayId(),'tv','a selected inn is in cutaway');
+  const faces=[];C3.addCutawayToBuilder({face:(vs)=>faces.push(vs)},0);
+  const flat=vs=>{const [a,b,c]=vs,n=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x),
+    l=Math.hypot((b.y-a.y)*(c.z-a.z)-(b.z-a.z)*(c.y-a.y),(b.z-a.z)*(c.x-a.x)-(b.x-a.x)*(c.z-a.z),n)||1;return Math.abs(n)/l>.5};
+  const floor=faces.filter(vs=>flat(vs)&&vs.every(v=>Math.abs(v.z-.03)<1e-6)).map(vs=>({x:(vs[0].x+vs[1].x+vs[2].x)/3,y:(vs[0].y+vs[1].y+vs[2].y)/3}));
+  assert.ok(floor.length>0,'tavern'+level+' has a floor');
+  const covers=(vs,p)=>{const s=(a,b)=>(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x),d=[s(vs[0],vs[1]),s(vs[1],vs[2]),s(vs[2],vs[0])];
+    return d.every(v=>v>=0)||d.every(v=>v<=0)};
+  const lids=faces.filter(vs=>flat(vs)&&Math.min(...vs.map(v=>v.z))>.2&&floor.some(p=>covers(vs,p)));
+  assert.equal(lids.length,0,'tavern'+level+' turn '+turn+': no slab above the ground floor');
+}
+State.selectedId=null;
+console.log('PASS inn cutaway leaves the ground floor open at every quarter-turn');

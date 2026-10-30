@@ -65,6 +65,7 @@
       size: t.size ?? null,
       woodStyle: t.woodStyle || null,
       linear: t.linear || null,
+      span: t.span || null,
       crossing: t.crossing || null,
       width: t.width ?? null,
       civic: t.placementSpec?.type && t.kind === 'civic' ? t.placementSpec.type : null,
@@ -197,7 +198,7 @@
     knights() { return window.ConquerCombat?.knightRecruitment?.() || null; },
     caravans() {
       const d = window.ConquerDiplomacy;
-      return d ? d.state().caravans.filter(c => c.status !== 'completed').length : null;
+      return d ? (d.caravans?.() || []).filter(c => c.status !== 'completed').length : null;
     },
     village() {
       return {

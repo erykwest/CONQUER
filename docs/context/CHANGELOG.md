@@ -19,6 +19,27 @@
 - Creati nove pannelli sotto Profilo (generale, popolazione, economia, proprietà, scorte, militare, cantieri, diplomazia, avvisi), CSS responsive, grafici alimentari da storico settimanale e controlli già supportati dal motore.
 - Separati esplicitamente magazzino economico e scorte assedio; organico presente e capacità edifici; valori effettivi e placeholder futuri. Aggiunto test fixture `qa/panels-regression.cjs` e design [management-panels](../management-panels.md).
 - Stato: codice sulla branch, non su main. Parsing JS, regressioni Node/CI e acquisizione Chromium PASS; revisione visiva dell'utente ancora attesa. ROADMAP invariata: pannelli di osservazione, non nuove regole economiche.
+## 2026-10-29 — Cutaway delle torri piccole con scala a chiocciola (branch `feature/cutaway-spiral-stairs`)
+
+- Le torri T1 in pietra, comprese le sottotorri, si aprono in sezione e mostrano una scala a chiocciola in pietra dalla porta alla cima: tonda nelle torri tonde, quadrata nelle torri quadrate. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
+
+## 2026-10-28 — Sala larga (branch `feature/wide-built-hall`)
+
+- Nuova variante della sezione costruita: larga 2U, H2 di default, solo piano terra a doppia altezza, per sale comuni, cappelle e sale del trono. Finestrone a lancetta modellato in Blender, 5 contrafforti a due stadi tra le lancette, 2 camini, cutaway a piano unico (arredi della libreria cutaway di main). Stato e prove in [STATUS](STATUS.md).
+- Fix: i contrafforti delle torri in pietra usano lo stesso profilo a gradoni e non attraversano più le facciate dal retro.
+- ROADMAP invariata. DECISIONS invariate: la variante segue il contratto esistente «varianti, non tipi duplicati» (`span` sul tipo `built`).
+
+## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (branch `feature/economy-vehicles`)
+
+- I convogli percorrono davvero la rete stradale dal mastio (o dal mercato) al confine con carri, carretti e carrozze disegnati in 2D e cavalli 2D. Scartato il 3D del branch d'origine. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-055 in DECISIONS.
+
+## 2026-10-29 — Parapetto delle merlature (branch `feature/battlement-parapet`)
+
+- Torri, porte e mura in pietra hanno un parapetto continuo tra i merli invece di soli blocchi isolati; le torri tonde hanno più merli (8/12/18). Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate: dettaglio visivo, nessun contratto toccato.
+
+## 2026-10-29 — Economia, tappa 4: un solo sistema di convogli (branch `feature/economy-convoys`)
+
+- Carovane della diplomazia, convogli del mastio, manifesti mercantili e carrozze nobiliari sono un solo sistema (`ConquerConvoys`) che preleva davvero dal castello; corretto il tributo gratuito introdotto con #98. Quattro cartelli di prova sulle arterie e convogli visibili sulla strada maestra. Stato e prove in [STATUS](STATUS.md). D-054 in DECISIONS; ROADMAP invariata.
 
 ## 2026-10-29 — Economia, tappa 3: commercio e botteghe L3 autonome (branch `feature/economy-commerce`)
 
@@ -31,6 +52,11 @@
 - Bandiere araldiche su torre coperta e vedetta, due drappi ai lati della porta in legno.
 - Cutaway della torre a palizzata in legno sul cutaway WebGL di #65: lati verso la camera aperti, pavimento, scala e arredi della funzione. Il fallback WebGL con soldati di ronda, riprodotto qui, è risolto in main da #91 (VAO per programma): il fix locale è stato tolto al merge.
 - Asset Lab: legno e palizzate ora con «Modello 3D»; baseline estesa con i 12 render nuovi. ROADMAP e DECISIONS invariate: promozione visiva sullo schema già deciso per i modelli Blender (civili, industrie, assedio), nessun nuovo contratto.
+
+## 2026-10-28 — Cutaway civico: verifica nel Lab e fix delle locande (branch `fix/civic-cutaway-lab`)
+
+- Foglio provini del cutaway di chiesa e locanda (L1–L3, 4 rotazioni) sul palco del Lab: nelle locande la faccia inferiore del primo piano copriva il pianterreno; tolta, con nuovo controllo in `civic3d-regression`. Audit del Lab su `main` senza errori. Stato in [STATUS](STATUS.md#cutaway-civico-e-contorno-di-selezione-su-main-con-90-54a7508-fix-fixcivic-cutaway-lab-28102026).
+- ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto toccato.
 
 ## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
 

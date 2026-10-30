@@ -313,8 +313,9 @@
         const o=t*9,tri=[[v[o],v[o+1],v[o+2]],[v[o+3],v[o+4],v[o+5]],[v[o+6],v[o+7],v[o+8]]];
         const ux=tri[1][0]-tri[0][0],uy=tri[1][1]-tri[0][1],uz=tri[1][2]-tri[0][2],wx=tri[2][0]-tri[0][0],wy=tri[2][1]-tri[0][1],wz=tri[2][2]-tri[0][2];
         const nx=uy*wz-uz*wy,ny=uz*wx-ux*wz,nz=ux*wy-uy*wx,nl=Math.hypot(nx,ny,nz)||1;
-        // Eaves caps of the walls would close the room from above.
-        if(!tower&&nz/nl>.5&&Math.min(tri[0][2],tri[1][2],tri[2][2])>CUTAWAY_SILL)continue;
+        // Eaves caps, upper-floor slabs and jetty soffits would close the room from above
+        // (no face culling: a soffit seen from above still paints).
+        if(!tower&&Math.abs(nz/nl)>.5&&Math.min(tri[0][2],tri[1][2],tri[2][2])>CUTAWAY_SILL)continue;
         const hex=pal[part.c[t]];
         if(!cam){pushPoly(back,tri,hex);continue}
         const f=p=>p[0]*cam.x+p[1]*cam.y;

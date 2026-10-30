@@ -20,6 +20,20 @@
 - **IN BRANCH, NON MERGE:** nove viste nel Profilo con grafici reali del ledger, istogrammi sociali e di scorte, controlli esistenti (tax/rations/quote vendita/trasferimenti) e indicatori militari/cantieri/diplomazia. [Specifiche](../management-panels.md).
 - **FATTO SU BRANCH / QA PASS:** `qa/panels-regression.cjs`, `qa/economy-panel-history-regression.cjs`, suite economica e QA Chromium con 9 screenshot; prova della persistenza storica nel ledger. Revisione visiva utente ancora da acquisire.
 - **TBD:** festività straordinarie con effetti veri su felicità e produzione, statistiche occupazione L2–L4, bilanci individuali dei beni del signore, organico militare reale, relazioni diplomatiche e avvisi avanzati. Il pannello non deve introdurre stato duplicato.
+## Castello — cutaway delle torri T1 con scala a chiocciola (29/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/cutaway-spiral-stairs`, NON MERGE:** torri T1 in pietra e sottotorri T1 apribili in sezione, con scala a chiocciola al posto delle stanze.
+- **APERTO:** torri T1 in pietra nella galleria del Lab (oggi l'audit non le cattura); mastio T1 (Sala comune) in sezione; posti degli occupanti sulla scala.
+
+## Castello — sala larga a doppia altezza (branch `feature/wide-built-hall`, 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione costruita larga 2U, H2 senza solaio, una stanza LARGE; finestroni Blender a tutta altezza, 5 contrafforti sul lato finestroni, 2 camini, cutaway a piano unico con gli arredi della libreria di main. Stesso profilo a gradoni anche per le torri con base «Contrafforti» (fix del disegno attraverso le facciate).
+- **ANCORA APERTO:** effetti di gioco specifici delle sale (per ora valgono le regole generiche delle stanze), figure all'interno nel cutaway (cerimonie, banchetti, udienze), contrafforti nell'impronta di collisione/piazzamento.
+
+## Castello — parapetto delle merlature (branch `feature/battlement-parapet`, 29/10/2026)
+
+- **IN CORSO su branch, NON MERGE:** parapetto continuo tra i merli di torri, porte e mura in pietra; più merli sulle torri tonde. Dettagli in [STATUS](STATUS.md).
+- **Aperto:** la firma 12×12 dell'audit del Lab non vede dettagli di questa scala (0 render cambiati): valutare una griglia più fine o un ritaglio sulla corona.
 
 ## Render 3D — fortificazioni in legno da Blender (28/10/2026)
 
@@ -32,9 +46,12 @@
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
 - **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
 - **TAPPA 2 SU MAIN (#99, `cdb2af9`):** routine settimanali di uomini e donne.
-- **TAPPA 3 SU BRANCH `feature/economy-commerce`, NON MERGE:** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
+- **TAPPA 3 SU MAIN (#101, `e1fdb20`):** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
 - **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda.
-- **DA FARE:** tappa 4 convogli unificati con `ConquerDiplomacy`; tappa 5 veicoli con cavalli 2D. Leva (`levy`) resta senza effetti.
+- **TAPPA 4 SU BRANCH `feature/economy-convoys`, NON MERGE:** un solo sistema di convogli (carovane della diplomazia comprese), cartelli di prova, convogli visibili sulla strada maestra.
+- **DA FARE (CI):** aggiungere a `.github/workflows/economy-flows-regression.yml` le nuove regressioni economiche (rations, labor-jobs, routines, commerce, urban-workshops, convoys, road-sign, diplomacy, vehicles): PR separata, il token di `gh` non ha lo scope `workflow`.
+- **TAPPA 5 SU BRANCH `feature/economy-vehicles`, NON MERGE:** veicoli instradati sulle strade, solo 2D.
+- **APERTO:** traffico automatico di carri e carrozze senza convoglio (oggi solo convogli reali, prove e carrozza dimostrativa); decidere se rimuovere da main i moduli 3D di animali e carri non usati dal gioco. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.
@@ -56,7 +73,8 @@
 ## Combat / feudi — capitano, cavalieri e diplomazia (branch `feature/knights-diplomacy-2d`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, IN MERGE (sostituisce #72):** capitano con identità propria e raggio di comando 16U; cavalieri a cavallo reclutabili fino a min(stanze nobili, posti in scuderia) — C-04 in parte; messaggero a cavallo periodico verso il mastio, richiesta di 100 monete, accetta/rifiuta, pianificatore di carovane con carico, scorta, partenza e provviste — prototipo di F-05; tutte le figure a cavallo in 2D (D-046).
-- **ANCORA APERTO:** unificare le carovane della diplomazia con i convogli dell'economia (#55) passando da `window.ConquerDiplomacy`; carovane visibili in mappa e intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
+- **FATTO:** carovane unificate con i convogli dell'economia (tappa 4, #105, 29/10/2026); visibili sulle strade con la tappa 5 (#108).
+- **ANCORA APERTO:** carovane intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
 
 ## Castello — cutaway arredato di torri, porte e sezioni (PR #65, riallineata 28/10/2026)
 
@@ -68,9 +86,11 @@
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** mixer a 4 livelli, ambiente da stagione/meteo, suoni locali degli edifici, colonna sonora stagionale; controlli solo DEV, audio spento di default.
 - **ANCORA APERTO:** controlli audio per il giocatore nella UI (UI v2), campioni per autunno e notte, effetti di battaglia, assedio e cantiere, eventuale caricamento differito dei brani per ridurre il peso della pagina.
 
-## Civili — cutaway di chiesa e locanda (branch `feature/civic-cutaway`, 23/10/2026)
+## Civili — cutaway di chiesa e locanda (su `main` con #90, 23–28/10/2026)
 
-- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
+- **SU MAIN:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
+- **FIX SU BRANCH `fix/civic-cutaway-lab`, NON MERGE:** lastra del primo piano che copriva il pianterreno delle locande.
+- **APERTO:** il Lab non ha uno stato «cutaway» per gli edifici civici (lo stage copre solo torri, mura, porte): la verifica è stata fatta a mano con lo stesso metodo.
 - **ANCORA APERTO:** cutaway per gli altri edifici civici (mercato, mulini, botteghe) e persone all'interno durante le attività.
 
 ## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
