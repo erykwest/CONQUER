@@ -263,7 +263,8 @@
   // One battlement piece: corbel or merlon body, plus the crenel-style crown prisms (merlonStyleParts).
   function prismPiece(m,p){
     m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon());
-    for(const q of p.styleParts||[])m.prism(q.pts,q.z0,q.z1,q.tone==='slit'?PAL.slit():PAL.merlon());
+    for(const q of p.styleParts||[])if(q.faces)for(const f of q.faces)m.face(f.pts,f.tone==='end'?'#635951':snowTop(MERLON_FACE_TONES[f.tone]));
+    else m.prism(q.pts,q.z0,q.z1,q.tone==='slit'?PAL.slit():PAL.merlon());
   }
   function addPieces(m,which){
     const plan=typeof isPlanView==='function'&&isPlanView();

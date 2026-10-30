@@ -477,11 +477,21 @@ function merlonStyleParts(center,angle,w,d,z,h,style=crenelStyle()){
   const ux=Math.cos(angle),uy=Math.sin(angle),nx=-uy,ny=ux,top=z+h,parts=[];
   const at=(along,across)=>({x:center.x+ux*along+nx*across,y:center.y+uy*along+ny*across});
   const slab=(c,sw,sd,z0,z1,tone='stone')=>parts.push({pts:rectWorldPoints(c.x,c.y,sw,sd,angle),z0,z1,tone});
+  const view=p=>{const q=rotateViewPoint(p);return q.x+q.y};
   if(style==='gabled'){
-    [.8,.54,.28].forEach((f,i)=>slab(center,w*f,d,top+i*.035,top+(i+1)*.035));
+    // Two slopes (inner and outer face) meeting on a ridge along the wall, closed by triangular
+    // gable ends. Faces are sorted far to near so the 2.5D painter can fill them in order.
+    const R=top+.1,c=(a,b)=>({p:at(a*w/2,b*d/2),z:top}),rA={p:at(-w/2,0),z:R},rB={p:at(w/2,0),z:R};
+    const faces=[
+      {pts:[c(-1,-1),c(1,-1),rB,rA],tone:'slopeA',ref:at(0,-d/4)},
+      {pts:[c(-1,1),c(1,1),rB,rA],tone:'slopeB',ref:at(0,d/4)},
+      {pts:[c(-1,-1),c(-1,1),rA],tone:'end',ref:at(-w/2,0)},
+      {pts:[c(1,-1),c(1,1),rB],tone:'end',ref:at(w/2,0)}
+    ].sort((a,b)=>view(a.ref)-view(b.ref));
+    faces.filter(f=>f.tone!=='end').forEach((f,i)=>f.tone=i?'slopeB':'slopeA');
+    parts.push({faces});
     return parts;
   }
-  const view=p=>{const q=rotateViewPoint(p);return q.x+q.y};
   const face=view(at(0,d/2))>=view(at(0,-d/2))?1:-1;
   slab(at(0,face*(d/2-.004)),Math.max(.026,w*.13),.02,z+.05,top-.045,'slit');
   const horns=[-1,1].sort((a,b)=>view(at(a*w/2,0))-view(at(b*w/2,0)));
@@ -621,7 +631,20 @@ function drawBattlementPiece(piece,frame){
 const MERLON_TONES={stone:{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'},slit:{top:'#2b2622',sideA:'#1d1a17',sideB:'#24201c',stroke:'#2b2622'}};
 function drawMerlonBody(piece){
   extrudePolygonAt(piece.pts,piece.z0,piece.z1,MERLON_TONES.stone);
-  for(const p of piece.styleParts||[])extrudePolygonAt(p.pts,p.z0,p.z1,MERLON_TONES[p.tone]);
+  for(const p of piece.styleParts||[]){
+    if(p.faces){drawMerlonFaces(p.faces);continue}
+    extrudePolygonAt(p.pts,p.z0,p.z1,MERLON_TONES[p.tone]);
+  }
+}
+// Gable faces: the slope turned to the viewer takes the lit top tone, the other the shaded side.
+const MERLON_FACE_TONES={slopeA:'#8a7e72',slopeB:'#9a8e82',end:'#635951'};
+function drawMerlonFaces(faces){
+  for(const f of faces){
+    const pts=f.pts.map(q=>w2s(q.p,q.z));
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const q of pts.slice(1))ctx.lineTo(q.x,q.y);ctx.closePath();
+    ctx.fillStyle=visualPaletteColor(f.tone==='end'?MERLON_FACE_TONES.end:winterSnowColor(MERLON_FACE_TONES[f.tone]));ctx.fill();
+    ctx.strokeStyle=visualPaletteColor('#c8b9a9');ctx.lineWidth=.6;ctx.stroke();
+  }
 }
 function renderBattlementPieces(pieces,frame){
   pieces.sort((a,b)=>a.depth-b.depth);
