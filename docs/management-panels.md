@@ -1,5 +1,8 @@
 # CONQUER — Settlement control center (branch panels)
 
+> **Stato aggiornato 30/10/2026:** il Centro di controllo (9 viste, storico max 26 mercati) è **MERGED su `main` tramite [PR #103](https://github.com/erykwest/CONQUER/pull/103)**. Le sezioni che descrivono la branch `panels`, le QA e le anteprime del 29/10 sono **cronaca tecnica del lavoro precedente al merge**, non un indicatore di funzionalità ancora da integrare. Rimangono aperte soltanto le estensioni indicate (festività simulate, occupazione L2–L4, leva e diplomazia mature). [Audit live 30/10](context/AUDIT-2026-10-30.md).
+
+
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
 - `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.

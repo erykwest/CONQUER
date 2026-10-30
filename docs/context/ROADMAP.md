@@ -1,9 +1,24 @@
 # Livello 1 — Roadmap sistemica
 
+## Priorità correnti — audit live 30/10/2026
+
+> `main` **`cf569992`**, [audit completo](AUDIT-2026-10-30.md). L'ordine M0–M5 è una cornice per **residui**, non per ricreare interi sottosistemi già mergiati. I paragrafi precedenti al 30/10 sotto restano snapshot **storici**.
+
+| Priorità | Residuo effettivo | Accettazione necessaria |
+|---|---|---|
+| **P0 CI** | [#109](https://github.com/erykwest/CONQUER/pull/109): verifiche economia delle tappe 2–5 | Riallineare workflow/contesto a main, conflitti risolti, CI verde (permessi merge workflow da trattare separatamente) |
+| **P1 economia** | Miniera `stone→metal`, officina Built Section→equipment, input botteghe L3, raccolti e magazzino assedio | Un solo addebito/ricavo reale, stock separati rappresentati coerentemente, save/load; **L1 cantieri già chiuso in #98** |
+| **P1 village** | [#111](https://github.com/erykwest/CONQUER/pull/111): pozzi secondari/centro designabile | QA World 3D e multi-centro; mantenere primo pozzo come fondatore unico |
+| **P2 campi** | [#110](https://github.com/erykwest/CONQUER/pull/110): livree e accampamento fortificabile | Verificare piazzamento del Builder, collisioni dopo resize e bivacco in partita reale; **non** confonderlo con assedio strategico |
+| **P2 assedio** | Blocco accessi→fame→resa e persistenza | Riusa #61 danni, #104 legno, portoni, incendi e presidi. **`No automatic surrender in P0` ancora nel codice** |
+
+**Nuovo baseline:** 15 core Builder e 8 parziali su 23 ID ([owner](../feature-backlog.md)); [#98](https://github.com/erykwest/CONQUER/pull/98) L1 veri, [#99](https://github.com/erykwest/CONQUER/pull/99) routine, [#101](https://github.com/erykwest/CONQUER/pull/101) commercio e botteghe L3, [#105](https://github.com/erykwest/CONQUER/pull/105) unico sistema convogli, [#108](https://github.com/erykwest/CONQUER/pull/108) carri/carrozzieri 2D e [#103](https://github.com/erykwest/CONQUER/pull/103) centro di controllo **sono già su main**. Congelare duplicati `jobmanager`, vecchio `autonomous-urban-economy` e vecchie PR squash come nuovi lavori. Feudi, world map e navigazione rimangono orizzonte futuro.
+
+
 > Triage delle **presenze nel codice** rinnovato al **22/10/2026** su `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e), con [audit completo](AUDIT-2026-10-22.md). Ordine sistemico proposto, **non** certificazione browser/QA; la tabella del 21/10 sottostante conserva il proprio contesto storico.
 > Il backlog dettagliato P0–P3 del Builder è [docs/feature-backlog.md](../feature-backlog.md).
 
-## Aggiornamento verificato — 23/10/2026
+## Aggiornamento verificato — 23/10/2026 (snapshot storico, superato dal 30/10)
 
 Nuova HEAD `main` [518e830](https://github.com/erykwest/CONQUER/commit/518e830547b66c12deefa0833487ea76b81c7746) dopo merge [#76](https://github.com/erykwest/CONQUER/pull/76), [#79](https://github.com/erykwest/CONQUER/pull/79), [#80](https://github.com/erykwest/CONQUER/pull/80), [#81](https://github.com/erykwest/CONQUER/pull/81). Vedi [audit completo 23/10](AUDIT-2026-10-23.md).
 
@@ -11,7 +26,7 @@ Nuova HEAD `main` [518e830](https://github.com/erykwest/CONQUER/commit/518e83054
 
 **Ciclo principale:** M0 unico stock/ledger e produzione → M1 costruttori L1 realmente necessari → M2 capienze/presidi → M3 difesa con blocco/fame/resa. **Parallelo opzionale e delimitato:** #82 come QA per verificare regressioni grafiche (portoni danneggiati e cantieri a 25/50/75%) e #77 soltanto dopo integrazione sicura. #78 eventi e #72 convogli non accelerano M0–M3.
 
-## Riesame delle priorità — 22/10/2026 (baseline precedente, ancora applicabile)
+## Riesame delle priorità — 22/10/2026 (snapshot storico; i riferimenti a #55/#61 sono superati)
 
 **Nessun riavvio dei sottosistemi già presenti.** I 13 nuclei Builder già su main e numerosi moduli difensivi/ambientali si considerano **BASELINE DELIVERED**, non nuove attività di sviluppo. L'effort futuro è dedicato a comportamento mancante, dati incoerenti e prova di funzionamento.
 
