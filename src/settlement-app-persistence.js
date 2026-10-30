@@ -88,7 +88,7 @@ function migrateStructures(list){
     const attachment=subtowerAttachmentAtSocket(parent,s,s.subtowerSocket,s.subtowerAngle);
     if(attachment){
       s.x=attachment.point.x;s.y=attachment.point.y;
-      if(s.shape==='square')s.angle=attachment.angle;
+      if(s.shape==='square'||isOrientedTower(s))s.angle=attachment.angle;
       s.subtowerSocket=attachment.subtowerSocket;
       s.subtowerAngle=attachment.subtowerAngle;
     }

@@ -55,6 +55,7 @@ canvas.addEventListener('pointerdown',e=>{
       mode:'orient',center:q,angle,lockedAngle,
       wallSnapId:snap.wallId||null,
       wallSnapEnd:snap.wallEnd||null,
+      wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
       parentTowerId:snap.parentTowerId||null,
       subtowerSocket:snap.subtowerSocket||null,
       subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -284,6 +285,7 @@ canvas.addEventListener('pointermove',e=>{
         mode:'hover',
         wallSnapId:snap.wallId||null,
         wallSnapEnd:snap.wallEnd||null,
+        wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
         parentTowerId:snap.parentTowerId||null,
         subtowerSocket:snap.subtowerSocket||null,
         subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -375,7 +377,7 @@ function setBuildMasonryMaterial(next){
 }
 for(const b of document.querySelectorAll('[data-build-masonry]'))b.onclick=()=>setBuildMasonryMaterial(b.dataset.buildMasonry);
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${isOrientedTowerShape(b.dataset.tower)?orientedTowerLabel(dummy):b.dataset.tower+' tower '+b.dataset.size+'U'} · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{

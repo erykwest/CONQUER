@@ -61,10 +61,12 @@ function towerVisualTopHeight(s){
   if(!s||s.type!=='tower')return structureHeight(s);
   return structureHeight(s)+towerRoofRise(s);
 }
+function towerRoofApex(s){return s?.shape==='dee'?deeTowerRoofApex(s):{x:s.x,y:s.y}}
 function towerRoofFootprintPoints(s){
   if(!s||s.type!=='tower')return[];
   const overhang=.07;
   if(s.shape==='round')return circleWorldPoints(s.x,s.y,Number(s.r||.5)+overhang,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s,-overhang);
   const d=rectDims(s);
   return rectWorldPoints(s.x,s.y,d.w+overhang*2,d.h+overhang*2,s.angle||0);
 }

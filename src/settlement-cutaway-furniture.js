@@ -54,7 +54,16 @@
       .sort((a,b)=>a.d-b.d).slice(0,2).map(x=>x.k);
     // The longer far wall first (it takes the main pieces).
     const len=k=>k[0]==='u'?b.h:b.w;far.sort((a,c)=>len(c)-len(a));
-    return{b,toWorld,far,hu:b.w/2,hv:b.h/2,round:slot.round};
+    // D tower: straight part behind u = cx, half round of radius hv (centred on u = cx) in front.
+    const dee=slot.dee?{cx:b.w/2-b.h/2,r:b.h/2}:null;
+    return{b,toWorld,far,hu:b.w/2,hv:b.h/2,round:slot.round,dee};
+  }
+  // Inside a D room with a margin m (pieces and ladders stay off the half round).
+  function deeInside(F,u,v,m=0){return u<=F.dee.cx||Math.hypot(u-F.dee.cx,v)<=F.dee.r-m}
+  // Pulls a point in front of u = cx back inside the half round.
+  function deeShrink(F,u,v,m){
+    const du=u-F.dee.cx,d=Math.hypot(du,v),lim=F.dee.r-m;
+    return du>0&&d>lim?[F.dee.cx+du*lim/d,v*lim/d]:[u,v];
   }
   // ---------- layout builder
   function builder(slot,opts){
@@ -65,6 +74,10 @@
       const [a,b]=F.far.map(k=>SIDES[k]),cu=(a[0]||b[0])*F.hu,cv=(a[1]||b[1])*F.hv;
       reserve.push([cu-Math.sign(cu)*LADDER_CLEAR-.01,cv-Math.sign(cv)*LADDER_CLEAR-.01,cu,cv].map((x,i,arr)=>x));
       F.ladder={u:cu-Math.sign(cu)*(LADDER_W/2+.04),v:cv-Math.sign(cv)*(LADDER_W/2+.04),side:F.far[0]};
+      if(F.dee&&!deeInside(F,F.ladder.u,F.ladder.v,LADDER_W/2+.06)){
+        [F.ladder.u,F.ladder.v]=deeShrink(F,F.ladder.u,F.ladder.v,LADDER_W/2+.06);
+        reserve.push([F.ladder.u-LADDER_CLEAR/2,F.ladder.v-LADDER_CLEAR/2,F.ladder.u+LADDER_CLEAR/2,F.ladder.v+LADDER_CLEAR/2]);
+      }
     }
     if(opts.passage)reserve.push(opts.passage);
     // The parent of a subtower / the subtowers of a parent occupy part of the room.
@@ -90,6 +103,7 @@
       const rot=((turn%4)+4)%4,r=rectOf(name,u,v,rot);
       if(r[0]<-F.hu-1e-6||r[2]>F.hu+1e-6||r[1]<-F.hv-1e-6||r[3]>F.hv+1e-6)return false;
       if(F.round&&Math.hypot(Math.max(Math.abs(r[0]),Math.abs(r[2])),Math.max(Math.abs(r[1]),Math.abs(r[3])))>F.hu+.02)return false;
+      if(F.dee&&![[r[0],r[1]],[r[2],r[1]],[r[2],r[3]],[r[0],r[3]]].every(([u,v])=>deeInside(F,u,v,-.02)))return false;
       if(!deco&&(hit(r,boxes)||hit(r,reserve)))return false;
       if(!deco)boxes.push(r);
       items.push({name,u,v,turn:rot,lift,r,deco});return true;
@@ -103,7 +117,7 @@
       const tries=o.exact?[t]:[t,t+.35,t-.35,t+.7,t-.7,-t,1,-1].map(x=>Math.max(-1,Math.min(1,x)));
       for(const tt of tries){
         const pos=tt*Math.max(0,along),u=du?du*(F.hu-inset):pos,v=dv?dv*(F.hv-inset):pos;
-        const [pu,pv]=F.round?shrinkRound(u,v,s):[u,v];
+        const [pu,pv]=F.round?shrinkRound(u,v,s):F.dee?deeShrink(F,u,v,Math.max(s.d,s.w)*.5+.02):[u,v];
         if(place(name,pu,pv,turn,o))return true;
       }
       return false;
@@ -205,7 +219,7 @@
     for(const slot of slots){
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
-      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
@@ -337,6 +351,7 @@
     for(let a=-.7;a<=.71;a+=.35)for(let b=-.7;b<=.71;b+=.35){
       const u=a*F.hu,v=b*F.hv;
       if(F.round&&Math.hypot(u,v)>F.hu-.12)continue;
+      if(F.dee&&!deeInside(F,u,v,.12))continue;
       if(boxes.some(r=>u>r[0]&&u<r[2]&&v>r[1]&&v<r[3]))continue;
       out.push(F.toWorld(u,v));
     }

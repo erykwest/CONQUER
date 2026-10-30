@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — semitorri e torri a D (30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/half-d-towers`, NON MERGE:** semitorre aperta alla gola (T1 piccola, T2 media) e torre a D (T2 media, T3 grande) in pietra; aggancio al muro con retro sul muro e fronte sul lato del puntatore; D sui fianchi della porta con il retro allineato. Semitorre con scala a pioli e botola a ogni piano. Cutaway della D. Costi per forma (tonda ×1,5, D ×1,25, semitorre ×0,5).
+- **APERTO:** arredi sui solai della semitorre; collisioni e navigazione usano il rettangolo che le contiene (gli angoli davanti alla D sono pieni); semitorre e D a metà di un muro esistente (oggi solo alla fine di un muro, come le altre torri). Palette clay: monconi, corone spezzate e macerie restano grigi per tutte le torri.
+
 ## Triage prevalente — 30 ottobre 2026 · ref `main` `cf569992`
 
 > [**AUDIT COMPLETO 30/10**](AUDIT-2026-10-30.md) prevale per la presenza effettiva sul codice rispetto alle sezioni storiche **23–29 ottobre** qui sotto. Non cancellare i vecchi requisiti: le loro note «branch/non su main» sono documentazione storica alle date indicate.
@@ -10,7 +15,6 @@
 - **Economia residua:** `mine` produce `stone` (non `metal`), `workshop` per `equipment` della Built Section ≠ bottega commerciale L3, nessun `tree depletion`, input botteghe/materiali e capacità fisiche del castello da collaudare; i pannelli **non** sommano `economy.castle` e `siege.stock`. La sequenza M0–M3 può ora concentrarsi su integrazioni, non riscrittura economia.
 - **Solo branch/OPEN:** #109 CI suite economia 2–5 (conflitto); #110 Livree/bivacco/campo militare (non assedio strategico completo); #111 multi-pozzo e quartieri (non su main). `messages`, `cans`, `circle` restano filoni separati; il vecchio `jobmanager` e `feature/autonomous-urban-economy` sono stati portati selettivamente/convertiti nelle PR economiche e non vanno duplicati.
 - **QA:** CI PASS sulle HEAD di #109/#110/#111 e smoke WebGPU main `cf569992`; non rappresenta un nuovo test browser dell'intero gioco eseguito per questo audit.
-
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 

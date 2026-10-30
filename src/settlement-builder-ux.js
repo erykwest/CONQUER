@@ -52,6 +52,8 @@
     {id:'defense',label:'Fortificazioni',icon:'castle',items:[
       ['[data-tower="square"][data-size="1.5"]','Torre quadrata T2','square'],
       ['[data-tower="round"][data-size="0.75"]','Torre rotonda T2','round'],
+      ['[data-tower="half"][data-size="1"]','Semitorre aperta alla gola','square'],
+      ['[data-tower="dee"][data-size="1.5"]','Torre a D · fronte tonda','round'],
       ['[data-wood-tower="watchtower"]','Torre di guardia lignea','timber'],
       ['[data-wood-tower="palisadeTower"]','Torre lignea','timber'],
       ['[data-linear="wall"]','Mura','wall'],
@@ -93,6 +95,7 @@
     {name:'Materiale di muratura',icon:'built',category:'all',selectors:['[data-build-masonry]']},
     {name:'Pianta torre quadrata',icon:'square',selectors:['[data-tower="square"]']},
     {name:'Pianta torre rotonda',icon:'round',selectors:['[data-tower="round"]']},
+    {name:'Semitorri e torri a D',icon:'round',selectors:['[data-tower="half"]','[data-tower="dee"]']},
     {name:'Altezza torre',icon:'level',selectors:['[data-tower-level]']},
     {name:'Spessore muro / palizzata',icon:'depth',selectors:['[data-wall-tier]']},
     {name:'Altezza muro',icon:'level',selectors:['[data-wall-level]']},
@@ -181,7 +184,7 @@
     for(const selector of control.selectors){
       for(const b of originalButtons.filter(x=>x.matches(selector))){
         const label=b.textContent.trim().replace(/\s+/g,' ');
-        const token=(b.dataset.size ? b.dataset.size+'U' : b.dataset.towerLevel ? 'H'+b.dataset.towerLevel : b.dataset.wallTier ? 'T'+b.dataset.wallTier : b.dataset.wallLevel ? 'H'+b.dataset.wallLevel : b.dataset.gateLevel ? 'H'+b.dataset.gateLevel : b.dataset.terraformDelta ? (Number(b.dataset.terraformDelta)<0?'−1U':'+1U') : b.dataset.terraformRadius ? 'R'+b.dataset.terraformRadius : label);
+        const token=(['half','dee'].includes(b.dataset.tower) ? label : b.dataset.size ? b.dataset.size+'U' : b.dataset.towerLevel ? 'H'+b.dataset.towerLevel : b.dataset.wallTier ? 'T'+b.dataset.wallTier : b.dataset.wallLevel ? 'H'+b.dataset.wallLevel : b.dataset.gateLevel ? 'H'+b.dataset.gateLevel : b.dataset.terraformDelta ? (Number(b.dataset.terraformDelta)<0?'−1U':'+1U') : b.dataset.terraformRadius ? 'R'+b.dataset.terraformRadius : label);
         b.classList.add('ux-value-btn');b.title=control.name+' · '+label;b.setAttribute('aria-label',b.title);b.dataset.tip=b.title;b.textContent=token;
         values.append(b);
       }
