@@ -1,6 +1,20 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
-## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+## Stato corrente su main — 30 ottobre 2026
+
+> **Audit sostitutivo della fotografia del 22–23/10:** [AUDIT-2026-10-30](context/AUDIT-2026-10-30.md), ref `main` `cf5699922`. **15 nuclei CORE MAIN, 8 voci PARZIALI** su 23 ID Builder; questo non certifica la QA browser completa. Il precedente conteggio 13/10 più sotto resta esclusivamente **storico**.
+
+| Classificazione corrente | ID | Prossimo lavoro reale |
+|---|---|---|
+| **CORE su main (15)** | P0-01a/03/04/07; P1-11/12/13; P2-14/15/16/18/19/20; P3-21/22 | Non riprogettare la feature. QA mirata, correzioni locali e collaudo end-to-end |
+| **PARZIALE (8)** | P0-01/02/05/06/08; P1-09/10; P2-17 | Terreno→routing, tree depletion, agricoltura↔ledger, miniera `stone→metal`, stanze↔depositi/officina, bonus civici |
+
+**Aggiornamenti effettivi:** [#98](https://github.com/erykwest/CONQUER/pull/98) ha portato **lavoratori L1 necessari per i cantieri** (P0-04); [#99](https://github.com/erykwest/CONQUER/pull/99) le routine; [#101](https://github.com/erykwest/CONQUER/pull/101) ha collegato **mercato, botteghe e Beni L3** al ledger, promuovendo P1-11 al nucleo MAIN. Il Centro di controllo con **9 viste e storici** ([#103](https://github.com/erykwest/CONQUER/pull/103)) è **merged su main dal 30/10**, non più "solo branch panels". I servizi locanda/chiesa ora hanno **operatori**, ma `SERVICE_KINDS.income` resta `not-simulated`: **P2-17 non è chiusa**. Le botteghe autonome nelle case **non** provano completata la filiera equipment dell'officina Built Section (P1-10).
+
+**PR ancora OPEN (non su main):** [#109](https://github.com/erykwest/CONQUER/pull/109) test CI economia, [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacchi/campi fortificabili, [#111](https://github.com/erykwest/CONQUER/pull/111) multi-pozzo e centri di quartiere. Gli screenshot demo dei pannelli non sono prove di produzione reale.
+
+
+## 2026-10-29 — Storici gestionali e anteprime visive · note storiche dalla branch `panels` (merged #103 il 30/10)
 
 - Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
 - Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
@@ -8,10 +22,10 @@
 - Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
 
 
-## Settlement management panels — `panels` (29/10/2026)
+## Settlement management panels — snapshot branch `panels` 29/10 (ora merged #103)
 
-- **Presente sulla branch (verifica browser/CI da completare):** centro di controllo Profilo a 9 viste, dati dal ledger economico e dai sottosistemi esistenti, grafico settimanale cibo, istogrammi, gestione tasse/razioni, quote vendita, acquisto/vendita proprietà, carovane.
-- **Non implementato:** festività sociali realmente simulate, serie storica felicità/occupazione/prezzi, produzione annua per proprietà e indicatori tributari di feudo, rapporto diplomatico persistente, allarmi epidemie/disordini/incendi. Per contratti e priorità vedere [management-panels.md](management-panels.md).
+- **Ora su main tramite #103 (test e screenshot del branch precedenti):** centro di controllo Profilo a 9 viste, dati dal ledger economico e dai sottosistemi esistenti, grafico settimanale cibo, istogrammi, gestione tasse/razioni, quote vendita, acquisto/vendita proprietà, carovane.
+- **Non implementato nella piena estensione:** festività sociali realmente simulate, occupazione L2–L4, indicatori tributari completi di feudo, rapporti diplomatici avanzati e allarmi epidemie/disordini/incendi. **Serie storiche felicità L1–L4, prezzi, occupazioni L1, produzione per sito (max 26 rilevazioni) sono implementate su main tramite #103.** Per contratti e priorità vedere [management-panels.md](management-panels.md).
 - **Vincolo:** niente risorse fittizie, niente somma tra scorte economiche e magazzini di assedio, niente soldati inventati dalle capienze.
 
 > **Nuova verifica Git 23/10:** [audit integrale aggiornato](context/AUDIT-2026-10-23.md) su main `518e830` dopo #76 e #79–81. **13 nuclei Builder già presenti e 10 voci con residui: conteggi invariati**. Le nuove feature Portoni GATE-01/01b/02/03/04/06 sono **main** e sono catalogate nel [backlog inter-sistemi](context/BACKLOG.md); Asset Lab è tooling, non nuova meccanica economica.
@@ -49,7 +63,7 @@
 - **P0-06:** mulino a vento/acqua e relativo menu già merge [#57](https://github.com/erykwest/CONQUER/pull/57)/[#58](https://github.com/erykwest/CONQUER/pull/58); resta la coerenza del ledger e dei campi.
 - **Criteri di chiusura:** le altre caselle non sono qui cambiate automaticamente in `[x]` senza un audit di accettazione individuale; il dettaglio di PR/QA è in [STATUS](context/STATUS.md).
 
-## Triage completo su main — 22/10/2026
+## Triage su main — 22/10/2026 (**storico; per lo stato corrente vedere l'audit 30/10**)
 
 > **Non utilizzare questo backlog come lista di feature inesistenti.** La [matrice verificata](context/AUDIT-2026-10-22.md) distingue il runtime già presente, il completamento meccanico e il collaudo.
 
@@ -68,7 +82,7 @@
 - [x] **P0-01a — Terraforming del giocatore (branch `terraforming`).** **[CORE MAIN · QA/integrazione se necessaria]** Collina naturale e gradone verticale color muro con ghost; divieto di sovrapporre due terrazzamenti murati; magnete muro a filo; persistenza e rendering Canvas/WebGL2. **QA dedicata:** `qa/terraforming-regression.cjs` (10 controlli, inclusa mesh verticale). **Successivamente integrato in `main`** insieme alle evoluzioni con [#63–69](https://github.com/erykwest/CONQUER/pull/69): la descrizione della branch e i 10 check riguardano il vecchio snapshot.
 - [ ] **P0-02 — Foreste procedurali funzionali.** **[BASE MAIN; tree depletion/rigenerazione assenti]** Completare, dove mancante, densità e sfruttamento: abbattimento, produzione legna, liberazione del terreno e rigenerazione secondo regole definite. **Accettazione:** produzione e stato della foresta rimangono coerenti dopo reload, senza spawn su edifici o strade non consentite.
 - [x] **P0-03 — Pozzo / Village Core.** **[CORE MAIN · QA/integrazione se necessaria]** Consolidare la fondazione e la crescita progressiva già avviata, anziché ricreare un secondo generatore. **Accettazione:** niente lotti/edifici sovrapposti, crescita deterministica per seed, accessi stradali e persistenza validi.
-- [ ] **P0-04 — Abitazioni L1–L4 e popolazione produttiva.** **[BASE MAIN; L1 cantieri in PR #55 OPEN]** Consolidare la coerenza tra livello abitazione, capienza, tier/professione e disponibilità di lavoro; separare status/tier dal lavoro corrente, se non ancora operativo. **Accettazione:** popolazione disponibile e lavoratori assegnabili coerenti con case ed economia; i tier superiori possono coprire lavori inferiori dove previsto.
+- [x] **P0-04 — Abitazioni L1–L4 e popolazione produttiva.** **[CORE MAIN 30/10: #98 lavoro L1 ai cantieri, #99 routine; QA integrativa aperta]** Consolidare la coerenza tra livello abitazione, capienza, tier/professione e disponibilità di lavoro; separare status/tier dal lavoro corrente, se non ancora operativo. **Accettazione:** popolazione disponibile e lavoratori assegnabili coerenti con case ed economia; i tier superiori possono coprire lavori inferiori dove previsto.
 - [ ] **P0-05 — Logging Camp.** **[BASE MAIN; depletion e ledger ancora da integrare]** Completare l'edificio estrattivo già abbozzato, lavoratori e rapporto reale con i boschi; sostituire il placeholder grafico quando pronto. **Accettazione:** collocamento vicino al bosco, output limitato da lavoratori/risorsa locale e comportamento consistente nel calendario economico.
 - [ ] **P0-06 — Mulino / Farm Hub.** **[BASE MAIN; resa/stock e calendario da riconciliare]** Definire il polo agricolo sfruttando il sistema campi già esistente. Riconciliare lavorazioni visive (aratura, semina, crescita, raccolto) con il bilancio economico stagionale. **Accettazione:** un'unica fonte per resa annuale, forza lavoro e produzione `food`, senza doppio conteggio.
 - [x] **P0-07 — Cava.** **[CORE MAIN · QA/integrazione se necessaria]** Rifinire il nodo `quarry` esistente e la sua dipendenza dai versanti rocciosi. **Accettazione:** collocamento geologicamente valido, operai L2, output `stone`, salvataggio e visualizzazione coerenti.
@@ -80,7 +94,7 @@
 
 - [ ] **P1-09 — Funzioni delle Built Sections.** **[BASE MAIN; capienze e slot presenti, ledger separato]** Collegare gli slot esistenti a capienza e funzione reale: granaio, magazzino, armeria, caserma, scuderia, alloggi/comando. **Accettazione:** i vincoli per piano/accessibilità e le capacità fisiche sono validati; il contenuto economico non supera capienze definite.
 - [ ] **P1-10 — Workshop / Fabbro.** **[BASE MAIN; produzione workshop non dimostrata dal solo slot]** Integrare il laboratorio nella costruzione e nell'economia (il motore conosce già il tipo `workshop`). **Accettazione:** input `metal` + `wood`, output `equipment`, lavoratori L3 e ciclo produttivo senza risorse duplicate.
-- [ ] **P1-11 — Mercato.** **[BASE MAIN; mercato già attivo, ledger da unificare]** Completare il collegamento tra edificio fisico e mercato/accounting già esistente, evitando una nuova simulazione concorrente. **Accettazione:** transazioni, stock, riserve, oro e proprietari si aggiornano nello stesso ledger.
+- [x] **P1-11 — Mercato.** **[CORE MAIN 30/10: #101 botteghe/beni/prezzi/vendite nel ledger, #105 convogli; QA fisico/stock aperta]** Completare il collegamento tra edificio fisico e mercato/accounting già esistente, evitando una nuova simulazione concorrente. **Accettazione:** transazioni, stock, riserve, oro e proprietari si aggiornano nello stesso ledger.
 - [x] **P1-12 — Palizzate.** **[CORE MAIN · QA/integrazione se necessaria]** Implementare segmenti, angoli, aperture/porte, costo ridotto rispetto alle mura e vulnerabilità al fuoco. **Accettazione:** gli accessi e le collisioni cambiano davvero i percorsi di unità e attaccanti; le palizzate sono modificabili nel Builder.
 - [x] **P1-13 — Ponti ordinari.** **[CORE MAIN · QA/integrazione se necessaria]** Permettere attraversamenti di fossati e corsi d'acqua, con larghezza compatibile con strada e accesso. **Accettazione:** il pathfinding considera il ponte soltanto quando collegato e transitabile; collocamento e stato sono persistenti.
 
@@ -91,7 +105,7 @@
 - [x] **P2-14 — Fossati.** **[CORE MAIN · QA/integrazione se necessaria]** Introdurre varianti asciutte/allagate e normali/larghe, con raccordi al terreno e interruzioni in corrispondenza degli accessi. **Accettazione:** modifica reale della percorribilità; geometria e salvataggio consistenti.
 - [x] **P2-15 — Ponti levatoi.** **[CORE MAIN · QA/integrazione se necessaria]** Variante dell'accesso fortificato con stato aperto/chiuso; dipende da fossato e attraversamento. **Accettazione:** stato condiviso tra rendering, navigazione e futuro comportamento d'assedio.
 - [x] **P2-16 — Basamenti diversificati.** **[CORE MAIN · QA/integrazione se necessaria]** Verticali, svasati e con contrafforti, anche in combinazione secondo la geometria. **Accettazione:** resa coerente di mura/torri; la variante visiva non altera in modo implicito ingombri, collisioni o costo.
-- [ ] **P2-17 — Taverna e Tempio.** **[BASE MAIN; manca effetto civico dichiarato nel pannello]** Collegare gli eventuali edifici civici già rappresentati a servizi, attrattività e coesione. **Accettazione:** effetto di gameplay chiaro, misurabile e senza introdurre nuove catene produttive.
+- [ ] **P2-17 — Taverna e Tempio.** **[BASE MAIN 30/10; operatori L3 #101 presenti, bonus/income non simulati; la dicitura «No services or economic effects» riguarda gli annessi]** Collegare gli eventuali edifici civici già rappresentati a servizi, attrattività e coesione. **Accettazione:** effetto di gameplay chiaro, misurabile e senza introdurre nuove catene produttive.
 - [x] **P2-18 — Motore araldico SVG universale.** **[CORE MAIN · QA/integrazione se necessaria]** Verificare e rifinire il sistema già presente: sorgente rettangolare indipendente dal supporto, con clipping lato oggetto. **Accettazione:** una stessa definizione è riutilizzabile su supporti differenti senza duplicazione della logica.
 - [x] **P2-19 — Pattern, quattro colori e simboli.** **[CORE MAIN · QA/integrazione se necessaria]** Completare l'uso di `C1/C2` per il pattern e `C3/C4` per simbolo e contorno. **Accettazione:** resa coerente su scudo, stendardo, veste e bardatura, nei supporti effettivamente disponibili.
 - [x] **P2-20 — Sincronizzazione araldica dal Profile Panel.** **[CORE MAIN · QA/integrazione se necessaria]** Estendere/validare il salvataggio e la propagazione globale delle modifiche. **Accettazione:** cambiamento unico e persistente su tutte le istanze che condividono la configurazione; nessuna texture obsoleta in cache.
