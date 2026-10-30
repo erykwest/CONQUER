@@ -168,3 +168,8 @@ This behavior is **shared across the Builder**, not a special rule of industrial
 **DOCUMENTATION ONLY — not present in the economy engine yet.** The approved design adds `clay` to the economic commodities without adding a separate brick good. A `quarry` placed within 6 U of a river/stream/lake bank may specialize in `clay`; existing stone quarries remain unchanged. Stone-consuming construction costs may be substituted 1:1 in quantity with clay when `brick` is selected as the building material, yielding a brown/red visual variant and 80% of the equivalent masonry structural integrity. The already noted gap between ledger goods and `State.resources` must be handled without inventing an independent clay storage system. No kilns, pottery or additional production chain in the first implementation.
 
 See [clay development guide](CLAY-DEVELOPMENT.md) and [clay QA](CLAY-REGRESSION-PLAN.md).
+
+## Weekly management-panel history (branch `panels`, 29/10/2026)
+
+After the actual Saturday market, the existing Economy V1 state stores up to **26 market-week snapshots** in `panelHistory`: day, aggregate population, welfare, happiness per tier, market prices per good, L1 job allocation, and site output/ownership captured at production time. This is a bounded projection of the same ledger, **not a second inventory**. `weekProducedSites` is reset after each weekly sample; historical ownership is not retroactively changed when an enterprise is sold. Old version-1 saves acquire these optional fields lazily without reset. Outputs processed by a mill are attributed to the mill as output of that conversion; this history is not a per-crop agronomic ledger. No historical values are inferred for prior saves.
+
