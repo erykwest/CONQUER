@@ -1,5 +1,19 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+
+- Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
+- Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
+- Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
+- Aggiornamenti su branch/PR draft #103. Test Chromium/CI da verificare prima di dichiarare completo.
+
+
+## Settlement management panels — `panels` (29/10/2026)
+
+- **Presente sulla branch (verifica browser/CI da completare):** centro di controllo Profilo a 9 viste, dati dal ledger economico e dai sottosistemi esistenti, grafico settimanale cibo, istogrammi, gestione tasse/razioni, quote vendita, acquisto/vendita proprietà, carovane.
+- **Non implementato:** festività sociali realmente simulate, serie storica felicità/occupazione/prezzi, produzione annua per proprietà e indicatori tributari di feudo, rapporto diplomatico persistente, allarmi epidemie/disordini/incendi. Per contratti e priorità vedere [management-panels.md](management-panels.md).
+- **Vincolo:** niente risorse fittizie, niente somma tra scorte economiche e magazzini di assedio, niente soldati inventati dalle capienze.
+
 > **Nuova verifica Git 23/10:** [audit integrale aggiornato](context/AUDIT-2026-10-23.md) su main `518e830` dopo #76 e #79–81. **13 nuclei Builder già presenti e 10 voci con residui: conteggi invariati**. Le nuove feature Portoni GATE-01/01b/02/03/04/06 sono **main** e sono catalogate nel [backlog inter-sistemi](context/BACKLOG.md); Asset Lab è tooling, non nuova meccanica economica.
 
 > **Stato ricontrollato: 2026-10-22**, `main` [c52b537](https://github.com/erykwest/CONQUER/commit/c52b537eac5f2a212841d45b75cc85b0136e069e). [Audit completo e matrice dei 23 ID](context/AUDIT-2026-10-22.md).
