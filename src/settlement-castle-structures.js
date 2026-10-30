@@ -468,10 +468,60 @@ function drawMachicolationFloors(){
   for(const s of items)withStructureVisualMaterial(s,()=>drawMachicolationFloor(s));
 }
 
-function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
+// Crown of a merlon in the feudal crenel style (crenelStyle()): extra prisms drawn after the body,
+// in painter order. Flat keeps the plain block (no parts). Gabled steps a ridge across the wall
+// thickness; swallowtail raises two horns with a V notch and cuts an arrow slit in the face turned
+// towards the viewer (the 2.5D painter cannot hide a slit on the far face).
+function merlonStyleParts(center,angle,w,d,z,h,cornerEnd=0,style=crenelStyle()){
+  if(style==='flat')return null;
+  const ux=Math.cos(angle),uy=Math.sin(angle),nx=-uy,ny=ux,top=z+h,parts=[];
+  const at=(along,across)=>({x:center.x+ux*along+nx*across,y:center.y+uy*along+ny*across});
+  const slab=(c,sw,sd,z0,z1,tone='stone')=>parts.push({pts:rectWorldPoints(c.x,c.y,sw,sd,angle),z0,z1,tone});
+  const view=p=>{const q=rotateViewPoint(p);return q.x+q.y};
+  if(style==='gabled'){
+    // Two slopes (inner and outer face) meeting on a ridge along the wall, closed by triangular
+    // gable ends. Faces are sorted far to near so the 2.5D painter can fill them in order.
+    // On an L corner arm the ridge stops over the centre of the corner block and that end is hipped:
+    // the two arms' hips meet there and read as one L-shaped coping.
+    const R=top+.1,c=(a,b)=>({p:at(a*w/2,b*d/2),z:top});
+    const ea=cornerEnd<0?-w/2+d/2:-w/2,eb=cornerEnd>0?w/2-d/2:w/2,rA={p:at(ea,0),z:R},rB={p:at(eb,0),z:R};
+    const faces=[
+      {pts:[c(-1,-1),c(1,-1),rB,rA],tone:'slopeA',ref:at(0,-d/4)},
+      {pts:[c(-1,1),c(1,1),rB,rA],tone:'slopeB',ref:at(0,d/4)},
+      {pts:[c(-1,-1),c(-1,1),rA],tone:cornerEnd<0?'hip':'end',ref:at(-w/2,0)},
+      {pts:[c(1,-1),c(1,1),rB],tone:cornerEnd>0?'hip':'end',ref:at(w/2,0)}
+    ].sort((a,b)=>view(a.ref)-view(b.ref));
+    faces.filter(f=>f.tone.startsWith('slope')).forEach((f,i)=>f.tone=i?'slopeB':'slopeA');
+    parts.push({faces});
+    return parts;
+  }
+  const face=view(at(0,d/2))>=view(at(0,-d/2))?1:-1;
+  slab(at(0,face*(d/2-.004)),Math.max(.026,w*.13),.02,z+.05,top-.045,'slit');
+  // Horns: one V profile along the run (outer edges vertical, inner edges sloping down to the notch)
+  // extruded across the wall thickness. Far cap, then edge faces far to near, then near cap.
+  // On an L corner arm (cornerEnd -1/+1) the horn at the corner end widens to the full corner block,
+  // so the two arms share one square corner pillar and each face keeps its own V.
+  const H=top+.15,V=top+.035,tw=w*.15,tL=cornerEnd<0?d:tw,tR=cornerEnd>0?d:tw,mid=(tL-tR)/2;
+  const prof=[[-w/2,top],[w/2,top],[w/2,H],[w/2-tR,H],[mid,V],[-w/2+tL,H],[-w/2,H]];
+  const P=(a,z,b)=>({p:at(a,b*d/2),z});
+  const caps=[-1,1].map(b=>({pts:prof.map(([a,z])=>P(a,z,b)),tone:'cap',ref:at(0,b*d/2)})).sort((x,y)=>view(x.ref)-view(y.ref));
+  const edges=[];
+  for(let i=1;i<prof.length;i++){
+    const [a0,z0]=prof[i],[a1,z1]=prof[(i+1)%prof.length];
+    edges.push({pts:[P(a0,z0,-1),P(a1,z1,-1),P(a1,z1,1),P(a0,z0,1)],tone:z0===z1?'top':a0===a1?'cap':'slopeA',ref:at((a0+a1)/2,0),z:(z0+z1)/2});
+  }
+  edges.sort((x,y)=>view(x.ref)-view(y.ref)||x.z-y.z);
+  parts.push({faces:[caps[0],...edges,caps[1]]});
+  return parts;
+}
+// Merlons are slimmer across the wall than their nominal depth; merlonNode applies the same factor
+// so the breastwork between them stays flush.
+const MERLON_DEPTH_SCALE=.72;
+function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null,cornerEnd=0){
+  d*=MERLON_DEPTH_SCALE;
   const pts=rectWorldPoints(center.x,center.y,w,d,angle),rp=rotateViewPoint(center);
   return{
-    pts,z0:z,z1:z+h,depth:rp.x+rp.y,
+    pts,z0:z,z1:z+h,depth:rp.x+rp.y,merlon:true,styleParts:merlonStyleParts(center,angle,w,d,z,h,cornerEnd),
     ownerId:owner?.id||null,
     ownerType:owner?.type||null,
     ownerDepth:owner?worldDepth(owner):null,
@@ -584,12 +634,31 @@ function drawBattlementPiece(piece,frame){
       ctx.lineTo(a.x,a.y-H);
       ctx.closePath();
       ctx.clip();
-      extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+      drawMerlonBody(piece);
       ctx.restore();
       return;
     }
-    extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+    drawMerlonBody(piece);
   }));
+}
+const MERLON_TONES={stone:{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'},slit:{top:'#2b2622',sideA:'#1d1a17',sideB:'#24201c',stroke:'#2b2622'}};
+function drawMerlonBody(piece){
+  extrudePolygonAt(piece.pts,piece.z0,piece.z1,MERLON_TONES.stone);
+  for(const p of piece.styleParts||[]){
+    if(p.faces){drawMerlonFaces(p.faces);continue}
+    extrudePolygonAt(p.pts,p.z0,p.z1,MERLON_TONES[p.tone]);
+  }
+}
+// Gable faces: the slope turned to the viewer takes the lit top tone, the other the shaded side.
+const MERLON_FACE_TONES={hip:'#857a6f',slopeA:'#8a7e72',slopeB:'#9a8e82',top:'#9a8e82',end:'#635951',cap:'#5a524b'};
+const merlonFaceColor=tone=>['end','cap'].includes(tone)?MERLON_FACE_TONES[tone]:winterSnowColor(MERLON_FACE_TONES[tone]);
+function drawMerlonFaces(faces){
+  for(const f of faces){
+    const pts=f.pts.map(q=>w2s(q.p,q.z));
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const q of pts.slice(1))ctx.lineTo(q.x,q.y);ctx.closePath();
+    ctx.fillStyle=visualPaletteColor(merlonFaceColor(f.tone));ctx.fill();
+    ctx.strokeStyle=visualPaletteColor('#c8b9a9');ctx.lineWidth=.6;ctx.stroke();
+  }
 }
 function renderBattlementPieces(pieces,frame){
   pieces.sort((a,b)=>a.depth-b.depth);
@@ -604,6 +673,7 @@ const PARAPET_HEIGHT=.11,ROUND_MERLON_SPACING=.32;
 // A merlon seen from a run along `runAngle`: its half extent along the run (hw) and across it (hd).
 // Corner merlons keep the tower's angle, so on two of the four sides they sit rotated 90° to the run.
 function merlonNode(center,angle,w,d,runAngle=angle){
+  d*=MERLON_DEPTH_SCALE;
   const c=Math.abs(Math.cos(runAngle-angle)),s=Math.abs(Math.sin(runAngle-angle));
   return{c:center,angle:runAngle,hw:(w*c+d*s)/2,hd:(w*s+d*c)/2-.008};
 }
@@ -673,6 +743,25 @@ function wallBattlementPieces(s){
   }
   return pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
 }
+// L-shaped corner merlon: two arms, one along each edge, sharing the square block on the corner
+// point `mc`. Each arm is its own merlon (so it takes the crenel-style crown along its run) and the
+// parapet runs start/end on the arm faces: start[e] opens edge e, end[e] closes it.
+const CORNER_ARM=.3;
+function lCornerMerlons(fp,corners,z,h,d,owner){
+  const n=fp.length,ds=d*MERLON_DEPTH_SCALE,pieces=[],start=[],end=[];
+  const dirOf=e=>{const a=fp[e],b=fp[(e+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1;return{x:(b.x-a.x)/L,y:(b.y-a.y)/L,angle:Math.atan2(b.y-a.y,b.x-a.x)}};
+  const arm=(mc,u,sign,angle)=>({x:mc.x+u.x*sign*(CORNER_ARM/2-ds/2),y:mc.y+u.y*sign*(CORNER_ARM/2-ds/2),angle});
+  for(let e=0;e<n;e++){
+    const mc=corners[e],fwd=dirOf(e),back=dirOf((e-1+n)%n);
+    const f=arm(mc,fwd,1,fwd.angle),b=arm(mc,back,-1,back.angle);
+    const fa=battlementPiece(f,f.angle,z,CORNER_ARM,d,h,owner,-1),ba=battlementPiece(b,b.angle,z,CORNER_ARM,d,h,owner,1);
+    fa.cornerArm=ba.cornerArm=true;
+    pieces.push(fa,ba);
+    start[e]=merlonNode(f,f.angle,CORNER_ARM,d);
+    end[(e-1+n)%n]=merlonNode(b,b.angle,CORNER_ARM,d);
+  }
+  return{pieces,start,end};
+}
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s);
@@ -683,14 +772,14 @@ function squareTowerBattlementPieces(s){
       const ML=Math.hypot(center.x-mc.x,center.y-mc.y)||1,cc={x:mc.x+(center.x-mc.x)/ML*.09,y:mc.y+(center.y-mc.y)/ML*.09};
       pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.115,.15,cornerAngle),z-.23,z+.015,s));
     }
-    pieces.push(battlementPiece(mc,cornerAngle,z,.27,.23,.25,s));
     corners.push(mc);
   }
+  const LC=lCornerMerlons(fp,corners,z,.25,.23,s);pieces.push(...LC.pieces);
   const parapets=[];
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
-    const run=[merlonNode(corners[e],cornerAngle,.27,.23,angle)];
+    const run=[LC.start[e]];
     for(let i=1;i<intervals;i++){
       const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
       if(mach){
@@ -700,7 +789,7 @@ function squareTowerBattlementPieces(s){
       pieces.push(battlementPiece(mc,angle,z,.25,.22,.24,s));
       run.push(merlonNode(mc,angle,.25,.22));
     }
-    run.push(merlonNode(corners[(e+1)%fp.length],cornerAngle,.27,.23,angle));
+    run.push(LC.end[e]);
     parapets.push(...parapetPieces(run,z,s));
   }
   return pieces.concat(parapets);
@@ -724,6 +813,30 @@ function roundTowerBattlementPieces(s){
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
   return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s));
+}
+// Restyling the feudal crenellation: every standing stone merlon is rebuilt at the target style's
+// rate (CRENEL_STYLE_COST). Brick structures pay clay instead of stone, as in constructionCost.
+function crenelRestyleQuote(style){
+  const cost={};let merlons=0;
+  for(const s of State.structures){
+    const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+    const n=pieces.filter(p=>p.merlon).length;if(!n)continue;
+    merlons+=n;
+    for(const [k,v] of Object.entries(CRENEL_STYLE_COST[style]||{})){
+      const key=k==='stone'&&s.masonryMaterial==='brick'?'clay':k;
+      cost[key]=(cost[key]||0)+v*n;
+    }
+  }
+  return{style,merlons,cost};
+}
+function applyCrenelStyle(style){
+  if(!CRENEL_STYLES.includes(style)||style===crenelStyle())return{ok:false,reason:'unchanged'};
+  const quote=crenelRestyleQuote(style);
+  if(!canAfford(quote.cost))return{ok:false,reason:'funds',quote};
+  if(!spendCost(quote.cost))return{ok:false,reason:'funds',quote};
+  State.policies.crenelStyle=style;
+  markDirty(null,true,true);draw();
+  return{ok:true,quote};
 }
 // Parent/subtower pairs overlap: merlons of the lower one that fall inside the footprint of the
 // taller attached structure would stick out of its walls. Drop them (parent or subtower alike).
@@ -968,20 +1081,20 @@ function gateBattlementPieces(s){
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;
     const mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
-    pieces.push(battlementPiece(mc,cornerAngle,z,.27,.23,.25,s));
     corners.push(mc);
   }
+  const LC=lCornerMerlons(fp,corners,z,.25,.23,s);pieces.push(...LC.pieces);
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
     const angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
-    const run=[merlonNode(corners[e],cornerAngle,.27,.23,angle)];
+    const run=[LC.start[e]];
     for(let i=1;i<intervals;i++){
       const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
       pieces.push(battlementPiece(mc,angle,z,.25,.22,.24,s));
       run.push(merlonNode(mc,angle,.25,.22));
     }
-    run.push(merlonNode(corners[(e+1)%fp.length],cornerAngle,.27,.23,angle));
+    run.push(LC.end[e]);
     pieces.push(...parapetPieces(run,z,s));
   }
   return withoutBuriedBattlements(s,pieces);

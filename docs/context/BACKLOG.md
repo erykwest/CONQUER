@@ -12,6 +12,11 @@
 - **QA:** CI PASS sulle HEAD di #109/#110/#111 e smoke WebGPU main `cf569992`; non rappresenta un nuovo test browser dell'intero gioco eseguito per questo audit.
 
 
+## Castello — stili di merlatura del feudo (branch `feat/crenel-styles`, 30/10/2026)
+
+- **IN CORSO su branch, NON MERGE:** tre stili globali (piatta, doppia falda, coda di rondine), cambio a pagamento per merlo dai Cantieri, merli più sottili e angoli a L. Dettagli in [STATUS](STATUS.md).
+- Aperti: stile per la merlatura in legno delle porte; eventuale tempo di cantiere per il rifacimento (oggi istantaneo una volta pagato).
+
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
 - `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.

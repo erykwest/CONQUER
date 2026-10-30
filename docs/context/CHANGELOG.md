@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-30 — Stili di merlatura del feudo · branch `feat/crenel-styles`
+
+- Nuova scelta globale in `State.policies.crenelStyle` (persistita locale e cloud): **piatta** (default), **doppia falda** (colmo lungo il muro), **coda di rondine** (corna a V e feritoia sul lato visibile). Vale per tutti i merli in pietra di torri, porte e mura; le nuove costruzioni seguono lo stile scelto.
+- Cambio a pagamento dal Centro di controllo › Cantieri, scheda «Stile delle merlature»: costo per merlo dello stile di arrivo (`CRENEL_STYLE_COST`: 1 pietra / 2 pietra + 1 oro / 3 pietra + 2 oro), argilla al posto della pietra sulle strutture in mattone, cantieri esclusi. Comandi `ConquerGame.commands.crenelQuote/setCrenelStyle`.
+- Geometria: corona dei merli in `merlonStyleParts`, disegnata identica dal renderer 2.5D e da `settlement-castle3d.js`. Merli più sottili nello spessore del muro (`MERLON_DEPTH_SCALE` 0,72, parapetti allineati) e merlo d'angolo a L su torri quadrate e porte, con pilastro condiviso per le rondini e testata a padiglione per la falda.
+- QA: verifica visiva nel Lab dei tre stili su torre quadrata, rotonda, caditoie e porta; `node qa/asset-audit.mjs` 487 render, 0 falliti, avvisi invariati (cantiere progressivo, schemi illustrativi); baseline aggiornata per il nuovo merlo di default. CI non ancora eseguita.
+
 ## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
 
 - Riletto live `main`, tree, 53 branch, PR recenti e CI. Nuova fotografia: [AUDIT-2026-10-30](AUDIT-2026-10-30.md). **Tre PR ancora aperte: #109/#110/#111; #103 Centro di controllo mergiata 30/10**. Nessun test Node/Chromium eseguito nella presente revisione, solo esiti CI/QA già tracciati.
