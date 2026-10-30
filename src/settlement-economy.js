@@ -66,7 +66,7 @@
       constructionPayroll:{total:0,bySite:{}},
       weeks:0,months:0,years:0,
       weekProduced:empty(),weekConsumed:empty(),weekBuildDemand:empty(),
-      weekRecovered:empty(),balanceHistory:[],lastBalance:null,foundingCharterId:null
+      weekRecovered:empty(),balanceHistory:[],panelHistory:[],weekProducedSites:{},lastBalance:null,foundingCharterId:null
     };
   }
   function state(){
@@ -88,6 +88,8 @@
     if(!e.happiness||typeof e.happiness!=='object')e.happiness={};
     for(const group of HAPPINESS_GROUPS)
       e.happiness[group]=clamp(finite(e.happiness[group],finite(e.welfare,50)),0,100);
+    if(!Array.isArray(e.panelHistory))e.panelHistory=[];
+    if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
     return e;
   }
   // Existing version-1 saves migrate lazily without resetting wallets or inventories.
@@ -97,6 +99,8 @@
     if(!e.weekBuildDemand)e.weekBuildDemand=empty();
     if(!e.weekRecovered)e.weekRecovered=empty();
     if(!Array.isArray(e.balanceHistory))e.balanceHistory=[];
+    if(!Array.isArray(e.panelHistory))e.panelHistory=[];
+    if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
     return e;
   }
   function reset(){State.economy=makeState();render(true)}
@@ -231,6 +235,12 @@
     if(!GOODS.includes(good)||quantity<=0)return;
     ensureFlows(e);
     e.weekProduced[good]=round((e.weekProduced[good]||0)+quantity);
+    // Preserve the actual productive site without fabricating output for a silent building.
+    if(e.activities?.[id]){
+      const site=e.weekProducedSites[id]||(e.weekProducedSites[id]={});
+      const ownerGoods=site[owner]||(site[owner]={});
+      ownerGoods[good]=round((ownerGoods[good]||0)+quantity);
+    }
     if(owner==='lord'){
       const keep=quantity*(100-(e.saleShare[good]||0))/100;
       const received=Math.min(keep,Math.max(0,(e.target[good]||0)-(e.castle[good]||0)));
@@ -588,6 +598,25 @@
     }
     const residents=HAPPINESS_GROUPS.reduce((sum,g)=>sum+pop[g],0);
     if(residents>0)e.welfare=round(HAPPINESS_GROUPS.reduce((sum,g)=>sum+e.happiness[g]*pop[g],0)/residents);
+    // Historical panels capture at the end of each real Saturday market, after
+    // prices, trade and weighted happiness are updated. No sampling per render frame.
+    const worker=jobSummary(day);
+    const siteOutput=Object.entries(e.weekProducedSites||{}).flatMap(([id,owners])=>{
+      const a=e.activities[id];
+      return a?Object.entries(owners).map(([owner,goods])=>({
+        id,type:a.type,owner,goods:{...goods}
+      })):[];
+    });
+    e.panelHistory.push({
+      day,population:{...pop},welfare:round(e.welfare),happiness:{...e.happiness},
+      prices:{...e.prices},jobs:{
+        herding:worker.herding,logging:worker.logging,industry:worker.industry,
+        building:worker.building,idle:worker.idle
+      },
+      production:siteOutput
+    });
+    if(e.panelHistory.length>26)e.panelHistory.splice(0,e.panelHistory.length-26);
+    e.weekProducedSites={};
   }
   function monthly(day){
     const e=sync(),staff=activeCapacity(),grouped={L1:0,L2:0},pop=population();
@@ -705,7 +734,7 @@
       activities:Object.keys(e.activities).length,
       balance:e.lastBalance||null,investmentCapacity:round(finite(e.investmentCapacity)),
       commerce:window.ConquerCommerce?.snapshot?.()||null,
-      weeks:e.weeks,months:e.months,years:e.years};
+      weeks:e.weeks,months:e.months,years:e.years,panelHistory:e.panelHistory?.slice(-26)||[]};
   }
   function render(force=false){
     const target=typeof document!=='undefined'?document.getElementById('economyOverview'):null;
