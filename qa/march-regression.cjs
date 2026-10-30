@@ -67,6 +67,8 @@ const loaded=M.load(storage);
 assert.equal(loaded.day,s.day);
 assert.equal(loaded.fiefs.find(f=>f.id==='hollowmere').owner,'player');
 assert.equal(loaded.fiefs.find(f=>f.id==='hollowmere').damage.civil,raidedDamage);
+assert.equal(M.unload(loaded)>0,true,'company may deposit raid loot at conquered fief');
+assert.equal(M.cargoUsed(loaded),0,'deposited loot clears company load');
 store.set(M.KEY,'{"version":7}');
 assert.ok(M.valid(M.load(storage)),'unknown schema resets to sandbox fixture');
 console.log('MARCH skeleton: routing, partial raiding, withdrawal, optional conquest, persistence PASS');
