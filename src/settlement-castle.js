@@ -225,7 +225,8 @@ function structureHeight(s){
     if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
   }
-  if(s.type==='gate')return isWoodGate(s)?1.94:[2.8,4.0,5.2][structureLevel(s)-1];
+  // The small gate stands just above the curtain (H2 walls are 2.10): L1 passage only, L2 one room over it.
+  if(s.type==='gate')return isWoodGate(s)?1.94:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];

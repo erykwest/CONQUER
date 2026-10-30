@@ -72,7 +72,7 @@ function towerRoofFootprintPoints(s){
 }
 function gateRoofRise(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return 0;
-  return .66;
+  return .66*rectDims(s).h/1.5;   // same pitch on the small gate
 }
 function gateRoofGeometry(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return null;

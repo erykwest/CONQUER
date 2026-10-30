@@ -461,9 +461,14 @@ function applyStructureTier(s,tier){
   }
   normalizeFunctions(s);return s
 }
+// Stone gates come in two sizes: the gatehouse (1.5×1.5U, L1-L3) and the small gate (1×1U, L1-L2).
+const GATE_SIZES=Object.freeze({large:1.5,small:1});
+const SMALL_GATE_MAX_LEVEL=2,SMALL_GATE_COST=.6;
+function isSmallGate(s){return s?.type==='gate'&&!isWoodGate(s)&&(Number(s.size)||GATE_SIZES.large)<1.25}
+function maxStructureLevel(s){return isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
   if(isWoodGate(s))return 1;
-  return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)
+  return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
 // Independent local X/Y scale in [0.8, 1.2], seeded by the stable house ID.
@@ -674,7 +679,7 @@ function baseConstructionCost(s){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
-  if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
+  if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s)*(isSmallGate(s)?SMALL_GATE_COST:1));
   if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});
   if(s.type==='bridge'){
     const factor=(s.width||1.5)/(s.variant==='stone'?1.5:1.2);

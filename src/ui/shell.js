@@ -102,7 +102,10 @@ const CATALOG = [
     rows: s => {
       const stone = s.tool.material !== 'wood', rows = [{ label: O.material, options: [
         opt(V.stone, '[data-gate]', stone), opt(V.wood, '[data-wood-gate]', !stone)] }];
-      if (stone) rows.push({ label: O.height, options: [1, 2, 3].map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
+      const small = stone && Number(s.tool.size) < 1.25;
+      if (stone) rows.push({ label: O.size, options: [['1.5', V.large], ['1', V.small]].map(([n, l]) =>
+        opt(l, `[data-gate][data-gate-size="${n}"]`, (Number(s.tool.size) || 1.5) === Number(n))) });
+      if (stone) rows.push({ label: O.height, options: (small ? [1, 2] : [1, 2, 3]).map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
       if (stone) rows.push(masonryRow(s));
       return rows;
     } },

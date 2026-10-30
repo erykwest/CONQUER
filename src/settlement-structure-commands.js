@@ -24,7 +24,7 @@ const StructureCommands=(()=>{
     if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){
       const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall';
     }
-    target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);
+    target.level=clamp(level,1,maxStructureLevel(target));normalizeFunctions(target);target.buildCost=constructionCost(target);
     refresh(target,false);return true;
   }
   // steps: ±1 = 15°, 'flip' = 180°.
@@ -185,7 +185,7 @@ const StructureCommands=(()=>{
       d.controls.push(choice('tier','setTier',isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label})),current));
     }
     if(['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate){
-      const max=['tower','gate'].includes(s.type)?3:2;
+      const max=maxStructureLevel(s);
       d.controls.push(choice('height','setHeight',Array.from({length:max},(_,i)=>({value:i+1,label:String(i+1)})),structureLevel(s)));
     }
     if(s.type==='tower'||s.type==='gate')

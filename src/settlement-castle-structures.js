@@ -891,7 +891,7 @@ function battlementBrazierSources(){
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
     }else if(s.type==='gate'&&gateRoofStyle(s)==='battlement'){
-      const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43;
+      const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43*rectDims(s).w/1.5;
       for(const side of [-1,1]){
         out.push({kind:'brazier',id:s.id+':brazier:'+side,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
       }
@@ -964,7 +964,7 @@ function drawFireGlows(nf){
 function gateBattlementPieces(s){
   if(s.type!=='gate'||isWoodGate(s)||underConstruction(s)||gateRoofStyle(s)!=='battlement')return[];
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
-  const pieces=[],center={x:s.x,y:s.y},perSide=4,intervals=perSide-1,inset=.11,cornerAngle=s.angle||0,corners=[];
+  const pieces=[],center={x:s.x,y:s.y},perSide=isSmallGate(s)?3:4,intervals=perSide-1,inset=.11,cornerAngle=s.angle||0,corners=[];
 
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;

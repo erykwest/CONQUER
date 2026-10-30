@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — porta piccola (30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/small-gate`, NON MERGE:** porta in pietra 1×1U, L1–L2, poco più alta del muro, con saracinesca, ante, torce e stendardi in scala; costo ×0,6 del corpo di porta.
+- **APERTO:** avviso `danno-visibile` del Lab sul portone incrinato/sfondato della porta piccola (portale più piccolo della soglia); ponte levatoio davanti alla porta piccola da provare su un fossato; instabilità dell'audit (due stati di render alternati senza cambi di codice).
+
 ## Castello — semitorri e torri a D (30/10/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/half-d-towers`, NON MERGE:** semitorre aperta alla gola (T1 piccola, T2 media) e torre a D (T2 media, T3 grande) in pietra; aggancio al muro con retro sul muro e fronte sul lato del puntatore; D sui fianchi della porta con il retro allineato. Semitorre con scala a pioli e botola a ogni piano. Cutaway della D. Costi per forma (tonda ×1,5, D ×1,25, semitorre ×0,5).

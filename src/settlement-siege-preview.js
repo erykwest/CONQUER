@@ -185,7 +185,10 @@
       ['Porta pietra L2',{type:'gate',shape:'square',material:'stone',size:1.5,level:2,roofStyle:'battlement'}],
       ['Porta pietra L3',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'battlement'}],
       ['Porta pietra L3 tetto',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'pitched'}],
-      ['Porta legno',{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}]
+      ['Porta legno',{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}],
+      ['Porta piccola L1',{type:'gate',shape:'square',material:'stone',size:1,level:1,roofStyle:'battlement'}],
+      ['Porta piccola L2',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'battlement'}],
+      ['Porta piccola L2 tetto',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'pitched'}]
     ]
   };
   function hpTo(s,f){

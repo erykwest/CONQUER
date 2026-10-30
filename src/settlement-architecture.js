@@ -115,17 +115,20 @@ function gateFacadeEdges(s){
   const defs=[{a:fp[0],b:fp[1],role:'side',index:0},{a:fp[1],b:fp[2],role:'front',index:1},{a:fp[2],b:fp[3],role:'side',index:2},{a:fp[3],b:fp[0],role:'rear',index:3}];
   for(const e of defs){const a=w2s(e.a,0),b=w2s(e.b,0);e.depth=(a.y+b.y)/2}defs.sort((a,b)=>b.depth-a.depth);return defs.slice(0,2);
 }
-function drawGatePortalOnEdge(edge){
-  if(drawArchitectureAssetOnEdge(edge,.705,.90,1.35,'gatePortal'))return;
-  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,cx=(edge.a.x+edge.b.x)/2,cy=(edge.a.y+edge.b.y)/2,half=.39;
-  const l={x:cx-ux*half,y:cy-uy*half},r={x:cx+ux*half,y:cy+uy*half};pathPolygon([w2s(l,.03),w2s(r,.03),w2s(r,1.05),w2s({x:cx,y:cy},1.38),w2s(l,1.05)],'#241a16','#9a7458',1);
+// Closed portal of a stone gate: .90×1.35 on the gatehouse, smaller on the small gate.
+function gateClosedPortal(s){return window.ConquerGates?.closedPortal?.(s)||{width:.9,height:1.35,centerZ:.705}}
+function drawGatePortalOnEdge(edge,s,key='gatePortal'){
+  const d=gateClosedPortal(s);
+  if(drawArchitectureAssetOnEdge(edge,d.centerZ,d.width,d.height,key))return;
+  const k=d.height/1.35,dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,cx=(edge.a.x+edge.b.x)/2,cy=(edge.a.y+edge.b.y)/2,half=d.width*.433;
+  const l={x:cx-ux*half,y:cy-uy*half},r={x:cx+ux*half,y:cy+uy*half};pathPolygon([w2s(l,.03),w2s(r,.03),w2s(r,1.05*k),w2s({x:cx,y:cy},1.38*k),w2s(l,1.05*k)],'#241a16','#9a7458',1);
 }
 function drawGatePortals(){
   for(const s of State.structures){
     if(s.type!=='gate'||isWoodGate(s)||underConstruction(s))continue;
     withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
       for(const edge of gateFacadeEdges(s)){
-        if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge);
+        if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge,s);
       }
     }));
   }
