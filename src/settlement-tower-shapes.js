@@ -31,11 +31,37 @@ function halfTowerBodyPieces(s){
 }
 function towerBodyPrisms(s){return s?.type==='tower'&&s.shape==='half'?halfTowerBodyPieces(s):[unionFootprintPoints(s)]}
 // Timber floors seen through the open gorge, one per storey; the top one is the fighting deck.
-function halfTowerFloorDecks(s){
+// Storey k is climbed by a ladder against a side wall at the gorge (alternating sides), through
+// a hatch left open in floor k: the floor is two convex boards around it.
+const HALF_LADDER_W=.16,HALF_HATCH_X=.26,HALF_HATCH_Y=.2,HALF_RUNG_STEP=.09;
+function halfTowerStoreys(s){
   if(s?.type!=='tower'||s.shape!=='half')return[];
-  const {w,h}=orientedTowerDims(s),t=HALF_TOWER_WALL,H=structureHeight(s),L=structureLevel(s);
-  const pts=orientedTowerWorld(s,[[-w/2,-h/2+t],[w/2-t,-h/2+t],[w/2-t,h/2-t],[-w/2,h/2-t]]),out=[];
-  for(let k=1;k<=L;k++){const z=k===L?H:H*k/L;out.push({pts,z0:z-.08,z1:z-.01})}
+  const {w,h}=orientedTowerDims(s),t=HALF_TOWER_WALL,H=structureHeight(s),L=structureLevel(s),out=[];
+  for(let k=1;k<=L;k++){
+    const side=k%2?-1:1,face=side*(h/2-t);
+    out.push({k,side,face,z:k===L?H:H*k/L,zBase:k===1?0:H*(k-1)/L,x0:-w/2,x1:-w/2+HALF_HATCH_X,xIn:w/2-t,yIn:h/2-t});
+  }
+  return out;
+}
+function halfTowerFloorDecks(s){
+  const rect=(x0,x1,y0,y1)=>orientedTowerWorld(s,[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]);
+  const out=[];
+  for(const st of halfTowerStoreys(s)){
+    const z0=st.z-.08,z1=st.z-.01,yh=st.face-st.side*HALF_HATCH_Y;
+    out.push({pts:rect(st.x1,st.xIn,-st.yIn,st.yIn),z0,z1});
+    out.push({pts:st.side<0?rect(st.x0,st.x1,yh,st.yIn):rect(st.x0,st.x1,-st.yIn,yh),z0,z1});
+  }
+  return out;
+}
+// Ladder rails and rungs (vertical boxes, like the cutaway ladders), from the floor below
+// up through the hatch.
+function halfTowerLadders(s){
+  const out=[],box=(x,y,dx,dy,z0,z1,part)=>out.push({pts:orientedTowerWorld(s,[[x-dx/2,y-dy/2],[x+dx/2,y-dy/2],[x+dx/2,y+dy/2],[x-dx/2,y+dy/2]]),z0,z1,part});
+  for(const st of halfTowerStoreys(s)){
+    const xc=(st.x0+st.x1)/2,y=st.face-st.side*.035,top=st.z+.06;
+    for(const o of [-1,1])box(xc+o*HALF_LADDER_W/2,y,.025,.025,st.zBase,top,'rail');
+    for(let z=st.zBase+HALF_RUNG_STEP;z<st.z-.02;z+=HALF_RUNG_STEP)box(xc,y,HALF_LADDER_W,.02,z-.008,z+.008,'rung');
+  }
   return out;
 }
 // Pitched roof: half cone on the round front, its apex over the centre of the half round.

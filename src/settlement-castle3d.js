@@ -32,6 +32,8 @@
     buttress:()=>[snowTop('#948779'),'#625a52','#4b4540','#9f9285'],
     chimney:()=>['#3b302c','#493732','#332824','#6a5148'],
     hoardDeck:()=>['#74533a','#5d432e','#493423','#927155'],
+    ladderRail:()=>['#8b6a45','#73573a','#5e472f'],                 // cutaway ladder colours
+    ladderRung:()=>['#b98652','#9a6f44','#7f5b37'],
   };
   const rgbCache=new Map();
   function rgb(hex){
@@ -136,6 +138,7 @@
       }
     }
     for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
+    for(const l of halfTowerLadders(s))m.prism(l.pts,l.z0,l.z1,l.part==='rung'?PAL.ladderRung():PAL.ladderRail());
     if(towerRoofStyle(s)==='pitched'){
       m.tag='roof';
       const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);

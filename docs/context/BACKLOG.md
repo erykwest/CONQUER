@@ -2,7 +2,7 @@
 
 ## Castello — semitorri e torri a D (30/10/2026)
 
-- **IMPLEMENTATO SU BRANCH `feature/half-d-towers`, NON MERGE:** semitorre aperta alla gola (T1 piccola, T2 media) e torre a D (T2 media, T3 grande) in pietra; aggancio al muro con retro sul muro e fronte sul lato del puntatore; D sui fianchi della porta con il retro allineato.
+- **IMPLEMENTATO SU BRANCH `feature/half-d-towers`, NON MERGE:** semitorre aperta alla gola (T1 piccola, T2 media) e torre a D (T2 media, T3 grande) in pietra; aggancio al muro con retro sul muro e fronte sul lato del puntatore; D sui fianchi della porta con il retro allineato. Semitorre con scala a pioli e botola a ogni piano.
 - **APERTO:** cutaway delle torri a D (oggi disattivato) e arredi sui solai della semitorre; collisioni e navigazione usano il rettangolo che le contiene (gli angoli davanti alla D sono pieni); semitorre e D a metà di un muro esistente (oggi solo alla fine di un muro, come le altre torri); costo dedicato (oggi lo stesso della torre quadrata dello stesso tier).
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`

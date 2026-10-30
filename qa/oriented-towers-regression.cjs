@@ -81,3 +81,20 @@ const area=pts=>pts.reduce((s,p,i)=>{const q=pts[(i+1)%pts.length];return s+p.x*
   assert.ok(total<d.w*d.h*.6,'the gorge is open, not a solid block');
   console.log('PASS semitower body is open at the rear');
 }
+{
+  // One ladder per storey through a hatch: no floor board covers a rung.
+  Object.assign(ctx,{structureLevel:s=>s.level,structureHeight:s=>s.level*1.1});
+  const inside=(p,poly)=>poly.every((a,i)=>{const b=poly[(i+1)%poly.length];return(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x)>1e-9});
+  for(const size of [1,1.5]){
+    const s={type:'tower',shape:'half',size,x:0,y:0,angle:.4,level:3};
+    const ladders=ctx.halfTowerLadders(s),decks=ctx.halfTowerFloorDecks(s);
+    assert.equal(ladders.filter(l=>l.part==='rail').length,2*s.level,'two rails per storey');
+    assert.equal(decks.length,2*s.level,'each floor is two boards around its hatch');
+    for(const d of decks)assert.ok(area(d.pts)>0,'boards are convex quads');
+    for(const l of ladders.filter(l=>l.part==='rung')){
+      const c={x:l.pts.reduce((a,p)=>a+p.x,0)/4,y:l.pts.reduce((a,p)=>a+p.y,0)/4};
+      for(const d of decks)if(d.z0<l.z1+.1&&d.z1>l.z0)assert.ok(!inside(c,d.pts),'ladder passes through the hatch');
+    }
+  }
+  console.log('PASS semitower ladders climb through floor hatches');
+}
