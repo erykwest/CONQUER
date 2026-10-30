@@ -64,6 +64,7 @@
     const canAct=!!op&&!!target&&target.owner==='enemy';
     $('march').disabled=!!op||!M.traversable(goal.x,goal.y);
     $('resupply').disabled=!M.atFief(state)||M.atFief(state).owner!=='player'||c.food>=64;
+    $('unload').disabled=!M.atFief(state)||M.atFief(state).owner!=='player'||M.cargoUsed(state)===0;
     $('raid').disabled=!canAct||c.morale===0;
     $('siege').disabled=!canAct||!['approach','raiding'].includes(op.phase);
     $('testVictory').disabled=!canAct||op.phase!=='siege'||op.days<1;
@@ -85,6 +86,7 @@
   $('conquer').addEventListener('click',()=>act(()=>M.conquer(state)));
   $('withdraw').addEventListener('click',()=>act(()=>M.withdraw(state)));
   $('resupply').addEventListener('click',()=>act(()=>M.resupply(state)));
+  $('unload').addEventListener('click',()=>act(()=>M.unload(state)));
   $('reset').addEventListener('click',()=>{
     if(!window.confirm('Reimpostare soltanto lo scenario di prova MARCH?'))return;
     state=M.initial();destination=null;message='Scenario di prova reimpostato.';
