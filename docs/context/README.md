@@ -1,5 +1,8 @@
 # CONQUER — Piramide di contesto
 
+> **Riferimento tecnico corrente: 30/10/2026, `main` `cf569992` — [AUDIT-2026-10-30](AUDIT-2026-10-30.md)**. Riconcilia 53 branch e 3 PR ancora aperte (#109/#110/#111), **15 core Builder su 23**, PR #98–108 economiche, #103 pannelli MERGED. Le note del 21/22/23 ottobre sono **snapshot storici**, non stato live. Usare [STATUS](STATUS.md), [BACKLOG](BACKLOG.md) e [ROADMAP](ROADMAP.md) aggiornati prima di proporre nuovo lavoro.
+
+
 > **Riesame corrente 23/10/2026:** [AUDIT-2026-10-23](AUDIT-2026-10-23.md) — quattro nuove PR mergiate (#76, #79, #80, #81), gate e Asset Lab su main, altre PR aperte. Il riepilogo del 22/10 rimane baseline storica.
 
 
@@ -9,7 +12,7 @@
 > Punto d'ingresso canonico per riprendere il progetto dopo una chat, un cambio di agente o una pausa.
 > Snapshot iniziale: **16 ottobre 2026**. **Audit stato Git aggiornato al 21 ottobre 2026**, base `main` [7d9328a](https://github.com/erykwest/CONQUER/commit/7d9328ace504234ad34e0b4d89a662af456832e2). La cronologia Git e i test hanno sempre precedenza sulle sintesi.
 
-**Stato corrente da aprire per primo:** [AUDIT-2026-10-21.md](AUDIT-2026-10-21.md) — merge #44/#48/#53/#54/#57–58/#63–69/#70/#71/#73, PR ancora aperte #55/#61/#65/#72 e limiti della QA. **Workflow PR automatico:** [PR-WORKFLOW.md](PR-WORKFLOW.md), [Action Context sync](../../.github/workflows/context-governance.yml); aggiornamenti obbligatori di STATUS/BACKLOG/CHANGELOG per le PR operative su qualsiasi branch.
+**Snapshot storico (NON lo stato corrente):** [AUDIT-2026-10-21.md](AUDIT-2026-10-21.md) — merge #44/#48/#53/#54/#57–58/#63–69/#70/#71/#73, PR ancora aperte #55/#61/#65/#72 e limiti della QA. **Workflow PR automatico:** [PR-WORKFLOW.md](PR-WORKFLOW.md), [Action Context sync](../../.github/workflows/context-governance.yml); aggiornamenti obbligatori di STATUS/BACKLOG/CHANGELOG per le PR operative su qualsiasi branch.
 
 ## Leggere in quest'ordine
 
@@ -22,7 +25,7 @@
 | **4 — Dettaglio** | [BACKLOG.md](BACKLOG.md) | Dove stanno le singole feature, i requisiti e i documenti tematici? |
 | **5 — Continuità** | [PROTOCOL.md](PROTOCOL.md) e [CHANGELOG.md](CHANGELOG.md) | Come leggere, aggiornare e trasferire il contesto senza degradarlo? |
 
-**Guida operativa per `clay` (branch da `Civil`, solo istruzioni):** [argilla, murature in mattoni e roadmap implementativa](../CLAY-DEVELOPMENT.md) · [piano QA](../CLAY-REGRESSION-PLAN.md). Le modifiche non sono ancora nel codice.
+**Guida operativa per `clay` (branch da `Civil`, solo istruzioni):** [argilla, murature in mattoni e roadmap implementativa](../CLAY-DEVELOPMENT.md) · [piano QA](../CLAY-REGRESSION-PLAN.md). Lo schema su branch `clay` è una specifica storica: cava argilla e muratura mattoni sono già nel runtime corrente di `main`.
 
 **Guida operativa per il sottosistema Civil:** [sviluppo edifici civili, cimitero L1, birreria L2 e annessi](../CIVIL-ANNEX-DEVELOPMENT.md). Contiene contratti del codice, percorso implementativo e checklist QA; è specifica della branch `Civil`.
 
