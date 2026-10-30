@@ -481,14 +481,17 @@ function merlonStyleParts(center,angle,w,d,z,h,cornerEnd=0,style=crenelStyle()){
   if(style==='gabled'){
     // Two slopes (inner and outer face) meeting on a ridge along the wall, closed by triangular
     // gable ends. Faces are sorted far to near so the 2.5D painter can fill them in order.
-    const R=top+.1,c=(a,b)=>({p:at(a*w/2,b*d/2),z:top}),rA={p:at(-w/2,0),z:R},rB={p:at(w/2,0),z:R};
+    // On an L corner arm the ridge stops over the centre of the corner block and that end is hipped:
+    // the two arms' hips meet there and read as one L-shaped coping.
+    const R=top+.1,c=(a,b)=>({p:at(a*w/2,b*d/2),z:top});
+    const ea=cornerEnd<0?-w/2+d/2:-w/2,eb=cornerEnd>0?w/2-d/2:w/2,rA={p:at(ea,0),z:R},rB={p:at(eb,0),z:R};
     const faces=[
       {pts:[c(-1,-1),c(1,-1),rB,rA],tone:'slopeA',ref:at(0,-d/4)},
       {pts:[c(-1,1),c(1,1),rB,rA],tone:'slopeB',ref:at(0,d/4)},
-      {pts:[c(-1,-1),c(-1,1),rA],tone:'end',ref:at(-w/2,0)},
-      {pts:[c(1,-1),c(1,1),rB],tone:'end',ref:at(w/2,0)}
+      {pts:[c(-1,-1),c(-1,1),rA],tone:cornerEnd<0?'hip':'end',ref:at(-w/2,0)},
+      {pts:[c(1,-1),c(1,1),rB],tone:cornerEnd>0?'hip':'end',ref:at(w/2,0)}
     ].sort((a,b)=>view(a.ref)-view(b.ref));
-    faces.filter(f=>f.tone!=='end').forEach((f,i)=>f.tone=i?'slopeB':'slopeA');
+    faces.filter(f=>f.tone.startsWith('slope')).forEach((f,i)=>f.tone=i?'slopeB':'slopeA');
     parts.push({faces});
     return parts;
   }
@@ -647,7 +650,7 @@ function drawMerlonBody(piece){
   }
 }
 // Gable faces: the slope turned to the viewer takes the lit top tone, the other the shaded side.
-const MERLON_FACE_TONES={slopeA:'#8a7e72',slopeB:'#9a8e82',top:'#9a8e82',end:'#635951',cap:'#5a524b'};
+const MERLON_FACE_TONES={hip:'#857a6f',slopeA:'#8a7e72',slopeB:'#9a8e82',top:'#9a8e82',end:'#635951',cap:'#5a524b'};
 const merlonFaceColor=tone=>['end','cap'].includes(tone)?MERLON_FACE_TONES[tone]:winterSnowColor(MERLON_FACE_TONES[tone]);
 function drawMerlonFaces(faces){
   for(const f of faces){
