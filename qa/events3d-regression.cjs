@@ -127,6 +127,25 @@ for(const g of [venue('arenaLot',{id:'u1'}),venue('festivalGround',{id:'u2',even
 // Pavilion schemes: one pair fills walls, gores and valance in different ways.
 {const red=sc=>E.triangles('tentOctagon',{x:0,y:0},0,['#b8322c','#2f56a6',sc]).col.filter(c=>c==='#b8322c').length;
  assert.equal(new Set(['gored','solid','roof','inverted'].map(red)).size,4,'each scheme fills the pavilion differently')}
+// Encampment: quarters, no two tents overlapping, everything inside the boundary,
+// nobles behind the parade ground, the gate at the front, deterministic.
+for(const [nl,ns] of [[1,3],[2,7],[4,16]]){
+ const army={leaders:Array.from({length:nl},(_,k)=>({id:'l'+k})),squads:Array.from({length:ns},(_,k)=>({id:'s'+k}))};
+ const c=E.encampment(army,{seed:7,key:'t'+ns});
+ assert.equal(c.quarters.nobles,nl,'every leader pitches a pavilion');
+ assert.equal(c.quarters.companies,Math.ceil(ns/3),'squads grouped in companies of three');
+ assert.equal(c.fires.length,ns,'one fire per squad');
+ const tents=c.items.filter(it=>/^tent/.test(it.m));
+ tents.forEach((a,i)=>tents.slice(i+1).forEach(b=>assert.ok(Math.hypot(a.x-b.x,a.y-b.y)>1,'tents keep apart')));
+ const inside=p=>{let n=false;const P=c.perimeter;for(let i=0,j=P.length-1;i<P.length;j=i++)if((P[i].y>p.y)!==(P[j].y>p.y)&&p.x<(P[j].x-P[i].x)*(p.y-P[i].y)/(P[j].y-P[i].y)+P[i].x)n=!n;return n};
+ c.items.forEach(it=>assert.ok(inside(it),it.m+' inside the boundary'));
+ c.items.filter(it=>/^tent(Octagon|Square)/.test(it.m)).forEach(it=>assert.ok(it.y>0,'nobles at the back'));
+ assert.ok(c.gate.y<Math.min(...c.items.map(it=>it.y)),'gate at the front');
+ assert.deepEqual(E.encampment(army,{seed:7,key:'t'+ns}),c,'deterministic');
+ const pairs=new Set(c.items.filter(it=>it.pair).map(it=>it.pair.slice(0,2).sort().join()));
+ assert.equal(pairs.size,nl,'each pavilion its own livery');
+}
+console.log('PASS encampment: quarters, spacing, boundary, gate, liveries');
 console.log('PASS livery: realm heraldry on stands and stages, primary pairs on knights\' gear');
 
 // Wind: cloth (pennons, bunting, banners) leaves the static scene and waves on the

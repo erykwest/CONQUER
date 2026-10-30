@@ -581,27 +581,152 @@
     }
     return out;
   }
+  // ---------- Encampment: a planned army camp laid out in quarters (docs/events, camp).
+  // Local frame: the way in at -y. The noble quarter (all the leaders' pavilions round
+  // a banner spot) lies at the back; each company has its own street on the front and
+  // flanks (company tent at its head, ridge tents staggered along it, a fire per squad);
+  // the train (wagons, crates, racks) fills the band between; a parade ground stays
+  // open at the centre. The boundary is a soft hull of everything pitched, with a gap
+  // at the front as the gate (the line a palisade will later follow).
+  // army: {leaders:[{id,kind}], squads:[{id}]}; opts: {x,y,angle,seed,heraldry,blocked}
+  // -> {items:[{m,x,y,a,pair?}], fires, perimeter:[{x,y}], gate:{x,y}, banner, paths:[[p,q]], quarters}
+  const CAMP_RADIUS={tentOctagon:1.05,tentSquare:1.1,tentCompany:1.05,tentRidge:.62,tentRidgePlain:.62,wagonCargo:.8,
+    propArmourCrate:.35,propWeaponRack:.45,propSpearRack:.45};
+  function encampment(army,opts={}){
+    const seed=opts.seed??((typeof State!=='undefined'&&State.seed)||1),h=opts.heraldry||(typeof State!=='undefined'&&State.heraldry)||{};
+    const key=opts.key||'camp',rnd=k=>hash(seed+'|enc|'+key+'|'+k)/4294967296,jit=(k,s)=>(rnd(k)-.5)*s;
+    const leaders=army.leaders||[],squads=army.squads||[],items=[],fires=[],paths=[];
+    const free=(x,y,r)=>items.every(it=>Math.hypot(it.x-x,it.y-y)>=r+(CAMP_RADIUS[it.m]||.4));
+    // Pitch near (x,y): a few seeded nudges before giving up on that piece.
+    const pitch=(it,k)=>{
+      const r=CAMP_RADIUS[it.m]||.4;
+      for(let t=0;t<6;t++){
+        const x=it.x+(t?jit(k+'x'+t,.5*t):0),y=it.y+(t?jit(k+'y'+t,.5*t):0);
+        if(free(x,y,r)){const p={...it,x,y};items.push(p);return p}
+      }
+      return null;
+    };
+    // Noble quarter: pavilions on a loose arc round the banner, the commander's in the
+    // realm livery at its middle, the others dealt distinct pairs, neighbours contrasting.
+    const banner={x:0,y:1.6+leaders.length*.25};
+    const deck=PAIRS.filter(([a,b])=>PRIMARY.indexOf(a)<PRIMARY.indexOf(b)).map((p,k)=>[hash(seed+'|nob|'+key+'|'+k),p]).sort((a,b)=>a[0]-b[0]).map(e=>e[1]);
+    const order=leaders.map((l,i)=>i).sort((a,b)=>Math.abs(a-(leaders.length-1)/2)-Math.abs(b-(leaders.length-1)/2));
+    const nobleR=leaders.length>1?1.9+leaders.length*.12:0,span=Math.min(2.6,.8*(leaders.length-1));
+    const pavs=[];
+    order.forEach((li,n)=>{
+      const f=leaders.length>1?li/(leaders.length-1)-.5:0,th=Math.PI/2+f*span*2;
+      const x=banner.x+Math.cos(th)*nobleR+jit('nx'+li,.35),y=banner.y+Math.sin(th)*nobleR+jit('ny'+li,.35);
+      let pair;
+      if(n===0)pair=[h.c1||'#b8322c',h.c2||'#ece6d6',SCHEME_KEYS[hash(seed+'|cmd|'+key)%SCHEME_KEYS.length]];
+      else{
+        const near=pavs.reduce((m,p)=>!m||Math.hypot(p.x-x,p.y-y)<Math.hypot(m.x-x,m.y-y)?p:m,null);
+        const k=Math.max(0,deck.findIndex(p=>!near||!p.some(c=>near.pair.includes(c))));
+        const p=deck.splice(k,1)[0]||PAIRS[n%PAIRS.length];
+        let sc=SCHEME_KEYS[hash(seed+'|nsc|'+key+'|'+n)%SCHEME_KEYS.length];
+        if(near&&sc===near.pair[2])sc=SCHEME_KEYS[(SCHEME_KEYS.indexOf(sc)+1)%SCHEME_KEYS.length];
+        pair=[p[0],p[1],sc];
+      }
+      const it=pitch({m:li%2?'tentSquare':'tentOctagon',x,y,a:Math.atan2(banner.y-y,banner.x-x)+Math.PI/2+jit('na'+li,.4),pair},'n'+li);
+      if(it)pavs.push(it);
+    });
+    // Companies of up to three squads, one street each, spread over front and flanks.
+    const companies=[];for(let i=0;i<squads.length;i+=3)companies.push(squads.slice(i,i+3));
+    const arc=3.9,rs=Math.max(3.4,companies.length*2.3/arc);
+    companies.forEach((co,ci)=>{
+      const f=companies.length>1?ci/(companies.length-1)-.5:0;
+      // The front gap: streets keep clear of the gate axis.
+      let phi=-Math.PI/2+f*arc+jit('cp'+ci,.18);
+      if(Math.abs(phi+Math.PI/2)<.32)phi+=phi<-Math.PI/2?-.32:.32;
+      const ux=Math.cos(phi),uy=Math.sin(phi),vx=-uy,vy=ux,head=rs+jit('cr'+ci,.4);
+      const at=(d,s)=>({x:ux*d+vx*s,y:uy*d+vy*s});
+      if(co.length===3){const p=at(head,0);pitch({m:'tentCompany',x:p.x,y:p.y,a:phi+Math.PI/2+jit('ca'+ci,.25)},'c'+ci)}
+      const model=rnd('ck'+ci)<.55?'tentRidge':'tentRidgePlain',tents=co.length===3?2:co.length*2;
+      let d=head+(co.length===3?1.55:0);
+      for(let t=0;t<tents;t++){
+        const side=t%2?1:-1,q=at(d+(t%2)*.5,side*(.78+jit('cs'+ci+t,.18))+Math.sin(d*1.3+ci)*.15);
+        // Doors face the street axis.
+        pitch({m:model,x:q.x,y:q.y,a:phi+(side>0?0:Math.PI)+jit('ta'+ci+t,.3)},'t'+ci+'.'+t);
+        if(t%2)d+=1.15;
+      }
+      co.forEach((sq,si)=>{const p=at(head-.95+si*1.05+(co.length===3?.9:0),jit('fs'+ci+si,.2));fires.push({x:p.x,y:p.y,id:sq.id+':fire'})});
+      paths.push([{x:0,y:0},at(head-1.1,0)]);
+    });
+    // Train: wagons either side of the parade ground towards the gate, crates and racks
+    // piled beside them.
+    const train=[];
+    for(let k=0;k<Math.max(1,Math.round(companies.length/2));k++){
+      const side=k%2?1:-1,row=Math.floor(k/2);
+      train.push(pitch({m:'wagonCargo',x:side*(1.5+row*.35)+jit('wx'+k,.25),y:-1.1-row*1.0+jit('wy'+k,.25),a:Math.PI/2+side*.35+jit('wa'+k,.4)},'w'+k));
+    }
+    ['propArmourCrate','propSpearRack','propArmourCrate','propWeaponRack'].slice(0,1+Math.min(3,leaders.length)).forEach((m,k)=>{
+      const side=k%2?-1:1;
+      train.push(pitch({m,x:side*(2.45+jit('gx'+k,.3)),y:-.4-Math.floor(k/2)*.75+jit('gy'+k,.3),a:rnd('gr'+k)*Math.PI*2},'g'+k));
+    });
+    // Boundary: hull of the pitched pieces grown by a margin, rounded twice (Chaikin).
+    const pts=[];
+    for(const it of items){const r=(CAMP_RADIUS[it.m]||.4)+.9;for(let k=0;k<8;k++)pts.push({x:it.x+Math.cos(k*Math.PI/4)*r,y:it.y+Math.sin(k*Math.PI/4)*r})}
+    if(!pts.length)pts.push({x:-2,y:-2},{x:2,y:-2},{x:2,y:2},{x:-2,y:2});
+    pts.sort((a,b)=>a.x-b.x||a.y-b.y);
+    const cross=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x),lo=[],hi=[];
+    for(const p of pts){while(lo.length>1&&cross(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+    for(const p of [...pts].reverse()){while(hi.length>1&&cross(hi[hi.length-2],hi[hi.length-1],p)<=0)hi.pop();hi.push(p)}
+    let hull=lo.slice(0,-1).concat(hi.slice(0,-1));
+    for(let r=0;r<2;r++)hull=hull.flatMap((p,i)=>{const q=hull[(i+1)%hull.length];return[{x:p.x*.75+q.x*.25,y:p.y*.75+q.y*.25},{x:p.x*.25+q.x*.75,y:p.y*.25+q.y*.75}]});
+    const front=hull.reduce((m,p)=>Math.abs(p.x)<1.2&&(!m||p.y<m.y)?p:m,null)||hull.reduce((m,p)=>p.y<m.y?p:m);
+    const gate={x:front.x,y:front.y};
+    paths.push([gate,{x:0,y:0}],[{x:0,y:0},banner]);
+    // Local -> world.
+    const a=opts.angle||0,c=Math.cos(a),sn=Math.sin(a),ox=opts.x||0,oy=opts.y||0;
+    const W=p=>({...p,x:ox+p.x*c-p.y*sn,y:oy+p.x*sn+p.y*c});
+    const blocked=opts.blocked||(()=>false);
+    return{x:ox,y:oy,key,
+      items:items.map(it=>({...W(it),a:(it.a||0)+a})).filter(it=>!blocked(it)),
+      fires:fires.map(W),perimeter:hull.map(W),gate:W(gate),banner:W(banner),
+      paths:paths.map(s=>s.map(W)),
+      quarters:{nobles:pavs.length,companies:companies.length,train:train.filter(Boolean).length}};
+  }
+  // Boundary marked with fence segments (stage 0 of the fortification), gate left open.
+  function encampmentFence(camp,step=1.4){
+    const out=[],P=camp.perimeter;
+    for(let i=0;i<P.length;i++){
+      const p=P[i],q=P[(i+1)%P.length],L=Math.hypot(q.x-p.x,q.y-p.y),n=Math.max(1,Math.round(L/step));
+      for(let k=0;k<n;k++){
+        const x=p.x+(q.x-p.x)*(k+.5)/n,y=p.y+(q.y-p.y)*(k+.5)/n;
+        if(Math.hypot(x-camp.gate.x,y-camp.gate.y)<1.3)continue;
+        out.push({m:'propFence',x,y,a:Math.atan2(q.y-p.y,q.x-p.x),s:L/n/1.4});
+      }
+    }
+    return out;
+  }
   // A bivouac as one catalog model (event palette, origin at the camp centre) for the Lab.
-  function bivouacModel(camp){
-    const p=[],c=[];
+  // pal: the scene registry palette, extended with each pavilion's livery colours.
+  function bivouacModel(camp,pal){
+    const p=[],c=[],index=hex=>{let k=pal.indexOf(hex);if(k<0){k=pal.length;pal.push(hex)}return k};
     for(const it of camp.items){
-      const co=Math.cos(it.a||0),sn=Math.sin(it.a||0);
+      const co=Math.cos(it.a||0),sn=Math.sin(it.a||0),s=it.s||1;
       for(const part of parts(it.m)||[]){
-        for(let k=0;k<part.v.length;k+=3){const x=part.v[k],y=part.v[k+1];p.push(it.x-camp.x+x*co-y*sn,it.y-camp.y+x*sn+y*co,part.v[k+2])}
-        c.push(...part.c);
+        for(let k=0;k<part.v.length;k+=3){const x=part.v[k]*s,y=part.v[k+1];p.push(it.x-camp.x+x*co-y*sn,it.y-camp.y+x*sn+y*co,part.v[k+2])}
+        const own=palette(it.m,it.pair||(liveryOf(it.m)==='pair'?pairFor(it.m):null));
+        for(const ci of part.c)c.push(index(own[ci]));
       }
     }
     return{parts:{camp:{p,i:p.map((_,k)=>k).slice(0,p.length/3),c}},meta:{},livery:'realm'};
   }
   window.ConquerEvents3D={VENUES,SETUPS,PAIRS,BUILD,SETUP_NAMES,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld,
-    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel};
+    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel,encampment,encampmentFence};
   // Lab scenes: sample bivouacs in the Asset Lab catalog (ConquerCampScenes).
   if(window.ConquerEventModels){
     const M=window.ConquerEventModels,sq=(n,x=0)=>Array.from({length:n},(_,k)=>({id:'s'+k,kind:'squad',x:x+(k%3)*.4,y:Math.floor(k/3)*.4}));
-    const scene=units=>bivouacModel(bivouac(units,{seed:7}).camps[0]);
-    window.ConquerCampScenes={palette:M.palette,paletteKeys:M.paletteKeys,models:{
+    const pal=[...M.palette],scene=units=>bivouacModel(bivouac(units,{seed:7}).camps[0],pal);
+    window.ConquerCampScenes={palette:pal,paletteKeys:pal.map((_,k)=>M.paletteKeys[k]||'livery'+k),models:{
       bivouacSquads:scene(sq(2)),
       bivouacCaptain:scene([{id:'cap',kind:'captain',x:0,y:0},...sq(5)]),
-      bivouacKnightLarge:scene([{id:'kn',kind:'knight',x:0,y:0},...sq(9)])}};
+      bivouacKnightLarge:scene([{id:'kn',kind:'knight',x:0,y:0},...sq(9)]),
+      ...Object.fromEntries([['encampmentSmall',2,7],['encampmentArmy',4,16]].map(([name,nl,ns])=>{
+        const camp=encampment({leaders:Array.from({length:nl},(_,k)=>({id:'l'+k,kind:k?'knight':'captain'})),squads:sq(ns)},{seed:7,key:name});
+        return[name,bivouacModel({x:0,y:0,items:camp.items.concat(encampmentFence(camp))},pal)];
+      }))}};
+    // Keys for the livery colours appended while building the scenes.
+    window.ConquerCampScenes.paletteKeys=pal.map((_,k)=>M.paletteKeys[k]||'livery'+k);
   }
 })();
