@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MARCH-01 — Modalità attacco e conquista facoltativa (30/10/2026)
+
+**VINCOLO DI GAME DESIGN:** il giocatore può guidare una compagnia militare sulla world map al posto di gestire direttamente un feudo. Una volta arrivato può razziare, iniziare un assedio o ritirarsi. Razzia e distruzione anche soltanto parziale sono **persistenti** e non obbligano a terminare l'invasione. Il giocatore può interrompere un'operazione in qualsiasi momento. Anche dopo aver espugnato le difese **l'annessione è un comando volontario**, non l'esito automatico dell'assedio; la campagna può proseguire.
+
+**CODICE DIMOSTRATIVO SOLO SUL BRANCH feature/march-skeleton:** /march/ implementa la sequenza sopra su fixture isolate, non ancora sui feudi della partita. La vittoria è immessa soltanto da un tasto TEST e non è un'assalto simulato. Nella V1 World/Feudal, Combat, Siege, economia e save saranno quelli condivisi: niente doppio ledger o secondo motore d'assedio. [Specifica](../march.md).
+
+
 ## D-PANELS-01 · Centro di controllo del feudo (29/10/2026)
 
 **DESIGN e codice sulla branch `panels`, non su `main`:** i pannelli di controllo sono un livello di osservazione/gestione nel Profilo della partita, non uno stato economico parallelo. Nove aree (Generale, Popolazione, Economia, Proprietà, Scorte, Militare, Cantieri, Diplomazia, Avvisi), usando `ConquerGame.read` e comandi del motore. Lo storico è mostrato solo dove esiste (`balanceHistory` mercato settimanale); nessuna serie fittizia. Distinguere scorte economia/Siege e numero di soldati effettivi/capienza caserme. **Festività, diplomazia avanzata e leve reali restano TBD**, come descritto in [management-panels](../management-panels.md). Nessuna modifica alle priorità della roadmap M0–M5.

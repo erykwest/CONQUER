@@ -1,5 +1,12 @@
 # Livello 1 — Roadmap sistemica
 
+## Estensione strategica — MARCH (decisione 30/10/2026)
+
+- **Modalità Attacco approvata**, distinta dalla gestione diretta del feudo ma nello stesso mondo persistente finale. Skeleton isolato su feature/march-skeleton con route /march/: marcia, razzia parziale, ritiro, segnaposto di assedio/assalto e conquista facoltativa. **Non è l'integrazione World/Feudal**.
+- **Prossima integrazione, dopo i fondamenti condivisi:** ID e stato unici per compagnie e feudi; transazione di bottino/danni sul ledger e strutture reali; eventi di esito da Combat/Siege; ritiro e annessione volontaria; save/load unico. Milestone/ordine M0–M5 esistente invariati.
+- Limiti e criterio V1: [docs/march.md](../march.md).
+
+
 ## Priorità correnti — audit live 30/10/2026
 
 > `main` **`cf569992`**, [audit completo](AUDIT-2026-10-30.md). L'ordine M0–M5 è una cornice per **residui**, non per ricreare interi sottosistemi già mergiati. I paragrafi precedenti al 30/10 sotto restano snapshot **storici**.
