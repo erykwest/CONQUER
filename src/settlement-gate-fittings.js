@@ -17,16 +17,28 @@
   // the opposite springs) up to the apex at y=44.
   const PORTAL={width:1.2,height:1.5,base:-.06,centerZ:-.06+1.5/2};
   const PX={size:256,half:64,spring:122,apex:44};
-  let openingCache=null;
-  function opening(){
-    if(openingCache)return openingCache;
-    const sx=PORTAL.width/PX.size,sz=PORTAL.height/PX.size,rise=PX.spring-PX.apex;
+  // The gatehouse front is 1.5U; a small gate (1U) gets a narrower, lower portal (at most .9 of
+  // its front) and its torches and banners move in by the front's ratio (k).
+  function portalOf(s){
+    const W=s?rectDims(s).h:1.5,width=Math.min(PORTAL.width,W*.9),height=PORTAL.height*(1+width/PORTAL.width)/2;
+    return{width,height,base:PORTAL.base,centerZ:PORTAL.base+height/2,k:W/1.5};
+  }
+  // The closed-door portal sprite (gate_portal.png): .90×1.35 on the gatehouse, scaled like the frame.
+  function closedPortal(s){
+    const r=portalOf(s).width/PORTAL.width,height=1.35*(1+r)/2;
+    return{width:.9*r,height,centerZ:.03+height/2};
+  }
+  const openingCache=new Map();
+  function opening(s){
+    const P=portalOf(s),key=P.width.toFixed(3);
+    if(openingCache.has(key))return openingCache.get(key);
+    const sx=P.width/PX.size,sz=P.height/PX.size,rise=PX.spring-PX.apex;
     const e=(rise*rise-PX.half*PX.half)/(2*PX.half),r=PX.half+e,phiMax=Math.acos(e/r);
-    const spring=PORTAL.base+(PX.size-PX.spring)*sz,arc=[];
+    const spring=P.base+(PX.size-PX.spring)*sz,arc=[];
     for(let i=0;i<=8;i++){const phi=phiMax*i/8;arc.push({c:(r*Math.cos(phi)-e)*sx,z:spring+r*Math.sin(phi)*sz})}
     arc[8].c=0;
-    openingCache={half:PX.half*sx,spring,apex:arc[8].z,arc};
-    return openingCache;
+    const o={half:PX.half*sx,spring,apex:arc[8].z,arc};openingCache.set(key,o);
+    return o;
   }
   // Local gate frame: `along` follows the passage (+ is the outer front, the drawbridge side),
   // `across` spans the gate front.
@@ -42,7 +54,7 @@
   // the gate keeps the plain prism (wood gates, or a storey too short for the vault).
   function addGateBody(m,s,H,pal){
     if(!stoneGate(s))return false;
-    const o=opening(),f=frame(s),L2=f.L/2,W2=f.W/2,cap=o.apex;
+    const o=opening(s),f=frame(s),L2=f.L/2,W2=f.W/2,cap=o.apex;
     if(H<cap+.25||o.half>=W2-.1)return false;
     const P=(a,c)=>at(f,a,c);
     m.prism([P(-L2,-W2),P(L2,-W2),P(L2,W2),P(-L2,W2)],cap,H,pal);
@@ -164,7 +176,7 @@
   // Leaf hinged on the jamb at `side` (+1/-1 across), swung inward by theta. Outline coordinates:
   // u from the hinge toward the centre line, z up; t is the thickness, toward the outer front
   // when closed and toward the passage axis when open.
-  function addLeaf(b,s,f,ground,side,theta,leafColor,bandColor,o=opening()){
+  function addLeaf(b,s,f,ground,side,theta,leafColor,bandColor,o=opening(s)){
     const hingeA=f.L/2-.22,T=.06,w=o.half-.012;
     const d={a:-Math.sin(theta),c:-side*Math.cos(theta)},n={a:Math.cos(theta),c:-side*Math.sin(theta)};
     const world=(u,z,t)=>{const p=at(f,hingeA+d.a*u+n.a*t,o.half*side+d.c*u+n.c*t);return[p.x,p.y,ground+z]};
@@ -180,8 +192,8 @@
     const ring=[{u:w-.09,z:.5},{u:w-.05,z:.5},{u:w-.05,z:.56},{u:w-.09,z:.56}];
     b.slab(ring,(q,t)=>world(q.u,q.z,t),T,T+.02,bandColor);
   }
-  function addPortcullis(b,f,ground,progress,wrecked=false){
-    const o=opening(),a0=f.L/2-.10,lift=(1-progress)*(o.apex+.04),iron=wrecked?'#2a2624':'#34302d';
+  function addPortcullis(b,f,ground,progress,wrecked=false,o=opening()){
+    const a0=f.L/2-.10,lift=(1-progress)*(o.apex+.04),iron=wrecked?'#2a2624':'#34302d';
     const bar=(c0,c1,z0,z1)=>{
       const pts=[at(f,a0-.014,c0),at(f,a0+.014,c0),at(f,a0+.014,c1),at(f,a0-.014,c1)];
       b.slab(pts,(p,t)=>[p.x,p.y,ground+t],z0,z1,iron);
@@ -197,9 +209,9 @@
   }
   // Torches on the outer facade, either side of the portal, below the banners.
   const TORCH={across:.565,z:.88};
-  function addTorchBrackets(b,f,ground){
+  function addTorchBrackets(b,f,ground,k=1){
     for(const side of [-1,1]){
-      const across=TORCH.across*side,wood='#5b4130',iron='#3b3532';
+      const across=TORCH.across*k*side,wood='#5b4130',iron='#3b3532';
       // Wall plate, an angled haft and the iron cup the flame rises from.
       const box=(a0,a1,c0,c1,z0,z1,colr)=>{
         const pts=[at(f,a0,c0),at(f,a1,c0),at(f,a1,c1),at(f,a0,c1)];
@@ -222,11 +234,11 @@
     const f=frame(s),ground=groundOf(s),b=meshBuilder();
     if(stage!=='broken'){
       const theta=door*DOOR_OPEN,leaf=stage==='damaged'?'#5f4129':'#7a5233';
-      for(const side of [-1,1])addLeaf(b,s,f,ground,side,theta,leaf,'#2f2b29',wood?WOOD_OPENING:opening());
+      for(const side of [-1,1])addLeaf(b,s,f,ground,side,theta,leaf,'#2f2b29',wood?WOOD_OPENING:opening(s));
     }
     // Raised, it sits hidden in the masonry above the vault; it stands even with the door gone.
-    if(p)addPortcullis(b,f,ground,pc,!!p.wrecked);
-    if(!wood)addTorchBrackets(b,f,ground);
+    if(p)addPortcullis(b,f,ground,pc,!!p.wrecked,opening(s));
+    if(!wood)addTorchBrackets(b,f,ground,portalOf(s).k);
     const mesh={pos:b.pos,col:b.col,static:settled};
     meshCache.set(s.id,{key,mesh});
     return mesh;
@@ -247,7 +259,7 @@
       if(visibleOnly&&!(typeof isPlanView==='function'&&isPlanView())
         &&viewDepthPoint(at(f,f.L/2+.5,0))<viewDepthPoint({x:s.x,y:s.y}))continue;
       for(const side of [-1,1])
-        out.push({kind:'torch',id:s.id+':gate-torch:'+side,p:at(f,f.L/2+.055,TORCH.across*side),z:TORCH.z+.04,groundZ:groundOf(s)});
+        out.push({kind:'torch',id:s.id+':gate-torch:'+side,p:at(f,f.L/2+.055,TORCH.across*portalOf(s).k*side),z:TORCH.z+.04,groundZ:groundOf(s)});
     }
     return out;
   }
@@ -303,14 +315,22 @@
     return spriteKey;
   }
   const BANNER={across:.62,width:.235,top:2.06,height:.96};
+  // Banners of one gate: moved in on a small gate, and kept below the crest of a low one.
+  function bannerOf(s){
+    const H=typeof structureHeight==='function'?structureHeight(s):Infinity;
+    const k=portalOf(s).k,top=Math.min(BANNER.top,H-.15),height=Math.min(BANNER.height,top-1);
+    return{across:BANNER.across*k,width:BANNER.width*k,top,height};
+  }
   // 3D facade decals for one gate: portal frames on both mouths, banners on the outer front.
   function decalSpecs(s){
     if(!stoneGate(s)||underConstruction(s))return[];
     const f=frame(s),out=[];
     const front={a:at(f,f.L/2,-f.W/2),b:at(f,f.L/2,f.W/2),normal:{x:f.ux,y:f.uy}};
     const rear={a:at(f,-f.L/2,f.W/2),b:at(f,-f.L/2,-f.W/2),normal:{x:-f.ux,y:-f.uy}};
-    for(const edge of [front,rear])out.push({edge,key:'gatePortalFrame',centerZ:PORTAL.centerZ,width:PORTAL.width,height:PORTAL.height,offset:0});
-    for(const side of [-1,1])out.push({edge:front,key:'gateBanner',centerZ:BANNER.top-BANNER.height/2,width:BANNER.width,height:BANNER.height,offset:BANNER.across*side});
+    const P=portalOf(s);
+    for(const edge of [front,rear])out.push({edge,key:'gatePortalFrame',centerZ:P.centerZ,width:P.width,height:P.height,offset:0});
+    const B=bannerOf(s);
+    for(const side of [-1,1])out.push({edge:front,key:'gateBanner',centerZ:B.top-B.height/2,width:B.width,height:B.height,offset:B.across*side});
     return out;
   }
 
@@ -318,7 +338,7 @@
   // The Canvas renderer keeps its solid gatehouse: an open gate shows the dark passage inside the
   // frame, a lowered portcullis its grid, and the visible outer front its banners.
   function drawCanvasPortal(s,edge){
-    const o=opening(),stage=window.ConquerSiege?.doorStage?.(s)||'intact';
+    const o=opening(s),P0=portalOf(s),stage=window.ConquerSiege?.doorStage?.(s)||'intact';
     const open=(Number.isFinite(s.doorOpen)?s.doorOpen:doorTarget(s))>.5||stage==='broken';
     const p=portcullis(s),pc=p?p.progress:0;
     if(!open&&!(pc>.01))return false;
@@ -327,8 +347,8 @@
     const outline=[P(-o.half,0),...o.arc.map(q=>P(-q.c,q.z)),...o.arc.slice().reverse().map(q=>P(q.c,q.z)),P(o.half,0)];
     if(open){
       pathPolygon(outline,'#1b1714',null);
-      drawArchitectureAssetOnEdge(edge,PORTAL.centerZ,PORTAL.width,PORTAL.height,'gatePortalFrame');
-    }else drawArchitectureAssetOnEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal');
+      drawArchitectureAssetOnEdge(edge,P0.centerZ,P0.width,P0.height,'gatePortalFrame');
+    }else{const d=closedPortal(s);drawArchitectureAssetOnEdge(edge,d.centerZ,d.width,d.height,window.ConquerSiege?.doorAsset?.(s)||'gatePortal')}
     if(pc>.01&&edge.role==='front'){
       ctx.save();ctx.beginPath();outline.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.closePath();ctx.clip();
       const top=o.apex,lift=(1-pc)*(top+.04);
@@ -344,7 +364,8 @@
   }
   function drawCanvasBanners(s,edge){
     if(edge.role!=='front')return;
-    for(const side of [-1,1])drawArchitectureAssetOnEdge(edge,BANNER.top-BANNER.height/2,BANNER.width,BANNER.height,'gateBanner',BANNER.across*side);
+    const B=bannerOf(s);
+    for(const side of [-1,1])drawArchitectureAssetOnEdge(edge,B.top-B.height/2,B.width,B.height,'gateBanner',B.across*side);
   }
   window.addEventListener?.('DOMContentLoaded',()=>{
     if(typeof drawGatePortals!=='function')return;
@@ -388,7 +409,7 @@
     slots.querySelector('[data-portcullis-repair]')?.addEventListener('click',()=>repairPortcullis(s));
   }
 
-  window.ConquerGates={opening,addGateBody,tick,dynamicMeshes,gateMesh,torchSources,ensureSprites,decalSpecs,
+  window.ConquerGates={opening,portalOf,closedPortal,addGateBody,tick,dynamicMeshes,gateMesh,torchSources,ensureSprites,decalSpecs,
     portcullis,portcullisBlocks,stateOfPortcullis,installPortcullis,togglePortcullis,removePortcullis,
     wreckPortcullis,repairPortcullis,panel,bindPanel,PORTCULLIS_COST,PORTCULLIS_REPAIR,PORTAL,BANNER};
 })();

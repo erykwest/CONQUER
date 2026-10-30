@@ -957,7 +957,7 @@
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
           // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
-          if(!fittings.length&&(edge.index===1||edge.index===3))onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
+          if(!fittings.length&&(edge.index===1||edge.index===3)){const d=gateClosedPortal(s);onEdge(edge,d.centerZ,d.width,d.height,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o)}
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
             else for(const off of gateSlitOffsets(edge))onEdge(edge,z,.24,.62,'arrowSlit',off,ground,o);
@@ -1290,7 +1290,8 @@
           if(!keep.has(e))continue;
           const a=g.inner[e],b=g.inner[(e+1)%4],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},mo={x:(fp[e].x+fp[(e+1)%4].x)/2,y:(fp[e].y+fp[(e+1)%4].y)/2};
           const dl=Math.hypot(mo.x-s.x,mo.y-s.y)||1,dir={x:(mo.x-s.x)/dl,y:(mo.y-s.y)/dl};
-          openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05,.78,'#1f1712');
+          const pk=(window.ConquerGates?.portalOf?.(s).width??1.2)/1.2;   // smaller on the small gate
+          openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05*(1+pk)/2,.78*pk,'#1f1712');
         }
         // Room openings seen from inside, as outside: window on the rear, slits on the front and flanks.
         const sz=gothicAssetSizeForLevel(s);

@@ -28,5 +28,10 @@ assert.match(css,/#devTools\{[^}]*max-height:calc\(100% - 24px\)/);
 assert.match(css,/#devToggle\{[^}]*flex:0 0 34px/);
 assert.match(css,/#devPanel\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*overscroll-behavior:contain/);
 assert.match(html,/settlement\.css\?v=dev-scroll-mills-1/);
-assert.match(html,/settlement-builder-ux\.js\?v=terraform-flat-h0-1/);
-console.log('PASS DEV panel scroll and both original mill commands visible in the compact Builder palette');
+assert.match(html,/settlement-builder-ux\.js\?v=small-gate-1/);
+// Both stone gate buttons (gatehouse and small gate) get a catalog entry of their own.
+for(const size of ['1.5','1']){
+  assert.match(html,new RegExp('<button data-gate data-gate-size="'+size+'">'),'gate button '+size);
+  assert.ok(ux.includes('[data-gate][data-gate-size="'+size+'"]'),'visible gate '+size+' catalog entry');
+}
+console.log('PASS DEV panel scroll, both mills and both stone gates visible in the compact Builder palette');

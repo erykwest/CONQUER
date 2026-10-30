@@ -60,7 +60,8 @@
       ['[data-linear="palisade"]','Palizzata','fence'],
       ['[data-linear="built"]','Sezione costruita','built'],
       ['[data-linear="builtWide"]','Sala larga 2U · doppia altezza','built'],
-      ['[data-gate]','Porta muraria','gate'],
+      ['[data-gate][data-gate-size="1.5"]','Porta muraria · 1,5×1,5U','gate'],
+      ['[data-gate][data-gate-size="1"]','Porta piccola · 1×1U · L1–L2','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
