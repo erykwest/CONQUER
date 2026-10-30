@@ -754,7 +754,9 @@ function lCornerMerlons(fp,corners,z,h,d,owner){
   for(let e=0;e<n;e++){
     const mc=corners[e],fwd=dirOf(e),back=dirOf((e-1+n)%n);
     const f=arm(mc,fwd,1,fwd.angle),b=arm(mc,back,-1,back.angle);
-    pieces.push(battlementPiece(f,f.angle,z,CORNER_ARM,d,h,owner,-1),battlementPiece(b,b.angle,z,CORNER_ARM,d,h,owner,1));
+    const fa=battlementPiece(f,f.angle,z,CORNER_ARM,d,h,owner,-1),ba=battlementPiece(b,b.angle,z,CORNER_ARM,d,h,owner,1);
+    fa.cornerArm=ba.cornerArm=true;
+    pieces.push(fa,ba);
     start[e]=merlonNode(f,f.angle,CORNER_ARM,d);
     end[(e-1+n)%n]=merlonNode(b,b.angle,CORNER_ARM,d);
   }
