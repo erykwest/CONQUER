@@ -59,7 +59,7 @@ function renderFunctionPanel(){
     const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
     return;
   }
-  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
     const cost=s.buildCost||constructionCost(s);
@@ -109,7 +109,7 @@ function renderFunctionPanel(){
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
       '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
   }
-  if(['house','market','tavern','church','training','plaza'].includes(s.type)){
+  if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
   }

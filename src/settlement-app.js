@@ -4,7 +4,7 @@ function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
-  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','plaza','civicAnnex','loggingCamp','quarry','mine','windmill','watermill'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','plaza','townhall','guild','civicAnnex','loggingCamp','quarry','mine','windmill','watermill'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
   const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId||s.type==='bridge'&&s.primaryBridgeFor)&&['wall','palisade','built','road','moat','bridge'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
@@ -74,6 +74,8 @@ function addStructure(s){
     if(!site.ok){status(site.reason);return false}
     s.groundZ=site.ground;s.resourceTarget=site.resourceTarget;
   }
+  // Town hall and guild hall are bound to the well whose square they stand on.
+  if(typeof isWellCivic==='function'&&isWellCivic(s))s.wellId=wellCivicPlacementCheck(s).well?.id||null;
   normalizeStructureRotation(s);
   normalizeCivicDevelopment(s);
   normalizeStructureVariants(s);
@@ -258,7 +260,7 @@ function turnGate(target,delta,label='Gate rotated'){
 }
 function flipGate(target){return turnGate(target,Math.PI,'Gate front flipped')}
 function rotatePointStructure(target,steps=1){
-  if(!target||!['house','market','tavern','church','training','plaza','civicAnnex','loggingCamp','quarry','mine','windmill'].includes(target.type))return false;
+  if(!target||!['house','market','tavern','church','training','plaza','townhall','guild','civicAnnex','loggingCamp','quarry','mine','windmill'].includes(target.type))return false;
   if(civicAnnexChildren(target.id).length){status('Remove annexes before rotating the parent complex');return false;}
   const oldAngle=Number(target.angle)||0,next=snapStructureAngle(oldAngle+STRUCTURE_ANGLE_STEP*steps);
   const candidate={...target,angle:next,rotationStep:structureRotationStep(next)};

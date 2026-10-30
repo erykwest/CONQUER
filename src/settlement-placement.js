@@ -105,6 +105,8 @@
     const polys=contact(s);
     const annexVerdict=civicAnnexPlacementCheck(s);
     if(!annexVerdict.ok)return annexVerdict;
+    const wellVerdict=typeof wellCivicPlacementCheck==='function'?wellCivicPlacementCheck(s):valid();
+    if(!wellVerdict.ok)return wellVerdict;
     if(!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
     const ignored=ignoreSet(options);
     // Only one founding well: until the village is named, a second well cannot be placed.

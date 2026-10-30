@@ -42,7 +42,7 @@
     // Village houses grow on their own (auto) but are real building sites too.
     if(!s||s.auto&&s.type!=='house'||SKIP.has(s.type)||window.ConquerIndustries?.is?.(s))return null;
     const H=Number(call('structureHeight',s))||0;
-    const wood=s.type==='palisade'||s.type==='house'||s.type==='market'||!!call('isWoodTower',s)||!!call('isWoodGate',s)||!!call('isCivicAnnex',s);
+    const wood=s.type==='palisade'||s.type==='house'||s.type==='market'||!!call('isWoodTower',s)||!!call('isWoodGate',s)||!!call('isCivicAnnex',s)||s.type==='guild'&&call('civicLevel',s)<3||s.type==='townhall'&&call('civicLevel',s)===1;
     const masonry=!wood;
     return{H,masonry,brick:s.masonryMaterial==='brick',
       scaffold:H>=.9&&s.type!=='palisade'&&!call('isWoodGate',s),

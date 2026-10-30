@@ -18,7 +18,7 @@
       return 'plaza_'+(typeof plazaVariant==='function'?plazaVariant(s):'paved')+(parent&&typeof civicLevel==='function'?civicLevel(parent):1);
     }
     if(s.type==='plaza')return 'plaza_'+(typeof plazaVariant==='function'?plazaVariant(s):'paved')+level;
-    if(s.type==='church'||s.type==='tavern'||s.type==='market')return s.type+level;
+    if(['church','tavern','market','townhall','guild'].includes(s.type))return s.type+level;
     return null;
   }
   const has=s=>{const k=modelKey(s);return !!(k&&DATA()?.models?.[k])};
@@ -36,14 +36,21 @@
     }
     expanded.set(key,out);return out;
   }
+  // Brick masonry (masonryMaterial 'brick') and the DEV clay palette: brick walls with
+  // light stone dressings, slate roofs turned to tile. The structure being meshed sets it.
+  const CLAY={stoneRough:'#9a5a3e',stoneRoughDark:'#7a4430',stone:'#a8603f',stoneLight:'#b56d4a',
+    stoneTrim:'#c9bca2',roofSlate:'#a5573a',roofSlateDark:'#88452e'};
+  let clayFor=false;
+  const isClay=s=>typeof State!=='undefined'&&State.visualPalette==='clay'||!!s&&typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick';
+  function withClay(s,fn){const prev=clayFor;clayFor=isClay(s);try{return fn()}finally{clayFor=prev}}
   // Palette with the roofs whitened in winter (light and dark tones kept apart).
-  let palCache=null;
+  const palCache=new Map();
   function palette(){
-    const data=DATA(),winter=typeof State!=='undefined'&&State.season==='winter';
-    if(palCache&&palCache.data===data&&palCache.winter===winter)return palCache.pal;
+    const data=DATA(),winter=typeof State!=='undefined'&&State.season==='winter',clay=clayFor||isClay(null),ck=(winter?'w':'s')+(clay?'c':'');
+    const hit=palCache.get(ck);if(hit&&hit.data===data)return hit.pal;
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];
-      return winter&&k.startsWith('roof')?WINTER[/Dark$/.test(k)?1:0]:hex});
-    palCache={data,winter,pal};return pal;
+      return winter&&k.startsWith('roof')?WINTER[/Dark$/.test(k)?1:0]:clay&&CLAY[k]||hex});
+    palCache.set(ck,{data,pal});return pal;
   }
   // World triangles of model `key` at place {x,y,angle,scale}; ground parts paint first.
   function triangles(key,place,ground){
@@ -249,7 +256,7 @@
     }
     return{pos,col};
   }
-  // ---------- cutaway: a selected church or inn opens up to show its interior
+  // ---------- cutaway: a selected church, inn, town hall or guild hall opens up to show its interior
   // The Blender shells have no inner faces and neither renderer culls back faces, so a
   // vertical section plane across the model's centre, facing the camera, is enough:
   // everything in front of it is cut down to a low sill, roofs and the eaves caps go,
@@ -263,11 +270,19 @@
     church3:{floors:[[-1.22,-2.72,1.22,3.28],[-2.45,-.37,-1.22,1.07],[1.22,-.37,2.45,1.07],[-.45,-3.47,.45,-2.74]],nave:[1.22,-2.25,1.6],chancel:[-1.22,2.1,1.22,3.28],altar:2.7,side:[[-2.15,.35],[2.15,.35]],font:[-.85,-2.45],pulpit:[.95,1.75]},
     tavern1:{floors:[[-1.08,-2.48,2.28,-.94],[-1.08,-.94,1.08,2.48]],tables:[[-.55,-1.72],[.5,-1.72],[1.6,-1.72],[-.5,1.75]],counter:[-.9,.25,.3,.47],barrels:[[-.85,.75],[-.5,.75]],hearths:[[.51,1.14]]},
     tavern2:{floors:[[-2.28,-2.48,2.28,-.94],[-1.08,-.94,1.08,2.48]],tables:[[-.7,-1.72],[.35,-1.72],[1.45,-1.72],[-.45,1.95]],counter:[-.9,.2,.3,.42],barrels:[[-.85,.7],[-.5,.7],[.75,-.55]],hearths:[[-1.57,-1.72],[.46,1.43]]},
-    tavern3:{floors:[[-2.28,-2.48,2.28,-.94],[-1.08,-.94,1.08,.94],[-2.28,.94,2.28,2.48]],tables:[[-.7,-1.72],[.35,-1.72],[1.45,-1.72],[-1.45,1.72],[-.35,1.72],[.6,1.72]],counter:[.62,-.6,.84,.6],barrels:[[-2.02,2.2],[-2.02,1.85],[-1.7,2.2]],hearths:[[-1.57,-1.72],[1.57,1.72],[0,0]]}
+    tavern3:{floors:[[-2.28,-2.48,2.28,-.94],[-1.08,-.94,1.08,.94],[-2.28,.94,2.28,2.48]],tables:[[-.7,-1.72],[.35,-1.72],[1.45,-1.72],[-1.45,1.72],[-.35,1.72],[.6,1.72]],counter:[.62,-.6,.84,.6],barrels:[[-2.02,2.2],[-2.02,1.85],[-1.7,2.2]],hearths:[[-1.57,-1.72],[1.57,1.72],[0,0]]},
+    // Town hall: council table under the podesta's dais; the L2/L3 room sits behind the arcade.
+    townhall1:{floors:[[-1.95,-.85,1.95,1.55]],council:[-.85,.3,.85,.62],dais:[-.7,1.15,.7,1.5],chests:[[-1.7,1.3],[1.7,1.3]],hearths:[[-1.62,-.45]],banners:[[-1.2,1.55],[1.2,1.55]]},
+    townhall2:{floors:[[-1.95,-.2,1.95,1.55]],council:[-.85,.35,.85,.65],dais:[-.7,1.15,.7,1.5],chests:[[-1.7,1.3],[1.7,1.3]],hearths:[[-1.62,.2]],banners:[[-1.2,1.55],[1.2,1.55]]},
+    townhall3:{floors:[[-1.95,-.2,1.95,1.55]],council:[-1.05,.3,1.05,.66],dais:[-.8,1.12,.8,1.5],chests:[[-1.7,1.3],[1.7,1.3],[1.7,.9]],hearths:[[-1.62,.2],[1.62,.2]],banners:[[-1.3,1.55],[0,1.55],[1.3,1.55]]},
+    // Guild hall: counting desks with ledgers and scales, the strongbox, bolts of cloth.
+    guild1:{floors:[[-1.42,-1.17,.46,1.17]],desks:[[-.95,-.45],[-.2,-.45]],counter:[-1.3,.62,-.25,.82],chests:[[.25,.9]],barrels:[[.28,-.85]],bolts:[[-1.35,-.95,-.4]],hearths:[]},
+    guild2:{floors:[[-1.42,-1.17,1.42,1.17]],desks:[[-.75,-.35],[.75,-.35]],counter:[-.6,.7,.6,.9],chests:[[-1.2,.95],[1.2,.95]],bolts:[[-1.35,-.95,-.1]],hearths:[[1.1,.62]]},
+    guild3:{floors:[[-1.42,-1.17,1.42,1.17]],desks:[[-.75,-.3],[0,-.3],[.75,-.3]],counter:[-.7,.72,.7,.92],chests:[[-1.2,.95],[1.2,.95],[1.2,.55]],bolts:[[-1.35,-.95,.2],[1.35,-.95,.2]],hearths:[[-1.1,.8]]}
   };
   const selectedOf=()=>typeof State!=='undefined'&&State.selectedId?(State.structures||[]).find(s=>s.id===State.selectedId):null;
   function cutawayActive(s){
-    return !!s&&(s.type==='church'||s.type==='tavern')&&s.id===State.selectedId&&!!INTERIOR[modelKey(s)]&&has(s)
+    return !!s&&['church','tavern','townhall','guild'].includes(s.type)&&s.id===State.selectedId&&!!INTERIOR[modelKey(s)]&&has(s)
       &&!(typeof underConstruction==='function'&&underConstruction(s));
   }
   function cutawayId(){const s=selectedOf();return cutawayActive(s)?s.id:null}
@@ -304,7 +319,9 @@
     const pal=palette(),keys=DATA().paletteKeys,out=[];
     for(const part of parts(key)){
       if(part.name==='naveRoof'||part.name==='chimneys')continue;
-      const tower=TOWER_PARTS.has(part.name);
+      // The town hall's tower stands in front of the council room: it goes down to a stump,
+      // or the section plane would leave a sliver of it standing to full height.
+      const stump=key.startsWith('townhall')&&TOWER_PARTS.has(part.name)&&!!cam,tower=TOWER_PARTS.has(part.name)&&!stump;
       const back=localPart(part.name),front=localPart(part.name+':front'),sill=localPart(part.name+':sill',1e5);
       const v=part.v;
       for(let t=0;t<part.c.length;t++){
@@ -318,6 +335,7 @@
         if(!tower&&Math.abs(nz/nl)>.5&&Math.min(tri[0][2],tri[1][2],tri[2][2])>CUTAWAY_SILL)continue;
         const hex=pal[part.c[t]];
         if(!cam){pushPoly(back,tri,hex);continue}
+        if(stump){const low=clip(tri,p=>p[2]-CUTAWAY_SILL);if(low.length>2)pushPoly(sill,low,hex);continue}
         const f=p=>p[0]*cam.x+p[1]*cam.y;
         const kept=clip(tri,f);
         if(kept.length>2)pushPoly((nx*cam.x+ny*cam.y)/nl>.05?front:back,kept,hex);
@@ -364,17 +382,38 @@
       return out;
     }
     const z=FLOOR_Z;
-    for(const [x,y] of spec.tables)piece('table',p=>{
+    for(const [x,y] of spec.tables||[])piece('table',p=>{
       box(p,x-.05,y-.05,x+.05,y+.05,z,z+.19,P('woodDark'));
       box(p,x-.23,y-.2,x+.23,y+.2,z+.19,z+.225,P('woodLight'),P('wood'));
       for(const sy of [-1,1])box(p,x-.22,y+sy*.27-.05,x+.22,y+sy*.27+.05,z,z+.11,P('wood'),P('woodDark'));
       box(p,x-.1,y-.04,x-.06,y,z+.225,z+.28,P('iron'));box(p,x+.06,y+.02,x+.1,y+.06,z+.225,z+.28,P('iron'));
     });
-    const [c0,c1,c2,c3]=spec.counter;
-    piece('counter',p=>{box(p,c0,c1,c2,c3,z,z+.26,P('woodDark'),P('wood'));box(p,c0-.02,c1-.02,c2+.02,c3+.02,z+.26,z+.29,P('woodLight'))});
-    for(const [x,y] of spec.barrels)piece('barrel',p=>{box(p,x-.1,y-.1,x+.1,y+.1,z,z+.27,P('barrel'),P('woodDark'));box(p,x-.103,y-.103,x+.103,y+.103,z+.08,z+.1,P('iron'))});
+    if(spec.counter){const [c0,c1,c2,c3]=spec.counter;
+      piece('counter',p=>{box(p,c0,c1,c2,c3,z,z+.26,P('woodDark'),P('wood'));box(p,c0-.02,c1-.02,c2+.02,c3+.02,z+.26,z+.29,P('woodLight'))})}
+    // Council: a long table with stools along both sides, the podesta's chair on a dais.
+    if(spec.council){const [x0,y0,x1,y1]=spec.council,ym=(y0+y1)/2;
+      piece('council',p=>{box(p,x0+.08,ym-.06,x1-.08,ym+.06,z,z+.2,P('woodDark'));box(p,x0,y0,x1,y1,z+.2,z+.235,P('canvasRed'),P('wood'))});
+      for(let x=x0+.18;x<=x1-.17;x+=.34)for(const y of [y0-.13,y1+.13])piece('stool',p=>box(p,x-.07,y-.07,x+.07,y+.07,z,z+.13,P('wood'),P('woodDark')));
+      for(let x=x0+.25;x<x1-.2;x+=.55)piece('scroll',p=>box(p,x-.06,ym-.03,x+.06,ym+.03,z+.235,z+.255,P('canvasWhite')))}
+    if(spec.dais){const [x0,y0,x1,y1]=spec.dais,xm=(x0+x1)/2,ym=(y0+y1)/2;
+      piece('dais',p=>{box(p,x0,y0,x1,y1,z,z+.06,P('stoneTrim'),P('stone'));box(p,xm-.12,ym-.08,xm+.12,ym+.1,z+.06,z+.2,P('woodDark'));box(p,xm-.12,ym+.06,xm+.12,ym+.1,z+.2,z+.42,P('woodDark'));box(p,xm-.05,ym+.08,xm+.05,ym+.11,z+.3,z+.4,P('gold'))})}
+    for(const [x,y] of spec.banners||[])piece('banner',p=>box(p,x-.1,y-.02,x+.1,y,z+.25,z+.62,P(x<0?'canvasRed':x>0?'canvasBlue':'gold')));
+    // Desks with an open ledger and a pair of scales.
+    for(const [x,y] of spec.desks||[])piece('desk',p=>{
+      box(p,x-.05,y-.05,x+.05,y+.05,z,z+.2,P('woodDark'));box(p,x-.22,y-.15,x+.22,y+.15,z+.2,z+.23,P('woodLight'),P('wood'));
+      box(p,x-.12,y-.05,x+.02,y+.06,z+.23,z+.245,P('canvasWhite'));
+      box(p,x+.1,y-.01,x+.12,y+.01,z+.23,z+.33,P('iron'));box(p,x+.03,y-.01,x+.19,y+.01,z+.32,z+.335,P('bronze'));
+      box(p,x-.07,y-.24,x+.07,y-.18,z,z+.13,P('wood'),P('woodDark'));
+    });
+    for(const [x,y] of spec.chests||[])piece('chest',p=>{box(p,x-.13,y-.08,x+.13,y+.08,z,z+.15,P('woodDark'),P('wood'));box(p,x-.135,y-.085,x+.135,y+.085,z+.15,z+.17,P('iron'));box(p,x-.02,y-.09,x+.02,y-.08,z+.08,z+.13,P('gold'))});
+    // Bolts of cloth stacked on a shelf along x from x0 to x1 at y.
+    for(const [x0,y,x1] of spec.bolts||[])piece('bolts',p=>{const a=Math.min(x0,x1),b=Math.max(x0,x1);
+      box(p,a,y-.08,b,y+.08,z+.12,z+.14,P('woodDark'));box(p,a,y-.08,b,y+.08,z+.3,z+.32,P('woodDark'));
+      const cloth=['cloth','canvasBlue','canvasRed','canvasYellow','canvasGreen'];let i=0;
+      for(let x=a+.06;x<b-.05;x+=.13,i++)for(const zz of [z+.14,z+.32])box(p,x-.05,y-.06,x+.05,y+.06,zz,zz+.09,P(cloth[(i+(zz>z+.2?2:0))%cloth.length]))});
+    for(const [x,y] of spec.barrels||[])piece('barrel',p=>{box(p,x-.1,y-.1,x+.1,y+.1,z,z+.27,P('barrel'),P('woodDark'));box(p,x-.103,y-.103,x+.103,y+.103,z+.08,z+.1,P('iron'))});
     // Hearths at the chimney stacks, the fire on the side facing the room centre.
-    for(const [x,y] of spec.hearths)piece('hearth',p=>{
+    for(const [x,y] of spec.hearths||[])piece('hearth',p=>{
       const L=Math.hypot(x,y),dx=L>.1?-x/L:0,dy=L>.1?-y/L:-1;
       box(p,x-.24,y-.24,x+.24,y+.24,z,z+.42,P('stoneRough'),P('stoneRoughDark'));
       box(p,x-.28,y-.28,x+.28,y+.28,z+.42,z+.47,P('stoneTrim'));
@@ -400,18 +439,18 @@
   }
   const cutCache=new Map();
   function cutawayMesh(s,ground){
-    const cam=cameraLocal(s),key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,cam?cam.x.toFixed(3)+','+cam.y.toFixed(3):'plan'].join('|');
+    const cam=cameraLocal(s),key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,isClay(s),cam?cam.x.toFixed(3)+','+cam.y.toFixed(3):'plan'].join('|');
     const hit=cutCache.get(s.id);if(hit&&hit.key===key)return hit.mesh;
-    const mesh=emit([...interiorParts(modelKey(s)),...sectionParts(modelKey(s),cam)],placeOf(s),ground);
+    const mesh=withClay(s,()=>emit([...interiorParts(modelKey(s)),...sectionParts(modelKey(s),cam)],placeOf(s),ground));
     cutCache.set(s.id,{key,mesh});
     return mesh;
   }
   // The building mesh is kept per structure (the painter caches its shaded fills on it).
   const bodyCache=new Map();
   function bodyMesh(s,ground){
-    const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season].join('|'),hit=bodyCache.get(s.id);
+    const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,isClay(s)].join('|'),hit=bodyCache.get(s.id);
     if(hit&&hit.key===key)return hit.mesh;
-    const mesh=triangles(modelKey(s),placeOf(s),ground);
+    const mesh=withClay(s,()=>triangles(modelKey(s),placeOf(s),ground));
     bodyCache.set(s.id,{key,mesh});
     return mesh;
   }
@@ -425,7 +464,7 @@
       :Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(s);
     // Lot props are sub-pixel when zoomed far out: the 2.5D painter skips them there.
     const body=!preview&&cutawayActive(s)?cutawayMesh(s,ground):null;
-    const list=preview?[triangles(modelKey(s),placeOf(s),ground)]
+    const list=preview?[withClay(s,()=>triangles(modelKey(s),placeOf(s),ground))]
       :(State.view.scale||1)<PROP_LOD_SCALE?[body||bodyMesh(s,ground)]
       :body?[body,...meshes(s,ground,false)]:meshes(s,ground);
     ctx.save();
