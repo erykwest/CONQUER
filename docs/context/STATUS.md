@@ -1,5 +1,17 @@
 # Livello 2 — Stato tecnico e prove
 
+## Stato operativo verificato — 30 ottobre 2026 · MAIN `cf569992`
+
+> **Questa è la fotografia corrente** e prevale sulle sezioni storiche sotto, spesso intitolate «branch ... non su main». Fonte: [AUDIT-2026-10-30.md](AUDIT-2026-10-30.md). Audit statico di Git, codice e CI; **nessuna nuova suite eseguita** in questa revisione.
+
+- **Merge successivi al 23/10:** [#61](https://github.com/erykwest/CONQUER/pull/61) (danni), [#77](https://github.com/erykwest/CONQUER/pull/77) (cantieri a fasi), [#78](https://github.com/erykwest/CONQUER/pull/78) (eventi), [#82](https://github.com/erykwest/CONQUER/pull/82) (Asset Lab audit), [#65](https://github.com/erykwest/CONQUER/pull/65) (cutaway arredato), #86–108 (ponti, civici, UI, audio, cavalieri, prestazioni, salvataggi, fortificazioni 3D, economia in 5 tappe, sale e scale). **#103 Centro di controllo MERGED il 30/10**: 9 viste e storici max 26 mercati, già in `src/settlement-panels.js`. Le catture Chromium dichiarano **dati demo**, non partita end-to-end reale.
+- **Builder:** [#98](https://github.com/erykwest/CONQUER/pull/98) ha completato **lavoro effettivo L1 necessario nei cantieri** (più paghe e commute), #99 routine settimanali; [#101](https://github.com/erykwest/CONQUER/pull/101) ha collegato botteghe L3, Beni L3, prezzo settimanale, operatori di chiesa/locanda; [#105](https://github.com/erykwest/CONQUER/pull/105) ha unificato i convogli; [#108](https://github.com/erykwest/CONQUER/pull/108) trasporto carri/carrozzieri/cavalli 2D. **15 core Builder / 8 parziali** (precedente 13/10 superato); matrice in [feature-backlog](../feature-backlog.md) e audit.
+- **Limiti economici:** `mine.good='stone'` ancora su main, non `metal`; `workshop` Built Sections→`equipment` da verificare (diverso da bottega L3 a casa); `settlement-industries.js` dichiara nessun esaurimento degli alberi; capienze `siege.stock` e stock `ConquerEconomy` sono **separati e mostrati correttamente separati** nei pannelli; `SERVICE_KINDS` in chiesa/locanda conserva `income:'not-simulated'`, benché abbia operatori.
+- **Assedio:** core danni/portoni/legno/fuoco/mastio/presidi/macchine esistono. `settlement-siege.js` ancora dichiara **«No automatic surrender in P0»**; blocco, fame→resa, sortite e IA strategica restano da integrare. Non rifare assedio/danni da zero.
+- **Tre PR OPEN (non MAIN):** [#109](https://github.com/erykwest/CONQUER/pull/109) CI regressioni economia 2–5 (**conflitti** contro main; CI della branch PASS e limite workflow scope API), [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacco/accampamento fortificabile (**mergeable** ma QA browser parziale), [#111](https://github.com/erykwest/CONQUER/pull/111) più pozzi/centro designabile/nomi quartiere (**mergeable**, CI PASS e browser Canvas, World 3D visivo ancora da provare). PR #55 chiusa senza merge dopo porting selettivo, non rilanciare il suo vecchio ramo.
+- **Git:** **53 remote branch incl. main, 3 PR open**; molte branch storiche derivano da squash merge. Non attribuire a main codice solo perché la branch esiste né considerare lavoro nuovo tutte le branch "ahead".
+
+
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
 - `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.
