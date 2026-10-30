@@ -19,7 +19,7 @@
   });
   const PORTCULLIS_HEALTH=120;
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
-    house:90,market:70,tavern:140,church:240,windmill:110,watermill:120});
+    house:90,market:70,tavern:140,church:240,townhall:220,guild:150,windmill:110,watermill:120});
   const isMill=s=>['windmill','watermill'].includes(s?.type);
   // Structural cores require siege artillery: blades, arrows, rams and torches
   // cannot demolish walls, towers, gatehouses or built sections, even in wood.
@@ -457,18 +457,21 @@
     return fp.length>=3?[fp]:[];
   }
   const STONE={side:['#635951','#514a44','#7d736b','#9a8e82'],top:['#9a8e82','#8a7f74']};
+  const BRICK={side:['#8a4e36','#6f3f2c','#a25d40','#b8704c'],top:['#a25d40','#8a4e36']};
   // Wood breaks into beams and planks, timber-framed buildings into plaster and beams
   // under a roof of boards, masonry into blocks.
   function collapseMaterial(s){
     if(s.type==='palisade'||s.material==='wood'||(s.type==='bridge'&&s.variant!=='stone')||(s.type==='tower'&&isWoodTower(s))||(s.type==='gate'&&typeof isWoodGate==='function'&&isWoodGate(s)))return'wood';
     if(s.type==='house'||s.type==='tavern'||s.type==='market')return'timber';
+    // Timber-framed guild halls (L1-L2) and the L1 town hall; their masonry levels fall as stone.
+    if(s.type==='guild'&&civicLevel(s)<3||s.type==='townhall'&&civicLevel(s)===1)return'timber';
     return'stone';
   }
   function collapsePalette(s){
     const m=collapseMaterial(s);
     if(m==='wood')return{side:['#7a5534','#5e4128','#8a6a42','#6b4a2e'],top:['#6b4a2e','#7a5534']};
     if(m==='timber')return{side:['#c9b896','#a8946f','#b7a582'],top:['#7a4a38','#5b3d30','#6b4a2e'],beam:['#4e392d','#5e4128']};
-    return STONE;
+    return typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick'?BRICK:STONE;
   }
   function startCollapse(s,z0,z1,opts={}){
     const x=state(),parts=opts.parts||collapseParts(s);
@@ -825,7 +828,12 @@
     if(['tower','gate'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!(typeof isWoodGate==='function'&&isWoodGate(s)))return ruinStructure(s,from);
     // Everything standing comes down; walls that leant on it stay as open ends.
     const g=groundOf(s),H=structureHeight(s)+(['tower','gate'].includes(s.type)?.35:0);
-    if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
+    // The town hall comes down hall first, then its taller civic tower from its own height.
+    if(s.type==='townhall'&&typeof civicParts==='function'){
+      const L=civicLevel(s),lean=from?{x:s.x-from.x,y:s.y-from.y}:null;
+      for(const part of civicParts(s)){const tower=part.role==='tower';
+        startCollapse(s,g,g+(tower?[3.9,5.8,8.2]:[2.8,2.9,3.8])[L-1],{parts:[part.points],lean,cause:tower?'collapse-tower':'collapse',...(tower?{delay:.3}:{})})}
+    }else if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
     else{const x=state();x.ruins.push({id:s.id,type:s.type,x:s.x??(s.a.x+s.b.x)/2,y:s.y??(s.a.y+s.b.y)/2,day:State.clock.day})}
     for(const w of State.structures){
       if(w.aSnap===s.id)w.aSnap=null;

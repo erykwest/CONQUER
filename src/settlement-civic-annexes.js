@@ -123,3 +123,37 @@ function startCivicAnnexPlacement(parent,annexType){
   setTool({kind:'civicAnnex',parentId:parent.id,annexType,label:'Place '+spec.label+' inside the complex · click to build'});
   return true;
 }
+// Well civics: the town hall and the guild hall belong to a well's square, the village
+// centre or any quarter well. One of each per well, standing within reach of it.
+const WELL_CIVIC_TYPES=Object.freeze(['townhall','guild']);
+const WELL_CIVIC_RANGE=9;
+const WELL_CIVIC_LABELS=Object.freeze({townhall:'Town hall',guild:'Guild hall'});
+function isWellCivic(s){return !!s&&WELL_CIVIC_TYPES.includes(s.type)}
+function wellCivicTaken(well,type,exceptId=null){
+  return State.structures.some(o=>o.type===type&&o.id!==exceptId&&o.wellId===well.id);
+}
+function wellCivicCandidates(s){
+  return State.structures.filter(w=>w.type==='well'&&!underConstruction(w)&&dist(s,w)<=WELL_CIVIC_RANGE)
+    .sort((a,b)=>dist(s,a)-dist(s,b));
+}
+// The saved well while it stands in reach, otherwise the nearest free well in reach.
+function wellCivicWell(s){
+  const wells=wellCivicCandidates(s);
+  return wells.find(w=>w.id===s?.wellId)||wells.find(w=>!wellCivicTaken(w,s.type,s.id))||null;
+}
+function wellCivicPlacementCheck(s){
+  if(!isWellCivic(s))return{ok:true};
+  const label=WELL_CIVIC_LABELS[s.type];
+  if(!State.village?.founded)return{ok:false,reason:label+' needs a founded village'};
+  const wells=wellCivicCandidates(s);
+  if(!wells.length)return{ok:false,reason:label+' must stand within '+WELL_CIVIC_RANGE+'U of a completed well'};
+  const well=wells.find(w=>w.id===s.wellId)||wells.find(w=>!wellCivicTaken(w,s.type,s.id));
+  if(!well)return{ok:false,reason:'The nearest well already has a '+label.toLowerCase()};
+  return{ok:true,well};
+}
+function wellCivicLabel(s){
+  const well=wellCivicWell(s);
+  const square=!well?'no well':typeof isVillageCenterWell==='function'&&isVillageCenterWell(well)?'village centre':
+    (typeof wellDisplayName==='function'&&wellDisplayName(well))||'unnamed quarter';
+  return WELL_CIVIC_LABELS[s.type]+' · L'+civicLevel(s)+' · '+square;
+}

@@ -174,6 +174,16 @@ function drawCivicStructure(s,preview=false){
   else if(s.type==='church')drawChurch(s,preview);
   else if(s.type==='training')drawTrainingField(s,preview);
   else if(s.type==='plaza')drawPlaza(s,preview);
+  else if(s.type==='townhall'||s.type==='guild')drawWellCivic(s,preview);
+}
+// Town hall / guild hall fallback: gabled hall, plain civic tower.
+function drawWellCivic(s,preview=false){
+  const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'#a39a8c';
+  const parts=civicParts(s).map(p=>({...p,depth:viewDepthPoint(p.center)})).sort((a,b)=>a.depth-b.depth);
+  for(const part of parts){
+    if(part.role==='tower')extrudePolygon(part.points,3.0,{top:'#7a5446',sideA:'#7a746b',sideB:'#8b847a',stroke});
+    else drawCivicGabledPart(s,part,1.7,2.4,'#7a746b','#8b847a','#7a4433','#8a4c39','#968e82',stroke);
+  }
 }
 function woodGateLocal(s,x,y){
   const q=rotateVec(x,y,s.angle||0);

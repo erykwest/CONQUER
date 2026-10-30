@@ -1,5 +1,5 @@
-"""CONQUER civic builder (Blender 5.x): church, tavern, market and piazza at three
-levels, the civic annexes and the church cemetery.
+"""CONQUER civic builder (Blender 5.x): church, tavern, market, piazza, town hall and
+guild at three levels, the civic annexes and the church cemetery.
 
 Low-poly, flat-coloured models in real metres on the game footprints of
 civicLocalParts() / CIVIC_ANNEX_CATALOG (1 U = 3.5 m). Model axes are the game's
@@ -778,6 +778,386 @@ def plaza_garden(m, L):
         m.done('furniture', p)
 
 
+# ------------------------------------------------------------------ town hall and guild (well civics)
+def bell(p, x, y, z, r=.55):
+    """Bronze bell hanging from a headstock, mouth at z."""
+    p.cylinder(r, 0, 'bronze', n=8, axis='z', center=(x, y, 0), radii=[r, r * .82, r * .55, r * .2], along=[z, z + .35, z + .9, z + 1.05])
+    p.box((x, y, z + 1.15), (r * 2.6, .2, .2), 'woodDark')
+
+
+def sundial(p, o, n, z, r=1.0, key='plaster'):
+    """Painted meridiana on a wall: a square panel, hour lines fanning down from the gnomon."""
+    plate(p, o, n, rect_pts(2 * r, 2 * r, z - 2 * r * .8), key, 0, .05)
+    top = z + r * .2 - .15
+    for k in range(7):
+        a = math.pi * (1.1 + .8 * k / 6)
+        c, s_ = math.cos(a), math.sin(a)
+        ln = r * (.9 if k % 3 else 1.05)
+        w = .035 if k % 3 else .06
+        plate(p, o, n, [(-s_ * w, top + c * w), (c * ln - s_ * w, top + s_ * ln + c * w),
+                        (c * ln + s_ * w, top + s_ * ln - c * w), (s_ * w, top - c * w)], 'dark', 0, .08)
+    plate(p, o, n, circ(0, top, .12, 6), 'gold', 0, .1)
+    p.beam((o[0] + n[0] * .08, o[1] + n[1] * .08, top), (o[0] + n[0] * .75, o[1] + n[1] * .75, top - .7), .05, .05, 'iron')
+
+
+def clock_face(p, o, n, z, r=.9):
+    plate(p, o, n, circ(0, z, r + .15, 12, math.pi / 12), 'stoneTrim', 0, .05)
+    plate(p, o, n, circ(0, z, r, 12, math.pi / 12), 'clock', 0, .08)
+    plate(p, o, n, [(-.04, z), (.04, z), (.04, z + r * .78), (-.04, z + r * .78)], 'dark', 0, .11)
+    plate(p, o, n, [(0, z - .04), (r * .55, z - .04), (r * .55, z + .04), (0, z + .04)], 'dark', 0, .11)
+
+
+def merlons(p, a, b, z, key, step=1.15, swallow=False):
+    """Battlement teeth along a wall top from a to b; swallowtail (ghibelline) when asked."""
+    L = math.hypot(b[0] - a[0], b[1] - a[1])
+    tx, ty = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+    rot = Matrix.Rotation(math.atan2(ty, tx), 3, 'Z')
+    k = max(1, int(L / step))
+    for i in range(k):
+        u = (i + .5) * L / k
+        x, y = a[0] + tx * u, a[1] + ty * u
+        if swallow:
+            p.box((x, y, z + .3), (.6, .4, .6), key, rot=rot)
+            for s_ in (-1, 1):
+                p.box((x + tx * s_ * .19, y + ty * s_ * .19, z + .85), (.22, .4, .5), key, rot=rot)
+        else:
+            p.box((x, y, z + .4), (.6, .4, .8), key, rot=rot)
+
+
+def arcade(p, xs, y, n, z1, col, fill, depth=.35):
+    """Round arches on columns along x at the wall plane y (outward normal n = (0, +-1))."""
+    for x in xs:
+        p.cylinder(.28, 0, col, n=8, axis='z', center=(x, y - n[1] * depth, 0), radii=[.36, .27, .27, .38], along=[0, .3, z1 - .4, z1])
+    for xa, xb in zip(xs, xs[1:]):
+        r = (xb - xa - .5) / 2
+        spring = z1 - .45 - r
+        # Each spandrel half is fanned from its top outer corner, so it stays a clean polygon.
+        for sd in (-1, 1):
+            arc = [(sd * math.cos(math.pi * k / 8) * r, spring + math.sin(math.pi * k / 8) * r) for k in range(5)]
+            pts = [(sd * (r + .25), z1), (sd * (r + .25), spring)] + arc + [(0, z1)]
+            plate(p, ((xa + xb) / 2, y), n, pts if sd < 0 else pts[::-1], fill, -depth - .2, .02)
+
+
+# civicLocalParts: hall 4 x 2.5 U at cy .35, tower 1.3 x 1.3 U at (0, -1.15) on the middle of the front.
+def townhall(m, L):
+    """L1 timber house of the commune, L2 brick broletto over an open arcade, L3 stone palazzo
+    with ghibelline merlons. The civic tower rises from the middle of the front and carries the
+    bell and the sundial at every level (the arengario balcony from L2, the clock at L3)."""
+    x0, x1 = -2.0 * S, 2.0 * S
+    yf, yb = -.9 * S, 1.6 * S
+    hc, hd = (yf + yb) / 2, yb - yf
+    tcx, tcy, th = 0.0, -1.15 * S, 2.15
+    gf = {1: 3.2, 2: 3.7, 3: 4.1}[L]
+    eave = {1: 6.3, 2: 7.8, 3: 10.8}[L]
+    wall = {1: 'stoneRough', 2: 'stone', 3: 'stoneLight'}[L]
+    trim = {1: 'stoneRoughDark', 2: 'stoneTrim', 3: 'stoneTrim'}[L]
+    upper = {1: 'plasterWarm', 2: 'brick', 3: 'stoneLight'}[L]
+    roof = ('roofShingle', 'roofShingleDark') if L == 1 else ('roofTile', 'roofTileDark')
+    glass = 'dark' if L == 1 else 'glass'
+    tw = x1 - x0
+
+    p = m.part('hall')
+    p.box((0, hc, .15), (tw + .3, hd + .3, .3), trim)
+    if L == 1:
+        p.box((0, hc, gf / 2), (tw, hd, gf), wall)
+        p.box((0, hc, (gf + eave) / 2), (tw + .3, hd + .3, eave - gf), upper)
+        for n, a, b in (((0, -1), (x0 - .15, yf - .15), (x1 + .15, yf - .15)), ((1, 0), (x1 + .15, yf - .15), (x1 + .15, yb + .15)),
+                        ((-1, 0), (x0 - .15, yb + .15), (x0 - .15, yf - .15)), ((0, 1), (x1 + .15, yb + .15), (x0 - .15, yb + .15))):
+            timber_wall(p, a, b, gf, eave, n)
+        opening(p, (-4.6, yf), (0, -1), 1.6, 2.5, 0, 'woodDark', frame='beam', arch='round')
+        p.box((-4.6, yf - .3, .1), (2.4, .6, .2), trim)
+        opening(p, (4.6, yf), (0, -1), .8, 1.0, 1.2, 'dark', frame='woodDark')
+        shutters(p, (4.6, yf), (0, -1), .8, 1.0, 1.2)
+        for x in (-5.4, -3.2, 3.2, 5.4):
+            opening(p, (x, yf - .15), (0, -1), .9, 1.2, gf + .9, glass, frame='woodDark')
+            shutters(p, (x, yf - .15), (0, -1), .9, 1.2, gf + .9)
+        for x in (-4.0, 0, 4.0):
+            opening(p, (x, yb + .15), (0, 1), .9, 1.2, gf + .9, glass, frame='woodDark')
+        for sx in (-1, 1):
+            for y in (hc - 2.0, hc + 2.0):
+                opening(p, (sx * (x1 + .15), y), (sx, 0), .9, 1.2, gf + .9, glass, frame='woodDark')
+    else:
+        core = yf + 2.3
+        p.box((0, (core + yb) / 2, gf / 2), (tw - .2, yb - core, gf), wall)
+        p.box((0, (yf + core) / 2, .32), (tw - .2, core - yf, .04), 'paving')
+        p.box((0, hc, (gf + eave) / 2), (tw, hd, eave - gf), upper)
+        p.box((0, hc, gf + .1), (tw + .2, hd + .2, .3), trim)
+        for xs in ((-6.75, -4.65, -2.55), (2.55, 4.65, 6.75)):   # an arcade either side of the tower
+            arcade(p, xs, yf, (0, -1), gf, 'stoneLight', upper)
+        for sx in (-1, 1):
+            p.cylinder(.28, 0, 'stoneLight', n=8, axis='z', center=(sx * (x1 - .35), core - .3, 0), radii=[.36, .27, .27, .38], along=[0, .3, gf - .4, gf])
+            opening(p, (sx * 4.65, core), (0, -1), 1.4, 2.5, 0, 'woodDark', frame=trim, arch='round')
+        rows = [gf + 1.0] if L == 2 else [gf + 1.0, gf + 4.0]
+        for zr in rows:
+            for x in (-5.7, -3.5, 3.5, 5.7):
+                opening(p, (x, yf), (0, -1), 1.0, 2.0, zr, glass, frame=trim, arch='pointed' if L == 2 else 'round')
+                p.box((x, yf - .04, zr + 1.1), (.08, .1, 2.2), trim)          # mullion of the biforate
+            for x in (-4.5, 0, 4.5):
+                opening(p, (x, yb), (0, 1), 1.0, 2.0, zr, glass, frame=trim, arch='pointed' if L == 2 else 'round')
+            for sx in (-1, 1):
+                for y in (hc - 2.0, hc + 2.0):
+                    opening(p, (sx * x1, y), (sx, 0), 1.0, 2.0, zr, glass, frame=trim, arch='pointed' if L == 2 else 'round')
+        for x in (-4.6, 4.6):     # coats of arms between the windows
+            plate(p, (x, yf), (0, -1), [(-.35, eave - 1.6), (.35, eave - 1.6), (.35, eave - 1.0), (0, eave - .8), (-.35, eave - 1.0)][::-1],
+                  'canvasRed' if x < 0 else 'canvasBlue', 0, .06)
+    if L < 3:
+        gable_roof(p, 0, hc, tw, hd, eave, eave + hd / 2 * (.8 if L == 1 else .55), 'x', roof, gable_key=upper)
+    else:
+        for a, b in (((x0, yf), (x1, yf)), ((x1, yf), (x1, yb)), ((x1, yb), (x0, yb)), ((x0, yb), (x0, yf))):
+            dx, dy = b[0] - a[0], b[1] - a[1]
+            ln = math.hypot(dx, dy)
+            p.box(((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, eave + .1), (abs(dx) + .5 if dy == 0 else .5, abs(dy) + .5 if dx == 0 else .5, .2), trim)
+            merlons(p, a, b, eave + .2, upper, swallow=True)
+        gable_roof(p, 0, hc, tw - .6, hd - .6, eave, eave + 2.4, 'x', roof, over=0, end_over=0, gable_key=upper)
+    m.done('hall', p)
+
+    # The civic tower on the front right corner.
+    tz = {1: 8.0, 2: 12.8, 3: 18.8}[L]
+    tfront = tcy - th
+    p = m.part('tower')
+    p.box((tcx, tcy, tz / 2), (2 * th, 2 * th, tz), wall if L > 1 else 'stoneRough')
+    p.box((tcx, tcy, .3), (2 * th + .25, 2 * th + .25, .6), trim)
+    if L >= 2:
+        for z in (gf + .1, tz - 4.2 if L == 3 else tz - .2):
+            p.box((tcx, tcy, z), (2 * th + .14, 2 * th + .14, .26), trim)
+    opening(p, (tcx, tfront), (0, -1), 1.2, 2.4, 0, 'woodDark', frame=trim, arch='round')
+    if L >= 2:   # arengario: the balcony the commune speaks from, over the tower door
+        az = gf + .4
+        opening(p, (tcx, tfront), (0, -1), 1.0, 2.0, az + .2, 'woodDark', frame=trim, arch='round')
+        p.box((tcx, tfront - .55, az), (2.8, 1.1, .22), trim)
+        p.box((tcx, tfront - 1.05, az + .4), (2.8, .1, .6), 'iron')
+        for sx in (-1, 1):
+            p.box((tcx + sx * 1.35, tfront - .6, az + .4), (.1, 1.0, .6), 'iron')
+            p.beam((tcx + sx * .9, tfront - .9, az - .1), (tcx + sx * .9, tfront - .05, az - 1.1), .18, .18, trim)
+    for n in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+        o = (tcx + n[0] * th, tcy + n[1] * th)
+        for z in ((4.0,) if L == 1 else (5.0, 9.0) if L == 2 else (5.5, 10.0, 13.0)):
+            if n == (0, -1) and z > 4.5 and z < 9.5:
+                continue
+            opening(p, o, n, .3, 1.0, z, 'dark')
+    sundial(p, (tcx, tfront), (0, -1), {1: 6.2, 2: 8.6, 3: 9.4}[L], {1: .9, 2: 1.15, 3: 1.25}[L], 'plaster' if L < 3 else 'stoneLight')
+    if L == 3:
+        clock_face(p, (tcx, tfront), (0, -1), tz - 2.1, 1.0)
+    m.done('tower', p)
+
+    p = m.part('belfry')
+    if L == 1:   # open timber bell frame under a shingled pyramid
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                p.box((tcx + sx * (th - .2), tcy + sy * (th - .2), tz + 1.3), (.3, .3, 2.6), 'wood')
+        p.box((tcx, tcy, tz + .1), (2 * th + .2, 2 * th + .2, .2), 'woodDark')
+        for n in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+            p.box((tcx + n[0] * (th - .2), tcy + n[1] * (th - .2), tz + .9), (2 * th if n[0] == 0 else .12, .12 if n[0] == 0 else 2 * th, .12), 'woodDark')
+        bell(p, tcx, tcy, tz + .9, .5)
+        pyramid(p, tcx, tcy, 2 * th + .8, 2 * th + .8, tz + 2.6, tz + 5.4, roof)
+        p.box((tcx, tcy, tz + 5.6), (.12, .12, .5), 'iron')
+    else:
+        cell = 3.2 if L == 2 else 3.6
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                p.box((tcx + sx * (th - .35), tcy + sy * (th - .35), tz + cell / 2), (.7, .7, cell), wall)
+        for n in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+            o = (tcx + n[0] * th, tcy + n[1] * th)
+            w, r = 2 * th - 1.4, th - .7
+            pts = [(-th, tz + cell), (-th, tz + cell - r - .3), (-w / 2, tz + cell - r - .3)]
+            pts += [(-math.cos(math.pi * k / 6) * r, tz + cell - r - .3 + math.sin(math.pi * k / 6) * r * .9) for k in range(1, 6)]
+            pts += [(w / 2, tz + cell - r - .3), (th, tz + cell - r - .3), (th, tz + cell)]
+            plate(p, o, n, pts, wall, -.5, 0)
+            p.box((o[0] - n[0] * .1, o[1] - n[1] * .1, tz + .5), (2 * th if n[0] == 0 else .3, .3 if n[0] == 0 else 2 * th, 1.0), wall)
+        bell(p, tcx, tcy, tz + 1.0, .62 if L == 2 else .7)
+        p.box((tcx, tcy, tz + cell + .15), (2 * th + .5, 2 * th + .5, .3), trim)
+        if L == 2:
+            pyramid(p, tcx, tcy, 2 * th + .6, 2 * th + .6, tz + cell + .3, tz + cell + 4.2, roof)
+            p.box((tcx, tcy, tz + cell + 4.5), (.12, .12, .7), 'iron')
+        else:
+            z = tz + cell + .3
+            c = th + .2
+            for a, b in (((tcx - c, tcy - c), (tcx + c, tcy - c)), ((tcx + c, tcy - c), (tcx + c, tcy + c)),
+                         ((tcx + c, tcy + c), (tcx - c, tcy + c)), ((tcx - c, tcy + c), (tcx - c, tcy - c))):
+                merlons(p, a, b, z, wall, step=1.1, swallow=True)
+            p.box((tcx, tcy, z + 1.0), (1.8, 1.8, 2.0), wall)
+            pyramid(p, tcx, tcy, 0, 0, z + 2.0, z + 5.6, ('roofLead', 'roofSlateDark'), n=8, r=1.25)
+            p.box((tcx, tcy, z + 5.8), (.1, .1, .5), 'gold')
+            p.box((tcx + .45, tcy, z + 5.85), (.8, .04, .5), 'canvasRed')     # pennant
+    m.done('belfry', p)
+
+
+# civicLocalParts: hall 3 x 2.5 U, the gable front at -y.
+def guild(m, L):
+    """L1 timber guild house, L2 jettied hall over a stone ground floor with a goods hoist,
+    L3 stone guildhall with stepped gables and a corner oriel."""
+    w, d = 3.0 * S - .3, 2.5 * S - .3
+    hx, hy = w / 2, d / 2
+    roof = {1: ('roofShingle', 'roofShingleDark'), 2: ('roofTile', 'roofTileDark'), 3: ('roofSlate', 'roofSlateDark')}[L]
+    p = m.part('hall')
+    if L == 1:
+        # Jettied timber hall with a porch over the door and an open goods shed on its flank.
+        x0_, x1_ = -hx, 1.7
+        mc, mw, gf, eave, jet = (x0_ + x1_) / 2, x1_ - x0_, 2.9, 5.7, .35
+        R = eave + (mw / 2 + jet) * 1.1
+        p.box((mc, 0, .3), (mw + .1, d + .1, .6), 'stoneRough')
+        p.box((mc, 0, gf / 2), (mw, d, gf), 'plaster')
+        p.box((mc, 0, (gf + eave) / 2), (mw + 2 * jet, d + 2 * jet, eave - gf), 'plasterWarm')
+        for o, n, a, b in ((0, (0, -1), (x0_, -hy), (x1_, -hy)), (0, (-1, 0), (x0_, hy), (x0_, -hy)), (0, (0, 1), (x1_, hy), (x0_, hy))):
+            timber_wall(p, a, b, .6, gf, n, step=1.6, braces=False, rail=False)
+        for n, a, b in (((0, -1), (x0_ - jet, -hy - jet), (x1_ + jet, -hy - jet)), ((1, 0), (x1_ + jet, -hy - jet), (x1_ + jet, hy + jet)),
+                        ((-1, 0), (x0_ - jet, hy + jet), (x0_ - jet, -hy - jet)), ((0, 1), (x1_ + jet, hy + jet), (x0_ - jet, hy + jet))):
+            timber_wall(p, a, b, gf, eave, n, step=1.4)
+        for x in [x0_ + .3 + i * .9 for i in range(int((mw - .6) / .9) + 1)]:     # jetty joists
+            p.box((x, -hy - .12, gf - .08), (.15, .45, .15), 'beam')
+        gable_roof(p, mc, 0, d + 2 * jet, mw + 2 * jet, eave, R, 'y', roof, gable_key='plasterWarm')
+        gy = -hy - jet - .45 - .05                                   # carved gable: king post and braces
+        p.beam((mc, gy, eave + .1), (mc, gy, R - .5), .16, .16, 'beam')
+        for sx in (-1, 1):
+            p.beam((mc + sx * (mw / 2 - .2), gy, eave + .15), (mc, gy, R - 1.3), .14, .14, 'beam')
+        p.beam((mc - mw / 2 - jet, gy, eave + .05), (mc + mw / 2 + jet, gy, eave + .05), .2, .2, 'beam')
+        opening(p, (mc, -hy), (0, -1), 1.5, 2.3, 0, 'woodDark', frame='beam', arch='round')
+        for sx in (-1, 1):                                            # porch on two posts
+            p.box((mc + sx * 1.3, -hy - 1.15, 1.25), (.18, .18, 2.5), 'woodDark')
+        slab(p, [(mc - 1.65, -hy - 1.45, 2.45), (mc + 1.65, -hy - 1.45, 2.45), (mc + 1.65, -hy, 2.85), (mc - 1.65, -hy, 2.85)], .1, roof[0])
+        bench(p, mc - 2.6, -hy - .45, 1.6)
+        for x in (mc - 2.5, mc + 2.5):
+            opening(p, (x, -hy), (0, -1), .8, .9, 1.2, 'dark', frame='woodDark')
+            shutters(p, (x, -hy), (0, -1), .8, .9, 1.2)
+        for x in (mc - 2.0, mc + 2.0):
+            opening(p, (x, -hy - jet), (0, -1), .9, 1.1, gf + .8, 'glass', frame='woodDark')
+            shutters(p, (x, -hy - jet), (0, -1), .9, 1.1, gf + .8)
+            p.box((x, -hy - jet - .18, gf + .7), (1.1, .3, .2), 'woodDark')
+            p.box((x, -hy - jet - .18, gf + .85), (1.0, .24, .14), 'flowerRed' if x < mc else 'flowerYellow')
+        opening(p, (mc, -hy - jet), (0, -1), .7, .9, eave + 1.0, 'dark', frame='woodDark')
+        p.box((x0_ - jet - .55, -hy + .8, gf + .3), (1.1, .07, .07), 'iron')     # emblem on a bracket
+        plate(p, (x0_ - jet - .9, -hy + .76), (0, -1), circ(0, gf - .25, .4, 8), 'woodLight', -.03, .03)
+        plate(p, (x0_ - jet - .9, -hy + .72), (0, -1), circ(0, gf - .25, .22, 6), 'gold', -.03, .04)
+        # Goods shed: boarded back and side, lean-to roof against the hall.
+        sx0, sx1 = x1_, hx
+        p.box(((sx0 + sx1) / 2, hy - .1, 1.2), (sx1 - sx0, .2, 2.4), 'wood')
+        p.box((sx1 - .1, 0, 1.2), (.2, d, 2.4), 'wood')
+        p.box((sx1 - .1, -hy + .1, 1.3), (.2, .2, 2.6), 'woodDark')
+        slab(p, [(sx0, -hy - .3, 3.6), (sx1 + .3, -hy - .3, 2.55), (sx1 + .3, hy + .3, 2.55), (sx0, hy + .3, 3.6)], .12, roof[1])
+        barrel(p, sx0 + .9, -1.2, r=.34, h=.9)
+        barrel(p, sx0 + .9, -.3, r=.34, h=.9)
+        crate(p, sx0 + 1.0, 1.4, 0, .7, .1)
+        crate(p, sx0 + 1.0, 1.4, .7, .55, .5)
+        sack(p, sx0 + 1.4, 2.6)
+        sign_z = None
+    elif L == 2:
+        # Merchant guild: stone ground floor with three arches, two jettied floors, dormers,
+        # banners and a goods hoist in the gable.
+        gf, f2, eave = 3.4, 6.0, 8.6
+        j1, j2 = .3, .6
+        R = eave + (hx + j2) * 1.0
+        p.box((0, 0, gf / 2), (w, d, gf), 'stone')
+        p.box((0, 0, .25), (w + .15, d + .15, .5), 'stoneTrim')
+        p.box((0, 0, gf + .05), (w + .2, d + .2, .2), 'stoneTrim')
+        for jj, z0, z1 in ((j1, gf, f2), (j2, f2, eave)):
+            p.box((0, 0, (z0 + z1) / 2), (w + 2 * jj, d + 2 * jj, z1 - z0), 'plaster')
+            X, Y = hx + jj, hy + jj
+            for n, a, b in (((0, -1), (-X, -Y), (X, -Y)), ((1, 0), (X, -Y), (X, Y)), ((-1, 0), (-X, Y), (-X, -Y)), ((0, 1), (X, Y), (-X, Y))):
+                timber_wall(p, a, b, z0, z1, n, step=1.3)
+            for x in [-X + .3 + i * .9 for i in range(int((2 * X - .6) / .9) + 1)]:
+                p.box((x, -Y + jj / 2 - .05, z0 - .08), (.15, jj + .3, .15), 'beam')
+        gable_roof(p, 0, 0, d + 2 * j2, w + 2 * j2, eave, R, 'y', roof, gable_key='plaster')
+        opening(p, (0, -hy), (0, -1), 2.2, 3.0, 0, 'woodDark', frame='stoneTrim', arch='round')
+        p.box((0, -hy - .4, .12), (3.0, .8, .24), 'stoneTrim')
+        for sx in (-1, 1):
+            opening(p, (sx * 3.3, -hy), (0, -1), 1.6, 2.4, 0, 'dark', frame='stoneTrim', arch='round')
+            p.box((sx * 3.3, -hy - .35, .45), (1.6, .5, .9), 'wood')          # shop counters in the side arches
+            blob(p, sx * 3.3 - .35, -hy - .35, .25, .9, .18, 'cloth' if sx < 0 else 'produceOrange', n=6)
+            blob(p, sx * 3.3 + .35, -hy - .35, .25, .9, .18, 'canvasBlue' if sx < 0 else 'produceRed', n=6)
+        for x in (-3.0, 0, 3.0):
+            opening(p, (x, -hy - j1), (0, -1), .9, 1.2, gf + .7, 'glass', frame='woodDark')
+            shutters(p, (x, -hy - j1), (0, -1), .9, 1.2, gf + .7)
+            p.box((x, -hy - j1 - .18, gf + .6), (1.1, .3, .2), 'woodDark')
+            p.box((x, -hy - j1 - .18, gf + .75), (1.0, .24, .14), ('flowerRed', 'flowerYellow', 'flowerPurple')[int(x / 3) + 1])
+        for x in (-2.0, 2.0):
+            opening(p, (x, -hy - j2), (0, -1), .9, 1.2, f2 + .7, 'glass', frame='woodDark')
+        for sx, key in ((-1, 'canvasRed'), (1, 'canvasBlue')):             # guild banners
+            bx = sx * (hx + j2 - .5)
+            p.box((bx, -hy - j2 - .4, eave - .25), (.06, .8, .06), 'iron')
+            plate(p, (bx, -hy - j2 - .75), (0, -1), [(-.35, eave - .3), (.35, eave - .3), (.35, f2 - .4), (0, f2 - .1), (-.35, f2 - .4)][::-1], key, -.02, .02)
+            plate(p, (bx, -hy - j2 - .78), (0, -1), circ(0, eave - 1.2, .18, 6), 'gold', -.02, .03)
+        opening(p, (0, -hy - j2), (0, -1), 1.3, 1.6, eave + .6, 'dark', frame='woodDark')
+        p.beam((0, -hy + .4, R - .9), (0, -hy - j2 - 1.2, R - .9), .22, .22, 'beam')    # goods hoist
+        p.beam((0, -hy - j2 - 1.05, R - 1.0), (0, -hy - j2 - 1.05, f2 + .5), .03, .03, 'sack')
+        crate(p, 0, -hy - j2 - 1.05, f2, .5)
+        plate(p, (0, -hy - j2), (0, -1), circ(0, R - 2.3, .45, 8), 'gold', 0, .08)
+        for sx in (-1, 1):                                                  # roof dormers
+            for y in (-1.6, 1.8):
+                dx = sx * (hx + j2 - 1.3)
+                dz = eave + (hx + j2 - abs(dx)) * 1.0
+                p.box((dx + sx * .2, y, dz - .2), (1.4, 1.4, 1.6), 'plaster')
+                opening(p, (dx + sx * .9, y), (sx, 0), .7, .8, dz - .7, 'glass', frame='woodDark')
+                gable_roof(p, dx + sx * .3, y, 1.6, 1.6, dz + .6, dz + 1.3, 'x', roof, over=.12, end_over=.12, th=.12, gable_key='plaster')
+        chimney = (hx - 1.2, 2.2, R)
+        for sx in (-1, 1):
+            for y in (-1.8, 1.8):
+                opening(p, (sx * (hx + j1), y), (sx, 0), .9, 1.2, gf + .8, 'glass', frame='woodDark')
+        sign_z = gf - .5
+    else:
+        eave = 9.4
+        R = eave + hx * 1.15
+        p.box((0, 0, eave / 2), (w, d, eave), 'stoneLight')
+        p.box((0, 0, .3), (w + .2, d + .2, .6), 'stoneTrim')
+        for z in (3.6, eave - .1):
+            p.box((0, 0, z), (w + .16, d + .16, .24), 'stoneTrim')
+        gable_roof(p, 0, 0, d - .8, w, eave, R - .25, 'y', roof, over=.3, ends=(False, False))
+        # Stepped gables front and back.
+        steps = 6
+        for sy in (-1, 1):
+            y = sy * (hy - .35)
+            for i in range(steps):
+                z0 = eave + i * (R - eave) / steps
+                hw = hx * (1 - i / steps)
+                p.box((0, y, z0 + (R - eave) / steps / 2), (2 * hw, .7, (R - eave) / steps), 'stoneLight')
+                p.box((0, y, z0 + (R - eave) / steps), (2 * hw + .2, .8, .14), 'stoneTrim')
+            p.box((0, y, R + .4), (.4, .4, .8), 'stoneTrim')
+        opening(p, (0, -hy), (0, -1), 2.0, 3.2, 0, 'woodDark', frame='stoneTrim', arch='pointed')
+        p.box((0, -hy - .45, .12), (3.2, .9, .24), 'stoneTrim')
+        for x in (-3.4, 3.4):
+            opening(p, (x, -hy), (0, -1), 1.1, 2.0, 1.0, 'glass', frame='stoneTrim', arch='pointed')
+            opening(p, (x, -hy), (0, -1), 1.1, 2.8, 4.6, 'glass', frame='stoneTrim', arch='pointed')
+        opening(p, (0, -hy), (0, -1), 1.3, 2.6, 4.6, 'glass', frame='stoneTrim', arch='pointed')
+        opening(p, (0, -hy), (0, -1), 1.0, 1.6, eave + 1.0, 'dark', frame='stoneTrim', arch='round')
+        for sx in (-1, 1):
+            for y in (-1.6, 1.6):
+                opening(p, (sx * hx, y), (sx, 0), 1.0, 2.6, 4.6, 'glass', frame='stoneTrim', arch='pointed')
+        plate(p, (0, -hy), (0, -1), circ(0, 8.1, .6, 10), 'gold', 0, .08)
+        # Corner oriel on the front right.
+        ox, oy = hx - .2, -hy - .2
+        prism(p, circ(ox, oy, 1.0, 6), 3.4, 8.8, 'stoneLight')
+        p.cylinder(.9, 0, 'stoneTrim', n=6, axis='z', center=(ox, oy, 0), radii=[.2, .95], along=[2.4, 3.4])
+        for a in (math.pi * 1.25, math.pi * 1.75):
+            n = (math.cos(a), math.sin(a))
+            opening(p, (ox + n[0] * .87, oy + n[1] * .87), n, .5, 1.4, 5.6, 'glass')
+        pyramid(p, ox, oy, 0, 0, 8.8, 11.6, ('roofSlate', 'roofSlateDark'), n=6, r=1.2)
+        p.box((ox, oy, 11.8), (.1, .1, .5), 'gold')
+        sign_z = None
+    if sign_z is not None:   # hanging guild sign
+        p.box((hx - 1.2, -hy - .45, sign_z + .55), (.06, .9, .06), 'iron')
+        plate(p, (hx - 1.2, -hy - .7), (1, 0), circ(0, sign_z, .32, 8), 'gold' if L == 2 else 'woodLight', -.03, .03)
+    m.done('hall', p)
+    if L == 2:   # own part, like the tavern's: the cutaway leaves it out
+        x, y, top = chimney
+        p = m.part('chimneys')
+        p.box((x, y, (top + .8) / 2), (.8, .8, top + .8), 'brick')
+        p.box((x, y, top + .85), (1.0, 1.0, .18), 'stoneTrim')
+        m.done('chimneys', p)
+
+    p = m.part('props')
+    if L == 1:
+        barrel(p, -4.6, -hy - .6, r=.32, h=.85)
+        crate(p, 4.5, -hy - .7, 0, .6, .2)
+    elif L == 2:
+        for x, y in ((-4.7, -hy - .8), (-4.0, -hy - .9)):
+            sack(p, x, y)
+        crate(p, 4.6, -hy - .9, 0, .65, .1)
+        crate(p, 4.7, -hy - .85, .65, .5, .5)
+    else:
+        bench(p, -3.4, -hy - .7, 2.0)
+        lamp_post(p, -hx + .4, -hy - 1.0, 3.0)
+    m.done('props', p)
+
+
 # ------------------------------------------------------------------ annexes (CIVIC_ANNEX_CATALOG footprints)
 def house_block(p, w, d, z1, wall, roof, ridge_rise, axis='x', plinth=None, over=.4, th=.2, gable_key=None, cx=0, cy=0):
     if plinth:
@@ -1237,6 +1617,8 @@ def build_list():
         for v, fn in (('paved', plaza_paved), ('fountain', plaza_fountain), ('garden', plaza_garden)):
             out.append(('plaza_%s%d' % (v, L), lambda m, L=L, fn=fn: fn(m, L)))
     out += ANNEXES
+    for L in (1, 2, 3):   # appended last: earlier models keep their export order
+        out += [('townhall%d' % L, lambda m, L=L: townhall(m, L)), ('guild%d' % L, lambda m, L=L: guild(m, L))]
     out += [('prop_' + k, fn) for k, fn in PROPS]
     return out
 
