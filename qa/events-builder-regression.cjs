@@ -62,3 +62,30 @@ assert.equal(E.make('stage').dressing,'players','the stage starts dressed for pl
   assert.equal(E.setupItems(s).length,0,'nothing left on an idle ground');
 }
 console.log('PASS runtime: venues made, footprints turn, free festival ground, panel, lifecycle on the game clock');
+
+// Army camp: Builder button in the combat group, lot sized by the army, works bought
+// one level at a time, each placed copy owning its camp.
+assert.match(html,/<button data-event-venue="armyCamp">/,'Builder button for the army camp');
+assert.ok(ux.slice(ux.indexOf("{id:'combat'")).includes('[data-event-venue="armyCamp"]'),'army camp in the combat group');
+{
+  const s={...E.make('armyCamp',{seed:5}),id:'ac',x:80,y:80,angle:0};
+  const small={w:s.w,h:s.h};
+  assert.ok(E.setupItems(s).some(it=>it.m==='tentOctagon')&&E.setupItems(s).some(it=>it.m==='tentCompany'),'camp pitches pavilion and company tents');
+  assert.ok(!E.setupItems(s).some(it=>/campPalisade|propFence/.test(it.m)),'a new camp is open ground');
+  const {w,h}=E.sizeOf(s);
+  for(const it of E.setupItems(s))assert.ok(Math.abs(it.x)<=w/2&&Math.abs(it.y)<=h/2,it.m+' on the lot');
+  s.camp.squads=15;s.camp.leaders=3;E.fitCamp(s);
+  assert.ok(s.w*s.h>small.w*small.h,'a bigger army takes a bigger lot');
+  assert.ok(E.panelHtml(s).includes('data-camp-works="1"'),'panel offers the fence first');
+  s.camp.works=2;E.fitCamp(s);
+  const items=E.setupItems(s);
+  assert.ok(items.some(it=>it.m==='campPalisade')&&items.filter(it=>it.m==='campGate').length===1,'palisade with one gate');
+  assert.ok(E.cost(s).wood>E.cost(E.make('armyCamp')).wood,'works add to the cost');
+  assert.ok(E.buildDays(s)>E.buildDays(E.make('armyCamp')),'and to the building time');
+  assert.ok(E.label(s).includes('palizzata'),'label names the works');
+  const spec=E.make('armyCamp',{seed:9}),a={...spec,id:'a'},b={...spec,id:'b'};
+  E.label(a);E.label(b);a.camp.squads=12;
+  assert.notEqual(b.camp.squads,12,'placed copies do not share their camp');
+  assert.ok(E.meshes(s,0).length>items.length/2,'camp meshes built');
+}
+console.log('PASS army camp: builder, army-sized lot, works levels, cost, own camp per structure');

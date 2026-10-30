@@ -21,7 +21,9 @@
     stage:{w:2.4,h:1.2,dressings:{players:'stagePlayers',herald:'stageHerald'},dressing:'players'},
     festivalGround:{w:14,h:10},
     // Permanent lot of the U arena with the participants' camp: its setup is always shown.
-    arenaLot:{w:18,h:14,setup:'arenaLot'}
+    arenaLot:{w:18,h:14,setup:'arenaLot'},
+    // Army encampment: its lot is sized by the army it hosts (encampment()), w / h on s.
+    armyCamp:{w:12,h:10}
   };
   // Setups of the 14 x 10 festival ground (x along the long side, front at -y),
   // local U, biggest items first (they arrive first). {m: event model or
@@ -111,7 +113,7 @@
   const GROUND=['#7f9a55','#6c8648'];
 
   const is=s=>s?.type==='eventVenue'&&!!VENUES[s.venue];
-  const sizeOf=s=>s.venue==='festivalGround'?{w:Number(s.w)||VENUES.festivalGround.w,h:Number(s.h)||VENUES.festivalGround.h}:{w:VENUES[s.venue].w,h:VENUES[s.venue].h};
+  const sizeOf=s=>s.venue==='armyCamp'?{w:Number(s.w)||VENUES.armyCamp.w,h:Number(s.h)||VENUES.armyCamp.h}:s.venue==='festivalGround'?{w:Number(s.w)||VENUES.festivalGround.w,h:Number(s.h)||VENUES.festivalGround.h}:{w:VENUES[s.venue].w,h:VENUES[s.venue].h};
   const fits=(setup,size)=>!!SETUPS[setup]&&size.w>=SETUPS[setup].min.w-1e-9&&size.h>=SETUPS[setup].min.h-1e-9;
   // Setups a festival ground of this size can host.
   function setupsFor(s){const size=sizeOf(s);return Object.keys(SETUPS).filter(k=>!SETUPS[k].fixed&&fits(k,size))}
@@ -126,6 +128,7 @@
   // the event is preparing / clearing.
   function setupItems(s){
     if(is(s)&&VENUES[s.venue].setup)return SETUPS[VENUES[s.venue].setup].items;   // permanent lot
+    if(is(s)&&s.venue==='armyCamp')return campLayout(s).items;
     if(!is(s)||s.venue!=='festivalGround'||!s.event)return[];
     const {setup,phase}=s.event;
     if(!SHOWN_PHASES.has(phase)||!fits(setup,sizeOf(s)))return[];
@@ -347,7 +350,7 @@
   const meshCache=new Map();
   function meshes(s,ground){
     const h=(typeof State!=='undefined'&&State.heraldry)||{};
-    const key=[s.venue,s.dressing,s.x,s.y,s.angle||0,s.w,s.h,ground,s.event?.setup,s.event?.phase,s.event?.progress,h.c1,h.c2,h.c4,State.seed].join('|');
+    const key=[s.venue,s.dressing,s.x,s.y,s.angle||0,s.w,s.h,ground,JSON.stringify(s.camp||null),s.event?.setup,s.event?.phase,s.event?.progress,h.c1,h.c2,h.c4,State.seed].join('|');
     const hit=meshCache.get(s);if(hit&&hit.key===key)return hit.list;
     const list=[],inst=[];
     const place=(ref,pl,pair)=>{inst.push({ref,place:pl,pair});return triangles(ref,pl,ground,pair,{only:'fixed'})};
@@ -378,7 +381,7 @@
     };
     placedItems(s).forEach((it,i)=>{
       const p=toWorld(s,it.x,it.y);
-      const pair=liveryOf(it.m)!=='pair'?null:/^tent/.test(it.m)?tentPair(it,i):deck[dealt++%deck.length];
+      const pair=liveryOf(it.m)!=='pair'?null:it.pair?it.pair:/^tent/.test(it.m)?tentPair(it,i):deck[dealt++%deck.length];
       const mesh=place(it.m,{x:p.x,y:p.y,angle:(s.angle||0)+(it.a||0),scale:it.s||1,key:id+':'+(s.event?.setup||VENUES[s.venue].setup)+':'+i},pair);
       if(mesh)list.push(mesh);
     });
@@ -439,8 +442,49 @@
     streetSpot:{name:'Pulpito',cost:{wood:6},days:.5},
     stage:{name:'Palco',cost:{wood:24,gold:10},days:2},
     festivalGround:{name:'Spiazzo eventi',cost:{},days:0},
-    arenaLot:{name:'Arena',cost:{wood:160,gold:80},days:12}
+    arenaLot:{name:'Arena',cost:{wood:160,gold:80},days:12},
+    armyCamp:{name:'Accampamento militare',cost:{wood:30,gold:10},days:1}
   };
+  // Camp works, one level after the other: open ground, a fence marking the boundary,
+  // a stake palisade with a gate. cost: what the step up to that level takes.
+  const CAMP_WORKS=[
+    {name:'aperto',cost:{}},
+    {name:'steccato',fence:'fence',cost:{wood:40},days:1},
+    {name:'palizzata e porta',fence:'palisade',cost:{wood:120,gold:15},days:3}
+  ];
+  const CAMP_LIMITS={leaders:[1,4],squads:[2,18]};
+  let campSerial=0;
+  // Placement copies the tool's spec shallowly: each structure gets its own camp object
+  // on first use, so changing one camp never changes another.
+  const campOwner=new WeakMap();
+  const campOf=s=>{
+    if(!s.camp)s.camp={leaders:1,squads:6,works:0,seed:0};
+    const o=campOwner.get(s.camp);
+    if(o&&o!==s)s.camp={...s.camp};
+    campOwner.set(s.camp,s);return s.camp;
+  };
+  // Local layout of a camp structure (cached): encampment() centred on its lot, the
+  // boundary works of its level, and the lot size that holds it all.
+  // The camp's own seed (c.seed, set when made) keeps the preview and the built camp alike.
+  const campCache=new Map();   // by layout key: preview copies made every frame share it
+  function campLayout(s){
+    const c=campOf(s),h=(typeof State!=='undefined'&&State.heraldry)||{},seed=(typeof State!=='undefined'&&State.seed)||1;
+    const id='c'+(c.seed??0),key=[id,c.leaders,c.squads,c.works,h.c1,h.c2,seed].join('|');
+    const hit=campCache.get(key);if(hit)return hit;
+    const army={leaders:Array.from({length:c.leaders},(_,k)=>({id:id+':l'+k,kind:k?'knight':'captain'})),
+      squads:Array.from({length:c.squads},(_,k)=>({id:id+':s'+k}))};
+    const camp=encampment(army,{seed,key:String(id)}),works=CAMP_WORKS[c.works]||CAMP_WORKS[0];
+    const xs=camp.perimeter.map(p=>p.x),ys=camp.perimeter.map(p=>p.y);
+    const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+    const all=camp.items.concat(works.fence?encampmentFence(camp,works.fence):[]);
+    const out={key,camp,
+      items:all.map(it=>({...it,x:it.x-cx,y:it.y-cy})),
+      w:Math.ceil(Math.max(...xs)-Math.min(...xs)+.6),h:Math.ceil(Math.max(...ys)-Math.min(...ys)+.6)};
+    if(campCache.size>64)campCache.clear();
+    campCache.set(key,out);return out;
+  }
+  // Lot size follows the army (call after changing s.camp).
+  function fitCamp(s){const l=campLayout(s);s.w=l.w;s.h=l.h;return s}
   const SETUP_NAMES={joust:'Giostra',tourney:'Torneo',circus:'Circo',feast:'Sagra',camp:'Accampamento',theatre:'Teatro'};
   const PHASE_NAMES={idle:'libero',preparing:'allestimento',active:'in corso',clearing:'smontaggio'};
   const PREPARE_DAYS=.25,CLEAR_DAYS=.15;          // game days to set up / clear a festival ground
@@ -449,16 +493,27 @@
     const s={type:'eventVenue',venue,w,h,shape:'rect',functions:[]};
     if(venue==='stage')s.dressing=opts.dressing==='herald'?'herald':'players';
     if(venue==='festivalGround')s.event={setup:'joust',phase:'idle',progress:0};
+    if(venue==='armyCamp'){
+      campSerial=(campSerial+1)%1e6;
+      s.camp={leaders:opts.leaders||1,squads:opts.squads||6,works:0,seed:opts.seed??(((typeof State!=='undefined'&&State.structures?.length)||0)*97+campSerial)};
+      fitCamp(s);
+    }
     return s;
   }
   function label(s){
     const b=BUILD[s.venue],{w,h}=sizeOf(s);let t=b.name+' · '+w+'×'+h+'U';
     if(s.venue==='stage')t+=' · '+(s.dressing==='herald'?'annunci':'artisti di strada');
     if(s.venue==='festivalGround'&&s.event)t+=' · '+SETUP_NAMES[s.event.setup]+' · '+PHASE_NAMES[s.event.phase];
+    if(s.venue==='armyCamp'){const c=campOf(s);t+=' · '+c.leaders+(c.leaders>1?' capi, ':' capo, ')+c.squads+' squadre · '+CAMP_WORKS[c.works].name}
     return t;
   }
-  const cost=s=>({...(BUILD[s.venue]?.cost||{})});
-  const buildDays=s=>BUILD[s.venue]?.days||0;
+  // A camp built with works already chosen pays for every level up to it.
+  const cost=s=>{
+    const out={...(BUILD[s.venue]?.cost||{})};
+    if(s.venue==='armyCamp')for(let k=1;k<=campOf(s).works;k++)for(const [r,v] of Object.entries(CAMP_WORKS[k].cost))out[r]=(out[r]||0)+v;
+    return out;
+  };
+  const buildDays=s=>(BUILD[s.venue]?.days||0)+(s.venue==='armyCamp'?CAMP_WORKS.slice(1,campOf(s).works+1).reduce((d,w)=>d+(w.days||0),0):0);
   // Lifecycle of the festival grounds on the game clock: preparing -> active, clearing -> idle;
   // the static scene is refreshed only when the number of props on the ground changes.
   function tickEvents(){
@@ -501,6 +556,17 @@
         '<div class="grid"><button data-event-start '+(busy?'disabled':'')+'>Avvia evento</button><button data-event-stop '+(ev.phase==='active'||ev.phase==='preparing'?'':'disabled')+'>Chiudi evento</button></div>'+
         '<div class="legend">Spiazzo riservato: niente case, campi o edifici. Durante l\'evento gli allestimenti vengono montati e poi smontati.</div></div>';
     }
+    if(s.venue==='armyCamp'){
+      const c=campOf(s),[l0,l1]=CAMP_LIMITS.leaders,[q0,q1]=CAMP_LIMITS.squads,next=CAMP_WORKS[c.works+1];
+      const ct=typeof costText==='function'?costText:(x=>JSON.stringify(x));
+      html+='<div class="slot"><div class="slot-label">Esercito accampato</div><div class="grid">'+
+        '<button data-camp-army="leaders:-1" '+(c.leaders<=l0?'disabled':'')+'>− Capo</button><button data-camp-army="leaders:1" '+(c.leaders>=l1?'disabled':'')+'>+ Capo</button>'+
+        '<button data-camp-army="squads:-1" '+(c.squads<=q0?'disabled':'')+'>− Squadra</button><button data-camp-army="squads:1" '+(c.squads>=q1?'disabled':'')+'>+ Squadra</button></div>'+
+        '<div class="legend">'+c.leaders+' capi · '+c.squads+' squadre ('+Math.ceil(c.squads/3)+' compagnie) · lotto '+s.w+'×'+s.h+'U</div></div>'+
+        '<div class="slot"><div class="slot-label">Fortificazione · '+CAMP_WORKS[c.works].name+'</div>'+
+        (next?'<div class="grid"><button data-camp-works="'+(c.works+1)+'">Costruisci '+next.name+' · '+ct(next.cost)+'</button></div>':'<div class="legend">Fortificazione leggera completa.</div>')+
+        '<div class="legend">Aperto → steccato → palizzata con porta.</div></div>';
+    }
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+='<div class="slot"><div class="slot-label">Rotazione · '+deg+'°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>';
     return html;
@@ -511,6 +577,17 @@
     root.querySelectorAll('[data-event-setup]').forEach(b=>b.onclick=()=>{setEvent(s,{setup:b.dataset.eventSetup});done()});
     root.querySelector('[data-event-start]')?.addEventListener('click',()=>{setEvent(s,{phase:'preparing',progress:0,since:State.clock?.day||0});done()});
     root.querySelector('[data-event-stop]')?.addEventListener('click',()=>{setEvent(s,{phase:'clearing',progress:0,since:State.clock?.day||0});done()});
+    root.querySelectorAll('[data-camp-army]').forEach(b=>b.onclick=()=>{
+      const [k,d]=b.dataset.campArmy.split(':'),c=campOf(s),[lo,hi]=CAMP_LIMITS[k];
+      c[k]=Math.max(lo,Math.min(hi,c[k]+Number(d)));fitCamp(s);refresh();done();
+    });
+    root.querySelectorAll('[data-camp-works]').forEach(b=>b.onclick=()=>{
+      const lv=Number(b.dataset.campWorks),w=CAMP_WORKS[lv],c=campOf(s);
+      if(!w||lv!==c.works+1)return;
+      if(typeof canAfford==='function'&&!canAfford(w.cost)){if(typeof status==='function')status('Risorse insufficienti per '+w.name);return}
+      if(typeof spendCost==='function'&&!spendCost(w.cost))return;
+      c.works=lv;fitCamp(s);refresh();done();
+    });
     root.querySelectorAll('[data-point-rotate]').forEach(b=>b.onclick=()=>{if(typeof rotatePointStructure==='function')rotatePointStructure(s,Number(b.dataset.pointRotate)||1);refresh();done()});
   }
   // ---------- Bivouac: a night field camp laid out like a real one (docs/events, camp).
@@ -727,7 +804,7 @@
     return{parts:{camp:{p,i:p.map((_,k)=>k).slice(0,p.length/3),c}},meta:{},livery:'realm'};
   }
   window.ConquerEvents3D={VENUES,SETUPS,PAIRS,BUILD,SETUP_NAMES,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld,
-    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel,encampment,encampmentFence};
+    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel,encampment,encampmentFence,campLayout,fitCamp,CAMP_WORKS};
   // Lab scenes: sample bivouacs in the Asset Lab catalog (ConquerCampScenes).
   if(window.ConquerEventModels){
     const M=window.ConquerEventModels,sq=(n,x=0)=>Array.from({length:n},(_,k)=>({id:'s'+k,kind:'squad',x:x+(k%3)*.4,y:Math.floor(k/3)*.4}));

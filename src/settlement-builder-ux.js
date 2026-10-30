@@ -72,7 +72,8 @@
       ['[data-event-venue="stage"]','Palco · 2.4×1.2U · artisti / annunci','stage'],
       ['[data-event-venue="festivalGround"]','Spiazzo eventi · 14×10U · giostra, torneo, circo, sagra','festival'],
       ['[data-event-venue="arenaLot"]','Arena · 18×14U · lotto dedicato','arena']]},
-    {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[]},
+    {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[
+      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata','castle']]},
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
