@@ -246,6 +246,7 @@ function footprintPoints(s){
   if(!s)return[];
   if(s.type==='tower'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
   if(s.type==='ruin'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s);
   if(['tower','gate','ruin'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
   if(['wall','palisade','built','moat','bridge'].includes(s.type))return linePoly(s);
@@ -279,6 +280,7 @@ function stoneTowerSplayedFootprint(s){
   if(s.shape==='round'){
     return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+STONE_TOWER_SPLAY_OFFSET,24);
   }
+  if(isOrientedTower(s))return orientedTowerOutline(s,-STONE_TOWER_SPLAY_OFFSET);
   const d=rectDims(s);
   return rectWorldPoints(
     s.x,s.y,
@@ -314,6 +316,7 @@ function stoneTowerButtresses(s){
     }
     return out;
   }
+  if(s.shape==='dee')return deeTowerButtresses(s,h);
   const fp=footprintPoints(s),center={x:s.x,y:s.y};
   for(let i=0;i<fp.length;i++){
     const a=fp[i],b=fp[(i+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
@@ -539,7 +542,8 @@ function cutawayEligible(s){
   // has no walls to open.
   if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
-  return s.type==='tower';
+  // Semitowers are open already; D towers have no cutaway interior yet.
+  return s.type==='tower'&&!isOrientedTower(s);
 }
 // Small (T1) stone towers are a stair shaft: no wooden floors, one stone newel stair from
 // the ground to the top (settlement-cutaway-furniture.js builds the steps).
@@ -931,6 +935,7 @@ function unionFootprintPoints(s){
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
 function polygonGeomForStructure(s){
+  if(s.type==='tower'&&s.shape==='half')return towerBodyPrisms(s).map(p=>[p.map(q=>[q.x,q.y])]);
   const pts=unionFootprintPoints(s);if(!pts||pts.length<3)return null;
   return [pts.map(p=>[p.x,p.y])];
 }

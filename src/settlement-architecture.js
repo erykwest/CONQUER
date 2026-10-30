@@ -76,6 +76,7 @@ function structureInteriorVector(s){
   return{x:vx/L,y:vy/L};
 }
 function interiorFacadeEdgeIndex(s){
+  if(isOrientedTower(s))return ORIENTED_FACADE_REAR;
   const fp=footprintPoints(s);if(fp.length<2)return-1;
   const iv=structureInteriorVector(s),center=structureCenter(s);let best=-1,bestScore=-Infinity;
   for(let i=0;i<fp.length;i++){
@@ -144,7 +145,7 @@ function drawGateWindows(s,lit=false,nf=1){
 }
 function visibleFacadeEdges(s){
   const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'&&p.kind!=='outbuilding'):null;
-  const rings=parts?parts.map(p=>p.points):[footprintPoints(s)],edges=[];
+  const rings=parts?parts.map(p=>p.points):[towerFacadePoints(s)],edges=[];
   for(const fp of rings){
     if(fp.length<4)continue;
     const faces=[];
@@ -208,7 +209,14 @@ function towerDoorSpecs(tower){
 
   // Primary ground-floor entrance exists only on independent towers.
   // Attached subtowers deliberately have NO ground-floor door.
-  if(!tower.parentTowerId){
+  // Oriented towers face the field: the door is on the rear, inside the walls (the semitower's
+  // rear is the open gorge itself).
+  if(!tower.parentTowerId&&isOrientedTower(tower)){
+    if(tower.shape==='dee'){
+      const fp=towerFacadePoints(tower),rear=towerDoorContactSpec(tower,{x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2},null,'front');
+      if(rear)specs.push(rear);
+    }
+  }else if(!tower.parentTowerId){
     const a=tower.angle||0;
     let frontContact;
     if(tower.shape==='round'){
@@ -362,7 +370,7 @@ function towerFaceDirections(s){
     const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x);
     return[0,1,2,3].map(i=>({face:i,nx:Math.cos(base+i*Math.PI/2),ny:Math.sin(base+i*Math.PI/2),interior:i===0}));
   }
-  const fp=footprintPoints(s),interior=interiorFacadeEdgeIndex(s);
+  const fp=towerFacadePoints(s),interior=interiorFacadeEdgeIndex(s);
   return fp.map((a,i)=>{
     const b=fp[(i+1)%fp.length],nx=(a.x+b.x)/2-s.x,ny=(a.y+b.y)/2-s.y,L=Math.hypot(nx,ny)||1;
     return{face:i,nx:nx/L,ny:ny/L,interior:i===interior};
@@ -662,7 +670,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
           return;
         }
-        const edges=visibleFacadeEdges(s),opacity=cutawayFacadeOpacity(s);
+        const edges=visibleFacadeEdges(s).filter(e=>!(s.shape==='half'&&e.index===ORIENTED_FACADE_REAR)),opacity=cutawayFacadeOpacity(s);
         for(const row of rows){
           const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);
           if(!key)continue;

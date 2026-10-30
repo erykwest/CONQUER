@@ -158,6 +158,11 @@
       ['Grande quadrata L3 caditoie',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'buttress'}],
       ['Grande rotonda L3 merli',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',baseStyle:'splayed'}],
       ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
+      ['Semitorre piccola L2',{type:'tower',shape:'half',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'battlement'}],
+      ['Semitorre media L3',{type:'tower',shape:'half',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Torre a D media L2 merli',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Torre a D grande L3 caditoie',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'splayed'}],
+      ['Torre a D grande L3 tetto',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',baseStyle:'buttress'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}]

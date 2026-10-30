@@ -919,7 +919,8 @@
           const interior=interiorFacadeEdgeIndex(s);
           for(const row of rows){
             const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)continue;
-            for(const edge of edgesOf(footprintPoints(s))){
+            for(const edge of edgesOf(towerFacadePoints(s))){
+              if(s.shape==='half'&&edge.index===ORIENTED_FACADE_REAR)continue;   // open gorge
               const o=outward(edge,center);
               if(edge.index===interior)onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o);
               else if(towerSlitFace(s,edge.index,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);

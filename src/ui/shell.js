@@ -70,12 +70,18 @@ const CATALOG = [
       const rows = [{ label: O.shape, options: [
         opt(V.square, '[data-tower="square"][data-size="1.5"]', stone && t.shape === 'square'),
         opt(V.round, '[data-tower="round"][data-size="0.75"]', stone && t.shape === 'round'),
+        opt(V.half, '[data-tower="half"][data-size="1"]', stone && t.shape === 'half'),
+        opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
         opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
         opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower')] }];
       if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2'].map(n =>
         opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
         opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone && t.shape === 'half') rows.push({ label: O.size, options: [['1', V.small], ['1.5', V.medium]].map(([n, l]) =>
+        opt(l, `[data-tower="half"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone && t.shape === 'dee') rows.push({ label: O.size, options: [['1.5', V.medium], ['2', V.large]].map(([n, l]) =>
+        opt(l, `[data-tower="dee"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone) rows.push({ label: O.level, options: [1, 2, 3].map(n => opt(String(n), `[data-tower-level="${n}"]`, s.levels.tower === n)) });
       if (stone) rows.push(masonryRow(s));
       return rows;

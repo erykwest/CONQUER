@@ -15,10 +15,12 @@ const src=[
   pick(/function towerTopWeaponAllowed\(s\)\{[^\n]*\}/,'towerTopWeaponAllowed'),
   pick(/function towerTopWeapon\(s\)\{[^\n]*\}/,'towerTopWeapon'),
   pick(/function isWoodTower\(s\)\{[^\n]*\}/,'isWoodTower'),
+  pick(/const ORIENTED_TOWER_SPECS=[\s\S]*?\nfunction orientedTowerDims\(s\)\{[^\n]*\}/,'oriented tower shapes'),
   pick(/function towerTier\(s\)\{[^\n]*\}/,'towerTier')
 ].join('\n');
 const window={},State={structures:[]};
 const ctx=vm.createContext({window,State,console,Math,Number,Object,Array,Map,Float32Array,String,
+  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
   underConstruction:()=>false,placementGroundZ:()=>.5,terrainElevation:()=>0,
   structureHeight:s=>[2.35,3.55,4.75][(s.level||1)-1],structureCenter:s=>({x:s.x,y:s.y}),
   structureInteriorVector:()=>({x:-1,y:0}),drawCastleSoldiers:()=>{}});

@@ -135,10 +135,11 @@
         m.frustum(stoneTowerSplayedFootprint(s),footprintPoints(s),0,STONE_TOWER_BASE_HEIGHT);
       }
     }
+    for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
     if(towerRoofStyle(s)==='pitched'){
       m.tag='roof';
-      const ring=towerRoofFootprintPoints(s),apex={x:s.x,y:s.y},apexZ=towerVisualTopHeight(s);
-      if(s.shape==='round'){
+      const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);
+      if(s.shape==='round'||s.shape==='dee'){
         const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
         m.pyramid(ring,h,apex,apexZ,i=>cols[i%3]);
       }else{
@@ -225,7 +226,7 @@
         // In the world renderer stone gates are carved: piers and a vault around a passage you can
         // see through, with door leaves as meshes. The Canvas paths keep the solid block and decals.
         if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
-          m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
+          for(const pts of towerBodyPrisms(s))m.prism(pts,0,structureHeight(s),PAL.stone());
         if(s.type==='tower')addTower(m,s);
         m.tag='roof';
         if(s.type==='gate')addGate(m,s);
