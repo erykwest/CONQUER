@@ -1164,6 +1164,15 @@
     // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
     const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    // Windows and slits seen from inside: the same sprites as outside (decal atlas), facing the
+    // room; a flat pane only while the atlas is not built yet.
+    const dv=[],atlasMap=typeof S!=='undefined'?S.decalMap:null;
+    const decal=(at,dir,z0,z1,w,key,hex)=>{
+      const uv=atlasMap?.get(key);if(!uv){openingQuad(m,at,dir,z0,z1,w,hex);return}
+      const t={x:-dir.y,y:dir.x},a={x:at.x-t.x*w/2,y:at.y-t.y*w/2},b={x:at.x+t.x*w/2,y:at.y+t.y*w/2},[u0,v0,u1,v1]=uv;
+      const P=[[a,z1,u0,v0],[b,z1,u1,v0],[b,z0,u1,v1],[a,z0,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [p,z,u,v]=P[k];dv.push(p.x,p.y,z,u,v,1,1,1,1)}
+    };
     const W3=window.ConquerWagons3D,FU=window.ConquerCutawayFurniture;
     // Furniture and ladders (world xy, z on the structure plane).
     const addFurniture=s=>{
@@ -1266,8 +1275,9 @@
         for(const row of towerWindowRows(s))for(const d of towerFaceDirections(s)){
           const dir={x:d.nx,y:d.ny};if(!keptDir(dir))continue;
           const at=innerAt(dir),zc=row.z;if(!outside(at,zc))continue;
-          if(d.interior&&towerGothicAssetForRow(s,row))openingQuad(m,at,dir,(plane?G0:0)+zc-.2,(plane?G0:0)+zc+.2,.26,'#8fa2b2');
-          else if(towerSlitFace(s,d.face,row.floor))openingQuad(m,at,dir,(plane?G0:0)+zc-.16,(plane?G0:0)+zc+.16,.06,'#1c1612');
+          const key=d.interior&&towerGothicAssetForRow(s,row),z=(plane?G0:0)+zc;
+          if(key){const sz=towerGothicAssetSizeForRow(s,row);decal(at,dir,z-sz.h/2,z+sz.h/2,sz.w,key,'#8fa2b2')}
+          else if(towerSlitFace(s,d.face,row.floor))decal(at,dir,z-.3,z+.3,.22,'arrowSlit','#1c1612');
         }
         for(const spec of (typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[])){
           const dir={x:spec.outward.x,y:spec.outward.y};if(!keptDir(dir))continue;
@@ -1291,14 +1301,14 @@
           const edge={a:fp[e],b:fp[(e+1)%4],index:e},rear=e===interiorFacadeEdgeIndex(s);
           for(const z of gateWindowRows(s))for(const off of rear?[0]:gateSlitOffsets(edge)){
             const at={x:(a.x+b.x)/2+u.x*off-dir.x*.006,y:(a.y+b.y)/2+u.y*off-dir.y*.006};
-            if(rear)openingQuad(m,at,dir,G0+z-sz.h*.4,G0+z+sz.h*.4,sz.w*.6,'#8fa2b2');
-            else openingQuad(m,at,dir,G0+z-.16,G0+z+.16,.06,'#1c1612');
+            if(rear)decal(at,dir,G0+z-sz.h/2,G0+z+sz.h/2,sz.w,gothicAssetForLevel(s),'#8fa2b2');
+            else decal(at,dir,G0+z-.31,G0+z+.31,.24,'arrowSlit','#1c1612');
           }
         }
       }
       addFurniture(s);
     }
-    return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris)};
+    return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris),dec:new Float32Array(dv)};
   }
 
   // ---------- content signatures (cheap, per frame) ----------
@@ -1433,7 +1443,7 @@
     }
     const dSig=[structuresSig('all'),Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
-      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
+      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
       const baked=buildDecals(atlas);
       upload(gl,'decals',baked.decals);
       upload(gl,'nightWindows',baked.lights);
@@ -1460,20 +1470,21 @@
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
     const cut=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s));
-    const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,
+    const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,S.sig.decals,
       ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
     if(S.cutContent!==cutContent){
-      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b)}
+      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b);gl.deleteBuffer(v.dec.b)}
       S.cutContent=cutContent;S.cutVariants=new Map();
     }
     if(cut.length){
       const key=rot+'|'+plan;let v=S.cutVariants.get(key);
       if(!v){
         const a=performance.now(),d=buildCutaway(),mk=x=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,x,gl.STATIC_DRAW);return{b,n:x.length}};
-        v={main:mk(d.main),shell:mk(d.shell),em:mk(d.em)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
+        v={main:mk(d.main),shell:mk(d.shell),em:mk(d.em),dec:mk(d.dec)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
       }
       S.buf.cutaway=v.main.b;S.buf['cutaway#n']=v.main.n;S.buf.cutawayShell=v.shell.b;S.buf['cutawayShell#n']=v.shell.n;S.buf.cutawayEm=v.em.b;S.buf['cutawayEm#n']=v.em.n;
-    }else{S.buf['cutaway#n']=0;S.buf['cutawayShell#n']=0;S.buf['cutawayEm#n']=0}
+      S.buf.cutawayDecals=v.dec.b;S.buf['cutawayDecals#n']=v.dec.n;
+    }else{S.buf['cutaway#n']=0;S.buf['cutawayShell#n']=0;S.buf['cutawayEm#n']=0;S.buf['cutawayDecals#n']=0}
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
     st.ensureMs=performance.now()-t0;
@@ -1499,6 +1510,15 @@
     const pr=S.prog.mesh;useProgram(gl,pr);setCamera(gl,pr,r);
     bindAttrib(gl,pr,'aPos',S.buf[name],3,24,0);bindAttrib(gl,pr,'aCol',S.buf[name],3,24,12);
     gl.drawArrays(mode,0,n/6);
+  }
+  function drawDecalBuffer(gl,r,name){
+    const n=S.buf[name+'#n'];if(!n||!S.tex.decalAtlas)return;
+    const dp=S.prog.decal;useProgram(gl,dp);setCamera(gl,dp,r);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(dp.loc.uAtlas,0);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+    const b=S.buf[name];bindAttrib(gl,dp,'aPos',b,3,36,0);bindAttrib(gl,dp,'aUV',b,2,36,12);bindAttrib(gl,dp,'aCol',b,4,36,20);
+    gl.drawArrays(gl.TRIANGLES,0,n/9);
+    gl.depthMask(true);gl.disable(gl.BLEND);
   }
   function resizeTo(r){
     const dpr=Math.min(devicePixelRatio||1,2),W=Math.max(1,Math.round(r.width*dpr)),H=Math.max(1,Math.round(r.height*dpr));
@@ -1529,15 +1549,9 @@
     drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'civicCutaway');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayShell');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
-    // facade decals: blended over their walls, depth-tested, no depth write
-    if(S.buf['decals#n']&&S.tex.decalAtlas){
-      const dp=S.prog.decal;useProgram(gl,dp);setCamera(gl,dp,r);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(dp.loc.uAtlas,0);
-      gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
-      const b=S.buf.decals;bindAttrib(gl,dp,'aPos',b,3,36,0);bindAttrib(gl,dp,'aUV',b,2,36,12);bindAttrib(gl,dp,'aCol',b,4,36,20);
-      gl.drawArrays(gl.TRIANGLES,0,S.buf['decals#n']/9);
-      gl.depthMask(true);gl.disable(gl.BLEND);
-    }
+    // facade decals (and the cutaway's windows seen from inside): blended over their walls,
+    // depth-tested, no depth write
+    drawDecalBuffer(gl,r,'decals');drawDecalBuffer(gl,r,'cutawayDecals');
     // trees
     if(S.buf['trees#n']&&S.tex.atlas){
       const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
@@ -1772,6 +1786,7 @@
     const gl=S.gl,r=wrap.getBoundingClientRect();
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayEm');gl.disable(gl.POLYGON_OFFSET_FILL);
+    drawDecalBuffer(gl,r,'cutawayDecals');gl.depthMask(false);
     // Figures inside the open rooms (occupants, archers at the slits) share the room light.
     const inside=(S.frameFigures||[]).filter(f=>/-room-|:slit:/.test(String(f.id)));
     if(inside.length&&S.tex.soldierAtlas){

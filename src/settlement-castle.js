@@ -625,7 +625,10 @@ function cutawayFloorLevels(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(level<=1||cutawaySpiralStair(s))return floors;
-  for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
+  // A gate's storeys line up with those of the stone tower flanking it (one floor level across).
+  const flank=s.type==='gate'?State.structures.find(o=>o.parentTowerId===s.id&&o.type==='tower'&&!isWoodTower(o)&&!cutawaySpiralStair(o)):null;
+  const fz=flank?cutawayFloorLevels(flank):[];
+  for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:h*i/level,material:'wood'});
   return floors;
 }
 function cutawayLocalRect(center,angle,x0,y0,x1,y1){

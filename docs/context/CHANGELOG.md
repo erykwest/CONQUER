@@ -9,6 +9,7 @@
 - Feritoie laterali della D spostate in avanti, sul mezzo tondo: accanto a una porta restano libere.
 - Porte in pietra: una fila di finestre per stanza (L1 nessuna, L2 una, L3 due), non più una per livello a partire dal passaggio.
 - Porte: finestra sempre sul retro, due feritoie affiancate sul fronte, aperture visibili anche nel cutaway. Finestre notturne di torri e porte: il vetro illuminato segue la sagoma della finestra invece di un rettangolo.
+- Cutaway: finestre e feritoie viste da dentro con lo sprite vero invece di quadrati colorati; i solai delle porte si allineano a quelli delle torri che le fiancheggiano.
 
 ## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
 
