@@ -729,6 +729,23 @@ function wallBattlementPieces(s){
   }
   return pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
 }
+// L-shaped corner merlon: two arms, one along each edge, sharing the square block on the corner
+// point `mc`. Each arm is its own merlon (so it takes the crenel-style crown along its run) and the
+// parapet runs start/end on the arm faces: start[e] opens edge e, end[e] closes it.
+const CORNER_ARM=.3;
+function lCornerMerlons(fp,corners,z,h,d,owner){
+  const n=fp.length,ds=d*MERLON_DEPTH_SCALE,pieces=[],start=[],end=[];
+  const dirOf=e=>{const a=fp[e],b=fp[(e+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1;return{x:(b.x-a.x)/L,y:(b.y-a.y)/L,angle:Math.atan2(b.y-a.y,b.x-a.x)}};
+  const arm=(mc,u,sign,angle)=>({x:mc.x+u.x*sign*(CORNER_ARM/2-ds/2),y:mc.y+u.y*sign*(CORNER_ARM/2-ds/2),angle});
+  for(let e=0;e<n;e++){
+    const mc=corners[e],fwd=dirOf(e),back=dirOf((e-1+n)%n);
+    const f=arm(mc,fwd,1,fwd.angle),b=arm(mc,back,-1,back.angle);
+    pieces.push(battlementPiece(f,f.angle,z,CORNER_ARM,d,h,owner),battlementPiece(b,b.angle,z,CORNER_ARM,d,h,owner));
+    start[e]=merlonNode(f,f.angle,CORNER_ARM,d);
+    end[(e-1+n)%n]=merlonNode(b,b.angle,CORNER_ARM,d);
+  }
+  return{pieces,start,end};
+}
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s);
@@ -739,14 +756,14 @@ function squareTowerBattlementPieces(s){
       const ML=Math.hypot(center.x-mc.x,center.y-mc.y)||1,cc={x:mc.x+(center.x-mc.x)/ML*.09,y:mc.y+(center.y-mc.y)/ML*.09};
       pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.115,.15,cornerAngle),z-.23,z+.015,s));
     }
-    pieces.push(battlementPiece(mc,cornerAngle,z,.27,.23,.25,s));
     corners.push(mc);
   }
+  const LC=lCornerMerlons(fp,corners,z,.25,.23,s);pieces.push(...LC.pieces);
   const parapets=[];
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
-    const run=[merlonNode(corners[e],cornerAngle,.27,.23,angle)];
+    const run=[LC.start[e]];
     for(let i=1;i<intervals;i++){
       const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
       if(mach){
@@ -756,7 +773,7 @@ function squareTowerBattlementPieces(s){
       pieces.push(battlementPiece(mc,angle,z,.25,.22,.24,s));
       run.push(merlonNode(mc,angle,.25,.22));
     }
-    run.push(merlonNode(corners[(e+1)%fp.length],cornerAngle,.27,.23,angle));
+    run.push(LC.end[e]);
     parapets.push(...parapetPieces(run,z,s));
   }
   return pieces.concat(parapets);
@@ -1048,20 +1065,20 @@ function gateBattlementPieces(s){
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;
     const mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
-    pieces.push(battlementPiece(mc,cornerAngle,z,.27,.23,.25,s));
     corners.push(mc);
   }
+  const LC=lCornerMerlons(fp,corners,z,.25,.23,s);pieces.push(...LC.pieces);
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
     const angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
-    const run=[merlonNode(corners[e],cornerAngle,.27,.23,angle)];
+    const run=[LC.start[e]];
     for(let i=1;i<intervals;i++){
       const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
       pieces.push(battlementPiece(mc,angle,z,.25,.22,.24,s));
       run.push(merlonNode(mc,angle,.25,.22));
     }
-    run.push(merlonNode(corners[(e+1)%fp.length],cornerAngle,.27,.23,angle));
+    run.push(LC.end[e]);
     pieces.push(...parapetPieces(run,z,s));
   }
   return withoutBuriedBattlements(s,pieces);
