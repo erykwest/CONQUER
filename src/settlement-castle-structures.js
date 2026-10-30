@@ -468,10 +468,37 @@ function drawMachicolationFloors(){
   for(const s of items)withStructureVisualMaterial(s,()=>drawMachicolationFloor(s));
 }
 
+// Crown of a merlon in the feudal crenel style (crenelStyle()): extra prisms drawn after the body,
+// in painter order. Flat keeps the plain block (no parts). Gabled steps a ridge across the wall
+// thickness; swallowtail raises two horns with a V notch and cuts an arrow slit in the face turned
+// towards the viewer (the 2.5D painter cannot hide a slit on the far face).
+function merlonStyleParts(center,angle,w,d,z,h,style=crenelStyle()){
+  if(style==='flat')return null;
+  const ux=Math.cos(angle),uy=Math.sin(angle),nx=-uy,ny=ux,top=z+h,parts=[];
+  const at=(along,across)=>({x:center.x+ux*along+nx*across,y:center.y+uy*along+ny*across});
+  const slab=(c,sw,sd,z0,z1,tone='stone')=>parts.push({pts:rectWorldPoints(c.x,c.y,sw,sd,angle),z0,z1,tone});
+  if(style==='gabled'){
+    [.8,.54,.28].forEach((f,i)=>slab(center,w*f,d,top+i*.035,top+(i+1)*.035));
+    return parts;
+  }
+  const view=p=>{const q=rotateViewPoint(p);return q.x+q.y};
+  const face=view(at(0,d/2))>=view(at(0,-d/2))?1:-1;
+  slab(at(0,face*(d/2-.004)),Math.max(.026,w*.13),.02,z+.05,top-.045,'slit');
+  const horns=[-1,1].sort((a,b)=>view(at(a*w/2,0))-view(at(b*w/2,0)));
+  for(const side of horns){
+    slab(at(side*w*.37,0),w*.26,d,top,top+.08);
+    slab(at(side*w*.425,0),w*.15,d,top+.08,top+.15);
+  }
+  return parts;
+}
+// Merlons are slimmer across the wall than their nominal depth; merlonNode applies the same factor
+// so the breastwork between them stays flush.
+const MERLON_DEPTH_SCALE=.72;
 function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
+  d*=MERLON_DEPTH_SCALE;
   const pts=rectWorldPoints(center.x,center.y,w,d,angle),rp=rotateViewPoint(center);
   return{
-    pts,z0:z,z1:z+h,depth:rp.x+rp.y,
+    pts,z0:z,z1:z+h,depth:rp.x+rp.y,merlon:true,styleParts:merlonStyleParts(center,angle,w,d,z,h),
     ownerId:owner?.id||null,
     ownerType:owner?.type||null,
     ownerDepth:owner?worldDepth(owner):null,
@@ -584,12 +611,17 @@ function drawBattlementPiece(piece,frame){
       ctx.lineTo(a.x,a.y-H);
       ctx.closePath();
       ctx.clip();
-      extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+      drawMerlonBody(piece);
       ctx.restore();
       return;
     }
-    extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'});
+    drawMerlonBody(piece);
   }));
+}
+const MERLON_TONES={stone:{top:'#9a8e82',sideA:'#514a44',sideB:'#635951',stroke:'#c8b9a9'},slit:{top:'#2b2622',sideA:'#1d1a17',sideB:'#24201c',stroke:'#2b2622'}};
+function drawMerlonBody(piece){
+  extrudePolygonAt(piece.pts,piece.z0,piece.z1,MERLON_TONES.stone);
+  for(const p of piece.styleParts||[])extrudePolygonAt(p.pts,p.z0,p.z1,MERLON_TONES[p.tone]);
 }
 function renderBattlementPieces(pieces,frame){
   pieces.sort((a,b)=>a.depth-b.depth);
@@ -604,6 +636,7 @@ const PARAPET_HEIGHT=.11,ROUND_MERLON_SPACING=.32;
 // A merlon seen from a run along `runAngle`: its half extent along the run (hw) and across it (hd).
 // Corner merlons keep the tower's angle, so on two of the four sides they sit rotated 90° to the run.
 function merlonNode(center,angle,w,d,runAngle=angle){
+  d*=MERLON_DEPTH_SCALE;
   const c=Math.abs(Math.cos(runAngle-angle)),s=Math.abs(Math.sin(runAngle-angle));
   return{c:center,angle:runAngle,hw:(w*c+d*s)/2,hd:(w*s+d*c)/2-.008};
 }
@@ -724,6 +757,30 @@ function roundTowerBattlementPieces(s){
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
   return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s));
+}
+// Restyling the feudal crenellation: every standing stone merlon is rebuilt at the target style's
+// rate (CRENEL_STYLE_COST). Brick structures pay clay instead of stone, as in constructionCost.
+function crenelRestyleQuote(style){
+  const cost={};let merlons=0;
+  for(const s of State.structures){
+    const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+    const n=pieces.filter(p=>p.merlon).length;if(!n)continue;
+    merlons+=n;
+    for(const [k,v] of Object.entries(CRENEL_STYLE_COST[style]||{})){
+      const key=k==='stone'&&s.masonryMaterial==='brick'?'clay':k;
+      cost[key]=(cost[key]||0)+v*n;
+    }
+  }
+  return{style,merlons,cost};
+}
+function applyCrenelStyle(style){
+  if(!CRENEL_STYLES.includes(style)||style===crenelStyle())return{ok:false,reason:'unchanged'};
+  const quote=crenelRestyleQuote(style);
+  if(!canAfford(quote.cost))return{ok:false,reason:'funds',quote};
+  if(!spendCost(quote.cost))return{ok:false,reason:'funds',quote};
+  State.policies.crenelStyle=style;
+  markDirty(null,true,true);draw();
+  return{ok:true,quote};
 }
 // Parent/subtower pairs overlap: merlons of the lower one that fall inside the footprint of the
 // taller attached structure would stick out of its walls. Drop them (parent or subtower alike).

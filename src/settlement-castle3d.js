@@ -27,6 +27,7 @@
   const PAL={
     stone:()=>[snowTop('#9a8e82'),'#635951','#514a44'],          // drawMultiPolygonBand / drawExposedTop
     merlon:()=>[snowTop('#9a8e82'),'#635951','#514a44','#c8b9a9'],  // drawBattlementPiece
+    slit:()=>['#2b2622','#24201c','#1d1a17','#2b2622'],             // swallowtail arrow slit
     corbel:()=>[snowTop('#887d72'),'#554d46','#403b36','#9f9183'],
     machFloor:()=>[snowTop('#918579'),'#605750','#4a443e','#b3a596'],
     buttress:()=>[snowTop('#948779'),'#625a52','#4b4540','#9f9285'],
@@ -259,6 +260,11 @@
     const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L2=dx*dx+dy*dy||1,t=clamp(((c.x-s.a.x)*dx+(c.y-s.a.y)*dy)/L2,0,1);
     return{x:s.a.x+dx*t,y:s.a.y+dy*t};
   }
+  // One battlement piece: corbel or merlon body, plus the crenel-style crown prisms (merlonStyleParts).
+  function prismPiece(m,p){
+    m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon());
+    for(const q of p.styleParts||[])m.prism(q.pts,q.z0,q.z1,q.tone==='slit'?PAL.slit():PAL.merlon());
+  }
   function addPieces(m,which){
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
@@ -269,7 +275,7 @@
         const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
         const near=viewDepthOf(c)>viewDepthOf(ownerRef(s,c))+1e-6;
         if(!plan&&(which==='front')!==near)continue;
-        withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+        withProjectionGroundZ(p.groundZ,()=>prismPiece(m,p));
       }
       });
     }
@@ -421,7 +427,7 @@
         const body=bodyMesh([s]),m=makeMesh();m.tag='crown';
         withStructureVisualMaterial(s,()=>{
           const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
-          for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+          for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>prismPiece(m,p));
         });
         return{tris:body.concat(m.tris),tags:body.tags.concat(m.tags)};
       });

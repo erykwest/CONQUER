@@ -269,6 +269,16 @@ function solarHours(season=State.season){
 const SOLAR_TWILIGHT_HOURS=1;
 const NIGHT_OVERLAY_MAX=.48;
 const BATTLEMENT_SPACING=.62;
+// Feudal crenellation style: one choice for every stone merlon of the settlement (towers, gates,
+// walls), stored in State.policies so new construction follows it. Restyling existing merlons is
+// paid per merlon at the target style's rate; flat is the default and the cheapest.
+const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail']);
+const CRENEL_STYLE_COST=Object.freeze({
+  flat:Object.freeze({stone:1}),
+  gabled:Object.freeze({gold:1,stone:2}),
+  swallowtail:Object.freeze({gold:2,stone:3})
+});
+function crenelStyle(){const v=State.policies?.crenelStyle;return CRENEL_STYLES.includes(v)?v:'flat'}
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
 // The paved square around the well is a no-build zone: houses, lots, fields and buildings
