@@ -1,5 +1,17 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Triage prevalente — 30 ottobre 2026 · ref `main` `cf569992`
+
+> [**AUDIT COMPLETO 30/10**](AUDIT-2026-10-30.md) prevale per la presenza effettiva sul codice rispetto alle sezioni storiche **23–29 ottobre** qui sotto. Non cancellare i vecchi requisiti: le loro note «branch/non su main» sono documentazione storica alle date indicate.
+
+- **FATTO SU MAIN:** #61 danni strutturali, #65 cutaway arredato, #77 cantieri grafici a fasi, #78 eventi 3D, #82 Asset Lab audit, #86–97 ponti/guardaroba/UI/asset/civici/audio/cavalieri/fix GPU/renderer; #98 lavoro **L1 meccanicamente necessario nei cantieri**; #99 routine maschili/femminili; #101 commercio L3 e operatori civici; #105 unico gestore convogli; #108 veicoli 2D; #103 **Centro di controllo a nove viste e serie storiche, merged il 30/10**; #102 sala 2U, #104 legno 3D, #106 scale T1, #107 parapetti. Non proporre come implementazioni da zero.
+- **23 ID Builder:** **15 CORE MAIN / 8 PARZIALI**, vedi [owner Builder](../feature-backlog.md). **P0-04 e P1-11 promosse a core** per #98 e #101. **P2-17** resta parziale: locanda/chiesa con operatori sì, **income/bonus non simulati**. I vecchi "No services or economic effects" riguardano gli *annessi*.
+- **Assedio:** S-05/13/16/25 core danni e portone ora **merged #61**; fuoco/scale/macchine/legno già in runtime. Restano **S-01/02/03/04/10/15** come ciclo strategico (blocco rifornimenti, fame→resa automatica, campo persistente, IA). **`No automatic surrender in P0` su main**.
+- **Economia residua:** `mine` produce `stone` (non `metal`), `workshop` per `equipment` della Built Section ≠ bottega commerciale L3, nessun `tree depletion`, input botteghe/materiali e capacità fisiche del castello da collaudare; i pannelli **non** sommano `economy.castle` e `siege.stock`. La sequenza M0–M3 può ora concentrarsi su integrazioni, non riscrittura economia.
+- **Solo branch/OPEN:** #109 CI suite economia 2–5 (conflitto); #110 Livree/bivacco/campo militare (non assedio strategico completo); #111 multi-pozzo e quartieri (non su main). `messages`, `cans`, `circle` restano filoni separati; il vecchio `jobmanager` e `feature/autonomous-urban-economy` sono stati portati selettivamente/convertiti nelle PR economiche e non vanno duplicati.
+- **QA:** CI PASS sulle HEAD di #109/#110/#111 e smoke WebGPU main `cf569992`; non rappresenta un nuovo test browser dell'intero gioco eseguito per questo audit.
+
+
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
 - `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.
