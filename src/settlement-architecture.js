@@ -127,7 +127,8 @@ function drawGatePortals(){
     }));
   }
 }
-function gateWindowRows(s){const l=structureLevel(s),rows=[1.72];if(l>=2)rows.push(2.92);if(l>=3)rows.push(4.12);return rows.filter(z=>z<structureHeight(s)-.28)}
+// One row per room: the ground floor is the passage (no window), each storey above has one.
+function gateWindowRows(s){return cutawayFloorLevels(s).slice(functionFloorOffset(s)).map(f=>f.z+.9).filter(z=>z<structureHeight(s)-.28)}
 function drawGateWindows(s,lit=false,nf=1){
   const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
   for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{
