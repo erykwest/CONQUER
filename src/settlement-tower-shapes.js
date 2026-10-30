@@ -13,9 +13,9 @@ function orientedTowerWorld(s,local){
 }
 function orientedTowerDir(s,x,y){const a=s.angle||0;return{x:x*Math.cos(a)-y*Math.sin(a),y:x*Math.sin(a)+y*Math.cos(a)}}
 // D outline in local coordinates, shrunk by `inset` (negative grows it: eaves, splayed base, machicolations).
-function deeTowerLocalOutline(s,inset=0){
+function deeTowerLocalOutline(s,inset=0,steps=DEE_ARC_STEPS){
   const {w,h}=orientedTowerDims(s),r=h/2-inset,x0=-w/2+inset,cx=w/2-h/2,pts=[[x0,-r]];
-  for(let i=0;i<=DEE_ARC_STEPS;i++){const a=-Math.PI/2+i/DEE_ARC_STEPS*Math.PI;pts.push([cx+Math.cos(a)*r,Math.sin(a)*r])}
+  for(let i=0;i<=steps;i++){const a=-Math.PI/2+i/steps*Math.PI;pts.push([cx+Math.cos(a)*r,Math.sin(a)*r])}
   pts.push([x0,r]);
   return pts;
 }
