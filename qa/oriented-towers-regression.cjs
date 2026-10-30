@@ -42,6 +42,10 @@ const area=pts=>pts.reduce((s,p,i)=>{const q=pts[(i+1)%pts.length];return s+p.x*
   assert.ok(Math.abs(area(fp)-expected)<.02,'D area: rectangle plus half round');
   const front=Math.max(...fp.map(p=>p.y)),rear=Math.min(...fp.map(p=>p.y));
   assert.ok(near(front,4+d.w/2,1e-9)&&near(rear,4-d.w/2,1e-9),'the half round faces s.angle');
+  // Cutaway: the inner ring is the outline shrunk by the wall, vertex for vertex.
+  const inner=ctx.orientedTowerOutline(s,.17);
+  assert.equal(inner.length,fp.length,'inner ring pairs with the outer one');
+  inner.forEach((p,i)=>assert.ok(near(Math.hypot(p.x-fp[i].x,p.y-fp[i].y),.17,.08),'wall thickness at vertex '+i));
   console.log('PASS D outline faces the field');
 }
 {

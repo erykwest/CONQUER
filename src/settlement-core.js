@@ -247,6 +247,9 @@ const COSTS={
   plaza:{gold:90,stone:80,wood:10},
   training:{gold:90,stone:24,wood:70}
 };
+// Stone towers of the same tier, against the square one: curved masonry costs more, the open-
+// backed semitower half.
+const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
 const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
@@ -669,7 +672,7 @@ function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
-    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
+    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
   if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
   if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});

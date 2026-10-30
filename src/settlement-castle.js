@@ -542,8 +542,8 @@ function cutawayEligible(s){
   // has no walls to open.
   if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
-  // Semitowers are open already; D towers have no cutaway interior yet.
-  return s.type==='tower'&&!isOrientedTower(s);
+  // Semitowers are open already (their gorge shows the floors and ladders).
+  return s.type==='tower'&&s.shape!=='half';
 }
 // Small (T1) stone towers are a stair shaft: no wooden floors, one stone newel stair from
 // the ground to the top (settlement-cutaway-furniture.js builds the steps).
@@ -579,6 +579,8 @@ function cutawayWallGeometry(s){
       const outer=footprintPoints(s),r=Math.max(.12,(Number(s.r)||.5)-thickness);
       return{outer,inner:circleWorldPoints(s.x,s.y,r,24),thickness};
     }
+    // D tower: the same outline shrunk by the wall, vertex for vertex.
+    if(s.shape==='dee')return{outer:orientedTowerOutline(s),inner:orientedTowerOutline(s,thickness),thickness};
     const d=rectDims(s),iw=Math.max(.18,d.w-thickness*2),ih=Math.max(.18,d.h-thickness*2);
     return{
       outer:footprintPoints(s),
@@ -767,6 +769,19 @@ function cutawayTransparentFaceIndexes(s,g){
   if(n===4&&s.type==='tower'&&s.shape!=='round'){
     const ranked=depths.map((depth,index)=>({depth,index})).sort((a,b)=>b.depth-a.depth);
     return new Set([ranked[0].index,ranked[1].index]);
+  }
+
+  // D towers remove every face turned to the camera (half the outline, like the two
+  // faces of a square tower): the cut runs through the straight sides or the half round.
+  if(s.type==='tower'&&s.shape==='dee'){
+    const open=new Set();
+    for(let i=0;i<n;i++){
+      const a=g.outer[i],b=g.outer[(i+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1,m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      let nx=(b.y-a.y)/L,ny=-(b.x-a.x)/L;
+      if(nx*(m.x-s.x)+ny*(m.y-s.y)<0){nx=-nx;ny=-ny}
+      if(viewDepthPoint({x:m.x+nx*.1,y:m.y+ny*.1})-viewDepthPoint(m)>1e-6)open.add(i);
+    }
+    return open;
   }
 
   // Round towers use an approximately 90° camera-facing wedge. The two radial
