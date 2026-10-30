@@ -77,6 +77,9 @@ function structureInteriorVector(s){
 }
 function interiorFacadeEdgeIndex(s){
   if(isOrientedTower(s))return ORIENTED_FACADE_REAR;
+  // A gate faces the field along its angle (portal edges 1 = front, 3 = rear): the windows
+  // look into the castle, whatever the walls around it.
+  if(s?.type==='gate')return GATE_FACADE_REAR;
   const fp=footprintPoints(s);if(fp.length<2)return-1;
   const iv=structureInteriorVector(s),center=structureCenter(s);let best=-1,bestScore=-Infinity;
   for(let i=0;i<fp.length;i++){
@@ -129,13 +132,16 @@ function drawGatePortals(){
 }
 // One row per room: the ground floor is the passage (no window), each storey above has one.
 function gateWindowRows(s){return cutawayFloorLevels(s).slice(functionFloorOffset(s)).map(f=>f.z+.9).filter(z=>z<structureHeight(s)-.28)}
+const GATE_FACADE_FRONT=1,GATE_FACADE_REAR=3;
+// Slits along a gate face: two side by side on the field front, one on the flanks.
+function gateSlitOffsets(edge){return edge.index===GATE_FACADE_FRONT?[-.26,.26]:[0]}
 function drawGateWindows(s,lit=false,nf=1){
   const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
   for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{
     for(const edge of gateFacadeEdges(s)){
       const paint=()=>isInteriorFacadeEdge(s,edge)
         ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)
-        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit');
+        :gateSlitOffsets(edge).forEach(o=>drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit',o));
       // The nighttime glow pass runs after the drawbridge. Mask only its
       // exterior-facing facade, preserving windows on the unobstructed sides.
       if(edge.role==='front'&&window.ConquerCrossings?.withDrawbridgeWindowOcclusion)
