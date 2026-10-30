@@ -138,6 +138,14 @@
     note(s,'Operazione interrotta presso '+(f?.name||'il feudo')+'. Danni e bottino rimangono.');
     return true;
   }
+  function unload(s){
+    const f=atFief(s);
+    if(!f||f.owner!=='player'||cargoUsed(s)===0)return false;
+    const amount=cargoUsed(s);
+    for(const k of RESOURCE_KEYS){f.stock[k]+=s.company.cargo[k];s.company.cargo[k]=0;}
+    note(s,'Consegnato bottino ('+amount+' unità) a '+f.name+'.');
+    return amount;
+  }
   function resupply(s){
     const f=atFief(s);
     if(!f||f.owner!=='player')return false;
@@ -169,7 +177,7 @@
   }
   function save(s,store){if(!valid(s))return false;try{store?.setItem(KEY,JSON.stringify(s));return true;}catch(_){return false;}}
   const api=Object.freeze({WIDTH,HEIGHT,KEY,initial,pathfind,traversable,fiefAt,atFief,currentTarget,
-    cargoUsed,select,march,advance,raid,besiege,reportAssaultVictory,conquer,withdraw,resupply,load,save,valid});
+    cargoUsed,select,march,advance,raid,besiege,reportAssaultVictory,conquer,withdraw,resupply,unload,load,save,valid});
   root.ConquerMarch=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
