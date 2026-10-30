@@ -680,6 +680,112 @@ function reconcileGateMainConnections(force=false){
   changed+=before-State.structures.length;
   return changed;
 }
+// Village wells. The founding well (State.village.wellId) owns the four border main roads,
+// the village seed and the economy charter. Later wells are ordinary buildings: each one is
+// an expansion centre (zones, houses, fire brigades) and joins the founding well's network
+// with one main road. Any completed well can be designated the village centre (default: the
+// founding well); wells that are not the centre may carry a quarter name.
+function foundingWell(){return State.structures.find(s=>s.id===State.village?.wellId&&s.type==='well')||null}
+function villageWells(completedOnly=true){return State.structures.filter(s=>s.type==='well'&&(!completedOnly||!underConstruction(s)))}
+function villageCenterWell(){
+  const id=State.village?.centerWellId;
+  return (id&&State.structures.find(s=>s.id===id&&s.type==='well'))||foundingWell();
+}
+function isVillageCenterWell(s){return s?.type==='well'&&villageCenterWell()?.id===s.id}
+// Growth centres: the founding well first (so a one-well village behaves exactly as before).
+function villageGrowthCentres(){
+  const founding=foundingWell();if(!founding||underConstruction(founding))return[];
+  return[founding,...villageWells().filter(s=>s!==founding)];
+}
+const WELL_NAME_MAX=32;
+function sanitizeWellName(name){return String(name??'').replace(/\s+/g,' ').trim().slice(0,WELL_NAME_MAX)}
+function wellDisplayName(s){
+  if(s?.type!=='well')return'';
+  return isVillageCenterWell(s)?(State.village?.name||''):(s.wellName||'');
+}
+function wellMainRouteId(well){return 'well-main:'+well.id}
+function wellMainRoads(well){return routeRoads(wellMainRouteId(well))}
+function wellMainTopologyKey(well,founding){
+  return [well.id,Number(well.x).toFixed(2),Number(well.y).toFixed(2),founding.id,Number(founding.x).toFixed(2),Number(founding.y).toFixed(2),
+    primaryRoadList(true).filter(r=>r.routeId!==wellMainRouteId(well)).length].join('#');
+}
+// The route is continuous when it chains from the well to the founding well or to another main road.
+function wellMainRouteContinuous(well){
+  const founding=foundingWell(),roads=wellMainRoads(well);
+  if(!founding||!roads.length)return false;
+  let cursor={x:well.x,y:well.y};
+  for(const r of roads){
+    if(dist(cursor,r.a)<=.42)cursor={...r.b};
+    else if(dist(cursor,r.b)<=.42)cursor={...r.a};
+    else return false;
+  }
+  if(dist(cursor,founding)<=.72)return true;
+  const own=wellMainRouteId(well);
+  return primaryRoadList(true).some(r=>r.routeId!==own&&pointSegmentDistance(cursor,r.a,r.b)<=.72);
+}
+// Stop the route where it first meets the existing main-road network: a T-junction, not a
+// parallel road running into the founding well's plaza.
+function wellMainTruncateAtNetwork(path,ownRoute){
+  const roads=primaryRoadList(true).filter(r=>r.routeId!==ownRoute),out=[{...path[0]}];
+  for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i];let hit=null,best=Infinity;
+    for(const r of roads){
+      const p=segmentIntersectionPoint(a,b,r.a,r.b);if(!p)continue;
+      const d=dist(a,p);if(d<best&&dist(path[0],p)>=.6){best=d;hit=p}
+    }
+    if(hit){out.push(hit);return out}
+    out.push({...b});
+  }
+  return out;
+}
+function buildWellMainConnection(...args){return finishRoadWork(buildWellMainConnectionWork(...args))}
+function* buildWellMainConnectionWork(well,force=false,stillValid=()=>true){
+  const founding=foundingWell();
+  if(!well||well.type!=='well'||!founding||well.id===founding.id||underConstruction(well)||!State.village.founded)return 0;
+  const routeId=wellMainRouteId(well);
+  if(mainRoadRouteDeleted(routeId))return 0;
+  const attemptKey=wellMainTopologyKey(well,founding);
+  if(!force&&wellMainRouteContinuous(well)){well.wellMainAttemptKey=attemptKey;well.wellMainBlocked=false;return 0}
+  if(!force&&well.wellMainBlocked&&well.wellMainAttemptKey===attemptKey)return 0;
+  const width=.62,ignore=[well.id,founding.id],start={x:well.x,y:well.y},goal={x:founding.x,y:founding.y};
+  let path=null;
+  if(yield* roadRepairSegmentWork(start,goal,width,ignore,null,true))path=[start,goal];
+  else for(const [pad,guard] of [[10,70000],[22,140000]]){
+    path=yield* findRoadRepairWork(start,goal,width,pad,ignore,guard,true);
+    if(!stillValid())return 0;
+    if(path?.length>1)break;
+  }
+  if(!stillValid())return 0;
+  if(!path||path.length<2){well.wellMainAttemptKey=attemptKey;well.wellMainBlocked=true;return 0}
+  const clean=yield* simplifyRoadRepairWork(path,width,ignore,true);
+  if(!stillValid())return 0;
+  const pts=subdivideRoadPolyline(alignedRiverRoadPolyline(wellMainTruncateAtNetwork(clean,routeId)),ROAD_RULES.arterialSegmentMax);
+  const oldRoadIds=new Set(wellMainRoads(well).map(r=>r.id));
+  State.structures=State.structures.filter(r=>!(r.type==='road'&&r.routeId===routeId)&&!oldRoadIds.has(r.primaryBridgeFor));
+  let added=0,parent=null;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1];if(dist(a,b)<.16)continue;
+    const road={id:uid(),type:'road',auto:true,roadClass:'arterial-well',routeId,routeSeq:added,
+      a:{...a},b:{...b},width,appeal:1,parentRoadId:parent,wellFor:well.id,reactive:true};
+    State.structures.push(road);autoPrimaryRoadBridges(road);parent=road.id;added++;
+  }
+  well.wellMainAttemptKey=attemptKey;well.wellMainBlocked=!added;
+  if(added){refreshStaleHouseRoadRefs();invalidateNavigation()}
+  return added;
+}
+function reconcileWellMainConnections(force=false){
+  let changed=0;
+  const live=new Set();
+  for(const well of villageWells()){
+    live.add(well.id);
+    changed+=buildWellMainConnection(well,force);
+  }
+  const before=State.structures.length;
+  // A road whose well is gone (or became the founding well) is dropped with it.
+  State.structures=State.structures.filter(s=>!s.wellFor||live.has(s.wellFor)&&s.wellFor!==State.village.wellId);
+  changed+=before-State.structures.length;
+  return changed;
+}
 function nearestRoadProjection(p,excludeAccessFor=null){
   let best=null,bestD=Infinity;
   for(const r of roadList(true)){
@@ -759,8 +865,7 @@ function towerSecondaryBranchCandidates(tower){
     const passage=gatePassageInfo(gate,tower);if(!passage)continue;
     out.push({id:gate.id,type:'gate',point:{...passage.near},distance:dist(tower,passage.near)});
   }
-  const well=State.structures.find(s=>s.type==='well'&&!underConstruction(s));
-  if(well)out.push({id:well.id,type:'well',point:{x:well.x,y:well.y},distance:dist(tower,well)});
+  for(const well of villageWells())out.push({id:well.id,type:'well',point:{x:well.x,y:well.y},distance:dist(tower,well)});
   return out.sort((a,b)=>a.distance-b.distance);
 }
 function towerSecondaryRoads(towerId){
@@ -920,6 +1025,7 @@ function reconcileReactiveRoadNetwork(){
   let changed=0;
   changed+=reconcileArterialRoutes();
   changed+=reconcileGateMainConnections(false);
+  changed+=reconcileWellMainConnections(false);
   // This entry point is used after load, when derived branches must be restored
   // as existing geometry rather than re-enter construction.
   changed+=reconcileTowerSecondaryBranches(Infinity,true);
@@ -1679,7 +1785,7 @@ function environmentContains(f,p,pad=0){
   return false;
 }
 // Primary roads are allowed to carve woods and cross natural waterways.
-function isPrimaryRoad(s){return s?.type==='road'&&(!!s.manualMain||s.roadClass==='arterial'||s.roadClass==='arterial-manual'||!!s.routeId&&String(s.routeId).startsWith('arterial-'))}
+function isPrimaryRoad(s){return s?.type==='road'&&(!!s.manualMain||s.roadClass==='arterial'||s.roadClass==='arterial-manual'||s.roadClass==='arterial-well'||!!s.routeId&&String(s.routeId).startsWith('arterial-'))}
 function primaryRoadCarvesPoint(p,extra=.62){
   return State.structures.some(s=>isPrimaryRoad(s)&&
     pointSegmentDistance(p,s.a,s.b)<=(Number(s.width)||.62)/2+extra);
@@ -1925,8 +2031,7 @@ function mainRoadSnapAnchor(p){
   };
 
   for(const entry of ensureBorderEntrySelection())consider(entry);
-  const well=State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
-  if(well)consider(well);
+  for(const well of State.structures)if(well.type==='well')consider(well);
 
   for(const road of roadList()){
     consider(road.a);consider(road.b);
@@ -2206,7 +2311,9 @@ function spawnHouse(step){
   const rnd=growthRng(step,211),radius=currentGrowthRadius(),manual=State.structures.filter(s=>!s.auto),placed=autoList().filter(s=>s.type!=='road');
   // Fully generated main roads extend to the 200U world border. Sampling
   // every segment uniformly can exhaust all candidates outside the growth zone.
-  const nearby=roads.filter(r=>pointSegmentDistance(well,r.a,r.b)<=radius+3.5);
+  // Every completed well is an expansion centre; distances are to the nearest one.
+  const centres=villageGrowthCentres(),centreDist=p=>Math.min(...centres.map(c=>dist(p,c)));
+  const nearby=roads.filter(r=>centres.some(c=>pointSegmentDistance(c,r.a,r.b)<=radius+3.5));
   if(!nearby.length){
     window.__conquerAnalytics?.event('HOUSE_SPAWN_FAILURE',{step,reason:'no_nearby_main_road',roads:roads.length,radius},'warn');
     return false;
@@ -2218,7 +2325,7 @@ function spawnHouse(step){
     const q={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
     const ang=roadAngle(road),side=rnd()<.5?-1:1,offset=1.75+rnd()*1.55;
     const p={x:q.x-Math.sin(ang)*offset*side,y:q.y+Math.cos(ang)*offset*side};
-    const d=dist(p,well);
+    const d=centreDist(p);
     if(d>radius||d<1.7||!inBuild(p)||!window.ConquerCombat?.areaState(p).yellow){outOfZone++;continue}
     const core=Math.exp(-Math.pow(d-Math.min(6.5,radius*.62),2)/(2*3.0*3.0));
     const score=core*1.2+(1-offset/3)*.65+rnd()*.20;
@@ -2258,6 +2365,7 @@ function spawnField(step,workerHouse=null){
   if(reason)return fail(reason,{houses:houses.length,roads:roads.length});
   const rnd=growthRng(step,307+(workerHouse?peasantHash(workerHouse.id)%100000:0));
   const radius=currentGrowthRadius()+4,validationContext={occupants:null};
+  const centres=villageGrowthCentres().length?villageGrowthCentres():[well],centreDist=p=>Math.min(...centres.map(c=>dist(p,c)));
   const inner=Math.max(7,currentGrowthRadius()+1),outer=Math.min(42,Math.max(inner+9,radius+15)),candidates=[];
   const addCandidate=(p,score)=>{
     if(!inBuild(p)||window.ConquerCombat?.areaState(p).yellow||terrainPlateauElevation(p)!==0)return;
@@ -2267,13 +2375,13 @@ function spawnField(step,workerHouse=null){
   };
   // Explore H0 in the white rural belt outside the yellow/green housing zone.
   for(let i=0;i<110;i++){
-    const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2;
-    const p={x:well.x+Math.cos(th)*d,y:well.y+Math.sin(th)*d};
+    const d=inner+rnd()*(outer-inner),th=rnd()*Math.PI*2,c=centres[i%centres.length];
+    const p={x:c.x+Math.cos(th)*d,y:c.y+Math.sin(th)*d};
     const ring=Math.exp(-Math.pow(d-(inner+outer)*.5,2)/(2*4.2*4.2));
     addCandidate(p,ring);
   }
   // Main roads extend far beyond the village, so prioritise local segments.
-  const localRoads=roads.filter(r=>pointSegmentDistance(well,r.a,r.b)<=radius+6);
+  const localRoads=roads.filter(r=>centres.some(c=>pointSegmentDistance(c,r.a,r.b)<=radius+6));
   const sampleRoads=localRoads.length?localRoads:roads;
   for(let i=0;i<100;i++){
     const road=sampleRoads[Math.floor(rnd()*sampleRoads.length)];
@@ -2283,7 +2391,7 @@ function spawnField(step,workerHouse=null){
       x:road.a.x+(road.b.x-road.a.x)*t-Math.sin(a)*offset*side,
       y:road.a.y+(road.b.y-road.a.y)*t+Math.cos(a)*offset*side
     };
-    if(dist(p,well)>Math.max(22,radius+19))continue;
+    if(centreDist(p)>Math.max(22,radius+19))continue;
     addCandidate(p,.8);
   }
   for(let i=0;i<70;i++){
@@ -2296,7 +2404,7 @@ function spawnField(step,workerHouse=null){
   if(workerHouse)for(let i=0;i<110;i++){
     const a=rnd()*Math.PI*2,d=2.8+rnd()*6.5;
     const p={x:workerHouse.x+Math.cos(a)*d,y:workerHouse.y+Math.sin(a)*d};
-    if(dist(p,well)>Math.max(22,radius+19))continue;
+    if(centreDist(p)>Math.max(22,radius+19))continue;
     addCandidate(p,1.12);
   }
   candidates.sort((a,b)=>b.score-a.score);

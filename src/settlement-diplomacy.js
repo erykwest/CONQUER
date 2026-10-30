@@ -25,7 +25,8 @@
   function reset(){State.diplomacy=makeState();hidePanels();refreshUI()}
   function mastio(){return window.ConquerSiege?.mastio?.()||null}
   function point(s){return {x:num(s?.x,WORLD/2),y:num(s?.y,WORLD/2)}}
-  function destination(){return mastio()||State.structures.find(s=>s.type==='well'&&!underConstruction(s))}
+  // Without a mastio, envoys head for the designated village centre well.
+  function destination(){return mastio()||(typeof villageCenterWell==='function'?villageCenterWell():null)||State.structures.find(s=>s.type==='well'&&!underConstruction(s))}
   function routeFrom(entry,goal,id){
     // Use the real road graph when its external link has been built; only fall back to a waypoint proxy.
     let route=null;

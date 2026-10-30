@@ -349,7 +349,9 @@ function drawPointStructure(s,preview=false){
 
     extrudePolygon(footprintPoints(s),h,{top:'#84796d',sideA:'#4e4740',sideB:'#5d554d',stroke});
     const p=w2s({x:s.x,y:s.y},h+.04),r=Math.max(2.5,.28*U*State.view.scale);ctx.fillStyle='#172023';ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r,0,0,Math.PI*2);ctx.fill();
-    if(State.village.founded&&State.village.name){ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12)}
+    // The centre well carries the village name; other wells their quarter name.
+    const label=State.village.founded?wellDisplayName(s):'';
+    if(label){ctx.fillStyle='#f2e6d3';ctx.font=(isVillageCenterWell(s)?'700 12px':'italic 600 11px')+' system-ui';ctx.textAlign='center';ctx.fillText(label,p.x,p.y-12)}
     return;
   }
   const tower=s.type==='tower',gate=s.type==='gate';

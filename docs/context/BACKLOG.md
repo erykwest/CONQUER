@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Villaggio — più pozzi (branch `feature/multi-wells`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** pozzi successivi come centri di espansione con strada principale verso il fondatore; centro villaggio designabile dall'ispettore; nomi di quartiere/borgata salvati e mostrati sulla mappa. Contratto D-056.
+- **APERTO:** raggio di crescita proprio per ogni quartiere (oggi comune a tutti i pozzi); nome del villaggio modificabile dall'ispettore del centro; effetti di gioco del centro oltre a etichetta e meta degli emissari (mercato, feste, tasse); scelta di un nuovo fondatore invece dell'azzeramento quando si demolisce il primo pozzo.
+
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
 - `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.

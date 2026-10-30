@@ -126,6 +126,26 @@ const StructureCommands=(()=>{
     target.nightClose=!!on;markDirty(false,false,true);renderFunctionPanel();return true;
   }
   function toggleMastio(id){window.ConquerSiege?.assignMastio(id);return true}
+  // Village centre: one well at a time. Picking the current centre again returns the role
+  // to the founding well (the default), like removing a Mastio designation.
+  function toggleVillageCenter(id){
+    const target=find(id);if(target?.type!=='well'||!State.village.founded||underConstruction(target))return false;
+    const founding=State.village.wellId;
+    if(isVillageCenterWell(target)){
+      if(target.id===founding){status('The founding well is already the village centre');return false}
+      delete State.village.centerWellId;status('Village centre returned to the founding well');
+    }else{
+      if(target.id===founding)delete State.village.centerWellId;else State.village.centerWellId=target.id;
+      status('Village centre designated'+(target.wellName?' · '+target.wellName:''));
+    }
+    markDirty(false,['ground'],true);renderFunctionPanel();draw();return true;
+  }
+  function setWellName(id,name){
+    const target=find(id);if(target?.type!=='well')return false;
+    const clean=sanitizeWellName(name);
+    if(clean)target.wellName=clean;else delete target.wellName;
+    markDirty(false,['ground'],true);renderFunctionPanel();draw();return true;
+  }
   function changeArchers(id,delta){
     const target=find(id);if(target?.type!=='tower')return false;
     window.ConquerSiege?.changeArchers(target.id,delta);return true;
@@ -155,6 +175,12 @@ const StructureCommands=(()=>{
     if(typeof isCivicAnnex==='function'&&isCivicAnnex(s)){
       const parent=State.structures.find(p=>p.id===s.parentId),spec=civicAnnexDefinition(s,parent);
       d.annex={label:spec?.label||null,parentId:parent?.id||null,size:spec?spec.w+'×'+spec.h+'U':null};
+      return d;
+    }
+    if(s.type==='well'){
+      const founding=s.id===State.village.wellId,center=isVillageCenterWell(s);
+      d.well={founding,center,founded:!!State.village.founded,name:s.wellName||'',villageName:State.village.name||'',
+        canCenter:!!State.village.founded&&!(center&&founding),mainRoad:founding||wellMainRoads(s).length>0};
       return d;
     }
     if(['moat','bridge'].includes(s.type)){
@@ -236,6 +262,6 @@ const StructureCommands=(()=>{
   }
 
   return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setWoodRoof,setGateRoof,setSkin,toggleCutaway,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();

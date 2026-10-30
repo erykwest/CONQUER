@@ -77,9 +77,15 @@ canvas.addEventListener('pointerdown',e=>{
     status(structureLabel(State.draft.preview)+' position fixed — move cursor to rotate, click to confirm');draw();return
   }
   if(State.tool.kind==='well'){
-    if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
+    const founding=!State.village.founded;
+    if(founding&&State.structures.some(s=>s.type==='well')){status('Name the village before building another well');return}
     const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y};
-    if(addStructure(well))openVillageModal(well);return
+    // Only the first well founds the village; later wells are expansion centres.
+    if(addStructure(well)){
+      if(founding)openVillageModal(well);
+      else status('Well built · '+(wellMainRoads(well).length?'main road linked to the founding well':'no main road route found'));
+    }
+    return
   }
   if(State.tool.kind==='crossing'){
     const moat=['dry','water'].includes(State.tool.crossing);
