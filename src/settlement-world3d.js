@@ -923,7 +923,7 @@
               if(s.shape==='half'&&edge.index===ORIENTED_FACADE_REAR)continue;   // open gorge
               const o=outward(edge,center);
               if(edge.index===interior)onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o);
-              else if(towerSlitFace(s,edge.index,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
+              else if(towerSlitFace(s,edge.index,row.floor)){const se=towerSlitEdge(s,edge);onEdge(se,row.z,.22,.60,'arrowSlit',0,ground,se===edge?o:outward(se,center))}
             }
           }
         }

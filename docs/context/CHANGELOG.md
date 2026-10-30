@@ -6,6 +6,7 @@
 - Semitorre: scala a pioli a ogni piano, attraverso una botola nel solaio, visibile dalla gola aperta.
 - Cantiere e crolli: il ponteggio della D segue la sua pianta; monconi e corone spezzate della semitorre restano aperti dietro.
 - Cutaway della torre a D con solai, arredi e scale dentro la pianta a D. Costi per forma: tonda ×1,5, D ×1,25, semitorre ×0,5 rispetto alla quadrata.
+- Feritoie laterali della D spostate in avanti, sul mezzo tondo: accanto a una porta restano libere.
 
 ## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
 

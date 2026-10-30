@@ -64,6 +64,17 @@ function halfTowerLadders(s){
   }
   return out;
 }
+// D tower side slits (facade faces 0 and 2): on the half round, 60° off the front, so they open
+// ahead of a flanking gate instead of in the middle of the flank it covers.
+const DEE_SIDE_SLIT=Math.PI/3;
+function deeSideSlit(s,face){
+  if(s?.shape!=='dee'||(face!==0&&face!==2))return null;
+  const {w,h}=orientedTowerDims(s),r=h/2,cx=w/2-h/2,side=face===0?-1:1,c=Math.cos(DEE_SIDE_SLIT),sn=Math.sin(DEE_SIDE_SLIT)*side;
+  const at=orientedTowerWorld(s,[[cx+c*r,sn*r]])[0],n=orientedTowerDir(s,c,sn),t={x:-n.y,y:n.x},half=.27;
+  return{at,n,edge:{a:{x:at.x-t.x*half,y:at.y-t.y*half},b:{x:at.x+t.x*half,y:at.y+t.y*half},index:face}};
+}
+// The facade edge a slit is drawn on (the D side faces move onto the half round).
+function towerSlitEdge(s,edge){return deeSideSlit(s,edge.index)?.edge??edge}
 // Pitched roof: half cone on the round front, its apex over the centre of the half round.
 function deeTowerRoofApex(s){const {w,h}=orientedTowerDims(s);return orientedTowerWorld(s,[[w/2-h/2,0]])[0]}
 function deeTowerButtresses(s,h){

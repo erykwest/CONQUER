@@ -74,6 +74,14 @@ const area=pts=>pts.reduce((s,p,i)=>{const q=pts[(i+1)%pts.length];return s+p.x*
   }
   assert.ok(near(left.point.y,10-1.5)&&near(right.point.y,10+1.5),'one flank each side, touching the gate');
   assert.equal(ctx.gateSubtowerAttachment(gate,child,'gate-front:1'),null,'no corner sockets for oriented towers');
+  // Side slits sit on the half round, ahead of the gate: none opens into the gatehouse.
+  const gp=ctx.rectWorldPoints(gate.x,gate.y,ctx.rectDims(gate).w,ctx.rectDims(gate).h,gate.angle);
+  const inGate=p=>p.x>=Math.min(...gp.map(q=>q.x))&&p.x<=Math.max(...gp.map(q=>q.x))&&p.y>=Math.min(...gp.map(q=>q.y))&&p.y<=Math.max(...gp.map(q=>q.y));
+  for(const a of [left,right])for(const face of [0,2]){
+    const sl=ctx.deeSideSlit({...child,x:a.point.x,y:a.point.y,angle:a.angle},face);
+    assert.ok(sl&&!inGate({x:sl.at.x+sl.n.x*.12,y:sl.at.y+sl.n.y*.12}),'side slit clear of the gate');
+    for(const p of [sl.edge.a,sl.edge.b])assert.ok(!inGate(p),'slit edge clear of the gate');
+  }
   console.log('PASS large D towers flank a gate, rear aligned');
 }
 {

@@ -223,7 +223,9 @@
       const floor=row.floor,feet=towerFloorZ(tower,floor);
       for(const dir of towerFaceDirections(tower)){
         if(!towerSlitFace(tower,dir.face,floor))continue;
-        const p={x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
+        // A slit with its own spot (D tower sides): the archer stands just inside it.
+        const back=cutawayWallThickness(tower)+.1;
+        const p=dir.at?{x:dir.at.x-dir.nx*back,y:dir.at.y-dir.ny*back}:{x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
         result.push({id:tower.id+':slit:'+floor+':'+dir.face,kind:'slit',
           floor,face:dir.face,nx:dir.nx,ny:dir.ny,p,z:feet,slitZ:row.z,h:ground+floor,visualZ:ground+row.z});
       }

@@ -372,6 +372,8 @@ function towerFaceDirections(s){
   }
   const fp=towerFacadePoints(s),interior=interiorFacadeEdgeIndex(s);
   return fp.map((a,i)=>{
+    // D tower sides: the slit's own spot on the half round (at) and its normal.
+    const slit=s.shape==='dee'&&deeSideSlit(s,i);if(slit)return{face:i,nx:slit.n.x,ny:slit.n.y,at:slit.at,interior:i===interior};
     const b=fp[(i+1)%fp.length],nx=(a.x+b.x)/2-s.x,ny=(a.y+b.y)/2-s.y,L=Math.hypot(nx,ny)||1;
     return{face:i,nx:nx/L,ny:ny/L,interior:i===interior};
   });
@@ -394,7 +396,7 @@ function towerFaceBlocked(s,dir,floor){
 // wall up to that structure's height - no arrow slit, window or door opens onto it.
 function towerFaceOnDivider(s,dir,z){
   const half=s.shape==='round'?(Number(s.r)||.5):Math.max(rectDims(s).w,rectDims(s).h)/2;
-  const probe={x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
+  const probe=dir.at?{x:dir.at.x+dir.nx*.12,y:dir.at.y+dir.ny*.12}:{x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
   return State.structures.some(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&
     (o.id===s.parentTowerId||o.parentTowerId===s.id)&&structureHeight(o)>z&&pointInPolygon(probe,footprintPoints(o)));
 }
@@ -679,7 +681,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
               if(isInteriorFacadeEdge(s,edge)){
                 drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
                 if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
-              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(towerSlitEdge(s,edge),row.z,.22,.60,'arrowSlit',0,false,1,opacity);
             }
           });
         }
