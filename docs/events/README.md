@@ -49,6 +49,14 @@ Leisure catalog (24 models): ![catalog](leisure-catalog.png) · arena views: ![a
 ## Builder (present on `events`)
 Palette group **Eventi e svago** with four buttons (`data-event-venue`): Pulpito (`streetSpot`, 6 wood, 0.5 d), Palco (`stage`, 24 wood + 10 gold, 2 d), Spiazzo eventi (`festivalGround`, free, no building site — a reservation), Arena (`arenaLot`, 160 wood + 80 gold, 12 d). Two-click oriented placement like the other point buildings (centre, then rotation), the shared placement preflight (whitezone, flat terrace, collisions; auto houses are cleared). Inspector: stage dressing (artisti / annunci); festival ground setup (giostra, torneo, circo, sagra, accampamento, teatro) with **Avvia evento** / **Chiudi evento**: `preparing` (0.25 game day, props arrive one after another) → `active` → `clearing` (0.15 day) → `idle`; rotation. Venues and event state are saved with the game. QA `qa/events-builder-regression.cjs`.
 
+## Camps (branch `feature/tent-livery`)
+- **Pavilion liveries:** walls, roof gores and valance have their own keys (`wallA/B`, `roofA/B`, `valA/B`); an instance pair `[A, B, scheme]` fills them by scheme (`gored`, `solid`, `roof`, `inverted`). Within a venue a tent shares no colour with its nearest neighbour and two warm lead colours never touch.
+- **Camp kit:** `tentRidge` / `tentRidgePlain` (troops), `tentCompany` (company tent, tall side walls, pavilion-sized), `campAwning` (striped, pair livery), `campBarrels`, `campSacks`, `campPicket` (horse lines; `meta.horses` for the 2D horses), `campPalisade` (1.4 U segment), `campGate` (realm banner).
+- **Bivouac** — `bivouac(units, opts)`: units camped within 3 U share a camp; leader's pavilion at the centre, a company tent per three squads on the outer ring, ridge tents on wavy staggered arcs facing the centre, one fire per squad. Used by the night field camp (`/camp`, `settlement-camp.js`).
+- **Encampment** — `encampment(army, opts)`: noble quarter at the back (pavilions round the banner, commander in the realm livery), one street per company on the front and flanks, train between, open parade ground, soft hull boundary with the gate gap at -y; returns items, fires, perimeter, gate, banner, paths. `encampmentFence(camp, 'fence'|'palisade')` tiles the boundary works.
+- **Venue `armyCamp`:** `{type:'eventVenue', venue:'armyCamp', w, h, camp:{leaders, squads, works, seed}}`; lot sized by the army (`fitCamp`), works `0` open / `1` fence (40 wood) / `2` palisade + gate (120 wood, 15 gold) bought from the inspector one level at a time. Builder button in the *Combattimento e allarmi* group.
+- Lab: category *Eventi*, compositions in `ConquerCampScenes`.
+
 ## Modules to integrate (future implementation)
 1. Venue registry and placement validation / occupancy reservations.
 2. Event catalog with venue compatibility, capacity and resource hooks.
