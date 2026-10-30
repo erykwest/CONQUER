@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-30 — Accampamenti: livree, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`)
+
+- Padiglioni con livree a schema e contrasto tra vicini; nuovo kit Blender del campo; bivacco notturno organizzato; accampamento militare a quartieri come struttura del Builder, fortificabile a livelli; modelli e composizioni nel Lab. Stato e prove in [STATUS](STATUS.md). AGENTS.md: verifica visiva nel Lab e obbligo di inserire ogni nuovo modello nel Lab. ROADMAP e DECISIONS invariate: l'accampamento riusa il contratto `eventVenue` (nuova venue `armyCamp`), nessuna decisione architetturale nuova.
+
 ## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
 
 - Riletto live `main`, tree, 53 branch, PR recenti e CI. Nuova fotografia: [AUDIT-2026-10-30](AUDIT-2026-10-30.md). **Tre PR ancora aperte: #109/#110/#111; #103 Centro di controllo mergiata 30/10**. Nessun test Node/Chromium eseguito nella presente revisione, solo esiti CI/QA già tracciati.

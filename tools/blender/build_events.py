@@ -46,11 +46,17 @@ from build_civic import circ, prism, slab, plate, blob, pyramid
 
 COLORS = {
     'heraldA': '#b53636', 'heraldB': '#355fb8', 'heraldTrim': '#d2ad4b',
+    # Pavilion roles (walls, roof gores, valance tongues), A/B alternating: the game
+    # fills them from the tent's livery scheme (settlement-events3d.js tentScheme).
+    'wallA': '#b53636', 'wallB': '#355fb8', 'roofA': '#355fb8', 'roofB': '#b53636',
+    'valA': '#b53636', 'valB': '#355fb8',
     'canvas': '#e8dcc0', 'canvasShade': '#c9bb98', 'dark': '#211d1a',
     'wood': '#9a6a3f', 'woodLight': '#ba8a55', 'woodDark': '#6a4529', 'beam': '#4d3423',
     'rope': '#b9a57a', 'steel': '#9aa3aa', 'steelDark': '#5d656c', 'gold': '#d8b14a',
     'mail': '#7d858b', 'leather': '#6b4a2e', 'leatherDark': '#45301f',
     'curtain': '#7c2a33', 'curtainDark': '#5e1f27', 'festYellow': '#d9b13b', 'festGreen': '#6f8a3c',
+    'sack': '#c8b48a', 'sackShade': '#a8936a', 'stake': '#8a6440', 'stakeTip': '#c9a77a',
+    'tentBrown': '#7b5a3e', 'tentKhaki': '#9a8460', 'tentStripe': '#c99a3e', 'tentShade': '#5c4430',
     'circusRed': '#b8322c', 'hay': '#d4b35b', 'barrel': '#8b5e35', 'iron': '#4f5357', 'sand': '#cdb98a',
 }
 KEYS = list(COLORS.keys())
@@ -262,10 +268,13 @@ def mail_heap(p, x, y, r, h, n=8):
 
 # ------------------------------------------------------------------ pavilions
 def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
-             keys=('heraldA', 'heraldB'), trim='heraldTrim', door=.5):
+             keys=('heraldA', 'heraldB'), trim='heraldTrim', door=.5, roles=False):
     """Camp pavilion on an n-sided plan (circumradius R, a flat side to the front),
-    each side parted into k vertical stripes of the two keys."""
+    each side parted into k vertical stripes of the two keys. With roles=True walls,
+    roof gores and valance take their own A/B keys (wallA/B, roofA/B, valA/B)."""
     tincture = lambda i: keys[i % 2]
+    wall_t, roof_t, val_t = ((lambda i: ('wallA', 'wallB')[i % 2]), (lambda i: ('roofA', 'roofB')[i % 2]),
+                             (lambda i: ('valA', 'valB')[i % 2])) if roles else (tincture, lambda i: tincture(i + 1), tincture)
     a0 = math.pi / n
     corners = circ(0, 0, 1, n, a0)
     ring = []   # unit plan points along the perimeter, k per side
@@ -282,9 +291,9 @@ def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
     faces = [(tuple(range(N - 1, -1, -1)), 'canvasShade')]
     for s in range(N):
         t = (s + 1) % N
-        faces += [((s, t, N + t, N + s), tincture(s)),
+        faces += [((s, t, N + t, N + s), wall_t(s)),
                   ((N + s, N + t, 2 * N + t, 2 * N + s), 'canvasShade'),
-                  ((2 * N + s, 2 * N + t, 3 * N), tincture(s + 1))]
+                  ((2 * N + s, 2 * N + t, 3 * N), roof_t(s))]
     mesh(p, verts, faces)
     # Valance: a gold band and one tongue per stripe, countercoloured to the gore above.
     for s in range(N):
@@ -292,7 +301,7 @@ def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
         o = ((a[0] + b[0]) / 2 * E, (a[1] + b[1]) / 2 * E)
         w = math.hypot(b[0] - a[0], b[1] - a[1]) * E
         nn = side_n(s)
-        plate(p, o, nn, tongue(w, ze + .02, .4), tincture(s), 0, .03)
+        plate(p, o, nn, tongue(w, ze + .02, .4), val_t(s), 0, .03)
         plate(p, o, nn, [(-w / 2, ze - .04), (w / 2, ze - .04), (w / 2, ze + .06), (-w / 2, ze + .06)], trim, .03, .045)
     # Door on the front side, flaps tied back.
     ap = R * math.cos(a0)
@@ -323,13 +332,166 @@ def pavilion(m, n, R, k, wall, apex, pole_top, over=.38, drop=.18, rope_step=1,
 
 
 def tent_octagon(m):
-    pavilion(m, 8, 2.7, 2, 2.0, 4.9, 6.0, rope_step=2)
+    pavilion(m, 8, 2.7, 2, 2.0, 4.9, 6.0, rope_step=2, roles=True)
     m.livery = 'pair'
+
+
+def ridge_tent(m, body, stripe=None, W=1.25, L=1.6, e=.35, H=1.95, eaves=False):
+    """Soldiers' ridge tent: low side walls, pitched roof along y, door flap at the
+    front (-y) gable, poles and four guy ropes. Plain canvas: troops carry no livery.
+    eaves: stripe bands along both eaves too (the company tent)."""
+    p = m.part('tent')
+    verts = [(-W, -L, 0), (W, -L, 0), (W, L, 0), (-W, L, 0),
+             (-W, -L, e), (W, -L, e), (W, L, e), (-W, L, e), (0, -L, H), (0, L, H)]
+    mesh(p, verts, [((3, 2, 1, 0), 'tentShade'), ((1, 2, 6, 5), body), ((3, 0, 4, 7), body),
+                    ((5, 6, 9, 8), body), ((7, 4, 8, 9), body),
+                    ((0, 1, 5, 8, 4), 'tentShade'), ((2, 3, 7, 9, 6), 'tentShade')])
+    if stripe:
+        p.box((0, 0, H + .02), (.14, 2 * L + .04, .06), stripe)
+        if eaves:
+            for sx in (-1, 1):
+                p.box((sx * (W + .02), 0, e - .05), (.04, 2 * L + .04, .22), stripe)
+    door = min(.38, W * .35) if not eaves else .7
+    plate(p, (0, -L), (0, -1), [(-door, 0), (door, 0), (0, H - .2)], 'dark', 0, .02)
+    m.done('tent', p)
+    p = m.part('ropes')
+    for sy in (-1, 1):
+        p.beam((0, sy * L, 0), (0, sy * (L + .05), H + .25), .05, .05, 'woodDark')
+        p.beam((0, sy * L, H), (0, sy * (L + 1.0), .05), .03, .03, 'rope')
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            p.beam((sx * W, sy * L * .6, e), (sx * (W + .7), sy * L * .6, .05), .025, .025, 'rope')
+    m.done('ropes', p)
+    m.meta = {'door': u(0, -L - .6, 0), 'radius': u(W + .8)[0]}
+
+
+def tent_ridge(m):
+    ridge_tent(m, 'tentBrown', 'tentStripe')
+
+
+def tent_ridge_plain(m):
+    ridge_tent(m, 'tentKhaki')
+
+
+def tent_company(m):
+    # Company tent: a 4 x 5.8 m ridge tent with tall side walls, about a pavilion's size,
+    # sleeping a whole company; brown canvas with ochre ridge and eave bands.
+    ridge_tent(m, 'tentBrown', 'tentStripe', W=2.0, L=2.9, e=1.1, H=3.1, eaves=True)
+
+
+def camp_awning(m):
+    """Striped awning of the camp train: four posts, a canopy sloping to the front in
+    stripes of the instance pair, scalloped valance in front. 3 x 2.4 m."""
+    p = m.part('awning')
+    W, D, n = 1.5, 1.2, 6
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            p.box((sx * (W - .05), sy * (D - .05), (2.0 if sy < 0 else 2.3) / 2), (.1, .1, 2.0 if sy < 0 else 2.3), 'woodDark')
+    w = 2 * W / n
+    for i in range(n):
+        x = -W + w * (i + .5)
+        key = 'heraldA' if i % 2 == 0 else 'heraldB'
+        p.beam((x, -D - .05, 2.02), (x, D + .05, 2.34), w, .04, key)
+        plate(p, (x, -D - .07), (0, -1), tongue(w, 2.0, .32), 'heraldB' if i % 2 == 0 else 'heraldA', -.03, .03)
+    m.done('awning', p)
+    m.livery = 'pair'
+    m.meta = {'radius': u(2.0)[0]}
+
+
+def barrel(p, x, y, z=0.0, lying=False):
+    if lying:
+        p.cylinder(.3, 0, 'barrel', n=10, axis='x', center=(x, y, z + .3), radii=[.26, .3, .26], along=[-.4, 0, .4])
+    else:
+        p.cylinder(.3, 0, 'barrel', n=10, axis='z', center=(x, y, z), radii=[.26, .3, .26], along=[0, .4, .8])
+        p.cylinder(.3, 0, 'iron', n=10, axis='z', center=(x, y, z), radii=[.305, .305], along=[.62, .66])
+
+
+def camp_barrels(m):
+    """Pile of barrels: five standing, two lying on top."""
+    p = m.part('barrels')
+    for x, y in ((-.65, 0), (0, -.1), (.65, 0), (-.32, .6), (.32, .6)):
+        barrel(p, x, y)
+    barrel(p, -.2, .1, .8, lying=True)
+    barrel(p, .45, .3, .8, lying=True)
+    m.done('barrels', p)
+    m.meta = {'radius': u(1.2)[0]}
+
+
+def camp_sacks(m):
+    """Heap of grain sacks round a small crate."""
+    p = m.part('sacks')
+    p.box((.45, .35, .19), (.38, .38, .38), 'wood')
+    for i, (x, y, z, a) in enumerate(((-.5, 0, 0, 0), (-.1, -.35, 0, .4), (-.45, .45, 0, 1.2), (.3, -.4, 0, 2.0),
+                                      (-.3, .1, .4, .7), (.1, -.1, .55, 1.6))):
+        p.cylinder(.22, 0, 'sack' if i % 3 else 'sackShade', n=8, axis='x', center=(x, y, z + .2),
+                   radii=[.12, .22, .2, .1], along=[-.32, -.15, .15, .32], squash=.7)
+    m.done('sacks', p)
+    m.meta = {'radius': u(1.1)[0]}
+
+
+def camp_picket(m):
+    """Horse lines: two posts with a rope rail 4.5 m long, a trough and a hay heap
+    (the horses themselves are drawn by the game's 2D animals)."""
+    p = m.part('picket')
+    for sx in (-2.25, 2.25):
+        p.box((sx, 0, .7), (.14, .14, 1.4), 'woodDark')
+    p.beam((-2.25, 0, 1.25), (2.25, 0, 1.25), .04, .04, 'rope')
+    p.box((0, .9, .25), (2.0, .45, .4), 'wood')
+    p.box((0, .9, .44), (1.85, .32, .04), 'beam')
+    p.cylinder(.6, 0, 'hay', n=10, axis='z', center=(2.1, 1.2, 0), radii=[.65, .55, .2], along=[0, .45, .8])
+    m.done('picket', p)
+    m.meta = {'radius': u(2.6)[0], 'horses': [u(x, -.7, 0) for x in (-1.5, -.5, .5, 1.5)]}
+
+
+def camp_palisade(m):
+    """1.4 U (4.9 m) of light camp palisade along x: sharpened stakes on a back rail,
+    lower than the fort's. Tiled round the camp boundary."""
+    p = m.part('palisade')
+    L, n = 4.9, 20
+    for i in range(n):
+        x = -L / 2 + L * (i + .5) / n
+        h = 1.9 + .18 * math.sin(i * 2.3)
+        p.cylinder(.11, 0, 'stake', n=6, axis='z', center=(x, 0, 0), radii=[.11, .11], along=[0, h])
+        p.cylinder(.11, 0, 'stakeTip', n=6, axis='z', center=(x, 0, 0), radii=[.11, .01], along=[h, h + .3])
+    for z in (.5, 1.4):
+        p.beam((-L / 2, .14, z), (L / 2, .14, z), .08, .12, 'woodDark')
+    m.done('palisade', p)
+    m.meta = {'length': u(L)[0]}
+
+
+def camp_gate(m):
+    """Camp gate for the palisade gap: two tall posts, a lintel with the realm banner,
+    two braced leaves swung open. 1.4 U wide like a palisade segment."""
+    p = m.part('gate')
+    W = 1.6
+    for sx in (-1, 1):
+        p.cylinder(.16, 0, 'stake', n=8, axis='z', center=(sx * (W + .15), 0, 0), radii=[.16, .16], along=[0, 3.0])
+        p.cylinder(.16, 0, 'stakeTip', n=8, axis='z', center=(sx * (W + .15), 0, 0), radii=[.16, .01], along=[3.0, 3.35])
+        # Leaf swung inwards (+y), hinged on the post.
+        hx, hy = sx * W, 0
+        ex, ey = sx * W * .35, W * .8
+        for z in (.2, 1.0, 1.8):
+            p.beam((hx, hy, z), (ex, ey, z), .1, .12, 'woodDark')
+        for t in range(6):
+            f = (t + .5) / 6
+            x, y = hx + (ex - hx) * f, hy + (ey - hy) * f
+            p.cylinder(.08, 0, 'stake', n=6, axis='z', center=(x, y, 0), radii=[.08, .08], along=[0, 2.0])
+        p.beam((hx, hy, .2), (ex, ey, 1.8), .07, .07, 'woodDark')
+        # Wing of palisade from the post to the segment end.
+        for i in range(4):
+            x = sx * (W + .45 + i * .22)
+            p.cylinder(.11, 0, 'stake', n=6, axis='z', center=(x, 0, 0), radii=[.11, .11], along=[0, 1.95])
+            p.cylinder(.11, 0, 'stakeTip', n=6, axis='z', center=(x, 0, 0), radii=[.11, .01], along=[1.95, 2.25])
+    p.beam((-W - .3, 0, 2.85), (W + .3, 0, 2.85), .18, .22, 'woodDark')
+    plate(p, (0, -.13), (0, -1), [(-.55, 2.75), (.55, 2.75), (.55, 1.95), (0, 1.75), (-.55, 1.95)], 'heraldA', 0, .02)
+    plate(p, (0, -.15), (0, -1), [(-.2, 2.6), (.2, 2.6), (.2, 2.05), (-.2, 2.05)], 'heraldB', .02, .03)
+    m.done('gate', p)
+    m.meta = {'length': u(4.9)[0]}
 
 
 def tent_square(m):
     # Circumradius 3.0: a 4.2 m square, four stripes a side; ropes at corners and mid sides.
-    pavilion(m, 4, 3.0, 4, 2.0, 4.3, 5.3, rope_step=2)
+    pavilion(m, 4, 3.0, 4, 2.0, 4.3, 5.3, rope_step=2, roles=True)
     m.livery = 'pair'
 
 
@@ -1133,14 +1295,20 @@ MODELS = [('tentOctagon', tent_octagon), ('tentSquare', tent_square), ('standOpe
           ('stageHerald', stage_herald), ('stageTheatre', stage_theatre), ('podiumStreet', podium_street),
           ('stagePlayers', stage_players), ('circusTent', circus_tent), ('wagonCaravan', wagon_caravan),
           ('wagonCage', wagon_cage), ('wagonCargo', wagon_cargo), ('circusBooth', circus_booth),
-          ('propBunting', bunting_line), ('propFence', lists_fence)]
+          ('propBunting', bunting_line), ('propFence', lists_fence),
+          ('tentRidge', tent_ridge), ('tentRidgePlain', tent_ridge_plain), ('tentCompany', tent_company),
+          ('campAwning', camp_awning), ('campBarrels', camp_barrels), ('campSacks', camp_sacks),
+          ('campPicket', camp_picket), ('campPalisade', camp_palisade), ('campGate', camp_gate)]
 LAYOUT = {'tentOctagon': (0, 0), 'tentSquare': (12, 0), 'standOpen': (0, 16), 'standCovered': (20, 16),
           'arenaU': (10, 52), 'propTilt': (0, -10), 'propLanceRack': (12, -10),
           'propWeaponRack': (17, -10), 'propSpearRack': (22, -10), 'propShieldRack': (27, -10),
           'propArmourPile': (17, -15), 'propArmourCrate': (22, -15), 'propArmourStand': (27, -15),
           'stageHerald': (0, -25), 'stageTheatre': (14, -25), 'podiumStreet': (-10, -25), 'stagePlayers': (0, -35),
           'circusTent': (-30, 0), 'wagonCaravan': (-30, -14), 'wagonCage': (-24, -14), 'wagonCargo': (-18, -14),
-          'circusBooth': (-30, -20), 'propBunting': (-25, -20), 'propFence': (-18, -20)}
+          'circusBooth': (-30, -20), 'propBunting': (-25, -20), 'propFence': (-18, -20),
+          'tentRidge': (-10, 0), 'tentRidgePlain': (-10, 5), 'tentCompany': (-10, 12),
+          'campAwning': (-40, 0), 'campBarrels': (-40, 6), 'campSacks': (-40, 10), 'campPicket': (-40, 15),
+          'campPalisade': (-50, 0), 'campGate': (-50, 6)}
 
 
 def main(out_path):
