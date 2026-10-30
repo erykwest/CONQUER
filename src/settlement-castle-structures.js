@@ -472,7 +472,7 @@ function drawMachicolationFloors(){
 // in painter order. Flat keeps the plain block (no parts). Gabled steps a ridge across the wall
 // thickness; swallowtail raises two horns with a V notch and cuts an arrow slit in the face turned
 // towards the viewer (the 2.5D painter cannot hide a slit on the far face).
-function merlonStyleParts(center,angle,w,d,z,h,style=crenelStyle()){
+function merlonStyleParts(center,angle,w,d,z,h,cornerEnd=0,style=crenelStyle()){
   if(style==='flat')return null;
   const ux=Math.cos(angle),uy=Math.sin(angle),nx=-uy,ny=ux,top=z+h,parts=[];
   const at=(along,across)=>({x:center.x+ux*along+nx*across,y:center.y+uy*along+ny*across});
@@ -494,21 +494,31 @@ function merlonStyleParts(center,angle,w,d,z,h,style=crenelStyle()){
   }
   const face=view(at(0,d/2))>=view(at(0,-d/2))?1:-1;
   slab(at(0,face*(d/2-.004)),Math.max(.026,w*.13),.02,z+.05,top-.045,'slit');
-  const horns=[-1,1].sort((a,b)=>view(at(a*w/2,0))-view(at(b*w/2,0)));
-  for(const side of horns){
-    slab(at(side*w*.37,0),w*.26,d,top,top+.08);
-    slab(at(side*w*.425,0),w*.15,d,top+.08,top+.15);
+  // Horns: one V profile along the run (outer edges vertical, inner edges sloping down to the notch)
+  // extruded across the wall thickness. Far cap, then edge faces far to near, then near cap.
+  // On an L corner arm (cornerEnd -1/+1) the horn at the corner end widens to the full corner block,
+  // so the two arms share one square corner pillar and each face keeps its own V.
+  const H=top+.15,V=top+.035,tw=w*.15,tL=cornerEnd<0?d:tw,tR=cornerEnd>0?d:tw,mid=(tL-tR)/2;
+  const prof=[[-w/2,top],[w/2,top],[w/2,H],[w/2-tR,H],[mid,V],[-w/2+tL,H],[-w/2,H]];
+  const P=(a,z,b)=>({p:at(a,b*d/2),z});
+  const caps=[-1,1].map(b=>({pts:prof.map(([a,z])=>P(a,z,b)),tone:'cap',ref:at(0,b*d/2)})).sort((x,y)=>view(x.ref)-view(y.ref));
+  const edges=[];
+  for(let i=1;i<prof.length;i++){
+    const [a0,z0]=prof[i],[a1,z1]=prof[(i+1)%prof.length];
+    edges.push({pts:[P(a0,z0,-1),P(a1,z1,-1),P(a1,z1,1),P(a0,z0,1)],tone:z0===z1?'top':a0===a1?'cap':'slopeA',ref:at((a0+a1)/2,0),z:(z0+z1)/2});
   }
+  edges.sort((x,y)=>view(x.ref)-view(y.ref)||x.z-y.z);
+  parts.push({faces:[caps[0],...edges,caps[1]]});
   return parts;
 }
 // Merlons are slimmer across the wall than their nominal depth; merlonNode applies the same factor
 // so the breastwork between them stays flush.
 const MERLON_DEPTH_SCALE=.72;
-function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null){
+function battlementPiece(center,angle,z,w=.28,d=.24,h=.24,owner=null,cornerEnd=0){
   d*=MERLON_DEPTH_SCALE;
   const pts=rectWorldPoints(center.x,center.y,w,d,angle),rp=rotateViewPoint(center);
   return{
-    pts,z0:z,z1:z+h,depth:rp.x+rp.y,merlon:true,styleParts:merlonStyleParts(center,angle,w,d,z,h),
+    pts,z0:z,z1:z+h,depth:rp.x+rp.y,merlon:true,styleParts:merlonStyleParts(center,angle,w,d,z,h,cornerEnd),
     ownerId:owner?.id||null,
     ownerType:owner?.type||null,
     ownerDepth:owner?worldDepth(owner):null,
@@ -637,12 +647,13 @@ function drawMerlonBody(piece){
   }
 }
 // Gable faces: the slope turned to the viewer takes the lit top tone, the other the shaded side.
-const MERLON_FACE_TONES={slopeA:'#8a7e72',slopeB:'#9a8e82',end:'#635951'};
+const MERLON_FACE_TONES={slopeA:'#8a7e72',slopeB:'#9a8e82',top:'#9a8e82',end:'#635951',cap:'#5a524b'};
+const merlonFaceColor=tone=>['end','cap'].includes(tone)?MERLON_FACE_TONES[tone]:winterSnowColor(MERLON_FACE_TONES[tone]);
 function drawMerlonFaces(faces){
   for(const f of faces){
     const pts=f.pts.map(q=>w2s(q.p,q.z));
     ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const q of pts.slice(1))ctx.lineTo(q.x,q.y);ctx.closePath();
-    ctx.fillStyle=visualPaletteColor(f.tone==='end'?MERLON_FACE_TONES.end:winterSnowColor(MERLON_FACE_TONES[f.tone]));ctx.fill();
+    ctx.fillStyle=visualPaletteColor(merlonFaceColor(f.tone));ctx.fill();
     ctx.strokeStyle=visualPaletteColor('#c8b9a9');ctx.lineWidth=.6;ctx.stroke();
   }
 }
@@ -740,7 +751,7 @@ function lCornerMerlons(fp,corners,z,h,d,owner){
   for(let e=0;e<n;e++){
     const mc=corners[e],fwd=dirOf(e),back=dirOf((e-1+n)%n);
     const f=arm(mc,fwd,1,fwd.angle),b=arm(mc,back,-1,back.angle);
-    pieces.push(battlementPiece(f,f.angle,z,CORNER_ARM,d,h,owner),battlementPiece(b,b.angle,z,CORNER_ARM,d,h,owner));
+    pieces.push(battlementPiece(f,f.angle,z,CORNER_ARM,d,h,owner,-1),battlementPiece(b,b.angle,z,CORNER_ARM,d,h,owner,1));
     start[e]=merlonNode(f,f.angle,CORNER_ARM,d);
     end[(e-1+n)%n]=merlonNode(b,b.angle,CORNER_ARM,d);
   }
