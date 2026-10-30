@@ -142,7 +142,7 @@ for(const [nl,ns] of [[1,3],[2,7],[4,16]]){
  c.items.filter(it=>/^tent(Octagon|Square)/.test(it.m)).forEach(it=>assert.ok(it.y>0,'nobles at the back'));
  assert.ok(c.gate.y<Math.min(...c.items.map(it=>it.y)),'gate at the front');
  assert.deepEqual(E.encampment(army,{seed:7,key:'t'+ns}),c,'deterministic');
- const pairs=new Set(c.items.filter(it=>it.pair).map(it=>it.pair.slice(0,2).sort().join()));
+ const pairs=new Set(c.items.filter(it=>it.pair&&/^tent/.test(it.m)).map(it=>it.pair.slice(0,2).sort().join()));
  assert.equal(pairs.size,nl,'each pavilion its own livery');
 }
 console.log('PASS encampment: quarters, spacing, boundary, gate, liveries');
