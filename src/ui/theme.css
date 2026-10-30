@@ -106,7 +106,8 @@ body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap)}
 #ui2 .u2-rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
 #ui2 .u2-room{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px}
 #ui2 .u2-room span{font-size:11px;font-weight:700;color:var(--u2-gold)}
-#ui2 select,#ui2 input[type=number]{height:var(--u2-row);padding:0 6px;border:1px solid var(--u2-line);border-radius:5px;background:var(--u2-sunken);color:var(--u2-text);font-size:13px;min-width:0}
+#ui2 .u2-name{width:100%}
+#ui2 select,#ui2 input[type=number],#ui2 input[type=text]{height:var(--u2-row);padding:0 6px;border:1px solid var(--u2-line);border-radius:5px;background:var(--u2-sunken);color:var(--u2-text);font-size:13px;min-width:0}
 
 /* cost tokens */
 #ui2 .u2-cost{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--u2-strong);cursor:default}

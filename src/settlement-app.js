@@ -101,11 +101,13 @@ function addStructure(s){
     displaced=removeOverlappingAuto(s);
   }
   State.structures.push(s);
-  if(isCivicAnnex(s)||['church','tavern','house'].includes(s.type))invalidateUrbanGeometry();
+  if(isCivicAnnex(s)||['church','tavern','house','well'].includes(s.type))invalidateUrbanGeometry();
   let reactive=0;
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
     if(isCivic(s))reactive+=ensureSettlementRoadAccess(s);
+    // A later well joins the founding well's network with one main road (no border roads).
+    if(s.type==='well'&&State.village.founded){reactive+=buildWellMainConnection(s);window.ConquerCombat?.invalidateRoutes?.()}
     if(s.type==='well')reactive+=reconcileTowerSecondaryBranches(Infinity,true);
     if(displaced.removed||reactive){
       const bits=[];
@@ -179,13 +181,24 @@ function deleteStructure(id){
   for(const child of removedChildren)if(child.buildCost)refundCost(child.buildCost);
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost&&!(target.type==='bridge'&&target.variant==='wood'))refundCost(target.buildCost);
-  if(target.type==='well'){
+  const foundingWellTarget=target.type==='well'&&(!State.village.founded||target.id===State.village.wellId);
+  if(foundingWellTarget){
     State.combat=null;window.ConquerCombat?.restore(null);
     const borderEntries=ensureBorderEntrySelection();
-    State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
+    // The village goes with its founding well, later wells included (refunded).
+    for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(w.buildCost);
+    State.structures=State.structures.filter(s=>!s.auto&&s.id!==id&&s.type!=='well');
     window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
-  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
+  }else{
+    State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.wellFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
+    if(target.type==='well'){
+      // A later well: its main road goes with it; the centre role falls back to the founding well.
+      if(State.village.centerWellId===id)delete State.village.centerWellId;
+      State.village.deletedMainRoutes=(State.village.deletedMainRoutes||[]).filter(r=>r!==wellMainRouteId(target));
+      invalidateUrbanGeometry();window.ConquerCombat?.invalidateRoutes?.();
+    }
+  }
   if(target.type==='tower')window.ConquerSiege?.syncAutoMastio?.();
   reconcileTowerSecondaryBranches(Infinity,true);
   if(State.selectedId===id||removedChildren.some(child=>child.id===State.selectedId))State.selectedId=null;

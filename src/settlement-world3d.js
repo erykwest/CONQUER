@@ -1685,10 +1685,11 @@
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(isPlanView())drawGrid();             // 5U lines + 0.5U snap lattice (plan view editor aid)
     residual2D();
-    // Village name over the well (screen-space text in drawPointStructure).
-    if(State.village.founded&&State.village.name)for(const s of State.structures){
+    // Village name over the centre well, quarter names over the others (as drawPointStructure).
+    if(State.village.founded)for(const s of State.structures){
       if(s.type!=='well'||underConstruction(s))continue;
-      const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12);
+      const label=wellDisplayName(s);if(!label)continue;
+      const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font=(isVillageCenterWell(s)?'700 12px':'italic 600 11px')+' system-ui';ctx.textAlign='center';ctx.fillText(label,p.x,p.y-12);
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
     return true;

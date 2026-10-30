@@ -45,6 +45,20 @@ function renderFunctionPanel(){
     slots.querySelector('[data-annex-delete]').onclick=()=>deleteStructure(s.id);
     return;
   }
+  if(s?.type==='well'){
+    // Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
+    const w=StructureCommands.describeStructure(s.id).well,esc=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    panel.classList.add('open');
+    info.innerHTML='<div class="kv"><span>Selected</span><b>Pozzo · '+esc(w.center?(w.villageName||'Centro villaggio'):(w.name||'Quartiere senza nome'))+'</b></div>'+
+      '<div class="kv"><span>Ruolo</span><b>'+(w.center?'Centro villaggio':'Quartiere')+'</b></div>'+
+      '<div class="kv"><span>Strada</span><b>'+(w.founding?'Strade maestre':w.mainRoad?'Principale verso il primo pozzo':'Da collegare')+'</b></div>';
+    slots.innerHTML=(w.founded?'<div class="slot"><button data-well-center'+(w.canCenter?'':' disabled')+(w.center?' class="active"':'')+'>'+(w.center?'Centro villaggio · rimuovi':'Designa come centro villaggio')+'</button></div>':'')+
+      (w.center?'<div class="legend">Il centro porta il nome del villaggio.</div>':
+        '<div class="slot"><label class="slot-label" for="wellNameInput">Nome quartiere / borgata</label><input id="wellNameInput" type="text" maxlength="32" placeholder="Quartiere o borgata" value="'+esc(w.name)+'"></div>');
+    const center=slots.querySelector('[data-well-center]');if(center)center.onclick=()=>StructureCommands.toggleVillageCenter(s.id);
+    const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
+    return;
+  }
   if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');

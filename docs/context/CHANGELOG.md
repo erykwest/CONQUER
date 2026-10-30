@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-30 — Più pozzi per villaggio (branch `feature/multi-wells`)
+
+- Dopo la fondazione si possono costruire altri pozzi: ognuno è un centro di espansione (zone, case, campi, antincendio) collegato al primo pozzo con una strada principale, senza nuove strade maestre. Il centro villaggio si designa dall'ispettore come il mastio; i pozzi non centro hanno un nome di quartiere mostrato sulla mappa. Stato e prove in [STATUS](STATUS.md). D-056 in DECISIONS; ROADMAP invariata.
+
 ## 2026-10-29 — Cutaway delle torri piccole con scala a chiocciola (branch `feature/cutaway-spiral-stairs`)
 
 - Le torri T1 in pietra, comprese le sottotorri, si aprono in sezione e mostrano una scala a chiocciola in pietra dalla porta alla cima: tonda nelle torri tonde, quadrata nelle torri quadrate. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.

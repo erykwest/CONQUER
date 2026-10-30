@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Villaggio — più pozzi (branch `feature/multi-wells`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** pozzi successivi come centri di espansione con strada principale verso il fondatore; centro villaggio designabile dall'ispettore; nomi di quartiere/borgata salvati e mostrati sulla mappa. Contratto D-056.
+- **APERTO:** raggio di crescita proprio per ogni quartiere (oggi comune a tutti i pozzi); nome del villaggio modificabile dall'ispettore del centro; effetti di gioco del centro oltre a etichetta e meta degli emissari (mercato, feste, tasse); scelta di un nuovo fondatore invece dell'azzeramento quando si demolisce il primo pozzo.
+
 ## Castello — cutaway delle torri T1 con scala a chiocciola (29/10/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/cutaway-spiral-stairs`, NON MERGE:** torri T1 in pietra e sottotorri T1 apribili in sezione, con scala a chiocciola al posto delle stanze.

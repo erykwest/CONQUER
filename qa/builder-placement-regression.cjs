@@ -96,9 +96,11 @@ test('attached subtorri remain valid when their parent rotates',()=>{
   assert.equal(h.check({...h.State.structures[0],angle:Math.PI/4},
     {ignoreId:'parent',checkCost:false}).ok,true);
 });
-test('existing village cannot found a second well',()=>{
-  const h=harness();h.State.village.founded=true;
-  assert.equal(h.check({type:'well',x:100,y:100}).ok,false);
+test('only one founding well; a founded village may build further wells',()=>{
+  const h=harness();h.State.structures.push({id:'well',type:'well',x:100,y:100});
+  assert.equal(h.check({type:'well',x:120,y:120}).ok,false,'unnamed founding well blocks a second one');
+  h.State.village.founded=true;
+  assert.equal(h.check({type:'well',x:120,y:120}).ok,true,'later wells are expansion centres');
 });
 test('road crossing whitezone boundary is invalid',()=>{
   const h=harness();
