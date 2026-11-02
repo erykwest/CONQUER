@@ -682,13 +682,16 @@ function wallBattlementPieces(s){
       p.groundZ=r.max;p.z0-=r.max-r.min;p.t=(t.lo+t.hi)/2;delete p.wallCrest;
     }
     // A parapet block is never taller than either merlon beside it: the lower one sets its top, a
-    // crenel's depth below the merlon's (the opening between them stays).
-    const merlons=all.filter(p=>!p.kind),CRENEL=.24-PARAPET_HEIGHT;
+    // crenel's depth below the merlon's (the opening between them stays). It also always rises above
+    // the highest tread under it; where the two clash, the merlons beside it grow instead.
+    const merlons=all.filter(p=>!p.kind),CRENEL=.24-PARAPET_HEIGHT,ABOVE_TREAD=.06;
     for(const p of all){
       if(p.kind!=='parapet')continue;
-      const before=merlons.filter(m=>m.t<p.t).pop(),after=merlons.find(m=>m.t>p.t);
-      const cap=Math.min(...[before,after].filter(Boolean).map(m=>m.groundZ+m.z1))-CRENEL;
-      if(Number.isFinite(cap)&&p.groundZ+p.z1>cap)p.z1=Math.max(p.z0+.02,cap-p.groundZ);
+      const near=[merlons.filter(m=>m.t<p.t).pop(),merlons.find(m=>m.t>p.t)].filter(Boolean);
+      const cap=Math.min(...near.map(m=>m.groundZ+m.z1))-CRENEL;
+      if(Number.isFinite(cap)&&p.groundZ+p.z1>cap)p.z1=cap-p.groundZ;
+      p.z1=Math.max(p.z1,g.z+ABOVE_TREAD);
+      for(const m of near)m.z1=Math.max(m.z1,p.groundZ+p.z1+CRENEL-m.groundZ);
     }
   }
   return all;
