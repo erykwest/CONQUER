@@ -203,6 +203,29 @@ console.log('PASS the drawbridge fits either stair and, raised, shuts the keep')
   assert.ok(K.climbDuration(keep)>=600);
   console.log('PASS stair obstacles and the climb to the door');
 }
+{
+  // Axes on the leaf: it has its own strength; at zero it falls and leaves its gap.
+  const {K,keep}=fixture();K.buildStair(keep);K.installDrawbridge(keep);
+  assert.equal(K.leafBarrier(keep),false,'lowered: no barrier');
+  K.toggleDrawbridge(keep);keep.keepEntrance.drawbridge.progress=1;
+  assert.ok(K.leafBarrier(keep),'raised: it shuts the doorway');
+  assert.equal(K.leafHp(keep).hp,K.LEAF_HP);
+  const r1=K.hitLeaf(keep,20);
+  assert.ok(!r1.broken&&r1.hp===K.LEAF_HP-20&&K.leafBarrier(keep),'worn but standing');
+  const r2=K.hitLeaf(keep,100);
+  assert.ok(r2.broken,'cut through');
+  assert.ok(!K.leafBarrier(keep)&&K.unreachable(keep)&&keep.keepEntrance.drawbridge.broken,'gone, its gap left');
+  assert.ok(Math.abs(K.layout(keep).gap-.9)<1e-9);
+  assert.ok(K.assaultLadderMesh(keep)?.col.length>20,'an assault ladder can stand against the door');
+  console.log('PASS axes wear the leaf down; cut through it leaves the gap');
+}
+const combatSrc=fs.readFileSync(root+'settlement-combat.js','utf8');
+assert.match(combatSrc,/function addKeepStorm\(tower\)/,'a ladder can be set against the Mastio');
+assert.match(combatSrc,/if\(keepStorm&&!keepStorm\.done\)\{keepThink\(e,keepStorm\);return\}/,'attackers follow it');
+assert.match(combatSrc,/K\.hitLeaf\(keep,KEEP_AXE\*up\.length\)/,'cut the raised leaf from the ladder top');
+assert.match(combatSrc,/ramStep\(dt\);\s*keepStep\(dt\);/,'every combat tick');
+assert.match(combatSrc,/s\.kind==='keep'&&s\.towerId/,'and the storm survives a save');
+console.log('PASS the assault on the Mastio is wired into combat');
 // Hooks: alarm, fire, wall walk, walkers, recalled civilians.
 const read=f=>fs.readFileSync(root+f,'utf8');
 assert.match(read('settlement-siege.js'),/bridgeAlarm\(\);window\.ConquerKeepEntrance\?\.alarmTick\?\.\(\)/,'the siege tick runs the guard');

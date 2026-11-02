@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=keep-entrance-3';
+import { T } from './i18n-it.js?v=keep-entrance-4';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -354,7 +354,8 @@ function Inspector({ snap, cmd }) {
             tip: k.stair === 'burnt' ? I.keepBurnt : I.keepWood, tipBody: k.reason || costTip(k.costs.wood) },
           { label: I.keepStone, active: k.stair === 'stone', disabled: at !== 1, v: 'stone', tip: I.keepStone, tipBody: costTip(k.costs.stone) }]}
           onPick=${o => o.v !== k.stair && (o.v !== 'none' || confirm(I.keepRemove + ' · ' + I.keepEntrance + '?')) && run('setKeepStair', o.v)} /></${Row}>
-      ${at > 0 && html`<${Row} label=${I.keepDrawbridge} tip=${TIP.keepDrawbridge}>
+      ${k.intruders > 0 && html`<p class="u2-hint">${I.keepViolated(k.intruders)}</p>`}
+      ${at > 0 && html`<${Row} label=${I.keepDrawbridge + (k.drawbridge ? ' ' + k.drawbridge.hp + '/' + k.drawbridge.max : '')} tip=${TIP.keepDrawbridge}>
         <${Seg} options=${k.drawbridge
           ? [{ label: k.drawbridge.raised ? I.keepLower : I.keepRaise, v: 'toggle' }, { label: I.keepRemove, v: 'remove' }]
           : [{ label: k.leafBurnt ? I.keepRebuild : I.keepInstall, v: 'install', tip: I.keepDrawbridge, tipBody: costTip(k.costs.drawbridge) }]}
