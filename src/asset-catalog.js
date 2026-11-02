@@ -9,13 +9,15 @@
   const gallery=byId('assetGallery'),filters=byId('assetCategoryFilters'),details=byId('assetDetail');
   if(!gallery||!filters||!details)return;
   const STATIC_FILES=window.CONQUER_ASSET_FILES||[],ROTATION_SETS=window.CONQUER_ASSET_ROTATIONS||{};
-  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
+  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Eventi','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
   const MODEL_SOURCES=[
     {global:'ConquerCivicModels',collection:'models',category:'Edifici',family:'Edifici civili'},
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
-    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'}
+    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
+    {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
+    {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -90,7 +92,7 @@
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
-            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js'}[source.global]),
+            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key:null});
     }
   }

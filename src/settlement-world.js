@@ -841,6 +841,9 @@ function settlementAccessTargets(){
 }
 function towerSecondaryBranchAccessPoint(tower,target){
   if(!tower||tower.type!=='tower'||tower.parentTowerId)return null;
+  // A raised keep entrance: the service road ends at the foot of the stair.
+  const keepFoot=window.ConquerKeepEntrance?.footPoint?.(tower);
+  if(keepFoot)return keepFoot;
 
   // Masonry towers use their real ground-floor front door. Timber towers do
   // not have a masonry door, so their facing direction defines the service entrance.

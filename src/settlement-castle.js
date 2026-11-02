@@ -225,7 +225,8 @@ function structureHeight(s){
     if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
   }
-  if(s.type==='gate')return isWoodGate(s)?1.94:[2.8,4.0,5.2][structureLevel(s)-1];
+  // The small gate stands just above the curtain (H2 walls are 2.10): L1 passage only, L2 one room over it.
+  if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
@@ -248,6 +249,7 @@ function footprintPoints(s){
   if(!s)return[];
   if(s.type==='tower'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
   if(s.type==='ruin'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s);
   if(['tower','gate','ruin'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
   if(['wall','palisade','built','moat','bridge'].includes(s.type))return linePoly(s);
@@ -281,6 +283,7 @@ function stoneTowerSplayedFootprint(s){
   if(s.shape==='round'){
     return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+STONE_TOWER_SPLAY_OFFSET,24);
   }
+  if(isOrientedTower(s))return orientedTowerOutline(s,-STONE_TOWER_SPLAY_OFFSET);
   const d=rectDims(s);
   return rectWorldPoints(
     s.x,s.y,
@@ -316,6 +319,7 @@ function stoneTowerButtresses(s){
     }
     return out;
   }
+  if(s.shape==='dee')return deeTowerButtresses(s,h);
   const fp=footprintPoints(s),center={x:s.x,y:s.y};
   for(let i=0;i<fp.length;i++){
     const a=fp[i],b=fp[(i+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
@@ -472,6 +476,82 @@ function buildableTerrainElevationForStructure(s){
   }
   return level??0;
 }
+// Walls on slopes: a thin T1 wall (no wall-walk: its merlons are only a crest) follows any slope,
+// a medium T2 wall gentle slopes only, a thick T3 wall needs one flat terrace (like every other
+// linear piece). A wall on a slope is built in steps (wallSlopeSections).
+const WALL_SLOPE_LIMIT=Object.freeze({1:'steep',2:'gentle',3:null});
+function wallTerrainVerdict(s){
+  if(buildableTerrainElevationForStructure(s)!=null)return{ok:true,slope:false};
+  if(s?.type!=='wall')return{ok:false,reason:'Wall segment crosses incompatible terrain'};
+  const limit=WALL_SLOPE_LIMIT[wallTier(s)];
+  if(!limit)return{ok:false,reason:'Thick (T3) walls need flat ground'};
+  if(limit!=='steep'&&structureTerrainSamples(s).some(p=>terrainSlopeKind(p)==='steep'))
+    return{ok:false,reason:'Medium (T2) walls cannot climb a steep slope'};
+  return{ok:true,slope:true};
+}
+// Wall on a slope: the wall itself is the stair (as on the Moorish walls of Sintra). The joined
+// footprint (unionFootprintPoints) is cut into tread-deep slices along a->b; each stands on the
+// terrain under its middle (ground), its base goes down to the lowest terrain under it (low,
+// relative to ground) and its top, ground + the wall height, is a tread of the walk. Level runs are
+// merged into one section. null: a flat wall.
+const WALL_TREAD=.12,WALL_STAIR_RISE=2/3,wallSectionCache=new WeakMap();
+function wallSlopeSections(s){
+  if(s?.type!=='wall'||!s.a||!s.b)return null;
+  const key=[s.a.x,s.a.y,s.b.x,s.b.y,s.width,s.tier,s.aSnap,s.bSnap,hasCastleSnap(s.aSnap),hasCastleSnap(s.bSnap),
+    State.relief?.terraforming?.length??0,State.relief?.seed,State.relief?.hills?.length].join('|');
+  const hit=wallSectionCache.get(s);if(hit&&hit.key===key&&hit.relief===State.relief)return hit.sections;
+  let sections=null;
+  if(wallTerrainVerdict(s).slope){
+    const fp=unionFootprintPoints(s),L=dist(fp[0],fp[1]),n=Math.max(2,Math.ceil(L/WALL_TREAD)),lerp=(p,q,t)=>({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t});
+    // t along the joined footprint -> t along a->b (the footprint overhangs into snapped towers).
+    const A=lerp(fp[0],fp[3],.5),B=lerp(fp[1],fp[2],.5),La=dist(s.a,s.b)||1;
+    const ab=t=>{const p=lerp(A,B,t);return((p.x-s.a.x)*(s.b.x-s.a.x)+(p.y-s.a.y)*(s.b.y-s.a.y))/(La*La)};
+    const raw=[];
+    for(let i=0;i<n;i++){
+      const t0=i/n,t1=(i+1)/n,pts=[lerp(fp[0],fp[1],t0),lerp(fp[0],fp[1],t1),lerp(fp[3],fp[2],t1),lerp(fp[3],fp[2],t0)];
+      const foot=Math.min(...pts.map(terrainElevation),terrainElevation(lerp(A,B,t0)),terrainElevation(lerp(A,B,t1)));
+      raw.push({t0,t1,pts,ground:terrainElevation(lerp(A,B,(t0+t1)/2)),foot});
+    }
+    // No riser is taller than 2/3 of its tread (H ≤ WALL_STAIR_RISE·L): where the terrain jumps (a
+    // terrace edge), the treads below are raised into a flight that meets the upper level.
+    const maxRise=WALL_STAIR_RISE*L/n;
+    for(let i=1;i<n;i++)raw[i].ground=Math.max(raw[i].ground,raw[i-1].ground-maxRise);
+    for(let i=n-2;i>=0;i--)raw[i].ground=Math.max(raw[i].ground,raw[i+1].ground-maxRise);
+    sections=[];
+    for(const r of raw){
+      const low=r.foot-r.ground-.04,prev=sections[sections.length-1];
+      // A level run (same tread height) stays one block.
+      if(prev&&Math.abs(prev.ground-r.ground)<.005){
+        prev.t1=ab(r.t1);prev.pts=[prev.pts[0],r.pts[1],r.pts[2],prev.pts[3]];prev.low=Math.min(prev.low,low);continue;
+      }
+      sections.push({t0:ab(r.t0),t1:ab(r.t1),pts:r.pts,ground:r.ground,low:Math.min(0,low)});
+    }
+  }
+  wallSectionCache.set(s,{key,relief:State.relief,sections});
+  return sections;
+}
+// Ground a linear piece is built from: its terrace, or the lowest foot of a stepped wall (the
+// building site rises from there). null: not buildable here.
+function linearBuildGroundZ(s){
+  const flat=buildableTerrainElevationForStructure(s);if(flat!=null)return flat;
+  if(!wallTerrainVerdict(s).ok)return null;
+  const secs=wallSlopeSections(s);
+  return secs?Math.min(...secs.map(q=>q.ground+q.low)):null;
+}
+// Ground of a stepped wall at t along a->b (its section's), or null for a flat wall.
+function wallGroundAt(s,t){
+  const secs=wallSlopeSections(s);if(!secs)return null;
+  return(secs.find(q=>t>=q.t0-1e-9&&t<=q.t1+1e-9)||(t<secs[0].t0?secs[0]:secs[secs.length-1])).ground;
+}
+// Ground under the walk at t: the tread there (the wall top is the stair).
+function wallWalkGroundAt(s,t){return wallGroundAt(s,t)}
+// Lowest and highest tread under t0..t1 (a merlon or a parapet block spanning a few treads).
+function wallGroundRange(s,t0,t1){
+  const secs=wallSlopeSections(s);if(!secs)return null;
+  const lo=Math.min(t0,t1),hi=Math.max(t0,t1),under=secs.filter(q=>q.t1>=lo-1e-9&&q.t0<=hi+1e-9);
+  const list=under.length?under:[secs.find(q=>lo<=q.t1)||secs[secs.length-1]];
+  return{min:Math.min(...list.map(q=>q.ground)),max:Math.max(...list.map(q=>q.ground))};
+}
 function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
   if(!worldPts?.length)return;
   const base=projectPath(worldPts,0),topPts=projectPath(worldPts,height),faces=[];
@@ -535,13 +615,15 @@ function cutawayPropSprite(key){const img=cutawayPropSprites[key];return img&&im
 function cutawayEligible(s){
   if(!s||underConstruction(s))return false;
   if(s.type==='built')return true;
-  // Stone gates open like square towers: the passage on the ground floor, rooms above.
+  // Stone gates open like square towers: the passage on the ground floor, rooms above (the
+  // timber-framed small gate: masonry below its frame floor, plaster above).
   if(s.type==='gate')return !isWoodGate(s);
   // The timber palisade tower opens its Blender model (settlement-wood3d.js); the watchtower
   // has no walls to open.
   if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
-  return s.type==='tower';
+  // Semitowers are open already (their gorge shows the floors and ladders).
+  return s.type==='tower'&&s.shape!=='half';
 }
 // Small (T1) stone towers are a stair shaft: no wooden floors, one stone newel stair from
 // the ground to the top (settlement-cutaway-furniture.js builds the steps).
@@ -577,6 +659,8 @@ function cutawayWallGeometry(s){
       const outer=footprintPoints(s),r=Math.max(.12,(Number(s.r)||.5)-thickness);
       return{outer,inner:circleWorldPoints(s.x,s.y,r,24),thickness};
     }
+    // D tower: the same outline shrunk by the wall, vertex for vertex.
+    if(s.shape==='dee')return{outer:orientedTowerOutline(s),inner:orientedTowerOutline(s,thickness),thickness};
     const d=rectDims(s),iw=Math.max(.18,d.w-thickness*2),ih=Math.max(.18,d.h-thickness*2);
     return{
       outer:footprintPoints(s),
@@ -621,9 +705,17 @@ function cutawayFloorLevels(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(level<=1||cutawaySpiralStair(s))return floors;
-  for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
+  if(gateTimberUpper(s))return[...floors,{z:GATE_TIMBER_FLOOR,material:'wood'}];   // the frame's own floor
+  // A gate's storeys line up with those of the stone tower flanking it (one floor level across).
+  const flank=s.type==='gate'?State.structures.find(o=>o.parentTowerId===s.id&&o.type==='tower'&&!isWoodTower(o)&&!cutawaySpiralStair(o)):null;
+  const fz=flank?cutawayFloorLevels(flank):[];
+  for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:h*i/level,material:'wood'});
   return floors;
 }
+// Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front
+// and the rear (local x), flush with the flanks the walls meet.
+function gateTimberFloorZ(s){return GATE_TIMBER_FLOOR}
+function gateTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+GATE_JETTY*2,d.h,s.angle||0)}
 function cutawayLocalRect(center,angle,x0,y0,x1,y1){
   const ca=Math.cos(angle),sa=Math.sin(angle);
   const p=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
@@ -761,10 +853,23 @@ function cutawayTransparentFaceIndexes(s,g){
     return new Set([frontLong,1,3]);
   }
 
-  // Square towers remove the two camera-facing faces.
-  if(n===4&&s.type==='tower'&&s.shape!=='round'){
+  // Square towers and gatehouses remove the two camera-facing faces.
+  if(n===4&&(s.type==='tower'&&s.shape!=='round'||s.type==='gate')){
     const ranked=depths.map((depth,index)=>({depth,index})).sort((a,b)=>b.depth-a.depth);
     return new Set([ranked[0].index,ranked[1].index]);
+  }
+
+  // D towers remove every face turned to the camera (half the outline, like the two
+  // faces of a square tower): the cut runs through the straight sides or the half round.
+  if(s.type==='tower'&&s.shape==='dee'){
+    const open=new Set();
+    for(let i=0;i<n;i++){
+      const a=g.outer[i],b=g.outer[(i+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1,m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      let nx=(b.y-a.y)/L,ny=-(b.x-a.x)/L;
+      if(nx*(m.x-s.x)+ny*(m.y-s.y)<0){nx=-nx;ny=-ny}
+      if(viewDepthPoint({x:m.x+nx*.1,y:m.y+ny*.1})-viewDepthPoint(m)>1e-6)open.add(i);
+    }
+    return open;
   }
 
   // Round towers use an approximately 90° camera-facing wedge. The two radial
@@ -933,6 +1038,7 @@ function unionFootprintPoints(s){
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
 function polygonGeomForStructure(s){
+  if(s.type==='tower'&&s.shape==='half')return towerBodyPrisms(s).map(p=>[p.map(q=>[q.x,q.y])]);
   const pts=unionFootprintPoints(s);if(!pts||pts.length<3)return null;
   return [pts.map(p=>[p.x,p.y])];
 }

@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=multi-wells-1';
+import { T } from './i18n-it.js?v=keep-entrance-4-multi-wells-1';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -70,12 +70,18 @@ const CATALOG = [
       const rows = [{ label: O.shape, options: [
         opt(V.square, '[data-tower="square"][data-size="1.5"]', stone && t.shape === 'square'),
         opt(V.round, '[data-tower="round"][data-size="0.75"]', stone && t.shape === 'round'),
+        opt(V.half, '[data-tower="half"][data-size="1"]', stone && t.shape === 'half'),
+        opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
         opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
         opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower')] }];
       if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2'].map(n =>
         opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
         opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone && t.shape === 'half') rows.push({ label: O.size, options: [['1', V.small], ['1.5', V.medium]].map(([n, l]) =>
+        opt(l, `[data-tower="half"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone && t.shape === 'dee') rows.push({ label: O.size, options: [['1.5', V.medium], ['2', V.large]].map(([n, l]) =>
+        opt(l, `[data-tower="dee"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone) rows.push({ label: O.level, options: [1, 2, 3].map(n => opt(String(n), `[data-tower-level="${n}"]`, s.levels.tower === n)) });
       if (stone) rows.push(masonryRow(s));
       return rows;
@@ -96,7 +102,10 @@ const CATALOG = [
     rows: s => {
       const stone = s.tool.material !== 'wood', rows = [{ label: O.material, options: [
         opt(V.stone, '[data-gate]', stone), opt(V.wood, '[data-wood-gate]', !stone)] }];
-      if (stone) rows.push({ label: O.height, options: [1, 2, 3].map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
+      const small = stone && Number(s.tool.size) < 1.25;
+      if (stone) rows.push({ label: O.size, options: [['1.5', V.large], ['1', V.small]].map(([n, l]) =>
+        opt(l, `[data-gate][data-gate-size="${n}"]`, (Number(s.tool.size) || 1.5) === Number(n))) });
+      if (stone) rows.push({ label: O.height, options: (small ? [1, 2] : [1, 2, 3]).map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
       if (stone) rows.push(masonryRow(s));
       return rows;
     } },
@@ -351,7 +360,31 @@ function Inspector({ snap, cmd }) {
         onPick=${o => run('setGateClosed', o.v)} /></${Row}>
       <${Row} label=${I.nightClose}><${Seg} options=${[{ label: d.gate.nightClose ? I.on : I.off, active: d.gate.nightClose }]}
         onPick=${() => run('setGateNightClose', !d.gate.nightClose)} /></${Row}>`}
-    ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits) + '.'}>
+    ${d.keepEntrance && (() => {
+      // Raised Mastio entrance: the stair goes wood → stone; the drawbridge fits either.
+      const k = d.keepEntrance, costTip = c => Object.entries(c).map(([r, v]) => T.resourcesLong[r] + ' ' + fmt(v)).join(' · ');
+      const order = { wood: 1, stone: 2 }, at = order[k.stair] || 0;
+      return html`<${Row} label=${I.keepEntrance} tip=${TIP.keepEntrance}>
+        <${Seg} options=${[
+          { label: I.keepGround, active: !k.stair, disabled: !k.stair, v: 'none', tip: I.keepRemove },
+          { label: I.keepWood, active: k.stair === 'wood', disabled: at >= 1 || !k.eligible || (!k.mastio && k.stair !== 'burnt'), v: 'wood',
+            tip: k.stair === 'burnt' ? I.keepBurnt : I.keepWood, tipBody: k.reason || costTip(k.costs.wood) },
+          { label: I.keepStone, active: k.stair === 'stone', disabled: at !== 1, v: 'stone', tip: I.keepStone, tipBody: costTip(k.costs.stone) }]}
+          onPick=${o => o.v !== k.stair && (o.v !== 'none' || confirm(I.keepRemove + ' · ' + I.keepEntrance + '?')) && run('setKeepStair', o.v)} /></${Row}>
+      ${k.intruders > 0 && html`<p class="u2-hint">${I.keepViolated(k.intruders)}</p>`}
+      ${at > 0 && html`<${Row} label=${I.keepDrawbridge + (k.drawbridge ? ' ' + k.drawbridge.hp + '/' + k.drawbridge.max : '')} tip=${TIP.keepDrawbridge}>
+        <${Seg} options=${k.drawbridge
+          ? [{ label: k.drawbridge.raised ? I.keepLower : I.keepRaise, v: 'toggle' }, { label: I.keepRemove, v: 'remove' }]
+          : [{ label: k.leafBurnt ? I.keepRebuild : I.keepInstall, v: 'install', tip: I.keepDrawbridge, tipBody: costTip(k.costs.drawbridge) }]}
+          onPick=${o => run('keepDrawbridge', o.v)} /></${Row}>`}
+      ${k.ladder && html`<${Row} label=${I.keepLadder} tip=${TIP.keepLadder}>
+        <${Seg} options=${[{ label: k.ladder.down ? I.keepLadderUp : I.keepLadderDown, v: k.ladder.down ? 'ladder-up' : 'ladder-down' }]}
+          onPick=${o => run('keepDrawbridge', o.v)} /></${Row}>`}
+      ${(k.drawbridge || k.ladder) && html`<${Row} label=${I.keepAuto} tip=${TIP.keepAuto}>
+        <${Seg} options=${[{ label: k.auto ? I.on : I.off, active: k.auto }]}
+          onPick=${() => run('keepDrawbridge', k.auto ? 'auto-off' : 'auto-on')} /></${Row}>`}`;
+    })()}
+    ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits, d.archers.bartizan) + '.'}>
       <${Seg} options=${[{ label: '−', disabled: d.archers.disabled || d.archers.count === 0, v: -1 }, { label: '+', disabled: d.archers.disabled || d.archers.count >= d.archers.max, v: 1 }]}
         onPick=${o => run('changeArchers', o.v)} /></${Row}>`}
     ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>

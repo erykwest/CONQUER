@@ -1,5 +1,28 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CRIME-01 — Skeleton autonomo del sistema criminalità (02/11/2026)
+
+- **DECISO per il laboratorio `/crime/`:** separare criminalità, ordine pubblico e tensione sociale. La severità, gogna e patibolo possono aumentare la deterrenza **ma anche il risentimento**; assistenza/ospizio e presidio agiscono su leve diverse. La sommossa è una fase di escalation, non un generico malus; la rivolta non viene risolta da un secondo sistema di combattimento.
+- **CONTRATTO DI SVILUPPO:** solo fixture locali e deterministiche, salvataggio dedicato, nessuna mutazione del `State` canonico o duplicazione di popolazione/risorse. La gestione effettiva riuserà popolazione, economia, stanze e Combat quando sarà integrata.
+- **ANCORA PROPOSTO/DA VERIFICARE:** posizionamento reale di gogna e forca; ospizio come annesso Chiesa L2; corpo di guardia e prigione come stanze W2/W3; tribunale nel Palazzo cittadino **solo dopo verifica degli slot**; soglie numeriche, eventi e durate. La loro presenza nel catalogo di fixture non è implementazione nel Builder.
+- [Specifica del prototipo](../crime.md). La roadmap strategica attuale resta invariata.
+
+
+## D-MASTIO-01 — Ingresso rialzato del mastio (02/11/2026)
+
+- L'ingresso rialzato è uno stato della torre mastio (`tower.keepEntrance`), non un nuovo tipo di struttura: progressione scala di legno → scala in pietra, levatoio come accessorio indipendente dalla scala. Solo torri in muratura indipendenti di almeno 2 piani; costruito resta della torre anche se il mastio viene spostato.
+- Con l'ingresso rialzato la torre non ha porta a terra: l'unico accesso dal suolo è il piede della scala, e nessuno con il levatoio alzato. Motivo: il mastio è l'ultimo rifugio (D-011), il levatoio lo rende difendibile anche a mura cadute.
+- L'ariete non colpisce il battente del mastio: sta al primo piano, fuori portata di un ariete a terra, ed è proprio il motivo storico dell'ingresso rialzato. Contro il mastio chiuso l'assalitore brucia la scala di legno (o, quando ci saranno, porta scale d'assalto al pianerottolo). Il mastio non ha porte verso il cammino di ronda (regola valida per ogni mastio): non si entra dalle mura né lo si attraversa.
+- Gli assalitori prendono il mastio chiuso con una scala d'assalto alla porta: il battente alzato ha una resistenza propria e si abbatte a colpi d'ascia (o si brucia); senza battente la porta non oppone resistenza. Non si usa il riempimento dei fossati (serve alle macchine pesanti, non a raggiungere un primo piano).
+- Scala o battente distrutti non isolano gli occupanti: calano una scala a pioli dalla porta e la ritirano davanti al nemico.
+
+## D-MARCH-01 — Modalità attacco e conquista facoltativa (30/10/2026)
+
+**VINCOLO DI GAME DESIGN:** il giocatore può guidare una compagnia militare sulla world map al posto di gestire direttamente un feudo. Una volta arrivato può razziare, iniziare un assedio o ritirarsi. Razzia e distruzione anche soltanto parziale sono **persistenti** e non obbligano a terminare l'invasione. Il giocatore può interrompere un'operazione in qualsiasi momento. Anche dopo aver espugnato le difese **l'annessione è un comando volontario**, non l'esito automatico dell'assedio; la campagna può proseguire.
+
+**CODICE DIMOSTRATIVO SOLO SUL BRANCH feature/march-skeleton:** /march/ implementa la sequenza sopra su fixture isolate, non ancora sui feudi della partita. La vittoria è immessa soltanto da un tasto TEST e non è un'assalto simulato. Nella V1 World/Feudal, Combat, Siege, economia e save saranno quelli condivisi: niente doppio ledger o secondo motore d'assedio. [Specifica](../march.md).
+
+
 ## D-PANELS-01 · Centro di controllo del feudo (29/10/2026)
 
 **DESIGN e codice sulla branch `panels`, non su `main`:** i pannelli di controllo sono un livello di osservazione/gestione nel Profilo della partita, non uno stato economico parallelo. Nove aree (Generale, Popolazione, Economia, Proprietà, Scorte, Militare, Cantieri, Diplomazia, Avvisi), usando `ConquerGame.read` e comandi del motore. Lo storico è mostrato solo dove esiste (`balanceHistory` mercato settimanale); nessuna serie fittizia. Distinguere scorte economia/Siege e numero di soldati effettivi/capienza caserme. **Festività, diplomazia avanzata e leve reali restano TBD**, come descritto in [management-panels](../management-panels.md). Nessuna modifica alle priorità della roadmap M0–M5.

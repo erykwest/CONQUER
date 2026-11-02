@@ -70,7 +70,7 @@ function renderFunctionPanel(){
   }
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s),capUnits=(s.type==='house'||simpleCivic)?0:functionCapacityUnits(s);panel.classList.add('open');
-  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate,maxLevel=['tower','gate'].includes(s.type)?3:2,canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
+  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate,maxLevel=maxStructureLevel(s),canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
   info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${masonryMaterial(s)?`<div class="kv"><span>Muratura</span><b>${masonryMaterial(s)==='brick'?'Mattoni / Argilla':'Pietra'}</b></div>`:''}${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label" data-construction-status="true">Under construction · ${s.construction?.version===2?constructionWorkStatus(s)+' · '+remainingDays(s).toFixed(1)+' worker-days left':remainingDays(s).toFixed(1)+' calendar days'}</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${isWideBuilt(s)?`<div class="legend" style="margin-top:7px">Wide hall: one LARGE ground-floor room with free double height (≥2U) — common hall, chapel, throne hall.</div>`:s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
   info.innerHTML+=siteLaborLine(s);
   // L3 commerce: autonomous workshop at home, or the service it operates.
@@ -98,16 +98,18 @@ function renderFunctionPanel(){
     html+='<div class="slot"><div class="slot-label">Difesa finale · Mastio</div>'+
       '<button data-siege-mastio="'+s.id+'" '+(building?'disabled':'')+' class="'+(active?'active':'')+'">'+(active?'Mastio attivo · rimuovi':'Designa come Mastio')+'</button>'+
       '<div class="legend">La prima torre completata è promossa automaticamente; il mastio conserva una sala comune, anche al livello T1.</div></div>';
+    html+=window.ConquerKeepEntrance?.panel(s)||'';
   }
   if(s.type==='tower'){
     const archerSlots=window.ConquerSiege?.archerSlots(s)||[];
     const archers=window.ConquerSiege?.stationedArchers(s)||0;
     const roofSlots=archerSlots.filter(slot=>slot.kind==='roof').length;
-    const slitSlots=archerSlots.length-roofSlots;
+    const bartizanSlots=archerSlots.filter(slot=>slot.kind==='bartizan').length;
+    const slitSlots=archerSlots.length-roofSlots-bartizanSlots;
     html+='<div class="slot"><div class="slot-label">Tower archers · '+archers+' / '+archerSlots.length+'</div>'+
       '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
-      '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+      '<div class="legend">Priority: roof '+roofSlots+(bartizanSlots?' → bartizans '+bartizanSlots+' (also 0-1U at the tower foot)':'')+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
   }
   if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
@@ -142,7 +144,8 @@ function renderFunctionPanel(){
   if(canTier){
     const current=['wall','palisade'].includes(s.type)?wallTier(s):towerTier(s);
     const labels=['wall','palisade'].includes(s.type)?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U']);
-    html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="grid3">${labels.map((label,i)=>`<button data-structure-tier="${i+1}" class="${current===i+1?'active':''}">${label}</button>`).join('')}</div></div>`;
+    const options=isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label}));
+    html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="${options.length===3?'grid3':'grid'}">${options.map(o=>`<button data-structure-tier="${o.value}" class="${current===o.value?'active':''}">${o.label}</button>`).join('')}</div></div>`;
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
   if(s.type==='tower'){
@@ -163,6 +166,14 @@ function renderFunctionPanel(){
       html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       html+=`<div class="slot"><div class="slot-label">Stone base</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti H1</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Svasato: H0.5. Contrafforti: da quota 0 a H1. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
       const weapon=structureVariant(s,'topWeapon'),armed=towerTopWeaponAllowed(s),wb=(k,l)=>`<button data-tower-weapon="${k}" ${armed||k==='none'?'':'disabled'} class="${weapon===k?'active':''}">${l}</button>`;
+      if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
+        const rs=structureVariant(s,'roofShape'),on=roof==='pitched',rb=(k,l)=>`<button data-tower-roof-shape="${k}" ${on?'':'disabled'} class="${rs===k?'active':''}">${l}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Forma delle falde</div><div class="grid3">${rb('pyramid','Piramide')}${rb('gable','2 falde')}${rb('hip','4 falde · colmo')}</div><div class="legend">${on?'Solo estetica, stesso costo. Colmo lungo metà della larghezza; con il colmo, due bandiere.':'Scegli prima il tetto a falde.'}</div></div>`;
+      }
+      if(variantSchema(s)?.bartizan){
+        const bz=structureVariant(s,'bartizan'),ok=towerBartizanAllowed(s),bb=(k,l)=>`<button data-tower-bartizan="${k}" ${ok||k==='none'?'':'disabled'} class="${bz===k?'active':''}">${l}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Garitte</div><div class="grid3">${bb('none','Nessuna')}${bb('battlement','Merlate')}${bb('pitched','Guglia')}</div><div class="legend">${ok?'Quattro garitte d\'angolo su mensole: 3 tiratori ciascuna, colpiscono anche il piede della torre (0-1U).':'Solo torri grandi (T3) quadrate o rotonde.'}</div></div>`;
+      }
       html+=`<div class="slot"><div class="slot-label">Arma in cima</div><div class="grid3">${wb('none','Nessuna')}${wb('mangonel','Mangano')}${wb('ballista','Balista')}</div><div class="legend">${armed?'Upgrade: mangano o balista sulla piazza della torre, rivolti verso l\'esterno (vista 3D).':'Solo torri medie (T2) senza tetto a falde, di qualsiasi altezza.'}</div></div>`;
     }
   }
@@ -172,8 +183,9 @@ function renderFunctionPanel(){
     if(woodGate){
       html+=`<div class="slot"><div class="legend">Wood gate · fixed H1 · 1.5×1U · front timber door · flat fighting deck with timber battlements.</div></div>`;
     }else{
-      const roof=gateRoofStyle(s);
-      html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
+      const roof=gateRoofStyle(s),timber=gateTimberUpper(s);
+      if(isSmallGate(s)&&structureLevel(s)===2)html+=`<div class="slot"><div class="slot-label">Piano alto</div><div class="grid"><button data-gate-upper="stone" class="${timber?'':'active'}">Pietra</button><button data-gate-upper="timber" class="${timber?'active':''}">Graticcio</button></div><div class="legend">Graticcio: legno e intonaco come le case, a sbalzo su fronte e retro, sempre con il tetto. Costa la porta L1 più ${costText(GATE_TIMBER_COST)}.</div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}" ${timber?'disabled':''}>Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
     }
   }
   if(s.type==='gate'&&!building&&window.ConquerSiege?.doorStage){
@@ -235,6 +247,7 @@ function renderFunctionPanel(){
   window.ConquerConvoys?.bindPanel?.(slots);
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
+  window.ConquerKeepEntrance?.bindPanel(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));
@@ -250,6 +263,7 @@ function renderFunctionPanel(){
   on('[data-tower-roof]',(id,el)=>StructureCommands.setTowerRoof(id,el.dataset.towerRoof));
   on('[data-wood-roof]',(id,el)=>StructureCommands.setWoodRoof(id,el.dataset.woodRoof));
   on('[data-gate-roof]',(id,el)=>StructureCommands.setGateRoof(id,el.dataset.gateRoof));
+  on('[data-gate-upper]',(id,el)=>StructureCommands.setGateUpper(id,el.dataset.gateUpper));
   on('[data-built-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.builtSkin));
   on('[data-wall-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.wallSkin));
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));
@@ -261,5 +275,7 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-civic-annex-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.civicAnnexChild)));
   on('[data-plaza-variant]',(id,el)=>StructureCommands.setPlazaVariant(id,el.dataset.plazaVariant));
   on('[data-tower-weapon]',(id,el)=>StructureCommands.setTowerWeapon(id,el.dataset.towerWeapon));
+  on('[data-tower-roof-shape]',(id,el)=>StructureCommands.setTowerRoofShape(id,el.dataset.towerRoofShape));
+  on('[data-tower-bartizan]',(id,el)=>StructureCommands.setTowerBartizan(id,el.dataset.towerBartizan));
 }
 let pan=null;

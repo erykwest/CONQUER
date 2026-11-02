@@ -183,7 +183,7 @@
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
   function tick(before,after){
-    gateNightWatch();bridgeAlarm();
+    gateNightWatch();bridgeAlarm();window.ConquerKeepEntrance?.alarmTick?.();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
@@ -214,6 +214,16 @@
         h:ground+top,visualZ:ground+z});
     }
     if(wood)return result; // Wooden towers have no stone arrow slits.
+    // Bartizans: three shooters in each turret, behind its merlons or its loopholes, facing out
+    // along the diagonal; they also strike the foot of the tower, 0-1 U out (combat bartizanDrops).
+    towerBartizans(tower).forEach((b,i)=>{
+      const tx=-b.ny,ty=b.nx;
+      for(let k=0;k<BARTIZAN_SLOTS;k++){
+        const side=(k-1)*.14,back=k===1?-.08:.06,p={x:b.center.x+b.nx*back+tx*side,y:b.center.y+b.ny*back+ty*side};
+        result.push({id:tower.id+':bartizan:'+i+':'+k,kind:'bartizan',bartizan:i,floor:top,nx:b.nx,ny:b.ny,p,
+          z:b.deckZ+.08,h:ground+top,visualZ:ground+b.deckZ+.08,foot:{x:b.center.x,y:b.center.y,r:b.r,reach:BARTIZAN_REACH}});
+      }
+    });
     // Exactly the faces and heights where towerWindowRows draws an arrow slit: the
     // archer stands on that floor just inside the wall, and shoots from the slit.
     const half=tower.shape==='round'?(Number(tower.r)||.5):(tower.size||1)/2;
@@ -223,7 +233,9 @@
       const floor=row.floor,feet=towerFloorZ(tower,floor);
       for(const dir of towerFaceDirections(tower)){
         if(!towerSlitFace(tower,dir.face,floor))continue;
-        const p={x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
+        // A slit with its own spot (D tower sides): the archer stands just inside it.
+        const back=cutawayWallThickness(tower)+.1;
+        const p=dir.at?{x:dir.at.x-dir.nx*back,y:dir.at.y-dir.ny*back}:{x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
         result.push({id:tower.id+':slit:'+floor+':'+dir.face,kind:'slit',
           floor,face:dir.face,nx:dir.nx,ny:dir.ny,p,z:feet,slitZ:row.z,h:ground+floor,visualZ:ground+row.z});
       }
@@ -372,7 +384,9 @@
     const left=piece(s.a,p0,s.aSnap,null,list.slice(0,i),0),right=piece(p1,s.b,null,s.bSnap,list.slice(i+1),bay.to);
     const pieces=[left,right].filter(Boolean);
     // The bay comes down: its masonry (and merlons) falls into the gap.
-    const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=groundOf(s);
+    // A stepped wall comes down from the ground of the section the bay opens in.
+    const stepped=typeof wallGroundAt==='function'?wallGroundAt(s,(bay.from+bay.to)/2/L):null;
+    const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=Number.isFinite(stepped)?stepped:groundOf(s);
     startCollapse(s,g,g+structureHeight(s)+.18,{cause:'breach',a:p0,b:p1,
       parts:[[{x:p0.x+nx,y:p0.y+ny},{x:p1.x+nx,y:p1.y+ny},{x:p1.x-nx,y:p1.y-ny},{x:p0.x-nx,y:p0.y-ny}]]});
     // What overhangs the bay on the outer face comes down with it: the timber gallery of a
@@ -445,8 +459,13 @@
   // session only, real time), then the heap they settle in, rebuilt from the spec on load.
   const started=new Map(),now=()=>performance.now()/1000;
   const C=()=>window.ConquerCollapse;
+  // Point structures: their foundation; walls (no foundation): their terrace, else the terrain at
+  // the middle (placementGroundZ is null for them, and null used to read as 0: a collapse on a
+  // raised terrace started at the foot of the hill).
   function groundOf(s){
-    if(typeof placementGroundZ==='function')return Number(placementGroundZ(s))||0;
+    const z=typeof placementGroundZ==='function'?placementGroundZ(s):null;
+    if(Number.isFinite(z))return z;
+    if(Number.isFinite(s.groundZ))return Number(s.groundZ);
     const c=s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
     return typeof terrainElevation==='function'?terrainElevation(c):0;
   }
@@ -536,10 +555,19 @@
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();redraw();
   }
+  // A semitower stands as its three walls (the gorge stays open); anything else as its footprint.
+  function masonryPieces(s){
+    return s.shape==='half'&&typeof halfTowerBodyPieces==='function'?halfTowerBodyPieces(s):[footprintPoints(s)];
+  }
   const stumpCache=new Map();
   function stumpMesh(s){
     const key=s.id+':'+s.ruinHeight;let m=stumpCache.get(key);if(m)return m;
-    const pos=[],col=[],g=groundOf(s),H=Number(s.ruinHeight)||.8,base=footprintPoints(s);
+    const pos=[],col=[];
+    masonryPieces(s).forEach((base,i)=>stumpPiece(s,i?key+':'+i:key,base,pos,col));
+    m={pos,col,static:true};stumpCache.set(key,m);return m;
+  }
+  function stumpPiece(s,key,base,pos,col){
+    const g=groundOf(s),H=Number(s.ruinHeight)||.8;
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     // Edges split every ~0.25 U so the broken top can be ragged.
@@ -560,7 +588,6 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col,static:true};stumpCache.set(key,m);return m;
   }
   // ---------- rubble on the ground ----------
   // Where the pieces settled, on a 0.25 U grid: the heap height there. A high core (over
@@ -599,7 +626,11 @@
   function crownMesh(s){
     const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3);
     let m=crownCache.get(key);if(m)return m;
-    const pos=[],col=[],base=footprintPoints(s);
+    const pos=[],col=[];
+    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col));
+    m={pos,col,static:true};crownCache.set(key,m);return m;
+  }
+  function crownPiece(key,base,g,H,pos,col){
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     const ring=[];
@@ -619,7 +650,6 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col,static:true};crownCache.set(key,m);return m;
   }
   function dynamicMeshes(){
     const out=state().ruins.map(ruinMesh).filter(Boolean);
@@ -738,7 +768,7 @@
         withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
           for(const edge of gateFacadeEdges(s)){
             if(edge.role!=='front'&&edge.role!=='rear')continue;
-            if(key==='gatePortal'||!drawArchitectureAssetOnEdge(edge,.705,.90,1.35,key))drawGatePortalOnEdge(edge);
+            drawGatePortalOnEdge(edge,s,key);
           }
         }));
       }
@@ -925,7 +955,8 @@
           ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
         }
       }
-      if(!world3d)drawRubble2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[]),...(window.ConquerEvents3D?.dynamicMeshes?.()||[])]);
+      if(!world3d)drawRubble2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[]),...(window.ConquerEvents3D?.dynamicMeshes?.()||[]),
+        ...(window.ConquerKeepEntrance?.dynamicMeshes?.()||[])]);
     }
     for(const r of state().ruins){
       if(r.spec)continue;

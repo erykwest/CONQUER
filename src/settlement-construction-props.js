@@ -59,9 +59,12 @@
     const area=pts=>{let a=0;for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];a+=p.x*q.y-q.x*p.y}return Math.abs(a/2)};
     let pts=polys.reduce((best,p)=>area(p)>area(best)?p:best,polys[0]).filter(Boolean);
     if(pts.length<3)return null;
+    // A D tower keeps its flat back: only the half round is cut into bays.
+    const dee=s.type==='tower'&&s.shape==='dee'&&fn('deeTowerLocalOutline');
+    if(dee){const {bay}=units();pts=orientedTowerWorld(s,deeTowerLocalOutline(s,0,Math.max(2,Math.round(Math.PI*orientedTowerDims(s).h/2/bay))))}
     const c={x:pts.reduce((a,p)=>a+p.x,0)/pts.length,y:pts.reduce((a,p)=>a+p.y,0)/pts.length};
     let r=0;for(const p of pts)r=Math.max(r,Math.hypot(p.x-c.x,p.y-c.y));
-    if(pts.length>12){
+    if(!dee&&pts.length>12){
       const {bay}=units(),k=Math.max(4,Math.round(2*Math.PI*r/bay)),a0=Number(s.angle)||0;
       pts=Array.from({length:k},(_,i)=>{const a=a0+i/k*Math.PI*2;return{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r}});
     }

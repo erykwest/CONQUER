@@ -47,7 +47,8 @@ export const T = {
     radius: 'Raggio'
   },
   values: {
-    square: 'Quadrata', round: 'Rotonda', watchtower: 'Guardia', woodTower: 'Lignea',
+    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea',
+    small: 'Piccola', medium: 'Media', large: 'Grande',
     wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga',
     stone: 'Pietra', wood: 'Legno',
     dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra',
@@ -77,15 +78,16 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', civicLevel: 'Sviluppo', plaza: 'Variante'
+      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
+      masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio',
-      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
+      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', none: '—', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -94,13 +96,18 @@ export const T = {
     },
     house: 'Livello sociale', houseDown: '− Riduci', houseUp: '+ Amplia',
     mastio: 'Mastio', mastioOn: 'Mastio attivo · rimuovi', mastioOff: 'Designa come mastio',
+    keepEntrance: 'Ingresso', keepGround: 'A terra', keepWood: 'Legno', keepStone: 'Pietra',
+    keepBurnt: 'Scala bruciata · ricostruisci', keepAuto: 'Automatico', keepRebuild: 'Ricostruisci',
+    keepViolated: n => 'Mastio violato: ' + n + ' assalitore/i dentro.',
+    keepLadder: 'Scala a pioli', keepLadderDown: '⬇ Cala', keepLadderUp: '⬆ Ritira',
+    keepDrawbridge: 'Levatoio', keepInstall: 'Installa', keepRaise: '⬆ Alza', keepLower: '⬇ Abbassa', keepRemove: 'Rimuovi',
     wellRole: 'Ruolo', wellCenter: 'Centro villaggio', wellQuarter: 'Quartiere',
     wellRoad: 'Strada', wellBorderRoads: 'Strade maestre', wellLinked: 'Principale', wellUnlinked: 'Da collegare',
     wellCenterRow: 'Centro', wellCenterOn: 'Attivo', wellCenterOff: 'Designa',
     wellCenterHint: name => 'Il centro porta il nome del villaggio' + (name ? ' · ' + name : '') + '.',
     wellName: 'Nome', wellNamePlaceholder: 'Quartiere o borgata', wellUnnamed: 'Quartiere senza nome',
     archers: (n, max) => 'Arcieri ' + n + '/' + max,
-    archerSlots: (roof, slits) => 'Tetto ' + roof + ' · feritoie ' + slits,
+    archerSlots: (roof, slits, bartizan) => 'Tetto ' + roof + (bartizan ? ' · garitte ' + bartizan : '') + ' · feritoie ' + slits,
     roomsTitle: 'Stanze',
     roomsPending: 'Le stanze si assegnano a costruzione finita.',
     roomsNone: 'Nessuna stanza a questa impronta o altezza.',
@@ -170,9 +177,15 @@ export const T = {
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde.',
+    roofShape: 'Solo estetica, stesso costo; con il tetto a falde. 2 falde: timpani in pietra. Colmo: 4 falde su un colmo lungo metà del tetto. Con il colmo, due bandiere.',
+    bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
     civicLevel: 'Tre stadi previsti; per ora senza effetti economici o di servizio.',
     plaza: 'Aspetto della piazza.',
     mastio: 'La prima torre completata diventa mastio da sola; il mastio tiene sempre una sala comune.',
+    keepEntrance: 'Solo sul mastio in muratura di almeno 2 piani. La porta sale al primo piano e il piano terra resta cieco: si entra solo dalla scala. Legno, poi pietra lungo la facciata.',
+    keepAuto: 'La guardia alza il levatoio (o ritira la scala a pioli) quando un nemico arriva a 9U e lo rimette quando se ne va.',
+    keepLadder: 'Scala o levatoio bruciati: gli occupanti calano una scala a pioli dalla porta e la ritirano quando serve. È l\'unico modo di entrare finché non si ricostruisce.',
+    keepDrawbridge: 'Resistenza 60: gli assalitori in cima a una scala d\'assalto lo abbattono a colpi d\'ascia, le torce lo bruciano. Accorcia la scala a un pianerottolo: il battente copre il vuoto davanti alla porta. Alzato, nessuno entra nel mastio dal suolo.',
     wellCenter: 'Il primo pozzo è il centro di default. Un altro pozzo può prenderne il ruolo; ridesignarlo restituisce il ruolo al primo.',
     wellRoad: 'Solo il primo pozzo apre le strade maestre verso i bordi. Gli altri si collegano alla sua rete con una strada principale.',
     wellName: 'Nome del quartiere o della borgata, mostrato sulla mappa.',
