@@ -29,6 +29,8 @@
     tavern:'M3 20V9l9-6 9 6v11M8 20v-7h8v7M5 9h14M15 6l3 2',
     church:'M3 21V11l9-5 9 5v10M9 21v-7h6v7M12 2v7m-3-4h6',
     training:'M3 21V5h18v16M7 7l10 12m0-12L7 19M9 2v3m6-3v3',
+    townhall:'M3 21V12h10v9M13 21V5h6v16M3 21h18M16 2v3M6 15h4M15 9h2',
+    guild:'M5 21V9l7-6 7 6v12M9 21v-5h6v5M12 9a1.5 1.5 0 100 .1',
     level:'M4 20h16M6 16h12M8 12h8M10 8h4M12 4v-2',
     depth:'M3 8l9-5 9 5-9 5zM3 8v8l9 5 9-5V8M12 13v8',
     rotate:'M20 11a8 8 0 10-2 7M20 4v7h-7',
@@ -48,6 +50,8 @@
       ['[data-civic="market"]','Mercato','market'],
       ['[data-civic="tavern"]','Taverna','tavern'],
       ['[data-civic="church"]','Chiesa','church'],
+      ['[data-civic="townhall"]','Municipio · presso un pozzo','townhall'],
+      ['[data-civic="guild"]','Gilda · presso un pozzo','guild'],
       ['[data-civic="training"]','Campo di addestramento','training']]},
     {id:'defense',label:'Fortificazioni',icon:'castle',items:[
       ['[data-tower="square"][data-size="1.5"]','Torre quadrata T2','square'],
