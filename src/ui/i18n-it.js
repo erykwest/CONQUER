@@ -78,16 +78,16 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto'
+      weapon: 'Arma', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
       masonry: 'Pietra', timber: 'Graticcio',
-      standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingPitched: 'Ballatoio a falde',
+      standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingPitched: 'Ball. falde', none: '—', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -166,7 +166,8 @@ export const T = {
     skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: riguarda solo il piano terra interno.' },
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
-    weapon: 'Solo su torri T2 senza tetto a falde.',
+    weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',
+    hoarding: 'Galleria di legno montata in guerra attorno alla cima, sotto la gronda se c\'è il tetto; il tetto resta. Non con le caditoie.',
     civicLevel: 'Tre stadi previsti; per ora senza effetti economici o di servizio.',
     plaza: 'Aspetto della piazza.',
     mastio: 'La prima torre completata diventa mastio da sola; il mastio tiene sempre una sala comune.',

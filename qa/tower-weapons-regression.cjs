@@ -14,6 +14,8 @@ const src=[
   pick(/function towerRoofStyle\(s\)\{[\s\S]*?\n?\}\n/,'towerRoofStyle'),
   pick(/function towerTopWeaponAllowed\(s\)\{[^\n]*\}/,'towerTopWeaponAllowed'),
   pick(/function towerTopWeapon\(s\)\{[^\n]*\}/,'towerTopWeapon'),
+  pick(/function towerHoardingAllowed\(s\)\{[^\n]*\}/,'towerHoardingAllowed'),
+  pick(/function towerHoardingMounted\(s\)\{[^\n]*\}/,'towerHoardingMounted'),
   pick(/function isWoodTower\(s\)\{[^\n]*\}/,'isWoodTower'),
   pick(/const ORIENTED_TOWER_SPECS=[\s\S]*?\nfunction orientedTowerDims\(s\)\{[^\n]*\}/,'oriented tower shapes'),
   pick(/function towerTier\(s\)\{[^\n]*\}/,'towerTier')
@@ -38,6 +40,7 @@ const tower=(o={})=>W.normalizeStructureVariants({type:'tower',shape:'square',ma
   assert.ok(!W.setStructureVariant(t,'topWeapon','trebuchet'),'only mangonel or ballista');
   for(const level of [1,2,3])assert.equal(W.towerTopWeapon(tower({level,topWeapon:'ballista'})),'ballista','any height');
   assert.equal(W.towerTopWeapon(tower({roofStyle:'machicolation',topWeapon:'ballista'})),'ballista','machicolation has an open deck');
+  assert.equal(W.towerTopWeapon(tower({hoarding:'on',topWeapon:'ballista'})),'none','a mounted hoarding closes the deck');
   assert.equal(W.towerTopWeapon(tower({roofStyle:'pitched',topWeapon:'ballista'})),'none','not under a pitched roof');
 assert.equal(W.towerTopWeapon(tower({brokenTop:true,topWeapon:'ballista'})),'none','not on a broken crown');
   assert.equal(W.towerTopWeapon(tower({size:1,topWeapon:'ballista'})),'none','not on small (T1) towers');

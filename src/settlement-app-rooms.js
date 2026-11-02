@@ -147,7 +147,11 @@ function renderFunctionPanel(){
         const parent=State.structures.find(x=>x.id===s.parentTowerId);
         html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent structure'}.</div></div>`;
       }
-      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="hoarding" class="${roof==='hoarding'?'active':''}">Ballatoio</button><button data-tower-roof="hoardingPitched" class="${roof==='hoardingPitched'?'active':''}">Ballatoio a falde</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Ballatoio: galleria di legno coperta tutt'intorno alla cima, con caditoie nel pavimento; può bruciare.</div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
+      if(s.shape!=='half'){
+        const hoardOk=towerHoardingAllowed(s),hoardOn=towerHoardingMounted(s);
+        html+=`<div class="slot"><div class="slot-label">Ballatoio</div><div class="grid3"><button data-tower-hoarding="off" class="${hoardOn?'':'active'}">Smontato</button><button data-tower-hoarding="on" ${hoardOk?'':'disabled'} class="${hoardOn?'active':''}">Montato</button></div><div class="legend">Galleria di legno montata in tempo di guerra attorno alla cima (sotto la gronda se la torre ha le falde), con caditoie nel pavimento; il tetto resta quello della torre. Può bruciare. Non con le caditoie in pietra.</div></div>`;
+      }
       html+=`<div class="slot"><div class="slot-label">Stone base</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti H1</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Svasato: H0.5. Contrafforti: da quota 0 a H1. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
       const weapon=structureVariant(s,'topWeapon'),armed=towerTopWeaponAllowed(s),wb=(k,l)=>`<button data-tower-weapon="${k}" ${armed||k==='none'?'':'disabled'} class="${weapon===k?'active':''}">${l}</button>`;
       html+=`<div class="slot"><div class="slot-label">Arma in cima</div><div class="grid3">${wb('none','Nessuna')}${wb('mangonel','Mangano')}${wb('ballista','Balista')}</div><div class="legend">${armed?'Upgrade: mangano o balista sulla piazza della torre, rivolti verso l\'esterno (vista 3D).':'Solo torri medie (T2) senza tetto a falde, di qualsiasi altezza.'}</div></div>`;
@@ -236,6 +240,7 @@ function renderFunctionPanel(){
   on('[data-gate-rotate]',(id,el)=>StructureCommands.rotate(id,Number(el.dataset.gateRotate)||1));
   on('[data-tower-base]',(id,el)=>StructureCommands.setTowerBase(id,el.dataset.towerBase));
   on('[data-tower-roof]',(id,el)=>StructureCommands.setTowerRoof(id,el.dataset.towerRoof));
+  on('[data-tower-hoarding]',(id,el)=>StructureCommands.setTowerHoarding(id,el.dataset.towerHoarding));
   on('[data-wood-roof]',(id,el)=>StructureCommands.setWoodRoof(id,el.dataset.woodRoof));
   on('[data-gate-roof]',(id,el)=>StructureCommands.setGateRoof(id,el.dataset.gateRoof));
   on('[data-gate-upper]',(id,el)=>StructureCommands.setGateUpper(id,el.dataset.gateUpper));

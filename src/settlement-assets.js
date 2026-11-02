@@ -129,12 +129,22 @@ function findHouseAssetId(level,plan=null,turret=null,doorSide=1,width=1.5){
 }
 function structureAssetFamilyCatalog(){
   const out=[],add=(key,label,base,rotates=true)=>out.push({key,label,base,rotates});
-  for(const shape of ['square','round'])for(let tier=1;tier<=3;tier++)for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched','hoarding','hoardingPitched'])for(const baseStyle of ['standard','buttress','splayed']){
+  for(const shape of ['square','round'])for(let tier=1;tier<=3;tier++)for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched'])for(const baseStyle of ['standard','buttress','splayed']){
     const size=towerSizeForTier(shape,tier);
     add(
       'tower-stone-'+shape+'-t'+tier+'-l'+level+'-'+roofStyle+'-'+baseStyle,
       'Stone '+shape+' tower T'+tier+' L'+level+' '+roofStyle+' '+baseStyle,
       assetPointBase('tower',{shape,material:'stone',level,tier,roofStyle,baseStyle,...(shape==='round'?{r:size}:{size})})
+    );
+  }
+  // The hoarding is mounted on a tower as built: one entry per shape, tier and roof it can go on.
+  for(const shape of ['square','round','dee'])for(let tier=1;tier<=3;tier++)for(const roofStyle of ['battlement','pitched']){
+    if(shape==='dee'&&tier===1)continue;
+    const size=shape==='dee'?[1,1.5,2][tier-1]:towerSizeForTier(shape,tier);
+    add(
+      'tower-stone-'+shape+'-t'+tier+'-l2-'+roofStyle+'-hoarding',
+      'Stone '+shape+' tower T'+tier+' L2 '+roofStyle+' with hoarding',
+      assetPointBase('tower',{shape,material:'stone',level:2,tier,roofStyle,baseStyle:'standard',hoarding:'on',...(shape==='round'?{r:size}:{size})})
     );
   }
   add('tower-wood-watch','Wood watchtower',assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,size:1,tier:1}));

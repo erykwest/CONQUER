@@ -51,12 +51,8 @@ function sunShadowState(){
   };
 }
 function towerRoofRise(s){
-  if(s?.type==='tower'&&towerRoofStyle(s)==='hoarding')return .69;   // hoarding roof ridge (build_hoarding.py)
-  if(s?.type==='tower'&&towerRoofStyle(s)==='hoardingPitched'){
-    // One roof over tower and gallery: eave on the gallery (0.47 U up), apex over the tower.
-    const span=(s.shape==='round'?Number(s.r||.5)*2:Number(s.size||1))+.98;
-    return .47+(s.shape==='round'?clamp(span*.75,1.1,2.2):clamp(span*.6,.9,1.8));
-  }
+  // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(s?.type==='tower'&&towerRoofStyle(s)==='battlement'&&towerHoardingMounted(s))return .69;
   if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
   const span=s.shape==='round'?Number(s.r||.5)*2:Number(s.size||1);
   return s.shape==='round'

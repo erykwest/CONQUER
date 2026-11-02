@@ -401,10 +401,12 @@ function structureScreenSilhouette(s){
       for(const p of towerRoofFootprintPoints(s))cloud.push(w2s(p,h));
       cloud.push(w2s({x:s.x,y:s.y},towerVisualTopHeight(s)));
     }
-    if(towerHasHoarding(s))for(const b of towerHoardingBays(s)){
-      const q={x:b.p0.x+b.n0.x*.5,y:b.p0.y+b.n0.y*.5};
-      cloud.push(w2s(q,h-.6),w2s(q,h+.5),w2s(b.p0,h+.69));
-      if(towerRoofStyle(s)==='hoardingPitched')cloud.push(w2s(towerRoofApex(s),towerVisualTopHeight(s)));
+    if(towerHasHoarding(s)){
+      const z=towerHoardingBaseZ(s);
+      for(const b of towerHoardingBays(s)){
+        const q={x:b.p0.x+b.n0.x*.5,y:b.p0.y+b.n0.y*.5};
+        cloud.push(w2s(q,z-.6),w2s(q,z+.5),w2s(b.p0,z+.69));
+      }
     }
     if(s.type==='gate'&&gateRoofStyle(s)==='pitched'){
       const g=gateRoofGeometry(s);
@@ -462,11 +464,14 @@ function machicolationFloorPolygon(s){
   }
   return null;
 }
-// Tower hoarding (ballatoio): the Blender bay of src/assets/hoarding-models.js repeated along
-// the tower outline. Each bay is swept between two outward normals, mitred at the corners, so
-// square corners close and round towers follow their curve with the same module.
-// 'hoardingPitched': the gallery without its lean-to, under one roof over tower and gallery.
-function towerHasHoarding(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&isHoardingRoofStyle(towerRoofStyle(s))}
+// Tower hoarding (ballatoio): a timber gallery mounted round the top in wartime, the roof stays
+// as built. The Blender bay of src/assets/hoarding-models.js is repeated along the tower outline,
+// each bay swept between two outward normals, mitred at the corners, so square corners close and
+// round towers follow their curve with the same module.
+function towerHasHoarding(s){return !underConstruction(s)&&towerHoardingMounted(s)}
+// On the crenellated top the gallery rides at the tower top, round the merlons; under a pitched
+// roof it hangs on the wall just below the eave, its lean-to tucked under the roof.
+function towerHoardingBaseZ(s){return structureHeight(s)-(towerRoofStyle(s)==='pitched'?.72:0)}
 function towerHoardingBays(s){
   const data=window.ConquerHoardingModels;if(!data)return[];
   const bayLen=data.bayLength,r=Number(s.r)||.5;
@@ -490,9 +495,7 @@ function towerHoardingBays(s){
     const a=pts[i],b=pts[(i+1)%n],count=Math.max(1,Math.round(Math.hypot(b.x-a.x,b.y-a.y)/bayLen));
     for(let k=0;k<count;k++)bays.push({
       p0:{x:a.x+(b.x-a.x)*k/count,y:a.y+(b.y-a.y)*k/count},p1:{x:a.x+(b.x-a.x)*(k+1)/count,y:a.y+(b.y-a.y)*(k+1)/count},
-      n0:k===0?miters[i]:normals[i],n1:k===count-1?miters[(i+1)%n]:normals[i],
-      // a real corner (not a facet of a curve): the pitched variant lays a hip rafter there
-      corner:k===0&&s.shape!=='round'&&normals[(i-1+n)%n].x*normals[i].x+normals[(i-1+n)%n].y*normals[i].y<.8
+      n0:k===0?miters[i]:normals[i],n1:k===count-1?miters[(i+1)%n]:normals[i]
     });
   }
   return bays;
@@ -500,30 +503,18 @@ function towerHoardingBays(s){
 // World triangles of a tower's hoarding: [{pts:[{p,z}x3], hex, key}], z above the tower's ground plane.
 function towerHoardingTriangles(s){
   const data=window.ConquerHoardingModels;if(!data||!towerHasHoarding(s))return[];
-  const h=structureHeight(s),bayLen=data.bayLength,pal=data.palette,keys=data.paletteKeys,out=[];
+  const z0=towerHoardingBaseZ(s),bayLen=data.bayLength,pal=data.palette,keys=data.paletteKeys,out=[];
   const color=ci=>keys[ci].startsWith('roof')&&keys[ci]!=='roofUnder'?winterSnowColor(pal[ci],ci%2?WINTER_SNOW_A:WINTER_SNOW_B):pal[ci];
-  const roofed=towerRoofStyle(s)==='hoardingPitched',apex=roofed?towerRoofApex(s):null,apexZ=roofed?towerVisualTopHeight(s):0;
-  const emit=(part,map)=>{
-    const p=part.p,ix=part.i;
-    for(let t=0;t<part.c.length;t++){
-      const pts=[0,1,2].map(k=>{const j=ix[t*3+k]*3;return map(p[j],p[j+1],p[j+2])});
-      out.push({pts,hex:color(part.c[t]),key:keys[part.c[t]]});
-    }
-  };
   for(const bay of towerHoardingBays(s)){
     const at=(x,y)=>{const t=x/bayLen,nx=bay.n0.x+(bay.n1.x-bay.n0.x)*t,ny=bay.n0.y+(bay.n1.y-bay.n0.y)*t;
       return{x:bay.p0.x+(bay.p1.x-bay.p0.x)*t+nx*y,y:bay.p0.y+(bay.p1.y-bay.p0.y)*t+ny*y}};
-    for(const [name,part] of Object.entries(data.models.bay.parts)){
-      if(roofed&&name==='roof')continue;
-      emit(part,(x,y,z)=>({p:at(x,y),z:h+z}));
+    for(const part of Object.values(data.models.bay.parts)){
+      const p=part.p,ix=part.i;
+      for(let t=0;t<part.c.length;t++){
+        const pts=[0,1,2].map(k=>{const j=ix[t*3+k]*3;return{p:at(p[j],p[j+1]),z:z0+p[j+2]}});
+        out.push({pts,hex:color(part.c[t]),key:keys[part.c[t]]});
+      }
     }
-    if(!roofed)continue;
-    // Spire segment: from this bay's eave up to the apex (x along the eave, y towards the apex).
-    const e0=at(0,data.eave.y),e1=at(bayLen,data.eave.y),ez=h+data.eave.z;
-    const spire=(x,y,z)=>{const e={x:e0.x+(e1.x-e0.x)*x,y:e0.y+(e1.y-e0.y)*x};
-      return{p:{x:e.x+(apex.x-e.x)*y,y:e.y+(apex.y-e.y)*y},z:ez+(apexZ-ez)*y+z}};
-    emit(data.models.spire.parts.spire,spire);
-    if(bay.corner)emit(data.models.spire.parts.hip,spire);
   }
   return out;
 }
@@ -892,13 +883,14 @@ function drawRoundTowerRoof(s){
   rim.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.restore();
 }
 function drawTowerRoof(s){
-  if(towerHasHoarding(s)){withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>drawTowerHoarding(s)));return}
+  // The gallery first: under a pitched roof the eave overhangs its lean-to.
+  if(towerHasHoarding(s))withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>drawTowerHoarding(s)));
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
   withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'||s.shape==='dee'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
 }
 function drawTowerRoofs(){
   const towers=State.structures
-    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&['pitched','hoarding','hoardingPitched'].includes(towerRoofStyle(s)))
+    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&(towerRoofStyle(s)==='pitched'||towerHasHoarding(s)))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of towers)withStructureVisualMaterial(s,()=>drawTowerRoof(s));
 }
@@ -928,7 +920,7 @@ function drawGateRoofs(){
 }
 function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function drawQuarteredTowerFlag(tower){
-  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower'||!['pitched','hoardingPitched'].includes(towerRoofStyle(tower)))return;
+  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower'||towerRoofStyle(tower)!=='pitched')return;
   const scale=clamp(State.view.scale,.55,1.45),base=w2s({x:tower.x,y:tower.y},towerVisualTopHeight(tower));
   const seed=(peasantHash(tower.id+'-flag')%1000)/1000;
   const mastH=clamp(20*scale,13,28),clothW=clamp(15*scale,10,21),clothH=clamp(10*scale,7,14);
@@ -959,7 +951,7 @@ function drawQuarteredTowerFlag(tower){
 }
 function drawTowerFlags(){
   const towers=State.structures
-    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&['pitched','hoardingPitched'].includes(towerRoofStyle(s)))
+    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const tower of towers)withStructureGroundPlane(tower,()=>drawQuarteredTowerFlag(tower));
 }
