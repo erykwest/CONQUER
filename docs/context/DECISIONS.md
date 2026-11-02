@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CRIME-01 — Skeleton autonomo del sistema criminalità (02/11/2026)
+
+- **DECISO per il laboratorio `/crime/`:** separare criminalità, ordine pubblico e tensione sociale. La severità, gogna e patibolo possono aumentare la deterrenza **ma anche il risentimento**; assistenza/ospizio e presidio agiscono su leve diverse. La sommossa è una fase di escalation, non un generico malus; la rivolta non viene risolta da un secondo sistema di combattimento.
+- **CONTRATTO DI SVILUPPO:** solo fixture locali e deterministiche, salvataggio dedicato, nessuna mutazione del `State` canonico o duplicazione di popolazione/risorse. La gestione effettiva riuserà popolazione, economia, stanze e Combat quando sarà integrata.
+- **ANCORA PROPOSTO/DA VERIFICARE:** posizionamento reale di gogna e forca; ospizio come annesso Chiesa L2; corpo di guardia e prigione come stanze W2/W3; tribunale nel Palazzo cittadino **solo dopo verifica degli slot**; soglie numeriche, eventi e durate. La loro presenza nel catalogo di fixture non è implementazione nel Builder.
+- [Specifica del prototipo](../crime.md). La roadmap strategica attuale resta invariata.
+
+
 ## D-MASTIO-01 — Ingresso rialzato del mastio (02/11/2026)
 
 - L'ingresso rialzato è uno stato della torre mastio (`tower.keepEntrance`), non un nuovo tipo di struttura: progressione scala di legno → scala in pietra, levatoio come accessorio indipendente dalla scala. Solo torri in muratura indipendenti di almeno 2 piani; costruito resta della torre anche se il mastio viene spostato.

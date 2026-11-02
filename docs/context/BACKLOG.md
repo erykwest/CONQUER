@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## CRIME — criminalità, ordine pubblico e sommosse (02/11/2026)
+
+- **C-00 — IMPLEMENTATO SU BRANCH `feature/crime-skeleton` (solo sandbox):** `/crime/`, motore deterministico disaccoppiato, metriche criminalità / ordine / tensione, progressione e recupero in cinque fasi, politiche sociali e repressive, flag stanza/annesso per guardia, prigione e ospizio, fixture gogna/forca/tribunale, cronaca, storico e salvataggio isolato, test `qa/crime-regression.cjs`.
+- **C-01 — APERTO:** sorgente unica per popolazione, felicità, tassazione, razioni e assistenza, senza ledger CRIME alternativo (`ConquerGame` + `ConquerEconomy`).
+- **C-02 — APERTO:** assegnazioni vere di guardia e prigione alle torri W2/W3, ospizio alla Chiesa L2, compatibilità degli slot, capacità e personale; verificare il Palazzo cittadino prima di attribuirgli un tribunale.
+- **C-03 — APERTO:** gogna e forca/patibolo come scatter/strutture civiche collocabili, con audit del Lab e QA visiva obbligatori nel loro futuro intervento.
+- **C-04 — APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
+- **C-05 — APERTO:** bilanciamento, logiche punitive individuali, effetti del giudizio/giustizia, persistenza unica, serie storiche e indicatori nel Centro di controllo, regressioni browser/end-to-end.
+- **DIPENDENZE:** M0 economia e popolazione vere → contratti funzioni civiche e guardie → routine e ordine pubblico → esiti militari. Sandbox C-00 non anticipa lo stato implementativo di C-01–C-05. [Design, confini e QA](../crime.md).
+
+
 ## Militare — accampamenti (branch `feature/tent-livery`, 30/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** livree a schema dei padiglioni; kit Blender del campo (canadese, tenda di compagnia, tettoia, botti, sacchi, linea dei cavalli, palizzata e porta); bivacco notturno organizzato in `/camp`; accampamento militare come struttura del Builder, dimensionato dall'esercito e fortificabile (steccato → palizzata con porta); tutto nel Lab.

@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-02 — CRIME: skeleton criminalità / ordine pubblico (branch `feature/crime-skeleton`)
+
+- Aggiunta route isolata `/crime/`: simulator deterministico a tre indicatori, cinque fasi (malcontento→rivolta), controlli sociali e repressivi, guardie/prigione/ospizio/gogna/patibolo/tribunale come fixture, arresti dimostrativi, grafico storico, cronaca e localStorage separato. Aggiunti `docs/crime.md` e `qa/crime-regression.cjs`.
+- Stato: **solo branch**, motore e regressioni isolati verificati in harness JS; Node CLI, CI e browser non ancora verificati al momento del commit. Nessun modello 3D, nuovo tipo di edificio in Builder, NPC reale o integrazione Combat. La roadmap M0–M5 non cambia; decisione del perimetro sandbox in D-CRIME-01.
+
+
 ## 2026-10-30 — Accampamenti: livree, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`)
 
 - Padiglioni con livree a schema e contrasto tra vicini; nuovo kit Blender del campo; bivacco notturno organizzato; accampamento militare a quartieri come struttura del Builder, fortificabile a livelli; modelli e composizioni nel Lab. Stato e prove in [STATUS](STATUS.md). AGENTS.md: verifica visiva nel Lab e obbligo di inserire ogni nuovo modello nel Lab. ROADMAP e DECISIONS invariate: l'accampamento riusa il contratto `eventVenue` (nuova venue `armyCamp`), nessuna decisione architetturale nuova.
