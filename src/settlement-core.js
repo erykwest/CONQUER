@@ -289,7 +289,9 @@ const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
     roofStyle:Object.freeze(['battlement','machicolation','pitched']),
     baseStyle:Object.freeze(['standard','buttress','splayed']),
-    topWeapon:Object.freeze(['none','mangonel','ballista'])
+    topWeapon:Object.freeze(['none','mangonel','ballista']),
+    bartizan:Object.freeze(['none','battlement','pitched']),
+    roofShape:Object.freeze(['pyramid','gable','hip'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -303,7 +305,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -383,6 +385,10 @@ function towerRoofStyle(s){
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
 function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))}
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
+// Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
+// with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';
