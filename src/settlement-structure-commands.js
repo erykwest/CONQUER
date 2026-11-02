@@ -24,7 +24,7 @@ const StructureCommands=(()=>{
     if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){
       const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall';
     }
-    target.level=level;normalizeFunctions(target);target.buildCost=constructionCost(target);
+    target.level=clamp(level,1,maxStructureLevel(target));normalizeFunctions(target);target.buildCost=constructionCost(target);
     refresh(target,false);return true;
   }
   // steps: ±1 = 15°, 'flip' = 180°.
@@ -61,6 +61,12 @@ const StructureCommands=(()=>{
     const target=find(id);if(!target||target.type!=='gate')return false;
     if(!setStructureVariant(target,'roofStyle',style))return false;
     refresh(target);status('Gate roof: '+(target.roofStyle==='pitched'?'pitched':'battlement'));return true;
+  }
+  function setGateUpper(id,upper){
+    const target=find(id);if(!isSmallGate(target)||structureLevel(target)!==2)return false;
+    if(!setStructureVariant(target,'upper',upper))return false;
+    target.buildCost=constructionCost(target);
+    refresh(target);status('Gate upper storey: '+(target.upper==='timber'?'timber frame':'masonry'));return true;
   }
   function setSkin(id,skin){
     const target=find(id);if(!target||!['wall','built'].includes(target.type))return false;
@@ -185,7 +191,7 @@ const StructureCommands=(()=>{
       d.controls.push(choice('tier','setTier',isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label})),current));
     }
     if(['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate){
-      const max=['tower','gate'].includes(s.type)?3:2;
+      const max=maxStructureLevel(s);
       d.controls.push(choice('height','setHeight',Array.from({length:max},(_,i)=>({value:i+1,label:String(i+1)})),structureLevel(s)));
     }
     if(s.type==='tower'||s.type==='gate')
@@ -200,7 +206,12 @@ const StructureCommands=(()=>{
         if(s.parentTowerId)d.facts.push({key:'subtower',value:structureLabel(State.structures.find(x=>x.id===s.parentTowerId)||s)});
       }
     }
-    if(s.type==='gate'&&!woodGate)d.controls.push(choice('roof','setGateRoof',[{value:'battlement',word:'battlement'},{value:'pitched',word:'pitched'}],gateRoofStyle(s)));
+    if(s.type==='gate'&&!woodGate){
+      // Small L2 gate: masonry or timber-framed upper storey (the frame always carries the roof).
+      const timber=gateTimberUpper(s);
+      if(isSmallGate(s)&&structureLevel(s)===2)d.controls.push(choice('upper','setGateUpper',[{value:'stone',word:'masonry'},{value:'timber',word:'timber'}],timber?'timber':'stone'));
+      d.controls.push(choice('roof','setGateRoof',[{value:'battlement',word:'battlement',disabled:timber},{value:'pitched',word:'pitched'}],gateRoofStyle(s)));
+    }
     if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
       d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
     if(typeof isPlazaLike==='function'&&isPlazaLike(s))
@@ -235,7 +246,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setWoodRoof,setGateRoof,setSkin,toggleCutaway,flipSide,
+  return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
     setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();
