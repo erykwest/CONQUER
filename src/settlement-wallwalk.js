@@ -28,12 +28,15 @@
     if(h.type==='gate'){const a=Number(h.angle)||0;return{x:-Math.cos(a),y:-Math.sin(a)}}
     return typeof structureInteriorVector==='function'?structureInteriorVector(h):{x:1,y:0};
   }
+  // The Mastio has no doors onto the wall walk: no way in from the walls, no passage through
+  // it from one wall to the next, no stair down from them (settlement-architecture.js draws none).
+  const barred=h=>h.type==='tower'&&!!h.isMastio;
   let cache={sig:null};
   function signature(){
     let sig='';
     for(const s of State.structures){
       if(s.type==='wall'||s.type==='palisade')sig+=s.id+(walkable(s)?'w':'x')+s.a?.x+','+s.a?.y+','+s.b?.x+','+s.b?.y+(s.level||1)+(s.tier||'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)+';';
-      else if(s.type==='tower'||s.type==='gate')sig+=s.id+(underConstruction(s)?'u':'c')+s.x+','+s.y+(s.angle||0)+';';
+      else if(s.type==='tower'||s.type==='gate')sig+=s.id+(underConstruction(s)?'u':'c')+s.x+','+s.y+(s.angle||0)+(barred(s)?'b':'')+';';
     }
     return sig;
   }
@@ -59,7 +62,7 @@
       // Ends seated on a tower/gate join through it; the tower/gate is a stair.
       for(const [end,n] of [['aSnap',A],['bSnap',B]]){
         const h=s[end]&&State.structures.find(x=>x.id===s[end]&&['tower','gate'].includes(x.type)&&!underConstruction(x));
-        if(!h)continue;
+        if(!h||barred(h))continue;
         const hub=node({x:h.x,y:h.y},z,'hub:'+h.id);hub.z=Math.max(hub.z,z);
         link(n,hub,Math.hypot(h.x-n.x,h.y-n.y));
         if(!hubs.has(h.id)){
@@ -82,10 +85,16 @@
     return cache;
   }
   const edgeOf=id=>graph().edges.find(e=>e.wall.id===id)||null;
+  // Walk height at t, above the terrain under p (how it is drawn): on a stepped wall the walk is on
+  // its section's top, or partway up the flight of stairs at a step.
+  function zAt(e,t,p){
+    const g=e.wall.type==='wall'&&typeof wallWalkGroundAt==='function'?wallWalkGroundAt(e.wall,t):null;
+    return Number.isFinite(g)?e.z+g-terrainElevation(p):e.z;
+  }
   function at(loc){
     const e=typeof loc.edge==='object'?loc.edge:edgeOf(loc.wallId);if(!e)return null;
-    const t=Math.max(0,Math.min(1,loc.t));
-    return{x:e.a.x+(e.b.x-e.a.x)*t,y:e.a.y+(e.b.y-e.a.y)*t,z:e.z,wallId:e.wall.id,t};
+    const t=Math.max(0,Math.min(1,loc.t)),p={x:e.a.x+(e.b.x-e.a.x)*t,y:e.a.y+(e.b.y-e.a.y)*t};
+    return{...p,z:zAt(e,t,p),wallId:e.wall.id,t};
   }
   // Nearest walkway point to a world point (within maxDist of the lane).
   function locate(p,maxDist=Infinity){
@@ -94,7 +103,7 @@
       const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,L2=dx*dx+dy*dy||1;
       const t=Math.max(0,Math.min(1,((p.x-e.a.x)*dx+(p.y-e.a.y)*dy)/L2));
       const q={x:e.a.x+dx*t,y:e.a.y+dy*t},d=Math.hypot(p.x-q.x,p.y-q.y);
-      if(d<=maxDist&&(!best||d<best.d))best={edge:e,wallId:e.wall.id,t,x:q.x,y:q.y,z:e.z,d};
+      if(d<=maxDist&&(!best||d<best.d))best={edge:e,wallId:e.wall.id,t,x:q.x,y:q.y,z:zAt(e,t,q),d};
     }
     return best;
   }

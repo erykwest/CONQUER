@@ -13,7 +13,8 @@ const STRUCTURE_ASSET_CENTER=Object.freeze({x:100,y:100});
 const STRUCTURE_ASSET_TEST_LENGTHS=Object.freeze({
   wall:Object.freeze([1,4,8]),
   palisade:Object.freeze([1,4,8]),
-  built:Object.freeze([1,2.5,4])
+  built:Object.freeze([1,2.5,4]),
+  builtWide:Object.freeze([2,4,6])
 });
 const STRUCTURE_SHADOW_TEST_STEPS=8;
 const structureAssetBitmapCache=new Map();
@@ -154,6 +155,10 @@ function structureAssetFamilyCatalog(){
   for(let level=1;level<=2;level++)for(const skin of ['standard','arcade'])for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add(
     'built-l'+level+'-'+skin+'-'+length,'Built section L'+level+' '+skin+' '+length+'U',
     assetLinearBase('built',length,{level,skin,width:1,functions:[]})
+  );
+  for(let level=1;level<=2;level++)for(const skin of ['standard','arcade'])for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add(
+    'built-wide-l'+level+'-'+skin+'-'+length,'Wide hall L'+level+' '+skin+' '+length+'U',
+    assetLinearBase('built',length,{span:'wide',level,skin,width:TYPES.builtWide.width,functions:[]})
   );
   for(const type of CIVIC_TYPES){
     if(CIVIC_LEVEL_TYPES.includes(type))for(let level=1;level<=3;level++){

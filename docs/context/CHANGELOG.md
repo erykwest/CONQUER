@@ -1,5 +1,313 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-02 — Consolidamento dello scheletro di economia urbana autonoma
+
+- Trasferiti in `main` i quattro moduli standalone di `feature/autonomous-urban-economy`, senza modificare il runtime. Registrate limitazioni e dipendenze in STATUS e BACKLOG. ROADMAP e DECISIONS invariate: non è una nuova funzionalità giocabile.
+
+## 2026-10-30 — Accampamenti: livree, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`)
+
+- Padiglioni con livree a schema e contrasto tra vicini; nuovo kit Blender del campo; bivacco notturno organizzato; accampamento militare a quartieri come struttura del Builder, fortificabile a livelli; modelli e composizioni nel Lab. Stato e prove in [STATUS](STATUS.md). AGENTS.md: verifica visiva nel Lab e obbligo di inserire ogni nuovo modello nel Lab. ROADMAP e DECISIONS invariate: l'accampamento riusa il contratto `eventVenue` (nuova venue `armyCamp`), nessuna decisione architetturale nuova.
+
+## 2026-11-02 — Ingresso rialzato del mastio (branch `feature/mastio-entrance`)
+
+- Il mastio può avere la porta al primo piano con una scala esterna: legno, poi pietra lungo la facciata, e un levatoio dedicato su entrambe che, alzato, chiude il mastio a chi sta a terra. Piano terra cieco, finestra e drappo lasciano il posto alla porta sul suo piano, civili e strade di servizio passano dal piede della scala. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: nuova D-MASTIO-01.
+- Seconda tappa: il levatoio si alza da solo quando i nemici si avvicinano alla scala e sbarra le porte del mastio sul cammino di ronda; la scala è un ostacolo per chi cammina; scala di legno e battente bruciano (la scala bruciata si ricostruisce); i civili richiamati salgono la rampa a vista prima di entrare. L'ariete non arriva al battente (scelta in D-MASTIO-01).
+- Quarta tappa: gli assalitori prendono il mastio con una scala d'assalto alla porta; il battente alzato ha resistenza 60 e cade a colpi d'ascia (o bruciato); chi entra lascia il campo e il mastio risulta violato.
+- Terza tappa: il mastio non ha porte sul cammino di ronda; il battente bruciato lascia il vuoto; con scala o battente bruciati gli occupanti calano (e ritirano) una scala a pioli dalla porta.
+
+## 2026-11-02 — Garitte e forme delle falde (branch `feature/bartizans`)
+
+- Torri grandi (T3) quadrate e rotonde in pietra: quattro garitte d'angolo su mensole, merlate o con guglia e bandiera; 3 tiratori per garitta che colpiscono anche il piede della torre fino a 1U. Torri quadrate col tetto a falde: piramide, 2 falde con timpani o 4 falde con colmo lungo metà del tetto (solo estetica, stesso costo; con il colmo due bandiere). Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: due nuove varianti del tipo `tower`, nessun tipo nuovo.
+
+## 2026-11-02 — Muri sui pendii (branch `feature/walls-on-slopes`)
+
+- I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e il muro stesso diventa una scala (una pedata ogni 0,12U) col parapetto merlato che corre accanto, come sulle mura di Sintra. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
+
+## 2026-10-30 — Porta piccola (branch `feature/small-gate`)
+
+- Seconda taglia della porta in pietra: 1×1U, L1–L2, altezze 2,4 / 3,6, costo ×0,6. Portale, ante, grata, torce, stendardi, merli e tetto in scala con la fronte; il corpo di porta 1,5U resta invariato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuovo valore di `size` del tipo `gate`, nessun tipo nuovo.
+- 02/11: piano alto a graticcio per la porta piccola L2 (legno e intonaco come le case, a sbalzo, costo L1 + 8 oro e 18 legno), falde della porta piccola girate (timpani sui fianchi), cutaway di tutte le porte con le due facce verso la camera aperte.
+
+## 2026-10-30 — Semitorri e torri a D (branch `feature/half-d-towers`)
+
+- Due nuove forme di torre in pietra, orientate verso l'esterno: semitorre aperta alla gola (piccola/media) e torre a D (media/grande). Si agganciano alla fine di un muro con il retro sul muro e, sui fianchi di una porta, formano la porta a due torri tonde con il retro allineato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuove varianti di `shape` del tipo `tower`, nessun tipo nuovo.
+- Semitorre: scala a pioli a ogni piano, attraverso una botola nel solaio, visibile dalla gola aperta.
+- Cantiere e crolli: il ponteggio della D segue la sua pianta; monconi e corone spezzate della semitorre restano aperti dietro.
+- Cutaway della torre a D con solai, arredi e scale dentro la pianta a D. Costi per forma: tonda ×1,5, D ×1,25, semitorre ×0,5 rispetto alla quadrata.
+- Feritoie laterali della D spostate in avanti, sul mezzo tondo: accanto a una porta restano libere.
+- Porte in pietra: una fila di finestre per stanza (L1 nessuna, L2 una, L3 due), non più una per livello a partire dal passaggio.
+- Porte: finestra sempre sul retro, due feritoie affiancate sul fronte, aperture visibili anche nel cutaway. Finestre notturne di torri e porte: il vetro illuminato segue la sagoma della finestra invece di un rettangolo.
+- Cutaway: finestre e feritoie viste da dentro con lo sprite vero invece di quadrati colorati; i solai delle porte si allineano a quelli delle torri che le fiancheggiano.
+
+## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
+
+- Creata pagina /march/ con demo isolata: click sulla mappa per ordine di marcia, giornate e viveri, quattro feudi statici, razzie parziali e persistenti, inizio assedio, ritirata volontaria, test esito positivo e conquista opzionale. Codice separato tra engine e UI; salvataggio solo dello scenario demo.
+- Nuova regressione qa/march-regression.cjs; verifiche rapide di sintassi e percorso deterministico passate in runtime JS isolato; Node, browser e CI ancora da verificare.
+- Documentati in docs/march.md limiti e contratto di integrazione: i feudi della demo **non** sono World/Feudal, il tasto d'assalto è un test e non simula Combat/Siege.
+- Aggiornata la piramide di contesto nello stesso branch. Nessuna modifica al Builder, al ledger principale o alla produzione su main.
+
+## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
+
+- Riletto live `main`, tree, 53 branch, PR recenti e CI. Nuova fotografia: [AUDIT-2026-10-30](AUDIT-2026-10-30.md). **Tre PR ancora aperte: #109/#110/#111; #103 Centro di controllo mergiata 30/10**. Nessun test Node/Chromium eseguito nella presente revisione, solo esiti CI/QA già tracciati.
+- Corrette due false attività Builder: **P0-04 L1 cantieri e routine** ora core con #98/#99; **P1-11 mercato/ledger e Beni L3** core con #101. Totale **15 core / 8 parziali**, su 23 ID. `workshop` della Built Section ed operatori civici/bonus restano oggetti distinti dalle botteghe e servizi già presenti.
+- Registrati come **MERGED** #61 danni, #65 cutaway, #77 cantieri visivi, #78 eventi, #82 Asset Lab audit, #86–108 (UI, 3D, audio, affidabilità, economia in 5 tappe, pannelli, geometrie). Rettificati riferimenti «solo branch» dei rispettivi snapshot datati.
+- Riconfermato `mine.good='stone'`, `No automatic surrender in P0`, assenza di `tree depletion`, e `SERVICE_KINDS.income='not-simulated'`. Stock economico e siege separati, correttamente non sommati nel Centro di controllo.
+- Aggiornati **feature-backlog**, **STATUS**, **BACKLOG**, **ROADMAP**, **README** e changelog; **DECISIONS invariato** perché non introduce nuovi contratti o scelte di design. Nessuna modifica runtime né merge delle tre PR funzionali aperte.
+
+## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
+
+- `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.
+- Correzioni: la sezione scelta resta attiva alla riapertura; il selettore produzione elenca solo i siti del signore (niente linea a 0 per i privati); le barre delle riserve scalano sul massimo tra scorta e target.
+- Aggiornamento live tramite `ConquerGame.subscribe` (throttle 500 ms) più heartbeat di 4 s al posto del ridisegno ogni 1,8 s; scroll orizzontale delle tabelle conservato.
+- Restyling `settlement-panels.css`: navigazione su una riga scorrevole con badge avvisi, intestazione di sezione, KPI con accento di stato (ok/attenzione/critico), card larghe per grafici e tabelle, intestazioni tabella fisse. Cache `?v=panels-3`.
+- QA: `qa/panels-regression.cjs` (+ sezione persistente e selettore solo signore) e `qa/economy-panel-history-regression.cjs` PASS in locale; verifica visiva nel browser con dati dimostrativi, nessun errore in console. CI non ancora eseguita su questo commit.
+## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+
+- Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
+- Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
+- Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
+- QA 29/10: PASS 8/8 check GitHub Actions su `38ea7ab`, inclusi regressione store 26 settimane e screenshot Chromium 9 immagini da fixture dichiarata demo. [Run](https://github.com/erykwest/CONQUER/actions/runs/40800506799). Non ancora su main.
+
+## 2026-10-29 — Centro di controllo degli insediamenti (branch `panels`)
+
+- Creati nove pannelli sotto Profilo (generale, popolazione, economia, proprietà, scorte, militare, cantieri, diplomazia, avvisi), CSS responsive, grafici alimentari da storico settimanale e controlli già supportati dal motore.
+- Separati esplicitamente magazzino economico e scorte assedio; organico presente e capacità edifici; valori effettivi e placeholder futuri. Aggiunto test fixture `qa/panels-regression.cjs` e design [management-panels](../management-panels.md).
+- Stato: codice sulla branch, non su main. Parsing JS, regressioni Node/CI e acquisizione Chromium PASS; revisione visiva dell'utente ancora attesa. ROADMAP invariata: pannelli di osservazione, non nuove regole economiche.
+## 2026-10-29 — Cutaway delle torri piccole con scala a chiocciola (branch `feature/cutaway-spiral-stairs`)
+
+- Le torri T1 in pietra, comprese le sottotorri, si aprono in sezione e mostrano una scala a chiocciola in pietra dalla porta alla cima: tonda nelle torri tonde, quadrata nelle torri quadrate. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
+
+## 2026-10-28 — Sala larga (branch `feature/wide-built-hall`)
+
+- Nuova variante della sezione costruita: larga 2U, H2 di default, solo piano terra a doppia altezza, per sale comuni, cappelle e sale del trono. Finestrone a lancetta modellato in Blender, 5 contrafforti a due stadi tra le lancette, 2 camini, cutaway a piano unico (arredi della libreria cutaway di main). Stato e prove in [STATUS](STATUS.md).
+- Fix: i contrafforti delle torri in pietra usano lo stesso profilo a gradoni e non attraversano più le facciate dal retro.
+- ROADMAP invariata. DECISIONS invariate: la variante segue il contratto esistente «varianti, non tipi duplicati» (`span` sul tipo `built`).
+
+## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (branch `feature/economy-vehicles`)
+
+- I convogli percorrono davvero la rete stradale dal mastio (o dal mercato) al confine con carri, carretti e carrozze disegnati in 2D e cavalli 2D. Scartato il 3D del branch d'origine. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-055 in DECISIONS.
+
+## 2026-10-29 — Parapetto delle merlature (branch `feature/battlement-parapet`)
+
+- Torri, porte e mura in pietra hanno un parapetto continuo tra i merli invece di soli blocchi isolati; le torri tonde hanno più merli (8/12/18). Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate: dettaglio visivo, nessun contratto toccato.
+
+## 2026-10-29 — Economia, tappa 4: un solo sistema di convogli (branch `feature/economy-convoys`)
+
+- Carovane della diplomazia, convogli del mastio, manifesti mercantili e carrozze nobiliari sono un solo sistema (`ConquerConvoys`) che preleva davvero dal castello; corretto il tributo gratuito introdotto con #98. Quattro cartelli di prova sulle arterie e convogli visibili sulla strada maestra. Stato e prove in [STATUS](STATUS.md). D-054 in DECISIONS; ROADMAP invariata.
+
+## 2026-10-29 — Economia, tappa 3: commercio e botteghe L3 autonome (branch `feature/economy-commerce`)
+
+- Il commercio di #55 e l'economia urbana autonoma sono un solo sistema collegato al calendario: le case L3 aprono botteghe da sole, producono Beni L3 venduti il sabato con i prezzi della settimana prima. Stato e prove in [STATUS](STATUS.md). D-053 in DECISIONS; ROADMAP invariata.
+
+## 2026-10-28 — Fortificazioni in legno in 3D (branch)
+
+- Su `feature/wood-fortifications-3d`: vedetta, torri a palizzata, porta in legno e palo di palizzata modellati in Blender (`tools/blender/build_wood_fort.py`) e posati dal nuovo `settlement-wood3d.js`; le palizzate seguono il layout del gioco con camminamento e terrapieno. Il world3d non ridisegna più il legno in 2.5D a ogni frame. Stato e prove in [STATUS](STATUS.md#fortificazioni-in-legno-in-3d-branch-featurewood-fortifications-3d-28102026).
+- Cantieri del legno montati pezzo per pezzo (torri, porte, palizzate) invece del fantasma traslucido.
+- Bandiere araldiche su torre coperta e vedetta, due drappi ai lati della porta in legno.
+- Cutaway della torre a palizzata in legno sul cutaway WebGL di #65: lati verso la camera aperti, pavimento, scala e arredi della funzione. Il fallback WebGL con soldati di ronda, riprodotto qui, è risolto in main da #91 (VAO per programma): il fix locale è stato tolto al merge.
+- Asset Lab: legno e palizzate ora con «Modello 3D»; baseline estesa con i 12 render nuovi. ROADMAP e DECISIONS invariate: promozione visiva sullo schema già deciso per i modelli Blender (civili, industrie, assedio), nessun nuovo contratto.
+
+## 2026-10-28 — Cutaway civico: verifica nel Lab e fix delle locande (branch `fix/civic-cutaway-lab`)
+
+- Foglio provini del cutaway di chiesa e locanda (L1–L3, 4 rotazioni) sul palco del Lab: nelle locande la faccia inferiore del primo piano copriva il pianterreno; tolta, con nuovo controllo in `civic3d-regression`. Audit del Lab su `main` senza errori. Stato in [STATUS](STATUS.md#cutaway-civico-e-contorno-di-selezione-su-main-con-90-54a7508-fix-fixcivic-cutaway-lab-28102026).
+- ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto toccato.
+
+## 2026-10-28 — Economia, tappa 2: routine settimanali (branch `feature/economy-routines`)
+
+- Uomini e donne L1–L4 hanno la settimana di `jobmanager`: svago maschile dalle 18, mercato il sabato e messa la domenica, lavoro femminile nei lotti. Solo visuale. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-052 in DECISIONS.
+
+## 2026-10-28 — Economia, tappa 1: lavoro L1 e cantieri (branch `feature/economy-labour`)
+
+- Portata su `main` la parte economica di #55 (bilancio settimanale, fondazione con 4 L1, Builder che paga dal castello, cantieri a giornate-operaio pagati dal signore) unita a `jobmanager` (pastori protetti, taglio legna, razioni, felicità per ceto) in un solo allocatore L1. Stato e prove in [STATUS](STATUS.md). Nuove decisioni D-047…D-051 in [DECISIONS](DECISIONS.md#economia--lavoro-l1-unico-28102026); ROADMAP invariata.
+
+## 2026-10-28 — Rendering: niente più picchi dal terreno 3D e dalla nebbia (branch `perf/render-spikes-v2`)
+
+- Una modifica a strade, campi, case o lotti ricuoce solo le tessere da 512 px toccate, una per frame, invece delle due texture 4096² del terreno. Terraforming, stagione, rilievo e foreste rifanno ancora tutto. La nebbia di combattimento rifà il raycast ogni 12 s solo se il contenuto è cambiato. La telemetria remota dice quale renderer è attivo (evento `RENDERER`). Misure e confronti in [STATUS](STATUS.md#rendering--picchi-del-terreno-3d-e-della-nebbia-branch-perfrender-spikes-v2-28102026): P95 del frame dopo una modifica dimezzato (115 → 56 ms).
+- Corretto un bug: strade e campi del terreno 3D ricevevano l'indice dell'array come `preview`; l'aspetto resta quello di prima.
+- ROADMAP e DECISIONS invariate: ottimizzazione di rendering, nessun contratto toccato. Sostituisce il branch `fix/render-spikes`.
+
+## 2026-10-28 — Giunzioni delle sottotorri (branch `fix/cutaway-junctions`)
+
+- Dopo il merge di #65, portate su `main` le tre correzioni rimaste solo sulla vecchia branch `feature/cutaway-furniture`: porta sul tetto della sottotorre più bassa, niente merli sepolti nella struttura attaccata più alta, niente drappo sul mastio in cutaway. Stato e prove in [STATUS](STATUS.md).
+- ROADMAP e DECISIONS invariate.
+
+## 2026-10-28 — Occlusione 2.5D: sagome sovrapposte (branch `fix/occlusion-clip-union`)
+
+- Ripresa da #18 (visual-qa) ed estesa a tutte le 6 funzioni di occlusione: un clip per sagoma invece di un unico percorso even-odd. Stato e prove in [STATUS](STATUS.md#occlusione-25d--sagome-sovrapposte-branch-fixocclusion-clip-union-28102026-da-18). Il runner a scene intere di #18 resta nel BACKLOG; #18 viene chiusa. Riconciliazione branch del 28/10: chiusi senza porting `assedio`, `combat`, `feature/landscape-forests`, `fix/forest-water-road-routing-20261014`, `docs/context-sync-pr-governance-20261021` (superati da `main`; commit conservati nei tag `archive/*`).
+- ROADMAP e DECISIONS invariate.
+
+## 2026-10-28 — Salvataggi sicuri (branch `fix/save-safety`)
+
+- Ripresa da #16 (audit-hardening) solo la parte salvataggi: autosave che non si interrompe con lo storage pieno e minimo 10000 risorse al caricamento limitato a DEV. Telemetria esclusa per scelta. Stato e prove in [STATUS](STATUS.md#salvataggi-sicuri-branch-fixsave-safety-28102026-porting-parziale-di-16). La PR #16 viene chiusa.
+- ROADMAP e DECISIONS invariate.
+
+## 2026-10-28 — Capitano, cavalieri e diplomazia portati su `main`, solo 2D (sostituisce PR #72)
+
+- Il gameplay della PR #72 (`feature/knights-messenger-caravans`, che contiene `knights`) è portato in modo selettivo su un branch nuovo da `main`: capitano distinto dai cavalieri, cavalieri a cavallo limitati da stanze nobili e scuderie, messaggero periodico con richiesta di tributo e pianificatore di carovane, `State.diplomacy` salvato. Comandi nella UI v2 (Difendi › Pattuglie, Gestisci › Scorte del castello). Stato e prove in [STATUS](STATUS.md).
+- Scartate le figure 3D della PR #72 (modelli Blender di cavalieri, `ConquerKnights3D`, stile «flat» delle mesh): cavalieri e messaggero usano il cavallo 2D approvato. Nuova decisione [D-046](DECISIONS.md#cavalieri-e-diplomazia-pr-72-portata-su-main-in-2d-28102026). ROADMAP invariata.
+
+## 2026-10-28 — Cutaway arredato riallineato a `main` (PR #65)
+
+- Merge di `main` `1194f5e`: il cutaway arredato del castello e il cutaway civico (#90) disegnano insieme in WebGL2; strade alle porte secondo la logica di main (`gateRoadPort`), test del branch adeguato. Baseline dell'audit del Lab con i 4 nuovi cutaway delle porte in pietra. Stato e prove in [STATUS](STATUS.md).
+- ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
+## 2026-10-21 — Cutaway arredato e WebGL2, branch di convergenza
+
+- Integrati catalogo mobili generato da Blender, disposizione funzionale delle stanze e arredi non sovrapposti, mantenendo le postazioni degli arcieri e il corridoio delle porte.
+- Aggiunti interni depth-tested nel renderer WebGL2 con mesh separate per ambienti, guscio e superfici luminose, cache su rotazione, pass notturno e fallback Canvas.
+- Contenuti della vecchia branch `feature/cutaway-furniture` portati su `feature/cutaway-furniture-converge` aggiornata con le novità Terraforming di `main`. PR #65, GitHub Actions suite integrale [#39508539592](https://github.com/erykwest/CONQUER/actions/runs/39508539592) **PASS**, CAMP e Builder PASS. Validazione visuale browser ancora aperta.
+
+## 2026-10-28 — Audio e colonna sonora stagionale (branch `sound`)
+
+- Branch del 17–19/10 riallineato a `main` `5ddefa6` (350 commit): mixer Web Audio a 4 livelli, ambiente da stagione e meteo, suoni degli edifici vicini, 9 brani stagionali; controlli nel pannello DEV, audio spento di default. Stato e prove in [STATUS](STATUS.md#audio--mixer-a-4-livelli-e-colonna-sonora-stagionale-branch-sound-1719102026-riallineato-2810).
+- ROADMAP e DECISIONS invariate: presentazione, nessun contratto di simulazione toccato.
+
+## 2026-10-25 — Eventi: pubblico nascosto da balaustre e schienali
+
+- Le figure sulle tribune (giostra, torneo, teatro) e nell'arena vengono coperte dalla balaustra, dai drappi e dallo schienale. Questi pezzi vengono ridisegnati in ordine di profondità insieme alle figure: ogni pezzo si ordina sul bordo della tribuna, spinto di 0,4 U verso l'esterno. Le figure vengono disegnate a gruppi tra un occlusore e l'altro, così un fotogramma della giostra costa circa 14 ms. QA in `event-people-regression`.
+- Resta aperto: le figure sono disegnate sopra gli edifici di altre strutture che stanno davanti allo spazio (sovrapposizione 2D, come i paesani).
+
+## 2026-10-25 — Eventi: accampamento affollato
+
+- L'accampamento dei cavalieri ha tre coppie che si allenano, un gruppo di tre persone che chiacchiera davanti a ogni tenda (slot `chat`) e due inservienti a ogni rastrelliera e armatura (slot `tend`), oltre agli scudieri: oltre 40 persone. QA estesa.
+
+## 2026-10-23 — Eventi: bardatura dei cavalli, torneo, accampamento e teatro animati
+
+- I cavalli della giostra hanno una gualdrappa (drappo partito, orlo dorato, crinale e pennacchio) disegnata sul cavallo 2D con la **stessa coppia di colori casuali del cavaliere**. Nuovi slot `fight` per tre coppie nel recinto del torneo e una coppia che si allena nell'accampamento, `prepare` davanti alle tende di torneo e accampamento, `perform`/`wait` per attori e quinte del teatro; scene animate dello spiazzo per torneo, accampamento e teatro. QA estese; verifica nel browser.
+
+## 2026-10-23 — Eventi: costruibili dal Builder
+
+- Nuova categoria **Eventi e svago** nel Builder con pulpito, palco, spiazzo eventi e arena; piazzamento a due clic con il preflight comune; agganci per impronta, nome, costo e durata; ispettore con veste del palco e scelta / avvio / chiusura dell'evento sullo spiazzo, ciclo `preparing → active → clearing → idle` sull'orologio di gioco. Spiazzo gratuito e senza cantiere; palco, pulpito e arena con costi in legno/oro e cantiere. QA `events-builder-regression`; collaudo nel browser con clic reali (piazzamento, selezione, avvio giostra, montaggio progressivo, persistenza dopo ricarica).
+
+## 2026-10-23 — Eventi: persone in arena, palco e pulpito
+
+- Nuovi slot CANS `fight` (due combattenti nella sabbia dell'arena) e `prepare` (uno scudiero per tenda del lotto arena). Scena `venueScene` per lotto arena, palco (attori e pubblico / banditore e folla) e pulpito (musico e cantastorie con ascoltatori), sempre animata; il pubblico dell'arena esulta a ogni colpo. Biglietteria del lotto arena girata verso l'interno perché la coda resti nel lotto. QA `event-people-regression` estesa; verifica Canvas nel browser.
+
+## 2026-10-23 — Eventi: persone allineate a CANS, sagra e circo animati
+
+- Nuovo `settlement-events-people.js`: slot con ID stabile, ruolo `guest`/`worker` e azione ricavati dai modelli (dominio = spazio evento) e registro occupanti con invarianti CANS (un occupante per slot e uno slot per occupante); sorgente **provvisoria** deterministica di figuranti marcati `provisional`, sostituibile da un adapter CANS. Giostra, sagra e circo disegnano solo occupanti registrati. Sagra: commensali, venditori, attori, cantastorie e pubblico, clienti che passeggiano tra le bancarelle; circo: imbonitore, giocoliere, biglietterie, code e ingresso nel tendone. QA `event-people-regression` e `joust-regression` PASS; verifica Canvas nel browser. Nessun runtime CANS implementato.
+
+## 2026-10-23 — Eventi: giostra animata
+
+- Nuovo `settlement-events-joust.js`: pubblico sugli spalti (≈2/3 dei posti, esulta all'impatto), due cavalieri che caricano lungo le corsie e a ogni corsa uno viene disarcionato (cade, resta a terra, si rialza, torna al cavallo), corse alternate tra le testate; stallieri con cavalli di riserva e scudieri che portano lance e scudi tra tende e testate. Figure 2D (popolani, soldati, cavallo 2D `drawAnimal`): i modelli 3D degli animali sono superati (indicazione dell'utente). QA `joust-regression` (12 corse); verifica Canvas nel browser.
+
+## 2026-10-23 — Eventi: CI della PR #78
+
+- Le stoffe degli eventi entrano nello strato dinamico WebGL con un ciclo proprio, lasciando invariata la lista sorgente verificata da `qa/mills3d-regression.cjs` (causa dei fallimenti di `menu-regression` e `settlement-qa`); dopo la correzione entrambi i check PASS in CI. `refactor-app-population` e `wall-bays` falliscono solo in checkout Windows con `core.autocrlf=true` (i test cercano frammenti con fine riga LF): con checkout LF, come in CI, passano anche su `main`. Non sono fallimenti del codice
+
+2026-10-22 — Eventi: disposizione casuale senza collisioni
+
+- Il jitter di tende, scatter e attrezzature prova spostamenti decrescenti e scarta quelli che urtano oggetti già piazzati, posizioni di base degli oggetti successivi o il perimetro; in mancanza resta nella posizione di base (validata). QA su 25 seed per tutti gli allestimenti: nessuna collisione né uscita, 91% degli oggetti spostabili ancora spostati.
+
+## 2026-10-22 — Eventi: bandiere al vento
+
+- Pennoni, festoni, gonfaloni e stendardi ondeggiano: pesi di stoffa esportati dal builder (parte `f`), strato dinamico come le pale dei mulini (WebGL e 2.5D), ampiezza legata al vento del meteo, fermi a gioco in pausa. Costo misurato ~0,6 ms per frame sul lotto arena (916 triangoli di stoffa). QA `events3d-regression` estesa; nel browser verificati movimento e assenza di errori (pannello nascosto: frame forzati a mano).
+
+## 2026-10-22 — Eventi: disposizione più casuale
+
+- Jitter delle tende portato a ±40° / 75% (prima 12%), scatter e attrezzature fino al 200% (su richiesta esplicita, possibili contatti tra oggetti); esteso a scatter, rastrelliere e armature in tutti gli allestimenti (D-045).
+
+## 2026-10-22 — Eventi: tende non allineate e tutte diverse
+
+- In arena, torneo e circo le tende ruotano di ±25° e si spostano fino al 5% della loro misura (deterministico per partita). Le coppie di colori delle tende sono uniche in ogni spazio, su cinque smalti (D-045 aggiornata). QA estesa.
+
+## 2026-10-22 — Eventi: arena arricchita in lotto dedicato
+
+- `arenaU` ora ha campo in sabbia, palco d'onore coperto con gonfaloni araldici e torri d'ingresso con stendardi. Nuovo spazio permanente `arenaLot` 18 × 14 U con 8 tende dei partecipanti, rastrelliere, armature, carri e merci scatter; l'arena esce dagli allestimenti dello spiazzo 14 × 10. QA aggiornata, verifica Canvas nel browser.
+
+## 2026-10-22 — Eventi: torneo, circo e sagra ampliati, catalogo leisure
+
+- Nuovo allestimento `tourney` (campo recintato, 4 tribune, 4 tende); circo con biglietterie, giocoliere, festoni e merci scatter; sagra con 16 tavoli. Nuovi modelli `circusBooth`, `propBunting`, `propFence`; gli allestimenti possono usare asset scatter (`sc:`). Catalogo illustrato in docs/events. QA aggiornata.
+
+## 2026-10-22 — Eventi: spiazzo polivalente 14 × 10
+
+- Lo spiazzo eventi passa da 6 × 10 a 14 × 10 U su richiesta esplicita (D-044); ridisegnati a grandezza piena i layout di giostra, circo, sagra, accampamento, teatro e arena. Registrate in DECISIONS anche le regole di livrea (D-045). QA `events3d-regression` aggiornata (tutti gli allestimenti nel 14 × 10, nessuno nel 6 × 10).
+
+## 2026-10-22 — Eventi: modelli 3D di podio, palchi e spiazzo polivalente
+
+- Su `events` aggiunti catalogo Blender (`tools/blender/build_events.py`, `src/assets/event-models.js`), modulo `src/settlement-events3d.js`, agganci nei renderer 2.5D e WebGL, QA `events3d-regression` e relativa Action.
+- [docs/events/README.md](../events/README.md) descrive il contratto `eventVenue`, gli allestimenti e le regole di livrea; STATUS e BACKLOG distinguono i modelli presenti dal gameplay ancora da fare.
+- ROADMAP e DECISIONS invariati: le taglie dello spiazzo oltre 6 × 10 restano una proposta (EV-P3)
+
+## 2026-10-28 — Cutaway di chiesa e locanda (branch `feature/civic-cutaway`)
+
+- La chiesa o la locanda selezionata si apre in sezione con arredi; il contorno di selezione segue l'impronta a terra; mura ed edifici non si piazzano più dentro le foreste o sotto le chiome. Allineato a `main` `5ddefa6`. Stato e prove in [STATUS](STATUS.md#cutaway-civico-e-contorno-di-selezione-branch-featurecivic-cutaway-23102026).
+- ROADMAP e DECISIONS invariate: estende il cutaway esistente agli edifici civici, nessun nuovo contratto.
+
+## 2026-10-26 — Mesh: niente più facce bicolori; export PNG 512 dal Lab
+
+- `ConquerMesh3D.shadeFactor` riconosce le facce superiori da `|nz|`. Gli export di Blender non hanno un ordine dei vertici coerente, quindi metà dei triangoli di uno stesso tetto (taverna, birrificio, loggia…) risultava scura (0,5). Ora il tono è uniforme in Canvas 2D, WebGL e Lab. Audit del Lab: 465 render, 0 errori, 128 cambiati; baseline aggiornata dopo la revisione.
+- Il Lab disegna i modelli con un depth buffer software (2× supersample), come la WebGL del gioco. Il painter 2.5D ordina per triangolo e tagliava i telai a graticcio e le finestre quasi complanari ai muri, quindi mostrava difetti che in WebGL non ci sono; restano solo nel fallback Canvas 2D del gioco. Revisione a 512 di tutti i 109 modelli; audit: 0 errori, baseline aggiornata.
+- Asset Lab: occupazione forzata («Occupazione»: no / occlusione corretta / come nel gioco), con popolani su terreno, pavimenti e portici, per verificare l'occlusione delle figure.
+- Asset Lab: pulsante «Esporta PNG 512», che esporta l'anteprima corrente (stato e rotazione) in 512 × 512, e la funzione `ConquerAssetCatalog.exportImage`.
+
+## 2026-10-28 — UI v2: modalità Difendi (branch `feature/ui-defend`)
+
+- Quarta fase della UI v2 opt-in (`?ui=2`): modalità Difendi con rail e scheda, stato del combattimento letto da `ConquerCombat.uiState()`. Registrate anche le fasi 1–3 già su `main` (`5ddefa6`) che non avevano voce nella piramide. Stato e prove in [STATUS](STATUS.md#ui-v2-isole--modalità-difendi-branch-featureui-defend-26102026), fasi aperte nel [BACKLOG](BACKLOG.md#ux--ui-v2-isole-opt-in-ui2-26102026).
+- ROADMAP e DECISIONS invariate: la UI v2 resta opt-in, nessun contratto di simulazione toccato.
+
+## 2026-10-23 — Fix fondazione strade, DEV e fallback WebGL nel branch
+
+- Riallineata `fix/main-founding-dev-webgl-20261023` a main `bc82dbe`, conservando gli aggiornamenti Lab e manutenzione.
+- Isolati gli attributi GPU con VAO per shader; preparati in modo cooperativo strade/ponti prima della sostituzione atomica; aggiornata la QA DEV ai default automatici con prova dei controlli reali.
+- Nuove regressioni per lavoro geometrico per avanzamento, annullamento senza effetti parziali, renderer ancora attivo dopo rebuild e fallback da vera perdita del contesto. 68 suite, 152 controlli di sintassi e due suite browser PASS locali; audit Lab 456 render/0 errori/49 avvisi/11 firme cambiate preesistenti, fogli fortificazioni rivisti e baseline invariata.
+- Aggiunta CI di branch/PR con regressioni complete, browser, audit e Context sync. STATUS/BACKLOG aggiornati e D-FIX-01 registrato; ROADMAP invariata perché sono correzioni, non nuove milestone. Nessun merge in main o deploy.
+
+## 2026-10-23 — Diagnosi dei tre problemi sulla branch di fix
+
+- Riallineata la copia di lavoro alla main `b79ea99` e documentate le cause di fallback WebGL, test DEV e tempi della fondazione strade nel [report](../main-fixes-diagnosis-2026-10-23.md), con riproduzioni e prove A/B.
+- Aggiornati STATUS e BACKLOG: nessun sorgente runtime/test permanente modificato, nessun fix dichiarato completo. ROADMAP e DECISIONS invariati; nessuna nuova PR, merge o pubblicazione.
+
+## 2026-10-23 — Ponti: magnete strade
+
+- Branch `feat/bridge-road-magnets`: le strade principali si agganciano alle due testate di ogni ponte e una strada su una testata non è più rifiutata come sovrapposizione. Stato e prove in [STATUS](STATUS.md#ponti--magnete-strade-23102026); requisiti BRIDGE-01/02 nel [BACKLOG](BACKLOG.md#ponti--magnete-strade-branch-featbridge-road-magnets-23102026).
+- ROADMAP e DECISIONS invariate: estensione del magnete esistente dei portoni, nessun nuovo contratto.
+
+## 2026-10-23 — Guardaroba stagionale dei popolani (branch)
+
+- Su `feature/seasonal-clothing`: catalogo di 9 overlay di abbigliamento (pioggia, inverno, estate, mezze stagioni ventose) sopra la figura procedurale dei popolani, scelti automaticamente da mese e meteo, con transizioni graduali nei mesi di passaggio. Scelto l'overlay a strati invece delle skin alternative: i capi si combinano e la sagoma/colore di classe resta leggibile.
+- Colori dell'abbigliamento per classe: L1 grigio/beige, L2 verde/marrone, L3 primari desaturati, L4 primari accesi, condivisi da tuniche e capi in tessuto.
+- Voci nell'Asset Lab e selettore stagione/meteo nel lab animato; nuova regressione `wardrobe`. **CI e merge ancora da verificare.** Invariati ROADMAP e DECISIONS: miglioramento solo visivo, nessun contratto di simulazione toccato.
+
+## 2026-10-23 — Converge: preparazione merge #61 sulla main aggiornata
+
+- Integrata main `518e830` nel branch `converge` (9 commit propri, 37 da recuperare), risolvendo i conflitti assedio/decisioni senza sostituire i moduli moderni. Preservati grata/porta/core indipendenti, terrapieni e ottimizzazioni di rendering; aggiunti guard compatibili con `portcullis`.
+- Rafforzate regressioni su grate, input invalidi, persistenza e scheduler; nuova QA del pannello reale PASS gameplay Canvas + avvio WebGL, con fallback grafico preesistente riprodotto sulla main e registrato nel report. Test locali 67/68 PASS; stesso FAIL temporale su fondazione strade presente anche sulla main (66/67). UI/Combat legacy fallisce sul default DEV anche in main. CI da attestare sulla PR prima del merge.
+- Aggiornati STATUS/BACKLOG/DECISIONS. ROADMAP invariata (nessun cambio di milestone/priorità). PR #61 ancora aperta; nessun merge in main e nessun deploy.
+- **FOLLOW-UP:** merge autorizzato; prima della esecuzione recuperati altri 4 commit della main fino a `bc82dbe` (Asset Lab #82 e manutenzione), preservando codice e note recenti. CI da ripetere prima del merge effettivo.
+
+## 2026-10-23 — Asset Lab: motore di audit visivo (branch `feat/asset-lab-audit`)
+
+- Il Lab diventa il motore di audit: `ConquerAssetStage` cattura ogni fortificazione negli stati di cantiere, danno e cutaway con il render del gioco; `ConquerAssetAudit` controlla tutti gli asset, confronta con la baseline revisionata e gestisce le deroghe; `qa/asset-audit.mjs` produce report e fogli provini anche in CI.
+- `/lab` apre il Lab direttamente; la sandbox `?assetlab=1` non avvia la simulazione e usa un mondo fisso.
+- Nuova procedura [ASSET-LAB-AUDIT](../ASSET-LAB-AUDIT.md) e regola in `AGENTS.md`. Riscontri del primo audit registrati nel BACKLOG (cantiere non progressivo, danno al portone, legno con SwiftShader). DECISIONS: D-LAB-02. ROADMAP invariata
+
+2026-10-23 — Pulizia Git verificata e finalizzazione
+
+- Workflow [#39982707805](https://github.com/erykwest/CONQUER/actions/runs/39982707805) completato **SUCCESS** e otto branch non più presenti nell'elenco remoto.
+- Aggiornato lo stesso workflow per eliminare anche la branch della prima PR di manutenzione #84 e **autocancellare** la propria branch sorgente solo dopo controllo GitHub PR merged e confronto SHA, evitando di lasciare branch tecniche aggiuntive. Nessun nuovo gameplay o cambiamento di scope; ROADMAP/DECISIONS invariati.
+
+## 2026-10-23 — Workflow per eliminare branch obsolete in modo sicuro
+
+- Ricontrollate tutte le branch remote rispetto a `main`, PR aperte e merge. Pianificata la rimozione di **otto ref** già merge/totalmente assorbiti; i ref con HEAD post-merge, PR aperte o commit esclusivi sono deliberatamente preservati.
+- Aggiunto workflow a trigger unico su merge in `main`, con lista esplicita nome + SHA, controllo PR merge o vera discendenza Git, e confronto HEAD prima di eseguire ogni DELETE. I risultati reali della rimozione devono essere letti nei log GitHub Actions; **questo changelog non anticipa il risultato**.
+- Nessun ref viene cancellato o forzato dal solo aggiornamento documentale; nessuna modifica al gameplay. ROADMAP/DECISIONS invariati.
+
+## 2026-10-23 — Nuovo audit main dopo le PR #76 e #79–81
+
+- HEAD `main` `518e830`, **sei commit** successivi al merge documentale #75, quattro PR funzionali **MERGED**: #76 Portoni, #79 Asset Lab unificato, #80 rotazione 3D, #81 22 fortificazioni reali/manifest/lavori. Audit documentato in [AUDIT-2026-10-23](AUDIT-2026-10-23.md).
+- Corrette in `BACKLOG` e `STATUS` le diciture **«solo branch»** diventate false dopo i merge. GATE-01/01b/02/03/04/06 ora MAIN, GATE-05/GATE-07 ancora aperti; Asset Lab #81 MAIN, audit #82 ancora OPEN.
+- Segnalati residui ancora su PR #61 (danni), #77 (montaggio per fasi + case), #78 (Eventi), #82 (audit visuale), #55 (costruttori/ledger), #65 (interni), #72 (cavalieri su `knights`), #18/#16 (draft).
+- **Rischio non riprodotto qui:** #82 segnala, sulla propria branch, portoni danneggiati/sfondati visivamente mancanti dopo #76 e cantieri con 25/50/75% quasi identici: riportati come **test da fare su main**, non come guasto confermato.
+- Riconfermato che **13 core Builder** sono presenti e **10 residui** restano di integrazione; roadmap M0–M5 invariata. CI #76 e #81 verificate PASS sulle rispettive HEAD; nessun nuovo test runtime/browser eseguito per questo audit. Nessuna decisione progettuale nuova.
+
+## 2026-10-23 — Asset Lab: catalogo completo (branch `feat/asset-lab-complete-catalog`)
+
+- Fortificazioni in pietra reintrodotte con geometria reale: il Lab apre il gioco in sandbox (`index.html?assetlab=1`, senza salvataggi, cloud né telemetria) e chiede a `ConquerSiegePreview.assetMesh` le mesh `ConquerCastle3D` di ogni variante della galleria distruzione. Le 7 varianti in legno sono escluse e dichiarate.
+- Aggiunte le 7 animazioni di lavoro; il manifest dei file è generato da `tools/build-asset-manifest.cjs` (controllato in CI) e include i set di rotazione di campo taglialegna e cava.
+- Corretti ricerca («undefined»), codice morto di `renderSchema`, schede della griglia schiacciate. Aggiornati STATUS e BACKLOG; DECISIONS con il contratto della sandbox (D-LAB-01). ROADMAP invariata: strumento DEV, nessun cambio di priorità.
+- Corretto lo stato di #80 in STATUS: era indicato «non ancora `main`» ma è integrato (`bf548ca`).
+
 ## 2026-10-22 — Asset Lab: rotazione ±15° e rimozione pseudo-fortificazioni (branch)
 
 - Su `fix/asset-lab-rotation-and-components`: comandi di rotazione sotto la preview dell'inspector, proiezione 3D orientabile a intervalli di 15°, rotazione delle anteprime native animate e disattivazione del giro automatico su interazione.
@@ -12,6 +320,20 @@
 - Browser Chromium e regressione dedicata **PASS** sulla PR #79; squash merge `f576ac5` in `main`. I diagrammi SCHEMA delle strutture procedurali non certificavano modelli completi, problema affrontato nella nuova iterazione.
 
 Il changelog descrive **modifiche della documentazione e della direzione**, non sostituisce la cronologia dei commit o le note di release del gioco.
+
+## 2026-10-22 — Oggetti di cantiere per fase (branch `feature/construction-props`)
+
+- Scelto come ambito del backlog la **progressione visiva dei cantieri**; prima tappa: kit modulare di oggetti Blender e loro comparsa/rimozione per fase (`prep`/`raise`/`finish`). Aggiornati [BACKLOG](BACKLOG.md) (voce *Elementi di cantiere animati*, con residui) e [STATUS](STATUS.md). ROADMAP e DECISIONS invariati: nessun contratto o priorità cambiati.
+- Allineato a `main` dopo #76 (portoni), #79/#80 (Asset Lab): conflitti in `index.html`, `STATUS.md`, `CHANGELOG.md` risolti tenendo entrambe le parti; le porte in cantiere usano ora il corpo scavato di `ConquerGates.addGateBody` (il ritaglio del varco del montaggio resta solo come ripiego).
+- Montaggio esteso a torre tonda, porta, muro, palizzata, `built`, taverna e mercato; avanzamento orizzontale per muri e palizzate; ponteggi su tutti i lati di torri e porte; cache a immagine per cantiere (prestazioni da ~1 s a 2–6 ms per frame con 10 cantieri).
+- Unito il branch `case` in `feature/construction-props` (conflitti solo in `index.html` e `STATUS.md`, tenute entrambe le parti); il montaggio delle case ora riusa `ConquerWorld3D.addHouse`.
+- Aggiunto il prototipo di **montaggio pezzo per pezzo** (quota di cantiere che taglia l'edificio finito) provato su torre T2 H2, chiesa L2 e casa L3; registrati in BACKLOG e STATUS i residui (dettagli 2.5D, tipi non provati, animazione di posa, prestazioni).
+
+## 2026-10-22 — Portoni: magnete strade e accessori
+
+- Branch `portoni`: magnete del portone sulle strade, passaggio voltato 3D con ante animate, upgrade grata per il portone in pietra, drappi araldici e torce notturne. Stato, prove e limiti in [STATUS](STATUS.md#portoni--magnete-strade-ante-grata-drappi-e-torce-22102026); requisiti GATE-01…06 nel [BACKLOG](BACKLOG.md#portoni--accessori-del-portone-branch-portoni-22102026).
+- Aggiunto il magnete delle strade principali sulle due bocche del portone (GATE-01b).
+- Decisa e implementata la grata come strato difensivo separato con HP propri (D-042, GATE-06); aperto GATE-07 per l'IA d'assedio. ROADMAP invariata.
 
 ## 2026-10-22 — Revisione integrale backlog vs codice main
 
@@ -87,8 +409,9 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 - Reso vincolante il divieto di sovrapporre un terrazzamento murato a un altro; aggiunto magnete bidirezionale fra bordo del terrazzamento e faccia del muro, compensando metà dello spessore.
 - Integrata la quota modificata nel contratto comune del terreno, nel rendering Canvas e nella mesh WebGL2, con persistenza dentro `State.relief` e invalidazione solo al commit.
 - Verifica locale: intera batteria `qa/*.cjs` PASS, 7 controlli Terraforming, sintassi JS e whitespace PASS; prova Chromium via HTTP di ghost, rifiuto sovrapposizione, reload e muro a filo PASS.
-- Stato distribuzione: branch soltanto; `main`, PR e deploy non modificati.
-## 2026-10-19 — clay: palette DEV Stone/Clay
+- Stato distribuzione: branch soltanto; `main`, PR e deploy non modificati
+
+2026-10-19 — clay: palette DEV Stone/Clay
 
 - Aggiunto selettore globale DEV con visualizzazione alternativa mattone/tegola e piani terra delle case L2–L4, colori condivisi tra Canvas e WebGL2, preference locale e invalidazione della scena; nessun cambiamento economico o all'integrità.
 - Aggiunta regressione e workflow GitHub Actions dedicata alla branch `clay`, preservando la suite `Civil`; [CI 39271126852](https://github.com/erykwest/CONQUER/actions/runs/39271126852) **PASS** sulla HEAD `bbe5a27`. Corretto il mock degli annessi civili nella QA industriale, senza alterare il runtime.
@@ -174,8 +497,9 @@ Il changelog descrive **modifiche della documentazione e della direzione**, non 
 
 ## Modello per le prossime righe
 
-```md
-## YYYY-MM-DD — [evento]
+```m
+
+YYYY-MM-DD — [evento]
 - Roadmap: Mx → My (motivo).
 - Stato: ID, branch, commit e QA [PASS/FAIL/NON ESEGUITA].
 - Decisioni: D-xxx / O-xxx risolto (link).

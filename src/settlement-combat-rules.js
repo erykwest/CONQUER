@@ -10,6 +10,7 @@
     wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
+    captain:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
   });
   // Faction IDs are data, not a render-side "enemy = black" conditional.
@@ -31,7 +32,7 @@
     }
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
-  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.kind==='archer'?'archer':u.combatKind||'infantry';
+  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.kind==='captain'?'captain':u.kind==='archer'?'archer':u.combatKind||'infantry';
   function boundaryPoints(isAllowed,worldSize=200,step=1.25){
     const edge=step*.576,points=[];
     for(let y=step/2;y<worldSize;y+=step)for(let x=step/2;x<worldSize;x+=step){

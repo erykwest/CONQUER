@@ -22,6 +22,7 @@ function confirm(){
  vm.runInContext("document.getElementById('confirmVillageBtn').onclick()",context,{timeout:250});
  assert.ok(performance.now()-start<100,'name confirmation must return promptly');
  assert.equal(run('State.village.founded'),true);
+ assert.equal(run('State.village.foundingWorkers'),4,'Founding must leave four L1 workers available before any house');
  assert.equal(run('roadList().length'),0,'planning must not run inside the name handler');
  assert.ok(queue.length>0);
 }

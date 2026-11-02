@@ -90,6 +90,7 @@ function scheduleCompletionRoadMaintenance(completed){
 function constructionCompletionsCrossed(beforeDay,afterDay){
   const out=[];
   for(const s of State.structures){
+    if(s?.construction?.version===2)continue; // notified by labor tick exactly once
     const d=Number(s?.construction?.completeDay);
     if(Number.isFinite(d)&&d>beforeDay&&d<=afterDay)out.push(s);
   }
@@ -153,6 +154,7 @@ function simulationFrame(now){
   const rawDtMs=now-simLast;
   window.__conquerAnalytics?.frame(now,rawDtMs);
   const dt=Math.min(.25,rawDtMs/1000);simLast=now;
+  window.ConquerRoadSignTests?.tick?.(dt);
   if(State.clock.speed>0){
     const previousDay=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
@@ -185,7 +187,12 @@ function simulationFrame(now){
       processVillageGrowth();
       tickFields(State.clock.day);
       window.ConquerEconomy?.tick(previousDay,State.clock.day);
-      completed=constructionCompletionsCrossed(simLogicDay,State.clock.day);
+      window.ConquerDiplomacy?.tick(previousDay,State.clock.day);
+      window.ConquerConvoys?.tick?.(previousDay,State.clock.day); // lord convoys and diplomatic caravans
+      // Player-build projects progress only when available L1 staff actually
+      // complete shift work; procedural road/house generation retains V1 clocks.
+      const laborCompletions=tickConstructionWork(simLogicDay,State.clock.day);
+      completed=[...constructionCompletionsCrossed(simLogicDay,State.clock.day),...laborCompletions];
       simLogicDay=State.clock.day;
       simLogicAt=now;
     }
@@ -259,6 +266,7 @@ function simulationFrame(now){
   }
 
   const weather=currentWeather();
+  window.ConquerSoundBridge?.tick(now,weather);
   const worldWeatherKey=Math.floor(State.clock.day)+'|'+weather.kind;
   if(worldWeatherKey!==lastWorldWeatherKey){
     const previousWasWet=/\|(rain|storm)$/.test(lastWorldWeatherKey),nowWet=weather.rain>0;
@@ -286,4 +294,5 @@ function simulationFrame(now){
     requestAnimationFrame(simulationFrame);
   }
 }
-requestAnimationFrame(simulationFrame);
+// Asset Lab sandbox: no match runs — no clock, no simulation; the Lab asks for each draw itself.
+if(!window.__CONQUER_ASSET_LAB__)requestAnimationFrame(simulationFrame);

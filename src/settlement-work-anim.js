@@ -147,8 +147,8 @@
     const g=sack?{x:shoulder.x+dirOf(P.th,f).x*bodyW*.95,y:shoulder.y+dirOf(P.th,f).y*bodyW*.95}
       :{x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(P.th))};
     if(!sack)drawTool(tool,g,f,P.th,scale);
-    // Arm: shoulder to hand, in the darker tunic tone.
-    ctx.strokeStyle=darken(dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
+    // Arm: shoulder to hand, in the darker tunic tone (or the cloak's, when wearing one).
+    ctx.strokeStyle=darken(window.ConquerWardrobe?.outfitFor(dot)?.sleeve||dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(shoulder.x,shoulder.y);ctx.lineTo(g.x,g.y);ctx.stroke();
     ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(g.x,g.y,Math.max(.5,.55*scale),0,Math.PI*2);ctx.fill();
     // Effect origin: where the tool tip strikes (or the casting hand).
@@ -173,7 +173,8 @@
   // Screen-space facing of a world direction (dx,dy).
   function facingOf(p,dx,dy){const a=w2s(p,0),b=w2s({x:p.x+dx,y:p.y+dy},0);return b.x>=a.x?1:-1}
   const now=()=>(typeof performance!=='undefined'?performance.now():Date.now())/1000;
-  const WORKER_COLORS=[['#8c6b3f','#5d4a32'],['#7d6a4a','#4f4130'],['#6f7a5a','#4b5340'],['#946c4a','#5e4630'],['#7c6f62','#4d443b']];
+  // Anonymous labourers are L1: grey and beige cloth.
+  const WORKER_COLORS=[['#9c9078','#7d7a72'],['#b4a58a','#8f8b82'],['#a39e93','#7d7a72'],['#c8bda6','#9c9078'],['#8f8b82','#b9b2a3']];
   function anonymous(id,p){
     const h=hash(String(id));
     return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',colors:WORKER_COLORS[h%WORKER_COLORS.length],

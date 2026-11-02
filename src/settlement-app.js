@@ -18,7 +18,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-event-venue],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   if(hardNavigation){
@@ -91,8 +91,8 @@ function addStructure(s){
       // Quarry and mine intentionally occupy rocky slopes, not flat terraces.
       s.groundZ=window.ConquerIndustries.validate(s).ground;
     }else{
-      const groundZ=buildableTerrainElevationForStructure(s);
-      if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
+      const groundZ=linearBuildGroundZ(s);
+      if(groundZ==null){status(s.type==='wall'?wallTerrainVerdict(s).reason:'Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
       s.groundZ=groundZ;
     }
     const cost=constructionCost(s);
@@ -136,6 +136,7 @@ function linearRouteStructures(route,endSnapId,spec){
       tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,
       flip:false,functions:[],masonryMaterial:State.buildMasonryMaterial
     };
+    if(State.tool.span==='wide')s.span='wide';
     if(i===0&&State.draft?.aSnap)s.aSnap=State.draft.aSnap;
     if(i===route.segments.length-1&&endSnapId)s.bSnap=endSnapId;
     if(groupId)s.routeGroupId=groupId;
@@ -153,8 +154,8 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
   for(const s of structures){
     const verdict=window.ConquerPlacement?.check(s);
     if(verdict&&!verdict.ok){status('Route blocked: '+verdict.reason);return false}
-    if(buildableTerrainElevationForStructure(s)==null){
-      status('Route crosses incompatible terrain — choose another joint or endpoint');
+    if(linearBuildGroundZ(s)==null){
+      status(s.type==='wall'?'Route blocked: '+wallTerrainVerdict(s).reason:'Route crosses incompatible terrain — choose another joint or endpoint');
       return false;
     }
   }
@@ -182,6 +183,7 @@ function deleteStructure(id){
     State.combat=null;window.ConquerCombat?.restore(null);
     const borderEntries=ensureBorderEntrySelection();
     State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
+    window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
   if(target.type==='tower')window.ConquerSiege?.syncAutoMastio?.();
@@ -258,7 +260,7 @@ function rotatePointStructure(target,steps=1){
   }else if(window.ConquerIndustries?.is(target)){
     target.groundZ=window.ConquerIndustries.validate(target).ground;
   }else{
-    target.groundZ=buildableTerrainElevationForStructure(target);
+    target.groundZ=linearBuildGroundZ(target);
   }
   if(target.type==='house')invalidateUrbanGeometry();
   markStructureDirty(target,true,true);

@@ -304,7 +304,8 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
     if(s.type==='gate'){
       if(window.ConquerCrossings?.drawbridgeBlocks(p,s))return true;
       // A closed gate with its door still whole shuts the passage (settlement-siege.js).
-      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s))return true;continue}
+      // So does a lowered portcullis (settlement-gate-fittings.js).
+      if(gatePointInPassage(s,p,.08)){if(window.ConquerSiege?.gateClosed?.(s)||window.ConquerGates?.portcullisBlocks?.(s))return true;continue}
       const q=toLocalPoint(s,p),d=rectDims(s);
       if(Math.abs(q.x)<=d.w/2+PEASANT_CLEARANCE&&Math.abs(q.y)<=d.h/2+PEASANT_CLEARANCE)return true;
       continue;
@@ -315,6 +316,13 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
       continue;
     }
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
+    // The Mastio's outer stair and landing: walkers go round them, up only from the foot.
+    if(s.type==='tower'&&s.keepEntrance){
+      for(const poly of window.ConquerKeepEntrance?.obstacles?.(s)||[]){
+        if(pointInPolygon(p,poly))return true;
+        for(let i=0;i<poly.length;i++)if(pointSegmentDistance(p,poly[i],poly[(i+1)%poly.length])<=PEASANT_CLEARANCE*.6)return true;
+      }
+    }
     if((s.type==='tower'||s.type==='ruin')&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='house'||isCivic(s)){
       const parts=obstacleParts?.get(s)||(s.type==='house'?urbanHouseDisplayParts(s):civicParts(s));

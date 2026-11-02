@@ -7,7 +7,7 @@ const begin=source.indexOf('  function selectCombatUnits(');
 const end=source.indexOf('  function whiteBoundaryPoints()',begin);
 assert.ok(begin>=0&&end>begin,'real unit selection and orders must be present');
 const units=[
-  {id:'commander',kind:'knight',x:100,y:100},
+  {id:'commander',kind:'captain',x:100,y:100},
   {id:'squad1',kind:'squad',x:102,y:100},
   {id:'squad2',kind:'squad',x:100,y:102},
   {id:'far',kind:'squad',x:140,y:140},
@@ -48,7 +48,7 @@ console.log('PASS 16U commander authority overrides 6U sergeant limit without le
 window.__CONQUER_CAMP_MODE__=true;
 assert.equal(move(units[1],{x:118,y:100}),true,'/camp can order squads beyond the commander beacon for open-field camps');
 window.__CONQUER_CAMP_MODE__=false;
-console.log('PASS /camp direct orders extend beyond yellow and knight beacon');
+console.log('PASS /camp direct orders extend beyond yellow and captain beacon');
 
 select([units[0],units[1],units[2]]);
 group({x:107,y:103});
@@ -69,7 +69,7 @@ console.log('PASS grouped destinations preserve relative formation, mouse box an
 clear();
 select([units[1]]);
 group({x:120,y:100});
-assert.match(notices.at(-1),/fuori raggio cavaliere \(16U\)/,'rejected order explains knight command radius');
+assert.match(notices.at(-1),/fuori raggio capitano \(16U\)/,'rejected order explains captain command radius');
 context.State.clock.speed=0;
 group({x:105,y:100});
 assert.match(notices.at(-1),/tempo in pausa/,'accepted paused orders explain why units are stationary');

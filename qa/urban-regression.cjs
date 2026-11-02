@@ -158,17 +158,19 @@ test('corner trees: one roll per shared corner, never two trees on one site',()=
  }finally{run("URBAN_CORNER_TREE_CHANCE=qaChance")}
 });
 test('facades: two windows per floor on long sides of L2+, timber frame on upper floors and gables',()=>{
- const plans=level=>run("(()=>{State.structures=[{id:'fp',type:'house',x:100,y:100,w:1.8,h:1.1,angle:0,houseLevel:"+level+"}];invalidateUrbanGeometry();const e=urbanHouseGeometry()[0],p=e.parts[0];return p.points.map((a,i)=>{const edge={a,b:p.points[(i+1)%p.points.length]},pl=houseFacadePlan(e.house,p,edge);return{L:dist(edge.a,edge.b),wall:p.bodyH,ridge:p.roofH,...pl}})})()");
+ const plans=level=>run("(()=>{State.structures=[{id:'fp',type:'house',x:100,y:100,w:1.8,h:1.1,angle:0,houseLevel:"+level+"}];invalidateUrbanGeometry();const e=urbanHouseGeometry()[0],p=e.parts[0];return p.points.map((a,i)=>{const edge={a,b:p.points[(i+1)%p.points.length]},pl=houseFacadePlan(e.house,{...p,turret:null},edge);return{L:dist(edge.a,edge.b),wall:p.bodyH,ridge:p.roofH,...pl}})})()");
  for(const w of plans(1)){assert.equal(w.windows.length,1);assert.equal(w.beams.length,0)}
  for(const level of [2,3,4]){
   const walls=plans(level),long=walls.filter(w=>w.L>1.5),short=walls.filter(w=>w.L<1.5);
   assert.ok(long.length>=1&&short.length>=1);
-  for(const w of long)assert.equal(w.windows.length,4,'L'+level+' long side: 2 windows x 2 floors');
+  // The door wall loses the ground-floor window next to the door (houseFacadeDoorCut).
+  for(const w of long)assert.ok(w.windows.length===4||w.windows.length===3&&w.windows.filter(x=>x.z>w.wall*.475).length===2,'L'+level+' long side: 2 windows x 2 floors');
+  assert.ok(long.some(w=>w.windows.length===4),'L'+level+' wall without door keeps all four');
   for(const w of short)assert.equal(w.windows.length,2,'L'+level+' short side: 1 window x 2 floors');
   for(const w of walls){
    assert.ok(w.beams.length>=6,'L'+level+' timber frame');
    // Frame stays on the upper floor (or the gable above it) and within the wall width.
-   assert.ok(w.beams.every(b=>b.every(p=>p.z>=w.wall*.5-1e-6&&p.z<=w.ridge+1e-6&&Math.abs(p.off)<=w.L/2+1e-6)));
+   assert.ok(w.beams.every(b=>b.every(p=>p.z>=w.wall*.475-1e-6&&p.z<=w.ridge+1e-6&&Math.abs(p.off)<=w.L/2+1e-6)));
   }
   assert.ok(short.some(w=>w.beams.some(b=>b.some(p=>p.z>w.wall+.1))),'gable end carries king post / collar');
   assert.ok(long.every(w=>w.beams.every(b=>b.every(p=>p.z<=w.wall+1e-6))),'eave sides have no gable timber');

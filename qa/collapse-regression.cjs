@@ -110,7 +110,9 @@ function fixture(){
   const wood={id:'WT',type:'tower',shape:'square',size:1.5,level:1,x:5,y:5,material:'wood',functions:[]};
   const wall={id:'W',type:'wall',a:{x:5.75,y:5},b:{x:12,y:5},aSnap:'WT',bSnap:null,width:.5,level:1};
   State.structures.push(wood,wall);
-  for(let k=0;k<200&&State.structures.includes(wood);k++)S.attackStructure('WT','axe',10);
+  // Towers (including timber ones) require structural artillery, not axe strikes.
+  assert.equal(S.attackStructure('WT','axe',10).damage,0);
+  for(let k=0;k<200&&State.structures.includes(wood);k++)S.attackStructure('WT','trebuchet',10);
   assert.ok(!State.structures.includes(wood),'a wooden tower comes down whole');
   assert.equal(wall.aSnap,null,'and leaves the wall an open end');
   assert.equal(State.siege.ruins.at(-1).spec.material,'wood');

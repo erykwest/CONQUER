@@ -2,13 +2,14 @@
 // Construction placement, tower snapping, wall routing, and room models. Runtime semantics preserved from the monolith.
 function rotateVec(x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:x*ca-y*sa,y:x*sa+y*ca}}
 function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);return v}
-function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
+function rectDims(s){if(isOrientedTower(s))return orientedTowerDims(s);const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
 function placementAngle(center,p){return snapStructureAngle(Math.atan2(p.y-center.y,p.x-center.x))}
 function orientedToolSpec(){
   if(State.tool.kind==='tower')return{type:'tower',shape:State.tool.shape,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size}),functions:[]};
   if(State.tool.kind==='gate'){
     if(State.tool.material==='wood')return{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat',functions:[]};
-    return{type:'gate',shape:'square',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:1.5,level:State.tool.level||State.buildLevels.gate,functions:[]};
+    const size=State.tool.size||GATE_SIZES.large,max=size<1.25?SMALL_GATE_MAX_LEVEL:3;
+    return{type:'gate',shape:'square',material:'stone',masonryMaterial:State.buildMasonryMaterial,size,level:Math.min(max,State.tool.level||State.buildLevels.gate),functions:[]};
   }
   // Future point-buildings can pass a placementSpec without adding another interaction path.
   if(State.tool.placementSpec&&State.tool.placementSpec.shape!=='round')return{...State.tool.placementSpec,masonryMaterial:State.buildMasonryMaterial};
@@ -23,11 +24,35 @@ function makePlacementPreview(q,angle=0){
   }
   return null;
 }
+// Road magnet for gates: the centre lands on the nearest road centreline and the passage
+// turns along the road, so the gate sits over it without cutting the way.
+function gateRoadSnap(p){
+  const radius=Math.max(1.2,linearMagnetRadius());let best=null;
+  for(const r of roadList(false)){
+    if(!r.a||!r.b||dist(r.a,r.b)<.05)continue;
+    const q=closestPointOnSegment(p,r.a,r.b),d=dist(p,q);
+    if(d<=radius&&(!best||d<best.d))best={d,point:q,road:r};
+  }
+  if(!best)return null;
+  const r=best.road;
+  return{point:{x:best.point.x,y:best.point.y},axis:snapStructureAngle(Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)),roadId:r.id};
+}
+// Orientation while the second click is pending: a locked angle wins; a road-snapped gate
+// keeps its passage on the road and only chooses which mouth faces out.
+function orientedDraftAngle(p){
+  const d=State.draft;
+  if(Number.isFinite(d?.lockedAngle))return d.lockedAngle;
+  const free=placementAngle(d.center,p);
+  if(!Number.isFinite(d?.roadAxis))return free;
+  const off=x=>Math.abs(Math.atan2(Math.sin(free-x),Math.cos(free-x)));
+  return snapStructureAngle(off(d.roadAxis)<=off(d.roadAxis+Math.PI)?d.roadAxis:d.roadAxis+Math.PI);
+}
 function commitOrientedPlacement(center,angle){
   const spec=orientedToolSpec();if(!spec)return false;
   const snap=spec.type==='tower'?{
     wallId:State.draft?.wallSnapId||null,
     wallEnd:State.draft?.wallSnapEnd||null,
+    wallSeat:Number.isFinite(State.draft?.wallSeat)?State.draft.wallSeat:null,
     parentTowerId:State.draft?.parentTowerId||null,
     subtowerSocket:State.draft?.subtowerSocket||null,
     subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
@@ -45,6 +70,7 @@ function commitOrientedPlacement(center,angle){
 }
 function boundaryPoint(s,target){
   if(!s||!['tower','gate'].includes(s.type))return target;
+  if(isOrientedTower(s))return orientedTowerBoundaryPoint(s,target);
   const dx=target.x-s.x,dy=target.y-s.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;let edge;
   if(s.shape==='round')edge=s.r;
   else{
@@ -77,17 +103,19 @@ function linearEndpointSnap(p,type,radius=linearMagnetRadius()){
 }
 // Free wall/palisade ends you can continue from, drawn on the wall top while the
 // tool is active; the one under the pointer lights up (same look as moat magnets).
+// With the road tool the magnets are the two ends of every bridge, at deck level.
 function drawLinearMagnets(){
   const type=State.tool?.kind==='linear'?State.tool.linear:null;
-  if(!['wall','palisade'].includes(type))return;
-  const hover=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,shown=new Set();
+  if(!['wall','palisade','road'].includes(type))return;
+  const road=type==='road',linearHover=State.tool.linearHover;
+  const hover=(road?linearHover?.bridgeEnd:linearHover?.endpoint)?linearHover.point:null,shown=new Set();
   ctx.save();
   for(const s of State.structures){
-    if(s.type!==type||!s.a||!s.b)continue;
+    if(s.type!==(road?'bridge':type)||!s.a||!s.b)continue;
     for(const end of ['a','b']){
-      if(end==='a'?s.aSnap:s.bSnap)continue;
+      if(!road&&(end==='a'?s.aSnap:s.bSnap))continue;
       const q=s[end],key=q.x.toFixed(3)+','+q.y.toFixed(3);if(shown.has(key))continue;shown.add(key);
-      const v=w2s(q,structureHeight(s)),active=hover&&dist(q,hover)<.015;
+      const v=w2s(q,road?.09:structureHeight(s)),active=hover&&dist(q,hover)<.015;
       ctx.beginPath();ctx.arc(v.x,v.y,active?7:4,0,Math.PI*2);
       ctx.fillStyle=active?'#8dffbd':'#f3ce84';ctx.fill();
       ctx.lineWidth=active?2.5:1.5;ctx.strokeStyle='#314938';ctx.stroke();
@@ -102,7 +130,8 @@ function snapAnchor(p){
   let best=terrace?{id:terrace.structureId}:null,bestPoint=terrace?.point||null,bestScore=terrace?.score??Infinity;
   for(const s of State.structures){
     if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;
-    const q=boundaryPoint(s,p),score=dist(p,q);
+    // Oriented towers take walls on their two flank seats, on the line of the curtain.
+    const q=isOrientedTower(s)?orientedTowerSeats(s).sort((a,b)=>dist(p,a)-dist(p,b))[0]:boundaryPoint(s,p),score=dist(p,q);
     if(score<=radius&&score<bestScore){best=s;bestPoint=q;bestScore=score}
   }
   const end=linearEndpointSnap(p,State.tool?.linear,radius);
@@ -152,14 +181,19 @@ function roundParentSubtowerAttachment(parent,child,radialAngle){
     subtowerAngle:a
   };
 }
-function gateSubtowerAttachment(parent,child,frontIndex){
+// Gate subtower sockets: the four corners (front fp[1], fp[2]; rear fp[0], fp[3]) and the middle of
+// the two flanks (fp[0]->fp[1], fp[2]->fp[3]). Gate "front" is facade fp[1] -> fp[2].
+const GATE_SUBTOWER_SOCKETS=['gate-front:1','gate-front:2','gate-rear:0','gate-rear:3','gate-side:0','gate-side:2'];
+function gateSubtowerAttachment(parent,child,socketOrFront){
   const fp=footprintPoints(parent);if(fp.length<4)return null;
-  // Gate "front" is facade fp[1] -> fp[2], therefore it has exactly two sockets.
   // Exception to normal subtowers: here the socket marks the CONTACT point,
-  // not the child centre. The child is pushed out along the corner ray until
-  // its own perimeter touches the gate perimeter, keeping the portal clear.
-  const i=Number(frontIndex)===2?2:1,corner=fp[i];
+  // not the child centre. The child is pushed out along the ray from the gate
+  // centre until its own perimeter touches the gate perimeter, keeping the portal clear.
+  const socket=typeof socketOrFront==='string'?socketOrFront:'gate-front:'+(Number(socketOrFront)===2?2:1);
+  const m=socket.match(/^gate-(front|rear|side):(\d)$/);if(!m)return null;
+  const i=Number(m[2]),corner=m[1]==='side'?{x:(fp[i].x+fp[(i+1)%4].x)/2,y:(fp[i].y+fp[(i+1)%4].y)/2}:fp[i];
   let ux=corner.x-parent.x,uy=corner.y-parent.y,L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
+  if(isOrientedTower(child))return orientedGateFlankAttachment(parent,child,socket);
   const angle=child.shape==='square'?(parent.angle||0):0;
   let support;
   if(child.shape==='round')support=Number(child.r)||.5;
@@ -170,15 +204,16 @@ function gateSubtowerAttachment(parent,child,frontIndex){
   return{
     point:{x:corner.x+ux*support,y:corner.y+uy*support},
     angle,
-    subtowerSocket:'gate-front:'+i,
+    subtowerSocket:socket,
     subtowerAngle:null
   };
 }
 function subtowerAttachmentAtSocket(parent,child,socket,radialAngle){
   if(!parent||!['tower','gate'].includes(parent.type)||!child||child.type!=='tower')return null;
+  // Oriented towers only flank gates; they neither carry nor become tower subtowers.
+  if(parent.type==='tower'&&(isOrientedTower(parent)||isOrientedTower(child)))return null;
   if(parent.type==='gate'){
-    const m=String(socket||'').match(/^gate-front:(1|2)$/);
-    return gateSubtowerAttachment(parent,child,m?Number(m[1]):1);
+    return gateSubtowerAttachment(parent,child,GATE_SUBTOWER_SOCKETS.includes(socket)?socket:'gate-front:1');
   }
   if(parent.shape==='round')return roundParentSubtowerAttachment(parent,child,radialAngle);
   const m=String(socket||'').match(/^corner:(\d)$/);
@@ -206,12 +241,12 @@ function nearestSubtowerPlacementSnap(p){
     if(parent.auto||!['tower','gate'].includes(parent.type)||underConstruction(parent)||(parent.type==='tower'&&isWoodTower(parent))||isWoodGate(parent))continue;
 
     // Tower parent: classic hierarchy, child must be strictly smaller.
-    if(parent.type==='tower'&&towerTier(parent)<=childTier)continue;
+    if(parent.type==='tower'&&(towerTier(parent)<=childTier||isOrientedTower(parent)||isOrientedTower(child)))continue;
 
-    // Gate parent: exactly two front-corner nodes; child size is unrestricted.
+    // Gate parent: four corner sockets and two flank-centre sockets.
     if(parent.type==='gate'){
-      for(const i of [1,2]){
-        const attachment=gateSubtowerAttachment(parent,child,i);if(!attachment)continue;
+      for(const socket of GATE_SUBTOWER_SOCKETS){
+        const attachment=gateSubtowerAttachment(parent,child,socket);if(!attachment)continue;
         const score=dist(p,attachment.point);
         if(score<=SUBTOWER_MAGNET&&score<bestScore&&subtowerAttachmentAvailable(parent,child,attachment)){
           best={...attachment,parentTowerId:parent.id,parentType:'gate',distance:score,wallId:null};
@@ -257,7 +292,7 @@ function repositionSubtower(child){
     const offset=snapStructureAngle(Number.isFinite(Number(child.orientationOffset))?Number(child.orientationOffset):0);
     child.orientationOffset=offset;
     applyStructureRotation(child,attachment.angle+offset);
-  }
+  }else if(isOrientedTower(child))applyStructureRotation(child,attachment.angle);
   child.subtowerSocket=attachment.subtowerSocket;
   child.subtowerAngle=attachment.subtowerAngle;
   return true;
@@ -308,6 +343,10 @@ function towerPlacementSnap(p){
   const subtower=nearestSubtowerPlacementSnap(p);
   if(subtower)return subtower;
   const wall=nearestWallPlacementSnap(p);
+  if(wall&&isOrientedTowerShape(State.tool.shape)&&State.tool.material!=='wood'){
+    const w=State.structures.find(s=>s.id===wall.wallId);
+    if(w)return{...wall,...orientedTowerWallSnap(State.tool.shape,Number(State.tool.size),w,wall.wallEnd,p)};
+  }
   return wall||{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
 }
 function towerHalfSpanAlongWall(tower,wall){
@@ -389,7 +428,8 @@ function regenerateTowerWallPair(tower,wall,end,anchor=null){
 
   // Watchtower = open frame: palisade keeps the original endpoint beneath it.
   // Solid towers/gates use the exact footprint boundary.
-  const contact=passThrough?original:boundaryPoint(tower,other);
+  const towerContact=()=>isOrientedTower(tower)?orientedTowerWallContact(tower,other,wall[end]):boundaryPoint(tower,other);
+  const contact=passThrough?original:towerContact();
   wall[end]={x:contact.x,y:contact.y};
   wall.length=dist(wall.a,wall.b);
   if(end==='a')wall.aSnap=tower.id;else wall.bSnap=tower.id;
@@ -398,7 +438,7 @@ function regenerateTowerWallPair(tower,wall,end,anchor=null){
   normalizeStructureVariants(wall);
   normalizeFunctions(tower);
   invalidateCastleColliderGeometry(tower,wall);
-  return passThrough||dist(wall[end],boundaryPoint(tower,other))<=.015;
+  return passThrough||dist(wall[end],towerContact())<=.015;
 }
 function attachTowerToWallEndpoint(wallId,end,tower,anchor){
   const wall=State.structures.find(s=>s.id===wallId&&['wall','palisade'].includes(s.type));
@@ -476,6 +516,7 @@ function breakWallForTower(wallId,tower){
   return true;
 }
 function addTowerWithPlacement(tower,snap={}){
+  if(isOrientedTower(tower)&&Number.isFinite(snap.wallSeat))tower.wallSeat=snap.wallSeat;
   if(snap.parentTowerId){
     const parent=State.structures.find(s=>s.id===snap.parentTowerId&&['tower','gate'].includes(s.type));
     if(!parent){status('Subtower parent is no longer available');return false}
@@ -491,7 +532,7 @@ function addTowerWithPlacement(tower,snap={}){
 
   if(snap.parentTowerId){
     const parent=State.structures.find(s=>s.id===snap.parentTowerId);
-    status(parent?.type==='gate'?'Subtower attached to gate front corner':'Subtower attached to '+(parent?.shape==='round'?'tower perimeter':'tower corner'));
+    status(parent?.type==='gate'?'Subtower attached to gate '+(String(tower.subtowerSocket).startsWith('gate-side')?'flank':String(tower.subtowerSocket).startsWith('gate-rear')?'rear corner':'front corner'):'Subtower attached to '+(parent?.shape==='round'?'tower perimeter':'tower corner'));
     return true;
   }
 
@@ -512,7 +553,7 @@ function addTowerWithPlacement(tower,snap={}){
 function currentLinearSpec(){
   if(State.tool.linear==='road')return TYPES.road;
   if(['wall','palisade'].includes(State.tool.linear))return{...TYPES[State.tool.linear],width:wallWidthForTier(State.tool.tier||State.buildLevels.wallTier)};
-  return TYPES.built;
+  return State.tool.span==='wide'?TYPES.builtWide:TYPES.built;
 }
 function normalizeLinear(a,b,spec,snapAngle=false){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),rawAngle=Math.atan2(dy,dx),angle=snapAngle?snapStructureAngle(rawAngle):rawAngle,ux=Math.cos(angle),uy=Math.sin(angle);return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target,angle,rotationStep:snapAngle?structureRotationStep(angle):null}}
 function structureAngleDelta(a,b){return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))}
@@ -574,24 +615,36 @@ function linePoly(s){
 function functionSlotSize(s,index=0){
   if(!s)return'normal';
   if(s.type==='tower')return towerTier(s)>=3?'large':'normal';
-  if(s.type==='built')return Number(s.length)>=3?'large':'normal';
+  if(s.type==='built')return isWideBuilt(s)||Number(s.length)>=3?'large':'normal';
   return'normal';
 }
 function functionSlotUnits(s,index=0){return functionSlotSize(s,index)==='large'?2:1}
+// The gate ground floor is an entrance passage; its functional rooms start upstairs.
+function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
-  if(s.type==='gate')return structureLevel(s);
+  if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
   if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
-  if(s.type==='built')return Number(s.length)>=2?structureLevel(s):0;
+  if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
   return 0;
 }
 function functionCapacityUnits(s){
   let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
-function normalizeFunctions(s){const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);while(s.functions.length<cap)s.functions.push(null);return s}
+function normalizeFunctions(s){
+  const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];
+  // Migrate once: prior saves placed a functional room on the traversable gate floor.
+  if(s.type==='gate'&&!s.gateGroundIsPassage){
+    if(s.functions.length>cap)s.functions=s.functions.slice(1);
+    s.gateGroundIsPassage=true;
+  }
+  s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);
+  while(s.functions.length<cap)s.functions.push(null);
+  return s;
+}
 // Variant contract:
  // tower/gate -> roofStyle
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`Built section ${s.length.toFixed(2)}U · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
+function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}

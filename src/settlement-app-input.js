@@ -8,14 +8,17 @@ canvas.addEventListener('pointerdown',e=>{
     return
   }
   const sp=pointerScreen(e),p=s2w(sp.x,sp.y);
-  if(State.tool.kind==='select'){selectStructure(structureAtScreen(sp)||structureAt(p));return}
+  if(State.tool.kind==='select'){
+    const sign=window.ConquerRoadSignTests?.hit?.(sp);
+    if(sign){window.ConquerRoadSignTests.open(sign);return}
+    selectStructure(structureAtScreen(sp)||structureAt(p));return
+  }
   if(State.tool.kind==='delete'){const hit=structureAtScreen(sp)||structureAt(p);if(hit)deleteStructure(hit.id);return}
 
   // Once the centre is fixed, the second click only defines orientation.
   // It may be anywhere on screen; only the building centre must lie in the build area.
   if(State.draft?.mode==='orient'&&orientedToolSpec()){
-    const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
-    commitOrientedPlacement(State.draft.center,angle);return
+    commitOrientedPlacement(State.draft.center,orientedDraftAngle(p));return
   }
 
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
@@ -52,6 +55,7 @@ canvas.addEventListener('pointerdown',e=>{
       mode:'orient',center:q,angle,lockedAngle,
       wallSnapId:snap.wallId||null,
       wallSnapEnd:snap.wallEnd||null,
+      wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
       parentTowerId:snap.parentTowerId||null,
       subtowerSocket:snap.subtowerSocket||null,
       subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -61,11 +65,11 @@ canvas.addEventListener('pointerdown',e=>{
     draw();return
   }
   if(State.tool.kind==='gate'){
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-    State.draft={mode:'orient',center:q,angle:0,preview:makePlacementPreview(q,0)};
-    status('Gate position fixed — move cursor to rotate, click to confirm');draw();return
+    const road=gateRoadSnap(p),q=road?road.point:{x:snapGrid(p.x),y:snapGrid(p.y)},angle=road?road.axis:0;
+    State.draft={mode:'orient',center:q,angle,roadAxis:road?road.axis:null,preview:makePlacementPreview(q,angle)};
+    status(road?'Gate magnetized to the road — move cursor to choose the outer front, click to confirm':'Gate position fixed — move cursor to rotate, click to confirm');draw();return
   }
-  if(State.tool.kind==='civic'||State.tool.kind==='industry'){
+  if(State.tool.kind==='civic'||State.tool.kind==='industry'||State.tool.kind==='event'){
     // Two-click oriented placement shared by all point buildings:
     // first click fixes the centre, pointer movement rotates the ghost,
     // second click commits the final angle.
@@ -123,17 +127,25 @@ canvas.addEventListener('pointerdown',e=>{
     const mainRoad=State.tool.linear==='road',snapFn=mainRoad?mainRoadSnapAnchor:snapAnchor;
     if(!State.draft){
       const s=snapFn(p);
-      State.draft={a:s.point,aSnap:s.structureId||null,preview:null,previewSegments:null};
-      status(mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
+      State.draft={a:s.point,aSnap:s.structureId||null,aGatePort:s.gatePort||null,preview:null,previewSegments:null};
+      status(s.gatePort?'Main road: starts at the gate — choose point B':s.bridgeEnd?'Main road: starts at the bridge — choose point B':mainRoad?'Main road: point A set — choose point B':'Point A set — choose point B');
       draw();
     }else{
       const e2=snapFn(p),spec=currentLinearSpec();
-      if(mainRoad){
+      if(mainRoad&&(State.draft.aGatePort||e2.gatePort)){
+        // A gate mouth is reached exactly: a free leg, then a straight approach into the passage.
+        const legs=manualRoadLegs(State.draft.a,e2.point,State.draft.aGatePort,e2.gatePort);
+        const bad=legs.find(l=>dist(l.a,l.b)<spec.min-.001||dist(l.a,l.b)>spec.max+.001);
+        const blocked=legs.map(l=>window.ConquerPlacement?.check({type:'road',manualMain:true,width:spec.width,...l})).find(v=>v&&!v.ok);
+        if(bad)status('Road to the gate: each leg must be '+spec.min+'–'+spec.max+'U');
+        else if(blocked)status('Road blocked: '+blocked.reason);
+        else if(legs.every(l=>addManualMainRoad(l.a,l.b))){State.draft=null;status('Main road joined to the gate — choose next segment')}
+      }else if(mainRoad){
         const n=normalizeLinear(State.draft.a,e2.point,spec,false);
         if(n&&n.length>=spec.min-.001){
           if(addManualMainRoad(n.a,n.b)){
             State.draft=null;
-            status('Main road added — choose next segment');
+            status(e2.bridgeEnd?'Main road joined to the bridge — choose next segment':'Main road added — choose next segment');
           }
         }else status('Segment too short');
       }else{
@@ -167,6 +179,8 @@ canvas.addEventListener('pointermove',e=>{
     return
   }
   const p=pointerWorld(e);
+  // Four signposts behave like interactive wayfinding markers in select mode.
+  if(canvas.style)canvas.style.cursor=State.tool.kind==='select'&&window.ConquerRoadSignTests?.hit?.(pointerScreen(e))?'pointer':'';
   if(State.tool.kind==='terraform'){
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};
@@ -192,23 +206,32 @@ canvas.addEventListener('pointermove',e=>{
       error||((snap?'⛓ Magnet · ':'')+type+' '+preview.length.toFixed(1)+'U · flat level banks'));
     draw();return;
   }
-  if(State.tool.kind==='linear'&&!State.draft&&['wall','palisade'].includes(State.tool.linear)){
-    // Light the wall-end magnet under the pointer before the first click too.
-    const hover=snapAnchor(p),was=State.tool.linearHover?.endpoint?State.tool.linearHover.point:null,now=hover.endpoint?hover.point:null;
+  if(State.tool.kind==='linear'&&!State.draft&&['wall','palisade','road'].includes(State.tool.linear)){
+    // Light the wall-end (or bridge-end, for roads) magnet under the pointer before the first click too.
+    const road=State.tool.linear==='road',hover=(road?mainRoadSnapAnchor:snapAnchor)(p),lit=s=>s?.endpoint||s?.bridgeEnd?s.point:null;
+    const was=lit(State.tool.linearHover),now=lit(hover);
     State.tool.linearHover=hover;
     if(!!was!==!!now||(was&&now&&dist(was,now)>1e-6))draw();
     return;
   }
   if(State.tool.kind==='linear'&&State.draft){
     const mainRoad=State.tool.linear==='road',snap=(mainRoad?mainRoadSnapAnchor:snapAnchor)(p),spec=currentLinearSpec();
-    if(!mainRoad)State.tool.linearHover=snap;
+    State.tool.linearHover=snap;
+    if(mainRoad&&(State.draft.aGatePort||snap.gatePort)){
+      const legs=manualRoadLegs(State.draft.a,snap.point,State.draft.aGatePort,snap.gatePort);
+      State.draft.preview=null;State.draft.invalidPreview=null;
+      State.draft.previewSegments=legs.map(l=>({type:'road',manualMain:true,width:spec.width,...l,length:dist(l.a,l.b)}));
+      const blocked=State.draft.previewSegments.map(s=>window.ConquerPlacement?.check(s)).find(v=>v&&!v.ok);
+      status(blocked?'Road blocked: '+blocked.reason:'Road magnet on the gate — click to confirm');
+      draw();return;
+    }
     if(mainRoad){
       const n=normalizeLinear(State.draft.a,snap.point,spec,false);
       if(n){
         State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:true};
         State.draft.previewSegments=null;State.draft.invalidPreview=null;
         const verdict=window.ConquerPlacement?.check(State.draft.preview);
-        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`Main road: ${n.length.toFixed(2)}U — click to confirm`);
+        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`${snap.bridgeEnd?'⛓ Bridge magnet · ':''}Main road: ${n.length.toFixed(2)}U — click to confirm`);
         draw();
       }else{
         State.draft.preview=null;State.draft.invalidPreview={type:'road',a:State.draft.a,b:snap.point,width:spec.width};draw();
@@ -218,7 +241,7 @@ canvas.addEventListener('pointermove',e=>{
 
     const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.endpoint));
     if(route){
-      const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
+      const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,...(State.tool.span==='wide'?{span:'wide'}:{})};
       State.draft.invalidPreview=null;
       State.draft.preview=null;
       State.draft.previewSegments=route.segments.map((seg,index)=>({
@@ -249,11 +272,11 @@ canvas.addEventListener('pointermove',e=>{
   const oriented=orientedToolSpec();
   if(oriented){
     if(State.draft?.mode==='orient'){
-      const angle=Number.isFinite(State.draft.lockedAngle)?State.draft.lockedAngle:placementAngle(State.draft.center,p);
+      const angle=orientedDraftAngle(p);
       State.draft.angle=angle;State.draft.preview=makePlacementPreview(State.draft.center,angle);
       const ghost=window.ConquerPlacement?.check({...State.draft.preview,parentTowerId:State.draft.parentTowerId||null,wallSnapId:State.draft.wallSnapId||null});
       let deg=Math.round(angle*180/Math.PI);if(deg<0)deg+=360;
-      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
+      status(ghost&&!ghost.ok?'Placement blocked: '+ghost.reason:State.draft.wallSnapId?`Wall snap · ${Number.isFinite(State.draft.lockedAngle)?'aligned':'rotate'} ${deg}° — click to confirm`:Number.isFinite(State.draft.roadAxis)?`Road magnet · front ${deg}° — click to confirm`:`Rotate: ${deg}° — click to confirm`);
       draw();return
     }
     if(State.tool.kind==='tower'){
@@ -262,6 +285,7 @@ canvas.addEventListener('pointermove',e=>{
         mode:'hover',
         wallSnapId:snap.wallId||null,
         wallSnapEnd:snap.wallEnd||null,
+        wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
         parentTowerId:snap.parentTowerId||null,
         subtowerSocket:snap.subtowerSocket||null,
         subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -269,10 +293,12 @@ canvas.addEventListener('pointermove',e=>{
       };
       if(snap.parentTowerId)status('Subtower socket');
     }else{
-      const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-      State.draft={mode:'hover',preview:makePlacementPreview(q,0)};
+      const road=State.tool.kind==='gate'?gateRoadSnap(p):null;
+      const q=road?road.point:{x:snapGrid(p.x),y:snapGrid(p.y)};
+      State.draft={mode:'hover',preview:makePlacementPreview(q,road?road.axis:0)};
       const ghost=window.ConquerPlacement?.check(State.draft.preview);
       if(ghost&&!ghost.ok)status('Placement blocked: '+ghost.reason);
+      else if(road)status('Road magnet — click to place the gate over the road');
     }
     draw();return
   }
@@ -351,7 +377,7 @@ function setBuildMasonryMaterial(next){
 }
 for(const b of document.querySelectorAll('[data-build-masonry]'))b.onclick=()=>setBuildMasonryMaterial(b.dataset.buildMasonry);
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${isOrientedTowerShape(b.dataset.tower)?orientedTowerLabel(dummy):b.dataset.tower+' tower '+b.dataset.size+'U'} · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
@@ -399,29 +425,34 @@ for(const b of document.querySelectorAll('[data-crossing-width]'))b.onclick=()=>
     status('Crossing width: '+width+'U');draw();
   }
 };
-for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,isPalisade=b.dataset.linear==='palisade',level=isPalisade?1:State.buildLevels.wall;setTool({kind:'linear',linear:b.dataset.linear,level,tier,label:(b.dataset.linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,wide=b.dataset.linear==='builtWide',linear=wide?'built':b.dataset.linear,isPalisade=linear==='palisade',level=isPalisade?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'&&State.tool.material!=='wood'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','palisade'].includes(State.tool.linear)){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status((State.tool.linear==='palisade'?'Palisade':'Wall')+' tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
-document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.buildLevels.wall=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=State.buildLevels.wall;State.draft=null;status('Wall height: '+State.buildLevels.wall+' level'+(State.buildLevels.wall>1?'s':''));draw()}});
+document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{const wide=State.tool.kind==='linear'&&State.tool.span==='wide';State.buildLevels[wide?'builtWide':'wall']=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=Number(b.dataset.wallLevel);State.draft=null;status((wide?'Wide hall':'Wall')+' height: '+State.tool.level+' level'+(State.tool.level>1?'s':''));draw()}});
 document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
   if(State.tool.kind==='gate'&&State.tool.material==='wood'){
     document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x.dataset.gateLevel==='1'));
     status('Wood gate height is fixed at H1');
     draw();return;
   }
-  State.buildLevels.gate=Number(b.dataset.gateLevel);
-  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
+  // The small gate stops at L2.
+  const small=State.tool.kind==='gate'&&State.tool.size<1.25;
+  State.buildLevels.gate=Math.min(Number(b.dataset.gateLevel),small?SMALL_GATE_MAX_LEVEL:3);
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===State.buildLevels.gate));
   if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:State.tool.size,level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
-document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level};
+// Stone gates: the gatehouse (data-gate-size 1.5) and the small gate (1).
+for(const b of document.querySelectorAll('[data-gate]'))b.onclick=e=>{
+  const size=Number(b.dataset.gateSize)||GATE_SIZES.large,small=size<1.25;
+  const level=Math.min(State.buildLevels.gate,small?SMALL_GATE_MAX_LEVEL:3),dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size,level};
+  State.buildLevels.gate=level;
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
-  setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+  setTool({kind:'gate',material:'stone',size,level,label:(small?'Small gate 1×1U · L':'Gate 1.5×1.5U · L')+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 document.querySelector('[data-wood-gate]').onclick=e=>{
   const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};
@@ -440,12 +471,20 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
      placementSpec:candidate,
      label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
+ // Event venues (settlement-events3d.js): podium, stage, festival ground, arena lot.
+ for(const b of document.querySelectorAll('[data-event-venue]'))b.onclick=()=>{
+   const E=window.ConquerEvents3D;if(!E)return;
+   const candidate=E.make(b.dataset.eventVenue);
+   setTool({kind:'event',venue:candidate.venue,placementSpec:candidate,
+     label:E.label(candidate)+' · '+(E.buildDays(candidate)?E.buildDays(candidate)+'d · ':'')+costText(E.cost(candidate)),el:b});
+ };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
   const borderEntries=ensureBorderEntrySelection();
-  State.village={...State.village,name,wellId:well.id,founded:true,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  State.village={...State.village,name,wellId:well.id,founded:true,foundingWorkers:4,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  window.ConquerEconomy?.foundingCharter?.(well.id);
   closeVillageModal();
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
@@ -464,4 +503,4 @@ document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
-['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
+['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});

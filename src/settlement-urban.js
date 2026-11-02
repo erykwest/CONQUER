@@ -441,14 +441,36 @@ function urbanDenseParts(house){
     urbanDensityCache={revision:urbanRevision,parts:new Map()};
   const cached=urbanDensityCache.parts.get(house.id);
   if(cached&&cached.level===houseLevel(house))return cached.parts;
-  const lot=urbanLots().find(l=>l.houseId===house.id),parts=[];
+  const lot=urbanLots().find(l=>l.houseId===house.id);
+  let parts=[];
   if(lot){
-    const level=houseLevel(house),width=URBAN_FRONT_WIDTH[level],depth=level===4?1.13:.98;
-    const sign=urbanArea(lot.points)>=0?1:-1;
+    // Each lot picks one street type: eaves to the street, or (gable-front) narrow deep houses with
+    // the short side on the street. A lot too shallow for the deep type keeps the eaves layout.
+    const gableFront=(peasantHash(house.id+'|gable-front')&1)===1;
+    if(gableFront)parts=urbanDenseLayout(house,lot,true);
+    if(!parts.length)parts=urbanDenseLayout(house,lot,false);
+  }
+  urbanDensityCache.parts.set(house.id,{level:houseLevel(house),parts});
+  return parts;
+}
+const URBAN_GABLE_FRONT_WIDTH=Object.freeze({3:1.08,4:1.0});
+function urbanDenseLayout(house,lot,gableFront){
+  const parts=[];
+  {
+    const level=houseLevel(house),width=(gableFront?URBAN_GABLE_FRONT_WIDTH:URBAN_FRONT_WIDTH)[level];
+    const depth=gableFront?(level===4?1.55:1.45):level===4?1.13:.98;
+    const sign=urbanArea(lot.points)>=0?1:-1,n=lot.points.length,street=level===4?urbanLotStreetEdges(lot):null;
     for(const frontage of urbanLotRoadFrontages(lot)){
       const count=Math.floor((frontage.length+.06)/width);
       if(!count)continue;
-      const spacing=frontage.length/count,baseWidth=Math.min(spacing+.045,level===4?1.65:1.95);
+      // L4 corner houses: the end building of a row whose lot corner meets another street gets the
+      // turret, on that corner (local +X runs along the frontage, times the lot orientation).
+      const edgeLen=dist(frontage.a,frontage.b);
+      const startCorner=!!street?.has((frontage.edge+n-1)%n)&&frontage.from<.6;
+      const endCorner=!!street?.has((frontage.edge+1)%n)&&frontage.to>edgeLen-.6;
+      // The lot vertex shared by the two streets; houseTurretInfo mirrors the turret towards it.
+      const turretCorner=i=>i===count-1&&endCorner?{side:sign,point:frontage.b}:i===0&&startCorner?{side:-sign,point:frontage.a}:null;
+      const spacing=frontage.length/count,baseWidth=Math.min(spacing+.045,gableFront?1.25:level===4?1.65:1.95);
       const inward={x:-frontage.uy*sign,y:frontage.ux*sign};
       // Original L/T extensions grow towards the plot interior (+local Y).
       const angle=Math.atan2(inward.y,inward.x)-Math.PI/2;
@@ -469,16 +491,20 @@ function urbanDenseParts(house){
           y:frontage.a.y+frontage.uy*along+inward.y*(faceDepth/2+URBAN_FRONT_SETBACK)
         };
         const buildingKey=house.id+'|'+partKey,virtual={
-          id:buildingKey,type:'house',houseLevel:level,urbanCompact:true,
+          id:buildingKey,type:'house',houseLevel:level,urbanCompact:true,gableFront,turretCorner:turretCorner(i),
           x:center.x,y:center.y,angle,w:faceWidth,h:faceDepth
         };
         let accepted=null;
+        const build=()=>houseFootprintParts(virtual).map(part=>({
+          ...part,dense:true,buildingKey,roadId:frontage.roadId,
+          frontage:frontage.edge,roofAngle:angle+(part.roofTurn||0)
+        }));
         for(let attempt=0;attempt<8;attempt++){
-          virtual.w=faceWidth;
-          const shape=houseFootprintParts(virtual).map(part=>({
-            ...part,dense:true,buildingKey,roadId:frontage.roadId,
-            frontage:frontage.edge,roofAngle:angle+(part.roofTurn||0)
-          }));
+          virtual.w=faceWidth;virtual.x=center.x;virtual.y=center.y;
+          let shape=build();
+          // An L4 corner turret projects past the facade: step the building back so it meets the street line.
+          const front=shape.find(part=>part.kind==='turret')?.front||0;
+          if(front>0){virtual.x+=inward.x*front;virtual.y+=inward.y*front;shape=build()}
           // Test the *entire* L/T outline and the L4 turret, not just the
           // original rectangular body. Slight shared-wall overlap is allowed.
           const inside=shape.every(part=>part.points.every(pt=>urbanContains(lot.points,pt,.04)));
@@ -495,7 +521,6 @@ function urbanDenseParts(house){
       if(new Set(parts.map(p=>p.buildingKey)).size>=10)break;
     }
   }
-  urbanDensityCache.parts.set(house.id,{level:houseLevel(house),parts});
   return parts;
 }
 function urbanDenseBuildingCount(house){
@@ -617,8 +642,11 @@ function urbanDenseHouseDoorInfo(house){
   const L=dist(edge,next)||1,tangent={x:(next.x-edge.x)/L,y:(next.y-edge.y)/L};
   const sign=urbanArea(lot.points)>=0?1:-1;
   const normal={x:tangent.y*sign,y:-tangent.x*sign};
-  const surface={x:first.center.x+normal.x*first.h*.5,y:first.center.y+normal.y*first.h*.5};
-  const outside={x:surface.x+normal.x*.26,y:surface.y+normal.y*.26};
+  // With an L4 corner turret the door moves along the facade, away from it.
+  const t=first.turret,shift=t?-Math.sign((t.center.x-first.center.x)*tangent.x+(t.center.y-first.center.y)*tangent.y)*first.w*.2:0;
+  const surface={x:first.center.x+normal.x*first.h*.5+tangent.x*shift,y:first.center.y+normal.y*first.h*.5+tangent.y*shift};
+  // A building stepped back behind its turret still opens onto the street line.
+  const step=.26+(t?.front||0),outside={x:surface.x+normal.x*step,y:surface.y+normal.y*step};
   return{surface,outside,tangent,normal,side:1,lateralSign:1};
 }
 // Choose once from world geometry, independent of draw order, camera and reload.
@@ -862,7 +890,7 @@ function urbanHouseGeometry(){
       return{...part,bodyH,roofH:ridges[i]};
     });
     const points=parts.flatMap(p=>p.points);
-    return{house,parts,minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),
+    return{house,parts,dormers:urbanHouseDormers(house,parts),minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),
       minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y))};
   });
 }
@@ -874,14 +902,16 @@ function urbanHouseGeometry(){
 //   king post, collar tie and struts.
 const HOUSE_WINDOW_HALF_W=.0875,HOUSE_WINDOW_HALF_H=.15,HOUSE_TIMBER_W=.05;
 function houseFacadePlan(house,part,edge){
-  const level=houseLevel(house),L=dist(edge.a,edge.b),rows=level>=2?[.52,1.34]:[.48];
+  const level=houseLevel(house),L=dist(edge.a,edge.b),wallH=part.bodyH??houseBodyHeight(house);
+  // Rows scale with the wall (.52/1.34 on a 1.72 U body), so the taller L4 upper floor keeps them centred.
+  const rows=level>=2?[.52,1.34].map(z=>z*wallH/1.72):[.48];
   const pts=part.points,i=pts.indexOf(edge.a),other=i>=0?dist(pts[(i+1)%pts.length],pts[(i+2)%pts.length]):0;
   const long=level>=2&&L>=1&&L>=other-1e-6;
   const offs=long?[-L/4,L/4]:[0];
-  const windows=rows.flatMap(z=>offs.map(off=>({off,z})));
+  const windows=houseFacadeDoorCut(house,edge,rows.flatMap(z=>offs.map(off=>({off,z}))));
   const beams=[];
   if(level<2)return{windows,beams};
-  const wallH=part.bodyH??houseBodyHeight(house),fb=wallH*.5,top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
+  const fb=houseFloorBreak(wallH),top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
   const seg=(o0,z0,o1,z1)=>beams.push([{off:o0,z:z0},{off:o1,z:z1}]);
   seg(-half,fb+t,half,fb+t);seg(-half,top-t,half,top-t);
   const upper=windows.filter(w=>w.z>fb&&w.z<top);
@@ -911,7 +941,135 @@ function houseFacadePlan(house,part,edge){
     seg(0,top,0,ridge-t*2);seg(-hc,zc,hc,zc);
     seg(-half*.62,top+t,-t,top+(ridge-top)*.72);seg(half*.62,top+t,t,top+(ridge-top)*.72);
   }
+  return houseFacadeTurretCut(part,edge,{windows,beams});
+}
+// A window never sits on or over the door: any window reaching down into the door's height keeps
+// HOUSE_DOOR_CLEARANCE beside the door leaf, or is dropped.
+const HOUSE_DOOR_TOP=.552,HOUSE_DOOR_CLEARANCE=.06;
+function houseFacadeDoorCut(house,edge,windows){
+  const door=typeof houseDoorInfo==='function'?houseDoorInfo(house):null;if(!door)return windows;
+  const L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+  const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2,dx=door.surface.x-mx,dy=door.surface.y-my;
+  const off=dx*ux+dy*uy;
+  if(Math.abs(-dx*uy+dy*ux)>.08||Math.abs(off)>L/2+.02)return windows;
+  const halfDoor=Math.min(.08,(Number(house.w)||1.5)*.0533);
+  return windows.filter(w=>w.z-HOUSE_WINDOW_HALF_H>HOUSE_DOOR_TOP+HOUSE_DOOR_CLEARANCE||
+    Math.abs(w.off-off)>=HOUSE_WINDOW_HALF_W+halfDoor+HOUSE_DOOR_CLEARANCE);
+}
+// The L4 corner turret stands in front of part of its own facade: that stretch keeps no window
+// or beam (horizontal plates are split around it).
+function houseFacadeTurretCut(part,edge,plan){
+  const turret=part.turret;if(!turret||part.kind==='turret')return plan;
+  const L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+  const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2,dx=turret.center.x-mx,dy=turret.center.y-my;
+  if(Math.abs(-dx*uy+dy*ux)>turret.rad+.06)return plan;
+  const c=dx*ux+dy*uy,lo=c-turret.rad-.03,hi=c+turret.rad+.03,inside=x=>x>lo&&x<hi;
+  const windows=plan.windows.filter(w=>w.off+HOUSE_WINDOW_HALF_W<=lo||w.off-HOUSE_WINDOW_HALF_W>=hi);
+  const beams=[];
+  for(const [a,b] of plan.beams){
+    if(Math.abs(a.z-b.z)<1e-9){
+      const x0=Math.min(a.off,b.off),x1=Math.max(a.off,b.off);
+      if(x0<lo)beams.push([{off:x0,z:a.z},{off:Math.min(x1,lo),z:a.z}]);
+      if(x1>hi)beams.push([{off:Math.max(x0,hi),z:a.z},{off:x1,z:a.z}]);
+    }else if(!inside(a.off)&&!inside(b.off)&&!(Math.min(a.off,b.off)<lo&&Math.max(a.off,b.off)>hi))beams.push([a,b]);
+  }
   return{windows,beams};
+}
+// L4 turret facade in world space (z above the turret's ground), shared by both renderers.
+// Its cream upper part is timber framed (plates at the floor band, eaves line and top, posts) with
+// two rows of windows: the house's upper floor looks to the street, the corner and the side; the
+// free-standing top storey looks all round.
+const TURRET_WINDOW_HALF_W=.065,TURRET_WINDOW_HALF_H=.12;
+function houseTurretFacade(turret){
+  const a=turret.angle||0,ex={x:Math.cos(a),y:Math.sin(a)},ey={x:-Math.sin(a),y:Math.cos(a)};
+  const street={x:ey.x*turret.sy,y:ey.y*turret.sy},side={x:ex.x*turret.sx,y:ex.y*turret.sx};
+  const t=HOUSE_TIMBER_W/2,floor=turret.floorZ,wall=turret.wallH,top=turret.bodyH,c=turret.center;
+  const rowLow=floor+(wall-floor)*.55,rowHigh=wall+(top-wall)*.5;
+  const windows=[],beams=[],at=(n,r)=>({x:c.x+n.x*r,y:c.y+n.y*r});
+  const beam=(p0,z0,p1,z1,normal)=>beams.push({a:{p:p0,z:z0},b:{p:p1,z:z1},normal});
+  const win=(n,r,z)=>windows.push({p:at(n,r),z,normal:n,tangent:{x:-n.y,y:n.x},hw:TURRET_WINDOW_HALF_W,hh:TURRET_WINDOW_HALF_H});
+  if(turret.type==='round'){
+    const r=turret.r,dir=k=>{const q=Math.atan2(street.y,street.x)+k;return{x:Math.cos(q),y:Math.sin(q)}};
+    const turn=Math.atan2(street.x*side.y-street.y*side.x,street.x*side.x+street.y*side.y)>0?1:-1;
+    const low=[0,Math.PI/4,Math.PI/2].map(k=>k*turn),high=[0,Math.PI/4,Math.PI/2,Math.PI,-Math.PI/2].map(k=>k*turn);
+    for(const k of low)win(dir(k),r,rowLow);
+    for(const k of high)win(dir(k),r,rowHigh);
+    const ring=turret.points;
+    for(const z of [floor+t,wall,top-t])for(let i=0;i<ring.length;i++){
+      const p0=ring[i],p1=ring[(i+1)%ring.length],m={x:(p0.x+p1.x)/2-c.x,y:(p0.y+p1.y)/2-c.y},L=Math.hypot(m.x,m.y)||1;
+      beam(p0,z,p1,z,{x:m.x/L,y:m.y/L});
+    }
+    // Posts flank every window, and stand every 45° where a storey has no window.
+    const flank=(TURRET_WINDOW_HALF_W+HOUSE_TIMBER_W)/r;
+    for(const [ks,z0,z1] of [[low,floor+t,wall],[high,wall,top-t]]){
+      const posts=ks.flatMap(k=>[k-flank,k+flank]);
+      for(let k=-Math.PI;k<Math.PI-1e-6;k+=Math.PI/4)if(ks.every(w=>Math.abs(Math.atan2(Math.sin(k-w),Math.cos(k-w)))>flank*1.6))posts.push(k);
+      for(const k of posts){const n=dir(k);beam(at(n,r),z0,at(n,r),z1,n)}
+    }
+  }else{
+    const half=turret.size/2;
+    for(const n of [street,side,{x:-street.x,y:-street.y},{x:-side.x,y:-side.y}]){
+      const tg={x:-n.y,y:n.x},m=at(n,half),p=off=>({x:m.x+tg.x*off,y:m.y+tg.y*off}),front=n===street||n===side;
+      for(const z of [floor+t,wall,top-t])beam(p(-half),z,p(half),z,n);
+      for(const off of [-(half-t),half-t])beam(p(off),floor+t,p(off),top-t,n);
+      const rows=front?[[rowLow,floor+t,wall],[rowHigh,wall,top-t]]:[[rowHigh,wall,top-t]];
+      for(const [z,z0,z1] of rows){
+        win(n,half,z);
+        const f=TURRET_WINDOW_HALF_W+HOUSE_TIMBER_W*.9;
+        beam(p(-f),z0,p(-f),z1,n);beam(p(f),z0,p(f),z1,n);
+      }
+    }
+  }
+  return{windows,beams};
+}
+// L4 roof dormers: two on each slope of every building's main body, kept clear of the corner
+// turret and of the chimneys. z is above the part's ground.
+function urbanHouseDormers(house,parts){
+  if(houseLevel(house)<4)return[];
+  // Chimney positions as finished: the geometry cache outlives the construction site.
+  const out=[],seen=new Set(),chimneys=chimneySpecs({...house,construction:null});
+  for(const part of parts){
+    if(part.kind!=='body')continue;
+    const key=part.buildingKey||'main';if(seen.has(key))continue;seen.add(key);
+    const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(house.angle||0)+turn;
+    const ca=Math.cos(angle),sa=Math.sin(angle),across=Math.abs(turn)>1e-6;
+    const rw=across?part.h:part.w,S=(across?part.w:part.h)/2,wallH=part.bodyH,H=part.roofH-wallH;
+    if(H<.3||rw<.8)continue;
+    const toLocal=p=>({x:(p.x-part.center.x)*ca+(p.y-part.center.y)*sa,y:-(p.x-part.center.x)*sa+(p.y-part.center.y)*ca});
+    const local=(x,y)=>({x:part.center.x+x*ca-y*sa,y:part.center.y+x*sa+y*ca});
+    const d=Math.min(.16,rw/9);
+    for(const s of [-1,1]){
+      const blocked=[];
+      for(const c of chimneys){const q=toLocal(c.center);if(Math.abs(q.y)<S&&Math.abs(q.x)<rw/2+.2)blocked.push([q.x-.16,q.x+.16])}
+      const tr=part.turret;
+      if(tr){const q=toLocal(tr.center);if(q.y*s>-tr.rad&&Math.abs(q.y)<S+tr.rad)blocked.push([q.x-tr.rad-.06,q.x+tr.rad+.06])}
+      for(const x0 of urbanDormerSlots(-rw/2+.1,rw/2-.1,blocked,d))
+        out.push(urbanDormer(part,local,x0,s,d,S,wallH,H,{x:-sa*s,y:ca*s},{x:ca,y:sa}));
+    }
+  }
+  return out;
+}
+function urbanDormerSlots(lo,hi,blocked,d){
+  const need=2*d+.06,free=[];let start=lo;
+  for(const [a,b] of blocked.filter(([a,b])=>b>lo&&a<hi).sort((p,q)=>p[0]-q[0])){if(a>start)free.push([start,a]);start=Math.max(start,b)}
+  if(start<hi)free.push([start,hi]);
+  const fits=free.filter(([a,b])=>b-a>=need).sort((p,q)=>(q[1]-q[0])-(p[1]-p[0]));
+  if(!fits.length)return[];
+  const [a,b]=fits[0];
+  if(b-a>=2*need)return[a+(b-a)/4,a+3*(b-a)/4];
+  return fits.slice(0,2).map(([a,b])=>(a+b)/2);
+}
+function urbanDormer(part,local,x0,s,d,S,wallH,H,normal,tangent){
+  // Front wall stands at 62% of the half span; cheeks and its small gable roof die into the slope.
+  const yf=s*S*.62,zb=wallH+.38*H,zt=wallH+.68*H,zr=wallH+.82*H,yt=s*S*.32,yr=s*S*.18;
+  const v=(x,y,z)=>({p:local(x,y),z});
+  const F0=v(x0-d,yf,zb),F1=v(x0+d,yf,zb),F2=v(x0+d,yf,zt),F3=v(x0-d,yf,zt),FA=v(x0,yf,zr);
+  const BL=v(x0-d,yt,zt),BR=v(x0+d,yt,zt),BA=v(x0,yr,zr);
+  return{partCenter:part.center,center:local(x0,yf),normal,tangent,faces:[
+    {kind:'front',pts:[F0,F1,F2,F3]},{kind:'gable',pts:[F3,F2,FA]},
+    {kind:'cheek',pts:[F0,F3,BL]},{kind:'cheek',pts:[F1,F2,BR]},
+    {kind:'roofA',pts:[F3,FA,BA,BL]},{kind:'roofB',pts:[F2,FA,BA,BR]}
+  ],window:{p:local(x0,yf),z:(zb+zt)/2,normal,tangent,hw:Math.min(.07,d*.5),hh:Math.min(.09,.3*H*.32)}};
 }
 function urbanRayInterval(a,b,poly){
   let enter=0,exit=1;const sign=urbanArea(poly)>=0?1:-1;

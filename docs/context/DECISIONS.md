@@ -1,7 +1,45 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MASTIO-01 — Ingresso rialzato del mastio (02/11/2026)
+
+- L'ingresso rialzato è uno stato della torre mastio (`tower.keepEntrance`), non un nuovo tipo di struttura: progressione scala di legno → scala in pietra, levatoio come accessorio indipendente dalla scala. Solo torri in muratura indipendenti di almeno 2 piani; costruito resta della torre anche se il mastio viene spostato.
+- Con l'ingresso rialzato la torre non ha porta a terra: l'unico accesso dal suolo è il piede della scala, e nessuno con il levatoio alzato. Motivo: il mastio è l'ultimo rifugio (D-011), il levatoio lo rende difendibile anche a mura cadute.
+- L'ariete non colpisce il battente del mastio: sta al primo piano, fuori portata di un ariete a terra, ed è proprio il motivo storico dell'ingresso rialzato. Contro il mastio chiuso l'assalitore brucia la scala di legno (o, quando ci saranno, porta scale d'assalto al pianerottolo). Il mastio non ha porte verso il cammino di ronda (regola valida per ogni mastio): non si entra dalle mura né lo si attraversa.
+- Gli assalitori prendono il mastio chiuso con una scala d'assalto alla porta: il battente alzato ha una resistenza propria e si abbatte a colpi d'ascia (o si brucia); senza battente la porta non oppone resistenza. Non si usa il riempimento dei fossati (serve alle macchine pesanti, non a raggiungere un primo piano).
+- Scala o battente distrutti non isolano gli occupanti: calano una scala a pioli dalla porta e la ritirano davanti al nemico.
+
+## D-MARCH-01 — Modalità attacco e conquista facoltativa (30/10/2026)
+
+**VINCOLO DI GAME DESIGN:** il giocatore può guidare una compagnia militare sulla world map al posto di gestire direttamente un feudo. Una volta arrivato può razziare, iniziare un assedio o ritirarsi. Razzia e distruzione anche soltanto parziale sono **persistenti** e non obbligano a terminare l'invasione. Il giocatore può interrompere un'operazione in qualsiasi momento. Anche dopo aver espugnato le difese **l'annessione è un comando volontario**, non l'esito automatico dell'assedio; la campagna può proseguire.
+
+**CODICE DIMOSTRATIVO SOLO SUL BRANCH feature/march-skeleton:** /march/ implementa la sequenza sopra su fixture isolate, non ancora sui feudi della partita. La vittoria è immessa soltanto da un tasto TEST e non è un'assalto simulato. Nella V1 World/Feudal, Combat, Siege, economia e save saranno quelli condivisi: niente doppio ledger o secondo motore d'assedio. [Specifica](../march.md).
+
+
+## D-PANELS-01 · Centro di controllo del feudo (29/10/2026)
+
+**DESIGN e codice sulla branch `panels`, non su `main`:** i pannelli di controllo sono un livello di osservazione/gestione nel Profilo della partita, non uno stato economico parallelo. Nove aree (Generale, Popolazione, Economia, Proprietà, Scorte, Militare, Cantieri, Diplomazia, Avvisi), usando `ConquerGame.read` e comandi del motore. Lo storico è mostrato solo dove esiste (`balanceHistory` mercato settimanale); nessuna serie fittizia. Distinguere scorte economia/Siege e numero di soldati effettivi/capienza caserme. **Festività, diplomazia avanzata e leve reali restano TBD**, come descritto in [management-panels](../management-panels.md). Nessuna modifica alle priorità della roadmap M0–M5.
+
+## Hardening strade e WebGL (23/10/2026)
+
+**D-FIX-01 · CODICE SU BRANCH `fix/main-founding-dev-webgl-20261023`:** ogni programma shader WebGL2 possiede il proprio VAO: abilitazioni e associazioni degli attributi non passano a programmi diversi quando viene eliminato un buffer di mesh. Rimangono il polling differito di D-038 e il fallback Canvas per errori veri; nessuna nuova query GPU sincrona nel disegno. La riparazione delle arterie prepara segmenti e ponti cedendo il controllo anche durante le scansioni dei fiumi; sostituisce la route e apre i corridoi forestali solo dopo una verifica finale della revisione di navigazione. Annullare la preparazione non pubblica topologia parziale e conserva quella precedente. Il percorso sincrono usa lo stesso generatore di ponti. Motivazioni e prove nel [report](../main-fixes-diagnosis-2026-10-23.md); nessuna modifica al contratto dei default DEV automatici o alla roadmap.
+
+> **Stato codice riconciliato al 23/10/2026:** D-LAB-01 e D-042 sono implementati in `main`. Le specifiche e decisioni sono invariate; cambia soltanto il riferimento di integrazione. [Audit](AUDIT-2026-10-23.md).
+
+
 > Data di **registrazione**: 2026-10-16. Le date originali di decisione non sono ricostruite dove non verificabili.
 > Classi: **VINCOLO** (principio espresso), **DESIGN** (direzione esplicita ma non prova di codice), **CODICE** (contratto osservato), **PROPOSTA**, **APERTO** (conflitto/decisione necessaria).
+
+## Converge — regole assedio (20/10/2026)
+
+**Applicazione D-031/D-032 sulla branch `converge`:** le restrizioni delle armi contro mura, torri e gatehouse sono implementate nel motore attuale, preservando il sistema di campate, le brecce e la separazione fra portone e torre-porta. Test dedicati disponibili, QA su pull request necessaria. La vecchia branch `assedio` non va fusa integralmente.
+
+**Riallineamento PR #61 (23/10/2026):** D-031/D-032 si applicano insieme a D-042: le immunità dei nuclei non proteggono la grata. I colpi alla porta continuano a raggiungere prima la grata abbassata, il fuoco la attraversa; restano tre integrità indipendenti. Conservati gli aggiornamenti di `main` fino a `518e830`, inclusi terrapieni e ridisegno coalescente.
+
+## Asset Lab (23/10/2026)
+
+**D-LAB-01 · CODICE SU MAIN dopo PR #81 (originariamente branch `feat/asset-lab-complete-catalog`):** il Lab non duplica la geometria del castello. Per le strutture che dipendono dall'intero motore (terreno, impronte, merli, tetti) carica il gioco in un iframe nascosto `index.html?assetlab=1`: in questa modalità `window.__CONQUER_ASSET_LAB__` blocca `saveLocal`, legge uno slot vuoto, salta Supabase e telemetria remota. Le varianti mostrate sono quelle di `ConquerSiegePreview.GALLERY`; le nuove varianti si aggiungono lì, non nel Lab.
+
+**D-LAB-02 · CODICE su branch `feat/asset-lab-audit`:** l'audit visivo usa i renderer del Lab e del gioco, mai un renderer parallelo. Gli stati delle fortificazioni sono quelli del gioco (`constructionProgress`, fasi di `galleryPhases` via `ConquerSiege`, `structureCutaway`). La baseline `qa/asset-audit-baseline.json` si aggiorna solo dopo la revisione dei fogli provini; i problemi accettati si registrano come deroghe con motivo, non abbassando le soglie. In sandbox `?assetlab=1` non gira la simulazione e il seed è fisso.
 
 ## Aggiornamento clay (19/10/2026) — solo design, non codice
 
@@ -125,6 +163,36 @@ Codice locale oltre `9e1b6a5`, nessuna nuova pubblicazione.
 
 **D-041 · CODICE SU MAIN / limite assedio:** [PR #73](https://github.com/erykwest/CONQUER/pull/73) aggiunge terra di riporto d'assalto compatibile col terrain boolean corrente; **non** implica implementazione di tutte le macchine o condizione di resa per blocco. Requisiti S-01–S-25 rimangono chiusi solo con prova di comportamento di ogni sistema.
 
+## Eventi (branch `events`, 22/10/2026)
+
+**D-044 · VINCOLO DI DESIGN ESPLICITO (EVENTI 22/10; registrata sulla branch come D-042, rinumerata al merge per la collisione con D-042 portoni):** lo spiazzo polivalente per eventi programmati misura **14 × 10 U** (lato lungo sull'asse x locale, fronte a −y), non più 6 × 10 come nello skeleton iniziale. **Motivazione:** il 6 × 10 risultava evidentemente troppo piccolo per giostra, circo e sagra a grandezza reale; con 14 × 10 entrano liste di oltre 10 U con quattro tribune, il tendone con carri e tende, la sagra con quattro bancarelle e otto tavoli, e anche l'arena a U. **Alternative scartate:** 6 × 10 con oggetti rimpiccioliti; taglie multiple (rinviate). **Impatto:** `VENUES.festivalGround` e `SETUPS` in `src/settlement-events3d.js`, `qa/events3d-regression.cjs`, [docs/events/README.md](../events/README.md).
+
+**D-045 · VINCOLO DI DESIGN ESPLICITO (EVENTI 22/10; già D-043 sulla branch):** tribune, arena e palchi seguono l'araldica del regno; tende dei cavalieri, rastrelliere e armature usano coppie casuali tra rosso, blu, giallo, verde e bianco (estesi oltre i primari perché le 8 tende dell'arena superano le 6 coppie possibili), **mai due tende con la stessa coppia nello stesso spazio**; in arena, torneo e circo le tende hanno rotazione casuale ±40° e spostamento fino al 75% della loro misura; merci scatter, rastrelliere e armature in ogni allestimento hanno orientamento libero (scatter) o ±35° e spostamento fino al 200%; ogni spostamento è scartato se urta un altro oggetto o esce dal lotto (si riprova più vicino, al limite resta nella posizione di base); festoni, circo e stoffe del palco degli artisti mantengono colori festosi fissi.
+
+**D-042 · DECISIONE ESPLICITA + CODICE SU MAIN dopo PR #76 (23/10/2026; originariamente branch `portoni`):** la **grata (saracinesca)** è uno **strato difensivo separato**, non un bonus di resistenza della porta. Estende D-032: il portone in pietra con grata ha tre durabilità indipendenti (torre-porta `core`, grata `portcullis` 120 HP, porta `door`). Una grata abbassata assorbe i colpi diretti alla porta (ariete, macchine) finché non è distrutta; il **fuoco** la attraversa e colpisce la porta. Abbassata sbarra il passaggio anche a porta aperta o sfondata; distrutta resta piegata e mezza alzata, non sbarra nulla e va riparata. L'accesso è violato solo con porta sfondata **e** nessuna grata abbassata (`gateBreached`).
+
+## Cavalieri e diplomazia (PR #72 portata su main in 2D, 28/10/2026)
+
+**D-046 · DECISIONE ESPLICITA DELL'UTENTE (28/10/2026):** umani e animali, cavalli compresi, restano **figure 2D** (disegno piano / billboard). Le mesh 3D generate con Blender per figure umane e animali sono scartate: niente `settlement-knights3d.js`, `knight-models.js`, `tools/blender/build_knights.py` né stile «flat» delle mesh 3D. Cavalieri a cavallo e messaggero usano solo `ConquerMounted2D` (`src/settlement-mounted2d.js`, il cavallo 2D approvato di `settlement-animals.js` con l'aggancio `onBody`). **Alternative scartate:** cavaliere 3D disegnato piatto (PR #72) e 3D a facce ombreggiate. **Impatto:** `drawMountedKnight` in `settlement-combat.js` e `ConquerDiplomacy.draw`; `qa/diplomacy-regression.cjs` fallisce se ricompaiono `ConquerKnights3D`/`ConquerKnightModels`. Le carovane della diplomazia restano separate dai convogli dell'economia (#55): l'unificazione è un lavoro successivo, attraverso l'interfaccia `window.ConquerDiplomacy`.
+
+
+## Economia — lavoro L1 unico (28/10/2026)
+
+Le decisioni D-033…D-038 delle branch #55 e `jobmanager` avevano numeri già usati su `main` per altri temi: sono riportate qui con numeri nuovi.
+
+**D-047 · CODICE SU MAIN dopo #98 (da #55, 19–20/10):** dopo la fondazione il Builder usa le scorte e la tesoreria di `ConquerEconomy`; `State.resources` è solo la proiezione per la UI. La fondazione dà una dotazione una tantum e 4 L1 fondatori senza casa. Bilancio settimanale per bene: prodotto, domanda, soddisfatto, carenza per offerta o per denaro, trend a 4 settimane. Con `?dev=1` il minimo di 10000 si applica alle scorte del castello.
+
+**D-048 · CODICE SU MAIN dopo #98 (da #55, 20/10):** i cantieri manuali avanzano solo con L1 reali: giornate-operaio lun–ven, al massimo 3 L1 per cantiere, percorso pedonale raggiungibile, salario pagato dal signore per il lavoro svolto (cantiere fermo se la tesoreria è vuota). Strade, case e campi procedurali conservano i timer.
+
+**D-049 · CODICE SU MAIN dopo #98 (unifica #55 e `jobmanager`):** un solo allocatore L1, `ConquerEconomy.laborAllocation`. Ordine: industrie; pastori protetti (case `goat`/`shepherd`, almeno uno per gregge, di più se il cibo accessibile copre meno di 14 giorni); cantieri; taglialegna (prima dei cantieri solo con legna bassa); pastori di ritorno al gregge; liberi. Il pascolo produce 0,9 cibo privato per pastore e giorno lavorativo. Non si porta `ConquerJobManager`. **Alternativa scartata:** il modello di cantiere di `jobmanager` (`workRequired` con priorità), che duplicava D-048.
+
+**D-050 · CODICE SU MAIN dopo #98 (da `jobmanager` D-034, 20/10):** il villaggio compra il cibo al mercato; il castello dà razioni solo per ordine del signore, salvato in `State.policies.rations` (`market` predefinito, `half`, `full`; i vecchi valori numerici valgono `market`). Le razioni escono davvero dal magazzino. Felicità separata L1–L4: sale se la classe mangia, scende con fame e mezze razioni, sale con razioni piene; il benessere è la media pesata. Servi L1/L2 vincolati al feudo, L3/L4 liberi: la migrazione non è implementata.
+
+**D-051 · APERTO:** `jobmanager` (vincolo esplicito del 20/10) vuole **nessun L1 nei campi**, solo L2; #55 e `main` lasciano gli L1 sui campi e gli L2 liberi a completarli. La tappa 1 mantiene il comportamento di #55/`main`. Serve una scelta dell'utente: applicare il vincolo cambia campi, figure e bilancio alimentare iniziale.
+**D-052 · CODICE SU MAIN dopo #99 (da `jobmanager` D-035/D-036, 20/10):** routine settimanali visuali. Uomini adulti: lavoro fino alle 18:00, poi svago (`LEISURE_VENUES`: locanda, mercato, pozzo); sabato mattina mercato, domenica mattina messa, pomeriggi di svago. Donne adulte: L1/L2 lotto al mattino, L3 mercato, L4 svago; sabato mercato, domenica messa, pomeriggi di svago. Solo strutture completate e raggiungibili, nessun teletrasporto; nessun effetto economico. Lo svago serale e il weekend hanno la precedenza sui pastori.
+**D-053 · CODICE SU MAIN dopo #101 (unifica #55 commercio e `feature/autonomous-urban-economy`):** un solo catalogo di botteghe, quello urbano (7 mestieri → 5 Beni L3). Le botteghe nascono da sole nelle case L3 (una per casa, nessun comando del giocatore), con scelta pesata deterministica per seme; i prezzi dei Beni L3 della settimana N usano solo le osservazioni della N-1, aggiornando un bene al giorno. Le vendite spostano monete esistenti dalle famiglie al portafoglio L3. I Beni L3 restano fuori da `ConquerEconomy.GOODS` (UI aggregata «Beni L3»). Ricette e consumo di materie prime non sono ancora simulati. **Alternative scartate:** botteghe registrate a mano di #55 (`registerShop` resta come API) e moduli ES non collegati.
+**D-054 · CODICE SU BRANCH `feature/economy-convoys` (unifica #55 convogli e #96 carovane):** un solo sistema, `ConquerConvoys`, salvato in `State.economy.commerce` (`lordConvoys`, `journeys`, `nobleJourneys`). Le carovane della diplomazia sono convogli del signore: oro, merci e provviste escono dal castello in un solo passo alla partenza (o all'accantonamento), altrimenti il convoglio resta bloccato; una merce per carro; scorta entro i posti di caserma. `ConquerDiplomacy` crea e modifica i convogli attraverso questa interfaccia e non tiene più una lista propria. Completa la nota finale di D-046. I cartelli di prova usano la mesh `signpost` di `ConquerScatterModel` e il `settlement-wagons.js` di main.
+**D-055 · CODICE SU BRANCH `feature/economy-vehicles` (da `economic-balances-animations`, applica D-046):** i veicoli su strada sono `ConquerVehicles`, solo 2D: instradamento Dijkstra sulle strade completate, moto con accelerazione, curve e frenata, disegno con `ConquerWagons.drawWagon` e cavalli `ConquerAnimals.drawAnimal` alla scala di bestiame e cavalieri. **Alternativa scartata:** mesh 3D di carro e cavalli (`ConquerWagons3D`, `ConquerAnimals3D`, stile «flat») del branch d'origine.
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
 ## Conflitti decisionali da risolvere esplicitamente

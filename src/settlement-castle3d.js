@@ -32,6 +32,9 @@
     buttress:()=>[snowTop('#948779'),'#625a52','#4b4540','#9f9285'],
     chimney:()=>['#3b302c','#493732','#332824','#6a5148'],
     hoardDeck:()=>['#74533a','#5d432e','#493423','#927155'],
+    plaster:()=>['#e8dcc2','#d2c4a6','#bcae91'],                     // timber-framed storey (house plaster)
+    ladderRail:()=>['#8b6a45','#73573a','#5e472f'],                 // cutaway ladder colours
+    ladderRung:()=>['#b98652','#9a6f44','#7f5b37'],
   };
   const rgbCache=new Map();
   function rgb(hex){
@@ -77,14 +80,15 @@
     return{col:Math.cos(2*(angle-Math.PI/6))>=0?pal[1]:pal[2],top:false};
   }
   function makeMesh(){
-    const tris=[],lines=[];
+    const tris=[],lines=[],tags=[];
     return{
-      tris,lines,
+      tris,lines,tags,
+      tag:'body',          // what the next faces are (body / roof): read by the construction assembly
       // face: vertices [{p,z}], colour: hex or palette array (top faces of stroked palettes get an outline)
       face(points,color){
         const vs=points.map(({p,z})=>vert(p,z));if(vs.length<3)return;
         const sh=Array.isArray(color)?shadeFor(vs,color):{col:color,top:false},c=rgb(sh.col);
-        for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.d,c[0],c[1],c[2]);
+        for(let i=1;i<vs.length-1;i++){for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.d,c[0],c[1],c[2]);tags.push(this.tag)}
         if(sh.top&&Array.isArray(color)&&color[3]){
           const o=rgb(color[3]);
           for(let i=0;i<vs.length;i++)for(const v of [vs[i],vs[(i+1)%vs.length]])lines.push(v.x,v.y,v.d,o[0],o[1],o[2]);
@@ -118,32 +122,64 @@
   function cutawayParts(){return State.structures.filter(s=>castleVolume(s)&&structureCutaway(s))}
   const winter=()=>State.season==='winter';
 
+  function addButtress(m,pieces){
+    for(const p of pieces){
+      if(buttressPieceIsPrism(p))m.prism(p.bottom,p.z0,p.z1,PAL.buttress());
+      else{m.frustum(p.bottom,p.top,p.z0,p.z1);m.face(p.top.map(q=>({p:q,z:p.z1})),PAL.buttress())}
+    }
+  }
   function addTower(m,s){
     const h=structureHeight(s);
     if(isStoneTowerStructure(s)){
       const base=towerBaseStyle(s);
       if(base==='buttress'){
-        const top=(2.35+(towerTier(s)-1)*.12)*.5;
-        for(const pts of stoneTowerButtressFootprints(s))m.prism(pts,0,top,PAL.buttress());
+        for(const b of stoneTowerButtresses(s))addButtress(m,b);
       }else if(base==='splayed'){
         m.frustum(stoneTowerSplayedFootprint(s),footprintPoints(s),0,STONE_TOWER_BASE_HEIGHT);
       }
     }
+    for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
+    for(const l of halfTowerLadders(s))m.prism(l.pts,l.z0,l.z1,l.part==='rung'?PAL.ladderRung():PAL.ladderRail());
     if(towerRoofStyle(s)==='pitched'){
-      const ring=towerRoofFootprintPoints(s),apex={x:s.x,y:s.y},apexZ=towerVisualTopHeight(s);
-      if(s.shape==='round'){
+      m.tag='roof';
+      const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);
+      if(s.shape==='round'||s.shape==='dee'){
         const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
         m.pyramid(ring,h,apex,apexZ,i=>cols[i%3]);
+      }else if(towerRoofShape(s)!=='pyramid'){
+        // Two slopes with stone gables, or a hip roof on a short ridge (squareTowerRoofGeometry).
+        for(const f of squareTowerRoofGeometry(s).faces){
+          m.tag=f.kind==='gable'?'gable':'roof';
+          m.face(f.pts,f.kind==='gable'?PAL.stone():winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
+        }
+        m.tag='roof';
       }else{
         m.pyramid(ring,h,apex,apexZ,i=>winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
       }
     }
+    for(const b of towerBartizans(s))addBartizan(m,b);
+  }
+  // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).
+  function addBartizan(m,b){
+    const tag=m.tag;m.tag='body';
+    m.frustum(b.corbel,b.ring,b.corbelZ,b.z0);
+    m.face(b.corbel.map(p=>({p,z:b.corbelZ})),PAL.stone());
+    m.prism(b.band,b.z0-.06,b.z0,PAL.corbel());
+    m.prism(b.ring,b.z0,b.drumZ,PAL.stone());
+    if(b.style==='pitched'){
+      m.tag='roof';
+      const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+      m.pyramid(b.eave,b.drumZ,b.center,b.apexZ,i=>cols[i%3]);
+    }
+    m.tag=tag;
   }
   function addGate(m,s){
     const g=gateRoofGeometry(s);if(!g)return;
     const H=g.h,R=g.ridgeH,sa=winter()?WINTER_SNOW_A:'#34363a',sb=winter()?WINTER_SNOW_B:'#42454a';
-    m.face([{p:g.c3,z:H},{p:g.c0,z:H},{p:g.ridgeA,z:R}],'#514a44');
-    m.face([{p:g.c1,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R}],'#62584f');
+    // Gables: masonry, or plaster over a timber storey.
+    const timber=gateTimberUpper(s),ga=timber?'#cdbf9f':'#514a44',gb=timber?'#e0d4b8':'#62584f';
+    m.face([{p:g.c3,z:H},{p:g.c0,z:H},{p:g.ridgeA,z:R}],ga);
+    m.face([{p:g.c1,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R}],gb);
     m.face([{p:g.c0,z:H},{p:g.c1,z:H},{p:g.ridgeB,z:R},{p:g.ridgeA,z:R}],sa);
     m.face([{p:g.c3,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R},{p:g.ridgeA,z:R}],sb);
   }
@@ -153,8 +189,10 @@
     m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:'#34363a');
     m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:'#42454a');
     // Gable ends are left open in 2.5D; a closed volume needs them.
+    const roofTag=m.tag;m.tag='gable';
     m.face([{p:p0,z:H},{p:ra,z:R},{p:p3,z:H}],PAL.stone());
     m.face([{p:p1,z:H},{p:p2,z:H},{p:rb,z:R}],PAL.stone());
+    m.tag=roofTag;
     for(const c of chimneySpecs(s))m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),c.z0,c.z1,PAL.chimney());
   }
   function addHoarding(m,s){
@@ -213,10 +251,22 @@
       if(point&&isRaisedPlacementCastlePoint(s))addFoundation(m,s);
       const run=fn=>point?withStructureGroundPlane(s,fn):fn();
       run(()=>{
-        m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
+        // In the world renderer stone gates are carved: piers and a vault around a passage you can
+        // see through, with door leaves as meshes. The Canvas paths keep the solid block and decals.
+        // A wall on a slope is built in steps, each section on its own ground.
+        // A timber-framed small gate: stone up to the room floor, plaster storey above.
+        const steps=s.type==='wall'?wallSlopeSections(s):null;
+        const timber=s.type==='gate'&&gateTimberUpper(s),top=timber?gateTimberFloorZ(s):structureHeight(s);
+        if(steps)for(const q of steps)withProjectionGroundZ(q.ground,()=>m.prism(q.pts,q.low,structureHeight(s),PAL.stone()));
+        else if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,top,PAL.stone())))
+          for(const pts of towerBodyPrisms(s))m.prism(pts,0,top,PAL.stone());
+        if(timber)m.prism(gateTimberStoreyPoints(s),top,structureHeight(s),PAL.plaster());
         if(s.type==='tower')addTower(m,s);
+        m.tag='roof';
         if(s.type==='gate')addGate(m,s);
         if(s.type==='built')addBuilt(m,s);
+        m.tag='body';
+        for(const b of wideHallButtresses(s))addButtress(m,b);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());
@@ -226,7 +276,7 @@
     return withLines(m);
   }
   // Triangle arrays carry their top-face outlines along (same 6-float vertex layout, GL_LINES pairs).
-  function withLines(m){const t=m.tris;t.lines=m.lines;return t}
+  function withLines(m){const t=m.tris;t.lines=m.lines;t.tags=m.tags;return t}
   function buildBodyUncached(){return bodyMesh(castleParts(),true)}
   // Full volumes of cutaway structures, used only as depth occluders (their look stays 2.5D).
   function buildCutawayDepth(){return memoGround(()=>bodyMesh(cutawayParts()))}
@@ -247,9 +297,9 @@
   function addPieces(m,which){
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
-    for(const s of castleParts()){
+    for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
       withStructureVisualMaterial(s,()=>{
-      const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+      const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){
         const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
         const near=viewDepthOf(c)>viewDepthOf(ownerRef(s,c))+1e-6;
@@ -396,7 +446,23 @@
       });
     }finally{worldOut=false}
   }
-  window.ConquerCastle3D={active,supported,setEnabled,drawBody,drawFront,worldMeshes,castleParts:()=>castleParts(),
+  // One structure as world triangles (x,y,z,r,g,b per vertex, already shaded) with a tag per
+  // triangle (body / roof / crown), whatever its construction state: the construction assembly
+  // reveals it piece by piece while it is being built.
+  function structureWorld(s){
+    worldOut=true;
+    try{
+      return memoGround(()=>{
+        const body=bodyMesh([s]),m=makeMesh();m.tag='crown';
+        withStructureVisualMaterial(s,()=>{
+          const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+          for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+        });
+        return{tris:body.concat(m.tris),tags:body.tags.concat(m.tags)};
+      });
+    }finally{worldOut=false}
+  }
+  window.ConquerCastle3D={active,supported,setEnabled,drawBody,drawFront,worldMeshes,structureWorld,castleParts:()=>castleParts(),
     castleVolume:s=>castleVolume(s),PAL,
     status:()=>({enabled,supported:supported(),failed:gpu.failed,bodyMs:perf().castle3dBodyMs,frontMs:perf().castle3dFrontMs,bodyTris:perf().castle3dBodyTris,frontTris:perf().castle3dFrontTris}),
     _build:{body:buildBody,front:buildFront}};

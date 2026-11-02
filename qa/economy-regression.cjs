@@ -57,7 +57,8 @@ test('sale 0%, castle cap, and weekend pause preserve resources',()=>{
   assert.ok(economy.snapshot().market.wood>0);
   const before=economy.snapshot().market.wood;
   economy.tick(4,6);
-  assert.equal(economy.snapshot().market.wood,before);
+  assert.ok(economy.snapshot().market.wood<before,'market day consumes household firewood');
+  assert.equal(economy.snapshot().balance.goods.wood.produced,5);
   assert.equal(economy.snapshot().weeks,1);
 });
 test('sale 100% routes all lord production to market',()=>{

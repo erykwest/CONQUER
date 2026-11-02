@@ -7,7 +7,7 @@ const page=await browser.newPage({viewport:{width:1280,height:900}});
 const errors=[];
 page.on('pageerror',e=>errors.push(String(e.stack||e)));
 try{
-  await page.goto('http://127.0.0.1:4173/?renderer=canvas2d',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.goto((process.env.CONQUER_QA_URL||'http://127.0.0.1:4173')+'/?renderer=canvas2d',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>!!window.ConquerCombat&&!!document.querySelector('#builder.ux-builder'),{timeout:15000});
   const dom=await page.evaluate(()=>({
     combat:!!document.getElementById('combatControls'),
@@ -46,12 +46,27 @@ try{
       draw();
     }
   });
-  assert.equal(devAndSnow.light,'day','DEV default must force daylight');
-  assert.equal(devAndSnow.season,'summer','DEV default must force summer');
-  assert.equal(devAndSnow.weather,'sun','DEV default must disable rain/fog');
+  assert.equal(devAndSnow.light,null,'Default daylight follows the procedural clock');
+  assert.equal(devAndSnow.season,null,'Default season follows the calendar');
+  assert.equal(devAndSnow.weather,null,'Default weather remains procedural');
   assert.equal(devAndSnow.fog,false,'Combat fog must start disabled');
   assert.equal(devAndSnow.tracksReady,true,'Snow footprint module must be loaded');
   assert.ok(devAndSnow.footprints>=6,'Four world units of movement must leave a winter trail');
+
+  // Procedural defaults must not prevent explicit DEV overrides or toggling
+  // back to automatic behaviour. Exercise the actual controls.
+  await page.locator('#devToggle').click();
+  for(const [selector,key,forced] of [
+    ['[data-light-override="day"]','daylightOverride','day'],
+    ['[data-season="summer"]','seasonOverride','summer'],
+    ['[data-weather-override="sun"]','weatherOverride','sun']
+  ]){
+    await page.locator(selector).click();
+    assert.equal(await page.evaluate(k=>State[k],key),forced);
+    await page.locator(selector).click();
+    assert.equal(await page.evaluate(k=>State[k],key),null);
+  }
+  await page.locator('#devToggle').click();
 
 
   // Exercise actual Canvas house drawing with multiple streetfront modules.
@@ -83,7 +98,8 @@ try{
   assert.equal(denseBrowser.n3,3,'Real browser must render three L3 frontage houses');
   assert.equal(denseBrowser.n4,4,'Real browser must render four L4 frontage houses');
   assert.ok(denseBrowser.l3Bodies>=6,'L3 frontage modules must preserve L/T wings');
-  assert.equal(denseBrowser.l4Turrets,4,'Each L4 module needs its own turret');
+  // L4 turrets sit only on the head building of a frontage at a street corner (STATUS 21/10/2026).
+  assert.ok(denseBrowser.l4Turrets<=2&&denseBrowser.l4Turrets<denseBrowser.n4,'L4 frontage turrets only on corner buildings, got '+denseBrowser.l4Turrets);
   assert.equal(denseBrowser.physicalParts,true);
 
   await page.getByRole('button',{name:'Combattimento e allarmi'}).click();

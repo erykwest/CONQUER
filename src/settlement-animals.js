@@ -342,6 +342,9 @@
     ctx.save();ctx.clip(path(sp.body));ctx.fillStyle=c.shade;
     ctx.beginPath();ctx.ellipse(sp.center.x,sp.center.y-50,110,24,0,0,Math.PI*2);ctx.fill();ctx.restore();
     if(!sp.headBehind)drawHead(ctx,sp,c,pose,lw,size);
+    // Riders and gear (settlement-mounted2d.js) draw in the body's art space, so they
+    // follow the gait's bob and pitch; flip says whether the art is mirrored.
+    if(opts.onBody)opts.onBody(ctx,{pose,lw,colors:c,sp,flip:facing*sp.artFacing});
     ctx.restore();
   }
   // The head is rigid: only moved and rotated, never reshaped.
