@@ -214,6 +214,16 @@
         h:ground+top,visualZ:ground+z});
     }
     if(wood)return result; // Wooden towers have no stone arrow slits.
+    // Bartizans: three shooters in each turret, behind its merlons or its loopholes, facing out
+    // along the diagonal; they also strike the foot of the tower, 0-1 U out (combat bartizanDrops).
+    towerBartizans(tower).forEach((b,i)=>{
+      const tx=-b.ny,ty=b.nx;
+      for(let k=0;k<BARTIZAN_SLOTS;k++){
+        const side=(k-1)*.14,back=k===1?-.08:.06,p={x:b.center.x+b.nx*back+tx*side,y:b.center.y+b.ny*back+ty*side};
+        result.push({id:tower.id+':bartizan:'+i+':'+k,kind:'bartizan',bartizan:i,floor:top,nx:b.nx,ny:b.ny,p,
+          z:b.deckZ+.08,h:ground+top,visualZ:ground+b.deckZ+.08,foot:{x:b.center.x,y:b.center.y,r:b.r,reach:BARTIZAN_REACH}});
+      }
+    });
     // Exactly the faces and heights where towerWindowRows draws an arrow slit: the
     // archer stands on that floor just inside the wall, and shoots from the slit.
     const half=tower.shape==='round'?(Number(tower.r)||.5):(tower.size||1)/2;

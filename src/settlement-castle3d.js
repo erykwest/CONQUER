@@ -146,10 +146,32 @@
       if(s.shape==='round'||s.shape==='dee'){
         const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
         m.pyramid(ring,h,apex,apexZ,i=>cols[i%3]);
+      }else if(towerRoofShape(s)!=='pyramid'){
+        // Two slopes with stone gables, or a hip roof on a short ridge (squareTowerRoofGeometry).
+        for(const f of squareTowerRoofGeometry(s).faces){
+          m.tag=f.kind==='gable'?'gable':'roof';
+          m.face(f.pts,f.kind==='gable'?PAL.stone():winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
+        }
+        m.tag='roof';
       }else{
         m.pyramid(ring,h,apex,apexZ,i=>winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
       }
     }
+    for(const b of towerBartizans(s))addBartizan(m,b);
+  }
+  // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).
+  function addBartizan(m,b){
+    const tag=m.tag;m.tag='body';
+    m.frustum(b.corbel,b.ring,b.corbelZ,b.z0);
+    m.face(b.corbel.map(p=>({p,z:b.corbelZ})),PAL.stone());
+    m.prism(b.band,b.z0-.06,b.z0,PAL.corbel());
+    m.prism(b.ring,b.z0,b.drumZ,PAL.stone());
+    if(b.style==='pitched'){
+      m.tag='roof';
+      const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+      m.pyramid(b.eave,b.drumZ,b.center,b.apexZ,i=>cols[i%3]);
+    }
+    m.tag=tag;
   }
   function addGate(m,s){
     const g=gateRoofGeometry(s);if(!g)return;
@@ -277,7 +299,7 @@
     if(plan&&which==='front')return;
     for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
       withStructureVisualMaterial(s,()=>{
-      const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+      const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){
         const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
         const near=viewDepthOf(c)>viewDepthOf(ownerRef(s,c))+1e-6;
@@ -433,7 +455,7 @@
       return memoGround(()=>{
         const body=bodyMesh([s]),m=makeMesh();m.tag='crown';
         withStructureVisualMaterial(s,()=>{
-          const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+          const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
           for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
         });
         return{tris:body.concat(m.tris),tags:body.tags.concat(m.tags)};

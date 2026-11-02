@@ -110,6 +110,22 @@ const StructureCommands=(()=>{
     status('Tower weapon: '+({none:'none',mangonel:'mangonel',ballista:'ballista'}[target.topWeapon])+(towerTopWeaponAllowed(target)?'':' (needs a T2 tower without a pitched roof)'));
     return true;
   }
+  // Cosmetic only: the roof shape changes neither cost nor rooms.
+  function setTowerRoofShape(id,shape){
+    const target=find(id);if(!target||target.type!=='tower'||(target.shape||'square')!=='square')return false;
+    if(!setStructureVariant(target,'roofShape',shape))return false;
+    refresh(target,false);
+    status('Tower roof shape: '+({pyramid:'pyramid',gable:'two slopes',hip:'four slopes with ridge'}[target.roofShape])+(towerRoofStyle(target)==='pitched'?'':' (shown with a pitched roof)'));
+    return true;
+  }
+  function setTowerBartizan(id,style){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    if(!setStructureVariant(target,'bartizan',style))return false;
+    window.ConquerCombat?.invalidateArchers?.();
+    refresh(target);
+    status('Bartizans: '+({none:'none',battlement:'crenellated',pitched:'spire'}[target.bartizan])+(towerBartizanAllowed(target)?'':' (needs a large T3 square or round stone tower)'));
+    return true;
+  }
   function setCivicLevel(id,level){
     const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
     if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
@@ -198,8 +214,8 @@ const StructureCommands=(()=>{
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};
       const slots=window.ConquerSiege?.archerSlots(s)||[],count=window.ConquerSiege?.stationedArchers(s)||0;
-      const roof=slots.filter(x=>x.kind==='roof').length;
-      d.archers={count,max:slots.length,roof,slits:slots.length-roof,disabled:building};
+      const roof=slots.filter(x=>x.kind==='roof').length,bartizan=slots.filter(x=>x.kind==='bartizan').length;
+      d.archers={count,max:slots.length,roof,bartizan,slits:slots.length-roof-bartizan,disabled:building};
       const keep=window.ConquerKeepEntrance?.describe?.(s);
       if(keep&&(keep.stair||keep.mastio))d.keepEntrance=keep;
     }
@@ -220,6 +236,14 @@ const StructureCommands=(()=>{
       }else{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
+        if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
+          const flat=towerRoofStyle(s)!=='pitched';
+          d.controls.push(choice('roofShape','setTowerRoofShape',[{value:'pyramid',word:'pyramid',disabled:flat},{value:'gable',word:'gable',disabled:flat},{value:'hip',word:'hip',disabled:flat}],structureVariant(s,'roofShape')));
+        }
+        if(variantSchema(s)?.bartizan){
+          const off=!towerBartizanAllowed(s);
+          d.controls.push(choice('bartizan','setTowerBartizan',[{value:'none',word:'none'},{value:'battlement',word:'battlement',disabled:off},{value:'pitched',word:'spire',disabled:off}],structureVariant(s,'bartizan')));
+        }
         d.controls.push(choice('base','setTowerBase',[{value:'standard',word:'standard'},{value:'buttress',word:'buttress'},{value:'splayed',word:'splayed'}],towerBaseStyle(s)));
         if(s.parentTowerId)d.facts.push({key:'subtower',value:structureLabel(State.structures.find(x=>x.id===s.parentTowerId)||s)});
       }
@@ -265,6 +289,6 @@ const StructureCommands=(()=>{
   }
 
   return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    setRoom,changeHouseLevel,toggleMastio,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();

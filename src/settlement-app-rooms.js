@@ -90,11 +90,12 @@ function renderFunctionPanel(){
     const archerSlots=window.ConquerSiege?.archerSlots(s)||[];
     const archers=window.ConquerSiege?.stationedArchers(s)||0;
     const roofSlots=archerSlots.filter(slot=>slot.kind==='roof').length;
-    const slitSlots=archerSlots.length-roofSlots;
+    const bartizanSlots=archerSlots.filter(slot=>slot.kind==='bartizan').length;
+    const slitSlots=archerSlots.length-roofSlots-bartizanSlots;
     html+='<div class="slot"><div class="slot-label">Tower archers · '+archers+' / '+archerSlots.length+'</div>'+
       '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
-      '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+      '<div class="legend">Priority: roof '+roofSlots+(bartizanSlots?' → bartizans '+bartizanSlots+' (also 0-1U at the tower foot)':'')+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
   }
   if(['house','market','tavern','church','training','plaza'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
@@ -151,6 +152,14 @@ function renderFunctionPanel(){
       html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       html+=`<div class="slot"><div class="slot-label">Stone base</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti H1</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Svasato: H0.5. Contrafforti: da quota 0 a H1. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
       const weapon=structureVariant(s,'topWeapon'),armed=towerTopWeaponAllowed(s),wb=(k,l)=>`<button data-tower-weapon="${k}" ${armed||k==='none'?'':'disabled'} class="${weapon===k?'active':''}">${l}</button>`;
+      if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
+        const rs=structureVariant(s,'roofShape'),on=roof==='pitched',rb=(k,l)=>`<button data-tower-roof-shape="${k}" ${on?'':'disabled'} class="${rs===k?'active':''}">${l}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Forma delle falde</div><div class="grid3">${rb('pyramid','Piramide')}${rb('gable','2 falde')}${rb('hip','4 falde · colmo')}</div><div class="legend">${on?'Solo estetica, stesso costo. Colmo lungo metà della larghezza; con il colmo, due bandiere.':'Scegli prima il tetto a falde.'}</div></div>`;
+      }
+      if(variantSchema(s)?.bartizan){
+        const bz=structureVariant(s,'bartizan'),ok=towerBartizanAllowed(s),bb=(k,l)=>`<button data-tower-bartizan="${k}" ${ok||k==='none'?'':'disabled'} class="${bz===k?'active':''}">${l}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Garitte</div><div class="grid3">${bb('none','Nessuna')}${bb('battlement','Merlate')}${bb('pitched','Guglia')}</div><div class="legend">${ok?'Quattro garitte d\'angolo su mensole: 3 tiratori ciascuna, colpiscono anche il piede della torre (0-1U).':'Solo torri grandi (T3) quadrate o rotonde.'}</div></div>`;
+      }
       html+=`<div class="slot"><div class="slot-label">Arma in cima</div><div class="grid3">${wb('none','Nessuna')}${wb('mangonel','Mangano')}${wb('ballista','Balista')}</div><div class="legend">${armed?'Upgrade: mangano o balista sulla piazza della torre, rivolti verso l\'esterno (vista 3D).':'Solo torri medie (T2) senza tetto a falde, di qualsiasi altezza.'}</div></div>`;
     }
   }
@@ -252,5 +261,7 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-civic-annex-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.civicAnnexChild)));
   on('[data-plaza-variant]',(id,el)=>StructureCommands.setPlazaVariant(id,el.dataset.plazaVariant));
   on('[data-tower-weapon]',(id,el)=>StructureCommands.setTowerWeapon(id,el.dataset.towerWeapon));
+  on('[data-tower-roof-shape]',(id,el)=>StructureCommands.setTowerRoofShape(id,el.dataset.towerRoofShape));
+  on('[data-tower-bartizan]',(id,el)=>StructureCommands.setTowerBartizan(id,el.dataset.towerBartizan));
 }
 let pan=null;
