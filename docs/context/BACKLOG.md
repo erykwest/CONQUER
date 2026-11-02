@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — ingresso rialzato del mastio (02/11/2026, S-08)
+
+- **IMPLEMENTATO SU BRANCH `feature/mastio-entrance`, NON MERGE:** porta del mastio al primo piano, piano terra cieco; scala di legno → scala in pietra lungo la facciata; levatoio accessorio su entrambe che, alzato, chiude il mastio a chi è a terra (richiamo dei civili compreso). Contributo a S-08 (rifugio finale), che resta PARZIALE.
+- **APERTO:** civili e soldati che salgono la scala con animazione (oggi entrano dal piede); la scala come ostacolo per i passanti; incendio della scala di legno; scale d'assalto contro il pianerottolo e ariete sul battente; levatoio alzato in automatico all'allarme rosso (come l'autodemolizione dei mezzoponti); porte verso il cammino di ronda del mastio che aggirano il levatoio; drappo araldico del mastio L2 spostato sopra la porta invece di sparire.
+
 ## Castello — muri sui pendii (02/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/walls-on-slopes`, NON MERGE:** muri T1 su pendii dolci e scoscesi, T2 solo dolci, T3 solo in piano; il muro sul pendio è una scala (una pedata ogni 0,12U) col parapetto merlato continuo; cammino di ronda, pattuglie, cantiere e brecce sul gradino.

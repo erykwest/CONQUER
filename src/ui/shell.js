@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=economy-labour-1';
+import { T } from './i18n-it.js?v=keep-entrance-1';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -343,6 +343,22 @@ function Inspector({ snap, cmd }) {
         onPick=${o => run('setGateClosed', o.v)} /></${Row}>
       <${Row} label=${I.nightClose}><${Seg} options=${[{ label: d.gate.nightClose ? I.on : I.off, active: d.gate.nightClose }]}
         onPick=${() => run('setGateNightClose', !d.gate.nightClose)} /></${Row}>`}
+    ${d.keepEntrance && (() => {
+      // Raised Mastio entrance: the stair goes wood → stone; the drawbridge fits either.
+      const k = d.keepEntrance, costTip = c => Object.entries(c).map(([r, v]) => T.resourcesLong[r] + ' ' + fmt(v)).join(' · ');
+      const order = { wood: 1, stone: 2 }, at = order[k.stair] || 0;
+      return html`<${Row} label=${I.keepEntrance} tip=${TIP.keepEntrance}>
+        <${Seg} options=${[
+          { label: I.keepGround, active: !k.stair, disabled: !k.stair, v: 'none', tip: I.keepRemove },
+          { label: I.keepWood, active: k.stair === 'wood', disabled: at >= 1 || !k.eligible || !k.mastio, v: 'wood', tip: I.keepWood, tipBody: k.reason || costTip(k.costs.wood) },
+          { label: I.keepStone, active: k.stair === 'stone', disabled: at !== 1, v: 'stone', tip: I.keepStone, tipBody: costTip(k.costs.stone) }]}
+          onPick=${o => o.v !== k.stair && (o.v !== 'none' || confirm(I.keepRemove + ' · ' + I.keepEntrance + '?')) && run('setKeepStair', o.v)} /></${Row}>
+      ${k.stair && html`<${Row} label=${I.keepDrawbridge} tip=${TIP.keepDrawbridge}>
+        <${Seg} options=${k.drawbridge
+          ? [{ label: k.drawbridge.raised ? I.keepLower : I.keepRaise, v: 'toggle' }, { label: I.keepRemove, v: 'remove' }]
+          : [{ label: I.keepInstall, v: 'install', tip: I.keepDrawbridge, tipBody: costTip(k.costs.drawbridge) }]}
+          onPick=${o => run('keepDrawbridge', o.v)} /></${Row}>`}`;
+    })()}
     ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits) + '.'}>
       <${Seg} options=${[{ label: '−', disabled: d.archers.disabled || d.archers.count === 0, v: -1 }, { label: '+', disabled: d.archers.disabled || d.archers.count >= d.archers.max, v: 1 }]}
         onPick=${o => run('changeArchers', o.v)} /></${Row}>`}

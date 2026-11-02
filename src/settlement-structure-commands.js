@@ -132,6 +132,20 @@ const StructureCommands=(()=>{
     target.nightClose=!!on;markDirty(false,false,true);renderFunctionPanel();return true;
   }
   function toggleMastio(id){window.ConquerSiege?.assignMastio(id);return true}
+  // Raised Mastio entrance (src/settlement-keep-entrance.js): wood → stone stair, drawbridge on either.
+  function setKeepStair(id,stair){
+    const target=find(id),K=window.ConquerKeepEntrance;if(target?.type!=='tower'||!K)return false;
+    if(stair==='none')return K.removeEntrance(target);
+    const current=target.keepEntrance?.stair;
+    if(!current)return stair==='wood'?K.buildStair(target):false;
+    return current==='wood'&&stair==='stone'?K.upgradeStone(target):false;
+  }
+  function keepDrawbridge(id,action){
+    const target=find(id),K=window.ConquerKeepEntrance;if(target?.type!=='tower'||!K)return false;
+    if(action==='install')return K.installDrawbridge(target);
+    if(action==='remove')return K.removeDrawbridge(target);
+    return K.toggleDrawbridge(target);
+  }
   function changeArchers(id,delta){
     const target=find(id);if(target?.type!=='tower')return false;
     window.ConquerSiege?.changeArchers(target.id,delta);return true;
@@ -146,7 +160,7 @@ const StructureCommands=(()=>{
       woodStyle:s.type==='tower'&&isWoodTower(s)?woodTowerStyle(s):null,wood:isWoodTower(s)||isWoodGate(s),
       houseLevel:s.type==='house'?houseLevel(s):null,mastioActive:!!s.isMastio,
       building:null,facts:[],controls:[],rooms:null,
-      mastio:null,archers:null,integrity:null,legacy:null,industry:null};
+      mastio:null,keepEntrance:null,archers:null,integrity:null,legacy:null,industry:null};
     if(underConstruction(s))d.building={progress:constructionProgress(s),days:remainingDays(s)};
     const cost=s.buildCost||constructionCost(s);
     d.cost=cost;
@@ -184,6 +198,8 @@ const StructureCommands=(()=>{
       const slots=window.ConquerSiege?.archerSlots(s)||[],count=window.ConquerSiege?.stationedArchers(s)||0;
       const roof=slots.filter(x=>x.kind==='roof').length;
       d.archers={count,max:slots.length,roof,slits:slots.length-roof,disabled:building};
+      const keep=window.ConquerKeepEntrance?.describe?.(s);
+      if(keep&&(keep.stair||keep.mastio))d.keepEntrance=keep;
     }
     if(['tower','wall','palisade'].includes(s.type)&&!woodTower){
       const linear=['wall','palisade'].includes(s.type),current=linear?wallTier(s):towerTier(s);
@@ -247,6 +263,6 @@ const StructureCommands=(()=>{
   }
 
   return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    setRoom,changeHouseLevel,toggleMastio,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();

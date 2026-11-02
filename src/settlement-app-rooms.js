@@ -84,6 +84,7 @@ function renderFunctionPanel(){
     html+='<div class="slot"><div class="slot-label">Difesa finale · Mastio</div>'+
       '<button data-siege-mastio="'+s.id+'" '+(building?'disabled':'')+' class="'+(active?'active':'')+'">'+(active?'Mastio attivo · rimuovi':'Designa come Mastio')+'</button>'+
       '<div class="legend">La prima torre completata è promossa automaticamente; il mastio conserva una sala comune, anche al livello T1.</div></div>';
+    html+=window.ConquerKeepEntrance?.panel(s)||'';
   }
   if(s.type==='tower'){
     const archerSlots=window.ConquerSiege?.archerSlots(s)||[];
@@ -223,6 +224,7 @@ function renderFunctionPanel(){
   window.ConquerConvoys?.bindPanel?.(slots);
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
+  window.ConquerKeepEntrance?.bindPanel(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));

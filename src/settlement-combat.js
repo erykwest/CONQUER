@@ -243,6 +243,9 @@
   // path directly through solid walls or magically appear inside a tower.
   function castleAccessCandidates(building,origin,resident){
     const out=[];
+    // A keep with a raised entrance is entered only up its stair, and not while the leaf is up.
+    const keep=building.type==='tower'?window.ConquerKeepEntrance?.access?.(building):undefined;
+    if(keep!==undefined)return keep?[keep]:[];
     if(building.type==='tower'&&typeof towerDoorSpecs==='function'){
       for(const spec of towerDoorSpecs(building)){
         if(spec.baseZ>.20)continue; // Wall-walk openings are not ground-floor access.
