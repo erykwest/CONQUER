@@ -5,12 +5,21 @@
 - **IMPLEMENTATO SU BRANCH `feature/walls-on-slopes`, NON MERGE:** muri T1 su pendii dolci e scoscesi, T2 solo dolci, T3 solo in piano; il muro sul pendio è una scala (una pedata ogni 0,12U) col parapetto merlato continuo; cammino di ronda, pattuglie, cantiere e brecce sul gradino.
 - **APERTO:** soldati in combattimento sul cammino di un T2 in pendio (altezza ai nodi); scale d'assalto contro un T2 in pendio; fallback 2.5D a bande senza Castle 3D; ballatoio e caditoie su muri in pendio (oggi tolti).
 
+## Castello — porta piccola (30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/small-gate`, NON MERGE:** porta in pietra 1×1U, L1–L2, poco più alta del muro, con saracinesca, ante, torce e stendardi in scala; costo ×0,6 del corpo di porta. Piano alto a graticcio (L2), falde trasversali, cutaway delle porte a due facce.
+- **APERTO:** il piano a graticcio non brucia come legno (solo il tetto); 2.5D senza graticcio (mostra la porta in pietra); avviso `danno-visibile` del Lab sul portone incrinato/sfondato della porta piccola (portale più piccolo della soglia); ponte levatoio davanti alla porta piccola da provare su un fossato; instabilità dell'audit (due stati di render alternati senza cambi di codice).
+
+## Castello — semitorri e torri a D (30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/half-d-towers`, NON MERGE:** semitorre aperta alla gola (T1 piccola, T2 media) e torre a D (T2 media, T3 grande) in pietra; aggancio al muro con retro sul muro e fronte sul lato del puntatore; D sui fianchi della porta con il retro allineato. Semitorre con scala a pioli e botola a ogni piano. Cutaway della D. Costi per forma (tonda ×1,5, D ×1,25, semitorre ×0,5).
+- **APERTO:** arredi sui solai della semitorre; collisioni e navigazione usano il rettangolo che le contiene (gli angoli davanti alla D sono pieni); semitorre e D a metà di un muro esistente (oggi solo alla fine di un muro, come le altre torri). Palette clay: monconi, corone spezzate e macerie restano grigi per tutte le torri.
+
 ## MARCH — Attacco e campagna militare (skeleton 30/10/2026)
 
 - **SUL BRANCH feature/march-skeleton, NON MAIN**: pagina /march/ e motore UI-independent per spostamento, approccio a un feudo, razzie parziali con bottino, fase assedio, ritirata volontaria senza rollback, vittoria d'assalto simulata solo per test e annessione esplicita. Regressione qa/march-regression.cjs disponibile; CI/browser non ancora certificati.
 - **DA INTEGRARE**: world map/feudi reali e salvataggio condiviso; Company con unità del Combat Engine; risoluzione razzie e assalti con danni e scorte reali; accessi, campi, logistica e fame via ConquerSiege; occupazione/governatore e passaggio al Feudo. Non introdurre una seconda economia o nuovi algoritmi indipendenti di assedio.
 - **Regole approvate**: razzia e distruzione parziale senza obbligo di completare l'invasione; ritiro sempre possibile; espugnazione ≠ conquista; annessione solo per scelta espressa del giocatore. [Specifica e criteri](../march.md).
-
 
 ## Triage prevalente — 30 ottobre 2026 · ref `main` `cf569992`
 
@@ -22,7 +31,6 @@
 - **Economia residua:** `mine` produce `stone` (non `metal`), `workshop` per `equipment` della Built Section ≠ bottega commerciale L3, nessun `tree depletion`, input botteghe/materiali e capacità fisiche del castello da collaudare; i pannelli **non** sommano `economy.castle` e `siege.stock`. La sequenza M0–M3 può ora concentrarsi su integrazioni, non riscrittura economia.
 - **Solo branch/OPEN:** #109 CI suite economia 2–5 (conflitto); #110 Livree/bivacco/campo militare (non assedio strategico completo); #111 multi-pozzo e quartieri (non su main). `messages`, `cans`, `circle` restano filoni separati; il vecchio `jobmanager` e `feature/autonomous-urban-economy` sono stati portati selettivamente/convertiti nelle PR economiche e non vanno duplicati.
 - **QA:** CI PASS sulle HEAD di #109/#110/#111 e smoke WebGPU main `cf569992`; non rappresenta un nuovo test browser dell'intero gioco eseguito per questo audit.
-
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 

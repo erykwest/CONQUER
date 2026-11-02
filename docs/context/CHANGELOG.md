@@ -4,13 +4,28 @@
 
 - I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e il muro stesso diventa una scala (una pedata ogni 0,12U) col parapetto merlato che corre accanto, come sulle mura di Sintra. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
 
+## 2026-10-30 — Porta piccola (branch `feature/small-gate`)
+
+- Seconda taglia della porta in pietra: 1×1U, L1–L2, altezze 2,4 / 3,6, costo ×0,6. Portale, ante, grata, torce, stendardi, merli e tetto in scala con la fronte; il corpo di porta 1,5U resta invariato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuovo valore di `size` del tipo `gate`, nessun tipo nuovo.
+- 02/11: piano alto a graticcio per la porta piccola L2 (legno e intonaco come le case, a sbalzo, costo L1 + 8 oro e 18 legno), falde della porta piccola girate (timpani sui fianchi), cutaway di tutte le porte con le due facce verso la camera aperte.
+
+## 2026-10-30 — Semitorri e torri a D (branch `feature/half-d-towers`)
+
+- Due nuove forme di torre in pietra, orientate verso l'esterno: semitorre aperta alla gola (piccola/media) e torre a D (media/grande). Si agganciano alla fine di un muro con il retro sul muro e, sui fianchi di una porta, formano la porta a due torri tonde con il retro allineato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuove varianti di `shape` del tipo `tower`, nessun tipo nuovo.
+- Semitorre: scala a pioli a ogni piano, attraverso una botola nel solaio, visibile dalla gola aperta.
+- Cantiere e crolli: il ponteggio della D segue la sua pianta; monconi e corone spezzate della semitorre restano aperti dietro.
+- Cutaway della torre a D con solai, arredi e scale dentro la pianta a D. Costi per forma: tonda ×1,5, D ×1,25, semitorre ×0,5 rispetto alla quadrata.
+- Feritoie laterali della D spostate in avanti, sul mezzo tondo: accanto a una porta restano libere.
+- Porte in pietra: una fila di finestre per stanza (L1 nessuna, L2 una, L3 due), non più una per livello a partire dal passaggio.
+- Porte: finestra sempre sul retro, due feritoie affiancate sul fronte, aperture visibili anche nel cutaway. Finestre notturne di torri e porte: il vetro illuminato segue la sagoma della finestra invece di un rettangolo.
+- Cutaway: finestre e feritoie viste da dentro con lo sprite vero invece di quadrati colorati; i solai delle porte si allineano a quelli delle torri che le fiancheggiano.
+
 ## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
 
 - Creata pagina /march/ con demo isolata: click sulla mappa per ordine di marcia, giornate e viveri, quattro feudi statici, razzie parziali e persistenti, inizio assedio, ritirata volontaria, test esito positivo e conquista opzionale. Codice separato tra engine e UI; salvataggio solo dello scenario demo.
 - Nuova regressione qa/march-regression.cjs; verifiche rapide di sintassi e percorso deterministico passate in runtime JS isolato; Node, browser e CI ancora da verificare.
 - Documentati in docs/march.md limiti e contratto di integrazione: i feudi della demo **non** sono World/Feudal, il tasto d'assalto è un test e non simula Combat/Siege.
 - Aggiornata la piramide di contesto nello stesso branch. Nessuna modifica al Builder, al ledger principale o alla produzione su main.
-
 
 ## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
 
@@ -19,7 +34,6 @@
 - Registrati come **MERGED** #61 danni, #65 cutaway, #77 cantieri visivi, #78 eventi, #82 Asset Lab audit, #86–108 (UI, 3D, audio, affidabilità, economia in 5 tappe, pannelli, geometrie). Rettificati riferimenti «solo branch» dei rispettivi snapshot datati.
 - Riconfermato `mine.good='stone'`, `No automatic surrender in P0`, assenza di `tree depletion`, e `SERVICE_KINDS.income='not-simulated'`. Stock economico e siege separati, correttamente non sommati nel Centro di controllo.
 - Aggiornati **feature-backlog**, **STATUS**, **BACKLOG**, **ROADMAP**, **README** e changelog; **DECISIONS invariato** perché non introduce nuovi contratti o scelte di design. Nessuna modifica runtime né merge delle tre PR funzionali aperte.
-
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 

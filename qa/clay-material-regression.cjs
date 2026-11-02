@@ -7,12 +7,17 @@ assert.ok(start>0&&end>start,'single cost resolver');
 const state=vm.createContext({
   COSTS:{tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],woodTower:[{wood:42}],well:{gold:50,stone:35,wood:10},wallPerU:{gold:6,stone:18,wood:2},palisadePerU:{wood:12},builtPerU:{gold:12,stone:16,wood:18}},
   window:{ConquerIndustries:{is:()=>false}},State:{resources:{stone:100,clay:100}},
-  isWoodTower:s=>s.material==='wood',towerTier:()=>1,levelCostFactor:()=>1,scaleCost:(x)=>({...x}),
+  isWoodTower:s=>s.material==='wood',towerTier:()=>1,levelCostFactor:()=>1,scaleCost:(x,f=1)=>Object.fromEntries(Object.entries(x).map(([k,v])=>[k,v*f])),
   isWoodGate:s=>s.material==='wood',roundCost:c=>c,isCivicAnnex:()=>false,isCivic:()=>false,
   builtWidth:s=>s.span==='wide'?2:1
 });
-vm.runInContext(core.slice(start,end),state);
+const shapeCost=core.match(/const TOWER_SHAPE_COST=[^\n]*/)?.[0];
+assert.ok(shapeCost,'tower shape cost factors');
+vm.runInContext(shapeCost+'\n'+core.slice(start,end),state);
 const cost=s=>vm.runInContext('constructionCost('+JSON.stringify(s)+')',state);
+// Same tier: round 1.5x, D 1.25x, semitower half of the square tower.
+for(const [shape,k] of [['round',1.5],['dee',1.25],['half',.5]])
+  assert.equal(cost({type:'tower',shape}).stone,cost({type:'tower',shape:'square'}).stone*k,shape+' tower cost');
 for(const s of [{type:'tower',level:1},{type:'wall',length:2},{type:'built',length:3},{type:'well'}]){
   const stone=cost({...s,masonryMaterial:'stone'}),brick=cost({...s,masonryMaterial:'brick'});
   assert.ok(stone.stone>0,'stone baseline '+s.type);assert.equal(brick.clay,stone.stone);

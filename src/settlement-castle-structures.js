@@ -452,6 +452,7 @@ function machicolationFloorPolygon(s){
   if(s.type==='tower'){
     const z=structureHeight(s);
     if(s.shape==='round')return{pts:circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+.115,24),z};
+    if(isOrientedTower(s))return{pts:orientedTowerOutline(s,-.11),z};
     const d=rectDims(s);return{pts:rectWorldPoints(s.x,s.y,d.w+.22,d.h+.22,s.angle||0),z};
   }
   return null;
@@ -746,7 +747,7 @@ function roundTowerBattlementPieces(s){
 }
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
-  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s));
+  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):isOrientedTower(s)?orientedTowerBattlementPieces(s):squareTowerBattlementPieces(s));
 }
 // Parent/subtower pairs overlap: merlons of the lower one that fall inside the footprint of the
 // taller attached structure would stick out of its walls. Drop them (parent or subtower alike).
@@ -797,7 +798,7 @@ function drawSquareTowerRoof(s){
 function drawRoundTowerRoof(s){
   const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
   if(fp.length<3)return;
-  const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
+  const apex=w2s(towerRoofApex(s),apexZ),faces=[];
   for(let i=0;i<fp.length;i++){
     const j=(i+1)%fp.length,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
     const shade=State.season==='winter'?(i%3===0?WINTER_SNOW_B:i%3===1?WINTER_SNOW_A:WINTER_SNOW_TOP):(i%3===0?'#303236':i%3===1?'#3a3d42':'#44474c');
@@ -811,7 +812,7 @@ function drawRoundTowerRoof(s){
 }
 function drawTowerRoof(s){
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
-  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
+  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'||s.shape==='dee'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
 }
 function drawTowerRoofs(){
   const towers=State.structures
@@ -913,7 +914,7 @@ function battlementBrazierSources(){
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
     }else if(s.type==='gate'&&gateRoofStyle(s)==='battlement'){
-      const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43;
+      const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43*rectDims(s).w/1.5;
       for(const side of [-1,1]){
         out.push({kind:'brazier',id:s.id+':brazier:'+side,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
       }
@@ -986,7 +987,7 @@ function drawFireGlows(nf){
 function gateBattlementPieces(s){
   if(s.type!=='gate'||isWoodGate(s)||underConstruction(s)||gateRoofStyle(s)!=='battlement')return[];
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
-  const pieces=[],center={x:s.x,y:s.y},perSide=4,intervals=perSide-1,inset=.11,cornerAngle=s.angle||0,corners=[];
+  const pieces=[],center={x:s.x,y:s.y},perSide=isSmallGate(s)?3:4,intervals=perSide-1,inset=.11,cornerAngle=s.angle||0,corners=[];
 
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;

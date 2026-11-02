@@ -47,7 +47,8 @@ export const T = {
     radius: 'Raggio'
   },
   values: {
-    square: 'Quadrata', round: 'Rotonda', watchtower: 'Guardia', woodTower: 'Lignea',
+    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea',
+    small: 'Piccola', medium: 'Media', large: 'Grande',
     wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga',
     stone: 'Pietra', wood: 'Legno',
     dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra',
@@ -77,15 +78,16 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', civicLevel: 'Sviluppo', plaza: 'Variante'
+      weapon: 'Arma', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
+      masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', none: '—', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', none: '—', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {

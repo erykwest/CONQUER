@@ -61,25 +61,32 @@ function towerVisualTopHeight(s){
   if(!s||s.type!=='tower')return structureHeight(s);
   return structureHeight(s)+towerRoofRise(s);
 }
+function towerRoofApex(s){return s?.shape==='dee'?deeTowerRoofApex(s):{x:s.x,y:s.y}}
 function towerRoofFootprintPoints(s){
   if(!s||s.type!=='tower')return[];
   const overhang=.07;
   if(s.shape==='round')return circleWorldPoints(s.x,s.y,Number(s.r||.5)+overhang,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s,-overhang);
   const d=rectDims(s);
   return rectWorldPoints(s.x,s.y,d.w+overhang*2,d.h+overhang*2,s.angle||0);
 }
 function gateRoofRise(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return 0;
-  return .66;
+  if(gateTimberUpper(s))return GATE_TIMBER_RIDGE-structureHeight(s);
+  return .66*rectDims(s).h/1.5;   // same pitch on the small gate
 }
 function gateRoofGeometry(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return null;
-  const d=rectDims(s),overhang=.08,h=structureHeight(s),rise=gateRoofRise(s);
-  const hx=d.w/2+overhang,hy=d.h/2+overhang,ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+  const d=rectDims(s),overhang=.08,h=structureHeight(s),rise=gateRoofRise(s),jetty=gateTimberUpper(s)?GATE_JETTY:0;
+  const hx=d.w/2+jetty+overhang,hy=d.h/2+overhang,ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   const local=(x,y)=>({x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca});
-  const c0=local(-hx,-hy),c1=local(hx,-hy),c2=local(hx,hy),c3=local(-hx,hy);
+  const c0=local(-hx,-hy),c1=local(hx,-hy),c2=local(hx,hy),c3=local(-hx,hy),footprint=[c0,c1,c2,c3];
+  // The small gate (stone or timber storey) turns the ridge across the passage: slopes over the
+  // front and the rear, gables on the flanks (same corner roles: ridgeA between c3 and c0, ridgeB
+  // between c1 and c2).
+  if(isSmallGate(s))return{h,ridgeH:h+rise,c0,c1:c3,c2:c2,c3:c1,ridgeA:local(0,-hy),ridgeB:local(0,hy),footprint};
   const ridgeA=local(-hx,0),ridgeB=local(hx,0);
-  return{h,ridgeH:h+rise,c0,c1,c2,c3,ridgeA,ridgeB,footprint:[c0,c1,c2,c3]};
+  return{h,ridgeH:h+rise,c0,c1,c2,c3,ridgeA,ridgeB,footprint};
 }
 function gateVisualTopHeight(s){
   if(!s||s.type!=='gate')return structureHeight(s);
