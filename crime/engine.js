@@ -112,7 +112,7 @@
     const crimeChange = 0.28 + p.tax * 0.008 + p.foodStress * 0.016
       - effectiveGuards * 0.061 - care * 0.3 - fear * 0.42
       - (f.tribunal ? 0.18 : 0) + (activeDisorder ? 0.9 : 0);
-    const orderChange = 0.22 + effectiveGuards * 0.068 - m.crime * 0.022
+    const orderChange = 0.22 + effectiveGuards * 0.068 + p.relief * 0.020 - m.crime * 0.022
       + (f.tribunal ? 0.2 : 0) - (s.phase === 'riot' ? 1.3 : 0)
       - (s.phase === 'revolt' ? 2.1 : 0) - (p.foodStress > 75 ? 0.3 : 0);
     const tensionChange = -0.75 + p.tax * 0.018 + p.foodStress * 0.024
