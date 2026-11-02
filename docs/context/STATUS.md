@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## Economia urbana autonoma — moduli isolati integrati (02/11/2026)
+
+- **Consolidati in `main` i moduli autonomi di `src/economy/`:** proposta di botteghe L3, catalogo di beni aggregati, prezzi settimanali, prove di unità e README. Moduli ancora **non collegati** a simulazione, salvataggi, UI e calendario di gioco.
+- **Verifiche della branch di integrazione:** `settlement-qa` e `Context sync` PASS; non sono test di integrazione economia end-to-end. ROADMAP e DECISIONS invariati.
+
 ## CRIME — laboratorio criminalità e ordine pubblico (branch `feature/crime-skeleton`, 02/11/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MAIN:** pagina `/crime/` con motore deterministico UI-independent (`crime/engine.js`), UI di prova (`crime/index.html`, `crime/ui.js`), metriche separate criminalità/ordine pubblico/tensione, fasi calma→malcontento→protesta→sommossa→rivolta con de-escalation, politiche e strutture dimostrative (guardie, prigione, ospizio, gogna, patibolo, tribunale), log e storico.

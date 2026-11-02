@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Economia urbana autonoma — scheletro consolidato (02/11/2026)
+
+- **FATTO (solo codice isolato):** moduli in `src/economy/` per botteghe L3, beni e prezzi, con README e test di base.
+- **DA FARE:** collegamento al runtime, case/popolani, calendario, persistenza, risorse effettive, commercio/importazioni e test funzionali. Nessuna funzione economica attivata da questo merge.
+
 ## CRIME — criminalità, ordine pubblico e sommosse (02/11/2026)
 
 - **C-00 — IMPLEMENTATO SU BRANCH `feature/crime-skeleton` (solo sandbox):** `/crime/`, motore deterministico disaccoppiato, metriche criminalità / ordine / tensione, progressione e recupero in cinque fasi, politiche sociali e repressive, flag stanza/annesso per guardia, prigione e ospizio, fixture gogna/forca/tribunale, cronaca, storico e salvataggio isolato, test `qa/crime-regression.cjs`.
