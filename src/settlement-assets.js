@@ -129,7 +129,7 @@ function findHouseAssetId(level,plan=null,turret=null,doorSide=1,width=1.5){
 }
 function structureAssetFamilyCatalog(){
   const out=[],add=(key,label,base,rotates=true)=>out.push({key,label,base,rotates});
-  for(const shape of ['square','round'])for(let tier=1;tier<=3;tier++)for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched'])for(const baseStyle of ['standard','buttress','splayed']){
+  for(const shape of ['square','round'])for(let tier=1;tier<=3;tier++)for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched','hoarding','hoardingPitched'])for(const baseStyle of ['standard','buttress','splayed']){
     const size=towerSizeForTier(shape,tier);
     add(
       'tower-stone-'+shape+'-t'+tier+'-l'+level+'-'+roofStyle+'-'+baseStyle,

@@ -50,7 +50,7 @@ const StructureCommands=(()=>{
   function setTowerRoof(id,style){
     const target=find(id);if(!target||target.type!=='tower')return false;
     if(!setStructureVariant(target,'roofStyle',style))return false;
-    refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?'machicolation':'battlement'));return true;
+    refresh(target);status('Tower roof: '+(['pitched','machicolation','hoarding','hoardingPitched'].includes(target.roofStyle)?target.roofStyle:'battlement'));return true;
   }
   function setWoodRoof(id,style){
     const target=find(id);if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return false;
@@ -200,7 +200,7 @@ const StructureCommands=(()=>{
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
-        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
+        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'hoarding',word:'hoarding'},{value:'hoardingPitched',word:'hoardingPitched'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
         d.controls.push(choice('base','setTowerBase',[{value:'standard',word:'standard'},{value:'buttress',word:'buttress'},{value:'splayed',word:'splayed'}],towerBaseStyle(s)));
         if(s.parentTowerId)d.facts.push({key:'subtower',value:structureLabel(State.structures.find(x=>x.id===s.parentTowerId)||s)});

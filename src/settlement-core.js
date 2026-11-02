@@ -287,7 +287,7 @@ const WALL_BREAK_MIN=.10;
 const STRUCTURE_VARIANT_VERSION=2;
 const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
-    roofStyle:Object.freeze(['battlement','machicolation','pitched']),
+    roofStyle:Object.freeze(['battlement','machicolation','pitched','hoarding','hoardingPitched']),
     baseStyle:Object.freeze(['standard','buttress','splayed']),
     topWeapon:Object.freeze(['none','mangonel','ballista'])
   }),
@@ -381,7 +381,9 @@ function towerRoofStyle(s){
 }
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
-function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))}
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','hoarding','hoardingPitched','broken'].includes(towerRoofStyle(s))}
+// Timber gallery round the top: open ('hoarding') or under the tower roof ('hoardingPitched').
+function isHoardingRoofStyle(style){return style==='hoarding'||style==='hoardingPitched'}
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;

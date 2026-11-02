@@ -204,7 +204,7 @@
     const result=[],center={x:tower.x,y:tower.y};
     const wood=isWoodTower(tower);
     const openDeck=wood?woodTowerStyle(tower)==='palisadeTower'&&woodTowerRoof(tower)==='open'
-      :['battlement','machicolation'].includes(towerRoofStyle(tower));
+      :['battlement','machicolation','hoarding','hoardingPitched'].includes(towerRoofStyle(tower));
     const top=wood?1:structureLevel(tower);
     const ground=placementGroundZ(tower);
     if(openDeck){

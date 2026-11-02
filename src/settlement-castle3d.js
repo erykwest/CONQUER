@@ -44,6 +44,11 @@
     rgbCache.set(color,v);return v;
   }
 
+  function shadeHex(hex,k){
+    const h=hex.replace('#','');
+    return '#'+[0,2,4].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('');
+  }
+
   // ---------- geometry collection ----------
   // terrainElevation() walks every relief polygon (~20 µs); vertices repeat a lot within one build.
   let groundMemo=null;
@@ -140,6 +145,11 @@
     }
     for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
     for(const l of halfTowerLadders(s))m.prism(l.pts,l.z0,l.z1,l.part==='rung'?PAL.ladderRung():PAL.ladderRail());
+    if(towerHasHoarding(s)){
+      // Blender bay (hoarding-models.js) swept around the outline; sides a shade darker.
+      m.tag='roof';
+      for(const t of towerHoardingTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
+    }
     if(towerRoofStyle(s)==='pitched'){
       m.tag='roof';
       const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);
