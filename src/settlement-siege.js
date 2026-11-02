@@ -374,7 +374,9 @@
     const left=piece(s.a,p0,s.aSnap,null,list.slice(0,i),0),right=piece(p1,s.b,null,s.bSnap,list.slice(i+1),bay.to);
     const pieces=[left,right].filter(Boolean);
     // The bay comes down: its masonry (and merlons) falls into the gap.
-    const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=groundOf(s);
+    // A stepped wall comes down from the ground of the section the bay opens in.
+    const stepped=typeof wallGroundAt==='function'?wallGroundAt(s,(bay.from+bay.to)/2/L):null;
+    const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=Number.isFinite(stepped)?stepped:groundOf(s);
     startCollapse(s,g,g+structureHeight(s)+.18,{cause:'breach',a:p0,b:p1,
       parts:[[{x:p0.x+nx,y:p0.y+ny},{x:p1.x+nx,y:p1.y+ny},{x:p1.x-nx,y:p1.y-ny},{x:p0.x-nx,y:p0.y-ny}]]});
     // What overhangs the bay on the outer face comes down with it: the timber gallery of a
@@ -447,8 +449,13 @@
   // session only, real time), then the heap they settle in, rebuilt from the spec on load.
   const started=new Map(),now=()=>performance.now()/1000;
   const C=()=>window.ConquerCollapse;
+  // Point structures: their foundation; walls (no foundation): their terrace, else the terrain at
+  // the middle (placementGroundZ is null for them, and null used to read as 0: a collapse on a
+  // raised terrace started at the foot of the hill).
   function groundOf(s){
-    if(typeof placementGroundZ==='function')return Number(placementGroundZ(s))||0;
+    const z=typeof placementGroundZ==='function'?placementGroundZ(s):null;
+    if(Number.isFinite(z))return z;
+    if(Number.isFinite(s.groundZ))return Number(s.groundZ);
     const c=s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
     return typeof terrainElevation==='function'?terrainElevation(c):0;
   }

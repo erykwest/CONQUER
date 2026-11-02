@@ -91,8 +91,8 @@ function addStructure(s){
       // Quarry and mine intentionally occupy rocky slopes, not flat terraces.
       s.groundZ=window.ConquerIndustries.validate(s).ground;
     }else{
-      const groundZ=buildableTerrainElevationForStructure(s);
-      if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
+      const groundZ=linearBuildGroundZ(s);
+      if(groundZ==null){status(s.type==='wall'?wallTerrainVerdict(s).reason:'Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
       s.groundZ=groundZ;
     }
     const cost=constructionCost(s);
@@ -154,8 +154,8 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
   for(const s of structures){
     const verdict=window.ConquerPlacement?.check(s);
     if(verdict&&!verdict.ok){status('Route blocked: '+verdict.reason);return false}
-    if(buildableTerrainElevationForStructure(s)==null){
-      status('Route crosses incompatible terrain — choose another joint or endpoint');
+    if(linearBuildGroundZ(s)==null){
+      status(s.type==='wall'?'Route blocked: '+wallTerrainVerdict(s).reason:'Route crosses incompatible terrain — choose another joint or endpoint');
       return false;
     }
   }
@@ -260,7 +260,7 @@ function rotatePointStructure(target,steps=1){
   }else if(window.ConquerIndustries?.is(target)){
     target.groundZ=window.ConquerIndustries.validate(target).ground;
   }else{
-    target.groundZ=buildableTerrainElevationForStructure(target);
+    target.groundZ=linearBuildGroundZ(target);
   }
   if(target.type==='house')invalidateUrbanGeometry();
   markStructureDirty(target,true,true);

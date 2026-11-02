@@ -474,6 +474,82 @@ function buildableTerrainElevationForStructure(s){
   }
   return level??0;
 }
+// Walls on slopes: a thin T1 wall (no wall-walk: its merlons are only a crest) follows any slope,
+// a medium T2 wall gentle slopes only, a thick T3 wall needs one flat terrace (like every other
+// linear piece). A wall on a slope is built in steps (wallSlopeSections).
+const WALL_SLOPE_LIMIT=Object.freeze({1:'steep',2:'gentle',3:null});
+function wallTerrainVerdict(s){
+  if(buildableTerrainElevationForStructure(s)!=null)return{ok:true,slope:false};
+  if(s?.type!=='wall')return{ok:false,reason:'Wall segment crosses incompatible terrain'};
+  const limit=WALL_SLOPE_LIMIT[wallTier(s)];
+  if(!limit)return{ok:false,reason:'Thick (T3) walls need flat ground'};
+  if(limit!=='steep'&&structureTerrainSamples(s).some(p=>terrainSlopeKind(p)==='steep'))
+    return{ok:false,reason:'Medium (T2) walls cannot climb a steep slope'};
+  return{ok:true,slope:true};
+}
+// Wall on a slope: the wall itself is the stair (as on the Moorish walls of Sintra). The joined
+// footprint (unionFootprintPoints) is cut into tread-deep slices along a->b; each stands on the
+// terrain under its middle (ground), its base goes down to the lowest terrain under it (low,
+// relative to ground) and its top, ground + the wall height, is a tread of the walk. Level runs are
+// merged into one section. null: a flat wall.
+const WALL_TREAD=.12,WALL_STAIR_RISE=2/3,wallSectionCache=new WeakMap();
+function wallSlopeSections(s){
+  if(s?.type!=='wall'||!s.a||!s.b)return null;
+  const key=[s.a.x,s.a.y,s.b.x,s.b.y,s.width,s.tier,s.aSnap,s.bSnap,hasCastleSnap(s.aSnap),hasCastleSnap(s.bSnap),
+    State.relief?.terraforming?.length??0,State.relief?.seed,State.relief?.hills?.length].join('|');
+  const hit=wallSectionCache.get(s);if(hit&&hit.key===key&&hit.relief===State.relief)return hit.sections;
+  let sections=null;
+  if(wallTerrainVerdict(s).slope){
+    const fp=unionFootprintPoints(s),L=dist(fp[0],fp[1]),n=Math.max(2,Math.ceil(L/WALL_TREAD)),lerp=(p,q,t)=>({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t});
+    // t along the joined footprint -> t along a->b (the footprint overhangs into snapped towers).
+    const A=lerp(fp[0],fp[3],.5),B=lerp(fp[1],fp[2],.5),La=dist(s.a,s.b)||1;
+    const ab=t=>{const p=lerp(A,B,t);return((p.x-s.a.x)*(s.b.x-s.a.x)+(p.y-s.a.y)*(s.b.y-s.a.y))/(La*La)};
+    const raw=[];
+    for(let i=0;i<n;i++){
+      const t0=i/n,t1=(i+1)/n,pts=[lerp(fp[0],fp[1],t0),lerp(fp[0],fp[1],t1),lerp(fp[3],fp[2],t1),lerp(fp[3],fp[2],t0)];
+      const foot=Math.min(...pts.map(terrainElevation),terrainElevation(lerp(A,B,t0)),terrainElevation(lerp(A,B,t1)));
+      raw.push({t0,t1,pts,ground:terrainElevation(lerp(A,B,(t0+t1)/2)),foot});
+    }
+    // No riser is taller than 2/3 of its tread (H ≤ WALL_STAIR_RISE·L): where the terrain jumps (a
+    // terrace edge), the treads below are raised into a flight that meets the upper level.
+    const maxRise=WALL_STAIR_RISE*L/n;
+    for(let i=1;i<n;i++)raw[i].ground=Math.max(raw[i].ground,raw[i-1].ground-maxRise);
+    for(let i=n-2;i>=0;i--)raw[i].ground=Math.max(raw[i].ground,raw[i+1].ground-maxRise);
+    sections=[];
+    for(const r of raw){
+      const low=r.foot-r.ground-.04,prev=sections[sections.length-1];
+      // A level run (same tread height) stays one block.
+      if(prev&&Math.abs(prev.ground-r.ground)<.005){
+        prev.t1=ab(r.t1);prev.pts=[prev.pts[0],r.pts[1],r.pts[2],prev.pts[3]];prev.low=Math.min(prev.low,low);continue;
+      }
+      sections.push({t0:ab(r.t0),t1:ab(r.t1),pts:r.pts,ground:r.ground,low:Math.min(0,low)});
+    }
+  }
+  wallSectionCache.set(s,{key,relief:State.relief,sections});
+  return sections;
+}
+// Ground a linear piece is built from: its terrace, or the lowest foot of a stepped wall (the
+// building site rises from there). null: not buildable here.
+function linearBuildGroundZ(s){
+  const flat=buildableTerrainElevationForStructure(s);if(flat!=null)return flat;
+  if(!wallTerrainVerdict(s).ok)return null;
+  const secs=wallSlopeSections(s);
+  return secs?Math.min(...secs.map(q=>q.ground+q.low)):null;
+}
+// Ground of a stepped wall at t along a->b (its section's), or null for a flat wall.
+function wallGroundAt(s,t){
+  const secs=wallSlopeSections(s);if(!secs)return null;
+  return(secs.find(q=>t>=q.t0-1e-9&&t<=q.t1+1e-9)||(t<secs[0].t0?secs[0]:secs[secs.length-1])).ground;
+}
+// Ground under the walk at t: the tread there (the wall top is the stair).
+function wallWalkGroundAt(s,t){return wallGroundAt(s,t)}
+// Lowest and highest tread under t0..t1 (a merlon or a parapet block spanning a few treads).
+function wallGroundRange(s,t0,t1){
+  const secs=wallSlopeSections(s);if(!secs)return null;
+  const lo=Math.min(t0,t1),hi=Math.max(t0,t1),under=secs.filter(q=>q.t1>=lo-1e-9&&q.t0<=hi+1e-9);
+  const list=under.length?under:[secs.find(q=>lo<=q.t1)||secs[secs.length-1]];
+  return{min:Math.min(...list.map(q=>q.ground)),max:Math.max(...list.map(q=>q.ground))};
+}
 function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
   if(!worldPts?.length)return;
   const base=projectPath(worldPts,0),topPts=projectPath(worldPts,height),faces=[];
