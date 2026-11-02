@@ -56,3 +56,16 @@ const wall=(tier,a=2,b=8)=>({type:'wall',tier,width:[0,.2,.5,1][tier],a:{x:a,y:0
   assert.ok(t1.every((q,i)=>!i||q.ground-t1[i-1].ground<.27),'steep T1: steep treads, still one per ~0.12U');
   console.log('PASS the wall top is the stair');
 }
+{
+  // A terrace edge: the ground jumps 1U at x=5. The stair still climbs at most 60°, with the treads
+  // below raised to meet the upper level; it never sinks under the terrain.
+  const ground=ctx.terrainElevation;
+  ctx.terrainElevation=p=>p.x<5?0:1;terrain.kind='steep';
+  const s=wall(1),secs=ctx.wallSlopeSections(s),run=6/Math.ceil(6/.12);
+  for(let i=1;i<secs.length;i++)
+    assert.ok(Math.abs(secs[i].ground-secs[i-1].ground)<=Math.tan(Math.PI/3)*run+1e-9,'no tread rises over 60°');
+  assert.ok(Math.abs(secs[secs.length-1].ground-1)<1e-9&&Math.abs(secs[0].ground)<1e-9,'the stair joins both levels');
+  assert.ok(secs.length>=6,'the 1U jump becomes a flight of several treads');
+  ctx.terrainElevation=ground;
+  console.log('PASS stairs never steeper than 60°');
+}

@@ -492,7 +492,7 @@ function wallTerrainVerdict(s){
 // terrain under its middle (ground), its base goes down to the lowest terrain under it (low,
 // relative to ground) and its top, ground + the wall height, is a tread of the walk. Level runs are
 // merged into one section. null: a flat wall.
-const WALL_TREAD=.12,wallSectionCache=new WeakMap();
+const WALL_TREAD=.12,WALL_STAIR_MAX_DEG=60,wallSectionCache=new WeakMap();
 function wallSlopeSections(s){
   if(s?.type!=='wall'||!s.a||!s.b)return null;
   const key=[s.a.x,s.a.y,s.b.x,s.b.y,s.width,s.tier,s.aSnap,s.bSnap,hasCastleSnap(s.aSnap),hasCastleSnap(s.bSnap),
@@ -504,17 +504,25 @@ function wallSlopeSections(s){
     // t along the joined footprint -> t along a->b (the footprint overhangs into snapped towers).
     const A=lerp(fp[0],fp[3],.5),B=lerp(fp[1],fp[2],.5),La=dist(s.a,s.b)||1;
     const ab=t=>{const p=lerp(A,B,t);return((p.x-s.a.x)*(s.b.x-s.a.x)+(p.y-s.a.y)*(s.b.y-s.a.y))/(La*La)};
-    sections=[];
+    const raw=[];
     for(let i=0;i<n;i++){
       const t0=i/n,t1=(i+1)/n,pts=[lerp(fp[0],fp[1],t0),lerp(fp[0],fp[1],t1),lerp(fp[3],fp[2],t1),lerp(fp[3],fp[2],t0)];
-      const mid=lerp(A,B,(t0+t1)/2),ground=terrainElevation(mid);
-      const low=Math.min(...pts.map(terrainElevation),terrainElevation(lerp(A,B,t0)),terrainElevation(lerp(A,B,t1)))-ground-.04;
-      const prev=sections[sections.length-1];
+      const foot=Math.min(...pts.map(terrainElevation),terrainElevation(lerp(A,B,t0)),terrainElevation(lerp(A,B,t1)));
+      raw.push({t0,t1,pts,ground:terrainElevation(lerp(A,B,(t0+t1)/2)),foot});
+    }
+    // The stair never climbs steeper than WALL_STAIR_MAX_DEG: where the terrain jumps (a terrace
+    // edge), the treads below are raised into a 60° flight that meets the upper level.
+    const maxRise=Math.tan(WALL_STAIR_MAX_DEG*Math.PI/180)*L/n;
+    for(let i=1;i<n;i++)raw[i].ground=Math.max(raw[i].ground,raw[i-1].ground-maxRise);
+    for(let i=n-2;i>=0;i--)raw[i].ground=Math.max(raw[i].ground,raw[i+1].ground-maxRise);
+    sections=[];
+    for(const r of raw){
+      const low=r.foot-r.ground-.04,prev=sections[sections.length-1];
       // A level run (same tread height) stays one block.
-      if(prev&&Math.abs(prev.ground-ground)<.005){
-        prev.t1=ab(t1);prev.pts=[prev.pts[0],pts[1],pts[2],prev.pts[3]];prev.low=Math.min(prev.low,low);continue;
+      if(prev&&Math.abs(prev.ground-r.ground)<.005){
+        prev.t1=ab(r.t1);prev.pts=[prev.pts[0],r.pts[1],r.pts[2],prev.pts[3]];prev.low=Math.min(prev.low,low);continue;
       }
-      sections.push({t0:ab(t0),t1:ab(t1),pts,ground,low:Math.min(0,low)});
+      sections.push({t0:ab(r.t0),t1:ab(r.t1),pts:r.pts,ground:r.ground,low:Math.min(0,low)});
     }
   }
   wallSectionCache.set(s,{key,relief:State.relief,sections});
