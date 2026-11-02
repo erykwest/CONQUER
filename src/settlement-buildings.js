@@ -508,6 +508,8 @@ function drawHouse(s){
       drawHouseRoofPart(s,part,wallH,part.ridgeH,true,creamGable);
       if(dormers.length)drawHouseDormers(dormers,part);
     }
+    // L3 workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
+    if(!shopOpen)window.ConquerShopCutaway?.drawFront2D(s);
   }
   if(!underConstruction(s)&&!window.ConquerShopCutaway?.active(s))drawHouseChimneys(s);
 }

@@ -8,8 +8,11 @@
 // ConquerCutawayFurniture.pieceFaces, plus a few procedural boxes) with a street counter on the
 // half of the facade away from the door. While the artisan's routine keeps him at his own
 // door during working hours, he is drawn inside at his bench instead.
-// Nothing is saved: the state follows the selection. The Asset Lab stages a house with
-// shopKind (stand-in for the commerce record) and shopCutaway (forced open).
+// Every closed L3 workshop also shows its street front: a shop window on the counter half of the
+// facade (shutters let down as counter and awning by day, shut at night) and a medieval bracket
+// sign beside the door, its board perpendicular to the facade with the trade's emblem.
+// Nothing is saved: the state follows the selection, the clock and the shop's day. The Asset Lab
+// stages a house with shopKind (stand-in for the commerce record), shopClosed and shopCutaway.
 (function(){
   const SILL=.14,FLOOR_Z=.03,GAP=.02;
   const STONE=['#625e59','#4f4b47'],FLOOR='#9b7a52',WOOD='#7a5a3c',WOOD_DARK='#5a4030',WOOD_LIGHT='#a98559';
@@ -24,9 +27,11 @@
     goldsmith:{tool:'hammer',goods:['#d9b44a','#e8cf7a','#bfc4c7']}
   });
   const CF=()=>window.ConquerCutawayFurniture;
+  // Read straight from the economy save (asked per facade edge): ConquerCommerce.state() migrates
+  // on every call, its daily tick keeps the records current.
   function shopOf(house){
-    if(house?.shopKind)return{kind:house.shopKind,artisanId:house.id+':m:0',state:'working'};
-    return window.ConquerCommerce?.state?.()?.shops?.[house?.id]||null;
+    if(house?.shopKind)return{kind:house.shopKind,artisanId:house.id+':m:0',state:house.shopClosed?'closed':'working'};
+    return window.ConquerEconomy?.state?.()?.commerce?.shops?.[house?.id]||null;
   }
   function eligible(house){
     return !!house&&house.type==='house'&&houseLevel(house)===3&&
@@ -252,6 +257,130 @@
     return res;
   }
 
+  // ---------- street front of a closed house: shop window and bracket sign
+  // The shop window opens on the counter half of the facade: by day the lower shutter is let down
+  // as a counter with the goods on it and the upper one propped up as an awning; at night, on
+  // Sunday or without the artisan both are shut flat on the wall. The trade sign hangs from an
+  // iron bracket on the upper floor beside the door, its board perpendicular to the facade.
+  const OPENING={z0:.13,z1:.45},SIGN={z:.86,reach:.34,b0:.08,b1:.32,top:.8,bottom:.6,th:.024};
+  const IRON='#2e2b28',BOARD='#6b4a2f',FIELD='#d8c49a';
+  // Emblems on the board: convex polygons in (u from the wall outwards, v up), both in [0,1].
+  const EMBLEMS={
+    blacksmith:[['#4a4d50',[[.15,.62],[.85,.62],[.78,.52],[.22,.52]]],['#4a4d50',[[.4,.52],[.6,.52],[.6,.4],[.4,.4]]],['#4a4d50',[[.3,.4],[.7,.4],[.75,.3],[.25,.3]]]],
+    carpenter:[['#8d9094',[[.15,.5],[.78,.62],[.78,.38]]],['#7a5233',[[.78,.64],[.9,.64],[.9,.36],[.78,.36]]]],
+    leatherworker:[['#6e4226',[[.35,.75],[.55,.75],[.55,.4],[.35,.4]]],['#6e4226',[[.35,.4],[.8,.4],[.8,.28],[.35,.28]]]],
+    potter:[['#a85f3a',[[.3,.55],[.7,.55],[.78,.42],[.65,.28],[.35,.28],[.22,.42]]],['#a85f3a',[[.4,.55],[.6,.55],[.58,.68],[.42,.68]]],['#8c4b2c',[[.36,.68],[.64,.68],[.64,.72],[.36,.72]]]],
+    weaver:[['#9c7449',[[.15,.5],[.35,.58],[.65,.58],[.85,.5],[.65,.42],[.35,.42]]],['#4f6d8a',[[.42,.6],[.58,.6],[.58,.4],[.42,.4]]]],
+    tailor:[['#6d7073',[[.2,.7],[.28,.74],[.7,.38],[.62,.34]]],['#6d7073',[[.8,.7],[.72,.74],[.3,.38],[.38,.34]]],['#6d7073',[[.22,.3],[.34,.3],[.34,.2],[.22,.2]]],['#6d7073',[[.66,.3],[.78,.3],[.78,.2],[.66,.2]]]],
+    goldsmith:[['#d4a93c',[[.3,.72],[.7,.72],[.6,.52],[.4,.52]]],['#d4a93c',[[.47,.52],[.53,.52],[.53,.34],[.47,.34]]],['#d4a93c',[[.36,.34],[.64,.34],[.64,.28],[.36,.28]]]]
+  };
+  const daytime=()=>typeof solarIsNight==='function'?!solarIsNight():true;
+  function frontOpen(house){const st=shopOf(house)?.state;return daytime()&&(st==='working'||st==='selling')}
+  // Shop window across the counter half of the facade: centre a and half width.
+  function opening(R){
+    const side=R.doorA>=0?-1:1,hw=Math.min(.28,(R.ha-.16)/2);
+    return{a:side*Math.max(hw+.06,R.ha*.5),hw};
+  }
+  function front(R,out,kind,open){
+    const {a:a0,hw}=opening(R),b=-R.hb,z=R.ground,P=(a,bb,zz)=>{const p=R.toWorld(a,bb);return[p.x,p.y,z+zz]};
+    // box() measures heights from the floor slab: these are relative to the street.
+    const {z0,z1}=OPENING,frame=group(out),lift=-FLOOR_Z;
+    for(const k of [-1,1])box(R,frame,a0+k*hw-.025,b-.02,a0+k*hw+.025,b,z0-.03+lift,z1+.03+lift,WOOD_DARK);
+    box(R,frame,a0-hw-.025,b-.02,a0+hw+.025,b,z1+lift,z1+.03+lift,WOOD_DARK);
+    if(!open){
+      for(const k of [-1,1])box(R,group(out),Math.min(a0,a0+k*hw)+(k<0?0:.003),b-.022,Math.max(a0,a0+k*hw)-(k<0?.003:0),b-.004,z0+lift,z1+lift,WOOD,WOOD_DARK);
+      return;
+    }
+    quad(group(out),[P(a0-hw,b-.003,z0),P(a0+hw,b-.003,z0),P(a0+hw,b-.003,z1),P(a0-hw,b-.003,z1)],'#2a211c');
+    // Lower shutter let down on two brackets as the counter, the trade's goods on it.
+    const top=.2+lift;
+    box(R,group(out),a0-hw,b-.15,a0+hw,b,top-.025,top,WOOD_LIGHT,WOOD);
+    for(const k of [-1,1])box(R,group(out),a0+k*(hw-.04)-.012,b-.1,a0+k*(hw-.04)+.012,b,top-.11,top-.025,WOOD_DARK);
+    const goods=TRADES[kind].goods,n=Math.max(2,Math.floor(hw*2/.11));
+    for(let i=0;i<n;i++){const a=a0-hw+.06+i*(hw*2-.12)/(n-1),h=.03+.018*(i%2);box(R,group(out),a-.03,b-.11,a+.03,b-.04,top,top+h,goods[i%goods.length])}
+    // Upper shutter propped up as an awning, sloping down away from the wall.
+    const aw=group(out),hi=z1+.02,lo=z1-.06,reach=-.17;
+    quad(aw,[P(a0-hw-.02,b,hi),P(a0+hw+.02,b,hi),P(a0+hw+.02,b+reach,lo),P(a0-hw-.02,b+reach,lo)],WOOD);
+    quad(aw,[P(a0-hw-.02,b+reach,lo),P(a0+hw+.02,b+reach,lo),P(a0+hw+.02,b+reach,lo-.022),P(a0-hw-.02,b+reach,lo-.022)],WOOD_DARK);
+  }
+  // Bracket sign on the upper floor, on the outer side of the door (away from the shop window).
+  function signPlace(R){
+    const s=R.doorA>=0?1:-1,a=Math.max(-R.ha+.05,Math.min(R.ha-.05,R.doorA+s*.12));
+    return{a,wall:-R.hb-(typeof houseJetty==='function'?houseJetty(R.house):.07)};
+  }
+  function sign(R,out,kind){
+    const {a,wall}=signPlace(R),z=R.ground,S=SIGN,P=(aa,bb,zz)=>{const p=R.toWorld(aa,bb);return[p.x,p.y,z+zz]},lift=-FLOOR_Z;
+    const iron=group(out);
+    box(R,iron,a-.01,wall-S.reach,a+.01,wall,S.z+lift,S.z+.016+lift,IRON);
+    // Diagonal stay from lower on the wall to two thirds of the arm.
+    quad(iron,[P(a,wall,S.z-.16),P(a,wall,S.z-.13),P(a,wall-S.reach*.66,S.z),P(a,wall-S.reach*.66,S.z-.025)],IRON);
+    box(R,iron,a-.02,wall-.012,a+.02,wall,S.z-.18+lift,S.z+.03+lift,IRON);
+    for(const u of [S.b0+.02,S.b1-.02])box(R,iron,a-.004,wall-u-.004,a+.004,wall-u+.004,S.top+lift,S.z+lift,IRON);
+    box(R,group(out),a-S.th/2,wall-S.b1,a+S.th/2,wall-S.b0,S.bottom+lift,S.top+lift,BOARD);
+    // Painted field and emblem on both faces.
+    for(const k of [-1,1]){
+      const x=a+k*(S.th/2+.002),B=(u,v)=>P(x,wall-S.b0-u*(S.b1-S.b0),S.bottom+v*(S.top-S.bottom)),m=.06;
+      quad(group(out),[B(m,m),B(1-m,m),B(1-m,1-m),B(m,1-m)],FIELD);
+      const x2=a+k*(S.th/2+.004),E=(u,v)=>P(x2,wall-S.b0-u*(S.b1-S.b0),S.bottom+v*(S.top-S.bottom)),g=group(out);
+      for(const [hex,pts] of EMBLEMS[kind])quad(g,pts.map(([u,v])=>E(u,v)),hex);
+    }
+  }
+  const frontCache=new Map();
+  function buildFront(house){
+    const shop=shopOf(house);if(!eligible(house)||active(house))return null;
+    const open=frontOpen(house),urban=typeof urbanRevision!=='undefined'?urbanRevision:0;
+    const key=[house.id,house.x,house.y,house.angle||0,house.doorSide,shop.kind,open?1:0,urban].join('|');
+    const hit=frontCache.get(house.id);if(hit&&hit.key===key)return hit.res;
+    const R=room(house);if(!R)return null;
+    const out=[];front(R,out,shop.kind,open);sign(R,out,shop.kind);
+    const res={mesh:emit(out),room:R,open};
+    frontCache.set(house.id,{key,res});
+    return res;
+  }
+  // The street front is seen only when the street wall faces the camera (2.5D painter).
+  function frontFacing(R){
+    if(typeof isPlanView==='function'&&isPlanView())return true;
+    const m=R.toWorld(0,-R.hb),o=R.toWorld(0,-R.hb-.1);
+    return viewDepthPoint(o)>viewDepthPoint(m);
+  }
+  function drawFront2D(house){
+    const r=buildFront(house);if(!r||!window.ConquerMesh3D||!frontFacing(r.room))return false;
+    window.ConquerMesh3D.drawMeshes(ctx,[r.mesh],window.ConquerMesh3D.gameView());
+    return true;
+  }
+  function addFront(m,house){
+    const r=buildFront(house);if(!r)return false;
+    const mesh=r.mesh,p=mesh.pos;
+    for(let t=0;t<mesh.col.length;t++){
+      const o=t*9;
+      m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t));
+    }
+    return true;
+  }
+  // houseFacadePlan: the ground-floor window where the shop window opens is not painted.
+  function facadeCut(house,part,edge,windows){
+    if(!eligible(house)||active(house))return windows;
+    const R=room(house);if(!R||part.center!==R.main.center&&dist(part.center,R.main.center)>1e-6)return windows;
+    const L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+    if(Math.abs(ux*R.N.x+uy*R.N.y)>.2)return windows;
+    const m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2},mb=(m.x-R.c.x)*R.N.x+(m.y-R.c.y)*R.N.y;
+    if(mb>0)return windows;   // the back wall
+    const {a:a0,hw}=opening(R),fb=R.top,ww=typeof HOUSE_WINDOW_HALF_W!=='undefined'?HOUSE_WINDOW_HALF_W:.0875;
+    return windows.filter(w=>{
+      if(w.z>=fb)return true;
+      const p={x:m.x+ux*w.off,y:m.y+uy*w.off},a=(p.x-R.c.x)*R.T.x+(p.y-R.c.y)*R.T.y;
+      return Math.abs(a-a0)>hw+ww+.03;
+    });
+  }
+  // Which fronts are open: the scene caches rebuild when this changes (dawn, dusk, the shop's day).
+  function frontSig(){
+    const shops=window.ConquerEconomy?.state?.()?.commerce?.shops;
+    const day=daytime();
+    let sig=day?'d':'n';
+    if(shops)for(const [id,s] of Object.entries(shops))sig+='|'+id+':'+(day&&(s.state==='working'||s.state==='selling')?1:0)+':'+s.kind;
+    return sig;
+  }
+
   // ---------- renderers
   // 2.5D: called by drawHouse in place of the house body parts.
   function draw2D(house){
@@ -299,6 +428,7 @@
     if(tool&&W)W.drawWorkerUnmasked(dot,tool,0,facing(r));
     else if(typeof drawVillagerFigureUnmasked==='function')drawVillagerFigureUnmasked(dot);
   }
-  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,shopOf,eligible,active,activeId,room,build,draw2D,addToBuilder,artisanAt,spotOf,
-    clear:()=>cache.clear()});
+  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,shopOf,eligible,active,activeId,room,build,draw2D,addToBuilder,artisanAt,spotOf,
+    frontOpen,opening,signPlace,buildFront,drawFront2D,addFront,facadeCut,frontSig,
+    clear:()=>{cache.clear();frontCache.clear()}});
 })();

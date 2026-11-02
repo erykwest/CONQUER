@@ -672,6 +672,8 @@
       const g=terrainElevation(c.center);
       m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
     }
+    // L3 workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
+    if(!m.tag)window.ConquerShopCutaway?.addFront(m,house);
   }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
@@ -1336,9 +1338,11 @@
   function ensureContent(gl){
     // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
     // An open L3 workshop (settlement-shop-cutaway.js) follows the selection the same way.
+    // Shop fronts open at dawn and shut at dusk: their signature rebuilds the buildings too.
     const civicCut=window.ConquerCivic3D?.cutawayId?.()||null,shopCut=window.ConquerShopCutaway?.activeId?.()||null;
-    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut&&S.shopCut===shopCut){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
-    S.civicCut=civicCut;S.shopCut=shopCut;
+    const shopFront=window.ConquerShopCutaway?.frontSig?.()||'';
+    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut&&S.shopCut===shopCut&&S.shopFront===shopFront){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
+    S.civicCut=civicCut;S.shopCut=shopCut;S.shopFront=shopFront;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
@@ -1368,7 +1372,7 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,shopCut,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
@@ -1404,7 +1408,7 @@
       if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
       upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
-    const dSig=[structuresSig('all'),shopCut,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
       const baked=buildDecals(atlas);

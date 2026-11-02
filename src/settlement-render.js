@@ -331,7 +331,11 @@ document.getElementById('castleCacheToggle')?.addEventListener('click',()=>setCa
 document.getElementById('castleCacheBenchmark')?.addEventListener('click',()=>benchmarkCastleBodyCache(3));
 updateCastleCacheControls();
 
+let shopFrontSig=null;
 function ensureStaticSceneCaches(){
+  // L3 shop fronts open at dawn and shut at dusk (settlement-shop-cutaway.js): repaint the houses.
+  const shopSig=window.ConquerShopCutaway?.frontSig?.()??null;
+  if(shopSig!==shopFrontSig){if(shopFrontSig!==null)invalidateSceneCache(['base']);shopFrontSig=shopSig}
   const builders=[
     ['landscape',drawLandscapeStaticScene],
     ['ground',drawGroundStaticScene],

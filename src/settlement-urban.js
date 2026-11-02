@@ -941,7 +941,9 @@ function houseFacadePlan(house,part,edge){
     seg(0,top,0,ridge-t*2);seg(-hc,zc,hc,zc);
     seg(-half*.62,top+t,-t,top+(ridge-top)*.72);seg(half*.62,top+t,t,top+(ridge-top)*.72);
   }
-  return houseFacadeTurretCut(part,edge,{windows,beams});
+  // An L3 workshop's shop window replaces the ground-floor window it falls on.
+  const shopWindows=(typeof window!=='undefined'&&window.ConquerShopCutaway?.facadeCut(house,part,edge,windows))||windows;
+  return houseFacadeTurretCut(part,edge,{windows:shopWindows,beams});
 }
 // A window never sits on or over the door: any window reaching down into the door's height keeps
 // HOUSE_DOOR_CLEARANCE beside the door leaf, or is dropped.

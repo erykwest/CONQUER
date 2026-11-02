@@ -55,10 +55,10 @@ assert.equal(SC.activeId(),'h');
 assert.equal(SC.active(house({houseLevel:2})),false,'L2 houses have no workshop');
 assert.equal(SC.active(house({shopKind:null})),false,'an L3 house without a workshop stays closed');
 assert.equal(SC.active(house({building:true})),false,'not while under construction');
-// Without the Lab stand-in the record comes from ConquerCommerce.
-window.ConquerCommerce={state:()=>({shops:{h:{kind:'potter',artisanId:'h:m:0',state:'working'}}})};
+// Without the Lab stand-in the record comes from the economy save (State.economy.commerce).
+window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'potter',artisanId:'h:m:0',state:'working'}}}})};
 assert.equal(SC.shopOf(house({shopKind:undefined})).kind,'potter','the commerce record names the trade');
-delete window.ConquerCommerce;
+delete window.ConquerEconomy;
 console.log('PASS eligibility: L3 + workshop + selection');
 
 let furnished=0;
@@ -148,12 +148,82 @@ assert.equal(SC.artisanAt(h,res('h:m:0'),null),null,'at home out of hours: nobod
 State.selectedId=null;SC.clear();
 assert.equal(SC.artisanAt(h,res('h:m:0'),door),null,'a closed house keeps the routine figure at the door');
 State.selectedId='h';
-window.ConquerCommerce={state:()=>({shops:{h:{kind:'weaver',artisanId:'h:m:0',state:'closed'}}})};
+window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'weaver',artisanId:'h:m:0',state:'closed'}}}})};
 assert.equal(SC.artisanAt(house({shopKind:undefined}),res('h:m:0'),door),null,'a closed workshop (Sunday) is empty');
-window.ConquerCommerce={state:()=>({shops:{h:{kind:'weaver',artisanId:'h:m:0',state:'working'}}})};
+window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'weaver',artisanId:'h:m:0',state:'working'}}}})};
 const weaver=SC.artisanAt(house({shopKind:undefined}),res('h:m:0'),door);
 assert.ok(weaver&&weaver.tool===null,'a weaver works without a striking tool');
 console.log('PASS the artisan works inside only when open and at work');
+
+// Street front of a closed house: shop window on the counter half, bracket sign beside the door.
+let night=false;ctx.solarIsNight=()=>night;
+const FIELD='#d8c49a';
+for(const doorLeft of [false,true])for(const kind of trades)for(turn=0;turn<4;turn++){
+  State.view.rotation=turn;State.selectedId=null;
+  const h=house({shopKind:kind,doorLeft});State.structures=[h];SC.clear();
+  const label=kind+(doorLeft?' door-left':'')+' turn '+turn;
+  const f=SC.buildFront(h),R=f.room,all=tris(f.mesh);
+  const loc=v=>({a:(v.x-R.c.x)*R.T.x+(v.y-R.c.y)*R.T.y,b:(v.x-R.c.x)*R.N.x+(v.y-R.c.y)*R.N.y,z:v.z});
+  // Sign board: its painted field lies in a plane perpendicular to the facade (one a, spread along b).
+  const field=all.filter(t=>f.mesh.col[all.indexOf(t)]===FIELD).flatMap(t=>t.v.map(loc));
+  assert.equal(field.length,12,label+': a painted field on each face of the board');
+  const as=field.map(q=>q.a),bs=field.map(q=>q.b),zs=field.map(q=>q.z);
+  assert.ok(Math.max(...as)-Math.min(...as)<.04,label+': the board is perpendicular to the facade');
+  assert.ok(Math.max(...bs)-Math.min(...bs)>.18,label+': the board reaches out into the street');
+  assert.ok(Math.max(...bs)<-R.hb-.07,label+': the board hangs clear of the (jettied) facade');
+  assert.ok(Math.min(...zs)>.552,label+': the board hangs above the door');
+  const sa=(Math.max(...as)+Math.min(...as))/2;
+  assert.ok(Math.abs(sa-R.doorA)<.2&&Math.sign(sa-R.doorA)===Math.sign(R.doorA),label+': beside the door, on its outer side');
+  // The arm is iron, fixed to the wall and longer than the board's reach.
+  const iron=all.filter((t,i)=>f.mesh.col[i]==='#2e2b28').flatMap(t=>t.v.map(loc));
+  assert.ok(Math.min(...iron.map(q=>q.b))<-R.hb-.07-.3,label+': the bracket arm reaches over the street');
+  // Emblem on both faces, in the trade's colours.
+  const emblem=new Set(SC.EMBLEMS[kind].map(([hex])=>hex));
+  assert.ok(all.filter((t,i)=>emblem.has(f.mesh.col[i])).length>=2*SC.EMBLEMS[kind].length,label+': the trade emblem on both faces');
+  // Shop window on the half away from the door, goods out by day only.
+  const op=SC.opening(R);assert.ok(Math.sign(op.a)===-Math.sign(R.doorA)&&Math.abs(op.a)+op.hw<=R.ha,label+': shop window on the counter half');
+  // Goods colours that the emblem does not use too (the potter's pots are terracotta on both).
+  const goods=new Set(SC.TRADES[kind].goods.filter(c=>!emblem.has(c)));
+  assert.equal(f.open,true,label+': open by day');
+  assert.ok(f.mesh.col.some(c=>goods.has(c)),label+': goods on the let-down shutter');
+  night=true;SC.clear();
+  const n=SC.buildFront(h);
+  assert.equal(n.open,false,label+': shut at night');
+  assert.ok(!n.mesh.col.some(c=>goods.has(c)),label+': no goods outside at night');
+  night=false;
+  // Everything of the front stands on the street side of the house.
+  for(const q of all.flatMap(t=>t.v.map(loc)))assert.ok(q.b<=-R.hb+1e-6,label+': the front stays outside the facade');
+}
+// Sunday / alarm shut the shutters by day; the cutaway takes the front away.
+window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'tailor',artisanId:'h:m:0',state:'closed'}}}})};
+State.structures=[house({shopKind:undefined})];State.selectedId=null;SC.clear();
+assert.equal(SC.buildFront(State.structures[0]).open,false,'a closed workshop (Sunday) keeps its shutters shut by day');
+const sigDay=SC.frontSig();
+window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'tailor',artisanId:'h:m:0',state:'working'}}}})};
+assert.notEqual(SC.frontSig(),sigDay,'the scene signature follows the shop\'s day');
+const sigOpen=SC.frontSig();night=true;assert.notEqual(SC.frontSig(),sigOpen,'and dusk');night=false;
+delete window.ConquerEconomy;
+{const h=house();State.structures=[h];State.selectedId='h';SC.clear();
+ assert.equal(SC.buildFront(h),null,'an open (cutaway) workshop has no street front');State.selectedId=null}
+// The ground-floor window where the shop window opens is dropped; the upper floor keeps its windows.
+{turn=0;State.view.rotation=0;const h=house();State.structures=[h];SC.clear();
+ const R=SC.room(h),part=R.main,P=part.points;
+ const edge=P.map((a,i)=>({a,b:P[(i+1)%P.length]})).find(e=>{const L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y);
+   const m={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2};return Math.abs(((e.b.x-e.a.x)*R.N.x+(e.b.y-e.a.y)*R.N.y)/L)<.2&&(m.x-R.c.x)*R.N.x+(m.y-R.c.y)*R.N.y<0});
+ const ux=(edge.b.x-edge.a.x),uy=(edge.b.y-edge.a.y),L=Math.hypot(ux,uy),m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2};
+ const offs=[-L/4,L/4],wins=offs.flatMap(off=>[{off,z:.41},{off,z:1.04}]);
+ const kept=SC.facadeCut(h,part,edge,wins),op=SC.opening(R);
+ const aOf=off=>(m.x+ux/L*off-R.c.x)*R.T.x+(m.y+uy/L*off-R.c.y)*R.T.y;
+ for(const w of wins){
+   const inShop=w.z<.65&&Math.abs(aOf(w.off)-op.a)<op.hw+.12;
+   assert.equal(kept.includes(w),!inShop,'window off '+w.off.toFixed(2)+' z '+w.z+(inShop?' dropped':' kept'));
+ }
+ assert.ok(kept.length===3,'exactly the ground-floor window on the shop half goes');
+ const back=P.map((a,i)=>({a,b:P[(i+1)%P.length]})).find(e=>Math.abs(((e.b.x-e.a.x)*R.N.x+(e.b.y-e.a.y)*R.N.y)/Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y))<.2&&
+   ((e.a.x+e.b.x)/2-R.c.x)*R.N.x+((e.a.y+e.b.y)/2-R.c.y)*R.N.y>0);
+ assert.equal(SC.facadeCut(h,part,back,wins).length,4,'the back wall keeps its windows');
+}
+console.log('PASS street front: bracket sign beside the door, shop window open by day, windows cut, cache signature');
 
 // Wiring: both renderers, facades, occlusion and the population pass use the module.
 const has=(f,re,what)=>assert.ok(re.test(src(f)),f+': '+what);
@@ -163,6 +233,11 @@ has('settlement-architecture.js',/ConquerShopCutaway\?\.active\(s\)\)return/,'no
 has('settlement-world3d.js',/ConquerShopCutaway\.addToBuilder\(m\)/,'WebGL cutaway buffer');
 has('settlement-world3d.js',/shopCut=window\.ConquerShopCutaway\?\.activeId/,'WebGL rebuilds on selection');
 has('settlement-urban.js',/!openIds\.includes\(q\.houseId\)/,'figures are not masked by an open shop');
+has('settlement-buildings.js',/if\(!shopOpen\)window\.ConquerShopCutaway\?\.drawFront2D\(s\)/,'2.5D street front');
+has('settlement-world3d.js',/ConquerShopCutaway\?\.addFront\(m,house\)/,'WebGL street front');
+has('settlement-world3d.js',/S\.shopFront===shopFront/,'WebGL rebuilds at dawn and dusk');
+has('settlement-render.js',/ConquerShopCutaway\?\.frontSig/,'2.5D cache rebuilds at dawn and dusk');
+has('settlement-urban.js',/ConquerShopCutaway\?\.facadeCut\(house,part,edge,windows\)/,'facade plan drops the window behind the shop');
 has('settlement-population-figures.js',/ConquerShopCutaway\?\.artisanAt\(house,resident,p\)/,'population pass');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 assert.ok(html.indexOf('settlement-commerce.js')<html.indexOf('settlement-shop-cutaway.js')&&html.indexOf('settlement-shop-cutaway.js')<html.indexOf('settlement-asset-stage.js'),'script order');

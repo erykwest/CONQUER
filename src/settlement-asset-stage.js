@@ -22,7 +22,8 @@
   function shopVariants(){
     const T=window.ConquerShopCutaway?.TRADES,K=window.ConquerCommerce?.WORKSHOP_KINDS;
     return T?Object.keys(T).map(kind=>({id:'bottega-l3-'+kind,label:'Bottega L3 · '+(K?.[kind]?.label||kind),family:'Botteghe L3',category:'Edifici',
-      spec:{type:'house',auto:true,houseLevel:3,w:1.5,h:1,doorSide:-1,groundZ:0,shopKind:kind}})):[];
+      // Door side towards the default camera: the thumbnail shows the street front and its sign.
+      spec:{type:'house',auto:true,houseLevel:3,w:1.5,h:1,doorSide:1,groundZ:0,shopKind:kind}})):[];
   }
   // Every variant of the gallery (wood ones too: the 2.5D path draws them) plus a built section.
   function variants(){
@@ -35,7 +36,8 @@
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}
   function states(id){
     const {spec}=find(id);
-    if(spec.type==='house')return[{id:'intact',label:'Nel gioco',group:'intatto'},{id:'cutaway',label:'Cutaway',group:'cutaway'}];
+    // Open front by day (intact), shutters closed (night, Sunday), cutaway when selected.
+    if(spec.type==='house')return[{id:'intact',label:'Nel gioco',group:'intatto'},{id:'closed',label:'Bottega chiusa',group:'chiusa'},{id:'cutaway',label:'Cutaway',group:'cutaway'}];
     const s=SP().galleryStructure(spec,0,0);
     const out=[{id:'intact',label:'Nel gioco',group:'intatto'}];
     for(const p of BUILD_STEPS)out.push({id:'build-'+Math.round(p*100),label:'Cantiere '+Math.round(p*100)+'%',group:'costruzione',progress:p});
@@ -63,6 +65,8 @@
   function apply(spec,state,id){
     // A fixed id: collapse seeds (and so the rubble heaps) derive from it.
     const s={...SP().galleryStructure(spec,spot.x,spot.y),id:'assetlab-'+id};State.structures.push(s);
+    // Houses are drawn from the urban geometry cache (walls, timber frame, windows): rebuild it.
+    if(s.type==='house')invalidateUrbanGeometry();
     if(state.progress!=null){
       // 10 days of work around the fixed clock, so progress is exactly the one asked for.
       s.construction={startedDay:State.clock.day-state.progress*10,completeDay:State.clock.day+(1-state.progress)*10};
@@ -75,9 +79,21 @@
       window.ConquerSiege?.restore(JSON.parse(JSON.stringify(State.siege)));
     }
     if(state.id==='cutaway')s[s.type==='house'?'shopCutaway':'cutaway']=true;
+    if(state.id==='closed')s.shopClosed=true;
     return State.structures.find(x=>x.id===s.id)||State.structures[0]||null;
   }
   const STRUCTURE_LAYERS=['ground','shadow','base','castleBody','castleFront'];
+  // Canvas-pixel coverage of a house: its urban faces plus the workshop's street front.
+  function houseSilhouette(s,W,H){
+    const c=document.getElementById('c'),k=c.width/document.getElementById('wrap').getBoundingClientRect().width;
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');g.fillStyle='#fff';
+    const fill=pts=>{g.beginPath();pts.forEach((q,i)=>i?g.lineTo(q.x*k,q.y*k):g.moveTo(q.x*k,q.y*k));g.closePath();g.fill()};
+    const entry=urbanHouseGeometry().find(e=>e.house.id===s.id);
+    for(const part of entry?.parts||[]){const gz=terrainElevation(part.center);for(const f of urbanHouseFaces(s,part))fill(f.map(v=>w2s(v.p,v.z-gz)))}
+    const m=window.ConquerShopCutaway?.buildFront(s)?.mesh;
+    if(m)for(let t=0;t<m.col.length;t++){const o=t*9;fill([0,3,6].map(j=>w2sRaw({x:m.pos[o+j],y:m.pos[o+j+1]},m.pos[o+j+2])))}
+    return g.getImageData(0,0,W,H).data;
+  }
   function frame(){
     invalidateSceneCache(STRUCTURE_LAYERS);window.ConquerWallWalk?.invalidate?.();draw();
     const c=document.getElementById('c');
@@ -110,8 +126,11 @@
       frame();const empty=frame();lap();
       const s=apply(v.spec,state,id);lap();const full=frame();lap();
       const W=full.width,H=full.height,a=full.data,b=empty.data,mask=new Uint8Array(W*H);
+      // Dark timber frames, iron brackets and shop shutters are within 30 of the dark stage ground:
+      // inside the house's own projected silhouette a finer threshold applies.
+      const near=s?.type==='house'?houseSilhouette(s,W,H):null;
       for(let i=0,p=0;p<W*H;p++,i+=4)
-        if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>30)mask[p]=1;
+        if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>(near?.[i+3]?8:30))mask[p]=1;
       // Background is what is unchanged AND reachable from the frame edge: a crack or a door the
       // colour of the grass inside the silhouette stays part of the structure.
       const bg=new Uint8Array(W*H),queue=new Int32Array(W*H);let qh=0,qt=0;
@@ -146,6 +165,7 @@
     }finally{
       delete performance.now;delete crypto.randomUUID;
       State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache(STRUCTURE_LAYERS);
+      if(v.spec.type==='house')invalidateUrbanGeometry();
     }
   }
   window.ConquerAssetStage={variants,states,capture};
