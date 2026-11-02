@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CONQUER — MARCH / Campagna militare</title>
+<style>
+:root{color-scheme:dark;--ink:#efe4cf;--muted:#b2aa95;--line:#695a40;--panel:#1a241f;--gold:#d6b978;--red:#c66b5d;--green:#86a887}
+*{box-sizing:border-box}body{margin:0;background:#101714;color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+h1,h2,h3,p{margin:0}h1,h2,h3{font-family:Georgia,serif;font-weight:normal}h1{font-size:2rem;letter-spacing:.08em}h2{font-size:1.4rem}h3{font-size:1.05rem}
+a{color:var(--gold);text-decoration:none}a:hover{text-decoration:underline}
+header{padding:16px clamp(16px,3vw,44px);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;align-items:center;background:#17201b}
+header nav{display:flex;gap:18px;flex-wrap:wrap}small,.muted{color:var(--muted)}.eyebrow{color:var(--gold);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+main{max-width:1450px;margin:auto;padding:26px clamp(12px,2.5vw,36px)}.intro{margin-bottom:20px;display:flex;justify-content:space-between;align-items:end;gap:18px;flex-wrap:wrap}
+.notice{border:1px solid #7f6c43;background:#312b1c;padding:8px 12px;border-radius:4px;font-size:.83rem;color:#f0d8a7;max-width:480px}
+.layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(295px,1fr);gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:18px;min-width:0}
+.panel h2{margin-bottom:12px}.map-header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+#map{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));aspect-ratio:9/7;gap:3px;padding:7px;background:#0c1412;border:1px solid #52604d;border-radius:4px}
+.tile{border:1px solid #4a5942;border-radius:2px;background:linear-gradient(145deg,#485b3d,#334b38);padding:0;position:relative;color:#f3e1b9;cursor:pointer;font:inherit;min-width:0}
+.tile:hover,.tile:focus-visible{outline:2px solid #f6dba5;outline-offset:-2px}
+.tile.forest{background:repeating-linear-gradient(45deg,#284737,#284737 8px,#31523e 8px,#31523e 15px)}
+.tile.water{background:linear-gradient(120deg,#263e4a,#335b68);cursor:not-allowed;border-color:#3b626a}.tile.bridge{background:linear-gradient(135deg,#7a6950,#4f5648)}.tile.route{box-shadow:inset 0 0 0 3px #d4c183}
+.tile.selected{outline:2px solid var(--gold);outline-offset:-3px}.tile.player{border-color:#9dce9c}.tile.enemy{border-color:#ce8372}
+.tile .mark{font-size:clamp(13px,2.1vw,27px);line-height:1;display:block}.tile .spot{font-size:clamp(6px,.85vw,11px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;margin:2px}
+.tile .army{position:absolute;right:1px;top:1px;border-radius:50%;font-size:clamp(11px,1.6vw,19px);background:#0d1510;padding:0 3px;color:#e7c77f;box-shadow:0 0 0 2px #e7c77f}
+.tile .foot{position:absolute;bottom:1px;left:3px;font-size:clamp(7px,.8vw,11px);color:#ffe1a0}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:.8rem}
+.swatch{width:11px;height:11px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:5px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}.stat{background:#263229;border:1px solid #465444;padding:10px;border-radius:4px}.stat strong{display:block;font-size:1.2rem;color:var(--gold)}.stat span{font-size:.75rem;color:var(--muted)}
+.militia{margin:12px 0;padding:9px;background:#27342b;border-left:2px solid #a89969;font-size:.9rem}
+.buttons{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+button.action{background:#3c4b3d;border:1px solid #809074;color:#f3eedc;padding:9px 12px;border-radius:3px;cursor:pointer;font-weight:650}
+button.action:hover:not(:disabled){background:#56684e}button.action:disabled{opacity:.33;cursor:not-allowed}
+button.action.primary{background:#6e633d;border-color:#c7aa67}button.action.warn{background:#563c34;border-color:#b17e6b}
+button.action.ghost{background:transparent;border-color:var(--line)}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+#fiefDetails{font-size:.9rem;line-height:1.7}#status{padding:11px;border:1px solid #637257;background:#28382b;border-radius:4px;margin:12px 0;color:#e4e6cb;min-height:44px}
+#log{padding:0;margin:10px 0 0;list-style:none;max-height:220px;overflow:auto}#log li{padding:7px 0;border-bottom:1px solid #334138;color:#c4c6af;font-size:.81rem}
+#log li:first-child{color:#f1dda6}footer{margin-top:20px;font-size:.8rem;color:var(--muted)}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.tile .mark{font-size:22px}.tile .spot{font-size:9px}}
+@media(max-width:430px){header{display:block}header nav{margin-top:10px}.panel{padding:11px}.tile .spot{display:none}.tile .army{font-size:12px}}
+</style>
+</head>
+<body>
+<header><div><div class="eyebrow">CONQUER / World layer</div><h1>MARCH</h1></div><nav aria-label="Navigazione"><a href="../index.html">Feudo / Builder</a><a href="../camp/">Camp</a></nav></header>
+<main>
+<div class="intro"><div><div class="eyebrow">Modalità attacco · Skeleton V0</div><h2>Comanda la compagnia. Scegli quando fermarti.</h2><p class="muted">Muoviti, razzia, assedia, ritirati o annetti. Nessuna conquista automatica.</p></div><div class="notice">SCENARIO DI TEST LOCALE — non sincronizzato con i feudi, il Combat Engine o i salvataggi della partita.</div></div>
+<div class="stats" aria-live="polite">
+<div class="stat"><strong id="day">1</strong><span>Giorno</span></div>
+<div class="stat"><strong id="troops">42</strong><span>Soldati</span></div>
+<div class="stat"><strong id="food">64</strong><span>Viveri</span></div>
+<div class="stat"><strong id="cargo">0/90</strong><span>Bottino / capacità</span></div>
+</div>
+<div class="layout">
+<section class="panel"><div class="map-header"><h2>Territorio</h2><small>Seleziona un feudo · spostamento a tappe giornaliere</small></div>
+<div id="map" role="group" aria-label="Mappa strategica dello scenario di prova"></div>
+<div class="legend"><span><i class="swatch" style="background:#96be8a"></i>Feudo alleato</span><span><i class="swatch" style="background:#ce8372"></i>Feudo ostile</span><span><i class="swatch" style="background:#d4c183"></i>Percorso</span><span>♞ Compagnia</span></div>
+<div class="militia" id="armyDetails"></div>
+<div id="status" role="status" aria-live="polite">Caricamento…</div>
+<div class="buttons"><button id="advance" class="action primary" type="button">▶ Avanza 1 giorno</button><button id="advance5" class="action" type="button">⏩ Avanza 5 giorni</button><button id="reset" class="action ghost" type="button">Ricomincia scenario</button></div>
+</section>
+<aside class="panel"><h2 id="targetTitle">Feudo selezionato</h2><div id="fiefDetails"></div>
+<div class="buttons"><button id="march" class="action primary" type="button">Marcia qui</button><button id="resupply" class="action" type="button">Rifornisci al feudo alleato</button><button id="unload" class="action" type="button">Deposita il bottino</button></div>
+<hr><h3>Operazioni militari</h3><p class="muted">Puoi ritirarti dopo qualunque danno o saccheggio, senza completare l'invasione.</p>
+<div class="buttons">
+<button id="raid" class="action warn" type="button">Razzia parziale</button>
+<button id="siege" class="action" type="button">Avvia assedio</button>
+<button id="testVictory" class="action ghost" type="button">Esito assalto: successo (TEST)</button>
+<button id="conquer" class="action primary" type="button">Annetti feudo</button>
+<button id="withdraw" class="action" type="button">Ritirata / interrompi</button>
+</div>
+<p class="muted" style="font-size:.8rem">L'esito «successo (TEST)» è un segnaposto in attesa dell'integrazione con Combat/Siege: non simula uno scontro reale.</p>
+<hr><h3>Diario operazioni</h3><ol id="log" aria-live="polite"></ol>
+</aside>
+</div>
+<footer>MARCH conserva soltanto i dati di questo scenario nel browser. Il contratto d'integrazione con World, Feudi, Combat e Siege è documentato separatamente.</footer>
+</main>
+<script src="./engine.js"></script>
+<script src="./ui.js"></script>
+</body>
+</html>
