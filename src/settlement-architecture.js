@@ -63,7 +63,16 @@ function drawArchitectureAssetOnEdge(edge,centerZ,width,height,key,offsetWorld=0
   if(lit){ctx.globalCompositeOperation='screen';ctx.globalAlpha=baseAlpha*Math.min(.50,.20+.28*nf);ctx.filter='sepia(1) saturate(2) hue-rotate(330deg) brightness(1.45)';ctx.drawImage(img,0,0)}
   ctx.restore();return true;
 }
+// Rule: a tower hooked to a gate (any gate socket) always has its entrance and its interior side
+// on the gate's rear, the inner side of the gatehouse, whatever its own angle or the walls.
+function towerGateParent(s){
+  if(!s||s.type!=='tower'||!s.parentTowerId)return null;
+  const p=State.structures.find(o=>o.id===s.parentTowerId);
+  return p?.type==='gate'?p:null;
+}
+function gateRearVector(g){const a=g.angle||0;return{x:-Math.cos(a),y:-Math.sin(a)}}
 function structureInteriorVector(s){
+  const gate=towerGateParent(s);if(gate)return gateRearVector(gate);
   let vx=0,vy=0,hits=0;
   for(const link of State.structures){
     if(!link||underConstruction(link)||!['wall','built'].includes(link.type))continue;
@@ -240,11 +249,19 @@ function towerDoorSpecs(tower){
   if(!tower||tower.type!=='tower'||underConstruction(tower))return[];
   const specs=[];
 
-  // Primary ground-floor entrance exists only on independent towers.
-  // Attached subtowers deliberately have NO ground-floor door.
+  // Primary ground-floor entrance exists on independent towers and on towers hooked to a gate.
+  // Subtowers of a tower deliberately have NO ground-floor door.
   // Oriented towers face the field: the door is on the rear, inside the walls (the semitower's
   // rear is the open gorge itself).
-  if(!tower.parentTowerId&&isOrientedTower(tower)){
+  const gate=towerGateParent(tower);
+  if(gate){
+    // Gate rule: the entrance faces the gate's rear (towerGateParent).
+    const rear=gateRearVector(gate),fp=towerFacadePoints(tower);
+    const contact=isOrientedTower(tower)?{x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2}
+      :tower.shape==='round'?{x:tower.x+rear.x*tower.r,y:tower.y+rear.y*tower.r}
+      :boundaryPoint(tower,{x:tower.x+rear.x,y:tower.y+rear.y});
+    if(tower.shape!=='half'){const spec=towerDoorContactSpec(tower,contact,null,'front');if(spec)specs.push(spec)}
+  }else if(!tower.parentTowerId&&isOrientedTower(tower)){
     if(tower.shape==='dee'){
       const fp=towerFacadePoints(tower),rear=towerDoorContactSpec(tower,{x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2},null,'front');
       if(rear)specs.push(rear);

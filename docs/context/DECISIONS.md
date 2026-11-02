@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-GATE-01 — Torri agganciate a una porta: ingresso sul retro della porta (02/11/2026)
+
+- **Regola, sempre:** una torre agganciata a una porta (qualsiasi socket `gate-*`, `parentTowerId` = la porta) ha l'ingresso al piano terra e il lato interno (finestre, porta, arredo del cutaway) verso il **retro della porta**, cioè l'interno della porta, qualunque sia l'angolo della torre o le mura attaccate. Vale per torri quadrate, rotonde e a D; la semitorre ha già la gola aperta sul retro e non riceve una porta. Le torri secondarie di un'altra torre restano senza ingresso al piano terra.
+- **Codice:** `towerGateParent` / `gateRearVector` in `settlement-architecture.js`, usati da `structureInteriorVector` e `towerDoorSpecs` (e quindi da disegno 2.5D/3D, torce, navigazione e combattimento). Prova: `qa/gate-tower-entrance-regression.cjs`.
 ## D-MARCH-01 — Modalità attacco e conquista facoltativa (30/10/2026)
 
 **VINCOLO DI GAME DESIGN:** il giocatore può guidare una compagnia militare sulla world map al posto di gestire direttamente un feudo. Una volta arrivato può razziare, iniziare un assedio o ritirarsi. Razzia e distruzione anche soltanto parziale sono **persistenti** e non obbligano a terminare l'invasione. Il giocatore può interrompere un'operazione in qualsiasi momento. Anche dopo aver espugnato le difese **l'annessione è un comando volontario**, non l'esito automatico dell'assedio; la campagna può proseguire.
