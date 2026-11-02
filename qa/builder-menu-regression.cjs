@@ -28,7 +28,7 @@ assert.match(css,/#devTools\{[^}]*max-height:calc\(100% - 24px\)/);
 assert.match(css,/#devToggle\{[^}]*flex:0 0 34px/);
 assert.match(css,/#devPanel\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*overscroll-behavior:contain/);
 assert.match(html,/settlement\.css\?v=dev-scroll-mills-1/);
-assert.match(html,/settlement-builder-ux\.js\?v=small-gate-1/);
+assert.match(html,/settlement-builder-ux\.js\?v=army-camp-2/);
 // Both stone gate buttons (gatehouse and small gate) get a catalog entry of their own.
 for(const size of ['1.5','1']){
   assert.match(html,new RegExp('<button data-gate data-gate-size="'+size+'">'),'gate button '+size);
