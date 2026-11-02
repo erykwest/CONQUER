@@ -675,9 +675,21 @@ function wallBattlementPieces(s){
   // Wall on a slope (its top is a stair): every merlon and parapet block stands on the highest tread
   // under it and reaches down to the lowest, so the breastwork runs on along the stair without
   // gaps and always covers it; the single crest line used to clip far merlons in 2.5D is gone.
-  if(wallSlopeSections(s))for(const p of all){
-    const ts=p.pts.map(q=>((q.x-s.a.x)*g.dx+(q.y-s.a.y)*g.dy)/(g.L*g.L)),r=wallGroundRange(s,Math.min(...ts),Math.max(...ts));
-    p.groundZ=r.max;p.z0-=r.max-r.min;delete p.wallCrest;
+  if(wallSlopeSections(s)){
+    const tOf=p=>{const ts=p.pts.map(q=>((q.x-s.a.x)*g.dx+(q.y-s.a.y)*g.dy)/(g.L*g.L));return{lo:Math.min(...ts),hi:Math.max(...ts)}};
+    for(const p of all){
+      const t=tOf(p),r=wallGroundRange(s,t.lo,t.hi);
+      p.groundZ=r.max;p.z0-=r.max-r.min;p.t=(t.lo+t.hi)/2;delete p.wallCrest;
+    }
+    // A parapet block is never taller than either merlon beside it: the lower one sets its top, a
+    // crenel's depth below the merlon's (the opening between them stays).
+    const merlons=all.filter(p=>!p.kind),CRENEL=.24-PARAPET_HEIGHT;
+    for(const p of all){
+      if(p.kind!=='parapet')continue;
+      const before=merlons.filter(m=>m.t<p.t).pop(),after=merlons.find(m=>m.t>p.t);
+      const cap=Math.min(...[before,after].filter(Boolean).map(m=>m.groundZ+m.z1))-CRENEL;
+      if(Number.isFinite(cap)&&p.groundZ+p.z1>cap)p.z1=Math.max(p.z0+.02,cap-p.groundZ);
+    }
   }
   return all;
 }
