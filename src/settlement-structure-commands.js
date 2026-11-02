@@ -145,6 +145,7 @@ const StructureCommands=(()=>{
     if(action==='install')return K.installDrawbridge(target);
     if(action==='remove')return K.removeDrawbridge(target);
     if(action==='auto-on'||action==='auto-off')return K.setAuto(target,action==='auto-on');
+    if(action==='ladder-down'||action==='ladder-up')return K.setLadder(target,action==='ladder-down');
     return K.toggleDrawbridge(target);
   }
   function changeArchers(id,delta){

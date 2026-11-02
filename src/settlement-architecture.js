@@ -267,8 +267,9 @@ function towerDoorSpecs(tower){
     if(front)specs.push(front);
   }
 
-  // Additional doors at every true wall socket connected to this tower.
-  for(const wall of State.structures){
+  // Additional doors at every true wall socket connected to this tower. The Mastio has none:
+  // it is not a way on or off the walls (settlement-wallwalk.js leaves it out too).
+  if(!tower.isMastio)for(const wall of State.structures){
     if(wall.type!=='wall'||underConstruction(wall))continue;
     let contact=null;
     if(wall.aSnap===tower.id)contact=wall.a;

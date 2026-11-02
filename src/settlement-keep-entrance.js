@@ -7,10 +7,12 @@
 //                door, a leaf hinged at the sill spans the gap and, raised, shuts the doorway.
 // The ground floor of the keep then has no door: civilians reach it only up the stair, and
 // not at all while the leaf is up. State lives on the tower: tower.keepEntrance =
-// {stair:'wood'|'stone'|'burnt',side:1|-1,drawbridge:{installed,raised,progress,auto,autoRaised}|null}.
-// A burnt wooden stair leaves the door up in the wall with nothing to reach it until rebuilt.
-// With `auto` (default on) the guard raises the leaf when an enemy comes near the stair and
-// lowers it again once they are gone; a raised leaf also bars the keep's wall-walk doors.
+// {stair:'wood'|'stone'|'burnt',side:1|-1,drawbridge:{installed,raised,progress,auto,autoRaised,burnt}|null,
+//  ladder:{down,autoUp}|null,auto}.
+// A burnt wooden stair, or a burnt leaf over its gap, leaves the door out of reach: the
+// occupants let a ladder down from the sill (and pull it in) until it is rebuilt. With `auto`
+// (default on) the guard raises the leaf, or pulls the ladder in, when an enemy comes near
+// and puts it back once they are gone. The Mastio has no wall-walk doors at all.
 (function(){
   const STAIR_COST={gold:6,wood:24};
   const STONE_COST={gold:10,stone:30};
@@ -27,7 +29,12 @@
       !(typeof isOrientedTower==='function'&&isOrientedTower(t))&&structureLevel(t)>=2;
   }
   function entrance(t){return eligible(t)&&[...STAIRS,'burnt'].includes(t.keepEntrance?.stair)?t.keepEntrance:null}
-  function drawbridge(t){const e=entrance(t);return e?.drawbridge?.installed?e.drawbridge:null}
+  // The working leaf. A burnt one (drawbridge.burnt) is gone but leaves its gap.
+  function drawbridge(t){const e=entrance(t);return e?.drawbridge?.installed&&!e.drawbridge.burnt?e.drawbridge:null}
+  // Stair burnt, or leaf burnt over its gap: the door is out of reach from the ground except
+  // by the ladder the occupants let down (keepEntrance.ladder={down,autoUp}).
+  function unreachable(t){const e=entrance(t);return !!e&&(e.stair==='burnt'||!!e.drawbridge?.burnt)}
+  const guardOn=e=>e.auto!==false&&e.drawbridge?.auto!==false;
   function sill(t){return entrance(t)?sillFor(t):null}
   // The front face, as towerDoorSpecs places the ground door of an independent tower.
   function frontFrame(t){
@@ -58,7 +65,7 @@
       :{u0:gap+LAND,u1:gap+LAND+run,v0:-FLIGHT_W/2,v1:FLIGHT_W/2,along:'u'};
     const foot=stone?P(gap+LAND/2,side*(LAND_HALF+run+.35)):P(gap+LAND+run+.35,0);
     const plan=[rect(landing.u0,landing.u1,landing.v0,landing.v1),rect(flight.u0,flight.u1,Math.min(flight.v0,flight.v1),Math.max(flight.v0,flight.v1))];
-    if(gap)plan.push(rect(0,gap,-LAND_HALF,LAND_HALF));
+    if(gap&&!spec.drawbridge?.burnt)plan.push(rect(0,gap,-LAND_HALF,LAND_HALF));   // with no leaf the pit is open ground
     return{frame:f,P,zTop,zFoot,g0,rise,run,steps,gap,stone,side,landing,flight,foot,plan};
   }
   // Floor of the first upper storey, above the tower's own ground.
@@ -125,13 +132,13 @@
     status('Scala in pietra costruita lungo la facciata');return true;
   }
   function installDrawbridge(t){
-    const e=entrance(t);if(!e||e.drawbridge?.installed)return false;
+    const e=entrance(t);if(!e||!STAIRS.includes(e.stair)||drawbridge(t))return false;   // new, or replacing a burnt leaf
     const next={...e,drawbridge:{installed:true,raised:false,progress:0}};
     const error=e.stair==='stone'?(freeSide(t,next)===null?validate(t,next):null):validate(t,next);
     if(error){status('Levatoio non disponibile: '+error);return false}
     if(!pay(DRAWBRIDGE_COST))return false;
     if(e.stair==='stone')e.side=freeSide(t,next);
-    e.drawbridge=next.drawbridge;refresh(t);
+    e.drawbridge=next.drawbridge;e.ladder=null;refresh(t);
     status('Levatoio installato davanti alla porta del mastio');return true;
   }
   // By hand: the guard leaves it as set until the next time enemies come or go.
@@ -140,24 +147,44 @@
     d.raised=!d.raised;d.autoRaised=false;refresh(t);
     status(d.raised?'Levatoio del mastio alzato':'Levatoio del mastio abbassato');return true;
   }
+  // The guard (leaf and ladder): on by default.
   function setAuto(t,on){
-    const d=drawbridge(t);if(!d)return false;
-    d.auto=!!on;if(!on)d.autoRaised=false;markDirty(false,false,true);renderFunctionPanel();return true;
+    const e=entrance(t);if(!e)return false;
+    e.auto=!!on;if(e.drawbridge)e.drawbridge.auto=!!on;
+    if(!on){if(e.drawbridge)e.drawbridge.autoRaised=false;if(e.ladder)e.ladder.autoUp=false}
+    markDirty(false,false,true);renderFunctionPanel();return true;
   }
-  // Living hostiles near the stair foot or the landing (wolves included).
+  // The occupants let the ladder down from the door, or pull it back in.
+  function setLadder(t,down){
+    const e=entrance(t);if(!e||!unreachable(t))return false;
+    e.ladder={down:!!down,autoUp:false};refresh(t);
+    status(down?'Scala a pioli calata dalla porta del mastio':'Scala a pioli ritirata nel mastio');return true;
+  }
+  // Living hostiles near the way in: stair foot and landing, or the ladder's foot.
   function enemyDistance(t){
-    const L=layout(t),list=window.ConquerCombat?.enemy?.()||[];if(!L||!list.length)return Infinity;
-    const landing=L.P((L.landing.u0+L.landing.u1)/2,0);let best=Infinity;
+    const list=window.ConquerCombat?.enemy?.()||[];if(!list.length)return Infinity;
+    let spots;
+    if(unreachable(t)){const g=ladderGeom(t);spots=g?[g.access]:[]}
+    else{const L=layout(t);spots=L?[L.foot,L.P((L.landing.u0+L.landing.u1)/2,0)]:[]}
+    let best=Infinity;
     for(const e of list){
       if(e.neutral||e.defeated||(e.stats&&!(e.stats.hp>0))||!Number.isFinite(e.x))continue;
-      best=Math.min(best,Math.hypot(e.x-L.foot.x,e.y-L.foot.y),Math.hypot(e.x-landing.x,e.y-landing.y));
+      for(const p of spots)best=Math.min(best,Math.hypot(e.x-p.x,e.y-p.y));
     }
     return best;
   }
   // Siege tick (settlement-siege.js, next to the half-bridges' red-alarm demolition).
   function alarmTick(){
     for(const t of State.structures){
-      const d=drawbridge(t);if(!d||d.auto===false)continue;
+      const e=entrance(t);if(!e||!guardOn(e))continue;
+      const l=unreachable(t)?e.ladder:null;
+      if(l){
+        const near=enemyDistance(t);
+        if(near<=ALARM_NEAR&&l.down){l.down=false;l.autoUp=true;refresh(t,false);status('Nemici sotto il mastio: la scala a pioli viene ritirata')}
+        else if(near>ALARM_CLEAR&&!l.down&&l.autoUp){l.down=true;l.autoUp=false;refresh(t,false);status('Nessun nemico vicino: la scala a pioli viene calata')}
+        continue;
+      }
+      const d=drawbridge(t);if(!d)continue;
       const near=enemyDistance(t);
       if(near<=ALARM_NEAR&&!d.raised){
         d.raised=true;d.autoRaised=true;refresh(t,false);status('Nemici alla scala: il levatoio del mastio si alza');
@@ -171,14 +198,15 @@
     const e=entrance(t);if(!e)return[];
     const out=[];
     if(e.stair==='wood')out.push({part:'stair',flam:.8});
-    if(e.drawbridge?.installed)out.push({part:'leaf',flam:.55});
+    if(drawbridge(t))out.push({part:'leaf',flam:.55});
     return out;
   }
-  // Burnt out: the wooden stair takes the leaf down with it; a leaf alone just falls.
+  // Burnt out: the wooden stair takes the leaf down with it; a leaf alone falls and leaves
+  // its gap between landing and door. Either way the ladder starts pulled in.
   function burnout(t,part){
     const e=entrance(t);if(!e)return false;
-    if(part==='stair'){e.stair='burnt';e.drawbridge=null}
-    else if(part==='leaf')e.drawbridge=null;
+    if(part==='stair'){e.stair='burnt';e.drawbridge=null;e.ladder={down:false,autoUp:false}}
+    else if(part==='leaf'){e.drawbridge={installed:true,burnt:true,raised:false,progress:0};e.ladder={down:false,autoUp:false}}
     else return false;
     refresh(t,false);return true;
   }
@@ -197,7 +225,7 @@
   }
   function removeDrawbridge(t){
     const e=entrance(t);if(!e?.drawbridge)return false;
-    e.drawbridge=null;refresh(t);status('Levatoio rimosso (nessun rimborso)');return true;
+    e.drawbridge=null;e.ladder=null;refresh(t);status('Levatoio rimosso (nessun rimborso)');return true;
   }
   function removeEntrance(t){
     if(!t?.keepEntrance)return false;
@@ -206,27 +234,47 @@
   // Where a walker on the ground enters the keep: the foot of the stair; null while the leaf
   // is up (or moving); undefined when the tower has no raised entrance.
   function access(t){
-    if(!entrance(t))return undefined;
+    const e=entrance(t);if(!e)return undefined;
+    if(unreachable(t))return e.ladder?.down?ladderGeom(t)?.access||null:null;
     const d=drawbridge(t);
     if(d&&(d.raised||d.progress>.02))return null;
     return layout(t)?.foot||null;
   }
-  function footPoint(t){return entrance(t)?layout(t)?.foot||null:null}
-  // The keep shut from outside: leaf up or moving. Its wall-walk doors are barred too.
-  function closed(t){const d=drawbridge(t);return !!d&&(d.raised||d.progress>.02)}
+  function footPoint(t){return !entrance(t)?null:unreachable(t)?ladderGeom(t)?.access||null:layout(t)?.foot||null}
+  // The keep shut from outside: leaf up or moving, or the ladder pulled in.
+  function closed(t){
+    if(unreachable(t))return !t.keepEntrance.ladder?.down;
+    const d=drawbridge(t);return !!d&&(d.raised||d.progress>.02);
+  }
+  // The ladder let down from the sill, leaning out to the ground below the door.
+  const LADDER_OUT=.55;
+  function ladderGeom(t){
+    if(!entrance(t))return null;
+    const f=frontFrame(t),g0=placementGroundZ(t)??ground(t),zTop=g0+sillFor(t);
+    const P=(u,v)=>({x:f.contact.x+f.outward.x*u+f.tangent.x*v,y:f.contact.y+f.outward.y*u+f.tangent.y*v});
+    const base=P(LADDER_OUT,0);
+    return{frame:f,P,zTop,zBase:ground(base),top:P(.06,0),base,access:P(LADDER_OUT+.2,0)};
+  }
   // Plan polygons that walkers go around (settlement-population-navigation.js), cached.
   const obstacleCache=new Map();
   function obstacles(t){
     if(!entrance(t))return null;
-    const e=t.keepEntrance,key=[t.x,t.y,t.angle,t.r,t.size,t.level,e.stair,e.side,!!e.drawbridge?.installed,State.relief?.seed].join('|');
+    const e=t.keepEntrance,key=[t.x,t.y,t.angle,t.r,t.size,t.level,e.stair,e.side,!!e.drawbridge?.installed,!!e.drawbridge?.burnt,State.relief?.seed].join('|');
     const hit=obstacleCache.get(t.id);if(hit&&hit.key===key)return hit.plan;
     const plan=layout(t)?.plan||[];obstacleCache.set(t.id,{key,plan});return plan;
   }
   // A civilian going up into the keep: from the foot along the flight, over the landing, to
   // the door. k 0..1 → {x,y,z} with z absolute.
   function climbPoint(t,k){
+    const pts=[];
+    if(unreachable(t)){
+      // Up the ladder: to its foot, then up the rungs to the sill.
+      const g=ladderGeom(t);if(!g)return null;
+      pts.push([g.access,g.zBase],[g.base,g.zBase],[g.top,g.zTop],[g.P(.02,0),g.zTop]);
+      return alongPath(pts,k);
+    }
     const L=layout(t);if(!L)return null;
-    const fl=L.flight,pts=[];
+    const fl=L.flight;
     if(fl.along==='u'){
       pts.push([L.P(fl.u1+.35,0),L.zFoot],[L.P(fl.u1,0),L.zFoot],[L.P(fl.u0,0),L.zTop]);
     }else{
@@ -234,6 +282,10 @@
       pts.push([L.P(um,fl.v1+Math.sign(fl.v1)*.35),L.zFoot],[L.P(um,fl.v1),L.zFoot],[L.P(um,fl.v0),L.zTop]);
     }
     pts.push([L.P((L.landing.u0+L.landing.u1)/2,0),L.zTop],[L.P(.05,0),L.zTop]);
+    return alongPath(pts,k);
+  }
+  // A point k (0..1) of the way along [[{x,y},z],...], by 3D length.
+  function alongPath(pts,k){
     let total=0;const seg=[];
     for(let i=1;i<pts.length;i++){const [a,za]=pts[i-1],[b,zb]=pts[i],len=Math.hypot(b.x-a.x,b.y-a.y,zb-za);seg.push(len);total+=len}
     let d=Math.max(0,Math.min(1,k))*total;
@@ -245,7 +297,10 @@
     return null;
   }
   // Time to climb, in ms, at the same pace as civilians walk (550 ms per unit).
-  function climbDuration(t){const L=layout(t);return L?Math.max(600,(L.run*1.41+L.gap+.9)*550):0}
+  function climbDuration(t){
+    if(unreachable(t)){const g=ladderGeom(t);return g?Math.max(600,(g.zTop-g.zBase)*1.6*550+.8*550):0}   // rungs are slower
+    const L=layout(t);return L?Math.max(600,(L.run*1.41+L.gap+.9)*550):0;
+  }
 
   // ---------- meshes (3D world; the 2.5D view paints the same triangles) ----------
   function builder(L){
@@ -346,12 +401,30 @@
     if(window.ConquerWorld3D?.active?.()||typeof viewDepthPoint!=='function')return true;
     return viewDepthPoint(frontFrame(t).contact)>=viewDepthPoint({x:t.x,y:t.y})-.015;
   }
+  // The ladder let down: two rails and rungs leaning from the sill to the ground.
+  function ladderMesh(t){
+    if(!unreachable(t)||!t.keepEntrance.ladder?.down)return null;
+    const g=ladderGeom(t),pos=[],col=[],f=g.frame;
+    const at=(u,v,z)=>{const p=g.P(u,v);return[p.x,p.y,z]};
+    const rod=(a,b,w,colr)=>{   // a thin square bar between two 3D points, along a and b
+      const n=[f.tangent.x*w,f.tangent.y*w],up=w;
+      const q=[[...a],[...b]],v=[];
+      for(const p of q)for(const [dx,dy,dz] of [[-n[0],-n[1],0],[n[0],n[1],0],[n[0],n[1],up],[-n[0],-n[1],up]])v.push([p[0]+dx,p[1]+dy,p[2]+dz]);
+      for(const [i,j,k,l] of [[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]])for(const tri of [[i,j,k],[i,k,l]]){for(const x of tri)pos.push(...v[x]);col.push(colr)}
+    };
+    const uTop=.06,uBot=LADDER_OUT,zT=g.zTop+.12,zB=g.zBase;
+    for(const s of [-1,1])rod(at(uBot,s*.14,zB),at(uTop,s*.14,zT),.022,'#6b4729');
+    const n=Math.max(4,Math.round((zT-zB)/.2));
+    for(let i=1;i<n;i++){const k=i/n,u=uBot+(uTop-uBot)*k,z=zB+(zT-zB)*k;rod(at(u,-.14,z),at(u,.14,z),.018,'#8a6038')}
+    return{pos,col};
+  }
   function dynamicMeshes(){
     const out=[];
     for(const t of State.structures){
       if(!entrance(t)||!facesCamera(t))continue;
       const m=stairMesh(t);if(m)out.push(m);
       const leaf=leafMesh(t);if(leaf)out.push(leaf);
+      const ladder=ladderMesh(t);if(ladder)out.push(ladder);
     }
     return out;
   }
@@ -373,7 +446,7 @@
   // A saved leaf is shown where it was left.
   function normalise(t){
     const d=t?.keepEntrance?.drawbridge;
-    if(d?.installed)d.progress=d.raised?1:0;
+    if(d?.installed)d.progress=d.raised&&!d.burnt?1:0;
     if(t?.keepEntrance&&![...STAIRS,'burnt'].includes(t.keepEntrance.stair))delete t.keepEntrance;
     return t;
   }
@@ -381,9 +454,10 @@
   // ---------- panel ----------
   function describe(t){
     if(!t||t.type!=='tower'||isWoodTower(t)||t.parentTowerId||(typeof isOrientedTower==='function'&&isOrientedTower(t)))return null;
-    const e=entrance(t),d=drawbridge(t);
+    const e=entrance(t),d=drawbridge(t),cut=unreachable(t);
     return{stair:e?.stair||null,mastio:!!t.isMastio,eligible:eligible(t),
-      drawbridge:d?{raised:!!d.raised,moving:d.progress>.01&&d.progress<.99,auto:d.auto!==false}:null,
+      drawbridge:d?{raised:!!d.raised,moving:d.progress>.01&&d.progress<.99,auto:guardOn(e)}:null,
+      leafBurnt:!!e?.drawbridge?.burnt,unreachable:cut,ladder:cut?{down:!!e.ladder?.down}:null,auto:e?guardOn(e):true,
       costs:{wood:STAIR_COST,stone:STONE_COST,drawbridge:DRAWBRIDGE_COST},
       reason:!eligible(t)?'Serve una torre in muratura di almeno 2 piani':!e&&!t.isMastio?'Solo sul mastio':null};
   }
@@ -391,16 +465,18 @@
     const D=describe(t);if(!D||(!D.stair&&!D.mastio))return'';
     let html='<div class="slot"><div class="slot-label">Ingresso rialzato · '+(D.stair==='stone'?'scala in pietra':D.stair==='wood'?'scala di legno':D.stair==='burnt'?'scala bruciata':'a terra')+'</div>';
     if(!D.stair)html+='<button data-keep-stair '+(D.eligible?'':'disabled')+'>Scala di legno al primo piano · '+costText(STAIR_COST)+'</button>';
-    else if(D.stair==='burnt')html+='<button data-keep-stair>Ricostruisci la scala di legno · '+costText(STAIR_COST)+'</button>'+
-      '<div class="legend">Senza scala nessuno raggiunge la porta del mastio.</div><button data-keep-remove>Demolisci ingresso rialzato</button>';
+    else if(D.stair==='burnt')html+='<button data-keep-stair>Ricostruisci la scala di legno · '+costText(STAIR_COST)+'</button>';
     else{
       if(D.stair==='wood')html+='<button data-keep-stone>Scala in pietra lungo la facciata · '+costText(STONE_COST)+'</button>';
-      html+=D.drawbridge?'<div class="grid"><button data-keep-drawbridge-toggle>'+(D.drawbridge.raised?'⬇ Abbassa':'⬆ Alza')+' levatoio</button><button data-keep-drawbridge-remove>Rimuovi levatoio</button></div>'+
-        '<div class="grid"><button data-keep-auto="1" class="'+(D.drawbridge.auto?'active':'')+'">Automatico ON</button><button data-keep-auto="0" class="'+(D.drawbridge.auto?'':'active')+'">OFF</button></div>'+
-        '<div class="legend">Automatico: si alza quando un nemico arriva a '+ALARM_NEAR+'U dalla scala e si riabbassa quando se ne va.</div>'
-        :'<button data-keep-drawbridge>Levatoio · '+costText(DRAWBRIDGE_COST)+'</button>';
-      html+='<button data-keep-remove>Demolisci ingresso rialzato</button>';
+      html+=D.drawbridge?'<div class="grid"><button data-keep-drawbridge-toggle>'+(D.drawbridge.raised?'⬇ Abbassa':'⬆ Alza')+' levatoio</button><button data-keep-drawbridge-remove>Rimuovi levatoio</button></div>'
+        :'<button data-keep-drawbridge>'+(D.leafBurnt?'Ricostruisci il levatoio bruciato · ':'Levatoio · ')+costText(DRAWBRIDGE_COST)+'</button>';
     }
+    // Stair or leaf burnt: the occupants let a ladder down from the door, or pull it in.
+    if(D.ladder)html+='<button data-keep-ladder="'+(D.ladder.down?'0':'1')+'">'+(D.ladder.down?'⬆ Ritira la scala a pioli':'⬇ Cala la scala a pioli')+'</button>'+
+      '<div class="legend">'+(D.stair==='burnt'?'Scala bruciata':'Levatoio bruciato, resta il vuoto')+': si entra solo dalla scala a pioli calata dalla porta.</div>';
+    if(D.drawbridge||D.ladder)html+='<div class="grid"><button data-keep-auto="1" class="'+(D.auto?'active':'')+'">Automatico ON</button><button data-keep-auto="0" class="'+(D.auto?'':'active')+'">OFF</button></div>'+
+      '<div class="legend">Automatico: con un nemico a '+ALARM_NEAR+'U la guardia alza il levatoio (o ritira la scala a pioli) e lo rimette quando se ne va.</div>';
+    if(D.stair)html+='<button data-keep-remove>Demolisci ingresso rialzato</button>';
     html+='<div class="legend">'+(D.reason?D.reason+'. ':'')+'La porta sale al primo piano; il piano terra resta cieco. Con il levatoio alzato nessuno entra dal suolo.</div></div>';
     return html;
   }
@@ -411,12 +487,13 @@
     slots.querySelector('[data-keep-drawbridge]')?.addEventListener('click',()=>installDrawbridge(t));
     slots.querySelector('[data-keep-drawbridge-toggle]')?.addEventListener('click',()=>toggleDrawbridge(t));
     slots.querySelector('[data-keep-drawbridge-remove]')?.addEventListener('click',()=>removeDrawbridge(t));
+    slots.querySelector('[data-keep-ladder]')?.addEventListener('click',e=>setLadder(t,e.currentTarget.dataset.keepLadder==='1'));
     slots.querySelectorAll('[data-keep-auto]').forEach(b=>b.addEventListener('click',()=>setAuto(t,b.dataset.keepAuto==='1')));
     slots.querySelector('[data-keep-remove]')?.addEventListener('click',()=>{if(confirm('Demolire l\'ingresso rialzato del mastio?'))removeEntrance(t)});
   }
 
   window.ConquerKeepEntrance={eligible,entrance,drawbridge,sill,layout,validate,buildStair,upgradeStone,installDrawbridge,
     toggleDrawbridge,removeDrawbridge,removeEntrance,access,footPoint,closed,obstacles,climbPoint,climbDuration,
-    setAuto,alarmTick,enemyDistance,fireParts,burnout,fireSeats,dynamicMeshes,stairMesh,leafMesh,animate,normalise,
+    setAuto,setLadder,unreachable,ladderGeom,ladderMesh,alarmTick,enemyDistance,fireParts,burnout,fireSeats,dynamicMeshes,stairMesh,leafMesh,animate,normalise,
     describe,panel,bindPanel,STAIR_COST,STONE_COST,DRAWBRIDGE_COST,ALARM_NEAR,ALARM_CLEAR};
 })();

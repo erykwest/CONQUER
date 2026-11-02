@@ -28,9 +28,9 @@
     if(h.type==='gate'){const a=Number(h.angle)||0;return{x:-Math.cos(a),y:-Math.sin(a)}}
     return typeof structureInteriorVector==='function'?structureInteriorVector(h):{x:1,y:0};
   }
-  // A Mastio with its drawbridge up bars its wall-walk doors too: no way in from the walls,
-  // no passage through it from one wall to the next.
-  const barred=h=>h.type==='tower'&&!!window.ConquerKeepEntrance?.closed?.(h);
+  // The Mastio has no doors onto the wall walk: no way in from the walls, no passage through
+  // it from one wall to the next, no stair down from them (settlement-architecture.js draws none).
+  const barred=h=>h.type==='tower'&&!!h.isMastio;
   let cache={sig:null};
   function signature(){
     let sig='';

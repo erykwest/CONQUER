@@ -4,7 +4,8 @@
 
 - L'ingresso rialzato è uno stato della torre mastio (`tower.keepEntrance`), non un nuovo tipo di struttura: progressione scala di legno → scala in pietra, levatoio come accessorio indipendente dalla scala. Solo torri in muratura indipendenti di almeno 2 piani; costruito resta della torre anche se il mastio viene spostato.
 - Con l'ingresso rialzato la torre non ha porta a terra: l'unico accesso dal suolo è il piede della scala, e nessuno con il levatoio alzato. Motivo: il mastio è l'ultimo rifugio (D-011), il levatoio lo rende difendibile anche a mura cadute.
-- L'ariete non colpisce il battente del mastio: sta al primo piano, fuori portata di un ariete a terra, ed è proprio il motivo storico dell'ingresso rialzato. Contro il mastio chiuso l'assalitore brucia la scala di legno (o, quando ci saranno, porta scale d'assalto al pianerottolo). Col battente alzato anche le porte del mastio verso il cammino di ronda sono sbarrate.
+- L'ariete non colpisce il battente del mastio: sta al primo piano, fuori portata di un ariete a terra, ed è proprio il motivo storico dell'ingresso rialzato. Contro il mastio chiuso l'assalitore brucia la scala di legno (o, quando ci saranno, porta scale d'assalto al pianerottolo). Il mastio non ha porte verso il cammino di ronda (regola valida per ogni mastio): non si entra dalle mura né lo si attraversa.
+- Scala o battente distrutti non isolano gli occupanti: calano una scala a pioli dalla porta e la ritirano davanti al nemico.
 
 ## D-MARCH-01 — Modalità attacco e conquista facoltativa (30/10/2026)
 

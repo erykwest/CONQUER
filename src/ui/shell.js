@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=keep-entrance-2';
+import { T } from './i18n-it.js?v=keep-entrance-3';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -357,11 +357,14 @@ function Inspector({ snap, cmd }) {
       ${at > 0 && html`<${Row} label=${I.keepDrawbridge} tip=${TIP.keepDrawbridge}>
         <${Seg} options=${k.drawbridge
           ? [{ label: k.drawbridge.raised ? I.keepLower : I.keepRaise, v: 'toggle' }, { label: I.keepRemove, v: 'remove' }]
-          : [{ label: I.keepInstall, v: 'install', tip: I.keepDrawbridge, tipBody: costTip(k.costs.drawbridge) }]}
+          : [{ label: k.leafBurnt ? I.keepRebuild : I.keepInstall, v: 'install', tip: I.keepDrawbridge, tipBody: costTip(k.costs.drawbridge) }]}
           onPick=${o => run('keepDrawbridge', o.v)} /></${Row}>`}
-      ${k.drawbridge && html`<${Row} label=${I.keepAuto} tip=${TIP.keepAuto}>
-        <${Seg} options=${[{ label: k.drawbridge.auto ? I.on : I.off, active: k.drawbridge.auto }]}
-          onPick=${() => run('keepDrawbridge', k.drawbridge.auto ? 'auto-off' : 'auto-on')} /></${Row}>`}`;
+      ${k.ladder && html`<${Row} label=${I.keepLadder} tip=${TIP.keepLadder}>
+        <${Seg} options=${[{ label: k.ladder.down ? I.keepLadderUp : I.keepLadderDown, v: k.ladder.down ? 'ladder-up' : 'ladder-down' }]}
+          onPick=${o => run('keepDrawbridge', o.v)} /></${Row}>`}
+      ${(k.drawbridge || k.ladder) && html`<${Row} label=${I.keepAuto} tip=${TIP.keepAuto}>
+        <${Seg} options=${[{ label: k.auto ? I.on : I.off, active: k.auto }]}
+          onPick=${() => run('keepDrawbridge', k.auto ? 'auto-off' : 'auto-on')} /></${Row}>`}`;
     })()}
     ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits) + '.'}>
       <${Seg} options=${[{ label: '−', disabled: d.archers.disabled || d.archers.count === 0, v: -1 }, { label: '+', disabled: d.archers.disabled || d.archers.count >= d.archers.max, v: 1 }]}

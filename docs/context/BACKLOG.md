@@ -4,6 +4,8 @@
 
 - **IMPLEMENTATO SU BRANCH `feature/mastio-entrance`, NON MERGE:** porta del mastio al primo piano, piano terra cieco; scala di legno → scala in pietra lungo la facciata; levatoio accessorio su entrambe che, alzato, chiude il mastio a chi è a terra (richiamo dei civili compreso). Contributo a S-08 (rifugio finale), che resta PARZIALE.
 - **IMPLEMENTATO SU BRANCH (seconda tappa):** levatoio automatico con i nemici a 9U; porte del mastio sul cammino di ronda sbarrate col battente alzato; scala come ostacolo per chi cammina; scala di legno e battente incendiabili, scala bruciata ricostruibile; civili richiamati che salgono la rampa visibilmente. Ariete sul battente escluso per scelta (D-MASTIO-01).
+- **IMPLEMENTATO SU BRANCH (terza tappa):** mastio senza porte sul cammino di ronda; battente bruciato che lascia il vuoto; scala a pioli calata/ritirata dagli occupanti con scala o battente bruciati.
+- **DA DECIDERE:** come entrano gli attaccanti nel mastio chiuso (oggi nessuna logica di presa del mastio).
 - **APERTO:** scale d'assalto contro il pianerottolo (serve un tratto di scalata verso `layout().landing`, fuori dal modello `{wallId,t}` del cammino); soldati difensori che usano la scala esterna per entrare nel mastio; resti carbonizzati della scala bruciata (oggi sparisce); drappo araldico del mastio L2 spostato sopra la porta invece di sparire.
 
 ## Castello — muri sui pendii (02/11/2026)
