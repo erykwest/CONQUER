@@ -42,7 +42,7 @@
     // Village houses grow on their own (auto) but are real building sites too.
     if(!s||s.auto&&s.type!=='house'||SKIP.has(s.type)||window.ConquerIndustries?.is?.(s))return null;
     const H=Number(call('structureHeight',s))||0;
-    const wood=s.type==='palisade'||s.type==='house'||s.type==='market'||!!call('isWoodTower',s)||!!call('isWoodGate',s)||!!call('isCivicAnnex',s);
+    const wood=s.type==='palisade'||s.type==='house'||s.type==='market'||s.type==='pier'||!!call('isWoodTower',s)||!!call('isWoodGate',s)||!!call('isCivicAnnex',s);
     const masonry=!wood;
     return{H,masonry,brick:s.masonryMaterial==='brick',
       scaffold:H>=.9&&s.type!=='palisade'&&!call('isWoodGate',s),
@@ -53,6 +53,11 @@
 
   // Footprint used for the scaffold: the largest polygon; circles become k-gons of bay width.
   function footprint(s){
+    // A pier's site is its landing on the shore: the deck stands over the sea.
+    if(window.ConquerPier?.is?.(s)){
+      const pts=window.ConquerPier.landing(s),c={x:pts.reduce((a,p)=>a+p.x,0)/4,y:pts.reduce((a,p)=>a+p.y,0)/4};
+      return{pts,c,r:Math.max(...pts.map(p=>Math.hypot(p.x-c.x,p.y-c.y)))};
+    }
     let polys=call('urbanBuildingPolygons',s)||[];
     if(!polys.length){const f=call('footprintPoints',s);if(f?.length)polys=[f]}
     if(!polys.length)return null;
@@ -97,6 +102,12 @@
       }
     }
     return false;
+  }
+  // Nor in the water (sea, ponds, rivers): a site on the shore keeps its props on land.
+  const WATER=['sea','pond','river','stream'];
+  function wet(p,r){
+    return(State.environment||[]).some(f=>WATER.includes(f.type)&&(call('environmentContains',f,p,r*.5)||
+      [0,1,2,3].some(i=>call('environmentContains',f,{x:p.x+Math.cos(i*Math.PI/2)*r,y:p.y+Math.sin(i*Math.PI/2)*r}))));
   }
   // Horizontal radius of a model (U), cached.
   const radii=new Map();
@@ -190,10 +201,11 @@
     for(const f of free){
       const r=radius(f.model);
       let placed=null;
-      for(const d of [0,.3,-.3,.6,-.6,.9,-.9]){
+      // Camera side first, then further round the footprint when that side is taken or wet.
+      for(const d of [0,.3,-.3,.6,-.6,.9,-.9,1.3,-1.3,1.8,-1.8,2.4,-2.4,3.1]){
         const a=front+f.at+d,dist=fp.r+gap+(f.lift?.1:r*.85);
         const c={x:fp.c.x+Math.cos(a)*dist,y:fp.c.y+Math.sin(a)*dist};
-        if(!blocked(s,c,r)){placed={c,a};break}
+        if(!blocked(s,c,r)&&!wet(c,r)){placed={c,a};break}
       }
       if(!placed)continue;
       const parts=Object.keys(MODELS().models[f.model].parts).filter(n=>!(f.skip||[]).includes(n));

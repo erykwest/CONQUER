@@ -471,18 +471,31 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   }
   // Ships (settlement-ships.js): sails raised and lowered by the morph between the set and
   // furled Blender builds. A big view framed to the hull and one at game scale, on water.
-  let shipSail=null;
+  // The crew (settlement-ship-crew.js) works the sails: topmen climb first, then the sails
+  // move. 'cycle' orders raise / lower in turn once the previous manoeuvre is over.
+  let shipCrew=null,shipIdle=0;
   function heroShip(W,H,k,dt){
-    const S=window.ConquerShips,key=subject.split(':')[1],m=window.ConquerShipModels.ships[key];
-    shipSail||=S.sailState();
+    const S=window.ConquerShips,C=window.ConquerShipCrew,key=subject.split(':')[1],m=window.ConquerShipModels.ships[key];
+    if(shipCrew?.key!==key){shipCrew=C.crewState(key,'lab');shipIdle=0}
+    const shipSail=shipCrew.sail;
     const turns=Number($('w3Turns').value),heading=headingInput(dt);
-    if(action==='cycle')shipSail.furl=S.cycle(clock);
-    else{(action==='furl'?S.raise:S.lower)(shipSail);S.step(shipSail,dt)}
+    if(action==='cycle'){
+      if(C.manoeuvring(shipCrew)||shipCrew.sailors.some(s=>s.mode==='aloft'||s.mode==='descend'||s.mode==='climb'))shipIdle=0;
+      else if((shipIdle+=dt)>2.5)C.order(shipCrew,shipSail.target?'lower':'raise');
+    }else C.order(shipCrew,action==='furl'?'raise':'lower');
+    C.step(shipCrew,dt);
     g.fillStyle='#3d6f86';g.fillRect(0,H*.22,W,H*.56);
     // Allegiance: realm arms on flags and sails; merchants fly the flag only.
     const [allegiance,realm]=$('shipFlag').value.split('|'),arms={...S.arms({allegiance,realm}),t:clock};
-    [[W*.38,H*.62,Math.min(W*.5/m.L,H*.3/m.L)],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>
-      W3.drawMeshes(g,[S.mesh(key,{x:0,y:0,heading},shipSail.furl,arms)],isoView(cx,cy,s,turns)));
+    const pose={x:0,y:0,heading};
+    [[W*.38,H*.62,Math.min(W*.5/m.L,H*.3/m.L)],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>{
+      const view=isoView(cx,cy,s,turns);
+      // Sailors as depth-sorted sprites, facing the way they move on screen.
+      const sprites=C.sailors(shipCrew).map(sl=>{const w=C.toWorld(pose,sl.local),ahead=C.toWorld(pose,sl.local.map((v,i)=>v+(sl.dir[i]||0)));
+        return{...w,draw:()=>{const p=view.project(w.x,w.y,w.z),q=view.project(ahead.x,ahead.y,ahead.z);
+          State.view.scale=s/12;ctx=g;C.drawSailor(C.dot(sl.id,p),sl.mode,clock,q.x>=p.x?1:-1)}}});
+      W3.drawMeshes(g,[S.mesh(key,pose,shipSail.furl,arms)],view,sprites);
+    });
     g.fillStyle='#fff';g.font=Math.round(14*k)+'px system-ui';
     g.fillText('Vele '+Math.round((1-shipSail.furl)*100)+'% spiegate',W*.04,H*.26);
   }
@@ -599,6 +612,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/assets/scatter-model.js?v=asset-lab-1"></script>
 <script src="./src/assets/ship-models.js?v=ships-1"></script>
 <script src="./src/settlement-ships.js?v=ships-1"></script>
+<script src="./src/settlement-ship-crew.js?v=crew-1"></script>
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-shapes.js?v=ships-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>

@@ -10,6 +10,7 @@ on:
       - 'src/settlement-ships.js'
       - 'src/assets/ship-models.js'
       - 'src/heraldry-shapes.js'
+      - 'src/settlement-ship-crew.js'
       - 'src/settlement-world.js'
       - 'qa/pier-regression.cjs'
       - 'qa/biome-recipes-regression.cjs'
@@ -32,3 +33,4 @@ jobs:
           node qa/biome-recipes-regression.cjs
           node qa/pier-regression.cjs
           node qa/ships-regression.cjs
+          node qa/ship-crew-regression.cjs

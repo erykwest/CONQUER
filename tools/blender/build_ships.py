@@ -168,6 +168,8 @@ def shrouds(part, h, x, head, n=2, ratlines=False):
             part.beam(head - Vector((0, 0, .3)), foot, .04, .04, 'rope')
         if ratlines and len(feet) > 1:
             top = head - Vector((0, 0, .3))
+            if side == 1:                                                         # crew climb the port shrouds
+                h.marks['ratlines'][round(x, 3)] = (feet[0].lerp(feet[-1], .5), top)
             for f in range(1, 9):
                 q = f / 10
                 a = feet[0].lerp(top, q); b = feet[-1].lerp(top, q)
@@ -251,6 +253,7 @@ def lateen(part, sails, h, x, height, yard, furl, belly=.9):
             u += (d * rx - b * rz) / det; w += (-cc * rx + a * rz) / det
         return min(1, max(0, u)), min(1, max(0, w))
     emblem_patch(h, P, lambda s, t: uv_at(c.x + ew / 2 - s * ew, c.z + eh / 2 - t * eh), 24, 15, 'y')
+    h.marks['rig'].append({'kind': 'lateen', 'x': x, 'head': head, 'deck': dz, 'lo': lo})
     # Halyard from the masthead to the yard.
     part.beam(head, lo.lerp(hi, .55), .04, .04, 'rope')
     return head
@@ -273,6 +276,7 @@ def square(part, sails, h, x, height, yard, furl, red=False, belly=1.1):
     sail_grid(sails, P, 8, 6, lambda i, j, u, v: a if i % 2 else b)
     # Heraldry over the whole square sail, seen from ahead: col 0 at u=0 (the -y side).
     emblem_patch(h, P, lambda s, t: (.06 + .88 * s, .06 + .88 * t), 24, 15, 'x')
+    h.marks['rig'].append({'kind': 'square', 'x': x, 'head': head, 'deck': h.deck_z(x / (h.L / 2)), 'yz': yz, 'w': w})
     return head
 
 
@@ -292,6 +296,7 @@ def castle(part, h, aft, length, height, style):
     b = min(h.half(t) for t in ts + [(ts[0] + ts[1]) / 2]) + .25
     z0 = max(h.top(t) for t in ts) + .05
     xm, lx = (x0 + x1) / 2, x1 - x0
+    h.marks['castles'].append((x0, x1))
     # Posts down to the deck, platform, overhanging floor.
     for px in (x0 + .2, x1 - .2):
         for s in (1, -1):
@@ -381,6 +386,43 @@ class NullPart:
         return lambda *a, **k: None
 
 
+CREW = {'barca': 2, 'cargo': 3, 'caravella': 5, 'cocca': 8, 'nave': 10}
+
+
+def crew_marks(h, key):
+    """Where the crew goes: a walk along the waist (between the castles) on the deck, and
+    per mast a climb (port shrouds with ratlines, otherwise the mast itself) up to the
+    working spots aloft (along a square yard, or at the masthead of a lateen rig)."""
+    x0, x1 = -h.L / 2 * .78, h.L / 2 * .78
+    for c0, c1 in h.marks['castles']:
+        if c1 < 0:
+            x0 = max(x0, c1 + .3)
+        else:
+            x1 = min(x1, c0 - .3)
+    deck = []
+    for i in range(13):
+        x = x0 + (x1 - x0) * i / 12
+        deck.append([x, 0, h.deck_z(x / (h.L / 2))])
+    masts = []
+    for r in h.marks['rig']:
+        x, head = r['x'], r['head']
+        rl = h.marks['ratlines'].get(round(x, 3))
+        if rl:
+            foot, top = rl
+            foot = foot - Vector((0, .35, 0))                                    # inboard, by the shrouds
+            foot.z = h.deck_z(foot.x / (h.L / 2))
+            climb = [list(foot), list(rl[0] + Vector((0, 0, .5))), list(top - Vector((0, -.4, .4)))]
+        else:
+            foot = Vector((x - .45, .25, r['deck']))
+            climb = [list(foot), list(Vector((x - .2, .15, r['deck'] + .4))), list(head - Vector((.2, -.15, .9)))]
+        if r['kind'] == 'square':
+            aloft = [[x - .25, s * r['w'] * q, r['yz'] - .55] for q in (.25, .55) for s in (1, -1)]
+        else:
+            aloft = [[x - .2, .15, head.z - .9], [x + .15, -.15, head.z - 1.3]]
+        masts.append({'x': x, 'climb': climb, 'aloft': aloft})
+    return {'n': CREW[key], 'deck': deck, 'half': h.half(0) * .55, 'masts': masts}
+
+
 def ensign(part, h, deck, staff, w, hgt):
     """Ensign staff raked over the stern, its flag mount at the top."""
     x = -h.L / 2 + .35
@@ -398,7 +440,7 @@ def masthead_flag(part, h, head, w, hgt):
 
 def build_ship(part, sails, key, s, furl):
     h = Hull(s)
-    h.furl, h.marks = furl, {'flags': [], 'emblems': []}
+    h.furl, h.marks = furl, {'flags': [], 'emblems': [], 'rig': [], 'ratlines': {}, 'castles': []}
     build_hull(part, h, s['hull'])
     rudder(part, h)
     if key == 'barca':
@@ -474,6 +516,10 @@ def export(parts, out_path):
         d['flags'] = [{'at': U(f['at']), 'w': U([f['w']])[0], 'h': U([f['h']])[0]} for f in h.marks['flags']]
         d['emblems'] = [{'cols': e['cols'], 'rows': e['rows'], 'axis': e['axis'], 'v': U(e['v']), 'f': U(e['f'])}
                         for e in h.marks['emblems']]
+        cm = crew_marks(h, key)
+        d['crew'] = {'n': cm['n'], 'half': U([cm['half']])[0], 'deck': [U(p) for p in cm['deck']],
+                     'masts': [{'x': U([m['x']])[0], 'climb': [U(p) for p in m['climb']], 'aloft': [U(p) for p in m['aloft']]}
+                               for m in cm['masts']]}
         d.update({'label': s['label'], 'size': s['size'], 'L': round(s['L'] / METERS_PER_U, 3),
                   'B': round(s['B'] / METERS_PER_U, 3), 'draft': round(s['D'] / METERS_PER_U, 3),
                   'deck': round(h.deck_z(0) / METERS_PER_U, 3)})
