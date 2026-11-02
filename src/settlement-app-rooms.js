@@ -159,8 +159,9 @@ function renderFunctionPanel(){
     if(woodGate){
       html+=`<div class="slot"><div class="legend">Wood gate · fixed H1 · 1.5×1U · front timber door · flat fighting deck with timber battlements.</div></div>`;
     }else{
-      const roof=gateRoofStyle(s);
-      html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
+      const roof=gateRoofStyle(s),timber=gateTimberUpper(s);
+      if(isSmallGate(s)&&structureLevel(s)===2)html+=`<div class="slot"><div class="slot-label">Piano alto</div><div class="grid"><button data-gate-upper="stone" class="${timber?'':'active'}">Pietra</button><button data-gate-upper="timber" class="${timber?'active':''}">Graticcio</button></div><div class="legend">Graticcio: legno e intonaco come le case, a sbalzo su fronte e retro, sempre con il tetto. Costa la porta L1 più ${costText(GATE_TIMBER_COST)}.</div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}" ${timber?'disabled':''}>Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
     }
   }
   if(s.type==='gate'&&!building&&window.ConquerSiege?.doorStage){
@@ -237,6 +238,7 @@ function renderFunctionPanel(){
   on('[data-tower-roof]',(id,el)=>StructureCommands.setTowerRoof(id,el.dataset.towerRoof));
   on('[data-wood-roof]',(id,el)=>StructureCommands.setWoodRoof(id,el.dataset.woodRoof));
   on('[data-gate-roof]',(id,el)=>StructureCommands.setGateRoof(id,el.dataset.gateRoof));
+  on('[data-gate-upper]',(id,el)=>StructureCommands.setGateUpper(id,el.dataset.gateUpper));
   on('[data-built-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.builtSkin));
   on('[data-wall-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.wallSkin));
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));

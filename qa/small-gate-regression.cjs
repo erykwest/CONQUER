@@ -14,15 +14,19 @@ const ctx=vm.createContext({Math,Number,Object,
   scaleCost:(x,f=1)=>Object.fromEntries(Object.entries(x).map(([k,v])=>[k,v*f])),
   COSTS:{gate:{gold:95,stone:90,wood:38,metal:10},woodGate:{gold:35}}});
 vm.runInContext([
+  pick(core,/const STRUCTURE_VARIANTS=[\s\S]*?\n\}\);/,'STRUCTURE_VARIANTS'),
+  pick(core,/const STRUCTURE_VARIANT_DEFAULTS=[\s\S]*?\n\}\);/,'STRUCTURE_VARIANT_DEFAULTS'),
+  pick(core,/const HALF_TOWER_VARIANTS=[\s\S]*?\nfunction structureVariant\(s,key\)\{[\s\S]*?\n\}/,'variant helpers'),
+  pick(core,/function gateRoofStyle\(s\)\{[\s\S]*?\n\}/,'gateRoofStyle'),
   pick(core,/const GATE_SIZES=[\s\S]*?\nfunction structureLevel\(s\)\{[\s\S]*?\n\}/,'gate sizes and structureLevel'),
   pick(core,/function levelCostFactor\(s\)\{[\s\S]*?\n\}/,'levelCostFactor'),
-  'function constructionCost(s){'+pick(core,/  if\(s\.type==='gate'\)return isWoodGate\(s\)[^\n]*/,'gate cost')+'}',
+  'function constructionCost(s){'+pick(core,/  if\(s\.type==='gate'\)\{\n[\s\S]*?\n  \}/,'gate cost')+'}',
   'function structureHeight(s){'+pick(castle,/  if\(s\.type==='gate'\)return isWoodGate\(s\)[^\n]*/,'gate height')+'}',
   pick(fittings,/  const PORTAL=[^\n]*/,'PORTAL'),
   pick(fittings,/  function portalOf\(s\)\{[\s\S]*?\n  \}/,'portalOf'),
   pick(fittings,/  const BANNER=[^\n]*/,'BANNER'),
   pick(fittings,/  function bannerOf\(s\)\{[\s\S]*?\n  \}/,'bannerOf'),
-  'Object.assign(this,{isSmallGate,structureLevel,constructionCost,structureHeight,portalOf,bannerOf});'
+  'Object.assign(this,{isSmallGate,structureLevel,constructionCost,structureHeight,portalOf,bannerOf,gateTimberUpper,gateRoofStyle,GATE_TIMBER_COST,GATE_TIMBER_RIDGE});'
 ].join('\n'),ctx);
 const gate=(size,level)=>({type:'gate',material:'stone',size,level});
 {
@@ -39,6 +43,20 @@ const gate=(size,level)=>({type:'gate',material:'stone',size,level});
   const big=ctx.constructionCost(gate(1.5,2)),small=ctx.constructionCost(gate(1,2));
   for(const k of Object.keys(big))assert.ok(Math.abs(small[k]-big[k]*.6)<1e-9,'small gate costs 0.6 of the gatehouse ('+k+')');
   console.log('PASS small gate height and cost');
+}
+{
+  // Timber upper storey: small L2 only, roof forced, the L1 price plus a little timber.
+  const t=l=>({...gate(1,l),upper:'timber',roofStyle:'battlement'});
+  assert.ok(ctx.gateTimberUpper(t(2))&&!ctx.gateTimberUpper(t(1))&&!ctx.gateTimberUpper({...t(2),size:1.5}),'small L2 only');
+  assert.ok(!ctx.gateTimberUpper({...t(2),brokenTop:true}),'a collapsed top storey is no frame');
+  assert.equal(ctx.gateRoofStyle(t(2)),'pitched','the frame always carries a roof');
+  const timber=ctx.constructionCost(t(2)),l1=ctx.constructionCost(gate(1,1)),stone=ctx.constructionCost(gate(1,2));
+  for(const k of Object.keys(stone))assert.equal(timber[k],(l1[k]||0)+(ctx.GATE_TIMBER_COST[k]||0),'L1 plus timber ('+k+')');
+  assert.ok(timber.stone<stone.stone&&timber.gold<stone.gold,'much cheaper than the stone storey');
+  // Lower frame (floor over the vault), same ridge as the stone L2 roof.
+  assert.ok(ctx.structureHeight(t(2))<ctx.structureHeight(gate(1,2)),'lower eaves than the stone L2');
+  assert.ok(Math.abs(ctx.GATE_TIMBER_RIDGE-(3.6+.66/1.5))<1e-9,'ridge of the stone L2 roof');
+  console.log('PASS small gate timber upper storey');
 }
 {
   const big=ctx.portalOf(gate(1.5,1)),small=ctx.portalOf(gate(1,1));

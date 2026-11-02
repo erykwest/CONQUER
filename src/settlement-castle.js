@@ -226,7 +226,7 @@ function structureHeight(s){
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
   }
   // The small gate stands just above the curtain (H2 walls are 2.10): L1 passage only, L2 one room over it.
-  if(s.type==='gate')return isWoodGate(s)?1.94:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
+  if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
   if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
@@ -537,7 +537,8 @@ function cutawayPropSprite(key){const img=cutawayPropSprites[key];return img&&im
 function cutawayEligible(s){
   if(!s||underConstruction(s))return false;
   if(s.type==='built')return true;
-  // Stone gates open like square towers: the passage on the ground floor, rooms above.
+  // Stone gates open like square towers: the passage on the ground floor, rooms above (the
+  // timber-framed small gate: masonry below its frame floor, plaster above).
   if(s.type==='gate')return !isWoodGate(s);
   // The timber palisade tower opens its Blender model (settlement-wood3d.js); the watchtower
   // has no walls to open.
@@ -626,12 +627,17 @@ function cutawayFloorLevels(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(level<=1||cutawaySpiralStair(s))return floors;
+  if(gateTimberUpper(s))return[...floors,{z:GATE_TIMBER_FLOOR,material:'wood'}];   // the frame's own floor
   // A gate's storeys line up with those of the stone tower flanking it (one floor level across).
   const flank=s.type==='gate'?State.structures.find(o=>o.parentTowerId===s.id&&o.type==='tower'&&!isWoodTower(o)&&!cutawaySpiralStair(o)):null;
   const fz=flank?cutawayFloorLevels(flank):[];
   for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:h*i/level,material:'wood'});
   return floors;
 }
+// Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front
+// and the rear (local x), flush with the flanks the walls meet.
+function gateTimberFloorZ(s){return GATE_TIMBER_FLOOR}
+function gateTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+GATE_JETTY*2,d.h,s.angle||0)}
 function cutawayLocalRect(center,angle,x0,y0,x1,y1){
   const ca=Math.cos(angle),sa=Math.sin(angle);
   const p=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
@@ -769,8 +775,8 @@ function cutawayTransparentFaceIndexes(s,g){
     return new Set([frontLong,1,3]);
   }
 
-  // Square towers remove the two camera-facing faces.
-  if(n===4&&s.type==='tower'&&s.shape!=='round'){
+  // Square towers and gatehouses remove the two camera-facing faces.
+  if(n===4&&(s.type==='tower'&&s.shape!=='round'||s.type==='gate')){
     const ranked=depths.map((depth,index)=>({depth,index})).sort((a,b)=>b.depth-a.depth);
     return new Set([ranked[0].index,ranked[1].index]);
   }

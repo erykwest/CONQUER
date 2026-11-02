@@ -314,10 +314,11 @@
     spriteKey=(banner.ready?want:'pending')+'#'+(banner.ready?'1':'0');
     return spriteKey;
   }
-  const BANNER={across:.62,width:.235,top:2.06,height:.96};
+  const BANNER={across:.62,width:.235,top:2.06,height:.96},BANNER_MIN=.4;   // no stub of a banner under a low frame
   // Banners of one gate: moved in on a small gate, and kept below the crest of a low one.
   function bannerOf(s){
-    const H=typeof structureHeight==='function'?structureHeight(s):Infinity;
+    // Masonry top: the eaves, or the floor of a timber upper storey (no banner on the frame).
+    const H=typeof gateTimberUpper==='function'&&gateTimberUpper(s)?gateTimberFloorZ(s):typeof structureHeight==='function'?structureHeight(s):Infinity;
     const k=portalOf(s).k,top=Math.min(BANNER.top,H-.15),height=Math.min(BANNER.height,top-1);
     return{across:BANNER.across*k,width:BANNER.width*k,top,height};
   }
@@ -330,7 +331,7 @@
     const P=portalOf(s);
     for(const edge of [front,rear])out.push({edge,key:'gatePortalFrame',centerZ:P.centerZ,width:P.width,height:P.height,offset:0});
     const B=bannerOf(s);
-    for(const side of [-1,1])out.push({edge:front,key:'gateBanner',centerZ:B.top-B.height/2,width:B.width,height:B.height,offset:B.across*side});
+    if(B.height>=BANNER_MIN)for(const side of [-1,1])out.push({edge:front,key:'gateBanner',centerZ:B.top-B.height/2,width:B.width,height:B.height,offset:B.across*side});
     return out;
   }
 
@@ -364,7 +365,7 @@
   }
   function drawCanvasBanners(s,edge){
     if(edge.role!=='front')return;
-    const B=bannerOf(s);
+    const B=bannerOf(s);if(B.height<BANNER_MIN)return;
     for(const side of [-1,1])drawArchitectureAssetOnEdge(edge,B.top-B.height/2,B.width,B.height,'gateBanner',B.across*side);
   }
   window.addEventListener?.('DOMContentLoaded',()=>{

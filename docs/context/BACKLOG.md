@@ -2,8 +2,8 @@
 
 ## Castello — porta piccola (30/10/2026)
 
-- **IMPLEMENTATO SU BRANCH `feature/small-gate`, NON MERGE:** porta in pietra 1×1U, L1–L2, poco più alta del muro, con saracinesca, ante, torce e stendardi in scala; costo ×0,6 del corpo di porta.
-- **APERTO:** avviso `danno-visibile` del Lab sul portone incrinato/sfondato della porta piccola (portale più piccolo della soglia); ponte levatoio davanti alla porta piccola da provare su un fossato; instabilità dell'audit (due stati di render alternati senza cambi di codice).
+- **IMPLEMENTATO SU BRANCH `feature/small-gate`, NON MERGE:** porta in pietra 1×1U, L1–L2, poco più alta del muro, con saracinesca, ante, torce e stendardi in scala; costo ×0,6 del corpo di porta. Piano alto a graticcio (L2), falde trasversali, cutaway delle porte a due facce.
+- **APERTO:** il piano a graticcio non brucia come legno (solo il tetto); 2.5D senza graticcio (mostra la porta in pietra); avviso `danno-visibile` del Lab sul portone incrinato/sfondato della porta piccola (portale più piccolo della soglia); ponte levatoio davanti alla porta piccola da provare su un fossato; instabilità dell'audit (due stati di render alternati senza cambi di codice).
 
 ## Castello — semitorri e torri a D (30/10/2026)
 

@@ -134,7 +134,30 @@ function drawGatePortals(){
   }
 }
 // One row per room: the ground floor is the passage (no window), each storey above has one.
-function gateWindowRows(s){return cutawayFloorLevels(s).slice(functionFloorOffset(s)).map(f=>f.z+.9).filter(z=>z<structureHeight(s)-.28)}
+// A timber upper storey has house windows in its frame instead (gateTimberFacade).
+function gateWindowRows(s){
+  if(gateTimberUpper(s))return[];
+  return cutawayFloorLevels(s).slice(functionFloorOffset(s)).map(f=>f.z+.9).filter(z=>z<structureHeight(s)-.28);
+}
+// Timber frame of a small gate's upper storey, per face of the jettied storey: sill and head
+// plates, corner posts; two windows between posts on the front and the rear, a post and two
+// braces on the flanks. Offsets along the edge from its middle, z above the gate's ground.
+function gateTimberFacade(s){
+  const pts=gateTimberStoreyPoints(s),z0=gateTimberFloorZ(s),z1=structureHeight(s),t=HOUSE_TIMBER_W/2,out=[];
+  for(let i=0;i<4;i++){
+    const a=pts[i],b=pts[(i+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y),h=L/2-t,beams=[],windows=[];
+    beams.push([{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]);
+    for(const e of [-h,h])beams.push([{off:e,z:z0+t},{off:e,z:z1-t}]);
+    if(i===GATE_FACADE_FRONT||i===GATE_FACADE_REAR){
+      const wz=(z0+z1)/2,f=HOUSE_WINDOW_HALF_W+HOUSE_TIMBER_W*.9;
+      for(const c of [-L*.24,L*.24]){windows.push({off:c,z:wz});beams.push([{off:c-f,z:z0+t},{off:c-f,z:z1-t}],[{off:c+f,z:z0+t},{off:c+f,z:z1-t}])}
+    }else{
+      beams.push([{off:0,z:z0+t},{off:0,z:z1-t}],[{off:-h,z:z0+t},{off:0,z:z1-t}],[{off:h,z:z0+t},{off:0,z:z1-t}]);
+    }
+    out.push({edge:{a,b,index:i},beams,windows});
+  }
+  return out;
+}
 const GATE_FACADE_FRONT=1,GATE_FACADE_REAR=3;
 // Slits along a gate face: two side by side on the field front, one on the flanks.
 function gateSlitOffsets(edge){return edge.index===GATE_FACADE_FRONT?[-.26,.26]:[0]}

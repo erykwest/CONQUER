@@ -3,6 +3,7 @@
 ## 2026-10-30 — Porta piccola (branch `feature/small-gate`)
 
 - Seconda taglia della porta in pietra: 1×1U, L1–L2, altezze 2,4 / 3,6, costo ×0,6. Portale, ante, grata, torce, stendardi, merli e tetto in scala con la fronte; il corpo di porta 1,5U resta invariato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuovo valore di `size` del tipo `gate`, nessun tipo nuovo.
+- 02/11: piano alto a graticcio per la porta piccola L2 (legno e intonaco come le case, a sbalzo, costo L1 + 8 oro e 18 legno), falde della porta piccola girate (timpani sui fianchi), cutaway di tutte le porte con le due facce verso la camera aperte.
 
 ## 2026-10-30 — Semitorri e torri a D (branch `feature/half-d-towers`)
 
