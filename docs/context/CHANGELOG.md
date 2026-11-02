@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-10-30 — Municipio e gilda sulle piazze dei pozzi (branch `feature/townhall-guild`)
+
+- Nuovi edifici civici L1–L3 legati ai pozzi: municipio con torre civica centrale, campana e meridiana (orologio al L3), gilda; modelli Blender, cutaway, cantiere e crollo. I modelli civici ora rispettano mattoni/argilla. Stato e prove in [STATUS](STATUS.md); ROADMAP e DECISIONS invariate (estende D-056 senza cambiarne il contratto).
 ## 2026-10-30 — Più pozzi per villaggio (branch `feature/multi-wells`)
 
 - Dopo la fondazione si possono costruire altri pozzi: ognuno è un centro di espansione (zone, case, campi, antincendio) collegato al primo pozzo con una strada principale, senza nuove strade maestre. Il centro villaggio si designa dall'ispettore come il mastio; i pozzi non centro hanno un nome di quartiere mostrato sulla mappa. Stato e prove in [STATUS](STATUS.md). D-056 in DECISIONS; ROADMAP invariata.

@@ -239,6 +239,8 @@ function structureHeight(s){
   if(s.type==='market')return .78;
   if(s.type==='tavern')return 2.15;
   if(s.type==='church')return 3.35;
+  if(s.type==='townhall')return [2.6,3.2,3.8][civicLevel(s)-1];
+  if(s.type==='guild')return [2.4,3.1,3.6][civicLevel(s)-1];
   if(s.type==='training')return .10;
   return 0;
 }
@@ -351,7 +353,7 @@ function unionGroundContactRings(polys){
     return polys;
   }
 }
-const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church']);
+const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild']);
 function isPlacementFoundationBuilding(s){
   return !!s&&!s.auto&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
 }

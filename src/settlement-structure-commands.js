@@ -197,7 +197,11 @@ const StructureCommands=(()=>{
     }
     const masonry=typeof masonryMaterial==='function'?masonryMaterial(s):null;
     if(masonry)d.facts.push({key:'masonry',value:masonry});
-    if(['house','market','tavern','church','training','plaza'].includes(s.type))
+    if(typeof isWellCivic==='function'&&isWellCivic(s)){
+      const well=wellCivicWell(s);
+      d.facts.push({key:'square',value:well?wellDisplayName(well)||'—':'—',center:!!well&&isVillageCenterWell(well)});
+    }
+    if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type))
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};

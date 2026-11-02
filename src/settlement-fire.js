@@ -33,6 +33,8 @@
     if(isWood(s))return[{part:'whole',flam:1}];
     if(s.type==='house'||s.type==='tavern')return[{part:'whole',flam:.9}];
     if(s.type==='market')return[{part:'whole',flam:.7}];
+    // Timber-framed guild halls and the L1 town hall; the masonry levels do not catch.
+    if(s.type==='guild'&&civicLevel(s)<3||s.type==='townhall'&&civicLevel(s)===1)return[{part:'whole',flam:.6}];
     // Mills: timber cap, sails, floors and wheel; once gutted nothing is left to burn.
     if(['windmill','watermill'].includes(s.type))return s.burnt?[]:[{part:'whole',flam:.85}];
     const out=[];
