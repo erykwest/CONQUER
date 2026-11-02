@@ -15,7 +15,7 @@
 (function(){
   const GROW=.22,EMBER_TIME=45,SPREAD_EVERY=1,DAMAGE_EVERY=1;
   // Seconds of full fire each fuel lasts.
-  const BURN={whole:55,roof:30,hoarding:26,door:22};
+  const BURN={whole:55,roof:30,hoarding:26,door:22,stair:28,leaf:18};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   function store(){
     if(!State.fire||typeof State.fire!=='object')State.fire={burning:[],embers:[]};
@@ -35,7 +35,8 @@
     if(s.type==='market')return[{part:'whole',flam:.7}];
     // Mills: timber cap, sails, floors and wheel; once gutted nothing is left to burn.
     if(['windmill','watermill'].includes(s.type))return s.burnt?[]:[{part:'whole',flam:.85}];
-    const out=[];
+    // The Mastio's wooden stair and drawbridge leaf come first: torches at its foot take them.
+    const out=s.type==='tower'?[...(window.ConquerKeepEntrance?.fireParts?.(s)||[])]:[];
     if(s.type==='tower'&&typeof towerRoofStyle==='function'&&towerRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='gate'&&typeof gateRoofStyle==='function'&&gateRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='church'&&!s.roofBurnt)out.push({part:'roof',flam:.4});
@@ -100,6 +101,7 @@
     }else if(f.part==='hoarding')s.skin='standard';
     else if(f.part==='door')s.doorBurnt=true;
     else if(f.part==='whole')s.burnt=true;      // a gutted mill: it stands, but grinds no more
+    else if(f.part==='stair'||f.part==='leaf'){window.ConquerKeepEntrance?.burnout?.(s,f.part);return}   // the keep's masonry is not charred
     s.charred=true;
     if(typeof invalidateStructureScene==='function')invalidateStructureScene(s);
     if(typeof invalidateSceneCache==='function')invalidateSceneCache();
@@ -345,6 +347,7 @@
     const rnd=rng(f.seed),ground=typeof terrainElevation==='function'?terrainElevation(centre(s)):0;
     const H=typeof structureHeight==='function'?structureHeight(s):1,out=[];
     const n=Math.round(3+f.heat*7);
+    if(f.part==='stair'||f.part==='leaf')return window.ConquerKeepEntrance?.fireSeats?.(s,f.part,rnd,n)||[];
     if(f.part==='door'){
       const d=typeof rectDims==='function'?rectDims(s):{w:1.5},a=Number(s.angle)||0;
       for(let i=0;i<n;i++){const o=(rnd()-.5)*.6;out.push({x:s.x+Math.cos(a)*d.w/2-Math.sin(a)*o,y:s.y+Math.sin(a)*d.w/2+Math.cos(a)*o,z:ground+.1+rnd()*.5})}

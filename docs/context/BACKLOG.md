@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — ingresso rialzato del mastio (02/11/2026, S-08)
+
+- **IMPLEMENTATO SU BRANCH `feature/mastio-entrance`, NON MERGE:** porta del mastio al primo piano, piano terra cieco; scala di legno → scala in pietra lungo la facciata; levatoio accessorio su entrambe che, alzato, chiude il mastio a chi è a terra (richiamo dei civili compreso). Contributo a S-08 (rifugio finale), che resta PARZIALE.
+- **IMPLEMENTATO SU BRANCH (seconda tappa):** levatoio automatico con i nemici a 9U; porte del mastio sul cammino di ronda sbarrate col battente alzato; scala come ostacolo per chi cammina; scala di legno e battente incendiabili, scala bruciata ricostruibile; civili richiamati che salgono la rampa visibilmente. Ariete sul battente escluso per scelta (D-MASTIO-01).
+- **IMPLEMENTATO SU BRANCH (terza tappa):** mastio senza porte sul cammino di ronda; battente bruciato che lascia il vuoto; scala a pioli calata/ritirata dagli occupanti con scala o battente bruciati.
+- **IMPLEMENTATO SU BRANCH (quarta tappa):** scala d'assalto contro la porta del mastio; battente con resistenza 60 abbattuto a colpi d'ascia (le torce lo bruciano); gli assalitori entrano e il mastio risulta violato.
+- **APERTO:** esito dell'ingresso nel mastio (mischia con gli occupanti, resa/conquista, legato al P0 assedio); difensori che respingono la scala; disposizione degli assalitori in cima; `founding-regression` instabile anche su `main` (limite 100 ms).
+- **APERTO (storico):** scale d'assalto contro il pianerottolo (serve un tratto di scalata verso `layout().landing`, fuori dal modello `{wallId,t}` del cammino); soldati difensori che usano la scala esterna per entrare nel mastio; resti carbonizzati della scala bruciata (oggi sparisce); drappo araldico del mastio L2 spostato sopra la porta invece di sparire.
+
 ## Castello — garitte e forme delle falde (02/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/bartizans`, NON MERGE:** variante `bartizan` (nessuna / merlate / guglia) per le torri grandi T3 quadrate e rotonde in pietra: quattro garitte d'angolo su mensole, 3 tiratori ciascuna con colpo al piede della torre 0–1U, bandiera sulle guglie. Variante `roofShape` (piramide / 2 falde / 4 falde con colmo L/2) per le torri quadrate col tetto a falde, solo estetica, due bandiere quando c'è il colmo.
