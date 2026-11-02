@@ -13,6 +13,7 @@ on:
       - 'src/settlement-ship-crew.js'
       - 'src/settlement-quay.js'
       - 'src/settlement-fleet.js'
+      - 'src/settlement-naval-battle.js'
       - 'src/settlement-world.js'
       - 'qa/pier-regression.cjs'
       - 'qa/biome-recipes-regression.cjs'
@@ -36,3 +37,4 @@ jobs:
           node qa/pier-regression.cjs
           node qa/ships-regression.cjs
           node qa/ship-crew-regression.cjs
+          node qa/naval-battle-regression.cjs

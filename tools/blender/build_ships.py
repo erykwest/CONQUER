@@ -296,7 +296,7 @@ def castle(part, h, aft, length, height, style):
     b = min(h.half(t) for t in ts + [(ts[0] + ts[1]) / 2]) + .25
     z0 = max(h.top(t) for t in ts) + .05
     xm, lx = (x0 + x1) / 2, x1 - x0
-    h.marks['castles'].append((x0, x1))
+    h.marks['castles'].append({'x0': x0, 'x1': x1, 'z': z0 + .16, 'b': b})
     # Posts down to the deck, platform, overhanging floor.
     for px in (x0 + .2, x1 - .2):
         for s in (1, -1):
@@ -394,7 +394,8 @@ def crew_marks(h, key):
     per mast a climb (port shrouds with ratlines, otherwise the mast itself) up to the
     working spots aloft (along a square yard, or at the masthead of a lateen rig)."""
     x0, x1 = -h.L / 2 * .78, h.L / 2 * .78
-    for c0, c1 in h.marks['castles']:
+    for c in h.marks['castles']:
+        c0, c1 = c['x0'], c['x1']
         if c1 < 0:
             x0 = max(x0, c1 + .3)
         else:
@@ -420,7 +421,9 @@ def crew_marks(h, key):
         else:
             aloft = [[x - .2, .15, head.z - .9], [x + .15, -.15, head.z - 1.3]]
         masts.append({'x': x, 'climb': climb, 'aloft': aloft})
-    return {'n': CREW[key], 'deck': deck, 'half': h.half(0) * .55, 'masts': masts}
+    # Castle platforms (archers' posts): extent along the hull, floor height, half width.
+    castles = [{'x0': c['x0'] + .3, 'x1': c['x1'] - .3, 'z': c['z'], 'b': c['b'] - .35} for c in h.marks['castles']]
+    return {'n': CREW[key], 'deck': deck, 'half': h.half(0) * .55, 'masts': masts, 'castles': castles}
 
 
 def ensign(part, h, deck, staff, w, hgt):
@@ -519,7 +522,8 @@ def export(parts, out_path):
         cm = crew_marks(h, key)
         d['crew'] = {'n': cm['n'], 'half': U([cm['half']])[0], 'deck': [U(p) for p in cm['deck']],
                      'masts': [{'x': U([m['x']])[0], 'climb': [U(p) for p in m['climb']], 'aloft': [U(p) for p in m['aloft']]}
-                               for m in cm['masts']]}
+                               for m in cm['masts']],
+                     'castles': [dict(zip(('x0', 'x1', 'z', 'b'), U([c['x0'], c['x1'], c['z'], c['b']]))) for c in cm['castles']]}
         d.update({'label': s['label'], 'size': s['size'], 'L': round(s['L'] / METERS_PER_U, 3),
                   'B': round(s['B'] / METERS_PER_U, 3), 'draft': round(s['D'] / METERS_PER_U, 3),
                   'deck': round(h.deck_z(0) / METERS_PER_U, 3)})

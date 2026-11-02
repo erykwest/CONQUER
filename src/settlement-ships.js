@@ -27,13 +27,23 @@
     return{flag:h,sail:o.allegiance==='merchant'?null:h};
   }
   const FLAG_COLS=10,FLAG_ROWS=6,EMBLEM_OFF=.012;
+  // Model -> world for a pose {x,y,heading,z,roll,pitch}: roll heels the ship to port
+  // (about +x), pitch dips the bow (about +y), then heading and the pose position.
+  function placer(pose){
+    const h=pose.heading||0,cs=Math.cos(h),sn=Math.sin(h),z0=pose.z||0;
+    const r=pose.roll||0,p=pose.pitch||0,cr=Math.cos(r),sr=Math.sin(r),cp=Math.cos(p),sp=Math.sin(p),tilt=r||p;
+    return(x,y,z,out)=>{
+      if(tilt){const y1=y*cr-z*sr,z1=y*sr+z*cr;const x2=x*cp-z1*sp;z=x*sp+z1*cp;x=x2;y=y1}
+      out.push(pose.x+x*cs-y*sn,pose.y+x*sn+y*cs,z0+z);
+    };
+  }
+  function toWorld(pose,l){const o=[];placer(pose)(l[0],l[1],l[2],o);return{x:o[0],y:o[1],z:o[2]}}
   const sample=(h,c,r)=>window.ConquerHeraldryShapes?.sample(h,c,r)||null;
   // World-space mesh {pos,col} for a ship at {x,y,heading,z}; furl 0 = set, 1 = furled.
   // With heraldry {flag, sail, t} it adds the flags (waving at time t) and the arms on the sails.
   function mesh(key,pose,furl=0,heraldry=null){
     const m=M.ships[key];if(!m)return null;
-    const h=pose.heading||0,cs=Math.cos(h),sn=Math.sin(h),z=pose.z||0,pos=[],col=[];
-    const put=(x,y,zz)=>pos.push(pose.x+x*cs-y*sn,pose.y+x*sn+y*cs,z+zz);
+    const pos=[],col=[],place=placer(pose),put=(x,y,zz)=>place(x,y,zz,pos);
     const quad=(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)};
     for(let t=0;t<m.c.length;t++){
       for(let k=0;k<3;k++){const j=m.i[t*3+k]*3;put(m.p[j],m.p[j+1],m.p[j+2])}
@@ -70,8 +80,7 @@
   // The flags alone, as a world mesh: cheap enough to wave every frame over a cached ship.
   function flagMesh(key,pose,h,t=0){
     const m=M.ships[key];if(!m||!h)return null;
-    const hd=pose.heading||0,cs=Math.cos(hd),sn=Math.sin(hd),z=pose.z||0,pos=[],col=[];
-    const put=(x,y,zz)=>pos.push(pose.x+x*cs-y*sn,pose.y+x*sn+y*cs,z+zz);
+    const pos=[],col=[],place=placer(pose),put=(x,y,zz)=>place(x,y,zz,pos);
     addFlags(m,h,t,(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)});
     return{pos,col};
   }
@@ -101,6 +110,6 @@
     M.lab[k]={parts:{hull,sails:{v:m.sails.v,c:m.sails.c}}};
     M.lab[k+'Furled']={parts:{hull,sails:{v:m.sails.f,c:m.sails.c}}};
   }
-  window.ConquerShips=Object.freeze({keys,mesh,flagMesh,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
+  window.ConquerShips=Object.freeze({keys,mesh,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
     small:keys.filter(k=>M.ships[k].size==='small'),large:keys.filter(k=>M.ships[k].size==='large')});
 })();

@@ -36,7 +36,19 @@
     return ship;
   }
   function order(what,id=null){for(const s of ships)if(!id||s.id===id)C().order(s.crew,what);requestDraw()}
-  function clear(){ships.length=0;requestDraw()}
+  function clear(){ships.length=0;window.ConquerNavalBattle?.end();requestDraw()}
+  function remove(id){const i=ships.findIndex(s=>s.id===id);if(i>=0)ships.splice(i,1);requestDraw()}
+  // Battle demo: a foreign ship of the same kind at anchor, and the chosen warship coming up
+  // from astern, off its quarter, to grapple and board it (settlement-naval-battle.js).
+  function battle({key='cocca',allegiance='player',realm='player'}={}){
+    const NB=window.ConquerNavalBattle;if(!NB)return null;
+    if(allegiance==='merchant')allegiance='player';
+    const D=spawn({key,allegiance:'foreign',realm:realm==='player'?'azure':realm,anchor:true});if(!D)return null;
+    const A=spawn({key,allegiance,realm:allegiance==='player'?'player':realm,anchor:true});
+    const h=D.pose.heading,n={x:-Math.sin(h),y:Math.cos(h)},f={x:Math.cos(h),y:Math.sin(h)};
+    A.pose={x:D.pose.x-f.x*16+n.x*6,y:D.pose.y-f.y*16+n.y*6,heading:h,z:0};
+    return NB.start(A,D);
+  }
   const requestDraw=()=>{if(typeof requestSceneDraw==='function')requestSceneDraw();else if(typeof draw==='function')draw()};
   // Keep the moored ships alongside if a pier moved or vanished.
   function sync(){
@@ -51,35 +63,43 @@
     if(!ships.length||!window.ConquerMesh3D)return;
     const now=(typeof performance!=='undefined'?performance.now():Date.now())/1000,dt=last?Math.min(.1,now-last):0;last=now;
     sync();
-    const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[];
+    const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle;
     for(const s of ships)C().step(s.crew,dt);
+    const fighting=!!NB?.active();
+    if(fighting)NB.step(dt);
     // With every sail at rest the ships (and their piers) are painted once into a cached
-    // bitmap and only the flags and sailors are drawn live; during a manoeuvre all is live.
-    const still=!ships.some(s=>s.crew.sail.t!==s.crew.sail.target);
+    // bitmap and only the flags and sailors are drawn live; during a manoeuvre or a battle
+    // all is live.
+    const still=!fighting&&!ships.some(s=>s.crew.sail.t!==s.crew.sail.target);
     // Ships are painted over the scene: the piers they lie at are painted again in the same
     // depth sort, so a pier in front of a hull still covers it.
     for(const id of new Set(ships.filter(s=>s.berth).map(s=>s.berth.pierId))){
       const pier=State.structures.find(p=>p.id===id);if(pier)meshes.push(...window.ConquerPier.meshes(pier));
     }
     for(const s of ships){
-      const arms=S().arms(s),key=[s.pose.x,s.pose.y,s.pose.heading,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
+      const arms=S().arms(s),key=[s.pose.x,s.pose.y,s.pose.heading,s.pose.z||0,s.pose.roll||0,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
       if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,s.pose,s.crew.sail.furl,{sail:arms.sail,flag:null})};
-      meshes.push(s.cache.mesh);
+      // A battle chars, burns and sinks the hull (settlement-naval-battle.js).
+      meshes.push(fighting?NB.dress(s,s.cache.mesh):s.cache.mesh);
       s.flags=S().flagMesh(s.key,s.pose,arms.flag,now);
       if(State.view.scale<.3)continue;
+      if(fighting)sprites.push(...NB.sprites(s,now));
       for(const sl of C().sailors(s.crew)){
         const w=C().toWorld(s.pose,sl.local),a=C().toWorld(s.pose,sl.local.map((v,i)=>v+(sl.dir[i]||0)));
+        if(w.z<-.05)continue;
         sprites.push({...w,draw:()=>{
           const p=w2sRaw(w,w.z),q=w2sRaw(a,a.z);
           withProjectionGroundZ(w.z-.1,()=>C().drawSailor(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,q.x>=p.x?1:-1));
         }});
       }
     }
-    const flags=ships.map(s=>s.flags).filter(Boolean);
+    const flags=ships.map(s=>s.flags).filter(Boolean),plank=fighting&&NB.plankMesh();
+    if(plank)flags.push(plank);
     if(still){
       M3.drawCached(ctx,'fleet',ships.map(s=>s.cache.key).join(';'),()=>meshes,ships[0].pose);
       M3.drawMeshes(ctx,flags,view,sprites);
     }else M3.drawMeshes(ctx,[...meshes,...flags],view,sprites);
+    if(fighting)NB.drawOverlay(now);
     // Sailors are always about (and flags wave): with ships afloat, keep frames coming even
     // when the game is paused.
     requestDraw();
@@ -95,7 +115,11 @@
     $('devShipClear').onclick=()=>{clear();readout()};
     $('devShipRaise').onclick=()=>{order('raise');readout()};
     $('devShipLower').onclick=()=>{order('lower');readout()};
+    $('devShipBattle').onclick=()=>{
+      const [allegiance,realm]=$('devShipFlag').value.split('|'),b=battle({key:$('devShipKind').value,allegiance,realm});
+      readout(b?'Battaglia: '+M().ships[b.A.key].label+' attacca una nave straniera dello stesso tipo, alla fonda':'Nessun mare su questa mappa: scegli il bioma Mare');
+    };
   }
   if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindDev);else bindDev()}
-  window.ConquerFleet=Object.freeze({ships,spawn,order,clear,draw:drawAll,berthPose,anchorPose});
+  window.ConquerFleet=Object.freeze({ships,spawn,order,clear,remove,battle,draw:drawAll,berthPose,anchorPose});
 })();

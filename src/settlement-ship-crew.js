@@ -101,11 +101,8 @@
   }
   // Sailors as {id,mode,local:[x,y,z],dir:[dx,dy,dz]} for the renderer.
   const sailors=cs=>cs.sailors.map(s=>({id:s.id,mode:s.mode==='toMast'?'walk':s.mode==='descend'?'climb':s.mode,local:s.p,dir:s.dir}));
-  // Local -> world for a ship pose {x,y,heading,z}.
-  function toWorld(pose,l){
-    const h=pose.heading||0,c=Math.cos(h),sn=Math.sin(h);
-    return{x:pose.x+l[0]*c-l[1]*sn,y:pose.y+l[0]*sn+l[1]*c,z:(pose.z||0)+l[2]};
-  }
+  // Local -> world for a ship pose (heading, heel, trim and height as the hull).
+  const toWorld=(pose,l)=>S.toWorld(pose,l);
 
   // ---------- drawing: the villager figure in sailor colours, with climbing and hauling arms
   const COLORS=[['#3e5b7a','#d9d2c3'],['#c9c2b0','#3e5b7a'],['#7a4b32','#d9d2c3'],['#2f4a61','#b9b09a'],['#d9d2c3','#6b4a33']];

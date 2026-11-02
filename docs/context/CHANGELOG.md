@@ -2,6 +2,8 @@
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
+- Equipaggio militare (arcieri sui castelli, armigeri sul ponte) e battaglia navale dimostrativa: avvicinamento, frecce anche incendiarie, passerella e abbordaggio, incendio e affondamento (`settlement-naval-battle.js`, `qa/naval-battle-regression.cjs`). `settlement-fire.js` esporta `flame`/`smoke`.
+
 - Porto: moli L4/L12, piazzamento solo costa + whitezone; banchina in pietra a due clic con moli agganciati; navi di test nel menu DEV (ormeggio con vele alzate, alla fonda, ordini alle vele). Toppe araldiche 16×10 e bandiere 10×6 per contenere il costo di disegno.
 
 - Mare: copertura massima dal 20% al 30%, la costa arriva nella whitezone per permettere i porti.

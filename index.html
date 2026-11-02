@@ -208,6 +208,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
         </div>
         <div class="dev-row"><button type="button" id="devShipSpawn" title="Ormeggia al primo attracco libero, altrimenti alla fonda al largo">⚓ Fai arrivare</button><button type="button" id="devShipClear" title="Togli tutte le navi di test">Togli tutte</button></div>
         <div class="dev-row"><button type="button" id="devShipRaise" title="I gabbieri salgono e alzano le vele">Alza vele</button><button type="button" id="devShipLower" title="I gabbieri salgono e abbassano le vele">Abbassa vele</button></div>
+        <div class="dev-row"><button type="button" class="full" id="devShipBattle" title="La nave scelta (con la sua bandiera) attacca una nave straniera dello stesso tipo alla fonda: arcieri, abbordaggio, incendio, affondamento">⚔ Battaglia navale</button></div>
         <span class="dev-hint" id="devShipReadout">Nessuna nave · servono il bioma Mare e, per ormeggiare, un molo.</span>
       </div>
       <div class="dev-section">
@@ -352,7 +353,8 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/assets/ship-models.js?v=ships-1"></script>
 <script src="./src/settlement-ships.js?v=ships-1"></script>
 <script src="./src/settlement-ship-crew.js?v=crew-1"></script>
-<script src="./src/settlement-fleet.js?v=fleet-1"></script>
+<script src="./src/settlement-naval-battle.js?v=battle-1"></script>
+<script src="./src/settlement-fleet.js?v=fleet-2"></script>
 <script src="./src/settlement-events-people.js?v=people-1"></script>
 <script src="./src/settlement-events-joust.js?v=joust-2"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
