@@ -158,6 +158,7 @@
 - **APERTO:** il fallback Canvas 2D del gioco usa ancora il painter e taglia telai e finestre; valutare una correzione del painter o sprite pre-renderizzati.
 - **FATTO (26/10):** occupazione forzata nel Lab. Il pulsante «Occupazione» passa tra tre modi: no, occlusione corretta (figure provate contro il depth buffer) e come nel gioco (figure disegnate sopra). I popolani sono su una griglia di 0,6 U su terreno, pavimenti e portici con spazio libero; l'export PNG 512 rispetta il modo scelto. Non usa ancora gli slot CANS o degli eventi (non su `main`).
 - **APERTO:** nel gioco le figure sono uno strato 2D sopra gli edifici: il modo «come nel gioco» mostra popolani sui tetti e davanti ai muri che dovrebbero coprirli.
+- **Case in 3D, kit Blender (D-057), branch `feature/houses-blender`, NON MERGE:** pilota L3 fatto in World 3D. **Da fare:** estendere il kit a L1 (paglia, muri bassi), L2, L4 (torrette, abbaini); adattare al kit il cutaway e il fronte delle botteghe del branch `feature/l3-workshop-cutaway`; montaggio del cantiere con i pezzi del kit; voce «casa intera» del kit nel Lab (oggi ci sono i soli pezzi).
 - **Residui dell'audit:** gli schemi (case, pozzo, campi, strade, fiumi, foresta, rilievo) restano non-gioco (`render-del-gioco`); ponti, levatoi, fossati, terrapieni non ancora nella sandbox.
 
 ## Igiene Git — esito e finalizzazione (23/10/2026)

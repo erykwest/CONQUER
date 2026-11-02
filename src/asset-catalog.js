@@ -15,7 +15,8 @@
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
-    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'}
+    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
+    {global:'ConquerHouseModels',collection:'models',category:'Componenti',family:'Kit case'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -90,7 +91,8 @@
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
-            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js'}[source.global]),
+            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',
+            ConquerHouseModels:'house-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key:null});
     }
   }

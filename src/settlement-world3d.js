@@ -629,6 +629,13 @@
   // house piece by piece; the WebGL builder has no tag and ignores it.
   function addHouse(m,entry,winter){
     const house=entry.house,lvl=houseLevel(house);
+    // Kit houses (settlement-house3d.js): bodies, roofs, frame, windows, door and chimneys come from
+    // the Blender kit; the yard outbuildings stay here. The construction assembly (m.tag) keeps
+    // building the plain house piece by piece.
+    if(!m.tag&&window.ConquerHouse3D?.addToBuilder(m,house)){
+      for(const part of entry.parts)if(part.kind==='outbuilding')addOutbuilding(m,house,part,winter);
+      return;
+    }
     for(const part of entry.parts){
       if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
       const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
@@ -996,6 +1003,9 @@
       }else if(s.type==='house'){
         const WIN=[35/255*.82,29/255*.82,24/255*.82,.82],TIMBER=[59/255,42/255,30/255,1];
         const entry=houseGeometry.get(s.id);
+        // Kit houses (settlement-house3d.js) carry frame, windows and door as geometry: only the
+        // night window lights stay here.
+        const kit=!!window.ConquerHouse3D?.handles(s);
         // World-space beam from {p,z} a to b on a surface with horizontal outward normal n.
         const beam=(a,b,n,ground,push)=>{
           const uv=atlas.map.get('__white');if(!uv)return;
@@ -1024,13 +1034,13 @@
             const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
             const plan=houseFacadePlan(s,part,edge),at=off=>({x:m.x+ux*off,y:m.y+uy*off});
             // Timber frame strips sit just under the windows (smaller wall offset).
-            for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
+            if(!kit)for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
             // drawWindowOnEdge: 2.1 x 3.25 px per view-scale unit -> .175U x ~.30U
             // Ground-floor openings on a jettied side sit on the recessed stone wall.
             const fb=houseFloorBreak(part.bodyH),recess=part.basePoints&&(edge.index===0||edge.index===2)?houseJetty(s):0;
             for(const w of plan.windows){
               const k=w.z<fb?recess:0,c=at(w.off),e={a:{x:edge.a.x-o.x*k,y:edge.a.y-o.y*k},b:{x:edge.b.x-o.x*k,y:edge.b.y-o.y*k}};
-              quad({x:c.x-ux*hw-o.x*k,y:c.y-uy*hw-o.y*k},{x:c.x+ux*hw-o.x*k,y:c.y+uy*hw-o.y*k},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
+              if(!kit)quad({x:c.x-ux*hw-o.x*k,y:c.y-uy*hw-o.y*k},{x:c.x+ux*hw-o.x*k,y:c.y+uy*hw-o.y*k},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
               lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
             }
           }
@@ -1038,7 +1048,7 @@
         for(const dormer of entry?.dormers||[])pane(dormer.window,terrainElevation(dormer.partCenter),.012);
         const d=houseDoorInfo(s),hw=Math.min(.08,(Number(s.w)||1.5)*.0533),g=terrainElevation(d.surface),DOOR=[57/255,39/255,30/255,1];
         const ds={x:d.surface.x-d.normal.x*houseJetty(s),y:d.surface.y-d.normal.y*houseJetty(s)};
-        quad({x:ds.x-d.tangent.x*hw,y:ds.y-d.tangent.y*hw},{x:ds.x+d.tangent.x*hw,y:ds.y+d.tangent.y*hw},g+.04,g+HOUSE_DOOR_TOP,'__white',d.normal,DOOR);
+        if(!kit)quad({x:ds.x-d.tangent.x*hw,y:ds.y-d.tangent.y*hw},{x:ds.x+d.tangent.x*hw,y:ds.y+d.tangent.y*hw},g+.04,g+HOUSE_DOOR_TOP,'__white',d.normal,DOOR);
       }
     }
     return{decals:new Float32Array(v),lights:new Float32Array(lights)};

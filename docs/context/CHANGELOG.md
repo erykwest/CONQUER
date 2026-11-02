@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-02 — Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`)
+
+- Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.
+- Nuovi `tools/blender/build_houses.py`, `src/assets/house-models.js`, `src/settlement-house3d.js`, `qa/house3d-regression.cjs`; 6 voci nel Lab.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-057). ROADMAP invariata: è una scelta di resa grafica delle case, non cambia milestone né la priorità P1 economia.
+
 ## 2026-11-02 — Muri sui pendii (branch `feature/walls-on-slopes`)
 
 - I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e il muro stesso diventa una scala (una pedata ogni 0,12U) col parapetto merlato che corre accanto, come sulle mura di Sintra. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
