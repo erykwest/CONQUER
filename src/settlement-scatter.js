@@ -52,6 +52,7 @@
       if(['wall','palisade','built','moat','bridge'].includes(s.type)&&s.a&&s.b){roads.push({a:s.a,b:s.b,half:(Number(s.width)||.6)/2+.15});continue}
       let list=[];
       try{list=urbanBuildingPolygons(s)}catch{}
+      if(!list.length&&window.ConquerPier?.is(s))list=[window.ConquerPier.footprint(s)];
       if(!list.length&&window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];list=[rectWorldPoints(s.x,s.y,t.w,t.h,s.angle||0)]}
       if(!list.length&&Number.isFinite(s.x))list=[rectWorldPoints(s.x,s.y,pointRadius(s)*2,pointRadius(s)*2,0)];
       for(const pts of list)if(pts?.length>2)polys.push(pts);

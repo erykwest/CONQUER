@@ -609,6 +609,7 @@
       // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
       if(window.ConquerWood3D?.addToBuilder(m,s))continue;
       if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
+      else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
       else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
@@ -1291,7 +1292,7 @@
   }
   const SIG_CATEGORIES=[
     {name:'ground',test:s=>s.type==='road'||s.type==='field'||s.type==='house'||s.type==='moat'||s.type==='bridge'||s.type==='palisade'},
-    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
+    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||s.type==='pier'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
       ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)},
     {name:'castle',test:s=>!s.auto&&['tower','gate','wall','built'].includes(s.type)},
     {name:'hedges',test:s=>s.type==='house'||s.type==='field'},

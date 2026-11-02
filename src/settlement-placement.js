@@ -105,7 +105,8 @@
     const polys=contact(s);
     const annexVerdict=civicAnnexPlacementCheck(s);
     if(!annexVerdict.ok)return annexVerdict;
-    if(!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
+    // A pier reaches out over the sea: its own validation keeps the landing in the whitezone.
+    if(!window.ConquerPier?.is(s)&&!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
     const ignored=ignoreSet(options);
     if(s.type==='well'&&!options.ignoreFounding&&(
       State.village?.founded||State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
@@ -113,6 +114,9 @@
     if(window.ConquerIndustries?.is(s)){
       const industry=window.ConquerIndustries.validate(s);
       if(!industry.ok)return industry;
+    }else if(window.ConquerPier?.is(s)){
+      const pier=window.ConquerPier.validate(s);
+      if(!pier.ok)return pier;
     }else if(isLine(s)){
       if(s.type==='road'){
         const d=dist(s.a,s.b);

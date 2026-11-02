@@ -234,6 +234,7 @@ function structureHeight(s){
   if(s.type==='moat')return 0;
   if(s.type==='ruin')return Number(s.ruinHeight)||.8;     // the stump a fallen tower or gate leaves
   if(window.ConquerIndustries?.is(s))return .35;
+  if(s.type==='pier')return .6;
   if(s.type==='house')return houseStructureHeight(s);
   if(isCivicAnnex(s)){const spec=civicAnnexDefinition(s);return !spec?0:spec.kind==='garden'||spec.kind==='yard'?.18:spec.kind==='stall'?.95:1.55;}
   if(s.type==='market')return .78;
@@ -257,6 +258,7 @@ function footprintPoints(s){
   }
   if(s.type==='field')return fieldPoints(s);
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.footprint(s);   // event venues (settlement-events3d.js)
+  if(window.ConquerPier?.is(s))return window.ConquerPier.footprint(s);
   if(isCivicAnnex(s))return civicAnnexFootprint(s);
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){

@@ -960,13 +960,14 @@ function makeEnvWater(rnd,type){
   }
   return{id:'env-'+type,type,points:pts,width:river?3.2:1.25,fill:river?'#3a7684':'#4f8d95',edge:river?'#88b4b8':'#9cc6c6'};
 }
-// The sea covers at most 20% of the map: its mean coast depth is held at or under 40U.
-const SEA_MAX_COVERAGE=.20;
+// The sea covers at most 30% of the map: its mean coast depth is held at or under 60U,
+// so the coast reaches into the buildable zone (50U) and leaves room for harbours.
+const SEA_MAX_COVERAGE=.30;
 function makeEnvSea(rnd){
   const sides=['north','east','south','west'],side=sides[Math.floor(rnd()*sides.length)],coast=[],n=14;
   const waves=Array.from({length:n+1},(_,i)=>Math.sin(i/n*Math.PI*2+rnd()*1.2)*5+(rnd()-.5)*5);
   const meanWave=waves.reduce((s,w)=>s+w,0)/waves.length;
-  const depth=Math.min(26+rnd()*12,WORLD*SEA_MAX_COVERAGE-Math.max(0,meanWave)-.5);
+  const depth=Math.min(46+rnd()*12,WORLD*SEA_MAX_COVERAGE-Math.max(0,meanWave)-.5);
   for(let i=0;i<=n;i++){
     const t=i/n,wave=waves[i];
     if(side==='north')coast.push({x:t*WORLD,y:depth+wave});

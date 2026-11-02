@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MARE — Porti e molo (branch `mare`, 02/11/2026)
+
+- **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
+- **DA FARE**: navi che usano gli attracchi; ruolo economico del porto (commercio via mare, pesca); interazione con assedio/incendio/demolizione del molo; scatter in contesto porto anche sulla riva; audit Asset Lab del modello.
+
 ## MARCH — Attacco e campagna militare (skeleton 30/10/2026)
 
 - **SUL BRANCH feature/march-skeleton, NON MAIN**: pagina /march/ e motore UI-independent per spostamento, approccio a un feudo, razzie parziali con bottino, fase assedio, ritirata volontaria senza rollback, vittoria d'assalto simulata solo per test e annessione esplicita. Regressione qa/march-regression.cjs disponibile; CI/browser non ancora certificati.

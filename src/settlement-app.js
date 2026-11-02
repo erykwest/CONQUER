@@ -18,7 +18,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-event-venue],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-event-venue],[data-pier],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   if(hardNavigation){
@@ -90,6 +90,9 @@ function addStructure(s){
       // Industries were already surveyed by their own resource-specific preflight.
       // Quarry and mine intentionally occupy rocky slopes, not flat terraces.
       s.groundZ=window.ConquerIndustries.validate(s).ground;
+    }else if(window.ConquerPier?.is(s)){
+      // The landing is on the shore, the rest of the deck stands over the sea.
+      s.groundZ=window.ConquerPier.validate(s).ground;
     }else{
       const groundZ=buildableTerrainElevationForStructure(s);
       if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}

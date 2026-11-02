@@ -1,0 +1,30 @@
+name: Sea and pier regression
+
+on:
+  push:
+    branches:
+      - mare
+  pull_request:
+    paths:
+      - 'src/settlement-pier.js'
+      - 'src/settlement-world.js'
+      - 'qa/pier-regression.cjs'
+      - 'qa/biome-recipes-regression.cjs'
+  workflow_dispatch:
+
+jobs:
+  sea-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Check JS syntax
+        run: |
+          for file in src/*.js qa/*.cjs; do node --check "$file"; done
+      - name: Run sea coverage and pier regressions
+        run: |
+          node qa/biome-recipes-regression.cjs
+          node qa/pier-regression.cjs

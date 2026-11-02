@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
+
+- Mare: copertura massima dal 20% al 30%, la costa arriva nella whitezone per permettere i porti.
+- Nuovo Molo (`settlement-pier.js`): legno su pali, 8U sul mare, merci sulle tavole, due attracchi sinistra/destra; agganciato a menu, anteprima, validazione, costi, render 2D/WebGL e inspector.
+- Nuova regressione `qa/pier-regression.cjs` e workflow `sea-regression.yml`. ROADMAP e DECISIONS invariati (nessun nuovo contratto oltre la struttura `pier`).
+
 ## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
 
 - Creata pagina /march/ con demo isolata: click sulla mappa per ordine di marcia, giornate e viveri, quattro feudi statici, razzie parziali e persistenti, inizio assedio, ritirata volontaria, test esito positivo e conquista opzionale. Codice separato tra engine e UI; salvataggio solo dello scenario demo.

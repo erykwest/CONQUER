@@ -36,6 +36,14 @@ function renderFunctionPanel(){
     E.bindPanel(slots,s);
     return;
   }
+  if(window.ConquerPier?.is(s)){
+    const P=window.ConquerPier;
+    panel.classList.add('open');
+    info.innerHTML='<div class="kv"><span>Porto</span><b>'+P.label(s)+'</b></div><div class="cost-line">'+costText(s.buildCost||P.cost(s))+'</div>'+
+      (underConstruction(s)?'<div class="legend">In costruzione · '+remainingDays(s).toFixed(1)+'d</div>':'');
+    slots.innerHTML=P.panelHtml(s);
+    return;
+  }
   if(isCivicAnnex(s)){
     const parent=State.structures.find(p=>p.id===s.parentId),spec=civicAnnexDefinition(s,parent);
     panel.classList.add('open');

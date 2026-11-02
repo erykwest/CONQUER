@@ -21,6 +21,12 @@ canvas.addEventListener('pointerdown',e=>{
     commitOrientedPlacement(State.draft.center,orientedDraftAngle(p));return
   }
 
+  // A pier snaps to the coast (its deck may hang over the sea outside the whitezone).
+  if(State.tool.kind==='pier'){
+    const preview=makePlacementPreview({x:p.x,y:p.y},0);
+    if(commitOrientedPlacement({x:preview.x,y:preview.y},preview.angle))status('Pier placed on the coast — choose next position');
+    draw();return
+  }
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='terraform'){
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
@@ -470,6 +476,11 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const candidate=E.make(b.dataset.eventVenue);
    setTool({kind:'event',venue:candidate.venue,placementSpec:candidate,
      label:E.label(candidate)+' · '+(E.buildDays(candidate)?E.buildDays(candidate)+'d · ':'')+costText(E.cost(candidate)),el:b});
+ };
+ // Pier (settlement-pier.js): the ghost snaps square to the coastline, one click builds.
+ for(const b of document.querySelectorAll('[data-pier]'))b.onclick=()=>{
+   const P=window.ConquerPier;if(!P)return;
+   setTool({kind:'pier',placementSpec:P.make(),label:P.label()+' · '+P.buildDays()+'d · '+costText(P.cost()),el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{

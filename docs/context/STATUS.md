@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
+
+- Costa del mare portata dal 20% al 30% della mappa (`SEA_MAX_COVERAGE=.30`, profondità 46–58U, massimo 60U): la costa entra nella whitezone (50U) e lascia spazio ai porti.
+- Nuova struttura **Molo** (`src/settlement-pier.js`, `type:'pier'`): si aggancia alla costa perpendicolare alla linea di riva, approdo di 1,5U a terra su basamento in pietra (dentro la whitezone), impalcato in legno di 8U sul mare su coppie di pali infissi sotto il pelo dell'acqua, merci dallo scatter model sulle tavole (casse, botti, sacchi, cime). Due attracchi (`ConquerPier.moorings(s)`: sinistra/destra della testata, 0,9U fuori dal bordo) con bitte e parabordi. Costo 🪙55 · 🪵110, 6 giorni. Menu Infrastrutture → Molo, un clic.
+- Test: `qa/pier-regression.cjs` e tutte le `qa/*-regression.cjs` passate in Node locale; `biome-recipes` aggiornato al limite 30%. Verificato a vista nel browser (renderer WebGL). CI del branch da eseguire; renderer Canvas 2D e Asset Lab non verificati. Le navi non esistono ancora: gli attracchi sono solo punti dati.
+
 ## 2026-10-30 — MARCH, skeleton su branch feature/march-skeleton (NON MAIN)
 
 - Nuova route /march/ con scenario strategico **isolato**: una compagnia, quattro feudi fixture, mappa a celle, ordini di spostamento, scorte e bottino, operazioni raid/siege, ritirata sempre possibile e annessione esplicita solo dopo l'esito positivo di un assalto di TEST. File: march/index.html, march/ui.js, march/engine.js.
