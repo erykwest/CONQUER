@@ -37,8 +37,10 @@
 
   // ---------- mesh in the civic layout {pos,col,gi,groups,groupBias}
   // stats: kit pieces and timber members placed (the regression checks every wall got its share).
-  function meshOut(){return{pos:[],col:[],gi:[],groups:[],groupBias:[],stats:{}}}
-  function group(m,bias=0){const g={m,start:m.pos.length,index:m.groups.length};m.groups.push(null);m.groupBias.push(bias);return g}
+  // tag per triangle for the construction assembly: body (walls, openings), beam (timber frame,
+  // rising ahead of the infill), gable, roof (roofs and chimneys, laid last).
+  function meshOut(){return{pos:[],col:[],gi:[],tag:[],groups:[],groupBias:[],stats:{}}}
+  function group(m,bias=0,tag='body'){const g={m,start:m.pos.length,index:m.groups.length,tag};m.groups.push(null);m.groupBias.push(bias);return g}
   function close(g){
     const m=g.m,p=m.pos;let cx=0,cy=0,cz=0,n=0;
     for(let i=g.start;i<p.length;i+=3){cx+=p[i];cy+=p[i+1];cz+=p[i+2];n++}
@@ -46,17 +48,17 @@
   }
   function poly(g,pts,hex){
     const m=g.m;
-    for(let i=1;i<pts.length-1;i++){for(const q of [pts[0],pts[i],pts[i+1]])m.pos.push(q[0],q[1],q[2]);m.col.push(hex);m.gi.push(g.index)}
+    for(let i=1;i<pts.length-1;i++){for(const q of [pts[0],pts[i],pts[i+1]])m.pos.push(q[0],q[1],q[2]);m.col.push(hex);m.gi.push(g.index);m.tag.push(g.tag)}
   }
   // A kit piece: local (x along tangent t, y along outward n, z up) at origin o, scaled per axis.
-  function piece(m,key,o,t,n,{sx=1,sy=1,sz=1,bias=0}={},pal){
+  function piece(m,key,o,t,n,{sx=1,sy=1,sz=1,bias=0,tag='body'}={},pal){
     m.stats[key]=(m.stats[key]||0)+1;
-    const g=group(m,bias);
+    const g=group(m,bias,tag);
     for(const part of parts(key)){
       const v=part.v;
       for(let i=0;i<v.length;i+=9){
         for(let k=0;k<3;k++){const x=v[i+k*3]*sx,y=v[i+k*3+1]*sy,z=v[i+k*3+2]*sz;m.pos.push(o.x+t.x*x+n.x*y,o.y+t.y*x+n.y*y,o.z+z)}
-        m.col.push(pal[part.c[i/9]]);m.gi.push(g.index);
+        m.col.push(pal[part.c[i/9]]);m.gi.push(g.index);m.tag.push(tag);
       }
     }
     close(g);
@@ -100,14 +102,14 @@
       }
       // Gable infill (the two triangles of urbanHouseFaces) under the kit roof.
       const faces=urbanHouseFaces(house,part);
-      for(const f of [faces[n+2],faces[n+3]]){const g=group(m);poly(g,f.map(v=>[v.p.x,v.p.y,v.z]),tint(GABLE));close(g)}
+      for(const f of [faces[n+2],faces[n+3]]){const g=group(m,0,'gable');poly(g,f.map(v=>[v.p.x,v.p.y,v.z]),tint(GABLE));close(g)}
       // Timber frame and windows on every wall (houseFacadePlan), the jetty joists under the overhang.
       for(const edge of edgesOf(P)){
         const o=outward(edge,part.center),L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
         const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2,at=off=>({x:mx+ux*off,y:my+uy*off}),t={x:ux,y:uy};
         // Kit pieces face out along +y: the tangent must turn +x into +y = o.
         const tk=ux*o.y-uy*o.x>0?t:{x:-ux,y:-uy};
-        const plan=houseFacadePlan(house,part,edge),g=group(m);
+        const plan=houseFacadePlan(house,part,edge),g=group(m,0,'beam');
         for(const [p0,p1] of plan.beams)member(g,at,o,ground,p0,p1);
         close(g);
         const recess=part.basePoints&&(edge.index===0||edge.index===2)?jetty:0;
@@ -130,7 +132,7 @@
       const across=Math.abs(turn)>1e-6,rw=across?part.h:part.w,span=across?part.w:part.h;
       const ra={x:Math.cos(angle),y:Math.sin(angle)},rn={x:-ra.y,y:ra.x};
       const rise=Math.max(.05,(part.roofH??housePartRidge(house,part))-bodyH);
-      piece(m,'roof',{x:part.center.x,y:part.center.y,z:top},ra,rn,{sx:rw,sy:span,sz:rise/(HOUSE_ROOF_PITCH*.5)},pal);
+      piece(m,'roof',{x:part.center.x,y:part.center.y,z:top},ra,rn,{sx:rw,sy:span,sz:rise/(HOUSE_ROOF_PITCH*.5),tag:'roof'},pal);
     }
     // The door (houseDoorInfo) in the recessed ground floor.
     const d=houseDoorInfo(house),hw=Math.min(.08,(Number(house.w)||1.5)*.0533);
@@ -140,7 +142,7 @@
     // Chimneys where chimneySpecs puts them.
     for(const c of chimneySpecs(house)){
       const g=terrainElevation(c.center),a=c.angle||0;
-      piece(m,'chimney',{x:c.center.x,y:c.center.y,z:g+c.z0},{x:Math.cos(a),y:Math.sin(a)},{x:-Math.sin(a),y:Math.cos(a)},{sz:(c.z1-c.z0)/CHIMNEY_H},pal);
+      piece(m,'chimney',{x:c.center.x,y:c.center.y,z:g+c.z0},{x:Math.cos(a),y:Math.sin(a)},{x:-Math.sin(a),y:Math.cos(a)},{sz:(c.z1-c.z0)/CHIMNEY_H,tag:'roof'},pal);
     }
     return m;
   }

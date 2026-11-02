@@ -1925,7 +1925,7 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

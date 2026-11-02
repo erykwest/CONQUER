@@ -76,6 +76,11 @@ for(const plan of ['L','T'])for(const w of [1.5,2])for(const doorSide of [-1,1])
   assert.equal(m.stats.members,members,label+': a timber member for every planned beam, on every wall');
   assert.ok(m.stats.windowUpper>=bodies.length*2&&m.stats.windowGround>=2,label+': upper and ground-floor windows');
   assert.equal(m.stats.roof,bodies.length,label+': one kit roof per body');
+  // Construction assembly tags: one per triangle; frame, gables and roofs apart from the walls.
+  assert.equal(m.tag.length,m.col.length,label+': a construction tag per triangle');
+  assert.deepEqual([...new Set(m.tag)].sort(),['beam','body','gable','roof'],label+': walls, frame, gables, roofs');
+  const roofCol=new Set(['roofSlate','roofSlateDark','roofCourse','roofRidge','chimney','chimneyCap'].map(k=>K.palette[K.paletteKeys.indexOf(k)]));
+  assert.ok(m.col.every((c,t)=>!roofCol.has(c)||m.tag[t]==='roof'),label+': roofs and chimneys are laid last');
   assert.equal(m.stats.door,1,label+': one door');
   assert.equal(m.stats.chimney,1,label+': the chimneys of chimneySpecs');
   assert.ok(m.stats.joist>=4,label+': joists under the jetty');
@@ -109,6 +114,10 @@ assert.match(world,/if\(!m\.tag&&window\.ConquerHouse3D\?\.addToBuilder\(m,house
 assert.match(world,/const kit=!!window\.ConquerHouse3D\?\.handles\(s\);/,'decals: kit houses keep only the night lights');
 assert.match(world,/if\(!kit\)for\(const \[p0,p1\] of plan\.beams\)strip/,'no timber decals on kit houses');
 assert.doesNotMatch(buildings,/ConquerHouse3D/,'2.5D fallback unchanged');
+const assembly=src('src/settlement-construction-assembly.js');
+assert.match(assembly,/castleSource\(s\)\|\|civicSource\(s\)\|\|kitHouseSource\(s\)\|\|houseSource\(s\)/,'construction sites build the kit house in World 3D');
+assert.match(assembly,/W3\.addOutbuilding\(m,s,part,winter\)/,'kit sites keep the yard outbuildings, without a second set of chimneys');
+assert.match(world,/addMesh,addHouse,addOutbuilding,/,'world3d exports addOutbuilding for the sites');
 assert.ok(html.indexOf('assets/house-models.js')>0&&html.indexOf('assets/house-models.js')<html.indexOf('settlement-house3d.js'),'kit registry loaded before the assembler');
 assert.ok(lab.includes('assets/house-models.js')&&catalog.includes("global:'ConquerHouseModels'"),'kit listed in the Asset Lab');
 assert.ok(fs.existsSync(root+'tools/blender/build_houses.py'),'Blender builder in the repository');
