@@ -83,9 +83,9 @@
   }
   const edgeOf=id=>graph().edges.find(e=>e.wall.id===id)||null;
   // Walk height at t, above the terrain under p (how it is drawn): on a stepped wall the walk is on
-  // its section's top, so it is lifted or lowered by the step against the slope under the man.
+  // its section's top, or partway up the flight of stairs at a step.
   function zAt(e,t,p){
-    const g=e.wall.type==='wall'&&typeof wallGroundAt==='function'?wallGroundAt(e.wall,t):null;
+    const g=e.wall.type==='wall'&&typeof wallWalkGroundAt==='function'?wallWalkGroundAt(e.wall,t):null;
     return Number.isFinite(g)?e.z+g-terrainElevation(p):e.z;
   }
   function at(loc){

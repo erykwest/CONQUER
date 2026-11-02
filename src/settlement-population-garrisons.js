@@ -116,9 +116,9 @@ function drawCastleSoldiers(){
     const z=wall.type==='palisade'?palisadePatrolSurface(wall).z:structureHeight(wall)+.10;
     for(let i=0;i<count;i++){
       const p=wallPatrolPoint(wall,day,i,count);
-      // On a stepped wall the patrol walks on its section's top, not along the slope under it.
+      // On a stepped wall the patrol walks on its section's top and up the flights at the steps.
       const L2=(wall.b.x-wall.a.x)**2+(wall.b.y-wall.a.y)**2||1,t=((p.x-wall.a.x)*(wall.b.x-wall.a.x)+(p.y-wall.a.y)*(wall.b.y-wall.a.y))/L2;
-      const g=wall.type==='wall'?wallGroundAt(wall,t):null,pz=Number.isFinite(g)?z+g-terrainElevation(p):z;
+      const g=wall.type==='wall'?wallWalkGroundAt(wall,t):null,pz=Number.isFinite(g)?z+g-terrainElevation(p):z;
       if(worldPointVisible(p,pz,48))drawSoldierFigure(p,pz,'spearman',wall.id+':patrol:'+i,day+i*.5);
     }
   }

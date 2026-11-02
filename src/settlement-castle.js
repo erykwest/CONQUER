@@ -522,6 +522,31 @@ function wallGroundAt(s,t){
   const secs=wallSlopeSections(s);if(!secs)return null;
   return(secs.find(q=>t>=q.t0-1e-9&&t<=q.t1+1e-9)||(t<secs[0].t0?secs[0]:secs[secs.length-1])).ground;
 }
+// Flights of stairs on the wall-walk of a stepped wall (T2+: T1 has no walk). At every step the
+// lower section carries a flight against the step, on the walk (inside the merlons): n treads of
+// ~0.07U rise, each a block from the walk up to its tread. t0..t1 is the flight along a->b, from its
+// foot to its head (t1 at the step); low/high are the grounds of the two sections.
+const WALL_STAIR_RISE=.07,WALL_STAIR_TREAD=.12;
+function wallStairFlights(s){
+  const secs=wallSlopeSections(s);if(!secs||wallTier(s)<2)return[];
+  const L=dist(s.a,s.b)||1,out=[];
+  for(let i=0;i+1<secs.length;i++){
+    const A=secs[i],B=secs[i+1],dz=B.ground-A.ground;if(Math.abs(dz)<.03)continue;
+    const lower=dz>0?A:B,n=Math.max(1,Math.round(Math.abs(dz)/WALL_STAIR_RISE));
+    const tread=Math.min(WALL_STAIR_TREAD,(lower.t1-lower.t0)*L*.9/n)/L,dir=dz>0?1:-1,step=A.t1;
+    out.push({t0:step-dir*tread*n,t1:step,dir,n,tread,low:lower.ground,high:lower.ground+Math.abs(dz)});
+  }
+  return out;
+}
+// Ground under the walk at t: the section's, or partway up a flight of stairs.
+function wallWalkGroundAt(s,t){
+  const g=wallGroundAt(s,t);if(!Number.isFinite(g))return g;
+  for(const f of wallStairFlights(s)){
+    const k=(t-f.t0)/(f.t1-f.t0);
+    if(k>=0&&k<=1)return f.low+(f.high-f.low)*k;
+  }
+  return g;
+}
 function extrudePolygon(worldPts,height,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
   if(!worldPts?.length)return;
   const base=projectPath(worldPts,0),topPts=projectPath(worldPts,height),faces=[];

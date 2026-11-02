@@ -2,7 +2,7 @@
 
 ## 2026-11-02 — Muri sui pendii (branch `feature/walls-on-slopes`)
 
-- I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e scendono a gradoni. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
+- I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e scendono a gradoni, con una rampa di scale sul cammino di ronda a ogni gradone. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
 
 ## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
 
