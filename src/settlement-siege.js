@@ -183,7 +183,7 @@
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
   function tick(before,after){
-    gateNightWatch();bridgeAlarm();
+    gateNightWatch();bridgeAlarm();window.ConquerKeepEntrance?.alarmTick?.();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
@@ -947,7 +947,8 @@
           ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
         }
       }
-      if(!world3d)drawRubble2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[]),...(window.ConquerEvents3D?.dynamicMeshes?.()||[])]);
+      if(!world3d)drawRubble2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[]),...(window.ConquerEvents3D?.dynamicMeshes?.()||[]),
+        ...(window.ConquerKeepEntrance?.dynamicMeshes?.()||[])]);
     }
     for(const r of state().ruins){
       if(r.spec)continue;

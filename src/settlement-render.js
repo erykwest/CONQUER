@@ -450,6 +450,7 @@ function draw(){
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
   window.ConquerSiege?.drawOverlay();
+  if(typeof drawRaisedVillagers==='function')drawRaisedVillagers();   // on the Mastio's outer stair
   drawCastleFireFixtures();
 
   // The drawbridge is an exterior shield when raised. Paint portals and
@@ -458,6 +459,7 @@ function draw(){
   if(world3d)window.ConquerWorld3D.drawMastioDrapes();
   else{drawFacadeWindows(false,1,false);drawGatePortals()}
   window.ConquerCrossings?.drawDynamic();
+  window.ConquerKeepEntrance?.animate();
   window.ConquerGates?.tick();
   drawChimneysAndSmoke();
 

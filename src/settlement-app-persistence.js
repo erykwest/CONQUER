@@ -69,6 +69,7 @@ function migrateStructures(list){
     normalizeStructureVariants(s);
 
     if(['tower','gate','built'].includes(s.type)){normalizeFunctions(s);window.ConquerSiege?.sanitizeRooms(s)}
+    if(s.type==='tower')window.ConquerKeepEntrance?.normalise(s);
     return s;
   });
 
