@@ -672,7 +672,30 @@ function wallBattlementPieces(s){
     pieces.push(piece);
     nodes.push(merlonNode(center,g.angle,.28,depth));
   }
-  return pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  const all=pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  // Wall on a slope (its top is a stair): every merlon and parapet block stands on the highest tread
+  // under it and reaches down to the lowest, so the breastwork runs on along the stair without
+  // gaps and always covers it; the single crest line used to clip far merlons in 2.5D is gone.
+  if(wallSlopeSections(s)){
+    const tOf=p=>{const ts=p.pts.map(q=>((q.x-s.a.x)*g.dx+(q.y-s.a.y)*g.dy)/(g.L*g.L));return{lo:Math.min(...ts),hi:Math.max(...ts)}};
+    for(const p of all){
+      const t=tOf(p),r=wallGroundRange(s,t.lo,t.hi);
+      p.groundZ=r.max;p.z0-=r.max-r.min;p.t=(t.lo+t.hi)/2;delete p.wallCrest;
+    }
+    // A parapet block is never taller than either merlon beside it: the lower one sets its top, a
+    // crenel's depth below the merlon's (the opening between them stays). It also always rises three
+    // risers above the highest tread under it; where the two clash, the merlons beside it grow instead.
+    const merlons=all.filter(p=>!p.kind),CRENEL=.24-PARAPET_HEIGHT,ABOVE_TREAD=3*WALL_STAIR_RISE*WALL_TREAD;
+    for(const p of all){
+      if(p.kind!=='parapet')continue;
+      const near=[merlons.filter(m=>m.t<p.t).pop(),merlons.find(m=>m.t>p.t)].filter(Boolean);
+      const cap=Math.min(...near.map(m=>m.groundZ+m.z1))-CRENEL;
+      if(Number.isFinite(cap)&&p.groundZ+p.z1>cap)p.z1=cap-p.groundZ;
+      p.z1=Math.max(p.z1,g.z+ABOVE_TREAD);
+      for(const m of near)m.z1=Math.max(m.z1,p.groundZ+p.z1+CRENEL-m.groundZ);
+    }
+  }
+  return all;
 }
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
