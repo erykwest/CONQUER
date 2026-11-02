@@ -223,7 +223,9 @@
       const floor=row.floor,feet=towerFloorZ(tower,floor);
       for(const dir of towerFaceDirections(tower)){
         if(!towerSlitFace(tower,dir.face,floor))continue;
-        const p={x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
+        // A slit with its own spot (D tower sides): the archer stands just inside it.
+        const back=cutawayWallThickness(tower)+.1;
+        const p=dir.at?{x:dir.at.x-dir.nx*back,y:dir.at.y-dir.ny*back}:{x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
         result.push({id:tower.id+':slit:'+floor+':'+dir.face,kind:'slit',
           floor,face:dir.face,nx:dir.nx,ny:dir.ny,p,z:feet,slitZ:row.z,h:ground+floor,visualZ:ground+row.z});
       }
@@ -533,10 +535,19 @@
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();redraw();
   }
+  // A semitower stands as its three walls (the gorge stays open); anything else as its footprint.
+  function masonryPieces(s){
+    return s.shape==='half'&&typeof halfTowerBodyPieces==='function'?halfTowerBodyPieces(s):[footprintPoints(s)];
+  }
   const stumpCache=new Map();
   function stumpMesh(s){
     const key=s.id+':'+s.ruinHeight;let m=stumpCache.get(key);if(m)return m;
-    const pos=[],col=[],g=groundOf(s),H=Number(s.ruinHeight)||.8,base=footprintPoints(s);
+    const pos=[],col=[];
+    masonryPieces(s).forEach((base,i)=>stumpPiece(s,i?key+':'+i:key,base,pos,col));
+    m={pos,col,static:true};stumpCache.set(key,m);return m;
+  }
+  function stumpPiece(s,key,base,pos,col){
+    const g=groundOf(s),H=Number(s.ruinHeight)||.8;
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     // Edges split every ~0.25 U so the broken top can be ragged.
@@ -557,7 +568,6 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col,static:true};stumpCache.set(key,m);return m;
   }
   // ---------- rubble on the ground ----------
   // Where the pieces settled, on a 0.25 U grid: the heap height there. A high core (over
@@ -596,7 +606,11 @@
   function crownMesh(s){
     const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3);
     let m=crownCache.get(key);if(m)return m;
-    const pos=[],col=[],base=footprintPoints(s);
+    const pos=[],col=[];
+    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col));
+    m={pos,col,static:true};crownCache.set(key,m);return m;
+  }
+  function crownPiece(key,base,g,H,pos,col){
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     const ring=[];
@@ -616,7 +630,6 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col,static:true};crownCache.set(key,m);return m;
   }
   function dynamicMeshes(){
     const out=state().ruins.map(ruinMesh).filter(Boolean);

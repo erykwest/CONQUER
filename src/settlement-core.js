@@ -247,6 +247,9 @@ const COSTS={
   plaza:{gold:90,stone:80,wood:10},
   training:{gold:90,stone:24,wood:70}
 };
+// Stone towers of the same tier, against the square one: curved masonry costs more, the open-
+// backed semitower half.
+const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
 const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
@@ -345,7 +348,9 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
 const RES_ORDER=['gold','stone','clay','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
-function variantSchema(s){return s&&STRUCTURE_VARIANTS[s.type]||null}
+// The semitower has an open gorge: crenellated top only, no roof, machicolations or base skirts.
+const HALF_TOWER_VARIANTS=Object.freeze({roofStyle:Object.freeze(['battlement']),baseStyle:Object.freeze(['standard']),topWeapon:STRUCTURE_VARIANTS.tower.topWeapon});
+function variantSchema(s){return s&&(s.type==='tower'&&s.shape==='half'?HALF_TOWER_VARIANTS:STRUCTURE_VARIANTS[s.type])||null}
 function variantDefaults(s){return s&&STRUCTURE_VARIANT_DEFAULTS[s.type]||null}
 function structureVariant(s,key){
   const schema=variantSchema(s),defs=variantDefaults(s);
@@ -409,7 +414,31 @@ function hasMachicolation(s){
   return false;
 }
 
-function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
+// Oriented stone towers (geometry in settlement-tower-shapes.js): the open-backed semitower
+// 'half' and the D tower 'dee'. Keyed by tier; s.size = 1 / 1.5 / 2 as for square towers,
+// depth runs along s.angle (towards the field), width along the wall.
+const ORIENTED_TOWER_SPECS=Object.freeze({
+  half:Object.freeze({tiers:[1,2],1:{depth:.75,width:1},2:{depth:1,width:1.5}}),
+  // The large D is as wide as a medium round tower: it grows in depth, so beside a gate its
+  // straight part matches the gate depth and the half round sticks out in front.
+  dee:Object.freeze({tiers:[2,3],2:{depth:1.5,width:1.25},3:{depth:2.25,width:1.5}})
+});
+function isOrientedTowerShape(shape){return Object.prototype.hasOwnProperty.call(ORIENTED_TOWER_SPECS,shape||'')}
+function isOrientedTower(s){return !!s&&(s.type==='tower'||s.type==='ruin')&&isOrientedTowerShape(s.shape)}
+function orientedTowerTierRange(shape){return ORIENTED_TOWER_SPECS[shape]?.tiers||[1,3]}
+function orientedTowerTier(s){
+  const [lo,hi]=orientedTowerTierRange(s.shape),span=Number(s.size)||1;
+  return clamp(span>=1.99?3:span>=1.49?2:1,lo,hi);
+}
+function orientedTowerDims(s){const d=ORIENTED_TOWER_SPECS[s.shape][orientedTowerTier(s)];return{w:d.depth,h:d.width}}
+// Facade decals (windows, slits, doors) sit on the bounding box: its sides are the straight
+// flanks of the D, its front touches the tip of the half round.
+const ORIENTED_FACADE_REAR=3;   // rect edge fp[3] -> fp[0], the local -x face
+function towerFacadePoints(s){
+  if(!isOrientedTower(s))return footprintPoints(s);
+  const {w,h}=orientedTowerDims(s);return rectWorldPoints(s.x,s.y,w,h,s.angle||0);
+}
+function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
 function wallTier(s){
   const explicit=Math.round(Number(s?.tier));
   if(explicit>=1&&explicit<=3)return explicit;
@@ -426,6 +455,7 @@ function applyStructureTier(s,tier){
     if(s.type==='wall'&&tier===1&&wallSkin(s)==='machicolation')s.skin='standard';
   }
   else if(s.type==='tower'){
+    if(isOrientedTower(s)){const [lo,hi]=orientedTowerTierRange(s.shape);s.tier=tier=clamp(tier,lo,hi)}
     if(s.shape==='round')s.r=towerSizeForTier('round',tier);
     else s.size=towerSizeForTier('square',tier);
   }
@@ -642,7 +672,7 @@ function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
-    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
+    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
   if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
   if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});
