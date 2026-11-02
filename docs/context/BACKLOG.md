@@ -66,7 +66,7 @@
 - **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
 - **TAPPA 2 SU MAIN (#99, `cdb2af9`):** routine settimanali di uomini e donne.
 - **TAPPA 3 SU MAIN (#101, `e1fdb20`):** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
-- **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda.
+- **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda. L'interno in sezione delle botteghe è in fase 1 su branch (`feature/l3-workshop-cutaway`).
 - **TAPPA 4 SU BRANCH `feature/economy-convoys`, NON MERGE:** un solo sistema di convogli (carovane della diplomazia comprese), cartelli di prova, convogli visibili sulla strada maestra.
 - **DA FARE (CI):** aggiungere a `.github/workflows/economy-flows-regression.yml` le nuove regressioni economiche (rations, labor-jobs, routines, commerce, urban-workshops, convoys, road-sign, diplomacy, vehicles): PR separata, il token di `gh` non ha lo scope `workflow`.
 - **TAPPA 5 SU BRANCH `feature/economy-vehicles`, NON MERGE:** veicoli instradati sulle strade, solo 2D.
@@ -110,7 +110,7 @@
 - **SU MAIN:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
 - **FIX SU BRANCH `fix/civic-cutaway-lab`, NON MERGE:** lastra del primo piano che copriva il pianterreno delle locande.
 - **APERTO:** il Lab non ha uno stato «cutaway» per gli edifici civici (lo stage copre solo torri, mura, porte): la verifica è stata fatta a mano con lo stesso metodo.
-- **ANCORA APERTO:** cutaway per gli altri edifici civici (mercato, mulini, botteghe) e persone all'interno durante le attività.
+- **ANCORA APERTO:** cutaway per gli altri edifici civici (mercato, mulini) e persone all'interno durante le attività. **Botteghe L3: fase 1 su branch `feature/l3-workshop-cutaway`, NON MERGE** (sezione per mestiere e artigiano al banco, vedi STATUS 02/11); residui: scala dell'artigiano nella stanza piccola, luci notturne, clienti, mesh Blender dedicate (telaio, tornio, forno) al posto delle scatole procedurali.
 
 ## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
 

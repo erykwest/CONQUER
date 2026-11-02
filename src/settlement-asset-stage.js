@@ -18,17 +18,25 @@
     }
     return{x:100,y:100};
   }
+  // L3 workshops (settlement-shop-cutaway.js): one L3 house per trade, closed and opened.
+  function shopVariants(){
+    const T=window.ConquerShopCutaway?.TRADES,K=window.ConquerCommerce?.WORKSHOP_KINDS;
+    return T?Object.keys(T).map(kind=>({id:'bottega-l3-'+kind,label:'Bottega L3 · '+(K?.[kind]?.label||kind),family:'Botteghe L3',category:'Edifici',
+      spec:{type:'house',auto:true,houseLevel:3,w:1.5,h:1,doorSide:-1,groundZ:0,shopKind:kind}})):[];
+  }
   // Every variant of the gallery (wood ones too: the 2.5D path draws them) plus a built section.
   function variants(){
     const G=SP().GALLERY;
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
       ['Mura',['Sezione costruita T2',{type:'built',tier:2,level:1}]],
       ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],...G.gates.map(r=>['Porte',r])]
-      .map(([family,[label,spec]])=>({id:slug(label),label,family,spec}));
+      .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}
   function states(id){
-    const {spec}=find(id),s=SP().galleryStructure(spec,0,0);
+    const {spec}=find(id);
+    if(spec.type==='house')return[{id:'intact',label:'Nel gioco',group:'intatto'},{id:'cutaway',label:'Cutaway',group:'cutaway'}];
+    const s=SP().galleryStructure(spec,0,0);
     const out=[{id:'intact',label:'Nel gioco',group:'intatto'}];
     for(const p of BUILD_STEPS)out.push({id:'build-'+Math.round(p*100),label:'Cantiere '+Math.round(p*100)+'%',group:'costruzione',progress:p});
     for(const [phase] of SP().galleryPhases(spec).slice(1))out.push({id:'damage-'+slug(phase),label:phase,group:'danno',phase});
@@ -66,7 +74,7 @@
       // Settled rubble, as a saved game reloads it, not the blocks still falling.
       window.ConquerSiege?.restore(JSON.parse(JSON.stringify(State.siege)));
     }
-    if(state.id==='cutaway')s.cutaway=true;
+    if(state.id==='cutaway')s[s.type==='house'?'shopCutaway':'cutaway']=true;
     return State.structures.find(x=>x.id===s.id)||State.structures[0]||null;
   }
   const STRUCTURE_LAYERS=['ground','shadow','base','castleBody','castleFront'];
@@ -79,7 +87,7 @@
     if(!s)return{present:false};
     const st=window.ConquerSiege?.integrity?.(s);
     return{present:true,type:s.type,material:s.material||'stone',level:s.level??null,tier:s.tier??null,
-      progress:+constructionProgress(s).toFixed(3),cutaway:structureCutaway(s),ruined:!!(s.ruined||s.ruin),
+      progress:+constructionProgress(s).toFixed(3),cutaway:structureCutaway(s)||!!window.ConquerShopCutaway?.active(s),ruined:!!(s.ruined||s.ruin),
       hp:st?.core?+(st.core.hp/st.core.max).toFixed(3):null,door:st?.door?+(st.door.hp/st.door.max).toFixed(3):null};
   }
   // capture(id, stateId, {rotation 0..3, scale}) -> {dataUrl, width, height, coverage, structure}

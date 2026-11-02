@@ -1171,7 +1171,7 @@ function urbanOcclusionPieces(){
     for(const part of entry.parts){
       const faces=urbanHouseFaces(entry.house,part);
       const projected=faces.flat().map(v=>w2sRaw(v.p,v.z));
-      pieces.push({faces,buildingKey:part.buildingKey||null,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
+      pieces.push({faces,houseId:entry.house.id,buildingKey:part.buildingKey||null,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
         minX:Math.min(...projected.map(p=>p.x)),maxX:Math.max(...projected.map(p=>p.x)),
         minY:Math.min(...projected.map(p=>p.y)),maxY:Math.max(...projected.map(p=>p.y))});
     }
@@ -1183,7 +1183,9 @@ function withUrbanFigureOcclusion(p,z,drawFn,ignoreBuildingKey=null){
   // of architectural faces costs far more than it contributes visually.
   if(State.view.scale<.48)return drawFn();
   const screen=w2s(p,z),depth=viewDepthPoint(p),r=wrap.getBoundingClientRect();
-  const pieces=urbanOcclusionPieces().filter(q=>(ignoreBuildingKey==null||q.buildingKey!==ignoreBuildingKey)&&q.maxDepth>depth&&
+  // An open L3 workshop no longer hides anyone (its walls are cut to the sill).
+  const open=window.ConquerShopCutaway?.activeId?.()||'',openIds=open?open.split(','):[];
+  const pieces=urbanOcclusionPieces().filter(q=>(ignoreBuildingKey==null||q.buildingKey!==ignoreBuildingKey)&&!openIds.includes(q.houseId)&&q.maxDepth>depth&&
     q.minX<screen.x+28&&q.maxX>screen.x-28&&q.minY<screen.y+12&&q.maxY>screen.y-44);
   if(!pieces.length)return drawFn();
   ctx.save();

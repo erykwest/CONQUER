@@ -164,7 +164,7 @@
       // Thumbnails are fitted to the card: the height tells L1 from L3.
       let top=0;if(mesh)for(let i=2;i<mesh.pos.length;i+=3)top=Math.max(top,mesh.pos[i]);
       const states=[...(mesh?[{id:'3d',label:'Modello 3D',group:'3d'}]:[]),...w.ConquerAssetStage.states(v.id)];
-      items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
+      items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:v.category||'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
         key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Solo 2.5D')+' · '+(states.length-(mesh?1:0))+' stati',
         source:'src/settlement-asset-stage.js · '+(!mesh?'percorso 2.5D':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
       if(mesh)meshes++;

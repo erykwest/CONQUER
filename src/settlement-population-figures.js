@@ -116,10 +116,14 @@ function drawPeasants(){
       const building=constructionJobs.get(resident.id);
       let p=building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
         residentClassPosition(house,resident,day,assignment);
-      if(p&&!building&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))
+      // The artisan of an open L3 workshop works at his bench, not at the door.
+      const shop=!building?window.ConquerShopCutaway?.artisanAt(house,resident,p):null;
+      if(shop)p=shop.p;
+      else if(p&&!building&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))
         p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
+      const inShop=!!shop&&combatP===undefined;
       // Footsteps follow every resident's actual position, independent of LOD.
       if(p)window.ConquerSnowTracks?.observe(resident.id,p,State.clock.day,'person');
       if(residentStride>1&&(resident.lodHash%residentStride)!==0)continue;
@@ -129,7 +133,7 @@ function drawPeasants(){
         p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
         hair:resident.hair,colors:resident.colors,
         militia:window.ConquerCombat?.recruitedResident(resident.id)||false,
-        work:fieldWork(p,assignment,house,resident)
+        work:inShop?(shop.tool&&window.ConquerWorkAnim?{tool:shop.tool,facing:shop.facing}:null):fieldWork(p,assignment,house,resident)
       });
       activeAgents++;
     }

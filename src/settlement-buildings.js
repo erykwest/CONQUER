@@ -496,8 +496,11 @@ function drawHouse(s){
     const floorBreak=houseFloorBreak(wallH);
     const creamTop='#d6bf82',creamA='#c8ae70',creamB='#e0ca91',creamGable='#d9c184';
     const dormers=level===4?urbanHouseGeometry().find(e=>e.house.id===s.id)?.dormers||[]:[];
+    // A selected L3 workshop opens its ground floor: one section mesh for all its bodies.
+    const shopOpen=!!window.ConquerShopCutaway?.active(s);let shopDrawn=false;
     for(const part of parts){
       if(part.kind==='outbuilding'){drawUrbanOutbuilding(s,part,selected);continue}
+      if(shopOpen){if(!shopDrawn){window.ConquerShopCutaway.draw2D(s);shopDrawn=true}continue}
       if(part.kind==='turret'){drawHouseTurret(s,part,selected);continue}
       // Recessed stone ground floor; the jettied upper floor overhangs it on the door side and opposite.
       extrudePolygonAt(part.basePoints||part.points,0,floorBreak,{top:'#625e59',sideA:'#4f4b47',sideB:'#625e59',stroke:null});
@@ -506,7 +509,7 @@ function drawHouse(s){
       if(dormers.length)drawHouseDormers(dormers,part);
     }
   }
-  if(!underConstruction(s))drawHouseChimneys(s);
+  if(!underConstruction(s)&&!window.ConquerShopCutaway?.active(s))drawHouseChimneys(s);
 }
 function closestPointOnSegment(p,a,b){
   const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;if(!L2)return{x:a.x,y:a.y};
@@ -568,6 +571,7 @@ function houseDoorInfo(house){
   return{surface,outside,tangent,normal,side,lateralSign};
 }
 function drawHouseDoor(house){
+  if(window.ConquerShopCutaway?.active(house))return;   // the facade is cut down to the sill
   const d=houseDoorInfo(house),halfW=Math.min(.08,(Number(house.w)||1.5)*.0533);
   const visible=visibleFacadeEdges(house).some(e=>pointSegmentDistance(d.surface,e.a,e.b)<.08);
   if(!visible)return;

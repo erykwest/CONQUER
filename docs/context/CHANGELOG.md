@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-02 — Cutaway delle botteghe L3, fase 1 (branch `feature/l3-workshop-cutaway`)
+
+- La casa L3 selezionata con una bottega mostra il pianterreno in sezione, arredato per mestiere, con il banco su strada e l'artigiano al lavoro durante l'orario di bottega. Modulo `src/settlement-shop-cutaway.js`; agganci in 2.5D, WebGL, facciate, fumo, occlusione delle figure e passaggio della popolazione.
+- Asset Lab: 7 voci «Botteghe L3» (stati «Nel gioco» e «Cutaway»), 14 voci aggiunte alla baseline dopo la revisione del foglio provini; i 140 «cambiati» delle fortificazioni (deriva di luce, tutti più chiari) non sono stati riscritti. Nuova regressione `qa/shop-cutaway-regression.cjs`.
+- Piramide: STATUS, BACKLOG (chiusa in fase 1 la voce «cutaway delle botteghe e persone all'interno»), DECISIONS (D-056). ROADMAP invariata: è un completamento visivo di #101, non cambia milestone né priorità P1 economia.
+
 ## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
 
 - Creata pagina /march/ con demo isolata: click sulla mappa per ordine di marcia, giornate e viveri, quattro feudi statici, razzie parziali e persistenti, inizio assedio, ritirata volontaria, test esito positivo e conquista opzionale. Codice separato tra engine e UI; salvataggio solo dello scenario demo.
