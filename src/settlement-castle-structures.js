@@ -671,7 +671,14 @@ function wallBattlementPieces(s){
     pieces.push(piece);
     nodes.push(merlonNode(center,g.angle,.28,depth));
   }
-  return pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  const all=pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  // Stepped wall: every piece stands on the section under it, and the single crest line used to
+  // clip far merlons in 2.5D no longer exists.
+  if(wallSlopeSections(s))for(const p of all){
+    const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
+    p.groundZ=wallGroundAt(s,((c.x-s.a.x)*g.dx+(c.y-s.a.y)*g.dy)/(g.L*g.L));delete p.wallCrest;
+  }
+  return all;
 }
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];

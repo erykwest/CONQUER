@@ -394,7 +394,11 @@ function gateRoofStyle(s){
   if(s?.type==='gate'&&s.brokenTop)return'broken';
   return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined
 }
-function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
+// A stepped wall on a slope keeps the plain crest: hoardings and machicolations need a level run.
+function wallSkin(s){
+  if(s?.type!=='wall')return undefined;
+  return typeof wallSlopeSections==='function'&&wallSlopeSections(s)?'standard':structureVariant(s,'skin');
+}
 function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
 // Wide built section (hall): same 'built' type, double width, one free-height
 // ground floor even at L2 — common halls, chapels, throne halls.

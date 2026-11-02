@@ -82,10 +82,16 @@
     return cache;
   }
   const edgeOf=id=>graph().edges.find(e=>e.wall.id===id)||null;
+  // Walk height at t, above the terrain under p (how it is drawn): on a stepped wall the walk is on
+  // its section's top, so it is lifted or lowered by the step against the slope under the man.
+  function zAt(e,t,p){
+    const g=e.wall.type==='wall'&&typeof wallGroundAt==='function'?wallGroundAt(e.wall,t):null;
+    return Number.isFinite(g)?e.z+g-terrainElevation(p):e.z;
+  }
   function at(loc){
     const e=typeof loc.edge==='object'?loc.edge:edgeOf(loc.wallId);if(!e)return null;
-    const t=Math.max(0,Math.min(1,loc.t));
-    return{x:e.a.x+(e.b.x-e.a.x)*t,y:e.a.y+(e.b.y-e.a.y)*t,z:e.z,wallId:e.wall.id,t};
+    const t=Math.max(0,Math.min(1,loc.t)),p={x:e.a.x+(e.b.x-e.a.x)*t,y:e.a.y+(e.b.y-e.a.y)*t};
+    return{...p,z:zAt(e,t,p),wallId:e.wall.id,t};
   }
   // Nearest walkway point to a world point (within maxDist of the lane).
   function locate(p,maxDist=Infinity){
@@ -94,7 +100,7 @@
       const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,L2=dx*dx+dy*dy||1;
       const t=Math.max(0,Math.min(1,((p.x-e.a.x)*dx+(p.y-e.a.y)*dy)/L2));
       const q={x:e.a.x+dx*t,y:e.a.y+dy*t},d=Math.hypot(p.x-q.x,p.y-q.y);
-      if(d<=maxDist&&(!best||d<best.d))best={edge:e,wallId:e.wall.id,t,x:q.x,y:q.y,z:e.z,d};
+      if(d<=maxDist&&(!best||d<best.d))best={edge:e,wallId:e.wall.id,t,x:q.x,y:q.y,z:zAt(e,t,q),d};
     }
     return best;
   }

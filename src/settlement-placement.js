@@ -122,8 +122,8 @@
           const t=i/steps,p={x:s.a.x+(s.b.x-s.a.x)*t,y:s.a.y+(s.b.y-s.a.y)*t};
           if((isPrimaryRoad(s)?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return invalid('Road crosses an impassable obstacle or cliff');
         }
-      }else if(buildableTerrainElevationForStructure(s)==null){
-        return invalid('Wall segment crosses incompatible terrain');
+      }else if(!wallTerrainVerdict(s).ok){
+        return invalid(wallTerrainVerdict(s).reason);
       }else{
         // Walls, palisades and built sections only checked the terrain: they ran through woods.
         const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));

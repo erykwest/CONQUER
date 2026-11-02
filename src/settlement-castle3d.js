@@ -224,7 +224,10 @@
       run(()=>{
         // In the world renderer stone gates are carved: piers and a vault around a passage you can
         // see through, with door leaves as meshes. The Canvas paths keep the solid block and decals.
-        if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
+        // A wall on a slope is built in steps, each section on its own ground.
+        const steps=s.type==='wall'?wallSlopeSections(s):null;
+        if(steps)for(const q of steps)withProjectionGroundZ(q.ground,()=>m.prism(q.pts,q.low,structureHeight(s),PAL.stone()));
+        else if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
           m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
         if(s.type==='tower')addTower(m,s);
         m.tag='roof';
