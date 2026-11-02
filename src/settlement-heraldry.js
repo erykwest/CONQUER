@@ -1,36 +1,17 @@
 'use strict';
 // Heraldry is campaign data; visual supports only clip the shared rectangular SVG.
 (()=>{
-const DEFAULT={pattern:'quarterly',c1:'#b32628',c2:'#eac15b',symbol:'lion',c3:'#111111',c4:'#f5e8c8'};
-const patterns=['plain1','plain2','perFess','pale','billet','cross','fess','pall','chevron','lozenge','pile','saltire','perPale','perBend','perSaltire','quarterly','bend','gyron','point','wavy'];
+// Partitions and default arms live in heraldry-shapes.js, shared with the 3D flags and sails.
+const SHAPES=window.ConquerHeraldryShapes;
+const DEFAULT={...SHAPES.DEFAULT};
+const patterns=Object.keys(SHAPES.PATTERNS);
 const $=id=>document.getElementById(id);
 const validHex=v=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
 let h={...DEFAULT,...(State.heraldry||{})};
 function sanitize(){if(!patterns.includes(h.pattern))h.pattern=DEFAULT.pattern;for(const k of ['c1','c2','c3','c4'])if(!validHex(h[k]))h[k]=DEFAULT[k];if(!window.CONQUER_HERALDRY_SYMBOLS.some(s=>s.id===h.symbol))h.symbol='lion'}
 function patternSvg(id,c1,c2){
- const base='<rect width="100" height="100" fill="'+c2+'"/>';
- const shape={
- plain1:'<rect width="100" height="100" fill="'+c1+'"/>',plain2:'',
- perFess:'<path d="M0 0H100V50H0Z" fill="'+c1+'"/>',
- pale:'<path d="M38 0H62V100H38Z" fill="'+c1+'"/>',
- billet:'<rect x="43" y="18" width="14" height="31" fill="'+c1+'"/>',
- cross:'<path d="M39 0H61V100H39ZM0 39H100V61H0Z" fill="'+c1+'"/>',
- fess:'<rect y="39" width="100" height="22" fill="'+c1+'"/>',
- pall:'<path d="M0 0L50 44 100 0 100 17 59 56 59 100 41 100 41 56 0 17Z" fill="'+c1+'"/>',
- chevron:'<path d="M0 69L50 20 100 69 100 86 50 39 0 86Z" fill="'+c1+'"/>',
- lozenge:'<path d="M50 14L85 50 50 86 15 50Z" fill="'+c1+'"/>',
- pile:'<path d="M5 0H95L50 87Z" fill="'+c1+'"/>',
- saltire:'<path d="M0 0H18L100 82V100H82L0 18ZM82 0H100V18L18 100H0V82Z" fill="'+c1+'"/>',
- perPale:'<rect width="50" height="100" fill="'+c1+'"/>',
- perBend:'<path d="M0 0H100V100Z" fill="'+c1+'"/>',
- perSaltire:'<path d="M0 0L50 50 100 0ZM0 100L50 50 100 100Z" fill="'+c1+'"/>',
- quarterly:'<path d="M0 0H50V50H0ZM50 50H100V100H50Z" fill="'+c1+'"/>',
- bend:'<path d="M0 0H24L100 76V100H76L0 24Z" fill="'+c1+'"/>',
- gyron:'<path d="M0 0H100L50 50ZM0 100L50 50 100 100Z" fill="'+c1+'"/>',
- point:'<path d="M0 0H100V100L50 32 0 100Z" fill="'+c1+'"/>',
- wavy:'<path d="M0 40Q12 28 25 40T50 40T75 40T100 40V62Q87 74 75 62T50 62T25 62T0 62Z" fill="'+c1+'"/>'
- };
- return base+(shape[id]||'');
+ const d=SHAPES.PATTERNS[id];
+ return '<rect width="100" height="100" fill="'+c2+'"/>'+(d?'<path d="'+d+'" fill="'+c1+'"/>':'');
 }
 function symbolSvg(entry=window.CONQUER_HERALDRY_SYMBOLS.find(s=>s.id===h.symbol),fill=h.c3,stroke=h.c4){
  const source=window.CONQUER_HERALDRY_SOURCES?.[entry?.source],box=entry?.viewBox;

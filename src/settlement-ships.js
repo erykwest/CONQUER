@@ -10,11 +10,31 @@
   const keys=Object.keys(M.ships);
   const SAIL_TIME=3;                       // seconds to raise or lower the sails
   const smooth=t=>t*t*(3-2*t);
+  // Heraldry. A ship belongs to the player's realm, to a foreign realm, or is a merchant:
+  // warships fly their realm's flags and wear its arms on the sails; merchants fly the flag
+  // of the realm they sail under but keep plain sails. Foreign realms are placeholders until
+  // the world map gives them arms of their own.
+  const FOREIGN=Object.freeze({
+    azure:{label:'Regno d’Azzurro',heraldry:{pattern:'perPale',c1:'#1f4f9c',c2:'#f1e6c9',symbol:'eagle',c3:'#1b1b1b',c4:'#f1e6c9'}},
+    vert:{label:'Regno di Verde',heraldry:{pattern:'chevron',c1:'#2f6b34',c2:'#e9d9a8',symbol:'deer',c3:'#7a1e1e',c4:'#e9d9a8'}},
+    sable:{label:'Regno di Nero',heraldry:{pattern:'cross',c1:'#d9b54a',c2:'#1b1a18',symbol:'lion',c3:'#b32628',c4:'#d9b54a'}}
+  });
+  const playerArms=()=>(typeof State!=='undefined'&&State.heraldry)||window.ConquerHeraldryShapes?.DEFAULT||null;
+  // {allegiance:'player'|'foreign'|'merchant', realm:'player'|<FOREIGN key>} -> {flag, sail}.
+  function arms(o={}){
+    const realm=o.allegiance==='foreign'?(o.realm||'azure'):o.realm||'player';
+    const h=realm==='player'?playerArms():FOREIGN[realm]?.heraldry||playerArms();
+    return{flag:h,sail:o.allegiance==='merchant'?null:h};
+  }
+  const FLAG_COLS=14,FLAG_ROWS=8,EMBLEM_OFF=.012;
+  const sample=(h,c,r)=>window.ConquerHeraldryShapes?.sample(h,c,r)||null;
   // World-space mesh {pos,col} for a ship at {x,y,heading,z}; furl 0 = set, 1 = furled.
-  function mesh(key,pose,furl=0){
+  // With heraldry {flag, sail, t} it adds the flags (waving at time t) and the arms on the sails.
+  function mesh(key,pose,furl=0,heraldry=null){
     const m=M.ships[key];if(!m)return null;
     const h=pose.heading||0,cs=Math.cos(h),sn=Math.sin(h),z=pose.z||0,pos=[],col=[];
     const put=(x,y,zz)=>pos.push(pose.x+x*cs-y*sn,pose.y+x*sn+y*cs,z+zz);
+    const quad=(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)};
     for(let t=0;t<m.c.length;t++){
       for(let k=0;k<3;k++){const j=m.i[t*3+k]*3;put(m.p[j],m.p[j+1],m.p[j+2])}
       col.push(M.palette[m.c[t]]);
@@ -23,6 +43,24 @@
     for(let t=0;t<s.c.length;t++){
       for(let k=0;k<3;k++){const j=t*9+k*3;put(s.v[j]+(s.f[j]-s.v[j])*f,s.v[j+1]+(s.f[j+1]-s.v[j+1])*f,s.v[j+2]+(s.f[j+2]-s.v[j+2])*f)}
       col.push(M.palette[s.c[t]]);
+    }
+    if(!heraldry)return{pos,col};
+    // Arms on the sails: each patch follows its cloth (set / furled) just off both faces.
+    const sailGrid=heraldry.sail&&m.emblems.length?m.emblems.map(e=>sample(heraldry.sail,e.cols,e.rows)):null;
+    if(sailGrid)m.emblems.forEach((e,n)=>{
+      const g=sailGrid[n];if(!g)return;
+      const W=e.cols+1,ax=e.axis==='x'?0:1;
+      const P=(c,r,off)=>{const j=(r*W+c)*3,p=[0,1,2].map(i=>e.v[j+i]+(e.f[j+i]-e.v[j+i])*f);p[ax]+=off;return p};
+      for(const off of [EMBLEM_OFF,-EMBLEM_OFF])for(let r=0;r<e.rows;r++)for(let c=0;c<e.cols;c++)
+        quad(P(c,r,off),P(c+1,r,off),P(c+1,r+1,off),P(c,r+1,off),g[r][c]);
+    });
+    // Flags fly aft from the top of their staff, waving with the time.
+    const fg=heraldry.flag&&sample(heraldry.flag,FLAG_COLS,FLAG_ROWS),t=heraldry.t||0;
+    if(fg)for(const fl of m.flags){
+      const [ax,ay,az]=fl.at;
+      const P=(c,r)=>{const u=c/FLAG_COLS,v=r/FLAG_ROWS,wave=Math.sin(u*5-t*4+v*.6)*fl.h*.16*u;
+        return[ax-u*fl.w,ay+wave,az-v*fl.h-u*u*fl.h*.08]};
+      for(let r=0;r<FLAG_ROWS;r++)for(let c=0;c<FLAG_COLS;c++)quad(P(c,r),P(c+1,r),P(c+1,r+1),P(c,r+1),fg[r][c]);
     }
     return{pos,col};
   }
@@ -52,6 +90,6 @@
     M.lab[k]={parts:{hull,sails:{v:m.sails.v,c:m.sails.c}}};
     M.lab[k+'Furled']={parts:{hull,sails:{v:m.sails.f,c:m.sails.c}}};
   }
-  window.ConquerShips=Object.freeze({keys,mesh,sailState,step,raise,lower,cycle,SAIL_TIME,
+  window.ConquerShips=Object.freeze({keys,mesh,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
     small:keys.filter(k=>M.ships[k].size==='small'),large:keys.filter(k=>M.ships[k].size==='large')});
 })();

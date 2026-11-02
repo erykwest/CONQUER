@@ -9,6 +9,7 @@ on:
       - 'src/settlement-pier.js'
       - 'src/settlement-ships.js'
       - 'src/assets/ship-models.js'
+      - 'src/heraldry-shapes.js'
       - 'src/settlement-world.js'
       - 'qa/pier-regression.cjs'
       - 'qa/biome-recipes-regression.cjs'

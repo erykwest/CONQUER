@@ -191,7 +191,27 @@ def sail_grid(sails, P, nu, nv, keyfn):
 FURL_DEPTH = .07
 
 
-def lateen(part, sails, h, x, height, yard, furl, cross=False, belly=.9):
+def emblem_patch(h, P, region, cols, rows, axis):
+    """Heraldry patch on a sail: a cols x rows vertex grid (row 0 at the top, col 0 at the
+    left as seen from port / from ahead) laid on the cloth, set and furled, recorded on the
+    hull for export. region(c, r) -> (u, v) sail parameters of grid vertex (c, r)."""
+    if h.furl:
+        return
+    v, f = [], []
+    for r in range(rows + 1):
+        for c in range(cols + 1):
+            u, w = region(c / cols, r / rows)
+            v += list(P(u, w, 0)); f += list(P(u, w, 1))
+    h.marks['emblems'].append({'cols': cols, 'rows': rows, 'axis': axis, 'v': v, 'f': f})
+
+
+def flag(h, at, w, hgt):
+    """Flag mount: the top of the staff at `at`; the flag flies aft (-x), w long, hgt deep."""
+    if not h.furl:
+        h.marks['flags'].append({'at': list(at), 'w': w, 'h': hgt})
+
+
+def lateen(part, sails, h, x, height, yard, furl, belly=.9):
     head = mast(part, h, x, height, .14 if h.s['size'] == 'small' else .3)
     t = x / (h.L / 2); dz = h.deck_z(t)
     lo = Vector((x + yard * .45, 0, dz + height * .25))
@@ -206,27 +226,31 @@ def lateen(part, sails, h, x, height, yard, furl, cross=False, belly=.9):
         b = belly * (1 - f * .8)
         return p + Vector((0, b * math.sin(math.pi * u) * math.sin(math.pi * min(1, vv * 1.1)) * (1 - vv * .5) + f * .12, 0))
 
-    # Panels and the cross are laid out in the set sail's plane (x along the hull, z up), so
-    # cloths hang as vertical strips and the cross stays upright whatever the triangle shape.
-    c = (A + Bv + clew) / 3
-    arm = yard * .1
-
+    # Panels are laid out in the set sail's plane (x along the hull, z up), so cloths hang
+    # as vertical strips whatever the triangle shape.
     def key(i, j, u, v):
         return 'sail' if int(math.floor(P(u, v, 0).x / (yard * .07))) % 2 else 'sailShade'
     sail_grid(sails, P, 22, 16, key)
-    if cross:
-        # Red cross painted on both faces: two upright bars just off the bellied cloth. Furled,
-        # it shrinks to the point of the bundle where that part of the cloth went.
-        uv = min(((i / 20, j / 20) for i in range(21) for j in range(21)),
-                 key=lambda q: (P(*q, 0).x - c.x) ** 2 + (P(*q, 0).z - c.z) ** 2)
-        near = P(*uv, 0)
-        for off in (.06, -.06):
-            y = near.y + off
-            for corners in (((-.2, -1), (.2, -1), (.2, 1), (-.2, 1)), ((-.7, .15), (.7, .15), (.7, .5), (-.7, .5))):
-                pts = [(c.x + a * arm, y, c.z + b * arm) for a, b in corners]
-                if furl:
-                    q = P(*uv); pts = [(q.x, q.y + off, q.z)] * 4
-                sails.quads(pts, [(0, 1, 2), (0, 2, 3)], 'cross')
+    # Heraldry: an upright 1.6:1 rectangle around the centroid of the set sail, mapped back to
+    # sail parameters (u, v) so it follows the belly and gathers up with the cloth.
+    c = (A + Bv + clew) / 3
+    ew = yard * .3; eh = ew / 1.6
+
+    def uv_at(tx, tz):
+        best = min(((i / 40, j / 40) for i in range(41) for j in range(41)),
+                   key=lambda q: (P(*q, 0).x - tx) ** 2 + (P(*q, 0).z - tz) ** 2)
+        u, w = best
+        for _ in range(8):                                                      # Newton on (x, z)
+            e = 1e-4; p = P(u, w, 0)
+            pu, pw = P(u + e, w, 0), P(u, w + e, 0)
+            a, b, cc, d = (pu.x - p.x) / e, (pw.x - p.x) / e, (pu.z - p.z) / e, (pw.z - p.z) / e
+            det = a * d - b * cc
+            if abs(det) < 1e-9:
+                break
+            rx, rz = tx - p.x, tz - p.z
+            u += (d * rx - b * rz) / det; w += (-cc * rx + a * rz) / det
+        return min(1, max(0, u)), min(1, max(0, w))
+    emblem_patch(h, P, lambda s, t: uv_at(c.x + ew / 2 - s * ew, c.z + eh / 2 - t * eh), 24, 15, 'y')
     # Halyard from the masthead to the yard.
     part.beam(head, lo.lerp(hi, .55), .04, .04, 'rope')
     return head
@@ -238,15 +262,17 @@ def square(part, sails, h, x, height, yard, furl, red=False, belly=1.1):
     w = yard / 2
     part.beam((x + .2, -w, yz), (x + .2, w, yz), .18, .18, 'mast')
     foot = max(h.deck_z(x / (h.L / 2)) + 1.6, yz - height * .62)
-    drop = (yz - .1 - foot) * (1 - furl * (1 - FURL_DEPTH))
+    drop = lambda f: (yz - .1 - foot) * (1 - f * (1 - FURL_DEPTH))
 
-    def P(u, v):
-        return Vector((x + .3 + belly * (1 - furl * .8) * math.sin(math.pi * u) * math.sin(math.pi * v) * (1 - .3 * v),
-                       -w + 2 * w * u, yz - .1 - drop * v))
+    def P(u, v, f=furl):
+        return Vector((x + .3 + belly * (1 - f * .8) * math.sin(math.pi * u) * math.sin(math.pi * v) * (1 - .3 * v),
+                       -w + 2 * w * u, yz - .1 - drop(f) * v))
     for s in (1, -1):                                                             # leech lines follow the foot
-        sails.beam((x + .2, s * w * .95, yz), (x + .3, s * w * .9, yz - .1 - drop - .02), .03, .03, 'rope')
+        sails.beam((x + .2, s * w * .95, yz), (x + .3, s * w * .9, yz - .1 - drop(furl) - .02), .03, .03, 'rope')
     a, b = ('sailRed', 'sailRedShade') if red else ('sail', 'sailShade')
     sail_grid(sails, P, 8, 6, lambda i, j, u, v: a if i % 2 else b)
+    # Heraldry over the whole square sail, seen from ahead: col 0 at u=0 (the -y side).
+    emblem_patch(h, P, lambda s, t: (.06 + .88 * s, .06 + .88 * t), 24, 15, 'x')
     return head
 
 
@@ -355,31 +381,53 @@ class NullPart:
         return lambda *a, **k: None
 
 
+def ensign(part, h, deck, staff, w, hgt):
+    """Ensign staff raked over the stern, its flag mount at the top."""
+    x = -h.L / 2 + .35
+    top = Vector((x - staff * .25, 0, deck + staff))
+    part.taper((x, 0, deck - .1), top, .1, .1, .06, .06, 'woodDark')
+    part.box(tuple(top + Vector((0, 0, .05))), (.12, .12, .1), 'yellow')
+    flag(h, top, w, hgt)
+
+
+def masthead_flag(part, h, head, w, hgt):
+    top = head + Vector((0, 0, 1.1))
+    part.taper(head, top, .08, .08, .05, .05, 'woodDark')
+    flag(h, top, w, hgt)
+
+
 def build_ship(part, sails, key, s, furl):
     h = Hull(s)
+    h.furl, h.marks = furl, {'flags': [], 'emblems': []}
     build_hull(part, h, s['hull'])
     rudder(part, h)
     if key == 'barca':
-        lateen(part, sails, h, .5, 6.5, 8.0, furl)
+        head = lateen(part, sails, h, .5, 6.5, 8.0, furl)
+        masthead_flag(part, h, head, 1.3, .8)
         for sgn in (1, -1):                                                      # oars along the thwarts
             part.beam((-2.8, sgn * .55, h.deck_z(0) + .55), (2.6, sgn * .7, h.deck_z(0) + .6), .1, .06, 'wood')
             part.box((2.75, sgn * .7, h.deck_z(0) + .6), (.5, .05, .22), 'wood')
         part.cylinder(.55, 0, 'net', n=10, axis='z', center=(-2.2, -.4, h.deck_z(-.5)), radii=[.6, .55, .3], along=[0, .25, .4])
         cargo(part, h, [('barrel', -.62, .35), ('barrel', -.62, -.1)])
     elif key == 'cargo':
-        square(part, sails, h, .3, 7.5, 6.0, furl, red=True)
+        head = square(part, sails, h, .3, 7.5, 6.0, furl, red=True)
+        masthead_flag(part, h, head, 1.5, .95)
         cargo(part, h, [('sack', -.55, .4), ('sack', -.5, -.2), ('crate', -.25, .45), ('barrel', -.25, -.4),
                         ('crate', .45, .3), ('sack', .45, -.35), ('barrel', .62, 0), ('sack', -.72, .05)])
     elif key == 'caravella':
         castle(part, h, True, 3.4, 1.6, 'lattice')
-        lateen(part, sails, h, 1.4, 9.0, 11.0, furl, cross=True)
-        lateen(part, sails, h, -2.6, 7.0, 8.5, furl, cross=True)
+        head = lateen(part, sails, h, 1.4, 9.0, 11.0, furl)
+        masthead_flag(part, h, head, 1.8, 1.1)
+        lateen(part, sails, h, -2.6, 7.0, 8.5, furl)
+        ensign(part, h, h.top(-1) + 1.7, 2.2, 1.6, 1.0)
         cargo(part, h, [('barrel', .55, .3), ('crate', .5, -.35)])
     elif key == 'cocca':
         castle(part, h, True, 6.0, 2.4, 'stripes')
         castle(part, h, False, 4.4, 2.2, 'stripes')
         head = square(part, sails, h, .3, 16.0, 13.0, furl)
         shrouds(part, h, .3, head, n=3, ratlines=True)
+        masthead_flag(part, h, head, 3.2, 2.0)
+        ensign(part, h, h.top(-1) + 2.5, 3.0, 2.6, 1.6)
         cargo(part, h, [('barrel', -.2, .5), ('barrel', -.15, .25), ('crate', .2, -.5), ('sack', .25, .45)])
     elif key == 'nave':
         castle(part, h, True, 7.2, 2.8, 'lattice')
@@ -389,6 +437,9 @@ def build_ship(part, sails, key, s, furl):
         shrouds(part, h, 2.4, head, n=3, ratlines=True)
         head2 = lateen(part, sails, h, -2.4, 15.5, 19.0, furl)
         shrouds(part, h, -2.4, head2, n=2)
+        masthead_flag(part, h, head, 3.4, 2.1)
+        masthead_flag(part, h, head2, 2.6, 1.6)
+        ensign(part, h, h.top(-1) + 2.9, 3.0, 2.6, 1.6)
         cargo(part, h, [('sack', .0, .5), ('barrel', -.05, -.5), ('crate', .12, .05), ('sack', .1, -.3)])
     return h
 
@@ -418,6 +469,11 @@ def export(parts, out_path):
         so, sf = export_part(sails, keys), export_part(furled, keys)
         assert so['c'] == sf['c'] and len(so['v']) == len(sf['v']), key + ': sail morph targets differ'
         d['sails'] = {'v': so['v'], 'f': sf['v'], 'c': so['c']}
+        # Heraldry: flag mounts and the patches on the sails (both in U), coloured by the game.
+        U = lambda vals: [round(q / METERS_PER_U, 3) for q in vals]
+        d['flags'] = [{'at': U(f['at']), 'w': U([f['w']])[0], 'h': U([f['h']])[0]} for f in h.marks['flags']]
+        d['emblems'] = [{'cols': e['cols'], 'rows': e['rows'], 'axis': e['axis'], 'v': U(e['v']), 'f': U(e['f'])}
+                        for e in h.marks['emblems']]
         d.update({'label': s['label'], 'size': s['size'], 'L': round(s['L'] / METERS_PER_U, 3),
                   'B': round(s['B'] / METERS_PER_U, 3), 'draft': round(s['D'] / METERS_PER_U, 3),
                   'deck': round(h.deck_z(0) / METERS_PER_U, 3)})

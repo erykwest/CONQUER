@@ -122,6 +122,11 @@ body.asset-catalog-static #labLegacyControls{display:none}
   </div>
   <div class="group" role="group" aria-label="Navi"><span>Navi</span>
     <button data-subject="ship:barca">Barca</button><button data-subject="ship:cargo">Carico</button><button data-subject="ship:caravella">Caravella</button><button data-subject="ship:cocca">Cocca</button><button data-subject="ship:nave">Nave latina</button>
+    <label id="shipFlagBox">Bandiera <select id="shipFlag">
+      <option value="player|player">Regno del giocatore</option>
+      <option value="foreign|azure">Regno d’Azzurro</option><option value="foreign|vert">Regno di Verde</option><option value="foreign|sable">Regno di Nero</option>
+      <option value="merchant|player">Mercantile · regno del giocatore</option><option value="merchant|azure">Mercantile · Regno d’Azzurro</option>
+    </select></label>
   </div>
   <div class="group" role="group" aria-label="Azione" id="actions"></div>
   <label>Velocità <input id="speed" type="range" min="0" max="2" step="0.1" value="1"></label>
@@ -474,8 +479,10 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     if(action==='cycle')shipSail.furl=S.cycle(clock);
     else{(action==='furl'?S.raise:S.lower)(shipSail);S.step(shipSail,dt)}
     g.fillStyle='#3d6f86';g.fillRect(0,H*.22,W,H*.56);
+    // Allegiance: realm arms on flags and sails; merchants fly the flag only.
+    const [allegiance,realm]=$('shipFlag').value.split('|'),arms={...S.arms({allegiance,realm}),t:clock};
     [[W*.38,H*.62,Math.min(W*.5/m.L,H*.3/m.L)],[W*.84,H*.6,12*2.6*k]].forEach(([cx,cy,s])=>
-      W3.drawMeshes(g,[S.mesh(key,{x:0,y:0,heading},shipSail.furl)],isoView(cx,cy,s,turns)));
+      W3.drawMeshes(g,[S.mesh(key,{x:0,y:0,heading},shipSail.furl,arms)],isoView(cx,cy,s,turns)));
     g.fillStyle='#fff';g.font=Math.round(14*k)+'px system-ui';
     g.fillText('Vele '+Math.round((1-shipSail.furl)*100)+'% spiegate',W*.04,H*.26);
   }
@@ -593,6 +600,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/assets/ship-models.js?v=ships-1"></script>
 <script src="./src/settlement-ships.js?v=ships-1"></script>
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
+<script src="./src/heraldry-shapes.js?v=ships-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>
 <script src="./src/asset-catalog.js?v=asset-lab-8"></script>
 <script src="./src/asset-audit.js?v=asset-lab-7"></script>
