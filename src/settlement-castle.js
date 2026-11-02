@@ -492,7 +492,7 @@ function wallTerrainVerdict(s){
 // terrain under its middle (ground), its base goes down to the lowest terrain under it (low,
 // relative to ground) and its top, ground + the wall height, is a tread of the walk. Level runs are
 // merged into one section. null: a flat wall.
-const WALL_TREAD=.12,WALL_STAIR_MAX_DEG=60,wallSectionCache=new WeakMap();
+const WALL_TREAD=.12,WALL_STAIR_RISE=2/3,wallSectionCache=new WeakMap();
 function wallSlopeSections(s){
   if(s?.type!=='wall'||!s.a||!s.b)return null;
   const key=[s.a.x,s.a.y,s.b.x,s.b.y,s.width,s.tier,s.aSnap,s.bSnap,hasCastleSnap(s.aSnap),hasCastleSnap(s.bSnap),
@@ -510,9 +510,9 @@ function wallSlopeSections(s){
       const foot=Math.min(...pts.map(terrainElevation),terrainElevation(lerp(A,B,t0)),terrainElevation(lerp(A,B,t1)));
       raw.push({t0,t1,pts,ground:terrainElevation(lerp(A,B,(t0+t1)/2)),foot});
     }
-    // The stair never climbs steeper than WALL_STAIR_MAX_DEG: where the terrain jumps (a terrace
-    // edge), the treads below are raised into a 60° flight that meets the upper level.
-    const maxRise=Math.tan(WALL_STAIR_MAX_DEG*Math.PI/180)*L/n;
+    // No riser is taller than 2/3 of its tread (H ≤ WALL_STAIR_RISE·L): where the terrain jumps (a
+    // terrace edge), the treads below are raised into a flight that meets the upper level.
+    const maxRise=WALL_STAIR_RISE*L/n;
     for(let i=1;i<n;i++)raw[i].ground=Math.max(raw[i].ground,raw[i-1].ground-maxRise);
     for(let i=n-2;i>=0;i--)raw[i].ground=Math.max(raw[i].ground,raw[i+1].ground-maxRise);
     sections=[];
