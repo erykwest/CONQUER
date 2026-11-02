@@ -401,9 +401,9 @@ function structureScreenSilhouette(s){
       for(const p of towerRoofFootprintPoints(s))cloud.push(w2s(p,h));
       cloud.push(w2s({x:s.x,y:s.y},towerVisualTopHeight(s)));
     }
-    if(towerHasHoarding(s)){
-      const z=towerHoardingBaseZ(s);
-      for(const b of towerHoardingBays(s)){
+    if(hasPointHoarding(s)){
+      const z=pointHoardingBaseZ(s);
+      for(const b of pointHoardingBays(s)){
         const q={x:b.p0.x+b.n0.x*.5,y:b.p0.y+b.n0.y*.5};
         cloud.push(w2s(q,z-.6),w2s(q,z+.5),w2s(b.p0,z+.69));
       }
@@ -464,15 +464,15 @@ function machicolationFloorPolygon(s){
   }
   return null;
 }
-// Tower hoarding (ballatoio): a timber gallery mounted round the top in wartime, the roof stays
-// as built. The Blender bay of src/assets/hoarding-models.js is repeated along the tower outline,
+// Hoarding (ballatoio) of a tower or a stone gate: a timber gallery mounted round the top in wartime,
+// the roof stays as built. The Blender bay of src/assets/hoarding-models.js is repeated along the outline,
 // each bay swept between two outward normals, mitred at the corners, so square corners close and
 // round towers follow their curve with the same module.
-function towerHasHoarding(s){return !underConstruction(s)&&towerHoardingMounted(s)}
-// On the crenellated top the gallery rides at the tower top, round the merlons; under a pitched
-// roof it hangs on the wall just below the eave, its lean-to tucked under the roof.
-function towerHoardingBaseZ(s){return structureHeight(s)-(towerRoofStyle(s)==='pitched'?.72:0)}
-function towerHoardingBays(s){
+function hasPointHoarding(s){return !!s&&!underConstruction(s)&&hoardingMounted(s)}
+// On the crenellated top the gallery rides at the top, round the merlons; under a pitched roof it
+// hangs on the wall just below the eave, its lean-to tucked under the roof.
+function pointHoardingBaseZ(s){return structureHeight(s)-((s.type==='gate'?gateRoofStyle(s):towerRoofStyle(s))==='pitched'?.72:0)}
+function pointHoardingBays(s){
   const data=window.ConquerHoardingModels;if(!data)return[];
   const bayLen=data.bayLength,r=Number(s.r)||.5;
   const pts=(s.shape==='round'?circleWorldPoints(s.x,s.y,r,Math.max(12,Math.round(Math.PI*2*r/(bayLen*.6)))):footprintPoints(s)).slice();
@@ -501,11 +501,11 @@ function towerHoardingBays(s){
   return bays;
 }
 // World triangles of a tower's hoarding: [{pts:[{p,z}x3], hex, key}], z above the tower's ground plane.
-function towerHoardingTriangles(s){
-  const data=window.ConquerHoardingModels;if(!data||!towerHasHoarding(s))return[];
-  const z0=towerHoardingBaseZ(s),bayLen=data.bayLength,pal=data.palette,keys=data.paletteKeys,out=[];
+function pointHoardingTriangles(s){
+  const data=window.ConquerHoardingModels;if(!data||!hasPointHoarding(s))return[];
+  const z0=pointHoardingBaseZ(s),bayLen=data.bayLength,pal=data.palette,keys=data.paletteKeys,out=[];
   const color=ci=>keys[ci].startsWith('roof')&&keys[ci]!=='roofUnder'?winterSnowColor(pal[ci],ci%2?WINTER_SNOW_A:WINTER_SNOW_B):pal[ci];
-  for(const bay of towerHoardingBays(s)){
+  for(const bay of pointHoardingBays(s)){
     const at=(x,y)=>{const t=x/bayLen,nx=bay.n0.x+(bay.n1.x-bay.n0.x)*t,ny=bay.n0.y+(bay.n1.y-bay.n0.y)*t;
       return{x:bay.p0.x+(bay.p1.x-bay.p0.x)*t+nx*y,y:bay.p0.y+(bay.p1.y-bay.p0.y)*t+ny*y}};
     for(const part of Object.values(data.models.bay.parts)){
@@ -519,8 +519,8 @@ function towerHoardingTriangles(s){
   return out;
 }
 // 2.5D fallback: the same triangles, painted far to near, back faces skipped.
-function drawTowerHoarding(s){
-  const tris=towerHoardingTriangles(s);if(!tris.length)return;
+function drawPointHoarding(s){
+  const tris=pointHoardingTriangles(s);if(!tris.length)return;
   const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
   const items=tris.map(t=>({t,d:depth(t)})).sort((a,b)=>a.d-b.d);
   for(const {t} of items){
@@ -884,17 +884,18 @@ function drawRoundTowerRoof(s){
 }
 function drawTowerRoof(s){
   // The gallery first: under a pitched roof the eave overhangs its lean-to.
-  if(towerHasHoarding(s))withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>drawTowerHoarding(s)));
+  if(hasPointHoarding(s))withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>drawPointHoarding(s)));
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
   withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'||s.shape==='dee'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
 }
 function drawTowerRoofs(){
   const towers=State.structures
-    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&(towerRoofStyle(s)==='pitched'||towerHasHoarding(s)))
+    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&(towerRoofStyle(s)==='pitched'||hasPointHoarding(s)))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of towers)withStructureVisualMaterial(s,()=>drawTowerRoof(s));
 }
 function drawGateRoof(s){
+  if(hasPointHoarding(s))withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>drawPointHoarding(s)));
   if(!s||s.type!=='gate'||isWoodGate(s)||underConstruction(s)||gateRoofStyle(s)!=='pitched')return;
   const g=gateRoofGeometry(s);if(!g)return;
   withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>{
@@ -914,7 +915,7 @@ function drawGateRoof(s){
 }
 function drawGateRoofs(){
   const gates=State.structures
-    .filter(s=>s.type==='gate'&&!underConstruction(s)&&gateRoofStyle(s)==='pitched')
+    .filter(s=>s.type==='gate'&&!underConstruction(s)&&(gateRoofStyle(s)==='pitched'||hasPointHoarding(s)))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of gates)withStructureVisualMaterial(s,()=>drawGateRoof(s));
 }

@@ -153,6 +153,11 @@ function structureAssetFamilyCatalog(){
     'gate-stone-l'+level+'-'+roofStyle,'Stone gate L'+level+' '+roofStyle,
     assetPointBase('gate',{shape:'square',material:'stone',size:1.5,level,roofStyle})
   );
+  // Hoarding mounted on the large and the small stone gate, crenellated or roofed.
+  for(const size of [1.5,1])for(const roofStyle of ['battlement','pitched'])add(
+    'gate-stone-'+(size<1.25?'small':'large')+'-l2-'+roofStyle+'-hoarding','Stone '+(size<1.25?'small':'large')+' gate L2 '+roofStyle+' with hoarding',
+    assetPointBase('gate',{shape:'square',material:'stone',size,level:2,roofStyle,hoarding:'on'})
+  );
   add('gate-wood','Wood gate',assetPointBase('gate',{shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}));
   for(let tier=1;tier<=3;tier++)for(let level=1;level<=2;level++)for(const skin of (tier===1?['standard','hoarding']:['standard','machicolation','hoarding']))for(const length of STRUCTURE_ASSET_TEST_LENGTHS.wall)add(
     'wall-t'+tier+'-l'+level+'-'+skin+'-'+length,'Wall T'+tier+' L'+level+' '+skin+' '+length+'U',

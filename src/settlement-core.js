@@ -295,7 +295,8 @@ const STRUCTURE_VARIANTS=Object.freeze({
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
-    upper:Object.freeze(['stone','timber'])
+    upper:Object.freeze(['stone','timber']),
+    hoarding:Object.freeze(['off','on'])
   }),
   wall:Object.freeze({
     skin:Object.freeze(['standard','machicolation','hoarding'])
@@ -306,7 +307,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
   tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',hoarding:'off'}),
-  gate:Object.freeze({roofStyle:'battlement',upper:'stone'}),
+  gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
 });
@@ -387,6 +388,11 @@ function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&
 // Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
 function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','pitched'].includes(towerRoofStyle(s))}
 function towerHoardingMounted(s){return towerHoardingAllowed(s)&&structureVariant(s,'hoarding')==='on'}
+// Stone gates (large and small) take it too, not over a timber-framed storey.
+function gateHoardingAllowed(s){return !!s&&s.type==='gate'&&!isWoodGate(s)&&!gateTimberUpper(s)&&['battlement','pitched'].includes(gateRoofStyle(s))}
+function gateHoardingMounted(s){return gateHoardingAllowed(s)&&structureVariant(s,'hoarding')==='on'}
+function hoardingAllowed(s){return s?.type==='gate'?gateHoardingAllowed(s):towerHoardingAllowed(s)}
+function hoardingMounted(s){return s?.type==='gate'?gateHoardingMounted(s):towerHoardingMounted(s)}
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;

@@ -52,13 +52,14 @@ const StructureCommands=(()=>{
     if(!setStructureVariant(target,'roofStyle',style))return false;
     refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?'machicolation':'battlement'));return true;
   }
-  // The hoarding is mounted or taken down; the roof stays as built.
-  function setTowerHoarding(id,value){
-    const target=find(id);if(!target||target.type!=='tower')return false;
-    if(value==='on'&&!towerHoardingAllowed(target)){status('Hoarding needs a crenellated or pitched stone tower');return false}
+  // The hoarding of a tower or stone gate is mounted or taken down; the roof stays as built.
+  function setHoarding(id,value){
+    const target=find(id);if(!target||!['tower','gate'].includes(target.type))return false;
+    if(value==='on'&&!hoardingAllowed(target)){status('Hoarding needs a crenellated or pitched stone '+target.type);return false}
     if(!setStructureVariant(target,'hoarding',value==='on'?'on':'off'))return false;
-    refresh(target);status('Tower hoarding: '+(target.hoarding==='on'?'mounted':'taken down'));return true;
+    refresh(target);status((target.type==='gate'?'Gate':'Tower')+' hoarding: '+(target.hoarding==='on'?'mounted':'taken down'));return true;
   }
+  const hoardingChoice=s=>choice('hoarding','setHoarding',[{value:'off',word:'hoardingOff'},{value:'on',word:'hoardingOn',disabled:!hoardingAllowed(s)}],hoardingMounted(s)?'on':'off');
   function setWoodRoof(id,style){
     const target=find(id);if(!isWoodTower(target)||woodTowerStyle(target)!=='palisadeTower')return false;
     target.woodRoof=style==='pitched'?'pitched':'open';
@@ -208,7 +209,7 @@ const StructureCommands=(()=>{
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
-        if(s.shape!=='half')d.controls.push(choice('hoarding','setTowerHoarding',[{value:'off',word:'hoardingOff'},{value:'on',word:'hoardingOn',disabled:!towerHoardingAllowed(s)}],towerHoardingMounted(s)?'on':'off'));
+        if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
         d.controls.push(choice('base','setTowerBase',[{value:'standard',word:'standard'},{value:'buttress',word:'buttress'},{value:'splayed',word:'splayed'}],towerBaseStyle(s)));
         if(s.parentTowerId)d.facts.push({key:'subtower',value:structureLabel(State.structures.find(x=>x.id===s.parentTowerId)||s)});
@@ -219,6 +220,7 @@ const StructureCommands=(()=>{
       const timber=gateTimberUpper(s);
       if(isSmallGate(s)&&structureLevel(s)===2)d.controls.push(choice('upper','setGateUpper',[{value:'stone',word:'masonry'},{value:'timber',word:'timber'}],timber?'timber':'stone'));
       d.controls.push(choice('roof','setGateRoof',[{value:'battlement',word:'battlement',disabled:timber},{value:'pitched',word:'pitched'}],gateRoofStyle(s)));
+      d.controls.push(hoardingChoice(s));
     }
     if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
       d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
@@ -254,7 +256,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setTowerHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
+  return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
     setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();

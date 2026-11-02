@@ -92,6 +92,8 @@ function gateRoofGeometry(s){
 }
 function gateVisualTopHeight(s){
   if(!s||s.type!=='gate')return structureHeight(s);
+  // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(gateRoofStyle(s)==='battlement'&&gateHoardingMounted(s))return structureHeight(s)+.69;
   return structureHeight(s)+gateRoofRise(s);
 }
 function structureVisualTopHeight(s){

@@ -145,11 +145,6 @@
     }
     for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
     for(const l of halfTowerLadders(s))m.prism(l.pts,l.z0,l.z1,l.part==='rung'?PAL.ladderRung():PAL.ladderRail());
-    if(towerHasHoarding(s)){
-      // Blender bay (hoarding-models.js) swept around the outline; sides a shade darker.
-      m.tag='roof';
-      for(const t of towerHoardingTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
-    }
     if(towerRoofStyle(s)==='pitched'){
       m.tag='roof';
       const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);
@@ -252,6 +247,8 @@
         if(s.type==='tower')addTower(m,s);
         m.tag='roof';
         if(s.type==='gate')addGate(m,s);
+        // Tower / gate hoarding: the Blender bay (hoarding-models.js) swept round the outline; sides a shade darker.
+        for(const t of pointHoardingTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         if(s.type==='built')addBuilt(m,s);
         m.tag='body';
         for(const b of wideHallButtresses(s))addButtress(m,b);
