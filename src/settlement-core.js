@@ -290,7 +290,8 @@ const STRUCTURE_VARIANTS=Object.freeze({
     roofStyle:Object.freeze(['battlement','machicolation','pitched']),
     baseStyle:Object.freeze(['standard','buttress','splayed']),
     topWeapon:Object.freeze(['none','mangonel','ballista']),
-    bartizan:Object.freeze(['none','battlement','pitched'])
+    bartizan:Object.freeze(['none','battlement','pitched']),
+    roofShape:Object.freeze(['pyramid','gable','hip'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -304,7 +305,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})

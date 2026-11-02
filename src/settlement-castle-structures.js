@@ -400,6 +400,8 @@ function structureScreenSilhouette(s){
     if(s.type==='tower'&&towerRoofStyle(s)==='pitched'){
       for(const p of towerRoofFootprintPoints(s))cloud.push(w2s(p,h));
       cloud.push(w2s({x:s.x,y:s.y},towerVisualTopHeight(s)));
+      const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
+      if(g)cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
     }
     if(s.type==='gate'&&gateRoofStyle(s)==='pitched'){
       const g=gateRoofGeometry(s);
@@ -828,6 +830,16 @@ function withPointRoofOcclusion(s,drawFn){
 function drawSquareTowerRoof(s){
   const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
   if(fp.length<4)return;
+  if(towerRoofShape(s)!=='pyramid'){
+    const winter=State.season==='winter',faces=squareTowerRoofGeometry(s).faces.map(f=>{
+      const poly=f.pts.map(q=>w2s(q.p,q.z));
+      return{poly,depth:(poly[0].y+poly[1].y)/2,gable:f.kind==='gable',
+        fill:f.kind==='gable'?(f.i===1?'#62584f':'#514a44'):winter?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a')};
+    });
+    faces.sort((a,b)=>a.depth-b.depth);
+    for(const f of faces)pathPolygon(f.poly,f.fill,winter&&!f.gable?WINTER_SNOW_STROKE:'#5d6066',1);
+    return;
+  }
   const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
   for(let i=0;i<4;i++){
     const j=(i+1)%4,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
@@ -892,7 +904,12 @@ function drawGateRoofs(){
 function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function drawQuarteredTowerFlag(tower){
   if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower')return;
-  if(towerRoofStyle(tower)==='pitched')drawQuarteredFlagAt({x:tower.x,y:tower.y},towerVisualTopHeight(tower),tower.id+'-flag');
+  if(towerRoofStyle(tower)==='pitched'){
+    // A roof with a ridge flies a flag at each end of it, a pyramid one on its apex.
+    const g=towerRoofShape(tower)!=='pyramid'&&squareTowerRoofGeometry(tower);
+    if(g){drawQuarteredFlagAt(g.ridgeA,g.ridgeH,tower.id+'-flag');drawQuarteredFlagAt(g.ridgeB,g.ridgeH,tower.id+'-flag-2')}
+    else drawQuarteredFlagAt({x:tower.x,y:tower.y},towerVisualTopHeight(tower),tower.id+'-flag');
+  }
   // A smaller pennant on the spire of every pitched bartizan.
   towerBartizans(tower).forEach((b,i)=>{if(b.style==='pitched')drawQuarteredFlagAt(b.center,b.apexZ,tower.id+'-bartizan-'+i,.7)});
 }

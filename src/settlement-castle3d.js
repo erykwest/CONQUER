@@ -146,6 +146,13 @@
       if(s.shape==='round'||s.shape==='dee'){
         const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
         m.pyramid(ring,h,apex,apexZ,i=>cols[i%3]);
+      }else if(towerRoofShape(s)!=='pyramid'){
+        // Two slopes with stone gables, or a hip roof on a short ridge (squareTowerRoofGeometry).
+        for(const f of squareTowerRoofGeometry(s).faces){
+          m.tag=f.kind==='gable'?'gable':'roof';
+          m.face(f.pts,f.kind==='gable'?PAL.stone():winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
+        }
+        m.tag='roof';
       }else{
         m.pyramid(ring,h,apex,apexZ,i=>winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
       }

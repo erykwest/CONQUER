@@ -110,6 +110,14 @@ const StructureCommands=(()=>{
     status('Tower weapon: '+({none:'none',mangonel:'mangonel',ballista:'ballista'}[target.topWeapon])+(towerTopWeaponAllowed(target)?'':' (needs a T2 tower without a pitched roof)'));
     return true;
   }
+  // Cosmetic only: the roof shape changes neither cost nor rooms.
+  function setTowerRoofShape(id,shape){
+    const target=find(id);if(!target||target.type!=='tower'||(target.shape||'square')!=='square')return false;
+    if(!setStructureVariant(target,'roofShape',shape))return false;
+    refresh(target,false);
+    status('Tower roof shape: '+({pyramid:'pyramid',gable:'two slopes',hip:'four slopes with ridge'}[target.roofShape])+(towerRoofStyle(target)==='pitched'?'':' (shown with a pitched roof)'));
+    return true;
+  }
   function setTowerBartizan(id,style){
     const target=find(id);if(!target||target.type!=='tower')return false;
     if(!setStructureVariant(target,'bartizan',style))return false;
@@ -210,6 +218,10 @@ const StructureCommands=(()=>{
       }else{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
+        if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
+          const flat=towerRoofStyle(s)!=='pitched';
+          d.controls.push(choice('roofShape','setTowerRoofShape',[{value:'pyramid',word:'pyramid',disabled:flat},{value:'gable',word:'gable',disabled:flat},{value:'hip',word:'hip',disabled:flat}],structureVariant(s,'roofShape')));
+        }
         if(variantSchema(s)?.bartizan){
           const off=!towerBartizanAllowed(s);
           d.controls.push(choice('bartizan','setTowerBartizan',[{value:'none',word:'none'},{value:'battlement',word:'battlement',disabled:off},{value:'pitched',word:'spire',disabled:off}],structureVariant(s,'bartizan')));
@@ -259,6 +271,6 @@ const StructureCommands=(()=>{
   }
 
   return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setTowerBartizan,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setTowerBartizan,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();
