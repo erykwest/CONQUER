@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Castello — garitte e forme delle falde (02/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/bartizans`, NON MERGE:** variante `bartizan` (nessuna / merlate / guglia) per le torri grandi T3 quadrate e rotonde in pietra: quattro garitte d'angolo su mensole, 3 tiratori ciascuna con colpo al piede della torre 0–1U, bandiera sulle guglie. Variante `roofShape` (piramide / 2 falde / 4 falde con colmo L/2) per le torri quadrate col tetto a falde, solo estetica, due bandiere quando c'è il colmo.
+- **APERTO:** garitte e falde nuove solo nel render 3D (il fallback 2.5D disegna le falde ma non i corpi delle garitte); garitte su torri a D; orientamento del colmo indipendente dalla rotazione della torre; garitte nel render 2.5D della galleria del Lab («Nel gioco»).
+
 ## Castello — muri sui pendii (02/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/walls-on-slopes`, NON MERGE:** muri T1 su pendii dolci e scoscesi, T2 solo dolci, T3 solo in piano; il muro sul pendio è una scala (una pedata ogni 0,12U) col parapetto merlato continuo; cammino di ronda, pattuglie, cantiere e brecce sul gradino.

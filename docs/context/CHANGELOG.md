@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-02 — Garitte e forme delle falde (branch `feature/bartizans`)
+
+- Torri grandi (T3) quadrate e rotonde in pietra: quattro garitte d'angolo su mensole, merlate o con guglia e bandiera; 3 tiratori per garitta che colpiscono anche il piede della torre fino a 1U. Torri quadrate col tetto a falde: piramide, 2 falde con timpani o 4 falde con colmo lungo metà del tetto (solo estetica, stesso costo; con il colmo due bandiere). Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: due nuove varianti del tipo `tower`, nessun tipo nuovo.
+
 ## 2026-11-02 — Muri sui pendii (branch `feature/walls-on-slopes`)
 
 - I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e il muro stesso diventa una scala (una pedata ogni 0,12U) col parapetto merlato che corre accanto, come sulle mura di Sintra. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
