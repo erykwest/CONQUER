@@ -166,25 +166,6 @@
     m.tag=roofTag;
     for(const c of chimneySpecs(s))m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),c.z0,c.z1,PAL.chimney());
   }
-  // Flights of stairs on the walk of a stepped wall: one block per tread across the whole wall top
-  // (the merlon lane rises with it, so the parapet on top always covers the stairs), standing on
-  // the lower section (wallStairFlights).
-  function addWallStairs(m,s){
-    const H=structureHeight(s),g=wallExteriorLayout(s);
-    const inner=-g.width/2+.005,outer=g.width/2-.005;
-    const at=(t,off)=>({x:s.a.x+g.dx*t+g.nx*off*g.side,y:s.a.y+g.dy*t+g.ny*off*g.side});
-    for(const f of wallStairFlights(s)){
-      const rise=(f.high-f.low)/f.n;
-      withProjectionGroundZ(f.low,()=>{
-        for(let j=0;j<f.n;j++){
-          const ta=f.t0+(f.t1-f.t0)*j/f.n,tb=f.t0+(f.t1-f.t0)*(j+1)/f.n;
-          const q=[at(ta,inner),at(tb,inner),at(tb,outer),at(ta,outer)];
-          if(q.reduce((a,p,i)=>{const r=q[(i+1)%4];return a+p.x*r.y-r.x*p.y},0)<0)q.reverse();   // same winding as the footprints
-          m.prism(q,H-.01,H+rise*(j+1),PAL.stone());
-        }
-      });
-    }
-  }
   function addHoarding(m,s){
     // drawWallHoarding geometry as solids (the 2.5D version draws the board face only when it faces the camera).
     const g=wallExteriorLayout(s),h=g.z,innerOff=Math.max(.02,g.width/2-.02),outerOff=g.width/2+.42;
@@ -245,10 +226,7 @@
         // see through, with door leaves as meshes. The Canvas paths keep the solid block and decals.
         // A wall on a slope is built in steps, each section on its own ground.
         const steps=s.type==='wall'?wallSlopeSections(s):null;
-        if(steps){
-          for(const q of steps)withProjectionGroundZ(q.ground,()=>m.prism(q.pts,q.low,structureHeight(s),PAL.stone()));
-          addWallStairs(m,s);
-        }
+        if(steps)for(const q of steps)withProjectionGroundZ(q.ground,()=>m.prism(q.pts,q.low,structureHeight(s),PAL.stone()));
         else if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
           m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
         if(s.type==='tower')addTower(m,s);

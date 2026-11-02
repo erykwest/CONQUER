@@ -17,7 +17,7 @@ const ctx=vm.createContext({Math,Number,Object,State:{relief:{seed:1,hills:[1]}}
   structureTerrainSamples:s=>Array.from({length:21},(_,i)=>({x:s.a.x+(s.b.x-s.a.x)*i/20,y:s.a.y})),
   buildableTerrainElevationForStructure:s=>s.a.x>=6||s.b.x<=4?(s.a.x>=6?1:0):null,
   unionFootprintPoints:s=>{const h=s.width/2;return[{x:s.a.x,y:s.a.y+h},{x:s.b.x,y:s.b.y+h},{x:s.b.x,y:s.b.y-h},{x:s.a.x,y:s.a.y-h}]}});
-vm.runInContext(block+'\nObject.assign(this,{wallTerrainVerdict,wallSlopeSections,wallGroundAt,wallStairFlights,wallWalkGroundAt});',ctx);
+vm.runInContext(block+'\nObject.assign(this,{wallTerrainVerdict,wallSlopeSections,wallGroundAt,wallWalkGroundAt});',ctx);
 const wall=(tier,a=2,b=8)=>({type:'wall',tier,width:[0,.2,.5,1][tier],a:{x:a,y:0},b:{x:b,y:0}});
 {
   for(const kind of ['gentle','steep']){
@@ -31,7 +31,11 @@ const wall=(tier,a=2,b=8)=>({type:'wall',tier,width:[0,.2,.5,1][tier],a:{x:a,y:0
 {
   terrain.kind='gentle';
   const s=wall(2),secs=ctx.wallSlopeSections(s);
-  assert.ok(secs&&secs.length>=12,'about one section per 0.5U');
+  // Flat 2..4 and 6..8, slope 4..6: two level runs, a stair of ~0.12U treads in between.
+  assert.ok(secs&&secs.length>=16&&secs.length<=20,'one tread per ~0.12U on the slope, level runs merged');
+  assert.ok((secs[0].t1-secs[0].t0)*6>1.9,'the flat foot is one block');
+  const stair=secs.slice(1,-1);
+  for(let i=1;i<stair.length;i++)assert.ok(stair[i].ground-stair[i-1].ground<.08,'gentle stair: rises under 0.08U');
   for(const q of secs){
     assert.ok(q.low<=0,'the base reaches the lowest ground under the section');
     assert.ok(q.t1>q.t0,'sections ordered along a->b');
@@ -43,18 +47,12 @@ const wall=(tier,a=2,b=8)=>({type:'wall',tier,width:[0,.2,.5,1][tier],a:{x:a,y:0
   console.log('PASS stepped wall sections');
 }
 {
-  // Flights of stairs at every step of a walked (T2+) wall; none on a T1 wall (no walk).
+  // The wall top is the stair: the walk at t is the tread there.
   terrain.kind='gentle';
-  const s=wall(2),secs=ctx.wallSlopeSections(s),flights=ctx.wallStairFlights(s);
-  const steps=secs.filter((q,i)=>i&&Math.abs(q.ground-secs[i-1].ground)>=.03).length;
-  assert.equal(flights.length,steps,'one flight per step');
-  for(const f of flights){
-    assert.ok(Math.abs((f.high-f.low)/f.n-.07)<.04,'treads of about 0.07U');
-    const head=ctx.wallWalkGroundAt(s,f.t1-(f.t1-f.t0)*1e-6),foot=ctx.wallWalkGroundAt(s,f.t0-(f.t1-f.t0)*.01);
-    assert.ok(Math.abs(foot-f.low)<1e-6&&Math.abs(head-f.high)<1e-6,'the walk climbs the flight from one section to the next');
-    const rise=(f.high-f.low)/f.n;
-    for(let j=0;j<f.n;j++){const tm=f.t0+(f.t1-f.t0)*(j+.5)/f.n;assert.ok(Math.abs(ctx.wallWalkGroundAt(s,tm)-(f.low+rise*(j+1)))<1e-6,'tread '+j+' top')}
-  }
-  assert.equal(ctx.wallStairFlights(wall(1)).length,0,'T1 has no walk, no stairs');
-  console.log('PASS stair flights on the wall-walk');
+  const s=wall(2),secs=ctx.wallSlopeSections(s);
+  for(const q of secs){const tm=(q.t0+q.t1)/2;assert.equal(ctx.wallWalkGroundAt(s,tm),q.ground,'walk on the tread')}
+  terrain.kind='steep';
+  const t1=ctx.wallSlopeSections(wall(1)).slice(1,-1);
+  assert.ok(t1.every((q,i)=>!i||q.ground-t1[i-1].ground<.27),'steep T1: steep treads, still one per ~0.12U');
+  console.log('PASS the wall top is the stair');
 }

@@ -2,7 +2,7 @@
 
 ## Castello — muri sui pendii (02/11/2026)
 
-- **IMPLEMENTATO SU BRANCH `feature/walls-on-slopes`, NON MERGE:** muri T1 su pendii dolci e scoscesi, T2 solo dolci, T3 solo in piano; muro a gradoni (una sezione ~0,5U per gradino) con merli, cammino di ronda, pattuglie, cantiere e brecce sul gradino.
+- **IMPLEMENTATO SU BRANCH `feature/walls-on-slopes`, NON MERGE:** muri T1 su pendii dolci e scoscesi, T2 solo dolci, T3 solo in piano; il muro sul pendio è una scala (una pedata ogni 0,12U) col parapetto merlato continuo; cammino di ronda, pattuglie, cantiere e brecce sul gradino.
 - **APERTO:** soldati in combattimento sul cammino di un T2 in pendio (altezza ai nodi); scale d'assalto contro un T2 in pendio; fallback 2.5D a bande senza Castle 3D; ballatoio e caditoie su muri in pendio (oggi tolti).
 
 ## MARCH — Attacco e campagna militare (skeleton 30/10/2026)
