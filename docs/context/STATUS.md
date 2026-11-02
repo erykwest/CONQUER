@@ -14,6 +14,14 @@
 - **Merge di `main` `375b50a` (#106):** senza conflitti.
 - **Merge di `main` `cf56999` (#103 centro di controllo):** conflitti solo in STATUS/BACKLOG/CHANGELOG, risolti tenendo tutte le sezioni; `qa/*.cjs` non browser PASS dopo il merge.
 
+## 2026-10-30 — MARCH, skeleton su branch feature/march-skeleton (NON MAIN)
+
+- Nuova route /march/ con scenario strategico **isolato**: una compagnia, quattro feudi fixture, mappa a celle, ordini di spostamento, scorte e bottino, operazioni raid/siege, ritirata sempre possibile e annessione esplicita solo dopo l'esito positivo di un assalto di TEST. File: march/index.html, march/ui.js, march/engine.js.
+- I danni civili e le scorte ridotte rimangono nello scenario dopo la ritirata; un assedio non cambia automaticamente la proprietà. Persistenza **solo locale e indipendente** (conquer.march.prototype.v1), senza modifica ai salvataggi del Builder.
+- Test: sintassi di engine/ui e ciclo rapido route→raid→withdraw→siege→mock victory→conquer verificati in runtime JS isolato; suite qa/march-regression.cjs aggiunta **non ancora eseguita tramite Node/CI**; test browser/e2e non eseguiti.
+- NON implementato: World/Feudal condiviso, roster reale Combat, danni strutturali reali, blocco/resa automatica, trasferimento asset o proprietà nel gioco reale. Contratto e limiti in [MARCH](../march.md). Non confondere la fixture con una seconda economia o con il sistema di assedio già presente.
+
+
 ## Stato operativo verificato — 30 ottobre 2026 · MAIN `cf569992`
 
 > **Questa è la fotografia corrente** e prevale sulle sezioni storiche sotto, spesso intitolate «branch ... non su main». Fonte: [AUDIT-2026-10-30.md](AUDIT-2026-10-30.md). Audit statico di Git, codice e CI; **nessuna nuova suite eseguita** in questa revisione.

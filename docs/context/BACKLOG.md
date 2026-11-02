@@ -5,6 +5,13 @@
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** livree a schema dei padiglioni; kit Blender del campo (canadese, tenda di compagnia, tettoia, botti, sacchi, linea dei cavalli, palizzata e porta); bivacco notturno organizzato in `/camp`; accampamento militare come struttura del Builder, dimensionato dall'esercito e fortificabile (steccato → palizzata con porta); tutto nel Lab.
 - **ANCORA APERTO:** collegare l'accampamento alle truppe reali (oggi l'esercito è impostato a mano nel pannello); controllo collisioni quando il lotto cresce; sentieri disegnati; cavalli 2D alla linea; fossato, terrapieno e torrette di legno come livelli successivi; effetti di gioco (riposo, morale, difesa, assedio dell'accampamento); palette tessile dei colori (garanza, guado, panna, ocra, carbone) al posto delle tinte primarie.
 
+## MARCH — Attacco e campagna militare (skeleton 30/10/2026)
+
+- **SUL BRANCH feature/march-skeleton, NON MAIN**: pagina /march/ e motore UI-independent per spostamento, approccio a un feudo, razzie parziali con bottino, fase assedio, ritirata volontaria senza rollback, vittoria d'assalto simulata solo per test e annessione esplicita. Regressione qa/march-regression.cjs disponibile; CI/browser non ancora certificati.
+- **DA INTEGRARE**: world map/feudi reali e salvataggio condiviso; Company con unità del Combat Engine; risoluzione razzie e assalti con danni e scorte reali; accessi, campi, logistica e fame via ConquerSiege; occupazione/governatore e passaggio al Feudo. Non introdurre una seconda economia o nuovi algoritmi indipendenti di assedio.
+- **Regole approvate**: razzia e distruzione parziale senza obbligo di completare l'invasione; ritiro sempre possibile; espugnazione ≠ conquista; annessione solo per scelta espressa del giocatore. [Specifica e criteri](../march.md).
+
+
 ## Triage prevalente — 30 ottobre 2026 · ref `main` `cf569992`
 
 > [**AUDIT COMPLETO 30/10**](AUDIT-2026-10-30.md) prevale per la presenza effettiva sul codice rispetto alle sezioni storiche **23–29 ottobre** qui sotto. Non cancellare i vecchi requisiti: le loro note «branch/non su main» sono documentazione storica alle date indicate.
