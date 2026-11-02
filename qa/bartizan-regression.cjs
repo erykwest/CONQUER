@@ -40,7 +40,7 @@ check('tower merlons under a turret go; crenellated turrets bring their own ring
   const turrets=run('towerBartizans')(withB),pieces=run('towerCrownPieces')(withB);
   for(const p of pieces.filter(p=>p.kind!=='parapet'&&p.kind!=='bartizanMerlon'))
     assert.ok(!turrets.some(b=>Math.hypot(centroid(p).x-b.center.x,centroid(p).y-b.center.y)<b.r),'no tower merlon inside a turret');
-  assert.equal(pieces.filter(p=>p.kind==='bartizanMerlon').length,4*6,'six merlons per turret');
+  assert.equal(pieces.filter(p=>p.kind==='bartizanMerlon').length,4*8,'eight merlons per turret');
   assert.equal(run('towerCrownPieces')(spire).filter(p=>p.kind==='bartizanMerlon').length,0,'spires have no merlons');
   assert.equal(run('towerCrownPieces')(plain).length,run('towerBattlementPieces')(plain).length,'no bartizans, crown unchanged');
 });

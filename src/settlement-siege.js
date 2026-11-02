@@ -219,7 +219,7 @@
     towerBartizans(tower).forEach((b,i)=>{
       const tx=-b.ny,ty=b.nx;
       for(let k=0;k<BARTIZAN_SLOTS;k++){
-        const side=(k-1)*.09,back=k===1?-.05:.04,p={x:b.center.x+b.nx*back+tx*side,y:b.center.y+b.ny*back+ty*side};
+        const side=(k-1)*.14,back=k===1?-.08:.06,p={x:b.center.x+b.nx*back+tx*side,y:b.center.y+b.ny*back+ty*side};
         result.push({id:tower.id+':bartizan:'+i+':'+k,kind:'bartizan',bartizan:i,floor:top,nx:b.nx,ny:b.ny,p,
           z:b.deckZ+.08,h:ground+top,visualZ:ground+b.deckZ+.08,foot:{x:b.center.x,y:b.center.y,r:b.r,reach:BARTIZAN_REACH}});
       }

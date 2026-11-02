@@ -767,12 +767,12 @@ function withoutBuriedBattlements(s,pieces){
 // crown); the pitched kind is a taller drum under a conical roof. World-space specs for the 3D builder.
 // Each turret holds BARTIZAN_SLOTS shooters that also reach the tower foot, BARTIZAN_REACH U out.
 const BARTIZAN_SLOTS=3,BARTIZAN_REACH=1;
-const BARTIZAN_R=.27,BARTIZAN_SIDES=12,BARTIZAN_WALL=.06,BARTIZAN_CORBEL=.34,BARTIZAN_DRUM=.36,BARTIZAN_ROOF=.62;
+const BARTIZAN_R=.405,BARTIZAN_SIDES=16,BARTIZAN_WALL=.07,BARTIZAN_CORBEL=.45,BARTIZAN_DRUM=.36,BARTIZAN_ROOF=.85;
 function towerBartizans(s){
   const style=towerBartizan(s);if(style==='none')return[];
   const z=structureHeight(s),centers=s.shape==='round'
     ?[1,3,5,7].map(k=>{const a=(s.angle||0)+k*Math.PI/4,R=(Number(s.r)||1)-.02;return{x:s.x+Math.cos(a)*R,y:s.y+Math.sin(a)*R}})
-    :footprintPoints(s).map(c=>{const dx=c.x-s.x,dy=c.y-s.y,L=Math.hypot(dx,dy)||1;return{x:c.x+dx/L*.06,y:c.y+dy/L*.06}});
+    :footprintPoints(s).map(c=>{const dx=c.x-s.x,dy=c.y-s.y,L=Math.hypot(dx,dy)||1;return{x:c.x+dx/L*.09,y:c.y+dy/L*.09}});
   return centers.map(c=>{
     const ring=r=>circleWorldPoints(c.x,c.y,r,BARTIZAN_SIDES),z0=z-.3,L=Math.hypot(c.x-s.x,c.y-s.y)||1;
     return{style,center:c,nx:(c.x-s.x)/L,ny:(c.y-s.y)/L,r:BARTIZAN_R,ring:ring(BARTIZAN_R),inner:ring(BARTIZAN_R-BARTIZAN_WALL),band:ring(BARTIZAN_R+.025),
@@ -780,7 +780,7 @@ function towerBartizans(s){
       eave:ring(BARTIZAN_R+.05),apexZ:z+BARTIZAN_DRUM+BARTIZAN_ROOF};
   });
 }
-// Parapet ring of a crenellated bartizan: twelve wall segments, every other one raised into a merlon.
+// Parapet ring of a crenellated bartizan: sixteen wall segments, every other one raised into a merlon.
 function bartizanCrownPieces(s,turrets){
   const pieces=[];
   for(const b of turrets){
