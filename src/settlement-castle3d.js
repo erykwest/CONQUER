@@ -32,6 +32,7 @@
     buttress:()=>[snowTop('#948779'),'#625a52','#4b4540','#9f9285'],
     chimney:()=>['#3b302c','#493732','#332824','#6a5148'],
     hoardDeck:()=>['#74533a','#5d432e','#493423','#927155'],
+    plaster:()=>['#e8dcc2','#d2c4a6','#bcae91'],                     // timber-framed storey (house plaster)
     ladderRail:()=>['#8b6a45','#73573a','#5e472f'],                 // cutaway ladder colours
     ladderRung:()=>['#b98652','#9a6f44','#7f5b37'],
   };
@@ -153,8 +154,10 @@
   function addGate(m,s){
     const g=gateRoofGeometry(s);if(!g)return;
     const H=g.h,R=g.ridgeH,sa=winter()?WINTER_SNOW_A:'#34363a',sb=winter()?WINTER_SNOW_B:'#42454a';
-    m.face([{p:g.c3,z:H},{p:g.c0,z:H},{p:g.ridgeA,z:R}],'#514a44');
-    m.face([{p:g.c1,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R}],'#62584f');
+    // Gables: masonry, or plaster over a timber storey.
+    const timber=gateTimberUpper(s),ga=timber?'#cdbf9f':'#514a44',gb=timber?'#e0d4b8':'#62584f';
+    m.face([{p:g.c3,z:H},{p:g.c0,z:H},{p:g.ridgeA,z:R}],ga);
+    m.face([{p:g.c1,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R}],gb);
     m.face([{p:g.c0,z:H},{p:g.c1,z:H},{p:g.ridgeB,z:R},{p:g.ridgeA,z:R}],sa);
     m.face([{p:g.c3,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R},{p:g.ridgeA,z:R}],sb);
   }
@@ -228,8 +231,11 @@
       run(()=>{
         // In the world renderer stone gates are carved: piers and a vault around a passage you can
         // see through, with door leaves as meshes. The Canvas paths keep the solid block and decals.
-        if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
-          for(const pts of towerBodyPrisms(s))m.prism(pts,0,structureHeight(s),PAL.stone());
+        // A timber-framed small gate: stone up to the room floor, plaster storey above.
+        const timber=s.type==='gate'&&gateTimberUpper(s),top=timber?gateTimberFloorZ(s):structureHeight(s);
+        if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,top,PAL.stone())))
+          for(const pts of towerBodyPrisms(s))m.prism(pts,0,top,PAL.stone());
+        if(timber)m.prism(gateTimberStoreyPoints(s),top,structureHeight(s),PAL.plaster());
         if(s.type==='tower')addTower(m,s);
         m.tag='roof';
         if(s.type==='gate')addGate(m,s);

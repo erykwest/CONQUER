@@ -206,7 +206,7 @@
     // Portals sit on footprint edges 1 and 3: keep the strip between them clear.
     const fp=footprintPoints(s),m1={x:(fp[1].x+fp[2].x)/2,y:(fp[1].y+fp[2].y)/2},m3={x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2};
     const b=slot.basis,ax=m1.x-m3.x,ay=m1.y-m3.y,L=Math.hypot(ax,ay)||1,lu=(ax*Math.cos(b.angle)+ay*Math.sin(b.angle))/L;
-    const half=.38;
+    const half=.38*(window.ConquerGates?.portalOf?.(s).width??1.2)/1.2;   // narrower in the small gate
     return Math.abs(lu)>.7?[-b.w/2,-half,b.w/2,half]:[-half,-b.h/2,half,b.h/2];
   }
   function layoutStructure(s,g){

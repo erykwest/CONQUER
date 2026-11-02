@@ -435,19 +435,24 @@ document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
     status('Wood gate height is fixed at H1');
     draw();return;
   }
-  State.buildLevels.gate=Number(b.dataset.gateLevel);
-  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
+  // The small gate stops at L2.
+  const small=State.tool.kind==='gate'&&State.tool.size<1.25;
+  State.buildLevels.gate=Math.min(Number(b.dataset.gateLevel),small?SMALL_GATE_MAX_LEVEL:3);
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===State.buildLevels.gate));
   if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:State.tool.size,level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
-document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level};
+// Stone gates: the gatehouse (data-gate-size 1.5) and the small gate (1).
+for(const b of document.querySelectorAll('[data-gate]'))b.onclick=e=>{
+  const size=Number(b.dataset.gateSize)||GATE_SIZES.large,small=size<1.25;
+  const level=Math.min(State.buildLevels.gate,small?SMALL_GATE_MAX_LEVEL:3),dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size,level};
+  State.buildLevels.gate=level;
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
-  setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+  setTool({kind:'gate',material:'stone',size,level,label:(small?'Small gate 1×1U · L':'Gate 1.5×1.5U · L')+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 document.querySelector('[data-wood-gate]').onclick=e=>{
   const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};

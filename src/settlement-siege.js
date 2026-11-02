@@ -748,7 +748,7 @@
         withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
           for(const edge of gateFacadeEdges(s)){
             if(edge.role!=='front'&&edge.role!=='rear')continue;
-            if(key==='gatePortal'||!drawArchitectureAssetOnEdge(edge,.705,.90,1.35,key))drawGatePortalOnEdge(edge);
+            drawGatePortalOnEdge(edge,s,key);
           }
         }));
       }

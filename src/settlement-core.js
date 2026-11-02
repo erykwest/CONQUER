@@ -292,7 +292,8 @@ const STRUCTURE_VARIANTS=Object.freeze({
     topWeapon:Object.freeze(['none','mangonel','ballista'])
   }),
   gate:Object.freeze({
-    roofStyle:Object.freeze(['battlement','pitched','flat'])
+    roofStyle:Object.freeze(['battlement','pitched','flat']),
+    upper:Object.freeze(['stone','timber'])
   }),
   wall:Object.freeze({
     skin:Object.freeze(['standard','machicolation','hoarding'])
@@ -303,7 +304,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
   tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none'}),
-  gate:Object.freeze({roofStyle:'battlement'}),
+  gate:Object.freeze({roofStyle:'battlement',upper:'stone'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
 });
@@ -397,6 +398,7 @@ function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
 function gateRoofStyle(s){
   if(isWoodGate(s))return'flat';
   if(s?.type==='gate'&&s.brokenTop)return'broken';
+  if(gateTimberUpper(s))return'pitched';         // a timber storey always carries a roof
   return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined
 }
 function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
@@ -461,9 +463,21 @@ function applyStructureTier(s,tier){
   }
   normalizeFunctions(s);return s
 }
+// Stone gates come in two sizes: the gatehouse (1.5×1.5U, L1-L3) and the small gate (1×1U, L1-L2).
+const GATE_SIZES=Object.freeze({large:1.5,small:1});
+const SMALL_GATE_MAX_LEVEL=2,SMALL_GATE_COST=.6;
+function isSmallGate(s){return s?.type==='gate'&&!isWoodGate(s)&&(Number(s.size)||GATE_SIZES.large)<1.25}
+// Small L2 gate with a timber-framed upper storey (plaster and beams like the houses), jettied
+// over the front and the rear: much cheaper than the stone storey.
+const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
+// The frame starts right over the passage vault: one low storey (1.2), its roof .84 high with the
+// slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
+const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
+function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
+function maxStructureLevel(s){return isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
   if(isWoodGate(s))return 1;
-  return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)
+  return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
 // Independent local X/Y scale in [0.8, 1.2], seeded by the stable house ID.
@@ -674,7 +688,12 @@ function baseConstructionCost(s){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
-  if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
+  if(s.type==='gate'){
+    if(isWoodGate(s))return{...COSTS.woodGate};
+    // Timber upper storey: the stone L1 small gate plus a little timber.
+    if(gateTimberUpper(s)){const c=scaleCost(COSTS.gate,SMALL_GATE_COST);for(const [k,v] of Object.entries(GATE_TIMBER_COST))c[k]=(c[k]||0)+v;return c}
+    return scaleCost(COSTS.gate,levelCostFactor(s)*(isSmallGate(s)?SMALL_GATE_COST:1));
+  }
   if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});
   if(s.type==='bridge'){
     const factor=(s.width||1.5)/(s.variant==='stone'?1.5:1.2);
