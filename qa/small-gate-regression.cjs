@@ -53,9 +53,10 @@ const gate=(size,level)=>({type:'gate',material:'stone',size,level});
   const timber=ctx.constructionCost(t(2)),l1=ctx.constructionCost(gate(1,1)),stone=ctx.constructionCost(gate(1,2));
   for(const k of Object.keys(stone))assert.equal(timber[k],(l1[k]||0)+(ctx.GATE_TIMBER_COST[k]||0),'L1 plus timber ('+k+')');
   assert.ok(timber.stone<stone.stone&&timber.gold<stone.gold,'much cheaper than the stone storey');
-  // Lower frame (floor over the vault), same ridge as the stone L2 roof.
-  assert.ok(ctx.structureHeight(t(2))<ctx.structureHeight(gate(1,2)),'lower eaves than the stone L2');
-  assert.ok(Math.abs(ctx.GATE_TIMBER_RIDGE-(3.6+.66/1.5))<1e-9,'ridge of the stone L2 roof');
+  // One low storey over the vault: eaves just above an H2 curtain, ridge below the stone L2's.
+  const eaves=ctx.structureHeight(t(2));
+  assert.ok(eaves>2.1&&eaves-1.4<=1.25,'a low storey from the vault to above the curtain');
+  assert.ok(ctx.GATE_TIMBER_RIDGE<3.6+.66/1.5,'the whole timber gate stays below the stone L2');
   console.log('PASS small gate timber upper storey');
 }
 {

@@ -470,9 +470,9 @@ function isSmallGate(s){return s?.type==='gate'&&!isWoodGate(s)&&(Number(s.size)
 // Small L2 gate with a timber-framed upper storey (plaster and beams like the houses), jettied
 // over the front and the rear: much cheaper than the stone storey.
 const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
-// The frame starts right over the passage vault and keeps the stone L2's ridge: lower eaves, steeper
-// roof, its slopes over the front and the rear (gables on the flanks).
-const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=3.2,GATE_TIMBER_RIDGE=3.6+.66/1.5;
+// The frame starts right over the passage vault: one low storey (1.2), its roof .84 high with the
+// slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
+const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
 function maxStructureLevel(s){return isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
