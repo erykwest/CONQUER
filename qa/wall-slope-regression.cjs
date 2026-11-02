@@ -50,8 +50,10 @@ const wall=(tier,a=2,b=8)=>({type:'wall',tier,width:[0,.2,.5,1][tier],a:{x:a,y:0
   assert.equal(flights.length,steps,'one flight per step');
   for(const f of flights){
     assert.ok(Math.abs((f.high-f.low)/f.n-.07)<.04,'treads of about 0.07U');
-    const head=ctx.wallWalkGroundAt(s,f.t1-(f.t1-f.t0)*1e-6),foot=ctx.wallWalkGroundAt(s,f.t0);
-    assert.ok(Math.abs(foot-f.low)<1e-6&&Math.abs(head-f.high)<1e-3,'the walk climbs the flight from one section to the next');
+    const head=ctx.wallWalkGroundAt(s,f.t1-(f.t1-f.t0)*1e-6),foot=ctx.wallWalkGroundAt(s,f.t0-(f.t1-f.t0)*.01);
+    assert.ok(Math.abs(foot-f.low)<1e-6&&Math.abs(head-f.high)<1e-6,'the walk climbs the flight from one section to the next');
+    const rise=(f.high-f.low)/f.n;
+    for(let j=0;j<f.n;j++){const tm=f.t0+(f.t1-f.t0)*(j+.5)/f.n;assert.ok(Math.abs(ctx.wallWalkGroundAt(s,tm)-(f.low+rise*(j+1)))<1e-6,'tread '+j+' top')}
   }
   assert.equal(ctx.wallStairFlights(wall(1)).length,0,'T1 has no walk, no stairs');
   console.log('PASS stair flights on the wall-walk');

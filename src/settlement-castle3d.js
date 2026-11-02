@@ -166,11 +166,12 @@
     m.tag=roofTag;
     for(const c of chimneySpecs(s))m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),c.z0,c.z1,PAL.chimney());
   }
-  // Flights of stairs on the walk of a stepped wall: one block per tread, between the inner face and
-  // the merlons (wallStairFlights), standing on the lower section.
+  // Flights of stairs on the walk of a stepped wall: one block per tread across the whole wall top
+  // (the merlon lane rises with it, so the parapet on top always covers the stairs), standing on
+  // the lower section (wallStairFlights).
   function addWallStairs(m,s){
-    const H=structureHeight(s),g=wallExteriorLayout(s),depth=Math.min(.28,Math.max(.18,g.width*.46));
-    const inner=-g.width/2+.02,outer=g.width/2-depth-.01;
+    const H=structureHeight(s),g=wallExteriorLayout(s);
+    const inner=-g.width/2+.005,outer=g.width/2-.005;
     const at=(t,off)=>({x:s.a.x+g.dx*t+g.nx*off*g.side,y:s.a.y+g.dy*t+g.ny*off*g.side});
     for(const f of wallStairFlights(s)){
       const rise=(f.high-f.low)/f.n;

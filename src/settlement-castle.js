@@ -538,12 +538,13 @@ function wallStairFlights(s){
   }
   return out;
 }
-// Ground under the walk at t: the section's, or partway up a flight of stairs.
+// Ground under the walk at t: the section's, or the tread of a flight of stairs (tread j stands
+// rise*(j+1) above the lower section).
 function wallWalkGroundAt(s,t){
   const g=wallGroundAt(s,t);if(!Number.isFinite(g))return g;
   for(const f of wallStairFlights(s)){
     const k=(t-f.t0)/(f.t1-f.t0);
-    if(k>=0&&k<=1)return f.low+(f.high-f.low)*k;
+    if(k>=0&&k<=1)return f.low+(f.high-f.low)*Math.min(f.n,Math.floor(k*f.n)+1)/f.n;
   }
   return g;
 }

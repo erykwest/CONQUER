@@ -672,11 +672,12 @@ function wallBattlementPieces(s){
     nodes.push(merlonNode(center,g.angle,.28,depth));
   }
   const all=pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
-  // Stepped wall: every piece stands on the section under it, and the single crest line used to
-  // clip far merlons in 2.5D no longer exists.
+  // Stepped wall: every piece stands on the highest walk under it (its section, or the tread of a
+  // flight of stairs it rises with), so the parapet always covers the stairs; the single crest line
+  // used to clip far merlons in 2.5D no longer exists.
   if(wallSlopeSections(s))for(const p of all){
-    const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
-    p.groundZ=wallGroundAt(s,((c.x-s.a.x)*g.dx+(c.y-s.a.y)*g.dy)/(g.L*g.L));delete p.wallCrest;
+    const ts=p.pts.map(q=>((q.x-s.a.x)*g.dx+(q.y-s.a.y)*g.dy)/(g.L*g.L));
+    p.groundZ=Math.max(...ts.map(t=>wallWalkGroundAt(s,t)));delete p.wallCrest;
   }
   return all;
 }
