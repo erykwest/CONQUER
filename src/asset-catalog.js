@@ -15,7 +15,8 @@
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
-    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'}
+    {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
+    {global:'ConquerShipModels',collection:'lab',category:'Veicoli',family:'Navi'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -53,6 +54,8 @@
     palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
+    const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
+    if(ship)return ship.label+(ship.size==='large'?' · grande':' · piccola')+(furled?' · vele alzate':' · vele spiegate');
     const m=/^(church|tavern|market|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
     return m?(nameOverrides[m[1]]||prettify(m[1]))+' · livello '+m[2]:prettify(key);
   }
@@ -90,8 +93,10 @@
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
-            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js'}[source.global]),
-        format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key:null});
+            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',
+            ConquerShipModels:'ship-models.js'}[source.global]),
+        format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
+          :source.global==='ConquerShipModels'?'ship:'+key.replace(/Furled$/,''):null});
     }
   }
   const animals=window.ConquerAnimalModels||{};

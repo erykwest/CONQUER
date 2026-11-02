@@ -3,7 +3,8 @@
 ## MARE — Porti e molo (branch `mare`, 02/11/2026)
 
 - **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
-- **DA FARE**: navi che usano gli attracchi; ruolo economico del porto (commercio via mare, pesca); interazione con assedio/incendio/demolizione del molo; scatter in contesto porto anche sulla riva; audit Asset Lab del modello.
+- **Navi**: 5 modelli Blender pronti (3 piccole, 2 grandi), solo nell'Asset Lab.
+- **DA FARE**: navi ormeggiate agli attracchi e in navigazione; audit Asset Lab + baseline delle navi; ruolo economico del porto (commercio via mare, pesca); interazione con assedio/incendio/demolizione del molo; scatter in contesto porto anche sulla riva; audit Asset Lab del modello.
 
 ## MARCH — Attacco e campagna militare (skeleton 30/10/2026)
 

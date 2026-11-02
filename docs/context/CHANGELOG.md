@@ -4,6 +4,7 @@
 
 - Mare: copertura massima dal 20% al 30%, la costa arriva nella whitezone per permettere i porti.
 - Nuovo Molo (`settlement-pier.js`): legno su pali, 8U sul mare, merci sulle tavole, due attracchi sinistra/destra; agganciato a menu, anteprima, validazione, costi, render 2D/WebGL e inspector.
+- Cinque navi modellate in Blender (`build_ships.py`): barca, barca da carico, caravella (piccole); cocca, nave latina (grandi). Registrate nell'Asset Lab, regressione `qa/ships-regression.cjs`. Vele alzate per ogni nave e animazione di alzata/ammainata (morph tra i due stati Blender), con anteprima animata nel Lab.
 - Nuova regressione `qa/pier-regression.cjs` e workflow `sea-regression.yml`. ROADMAP e DECISIONS invariati (nessun nuovo contratto oltre la struttura `pier`).
 
 ## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
