@@ -472,9 +472,22 @@ function hasPointHoarding(s){return !!s&&!underConstruction(s)&&hoardingMounted(
 // On the crenellated top the gallery rides at the top, round the merlons; under a pitched roof it
 // hangs on the wall just below the eave, its lean-to tucked under the roof.
 function pointHoardingBaseZ(s){return structureHeight(s)-((s.type==='gate'?gateRoofStyle(s):towerRoofStyle(s))==='pitched'?.72:0)}
+// A gate takes it on its front only (the +x face, where the door leaves close): one straight run
+// across the passage, closed by an end board at each side.
+function gateHoardingBays(s,bayLen){
+  const d=rectDims(s),a=s.angle||0,n={x:Math.cos(a),y:Math.sin(a)},dir={x:n.y,y:-n.x};   // outward on the left of dir
+  const mid={x:s.x+n.x*d.w/2,y:s.y+n.y*d.w/2},start={x:mid.x-dir.x*d.h/2,y:mid.y-dir.y*d.h/2};
+  const count=Math.max(1,Math.round(d.h/bayLen)),step=d.h/count,bays=[];
+  for(let k=0;k<count;k++)bays.push({
+    p0:{x:start.x+dir.x*step*k,y:start.y+dir.y*step*k},p1:{x:start.x+dir.x*step*(k+1),y:start.y+dir.y*step*(k+1)},
+    n0:n,n1:n,capStart:k===0,capEnd:k===count-1
+  });
+  return bays;
+}
 function pointHoardingBays(s){
   const data=window.ConquerHoardingModels;if(!data)return[];
   const bayLen=data.bayLength,r=Number(s.r)||.5;
+  if(s.type==='gate')return gateHoardingBays(s,bayLen);
   const pts=(s.shape==='round'?circleWorldPoints(s.x,s.y,r,Math.max(12,Math.round(Math.PI*2*r/(bayLen*.6)))):footprintPoints(s)).slice();
   const n=pts.length;if(n<3)return[];
   // The bay's +y (outward) is on the left of its +x: walk the outline clockwise, or bays come out mirrored.
@@ -498,7 +511,17 @@ function pointHoardingBays(s){
       n0:k===0?miters[i]:normals[i],n1:k===count-1?miters[(i+1)%n]:normals[i]
     });
   }
-  return bays;
+  // No gallery into the masonry of a gate or tower built against this one at that height: those
+  // bays are left out and the gallery is closed by an end board on each side of the gap.
+  const z=pointHoardingBaseZ(s),others=State.structures.filter(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&structureHeight(o)>z-.6);
+  if(!others.length)return bays;
+  const blocked=bays.map(b=>{
+    const m={x:(b.p0.x+b.p1.x+(b.n0.x+b.n1.x)*.25)/2,y:(b.p0.y+b.p1.y+(b.n0.y+b.n1.y)*.25)/2};   // .25 U out, mid-bay
+    return others.some(o=>pointInPolygon(m,footprintPoints(o)));
+  });
+  if(!blocked.some(Boolean))return bays;
+  const N=bays.length;
+  return bays.map((b,i)=>blocked[i]?null:{...b,capStart:blocked[(i-1+N)%N],capEnd:blocked[(i+1)%N]}).filter(Boolean);
 }
 // World triangles of a tower's hoarding: [{pts:[{p,z}x3], hex, key}], z above the tower's ground plane.
 function pointHoardingTriangles(s){
@@ -508,12 +531,17 @@ function pointHoardingTriangles(s){
   for(const bay of pointHoardingBays(s)){
     const at=(x,y)=>{const t=x/bayLen,nx=bay.n0.x+(bay.n1.x-bay.n0.x)*t,ny=bay.n0.y+(bay.n1.y-bay.n0.y)*t;
       return{x:bay.p0.x+(bay.p1.x-bay.p0.x)*t+nx*y,y:bay.p0.y+(bay.p1.y-bay.p0.y)*t+ny*y}};
-    for(const part of Object.values(data.models.bay.parts)){
-      const p=part.p,ix=part.i;
+    // mirror: the end board at the far end of the run (x flipped, winding reversed for culling)
+    const emit=(part,mirror)=>{
+      const p=part.p,ix=part.i,order=mirror?[0,2,1]:[0,1,2];
       for(let t=0;t<part.c.length;t++){
-        const pts=[0,1,2].map(k=>{const j=ix[t*3+k]*3;return{p:at(p[j],p[j+1]),z:z0+p[j+2]}});
+        const pts=order.map(k=>{const j=ix[t*3+k]*3;return{p:at(mirror?bayLen-p[j]:p[j],p[j+1]),z:z0+p[j+2]}});
         out.push({pts,hex:color(part.c[t]),key:keys[part.c[t]]});
       }
+    };
+    for(const [name,part] of Object.entries(data.models.bay.parts)){
+      if(name!=='endCap')emit(part,false);
+      else{if(bay.capStart)emit(part,false);if(bay.capEnd)emit(part,true)}
     }
   }
   return out;

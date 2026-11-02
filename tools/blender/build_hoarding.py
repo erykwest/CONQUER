@@ -14,6 +14,7 @@ round towers follow their curve with the same module.
   frame    putlog joist through the masonry, diagonal strut, corner posts, rafter
   boards   outer plank wall to 0.43 U with a loophole
   roof     lean-to shingle roof from 0.66 U over the tower top down to 0.47 U at the eave
+  endCap   board closing the gallery where it stops (gate fronts), mirrored at the far end
 The hoarding is a wartime addition: the tower keeps its own top. On a crenellated tower the bay
 sits at the tower top; under a pitched roof the game hangs it lower, below the eave.
 Palette keys starting with 'roof' turn white in winter.
@@ -118,6 +119,17 @@ def bay(root):
         slab(roof, 0, L, y0, z0 + lift, y1, z1 + lift, ROOF_T, 'roofShingle' if k % 2 else 'roofShingleDark', 'roofUnder')
     box(roof, 0, L, ROOF_IN - .03, ROOF_IN + .03, ROOF_HI, ROOF_HI + .03, 'roofRidge')       # ridge board
     parts['roof'] = roof.finish()
+
+    # End board closing a gallery that stops (a gate front): laid at x = 0 of the first bay,
+    # mirrored by the game at the end of the last one. It follows the roof slope on top.
+    end = Part(root, 'endCap', COLORS)
+    roof_z = lambda y: ROOF_HI + (ROOF_LO - ROOF_HI) * (y - ROOF_IN) / (ROOF_OUT - ROOF_IN) - ROOF_T
+    y1 = Y_OUT + BOARD_T
+    profile = [(Y_IN, DECK0), (y1, DECK0), (y1, roof_z(y1)), (Y_IN, roof_z(Y_IN))]
+    vs = [(x * S, y * S, z * S) for x in (0, BOARD_T) for y, z in profile]
+    end.quads(vs, [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)], 'boardDark')
+    box(end, -.01, .05, y1 - .05, y1, BOARD0, ROOF_LO + .01, 'post')                       # corner post
+    parts['endCap'] = end.finish()
     return parts
 
 
