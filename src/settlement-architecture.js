@@ -76,6 +76,10 @@ function structureInteriorVector(s){
   return{x:vx/L,y:vy/L};
 }
 function interiorFacadeEdgeIndex(s){
+  if(isOrientedTower(s))return ORIENTED_FACADE_REAR;
+  // A gate faces the field along its angle (portal edges 1 = front, 3 = rear): the windows
+  // look into the castle, whatever the walls around it.
+  if(s?.type==='gate')return GATE_FACADE_REAR;
   const fp=footprintPoints(s);if(fp.length<2)return-1;
   const iv=structureInteriorVector(s),center=structureCenter(s);let best=-1,bestScore=-Infinity;
   for(let i=0;i<fp.length;i++){
@@ -126,14 +130,18 @@ function drawGatePortals(){
     }));
   }
 }
-function gateWindowRows(s){const l=structureLevel(s),rows=[1.72];if(l>=2)rows.push(2.92);if(l>=3)rows.push(4.12);return rows.filter(z=>z<structureHeight(s)-.28)}
+// One row per room: the ground floor is the passage (no window), each storey above has one.
+function gateWindowRows(s){return cutawayFloorLevels(s).slice(functionFloorOffset(s)).map(f=>f.z+.9).filter(z=>z<structureHeight(s)-.28)}
+const GATE_FACADE_FRONT=1,GATE_FACADE_REAR=3;
+// Slits along a gate face: two side by side on the field front, one on the flanks.
+function gateSlitOffsets(edge){return edge.index===GATE_FACADE_FRONT?[-.26,.26]:[0]}
 function drawGateWindows(s,lit=false,nf=1){
   const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
   for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{
     for(const edge of gateFacadeEdges(s)){
       const paint=()=>isInteriorFacadeEdge(s,edge)
         ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)
-        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit');
+        :gateSlitOffsets(edge).forEach(o=>drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit',o));
       // The nighttime glow pass runs after the drawbridge. Mask only its
       // exterior-facing facade, preserving windows on the unobstructed sides.
       if(edge.role==='front'&&window.ConquerCrossings?.withDrawbridgeWindowOcclusion)
@@ -144,7 +152,7 @@ function drawGateWindows(s,lit=false,nf=1){
 }
 function visibleFacadeEdges(s){
   const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'&&p.kind!=='outbuilding'):null;
-  const rings=parts?parts.map(p=>p.points):[footprintPoints(s)],edges=[];
+  const rings=parts?parts.map(p=>p.points):[towerFacadePoints(s)],edges=[];
   for(const fp of rings){
     if(fp.length<4)continue;
     const faces=[];
@@ -208,7 +216,14 @@ function towerDoorSpecs(tower){
 
   // Primary ground-floor entrance exists only on independent towers.
   // Attached subtowers deliberately have NO ground-floor door.
-  if(!tower.parentTowerId){
+  // Oriented towers face the field: the door is on the rear, inside the walls (the semitower's
+  // rear is the open gorge itself).
+  if(!tower.parentTowerId&&isOrientedTower(tower)){
+    if(tower.shape==='dee'){
+      const fp=towerFacadePoints(tower),rear=towerDoorContactSpec(tower,{x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2},null,'front');
+      if(rear)specs.push(rear);
+    }
+  }else if(!tower.parentTowerId){
     const a=tower.angle||0;
     let frontContact;
     if(tower.shape==='round'){
@@ -362,8 +377,10 @@ function towerFaceDirections(s){
     const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x);
     return[0,1,2,3].map(i=>({face:i,nx:Math.cos(base+i*Math.PI/2),ny:Math.sin(base+i*Math.PI/2),interior:i===0}));
   }
-  const fp=footprintPoints(s),interior=interiorFacadeEdgeIndex(s);
+  const fp=towerFacadePoints(s),interior=interiorFacadeEdgeIndex(s);
   return fp.map((a,i)=>{
+    // D tower sides: the slit's own spot on the half round (at) and its normal.
+    const slit=s.shape==='dee'&&deeSideSlit(s,i);if(slit)return{face:i,nx:slit.n.x,ny:slit.n.y,at:slit.at,interior:i===interior};
     const b=fp[(i+1)%fp.length],nx=(a.x+b.x)/2-s.x,ny=(a.y+b.y)/2-s.y,L=Math.hypot(nx,ny)||1;
     return{face:i,nx:nx/L,ny:ny/L,interior:i===interior};
   });
@@ -386,7 +403,7 @@ function towerFaceBlocked(s,dir,floor){
 // wall up to that structure's height - no arrow slit, window or door opens onto it.
 function towerFaceOnDivider(s,dir,z){
   const half=s.shape==='round'?(Number(s.r)||.5):Math.max(rectDims(s).w,rectDims(s).h)/2;
-  const probe={x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
+  const probe=dir.at?{x:dir.at.x+dir.nx*.12,y:dir.at.y+dir.ny*.12}:{x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
   return State.structures.some(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&
     (o.id===s.parentTowerId||o.parentTowerId===s.id)&&structureHeight(o)>z&&pointInPolygon(probe,footprintPoints(o)));
 }
@@ -662,7 +679,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
           return;
         }
-        const edges=visibleFacadeEdges(s),opacity=cutawayFacadeOpacity(s);
+        const edges=visibleFacadeEdges(s).filter(e=>!(s.shape==='half'&&e.index===ORIENTED_FACADE_REAR)),opacity=cutawayFacadeOpacity(s);
         for(const row of rows){
           const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);
           if(!key)continue;
@@ -671,7 +688,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
               if(isInteriorFacadeEdge(s,edge)){
                 drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
                 if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
-              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(towerSlitEdge(s,edge),row.z,.22,.60,'arrowSlit',0,false,1,opacity);
             }
           });
         }

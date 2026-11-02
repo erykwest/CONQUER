@@ -246,6 +246,7 @@ function footprintPoints(s){
   if(!s)return[];
   if(s.type==='tower'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
   if(s.type==='ruin'&&s.shape==='round')return circleWorldPoints(s.x,s.y,s.r,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s);
   if(['tower','gate','ruin'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
   if(['wall','palisade','built','moat','bridge'].includes(s.type))return linePoly(s);
@@ -279,6 +280,7 @@ function stoneTowerSplayedFootprint(s){
   if(s.shape==='round'){
     return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+STONE_TOWER_SPLAY_OFFSET,24);
   }
+  if(isOrientedTower(s))return orientedTowerOutline(s,-STONE_TOWER_SPLAY_OFFSET);
   const d=rectDims(s);
   return rectWorldPoints(
     s.x,s.y,
@@ -314,6 +316,7 @@ function stoneTowerButtresses(s){
     }
     return out;
   }
+  if(s.shape==='dee')return deeTowerButtresses(s,h);
   const fp=footprintPoints(s),center={x:s.x,y:s.y};
   for(let i=0;i<fp.length;i++){
     const a=fp[i],b=fp[(i+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
@@ -539,7 +542,8 @@ function cutawayEligible(s){
   // has no walls to open.
   if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
-  return s.type==='tower';
+  // Semitowers are open already (their gorge shows the floors and ladders).
+  return s.type==='tower'&&s.shape!=='half';
 }
 // Small (T1) stone towers are a stair shaft: no wooden floors, one stone newel stair from
 // the ground to the top (settlement-cutaway-furniture.js builds the steps).
@@ -575,6 +579,8 @@ function cutawayWallGeometry(s){
       const outer=footprintPoints(s),r=Math.max(.12,(Number(s.r)||.5)-thickness);
       return{outer,inner:circleWorldPoints(s.x,s.y,r,24),thickness};
     }
+    // D tower: the same outline shrunk by the wall, vertex for vertex.
+    if(s.shape==='dee')return{outer:orientedTowerOutline(s),inner:orientedTowerOutline(s,thickness),thickness};
     const d=rectDims(s),iw=Math.max(.18,d.w-thickness*2),ih=Math.max(.18,d.h-thickness*2);
     return{
       outer:footprintPoints(s),
@@ -619,7 +625,10 @@ function cutawayFloorLevels(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(level<=1||cutawaySpiralStair(s))return floors;
-  for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
+  // A gate's storeys line up with those of the stone tower flanking it (one floor level across).
+  const flank=s.type==='gate'?State.structures.find(o=>o.parentTowerId===s.id&&o.type==='tower'&&!isWoodTower(o)&&!cutawaySpiralStair(o)):null;
+  const fz=flank?cutawayFloorLevels(flank):[];
+  for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:h*i/level,material:'wood'});
   return floors;
 }
 function cutawayLocalRect(center,angle,x0,y0,x1,y1){
@@ -763,6 +772,19 @@ function cutawayTransparentFaceIndexes(s,g){
   if(n===4&&s.type==='tower'&&s.shape!=='round'){
     const ranked=depths.map((depth,index)=>({depth,index})).sort((a,b)=>b.depth-a.depth);
     return new Set([ranked[0].index,ranked[1].index]);
+  }
+
+  // D towers remove every face turned to the camera (half the outline, like the two
+  // faces of a square tower): the cut runs through the straight sides or the half round.
+  if(s.type==='tower'&&s.shape==='dee'){
+    const open=new Set();
+    for(let i=0;i<n;i++){
+      const a=g.outer[i],b=g.outer[(i+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1,m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      let nx=(b.y-a.y)/L,ny=-(b.x-a.x)/L;
+      if(nx*(m.x-s.x)+ny*(m.y-s.y)<0){nx=-nx;ny=-ny}
+      if(viewDepthPoint({x:m.x+nx*.1,y:m.y+ny*.1})-viewDepthPoint(m)>1e-6)open.add(i);
+    }
+    return open;
   }
 
   // Round towers use an approximately 90° camera-facing wedge. The two radial
@@ -931,6 +953,7 @@ function unionFootprintPoints(s){
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
 function polygonGeomForStructure(s){
+  if(s.type==='tower'&&s.shape==='half')return towerBodyPrisms(s).map(p=>[p.map(q=>[q.x,q.y])]);
   const pts=unionFootprintPoints(s);if(!pts||pts.length<3)return null;
   return [pts.map(p=>[p.x,p.y])];
 }

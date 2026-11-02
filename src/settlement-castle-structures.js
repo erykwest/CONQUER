@@ -452,6 +452,7 @@ function machicolationFloorPolygon(s){
   if(s.type==='tower'){
     const z=structureHeight(s);
     if(s.shape==='round')return{pts:circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+.115,24),z};
+    if(isOrientedTower(s))return{pts:orientedTowerOutline(s,-.11),z};
     const d=rectDims(s);return{pts:rectWorldPoints(s.x,s.y,d.w+.22,d.h+.22,s.angle||0),z};
   }
   return null;
@@ -723,7 +724,7 @@ function roundTowerBattlementPieces(s){
 }
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
-  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s));
+  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):isOrientedTower(s)?orientedTowerBattlementPieces(s):squareTowerBattlementPieces(s));
 }
 // Parent/subtower pairs overlap: merlons of the lower one that fall inside the footprint of the
 // taller attached structure would stick out of its walls. Drop them (parent or subtower alike).
@@ -774,7 +775,7 @@ function drawSquareTowerRoof(s){
 function drawRoundTowerRoof(s){
   const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
   if(fp.length<3)return;
-  const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
+  const apex=w2s(towerRoofApex(s),apexZ),faces=[];
   for(let i=0;i<fp.length;i++){
     const j=(i+1)%fp.length,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
     const shade=State.season==='winter'?(i%3===0?WINTER_SNOW_B:i%3===1?WINTER_SNOW_A:WINTER_SNOW_TOP):(i%3===0?'#303236':i%3===1?'#3a3d42':'#44474c');
@@ -788,7 +789,7 @@ function drawRoundTowerRoof(s){
 }
 function drawTowerRoof(s){
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
-  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
+  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'||s.shape==='dee'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
 }
 function drawTowerRoofs(){
   const towers=State.structures

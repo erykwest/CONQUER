@@ -182,7 +182,7 @@ const StructureCommands=(()=>{
     if(['tower','wall','palisade'].includes(s.type)&&!woodTower){
       const linear=['wall','palisade'].includes(s.type),current=linear?wallTier(s):towerTier(s);
       const labels=linear?['T1 · 0,2U','T2 · 0,5U','T3 · 1U']:(s.shape==='round'?['T1 · R0,5','T2 · R0,75','T3 · R1']:['T1 · 1U','T2 · 1,5U','T3 · 2U']);
-      d.controls.push(choice('tier','setTier',labels.map((label,i)=>({value:i+1,label})),current));
+      d.controls.push(choice('tier','setTier',isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label})),current));
     }
     if(['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate){
       const max=['tower','gate'].includes(s.type)?3:2;
