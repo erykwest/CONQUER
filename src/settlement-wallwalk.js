@@ -28,12 +28,15 @@
     if(h.type==='gate'){const a=Number(h.angle)||0;return{x:-Math.cos(a),y:-Math.sin(a)}}
     return typeof structureInteriorVector==='function'?structureInteriorVector(h):{x:1,y:0};
   }
+  // A Mastio with its drawbridge up bars its wall-walk doors too: no way in from the walls,
+  // no passage through it from one wall to the next.
+  const barred=h=>h.type==='tower'&&!!window.ConquerKeepEntrance?.closed?.(h);
   let cache={sig:null};
   function signature(){
     let sig='';
     for(const s of State.structures){
       if(s.type==='wall'||s.type==='palisade')sig+=s.id+(walkable(s)?'w':'x')+s.a?.x+','+s.a?.y+','+s.b?.x+','+s.b?.y+(s.level||1)+(s.tier||'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)+';';
-      else if(s.type==='tower'||s.type==='gate')sig+=s.id+(underConstruction(s)?'u':'c')+s.x+','+s.y+(s.angle||0)+';';
+      else if(s.type==='tower'||s.type==='gate')sig+=s.id+(underConstruction(s)?'u':'c')+s.x+','+s.y+(s.angle||0)+(barred(s)?'b':'')+';';
     }
     return sig;
   }
@@ -59,7 +62,7 @@
       // Ends seated on a tower/gate join through it; the tower/gate is a stair.
       for(const [end,n] of [['aSnap',A],['bSnap',B]]){
         const h=s[end]&&State.structures.find(x=>x.id===s[end]&&['tower','gate'].includes(x.type)&&!underConstruction(x));
-        if(!h)continue;
+        if(!h||barred(h))continue;
         const hub=node({x:h.x,y:h.y},z,'hub:'+h.id);hub.z=Math.max(hub.z,z);
         link(n,hub,Math.hypot(h.x-n.x,h.y-n.y));
         if(!hubs.has(h.id)){

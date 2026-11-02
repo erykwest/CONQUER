@@ -183,7 +183,7 @@
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
   function tick(before,after){
-    gateNightWatch();bridgeAlarm();
+    gateNightWatch();bridgeAlarm();window.ConquerKeepEntrance?.alarmTick?.();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);

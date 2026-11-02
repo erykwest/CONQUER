@@ -137,13 +137,14 @@ const StructureCommands=(()=>{
     const target=find(id),K=window.ConquerKeepEntrance;if(target?.type!=='tower'||!K)return false;
     if(stair==='none')return K.removeEntrance(target);
     const current=target.keepEntrance?.stair;
-    if(!current)return stair==='wood'?K.buildStair(target):false;
+    if(!current||current==='burnt')return stair==='wood'?K.buildStair(target):false;
     return current==='wood'&&stair==='stone'?K.upgradeStone(target):false;
   }
   function keepDrawbridge(id,action){
     const target=find(id),K=window.ConquerKeepEntrance;if(target?.type!=='tower'||!K)return false;
     if(action==='install')return K.installDrawbridge(target);
     if(action==='remove')return K.removeDrawbridge(target);
+    if(action==='auto-on'||action==='auto-off')return K.setAuto(target,action==='auto-on');
     return K.toggleDrawbridge(target);
   }
   function changeArchers(id,delta){

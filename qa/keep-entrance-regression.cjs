@@ -123,6 +123,77 @@ console.log('PASS the drawbridge fits either stair and, raised, shuts the keep')
   keep.level=1;assert.equal(K.sill(keep),null);assert.equal(K.access(keep),undefined);
   console.log('PASS stair and leaf meshes; saves and lowered keeps');
 }
+{
+  // The guard: enemies near the stair raise the leaf, it comes down once they are gone.
+  const State={structures:[],resources:{gold:500,wood:500,stone:500,metal:50}};
+  const enemies=[];
+  const ctx=vm.createContext({State,window:{ConquerCombat:{enemy:()=>enemies}},console,Math,Object,Array,Map,Set,String,Number,JSON,
+    performance:{now:()=>0},requestAnimationFrame:()=>1,underConstruction:()=>false,isWoodTower:()=>false,isOrientedTower:()=>false,
+    structureLevel:s=>s.level||1,structureHeight:s=>[2.35,3.55,4.75][(s.level||1)-1],
+    cutawayFloorLevels:s=>[{z:.055},{z:1.775}],footprintPoints:s=>s.type==='tower'?rect(s.x,s.y,1.5,1.5):[],
+    boundaryPoint:(s,p)=>p,placementGroundZ:()=>0,terrainElevation:()=>0,pointInPolygon:()=>false,structureLabel:s=>s.type,costText:()=>'',
+    canAfford:()=>true,spendCost:()=>{},status:()=>{},markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},invalidateNavigation:()=>{}});
+  vm.runInContext(src,ctx);
+  const K=ctx.window.ConquerKeepEntrance,keep={id:'k',type:'tower',shape:'square',x:0,y:0,size:1.5,angle:0,level:2,isMastio:true};
+  State.structures.push(keep);K.buildStair(keep);K.installDrawbridge(keep);
+  const d=keep.keepEntrance.drawbridge;
+  enemies.push({x:30,y:0});K.alarmTick();
+  assert.equal(d.raised,false,'nobody near: the leaf stays down');
+  enemies[0].x=8;K.alarmTick();
+  assert.ok(d.raised&&d.autoRaised,'an enemy at the stair: the guard raises it');
+  assert.equal(K.access(keep),null,'and the keep is shut');
+  enemies[0].x=15;K.alarmTick();
+  assert.equal(d.raised,true,'between the two radii it stays up');
+  enemies[0].defeated=true;K.alarmTick();
+  assert.equal(d.raised,false,'the last enemy fallen: it comes down');
+  enemies[0].defeated=false;enemies[0].x=5;K.setAuto(keep,false);K.alarmTick();
+  assert.equal(d.raised,false,'automatic off: left as set');
+  K.setAuto(keep,true);K.toggleDrawbridge(keep);enemies[0].x=40;K.alarmTick();
+  assert.equal(d.raised,true,'raised by hand: not lowered by the guard');
+  console.log('PASS the guard raises the leaf when enemies come near and lowers it after');
+
+  // Fire: the wooden stair and the leaf burn; burnt, the door is out of reach until rebuilt.
+  assert.equal(K.fireParts(keep).map(p=>p.part).join(),'stair,leaf');
+  assert.ok(K.closed(keep),'leaf up: the keep is closed (its wall-walk doors barred)');
+  K.burnout(keep,'leaf');
+  assert.equal(keep.keepEntrance.drawbridge,null,'a burnt leaf falls');
+  assert.ok(!K.closed(keep));
+  K.burnout(keep,'stair');
+  assert.equal(keep.keepEntrance.stair,'burnt');
+  assert.equal(K.access(keep),null,'no stair: nobody reaches the door');
+  assert.equal(K.sill(keep),1.775,'the door stays up in the wall');
+  assert.equal(K.dynamicMeshes().length,0,'nothing left to draw');
+  assert.equal(K.fireParts(keep).length,0,'nothing left to burn');
+  K.normalise(keep);assert.equal(keep.keepEntrance.stair,'burnt','kept through a save');
+  keep.isMastio=false;
+  assert.ok(K.buildStair(keep),'rebuilt, even if no longer the mastio');
+  assert.equal(keep.keepEntrance.stair,'wood');
+  K.upgradeStone(keep);assert.equal(K.fireParts(keep).length,0,'a stone stair without leaf does not burn');
+  console.log('PASS wooden stair and leaf burn; a burnt stair is rebuilt');
+
+  // Obstacles, climb.
+  const plan=K.obstacles(keep);assert.ok(plan.length===2&&plan.every(p=>p.length===4));
+  assert.equal(K.obstacles(keep),plan,'cached');
+  const L=K.layout(keep),c0=K.climbPoint(keep,0),c1=K.climbPoint(keep,1),cm=K.climbPoint(keep,.5);
+  assert.ok(Math.hypot(c0.x-L.foot.x,c0.y-L.foot.y)<1e-9&&c0.z===L.zFoot,'the climb starts at the foot');
+  assert.ok(Math.abs(c1.z-L.zTop)<1e-9&&Math.hypot(c1.x-L.frame.contact.x,c1.y-L.frame.contact.y)<.1,'and ends at the door');
+  assert.ok(cm.z>L.zFoot&&cm.z<=L.zTop,'rising on the way');
+  assert.ok(K.climbDuration(keep)>=600);
+  console.log('PASS stair obstacles and the climb to the door');
+}
+// Hooks: alarm, fire, wall walk, walkers, recalled civilians.
+const read=f=>fs.readFileSync(root+f,'utf8');
+assert.match(read('settlement-siege.js'),/bridgeAlarm\(\);window\.ConquerKeepEntrance\?\.alarmTick\?\.\(\)/,'the siege tick runs the guard');
+const fire=read('settlement-fire.js');
+assert.match(fire,/ConquerKeepEntrance\?\.fireParts\?\.\(s\)/,'fire knows the stair and the leaf');
+assert.match(fire,/stair:28,leaf:18/,'with their own fuel');
+assert.match(fire,/ConquerKeepEntrance\?\.burnout\?\.\(s,f\.part\)/,'and burns them out');
+assert.match(read('settlement-wallwalk.js'),/if\(!h\|\|barred\(h\)\)continue;/,'a raised leaf bars the wall-walk doors');
+assert.match(read('settlement-population-navigation.js'),/ConquerKeepEntrance\?\.obstacles\?\.\(s\)/,'walkers go round the stair');
+assert.match(read('settlement-combat.js'),/climbPoint\?\.\(keep,/,'recalled civilians climb it');
+assert.match(read('settlement-population-figures.js'),/withProjectionGroundZ\(dot\.p\.z,/,'drawn at the step height');
+assert.match(read('settlement-render.js'),/drawRaisedVillagers\(\);/,'after the stair meshes');
+console.log('PASS alarm, fire, wall walk, walkers and civilians are wired to the entrance');
 // Hooks: the door, civilians and service roads follow the raised entrance.
 const arch=fs.readFileSync(root+'settlement-architecture.js','utf8');
 assert.match(arch,/ConquerKeepEntrance\?\.sill\?\.\(tower\)/,'towerDoorSpecs raises the front door');

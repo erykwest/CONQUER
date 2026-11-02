@@ -166,8 +166,17 @@ function drawPeasants(){
   for(const dot of dots){
     if(dot.militia)drawSoldierFigure(dot.p,.10,'spearman',dot.id,day);
     else if(dot.work)window.ConquerWorkAnim.drawWorker(dot,dot.work.tool,workClock,dot.work.facing);
+    // On the Mastio's outer stair (p.z absolute): drawn later, over the stair (drawRaisedVillagers).
+    else if(Number.isFinite(dot.p.z))raisedVillagers.push(dot);
     else drawVillagerFigure(dot);
   }
+}
+// Villagers climbing the Mastio's outer stair, at the step's height rather than the terrain's.
+// Painted after the stair meshes (settlement-render.js), which would otherwise cover them.
+let raisedVillagers=[];
+function drawRaisedVillagers(){
+  for(const dot of raisedVillagers)withProjectionGroundZ(dot.p.z,()=>drawVillagerFigureUnmasked(dot));
+  raisedVillagers=[];
 }
 // A farmer standing at his field spot works it with the tool of the season:
 // hoe for ploughing, seed sack for sowing, sickle for the harvest.
