@@ -343,7 +343,7 @@ function Inspector({ snap, cmd }) {
         onPick=${o => run('setGateClosed', o.v)} /></${Row}>
       <${Row} label=${I.nightClose}><${Seg} options=${[{ label: d.gate.nightClose ? I.on : I.off, active: d.gate.nightClose }]}
         onPick=${() => run('setGateNightClose', !d.gate.nightClose)} /></${Row}>`}
-    ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits) + '.'}>
+    ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits, d.archers.bartizan) + '.'}>
       <${Seg} options=${[{ label: '−', disabled: d.archers.disabled || d.archers.count === 0, v: -1 }, { label: '+', disabled: d.archers.disabled || d.archers.count >= d.archers.max, v: 1 }]}
         onPick=${o => run('changeArchers', o.v)} /></${Row}>`}
     ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>

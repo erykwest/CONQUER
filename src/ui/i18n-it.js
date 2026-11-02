@@ -78,16 +78,16 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto'
+      weapon: 'Arma', bartizan: 'Garitte', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio',
-      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
+      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', none: '—', mangonel: 'Mangano', ballista: 'Balista', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -97,7 +97,7 @@ export const T = {
     house: 'Livello sociale', houseDown: '− Riduci', houseUp: '+ Amplia',
     mastio: 'Mastio', mastioOn: 'Mastio attivo · rimuovi', mastioOff: 'Designa come mastio',
     archers: (n, max) => 'Arcieri ' + n + '/' + max,
-    archerSlots: (roof, slits) => 'Tetto ' + roof + ' · feritoie ' + slits,
+    archerSlots: (roof, slits, bartizan) => 'Tetto ' + roof + (bartizan ? ' · garitte ' + bartizan : '') + ' · feritoie ' + slits,
     roomsTitle: 'Stanze',
     roomsPending: 'Le stanze si assegnano a costruzione finita.',
     roomsNone: 'Nessuna stanza a questa impronta o altezza.',
@@ -167,6 +167,7 @@ export const T = {
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde.',
+    bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
     civicLevel: 'Tre stadi previsti; per ora senza effetti economici o di servizio.',
     plaza: 'Aspetto della piazza.',
     mastio: 'La prima torre completata diventa mastio da sola; il mastio tiene sempre una sala comune.',

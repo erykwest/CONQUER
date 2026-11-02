@@ -761,6 +761,48 @@ function withoutBuriedBattlements(s,pieces){
     return !taller.some(o=>o.h>p.z0+.01&&pointInPolygon(c,o.pts));
   });
 }
+// Bartizans (variant `bartizan`, large T3 towers): a round turret at each corner of a square tower,
+// on the diagonals of a round one, standing out of the crown on a corbelled cone. The crenellated
+// kind is open on top (floor at the deck, then a parapet ring with merlons like the tower's own
+// crown); the pitched kind is a taller drum under a conical roof. World-space specs for the 3D builder.
+// Each turret holds BARTIZAN_SLOTS shooters that also reach the tower foot, BARTIZAN_REACH U out.
+const BARTIZAN_SLOTS=3,BARTIZAN_REACH=1;
+const BARTIZAN_R=.27,BARTIZAN_SIDES=12,BARTIZAN_WALL=.06,BARTIZAN_CORBEL=.34,BARTIZAN_DRUM=.36,BARTIZAN_ROOF=.62;
+function towerBartizans(s){
+  const style=towerBartizan(s);if(style==='none')return[];
+  const z=structureHeight(s),centers=s.shape==='round'
+    ?[1,3,5,7].map(k=>{const a=(s.angle||0)+k*Math.PI/4,R=(Number(s.r)||1)-.02;return{x:s.x+Math.cos(a)*R,y:s.y+Math.sin(a)*R}})
+    :footprintPoints(s).map(c=>{const dx=c.x-s.x,dy=c.y-s.y,L=Math.hypot(dx,dy)||1;return{x:c.x+dx/L*.06,y:c.y+dy/L*.06}});
+  return centers.map(c=>{
+    const ring=r=>circleWorldPoints(c.x,c.y,r,BARTIZAN_SIDES),z0=z-.3,L=Math.hypot(c.x-s.x,c.y-s.y)||1;
+    return{style,center:c,nx:(c.x-s.x)/L,ny:(c.y-s.y)/L,r:BARTIZAN_R,ring:ring(BARTIZAN_R),inner:ring(BARTIZAN_R-BARTIZAN_WALL),band:ring(BARTIZAN_R+.025),
+      corbel:ring(.05),corbelZ:z0-BARTIZAN_CORBEL,z0,deckZ:z,drumZ:style==='pitched'?z+BARTIZAN_DRUM:z,
+      eave:ring(BARTIZAN_R+.05),apexZ:z+BARTIZAN_DRUM+BARTIZAN_ROOF};
+  });
+}
+// Parapet ring of a crenellated bartizan: twelve wall segments, every other one raised into a merlon.
+function bartizanCrownPieces(s,turrets){
+  const pieces=[];
+  for(const b of turrets){
+    if(b.style!=='battlement')continue;
+    for(let i=0;i<b.ring.length;i++){
+      const j=(i+1)%b.ring.length,pts=[b.ring[i],b.ring[j],b.inner[j],b.inner[i]];
+      pieces.push(battlementPolygonPiece(i%2?'parapet':'bartizanMerlon',pts,b.deckZ,b.deckZ+(i%2?PARAPET_HEIGHT:.25),s));
+    }
+  }
+  return pieces;
+}
+// The tower crown as the 3D builder meshes it: the tower's battlements, less the merlons a bartizan
+// stands on, plus the bartizans' own parapets.
+function towerCrownPieces(s){
+  const turrets=towerBartizans(s),pieces=towerBattlementPieces(s);
+  if(!turrets.length)return pieces;
+  const kept=pieces.filter(p=>{
+    const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
+    return !turrets.some(b=>Math.hypot(c.x-b.center.x,c.y-b.center.y)<b.r+.03);
+  });
+  return underConstruction(s)?kept:withoutBuriedBattlements(s,kept.concat(bartizanCrownPieces(s,turrets)));
+}
 function pointRoofOccluders(s){
   if(!s||!['tower','gate'].includes(s.type))return[];
   const d=worldDepth(s),base=structureHeight(s);
@@ -846,9 +888,14 @@ function drawGateRoofs(){
 }
 function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function drawQuarteredTowerFlag(tower){
-  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower'||towerRoofStyle(tower)!=='pitched')return;
-  const scale=clamp(State.view.scale,.55,1.45),base=w2s({x:tower.x,y:tower.y},towerVisualTopHeight(tower));
-  const seed=(peasantHash(tower.id+'-flag')%1000)/1000;
+  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower')return;
+  if(towerRoofStyle(tower)==='pitched')drawQuarteredFlagAt({x:tower.x,y:tower.y},towerVisualTopHeight(tower),tower.id+'-flag');
+  // A smaller pennant on the spire of every pitched bartizan.
+  towerBartizans(tower).forEach((b,i)=>{if(b.style==='pitched')drawQuarteredFlagAt(b.center,b.apexZ,tower.id+'-bartizan-'+i,.7)});
+}
+function drawQuarteredFlagAt(at,z,seedKey,size=1){
+  const scale=clamp(State.view.scale,.55,1.45)*size,base=w2s(at,z);
+  const seed=(peasantHash(seedKey)%1000)/1000;
   const mastH=clamp(20*scale,13,28),clothW=clamp(15*scale,10,21),clothH=clamp(10*scale,7,14);
   const wave=Math.sin(visualCycleDay()*18+seed*Math.PI*2)*1.4*scale;
   const mastTop={x:base.x,y:base.y-mastH};
@@ -877,7 +924,7 @@ function drawQuarteredTowerFlag(tower){
 }
 function drawTowerFlags(){
   const towers=State.structures
-    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
+    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&(towerRoofStyle(s)==='pitched'||towerBartizan(s)==='pitched'))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const tower of towers)withStructureGroundPlane(tower,()=>drawQuarteredTowerFlag(tower));
 }
