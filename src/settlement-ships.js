@@ -26,7 +26,7 @@
     const h=realm==='player'?playerArms():FOREIGN[realm]?.heraldry||playerArms();
     return{flag:h,sail:o.allegiance==='merchant'?null:h};
   }
-  const FLAG_COLS=14,FLAG_ROWS=8,EMBLEM_OFF=.012;
+  const FLAG_COLS=10,FLAG_ROWS=6,EMBLEM_OFF=.012;
   const sample=(h,c,r)=>window.ConquerHeraldryShapes?.sample(h,c,r)||null;
   // World-space mesh {pos,col} for a ship at {x,y,heading,z}; furl 0 = set, 1 = furled.
   // With heraldry {flag, sail, t} it adds the flags (waving at time t) and the arms on the sails.
@@ -54,14 +54,25 @@
       for(const off of [EMBLEM_OFF,-EMBLEM_OFF])for(let r=0;r<e.rows;r++)for(let c=0;c<e.cols;c++)
         quad(P(c,r,off),P(c+1,r,off),P(c+1,r+1,off),P(c,r+1,off),g[r][c]);
     });
-    // Flags fly aft from the top of their staff, waving with the time.
-    const fg=heraldry.flag&&sample(heraldry.flag,FLAG_COLS,FLAG_ROWS),t=heraldry.t||0;
-    if(fg)for(const fl of m.flags){
+    if(heraldry.flag)addFlags(m,heraldry.flag,heraldry.t||0,quad);
+    return{pos,col};
+  }
+  // Flags fly aft from the top of their staff, waving with the time.
+  function addFlags(m,h,t,quad){
+    const fg=sample(h,FLAG_COLS,FLAG_ROWS);if(!fg)return;
+    for(const fl of m.flags){
       const [ax,ay,az]=fl.at;
       const P=(c,r)=>{const u=c/FLAG_COLS,v=r/FLAG_ROWS,wave=Math.sin(u*5-t*4+v*.6)*fl.h*.16*u;
         return[ax-u*fl.w,ay+wave,az-v*fl.h-u*u*fl.h*.08]};
       for(let r=0;r<FLAG_ROWS;r++)for(let c=0;c<FLAG_COLS;c++)quad(P(c,r),P(c+1,r),P(c+1,r+1),P(c,r+1),fg[r][c]);
     }
+  }
+  // The flags alone, as a world mesh: cheap enough to wave every frame over a cached ship.
+  function flagMesh(key,pose,h,t=0){
+    const m=M.ships[key];if(!m||!h)return null;
+    const hd=pose.heading||0,cs=Math.cos(hd),sn=Math.sin(hd),z=pose.z||0,pos=[],col=[];
+    const put=(x,y,zz)=>pos.push(pose.x+x*cs-y*sn,pose.y+x*sn+y*cs,z+zz);
+    addFlags(m,h,t,(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)});
     return{pos,col};
   }
   // Sail state of one ship: {furl, target}. step() moves furl towards target at SAIL_TIME,
@@ -90,6 +101,6 @@
     M.lab[k]={parts:{hull,sails:{v:m.sails.v,c:m.sails.c}}};
     M.lab[k+'Furled']={parts:{hull,sails:{v:m.sails.f,c:m.sails.c}}};
   }
-  window.ConquerShips=Object.freeze({keys,mesh,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
+  window.ConquerShips=Object.freeze({keys,mesh,flagMesh,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
     small:keys.filter(k=>M.ships[k].size==='small'),large:keys.filter(k=>M.ships[k].size==='large')});
 })();

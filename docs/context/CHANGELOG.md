@@ -2,6 +2,8 @@
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
+- Porto: moli L4/L12, piazzamento solo costa + whitezone; banchina in pietra a due clic con moli agganciati; navi di test nel menu DEV (ormeggio con vele alzate, alla fonda, ordini alle vele). Toppe araldiche 16×10 e bandiere 10×6 per contenere il costo di disegno.
+
 - Mare: copertura massima dal 20% al 30%, la costa arriva nella whitezone per permettere i porti.
 - Nuovo Molo (`settlement-pier.js`): legno su pali, 8U sul mare, merci sulle tavole, due attracchi sinistra/destra; agganciato a menu, anteprima, validazione, costi, render 2D/WebGL e inspector.
 - Cinque navi modellate in Blender (`build_ships.py`): barca, barca da carico, caravella (piccole); cocca, nave latina (grandi). Registrate nell'Asset Lab, regressione `qa/ships-regression.cjs`. Vele alzate per ogni nave e animazione di alzata/ammainata (morph tra i due stati Blender), con anteprima animata nel Lab. Araldica navale: bandiere e armi sulle vele per navi del giocatore e di regni stranieri, solo bandiera per le mercantili; partizioni araldiche spostate in `heraldry-shapes.js` (condivise con l'editor). Equipaggi civili: marinai che camminano sul ponte e gabbieri che salgono sugli alberi per manovrare le vele (`settlement-ship-crew.js`, dati da Blender, `qa/ship-crew-regression.cjs`). Cantiere del molo: materiali solo sull'approdo, nessun oggetto di cantiere in acqua, materiali in legno.

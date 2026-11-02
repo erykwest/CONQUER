@@ -66,7 +66,7 @@ for(const [key,m] of Object.entries(M.ships)){
   assert.ok(m.emblems.length>=1,key+': has a heraldry patch on the sails');
   for(const e of m.emblems)assert.equal(e.v.length,(e.cols+1)*(e.rows+1)*3,key+': patch grid');
   const plain=S.mesh(key,{x:0,y:0},0).col.length;
-  const flagTris=m.flags.length*2*14*8,patchTris=m.emblems.reduce((t,e)=>t+e.cols*e.rows*4,0);
+  const flagTris=m.flags.length*2*10*6,patchTris=m.emblems.reduce((t,e)=>t+e.cols*e.rows*4,0);
   assert.equal(S.mesh(key,{x:0,y:0},0,{...merchant,t:0}).col.length,plain+flagTris,key+': merchant adds flags only');
   const war=S.mesh(key,{x:0,y:0},0,{...foreign,t:0});
   assert.equal(war.col.length,plain+flagTris+patchTris,key+': warship adds flags and sail arms');

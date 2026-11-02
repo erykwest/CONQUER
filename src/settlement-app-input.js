@@ -27,6 +27,13 @@ canvas.addEventListener('pointerdown',e=>{
     if(commitOrientedPlacement({x:preview.x,y:preview.y},preview.angle))status('Pier placed on the coast — choose next position');
     draw();return
   }
+  if(State.tool.kind==='quay'){
+    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    if(!State.draft?.a){State.draft={a:q,preview:null};status('Banchina: punto A fissato — clicca il punto B');draw();return}
+    const quay={id:uid(),...window.ConquerQuay.make(State.draft.a,q)};
+    if(addStructure(quay)){State.draft=null;status('Banchina costruita — scegli il prossimo punto A')}
+    draw();return
+  }
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='terraform'){
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
@@ -191,6 +198,14 @@ canvas.addEventListener('pointermove',e=>{
     State.draft={mode:'terraform',preview:ghost};
     status(!ghost?.ok?'Terraforming blocked: '+(ghost?.reason||'invalid terrain'):
       (ghost.wallSnap?'Magnet to wall face · ':'')+(ghost.mode==='flat'?'Flat subtraction':ghost.mode==='walled'?'Walled terrace':'Sloped')+' · H '+ghost.targetZ.toFixed(0)+' — click to apply');
+    draw();return;
+  }
+  if(State.tool.kind==='quay'){
+    if(!State.draft?.a)return;
+    const preview=window.ConquerQuay.make(State.draft.a,{x:snapGrid(p.x),y:snapGrid(p.y)});
+    State.draft.preview=preview.length>=.02?preview:null;
+    const v=State.draft.preview&&window.ConquerPlacement?.check(State.draft.preview);
+    status(v&&!v.ok?'Banchina: '+v.reason:'Banchina '+preview.length.toFixed(1)+'U — clicca il punto B');
     draw();return;
   }
   if(State.tool.kind==='crossing'){
@@ -477,10 +492,17 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    setTool({kind:'event',venue:candidate.venue,placementSpec:candidate,
      label:E.label(candidate)+' · '+(E.buildDays(candidate)?E.buildDays(candidate)+'d · ':'')+costText(E.cost(candidate)),el:b});
  };
- // Pier (settlement-pier.js): the ghost snaps square to the coastline, one click builds.
+ // Pier (settlement-pier.js): the ghost snaps square to the coastline or a quay's sea edge,
+ // one click builds. data-pier gives the reach (4 or 12).
  for(const b of document.querySelectorAll('[data-pier]'))b.onclick=()=>{
    const P=window.ConquerPier;if(!P)return;
-   setTool({kind:'pier',placementSpec:P.make(),label:P.label()+' · '+P.buildDays()+'d · '+costText(P.cost()),el:b});
+   const spec=P.make(Number(b.dataset.pier)||12);
+   setTool({kind:'pier',placementSpec:spec,label:P.label(spec)+' · '+P.buildDays(spec)+'d · '+costText(P.cost(spec)),el:b});
+ };
+ // Stone quay (settlement-quay.js): two clicks, along the shore or out in the water.
+ for(const b of document.querySelectorAll('[data-quay]'))b.onclick=()=>{
+   const Q=window.ConquerQuay;if(!Q)return;
+   setTool({kind:'quay',label:Q.label()+' · 2 clic · lungo la riva o in acqua · '+costText(Q.SPEC.costPerU)+'/U',el:b});
  };
  document.querySelector('[data-well]').onclick=e=>setTool({kind:'well',label:'Village well · instant · '+costText(constructionCost({type:'well',masonryMaterial:State.buildMasonryMaterial})),el:e.currentTarget});
 document.getElementById('confirmVillageBtn').onclick=()=>{

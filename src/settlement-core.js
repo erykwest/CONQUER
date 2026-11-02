@@ -656,6 +656,7 @@ function baseConstructionCost(s){
   if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.definition(s).cost};
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.cost(s);
   if(window.ConquerPier?.is(s))return window.ConquerPier.cost(s);
+  if(window.ConquerQuay?.is(s))return window.ConquerQuay.cost(s);
   if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -700,6 +701,7 @@ function buildDuration(s){
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.definition(s).days;
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.buildDays(s);
   if(window.ConquerPier?.is(s))return window.ConquerPier.buildDays(s);
+  if(window.ConquerQuay?.is(s))return window.ConquerQuay.buildDays(s);
   if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));

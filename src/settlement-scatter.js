@@ -49,7 +49,7 @@
     for(const s of State.structures){
       if(s.type==='road'){if(s.a&&s.b)roads.push({a:s.a,b:s.b,half:(Number(s.width)||.5)*.36+.12});continue}
       if(s.type==='field'){polys.push(fieldPoints(s));continue}
-      if(['wall','palisade','built','moat','bridge'].includes(s.type)&&s.a&&s.b){roads.push({a:s.a,b:s.b,half:(Number(s.width)||.6)/2+.15});continue}
+      if(['wall','palisade','built','moat','bridge','quay'].includes(s.type)&&s.a&&s.b){roads.push({a:s.a,b:s.b,half:(Number(s.width)||.6)/2+.15});continue}
       let list=[];
       try{list=urbanBuildingPolygons(s)}catch{}
       if(!list.length&&window.ConquerPier?.is(s))list=[window.ConquerPier.footprint(s)];

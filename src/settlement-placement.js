@@ -79,6 +79,8 @@
     return false;
   }
   function regularCollision(s,other,polys,options={}){
+    // Piers branch off quays: their landing rests on the quay.
+    if((s.type==='pier'&&other.type==='quay')||(s.type==='quay'&&other.type==='pier'))return false;
     if(s.type==='house'&&other.type==='road'&&other.accessFor===s.id)return false;
     // Castle pieces deliberately join walls/gates/towers at their sockets.
     if(['tower','gate'].includes(s.type)&&['wall','built','tower','gate','palisade'].includes(other.type)){
@@ -117,6 +119,10 @@
     }else if(window.ConquerPier?.is(s)){
       const pier=window.ConquerPier.validate(s);
       if(!pier.ok)return pier;
+    }else if(window.ConquerQuay?.is(s)){
+      // Quays only ask for the whitezone and water: no buildable-terrain rules.
+      const quay=window.ConquerQuay.validate(s);
+      if(!quay.ok)return quay;
     }else if(isLine(s)){
       if(s.type==='road'){
         const d=dist(s.a,s.b);

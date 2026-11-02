@@ -252,7 +252,7 @@ def lateen(part, sails, h, x, height, yard, furl, belly=.9):
             rx, rz = tx - p.x, tz - p.z
             u += (d * rx - b * rz) / det; w += (-cc * rx + a * rz) / det
         return min(1, max(0, u)), min(1, max(0, w))
-    emblem_patch(h, P, lambda s, t: uv_at(c.x + ew / 2 - s * ew, c.z + eh / 2 - t * eh), 24, 15, 'y')
+    emblem_patch(h, P, lambda s, t: uv_at(c.x + ew / 2 - s * ew, c.z + eh / 2 - t * eh), 16, 10, 'y')
     h.marks['rig'].append({'kind': 'lateen', 'x': x, 'head': head, 'deck': dz, 'lo': lo})
     # Halyard from the masthead to the yard.
     part.beam(head, lo.lerp(hi, .55), .04, .04, 'rope')
@@ -275,7 +275,7 @@ def square(part, sails, h, x, height, yard, furl, red=False, belly=1.1):
     a, b = ('sailRed', 'sailRedShade') if red else ('sail', 'sailShade')
     sail_grid(sails, P, 8, 6, lambda i, j, u, v: a if i % 2 else b)
     # Heraldry over the whole square sail, seen from ahead: col 0 at u=0 (the -y side).
-    emblem_patch(h, P, lambda s, t: (.06 + .88 * s, .06 + .88 * t), 24, 15, 'x')
+    emblem_patch(h, P, lambda s, t: (.06 + .88 * s, .06 + .88 * t), 16, 10, 'x')
     h.marks['rig'].append({'kind': 'square', 'x': x, 'head': head, 'deck': h.deck_z(x / (h.L / 2)), 'yz': yz, 'w': w})
     return head
 

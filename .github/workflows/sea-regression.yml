@@ -11,6 +11,8 @@ on:
       - 'src/assets/ship-models.js'
       - 'src/heraldry-shapes.js'
       - 'src/settlement-ship-crew.js'
+      - 'src/settlement-quay.js'
+      - 'src/settlement-fleet.js'
       - 'src/settlement-world.js'
       - 'qa/pier-regression.cjs'
       - 'qa/biome-recipes-regression.cjs'

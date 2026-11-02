@@ -1,18 +1,26 @@
 'use strict';
-// Molo: a timber pier built on the sea coast. Its local frame starts on the coastline,
-// +X runs out to sea for REACH U, -X is a short landing on the shore. The deck stands on
-// pile bents driven into the sea bed; scatter props (crates, barrels, sacks, rope) sit on
-// the boards and two mooring points (left / right of the head) are where ships tie up.
+// Molo: a timber pier built on the sea coast, or branching off a stone quay
+// (settlement-quay.js). Its local frame starts on the coastline (or the quay's sea edge),
+// +X runs out to sea for its reach, -X is a short landing on the shore. Two sizes: L4 and
+// L12 (piers saved before the sizes keep L8). The deck stands on pile bents driven into
+// the sea bed; scatter props sit on the boards and two mooring points (left / right of
+// the head) are where ships tie up. Placement asks only for the coast and the whitezone.
 (() => {
-  const REACH=8,LAND=1.5,HALF=.75,TOP=.6,BED=-.6;
-  const MOOR_AT=REACH-1.6,MOOR_OUT=.9;                      // berth: along the head, off the deck edge
-  const SPEC=Object.freeze({label:'Molo',name:'Pier',w:LAND+REACH,h:HALF*2,days:6,cost:Object.freeze({gold:55,wood:110})});
+  const LAND=1.5,HALF=.75,TOP=.6,BED=-.6,MOOR_OUT=.9;
+  const SIZES=Object.freeze({
+    4:{days:4,cost:Object.freeze({gold:30,wood:60})},
+    8:{days:6,cost:Object.freeze({gold:55,wood:110})},       // legacy saves
+    12:{days:8,cost:Object.freeze({gold:80,wood:160})}
+  });
+  const reachOf=s=>SIZES[Number(s?.reach)]?Number(s.reach):8;
+  const moorAt=s=>reachOf(s)-1.6;                            // berth: along the head, off the deck edge
+  const SPEC=Object.freeze({label:'Molo',name:'Pier',h:HALF*2,sizes:SIZES});
   const WOOD='#8a6239',WOOD2='#9b7044',DARK='#5b3b22',PILE='#4a3322',WET='#2f3a33',STONE='#8f8a7e';
   const is=s=>s?.type==='pier';
-  const make=()=>({type:'pier',shape:'pier',w:SPEC.w,h:SPEC.h,functions:[]});
+  const make=(reach=12)=>({type:'pier',shape:'pier',reach,w:LAND+reach,h:HALF*2,functions:[]});
   const toWorld=(s,x,y)=>{const a=s.angle||0,c=Math.cos(a),sn=Math.sin(a);return{x:s.x+x*c-y*sn,y:s.y+x*sn+y*c}};
   const rect=(s,x0,x1,y0,y1)=>[toWorld(s,x0,y0),toWorld(s,x1,y0),toWorld(s,x1,y1),toWorld(s,x0,y1)];
-  const footprint=s=>rect(s,-LAND,REACH,-HALF,HALF);
+  const footprint=s=>rect(s,-LAND,reachOf(s),-HALF,HALF);
   const landing=s=>rect(s,-LAND,0,-HALF,HALF);
   const seaOf=()=>(State.environment||[]).find(f=>f.type==='sea'&&f.coastline?.length>1)||null;
 
@@ -29,42 +37,46 @@
     if(!environmentContains(sea,{x:best.point.x+n.x*1.5,y:best.point.y+n.y*1.5}))n={x:-n.x,y:-n.y};
     return{sea,point:best.point,distance:best.d,normal:n};
   }
-  // The pier always sits on the coast, square to it: the cursor only picks where.
+  // Where a pier can start near p: the sea edge of a quay when one is at hand (a quay built
+  // on the shore runs right by the coastline, so it must win within its reach), else the coast.
+  const QUAY_REACH=2.5;
+  function rootHit(p){
+    const coast=coastHit(p),quay=window.ConquerQuay?.edgeHit(p);
+    if(quay&&(quay.distance<=QUAY_REACH||!coast||quay.distance<=coast.distance))return{...quay,sea:coast?.sea||seaOf(),onQuay:quay.quay.id};
+    return coast&&{...coast,onQuay:null};
+  }
+  // The pier always sits on the coast (or a quay), square to it: the cursor only picks where.
   function snapToCoast(s){
-    const hit=coastHit(s);if(!hit)return s;
+    const hit=rootHit(s);if(!hit)return s;
     s.x=hit.point.x;s.y=hit.point.y;s.angle=Math.atan2(hit.normal.y,hit.normal.x);
-    s.rotationStep=structureRotationStep(s.angle);
+    s.rotationStep=structureRotationStep(s.angle);s.onQuay=hit.onQuay||null;
     return s;
   }
-  const groundLevel=s=>terrainElevation(toWorld(s,-LAND*.6,0));
+  // Deck level: above the highest ground under the landing (never below the waterline);
+  // on a quay the deck is flush with the quay top.
+  const groundLevel=s=>s.onQuay?0:Math.max(0,...[-LAND+.1,-LAND/2,-.2].flatMap(x=>[-HALF,0,HALF].map(y=>terrainElevation(toWorld(s,x,y)))));
 
   function validate(s){
     if(!is(s))return{ok:false,reason:'Not a pier'};
-    const hit=coastHit(s);
+    const hit=rootHit(s);
     if(!hit)return{ok:false,reason:'A pier needs a sea coast'};
-    if(hit.distance>.3)return{ok:false,reason:'A pier must start on the coastline'};
+    if(hit.distance>.3)return{ok:false,reason:'A pier must start on the coastline or a quay'};
     // Only the landing must be in the whitezone: the deck reaches out over the sea.
+    // No buildable-terrain rules: slopes, woods and uneven shore are fine.
     if(landing(s).some(v=>v.x<BUILD_MIN||v.x>BUILD_MAX||v.y<BUILD_MIN||v.y>BUILD_MAX))
       return{ok:false,reason:'The pier landing must be inside the whitezone (100×100U)'};
-    const env=State.environment||[],g=groundLevel(s);
-    for(const x of [-LAND+.1,-LAND/2,-.25])for(const y of [-HALF+.1,0,HALF-.1]){
-      const p=toWorld(s,x,y);
-      if(env.some(f=>['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,x>-.5?-.15:.1)))
-        return{ok:false,reason:'The pier landing must be on open shore'};
-      if(terrainSlopeKind(p)||Math.abs(terrainElevation(p)-g)>.001)
-        return{ok:false,reason:'The pier landing needs flat ground'};
-    }
-    for(const x of [2,REACH/2,REACH-.1])for(const y of [-HALF,HALF])
-      if(!environmentContains(hit.sea,toWorld(s,x,y)))return{ok:false,reason:'The pier must reach out over open sea'};
-    return{ok:true,ground:g};
+    const R=reachOf(s),sea=hit.sea;
+    for(const x of [Math.min(2,R*.5),R/2,R-.1])for(const y of [-HALF,HALF])
+      if(!sea||!environmentContains(sea,toWorld(s,x,y)))return{ok:false,reason:'The pier must reach out over open sea'};
+    return{ok:true,ground:groundLevel({...s,onQuay:hit.onQuay}),onQuay:hit.onQuay||null};
   }
 
   // Berths: where a ship lies alongside, one each side of the head, bow towards the sea.
   function moorings(s){
-    const a=s.angle||0;
+    const a=s.angle||0,at=moorAt(s);
     return[['left',1],['right',-1]].map(([side,k])=>{
-      const p=toWorld(s,MOOR_AT,k*(HALF+MOOR_OUT)),post=toWorld(s,MOOR_AT,k*(HALF-.13));
-      return{side,x:p.x,y:p.y,angle:a,bollard:post};
+      const p=toWorld(s,at,k*(HALF+MOOR_OUT)),post=toWorld(s,at,k*(HALF-.13));
+      return{side,x:p.x,y:p.y,angle:a,bollard:post,edge:toWorld(s,at,k*HALF),out:{x:-Math.sin(a)*k,y:Math.cos(a)*k}};
     });
   }
 
@@ -72,7 +84,7 @@
   const cache=new Map();
   function meshes(s,ground){
     const g=Number.isFinite(ground)?ground:Number.isFinite(s.groundZ)?s.groundZ:groundLevel(s);
-    const key=[s.x,s.y,s.angle,g].join('|');
+    const REACH=reachOf(s),MOOR_AT=moorAt(s),key=[s.x,s.y,s.angle,g,REACH,s.onQuay||''].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit.list;
     const top=g+TOP,pos=[],col=[];
     const P=(x,y,z)=>{const p=toWorld(s,x,y);return[p.x,p.y,z]};
@@ -88,8 +100,11 @@
     for(const y of [-HALF+.12,0,HALF-.12])box(-LAND,REACH,y-.07,y+.07,top-.17,top-.06,DARK);
     // Pile bents: a pair of piles into the sea bed and a headstock under the stringers,
     // the waterline marked by a darker wet band. On the shore a stone crib carries the landing.
-    box(-LAND,0,-HALF-.05,HALF+.05,g-.02,top-.06,STONE);
-    box(-LAND-.6,-LAND,-HALF+.1,HALF-.1,g-.02,g+(top-g)*.5,STONE);          // step up from the shore
+    // (On a quay the landing rests on the quay itself.)
+    if(!s.onQuay){
+      box(-LAND,0,-HALF-.05,HALF+.05,Math.min(g,terrainElevation(toWorld(s,-LAND,0)))-.02,top-.06,STONE);
+      box(-LAND-.6,-LAND,-HALF+.1,HALF-.1,g-.02,g+(top-g)*.5,STONE);        // step up from the shore
+    }
     const bents=[];for(let x=.5;x<REACH-.4;x+=1.5)bents.push(x);bents.push(REACH-.12);
     for(const x of bents){
       for(const k of [-1,1]){
@@ -108,19 +123,21 @@
       for(const dx of [-.9,.9])box(MOOR_AT+dx-.06,MOOR_AT+dx+.06,m*HALF-(m>0?0:.07),m*HALF+(m>0?.07:0),g-.05,top-.02,DARK);
     }
     const list=[{pos,col}];
-    const props=deckProps(s,top);if(props)list.push(props);
+    const props=deckProps(s,top,REACH,MOOR_AT);if(props)list.push(props);
     cache.set(s.id,{key,list});
     return list;
   }
   // Goods waiting on the boards, kept off the centre lane and away from the bollards.
   const PROPS=['crateStack','barrelGroup','sackPile','crateStack','goodsMixed'];
-  function deckProps(s,top){
+  function deckProps(s,top,REACH,MOOR_AT){
     const M=window.ConquerScatterModel;if(!M?.assets)return null;
     const rnd=seedRand((Number(State.seed)||1)^[...String(s.id||'pier')].reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261));
-    const spots=[[-.7,.42],[1.3,-.42],[2.7,.42],[4.1,-.42],[MOOR_AT+.55,.38],[MOOR_AT+.55,-.38]];
+    // Goods every ~1.4U along the deck, alternating sides, clear of the berths; rope by the bollards.
+    const spots=[];for(let x=-.7,i=0;x<MOOR_AT-.6;x+=1.4,i++)spots.push([x,i%2?-.42:.42,false]);
+    spots.push([MOOR_AT+.55,.38,true],[MOOR_AT+.55,-.38,true]);
     const pos=[],col=[];
-    spots.forEach(([x,y],i)=>{
-      const name=i>=4?'ropeCoil':PROPS[Math.floor(rnd()*PROPS.length)],a=M.assets[name];if(!a)return;
+    spots.forEach(([x,y,rope])=>{
+      const i=rope?4:0,name=rope?'ropeCoil':PROPS[Math.floor(rnd()*PROPS.length)],a=M.assets[name];if(!a)return;
       const k=i>=4?1.1:1.15,h=(s.angle||0)+(rnd()<.5?0:Math.PI/2)+(rnd()-.5)*.3,c=Math.cos(h)*k,sn=Math.sin(h)*k,o=toWorld(s,x,y);
       for(let t=0;t<a.c.length;t++){
         for(let q=0;q<3;q++){const j=a.i[t*3+q]*3,vx=a.v[j],vy=a.v[j+1];pos.push(o.x+vx*c-vy*sn,o.y+vx*sn+vy*c,top+a.v[j+2]*k)}
@@ -149,13 +166,13 @@
     }
     return true;
   }
-  const label=()=>SPEC.label+' · '+REACH+'U · 2 attracchi';
-  const cost=()=>({...SPEC.cost});
-  const buildDays=()=>SPEC.days;
+  const label=s=>SPEC.label+' L'+reachOf(s)+' · '+reachOf(s)+'U · 2 attracchi';
+  const cost=s=>({...SIZES[reachOf(s)].cost});
+  const buildDays=s=>SIZES[reachOf(s)].days;
   function panelHtml(s){
     return'<div class="slot"><div class="slot-label">Attracchi</div>'+moorings(s).map(m=>
       '<div class="kv"><span>'+(m.side==='left'?'Sinistra':'Destra')+'</span><b>'+m.x.toFixed(1)+', '+m.y.toFixed(1)+'</b></div>').join('')+
-      '</div><div class="legend">Molo in legno su pali, lungo '+REACH+'U verso il mare. Va costruito sulla costa, con l\'approdo dentro la whitezone.</div>';
+      '</div><div class="legend">Molo in legno su pali, lungo '+reachOf(s)+'U verso il mare'+(s.onQuay?', agganciato alla banchina':'')+'. Va costruito sulla costa o su una banchina, con l\'approdo dentro la whitezone.</div>';
   }
-  window.ConquerPier=Object.freeze({SPEC,REACH,LAND,is,make,footprint,landing,coastHit,snapToCoast,groundLevel,validate,moorings,meshes,draw,addToBuilder,label,cost,buildDays,panelHtml});
+  window.ConquerPier=Object.freeze({SPEC,SIZES,LAND,HALF,TOP,is,make,reachOf,footprint,landing,coastHit,rootHit,snapToCoast,groundLevel,validate,moorings,meshes,draw,addToBuilder,label,cost,buildDays,panelHtml});
 })();
