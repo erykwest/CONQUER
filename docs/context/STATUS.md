@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## CRIME — laboratorio criminalità e ordine pubblico (branch `feature/crime-skeleton`, 02/11/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MAIN:** pagina `/crime/` con motore deterministico UI-independent (`crime/engine.js`), UI di prova (`crime/index.html`, `crime/ui.js`), metriche separate criminalità/ordine pubblico/tensione, fasi calma→malcontento→protesta→sommossa→rivolta con de-escalation, politiche e strutture dimostrative (guardie, prigione, ospizio, gogna, patibolo, tribunale), log e storico.
+- **ISOLAMENTO:** 120 residenti fixture, localStorage `conquer.crime.prototype.v1`; nessuna modifica ai residenti reali, al ledger, ai locali, alla mappa o ai salvataggi del Builder. Nessun asset visivo nuovo; pagina e controlli sono HTML/CSS.
+- **QA:** `qa/crime-regression.cjs` creato; logica della regressione eseguita in harness JS isolato (PASS), **Node CLI, browser e CI non ancora verificati** alla redazione di questa voce. La pagina è codice, non un deploy certificato.
+- **APERTO:** adapter a stato canonico ed economia, popolani/guardie e routine fisiche, stanze vere/capienze, edifici punitive collocabili, procedimenti individuali, integrazione Combat per sommosse e rivolte, salvataggio condiviso e bilanciamento. Verificare gli slot del Palazzo cittadino prima del tribunale. [Specifica](../crime.md).
+
+
 ## Accampamenti — livree delle tende, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`, 29–30/10/2026)
 
 - **Codice presente su branch (non ancora `main`):**
