@@ -32,8 +32,14 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 
 - **C-00 — IMPLEMENTATO SU BRANCH `feature/crime-skeleton` (solo sandbox):** `/crime/`, motore deterministico disaccoppiato, metriche criminalità / ordine / tensione, progressione e recupero in cinque fasi, politiche sociali e repressive, flag stanza/annesso per guardia, prigione e ospizio, fixture gogna/forca/tribunale, cronaca, storico e salvataggio isolato, test `qa/crime-regression.cjs`.
 - **C-01 — APERTO:** sorgente unica per popolazione, felicità, tassazione, razioni e assistenza, senza ledger CRIME alternativo (`ConquerGame` + `ConquerEconomy`).
-- **C-02 — APERTO:** assegnazioni vere di guardia e prigione alle torri W2/W3, ospizio alla Chiesa L2, compatibilità degli slot, capacità e personale; verificare il Palazzo cittadino prima di attribuirgli un tribunale.
-- **C-03 — APERTO:** gogna e forca/patibolo come scatter/strutture civiche collocabili, con audit del Lab e QA visiva obbligatori nel loro futuro intervento.
+- **C-02 — IMPLEMENTATO SU BRANCH `feature/crime-buildings` (Builder):**
+  - Municipio con una sala al piano terra per livello civico (consiglio, tribunale da L2, guardia, prigione), arredate nel cutaway.
+  - Capienze: prigione 6/12, guardia 4 per unità di stanza.
+  - Ospizio come annesso della Chiesa L2, con modello Blender.
+  - **APERTO:** personale e routine delle guardie, lettura dal salvataggio in `/crime/` (adapter, vedi C-01).
+- **C-03 — IMPLEMENTATO SU BRANCH `feature/crime-buildings`:**
+  - Gogna (1 × 1 U) e forca (2 × 1,5 U) collocabili come `eventVenue`, con cantiere, costo e modelli Blender `justicePillory` / `justiceGallows` nel Lab (*Edifici · Giustizia*).
+  - **APERTO:** audit del Lab con baseline e QA visiva nel browser.
 - **C-04 — APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
 - **C-05 — APERTO:** bilanciamento, logiche punitive individuali, effetti del giudizio/giustizia, persistenza unica, serie storiche e indicatori nel Centro di controllo, regressioni browser/end-to-end.
 - **DIPENDENZE:** M0 economia e popolazione vere → contratti funzioni civiche e guardie → routine e ordine pubblico → esiti militari. Sandbox C-00 non anticipa lo stato implementativo di C-01–C-05. [Design, confini e QA](../crime.md).

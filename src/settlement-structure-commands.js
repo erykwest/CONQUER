@@ -140,6 +140,7 @@ const StructureCommands=(()=>{
       status('Remove annexes requiring a higher level before downgrading');return false;
     }
     target.civicLevel=level;normalizeCivicDevelopment(target);
+    if(target.type==='townhall')normalizeFunctions(target);
     refresh(target);status(structureLabel(target)+' · skeleton stage only');return true;
   }
   function setPlazaVariant(id,variant){
@@ -309,12 +310,13 @@ const StructureCommands=(()=>{
     }
     if(['wall','palisade','built'].includes(s.type))d.controls.push({key:'side',cmd:'flipSide',toggle:true});
     if(cutawayEligible(s))d.controls.push({key:'cutaway',cmd:'toggleCutaway',toggle:true,active:structureCutaway(s),disabled:building});
-    if(!house&&!simpleCivic){
+    if(!house&&(!simpleCivic||s.type==='townhall')){
+      if(simpleCivic)normalizeFunctions(s);
       const cap=functionCapacity(s);
       d.facts.push({key:'rooms',value:cap+' · '+functionCapacityUnits(s)});
-      d.rooms={pending:building,slots:building?[]:Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>({
+      d.rooms={pending:building,hall:s.type==='townhall',slots:building?[]:Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>({
         index:i,size:functionSlotSize(s,i),units:functionSlotUnits(s,i),value:s.functions[i]||'',
-        options:FUNCTION_CATALOG.map(k=>({value:k,allowed:!!window.ConquerSiege?.allowed(s,i,k)}))}))};
+        options:functionCatalog(s).map(k=>({value:k,allowed:!!window.ConquerSiege?.allowed(s,i,k)}))}))};
     }
     if(['tower','gate','built'].includes(s.type)){
       const hp=window.ConquerSiege?.integrity(s);

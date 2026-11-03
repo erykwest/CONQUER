@@ -1,5 +1,14 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Edifici e stanze di CRIME nel Builder (branch `feature/crime-buildings`)
+
+- **Municipio:** sale al piano terra (una per livello) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate nel cutaway.
+- **Capienze:** detenuti e sentinelle in `ConquerSiege.capacity()`.
+- **Ospizio:** annesso della Chiesa L2.
+- **Gogna e forca:** strutture di piazza collocabili, con modelli Blender, nel Lab e nel Builder.
+- **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
+- **Piramide:** STATUS, BACKLOG (C-02 e C-03 su branch), DECISIONS (tribunale nel Municipio). ROADMAP invariata.
+
 ## 2026-11-02 — Ballatoi di torri e porte (branch `feature/tower-hoardings`)
 
 - Ballatoio di legno come aggiunta temporanea (Montato / Smontato) sulle torri in pietra (quadrata, rotonda, a D) e sulle porte in pietra grande e piccola, merlate o a falde: il tetto resta quello costruito, sotto le falde il ballatoio pende sotto la gronda. Sulle porte solo sul fronte esterno; sulle torri si interrompe contro porte e torri attaccate più alte. Nuova regola D-GATE-01: le torri agganciate a una porta hanno ingresso e lato interno sempre sul retro della porta. Modello Blender (`tools/blender/build_hoarding.py`) ripetuto lungo il profilo; brucia, esclude le macchine in cima alla torre. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: aggiunta D-GATE-01; nuova variante `hoarding` dei tipi `tower` e `gate`, nessun tipo nuovo.

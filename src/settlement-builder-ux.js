@@ -52,7 +52,9 @@
       ['[data-civic="church"]','Chiesa','church'],
       ['[data-civic="townhall"]','Municipio · presso un pozzo','townhall'],
       ['[data-civic="guild"]','Gilda · presso un pozzo','guild'],
-      ['[data-civic="training"]','Campo di addestramento','training']]},
+      ['[data-civic="training"]','Campo di addestramento','training'],
+      ['[data-event-venue="pillory"]','Gogna · 1×1U · piazza','civic'],
+      ['[data-event-venue="gallows"]','Forca · 2×1.5U · piazza o margine','civic']]},
     {id:'defense',label:'Fortificazioni',icon:'castle',items:[
       ['[data-tower="square"][data-size="1.5"]','Torre quadrata T2','square'],
       ['[data-tower="round"][data-size="0.75"]','Torre rotonda T2','round'],

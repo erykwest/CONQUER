@@ -9,12 +9,12 @@
     tax: [0, 100], foodStress: [0, 100], guards: [0, 40], relief: [0, 100], severity: [0, 2]
   });
   const FACILITIES = Object.freeze({
-    watch: Object.freeze({label: 'Corpo di guardia', place: 'Stanza torre W2/W3', role: 'Pattuglie e arresti'}),
-    prison: Object.freeze({label: 'Prigione', place: 'Stanza torre W2/W3', role: 'Detenzione · 12 posti'}),
+    watch: Object.freeze({label: 'Corpo di guardia', place: 'Stanza di torre T2/T3, porta o sala del Municipio', role: 'Pattuglie e arresti'}),
+    prison: Object.freeze({label: 'Prigione', place: 'Stanza di torre T2/T3, porta o sala del Municipio', role: 'Detenzione · 12 posti'}),
     almshouse: Object.freeze({label: 'Ospizio', place: 'Annesso Chiesa L2', role: 'Assistenza ai più vulnerabili'}),
     pillory: Object.freeze({label: 'Gogna', place: 'Piazza', role: 'Deterrenza pubblica e risentimento'}),
     gallows: Object.freeze({label: 'Forca / patibolo', place: 'Piazza o margine urbano', role: 'Intimidazione e tensione sociale'}),
-    tribunal: Object.freeze({label: 'Tribunale', place: 'Palazzo civico (da verificare)', role: 'Giustizia ordinaria e rilascio detenuti'})
+    tribunal: Object.freeze({label: 'Tribunale', place: 'Sala del Municipio L2+', role: 'Giustizia ordinaria e rilascio detenuti'})
   });
   const clamp = n => Math.max(0, Math.min(100, n));
   const round = n => Math.round(n * 10) / 10;

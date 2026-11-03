@@ -25,6 +25,31 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 
 **Avvertenza:** nessuna esecuzione è visualizzata o simulata, e le strutture punitive non applicano sentenze ai singoli PNG. I coefficienti non sono ancora tarati, né derivati da serie dati reali.
 
+## Edifici e stanze nel Builder (C-02 / C-03)
+
+**Stato (03/11/2026):** implementati sul branch `feature/crime-buildings` come **strutture reali del Builder**. Il laboratorio `/crime/` resta isolato: non legge ancora il salvataggio e i suoi flag restano di fixture.
+
+| Struttura | Dove si costruisce | Dati | Note |
+| --- | --- | --- | --- |
+| Corpo di guardia (`guard`) | Stanza di torre T2/T3, porta o sezione costruita (già esistente); **sala del Municipio** | `s.functions[i]='guard'` | Capienza 4 sentinelle per unità di stanza (`ConquerSiege.capacity().watchmen`) |
+| Prigione (`prison`) | Come sopra | `s.functions[i]='prison'` | 6 detenuti per stanza normale, 12 per stanza grande (T3), 6 per sala del Municipio (`capacity().prisoners`) |
+| Sala del consiglio (`council`) | Solo Municipio | `s.functions[i]='council'` | Arredo storico del cutaway; un Municipio salvato prima delle sale riceve questa sala nella prima posizione |
+| Tribunale (`tribunal`) | Solo Municipio **L2+** | `s.functions[i]='tribunal'` | Al ritorno a L1 la sala decade |
+| Ospizio (`almshouse`) | Annesso della Chiesa **L2**, max 1, 3 × 2,4 U | `{type:'civicAnnex', annexType:'almshouse'}` | Modello Blender `almshouse` (aula intonacata, portico, campanile a vela). Come gli altri annessi: niente costo o effetti economici |
+| Gogna (`pillory`) | Piazza, 1 × 1 U | `{type:'eventVenue', venue:'pillory'}` | 8 legno + 2 metallo, ½ giorno. Modello `justicePillory` |
+| Forca (`gallows`) | Piazza o margine, 2 × 1,5 U | `{type:'eventVenue', venue:'gallows'}` | 24 legno + 2 metallo, 1 giorno. Modello `justiceGallows`, sobrio e **vuoto** (senza figura né cappio) |
+
+**Sale del Municipio.** Il piano terra del Municipio si divide in tante sale affiancate quanti sono i livelli civici (L1 = 1, L2 = 2, L3 = 3), con il catalogo civico `TOWNHALL_FUNCTION_CATALOG = council, tribunal, guard, prison`. Le funzioni del castello restano nel castello: consiglio e tribunale non si assegnano alle torri. Nel cutaway del Municipio ogni sala è arredata secondo il suo ruolo, con una tramezza tra le sale:
+
+- **Consiglio:** tavolo e seggio del podestà.
+- **Tribunale:** banco dei giudici su gradino, sbarra, panche.
+- **Guardia:** tavolo, rastrelliera, branda.
+- **Prigione:** inferriata, paglia, catene.
+
+Gogna e forca riusano il contratto delle `eventVenue` (posa a due clic, cantiere, costo, modello nel catalogo eventi). Nel nuovo Builder compaiono nello strumento **Giustizia**; nel vecchio, tra gli edifici civili. Nel Lab sono nella categoria *Edifici · Giustizia*.
+
+Test: `qa/crime-buildings-regression.cjs`.
+
 ## Contratto futuro (non implementato)
 
 | Sistema autorevole | Ingresso futuro per CRIME | Uscita futura / responsabilità |
@@ -36,7 +61,7 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 | `ConquerGame` persistenza | `State` canonico e calendario unico | Stato sociale persistente **solo dopo** definizione del contratto e migrazione |
 | Centro di controllo | KPI sociali **solo quando veri** | Avvisi su disordini, detenuti, servizi e welfare |
 
-Il **Palazzo cittadino** e i suoi eventuali slot vanno verificati prima di assegnare il Tribunale; non introdurre stanze civiche presunte. La gogna e il patibolo sono piccole strutture collocabili previste, **non presenti** nel Builder con questa iterazione. L'ospizio è proposto come annesso religioso, senza introdurre una nuova categoria di risorse.
+Il Tribunale è una sala del Municipio L2+ (decisione del 03/11/2026, dopo il cutaway civico). Gogna, forca, ospizio, corpo di guardia e prigione esistono ora nel Builder (sezione precedente). Restano da fare l'adapter `/crime/` ← `State`, il personale e le routine.
 
 ## Non-obiettivi V0
 

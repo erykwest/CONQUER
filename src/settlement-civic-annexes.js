@@ -6,6 +6,8 @@ const CIVIC_ANNEX_CATALOG=Object.freeze({
     cemetery:{label:'Cemetery',level:1,w:2.2,h:2.2,max:1,kind:'cemetery',intrinsic:true},
     herbGarden:{label:'Herb garden',level:1,w:2,h:2,max:2,kind:'garden'},
     scriptorium:{label:'Scriptorium',level:2,w:2.5,h:2,max:1,kind:'stone'},
+    // Ospizio: shelter for the poor and the sick (crime skeleton: care against unrest).
+    almshouse:{label:'Almshouse',level:2,w:3,h:2.4,max:1,kind:'stone'},
     monastery:{label:'Monastery',level:3,w:3,h:2.5,max:1,kind:'stone'},
     cloister:{label:'Cloister',level:3,w:2.5,h:2.5,max:1,kind:'yard'},
     // Church square (sagrato): a piazza in front of or beside the church, three variants.

@@ -1223,6 +1223,38 @@ def a_scriptorium(m):
     m.done('body', p)
 
 
+def a_almshouse(m):
+    """Ospizio (church L2 annex): a long plastered hall for the poor and the sick with a
+    portico on the front, a bell gable on one end and benches under the arcade."""
+    w, d, cy, z1 = 9.6, 5.0, 1.2, 4.0
+    p = m.part('body')
+    house_block(p, w, d, z1, 'plaster', ('roofTile', 'roofTileDark'), 2.4, plinth='stoneTrim', cy=cy)
+    for x in (-3.2, -1.1, 1.1, 3.2):
+        opening(p, (x, cy + d / 2), (0, 1), .8, 1.3, 1.6, 'glass', frame='stoneTrim', arch='round')
+        if abs(x) > 2:
+            opening(p, (x, cy - d / 2), (0, -1), .8, 1.3, 1.6, 'glass', frame='stoneTrim', arch='round')
+    for sx in (-1, 1):
+        opening(p, (sx * w / 2, cy), (sx, 0), .8, 1.3, 1.8, 'glass', frame='stoneTrim', arch='round')
+    opening(p, (0, cy - d / 2), (0, -1), 1.4, 2.4, 0, 'woodDark', frame='stoneTrim', arch='round')
+    # Bell gable (campanile a vela) over the east end, with its cross.
+    gx = w / 2 - .5
+    p.box((gx, cy, z1 + 2.9), (.4, 1.6, 1.8), 'stoneLight')
+    plate(p, (gx - .2, cy), (-1, 0), [(-.35, z1 + 2.4), (.35, z1 + 2.4), (.35, z1 + 3.1), (0, z1 + 3.4), (-.35, z1 + 3.1)], 'dark', 0, .02)
+    p.box((gx, cy, z1 + 2.7), (.08, .3, .45), 'bronze')
+    cross(p, gx, cy, z1 + 3.8, .9, 'iron', axis='y')
+    m.done('body', p)
+    p = m.part('portico')
+    y0, y1 = cy - d / 2, -3.7
+    p.box((0, (y0 + y1) / 2, .12), (w, y0 - y1, .24), 'paving')
+    for x in (-4.4, -2.2, 0, 2.2, 4.4):
+        p.cylinder(.22, 0, 'stoneLight', n=8, axis='z', center=(x, y1 + .35, 0), radii=[.28, .22, .22, .3], along=[.24, .45, 2.75, 2.95])
+    p.box((0, y1 + .35, 3.12), (w, .4, .35), 'stoneTrim')
+    slab(p, [(-w / 2 - .2, y1 - .05, 3.45), (w / 2 + .2, y1 - .05, 3.45), (w / 2 + .2, y0, 3.95), (-w / 2 - .2, y0, 3.95)], .18, 'roofTile')
+    for x in (-3.3, 3.3):
+        bench(p, x, y0 - .45, 1.8)
+    m.done('portico', p)
+
+
 def a_monastery(m):
     w, d = 10.0, 7.4
     p = m.part('body')
@@ -1620,6 +1652,7 @@ def build_list():
     for L in (1, 2, 3):   # appended last: earlier models keep their export order
         out += [('townhall%d' % L, lambda m, L=L: townhall(m, L)), ('guild%d' % L, lambda m, L=L: guild(m, L))]
     out += [('prop_' + k, fn) for k, fn in PROPS]
+    out += [('almshouse', a_almshouse)]   # appended last, like the town hall and guild
     return out
 
 

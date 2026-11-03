@@ -4,7 +4,9 @@
   function redraw(){if(typeof requestSceneDraw==='function')requestSceneDraw();else if(typeof draw==='function')draw()}
   const CAPACITY=Object.freeze({granary:{food:240},storage:{materials:240},armory:{equipment:80},
     stables:{horses:5},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
-    nobleRoom:{knights:1},quarters:{soldiers:16}});
+    nobleRoom:{knights:1},quarters:{soldiers:16},
+    // Public order (crime skeleton): a normal cell holds 6, a large one 12; a guard post 4 watchmen.
+    prison:{prisoners:6},guard:{watchmen:4}});
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
     spear:{stone:0,wood:0,door:0,portcullis:0},
@@ -71,10 +73,15 @@
     window.ConquerCircle?.reset?.();
     rubbleGrid=null;                                  // rubble of the loaded game
   }
+  const CIVIC_ONLY_ROOMS=new Set(['council','tribunal']);
   function eligibleRoom(s){return !!s&&['tower','gate','built'].includes(s.type)&&!underConstruction(s)}
   function floor(s,index){return index+1}
   function allowed(s,index,fn){
     if(!fn)return true;
+    // Town hall chambers sit side by side on the ground floor; the tribunal needs two (L2).
+    if(s?.type==='townhall')return !underConstruction(s)&&index>=0&&index<functionCapacity(s)
+      &&TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||civicLevel(s)>=2);
+    if(CIVIC_ONLY_ROOMS.has(fn))return false;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
@@ -247,9 +254,9 @@
   }
   function capacity(){
     const unavailable=capturedRoomIds();
-    const out={food:0,materials:0,equipment:0,horses:0,gold:0,meals:0,soldiers:0,knights:0};
+    const out={food:0,materials:0,equipment:0,horses:0,gold:0,meals:0,soldiers:0,knights:0,prisoners:0,watchmen:0};
     for(const s of State.structures){
-      if(!eligibleRoom(s)||s.destroyed)continue;
+      if(!(eligibleRoom(s)||s.type==='townhall'&&!underConstruction(s))||s.destroyed)continue;
       normalizeFunctions(s);
       s.functions.forEach((fn,i)=>{
         const spec=CAPACITY[fn];

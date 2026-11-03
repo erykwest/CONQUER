@@ -52,7 +52,8 @@
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno'};
+    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
+    justicePillory:'Gogna',justiceGallows:'Forca',almshouse:'Ospizio (annesso della chiesa)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
@@ -85,8 +86,10 @@
       const isCivicNature=isCivicProp&&/^prop_(tree|cypress|flowerBush)/.test(key);
       const isCivicFurniture=isCivicProp&&/^prop_table/.test(key);
       // A civic shop/stable/warehouse is a building, not an interior furnishing.
-      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':source.category;
-      const family=source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
+      // Pillory and gallows are piazza works of public justice, placed like the event venues.
+      const isJustice=source.global==='ConquerEventModels'&&key.startsWith('justice');
+      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':isJustice?'Edifici':source.category;
+      const family=isJustice?'Giustizia':source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
         :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali':source.family;
       items.push({id:'model:'+source.global+':'+key,title:titleFor(key),category,family,
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
