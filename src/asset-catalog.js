@@ -18,7 +18,7 @@
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
     {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
     {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
-    {global:'ConquerHouseModels',collection:'models',category:'Componenti',family:'Kit case'}
+    {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
