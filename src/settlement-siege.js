@@ -77,6 +77,8 @@
     if(!fn)return true;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
+    // The portico of a W1 section is an open ground floor: only what lives under arches fits there.
+    if(l===1&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
     // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
     if(fn==='kitchen')return l===1&&s.type==='built';

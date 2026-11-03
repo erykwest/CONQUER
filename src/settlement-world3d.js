@@ -992,22 +992,19 @@
           }
         }
       }else if(s.type==='built'){
-        const inside=-wallExteriorSide(s);
         for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
           for(let i=0;i<count;i++)onEdge(edge,z,Math.min(aw,cell*.82),ah,key,(i+.5)*cell-edge.length/2,ground,o);
         }
-        if(builtSkin(s)==='arcade'){                                            // drawBuiltArcade, interior facade
-          const edge=linearFacadeEdge(s,inside),h=Math.min(1.46,structureHeight(s)-.16);
-          if(h>.18&&edge.length>=.35){
-            const count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,centerZ=.04+h/2,key=cell<2.25?'arcade2':'arcade3';
-            const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center),DARK=[36/255,33/255,31/255,1];
-            for(let i=0;i<count;i++){
-              const off=(i+.5)*cell-edge.length/2,w=cell*.96,span=facadeAssetWorldSpan(edge,w,off);
-              quad(span.a,span.b,ground+centerZ-h*.43,ground+centerZ+h*.43,'__white',o,DARK,.008);   // drawFacadeAssetBackdrop
-              onEdge(edge,centerZ,w,h,key,off,ground,o);
-            }
+        const arcade=builtArcadeLayout(s);                                      // drawBuiltArcade, interior facade
+        if(arcade){
+          const {edge,h,centerZ,key}=arcade;
+          const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center),DARK=[36/255,33/255,31/255,1];
+          for(const {off,w} of arcade.bays){
+            const span=facadeAssetWorldSpan(edge,w,off);
+            quad(span.a,span.b,ground+centerZ-h*.43,ground+centerZ+h*.43,'__white',o,DARK,.008);   // drawFacadeAssetBackdrop
+            onEdge(edge,centerZ,w,h,key,off,ground,o);
           }
         }
       }else if(s.type==='house'){
@@ -1353,6 +1350,22 @@
             const at={x:(a.x+b.x)/2+u.x*off-dir.x*.006,y:(a.y+b.y)/2+u.y*off-dir.y*.006};
             if(rear)decal(at,dir,G0+z-sz.h/2,G0+z+sz.h/2,sz.w,gothicAssetForLevel(s),'#8fa2b2');
             else decal(at,dir,G0+z-.31,G0+z+.31,.24,'arrowSlit','#1c1612');
+          }
+        }
+      }else if(s.type==='built'){
+        // The portico seen from inside when it stands on the rear wall; on the near side it goes with the wall.
+        const arcade=builtArcadeLayout(s),c=structureCenter(s);
+        const seg={x:s.b.x-s.a.x,y:s.b.y-s.a.y},L=Math.hypot(seg.x,seg.y)||1,u={x:seg.x/L,y:seg.y/L};
+        for(const e of keep){
+          if(!arcade||arcade.centerZ+arcade.h/2>H)break;
+          const a=g.inner[e],b=g.inner[(e+1)%n],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+          const side=Math.sign(-u.y*(mid.x-c.x)+u.x*(mid.y-c.y));if(side!==arcade.side)continue;
+          const dir={x:-u.y*side,y:u.x*side},ec={x:(arcade.edge.a.x+arcade.edge.b.x)/2,y:(arcade.edge.a.y+arcade.edge.b.y)/2};
+          const t=(ec.x-mid.x)*u.x+(ec.y-mid.y)*u.y,G=terrainElevation(mid),{h,centerZ:cz}=arcade;
+          for(const {off,w} of arcade.bays){
+            const at=k=>({x:mid.x+u.x*(t+off)-dir.x*k,y:mid.y+u.y*(t+off)-dir.y*k});
+            openingQuad(m,at(.006),dir,G+cz-h*.43,G+cz+h*.43,w,'#24211f');
+            decal(at(.009),dir,G+cz-h/2,G+cz+h/2,w,arcade.key,'#6d655c');
           }
         }
       }

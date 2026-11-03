@@ -202,7 +202,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='built'){
     const skin=builtSkin(s);
-    html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">Porticato affects only the interior ground floor.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">${isWideBuilt(s)?'Porticato affects only the interior ground floor.':'Porticato: the ground floor opens under the arches and the upper floor is raised over it. Under the portico: '+PORTICO_FUNCTIONS.map(k=>FUNCTION_LABELS[k]).join(', ')+'.'}</div></div>`;
   }
   if(s.type==='wall'){
     const skin=wallSkin(s),narrow=wallTier(s)===1;

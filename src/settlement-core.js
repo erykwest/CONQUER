@@ -358,6 +358,8 @@ const BIOMES=Object.freeze({
   sea:{label:'Mare',field:'#2a2818'}
 });
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison'];
+// Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores, guard post.
+const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage','guard']);
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison'};
 const uid=()=>crypto.randomUUID?.()||('id-'+Date.now()+'-'+Math.random());
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -442,6 +444,8 @@ function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefi
 function isWideBuilt(s){return s?.type==='built'&&s.span==='wide'}
 function builtWidth(s){return isWideBuilt(s)?TYPES.builtWide.width:TYPES.built.width}
 function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
+// W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
+function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.
 function hasMachicolation(s){
   if(!s)return false;

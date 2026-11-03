@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## Portico delle sezioni W1 (branch `feature/built-portico`, da `main` 69ff1ea, 03/11/2026, NON MAIN)
+
+- **Bug corretti:** il porticato aveva tre geometrie diverse: 2.5D (`settlement-facade-polish.js`) un solo sprite da 3 archi stirato su tutta la sezione (alto 1,18), World 3D e `settlement-architecture.js` campate da 2–3 archi alte fino a 1,46, quindi sulla W1 L2 gli archi superavano il solaio del piano sopraelevato (1,40); nel cutaway 3D il portico spariva del tutto.
+- **Codice:** nuovo `builtArcadeLayout(s)` in `settlement-architecture.js`, usato da 2.5D, facade polish (un'apertura per ogni arco di ogni campata), decal World 3D e cutaway 3D: campate da 2/3 archi, altezza ≤ 1,46 e sempre 0,08 sotto il solaio del piano alto. Nel cutaway 3D il portico resta visibile dall'interno quando sta sulla parete di fondo; sul lato aperto se ne va con la parete, come finestre e feritoie.
+- **Funzioni sotto il portico:** `PORTICO_FUNCTIONS` (`settlement-core.js`) = stalle, officina degli armaioli (`workshop`), magazzino materiali, corpo di guardia; `isBuiltPortico(s)` vale solo per W1 (la sala larga W2 con portico tiene la sua sala). `ConquerSiege.allowed` esclude ogni altra funzione dal piano terra di una W1 porticata; il piano sopraelevato non cambia. Cambiando skin, `sanitizeRooms` svuota le stanze fuori regola.
+- **Lab:** nuova variante «Sezione porticata L2» (stalla al piano terra) nella famiglia Mura.
+- **QA:** nuova `qa/built-portico-regression.cjs` PASS, `qa/kitchen-rooms-regression.cjs` e `qa/mastio-selection-zoom-regression.cjs` PASS (contesto vm aggiornato con i nuovi globali); altre 60 regressioni sui file toccati PASS. Audit Lab famiglia Mura in locale: 0 errori, 8 render nuovi (aggiunti alla baseline solo questi); i 43 «cambiati» riguardano anche muri e sezioni che il branch non tocca (deriva macchina/baseline, non aggiornati). Verifica visiva nel Lab: World 3D e canvas2d, intatto 4 rotazioni e cutaway. **Non verificato:** pannello stanze in partita, CI della PR.
+
 ## Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`, da `main` a372f1c, 03/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** `ConquerSiege.allowed` permette la cucina solo al piano terra delle sezioni costruite: W1 (sezione, L1 o L2, lunga almeno 2U) e W2 (sala larga). Non più in torri (mastio compreso), porte o piani superiori. Granaio, magazzino e sala comune mantengono la regola precedente.

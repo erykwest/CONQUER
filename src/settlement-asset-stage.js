@@ -30,6 +30,7 @@
     const G=SP().GALLERY;
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
       ['Mura',['Sezione costruita T2',{type:'built',tier:2,level:1}]],
+      ['Mura',['Sezione porticata L2',{type:'built',tier:2,level:2,skin:'arcade',functions:['stables',null]}]],
       ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }

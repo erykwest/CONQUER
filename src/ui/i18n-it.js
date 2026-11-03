@@ -175,7 +175,7 @@ export const T = {
     roof: 'Caditoie: merlatura in aggetto su mensole.',
     woodRoof: 'Piattaforma aperta oppure tetto a falde su 4 pali.',
     base: 'A scarpa: alta 0,5. Contrafforti: da quota 0 a H1. Le fondamenta seguono l\'impronta.',
-    skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: riguarda solo il piano terra interno.' },
+    skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: il piano terra interno si apre sotto gli archi e il piano alto resta sopraelevato. Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia.' },
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',

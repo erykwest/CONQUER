@@ -522,10 +522,20 @@ function linearFacadeEdge(s,side){
     length:seg.length
   };
 }
+// Portico on the interior facade, shared by the 2.5D, World 3D and cutaway renderers: bays of
+// 2 or 3 arches (arcade2/arcade3), never taller than the slab of the raised floor above.
+function builtArcadeLayout(s){
+  if(!s||s.type!=='built'||underConstruction(s)||builtSkin(s)!=='arcade')return null;
+  const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side);
+  const ceiling=builtInteriorFloors(s)>=2?cutawayFloorLevels(s)[1].z-.08:structureHeight(s)-.16,h=Math.min(1.46,ceiling);
+  if(h<=.18||edge.length<.35)return null;
+  const count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,key=cell<2.25?'arcade2':'arcade3';
+  return{side,edge,h,centerZ:.04+h/2,count,cell,key,arches:key==='arcade2'?2:3,
+    bays:Array.from({length:count},(_,i)=>({off:(i+.5)*cell-edge.length/2,w:cell*.96}))};
+}
 function drawBuiltArcade(s){
-  if(!s||s.type!=='built'||underConstruction(s)||builtSkin(s)!=='arcade')return;const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
-  const edge=linearFacadeEdge(s,inside),count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,h=Math.min(1.46,structureHeight(s)-.16),centerZ=.04+h/2,key=cell<2.25?'arcade2':'arcade3';
-  withStructureDetailOcclusion(s,centerZ+h/2,()=>{for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2,w=cell*.96;drawFacadeAssetBackdrop(edge,centerZ,w,h*.86,off,'#24211f');drawArchitectureAssetOnEdge(edge,centerZ,w,h,key,off)}})
+  const a=builtArcadeLayout(s);if(!a||a.side!==linearFrontSide(s))return;
+  withStructureDetailOcclusion(s,a.centerZ+a.h/2,()=>{for(const b of a.bays){drawFacadeAssetBackdrop(a.edge,a.centerZ,b.w,a.h*.86,b.off,'#24211f');drawArchitectureAssetOnEdge(a.edge,a.centerZ,b.w,a.h,a.key,b.off)}})
 }
 function drawWallHoarding(s,occlusionFrame=null){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;

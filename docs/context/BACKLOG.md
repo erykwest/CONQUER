@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Portico delle sezioni W1 (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/built-portico`:** un solo layout del porticato per 2.5D, World 3D e cutaway; archi sotto il solaio del piano sopraelevato; portico visibile nel cutaway 3D. Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia (proposta: l'utente ha indicato stalle e armaioli, le altre due sono da confermare).
+- **APERTO:** portico come vero passaggio aperto (pilastri e volte in 3D, profondità della loggia, figure che lo attraversano) invece di decal su fondo scuro; arredi specifici sotto gli archi (carri, rastrelliere); bottega/mercato sotto portico se si vorrà il commercio.
+
 ## Cucine solo nelle sezioni costruite (03/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/kitchen-built-only`:** cucina solo al piano terra di sezioni W1 e sale larghe W2; niente torri né porte. I salvataggi perdono al caricamento le cucine in torri e porte.
