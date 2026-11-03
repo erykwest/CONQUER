@@ -47,8 +47,8 @@ vm.runInContext([constant(core,'HOUSE_ROOF_PITCH'),constant(core,'HOUSE_FLOOR_BR
 for(const f of ['src/assets/house-models.js','src/settlement-mesh3d.js','src/settlement-house3d.js'])vm.runInContext(src(f),sandbox,{filename:f});
 const K=window.ConquerHouseModels,H=window.ConquerHouse3D;
 
-// 1. The kit: six pieces, indexed triangles, palette colours.
-assert.deepEqual(Object.keys(K.models).sort(),['chimney','door','joist','roof','windowGround','windowUpper']);
+// 1. The kit: six L3 pieces and three L1 cottage pieces, indexed triangles, palette colours.
+assert.deepEqual(Object.keys(K.models).sort(),['chimney','door','doorCottage','joist','roof','roofThatch','windowCottage','windowGround','windowUpper']);
 for(const [name,model] of Object.entries(K.models))for(const [pn,p] of Object.entries(model.parts)){
   assert.equal(p.i.length,p.c.length*3,name+'.'+pn+': three indices per triangle');
   assert.ok(p.i.every(i=>i>=0&&i*3<p.p.length),name+'.'+pn+': indices in range');
@@ -57,11 +57,12 @@ for(const [name,model] of Object.entries(K.models))for(const [pn,p] of Object.en
 assert.equal(K.palette[K.paletteKeys.indexOf('stone')],'#625e59','kit stone = procedural stone (brick swatches apply)');
 console.log('PASS kit: '+Object.keys(K.models).length+' pieces');
 
-// 2. Only L3 houses, built and finished.
+// 2. L1 and L3 houses, built and finished.
 assert.equal(H.handles({type:'house',houseLevel:3}),true);
-for(const s of [{type:'house',houseLevel:2},{type:'house',houseLevel:4},{type:'house',houseLevel:3,building:true},{type:'tower'}])
+assert.equal(H.handles({type:'house',houseLevel:1}),true);
+for(const s of [{type:'house',houseLevel:2},{type:'house',houseLevel:4},{type:'house',houseLevel:3,building:true},{type:'house',houseLevel:1,building:true},{type:'tower'}])
   assert.equal(H.handles(s),false,JSON.stringify(s)+' keeps the procedural drawing');
-console.log('PASS pilot scope: L3 only');
+console.log('PASS scope: L1 and L3');
 
 // 3. Every wall, every body: windows and members as the facade plan, one roof per body.
 let houses=0;
@@ -99,6 +100,35 @@ for(const plan of ['L','T'])for(const w of [1.5,2])for(const doorSide of [-1,1])
   houses++;
 }
 console.log('PASS '+houses+' L3 houses: windows and timber on every wall, roofs, door, chimney, joists, inside the plan');
+
+// 3b. L1 cottages: one body, daub walls on a timber frame, a cottage window for every planned window
+// on every wall, the plank door, a thatched roof up to the fixed 1.45 U ridge, no L3 pieces.
+let cottages=0;
+for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Math.PI/2,2.5]){
+  const s={id:'cot-'+w+doorSide+angle,type:'house',houseLevel:1,auto:true,x:50,y:40,w,h:1,doorSide,angle};
+  State.structures=[s];H.clear();
+  const m=H.geometry(s),entry=sandbox.urbanHouseGeometry()[0],bodies=entry.parts.filter(p=>p.kind==='body'),label='L1 '+w+'U door '+doorSide+' angle '+angle.toFixed(1);
+  assert.equal(bodies.length,1,label+': one body');
+  let windows=0;bodies[0].points.forEach((a,i)=>{windows+=sandbox.houseFacadePlan(s,bodies[0],{a,b:bodies[0].points[(i+1)%4]}).windows.length});
+  assert.equal(m.stats.windowCottage,windows,label+': a cottage window for every planned window, on every wall');
+  assert.ok(windows>=3,label+': windows on several walls');
+  assert.equal(m.stats.members,4*4+2*windows,label+': corner posts, sill and wall plates on 4 walls, posts beside each window');
+  assert.equal(m.stats.roofThatch,1,label+': one thatched roof');
+  assert.equal(m.stats.doorCottage,1,label+': the plank door');
+  for(const k of ['roof','door','windowUpper','windowGround','joist'])assert.ok(!m.stats[k],label+': no L3 '+k);
+  const thatch=K.palette[K.paletteKeys.indexOf('roofThatch')];
+  let ridge=0;for(let t=0;t<m.col.length;t++){if(m.tag[t]!=='roof')continue;for(let k=0;k<3;k++)ridge=Math.max(ridge,m.pos[t*9+k*3+2])}
+  assert.ok(m.col.includes(thatch),label+': thatch colours');
+  assert.ok(ridge<2.48+1e-6&&ridge>1.4,label+': roof up to the ridge (and the chimney) ('+ridge.toFixed(2)+')');
+  const minZ=Math.min(...Array.from({length:m.pos.length/3},(_,i)=>m.pos[i*3+2]));
+  assert.ok(minZ>=-.1,label+': nothing below the ground');
+  assert.deepEqual([...new Set(m.tag)].sort(),['beam','body','gable','roof'],label+': construction tags');
+  cottages++;
+}
+{const s={id:'cot-w',type:'house',houseLevel:1,auto:true,x:0,y:0,w:1.5,h:1,doorSide:1,angle:0};State.structures=[s];
+ State.season='winter';H.clear();const winter=new Set(H.geometry(s).col);State.season='summer';H.clear();
+ assert.ok(!winter.has(K.palette[K.paletteKeys.indexOf('roofThatch')])&&winter.has('#e7ece8'),'winter thatch is white');}
+console.log('PASS '+cottages+' L1 cottages: framed daub walls, cottage windows on every wall, plank door, thatch');
 
 // 4. Brick masonry recolours the kit stone like the procedural walls; winter whitens the roofs.
 {const s={id:'kit-brick',type:'house',houseLevel:3,auto:true,x:0,y:0,w:1.5,h:1,doorSide:1,angle:0};State.structures=[s];

@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER houses in 3D (pilot: L3): the game's own procedural plans dressed with the Blender kit
+// CONQUER houses in 3D (L1 cottages and L3 townhouses): the game's own procedural plans dressed with the Blender kit
 // (src/assets/house-models.js, tools/blender/build_houses.py). Plans, proportions, rows, wings,
 // windows, timber frame, door and chimneys keep their rules (urbanHouseGeometry, houseFacadePlan,
 // houseDoorInfo, chimneySpecs); walls and timber members become solids with thickness, and the
@@ -12,8 +12,11 @@
   const WINTER=['#e7ece8','#dce3de'];
   const STONE=['#625e59','#4f4b47'],PLASTER=['#e0ca91','#c8ae70'],SOFFIT='#4a3626',TIMBER='#3b2a1e',GABLE='#d9c184';
   const DOOR_HW=.08,CHIMNEY_H=.48,TIMBER_OUT=.018,JOIST_STEP=.2,JOIST_H=.07;
+  // L1 cottages: low daub walls in the procedural houses' browns, timber frame, thatch.
+  const DAUB=['#654936','#4e392d'];
+  const LEVELS=new Set([1,3]);
   function handles(s){
-    return !!s&&s.type==='house'&&houseLevel(s)===3&&!!DATA()&&!!window.ConquerMesh3D&&
+    return !!s&&s.type==='house'&&LEVELS.has(houseLevel(s))&&!!DATA()&&!!window.ConquerMesh3D&&
       !(typeof underConstruction==='function'&&underConstruction(s));
   }
   // Indexed kit parts expanded once into flat triangle lists.
@@ -80,11 +83,48 @@
     const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;if(nx*(mx-c.x)+ny*(my-c.y)<0){nx=-nx;ny=-ny}
     return{x:nx,y:ny};
   }
+  // Kit roof on a part's ridge: x along the ridge, y by the span, z by the rise (60-degree roof: a
+  // unit span rises HOUSE_ROOF_PITCH/2; thatch: a unit rise, since L1 ridges are fixed at 1.45 U).
+  function roofPiece(m,house,part,pal,key,unitRise){
+    const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(house.angle||0)+turn;
+    const across=Math.abs(turn)>1e-6,rw=across?part.h:part.w,span=across?part.w:part.h;
+    const ra={x:Math.cos(angle),y:Math.sin(angle)},rn={x:-ra.y,y:ra.x};
+    const rise=Math.max(.05,(part.roofH??housePartRidge(house,part))-part.bodyH);
+    piece(m,key,{x:part.center.x,y:part.center.y,z:terrainElevation(part.center)+part.bodyH},ra,rn,{sx:rw,sy:span,sz:rise/unitRise,tag:'roof'},pal);
+  }
+  // A wall edge: tangent, outward normal, point at an offset, kit tangent (+x turned to +y = out).
+  function wallFrame(edge,c){
+    const o=outward(edge,c),L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+    const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;
+    return{o,L,at:off=>({x:mx+ux*off,y:my+uy*off}),tk:ux*o.y-uy*o.x>0?{x:ux,y:uy}:{x:-ux,y:-uy}};
+  }
+  // L1 cottage: daub walls on a timber frame (corner posts, sill and wall plates, posts beside the
+  // windows), unglazed shuttered windows where houseFacadePlan puts them, a thatched roof.
+  function cottagePart(m,house,part,pal){
+    const ground=terrainElevation(part.center),H=part.bodyH,P=part.points,n=P.length,t=HOUSE_TIMBER_W/2;
+    for(const edge of edgesOf(P)){
+      const g=group(m);
+      poly(g,[[edge.a.x,edge.a.y,ground],[edge.b.x,edge.b.y,ground],[edge.b.x,edge.b.y,ground+H],[edge.a.x,edge.a.y,ground+H]],tint(DAUB[edge.index%2]));close(g);
+    }
+    const faces=urbanHouseFaces(house,part);
+    for(const f of [faces[n+2],faces[n+3]]){const g=group(m,0,'gable');poly(g,f.map(v=>[v.p.x,v.p.y,v.z]),tint(DAUB[0]));close(g)}
+    for(const edge of edgesOf(P)){
+      const {o,L,at,tk}=wallFrame(edge,part.center),half=L/2,plan=houseFacadePlan(house,part,edge),g=group(m,0,'beam');
+      const frame=[[{off:-half+t,z:0},{off:-half+t,z:H}],[{off:half-t,z:0},{off:half-t,z:H}],
+        [{off:-half,z:t},{off:half,z:t}],[{off:-half,z:H-t},{off:half,z:H-t}]];
+      for(const w of plan.windows)for(const s of [-1,1]){const x=w.off+s*(HOUSE_WINDOW_HALF_W+.024+t);frame.push([{off:x,z:t},{off:x,z:H-t}])}
+      for(const [p0,p1] of frame)member(g,at,o,ground,p0,p1);
+      close(g);
+      for(const w of plan.windows){const c=at(w.off);piece(m,'windowCottage',{x:c.x,y:c.y,z:ground+w.z},tk,o,{},pal)}
+    }
+    roofPiece(m,house,part,pal,'roofThatch',1);
+  }
   // ---------- one house
   function build(house,entry){
-    const m=meshOut(),pal=kitPalette(),jetty=houseJetty(house);
+    const m=meshOut(),pal=kitPalette(),jetty=houseJetty(house),cottage=houseLevel(house)===1;
     for(const part of entry.parts){
       if(part.kind!=='body')continue;
+      if(cottage){cottagePart(m,house,part,pal);continue}
       const ground=terrainElevation(part.center),bodyH=part.bodyH,fb=houseFloorBreak(bodyH),top=ground+bodyH;
       const P=part.points,B=part.basePoints||P,n=P.length;
       // Stone ground floor on the recessed base, plastered timbered floor above, jetty soffits.
@@ -126,19 +166,14 @@
           }
         }
       }
-      // Kit roof on the part's ridge: x along the ridge, y and z by the span (60-degree pitch);
-      // a wing capped below the main ridge keeps its span and lowers its rise.
-      const turn=part.roofTurn||0,angle=Number.isFinite(part.roofAngle)?part.roofAngle:(house.angle||0)+turn;
-      const across=Math.abs(turn)>1e-6,rw=across?part.h:part.w,span=across?part.w:part.h;
-      const ra={x:Math.cos(angle),y:Math.sin(angle)},rn={x:-ra.y,y:ra.x};
-      const rise=Math.max(.05,(part.roofH??housePartRidge(house,part))-bodyH);
-      piece(m,'roof',{x:part.center.x,y:part.center.y,z:top},ra,rn,{sx:rw,sy:span,sz:rise/(HOUSE_ROOF_PITCH*.5),tag:'roof'},pal);
+      // A wing capped below the main ridge keeps its span and lowers its rise.
+      roofPiece(m,house,part,pal,'roof',HOUSE_ROOF_PITCH*.5);
     }
-    // The door (houseDoorInfo) in the recessed ground floor.
+    // The door (houseDoorInfo) in the recessed ground floor (the cottage has no jetty).
     const d=houseDoorInfo(house),hw=Math.min(.08,(Number(house.w)||1.5)*.0533);
     const dp={x:d.surface.x-d.normal.x*jetty,y:d.surface.y-d.normal.y*jetty,z:terrainElevation(d.surface)};
     const dt=d.tangent.x*d.normal.y-d.tangent.y*d.normal.x>0?d.tangent:{x:-d.tangent.x,y:-d.tangent.y};
-    piece(m,'door',dp,dt,d.normal,{sx:hw/DOOR_HW},pal);
+    piece(m,cottage?'doorCottage':'door',dp,dt,d.normal,{sx:hw/DOOR_HW},pal);
     // Chimneys where chimneySpecs puts them.
     for(const c of chimneySpecs(house)){
       const g=terrainElevation(c.center),a=c.angle||0;

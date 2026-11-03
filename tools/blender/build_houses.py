@@ -1,6 +1,7 @@
 """CONQUER house kit builder (Blender 4.4+/5.x): the detail pieces the game assembles on its
 procedural house plans (settlement-house3d.js): upper-floor and ground-floor windows, the door,
-the 60-degree gabled roof, the chimney stack and the jetty joist end.
+the 60-degree gabled roof, the chimney stack and the jetty joist end (L3), and for the L1
+cottages the unglazed shuttered window, the plank door and the thatched roof.
 
 Houses have no fixed size (lots, rows, L/T wings, per-id proportions), so unlike the civic
 buildings they are not whole models: the game keeps its plans (houseFootprintParts /
@@ -15,6 +16,8 @@ Piece axes:
     origin at the wall top (eaves line) on the centre; the game scales x by the ridge length and
     y, z by the span (the pitch is constant, so the scaling is uniform across the slope).
   chimney: footprint 0.22 x 0.20 U as chimneySpecs, z 0..0.48 U, origin at the bottom centre.
+  roofThatch: like roof, but with a unit rise (z 0..1 at the ridge): L1 ridges are fixed at
+    1.45 U whatever the span, so the game scales z by the actual rise.
 Palette keys starting with 'roof' turn white in winter. Stone keys use the same hex values as the
 procedural houses so the brick masonry swatches (CLAY_VISUAL_SWATCHES) still apply.
 
@@ -36,6 +39,9 @@ COLORS = {
     'glass': '#232120', 'shutter': '#56664a', 'shutterDark': '#45533b', 'iron': '#2e2b28',
     'roofSlate': '#303237', 'roofSlateDark': '#3a3d42', 'roofCourse': '#27292d', 'roofRidge': '#2a2b2f',
     'eaves': '#2b211a', 'chimney': '#3b302c', 'chimneyDark': '#332824', 'chimneyCap': '#493732',
+    # L1 cottages: thatch as HOUSE_THATCH (settlement-buildings.js), unglazed openings
+    'roofThatch': '#b39250', 'roofThatchDark': '#c4a25d', 'roofThatchRidge': '#9a7b40', 'thatchUnder': '#6e5530',
+    'dark': '#1f1a16', 'plank': '#5e4430',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Houses'
@@ -192,8 +198,77 @@ def joist(mdl):
     mdl.done('joist', j)
 
 
+def window_cottage(mdl):
+    """L1 cottage window: an unglazed opening in a timber frame, a plank shutter hung on the
+    left and swung half open, a timber lintel and sill."""
+    hw, hh, f = WIN_HW, WIN_HH * .8, .024
+    fr = mdl.part('frame')
+    box(fr, -hw - f, -.008, -hh - f, -hw, .02, hh + f, 'beam')
+    box(fr, hw, -.008, -hh - f, hw + f, .02, hh + f, 'beam')
+    box(fr, -hw - f - .02, -.008, hh, hw + f + .02, .026, hh + f + .01, 'beam')      # lintel
+    box(fr, -hw - f - .015, -.008, -hh - f - .012, hw + f + .015, .04, -hh, 'beam')  # sill
+    mdl.done('frame', fr)
+    op = mdl.part('opening')
+    box(op, -hw, -.03, -hh, hw, -.02, hh, 'dark')
+    mdl.done('opening', op)
+    sh = mdl.part('shutter')
+    # Hinged on the left jamb, swung out about 60 degrees: a slanted plank leaf with two battens.
+    a = math.radians(60)
+    x0, y0 = -hw - f, .02
+    x1, y1 = x0 - math.cos(a) * hw * 1.9, y0 + math.sin(a) * hw * 1.9
+    slab(sh, [(x0, y0, -hh), (x1, y1, -hh), (x1, y1, hh), (x0, y0, hh)], .01, 'plank')
+    for z in (-hh * .55, hh * .55):
+        slab(sh, [(x0, y0 + .006, z - .012), (x1, y1 + .006, z - .012), (x1, y1 + .006, z + .012), (x0, y0 + .006, z + .012)], .005, 'beam')
+    mdl.done('shutter', sh)
+
+
+def door_cottage(mdl):
+    """L1 cottage door: plank leaf between timber posts under a heavy lintel, a stone threshold."""
+    hw, top, f = DOOR_HW, DOOR_TOP, .03
+    fr = mdl.part('frame')
+    box(fr, -hw - f, -.008, 0, -hw, .028, top, 'beam')
+    box(fr, hw, -.008, 0, hw + f, .028, top, 'beam')
+    box(fr, -hw - f - .03, -.008, top, hw + f + .03, .034, top + .05, 'beam')
+    mdl.done('frame', fr)
+    lf = mdl.part('leaf')
+    box(lf, -hw, -.014, 0, hw, -.004, top, 'plank')
+    for i in (1, 2):
+        x = -hw + 2 * hw * i / 3
+        box(lf, x - .003, -.004, .01, x + .003, -.001, top - .01, 'beam')
+    for z in (.1, top - .1):
+        box(lf, -hw + .01, -.004, z - .012, hw - .01, .002, z + .012, 'beam')
+    mdl.done('leaf', lf)
+    st = mdl.part('step')
+    box(st, -hw - f - .02, 0, 0, hw + f + .02, .06, .018, 'step')
+    mdl.done('step', st)
+
+
+def roof_thatch(mdl):
+    """Unit thatched gable roof (ridge along X, span y -0.5..0.5, rise 1 at the ridge, so the game
+    scales z by the actual rise): a thick thatch layer with a rounded eave roll and an overhang
+    past the gables, a ridge roll on top and a dark underside."""
+    ov, vg, t = .09, .06, .07
+    rise = 1.0
+    sl = mdl.part('thatch')
+    for s in (-1, 1):
+        y_e, z_e = s * (.5 + ov), -ov * 2 * rise
+        pts = [(-.5 - vg, y_e, z_e), (.5 + vg, y_e, z_e), (.5 + vg, 0, rise), (-.5 - vg, 0, rise)]
+        if s < 0:
+            pts = [pts[1], pts[0], pts[3], pts[2]]
+        slab(sl, pts, t, 'roofThatch' if s < 0 else 'roofThatchDark', 'thatchUnder')
+    mdl.done('thatch', sl)
+    rl = mdl.part('rolls')
+    # Eave rolls: half-cylinders along X at the foot of each slope; ridge roll on top.
+    for s in (-1, 1):
+        rl.cylinder(.035 * S, (.5 + vg) * S, 'roofThatchRidge', n=8, axis='x',
+                    center=(0, s * (.5 + ov) * S, (-ov * 2 * rise - .01) * S))
+    rl.cylinder(.05 * S, (.5 + vg + .02) * S, 'roofThatchRidge', n=10, axis='x', center=(0, 0, (rise + .01) * S))
+    mdl.done('rolls', rl)
+
+
 BUILD = [('windowUpper', window_upper), ('windowGround', window_ground), ('door', door),
-         ('roof', roof), ('chimney', chimney), ('joist', joist)]
+         ('roof', roof), ('chimney', chimney), ('joist', joist),
+         ('windowCottage', window_cottage), ('doorCottage', door_cottage), ('roofThatch', roof_thatch)]
 
 
 def main(out_path):

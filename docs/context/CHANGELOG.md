@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Case L1 in 3D con il kit Blender (branch `feature/houses-blender-l1`)
+
+- Le casette L1 in World 3D sono costruite col kit: tetto di paglia, finestre rustiche con anta, porta a tavole, telaio di pali e travi, comignoli. Kit a 9 pezzi; corrette le chiavi della baseline dell'audit per il kit (prima non venivano mai riconosciute).
+- Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
+
 ## 2026-11-02 — Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`)
 
 - Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.

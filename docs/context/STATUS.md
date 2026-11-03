@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## Case L1 in 3D con il kit Blender (branch `feature/houses-blender-l1`, da `main` 4792951, 03/11/2026, NON MAIN)
+
+- **Seguito di D-057** (kit su main con #136): dopo L3, le case **L1** in World 3D sono costruite con il kit. Nuovi pezzi in `tools/blender/build_houses.py` → `src/assets/house-models.js`: **tetto di paglia** (strato spesso con rotoli di gronda e di colmo, sottotetto scuro; alzata unitaria scalata sull'alzata reale, perché il colmo L1 è fisso a 1,45 U), **finestra rustica** (vano senza vetro, telaio in trave, anta di tavole socchiusa), **porta rustica** (battente a tavole tra pali sotto architrave, soglia di pietra). Kit: 9 pezzi, 856 triangoli, 20 KB.
+- **Montaggio** (`src/settlement-house3d.js`, `cottagePart`): muri bassi nei bruni delle L1 procedurali (`#654936` / `#4e392d`) su un telaio di pali d'angolo, banchina, dormiente e pali ai lati delle finestre; finestre rustiche dove `houseFacadePlan` le mette, su tutti i lati; timpani bruni; porta rustica a `houseDoorInfo`; comignoli del kit a `chimneySpecs`. Il tetto del kit è ora un pezzo comune (`roofPiece`) per L1 e L3. Il fallback 2.5D resta procedurale.
+- **Correzione della baseline dell'audit:** le 6 voci del kit entrate con #136 avevano la chiave `id|null` invece di `id|` (stato vuoto dei modelli), quindi l'audit non le riconosceva mai; ora sono riscritte con la chiave giusta insieme alle 3 nuove.
+- **QA locale:** `qa/house3d-regression.cjs` estesa alle L1 (16 casette 1,5/2 U × porta ±1 × 4 angoli: un pezzo finestra per ogni finestra pianificata su ogni lato, telaio completo, porta rustica, un tetto di paglia fino al colmo, nessun pezzo L3, tag del cantiere; paglia bianca d'inverno). 120/120 `qa/*.cjs` non di performance PASS. Audit del Lab famiglia «Kit case»: 9 render, 0 falliti, 0 nuovi, 0 cambiati dopo la correzione delle chiavi. Catture World 3D delle casette L1 nelle quattro rotazioni riviste. **Non verificato:** partita con un villaggio generato, CI della PR.
+- **Limiti:** L2 e L4 ancora procedurali; il comignolo delle L1 è quello del kit L3 (scuro e massiccio per una casupola).
+
 ## Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`, da `main` d15826e, 02/11/2026, NON MAIN)
 
 - **Perché:** il catalogo delle forme L3 nel render 2.5D mostrava i limiti del painter (pareti senza graticcio dove `visibleFacadeEdges` le scarta, falde e timpani che si compenetrano male). Scelta dell'utente (D-057): case in Blender, kit modulare, pilota L3, poi L1–L4.
