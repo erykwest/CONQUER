@@ -1,0 +1,60 @@
+{
+  "policy": "Originals on Drive; mono/stereo and duration preserved",
+  "assets": [
+    {
+      "cue": "spring",
+      "file": "soundreality-spring-forest-nature-332842.mp3",
+      "original_bytes": 1250304,
+      "optimized_bytes": 625965,
+      "bitrate_kbps": 128,
+      "lufs": -12.32,
+      "true_peak_dbtp": 0.57,
+      "trim_db": -11.68,
+      "skipped": false
+    },
+    {
+      "cue": "wind",
+      "file": "soundreality-wind-blowing-457954.mp3",
+      "original_bytes": 1367808,
+      "optimized_bytes": 684717,
+      "bitrate_kbps": 128,
+      "lufs": -30.77,
+      "true_peak_dbtp": -8.1,
+      "trim_db": 5.1,
+      "skipped": false
+    },
+    {
+      "cue": "thunder",
+      "file": "soundreality-thunder-sound-375727.mp3",
+      "original_bytes": 1920768,
+      "optimized_bytes": 961197,
+      "bitrate_kbps": 128,
+      "lufs": -14.58,
+      "true_peak_dbtp": 0.24,
+      "trim_db": -9.42,
+      "skipped": false
+    },
+    {
+      "cue": "choir",
+      "file": "freesound_community-church-atmosphere-with-choir-54511.mp3",
+      "original_bytes": 2366208,
+      "optimized_bytes": 887949,
+      "bitrate_kbps": 96,
+      "lufs": -34.79,
+      "true_peak_dbtp": -14.27,
+      "trim_db": 11.27,
+      "skipped": false
+    },
+    {
+      "cue": "bells",
+      "file": "jasonlee3071-church-bells-194653.mp3",
+      "original_bytes": 308736,
+      "optimized_bytes": 116397,
+      "bitrate_kbps": 96,
+      "lufs": -29.49,
+      "true_peak_dbtp": -13.28,
+      "trim_db": 8.49,
+      "skipped": false
+    }
+  ]
+}

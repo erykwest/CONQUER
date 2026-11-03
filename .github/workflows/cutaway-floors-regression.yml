@@ -1,0 +1,43 @@
+name: Cutaway floors regression
+
+on:
+  pull_request:
+    paths:
+      - 'qa/cutaway-floors-regression.cjs'
+      - 'qa/cutaway-furniture-regression.cjs'
+      - 'qa/civic3d-regression.cjs'
+      - 'src/settlement-cutaway-floors.js'
+      - 'src/settlement-castle.js'
+      - 'src/settlement-civic3d.js'
+      - 'src/settlement-cutaway-furniture.js'
+      - 'src/settlement-world3d.js'
+      - 'src/settlement-render.js'
+      - 'src/settlement-structure-commands.js'
+      - 'src/settlement-population-garrisons.js'
+      - '.github/workflows/cutaway-floors-regression.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'qa/cutaway-floors-regression.cjs'
+      - 'src/settlement-cutaway-floors.js'
+      - '.github/workflows/cutaway-floors-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cutaway-floors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test floor-by-floor cutaway (castle and civic)
+        run: node qa/cutaway-floors-regression.cjs
+      - name: Test civic cutaway and furnished castle cutaway
+        run: |
+          node qa/civic3d-regression.cjs
+          node qa/cutaway-furniture-regression.cjs

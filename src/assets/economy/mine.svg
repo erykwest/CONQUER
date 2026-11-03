@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="mine-title mine-desc" data-asset="mine" data-master-angle="0" data-rotation-step="15">
+  <title id="mine-title">CONQUER — Miniera, SVG master</title>
+  <desc id="mine-desc">Ingresso di miniera medievale isometrico ricavato nella roccia, con puntellamento in legno, binari, cassa, botte e catasta di travi. Fondo trasparente.</desc>
+  <defs>
+    <radialGradient id="ground" cx="46%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#aa9368"/>
+      <stop offset="0.58" stop-color="#8a7653"/>
+      <stop offset="1" stop-color="#6d6048"/>
+    </radialGradient>
+    <linearGradient id="rockA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c3baa8"/>
+      <stop offset="0.48" stop-color="#8f887c"/>
+      <stop offset="1" stop-color="#595750"/>
+    </linearGradient>
+    <linearGradient id="rockB" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#ddd2bd"/>
+      <stop offset="0.45" stop-color="#9c9382"/>
+      <stop offset="1" stop-color="#625e56"/>
+    </linearGradient>
+    <linearGradient id="rockDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#77736a"/>
+      <stop offset="1" stop-color="#3d3f3b"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0.8">
+      <stop offset="0" stop-color="#c18c59"/>
+      <stop offset="0.48" stop-color="#8f5e36"/>
+      <stop offset="1" stop-color="#573821"/>
+    </linearGradient>
+    <linearGradient id="woodDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7b4e2e"/>
+      <stop offset="1" stop-color="#3f291a"/>
+    </linearGradient>
+    <linearGradient id="tunnel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171817"/>
+      <stop offset="0.65" stop-color="#25231f"/>
+      <stop offset="1" stop-color="#413729"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#554f49"/>
+      <stop offset="0.45" stop-color="#aaa298"/>
+      <stop offset="1" stop-color="#5b5650"/>
+    </linearGradient>
+    <clipPath id="groundClip">
+      <path d="M113 642Q142 559 244 497Q337 439 444 438Q566 411 690 442Q825 471 907 564Q956 626 936 715Q916 807 809 856Q689 917 559 944Q421 972 302 922Q184 873 125 789Q90 723 113 642Z"/>
+    </clipPath>
+  </defs>
+
+  <g id="ground-layer" data-part="ground">
+    <path d="M113 642Q142 559 244 497Q337 439 444 438Q566 411 690 442Q825 471 907 564Q956 626 936 715Q916 807 809 856Q689 917 559 944Q421 972 302 922Q184 873 125 789Q90 723 113 642Z" fill="url(#ground)" opacity="0.92"/>
+    <path d="M182 668Q272 554 443 527Q620 492 805 581Q879 631 866 710Q850 791 740 834Q592 902 422 883Q258 863 185 784Q147 734 182 668Z" fill="#5c4f39" opacity="0.18"/>
+    <g clip-path="url(#groundClip)" opacity="0.46">
+      <path d="M176 744l36 -10m-8 31l48 -17m79 85l34 -10m-9 38l44 -12m155 38l45 -17m76 -34l39 -19m94 -82l31 -18M274 601l45 -16m359 -43l42 13" fill="none" stroke="#4f4535" stroke-width="7" stroke-linecap="round" opacity="0.28"/>
+      <ellipse cx="246" cy="715" rx="12" ry="5" fill="#c3aa78" opacity="0.35"/>
+      <ellipse cx="337" cy="892" rx="16" ry="5" fill="#c7ad79" opacity="0.25"/>
+      <ellipse cx="816" cy="742" rx="13" ry="5" fill="#4a4132" opacity="0.3"/>
+      <ellipse cx="713" cy="870" rx="10" ry="4" fill="#c7ad79" opacity="0.28"/>
+      <ellipse cx="170" cy="650" rx="9" ry="4" fill="#c9b381" opacity="0.3"/>
+      <ellipse cx="543" cy="920" rx="17" ry="5" fill="#514738" opacity="0.25"/>
+    </g>
+  </g>
+
+  <ellipse cx="538" cy="623" rx="314" ry="188" fill="#1b1714" opacity="0.18"/>
+
+  <g id="rock-mass" data-part="rock">
+    <path d="M224 605Q228 479 310 380Q379 292 486 263Q595 227 700 275Q793 317 838 411Q875 493 848 586Q815 650 749 681L693 613Q706 541 660 479Q617 423 540 414Q464 405 405 450Q354 490 341 558L328 642Z" fill="url(#rockDark)" stroke="#4b4b46" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M226 598L244 494L304 402L379 363L420 419L374 472L344 561L333 645L277 674Z" fill="url(#rockB)" stroke="#57554f" stroke-width="5"/>
+    <path d="M245 493L303 401L378 363L345 426L292 465Z" fill="#d2c6ae" opacity="0.48"/>
+    <path d="M273 672L335 643L346 557L384 493L395 615L354 690Z" fill="#777168" opacity="0.64"/>
+    <path d="M672 350Q777 366 828 446Q865 505 844 585L787 662L717 626L706 536L676 470L628 416Z" fill="url(#rockA)" stroke="#55544f" stroke-width="5"/>
+    <path d="M719 389Q790 412 824 470L839 530L802 505L765 447Z" fill="#d2c5ad" opacity="0.42"/>
+    <path d="M789 661L717 625L708 540L676 471L740 520L758 594Z" fill="#5d5c57" opacity="0.6"/>
+    <path d="M358 371L392 307L469 275L518 315L488 388L419 420Z" fill="url(#rockB)" stroke="#5a5852" stroke-width="5"/>
+    <path d="M471 278L549 249L612 272L627 340L566 399L489 383L519 316Z" fill="url(#rockA)" stroke="#56544f" stroke-width="5"/>
+    <path d="M607 275L676 292L731 340L711 403L648 425L611 369L627 340Z" fill="url(#rockB)" stroke="#57554f" stroke-width="5"/>
+    <path d="M180 666l63 -61l61 28l-12 76l-74 34l-56 -29z" fill="url(#rockA)" stroke="#57554f" stroke-width="4"/>
+    <path d="M138 717l52 -28l51 36l-15 53l-61 16l-39 -35z" fill="url(#rockB)" stroke="#5c5952" stroke-width="4"/>
+    <path d="M221 754l58 -21l51 30l-9 55l-66 19l-44 -34z" fill="url(#rockDark)" stroke="#4f504b" stroke-width="4"/>
+    <path d="M794 610l58 -12l47 46l-18 62l-64 17l-44 -45z" fill="url(#rockA)" stroke="#56554f" stroke-width="4"/>
+    <path d="M832 697l58 -9l35 39l-20 52l-61 13l-34 -41z" fill="url(#rockB)" stroke="#5a5851" stroke-width="4"/>
+    <path d="M758 709l62 -12l44 45l-25 59l-66 11l-39 -46z" fill="url(#rockDark)" stroke="#4c4d49" stroke-width="4"/>
+    <path d="M306 420l53 29l-26 68l-61 -17zM742 427l52 38l-27 59l-59 -20zM387 317l57 23l-31 49l-44 -19zM555 276l43 28l-18 47l-52 -3z" fill="#e2d7c2" opacity="0.22"/>
+    <path d="M245 554q59 -38 112 -56M697 437q68 23 113 76M343 360q106 -51 210 -66M632 319q72 14 120 67" fill="none" stroke="#ece4d2" stroke-width="9" stroke-linecap="round" opacity="0.18"/>
+    <path d="M275 604q51 -19 78 -63M751 565q50 15 91 49M443 294q40 45 86 88M639 365q19 43 59 75" fill="none" stroke="#3f403d" stroke-width="8" stroke-linecap="round" opacity="0.24"/>
+  </g>
+
+  <g id="mine-opening" data-part="opening">
+    <path d="M345 668L354 541Q362 470 414 430Q468 389 535 397Q602 405 646 456Q681 497 689 560L692 675Z" fill="#2a2824" stroke="#45423d" stroke-width="12"/>
+    <path d="M382 670L389 550Q397 498 435 469Q472 440 520 446Q567 451 599 487Q624 515 630 561L632 673Z" fill="url(#tunnel)"/>
+    <path d="M411 668L416 558Q421 520 451 499Q480 478 516 482Q553 487 577 515Q594 536 598 568L599 671Z" fill="#111312" opacity="0.72"/>
+    <ellipse cx="506" cy="645" rx="94" ry="31" fill="#090a09" opacity="0.43"/>
+  </g>
+
+  <g id="portal-frame" data-part="timber">
+    <path d="M379 681L387 500" stroke="#3c2618" stroke-width="31" stroke-linecap="round" opacity="0.34"/>
+    <path d="M379 681L387 500" stroke="url(#wood)" stroke-width="24" stroke-linecap="round"/>
+    <path d="M625 682L617 503" stroke="#3c2618" stroke-width="31" stroke-linecap="round" opacity="0.34"/>
+    <path d="M625 682L617 503" stroke="url(#wood)" stroke-width="24" stroke-linecap="round"/>
+    <path d="M381 502Q503 435 621 504" fill="none" stroke="#3c2618" stroke-width="35" stroke-linecap="round" opacity="0.34"/>
+    <path d="M381 502Q503 435 621 504" fill="none" stroke="url(#wood)" stroke-width="27" stroke-linecap="round"/>
+    <path d="M391 555Q504 503 614 557" fill="none" stroke="#4b2f1d" stroke-width="18" stroke-linecap="round"/>
+    <path d="M386 606L430 549M619 608L574 550" stroke="url(#woodDark)" stroke-width="17" stroke-linecap="round"/>
+    <path d="M374 678L383 504M619 679L612 506M392 495Q502 444 610 500" fill="none" stroke="#d8a36e" stroke-width="3" stroke-linecap="round" opacity="0.43"/>
+    <path d="M374 574l23 1M613 575l23 -1" stroke="#433f3b" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="390" cy="548" r="5" fill="#343230"/><circle cx="616" cy="548" r="5" fill="#343230"/>
+  </g>
+
+  <g id="rails" data-part="rails">
+    <path d="M409 676L282 864L339 887L463 683Z" fill="#5e4e39" opacity="0.35"/>
+    <path d="M552 681L651 886L702 866L598 676Z" fill="#5e4e39" opacity="0.26"/>
+    <g stroke="#5d3b25" stroke-width="16" stroke-linecap="round">
+      <path d="M408 711L587 743"/><path d="M386 746L610 787"/><path d="M363 784L632 833"/><path d="M337 827L654 884"/>
+    </g>
+    <g stroke="#a5774b" stroke-width="5" stroke-linecap="round" opacity="0.56">
+      <path d="M406 706L587 738"/><path d="M384 741L610 782"/><path d="M361 779L632 828"/><path d="M335 822L654 879"/>
+    </g>
+    <path d="M438 680L367 850" fill="none" stroke="#312d2b" stroke-width="13" stroke-linecap="round" opacity="0.28"/>
+    <path d="M438 680L367 850" fill="none" stroke="url(#rail)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M570 679L644 851" fill="none" stroke="#312d2b" stroke-width="13" stroke-linecap="round" opacity="0.28"/>
+    <path d="M570 679L644 851" fill="none" stroke="url(#rail)" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g id="props" data-part="props">
+    <g id="timber-stack">
+      <path d="M665 709L839 652" stroke="#3c2518" stroke-width="26" stroke-linecap="round" opacity="0.23"/>
+      <path d="M665 709L839 652" stroke="url(#woodDark)" stroke-width="20" stroke-linecap="round"/>
+      <path d="M674 729L850 675" stroke="#3c2518" stroke-width="25" stroke-linecap="round" opacity="0.23"/>
+      <path d="M674 729L850 675" stroke="url(#wood)" stroke-width="19" stroke-linecap="round"/>
+      <path d="M692 745L859 697" stroke="#3c2518" stroke-width="24" stroke-linecap="round" opacity="0.23"/>
+      <path d="M692 745L859 697" stroke="url(#woodDark)" stroke-width="18" stroke-linecap="round"/>
+      <path d="M702 767L843 728" stroke="#3c2518" stroke-width="23" stroke-linecap="round" opacity="0.23"/>
+      <path d="M702 767L843 728" stroke="url(#wood)" stroke-width="17" stroke-linecap="round"/>
+      <g fill="#3a281c" opacity="0.75">
+        <ellipse cx="839" cy="652" rx="10" ry="12" transform="rotate(72 839 652)"/>
+        <ellipse cx="850" cy="675" rx="10" ry="11" transform="rotate(72 850 675)"/>
+        <ellipse cx="859" cy="697" rx="9" ry="11" transform="rotate(72 859 697)"/>
+        <ellipse cx="843" cy="728" rx="9" ry="10" transform="rotate(72 843 728)"/>
+      </g>
+    </g>
+
+    <g id="crate" transform="translate(240 666)">
+      <path d="M0 24L48 0L93 18L44 43Z" fill="#aa7444" stroke="#51321f" stroke-width="4"/>
+      <path d="M0 24L44 43L44 96L0 77Z" fill="#7f5030" stroke="#51321f" stroke-width="4"/>
+      <path d="M44 43L93 18L93 71L44 96Z" fill="#8e5b36" stroke="#51321f" stroke-width="4"/>
+      <path d="M8 34L36 48L9 68M84 29L53 45L84 60M14 18L77 42" fill="none" stroke="#49301f" stroke-width="6" stroke-linecap="round"/>
+    </g>
+
+    <g id="barrel" transform="translate(739 781)">
+      <ellipse cx="41" cy="14" rx="35" ry="16" fill="#9b673e" stroke="#503321" stroke-width="4"/>
+      <path d="M6 14L11 73Q41 92 71 73L76 14Q42 31 6 14Z" fill="#855434" stroke="#503321" stroke-width="4"/>
+      <ellipse cx="41" cy="73" rx="30" ry="13" fill="#6c432b" stroke="#503321" stroke-width="4"/>
+      <path d="M10 31Q42 46 73 31M10 60Q42 76 72 60" fill="none" stroke="#3c3d3c" stroke-width="6" opacity="0.8"/>
+    </g>
+  </g>
+
+  <g id="scatter-rocks" data-part="scatter">
+    <path d="M145 832l27 -16l25 12l-3 23l-29 10l-23 -12z" fill="url(#rockA)" stroke="#57544e" stroke-width="3"/>
+    <path d="M214 866l24 -14l22 10l-2 20l-26 9l-20 -10z" fill="url(#rockB)" stroke="#57544e" stroke-width="3"/>
+    <path d="M858 832l30 -12l22 17l-9 25l-31 4l-19 -17z" fill="url(#rockA)" stroke="#56534e" stroke-width="3"/>
+    <path d="M884 621l18 -9l17 10l-5 17l-21 5l-15 -11z" fill="url(#rockB)" stroke="#56534e" stroke-width="3"/>
+    <path d="M303 571l16 -10l15 8l-3 17l-18 6l-14 -9z" fill="#9c958a" stroke="#5c5952" stroke-width="3"/>
+  </g>
+
+  <g id="vegetation" data-part="vegetation" opacity="0.72">
+    <path d="M795 523q8 -31 18 -39M798 524q-3 -25 -15 -42M802 524q14 -20 31 -29" fill="none" stroke="#657050" stroke-width="6" stroke-linecap="round"/>
+    <path d="M263 468q6 -23 14 -34M265 470q-6 -19 -18 -31M269 468q12 -15 24 -21" fill="none" stroke="#697253" stroke-width="5" stroke-linecap="round"/>
+    <path d="M788 518q22 -16 43 -3q-11 24 -31 22q-19 -3 -12 -19z" fill="#6c7652" opacity="0.65"/>
+    <path d="M246 463q18 -14 36 -4q-7 20 -26 19q-17 -1 -10 -15z" fill="#727a57" opacity="0.58"/>
+  </g>
+</svg>
