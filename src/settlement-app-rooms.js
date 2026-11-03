@@ -212,6 +212,10 @@ function renderFunctionPanel(){
     const cutaway=structureCutaway(s);
     html+=`<div class="slot"><div class="slot-label">Cutaway facade</div><button data-cutaway-toggle class="${cutaway?'active':''}" ${building?'disabled':''}>${cutaway?'Cutaway ON':'Cutaway OFF'}</button><div class="legend">Opens the camera-facing shell and exposes the functional rooms.</div></div>`;
   }
+  if(!building&&(structureCutaway(s)||civicFloorCutaway(s))&&cutawayFloorCount(s)>1){
+    const f=cutawayVisibleFloor(s),n=cutawayFloorCount(s);
+    html+=`<div class="slot"><div class="slot-label">Cutaway floor ${f+1} / ${n}</div><div class="grid"><button data-cutaway-floor="-1" ${f===0?'disabled':''}>▼ Floor below</button><button data-cutaway-floor="1" ${f>=n-1?'disabled':''}>▲ Floor above</button></div><div class="legend">The floors above the one in view are taken off.</div></div>`;
+  }
   if(['wall','palisade','built'].includes(s.type)){
     const flipLabel=s.type==='built'?'Exterior side / windows':'Exterior side';
     const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':s.type==='palisade'?'Defines which side is exterior; walkway and earthwork are generated inward.':isWideBuilt(s)?'Exterior: arrow slits. Interior: tall hall windows (clerestory with portico).':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
@@ -219,8 +223,9 @@ function renderFunctionPanel(){
   }
   if(s.type==='townhall'&&!building){
     normalizeFunctions(s);
-    html+=s.functions.map((value,i)=>`<div class="slot"><div class="slot-label">Chamber ${i+1} · ground floor</div><select data-function-slot="${i}"><option value="">— Empty —</option>${TOWNHALL_FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('')
-      +'<div class="legend">One chamber per civic level; the tribunal needs L2.</div>';
+    // One room per floor, the highest listed first.
+    html+=s.functions.map((value,i)=>({value,i})).reverse().map(({value,i})=>`<div class="slot"><div class="slot-label">Room ${i+1} · ${i?'Floor '+i:'Ground floor'}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${TOWNHALL_FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('')
+      +'<div class="legend">One room per floor, as many as the civic level; the tribunal needs L2.</div>';
   }
   if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
@@ -280,6 +285,7 @@ function renderFunctionPanel(){
   on('[data-built-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.builtSkin));
   on('[data-wall-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.wallSkin));
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));
+  on('[data-cutaway-floor]',(id,el)=>StructureCommands.stepCutawayFloor(id,Number(el.dataset.cutawayFloor)));
   on('[data-linear-flip]',id=>StructureCommands.flipSide(id));
   on('[data-function-slot]',(id,el)=>StructureCommands.setRoom(id,Number(el.dataset.functionSlot),el.value),'onchange');
   window.ConquerGates?.bindPanel(slots);

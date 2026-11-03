@@ -1,5 +1,25 @@
 # Livello 2 — Stato tecnico e prove
 
+## Cutaway per piani (branch `feature/cutaway-floors`, da `main` ac99bcf, 03/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:** `s.cutawayFloor` (piano in vista), `cutawayFloorCount` / `cutawayVisibleFloor` / `cutawayCeilingZ` / `cutawayFloorShown` (`settlement-castle.js`), `floorCount` / `visibleFloor` / `floorSpan` / `cutawaySig` / `UPPER_ROOMS` (`ConquerCivic3D`).
+  - **Comando:** `StructureCommands.stepCutawayFloor`, usato dalla riga «Spaccato · piano» dell'ispettore, dal vecchio pannello e dalle frecce ▲ ▼ ancorate sopra l'edificio (`src/settlement-cutaway-floors.js`).
+  - **Castello:** taglio al soffitto del piano in vista in 2.5D e WebGL; arredi, luci, occupanti e finestre dei piani spenti esclusi. Le cache (overlay 2.5D, `cutContent` WebGL, firma del cutaway civico) cambiano con il piano.
+  - **Municipio:** piani superiori L1–L3 con pavimento di tavole, ancora senza arredi (arriveranno con le stanze per piano del branch CRIME).
+- **QA:** `qa/cutaway-floors-regression.cjs` PASS, insieme alle regressioni di cutaway, civiche, mastio, botteghe e pannelli. Verifica visiva nel motore (Municipio L3 PT/P1/P2, torre T2 a 3 piani in WebGL).
+- **APERTO:** piani alti di taverna e gilda; audit del Lab per gli stati di cutaway.
+
+## 2026-11-03 — Verifica assedio, events e messaggeri 2D
+
+Baseline esaminata: main 49831855ffa8b160839c4b539a6bd277451db0bc. Nessuna nuova funzionalità da reintegrare nei tre branch selezionati.
+
+- **assedio ddaafdf4:** immunità dei nuclei ai colpi ordinari, arieti e torce; HP distinti porta/nucleo; invalidazione topologica e danni persistenti sono già riconciliati nella #61. Main conserva anche grata autonoma, danni per campata, cadute direzionali, crolli e Circle: ripristinare il vecchio skeleton li regredirebbe.
+- **events 2dd00b36:** diff vuoto rispetto alla base comune 1194f5e03afd340969bbc997f4bc976819640f4f. Moduli, UI, folla, giostre e allestimenti già in #78, estesi dagli accampamenti #110. Nessun residuo operativo del branch.
+- **feature/knights-messenger-caravans 69339589:** capitano, reclutamento e messaggeri già in #96; settlement-mounted2d.js e settlement-animals.js identici. Main usa il ledger e i convogli unificati #105, migra i vecchi salvataggi ed esclude il renderer 3D da gioco e test (D-046). Nessun recupero di mesh o stile flat 3D.
+- **Prove eseguite:** 18/18 suite su main attuale: assedio, brecce, grate, levatoi, incendio/crolli, mastio, eventi, folla, Builder, giostre/camp, diplomazia, selezione, pattuglie, convogli e mass battle. Nessuna modifica a sorgenti, renderer o asset.
+- **Pulizia autorizzata:** rimuovere solo i tre ref con gli SHA sopra dopo verifica PR aperte e presenza delle PR sostitutive in main. Restano aperti gli sviluppi strategici e le limitazioni già documentate; questa ricognizione non certifica un assedio o una world map completi.
+
+
 ## Ballatoi di torri e porte (branch `feature/tower-hoardings`, da `main` d15826e, aggiornata con `main` 9f135d9 il 03/11/2026)
 
 - **Merge di `main` (03/11):** conflitti risolti tenendo entrambe le parti (varianti `bartizan` / `roofShape` di #119 accanto a `hoarding`; comandi di mastio e pozzi). Nuova esclusione: niente ballatoio sulle torri con le garitte (`towerHoardingAllowed`). Dopo il merge 113 `qa/*.cjs` non di performance PASS (`bartizan`, `keep-entrance`, `tower-roof-shape` comprese); nel gioco porta con torri rotonde e ballatoio, torre T3 con garitte senza ballatoio, torre a 2 falde col ballatoio sotto la gronda, console pulita.

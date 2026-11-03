@@ -12,6 +12,8 @@ function drawCutawayOccupants(){
   for(const s of structures){
     const render=()=>{
       for(const slot of cutawayRoomSlots(s)){
+        // Floor-by-floor cutaway: nobody stands in the rooms taken off above the floor in view.
+        if(typeof cutawayFloorShown==='function'&&!cutawayFloorShown(s,slot.floor))continue;
         let count=0,kind=null;
         if(slot.role==='barracks'||slot.role==='quarters'){
           count=3;kind='soldier';

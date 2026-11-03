@@ -358,6 +358,9 @@ function Inspector({ snap, cmd }) {
       if (d.mastio) chips.push({ label: I.mastio, active: d.mastio.active, disabled: d.mastio.disabled, tip: I.mastio, tipBody: TIP.mastio, run: () => run('toggleMastio') });
       return chips.length > 0 && html`<${Row} label=${I.toggles}><${Seg} options=${chips} onPick=${o => o.run()} /></${Row}>`;
     })()}
+    ${d.cutawayFloor && html`<${Row} label=${I.cutawayFloor(d.cutawayFloor.index, d.cutawayFloor.count)} tip=${TIP.cutawayFloor}>
+      <${Seg} options=${[{ label: '▼', tip: I.floorDown, disabled: d.cutawayFloor.index === 0, v: -1 }, { label: '▲', tip: I.floorUp, disabled: d.cutawayFloor.index >= d.cutawayFloor.count - 1, v: 1 }]}
+        onPick=${o => run('stepCutawayFloor', o.v)} /></${Row}>`}
     ${d.gate && html`<${Row} label=${I.gate + ' · ' + (I.gateStage[d.gate.stage] || d.gate.stage)} tip=${I.gateHelp}>
       <${Seg} options=${[{ label: I.gateOpen, active: !d.gate.closed, v: false }, { label: I.gateClosed, active: d.gate.closed, disabled: d.gate.broken, v: true }]}
         onPick=${o => run('setGateClosed', o.v)} /></${Row}>
@@ -392,8 +395,8 @@ function Inspector({ snap, cmd }) {
         onPick=${o => run('changeArchers', o.v)} /></${Row}>`}
     ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>
       ${d.rooms.pending ? html`<p class="u2-hint">${I.roomsPending}</p>` : d.rooms.slots.length === 0 ? html`<p class="u2-hint">${I.roomsNone}</p>` :
-        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${(d.rooms.hall ? 'Sala ' : 'Piano ') + (r.index + 1)} data-tip-body=${d.rooms.hall ? I.hallRoom(r.index + 1) : I.room(r.index + 1, r.size, r.units)}>
-          <span>${d.rooms.hall ? 'S' : 'P'}${r.index + 1}${r.size === 'large' ? '+' : ''}</span>
+        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${'Piano ' + (r.index + 1)} data-tip-body=${I.room(r.index + 1, r.size, r.units)}>
+          <span>P${r.index + 1}${r.size === 'large' ? '+' : ''}</span>
           <select value=${r.value} onChange=${e => run('setRoom', r.index, e.currentTarget.value)}>
             <option value="">${I.roomEmpty}</option>
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}

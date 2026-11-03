@@ -712,6 +712,30 @@ function cutawayFloorLevels(s){
   for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:h*i/level,material:'wood'});
   return floors;
 }
+// Floor-by-floor cutaway, shared by the castle and the civic buildings (settlement-civic3d.js):
+// s.cutawayFloor is the floor in view and the floors above it are taken off. Unset, a castle
+// structure shows every floor (its top one is in view) and a civic building opens on the ground
+// floor. A subtower follows the ceiling of its parent; timber towers keep their whole model.
+function civicFloorCutaway(s){return !!window.ConquerCivic3D?.cutawayActive?.(s)}
+function cutawayFloorCount(s){
+  if(civicFloorCutaway(s))return window.ConquerCivic3D.floorCount(s);
+  if(!s||s.parentTowerId||!cutawayEligible(s)||isWoodTower(s))return 1;
+  return cutawayFloorLevels(s).length;
+}
+function cutawayVisibleFloor(s){
+  if(civicFloorCutaway(s))return window.ConquerCivic3D.visibleFloor(s);
+  const n=cutawayFloorCount(s);
+  return clamp(Number.isInteger(s?.cutawayFloor)?s.cutawayFloor:n-1,0,n-1);
+}
+// Height (U above the structure's ground) where the castle cutaway is cut: the next floor up.
+function cutawayCeilingZ(s){
+  if(s?.parentTowerId){const p=State.structures.find(o=>o.id===s.parentTowerId);if(p&&p!==s)return cutawayCeilingZ(p)}
+  if(!s||isWoodTower(s))return Infinity;
+  const floors=cutawayFloorLevels(s),f=cutawayVisibleFloor(s);
+  return f<floors.length-1?floors[f+1].z:Infinity;
+}
+// Floor i (and its room, furniture, ladder) is drawn when it lies below the cut.
+function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Number.isFinite(z)||z<cutawayCeilingZ(s)-.01}
 // Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front
 // and the rear (local x), flush with the flanks the walls meet.
 function gateTimberFloorZ(s){return GATE_TIMBER_FLOOR}
@@ -814,6 +838,7 @@ function drawCutawayFloorsAndProps(s,g){
   const F=window.ConquerCutawayFurniture;
   if(!F){drawCutawayFloors(s,g);drawCutawayInteriorProps(s,g);return}
   cutawayFloorLevels(s).forEach((floor,i)=>{
+    if(!cutawayFloorShown(s,i))return;
     if(floor.material==='stone')drawStoneTileFloor(s,g,floor.z);else drawWoodFloor(s,g,floor.z);
     F.draw(s,g,i);
   });
@@ -992,14 +1017,16 @@ function drawCutawayStructure(s){
   // (ConquerWood3D.draw); only the room's furnishings belong here.
   if(isWoodTower(s)){withStructureGroundPlane(s,()=>window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s)));return}
   const render=()=>{
-    const g=cutawayWallGeometry(s),height=structureHeight(s);
+    // Walls stop at the ceiling of the floor in view (cutawayCeilingZ); the crest and the roof
+    // deck only when every floor is in view.
+    const g=cutawayWallGeometry(s),full=structureHeight(s),height=Math.min(full,cutawayCeilingZ(s)),top=height>=full-1e-6;
 
     if(s.type==='built'){
       // Dedicated built-section cutaway: one rear wall, zero short end walls.
       drawBuiltCutawayShell(s,g,height);
       drawCutawayFloorsAndProps(s,g);
       drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
-      drawBuiltDetails(s,false);
+      if(top)drawBuiltDetails(s,false);
       if(builtSkin(s)==='arcade'){
         ctx.save();ctx.globalAlpha*=.72;drawBuiltArcade(s);ctx.restore();
       }
@@ -1012,7 +1039,7 @@ function drawCutawayStructure(s){
     drawCutawaySectionJambs(g,height,shell.transparent);
     drawCutawayShellFaces(shell.faces,true);
     drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
-    drawCutawayFlatRoofDeck(s,g,height);
+    if(top)drawCutawayFlatRoofDeck(s,g,height);
 
     if(s.type==='tower'){
       ctx.save();ctx.globalAlpha*=.28;drawStoneTowerBase(s,false);ctx.restore();

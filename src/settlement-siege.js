@@ -78,7 +78,7 @@
   function floor(s,index){return index+1}
   function allowed(s,index,fn){
     if(!fn)return true;
-    // Town hall chambers sit side by side on the ground floor; the tribunal needs two (L2).
+    // Town hall: one room per floor, as many as the civic level; the tribunal needs L2.
     if(s?.type==='townhall')return !underConstruction(s)&&index>=0&&index<functionCapacity(s)
       &&TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||civicLevel(s)>=2);
     if(CIVIC_ONLY_ROOMS.has(fn))return false;

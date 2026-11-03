@@ -644,7 +644,8 @@ function normalizeFunctions(s){
   while(s.functions.length<cap)s.functions.push(null);
   return s;
 }
-// Town halls saved before their chambers keep the council room they always showed.
+// Town hall rooms: room i is floor i. Town halls saved before their rooms keep the council hall
+// they always showed on the ground floor.
 function normalizeTownhallRooms(s){
   const cap=functionCapacity(s);
   if(!Array.isArray(s.functions)||!s.townhallRooms){s.functions=['council'];s.townhallRooms=1}

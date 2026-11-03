@@ -359,7 +359,8 @@ const BIOMES=Object.freeze({
 });
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison'];
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',council:'Council chamber',tribunal:'Tribunal'};
-// Town hall: the ground-floor hall is split into side-by-side chambers, one per civic level.
+// Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
+// shown one floor at a time in the floor-by-floor cutaway.
 // Civic catalogue, apart from the castle one: the tribunal sits there from L2.
 const TOWNHALL_FUNCTION_CATALOG=Object.freeze(['council','tribunal','guard','prison']);
 function functionCatalog(s){return s?.type==='townhall'?TOWNHALL_FUNCTION_CATALOG:FUNCTION_CATALOG}

@@ -9,6 +9,20 @@
 - **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
 - **Piramide:** STATUS, BACKLOG (C-02 e C-03 su branch), DECISIONS (tribunale nel Municipio). ROADMAP invariata.
 
+## 2026-11-03 — Cutaway per piani (branch `feature/cutaway-floors`)
+
+- Lo spaccato mostra un piano per volta: ▲ ▼ sopra l'edificio selezionato e nell'ispettore (nuovo e vecchio) tolgono o rimettono i piani superiori. Un solo comando, `StructureCommands.stepCutawayFloor`, e un campo `s.cutawayFloor`.
+- **Castello** (torri, porte, sezioni costruite): per default tutti i piani come prima. Scendendo, muri, finestre, solai, arredi, scale a pioli e occupanti si fermano al soffitto del piano in vista; la sottotorre segue la madre. Sia in 2.5D sia in WebGL.
+- **Edifici civici:** per default il piano terra come prima. Il Municipio apre anche i piani superiori del suo modello (L1–L2: 2 piani, L3: 3), con pavimento di tavole, pareti di fondo tagliate al soffitto e torre a moncone. Gli altri edifici civici hanno un solo piano finché non hanno interni ai piani alti.
+- **Prove:** nuova `qa/cutaway-floors-regression.cjs` con workflow dedicato.
+- **Piramide:** STATUS, BACKLOG, DECISIONS (D-CUT-01). ROADMAP invariata.
+
+## 2026-11-03 — Consolidamento assedio, events e messaggeri senza 3D
+
+- Confrontati i tre branch selezionati con main 49831855: nessun residuo utile da integrare; assedio coperto da #61, eventi da #78/#110, cavalieri/messaggeri 2D da #96 e convogli da #105.
+- 18/18 regressioni pertinenti superate. Il codice 3D del vecchio branch cavalieri resta escluso (D-046); nessuna regressione al vecchio inventario o al vecchio modello danni.
+- Workflow di pulizia limitato ai tre commit verificati, con protezione dei ref aggiornati e delle PR aperte. Nessuna nuova PR o modifica al runtime.
+
 ## 2026-11-02 — Ballatoi di torri e porte (branch `feature/tower-hoardings`)
 
 - Ballatoio di legno come aggiunta temporanea (Montato / Smontato) sulle torri in pietra (quadrata, rotonda, a D) e sulle porte in pietra grande e piccola, merlate o a falde: il tetto resta quello costruito, sotto le falde il ballatoio pende sotto la gronda. Sulle porte solo sul fronte esterno; sulle torri si interrompe contro porte e torri attaccate più alte. Nuova regola D-GATE-01: le torri agganciate a una porta hanno ingresso e lato interno sempre sul retro della porta. Modello Blender (`tools/blender/build_hoarding.py`) ripetuto lungo il profilo; brucia, esclude le macchine in cima alla torre. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: aggiunta D-GATE-01; nuova variante `hoarding` dei tipi `tower` e `gate`, nessun tipo nuovo.

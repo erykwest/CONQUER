@@ -50,7 +50,7 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
   console.log('PASS town hall chambers: council, guard, prison, tribunal from L2; prison and guard capacities');
 }
 
-// ---------- town hall cutaway furnishes each chamber
+// ---------- town hall cutaway: one room per floor, furnished over the whole floor in view
 {
   const window={},State={season:'summer',structures:[]};
   const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,String,Float32Array,
@@ -58,25 +58,29 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
   vm.runInContext(core.slice(core.indexOf('const CIVIC_TYPES='),core.indexOf('function civicParts(')),ctx);
   for(const f of ['assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js'])vm.runInContext(src(f),ctx);
   const C3=window.ConquerCivic3D;
-  const faces=(level,functions)=>{
-    State.structures=[{id:'th',type:'townhall',x:0,y:0,angle:0,civicLevel:level,...(functions?{functions,townhallRooms:1}:{})}];State.selectedId='th';
+  const faces=(level,functions,floor=0)=>{
+    State.structures=[{id:'th',type:'townhall',x:0,y:0,angle:0,civicLevel:level,cutawayFloor:floor,...(functions?{functions,townhallRooms:1}:{})}];State.selectedId='th';
     assert.equal(C3.cutawayId(),'th','the selected town hall is in cutaway');
     const out=[];C3.addCutawayToBuilder({face:vs=>out.push(vs)},0);return out;
   };
   const legacy=faces(1).length;
-  assert.equal(faces(1,['council']).length,legacy,'a lone council chamber keeps the classic room');
-  const roles=['council','tribunal','guard','prison'],counts={};
-  for(const r of roles)counts[r]=faces(3,[r,null,null]).length;
-  const empty=faces(3,[null,null,null]).length;
-  for(const r of roles)assert.ok(counts[r]>empty,r+' chamber is furnished');
-  assert.equal(new Set(Object.values(counts)).size,roles.length,'every role has its own furnishing');
-  const full=faces(3,['council','tribunal','prison']);
-  // Furniture stays inside the hall (L2/L3 floor x -1.95..1.95, y -0.2..1.55), below the sill section.
-  const low=full.filter(vs=>vs.every(v=>v.z>.02&&v.z<.8&&v.y>-.2-1e-6&&v.y<1.55+1e-6));
-  assert.ok(low.length>counts.council-empty,'three furnished chambers');
-  assert.ok(full.every(vs=>vs.every(v=>Math.abs(v.x)<=2.6&&Math.abs(v.y)<=3)),'nothing escapes the building');
+  assert.equal(faces(1,['council']).length,legacy,'the council keeps the classic ground-floor hall');
+  const roles=['council','tribunal','guard','prison'];
+  for(const floor of [0,1,2]){
+    const counts={},empty=faces(3,[null,null,null],floor).length;
+    for(const r of roles){const fn=[null,null,null];fn[floor]=r;counts[r]=faces(3,fn,floor).length}
+    for(const r of roles)assert.ok(counts[r]>empty+20,r+' furnishes floor '+floor);
+    assert.equal(new Set(Object.values(counts)).size,roles.length,'floor '+floor+': every role has its own furnishing');
+  }
+  // A room shows only on its floor: the tribunal on floor 1 is not in the ground-floor view.
+  assert.equal(faces(3,[null,'tribunal',null],0).length,faces(3,[null,null,null],0).length,'rooms of other floors are not drawn');
+  // Furniture stays in the room of the floor in view (L3 floor 1 at z 1.171, rect x ±1.9, y -0.82..1.52).
+  const up=faces(3,['council','tribunal','prison'],1);
+  assert.ok(up.every(vs=>vs.every(v=>Math.abs(v.x)<=2.6&&Math.abs(v.y)<=3)),'nothing escapes the building');
+  const furniture=up.filter(vs=>vs.every(v=>v.z>1.21&&v.z<1.171+.8&&Math.abs(v.x)<1.9+1e-6&&v.y>-.82-1e-6&&v.y<1.52+1e-6));
+  assert.ok(furniture.length>100,'the tribunal stands on floor 1');
   State.selectedId=null;
-  console.log('PASS town hall cutaway: '+roles.join(', ')+' chambers furnished side by side');
+  console.log('PASS town hall cutaway: one room per floor ('+roles.join(', ')+'), furnished floor by floor');
 }
 
 // ---------- almshouse annex of the church

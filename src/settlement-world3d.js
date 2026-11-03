@@ -1209,7 +1209,8 @@
       if(!structureCutaway(s)||underConstruction(s))continue;
       // Timber tower: the Blender model minus the sides facing this quarter-turn, then its room.
       if(window.ConquerWood3D?.addCutawayToBuilder?.(sh,s)){addFurniture(s);continue}
-      const g0=cutawayWallGeometry(s),H=structureHeight(s),n=Math.min(g0.outer.length,g0.inner.length);
+      // Floor-by-floor cutaway: H is the cut (the ceiling of the floor in view), HF the full height.
+      const g0=cutawayWallGeometry(s),HF=structureHeight(s),H=Math.min(HF,cutawayCeilingZ(s)),n=Math.min(g0.outer.length,g0.inner.length);
       // Inner ring re-indexed so inner[i] is the vertex nearest outer[i] (built sections list them
       // in another order, which made the crest quads cross over the whole room).
       const g={...g0,inner:g0.outer.slice(0,n).map(o=>g0.inner.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,g0.inner[0]))};
@@ -1234,7 +1235,7 @@
         keep=new Set([...Array(n).keys()].filter(i=>!open.has(i)));jambs=cutawayBoundaryVertices(open,n);
       }
       // Timber-framed small gate: masonry up to the frame's floor, plaster above (outside and in).
-      const timber=s.type==='gate'&&gateTimberUpper(s),zf=timber?gateTimberFloorZ(s):H;
+      const timber=s.type==='gate'&&gateTimberUpper(s),zf=timber?Math.min(gateTimberFloorZ(s),H):H;
       const band=(mesh,p,q,z0,z1,hex)=>mesh.face([Z(p,z0),Z(q,z0),Z(q,z1),Z(p,z1)],hex);
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
@@ -1270,12 +1271,13 @@
       }
       const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:'#8f857a';   // a frame's cut top is its head plate
       for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
-      if(s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
+      if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
       for(const floor of cutawayFloorLevels(s)){
         const stone=floor.material==='stone',z=floor.z,th=stone?.045:.065;
+        if(z>=H-.01)continue;
         facesOut(g.inner,stone?'#7f796f':'#795a3a',m,z);
         for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?'#5a554d':'#5b402b')}
         if(stone){
@@ -1304,14 +1306,14 @@
       if(s.type==='tower'){
         for(const row of towerWindowRows(s))for(const d of towerFaceDirections(s)){
           const dir={x:d.nx,y:d.ny};if(!keptDir(dir))continue;
-          const at=innerAt(dir),zc=row.z;if(!outside(at,zc))continue;
+          const at=innerAt(dir),zc=row.z;if(zc>=H||!outside(at,zc))continue;
           const key=d.interior&&!towerWindowGivesWayToDoor(s,d,row.floor)&&towerGothicAssetForRow(s,row),z=(plane?G0:0)+zc;
           if(key){const sz=towerGothicAssetSizeForRow(s,row);decal(at,dir,z-sz.h/2,z+sz.h/2,sz.w,key,'#8fa2b2')}
           else if(towerSlitFace(s,d.face,row.floor))decal(at,dir,z-.3,z+.3,.22,'arrowSlit','#1c1612');
         }
         for(const spec of (typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[])){
           const dir={x:spec.outward.x,y:spec.outward.y};if(!keptDir(dir))continue;
-          const at={x:spec.contact.x-dir.x*(g.thickness+.006),y:spec.contact.y-dir.y*(g.thickness+.006)};if(!outside(at))continue;
+          const at={x:spec.contact.x-dir.x*(g.thickness+.006),y:spec.contact.y-dir.y*(g.thickness+.006)};if(spec.baseZ>=H||!outside(at))continue;
           openingQuad(m,at,dir,G0+spec.baseZ+.01,G0+Math.min(spec.apexZ,spec.baseZ+.6),.3,'#1f1712');
         }
       }else if(s.type==='gate'){
@@ -1331,12 +1333,12 @@
           const mo={x:(fp[e].x+fp[(e+1)%4].x)/2,y:(fp[e].y+fp[(e+1)%4].y)/2},dl=Math.hypot(mo.x-s.x,mo.y-s.y)||1,dir={x:(mo.x-s.x)/dl,y:(mo.y-s.y)/dl};
           const edge={a:fp[e],b:fp[(e+1)%4],index:e},rear=e===interiorFacadeEdgeIndex(s);
           // Timber frame: its house windows, seen from inside.
-          if(timber)for(const w of gateTimberFacade(s)[e].windows){
+          if(timber)for(const w of gateTimberFacade(s)[e].windows.filter(w=>w.z<H)){
             const at={x:(a.x+b.x)/2+u.x*w.off-dir.x*.006,y:(a.y+b.y)/2+u.y*w.off-dir.y*.006};
             openingQuad(m,at,dir,G0+w.z-HOUSE_WINDOW_HALF_H,G0+w.z+HOUSE_WINDOW_HALF_H,HOUSE_WINDOW_HALF_W*2+.04,'#5b412c');
             openingQuad(m,{x:at.x-dir.x*.002,y:at.y-dir.y*.002},dir,G0+w.z-HOUSE_WINDOW_HALF_H+.02,G0+w.z+HOUSE_WINDOW_HALF_H-.02,HOUSE_WINDOW_HALF_W*2,'#8fa2b2');
           }
-          for(const z of gateWindowRows(s))for(const off of rear?[0]:gateSlitOffsets(edge)){
+          for(const z of gateWindowRows(s).filter(z=>z<H))for(const off of rear?[0]:gateSlitOffsets(edge)){
             const at={x:(a.x+b.x)/2+u.x*off-dir.x*.006,y:(a.y+b.y)/2+u.y*off-dir.y*.006};
             if(rear)decal(at,dir,G0+z-sz.h/2,G0+z+sz.h/2,sz.w,gothicAssetForLevel(s),'#8fa2b2');
             else decal(at,dir,G0+z-.31,G0+z+.31,.24,'arrowSlit','#1c1612');
@@ -1413,7 +1415,8 @@
     // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
     // An open L3 workshop (settlement-shop-cutaway.js) follows the selection the same way.
     // Shop fronts open at dawn and shut at dusk: their signature rebuilds the buildings too.
-    const civicCut=window.ConquerCivic3D?.cutawayId?.()||null,shopCut=window.ConquerShopCutaway?.activeId?.()||null;
+    // civicCut: '<id>@<storey in view>' (cutawaySig), so a floor change rebuilds the cutaway.
+    const civicCut=(window.ConquerCivic3D?.cutawaySig||window.ConquerCivic3D?.cutawayId)?.()||null,shopCut=window.ConquerShopCutaway?.activeId?.()||null;
     const shopFront=window.ConquerShopCutaway?.frontSig?.()||'';
     if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut&&S.shopCut===shopCut&&S.shopFront===shopFront){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
     S.civicCut=civicCut;S.shopCut=shopCut;S.shopFront=shopFront;
@@ -1451,7 +1454,7 @@
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
     if(S.sig.civicCutaway!==cutSig){
-      const m=meshBuilder(true),s=civicCut&&State.structures.find(x=>x.id===civicCut);
+      const cutId=civicCut&&civicCut.split('@')[0],m=meshBuilder(true),s=cutId&&State.structures.find(x=>x.id===cutId);
       if(s)withStructureVisualMaterial(s,()=>ConquerCivic3D.addCutawayToBuilder(m,Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)));
       if(shopCut)window.ConquerShopCutaway.addToBuilder(m);
       upload(gl,'civicCutaway',new Float32Array(m.tris));S.sig.civicCutaway=cutSig;
@@ -1512,7 +1515,7 @@
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
     const cut=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s));
     const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,S.sig.decals,
-      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
+      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),cutawayCeilingZ(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
     if(S.cutContent!==cutContent){
       for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b);gl.deleteBuffer(v.dec.b)}
       S.cutContent=cutContent;S.cutVariants=new Map();

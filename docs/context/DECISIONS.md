@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CUT-01 — Cutaway per piani (03/11/2026)
+
+- **DECISO:**
+  - **Un piano per volta.** Lo spaccato toglie i piani sopra quello in vista. Il piano si sceglie con ▲ ▼ ancorate sopra l'edificio selezionato e con la stessa riga nell'ispettore.
+  - **Un solo modello** per castello (torri, porte, sezioni costruite) ed edifici civici.
+  - **Default:** il castello resta con tutti i piani; gli edifici civici aprono il piano terra.
+  - **Motivo:** interni ricchi ai piani alti restano leggibili se si vede un piano alla volta. Non si semplificano gli arredi.
+- **Conseguenza per il Municipio:** una stanza per piano invece di più sale affiancate. Le stanze sono tante quanti i livelli civici: L1 = 1, il suo P1 resta senza funzione.
+
 ## D-GATE-01 — Torri agganciate a una porta: ingresso sul retro della porta (02/11/2026)
 
 - **Regola, sempre:** una torre agganciata a una porta (qualsiasi socket `gate-*`, `parentTowerId` = la porta) ha l'ingresso al piano terra e il lato interno (finestre, porta, arredo del cutaway) verso il **retro della porta**, cioè l'interno della porta, qualunque sia l'angolo della torre o le mura attaccate. Vale per torri quadrate, rotonde e a D; la semitorre ha già la gola aperta sul retro e non riceve una porta. Le torri secondarie di un'altra torre restano senza ingresso al piano terra.
