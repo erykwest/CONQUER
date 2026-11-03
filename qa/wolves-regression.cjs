@@ -9,7 +9,7 @@ const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const art=read('src/settlement-animals.js');
 const wolvesSrc=read('src/settlement-wolves.js');
-const combatSrc=read('src/settlement-combat.js');
+const combatSrc=read('src/settlement-combat.js')+'\n'+read('src/settlement-combat-render.js');
 const rulesSrc=read('src/settlement-combat-rules.js');
 const html=read('camp/index.html');
 assert.match(html,/settlement-animals\.js/);

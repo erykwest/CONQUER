@@ -78,16 +78,16 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto'
+      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
       masonry: 'Pietra', timber: 'Graticcio',
-      standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio',
+      standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -107,6 +107,8 @@ export const T = {
     wellCenterHint: name => 'Il centro porta il nome del villaggio' + (name ? ' · ' + name : '') + '.',
     wellName: 'Nome', wellNamePlaceholder: 'Quartiere o borgata', wellUnnamed: 'Quartiere senza nome',
     archers: (n, max) => 'Arcieri ' + n + '/' + max,
+    cutawayFloor: (i, n) => 'Spaccato · ' + (i === 0 ? 'piano terra' : 'piano ' + i) + ' (' + (i + 1) + '/' + n + ')',
+    floorUp: 'Piano di sopra', floorDown: 'Piano di sotto',
     archerSlots: (roof, slits, bartizan) => 'Tetto ' + roof + (bartizan ? ' · garitte ' + bartizan : '') + ' · feritoie ' + slits,
     roomsTitle: 'Stanze',
     roomsPending: 'Le stanze si assegnano a costruzione finita.',
@@ -176,9 +178,10 @@ export const T = {
     skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: riguarda solo il piano terra interno.' },
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
-    weapon: 'Solo su torri T2 senza tetto a falde.',
+    weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',
     roofShape: 'Solo estetica, stesso costo; con il tetto a falde. 2 falde: timpani in pietra. Colmo: 4 falde su un colmo lungo metà del tetto. Con il colmo, due bandiere.',
     bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
+    hoarding: 'Galleria di legno montata in guerra attorno alla cima, sotto la gronda se c\'è il tetto; il tetto resta. Non con le caditoie né con le garitte.',
     civicLevel: 'Tre stadi previsti; per ora senza effetti economici o di servizio.',
     plaza: 'Aspetto della piazza.',
     mastio: 'La prima torre completata diventa mastio da sola; il mastio tiene sempre una sala comune.',
@@ -191,6 +194,7 @@ export const T = {
     wellName: 'Nome del quartiere o della borgata, mostrato sulla mappa.',
     archers: 'Priorità: tetto, poi feritoie dai piani alti. Le mura collegate possono bloccare le feritoie.',
     rooms: 'Una stanza per piano. Alcune funzioni sono permesse solo al piano terra.',
+    cutawayFloor: 'Lo spaccato mostra un piano per volta: ▲ ▼ (o le frecce sopra l\'edificio) spengono o riaccendono i piani superiori.',
     masonry: 'Materiale dei prossimi cantieri in muratura: cambia costo e aspetto.',
     house: 'L1 3 abitanti · L2 6 · L3 9 · L4 12.',
     integrity: 'Muratura, porta e grata perdono resistenza sotto assedio.',

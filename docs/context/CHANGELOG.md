@@ -5,6 +5,39 @@
 - Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.
 - Nuovi `tools/blender/build_houses.py`, `src/assets/house-models.js`, `src/settlement-house3d.js`, `qa/house3d-regression.cjs`; 6 voci nel Lab.
 - Piramide: STATUS, BACKLOG, DECISIONS (D-057). ROADMAP invariata: è una scelta di resa grafica delle case, non cambia milestone né la priorità P1 economia.
+## 2026-11-03 — Combat: chiuso il refactor del renderer
+
+- Recuperato il residuo della branch combat a partire dal runtime main f603d514: presentazione tattica separata, nessuna regressione al prototipo vecchio. Disegno di frecce/pietre/lampi spostato fuori dalle regole.
+- Aggiornati Builder, /camp e harness di test; aggiunti test del confine stato/disegno, CI e documentazione del contratto. 118 suite PASS, trace equivalenti in cinque scenari e pixel browser identici prima/dopo. Lab: 784 render e zero fail; avvisi/drift registrati separatamente.
+- Cleanup combat previsto solo dopo promozione del commit verificato. Nessuna nuova PR. Roadmap di prodotto invariata; contratto tecnico registrato in DECISIONS.
+
+## 2026-11-03 — Cutaway per piani (branch `feature/cutaway-floors`)
+
+- Lo spaccato mostra un piano per volta: ▲ ▼ sopra l'edificio selezionato e nell'ispettore (nuovo e vecchio) tolgono o rimettono i piani superiori. Un solo comando, `StructureCommands.stepCutawayFloor`, e un campo `s.cutawayFloor`.
+- **Castello** (torri, porte, sezioni costruite): per default tutti i piani come prima. Scendendo, muri, finestre, solai, arredi, scale a pioli e occupanti si fermano al soffitto del piano in vista; la sottotorre segue la madre. Sia in 2.5D sia in WebGL.
+- **Edifici civici:** per default il piano terra come prima. Il Municipio apre anche i piani superiori del suo modello (L1–L2: 2 piani, L3: 3), con pavimento di tavole, pareti di fondo tagliate al soffitto e torre a moncone. Gli altri edifici civici hanno un solo piano finché non hanno interni ai piani alti.
+- **Prove:** nuova `qa/cutaway-floors-regression.cjs` con workflow dedicato.
+- **Piramide:** STATUS, BACKLOG, DECISIONS (D-CUT-01). ROADMAP invariata.
+
+## 2026-11-03 — Hardening e skeleton CANS, senza ripristino del vecchio combat
+
+- **Browser locale PASS:** avvio con WebGL senza errori, diagnostica locale senza fetch, CANS assente dal bootstrap e caricato solo su richiesta con prenotazione esclusiva funzionante. 107 controlli di sintassi PASS.
+- Recuperati da audit-hardening soltanto i residui mancanti: API telemetria disattivata e rimozione dell'invio pubblico diretto; mantenute diagnostica locale e implementazione salvataggi attuale #93. Nuovi test comportamentali e workflow Runtime integrity.
+- Conservato lo skeleton CANS opt-in con specifica, 11 regressioni e workflow anche per main; nessun adapter o cittadino reale dichiarato completo.
+- Combat conserva un residuo utile: separazione del renderer overlay da riconciliare sul runtime attuale; nessun rollback di capitano, battaglie, animazioni o pattuglie. Branch conservata.
+- QA locale: 5 runtime test e 116 suite di regressione verificate; guard statico Lab allineato alla telemetria sempre locale. Prevista pulizia di cans/audit-hardening solo dopo promozione verificata. ROADMAP e DECISIONS invariate nei contratti; dettaglio in STATUS.
+
+
+## 2026-11-03 — Consolidamento assedio, events e messaggeri senza 3D
+
+- Confrontati i tre branch selezionati con main 49831855: nessun residuo utile da integrare; assedio coperto da #61, eventi da #78/#110, cavalieri/messaggeri 2D da #96 e convogli da #105.
+- 18/18 regressioni pertinenti superate. Il codice 3D del vecchio branch cavalieri resta escluso (D-046); nessuna regressione al vecchio inventario o al vecchio modello danni.
+- Workflow di pulizia limitato ai tre commit verificati, con protezione dei ref aggiornati e delle PR aperte. Nessuna nuova PR o modifica al runtime.
+
+
+## 2026-11-02 — Ballatoi di torri e porte (branch `feature/tower-hoardings`)
+
+- Ballatoio di legno come aggiunta temporanea (Montato / Smontato) sulle torri in pietra (quadrata, rotonda, a D) e sulle porte in pietra grande e piccola, merlate o a falde: il tetto resta quello costruito, sotto le falde il ballatoio pende sotto la gronda. Sulle porte solo sul fronte esterno; sulle torri si interrompe contro porte e torri attaccate più alte. Nuova regola D-GATE-01: le torri agganciate a una porta hanno ingresso e lato interno sempre sul retro della porta. Modello Blender (`tools/blender/build_hoarding.py`) ripetuto lungo il profilo; brucia, esclude le macchine in cima alla torre. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: aggiunta D-GATE-01; nuova variante `hoarding` dei tipi `tower` e `gate`, nessun tipo nuovo.
 ## 2026-11-02 — Fronte bottega e insegna a bandiera, fase 2 (branch `feature/l3-workshop-cutaway`)
 
 - Le case L3 con bottega mostrano su strada una vetrina a ante (banco e tettoia di giorno, ante chiuse la notte e la domenica) e un'insegna a bandiera di ferro accanto alla porta, con l'emblema del mestiere; la finestra del pianterreno dietro la vetrina sparisce.

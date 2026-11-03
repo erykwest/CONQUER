@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const source=fs.readFileSync(path.join(__dirname,'../src/settlement-combat.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../src/settlement-combat.js'),'utf8')+'\n'+fs.readFileSync(path.join(__dirname,'../src/settlement-combat-render.js'),'utf8');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 
 // Visual defaults are independent of the world-state area masks.

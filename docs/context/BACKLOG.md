@@ -1,5 +1,38 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-03 — Combat: separazione presentazione completata
+
+- **Implementato su combat e verificato localmente:** canvas tattico, fog/zone, figure/HUD ed effetti in settlement-combat-render.js; regole prive di Canvas. Il precedente residuo di separazione dell'overlay non richiede più di conservare la branch dopo la promozione.
+- **Accettazione:** 118 regressioni PASS; cinque scenari con trace grafici identici; confronto browser con pixel overlay identici, Builder e /camp senza errori.
+- **Fuori scope:** ulteriori refactor della UI/input, risoluzione avvisi e drift della baseline Asset Lab, nuove meccaniche o figure 3D.
+
+## Cutaway per piani (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/cutaway-floors`:** un piano per volta con ▲ ▼ sopra l'edificio e nell'ispettore, per castello (torri, porte, sezioni) e Municipio (2–3 piani).
+- **APERTO:** piani alti arredati di taverna e gilda; arredi per piano del Municipio (branch CRIME: una stanza per piano); stato «Cutaway · piano N» nel Lab.
+
+## 2026-11-03 — Audit hardening, CANS e combat
+
+| Branch | Recupero verificato | Residuo |
+|---|---|---|
+| audit-hardening | Telemetria remota disattivata, diagnostica locale e CI; salvataggi già #93 | Eventuale nuova telemetria autenticata richiede progetto separato |
+| cans | Skeleton logico puro, 11 test, specifica e CI | Adapter al gioco, navigazione/animazioni/persistenza reale ancora da sviluppare |
+| combat | Regole/pattuglie e disegno popolazione già presenti | Separare overlay tattico conservando tutte le feature correnti; branch mantenuta |
+
+La presenza del motore CANS non chiude i requisiti di popolazione in interni o di movimento tra arredi. Nessun caricamento automatico o cambiamento di gameplay introdotto.
+
+
+## 2026-11-03 — Residui dei tre branch selezionati
+
+| Branch | Residuo da recuperare | Esito |
+|---|---|---|
+| assedio | Nessuno dello skeleton storico | Coperto da #61; conservare modello danni attuale e Circle |
+| events | Nessuno: diff vuoto contro base comune con main | Coperto da #78 e successive estensioni #110 |
+| feature/knights-messenger-caravans | Nessuno compatibile con D-046 | Coperto da #96 in 2D e #105 per convogli/ledger; vecchio 3D escluso |
+
+18 suite pertinenti superate. Le tre branch sono ridondanti e candidate alla rimozione con controllo del commit esatto. ROADMAP e DECISIONS invariate: nessuna nuova decisione di gameplay.
+
+
 ## 2026-11-03 — Priorità esplicite per consolidamento branch
 
 | Priorità | Branch | Stato / prossimo passo |
@@ -377,7 +410,7 @@ Confini di lotti e campi: staccionate, muretti e siepi con pesi di progetto **50
 | S-06 | Scale, arieti, catapulte, trabucchi e materiali necessari; IA riconosce breach e punti deboli | S-03,S-05 | PARZIALE MAIN · macchine/scale presenti, IA incompleta |
 | S-07 | Fuoco, propagazione, spegnimento con acqua/pozzo, rischi di legno e palizzate | fuoco + lavoro/percorsi | MAIN BASE · fuoco e brigata; QA integrazione |
 | S-08 | Mastio come attributo di una torre (uno), cerchie difensive rilevate dalla geometria; ripiegamento guarnigione/civili | zone, pathfinding, castle | PARZIALE MAIN · Mastio sì, ritirata completa no |
-| S-09 | Hoardings funzionali e caditoie, manutenzione, vulnerabilità a incendi | S-05,S-07 | PARZIALE MAIN · hoardings sì, manutenzione no |
+| S-09 | Hoardings funzionali e caditoie, manutenzione, vulnerabilità a incendi | S-05,S-07 | PARZIALE MAIN · hoardings sui muri sì, manutenzione no · BRANCH `feature/tower-hoardings`: ballatoio montabile/smontabile su torri e porte in pietra (porte: solo fronte); torri agganciate alle porte con ingresso sul retro della porta (D-GATE-01) (modello Blender, tetto invariato, brucia); ancora aperti su torri e porte: tempo e costo di montaggio, lancio di pietre dalle caditoie, blocco scale/ponti, integrità separata |
 | S-10 | «Piano di Difesa» con upgrade predisposti, materiali, tempi di montaggio e preview | Builder + S-02 | DESIGN · Piano di Difesa da realizzare |
 | S-11 | Slot di torri/feritoie/tetto presidiati, priorità archi/balestre, tetti tagliati/cutaway, altezza/visibilità | Built Sections + roster | PARZIALE MAIN · slot arcieri già presenti |
 | S-12 | Chiamata alle armi/milizia via armeria, ordine di presidio, rifugio in sala comune | agenti/nav, capienza | PARZIALE MAIN · mobilitazione da integrare |

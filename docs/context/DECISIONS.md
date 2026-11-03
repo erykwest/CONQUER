@@ -1,5 +1,22 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-COMBAT-RENDER — Confine tecnico del combat (03/11/2026)
+
+ConquerCombatRenderer gestisce soltanto stato di presentazione e disegno. Ordini, visibilità/LOS, percorsi, HP, tempo e code di effetti restano nel dominio combat/regole. Le regole non dipendono da Canvas o dal renderer ed espongono visualEffects() come vista temporanea da non mutare. Il renderer non avanza la simulazione. Il wrapper precedente di draw e lo scheduler condiviso restano unici. Nessuna modifica a D-046 o alle meccaniche; parità verificata su trace e pixel del canvas. Specifica in [COMBAT-RENDERING](../COMBAT-RENDERING.md).
+
+## D-CUT-01 — Cutaway per piani (03/11/2026)
+
+- **DECISO:**
+  - **Un piano per volta.** Lo spaccato toglie i piani sopra quello in vista. Il piano si sceglie con ▲ ▼ ancorate sopra l'edificio selezionato e con la stessa riga nell'ispettore.
+  - **Un solo modello** per castello (torri, porte, sezioni costruite) ed edifici civici.
+  - **Default:** il castello resta con tutti i piani; gli edifici civici aprono il piano terra.
+  - **Motivo:** interni ricchi ai piani alti restano leggibili se si vede un piano alla volta. Non si semplificano gli arredi.
+- **Conseguenza per il Municipio:** una stanza per piano invece di più sale affiancate. Le stanze sono tante quanti i livelli civici: L1 = 1, il suo P1 resta senza funzione.
+
+## D-GATE-01 — Torri agganciate a una porta: ingresso sul retro della porta (02/11/2026)
+
+- **Regola, sempre:** una torre agganciata a una porta (qualsiasi socket `gate-*`, `parentTowerId` = la porta) ha l'ingresso al piano terra e il lato interno (finestre, porta, arredo del cutaway) verso il **retro della porta**, cioè l'interno della porta, qualunque sia l'angolo della torre o le mura attaccate. Vale per torri quadrate, rotonde e a D; la semitorre ha già la gola aperta sul retro e non riceve una porta. Le torri secondarie di un'altra torre restano senza ingresso al piano terra.
+- **Codice:** `towerGateParent` / `gateRearVector` in `settlement-architecture.js`, usati da `structureInteriorVector` e `towerDoorSpecs` (e quindi da disegno 2.5D/3D, torce, navigazione e combattimento). Prova: `qa/gate-tower-entrance-regression.cjs`.
 ## 2026-11-03 — Consolidamento P0 / P2 / P3
 
 Decisione esplicita dell'utente: P0 bridge, circle, jobmanager e knights; P2 messages; P3 verifica di pertinenza per le altre branch senza PR. Recupero dei soli residui, senza ricreare funzionalità integrate e senza PR superflue. I contratti D-046 (figure 2D), D-049 (unico allocatore economico) e la decisione ancora aperta D-051 restano invariati. Circle conserva le scorte strategiche in State.siege.stock: la conquista non può duplicarle o sottrarre inventario economico del villaggio per supposizione.

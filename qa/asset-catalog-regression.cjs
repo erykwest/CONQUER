@@ -64,7 +64,7 @@ assert(index.includes("window.__CONQUER_ASSET_LAB__ = new URLSearchParams(locati
 assert(/function saveLocal\(\)\{\n  if\(window\.__CONQUER_ASSET_LAB__\)return;/.test(persistence),'Sandbox must not save locally');
 assert(/if\(window\.__CONQUER_ASSET_LAB__\)return 'conquer\.assetlab\.sandbox'/.test(persistence),'Sandbox must read its own empty slot');
 assert(/async function initSupabase\(\)\{if\(window\.__CONQUER_ASSET_LAB__\)return;/.test(persistence),'Sandbox must not sign in to the cloud');
-assert(/if\(window\.__CONQUER_ASSET_LAB__\|\|!sample/.test(core),'Sandbox must not send telemetry');
+assert(!core.includes('/rest/v1/simulation_telemetry'),'Neither sandbox nor game may write public telemetry; behavioral coverage: tests/runtime-integrity.test.mjs');
 
 // Work animations: one entry per tool of settlement-work-anim.js.
 const workTools=[...read('src/settlement-work-anim.js').matchAll(/^    (\w+):\{period:/gm)].map(m=>m[1]);
