@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`, da `main` a372f1c, 03/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:** `ConquerSiege.allowed` permette la cucina solo al piano terra delle sezioni costruite: W1 (sezione, L1 o L2, lunga almeno 2U) e W2 (sala larga). Non più in torri (mastio compreso), porte o piani superiori. Granaio, magazzino e sala comune mantengono la regola precedente.
+- **Migrazione:** al caricamento `sanitizeRooms` svuota le stanze-cucina nelle torri e nelle porte dei salvataggi esistenti; la capienza pasti scende di conseguenza finché non si assegna una cucina in una sezione.
+- **QA:** nuova `qa/kitchen-rooms-regression.cjs` PASS (regola estratta dal sorgente vero). **Non verificato:** pannello stanze nel browser, CI della PR.
+
 ## Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`, da `main` d15826e, 02/11/2026, NON MAIN)
 
 - **Perché:** il catalogo delle forme L3 nel render 2.5D mostrava i limiti del painter (pareti senza graticcio dove `visibleFacadeEdges` le scarta, falde e timpani che si compenetrano male). Scelta dell'utente (D-057): case in Blender, kit modulare, pilota L3, poi L1–L4.

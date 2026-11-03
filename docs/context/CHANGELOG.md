@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`)
+
+- La cucina si assegna solo al piano terra delle sezioni costruite (W1 sezione, W2 sala larga), non più in torri o porte; i salvataggi esistenti perdono le cucine fuori regola al caricamento.
+- Nuova `qa/kitchen-rooms-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una regola di gioco sulle stanze, non cambia milestone né contratti.
+
 ## 2026-11-02 — Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`)
 
 - Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.
