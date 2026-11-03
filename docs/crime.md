@@ -39,14 +39,12 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 | Gogna (`pillory`) | Piazza, 1 × 1 U | `{type:'eventVenue', venue:'pillory'}` | 8 legno + 2 metallo, ½ giorno. Modello `justicePillory` |
 | Forca (`gallows`) | Piazza o margine, 2 × 1,5 U | `{type:'eventVenue', venue:'gallows'}` | 24 legno + 2 metallo, 1 giorno. Modello `justiceGallows`, sobrio e **vuoto** (senza figura né cappio) |
 
-**Sale del Municipio.** Il piano terra del Municipio si divide in tante sale affiancate quanti sono i livelli civici (L1 = 1, L2 = 2, L3 = 3), con il catalogo civico `TOWNHALL_FUNCTION_CATALOG = council, tribunal, guard, prison`. Le funzioni del castello restano nel castello: consiglio e tribunale non si assegnano alle torri. Nel cutaway del Municipio ogni sala ha **uno o due pezzi forti** contro la parete di fondo, perché si legga a colpo d'occhio. Le sale sono separate da muretti bassi che non nascondono quella accanto:
+**Sale del Municipio.** Il piano terra del Municipio si divide in tante sale affiancate quanti sono i livelli civici (L1 = 1, L2 = 2, L3 = 3), con il catalogo civico `TOWNHALL_FUNCTION_CATALOG = council, tribunal, guard, prison`. Le funzioni del castello restano nel castello: consiglio e tribunale non si assegnano alle torri. Nel cutaway del Municipio ogni sala è arredata secondo il suo ruolo, con una tramezza tra le sale:
 
-- **Consiglio:** tavolo con panno rosso e seggio sulla pedana.
-- **Tribunale:** banco dei giudici su gradino e sbarra.
-- **Guardia:** tavolo e rastrelliera.
-- **Prigione:** inferriata e paglia.
-
-Gli arredi minuti (sgabelli, catene, balaustre, sedie) sono stati tolti dopo la revisione visiva: in sale strette diventavano rumore grafico.
+- **Consiglio:** tavolo e seggio del podestà.
+- **Tribunale:** banco dei giudici su gradino, sbarra, panche.
+- **Guardia:** tavolo, rastrelliera, branda.
+- **Prigione:** inferriata, paglia, catene.
 
 Gogna e forca riusano il contratto delle `eventVenue` (posa a due clic, cantiere, costo, modello nel catalogo eventi). Nel nuovo Builder compaiono nello strumento **Giustizia**; nel vecchio, tra gli edifici civili. Nel Lab sono nella categoria *Edifici · Giustizia*.
 

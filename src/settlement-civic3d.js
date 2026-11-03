@@ -356,42 +356,48 @@
     while(roles.length<n)roles.push(null);
     return roles;
   }
-  // Read at a glance, not a doll's house: each chamber has one or two big signature pieces
-  // against the back wall, and the partitions are knee walls that do not hide the next room.
   function townhallChambers(spec,roles,piece,P){
     const [fx0,fy0,fx1,fy1]=spec.floors[0],z=FLOOR_Z,bw=(fx1-fx0)/roles.length,back=fy1;
     const hearthNear=(x0,x1)=>(spec.hearths||[]).some(([hx])=>hx>=x0-.1&&hx<=x1+.1);
     roles.forEach((role,i)=>{
-      const x0=fx0+i*bw,x1=x0+bw;
-      if(i>0)piece('partition',p=>box(p,x0-.04,fy0+.5,x0+.04,back,z,z+.2,P('stoneLight'),P('stone')));
+      const x0=fx0+i*bw,x1=x0+bw,cx=(x0+x1)/2;
+      // Inner partition with a doorway towards the arcade side.
+      if(i>0)piece('partition',p=>{box(p,x0-.03,fy0+.45,x0+.03,back,z,z+.6,P('stoneLight'),P('stone'))});
       // Keep clear of the hearth on an end bay.
-      const pad=hearthNear(x0,x1)?.55:.2,ix0=x0+(i===0?pad:.2),ix1=x1-(i===roles.length-1?pad:.2),iw=ix1-ix0,icx=(ix0+ix1)/2;
-      const hw=Math.min(.6,iw/2);
+      const pad=hearthNear(x0,x1)?.55:.18,ix0=x0+(i===0?pad:.18),ix1=x1-(i===roles.length-1?pad:.18),iw=ix1-ix0,icx=(ix0+ix1)/2;
       if(role==='council'){
-        // Long table under a red cloth, the podesta's chair on the dais behind it.
-        const ym=(fy0+back)/2+.15,ty=Math.min(.75,hw+.1);
-        piece('council',p=>{box(p,icx-ty+.1,ym-.08,icx+ty-.1,ym+.08,z,z+.2,P('woodDark'));box(p,icx-ty,ym-.2,icx+ty,ym+.2,z+.2,z+.24,P('canvasRed'),P('wood'))});
-        piece('dais',p=>{const y=back-.22;box(p,icx-hw,y-.2,icx+hw,back-.02,z,z+.07,P('stoneTrim'),P('stone'));
-          box(p,icx-.15,y-.1,icx+.15,y+.12,z+.07,z+.22,P('woodDark'));box(p,icx-.15,y+.08,icx+.15,y+.14,z+.22,z+.5,P('woodDark'))});
+        const hw=Math.min(.85,iw/2-.05),ym=(fy0+back)/2+.25;
+        piece('council',p=>{box(p,icx-hw+.08,ym-.06,icx+hw-.08,ym+.06,z,z+.2,P('woodDark'));box(p,icx-hw,ym-.16,icx+hw,ym+.16,z+.2,z+.235,P('canvasRed'),P('wood'))});
+        for(let x=icx-hw+.18;x<=icx+hw-.17;x+=.34)for(const y of [ym-.29,ym+.29])piece('stool',p=>box(p,x-.07,y-.07,x+.07,y+.07,z,z+.13,P('wood'),P('woodDark')));
+        piece('dais',p=>{const ym2=back-.2;box(p,icx-Math.min(.7,iw/2),ym2-.17,icx+Math.min(.7,iw/2),ym2+.17,z,z+.06,P('stoneTrim'),P('stone'));box(p,icx-.12,ym2-.08,icx+.12,ym2+.1,z+.06,z+.2,P('woodDark'));box(p,icx-.12,ym2+.06,icx+.12,ym2+.1,z+.2,z+.42,P('woodDark'));box(p,icx-.05,ym2+.08,icx+.05,ym2+.11,z+.3,z+.4,P('gold'))});
+        for(const x of [ix0+.15,ix1-.15])piece('chest',p=>{box(p,x-.13,back-.33,x+.13,back-.17,z,z+.15,P('woodDark'),P('wood'));box(p,x-.135,back-.335,x+.135,back-.165,z+.15,z+.17,P('iron'))});
+        piece('banner',p=>box(p,cx-.1,back-.02,cx+.1,back,z+.25,z+.62,P('canvasRed')));
       }else if(role==='tribunal'){
-        // The judges' bench on a step, and the bar that keeps the public at a distance.
-        const jy=back-.3;
-        piece('bench',p=>{box(p,icx-hw,jy-.2,icx+hw,back-.02,z,z+.1,P('stoneTrim'),P('stone'));
-          box(p,icx-hw+.05,jy-.2,icx+hw-.05,jy-.06,z+.1,z+.38,P('woodDark'),P('wood'));box(p,icx-hw+.03,jy-.22,icx+hw-.03,jy-.04,z+.38,z+.41,P('canvasBlue'))});
-        const ry=jy-.65;
-        piece('bar',p=>box(p,icx-hw,ry-.05,icx+hw,ry+.05,z,z+.24,P('wood'),P('woodDark')));
+        // The judges' bench on a raised step, the bar across the room, benches for the public.
+        const hw=Math.min(.6,iw/2-.05),jy=back-.28;
+        piece('bench',p=>{box(p,icx-hw-.05,jy-.22,icx+hw+.05,back-.02,z,z+.1,P('stoneTrim'),P('stone'));box(p,icx-hw,jy-.22,icx+hw,jy-.12,z+.1,z+.36,P('woodDark'),P('wood'));box(p,icx-hw-.02,jy-.24,icx+hw+.02,jy-.1,z+.36,z+.385,P('canvasBlue'))});
+        for(const x of [icx-hw*.6,icx,icx+hw*.6])piece('judgeChair',p=>{box(p,x-.08,jy-.02,x+.08,jy+.12,z+.1,z+.22,P('woodDark'));box(p,x-.08,jy+.1,x+.08,jy+.13,z+.22,z+.48,P('woodDark'))});
+        piece('scroll',p=>box(p,icx-.07,jy-.2,icx+.07,jy-.14,z+.385,z+.4,P('canvasWhite')));
+        const ry=jy-.62;
+        piece('bar',p=>{box(p,icx-hw,ry-.02,icx+hw,ry+.02,z+.2,z+.24,P('wood'));for(let x=icx-hw;x<=icx+hw+1e-6;x+=hw/3)box(p,x-.015,ry-.015,x+.015,ry+.015,z,z+.2,P('woodDark'))});
+        for(const y of [ry-.32,ry-.62])if(y>fy0+.1)piece('pewBench',p=>{box(p,icx-hw,y-.07,icx+hw,y+.07,z,z+.11,P('wood'),P('woodDark'))});
+        piece('banner',p=>box(p,cx-.1,back-.02,cx+.1,back,z+.4,z+.75,P('canvasBlue')));
       }else if(role==='guard'){
-        // A table in the middle and the weapon rack on the back wall.
+        // Guard post: table with dice and stools, a weapon rack and a cot.
         const ty=(fy0+back)/2;
-        piece('table',p=>{box(p,icx-.06,ty-.06,icx+.06,ty+.06,z,z+.19,P('woodDark'));box(p,icx-.28,ty-.2,icx+.28,ty+.2,z+.19,z+.23,P('woodLight'),P('wood'))});
-        piece('weaponRack',p=>{box(p,icx-hw,back-.14,icx+hw,back-.04,z,z+.1,P('woodDark'));
-          for(const k of [-.5,0,.5])box(p,icx+k*hw-.025,back-.11,icx+k*hw+.025,back-.06,z+.1,z+.62,P('iron'))});
+        piece('table',p=>{box(p,icx-.05,ty-.05,icx+.05,ty+.05,z,z+.19,P('woodDark'));box(p,icx-.23,ty-.18,icx+.23,ty+.18,z+.19,z+.225,P('woodLight'),P('wood'))});
+        for(const y of [ty-.3,ty+.3])piece('stool',p=>box(p,icx-.07,y-.07,icx+.07,y+.07,z,z+.13,P('wood'),P('woodDark')));
+        piece('weaponRack',p=>{box(p,ix0+.05,back-.12,ix1-.05,back-.06,z+.08,z+.12,P('woodDark'));box(p,ix0+.05,back-.12,ix1-.05,back-.06,z+.4,z+.44,P('woodDark'));
+          for(let x=ix0+.15;x<ix1-.1;x+=.16)box(p,x-.012,back-.1,x+.012,back-.08,z,z+.62,P('iron'))});
+        piece('cot',p=>{box(p,ix1-.24,fy0+.55,ix1-.02,fy0+1.05,z,z+.1,P('woodDark'));box(p,ix1-.22,fy0+.57,ix1-.04,fy0+1.03,z+.1,z+.13,P('cloth'))});
       }else if(role==='prison'){
-        // A cell: one row of bars across the bay, straw on the floor behind it.
-        const cy=back-.6;
-        piece('cellBars',p=>{box(p,ix0,cy-.03,ix1,cy+.03,z+.54,z+.6,P('iron'));
-          const n=Math.max(3,Math.round(iw/.16));for(let k=0;k<=n;k++){const x=ix0+iw*k/n;box(p,x-.018,cy-.018,x+.018,cy+.018,z,z+.54,P('iron'))}});
-        piece('straw',p=>pushPoly(p,[[ix0+.1,back-.45,z+.006],[ix1-.1,back-.45,z+.006],[ix1-.1,back-.08,z+.006],[ix0+.1,back-.08,z+.006]],P('canvasYellow')));
+        // Cell: bars across the back of the bay, straw and a bucket inside, chains on the wall.
+        const cy=back-.62;
+        piece('cellBars',p=>{box(p,ix0,cy-.02,ix1,cy+.02,z+.55,z+.59,P('iron'));for(let x=ix0;x<=ix1+1e-6;x+=.09)box(p,x-.01,cy-.01,x+.01,cy+.01,z,z+.59,P('iron'))});
+        piece('straw',p=>pushPoly(p,[[ix0+.08,back-.5,z+.006],[icx,back-.5,z+.006],[icx,back-.08,z+.006],[ix0+.08,back-.08,z+.006]],P('canvasYellow')));
+        piece('bucket',p=>box(p,ix1-.2,back-.2,ix1-.08,back-.08,z,z+.1,P('barrel'),P('woodDark')));
+        for(const x of [icx-.15,icx+.15])piece('wallChains',p=>box(p,x-.01,back-.02,x+.01,back,z+.22,z+.5,P('iron')));
+        piece('guardStool',p=>box(p,icx-.07,fy0+.4,icx+.07,fy0+.54,z,z+.13,P('wood'),P('woodDark')));
       }
     });
   }
