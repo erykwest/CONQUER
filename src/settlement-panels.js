@@ -278,8 +278,24 @@
       kpi('Salari cantieri',fmt(d.snapshot?.constructionPayroll),'Oro già pagato')
     ])+grid([
       card('Lavoratori allocati',bars(work,max1(work.map(x=>x[1])))),
-      card('Progresso lavori',tasks||empty('Nessun cantiere in corso.'),'Tempi e lavoro derivano dalla simulazione L1 già attiva.')
+      card('Progresso lavori',tasks||empty('Nessun cantiere in corso.'),'Tempi e lavoro derivano dalla simulazione L1 già attiva.'),
+      crenelCard()
     ]);
+  }
+  const CRENELS = [['flat','Piatta','Blocco squadrato, lo stile di base.'],['gabled','Doppia falda','Sommità a due spioventi.'],['swallowtail','Coda di rondine','Corna a V e feritoia: la più costosa.']];
+  const costLine = cost => Object.entries(cost||{}).filter(([,v])=>v>0).map(([k,v])=>fmt(v)+' '+good(k)).join(' · ') || 'gratis';
+  function crenelCard() {
+    const cmd = window.ConquerGame?.commands;
+    if(!cmd?.crenelQuote)return '';
+    const current = typeof crenelStyle==='function' ? crenelStyle() : 'flat';
+    const rows = CRENELS.map(([id,label,tip])=>{
+      const q = cmd.crenelQuote(id), on = id===current;
+      return '<div class="cp-line"><span>'+esc(label)+' <small>'+esc(tip)+'</small></span>'+
+        (on ? '<b>In uso</b>' : '<button type="button" class="cp-action" data-cp-crenel="'+id+'">Adotta · '+esc(costLine(q.cost))+'</button>')+'</div>';
+    }).join('');
+    const n = cmd.crenelQuote(current).merlons;
+    return card('Stile delle merlature',rows+(ui.crenelMsg?warn(ui.crenelMsg):''),
+      'Cambia tutti i '+fmt(n)+' merli in pietra del feudo; il costo cresce con il numero di merli. Le nuove costruzioni usano lo stile scelto.',true);
   }
   function diplomacy(d) {
     const s = d.diplomacy || {}, active = (s.caravans||[]).filter(c=>c.status!=='completed');
@@ -330,6 +346,12 @@
       if(tab){ui.tab = tab.dataset.cpTab; render(); return;}
       const trade = ev.target.closest('[data-cp-transfer]');
       if(trade){window.ConquerGame?.commands?.transferActivity?.(trade.dataset.cpTransfer,trade.dataset.cpOwner); render(); return;}
+      const crenel = ev.target.closest('[data-cp-crenel]');
+      if(crenel){
+        const out = window.ConquerGame?.commands?.setCrenelStyle?.(crenel.dataset.cpCrenel);
+        ui.crenelMsg = out?.ok ? '' : out?.reason==='funds' ? 'Risorse insufficienti per rifare le merlature.' : '';
+        render(); return;
+      }
       if(ev.target.closest('[data-cp-action="caravans"]')){$('profileOverlay').hidden = true; window.ConquerGame?.commands?.openCaravans?.();}
     });
     root.addEventListener('input',ev=>{
