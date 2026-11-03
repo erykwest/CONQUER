@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Le case bruciate crollano (branch `fix/house-fire-collapse`)
+
+- Un incendio lasciato bruciare fino in fondo abbatte case (di ogni livello), locande e mercati, con macerie e braci; prima le case L3/L4 restavano in piedi al 2% di integrità. Regressione dell'incendio estesa.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-058, scelta dell'utente). ROADMAP invariata.
 ## 2026-11-03 — Priorità P0 e riconciliazione circle
 
 - CI CIRCLE estesa a main e alle dipendenze core/stanze/ingresso mastio; fixture VM portabili anche con checkout CRLF Windows.

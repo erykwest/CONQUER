@@ -2,7 +2,8 @@
 // CONQUER fire: what burns, how a fire grows, eats its fuel, damages, spreads and dies,
 // and how it looks. Timber burns whole (houses, taverns, markets, wooden towers, gates
 // and palisades); stone structures burn only their wooden parts (a pitched roof, a
-// hoarding gallery, the gate door); bare masonry does not burn. A timber structure
+// hoarding gallery, the gate door); bare masonry does not burn. A house, inn or market
+// left to burn out comes down at the end of its fuel, at any level. A timber structure
 // that comes down while burning leaves burning rubble for a while: nobody crosses it
 // (not even a breach) and it sets light to what stands next to it. Rain slows it all.
 // Fires run on game time (ConquerFire.tick(dt*speed) from the simulation frame): they
@@ -14,6 +15,8 @@
 //   drawTorch(g,p,scale,id)          the torch an attacker carries
 (function(){
   const GROW=.22,EMBER_TIME=45,SPREAD_EVERY=1,DAMAGE_EVERY=1;
+  // Timber buildings that a fire left to burn out brings down (mills stand gutted instead).
+  const BURNS_DOWN=new Set(['house','tavern','market']);
   // Seconds of full fire each fuel lasts.
   const BURN={whole:55,roof:30,hoarding:26,door:22,stair:28,leaf:18};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -312,7 +315,17 @@
         if(typeof invalidateSceneCache==='function')invalidateSceneCache();
         if(typeof markDirty==='function')markDirty(true,true,true);
       }
-      if(f.fuel<=0){x.burning=x.burning.filter(g=>g!==f);if(f.part!=='whole')burnout(s,f);else if(f.gutted)burnout(s,f)}
+      if(f.fuel<=0){
+        x.burning=x.burning.filter(g=>g!==f);
+        if(f.part!=='whole')burnout(s,f);
+        else if(f.gutted)burnout(s,f);
+        // A house, inn or market burnt through comes down with its last flames, whatever its
+        // level (their integrity grows with the level, the fuel does not): rubble and embers.
+        else if(BURNS_DOWN.has(s.type)){
+          window.ConquerSiege?.attackStructure(s.id,'torch',1e9,'core');
+          const now=find(f.id);if(!now||now.type==='ruin')toEmbers(f);
+        }
+      }
     }
     for(const e of [...x.embers]){
       e.left-=dt*(rain?2.5:1);e.heat=clamp(e.left/EMBER_TIME,0,1);
