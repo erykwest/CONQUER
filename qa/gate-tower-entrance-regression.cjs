@@ -16,7 +16,7 @@ const src=[
 const State={structures:[]};
 const rect=(s)=>{const w=s.size,h=s.size,a=s.angle||0,c=Math.cos(a),n=Math.sin(a);
   return[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>({x:s.x+x*c-y*n,y:s.y+x*n+y*c}))};
-const ctx=vm.createContext({State,Math,
+const ctx=vm.createContext({State,Math,window:{},
   underConstruction:()=>false,wallExteriorSide:()=>1,towerRoofDoorSpecs:()=>[],
   isOrientedTower:s=>s.shape==='dee'||s.shape==='half',
   towerFacadePoints:rect,footprintPoints:rect,

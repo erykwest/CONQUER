@@ -118,6 +118,22 @@ const StructureCommands=(()=>{
     status('Tower weapon: '+({none:'none',mangonel:'mangonel',ballista:'ballista'}[target.topWeapon])+(towerTopWeaponAllowed(target)?'':' (needs a T2 tower without a pitched roof)'));
     return true;
   }
+  // Cosmetic only: the roof shape changes neither cost nor rooms.
+  function setTowerRoofShape(id,shape){
+    const target=find(id);if(!target||target.type!=='tower'||(target.shape||'square')!=='square')return false;
+    if(!setStructureVariant(target,'roofShape',shape))return false;
+    refresh(target,false);
+    status('Tower roof shape: '+({pyramid:'pyramid',gable:'two slopes',hip:'four slopes with ridge'}[target.roofShape])+(towerRoofStyle(target)==='pitched'?'':' (shown with a pitched roof)'));
+    return true;
+  }
+  function setTowerBartizan(id,style){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    if(!setStructureVariant(target,'bartizan',style))return false;
+    window.ConquerCombat?.invalidateArchers?.();
+    refresh(target);
+    status('Bartizans: '+({none:'none',battlement:'crenellated',pitched:'spire'}[target.bartizan])+(towerBartizanAllowed(target)?'':' (needs a large T3 square or round stone tower)'));
+    return true;
+  }
   function setCivicLevel(id,level){
     const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
     if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
@@ -140,6 +156,42 @@ const StructureCommands=(()=>{
     target.nightClose=!!on;markDirty(false,false,true);renderFunctionPanel();return true;
   }
   function toggleMastio(id){window.ConquerSiege?.assignMastio(id);return true}
+  // Raised Mastio entrance (src/settlement-keep-entrance.js): wood → stone stair, drawbridge on either.
+  function setKeepStair(id,stair){
+    const target=find(id),K=window.ConquerKeepEntrance;if(target?.type!=='tower'||!K)return false;
+    if(stair==='none')return K.removeEntrance(target);
+    const current=target.keepEntrance?.stair;
+    if(!current||current==='burnt')return stair==='wood'?K.buildStair(target):false;
+    return current==='wood'&&stair==='stone'?K.upgradeStone(target):false;
+  }
+  function keepDrawbridge(id,action){
+    const target=find(id),K=window.ConquerKeepEntrance;if(target?.type!=='tower'||!K)return false;
+    if(action==='install')return K.installDrawbridge(target);
+    if(action==='remove')return K.removeDrawbridge(target);
+    if(action==='auto-on'||action==='auto-off')return K.setAuto(target,action==='auto-on');
+    if(action==='ladder-down'||action==='ladder-up')return K.setLadder(target,action==='ladder-down');
+    return K.toggleDrawbridge(target);
+  }
+  // Village centre: one well at a time. Picking the current centre again returns the role
+  // to the founding well (the default), like removing a Mastio designation.
+  function toggleVillageCenter(id){
+    const target=find(id);if(target?.type!=='well'||!State.village.founded||underConstruction(target))return false;
+    const founding=State.village.wellId;
+    if(isVillageCenterWell(target)){
+      if(target.id===founding){status('The founding well is already the village centre');return false}
+      delete State.village.centerWellId;status('Village centre returned to the founding well');
+    }else{
+      if(target.id===founding)delete State.village.centerWellId;else State.village.centerWellId=target.id;
+      status('Village centre designated'+(target.wellName?' · '+target.wellName:''));
+    }
+    markDirty(false,['ground'],true);renderFunctionPanel();draw();return true;
+  }
+  function setWellName(id,name){
+    const target=find(id);if(target?.type!=='well')return false;
+    const clean=sanitizeWellName(name);
+    if(clean)target.wellName=clean;else delete target.wellName;
+    markDirty(false,['ground'],true);renderFunctionPanel();draw();return true;
+  }
   function changeArchers(id,delta){
     const target=find(id);if(target?.type!=='tower')return false;
     window.ConquerSiege?.changeArchers(target.id,delta);return true;
@@ -154,7 +206,7 @@ const StructureCommands=(()=>{
       woodStyle:s.type==='tower'&&isWoodTower(s)?woodTowerStyle(s):null,wood:isWoodTower(s)||isWoodGate(s),
       houseLevel:s.type==='house'?houseLevel(s):null,mastioActive:!!s.isMastio,
       building:null,facts:[],controls:[],rooms:null,
-      mastio:null,archers:null,integrity:null,legacy:null,industry:null};
+      mastio:null,keepEntrance:null,archers:null,integrity:null,legacy:null,industry:null};
     if(underConstruction(s))d.building={progress:constructionProgress(s),days:remainingDays(s)};
     const cost=s.buildCost||constructionCost(s);
     d.cost=cost;
@@ -171,6 +223,12 @@ const StructureCommands=(()=>{
       d.annex={label:spec?.label||null,parentId:parent?.id||null,size:spec?spec.w+'×'+spec.h+'U':null};
       return d;
     }
+    if(s.type==='well'){
+      const founding=s.id===State.village.wellId,center=isVillageCenterWell(s);
+      d.well={founding,center,founded:!!State.village.founded,name:s.wellName||'',villageName:State.village.name||'',
+        canCenter:!!State.village.founded&&!(center&&founding),mainRoad:founding||wellMainRoads(s).length>0};
+      return d;
+    }
     if(['moat','bridge'].includes(s.type)){
       d.facts.push({key:'variant',value:s.variant},{key:'length',value:(s.length||0).toFixed(1)+'U'});
       d.legacy='crossing';return d;
@@ -185,13 +243,19 @@ const StructureCommands=(()=>{
     }
     const masonry=typeof masonryMaterial==='function'?masonryMaterial(s):null;
     if(masonry)d.facts.push({key:'masonry',value:masonry});
-    if(['house','market','tavern','church','training','plaza'].includes(s.type))
+    if(typeof isWellCivic==='function'&&isWellCivic(s)){
+      const well=wellCivicWell(s);
+      d.facts.push({key:'square',value:well?wellDisplayName(well)||'—':'—',center:!!well&&isVillageCenterWell(well)});
+    }
+    if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type))
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};
       const slots=window.ConquerSiege?.archerSlots(s)||[],count=window.ConquerSiege?.stationedArchers(s)||0;
-      const roof=slots.filter(x=>x.kind==='roof').length;
-      d.archers={count,max:slots.length,roof,slits:slots.length-roof,disabled:building};
+      const roof=slots.filter(x=>x.kind==='roof').length,bartizan=slots.filter(x=>x.kind==='bartizan').length;
+      d.archers={count,max:slots.length,roof,bartizan,slits:slots.length-roof-bartizan,disabled:building};
+      const keep=window.ConquerKeepEntrance?.describe?.(s);
+      if(keep&&(keep.stair||keep.mastio))d.keepEntrance=keep;
     }
     if(['tower','wall','palisade'].includes(s.type)&&!woodTower){
       const linear=['wall','palisade'].includes(s.type),current=linear?wallTier(s):towerTier(s);
@@ -211,6 +275,14 @@ const StructureCommands=(()=>{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
+        if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
+          const flat=towerRoofStyle(s)!=='pitched';
+          d.controls.push(choice('roofShape','setTowerRoofShape',[{value:'pyramid',word:'pyramid',disabled:flat},{value:'gable',word:'gable',disabled:flat},{value:'hip',word:'hip',disabled:flat}],structureVariant(s,'roofShape')));
+        }
+        if(variantSchema(s)?.bartizan){
+          const off=!towerBartizanAllowed(s);
+          d.controls.push(choice('bartizan','setTowerBartizan',[{value:'none',word:'none'},{value:'battlement',word:'battlement',disabled:off},{value:'pitched',word:'spire',disabled:off}],structureVariant(s,'bartizan')));
+        }
         d.controls.push(choice('base','setTowerBase',[{value:'standard',word:'standard'},{value:'buttress',word:'buttress'},{value:'splayed',word:'splayed'}],towerBaseStyle(s)));
         if(s.parentTowerId)d.facts.push({key:'subtower',value:structureLabel(State.structures.find(x=>x.id===s.parentTowerId)||s)});
       }
@@ -257,6 +329,6 @@ const StructureCommands=(()=>{
   }
 
   return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,changeArchers,setTowerWeapon,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();

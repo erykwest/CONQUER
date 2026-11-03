@@ -118,6 +118,7 @@ function runSettlementMaintenance(reason='watchdog',completedStructures=[]){
     measureStep('roadSchedule',()=>{scheduleCompletionRoadMaintenance(completedStructures);return 0});
   }else if(reason!=='watchdog'){
     measureStep('gateMain',()=>reconcileGateMainConnections(false));
+    measureStep('wellMain',()=>reconcileWellMainConnections(false));
     measureStep('towerSecondary',()=>reconcileTowerSecondaryBranches());
     measureStep('settlementAccess',()=>reconcileSettlementAccessRoads());
   }

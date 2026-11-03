@@ -54,7 +54,11 @@ function migrateStructures(list){
       }
     }
     if(s.type==='road'&&s.a&&s.b&&!Number.isFinite(Number(s.length)))s.length=dist(s.a,s.b);
-    if(s.type==='well')delete s.construction;
+    if(s.type==='well'){
+      delete s.construction;
+      // Quarter names of later wells (older saves have none: one well = the village centre).
+      const name=sanitizeWellName(s.wellName);if(name)s.wellName=name;else delete s.wellName;
+    }
     if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;
     if(structureUsesDiscreteAngle(s))normalizeStructureRotation(s);
     if(['wall','palisade','built'].includes(s.type)&&s.a&&s.b){
@@ -69,6 +73,7 @@ function migrateStructures(list){
     normalizeStructureVariants(s);
 
     if(['tower','gate','built'].includes(s.type)){normalizeFunctions(s);window.ConquerSiege?.sanitizeRooms(s)}
+    if(s.type==='tower')window.ConquerKeepEntrance?.normalise(s);
     return s;
   });
 

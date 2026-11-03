@@ -15,6 +15,8 @@ const src=[
   pick(/function towerTopWeaponAllowed\(s\)\{[^\n]*\}/,'towerTopWeaponAllowed'),
   pick(/function towerTopWeapon\(s\)\{[^\n]*\}/,'towerTopWeapon'),
   pick(/function towerHoardingAllowed\(s\)\{[^\n]*\}/,'towerHoardingAllowed'),
+  pick(/function towerBartizanAllowed\(s\)\{[^\n]*\}/,'towerBartizanAllowed'),
+  pick(/function towerBartizan\(s\)\{[^\n]*\}/,'towerBartizan'),
   pick(/function towerHoardingMounted\(s\)\{[^\n]*\}/,'towerHoardingMounted'),
   pick(/function isWoodTower\(s\)\{[^\n]*\}/,'isWoodTower'),
   pick(/const ORIENTED_TOWER_SPECS=[\s\S]*?\nfunction orientedTowerDims\(s\)\{[^\n]*\}/,'oriented tower shapes'),

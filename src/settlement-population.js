@@ -72,6 +72,24 @@ function towerRoofFootprintPoints(s){
   const d=rectDims(s);
   return rectWorldPoints(s.x,s.y,d.w+overhang*2,d.h+overhang*2,s.angle||0);
 }
+// Square stone towers choose the shape of the pitched roof (variant `roofShape`): a pyramid, two
+// slopes on a ridge with stone gable ends, or four slopes on a ridge half as long as the roof (hip).
+// The ridge runs along the tower's local x axis at the pyramid's apex height. Faces keep the
+// pyramid's edge order (0: front slope, 1: +x end, 2: back slope, 3: -x end) so shading matches.
+function towerRoofShape(s){return s?.type==='tower'&&(s.shape||'square')==='square'&&!isWoodTower(s)&&towerRoofStyle(s)==='pitched'?structureVariant(s,'roofShape')||'pyramid':'pyramid'}
+function squareTowerRoofGeometry(s){
+  const fp=towerRoofFootprintPoints(s);if(fp.length!==4)return null;
+  const shape=towerRoofShape(s),h=structureHeight(s),ridgeH=towerVisualTopHeight(s);
+  const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}),e0=lerp(fp[0],fp[3],.5),e1=lerp(fp[1],fp[2],.5);
+  const t=shape==='gable'?0:shape==='hip'?.25:.5,ridgeA=lerp(e0,e1,t),ridgeB=lerp(e0,e1,1-t);
+  const eave=p=>({p,z:h}),ridge=p=>({p,z:ridgeH}),end=shape==='gable'?'gable':'roof';
+  return{shape,h,ridgeH,footprint:fp,ridgeA,ridgeB,faces:[
+    {i:0,kind:'roof',pts:[eave(fp[0]),eave(fp[1]),ridge(ridgeB),ridge(ridgeA)]},
+    {i:1,kind:end,pts:[eave(fp[1]),eave(fp[2]),ridge(ridgeB)]},
+    {i:2,kind:'roof',pts:[eave(fp[2]),eave(fp[3]),ridge(ridgeA),ridge(ridgeB)]},
+    {i:3,kind:end,pts:[eave(fp[3]),eave(fp[0]),ridge(ridgeA)]}
+  ].map(f=>({...f,pts:f.pts.filter((q,k,a)=>k===0||q.p!==a[k-1].p)}))};
+}
 function gateRoofRise(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return 0;
   if(gateTimberUpper(s))return GATE_TIMBER_RIDGE-structureHeight(s);
@@ -122,7 +140,7 @@ const shadowCasterGeometryCache=new Map();
 function shadowCasterSignature(s){
   return[
     s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
-    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.bartizan,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
     s.type==='house'&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?urbanRevision:0
   ].join('|');
 }

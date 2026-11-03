@@ -278,11 +278,15 @@ function towerDoorSpecs(tower){
         :boundaryPoint(tower,{x:tower.x+Math.cos(a),y:tower.y+Math.sin(a)});
     }
     const front=towerDoorContactSpec(tower,frontContact,null,'front');
+    // Mastio with a raised entrance: the front door opens on the first upper storey.
+    const sill=window.ConquerKeepEntrance?.sill?.(tower);
+    if(front&&sill!=null){front.baseZ=sill;front.apexZ=Math.min(structureHeight(tower)-.16,sill+.92);front.raised=true}
     if(front)specs.push(front);
   }
 
-  // Additional doors at every true wall socket connected to this tower.
-  for(const wall of State.structures){
+  // Additional doors at every true wall socket connected to this tower. The Mastio has none:
+  // it is not a way on or off the walls (settlement-wallwalk.js leaves it out too).
+  if(!tower.isMastio)for(const wall of State.structures){
     if(wall.type!=='wall'||underConstruction(wall))continue;
     let contact=null;
     if(wall.aSnap===tower.id)contact=wall.a;
@@ -455,6 +459,16 @@ function towerEdgeOnDivider(s,edge,z){
   const mx=(edge.a.x+edge.b.x)/2-s.x,my=(edge.a.y+edge.b.y)/2-s.y,L=Math.hypot(mx,my)||1;
   return towerFaceOnDivider(s,{nx:mx/L,ny:my/L},z);
 }
+// A raised keep door opens on the first upper storey (floor 2): on that floor it takes the
+// place of the window, and of the heraldic drape, on the face it opens through.
+function towerWindowGivesWayToDoor(s,edgeOrDir,floor){
+  if(floor!==2||window.ConquerKeepEntrance?.sill?.(s)==null)return false;
+  const door=towerDoorSpecs(s).find(d=>d.raised);if(!door)return false;
+  let nx=edgeOrDir.nx,ny=edgeOrDir.ny;
+  if(edgeOrDir.a){nx=(edgeOrDir.a.x+edgeOrDir.b.x)/2-s.x;ny=(edgeOrDir.a.y+edgeOrDir.b.y)/2-s.y}
+  const L=Math.hypot(nx,ny)||1;
+  return (nx*door.outward.x+ny*door.outward.y)/L>.7;
+}
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);
   return !!dir&&!dir.interior&&floor>=2&&!towerFaceBlocked(s,dir,floor);
@@ -472,6 +486,7 @@ function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
   for(const edge of roundTowerFacadeEdges(s)){
     if(edge.interior){
       if(towerEdgeOnDivider(s,edge,row.z))continue;   // window would open onto a dividing wall
+      if(towerWindowGivesWayToDoor(s,edge,row.floor))continue;
       drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
       if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w*.86,sz.h,opacity);
     }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
@@ -729,6 +744,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           withStructureDetailOcclusion(s,row.z,()=>{
             for(const edge of edges){
               if(isInteriorFacadeEdge(s,edge)){
+                if(towerWindowGivesWayToDoor(s,edge,row.floor))continue;
                 drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
                 if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
               }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(towerSlitEdge(s,edge),row.z,.22,.60,'arrowSlit',0,false,1,opacity);

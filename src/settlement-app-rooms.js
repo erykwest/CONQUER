@@ -16,7 +16,7 @@ function siteLaborLine(s){
 // Hoarding of a stone tower or gate: mounted or taken down, the roof stays as built.
 function hoardingSlot(s){
   const ok=hoardingAllowed(s),on=hoardingMounted(s);
-  return`<div class="slot"><div class="slot-label">Ballatoio</div><div class="grid3"><button data-hoarding="off" class="${on?'':'active'}">Smontato</button><button data-hoarding="on" ${ok?'':'disabled'} class="${on?'active':''}">Montato</button></div><div class="legend">Galleria di legno montata in tempo di guerra attorno alla cima (sotto la gronda se c'è il tetto a falde), con caditoie nel pavimento; il tetto resta quello costruito. Può bruciare.${s.type==='gate'?' Non sopra il piano a graticcio.':' Non con le caditoie in pietra.'}</div></div>`;
+  return`<div class="slot"><div class="slot-label">Ballatoio</div><div class="grid3"><button data-hoarding="off" class="${on?'':'active'}">Smontato</button><button data-hoarding="on" ${ok?'':'disabled'} class="${on?'active':''}">Montato</button></div><div class="legend">Galleria di legno montata in tempo di guerra attorno alla cima (sotto la gronda se c'è il tetto a falde), con caditoie nel pavimento; il tetto resta quello costruito. Può bruciare.${s.type==='gate'?' Non sopra il piano a graticcio.':' Non con le caditoie in pietra né con le garitte.'}</div></div>`;
 }
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
@@ -50,7 +50,21 @@ function renderFunctionPanel(){
     slots.querySelector('[data-annex-delete]').onclick=()=>deleteStructure(s.id);
     return;
   }
-  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
+  if(s?.type==='well'){
+    // Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
+    const w=StructureCommands.describeStructure(s.id).well,esc=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    panel.classList.add('open');
+    info.innerHTML='<div class="kv"><span>Selected</span><b>Pozzo · '+esc(w.center?(w.villageName||'Centro villaggio'):(w.name||'Quartiere senza nome'))+'</b></div>'+
+      '<div class="kv"><span>Ruolo</span><b>'+(w.center?'Centro villaggio':'Quartiere')+'</b></div>'+
+      '<div class="kv"><span>Strada</span><b>'+(w.founding?'Strade maestre':w.mainRoad?'Principale verso il primo pozzo':'Da collegare')+'</b></div>';
+    slots.innerHTML=(w.founded?'<div class="slot"><button data-well-center'+(w.canCenter?'':' disabled')+(w.center?' class="active"':'')+'>'+(w.center?'Centro villaggio · rimuovi':'Designa come centro villaggio')+'</button></div>':'')+
+      (w.center?'<div class="legend">Il centro porta il nome del villaggio.</div>':
+        '<div class="slot"><label class="slot-label" for="wellNameInput">Nome quartiere / borgata</label><input id="wellNameInput" type="text" maxlength="32" placeholder="Quartiere o borgata" value="'+esc(w.name)+'"></div>');
+    const center=slots.querySelector('[data-well-center]');if(center)center.onclick=()=>StructureCommands.toggleVillageCenter(s.id);
+    const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
+    return;
+  }
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
     const cost=s.buildCost||constructionCost(s);
@@ -89,18 +103,20 @@ function renderFunctionPanel(){
     html+='<div class="slot"><div class="slot-label">Difesa finale · Mastio</div>'+
       '<button data-siege-mastio="'+s.id+'" '+(building?'disabled':'')+' class="'+(active?'active':'')+'">'+(active?'Mastio attivo · rimuovi':'Designa come Mastio')+'</button>'+
       '<div class="legend">La prima torre completata è promossa automaticamente; il mastio conserva una sala comune, anche al livello T1.</div></div>';
+    html+=window.ConquerKeepEntrance?.panel(s)||'';
   }
   if(s.type==='tower'){
     const archerSlots=window.ConquerSiege?.archerSlots(s)||[];
     const archers=window.ConquerSiege?.stationedArchers(s)||0;
     const roofSlots=archerSlots.filter(slot=>slot.kind==='roof').length;
-    const slitSlots=archerSlots.length-roofSlots;
+    const bartizanSlots=archerSlots.filter(slot=>slot.kind==='bartizan').length;
+    const slitSlots=archerSlots.length-roofSlots-bartizanSlots;
     html+='<div class="slot"><div class="slot-label">Tower archers · '+archers+' / '+archerSlots.length+'</div>'+
       '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
-      '<div class="legend">Priority: roof '+roofSlots+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+      '<div class="legend">Priority: roof '+roofSlots+(bartizanSlots?' → bartizans '+bartizanSlots+' (also 0-1U at the tower foot)':'')+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
   }
-  if(['house','market','tavern','church','training','plaza'].includes(s.type)){
+  if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
   }
@@ -156,6 +172,14 @@ function renderFunctionPanel(){
       if(s.shape!=='half')html+=hoardingSlot(s);
       html+=`<div class="slot"><div class="slot-label">Stone base</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti H1</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Svasato: H0.5. Contrafforti: da quota 0 a H1. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
       const weapon=structureVariant(s,'topWeapon'),armed=towerTopWeaponAllowed(s),wb=(k,l)=>`<button data-tower-weapon="${k}" ${armed||k==='none'?'':'disabled'} class="${weapon===k?'active':''}">${l}</button>`;
+      if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
+        const rs=structureVariant(s,'roofShape'),on=roof==='pitched',rb=(k,l)=>`<button data-tower-roof-shape="${k}" ${on?'':'disabled'} class="${rs===k?'active':''}">${l}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Forma delle falde</div><div class="grid3">${rb('pyramid','Piramide')}${rb('gable','2 falde')}${rb('hip','4 falde · colmo')}</div><div class="legend">${on?'Solo estetica, stesso costo. Colmo lungo metà della larghezza; con il colmo, due bandiere.':'Scegli prima il tetto a falde.'}</div></div>`;
+      }
+      if(variantSchema(s)?.bartizan){
+        const bz=structureVariant(s,'bartizan'),ok=towerBartizanAllowed(s),bb=(k,l)=>`<button data-tower-bartizan="${k}" ${ok||k==='none'?'':'disabled'} class="${bz===k?'active':''}">${l}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Garitte</div><div class="grid3">${bb('none','Nessuna')}${bb('battlement','Merlate')}${bb('pitched','Guglia')}</div><div class="legend">${ok?'Quattro garitte d\'angolo su mensole: 3 tiratori ciascuna, colpiscono anche il piede della torre (0-1U).':'Solo torri grandi (T3) quadrate o rotonde.'}</div></div>`;
+      }
       html+=`<div class="slot"><div class="slot-label">Arma in cima</div><div class="grid3">${wb('none','Nessuna')}${wb('mangonel','Mangano')}${wb('ballista','Balista')}</div><div class="legend">${armed?'Upgrade: mangano o balista sulla piazza della torre, rivolti verso l\'esterno (vista 3D).':'Solo torri medie (T2) senza tetto a falde, di qualsiasi altezza.'}</div></div>`;
     }
   }
@@ -230,6 +254,7 @@ function renderFunctionPanel(){
   window.ConquerConvoys?.bindPanel?.(slots);
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
+  window.ConquerKeepEntrance?.bindPanel(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));
@@ -258,5 +283,7 @@ function renderFunctionPanel(){
   slots.querySelectorAll('[data-civic-annex-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.civicAnnexChild)));
   on('[data-plaza-variant]',(id,el)=>StructureCommands.setPlazaVariant(id,el.dataset.plazaVariant));
   on('[data-tower-weapon]',(id,el)=>StructureCommands.setTowerWeapon(id,el.dataset.towerWeapon));
+  on('[data-tower-roof-shape]',(id,el)=>StructureCommands.setTowerRoofShape(id,el.dataset.towerRoofShape));
+  on('[data-tower-bartizan]',(id,el)=>StructureCommands.setTowerBartizan(id,el.dataset.towerBartizan));
 }
 let pan=null;
