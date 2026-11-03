@@ -1,6 +1,10 @@
 name: One-time safe cleanup of obsolete remote branches (2026-11-03)
 
-# User-authorized cleanup: tower hoardings merged in PR #134, exact head verified.
+# User-authorized feature/* audit: merged cutaway/houses and superseded UI/economy/forests.
+# Main 9af18dd: 17 pertinent regression suites passed; both active CRIME branches preserved.
+# UI files match squash 5ddefa6 (shell differs only in CRLF); main extends them.
+# Forest SVG/layout/cache and depth-tested trees already replace the old flat prototype.
+# Economy #98/#99/#101/#105/#108 replaces closed #55; no old ledgers or 3D figures restored.
 # Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
@@ -48,11 +52,18 @@ jobs:
               # Audited replacements: #61 siege damage, #78 events, #96 approved 2D diplomacy.
               # D-046 explicitly discards the old 3D knight implementation.
               case "$branch:$evidence" in
-                assedio:replacement:61|events:replacement:78|feature/knights-messenger-caravans:replacement:96) ;;
+                assedio:replacement:61|events:replacement:78|feature/knights-messenger-caravans:replacement:96|feature/economic-balances-20261019:replacement:105) ;;
                 *) echo 'Unapproved replacement'; exit 1 ;;
               esac
               pr="${evidence#replacement:}"
               merged_sha="$(gh api "repos/$GH_REPO/pulls/$pr" --jq 'select(.merged_at != null) | .merge_commit_sha')"
+            elif [[ "$evidence" == audited-commit:* ]]; then
+              # Exact audited replacement commits already on main; never accept arbitrary pairs.
+              case "$branch:$evidence" in
+                feature/ui-shell:audited-commit:5ddefa684c80239d3a298e546167b5b4b81a8d1f|feature/landscape-forests:audited-commit:c2d76be90a41d491d2ffd8864352219ad6fa52cb) ;;
+                *) echo 'Unapproved audited commit'; exit 1 ;;
+              esac
+              merged_sha="${evidence#audited-commit:}"
             else
               entry="$(gh api "repos/$GH_REPO/pulls/$evidence" --jq '[.head.ref,.head.sha,(.merged_at // ""),(.merge_commit_sha // "")] | join("|")')"
               IFS='|' read -r pr_branch pr_sha merged_at merged_sha <<< "$entry"
@@ -80,7 +91,11 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          feature/tower-hoardings|827bad31e66a9950670685e37a18e97b8368b3a4|134
+          feature/cutaway-floors|b2ef29e783172561e33905b7b4afe4d71edf7f13|138
+          feature/houses-blender|97c8cdf95f429c41dfecf391fedef40958771395|136
+          feature/economic-balances-20261019|ec13591c68a392bc346305ee5c32b861893d27d1|replacement:105
+          feature/landscape-forests|8be5a071246e47afec6627815b8e6f0f8835667e|audited-commit:c2d76be90a41d491d2ffd8864352219ad6fa52cb
+          feature/ui-shell|ee51adf21f2ba2ddb524190dac3ea7a1fc5ec811|audited-commit:5ddefa684c80239d3a298e546167b5b4b81a8d1f
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))
