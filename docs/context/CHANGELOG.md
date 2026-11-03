@@ -5,6 +5,23 @@
 - Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.
 - Nuovi `tools/blender/build_houses.py`, `src/assets/house-models.js`, `src/settlement-house3d.js`, `qa/house3d-regression.cjs`; 6 voci nel Lab.
 - Piramide: STATUS, BACKLOG, DECISIONS (D-057). ROADMAP invariata: è una scelta di resa grafica delle case, non cambia milestone né la priorità P1 economia.
+## 2026-11-02 — Fronte bottega e insegna a bandiera, fase 2 (branch `feature/l3-workshop-cutaway`)
+
+- Le case L3 con bottega mostrano su strada una vetrina a ante (banco e tettoia di giorno, ante chiuse la notte e la domenica) e un'insegna a bandiera di ferro accanto alla porta, con l'emblema del mestiere; la finestra del pianterreno dietro la vetrina sparisce.
+- Asset Lab: stato «Bottega chiusa»; corretti nello stage la cache urbana non invalidata (catture delle case senza travi e finestre) e la maschera che ritagliava le travi scure. Baseline delle 21 voci «Botteghe L3» rifatta. Nessuna regressione nel rendering del gioco: verificato sul fotogramma senza maschera.
+- Piramide: STATUS, BACKLOG (insegne e merci in facciata in fase 2 su branch). DECISIONS e ROADMAP invariate: è il completamento visivo già previsto da D-053/D-059.
+
+
+## 2026-11-02 — Cutaway delle botteghe L3, fase 1 (branch `feature/l3-workshop-cutaway`)
+
+- La casa L3 selezionata con una bottega mostra il pianterreno in sezione, arredato per mestiere, con il banco su strada e l'artigiano al lavoro durante l'orario di bottega. Modulo `src/settlement-shop-cutaway.js`; agganci in 2.5D, WebGL, facciate, fumo, occlusione delle figure e passaggio della popolazione.
+- Asset Lab: 7 voci «Botteghe L3» (stati «Nel gioco» e «Cutaway»), 14 voci aggiunte alla baseline dopo la revisione del foglio provini; i 140 «cambiati» delle fortificazioni (deriva di luce, tutti più chiari) non sono stati riscritti. Nuova regressione `qa/shop-cutaway-regression.cjs`.
+- Piramide: STATUS, BACKLOG (chiusa in fase 1 la voce «cutaway delle botteghe e persone all'interno»), DECISIONS (D-059). ROADMAP invariata: è un completamento visivo di #101, non cambia milestone né priorità P1 economia.
+
+## 2026-11-03 — Le case bruciate crollano (branch `fix/house-fire-collapse`)
+
+- Un incendio lasciato bruciare fino in fondo abbatte case (di ogni livello), locande e mercati, con macerie e braci; prima le case L3/L4 restavano in piedi al 2% di integrità. Regressione dell'incendio estesa.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-058, scelta dell'utente). ROADMAP invariata.
 ## 2026-11-03 — Priorità P0 e riconciliazione circle
 
 - CI CIRCLE estesa a main e alle dipendenze core/stanze/ingresso mastio; fixture VM portabili anche con checkout CRLF Windows.

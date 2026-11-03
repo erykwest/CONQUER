@@ -635,6 +635,8 @@ function drawHouseFacadeWindows(s,lit=false,nf=1){
   // At high zoom most homes are offscreen; skip the expensive L/T occlusion
   // and façade polygon work before it constructs any projection data.
   if(!worldPointVisible(s,houseBodyHeight(s)+.6,320+180*State.view.scale))return;
+  // An open L3 workshop has no upper floor or facade left (settlement-shop-cutaway.js).
+  if(window.ConquerShopCutaway?.active(s))return;
   // Visible walls, matched to their geometry part (bodyH/ridge) by coordinates.
   const key=(a,b)=>a.x.toFixed(4)+','+a.y.toFixed(4)+'|'+b.x.toFixed(4)+','+b.y.toFixed(4);
   const walls=new Map(),entry=urbanHouseGeometry().find(e=>e.house.id===s.id);

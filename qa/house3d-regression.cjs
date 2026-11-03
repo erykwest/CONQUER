@@ -110,7 +110,10 @@ console.log('PASS brick masonry and winter roofs');
 
 // 5. Wiring: World 3D only; the 2.5D fallback keeps the procedural house.
 const world=src('src/settlement-world3d.js'),html=src('index.html'),lab=src('figures-lab.html'),catalog=src('src/asset-catalog.js');
-assert.match(world,/if\(!m\.tag&&window\.ConquerHouse3D\?\.addToBuilder\(m,house\)\)\{/,'addHouse hands kit houses to the kit');
+assert.match(world,/if\(!m\.tag&&!shopOpen&&window\.ConquerHouse3D\?\.addToBuilder\(m,house\)\)\{/,'addHouse hands kit houses to the kit, except a workshop open in section');
+// The kit house keeps the workshop's street front (shop window and bracket sign, settlement-shop-cutaway.js).
+const kitBranch=world.slice(world.indexOf('ConquerHouse3D?.addToBuilder(m,house)'),world.indexOf('return;',world.indexOf('ConquerHouse3D?.addToBuilder(m,house)')));
+assert.match(kitBranch,/window\.ConquerShopCutaway\?\.addFront\(m,house\)/,'kit houses keep the workshop street front');
 assert.match(world,/const kit=!!window\.ConquerHouse3D\?\.handles\(s\);/,'decals: kit houses keep only the night lights');
 assert.match(world,/if\(!kit\)for\(const \[p0,p1\] of plan\.beams\)strip/,'no timber decals on kit houses');
 assert.doesNotMatch(buildings,/ConquerHouse3D/,'2.5D fallback unchanged');
