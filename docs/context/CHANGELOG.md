@@ -18,6 +18,12 @@
 - **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
 - **Piramide:** STATUS, BACKLOG (C-02 e C-03 su branch), DECISIONS (tribunale nel Municipio). ROADMAP invariata.
 
+## 2026-11-03 — Combat: chiuso il refactor del renderer
+
+- Recuperato il residuo della branch combat a partire dal runtime main f603d514: presentazione tattica separata, nessuna regressione al prototipo vecchio. Disegno di frecce/pietre/lampi spostato fuori dalle regole.
+- Aggiornati Builder, /camp e harness di test; aggiunti test del confine stato/disegno, CI e documentazione del contratto. 118 suite PASS, trace equivalenti in cinque scenari e pixel browser identici prima/dopo. Lab: 784 render e zero fail; avvisi/drift registrati separatamente.
+- Cleanup combat previsto solo dopo promozione del commit verificato. Nessuna nuova PR. Roadmap di prodotto invariata; contratto tecnico registrato in DECISIONS.
+
 ## 2026-11-03 — Cutaway per piani (branch `feature/cutaway-floors`)
 
 - Lo spaccato mostra un piano per volta: ▲ ▼ sopra l'edificio selezionato e nell'ispettore (nuovo e vecchio) tolgono o rimettono i piani superiori. Un solo comando, `StructureCommands.stepCutawayFloor`, e un campo `s.cutawayFloor`.

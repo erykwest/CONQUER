@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-COMBAT-RENDER — Confine tecnico del combat (03/11/2026)
+
+ConquerCombatRenderer gestisce soltanto stato di presentazione e disegno. Ordini, visibilità/LOS, percorsi, HP, tempo e code di effetti restano nel dominio combat/regole. Le regole non dipendono da Canvas o dal renderer ed espongono visualEffects() come vista temporanea da non mutare. Il renderer non avanza la simulazione. Il wrapper precedente di draw e lo scheduler condiviso restano unici. Nessuna modifica a D-046 o alle meccaniche; parità verificata su trace e pixel del canvas. Specifica in [COMBAT-RENDERING](../COMBAT-RENDERING.md).
+
 ## D-CUT-01 — Cutaway per piani (03/11/2026)
 
 - **DECISO:**
