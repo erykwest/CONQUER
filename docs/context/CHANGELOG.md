@@ -3,6 +3,10 @@
 ## 2026-11-02 — Ballatoi di torri e porte (branch `feature/tower-hoardings`)
 
 - Ballatoio di legno come aggiunta temporanea (Montato / Smontato) sulle torri in pietra (quadrata, rotonda, a D) e sulle porte in pietra grande e piccola, merlate o a falde: il tetto resta quello costruito, sotto le falde il ballatoio pende sotto la gronda. Sulle porte solo sul fronte esterno; sulle torri si interrompe contro porte e torri attaccate più alte. Nuova regola D-GATE-01: le torri agganciate a una porta hanno ingresso e lato interno sempre sul retro della porta. Modello Blender (`tools/blender/build_hoarding.py`) ripetuto lungo il profilo; brucia, esclude le macchine in cima alla torre. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: aggiunta D-GATE-01; nuova variante `hoarding` dei tipi `tower` e `gate`, nessun tipo nuovo.
+## 2026-11-03 — Le case bruciate crollano (branch `fix/house-fire-collapse`)
+
+- Un incendio lasciato bruciare fino in fondo abbatte case (di ogni livello), locande e mercati, con macerie e braci; prima le case L3/L4 restavano in piedi al 2% di integrità. Regressione dell'incendio estesa.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-058, scelta dell'utente). ROADMAP invariata.
 ## 2026-11-03 — Priorità P0 e riconciliazione circle
 
 - CI CIRCLE estesa a main e alle dipendenze core/stanze/ingresso mastio; fixture VM portabili anche con checkout CRLF Windows.
@@ -10,6 +14,9 @@
 - Recupero dei soli residui di circle sulla main d8c89556: conflitto script risolto preservando economia/convogli, integrazione mastio rialzato e reset al cambio salvataggio. Nessuna reintegrazione di bridge, JobManager parallelo o cavalieri 3D.
 - QA locale: 67 test circle e 113 suite di regressione superati; founding richiede esecuzione isolata dopo fallimento temporale sotto carico. Stato pubblicazione/merge da risolvere tramite SHA Git remoto.
 
+## 2026-11-03 — Economia: regressioni delle tappe 2–5 in CI (PR #109)
+
+- `economy-flows-regression.yml` esegue anche routine, commercio, botteghe L3, convogli, cartelli, diplomazia e veicoli. Corretti in STATUS e BACKLOG gli stati delle tappe 4 (#105) e 5 (#108), già mergiate.
 
 ## 2026-10-30 — Stili di merlatura del feudo · branch `feat/crenel-styles`
 
@@ -113,7 +120,7 @@
 - Fix: i contrafforti delle torri in pietra usano lo stesso profilo a gradoni e non attraversano più le facciate dal retro.
 - ROADMAP invariata. DECISIONS invariate: la variante segue il contratto esistente «varianti, non tipi duplicati» (`span` sul tipo `built`).
 
-## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (branch `feature/economy-vehicles`)
+## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (PR #108)
 
 - I convogli percorrono davvero la rete stradale dal mastio (o dal mercato) al confine con carri, carretti e carrozze disegnati in 2D e cavalli 2D. Scartato il 3D del branch d'origine. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-055 in DECISIONS.
 
