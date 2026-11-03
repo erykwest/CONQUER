@@ -1257,23 +1257,25 @@ def a_almshouse(m):
     ground floor, timber-framed plastered upper floor jettied at the back, a steep slate
     roof (60 deg), and a timber gallery (ballatoio) along the upper floor of the front,
     reached by an outside stair and sheltered by a lean-to. A small cross on the gable."""
-    w, y0, y1, zf, z1 = 8.4, -1.3, 3.1, 2.4, 4.8      # ground floor y0..y1, floor break, eaves
+    w, y0, y1, zf, z1 = 12.6, -1.3, 3.1, 2.4, 4.8     # ground floor y0..y1, floor break, eaves
+    hw = w / 2
     yb = y1 + .3                                      # jettied back wall of the upper floor
     cy, d1 = (y0 + yb) / 2, yb - y0
     p = m.part('body')
     p.box((0, (y0 + y1) / 2, zf / 2), (w, y1 - y0, zf), 'houseStone')
     p.box((0, cy, (zf + z1) / 2), (w, d1, z1 - zf), 'housePlaster')
     p.box((0, y1 + .15, zf - .08), (w, .3, .16), 'houseTimber')                         # jetty sill
-    for x in (-3.0, -1.0, 1.0, 3.0):
+    for i in range(6):
+        x = -hw + 1.0 + i * (w - 2.0) / 5
         p.beam((x, y1, zf - .5), (x, yb - .05, zf - .12), .12, .12, 'houseTimber')     # jetty brackets
     # Ground floor: door and small windows in the stone.
-    opening(p, (-1.6, y0), (0, -1), 1.0, 1.9, 0, 'woodDark', frame='houseTimber')
-    for x in (-3.4, .4, 2.6):
+    opening(p, (-2.4, y0), (0, -1), 1.0, 1.9, 0, 'woodDark', frame='houseTimber')
+    for x in (-4.8, -.6, 1.8, 4.2):
         opening(p, (x, y0), (0, -1), .5, .7, 1.1, 'houseWindow')
-    for x in (-2.6, 0, 2.6):
+    for x in (-4.2, -1.4, 1.4, 4.2):
         opening(p, (x, y1), (0, 1), .5, .7, 1.1, 'houseWindow')
     # Upper floor: doors onto the gallery at the front, windows at the back and the ends.
-    front_doors, back_wins = (-2.8, 0, 2.8), (-2.8, -.9, .9, 2.8)
+    front_doors, back_wins = (-4.2, -1.4, 1.4, 4.2), (-4.8, -2.9, -1.0, 1.0, 2.9, 4.8)
     for x in front_doors:
         opening(p, (x, y0), (0, -1), .8, 1.8, zf + .05, 'woodDark')
     for x in back_wins:
@@ -1294,24 +1296,25 @@ def a_almshouse(m):
         zc = z1 + (ridge - z1) * .42
         hc = d1 / 2 * (1 - .42)
         p.beam((x, cy - hc, zc), (x, cy + hc, zc), .14, .14, 'houseTimber')
-    p.box((2.2, cy + 1.0, (ridge + z1) / 2 + 1.2), (.75, .7, ridge - z1), 'houseChimney')
+    for x in (-3.4, 3.4):                                                               # two stacks on the long house
+        p.box((x, cy + 1.0, (ridge + z1) / 2 + 1.2), (.75, .7, ridge - z1), 'houseChimney')
     cross(p, -w / 2 - .12, cy, ridge - .1, 1.0, 'houseTimber', axis='y')
     m.done('roof', p)
     # Gallery (ballatoio) along the front at the upper floor, landing and stair at the east end.
     p = m.part('gallery')
-    gy, xs_end, zg = -2.7, 5.1, zf - .2                                                  # outer edge, landing end, deck top
+    gy, xs_end, zg = -2.7, hw + .9, zf - .2                                                  # outer edge, landing end, deck top
     p.box(((-w / 2 + xs_end) / 2, (y0 + gy) / 2, zg - .09), (w / 2 + xs_end, y0 - gy, .18), 'wood')
-    posts = (-4.1, -1.4, 1.4, 4.1, 5.0)
+    posts = (-hw + .2, -hw / 2, 0, hw / 2, hw - .2, xs_end - .1)
     for x in posts:
         p.box((x, gy + .1, 2.0), (.18, .18, 4.0), 'houseTimber')
         p.beam((x, gy + .1, zg - .9), (x, y0, zg - .2), .1, .12, 'houseTimber')           # brace under the deck
     p.box(((-w / 2 + xs_end) / 2, gy + .1, 3.85), (w / 2 + xs_end, .2, .2), 'houseTimber')
-    p.box(((-w / 2 + 4.3) / 2, gy + .06, zg + .38), (w / 2 + 4.3, .06, .62), 'woodLight')   # plank parapet
+    p.box(((-w / 2 + hw + .1) / 2, gy + .06, zg + .38), (w / 2 + hw + .1, .06, .62), 'woodLight')   # plank parapet
     p.box(((-w / 2 + xs_end) / 2, gy + .06, zg + .72), (w / 2 + xs_end, .12, .08), 'houseTimber')
     p.box((xs_end - .04, (y0 + gy) / 2, zg + .38), (.06, y0 - gy, .62), 'woodLight')
     slab(p, [(-w / 2 - .2, gy - .25, 3.75), (xs_end + .1, gy - .25, 3.75), (xs_end + .1, y0, 4.05), (-w / 2 - .2, y0, 4.05)], .16, 'roofHouse')
     # Outside stair down from the landing along the east end.
-    n, sx0, sx1, run = 11, 4.4, 5.1, 3.6 / 11
+    n, sx0, sx1, run = 11, hw + .2, xs_end, 3.6 / 11
     for j in range(n):
         p.box(((sx0 + sx1) / 2, y0 + run * (j + .5), zg - zg / n * (j + 1) + .04), (sx1 - sx0, run, .08), 'woodLight')
     for x in (sx0 + .04, sx1 - .04):

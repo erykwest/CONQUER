@@ -4,7 +4,7 @@
 
 - **Municipio:** una stanza per piano (tante quante i livelli) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate sull'intero piano e viste un piano per volta col cutaway per piani (unito da `feature/cutaway-floors`).
 - **Capienze:** detenuti e sentinelle in `ConquerSiege.capacity()`.
-- **Ospizio:** annesso della Chiesa L2.
+- **Ospizio:** annesso della Chiesa L2, casa lunga a due piani (4,5 × 2,4 U) nello stile delle case con ballatoio al P1.
 - **Gogna e forca:** strutture di piazza collocabili, con modelli Blender, nel Lab e nel Builder.
 - **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
 - **Piramide:** STATUS, BACKLOG (C-02 e C-03 su branch), DECISIONS (tribunale nel Municipio). ROADMAP invariata.
