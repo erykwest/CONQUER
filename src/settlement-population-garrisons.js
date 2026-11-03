@@ -25,6 +25,8 @@ function drawCutawayOccupants(){
           }
         }
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
+        // Prison: two prisoners, three in a large cell (settlement-court-people.js draws them).
+        else if(slot.role==='prison'&&window.ConquerCourtPeople){count=slot.size==='large'?3:2;kind='prisoner'}
         if(!count)continue;
         const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);
         const positions=cutawayOccupantLayout(count),items=[];
@@ -38,6 +40,7 @@ function drawCutawayOccupants(){
         for(const item of items){
           const id=s.id+'-room-'+slot.index+'-'+item.i;
           if(kind==='soldier')drawSoldierFigure(item.p,slot.z+.09,'unarmed',id,item.phase);
+          else if(kind==='prisoner')window.ConquerCourtPeople.drawCellPrisoner(item.p,slot.z,id,item.phase,item.i>0);
           else drawNobleFigure(item.p,slot.z+.09,id,item.phase);
         }
       }

@@ -394,6 +394,14 @@
     for(let y=ry-.32;y>front+.12;y-=.3)pews.push(y);
     return{ix0,ix1,icx,iw,hw,jy,ry,front,back,pews,judges:[icx-hw*.62,icx,icx+hw*.62],clerk:{x:ix0+.32,y:ry+.3}};
   }
+  // Prison layout, shared the same way: cells along the back wall behind one row of bars at cy,
+  // n cells of width cw from ix0, the jailer's table by the door.
+  function prisonLayout(rect,hearths=[]){
+    const [fx0,fy0,fx1,fy1]=rect,back=fy1,front=fy0;
+    const pad=x=>hearths.some(([hx])=>Math.abs(hx-x)<.6)?.62:.18;
+    const ix0=fx0+pad(fx0+.3),ix1=fx1-pad(fx1-.3),iw=ix1-ix0,n=Math.max(2,Math.round(iw/1.1));
+    return{ix0,ix1,iw,back,front,cy:back-.62,n,cw:iw/n,jailer:{x:ix1-.4,y:front+.45}};
+  }
   function furnishTownhallRoom(role,rect,z,piece,P,hearths=[]){
     const [fx0,fy0,fx1,fy1]=rect,back=fy1,front=fy0,cx=(fx0+fx1)/2;
     // Clear of the hearths standing by the end walls.
@@ -439,7 +447,7 @@
     }else if(role==='prison'){
       // Cells along the back wall behind one row of bars, each with straw, a bucket and wall
       // chains; the jailer's table by the door.
-      const cy=back-.62,n=Math.max(2,Math.round(iw/1.1)),cw=iw/n;
+      const {cy,n,cw}=prisonLayout(rect,hearths);
       piece('cellBars',p=>{box(p,ix0,cy-.02,ix1,cy+.02,z+.55,z+.59,P('iron'));for(let x=ix0;x<=ix1+1e-6;x+=.09)box(p,x-.01,cy-.01,x+.01,cy+.01,z,z+.59,P('iron'))});
       for(let k=1;k<n;k++){const x=ix0+cw*k;piece('cellWall',p=>box(p,x-.03,cy,x+.03,back,z,z+.55,P('stoneLight'),P('stone')))}
       for(let k=0;k<n;k++){
@@ -448,7 +456,7 @@
         piece('bucket',p=>box(p,b-.2,back-.2,b-.08,back-.08,z,z+.1,P('barrel'),P('woodDark')));
         for(const x of [m-.12,m+.12])piece('wallChains',p=>box(p,x-.01,back-.02,x+.01,back,z+.22,z+.5,P('iron')));
       }
-      const tx=ix1-.4,ty=front+.45;
+      const {x:tx,y:ty}=prisonLayout(rect,hearths).jailer;
       piece('jailerTable',p=>{box(p,tx-.05,ty-.05,tx+.05,ty+.05,z,z+.19,P('woodDark'));box(p,tx-.22,ty-.16,tx+.22,ty+.16,z+.19,z+.225,P('woodLight'),P('wood'));box(p,tx+.06,ty-.03,tx+.12,ty+.03,z+.225,z+.3,P('lamp'))});
       stool(tx-.35,ty);
     }
@@ -461,21 +469,41 @@
   function roomSlots(s){
     if(s?.type!=='townhall')return[];
     const key=modelKey(s),spec=INTERIOR[key];if(!spec)return[];
-    const span=floorSpan(s,key);
-    if(townhallRole(s,span.floor)!=='tribunal')return[];
-    const rect=span.floor?spec.upper[span.floor-1].rect:spec.floors[0],z=span.z+FLOOR_Z;
-    const L=tribunalLayout(rect,span.floor?[]:spec.hearths||[]),out=[];
+    const span=floorSpan(s,key),role=townhallRole(s,span.floor);
+    if(role!=='tribunal'&&role!=='prison')return[];
+    const rect=span.floor?spec.upper[span.floor-1].rect:spec.floors[0],z=span.z+FLOOR_Z,hearths=span.floor?[]:spec.hearths||[],out=[];
     const add=(id,role,action,x,y,dz)=>out.push({id,role,action,x,y,z:z+dz});
+    let h=2166136261;for(const c of String(s.id)+':'+role)h=Math.imul(h^c.charCodeAt(0),16777619);
+    const rnd=()=>((h=Math.imul(h^(h>>>13),1597334677)>>>0)%1000)/1000;
+    if(role==='prison'){
+      // Prisoners in the cells (one or two each: sitting on the straw, or at the bars), the jailer at his table.
+      const P=prisonLayout(rect,hearths);
+      for(let k=0;k<P.n;k++){
+        const a=P.ix0+P.cw*k,b=a+P.cw,m=(a+b)/2,two=rnd()<.5;
+        add('cell'+k+'-0','prisoner',k===0?'bars':'sit',k===0?m:a+.28,k===0?P.cy+.12:P.back-.27,k===0?0:-.12);
+        if(two)add('cell'+k+'-1','prisoner','sit',b-.32,P.back-.32,-.12);
+      }
+      add('jailer','jailer','doze',P.jailer.x-.35,P.jailer.y,.13-.12);
+      return out;
+    }
+    const L=tribunalLayout(rect,hearths);
     L.judges.forEach((x,i)=>add('judge'+i,'judge',i===1?'preside':'sit',x,L.jy+.05,.1+.23-.12));
     add('clerk','clerk','write',L.clerk.x,L.clerk.y+.28,.13-.12);
     add('prisoner','prisoner','bound',L.icx,L.ry+.17,0);
     add('guard0','guard','stand',L.icx-.32,L.ry+.19,0);
     add('guard1','guard','stand',L.icx+.32,L.ry+.19,0);
-    let h=2166136261;for(const c of String(s.id))h=Math.imul(h^c.charCodeAt(0),16777619);
-    const rnd=()=>((h=Math.imul(h^(h>>>13),1597334677)>>>0)%1000)/1000;
     L.pews.forEach((y,r)=>{for(const [a,b] of [[L.ix0+.1,L.icx-.15],[L.icx+.15,L.ix1-.1]])
       for(let x=a+.2,k=0;x<b-.1;x+=.42,k++)if(rnd()<.45)add('public'+r+'-'+Math.round(x*10)+'-'+k,'public','sit',x,y,.11-.12)});
     return out;
+  }
+  // The cell bars of the prison floor in view (local x0..x1 along y, from z up to z+h, a bar every
+  // step): the people drawn over the scene redraw them over the prisoners behind.
+  function prisonBars(s){
+    if(s?.type!=='townhall')return null;
+    const key=modelKey(s),spec=INTERIOR[key];if(!spec)return null;
+    const span=floorSpan(s,key);if(townhallRole(s,span.floor)!=='prison')return null;
+    const rect=span.floor?spec.upper[span.floor-1].rect:spec.floors[0],P=prisonLayout(rect,span.floor?[]:spec.hearths||[]);
+    return{x0:P.ix0,x1:P.ix1,y:P.cy,z:span.z+FLOOR_Z,h:.59,step:.09,back:P.back};
   }
   const UPPER_ROOMS={townhall:({storey,s,rect,z,piece,P})=>furnishTownhallRoom(townhallRole(s,storey),rect,z,piece,P)};
   function interiorParts(key,span={floor:0,z:0},s=null){
@@ -641,5 +669,5 @@
     return true;
   }
   window.ConquerCivic3D={modelKey,has,parts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
-    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,lotProps,allLotProps};
+    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,prisonBars,lotProps,allLotProps};
 })();

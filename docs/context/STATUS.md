@@ -134,7 +134,8 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
   - **Natura:** persone decorative e provvisorie, senza residenti.
 - **QA:** `qa/court-people-regression.cjs` PASS. Le regressioni di guardaroba, arredo CRIME, civic3d, catalogo del Lab, animazioni di lavoro e persone degli eventi restano verdi. Verifica nel motore (Municipio L3, P1 tribunale, due rotazioni) e nel Lab (quattro costumi, controlli OK).
 - **Giustizia pubblica:** `justiceSlots`/`justiceScene` per gogna (lun–sab 8–17), forca e patibolo (venerdì 10–12), con boia, magistrato, guardie e folla. Scene sobrie; la folla dietro alla struttura è ritagliata lungo la sua sagoma piena. Verifica nel motore da due lati.
-- **DA FARE:** audit del Lab con baseline; prigionieri in cella; arresti e proteste.
+- **Prigioni:** detenuti e carceriere nella prigione del Municipio (`prisonLayout`, `prisonBars`), detenuti nelle prigioni del castello (`drawCellPrisoner` da `drawCutawayOccupants`). Verifica nel motore da due lati e in una torre T2.
+- **DA FARE:** audit del Lab con baseline; arresti e proteste nelle routine.
 
 ## CRIME — edifici e stanze nel Builder (branch `feature/crime-buildings`, 03/11/2026)
 

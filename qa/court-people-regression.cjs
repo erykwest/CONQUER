@@ -68,6 +68,29 @@ const hall=(floor,functions=['council','tribunal','prison'])=>({id:'th',type:'to
   console.log('PASS court session: working days 9-17 with no alarm; pure, animated scene; pluggable occupancy');
 }
 
+// ---------- prison: the town hall's cells, and the castle's prison rooms
+{
+  State.structures=[hall(2)];State.selectedId='th';
+  const s=State.structures[0],sl=C3.roomSlots(s),bars=C3.prisonBars(s);
+  const prisoners=sl.filter(a=>a.role==='prisoner'),jailer=sl.filter(a=>a.role==='jailer');
+  assert.ok(prisoners.length>=2&&jailer.length===1,'prisoners in the cells, the jailer at his table');
+  assert.ok(bars&&prisoners.every(p=>p.y>bars.y&&p.y<bars.back&&p.x>bars.x0&&p.x<bars.x1),'every prisoner behind the bars');
+  assert.ok(jailer[0].y<bars.y,'the jailer outside the cells');
+  assert.equal(prisoners.filter(p=>p.action==='bars').length,1,'one at the bars, the others sitting');
+  assert.ok(sl.every(a=>a.z>2.129-.12&&a.z<2.129+.3),'on the prison floor (L3 floor 2)');
+  // The prison is never empty: no session hours.
+  State.clock.day=13.95;assert.equal(CP.inSession(),false);
+  assert.ok(CP.scene(s,1).length===sl.length,'prisoners at night too');
+  assert.match(src('settlement-court-people.js'),/role!=='prison'&&!\(role==='tribunal'&&inSession\(\)\)/,'only the tribunal keeps hours');
+  assert.equal(C3.prisonBars(hall(1)),null,'no bars on the tribunal floor');
+  // Castle prison rooms: prisoners instead of an empty room, drawn by this module.
+  const garrisons=src('settlement-population-garrisons.js');
+  assert.match(garrisons,/slot\.role==='prison'&&window\.ConquerCourtPeople\)\{count=slot\.size==='large'\?3:2;kind='prisoner'\}/,'two prisoners, three in a large cell');
+  assert.match(garrisons,/ConquerCourtPeople\.drawCellPrisoner\(item\.p,slot\.z,id,item\.phase,item\.i>0\)/,'drawn as prisoners');
+  assert.equal(typeof CP.drawCellPrisoner,'function');
+  console.log('PASS prison: prisoners behind the bars and the jailer in the town hall, prisoners in castle cells, day and night');
+}
+
 // ---------- public justice: pillory, gallows, scaffold
 {
   let alarm='off';window.ConquerCombat={alarmMode:()=>alarm};

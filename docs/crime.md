@@ -61,6 +61,13 @@ Il **cutaway per piani** (D-CUT-01, branch `feature/cutaway-floors`, unito qui) 
 - **Natura:** sono decorative e provvisorie, senza residenti né sentenze. Un futuro runtime CRIME può sostituirle con `setOccupancySource`.
 - **Costumi di ruolo:** stanno in `ConquerWardrobe.ROLE_PIECES` e sono `judgeRobe`, `judgeCap`, `clerkGown`, `clerkCap`, `prisonerShirt` e `executionerHood` (quest'ultimo già pronto per il boia). Il guardaroba stagionale non li assegna mai. Nel Lab si trovano sotto *Popolazione · Costumi di ruolo*.
 
+**Prigioni occupate** (a ogni ora, stesso modulo):
+
+- **Municipio:** sul piano della prigione ci sono uno o due detenuti per cella. Uno sta in piedi alle sbarre, gli altri seduti sulla paglia; il carceriere sonnecchia al tavolo vicino alla porta.
+  - Celle e carceriere seguono `prisonLayout`, lo stesso dell'arredo.
+  - Quando la camera guarda le celle attraverso l'inferriata, le sbarre (`ConquerCivic3D.prisonBars`) vengono ridisegnate sopra i detenuti.
+- **Torri, porte e sezioni:** nelle stanze con funzione prigione del castello ci sono due detenuti (tre in una stanza grande), disegnati da `drawCutawayOccupants` accanto a soldati e nobili.
+
 **Gogna, forca e patibolo in uso** (stesso modulo, `justiceSlots` / `justiceScene`). Le scene sono sobrie: nessun condannato sulla forca o sul patibolo, nessuna esecuzione; la scena si ferma all'attesa.
 
 - **Gogna:** dal lunedì al sabato, dalle 8 alle 17. Un condannato a mani legate sta sulla pedana e un capannello davanti lo schernisce col pugno alzato.
