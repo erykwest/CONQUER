@@ -35,17 +35,23 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
   // Downgrade drops the tribunal.
   const down=hall(2,['council','tribunal']);down.civicLevel=1;run('normalizeFunctions')(down);
   assert.deepEqual([...down.functions],['council'],'L2 -> L1 drops the second chamber');
-  const kept=hall(3,['tribunal','prison','guard']);kept.civicLevel=2;run('normalizeFunctions')(kept);
-  assert.deepEqual([...kept.functions],['tribunal','prison'],'L3 -> L2 keeps the tribunal');
+  const kept=hall(3,['tribunal','guard','council']);kept.civicLevel=2;run('normalizeFunctions')(kept);
+  assert.deepEqual([...kept.functions],['tribunal','guard'],'L3 -> L2 keeps the tribunal');
+  // The prison only on the ground floor (room 0): one saved upstairs is emptied.
+  assert.ok(S.allowed(hall(2),0,'prison')&&!S.allowed(hall(2),1,'prison')&&!S.allowed(hall(3),2,'prison'),'town hall prison on the ground floor only');
+  const up=hall(3,['council','prison','tribunal']);run('normalizeFunctions')(up);
+  assert.deepEqual([...up.functions],['council',null,'tribunal'],'a prison upstairs is emptied');
   // Council and tribunal are civic only.
   const tower={id:'t',type:'tower',size:1.5,level:3,functions:[]};
   assert.ok(!S.allowed(tower,0,'tribunal')&&!S.allowed(tower,0,'council'),'no tribunal or council in a tower');
-  assert.ok(S.allowed(tower,2,'prison')&&S.allowed(tower,2,'guard'),'prison and guard post on any T2 tower floor');
-  // Capacities: a normal cell 6 prisoners, a large one 12; guard posts 4 watchmen.
+  assert.ok(S.allowed(tower,0,'prison')&&!S.allowed(tower,1,'prison')&&!S.allowed(tower,2,'prison'),'castle prison on the ground floor only');
+  assert.ok(!S.allowed({id:'g',type:'gate',level:3,functions:[]},0,'prison'),'not in a gate (its ground floor is the passage)');
+  assert.ok(S.allowed(tower,2,'guard'),'guard post on any T2 tower floor');
+  // Capacities: five prisoners per cell (one cell a normal room, the town hall's cells counted by civic3d); guard posts 4 watchmen.
   State.structures=[{...tower,size:1.5,functions:['prison','guard',null]},hall(2,['prison','tribunal'])];
-  run('functionSlotUnits=()=>1;');
+  run('functionSlotUnits=()=>1;');ctx.window.ConquerCivic3D={prisonCellCount:()=>3};
   const cap=S.capacity();
-  assert.equal(cap.prisoners,12,'tower cell + town hall cell');
+  assert.equal(cap.prisoners,5+15,'tower cell (5) + three town hall cells (15)');
   assert.equal(cap.watchmen,4,'one guard post');
   console.log('PASS town hall chambers: council, guard, prison, tribunal from L2; prison and guard capacities');
 }

@@ -383,6 +383,16 @@
     if(!Array.isArray(s?.functions)||!s.townhallRooms)return floor===0?'council':null;
     return s.functions[floor]||null;
   }
+  // Prison layout, shared the same way: cells along the back wall behind one row of bars at cy,
+  // n cells of width cw from ix0, the jailer's table by the door.
+  function prisonLayout(rect,hearths=[]){
+    const [fx0,fy0,fx1,fy1]=rect,back=fy1,front=fy0;
+    const pad=x=>hearths.some(([hx])=>Math.abs(hx-x)<.6)?.62:.18;
+    const ix0=fx0+pad(fx0+.3),ix1=fx1-pad(fx1-.3),iw=ix1-ix0,n=Math.max(2,Math.round(iw/1.1));
+    return{ix0,ix1,iw,back,front,cy:back-.62,n,cw:iw/n,jailer:{x:ix1-.4,y:front+.45}};
+  }
+  // Cells of the town hall's prison (ground floor only): five prisoners each (settlement-siege.js).
+  function prisonCellCount(s){const spec=INTERIOR[modelKey(s)];return spec?prisonLayout(spec.floors[0],spec.hearths||[]).n:0}
   function furnishTownhallRoom(role,rect,z,piece,P,hearths=[]){
     const [fx0,fy0,fx1,fy1]=rect,back=fy1,front=fy0,cx=(fx0+fx1)/2;
     // Clear of the hearths standing by the end walls.
@@ -429,7 +439,7 @@
     }else if(role==='prison'){
       // Cells along the back wall behind one row of bars, each with straw, a bucket and wall
       // chains; the jailer's table by the door.
-      const cy=back-.62,n=Math.max(2,Math.round(iw/1.1)),cw=iw/n;
+      const {cy,n,cw}=prisonLayout(rect,hearths);
       piece('cellBars',p=>{box(p,ix0,cy-.02,ix1,cy+.02,z+.55,z+.59,P('iron'));for(let x=ix0;x<=ix1+1e-6;x+=.09)box(p,x-.01,cy-.01,x+.01,cy+.01,z,z+.59,P('iron'))});
       for(let k=1;k<n;k++){const x=ix0+cw*k;piece('cellWall',p=>box(p,x-.03,cy,x+.03,back,z,z+.55,P('stoneLight'),P('stone')))}
       for(let k=0;k<n;k++){
@@ -438,7 +448,7 @@
         piece('bucket',p=>box(p,b-.2,back-.2,b-.08,back-.08,z,z+.1,P('barrel'),P('woodDark')));
         for(const x of [m-.12,m+.12])piece('wallChains',p=>box(p,x-.01,back-.02,x+.01,back,z+.22,z+.5,P('iron')));
       }
-      const tx=ix1-.4,ty=front+.45;
+      const {x:tx,y:ty}=prisonLayout(rect,hearths).jailer;
       piece('jailerTable',p=>{box(p,tx-.05,ty-.05,tx+.05,ty+.05,z,z+.19,P('woodDark'));box(p,tx-.22,ty-.16,tx+.22,ty+.16,z+.19,z+.225,P('woodLight'),P('wood'));box(p,tx+.06,ty-.03,tx+.12,ty+.03,z+.225,z+.3,P('lamp'))});
       stool(tx-.35,ty);
     }
@@ -609,5 +619,5 @@
     return true;
   }
   window.ConquerCivic3D={modelKey,has,parts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
-    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,lotProps,allLotProps};
+    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,prisonCellCount,lotProps,allLotProps};
 })();

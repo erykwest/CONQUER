@@ -649,7 +649,8 @@ function normalizeFunctions(s){
 function normalizeTownhallRooms(s){
   const cap=functionCapacity(s);
   if(!Array.isArray(s.functions)||!s.townhallRooms){s.functions=['council'];s.townhallRooms=1}
-  s.functions=s.functions.slice(0,cap).map(fn=>TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||cap>=2)?fn:null);
+  // The prison only on the ground floor (room 0).
+  s.functions=s.functions.slice(0,cap).map((fn,i)=>TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||cap>=2)&&(fn!=='prison'||i===0)?fn:null);
   while(s.functions.length<cap)s.functions.push(null);
   return s;
 }
