@@ -57,12 +57,11 @@ for(const [name,model] of Object.entries(K.models))for(const [pn,p] of Object.en
 assert.equal(K.palette[K.paletteKeys.indexOf('stone')],'#625e59','kit stone = procedural stone (brick swatches apply)');
 console.log('PASS kit: '+Object.keys(K.models).length+' pieces');
 
-// 2. L1 and L3 houses, built and finished.
-assert.equal(H.handles({type:'house',houseLevel:3}),true);
-assert.equal(H.handles({type:'house',houseLevel:1}),true);
-for(const s of [{type:'house',houseLevel:2},{type:'house',houseLevel:4},{type:'house',houseLevel:3,building:true},{type:'house',houseLevel:1,building:true},{type:'tower'}])
+// 2. L1, L2 and L3 houses, built and finished.
+for(const level of [1,2,3])assert.equal(H.handles({type:'house',houseLevel:level}),true,'L'+level+' uses the kit');
+for(const s of [{type:'house',houseLevel:4},{type:'house',houseLevel:3,building:true},{type:'house',houseLevel:1,building:true},{type:'tower'}])
   assert.equal(H.handles(s),false,JSON.stringify(s)+' keeps the procedural drawing');
-console.log('PASS scope: L1 and L3');
+console.log('PASS scope: L1, L2 and L3');
 
 // 3. Every wall, every body: windows and members as the facade plan, one roof per body.
 let houses=0;
@@ -100,6 +99,25 @@ for(const plan of ['L','T'])for(const w of [1.5,2])for(const doorSide of [-1,1])
   houses++;
 }
 console.log('PASS '+houses+' L3 houses: windows and timber on every wall, roofs, door, chimney, joists, inside the plan');
+
+// 3a. L2 houses: one body, the L3 townhouse pieces (stone ground floor, jettied timbered floor).
+let l2=0;
+for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Math.PI/2,2.5]){
+  const s={id:'l2-'+w+doorSide+angle,type:'house',houseLevel:2,auto:true,x:50,y:40,w,h:1,doorSide,angle};
+  State.structures=[s];H.clear();
+  const m=H.geometry(s),entry=sandbox.urbanHouseGeometry()[0],bodies=entry.parts.filter(p=>p.kind==='body'),label='L2 '+w+'U door '+doorSide+' angle '+angle.toFixed(1);
+  assert.equal(bodies.length,1,label+': one body');
+  let windows=0,members=0;bodies[0].points.forEach((a,i)=>{const p=sandbox.houseFacadePlan(s,bodies[0],{a,b:bodies[0].points[(i+1)%4]});windows+=p.windows.length;members+=p.beams.length});
+  assert.equal((m.stats.windowUpper||0)+(m.stats.windowGround||0),windows,label+': a window piece for every planned window, on every wall');
+  assert.equal(m.stats.members,members,label+': a timber member for every planned beam');
+  assert.ok(m.stats.windowUpper>=2&&m.stats.windowGround>=2,label+': upper and ground-floor windows');
+  assert.equal(m.stats.roof,1,label+': one slate roof');
+  assert.equal(m.stats.door,1,label+': the stone-framed door');
+  assert.ok(m.stats.joist>=4,label+': joists under the jetty');
+  for(const k of ['roofThatch','doorCottage','windowCottage'])assert.ok(!m.stats[k],label+': no cottage '+k);
+  l2++;
+}
+console.log('PASS '+l2+' L2 houses: one body with the townhouse pieces on every wall');
 
 // 3b. L1 cottages: one body, daub walls on a timber frame, a cottage window for every planned window
 // on every wall, the plank door, a thatched roof up to the fixed 1.45 U ridge, no L3 pieces.

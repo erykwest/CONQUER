@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER houses in 3D (L1 cottages and L3 townhouses): the game's own procedural plans dressed with the Blender kit
+// CONQUER houses in 3D (L1 cottages, L2 and L3 townhouses): the game's own procedural plans dressed with the Blender kit
 // (src/assets/house-models.js, tools/blender/build_houses.py). Plans, proportions, rows, wings,
 // windows, timber frame, door and chimneys keep their rules (urbanHouseGeometry, houseFacadePlan,
 // houseDoorInfo, chimneySpecs); walls and timber members become solids with thickness, and the
@@ -14,7 +14,8 @@
   const DOOR_HW=.08,CHIMNEY_H=.48,TIMBER_OUT=.018,JOIST_STEP=.2,JOIST_H=.07;
   // L1 cottages: low daub walls in the procedural houses' browns, timber frame, thatch.
   const DAUB=['#654936','#4e392d'];
-  const LEVELS=new Set([1,3]);
+  // L2 houses are drawn like L3 ones (stone ground floor, jettied timber floor) on a single body.
+  const LEVELS=new Set([1,2,3]);
   function handles(s){
     return !!s&&s.type==='house'&&LEVELS.has(houseLevel(s))&&!!DATA()&&!!window.ConquerMesh3D&&
       !(typeof underConstruction==='function'&&underConstruction(s));
