@@ -400,6 +400,8 @@ function structureScreenSilhouette(s){
     if(s.type==='tower'&&towerRoofStyle(s)==='pitched'){
       for(const p of towerRoofFootprintPoints(s))cloud.push(w2s(p,h));
       cloud.push(w2s({x:s.x,y:s.y},towerVisualTopHeight(s)));
+      const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
+      if(g)cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
     }
     if(s.type==='gate'&&gateRoofStyle(s)==='pitched'){
       const g=gateRoofGeometry(s);
@@ -452,6 +454,7 @@ function machicolationFloorPolygon(s){
   if(s.type==='tower'){
     const z=structureHeight(s);
     if(s.shape==='round')return{pts:circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+.115,24),z};
+    if(isOrientedTower(s))return{pts:orientedTowerOutline(s,-.11),z};
     const d=rectDims(s);return{pts:rectWorldPoints(s.x,s.y,d.w+.22,d.h+.22,s.angle||0),z};
   }
   return null;
@@ -741,7 +744,30 @@ function wallBattlementPieces(s){
     pieces.push(piece);
     nodes.push(merlonNode(center,g.angle,.28,depth));
   }
-  return pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  const all=pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  // Wall on a slope (its top is a stair): every merlon and parapet block stands on the highest tread
+  // under it and reaches down to the lowest, so the breastwork runs on along the stair without
+  // gaps and always covers it; the single crest line used to clip far merlons in 2.5D is gone.
+  if(wallSlopeSections(s)){
+    const tOf=p=>{const ts=p.pts.map(q=>((q.x-s.a.x)*g.dx+(q.y-s.a.y)*g.dy)/(g.L*g.L));return{lo:Math.min(...ts),hi:Math.max(...ts)}};
+    for(const p of all){
+      const t=tOf(p),r=wallGroundRange(s,t.lo,t.hi);
+      p.groundZ=r.max;p.z0-=r.max-r.min;p.t=(t.lo+t.hi)/2;delete p.wallCrest;
+    }
+    // A parapet block is never taller than either merlon beside it: the lower one sets its top, a
+    // crenel's depth below the merlon's (the opening between them stays). It also always rises three
+    // risers above the highest tread under it; where the two clash, the merlons beside it grow instead.
+    const merlons=all.filter(p=>!p.kind),CRENEL=.24-PARAPET_HEIGHT,ABOVE_TREAD=3*WALL_STAIR_RISE*WALL_TREAD;
+    for(const p of all){
+      if(p.kind!=='parapet')continue;
+      const near=[merlons.filter(m=>m.t<p.t).pop(),merlons.find(m=>m.t>p.t)].filter(Boolean);
+      const cap=Math.min(...near.map(m=>m.groundZ+m.z1))-CRENEL;
+      if(Number.isFinite(cap)&&p.groundZ+p.z1>cap)p.z1=cap-p.groundZ;
+      p.z1=Math.max(p.z1,g.z+ABOVE_TREAD);
+      for(const m of near)m.z1=Math.max(m.z1,p.groundZ+p.z1+CRENEL-m.groundZ);
+    }
+  }
+  return all;
 }
 // L-shaped corner merlon: two arms, one along each edge, sharing the square block on the corner
 // point `mc`. Each arm is its own merlon (so it takes the crenel-style crown along its run) and the
@@ -812,7 +838,7 @@ function roundTowerBattlementPieces(s){
 }
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
-  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):squareTowerBattlementPieces(s));
+  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):isOrientedTower(s)?orientedTowerBattlementPieces(s):squareTowerBattlementPieces(s));
 }
 // Restyling the feudal crenellation: every standing stone merlon is rebuilt at the target style's
 // rate (CRENEL_STYLE_COST). Brick structures pay clay instead of stone, as in constructionCost.
@@ -850,6 +876,51 @@ function withoutBuriedBattlements(s,pieces){
     return !taller.some(o=>o.h>p.z0+.01&&pointInPolygon(c,o.pts));
   });
 }
+// Bartizans (variant `bartizan`, large T3 towers): a round turret at each corner of a square tower,
+// on the diagonals of a round one, standing out of the crown on a corbelled cone. The crenellated
+// kind is open on top (floor at the deck, then a parapet ring with merlons like the tower's own
+// crown); the pitched kind is a taller drum under a conical roof. World-space specs for the 3D builder.
+// Each turret holds BARTIZAN_SLOTS shooters that also reach the tower foot, BARTIZAN_REACH U out.
+const BARTIZAN_SLOTS=3,BARTIZAN_REACH=1;
+// Heights: the drum hangs BARTIZAN_BELOW under the tower deck on a BARTIZAN_CORBEL cone; the spire's
+// drum rises BARTIZAN_DRUM above the deck, the crenellated turret's floor BARTIZAN_RAISE.
+const BARTIZAN_R=.405,BARTIZAN_SIDES=16,BARTIZAN_WALL=.07,BARTIZAN_BELOW=.45,BARTIZAN_CORBEL=.675,BARTIZAN_DRUM=.54,BARTIZAN_RAISE=.18,BARTIZAN_ROOF=.85;
+function towerBartizans(s){
+  const style=towerBartizan(s);if(style==='none')return[];
+  const z=structureHeight(s),centers=s.shape==='round'
+    ?[1,3,5,7].map(k=>{const a=(s.angle||0)+k*Math.PI/4,R=(Number(s.r)||1)-.02;return{x:s.x+Math.cos(a)*R,y:s.y+Math.sin(a)*R}})
+    :footprintPoints(s).map(c=>{const dx=c.x-s.x,dy=c.y-s.y,L=Math.hypot(dx,dy)||1;return{x:c.x+dx/L*.09,y:c.y+dy/L*.09}});
+  return centers.map(c=>{
+    const ring=r=>circleWorldPoints(c.x,c.y,r,BARTIZAN_SIDES),z0=z-BARTIZAN_BELOW,L=Math.hypot(c.x-s.x,c.y-s.y)||1;
+    const deckZ=style==='pitched'?z:z+BARTIZAN_RAISE;
+    return{style,center:c,nx:(c.x-s.x)/L,ny:(c.y-s.y)/L,r:BARTIZAN_R,ring:ring(BARTIZAN_R),inner:ring(BARTIZAN_R-BARTIZAN_WALL),band:ring(BARTIZAN_R+.025),
+      corbel:ring(.05),corbelZ:z0-BARTIZAN_CORBEL,z0,deckZ,drumZ:style==='pitched'?z+BARTIZAN_DRUM:deckZ,
+      eave:ring(BARTIZAN_R+.05),apexZ:z+BARTIZAN_DRUM+BARTIZAN_ROOF};
+  });
+}
+// Parapet ring of a crenellated bartizan: sixteen wall segments, every other one raised into a merlon.
+function bartizanCrownPieces(s,turrets){
+  const pieces=[];
+  for(const b of turrets){
+    if(b.style!=='battlement')continue;
+    for(let i=0;i<b.ring.length;i++){
+      const j=(i+1)%b.ring.length,pts=[b.ring[i],b.ring[j],b.inner[j],b.inner[i]];
+      pieces.push(battlementPolygonPiece(i%2?'parapet':'bartizanMerlon',pts,b.deckZ,b.deckZ+(i%2?PARAPET_HEIGHT:.25),s));
+    }
+  }
+  return pieces;
+}
+// The tower crown as the 3D builder meshes it: the tower's battlements, less the merlons a bartizan
+// stands on, plus the bartizans' own parapets.
+function towerCrownPieces(s){
+  const turrets=towerBartizans(s),pieces=towerBattlementPieces(s);
+  if(!turrets.length)return pieces;
+  const kept=pieces.filter(p=>{
+    const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
+    return !turrets.some(b=>Math.hypot(c.x-b.center.x,c.y-b.center.y)<b.r+.03);
+  });
+  return underConstruction(s)?kept:withoutBuriedBattlements(s,kept.concat(bartizanCrownPieces(s,turrets)));
+}
 function pointRoofOccluders(s){
   if(!s||!['tower','gate'].includes(s.type))return[];
   const d=worldDepth(s),base=structureHeight(s);
@@ -872,6 +943,16 @@ function withPointRoofOcclusion(s,drawFn){
 function drawSquareTowerRoof(s){
   const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
   if(fp.length<4)return;
+  if(towerRoofShape(s)!=='pyramid'){
+    const winter=State.season==='winter',faces=squareTowerRoofGeometry(s).faces.map(f=>{
+      const poly=f.pts.map(q=>w2s(q.p,q.z));
+      return{poly,depth:(poly[0].y+poly[1].y)/2,gable:f.kind==='gable',
+        fill:f.kind==='gable'?(f.i===1?'#62584f':'#514a44'):winter?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a')};
+    });
+    faces.sort((a,b)=>a.depth-b.depth);
+    for(const f of faces)pathPolygon(f.poly,f.fill,winter&&!f.gable?WINTER_SNOW_STROKE:'#5d6066',1);
+    return;
+  }
   const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
   for(let i=0;i<4;i++){
     const j=(i+1)%4,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
@@ -887,7 +968,7 @@ function drawSquareTowerRoof(s){
 function drawRoundTowerRoof(s){
   const baseZ=structureHeight(s),apexZ=towerVisualTopHeight(s),fp=towerRoofFootprintPoints(s);
   if(fp.length<3)return;
-  const apex=w2s({x:s.x,y:s.y},apexZ),faces=[];
+  const apex=w2s(towerRoofApex(s),apexZ),faces=[];
   for(let i=0;i<fp.length;i++){
     const j=(i+1)%fp.length,a=w2s(fp[i],baseZ),b=w2s(fp[j],baseZ);
     const shade=State.season==='winter'?(i%3===0?WINTER_SNOW_B:i%3===1?WINTER_SNOW_A:WINTER_SNOW_TOP):(i%3===0?'#303236':i%3===1?'#3a3d42':'#44474c');
@@ -901,7 +982,7 @@ function drawRoundTowerRoof(s){
 }
 function drawTowerRoof(s){
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
-  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
+  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'||s.shape==='dee'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
 }
 function drawTowerRoofs(){
   const towers=State.structures
@@ -935,9 +1016,19 @@ function drawGateRoofs(){
 }
 function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function drawQuarteredTowerFlag(tower){
-  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower'||towerRoofStyle(tower)!=='pitched')return;
-  const scale=clamp(State.view.scale,.55,1.45),base=w2s({x:tower.x,y:tower.y},towerVisualTopHeight(tower));
-  const seed=(peasantHash(tower.id+'-flag')%1000)/1000;
+  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower')return;
+  if(towerRoofStyle(tower)==='pitched'){
+    // A roof with a ridge flies a flag at each end of it, a pyramid one on its apex.
+    const g=towerRoofShape(tower)!=='pyramid'&&squareTowerRoofGeometry(tower);
+    if(g){drawQuarteredFlagAt(g.ridgeA,g.ridgeH,tower.id+'-flag');drawQuarteredFlagAt(g.ridgeB,g.ridgeH,tower.id+'-flag-2')}
+    else drawQuarteredFlagAt({x:tower.x,y:tower.y},towerVisualTopHeight(tower),tower.id+'-flag');
+  }
+  // A smaller pennant on the spire of every pitched bartizan.
+  towerBartizans(tower).forEach((b,i)=>{if(b.style==='pitched')drawQuarteredFlagAt(b.center,b.apexZ,tower.id+'-bartizan-'+i,.7)});
+}
+function drawQuarteredFlagAt(at,z,seedKey,size=1){
+  const scale=clamp(State.view.scale,.55,1.45)*size,base=w2s(at,z);
+  const seed=(peasantHash(seedKey)%1000)/1000;
   const mastH=clamp(20*scale,13,28),clothW=clamp(15*scale,10,21),clothH=clamp(10*scale,7,14);
   const wave=Math.sin(visualCycleDay()*18+seed*Math.PI*2)*1.4*scale;
   const mastTop={x:base.x,y:base.y-mastH};
@@ -966,7 +1057,7 @@ function drawQuarteredTowerFlag(tower){
 }
 function drawTowerFlags(){
   const towers=State.structures
-    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&towerRoofStyle(s)==='pitched')
+    .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&(towerRoofStyle(s)==='pitched'||towerBartizan(s)==='pitched'))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const tower of towers)withStructureGroundPlane(tower,()=>drawQuarteredTowerFlag(tower));
 }
@@ -1003,7 +1094,7 @@ function battlementBrazierSources(){
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
     }else if(s.type==='gate'&&gateRoofStyle(s)==='battlement'){
-      const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43;
+      const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43*rectDims(s).w/1.5;
       for(const side of [-1,1]){
         out.push({kind:'brazier',id:s.id+':brazier:'+side,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
       }
@@ -1076,7 +1167,7 @@ function drawFireGlows(nf){
 function gateBattlementPieces(s){
   if(s.type!=='gate'||isWoodGate(s)||underConstruction(s)||gateRoofStyle(s)!=='battlement')return[];
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
-  const pieces=[],center={x:s.x,y:s.y},perSide=4,intervals=perSide-1,inset=.11,cornerAngle=s.angle||0,corners=[];
+  const pieces=[],center={x:s.x,y:s.y},perSide=isSmallGate(s)?3:4,intervals=perSide-1,inset=.11,cornerAngle=s.angle||0,corners=[];
 
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1;

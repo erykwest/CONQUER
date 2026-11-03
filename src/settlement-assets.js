@@ -265,7 +265,7 @@ function assetPixelHash(canvas){
   return(h>>>0).toString(16).padStart(8,'0');
 }
 function expectedShadowCaster(s){
-  return ['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type);
+  return ['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type);
 }
 function validateAssetShadowGeometry(s){
   if(!expectedShadowCaster(s))return{tested:0,failed:0};

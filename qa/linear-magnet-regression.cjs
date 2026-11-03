@@ -12,6 +12,7 @@ const input=fs.readFileSync(root+'settlement-app-input.js','utf8');
 const pick=(src,re,name)=>{const m=src.match(re)?.[0];assert.ok(m,'use the actual '+name);return m};
 const code=[
   pick(core,/const LINEAR_POINT_MAGNET=[^;]+;/,'magnet constant'),
+  pick(core,/const ORIENTED_TOWER_SPECS=[\s\S]*?\nfunction isOrientedTower\(s\)\{[^\n]*\}/,'oriented tower shapes'),
   pick(placement,/function boundaryPoint\([\s\S]*?\n\}/,'boundaryPoint'),
   pick(placement,/function linearMagnetRadius\([\s\S]*?\n\}/,'linearMagnetRadius'),
   pick(placement,/function linearEndpointSnap\([\s\S]*?\n\}/,'linearEndpointSnap'),

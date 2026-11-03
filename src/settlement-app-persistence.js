@@ -48,12 +48,17 @@ function migrateStructures(list){
       if(s.material==='wood'){
         s.shape='square';s.level=1;s.size=1.5;s.w=1;s.h=1.5;s.roofStyle='flat';
       }else{
-        s.level=clamp(Math.round(Number(s.level)||1),1,3);
+        s.size=isSmallGate(s)?GATE_SIZES.small:GATE_SIZES.large;
+        s.level=clamp(Math.round(Number(s.level)||1),1,maxStructureLevel(s));
         delete s.w;delete s.h;
       }
     }
     if(s.type==='road'&&s.a&&s.b&&!Number.isFinite(Number(s.length)))s.length=dist(s.a,s.b);
-    if(s.type==='well')delete s.construction;
+    if(s.type==='well'){
+      delete s.construction;
+      // Quarter names of later wells (older saves have none: one well = the village centre).
+      const name=sanitizeWellName(s.wellName);if(name)s.wellName=name;else delete s.wellName;
+    }
     if(['tower','gate'].includes(s.type)&&!Number.isFinite(s.angle))s.angle=0;
     if(structureUsesDiscreteAngle(s))normalizeStructureRotation(s);
     if(['wall','palisade','built'].includes(s.type)&&s.a&&s.b){
@@ -68,6 +73,7 @@ function migrateStructures(list){
     normalizeStructureVariants(s);
 
     if(['tower','gate','built'].includes(s.type)){normalizeFunctions(s);window.ConquerSiege?.sanitizeRooms(s)}
+    if(s.type==='tower')window.ConquerKeepEntrance?.normalise(s);
     return s;
   });
 
@@ -88,7 +94,7 @@ function migrateStructures(list){
     const attachment=subtowerAttachmentAtSocket(parent,s,s.subtowerSocket,s.subtowerAngle);
     if(attachment){
       s.x=attachment.point.x;s.y=attachment.point.y;
-      if(s.shape==='square')s.angle=attachment.angle;
+      if(s.shape==='square'||isOrientedTower(s))s.angle=attachment.angle;
       s.subtowerSocket=attachment.subtowerSocket;
       s.subtowerAngle=attachment.subtowerAngle;
     }

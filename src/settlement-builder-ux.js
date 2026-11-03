@@ -29,6 +29,8 @@
     tavern:'M3 20V9l9-6 9 6v11M8 20v-7h8v7M5 9h14M15 6l3 2',
     church:'M3 21V11l9-5 9 5v10M9 21v-7h6v7M12 2v7m-3-4h6',
     training:'M3 21V5h18v16M7 7l10 12m0-12L7 19M9 2v3m6-3v3',
+    townhall:'M3 21V12h10v9M13 21V5h6v16M3 21h18M16 2v3M6 15h4M15 9h2',
+    guild:'M5 21V9l7-6 7 6v12M9 21v-5h6v5M12 9a1.5 1.5 0 100 .1',
     level:'M4 20h16M6 16h12M8 12h8M10 8h4M12 4v-2',
     depth:'M3 8l9-5 9 5-9 5zM3 8v8l9 5 9-5V8M12 13v8',
     rotate:'M20 11a8 8 0 10-2 7M20 4v7h-7',
@@ -48,17 +50,22 @@
       ['[data-civic="market"]','Mercato','market'],
       ['[data-civic="tavern"]','Taverna','tavern'],
       ['[data-civic="church"]','Chiesa','church'],
+      ['[data-civic="townhall"]','Municipio · presso un pozzo','townhall'],
+      ['[data-civic="guild"]','Gilda · presso un pozzo','guild'],
       ['[data-civic="training"]','Campo di addestramento','training']]},
     {id:'defense',label:'Fortificazioni',icon:'castle',items:[
       ['[data-tower="square"][data-size="1.5"]','Torre quadrata T2','square'],
       ['[data-tower="round"][data-size="0.75"]','Torre rotonda T2','round'],
+      ['[data-tower="half"][data-size="1"]','Semitorre aperta alla gola','square'],
+      ['[data-tower="dee"][data-size="1.5"]','Torre a D · fronte tonda','round'],
       ['[data-wood-tower="watchtower"]','Torre di guardia lignea','timber'],
       ['[data-wood-tower="palisadeTower"]','Torre lignea','timber'],
       ['[data-linear="wall"]','Mura','wall'],
       ['[data-linear="palisade"]','Palizzata','fence'],
       ['[data-linear="built"]','Sezione costruita','built'],
       ['[data-linear="builtWide"]','Sala larga 2U · doppia altezza','built'],
-      ['[data-gate]','Porta muraria','gate'],
+      ['[data-gate][data-gate-size="1.5"]','Porta muraria · 1,5×1,5U','gate'],
+      ['[data-gate][data-gate-size="1"]','Porta piccola · 1×1U · L1–L2','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
@@ -72,7 +79,8 @@
       ['[data-event-venue="stage"]','Palco · 2.4×1.2U · artisti / annunci','stage'],
       ['[data-event-venue="festivalGround"]','Spiazzo eventi · 14×10U · giostra, torneo, circo, sagra','festival'],
       ['[data-event-venue="arenaLot"]','Arena · 18×14U · lotto dedicato','arena']]},
-    {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[]},
+    {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[
+      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata','castle']]},
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
@@ -93,6 +101,7 @@
     {name:'Materiale di muratura',icon:'built',category:'all',selectors:['[data-build-masonry]']},
     {name:'Pianta torre quadrata',icon:'square',selectors:['[data-tower="square"]']},
     {name:'Pianta torre rotonda',icon:'round',selectors:['[data-tower="round"]']},
+    {name:'Semitorri e torri a D',icon:'round',selectors:['[data-tower="half"]','[data-tower="dee"]']},
     {name:'Altezza torre',icon:'level',selectors:['[data-tower-level]']},
     {name:'Spessore muro / palizzata',icon:'depth',selectors:['[data-wall-tier]']},
     {name:'Altezza muro',icon:'level',selectors:['[data-wall-level]']},
@@ -181,7 +190,7 @@
     for(const selector of control.selectors){
       for(const b of originalButtons.filter(x=>x.matches(selector))){
         const label=b.textContent.trim().replace(/\s+/g,' ');
-        const token=(b.dataset.size ? b.dataset.size+'U' : b.dataset.towerLevel ? 'H'+b.dataset.towerLevel : b.dataset.wallTier ? 'T'+b.dataset.wallTier : b.dataset.wallLevel ? 'H'+b.dataset.wallLevel : b.dataset.gateLevel ? 'H'+b.dataset.gateLevel : b.dataset.terraformDelta ? (Number(b.dataset.terraformDelta)<0?'−1U':'+1U') : b.dataset.terraformRadius ? 'R'+b.dataset.terraformRadius : label);
+        const token=(['half','dee'].includes(b.dataset.tower) ? label : b.dataset.size ? b.dataset.size+'U' : b.dataset.towerLevel ? 'H'+b.dataset.towerLevel : b.dataset.wallTier ? 'T'+b.dataset.wallTier : b.dataset.wallLevel ? 'H'+b.dataset.wallLevel : b.dataset.gateLevel ? 'H'+b.dataset.gateLevel : b.dataset.terraformDelta ? (Number(b.dataset.terraformDelta)<0?'−1U':'+1U') : b.dataset.terraformRadius ? 'R'+b.dataset.terraformRadius : label);
         b.classList.add('ux-value-btn');b.title=control.name+' · '+label;b.setAttribute('aria-label',b.title);b.dataset.tip=b.title;b.textContent=token;
         values.append(b);
       }
