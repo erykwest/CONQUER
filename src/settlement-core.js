@@ -963,9 +963,9 @@ function pointRadius(s){
 
 // CONQUER diagnostics — bounded in-memory telemetry, no persistent background writes.
 (function(){
-  const SAMPLE_MS=1000,MAX_SAMPLES=900,MAX_EVENTS=500,FRAME_SPIKE_MS=55,REMOTE_MS=10000;
+  const SAMPLE_MS=1000,MAX_SAMPLES=900,MAX_EVENTS=500,FRAME_SPIKE_MS=55;
   const samples=[],events=[],sessionId=crypto.randomUUID?.()||('diag-'+Math.random().toString(36).slice(2));
-  let lastSampleAt=performance.now(),lastRemoteAt=0,lastEventAtByType=new Map(),lastPerf={},frameCount=0,frameSum=0,frameMax=0,frameOverBudget=0;
+  let lastSampleAt=performance.now(),lastEventAtByType=new Map(),lastPerf={},frameCount=0,frameSum=0,frameMax=0,frameOverBudget=0;
 
   const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
   const trim=(list,max)=>{if(list.length>max)list.splice(0,list.length-max)};
@@ -982,67 +982,8 @@ function pointRadius(s){
     trim(events,MAX_EVENTS);
   }
   function delta(name,p){return Math.max(0,finite(p[name])-finite(lastPerf[name]))}
-  function sendRemote(sample){
-    const now=performance.now();
-    if(window.__CONQUER_ASSET_LAB__||!sample||sample.speed<=0||now-lastRemoteAt<REMOTE_MS)return;
-    lastRemoteAt=now;
-    // The active renderer travels as a synthetic first event so rows stay compatible with the
-    // existing table schema (recent_events is free-form JSON).
-    const p=perf(),w3d=window.ConquerWorld3D,w3s=w3d?.active?.()?w3d.status?.().stats||{}:{};
-    const rendererEvent={atMs:Math.round(now),type:'RENDERER',severity:'info',data:{
-      mode:w3d?.active?.()?'world3d':p.webgpuActive?'webgpu':'canvas2d',
-      phases:Object.fromEntries(Object.entries(p.renderPhases||{}).map(([k,v])=>[k,+finite(v).toFixed(1)])),
-      world3dBackMs:+finite(p.world3dBackMs).toFixed(1),world3dEnsureMs:+finite(p.world3dEnsureMs).toFixed(1),
-      world3dFrontMs:+finite(p.world3dFrontMs).toFixed(1),combatFogMs:+finite(p.combatFogMs).toFixed(1),
-      groundBakeMs:+finite(w3s.groundBakeMs).toFixed(1),groundTiles:finite(w3s.groundTiles),groundTileMs:+finite(w3s.groundTileMs).toFixed(1)
-    }};
-    const recentEvents=[rendererEvent,...events.filter(e=>e.atMs>=now-REMOTE_MS).slice(-8)];
-    const row={
-      session_id:sessionId,
-      day:sample.day,
-      speed:sample.speed,
-      frame_avg_ms:sample.frame?.avgMs||0,
-      frame_max_ms:sample.frame?.maxMs||0,
-      frame_over_34:sample.frame?.over34||0,
-      draw_ms:sample.draw?.lastMs||0,
-      maintenance_ms:sample.maintenance?.lastMs||0,
-      save_ms:sample.save?.lastMs||0,
-      visible_population:sample.population?.visible||0,
-      represented_population:sample.population?.represented||0,
-      structures:sample.scene?.structures||0,
-      roads:sample.scene?.roads||0,
-      nav_graph_builds_delta:sample.navigation?.deltaGraphBuilds||0,
-      nav_trees_delta:sample.navigation?.deltaTreesBuilt||0,
-      nav_invalidations_delta:sample.navigation?.deltaNavInvalidations||0,
-      cache_invalidations_delta:sample.cache?.deltaInvalidations||0,
-      cache_rebuilds_delta:
-        (sample.cache?.deltaLandscapeRebuilds||0)+(sample.cache?.deltaGroundRebuilds||0)+
-        (sample.cache?.deltaShadowRebuilds||0)+(sample.cache?.deltaBaseRebuilds||0)+(sample.cache?.deltaCastleBodyRebuilds||0)+
-        (sample.cache?.deltaCastleFrontRebuilds||0),
-      asset_cache_entries:sample.assetCache?.entries||0,
-      asset_cache_mb:sample.assetCache?.estimatedMb||0,
-      asset_cache_hits_delta:sample.assetCache?.deltaHits||0,
-      asset_cache_misses_delta:sample.assetCache?.deltaMisses||0,
-      asset_cache_evictions_delta:sample.assetCache?.deltaEvictions||0,
-      asset_prerender_ms:sample.assetCache?.lastPrerenderMs||0,
-      castle_body_bitmap_hits_delta:sample.assetCache?.deltaCastleBodyHits||0,
-      castle_body_bitmap_misses_delta:sample.assetCache?.deltaCastleBodyMisses||0,
-      castle_body_bitmap_ms:sample.assetCache?.castleBodyMs||0,
-      recent_events:recentEvents
-    };
-    fetch(SUPABASE_URL+'/rest/v1/simulation_telemetry',{
-      method:'POST',
-      headers:{
-        'content-type':'application/json',
-        'apikey':SUPABASE_KEY,
-        'authorization':'Bearer '+SUPABASE_KEY,
-        'prefer':'return=minimal'
-      },
-      body:JSON.stringify(row),
-      keepalive:true,
-      cache:'no-store'
-    }).catch(err=>event('REMOTE_TELEMETRY_ERROR',{message:String(err)},'warn',30000));
-  }
+  // Diagnostics remain local until authenticated telemetry ingestion is available.
+  function sendRemote(_sample){ return; }
   function frame(now,rawDtMs){
     const dt=finite(rawDtMs);
     frameCount++;frameSum+=dt;frameMax=Math.max(frameMax,dt);
