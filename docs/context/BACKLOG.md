@@ -1,5 +1,147 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-03 — Priorità esplicite per consolidamento branch
+
+| Priorità | Branch | Stato / prossimo passo |
+|---|---|---|
+| P0 | bridge | Già coperta da #73; preservare i miglioramenti successivi di main |
+| P0 | circle | Riconciliata su main corrente, QA locale 67/67; pubblicazione e CI prima della promozione |
+| P0 | jobmanager | Coperta da #98–99; non duplicare D-049. D-051 resta aperta |
+| P0 | knights | Renderer 2D già identico su main, #96; 3D escluso da D-046 |
+| P2 | messages | Integrare dopo riconciliazione del runtime e documentazione |
+| P3 | Tutte le altre branch senza PR | Verificare se i residui sono ancora pertinenti; niente recuperi automatici |
+
+Circle: niente resa automatica del feudo; conquista di settore solo con presenza terrestre ostile incontestata per mezzo giorno simulato, riconquista con difensori. Bottino solo dalle scorte di assedio assegnate alle stanze; ledger economico del villaggio separato e invariato.
+
+
+## Piazze dei pozzi — municipio e gilda (branch `feature/townhall-guild`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** municipio e gilda L1–L3 legati a un pozzo (uno per tipo e per pozzo, entro 9U), modelli Blender, cutaway, cantiere, crollo; mattoni/argilla applicati a tutti i modelli civici.
+- **APERTO:** effetti di gioco (tasse e decreti dal municipio del centro, mestieri e botteghe L3 dalla gilda), lotti Voronoi propri, annessi di piazza; modalità multi-cella del Lab per i cantieri (bitmap riusata).
+## Villaggio — più pozzi (branch `feature/multi-wells`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** pozzi successivi come centri di espansione con strada principale verso il fondatore; centro villaggio designabile dall'ispettore; nomi di quartiere/borgata salvati e mostrati sulla mappa. Contratto D-056.
+- **APERTO:** raggio di crescita proprio per ogni quartiere (oggi comune a tutti i pozzi); nome del villaggio modificabile dall'ispettore del centro; effetti di gioco del centro oltre a etichetta e meta degli emissari (mercato, feste, tasse); scelta di un nuovo fondatore invece dell'azzeramento quando si demolisce il primo pozzo.
+
+## Economia urbana autonoma — scheletro consolidato (02/11/2026)
+
+- **FATTO (solo codice isolato):** moduli in `src/economy/` per botteghe L3, beni e prezzi, con README e test di base.
+- **DA FARE:** collegamento al runtime, case/popolani, calendario, persistenza, risorse effettive, commercio/importazioni e test funzionali. Nessuna funzione economica attivata da questo merge.
+
+## CRIME — criminalità, ordine pubblico e sommosse (02/11/2026)
+
+- **C-00 — IMPLEMENTATO SU BRANCH `feature/crime-skeleton` (solo sandbox):** `/crime/`, motore deterministico disaccoppiato, metriche criminalità / ordine / tensione, progressione e recupero in cinque fasi, politiche sociali e repressive, flag stanza/annesso per guardia, prigione e ospizio, fixture gogna/forca/tribunale, cronaca, storico e salvataggio isolato, test `qa/crime-regression.cjs`.
+- **C-01 — APERTO:** sorgente unica per popolazione, felicità, tassazione, razioni e assistenza, senza ledger CRIME alternativo (`ConquerGame` + `ConquerEconomy`).
+- **C-02 — APERTO:** assegnazioni vere di guardia e prigione alle torri W2/W3, ospizio alla Chiesa L2, compatibilità degli slot, capacità e personale; verificare il Palazzo cittadino prima di attribuirgli un tribunale.
+- **C-03 — APERTO:** gogna e forca/patibolo come scatter/strutture civiche collocabili, con audit del Lab e QA visiva obbligatori nel loro futuro intervento.
+- **C-04 — APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
+- **C-05 — APERTO:** bilanciamento, logiche punitive individuali, effetti del giudizio/giustizia, persistenza unica, serie storiche e indicatori nel Centro di controllo, regressioni browser/end-to-end.
+- **DIPENDENZE:** M0 economia e popolazione vere → contratti funzioni civiche e guardie → routine e ordine pubblico → esiti militari. Sandbox C-00 non anticipa lo stato implementativo di C-01–C-05. [Design, confini e QA](../crime.md).
+
+
+## Militare — accampamenti (branch `feature/tent-livery`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** livree a schema dei padiglioni; kit Blender del campo (canadese, tenda di compagnia, tettoia, botti, sacchi, linea dei cavalli, palizzata e porta); bivacco notturno organizzato in `/camp`; accampamento militare come struttura del Builder, dimensionato dall'esercito e fortificabile (steccato → palizzata con porta); tutto nel Lab.
+- **ANCORA APERTO:** collegare l'accampamento alle truppe reali (oggi l'esercito è impostato a mano nel pannello); controllo collisioni quando il lotto cresce; sentieri disegnati; cavalli 2D alla linea; fossato, terrapieno e torrette di legno come livelli successivi; effetti di gioco (riposo, morale, difesa, assedio dell'accampamento); palette tessile dei colori (garanza, guado, panna, ocra, carbone) al posto delle tinte primarie.
+
+## Castello — ingresso rialzato del mastio (02/11/2026, S-08)
+
+- **IMPLEMENTATO SU BRANCH `feature/mastio-entrance`, NON MERGE:** porta del mastio al primo piano, piano terra cieco; scala di legno → scala in pietra lungo la facciata; levatoio accessorio su entrambe che, alzato, chiude il mastio a chi è a terra (richiamo dei civili compreso). Contributo a S-08 (rifugio finale), che resta PARZIALE.
+- **IMPLEMENTATO SU BRANCH (seconda tappa):** levatoio automatico con i nemici a 9U; porte del mastio sul cammino di ronda sbarrate col battente alzato; scala come ostacolo per chi cammina; scala di legno e battente incendiabili, scala bruciata ricostruibile; civili richiamati che salgono la rampa visibilmente. Ariete sul battente escluso per scelta (D-MASTIO-01).
+- **IMPLEMENTATO SU BRANCH (terza tappa):** mastio senza porte sul cammino di ronda; battente bruciato che lascia il vuoto; scala a pioli calata/ritirata dagli occupanti con scala o battente bruciati.
+- **IMPLEMENTATO SU BRANCH (quarta tappa):** scala d'assalto contro la porta del mastio; battente con resistenza 60 abbattuto a colpi d'ascia (le torce lo bruciano); gli assalitori entrano e il mastio risulta violato.
+- **APERTO:** esito dell'ingresso nel mastio (mischia con gli occupanti, resa/conquista, legato al P0 assedio); difensori che respingono la scala; disposizione degli assalitori in cima; `founding-regression` instabile anche su `main` (limite 100 ms).
+- **APERTO (storico):** scale d'assalto contro il pianerottolo (serve un tratto di scalata verso `layout().landing`, fuori dal modello `{wallId,t}` del cammino); soldati difensori che usano la scala esterna per entrare nel mastio; resti carbonizzati della scala bruciata (oggi sparisce); drappo araldico del mastio L2 spostato sopra la porta invece di sparire.
+
+## Castello — garitte e forme delle falde (02/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/bartizans`, NON MERGE:** variante `bartizan` (nessuna / merlate / guglia) per le torri grandi T3 quadrate e rotonde in pietra: quattro garitte d'angolo su mensole, 3 tiratori ciascuna con colpo al piede della torre 0–1U, bandiera sulle guglie. Variante `roofShape` (piramide / 2 falde / 4 falde con colmo L/2) per le torri quadrate col tetto a falde, solo estetica, due bandiere quando c'è il colmo.
+- **APERTO:** garitte e falde nuove solo nel render 3D (il fallback 2.5D disegna le falde ma non i corpi delle garitte); garitte su torri a D; orientamento del colmo indipendente dalla rotazione della torre; garitte nel render 2.5D della galleria del Lab («Nel gioco»).
+
+## Castello — muri sui pendii (02/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/walls-on-slopes`, NON MERGE:** muri T1 su pendii dolci e scoscesi, T2 solo dolci, T3 solo in piano; il muro sul pendio è una scala (una pedata ogni 0,12U) col parapetto merlato continuo; cammino di ronda, pattuglie, cantiere e brecce sul gradino.
+- **APERTO:** soldati in combattimento sul cammino di un T2 in pendio (altezza ai nodi); scale d'assalto contro un T2 in pendio; fallback 2.5D a bande senza Castle 3D; ballatoio e caditoie su muri in pendio (oggi tolti).
+
+## Castello — porta piccola (30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/small-gate`, NON MERGE:** porta in pietra 1×1U, L1–L2, poco più alta del muro, con saracinesca, ante, torce e stendardi in scala; costo ×0,6 del corpo di porta. Piano alto a graticcio (L2), falde trasversali, cutaway delle porte a due facce.
+- **APERTO:** il piano a graticcio non brucia come legno (solo il tetto); 2.5D senza graticcio (mostra la porta in pietra); avviso `danno-visibile` del Lab sul portone incrinato/sfondato della porta piccola (portale più piccolo della soglia); ponte levatoio davanti alla porta piccola da provare su un fossato; instabilità dell'audit (due stati di render alternati senza cambi di codice).
+
+## Castello — semitorri e torri a D (30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/half-d-towers`, NON MERGE:** semitorre aperta alla gola (T1 piccola, T2 media) e torre a D (T2 media, T3 grande) in pietra; aggancio al muro con retro sul muro e fronte sul lato del puntatore; D sui fianchi della porta con il retro allineato. Semitorre con scala a pioli e botola a ogni piano. Cutaway della D. Costi per forma (tonda ×1,5, D ×1,25, semitorre ×0,5).
+- **APERTO:** arredi sui solai della semitorre; collisioni e navigazione usano il rettangolo che le contiene (gli angoli davanti alla D sono pieni); semitorre e D a metà di un muro esistente (oggi solo alla fine di un muro, come le altre torri). Palette clay: monconi, corone spezzate e macerie restano grigi per tutte le torri.
+
+## MARCH — Attacco e campagna militare (skeleton 30/10/2026)
+
+- **SUL BRANCH feature/march-skeleton, NON MAIN**: pagina /march/ e motore UI-independent per spostamento, approccio a un feudo, razzie parziali con bottino, fase assedio, ritirata volontaria senza rollback, vittoria d'assalto simulata solo per test e annessione esplicita. Regressione qa/march-regression.cjs disponibile; CI/browser non ancora certificati.
+- **DA INTEGRARE**: world map/feudi reali e salvataggio condiviso; Company con unità del Combat Engine; risoluzione razzie e assalti con danni e scorte reali; accessi, campi, logistica e fame via ConquerSiege; occupazione/governatore e passaggio al Feudo. Non introdurre una seconda economia o nuovi algoritmi indipendenti di assedio.
+- **Regole approvate**: razzia e distruzione parziale senza obbligo di completare l'invasione; ritiro sempre possibile; espugnazione ≠ conquista; annessione solo per scelta espressa del giocatore. [Specifica e criteri](../march.md).
+
+## Triage prevalente — 30 ottobre 2026 · ref `main` `cf569992`
+
+> [**AUDIT COMPLETO 30/10**](AUDIT-2026-10-30.md) prevale per la presenza effettiva sul codice rispetto alle sezioni storiche **23–29 ottobre** qui sotto. Non cancellare i vecchi requisiti: le loro note «branch/non su main» sono documentazione storica alle date indicate.
+
+- **FATTO SU MAIN:** #61 danni strutturali, #65 cutaway arredato, #77 cantieri grafici a fasi, #78 eventi 3D, #82 Asset Lab audit, #86–97 ponti/guardaroba/UI/asset/civici/audio/cavalieri/fix GPU/renderer; #98 lavoro **L1 meccanicamente necessario nei cantieri**; #99 routine maschili/femminili; #101 commercio L3 e operatori civici; #105 unico gestore convogli; #108 veicoli 2D; #103 **Centro di controllo a nove viste e serie storiche, merged il 30/10**; #102 sala 2U, #104 legno 3D, #106 scale T1, #107 parapetti. Non proporre come implementazioni da zero.
+- **23 ID Builder:** **15 CORE MAIN / 8 PARZIALI**, vedi [owner Builder](../feature-backlog.md). **P0-04 e P1-11 promosse a core** per #98 e #101. **P2-17** resta parziale: locanda/chiesa con operatori sì, **income/bonus non simulati**. I vecchi "No services or economic effects" riguardano gli *annessi*.
+- **Assedio:** S-05/13/16/25 core danni e portone ora **merged #61**; fuoco/scale/macchine/legno già in runtime. Restano **S-01/02/03/04/10/15** come ciclo strategico (blocco rifornimenti, fame→resa automatica, campo persistente, IA). **`No automatic surrender in P0` su main**.
+- **Economia residua:** `mine` produce `stone` (non `metal`), `workshop` per `equipment` della Built Section ≠ bottega commerciale L3, nessun `tree depletion`, input botteghe/materiali e capacità fisiche del castello da collaudare; i pannelli **non** sommano `economy.castle` e `siege.stock`. La sequenza M0–M3 può ora concentrarsi su integrazioni, non riscrittura economia.
+- **Solo branch/OPEN:** #109 CI suite economia 2–5 (conflitto); #110 Livree/bivacco/campo militare (non assedio strategico completo); #111 multi-pozzo e quartieri (non su main). `messages`, `cans`, `circle` restano filoni separati; il vecchio `jobmanager` e `feature/autonomous-urban-economy` sono stati portati selettivamente/convertiti nelle PR economiche e non vanno duplicati.
+- **QA:** CI PASS sulle HEAD di #109/#110/#111 e smoke WebGPU main `cf569992`; non rappresenta un nuovo test browser dell'intero gioco eseguito per questo audit.
+
+## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
+
+- `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.
+- Correzioni: la sezione scelta resta attiva alla riapertura; il selettore produzione elenca solo i siti del signore (niente linea a 0 per i privati); le barre delle riserve scalano sul massimo tra scorta e target.
+- Aggiornamento live tramite `ConquerGame.subscribe` (throttle 500 ms) più heartbeat di 4 s al posto del ridisegno ogni 1,8 s; scroll orizzontale delle tabelle conservato.
+- Restyling `settlement-panels.css`: navigazione su una riga scorrevole con badge avvisi, intestazione di sezione, KPI con accento di stato (ok/attenzione/critico), card larghe per grafici e tabelle, intestazioni tabella fisse. Cache `?v=panels-3`.
+- QA: `qa/panels-regression.cjs` (+ sezione persistente e selettore solo signore) e `qa/economy-panel-history-regression.cjs` PASS in locale; verifica visiva nel browser con dati dimostrativi, nessun errore in console. CI non ancora eseguita su questo commit.
+## 2026-10-29 — Storici gestionali e anteprime visive · branch `panels`
+
+- Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
+- Grafici storici nel Centro di controllo: welfare generale, felicità per classe, mansioni L1, prezzi selezionabili per risorsa, produzione del signore totale o per singola attività. I dati restano nel campo `State.economy` già persistito.
+- Regressioni `qa/panels-regression.cjs` e `qa/economy-panel-history-regression.cjs`; screenshot browser via `qa/panels-browser.mjs` e workflow dedicato, con badge **DATI DIMOSTRATIVI**. Non attribuire screenshot fixture a una partita reale.
+- **QA PASS su `38ea7ab`:** 8 check GitHub Actions verdi, regressione storici 26 settimane e browser con 9 catture demo. [Workflow screenshot](https://github.com/erykwest/CONQUER/actions/runs/40800506799). Revisione visiva utente e merge ancora aperti.
+
+
+## Pannelli gestionali dell’insediamento — branch `panels` (29/10/2026)
+
+- **IN BRANCH, NON MERGE:** nove viste nel Profilo con grafici reali del ledger, istogrammi sociali e di scorte, controlli esistenti (tax/rations/quote vendita/trasferimenti) e indicatori militari/cantieri/diplomazia. [Specifiche](../management-panels.md).
+- **FATTO SU BRANCH / QA PASS:** `qa/panels-regression.cjs`, `qa/economy-panel-history-regression.cjs`, suite economica e QA Chromium con 9 screenshot; prova della persistenza storica nel ledger. Revisione visiva utente ancora da acquisire.
+- **TBD:** festività straordinarie con effetti veri su felicità e produzione, statistiche occupazione L2–L4, bilanci individuali dei beni del signore, organico militare reale, relazioni diplomatiche e avvisi avanzati. Il pannello non deve introdurre stato duplicato.
+## Castello — cutaway delle torri T1 con scala a chiocciola (29/10/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/cutaway-spiral-stairs`, NON MERGE:** torri T1 in pietra e sottotorri T1 apribili in sezione, con scala a chiocciola al posto delle stanze.
+- **APERTO:** torri T1 in pietra nella galleria del Lab (oggi l'audit non le cattura); mastio T1 (Sala comune) in sezione; posti degli occupanti sulla scala.
+
+## Castello — sala larga a doppia altezza (branch `feature/wide-built-hall`, 28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione costruita larga 2U, H2 senza solaio, una stanza LARGE; finestroni Blender a tutta altezza, 5 contrafforti sul lato finestroni, 2 camini, cutaway a piano unico con gli arredi della libreria di main. Stesso profilo a gradoni anche per le torri con base «Contrafforti» (fix del disegno attraverso le facciate).
+- **ANCORA APERTO:** effetti di gioco specifici delle sale (per ora valgono le regole generiche delle stanze), figure all'interno nel cutaway (cerimonie, banchetti, udienze), contrafforti nell'impronta di collisione/piazzamento.
+
+## Castello — parapetto delle merlature (branch `feature/battlement-parapet`, 29/10/2026)
+
+- **IN CORSO su branch, NON MERGE:** parapetto continuo tra i merli di torri, porte e mura in pietra; più merli sulle torri tonde. Dettagli in [STATUS](STATUS.md).
+- **Aperto:** la firma 12×12 dell'audit del Lab non vede dettagli di questa scala (0 render cambiati): valutare una griglia più fine o un ritaglio sulla corona.
+
+## Render 3D — fortificazioni in legno da Blender (28/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE (`feature/wood-fortifications-3d`):** palizzate T1–T3, torre di vedetta, torri a palizzata e porta in legno come modelli Blender nel renderer 3D; chiuso l'ultimo residuo 2.5D del castello nel world3d Cantieri del legno montati pezzo per pezzo dai modelli; cutaway della torre a palizzata con gli arredi delle stanze; bandiere e drappi araldici (statici, senza vento).
+- **APERTO (legno):** cutaway della porta in legno (le porte in pietra lo hanno da #65); nel Lab le celle «Cantiere» non mostrano il montaggio (cattura prima del ridisegno in cache, vale anche per la pietra).
+- **APERTO:** stati di danno visibili per il legno (oggi assenti anche in 2.5D); cantiere del legno ancora col fantasma traslucido; percorso Canvas 2.5D non usa i nuovi modelli (fallback invariato).
+- **PROSSIMO (deciso il 28/10):** arredi del cutaway come modelli Blender, dopo aver portato il cutaway nel 3D. Niente modelli 3D per umani e animali: lo stile 3D delle figure è stato scartato.
+## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
+
+- **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
+- **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
+- **TAPPA 2 SU MAIN (#99, `cdb2af9`):** routine settimanali di uomini e donne.
+- **TAPPA 3 SU MAIN (#101, `e1fdb20`):** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
+- **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, insegne e merci in facciata delle botteghe, incasso della locanda.
+- **TAPPA 4 SU BRANCH `feature/economy-convoys`, NON MERGE:** un solo sistema di convogli (carovane della diplomazia comprese), cartelli di prova, convogli visibili sulla strada maestra.
+- **DA FARE (CI):** aggiungere a `.github/workflows/economy-flows-regression.yml` le nuove regressioni economiche (rations, labor-jobs, routines, commerce, urban-workshops, convoys, road-sign, diplomacy, vehicles): PR separata, il token di `gh` non ha lo scope `workflow`.
+- **TAPPA 5 SU BRANCH `feature/economy-vehicles`, NON MERGE:** veicoli instradati sulle strade, solo 2D.
+- **APERTO:** traffico automatico di carri e carrozze senza convoglio (oggi solo convogli reali, prove e carrozza dimostrativa); decidere se rimuovere da main i moduli 3D di animali e carri non usati dal gioco. Leva (`levy`) resta senza effetti.
 ## Prestazioni — picchi di rendering (branch `perf/render-spikes-v2`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** ricottura a tessere del terreno 3D, nebbia con firma di contenuto, evento di telemetria `RENDERER`.
@@ -21,7 +163,8 @@
 ## Combat / feudi — capitano, cavalieri e diplomazia (branch `feature/knights-diplomacy-2d`, 28/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, IN MERGE (sostituisce #72):** capitano con identità propria e raggio di comando 16U; cavalieri a cavallo reclutabili fino a min(stanze nobili, posti in scuderia) — C-04 in parte; messaggero a cavallo periodico verso il mastio, richiesta di 100 monete, accetta/rifiuta, pianificatore di carovane con carico, scorta, partenza e provviste — prototipo di F-05; tutte le figure a cavallo in 2D (D-046).
-- **ANCORA APERTO:** unificare le carovane della diplomazia con i convogli dell'economia (#55) passando da `window.ConquerDiplomacy`; carovane visibili in mappa e intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
+- **FATTO:** carovane unificate con i convogli dell'economia (tappa 4, #105, 29/10/2026); visibili sulle strade con la tappa 5 (#108).
+- **ANCORA APERTO:** carovane intercettabili (F-06); le province esterne sono astratte (collegamento convenzionale di 40U fuori mappa); il messaggero in attesa sta al centro del mastio e si disegna sopra la torre; nessun costo di mantenimento dei cavalieri.
 
 ## Castello — cutaway arredato di torri, porte e sezioni (PR #65, riallineata 28/10/2026)
 
@@ -33,9 +176,11 @@
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** mixer a 4 livelli, ambiente da stagione/meteo, suoni locali degli edifici, colonna sonora stagionale; controlli solo DEV, audio spento di default.
 - **ANCORA APERTO:** controlli audio per il giocatore nella UI (UI v2), campioni per autunno e notte, effetti di battaglia, assedio e cantiere, eventuale caricamento differito dei brani per ridurre il peso della pagina.
 
-## Civili — cutaway di chiesa e locanda (branch `feature/civic-cutaway`, 23/10/2026)
+## Civili — cutaway di chiesa e locanda (su `main` con #90, 23–28/10/2026)
 
-- **IMPLEMENTATO SU BRANCH, NON MERGE:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
+- **SU MAIN:** sezione dell'edificio civico selezionato con arredi; contorno di selezione a terra; mura e edifici rispettano foreste e chiome.
+- **FIX SU BRANCH `fix/civic-cutaway-lab`, NON MERGE:** lastra del primo piano che copriva il pianterreno delle locande.
+- **APERTO:** il Lab non ha uno stato «cutaway» per gli edifici civici (lo stage copre solo torri, mura, porte): la verifica è stata fatta a mano con lo stesso metodo.
 - **ANCORA APERTO:** cutaway per gli altri edifici civici (mercato, mulini, botteghe) e persone all'interno durante le attività.
 
 ## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)

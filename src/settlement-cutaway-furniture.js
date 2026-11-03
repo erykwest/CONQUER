@@ -54,7 +54,16 @@
       .sort((a,b)=>a.d-b.d).slice(0,2).map(x=>x.k);
     // The longer far wall first (it takes the main pieces).
     const len=k=>k[0]==='u'?b.h:b.w;far.sort((a,c)=>len(c)-len(a));
-    return{b,toWorld,far,hu:b.w/2,hv:b.h/2,round:slot.round};
+    // D tower: straight part behind u = cx, half round of radius hv (centred on u = cx) in front.
+    const dee=slot.dee?{cx:b.w/2-b.h/2,r:b.h/2}:null;
+    return{b,toWorld,far,hu:b.w/2,hv:b.h/2,round:slot.round,dee};
+  }
+  // Inside a D room with a margin m (pieces and ladders stay off the half round).
+  function deeInside(F,u,v,m=0){return u<=F.dee.cx||Math.hypot(u-F.dee.cx,v)<=F.dee.r-m}
+  // Pulls a point in front of u = cx back inside the half round.
+  function deeShrink(F,u,v,m){
+    const du=u-F.dee.cx,d=Math.hypot(du,v),lim=F.dee.r-m;
+    return du>0&&d>lim?[F.dee.cx+du*lim/d,v*lim/d]:[u,v];
   }
   // ---------- layout builder
   function builder(slot,opts){
@@ -65,6 +74,10 @@
       const [a,b]=F.far.map(k=>SIDES[k]),cu=(a[0]||b[0])*F.hu,cv=(a[1]||b[1])*F.hv;
       reserve.push([cu-Math.sign(cu)*LADDER_CLEAR-.01,cv-Math.sign(cv)*LADDER_CLEAR-.01,cu,cv].map((x,i,arr)=>x));
       F.ladder={u:cu-Math.sign(cu)*(LADDER_W/2+.04),v:cv-Math.sign(cv)*(LADDER_W/2+.04),side:F.far[0]};
+      if(F.dee&&!deeInside(F,F.ladder.u,F.ladder.v,LADDER_W/2+.06)){
+        [F.ladder.u,F.ladder.v]=deeShrink(F,F.ladder.u,F.ladder.v,LADDER_W/2+.06);
+        reserve.push([F.ladder.u-LADDER_CLEAR/2,F.ladder.v-LADDER_CLEAR/2,F.ladder.u+LADDER_CLEAR/2,F.ladder.v+LADDER_CLEAR/2]);
+      }
     }
     if(opts.passage)reserve.push(opts.passage);
     // The parent of a subtower / the subtowers of a parent occupy part of the room.
@@ -90,6 +103,7 @@
       const rot=((turn%4)+4)%4,r=rectOf(name,u,v,rot);
       if(r[0]<-F.hu-1e-6||r[2]>F.hu+1e-6||r[1]<-F.hv-1e-6||r[3]>F.hv+1e-6)return false;
       if(F.round&&Math.hypot(Math.max(Math.abs(r[0]),Math.abs(r[2])),Math.max(Math.abs(r[1]),Math.abs(r[3])))>F.hu+.02)return false;
+      if(F.dee&&![[r[0],r[1]],[r[2],r[1]],[r[2],r[3]],[r[0],r[3]]].every(([u,v])=>deeInside(F,u,v,-.02)))return false;
       if(!deco&&(hit(r,boxes)||hit(r,reserve)))return false;
       if(!deco)boxes.push(r);
       items.push({name,u,v,turn:rot,lift,r,deco});return true;
@@ -103,7 +117,7 @@
       const tries=o.exact?[t]:[t,t+.35,t-.35,t+.7,t-.7,-t,1,-1].map(x=>Math.max(-1,Math.min(1,x)));
       for(const tt of tries){
         const pos=tt*Math.max(0,along),u=du?du*(F.hu-inset):pos,v=dv?dv*(F.hv-inset):pos;
-        const [pu,pv]=F.round?shrinkRound(u,v,s):[u,v];
+        const [pu,pv]=F.round?shrinkRound(u,v,s):F.dee?deeShrink(F,u,v,Math.max(s.d,s.w)*.5+.02):[u,v];
         if(place(name,pu,pv,turn,o))return true;
       }
       return false;
@@ -192,7 +206,7 @@
     // Portals sit on footprint edges 1 and 3: keep the strip between them clear.
     const fp=footprintPoints(s),m1={x:(fp[1].x+fp[2].x)/2,y:(fp[1].y+fp[2].y)/2},m3={x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2};
     const b=slot.basis,ax=m1.x-m3.x,ay=m1.y-m3.y,L=Math.hypot(ax,ay)||1,lu=(ax*Math.cos(b.angle)+ay*Math.sin(b.angle))/L;
-    const half=.38;
+    const half=.38*(window.ConquerGates?.portalOf?.(s).width??1.2)/1.2;   // narrower in the small gate
     return Math.abs(lu)>.7?[-b.w/2,-half,b.w/2,half]:[-half,-b.h/2,half,b.h/2];
   }
   function layoutStructure(s,g){
@@ -200,10 +214,12 @@
     const slots=cutawayRoomSlots(s,g).map(x=>({...x,floor:x.floor??x.index}));
     // Gates: the ground floor is the entrance passage, no room; it only holds the ladder up.
     if(functionFloorOffset(s)&&levels>1)slots.unshift({index:-1,floor:0,role:null,size:'normal',z:floors[0].z,basis:cutawayFloorBasis(s,g),g});
+    // Small towers: a spiral stair fills the shaft, no room furniture nor ladder.
+    if(spiralTower(s))return out;
     for(const slot of slots){
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
-      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
@@ -244,6 +260,74 @@
       boxWorld(F,L.u,L.v,z-.008,sideU?LADDER_W:.02,sideU?.02:LADDER_W,.016,'#b98652',out,floor);
     }
   }
+  // ---------- spiral stair (small T1 towers)
+  const STAIR_RISE=.11,STAIR_MIN_R=.1;
+  function spiralTower(s){return typeof cutawaySpiralStair==='function'&&cutawaySpiralStair(s)}
+  // Axis and size: the widest circle (round tower) or axis-aligned square (square tower)
+  // inside the shaft and outside the parent footprint (a subtower is cut by its parent; the
+  // stair moves into the free part). Local (u,v) frame; R is the radius / half side.
+  function spiralStair(s,g){
+    const b=cutawayFloorBasis(s,g),ca=Math.cos(b.angle),sa=Math.sin(b.angle),hu=b.w/2,hv=b.h/2,round=s.shape==='round';
+    const toWorld=(u,v)=>({x:b.center.x+u*ca-v*sa,y:b.center.y+u*sa+v*ca});
+    const blocks=(typeof cutawayBlockers==='function'?cutawayBlockers(s):[]).map(k=>k.pts);
+    const local=blocks.flat().map(p=>{const dx=p.x-b.center.x,dy=p.y-b.center.y;return[dx*ca+dy*sa,-dx*sa+dy*ca]});
+    const room=(u,v)=>round?hu-Math.hypot(u,v):Math.min(hu-Math.abs(u),hv-Math.abs(v));
+    const inBlock=(u,v)=>{const p=toWorld(u,v);return blocks.some(B=>pointInPolygon(p,B))};
+    // Square of half side h at (u,v): no perimeter sample in a blocker, no blocker corner inside.
+    const squareFree=(u,v,h)=>{
+      if(local.some(([x,y])=>Math.abs(x-u)<h-1e-6&&Math.abs(y-v)<h-1e-6))return false;
+      for(let i=0;i<=8;i++){const t=-h+2*h*i/8;if(inBlock(u+t,v-h)||inBlock(u+t,v+h)||inBlock(u-h,v+t)||inBlock(u+h,v+t))return false}
+      return true;
+    };
+    const clear=(u,v)=>{
+      let r=room(u,v);
+      if(!blocks.length)return r;
+      if(inBlock(u,v))return -1;
+      if(round){const p=toWorld(u,v);for(const B of blocks)for(let i=0;i<B.length;i++)r=Math.min(r,pointSegmentDistance(p,B[i],B[(i+1)%B.length]));return r}
+      if(squareFree(u,v,r))return r;
+      let lo=0;for(let k=0;k<8;k++){const m=(lo+r)/2;if(squareFree(u,v,m))lo=m;else r=m}
+      return lo;
+    };
+    let best=null;
+    for(let u=-hu;u<=hu+1e-9;u+=.025)for(let v=-hv;v<=hv+1e-9;v+=.025){
+      // Ties go to the shaft centre.
+      const r=clear(u,v)-.012,score=r-Math.hypot(u,v)*1e-3;
+      if(r>0&&(!best||score>best.score))best={u,v,R:r,score};
+    }
+    if(!best||best.R<STAIR_MIN_R)return null;
+    // The first step starts at the entrance: the ground door, else (subtower) the parent side.
+    const doors=typeof towerDoorSpecs==='function'?towerDoorSpecs(s).slice().sort((p,q)=>p.baseZ-q.baseZ):[];
+    const parent=s.parentTowerId&&State.structures.find(o=>o.id===s.parentTowerId);
+    const c=toWorld(best.u,best.v),dir=doors[0]?doors[0].outward:parent?{x:parent.x-c.x,y:parent.y-c.y}:{x:ca,y:sa};
+    // Square stairs: 16 steps a turn and the start on a multiple of the step angle, so the
+    // corners (45°, 135°, ...) fall between two steps and every outer edge is straight.
+    const perTurn=round?14:16,da=Math.PI*2/perTurn;
+    let start=Math.atan2(dir.y,dir.x)-b.angle;if(!round)start=Math.round(start/da)*da;
+    const z0=cutawayFloorLevels(s)[0].z,z1=structureHeight(s)-.06;
+    return{u:best.u,v:best.v,R:best.R,newel:Math.min(.045,best.R*.2),square:!round,perTurn,start,z0,z1,steps:Math.max(1,Math.floor((z1-z0)/STAIR_RISE)),toWorld,angle:b.angle};
+  }
+  // Stone wedge steps around a newel post, each overlapping the one below like a solid
+  // helical stair (no undersides: the camera never looks up). A square stair runs the same
+  // angles out to a square wall line around a square newel.
+  function spiralStairWorld(st,out){
+    const da=Math.PI*2/st.perTurn,rise=(st.z1-st.z0)/st.steps,{u,v,R,newel,square}=st;
+    const rad=(a,r)=>square?r/Math.max(Math.abs(Math.cos(a)),Math.abs(Math.sin(a))):r;
+    const P=(a,r,z)=>{const rr=rad(a,r),p=st.toWorld(u+Math.cos(a)*rr,v+Math.sin(a)*rr);return[p.x,p.y,z]};
+    const N=(a)=>[Math.cos(a+st.angle),Math.sin(a+st.angle),0];
+    // Outward normal of the wall line at angle a (radial, or the square side it hits).
+    const side=a=>{if(!square)return N(a);const c=Math.cos(a),s=Math.sin(a);return N(Math.abs(c)>=Math.abs(s)?(c>0?0:Math.PI):(s>0?Math.PI/2:-Math.PI/2))};
+    for(let k=0;k<st.steps;k++){
+      const a0=st.start+k*da,a1=a0+da*(square?1:1.04),am=(a0+a1)/2,top=st.z0+(k+1)*rise,bot=Math.max(st.z0,top-rise-.035);
+      out.push({pts:[P(a0,newel,top),P(a0,R,top),P(am,R,top),P(a1,R,top),P(a1,newel,top)],hex:'#8d877c',n:[0,0,1],floor:0});
+      out.push({pts:[P(a0,newel,bot),P(a0,R,bot),P(a0,R,top),P(a0,newel,top)],hex:'#6f6a62',n:N(a0-Math.PI/2),floor:0});
+      out.push({pts:[P(a1,R,bot),P(a1,newel,bot),P(a1,newel,top),P(a1,R,top)],hex:'#6f6a62',n:N(a1+Math.PI/2),floor:0});
+      for(const [p,q] of [[a0,am],[am,a1]])out.push({pts:[P(p,R,bot),P(q,R,bot),P(q,R,top),P(p,R,top)],hex:'#77716a',n:side((p+q)/2),floor:0});
+    }
+    // Newel: an octagonal (square: four-sided) post with a cap above the last step.
+    const zt=st.z1+.04,n=square?4:8,a0=square?Math.PI/4:0,ring=Array.from({length:n},(_,i)=>a0+i*Math.PI*2/n);
+    for(let i=0;i<n;i++){const p=ring[i],q=ring[(i+1)%n]+(i===n-1?Math.PI*2:0);out.push({pts:[P(p,newel,st.z0),P(q,newel,st.z0),P(q,newel,zt),P(p,newel,zt)],hex:'#7a7268',n:N((p+q)/2),floor:0})}
+    out.push({pts:ring.map(a=>P(a,newel,zt)),hex:'#8d877c',n:[0,0,1],floor:0});
+  }
   const cache=new Map();
   function structureFaces(s,g){
     // Cheap key: archer posts follow the wall junctions and the tower shape, not the archer
@@ -257,6 +341,7 @@
       if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.floor);
       spots.set(room.slot.index,freeSpots(room));
     }
+    if(spiralTower(s)){const st=spiralStair(s,g);if(st)spiralStairWorld(st,faces)}
     const res={key,faces,lights,spots};cache.set(s.id,res);return res;
   }
   // Standing spots for room occupants: grid points clear of furniture footprints.
@@ -266,6 +351,7 @@
     for(let a=-.7;a<=.71;a+=.35)for(let b=-.7;b<=.71;b+=.35){
       const u=a*F.hu,v=b*F.hv;
       if(F.round&&Math.hypot(u,v)>F.hu-.12)continue;
+      if(F.dee&&!deeInside(F,u,v,.12))continue;
       if(boxes.some(r=>u>r[0]&&u<r[2]&&v>r[1]&&v<r[3]))continue;
       out.push(F.toWorld(u,v));
     }
@@ -336,5 +422,5 @@
     }
   }
   function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces:[]}
-  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,pieceFaces,clear:()=>cache.clear()};
+  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();

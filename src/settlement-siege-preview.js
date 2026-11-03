@@ -158,6 +158,15 @@
       ['Grande quadrata L3 caditoie',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'buttress'}],
       ['Grande rotonda L3 merli',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',baseStyle:'splayed'}],
       ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
+      ['Grande quadrata L3 garitte merlate',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',bartizan:'battlement'}],
+      ['Grande rotonda L3 garitte a guglia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',bartizan:'pitched'}],
+      ['Grande quadrata L3 tetto 2 falde',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'gable'}],
+      ['Grande quadrata L3 tetto con colmo',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'hip',bartizan:'pitched'}],
+      ['Semitorre piccola L2',{type:'tower',shape:'half',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'battlement'}],
+      ['Semitorre media L3',{type:'tower',shape:'half',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Torre a D media L2 merli',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Torre a D grande L3 caditoie',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'splayed'}],
+      ['Torre a D grande L3 tetto',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',baseStyle:'buttress'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}]
@@ -180,7 +189,11 @@
       ['Porta pietra L2',{type:'gate',shape:'square',material:'stone',size:1.5,level:2,roofStyle:'battlement'}],
       ['Porta pietra L3',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'battlement'}],
       ['Porta pietra L3 tetto',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'pitched'}],
-      ['Porta legno',{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}]
+      ['Porta legno',{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}],
+      ['Porta piccola L1',{type:'gate',shape:'square',material:'stone',size:1,level:1,roofStyle:'battlement'}],
+      ['Porta piccola L2',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'battlement'}],
+      ['Porta piccola L2 tetto',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'pitched'}],
+      ['Porta piccola L2 graticcio',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'pitched',upper:'timber'}]
     ]
   };
   function hpTo(s,f){
@@ -215,7 +228,8 @@
     if(['wall','palisade'].includes(spec.type))return wallPhases();
     const L=spec.level||1,wood=spec.material==='wood',out=[['intatta',()=>{}],['danneggiata',s=>hpTo(s,.85)]];
     if(spec.type==='gate')out.push(['portone incrinato',s=>doorTo(s,.5)],['portone sfondato',s=>doorTo(s,0)]);
-    if(!wood)for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
+    // Only towers and gatehouses fail a storey at a time (settlement-siege.js storeyCollapse).
+    if(!wood&&['tower','gate'].includes(spec.type))for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
     out.push(['distrutta',s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,0)}]);
     return out;
   }
@@ -223,19 +237,21 @@
   // The Asset Lab builds its fortification entries with this too.
   function galleryStructure(spec,x,y){
     return['wall','palisade','built'].includes(spec.type)
-      ?{id:uid(),functions:[],flip:false,...spec,width:wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
+      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
       :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
   }
   // Asset Lab (index.html?assetlab=1 in a hidden frame): world-space castle meshes of one gallery spec,
-  // built alone on flat ground and removed again. null when the spec has no 3D volume (wood, palisades).
+  // built alone on flat ground and removed again. Timber towers, timber gates and palisades come from
+  // their Blender models (ConquerWood3D); null when the spec has no 3D volume.
   let assetSpot=null;
   function assetMesh(spec){
     State.clock.speed=0;
     const c=assetSpot||(assetSpot=flatSpot()),s=galleryStructure(spec,c.x,c.y);
-    if(!window.ConquerCastle3D?.castleVolume(s))return null;
+    const castle=!!window.ConquerCastle3D?.castleVolume(s),wood=!castle&&!!window.ConquerWood3D?.handles(s);
+    if(!castle&&!wood)return null;
     const keep=State.structures;
     State.structures=[s];invalidateSceneCache();
-    try{return{origin:c,...window.ConquerCastle3D.worldMeshes()}}
+    try{return wood?{origin:c,body:window.ConquerWood3D.worldTriangles([s]),front:new Float32Array(0)}:{origin:c,...window.ConquerCastle3D.worldMeshes()}}
     finally{State.structures=keep;invalidateSceneCache()}
   }
   let galleryLabels=null;

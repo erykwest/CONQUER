@@ -8,7 +8,11 @@ canvas.addEventListener('pointerdown',e=>{
     return
   }
   const sp=pointerScreen(e),p=s2w(sp.x,sp.y);
-  if(State.tool.kind==='select'){selectStructure(structureAtScreen(sp)||structureAt(p));return}
+  if(State.tool.kind==='select'){
+    const sign=window.ConquerRoadSignTests?.hit?.(sp);
+    if(sign){window.ConquerRoadSignTests.open(sign);return}
+    selectStructure(structureAtScreen(sp)||structureAt(p));return
+  }
   if(State.tool.kind==='delete'){const hit=structureAtScreen(sp)||structureAt(p);if(hit)deleteStructure(hit.id);return}
 
   // Once the centre is fixed, the second click only defines orientation.
@@ -51,6 +55,7 @@ canvas.addEventListener('pointerdown',e=>{
       mode:'orient',center:q,angle,lockedAngle,
       wallSnapId:snap.wallId||null,
       wallSnapEnd:snap.wallEnd||null,
+      wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
       parentTowerId:snap.parentTowerId||null,
       subtowerSocket:snap.subtowerSocket||null,
       subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -73,9 +78,15 @@ canvas.addEventListener('pointerdown',e=>{
     status(structureLabel(State.draft.preview)+' position fixed — move cursor to rotate, click to confirm');draw();return
   }
   if(State.tool.kind==='well'){
-    if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
+    const founding=!State.village.founded;
+    if(founding&&State.structures.some(s=>s.type==='well')){status('Name the village before building another well');return}
     const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y};
-    if(addStructure(well))openVillageModal(well);return
+    // Only the first well founds the village; later wells are expansion centres.
+    if(addStructure(well)){
+      if(founding)openVillageModal(well);
+      else status('Well built · '+(wellMainRoads(well).length?'main road linked to the founding well':'no main road route found'));
+    }
+    return
   }
   if(State.tool.kind==='crossing'){
     const moat=['dry','water'].includes(State.tool.crossing);
@@ -174,6 +185,8 @@ canvas.addEventListener('pointermove',e=>{
     return
   }
   const p=pointerWorld(e);
+  // Four signposts behave like interactive wayfinding markers in select mode.
+  if(canvas.style)canvas.style.cursor=State.tool.kind==='select'&&window.ConquerRoadSignTests?.hit?.(pointerScreen(e))?'pointer':'';
   if(State.tool.kind==='terraform'){
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};
@@ -234,7 +247,7 @@ canvas.addEventListener('pointermove',e=>{
 
     const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.endpoint));
     if(route){
-      const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined};
+      const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,...(State.tool.span==='wide'?{span:'wide'}:{})};
       State.draft.invalidPreview=null;
       State.draft.preview=null;
       State.draft.previewSegments=route.segments.map((seg,index)=>({
@@ -278,6 +291,7 @@ canvas.addEventListener('pointermove',e=>{
         mode:'hover',
         wallSnapId:snap.wallId||null,
         wallSnapEnd:snap.wallEnd||null,
+        wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
         parentTowerId:snap.parentTowerId||null,
         subtowerSocket:snap.subtowerSocket||null,
         subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -369,7 +383,7 @@ function setBuildMasonryMaterial(next){
 }
 for(const b of document.querySelectorAll('[data-build-masonry]'))b.onclick=()=>setBuildMasonryMaterial(b.dataset.buildMasonry);
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${isOrientedTowerShape(b.dataset.tower)?orientedTowerLabel(dummy):b.dataset.tower+' tower '+b.dataset.size+'U'} · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
@@ -417,29 +431,34 @@ for(const b of document.querySelectorAll('[data-crossing-width]'))b.onclick=()=>
     status('Crossing width: '+width+'U');draw();
   }
 };
-for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,isPalisade=b.dataset.linear==='palisade',level=isPalisade?1:State.buildLevels.wall;setTool({kind:'linear',linear:b.dataset.linear,level,tier,label:(b.dataset.linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,wide=b.dataset.linear==='builtWide',linear=wide?'built':b.dataset.linear,isPalisade=linear==='palisade',level=isPalisade?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'&&State.tool.material!=='wood'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','palisade'].includes(State.tool.linear)){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status((State.tool.linear==='palisade'?'Palisade':'Wall')+' tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
-document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{State.buildLevels.wall=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=State.buildLevels.wall;State.draft=null;status('Wall height: '+State.buildLevels.wall+' level'+(State.buildLevels.wall>1?'s':''));draw()}});
+document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{const wide=State.tool.kind==='linear'&&State.tool.span==='wide';State.buildLevels[wide?'builtWide':'wall']=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=Number(b.dataset.wallLevel);State.draft=null;status((wide?'Wide hall':'Wall')+' height: '+State.tool.level+' level'+(State.tool.level>1?'s':''));draw()}});
 document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
   if(State.tool.kind==='gate'&&State.tool.material==='wood'){
     document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x.dataset.gateLevel==='1'));
     status('Wood gate height is fixed at H1');
     draw();return;
   }
-  State.buildLevels.gate=Number(b.dataset.gateLevel);
-  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
+  // The small gate stops at L2.
+  const small=State.tool.kind==='gate'&&State.tool.size<1.25;
+  State.buildLevels.gate=Math.min(Number(b.dataset.gateLevel),small?SMALL_GATE_MAX_LEVEL:3);
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===State.buildLevels.gate));
   if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:State.tool.size,level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
-document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level};
+// Stone gates: the gatehouse (data-gate-size 1.5) and the small gate (1).
+for(const b of document.querySelectorAll('[data-gate]'))b.onclick=e=>{
+  const size=Number(b.dataset.gateSize)||GATE_SIZES.large,small=size<1.25;
+  const level=Math.min(State.buildLevels.gate,small?SMALL_GATE_MAX_LEVEL:3),dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size,level};
+  State.buildLevels.gate=level;
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
-  setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+  setTool({kind:'gate',material:'stone',size,level,label:(small?'Small gate 1×1U · L':'Gate 1.5×1.5U · L')+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 document.querySelector('[data-wood-gate]').onclick=e=>{
   const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};
@@ -470,7 +489,8 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const well=State.structures.find(s=>s.id===State.pendingWellId&&s.type==='well'),name=document.getElementById('villageNameInput').value.trim();
   if(!well)return closeVillageModal();if(!name){status('Enter a village name');document.getElementById('villageNameInput').focus();return}
   const borderEntries=ensureBorderEntrySelection();
-  State.village={...State.village,name,wellId:well.id,founded:true,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  State.village={...State.village,name,wellId:well.id,founded:true,foundingWorkers:4,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
+  window.ConquerEconomy?.foundingCharter?.(well.id);
   closeVillageModal();
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
@@ -489,4 +509,4 @@ document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
-['tax','rations','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
+['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});

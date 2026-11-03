@@ -16,13 +16,13 @@ const walls=()=>[
   piece('north','wall',4,4,16,4.5),piece('south','wall',4,15.5,16,16),
   piece('west','wall',4,4,4.5,16),piece('east','wall',15.5,4,16,16)
 ];
-async function boot(structures,environment=[],relief={hills:[]},battle=null,wallwalk=null,siege=null) {
+async function boot(structures,environment=[],relief={hills:[]},battle=null,wallwalk=null,siege=null,keepEntrance=null) {
   const State={structures,environment,relief,clock:{day:0,speed:1}};
   const events=[];
   const window={dispatchEvent(e){events.push(e)},ConquerTerraforming:{edits:()=>[]},
     ConquerCombat:battle||{
       units:()=>[],enemy:()=>[],uiState:()=>({alarm:'off',alert:'clear'})
-    },ConquerWallWalk:wallwalk,ConquerSiege:siege};
+    },ConquerWallWalk:wallwalk,ConquerSiege:siege,ConquerKeepEntrance:keepEntrance};
   const context={State,window,BUILD_MIN:0,BUILD_MAX:20,
     underConstruction:s=>!!s.incomplete,
     footprintPoints:s=>s.polygon,reliefEdgeBands:()=>[],
@@ -253,4 +253,18 @@ test('captured original sector split into two successors does not capture both',
   assert.equal(next.controlSummary.captured,1);
   assert.equal(next.controlSummary.safe,1);
   assert.equal(next.compartments.filter(c=>c.captured).length,1);
+});
+
+test('raised Mastio and emergency ladder use their real ground foot for sector ownership',async()=>{
+  const keep=piece('raised-keep','tower',9,3,11,5,{isMastio:true,x:10,y:4,size:2});
+  let foot={x:10,y:6};
+  const {api}=await boot([...walls(),keep],[],{hills:[]},null,null,null,{footPoint:()=>foot});
+  const inside=api.sectorAt(foot);
+  assert.ok(inside);
+  assert.equal(api.sectorForStructure(keep),inside);
+  assert.equal(api.getSnapshot().compartments.find(c=>c.id===inside).mastio,true);
+  foot={x:10,y:2};
+  api.invalidate('entrance replaced by emergency ladder outside the circuit');
+  assert.equal(api.sectorForStructure(keep),null);
+  assert.equal(api.getSnapshot().compartments.some(c=>c.mastio),false);
 });

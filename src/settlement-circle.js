@@ -88,6 +88,9 @@
   function mastioEntrance() {
     const keep=State.structures.find(s=>s.type==='tower'&&s.isMastio&&eligible(s));
     if(!keep)return null;
+    // Raised entrances and emergency ladders join the world at their ground foot.
+    const foot=window.ConquerKeepEntrance?.footPoint?.(keep);
+    if(foot&&Number.isFinite(foot.x)&&Number.isFinite(foot.y))return foot;
     const front=typeof towerDoorSpecs==='function'
       ?towerDoorSpecs(keep).find(s=>s.kind==='front'):null;
     if(front?.contact&&front?.outward)return{
@@ -365,6 +368,10 @@
     // A run of construction completions / wall fragments is one update.
     timer=setTimeout(()=>{timer=null;recompute()},120);
   }
+  function reset(){
+    snapshot=null;captureHolds={};recaptureHolds={};pendingBreachIds.clear();
+    invalidate('siege restored');
+  }
   function invalidateControl(){controlDirty=true}
   function sectorAt(p){return getSnapshot()?.sectorAt(p)||null}
   function controlState(id){return getSnapshot()?.compartments.find(c=>c.id===id)||null}
@@ -407,7 +414,7 @@
     return data?topology.findNextCircleRefuge(fromId,data,stateFor):null;
   }
   window.ConquerCircle=Object.freeze({
-    invalidate,invalidateControl,markBreach,recompute,updateControl,tickOccupation,getSnapshot,
+    invalidate,reset,invalidateControl,markBreach,recompute,updateControl,tickOccupation,getSnapshot,
     distributeStores:(stock,depots,blocked)=>logistics?.distributeCircleStores(stock,depots,blocked),
     captureStores:args=>logistics?.captureCircleStores(args),
     sectorAt,sectorForStructure,controlState,nextRefuge,

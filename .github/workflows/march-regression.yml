@@ -1,0 +1,26 @@
+name: March skeleton regression
+
+on:
+  pull_request:
+    paths:
+      - 'march/**'
+      - 'qa/march-regression.cjs'
+      - '.github/workflows/march-regression.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'march/**'
+      - 'qa/march-regression.cjs'
+      - '.github/workflows/march-regression.yml'
+
+jobs:
+  march-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test military campaign skeleton
+        run: node qa/march-regression.cjs

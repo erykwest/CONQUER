@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate four-layer mixer and DEV integration
         run: node qa/sound-regression.cjs
       - name: Validate nine seasonal music tracks and playback mixer

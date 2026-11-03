@@ -174,6 +174,16 @@ function drawCivicStructure(s,preview=false){
   else if(s.type==='church')drawChurch(s,preview);
   else if(s.type==='training')drawTrainingField(s,preview);
   else if(s.type==='plaza')drawPlaza(s,preview);
+  else if(s.type==='townhall'||s.type==='guild')drawWellCivic(s,preview);
+}
+// Town hall / guild hall fallback: gabled hall, plain civic tower.
+function drawWellCivic(s,preview=false){
+  const selected=State.selectedId===s.id,stroke=selected?'#f4b76f':'#a39a8c';
+  const parts=civicParts(s).map(p=>({...p,depth:viewDepthPoint(p.center)})).sort((a,b)=>a.depth-b.depth);
+  for(const part of parts){
+    if(part.role==='tower')extrudePolygon(part.points,3.0,{top:'#7a5446',sideA:'#7a746b',sideB:'#8b847a',stroke});
+    else drawCivicGabledPart(s,part,1.7,2.4,'#7a746b','#8b847a','#7a4433','#8a4c39','#968e82',stroke);
+  }
 }
 function woodGateLocal(s,x,y){
   const q=rotateVec(x,y,s.angle||0);
@@ -252,6 +262,11 @@ function drawWoodGate(s,preview=false){
   const postR=.075,bodyTop=1.48,roofTop=1.62;
   const sideY=halfY-.09,step=.205;
   const selected=State.selectedId===s.id;
+  // Blender model (settlement-wood3d.js); the drawing below is the fallback.
+  if(window.ConquerWood3D?.draw(s,preview)){
+    if(selected)pathPolygon(projectPath(footprintPoints(s),.025),null,'#f4b76f',2);
+    return;
+  }
 
   // Two palisade-like side piers leave the central corridor physically open.
   for(const sy of [-sideY,sideY]){
@@ -296,13 +311,15 @@ function drawStoneTowerBase(s,preview=false){
 
   const stroke=State.selectedId===s.id?'#f4b76f':'#9f9285';
   if(style==='buttress'){
-    const buttressTop=(2.35+(towerTier(s)-1)*.12)*.5;
-    for(const pts of stoneTowerButtressFootprints(s)){
-      extrudePolygonAt(pts,0,buttressTop,{
-        top:winterSnowColor('#948779'),
-        sideA:'#4b4540',sideB:'#625a52',stroke
-      });
-    }
+    // Painted after the tower body: buttresses on the far faces only show outside the
+    // tower silhouette (where they stick out past its edge), never across its walls.
+    const colors={top:winterSnowColor('#948779'),sideA:'#4b4540',sideB:'#625a52',stroke:State.selectedId===s.id?stroke:'rgba(159,146,133,.75)'};
+    const facing=b=>viewDepthPoint({x:b.anchor.x+b.outward.x,y:b.anchor.y+b.outward.y})>viewDepthPoint(b.anchor);
+    const all=stoneTowerButtresses(s).sort((a,b)=>viewDepthPoint(a.anchor)-viewDepthPoint(b.anchor));
+    const paint=b=>{for(const p of b)extrudeFrustumAt(p.bottom,p.top,p.z0,p.z1,colors)};
+    const fp=footprintPoints(s),h=structureHeight(s),body=convexHull([...projectPath(fp,0),...projectPath(fp,h)]);
+    withoutScreenHulls([body],()=>all.filter(b=>!facing(b)).forEach(paint));
+    all.filter(facing).forEach(paint);
     return;
   }
 
@@ -342,7 +359,9 @@ function drawPointStructure(s,preview=false){
 
     extrudePolygon(footprintPoints(s),h,{top:'#84796d',sideA:'#4e4740',sideB:'#5d554d',stroke});
     const p=w2s({x:s.x,y:s.y},h+.04),r=Math.max(2.5,.28*U*State.view.scale);ctx.fillStyle='#172023';ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r,0,0,Math.PI*2);ctx.fill();
-    if(State.village.founded&&State.village.name){ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12)}
+    // The centre well carries the village name; other wells their quarter name.
+    const label=State.village.founded?wellDisplayName(s):'';
+    if(label){ctx.fillStyle='#f2e6d3';ctx.font=(isVillageCenterWell(s)?'700 12px':'italic 600 11px')+' system-ui';ctx.textAlign='center';ctx.fillText(label,p.x,p.y-12)}
     return;
   }
   const tower=s.type==='tower',gate=s.type==='gate';

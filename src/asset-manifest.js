@@ -13,6 +13,7 @@ window.CONQUER_ASSET_FILES=[
  "src/assets/architecture/gothic_l1.png",
  "src/assets/architecture/gothic_l2.png",
  "src/assets/architecture/gothic_l3.png",
+ "src/assets/architecture/hall_lancet.png",
  "src/assets/architecture/tower_door.png",
  "src/assets/bushes/bush_01_tondo.svg",
  "src/assets/bushes/bush_02_globulare.svg",

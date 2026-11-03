@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js';
+import { T } from './i18n-it.js?v=keep-entrance-4-multi-wells-1';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -70,24 +70,31 @@ const CATALOG = [
       const rows = [{ label: O.shape, options: [
         opt(V.square, '[data-tower="square"][data-size="1.5"]', stone && t.shape === 'square'),
         opt(V.round, '[data-tower="round"][data-size="0.75"]', stone && t.shape === 'round'),
+        opt(V.half, '[data-tower="half"][data-size="1"]', stone && t.shape === 'half'),
+        opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
         opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
         opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower')] }];
       if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2'].map(n =>
         opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
         opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone && t.shape === 'half') rows.push({ label: O.size, options: [['1', V.small], ['1.5', V.medium]].map(([n, l]) =>
+        opt(l, `[data-tower="half"][data-size="${n}"]`, Number(t.size) === Number(n))) });
+      if (stone && t.shape === 'dee') rows.push({ label: O.size, options: [['1.5', V.medium], ['2', V.large]].map(([n, l]) =>
+        opt(l, `[data-tower="dee"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone) rows.push({ label: O.level, options: [1, 2, 3].map(n => opt(String(n), `[data-tower-level="${n}"]`, s.levels.tower === n)) });
       if (stone) rows.push(masonryRow(s));
       return rows;
     } },
   { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => s.tool.kind === 'linear' && s.tool.linear !== 'road',
     rows: s => {
-      const kind = s.tool.linear, rows = [{ label: O.type, options: [
+      const kind = s.tool.linear, wide = kind === 'built' && s.tool.span === 'wide', rows = [{ label: O.type, options: [
         opt(V.wall, '[data-linear="wall"]', kind === 'wall'),
         opt(V.palisade, '[data-linear="palisade"]', kind === 'palisade'),
-        opt(V.built, '[data-linear="built"]', kind === 'built')] }];
+        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide),
+        opt(V.builtWide, '[data-linear="builtWide"]', wide)] }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
-      if (kind !== 'palisade') rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, s.levels.wall === n)) });
+      if (kind !== 'palisade') rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
       if (kind !== 'palisade') rows.push(masonryRow(s));
       return rows;
     } },
@@ -95,7 +102,10 @@ const CATALOG = [
     rows: s => {
       const stone = s.tool.material !== 'wood', rows = [{ label: O.material, options: [
         opt(V.stone, '[data-gate]', stone), opt(V.wood, '[data-wood-gate]', !stone)] }];
-      if (stone) rows.push({ label: O.height, options: [1, 2, 3].map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
+      const small = stone && Number(s.tool.size) < 1.25;
+      if (stone) rows.push({ label: O.size, options: [['1.5', V.large], ['1', V.small]].map(([n, l]) =>
+        opt(l, `[data-gate][data-gate-size="${n}"]`, (Number(s.tool.size) || 1.5) === Number(n))) });
+      if (stone) rows.push({ label: O.height, options: (small ? [1, 2] : [1, 2, 3]).map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
       if (stone) rows.push(masonryRow(s));
       return rows;
     } },
@@ -125,7 +135,7 @@ const CATALOG = [
         opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone')] },
       { label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) }] },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
-    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza'].map(k =>
+    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild'].map(k =>
       opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
   { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
     rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },
@@ -302,12 +312,28 @@ function CrossingPanel({ id }) {
   });
   return html`<div class="u2-legacy" ref=${ref}></div>`;
 }
+// Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
+function WellPanel({ d, run }) {
+  const w = d.well;
+  return html`
+    <div class="u2-stats">
+      <${Stat} label=${I.wellRole} value=${w.center ? I.wellCenter : I.wellQuarter} tip=${TIP.wellCenter} />
+      <${Stat} label=${I.wellRoad} value=${w.founding ? I.wellBorderRoads : w.mainRoad ? I.wellLinked : I.wellUnlinked} tip=${TIP.wellRoad} />
+    </div>
+    ${w.founded && html`<${Row} label=${I.wellCenterRow} tip=${TIP.wellCenter}>
+      <${Seg} options=${[{ label: w.center ? I.wellCenterOn : I.wellCenterOff, active: w.center, disabled: !w.canCenter }]}
+        onPick=${() => run('toggleVillageCenter')} /></${Row}>`}
+    ${w.center ? html`<p class="u2-hint">${I.wellCenterHint(w.villageName)}</p>` : html`<${Row} label=${I.wellName} tip=${TIP.wellName}>
+      <input type="text" class="u2-name" key=${d.id + '|' + w.name} defaultValue=${w.name} maxlength="32" placeholder=${I.wellNamePlaceholder}
+        aria-label=${I.wellName} onChange=${e => run('setWellName', e.currentTarget.value)} /></${Row}>`}`;
+}
 function Inspector({ snap, cmd }) {
   const d = snap.selection?.detail;
   if (!d) return null;
   const run = (name, ...args) => cmd.structure(name, d.id, ...args);
-  const sub = d.building ? I.underConstruction(d.building.days) : d.houseLevel ? 'L' + d.houseLevel : I.completed;
-  const facts = d.facts.map(f => [I.facts[f.key], f.key === 'masonry' ? I.masonryValues[f.value] || f.value : f.value]);
+  const sub = d.building ? I.underConstruction(d.building.days) : d.houseLevel ? 'L' + d.houseLevel
+    : d.well ? (d.well.center ? d.well.villageName || I.wellCenter : d.well.name || I.wellUnnamed) : I.completed;
+  const facts = d.facts.map(f => [I.facts[f.key], f.key === 'masonry' ? I.masonryValues[f.value] || f.value : f.center ? I.wellCenter + ' · ' + f.value : f.value]);
   if (d.industry) facts.push([I.workers + ' L' + d.industry.tier, d.industry.workers + '/' + d.industry.max], [I.owner, d.industry.owner === 'lord' ? I.ownerLord : I.ownerPrivate]);
   const hp = d.integrity;
   return html`<${Card} title=${structureTitle(d)} sub=${sub} onClose=${cmd.deselect}
@@ -317,6 +343,7 @@ function Inspector({ snap, cmd }) {
     ${facts.length > 0 && html`<div class="u2-stats">${facts.map(([k, v]) => html`<${Stat} label=${k} value=${v} />`)}</div>`}
     ${d.annex && html`<${Row} label=${I.annex} tip=${I.annexHelp}>
       <${Seg} options=${[{ label: I.annexParent, disabled: !d.annex.parentId }]} onPick=${() => cmd.select(d.annex.parentId)} /></${Row}>`}
+    ${d.well && html`<${WellPanel} d=${d} run=${run} />`}
     ${d.house && html`<${Row} label=${I.house + ' L' + d.house.level} tip=${TIP.house}>
       <${Seg} options=${[{ label: '−', tip: I.houseDown, disabled: !d.house.canDown, v: -1 }, { label: '+', tip: I.houseUp, disabled: !d.house.canUp, v: 1 }]}
         onPick=${o => run('changeHouseLevel', o.v)} /></${Row}>`}
@@ -333,7 +360,31 @@ function Inspector({ snap, cmd }) {
         onPick=${o => run('setGateClosed', o.v)} /></${Row}>
       <${Row} label=${I.nightClose}><${Seg} options=${[{ label: d.gate.nightClose ? I.on : I.off, active: d.gate.nightClose }]}
         onPick=${() => run('setGateNightClose', !d.gate.nightClose)} /></${Row}>`}
-    ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits) + '.'}>
+    ${d.keepEntrance && (() => {
+      // Raised Mastio entrance: the stair goes wood → stone; the drawbridge fits either.
+      const k = d.keepEntrance, costTip = c => Object.entries(c).map(([r, v]) => T.resourcesLong[r] + ' ' + fmt(v)).join(' · ');
+      const order = { wood: 1, stone: 2 }, at = order[k.stair] || 0;
+      return html`<${Row} label=${I.keepEntrance} tip=${TIP.keepEntrance}>
+        <${Seg} options=${[
+          { label: I.keepGround, active: !k.stair, disabled: !k.stair, v: 'none', tip: I.keepRemove },
+          { label: I.keepWood, active: k.stair === 'wood', disabled: at >= 1 || !k.eligible || (!k.mastio && k.stair !== 'burnt'), v: 'wood',
+            tip: k.stair === 'burnt' ? I.keepBurnt : I.keepWood, tipBody: k.reason || costTip(k.costs.wood) },
+          { label: I.keepStone, active: k.stair === 'stone', disabled: at !== 1, v: 'stone', tip: I.keepStone, tipBody: costTip(k.costs.stone) }]}
+          onPick=${o => o.v !== k.stair && (o.v !== 'none' || confirm(I.keepRemove + ' · ' + I.keepEntrance + '?')) && run('setKeepStair', o.v)} /></${Row}>
+      ${k.intruders > 0 && html`<p class="u2-hint">${I.keepViolated(k.intruders)}</p>`}
+      ${at > 0 && html`<${Row} label=${I.keepDrawbridge + (k.drawbridge ? ' ' + k.drawbridge.hp + '/' + k.drawbridge.max : '')} tip=${TIP.keepDrawbridge}>
+        <${Seg} options=${k.drawbridge
+          ? [{ label: k.drawbridge.raised ? I.keepLower : I.keepRaise, v: 'toggle' }, { label: I.keepRemove, v: 'remove' }]
+          : [{ label: k.leafBurnt ? I.keepRebuild : I.keepInstall, v: 'install', tip: I.keepDrawbridge, tipBody: costTip(k.costs.drawbridge) }]}
+          onPick=${o => run('keepDrawbridge', o.v)} /></${Row}>`}
+      ${k.ladder && html`<${Row} label=${I.keepLadder} tip=${TIP.keepLadder}>
+        <${Seg} options=${[{ label: k.ladder.down ? I.keepLadderUp : I.keepLadderDown, v: k.ladder.down ? 'ladder-up' : 'ladder-down' }]}
+          onPick=${o => run('keepDrawbridge', o.v)} /></${Row}>`}
+      ${(k.drawbridge || k.ladder) && html`<${Row} label=${I.keepAuto} tip=${TIP.keepAuto}>
+        <${Seg} options=${[{ label: k.auto ? I.on : I.off, active: k.auto }]}
+          onPick=${() => run('keepDrawbridge', k.auto ? 'auto-off' : 'auto-on')} /></${Row}>`}`;
+    })()}
+    ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits, d.archers.bartizan) + '.'}>
       <${Seg} options=${[{ label: '−', disabled: d.archers.disabled || d.archers.count === 0, v: -1 }, { label: '+', disabled: d.archers.disabled || d.archers.count >= d.archers.max, v: 1 }]}
         onPick=${o => run('changeArchers', o.v)} /></${Row}>`}
     ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>
@@ -372,6 +423,9 @@ function Overview({ game }) {
   return html`<div class="u2-stats u2-stats-3">
       <${Stat} label=${M.population} value=${total} tip=${TIP.population + ' ' + pop.join(' · ')} />
       <${Stat} label=${M.welfare} value=${num(e.welfare, 0)} tip=${TIP.welfare}><${Bar} value=${e.welfare} max=${100} /></${Stat}>
+      <${Stat} label=${M.happiness} value=${['L1', 'L2', 'L3', 'L4'].map(g => num(e.happiness?.[g], 0)).join(' · ')} tip=${TIP.happiness} />
+      ${e.jobs && html`<${Stat} label=${M.jobs} value=${M.jobsValue(e.jobs)} tip=${TIP.jobs + (e.jobs.foodRisk ? ' ⚠' : '')} />`}
+      ${e.commerce && html`<${Stat} label=${M.workshops} value=${e.commerce.l3Shops + ' · ' + num(e.commerce.l3Goods, 0) + ' ' + M.l3Goods} tip=${TIP.workshops} />`}
       <${Stat} label="Oro castello" value=${num(e.castleGold, 0)} tip=${TIP.castleGold} />
       <${Stat} label="Capitale L4" value=${num(e.capital, 0)} tip=${TIP.capital} />
       <${Stat} label="Salari" value=${[e.wage.L1, e.wage.L2, e.wage.L3].map(w => num(w, 1)).join(' · ')} tip=${TIP.wages + ' ' + TIP.schedule} />
@@ -381,7 +435,9 @@ function Overview({ game }) {
 }
 function Policies({ game }) {
   const p = game.read.policies(), snap = game.snapshot();
-  return html`${['tax', 'rations', 'levy'].map(k => html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
+  return html`${['tax', 'rations', 'levy'].map(k => k === 'rations' ? html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
+      <${Seg} options=${['market', 'half', 'full'].map(m => ({ label: M.rationModes[m], active: (game.read.economy()?.rationMode || 'market') === m, m }))}
+        onPick=${o => { game.commands.setPolicy('rations', o.m); game.emit(); }} /></${Row}>` : html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
       <div class="u2-slider"><input type="range" min="0" max="100" value=${p[k]} aria-label=${M.policies[k]}
         onInput=${e => { game.commands.setPolicy(k, e.currentTarget.value); game.emit(); }} /><b>${p[k]}%</b></div></${Row}>`)}
     <${Row} label="Muratura case" tip=${M.privateMasonryHelp}>

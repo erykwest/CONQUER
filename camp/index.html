@@ -39,6 +39,8 @@
     <div class="grid3"><button data-tower="square" data-size="1">1U</button><button data-tower="square" data-size="1.5">1.5U</button><button data-tower="square" data-size="2">2U</button></div>
     <h3>Round towers</h3>
     <div class="grid3"><button data-tower="round" data-size="0.5">R .5</button><button data-tower="round" data-size="0.75">R .75</button><button data-tower="round" data-size="1">R 1</button></div>
+    <h3>Semitorri e torri a D</h3>
+    <div class="grid"><button data-tower="half" data-size="1">] piccola</button><button data-tower="half" data-size="1.5">] media</button><button data-tower="dee" data-size="1.5">D media</button><button data-tower="dee" data-size="2">D grande</button></div>
     <h3>Wooden towers</h3>
     <div class="grid"><button data-wood-tower="watchtower">Watchtower<br><span class="small">1×1 · H1</span></button><button data-wood-tower="palisadeTower">Wood tower<br><span class="small">1.5×1.5 · H1</span></button></div>
     <h3>Tower height</h3>
@@ -50,7 +52,7 @@
     <h3>Wall height</h3>
     <div class="grid"><button data-wall-level="1" class="active">1 level</button><button data-wall-level="2">2 levels</button></div>
     <h3>Gate</h3>
-    <div class="grid"><button data-gate>Stone gate<br><span class="small">1.5×1.5U</span></button><button data-wood-gate>Wood gate<br><span class="small">1.5×1U · H1</span></button></div>
+    <div class="grid3"><button data-gate data-gate-size="1.5">Stone gate<br><span class="small">1.5×1.5U</span></button><button data-gate data-gate-size="1">Small gate<br><span class="small">1×1U · L1–L2</span></button><button data-wood-gate>Wood gate<br><span class="small">1.5×1U · H1</span></button></div>
     <div class="grid3" style="margin-top:6px"><button data-gate-level="1" class="active">L1</button><button data-gate-level="2">L2</button><button data-gate-level="3">L3</button></div>
     <h3>Village core</h3><button class="full" data-well>◉ Well / found village</button>
     <h3>Roads</h3><button class="full" data-main-road>═ Main road</button>
@@ -108,7 +110,7 @@
     <div class="kv"><span>Time</span><b>paused on load</b></div>
     <h3>Policies</h3>
     <div class="policy"><span>Tax</span><input id="tax" type="range" min="0" max="100" value="25"></div>
-    <div class="policy"><span>Rations</span><input id="rations" type="range" min="0" max="100" value="50"></div>
+    <div class="policy"><label for="rations">Rations</label><select id="rations" aria-label="Lord's castle food order"><option value="market">Market only</option><option value="half">Half castle rations</option><option value="full">Full castle rations</option></select></div>
     <div class="policy"><span>Levy</span><input id="levy" type="range" min="0" max="100" value="10"></div>
     <details id="economyDetails" class="economy-details" open>
       <summary>Economy · Production and Market</summary>
@@ -229,55 +231,68 @@
   <div id="status">Select a build tool</div>
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
-<script src="./src/settlement-core.js"></script>
+<script src="./src/settlement-core.js?v=slopes-merge-1"></script>
+<script src="./src/settlement-tower-shapes.js?v=dee-slits-1"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js?v=bridge-magnet-1"></script>
-<script src="./src/settlement-castle.js?v=refactor-1"></script>
+<script src="./src/settlement-castle.js?v=stair-hl-1"></script>
 <script src="./src/settlement-landscape.js?v=refactor-1"></script>
-<script src="./src/settlement-castle-placement.js?v=bridge-magnet-1"></script>
-<script src="./src/settlement-castle-structures.js?v=clip-union-1"></script>
+<script src="./src/settlement-castle-placement.js?v=small-gate-1"></script>
+<script src="./src/settlement-castle-structures.js?v=parapet-3h-1"></script>
 <script src="./src/settlement-buildings.js?v=refactor-1"></script>
 <script src="./src/settlement-urban.js"></script>
 <script src="./src/settlement-fields.js"></script>
 <script src="./src/settlement-boundaries.js"></script>
 <script src="./src/settlement-industries.js?v=industry-1"></script>
-<script src="./src/settlement-placement.js?v=bridge-magnet-1"></script>
-<script src="./src/settlement-siege.js?v=portoni-4"></script>
+<script src="./src/settlement-placement.js?v=wall-slopes-1"></script>
+<script src="./src/settlement-siege.js?v=slopes-merge-1"></script>
 <script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5"></script>
-<script src="./src/settlement-gate-fittings.js?v=portoni-4"></script>
+<script src="./src/settlement-gate-fittings.js?v=timber-gate-2"></script>
 <script src="./src/settlement-population.js"></script>
 <script src="./src/settlement-population-fields.js?v=refactor-2"></script>
 <script src="./src/settlement-population-navigation.js?v=portoni-2"></script>
-<script src="./src/settlement-population-routines.js?v=refactor-2"></script>
-<script src="./src/settlement-population-residents.js?v=refactor-2"></script>
-<script src="./src/settlement-population-figures.js?v=refactor-2"></script>
-<script src="./src/settlement-population-garrisons.js?v=refactor-2"></script>
+<script src="./src/settlement-population-routines.js?v=economy-commerce-1"></script>
+<script src="./src/settlement-population-female.js?v=economy-routines-1"></script>
+<script src="./src/settlement-population-male.js?v=economy-routines-1"></script>
+<script src="./src/settlement-population-residents.js?v=economy-commerce-1"></script>
+<script src="./src/settlement-population-figures.js?v=economy-labour-1"></script>
+<script src="./src/settlement-population-garrisons.js?v=wall-stairs-1"></script>
   <script src="./src/settlement-snow-tracks.js?v=winter-footsteps-1"></script>
-<script src="./src/settlement-architecture.js?v=clip-union-1"></script>
+<script src="./src/settlement-architecture.js?v=timber-gate-1"></script>
 <script src="./src/settlement-weather.js?v=refactor-1"></script>
 <script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
-<script src="./src/settlement-render.js?v=portoni-2"></script>
-<script src="./src/settlement-castle3d.js?v=prototype-2"></script>
-<script src="./src/settlement-world3d.js?v=portoni-2"></script>
+<script src="./src/settlement-render.js?v=economy-convoys-1"></script>
+<script src="./src/settlement-castle3d.js?v=slopes-merge-1"></script>
+<script src="./src/settlement-world3d.js?v=timber-gate-4"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
-<script src="./src/settlement-economy.js?v=economy-1"></script>
-<script src="./src/settlement-app.js"></script>
-<script src="./src/settlement-app-rooms.js?v=portoni-4"></script>
-<script src="./src/settlement-app-input.js?v=bridge-magnet-1"></script>
-<script src="./src/settlement-app-persistence.js?v=save-safety-2"></script>
-<script src="./src/settlement-app-calendar-ui.js?v=refactor-2"></script>
-<script src="./src/settlement-app-simulation.js?v=refactor-2"></script>
+<script src="./src/settlement-economy.js?v=economy-commerce-1"></script>
+<script src="./src/settlement-urban-economy.js?v=economy-commerce-1"></script>
+<script src="./src/settlement-market-economy.js?v=economy-commerce-1"></script>
+<script src="./src/settlement-commerce.js?v=economy-commerce-1"></script>
+<script src="./src/settlement-convoys.js?v=economy-convoys-1"></script>
+<script src="./src/settlement-wagons.js?v=economy-convoys-1"></script>
+<script src="./src/settlement-vehicles.js?v=economy-vehicles-1"></script>
+<script src="./src/settlement-road-sign-tests.js?v=economy-vehicles-1"></script>
+<script src="./src/settlement-app.js?v=wall-slopes-1"></script>
+<script src="./src/settlement-app-rooms.js?v=timber-gate-1"></script>
+<script src="./src/settlement-app-input.js?v=small-gate-1"></script>
+<script src="./src/settlement-app-persistence.js?v=small-gate-1"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1"></script>
+<script src="./src/settlement-app-simulation.js?v=economy-convoys-1"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
 <script src="./src/settlement-minimap.js?v=minimap-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
 <script src="./src/settlement-animals.js?v=animation-wolf-1"></script>
 <script src="./src/settlement-combat-rules.js?v=combat-3"></script>
 <script src="./src/settlement-combat.js?v=zones-hd-off-1"></script>
-<script src="./src/settlement-camp.js?v=camp-1"></script>
+<script src="./src/settlement-mesh3d.js?v=army-camp-1"></script>
+<script src="./src/assets/event-models.js?v=army-camp-1"></script>
+<script src="./src/settlement-events3d.js?v=army-camp-1"></script>
+<script src="./src/settlement-camp.js?v=bivouac-1"></script>
 <script src="./src/settlement-wolves.js?v=camp-wolves-1"></script>
 <script src="./src/heraldry-symbols.js"></script>
 <script src="./src/settlement-heraldry.js"></script>
-<script src="./src/settlement-builder-ux.js?v=antiregression-2"></script>
+<script src="./src/settlement-builder-ux.js?v=small-gate-1"></script>
 </body>
 </html>

@@ -77,7 +77,7 @@
     combat.enemy=Array.isArray(combat.enemy)?combat.enemy.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y))
       .map(({legs,climbing,nextThink,engaged,gateway,...e})=>e):[];
     // Ladders and assault towers set against the walls (dev assault).
-    combat.storms=Array.isArray(combat.storms)?combat.storms.filter(s=>s&&s.foot&&s.origin&&(['ladder','tower'].includes(s.kind)&&s.wallId||s.kind==='ram'&&s.gateId)):[];
+    combat.storms=Array.isArray(combat.storms)?combat.storms.filter(s=>s&&s.foot&&s.origin&&(['ladder','tower'].includes(s.kind)&&s.wallId||s.kind==='ram'&&s.gateId||s.kind==='keep'&&s.towerId)):[];
     for(const e of combat.enemy){e.faction??='dev_hostile';e.combatKind??=e.kind==='archer'?'archer':e.kind==='knight'?'knight':'infantry';}
     memory.fill(1);
     try{const saved=atob(combat.seen||'');for(let i=0;i<Math.min(saved.length,memory.length);i++)memory[i]=saved.charCodeAt(i)?1:0}catch(e){}
@@ -135,6 +135,13 @@
       {x:well.x,y:well.y,r:14,mode:'yellow',id:'well-alert'},
       {x:well.x,y:well.y,r:7,mode:'green',id:'well-safe'}
     ];
+    // Every later well is an expansion centre with the same three rings.
+    for(const w of State.structures){
+      if(w.type!=='well'||w===well||underConstruction(w))continue;
+      out.push({x:w.x,y:w.y,r:20,mode:'allow',id:'well-access:'+w.id},
+        {x:w.x,y:w.y,r:14,mode:'yellow',id:'well-alert:'+w.id},
+        {x:w.x,y:w.y,r:7,mode:'green',id:'well-safe:'+w.id});
+    }
     for(const tower of State.structures){
       if(tower.type==='tower'&&!underConstruction(tower))
         out.push({x:tower.x,y:tower.y,r:8+2*structureLevel(tower),mode:'yellow',id:tower.id});
@@ -243,6 +250,9 @@
   // path directly through solid walls or magically appear inside a tower.
   function castleAccessCandidates(building,origin,resident){
     const out=[];
+    // A keep with a raised entrance is entered only up its stair, and not while the leaf is up.
+    const keep=building.type==='tower'?window.ConquerKeepEntrance?.access?.(building):undefined;
+    if(keep!==undefined)return keep?[keep]:[];
     if(building.type==='tower'&&typeof towerDoorSpecs==='function'){
       for(const spec of towerDoorSpecs(building)){
         if(spec.baseZ>.20)continue; // Wall-walk openings are not ground-floor access.
@@ -310,7 +320,13 @@
   }
   function motionPosition(motion,now){
     if(!motion.path||motion.path.length<2)return motion.start;
-    const progress=clamp((now-motion.startedAt)/Math.max(1,motion.duration),0,1);
+    // Up the Mastio's outer stair after the walk (settlement-keep-entrance.js): z rises.
+    if(motion.climbMs&&now>motion.startedAt+motion.walkMs){
+      const keep=State.structures.find(s=>s.id===motion.structureId);
+      const p=keep&&window.ConquerKeepEntrance?.climbPoint?.(keep,(now-motion.startedAt-motion.walkMs)/motion.climbMs);
+      if(p)return p;
+    }
+    const progress=clamp((now-motion.startedAt)/Math.max(1,motion.walkMs??motion.duration),0,1);
     return pointAlongPath(motion.path,progress)||motion.start;
   }
   function runningCivilianMotions(){
@@ -396,10 +412,14 @@
         return desired;
       }
       const length=pathLength(result.path);
+      const walkMs=result.path.length<2?0:Math.max(450,length*550*(window.ConquerCrossings?.routeMultiplier(result.path)||1));
+      // Recalled into a Mastio with a raised entrance: the walk ends at the stair foot, then up.
+      const keep=mode==='hall'&&result.structureId&&State.structures.find(s=>s.id===result.structureId);
+      const climbMs=keep&&walkMs&&window.ConquerKeepEntrance?.access?.(keep)?window.ConquerKeepEntrance.climbDuration(keep):0;
       motion={
         mode,homeId:house.id,start:origin,target:result.target,path:result.path,
-        structureId:result.structureId||null,startedAt:now,
-        duration:result.path.length<2?0:Math.max(450,length*550*(window.ConquerCrossings?.routeMultiplier(result.path)||1))
+        structureId:result.structureId||null,startedAt:now,walkMs,climbMs,
+        duration:walkMs+climbMs
       };
       residentMotion.set(id,motion);
     }
@@ -883,6 +903,12 @@
           if(s.done)continue;
           const a=w2s(s.foot,0),b=w2s(s.origin,.35);g.strokeStyle='#6b4a2c';g.lineWidth=12;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();continue;
         }
+        if(s.kind==='keep'){
+          if(s.done)continue;
+          const keep=State.structures.find(x=>x.id===s.towerId),lg=keep&&window.ConquerKeepEntrance?.ladderGeom(keep);if(!lg)continue;
+          const a=w2sRaw(lg.base,lg.zBase),b=w2sRaw(lg.top,lg.zTop+.12);
+          g.strokeStyle='#7a5530';g.lineWidth=3;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();continue;
+        }
         const ww=WW(),top=ww?.at({wallId:s.wallId,t:s.t});if(!top)continue;
         const a=w2s(s.foot,0),b=w2s(top,top.z+.15);
         g.strokeStyle='#7a5530';g.lineWidth=s.kind==='ladder'?3:9;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();
@@ -1305,12 +1331,12 @@
     nextArcherRosterAt=now+1000;
     archerRosterSize=State.structures.length;
     const active=new Set(),out=[];
-    function put(id,p,visualZ,h,face=null){
+    function put(id,p,visualZ,h,face=null,foot=null){
       active.add(id);
       let shooter=archerCache.get(id);
       if(!shooter){shooter={id,clock:0};archerCache.set(id,shooter)}
       shooter.x=p.x;shooter.y=p.y;shooter.h=h;shooter.visualZ=visualZ;
-      shooter.nx=face?.nx??null;shooter.ny=face?.ny??null;
+      shooter.nx=face?.nx??null;shooter.ny=face?.ny??null;shooter.foot=foot;
       shooter.terrainAt=terrainElevation;out.push(shooter);
     }
     for(const s of State.structures){
@@ -1320,7 +1346,7 @@
         // Combat shooters are exactly the staffed slots shown by the Builder.
         // No unassigned tower fires and slits have outward firing arcs.
         for(const slot of window.ConquerSiege?.occupiedArcherSlots(s)||[]){
-          put(slot.id,slot.p,slot.visualZ,slot.h,slot.kind==='slit'?slot:null);
+          put(slot.id,slot.p,slot.visualZ,slot.h,['slit','bartizan'].includes(slot.kind)?slot:null,slot.foot||null);
         }
       }else if(s.type==='gate'){
         if(gateRoofStyle(s)==='battlement')put(s.id+':gate-roof',{x:s.x,y:s.y},ground+structureHeight(s)+.08,ground+structureLevel(s));
@@ -1364,7 +1390,7 @@
     if(loc){u.wall={wallId:loc.wallId,t:loc.t};u.z=loc.z;return u.wall}
     u.wall=null;u.z=0;return null;
   }
-  const levelOf=u=>u.climbing?'climb':unitWall(u)?'wall:'+WW().component(u.wall):'ground';
+  const levelOf=u=>u.climbing?'climb':u.onKeep?'keep:'+u.onKeep:unitWall(u)?'wall:'+WW().component(u.wall):'ground';
   function groundLeg(from,to,u){
     let path=infantryRoute(from,to,u.id,u.kind||'knight');
     // The last stretch may lie inside a wall's clearance (a ladder foot, a gate mouth):
@@ -1426,7 +1452,18 @@
         const k=Math.min(1,leg.elapsed/leg.duration);
         u.x=leg.from.x+(leg.to.x-leg.from.x)*k;u.y=leg.from.y+(leg.to.y-leg.from.y)*k;u.z=leg.from.z+(leg.to.z-leg.from.z)*k;
         u.climbing=k<1;u.wall=null;moved=true;
-        if(k>=1){u.legs.shift();u.climbing=false;if(leg.toWall)u.wall={...leg.toWall};else u.z=0}
+        // An assault ladder against the Mastio's door: he stays up at the sill (onKeep).
+        if(k>=1){u.legs.shift();u.climbing=false;if(leg.toWall)u.wall={...leg.toWall};else if(leg.keepId)u.onKeep=leg.keepId;else u.z=0}
+        continue;
+      }
+      if(leg.kind==='keepClimb'){
+        // Up the Mastio's outer stair (or the occupants' ladder) to the door: z from the path.
+        const keep=State.structures.find(s=>s.id===leg.keepId),K=window.ConquerKeepEntrance;
+        const use=Math.min(leg.duration-leg.elapsed,budget/speed);leg.elapsed+=use;budget-=use*speed;
+        const k=Math.min(1,leg.elapsed/leg.duration),p=keep&&K?.climbPoint(keep,k);
+        if(p){u.x=p.x;u.y=p.y;u.z=p.z-terrainElevation(p)}
+        u.climbing=k<1;u.wall=null;moved=true;
+        if(k>=1){u.legs.shift();u.climbing=false;u.onKeep=leg.keepId}
         continue;
       }
       if(!leg.i)leg.i=1;
@@ -1484,6 +1521,59 @@
     for(const e of combat.enemy)if(livingUnit(e)&&!e.wall){e.assault=storm.id;e.legs=null;e.nextThink=0;n++}
     changed();status((kind==='ladder'?'Ladder':'Assault tower')+' set against the wall · '+n+' attacker(s)');
     return storm;
+  }
+  // ---------- the Mastio: an assault ladder against its raised door ----------
+  // Set by clicking the Mastio with the ladder tool (settlement-keep-entrance.js). If the way
+  // in is open (stair, leaf down, or the occupants' ladder) the attackers just climb it; else
+  // they go up their own ladder to the sill, cut through a raised leaf with their axes and go
+  // in. Once inside they leave the field (combat.inKeep) and the keep counts as violated.
+  const KEEP_BLOW_S=1.5,KEEP_AXE=4;
+  function addKeepStorm(tower){
+    const K=window.ConquerKeepEntrance,g=K?.ladderGeom(tower);
+    if(!g||!K.entrance(tower)){status('Assault refused: the Mastio has no raised entrance');return null}
+    const a=Math.atan2(g.frame.outward.y,g.frame.outward.x);
+    const storm={id:'storm-'+uid(),kind:'keep',towerId:tower.id,origin:g.base,heading:a+Math.PI,clock:0,
+      foot:{x:g.base.x+g.frame.outward.x*.45,y:g.base.y+g.frame.outward.y*.45}};
+    (combat.storms||(combat.storms=[])).push(storm);
+    let n=0;
+    for(const e of combat.enemy)if(livingUnit(e)&&!e.wall){e.assault=storm.id;e.legs=null;e.nextThink=0;e.cameDown=false;n++}
+    changed();status('Ladder set against the Mastio door · '+n+' attacker(s)');
+    return storm;
+  }
+  function keepThink(e,storm){
+    const K=window.ConquerKeepEntrance,keep=State.structures.find(s=>s.id===storm.towerId);
+    if(!keep||!K?.entrance(keep)){storm.done=true;e.assault=null;return}
+    if(e.onKeep||e.legs?.length)return;       // at the door: keepStep cuts the leaf or lets him in
+    const open=K.access(keep);
+    if(open){
+      e.legs=[groundLeg(e,open,e),{kind:'keepClimb',keepId:keep.id,elapsed:0,duration:Math.max(.6,K.climbDuration(keep)/1000)}];
+      return;
+    }
+    const g=K.ladderGeom(keep),i=combat.enemy.filter(x=>x.assault===storm.id).indexOf(e);
+    e.legs=[groundLeg(e,storm.foot,e),{kind:'climb',from:{x:g.base.x,y:g.base.y,z:0},
+      to:{x:g.top.x,y:g.top.y,z:g.zTop-terrainElevation(g.top)},duration:CLIMB_S*1.2,elapsed:0,toWall:null,keepId:keep.id,stagger:Math.max(0,i)*.9}];
+  }
+  function keepStep(dt){
+    const K=window.ConquerKeepEntrance;if(!K)return;
+    for(const storm of combat.storms||[]){
+      if(storm.kind!=='keep'||storm.done)continue;
+      const keep=State.structures.find(s=>s.id===storm.towerId);if(!keep){storm.done=true;continue}
+      const up=combat.enemy.filter(e=>e.onKeep===keep.id&&livingUnit(e)&&!e.routing);
+      if(!up.length)continue;
+      if(K.leafBarrier(keep)){
+        storm.clock+=dt;if(storm.clock<KEEP_BLOW_S)continue;storm.clock=0;
+        K.hitLeaf(keep,KEEP_AXE*up.length);storm.blows=(storm.blows||0)+1;
+        continue;
+      }
+      for(const e of up)enterKeep(e,keep);
+    }
+  }
+  function enterKeep(e,keep){
+    combat.enemy=combat.enemy.filter(x=>x!==e);
+    (combat.inKeep||(combat.inKeep=[])).push({id:e.id,keepId:keep.id,faction:e.faction});
+    const ent=keep.keepEntrance;if(ent)ent.intruders=(ent.intruders||0)+1;
+    if(ent?.intruders===1)status('Gli assalitori sono entrati nel mastio!');
+    changed();if(typeof renderFunctionPanel==='function')renderFunctionPanel();
   }
   // ---------- the ram: battering a gate in ----------
   // A ram storm stands before a gate's door with its head just short of it. The first
@@ -1549,6 +1639,8 @@
   function assaultThink(e,now){
     if(e.engaged||e.climbing||now<(e.nextThink||0))return;
     e.nextThink=now+THINK_S*1000;
+    const keepStorm=(combat.storms||[]).find(s=>s.id===e.assault&&s.kind==='keep');
+    if(keepStorm&&!keepStorm.done){keepThink(e,keepStorm);return}
     const ww=WW();if(!ww)return;
     const ram=(combat.storms||[]).find(s=>s.id===e.assault&&s.kind==='ram');
     if(ram&&!ram.done&&!e.cameDown){ramThink(e,ram);return}
@@ -1648,17 +1740,37 @@
       rules.dropStone(u,target,{x:u.x+f.ex*(f.half+.12),y:u.y+f.ey*(f.half+.12),z},u.kind==='squad'?2:1);
     }
   }
+  // Bartizan shooters: besides their bow, they strike straight down at attackers at the tower
+  // foot, 0-1 U out from the turret's face (the blind spot under the crown), every 2.5 s.
+  function bartizanDrops(step,hostiles){
+    const rules=window.ConquerCombatRules;if(!rules?.dropStone)return;
+    for(const shooter of archers()){
+      const f=shooter.foot;if(!f)continue;
+      shooter.footClock=(shooter.footClock||0)+step;if(shooter.footClock<2.5)continue;
+      let target=null,bd=Infinity;
+      for(const e of hostiles){
+        if(!livingUnit(e)||unitWall(e))continue;
+        const out=Math.hypot(e.x-f.x,e.y-f.y)-f.r;
+        if(out<-.05||out>f.reach||out>=bd)continue;
+        bd=out;target=e;
+      }
+      if(!target)continue;
+      shooter.footClock=0;
+      rules.dropStone(shooter,target,{x:f.x,y:f.y,z:shooter.visualZ-.3},1);
+    }
+  }
   // Ladders and assault towers against the walls, for the 3D renderer.
   function dynamicMeshes(){
     const SE=window.ConquerSiegeEngines3D;if(!SE||!combat?.storms?.length)return[];
-    return combat.storms.filter(s=>s.kind==='ram'?!s.done:WW()?.edgeOf(s.wallId)).map(s=>{
+    return combat.storms.filter(s=>s.kind==='ram'||s.kind==='keep'?!s.done:WW()?.edgeOf(s.wallId)).map(s=>{
+      if(s.kind==='keep'){const keep=State.structures.find(x=>x.id===s.towerId);return keep&&window.ConquerKeepEntrance?.assaultLadderMesh(keep)}
       const g=terrainElevation(s.origin);
       if(s.kind==='ram')return SE.triangles('ram',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},
         (s.manned||0)>=2?{mode:'fire',t:s.clock}:{mode:'idle'});
       return s.kind==='ladder'
         ?SE.triangles('ladder',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{up:1})
         :SE.triangles(s.level>1?'tower2':'tower',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{bridge:1});
-    });
+    }).filter(Boolean);
   }
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
@@ -1711,6 +1823,7 @@
       if(e.legs?.length&&stepLegs(e,dt,e.kind==='knight'||e.combatKind==='knight'?1.5:.8))moved=true;
     }
     ramStep(dt);
+    keepStep(dt);
     if(moved){visibilityDirty=true;maskDirty=true}
     window.ConquerCamp?.synchronize();
     // Combat AI, target acquisition and LOS are capped at 10 Hz.
@@ -1749,6 +1862,7 @@
           return safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1;
         },mobileArchers(hostiles),sees);
       stoneDrops(step);
+      if(hostiles.length)bartizanDrops(step,hostiles);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
       if(ruleMs>25)window.__conquerAnalytics?.event('COMBAT_RULES_SLOW',{ms:+ruleMs.toFixed(1),archers:hostiles.length?archerRoster.length:0,hostiles:hostiles.length},'warn',3000);
@@ -1802,6 +1916,12 @@
     }
     if(kind==='combat-storm'){
       e.preventDefault();e.stopImmediatePropagation();
+      // A ladder on the Mastio goes against its raised door.
+      const keep=State.tool.stormKind==='ladder'?structureAtScreen(pointerScreen(e))||structureAt(p):null;
+      if(keep?.type==='tower'&&window.ConquerKeepEntrance?.entrance(keep)){
+        if(addKeepStorm(keep))setTool({kind:'select',label:'Select'});
+        syncButtons();draw();return;
+      }
       const hit=WW()?.pickScreen(pointerScreen(e))||WW()?.locate(p,1.2);
       if(!hit){status('Click the top of a wall (T2+, finished)');return}
       if(addStorm(State.tool.stormKind,{wallId:hit.wallId,t:hit.t}))setTool({kind:'select',label:'Select'});
@@ -1981,7 +2101,7 @@
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
-    dynamicMeshes,addStorm,addRamStorm,issueWallOrder,planLegs,
+    dynamicMeshes,addStorm,addRamStorm,addKeepStorm,issueWallOrder,planLegs,inKeep:()=>combat?.inKeep||[],
     units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
     recruitKnight,knightRecruitment:()=>{
       const cap=window.ConquerSiege?.capacity?.()||{},current=(combat?.units||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;

@@ -33,7 +33,7 @@ function structureSceneLayers(s){
   if(s.type==='house')return['ground','shadow','base'];
   if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
-  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
+  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
   // Palisades and timber fortifications are rendered in the non-union base layer.
   if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return[...shadow,'base','castleFront'];
@@ -113,7 +113,8 @@ const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 // Asset Lab sandbox: one fixed world, so audit captures repeat across runs and machines.
 const initialSeed=(()=>{if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2},buildMasonryMaterial:'stone',resources:{gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const PROVISIONAL_RESOURCES=Object.freeze({gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000});
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2,builtWide:2},buildMasonryMaterial:'stone',resources:{...PROVISIONAL_RESOURCES},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 // DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
 const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
 State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
@@ -214,7 +215,7 @@ function structureAngleFromStep(step){
 }
 function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
 function structureUsesDiscreteAngle(s){
-  return !!s&&['tower','gate','house','market','tavern','church','training','plaza'].includes(s.type);
+  return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
   if(!s)return 0;
@@ -227,7 +228,7 @@ function normalizeStructureRotation(s){
   if(structureUsesDiscreteAngle(s))applyStructureRotation(s,Number.isFinite(Number(s.angle))?Number(s.angle):0);
   return s;
 }
-const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4},road:{width:.62,min:1,max:160}};
+const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4},builtWide:{width:2,min:2,max:6},road:{width:.62,min:1,max:160}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
 const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
 const ROUND_TOWER_TIERS=Object.freeze({1:.5,2:.75,3:1});
@@ -244,9 +245,14 @@ const COSTS={
   tavern:{gold:190,stone:65,wood:145},
   church:{gold:320,stone:360,wood:110,metal:18},
   plaza:{gold:90,stone:80,wood:10},
+  townhall:{gold:240,stone:210,wood:85,metal:10},
+  guild:{gold:180,stone:110,wood:120},
   training:{gold:90,stone:24,wood:70}
 };
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+// Stone towers of the same tier, against the square one: curved masonry costs more, the open-
+// backed semitower half.
+const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
+const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -285,10 +291,13 @@ const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
     roofStyle:Object.freeze(['battlement','machicolation','pitched']),
     baseStyle:Object.freeze(['standard','buttress','splayed']),
-    topWeapon:Object.freeze(['none','mangonel','ballista'])
+    topWeapon:Object.freeze(['none','mangonel','ballista']),
+    bartizan:Object.freeze(['none','battlement','pitched']),
+    roofShape:Object.freeze(['pyramid','gable','hip'])
   }),
   gate:Object.freeze({
-    roofStyle:Object.freeze(['battlement','pitched','flat'])
+    roofStyle:Object.freeze(['battlement','pitched','flat']),
+    upper:Object.freeze(['stone','timber'])
   }),
   wall:Object.freeze({
     skin:Object.freeze(['standard','machicolation','hoarding'])
@@ -298,8 +307,8 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none'}),
-  gate:Object.freeze({roofStyle:'battlement'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid'}),
+  gate:Object.freeze({roofStyle:'battlement',upper:'stone'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
 });
@@ -344,7 +353,9 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
 const RES_ORDER=['gold','stone','clay','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
-function variantSchema(s){return s&&STRUCTURE_VARIANTS[s.type]||null}
+// The semitower has an open gorge: crenellated top only, no roof, machicolations or base skirts.
+const HALF_TOWER_VARIANTS=Object.freeze({roofStyle:Object.freeze(['battlement']),baseStyle:Object.freeze(['standard']),topWeapon:STRUCTURE_VARIANTS.tower.topWeapon});
+function variantSchema(s){return s&&(s.type==='tower'&&s.shape==='half'?HALF_TOWER_VARIANTS:STRUCTURE_VARIANTS[s.type])||null}
 function variantDefaults(s){return s&&STRUCTURE_VARIANT_DEFAULTS[s.type]||null}
 function structureVariant(s,key){
   const schema=variantSchema(s),defs=variantDefaults(s);
@@ -376,6 +387,10 @@ function towerRoofStyle(s){
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
 function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))}
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
+// Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
+// with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';
@@ -391,10 +406,20 @@ function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
 function gateRoofStyle(s){
   if(isWoodGate(s))return'flat';
   if(s?.type==='gate'&&s.brokenTop)return'broken';
+  if(gateTimberUpper(s))return'pitched';         // a timber storey always carries a roof
   return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined
 }
-function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
+// A stepped wall on a slope keeps the plain crest: hoardings and machicolations need a level run.
+function wallSkin(s){
+  if(s?.type!=='wall')return undefined;
+  return typeof wallSlopeSections==='function'&&wallSlopeSections(s)?'standard':structureVariant(s,'skin');
+}
 function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
+// Wide built section (hall): same 'built' type, double width, one free-height
+// ground floor even at L2 — common halls, chapels, throne halls.
+function isWideBuilt(s){return s?.type==='built'&&s.span==='wide'}
+function builtWidth(s){return isWideBuilt(s)?TYPES.builtWide.width:TYPES.built.width}
+function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.
 function hasMachicolation(s){
   if(!s)return false;
@@ -403,7 +428,31 @@ function hasMachicolation(s){
   return false;
 }
 
-function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
+// Oriented stone towers (geometry in settlement-tower-shapes.js): the open-backed semitower
+// 'half' and the D tower 'dee'. Keyed by tier; s.size = 1 / 1.5 / 2 as for square towers,
+// depth runs along s.angle (towards the field), width along the wall.
+const ORIENTED_TOWER_SPECS=Object.freeze({
+  half:Object.freeze({tiers:[1,2],1:{depth:.75,width:1},2:{depth:1,width:1.5}}),
+  // The large D is as wide as a medium round tower: it grows in depth, so beside a gate its
+  // straight part matches the gate depth and the half round sticks out in front.
+  dee:Object.freeze({tiers:[2,3],2:{depth:1.5,width:1.25},3:{depth:2.25,width:1.5}})
+});
+function isOrientedTowerShape(shape){return Object.prototype.hasOwnProperty.call(ORIENTED_TOWER_SPECS,shape||'')}
+function isOrientedTower(s){return !!s&&(s.type==='tower'||s.type==='ruin')&&isOrientedTowerShape(s.shape)}
+function orientedTowerTierRange(shape){return ORIENTED_TOWER_SPECS[shape]?.tiers||[1,3]}
+function orientedTowerTier(s){
+  const [lo,hi]=orientedTowerTierRange(s.shape),span=Number(s.size)||1;
+  return clamp(span>=1.99?3:span>=1.49?2:1,lo,hi);
+}
+function orientedTowerDims(s){const d=ORIENTED_TOWER_SPECS[s.shape][orientedTowerTier(s)];return{w:d.depth,h:d.width}}
+// Facade decals (windows, slits, doors) sit on the bounding box: its sides are the straight
+// flanks of the D, its front touches the tip of the half round.
+const ORIENTED_FACADE_REAR=3;   // rect edge fp[3] -> fp[0], the local -x face
+function towerFacadePoints(s){
+  if(!isOrientedTower(s))return footprintPoints(s);
+  const {w,h}=orientedTowerDims(s);return rectWorldPoints(s.x,s.y,w,h,s.angle||0);
+}
+function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
 function wallTier(s){
   const explicit=Math.round(Number(s?.tier));
   if(explicit>=1&&explicit<=3)return explicit;
@@ -420,14 +469,27 @@ function applyStructureTier(s,tier){
     if(s.type==='wall'&&tier===1&&wallSkin(s)==='machicolation')s.skin='standard';
   }
   else if(s.type==='tower'){
+    if(isOrientedTower(s)){const [lo,hi]=orientedTowerTierRange(s.shape);s.tier=tier=clamp(tier,lo,hi)}
     if(s.shape==='round')s.r=towerSizeForTier('round',tier);
     else s.size=towerSizeForTier('square',tier);
   }
   normalizeFunctions(s);return s
 }
+// Stone gates come in two sizes: the gatehouse (1.5×1.5U, L1-L3) and the small gate (1×1U, L1-L2).
+const GATE_SIZES=Object.freeze({large:1.5,small:1});
+const SMALL_GATE_MAX_LEVEL=2,SMALL_GATE_COST=.6;
+function isSmallGate(s){return s?.type==='gate'&&!isWoodGate(s)&&(Number(s.size)||GATE_SIZES.large)<1.25}
+// Small L2 gate with a timber-framed upper storey (plaster and beams like the houses), jettied
+// over the front and the rear: much cheaper than the stone storey.
+const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
+// The frame starts right over the passage vault: one low storey (1.2), its roof .84 high with the
+// slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
+const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
+function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
+function maxStructureLevel(s){return isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
   if(isWoodGate(s))return 1;
-  return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)
+  return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
 // Independent local X/Y scale in [0.8, 1.2], seeded by the stable house ID.
@@ -585,8 +647,8 @@ function houseRidgeHeight(s){
   return housePartRidge(s,houseFootprintParts(s)[0]);
 }
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
-const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza']);
-const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza']);
+const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild']);
+const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild']);
 const PLAZA_VARIANTS=Object.freeze(['paved','fountain','garden']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
 function civicLevel(s){return Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1)))}
@@ -611,6 +673,12 @@ function civicLocalParts(s){
   ];
   if(s.type==='training')return[{cx:0,cy:0,w:5,h:4,role:'training',roofTurn:0}];
   if(s.type==='plaza')return[{cx:0,cy:0,w:5,h:5,role:'square',roofTurn:0}];
+  // Well civics (settlement-civic-annexes.js): the civic tower rises from the middle of the town hall's front.
+  if(s.type==='townhall')return[
+    {cx:0,cy:.35,w:4,h:2.5,role:'hall',roofTurn:0},
+    {cx:0,cy:-1.15,w:1.3,h:1.3,role:'tower',roofTurn:0}
+  ];
+  if(s.type==='guild')return[{cx:0,cy:0,w:3,h:2.5,role:'hall',roofTurn:Math.PI/2}];
   return[];
 }
 function civicParts(s){
@@ -636,9 +704,14 @@ function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
-    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
+    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
-  if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
+  if(s.type==='gate'){
+    if(isWoodGate(s))return{...COSTS.woodGate};
+    // Timber upper storey: the stone L1 small gate plus a little timber.
+    if(gateTimberUpper(s)){const c=scaleCost(COSTS.gate,SMALL_GATE_COST);for(const [k,v] of Object.entries(GATE_TIMBER_COST))c[k]=(c[k]||0)+v;return c}
+    return scaleCost(COSTS.gate,levelCostFactor(s)*(isSmallGate(s)?SMALL_GATE_COST:1));
+  }
   if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});
   if(s.type==='bridge'){
     const factor=(s.width||1.5)/(s.variant==='stone'?1.5:1.2);
@@ -653,7 +726,7 @@ function baseConstructionCost(s){
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
-  if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
+  if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),levelCostFactor(s));
   return{};
 }
 function constructionCost(s){
@@ -662,9 +735,27 @@ function constructionCost(s){
   return cost;
 }
 function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
-function canAfford(cost){return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v)}
-function spendCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)-v;renderUI()}
-function refundCost(cost){for(const [k,v] of Object.entries(cost||{}))State.resources[k]=(State.resources[k]||0)+v;renderUI()}
+// Before founding, the sandbox only permits placement of the founding well.
+// Once founded, the economic treasury and castle store own all construction assets.
+function canAfford(cost){
+  if(State.village?.founded&&window.ConquerEconomy?.canBuild)
+    return window.ConquerEconomy.canBuild(cost);
+  return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v);
+}
+function spendCost(cost){
+  if(State.village?.founded&&window.ConquerEconomy?.spendBuild){
+    if(!window.ConquerEconomy.spendBuild(cost))return false;
+  }else for(const [k,v] of Object.entries(cost||{}))
+    State.resources[k]=(State.resources[k]||0)-v;
+  renderUI();return true;
+}
+function refundCost(cost){
+  if(State.village?.founded&&window.ConquerEconomy?.refundBuild)
+    window.ConquerEconomy.refundBuild(cost);
+  else for(const [k,v] of Object.entries(cost||{}))
+    State.resources[k]=(State.resources[k]||0)+v;
+  renderUI();
+}
 function buildDuration(s){
   if(s.type==='tower'){
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
@@ -678,7 +769,7 @@ function buildDuration(s){
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
-  if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length)*(.75+.25*structureLevel(s));
+  if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length*builtWidth(s))*(.75+.25*structureLevel(s));
   if(s.type==='moat')return .8+(s.length||1)*(s.variant==='water'?.9:.65)*(s.width||1.5)/1.5;
   if(s.type==='bridge')return .8+(s.length||1)*(s.variant==='stone'?.8:.5)*(s.width||1.5)/1.5;
   if(s.type==='road')return BUILD_DAYS.road;
@@ -686,18 +777,156 @@ function buildDuration(s){
   if(s.type==='field')return BUILD_DAYS.field;
   return 0;
 }
+// Construction V2: manual projects use paid-for work units, not a calendar deadline.
+// The pre-existing procedural roads/houses/fields keep their bootstrap timers.
+const CONSTRUCTION_MAX_WORKERS=3;
+function constructionWorkClock(day){
+  // Same 5-day labor week / work shift used by the agricultural simulation.
+  const whole=Math.floor(day),week=Math.floor(whole/7),wd=((whole%7)+7)%7;
+  return week*5+Math.min(wd,5)+(wd<5?clamp((day-whole-.14)/.38,0,1):0);
+}
 function beginConstruction(s,delay=0){
   const d=buildDuration(s);if(d<=0)return s;
-  s.construction={startedDay:State.clock.day+delay,completeDay:State.clock.day+delay+d};return s;
+  const startedDay=State.clock.day+delay;
+  if(s.auto){
+    s.construction={startedDay,completeDay:startedDay+d};
+    // Autonomous growth carries its own labor valuation at spawn. The lord
+    // is never billed again during construction and candidates are not booked.
+    if(!s.spawnCost){
+      const quote=window.ConquerEconomy?.spontaneousSpawnQuote?.(d)||
+        {laborDays:d,laborGold:Math.round(d/20*1000)/1000};
+      s.spawnCost={laborDays:quote.laborDays,laborGold:quote.laborGold,
+        totalGold:quote.laborGold,payer:'spontaneous'};
+    }
+    return s;
+  }
+  s.construction={version:2,startedDay,workRequired:d,workDone:0,
+    lastWorkDay:startedDay,workers:0,completedDay:null};
+  return s;
 }
 function constructionProgress(s){
   if(!s?.construction)return 1;
-  const a=s.construction.startedDay,b=s.construction.completeDay;
+  const c=s.construction;
+  if(c.version===2)return clamp((Number(c.workDone)||0)/Math.max(0.001,Number(c.workRequired)||1),0,1);
+  const a=c.startedDay,b=c.completeDay;
   if(State.clock.day<=a)return 0;if(State.clock.day>=b)return 1;
   return clamp((State.clock.day-a)/(b-a),0,1);
 }
 function underConstruction(s){return constructionProgress(s)<1}
-function remainingDays(s){return s?.construction?Math.max(0,s.construction.completeDay-State.clock.day):0}
+function remainingDays(s){
+  if(!s?.construction)return 0;
+  const c=s.construction;
+  if(c.version===2)return Math.max(0,Number(c.workRequired)-Number(c.workDone))/Math.max(1,Number(c.workers)||1);
+  return Math.max(0,c.completeDay-State.clock.day);
+}
+function constructionWorkStatus(s){
+  const c=s?.construction;
+  if(!c||!underConstruction(s))return '';
+  if(c.version!==2)return 'Procedural construction';
+  const wd=((Math.floor(State.clock.day)%7)+7)%7;
+  if(wd>=5)return 'Workers resting (weekend)';
+  if(c.unfunded||(window.ConquerEconomy?.constructionWagePerWorkday?.()||0)>0&&
+      (window.ConquerEconomy?.state?.().castleGold||0)<=1e-8)
+    return 'Paused: insufficient lord treasury for wages';
+  return c.workers>0?c.workers+' L1 assigned':'Waiting for idle L1 workers';
+}
+function migrateConstructionSites(){
+  if(!State.village?.founded)return 0;
+  let changed=0;
+  for(const s of State.structures||[]){
+    const c=s.construction;
+    if(s.auto||!c||c.version===2||constructionProgress(s)>=1)continue;
+    const a=Number(c.startedDay),b=Number(c.completeDay);
+    if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a)continue;
+    // Never restart partial old-build progress or grant free work at migration.
+    const completedRatio=clamp((State.clock.day-a)/(b-a),0,1);
+    s.construction={version:2,startedDay:a,workRequired:b-a,
+      workDone:(b-a)*completedRatio,lastWorkDay:Math.max(State.clock.day,a),
+      workers:0,completedDay:null};
+    changed++;
+  }
+  return changed;
+}
+function constructionCrewAssignments(day=State.clock.day,cutoff=day){
+  const slots=new Map();
+  if(!State.village?.founded)return slots;
+  const dayOfWeek=((Math.floor(day)%7)+7)%7;
+  if(dayOfWeek>=5)return slots;
+  const candidates=window.ConquerEconomy?.availableBuilderIds?.(day)||[];
+  const sites=(State.structures||[]).filter(s=>!s.auto&&
+    s.construction?.version===2&&underConstruction(s)&&
+    s.construction.startedDay<=cutoff).sort((a,b)=>
+    a.construction.startedDay-b.construction.startedDay||
+    String(a.id).localeCompare(String(b.id)));
+  for(const s of sites)slots.set(s.id,[]);
+  const used=new Set();
+  // One worker per open job first, then the second/third if still spare.
+  // In the live world, reachable pedestrian routes are required; no phantom
+  // building progress can be produced by a worker stranded behind barriers.
+  for(let pass=0;pass<CONSTRUCTION_MAX_WORKERS&&used.size<candidates.length;pass++)
+    for(const s of sites){
+      if(used.size>=candidates.length)break;
+      const worker=candidates.find(w=>!used.has(w.id)&&
+        (typeof constructionWorkerPath!=='function'||constructionWorkerPath(w,s)));
+      if(!worker)continue;
+      used.add(worker.id);slots.get(s.id).push(worker);
+    }
+  return slots;
+}
+function tickConstructionWork(fromDay,toDay){
+  if(!State.village?.founded)return[];
+  migrateConstructionSites();
+  const start=Number(fromDay),end=Number(toDay);
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return[];
+  const completed=[];
+  const pending=(State.structures||[]).filter(s=>
+    !s.auto&&s.construction?.version===2&&underConstruction(s));
+  if(!pending.length)return completed;
+  // Loaded games may resume at day 2000 with simLogicDay still at zero.
+  // Progress was already settled through each site's lastWorkDay.
+  const earliest=Math.min(...pending.map(s=>Math.max(s.construction.startedDay,
+    Number(s.construction.lastWorkDay)||s.construction.startedDay)));
+  let t=Math.max(0,start,Math.min(end,earliest)),guard=0;
+  while(t<end-1e-9&&guard++<10000){
+    const next=Math.min(end,Math.floor(t)+1);
+    if(next<=t+1e-9)break;
+    const workerDay=constructionWorkClock(next)-constructionWorkClock(t);
+    const sites=(State.structures||[]).filter(s=>
+      !s.auto&&s.construction?.version===2&&underConstruction(s)&&
+      s.construction.startedDay<next
+    ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
+      String(a.id).localeCompare(String(b.id)));
+    if(sites.length){
+      const assigned=workerDay>0?constructionCrewAssignments(t,next):new Map();
+      for(const s of sites){
+        const c=s.construction,n=assigned.get(s.id)?.length||0;
+        const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
+        const requested=Math.min(Math.max(0,c.workRequired-c.workDone),
+          Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n);
+        // Only actual funded work advances construction. Materials were paid
+        // at placement; labor is paid as its shifts are performed.
+        const payroll=requested>0?
+          window.ConquerEconomy?.payConstructionWork?.(s,requested)||{work:requested,paid:0}:
+          {work:0,paid:0};
+        const work=payroll.work;
+        c.unfunded=requested>1e-9&&work<=1e-9;
+        c.workers=work>0?n:0;
+        if(work>0){
+          c.workDone=Math.min(c.workRequired,c.workDone+work);
+          State.dirty=true;
+        }
+        c.lastWorkDay=Math.max(next,Number(c.lastWorkDay)||0);
+        if(c.workDone>=c.workRequired-1e-8){
+          c.workDone=c.workRequired;c.completedDay=next;c.workers=0;
+          completed.push(s);
+        }
+      }
+    }
+    t=next;
+    if(completed.length===pending.length)break;
+  }
+  return completed;
+}
 function pointRadius(s){
   if(s.type==='tower')return s.shape==='round'?s.r:Math.SQRT2*s.size/2;
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
@@ -861,7 +1090,7 @@ function pointRadius(s){
       scene:{
         structures:all.length,
         roads:all.reduce((n,x)=>n+(x?.type==='road'?1:0),0),
-        construction:all.reduce((n,x)=>n+(x?.construction&&finite(x.construction.completeDay)>day?1:0),0)
+        construction:all.reduce((n,x)=>n+(x?.construction&&underConstruction(x)?1:0),0)
       }
     };
     samples.push(s);trim(samples,MAX_SAMPLES);

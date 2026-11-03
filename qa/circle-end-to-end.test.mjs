@@ -106,3 +106,23 @@ test('real siege + circle: defender recapture reopens room, never restores food'
   assert.equal(game.siege.state().stock.food,240);
   assert.equal(game.siege.circleCaptureRecords().length,0);
 });
+
+test('loading another save clears old breached footprints and pending occupation timers',async()=>{
+  const game=await boot();
+  const original=game.State.structures.slice();
+  const saved=JSON.parse(JSON.stringify(game.siege.state()));
+  game.circle.tickOccupation(0);
+  game.circle.tickOccupation(.4);
+  game.circle.markBreach(original[0],{x:9,y:4.25},{x:11,y:4.25});
+  game.State.structures=original.slice(1);
+  game.circle.invalidate('breach in previous save');
+  assert.ok(game.circle.getSnapshot().compartments.some(c=>c.breached));
+  game.State.structures=original;
+  game.siege.restore(saved);
+  assert.equal(game.circle.getSnapshot().compartments.some(c=>c.breached),false);
+  game.State.clock.day=.4;game.circle.tickOccupation(.4);
+  game.State.clock.day=.5;game.circle.tickOccupation(.5);
+  assert.equal(game.siege.circleCaptureRecords().length,0);
+  game.State.clock.day=.9;game.circle.tickOccupation(.9);
+  assert.equal(game.siege.circleCaptureRecords().length,1);
+});

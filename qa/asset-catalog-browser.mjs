@@ -37,8 +37,9 @@ try{
   await page.locator('#assetRotateLeft').click();
   const heights=await page.evaluate(()=>['l1','l3'].map(l=>window.ConquerAssetCatalog.items.find(x=>x.id==='castle:pietra-quadrata-'+l).format));
   assert.notEqual(heights[0],heights[1],'Levels must show their own height');
-  // Engine states: construction, damage and cutaway are game captures; wood variants are 2.5D only.
-  assert.ok(castles.some(x=>!x.mesh&&x.spec?.material==='wood'),'Wood fortifications must be listed (2.5D)');
+  // Engine states: construction, damage and cutaway are game captures; timber towers, gate and
+  // palisades are meshed from their Blender models (settlement-wood3d.js).
+  assert.ok(castles.some(x=>x.mesh&&x.spec?.material==='wood')&&castles.some(x=>x.mesh&&x.spec?.type==='palisade'),'Timber fortifications must be listed with their 3D mesh');
   await page.evaluate(()=>window.ConquerAssetCatalog.select('castle:pietra-quadrata-l3','damage-crollo-1-piano'));
   assert.ok(await page.locator('#assetStateBar button[data-state="cutaway"]').count(),'Cutaway state must be offered');
   assert.equal(await page.locator('#assetStateBar button[aria-pressed="true"]').getAttribute('data-state'),'damage-crollo-1-piano');

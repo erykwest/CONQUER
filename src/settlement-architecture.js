@@ -11,7 +11,9 @@ const ARCHITECTURE_ASSET_PATHS=Object.freeze({
   gothicL2:'./src/assets/architecture/gothic_l2.png',
   gothicL3:'./src/assets/architecture/gothic_l3.png',
   arcade2:'./src/assets/architecture/arcade_2.png',
-  arcade3:'./src/assets/architecture/arcade_3.png'
+  arcade3:'./src/assets/architecture/arcade_3.png',
+  // Two-light lancet for wide halls, modelled and rendered in Blender (ASSETS/blender/build_hall_window.py).
+  hallLancet:'./src/assets/architecture/hall_lancet.png'
 });
 const architectureSprites={};
 function prepareArchitectureSprite(img){
@@ -74,6 +76,10 @@ function structureInteriorVector(s){
   return{x:vx/L,y:vy/L};
 }
 function interiorFacadeEdgeIndex(s){
+  if(isOrientedTower(s))return ORIENTED_FACADE_REAR;
+  // A gate faces the field along its angle (portal edges 1 = front, 3 = rear): the windows
+  // look into the castle, whatever the walls around it.
+  if(s?.type==='gate')return GATE_FACADE_REAR;
   const fp=footprintPoints(s);if(fp.length<2)return-1;
   const iv=structureInteriorVector(s),center=structureCenter(s);let best=-1,bestScore=-Infinity;
   for(let i=0;i<fp.length;i++){
@@ -109,29 +115,59 @@ function gateFacadeEdges(s){
   const defs=[{a:fp[0],b:fp[1],role:'side',index:0},{a:fp[1],b:fp[2],role:'front',index:1},{a:fp[2],b:fp[3],role:'side',index:2},{a:fp[3],b:fp[0],role:'rear',index:3}];
   for(const e of defs){const a=w2s(e.a,0),b=w2s(e.b,0);e.depth=(a.y+b.y)/2}defs.sort((a,b)=>b.depth-a.depth);return defs.slice(0,2);
 }
-function drawGatePortalOnEdge(edge){
-  if(drawArchitectureAssetOnEdge(edge,.705,.90,1.35,'gatePortal'))return;
-  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,cx=(edge.a.x+edge.b.x)/2,cy=(edge.a.y+edge.b.y)/2,half=.39;
-  const l={x:cx-ux*half,y:cy-uy*half},r={x:cx+ux*half,y:cy+uy*half};pathPolygon([w2s(l,.03),w2s(r,.03),w2s(r,1.05),w2s({x:cx,y:cy},1.38),w2s(l,1.05)],'#241a16','#9a7458',1);
+// Closed portal of a stone gate: .90×1.35 on the gatehouse, smaller on the small gate.
+function gateClosedPortal(s){return window.ConquerGates?.closedPortal?.(s)||{width:.9,height:1.35,centerZ:.705}}
+function drawGatePortalOnEdge(edge,s,key='gatePortal'){
+  const d=gateClosedPortal(s);
+  if(drawArchitectureAssetOnEdge(edge,d.centerZ,d.width,d.height,key))return;
+  const k=d.height/1.35,dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,cx=(edge.a.x+edge.b.x)/2,cy=(edge.a.y+edge.b.y)/2,half=d.width*.433;
+  const l={x:cx-ux*half,y:cy-uy*half},r={x:cx+ux*half,y:cy+uy*half};pathPolygon([w2s(l,.03),w2s(r,.03),w2s(r,1.05*k),w2s({x:cx,y:cy},1.38*k),w2s(l,1.05*k)],'#241a16','#9a7458',1);
 }
 function drawGatePortals(){
   for(const s of State.structures){
     if(s.type!=='gate'||isWoodGate(s)||underConstruction(s))continue;
     withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
       for(const edge of gateFacadeEdges(s)){
-        if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge);
+        if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge,s);
       }
     }));
   }
 }
-function gateWindowRows(s){const l=structureLevel(s),rows=[1.72];if(l>=2)rows.push(2.92);if(l>=3)rows.push(4.12);return rows.filter(z=>z<structureHeight(s)-.28)}
+// One row per room: the ground floor is the passage (no window), each storey above has one.
+// A timber upper storey has house windows in its frame instead (gateTimberFacade).
+function gateWindowRows(s){
+  if(gateTimberUpper(s))return[];
+  return cutawayFloorLevels(s).slice(functionFloorOffset(s)).map(f=>f.z+.9).filter(z=>z<structureHeight(s)-.28);
+}
+// Timber frame of a small gate's upper storey, per face of the jettied storey: sill and head
+// plates, corner posts; two windows between posts on the front and the rear, a post and two
+// braces on the flanks. Offsets along the edge from its middle, z above the gate's ground.
+function gateTimberFacade(s){
+  const pts=gateTimberStoreyPoints(s),z0=gateTimberFloorZ(s),z1=structureHeight(s),t=HOUSE_TIMBER_W/2,out=[];
+  for(let i=0;i<4;i++){
+    const a=pts[i],b=pts[(i+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y),h=L/2-t,beams=[],windows=[];
+    beams.push([{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]);
+    for(const e of [-h,h])beams.push([{off:e,z:z0+t},{off:e,z:z1-t}]);
+    if(i===GATE_FACADE_FRONT||i===GATE_FACADE_REAR){
+      const wz=(z0+z1)/2,f=HOUSE_WINDOW_HALF_W+HOUSE_TIMBER_W*.9;
+      for(const c of [-L*.24,L*.24]){windows.push({off:c,z:wz});beams.push([{off:c-f,z:z0+t},{off:c-f,z:z1-t}],[{off:c+f,z:z0+t},{off:c+f,z:z1-t}])}
+    }else{
+      beams.push([{off:0,z:z0+t},{off:0,z:z1-t}],[{off:-h,z:z0+t},{off:0,z:z1-t}],[{off:h,z:z0+t},{off:0,z:z1-t}]);
+    }
+    out.push({edge:{a,b,index:i},beams,windows});
+  }
+  return out;
+}
+const GATE_FACADE_FRONT=1,GATE_FACADE_REAR=3;
+// Slits along a gate face: two side by side on the field front, one on the flanks.
+function gateSlitOffsets(edge){return edge.index===GATE_FACADE_FRONT?[-.26,.26]:[0]}
 function drawGateWindows(s,lit=false,nf=1){
   const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
   for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{
     for(const edge of gateFacadeEdges(s)){
       const paint=()=>isInteriorFacadeEdge(s,edge)
         ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)
-        :drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit');
+        :gateSlitOffsets(edge).forEach(o=>drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit',o));
       // The nighttime glow pass runs after the drawbridge. Mask only its
       // exterior-facing facade, preserving windows on the unobstructed sides.
       if(edge.role==='front'&&window.ConquerCrossings?.withDrawbridgeWindowOcclusion)
@@ -142,7 +178,7 @@ function drawGateWindows(s,lit=false,nf=1){
 }
 function visibleFacadeEdges(s){
   const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'&&p.kind!=='outbuilding'):null;
-  const rings=parts?parts.map(p=>p.points):[footprintPoints(s)],edges=[];
+  const rings=parts?parts.map(p=>p.points):[towerFacadePoints(s)],edges=[];
   for(const fp of rings){
     if(fp.length<4)continue;
     const faces=[];
@@ -206,7 +242,14 @@ function towerDoorSpecs(tower){
 
   // Primary ground-floor entrance exists only on independent towers.
   // Attached subtowers deliberately have NO ground-floor door.
-  if(!tower.parentTowerId){
+  // Oriented towers face the field: the door is on the rear, inside the walls (the semitower's
+  // rear is the open gorge itself).
+  if(!tower.parentTowerId&&isOrientedTower(tower)){
+    if(tower.shape==='dee'){
+      const fp=towerFacadePoints(tower),rear=towerDoorContactSpec(tower,{x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2},null,'front');
+      if(rear)specs.push(rear);
+    }
+  }else if(!tower.parentTowerId){
     const a=tower.angle||0;
     let frontContact;
     if(tower.shape==='round'){
@@ -218,11 +261,15 @@ function towerDoorSpecs(tower){
         :boundaryPoint(tower,{x:tower.x+Math.cos(a),y:tower.y+Math.sin(a)});
     }
     const front=towerDoorContactSpec(tower,frontContact,null,'front');
+    // Mastio with a raised entrance: the front door opens on the first upper storey.
+    const sill=window.ConquerKeepEntrance?.sill?.(tower);
+    if(front&&sill!=null){front.baseZ=sill;front.apexZ=Math.min(structureHeight(tower)-.16,sill+.92);front.raised=true}
     if(front)specs.push(front);
   }
 
-  // Additional doors at every true wall socket connected to this tower.
-  for(const wall of State.structures){
+  // Additional doors at every true wall socket connected to this tower. The Mastio has none:
+  // it is not a way on or off the walls (settlement-wallwalk.js leaves it out too).
+  if(!tower.isMastio)for(const wall of State.structures){
     if(wall.type!=='wall'||underConstruction(wall))continue;
     let contact=null;
     if(wall.aSnap===tower.id)contact=wall.a;
@@ -360,8 +407,10 @@ function towerFaceDirections(s){
     const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x);
     return[0,1,2,3].map(i=>({face:i,nx:Math.cos(base+i*Math.PI/2),ny:Math.sin(base+i*Math.PI/2),interior:i===0}));
   }
-  const fp=footprintPoints(s),interior=interiorFacadeEdgeIndex(s);
+  const fp=towerFacadePoints(s),interior=interiorFacadeEdgeIndex(s);
   return fp.map((a,i)=>{
+    // D tower sides: the slit's own spot on the half round (at) and its normal.
+    const slit=s.shape==='dee'&&deeSideSlit(s,i);if(slit)return{face:i,nx:slit.n.x,ny:slit.n.y,at:slit.at,interior:i===interior};
     const b=fp[(i+1)%fp.length],nx=(a.x+b.x)/2-s.x,ny=(a.y+b.y)/2-s.y,L=Math.hypot(nx,ny)||1;
     return{face:i,nx:nx/L,ny:ny/L,interior:i===interior};
   });
@@ -384,7 +433,7 @@ function towerFaceBlocked(s,dir,floor){
 // wall up to that structure's height - no arrow slit, window or door opens onto it.
 function towerFaceOnDivider(s,dir,z){
   const half=s.shape==='round'?(Number(s.r)||.5):Math.max(rectDims(s).w,rectDims(s).h)/2;
-  const probe={x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
+  const probe=dir.at?{x:dir.at.x+dir.nx*.12,y:dir.at.y+dir.ny*.12}:{x:s.x+dir.nx*(half+.12),y:s.y+dir.ny*(half+.12)};
   return State.structures.some(o=>o!==s&&!underConstruction(o)&&['tower','gate'].includes(o.type)&&
     (o.id===s.parentTowerId||o.parentTowerId===s.id)&&structureHeight(o)>z&&pointInPolygon(probe,footprintPoints(o)));
 }
@@ -392,6 +441,16 @@ function towerFaceOnDivider(s,dir,z){
 function towerEdgeOnDivider(s,edge,z){
   const mx=(edge.a.x+edge.b.x)/2-s.x,my=(edge.a.y+edge.b.y)/2-s.y,L=Math.hypot(mx,my)||1;
   return towerFaceOnDivider(s,{nx:mx/L,ny:my/L},z);
+}
+// A raised keep door opens on the first upper storey (floor 2): on that floor it takes the
+// place of the window, and of the heraldic drape, on the face it opens through.
+function towerWindowGivesWayToDoor(s,edgeOrDir,floor){
+  if(floor!==2||window.ConquerKeepEntrance?.sill?.(s)==null)return false;
+  const door=towerDoorSpecs(s).find(d=>d.raised);if(!door)return false;
+  let nx=edgeOrDir.nx,ny=edgeOrDir.ny;
+  if(edgeOrDir.a){nx=(edgeOrDir.a.x+edgeOrDir.b.x)/2-s.x;ny=(edgeOrDir.a.y+edgeOrDir.b.y)/2-s.y}
+  const L=Math.hypot(nx,ny)||1;
+  return (nx*door.outward.x+ny*door.outward.y)/L>.7;
 }
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);
@@ -410,6 +469,7 @@ function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
   for(const edge of roundTowerFacadeEdges(s)){
     if(edge.interior){
       if(towerEdgeOnDivider(s,edge,row.z))continue;   // window would open onto a dividing wall
+      if(towerWindowGivesWayToDoor(s,edge,row.floor))continue;
       drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
       if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w*.86,sz.h,opacity);
     }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
@@ -518,14 +578,58 @@ function drawWallHoarding(s,occlusionFrame=null){
     }
   });
 }
-function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60){
+// A fixed count (wide-hall lancets) drops windows whose bay could not hold them undistorted
+// (drawn width = min(asset width, bay * .82)).
+function builtWindowCount(edge,density,fixed,assetWidth=.24){
+  return fixed?clamp(Math.floor(edge.length*.82/assetWidth),1,fixed):Math.max(1,Math.round(edge.length*density));
+}
+function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60,fixed=0){
   if(side!==linearFrontSide(s))return;
-  const edge=linearFacadeEdge(s,side),count=Math.max(1,Math.round(edge.length*density)),cell=edge.length/count,opacity=cutawayFacadeOpacity(s);
+  const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,assetWidth),cell=edge.length/count,opacity=cutawayFacadeOpacity(s);
   for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf,opacity)}
 }
-function drawBuiltWindows(s,lit=false,nf=1){
+// Facade rows shared by the 2.5D and 3D renderers: [side,z,density,key,width,height,lit,fixedCount].
+const HALL_LANCET_ASPECT=640/1566;   // hall_lancet.png: keep the Blender render undistorted
+function builtWindowRows(s){
   const l=structureLevel(s),outside=wallExteriorSide(s),inside=-outside,lowerZ=.86,upperZ=2.22;
-  withBuiltRoofOcclusionClip(s,()=>{if(l>=2)drawBuiltWindowRow(s,inside,upperZ,.42,lit,nf,'gothicL3',.92,.78);drawBuiltWindowRow(s,outside,lowerZ,.72,false,nf,'arrowSlit',.23,.58);if(l>=2)drawBuiltWindowRow(s,outside,upperZ,.72,false,nf,'arrowSlit',.23,.58)})
+  if(isWideBuilt(s)){
+    // One free-height hall: four lancets rising through both storeys, slits outside.
+    // A portico takes the interior ground floor, so the hall falls back to clerestory lights.
+    const arcade=builtSkin(s)==='arcade',slits=[[outside,.86,.72,'arrowSlit',.23,.58,false]];
+    const lancet=h=>[inside,.24+h/2,0,'hallLancet',h*HALL_LANCET_ASPECT,h,true,4];
+    if(l<2)return arcade?slits:[lancet(1.30),...slits];
+    return[arcade?[inside,upperZ,.42,'gothicL3',.92,.78,true]:lancet(2.12),...slits,[outside,upperZ,.72,'arrowSlit',.23,.58,false]];
+  }
+  const rows=[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
+  if(l>=2)rows.unshift([inside,upperZ,.42,'gothicL3',.92,.78,true]),rows.push([outside,upperZ,.72,'arrowSlit',.23,.58,false]);
+  return rows;
+}
+function drawBuiltWindows(s,lit=false,nf=1){
+  const buttresses=visibleHallButtresses(s);
+  withBuiltRoofOcclusionClip(s,()=>{
+    withoutScreenHulls(buttresses.map(b=>convexHull(b.flatMap(p=>[...projectPath(p.bottom,p.z0),...projectPath(p.top,p.z1)]))),()=>{
+      for(const [side,z,density,key,w,h,canLight,fixed] of builtWindowRows(s))drawBuiltWindowRow(s,side,z,density,canLight&&lit,nf,key,w,h,fixed);
+    });
+    // Buttresses stand in front of the lancets: painted in this pass, after them. The night pass
+    // only re-lights the windows (clipped around the buttresses), so the masonry keeps its shade.
+    if(!lit)for(const b of buttresses)for(const p of b)extrudeFrustumAt(p.bottom,p.top,p.z0,p.z1,{
+      top:winterSnowColor('#948779'),sideA:'#4b4540',sideB:'#625a52',stroke:'rgba(159,146,133,.75)'
+    });
+  });
+}
+// The camera-facing lancet facade only (a rear buttress would paint over the hall body), far first.
+function visibleHallButtresses(s){
+  if(!isWideBuilt(s)||structureCutaway(s)||-wallExteriorSide(s)!==linearFrontSide(s))return[];
+  const depth=b=>viewDepthPoint(b[0].bottom[2]);
+  return wideHallButtresses(s).sort((a,b)=>depth(a)-depth(b));
+}
+function withoutScreenHulls(hulls,drawFn){
+  hulls=hulls.filter(h=>h.length>=3);
+  if(!hulls.length){drawFn();return}
+  const r=wrap.getBoundingClientRect();
+  ctx.save();ctx.beginPath();ctx.rect(-48,-48,r.width+96,r.height+96);
+  for(const hull of hulls){hull.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath()}
+  ctx.clip('evenodd');drawFn();ctx.restore();
 }
 function drawHouseFacadeWindows(s,lit=false,nf=1){
   // At high zoom most homes are offscreen; skip the expensive L/T occlusion
@@ -616,16 +720,17 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
           return;
         }
-        const edges=visibleFacadeEdges(s),opacity=cutawayFacadeOpacity(s);
+        const edges=visibleFacadeEdges(s).filter(e=>!(s.shape==='half'&&e.index===ORIENTED_FACADE_REAR)),opacity=cutawayFacadeOpacity(s);
         for(const row of rows){
           const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);
           if(!key)continue;
           withStructureDetailOcclusion(s,row.z,()=>{
             for(const edge of edges){
               if(isInteriorFacadeEdge(s,edge)){
+                if(towerWindowGivesWayToDoor(s,edge,row.floor))continue;
                 drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
                 if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
-              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
+              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(towerSlitEdge(s,edge),row.z,.22,.60,'arrowSlit',0,false,1,opacity);
             }
           });
         }
