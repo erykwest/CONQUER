@@ -148,9 +148,10 @@ function renderFunctionPanel(){
   }
   if(canTier){
     const current=['wall','palisade'].includes(s.type)?wallTier(s):towerTier(s);
-    const labels=['wall','palisade'].includes(s.type)?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U']);
+    const labels=['wall','palisade'].includes(s.type)?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U',...(woodTower||s.parentTowerId?[]:['W4 · 3U'])]);
     const options=isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label}));
-    html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="${options.length===3?'grid3':'grid'}">${options.map(o=>`<button data-structure-tier="${o.value}" class="${current===o.value?'active':''}">${o.label}</button>`).join('')}</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="${options.length===3?'grid3':'grid'}">${options.map(o=>`<button data-structure-tier="${o.value}" ${o.value===KEEP_W4_TIER&&!keepW4Available(s)?'disabled':''} class="${current===o.value?'active':''}">${o.label}</button>`).join('')}</div></div>`;
+    if(isKeepW4(s))html+=Array.from({length:structureLevel(s)},(_,f)=>{const cur=keepFloorPlan(s,f);return `<div class="slot"><div class="slot-label">Pianta · ${f===0?'piano terra':'piano '+f}</div><div class="grid">${Object.keys(KEEP_FLOOR_PLANS).map(k=>`<button data-keep-plan="${f}:${k}" class="${cur===k?'active':''}">${{hall:'Sala',halves:'2 metà',three:'1+2',quad:'4 quarti'}[k]}</button>`).join('')}</div></div>`}).join('');
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
   if(s.type==='tower'){
@@ -224,7 +225,7 @@ function renderFunctionPanel(){
   if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
-    else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · Floor ${i+1+functionFloorOffset(s)} ·${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
+    else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · Floor ${functionSlotFloor(s,i)+1} ·${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`}).join('');
   }
   if(['wall','palisade'].includes(s.type)&&!building){
     // Walls take damage bay by bay; a fallen bay opens a breach there.
@@ -281,6 +282,7 @@ function renderFunctionPanel(){
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));
   on('[data-cutaway-floor]',(id,el)=>StructureCommands.stepCutawayFloor(id,Number(el.dataset.cutawayFloor)));
   on('[data-linear-flip]',id=>StructureCommands.flipSide(id));
+  on('[data-keep-plan]',(id,el)=>{const [f,k]=el.dataset.keepPlan.split(':');StructureCommands.setKeepFloorPlan(id,Number(f),k)});
   on('[data-function-slot]',(id,el)=>StructureCommands.setRoom(id,Number(el.dataset.functionSlot),el.value),'onchange');
   window.ConquerGates?.bindPanel(slots);
   on('[data-civic-level]',(id,el)=>StructureCommands.setCivicLevel(id,Number(el.dataset.civicLevel)));

@@ -517,6 +517,7 @@ function breakWallForTower(wallId,tower){
 }
 function addTowerWithPlacement(tower,snap={}){
   if(isOrientedTower(tower)&&Number.isFinite(snap.wallSeat))tower.wallSeat=snap.wallSeat;
+  if(isKeepW4(tower)&&(snap.parentTowerId||!keepW4Available(tower))){status(snap.parentTowerId?'The W4 keep stands on its own':'Only one W4 keep per settlement');return false}
   if(snap.parentTowerId){
     const parent=State.structures.find(s=>s.id===snap.parentTowerId&&['tower','gate'].includes(s.type));
     if(!parent){status('Subtower parent is no longer available');return false}
@@ -612,8 +613,30 @@ function linePoly(s){
   const a=s.a,b=s.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
+// Function slots run floor by floor; the W4 keep has several rooms per floor (keepFloorRooms),
+// every other structure one. Slot i -> {floor, room, rect} (rect: fractions of the floor).
+function functionSlotLayout(s){
+  const cap=functionCapacity(s);
+  if(!isKeepW4(s))return Array.from({length:cap},(_,i)=>({floor:i+functionFloorOffset(s),room:0,rect:[0,0,1,1]}));
+  const out=[];
+  for(let floor=0;floor<structureLevel(s);floor++)keepFloorRooms(s,floor).forEach((rect,room)=>out.push({floor,room,rect}));
+  return out;
+}
+// Rooms keep their floor when the layout changes (floor plan, tier): the roles of each floor go
+// back on the same floor, empty rooms dropped first when it has fewer rooms.
+function functionsByFloor(s){
+  const out=[];functionSlotLayout(s).forEach((x,i)=>(out[x.floor]||(out[x.floor]=[])).push(s.functions?.[i]||null));return out;
+}
+function restoreFunctionsByFloor(s,byFloor){
+  const L=functionSlotLayout(s),want=[];L.forEach(x=>want[x.floor]=(want[x.floor]||0)+1);
+  const lists=want.map((n,f)=>{const list=(byFloor[f]||[]).slice();while(list.length>n&&list.includes(null))list.splice(list.lastIndexOf(null),1);return list});
+  s.functions=L.map(x=>lists[x.floor]?.length?lists[x.floor].shift():null);
+  normalizeFunctions(s);return s;
+}
+function functionSlotFloor(s,index){return isKeepW4(s)?functionSlotLayout(s)[index]?.floor??0:index+functionFloorOffset(s)}
 function functionSlotSize(s,index=0){
   if(!s)return'normal';
+  if(isKeepW4(s)){const r=functionSlotLayout(s)[index]?.rect;return r&&(r[2]-r[0])*(r[3]-r[1])<.4?'normal':'large'}
   if(s.type==='tower')return towerTier(s)>=3?'large':'normal';
   if(s.type==='built')return isWideBuilt(s)||Number(s.length)>=3?'large':'normal';
   return'normal';
@@ -624,6 +647,7 @@ function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
+  if(typeof isKeepW4==='function'&&isKeepW4(s)){let n=0;for(let f=0;f<structureLevel(s);f++)n+=keepFloorRooms(s,f).length;return n}
   if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
   if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
   return 0;
@@ -632,6 +656,9 @@ function functionCapacityUnits(s){
   let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
 function normalizeFunctions(s){
+  const w4=typeof isKeepW4==='function'&&isKeepW4(s);
+  if(w4)s.keepPlans=Array.from({length:3},(_,f)=>keepFloorPlan(s,f));
+  else delete s.keepPlans;
   const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];
   // Migrate once: prior saves placed a functional room on the traversable gate floor.
   if(s.type==='gate'&&!s.gateGroundIsPassage){

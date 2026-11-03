@@ -72,7 +72,8 @@
     rubbleGrid=null;                                  // rubble of the loaded game
   }
   function eligibleRoom(s){return !!s&&['tower','gate','built'].includes(s.type)&&!underConstruction(s)}
-  function floor(s,index){return index+1}
+  // Storey of a room (1 = ground); the W4 keep has several rooms per storey.
+  function floor(s,index){return typeof isKeepW4==='function'&&isKeepW4(s)?functionSlotFloor(s,index)+1:index+1}
   function allowed(s,index,fn){
     if(!fn)return true;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
@@ -125,6 +126,16 @@
     }
   }
   function syncAutoMastio(){
+    // A finished W4 keep is the Mastio: it takes the title from any earlier tower once.
+    const w4=typeof isKeepW4==='function'&&State.structures.find(s=>isKeepW4(s)&&mastioEligible(s)&&!underConstruction(s));
+    if(w4&&!w4.isMastio&&!w4.mastioAuto){
+      w4.mastioAuto=true;
+      for(const s of State.structures)if(s.type==='tower')s.isMastio=false;
+      w4.isMastio=true;
+      if(!ensureMastioHall(w4,true))w4.isMastio=false;
+      markDirty(false,['base','castleBody','castleFront']);
+      return true;
+    }
     // The first independent finished tower is the keep, regardless of whether
     // it is wood, round stone or square stone. Gates/watchtowers are excluded.
     if(State.structures.some(s=>s.type==='tower'&&s.isMastio&&mastioEligible(s)))return false;

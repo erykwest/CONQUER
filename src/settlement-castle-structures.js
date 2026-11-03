@@ -891,7 +891,7 @@ function lCornerMerlons(fp,corners,z,h,d,owner){
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s);
-  const perSide=[0,3,4,5][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[];
+  const perSide=[0,3,4,5,7][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[];
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1,mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
     if(mach){

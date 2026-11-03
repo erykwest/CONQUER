@@ -137,6 +137,16 @@ function structureAssetFamilyCatalog(){
       assetPointBase('tower',{shape,material:'stone',level,tier,roofStyle,baseStyle,...(shape==='round'?{r:size}:{size})})
     );
   }
+  // W4 Mastio (3U square): heights and roofs, then the room layouts of its floors in cutaway,
+  // with three small corner subtowers and a medium one (keep-w4-corners in the Lab sheets).
+  for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched'])add(
+    'tower-stone-square-w4-l'+level+'-'+roofStyle,'Mastio W4 L'+level+' '+roofStyle,
+    assetPointBase('tower',{shape:'square',material:'stone',level,tier:KEEP_W4_TIER,roofStyle,baseStyle:'standard',size:3,isMastio:true})
+  );
+  for(const plans of [['three','quad','hall'],['halves','halves','halves'],['hall','quad','quad'],['quad','three','hall']])add(
+    'tower-stone-square-w4-plans-'+plans.join('-'),'Mastio W4 floors '+plans.join(' / '),
+    assetPointBase('tower',{shape:'square',material:'stone',level:3,tier:KEEP_W4_TIER,roofStyle:'battlement',baseStyle:'standard',size:3,isMastio:true,keepPlans:plans,cutaway:true})
+  );
   // The hoarding is mounted on a tower as built: one entry per shape, tier and roof it can go on.
   for(const shape of ['square','round','dee'])for(let tier=1;tier<=3;tier++)for(const roofStyle of ['battlement','pitched']){
     if(shape==='dee'&&tier===1)continue;

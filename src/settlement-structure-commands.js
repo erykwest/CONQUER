@@ -12,8 +12,12 @@ const StructureCommands=(()=>{
       const parent=target.parentTowerId&&State.structures.find(s=>s.id===target.parentTowerId&&s.type==='tower');
       if(parent&&requested>=towerTier(parent)){status('Subtower must remain smaller than its parent tower');return false}
       if(subtowerChildren(target.id).some(child=>towerTier(child)>=requested)){status('Parent tower must remain larger than all attached subtorri');return false}
+      if(requested===KEEP_W4_TIER&&(isWoodTower(target)||(target.shape||'square')!=='square'||target.parentTowerId)){status('W4 is a square stone keep');return false}
+      if(requested===KEEP_W4_TIER&&!keepW4Available(target)){status('Only one W4 keep per settlement');return false}
     }
+    const byFloor=target.type==='tower'?functionsByFloor(target):null;
     applyStructureTier(target,requested);
+    if(byFloor)restoreFunctionsByFloor(target,byFloor);
     target.tier=['wall','palisade'].includes(target.type)?wallTier(target):towerTier(target);
     target.buildCost=constructionCost(target);
     if(target.type==='tower'){repositionSubtower(target);syncSubtowerTree(target.id)}
@@ -21,11 +25,32 @@ const StructureCommands=(()=>{
   }
   function setHeight(id,level){
     const target=find(id);if(!target)return false;
+    if(isKeepW4(target)){
+      // Rooms stay on their floor; the Common Hall comes down to the ground floor if its floor goes.
+      const byFloor=functionsByFloor(target),lost=byFloor.slice(level).flat();
+      target.level=clamp(level,1,maxStructureLevel(target));
+      if(target.isMastio&&lost.includes('commonHall')&&!byFloor.slice(0,level).flat().includes('commonHall'))byFloor[0][0]='commonHall';
+      restoreFunctionsByFloor(target,byFloor);target.buildCost=constructionCost(target);
+      refresh(target,false);return true;
+    }
     if(target.isMastio&&!target.functions?.slice(0,level).includes('commonHall')){
       const prior=target.functions.indexOf('commonHall');if(prior>=0)target.functions[prior]=null;target.functions[0]='commonHall';
     }
     target.level=clamp(level,1,maxStructureLevel(target));normalizeFunctions(target);target.buildCost=constructionCost(target);
     refresh(target,false);return true;
+  }
+  // W4 keep: the room layout of one floor (KEEP_FLOOR_PLANS); the roles of that floor are kept
+  // in order as far as the new rooms allow, and the Mastio keeps its Common Hall.
+  function setKeepFloorPlan(id,floor,plan){
+    const target=find(id);if(!isKeepW4(target)||!KEEP_FLOOR_PLANS[plan]||floor<0||floor>=structureLevel(target))return false;
+    const byFloor=functionsByFloor(target),had=(byFloor[floor]||[]).includes('commonHall');
+    target.keepPlans[floor]=plan;
+    const n=KEEP_FLOOR_PLANS[plan].length,list=(byFloor[floor]||[]).filter(Boolean);
+    if(had&&!list.slice(0,n).includes('commonHall'))list.splice(n-1,0,'commonHall');
+    byFloor[floor]=list.slice(0,n);
+    restoreFunctionsByFloor(target,byFloor);
+    window.ConquerSiege?.sanitizeRooms?.(target);
+    refresh(target,false);status('Piano '+(floor===0?'terra':floor)+': '+n+(n===1?' sala':' stanze'));return true;
   }
   // steps: ±1 = 15°, 'flip' = 180°.
   function rotate(id,steps){
@@ -269,9 +294,13 @@ const StructureCommands=(()=>{
     }
     if(['tower','wall','palisade'].includes(s.type)&&!woodTower){
       const linear=['wall','palisade'].includes(s.type),current=linear?wallTier(s):towerTier(s);
-      const labels=linear?['T1 · 0,2U','T2 · 0,5U','T3 · 1U']:(s.shape==='round'?['T1 · R0,5','T2 · R0,75','T3 · R1']:['T1 · 1U','T2 · 1,5U','T3 · 2U']);
-      d.controls.push(choice('tier','setTier',isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label})),current));
+      const labels=linear?['T1 · 0,2U','T2 · 0,5U','T3 · 1U']:(s.shape==='round'?['T1 · R0,5','T2 · R0,75','T3 · R1']:['T1 · 1U','T2 · 1,5U','T3 · 2U','W4 · 3U']);
+      const opts=isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label,disabled:i+1===KEEP_W4_TIER&&(!keepW4Available(s)||!!s.parentTowerId)}));
+      d.controls.push(choice('tier','setTier',opts,current));
     }
+    // W4 keep: room layout of each floor, ground floor first.
+    if(isKeepW4(s))d.keepPlans={floors:Array.from({length:structureLevel(s)},(_,f)=>({floor:f,plan:keepFloorPlan(s,f),rooms:keepFloorRooms(s,f).length})),
+      plans:Object.keys(KEEP_FLOOR_PLANS).map(k=>({value:k,rooms:KEEP_FLOOR_PLANS[k].length}))};
     if(['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate){
       const max=maxStructureLevel(s);
       d.controls.push(choice('height','setHeight',Array.from({length:max},(_,i)=>({value:i+1,label:String(i+1)})),structureLevel(s)));
@@ -326,7 +355,7 @@ const StructureCommands=(()=>{
       const cap=functionCapacity(s);
       d.facts.push({key:'rooms',value:cap+' · '+functionCapacityUnits(s)});
       d.rooms={pending:building,slots:building?[]:Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>({
-        index:i,size:functionSlotSize(s,i),units:functionSlotUnits(s,i),value:s.functions[i]||'',
+        index:i,floor:functionSlotFloor(s,i),room:isKeepW4(s)?functionSlotLayout(s)[i].room:0,size:functionSlotSize(s,i),units:functionSlotUnits(s,i),value:s.functions[i]||'',
         options:FUNCTION_CATALOG.map(k=>({value:k,allowed:!!window.ConquerSiege?.allowed(s,i,k)}))}))};
     }
     if(['tower','gate','built'].includes(s.type)){
@@ -341,7 +370,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
+  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();
