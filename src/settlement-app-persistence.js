@@ -71,6 +71,9 @@ function migrateStructures(list){
     return s;
   });
 
+  // Walls against a quay always face out to the water (settlement-quay.js rule).
+  for(const s of migrated)window.ConquerQuay?.faceWallOut(s,migrated);
+
   // Remove annexes whose parent no longer exists and repair dimensions from catalog.
   const parentIndex=new Map(migrated.map(s=>[s.id,s]));
   const cleaned=migrated.filter(s=>!isCivicAnnex(s)||normalizeCivicAnnex(s,parentIndex.get(s.parentId)));

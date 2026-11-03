@@ -39,20 +39,36 @@
   }
   function toWorld(pose,l){const o=[];placer(pose)(l[0],l[1],l[2],o);return{x:o[0],y:o[1],z:o[2]}}
   const sample=(h,c,r)=>window.ConquerHeraldryShapes?.sample(h,c,r)||null;
+  // Liveries: each ship gets a random hull paint (the wale and castle panels, 'red' in the
+  // model) and planking tone (the oak and tar shades), so two ships of a kind look apart.
+  const PAINTS=[['#b0332a','#86241f'],['#2f5f9e','#223f6b'],['#2f6b3c','#1f4a29'],['#d2a63a','#9c7a26'],['#2a2624','#161413'],['#e7dcc4','#b9ad94'],['#6b3a7a','#4a2755']];
+  const WOODS=[null,['#7a5230','#8f6439','#4e321b'],['#b08458','#c39a6c','#7c5a38'],['#6f6a62','#86817a','#4a4641'],['#4b2a20','#5e3326','#2a1913']];
+  const PAINT_KEYS=['red','redDark'],WOOD_KEYS=[['oak','oakLight','oakDark'],['tar','tarLight','tarDark']];
+  const livery=(rnd=Math.random)=>({paint:Math.floor(rnd()*PAINTS.length),wood:Math.floor(rnd()*WOODS.length)});
+  const liveryCache=new Map();
+  function palette(l){
+    if(!l||!M.paletteKeys)return M.palette;
+    const id=l.paint+'/'+l.wood;if(liveryCache.has(id))return liveryCache.get(id);
+    const out=M.palette.slice(),set=(k,c)=>{const i=M.paletteKeys.indexOf(k);if(i>=0&&c)out[i]=c};
+    PAINT_KEYS.forEach((k,i)=>set(k,PAINTS[l.paint]?.[i]));
+    const w=WOODS[l.wood];if(w)for(const ks of WOOD_KEYS)ks.forEach((k,i)=>set(k,w[i]));
+    liveryCache.set(id,out);return out;
+  }
   // World-space mesh {pos,col} for a ship at {x,y,heading,z}; furl 0 = set, 1 = furled.
   // With heraldry {flag, sail, t} it adds the flags (waving at time t) and the arms on the sails.
-  function mesh(key,pose,furl=0,heraldry=null){
+  function mesh(key,pose,furl=0,heraldry=null,liv=null){
     const m=M.ships[key];if(!m)return null;
+    const P=palette(liv);
     const pos=[],col=[],place=placer(pose),put=(x,y,zz)=>place(x,y,zz,pos);
     const quad=(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)};
     for(let t=0;t<m.c.length;t++){
       for(let k=0;k<3;k++){const j=m.i[t*3+k]*3;put(m.p[j],m.p[j+1],m.p[j+2])}
-      col.push(M.palette[m.c[t]]);
+      col.push(P[m.c[t]]);
     }
     const s=m.sails,f=Math.max(0,Math.min(1,furl));
     for(let t=0;t<s.c.length;t++){
       for(let k=0;k<3;k++){const j=t*9+k*3;put(s.v[j]+(s.f[j]-s.v[j])*f,s.v[j+1]+(s.f[j+1]-s.v[j+1])*f,s.v[j+2]+(s.f[j+2]-s.v[j+2])*f)}
-      col.push(M.palette[s.c[t]]);
+      col.push(P[s.c[t]]);
     }
     if(!heraldry)return{pos,col};
     // Arms on the sails: each patch follows its cloth (set / furled) just off both faces.
@@ -110,6 +126,6 @@
     M.lab[k]={parts:{hull,sails:{v:m.sails.v,c:m.sails.c}}};
     M.lab[k+'Furled']={parts:{hull,sails:{v:m.sails.f,c:m.sails.c}}};
   }
-  window.ConquerShips=Object.freeze({keys,mesh,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
+  window.ConquerShips=Object.freeze({keys,mesh,livery,PAINTS,WOODS,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
     small:keys.filter(k=>M.ships[k].size==='small'),large:keys.filter(k=>M.ships[k].size==='large')});
 })();

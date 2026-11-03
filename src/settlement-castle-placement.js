@@ -56,8 +56,11 @@ function commitOrientedPlacement(center,angle){
     subtowerSocket:State.draft?.subtowerSocket||null,
     subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
   }:{};
-  const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
+  const quaySnap=spec.type==='tower'?State.draft?.quaySnap||null:null;
+  const locked=Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle;
+  const finalAngle=quaySnap?locked:snapStructureAngle(locked);   // a quay tower keeps the quay's angle
   const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  if(quaySnap)s.quaySnap=quaySnap;
   if(s.type==='watermill')window.ConquerIndustries?.orientToWater(s);
   if(s.type==='pier')window.ConquerPier?.snapToCoast(s);
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
@@ -127,6 +130,10 @@ function snapAnchor(p){
   const terrace=State.tool?.kind==='linear'&&State.tool.linear==='wall'
     ?window.ConquerTerraforming?.snapWallAnchor(p,currentLinearSpec().width):null;
   let best=terrace?{id:terrace.structureId}:null,bestPoint=terrace?.point||null,bestScore=terrace?.score??Infinity;
+  // Quay magnet: walls, palisades and built sections along either side of a stone quay.
+  const quay=State.tool?.kind==='linear'&&['wall','palisade','built'].includes(State.tool.linear)
+    ?window.ConquerQuay?.snapWallAnchor(p,currentLinearSpec().width):null;
+  if(quay&&quay.score<bestScore){best={id:quay.structureId};bestPoint=quay.point;bestScore=quay.score}
   for(const s of State.structures){
     if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;
     const q=boundaryPoint(s,p),score=dist(p,q);
@@ -338,7 +345,11 @@ function towerPlacementSnap(p){
   const subtower=nearestSubtowerPlacementSnap(p);
   if(subtower)return subtower;
   const wall=nearestWallPlacementSnap(p);
-  return wall||{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
+  if(wall)return wall;
+  // Against a stone quay, its inner side (the door) turned to the quay (settlement-quay.js).
+  const quay=window.ConquerQuay?.snapTower(p,towerToolPrototype());
+  if(quay)return{point:quay.point,wallId:null,parentTowerId:null,angle:quay.angle,quayId:quay.quayId};
+  return{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
 }
 function towerHalfSpanAlongWall(tower,wall){
   if(tower.shape==='round')return Number(tower.r)||.5;

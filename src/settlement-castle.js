@@ -355,7 +355,8 @@ function unionGroundContactRings(polys){
 }
 const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church']);
 function isPlacementFoundationBuilding(s){
-  return !!s&&!s.auto&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
+  // A tower against a quay stands on the quay's plinth instead (settlement-quay.js).
+  return !!s&&!s.auto&&!s.quaySnap&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
 }
 function placementFoundationProfile(s){
   if(!isPlacementFoundationBuilding(s))return null;
@@ -463,6 +464,8 @@ function structureTerrainSamples(s){
 function buildableTerrainElevationForStructure(s){
   const terraceZ=window.ConquerTerraforming?.wallGroundZ(s);
   if(terraceZ!=null)return terraceZ;
+  const quayZ=window.ConquerQuay?.wallGroundZ(s);   // a wall built along a quay stands on its coping
+  if(quayZ!=null)return quayZ;
   const samples=structureTerrainSamples(s);if(!samples.length)return 0;
   let level=null;
   for(const p of samples){

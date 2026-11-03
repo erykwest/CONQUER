@@ -1806,6 +1806,8 @@
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
     try{for(const m of window.ConquerEvents3D?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
+    // Ships afloat: hulls, morphing sails, flags and boarding planks (settlement-fleet.js).
+    try{for(const m of window.ConquerFleet?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);
     uploadSettledMeshes(S.gl,settled);
     const dyn=buildDynamic(moving);dynamicQueue=[];

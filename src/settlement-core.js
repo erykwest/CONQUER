@@ -215,6 +215,8 @@ function structureAngleFromStep(step){
 }
 function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
 function structureUsesDiscreteAngle(s){
+  // A tower against a stone quay keeps the quay's exact angle (settlement-quay.js).
+  if(s?.type==='tower'&&s.quaySnap)return false;
   return !!s&&['tower','gate','house','market','tavern','church','training','plaza'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){

@@ -20,8 +20,11 @@
   const make=(reach=12)=>({type:'pier',shape:'pier',reach,w:LAND+reach,h:HALF*2,functions:[]});
   const toWorld=(s,x,y)=>{const a=s.angle||0,c=Math.cos(a),sn=Math.sin(a);return{x:s.x+x*c-y*sn,y:s.y+x*sn+y*c}};
   const rect=(s,x0,x1,y0,y1)=>[toWorld(s,x0,y0),toWorld(s,x1,y0),toWorld(s,x1,y1),toWorld(s,x0,y1)];
-  const footprint=s=>rect(s,-LAND,reachOf(s),-HALF,HALF);
-  const landing=s=>rect(s,-LAND,0,-HALF,HALF);
+  // On a quay the landing is only a lip over the coping, so piers can face each other from
+  // the two sides of a mole without their landings meeting.
+  const landOf=s=>s?.onQuay?.3:LAND;
+  const footprint=s=>rect(s,-landOf(s),reachOf(s),-HALF,HALF);
+  const landing=s=>rect(s,-landOf(s),0,-HALF,HALF);
   const seaOf=()=>(State.environment||[]).find(f=>f.type==='sea'&&f.coastline?.length>1)||null;
 
   // Nearest coastline point and the normal pointing out to sea.
@@ -39,7 +42,7 @@
   }
   // Where a pier can start near p: the sea edge of a quay when one is at hand (a quay built
   // on the shore runs right by the coastline, so it must win within its reach), else the coast.
-  const QUAY_REACH=2.5;
+  const QUAY_REACH=2.5,QUAY_SHORE=4,QUAY_SPACING=5;   // U: snap reach, clear of the shore, between piers
   function rootHit(p){
     const coast=coastHit(p),quay=window.ConquerQuay?.edgeHit(p);
     if(quay&&(quay.distance<=QUAY_REACH||!coast||quay.distance<=coast.distance))return{...quay,sea:coast?.sea||seaOf(),onQuay:quay.quay.id};
@@ -63,8 +66,23 @@
     if(hit.distance>.3)return{ok:false,reason:'A pier must start on the coastline or a quay'};
     // Only the landing must be in the whitezone: the deck reaches out over the sea.
     // No buildable-terrain rules: slopes, woods and uneven shore are fine.
-    if(landing(s).some(v=>v.x<BUILD_MIN||v.x>BUILD_MAX||v.y<BUILD_MIN||v.y>BUILD_MAX))
+    // (Off a quay the quay has already started from the whitezone: it may run on beyond it.)
+    if(!hit.onQuay&&landing(s).some(v=>v.x<BUILD_MIN||v.x>BUILD_MAX||v.y<BUILD_MIN||v.y>BUILD_MAX))
       return{ok:false,reason:'The pier landing must be inside the whitezone (100×100U)'};
+    // Off a quay: clear of the shore, and spaced from the other piers on the same side.
+    // The shore rule is for piers branching sideways off a mole (running along the shore);
+    // a pier heading straight out to sea from a shore quay starts at the coast by design.
+    if(hit.onQuay){
+      const coast=coastHit(s);
+      const seaward=coast&&hit.normal.x*coast.normal.x+hit.normal.y*coast.normal.y>.7;
+      if(coast&&!seaward&&coast.distance<QUAY_SHORE-1e-6)return{ok:false,reason:'A pier off a quay must start at least '+QUAY_SHORE+'U from the shore'};
+      const side=Math.atan2(hit.normal.y,hit.normal.x);
+      for(const o of State.structures||[]){
+        if(!is(o)||o.id===s.id||o.onQuay!==hit.onQuay)continue;
+        if(Math.cos((o.angle||0)-side)<.99)continue;                           // the other side of the quay
+        if(dist(o,hit.point)<QUAY_SPACING-1e-6)return{ok:false,reason:'Piers on a quay must be at least '+QUAY_SPACING+'U apart'};
+      }
+    }
     const R=reachOf(s),sea=hit.sea;
     for(const x of [Math.min(2,R*.5),R/2,R-.1])for(const y of [-HALF,HALF])
       if(!sea||!environmentContains(sea,toWorld(s,x,y)))return{ok:false,reason:'The pier must reach out over open sea'};
@@ -94,10 +112,10 @@
         for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(c)}
     };
     // Deck: cross planks with small gaps, on three stringers.
-    const plank=.3;
-    for(let x=-LAND,i=0;x<REACH-.01;x+=plank,i++)
+    const plank=.3,land=landOf(s);
+    for(let x=-land,i=0;x<REACH-.01;x+=plank,i++)
       box(x+.015,Math.min(REACH,x+plank)-.015,-HALF,HALF,top-.06,top,i%3===1?WOOD2:WOOD);
-    for(const y of [-HALF+.12,0,HALF-.12])box(-LAND,REACH,y-.07,y+.07,top-.17,top-.06,DARK);
+    for(const y of [-HALF+.12,0,HALF-.12])box(-land,REACH,y-.07,y+.07,top-.17,top-.06,DARK);
     // Pile bents: a pair of piles into the sea bed and a headstock under the stringers,
     // the waterline marked by a darker wet band. On the shore a stone crib carries the landing.
     // (On a quay the landing rests on the quay itself.)
@@ -133,7 +151,7 @@
     const M=window.ConquerScatterModel;if(!M?.assets)return null;
     const rnd=seedRand((Number(State.seed)||1)^[...String(s.id||'pier')].reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261));
     // Goods every ~1.4U along the deck, alternating sides, clear of the berths; rope by the bollards.
-    const spots=[];for(let x=-.7,i=0;x<MOOR_AT-.6;x+=1.4,i++)spots.push([x,i%2?-.42:.42,false]);
+    const spots=[];for(let x=s.onQuay?.5:-.7,i=0;x<MOOR_AT-.6;x+=1.4,i++)spots.push([x,i%2?-.42:.42,false]);
     spots.push([MOOR_AT+.55,.38,true],[MOOR_AT+.55,-.38,true]);
     const pos=[],col=[];
     spots.forEach(([x,y,rope])=>{

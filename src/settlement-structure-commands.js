@@ -79,6 +79,7 @@ const StructureCommands=(()=>{
   }
   function flipSide(id){
     const target=find(id);if(!target||!['wall','palisade','built'].includes(target.type))return false;
+    if(window.ConquerQuay?.isQuayWall(target)){status('A wall on a quay always faces out to the water');return false}
     target.flip=!target.flip;
     refresh(target);
     status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped');

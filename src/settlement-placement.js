@@ -81,6 +81,11 @@
   function regularCollision(s,other,polys,options={}){
     // Piers branch off quays: their landing rests on the quay.
     if((s.type==='pier'&&other.type==='quay')||(s.type==='quay'&&other.type==='pier'))return false;
+    // Quays joined by the quay magnet meet without colliding.
+    if(window.ConquerQuay?.joined(s,other))return false;
+    // A wall magnetised to a quay stands on it.
+    if(other.type==='quay'&&window.ConquerQuay?.isWallOn(s,other))return false;
+    if(s.type==='quay'&&window.ConquerQuay?.isWallOn(other,s))return false;
     if(s.type==='house'&&other.type==='road'&&other.accessFor===s.id)return false;
     // Castle pieces deliberately join walls/gates/towers at their sockets.
     if(['tower','gate'].includes(s.type)&&['wall','built','tower','gate','palisade'].includes(other.type)){
@@ -108,7 +113,9 @@
     const annexVerdict=civicAnnexPlacementCheck(s);
     if(!annexVerdict.ok)return annexVerdict;
     // A pier reaches out over the sea: its own validation keeps the landing in the whitezone.
-    if(!window.ConquerPier?.is(s)&&!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
+    // Quays (and the walls and towers built against them) start in the whitezone by their own rules.
+    const harbour=window.ConquerPier?.is(s)||window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null;
+    if(!harbour&&!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
     const ignored=ignoreSet(options);
     if(s.type==='well'&&!options.ignoreFounding&&(
       State.village?.founded||State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
@@ -139,6 +146,8 @@
         const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
         if(samples(polys).some(inForest)||blockedByTrees(polys))return invalid('Wall segment crosses a forest');
       }
+    }else if(s.type==='tower'&&s.quaySnap&&window.ConquerQuay?.wallGroundZ(s)!=null){
+      // A tower against a quay stands in the water on its plinth: no terrain or water rules.
     }else{
       const foundation=isPlacementFoundationBuilding(s);
       if(!foundation&&buildableTerrainElevationForStructure(s)==null)

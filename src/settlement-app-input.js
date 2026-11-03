@@ -28,9 +28,10 @@ canvas.addEventListener('pointerdown',e=>{
     draw();return
   }
   if(State.tool.kind==='quay'){
-    const q={x:snapGrid(p.x),y:snapGrid(p.y)};
-    if(!State.draft?.a){State.draft={a:q,preview:null};status('Banchina: punto A fissato — clicca il punto B');draw();return}
-    const quay={id:uid(),...window.ConquerQuay.make(State.draft.a,q)};
+    // Magnet: another quay's end (carry it on) or face (a T).
+    const m=window.ConquerQuay.snapQuay(p),q=m?.point||{x:snapGrid(p.x),y:snapGrid(p.y)};
+    if(!State.draft?.a){State.draft={a:q,aSnap:m?.quayId||null,preview:null};status(m?'⚓ Banchina agganciata — clicca il punto B':'Banchina: punto A fissato — clicca il punto B');draw();return}
+    const quay={id:uid(),...window.ConquerQuay.make(State.draft.a,q),aSnap:State.draft.aSnap||null,bSnap:m?.quayId||null};
     if(addStructure(quay)){State.draft=null;status('Banchina costruita — scegli il prossimo punto A')}
     draw();return
   }
@@ -62,7 +63,8 @@ canvas.addEventListener('pointerdown',e=>{
     const snap=towerPlacementSnap(p),q=snap.point;
     // A round footprint is independent of orientation; its door still needs
     // a user-selected facing even when the centre snaps to a wall/subtower.
-    const lockedAngle=State.tool.shape==='round'?null:(snap.parentTowerId||snap.wallId)?snap.angle:null;
+    // Against a quay the tower's inner side (door) is forced towards the quay, even when round.
+    const lockedAngle=snap.quayId?snap.angle:State.tool.shape==='round'?null:(snap.parentTowerId||snap.wallId)?snap.angle:null;
     const angle=Number.isFinite(lockedAngle)?lockedAngle:0;
     State.draft={
       mode:'orient',center:q,angle,lockedAngle,
@@ -71,7 +73,8 @@ canvas.addEventListener('pointerdown',e=>{
       parentTowerId:snap.parentTowerId||null,
       subtowerSocket:snap.subtowerSocket||null,
       subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
-      preview:makePlacementPreview(q,angle)
+      quaySnap:snap.quayId||null,
+      preview:{...makePlacementPreview(q,angle),...(snap.quayId?{quaySnap:snap.quayId,angle}:{})}
     };
     status(snap.parentTowerId?'Subtower magnetized — click to confirm':snap.wallId?'Tower magnetized to wall endpoint — click to confirm':'Position fixed — move cursor to rotate, click to confirm');
     draw();return
@@ -161,8 +164,10 @@ canvas.addEventListener('pointerdown',e=>{
           }
         }else status('Segment too short');
       }else{
-        // A magnet (tower, gate or a free wall end) is reached exactly.
-        const route=normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!(e2.structureId||e2.endpoint));
+        // A magnet (tower, gate or a free wall end) is reached exactly; along a quay the wall
+        // follows the quay edge straight, whatever its angle.
+        const route=window.ConquerQuay?.wallRoute(State.draft.a,e2.point,State.draft.aSnap,e2.structureId,spec)||
+          normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!(e2.structureId||e2.endpoint));
         if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
           const legs=route.segments.length;
           if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
@@ -202,10 +207,11 @@ canvas.addEventListener('pointermove',e=>{
   }
   if(State.tool.kind==='quay'){
     if(!State.draft?.a)return;
-    const preview=window.ConquerQuay.make(State.draft.a,{x:snapGrid(p.x),y:snapGrid(p.y)});
+    const m=window.ConquerQuay.snapQuay(p);
+    const preview={...window.ConquerQuay.make(State.draft.a,m?.point||{x:snapGrid(p.x),y:snapGrid(p.y)}),aSnap:State.draft.aSnap||null,bSnap:m?.quayId||null};
     State.draft.preview=preview.length>=.02?preview:null;
     const v=State.draft.preview&&window.ConquerPlacement?.check(State.draft.preview);
-    status(v&&!v.ok?'Banchina: '+v.reason:'Banchina '+preview.length.toFixed(1)+'U — clicca il punto B');
+    status(v&&!v.ok?'Banchina: '+v.reason:(m?'⚓ ':'')+'Banchina '+preview.length.toFixed(1)+'U — clicca il punto B');
     draw();return;
   }
   if(State.tool.kind==='crossing'){
@@ -259,7 +265,8 @@ canvas.addEventListener('pointermove',e=>{
       return;
     }
 
-    const route=normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.endpoint));
+    const route=window.ConquerQuay?.wallRoute(State.draft.a,snap.point,State.draft.aSnap,snap.structureId,spec)||
+      normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.endpoint));
     if(route){
       const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,...(State.tool.span==='wide'?{span:'wide'}:{})};
       State.draft.invalidPreview=null;
@@ -269,9 +276,10 @@ canvas.addEventListener('pointermove',e=>{
         ...(index===0&&State.draft.aSnap?{aSnap:State.draft.aSnap}:{}),
         ...(index===route.segments.length-1&&snap.structureId?{bSnap:snap.structureId}:{})
       }));
+      State.draft.previewSegments.forEach(seg=>window.ConquerQuay?.faceWallOut(seg));   // quay walls face out
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
       const legs=route.segments.length,total=route.length;
-      status(`${State.tool.label}: ${total.toFixed(2)}U · ${legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
+      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
       State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};
@@ -300,7 +308,7 @@ canvas.addEventListener('pointermove',e=>{
       draw();return
     }
     if(State.tool.kind==='tower'){
-      const snap=towerPlacementSnap(p),angle=State.tool.shape==='round'?0:(snap.parentTowerId||snap.wallId)?snap.angle:0;
+      const snap=towerPlacementSnap(p),angle=snap.quayId?snap.angle:State.tool.shape==='round'?0:(snap.parentTowerId||snap.wallId)?snap.angle:0;
       State.draft={
         mode:'hover',
         wallSnapId:snap.wallId||null,
@@ -308,9 +316,11 @@ canvas.addEventListener('pointermove',e=>{
         parentTowerId:snap.parentTowerId||null,
         subtowerSocket:snap.subtowerSocket||null,
         subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
-        preview:makePlacementPreview(snap.point,angle)
+        quaySnap:snap.quayId||null,
+        preview:{...makePlacementPreview(snap.point,angle),...(snap.quayId?{quaySnap:snap.quayId,angle}:{})}
       };
       if(snap.parentTowerId)status('Subtower socket');
+      else if(snap.quayId)status('⚓ Tower against the quay — inner side to the quay, click to place');
     }else{
       const road=State.tool.kind==='gate'?gateRoadSnap(p):null;
       const q=road?road.point:{x:snapGrid(p.x),y:snapGrid(p.y)};

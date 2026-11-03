@@ -452,6 +452,7 @@ function draw(){
   drawCastleSoldiers();
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
+  window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
   window.ConquerSiege?.drawOverlay();
   drawCastleFireFixtures();
 

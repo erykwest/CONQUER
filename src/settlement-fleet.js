@@ -1,7 +1,7 @@
 'use strict';
 // Ships in the game world (test fleet, DEV panel). A ship moors at the first free berth of a
-// pier (settlement-pier.js), lying alongside with its bow to the sea, or, with no free berth,
-// rides at anchor off the coast. Each ship has its arms (ConquerShips.arms) and a crew
+// pier (settlement-pier.js), lying alongside with its bow to the sea, then at a free slot along
+// a quay (settlement-quay.js), or, with no free berth, rides at anchor off the coast. Each ship has its arms (ConquerShips.arms) and a crew
 // (settlement-ship-crew.js) that works the sails on orders. Ships are drawn every frame on
 // the dynamic layer (both renderers) with their sailors as depth-sorted figures; the crews
 // run on real time, so the sails can be tested with the game paused. Not saved yet.
@@ -22,16 +22,46 @@
     const t={x:-hit.normal.y,y:hit.normal.x},d=7+M().ships[key].B,along=(n%5-2)*9;
     return{x:hit.point.x+hit.normal.x*d+t.x*along,y:hit.point.y+hit.normal.y*d+t.y*along,heading:Math.atan2(t.y,t.x),z:0};
   }
-  // pier: moor at that pier only; anchor: true rides at anchor even with berths free.
-  function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,anchor=false}={}){
+  // Along a quay (settlement-quay.js berths): alongside the face, bow along the quay.
+  function quayBerthPose(b,key){
+    const off=M().ships[key].B/2+.12;
+    return{x:b.edge.x+b.out.x*off,y:b.edge.y+b.out.y*off,heading:b.angle,z:0};
+  }
+  // A quay slot is free for a ship when its hull clears every quay (a slot by a corner would
+  // put a long hull against the other arm), every pier and every other ship.
+  function hull(key,pose,pad=.08){
+    const m=M().ships[key],c=Math.cos(pose.heading),sn=Math.sin(pose.heading),hl=m.L/2+pad,hb=m.B/2+pad;
+    return[[hl,hb],[-hl,hb],[-hl,-hb],[hl,-hb]].map(([x,y])=>({x:pose.x+x*c-y*sn,y:pose.y+x*sn+y*c}));
+  }
+  function overlap(A,B){
+    for(const poly of [A,B])for(let i=0;i<poly.length;i++){
+      const a=poly[i],b=poly[(i+1)%poly.length],nx=-(b.y-a.y),ny=b.x-a.x;
+      const pa=A.map(p=>p.x*nx+p.y*ny),pb=B.map(p=>p.x*nx+p.y*ny);
+      if(Math.max(...pa)<=Math.min(...pb)||Math.max(...pb)<=Math.min(...pa))return false;
+    }
+    return true;
+  }
+  function quayFree(b,key){
+    const h=hull(key,quayBerthPose(b,key));
+    for(const o of State.structures||[]){
+      if(o.type==='quay'&&overlap(h,window.ConquerQuay.footprint(o)))return false;
+      if(o.type==='pier'&&overlap(h,window.ConquerPier.footprint(o)))return false;
+    }
+    return!ships.some(s=>overlap(h,hull(s.key,s.pose)));
+  }
+  // pier / quay: moor there only; anchor: true rides at anchor even with berths free.
+  // Pier berths are filled first, then the slots along the quays.
+  function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null}={}){
     if(!M()?.ships?.[key])return null;
     let berth=null,pose=null;
-    if(!anchor)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&(!pier||s.id===pier)))
+    if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&(!pier||s.id===pier)))
       for(const side of ['left','right'])if(!berth&&!occupied(p.id,side)){berth={pierId:p.id,side};pose=berthPose(p,side,key)}
+    if(!berth&&!anchor&&!pier)for(const q of (State.structures||[]).filter(s=>s.type==='quay'&&(!quay||s.id===quay)))
+      for(const b of window.ConquerQuay?.berths(q)||[])if(!berth&&quayFree(b,key)){berth={quayId:q.id,side:b.side,along:b.along,key:b.key};pose=quayBerthPose(b,key)}
     pose||=anchorPose(key,ships.length);
     if(!pose)return null;
     // In port the sails are furled up to the yards; at anchor off the coast they stay set.
-    const id='ship-'+(++seq),ship={id,key,allegiance,realm,berth,pose,crew:C().crewState(key,id,S().sailState(!!berth)),cache:null};
+    const id='ship-'+(++seq),ship={id,key,allegiance,realm,berth,pose,livery:livery||S().livery?.(),crew:C().crewState(key,id,S().sailState(!!berth)),cache:null};
     ships.push(ship);requestDraw();
     return ship;
   }
@@ -50,35 +80,46 @@
     return NB.start(A,D);
   }
   const requestDraw=()=>{if(typeof requestSceneDraw==='function')requestSceneDraw();else if(typeof draw==='function')draw()};
-  // Keep the moored ships alongside if a pier moved or vanished.
+  // Keep the moored ships alongside if a pier moved or vanished; a quay slot that closed
+  // (a pier or a wall built by it) sends its ship away.
   function sync(){
     for(let i=ships.length-1;i>=0;i--){
       const s=ships[i];if(!s.berth)continue;
+      if(s.berth.quayId){
+        const q=State.structures.find(o=>o.id===s.berth.quayId),b=q&&window.ConquerQuay?.berths(q).find(x=>x.key===s.berth.key);
+        if(!b){ships.splice(i,1);continue}
+        s.pose=quayBerthPose(b,s.key);continue;
+      }
       const pier=State.structures.find(p=>p.id===s.berth.pierId);
       if(!pier){ships.splice(i,1);continue}
       s.pose=berthPose(pier,s.berth.side,s.key);
     }
   }
+  // With the 3D renderer the hulls, sails, flags and plank are WebGL meshes of the frame's
+  // front pass (depth-tested against piers, quays and the sea surface); the figures, flames
+  // and arrows are painted after that pass so the hulls do not cover them.
+  let frame3d=null;
+  const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
+    frame3d=null;
     if(!ships.length||!window.ConquerMesh3D)return;
     const now=(typeof performance!=='undefined'?performance.now():Date.now())/1000,dt=last?Math.min(.1,now-last):0;last=now;
     sync();
-    const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle;
+    const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle,gl=world3d();
     for(const s of ships)C().step(s.crew,dt);
     const fighting=!!NB?.active();
     if(fighting)NB.step(dt);
-    // With every sail at rest the ships (and their piers) are painted once into a cached
-    // bitmap and only the flags and sailors are drawn live; during a manoeuvre or a battle
-    // all is live.
-    const still=!fighting&&!ships.some(s=>s.crew.sail.t!==s.crew.sail.target);
-    // Ships are painted over the scene: the piers they lie at are painted again in the same
-    // depth sort, so a pier in front of a hull still covers it.
-    for(const id of new Set(ships.filter(s=>s.berth).map(s=>s.berth.pierId))){
+    // 2.5D only: with every sail at rest the ships (and their piers) are painted once into a
+    // cached bitmap and only the flags and sailors are drawn live.
+    const still=!gl&&!fighting&&!ships.some(s=>s.crew.sail.t!==s.crew.sail.target);
+    // 2.5D only: ships are painted over the scene, so the piers they lie at are painted again
+    // in the same depth sort and a pier in front of a hull still covers it.
+    if(!gl)for(const id of new Set(ships.filter(s=>s.berth).map(s=>s.berth.pierId))){
       const pier=State.structures.find(p=>p.id===id);if(pier)meshes.push(...window.ConquerPier.meshes(pier));
     }
     for(const s of ships){
       const arms=S().arms(s),key=[s.pose.x,s.pose.y,s.pose.heading,s.pose.z||0,s.pose.roll||0,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
-      if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,s.pose,s.crew.sail.furl,{sail:arms.sail,flag:null})};
+      if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,s.pose,s.crew.sail.furl,{sail:arms.sail,flag:null},s.livery)};
       // A battle chars, burns and sinks the hull (settlement-naval-battle.js).
       meshes.push(fighting?NB.dress(s,s.cache.mesh):s.cache.mesh);
       s.flags=S().flagMesh(s.key,s.pose,arms.flag,now);
@@ -95,6 +136,10 @@
     }
     const flags=ships.map(s=>s.flags).filter(Boolean),plank=fighting&&NB.plankMesh();
     if(plank)flags.push(plank);
+    if(gl){
+      frame3d={meshes:[...meshes,...flags],sprites,view,now,fighting};
+      requestDraw();return;
+    }
     if(still){
       M3.drawCached(ctx,'fleet',ships.map(s=>s.cache.key).join(';'),()=>meshes,ships[0].pose);
       M3.drawMeshes(ctx,flags,view,sprites);
@@ -103,6 +148,15 @@
     // Sailors are always about (and flags wave): with ships afloat, keep frames coming even
     // when the game is paused.
     requestDraw();
+  }
+  // The frame's ship meshes for the WebGL front pass (settlement-world3d.js drawFront).
+  const dynamicMeshes=()=>frame3d?.meshes||[];
+  // After the 3D front pass: sailors, soldiers and flames depth-sorted among themselves, then
+  // arrows and the foam of a sinking hull.
+  function drawFigures(){
+    const f=frame3d;if(!f)return;
+    f.sprites.sort((a,b)=>f.view.depth(a.x,a.y,a.z)-f.view.depth(b.x,b.y,b.z)).forEach(s=>s.draw());
+    if(f.fighting)window.ConquerNavalBattle.drawOverlay(f.now);
   }
   // DEV panel (index.html #devShips).
   function bindDev(){
@@ -121,5 +175,5 @@
     };
   }
   if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindDev);else bindDev()}
-  window.ConquerFleet=Object.freeze({ships,spawn,order,clear,remove,battle,draw:drawAll,berthPose,anchorPose});
+  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,battle,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose});
 })();

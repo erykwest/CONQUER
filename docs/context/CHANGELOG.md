@@ -2,6 +2,15 @@
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
+- Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
+- Magnete delle mura sui lati della banchina: muro dritto all'esterno, addossato alla faccia, alla quota della banchina su zoccolo.
+- Livrea casuale delle navi: ogni nave alla creazione prende a caso pittura dello scafo (fascia e pannelli, 7 colori) e tono del fasciame (5), passabili come `livery` a `ConquerFleet.spawn`.
+- Attracchi lungo la banchina (ogni 5U, disattivati entro 4U da un pontile, sotto le mura, vicino alle torri); la flotta li usa dopo i pontili con controllo dello scafo.
+- Regola: i muri di banchina mostrano sempre l'esterno all'acqua (flip forzato, anche sulle partite salvate; inversione manuale rifiutata).
+- Angoli delle banchine chiusi (prolungamento alle estremità collegate, muri d'angolo sovrapposti); banchine, mura, torri e pontili da banchina possono proseguire oltre la white zone se partono da dentro.
+- Torri sulla banchina (lati e vertici, porta verso la banchina, quota della banchina su zoccolo); magnete tra banchine (estremità e facce); texture a blocchi di pietra con giunti e lastricato.
+- Navi nel WebGL (mesh dinamiche); pontili da banchina a ≥4U dalla riva e ≥5U tra loro; gru, paranchi e merci sulla banchina.
+
 - Equipaggio militare (arcieri sui castelli, armigeri sul ponte) e battaglia navale dimostrativa: avvicinamento, frecce anche incendiarie, passerella e abbordaggio, incendio e affondamento (`settlement-naval-battle.js`, `qa/naval-battle-regression.cjs`). `settlement-fire.js` esporta `flame`/`smoke`.
 
 - Porto: moli L4/L12, piazzamento solo costa + whitezone; banchina in pietra a due clic con moli agganciati; navi di test nel menu DEV (ormeggio con vele alzate, alla fonda, ordini alle vele). Toppe araldiche 16×10 e bandiere 10×6 per contenere il costo di disegno.

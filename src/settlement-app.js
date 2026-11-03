@@ -75,6 +75,7 @@ function addStructure(s){
     s.groundZ=site.ground;s.resourceTarget=site.resourceTarget;
   }
   normalizeStructureRotation(s);
+  window.ConquerQuay?.faceWallOut(s);
   normalizeCivicDevelopment(s);
   normalizeStructureVariants(s);
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
@@ -150,6 +151,7 @@ function linearRouteStructures(route,endSnapId,spec){
     if(groupId)s.routeGroupId=groupId;
     if(jointId&&i===0)s.bJoint=jointId;
     if(jointId&&i===route.segments.length-1)s.aJoint=jointId;
+    window.ConquerQuay?.faceWallOut(s);   // rule: quay walls show their exterior to the water
     return s;
   });
 }
