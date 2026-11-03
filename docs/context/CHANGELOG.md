@@ -2,6 +2,7 @@
 
 ## 2026-11-03 — Priorità P0 e riconciliazione circle
 
+- CI CIRCLE estesa a main e alle dipendenze core/stanze/ingresso mastio; fixture VM portabili anche con checkout CRLF Windows.
 - Ordine richiesto dall'utente: P0 bridge/circle/jobmanager/knights, P2 messages, P3 pertinenza delle altre branch senza PR.
 - Recupero dei soli residui di circle sulla main d8c89556: conflitto script risolto preservando economia/convogli, integrazione mastio rialzato e reset al cambio salvataggio. Nessuna reintegrazione di bridge, JobManager parallelo o cavalieri 3D.
 - QA locale: 67 test circle e 113 suite di regressione superati; founding richiede esecuzione isolata dopo fallimento temporale sotto carico. Stato pubblicazione/merge da risolvere tramite SHA Git remoto.

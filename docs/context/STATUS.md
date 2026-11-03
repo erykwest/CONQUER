@@ -2,6 +2,7 @@
 
 ## 2026-11-03 — Consolidamento prioritario P0 (in verifica su circle)
 
+- CI CIRCLE estesa a main e alle dipendenze core/stanze/ingresso mastio; fixture VM portabili anche con checkout CRLF Windows.
 Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR nuova; riconciliazione diretta autorizzata dall'utente, senza reintrodurre sistemi già integrati.
 
 - **P0 bridge:** terrapieni recuperati in #73; main mantiene persistenza, esclusione del capitano e riempimento compatibile con terraforming. Nessuna modifica operativa da reintegrare.

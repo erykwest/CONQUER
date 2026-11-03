@@ -2,11 +2,14 @@ name: CIRCLE regression
 
 on:
   push:
-    branches: [circle]
+    branches: [main, circle]
     paths:
       - 'src/circle/**'
       - 'src/settlement-circle.js'
       - 'src/settlement-siege.js'
+      - 'src/settlement-core.js'
+      - 'src/settlement-castle-structures.js'
+      - 'src/settlement-keep-entrance.js'
       - 'src/settlement-combat.js'
       - 'src/settlement-app-simulation.js'
       - 'src/settlement-population-navigation.js'
@@ -18,6 +21,9 @@ on:
       - 'src/circle/**'
       - 'src/settlement-circle.js'
       - 'src/settlement-siege.js'
+      - 'src/settlement-core.js'
+      - 'src/settlement-castle-structures.js'
+      - 'src/settlement-keep-entrance.js'
       - 'src/settlement-combat.js'
       - 'src/settlement-app-simulation.js'
       - 'qa/circle-*.test.mjs'
