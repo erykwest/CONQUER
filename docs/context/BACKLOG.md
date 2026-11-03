@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-03 — Residui dei tre branch selezionati
+
+| Branch | Residuo da recuperare | Esito |
+|---|---|---|
+| assedio | Nessuno dello skeleton storico | Coperto da #61; conservare modello danni attuale e Circle |
+| events | Nessuno: diff vuoto contro base comune con main | Coperto da #78 e successive estensioni #110 |
+| feature/knights-messenger-caravans | Nessuno compatibile con D-046 | Coperto da #96 in 2D e #105 per convogli/ledger; vecchio 3D escluso |
+
+18 suite pertinenti superate. Le tre branch sono ridondanti e candidate alla rimozione con controllo del commit esatto. ROADMAP e DECISIONS invariate: nessuna nuova decisione di gameplay.
+
+
 ## 2026-11-03 — Priorità esplicite per consolidamento branch
 
 | Priorità | Branch | Stato / prossimo passo |

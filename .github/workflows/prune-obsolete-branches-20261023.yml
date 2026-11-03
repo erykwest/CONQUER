@@ -1,6 +1,7 @@
 name: One-time safe cleanup of obsolete remote branches (2026-11-03)
 
-# User-authorized cleanup. Runs only when this exact workflow changes on main.
+# User-authorized second cleanup: assedio, events, 2D knight/messenger branch.
+# Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
   push:
@@ -43,10 +44,10 @@ jobs:
             if [[ "$evidence" == '-' ]]; then
               merged_sha="$expected"
             elif [[ "$evidence" == replacement:* ]]; then
-              # Individually audited replacements: #73 earthworks; #96 approved 2D knights.
+              # Audited replacements: #61 siege damage, #78 events, #96 approved 2D diplomacy.
               # D-046 explicitly discards the old 3D knight implementation.
               case "$branch:$evidence" in
-                bridge:replacement:73|knights:replacement:96) ;;
+                assedio:replacement:61|events:replacement:78|feature/knights-messenger-caravans:replacement:96) ;;
                 *) echo 'Unapproved replacement'; exit 1 ;;
               esac
               pr="${evidence#replacement:}"
@@ -78,51 +79,9 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          ci/economy-regressions|e93ead450e0b89583cf93b54ad29cf220b0b1139|109
-          converge|3c458a62494a6f22cf4913101307ad2791c909b2|61
-          docs/audit-main-20261030|c4fd39823e9a0d60f895edaeb13f368d438224fa|112
-          feat/asset-lab-audit|f84af43de755c7af89112b0afe7716ddea822caf|82
-          feat/crenel-styles|d43160a02b8b505981f50184d1713099796b5fd0|115
-          feature/autonomous-urban-economy|1ce18e9c01a438bce923f03cd4dd5cd00379b2f4|130
-          feature/bartizans|e73519f897d1233a785e9d72b5d5c835c667be28|119
-          feature/battlement-parapet|e1d023d06def3fecfaa07fa69eeab46d71257026|107
-          feature/civic-cutaway|7e75ec609fa66a0ec7246f61c34196603ee4bc00|90
-          feature/construction-props|9c919ded4bf39d81bc295187f6e18107b1f819ab|77
-          feature/crime-skeleton|42eed5b43598b980e7ef88881c319f5374c5fbdd|132
-          feature/cutaway-furniture-converge|a673c521b73ff33ef54272461cf7fda5b45826ba|65
-          feature/cutaway-spiral-stairs|6393e7c244511cba120472a543dd5ab4edede450|106
-          feature/economy-commerce|d4f513c2b5c190357c9f2c89b176ab611d3480b6|101
-          feature/economy-convoys|f6f2c0d5434020e918d3258e5ec4a69ab122bfe7|105
-          feature/economy-labour|93a4536dec8bae1f1717a630777ba51f4293cfb6|98
-          feature/economy-routines|a2eb4cbd18cccf1e85b23e3286caf0ce9b14103b|99
-          feature/economy-vehicles|894211b8ff4327c5a55b941c0ba3c40f40b394cd|108
-          feature/half-d-towers|caf6578a3b26e1766bd0c24ca92cb097f781f0bd|114
-          feature/knights-diplomacy-2d|4dc71a4c92376c56a5d067ac2bbb6674b87d0311|96
-          feature/l3-workshop-cutaway|69a84f7ebabd81eb3a5ac3bd2e3076d55756ee65|135
-          feature/march-skeleton|175ab6de5dc336077e566b59da06d8f34205629d|117
-          feature/mastio-entrance|d2a092ec74edd0b38d21270f51387ef4ca2fa0cd|120
-          feature/multi-wells|a3df0c8c5c105f45cbe964f11b54771b1f281169|111
-          feature/seasonal-clothing|041cb28ba1bf32d5e874caea70d7647fa3f17c18|87
-          feature/small-gate|8d765000171f37894aa78a4cd0955882c433b225|116
-          feature/tent-livery|01aff13852261ba08d67bcf350d08f7d37dc8808|110
-          feature/townhall-guild|43008b770ca45a1a4a1598bac943ba5060815342|113
-          feature/ui-defend|c772e383acca6eb321e55279d18d3618c391ff11|88
-          feature/walls-on-slopes|4f2df213c03139ce2b2dad892549c129626ba186|118
-          feature/wide-built-hall|2ce71494a902ca52b2ec16535aed8420c7a1374d|102
-          feature/wood-fortifications-3d|0a3288e5b6c60d9dc7baeadcc8b35f3bc7220a15|104
-          fix/civic-cutaway-lab|566011bbe677c1f1b8ea01cfee3123993d127bbb|100
-          fix/cutaway-junctions|2bb8d0446a7d9fae6154e4d2d5e9a951f05e7ad2|95
-          fix/house-fire-collapse|4566ad94804565a7e7c46a9fcc75dfd2d4637170|137
-          fix/lab-export-normals|bf87534985467ab7cfd0ea39b4eeded2ed77a865|89
-          fix/main-founding-dev-webgl-20261023|3a1856facc67cadd3dd34567f677a5bb056877ac|91
-          fix/occlusion-clip-union|9a908ca7f3d4f7d7f0ebe34543dcc50602a90c41|94
-          fix/save-safety|1618a5317ca43475e32a73be38af75102b96a9b6|93
-          panels|f2454951e142346e85b6b70dd60500077487e957|103
-          perf/render-spikes-v2|397892f13c4b6545d42a404269f43d98195c6d53|97
-          sound|dacbe6cd517575f5efdc9c9f11a0127154206106|92
-          circle|be137577857ee17efeda66df424bcb3fb49cf854|-
-          bridge|481f56d7b8f7513f9561d10bd188c47bead4933c|replacement:73
-          knights|11952ce19c431cac730cacf54d44e0d35f8f7b66|replacement:96
+          assedio|ddaafdf415c509c0c916e2808395f9b915c4c4fd|replacement:61
+          events|2dd00b365f05b352c2814e7951dd60bf47f76dc6|replacement:78
+          feature/knights-messenger-caravans|693395898f6115515f4ca1b5d07a22e721a5c838|replacement:96
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))

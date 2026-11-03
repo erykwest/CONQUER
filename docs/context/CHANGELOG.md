@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Consolidamento assedio, events e messaggeri senza 3D
+
+- Confrontati i tre branch selezionati con main 49831855: nessun residuo utile da integrare; assedio coperto da #61, eventi da #78/#110, cavalieri/messaggeri 2D da #96 e convogli da #105.
+- 18/18 regressioni pertinenti superate. Il codice 3D del vecchio branch cavalieri resta escluso (D-046); nessuna regressione al vecchio inventario o al vecchio modello danni.
+- Workflow di pulizia limitato ai tre commit verificati, con protezione dei ref aggiornati e delle PR aperte. Nessuna nuova PR o modifica al runtime.
+
+
 ## 2026-11-02 — Ballatoi di torri e porte (branch `feature/tower-hoardings`)
 
 - Ballatoio di legno come aggiunta temporanea (Montato / Smontato) sulle torri in pietra (quadrata, rotonda, a D) e sulle porte in pietra grande e piccola, merlate o a falde: il tetto resta quello costruito, sotto le falde il ballatoio pende sotto la gronda. Sulle porte solo sul fronte esterno; sulle torri si interrompe contro porte e torri attaccate più alte. Nuova regola D-GATE-01: le torri agganciate a una porta hanno ingresso e lato interno sempre sul retro della porta. Modello Blender (`tools/blender/build_hoarding.py`) ripetuto lungo il profilo; brucia, esclude le macchine in cima alla torre. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: aggiunta D-GATE-01; nuova variante `hoarding` dei tipi `tower` e `gate`, nessun tipo nuovo.
