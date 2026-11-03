@@ -114,7 +114,7 @@
     State.dirty=true;
     const el=document.getElementById('saveState');if(el)el.textContent='unsaved';
     if(typeof scheduleLocalSave==='function')scheduleLocalSave();
-    if(!brushInProgress)syncButtons();
+    if(!brushInProgress){syncButtons();window.ConquerCircle?.invalidateControl?.('combat roster or alarm changed');window.ConquerCircle?.updateControl?.(true)}
   }
   const point=(x,y)=>({x:Math.max(0,Math.min(WORLD,x)),y:Math.max(0,Math.min(WORLD,y))});
   const activeWell=()=>State.village.founded?State.structures.find(s=>s.id===State.village.wellId&&s.type==='well'):null;
@@ -2006,6 +2006,8 @@
     whiteBoundaryPending=false;whiteBoundarySignature='';patrolNavRevision++;patrolRouteCache.clear();
     for(const u of combat.units)if(u.kind==='patrol'){u.target=null;u.path=null;u.nextPatrolAt=0}
     if(activeWell())updateAlert(observers());
+    window.ConquerCircle?.invalidateControl?.('alarm zone brush changed');
+    window.ConquerCircle?.updateControl?.(true);
     scheduleLocalSave();requestToolDraw();
   },true);
   window.addEventListener?.('keydown',e=>{
@@ -2013,7 +2015,7 @@
     clearCombatSelection();setTool({kind:'select',label:'Select'});draw();
   },true);
   const styles=document.createElement('style');
-  styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatRecall[data-mode=green]{background:#35874e;color:#fff} #combatRecall[data-mode=hall]{background:#ad3438;color:#fff} #combatMute:disabled{opacity:.55} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c}';
+  styles.textContent='#combatCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4} #combatControls{border:1px solid #78634c;border-radius:10px;padding:9px;margin:8px 0;background:#211b15} #combatControls h3{margin:3px 0 8px} #combatControls .combat-row{display:flex;gap:4px;margin-bottom:5px} #combatControls button{font-size:11px;flex:1;padding:7px 4px} #combatControls .combat-row button.active{background:#f2c772;color:#20180c} #combatRecall[data-mode=green]{background:#35874e;color:#fff} #combatRecall[data-mode=hall]{background:#ad3438;color:#fff} #combatMute:disabled{opacity:.55} #combatControls label{font-size:11px;display:flex;gap:8px;align-items:center} #combatControls input{flex:1;min-width:0} #combatAlarm[data-level=general]{color:#fc6868} #combatAlarm[data-level=local]{color:#efc06c} #combatCircleStatus[data-danger="1"]{color:#f0a27c}';
   document.head.appendChild(styles);
   const ui=document.createElement('div');
   ui.id='combatControls';
@@ -2029,7 +2031,8 @@
     '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button><button data-combat-storm="ram" title="Set a ram against a gate: intruders batter it in">Assault · ram</button><button data-combat-storm="fill" title="Fill a ravine up to the plateau: three moat-fills per level, dug by infantry">Assault · fill</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
-    '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>';
+    '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>'+
+    '<div class="legend" id="combatCircleStatus">Compartimenti · controllo in attesa</div>';
   document.querySelector('#builder h2').insertAdjacentElement('afterend',ui);
   const $=id=>document.getElementById(id);
   function syncButtons(){
@@ -2071,7 +2074,7 @@
   document.querySelectorAll('[data-combat-fire]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-fire',fireKind:b.dataset.combatFire,label:'Click a structure to shoot at it'});syncButtons();
   });
-  $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerCombatRules?.reset();changed();alertState='clear';draw()};
+  $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerCombatRules?.reset();alertState='clear';changed();draw()};
   document.querySelectorAll('[data-combat-storm]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-storm',stormKind:b.dataset.combatStorm,label:'Click the top of a wall to storm it'});syncButtons();
   });
