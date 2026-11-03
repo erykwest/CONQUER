@@ -629,8 +629,11 @@
   // house piece by piece; the WebGL builder has no tag and ignores it.
   function addHouse(m,entry,winter){
     const house=entry.house,lvl=houseLevel(house);
+    // An open L3 workshop: its bodies live in the cutaway buffer (settlement-shop-cutaway.js).
+    const shopOpen=!m.tag&&!!window.ConquerShopCutaway?.active(house);
     for(const part of entry.parts){
       if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
+      if(shopOpen)continue;
       const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
       const split=base+(part.kind==='turret'?part.floorZ:houseFloorBreak(part.bodyH));
       const bp=part.basePoints;
@@ -656,6 +659,7 @@
         m.tag?.('gable');m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
       }
     }
+    if(shopOpen)return;
     // L4 dormers (urbanHouseDormers): cream front and cheeks, slate gable roof.
     const dormerColors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
       roofA:winter?WINTER_ROOF[0]:'#303237',roofB:winter?WINTER_ROOF[1]:'#3a3d42'};
@@ -668,6 +672,8 @@
       const g=terrainElevation(c.center);
       m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
     }
+    // L3 workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
+    if(!m.tag)window.ConquerShopCutaway?.addFront(m,house);
   }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
@@ -997,6 +1003,7 @@
           }
         }
       }else if(s.type==='house'){
+        if(window.ConquerShopCutaway?.active(s))continue;   // an open workshop keeps no facade
         const WIN=[35/255*.82,29/255*.82,24/255*.82,.82],TIMBER=[59/255,42/255,30/255,1];
         const entry=houseGeometry.get(s.id);
         // World-space beam from {p,z} a to b on a surface with horizontal outward normal n.
@@ -1404,9 +1411,12 @@
   }
   function ensureContent(gl){
     // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
-    const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
-    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
-    S.civicCut=civicCut;
+    // An open L3 workshop (settlement-shop-cutaway.js) follows the selection the same way.
+    // Shop fronts open at dawn and shut at dusk: their signature rebuilds the buildings too.
+    const civicCut=window.ConquerCivic3D?.cutawayId?.()||null,shopCut=window.ConquerShopCutaway?.activeId?.()||null;
+    const shopFront=window.ConquerShopCutaway?.frontSig?.()||'';
+    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut&&S.shopCut===shopCut&&S.shopFront===shopFront){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
+    S.civicCut=civicCut;S.shopCut=shopCut;S.shopFront=shopFront;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
@@ -1436,13 +1446,14 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
     if(S.sig.civicCutaway!==cutSig){
       const m=meshBuilder(true),s=civicCut&&State.structures.find(x=>x.id===civicCut);
       if(s)withStructureVisualMaterial(s,()=>ConquerCivic3D.addCutawayToBuilder(m,Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)));
+      if(shopCut)window.ConquerShopCutaway.addToBuilder(m);
       upload(gl,'civicCutaway',new Float32Array(m.tris));S.sig.civicCutaway=cutSig;
     }
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
@@ -1471,7 +1482,7 @@
       if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
       upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
-    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
       const baked=buildDecals(atlas);

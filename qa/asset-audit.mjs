@@ -37,10 +37,11 @@ try{
   report.durationMs=Date.now()-t0;report.url=url;report.pageErrors=errors;
   fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,1));
 
-  // Contact sheets: one per fortification family (all states), one per other category.
+  // Contact sheets: one per engine-staged family (all states: fortifications, L3 workshops), one per other category.
   const groups=await page.evaluate(o=>{
     const items=window.ConquerAssetCatalog.items.filter(x=>(!o.ids||o.ids.includes(x.id))&&(!o.category||x.category===o.category)&&(!o.family||x.family===o.family));
-    const fam=[...new Set(items.filter(x=>x.kind==='castle').map(x=>x.family))].map(f=>({name:'fortificazioni-'+f,family:f,category:'Fortificazioni',states:'all'}));
+    const staged=items.filter(x=>x.kind==='castle'),famKeys=[...new Set(staged.map(x=>x.category+'|'+x.family))];
+    const fam=famKeys.map(k=>{const [category,f]=k.split('|');return{name:category+'-'+f,family:f,category,states:'all'}});
     const cats=[...new Set(items.filter(x=>x.kind!=='castle').map(x=>x.category))].map(c=>({name:c,category:c,states:'default'}));
     return[...fam,...cats].map(g=>({...g,ids:items.filter(x=>x.category===g.category&&(!g.family||x.family===g.family)).map(x=>x.id)}));
   },opts);
