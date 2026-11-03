@@ -53,7 +53,7 @@
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
     palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
-    justicePillory:'Gogna',justiceGallows:'Forca',almshouse:'Ospizio (annesso della chiesa)'};
+    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);

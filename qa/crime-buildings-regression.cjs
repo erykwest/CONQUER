@@ -102,7 +102,7 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
   const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array,performance:{now:()=>0}});
   for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
   const E=window.ConquerEvents3D;
-  for(const [v,model] of [['pillory','justicePillory'],['gallows','justiceGallows']]){
+  for(const [v,model] of [['pillory','justicePillory'],['gallows','justiceGallows'],['scaffold','justiceScaffold']]){
     const s={...E.make(v),id:v,x:0,y:0,angle:0};
     assert.ok(E.is(s)&&E.has(s),v+' is a placeable venue that renders');
     assert.equal(E.venueModel(s),model);
@@ -112,13 +112,13 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
     assert.ok(E.setupItems(s).length===0,v+' has no event setup');
   }
   const html=read('index.html'),ux=src('settlement-builder-ux.js'),shell=src('ui/shell.js'),it=src('ui/i18n-it.js');
-  for(const v of ['pillory','gallows']){
+  for(const v of ['pillory','gallows','scaffold']){
     assert.match(html,new RegExp('<button data-event-venue="'+v+'">'),'legacy Builder button for '+v);
     assert.ok(ux.includes('[data-event-venue="'+v+'"]'),v+' in the Builder palette');
     assert.ok(shell.includes('[data-event-venue="${k}"]')&&shell.includes("'pillory', 'gallows'"),'new Builder: justice tool');
   }
   assert.match(it,/justice: 'Giustizia/);assert.match(it,/pillory: 'Gogna', gallows: 'Forca'/);
   assert.match(it,/tribunal: 'Tribunale'/);
-  assert.match(src('asset-catalog.js'),/justicePillory:'Gogna',justiceGallows:'Forca'/,'Lab names');
-  console.log('PASS pillory and gallows: venues, models on their footprints, Builder entries, Lab names');
+  assert.match(src('asset-catalog.js'),/justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo'/,'Lab names');
+  console.log('PASS pillory, gallows and scaffold: venues, models on their footprints, Builder entries, Lab names');
 }

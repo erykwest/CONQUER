@@ -9,7 +9,7 @@
 // armour) take a random pair of primary colours per instance instead.
 //
 // Venue contract (data only; placement and scheduling are later modules):
-//   {type:'eventVenue', venue:'streetSpot'|'stage'|'festivalGround'|'pillory'|'gallows', x, y, angle,
+//   {type:'eventVenue', venue:'streetSpot'|'stage'|'festivalGround'|'pillory'|'gallows'|'scaffold', x, y, angle,
 //    dressing?:'players'|'herald', w?, h?, event?:{setup, phase, progress?}}
 // The festival ground shows its setup only while the event is preparing (props
 // appear with progress), active, or clearing (props leave with progress).
@@ -26,9 +26,10 @@
     armyCamp:{w:12,h:10},
     // Public justice (docs/crime.md): small piazza works, shown sober and empty.
     pillory:{w:1,h:1},
-    gallows:{w:2,h:1.5}
+    gallows:{w:2,h:1.5},
+    scaffold:{w:2.5,h:2}
   };
-  const JUSTICE_MODELS={pillory:'justicePillory',gallows:'justiceGallows'};
+  const JUSTICE_MODELS={pillory:'justicePillory',gallows:'justiceGallows',scaffold:'justiceScaffold'};
   // Setups of the 14 x 10 festival ground (x along the long side, front at -y),
   // local U, biggest items first (they arrive first). {m: event model or
   // 'civic:<key>', x, y, a: heading, s: scale}. min = smallest ground that holds
@@ -450,7 +451,8 @@
     arenaLot:{name:'Arena',cost:{wood:160,gold:80},days:12},
     armyCamp:{name:'Accampamento militare',cost:{wood:30,gold:10},days:1},
     pillory:{name:'Gogna',cost:{wood:8,metal:2},days:.5},
-    gallows:{name:'Forca',cost:{wood:24,metal:2},days:1}
+    gallows:{name:'Forca',cost:{wood:24,metal:2},days:1},
+    scaffold:{name:'Patibolo',cost:{wood:40,stone:10,metal:2},days:2}
   };
   // Camp works, one level after the other: open ground, a fence marking the boundary,
   // a stake palisade with a gate. cost: what the step up to that level takes.

@@ -30,7 +30,7 @@ export const T = {
     production: 'Produzione',
     terrain: 'Terreno',
     well: 'Pozzo · fonda il villaggio, poi nuovi quartieri',
-    justice: 'Giustizia · gogna e forca',
+    justice: 'Giustizia · gogna, forca e patibolo',
     delete: 'Demolisci'
   },
   options: {
@@ -55,7 +55,7 @@ export const T = {
     dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra',
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
-    pillory: 'Gogna', gallows: 'Forca',
+    pillory: 'Gogna', gallows: 'Forca', scaffold: 'Patibolo',
     plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
   },
   hints: {

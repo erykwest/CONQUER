@@ -54,7 +54,8 @@
       ['[data-civic="guild"]','Gilda · presso un pozzo','guild'],
       ['[data-civic="training"]','Campo di addestramento','training'],
       ['[data-event-venue="pillory"]','Gogna · 1×1U · piazza','civic'],
-      ['[data-event-venue="gallows"]','Forca · 2×1.5U · piazza o margine','civic']]},
+      ['[data-event-venue="gallows"]','Forca · 2×1.5U · piazza o margine','civic'],
+      ['[data-event-venue="scaffold"]','Patibolo · 2.5×2U · piazza maggiore','civic']]},
     {id:'defense',label:'Fortificazioni',icon:'castle',items:[
       ['[data-tower="square"][data-size="1.5"]','Torre quadrata T2','square'],
       ['[data-tower="round"][data-size="0.75"]','Torre rotonda T2','round'],

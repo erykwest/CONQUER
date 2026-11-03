@@ -65,8 +65,8 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
   - Ospizio come annesso della Chiesa L2, con modello Blender.
   - **APERTO:** personale e routine delle guardie, lettura dal salvataggio in `/crime/` (adapter, vedi C-01).
 - **C-03 — IMPLEMENTATO SU BRANCH `feature/crime-buildings`:**
-  - Gogna (1 × 1 U) e forca (2 × 1,5 U) collocabili come `eventVenue`, con cantiere, costo e modelli Blender `justicePillory` / `justiceGallows` nel Lab (*Edifici · Giustizia*).
-  - **APERTO:** audit del Lab con baseline e QA visiva nel browser.
+  - Gogna (1 × 1 U), forca (2 × 1,5 U) e patibolo (2,5 × 2 U) collocabili come `eventVenue`, con cantiere, costo e modelli Blender `justicePillory` / `justiceGallows` / `justiceScaffold` nel Lab (*Edifici · Giustizia*). In `/crime/` il patibolo è un flag separato dalla forca.
+  - **APERTO:** audit del Lab con aggiornamento della baseline.
 - **C-04 — APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
 - **C-05 — APERTO:** bilanciamento, logiche punitive individuali, effetti del giudizio/giustizia, persistenza unica, serie storiche e indicatori nel Centro di controllo, regressioni browser/end-to-end.
 - **DIPENDENZE:** M0 economia e popolazione vere → contratti funzioni civiche e guardie → routine e ordine pubblico → esiti militari. Sandbox C-00 non anticipa lo stato implementativo di C-01–C-05. [Design, confini e QA](../crime.md).

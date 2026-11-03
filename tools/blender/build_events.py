@@ -16,7 +16,7 @@ stands, the U-shaped arena, stages and the lists' scatter props.
   folding screens;
 - circusTent (big top) and the troupe's wagons: wagonCaravan, wagonCage,
   wagonCargo (+x forward, as build_wagon.py), circusBooth (ticket booth);
-- justicePillory / justiceGallows: the piazza's pillory and gallows (docs/crime.md),
+- justicePillory / justiceGallows / justiceScaffold: the piazza's pillory, gallows and scaffold (docs/crime.md),
   shown sober and empty;
 - propBunting (bunting between two poles), propFence (1.4 U tournament fence
   segment, top rail in the realm livery);
@@ -1343,6 +1343,38 @@ def justice_gallows(m):
     m.meta = {'facing': [0, -1], 'stairFoot': u(*foot)}
 
 
+def justice_scaffold(m):
+    """Patibolo (2.5 x 2 U): a square timber stage raised on posts, hung with a dark cloth,
+    a low rail on three sides, the side stair, the bench for the magistrates at the back and
+    the wooden block in the middle. Shown empty: no figure, no blade."""
+    W, D, H = 4.2, 4.2, 1.5
+    xs, ys = [-W / 2 + .08, 0, W / 2 - .08], [-D / 2 + .08, 0, D / 2 - .08]
+    p = m.part('stage')
+    platform(p, W, D, H, xs, ys)
+    foot = side_stair(p, W / 2, -D / 2 + .7, H, run=.25)
+    for x in (-W / 2 + .08, W / 2 - .08):                                              # rail posts
+        for y in (-D / 2 + .08, D / 2 - .08):
+            p.box((x, y, H + .45), (.1, .1, .9), 'beam')
+    p.box((0, D / 2 - .08, H + .88), (W, .08, .08), 'woodDark')                         # back rail
+    p.box((-W / 2 + .08, 0, H + .88), (.08, D, .08), 'woodDark')                        # far side rail
+    p.box((W / 2 - .08, .35, H + .88), (.08, D - 1.4, .08), 'woodDark')                 # stair side, open at the stair
+    p.box((0, -D / 2 + .08, H + .88), (W, .08, .08), 'woodDark')                        # front rail
+    p.box((0, D / 2 - .45, H + .22), (2.2, .4, .08), 'woodLight')                      # magistrates' bench
+    for x in (-.95, .95):
+        p.box((x, D / 2 - .45, H + .09), (.1, .34, .18), 'woodDark')
+    p.cylinder(.32, 0, 'woodDark', n=9, axis='z', center=(0, -.2, H), radii=[.34, .32, .32], along=[0, .1, .5],
+               cap_key='woodLight')                                                     # the block
+    m.done('stage', p)
+    p = m.part('drape')
+    for (a, b) in (((-W / 2, -D / 2 - .03), (W / 2, -D / 2 - .03)), ((-W / 2 - .03, -D / 2), (-W / 2 - .03, D / 2)),
+                   ((-W / 2, D / 2 + .03), (W / 2, D / 2 + .03))):
+        cx, cy = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        sx, sy = max(abs(b[0] - a[0]), .03), max(abs(b[1] - a[1]), .03)
+        p.box((cx, cy, H - .45), (sx, sy, .8), 'curtainDark')
+    m.done('drape', p)
+    m.meta = {'facing': [0, -1], 'stairFoot': u(*foot)}
+
+
 MODELS = [('tentOctagon', tent_octagon), ('tentSquare', tent_square), ('standOpen', stand_open),
           ('standCovered', stand_covered), ('arenaU', arena_u), ('propTilt', p_tilt), ('propLanceRack', p_lance_rack),
           ('propWeaponRack', p_weapon_rack), ('propSpearRack', p_spear_rack), ('propShieldRack', p_shield_rack),
@@ -1354,7 +1386,7 @@ MODELS = [('tentOctagon', tent_octagon), ('tentSquare', tent_square), ('standOpe
           ('tentRidge', tent_ridge), ('tentRidgePlain', tent_ridge_plain), ('tentCompany', tent_company),
           ('campAwning', camp_awning), ('campBarrels', camp_barrels), ('campSacks', camp_sacks),
           ('campPicket', camp_picket), ('campPalisade', camp_palisade), ('campGate', camp_gate),
-          ('justicePillory', justice_pillory), ('justiceGallows', justice_gallows)]
+          ('justicePillory', justice_pillory), ('justiceGallows', justice_gallows), ('justiceScaffold', justice_scaffold)]
 LAYOUT = {'tentOctagon': (0, 0), 'tentSquare': (12, 0), 'standOpen': (0, 16), 'standCovered': (20, 16),
           'arenaU': (10, 52), 'propTilt': (0, -10), 'propLanceRack': (12, -10),
           'propWeaponRack': (17, -10), 'propSpearRack': (22, -10), 'propShieldRack': (27, -10),
@@ -1364,7 +1396,7 @@ LAYOUT = {'tentOctagon': (0, 0), 'tentSquare': (12, 0), 'standOpen': (0, 16), 's
           'circusBooth': (-30, -20), 'propBunting': (-25, -20), 'propFence': (-18, -20),
           'tentRidge': (-10, 0), 'tentRidgePlain': (-10, 5), 'tentCompany': (-10, 12),
           'campAwning': (-40, 0), 'campBarrels': (-40, 6), 'campSacks': (-40, 10), 'campPicket': (-40, 15),
-          'campPalisade': (-50, 0), 'campGate': (-50, 6), 'justicePillory': (-60, 0), 'justiceGallows': (-60, 8)}
+          'campPalisade': (-50, 0), 'campGate': (-50, 6), 'justicePillory': (-60, 0), 'justiceGallows': (-60, 8), 'justiceScaffold': (-60, 16)}
 
 
 def main(out_path):

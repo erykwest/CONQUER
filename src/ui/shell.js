@@ -141,8 +141,8 @@ const CATALOG = [
   { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
     rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },
   { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well', rows: s => [masonryRow(s)] },
-  { id: 'justice', hint: T.hints.point, press: '[data-event-venue="pillory"]', is: s => s.tool.kind === 'event' && ['pillory', 'gallows'].includes(s.tool.venue),
-    rows: s => [{ label: O.building, options: ['pillory', 'gallows'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
+  { id: 'justice', hint: T.hints.point, press: '[data-event-venue="pillory"]', is: s => s.tool.kind === 'event' && ['pillory', 'gallows', 'scaffold'].includes(s.tool.venue),
+    rows: s => [{ label: O.building, options: ['pillory', 'gallows', 'scaffold'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
   { id: 'delete', hint: T.hints.delete, press: '[data-tool="delete"]', is: s => s.tool.kind === 'delete' }
 ];
 const activeEntry = snap => CATALOG.find(e => e.is(snap)) || CATALOG[0];

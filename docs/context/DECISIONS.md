@@ -26,7 +26,7 @@ Decisione esplicita dell'utente: P0 bridge, circle, jobmanager e knights; P2 mes
   - **Tribunale:** è una stanza del Municipio, che ha una stanza per piano (tante quante i livelli civici, D-CUT-01) con un catalogo civico separato da quello del castello. Il tribunale richiede L2.
   - **Ospizio:** annesso della Chiesa L2.
   - **Guardia e prigione:** sono le funzioni di stanza esistenti (torri T2/T3, porte, sezioni costruite) e anche stanze (piani) del Municipio.
-  - **Gogna e forca:** strutture di piazza collocabili, sul contratto `eventVenue`, rappresentate vuote e sobrie.
+  - **Gogna, forca e patibolo:** tre strutture di piazza distinte e collocabili, sul contratto `eventVenue`, rappresentate vuote e sobrie. Anche in `/crime/` il patibolo è un flag separato dalla forca (prima «Forca / patibolo»); i salvataggi vecchi lo caricano spento.
 - **ANCORA PROPOSTO/DA VERIFICARE:** soglie numeriche, eventi e durate; personale delle guardie; lettura delle strutture reali da parte di `/crime/`.
 - [Specifica del prototipo](../crime.md). La roadmap strategica attuale resta invariata.
 
