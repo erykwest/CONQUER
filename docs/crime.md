@@ -61,6 +61,16 @@ Il **cutaway per piani** (D-CUT-01, branch `feature/cutaway-floors`, unito qui) 
 - **Natura:** sono decorative e provvisorie, senza residenti né sentenze. Un futuro runtime CRIME può sostituirle con `setOccupancySource`.
 - **Costumi di ruolo:** stanno in `ConquerWardrobe.ROLE_PIECES` e sono `judgeRobe`, `judgeCap`, `clerkGown`, `clerkCap`, `prisonerShirt` e `executionerHood` (quest'ultimo già pronto per il boia). Il guardaroba stagionale non li assegna mai. Nel Lab si trovano sotto *Popolazione · Costumi di ruolo*.
 
+**Gogna, forca e patibolo in uso** (stesso modulo, `justiceSlots` / `justiceScene`). Le scene sono sobrie: nessun condannato sulla forca o sul patibolo, nessuna esecuzione; la scena si ferma all'attesa.
+
+- **Gogna:** dal lunedì al sabato, dalle 8 alle 17. Un condannato a mani legate sta sulla pedana e un capannello davanti lo schernisce col pugno alzato.
+- **Forca e patibolo:** il «giorno di giustizia», il venerdì dalle 10 a mezzogiorno.
+  - Sul palco aspetta il boia, incappucciato e a braccia conserte.
+  - Sul patibolo c'è anche un magistrato che legge la sentenza dalla panca.
+  - Due guardie stanno ai piedi della scala e una folla a semicerchio davanti.
+- **Sospensione:** l'allarme svuota la piazza.
+- **Disegno:** chi sta dietro alla struttura viene ritagliato lungo la sagoma della parte piena (base, pedana, drappo, parapetto). Pali e trave restano trasparenti.
+
 Test: `qa/court-people-regression.cjs`.
 
 Gogna, forca e patibolo riusano il contratto delle `eventVenue` (posa a due clic, cantiere, costo, modello nel catalogo eventi). Nel nuovo Builder compaiono nello strumento **Giustizia**; nel vecchio, tra gli edifici civili. Nel Lab sono nella categoria *Edifici · Giustizia*.

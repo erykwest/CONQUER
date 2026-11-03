@@ -115,14 +115,15 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **QA:** `qa/crime-regression.cjs` creato; logica della regressione eseguita in harness JS isolato (PASS), **Node CLI, browser e CI non ancora verificati** alla redazione di questa voce. La pagina è codice, non un deploy certificato.
 - **APERTO:** adapter a stato canonico ed economia, popolani/guardie e routine fisiche, procedimenti individuali, integrazione Combat per sommosse e rivolte, salvataggio condiviso e bilanciamento. [Specifica](../crime.md).
 
-## CRIME — tribunale in seduta (branch `feature/crime-tribunal-scene`, su `feature/crime-buildings`, 03/11/2026, NON MAIN)
+## CRIME — tribunale in seduta, gogna, forca e patibolo in uso (branch `feature/crime-tribunal-scene`, su `feature/crime-buildings`, 03/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** `ConquerCourtPeople` (`src/settlement-court-people.js`) disegna la seduta del tribunale sul piano in vista del Municipio selezionato, nei giorni feriali dalle 9 alle 17 e senza allarme.
   - **Posti:** da `ConquerCivic3D.roomSlots`, con lo stesso `tribunalLayout` dell'arredo.
   - **Costumi:** `ConquerWardrobe.ROLE_PIECES`, mostrati nel Lab.
   - **Natura:** persone decorative e provvisorie, senza residenti.
 - **QA:** `qa/court-people-regression.cjs` PASS. Le regressioni di guardaroba, arredo CRIME, civic3d, catalogo del Lab, animazioni di lavoro e persone degli eventi restano verdi. Verifica nel motore (Municipio L3, P1 tribunale, due rotazioni) e nel Lab (quattro costumi, controlli OK).
-- **DA FARE:** audit del Lab con baseline; altre scene di C-04.
+- **Giustizia pubblica:** `justiceSlots`/`justiceScene` per gogna (lun–sab 8–17), forca e patibolo (venerdì 10–12), con boia, magistrato, guardie e folla. Scene sobrie; la folla dietro alla struttura è ritagliata lungo la sua sagoma piena. Verifica nel motore da due lati.
+- **DA FARE:** audit del Lab con baseline; prigionieri in cella; arresti e proteste.
 
 ## CRIME — edifici e stanze nel Builder (branch `feature/crime-buildings`, 03/11/2026)
 

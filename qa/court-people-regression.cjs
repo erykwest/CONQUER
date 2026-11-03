@@ -68,6 +68,37 @@ const hall=(floor,functions=['council','tribunal','prison'])=>({id:'th',type:'to
   console.log('PASS court session: working days 9-17 with no alarm; pure, animated scene; pluggable occupancy');
 }
 
+// ---------- public justice: pillory, gallows, scaffold
+{
+  let alarm='off';window.ConquerCombat={alarmMode:()=>alarm};
+  const on=(v,day)=>{State.clock.day=day;return CP.justiceInSession(v)};
+  assert.equal(on('pillory',10.5),true,'pillory: a weekday noon');assert.equal(on('pillory',12.5),true,'pillory: Saturday');
+  assert.equal(on('pillory',13.5),false,'no pillory on Sunday');assert.equal(on('pillory',10.2),false,'pillory: before 8');
+  for(const v of ['gallows','scaffold']){
+    assert.equal(on(v,4+11/24),true,v+': justice day (Friday) 10-12');
+    assert.equal(on(v,3+11/24),false,v+': not on Thursday');assert.equal(on(v,4+13/24),false,v+': not after noon');
+  }
+  alarm='green';assert.equal(on('scaffold',4+11/24),false,'the alarm clears the square');alarm='off';
+  const venue=v=>({id:'j-'+v,type:'eventVenue',venue:v,x:0,y:0,angle:0,w:{pillory:1,gallows:2,scaffold:2.5}[v],h:{pillory:1,gallows:1.5,scaffold:2}[v]});
+  for(const v of ['pillory','gallows','scaffold']){
+    const s=venue(v),sl=CP.justiceSlots(s),by=r=>sl.filter(x=>x.role===r),crowd=by('public');
+    assert.ok(crowd.length>=4,v+': onlookers');
+    assert.ok(crowd.every(p=>p.y<0&&p.z===0&&(Math.abs(p.x)>s.w/2||Math.abs(p.y)>s.h/2)),v+': the crowd stands in front, off the work');
+    assert.ok(crowd.some(p=>p.action==='jeer'),v+': some jeer');
+    assert.equal(JSON.stringify(CP.justiceSlots({...s})),JSON.stringify(sl),v+': a fixed draw per structure');
+    assert.equal(JSON.stringify(CP.justiceScene(s,2)),JSON.stringify(CP.justiceScene(s,2)),v+': pure scene');
+    if(v==='pillory'){assert.equal(by('prisoner').length,1);assert.ok(by('prisoner')[0].z>.15,'the condemned stands on the base');assert.equal(by('executioner').length,0)}
+    else{
+      assert.equal(by('executioner').length,1,v+': the executioner waits');assert.ok(by('executioner')[0].z>.3,'on the stage');
+      assert.equal(by('guard').length,2,v+': two guards at the stair');
+      assert.equal(by('prisoner').length,0,v+': no condemned on the gallows or the scaffold (sober: the scene stops at the waiting)');
+    }
+  }
+  assert.equal(CP.dotOf(venue('scaffold'),{id:'executioner',role:'executioner'},{x:0,y:0}).outfit.head,'executionerHood');
+  assert.equal(CP.justiceSlots({type:'eventVenue',venue:'stage'}).length,0,'other venues untouched');
+  console.log('PASS public justice: pillory Mon-Sat 8-17, gallows and scaffold on justice day; sober scenes');
+}
+
 // ---------- costumes of office
 {
   for(const k of ['judgeRobe','judgeCap','clerkGown','clerkCap','prisonerShirt','executionerHood']){
