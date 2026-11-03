@@ -1,6 +1,6 @@
 name: One-time safe cleanup of obsolete remote branches (2026-11-03)
 
-# User-authorized cleanup of the exact verified combat ref after renderer consolidation.
+# User-authorized cleanup: tower hoardings merged in PR #134, exact head verified.
 # Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
@@ -80,7 +80,7 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          combat|@this-commit|-
+          feature/tower-hoardings|827bad31e66a9950670685e37a18e97b8368b3a4|134
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))
