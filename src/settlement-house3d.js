@@ -34,9 +34,17 @@
   }
   // Kit palette (winter roofs white) through the brick masonry swatches, like the procedural houses.
   const tint=hex=>typeof visualPaletteColor==='function'?visualPaletteColor(hex):hex;
+  // In clay (brick masonry or the clay palette) the kit's own stone and slate details borrow the
+  // swatch of a matching stone / slate tone of CLAY_VISUAL_SWATCHES: dressed surrounds and the step
+  // turn to light brick, slate courses and ridge to dark tile, instead of staying grey on brick.
+  const CLAY_ALIAS={stoneTrim:'#9a8e82',step:'#887d72',roofCourse:'#303236',roofRidge:'#303236'};
   function kitPalette(){
-    const data=DATA(),winter=State.season==='winter';
-    return data.palette.map((hex,i)=>{const k=data.paletteKeys[i];return tint(winter&&k.startsWith('roof')?WINTER[/Dark$|Ridge$|Course$/.test(k)?1:0]:hex)});
+    const data=DATA(),winter=State.season==='winter',clay=tint(STONE[0])!==STONE[0];
+    return data.palette.map((hex,i)=>{
+      const k=data.paletteKeys[i];
+      if(winter&&k.startsWith('roof'))return tint(WINTER[/Dark$|Ridge$|Course$/.test(k)?1:0]);
+      return tint(clay&&CLAY_ALIAS[k]||hex);
+    });
   }
 
   // ---------- mesh in the civic layout {pos,col,gi,groups,groupBias}

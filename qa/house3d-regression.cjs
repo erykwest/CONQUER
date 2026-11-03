@@ -21,17 +21,19 @@ const hash=s=>{let h=2166136261;for(const c of String(s))h=Math.imul(h^c.charCod
 const rectWorldPoints=(x,y,w,h,a=0)=>{const ca=Math.cos(a),sa=Math.sin(a);return[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([u,v])=>({x:x+u*ca-v*sa,y:y+u*sa+v*ca}))};
 const pointInPolygon=(p,pts)=>{let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)c=!c}return c};
 const pointSegmentDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L));return Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t)};
-const window={};let brick=false;
+const window={};
 const State={season:'summer',structures:[],visualPalette:'stone'};
 const sandbox={Math,Number,Object,Array,Map,Float32Array,JSON,String,window,State,peasantHash:hash,rectWorldPoints,
   circleWorldPoints:()=>[],terrainElevation:()=>0,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
   roadList:()=>[],pointInPolygon,pointSegmentDistance,urbanDenseHouseDoorInfo:()=>null,underConstruction:s=>!!s.building,
   // One chimney on the main ridge, as chimneySpecs does for a detached house.
   chimneySpecs:s=>[{center:{x:s.x,y:s.y},angle:s.angle||0,z0:2.0,z1:2.48,index:0}],
-  withStructureVisualMaterial:(s,f)=>f(),masonryMaterial:()=>brick?'brick':'stone',
-  visualPaletteColor:hex=>brick&&hex.toLowerCase()==='#625e59'?'#8b5a43':hex};
+};
 vm.createContext(sandbox);
 const constant=(text,name)=>text.match(new RegExp('const '+name+'=[^;]+;'))[0];
+// The game's own clay recolouring: brick masonry and the clay palette (settlement-core.js).
+vm.runInContext(core.slice(core.indexOf('const CLAY_VISUAL_SWATCHES='),core.indexOf('});',core.indexOf('const CLAY_VISUAL_SWATCHES='))+3)+
+  '\nlet structureVisualMaterial=null;\n'+['masonryMaterial','withStructureVisualMaterial','visualPaletteColor'].map(n=>fnSource(core,n)).join('\n'),sandbox);
 vm.runInContext([constant(core,'HOUSE_ROOF_PITCH'),constant(core,'HOUSE_FLOOR_BREAK'),constant(urban,'HOUSE_WINDOW_HALF_W'),
   constant(urban,'TURRET_WINDOW_HALF_W'),constant(urban,'HOUSE_DOOR_TOP'),
   ...['houseLevel','houseDimensionScale','houseFootprintDimensions','housePlanType','houseTurretType','houseLocalToWorld',
@@ -55,6 +57,15 @@ for(const [name,model] of Object.entries(K.models))for(const [pn,p] of Object.en
   assert.ok(p.c.every(i=>i>=0&&i<K.palette.length),name+'.'+pn+': palette colours');
 }
 assert.equal(K.palette[K.paletteKeys.indexOf('stone')],'#625e59','kit stone = procedural stone (brick swatches apply)');
+// Roofs: slate (L2/L3) and thatch (L1) on top, their dark underside below (a wrongly wound slope
+// extruded the underside upwards and the roofs showed brown).
+for(const [key,tops,under] of [['roof',['roofSlate','roofSlateDark'],'eaves'],['roofThatch',['roofThatch','roofThatchDark'],'thatchUnder']]){
+  const part=Object.values(K.models[key].parts)[0],idx=k=>K.paletteKeys.indexOf(k);
+  const meanZ=keys=>{const ids=keys.map(idx);let s=0,n=0;for(let t=0;t<part.c.length;t++)if(ids.includes(part.c[t]))for(let k=0;k<3;k++){s+=part.p[part.i[t*3+k]*3+2];n++}return s/n};
+  assert.ok(meanZ(tops)>meanZ([under]),key+': '+tops.join('/')+' on top of the '+under+' underside');
+}
+assert.deepEqual([K.palette[K.paletteKeys.indexOf('roofSlate')],K.palette[K.paletteKeys.indexOf('roofSlateDark')]],['#303237','#3a3d42'],'slate = the procedural houses\' slate');
+assert.deepEqual([K.palette[K.paletteKeys.indexOf('roofThatch')],K.palette[K.paletteKeys.indexOf('roofThatchDark')]],['#b39250','#c4a25d'],'thatch = HOUSE_THATCH');
 console.log('PASS kit: '+Object.keys(K.models).length+' pieces');
 
 // 2. L1, L2 and L3 houses, built and finished.
@@ -150,11 +161,24 @@ console.log('PASS '+cottages+' L1 cottages: framed daub walls, cottage windows o
 
 // 4. Brick masonry recolours the kit stone like the procedural walls; winter whitens the roofs.
 {const s={id:'kit-brick',type:'house',houseLevel:3,auto:true,x:0,y:0,w:1.5,h:1,doorSide:1,angle:0};State.structures=[s];
- H.clear();const stone=new Set(H.geometry(s).col);brick=true;H.clear();const bricks=new Set(H.geometry(s).col);brick=false;
- assert.ok(stone.has('#625e59')&&!bricks.has('#625e59')&&bricks.has('#8b5a43'),'brick swatches recolour the stone ground floor');
+ H.clear();const stone=new Set(H.geometry(s).col);
+ const P=k=>K.palette[K.paletteKeys.indexOf(k)];
+ // Clay: brick masonry on the house, or the clay palette for everything.
+ for(const [label,set,unset] of [['brick masonry',()=>{s.masonryMaterial='brick'},()=>{delete s.masonryMaterial}],
+   ['clay palette',()=>{State.visualPalette='clay'},()=>{State.visualPalette='stone'}]]){
+   set();H.clear();const clay=new Set(H.geometry(s).col);unset();
+   assert.ok(stone.has('#625e59')&&!clay.has('#625e59')&&clay.has('#ae664d'),label+': the stone ground floor turns to brick');
+   assert.ok(stone.has(P('roofSlate'))&&!clay.has(P('roofSlate'))&&clay.has('#a94e36'),label+': slate turns to tile');
+   for(const k of ['stoneTrim','step','roofCourse','roofRidge'])
+     assert.ok(stone.has(P(k))&&!clay.has(P(k)),label+': no grey '+k+' left on a clay house');
+ }
+ // Cottages keep their thatch in clay.
+ const c={id:'kit-clay-cottage',type:'house',houseLevel:1,auto:true,x:0,y:0,w:1.5,h:1,doorSide:1,angle:0,masonryMaterial:'brick'};
+ State.structures=[c];H.clear();assert.ok(H.geometry(c).col.includes(P('roofThatch')),'clay: the L1 thatch stays thatch');
+ State.structures=[s];
  State.season='winter';H.clear();const winter=new Set(H.geometry(s).col);State.season='summer';H.clear();
  assert.ok(!winter.has(K.palette[K.paletteKeys.indexOf('roofSlate')])&&winter.has('#e7ece8'),'winter roofs are white');}
-console.log('PASS brick masonry and winter roofs');
+console.log('PASS clay (brick masonry and clay palette): brick, tiles, no grey stone or slate details; winter roofs');
 
 // 5. Wiring: World 3D only; the 2.5D fallback keeps the procedural house.
 const world=src('src/settlement-world3d.js'),html=src('index.html'),lab=src('figures-lab.html'),catalog=src('src/asset-catalog.js');

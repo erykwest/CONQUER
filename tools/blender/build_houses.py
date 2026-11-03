@@ -158,7 +158,8 @@ def roof(mdl):
         pts = [(-.5 - vg, y_e, zo), (.5 + vg, y_e, zo), (.5 + vg, 0, rise), (-.5 - vg, 0, rise)]
         if s < 0:
             pts = [pts[1], pts[0], pts[3], pts[2]]
-        slab(sl, pts, t, 'roofSlate' if s < 0 else 'roofSlateDark', 'eaves')
+        # slab() wants the visible side counter-clockwise from outside: the slope runs the other way.
+        slab(sl, pts[::-1], t, 'roofSlate' if s < 0 else 'roofSlateDark', 'eaves')
     mdl.done('slopes', sl)
     co = mdl.part('courses')
     for s in (-1, 1):
@@ -255,7 +256,7 @@ def roof_thatch(mdl):
         pts = [(-.5 - vg, y_e, z_e), (.5 + vg, y_e, z_e), (.5 + vg, 0, rise), (-.5 - vg, 0, rise)]
         if s < 0:
             pts = [pts[1], pts[0], pts[3], pts[2]]
-        slab(sl, pts, t, 'roofThatch' if s < 0 else 'roofThatchDark', 'thatchUnder')
+        slab(sl, pts[::-1], t, 'roofThatch' if s < 0 else 'roofThatchDark', 'thatchUnder')
     mdl.done('thatch', sl)
     rl = mdl.part('rolls')
     # Eave rolls: half-cylinders along X at the foot of each slope; ridge roll on top.

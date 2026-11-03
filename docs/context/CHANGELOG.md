@@ -3,6 +3,7 @@
 ## 2026-11-03 — Case L1 e L2 in 3D con il kit Blender (branch `feature/houses-blender-l1`)
 
 - Anche le case L2 in World 3D usano il kit (gli stessi pezzi delle L3, su un corpo solo, come nel disegno procedurale).
+- Tetti corretti: le falde del kit mostravano il sottotetto bruno sopra l'ardesia e la paglia (falde avvolte al contrario nel builder Blender); ora ardesia grigia su L2/L3 e paglia sulle L1. Verificata l'argilla: mattoni, coppi e dettagli del kit coerenti, senza pietra o ardesia grigie.
 
 - Le casette L1 in World 3D sono costruite col kit: tetto di paglia, finestre rustiche con anta, porta a tavole, telaio di pali e travi, comignoli. Kit a 9 pezzi; corrette le chiavi della baseline dell'audit per il kit (prima non venivano mai riconosciute).
 - Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
