@@ -6,6 +6,11 @@
 
 - Le casette L1 in World 3D sono costruite col kit: tetto di paglia, finestre rustiche con anta, porta a tavole, telaio di pali e travi, comignoli. Kit a 9 pezzi; corrette le chiavi della baseline dell'audit per il kit (prima non venivano mai riconosciute).
 - Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
+## 2026-11-03 — Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`)
+
+- La cucina si assegna solo al piano terra delle sezioni costruite (W1 sezione, W2 sala larga), non più in torri o porte; i salvataggi esistenti perdono le cucine fuori regola al caricamento.
+- Nuova `qa/kitchen-rooms-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una regola di gioco sulle stanze, non cambia milestone né contratti.
 
 ## 2026-11-02 — Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`)
 

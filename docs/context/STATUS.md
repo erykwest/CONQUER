@@ -9,6 +9,11 @@
 - **Correzione della baseline dell'audit:** le 6 voci del kit entrate con #136 avevano la chiave `id|null` invece di `id|` (stato vuoto dei modelli), quindi l'audit non le riconosceva mai; ora sono riscritte con la chiave giusta insieme alle 3 nuove.
 - **QA locale:** `qa/house3d-regression.cjs` estesa alle L1 (16 casette 1,5/2 U × porta ±1 × 4 angoli: un pezzo finestra per ogni finestra pianificata su ogni lato, telaio completo, porta rustica, un tetto di paglia fino al colmo, nessun pezzo L3, tag del cantiere; paglia bianca d'inverno). 120/120 `qa/*.cjs` non di performance PASS. Audit del Lab famiglia «Kit case»: 9 render, 0 falliti, 0 nuovi, 0 cambiati dopo la correzione delle chiavi. Catture World 3D delle casette L1 nelle quattro rotazioni riviste. **Non verificato:** partita con un villaggio generato, CI della PR.
 - **Limiti:** L4 ancora procedurale (torrette, abbaini); il comignolo delle L1 è quello del kit L3 (scuro e massiccio per una casupola).
+## Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`, da `main` a372f1c, 03/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:** `ConquerSiege.allowed` permette la cucina solo al piano terra delle sezioni costruite: W1 (sezione, L1 o L2, lunga almeno 2U) e W2 (sala larga). Non più in torri (mastio compreso), porte o piani superiori. Granaio, magazzino e sala comune mantengono la regola precedente.
+- **Migrazione:** al caricamento `sanitizeRooms` svuota le stanze-cucina nelle torri e nelle porte dei salvataggi esistenti; la capienza pasti scende di conseguenza finché non si assegna una cucina in una sezione.
+- **QA:** nuova `qa/kitchen-rooms-regression.cjs` PASS (regola estratta dal sorgente vero). **Non verificato:** pannello stanze nel browser, CI della PR.
 
 ## Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`, da `main` d15826e, 02/11/2026, NON MAIN)
 
