@@ -1,6 +1,6 @@
 name: One-time safe cleanup of obsolete remote branches (2026-11-03)
 
-# User-authorized second cleanup: assedio, events, 2D knight/messenger branch.
+# User-authorized cleanup after verified CANS/hardening promotion; combat has unmerged work.
 # Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
@@ -28,6 +28,7 @@ jobs:
           echo '## Branch cleanup — 2026-11-03' >> "$GITHUB_STEP_SUMMARY"
           while IFS='|' read -r branch expected evidence; do
             [[ -z "$branch" ]] && continue
+            if [[ "$expected" == '@this-commit' ]]; then expected="$GITHUB_SHA"; fi
             examined=$((examined+1))
             echo "Candidate $examined: $branch"
             if [[ "$branch" == main ]]; then exit 1; fi
@@ -79,9 +80,8 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          assedio|ddaafdf415c509c0c916e2808395f9b915c4c4fd|replacement:61
-          events|2dd00b365f05b352c2814e7951dd60bf47f76dc6|replacement:78
-          feature/knights-messenger-caravans|693395898f6115515f4ca1b5d07a22e721a5c838|replacement:96
+          cans|0f6048c0996f3ca1a5cff5db9e5068fc94caf46a|-
+          audit-hardening|@this-commit|-
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))

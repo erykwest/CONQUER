@@ -5,6 +5,17 @@
 - **IMPLEMENTATO SU BRANCH `feature/cutaway-floors`:** un piano per volta con ▲ ▼ sopra l'edificio e nell'ispettore, per castello (torri, porte, sezioni) e Municipio (2–3 piani).
 - **APERTO:** piani alti arredati di taverna e gilda; arredi per piano del Municipio (branch CRIME: una stanza per piano); stato «Cutaway · piano N» nel Lab.
 
+## 2026-11-03 — Audit hardening, CANS e combat
+
+| Branch | Recupero verificato | Residuo |
+|---|---|---|
+| audit-hardening | Telemetria remota disattivata, diagnostica locale e CI; salvataggi già #93 | Eventuale nuova telemetria autenticata richiede progetto separato |
+| cans | Skeleton logico puro, 11 test, specifica e CI | Adapter al gioco, navigazione/animazioni/persistenza reale ancora da sviluppare |
+| combat | Regole/pattuglie e disegno popolazione già presenti | Separare overlay tattico conservando tutte le feature correnti; branch mantenuta |
+
+La presenza del motore CANS non chiude i requisiti di popolazione in interni o di movimento tra arredi. Nessun caricamento automatico o cambiamento di gameplay introdotto.
+
+
 ## 2026-11-03 — Residui dei tre branch selezionati
 
 | Branch | Residuo da recuperare | Esito |

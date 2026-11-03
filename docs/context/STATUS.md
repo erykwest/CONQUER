@@ -9,6 +9,18 @@
 - **QA:** `qa/cutaway-floors-regression.cjs` PASS, insieme alle regressioni di cutaway, civiche, mastio, botteghe e pannelli. Verifica visiva nel motore (Municipio L3 PT/P1/P2, torre T2 a 3 piani in WebGL).
 - **APERTO:** piani alti di taverna e gilda; audit del Lab per gli stati di cutaway.
 
+## 2026-11-03 — Recupero selettivo audit-hardening / CANS; combat conservata
+
+- **Browser locale PASS:** avvio con WebGL senza errori, diagnostica locale senza fetch, CANS assente dal bootstrap e caricato solo su richiesta con prenotazione esclusiva funzionante. 107 controlli di sintassi PASS.
+Baseline main ac99bcf6f350539482a97c650d3350e773a0c77d; lavoro preparato su audit-hardening, non dichiarato in main prima della verifica del ref remoto.
+
+- **audit-hardening:** recuperata la disattivazione della telemetria remota non autenticata (API 404 senza lettura dei payload; rimossa scrittura diretta simulation_telemetry dal client). Diagnostica locale, eventi, snapshot ed export JSON restano disponibili; nessuna modifica a credenziali, tabelle, policy o RLS del database. Le correzioni di salvataggio erano già nella #93: mantenuti resource floor solo DEV, serializer attuale e gestione storage pieno. Cache del solo script core aggiornata.
+- **CANS:** recuperati src/settlement-cans.js, qa/cans-regression.cjs, specifica docs/CANS-ARCHITECTURE.md e CI. Motore logico puro e opt-in: domini/accessi/slot, prenotazioni esclusive, TTL, grafo locale, sequenze, trasferimenti a due fasi e ripristino degli incarichi. Non caricato da index.html e non collegato al tick del gioco. Adapter di taverne/chiese, cittadini reali, animazioni, economia, navigazione fisica e carrier reali restano aperti. Nessun duplicato del lavoro economico.
+- **combat:** pattuglie White Zone, percorsi dedicati/cached, AI ostile e funzioni di disegno popolazione già presenti. Tutte le 15 funzioni del vecchio settlement-population-render.js esistono nei moduli correnti. Resta non recuperata la separazione overlay in settlement-combat-render.js: il vecchio renderer presume il cavaliere come comandante e non copre capitano, combattenti individuali, animazioni, cadute di pietre e feature recenti. Conservare combat per una riconciliazione mirata, senza reintegrare il vecchio runtime.
+- **Prove locali:** CANS 11/11; runtime-integrity 5/5 (GET/POST/OPTIONS disabilitati, diagnostica gioco e Lab senza rete); 116 suite qa/*-regression.cjs verificate (115 nella batteria iniziale, asset-catalog ripetuta dopo allineamento del guard alla telemetria sempre disattivata). Le suite salvataggi, pattuglie e mass battle incluse. Nessun cambiamento di asset/renderer. CI da confermare sul commit finale.
+- **Pulizia autorizzata al raggiungimento di main:** cans solo con SHA originale verificato e commit antenato di main; audit-hardening solo se punta esattamente al commit promosso. PR aperte o nuovi commit impediscono la rimozione. combat resta disponibile.
+
+
 ## 2026-11-03 — Verifica assedio, events e messaggeri 2D
 
 Baseline esaminata: main 49831855ffa8b160839c4b539a6bd277451db0bc. Nessuna nuova funzionalità da reintegrare nei tre branch selezionati.

@@ -17,6 +17,15 @@
 - **Prove:** nuova `qa/cutaway-floors-regression.cjs` con workflow dedicato.
 - **Piramide:** STATUS, BACKLOG, DECISIONS (D-CUT-01). ROADMAP invariata.
 
+## 2026-11-03 — Hardening e skeleton CANS, senza ripristino del vecchio combat
+
+- **Browser locale PASS:** avvio con WebGL senza errori, diagnostica locale senza fetch, CANS assente dal bootstrap e caricato solo su richiesta con prenotazione esclusiva funzionante. 107 controlli di sintassi PASS.
+- Recuperati da audit-hardening soltanto i residui mancanti: API telemetria disattivata e rimozione dell'invio pubblico diretto; mantenute diagnostica locale e implementazione salvataggi attuale #93. Nuovi test comportamentali e workflow Runtime integrity.
+- Conservato lo skeleton CANS opt-in con specifica, 11 regressioni e workflow anche per main; nessun adapter o cittadino reale dichiarato completo.
+- Combat conserva un residuo utile: separazione del renderer overlay da riconciliare sul runtime attuale; nessun rollback di capitano, battaglie, animazioni o pattuglie. Branch conservata.
+- QA locale: 5 runtime test e 116 suite di regressione verificate; guard statico Lab allineato alla telemetria sempre locale. Prevista pulizia di cans/audit-hardening solo dopo promozione verificata. ROADMAP e DECISIONS invariate nei contratti; dettaglio in STATUS.
+
+
 ## 2026-11-03 — Consolidamento assedio, events e messaggeri senza 3D
 
 - Confrontati i tre branch selezionati con main 49831855: nessun residuo utile da integrare; assedio coperto da #61, eventi da #78/#110, cavalieri/messaggeri 2D da #96 e convogli da #105.
