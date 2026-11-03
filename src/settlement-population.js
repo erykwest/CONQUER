@@ -51,6 +51,8 @@ function sunShadowState(){
   };
 }
 function towerRoofRise(s){
+  // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(s?.type==='tower'&&towerRoofStyle(s)==='battlement'&&towerHoardingMounted(s))return .69;
   if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
   const span=s.shape==='round'?Number(s.r||.5)*2:Number(s.size||1);
   return s.shape==='round'
@@ -108,6 +110,8 @@ function gateRoofGeometry(s){
 }
 function gateVisualTopHeight(s){
   if(!s||s.type!=='gate')return structureHeight(s);
+  // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(gateRoofStyle(s)==='battlement'&&gateHoardingMounted(s))return structureHeight(s)+.69;
   return structureHeight(s)+gateRoofRise(s);
 }
 function structureVisualTopHeight(s){

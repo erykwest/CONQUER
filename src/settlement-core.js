@@ -303,11 +303,14 @@ const STRUCTURE_VARIANTS=Object.freeze({
     baseStyle:Object.freeze(['standard','buttress','splayed']),
     topWeapon:Object.freeze(['none','mangonel','ballista']),
     bartizan:Object.freeze(['none','battlement','pitched']),
-    roofShape:Object.freeze(['pyramid','gable','hip'])
+    roofShape:Object.freeze(['pyramid','gable','hip']),
+    // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
+    hoarding:Object.freeze(['off','on'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
-    upper:Object.freeze(['stone','timber'])
+    upper:Object.freeze(['stone','timber']),
+    hoarding:Object.freeze(['off','on'])
   }),
   wall:Object.freeze({
     skin:Object.freeze(['standard','machicolation','hoarding'])
@@ -317,8 +320,8 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid'}),
-  gate:Object.freeze({roofStyle:'battlement',upper:'stone'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off'}),
+  gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
 });
@@ -395,7 +398,16 @@ function towerRoofStyle(s){
 }
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
-function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))}
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)}
+// Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
+// Nor with bartizans: their corbelled corners take the perimeter the gallery runs round.
+function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}
+function towerHoardingMounted(s){return towerHoardingAllowed(s)&&structureVariant(s,'hoarding')==='on'}
+// Stone gates (large and small) take it too, not over a timber-framed storey.
+function gateHoardingAllowed(s){return !!s&&s.type==='gate'&&!isWoodGate(s)&&!gateTimberUpper(s)&&['battlement','pitched'].includes(gateRoofStyle(s))}
+function gateHoardingMounted(s){return gateHoardingAllowed(s)&&structureVariant(s,'hoarding')==='on'}
+function hoardingAllowed(s){return s?.type==='gate'?gateHoardingAllowed(s):towerHoardingAllowed(s)}
+function hoardingMounted(s){return s?.type==='gate'?gateHoardingMounted(s):towerHoardingMounted(s)}
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 // Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).

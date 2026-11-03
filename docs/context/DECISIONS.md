@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-GATE-01 — Torri agganciate a una porta: ingresso sul retro della porta (02/11/2026)
+
+- **Regola, sempre:** una torre agganciata a una porta (qualsiasi socket `gate-*`, `parentTowerId` = la porta) ha l'ingresso al piano terra e il lato interno (finestre, porta, arredo del cutaway) verso il **retro della porta**, cioè l'interno della porta, qualunque sia l'angolo della torre o le mura attaccate. Vale per torri quadrate, rotonde e a D; la semitorre ha già la gola aperta sul retro e non riceve una porta. Le torri secondarie di un'altra torre restano senza ingresso al piano terra.
+- **Codice:** `towerGateParent` / `gateRearVector` in `settlement-architecture.js`, usati da `structureInteriorVector` e `towerDoorSpecs` (e quindi da disegno 2.5D/3D, torce, navigazione e combattimento). Prova: `qa/gate-tower-entrance-regression.cjs`.
 ## 2026-11-03 — Consolidamento P0 / P2 / P3
 
 Decisione esplicita dell'utente: P0 bridge, circle, jobmanager e knights; P2 messages; P3 verifica di pertinenza per le altre branch senza PR. Recupero dei soli residui, senza ricreare funzionalità integrate e senza PR superflue. I contratti D-046 (figure 2D), D-049 (unico allocatore economico) e la decisione ancora aperta D-051 restano invariati. Circle conserva le scorte strategiche in State.siege.stock: la conquista non può duplicarle o sottrarre inventario economico del villaggio per supposizione.

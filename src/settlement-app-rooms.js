@@ -13,6 +13,11 @@ function siteLaborLine(s){
   return txt?'<div class="legend" data-site-wages="true">'+txt+'</div>':'';
 }
 
+// Hoarding of a stone tower or gate: mounted or taken down, the roof stays as built.
+function hoardingSlot(s){
+  const ok=hoardingAllowed(s),on=hoardingMounted(s);
+  return`<div class="slot"><div class="slot-label">Ballatoio</div><div class="grid3"><button data-hoarding="off" class="${on?'':'active'}">Smontato</button><button data-hoarding="on" ${ok?'':'disabled'} class="${on?'active':''}">Montato</button></div><div class="legend">Galleria di legno montata in tempo di guerra attorno alla cima (sotto la gronda se c'è il tetto a falde), con caditoie nel pavimento; il tetto resta quello costruito. Può bruciare.${s.type==='gate'?' Non sopra il piano a graticcio.':' Non con le caditoie in pietra né con le garitte.'}</div></div>`;
+}
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
   if(window.ConquerIndustries?.is(s)){
@@ -164,6 +169,7 @@ function renderFunctionPanel(){
         html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent structure'}.</div></div>`;
       }
       html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
+      if(s.shape!=='half')html+=hoardingSlot(s);
       html+=`<div class="slot"><div class="slot-label">Stone base</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti H1</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Svasato: H0.5. Contrafforti: da quota 0 a H1. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
       const weapon=structureVariant(s,'topWeapon'),armed=towerTopWeaponAllowed(s),wb=(k,l)=>`<button data-tower-weapon="${k}" ${armed||k==='none'?'':'disabled'} class="${weapon===k?'active':''}">${l}</button>`;
       if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
@@ -186,6 +192,7 @@ function renderFunctionPanel(){
       const roof=gateRoofStyle(s),timber=gateTimberUpper(s);
       if(isSmallGate(s)&&structureLevel(s)===2)html+=`<div class="slot"><div class="slot-label">Piano alto</div><div class="grid"><button data-gate-upper="stone" class="${timber?'':'active'}">Pietra</button><button data-gate-upper="timber" class="${timber?'active':''}">Graticcio</button></div><div class="legend">Graticcio: legno e intonaco come le case, a sbalzo su fronte e retro, sempre con il tetto. Costa la porta L1 più ${costText(GATE_TIMBER_COST)}.</div></div>`;
       html+=`<div class="slot"><div class="slot-label">Gate roof</div><div class="grid"><button data-gate-roof="battlement" class="${roof==='battlement'?'active':''}" ${timber?'disabled':''}>Merlato</button><button data-gate-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div></div>`;
+      html+=hoardingSlot(s);
     }
   }
   if(s.type==='gate'&&!building&&window.ConquerSiege?.doorStage){
@@ -261,6 +268,7 @@ function renderFunctionPanel(){
   on('[data-gate-rotate]',(id,el)=>StructureCommands.rotate(id,Number(el.dataset.gateRotate)||1));
   on('[data-tower-base]',(id,el)=>StructureCommands.setTowerBase(id,el.dataset.towerBase));
   on('[data-tower-roof]',(id,el)=>StructureCommands.setTowerRoof(id,el.dataset.towerRoof));
+  on('[data-hoarding]',(id,el)=>StructureCommands.setHoarding(id,el.dataset.hoarding));
   on('[data-wood-roof]',(id,el)=>StructureCommands.setWoodRoof(id,el.dataset.woodRoof));
   on('[data-gate-roof]',(id,el)=>StructureCommands.setGateRoof(id,el.dataset.gateRoof));
   on('[data-gate-upper]',(id,el)=>StructureCommands.setGateUpper(id,el.dataset.gateUpper));

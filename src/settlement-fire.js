@@ -46,6 +46,7 @@
     if(s.type==='gate'&&typeof gateRoofStyle==='function'&&gateRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='church'&&!s.roofBurnt)out.push({part:'roof',flam:.4});
     if(s.type==='wall'&&typeof wallSkin==='function'&&wallSkin(s)==='hoarding')out.push({part:'hoarding',flam:.8});
+    if((s.type==='tower'||s.type==='gate')&&typeof hoardingMounted==='function'&&hoardingMounted(s))out.push({part:'hoarding',flam:.8});
     // The door burns until it is burnt out or battered down (its own integrity at zero).
     if(s.type==='gate'&&!s.doorBurnt&&!(s.siegeIntegrity?.door?.hp<=0))out.push({part:'door',flam:.5});
     return out;
@@ -103,7 +104,9 @@
     if(f.part==='roof'){
       s.roofBurnt=true;
       if(s.type==='tower'||s.type==='gate')s.roofStyle='battlement';
-    }else if(f.part==='hoarding')s.skin='standard';
+    }else if(f.part==='hoarding'){
+      if(s.type==='tower'||s.type==='gate')s.hoarding='off';else s.skin='standard';
+    }
     else if(f.part==='door')s.doorBurnt=true;
     else if(f.part==='whole')s.burnt=true;      // a gutted mill: it stands, but grinds no more
     else if(f.part==='stair'||f.part==='leaf'){window.ConquerKeepEntrance?.burnout?.(s,f.part);return}   // the keep's masonry is not charred
