@@ -65,7 +65,7 @@ function open(tab='general'){
  $('profileDay').textContent=(Number(State.clock?.day)||0).toFixed(1);
  setTab(tab);
 }
-function setTab(tab){document.querySelectorAll('[data-profile-tab]').forEach(b=>b.classList.toggle('active',b.dataset.profileTab===tab));$('profileGeneral').hidden=tab!=='general';$('profileHeraldry').hidden=tab!=='heraldry';if(tab==='heraldry')draw()}
+function setTab(tab){document.querySelectorAll('[data-profile-tab]').forEach(b=>b.classList.toggle('active',b.dataset.profileTab===tab));$('profileGeneral').hidden=tab!=='general';$('profileHeraldry').hidden=tab!=='heraldry';const control=$('profileControl');if(control)control.hidden=tab!=='control';if(tab==='heraldry')draw();if(tab==='control')window.ConquerPanels?.open()}
 function close(){$('profileOverlay').hidden=true}
 sanitize();State.heraldry={...h};
 $('profileBtn').addEventListener('click',()=>open());

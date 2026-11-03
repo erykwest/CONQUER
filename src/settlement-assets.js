@@ -13,7 +13,8 @@ const STRUCTURE_ASSET_CENTER=Object.freeze({x:100,y:100});
 const STRUCTURE_ASSET_TEST_LENGTHS=Object.freeze({
   wall:Object.freeze([1,4,8]),
   palisade:Object.freeze([1,4,8]),
-  built:Object.freeze([1,2.5,4])
+  built:Object.freeze([1,2.5,4]),
+  builtWide:Object.freeze([2,4,6])
 });
 const STRUCTURE_SHADOW_TEST_STEPS=8;
 const structureAssetBitmapCache=new Map();
@@ -136,11 +137,26 @@ function structureAssetFamilyCatalog(){
       assetPointBase('tower',{shape,material:'stone',level,tier,roofStyle,baseStyle,...(shape==='round'?{r:size}:{size})})
     );
   }
+  // The hoarding is mounted on a tower as built: one entry per shape, tier and roof it can go on.
+  for(const shape of ['square','round','dee'])for(let tier=1;tier<=3;tier++)for(const roofStyle of ['battlement','pitched']){
+    if(shape==='dee'&&tier===1)continue;
+    const size=shape==='dee'?[1,1.5,2][tier-1]:towerSizeForTier(shape,tier);
+    add(
+      'tower-stone-'+shape+'-t'+tier+'-l2-'+roofStyle+'-hoarding',
+      'Stone '+shape+' tower T'+tier+' L2 '+roofStyle+' with hoarding',
+      assetPointBase('tower',{shape,material:'stone',level:2,tier,roofStyle,baseStyle:'standard',hoarding:'on',...(shape==='round'?{r:size}:{size})})
+    );
+  }
   add('tower-wood-watch','Wood watchtower',assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,size:1,tier:1}));
   for(const woodRoof of ['open','pitched'])add('tower-wood-medium-'+woodRoof,'Wood medium tower '+woodRoof,assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof,level:1,size:1.5,tier:2}));
   for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','pitched'])add(
     'gate-stone-l'+level+'-'+roofStyle,'Stone gate L'+level+' '+roofStyle,
     assetPointBase('gate',{shape:'square',material:'stone',size:1.5,level,roofStyle})
+  );
+  // Hoarding mounted on the large and the small stone gate, crenellated or roofed.
+  for(const size of [1.5,1])for(const roofStyle of ['battlement','pitched'])add(
+    'gate-stone-'+(size<1.25?'small':'large')+'-l2-'+roofStyle+'-hoarding','Stone '+(size<1.25?'small':'large')+' gate L2 '+roofStyle+' with hoarding',
+    assetPointBase('gate',{shape:'square',material:'stone',size,level:2,roofStyle,hoarding:'on'})
   );
   add('gate-wood','Wood gate',assetPointBase('gate',{shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}));
   for(let tier=1;tier<=3;tier++)for(let level=1;level<=2;level++)for(const skin of (tier===1?['standard','hoarding']:['standard','machicolation','hoarding']))for(const length of STRUCTURE_ASSET_TEST_LENGTHS.wall)add(
@@ -155,7 +171,16 @@ function structureAssetFamilyCatalog(){
     'built-l'+level+'-'+skin+'-'+length,'Built section L'+level+' '+skin+' '+length+'U',
     assetLinearBase('built',length,{level,skin,width:1,functions:[]})
   );
-  for(const type of CIVIC_TYPES)add('civic-'+type,'Civic '+type,assetPointBase(type));
+  for(let level=1;level<=2;level++)for(const skin of ['standard','arcade'])for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add(
+    'built-wide-l'+level+'-'+skin+'-'+length,'Wide hall L'+level+' '+skin+' '+length+'U',
+    assetLinearBase('built',length,{span:'wide',level,skin,width:TYPES.builtWide.width,functions:[]})
+  );
+  for(const type of CIVIC_TYPES){
+    if(CIVIC_LEVEL_TYPES.includes(type))for(let level=1;level<=3;level++){
+      if(type==='plaza')for(const variant of PLAZA_VARIANTS)add('civic-plaza-l'+level+'-'+variant,'Piazza L'+level+' '+variant,assetPointBase(type,{civicLevel:level,plazaVariant:variant}));
+      else add('civic-'+type+'-l'+level,'Civic '+type+' L'+level,assetPointBase(type,{civicLevel:level}));
+    }else add('civic-'+type,'Civic '+type,assetPointBase(type));
+  }
   for(const width of [1.5,2])for(const doorSide of [-1,1]){
     for(const level of [1,2]){
       const id=findHouseAssetId(level,null,null,doorSide,width);
@@ -255,7 +280,7 @@ function assetPixelHash(canvas){
   return(h>>>0).toString(16).padStart(8,'0');
 }
 function expectedShadowCaster(s){
-  return ['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type);
+  return ['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type);
 }
 function validateAssetShadowGeometry(s){
   if(!expectedShadowCaster(s))return{tested:0,failed:0};

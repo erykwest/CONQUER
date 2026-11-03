@@ -1,0 +1,24 @@
+/* Diplomatic courier letter and strategic caravan planner. */
+#diplomacyHost{position:absolute;inset:0;pointer-events:none;z-index:35}
+#courierLetter{position:absolute;transform:translate(-50%,-100%);min-width:38px;height:38px;cursor:pointer;pointer-events:auto;border:2px solid #debf7d;border-radius:50%;background:#263026;color:#fff;box-shadow:0 3px 12px #0009;font-size:20px;z-index:41}
+#courierLetter:hover{background:#4d583b}
+#diplomacyHost [hidden]{display:none!important}
+.diplomacy-backdrop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,9,11,.65);z-index:45;pointer-events:auto;padding:15px}
+.diplomacy-panel{width:min(92vw,440px);max-height:86%;overflow:auto;border:1px solid #a18b5e;border-radius:10px;padding:20px;background:#202923;color:#eee6d2;box-shadow:0 12px 32px #0009;font-size:14px}
+.diplomacy-panel h2{margin:0 0 12px;color:#f5d394;font-size:19px}
+.diplomacy-panel h3{font-size:15px;margin:13px 0 6px}
+.diplomacy-panel p{line-height:1.45}
+.diplomacy-panel .diplomacy-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap}
+.diplomacy-panel button{padding:7px 10px;cursor:pointer;border:1px solid #907a59;border-radius:5px;background:#314337;color:#f4eaca}
+.diplomacy-panel button:disabled{opacity:.4;cursor:not-allowed}
+.diplomacy-panel button:hover:not(:disabled){background:#4a6147}
+.diplomacy-wide{width:min(92vw,710px)}
+.caravan-list{display:flex;gap:6px;overflow:auto;margin:0 0 12px;padding:0 0 6px;white-space:nowrap}
+.caravan-list button{white-space:nowrap}
+.caravan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-top:12px}
+.caravan-grid label{display:flex;flex-direction:column;gap:4px;color:#ddc9a3;font-size:12px}
+.caravan-grid input{width:100%;box-sizing:border-box;background:#131b18;color:#f4eaca;border:1px solid #816d51;border-radius:5px;padding:7px;font:inherit}
+.caravan-preview{margin-top:12px;padding:12px 14px;background:#18211e;border:1px solid #495a4d;border-radius:7px}
+.caravan-preview p{margin:6px 0;font-size:12px}
+.caravan-warning{color:#ffab83;font-weight:bold}
+.courier-note{font-size:12px;opacity:.8}

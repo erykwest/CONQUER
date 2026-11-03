@@ -22,6 +22,7 @@ function confirm(){
  vm.runInContext("document.getElementById('confirmVillageBtn').onclick()",context,{timeout:250});
  assert.ok(performance.now()-start<100,'name confirmation must return promptly');
  assert.equal(run('State.village.founded'),true);
+ assert.equal(run('State.village.foundingWorkers'),4,'Founding must leave four L1 workers available before any house');
  assert.equal(run('roadList().length'),0,'planning must not run inside the name handler');
  assert.ok(queue.length>0);
 }
@@ -42,8 +43,12 @@ for(const [seed,biome] of [[12345,'plains'],[4242,'forest']])check('actual name 
  assert.equal(run('processVillageGrowth()'),0);
  const timing=drain();
  assert.equal(run('foundingRoadJob'),null);
- assert.equal(run('ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length'),4);
- assert.equal(run('roadList().every(r=>roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId]))'),true);
+ const routeCount=run('ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length');
+ if(routeCount!==4)console.log('UNCONNECTED_ROUTE_DIAGNOSTICS',JSON.stringify(run("ensureRoadPlan().map(r=>({id:r.id,edge:r.edge,roads:routeRoads(r.id).length,continuous:arterialRouteContinuous(r.id),target:r.target}))")));
+ assert.equal(routeCount,4);
+ const clear=run('roadList().every(r=>roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId]))');
+ if(!clear)console.log('blocked samples',JSON.stringify(run('roadList().filter(r=>!roadRepairSegmentClear(r.a,r.b,r.width,[State.village.wellId])).map(r=>({a:r.a,b:r.b,route:r.routeId,blocked:Array.from({length:51},(_,i)=>{const t=i/50,p={x:r.a.x+(r.b.x-r.a.x)*t,y:r.a.y+(r.b.y-r.a.y)*t};return [t,environmentBlocksPoint(p,"road"),terrainSlopeKind(p)]}).filter(q=>q[1]||q[2])}))')));
+ assert.equal(clear,true);
  console.log('  planning slices',timing);
 });
 check('a new building invalidates an in-progress route and is avoided',()=>{

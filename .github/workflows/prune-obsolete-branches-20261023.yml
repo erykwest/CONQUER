@@ -1,0 +1,87 @@
+name: One-time safe cleanup of obsolete remote branches (2026-11-03)
+
+# User-authorized cleanup after verified CANS/hardening promotion; combat has unmerged work.
+# Runs only when this exact workflow changes on main.
+# Every candidate is pinned below; new work and open-PR heads/bases are preserved.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/prune-obsolete-branches-20261023.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prune:
+    if: github.repository == 'erykwest/CONQUER'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify exact heads, merged evidence and live PRs before deletion
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          removed=0; skipped=0; failures=0; examined=0
+          echo '## Branch cleanup — 2026-11-03' >> "$GITHUB_STEP_SUMMARY"
+          while IFS='|' read -r branch expected evidence; do
+            [[ -z "$branch" ]] && continue
+            if [[ "$expected" == '@this-commit' ]]; then expected="$GITHUB_SHA"; fi
+            examined=$((examined+1))
+            echo "Candidate $examined: $branch"
+            if [[ "$branch" == main ]]; then exit 1; fi
+            protected="$(gh api --paginate "repos/$GH_REPO/pulls?state=open&per_page=100" --jq '.[] | .head.ref, .base.ref')"
+            if grep -Fxq "$branch" <<< "$protected"; then
+              echo "SKIP open PR: $branch"; skipped=$((skipped+1)); continue
+            fi
+            current="$(gh api "repos/$GH_REPO/git/ref/heads/$branch" --jq '.object.sha' 2>/dev/null)" || {
+              echo "SKIP missing: $branch"; skipped=$((skipped+1)); continue
+            }
+            if [[ "$current" != "$expected" ]]; then
+              echo "SKIP changed head: $branch"; skipped=$((skipped+1)); continue
+            fi
+            if [[ "$evidence" == '-' ]]; then
+              merged_sha="$expected"
+            elif [[ "$evidence" == replacement:* ]]; then
+              # Audited replacements: #61 siege damage, #78 events, #96 approved 2D diplomacy.
+              # D-046 explicitly discards the old 3D knight implementation.
+              case "$branch:$evidence" in
+                assedio:replacement:61|events:replacement:78|feature/knights-messenger-caravans:replacement:96) ;;
+                *) echo 'Unapproved replacement'; exit 1 ;;
+              esac
+              pr="${evidence#replacement:}"
+              merged_sha="$(gh api "repos/$GH_REPO/pulls/$pr" --jq 'select(.merged_at != null) | .merge_commit_sha')"
+            else
+              entry="$(gh api "repos/$GH_REPO/pulls/$evidence" --jq '[.head.ref,.head.sha,(.merged_at // ""),(.merge_commit_sha // "")] | join("|")')"
+              IFS='|' read -r pr_branch pr_sha merged_at merged_sha <<< "$entry"
+              if [[ "$pr_branch" != "$branch" || "$pr_sha" != "$expected" || -z "$merged_at" ]]; then
+                echo "SKIP PR mismatch: $branch"; skipped=$((skipped+1)); continue
+              fi
+            fi
+            if [[ ! "$merged_sha" =~ ^[a-f0-9]{40}$ ]]; then
+              echo "SKIP no merged proof: $branch"; skipped=$((skipped+1)); continue
+            fi
+            ancestry="$(gh api "repos/$GH_REPO/compare/$merged_sha...main" --jq '.status')"
+            if [[ "$ancestry" != ahead && "$ancestry" != identical ]]; then
+              echo "SKIP not in main: $branch"; skipped=$((skipped+1)); continue
+            fi
+            # Re-read immediately before deletion; refuse branches updated during the audit.
+            current="$(gh api "repos/$GH_REPO/git/ref/heads/$branch" --jq '.object.sha')"
+            if [[ "$current" != "$expected" ]]; then
+              echo "SKIP changed during audit: $branch"; skipped=$((skipped+1)); continue
+            fi
+            if gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$branch" >/dev/null; then
+              echo "DELETED $branch"
+              echo "- DELETED: \`$branch\` ($expected; evidence $evidence)" >> "$GITHUB_STEP_SUMMARY"
+              removed=$((removed+1))
+            else
+              echo "FAILED $branch"; failures=$((failures+1))
+            fi
+          done <<'BRANCHES'
+          cans|0f6048c0996f3ca1a5cff5db9e5068fc94caf46a|-
+          audit-hardening|@this-commit|-
+          BRANCHES
+          echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
+          ((failures == 0))
