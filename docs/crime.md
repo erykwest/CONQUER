@@ -35,7 +35,7 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 | Prigione (`prison`) | Come sopra | `s.functions[i]='prison'` | 6 detenuti per stanza normale, 12 per stanza grande (T3), 6 per sala del Municipio (`capacity().prisoners`) |
 | Sala del consiglio (`council`) | Solo Municipio | `s.functions[i]='council'` | Arredo storico del cutaway; un Municipio salvato prima delle sale riceve questa sala nella prima posizione |
 | Tribunale (`tribunal`) | Solo Municipio **L2+** | `s.functions[i]='tribunal'` | Al ritorno a L1 la sala decade |
-| Ospizio (`almshouse`) | Annesso della Chiesa **L2**, max 1, 3 × 2,4 U | `{type:'civicAnnex', annexType:'almshouse'}` | Modello Blender `almshouse` (aula intonacata, portico, campanile a vela). Come gli altri annessi: niente costo o effetti economici |
+| Ospizio (`almshouse`) | Annesso della Chiesa **L2**, max 1, 3 × 2,4 U | `{type:'civicAnnex', annexType:'almshouse'}` | Modello Blender `almshouse` nello **stile delle case**: casa lunga a due piani, piano terra in pietra, P1 a graticcio su intonaco ocra con sporto sul retro, tetto in ardesia a 60°, **ballatoio** di legno al P1 sul fronte con tettoia e scala esterna, piccola croce sul frontone. Colori presi dal renderer delle case (`houseStone`, `housePlaster`, `houseTimber`, `roofHouse`…, in coda alla palette civica). Come gli altri annessi: niente costo o effetti economici |
 | Gogna (`pillory`) | Piazza, 1 × 1 U | `{type:'eventVenue', venue:'pillory'}` | 8 legno + 2 metallo, ½ giorno. Modello `justicePillory` |
 | Forca (`gallows`) | Piazza o margine, 2 × 1,5 U | `{type:'eventVenue', venue:'gallows'}` | 24 legno + 2 metallo, 1 giorno. Modello `justiceGallows`, sobrio e **vuoto** (senza figura né cappio) |
 
