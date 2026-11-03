@@ -1,5 +1,16 @@
 # Livello 1 — Roadmap sistemica
 
+## Priorità consolidamento branch — decisione 03/11/2026
+
+Questa sequenza riguarda il recupero del lavoro Git e prevale sulle vecchie tabelle di consolidamento, senza cambiare le milestone M0–M5.
+
+1. **P0:** bridge, circle, jobmanager, knights. Recuperare solo modifiche mancanti e compatibili; bridge è coperta da #73, jobmanager da #98–99 (D-049), knights 2D da #96 (D-046). Circle richiede riconciliazione e verifica sul runtime corrente.
+2. **P2:** messages, sistema postale.
+3. **P3:** tutte le altre branch senza PR, da riesaminare per pertinenza prima di integrarle.
+
+La priorità non annulla D-046 (figure 2D), D-049 (allocatore unico) né decide D-051 (campi solo L2).
+
+
 ## Estensione strategica — MARCH (decisione 30/10/2026)
 
 - **Modalità Attacco approvata**, distinta dalla gestione diretta del feudo ma nello stesso mondo persistente finale. Skeleton isolato su feature/march-skeleton con route /march/: marcia, razzia parziale, ritiro, segnaposto di assedio/assalto e conquista facoltativa. **Non è l'integrazione World/Feudal**.

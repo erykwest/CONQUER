@@ -5,6 +5,20 @@
 - Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.
 - Nuovi `tools/blender/build_houses.py`, `src/assets/house-models.js`, `src/settlement-house3d.js`, `qa/house3d-regression.cjs`; 6 voci nel Lab.
 - Piramide: STATUS, BACKLOG, DECISIONS (D-057). ROADMAP invariata: è una scelta di resa grafica delle case, non cambia milestone né la priorità P1 economia.
+## 2026-11-03 — Priorità P0 e riconciliazione circle
+
+- CI CIRCLE estesa a main e alle dipendenze core/stanze/ingresso mastio; fixture VM portabili anche con checkout CRLF Windows.
+- Ordine richiesto dall'utente: P0 bridge/circle/jobmanager/knights, P2 messages, P3 pertinenza delle altre branch senza PR.
+- Recupero dei soli residui di circle sulla main d8c89556: conflitto script risolto preservando economia/convogli, integrazione mastio rialzato e reset al cambio salvataggio. Nessuna reintegrazione di bridge, JobManager parallelo o cavalieri 3D.
+- QA locale: 67 test circle e 113 suite di regressione superati; founding richiede esecuzione isolata dopo fallimento temporale sotto carico. Stato pubblicazione/merge da risolvere tramite SHA Git remoto.
+
+
+## 2026-10-30 — Stili di merlatura del feudo · branch `feat/crenel-styles`
+
+- Nuova scelta globale in `State.policies.crenelStyle` (persistita locale e cloud): **piatta** (default), **doppia falda** (colmo lungo il muro), **coda di rondine** (corna a V e feritoia sul lato visibile). Vale per tutti i merli in pietra di torri, porte e mura; le nuove costruzioni seguono lo stile scelto.
+- Cambio a pagamento dal Centro di controllo › Cantieri, scheda «Stile delle merlature»: costo per merlo dello stile di arrivo (`CRENEL_STYLE_COST`: 1 pietra / 2 pietra + 1 oro / 3 pietra + 2 oro), argilla al posto della pietra sulle strutture in mattone, cantieri esclusi. Comandi `ConquerGame.commands.crenelQuote/setCrenelStyle`.
+- Geometria: corona dei merli in `merlonStyleParts`, disegnata identica dal renderer 2.5D e da `settlement-castle3d.js`. Merli più sottili nello spessore del muro (`MERLON_DEPTH_SCALE` 0,72, parapetti allineati) e merlo d'angolo a L su torri quadrate e porte, con pilastro condiviso per le rondini e testata a padiglione per la falda.
+- QA: verifica visiva nel Lab dei tre stili su torre quadrata, rotonda, caditoie e porta; `node qa/asset-audit.mjs` 487 render, 0 falliti, avvisi invariati (cantiere progressivo, schemi illustrativi); baseline aggiornata per il nuovo merlo di default. CI non ancora eseguita.
 ## 2026-10-30 — Municipio e gilda sulle piazze dei pozzi (branch `feature/townhall-guild`)
 
 - Nuovi edifici civici L1–L3 legati ai pozzi: municipio con torre civica centrale, campana e meridiana (orologio al L3), gilda; modelli Blender, cutaway, cantiere e crollo. I modelli civici ora rispettano mattoni/argilla. Stato e prove in [STATUS](STATUS.md); ROADMAP e DECISIONS invariate (estende D-056 senza cambiarne il contratto).
@@ -532,3 +546,30 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 - **CODICE / BRANCH**: al tramonto squadre entro zona gialla richiamate lungo percorsi validi alla propria caserma, squadre fuori zona accampate sul posto (tenda e braciere per unità, un solo soldato di guardia visibile). All'alba ripristino delle squadre. Nessun cambio a `/urban`.
 - **CODICE / BRANCH**: cutaway caserma sincronizzato con le truppe effettivamente rientrate, nessun soldato fittizio in stanza vuota.
 - **VERIFICA DA ESEGUIRE**: test browser su percorso, UI mobile, ritorni ostacolati, campi in elevazione, salvataggi e rendering WebGL2/Canvas; le sorgenti da sole non dimostrano QA superata.
+
+
+### CIRCLE — 2026-10-28
+2026-10-28 — `circle` branch: add isolated defensive-compartment model and QA fixture. Not integrated in gameplay; QA not executed.
+
+
+### 2026-10-29 — CIRCLE — branch `circle`
+- Motore di riconoscimento topologico indipendente dalla navigazione: rasterizza mura/palizzate/torri/porte/built sections realmente costruite e ostacoli naturali effettivamente invalicabili. Identifica cerchie e compartimenti laterali, profondità, portali e ingresso del Mastio. Tiene aperta la distinzione tra accesso e conquista.
+- Hook runtime `window.ConquerCircle`, caricamento in `index.html`, invalidazione su variazioni topologiche e cantieri completati, test topologia 11/11 e adapter runtime 5/5 PASS nel harness JavaScript isolato.
+- Limitazioni: non cablato a IA civile, occupazione militare, scorte economiche reali o overlay; test browser/Node CLI non eseguiti; `main` invariata.
+
+
+### 2026-10-29 — /circle — stati militari dei compartimenti (branch `circle`)
+- Introdotto `src/circle/defensive-control.mjs`, valutatore deterministico di `secure`/`alert`/`threatened`/`infiltrated`/`invaded`/`contested` basato su nemici e difensori presenti realmente, inclusi combattimenti sui camminamenti. `captured` non viene attribuito automaticamente.
+- Collegato a `ConquerCombat` via `window.ConquerCircle`; aggiornamenti periodici e su modifiche esplicite, transizioni evento, riepilogo nel pannello Combat. Corretta sincronizzazione quando si cancellano i nemici o si disegnano allarmi a gioco fermo. Allineato il vocabolario degli stati dello skeleton. `ConquerSiege.breach` segnala il segmento a `ConquerCircle.markBreach`: il vecchio settore rimane temporaneamente `compromised` (non conquistato), può diventare `invaded` e ritorna settore ordinario dopo la ricostruzione; salvare l'identità tra sessioni resta fuori scope.
+- Verifiche: 43/43 test isolati PASS e parsing JS dei moduli runtime; Node CLI e prova browser NON eseguiti. Nessuna modifica a `main`.
+
+
+### 2026-10-29 — /circle: conquista e approvvigionamenti (branch `circle`)
+- Integrati `src/circle/defensive-logistics.mjs`, `ConquerCircle.tickOccupation` e `ConquerSiege.captureCircleSector/releaseCircleSector/circleStoreInventory`: conferma conquista dopo 0,5 giorni di controllo nemico incontrastato; riconquista simmetrica dopo 0,5 giorni in controllo difensore.
+- Magazzini veri delle strutture fortificate: deposito prioritario all'interno, materiali con capienza condivisa, riserva globale `siege.stock` autoritativa; perdita one-shot per ogni stanza in compartimento conquistato; riconquista non rimborsa i viveri persi. Capacità delle stanze conquistate sospesa. Facciata interna delle `built` usata per assegnare il settore.
+- Salvataggi: record di cattura e stanze perdute all'interno di `State.siege.circle`; ripristino in `ConquerSiege.restore`, compatibile con il payload locale/cloud. La mappa riporta i compartimenti conquistati anche dopo salvataggio di una breccia; una suddivisione successiva non segna automaticamente tutti i settori eredi come conquistati.
+- QA: 65/65 test isolati PASS inclusi i moduli veri di assedio e controllo, syntax checks PASS; Node nativo, CI e test browser ancora non eseguiti. `main` invariata.
+
+
+### 2026-10-29 — CIRCLE QA GitHub Actions
+- Creato workflow `.github/workflows/circle-regression.yml` per test Node.js 22 e syntax checks ad ogni push rilevante su `circle`. [Run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993) su codice `68533977`: **PASS 65/65 test**. Restano da eseguire smoke test browser/UI e profiling dinamico.

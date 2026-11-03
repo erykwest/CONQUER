@@ -13,6 +13,7 @@ const navPerf={
 Object.assign(navPerf,window.__conquerPerf||{});
 window.__conquerPerf=navPerf;
 function invalidateNavigation(hard=true,{urban=true}={}){
+  window.ConquerCircle?.invalidate?.('navigation topology changed');
   // Destination trees depend on the exact road graph, so any topology change
   // drops them. Individual resident routes survive soft extensions.
   navPerf.navInvalidations=(navPerf.navInvalidations||0)+1;

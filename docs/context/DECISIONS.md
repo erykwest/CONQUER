@@ -1,5 +1,10 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## 2026-11-03 — Consolidamento P0 / P2 / P3
+
+Decisione esplicita dell'utente: P0 bridge, circle, jobmanager e knights; P2 messages; P3 verifica di pertinenza per le altre branch senza PR. Recupero dei soli residui, senza ricreare funzionalità integrate e senza PR superflue. I contratti D-046 (figure 2D), D-049 (unico allocatore economico) e la decisione ancora aperta D-051 restano invariati. Circle conserva le scorte strategiche in State.siege.stock: la conquista non può duplicarle o sottrarre inventario economico del villaggio per supposizione.
+
+
 ## D-CRIME-01 — Skeleton autonomo del sistema criminalità (02/11/2026)
 
 - **DECISO per il laboratorio `/crime/`:** separare criminalità, ordine pubblico e tensione sociale. La severità, gogna e patibolo possono aumentare la deterrenza **ma anche il risentimento**; assistenza/ospizio e presidio agiscono su leve diverse. La sommossa è una fase di escalation, non un generico malus; la rivolta non viene risolta da un secondo sistema di combattimento.
@@ -220,3 +225,32 @@ Le decisioni D-033…D-038 delle branch #55 e `jobmanager` avevano numeri già u
 ## Regola per le nuove decisioni
 
 Aggiungere un ID, classe, data di registrazione, **motivazione**, alternative scartate, impatto su file/test, issue/PR/commit. Non sovrascrivere silenziosamente una decisione: segnarla **SUPERATA DA D-xxx**, mantenendo la traccia. Per le proposte usare «PROPOSTA» fino a conferma esplicita.
+
+
+### CIRCLE — 2026-10-28
+2026-10-28 — CIRCLE design: white/yellow/green painted zones remain independent. Defensive compartments close only with fortifications or genuinely impassable natural terrain (cliffs/sea); ordinary civilian buildings excluded. Capture requires military control, not tower collapse. Supplies fill deepest compatible depots first; capture removes local stores. Civilian withdrawal proceeds by reachable secure compartment, not direct teleport to keep. Implementation is skeleton only.
+
+
+### CIRCLE — decisioni operative 2026-10-29
+- La chiusura fisica riguarda **solo** fortificazioni finite e barriere naturali realmente invalicabili. Edifici civili e siepi restano semplici ostacoli di navigazione e non chiudono un compartimento.
+- Una porta aperta mantiene la demarcazione *difensiva* ma consente il transito; le porte chiuse non costituiscono collegamento percorribile. I ponti possono interrompere una chiusura naturale.
+- L'appartenenza del Mastio viene valutata dal lato dell'ingresso, non dal centro dell'edificio pieno. Per le built sections senza ingresso identificabile, l'attribuzione alle riserve resta non determinata.
+- Le cerchie annidate e settori laterali hanno identità logiche distinte. Una breccia modifica la topologia ma non è una conquista automatica: senza un controller militare i settori sono `unassessed`; non devono essere scelti come rifugi per default.
+- Il riconoscimento raster attuale è un primo contratto runtime, non sostituisce collisioni, pathfinding e simulazione d'assedio esistenti.
+
+
+### CIRCLE — controllo militare dei compartimenti — 2026-10-29
+- **La condizione `secure` dipende dall'assenza di combattenti ostili effettivamente presenti nel compartimento.** La visibilità della fog of war non è una fonte attendibile di sicurezza: un nemico non avvistato rende comunque insicura la zona.
+- **`alert` non significa occupato.** Gli allarmi esistenti (yellow/green e campana) restano indipendenti dalla classificazione di occupazione; `secure` e `alert` restano eleggibili come rifugi nel contratto `/circle`.
+- **Scale/torri d'assedio e camminamenti:** salita=`threatened`, ostile sul camminamento=`infiltrated`, scontro tra difensori e assalitori sul camminamento=`contested`. Solo presenza a terra dentro un compartimento genera `invaded`, oppure `contested` se ci sono difensori.
+- **`invaded` non equivale a `captured`.** Il controllo definitivo, la perdita delle scorte e la produzione interrotta richiederanno un evento esplicito di conquista confermata; questa iterazione non trasferisce risorse né altera i pennelli e le collisioni esistenti.
+- I settori aperti da **brecce d'assedio documentate** vengono conservati in memoria nella sessione corrente come `compromised` (non sicuri) anche dopo la perdita della chiusura geometrica. Il successivo ingresso ostile li classifica `invaded`; la ricostruzione ne rimuove lo stato storico e restituisce un compartimento chiuso. Le demolizioni volontarie non generano automaticamente questi settori storici. **Resta aperta la persistenza** tra caricamenti e l'assegnazione di identità permanenti; `captured` richiede una conferma separata.
+
+
+### CIRCLE — decisioni logistiche e di cattura — 2026-10-29
+- La cattura NON è sinonimo di `invaded`: richiede almeno 0,5 giorni di occupazione nemica a terra continuativa, senza difensori in grado di contestarla (anche sulle mura). Nessuna cattura a gioco fermo. Qualunque breccia, scala o torre d'assedio da sola non trasferisce possesso.
+- Il ledger autorevole delle scorte fortificate è `State.siege.stock`. Per evitare duplicazioni non viene creato un secondo ammontare salvato per stanza: la ripartizione fisica virtuale è calcolata dai depositi compatibili e dai livelli difensivi al momento dell'uso. I depositi più profondi si riempiono per primi; la capacità condivisa `materials` copre legno, pietra e metallo.
+- **Alla conquista verificata** il quantitativo effettivamente assegnato alle sole stanze del settore viene sottratto una sola volta al magazzino del difensore e registrato in `State.siege.circle.captures[]` (`lost`, `rooms`, `anchors`, `polygon`, `day`). Le altre risorse (`State.resources` Builder e stock mercantile `ConquerEconomy`) NON vengono modificate automaticamente. I depositi non attribuibili con certezza non sono soggetti a sottrazioni ipotetiche.
+- Il settore conquistato rimane `captured` finché non è ricontrollato dai difensori per almeno 0,5 giorni di gioco senza ostili. La riconquista riattiva la capacità fisica del deposito ma NON rigenera le merci sottratte.
+- Il record di cattura sopravvive a save/load, incluse brecce che eliminano la chiusura topologica; una successiva compartimentazione non può propagare una sola cattura a più settori. Il bottino lato attaccante e la simulazione di trasporti di risorse sono rinviati.
+

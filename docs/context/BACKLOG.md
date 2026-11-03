@@ -1,5 +1,19 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-03 — Priorità esplicite per consolidamento branch
+
+| Priorità | Branch | Stato / prossimo passo |
+|---|---|---|
+| P0 | bridge | Già coperta da #73; preservare i miglioramenti successivi di main |
+| P0 | circle | Riconciliata su main corrente, QA locale 67/67; pubblicazione e CI prima della promozione |
+| P0 | jobmanager | Coperta da #98–99; non duplicare D-049. D-051 resta aperta |
+| P0 | knights | Renderer 2D già identico su main, #96; 3D escluso da D-046 |
+| P2 | messages | Integrare dopo riconciliazione del runtime e documentazione |
+| P3 | Tutte le altre branch senza PR | Verificare se i residui sono ancora pertinenti; niente recuperi automatici |
+
+Circle: niente resa automatica del feudo; conquista di settore solo con presenza terrestre ostile incontestata per mezzo giorno simulato, riconquista con difensori. Bottino solo dalle scorte di assedio assegnate alle stanze; ledger economico del villaggio separato e invariato.
+
+
 ## Piazze dei pozzi — municipio e gilda (branch `feature/townhall-guild`, 30/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** municipio e gilda L1–L3 legati a un pozzo (uno per tipo e per pozzo, entro 9U), modelli Blender, cutaway, cantiere, crollo; mattoni/argilla applicati a tutti i modelli civici.
@@ -75,6 +89,12 @@
 - **Economia residua:** `mine` produce `stone` (non `metal`), `workshop` per `equipment` della Built Section ≠ bottega commerciale L3, nessun `tree depletion`, input botteghe/materiali e capacità fisiche del castello da collaudare; i pannelli **non** sommano `economy.castle` e `siege.stock`. La sequenza M0–M3 può ora concentrarsi su integrazioni, non riscrittura economia.
 - **Solo branch/OPEN:** #109 CI suite economia 2–5 (conflitto); #110 Livree/bivacco/campo militare (non assedio strategico completo); #111 multi-pozzo e quartieri (non su main). `messages`, `cans`, `circle` restano filoni separati; il vecchio `jobmanager` e `feature/autonomous-urban-economy` sono stati portati selettivamente/convertiti nelle PR economiche e non vanno duplicati.
 - **QA:** CI PASS sulle HEAD di #109/#110/#111 e smoke WebGPU main `cf569992`; non rappresenta un nuovo test browser dell'intero gioco eseguito per questo audit.
+
+
+## Castello — stili di merlatura del feudo (branch `feat/crenel-styles`, 30/10/2026)
+
+- **IN CORSO su branch, NON MERGE:** tre stili globali (piatta, doppia falda, coda di rondine), cambio a pagamento per merlo dai Cantieri, merli più sottili e angoli a L. Dettagli in [STATUS](STATUS.md).
+- Aperti: stile per la merlatura in legno delle porte; eventuale tempo di cantiere per il rifacimento (oggi istantaneo una volta pagato).
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
@@ -596,3 +616,30 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Rilevazione lag:** rendere evidenti cali improvvisi di FPS e picchi di frame time; privilegiare una traccia dei tempi per frame (ms) oppure affiancarla agli FPS per distinguere meglio gli spike.
 - **Impatto minimo:** campionamento e rendering dell'overlay leggeri, buffer temporale limitato a 30 secondi e nessun costo significativo quando disattivato.
 - **QA:** verificare accuratezza, comportamento in pausa e a differenti frame rate, corretto reset della finestra temporale e funzionamento su renderer supportati.
+
+
+### CIRCLE — 2026-10-28
+2026-10-28 — CIRCLE skeleton (branch `circle`): domain states, barrier eligibility, compartment/depot contracts, deep-first storage, capture ledger and civilian fallback added. TODO: actual geometry loops, natural terrain impassability, gate/access orientation, siege control, civilian pathfinding, persistence, runtime integration, visual and automated regression.
+
+
+### CIRCLE — avanzamento 2026-10-29 (branch `circle`)
+- **Fatto nel branch:** detector di compartimenti chiusi (fortificazioni complete, scarpate ripide, mare/montagne, terraforming), due settori laterali, cerchie annidate, taglio brecce, accessi gate aperto/chiuso, ponti praticabili, profondità e collegamenti, API `window.ConquerCircle`.
+- **Aperto:** verifica visuale e prestazionale su scenari reali; interfaccia debug/overlay; identità persistente dei compartimenti; aggancio a controllo militare/ingressi nemici (scale, torri d'assedio); scelta sicura delle destinazioni di fuga e relativa IA; accessi lato costruzioni, deposito interno per built senza ingresso certo; scorte fisiche e produzione settoriale; QA end-to-end e protezione regressioni di navigazione.
+- **Vincolo:** edifici civili, recinti e siepi non chiudono compartimenti; le zone dipinte white/yellow/green non vengono sostituite. Le brecce non implicano automaticamente conquista.
+
+
+### CIRCLE — stato invaso/sicuro — 2026-10-29
+- **Branch `circle` presente:** classificazione militare sulle posizioni reali delle unità, con distinzioni minaccia da scala, infiltrazione sulle mura, invasione a terra, contesa con difensori, allerta e sicuro; readout Combat e API read-only; refresh durante tick, spawn, eliminazione nemici, pennelli/allarmi. Test di controllo, topologia e adapter aggiunti. **Presente nel branch:** `markBreach` conserva un compartimento assediato come `compromised`, non sicuro, fino alla ricostruzione; la presenza nemica lo porta a `invaded` senza conquistarlo.
+- **Da completare:** serializzazione e identità stabile tra salvataggi dei compartimenti compromessi (il mantenimento dopo breccia d'assedio funziona solo nella sessione attiva); controllo e cattura confermata, riconquista e ripristino della sicurezza; connessione all'IA ritirata civili e al sistema economico (depositi localizzati, perdita scorte solo alla conquista, produzione residuale), test browser, regressione reale e profiling. Distinguere effetti delle truppe sulle mura da vera occupazione a terra.
+- **Non cambiare:** white/yellow/green zone territoriali e gestione della nebbia di guerra non definiscono il possesso militare.
+
+
+### CIRCLE — prossimo lavoro dopo la conquista (29 ottobre 2026)
+- **Fatto solo su `circle`:** certificazione automatica dopo occupazione non contestata per 0,5 giorni di gioco, persistenza `captured`, perdita one-shot delle scorte assegnate alle stanze conquistate, capacità disabilitata fino a riconquista; ricattura dopo 0,5 giorni con difensori presenti, senza restituire le risorse sottratte.
+- **Ancora da fare:** A) ritirata progressiva dei civili attraverso i portali effettivamente aperti verso il compartimento contiguo più sicuro; B) produzione residua negli edifici dei compartimenti non invasi e riduzione della manodopera disponibile; C) bottino lato assalitore e pannello logistico per singolo deposito; D) browser QA reale, benchmark performance, ID di settore di lunga durata oltre la ricostruzione procedurale, verifica collisioni/porte e scenari complessi di assedi simultanei.
+- **NOTA:** la distribuzione dello stock per stanza è un'allocazione deterministica, non una simulazione di trasporto con popolani; l'economia `ConquerEconomy` e le risorse builder NON sono state fuse.
+
+
+### CIRCLE — QA baseline 29 ottobre 2026
+- **Verificato:** Node 22 CI [run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993), 65/65 PASS; workflow automatico attivo su `circle`.
+- **QA aperta:** prova gameplay browser sulla branch `circle`, assedio contemporaneo di cerchie concentriche/radiali, salvataggi dopo molte campagne, prestazioni della topologia raster e controllo UI in pausa.
