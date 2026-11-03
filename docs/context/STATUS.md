@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## Cutaway per piani (branch `feature/cutaway-floors`, da `main` ac99bcf, 03/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:** `s.cutawayFloor` (piano in vista), `cutawayFloorCount` / `cutawayVisibleFloor` / `cutawayCeilingZ` / `cutawayFloorShown` (`settlement-castle.js`), `floorCount` / `visibleFloor` / `floorSpan` / `cutawaySig` / `UPPER_ROOMS` (`ConquerCivic3D`).
+  - **Comando:** `StructureCommands.stepCutawayFloor`, usato dalla riga «Spaccato · piano» dell'ispettore, dal vecchio pannello e dalle frecce ▲ ▼ ancorate sopra l'edificio (`src/settlement-cutaway-floors.js`).
+  - **Castello:** taglio al soffitto del piano in vista in 2.5D e WebGL; arredi, luci, occupanti e finestre dei piani spenti esclusi. Le cache (overlay 2.5D, `cutContent` WebGL, firma del cutaway civico) cambiano con il piano.
+  - **Municipio:** piani superiori L1–L3 con pavimento di tavole, ancora senza arredi (arriveranno con le stanze per piano del branch CRIME).
+- **QA:** `qa/cutaway-floors-regression.cjs` PASS, insieme alle regressioni di cutaway, civiche, mastio, botteghe e pannelli. Verifica visiva nel motore (Municipio L3 PT/P1/P2, torre T2 a 3 piani in WebGL).
+- **APERTO:** piani alti di taverna e gilda; audit del Lab per gli stati di cutaway.
+
 ## 2026-11-03 — Recupero selettivo audit-hardening / CANS; combat conservata
 
 - **Browser locale PASS:** avvio con WebGL senza errori, diagnostica locale senza fetch, CANS assente dal bootstrap e caricato solo su richiesta con prenotazione esclusiva funzionante. 107 controlli di sintassi PASS.

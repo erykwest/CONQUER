@@ -355,6 +355,9 @@ function Inspector({ snap, cmd }) {
       if (d.mastio) chips.push({ label: I.mastio, active: d.mastio.active, disabled: d.mastio.disabled, tip: I.mastio, tipBody: TIP.mastio, run: () => run('toggleMastio') });
       return chips.length > 0 && html`<${Row} label=${I.toggles}><${Seg} options=${chips} onPick=${o => o.run()} /></${Row}>`;
     })()}
+    ${d.cutawayFloor && html`<${Row} label=${I.cutawayFloor(d.cutawayFloor.index, d.cutawayFloor.count)} tip=${TIP.cutawayFloor}>
+      <${Seg} options=${[{ label: '▼', tip: I.floorDown, disabled: d.cutawayFloor.index === 0, v: -1 }, { label: '▲', tip: I.floorUp, disabled: d.cutawayFloor.index >= d.cutawayFloor.count - 1, v: 1 }]}
+        onPick=${o => run('stepCutawayFloor', o.v)} /></${Row}>`}
     ${d.gate && html`<${Row} label=${I.gate + ' · ' + (I.gateStage[d.gate.stage] || d.gate.stage)} tip=${I.gateHelp}>
       <${Seg} options=${[{ label: I.gateOpen, active: !d.gate.closed, v: false }, { label: I.gateClosed, active: d.gate.closed, disabled: d.gate.broken, v: true }]}
         onPick=${o => run('setGateClosed', o.v)} /></${Row}>
