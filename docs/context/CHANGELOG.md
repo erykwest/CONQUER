@@ -4,6 +4,26 @@
 
 - Un incendio lasciato bruciare fino in fondo abbatte case (di ogni livello), locande e mercati, con macerie e braci; prima le case L3/L4 restavano in piedi al 2% di integrità. Regressione dell'incendio estesa.
 - Piramide: STATUS, BACKLOG, DECISIONS (D-058, scelta dell'utente). ROADMAP invariata.
+## 2026-10-30 — Municipio e gilda sulle piazze dei pozzi (branch `feature/townhall-guild`)
+
+- Nuovi edifici civici L1–L3 legati ai pozzi: municipio con torre civica centrale, campana e meridiana (orologio al L3), gilda; modelli Blender, cutaway, cantiere e crollo. I modelli civici ora rispettano mattoni/argilla. Stato e prove in [STATUS](STATUS.md); ROADMAP e DECISIONS invariate (estende D-056 senza cambiarne il contratto).
+## 2026-10-30 — Più pozzi per villaggio (branch `feature/multi-wells`)
+
+- Dopo la fondazione si possono costruire altri pozzi: ognuno è un centro di espansione (zone, case, campi, antincendio) collegato al primo pozzo con una strada principale, senza nuove strade maestre. Il centro villaggio si designa dall'ispettore come il mastio; i pozzi non centro hanno un nome di quartiere mostrato sulla mappa. Stato e prove in [STATUS](STATUS.md). D-056 in DECISIONS; ROADMAP invariata.
+
+## 2026-11-02 — Moduli isolati economia urbana autonoma integrati
+
+- Recuperato lo scheletro `feature/autonomous-urban-economy`: quattro file `src/economy/` su `main`, senza attivare il runtime. Aggiornati STATUS e BACKLOG con limiti e dipendenze; ROADMAP e DECISIONS invariate.
+
+## 2026-11-02 — CRIME: skeleton criminalità / ordine pubblico (branch `feature/crime-skeleton`)
+
+- Aggiunta route isolata `/crime/`: simulator deterministico a tre indicatori, cinque fasi (malcontento→rivolta), controlli sociali e repressivi, guardie/prigione/ospizio/gogna/patibolo/tribunale come fixture, arresti dimostrativi, grafico storico, cronaca e localStorage separato. Aggiunti `docs/crime.md` e `qa/crime-regression.cjs`.
+- Stato: **solo branch**, motore e regressioni isolati verificati in harness JS; Node CLI, CI e browser non ancora verificati al momento del commit. Nessun modello 3D, nuovo tipo di edificio in Builder, NPC reale o integrazione Combat. La roadmap M0–M5 non cambia; decisione del perimetro sandbox in D-CRIME-01.
+
+
+## 2026-10-30 — Accampamenti: livree, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`)
+
+- Padiglioni con livree a schema e contrasto tra vicini; nuovo kit Blender del campo; bivacco notturno organizzato; accampamento militare a quartieri come struttura del Builder, fortificabile a livelli; modelli e composizioni nel Lab. Stato e prove in [STATUS](STATUS.md). AGENTS.md: verifica visiva nel Lab e obbligo di inserire ogni nuovo modello nel Lab. ROADMAP e DECISIONS invariate: l'accampamento riusa il contratto `eventVenue` (nuova venue `armyCamp`), nessuna decisione architetturale nuova.
 
 ## 2026-11-02 — Ingresso rialzato del mastio (branch `feature/mastio-entrance`)
 

@@ -1,5 +1,35 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Piazze dei pozzi — municipio e gilda (branch `feature/townhall-guild`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** municipio e gilda L1–L3 legati a un pozzo (uno per tipo e per pozzo, entro 9U), modelli Blender, cutaway, cantiere, crollo; mattoni/argilla applicati a tutti i modelli civici.
+- **APERTO:** effetti di gioco (tasse e decreti dal municipio del centro, mestieri e botteghe L3 dalla gilda), lotti Voronoi propri, annessi di piazza; modalità multi-cella del Lab per i cantieri (bitmap riusata).
+## Villaggio — più pozzi (branch `feature/multi-wells`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** pozzi successivi come centri di espansione con strada principale verso il fondatore; centro villaggio designabile dall'ispettore; nomi di quartiere/borgata salvati e mostrati sulla mappa. Contratto D-056.
+- **APERTO:** raggio di crescita proprio per ogni quartiere (oggi comune a tutti i pozzi); nome del villaggio modificabile dall'ispettore del centro; effetti di gioco del centro oltre a etichetta e meta degli emissari (mercato, feste, tasse); scelta di un nuovo fondatore invece dell'azzeramento quando si demolisce il primo pozzo.
+
+## Economia urbana autonoma — scheletro consolidato (02/11/2026)
+
+- **FATTO (solo codice isolato):** moduli in `src/economy/` per botteghe L3, beni e prezzi, con README e test di base.
+- **DA FARE:** collegamento al runtime, case/popolani, calendario, persistenza, risorse effettive, commercio/importazioni e test funzionali. Nessuna funzione economica attivata da questo merge.
+
+## CRIME — criminalità, ordine pubblico e sommosse (02/11/2026)
+
+- **C-00 — IMPLEMENTATO SU BRANCH `feature/crime-skeleton` (solo sandbox):** `/crime/`, motore deterministico disaccoppiato, metriche criminalità / ordine / tensione, progressione e recupero in cinque fasi, politiche sociali e repressive, flag stanza/annesso per guardia, prigione e ospizio, fixture gogna/forca/tribunale, cronaca, storico e salvataggio isolato, test `qa/crime-regression.cjs`.
+- **C-01 — APERTO:** sorgente unica per popolazione, felicità, tassazione, razioni e assistenza, senza ledger CRIME alternativo (`ConquerGame` + `ConquerEconomy`).
+- **C-02 — APERTO:** assegnazioni vere di guardia e prigione alle torri W2/W3, ospizio alla Chiesa L2, compatibilità degli slot, capacità e personale; verificare il Palazzo cittadino prima di attribuirgli un tribunale.
+- **C-03 — APERTO:** gogna e forca/patibolo come scatter/strutture civiche collocabili, con audit del Lab e QA visiva obbligatori nel loro futuro intervento.
+- **C-04 — APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
+- **C-05 — APERTO:** bilanciamento, logiche punitive individuali, effetti del giudizio/giustizia, persistenza unica, serie storiche e indicatori nel Centro di controllo, regressioni browser/end-to-end.
+- **DIPENDENZE:** M0 economia e popolazione vere → contratti funzioni civiche e guardie → routine e ordine pubblico → esiti militari. Sandbox C-00 non anticipa lo stato implementativo di C-01–C-05. [Design, confini e QA](../crime.md).
+
+
+## Militare — accampamenti (branch `feature/tent-livery`, 30/10/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** livree a schema dei padiglioni; kit Blender del campo (canadese, tenda di compagnia, tettoia, botti, sacchi, linea dei cavalli, palizzata e porta); bivacco notturno organizzato in `/camp`; accampamento militare come struttura del Builder, dimensionato dall'esercito e fortificabile (steccato → palizzata con porta); tutto nel Lab.
+- **ANCORA APERTO:** collegare l'accampamento alle truppe reali (oggi l'esercito è impostato a mano nel pannello); controllo collisioni quando il lotto cresce; sentieri disegnati; cavalli 2D alla linea; fossato, terrapieno e torrette di legno come livelli successivi; effetti di gioco (riposo, morale, difesa, assedio dell'accampamento); palette tessile dei colori (garanza, guado, panna, ocra, carbone) al posto delle tinte primarie.
+
 ## Castello — ingresso rialzato del mastio (02/11/2026, S-08)
 
 - **IMPLEMENTATO SU BRANCH `feature/mastio-entrance`, NON MERGE:** porta del mastio al primo piano, piano terra cieco; scala di legno → scala in pietra lungo la facciata; levatoio accessorio su entrambe che, alzato, chiude il mastio a chi è a terra (richiamo dei civili compreso). Contributo a S-08 (rifugio finale), che resta PARZIALE.

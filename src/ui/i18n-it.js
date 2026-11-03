@@ -29,7 +29,7 @@ export const T = {
     civic: 'Edifici civici',
     production: 'Produzione',
     terrain: 'Terreno',
-    well: 'Pozzo · fonda il villaggio',
+    well: 'Pozzo · fonda il villaggio, poi nuovi quartieri',
     delete: 'Demolisci'
   },
   options: {
@@ -54,7 +54,7 @@ export const T = {
     dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra',
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
-    plaza: 'Piazza', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
+    plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
   },
   hints: {
     select: 'Clic su un edificio per selezionarlo',
@@ -67,7 +67,7 @@ export const T = {
   structures: {
     towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea',
     gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
-    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
+    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'
   },
   inspector: {
@@ -92,7 +92,7 @@ export const T = {
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
       household: 'Capienza', residents: 'Uomini · donne · bambini', rooms: 'Stanze · capacità',
-      variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura'
+      variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura', square: 'Piazza del pozzo'
     },
     house: 'Livello sociale', houseDown: '− Riduci', houseUp: '+ Amplia',
     mastio: 'Mastio', mastioOn: 'Mastio attivo · rimuovi', mastioOff: 'Designa come mastio',
@@ -101,6 +101,11 @@ export const T = {
     keepViolated: n => 'Mastio violato: ' + n + ' assalitore/i dentro.',
     keepLadder: 'Scala a pioli', keepLadderDown: '⬇ Cala', keepLadderUp: '⬆ Ritira',
     keepDrawbridge: 'Levatoio', keepInstall: 'Installa', keepRaise: '⬆ Alza', keepLower: '⬇ Abbassa', keepRemove: 'Rimuovi',
+    wellRole: 'Ruolo', wellCenter: 'Centro villaggio', wellQuarter: 'Quartiere',
+    wellRoad: 'Strada', wellBorderRoads: 'Strade maestre', wellLinked: 'Principale', wellUnlinked: 'Da collegare',
+    wellCenterRow: 'Centro', wellCenterOn: 'Attivo', wellCenterOff: 'Designa',
+    wellCenterHint: name => 'Il centro porta il nome del villaggio' + (name ? ' · ' + name : '') + '.',
+    wellName: 'Nome', wellNamePlaceholder: 'Quartiere o borgata', wellUnnamed: 'Quartiere senza nome',
     archers: (n, max) => 'Arcieri ' + n + '/' + max,
     archerSlots: (roof, slits, bartizan) => 'Tetto ' + roof + (bartizan ? ' · garitte ' + bartizan : '') + ' · feritoie ' + slits,
     roomsTitle: 'Stanze',
@@ -181,6 +186,9 @@ export const T = {
     keepAuto: 'La guardia alza il levatoio (o ritira la scala a pioli) quando un nemico arriva a 9U e lo rimette quando se ne va.',
     keepLadder: 'Scala o levatoio bruciati: gli occupanti calano una scala a pioli dalla porta e la ritirano quando serve. È l\'unico modo di entrare finché non si ricostruisce.',
     keepDrawbridge: 'Resistenza 60: gli assalitori in cima a una scala d\'assalto lo abbattono a colpi d\'ascia, le torce lo bruciano. Accorcia la scala a un pianerottolo: il battente copre il vuoto davanti alla porta. Alzato, nessuno entra nel mastio dal suolo.',
+    wellCenter: 'Il primo pozzo è il centro di default. Un altro pozzo può prenderne il ruolo; ridesignarlo restituisce il ruolo al primo.',
+    wellRoad: 'Solo il primo pozzo apre le strade maestre verso i bordi. Gli altri si collegano alla sua rete con una strada principale.',
+    wellName: 'Nome del quartiere o della borgata, mostrato sulla mappa.',
     archers: 'Priorità: tetto, poi feritoie dai piani alti. Le mura collegate possono bloccare le feritoie.',
     rooms: 'Una stanza per piano. Alcune funzioni sono permesse solo al piano terra.',
     masonry: 'Materiale dei prossimi cantieri in muratura: cambia costo e aspetto.',

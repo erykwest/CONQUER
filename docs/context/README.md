@@ -1,5 +1,8 @@
 # CONQUER — Piramide di contesto
 
+**Nuovo laboratorio CRIME (02/11/2026):** [specifica criminalità, ordine pubblico, sommosse e strutture repressive](../crime.md). Skeleton sperimentale su branch `feature/crime-skeleton` con route `/crime/`: indicatori e fasi simulate su fixture, non collegati ai popolani, agli edifici o ai salvataggi del Builder.
+
+
 **Nuovo filone MARCH (30/10/2026):** [specifica modalità attacco](../march.md). Skeleton su branch feature/march-skeleton: prototipo locale su fixture, non world map/feudi integrati. Il ritiro lascia danni e bottino persistenti nello scenario, la conquista è volontaria.
 
 

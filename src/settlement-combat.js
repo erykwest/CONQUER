@@ -135,6 +135,13 @@
       {x:well.x,y:well.y,r:14,mode:'yellow',id:'well-alert'},
       {x:well.x,y:well.y,r:7,mode:'green',id:'well-safe'}
     ];
+    // Every later well is an expansion centre with the same three rings.
+    for(const w of State.structures){
+      if(w.type!=='well'||w===well||underConstruction(w))continue;
+      out.push({x:w.x,y:w.y,r:20,mode:'allow',id:'well-access:'+w.id},
+        {x:w.x,y:w.y,r:14,mode:'yellow',id:'well-alert:'+w.id},
+        {x:w.x,y:w.y,r:7,mode:'green',id:'well-safe:'+w.id});
+    }
     for(const tower of State.structures){
       if(tower.type==='tower'&&!underConstruction(tower))
         out.push({x:tower.x,y:tower.y,r:8+2*structureLevel(tower),mode:'yellow',id:tower.id});
