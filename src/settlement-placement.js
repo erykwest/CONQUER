@@ -105,11 +105,15 @@
     const polys=contact(s);
     const annexVerdict=civicAnnexPlacementCheck(s);
     if(!annexVerdict.ok)return annexVerdict;
+    const wellVerdict=typeof wellCivicPlacementCheck==='function'?wellCivicPlacementCheck(s):valid();
+    if(!wellVerdict.ok)return wellVerdict;
     if(!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
     const ignored=ignoreSet(options);
-    if(s.type==='well'&&!options.ignoreFounding&&(
-      State.village?.founded||State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
-    ))return invalid('A village well already exists');
+    // Only one founding well: until the village is named, a second well cannot be placed.
+    // Once founded, further wells are ordinary buildings (expansion centres).
+    if(s.type==='well'&&!options.ignoreFounding&&!State.village?.founded&&
+      State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
+    )return invalid('The founding well is waiting for the village name');
     if(window.ConquerIndustries?.is(s)){
       const industry=window.ConquerIndustries.validate(s);
       if(!industry.ok)return industry;
