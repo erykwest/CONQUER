@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Cutaway per piani (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/cutaway-floors`:** un piano per volta con ▲ ▼ sopra l'edificio e nell'ispettore, per castello (torri, porte, sezioni) e Municipio (2–3 piani).
+- **APERTO:** piani alti arredati di taverna e gilda; arredi per piano del Municipio (branch CRIME: una stanza per piano); stato «Cutaway · piano N» nel Lab.
+
 ## 2026-11-03 — Residui dei tre branch selezionati
 
 | Branch | Residuo da recuperare | Esito |

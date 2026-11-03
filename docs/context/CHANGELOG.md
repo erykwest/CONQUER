@@ -1,5 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Cutaway per piani (branch `feature/cutaway-floors`)
+
+- Lo spaccato mostra un piano per volta: ▲ ▼ sopra l'edificio selezionato e nell'ispettore (nuovo e vecchio) tolgono o rimettono i piani superiori. Un solo comando, `StructureCommands.stepCutawayFloor`, e un campo `s.cutawayFloor`.
+- **Castello** (torri, porte, sezioni costruite): per default tutti i piani come prima. Scendendo, muri, finestre, solai, arredi, scale a pioli e occupanti si fermano al soffitto del piano in vista; la sottotorre segue la madre. Sia in 2.5D sia in WebGL.
+- **Edifici civici:** per default il piano terra come prima. Il Municipio apre anche i piani superiori del suo modello (L1–L2: 2 piani, L3: 3), con pavimento di tavole, pareti di fondo tagliate al soffitto e torre a moncone. Gli altri edifici civici hanno un solo piano finché non hanno interni ai piani alti.
+- **Prove:** nuova `qa/cutaway-floors-regression.cjs` con workflow dedicato.
+- **Piramide:** STATUS, BACKLOG, DECISIONS (D-CUT-01). ROADMAP invariata.
+
 ## 2026-11-03 — Consolidamento assedio, events e messaggeri senza 3D
 
 - Confrontati i tre branch selezionati con main 49831855: nessun residuo utile da integrare; assedio coperto da #61, eventi da #78/#110, cavalieri/messaggeri 2D da #96 e convogli da #105.

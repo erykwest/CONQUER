@@ -272,9 +272,14 @@
     tavern2:{floors:[[-2.28,-2.48,2.28,-.94],[-1.08,-.94,1.08,2.48]],tables:[[-.7,-1.72],[.35,-1.72],[1.45,-1.72],[-.45,1.95]],counter:[-.9,.2,.3,.42],barrels:[[-.85,.7],[-.5,.7],[.75,-.55]],hearths:[[-1.57,-1.72],[.46,1.43]]},
     tavern3:{floors:[[-2.28,-2.48,2.28,-.94],[-1.08,-.94,1.08,.94],[-2.28,.94,2.28,2.48]],tables:[[-.7,-1.72],[.35,-1.72],[1.45,-1.72],[-1.45,1.72],[-.35,1.72],[.6,1.72]],counter:[.62,-.6,.84,.6],barrels:[[-2.02,2.2],[-2.02,1.85],[-1.7,2.2]],hearths:[[-1.57,-1.72],[1.57,1.72],[0,0]]},
     // Town hall: council table under the podesta's dais; the L2/L3 room sits behind the arcade.
-    townhall1:{floors:[[-1.95,-.85,1.95,1.55]],council:[-.85,.3,.85,.62],dais:[-.7,1.15,.7,1.5],chests:[[-1.7,1.3],[1.7,1.3]],hearths:[[-1.62,-.45]],banners:[[-1.2,1.55],[1.2,1.55]]},
-    townhall2:{floors:[[-1.95,-.2,1.95,1.55]],council:[-.85,.35,.85,.65],dais:[-.7,1.15,.7,1.5],chests:[[-1.7,1.3],[1.7,1.3]],hearths:[[-1.62,.2]],banners:[[-1.2,1.55],[1.2,1.55]]},
-    townhall3:{floors:[[-1.95,-.2,1.95,1.55]],council:[-1.05,.3,1.05,.66],dais:[-.8,1.12,.8,1.5],chests:[[-1.7,1.3],[1.7,1.3],[1.7,.9]],hearths:[[-1.62,.2],[1.62,.2]],banners:[[-1.3,1.55],[0,1.55],[1.3,1.55]]},
+    // upper: the storeys above (build_civic.py townhall: floor at gf, L3 a second one half way
+    // to the eaves), each {z: floor level in U, rect: room over the whole depth}.
+    townhall1:{floors:[[-1.95,-.85,1.95,1.55]],council:[-.85,.3,.85,.62],dais:[-.7,1.15,.7,1.5],chests:[[-1.7,1.3],[1.7,1.3]],hearths:[[-1.62,-.45]],banners:[[-1.2,1.55],[1.2,1.55]],
+      upper:[{z:.914,rect:[-1.95,-.85,1.95,1.55]}]},
+    townhall2:{floors:[[-1.95,-.2,1.95,1.55]],council:[-.85,.35,.85,.65],dais:[-.7,1.15,.7,1.5],chests:[[-1.7,1.3],[1.7,1.3]],hearths:[[-1.62,.2]],banners:[[-1.2,1.55],[1.2,1.55]],
+      upper:[{z:1.057,rect:[-1.9,-.82,1.9,1.52]}]},
+    townhall3:{floors:[[-1.95,-.2,1.95,1.55]],council:[-1.05,.3,1.05,.66],dais:[-.8,1.12,.8,1.5],chests:[[-1.7,1.3],[1.7,1.3],[1.7,.9]],hearths:[[-1.62,.2],[1.62,.2]],banners:[[-1.3,1.55],[0,1.55],[1.3,1.55]],
+      upper:[{z:1.171,rect:[-1.9,-.82,1.9,1.52]},{z:2.129,rect:[-1.9,-.82,1.9,1.52]}]},
     // Guild hall: counting desks with ledgers and scales, the strongbox, bolts of cloth.
     guild1:{floors:[[-1.42,-1.17,.46,1.17]],desks:[[-.95,-.45],[-.2,-.45]],counter:[-1.3,.62,-.25,.82],chests:[[.25,.9]],barrels:[[.28,-.85]],bolts:[[-1.35,-.95,-.4]],hearths:[]},
     guild2:{floors:[[-1.42,-1.17,1.42,1.17]],desks:[[-.75,-.35],[.75,-.35]],counter:[-.6,.7,.6,.9],chests:[[-1.2,.95],[1.2,.95]],bolts:[[-1.35,-.95,-.1]],hearths:[[1.1,.62]]},
@@ -286,6 +291,20 @@
       &&!(typeof underConstruction==='function'&&underConstruction(s));
   }
   function cutawayId(){const s=selectedOf();return cutawayActive(s)?s.id:null}
+  // Floor-by-floor cutaway: s.cutawayFloor is the storey in view (0 = ground, the default);
+  // the storeys above it are taken off. Storeys without an interior list are not offered.
+  function floorCount(s){return 1+(INTERIOR[modelKey(s)]?.upper?.length||0)}
+  function visibleFloor(s){
+    const n=floorCount(s),f=Number.isInteger(s?.cutawayFloor)?s.cutawayFloor:0;
+    return Math.max(0,Math.min(n-1,f));
+  }
+  // Floor level (U above the ground) and ceiling of the storey in view (Infinity on the top one).
+  function floorSpan(s,key=modelKey(s)){
+    const up=INTERIOR[key]?.upper||[],f=visibleFloor(s);
+    return{floor:f,z:f?up[f-1].z:0,ceiling:f<up.length?up[f].z:Infinity};
+  }
+  // Signature of what the cutaway shows: the selected building and its storey in view.
+  function cutawaySig(){const s=selectedOf();return cutawayActive(s)?s.id+'@'+visibleFloor(s):null}
   // Camera direction (towards the viewer) in the model's local axes; null in plan view.
   function cameraLocal(s){
     if(typeof isPlanView==='function'&&isPlanView())return null;
@@ -315,8 +334,12 @@
     for(let i=0;i<4;i++){const a=c[i],b=c[(i+1)%4];pushPoly(part,[[a[0],a[1],z0],[b[0],b[1],z0],[b[0],b[1],z1],[a[0],a[1],z1]],side)}
   }
   // The model sectioned against the camera: back pieces whole, front pieces only below the sill.
-  function sectionParts(key,cam){
+  // An upper storey in view (span.z > 0): the sill rises to its floor, everything above its
+  // ceiling goes, and the far walls start at its floor (the storeys below stay closed).
+  function sectionParts(key,cam,span={z:0,ceiling:Infinity}){
     const pal=palette(),keys=DATA().paletteKeys,out=[];
+    const zs=span.z+CUTAWAY_SILL,zc=span.ceiling,upper=span.z>0;
+    const cap=poly=>Number.isFinite(zc)?clip(poly,p=>p[2]-zc):poly;
     for(const part of parts(key)){
       if(part.name==='naveRoof'||part.name==='chimneys')continue;
       // The town hall's tower stands in front of the council room: it goes down to a stump,
@@ -332,14 +355,19 @@
         const nx=uy*wz-uz*wy,ny=uz*wx-ux*wz,nz=ux*wy-uy*wx,nl=Math.hypot(nx,ny,nz)||1;
         // Eaves caps, upper-floor slabs and jetty soffits would close the room from above
         // (no face culling: a soffit seen from above still paints).
-        if(!tower&&Math.abs(nz/nl)>.5&&Math.min(tri[0][2],tri[1][2],tri[2][2])>CUTAWAY_SILL)continue;
+        // On an upper storey the string course and the storey's own bottom sit at its floor level:
+        // they go too, or they would lie over the floor.
+        if(!tower&&Math.abs(nz/nl)>.5&&Math.min(tri[0][2],tri[1][2],tri[2][2])>(upper?span.z-.05:zs))continue;
         const hex=pal[part.c[t]];
         if(!cam){pushPoly(back,tri,hex);continue}
-        if(stump){const low=clip(tri,p=>p[2]-CUTAWAY_SILL);if(low.length>2)pushPoly(sill,low,hex);continue}
+        if(stump){const low=clip(tri,p=>p[2]-zs);if(low.length>2)pushPoly(sill,low,hex);continue}
         const f=p=>p[0]*cam.x+p[1]*cam.y;
-        const kept=clip(tri,f);
+        // Far side: from the floor in view to its ceiling (the closed storeys below would
+        // otherwise paint over the floor).
+        let kept=cap(clip(tri,f));
+        if(upper&&kept.length>2)kept=clip(kept,p=>span.z-.01-p[2]);
         if(kept.length>2)pushPoly((nx*cam.x+ny*cam.y)/nl>.05?front:back,kept,hex);
-        const low=clip(clip(tri,p=>-f(p)),p=>p[2]-CUTAWAY_SILL);
+        const low=clip(clip(tri,p=>-f(p)),p=>p[2]-zs);
         if(low.length>2)pushPoly(sill,low,hex);
       }
       // Far walls before the furnishings; camera-facing section stubs sort by their own centre.
@@ -348,8 +376,21 @@
     }
     return out;
   }
-  function interiorParts(key){
+  // Furnishings of an upper storey, by building and storey: (key, storey, piece, P, rect, z) -> void.
+  // Empty by default: the storey shows its plank floor.
+  const UPPER_ROOMS={};
+  function interiorParts(key,span={floor:0,z:0},s=null){
     const spec=INTERIOR[key],pal=palette(),keys=DATA().paletteKeys,P=k=>pal[keys.indexOf(k)],out=[];
+    if(span.floor>0){
+      const {rect}=spec.upper[span.floor-1],[x0,y0,x1,y1]=rect,z=span.z+FLOOR_Z,floor=localPart('floor',-1e5);
+      pushPoly(floor,[[x0,y0,z],[x1,y0,z],[x1,y1,z],[x0,y1,z]],P('woodLight'));
+      // Plank joints across the room.
+      for(let x=x0+.32;x<x1-.05;x+=.32)pushPoly(floor,[[x-.008,y0,z+.002],[x+.008,y0,z+.002],[x+.008,y1,z+.002],[x-.008,y1,z+.002]],P('wood'));
+      out.push(floor);
+      const room=UPPER_ROOMS[key.replace(/\d+$/,'')];
+      if(room)room({key,storey:span.floor,s,rect,z,P,piece:(name,fn)=>{const p=localPart(name);fn(p);out.push(p)},box,pushPoly});
+      return out;
+    }
     const church=key.startsWith('church'),floor=localPart('floor',-1e5);
     for(const [x0,y0,x1,y1] of spec.floors)pushPoly(floor,[[x0,y0,FLOOR_Z],[x1,y0,FLOOR_Z],[x1,y1,FLOOR_Z],[x0,y1,FLOOR_Z]],church?P('paving'):P('woodLight'));
     out.push(floor);
@@ -439,9 +480,10 @@
   }
   const cutCache=new Map();
   function cutawayMesh(s,ground){
-    const cam=cameraLocal(s),key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,isClay(s),cam?cam.x.toFixed(3)+','+cam.y.toFixed(3):'plan'].join('|');
+    const cam=cameraLocal(s),span=floorSpan(s);
+    const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,isClay(s),cam?cam.x.toFixed(3)+','+cam.y.toFixed(3):'plan',span.floor,(s.functions||[]).join(',')].join('|');
     const hit=cutCache.get(s.id);if(hit&&hit.key===key)return hit.mesh;
-    const mesh=withClay(s,()=>emit([...interiorParts(modelKey(s)),...sectionParts(modelKey(s),cam)],placeOf(s),ground));
+    const mesh=withClay(s,()=>emit([...interiorParts(modelKey(s),span,s),...sectionParts(modelKey(s),cam,span)],placeOf(s),ground));
     cutCache.set(s.id,{key,mesh});
     return mesh;
   }
@@ -493,5 +535,6 @@
     addMesh(m,cutawayMesh(s,ground));
     return true;
   }
-  window.ConquerCivic3D={modelKey,has,parts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,lotProps,allLotProps};
+  window.ConquerCivic3D={modelKey,has,parts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
+    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,lotProps,allLotProps};
 })();

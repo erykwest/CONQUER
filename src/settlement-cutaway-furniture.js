@@ -362,7 +362,7 @@
   // floor: only that floor's pieces (2.5D draws each floor right after its slab).
   function draw(s,g,floor=null){
     if(!FM())return false;
-    const faces=structureFaces(s,g).faces.filter(f=>floor===null||f.floor===floor),turns=State.view.rotation||0,W3=window.ConquerWagons3D;
+    const faces=structureFaces(s,g).faces.filter(f=>(floor===null||f.floor===floor)&&shown(s,f)),turns=State.view.rotation||0,W3=window.ConquerWagons3D;
     const list=faces.map(f=>{let d=0;for(const p of f.pts)d+=depthOf(p[0],p[1],p[2]);return{f,d:d/f.pts.length}}).sort((a,b)=>a.d-b.d);
     ctx.save();ctx.lineJoin='round';ctx.lineWidth=.5;
     for(const {f} of list){
@@ -376,7 +376,10 @@
     ctx.restore();
     return true;
   }
-  function lights(s,g){return FM()?structureFaces(s,g).lights:[]}
+  // Floor-by-floor cutaway: the floors above the one in view (cutawayFloorShown) are not drawn.
+  const shown=(s,f)=>f.floor==null||typeof cutawayFloorShown!=='function'||cutawayFloorShown(s,f.floor);
+  const below=(s,L)=>typeof cutawayCeilingZ!=='function'||L.p[2]<cutawayCeilingZ(s)-.01;
+  function lights(s,g){return FM()?structureFaces(s,g).lights.filter(L=>below(s,L)):[]}
   // Night cutaway: torches, candles and hearth fires glow after the night overlay.
   const GLOW={torch:{r:20,a:.5},fire:{r:26,a:.55},candle:{r:10,a:.42}};
   function drawNightGlow(nf){
@@ -414,13 +417,13 @@
     for(const s of State.structures){
       if(!structureCutaway(s)||underConstruction(s))continue;
       const paint=()=>{for(const f of structureFaces(s,cutawayWallGeometry(s)).faces){
-        if(!f.emissive)continue;
+        if(!f.emissive||!shown(s,f))continue;
         ctx.fillStyle=f.hex;ctx.beginPath();
         f.pts.forEach((p,i)=>{const q=w2s({x:p[0],y:p[1]},p[2]);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.fill();
       }};
       if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,paint);else paint();
     }
   }
-  function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces:[]}
+  function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces.filter(f=>shown(s,f)):[]}
   window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();

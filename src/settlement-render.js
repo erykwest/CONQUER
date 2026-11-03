@@ -215,7 +215,7 @@ function castleBodyVisualSignature(){
     s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
     s.roofStyle||'',s.bartizan||'',s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
     point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
-    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,JSON.stringify(s.functions||[]),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
+    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,s.cutawayFloor??null,JSON.stringify(s.functions||[]),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
@@ -384,7 +384,8 @@ let lastCivicCutawayId=null;
 function draw(){
   // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
   // panel's close button deselect without invalidating it.
-  const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
+  // The signature carries the storey in view: changing floor re-bakes the layer too.
+  const civicCut=(window.ConquerCivic3D?.cutawaySig||window.ConquerCivic3D?.cutawayId)?.()||null;
   if(civicCut!==lastCivicCutawayId){lastCivicCutawayId=civicCut;invalidateSceneCache('base')}
   const r=wrap.getBoundingClientRect();
   const phaseStart=performance.now(),phaseStats={};

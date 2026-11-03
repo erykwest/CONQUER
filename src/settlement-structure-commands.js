@@ -91,6 +91,16 @@ const StructureCommands=(()=>{
     status((target.type==='tower'?'Tower':target.type==='gate'?'Gatehouse':'Built section')+' cutaway '+(target.cutaway?'enabled':'disabled'));
     return true;
   }
+  // Floor-by-floor cutaway: one floor up (+1) or down (-1); the floors above the one in view go.
+  function stepCutawayFloor(id,delta){
+    const target=find(id);if(!target)return false;
+    const n=cutawayFloorCount(target),now=cutawayVisibleFloor(target),next=clamp(now+Math.sign(Number(delta)||0),0,n-1);
+    if(n<2||next===now)return false;
+    target.cutawayFloor=next;
+    refresh(target,false);
+    status('Cutaway: floor '+(next+1)+' / '+n);
+    return true;
+  }
   function flipSide(id){
     const target=find(id);if(!target||!['wall','palisade','built'].includes(target.type))return false;
     target.flip=!target.flip;
@@ -309,6 +319,9 @@ const StructureCommands=(()=>{
     }
     if(['wall','palisade','built'].includes(s.type))d.controls.push({key:'side',cmd:'flipSide',toggle:true});
     if(cutawayEligible(s))d.controls.push({key:'cutaway',cmd:'toggleCutaway',toggle:true,active:structureCutaway(s),disabled:building});
+    // Floor in view of an open cutaway (castle toggle or selected civic building), stepped with ▲ ▼.
+    if(!building&&(structureCutaway(s)||civicFloorCutaway(s))&&cutawayFloorCount(s)>1)
+      d.cutawayFloor={index:cutawayVisibleFloor(s),count:cutawayFloorCount(s)};
     if(!house&&!simpleCivic){
       const cap=functionCapacity(s);
       d.facts.push({key:'rooms',value:cap+' · '+functionCapacityUnits(s)});
@@ -328,7 +341,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,flipSide,
+  return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();
