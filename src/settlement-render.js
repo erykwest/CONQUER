@@ -384,8 +384,7 @@ let lastCivicCutawayId=null;
 function draw(){
   // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
   // panel's close button deselect without invalidating it.
-  // The signature carries the storey in view: changing floor re-bakes the layer too.
-  const civicCut=(window.ConquerCivic3D?.cutawaySig||window.ConquerCivic3D?.cutawayId)?.()||null;
+  const civicCut=window.ConquerCivic3D?.cutawaySig?.()||null;   // id@floor
   if(civicCut!==lastCivicCutawayId){lastCivicCutawayId=civicCut;invalidateSceneCache('base')}
   const r=wrap.getBoundingClientRect();
   const phaseStart=performance.now(),phaseStats={};
