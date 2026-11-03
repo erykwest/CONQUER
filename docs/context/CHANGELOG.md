@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Le case bruciate crollano (branch `fix/house-fire-collapse`)
+
+- Un incendio lasciato bruciare fino in fondo abbatte case (di ogni livello), locande e mercati, con macerie e braci; prima le case L3/L4 restavano in piedi al 2% di integrità. Regressione dell'incendio estesa.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-058, scelta dell'utente). ROADMAP invariata.
+
 ## 2026-11-02 — Ingresso rialzato del mastio (branch `feature/mastio-entrance`)
 
 - Il mastio può avere la porta al primo piano con una scala esterna: legno, poi pietra lungo la facciata, e un levatoio dedicato su entrambe che, alzato, chiude il mastio a chi sta a terra. Piano terra cieco, finestra e drappo lasciano il posto alla porta sul suo piano, civili e strade di servizio passano dal piede della scala. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: nuova D-MASTIO-01.

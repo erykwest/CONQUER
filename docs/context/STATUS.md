@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## Le case bruciate crollano (branch `fix/house-fire-collapse`, da `main` f8a7d65, 03/11/2026, NON MAIN)
+
+- **Difetto (emerso nella riverifica delle case del kit, 02/11):** l'integrità delle case cresce col livello (+40% per livello) mentre il combustibile di un incendio «intero» dura sempre 55 s di piena fiamma: una casa L2 crollava, una L3 o L4 restava in piedi intatta con il 2% di integrità e serviva una seconda accensione.
+- **Codice (`src/settlement-fire.js`, D-058):** quando un incendio finisce il combustibile su una casa, una locanda o un mercato (`BURNS_DOWN`), il colpo finale passa da `ConquerSiege.attackStructure(...,'torch',...)`: `destroyStructure`, crollo in macerie di legno, braci. I mulini restano «sventrati» in piedi; le fortificazioni in legno e le parti in legno della pietra non cambiano; un incendio spento dalla catena dei secchi lascia la casa in piedi, danneggiata.
+- **QA locale:** `qa/fire-regression.cjs` estesa (case L1–L4 lasciate bruciare crollano entro la durata del combustibile, con macerie e braci; casa L4 spenta resta in piedi danneggiata); il nuovo blocco **fallisce senza la correzione** («an L3 house burns down») e passa con essa. 111/111 `qa/*.cjs` non di performance PASS. Gioco (porta 4219, World 3D attivo): un solo incendio abbatte case L2 (44 s, per danno), L3 e L4 (55 s, a fine combustibile), rovina `destroyed:timber`, braci, casa fuori dalla cache urbana, nessun errore. **Non verificato:** CI della PR.
+
 ## Ingresso rialzato del mastio (branch `feature/mastio-entrance`, da `main` d15826e, 02/11/2026)
 
 - **Codice presente su branch (non ancora `main`):** nuovo modulo `src/settlement-keep-entrance.js` (`window.ConquerKeepEntrance`). Stato sulla torre: `tower.keepEntrance={stair:'wood'|'stone',side,drawbridge}`. Si costruisce solo sul mastio in muratura indipendente di almeno 2 piani (no torri di legno, sottotorri, semitorri/D); una volta costruito resta della torre. Se la torre scende a L1 l'ingresso viene ignorato e torna la porta a terra.
