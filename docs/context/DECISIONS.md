@@ -23,9 +23,9 @@ Decisione esplicita dell'utente: P0 bridge, circle, jobmanager e knights; P2 mes
 - **DECISO per il laboratorio `/crime/`:** separare criminalità, ordine pubblico e tensione sociale. La severità, gogna e patibolo possono aumentare la deterrenza **ma anche il risentimento**; assistenza/ospizio e presidio agiscono su leve diverse. La sommossa è una fase di escalation, non un generico malus; la rivolta non viene risolta da un secondo sistema di combattimento.
 - **CONTRATTO DI SVILUPPO:** solo fixture locali e deterministiche, salvataggio dedicato, nessuna mutazione del `State` canonico o duplicazione di popolazione/risorse. La gestione effettiva riuserà popolazione, economia, stanze e Combat quando sarà integrata.
 - **DECISO (03/11/2026):**
-  - **Tribunale:** è una sala del Municipio. Il Municipio non aveva slot: dopo il cutaway civico riceve sale affiancate al piano terra, una per livello, con un catalogo civico separato da quello del castello. Il tribunale richiede L2.
+  - **Tribunale:** è una stanza del Municipio, che ha una stanza per piano (tante quante i livelli civici, D-CUT-01) con un catalogo civico separato da quello del castello. Il tribunale richiede L2.
   - **Ospizio:** annesso della Chiesa L2.
-  - **Guardia e prigione:** sono le funzioni di stanza esistenti (torri T2/T3, porte, sezioni costruite) e anche sale del Municipio.
+  - **Guardia e prigione:** sono le funzioni di stanza esistenti (torri T2/T3, porte, sezioni costruite) e anche stanze (piani) del Municipio.
   - **Gogna e forca:** strutture di piazza collocabili, sul contratto `eventVenue`, rappresentate vuote e sobrie.
 - **ANCORA PROPOSTO/DA VERIFICARE:** soglie numeriche, eventi e durate; personale delle guardie; lettura delle strutture reali da parte di `/crime/`.
 - [Specifica del prototipo](../crime.md). La roadmap strategica attuale resta invariata.

@@ -14,7 +14,7 @@
     almshouse: Object.freeze({label: 'Ospizio', place: 'Annesso Chiesa L2', role: 'Assistenza ai più vulnerabili'}),
     pillory: Object.freeze({label: 'Gogna', place: 'Piazza', role: 'Deterrenza pubblica e risentimento'}),
     gallows: Object.freeze({label: 'Forca / patibolo', place: 'Piazza o margine urbano', role: 'Intimidazione e tensione sociale'}),
-    tribunal: Object.freeze({label: 'Tribunale', place: 'Sala del Municipio L2+', role: 'Giustizia ordinaria e rilascio detenuti'})
+    tribunal: Object.freeze({label: 'Tribunale', place: 'Piano del Municipio L2+', role: 'Giustizia ordinaria e rilascio detenuti'})
   });
   const clamp = n => Math.max(0, Math.min(100, n));
   const round = n => Math.round(n * 10) / 10;

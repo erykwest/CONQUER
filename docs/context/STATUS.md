@@ -96,7 +96,7 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 ## CRIME — edifici e stanze nel Builder (branch `feature/crime-buildings`, 03/11/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MAIN:**
-  - **Municipio:** sale al piano terra, una per livello civico, con catalogo civico separato (`council`, `tribunal` da L2, `guard`, `prison`). Si scelgono nell'ispettore («S1…S3») e sono arredate nel cutaway. I Municipi già salvati ricevono la sala del consiglio.
+  - **Municipio:** una stanza per piano, tante quante i livelli civici, con catalogo civico separato (`council`, `tribunal` da L2, `guard`, `prison`). Si scelgono nell'ispettore («P1…P3») e sono arredate sull'intero piano; il cutaway per piani (`feature/cutaway-floors`, unito) le mostra una per volta. I Municipi già salvati ricevono la sala del consiglio al piano terra.
   - **Capienze:** `ConquerSiege.capacity()` espone `prisoners` (6 per stanza normale, 12 grande) e `watchmen` (4).
   - **Ospizio:** annesso della Chiesa L2 (`almshouse`), modello Blender in `civic-models.js`.
   - **Gogna e forca:** `eventVenue` `pillory` / `gallows` con costo, cantiere e modelli `justicePillory` / `justiceGallows` (`event-models.js`, palette estesa in coda). Si trovano nello strumento «Giustizia» del nuovo Builder e tra gli edifici civili del vecchio.

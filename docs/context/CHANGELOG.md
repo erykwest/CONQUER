@@ -2,7 +2,7 @@
 
 ## 2026-11-03 — Edifici e stanze di CRIME nel Builder (branch `feature/crime-buildings`)
 
-- **Municipio:** sale al piano terra (una per livello) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate nel cutaway.
+- **Municipio:** una stanza per piano (tante quante i livelli) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate sull'intero piano e viste un piano per volta col cutaway per piani (unito da `feature/cutaway-floors`).
 - **Capienze:** detenuti e sentinelle in `ConquerSiege.capacity()`.
 - **Ospizio:** annesso della Chiesa L2.
 - **Gogna e forca:** strutture di piazza collocabili, con modelli Blender, nel Lab e nel Builder.
