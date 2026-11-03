@@ -1,6 +1,6 @@
 name: One-time safe cleanup of obsolete remote branches (2026-11-03)
 
-# User-authorized cleanup after verified CANS/hardening promotion; combat has unmerged work.
+# User-authorized cleanup of the exact verified combat ref after renderer consolidation.
 # Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
@@ -80,8 +80,7 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          cans|0f6048c0996f3ca1a5cff5db9e5068fc94caf46a|-
-          audit-hardening|@this-commit|-
+          combat|@this-commit|-
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))

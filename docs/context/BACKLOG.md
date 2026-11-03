@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-03 — Combat: separazione presentazione completata
+
+- **Implementato su combat e verificato localmente:** canvas tattico, fog/zone, figure/HUD ed effetti in settlement-combat-render.js; regole prive di Canvas. Il precedente residuo di separazione dell'overlay non richiede più di conservare la branch dopo la promozione.
+- **Accettazione:** 118 regressioni PASS; cinque scenari con trace grafici identici; confronto browser con pixel overlay identici, Builder e /camp senza errori.
+- **Fuori scope:** ulteriori refactor della UI/input, risoluzione avvisi e drift della baseline Asset Lab, nuove meccaniche o figure 3D.
+
 ## Cutaway per piani (03/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/cutaway-floors`:** un piano per volta con ▲ ▼ sopra l'edificio e nell'ispettore, per castello (torri, porte, sezioni) e Municipio (2–3 piani).

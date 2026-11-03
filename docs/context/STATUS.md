@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-03 — Chiusura residuo combat: renderer separato
+
+Base iniziale verificata main f603d514a734ef6af151d0265994451d64bfef2d; poi preservato il merge concorrente #138 (cutaway per piani) su main 1baecafc6b8aa0c13dc3f139d81093962415291d. Riconciliazione del solo residuo combat.
+
+- **Implementato su combat, da promuovere dopo CI:** nuovo settlement-combat-render.js per canvas tattico, bitmap nebbia, maschere zone/cache, stendardi/torce, figure e HUD. settlement-combat.js conserva visibilità, ordini, selezione, unità e percorsi e delega il disegno. Le regole esportano visualEffects() senza dipendenze Canvas; frecce, pietre e lampi sono disegnati dal renderer. Nessun nuovo scheduler.
+- **Preservati:** capitano a piedi, cavalieri solo 2D (D-046), truppe individuali e squadre/pattuglie, accampamenti e lupi, animazioni e cadute, assalti e ingresso rialzato del mastio, nebbia e zone, selezione multipla e salvataggi. Entrypoint Builder e /camp aggiornati. Nessun ripristino del vecchio combat storico.
+- **QA:** 118/118 regressioni; parità esatta dei comandi grafici in cinque scenari; Builder e /camp senza errori browser; pixel del canvas tattico identici prima/dopo nella fixture mista (archi e pietre). Nuovo workflow Combat simulation and renderer regression su main/combat. Dettagli e hash in [COMBAT-RENDERING](../COMBAT-RENDERING.md).
+- **Audit Lab:** 784 render, zero controlli falliti; 88 avvisi, 103 nuovi e 215 cambiati rispetto alla baseline memorizzata, senza modifica a catalogo/asset da questo refactor. Nessun aggiornamento indiscriminato della baseline.
+- **Residuo chiuso:** separazione grafica/meccanica richiesta sulla branch combat. Rimozione del ref solo dopo CI e promozione del medesimo commit in main; PR aperte o ulteriori commit impediscono la cancellazione.
+
 ## Cutaway per piani (branch `feature/cutaway-floors`, da `main` ac99bcf, 03/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** `s.cutawayFloor` (piano in vista), `cutawayFloorCount` / `cutawayVisibleFloor` / `cutawayCeilingZ` / `cutawayFloorShown` (`settlement-castle.js`), `floorCount` / `visibleFloor` / `floorSpan` / `cutawaySig` / `UPPER_ROOMS` (`ConquerCivic3D`).
