@@ -2,7 +2,7 @@
 
 ## 2026-11-03 — Consolidamento prioritario P0 (in verifica su circle)
 
-Baseline verificata: main 9f135d9bb635918e1101d24e1e5f8f11f2f57353. Nessuna PR nuova; riconciliazione diretta autorizzata dall'utente, senza reintrodurre sistemi già integrati.
+Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR nuova; riconciliazione diretta autorizzata dall'utente, senza reintrodurre sistemi già integrati.
 
 - **P0 bridge:** terrapieni recuperati in #73; main mantiene persistenza, esclusione del capitano e riempimento compatibile con terraforming. Nessuna modifica operativa da reintegrare.
 - **P0 circle:** integrazione dei compartimenti, controllo militare, conquista/riconquista e scorte di assedio sulla main corrente. Risolto index.html conservando i moduli economia/convogli e le versioni recenti; cache dei quattro script condivisi aggiornata. Aggiunti aggancio al piede reale del mastio rialzato e reset dei settori/timer al cambio salvataggio.
@@ -10,7 +10,7 @@ Baseline verificata: main 9f135d9bb635918e1101d24e1e5f8f11f2f57353. Nessuna PR n
 - **P0 knights:** settlement-mounted2d.js e settlement-animals.js sono identici tra knights e main; gameplay e diplomazia in #96. Le differenze 3D restano escluse da D-046.
 - **P2 messages:** conservata per futura riconciliazione, senza integrazione in questo lavoro.
 - **P3:** case, economic-balances-animations, feature/landscape-forests, feature/ui-shell, fix/biomes-restore, fix/render-spikes: verificare pertinenza residua prima di qualsiasi recupero.
-- **QA locale:** 67/67 test circle, incluse due regressioni del main corrente; 113 suite qa/*-regression.cjs superate (112 in parallelo, founding ripetuta isolata dopo soglia temporale 119ms sotto carico). Non è una misura di prestazioni stabili. Nessun asset/renderer cambiato. Browser locale: moduli ES caricati, WebGL attivo, 400 cibo trasferiti al granaio e sottratti una sola volta alla conquista; banner di settore aggiornato. Favicon 404 e avviso WebGPU Windows non riguardano circle. CI e stato merge da verificare sul commit pubblicato.
+- **QA locale:** 67/67 test circle, incluse due regressioni del main corrente; 113 suite qa/*-regression.cjs superate (112 in parallelo, founding ripetuta isolata dopo soglia temporale 119ms sotto carico). Non è una misura di prestazioni stabili. Nessun asset/renderer cambiato. Browser locale: moduli ES caricati, WebGL attivo, 400 cibo trasferiti al granaio e sottratti una sola volta alla conquista; banner di settore aggiornato. Ricaricamento mantiene una sola conquista; riconquista riapre il granaio (480 posti) senza restituire il cibo. Favicon 404 e avviso WebGPU Windows non riguardano circle. CI CIRCLE sul primo commit a4d8792 PASS (run 41604792313). Riallineamento successivo a main d8c89556 conserva #115 merlature; nuova CI e stato merge da verificare sul commit finale.
 
 
 ## Piazze dei pozzi — municipio e gilda (branch `feature/townhall-guild` su `feature/multi-wells`, 30/10/2026)
@@ -126,6 +126,13 @@ Baseline verificata: main 9f135d9bb635918e1101d24e1e5f8f11f2f57353. Nessuna PR n
 - **Assedio:** core danni/portoni/legno/fuoco/mastio/presidi/macchine esistono. `settlement-siege.js` ancora dichiara **«No automatic surrender in P0»**; blocco, fame→resa, sortite e IA strategica restano da integrare. Non rifare assedio/danni da zero.
 - **Tre PR OPEN (non MAIN):** [#109](https://github.com/erykwest/CONQUER/pull/109) CI regressioni economia 2–5 (**conflitti** contro main; CI della branch PASS e limite workflow scope API), [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacco/accampamento fortificabile (**mergeable** ma QA browser parziale), [#111](https://github.com/erykwest/CONQUER/pull/111) più pozzi/centro designabile/nomi quartiere (**mergeable**, CI PASS e browser Canvas, World 3D visivo ancora da provare). PR #55 chiusa senza merge dopo porting selettivo, non rilanciare il suo vecchio ramo.
 - **Git:** **53 remote branch incl. main, 3 PR open**; molte branch storiche derivano da squash merge. Non attribuire a main codice solo perché la branch esiste né considerare lavoro nuovo tutte le branch "ahead".
+
+
+## Castello — stili di merlatura del feudo (branch `feat/crenel-styles`, 30/10/2026)
+
+- Implementato: stile globale `State.policies.crenelStyle` (piatta default, doppia falda, coda di rondine con feritoia), cambio pagato per merlo dal Centro di controllo › Cantieri, nuove costruzioni nello stile scelto. Merli più sottili e merlo d'angolo a L su torri quadrate e porte (pilastro condiviso per le rondini, padiglione per la falda).
+- Provato: verifica visiva nel Lab (torre quadrata, rotonda, caditoie, porta; rotazioni 0–3); preventivo e addebito controllati in console (pietra → argilla per il mattone, rifiuto senza fondi). `qa/battlement-parapet-regression.cjs` PASS 5/5 (angoli a L contati una volta, corone per stile, prezzi pietra/mattone); subtower-junctions, module-boundaries e fire PASS. Asset audit 487 render, 0 falliti, baseline aggiornata.
+- Non provato: CI su GitHub, partita reale fondata con il pannello aperto, modalità world3d a pieno schermo. La merlatura in legno delle porte non cambia stile.
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
