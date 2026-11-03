@@ -33,7 +33,7 @@ function structureSceneLayers(s){
   if(s.type==='house')return['ground','shadow','base'];
   if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
-  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type)?['shadow']:[];
+  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
   // Palisades and timber fortifications are rendered in the non-union base layer.
   if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return[...shadow,'base','castleFront'];
@@ -215,7 +215,7 @@ function structureAngleFromStep(step){
 }
 function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
 function structureUsesDiscreteAngle(s){
-  return !!s&&['tower','gate','house','market','tavern','church','training','plaza'].includes(s.type);
+  return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
   if(!s)return 0;
@@ -245,9 +245,14 @@ const COSTS={
   tavern:{gold:190,stone:65,wood:145},
   church:{gold:320,stone:360,wood:110,metal:18},
   plaza:{gold:90,stone:80,wood:10},
+  townhall:{gold:240,stone:210,wood:85,metal:10},
+  guild:{gold:180,stone:110,wood:120},
   training:{gold:90,stone:24,wood:70}
 };
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+// Stone towers of the same tier, against the square one: curved masonry costs more, the open-
+// backed semitower half.
+const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
+const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -286,10 +291,13 @@ const STRUCTURE_VARIANTS=Object.freeze({
   tower:Object.freeze({
     roofStyle:Object.freeze(['battlement','machicolation','pitched']),
     baseStyle:Object.freeze(['standard','buttress','splayed']),
-    topWeapon:Object.freeze(['none','mangonel','ballista'])
+    topWeapon:Object.freeze(['none','mangonel','ballista']),
+    bartizan:Object.freeze(['none','battlement','pitched']),
+    roofShape:Object.freeze(['pyramid','gable','hip'])
   }),
   gate:Object.freeze({
-    roofStyle:Object.freeze(['battlement','pitched','flat'])
+    roofStyle:Object.freeze(['battlement','pitched','flat']),
+    upper:Object.freeze(['stone','timber'])
   }),
   wall:Object.freeze({
     skin:Object.freeze(['standard','machicolation','hoarding'])
@@ -299,8 +307,8 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none'}),
-  gate:Object.freeze({roofStyle:'battlement'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid'}),
+  gate:Object.freeze({roofStyle:'battlement',upper:'stone'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
 });
@@ -345,7 +353,9 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const status=t=>document.getElementById('status').textContent=t;
 const RES_ORDER=['gold','stone','clay','wood','metal'];
 function roundCost(cost){const out={};for(const [k,v] of Object.entries(cost||{}))if(v>0)out[k]=Math.max(1,Math.ceil(v));return out}
-function variantSchema(s){return s&&STRUCTURE_VARIANTS[s.type]||null}
+// The semitower has an open gorge: crenellated top only, no roof, machicolations or base skirts.
+const HALF_TOWER_VARIANTS=Object.freeze({roofStyle:Object.freeze(['battlement']),baseStyle:Object.freeze(['standard']),topWeapon:STRUCTURE_VARIANTS.tower.topWeapon});
+function variantSchema(s){return s&&(s.type==='tower'&&s.shape==='half'?HALF_TOWER_VARIANTS:STRUCTURE_VARIANTS[s.type])||null}
 function variantDefaults(s){return s&&STRUCTURE_VARIANT_DEFAULTS[s.type]||null}
 function structureVariant(s,key){
   const schema=variantSchema(s),defs=variantDefaults(s);
@@ -377,6 +387,10 @@ function towerRoofStyle(s){
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
 function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))}
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
+// Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
+// with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';
@@ -392,9 +406,14 @@ function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
 function gateRoofStyle(s){
   if(isWoodGate(s))return'flat';
   if(s?.type==='gate'&&s.brokenTop)return'broken';
+  if(gateTimberUpper(s))return'pitched';         // a timber storey always carries a roof
   return s?.type==='gate'?structureVariant(s,'roofStyle'):undefined
 }
-function wallSkin(s){return s?.type==='wall'?structureVariant(s,'skin'):undefined}
+// A stepped wall on a slope keeps the plain crest: hoardings and machicolations need a level run.
+function wallSkin(s){
+  if(s?.type!=='wall')return undefined;
+  return typeof wallSlopeSections==='function'&&wallSlopeSections(s)?'standard':structureVariant(s,'skin');
+}
 function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
 // Wide built section (hall): same 'built' type, double width, one free-height
 // ground floor even at L2 — common halls, chapels, throne halls.
@@ -409,7 +428,31 @@ function hasMachicolation(s){
   return false;
 }
 
-function towerTier(s){const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
+// Oriented stone towers (geometry in settlement-tower-shapes.js): the open-backed semitower
+// 'half' and the D tower 'dee'. Keyed by tier; s.size = 1 / 1.5 / 2 as for square towers,
+// depth runs along s.angle (towards the field), width along the wall.
+const ORIENTED_TOWER_SPECS=Object.freeze({
+  half:Object.freeze({tiers:[1,2],1:{depth:.75,width:1},2:{depth:1,width:1.5}}),
+  // The large D is as wide as a medium round tower: it grows in depth, so beside a gate its
+  // straight part matches the gate depth and the half round sticks out in front.
+  dee:Object.freeze({tiers:[2,3],2:{depth:1.5,width:1.25},3:{depth:2.25,width:1.5}})
+});
+function isOrientedTowerShape(shape){return Object.prototype.hasOwnProperty.call(ORIENTED_TOWER_SPECS,shape||'')}
+function isOrientedTower(s){return !!s&&(s.type==='tower'||s.type==='ruin')&&isOrientedTowerShape(s.shape)}
+function orientedTowerTierRange(shape){return ORIENTED_TOWER_SPECS[shape]?.tiers||[1,3]}
+function orientedTowerTier(s){
+  const [lo,hi]=orientedTowerTierRange(s.shape),span=Number(s.size)||1;
+  return clamp(span>=1.99?3:span>=1.49?2:1,lo,hi);
+}
+function orientedTowerDims(s){const d=ORIENTED_TOWER_SPECS[s.shape][orientedTowerTier(s)];return{w:d.depth,h:d.width}}
+// Facade decals (windows, slits, doors) sit on the bounding box: its sides are the straight
+// flanks of the D, its front touches the tip of the half round.
+const ORIENTED_FACADE_REAR=3;   // rect edge fp[3] -> fp[0], the local -x face
+function towerFacadePoints(s){
+  if(!isOrientedTower(s))return footprintPoints(s);
+  const {w,h}=orientedTowerDims(s);return rectWorldPoints(s.x,s.y,w,h,s.angle||0);
+}
+function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
 function wallTier(s){
   const explicit=Math.round(Number(s?.tier));
   if(explicit>=1&&explicit<=3)return explicit;
@@ -426,14 +469,27 @@ function applyStructureTier(s,tier){
     if(s.type==='wall'&&tier===1&&wallSkin(s)==='machicolation')s.skin='standard';
   }
   else if(s.type==='tower'){
+    if(isOrientedTower(s)){const [lo,hi]=orientedTowerTierRange(s.shape);s.tier=tier=clamp(tier,lo,hi)}
     if(s.shape==='round')s.r=towerSizeForTier('round',tier);
     else s.size=towerSizeForTier('square',tier);
   }
   normalizeFunctions(s);return s
 }
+// Stone gates come in two sizes: the gatehouse (1.5×1.5U, L1-L3) and the small gate (1×1U, L1-L2).
+const GATE_SIZES=Object.freeze({large:1.5,small:1});
+const SMALL_GATE_MAX_LEVEL=2,SMALL_GATE_COST=.6;
+function isSmallGate(s){return s?.type==='gate'&&!isWoodGate(s)&&(Number(s.size)||GATE_SIZES.large)<1.25}
+// Small L2 gate with a timber-framed upper storey (plaster and beams like the houses), jettied
+// over the front and the rear: much cheaper than the stone storey.
+const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
+// The frame starts right over the passage vault: one low storey (1.2), its roof .84 high with the
+// slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
+const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
+function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
+function maxStructureLevel(s){return isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
   if(isWoodGate(s))return 1;
-  return clamp(Math.round(Number(s?.level)||1),1,['tower','gate'].includes(s?.type)?3:2)
+  return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
 // Independent local X/Y scale in [0.8, 1.2], seeded by the stable house ID.
@@ -591,8 +647,8 @@ function houseRidgeHeight(s){
   return housePartRidge(s,houseFootprintParts(s)[0]);
 }
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
-const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza']);
-const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza']);
+const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild']);
+const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild']);
 const PLAZA_VARIANTS=Object.freeze(['paved','fountain','garden']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
 function civicLevel(s){return Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1)))}
@@ -617,6 +673,12 @@ function civicLocalParts(s){
   ];
   if(s.type==='training')return[{cx:0,cy:0,w:5,h:4,role:'training',roofTurn:0}];
   if(s.type==='plaza')return[{cx:0,cy:0,w:5,h:5,role:'square',roofTurn:0}];
+  // Well civics (settlement-civic-annexes.js): the civic tower rises from the middle of the town hall's front.
+  if(s.type==='townhall')return[
+    {cx:0,cy:.35,w:4,h:2.5,role:'hall',roofTurn:0},
+    {cx:0,cy:-1.15,w:1.3,h:1.3,role:'tower',roofTurn:0}
+  ];
+  if(s.type==='guild')return[{cx:0,cy:0,w:3,h:2.5,role:'hall',roofTurn:Math.PI/2}];
   return[];
 }
 function civicParts(s){
@@ -642,9 +704,14 @@ function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
-    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s));
+    return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
-  if(s.type==='gate')return isWoodGate(s)?{...COSTS.woodGate}:scaleCost(COSTS.gate,levelCostFactor(s));
+  if(s.type==='gate'){
+    if(isWoodGate(s))return{...COSTS.woodGate};
+    // Timber upper storey: the stone L1 small gate plus a little timber.
+    if(gateTimberUpper(s)){const c=scaleCost(COSTS.gate,SMALL_GATE_COST);for(const [k,v] of Object.entries(GATE_TIMBER_COST))c[k]=(c[k]||0)+v;return c}
+    return scaleCost(COSTS.gate,levelCostFactor(s)*(isSmallGate(s)?SMALL_GATE_COST:1));
+  }
   if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});
   if(s.type==='bridge'){
     const factor=(s.width||1.5)/(s.variant==='stone'?1.5:1.2);

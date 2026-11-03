@@ -4,13 +4,64 @@
 
 - Le case L3 con bottega mostrano su strada una vetrina a ante (banco e tettoia di giorno, ante chiuse la notte e la domenica) e un'insegna a bandiera di ferro accanto alla porta, con l'emblema del mestiere; la finestra del pianterreno dietro la vetrina sparisce.
 - Asset Lab: stato «Bottega chiusa»; corretti nello stage la cache urbana non invalidata (catture delle case senza travi e finestre) e la maschera che ritagliava le travi scure. Baseline delle 21 voci «Botteghe L3» rifatta. Nessuna regressione nel rendering del gioco: verificato sul fotogramma senza maschera.
-- Piramide: STATUS, BACKLOG (insegne e merci in facciata in fase 2 su branch). DECISIONS e ROADMAP invariate: è il completamento visivo già previsto da D-053/D-056.
+- Piramide: STATUS, BACKLOG (insegne e merci in facciata in fase 2 su branch). DECISIONS e ROADMAP invariate: è il completamento visivo già previsto da D-053/D-059.
 
 ## 2026-11-02 — Cutaway delle botteghe L3, fase 1 (branch `feature/l3-workshop-cutaway`)
 
 - La casa L3 selezionata con una bottega mostra il pianterreno in sezione, arredato per mestiere, con il banco su strada e l'artigiano al lavoro durante l'orario di bottega. Modulo `src/settlement-shop-cutaway.js`; agganci in 2.5D, WebGL, facciate, fumo, occlusione delle figure e passaggio della popolazione.
 - Asset Lab: 7 voci «Botteghe L3» (stati «Nel gioco» e «Cutaway»), 14 voci aggiunte alla baseline dopo la revisione del foglio provini; i 140 «cambiati» delle fortificazioni (deriva di luce, tutti più chiari) non sono stati riscritti. Nuova regressione `qa/shop-cutaway-regression.cjs`.
-- Piramide: STATUS, BACKLOG (chiusa in fase 1 la voce «cutaway delle botteghe e persone all'interno»), DECISIONS (D-056). ROADMAP invariata: è un completamento visivo di #101, non cambia milestone né priorità P1 economia.
+- Piramide: STATUS, BACKLOG (chiusa in fase 1 la voce «cutaway delle botteghe e persone all'interno»), DECISIONS (D-059). ROADMAP invariata: è un completamento visivo di #101, non cambia milestone né priorità P1 economia.
+## 2026-10-30 — Municipio e gilda sulle piazze dei pozzi (branch `feature/townhall-guild`)
+
+- Nuovi edifici civici L1–L3 legati ai pozzi: municipio con torre civica centrale, campana e meridiana (orologio al L3), gilda; modelli Blender, cutaway, cantiere e crollo. I modelli civici ora rispettano mattoni/argilla. Stato e prove in [STATUS](STATUS.md); ROADMAP e DECISIONS invariate (estende D-056 senza cambiarne il contratto).
+## 2026-10-30 — Più pozzi per villaggio (branch `feature/multi-wells`)
+
+- Dopo la fondazione si possono costruire altri pozzi: ognuno è un centro di espansione (zone, case, campi, antincendio) collegato al primo pozzo con una strada principale, senza nuove strade maestre. Il centro villaggio si designa dall'ispettore come il mastio; i pozzi non centro hanno un nome di quartiere mostrato sulla mappa. Stato e prove in [STATUS](STATUS.md). D-056 in DECISIONS; ROADMAP invariata.
+
+## 2026-11-02 — Moduli isolati economia urbana autonoma integrati
+
+- Recuperato lo scheletro `feature/autonomous-urban-economy`: quattro file `src/economy/` su `main`, senza attivare il runtime. Aggiornati STATUS e BACKLOG con limiti e dipendenze; ROADMAP e DECISIONS invariate.
+
+## 2026-11-02 — CRIME: skeleton criminalità / ordine pubblico (branch `feature/crime-skeleton`)
+
+- Aggiunta route isolata `/crime/`: simulator deterministico a tre indicatori, cinque fasi (malcontento→rivolta), controlli sociali e repressivi, guardie/prigione/ospizio/gogna/patibolo/tribunale come fixture, arresti dimostrativi, grafico storico, cronaca e localStorage separato. Aggiunti `docs/crime.md` e `qa/crime-regression.cjs`.
+- Stato: **solo branch**, motore e regressioni isolati verificati in harness JS; Node CLI, CI e browser non ancora verificati al momento del commit. Nessun modello 3D, nuovo tipo di edificio in Builder, NPC reale o integrazione Combat. La roadmap M0–M5 non cambia; decisione del perimetro sandbox in D-CRIME-01.
+
+
+## 2026-10-30 — Accampamenti: livree, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`)
+
+- Padiglioni con livree a schema e contrasto tra vicini; nuovo kit Blender del campo; bivacco notturno organizzato; accampamento militare a quartieri come struttura del Builder, fortificabile a livelli; modelli e composizioni nel Lab. Stato e prove in [STATUS](STATUS.md). AGENTS.md: verifica visiva nel Lab e obbligo di inserire ogni nuovo modello nel Lab. ROADMAP e DECISIONS invariate: l'accampamento riusa il contratto `eventVenue` (nuova venue `armyCamp`), nessuna decisione architetturale nuova.
+
+## 2026-11-02 — Ingresso rialzato del mastio (branch `feature/mastio-entrance`)
+
+- Il mastio può avere la porta al primo piano con una scala esterna: legno, poi pietra lungo la facciata, e un levatoio dedicato su entrambe che, alzato, chiude il mastio a chi sta a terra. Piano terra cieco, finestra e drappo lasciano il posto alla porta sul suo piano, civili e strade di servizio passano dal piede della scala. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: nuova D-MASTIO-01.
+- Seconda tappa: il levatoio si alza da solo quando i nemici si avvicinano alla scala e sbarra le porte del mastio sul cammino di ronda; la scala è un ostacolo per chi cammina; scala di legno e battente bruciano (la scala bruciata si ricostruisce); i civili richiamati salgono la rampa a vista prima di entrare. L'ariete non arriva al battente (scelta in D-MASTIO-01).
+- Quarta tappa: gli assalitori prendono il mastio con una scala d'assalto alla porta; il battente alzato ha resistenza 60 e cade a colpi d'ascia (o bruciato); chi entra lascia il campo e il mastio risulta violato.
+- Terza tappa: il mastio non ha porte sul cammino di ronda; il battente bruciato lascia il vuoto; con scala o battente bruciati gli occupanti calano (e ritirano) una scala a pioli dalla porta.
+
+## 2026-11-02 — Garitte e forme delle falde (branch `feature/bartizans`)
+
+- Torri grandi (T3) quadrate e rotonde in pietra: quattro garitte d'angolo su mensole, merlate o con guglia e bandiera; 3 tiratori per garitta che colpiscono anche il piede della torre fino a 1U. Torri quadrate col tetto a falde: piramide, 2 falde con timpani o 4 falde con colmo lungo metà del tetto (solo estetica, stesso costo; con il colmo due bandiere). Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: due nuove varianti del tipo `tower`, nessun tipo nuovo.
+
+## 2026-11-02 — Muri sui pendii (branch `feature/walls-on-slopes`)
+
+- I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e il muro stesso diventa una scala (una pedata ogni 0,12U) col parapetto merlato che corre accanto, come sulle mura di Sintra. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
+
+## 2026-10-30 — Porta piccola (branch `feature/small-gate`)
+
+- Seconda taglia della porta in pietra: 1×1U, L1–L2, altezze 2,4 / 3,6, costo ×0,6. Portale, ante, grata, torce, stendardi, merli e tetto in scala con la fronte; il corpo di porta 1,5U resta invariato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuovo valore di `size` del tipo `gate`, nessun tipo nuovo.
+- 02/11: piano alto a graticcio per la porta piccola L2 (legno e intonaco come le case, a sbalzo, costo L1 + 8 oro e 18 legno), falde della porta piccola girate (timpani sui fianchi), cutaway di tutte le porte con le due facce verso la camera aperte.
+
+## 2026-10-30 — Semitorri e torri a D (branch `feature/half-d-towers`)
+
+- Due nuove forme di torre in pietra, orientate verso l'esterno: semitorre aperta alla gola (piccola/media) e torre a D (media/grande). Si agganciano alla fine di un muro con il retro sul muro e, sui fianchi di una porta, formano la porta a due torri tonde con il retro allineato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuove varianti di `shape` del tipo `tower`, nessun tipo nuovo.
+- Semitorre: scala a pioli a ogni piano, attraverso una botola nel solaio, visibile dalla gola aperta.
+- Cantiere e crolli: il ponteggio della D segue la sua pianta; monconi e corone spezzate della semitorre restano aperti dietro.
+- Cutaway della torre a D con solai, arredi e scale dentro la pianta a D. Costi per forma: tonda ×1,5, D ×1,25, semitorre ×0,5 rispetto alla quadrata.
+- Feritoie laterali della D spostate in avanti, sul mezzo tondo: accanto a una porta restano libere.
+- Porte in pietra: una fila di finestre per stanza (L1 nessuna, L2 una, L3 due), non più una per livello a partire dal passaggio.
+- Porte: finestra sempre sul retro, due feritoie affiancate sul fronte, aperture visibili anche nel cutaway. Finestre notturne di torri e porte: il vetro illuminato segue la sagoma della finestra invece di un rettangolo.
+- Cutaway: finestre e feritoie viste da dentro con lo sprite vero invece di quadrati colorati; i solai delle porte si allineano a quelli delle torri che le fiancheggiano.
 
 ## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
 
@@ -19,7 +70,6 @@
 - Documentati in docs/march.md limiti e contratto di integrazione: i feudi della demo **non** sono World/Feudal, il tasto d'assalto è un test e non simula Combat/Siege.
 - Aggiornata la piramide di contesto nello stesso branch. Nessuna modifica al Builder, al ledger principale o alla produzione su main.
 
-
 ## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
 
 - Riletto live `main`, tree, 53 branch, PR recenti e CI. Nuova fotografia: [AUDIT-2026-10-30](AUDIT-2026-10-30.md). **Tre PR ancora aperte: #109/#110/#111; #103 Centro di controllo mergiata 30/10**. Nessun test Node/Chromium eseguito nella presente revisione, solo esiti CI/QA già tracciati.
@@ -27,7 +77,6 @@
 - Registrati come **MERGED** #61 danni, #65 cutaway, #77 cantieri visivi, #78 eventi, #82 Asset Lab audit, #86–108 (UI, 3D, audio, affidabilità, economia in 5 tappe, pannelli, geometrie). Rettificati riferimenti «solo branch» dei rispettivi snapshot datati.
 - Riconfermato `mine.good='stone'`, `No automatic surrender in P0`, assenza di `tree depletion`, e `SERVICE_KINDS.income='not-simulated'`. Stock economico e siege separati, correttamente non sommati nel Centro di controllo.
 - Aggiornati **feature-backlog**, **STATUS**, **BACKLOG**, **ROADMAP**, **README** e changelog; **DECISIONS invariato** perché non introduce nuovi contratti o scelte di design. Nessuna modifica runtime né merge delle tre PR funzionali aperte.
-
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 

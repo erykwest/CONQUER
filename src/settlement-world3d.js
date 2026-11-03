@@ -757,6 +757,9 @@
       }else if(s.type==='tavern'){
         const rA=winter?WINTER_ROOF[0]:'#3b302b',rB=winter?WINTER_ROOF[1]:'#493930';
         m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.48,2.08,'#684f3d','#7b5e48',rA,rB,'#80624a');
+      }else if(s.type==='townhall'||s.type==='guild'){
+        if(part.role==='tower')m.prism(part.points,g,g+3.0,'#7a746b','#6d675f','#7a746b');
+        else m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.7,2.4,'#7a746b','#8b847a',winter?WINTER_ROOF[0]:'#7a4433',winter?WINTER_ROOF[1]:'#8a4c39','#968e82');
       }else if(s.type==='church'){
         if(part.role==='tower'){
           m.prism(part.points,g,g+2.72,'#676a6c','#5a5d5f','#676a6c');
@@ -838,14 +841,31 @@
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
   const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken','gatePortalFrame','gateBanner','hallLancet'];
+  // Windows whose glass lights up at night: the emissive pane is the sprite's own glass, not a box.
+  const GLASS_KEYS=['gothicL1','gothicL2','gothicL3'];
+  // Glass mask of a window sprite: the dark blue panes, without the black leading and the stone.
+  function glassMask(img){
+    const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+    const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);
+    const d=g.getImageData(0,0,c.width,c.height),p=d.data;
+    for(let i=0;i<p.length;i+=4){
+      const r=p[i],gg=p[i+1],b=p[i+2],lum=(r+gg+b)/3,glass=p[i+3]>200&&b>=r&&lum>28&&lum<120;
+      p[i]=p[i+1]=p[i+2]=255;p[i+3]=glass?255:0;
+    }
+    g.putImageData(d,0,0);return c;
+  }
   function buildDecalAtlas(){
     window.ConquerGates?.ensureSprites();
-    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=4*T;
+    const tiles=[...DECAL_KEYS,'__white','__glow',...GLASS_KEYS.map(k=>'__glass:'+k)];
+    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=Math.ceil(tiles.length/cols)*T;
     const g=c.getContext('2d'),map=new Map();
-    const tiles=[...DECAL_KEYS,'__white','__glow'];
     tiles.forEach((k,i)=>{
       const x=(i%cols)*T,y=Math.floor(i/cols)*T;
       if(k==='__white'){g.fillStyle='#fff';g.fillRect(x,y,16,16);map.set(k,[(x+4)/c.width,(y+4)/c.height,(x+12)/c.width,(y+12)/c.height]);return}
+      if(k.startsWith('__glass:')){
+        const img=architectureSprite(k.slice(8));if(!img)return;
+        g.drawImage(glassMask(img),x,y);map.set(k,[x/c.width,y/c.height,(x+img.width)/c.width,(y+img.height)/c.height]);return;
+      }
       if(k==='__glow'){
         const radial=g.createRadialGradient(x+T/2,y+T/2,0,x+T/2,y+T/2,T/2-2);
         radial.addColorStop(0,'rgba(255,239,190,0.90)');
@@ -875,18 +895,21 @@
     };
     // These emissive panes and soft halos are generated only when facade geometry changes.
     // Intensity is a uniform: sunset/sunrise never recreate their buffers.
-    const lightWindow=(edge,centerZ,width,height,offset,ground,out)=>{
+    // key: a window sprite with a glass mask lights its panes over the whole sprite; without one
+    // (house windows) a pane-sized box lights up.
+    const lightWindow=(edge,centerZ,width,height,offset,ground,out,key=null)=>{
       const halo=facadeAssetWorldSpan(edge,width*3.4,offset);
       quad(halo.a,halo.b,ground+centerZ-height*1.7,ground+centerZ+height*1.7,
         '__glow',out,[1,.67,.32,.33],.032,lights);
-      const glass=facadeAssetWorldSpan(edge,width*.8,offset);
-      quad(glass.a,glass.b,ground+centerZ-height*.4,ground+centerZ+height*.4,
-        '__white',out,[1,.77,.38,.77],.027,lights);
+      const mask=key&&atlas.map.has('__glass:'+key)?'__glass:'+key:null;
+      const glass=facadeAssetWorldSpan(edge,mask?width:width*.8,offset),h=mask?.5:.4;
+      quad(glass.a,glass.b,ground+centerZ-height*h,ground+centerZ+height*h,
+        mask||'__white',out,[1,.77,.38,mask?.9:.77],.027,lights);
     };
     const onEdge=(edge,centerZ,width,height,key,offset,ground,out)=>{
       const span=facadeAssetWorldSpan(edge,width,offset);
       quad(span.a,span.b,ground+centerZ-height/2,ground+centerZ+height/2,key,out);
-      if(key.startsWith('gothic'))lightWindow(edge,centerZ,width,height,offset,ground,out);
+      if(key.startsWith('gothic'))lightWindow(edge,centerZ,width,height,offset,ground,out,key);
     };
     const edgesOf=fp=>fp.map((a,i)=>({a,b:fp[(i+1)%fp.length],index:i}));
     // A beam from wall point p0 to p1 ({off,z}), `width` thick within the wall plane.
@@ -917,7 +940,7 @@
             for(let i=0;i<4;i++){
               const a=base+i*Math.PI/2,o={x:Math.cos(a),y:Math.sin(a)},cc={x:s.x+o.x*r,y:s.y+o.y*r},tx=-o.y,ty=o.x;
               const edge={a:{x:cc.x-tx*span/2,y:cc.y-ty*span/2},b:{x:cc.x+tx*span/2,y:cc.y+ty*span/2}};
-              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z))onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);}
+              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z)&&!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);}
               else if(towerSlitFace(s,i,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
             }
           }
@@ -925,10 +948,11 @@
           const interior=interiorFacadeEdgeIndex(s);
           for(const row of rows){
             const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)continue;
-            for(const edge of edgesOf(footprintPoints(s))){
+            for(const edge of edgesOf(towerFacadePoints(s))){
+              if(s.shape==='half'&&edge.index===ORIENTED_FACADE_REAR)continue;   // open gorge
               const o=outward(edge,center);
-              if(edge.index===interior)onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o);
-              else if(towerSlitFace(s,edge.index,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
+              if(edge.index===interior){if(!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o)}
+              else if(towerSlitFace(s,edge.index,row.floor)){const se=towerSlitEdge(s,edge);onEdge(se,row.z,.22,.60,'arrowSlit',0,ground,se===edge?o:outward(se,center))}
             }
           }
         }
@@ -939,13 +963,24 @@
         // the portcullis are meshes (settlement-gate-fittings.js).
         const fittings=window.ConquerGates?.decalSpecs(s)||[];
         for(const d of fittings)onEdge(d.edge,d.centerZ,d.width,d.height,d.key,d.offset,ground,d.edge.normal);
+        // Timber upper storey: frame strips and house windows (with their night glow).
+        if(gateTimberUpper(s))for(const f of gateTimberFacade(s)){
+          const e=f.edge,o=outward(e,center),L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
+          const m={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},at=off=>({x:m.x+ux*off,y:m.y+uy*off}),hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
+          for(const [p0,p1] of f.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,[59/255,42/255,30/255,1],.009);
+          for(const w of f.windows){
+            const c=at(w.off);
+            quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,[35/255*.82,29/255*.82,24/255*.82,.82]);
+            lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
+          }
+        }
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
           // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
-          if(!fittings.length&&(edge.index===1||edge.index===3))onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
+          if(!fittings.length&&(edge.index===1||edge.index===3)){const d=gateClosedPortal(s);onEdge(edge,d.centerZ,d.width,d.height,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o)}
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
-            else onEdge(edge,z,.24,.62,'arrowSlit',0,ground,o);
+            else for(const off of gateSlitOffsets(edge))onEdge(edge,z,.24,.62,'arrowSlit',off,ground,o);
           }
         }
       }else if(s.type==='built'){
@@ -1062,7 +1097,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','civicAnnex'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','townhall','guild','civicAnnex'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}
@@ -1150,6 +1185,15 @@
     // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
     const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    // Windows and slits seen from inside: the same sprites as outside (decal atlas), facing the
+    // room; a flat pane only while the atlas is not built yet.
+    const dv=[],atlasMap=typeof S!=='undefined'?S.decalMap:null;
+    const decal=(at,dir,z0,z1,w,key,hex)=>{
+      const uv=atlasMap?.get(key);if(!uv){openingQuad(m,at,dir,z0,z1,w,hex);return}
+      const t={x:-dir.y,y:dir.x},a={x:at.x-t.x*w/2,y:at.y-t.y*w/2},b={x:at.x+t.x*w/2,y:at.y+t.y*w/2},[u0,v0,u1,v1]=uv;
+      const P=[[a,z1,u0,v0],[b,z1,u1,v0],[b,z0,u1,v1],[a,z0,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [p,z,u,v]=P[k];dv.push(p.x,p.y,z,u,v,1,1,1,1)}
+    };
     const W3=window.ConquerWagons3D,FU=window.ConquerCutawayFurniture;
     // Furniture and ladders (world xy, z on the structure plane).
     const addFurniture=s=>{
@@ -1189,9 +1233,15 @@
         const open=cutawayTransparentFaceIndexes(s,g);
         keep=new Set([...Array(n).keys()].filter(i=>!open.has(i)));jambs=cutawayBoundaryVertices(open,n);
       }
+      // Timber-framed small gate: masonry up to the frame's floor, plaster above (outside and in).
+      const timber=s.type==='gate'&&gateTimberUpper(s),zf=timber?gateTimberFloorZ(s):H;
+      const band=(mesh,p,q,z0,z1,hex)=>mesh.face([Z(p,z0),Z(q,z0),Z(q,z1),Z(p,z1)],hex);
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
-        wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f');
+        if(timber){
+          band(sh,o0,o1,0,zf,castleSideShade(o0,o1));band(sh,o0,o1,zf,H,'#d9ccb0');
+          band(m,i0,i1,0,zf,'#61574f');band(m,i0,i1,zf,H,'#cbbd9f');
+        }else{wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f')}
       }
       // Subtower: the parent stays intact, and a dividing wall closes the subtower along the
       // parent's outline where it runs through the subtower footprint.
@@ -1214,8 +1264,11 @@
             }
           }
         }
-      }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v]))m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
-      const ring=winter?WINTER_SNOW_TOP:'#8f857a';
+      }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v])){
+        m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],zf),Z(g.outer[v],zf)],'#82776c');
+        if(timber)m.face([Z(g.outer[v],zf),Z(g.inner[v],zf),Z(g.inner[v],H),Z(g.outer[v],H)],'#5b412c');   // cut corner post
+      }
+      const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:'#8f857a';   // a frame's cut top is its head plate
       for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
       if(s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
@@ -1252,8 +1305,9 @@
         for(const row of towerWindowRows(s))for(const d of towerFaceDirections(s)){
           const dir={x:d.nx,y:d.ny};if(!keptDir(dir))continue;
           const at=innerAt(dir),zc=row.z;if(!outside(at,zc))continue;
-          if(d.interior&&towerGothicAssetForRow(s,row))openingQuad(m,at,dir,(plane?G0:0)+zc-.2,(plane?G0:0)+zc+.2,.26,'#8fa2b2');
-          else if(towerSlitFace(s,d.face,row.floor))openingQuad(m,at,dir,(plane?G0:0)+zc-.16,(plane?G0:0)+zc+.16,.06,'#1c1612');
+          const key=d.interior&&!towerWindowGivesWayToDoor(s,d,row.floor)&&towerGothicAssetForRow(s,row),z=(plane?G0:0)+zc;
+          if(key){const sz=towerGothicAssetSizeForRow(s,row);decal(at,dir,z-sz.h/2,z+sz.h/2,sz.w,key,'#8fa2b2')}
+          else if(towerSlitFace(s,d.face,row.floor))decal(at,dir,z-.3,z+.3,.22,'arrowSlit','#1c1612');
         }
         for(const spec of (typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[])){
           const dir={x:spec.outward.x,y:spec.outward.y};if(!keptDir(dir))continue;
@@ -1266,12 +1320,32 @@
           if(!keep.has(e))continue;
           const a=g.inner[e],b=g.inner[(e+1)%4],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},mo={x:(fp[e].x+fp[(e+1)%4].x)/2,y:(fp[e].y+fp[(e+1)%4].y)/2};
           const dl=Math.hypot(mo.x-s.x,mo.y-s.y)||1,dir={x:(mo.x-s.x)/dl,y:(mo.y-s.y)/dl};
-          openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05,.78,'#1f1712');
+          const pk=(window.ConquerGates?.portalOf?.(s).width??1.2)/1.2;   // smaller on the small gate
+          openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05*(1+pk)/2,.78*pk,'#1f1712');
+        }
+        // Room openings seen from inside, as outside: window on the rear, slits on the front and flanks.
+        const sz=gothicAssetSizeForLevel(s);
+        for(let e=0;e<4;e++){
+          if(!keep.has(e))continue;
+          const a=g.inner[e],b=g.inner[(e+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y)||1,u={x:(b.x-a.x)/L,y:(b.y-a.y)/L};
+          const mo={x:(fp[e].x+fp[(e+1)%4].x)/2,y:(fp[e].y+fp[(e+1)%4].y)/2},dl=Math.hypot(mo.x-s.x,mo.y-s.y)||1,dir={x:(mo.x-s.x)/dl,y:(mo.y-s.y)/dl};
+          const edge={a:fp[e],b:fp[(e+1)%4],index:e},rear=e===interiorFacadeEdgeIndex(s);
+          // Timber frame: its house windows, seen from inside.
+          if(timber)for(const w of gateTimberFacade(s)[e].windows){
+            const at={x:(a.x+b.x)/2+u.x*w.off-dir.x*.006,y:(a.y+b.y)/2+u.y*w.off-dir.y*.006};
+            openingQuad(m,at,dir,G0+w.z-HOUSE_WINDOW_HALF_H,G0+w.z+HOUSE_WINDOW_HALF_H,HOUSE_WINDOW_HALF_W*2+.04,'#5b412c');
+            openingQuad(m,{x:at.x-dir.x*.002,y:at.y-dir.y*.002},dir,G0+w.z-HOUSE_WINDOW_HALF_H+.02,G0+w.z+HOUSE_WINDOW_HALF_H-.02,HOUSE_WINDOW_HALF_W*2,'#8fa2b2');
+          }
+          for(const z of gateWindowRows(s))for(const off of rear?[0]:gateSlitOffsets(edge)){
+            const at={x:(a.x+b.x)/2+u.x*off-dir.x*.006,y:(a.y+b.y)/2+u.y*off-dir.y*.006};
+            if(rear)decal(at,dir,G0+z-sz.h/2,G0+z+sz.h/2,sz.w,gothicAssetForLevel(s),'#8fa2b2');
+            else decal(at,dir,G0+z-.31,G0+z+.31,.24,'arrowSlit','#1c1612');
+          }
         }
       }
       addFurniture(s);
     }
-    return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris)};
+    return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris),dec:new Float32Array(dv)};
   }
 
   // ---------- content signatures (cheap, per frame) ----------
@@ -1279,7 +1353,7 @@
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
@@ -1410,7 +1484,7 @@
     }
     const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
-      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
+      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
       const baked=buildDecals(atlas);
       upload(gl,'decals',baked.decals);
       upload(gl,'nightWindows',baked.lights);
@@ -1437,20 +1511,21 @@
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
     const cut=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s));
-    const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,
+    const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,S.sig.decals,
       ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
     if(S.cutContent!==cutContent){
-      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b)}
+      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b);gl.deleteBuffer(v.dec.b)}
       S.cutContent=cutContent;S.cutVariants=new Map();
     }
     if(cut.length){
       const key=rot+'|'+plan;let v=S.cutVariants.get(key);
       if(!v){
         const a=performance.now(),d=buildCutaway(),mk=x=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,x,gl.STATIC_DRAW);return{b,n:x.length}};
-        v={main:mk(d.main),shell:mk(d.shell),em:mk(d.em)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
+        v={main:mk(d.main),shell:mk(d.shell),em:mk(d.em),dec:mk(d.dec)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
       }
       S.buf.cutaway=v.main.b;S.buf['cutaway#n']=v.main.n;S.buf.cutawayShell=v.shell.b;S.buf['cutawayShell#n']=v.shell.n;S.buf.cutawayEm=v.em.b;S.buf['cutawayEm#n']=v.em.n;
-    }else{S.buf['cutaway#n']=0;S.buf['cutawayShell#n']=0;S.buf['cutawayEm#n']=0}
+      S.buf.cutawayDecals=v.dec.b;S.buf['cutawayDecals#n']=v.dec.n;
+    }else{S.buf['cutaway#n']=0;S.buf['cutawayShell#n']=0;S.buf['cutawayEm#n']=0;S.buf['cutawayDecals#n']=0}
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
     st.ensureMs=performance.now()-t0;
@@ -1476,6 +1551,15 @@
     const pr=S.prog.mesh;useProgram(gl,pr);setCamera(gl,pr,r);
     bindAttrib(gl,pr,'aPos',S.buf[name],3,24,0);bindAttrib(gl,pr,'aCol',S.buf[name],3,24,12);
     gl.drawArrays(mode,0,n/6);
+  }
+  function drawDecalBuffer(gl,r,name){
+    const n=S.buf[name+'#n'];if(!n||!S.tex.decalAtlas)return;
+    const dp=S.prog.decal;useProgram(gl,dp);setCamera(gl,dp,r);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(dp.loc.uAtlas,0);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+    const b=S.buf[name];bindAttrib(gl,dp,'aPos',b,3,36,0);bindAttrib(gl,dp,'aUV',b,2,36,12);bindAttrib(gl,dp,'aCol',b,4,36,20);
+    gl.drawArrays(gl.TRIANGLES,0,n/9);
+    gl.depthMask(true);gl.disable(gl.BLEND);
   }
   function resizeTo(r){
     const dpr=Math.min(devicePixelRatio||1,2),W=Math.max(1,Math.round(r.width*dpr)),H=Math.max(1,Math.round(r.height*dpr));
@@ -1506,15 +1590,9 @@
     drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'civicCutaway');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayShell');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
-    // facade decals: blended over their walls, depth-tested, no depth write
-    if(S.buf['decals#n']&&S.tex.decalAtlas){
-      const dp=S.prog.decal;useProgram(gl,dp);setCamera(gl,dp,r);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(dp.loc.uAtlas,0);
-      gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
-      const b=S.buf.decals;bindAttrib(gl,dp,'aPos',b,3,36,0);bindAttrib(gl,dp,'aUV',b,2,36,12);bindAttrib(gl,dp,'aCol',b,4,36,20);
-      gl.drawArrays(gl.TRIANGLES,0,S.buf['decals#n']/9);
-      gl.depthMask(true);gl.disable(gl.BLEND);
-    }
+    // facade decals (and the cutaway's windows seen from inside): blended over their walls,
+    // depth-tested, no depth write
+    drawDecalBuffer(gl,r,'decals');drawDecalBuffer(gl,r,'cutawayDecals');
     // trees
     if(S.buf['trees#n']&&S.tex.atlas){
       const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
@@ -1696,10 +1774,11 @@
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(isPlanView())drawGrid();             // 5U lines + 0.5U snap lattice (plan view editor aid)
     residual2D();
-    // Village name over the well (screen-space text in drawPointStructure).
-    if(State.village.founded&&State.village.name)for(const s of State.structures){
+    // Village name over the centre well, quarter names over the others (as drawPointStructure).
+    if(State.village.founded)for(const s of State.structures){
       if(s.type!=='well'||underConstruction(s))continue;
-      const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12);
+      const label=wellDisplayName(s);if(!label)continue;
+      const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font=(isVillageCenterWell(s)?'700 12px':'italic 600 11px')+' system-ui';ctx.textAlign='center';ctx.fillText(label,p.x,p.y-12);
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
     return true;
@@ -1749,6 +1828,7 @@
     const gl=S.gl,r=wrap.getBoundingClientRect();
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayEm');gl.disable(gl.POLYGON_OFFSET_FILL);
+    drawDecalBuffer(gl,r,'cutawayDecals');gl.depthMask(false);
     // Figures inside the open rooms (occupants, archers at the slits) share the room light.
     const inside=(S.frameFigures||[]).filter(f=>/-room-|:slit:/.test(String(f.id)));
     if(inside.length&&S.tex.soldierAtlas){
@@ -1810,7 +1890,8 @@
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
     // Mill sails and wheels turn every frame (industries).
     // Gate door leaves, portcullis and torch brackets (gate fittings).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates]){
+    // The Mastio's raised entrance: stair and drawbridge leaf (keep entrance).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).

@@ -1,0 +1,30 @@
+name: Crime skeleton regression
+
+on:
+  pull_request:
+    paths:
+      - 'crime/**'
+      - 'qa/crime-regression.cjs'
+      - '.github/workflows/crime-regression.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'crime/**'
+      - 'qa/crime-regression.cjs'
+      - '.github/workflows/crime-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  crime-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test criminality and public-order skeleton
+        run: node qa/crime-regression.cjs
