@@ -114,6 +114,13 @@
 - **Tre PR OPEN (non MAIN):** [#109](https://github.com/erykwest/CONQUER/pull/109) CI regressioni economia 2–5 (**conflitti** contro main; CI della branch PASS e limite workflow scope API), [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacco/accampamento fortificabile (**mergeable** ma QA browser parziale), [#111](https://github.com/erykwest/CONQUER/pull/111) più pozzi/centro designabile/nomi quartiere (**mergeable**, CI PASS e browser Canvas, World 3D visivo ancora da provare). PR #55 chiusa senza merge dopo porting selettivo, non rilanciare il suo vecchio ramo.
 - **Git:** **53 remote branch incl. main, 3 PR open**; molte branch storiche derivano da squash merge. Non attribuire a main codice solo perché la branch esiste né considerare lavoro nuovo tutte le branch "ahead".
 
+
+## Castello — stili di merlatura del feudo (branch `feat/crenel-styles`, 30/10/2026)
+
+- Implementato: stile globale `State.policies.crenelStyle` (piatta default, doppia falda, coda di rondine con feritoia), cambio pagato per merlo dal Centro di controllo › Cantieri, nuove costruzioni nello stile scelto. Merli più sottili e merlo d'angolo a L su torri quadrate e porte (pilastro condiviso per le rondini, padiglione per la falda).
+- Provato: verifica visiva nel Lab (torre quadrata, rotonda, caditoie, porta; rotazioni 0–3); preventivo e addebito controllati in console (pietra → argilla per il mattone, rifiuto senza fondi). `qa/battlement-parapet-regression.cjs` PASS 5/5 (angoli a L contati una volta, corone per stile, prezzi pietra/mattone); subtower-junctions, module-boundaries e fire PASS. Asset audit 487 render, 0 falliti, baseline aggiornata.
+- Non provato: CI su GitHub, partita reale fondata con il pannello aperto, modalità world3d a pieno schermo. La merlatura in legno delle porte non cambia stile.
+
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
 - `settlement-panels.js` riorganizzato: helper condivisi (card, KPI, tabelle, select), un solo motore di grafici SVG con griglia, etichette giorno intere e tooltip per punto; avvisi calcolati una volta per render.
