@@ -25,8 +25,13 @@ function drawCutawayOccupants(){
           }
         }
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
-        // Prison: two prisoners, three in a large cell (settlement-court-people.js draws them).
-        else if(slot.role==='prison'&&window.ConquerCourtPeople){count=slot.size==='large'?3:2;kind='prisoner'}
+        // Prison (ground floor): one to five prisoners per cell, a large room has two cells
+        // (settlement-court-people.js draws them; the capacity is in settlement-siege.js).
+        else if(slot.role==='prison'&&window.ConquerCourtPeople){
+          const max=window.ConquerCivic3D?.PRISON_CELL_MAX||5,cells=slot.size==='large'?2:1;
+          for(let c=0;c<cells;c++)count+=1+peasantHash(s.id+'-cell-'+slot.index+'-'+c)%max;
+          kind='prisoner';
+        }
         if(!count)continue;
         const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);
         const positions=cutawayOccupantLayout(count),items=[];

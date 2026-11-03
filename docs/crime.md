@@ -32,7 +32,7 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 | Struttura | Dove si costruisce | Dati | Note |
 | --- | --- | --- | --- |
 | Corpo di guardia (`guard`) | Stanza di torre T2/T3, porta o sezione costruita (già esistente); **stanza del Municipio** (un piano) | `s.functions[i]='guard'` | Capienza 4 sentinelle per unità di stanza (`ConquerSiege.capacity().watchmen`) |
-| Prigione (`prison`) | Come sopra | `s.functions[i]='prison'` | 6 detenuti per stanza normale, 12 per stanza grande (T3), 6 per piano del Municipio (`capacity().prisoners`) |
+| Prigione (`prison`) | **Solo al piano terra (P0)**: torri e sezioni costruite (non le porte, dove il piano terra è il passaggio), stanza 0 del Municipio | `s.functions[i]='prison'` | **5 detenuti per cella**: una cella per stanza normale, due per stanza grande, 2–3 nel Municipio (`ConquerCivic3D.prisonCellCount`). Le prigioni salvate ai piani alti vengono svuotate al caricamento (`capacity().prisoners`) |
 | Sala del consiglio (`council`) | Solo Municipio | `s.functions[i]='council'` | Arredo storico del cutaway; un Municipio salvato prima delle stanze la riceve al piano terra |
 | Tribunale (`tribunal`) | Solo Municipio **L2+**, a qualsiasi piano | `s.functions[i]='tribunal'` | Al ritorno a L1 la stanza decade |
 | Ospizio (`almshouse`) | Annesso della Chiesa **L2**, max 1, 4,5 × 2,4 U | `{type:'civicAnnex', annexType:'almshouse'}` | Modello Blender `almshouse` nello **stile delle case**: casa lunga a due piani (12,6 m, due camini), piano terra in pietra, P1 a graticcio su intonaco ocra con sporto sul retro, tetto in ardesia a 60°, **ballatoio** di legno al P1 sul fronte con tettoia e scala esterna, piccola croce sul frontone. Colori presi dal renderer delle case (`houseStone`, `housePlaster`, `houseTimber`, `roofHouse`…, in coda alla palette civica). Come gli altri annessi: niente costo o effetti economici |
@@ -63,10 +63,10 @@ Il **cutaway per piani** (D-CUT-01, branch `feature/cutaway-floors`, unito qui) 
 
 **Prigioni occupate** (a ogni ora, stesso modulo):
 
-- **Municipio:** sul piano della prigione ci sono uno o due detenuti per cella. Uno sta in piedi alle sbarre, gli altri seduti sulla paglia; il carceriere sonnecchia al tavolo vicino alla porta.
+- **Municipio:** la prigione sta al piano terra, con **da 1 a 5 detenuti per cella**. Il primo della prima cella sta in piedi alle sbarre, gli altri seduti sulla paglia; il carceriere sonnecchia al tavolo vicino alla porta.
   - Celle e carceriere seguono `prisonLayout`, lo stesso dell'arredo.
   - Quando la camera guarda le celle attraverso l'inferriata, le sbarre (`ConquerCivic3D.prisonBars`) vengono ridisegnate sopra i detenuti.
-- **Torri, porte e sezioni:** nelle stanze con funzione prigione del castello ci sono due detenuti (tre in una stanza grande), disegnati da `drawCutawayOccupants` accanto a soldati e nobili.
+- **Torri e sezioni:** nelle prigioni del castello (solo al piano terra) ci sono **da 1 a 5 detenuti per cella**, e una stanza grande ha due celle. Li disegna `drawCutawayOccupants` accanto a soldati e nobili.
 
 **Gogna, forca e patibolo in uso** (stesso modulo, `justiceSlots` / `justiceScene`). Le scene sono sobrie: nessun condannato sulla forca o sul patibolo, nessuna esecuzione; la scena si ferma all'attesa.
 

@@ -141,7 +141,7 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 
 - **IMPLEMENTATO SU BRANCH, NON MAIN:**
   - **Municipio:** una stanza per piano, tante quante i livelli civici, con catalogo civico separato (`council`, `tribunal` da L2, `guard`, `prison`). Si scelgono nell'ispettore («P1…P3») e sono arredate sull'intero piano; il cutaway per piani (`feature/cutaway-floors`, unito) le mostra una per volta. I Municipi già salvati ricevono la sala del consiglio al piano terra.
-  - **Capienze:** `ConquerSiege.capacity()` espone `prisoners` (6 per stanza normale, 12 grande) e `watchmen` (4).
+  - **Capienze:** `ConquerSiege.capacity()` espone `prisoners` (5 per cella: una cella per stanza normale, due per stanza grande, 2–3 nel Municipio) e `watchmen` (4). Prigioni solo al piano terra (P0).
   - **Ospizio:** annesso della Chiesa L2 (`almshouse`), modello Blender in `civic-models.js`.
   - **Gogna, forca e patibolo:** `eventVenue` `pillory` / `gallows` / `scaffold` con costo, cantiere e modelli `justicePillory` / `justiceGallows` / `justiceScaffold` (`event-models.js`, palette estesa in coda). Si trovano nello strumento «Giustizia» del nuovo Builder e tra gli edifici civili del vecchio.
 - **ISOLAMENTO:** `/crime/` non legge ancora queste strutture; cambiano solo le diciture dei luoghi.

@@ -5,8 +5,9 @@
   const CAPACITY=Object.freeze({granary:{food:240},storage:{materials:240},armory:{equipment:80},
     stables:{horses:5},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
     nobleRoom:{knights:1},quarters:{soldiers:16},
-    // Public order (crime skeleton): a normal cell holds 6, a large one 12; a guard post 4 watchmen.
-    prison:{prisoners:6},guard:{watchmen:4}});
+    // Public order (crime skeleton): five prisoners per cell (a large room has two cells, the town
+    // hall's prison floor one per cell, ConquerCivic3D.prisonCellCount); a guard post 4 watchmen.
+    prison:{prisoners:5},guard:{watchmen:4}});
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
     spear:{stone:0,wood:0,door:0,portcullis:0},
@@ -80,11 +81,13 @@
     if(!fn)return true;
     // Town hall: one room per floor, as many as the civic level; the tribunal needs L2.
     if(s?.type==='townhall')return !underConstruction(s)&&index>=0&&index<functionCapacity(s)
-      &&TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||civicLevel(s)>=2);
+      &&TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||civicLevel(s)>=2)&&(fn!=='prison'||index===0);
     if(CIVIC_ONLY_ROOMS.has(fn))return false;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
+    // Prisons on the ground floor only (a gate's ground floor is its passage).
+    if(fn==='prison')return l===1&&s.type!=='gate';
     if(['granary','storage','kitchen','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
     return true;
@@ -261,7 +264,7 @@
       s.functions.forEach((fn,i)=>{
         const spec=CAPACITY[fn];
         if(!spec||!allowed(s,i,fn)||unavailable.has(s.id+':'+i))return;
-        const units=(fn==='stables'||fn==='nobleRoom')?1:functionSlotUnits(s,i);
+        const units=(fn==='stables'||fn==='nobleRoom')?1:fn==='prison'&&s.type==='townhall'?window.ConquerCivic3D?.prisonCellCount?.(s)||1:functionSlotUnits(s,i);
         for(const [k,v] of Object.entries(spec))out[k]+=v*units;
       });
     }

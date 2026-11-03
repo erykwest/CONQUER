@@ -394,6 +394,7 @@
     for(let y=ry-.32;y>front+.12;y-=.3)pews.push(y);
     return{ix0,ix1,icx,iw,hw,jy,ry,front,back,pews,judges:[icx-hw*.62,icx,icx+hw*.62],clerk:{x:ix0+.32,y:ry+.3}};
   }
+  const PRISON_CELL_MAX=5;   // prisoners per cell (settlement-siege.js CAPACITY.prison)
   // Prison layout, shared the same way: cells along the back wall behind one row of bars at cy,
   // n cells of width cw from ix0, the jailer's table by the door.
   function prisonLayout(rect,hearths=[]){
@@ -402,6 +403,8 @@
     const ix0=fx0+pad(fx0+.3),ix1=fx1-pad(fx1-.3),iw=ix1-ix0,n=Math.max(2,Math.round(iw/1.1));
     return{ix0,ix1,iw,back,front,cy:back-.62,n,cw:iw/n,jailer:{x:ix1-.4,y:front+.45}};
   }
+  // Cells of the town hall's prison (ground floor only): five prisoners each (settlement-siege.js).
+  function prisonCellCount(s){const spec=INTERIOR[modelKey(s)];return spec?prisonLayout(spec.floors[0],spec.hearths||[]).n:0}
   function furnishTownhallRoom(role,rect,z,piece,P,hearths=[]){
     const [fx0,fy0,fx1,fy1]=rect,back=fy1,front=fy0,cx=(fx0+fx1)/2;
     // Clear of the hearths standing by the end walls.
@@ -476,12 +479,16 @@
     let h=2166136261;for(const c of String(s.id)+':'+role)h=Math.imul(h^c.charCodeAt(0),16777619);
     const rnd=()=>((h=Math.imul(h^(h>>>13),1597334677)>>>0)%1000)/1000;
     if(role==='prison'){
-      // Prisoners in the cells (one or two each: sitting on the straw, or at the bars), the jailer at his table.
+      // Prisoners in the cells, one to five each (PRISON_CELL_MAX, the capacity in settlement-siege.js):
+      // the first one of the first cell at the bars, the others sitting on the straw; the jailer at his table.
       const P=prisonLayout(rect,hearths);
+      const seats=[[.22,.27],[.5,.22],[.78,.27],[.34,.47],[.66,.47]];   // (across the cell, from the back wall)
       for(let k=0;k<P.n;k++){
-        const a=P.ix0+P.cw*k,b=a+P.cw,m=(a+b)/2,two=rnd()<.5;
-        add('cell'+k+'-0','prisoner',k===0?'bars':'sit',k===0?m:a+.28,k===0?P.cy+.12:P.back-.27,k===0?0:-.12);
-        if(two)add('cell'+k+'-1','prisoner','sit',b-.32,P.back-.32,-.12);
+        const a=P.ix0+P.cw*k,count=1+Math.floor(rnd()*PRISON_CELL_MAX);
+        for(let i=0;i<count;i++){
+          if(k===0&&i===0){add('cell0-0','prisoner','bars',a+P.cw/2,P.cy+.12,0);continue}
+          const [u,v]=seats[i];add('cell'+k+'-'+i,'prisoner','sit',a+P.cw*u,P.back-v,-.12);
+        }
       }
       add('jailer','jailer','doze',P.jailer.x-.35,P.jailer.y,.13-.12);
       return out;
@@ -669,5 +676,5 @@
     return true;
   }
   window.ConquerCivic3D={modelKey,has,parts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
-    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,prisonBars,lotProps,allLotProps};
+    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,prisonBars,prisonCellCount,PRISON_CELL_MAX,lotProps,allLotProps};
 })();

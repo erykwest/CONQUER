@@ -5,7 +5,7 @@
 - **Scena:** quando il Municipio selezionato mostra il piano del tribunale, nei giorni feriali dalle 9 alle 17 e senza allarme, la sala si riempie di persone.
   - **Chi:** giudici in toga e berretto rossi (quello che presiede alza la mano), cancelliere che scrive, prigioniero a mani legate tra due guardie, pubblico sulle panche.
   - **Come:** nuovo modulo `src/settlement-court-people.js`; i posti vengono da `ConquerCivic3D.roomSlots`, che condivide il layout con l'arredo.
-- **Prigioni occupate:** detenuti nelle celle del Municipio (alle sbarre o seduti sulla paglia, sbarre ridisegnate davanti) e carceriere al tavolo; detenuti nelle stanze prigione del castello. A ogni ora.
+- **Prigioni occupate:** al piano terra, da 1 a 5 detenuti per cella (alle sbarre o seduti sulla paglia, sbarre ridisegnate davanti) e carceriere al tavolo nel Municipio; lo stesso nelle prigioni del castello. A ogni ora.
 - **Gogna, forca e patibolo in uso:** gogna occupata (lun–sab, 8–17) con capannello che schernisce; «giorno di giustizia» (venerdì 10–12) con boia incappucciato sul palco, magistrato che legge sul patibolo, guardie alla scala e folla. Scene sobrie, senza condannato sul palco né esecuzione.
 - **Costumi di ruolo:** catalogo separato `ConquerWardrobe.ROLE_PIECES` (giudice, cancelliere, prigioniero, boia), mai assegnato per stagione. Nel Lab sotto *Costumi di ruolo*.
 - **Prove:** nuova `qa/court-people-regression.cjs`, anche nel workflow CRIME. Specifica in [crime.md](../crime.md).
@@ -14,7 +14,7 @@
 ## 2026-11-03 — Edifici e stanze di CRIME nel Builder (branch `feature/crime-buildings`)
 
 - **Municipio:** una stanza per piano (tante quante i livelli) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate sull'intero piano e viste un piano per volta col cutaway per piani (unito da `feature/cutaway-floors`).
-- **Capienze:** detenuti e sentinelle in `ConquerSiege.capacity()`.
+- **Capienze:** detenuti (5 per cella) e sentinelle in `ConquerSiege.capacity()`; prigioni solo al piano terra (P0), nel castello e nel Municipio.
 - **Ospizio:** annesso della Chiesa L2, casa lunga a due piani (4,5 × 2,4 U) nello stile delle case con ballatoio al P1.
 - **Gogna, forca e patibolo:** tre strutture di piazza collocabili, con modelli Blender, nel Lab e nel Builder; in `/crime/` il patibolo è separato dalla forca.
 - **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
