@@ -67,7 +67,8 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 - **C-03 — IMPLEMENTATO SU BRANCH `feature/crime-buildings`:**
   - Gogna (1 × 1 U), forca (2 × 1,5 U) e patibolo (2,5 × 2 U) collocabili come `eventVenue`, con cantiere, costo e modelli Blender `justicePillory` / `justiceGallows` / `justiceScaffold` nel Lab (*Edifici · Giustizia*). In `/crime/` il patibolo è un flag separato dalla forca.
   - **APERTO:** audit del Lab con aggiornamento della baseline.
-- **C-04 — APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
+- **C-04 — AVVIATO SU BRANCH `feature/crime-tribunal-scene`:** tribunale in seduta nel cutaway del Municipio (giudici, cancelliere, prigioniero tra due guardie, pubblico) con costumi di ruolo; persone decorative e provvisorie, sostituibili con `ConquerCourtPeople.setOccupancySource`.
+  - **APERTO:** prigionieri in cella, gogna occupata, giorno di giustizia con il boia (costume già pronto), eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
 - **C-05 — APERTO:** bilanciamento, logiche punitive individuali, effetti del giudizio/giustizia, persistenza unica, serie storiche e indicatori nel Centro di controllo, regressioni browser/end-to-end.
 - **DIPENDENZE:** M0 economia e popolazione vere → contratti funzioni civiche e guardie → routine e ordine pubblico → esiti militari. Sandbox C-00 non anticipa lo stato implementativo di C-01–C-05. [Design, confini e QA](../crime.md).
 

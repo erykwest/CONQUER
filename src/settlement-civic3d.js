@@ -383,6 +383,17 @@
     if(!Array.isArray(s?.functions)||!s.townhallRooms)return floor===0?'council':null;
     return s.functions[floor]||null;
   }
+  // Tribunal layout in the room's local axes, shared by its furniture (furnishTownhallRoom) and
+  // its people (roomSlots), so the two never drift apart: the judges' bench by the back wall, the
+  // bar across the room, the clerk's desk on one side, rows of benches for the public.
+  function tribunalLayout(rect,hearths=[]){
+    const [fx0,fy0,fx1,fy1]=rect,back=fy1,front=fy0;
+    const pad=x=>hearths.some(([hx])=>Math.abs(hx-x)<.6)?.62:.18;
+    const ix0=fx0+pad(fx0+.3),ix1=fx1-pad(fx1-.3),icx=(ix0+ix1)/2,iw=ix1-ix0;
+    const hw=Math.min(.9,iw/2-.35),jy=back-.3,ry=jy-.62,pews=[];
+    for(let y=ry-.32;y>front+.12;y-=.3)pews.push(y);
+    return{ix0,ix1,icx,iw,hw,jy,ry,front,back,pews,judges:[icx-hw*.62,icx,icx+hw*.62],clerk:{x:ix0+.32,y:ry+.3}};
+  }
   function furnishTownhallRoom(role,rect,z,piece,P,hearths=[]){
     const [fx0,fy0,fx1,fy1]=rect,back=fy1,front=fy0,cx=(fx0+fx1)/2;
     // Clear of the hearths standing by the end walls.
@@ -403,15 +414,14 @@
       for(const x of [icx-1.2,icx+1.2])if(x>ix0&&x<ix1)banner(x,P(x<icx?'canvasRed':'canvasBlue'));
     }else if(role==='tribunal'){
       // The judges' bench on a raised step, the clerk's desk, the bar, the benches for the public.
-      const hw=Math.min(.9,iw/2-.35),jy=back-.3;
+      const L=tribunalLayout(rect,hearths),{hw,jy,ry}=L;
       piece('bench',p=>{box(p,icx-hw-.08,jy-.24,icx+hw+.08,back-.02,z,z+.1,P('stoneTrim'),P('stone'));box(p,icx-hw,jy-.24,icx+hw,jy-.13,z+.1,z+.38,P('woodDark'),P('wood'));box(p,icx-hw-.02,jy-.26,icx+hw+.02,jy-.11,z+.38,z+.405,P('canvasBlue'))});
-      for(const x of [icx-hw*.62,icx,icx+hw*.62])piece('judgeChair',p=>{box(p,x-.09,jy-.02,x+.09,jy+.13,z+.1,z+.23,P('woodDark'));box(p,x-.09,jy+.1,x+.09,jy+.14,z+.23,z+(x===icx?.58:.5),P('woodDark'))});
+      for(const x of L.judges)piece('judgeChair',p=>{box(p,x-.09,jy-.02,x+.09,jy+.13,z+.1,z+.23,P('woodDark'));box(p,x-.09,jy+.1,x+.09,jy+.14,z+.23,z+(x===icx?.58:.5),P('woodDark'))});
       piece('scroll',p=>{box(p,icx-.08,jy-.22,icx+.08,jy-.16,z+.405,z+.42,P('canvasWhite'));box(p,icx+.3,jy-.21,icx+.36,jy-.17,z+.405,z+.47,P('iron'))});
-      const ry=jy-.62;
-      piece('clerkDesk',p=>{const x=ix0+.32,y=ry+.3;box(p,x-.05,y-.05,x+.05,y+.05,z,z+.2,P('woodDark'));box(p,x-.22,y-.15,x+.22,y+.15,z+.2,z+.23,P('woodLight'),P('wood'));box(p,x-.12,y-.05,x+.02,y+.06,z+.23,z+.245,P('canvasWhite'))});
-      stool(ix0+.32,ry+.58);
+      piece('clerkDesk',p=>{const {x,y}=L.clerk;box(p,x-.05,y-.05,x+.05,y+.05,z,z+.2,P('woodDark'));box(p,x-.22,y-.15,x+.22,y+.15,z+.2,z+.23,P('woodLight'),P('wood'));box(p,x-.12,y-.05,x+.02,y+.06,z+.23,z+.245,P('canvasWhite'))});
+      stool(L.clerk.x,L.clerk.y+.28);
       piece('bar',p=>{const a=icx-hw-.25,b=icx+hw+.25;box(p,a,ry-.02,b,ry+.02,z+.2,z+.24,P('wood'));for(let x=a;x<=b+1e-6;x+=(b-a)/8)box(p,x-.015,ry-.015,x+.015,ry+.015,z,z+.2,P('woodDark'))});
-      for(let y=ry-.32;y>front+.12;y-=.3)for(const [a,b] of [[ix0+.1,icx-.15],[icx+.15,ix1-.1]])piece('pewBench',p=>box(p,a,y-.06,b,y+.06,z,z+.11,P('wood'),P('woodDark')));
+      for(const y of L.pews)for(const [a,b] of [[ix0+.1,icx-.15],[icx+.15,ix1-.1]])piece('pewBench',p=>box(p,a,y-.06,b,y+.06,z,z+.11,P('wood'),P('woodDark')));
       for(const x of [icx-hw-.35,icx+hw+.35])banner(x,P('canvasBlue'),.4,.75);
     }else if(role==='guard'){
       // Guard room: two tables with stools, the weapon rack and the shield rack, the cots, the chest.
@@ -445,6 +455,28 @@
   }
   // Furnishings of an upper storey, by building and storey: (key, storey, piece, P, rect, z) -> void.
   // Empty by default: the storey shows its plank floor.
+  // People of the room in view of a selected town hall, in its local axes (x, y as the model,
+  // z = feet above the building's ground): the tribunal in session. Seated figures sit .12 low
+  // (the event figures' convention). Public seats are a fixed draw per building.
+  function roomSlots(s){
+    if(s?.type!=='townhall')return[];
+    const key=modelKey(s),spec=INTERIOR[key];if(!spec)return[];
+    const span=floorSpan(s,key);
+    if(townhallRole(s,span.floor)!=='tribunal')return[];
+    const rect=span.floor?spec.upper[span.floor-1].rect:spec.floors[0],z=span.z+FLOOR_Z;
+    const L=tribunalLayout(rect,span.floor?[]:spec.hearths||[]),out=[];
+    const add=(id,role,action,x,y,dz)=>out.push({id,role,action,x,y,z:z+dz});
+    L.judges.forEach((x,i)=>add('judge'+i,'judge',i===1?'preside':'sit',x,L.jy+.05,.1+.23-.12));
+    add('clerk','clerk','write',L.clerk.x,L.clerk.y+.28,.13-.12);
+    add('prisoner','prisoner','bound',L.icx,L.ry+.17,0);
+    add('guard0','guard','stand',L.icx-.32,L.ry+.19,0);
+    add('guard1','guard','stand',L.icx+.32,L.ry+.19,0);
+    let h=2166136261;for(const c of String(s.id))h=Math.imul(h^c.charCodeAt(0),16777619);
+    const rnd=()=>((h=Math.imul(h^(h>>>13),1597334677)>>>0)%1000)/1000;
+    L.pews.forEach((y,r)=>{for(const [a,b] of [[L.ix0+.1,L.icx-.15],[L.icx+.15,L.ix1-.1]])
+      for(let x=a+.2,k=0;x<b-.1;x+=.42,k++)if(rnd()<.45)add('public'+r+'-'+Math.round(x*10)+'-'+k,'public','sit',x,y,.11-.12)});
+    return out;
+  }
   const UPPER_ROOMS={townhall:({storey,s,rect,z,piece,P})=>furnishTownhallRoom(townhallRole(s,storey),rect,z,piece,P)};
   function interiorParts(key,span={floor:0,z:0},s=null){
     let spec=INTERIOR[key];const pal=palette(),keys=DATA().paletteKeys,P=k=>pal[keys.indexOf(k)],out=[];
@@ -609,5 +641,5 @@
     return true;
   }
   window.ConquerCivic3D={modelKey,has,parts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
-    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,lotProps,allLotProps};
+    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,lotProps,allLotProps};
 })();

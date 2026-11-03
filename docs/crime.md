@@ -49,6 +49,20 @@ Il **cutaway per piani** (D-CUT-01, branch `feature/cutaway-floors`, unito qui) 
 - **Guardia:** due tavoli con sgabelli, rastrelliera d'armi, scudi, brande, cassone.
 - **Prigione:** celle lungo la parete di fondo dietro l'inferriata, con paglia, secchio e catene, e il tavolo del carceriere vicino alla porta.
 
+**Tribunale in seduta** (`src/settlement-court-people.js`, `ConquerCourtPeople`). Quando il Municipio selezionato mostra il piano del tribunale nel cutaway, la sala si riempie. Succede dal lunedì al venerdì, dalle 9 alle 17, se la campana d'allarme è ferma.
+
+- **Chi c'è:**
+  - tre giudici in toga rossa con collo d'ermellino e berretto, seduti al banco; quello che presiede alza la mano di tanto in tanto;
+  - il cancelliere in nero che scrive alla sua scrivania;
+  - il prigioniero alla sbarra, in camicia grezza con le mani legate, tra due guardie con la lancia;
+  - il pubblico sulle panche, rado: un'estrazione fissa per edificio.
+- **Posti:** vengono da `ConquerCivic3D.roomSlots`, che usa lo stesso `tribunalLayout` dell'arredo.
+- **Disegno:** le persone sono disegnate a ogni fotogramma con le figure dei popolani, come l'artigiano delle botteghe e le persone degli eventi. Non entrano nella mesh del cutaway.
+- **Natura:** sono decorative e provvisorie, senza residenti né sentenze. Un futuro runtime CRIME può sostituirle con `setOccupancySource`.
+- **Costumi di ruolo:** stanno in `ConquerWardrobe.ROLE_PIECES` e sono `judgeRobe`, `judgeCap`, `clerkGown`, `clerkCap`, `prisonerShirt` e `executionerHood` (quest'ultimo già pronto per il boia). Il guardaroba stagionale non li assegna mai. Nel Lab si trovano sotto *Popolazione · Costumi di ruolo*.
+
+Test: `qa/court-people-regression.cjs`.
+
 Gogna, forca e patibolo riusano il contratto delle `eventVenue` (posa a due clic, cantiere, costo, modello nel catalogo eventi). Nel nuovo Builder compaiono nello strumento **Giustizia**; nel vecchio, tra gli edifici civili. Nel Lab sono nella categoria *Edifici · Giustizia*.
 
 Test: `qa/crime-buildings-regression.cjs`.

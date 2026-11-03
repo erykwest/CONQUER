@@ -6,6 +6,9 @@ on:
       - 'crime/**'
       - 'qa/crime-regression.cjs'
       - 'qa/crime-buildings-regression.cjs'
+      - 'qa/court-people-regression.cjs'
+      - 'src/settlement-court-people.js'
+      - 'src/settlement-wardrobe.js'
       - 'src/settlement-core.js'
       - 'src/settlement-castle-placement.js'
       - 'src/settlement-siege.js'
@@ -40,3 +43,5 @@ jobs:
         run: node qa/crime-regression.cjs
       - name: Test crime buildings and rooms (town hall chambers, almshouse, pillory, gallows)
         run: node qa/crime-buildings-regression.cjs
+      - name: Test the tribunal in session (court people, costumes of office)
+        run: node qa/court-people-regression.cjs
