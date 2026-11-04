@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+Sul branch `fix/remove-fossil-industry-svg` l’Asset Lab usa le voci 3D esistenti per cava e campo taglialegna. Rimossi i relativi SVG storici, le anteprime autonome e i generatori delle rotazioni.
+
 ## Mastio W4 · 3U con più stanze per piano (branch `feature/keep-w4`, da `main` a372f1c, 03/11/2026, NON MAIN)
 
 - **Regole:** `towerTier` = 4 per una torre quadrata in pietra da 3U (`isKeepW4`); solo una per insediamento (`keepW4Available`), mai sottotorre; a fine cantiere diventa il Mastio e prende la sala comune (`syncAutoMastio`). Costo 240 oro / 330 pietra / 75 legno, 18 giorni; garitte ammesse (T3+); 7 merli per lato.
