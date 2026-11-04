@@ -85,7 +85,7 @@
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
     // The portico of a W1 section is an open ground floor: only what lives under arches fits there.
-    if(l===1&&s.type==='built'&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
+    if(l===1&&s.type==='built'&&typeof isBuiltPortico==='function'&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
     // Prisons on the ground floor only (a gate's ground floor is its passage).
     if(fn==='prison')return l===1&&s.type!=='gate';
