@@ -10,6 +10,8 @@ on:
       - 'qa/*combat*'
       - 'qa/*battle*'
       - 'qa/patrol-regression.cjs'
+      - 'src/settlement-alarm-bells.js'
+      - 'qa/alarm-bell-regression.cjs'
       - 'qa/urban-regression.cjs'
       - 'qa/camp-regression.cjs'
       - 'qa/wolves-regression.cjs'
@@ -51,3 +53,4 @@ jobs:
           node qa/keep-entrance-regression.cjs
           node qa/cutaway-floors-regression.cjs
           node qa/save-safety-regression.cjs
+          node qa/alarm-bell-regression.cjs

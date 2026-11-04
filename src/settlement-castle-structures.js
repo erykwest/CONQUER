@@ -573,9 +573,11 @@ function dovecoteTriangles(s){
   }
   return out;
 }
-// The apex flag flies from the lantern's finial when there is one.
+// The apex flag flies from the finial of the lantern or of the belfry when there is one
+// (one roof, one upgrade: settlement-alarm-bells.js APEX_ROOMS).
 function towerApexFlagZ(s){
-  const h=typeof towerDovecote==='function'&&towerDovecote(s)?window.ConquerDovecoteModels?.height||0:0;
+  const h=typeof towerDovecote==='function'&&towerDovecote(s)?window.ConquerDovecoteModels?.height||0
+    :window.ConquerAlarmBells?.towerBell(s)?window.ConquerBelfryModels?.height||0:0;
   return towerVisualTopHeight(s)+h;
 }
 // 2.5D: painted far to near after the roof, back faces skipped (as the hoarding).

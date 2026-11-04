@@ -11,7 +11,7 @@
   const selectedIds=new Set();
   let transitionFrame=0,recallStartedAt=0,alertState='clear';
   const residentMotion=new Map(),residentLastPosition=new Map();
-  let transitLastFrame=0;
+  let transitLastFrame=0,alarmRing=null;
   let combat=null;
   const archerCache=new Map();
   const mobileArcherCache=new WeakMap();
@@ -276,20 +276,46 @@
     return armories.length?buildingDestination(house,resident,origin,armories):null;
   }
   function alarmMode(){return combat?.recallMode||'off'}
+  // The alarm as this household has heard it so far.
+  function heardAlarm(house,now){
+    const mode=alarmMode(),bells=window.ConquerAlarmBells;
+    if(mode==='off'||!alarmRing||!bells||!house)return mode;
+    return bells.heard(alarmRing,house,now);
+  }
+  // One peal per raised alarm, as loud as the bell nearest the camera; without any bell, a signal tone.
+  function ringBells(ring){
+    const audio=window.ConquerSound;if(!audio?.state?.().enabled)return;
+    const nodes=(ring?.plan?.nodes||[]).filter(n=>n.r>0);
+    if(!nodes.length){audio.notify?.();return}
+    let volume=.35;
+    if(typeof s2w==='function'&&typeof canvas!=='undefined'){
+      const c=s2w(canvas.clientWidth/2,canvas.clientHeight/2);
+      const near=Math.min(...nodes.map(n=>Math.max(0,Math.hypot(n.x-c.x,n.y-c.y)-n.r)));
+      volume=Math.max(.25,1-near/30);
+    }
+    void audio.play('bells','effects',volume);
+  }
   function setAlarmMode(mode){
     if(!combat||!['off','green','hall'].includes(mode))return false;
     if(mode==='hall'&&!window.ConquerSiege?.mastio?.()){
       status('A completed Mastio with a Common Hall is required for the red bell.');
       return false;
     }
+    const prior=combat.recallMode||'off';
     combat.recallMode=mode;
     combat.recall=mode!=='off';
+    // The bells carry it house by house (settlement-alarm-bells.js); the release is shouted at once.
+    const bells=window.ConquerAlarmBells;
+    if(mode!==prior)alarmRing=bells?.ring(mode,alarmRing,performance.now())||null;
+    if(mode!=='off'&&mode!==prior)ringBells(alarmRing);
     // Preserve ongoing recruited-men paths when escalating from green to red.
     if(mode==='off')residentMotion.forEach(m=>{if(m.mode==='recruit')m.equipped=false});
     changed();draw();requestCivilianAnimation();
-    status(mode==='green'?'🔔 Green alarm: women and children → safe zones; adult men → closest armory':
+    const pealing=(alarmRing?.plan?.nodes||[]).filter(n=>n.r>0).length;
+    const heardBy=mode==='off'?'':pealing?' · '+pealing+' bell(s) ringing':' · no bell: the alarm spreads by word of mouth';
+    status((mode==='green'?'🔔 Green alarm: women and children → safe zones; adult men → closest armory':
       mode==='hall'?'🔔 Red alarm: women and children → Mastio Common Hall; adult men → closest armory':
-      '🔕 Release: civilians and recalled recruits return to normal routines');
+      '🔕 Release: civilians and recalled recruits return to normal routines')+heardBy);
     return true;
   }
   function recruitedResident(id){
@@ -310,6 +336,8 @@
   }
   function runningCivilianMotions(){
     const now=performance.now();
+    // Bells still carrying the alarm to far households: keep redrawing while paused.
+    if(window.ConquerAlarmBells?.pending(alarmRing,now))return true;
     for(const motion of residentMotion.values()){
       if(now<motion.startedAt+motion.duration)return true;
     }
@@ -359,7 +387,7 @@
   function civilPosition(p,house,resident){
     if(!activeWell())return p;
     const desired=civilianLegalPosition(p,house);
-    const id=resident.id,now=performance.now(),alarm=alarmMode();
+    const id=resident.id,now=performance.now(),alarm=heardAlarm(house,now);
     // Age takes precedence over sex: boys are children, never conscripted.
     const mode=alarm==='off'?'release':
       (resident.age==='adult'&&resident.sex==='male'?'recruit':alarm);
@@ -1765,7 +1793,7 @@
     },
     wolfSpawnedFor:()=>combat?.wolvesSpawnedFor||null,
     recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
-    alarmMode,setAlarmMode,recruitedResident,
+    alarmMode,setAlarmMode,recruitedResident,heardAlarm,alarmRing:()=>alarmRing,
     // Read-only summary for UI shells (UI v2 Difendi): no side effects.
     uiState:()=>{
       const allies=combat?.units.filter(u=>!u.defeated)||[],hostiles=combat?.enemy.filter(e=>!e.defeated&&!e.neutral)||[];

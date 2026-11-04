@@ -277,7 +277,8 @@
         if(s.type==='built')addBuilt(m,s);
         m.tag='body';
         // Room exterior elements (settlement-room-exterior.js), as the hoarding: sides a shade darker.
-        for(const t of window.ConquerRoomExterior?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
+        // Timber towers carry theirs in their Blender mesh (settlement-wood3d.js).
+        if(!isWoodTower(s))for(const t of window.ConquerRoomExterior?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         for(const b of wideHallButtresses(s))addButtress(m,b);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);

@@ -12,15 +12,31 @@
 //   construction site  nothing: rooms are only assigned once the building is finished
 //   collapse    roomExteriorCollapseParts(): the element falls with its building, or alone when broken
 // Mounts: 'face' (corbelled out of the exterior face of a built section, at the floor of its room)
-// is the one implemented; 'roof' and 'eave' are reserved for the dovecote and the cistern.
+// and 'roof' (on the apex or the middle of the ridge of a tower's pitched roof); 'eave' is reserved
+// for the cistern.
+// Two kinds of entry: a room function (key = the function, one element per room that has it) and a
+// structure upgrade ({upgrade:{variant,value}}, one element per structure whose variant has that
+// value and whose `active(s)` rule holds). Elements carry `index`: the room slot, or 'v:'+key.
 const ROOM_EXTERIOR=Object.freeze({
   // Garderobe: a stone box on corbels, the chute down the wall. One per room, upper floor only.
-  latrine:Object.freeze({model:'garderobe',source:'ConquerGarderobeModels',mount:'face',breakable:Object.freeze({hp:40,material:'stone'})})
+  latrine:Object.freeze({model:'garderobe',source:'ConquerGarderobeModels',mount:'face',breakable:Object.freeze({hp:40,material:'stone'})}),
+  // Alarm-bell belfry: the `bell` upgrade of a T1-T2 pitched-roof tower (rules in settlement-alarm-bells.js).
+  bell:Object.freeze({upgrade:Object.freeze({variant:'bell',value:'bell'}),model:'belfry',source:'ConquerBelfryModels',mount:'roof',
+    active:s=>!!window.ConquerAlarmBells?.towerBell(s)})
 });
+const ROOM_EXTERIOR_UPGRADES=Object.entries(ROOM_EXTERIOR).filter(([,spec])=>spec.upgrade);
 const ROOM_EXTERIOR_END_CLEAR=.3;          // U kept free at each end of the face (tower snaps, corners)
 const ROOM_EXTERIOR_HOARDING_REACH=.5;      // how far a tower/gate hoarding or a wall gallery sticks out
 
-function roomExteriorSpec(fn){return ROOM_EXTERIOR[fn]||null}
+// Spec of a room function (upgrade entries are not room functions).
+function roomExteriorSpec(fn){const spec=ROOM_EXTERIOR[fn];return spec&&!spec.upgrade?spec:null}
+// Upgrade entries switched on for s: [[key,spec]].
+function roomExteriorUpgrades(s){
+  if(!s||typeof structureVariant!=='function')return[];
+  return ROOM_EXTERIOR_UPGRADES.filter(([,spec])=>structureVariant(s,spec.upgrade.variant)===spec.upgrade.value&&(!spec.active||spec.active(s)));
+}
+// Does s carry any exterior element (room or upgrade)? Renderers and caches ask this first.
+function hasRoomExterior(s){return !!s&&(!!s.functions?.some(roomExteriorSpec)||roomExteriorUpgrades(s).length>0)}
 function roomExteriorModel(spec){
   const data=spec&&window[spec.source],model=data?.models?.[spec.model];
   return model?{data,model}:null;
@@ -30,9 +46,13 @@ function roomExteriorFloorZ(s,index){
   const floors=typeof cutawayFloorLevels==='function'?cutawayFloorLevels(s):[];
   return floors[index+functionFloorOffset(s)]?.z??null;
 }
-// Plan footprint of an element: the box out of the face, with a small margin.
+// Plan footprint of an element: the box out of the face (or centred on a roof anchor), with a margin.
 function roomExteriorRect(e,margin=.02){
   const h=e.width/2+margin,out=e.projection+margin*2,{anchor:a,tangent:t,normal:n}=e;
+  if(e.spec?.mount==='roof'){
+    const d=out/2,c=(u,v)=>({x:a.x+t.x*u+n.x*v,y:a.y+t.y*u+n.y*v});
+    return[c(-h,-d),c(h,-d),c(h,d),c(-h,d)];
+  }
   return[
     {x:a.x-t.x*h,y:a.y-t.y*h},{x:a.x+t.x*h,y:a.y+t.y*h},
     {x:a.x+t.x*h+n.x*out,y:a.y+t.y*h+n.y*out},{x:a.x-t.x*h+n.x*out,y:a.y-t.y*h+n.y*out}
@@ -69,6 +89,37 @@ function roomExteriorClear(e,obstacles){
 // 'face': the exterior face of a built section (wallExteriorSide, the "Exterior side / windows"
 // control), centred on one arrow-slit cell of that floor (the slit gives way to it), the cell
 // nearest the middle first, clear of the face ends and of anything already outside.
+// Plan extent of a model (width along +x, depth along +y), cached per model.
+const roomExteriorExtent=new WeakMap();
+function roomExteriorModelExtent(model){
+  let x=roomExteriorExtent.get(model);if(x)return x;
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity,z1=-Infinity;
+  for(const part of Object.values(model.parts))for(let i=0;i<part.p.length;i+=3){
+    x0=Math.min(x0,part.p[i]);x1=Math.max(x1,part.p[i]);y0=Math.min(y0,part.p[i+1]);y1=Math.max(y1,part.p[i+1]);z1=Math.max(z1,part.p[i+2]);
+  }
+  x={width:x1-x0,depth:y1-y0,height:z1};roomExteriorExtent.set(model,x);return x;
+}
+// 'roof': on the apex of a pyramid or round roof, on the middle of the ridge of a gable or hip roof,
+// on top of a timber tower's Blender roof; turned with the tower (a round roof keeps angle 0).
+function roomExteriorRoofBase(s){
+  if(s?.type!=='tower')return null;
+  if(isWoodTower(s)){
+    const key=window.ConquerWood3D?.modelKey(s),parts=key&&window.ConquerWood3D.parts(key);if(!parts)return null;
+    let z=0;for(const part of parts)if(['roof','top'].includes(part.name))for(let i=2;i<part.v.length;i+=3)z=Math.max(z,part.v[i]);
+    return{p:{x:s.x,y:s.y},z,angle:s.angle||0};
+  }
+  if(towerRoofStyle(s)!=='pitched')return null;
+  const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
+  if(g)return{p:{x:(g.ridgeA.x+g.ridgeB.x)/2,y:(g.ridgeA.y+g.ridgeB.y)/2},z:g.ridgeH,angle:s.angle||0};
+  return{p:towerRoofApex(s),z:towerVisualTopHeight(s),angle:s.shape==='round'?0:(s.angle||0)};
+}
+function roomExteriorUpgradePlacement(s,key,spec){
+  const m=roomExteriorModel(spec);if(!m||!s||underConstruction(s)||spec.mount!=='roof')return null;
+  const base=roomExteriorRoofBase(s);if(!base)return null;
+  const ext=roomExteriorModelExtent(m.model),ca=Math.cos(base.angle),sa=Math.sin(base.angle);
+  return{fn:key,index:'v:'+key,spec,side:0,off:0,z:base.z,width:ext.width,projection:ext.depth,height:ext.height,
+    tangent:{x:ca,y:sa},normal:{x:-sa,y:ca},anchor:base.p};
+}
 function roomExteriorPlacement(s,index,fn){
   const spec=roomExteriorSpec(fn),m=roomExteriorModel(spec);
   if(!spec||!m||!s||underConstruction(s))return null;
@@ -97,9 +148,14 @@ function roomExteriorPlacement(s,index,fn){
 // Placed elements of a structure (rooms whose function has an exterior element and fits).
 // Broken ones are left out unless asked for.
 function roomExteriorElements(s,{broken=false}={}){
-  if(!s||!Array.isArray(s.functions)||underConstruction(s))return[];
+  if(!s||underConstruction(s))return[];
   const out=[];
-  s.functions.forEach((fn,i)=>{
+  for(const [key,spec] of roomExteriorUpgrades(s)){
+    const e=roomExteriorUpgradePlacement(s,key,spec);if(!e)continue;
+    e.broken=roomExteriorBroken(s,e.index);
+    if(broken||!e.broken)out.push(e);
+  }
+  (Array.isArray(s.functions)?s.functions:[]).forEach((fn,i)=>{
     if(!roomExteriorSpec(fn))return;
     const e=roomExteriorPlacement(s,i,fn);if(!e)return;
     e.broken=roomExteriorBroken(s,i);
@@ -130,7 +186,7 @@ function roomExteriorTriangles(s,elements=roomExteriorElements(s)){
 // 2.5D: the same triangles, painted far to near, back faces skipped (as drawPointHoarding).
 function drawRoomExterior(s){
   const elements=roomExteriorElements(s);if(!elements.length)return;
-  const tris=roomExteriorTriangles(s,elements),top=Math.max(...elements.map(e=>e.z+.75));
+  const tris=roomExteriorTriangles(s,elements),top=Math.max(...elements.map(e=>e.z+(e.height||.75)));
   const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
   withStructureDetailOcclusion(s,top,()=>{
     for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>a.d-b.d)){
@@ -142,7 +198,9 @@ function drawRoomExterior(s){
   });
 }
 function drawRoomExteriors(){
-  const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)&&s.functions?.some(roomExteriorSpec))
+  // Timber towers carry theirs in the Blender mesh of settlement-wood3d.js; a built section in
+  // cutaway draws its own inside drawCutawayStructure, a tower in cutaway keeps its roof and roof element.
+  const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!(structureCutaway(s)&&s.type==='built')&&!isWoodTower(s)&&hasRoomExterior(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s));
 }
@@ -170,6 +228,9 @@ function roomExteriorHp(s,e){
 // Collapse footprint and heights of an element: [{parts:[poly], z0, z1, material}].
 function roomExteriorCollapseParts(e){
   const m=roomExteriorModel(e.spec)?.model;if(!m)return null;
+  // A roof element (the belfry) is a timber frame whatever the tower is built of.
+  if(e.spec.mount==='roof')return{parts:[roomExteriorRect(e,0)],z0:e.z-(roomExteriorModel(e.spec).data.sink||0),z1:e.z+e.height,
+    material:e.spec.breakable?.material||'wood'};
   return{parts:[roomExteriorRect(e,0)],z0:e.z+m.bottom,z1:e.z+.72,material:e.spec.breakable?.material||'stone'};
 }
 // The room is repaired with a new box: full health, drawn again.
@@ -179,6 +240,7 @@ function restoreRoomExterior(s,index){
   if(!Object.keys(s.roomExteriorHp).length)delete s.roomExteriorHp;
   return true;
 }
-window.ConquerRoomExterior={ROOM_EXTERIOR,spec:roomExteriorSpec,placement:roomExteriorPlacement,elements:roomExteriorElements,
+window.ConquerRoomExterior={ROOM_EXTERIOR,spec:roomExteriorSpec,upgrades:roomExteriorUpgrades,has:hasRoomExterior,roofBase:roomExteriorRoofBase,
+  placement:roomExteriorPlacement,elements:roomExteriorElements,
   triangles:roomExteriorTriangles,draw:drawRoomExterior,drawAll:drawRoomExteriors,takesWindow:roomExteriorTakesWindow,
   at:roomExteriorAt,hp:roomExteriorHp,broken:roomExteriorBroken,collapseParts:roomExteriorCollapseParts,repair:restoreRoomExterior};
