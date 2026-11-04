@@ -225,7 +225,7 @@ console.log('PASS quay: shore or water, whitezone, sea face, piers branch off it
 for(const f of ['heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js','settlement-fleet.js'])vm.runInContext(read('src/'+f),ctx);
 const F=window.ConquerFleet,M2=window.ConquerShipModels;
 State.structures.length=0;State.structures.push(s);
-const one=F.spawn({key:'cocca',allegiance:'merchant'}),two=F.spawn({key:'barca',allegiance:'player'}),three=F.spawn({key:'nave',allegiance:'foreign',realm:'azure'});
+const one=F.spawn({key:'cocca',allegiance:'merchant'}),two=F.spawn({key:'barca',allegiance:'foreign'}),three=F.spawn({key:'nave',allegiance:'foreign',realm:'azure'});
 assert.equal(one.berth.side,'left','first ship at the left berth');
 assert.equal(two.berth.side,'right','second at the right berth');
 assert.equal(three.berth,null,'third at anchor: no berth left');
@@ -310,10 +310,18 @@ const d0=Math.hypot(foe.pose.x-war.pose.x,foe.pose.y-war.pose.y);
 for(let k=0;k<200;k++)F.commandStep(.1);
 assert.ok(Math.hypot(foe.pose.x-war.pose.x,foe.pose.y-war.pose.y)<d0-5,'it closes on the enemy');
 war.cmd=null;F.selectAt(war.pose);
-assert.match(F.orderAt(window.ConquerPier.moorings(s)[0].edge),/ormeggiare/,'a click on the pier sends it to a berth');
+assert.match(F.orderAt(window.ConquerPier.moorings(s)[0].edge),/commerciale/,'warships do not tie up at a commercial pier');
+assert.match(F.moorSelected(),/Nessun molo militare/,'Attracca needs a military pier');
+s.use='military';
+assert.match(F.orderAt(window.ConquerPier.moorings(s)[0].edge),/ormeggiare/,'a click on a military pier sends it to a berth');
+war.cmd=null;
+assert.match(F.moorSelected(),/attraccare/,'Attracca sends it to the nearest free military berth');
 for(let k=0;k<1500&&war.cmd;k++)F.commandStep(.1);
 assert.ok(war.berth?.pierId===s.id&&!war.away,'tied up at the pier');
 F.clear();F.clearSelection();
+{const w2=F.spawn({key:'caravella',allegiance:'player',realm:'player'}),m2=F.spawn({key:'cargo',allegiance:'merchant'});
+assert.ok(w2.berth?.pierId===s.id&&!m2.berth,'a military pier takes warships, merchants ride at anchor');}
+delete s.use;F.clear();
 console.log('PASS warship commands: select, sail, anchor saved, attack, moor');
 
 // Shipyard: a pier with yard 1|2 and a slipway, no berths; L1 builds the small craft only,

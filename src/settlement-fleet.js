@@ -51,12 +51,15 @@
   }
   // pier / quay: moor there only; anchor: true rides at anchor even with berths free.
   // Pier berths are filled first, then the slots along the quays.
+  const militaryPier=p=>p?.use==='military';
   function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null,noAnchor=false,fisher=null,convoy=null}={}){
     if(!S()?.model?.(key))return null;
     let berth=null,pose=null;
-    if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&!s.yard&&(!pier||s.id===pier)))
+    // Warships tie up at military piers, merchants and fishing boats at commercial piers and quays.
+    const mil=allegiance==='player'&&!fisher&&!convoy;
+    if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&!s.yard&&(pier?s.id===pier:militaryPier(s)===mil)))
       for(const side of ['left','right'])if(!berth&&!occupied(p.id,side)){berth={pierId:p.id,side};pose=berthPose(p,side,key)}
-    if(!berth&&!anchor&&!pier)for(const q of (State.structures||[]).filter(s=>s.type==='quay'&&(!quay||s.id===quay)))
+    if(!berth&&!anchor&&!pier&&!mil)for(const q of (State.structures||[]).filter(s=>s.type==='quay'&&(!quay||s.id===quay)))
       for(const b of window.ConquerQuay?.berths(q)||[])if(!berth&&quayFree(b,key)){berth={quayId:q.id,side:b.side,along:b.along,key:b.key};pose=quayBerthPose(b,key)}
     if(!pose&&noAnchor)return null;
     pose||=anchorPose(key,ships.length);
@@ -163,7 +166,8 @@
     }
     const pier=(State.structures||[]).find(o=>o.type==='pier'&&!o.yard&&window.ConquerPier.footprint(o)&&pip(p,window.ConquerPier.footprint(o)));
     if(pier){
-      let n=0;for(const s of list){const side=['left','right'].find(sd=>!ships.some(o=>o!==s&&o.berth?.pierId===pier.id&&o.berth.side===sd&&o.cmd?.kind!=='moor')&&!ships.some(o=>o!==s&&o.cmd?.kind==='moor'&&o.cmd.pier===pier.id&&o.cmd.side===sd));if(!side)break;setCommand(s,{kind:'moor',pier:pier.id,side});n++}
+      if(!militaryPier(pier))return'Molo commerciale: le navi militari attraccano ai moli militari';
+      let n=0;for(const s of list){const side=freeSide(pier,s);if(!side)break;setCommand(s,{kind:'moor',pier:pier.id,side});n++}
       return n?n+(n>1?' navi vanno':' nave va')+' a ormeggiare al molo':'Attracchi del molo occupati';
     }
     if(!onSea(p))return'Le navi vanno solo per mare';
@@ -172,6 +176,20 @@
     const h=Math.atan2(p.y-c.y,p.x-c.x),nx=-Math.sin(h),ny=Math.cos(h);
     list.forEach((s,i)=>{const k=(i-(list.length-1)/2)*(S().model(s.key).B+3);setCommand(s,{kind:'move',goal:{x:p.x+nx*k,y:p.y+ny*k}})});
     return list.length+(list.length>1?' navi salpano':' nave salpa');
+  }
+  const freeSide=(pier,s)=>['left','right'].find(sd=>!ships.some(o=>o!==s&&o.berth?.pierId===pier.id&&o.berth.side===sd&&o.cmd?.kind!=='moor')&&!ships.some(o=>o!==s&&o.cmd?.kind==='moor'&&o.cmd.pier===pier.id&&o.cmd.side===sd));
+  // "Attracca": each selected warship goes to the nearest military pier with a free berth.
+  function moorSelected(){
+    const list=selectedShips();if(!list.length)return'Seleziona una nave militare';
+    const piers=(State.structures||[]).filter(o=>o.type==='pier'&&!o.yard&&militaryPier(o)&&!(typeof underConstruction==='function'&&underConstruction(o)));
+    if(!piers.length)return'Nessun molo militare: impostane uno dal pannello del molo';
+    let n=0;
+    for(const s of list){
+      if(s.berth)continue;
+      const opts=piers.map(p=>({p,side:freeSide(p,s)})).filter(o=>o.side).sort((a,b)=>Math.hypot(a.p.x-s.pose.x,a.p.y-s.pose.y)-Math.hypot(b.p.x-s.pose.x,b.p.y-s.pose.y));
+      if(!opts.length)break;setCommand(s,{kind:'moor',pier:opts[0].p.id,side:opts[0].side});n++;
+    }
+    return n?n+(n>1?' navi vanno':' nave va')+' ad attraccare':'Attracchi militari occupati';
   }
   function setCommand(s,cmd){
     s.cmd=cmd;s.nav=null;s.cmdPose={...s.pose};
@@ -326,5 +344,5 @@
       if(out)out.textContent=count();
     });
   }
-  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,persist,restore,battle,selectAt,selectInBox,clearSelection,selectedShips,orderAt,setCommand,commandStep:commands,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose,devPierHtml,bindDevPier});
+  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,persist,restore,battle,selectAt,selectInBox,clearSelection,selectedShips,orderAt,moorSelected,militaryPier,setCommand,commandStep:commands,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose,devPierHtml,bindDevPier});
 })();

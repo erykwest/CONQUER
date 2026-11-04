@@ -16,7 +16,7 @@
   const workCentre=s=>s.type==='quay'?{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2}:{x:s.x,y:s.y};
   function berthCount(works){
     let n=0;
-    for(const w of works)n+=w.type==='pier'?(w.yard?0:2):(window.ConquerQuay?.berths(w)||[]).length;
+    for(const w of works)n+=w.type==='pier'?(w.yard||w.use==='military'?0:2):(window.ConquerQuay?.berths(w)||[]).length;
     // Ships already moored that are not fishing boats hold their berths.
     return Math.max(0,n-(window.ConquerFleet?.ships||[]).filter(s=>s.berth&&!s.fisher).length);
   }
