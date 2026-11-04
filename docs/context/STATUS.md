@@ -1,5 +1,16 @@
 # Livello 2 — Stato tecnico e prove
 
+## Scuderia militare (branch `feature/military-stables`, con `main` fdee478, 04/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH (estende `stables`, nessun nuovo tipo di stanza; proposta approvata dall'utente il 04/11 senza rimonta né cicli di foraggio):**
+  - **Capienza** (`settlement-siege.js` `stableUnits`): una stalla in torre resta un blocco di poste da 5 cavalli. In una sezione costruita le poste corrono lungo la stanza, 5 cavalli per U, il doppio nella sala larga (sezione 2U: 10, 4U: 20, sala larga 2U: 20). Il limite dei cavalieri (`min(stanze nobili, cavalli)`) cresce di conseguenza. Regola delle stanze invariata: solo piano terra, mai nelle porte.
+  - **Assedio:** i depositi del cerchio (`circleDepots`) hanno la stessa capienza, quindi una stalla catturata perde i cavalli che contiene. Quando il cibo finisce si macellano i cavalli di riserva (quelli che nessun cavaliere monta), quanti ne servono per coprire l'ammanco, 20 razioni ciascuno (`slaughterHorses`). Contatore `horsesSlaughtered` nel salvataggio e avviso nel riepilogo logistico.
+  - **Corrieri:** con un cavallo di riserva la risposta al messaggero della provincia riparte su un cavallo fresco, 1,5× più veloce (`by:'horse'` nella storia); senza, al passo del messaggero. Il colombo viaggiatore resta più veloce di entrambi.
+  - **Arredo:** nelle stanze lunghe delle sezioni costruite c'è una fila di poste lungo la parete lunga, quante ne entrano; selle, mangiatoia, fieno, secchi e barili completano la stanza. Nessun pezzo Blender nuovo.
+- **Asset Lab:** varianti `Scuderia militare · sezione L1` e `Scuderia militare · sala larga`. Audit: 16 render, 0 falliti; cutaway rivisto nel Lab con `ConquerAssetAudit.inspect`. Baseline aggiornata per queste voci.
+- **QA:** nuova `qa/military-stables-regression.cjs` (capienza, depositi del cerchio, macellazione, corriere a cavallo), aggiunta a `combat-regression.yml`. La guardia di `qa/diplomacy-regression.cjs` sulla capienza delle stalle è aggiornata alla nuova regola. 125/125 `qa/*.cjs` non di performance PASS in locale.
+- **Non verificato:** una partita d'assedio vera con la macellazione; il reclutamento dei cavalieri continua a leggere la capienza delle stalle, non lo stock dei cavalli (comportamento preesistente, vedi BACKLOG).
+
 ## Colombaia nelle torri a falde (branch `feature/colombaia`, da `main` 89dd465, 04/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** nuova funzione di stanza `dovecote` (Colombaia) in `FUNCTION_CATALOG`. `ConquerSiege.allowed` la ammette solo all'**ultimo piano** di una torre in pietra **T2/T3** (quadrata, tonda o a D) **L2–L3** con `roofStyle:'pitched'` (`towerDovecoteAllowed` in `settlement-core.js`); niente T1, semitorri, legno, porte, sezioni, cime crollate o cantieri. Se il tetto torna merlato o la torre sale di livello, `sanitizeRooms` toglie la stanza. Occupa l'unica stanza sotto il tetto: Falconiera e Campana d'allarme, pensate per lo stesso posto, la escluderanno.

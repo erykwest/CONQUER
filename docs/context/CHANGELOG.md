@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-04 — Scuderia militare (branch `feature/military-stables`)
+
+- `stables` nelle sezioni costruite: 5 cavalli per U (doppio nella sala larga), poste in fila nel cutaway. Una stalla catturata perde i cavalli; senza cibo si macellano quelli di riserva. Le risposte ai messaggeri ripartono a cavallo, 1,5× più veloci.
+- Nuova `qa/military-stables-regression.cjs`; due varianti nel Lab con la loro baseline.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è l'estensione di una stanza esistente nella direzione già decisa, senza nuovi contratti.
+
 ## 2026-11-04 — Colombaia nelle torri a falde (branch `feature/colombaia`)
 
 - Nuova stanza `dovecote` (Colombaia): ultimo piano di torri in pietra T2/T3 L2–L3 con tetto a falde. Lettere per colombo viaggiatore 4× più veloci verso la torre-colombaia, risposta immediata senza corriere di ritorno.
