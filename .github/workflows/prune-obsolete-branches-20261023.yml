@@ -1,10 +1,6 @@
 name: One-time safe cleanup of obsolete remote branches (2026-11-03)
 
-# User-authorized consolidation: obsolete docs governance branch, head 9980456.
-# Governance tree at 819ad61 equals merged PR #74 squash f739e51 (ignoring CRLF).
-# Sole post-PR commit is the initial CANS proposal, covered by canonical docs/CANS-ARCHITECTURE.md.
-# Canonical CANS spec 9ad79c5 and isolated skeleton f603d51 are already on main.
-# Context guard PASS; all 11 CANS logical regression cases PASS on main 89dd465.
+# Remove exact branch heads already merged in PRs #140, #141 and #145.
 # Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
@@ -91,7 +87,9 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          docs/context-sync-pr-governance-20261021|9980456a0be9fc323ae5e665599d55f7843ca59c|replacement:74
+          feature/kitchen-built-only|54746db8cc552ff08c28a6b1044e7e82c0545138|140
+          feature/houses-blender-l1|45c2544c980dd4402d470b1ac69175f6a79e8376|141
+          feature/houses-blender-l4|fd0d53f85214484c7761424d28f2dbbf0f2677b6|145
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))
