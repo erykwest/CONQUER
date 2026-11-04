@@ -1,5 +1,20 @@
 # Livello 2 — Stato tecnico e prove
 
+## Campana d'allarme (branch `feature/alarm-bell`, con `main` 1b46975, 04/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:**
+  - **Allarme fisico** (`src/settlement-alarm-bells.js`, `ConquerAlarmBells`): l'allarme del villaggio (`ConquerCombat.setAlarmMode`) non arriva più a tutti nello stesso istante. Parte dal posto di comando (Mastio, poi Municipio, chiesa, prima campana, pozzo). Ogni campana suona nel suo raggio e passa l'allarme alle campane che vi rientrano (Dijkstra sulla catena). Una casa nel raggio lo sente in 0,4 s, una campana risponde in 0,6 s; fuori da ogni raggio la notizia va a voce, 1,5 s più 0,15 s per U, mai oltre 10 s. Le campane non si sommano: ogni casa sente la prima. Il piano di suono è un'istantanea presa quando si dà l'allarme.
+  - **Campane:**
+    - **Chiesa** e **Municipio**, incorporate, con raggio secondo il livello civico (chiesa 12/14/16 U, Municipio 10/12/14 U).
+    - **Upgrade `bell`** delle torri T1–T2 a falde, in pietra o in legno (anche la vedetta), con raggio 10/13/16 U secondo il livello.
+    - Una torre distrutta, decapitata o col tetto bruciato non ha campana.
+    - Un tetto, un upgrade: la campana esclude Colombaia e Falconiera (`APEX_ROOMS`), come deciso dall'utente il 04/11.
+  - **Comandi:** scelta «bell» nel pannello della torre (disabilitata dove non è ammessa), fatto «raggio della campana».
+  - **Campanile:** modello Blender `tools/blender/build_belfry.py` → `src/assets/belfry-models.js`, montato con **`ROOM_EXTERIOR`** (voce di upgrade `bell`, `mount:'roof'`, estensione di D-ROOM-EXT-01), non con un renderer proprio. Lo disegnano 2.5D, castle 3D, World 3D e legno 3D. La bandiera dell'apice sventola dal pinnacolo del campanile.
+- **Asset Lab:** 6 varianti «+ campana» nella galleria delle torri (pietra quadrata L1, rotonda L2, quadrata a due falde, a D media, vedetta e media di legno) e il modello `ConquerBelfryModels:belfry` in «Edifici · Elementi esterni delle stanze». Audit: 52 render, 0 falliti; fogli rivisti, campanile visibile in gioco, in 3D, nei danni e nel cutaway. Baseline aggiornata per queste voci.
+- **QA:** `qa/alarm-bell-regression.cjs` PASS: dove entra la campana e i raggi, campane valide, origine dell'allarme, catena e passaparola, nessuna somma, torre distrutta che spezza la catena, ritardo per casa (il rosso dopo il verde), collegamento al combat. Le altre regressioni sono nel riepilogo della PR.
+- **Non verificato:** l'allarme sentito casa per casa in una partita vera (verificato solo da test).
+
 ## Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`, da `main` a692ce5, 04/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:**

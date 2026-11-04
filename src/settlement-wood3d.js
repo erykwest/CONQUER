@@ -170,8 +170,9 @@
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0,sx:d.w/1,sy:d.h/1.5},ground);
     }else{
       const names=parts(key).map(p=>p.name),open=cutaway(s)?openSides(s):null;
-      // The alarm-bell belfry takes the roof top: its finial replaces the flag pole.
-      const belfry=typeof belfryTriangles==='function'?belfryTriangles(s):[];
+      // Room exterior elements (settlement-room-exterior.js): the alarm-bell belfry takes the roof
+      // top and its finial replaces the flag pole.
+      const belfry=window.ConquerRoomExterior?.triangles(s)||[];
       const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag'));
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
       for(const t of belfry){for(const q of t.pts)mesh.pos.push(q.p.x,q.p.y,ground+q.z);mesh.col.push(t.hex)}

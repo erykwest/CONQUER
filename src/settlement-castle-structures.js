@@ -559,45 +559,9 @@ function drawPointHoarding(s){
     pathPolygon([a,b,c],t.hex,t.hex,.6);
   }
 }
-// Alarm-bell belfry (bell variant, settlement-alarm-bells.js) on the roof of a T1-T2 tower: the
-// Blender model of src/assets/belfry-models.js turned with the tower, its saddle sunk into the
-// slopes. On a pyramid it stands on the apex, on a gable or hip roof on the middle of the ridge,
-// on a timber tower on top of its Blender roof. z is above the tower's ground, as the hoarding.
-function towerBelfryBase(s){
-  if(!window.ConquerAlarmBells?.towerBell(s)||underConstruction(s))return null;
-  if(isWoodTower(s)){
-    const key=window.ConquerWood3D?.modelKey(s),parts=key&&window.ConquerWood3D.parts(key);if(!parts)return null;
-    let z=0;for(const part of parts)if(['roof','top'].includes(part.name))for(let i=2;i<part.v.length;i+=3)z=Math.max(z,part.v[i]);
-    return{p:{x:s.x,y:s.y},z,angle:s.angle||0};
-  }
-  const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
-  if(g)return{p:{x:(g.ridgeA.x+g.ridgeB.x)/2,y:(g.ridgeA.y+g.ridgeB.y)/2},z:g.ridgeH,angle:s.angle||0};
-  return{p:towerRoofApex(s),z:towerVisualTopHeight(s),angle:s.shape==='round'?0:(s.angle||0)};
-}
-function belfryTriangles(s,base=towerBelfryBase(s)){
-  const data=window.ConquerBelfryModels;if(!data||!base)return[];
-  const ca=Math.cos(base.angle),sa=Math.sin(base.angle),pal=data.palette,keys=data.paletteKeys,out=[];
-  const color=ci=>keys[ci].startsWith('roof')?winterSnowColor(pal[ci],ci%2?WINTER_SNOW_A:WINTER_SNOW_B):pal[ci];
-  for(const part of Object.values(data.models.belfry.parts)){
-    const p=part.p,ix=part.i;
-    for(let t=0;t<part.c.length;t++)out.push({pts:[0,1,2].map(k=>{const j=ix[t*3+k]*3;
-      return{p:{x:base.p.x+p[j]*ca-p[j+1]*sa,y:base.p.y+p[j]*sa+p[j+1]*ca},z:base.z+p[j+2]}}),hex:color(part.c[t]),key:keys[part.c[t]]});
-  }
-  return out;
-}
 // The apex flag flies from the belfry's finial when there is one.
 function towerApexFlagZ(s){
   return towerVisualTopHeight(s)+(window.ConquerAlarmBells?.towerBell(s)?window.ConquerBelfryModels?.height||0:0);
-}
-// 2.5D: painted far to near after the roof, back faces skipped (as the hoarding).
-function drawBelfry(s){
-  const tris=belfryTriangles(s);if(!tris.length)return;
-  const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
-  for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>a.d-b.d)){
-    const [a,b,c]=t.pts.map(q=>w2s(q.p,q.z));
-    if((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)continue;
-    pathPolygon([a,b,c],t.hex,t.hex,.6);
-  }
 }
 function drawMachicolationFloor(s){
   const spec=machicolationFloorPolygon(s);if(!spec)return;
@@ -1126,7 +1090,6 @@ function drawTowerRoof(s){
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
   withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>{
     if(s.shape==='round'||s.shape==='dee')drawRoundTowerRoof(s);else drawSquareTowerRoof(s);
-    drawBelfry(s);
   }));
 }
 function drawTowerRoofs(){
