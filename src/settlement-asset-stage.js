@@ -33,7 +33,9 @@
       ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],
       // Infirmary wards (W1 section on both floors, W2 hall): the cutaway shows the furnished rooms.
       ['Mura',['Infermeria · sezione L2',{type:'built',tier:2,level:2,functions:['infirmary','infirmary']}]],
-      ['Mura',['Infermeria · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['infirmary']}]],...G.gates.map(r=>['Porte',r])]
+      ['Mura',['Infermeria · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['infirmary']}]],
+      // Room exterior element (settlement-room-exterior.js): the garderobe of an upper-floor latrine.
+      ['Mura',['Sezione costruita L2 + latrina',{type:'built',tier:2,level:2,functions:[null,'latrine']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}

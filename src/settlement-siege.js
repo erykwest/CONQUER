@@ -36,8 +36,14 @@
     stables:'horses',treasury:'gold'
   });
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
+  // Garrison hygiene: the courtyard and chamber pots serve a small garrison; each latrine serves
+  // 16 more (32 in a large room). An unserved garrison loses hygiene down to a floor of 40; below
+  // 50 up to a tenth of the archers fall sick and leave their posts. A secondary need, not a gate.
+  const SANITATION_FREE=24,LATRINE_SOLDIERS=16,HYGIENE_FLOOR=40,SICK_BELOW=50,SICK_MAX=.1;
+  const ROOM_EXTERIOR_REPAIR=Object.freeze({stone:6,gold:2});
+  const within=(v,a,b)=>Math.max(a,Math.min(b,v));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
-    lastDay:State.clock.day,starvationDays:0,ruins:[],earthworks:[],
+    lastDay:State.clock.day,starvationDays:0,hygiene:100,ruins:[],earthworks:[],
     circle:{captures:[],capturedRoomIds:[]}}}
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
@@ -51,6 +57,7 @@
     if(!Array.isArray(x.circle.capturedRoomIds))x.circle.capturedRoomIds=[];
     if(!Number.isFinite(x.lastDay))x.lastDay=State.clock.day;
     if(!Number.isFinite(x.starvationDays))x.starvationDays=0;
+    x.hygiene=Number.isFinite(x.hygiene)?within(x.hygiene,0,100):100;
     return x;
   }
   function restore(raw){
@@ -59,7 +66,7 @@
     started.clear();heapCache.clear();rubbleCache.clear();stumpCache.clear();crownCache.clear();
     State.siege=raw&&typeof raw==='object'?{
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
-      starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
+      starvationDays:Number(raw.starvationDays)||0,hygiene:Number.isFinite(Number(raw.hygiene))?Number(raw.hygiene):100,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
       earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[],
       circle:{
         // Never discard an ACTIVE conquest when loading a long campaign.
@@ -91,6 +98,8 @@
     if(fn==='kitchen')return l===1&&s.type==='built';
     // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
     if(fn==='infirmary')return l<=2&&s.type==='built';
+    // Latrine: upper floor of a W1 built section, where its garderobe fits on the exterior face.
+    if(fn==='latrine')return l===2&&s.type==='built'&&!isWideBuilt(s)&&!!window.ConquerRoomExterior?.placement(s,index,fn);
     if(['granary','storage','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
     return true;
@@ -296,6 +305,27 @@
     // Barracks and noble rooms represent stationed forces until unit accounting is linked.
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
+  function garrison(){
+    const c=capacity();
+    return c.soldiers+c.knights+State.structures.reduce((t,s)=>t+(s.type==='tower'&&!underConstruction(s)?stationedArchers(s):0),0);
+  }
+  // Soldiers served by working latrines: an allowed room, not captured, its garderobe standing.
+  function latrineCapacity(){
+    const unavailable=capturedRoomIds();let total=0;
+    for(const s of State.structures){
+      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
+      s.functions.forEach((fn,i)=>{
+        if(fn==='latrine'&&allowed(s,i,fn)&&!unavailable.has(s.id+':'+i)&&!window.ConquerRoomExterior?.broken(s,i))
+          total+=LATRINE_SOLDIERS*functionSlotUnits(s,i);
+      });
+    }
+    return total;
+  }
+  function hygieneTarget(){
+    const g=garrison();
+    return g<=0?100:within(100*(SANITATION_FREE+latrineCapacity())/g,HYGIENE_FLOOR,100);
+  }
+  function sickShare(){return within((SICK_BELOW-state().hygiene)/100,0,SICK_MAX)}
   function tick(before,after){
     gateNightWatch();bridgeAlarm();window.ConquerKeepEntrance?.alarmTick?.();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
@@ -303,6 +333,10 @@
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
     if(elapsed)window.ConquerInfirmary?.tick(after-elapsed,after);
     if(!elapsed)return;
+    // Hygiene drifts towards what the latrines can serve: slowly down, faster back up.
+    const target=hygieneTarget(),was=sickShare();
+    x.hygiene=within(x.hygiene+within(target-x.hygiene,-2*elapsed,5*elapsed),0,100);
+    if(sickShare()!==was)window.ConquerCombat?.invalidateArchers?.();
     const demand=dailyFoodDemand()*elapsed;
     if(demand<=0)return;
     const consumed=Math.min(x.stock.food,demand);
@@ -361,7 +395,8 @@
     const n=Number(tower?.archerCount);
     return Math.min(archerSlots(tower).length,Number.isFinite(n)?Math.max(0,Math.floor(n)):0);
   }
-  function occupiedArcherSlots(tower){return archerSlots(tower).slice(0,stationedArchers(tower))}
+  // Sick archers (poor garrison hygiene) leave their posts empty.
+  function occupiedArcherSlots(tower){const n=stationedArchers(tower);return archerSlots(tower).slice(0,n-Math.round(n*sickShare()))}
   function changeArchers(id,delta){
     const tower=State.structures.find(s=>s.id===id&&s.type==='tower');
     if(!tower||underConstruction(tower))return false;
@@ -912,6 +947,9 @@
     const impactPoint=part&&typeof part==='object'&&Number.isFinite(part.x)&&Number.isFinite(part.y);
     if(part!=='core'&&!(part==='door'&&s.type==='gate')&&!impactPoint)
       return{ok:false,damage:0,reason:'Invalid structure component'};
+    // A hit next to a room's exterior element (the garderobe box) brings that down first.
+    const ext=impactPoint&&window.ConquerRoomExterior?.at(s,part);
+    if(ext)return attackRoomExterior(s,ext,weapon,power);
     const stats=integrity(s),section=gateSection(s,part,weapon),hp=stats[section];
     const factor=effectiveness(weapon,s,section);
     if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
@@ -933,6 +971,29 @@
       markDirty(false,false,true);redraw();
     }
     return{ok:true,part:section,damage,remaining:hp.hp,max:hp.max,destroyed:hp.hp===0};
+  }
+  // The element falls on its own: its room keeps the function but serves nobody until repaired.
+  function attackRoomExterior(s,e,weapon,power){
+    const RE=window.ConquerRoomExterior,factor=effectiveness(weapon,s,'core');
+    if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
+    const hp=RE.hp(s,e),damage=Math.min(hp.hp,power*factor);
+    s.roomExteriorHp[e.index]=hp.hp-damage;
+    if(hp.hp-damage<=0){
+      const c=RE.collapseParts(e),g=groundOf(s);
+      if(c)startCollapse(s,g+c.z0,g+c.z1,{cause:'room-exterior-'+e.index,parts:c.parts});
+      invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();
+    }else markDirty(false,false,true);
+    redraw();
+    return{ok:true,part:'roomExterior',fn:e.fn,index:e.index,damage,remaining:Math.max(0,hp.hp-damage),max:hp.max,destroyed:hp.hp-damage<=0};
+  }
+  function repairRoomExterior(id,index){
+    const s=State.structures.find(x=>x.id===id),cost=ROOM_EXTERIOR_REPAIR;
+    if(!s||!window.ConquerRoomExterior?.broken(s,index))return false;
+    if(Object.entries(cost).some(([k,v])=>(State.resources[k]||0)<v)){status('Not enough resources to repair');return false}
+    for(const [k,v] of Object.entries(cost))State.resources[k]-=v;
+    window.ConquerRoomExterior.repair(s,index);
+    invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderUI();renderFunctionPanel();redraw();
+    return true;
   }
   // Towers and gatehouses fail a storey at a time: at 2/3 and 1/3 of their health the
   // top storey comes down (the structure loses a level, its rooms and slots up there),
@@ -983,6 +1044,11 @@
         startCollapse(s,g,g+(tower?[3.9,5.8,8.2]:[2.8,2.9,3.8])[L-1],{parts:[part.points],lean,cause:tower?'collapse-tower':'collapse',...(tower?{delay:.3}:{})})}
     }else if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
     else{const x=state();x.ruins.push({id:s.id,type:s.type,x:s.x??(s.a.x+s.b.x)/2,y:s.y??(s.a.y+s.b.y)/2,day:State.clock.day})}
+    // Exterior elements of its rooms (a garderobe on its corbels) come down with it.
+    for(const e of window.ConquerRoomExterior?.elements(s)||[]){
+      const c=window.ConquerRoomExterior.collapseParts(e);
+      if(c)startCollapse(s,g+c.z0,g+c.z1,{cause:'room-exterior-'+e.index,parts:c.parts,delay:.2});
+    }
     for(const w of State.structures){
       if(w.aSnap===s.id)w.aSnap=null;
       if(w.bSnap===s.id)w.bSnap=null;
@@ -1107,10 +1173,24 @@
       '<br>Materials '+fmt(material)+'/'+fmt(c.materials)+' · Arms '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
       '<br>Horses '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · Gold '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
       '<br>Kitchen '+fmt(c.meals)+' meals/d · Barracks '+fmt(c.soldiers)+' · Knights '+fmt(c.knights)+
-      (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+'</div>'+
+      (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+
+      '<br>Hygiene '+fmt(x.hygiene)+' · Latrines serve '+fmt(SANITATION_FREE+latrineCapacity())+' / garrison '+fmt(garrison())+
+      (sickShare()>0?' · ⚠ '+Math.round(sickShare()*100)+'% archers sick':'')+'</div>'+
       '<div class="grid3">'+buttons+'</div><div class="legend">Transfer up to 50 from settlement resources per click. Supply capacity depends on rooms.</div></div>';
   }
+  // A fallen garderobe on this structure: its room is out of use until rebuilt.
+  function roomExteriorHtml(s){
+    const RE=window.ConquerRoomExterior;if(!RE||!s)return'';
+    const broken=RE.elements(s,{broken:true}).filter(e=>e.broken);if(!broken.length)return'';
+    const cost=Object.entries(ROOM_EXTERIOR_REPAIR).map(([k,v])=>v+' '+k).join(' · ');
+    return broken.map(e=>'<div class="slot"><div class="slot-label">'+(FUNCTION_LABELS[e.fn]||e.fn)+' · floor '+(e.index+1)+' · collapsed</div>'+
+      '<button data-room-exterior-repair="'+e.index+'" type="button">Rebuild ('+cost+')</button>'+
+      '<div class="legend">The room serves nobody until its exterior element is rebuilt.</div></div>').join('');
+  }
   function bindPanel(slots){
+    slots.querySelectorAll('[data-room-exterior-repair]').forEach(btn=>btn.onclick=()=>{
+      const s=selectedStructure();if(s&&repairRoomExterior(s.id,Number(btn.dataset.roomExteriorRepair)))status('Rebuilt');
+    });
     slots.querySelectorAll('[data-siege-archer]').forEach(btn=>btn.onclick=()=>{
       const tower=selectedStructure();
       if(tower?.type==='tower')changeArchers(tower.id,Number(btn.dataset.siegeArcher));
@@ -1148,5 +1228,6 @@
     circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
     releaseCircleSector,
     bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,gateBreached,PORTCULLIS_HEALTH,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
-    archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
+    archerSlots,stationedArchers,occupiedArcherSlots,changeArchers,
+    garrison,latrineCapacity,hygieneTarget,sickShare,roomExteriorHtml,repairRoomExterior};
 })();

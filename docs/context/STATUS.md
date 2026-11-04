@@ -12,6 +12,27 @@
 - **Asset Lab:** il registro `ConquerFurnitureModel`, finora assente, entra nel catalogo come Interni · Arredi del cutaway. Nel palco del motore ci sono due varianti: «Infermeria · sezione L2» e «Infermeria · sala larga», con lo stato cutaway.
 - **QA:** nuova `qa/infirmary-regression.cjs` PASS (9 controlli, con il vero `allowed()` e il modulo reale), aggiunta alla CI `combat-regression.yml`. `cutaway-furniture-regression.cjs` PASS con il ruolo `infirmary`. Economia, campo, assedio, cucina e catalogo PASS in locale. Audit completo del Lab in locale: 859 render e 0 errori. Nella baseline ho aggiunto solo le 69 voci di questa PR (53 arredi del cutaway e 16 stati delle due infermerie), dopo averne rivisto i render. Sulla baseline di main restano differenze che non dipendono da questa PR: 103 nuove voci tra torri, mura e porte, 21 botteghe L3 cambiate, 6 pezzi del kit case spariti. Le lascio a chi possiede quegli asset. **Non verificato:** partita reale nel browser con un assedio vero.
 
+## Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`, da `main` a692ce5, 04/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:**
+  - **Meccanismo `ROOM_EXTERIOR`:** il contratto è D-ROOM-EXT-01, il codice è in `src/settlement-room-exterior.js` (`ConquerRoomExterior`). Una funzione di stanza aggiunge un elemento all'esterno dell'edificio.
+  - **Latrina:** prima applicazione, funzione `latrine` aggiunta a `FUNCTION_CATALOG`. Si assegna solo al piano 2 delle sezioni W1, e solo dove la scatola entra.
+  - **Modello:** `tools/blender/build_garderobe.py` genera `src/assets/garderobe-models.js` (254 triangoli). Il nuovo pezzo d'arredo `latrineSeat` è aggiunto a `build_furniture.py`; degli altri 51 pezzi rigenerati nessuno è cambiato.
+- **Renderer:**
+  - **2.5D:** la latrina si disegna nel corpo del castello e nel cutaway.
+  - **Castle 3D e World 3D:** la mesh contiene esattamente i +254 triangoli del modello, controllato con `assetMesh` nel Lab. Il cutaway del World 3D è nel guscio esterno.
+  - **Feritoie:** quelle della cella occupata non si disegnano né in 2.5D né in 3D.
+  - **Cantiere:** nessun elemento.
+  - **Crollo:** l'elemento cade con la sezione oppure da solo.
+- **Simulazione (`settlement-siege.js`):**
+  - **Igiene:** `hygiene` (0–100) nello stato dell'assedio, aggiornata nel tick giornaliero. Il valore obiettivo è `100·(24+capienza latrine)/guarnigione`, con un minimo di 40.
+  - **Malati:** `sickShare` toglie fino al 10% delle postazioni occupate (`occupiedArcherSlots`).
+  - **Riepilogo:** il riepilogo logistico mostra igiene, posti serviti, guarnigione e percentuale di malati.
+  - **Latrina crollata:** il pannello della struttura offre "Rebuild".
+- **Asset Lab:** variante `Sezione costruita L2 + latrina` con la fase di danno "elemento esterno crollato", e voce modello `ConquerGarderobeModels:garderobe` nella famiglia "Elementi esterni delle stanze". Ispezione: intatta, cutaway, crollata e cantiere al 50% sono tutte visibili e senza errori. Audit del Lab dopo il merge di `main` 7814b3d: 813 render, 0 falliti; le 10 voci nuove della latrina (modello + 9 stati della variante) riviste nel foglio «Mura» e aggiunte alla baseline. Le altre 103 voci nuove (ballatoi di torri e porte) e le 21 cambiate (Botteghe L3) sono derive già presenti su `main`, non toccate da questo branch e lasciate fuori dalla baseline.
+- **QA:** la nuova `qa/room-exterior-latrine-regression.cjs` passa. Tutte le `qa/*-regression.cjs` passano in locale.
+- **Non verificato:** il World 3D cutaway e il pannello stanze non sono stati visti a schermo (verificati solo da codice e test); la CI della PR non è ancora girata.
+
 ## Case L4 in 3D con il kit Blender (branch `feature/houses-blender-l4`, da `main` 2874f43 dopo il merge di #141, 04/11/2026, NON MAIN)
 
 - **Kit:** due pezzi nuovi in `tools/blender/build_houses.py` → `src/assets/house-models.js`: **tetto della torretta tonda** (cono a 20 lati in un tono solo, la luce ne ombreggia le facce) e **quadrata** (piramide a falde alterne), entrambi con fascia di gronda e pinnacolo in ferro; base unitaria scalata sul raggio/lato della torretta, alzata sull'altezza reale. Kit: 11 pezzi, 1024 triangoli, 24 KB.

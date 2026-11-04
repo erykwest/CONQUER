@@ -357,8 +357,8 @@ const BIOMES=Object.freeze({
   mountains:{label:'Montagne',field:'#2b2620'},
   sea:{label:'Mare',field:'#2a2818'}
 });
-const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','infirmary'];
-const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',infirmary:'Infirmary',council:'Council chamber',tribunal:'Tribunal'};
+const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary'];
+const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.
 // Civic catalogue, apart from the castle one: the tribunal sits there from L2.

@@ -152,6 +152,10 @@ def f_herb_shelf(p):
     for i, y in enumerate((-.4, -.2, 0, .2, .4)):
         p.beam((.02, y, 1.76), (.02, y, 1.62), .008, .008, 'twine')
         p.taper((.02, y, 1.62), (.02, y, 1.36), .1, .08, .03, .03, 'herb' if i % 2 else 'herbDry')
+def f_latrine_seat(p):
+    # Garderobe seat: a stone bench against the wall with a plank top and the drop hole.
+    p.box((0, 0, .22), (.5, 1.0, .44), 'stoneWarm'); p.box((.01, 0, .455), (.48, .96, .03), 'wood')
+    p.cylinder(.11, 0, 'soot', n=8, axis='z', center=(.04, 0, .47), radii=[.11, .11], along=[0, .006])
 def f_grain_bin(p):
     p.box((0, 0, .5), (1.0, 1.6, 1.0), 'wood')
     for y in (-.79, .79):
@@ -323,7 +327,7 @@ PIECES = (
     ('bench', f_bench), ('tableLong', f_table_long), ('tableSmall', f_table_small), ('stool', f_stool), ('chair', f_chair),
     ('chest', f_chest), ('brazier', f_brazier), ('banner', f_banner),
     ('spearRack', f_spear_rack), ('swordRack', f_sword_rack), ('armorStand', f_armor_stand), ('shieldWall', f_shield_wall), ('arrowCrate', f_arrow_crate),
-    ('bunkBed', f_bunk_bed), ('pallet', f_pallet), ('washBasin', f_wash_basin),
+    ('bunkBed', f_bunk_bed), ('pallet', f_pallet), ('washBasin', f_wash_basin), ('latrineSeat', f_latrine_seat),
     ('grainBin', f_grain_bin), ('scales', f_scales),
     ('hearth', f_hearth), ('shelf', f_shelf), ('breadOven', f_bread_oven), ('hamRack', f_ham_rack),
     ('stall', f_stall), ('manger', f_manger), ('saddleStand', f_saddle_stand),

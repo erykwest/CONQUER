@@ -9,6 +9,14 @@
 - Nuova `qa/infirmary-regression.cjs`; `cutaway-furniture-regression.cjs` copre il nuovo ruolo.
 - Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la stanza segue la direzione già concordata (ampliare gli edifici con stanze, con effetti reali sulla simulazione) e non cambia contratti.
 
+## 2026-11-04 — Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`)
+
+- Nuovo contratto `ROOM_EXTERIOR`: una stanza può aggiungere un elemento all'esterno dell'edificio, disegnato da tutti i renderer con un'unica geometria e incluso nel crollo.
+- Prima applicazione: la latrina (garderobe) a sbalzo su mensole al piano 2 delle sezioni W1, con lo scarico verso terra. Effetto in gioco: igiene della guarnigione, con fino al 10% degli arcieri malati quando mancano latrine per una guarnigione grande. La latrina è rompibile dall'artiglieria e si può ricostruire.
+- Nuovi `src/settlement-room-exterior.js`, `tools/blender/build_garderobe.py`, `src/assets/garderobe-models.js`, il pezzo d'arredo `latrineSeat` e `qa/room-exterior-latrine-regression.cjs`. Nel Lab: la variante e il modello.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01). ROADMAP invariata: la latrina era già approvata nel catalogo delle stanze, quindi non cambia milestone.
+- CI: il modello della garderobe è nel Lab sotto «Edifici», come il kit case, perché «Fortificazioni» contiene solo mesh del motore. Il job browser di `main-fixes-regression.yml` è fissato su `ubuntu-24.04` come gli altri job browser: Playwright 1.56 non ha Chromium per `ubuntu-latest` (26.04).
+
 ## 2026-11-03 — Tribunale in seduta (branch `feature/crime-tribunal-scene`, su `feature/crime-buildings`)
 
 - **Scena:** quando il Municipio selezionato mostra il piano del tribunale, nei giorni feriali dalle 9 alle 17 e senza allarme, la sala si riempie di persone.

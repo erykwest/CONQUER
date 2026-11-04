@@ -131,7 +131,7 @@ export const T = {
   functions: {
     guard: 'Corpo di guardia', barracks: 'Caserma', armory: 'Armeria', storage: 'Magazzino materiali', granary: 'Granaio',
     kitchen: 'Cucina', stables: 'Scuderie', quarters: 'Alloggi', nobleRoom: 'Stanze nobili', workshop: 'Officina d\'armi',
-    chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione',
+    chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione', latrine: 'Latrina',
     infirmary: 'Infermeria', council: 'Sala del consiglio', tribunal: 'Tribunale'
   },
   manage: {

@@ -213,6 +213,7 @@
       const two=depth>=2*size('infirmaryBed').d+.25,first=two?Math.ceil(beds/2):beds;
       let left=beds-wardRow(r,r.A,first);if(two&&left>0)left-=wardRow(r,opposite,left);if(left>0)wardRow(r,r.B,left);
       r.near(.3,.35,'stool');if(r.large)r.wall(r.A,-.95,'candleStand')},
+    latrine(r){r.wall(r.A,0,'latrineSeat');r.wall(r.B,.5,'washBasin');r.near(-.4,.35,'s:buckets');if(r.large)r.wall(r.A,.75,'latrineSeat')},
     prison(r){r.wall(r.A,0,'cellBars',{off:.35});r.wall(r.A,-.4,'wallChains',{deco:true});r.wall(r.A,.4,'straw',{deco:true});
       r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')}
   };
