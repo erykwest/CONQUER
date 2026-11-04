@@ -4,6 +4,8 @@
 
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
 - Magnete delle mura sui lati della banchina: muro dritto all'esterno, addossato alla faccia, alla quota della banchina su zoccolo.
+- Pescatori (`src/settlement-fishers.js`): le case L1 entro 14U da un molo o da una banchina diventano famiglie di pescatori, una per attracco libero, le più vicine prima. Ognuna ha una barca da pesca ormeggiata, che esce all'alba nei giorni feriali verso una zona di pesca al largo e rientra nel pomeriggio; il pescato vale 1,2 di cibo privato per pescatore per giorno lavorativo. Sul lotto ci sono rete stesa, rastrelliera del pesce e ceste (Blender `tools/blender/build_fishing.py` → `src/assets/fishing-models.js`, nell'Asset Lab sotto Produzione/Pescatori).
+- Rotte commerciali col mare: niente strada principale né cartello sul lato mare; 3 uscite via mare (centro del lato mare e moncherini di mare dei due lati adiacenti) in `State.village.seaEntries` e in `ConquerConvoys.availableExits()` con `mode:'sea'`. Le uscite stradali non finiscono più sui moncherini di mare.
 - Livrea casuale delle navi: ogni nave alla creazione prende a caso pittura dello scafo (fascia e pannelli, 7 colori) e tono del fasciame (5), passabili come `livery` a `ConquerFleet.spawn`.
 - Attracchi lungo la banchina (ogni 5U, disattivati entro 4U da un pontile, sotto le mura, vicino alle torri); la flotta li usa dopo i pontili con controllo dello scafo.
 - Regola: i muri di banchina mostrano sempre l'esterno all'acqua (flip forzato, anche sulle partite salvate; inversione manuale rifiutata).

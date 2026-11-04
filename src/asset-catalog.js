@@ -16,7 +16,8 @@
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
-    {global:'ConquerShipModels',collection:'lab',category:'Veicoli',family:'Navi'}
+    {global:'ConquerShipModels',collection:'lab',category:'Veicoli',family:'Navi'},
+    {global:'ConquerFishingModels',collection:'models',category:'Produzione',family:'Pescatori'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -51,7 +52,8 @@
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno'};
+    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
+    netRack:'Rete stesa ad asciugare',fishRack:'Rastrelliera del pesce',fishBaskets:'Ceste del pescato'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
@@ -94,7 +96,7 @@
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',
-            ConquerShipModels:'ship-models.js'}[source.global]),
+            ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
           :source.global==='ConquerShipModels'?'ship:'+key.replace(/Furled$/,''):null});
     }

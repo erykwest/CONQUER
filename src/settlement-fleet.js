@@ -51,17 +51,18 @@
   }
   // pier / quay: moor there only; anchor: true rides at anchor even with berths free.
   // Pier berths are filled first, then the slots along the quays.
-  function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null}={}){
+  function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null,noAnchor=false,fisher=null}={}){
     if(!M()?.ships?.[key])return null;
     let berth=null,pose=null;
     if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&(!pier||s.id===pier)))
       for(const side of ['left','right'])if(!berth&&!occupied(p.id,side)){berth={pierId:p.id,side};pose=berthPose(p,side,key)}
     if(!berth&&!anchor&&!pier)for(const q of (State.structures||[]).filter(s=>s.type==='quay'&&(!quay||s.id===quay)))
       for(const b of window.ConquerQuay?.berths(q)||[])if(!berth&&quayFree(b,key)){berth={quayId:q.id,side:b.side,along:b.along,key:b.key};pose=quayBerthPose(b,key)}
+    if(!pose&&noAnchor)return null;
     pose||=anchorPose(key,ships.length);
     if(!pose)return null;
     // In port the sails are furled up to the yards; at anchor off the coast they stay set.
-    const id='ship-'+(++seq),ship={id,key,allegiance,realm,berth,pose,livery:livery||S().livery?.(),crew:C().crewState(key,id,S().sailState(!!berth)),cache:null};
+    const id='ship-'+(++seq),ship={id,key,allegiance,realm,berth,pose,livery:livery||S().livery?.(),fisher,crew:C().crewState(key,id,S().sailState(!!berth)),cache:null};
     ships.push(ship);requestDraw();
     return ship;
   }
@@ -102,9 +103,11 @@
   const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
     frame3d=null;
+    window.ConquerFishers?.syncBoats();
     if(!ships.length||!window.ConquerMesh3D)return;
     const now=(typeof performance!=='undefined'?performance.now():Date.now())/1000,dt=last?Math.min(.1,now-last):0;last=now;
     sync();
+    window.ConquerFishers?.step(now);
     const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle,gl=world3d();
     for(const s of ships)C().step(s.crew,dt);
     const fighting=!!NB?.active();
@@ -117,6 +120,7 @@
     if(!gl)for(const id of new Set(ships.filter(s=>s.berth).map(s=>s.berth.pierId))){
       const pier=State.structures.find(p=>p.id===id);if(pier)meshes.push(...window.ConquerPier.meshes(pier));
     }
+    meshes.push(...(window.ConquerFishers?.lotMeshes()||[]));
     for(const s of ships){
       const arms=S().arms(s),key=[s.pose.x,s.pose.y,s.pose.heading,s.pose.z||0,s.pose.roll||0,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
       if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,s.pose,s.crew.sail.furl,{sail:arms.sail,flag:null},s.livery)};

@@ -38,6 +38,18 @@ test('four entries migrate from build boundary to outer world boundary',()=>{
  assert.equal(run('validBorderEntrySelection(State.village.borderEntries)'),true);
  assert.equal(run('State.village.borderEntries.every(e=>e.x===0||e.x===WORLD||e.y===0||e.y===WORLD)'),true);
 });
+test('a sea map has three land exits and three sea exits',()=>{
+ const r=run(`(()=>{const env=State.environment;State.environment=[makeEnvSea(()=>.9)];const side=State.environment[0].side;
+  delete State.village.borderEntries;const land=ensureBorderEntrySelection().map(e=>e.edge).sort().join(),sea=seaBorderEntries();
+  const out={side,land,sea:sea.map(e=>e.edge).sort().join(),onBorder:sea.every(e=>e.x===0||e.x===WORLD||e.y===0||e.y===WORLD),
+   wet:sea.every(e=>environmentContains(State.environment[0],{x:Math.min(WORLD-.5,Math.max(.5,e.x)),y:Math.min(WORLD-.5,Math.max(.5,e.y))},0))};
+  State.environment=env;delete State.village.borderEntries;ensureBorderEntrySelection();return JSON.stringify(out)})()`);
+ const o=JSON.parse(r);
+ assert.equal(o.side,'west');
+ assert.equal(o.land,'east,north,south');
+ assert.equal(o.sea,'north,south,west');
+ assert.equal(o.onBorder,true);assert.equal(o.wet,true);
+});
 test('road repairs can reach outer world and reject points beyond it',()=>{
  assert.equal(run('roadRepairPointClear({x:25,y:100})'),true);
  assert.equal(run('roadRepairPointClear({x:0,y:100})'),true);

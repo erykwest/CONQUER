@@ -258,7 +258,8 @@
   function availableExits(){
     const plan=Array.isArray(State.village?.roadPlan)?State.village.roadPlan:[];
     const entries=Array.isArray(State.village?.borderEntries)?State.village.borderEntries:[];
-    return ['north','east','south','west'].map(edge=>{
+    const sea=State.environment?.find(f=>f.type==='sea')?.side;
+    const land=['north','east','south','west'].filter(edge=>edge!==sea).map(edge=>{
       const route=plan.find(r=>r.edge===edge);
       const entry=entries.find(e=>e.edge===edge);
       return{edge,routeId:route?.id||null,entryId:entry?.id||null,
@@ -267,6 +268,9 @@
         // navigation must verify full continuity before moving or charging.
         reportedConnected:!!route?.connected};
     });
+    // Sea exits (sea edge + the sea stubs of the adjacent edges) for ships, no road.
+    const seaExits=((typeof seaBorderEntries==='function'?seaBorderEntries():State.village?.seaEntries)||[]).map(e=>({edge:e.edge,mode:'sea',routeId:null,entryId:e.id,point:{x:e.x,y:e.y},reportedConnected:true}));
+    return[...land.map(x=>({...x,mode:'land'})),...seaExits];
   }
   // Small lord-owned draft controls; never offers a fictitious launch button.
   function panelHtml(tower){

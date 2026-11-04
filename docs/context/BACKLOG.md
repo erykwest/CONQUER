@@ -549,3 +549,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Impatto minimo:** campionamento e rendering dell'overlay leggeri, buffer temporale limitato a 30 secondi e nessun costo significativo quando disattivato.
 - **QA:** verificare accuratezza, comportamento in pausa e a differenti frame rate, corretto reset della finestra temporale e funzionamento su renderer supportati.
 - Navi: salvare la livrea con la nave quando la flotta verrà persistita (oggi è solo runtime).
+- Pescatori: pesce come bene a parte e pescheria al mercato; percorso delle barche che evita moli e altre navi; il pescatore a piedi tra casa e molo.
+- Uscite via mare: navi mercantili che entrano ed escono dalle 3 uscite di mare; rimuovere nei salvataggi vecchi la strada già costruita verso il mare.
+- Cantiere navale (scalo di varo in Blender, costruzione e varo delle navi).

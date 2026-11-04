@@ -250,3 +250,32 @@ State.structures.push({id:'hp',type:'pier',reach:4,x:149,y:156.5,angle:Math.PI,o
 assert.ok(Q.berths(harbourMole).every(b=>Math.hypot(b.edge.x-149,b.edge.y-156.5)>=4),'no quay slot within 4U of the pier');
 F.clear();State.structures.length=0;
 console.log('PASS fleet: moored at berths with sails furled, anchored off the coast, orders, clear');
+
+// Fishermen: the L1 houses nearest a pier fish, one per berth; each gets a fishing boat at a
+// berth (never at anchor); on a working day the boat is at sea at midday with its sails set
+// and moored at night, and a house that is no longer a fisherman loses its boat.
+Object.assign(ctx,{underConstruction:()=>false,houseLevel:h=>h.houseLevel||1,visualCycleFrac:()=>ctx.__frac});
+State.village={founded:true};State.clock={day:0};
+vm.runInContext(read('src/settlement-fishers.js'),ctx);
+const Fi=window.ConquerFishers;
+State.structures.push(s);
+const house=(id,x,y,lvl=1)=>({id,type:'house',houseLevel:lvl,x,y});
+State.structures.push(house('h1',s.x+2,s.y-6),house('h2',s.x-3,s.y-8),house('h3',s.x+1,s.y-10),house('far',s.x,s.y-40),house('l2',s.x,s.y-5,2));
+assert.equal([...Fi.fisherIds()].sort().join(),'h1,h2','the two nearest L1 houses fish: two berths, none for far or L2 houses');
+Fi.syncBoats();
+assert.equal(F.ships.filter(b=>b.fisher).length,2,'one boat per fisherman');
+assert.ok(F.ships.every(b=>b.key==='barca'&&b.berth?.pierId===s.id),'fishing boats moor at the pier');
+ctx.__frac=.45;Fi.step(1);
+const boat=F.ships[0];
+assert.ok(boat.away&&pointInPolygon(boat.pose,sea.points),'at midday the boat is out on the sea');
+assert.ok(boat.pose.y>s.y+8,'well off the pier');
+assert.equal(boat.crew.sail.target,0,'sailing with the sails set');
+ctx.__frac=.9;Fi.step(1);
+assert.ok(!boat.away&&boat.crew.sail.target===1,'in the evening it is moored, sails furled');
+State.clock.day=5;ctx.__frac=.45;Fi.step(1);
+assert.ok(!boat.away,'no fishing on the weekend');
+State.structures=State.structures.filter(o=>o.id!=='h1');Fi.syncBoats();
+assert.ok(!F.ships.some(b=>b.fisher==='h1'),'the boat goes with its fisherman');
+assert.ok(read('src/settlement-economy.js').includes("put(e,'food',FISH_FOOD_PER_DAY,'private',w.houseId+':fish')"),'the catch is private food');
+F.clear();State.structures.length=0;
+console.log('PASS fishers: nearest L1 houses, one boat per berth, out at midday, home at night, weekend, catch');
