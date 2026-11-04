@@ -178,8 +178,8 @@
     kitchen(r){r.wall(r.A,-.3,'hearth');r.wall(r.B,.3,'shelf');r.near(.15,.15,r.large?'tableLong':'tableSmall',1);r.wall(r.B,-.7,'s:barrelGroup');
       if(r.large){r.wall(r.A,.6,'breadOven');r.near(-.4,-.3,'hamRack');r.near(.5,.5,'s:firewood')}else r.wall(r.A,.7,'s:firewood')},
     stables(r){
-      // Military stables in a long built-section room: a row of stalls down each long wall, as many
-      // as fit (5 horses per U, settlement-siege.js stableUnits), tack and forage in between.
+      // Military stables in a long built-section room: stalls down the long standing wall, as many
+      // as fit (5 horses per U, settlement-siege.js stableUnits); tack on the short wall, forage in between.
       const F=r.F,len=side=>2*(SIDES[side][0]?F.hv:F.hu);
       if(!F.round&&!F.dee&&Math.max(F.hu,F.hv)>1.6*Math.min(F.hu,F.hv)){
         const walls=[r.A,r.B].sort((a,b)=>len(b)-len(a)),fit=side=>Math.max(1,Math.floor((len(side)-.1)/(size('stall').w+.04)));
