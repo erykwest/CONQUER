@@ -11,6 +11,11 @@
   // dovecote tower PIGEON_SPEEDUP times faster than the horseman rides, and the answer leaves by
   // pigeon, so no messenger rides back. Without a dovecote the courier rides as before.
   const PIGEON_SPEEDUP=4,MIN_PIGEON_DAYS=.25;
+  // Military stables (settlement-siege.js spareHorses): with a horse no knight rides, the answer
+  // goes back on a fresh mount, HORSE_SPEEDUP times faster than the tired messenger. The pigeon
+  // stays faster still.
+  const HORSE_SPEEDUP=1.5;
+  const freshHorse=()=>(window.ConquerSiege?.spareHorses?.()||0)>0;
   const byId=id=>document.getElementById(id);
   const num=(v,def=0)=>Number.isFinite(+v)?+v:def;
   function hash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
@@ -91,11 +96,15 @@
   }
   function finishResponse(accepted){
     const x=state(),m=x.incoming;if(!m||m.phase!=='waiting')return;
-    const pigeon=m.by==='pigeon';
-    x.history.push({day:day(),edge:m.edge,accepted,request:m.request,by:pigeon?'pigeon':'courier'});
+    const pigeon=m.by==='pigeon',mounted=!pigeon&&freshHorse();
+    x.history.push({day:day(),edge:m.edge,accepted,request:m.request,by:pigeon?'pigeon':mounted?'horse':'courier'});
     // By pigeon the answer flies off at once: the channel is free, nobody rides back.
     if(pigeon)x.incoming=null;
-    else{m.phase='returning';m.departDay=day();m.returnDay=day()+Math.max(.5,routeLength(m.route)*DAYS_PER_COURIER_UNIT)}
+    else{
+      const speed=mounted?HORSE_SPEEDUP:1;
+      m.phase='returning';m.departDay=day();m.by=mounted?'horse':'courier';
+      m.returnDay=day()+Math.max(.5/speed,routeLength(m.route)*DAYS_PER_COURIER_UNIT/speed);
+    }
     byId('courierLetter').hidden=true;byId('courierDialog').hidden=true;
     if(accepted){
       const id='caravan-'+m.id;
@@ -136,7 +145,7 @@
   function htmlEscape(v){return String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
   function openLetter(){
     const m=state().incoming;if(!m||m.phase!=='waiting')return;
-    byId('courierFrom').textContent='Dalla provincia a '+(EDGES[m.edge]||m.edge)+(m.by==='pigeon'?' · per colombo viaggiatore: la risposta parte subito':'');
+    byId('courierFrom').textContent='Dalla provincia a '+(EDGES[m.edge]||m.edge)+(m.by==='pigeon'?' · per colombo viaggiatore: la risposta parte subito':freshHorse()?' · la risposta riparte su un cavallo fresco delle scuderie':'');
     byId('courierMessage').textContent='Richiesta di aiuto: inviate 100 monete alla nostra provincia.';
     byId('courierDialog').hidden=false;byId('courierLetter').hidden=true;
   }

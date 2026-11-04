@@ -15,6 +15,17 @@
 - **QA:** `qa/alarm-bell-regression.cjs` PASS: dove entra la campana e i raggi, campane valide, origine dell'allarme, catena e passaparola, nessuna somma, torre distrutta che spezza la catena, ritardo per casa (il rosso dopo il verde), collegamento al combat. Le altre regressioni sono nel riepilogo della PR.
 - **Non verificato:** l'allarme sentito casa per casa in una partita vera (verificato solo da test).
 
+## Scuderia militare (branch `feature/military-stables`, con `main` fdee478, 04/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH (estende `stables`, nessun nuovo tipo di stanza; proposta approvata dall'utente il 04/11 senza rimonta né cicli di foraggio):**
+  - **Capienza** (`settlement-siege.js` `stableUnits`): una stalla in torre resta un blocco di poste da 5 cavalli. In una sezione costruita W1 le poste corrono lungo la stanza, 5 cavalli per U (sezione 2U: 10, 4U: 20). Il limite dei cavalieri (`min(stanze nobili, cavalli)`) cresce di conseguenza. Regola delle stanze: solo piano terra, mai nelle porte e, per decisione dell'utente del 04/11, **mai nelle sale larghe W2**. I salvataggi perdono al caricamento le scuderie già assegnate a una sala larga (`sanitizeRooms`).
+  - **Assedio:** i depositi del cerchio (`circleDepots`) hanno la stessa capienza, quindi una stalla catturata perde i cavalli che contiene. Quando il cibo finisce si macellano i cavalli di riserva (quelli che nessun cavaliere monta), quanti ne servono per coprire l'ammanco, 20 razioni ciascuno (`slaughterHorses`). Contatore `horsesSlaughtered` nel salvataggio e avviso nel riepilogo logistico.
+  - **Corrieri:** con un cavallo di riserva la risposta al messaggero della provincia riparte su un cavallo fresco, 1,5× più veloce (`by:'horse'` nella storia); senza, al passo del messaggero. Il colombo viaggiatore resta più veloce di entrambi.
+  - **Arredo:** nelle stanze lunghe delle sezioni costruite c'è una fila di poste lungo la parete lunga, quante ne entrano; selle, mangiatoia, fieno, secchi e barili completano la stanza. Nessun pezzo Blender nuovo.
+- **Asset Lab:** variante `Scuderia militare · sezione L1`. Audit: 8 render, 0 falliti; cutaway rivisto nel Lab con `ConquerAssetAudit.inspect`. Baseline aggiornata per queste voci.
+- **QA:** nuova `qa/military-stables-regression.cjs` (capienza, depositi del cerchio, macellazione, corriere a cavallo), aggiunta a `combat-regression.yml`. La guardia di `qa/diplomacy-regression.cjs` sulla capienza delle stalle è aggiornata alla nuova regola. 125/125 `qa/*.cjs` non di performance PASS in locale.
+- **Non verificato:** una partita d'assedio vera con la macellazione; il reclutamento dei cavalieri continua a leggere la capienza delle stalle, non lo stock dei cavalli (comportamento preesistente, vedi BACKLOG).
+
 ## Cisterna, stanza al piano terra delle torri W2–W3 (branch `feature/cistern`, da `main` 89dd465, 04/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** nuova funzione `cistern` in `FUNCTION_CATALOG`. `ConquerSiege.allowed` la permette solo al piano terra delle torri in pietra W2/W3 (`towerTier>=2`), mai in torri di legno, porte o sezioni costruite.

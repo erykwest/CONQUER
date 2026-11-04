@@ -46,6 +46,7 @@ jobs:
           node qa/zones-visual-regression.cjs
           node qa/camp-regression.cjs
           node qa/infirmary-regression.cjs
+          node qa/military-stables-regression.cjs
           node qa/wolves-regression.cjs
           node qa/diplomacy-regression.cjs
           node qa/siege-assault-regression.cjs
