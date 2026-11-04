@@ -65,16 +65,14 @@ jobs:
         run: node qa/asset-catalog-browser.mjs
       - name: Visual audit (every asset, every fortification state)
         run: node qa/asset-audit.mjs
-      - name: Extract CRIME signatures for visual review
+      - name: Capture the eight CRIME asset thumbnails for review
         run: |
-          node - <<'NODE'
-          const report = require('./artifacts/asset-audit/report.json');
-          for (const r of report.results) {
-            if (!/justice|pillory|gallows|scaffold|almshouse|townHall|wardrobe:role:/i.test(r.id)) continue;
-            const key = r.id + '|' + (r.state ?? '') + (r.rotation ? '|r' + r.rotation : '');
-            console.log('CRIME_AUDIT ' + JSON.stringify([key, {title:r.title, coverage:r.coverage, signature:r.signature, ...(r.structure ? {structure:r.structure} : {})}, r.baseline, r.checks]));
-          }
-          NODE
+          node qa/asset-audit.mjs --ids=model:ConquerCivicModels:almshouse,model:ConquerEventModels:justicePillory,model:ConquerEventModels:justiceGallows,model:ConquerEventModels:justiceScaffold,wardrobe:role:judge,wardrobe:role:clerk,wardrobe:role:prisoner,wardrobe:role:executioner --out=artifacts/crime-review
+          for sheet in artifacts/crime-review/sheets/*.png; do
+            printf 'CRIME_SHEET %s ' "$(basename "$sheet")"
+            base64 -w0 "$sheet"
+            printf '\n'
+          done
       - name: Audit summary
         if: always()
         run: test -f artifacts/asset-audit/report.md && cat artifacts/asset-audit/report.md >> "$GITHUB_STEP_SUMMARY" || true
