@@ -71,6 +71,32 @@ const tower=(id,o={})=>({id,type:'tower',shape:'square',size:1.5,level:2,x:0,y:0
   console.log('PASS horses slaughtered for food, spare ones only');
 }
 {
+  // Mounted courier: with a spare horse the answer rides back 1.5x faster; without one, at the
+  // messenger's pace (the same minimal DOM as qa/dovecote-regression.cjs, no dovecote).
+  const element=()=>({hidden:true,textContent:'',innerHTML:'',dataset:{},style:{},onclick:null,addEventListener(){},appendChild(){},querySelector(){return null}});
+  function diplomacy(spare){
+    const els={},keep={id:'keep',type:'tower',isMastio:true,x:60,y:80,functions:['commonHall']};
+    const State={clock:{day:10},seed:7,structures:[keep],diplomacy:null,village:{founded:true,borderEntries:[{edge:'west',x:0,y:50}]},view:{scale:1}};
+    const window={ConquerSiege:{mastio:()=>keep,spareHorses:()=>spare},ConquerConvoys:{planLordConvoy(){},state:()=>({lordConvoys:{}})}};
+    const sandbox={window,State,console,Math,Number,Object,Array,JSON,String,
+      document:{getElementById:id=>els[id]||(els[id]=element()),createElement:()=>element()},
+      wrap:element(),WORLD:100,dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
+      markDirty(){},status(){},roadNetworkPath:(a,b)=>[{x:a.x,y:a.y},{x:a.x,y:b.y},{x:b.x,y:b.y}],
+      ensureBorderEntrySelection:()=>State.village.borderEntries,terrainElevation:()=>0,placementGroundZ:()=>0,
+      towerVisualTopHeight:()=>3,w2s:()=>({x:0,y:0}),towerDovecote:()=>false};
+    sandbox.window.window=sandbox.window;
+    vm.runInNewContext(fs.readFileSync(root+'settlement-diplomacy.js','utf8'),sandbox);
+    const D=window.ConquerDiplomacy;assert.ok(D.spawn(10));
+    const m=State.diplomacy.incoming;D.tick(10,m.arrivalDay);D.finishResponse(false);
+    return{m,ride:m.returnDay-m.departDay,by:State.diplomacy.history.at(-1).by};
+  }
+  const foot=diplomacy(0),horse=diplomacy(3);
+  assert.equal(foot.by,'courier');assert.equal(horse.by,'horse');
+  assert.ok(Math.abs(foot.ride/horse.ride-1.5)<1e-9,'1.5x faster on a fresh horse: '+foot.ride+' / '+horse.ride);
+  assert.equal(horse.m.phase,'returning','the messenger still rides back');
+  console.log('PASS the answer rides back on a fresh horse when the stables have one');
+}
+{
   // With food in stock nothing is slaughtered.
   const {State,S}=fixture();
   State.structures.push(built('b'),{id:'h',type:'house',people:100,functions:[]});
