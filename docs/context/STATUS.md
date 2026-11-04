@@ -17,7 +17,7 @@
   - **Malati:** `sickShare` toglie fino al 10% delle postazioni occupate (`occupiedArcherSlots`).
   - **Riepilogo:** il riepilogo logistico mostra igiene, posti serviti, guarnigione e percentuale di malati.
   - **Latrina crollata:** il pannello della struttura offre "Rebuild".
-- **Asset Lab:** variante `Sezione costruita L2 + latrina` con la fase di danno "elemento esterno crollato", e voce modello `ConquerGarderobeModels:garderobe` nella famiglia "Elementi esterni delle stanze". Ispezione: intatta, cutaway, crollata e cantiere al 50% sono tutte visibili e senza errori.
+- **Asset Lab:** variante `Sezione costruita L2 + latrina` con la fase di danno "elemento esterno crollato", e voce modello `ConquerGarderobeModels:garderobe` nella famiglia "Elementi esterni delle stanze". Ispezione: intatta, cutaway, crollata e cantiere al 50% sono tutte visibili e senza errori. Audit del Lab dopo il merge di `main` 7814b3d: 813 render, 0 falliti; le 10 voci nuove della latrina (modello + 9 stati della variante) riviste nel foglio «Mura» e aggiunte alla baseline. Le altre 103 voci nuove (ballatoi di torri e porte) e le 21 cambiate (Botteghe L3) sono derive già presenti su `main`, non toccate da questo branch e lasciate fuori dalla baseline.
 - **QA:** la nuova `qa/room-exterior-latrine-regression.cjs` passa. Tutte le `qa/*-regression.cjs` passano in locale.
 - **Non verificato:** il World 3D cutaway e il pannello stanze non sono stati visti a schermo (verificati solo da codice e test); la CI della PR non è ancora girata.
 
