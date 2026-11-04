@@ -50,10 +50,11 @@
     const b=slot.basis,ca=Math.cos(b.angle),sa=Math.sin(b.angle);
     const toWorld=(u,v)=>({x:b.center.x+u*ca-v*sa,y:b.center.y+u*sa+v*ca});
     const d0=viewDepthPoint(b.center);
-    const far=Object.keys(SIDES).map(k=>{const [du,dv]=SIDES[k],p=toWorld(du*.1,dv*.1);return{k,d:viewDepthPoint(p)-d0}})
+    // A portico room keeps its walls whatever the camera: back wall first, then an end wall.
+    const far=slot.far||Object.keys(SIDES).map(k=>{const [du,dv]=SIDES[k],p=toWorld(du*.1,dv*.1);return{k,d:viewDepthPoint(p)-d0}})
       .sort((a,b)=>a.d-b.d).slice(0,2).map(x=>x.k);
     // The longer far wall first (it takes the main pieces).
-    const len=k=>k[0]==='u'?b.h:b.w;far.sort((a,c)=>len(c)-len(a));
+    const len=k=>k[0]==='u'?b.h:b.w;if(!slot.far)far.sort((a,c)=>len(c)-len(a));
     // D tower: straight part behind u = cx, half round of radius hv (centred on u = cx) in front.
     const dee=slot.dee?{cx:b.w/2-b.h/2,r:b.h/2}:null;
     return{b,toWorld,far,hu:b.w/2,hv:b.h/2,round:slot.round,dee};
@@ -245,6 +246,15 @@
     const half=.38*(window.ConquerGates?.portalOf?.(s).width??1.2)/1.2;   // narrower in the small gate
     return Math.abs(lu)>.7?[-b.w/2,-half,b.w/2,half]:[-half,-b.h/2,half,b.h/2];
   }
+  // W1 portico: the ground floor is the loggia under the arches (builtLoggia), one room per bay
+  // between partitions, furnished against the exterior wall, the walkway along the piers clear.
+  function porticoSlots(s,slot){
+    const L=slot.floor===0&&typeof isBuiltPortico==='function'&&isBuiltPortico(s)?builtLoggia(s):null;
+    if(!L)return[{slot,passage:null}];
+    const back=L.side>0?'v-':'v+';
+    return L.rooms.map((room,k)=>({slot:{...slot,index:k?slot.index+'.'+k:slot.index,basis:room,far:[back,k%2?'u+':'u-'],portico:true},
+      passage:[-room.w/2,L.walk.v0,room.w/2,L.walk.v1]}));
+  }
   function layoutStructure(s,g){
     const levels=structureLevel(s),floors=cutawayFloorLevels(s),out=[];
     const slots=cutawayRoomSlots(s,g).map(x=>({...x,floor:x.floor??x.index}));
@@ -252,10 +262,11 @@
     if(functionFloorOffset(s)&&levels>1)slots.unshift({index:-1,floor:0,role:null,size:'normal',z:floors[0].z,basis:cutawayFloorBasis(s,g),g});
     // Small towers: a spiral stair fills the shaft, no room furniture nor ladder.
     if(spiralTower(s))return out;
-    for(const slot of slots){
+    for(const pc of slots.flatMap(raw=>porticoSlots(s,raw))){
+      const slot=pc.slot;
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
-      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:pc.passage||passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
@@ -369,7 +380,7 @@
     // Cheap key: archer posts follow the wall junctions and the tower shape, not the archer
     // count, so no archerSlots() scan per call.
     const snaps=State.structures.filter(w=>w.aSnap===s.id||w.bSnap===s.id).map(w=>w.id+':'+structureLevel(w)).join(',');
-    const key=[s.id,State.view.rotation||0,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),structureLevel(s),s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
+    const key=[s.id,State.view.rotation||0,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),structureLevel(s),s.skin,s.wallSide,s.flip,s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
     const faces=[],lights=[],her=heraldry(),spots=new Map();
     for(const room of layoutStructure(s,g)){
@@ -461,5 +472,7 @@
     }
   }
   function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces.filter(f=>shown(s,f)):[]}
-  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
+  // W1 portico outside the cutaway: the loggia's furniture stays in view through the arches.
+  function loggiaFaces(s){return FM()&&isBuiltPortico(s)&&!underConstruction(s)?structureFaces(s,cutawayWallGeometry(s)).faces.filter(f=>f.floor===0):[]}
+  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();

@@ -202,7 +202,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='built'){
     const skin=builtSkin(s);
-    html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">Porticato affects only the interior ground floor.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">${isWideBuilt(s)?'Porticato affects only the interior ground floor.':'Porticato: the ground floor opens under the arches and the upper floor is raised over it. Under the portico: '+PORTICO_FUNCTIONS.map(k=>FUNCTION_LABELS[k]).join(', ')+'.'}</div></div>`;
   }
   if(s.type==='wall'){
     const skin=wallSkin(s),narrow=wallTier(s)===1;
@@ -230,7 +230,7 @@ function renderFunctionPanel(){
   if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
-    else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · Floor ${i+1+functionFloorOffset(s)} ·${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select>${value==='infirmary'?window.ConquerInfirmary?.slotLegend(s,i)||'':''}</div>`}).join('');
+    else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">${i===0&&isBuiltPortico(s)?'Portico':'Room '+(i+1)} · Floor ${i+1+functionFloorOffset(s)} ·${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select>${value==='infirmary'?window.ConquerInfirmary?.slotLegend(s,i)||'':''}</div>`}).join('');
   }
   if(['wall','palisade'].includes(s.type)&&!building){
     // Walls take damage bay by bay; a fallen bay opens a breach there.
