@@ -164,8 +164,9 @@
   }
   const cutaway=s=>typeof structureCutaway==='function'&&structureCutaway(s);
   // Longhouse laid along a->b: one 1 U bay model per U (stretched to the exact length), the door
-  // gable at a and the closed gable at b. In cutaway the wall, roof slope and gable facing the
-  // camera are left out and the plank floor shows, as the palisade tower's open sides.
+  // gable at a and the closed gable at b. In cutaway the roof goes (the far slope would cover the
+  // back of the room from above, as the stone section's cutaway has no roof), and so do the wall
+  // and gable facing the camera; the plank floor shows, as the palisade tower's open sides.
   function longhouse(s){
     const key=modelKey(s),mesh={pos:[],col:[]};
     const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
@@ -176,7 +177,7 @@
       const d0=viewDepthPoint(c),near=p=>viewDepthPoint(p)>d0+1e-6;
       skip=new Set();
       const yn=near({x:c.x+uy,y:c.y-ux});
-      skip.add(yn?'wall_yn':'wall_yp').add(yn?'roof_yn':'roof_yp').add('ridge');
+      skip.add(yn?'wall_yn':'wall_yp').add('roof_yn').add('roof_yp').add('ridge');
       skip.add(near(s.a)?'end_a':'end_b');
     }
     const bay=['wall_yn','wall_yp','roof_yn','roof_yp','ridge','floor'].filter(n=>!skip.has(n));

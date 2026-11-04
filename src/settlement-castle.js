@@ -1056,7 +1056,7 @@ function drawCutawayStructure(s){
   // Timber tower: its model, minus the camera-facing sides, is drawn with the structures
   // (ConquerWood3D.draw); only the room's furnishings belong here.
   if(isWoodTower(s)){withStructureGroundPlane(s,()=>window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s)));return}
-  if(isLonghouse(s)){window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s));return}
+  if(isLonghouse(s))return;   // its room is drawn with its model (drawStructure)
   const render=()=>{
     // Walls stop at the ceiling of the floor in view (cutawayCeilingZ); the crest and the roof
     // deck only when every floor is in view.

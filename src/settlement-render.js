@@ -42,7 +42,9 @@ function drawStructure(s,preview=false){
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
     else if(s.type==='palisade')drawPalisade(s,preview);
-    else if(isLonghouse(s)&&window.ConquerWood3D?.draw(s,preview)){}   // timber longhouse: Blender model
+    // Timber longhouse: Blender model; open in cutaway, its room right after it, in depth order (it
+    // is not a castle part, so the castle body / cutaway composites neither bound nor refresh it).
+    else if(isLonghouse(s)&&window.ConquerWood3D?.draw(s,preview)){if(!preview&&structureCutaway(s))window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s))}
     else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
     ctx.restore();
   };
