@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-04 — Case L4 in 3D con il kit Blender (branch `feature/houses-blender-l4`)
+
+- Le case L4 in World 3D usano il kit: torrette d'angolo tonde e quadrate (muri in pietra e graticcio, finestre del kit, tetto conico o a piramide con pinnacolo, nuovi pezzi Blender) e abbaini con finestra del kit. Kit a 11 pezzi; 2 voci nuove nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
+
 ## 2026-11-03 — Case L1 e L2 in 3D con il kit Blender (branch `feature/houses-blender-l1`)
 
 - Anche le case L2 in World 3D usano il kit (gli stessi pezzi delle L3, su un corpo solo, come nel disegno procedurale).

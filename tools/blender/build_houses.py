@@ -1,7 +1,8 @@
 """CONQUER house kit builder (Blender 4.4+/5.x): the detail pieces the game assembles on its
 procedural house plans (settlement-house3d.js): upper-floor and ground-floor windows, the door,
-the 60-degree gabled roof, the chimney stack and the jetty joist end (L3), and for the L1
-cottages the unglazed shuttered window, the plank door and the thatched roof.
+the 60-degree gabled roof, the chimney stack and the jetty joist end (L2-L4), for the L1
+cottages the unglazed shuttered window, the plank door and the thatched roof, and the conical and
+pyramidal roofs of the L4 corner turrets.
 
 Houses have no fixed size (lots, rows, L/T wings, per-id proportions), so unlike the civic
 buildings they are not whole models: the game keeps its plans (houseFootprintParts /
@@ -16,6 +17,8 @@ Piece axes:
     origin at the wall top (eaves line) on the centre; the game scales x by the ridge length and
     y, z by the span (the pitch is constant, so the scaling is uniform across the slope).
   chimney: footprint 0.22 x 0.20 U as chimneySpecs, z 0..0.48 U, origin at the bottom centre.
+  turretRoofRound / turretRoofSquare: base radius / half side 1 at z 0, apex at z 1, finial above;
+    origin at the centre of the turret top.
   roofThatch: like roof, but with a unit rise (z 0..1 at the ridge): L1 ridges are fixed at
     1.45 U whatever the span, so the game scales z by the actual rise.
 Palette keys starting with 'roof' turn white in winter. Stone keys use the same hex values as the
@@ -42,6 +45,8 @@ COLORS = {
     # L1 cottages: thatch as HOUSE_THATCH (settlement-buildings.js), unglazed openings
     'roofThatch': '#b39250', 'roofThatchDark': '#c4a25d', 'roofThatchRidge': '#9a7b40', 'thatchUnder': '#6e5530',
     'dark': '#1f1a16', 'plank': '#5e4430',
+    # L4 corner turrets: the bluish slate of the procedural turret roofs
+    'roofTurret': '#303943', 'roofTurretDark': '#394550',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Houses'
@@ -267,9 +272,36 @@ def roof_thatch(mdl):
     mdl.done('rolls', rl)
 
 
+def turret_roof(mdl, sides):
+    """L4 corner turret roof, unit size: base radius (round) or half side (square) 1 at z 0, apex at
+    z 1, so the game scales x, y by the turret and z by the roof height. Slate cone in one tone
+    (the light shades its facets; alternate tones striped it), pyramid faces in two, a dark eaves band, and an iron finial with a ball above the apex."""
+    n = sides
+    a0 = math.pi / 4 if n == 4 else 0.0
+    rr = 1 / math.cos(math.pi / 4) if n == 4 else 1.0   # square: corners at half side 1
+    ring = [(math.cos(a0 + 2 * math.pi * i / n) * rr, math.sin(a0 + 2 * math.pi * i / n) * rr) for i in range(n)]
+    sl = mdl.part('cone')
+    apex = (0, 0, 1.0)
+    for i in range(n):
+        (x0, y0), (x1, y1) = ring[i], ring[(i + 1) % n]
+        sl.quads([(x0 * S, y0 * S, 0), (x1 * S, y1 * S, 0), (apex[0] * S, apex[1] * S, apex[2] * S)], [(0, 1, 2)],
+                 'roofTurretDark' if n == 4 and i % 2 == 0 else 'roofTurret')
+    mdl.done('cone', sl)
+    ev = mdl.part('eaves')
+    for i in range(n):
+        (x0, y0), (x1, y1) = ring[i], ring[(i + 1) % n]
+        ev.quads([(x0 * S, y0 * S, -.05 * S), (x1 * S, y1 * S, -.05 * S), (x1 * S, y1 * S, 0), (x0 * S, y0 * S, 0)], [(0, 1, 2, 3)], 'eaves')
+    mdl.done('eaves', ev)
+    fn = mdl.part('finial')
+    fn.cylinder(.012 * S, .14 * S, 'iron', n=6, axis='z', center=(0, 0, (1.0 + .12) * S))
+    fn.cylinder(.03 * S, .03 * S, 'iron', n=8, axis='z', center=(0, 0, (1.0 + .2) * S))
+    mdl.done('finial', fn)
+
+
 BUILD = [('windowUpper', window_upper), ('windowGround', window_ground), ('door', door),
          ('roof', roof), ('chimney', chimney), ('joist', joist),
-         ('windowCottage', window_cottage), ('doorCottage', door_cottage), ('roofThatch', roof_thatch)]
+         ('windowCottage', window_cottage), ('doorCottage', door_cottage), ('roofThatch', roof_thatch),
+         ('turretRoofRound', lambda m_: turret_roof(m_, 20)), ('turretRoofSquare', lambda m_: turret_roof(m_, 4))]
 
 
 def main(out_path):
