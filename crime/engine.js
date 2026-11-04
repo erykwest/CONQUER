@@ -9,12 +9,13 @@
     tax: [0, 100], foodStress: [0, 100], guards: [0, 40], relief: [0, 100], severity: [0, 2]
   });
   const FACILITIES = Object.freeze({
-    watch: Object.freeze({label: 'Corpo di guardia', place: 'Stanza torre W2/W3', role: 'Pattuglie e arresti'}),
-    prison: Object.freeze({label: 'Prigione', place: 'Stanza torre W2/W3', role: 'Detenzione · 12 posti'}),
+    watch: Object.freeze({label: 'Corpo di guardia', place: 'Stanza di torre T2/T3, porta o sala del Municipio', role: 'Pattuglie e arresti'}),
+    prison: Object.freeze({label: 'Prigione', place: 'Stanza di torre T2/T3, porta o sala del Municipio', role: 'Detenzione · 12 posti'}),
     almshouse: Object.freeze({label: 'Ospizio', place: 'Annesso Chiesa L2', role: 'Assistenza ai più vulnerabili'}),
     pillory: Object.freeze({label: 'Gogna', place: 'Piazza', role: 'Deterrenza pubblica e risentimento'}),
-    gallows: Object.freeze({label: 'Forca / patibolo', place: 'Piazza o margine urbano', role: 'Intimidazione e tensione sociale'}),
-    tribunal: Object.freeze({label: 'Tribunale', place: 'Palazzo civico (da verificare)', role: 'Giustizia ordinaria e rilascio detenuti'})
+    gallows: Object.freeze({label: 'Forca', place: 'Piazza o margine urbano', role: 'Intimidazione e tensione sociale'}),
+    scaffold: Object.freeze({label: 'Patibolo', place: 'Piazza maggiore', role: 'Massimo deterrente, massimo risentimento'}),
+    tribunal: Object.freeze({label: 'Tribunale', place: 'Piano del Municipio L2+', role: 'Giustizia ordinaria e rilascio detenuti'})
   });
   const clamp = n => Math.max(0, Math.min(100, n));
   const round = n => Math.round(n * 10) / 10;
@@ -31,7 +32,7 @@
       population: 120, // Demo headcount; NEVER the actual settlement population.
       metrics: {crime: 28, order: 68, tension: 34},
       policies: {tax: 25, foodStress: 35, guards: 10, relief: 20, severity: 1},
-      facilities: {watch: true, prison: true, almshouse: false, pillory: false, gallows: false, tribunal: false},
+      facilities: {watch: true, prison: true, almshouse: false, pillory: false, gallows: false, scaffold: false, tribunal: false},
       detained: 0,
       phase: 'calm',
       phaseDays: 0,
@@ -105,7 +106,7 @@
     s.day++;
     const p = s.policies, f = s.facilities, m = s.metrics;
     const effectiveGuards = f.watch ? p.guards : Math.floor(p.guards / 2);
-    const fear = p.severity * 0.5 + (f.pillory ? 0.4 : 0) + (f.gallows ? 0.75 : 0);
+    const fear = p.severity * 0.5 + (f.pillory ? 0.4 : 0) + (f.gallows ? 0.75 : 0) + (f.scaffold ? 0.9 : 0);
     const care = p.relief * 0.024 + (f.almshouse ? 0.65 : 0);
     const activeDisorder = s.phase === 'riot' || s.phase === 'revolt';
     // Model rules are illustrative balancing placeholders, not medieval statistics.
@@ -117,7 +118,7 @@
       - (s.phase === 'revolt' ? 2.1 : 0) - (p.foodStress > 75 ? 0.3 : 0);
     const tensionChange = -0.75 + p.tax * 0.018 + p.foodStress * 0.024
       + p.severity * 0.22 + (f.pillory ? 0.35 : 0)
-      + (f.gallows ? 1.3 : 0) - p.relief * 0.024
+      + (f.gallows ? 1.3 : 0) + (f.scaffold ? 1.6 : 0) - p.relief * 0.024
       - (f.almshouse ? 0.7 : 0) - (f.tribunal ? 0.25 : 0)
       + (activeDisorder ? 0.35 : 0);
     m.crime = round(clamp(m.crime + crimeChange));
@@ -169,6 +170,8 @@
       const raw = storage?.getItem(KEY);
       if (!raw) return initial();
       const state = JSON.parse(raw);
+      // Saves from before the scaffold was split from the gallows: no scaffold yet.
+      if (state?.facilities && !has(state.facilities, 'scaffold')) state.facilities.scaffold = false;
       return valid(state) ? state : initial();
     } catch (_) { return initial(); }
   }

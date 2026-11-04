@@ -41,7 +41,7 @@ jobs:
       - run: node qa/asset-catalog-regression.cjs
       - run: node qa/siege-assault-regression.cjs
   browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

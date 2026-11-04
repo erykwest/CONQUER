@@ -148,7 +148,30 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **IMPLEMENTATO SU BRANCH, NON MAIN:** pagina `/crime/` con motore deterministico UI-independent (`crime/engine.js`), UI di prova (`crime/index.html`, `crime/ui.js`), metriche separate criminalità/ordine pubblico/tensione, fasi calma→malcontento→protesta→sommossa→rivolta con de-escalation, politiche e strutture dimostrative (guardie, prigione, ospizio, gogna, patibolo, tribunale), log e storico.
 - **ISOLAMENTO:** 120 residenti fixture, localStorage `conquer.crime.prototype.v1`; nessuna modifica ai residenti reali, al ledger, ai locali, alla mappa o ai salvataggi del Builder. Nessun asset visivo nuovo; pagina e controlli sono HTML/CSS.
 - **QA:** `qa/crime-regression.cjs` creato; logica della regressione eseguita in harness JS isolato (PASS), **Node CLI, browser e CI non ancora verificati** alla redazione di questa voce. La pagina è codice, non un deploy certificato.
-- **APERTO:** adapter a stato canonico ed economia, popolani/guardie e routine fisiche, stanze vere/capienze, edifici punitive collocabili, procedimenti individuali, integrazione Combat per sommosse e rivolte, salvataggio condiviso e bilanciamento. Verificare gli slot del Palazzo cittadino prima del tribunale. [Specifica](../crime.md).
+- **APERTO:** adapter a stato canonico ed economia, popolani/guardie e routine fisiche, procedimenti individuali, integrazione Combat per sommosse e rivolte, salvataggio condiviso e bilanciamento. [Specifica](../crime.md).
+
+## CRIME — tribunale in seduta, gogna, forca e patibolo in uso (branch `feature/crime-tribunal-scene`, confluita nella PR #139 il 04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH:** `ConquerCourtPeople` (`src/settlement-court-people.js`) disegna la seduta del tribunale sul piano in vista del Municipio selezionato, nei giorni feriali dalle 9 alle 17 e senza allarme.
+  - **Posti:** da `ConquerCivic3D.roomSlots`, con lo stesso `tribunalLayout` dell'arredo.
+  - **Costumi:** `ConquerWardrobe.ROLE_PIECES`, mostrati nel Lab.
+  - **Natura:** persone decorative e provvisorie, senza residenti.
+- **QA:** `qa/court-people-regression.cjs` PASS. Le regressioni di guardaroba, arredo CRIME, civic3d, catalogo del Lab, animazioni di lavoro e persone degli eventi restano verdi. Verifica nel motore (Municipio L3, P1 tribunale, due rotazioni) e nel Lab (quattro costumi, controlli OK).
+- **Giustizia pubblica:** `justiceSlots`/`justiceScene` per gogna (lun–sab 8–17), forca e patibolo (venerdì 10–12), con boia, magistrato, guardie e folla. Scene sobrie; la folla dietro alla struttura è ritagliata lungo la sua sagoma piena. Verifica nel motore da due lati.
+- **Prigioni:** detenuti e carceriere nella prigione del Municipio (`prisonLayout`, `prisonBars`), detenuti nelle prigioni del castello (`drawCellPrisoner` da `drawCutawayOccupants`). Verifica nel motore da due lati e in una torre T2.
+- **QA integrata (#139):** regressioni CRIME e tribunale, guardaroba, cutaway e controlli browser di assedio, pannelli e Asset Lab superati. Audit: 803 render, 0 falliti. Rivisti gli 8 asset CRIME (ospizio, tre strutture di giustizia e quattro costumi) e aggiunti alla baseline.
+- **DA FARE:** arresti e proteste nelle routine.
+
+## CRIME — edifici e stanze nel Builder (branch `feature/crime-buildings`, 03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH, NON MAIN:**
+  - **Municipio:** una stanza per piano, tante quante i livelli civici, con catalogo civico separato (`council`, `tribunal` da L2, `guard`, `prison`). Si scelgono nell'ispettore («P1…P3») e sono arredate sull'intero piano; il cutaway per piani (`feature/cutaway-floors`, unito) le mostra una per volta. I Municipi già salvati ricevono la sala del consiglio al piano terra.
+  - **Capienze:** `ConquerSiege.capacity()` espone `prisoners` (5 per cella: una cella per stanza normale, due per stanza grande, 2–3 nel Municipio) e `watchmen` (4). Prigioni solo al piano terra (P0).
+  - **Ospizio:** annesso della Chiesa L2 (`almshouse`), modello Blender in `civic-models.js`.
+  - **Gogna, forca e patibolo:** `eventVenue` `pillory` / `gallows` / `scaffold` con costo, cantiere e modelli `justicePillory` / `justiceGallows` / `justiceScaffold` (`event-models.js`, palette estesa in coda). Si trovano nello strumento «Giustizia» del nuovo Builder e tra gli edifici civili del vecchio.
+- **ISOLAMENTO:** `/crime/` non legge ancora queste strutture; cambiano solo le diciture dei luoghi.
+- **QA:** `qa/crime-buildings-regression.cjs` PASS in Node. I modelli rigenerati con Blender 4.4 headless lasciano invariati, bit per bit, tutti gli altri modelli.
+- **Audit del Lab (#139):** fogli provini CRIME rivisti e baseline aggiornata per le otto nuove voci.
 
 
 ## Accampamenti — livree delle tende, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`, 29–30/10/2026)

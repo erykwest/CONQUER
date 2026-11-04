@@ -43,7 +43,7 @@ let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name)}
 function parent(type,level=3){State.structures=[{id:'main',type,x:100,y:100,civicLevel:level,angle:0}];State.lots=type==='market'?[]:[{civicId:'main',points:square(100,100,16,16)}]}
 test('catalog offers owned annexes for three civic parent types, with levels and dimensions',()=>{
-  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),6);
+  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),7);   // + almshouse (crime)
   assert.equal(run("CIVIC_ANNEX_CATALOG.church.square.kind"),'plaza');
   assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.tavern).length"),5);
   assert.equal(run("CIVIC_ANNEX_CATALOG.church.cemetery.intrinsic"),true);
