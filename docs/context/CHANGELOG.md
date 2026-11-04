@@ -6,6 +6,13 @@
 - Nuova `qa/military-stables-regression.cjs`; una variante nel Lab con la sua baseline.
 - Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è l'estensione di una stanza esistente nella direzione già decisa, senza nuovi contratti.
 
+## 2026-11-04 — Cisterna (branch `feature/cistern`)
+
+- Nuova stanza Cisterna al piano terra delle torri in pietra W2–W3: sempre piena, disseta 60 persone (120 nelle torri grandi) quando i nemici tagliano fuori i pozzi; altrimenti cresce la sete (`thirstDays`). La catena dei secchi attinge alla porta della torre.
+- Arredo cutaway (vasca, botola con argano, secchi) da due nuovi pezzi Blender; due righe nella galleria dell'Asset Lab; baseline dell'audit aggiornata.
+- Nuova `qa/cistern-regression.cjs`; estese `qa/cutaway-furniture-regression.cjs` e `qa/multi-wells-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una stanza della direzione già decisa (stanze e annessi al posto di edifici nuovi), senza nuovi contratti.
+
 ## 2026-11-04 — Colombaia nelle torri a falde (branch `feature/colombaia`)
 
 - Nuova stanza `dovecote` (Colombaia): ultimo piano di torri in pietra T2/T3 L2–L3 con tetto a falde. Lettere per colombo viaggiatore 4× più veloci verso la torre-colombaia, risposta immediata senza corriere di ritorno.
