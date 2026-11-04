@@ -70,6 +70,7 @@ canvas.addEventListener('pointerdown',e=>{
       mode:'orient',center:q,angle,lockedAngle,
       wallSnapId:snap.wallId||null,
       wallSnapEnd:snap.wallEnd||null,
+      wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
       parentTowerId:snap.parentTowerId||null,
       subtowerSocket:snap.subtowerSocket||null,
       subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -93,9 +94,15 @@ canvas.addEventListener('pointerdown',e=>{
     status(structureLabel(State.draft.preview)+' position fixed — move cursor to rotate, click to confirm');draw();return
   }
   if(State.tool.kind==='well'){
-    if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
+    const founding=!State.village.founded;
+    if(founding&&State.structures.some(s=>s.type==='well')){status('Name the village before building another well');return}
     const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y};
-    if(addStructure(well))openVillageModal(well);return
+    // Only the first well founds the village; later wells are expansion centres.
+    if(addStructure(well)){
+      if(founding)openVillageModal(well);
+      else status('Well built · '+(wellMainRoads(well).length?'main road linked to the founding well':'no main road route found'));
+    }
+    return
   }
   if(State.tool.kind==='crossing'){
     const moat=['dry','water'].includes(State.tool.crossing);
@@ -313,6 +320,7 @@ canvas.addEventListener('pointermove',e=>{
         mode:'hover',
         wallSnapId:snap.wallId||null,
         wallSnapEnd:snap.wallEnd||null,
+        wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
         parentTowerId:snap.parentTowerId||null,
         subtowerSocket:snap.subtowerSocket||null,
         subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -406,7 +414,7 @@ function setBuildMasonryMaterial(next){
 }
 for(const b of document.querySelectorAll('[data-build-masonry]'))b.onclick=()=>setBuildMasonryMaterial(b.dataset.buildMasonry);
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${isOrientedTowerShape(b.dataset.tower)?orientedTowerLabel(dummy):b.dataset.tower+' tower '+b.dataset.size+'U'} · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
 for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
@@ -464,19 +472,24 @@ document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
     status('Wood gate height is fixed at H1');
     draw();return;
   }
-  State.buildLevels.gate=Number(b.dataset.gateLevel);
-  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
+  // The small gate stops at L2.
+  const small=State.tool.kind==='gate'&&State.tool.size<1.25;
+  State.buildLevels.gate=Math.min(Number(b.dataset.gateLevel),small?SMALL_GATE_MAX_LEVEL:3);
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===State.buildLevels.gate));
   if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:State.tool.size,level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
-document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level};
+// Stone gates: the gatehouse (data-gate-size 1.5) and the small gate (1).
+for(const b of document.querySelectorAll('[data-gate]'))b.onclick=e=>{
+  const size=Number(b.dataset.gateSize)||GATE_SIZES.large,small=size<1.25;
+  const level=Math.min(State.buildLevels.gate,small?SMALL_GATE_MAX_LEVEL:3),dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size,level};
+  State.buildLevels.gate=level;
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
-  setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+  setTool({kind:'gate',material:'stone',size,level,label:(small?'Small gate 1×1U · L':'Gate 1.5×1.5U · L')+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 document.querySelector('[data-wood-gate]').onclick=e=>{
   const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};

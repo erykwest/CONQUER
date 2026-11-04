@@ -190,15 +190,29 @@
     g.strokeStyle='#554637';g.lineWidth=Math.max(.7,State.view.scale);
     g.beginPath();g.moveTo(T.x,T.y);g.lineTo(mid.x,mid.y);g.stroke();
   }
+  let bivouacCache={sig:null,camps:[],meshes:[]};
   function drawEncampments(g){
     const campers=units().filter(u=>u.campState==='camped'&&!u.defeated&&
       ['squad','knight','captain'].includes(u.kind));
     if(!campers.length)return;
+    // Bivouac layout (ConquerEvents3D.bivouac): pavilion, ridge tents and fires per camp;
+    // the old one-tent-per-unit sketch stays as the fallback without the 3D catalog.
+    const E=window.ConquerEvents3D,M=window.ConquerMesh3D;
+    let fires=campers.map(u=>({x:u.x+.68,y:u.y-.25,id:u.id}));
+    const sig=campers.map(u=>u.id+'@'+u.x.toFixed(1)+','+u.y.toFixed(1)).join('|');
+    if(E?.bivouac&&M){
+      if(bivouacCache.sig!==sig){
+        const camps=E.bivouac(campers,{blocked:p=>typeof pointBlockedForPeasant==='function'&&pointBlockedForPeasant(p)}).camps;
+        bivouacCache={sig,camps,meshes:E.bivouacMeshes(camps,p=>terrainElevation(p))};
+      }
+      fires=bivouacCache.camps.flatMap(c=>c.fires);
+    }
     withRenderContext(g,()=>{
-      for(const unit of campers){
-        tent(g,unit);
-        const fire={kind:'brazier',id:unit.id+':camp-brazier',
-          p:{x:unit.x+.68,y:unit.y-.25},z:.14,groundZ:terrainElevation(unit)};
+      if(E?.bivouac&&M)M.drawMeshes(g,bivouacCache.meshes,M.gameView());
+      else campers.forEach(u=>tent(g,u));
+      for(const f of fires){
+        const fire={kind:'brazier',id:f.id+':camp-brazier',
+          p:{x:f.x,y:f.y},z:.14,groundZ:terrainElevation(f)};
         drawBrazierFixture(fire);
         const base=w2sRaw(fire.p,fire.groundZ+fire.z+.08);
         const scale=clamp(State.view.scale,.55,1.45);

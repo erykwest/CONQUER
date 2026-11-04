@@ -1,0 +1,49 @@
+name: Tower bartizans and roof shapes regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement-core.js'
+      - 'src/settlement-population.js'
+      - 'src/settlement-castle-structures.js'
+      - 'src/settlement-castle3d.js'
+      - 'src/settlement-siege.js'
+      - 'src/settlement-combat.js'
+      - 'src/settlement-structure-commands.js'
+      - 'qa/bartizan-regression.cjs'
+      - 'qa/tower-roof-shape-regression.cjs'
+      - 'qa/dovecote-regression.cjs'
+      - 'src/settlement-diplomacy.js'
+      - 'src/settlement-cutaway-furniture.js'
+      - 'src/assets/dovecote-models.js'
+      - 'src/assets/furniture-model.js'
+      - '.github/workflows/tower-variants-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  tower-variants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Check affected scripts
+        run: |
+          node --check src/settlement-castle-structures.js
+          node --check src/settlement-castle3d.js
+          node --check src/settlement-combat.js
+          node --check src/settlement-siege.js
+      - name: Bartizans (geometry, crown, archer slots with the 0-1U foot strike)
+        run: node qa/bartizan-regression.cjs
+      - name: Square tower roof shapes (pyramid, gable, hip with L/2 ridge)
+        run: node qa/tower-roof-shape-regression.cjs
+      - name: Existing crown and tower weapon regressions
+        run: |
+          node qa/battlement-parapet-regression.cjs
+          node qa/subtower-junctions-regression.cjs
+          node qa/tower-weapons-regression.cjs
+      - name: Dovecote (top room under the pitched roof, pigeon post, roof lantern)
+        run: node qa/dovecote-regression.cjs

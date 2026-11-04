@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const base=path.join(__dirname,'..','src');
-const combat=fs.readFileSync(path.join(base,'settlement-combat.js'),'utf8');
+const combat=fs.readFileSync(path.join(base,'settlement-combat.js'),'utf8')+'\n'+fs.readFileSync(path.join(base,'settlement-combat-render.js'),'utf8');
 const siege=fs.readFileSync(path.join(base,'settlement-siege.js'),'utf8');
 const rules=fs.readFileSync(path.join(base,'settlement-combat-rules.js'),'utf8');
 assert.match(combat,/kind:'captain'/,'initial commander must be called captain');
@@ -14,7 +14,9 @@ assert.match(combat,/u\.kind==='captain'&&!u\.defeated/,'captain owns command be
 assert.match(rules,/captain:Object\.freeze/);
 assert.match(siege,/stables:\{horses:5\}/);
 assert.match(siege,/nobleRoom:\{knights:1\}/);
-assert.match(siege,/fn==='stables'\|\|fn==='nobleRoom'/,'castle slot size must not multiply these capacities');
+// Noble rooms: one knight whatever the slot size. Stables: one stall block in a tower, 5 horses per U
+// of a built-section room (military stables, settlement-siege.js stableUnits), never the slot size.
+assert.match(siege,/fn==='stables'\?stableUnits\(s,i\):fn==='nobleRoom'\?1:/,'castle slot size must not multiply these capacities');
 
 function fixture(){
   const nodes=new Map();

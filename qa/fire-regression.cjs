@@ -19,7 +19,7 @@ function fixture({rain=false,seed=7}={}){
     Math:Object.assign(Object.create(Math),{random}),
     structureLevel:s=>s.level||1,
     structureHeight:s=>s.type==='ruin'?s.ruinHeight:s.type==='tower'?[2.35,3.55,4.75][(s.level||1)-1]:s.type==='house'?2.26:s.type==='gate'?2.8:1.15,
-    footprintPoints:s=>square(s.x,s.y,s.type==='house'?1:.75),houseFootprintParts:s=>[{points:square(s.x,s.y,1)}],houseLevel:()=>2,
+    footprintPoints:s=>square(s.x,s.y,s.type==='house'?1:.75),houseFootprintParts:s=>[{points:square(s.x,s.y,1)}],houseLevel:s=>s.houseLevel||2,
     wallTier:s=>s.tier||2,wallSkin:s=>s.skin||'standard',towerTier:()=>2,isCivic:()=>false,rectDims:()=>({w:1.5,h:1.5}),
     isWoodTower:s=>s.type==='tower'&&s.material==='wood',isWoodGate:s=>s.type==='gate'&&s.material==='wood',
     towerRoofStyle:s=>s.type==='tower'?(s.roofStyle||'battlement'):undefined,gateRoofStyle:s=>s.roofStyle||'battlement',
@@ -31,6 +31,7 @@ function fixture({rain=false,seed=7}={}){
   return{State,F:ctx.window.ConquerFire,S:ctx.window.ConquerSiege};
 }
 const run=(F,secs,step=.25)=>{for(let t=0;t<secs;t+=step)F.tick(step)};
+const BURN_WHOLE=fixture().F.BURN.whole;
 const house=(id,x,y)=>({id,type:'house',x,y,functions:[]});
 
 {
@@ -61,6 +62,26 @@ const house=(id,x,y)=>({id,type:'house',x,y,functions:[]});
   run(F,60);
   assert.equal(F.state().embers.length,0,'the embers die');
   console.log('PASS a house burns down into burning rubble that blocks, then dies down');
+}
+{
+  // Every level burns down: integrity grows with the house level, the fuel does not, so an L3/L4
+  // house used to outlast its fire at a few percent and stand intact. Left alone (no well, no
+  // brigade), the fire brings it down at the end of its fuel, with burning rubble.
+  for(const level of [1,2,3,4]){
+    const {State,F}=fixture();
+    const h={...house('h'+level,0,0),houseLevel:level};State.structures.push(h);
+    F.ignite(h.id,{heat:1});
+    let t=0;for(;t<120&&State.structures.includes(h);t+=.25)F.tick(.25);
+    assert.ok(!State.structures.includes(h),'an L'+level+' house burns down');
+    assert.ok(t<=BURN_WHOLE+5,'L'+level+': no later than its fuel ('+t.toFixed(1)+' s)');
+    assert.ok(F.state().embers.length>0&&(State.siege?.ruins||[]).some(r=>String(r.id).startsWith(h.id)),'L'+level+': rubble and embers');
+  }
+  // A fire put out before its fuel is gone leaves the house standing, damaged.
+  const {State,F,S}=fixture();
+  const h={...house('h',0,0),houseLevel:4};State.structures.push(h);
+  F.ignite('h',{heat:1});run(F,20);F.extinguish('h');run(F,5);
+  assert.ok(State.structures.includes(h)&&S.integrity(h).core.hp<S.integrity(h).core.max,'an extinguished house stands, damaged');
+  console.log('PASS houses of every level burn down when the fire runs its course; an extinguished one stands');
 }
 {
   // Stone with wooden parts: the roof burns off, the hoarding burns away, masonry stands.

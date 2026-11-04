@@ -190,6 +190,7 @@ function renderCastleBodyContent(){
   drawTowerDoors();
   drawTowerRoofs();
   drawGateRoofs();
+  window.ConquerRoomExterior?.drawAll();
 }
 function castleBodyRenderableStructures(){
   return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));
@@ -215,9 +216,9 @@ function castleBodyVisualSignature(){
   const point=p=>p?[num(p.x),num(p.y)]:null;
   const items=castleBodyRenderableStructures().map(s=>[
     s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
-    s.roofStyle||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
+    s.roofStyle||'',s.bartizan||'',s.bell||'',s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
     point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
-    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,JSON.stringify(s.functions||[]),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
+    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,s.cutawayFloor??null,JSON.stringify(s.functions||[]),JSON.stringify(s.roomExteriorHp||null),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
@@ -333,7 +334,11 @@ document.getElementById('castleCacheToggle')?.addEventListener('click',()=>setCa
 document.getElementById('castleCacheBenchmark')?.addEventListener('click',()=>benchmarkCastleBodyCache(3));
 updateCastleCacheControls();
 
+let shopFrontSig=null;
 function ensureStaticSceneCaches(){
+  // L3 shop fronts open at dawn and shut at dusk (settlement-shop-cutaway.js): repaint the houses.
+  const shopSig=window.ConquerShopCutaway?.frontSig?.()??null;
+  if(shopSig!==shopFrontSig){if(shopFrontSig!==null)invalidateSceneCache(['base']);shopFrontSig=shopSig}
   const builders=[
     ['landscape',drawLandscapeStaticScene],
     ['ground',drawGroundStaticScene],
@@ -382,7 +387,7 @@ let lastCivicCutawayId=null;
 function draw(){
   // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
   // panel's close button deselect without invalidating it.
-  const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
+  const civicCut=window.ConquerCivic3D?.cutawaySig?.()||null;   // id@floor
   if(civicCut!==lastCivicCutawayId){lastCivicCutawayId=civicCut;invalidateSceneCache('base')}
   const r=wrap.getBoundingClientRect();
   const phaseStart=performance.now(),phaseStats={};
@@ -440,6 +445,7 @@ function draw(){
   drawPeasants();
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
+  window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
   window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
@@ -458,6 +464,7 @@ function draw(){
   window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
   window.ConquerGulls?.draw(performance.now()/1000);   // seagulls over the coast, above the ships
   window.ConquerSiege?.drawOverlay();
+  if(typeof drawRaisedVillagers==='function')drawRaisedVillagers();   // on the Mastio's outer stair
   drawCastleFireFixtures();
 
   // The drawbridge is an exterior shield when raised. Paint portals and
@@ -466,6 +473,7 @@ function draw(){
   if(world3d)window.ConquerWorld3D.drawMastioDrapes();
   else{drawFacadeWindows(false,1,false);drawGatePortals()}
   window.ConquerCrossings?.drawDynamic();
+  window.ConquerKeepEntrance?.animate();
   window.ConquerGates?.tick();
   drawChimneysAndSmoke();
 

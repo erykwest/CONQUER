@@ -14,11 +14,17 @@ const src=[
   pick(/function towerRoofStyle\(s\)\{[\s\S]*?\n?\}\n/,'towerRoofStyle'),
   pick(/function towerTopWeaponAllowed\(s\)\{[^\n]*\}/,'towerTopWeaponAllowed'),
   pick(/function towerTopWeapon\(s\)\{[^\n]*\}/,'towerTopWeapon'),
+  pick(/function towerHoardingAllowed\(s\)\{[^\n]*\}/,'towerHoardingAllowed'),
+  pick(/function towerBartizanAllowed\(s\)\{[^\n]*\}/,'towerBartizanAllowed'),
+  pick(/function towerBartizan\(s\)\{[^\n]*\}/,'towerBartizan'),
+  pick(/function towerHoardingMounted\(s\)\{[^\n]*\}/,'towerHoardingMounted'),
   pick(/function isWoodTower\(s\)\{[^\n]*\}/,'isWoodTower'),
+  pick(/const ORIENTED_TOWER_SPECS=[\s\S]*?\nfunction orientedTowerDims\(s\)\{[^\n]*\}/,'oriented tower shapes'),
   pick(/function towerTier\(s\)\{[^\n]*\}/,'towerTier')
 ].join('\n');
 const window={},State={structures:[]};
 const ctx=vm.createContext({window,State,console,Math,Number,Object,Array,Map,Float32Array,String,
+  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
   underConstruction:()=>false,placementGroundZ:()=>.5,terrainElevation:()=>0,
   structureHeight:s=>[2.35,3.55,4.75][(s.level||1)-1],structureCenter:s=>({x:s.x,y:s.y}),
   structureInteriorVector:()=>({x:-1,y:0}),drawCastleSoldiers:()=>{}});
@@ -36,6 +42,7 @@ const tower=(o={})=>W.normalizeStructureVariants({type:'tower',shape:'square',ma
   assert.ok(!W.setStructureVariant(t,'topWeapon','trebuchet'),'only mangonel or ballista');
   for(const level of [1,2,3])assert.equal(W.towerTopWeapon(tower({level,topWeapon:'ballista'})),'ballista','any height');
   assert.equal(W.towerTopWeapon(tower({roofStyle:'machicolation',topWeapon:'ballista'})),'ballista','machicolation has an open deck');
+  assert.equal(W.towerTopWeapon(tower({hoarding:'on',topWeapon:'ballista'})),'none','a mounted hoarding closes the deck');
   assert.equal(W.towerTopWeapon(tower({roofStyle:'pitched',topWeapon:'ballista'})),'none','not under a pitched roof');
 assert.equal(W.towerTopWeapon(tower({brokenTop:true,topWeapon:'ballista'})),'none','not on a broken crown');
   assert.equal(W.towerTopWeapon(tower({size:1,topWeapon:'ballista'})),'none','not on small (T1) towers');

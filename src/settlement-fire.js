@@ -2,7 +2,8 @@
 // CONQUER fire: what burns, how a fire grows, eats its fuel, damages, spreads and dies,
 // and how it looks. Timber burns whole (houses, taverns, markets, wooden towers, gates
 // and palisades); stone structures burn only their wooden parts (a pitched roof, a
-// hoarding gallery, the gate door); bare masonry does not burn. A timber structure
+// hoarding gallery, the gate door); bare masonry does not burn. A house, inn or market
+// left to burn out comes down at the end of its fuel, at any level. A timber structure
 // that comes down while burning leaves burning rubble for a while: nobody crosses it
 // (not even a breach) and it sets light to what stands next to it. Rain slows it all.
 // Fires run on game time (ConquerFire.tick(dt*speed) from the simulation frame): they
@@ -14,8 +15,10 @@
 //   drawTorch(g,p,scale,id)          the torch an attacker carries
 (function(){
   const GROW=.22,EMBER_TIME=45,SPREAD_EVERY=1,DAMAGE_EVERY=1;
+  // Timber buildings that a fire left to burn out brings down (mills stand gutted instead).
+  const BURNS_DOWN=new Set(['house','tavern','market']);
   // Seconds of full fire each fuel lasts.
-  const BURN={whole:55,roof:30,hoarding:26,door:22};
+  const BURN={whole:55,roof:30,hoarding:26,door:22,stair:28,leaf:18};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   function store(){
     if(!State.fire||typeof State.fire!=='object')State.fire={burning:[],embers:[]};
@@ -33,13 +36,17 @@
     if(isWood(s))return[{part:'whole',flam:1}];
     if(s.type==='house'||s.type==='tavern')return[{part:'whole',flam:.9}];
     if(s.type==='market')return[{part:'whole',flam:.7}];
+    // Timber-framed guild halls and the L1 town hall; the masonry levels do not catch.
+    if(s.type==='guild'&&civicLevel(s)<3||s.type==='townhall'&&civicLevel(s)===1)return[{part:'whole',flam:.6}];
     // Mills: timber cap, sails, floors and wheel; once gutted nothing is left to burn.
     if(['windmill','watermill'].includes(s.type))return s.burnt?[]:[{part:'whole',flam:.85}];
-    const out=[];
+    // The Mastio's wooden stair and drawbridge leaf come first: torches at its foot take them.
+    const out=s.type==='tower'?[...(window.ConquerKeepEntrance?.fireParts?.(s)||[])]:[];
     if(s.type==='tower'&&typeof towerRoofStyle==='function'&&towerRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='gate'&&typeof gateRoofStyle==='function'&&gateRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='church'&&!s.roofBurnt)out.push({part:'roof',flam:.4});
     if(s.type==='wall'&&typeof wallSkin==='function'&&wallSkin(s)==='hoarding')out.push({part:'hoarding',flam:.8});
+    if((s.type==='tower'||s.type==='gate')&&typeof hoardingMounted==='function'&&hoardingMounted(s))out.push({part:'hoarding',flam:.8});
     // The door burns until it is burnt out or battered down (its own integrity at zero).
     if(s.type==='gate'&&!s.doorBurnt&&!(s.siegeIntegrity?.door?.hp<=0))out.push({part:'door',flam:.5});
     return out;
@@ -97,9 +104,12 @@
     if(f.part==='roof'){
       s.roofBurnt=true;
       if(s.type==='tower'||s.type==='gate')s.roofStyle='battlement';
-    }else if(f.part==='hoarding')s.skin='standard';
+    }else if(f.part==='hoarding'){
+      if(s.type==='tower'||s.type==='gate')s.hoarding='off';else s.skin='standard';
+    }
     else if(f.part==='door')s.doorBurnt=true;
     else if(f.part==='whole')s.burnt=true;      // a gutted mill: it stands, but grinds no more
+    else if(f.part==='stair'||f.part==='leaf'){window.ConquerKeepEntrance?.burnout?.(s,f.part);return}   // the keep's masonry is not charred
     s.charred=true;
     if(typeof invalidateStructureScene==='function')invalidateStructureScene(s);
     if(typeof invalidateSceneCache==='function')invalidateSceneCache();
@@ -157,7 +167,13 @@
   const WOMEN=[['#b4a58a','#8f8b82'],['#9c9078','#7d7a72'],['#c8bda6','#9c9078'],['#a39e93','#7d7a72']];   // L1 grey/beige
   function brigadeOn(){return store().brigadeOn!==false}
   function setBrigade(on){store().brigadeOn=!!on;if(!on)store().carriers=[]}
-  function wells(){return State.structures.filter(s=>s.type==='well'&&!(typeof underConstruction==='function'&&underConstruction(s)))}
+  // Water points: the wells that can still be reached (siege), and the cisterns, always full,
+  // drawn from at the ground door of their tower.
+  function wells(){
+    const S=window.ConquerSiege;
+    return State.structures.filter(s=>s.type==='well'&&!(typeof underConstruction==='function'&&underConstruction(s))&&(!S?.wellReachable||S.wellReachable(s)))
+      .concat(S?.cisternTaps?.()||[]);
+  }
   // What can be fought: burning parts of standing structures and burning rubble.
   function blazes(){
     const x=store(),out=[];
@@ -192,6 +208,7 @@
     c.path=p;return true;
   }
   function wellStand(w,angle=0){
+    if(w.tap)return{...w.tap};
     let p;
     for(let k=0;k<16;k++){
       const a=angle+k*Math.PI/8;p={x:w.x+Math.cos(a)*.9,y:w.y+Math.sin(a)*.9};
@@ -308,7 +325,17 @@
         if(typeof invalidateSceneCache==='function')invalidateSceneCache();
         if(typeof markDirty==='function')markDirty(true,true,true);
       }
-      if(f.fuel<=0){x.burning=x.burning.filter(g=>g!==f);if(f.part!=='whole')burnout(s,f);else if(f.gutted)burnout(s,f)}
+      if(f.fuel<=0){
+        x.burning=x.burning.filter(g=>g!==f);
+        if(f.part!=='whole')burnout(s,f);
+        else if(f.gutted)burnout(s,f);
+        // A house, inn or market burnt through comes down with its last flames, whatever its
+        // level (their integrity grows with the level, the fuel does not): rubble and embers.
+        else if(BURNS_DOWN.has(s.type)){
+          window.ConquerSiege?.attackStructure(s.id,'torch',1e9,'core');
+          const now=find(f.id);if(!now||now.type==='ruin')toEmbers(f);
+        }
+      }
     }
     for(const e of [...x.embers]){
       e.left-=dt*(rain?2.5:1);e.heat=clamp(e.left/EMBER_TIME,0,1);
@@ -345,6 +372,7 @@
     const rnd=rng(f.seed),ground=typeof terrainElevation==='function'?terrainElevation(centre(s)):0;
     const H=typeof structureHeight==='function'?structureHeight(s):1,out=[];
     const n=Math.round(3+f.heat*7);
+    if(f.part==='stair'||f.part==='leaf')return window.ConquerKeepEntrance?.fireSeats?.(s,f.part,rnd,n)||[];
     if(f.part==='door'){
       const d=typeof rectDims==='function'?rectDims(s):{w:1.5},a=Number(s.angle)||0;
       for(let i=0;i<n;i++){const o=(rnd()-.5)*.6;out.push({x:s.x+Math.cos(a)*d.w/2-Math.sin(a)*o,y:s.y+Math.sin(a)*d.w/2+Math.cos(a)*o,z:ground+.1+rnd()*.5})}

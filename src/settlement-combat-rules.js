@@ -303,32 +303,8 @@
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
     for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);
   }
-  function drawEffects(g,project){
-    g.save();
-    for(const p of shots){
-      const t=Math.min(1,(elapsed-p.start)/p.duration);
-      const rise=Math.sin(Math.PI*t)*Math.min(3,Math.hypot(p.to.x-p.from.x,p.to.y-p.from.y)*.20);
-      const x=p.from.x+(p.to.x-p.from.x)*t,y=p.from.y+(p.to.y-p.from.y)*t;
-      const z=p.from.z+(p.to.z-p.from.z)*t+rise;
-      const pos=project({x,y},z);
-      const end=project({x:p.from.x+(p.to.x-p.from.x)*Math.min(1,t+.045),y:p.from.y+(p.to.y-p.from.y)*Math.min(1,t+.045)},
-        p.from.z+(p.to.z-p.from.z)*Math.min(1,t+.045)+Math.sin(Math.PI*Math.min(1,t+.045))*Math.min(3,Math.hypot(p.to.x-p.from.x,p.to.y-p.from.y)*.20));
-      g.strokeStyle='#d7c6a1';g.lineWidth=2;g.beginPath();g.moveTo(pos.x,pos.y);g.lineTo(end.x,end.y);g.stroke();
-    }
-    for(const s of stones){
-      // Falls with gravity from the gallery; a puff where it lands.
-      const t=Math.min(1,(elapsed-s.start)/s.duration),k=t*t;
-      const at=project({x:s.from.x+(s.to.x-s.from.x)*t,y:s.from.y+(s.to.y-s.from.y)*t},s.from.z+(s.to.z-s.from.z)*k);
-      if(t<1){g.globalAlpha=1;g.fillStyle='#8e877c';g.strokeStyle='#4a453f';g.lineWidth=1;g.beginPath();g.arc(at.x,at.y,3.2,0,Math.PI*2);g.fill();g.stroke()}
-      else{const age=(elapsed-s.start-s.duration)/.25;g.globalAlpha=Math.max(0,.6-age*.6);g.fillStyle='#c9bda7';g.beginPath();g.arc(at.x,at.y,4+age*6,0,Math.PI*2);g.fill();g.globalAlpha=1}
-    }
-    for(const f of meleeFlashes){
-      const age=(elapsed-f.at)/.65,at=project(f,.16);
-      g.globalAlpha=Math.max(0,1-age);g.strokeStyle='#f3dcc0';g.lineWidth=1.8;
-      g.beginPath();g.moveTo(at.x-5,at.y-11-age*5);g.lineTo(at.x+6,at.y-3-age*5);g.stroke();
-    }
-    g.restore();
-  }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,orderedBoundaryPoints,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,dropStone,STONE_DAMAGE,
+  window.ConquerCombatRules={PROFILES,MAX_E,MAX_B,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,orderedBoundaryPoints,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,dropStone,STONE_DAMAGE,
+    // Borrowed read-only effect state; presentation never advances these queues.
+    visualEffects:()=>({shots,stones,meleeFlashes,elapsed}),
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;stones.length=0;elapsed=0;combatClock=0;window.ConquerCombatAnim?.reset()}};
 })();

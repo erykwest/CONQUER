@@ -54,7 +54,16 @@
       .sort((a,b)=>a.d-b.d).slice(0,2).map(x=>x.k);
     // The longer far wall first (it takes the main pieces).
     const len=k=>k[0]==='u'?b.h:b.w;far.sort((a,c)=>len(c)-len(a));
-    return{b,toWorld,far,hu:b.w/2,hv:b.h/2,round:slot.round};
+    // D tower: straight part behind u = cx, half round of radius hv (centred on u = cx) in front.
+    const dee=slot.dee?{cx:b.w/2-b.h/2,r:b.h/2}:null;
+    return{b,toWorld,far,hu:b.w/2,hv:b.h/2,round:slot.round,dee};
+  }
+  // Inside a D room with a margin m (pieces and ladders stay off the half round).
+  function deeInside(F,u,v,m=0){return u<=F.dee.cx||Math.hypot(u-F.dee.cx,v)<=F.dee.r-m}
+  // Pulls a point in front of u = cx back inside the half round.
+  function deeShrink(F,u,v,m){
+    const du=u-F.dee.cx,d=Math.hypot(du,v),lim=F.dee.r-m;
+    return du>0&&d>lim?[F.dee.cx+du*lim/d,v*lim/d]:[u,v];
   }
   // ---------- layout builder
   function builder(slot,opts){
@@ -65,6 +74,10 @@
       const [a,b]=F.far.map(k=>SIDES[k]),cu=(a[0]||b[0])*F.hu,cv=(a[1]||b[1])*F.hv;
       reserve.push([cu-Math.sign(cu)*LADDER_CLEAR-.01,cv-Math.sign(cv)*LADDER_CLEAR-.01,cu,cv].map((x,i,arr)=>x));
       F.ladder={u:cu-Math.sign(cu)*(LADDER_W/2+.04),v:cv-Math.sign(cv)*(LADDER_W/2+.04),side:F.far[0]};
+      if(F.dee&&!deeInside(F,F.ladder.u,F.ladder.v,LADDER_W/2+.06)){
+        [F.ladder.u,F.ladder.v]=deeShrink(F,F.ladder.u,F.ladder.v,LADDER_W/2+.06);
+        reserve.push([F.ladder.u-LADDER_CLEAR/2,F.ladder.v-LADDER_CLEAR/2,F.ladder.u+LADDER_CLEAR/2,F.ladder.v+LADDER_CLEAR/2]);
+      }
     }
     if(opts.passage)reserve.push(opts.passage);
     // The parent of a subtower / the subtowers of a parent occupy part of the room.
@@ -90,6 +103,7 @@
       const rot=((turn%4)+4)%4,r=rectOf(name,u,v,rot);
       if(r[0]<-F.hu-1e-6||r[2]>F.hu+1e-6||r[1]<-F.hv-1e-6||r[3]>F.hv+1e-6)return false;
       if(F.round&&Math.hypot(Math.max(Math.abs(r[0]),Math.abs(r[2])),Math.max(Math.abs(r[1]),Math.abs(r[3])))>F.hu+.02)return false;
+      if(F.dee&&![[r[0],r[1]],[r[2],r[1]],[r[2],r[3]],[r[0],r[3]]].every(([u,v])=>deeInside(F,u,v,-.02)))return false;
       if(!deco&&(hit(r,boxes)||hit(r,reserve)))return false;
       if(!deco)boxes.push(r);
       items.push({name,u,v,turn:rot,lift,r,deco});return true;
@@ -103,7 +117,7 @@
       const tries=o.exact?[t]:[t,t+.35,t-.35,t+.7,t-.7,-t,1,-1].map(x=>Math.max(-1,Math.min(1,x)));
       for(const tt of tries){
         const pos=tt*Math.max(0,along),u=du?du*(F.hu-inset):pos,v=dv?dv*(F.hv-inset):pos;
-        const [pu,pv]=F.round?shrinkRound(u,v,s):[u,v];
+        const [pu,pv]=F.round?shrinkRound(u,v,s):F.dee?deeShrink(F,u,v,Math.max(s.d,s.w)*.5+.02):[u,v];
         if(place(name,pu,pv,turn,o))return true;
       }
       return false;
@@ -148,6 +162,15 @@
     if(alongV){r.near(fu-o,fv,'bench',turn);r.near(fu+o,fv,'bench',turn)}else{r.near(fu,fv-o,'bench',turn);r.near(fu,fv+o,'bench',turn)}
     return true;
   }
+  // Up to n ward cots against one wall, spread along it with an aisle between beds (at least a
+  // hand apart when the wall is short, at most two bed widths of aisle); returns how many stand.
+  function wardRow(r,side,n){
+    const s=size('infirmaryBed'),half=(side[0]==='u'?r.F.hv:r.F.hu),along=half-s.w/2-.02,tight=s.w+.03;
+    const fit=Math.min(n,Math.max(0,Math.floor((2*along+s.w)/tight)));
+    const pitch=fit>1?Math.max(tight,Math.min(3*s.w,1.8*along/(fit-1))):tight;let placed=0;
+    for(let k=0;k<fit;k++){const pos=(k-(fit-1)/2)*pitch;if(r.wall(side,along>0?pos/along:0,'infirmaryBed',{exact:true}))placed++}
+    return placed;
+  }
   const ROOMS={
     guard(r){r.row(r.A,'spearRack',1,{t:-.4});r.wall(r.B,.2,'bench');r.near(.15,.1,'tableSmall');r.near(.15,-.45,'stool');r.near(-.3,.15,'stool');
       r.wall(r.A,.6,'brazier',{off:.1});if(r.large){r.wall(r.B,-.7,'s:barrelGroup');r.wall(r.A,.1,'bench')}},
@@ -163,7 +186,19 @@
       if(r.large){r.near(-.4,.3,'s:sackPile');r.near(.45,-.35,'s:hayBales')}},
     kitchen(r){r.wall(r.A,-.3,'hearth');r.wall(r.B,.3,'shelf');r.near(.15,.15,r.large?'tableLong':'tableSmall',1);r.wall(r.B,-.7,'s:barrelGroup');
       if(r.large){r.wall(r.A,.6,'breadOven');r.near(-.4,-.3,'hamRack');r.near(.5,.5,'s:firewood')}else r.wall(r.A,.7,'s:firewood')},
-    stables(r){r.row(r.A,'stall',r.large?3:1);r.wall(r.B,0,'manger');r.near(.3,.3,'s:hayBales');r.near(-.3,.4,'s:buckets');if(r.large)r.near(.4,-.4,'saddleStand',1)},
+    stables(r){
+      // Military stables in a long built-section room: stalls down the long standing wall, as many
+      // as fit (5 horses per U, settlement-siege.js stableUnits); tack on the short wall, forage in between.
+      const F=r.F,len=side=>2*(SIDES[side][0]?F.hv:F.hu);
+      if(!F.round&&!F.dee&&Math.max(F.hu,F.hv)>1.6*Math.min(F.hu,F.hv)){
+        const walls=[r.A,r.B].sort((a,b)=>len(b)-len(a)),fit=side=>Math.max(1,Math.floor((len(side)-.1)/(size('stall').w+.04)));
+        r.row(walls[0],'stall',fit(walls[0]),{spill:false});
+        if(len(walls[1])>=len(walls[0])-1e-6)r.row(walls[1],'stall',fit(walls[1]),{spill:false});
+        else{r.wall(walls[1],-.4,'saddleStand');r.wall(walls[1],.4,'manger')}
+        r.near(.4,.1,'saddleStand',1);r.near(-.4,.1,'s:hayBales');r.near(0,-.1,'s:buckets');r.near(.7,-.1,'s:barrelGroup');
+        return;
+      }
+      r.row(r.A,'stall',r.large?3:1);r.wall(r.B,0,'manger');r.near(.3,.3,'s:hayBales');r.near(-.3,.4,'s:buckets');if(r.large)r.near(.4,-.4,'saddleStand',1)},
     nobleRoom(r){r.wall(r.A,-.2,'canopyBed');r.at(.1,.2,'rug',0,{deco:true});r.wall(r.B,.6,'tapestry',{deco:true});
       r.wall(r.B,-.5,r.large?'fireplace':'chest');r.near(.35,.35,'tableSmall');r.near(.6,.35,'chair',2);
       if(r.large){r.near(-.4,.45,'writingDesk',r.toward(r.A));r.near(.5,-.5,'chest');r.wall(r.A,.75,'candleStand')}},
@@ -182,8 +217,23 @@
       r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large){r.near(.4,.45,'tableLong');r.wall(r.B,-.7,'candleStand')}},
     treasury(r){r.row(r.A,'strongChest',r.large?3:2);r.wall(r.B,-.5,'goldChest');r.near(.2,.2,'coinSacks');
       if(r.large){r.wall(r.B,.4,'ingotRack');r.near(-.4,.4,'writingDesk');r.near(.5,-.3,'coinSacks')}},
+    // Ward: one cot per bed of the simulation (6 normal, 12 large), heads to the wall. A room deep
+    // enough for two cots and an aisle (the W2 hall) gets two facing rows on its long walls; else
+    // one row on the main wall, the rest on the other wall between the herb shelf and the basin.
+    infirmary(r){const beds=r.large?12:6;r.wall(r.B,.85,'herbShelf')||r.wall(r.A,.85,'herbShelf');r.wall(r.B,-.85,'washBasin');
+      const depth=2*(r.A[0]==='u'?r.F.hu:r.F.hv),facing=(r.A[1]==='+'?'-':'+'),opposite=r.A[0]+facing;
+      const two=depth>=2*size('infirmaryBed').d+.25,first=two?Math.ceil(beds/2):beds;
+      let left=beds-wardRow(r,r.A,first);if(two&&left>0)left-=wardRow(r,opposite,left);if(left>0)wardRow(r,r.B,left);
+      r.near(.3,.35,'stool');if(r.large)r.wall(r.A,-.95,'candleStand')},
+    latrine(r){r.wall(r.A,0,'latrineSeat');r.wall(r.B,.5,'washBasin');r.near(-.4,.35,'s:buckets');if(r.large)r.wall(r.A,.75,'latrineSeat')},
     prison(r){r.wall(r.A,0,'cellBars',{off:.35});r.wall(r.A,-.4,'wallChains',{deco:true});r.wall(r.A,.4,'straw',{deco:true});
-      r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')}
+      r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')},
+    // Cistern (tower ground floor): the tank fed by the rain pipe, the hatch over the water, buckets by the door.
+    cistern(r){r.wall(r.A,-.2,'cisternTank');r.near(.1,.15,'cisternHatch',r.toward(r.A));r.near(.45,.45,'s:buckets');
+      if(r.large){r.wall(r.B,.4,'cisternTank');r.near(-.4,.45,'s:barrelGroup')}},
+    // Colombaia: walls of nesting holes, a perch rack, grain sacks and the keeper's stool.
+    dovecote(r){r.row(r.A,'nestWall',r.large?2:1);r.wall(r.B,-.3,'nestWall');r.near(.25,.25,'perch',r.toward(r.A));
+      r.near(-.35,.4,'s:sackPile');r.near(.5,-.4,'stool');if(r.large)r.near(-.5,-.45,'s:buckets')}
   };
 
   // ---------- rooms of a structure
@@ -192,7 +242,7 @@
     // Portals sit on footprint edges 1 and 3: keep the strip between them clear.
     const fp=footprintPoints(s),m1={x:(fp[1].x+fp[2].x)/2,y:(fp[1].y+fp[2].y)/2},m3={x:(fp[3].x+fp[0].x)/2,y:(fp[3].y+fp[0].y)/2};
     const b=slot.basis,ax=m1.x-m3.x,ay=m1.y-m3.y,L=Math.hypot(ax,ay)||1,lu=(ax*Math.cos(b.angle)+ay*Math.sin(b.angle))/L;
-    const half=.38;
+    const half=.38*(window.ConquerGates?.portalOf?.(s).width??1.2)/1.2;   // narrower in the small gate
     return Math.abs(lu)>.7?[-b.w/2,-half,b.w/2,half]:[-half,-b.h/2,half,b.h/2];
   }
   function layoutStructure(s,g){
@@ -205,7 +255,7 @@
     for(const slot of slots){
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
-      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
@@ -337,6 +387,7 @@
     for(let a=-.7;a<=.71;a+=.35)for(let b=-.7;b<=.71;b+=.35){
       const u=a*F.hu,v=b*F.hv;
       if(F.round&&Math.hypot(u,v)>F.hu-.12)continue;
+      if(F.dee&&!deeInside(F,u,v,.12))continue;
       if(boxes.some(r=>u>r[0]&&u<r[2]&&v>r[1]&&v<r[3]))continue;
       out.push(F.toWorld(u,v));
     }
@@ -347,7 +398,7 @@
   // floor: only that floor's pieces (2.5D draws each floor right after its slab).
   function draw(s,g,floor=null){
     if(!FM())return false;
-    const faces=structureFaces(s,g).faces.filter(f=>floor===null||f.floor===floor),turns=State.view.rotation||0,W3=window.ConquerWagons3D;
+    const faces=structureFaces(s,g).faces.filter(f=>(floor===null||f.floor===floor)&&shown(s,f)),turns=State.view.rotation||0,W3=window.ConquerWagons3D;
     const list=faces.map(f=>{let d=0;for(const p of f.pts)d+=depthOf(p[0],p[1],p[2]);return{f,d:d/f.pts.length}}).sort((a,b)=>a.d-b.d);
     ctx.save();ctx.lineJoin='round';ctx.lineWidth=.5;
     for(const {f} of list){
@@ -361,7 +412,10 @@
     ctx.restore();
     return true;
   }
-  function lights(s,g){return FM()?structureFaces(s,g).lights:[]}
+  // Floor-by-floor cutaway: the floors above the one in view (cutawayFloorShown) are not drawn.
+  const shown=(s,f)=>f.floor==null||typeof cutawayFloorShown!=='function'||cutawayFloorShown(s,f.floor);
+  const below=(s,L)=>typeof cutawayCeilingZ!=='function'||L.p[2]<cutawayCeilingZ(s)-.01;
+  function lights(s,g){return FM()?structureFaces(s,g).lights.filter(L=>below(s,L)):[]}
   // Night cutaway: torches, candles and hearth fires glow after the night overlay.
   const GLOW={torch:{r:20,a:.5},fire:{r:26,a:.55},candle:{r:10,a:.42}};
   function drawNightGlow(nf){
@@ -399,13 +453,13 @@
     for(const s of State.structures){
       if(!structureCutaway(s)||underConstruction(s))continue;
       const paint=()=>{for(const f of structureFaces(s,cutawayWallGeometry(s)).faces){
-        if(!f.emissive)continue;
+        if(!f.emissive||!shown(s,f))continue;
         ctx.fillStyle=f.hex;ctx.beginPath();
         f.pts.forEach((p,i)=>{const q=w2s({x:p[0],y:p[1]},p[2]);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.fill();
       }};
       if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,paint);else paint();
     }
   }
-  function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces:[]}
+  function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces.filter(f=>shown(s,f)):[]}
   window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();

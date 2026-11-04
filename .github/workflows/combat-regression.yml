@@ -1,0 +1,56 @@
+name: Combat simulation and renderer regression
+on:
+  push:
+    branches: [main, combat]
+    paths:
+      - 'src/settlement-combat*.js'
+      - 'src/settlement-camp.js'
+      - 'src/settlement-wolves.js'
+      - 'src/settlement-mounted2d.js'
+      - 'qa/*combat*'
+      - 'qa/*battle*'
+      - 'qa/patrol-regression.cjs'
+      - 'src/settlement-alarm-bells.js'
+      - 'qa/alarm-bell-regression.cjs'
+      - 'qa/urban-regression.cjs'
+      - 'qa/camp-regression.cjs'
+      - 'qa/wolves-regression.cjs'
+      - 'index.html'
+      - 'camp/index.html'
+      - '.github/workflows/combat-regression.yml'
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Combat module syntax
+        run: |
+          node --check src/settlement-combat.js
+          node --check src/settlement-combat-render.js
+          node --check src/settlement-combat-rules.js
+      - name: Rendering boundaries and combat behavior
+        run: |
+          node qa/combat-render-regression.cjs
+          node qa/combat-anim-regression.cjs
+          node qa/combat-selection-regression.cjs
+          node qa/mass-battle-regression.cjs
+          node qa/patrol-regression.cjs
+          node qa/night-vision-regression.cjs
+          node qa/zones-visual-regression.cjs
+          node qa/camp-regression.cjs
+          node qa/infirmary-regression.cjs
+          node qa/military-stables-regression.cjs
+          node qa/wolves-regression.cjs
+          node qa/diplomacy-regression.cjs
+          node qa/siege-assault-regression.cjs
+          node qa/keep-entrance-regression.cjs
+          node qa/cutaway-floors-regression.cjs
+          node qa/save-safety-regression.cjs
+          node qa/alarm-bell-regression.cjs

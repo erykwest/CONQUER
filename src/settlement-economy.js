@@ -602,15 +602,17 @@
     e.lastTrade=last;e.weeks++;
     syncBuilderResources();
     // Each class keeps its own happiness: hunger hurts, half rations hurt morale,
-    // full castle rations please. Welfare is the resident-weighted average.
+    // full castle rations please, a staffed infirmary with beds to spare cares for L1/L2.
+    // Welfare is the resident-weighted average.
+    const residents=HAPPINESS_GROUPS.reduce((sum,g)=>sum+pop[g],0);
     for(const g of HAPPINESS_GROUPS){
       if(!(pop[g]>0)||!(foodNeed[g]>0))continue;
       const fed=clamp(fedFood[g]/foodNeed[g],0,1);
       const hunger=fed>=.999?.2:-Math.max(.5,5*(1-fed));
       const order=mode==='half'?-1.2:mode==='full'?.8*clamp(rationed[g]/foodNeed[g],0,1):0;
-      e.happiness[g]=clamp(round(e.happiness[g]+hunger+order),0,100);
+      const care=window.ConquerInfirmary?.care(g,e.happiness[g],residents)||0;
+      e.happiness[g]=clamp(round(e.happiness[g]+hunger+order+care),0,100);
     }
-    const residents=HAPPINESS_GROUPS.reduce((sum,g)=>sum+pop[g],0);
     if(residents>0)e.welfare=round(HAPPINESS_GROUPS.reduce((sum,g)=>sum+e.happiness[g]*pop[g],0)/residents);
     // Historical panels capture at the end of each real Saturday market, after
     // prices, trade and weighted happiness are updated. No sampling per render frame.

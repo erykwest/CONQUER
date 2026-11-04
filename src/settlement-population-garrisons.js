@@ -12,6 +12,8 @@ function drawCutawayOccupants(){
   for(const s of structures){
     const render=()=>{
       for(const slot of cutawayRoomSlots(s)){
+        // Floor-by-floor cutaway: nobody stands in the rooms taken off above the floor in view.
+        if(typeof cutawayFloorShown==='function'&&!cutawayFloorShown(s,slot.floor))continue;
         let count=0,kind=null;
         if(slot.role==='barracks'||slot.role==='quarters'){
           count=3;kind='soldier';
@@ -23,6 +25,13 @@ function drawCutawayOccupants(){
           }
         }
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
+        // Prison (ground floor): one to five prisoners per cell, a large room has two cells
+        // (settlement-court-people.js draws them; the capacity is in settlement-siege.js).
+        else if(slot.role==='prison'&&window.ConquerCourtPeople){
+          const max=window.ConquerCivic3D?.PRISON_CELL_MAX||5,cells=slot.size==='large'?2:1;
+          for(let c=0;c<cells;c++)count+=1+peasantHash(s.id+'-cell-'+slot.index+'-'+c)%max;
+          kind='prisoner';
+        }
         if(!count)continue;
         const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);
         const positions=cutawayOccupantLayout(count),items=[];
@@ -36,6 +45,7 @@ function drawCutawayOccupants(){
         for(const item of items){
           const id=s.id+'-room-'+slot.index+'-'+item.i;
           if(kind==='soldier')drawSoldierFigure(item.p,slot.z+.09,'unarmed',id,item.phase);
+          else if(kind==='prisoner')window.ConquerCourtPeople.drawCellPrisoner(item.p,slot.z,id,item.phase,item.i>0);
           else drawNobleFigure(item.p,slot.z+.09,id,item.phase);
         }
       }
@@ -116,7 +126,10 @@ function drawCastleSoldiers(){
     const z=wall.type==='palisade'?palisadePatrolSurface(wall).z:structureHeight(wall)+.10;
     for(let i=0;i<count;i++){
       const p=wallPatrolPoint(wall,day,i,count);
-      if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',wall.id+':patrol:'+i,day+i*.5);
+      // On a stepped wall the patrol walks on its section's top and up the flights at the steps.
+      const L2=(wall.b.x-wall.a.x)**2+(wall.b.y-wall.a.y)**2||1,t=((p.x-wall.a.x)*(wall.b.x-wall.a.x)+(p.y-wall.a.y)*(wall.b.y-wall.a.y))/L2;
+      const g=wall.type==='wall'?wallWalkGroundAt(wall,t):null,pz=Number.isFinite(g)?z+g-terrainElevation(p):z;
+      if(worldPointVisible(p,pz,48))drawSoldierFigure(p,pz,'spearman',wall.id+':patrol:'+i,day+i*.5);
     }
   }
 

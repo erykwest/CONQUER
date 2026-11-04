@@ -112,6 +112,8 @@
     const polys=contact(s);
     const annexVerdict=civicAnnexPlacementCheck(s);
     if(!annexVerdict.ok)return annexVerdict;
+    const wellVerdict=typeof wellCivicPlacementCheck==='function'?wellCivicPlacementCheck(s):valid();
+    if(!wellVerdict.ok)return wellVerdict;
     // A pier reaches out over the sea: its own validation keeps the landing in the whitezone.
     // Quays (and the walls and towers built against them) start in the whitezone by their own rules.
     const harbour=window.ConquerPier?.is(s)||window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null;
@@ -120,9 +122,11 @@
     const onQuay=window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null||(s.type==='pier'&&s.onQuay);
     if(!onQuay&&window.ConquerCoast&&samples(polys).some(p=>window.ConquerCoast.rockAt(p)))return invalid('Scogli: qui si può costruire solo la banchina');
     const ignored=ignoreSet(options);
-    if(s.type==='well'&&!options.ignoreFounding&&(
-      State.village?.founded||State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
-    ))return invalid('A village well already exists');
+    // Only one founding well: until the village is named, a second well cannot be placed.
+    // Once founded, further wells are ordinary buildings (expansion centres).
+    if(s.type==='well'&&!options.ignoreFounding&&!State.village?.founded&&
+      State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
+    )return invalid('The founding well is waiting for the village name');
     if(window.ConquerIndustries?.is(s)){
       const industry=window.ConquerIndustries.validate(s);
       if(!industry.ok)return industry;
@@ -142,8 +146,8 @@
           const t=i/steps,p={x:s.a.x+(s.b.x-s.a.x)*t,y:s.a.y+(s.b.y-s.a.y)*t};
           if((isPrimaryRoad(s)?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return invalid('Road crosses an impassable obstacle or cliff');
         }
-      }else if(buildableTerrainElevationForStructure(s)==null){
-        return invalid('Wall segment crosses incompatible terrain');
+      }else if(!wallTerrainVerdict(s).ok){
+        return invalid(wallTerrainVerdict(s).reason);
       }else{
         // Walls, palisades and built sections only checked the terrain: they ran through woods.
         const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));

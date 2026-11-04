@@ -4,7 +4,12 @@
   function redraw(){if(typeof requestSceneDraw==='function')requestSceneDraw();else if(typeof draw==='function')draw()}
   const CAPACITY=Object.freeze({granary:{food:240},storage:{materials:240},armory:{equipment:80},
     stables:{horses:5},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
-    nobleRoom:{knights:1},quarters:{soldiers:16}});
+    nobleRoom:{knights:1},quarters:{soldiers:16},
+    // Cistern: always full; water is the number of people it keeps drinking when the wells are cut off.
+    cistern:{water:60},
+    // Public order (crime skeleton): five prisoners per cell (a large room has two cells, the town
+    // hall's prison floor one per cell, ConquerCivic3D.prisonCellCount); a guard post 4 watchmen.
+    prison:{prisoners:5},guard:{watchmen:4}});
   const WEAPONS=Object.freeze({
     sword:{stone:0,wood:0,door:0},
     spear:{stone:0,wood:0,door:0,portcullis:0},
@@ -19,7 +24,7 @@
   });
   const PORTCULLIS_HEALTH=120;
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
-    house:90,market:70,tavern:140,church:240,windmill:110,watermill:120});
+    house:90,market:70,tavern:140,church:240,townhall:220,guild:150,windmill:110,watermill:120});
   const isMill=s=>['windmill','watermill'].includes(s?.type);
   // Structural cores require siege artillery: blades, arrows, rams and torches
   // cannot demolish walls, towers, gatehouses or built sections, even in wood.
@@ -28,9 +33,30 @@
   const NON_STRUCTURAL_WEAPONS=new Set(['sword','spear','axe','arrow','bow','crossbow','ram','torch']);
   const STOCK_KEYS=['food','wood','stone','metal','equipment','horses','gold'];
   const MATERIAL_KEYS=['wood','stone','metal'];
+  const CIRCLE_DEPOT_GROUP=Object.freeze({
+    granary:'food',storage:'materials',armory:'equipment',
+    stables:'horses',treasury:'gold'
+  });
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
+  // Military stables (extends `stables`, no new room type): a tower stable holds one stall block
+  // (5 horses); in a W1 built section the stalls run its length, 5 horses per U of room. Never in a
+  // W2 wide hall (user decision, 04/11/2026). When the food runs out, the horses no knight rides
+  // are slaughtered: each one feeds HORSE_FOOD rations.
+  const HORSE_FOOD=20;
+  function stableUnits(s){
+    if(s?.type!=='built')return 1;
+    return Math.max(1,Math.floor(Number(s.length)||1));
+  }
+  const roomUnits=(s,fn,index)=>fn==='stables'?stableUnits(s,index):functionSlotUnits(s,index);
+  // Garrison hygiene: the courtyard and chamber pots serve a small garrison; each latrine serves
+  // 16 more (32 in a large room). An unserved garrison loses hygiene down to a floor of 40; below
+  // 50 up to a tenth of the archers fall sick and leave their posts. A secondary need, not a gate.
+  const SANITATION_FREE=24,LATRINE_SOLDIERS=16,HYGIENE_FLOOR=40,SICK_BELOW=50,SICK_MAX=.1;
+  const ROOM_EXTERIOR_REPAIR=Object.freeze({stone:6,gold:2});
+  const within=(v,a,b)=>Math.max(a,Math.min(b,v));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
-    lastDay:State.clock.day,starvationDays:0,ruins:[],earthworks:[]}}
+    lastDay:State.clock.day,starvationDays:0,thirstDays:0,hygiene:100,ruins:[],earthworks:[],
+    circle:{captures:[],capturedRoomIds:[]}}}
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
     const x=State.siege;
@@ -38,8 +64,13 @@
     for(const k of STOCK_KEYS)x.stock[k]=Math.max(0,Number(x.stock[k])||0);
     if(!Array.isArray(x.ruins))x.ruins=[];
     if(!Array.isArray(x.earthworks))x.earthworks=[];
+    if(!x.circle||typeof x.circle!=='object')x.circle={captures:[],capturedRoomIds:[]};
+    if(!Array.isArray(x.circle.captures))x.circle.captures=[];
+    if(!Array.isArray(x.circle.capturedRoomIds))x.circle.capturedRoomIds=[];
     if(!Number.isFinite(x.lastDay))x.lastDay=State.clock.day;
     if(!Number.isFinite(x.starvationDays))x.starvationDays=0;
+    if(!Number.isFinite(x.thirstDays))x.thirstDays=0;
+    x.hygiene=Number.isFinite(x.hygiene)?within(x.hygiene,0,100):100;
     return x;
   }
   function restore(raw){
@@ -48,20 +79,46 @@
     started.clear();heapCache.clear();rubbleCache.clear();stumpCache.clear();crownCache.clear();
     State.siege=raw&&typeof raw==='object'?{
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
-      starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
-      earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[]
+      starvationDays:Number(raw.starvationDays)||0,thirstDays:Number(raw.thirstDays)||0,horsesSlaughtered:Number(raw.horsesSlaughtered)||0,hygiene:Number.isFinite(Number(raw.hygiene))?Number(raw.hygiene):100,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
+      earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[],
+      circle:{
+        // Never discard an ACTIVE conquest when loading a long campaign.
+        captures:Array.isArray(raw.circle?.captures)?raw.circle.captures.filter(
+          (r,i,all)=>r&&!r.reclaimed||i>=all.length-100
+        ):[],
+        capturedRoomIds:Array.isArray(raw.circle?.capturedRoomIds)?
+          [...new Set(raw.circle.capturedRoomIds.filter(id=>typeof id==='string'))]:[]
+      }
     }:initial();
     state();normalizeMastio();
+    window.ConquerCircle?.reset?.();
     rubbleGrid=null;                                  // rubble of the loaded game
   }
   function eligibleRoom(s){return !!s&&['tower','gate','built'].includes(s.type)&&!underConstruction(s)}
   function floor(s,index){return index+1}
   function allowed(s,index,fn){
     if(!fn)return true;
+    // Town hall: one room per floor, as many as the civic level; the tribunal needs L2.
+    if(s?.type==='townhall')return !underConstruction(s)&&index>=0&&index<functionCapacity(s)
+      &&TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||civicLevel(s)>=2)&&(fn!=='prison'||index===0);
+    if(fn==='council'||fn==='tribunal')return false;   // civic rooms, town hall only
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
-    if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
-    if(['granary','storage','kitchen','commonHall'].includes(fn))
+    // Stables: ground floor of a tower or of a W1 built section, never a W2 wide hall.
+    if(fn==='stables')return l===1&&s.type!=='gate'&&!s.parentTowerId&&!(s.type==='built'&&isWideBuilt(s));
+    if(fn==='workshop')return l===1&&s.type!=='gate'&&!s.parentTowerId;
+    // Prisons on the ground floor only (a gate's ground floor is its passage).
+    if(fn==='prison')return l===1&&s.type!=='gate';
+    // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
+    if(fn==='kitchen')return l===1&&s.type==='built';
+    // Cistern: ground floor of medium or large (W2/W3) stone towers.
+    if(fn==='cistern')return l===1&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
+    if(fn==='dovecote')return l===top&&towerDovecoteAllowed(s);
+    // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
+    if(fn==='infirmary')return l<=2&&s.type==='built';
+    // Latrine: upper floor of a W1 built section, where its garderobe fits on the exterior face.
+    if(fn==='latrine')return l===2&&s.type==='built'&&!isWideBuilt(s)&&!!window.ConquerRoomExterior?.placement(s,index,fn);
+    if(['granary','storage','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
     return true;
   }
@@ -146,14 +203,97 @@
     status(already?'Mastio designation removed':'Mastio designated — Common Hall secured');
     return true;
   }
-  function capacity(){
-    const out={food:0,materials:0,equipment:0,horses:0,gold:0,meals:0,soldiers:0,knights:0};
+  function capturedRoomIds(){
+    return new Set(state().circle.capturedRoomIds);
+  }
+  function circleCaptureRecords(){
+    return state().circle.captures.filter(r=>r&&r.reclaimed!==true);
+  }
+  function circleDepots(){
+    const circle=window.ConquerCircle,levelById=new Map(
+      (circle?.getSnapshot?.()?.compartments||[]).map(c=>[c.id,c.depth])
+    );
+    const rooms=[];
     for(const s of State.structures){
       if(!eligibleRoom(s)||s.destroyed)continue;
       normalizeFunctions(s);
+      const sectorId=circle?.sectorForStructure?.(s)||null;
+      s.functions.forEach((fn,index)=>{
+        if(!fn||!allowed(s,index,fn)||!CIRCLE_DEPOT_GROUP[fn])return;
+        rooms.push({id:s.id+':'+index,structureId:s.id,index,kind:fn,
+          sectorId,depth:sectorId?levelById.get(sectorId)||0:0,
+          capacity:CAPACITY[fn][CIRCLE_DEPOT_GROUP[fn]]*roomUnits(s,fn,index)
+        });
+      });
+    }
+    return rooms;
+  }
+  // Independent deterministic distribution: no extra bank or second source
+  // of truth. The existing siege.stock remains the only resource balance.
+  function circleStoreInventory(){
+    const distribute=window.ConquerCircle?.distributeStores;
+    if(!distribute)return null;
+    return distribute(state().stock,circleDepots(),state().circle.capturedRoomIds);
+  }
+  function captureCircleSector(sector){
+    if(!sector?.id||sector.state!=='invaded'||sector.captured||
+       !(sector.control?.groundEnemies>0)||
+       sector.control?.groundDefenders>0||sector.control?.wallDefenders>0)
+      return{ok:false,reason:'Sector is not under uncontested ground occupation'};
+    const circle=window.ConquerCircle,fn=circle?.captureStores;
+    if(typeof fn!=='function')return{ok:false,reason:'Circle stock ledger not ready'};
+    const siege=state(),records=siege.circle.captures;
+    if(records.some(r=>r&&!r.reclaimed&&r.originId===sector.id))
+      return{ok:false,reason:'Sector already captured'};
+    const ledger=fn({sectorId:sector.id,stock:siege.stock,
+      depots:circleDepots(),capturedRoomIds:siege.circle.capturedRoomIds});
+    if(!ledger?.stock||!Array.isArray(ledger.rooms))
+      return{ok:false,reason:'Physical depot distribution unavailable'};
+    const record={
+      id:'captured-'+State.clock.day.toFixed(5)+'-'+records.length,
+      originId:sector.id,day:State.clock.day,depth:sector.depth,
+      polygon:sector.polygon,boundaries:sector.boundaries,
+      anchors:sector.anchors||[sector.centroid],rooms:ledger.rooms,lost:ledger.lost
+    };
+    siege.stock=ledger.stock;
+    siege.circle.capturedRoomIds=ledger.capturedRoomIds;
+    siege.circle.captures.push(record);
+    // Bound completed history only. Active captures and their ownership
+    // evidence must survive regardless of campaign duration.
+    const history=siege.circle.captures.filter(r=>r.reclaimed);
+    if(history.length>100){
+      const evict=new Set(history.slice(0,history.length-100));
+      siege.circle.captures=siege.circle.captures.filter(r=>!evict.has(r));
+    }
+    if(typeof markDirty==='function')markDirty(false,false,true);
+    if(typeof renderUI==='function')renderUI();
+    circle?.invalidateControl?.();
+    return{ok:true,record,lost:ledger.lost};
+  }
+  function releaseCircleSector(recordId){
+    const siege=state();
+    const record=siege.circle.captures.find(r=>r.id===recordId&&!r.reclaimed);
+    if(!record)return{ok:false,reason:'Unknown captured sector'};
+    record.reclaimed=true;record.reclaimedDay=State.clock.day;
+    const activeRooms=new Set(siege.circle.captures.filter(r=>r&&!r.reclaimed)
+      .flatMap(r=>r.rooms||[]));
+    siege.circle.capturedRoomIds=siege.circle.capturedRoomIds
+      .filter(id=>activeRooms.has(id));
+    // Reclaim opens the empty rooms; stolen goods do not reappear.
+    if(typeof markDirty==='function')markDirty(false,false,true);
+    window.ConquerCircle?.invalidateControl?.();
+    return{ok:true,record};
+  }
+  function capacity(){
+    const unavailable=capturedRoomIds();
+    const out={food:0,materials:0,equipment:0,horses:0,gold:0,meals:0,soldiers:0,knights:0,water:0,prisoners:0,watchmen:0};
+    for(const s of State.structures){
+      if(!(eligibleRoom(s)||s.type==='townhall'&&!underConstruction(s))||s.destroyed)continue;
+      normalizeFunctions(s);
       s.functions.forEach((fn,i)=>{
-        const spec=CAPACITY[fn];if(!spec||!allowed(s,i,fn))return;
-        const units=(fn==='stables'||fn==='nobleRoom')?1:functionSlotUnits(s,i);
+        const spec=CAPACITY[fn];
+        if(!spec||!allowed(s,i,fn)||unavailable.has(s.id+':'+i))return;
+        const units=fn==='stables'?stableUnits(s,i):fn==='nobleRoom'?1:fn==='prison'&&s.type==='townhall'?window.ConquerCivic3D?.prisonCellCount?.(s)||1:functionSlotUnits(s,i);
         for(const [k,v] of Object.entries(spec))out[k]+=v*units;
       });
     }
@@ -182,14 +322,90 @@
     // Barracks and noble rooms represent stationed forces until unit accounting is linked.
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
+  // Horses in the stables that no mounted knight needs.
+  function spareHorses(x=state()){
+    const knights=(window.ConquerCombat?.units?.()||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;
+    return Math.max(0,Math.floor(x.stock.horses)-knights);
+  }
+  // Out of food: slaughter just enough spare horses to cover the shortfall; their meat goes to the stock.
+  function slaughterHorses(x,shortfall){
+    const n=Math.min(spareHorses(x),Math.ceil(shortfall/HORSE_FOOD));
+    if(n<=0)return 0;
+    x.stock.horses-=n;x.stock.food+=n*HORSE_FOOD;
+    x.horsesSlaughtered=(Number(x.horsesSlaughtered)||0)+n;
+    return n;
+  }
+  // ---------- water: wells while they can be reached, then the cisterns
+  function hostilesInField(){
+    return (window.ConquerCombat?.enemy?.()||[]).some(e=>e&&e.kind!=='wolf'&&!e.defeated&&!(e.hp<=0));
+  }
+  // With enemies about, a well outside the walls, or in a sector that is no longer safe, is cut off.
+  function wellReachable(w){
+    if(!hostilesInField())return true;
+    const C=window.ConquerCircle;
+    if(!C?.getSnapshot?.()?.compartments?.length)return true;   // no enclosure: nothing to be cut off from
+    const id=C.sectorAt({x:w.x,y:w.y});
+    return !!id&&C.controlState?.(id)?.safe!==false;
+  }
+  function water(){
+    const cap=capacity(),people=civilians()+cap.soldiers+cap.knights;
+    const wells=State.structures.filter(s=>s.type==='well'&&!underConstruction(s));
+    if(!hostilesInField()||wells.some(wellReachable))return{people,source:'wells',served:people,short:0};
+    const served=Math.min(people,cap.water);
+    return{people,source:served>0?'cistern':'none',served,short:people>0?(people-served)/people:0};
+  }
+  // Where the bucket brigade draws water from a cistern: just outside its tower's ground door.
+  function cisternTaps(){
+    const out=[],lost=capturedRoomIds();
+    for(const s of State.structures){
+      if(s.type!=='tower'||s.destroyed||!eligibleRoom(s)||!Array.isArray(s.functions))continue;
+      if(!s.functions.some((fn,i)=>fn==='cistern'&&allowed(s,i,fn)&&!lost.has(s.id+':'+i)))continue;
+      const door=(typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[]).find(d=>d.baseZ<.2);
+      const r=s.shape==='round'?(Number(s.r)||.75):(Number(s.size)||1.5)/2,a=Number(s.angle)||0;
+      const at=door?{x:door.contact.x+door.outward.x*.35,y:door.contact.y+door.outward.y*.35}
+        :{x:s.x+Math.cos(a)*(r+.35),y:s.y+Math.sin(a)*(r+.35)};
+      out.push({id:s.id,type:'cistern',x:at.x,y:at.y,tap:at});
+    }
+    return out;
+  }
+  function garrison(){
+    const c=capacity();
+    return c.soldiers+c.knights+State.structures.reduce((t,s)=>t+(s.type==='tower'&&!underConstruction(s)?stationedArchers(s):0),0);
+  }
+  // Soldiers served by working latrines: an allowed room, not captured, its garderobe standing.
+  function latrineCapacity(){
+    const unavailable=capturedRoomIds();let total=0;
+    for(const s of State.structures){
+      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
+      s.functions.forEach((fn,i)=>{
+        if(fn==='latrine'&&allowed(s,i,fn)&&!unavailable.has(s.id+':'+i)&&!window.ConquerRoomExterior?.broken(s,i))
+          total+=LATRINE_SOLDIERS*functionSlotUnits(s,i);
+      });
+    }
+    return total;
+  }
+  function hygieneTarget(){
+    const g=garrison();
+    return g<=0?100:within(100*(SANITATION_FREE+latrineCapacity())/g,HYGIENE_FLOOR,100);
+  }
+  function sickShare(){return within((SICK_BELOW-state().hygiene)/100,0,SICK_MAX)}
   function tick(before,after){
-    gateNightWatch();bridgeAlarm();
+    gateNightWatch();bridgeAlarm();window.ConquerKeepEntrance?.alarmTick?.();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
+    if(elapsed)window.ConquerInfirmary?.tick(after-elapsed,after);
     if(!elapsed)return;
+    const w=water();
+    if(w.short>0)x.thirstDays+=elapsed*w.short;
+    else x.thirstDays=Math.max(0,x.thirstDays-elapsed*.5);
+    // Hygiene drifts towards what the latrines can serve: slowly down, faster back up.
+    const target=hygieneTarget(),was=sickShare();
+    x.hygiene=within(x.hygiene+within(target-x.hygiene,-2*elapsed,5*elapsed),0,100);
+    if(sickShare()!==was)window.ConquerCombat?.invalidateArchers?.();
     const demand=dailyFoodDemand()*elapsed;
     if(demand<=0)return;
+    if(x.stock.food<demand)slaughterHorses(x,demand-x.stock.food);
     const consumed=Math.min(x.stock.food,demand);
     x.stock.food=Math.max(0,x.stock.food-consumed);
     if(consumed<demand)x.starvationDays+=elapsed*(demand-consumed)/demand;
@@ -214,6 +430,16 @@
         h:ground+top,visualZ:ground+z});
     }
     if(wood)return result; // Wooden towers have no stone arrow slits.
+    // Bartizans: three shooters in each turret, behind its merlons or its loopholes, facing out
+    // along the diagonal; they also strike the foot of the tower, 0-1 U out (combat bartizanDrops).
+    towerBartizans(tower).forEach((b,i)=>{
+      const tx=-b.ny,ty=b.nx;
+      for(let k=0;k<BARTIZAN_SLOTS;k++){
+        const side=(k-1)*.14,back=k===1?-.08:.06,p={x:b.center.x+b.nx*back+tx*side,y:b.center.y+b.ny*back+ty*side};
+        result.push({id:tower.id+':bartizan:'+i+':'+k,kind:'bartizan',bartizan:i,floor:top,nx:b.nx,ny:b.ny,p,
+          z:b.deckZ+.08,h:ground+top,visualZ:ground+b.deckZ+.08,foot:{x:b.center.x,y:b.center.y,r:b.r,reach:BARTIZAN_REACH}});
+      }
+    });
     // Exactly the faces and heights where towerWindowRows draws an arrow slit: the
     // archer stands on that floor just inside the wall, and shoots from the slit.
     const half=tower.shape==='round'?(Number(tower.r)||.5):(tower.size||1)/2;
@@ -223,7 +449,9 @@
       const floor=row.floor,feet=towerFloorZ(tower,floor);
       for(const dir of towerFaceDirections(tower)){
         if(!towerSlitFace(tower,dir.face,floor))continue;
-        const p={x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
+        // A slit with its own spot (D tower sides): the archer stands just inside it.
+        const back=cutawayWallThickness(tower)+.1;
+        const p=dir.at?{x:dir.at.x-dir.nx*back,y:dir.at.y-dir.ny*back}:{x:tower.x+dir.nx*radius,y:tower.y+dir.ny*radius};
         result.push({id:tower.id+':slit:'+floor+':'+dir.face,kind:'slit',
           floor,face:dir.face,nx:dir.nx,ny:dir.ny,p,z:feet,slitZ:row.z,h:ground+floor,visualZ:ground+row.z});
       }
@@ -234,7 +462,8 @@
     const n=Number(tower?.archerCount);
     return Math.min(archerSlots(tower).length,Number.isFinite(n)?Math.max(0,Math.floor(n)):0);
   }
-  function occupiedArcherSlots(tower){return archerSlots(tower).slice(0,stationedArchers(tower))}
+  // Sick archers (poor garrison hygiene) leave their posts empty.
+  function occupiedArcherSlots(tower){const n=stationedArchers(tower);return archerSlots(tower).slice(0,n-Math.round(n*sickShare()))}
   function changeArchers(id,delta){
     const tower=State.structures.find(s=>s.id===id&&s.type==='tower');
     if(!tower||underConstruction(tower))return false;
@@ -372,7 +601,9 @@
     const left=piece(s.a,p0,s.aSnap,null,list.slice(0,i),0),right=piece(p1,s.b,null,s.bSnap,list.slice(i+1),bay.to);
     const pieces=[left,right].filter(Boolean);
     // The bay comes down: its masonry (and merlons) falls into the gap.
-    const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=groundOf(s);
+    // A stepped wall comes down from the ground of the section the bay opens in.
+    const stepped=typeof wallGroundAt==='function'?wallGroundAt(s,(bay.from+bay.to)/2/L):null;
+    const hw=(Number(s.width)||.5)/2,nx=-uy*hw,ny=ux*hw,g=Number.isFinite(stepped)?stepped:groundOf(s);
     startCollapse(s,g,g+structureHeight(s)+.18,{cause:'breach',a:p0,b:p1,
       parts:[[{x:p0.x+nx,y:p0.y+ny},{x:p1.x+nx,y:p1.y+ny},{x:p1.x-nx,y:p1.y-ny},{x:p0.x-nx,y:p0.y-ny}]]});
     // What overhangs the bay on the outer face comes down with it: the timber gallery of a
@@ -385,6 +616,9 @@
       startCollapse(s,g+z0,g+z1,{cause:'breach-'+skin,parts:[strip],
         ...(skin==='hoarding'?{material:'wood',palette:{side:['#7a5534','#5e4128','#8a6a42','#6b4a2e'],top:['#6b4a2e','#7a5534']}}:{})});
     }
+    // Remember the sector this specific hostile breach exposed before the
+    // bay geometry is removed; ordinary Builder deletions do not claim land.
+    window.ConquerCircle?.markBreach?.(s,p0,p1);
     const idx=State.structures.findIndex(t=>t.id===s.id);
     if(idx>=0)State.structures.splice(idx,1,...pieces);
     // Towers keep their links: the a end now belongs to the left stretch, the b end to the right.
@@ -445,8 +679,13 @@
   // session only, real time), then the heap they settle in, rebuilt from the spec on load.
   const started=new Map(),now=()=>performance.now()/1000;
   const C=()=>window.ConquerCollapse;
+  // Point structures: their foundation; walls (no foundation): their terrace, else the terrain at
+  // the middle (placementGroundZ is null for them, and null used to read as 0: a collapse on a
+  // raised terrace started at the foot of the hill).
   function groundOf(s){
-    if(typeof placementGroundZ==='function')return Number(placementGroundZ(s))||0;
+    const z=typeof placementGroundZ==='function'?placementGroundZ(s):null;
+    if(Number.isFinite(z))return z;
+    if(Number.isFinite(s.groundZ))return Number(s.groundZ);
     const c=s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
     return typeof terrainElevation==='function'?terrainElevation(c):0;
   }
@@ -457,18 +696,21 @@
     return fp.length>=3?[fp]:[];
   }
   const STONE={side:['#635951','#514a44','#7d736b','#9a8e82'],top:['#9a8e82','#8a7f74']};
+  const BRICK={side:['#8a4e36','#6f3f2c','#a25d40','#b8704c'],top:['#a25d40','#8a4e36']};
   // Wood breaks into beams and planks, timber-framed buildings into plaster and beams
   // under a roof of boards, masonry into blocks.
   function collapseMaterial(s){
     if(s.type==='palisade'||s.material==='wood'||(s.type==='bridge'&&s.variant!=='stone')||(s.type==='tower'&&isWoodTower(s))||(s.type==='gate'&&typeof isWoodGate==='function'&&isWoodGate(s)))return'wood';
     if(s.type==='house'||s.type==='tavern'||s.type==='market')return'timber';
+    // Timber-framed guild halls (L1-L2) and the L1 town hall; their masonry levels fall as stone.
+    if(s.type==='guild'&&civicLevel(s)<3||s.type==='townhall'&&civicLevel(s)===1)return'timber';
     return'stone';
   }
   function collapsePalette(s){
     const m=collapseMaterial(s);
     if(m==='wood')return{side:['#7a5534','#5e4128','#8a6a42','#6b4a2e'],top:['#6b4a2e','#7a5534']};
     if(m==='timber')return{side:['#c9b896','#a8946f','#b7a582'],top:['#7a4a38','#5b3d30','#6b4a2e'],beam:['#4e392d','#5e4128']};
-    return STONE;
+    return typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick'?BRICK:STONE;
   }
   function startCollapse(s,z0,z1,opts={}){
     const x=state(),parts=opts.parts||collapseParts(s);
@@ -533,10 +775,19 @@
     if(typeof invalidateNavigation==='function')invalidateNavigation(true);
     invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();redraw();
   }
+  // A semitower stands as its three walls (the gorge stays open); anything else as its footprint.
+  function masonryPieces(s){
+    return s.shape==='half'&&typeof halfTowerBodyPieces==='function'?halfTowerBodyPieces(s):[footprintPoints(s)];
+  }
   const stumpCache=new Map();
   function stumpMesh(s){
     const key=s.id+':'+s.ruinHeight;let m=stumpCache.get(key);if(m)return m;
-    const pos=[],col=[],g=groundOf(s),H=Number(s.ruinHeight)||.8,base=footprintPoints(s);
+    const pos=[],col=[];
+    masonryPieces(s).forEach((base,i)=>stumpPiece(s,i?key+':'+i:key,base,pos,col));
+    m={pos,col,static:true};stumpCache.set(key,m);return m;
+  }
+  function stumpPiece(s,key,base,pos,col){
+    const g=groundOf(s),H=Number(s.ruinHeight)||.8;
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     // Edges split every ~0.25 U so the broken top can be ragged.
@@ -557,7 +808,6 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col,static:true};stumpCache.set(key,m);return m;
   }
   // ---------- rubble on the ground ----------
   // Where the pieces settled, on a 0.25 U grid: the heap height there. A high core (over
@@ -596,7 +846,11 @@
   function crownMesh(s){
     const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3);
     let m=crownCache.get(key);if(m)return m;
-    const pos=[],col=[],base=footprintPoints(s);
+    const pos=[],col=[];
+    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col));
+    m={pos,col,static:true};crownCache.set(key,m);return m;
+  }
+  function crownPiece(key,base,g,H,pos,col){
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     const ring=[];
@@ -616,7 +870,6 @@
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
       if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
     }
-    m={pos,col,static:true};crownCache.set(key,m);return m;
   }
   function dynamicMeshes(){
     const out=state().ruins.map(ruinMesh).filter(Boolean);
@@ -735,7 +988,7 @@
         withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
           for(const edge of gateFacadeEdges(s)){
             if(edge.role!=='front'&&edge.role!=='rear')continue;
-            if(key==='gatePortal'||!drawArchitectureAssetOnEdge(edge,.705,.90,1.35,key))drawGatePortalOnEdge(edge);
+            drawGatePortalOnEdge(edge,s,key);
           }
         }));
       }
@@ -761,6 +1014,9 @@
     const impactPoint=part&&typeof part==='object'&&Number.isFinite(part.x)&&Number.isFinite(part.y);
     if(part!=='core'&&!(part==='door'&&s.type==='gate')&&!impactPoint)
       return{ok:false,damage:0,reason:'Invalid structure component'};
+    // A hit next to a room's exterior element (the garderobe box) brings that down first.
+    const ext=impactPoint&&window.ConquerRoomExterior?.at(s,part);
+    if(ext)return attackRoomExterior(s,ext,weapon,power);
     const stats=integrity(s),section=gateSection(s,part,weapon),hp=stats[section];
     const factor=effectiveness(weapon,s,section);
     if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
@@ -782,6 +1038,29 @@
       markDirty(false,false,true);redraw();
     }
     return{ok:true,part:section,damage,remaining:hp.hp,max:hp.max,destroyed:hp.hp===0};
+  }
+  // The element falls on its own: its room keeps the function but serves nobody until repaired.
+  function attackRoomExterior(s,e,weapon,power){
+    const RE=window.ConquerRoomExterior,factor=effectiveness(weapon,s,'core');
+    if(!factor)return{ok:false,damage:0,reason:'Weapon cannot damage this material'};
+    const hp=RE.hp(s,e),damage=Math.min(hp.hp,power*factor);
+    s.roomExteriorHp[e.index]=hp.hp-damage;
+    if(hp.hp-damage<=0){
+      const c=RE.collapseParts(e),g=groundOf(s);
+      if(c)startCollapse(s,g+c.z0,g+c.z1,{cause:'room-exterior-'+e.index,parts:c.parts});
+      invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();
+    }else markDirty(false,false,true);
+    redraw();
+    return{ok:true,part:'roomExterior',fn:e.fn,index:e.index,damage,remaining:Math.max(0,hp.hp-damage),max:hp.max,destroyed:hp.hp-damage<=0};
+  }
+  function repairRoomExterior(id,index){
+    const s=State.structures.find(x=>x.id===id),cost=ROOM_EXTERIOR_REPAIR;
+    if(!s||!window.ConquerRoomExterior?.broken(s,index))return false;
+    if(Object.entries(cost).some(([k,v])=>(State.resources[k]||0)<v)){status('Not enough resources to repair');return false}
+    for(const [k,v] of Object.entries(cost))State.resources[k]-=v;
+    window.ConquerRoomExterior.repair(s,index);
+    invalidateStructureScene(s);invalidateSceneCache();markDirty(true,true,true);renderUI();renderFunctionPanel();redraw();
+    return true;
   }
   // Towers and gatehouses fail a storey at a time: at 2/3 and 1/3 of their health the
   // top storey comes down (the structure loses a level, its rooms and slots up there),
@@ -825,8 +1104,18 @@
     if(['tower','gate'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!(typeof isWoodGate==='function'&&isWoodGate(s)))return ruinStructure(s,from);
     // Everything standing comes down; walls that leant on it stay as open ends.
     const g=groundOf(s),H=structureHeight(s)+(['tower','gate'].includes(s.type)?.35:0);
-    if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
+    // The town hall comes down hall first, then its taller civic tower from its own height.
+    if(s.type==='townhall'&&typeof civicParts==='function'){
+      const L=civicLevel(s),lean=from?{x:s.x-from.x,y:s.y-from.y}:null;
+      for(const part of civicParts(s)){const tower=part.role==='tower';
+        startCollapse(s,g,g+(tower?[3.9,5.8,8.2]:[2.8,2.9,3.8])[L-1],{parts:[part.points],lean,cause:tower?'collapse-tower':'collapse',...(tower?{delay:.3}:{})})}
+    }else if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
     else{const x=state();x.ruins.push({id:s.id,type:s.type,x:s.x??(s.a.x+s.b.x)/2,y:s.y??(s.a.y+s.b.y)/2,day:State.clock.day})}
+    // Exterior elements of its rooms (a garderobe on its corbels) come down with it.
+    for(const e of window.ConquerRoomExterior?.elements(s)||[]){
+      const c=window.ConquerRoomExterior.collapseParts(e);
+      if(c)startCollapse(s,g+c.z0,g+c.z1,{cause:'room-exterior-'+e.index,parts:c.parts,delay:.2});
+    }
     for(const w of State.structures){
       if(w.aSnap===s.id)w.aSnap=null;
       if(w.bSnap===s.id)w.bSnap=null;
@@ -917,7 +1206,8 @@
           ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
         }
       }
-      if(!world3d)drawRubble2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[]),...(window.ConquerEvents3D?.dynamicMeshes?.()||[])]);
+      if(!world3d)drawRubble2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[]),...(window.ConquerEvents3D?.dynamicMeshes?.()||[]),
+        ...(window.ConquerKeepEntrance?.dynamicMeshes?.()||[])]);
     }
     for(const r of state().ruins){
       if(r.spec)continue;
@@ -950,10 +1240,27 @@
       '<br>Materials '+fmt(material)+'/'+fmt(c.materials)+' · Arms '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
       '<br>Horses '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · Gold '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
       '<br>Kitchen '+fmt(c.meals)+' meals/d · Barracks '+fmt(c.soldiers)+' · Knights '+fmt(c.knights)+
-      (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+'</div>'+
+      '<br>Cisterns '+fmt(c.water)+' people'+
+      (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+
+      (x.thirstDays>0?'<br>⚠ Water shortfall '+x.thirstDays.toFixed(1)+' d':'')+
+      '<br>Hygiene '+fmt(x.hygiene)+' · Latrines serve '+fmt(SANITATION_FREE+latrineCapacity())+' / garrison '+fmt(garrison())+
+      (sickShare()>0?' · ⚠ '+Math.round(sickShare()*100)+'% archers sick':'')+
+      (x.horsesSlaughtered>0?'<br>⚠ Horses slaughtered for food '+fmt(x.horsesSlaughtered):'')+'</div>'+
       '<div class="grid3">'+buttons+'</div><div class="legend">Transfer up to 50 from settlement resources per click. Supply capacity depends on rooms.</div></div>';
   }
+  // A fallen garderobe on this structure: its room is out of use until rebuilt.
+  function roomExteriorHtml(s){
+    const RE=window.ConquerRoomExterior;if(!RE||!s)return'';
+    const broken=RE.elements(s,{broken:true}).filter(e=>e.broken);if(!broken.length)return'';
+    const cost=Object.entries(ROOM_EXTERIOR_REPAIR).map(([k,v])=>v+' '+k).join(' · ');
+    return broken.map(e=>'<div class="slot"><div class="slot-label">'+(FUNCTION_LABELS[e.fn]||e.fn)+' · floor '+(e.index+1)+' · collapsed</div>'+
+      '<button data-room-exterior-repair="'+e.index+'" type="button">Rebuild ('+cost+')</button>'+
+      '<div class="legend">The room serves nobody until its exterior element is rebuilt.</div></div>').join('');
+  }
   function bindPanel(slots){
+    slots.querySelectorAll('[data-room-exterior-repair]').forEach(btn=>btn.onclick=()=>{
+      const s=selectedStructure();if(s&&repairRoomExterior(s.id,Number(btn.dataset.roomExteriorRepair)))status('Rebuilt');
+    });
     slots.querySelectorAll('[data-siege-archer]').forEach(btn=>btn.onclick=()=>{
       const tower=selectedStructure();
       if(tower?.type==='tower')changeArchers(tower.id,Number(btn.dataset.siegeArcher));
@@ -986,8 +1293,11 @@
     });
   }
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
-    capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
+    capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
+    circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
+    releaseCircleSector,
     bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,gateBreached,PORTCULLIS_HEALTH,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
-    archerSlots,stationedArchers,occupiedArcherSlots,changeArchers};
+    archerSlots,stationedArchers,occupiedArcherSlots,changeArchers,
+    garrison,latrineCapacity,hygieneTarget,sickShare,roomExteriorHtml,repairRoomExterior};
 })();

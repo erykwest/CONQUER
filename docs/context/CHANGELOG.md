@@ -35,6 +35,211 @@
 - Nuovo Molo (`settlement-pier.js`): legno su pali, 8U sul mare, merci sulle tavole, due attracchi sinistra/destra; agganciato a menu, anteprima, validazione, costi, render 2D/WebGL e inspector.
 - Cinque navi modellate in Blender (`build_ships.py`): barca, barca da carico, caravella (piccole); cocca, nave latina (grandi). Registrate nell'Asset Lab, regressione `qa/ships-regression.cjs`. Vele alzate per ogni nave e animazione di alzata/ammainata (morph tra i due stati Blender), con anteprima animata nel Lab. Araldica navale: bandiere e armi sulle vele per navi del giocatore e di regni stranieri, solo bandiera per le mercantili; partizioni araldiche spostate in `heraldry-shapes.js` (condivise con l'editor). Equipaggi civili: marinai che camminano sul ponte e gabbieri che salgono sugli alberi per manovrare le vele (`settlement-ship-crew.js`, dati da Blender, `qa/ship-crew-regression.cjs`). Cantiere del molo: materiali solo sull'approdo, nessun oggetto di cantiere in acqua, materiali in legno.
 - Nuova regressione `qa/pier-regression.cjs` e workflow `sea-regression.yml`. ROADMAP e DECISIONS invariati (nessun nuovo contratto oltre la struttura `pier`).
+## 2026-11-04 — Campana d'allarme (branch `feature/alarm-bell`)
+
+- L'allarme del villaggio si propaga dalle campane (chiesa, Municipio, torri T1–T2 a falde con l'upgrade `bell`): raggio d'ascolto, catena di campane, passaparola oltre i raggi. Le case lontane lo sentono più tardi.
+- Campanile Blender sul tetto, montato con `ROOM_EXTERIOR`, esteso agli upgrade di struttura e al montaggio `roof`. Il tetto è esclusivo con Colombaia e Falconiera.
+- Asset Lab: 6 varianti di torre e il modello; baseline dell'audit aggiornata. Nuova `qa/alarm-bell-regression.cjs`.
+- Piramide: STATUS, BACKLOG, DECISIONS (estensione di D-ROOM-EXT-01). ROADMAP invariata: la Campana era già approvata nel catalogo delle stanze.
+
+## 2026-11-04 — Scuderia militare (branch `feature/military-stables`)
+
+- `stables` nelle sezioni costruite W1: 5 cavalli per U, poste in fila nel cutaway. Le sale larghe W2 non ammettono più la scuderia. Una stalla catturata perde i cavalli; senza cibo si macellano quelli di riserva. Le risposte ai messaggeri ripartono a cavallo, 1,5× più veloci.
+- Nuova `qa/military-stables-regression.cjs`; una variante nel Lab con la sua baseline.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è l'estensione di una stanza esistente nella direzione già decisa, senza nuovi contratti.
+
+## 2026-11-04 — Cisterna (branch `feature/cistern`)
+
+- Nuova stanza Cisterna al piano terra delle torri in pietra W2–W3: sempre piena, disseta 60 persone (120 nelle torri grandi) quando i nemici tagliano fuori i pozzi; altrimenti cresce la sete (`thirstDays`). La catena dei secchi attinge alla porta della torre.
+- Arredo cutaway (vasca, botola con argano, secchi) da due nuovi pezzi Blender; due righe nella galleria dell'Asset Lab; baseline dell'audit aggiornata.
+- Nuova `qa/cistern-regression.cjs`; estese `qa/cutaway-furniture-regression.cjs` e `qa/multi-wells-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una stanza della direzione già decisa (stanze e annessi al posto di edifici nuovi), senza nuovi contratti.
+
+## 2026-11-04 — Colombaia nelle torri a falde (branch `feature/colombaia`)
+
+- Nuova stanza `dovecote` (Colombaia): ultimo piano di torri in pietra T2/T3 L2–L3 con tetto a falde. Lettere per colombo viaggiatore 4× più veloci verso la torre-colombaia, risposta immediata senza corriere di ritorno.
+- Lanterna Blender sull'apice del tetto (3D e 2.5D), parete dei nidi e posatoio nel cutaway, registri lanterna e arredi nell'Asset Lab, tre varianti di galleria; baseline dell'audit aggiornata.
+- Nuova `qa/dovecote-regression.cjs` nel workflow delle varianti di torre.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la Colombaia era già approvata come idea nel catalogo delle stanze e torri; la regola «una sola funzione sotto il tetto» è annotata in STATUS.
+
+## 2026-11-04 — Infermeria nelle sezioni costruite (branch `feature/infirmary`)
+
+- Nuova stanza Infermeria, solo nelle sezioni costruite (piano terra e primo piano della W1, sala larga W2).
+  - Ogni giorno, con il personale pagato, ricovera i caduti nella zona gialla (60% di sopravvivenza, ritorno dopo 3 giorni a metà vita) e cura i feriti.
+  - I letti liberi danno +1 di felicità settimanale a L1 e L2.
+- Nuovi arredi Blender: letto d'infermeria (testiera al muro, letti perpendicolari, 6 per stanza normale e 12 per la grande) e scaffale delle erbe. Gli arredi del cutaway entrano nell'Asset Lab, che ora ha anche due varianti di infermeria nel palco del motore.
+- Nuova `qa/infirmary-regression.cjs`; `cutaway-furniture-regression.cjs` copre il nuovo ruolo.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la stanza segue la direzione già concordata (ampliare gli edifici con stanze, con effetti reali sulla simulazione) e non cambia contratti.
+
+## 2026-11-04 — Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`)
+
+- Nuovo contratto `ROOM_EXTERIOR`: una stanza può aggiungere un elemento all'esterno dell'edificio, disegnato da tutti i renderer con un'unica geometria e incluso nel crollo.
+- Prima applicazione: la latrina (garderobe) a sbalzo su mensole al piano 2 delle sezioni W1, con lo scarico verso terra. Effetto in gioco: igiene della guarnigione, con fino al 10% degli arcieri malati quando mancano latrine per una guarnigione grande. La latrina è rompibile dall'artiglieria e si può ricostruire.
+- Nuovi `src/settlement-room-exterior.js`, `tools/blender/build_garderobe.py`, `src/assets/garderobe-models.js`, il pezzo d'arredo `latrineSeat` e `qa/room-exterior-latrine-regression.cjs`. Nel Lab: la variante e il modello.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01). ROADMAP invariata: la latrina era già approvata nel catalogo delle stanze, quindi non cambia milestone.
+- CI: il modello della garderobe è nel Lab sotto «Edifici», come il kit case, perché «Fortificazioni» contiene solo mesh del motore. Il job browser di `main-fixes-regression.yml` è fissato su `ubuntu-24.04` come gli altri job browser: Playwright 1.56 non ha Chromium per `ubuntu-latest` (26.04).
+
+## 2026-11-03 — Tribunale in seduta (branch `feature/crime-tribunal-scene`, su `feature/crime-buildings`)
+
+- **Scena:** quando il Municipio selezionato mostra il piano del tribunale, nei giorni feriali dalle 9 alle 17 e senza allarme, la sala si riempie di persone.
+  - **Chi:** giudici in toga e berretto rossi (quello che presiede alza la mano), cancelliere che scrive, prigioniero a mani legate tra due guardie, pubblico sulle panche.
+  - **Come:** nuovo modulo `src/settlement-court-people.js`; i posti vengono da `ConquerCivic3D.roomSlots`, che condivide il layout con l'arredo.
+- **Prigioni occupate:** al piano terra, da 1 a 5 detenuti per cella (alle sbarre o seduti sulla paglia, sbarre ridisegnate davanti) e carceriere al tavolo nel Municipio; lo stesso nelle prigioni del castello. A ogni ora.
+- **Gogna, forca e patibolo in uso:** gogna occupata (lun–sab, 8–17) con capannello che schernisce; «giorno di giustizia» (venerdì 10–12) con boia incappucciato sul palco, magistrato che legge sul patibolo, guardie alla scala e folla. Scene sobrie, senza condannato sul palco né esecuzione.
+- **Costumi di ruolo:** catalogo separato `ConquerWardrobe.ROLE_PIECES` (giudice, cancelliere, prigioniero, boia), mai assegnato per stagione. Nel Lab sotto *Costumi di ruolo*.
+- **Prove:** nuova `qa/court-people-regression.cjs`, anche nel workflow CRIME. Specifica in [crime.md](../crime.md).
+- **Piramide:** STATUS, BACKLOG (C-04 avviato). ROADMAP e DECISIONS invariate: è la prima scena visiva di C-04 e non cambia contratti.
+
+## 2026-11-03 — Edifici e stanze di CRIME nel Builder (branch `feature/crime-buildings`)
+
+- **Municipio:** una stanza per piano (tante quante i livelli) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate sull'intero piano e viste un piano per volta col cutaway per piani (unito da `feature/cutaway-floors`).
+- **Capienze:** detenuti (5 per cella) e sentinelle in `ConquerSiege.capacity()`; prigioni solo al piano terra (P0), nel castello e nel Municipio.
+- **Ospizio:** annesso della Chiesa L2, casa lunga a due piani (4,5 × 2,4 U) nello stile delle case con ballatoio al P1.
+- **Gogna, forca e patibolo:** tre strutture di piazza collocabili, con modelli Blender, nel Lab e nel Builder; in `/crime/` il patibolo è separato dalla forca.
+- **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
+- **Piramide:** STATUS, BACKLOG (C-02 e C-03 su branch), DECISIONS (tribunale nel Municipio). ROADMAP invariata.
+
+## 2026-11-04 — Case L4 in 3D con il kit Blender (branch `feature/houses-blender-l4`)
+
+- Le case L4 in World 3D usano il kit: torrette d'angolo tonde e quadrate (muri in pietra e graticcio, finestre del kit, tetto conico o a piramide con pinnacolo, nuovi pezzi Blender) e abbaini con finestra del kit. Kit a 11 pezzi; 2 voci nuove nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
+
+## 2026-11-03 — Case L1 e L2 in 3D con il kit Blender (branch `feature/houses-blender-l1`)
+
+- Anche le case L2 in World 3D usano il kit (gli stessi pezzi delle L3, su un corpo solo, come nel disegno procedurale).
+- Tetti corretti: le falde del kit mostravano il sottotetto bruno sopra l'ardesia e la paglia (falde avvolte al contrario nel builder Blender); ora ardesia grigia su L2/L3 e paglia sulle L1. Verificata l'argilla: mattoni, coppi e dettagli del kit coerenti, senza pietra o ardesia grigie.
+
+- Le casette L1 in World 3D sono costruite col kit: tetto di paglia, finestre rustiche con anta, porta a tavole, telaio di pali e travi, comignoli. Kit a 9 pezzi; corrette le chiavi della baseline dell'audit per il kit (prima non venivano mai riconosciute).
+- Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
+## 2026-11-03 — Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`)
+
+- La cucina si assegna solo al piano terra delle sezioni costruite (W1 sezione, W2 sala larga), non più in torri o porte; i salvataggi esistenti perdono le cucine fuori regola al caricamento.
+- Nuova `qa/kitchen-rooms-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una regola di gioco sulle stanze, non cambia milestone né contratti.
+
+## 2026-11-02 — Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`)
+
+- Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.
+- Nuovi `tools/blender/build_houses.py`, `src/assets/house-models.js`, `src/settlement-house3d.js`, `qa/house3d-regression.cjs`; 6 voci nel Lab.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-057). ROADMAP invariata: è una scelta di resa grafica delle case, non cambia milestone né la priorità P1 economia.
+## 2026-11-03 — Combat: chiuso il refactor del renderer
+
+- Recuperato il residuo della branch combat a partire dal runtime main f603d514: presentazione tattica separata, nessuna regressione al prototipo vecchio. Disegno di frecce/pietre/lampi spostato fuori dalle regole.
+- Aggiornati Builder, /camp e harness di test; aggiunti test del confine stato/disegno, CI e documentazione del contratto. 118 suite PASS, trace equivalenti in cinque scenari e pixel browser identici prima/dopo. Lab: 784 render e zero fail; avvisi/drift registrati separatamente.
+- Cleanup combat previsto solo dopo promozione del commit verificato. Nessuna nuova PR. Roadmap di prodotto invariata; contratto tecnico registrato in DECISIONS.
+
+## 2026-11-03 — Cutaway per piani (branch `feature/cutaway-floors`)
+
+- Lo spaccato mostra un piano per volta: ▲ ▼ sopra l'edificio selezionato e nell'ispettore (nuovo e vecchio) tolgono o rimettono i piani superiori. Un solo comando, `StructureCommands.stepCutawayFloor`, e un campo `s.cutawayFloor`.
+- **Castello** (torri, porte, sezioni costruite): per default tutti i piani come prima. Scendendo, muri, finestre, solai, arredi, scale a pioli e occupanti si fermano al soffitto del piano in vista; la sottotorre segue la madre. Sia in 2.5D sia in WebGL.
+- **Edifici civici:** per default il piano terra come prima. Il Municipio apre anche i piani superiori del suo modello (L1–L2: 2 piani, L3: 3), con pavimento di tavole, pareti di fondo tagliate al soffitto e torre a moncone. Gli altri edifici civici hanno un solo piano finché non hanno interni ai piani alti.
+- **Prove:** nuova `qa/cutaway-floors-regression.cjs` con workflow dedicato.
+- **Piramide:** STATUS, BACKLOG, DECISIONS (D-CUT-01). ROADMAP invariata.
+
+## 2026-11-03 — Hardening e skeleton CANS, senza ripristino del vecchio combat
+
+- **Browser locale PASS:** avvio con WebGL senza errori, diagnostica locale senza fetch, CANS assente dal bootstrap e caricato solo su richiesta con prenotazione esclusiva funzionante. 107 controlli di sintassi PASS.
+- Recuperati da audit-hardening soltanto i residui mancanti: API telemetria disattivata e rimozione dell'invio pubblico diretto; mantenute diagnostica locale e implementazione salvataggi attuale #93. Nuovi test comportamentali e workflow Runtime integrity.
+- Conservato lo skeleton CANS opt-in con specifica, 11 regressioni e workflow anche per main; nessun adapter o cittadino reale dichiarato completo.
+- Combat conserva un residuo utile: separazione del renderer overlay da riconciliare sul runtime attuale; nessun rollback di capitano, battaglie, animazioni o pattuglie. Branch conservata.
+- QA locale: 5 runtime test e 116 suite di regressione verificate; guard statico Lab allineato alla telemetria sempre locale. Prevista pulizia di cans/audit-hardening solo dopo promozione verificata. ROADMAP e DECISIONS invariate nei contratti; dettaglio in STATUS.
+
+
+## 2026-11-03 — Consolidamento assedio, events e messaggeri senza 3D
+
+- Confrontati i tre branch selezionati con main 49831855: nessun residuo utile da integrare; assedio coperto da #61, eventi da #78/#110, cavalieri/messaggeri 2D da #96 e convogli da #105.
+- 18/18 regressioni pertinenti superate. Il codice 3D del vecchio branch cavalieri resta escluso (D-046); nessuna regressione al vecchio inventario o al vecchio modello danni.
+- Workflow di pulizia limitato ai tre commit verificati, con protezione dei ref aggiornati e delle PR aperte. Nessuna nuova PR o modifica al runtime.
+
+
+## 2026-11-02 — Ballatoi di torri e porte (branch `feature/tower-hoardings`)
+
+- Ballatoio di legno come aggiunta temporanea (Montato / Smontato) sulle torri in pietra (quadrata, rotonda, a D) e sulle porte in pietra grande e piccola, merlate o a falde: il tetto resta quello costruito, sotto le falde il ballatoio pende sotto la gronda. Sulle porte solo sul fronte esterno; sulle torri si interrompe contro porte e torri attaccate più alte. Nuova regola D-GATE-01: le torri agganciate a una porta hanno ingresso e lato interno sempre sul retro della porta. Modello Blender (`tools/blender/build_hoarding.py`) ripetuto lungo il profilo; brucia, esclude le macchine in cima alla torre. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: aggiunta D-GATE-01; nuova variante `hoarding` dei tipi `tower` e `gate`, nessun tipo nuovo.
+## 2026-11-02 — Fronte bottega e insegna a bandiera, fase 2 (branch `feature/l3-workshop-cutaway`)
+
+- Le case L3 con bottega mostrano su strada una vetrina a ante (banco e tettoia di giorno, ante chiuse la notte e la domenica) e un'insegna a bandiera di ferro accanto alla porta, con l'emblema del mestiere; la finestra del pianterreno dietro la vetrina sparisce.
+- Asset Lab: stato «Bottega chiusa»; corretti nello stage la cache urbana non invalidata (catture delle case senza travi e finestre) e la maschera che ritagliava le travi scure. Baseline delle 21 voci «Botteghe L3» rifatta. Nessuna regressione nel rendering del gioco: verificato sul fotogramma senza maschera.
+- Piramide: STATUS, BACKLOG (insegne e merci in facciata in fase 2 su branch). DECISIONS e ROADMAP invariate: è il completamento visivo già previsto da D-053/D-059.
+
+
+## 2026-11-02 — Cutaway delle botteghe L3, fase 1 (branch `feature/l3-workshop-cutaway`)
+
+- La casa L3 selezionata con una bottega mostra il pianterreno in sezione, arredato per mestiere, con il banco su strada e l'artigiano al lavoro durante l'orario di bottega. Modulo `src/settlement-shop-cutaway.js`; agganci in 2.5D, WebGL, facciate, fumo, occlusione delle figure e passaggio della popolazione.
+- Asset Lab: 7 voci «Botteghe L3» (stati «Nel gioco» e «Cutaway»), 14 voci aggiunte alla baseline dopo la revisione del foglio provini; i 140 «cambiati» delle fortificazioni (deriva di luce, tutti più chiari) non sono stati riscritti. Nuova regressione `qa/shop-cutaway-regression.cjs`.
+- Piramide: STATUS, BACKLOG (chiusa in fase 1 la voce «cutaway delle botteghe e persone all'interno»), DECISIONS (D-059). ROADMAP invariata: è un completamento visivo di #101, non cambia milestone né priorità P1 economia.
+
+## 2026-11-03 — Le case bruciate crollano (branch `fix/house-fire-collapse`)
+
+- Un incendio lasciato bruciare fino in fondo abbatte case (di ogni livello), locande e mercati, con macerie e braci; prima le case L3/L4 restavano in piedi al 2% di integrità. Regressione dell'incendio estesa.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-058, scelta dell'utente). ROADMAP invariata.
+## 2026-11-03 — Priorità P0 e riconciliazione circle
+
+- CI CIRCLE estesa a main e alle dipendenze core/stanze/ingresso mastio; fixture VM portabili anche con checkout CRLF Windows.
+- Ordine richiesto dall'utente: P0 bridge/circle/jobmanager/knights, P2 messages, P3 pertinenza delle altre branch senza PR.
+- Recupero dei soli residui di circle sulla main d8c89556: conflitto script risolto preservando economia/convogli, integrazione mastio rialzato e reset al cambio salvataggio. Nessuna reintegrazione di bridge, JobManager parallelo o cavalieri 3D.
+- QA locale: 67 test circle e 113 suite di regressione superati; founding richiede esecuzione isolata dopo fallimento temporale sotto carico. Stato pubblicazione/merge da risolvere tramite SHA Git remoto.
+
+## 2026-11-03 — Economia: regressioni delle tappe 2–5 in CI (PR #109)
+
+- `economy-flows-regression.yml` esegue anche routine, commercio, botteghe L3, convogli, cartelli, diplomazia e veicoli. Corretti in STATUS e BACKLOG gli stati delle tappe 4 (#105) e 5 (#108), già mergiate.
+
+## 2026-10-30 — Stili di merlatura del feudo · branch `feat/crenel-styles`
+
+- Nuova scelta globale in `State.policies.crenelStyle` (persistita locale e cloud): **piatta** (default), **doppia falda** (colmo lungo il muro), **coda di rondine** (corna a V e feritoia sul lato visibile). Vale per tutti i merli in pietra di torri, porte e mura; le nuove costruzioni seguono lo stile scelto.
+- Cambio a pagamento dal Centro di controllo › Cantieri, scheda «Stile delle merlature»: costo per merlo dello stile di arrivo (`CRENEL_STYLE_COST`: 1 pietra / 2 pietra + 1 oro / 3 pietra + 2 oro), argilla al posto della pietra sulle strutture in mattone, cantieri esclusi. Comandi `ConquerGame.commands.crenelQuote/setCrenelStyle`.
+- Geometria: corona dei merli in `merlonStyleParts`, disegnata identica dal renderer 2.5D e da `settlement-castle3d.js`. Merli più sottili nello spessore del muro (`MERLON_DEPTH_SCALE` 0,72, parapetti allineati) e merlo d'angolo a L su torri quadrate e porte, con pilastro condiviso per le rondini e testata a padiglione per la falda.
+- QA: verifica visiva nel Lab dei tre stili su torre quadrata, rotonda, caditoie e porta; `node qa/asset-audit.mjs` 487 render, 0 falliti, avvisi invariati (cantiere progressivo, schemi illustrativi); baseline aggiornata per il nuovo merlo di default. CI non ancora eseguita.
+## 2026-10-30 — Municipio e gilda sulle piazze dei pozzi (branch `feature/townhall-guild`)
+
+- Nuovi edifici civici L1–L3 legati ai pozzi: municipio con torre civica centrale, campana e meridiana (orologio al L3), gilda; modelli Blender, cutaway, cantiere e crollo. I modelli civici ora rispettano mattoni/argilla. Stato e prove in [STATUS](STATUS.md); ROADMAP e DECISIONS invariate (estende D-056 senza cambiarne il contratto).
+## 2026-10-30 — Più pozzi per villaggio (branch `feature/multi-wells`)
+
+- Dopo la fondazione si possono costruire altri pozzi: ognuno è un centro di espansione (zone, case, campi, antincendio) collegato al primo pozzo con una strada principale, senza nuove strade maestre. Il centro villaggio si designa dall'ispettore come il mastio; i pozzi non centro hanno un nome di quartiere mostrato sulla mappa. Stato e prove in [STATUS](STATUS.md). D-056 in DECISIONS; ROADMAP invariata.
+
+## 2026-11-02 — Moduli isolati economia urbana autonoma integrati
+
+- Recuperato lo scheletro `feature/autonomous-urban-economy`: quattro file `src/economy/` su `main`, senza attivare il runtime. Aggiornati STATUS e BACKLOG con limiti e dipendenze; ROADMAP e DECISIONS invariate.
+
+## 2026-11-02 — CRIME: skeleton criminalità / ordine pubblico (branch `feature/crime-skeleton`)
+
+- Aggiunta route isolata `/crime/`: simulator deterministico a tre indicatori, cinque fasi (malcontento→rivolta), controlli sociali e repressivi, guardie/prigione/ospizio/gogna/patibolo/tribunale come fixture, arresti dimostrativi, grafico storico, cronaca e localStorage separato. Aggiunti `docs/crime.md` e `qa/crime-regression.cjs`.
+- Stato: **solo branch**, motore e regressioni isolati verificati in harness JS; Node CLI, CI e browser non ancora verificati al momento del commit. Nessun modello 3D, nuovo tipo di edificio in Builder, NPC reale o integrazione Combat. La roadmap M0–M5 non cambia; decisione del perimetro sandbox in D-CRIME-01.
+
+
+## 2026-10-30 — Accampamenti: livree, bivacco, accampamento militare fortificabile (branch `feature/tent-livery`)
+
+- Padiglioni con livree a schema e contrasto tra vicini; nuovo kit Blender del campo; bivacco notturno organizzato; accampamento militare a quartieri come struttura del Builder, fortificabile a livelli; modelli e composizioni nel Lab. Stato e prove in [STATUS](STATUS.md). AGENTS.md: verifica visiva nel Lab e obbligo di inserire ogni nuovo modello nel Lab. ROADMAP e DECISIONS invariate: l'accampamento riusa il contratto `eventVenue` (nuova venue `armyCamp`), nessuna decisione architetturale nuova.
+
+## 2026-11-02 — Ingresso rialzato del mastio (branch `feature/mastio-entrance`)
+
+- Il mastio può avere la porta al primo piano con una scala esterna: legno, poi pietra lungo la facciata, e un levatoio dedicato su entrambe che, alzato, chiude il mastio a chi sta a terra. Piano terra cieco, finestra e drappo lasciano il posto alla porta sul suo piano, civili e strade di servizio passano dal piede della scala. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS: nuova D-MASTIO-01.
+- Seconda tappa: il levatoio si alza da solo quando i nemici si avvicinano alla scala e sbarra le porte del mastio sul cammino di ronda; la scala è un ostacolo per chi cammina; scala di legno e battente bruciano (la scala bruciata si ricostruisce); i civili richiamati salgono la rampa a vista prima di entrare. L'ariete non arriva al battente (scelta in D-MASTIO-01).
+- Quarta tappa: gli assalitori prendono il mastio con una scala d'assalto alla porta; il battente alzato ha resistenza 60 e cade a colpi d'ascia (o bruciato); chi entra lascia il campo e il mastio risulta violato.
+- Terza tappa: il mastio non ha porte sul cammino di ronda; il battente bruciato lascia il vuoto; con scala o battente bruciati gli occupanti calano (e ritirano) una scala a pioli dalla porta.
+
+## 2026-11-02 — Garitte e forme delle falde (branch `feature/bartizans`)
+
+- Torri grandi (T3) quadrate e rotonde in pietra: quattro garitte d'angolo su mensole, merlate o con guglia e bandiera; 3 tiratori per garitta che colpiscono anche il piede della torre fino a 1U. Torri quadrate col tetto a falde: piramide, 2 falde con timpani o 4 falde con colmo lungo metà del tetto (solo estetica, stesso costo; con il colmo due bandiere). Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: due nuove varianti del tipo `tower`, nessun tipo nuovo.
+
+## 2026-11-02 — Muri sui pendii (branch `feature/walls-on-slopes`)
+
+- I muri si possono costruire sui pendii secondo lo spessore (T1 dolci e scoscesi, T2 dolci, T3 solo in piano) e il muro stesso diventa una scala (una pedata ogni 0,12U) col parapetto merlato che corre accanto, come sulle mura di Sintra. Corretta anche la quota del crollo dei muri su terrazze alte. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate (regola di posa e disegno dei muri esistenti, nessun tipo nuovo).
+
+## 2026-10-30 — Porta piccola (branch `feature/small-gate`)
+
+- Seconda taglia della porta in pietra: 1×1U, L1–L2, altezze 2,4 / 3,6, costo ×0,6. Portale, ante, grata, torce, stendardi, merli e tetto in scala con la fronte; il corpo di porta 1,5U resta invariato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuovo valore di `size` del tipo `gate`, nessun tipo nuovo.
+- 02/11: piano alto a graticcio per la porta piccola L2 (legno e intonaco come le case, a sbalzo, costo L1 + 8 oro e 18 legno), falde della porta piccola girate (timpani sui fianchi), cutaway di tutte le porte con le due facce verso la camera aperte.
+
+## 2026-10-30 — Semitorri e torri a D (branch `feature/half-d-towers`)
+
+- Due nuove forme di torre in pietra, orientate verso l'esterno: semitorre aperta alla gola (piccola/media) e torre a D (media/grande). Si agganciano alla fine di un muro con il retro sul muro e, sui fianchi di una porta, formano la porta a due torri tonde con il retro allineato. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; DECISIONS invariate: nuove varianti di `shape` del tipo `tower`, nessun tipo nuovo.
+- Semitorre: scala a pioli a ogni piano, attraverso una botola nel solaio, visibile dalla gola aperta.
+- Cantiere e crolli: il ponteggio della D segue la sua pianta; monconi e corone spezzate della semitorre restano aperti dietro.
+- Cutaway della torre a D con solai, arredi e scale dentro la pianta a D. Costi per forma: tonda ×1,5, D ×1,25, semitorre ×0,5 rispetto alla quadrata.
+- Feritoie laterali della D spostate in avanti, sul mezzo tondo: accanto a una porta restano libere.
+- Porte in pietra: una fila di finestre per stanza (L1 nessuna, L2 una, L3 due), non più una per livello a partire dal passaggio.
+- Porte: finestra sempre sul retro, due feritoie affiancate sul fronte, aperture visibili anche nel cutaway. Finestre notturne di torri e porte: il vetro illuminato segue la sagoma della finestra invece di un rettangolo.
+- Cutaway: finestre e feritoie viste da dentro con lo sprite vero invece di quadrati colorati; i solai delle porte si allineano a quelli delle torri che le fiancheggiano.
 
 ## 2026-10-30 — Skeleton /march (branch feature/march-skeleton)
 
@@ -43,7 +248,6 @@
 - Documentati in docs/march.md limiti e contratto di integrazione: i feudi della demo **non** sono World/Feudal, il tasto d'assalto è un test e non simula Combat/Siege.
 - Aggiornata la piramide di contesto nello stesso branch. Nessuna modifica al Builder, al ledger principale o alla produzione su main.
 
-
 ## 2026-10-30 — Audit integrale aggiornato alla HEAD `cf569992`
 
 - Riletto live `main`, tree, 53 branch, PR recenti e CI. Nuova fotografia: [AUDIT-2026-10-30](AUDIT-2026-10-30.md). **Tre PR ancora aperte: #109/#110/#111; #103 Centro di controllo mergiata 30/10**. Nessun test Node/Chromium eseguito nella presente revisione, solo esiti CI/QA già tracciati.
@@ -51,7 +255,6 @@
 - Registrati come **MERGED** #61 danni, #65 cutaway, #77 cantieri visivi, #78 eventi, #82 Asset Lab audit, #86–108 (UI, 3D, audio, affidabilità, economia in 5 tappe, pannelli, geometrie). Rettificati riferimenti «solo branch» dei rispettivi snapshot datati.
 - Riconfermato `mine.good='stone'`, `No automatic surrender in P0`, assenza di `tree depletion`, e `SERVICE_KINDS.income='not-simulated'`. Stock economico e siege separati, correttamente non sommati nel Centro di controllo.
 - Aggiornati **feature-backlog**, **STATUS**, **BACKLOG**, **ROADMAP**, **README** e changelog; **DECISIONS invariato** perché non introduce nuovi contratti o scelte di design. Nessuna modifica runtime né merge delle tre PR funzionali aperte.
-
 
 ## 2026-10-29 — Ristrutturazione e restyling del Centro di controllo · branch `panels`
 
@@ -82,7 +285,7 @@
 - Fix: i contrafforti delle torri in pietra usano lo stesso profilo a gradoni e non attraversano più le facciate dal retro.
 - ROADMAP invariata. DECISIONS invariate: la variante segue il contratto esistente «varianti, non tipi duplicati» (`span` sul tipo `built`).
 
-## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (branch `feature/economy-vehicles`)
+## 2026-10-29 — Economia, tappa 5: carri, carrozze e carretti sulle strade, cavalli 2D (PR #108)
 
 - I convogli percorrono davvero la rete stradale dal mastio (o dal mercato) al confine con carri, carretti e carrozze disegnati in 2D e cavalli 2D. Scartato il 3D del branch d'origine. Stato e prove in [STATUS](STATUS.md). ROADMAP invariata; D-055 in DECISIONS.
 
@@ -513,3 +716,30 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 - **CODICE / BRANCH**: al tramonto squadre entro zona gialla richiamate lungo percorsi validi alla propria caserma, squadre fuori zona accampate sul posto (tenda e braciere per unità, un solo soldato di guardia visibile). All'alba ripristino delle squadre. Nessun cambio a `/urban`.
 - **CODICE / BRANCH**: cutaway caserma sincronizzato con le truppe effettivamente rientrate, nessun soldato fittizio in stanza vuota.
 - **VERIFICA DA ESEGUIRE**: test browser su percorso, UI mobile, ritorni ostacolati, campi in elevazione, salvataggi e rendering WebGL2/Canvas; le sorgenti da sole non dimostrano QA superata.
+
+
+### CIRCLE — 2026-10-28
+2026-10-28 — `circle` branch: add isolated defensive-compartment model and QA fixture. Not integrated in gameplay; QA not executed.
+
+
+### 2026-10-29 — CIRCLE — branch `circle`
+- Motore di riconoscimento topologico indipendente dalla navigazione: rasterizza mura/palizzate/torri/porte/built sections realmente costruite e ostacoli naturali effettivamente invalicabili. Identifica cerchie e compartimenti laterali, profondità, portali e ingresso del Mastio. Tiene aperta la distinzione tra accesso e conquista.
+- Hook runtime `window.ConquerCircle`, caricamento in `index.html`, invalidazione su variazioni topologiche e cantieri completati, test topologia 11/11 e adapter runtime 5/5 PASS nel harness JavaScript isolato.
+- Limitazioni: non cablato a IA civile, occupazione militare, scorte economiche reali o overlay; test browser/Node CLI non eseguiti; `main` invariata.
+
+
+### 2026-10-29 — /circle — stati militari dei compartimenti (branch `circle`)
+- Introdotto `src/circle/defensive-control.mjs`, valutatore deterministico di `secure`/`alert`/`threatened`/`infiltrated`/`invaded`/`contested` basato su nemici e difensori presenti realmente, inclusi combattimenti sui camminamenti. `captured` non viene attribuito automaticamente.
+- Collegato a `ConquerCombat` via `window.ConquerCircle`; aggiornamenti periodici e su modifiche esplicite, transizioni evento, riepilogo nel pannello Combat. Corretta sincronizzazione quando si cancellano i nemici o si disegnano allarmi a gioco fermo. Allineato il vocabolario degli stati dello skeleton. `ConquerSiege.breach` segnala il segmento a `ConquerCircle.markBreach`: il vecchio settore rimane temporaneamente `compromised` (non conquistato), può diventare `invaded` e ritorna settore ordinario dopo la ricostruzione; salvare l'identità tra sessioni resta fuori scope.
+- Verifiche: 43/43 test isolati PASS e parsing JS dei moduli runtime; Node CLI e prova browser NON eseguiti. Nessuna modifica a `main`.
+
+
+### 2026-10-29 — /circle: conquista e approvvigionamenti (branch `circle`)
+- Integrati `src/circle/defensive-logistics.mjs`, `ConquerCircle.tickOccupation` e `ConquerSiege.captureCircleSector/releaseCircleSector/circleStoreInventory`: conferma conquista dopo 0,5 giorni di controllo nemico incontrastato; riconquista simmetrica dopo 0,5 giorni in controllo difensore.
+- Magazzini veri delle strutture fortificate: deposito prioritario all'interno, materiali con capienza condivisa, riserva globale `siege.stock` autoritativa; perdita one-shot per ogni stanza in compartimento conquistato; riconquista non rimborsa i viveri persi. Capacità delle stanze conquistate sospesa. Facciata interna delle `built` usata per assegnare il settore.
+- Salvataggi: record di cattura e stanze perdute all'interno di `State.siege.circle`; ripristino in `ConquerSiege.restore`, compatibile con il payload locale/cloud. La mappa riporta i compartimenti conquistati anche dopo salvataggio di una breccia; una suddivisione successiva non segna automaticamente tutti i settori eredi come conquistati.
+- QA: 65/65 test isolati PASS inclusi i moduli veri di assedio e controllo, syntax checks PASS; Node nativo, CI e test browser ancora non eseguiti. `main` invariata.
+
+
+### 2026-10-29 — CIRCLE QA GitHub Actions
+- Creato workflow `.github/workflows/circle-regression.yml` per test Node.js 22 e syntax checks ad ogni push rilevante su `circle`. [Run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993) su codice `68533977`: **PASS 65/65 test**. Restano da eseguire smoke test browser/UI e profiling dinamico.

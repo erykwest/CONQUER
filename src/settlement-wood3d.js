@@ -170,15 +170,19 @@
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0,sx:d.w/1,sy:d.h/1.5},ground);
     }else{
       const names=parts(key).map(p=>p.name),open=cutaway(s)?openSides(s):null;
-      const only=names.filter(n=>open?!open.has(n):!INTERIOR.includes(n));
+      // Room exterior elements (settlement-room-exterior.js): the alarm-bell belfry takes the roof
+      // top and its finial replaces the flag pole.
+      const belfry=window.ConquerRoomExterior?.triangles(s)||[];
+      const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag'));
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
+      for(const t of belfry){for(const q of t.pts)mesh.pos.push(q.p.x,q.p.y,ground+q.z);mesh.col.push(t.hex)}
     }
     return mesh;
   }
   // World geometry of one structure: model meshes (shaded by face normal) + pre-shaded faces.
   const cache=new Map();
   function geometry(s){
-    const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.w,s.h,s.size,
+    const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.bell,s.w,s.h,s.size,
       s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length,
       cutaway(s)?'cut'+[...openSides(s)].join(','):'',Object.values(heraldry()).join('')].join('|');
     const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;

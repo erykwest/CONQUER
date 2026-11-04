@@ -9,7 +9,7 @@
   const gallery=byId('assetGallery'),filters=byId('assetCategoryFilters'),details=byId('assetDetail');
   if(!gallery||!filters||!details)return;
   const STATIC_FILES=window.CONQUER_ASSET_FILES||[],ROTATION_SETS=window.CONQUER_ASSET_ROTATIONS||{};
-  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
+  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Eventi','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
   const MODEL_SOURCES=[
     {global:'ConquerCivicModels',collection:'models',category:'Edifici',family:'Edifici civili'},
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
@@ -19,7 +19,17 @@
     {global:'ConquerShipModels',collection:'lab',category:'Veicoli',family:'Navi'},
     {global:'ConquerFishingModels',collection:'models',category:'Produzione',family:'Pescatori'},
     {global:'ConquerShipyardModels',collection:'models',category:'Produzione',family:'Cantiere navale'},
-    {global:'ConquerWatersideModels',collection:'models',category:'Territorio',family:'Riva e approdi'}
+    {global:'ConquerWatersideModels',collection:'models',category:'Territorio',family:'Riva e approdi'},
+    {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
+    {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
+    {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
+    {global:'ConquerFurnitureModel',collection:'pieces',category:'Interni',family:'Arredi del cutaway'},
+    // Elements a room adds to the outside of its building (ROOM_EXTERIOR, settlement-room-exterior.js).
+    // Blender parts listed under Edifici, as the house kit: Fortificazioni holds only engine meshes and
+    // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
+    {global:'ConquerGarderobeModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
+    {global:'ConquerDovecoteModels',collection:'models',category:'Edifici',family:'Colombaia (lanterna sul tetto)'},
+    {global:'ConquerBelfryModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -48,7 +58,7 @@
     :path.includes('/interior/')?'Interni':path.includes('/heraldry/')?'Araldica':'Territorio';
   const fileFamily=path=>path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
-  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
+  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
     loggingCamp:'Campo taglialegna',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
     sheep:'Pecora',goat:'Capra',cow:'Mucca',horse:'Cavallo',deer:'Cerva',stag:'Cervo',wolf:'Lupo',bear:'Orso',boar:'Cinghiale',
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
@@ -57,12 +67,16 @@
     palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
     netRack:'Rete stesa ad asciugare',fishRack:'Rastrelliera del pesce',fishBaskets:'Ceste del pescato',
     slipwayL1:'Scalo di varo L1',slipwayL2:'Scalo di varo L2',shed:'Tettoia del cantiere navale',frames:'Ossatura di scafo',
-    barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare'};
+    barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare',garderobe:'Latrina a sbalzo (garderobe)',
+    infirmaryBed:'Letto d’infermeria',herbShelf:'Scaffale delle erbe',washBasin:'Bacile',
+    lantern:'Colombaia · lanterna sul tetto',nestWall:'Colombaia · parete dei nidi',perch:'Colombaia · posatoio',
+    belfry:'Castello campanario · campana d’allarme',
+    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
     if(ship)return ship.label+(ship.size==='large'?' · grande':' · piccola')+(furled?' · vele alzate':' · vele spiegate');
-    const m=/^(church|tavern|market|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
+    const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
     return m?(nameOverrides[m[1]]||prettify(m[1]))+' · livello '+m[2]:prettify(key);
   }
   const items=[];
@@ -92,14 +106,17 @@
       const isCivicNature=isCivicProp&&/^prop_(tree|cypress|flowerBush)/.test(key);
       const isCivicFurniture=isCivicProp&&/^prop_table/.test(key);
       // A civic shop/stable/warehouse is a building, not an interior furnishing.
-      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':source.category;
-      const family=source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
+      // Pillory and gallows are piazza works of public justice, placed like the event venues.
+      const isJustice=source.global==='ConquerEventModels'&&key.startsWith('justice');
+      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':isJustice?'Edifici':source.category;
+      const family=isJustice?'Giustizia':source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
         :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali':source.family;
       items.push({id:'model:'+source.global+':'+key,title:titleFor(key),category,family,
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
-            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',
+            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
+            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',
             ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js',ConquerWatersideModels:'waterside-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
           :source.global==='ConquerShipModels'&&window.ConquerShipModels.ships?.[key.replace(/Furled$/,'')]?'ship:'+key.replace(/Furled$/,''):null});
@@ -124,6 +141,12 @@
     items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
       kind:'wardrobe',key,format:'Overlay',note:'Si attiva: '+wardrobe[key].when+'.',source:'src/settlement-wardrobe.js'});
   }
+  // Costumes of office (crime): whole outfits by role, as the tribunal scene dresses them.
+  for(const [key,title,pieces] of [['judge','Giudice',['judgeRobe','judgeCap']],['clerk','Cancelliere',['clerkGown','clerkCap']],
+    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']]])
+    if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
+      items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
+        format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -175,7 +198,7 @@
       // Thumbnails are fitted to the card: the height tells L1 from L3.
       let top=0;if(mesh)for(let i=2;i<mesh.pos.length;i+=3)top=Math.max(top,mesh.pos[i]);
       const states=[...(mesh?[{id:'3d',label:'Modello 3D',group:'3d'}]:[]),...w.ConquerAssetStage.states(v.id)];
-      items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
+      items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:v.category||'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
         key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Solo 2.5D')+' · '+(states.length-(mesh?1:0))+' stati',
         source:'src/settlement-asset-stage.js · '+(!mesh?'percorso 2.5D':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
       if(mesh)meshes++;
@@ -430,7 +453,7 @@
       [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
         const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
         drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
-          outfit:W.compose([item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+          outfit:W.compose(item.pieces||[item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
       });
     }catch(error){
       console.warn('Asset Lab wardrobe thumbnail could not render',item.key,error);

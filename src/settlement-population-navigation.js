@@ -13,6 +13,7 @@ const navPerf={
 Object.assign(navPerf,window.__conquerPerf||{});
 window.__conquerPerf=navPerf;
 function invalidateNavigation(hard=true,{urban=true}={}){
+  window.ConquerCircle?.invalidate?.('navigation topology changed');
   // Destination trees depend on the exact road graph, so any topology change
   // drops them. Individual resident routes survive soft extensions.
   navPerf.navInvalidations=(navPerf.navInvalidations||0)+1;
@@ -320,6 +321,13 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
       continue;
     }
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
+    // The Mastio's outer stair and landing: walkers go round them, up only from the foot.
+    if(s.type==='tower'&&s.keepEntrance){
+      for(const poly of window.ConquerKeepEntrance?.obstacles?.(s)||[]){
+        if(pointInPolygon(p,poly))return true;
+        for(let i=0;i<poly.length;i++)if(pointSegmentDistance(p,poly[i],poly[(i+1)%poly.length])<=PEASANT_CLEARANCE*.6)return true;
+      }
+    }
     if((s.type==='tower'||s.type==='ruin')&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='house'||isCivic(s)){
       const parts=obstacleParts?.get(s)||(s.type==='house'?urbanHouseDisplayParts(s):civicParts(s));

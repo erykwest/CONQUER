@@ -27,11 +27,15 @@
   const PAL={
     stone:()=>[snowTop('#9a8e82'),'#635951','#514a44'],          // drawMultiPolygonBand / drawExposedTop
     merlon:()=>[snowTop('#9a8e82'),'#635951','#514a44','#c8b9a9'],  // drawBattlementPiece
+    slit:()=>['#2b2622','#24201c','#1d1a17','#2b2622'],             // swallowtail arrow slit
     corbel:()=>[snowTop('#887d72'),'#554d46','#403b36','#9f9183'],
     machFloor:()=>[snowTop('#918579'),'#605750','#4a443e','#b3a596'],
     buttress:()=>[snowTop('#948779'),'#625a52','#4b4540','#9f9285'],
     chimney:()=>['#3b302c','#493732','#332824','#6a5148'],
     hoardDeck:()=>['#74533a','#5d432e','#493423','#927155'],
+    plaster:()=>['#e8dcc2','#d2c4a6','#bcae91'],                     // timber-framed storey (house plaster)
+    ladderRail:()=>['#8b6a45','#73573a','#5e472f'],                 // cutaway ladder colours
+    ladderRung:()=>['#b98652','#9a6f44','#7f5b37'],
   };
   const rgbCache=new Map();
   function rgb(hex){
@@ -39,6 +43,11 @@
     let v=rgbCache.get(color);if(v)return v;
     const h=color.replace('#','');v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);
     rgbCache.set(color,v);return v;
+  }
+
+  function shadeHex(hex,k){
+    const h=hex.replace('#','');
+    return '#'+[0,2,4].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('');
   }
 
   // ---------- geometry collection ----------
@@ -135,22 +144,48 @@
         m.frustum(stoneTowerSplayedFootprint(s),footprintPoints(s),0,STONE_TOWER_BASE_HEIGHT);
       }
     }
+    for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
+    for(const l of halfTowerLadders(s))m.prism(l.pts,l.z0,l.z1,l.part==='rung'?PAL.ladderRung():PAL.ladderRail());
     if(towerRoofStyle(s)==='pitched'){
       m.tag='roof';
-      const ring=towerRoofFootprintPoints(s),apex={x:s.x,y:s.y},apexZ=towerVisualTopHeight(s);
-      if(s.shape==='round'){
+      const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);
+      if(s.shape==='round'||s.shape==='dee'){
         const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
         m.pyramid(ring,h,apex,apexZ,i=>cols[i%3]);
+      }else if(towerRoofShape(s)!=='pyramid'){
+        // Two slopes with stone gables, or a hip roof on a short ridge (squareTowerRoofGeometry).
+        for(const f of squareTowerRoofGeometry(s).faces){
+          m.tag=f.kind==='gable'?'gable':'roof';
+          m.face(f.pts,f.kind==='gable'?PAL.stone():winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
+        }
+        m.tag='roof';
       }else{
         m.pyramid(ring,h,apex,apexZ,i=>winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
       }
     }
+    for(const b of towerBartizans(s))addBartizan(m,b);
+  }
+  // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).
+  function addBartizan(m,b){
+    const tag=m.tag;m.tag='body';
+    m.frustum(b.corbel,b.ring,b.corbelZ,b.z0);
+    m.face(b.corbel.map(p=>({p,z:b.corbelZ})),PAL.stone());
+    m.prism(b.band,b.z0-.06,b.z0,PAL.corbel());
+    m.prism(b.ring,b.z0,b.drumZ,PAL.stone());
+    if(b.style==='pitched'){
+      m.tag='roof';
+      const cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+      m.pyramid(b.eave,b.drumZ,b.center,b.apexZ,i=>cols[i%3]);
+    }
+    m.tag=tag;
   }
   function addGate(m,s){
     const g=gateRoofGeometry(s);if(!g)return;
     const H=g.h,R=g.ridgeH,sa=winter()?WINTER_SNOW_A:'#34363a',sb=winter()?WINTER_SNOW_B:'#42454a';
-    m.face([{p:g.c3,z:H},{p:g.c0,z:H},{p:g.ridgeA,z:R}],'#514a44');
-    m.face([{p:g.c1,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R}],'#62584f');
+    // Gables: masonry, or plaster over a timber storey.
+    const timber=gateTimberUpper(s),ga=timber?'#cdbf9f':'#514a44',gb=timber?'#e0d4b8':'#62584f';
+    m.face([{p:g.c3,z:H},{p:g.c0,z:H},{p:g.ridgeA,z:R}],ga);
+    m.face([{p:g.c1,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R}],gb);
     m.face([{p:g.c0,z:H},{p:g.c1,z:H},{p:g.ridgeB,z:R},{p:g.ridgeA,z:R}],sa);
     m.face([{p:g.c3,z:H},{p:g.c2,z:H},{p:g.ridgeB,z:R},{p:g.ridgeA,z:R}],sb);
   }
@@ -224,13 +259,26 @@
       run(()=>{
         // In the world renderer stone gates are carved: piers and a vault around a passage you can
         // see through, with door leaves as meshes. The Canvas paths keep the solid block and decals.
-        if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,structureHeight(s),PAL.stone())))
-          m.prism(unionFootprintPoints(s),0,structureHeight(s),PAL.stone());
+        // A wall on a slope is built in steps, each section on its own ground.
+        // A timber-framed small gate: stone up to the room floor, plaster storey above.
+        const steps=s.type==='wall'?wallSlopeSections(s):null;
+        const timber=s.type==='gate'&&gateTimberUpper(s),top=timber?gateTimberFloorZ(s):structureHeight(s);
+        if(steps)for(const q of steps)withProjectionGroundZ(q.ground,()=>m.prism(q.pts,q.low,structureHeight(s),PAL.stone()));
+        else if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,top,PAL.stone())))
+          for(const pts of towerBodyPrisms(s))m.prism(pts,0,top,PAL.stone());
+        if(timber)m.prism(gateTimberStoreyPoints(s),top,structureHeight(s),PAL.plaster());
         if(s.type==='tower')addTower(m,s);
         m.tag='roof';
         if(s.type==='gate')addGate(m,s);
+        // Tower / gate hoarding: the Blender bay (hoarding-models.js) swept round the outline; sides a shade darker.
+        for(const t of pointHoardingTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
+        // Dovecote lantern on the roof apex (dovecote-models.js).
+        for(const t of dovecoteTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         if(s.type==='built')addBuilt(m,s);
         m.tag='body';
+        // Room exterior elements (settlement-room-exterior.js), as the hoarding: sides a shade darker.
+        // Timber towers carry theirs in their Blender mesh (settlement-wood3d.js).
+        if(!isWoodTower(s))for(const t of window.ConquerRoomExterior?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         for(const b of wideHallButtresses(s))addButtress(m,b);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
@@ -259,17 +307,23 @@
     const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L2=dx*dx+dy*dy||1,t=clamp(((c.x-s.a.x)*dx+(c.y-s.a.y)*dy)/L2,0,1);
     return{x:s.a.x+dx*t,y:s.a.y+dy*t};
   }
+  // One battlement piece: corbel or merlon body, plus the crenel-style crown prisms (merlonStyleParts).
+  function prismPiece(m,p){
+    m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon());
+    for(const q of p.styleParts||[])if(q.faces)for(const f of q.faces)m.face(f.pts,merlonFaceColor(f.tone));
+    else m.prism(q.pts,q.z0,q.z1,q.tone==='slit'?PAL.slit():PAL.merlon());
+  }
   function addPieces(m,which){
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
     for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
       withStructureVisualMaterial(s,()=>{
-      const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+      const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){
         const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
         const near=viewDepthOf(c)>viewDepthOf(ownerRef(s,c))+1e-6;
         if(!plan&&(which==='front')!==near)continue;
-        withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+        withProjectionGroundZ(p.groundZ,()=>prismPiece(m,p));
       }
       });
     }
@@ -420,8 +474,8 @@
       return memoGround(()=>{
         const body=bodyMesh([s]),m=makeMesh();m.tag='crown';
         withStructureVisualMaterial(s,()=>{
-          const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
-          for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon()));
+          const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+          for(const p of pieces)withProjectionGroundZ(p.groundZ,()=>prismPiece(m,p));
         });
         return{tris:body.concat(m.tris),tags:body.tags.concat(m.tags)};
       });
