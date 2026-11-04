@@ -997,7 +997,8 @@
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
           for(let i=0;i<count;i++)onEdge(edge,z,Math.min(aw,cell*.82),ah,key,(i+.5)*cell-edge.length/2,ground,o);
         }
-        const arcade=builtArcadeLayout(s);                                      // drawBuiltArcade, interior facade
+        // W1 portico: carved loggia in the castle body (builtLoggia). The W2 hall keeps the arcade decal.
+        const arcade=!isBuiltPortico(s)&&builtArcadeLayout(s);
         if(arcade){
           const {edge,h,centerZ,key}=arcade;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center),DARK=[36/255,33/255,31/255,1];
@@ -1245,11 +1246,21 @@
       // Timber-framed small gate: masonry up to the frame's floor, plaster above (outside and in).
       const timber=s.type==='gate'&&gateTimberUpper(s),zf=timber?Math.min(gateTimberFloorZ(s),H):H;
       const band=(mesh,p,q,z0,z1,hex)=>mesh.face([Z(p,z0),Z(q,z0),Z(q,z1),Z(p,z1)],hex);
+      const loggia=isBuiltPortico(s)?builtLoggia(s):null,lc=structureCenter(s),ln=s.b?{x:-(s.b.y-s.a.y),y:s.b.x-s.a.x}:null;
+      const loggiaEdge=(p,q)=>!!loggia&&loggia.cap<H&&Math.sign(((p.x+q.x)/2-lc.x)*ln.x+((p.y+q.y)/2-lc.y)*ln.y)===loggia.side;
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
         if(timber){
           band(sh,o0,o1,0,zf,castleSideShade(o0,o1));band(sh,o0,o1,zf,H,'#d9ccb0');
           band(m,i0,i1,0,zf,'#61574f');band(m,i0,i1,zf,H,'#cbbd9f');
+        }else if(loggiaEdge(o0,o1)){
+          // W1 portico on the standing wall: masonry only above the loggia, its piers and arches below.
+          band(sh,o0,o1,loggia.cap,H,castleSideShade(o0,o1));band(m,i0,i1,loggia.cap,H,'#61574f');
+          for(const f of loggia.faces)if(f.part==='arcade'){
+            const P=f.pts.map(q=>Z(q.p,q.z));let nx=0,ny=0,nz=0;
+            for(let k=0;k<P.length;k++){const a=P[k],b=P[(k+1)%P.length];nx+=(a.y-b.y)*(a.z+b.z);ny+=(a.z-b.z)*(a.x+b.x);nz+=(a.x-b.x)*(a.y+b.y)}
+            const l=Math.hypot(nx,ny,nz)||1;sh.face(P,shadeHex('#8a7f74',W3?W3.shadeFactor(nx/l,ny/l,nz/l,turns):1));
+          }
         }else{wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f')}
       }
       // Subtower: the parent stays intact, and a dividing wall closes the subtower along the
@@ -1353,8 +1364,9 @@
           }
         }
       }else if(s.type==='built'){
-        // The portico seen from inside when it stands on the rear wall; on the near side it goes with the wall.
-        const arcade=builtArcadeLayout(s),c=structureCenter(s);
+        // W2 hall portico (a decal) seen from inside when it stands on the rear wall; the W1 loggia is
+        // geometry (above). On the near side it goes with the wall.
+        const arcade=!loggia&&builtArcadeLayout(s),c=structureCenter(s);
         const seg={x:s.b.x-s.a.x,y:s.b.y-s.a.y},L=Math.hypot(seg.x,seg.y)||1,u={x:seg.x/L,y:seg.y/L};
         for(const e of keep){
           if(!arcade||arcade.centerZ+arcade.h/2>H)break;

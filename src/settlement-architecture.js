@@ -533,6 +533,57 @@ function builtArcadeLayout(s){
   return{side,edge,h,centerZ:.04+h/2,count,cell,key,arches:key==='arcade2'?2:3,
     bays:Array.from({length:count},(_,i)=>({off:(i+.5)*cell-edge.length/2,w:cell*.96}))};
 }
+// Real loggia of a W1 portico (World 3D, like the carved gate passage): the ground floor steps
+// back ~.42U from the interior face, a row of piers carries round arches along that face and the
+// raised floor rests on them. Faces are world-space polygons [{p,z}] tagged by part:
+// 'upper' (block over the loggia), 'ground' (rooms behind it), 'backwall' (their face under the
+// arches), 'arcade' (end walls, piers, arches), 'ceiling' and 'paving'. The 2.5D renderer keeps the arches cut into the facade.
+function builtLoggia(s){
+  const a=builtArcadeLayout(s);if(!a||isWideBuilt(s))return null;
+  const fp=unionFootprintPoints(s),L=Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y)||1;
+  const u={x:(s.b.x-s.a.x)/L,y:(s.b.y-s.a.y)/L},n={x:-u.y,y:u.x};
+  const loc=p=>({al:(p.x-s.a.x)*u.x+(p.y-s.a.y)*u.y,ac:(p.x-s.a.x)*n.x+(p.y-s.a.y)*n.y});
+  const P=(al,ac)=>({x:s.a.x+u.x*al+n.x*ac,y:s.a.y+u.y*al+n.y*ac});
+  const lp=fp.map(loc),C0=Math.min(...lp.map(q=>q.ac)),C1=Math.max(...lp.map(q=>q.ac));
+  const side=a.side,front=side>0?C1:C0,depth=Math.min(.42,(C1-C0)*.45),band=.15;
+  const back=front-side*depth,inner=front-side*band,cap=a.centerZ+a.h/2,H=structureHeight(s);
+  // Footprint clipped to {al,ac} half-planes: keeps snapped, slanted ends exactly as the body has them.
+  const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],fp0=f(loc(p)),fq=f(loc(q));
+    if(fp0>=0)out.push(p);if((fp0>=0)!==(fq>=0)){const t=fp0/(fp0-fq);out.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}}return out};
+  const faces=[],face=(part,pts)=>faces.push({part,pts});
+  const prism=(part,pts,z0,z1,bottom=false)=>{
+    if(pts.length<3||!(z1>z0))return;
+    face(part,pts.map(p=>({p,z:z1})));if(bottom)face(part,pts.map(p=>({p,z:z0})).reverse());
+    for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];face(part,[{p,z:z0},{p:q,z:z0},{p:q,z:z1},{p,z:z1}])}
+  };
+  const strip=(c0,c1)=>clip(clip(fp,q=>side*(q.ac-c0)),q=>side*(c1-q.ac));   // across between c0 and c1 (towards front)
+  prism('upper',fp,cap,H);
+  prism('ground',clip(fp,q=>side*(back-q.ac)),0,cap);
+  // Arches along the usable facade (snapped ends padded like the windows), piers between them.
+  const e0=loc(a.edge.a).al,e1=loc(a.edge.b).al,N=a.count*a.arches,cell=(e1-e0)/N,pw=Math.min(.22,cell*.26),half=(cell-pw)/2;
+  const apex=cap-.10,spring=Math.max(.35,apex-half),rise=apex-spring;
+  const pier=(x0,x1)=>clip(clip(strip(inner,front),q=>q.al-x0),q=>x1-q.al);
+  // End walls close the loggia against towers and gates; piers are only the front band.
+  prism('arcade',clip(strip(back,front),q=>e0+pw/2-q.al),0,cap);
+  prism('arcade',clip(strip(back,front),q=>q.al-(e1-pw/2)),0,cap);
+  for(let k=1;k<N;k++){const x=e0+k*cell;prism('arcade',pier(x-pw/2,x+pw/2),0,cap)}
+  for(let k=0;k<N;k++){
+    const l=e0+k*cell+pw/2,r=l+cell-pw,c=(l+r)/2,arc=[];
+    for(let j=0;j<=8;j++){const t=Math.PI*(1-j/8);arc.push({al:c+half*Math.cos(t),z:spring+rise*Math.sin(t)})}
+    for(const ac of [front,inner]){
+      const cl={p:P(l,ac),z:cap},cr={p:P(r,ac),z:cap},A=q=>({p:P(q.al,ac),z:q.z});
+      for(let j=0;j<8;j++)face('arcade',[j<4?cl:cr,A(arc[j]),A(arc[j+1])]);
+      face('arcade',[cl,A(arc[4]),cr]);
+    }
+    for(let j=0;j<8;j++)face('arcade',[{p:P(arc[j].al,front),z:arc[j].z},{p:P(arc[j+1].al,front),z:arc[j+1].z},{p:P(arc[j+1].al,inner),z:arc[j+1].z},{p:P(arc[j].al,inner),z:arc[j].z}]);
+  }
+  // The rooms' wall under the arches stands in the loggia's shadow.
+  for(const f of faces)if(f.part==='ground'&&f.pts.every(q=>Math.abs(loc(q.p).ac-back)<1e-6))f.part='backwall';
+  const walk=clip(clip(strip(back,front),q=>q.al-e0),q=>e1-q.al);
+  face('ceiling',walk.map(p=>({p,z:cap-.002})));
+  face('paving',walk.map(p=>({p,z:.006})));
+  return{side,cap,front,back,inner,faces};
+}
 function drawBuiltArcade(s){
   const a=builtArcadeLayout(s);if(!a||a.side!==linearFrontSide(s))return;
   withStructureDetailOcclusion(s,a.centerZ+a.h/2,()=>{for(const b of a.bays){drawFacadeAssetBackdrop(a.edge,a.centerZ,b.w,a.h*.86,b.off,'#24211f');drawArchitectureAssetOnEdge(a.edge,a.centerZ,b.w,a.h,a.key,b.off)}})

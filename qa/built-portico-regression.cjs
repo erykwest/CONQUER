@@ -21,12 +21,15 @@ const ctx=vm.createContext({
   builtSkin:s=>s.type==='built'?(s.skin||'standard'):undefined,
   cutawayFloorLevels:s=>(s.level||1)>=2&&s.span!=='wide'?[{z:.055},{z:1.4}]:[{z:.055}],
   wallExteriorSide:()=>1,
-  linearFacadeEdge:(s,side)=>({a:{x:0,y:side},b:{x:s.length,y:side},length:s.length}),
+  // A section along +x from a to b, 1U wide; the interior (portico) side is -y.
+  linearFacadeEdge:(s,side)=>({a:{x:s.a.x+.04,y:.504*side},b:{x:s.b.x-.04,y:.504*side},length:s.length-.08}),
+  unionFootprintPoints:s=>[{x:s.a.x,y:.5},{x:s.b.x,y:.5},{x:s.b.x,y:-.5},{x:s.a.x,y:-.5}],
 });
 vm.runInContext([core.match(/const PORTICO_FUNCTIONS=[^\n]+/)[0],pick(core,'isWideBuilt'),pick(core,'builtInteriorFloors'),pick(core,'isBuiltPortico'),
-  pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed'),pick(arch,'builtArcadeLayout'),
-  'this.out={allowed,builtArcadeLayout,PORTICO_FUNCTIONS};'].join('\n'),ctx);
-const {allowed,builtArcadeLayout,PORTICO_FUNCTIONS}=ctx.out;
+  pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed'),pick(arch,'builtArcadeLayout'),pick(arch,'builtLoggia'),
+  'this.out={allowed,builtArcadeLayout,builtLoggia,PORTICO_FUNCTIONS};'].join('\n'),ctx);
+const {allowed,builtArcadeLayout,builtLoggia,PORTICO_FUNCTIONS}=ctx.out;
+const section=(extra)=>({type:'built',a:{x:0,y:0},b:{x:7.5,y:0},length:7.5,level:2,skin:'arcade',...extra});
 
 const portico={type:'built',length:3,level:2,skin:'arcade'},porticoL1={...portico,level:1},plain={type:'built',length:3,level:2};
 assert.deepEqual([...PORTICO_FUNCTIONS],['stables','workshop','storage','guard']);
@@ -42,14 +45,37 @@ assert.ok(allowed(plain,0,'kitchen'),'standard W1 ground floor unchanged');
 assert.ok(allowed({type:'built',span:'wide',length:3,level:2,skin:'arcade'},0,'throneHall'),'W2 hall with portico keeps its hall');
 console.log('PASS raised floor, standard sections and W2 halls unchanged');
 
-const L2=builtArcadeLayout({...portico,length:7.5});
+const L2=builtArcadeLayout(section());
 assert.ok(L2.centerZ+L2.h/2<1.4,'arches stop below the raised floor slab');
 assert.equal(L2.count,3);assert.equal(L2.key,'arcade3');assert.equal(L2.bays.length,3);
-const L1=builtArcadeLayout({...porticoL1,length:7.5});
+const L1=builtArcadeLayout(section({level:1}));
 assert.ok(L1.centerZ+L1.h/2<=1.75-.1,'L1 arches stay under the eaves');
-assert.equal(builtArcadeLayout({...plain,length:7.5}),null,'no arcade without the skin');
-assert.equal(builtArcadeLayout({...portico,length:7.5,building:true}),null,'no arcade while building');
+assert.equal(builtArcadeLayout(section({skin:'standard'})),null,'no arcade without the skin');
+assert.equal(builtArcadeLayout(section({building:true})),null,'no arcade while building');
 console.log('PASS arcade layout below the raised floor');
+
+// The loggia: a recessed ground floor, piers and arches under the raised floor, on the interior side.
+for(const extra of [{},{level:1},{b:{x:2.2,y:0},length:2.2}]){
+  const s=section(extra),g=builtLoggia(s),parts=new Set(g.faces.map(f=>f.part)),label=JSON.stringify(extra);
+  for(const p of ['upper','ground','backwall','arcade','ceiling','paving'])assert.ok(parts.has(p),p+' '+label);
+  const zs=f=>f.pts.map(q=>q.z),ys=f=>f.pts.map(q=>q.p.y);
+  assert.equal(g.side,-1);assert.ok(Math.abs(g.front+.5)<1e-9&&Math.abs(g.back+.08)<1e-9,'loggia .42U deep on the interior side '+label);
+  for(const f of g.faces.filter(f=>f.part==='arcade'||f.part==='backwall'))assert.ok(Math.max(...zs(f))<=g.cap+1e-9,'arcade under the raised floor '+label);
+  for(const f of g.faces.filter(f=>f.part==='ground'))assert.ok(Math.max(...ys(f))<=.5+1e-9&&Math.min(...ys(f))>=g.back-1e-9,'rooms behind the loggia '+label);
+  assert.ok(g.faces.filter(f=>f.part==='upper').every(f=>Math.min(...zs(f))>=g.cap-1e-9),'upper block on top of the loggia '+label);
+}
+const piers=builtLoggia(section()).faces.filter(f=>f.part==='arcade'&&f.pts.length===4&&f.pts.every(q=>Math.abs(q.z-1.36)<1e-9));
+assert.ok(piers.length>=8,'pier tops along a 7.5U section');
+assert.equal(builtLoggia(section({span:'wide'})),null,'the W2 hall keeps its decal arcade');
+assert.equal(builtLoggia(section({skin:'standard'})),null,'no loggia without the skin');
+console.log('PASS W1 loggia: recessed ground floor, piers and arches under the raised floor');
+
+// World 3D carves it (like the gate passage); 2.5D keeps the arches cut into the facade.
+const c3d=src('settlement-castle3d.js'),w3d=src('settlement-world3d.js');
+assert.match(c3d,/&&!\(worldOut&&addBuiltLoggia\(m,s\)\)\)/);
+assert.match(w3d,/const arcade=!isBuiltPortico\(s\)&&builtArcadeLayout\(s\)/);
+assert.match(w3d,/loggiaEdge\(o0,o1\)/);
+console.log('PASS World 3D body and cutaway use the loggia');
 
 // Every renderer (2.5D, facade polish, World 3D, 3D cutaway) reads the shared layout.
 assert.match(arch,/function drawBuiltArcade\(s\)\{\n  const a=builtArcadeLayout\(s\)/);
