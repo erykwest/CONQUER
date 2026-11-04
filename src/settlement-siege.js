@@ -80,6 +80,7 @@
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
     // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
     if(fn==='kitchen')return l===1&&s.type==='built';
+    if(fn==='dovecote')return l===top&&towerDovecoteAllowed(s);
     if(['granary','storage','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
     return true;

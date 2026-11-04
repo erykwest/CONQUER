@@ -559,6 +559,30 @@ function drawPointHoarding(s){
     pathPolygon([a,b,c],t.hex,t.hex,.6);
   }
 }
+// Dovecote lantern (Colombaia) on the roof apex of a tower whose top room is the dovecote: the Blender
+// model of src/assets/dovecote-models.js turned with the tower, its plinth sunk into the slopes.
+function dovecoteTriangles(s){
+  const data=window.ConquerDovecoteModels;if(!data||typeof towerDovecote!=='function'||!towerDovecote(s))return[];
+  const apex=towerRoofApex(s),z0=towerVisualTopHeight(s),a=s.shape==='round'?0:(s.angle||0),ca=Math.cos(a),sa=Math.sin(a);
+  const pal=data.palette,keys=data.paletteKeys,out=[];
+  const color=ci=>keys[ci].startsWith('roof')?winterSnowColor(pal[ci],ci%2?WINTER_SNOW_A:WINTER_SNOW_B):pal[ci];
+  for(const part of Object.values(data.models.lantern.parts)){
+    const p=part.p,ix=part.i;
+    for(let t=0;t<part.c.length;t++)out.push({pts:[0,1,2].map(k=>{const j=ix[t*3+k]*3;
+      return{p:{x:apex.x+p[j]*ca-p[j+1]*sa,y:apex.y+p[j]*sa+p[j+1]*ca},z:z0+p[j+2]}}),hex:color(part.c[t]),key:keys[part.c[t]]});
+  }
+  return out;
+}
+// 2.5D: painted far to near after the roof, back faces skipped (as the hoarding).
+function drawDovecote(s){
+  const tris=dovecoteTriangles(s);if(!tris.length)return;
+  const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
+  for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>a.d-b.d)){
+    const [a,b,c]=t.pts.map(q=>w2s(q.p,q.z));
+    if((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)continue;
+    pathPolygon([a,b,c],t.hex,t.hex,.6);
+  }
+}
 function drawMachicolationFloor(s){
   const spec=machicolationFloorPolygon(s);if(!spec)return;
   const draw=()=>extrudePolygonAt(spec.pts,spec.z-.055,spec.z+.035,{
@@ -1084,7 +1108,10 @@ function drawTowerRoof(s){
   // The gallery first: under a pitched roof the eave overhangs its lean-to.
   if(hasPointHoarding(s))withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>drawPointHoarding(s)));
   if(!s||s.type!=='tower'||isWoodTower(s)||underConstruction(s)||towerRoofStyle(s)!=='pitched')return;
-  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>s.shape==='round'||s.shape==='dee'?drawRoundTowerRoof(s):drawSquareTowerRoof(s)));
+  withStructureGroundPlane(s,()=>withPointRoofOcclusion(s,()=>{
+    if(s.shape==='round'||s.shape==='dee')drawRoundTowerRoof(s);else drawSquareTowerRoof(s);
+    drawDovecote(s);
+  }));
 }
 function drawTowerRoofs(){
   const towers=State.structures

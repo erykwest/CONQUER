@@ -164,6 +164,10 @@
       ['Grande rotonda L3 tetto + ballatoio',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',hoarding:'on'}],
       ['Torre a D grande L3 tetto + ballatoio',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',hoarding:'on'}],
       ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
+      // Dovecote (Colombaia): the top room under the pitched roof, its lantern on the apex.
+      ['Pietra quadrata L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',functions:[null,'dovecote']}],
+      ['Grande rotonda L3 tetto + colombaia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
+      ['Torre a D grande L3 tetto + colombaia',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
       ['Grande quadrata L3 garitte merlate',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',bartizan:'battlement'}],
       ['Grande rotonda L3 garitte a guglia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',bartizan:'pitched'}],
       ['Grande quadrata L3 tetto 2 falde',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'gable'}],
