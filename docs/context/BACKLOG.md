@@ -8,6 +8,28 @@
   - **Falconiera:** nascerà sullo stesso montaggio ed è già esclusa dal tetto con campana (`APEX_ROOMS`).
   - **Suono:** il rintocco udibile non è ancora collegato al motore audio.
 
+## Cisterna (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/cistern`:** stanza al piano terra delle torri in pietra W2–W3, sempre piena; acqua per 60/120 persone quando l'assedio taglia fuori i pozzi; punto d'acqua della catena dei secchi alla porta della torre; arredo nel cutaway.
+- **APERTO — esterno della torre (attende il meccanismo stanza→esterno del branch `feature/room-exterior-latrine`):** quando c'è una cisterna la torre dovrebbe mostrare: **gronda** lungo il bordo del tetto a falde (sui tetti merlati, doccioni nel parapetto); **pluviale** lungo la facciata fino al piede, in linea con l'imbocco già modellato sopra la vasca (`cisternTank`, angolo posteriore); **bocca di presa / piccola vera** in pietra accanto alla porta del piano terra, dove la catena dei secchi attinge (`cisternTaps`).
+- **APERTO:** effetto della sete sulla resa o sul morale nel ciclo d'assedio P2 (`siege.thirstDays`); torri senza porta al piano terra (mastio con porta rialzata, torri secondarie): oggi le donne attingono al piede della torre sul lato frontale.
+- **FUTURO, non in questo branch:** Presidio antincendio come upgrade di Pozzo e Cisterna.
+
+## Colombaia (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/colombaia`:** stanza Colombaia all'ultimo piano delle torri in pietra T2/T3 L2–L3 a falde; lettere per piccione 4× più veloci e risposta senza corriere di ritorno; lanterna sul tetto, arredo cutaway, voci nell'Asset Lab.
+- **APERTO:** avvisi rapidi tra avamposti e castelli (aspetta Avamposto / Corpo di Guardia, usare `ConquerDovecote`); migrare la lanterna sul contratto `ROOM_EXTERIOR` quando entra in `main`; Falconiera e Campana d'allarme sullo stesso slot sotto il tetto; spostare la colombaia al nuovo ultimo piano quando la torre sale di livello invece di toglierla; piccione in volo come modello 3D nel World 3D.
+
+## Infermeria nelle sezioni costruite (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/infirmary`:** stanza Infermeria (W1 piani 1–2, W2). Ha letti, personale pagato, ricovero dei caduti nella zona gialla con il 60% di sopravvivenza, guarigione dei feriti al 25% al giorno e +1 settimanale di felicità L1/L2 quando la copertura è di un letto ogni 40 abitanti.
+- **APERTO:**
+  - Epidemie: non esiste ancora un modello dati. Quando arriverà, l'infermeria dovrà ridurne il rischio e la durata tramite `ConquerInfirmary.status().free`.
+  - Figure di cerusico e inservienti nel cutaway (oggi il personale è solo economico).
+  - Barelle animate che portano i caduti in infermeria.
+  - Avviso al giocatore quando una truppa è persa o dimessa.
+  - Giardino dei semplici come annesso: fuori scope.
+
 ## Elementi esterni delle stanze e Latrina (04/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/room-exterior-latrine`:** il meccanismo `ROOM_EXTERIOR` (D-ROOM-EXT-01) e la latrina a sbalzo al piano 2 delle sezioni W1, con igiene della guarnigione come bisogno secondario.

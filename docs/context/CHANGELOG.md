@@ -7,6 +7,29 @@
 - Asset Lab: 6 varianti di torre e il modello; baseline dell'audit aggiornata. Nuova `qa/alarm-bell-regression.cjs`.
 - Piramide: STATUS, BACKLOG, DECISIONS (estensione di D-ROOM-EXT-01). ROADMAP invariata: la Campana era già approvata nel catalogo delle stanze.
 
+## 2026-11-04 — Cisterna (branch `feature/cistern`)
+
+- Nuova stanza Cisterna al piano terra delle torri in pietra W2–W3: sempre piena, disseta 60 persone (120 nelle torri grandi) quando i nemici tagliano fuori i pozzi; altrimenti cresce la sete (`thirstDays`). La catena dei secchi attinge alla porta della torre.
+- Arredo cutaway (vasca, botola con argano, secchi) da due nuovi pezzi Blender; due righe nella galleria dell'Asset Lab; baseline dell'audit aggiornata.
+- Nuova `qa/cistern-regression.cjs`; estese `qa/cutaway-furniture-regression.cjs` e `qa/multi-wells-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una stanza della direzione già decisa (stanze e annessi al posto di edifici nuovi), senza nuovi contratti.
+
+## 2026-11-04 — Colombaia nelle torri a falde (branch `feature/colombaia`)
+
+- Nuova stanza `dovecote` (Colombaia): ultimo piano di torri in pietra T2/T3 L2–L3 con tetto a falde. Lettere per colombo viaggiatore 4× più veloci verso la torre-colombaia, risposta immediata senza corriere di ritorno.
+- Lanterna Blender sull'apice del tetto (3D e 2.5D), parete dei nidi e posatoio nel cutaway, registri lanterna e arredi nell'Asset Lab, tre varianti di galleria; baseline dell'audit aggiornata.
+- Nuova `qa/dovecote-regression.cjs` nel workflow delle varianti di torre.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la Colombaia era già approvata come idea nel catalogo delle stanze e torri; la regola «una sola funzione sotto il tetto» è annotata in STATUS.
+
+## 2026-11-04 — Infermeria nelle sezioni costruite (branch `feature/infirmary`)
+
+- Nuova stanza Infermeria, solo nelle sezioni costruite (piano terra e primo piano della W1, sala larga W2).
+  - Ogni giorno, con il personale pagato, ricovera i caduti nella zona gialla (60% di sopravvivenza, ritorno dopo 3 giorni a metà vita) e cura i feriti.
+  - I letti liberi danno +1 di felicità settimanale a L1 e L2.
+- Nuovi arredi Blender: letto d'infermeria (testiera al muro, letti perpendicolari, 6 per stanza normale e 12 per la grande) e scaffale delle erbe. Gli arredi del cutaway entrano nell'Asset Lab, che ora ha anche due varianti di infermeria nel palco del motore.
+- Nuova `qa/infirmary-regression.cjs`; `cutaway-furniture-regression.cjs` copre il nuovo ruolo.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la stanza segue la direzione già concordata (ampliare gli edifici con stanze, con effetti reali sulla simulazione) e non cambia contratti.
+
 ## 2026-11-04 — Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`)
 
 - Nuovo contratto `ROOM_EXTERIOR`: una stanza può aggiungere un elemento all'esterno dell'edificio, disegnato da tutti i renderer con un'unica geometria e incluso nel crollo.

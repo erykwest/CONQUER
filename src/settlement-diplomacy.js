@@ -7,6 +7,10 @@
   const LABELS={gold:'Monete',food:'Cibo',wood:'Legno',stone:'Pietra',clay:'Argilla',metal:'Metallo',equipment:'Equipaggiamento'};
   const EDGES={north:'Nord',south:'Sud',east:'Est',west:'Ovest'};
   const DEFAULT_REQUEST=100;
+  // Colombaia (pigeon post, towerDovecote in settlement-core.js): a letter flies straight to the
+  // dovecote tower PIGEON_SPEEDUP times faster than the horseman rides, and the answer leaves by
+  // pigeon, so no messenger rides back. Without a dovecote the courier rides as before.
+  const PIGEON_SPEEDUP=4,MIN_PIGEON_DAYS=.25;
   const byId=id=>document.getElementById(id);
   const num=(v,def=0)=>Number.isFinite(+v)?+v:def;
   function hash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
@@ -38,6 +42,15 @@
     return route.filter((p,i,a)=>i===0||dist(p,a[i-1])>.05).map(point);
   }
   function routeLength(path){let total=0;for(let i=1;i<path.length;i++)total+=dist(path[i-1],path[i]);return total}
+  function dovecotes(){return typeof towerDovecote==='function'?(State.structures||[]).filter(s=>towerDovecote(s)):[]}
+  // The dovecote nearest to where the letter comes from.
+  function loftFor(entry){return dovecotes().sort((a,b)=>dist(point(a),entry)-dist(point(b),entry))[0]||null}
+  function loftTopZ(m){
+    const s=State.structures.find(o=>o.id===m.loftId);
+    if(!s)return terrainElevation(m.goal)+1.35;
+    const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
+    return ground+towerVisualTopHeight(s)+.55;
+  }
   function position(path,fraction){
     const total=routeLength(path),target=Math.min(1,Math.max(0,fraction))*total;
     let used=0;
@@ -64,9 +77,13 @@
     const entries=(typeof ensureBorderEntrySelection==='function'?ensureBorderEntrySelection():State.village.borderEntries)||[];
     if(!entries.length)return false;
     const entry=entries[choice(State.seed+'|courier|edge|'+x.sequence,entries.length)];
-    const route=routeFrom(entry,goal,x.sequence),duration=Math.max(.5,routeLength(route)*DAYS_PER_COURIER_UNIT);
-    x.incoming={id:'courier-'+x.sequence,edge:entry.edge,entry:point(entry),goal:point(goal),
-      route,spawnDay:at,arrivalDay:at+duration,phase:'arriving',request:DEFAULT_REQUEST};
+    const loft=loftFor(point(entry));
+    const route=loft?[point(entry),point(loft)]:routeFrom(entry,goal,x.sequence);
+    const duration=loft?Math.max(MIN_PIGEON_DAYS,routeLength(route)*DAYS_PER_COURIER_UNIT/PIGEON_SPEEDUP)
+      :Math.max(.5,routeLength(route)*DAYS_PER_COURIER_UNIT);
+    x.incoming={id:'courier-'+x.sequence,edge:entry.edge,entry:point(entry),goal:point(loft||goal),
+      route,spawnDay:at,arrivalDay:at+duration,phase:'arriving',request:DEFAULT_REQUEST,
+      by:loft?'pigeon':'courier',...(loft?{loftId:loft.id}:{})};
     x.sequence++;
     scheduleNext(x,at);
     changed();refreshUI();
@@ -74,13 +91,18 @@
   }
   function finishResponse(accepted){
     const x=state(),m=x.incoming;if(!m||m.phase!=='waiting')return;
-    x.history.push({day:day(),edge:m.edge,accepted,request:m.request});
-    m.phase='returning';m.departDay=day();m.returnDay=day()+Math.max(.5,routeLength(m.route)*DAYS_PER_COURIER_UNIT);
+    const pigeon=m.by==='pigeon';
+    x.history.push({day:day(),edge:m.edge,accepted,request:m.request,by:pigeon?'pigeon':'courier'});
+    // By pigeon the answer flies off at once: the channel is free, nobody rides back.
+    if(pigeon)x.incoming=null;
+    else{m.phase='returning';m.departDay=day();m.returnDay=day()+Math.max(.5,routeLength(m.route)*DAYS_PER_COURIER_UNIT)}
     byId('courierLetter').hidden=true;byId('courierDialog').hidden=true;
     if(accepted){
       const id='caravan-'+m.id;
+      // The caravan still travels by road, whatever carried the letter.
+      const road=pigeon?routeFrom(m.entry,point(destination()||m.goal),m.id):m.route;
       window.ConquerConvoys?.planLordConvoy({id,kind:'tribute',destinationId:'province-'+m.edge,
-        coinGold:DEFAULT_REQUEST,minGold:DEFAULT_REQUEST,edge:m.edge,routeDistance:routeLength(m.route),
+        coinGold:DEFAULT_REQUEST,minGold:DEFAULT_REQUEST,edge:m.edge,routeDistance:routeLength(road),
         departDay:Math.ceil(day())+1,source:'diplomacy'});
       openCaravans(id);
     }
@@ -114,7 +136,7 @@
   function htmlEscape(v){return String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
   function openLetter(){
     const m=state().incoming;if(!m||m.phase!=='waiting')return;
-    byId('courierFrom').textContent='Dalla provincia a '+(EDGES[m.edge]||m.edge);
+    byId('courierFrom').textContent='Dalla provincia a '+(EDGES[m.edge]||m.edge)+(m.by==='pigeon'?' · per colombo viaggiatore: la risposta parte subito':'');
     byId('courierMessage').textContent='Richiesta di aiuto: inviate 100 monete alla nostra provincia.';
     byId('courierDialog').hidden=false;byId('courierLetter').hidden=true;
   }
@@ -173,11 +195,13 @@
     if(!letter)return;
     const show=m?.phase==='waiting'&&byId('courierDialog')?.hidden;
     letter.hidden=!show;if(!show)return;
-    const p=courierPose(m),sc=w2s(p,terrainElevation(p)+1.35);
+    // A pigeon letter waits over the dovecote lantern.
+    const p=courierPose(m),sc=w2s(p,m.by==='pigeon'?loftTopZ(m):terrainElevation(p)+1.35);
     letter.style.left=Math.round(sc.x)+'px';letter.style.top=Math.round(sc.y-15)+'px';
   }
   function draw(g){
     const m=state().incoming,p=courierPose(m);if(!m||!p||!worldPointVisible(p,.15,70))return;
+    if(m.by==='pigeon'){if(m.phase==='arriving')drawPigeon(g,m,p);return}
     // The messenger rides the approved flat 2D horse (settlement-mounted2d.js), facing
     // left or right by the screen direction of its route.
     const M2=window.ConquerMounted2D;
@@ -190,6 +214,19 @@
     }else{
       withRenderContext(g,()=>drawSoldierFigure(p,.10,'unarmed',m.id,day()));
     }
+  }
+  // The carrier pigeon in flight: a small grey bird flapping, gliding down onto the dovecote.
+  function drawPigeon(g,m,p){
+    const k=clamp((day()-m.spawnDay)/Math.max(.001,m.arrivalDay-m.spawnDay),0,1);
+    const z=(terrainElevation(m.entry)+4)*(1-k)+loftTopZ(m)*k,s=w2s(p,z);
+    const a=w2sRaw(p,0),b=w2sRaw({x:p.x+Math.cos(p.heading),y:p.y+Math.sin(p.heading)},0),f=b.x>=a.x?1:-1;
+    const r=Math.max(1.6,State.view.scale*1.6),flap=Math.sin(performance.now()/70+hash(m.id))*r*1.1;
+    g.save();g.lineCap='round';g.strokeStyle='#596068';g.lineWidth=Math.max(1,r*.45);
+    g.beginPath();g.moveTo(s.x-r*1.8,s.y-flap);g.quadraticCurveTo(s.x-r*.6,s.y-flap*.4-r*.3,s.x,s.y);
+    g.quadraticCurveTo(s.x+r*.6,s.y-flap*.4-r*.3,s.x+r*1.8,s.y-flap);g.stroke();
+    g.fillStyle='#a3a8ad';g.beginPath();g.ellipse(s.x,s.y,r*1.1,r*.55,0,0,Math.PI*2);g.fill();
+    g.fillStyle='#5c7d6b';g.beginPath();g.arc(s.x+f*r*1.05,s.y-r*.2,r*.42,0,Math.PI*2);g.fill();
+    g.restore();
   }
   function refreshUI(){
     const b=byId('caravanOpen');if(b)b.textContent='📦 Carovane ('+caravans().filter(c=>c.status!=='completed').length+')';
@@ -220,7 +257,9 @@
     });
     refreshUI();
   }
-  window.ConquerDiplomacy={tick,reset,state,caravans,draw,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans};
+  window.ConquerDiplomacy={tick,reset,state,caravans,draw,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans,finishResponse};
+  // Hook for the outpost / guard-room work: quick alerts between towers will use the same post.
+  window.ConquerDovecote={towers:dovecotes,active:()=>dovecotes().length>0,PIGEON_SPEEDUP,MIN_PIGEON_DAYS};
   initUI();
   // Combat has already wrapped the scene draw; retain its layering and only move the DOM letter.
   const drawSettlement=window.draw;
