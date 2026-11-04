@@ -159,5 +159,8 @@ check('wired into the game: catalog, siege tick, economy, panel, pages, Italian 
   }
   const m={};new Function('window',fs.readFileSync(__dirname+'/../src/assets/furniture-model.js','utf8'))(m);
   for(const n of ['infirmaryBed','herbShelf','washBasin'])assert.ok(m.ConquerFurnitureModel.pieces[n],n+' modelled');
+  const cot=m.ConquerFurnitureModel.pieces.infirmaryBed;
+  assert.ok(cot.d>2*cot.w,'the cot runs away from the wall (head to the wall, perpendicular)');
+  assert.match(src('settlement-cutaway-furniture.js'),/const beds=r\.large\?12:6/,'one cot per simulated bed');
 });
 console.log('infirmary regression: '+passed+' checks');

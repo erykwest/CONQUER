@@ -126,11 +126,18 @@ def f_pallet(p):
 def f_wash_basin(p):
     table(p, .45, .45, .7, 'wood'); p.cylinder(.2, 0, 'ironLight', n=10, axis='z', center=(0, 0, .7), radii=[.12, .2], along=[0, .1], cap_key='iron')
 def f_infirmary_bed(p):
-    """Low ward cot: wooden frame on short legs, straw tick, linen sheet, folded wool blanket, headboard."""
-    p.box((0, 0, .32), (.86, 1.96, .07), 'wood'); legs(p, 1.96, .86, .29, t=.07, inset=.06)
-    p.box((0, .97, .55), (.86, .06, .5), 'woodDark')                                  # headboard
-    p.box((0, 0, .41), (.78, 1.86, .11), 'straw'); p.box((0, -.05, .47), (.8, 1.7, .025), 'linen')
-    p.box((0, .74, .5), (.56, .26, .08), 'linen'); p.box((.01, -.55, .49), (.82, .62, .05), 'clothDark')
+    """Narrow ward cot set head-to-wall (long axis along +X, headboard on the back face):
+    wooden frame on short legs, straw tick, linen sheet, pillow, wool blanket over the foot.
+    Built as three stacked lengths (head, middle, foot), each layer centred on its own length:
+    the 2.5D painter sorts faces by mean depth, so a layer never hides the one above it."""
+    legs(p, .78, 1.96, .29, t=.07, inset=.06)
+    p.box((-.95, 0, .55), (.06, .78, .5), 'woodDark')                                 # headboard against the wall
+    for x0, x1, cover in ((-.92, -.5, 'linen'), (-.5, .24, 'linen'), (.24, .98, 'clothDark')):
+        c, L = (x0 + x1) / 2, x1 - x0
+        p.box((c, 0, .32), (L, .78, .07), 'wood')                                    # frame
+        p.box((c, 0, .395), (L - .02, .7, .08), 'straw')                             # straw tick
+        p.box((c, 0, .4475), (L - .02, .74, .025 if cover == 'linen' else .05), cover)
+    p.box((-.71, 0, .49), (.3, .5, .06), 'linen')                                     # pillow on the head length
 def f_herb_shelf(p):
     """Apothecary wall shelf: jars and a mortar on the boards, herb bundles drying from a rail."""
     for y in (-.55, .55):
