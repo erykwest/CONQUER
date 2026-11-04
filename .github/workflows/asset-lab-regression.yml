@@ -41,7 +41,7 @@ jobs:
       - run: node qa/asset-catalog-regression.cjs
       - run: node qa/siege-assault-regression.cjs
   browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -65,6 +65,16 @@ jobs:
         run: node qa/asset-catalog-browser.mjs
       - name: Visual audit (every asset, every fortification state)
         run: node qa/asset-audit.mjs
+      - name: Extract CRIME signatures for visual review
+        run: |
+          node - <<'NODE'
+          const report = require('./artifacts/asset-audit/report.json');
+          for (const r of report.results) {
+            if (!/justice|pillory|gallows|scaffold|almshouse|townHall|wardrobe:role:/i.test(r.id)) continue;
+            const key = r.id + '|' + (r.state ?? '') + (r.rotation ? '|r' + r.rotation : '');
+            console.log('CRIME_AUDIT ' + JSON.stringify([key, {title:r.title, coverage:r.coverage, signature:r.signature, ...(r.structure ? {structure:r.structure} : {})}, r.baseline, r.checks]));
+          }
+          NODE
       - name: Audit summary
         if: always()
         run: test -f artifacts/asset-audit/report.md && cat artifacts/asset-audit/report.md >> "$GITHUB_STEP_SUMMARY" || true
