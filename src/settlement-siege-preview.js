@@ -240,6 +240,11 @@
     if(spec.type==='gate')out.push(['portone incrinato',s=>doorTo(s,.5)],['portone sfondato',s=>doorTo(s,0)]);
     // Only towers and gatehouses fail a storey at a time (settlement-siege.js storeyCollapse).
     if(!wood&&['tower','gate'].includes(spec.type))for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
+    // A trebuchet hit next to a room's exterior element (the garderobe) brings down the box alone.
+    if(spec.functions?.some(fn=>window.ConquerRoomExterior?.spec(fn)))out.push(['elemento esterno crollato',s=>{
+      for(const e of window.ConquerRoomExterior.elements(s))
+        window.ConquerSiege.attackStructure(s.id,'trebuchet',100,{x:e.anchor.x+e.normal.x*.15,y:e.anchor.y+e.normal.y*.15});
+    }]);
     out.push(['distrutta',s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,0)}]);
     return out;
   }

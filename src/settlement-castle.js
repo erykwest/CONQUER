@@ -1026,6 +1026,7 @@ function drawCutawayStructure(s){
       drawBuiltCutawayShell(s,g,height);
       drawCutawayFloorsAndProps(s,g);
       drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
+      window.ConquerRoomExterior?.draw(s);       // outside the cut walls: stays whole
       if(top)drawBuiltDetails(s,false);
       if(builtSkin(s)==='arcade'){
         ctx.save();ctx.globalAlpha*=.72;drawBuiltArcade(s);ctx.restore();

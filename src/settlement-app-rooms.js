@@ -255,6 +255,7 @@ function renderFunctionPanel(){
       '<div class="legend">Prototype damage controls; only effective tools can harm each material. Towers and gates lose their top storey at 2/3 and 1/3 of their health.</div></div>';
   }
   if(['tower','gate','built'].includes(s.type)){
+    html+=window.ConquerSiege?.roomExteriorHtml?.(s)||'';
     html+=window.ConquerSiege?.summaryHtml()||'';
   }
   html+=window.ConquerConvoys?.panelHtml?.(s)||'';

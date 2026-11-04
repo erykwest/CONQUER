@@ -18,7 +18,11 @@
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
     {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
     {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
-    {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'}
+    {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
+    // Elements a room adds to the outside of its building (ROOM_EXTERIOR, settlement-room-exterior.js).
+    // Blender parts listed under Edifici, as the house kit: Fortificazioni holds only engine meshes and
+    // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
+    {global:'ConquerGarderobeModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -53,7 +57,7 @@
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
+    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',garderobe:'Latrina a sbalzo (garderobe)',
     justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
@@ -97,7 +101,7 @@
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
-            ConquerHouseModels:'house-models.js'}[source.global]),
+            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key:null});
     }
   }
