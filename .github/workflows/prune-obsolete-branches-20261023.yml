@@ -1,6 +1,10 @@
 name: One-time safe cleanup of obsolete remote branches (2026-11-03)
 
-# User-authorized cleanup of the exact verified combat ref after renderer consolidation.
+# User-authorized consolidation: obsolete docs governance branch, head 9980456.
+# Governance tree at 819ad61 equals merged PR #74 squash f739e51 (ignoring CRLF).
+# Sole post-PR commit is the initial CANS proposal, covered by canonical docs/CANS-ARCHITECTURE.md.
+# Canonical CANS spec 9ad79c5 and isolated skeleton f603d51 are already on main.
+# Context guard PASS; all 11 CANS logical regression cases PASS on main 89dd465.
 # Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
@@ -48,11 +52,18 @@ jobs:
               # Audited replacements: #61 siege damage, #78 events, #96 approved 2D diplomacy.
               # D-046 explicitly discards the old 3D knight implementation.
               case "$branch:$evidence" in
-                assedio:replacement:61|events:replacement:78|feature/knights-messenger-caravans:replacement:96) ;;
+                assedio:replacement:61|events:replacement:78|feature/knights-messenger-caravans:replacement:96|feature/economic-balances-20261019:replacement:105|fix/render-spikes:replacement:97|docs/context-sync-pr-governance-20261021:replacement:74) ;;
                 *) echo 'Unapproved replacement'; exit 1 ;;
               esac
               pr="${evidence#replacement:}"
               merged_sha="$(gh api "repos/$GH_REPO/pulls/$pr" --jq 'select(.merged_at != null) | .merge_commit_sha')"
+            elif [[ "$evidence" == audited-commit:* ]]; then
+              # Exact audited replacement commits already on main; never accept arbitrary pairs.
+              case "$branch:$evidence" in
+                feature/ui-shell:audited-commit:5ddefa684c80239d3a298e546167b5b4b81a8d1f|feature/landscape-forests:audited-commit:c2d76be90a41d491d2ffd8864352219ad6fa52cb|fix/biomes-restore:audited-commit:ee671e6f8af97a5dd3f55be72122a186ecb26ef9) ;;
+                *) echo 'Unapproved audited commit'; exit 1 ;;
+              esac
+              merged_sha="${evidence#audited-commit:}"
             else
               entry="$(gh api "repos/$GH_REPO/pulls/$evidence" --jq '[.head.ref,.head.sha,(.merged_at // ""),(.merge_commit_sha // "")] | join("|")')"
               IFS='|' read -r pr_branch pr_sha merged_at merged_sha <<< "$entry"
@@ -80,7 +91,7 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          combat|@this-commit|-
+          docs/context-sync-pr-governance-20261021|9980456a0be9fc323ae5e665599d55f7843ca59c|replacement:74
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))

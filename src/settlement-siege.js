@@ -74,7 +74,6 @@
     window.ConquerCircle?.reset?.();
     rubbleGrid=null;                                  // rubble of the loaded game
   }
-  const CIVIC_ONLY_ROOMS=new Set(['council','tribunal']);
   function eligibleRoom(s){return !!s&&['tower','gate','built'].includes(s.type)&&!underConstruction(s)}
   function floor(s,index){return index+1}
   function allowed(s,index,fn){
@@ -82,13 +81,15 @@
     // Town hall: one room per floor, as many as the civic level; the tribunal needs L2.
     if(s?.type==='townhall')return !underConstruction(s)&&index>=0&&index<functionCapacity(s)
       &&TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||civicLevel(s)>=2)&&(fn!=='prison'||index===0);
-    if(CIVIC_ONLY_ROOMS.has(fn))return false;
+    if(fn==='council'||fn==='tribunal')return false;   // civic rooms, town hall only
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
     // Prisons on the ground floor only (a gate's ground floor is its passage).
     if(fn==='prison')return l===1&&s.type!=='gate';
-    if(['granary','storage','kitchen','commonHall'].includes(fn))
+    // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
+    if(fn==='kitchen')return l===1&&s.type==='built';
+    if(['granary','storage','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
     return true;
   }

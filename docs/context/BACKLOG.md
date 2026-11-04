@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Cucine solo nelle sezioni costruite (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/kitchen-built-only`:** cucina solo al piano terra di sezioni W1 e sale larghe W2; niente torri né porte. I salvataggi perdono al caricamento le cucine in torri e porte.
+- **APERTO:** avviso al giocatore quando un salvataggio perde una cucina; eventuale bilanciamento dei pasti per sezione.
+
 ## 2026-11-03 — Combat: separazione presentazione completata
 
 - **Implementato su combat e verificato localmente:** canvas tattico, fog/zone, figure/HUD ed effetti in settlement-combat-render.js; regole prive di Canvas. Il precedente residuo di separazione dell'overlay non richiede più di conservare la branch dopo la promozione.
