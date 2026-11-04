@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER houses in 3D (L1 cottages, L2 and L3 townhouses): the game's own procedural plans dressed with the Blender kit
+// CONQUER houses in 3D (L1 cottages, L2-L4 townhouses, L4 turrets and dormers): the game's own procedural plans dressed with the Blender kit
 // (src/assets/house-models.js, tools/blender/build_houses.py). Plans, proportions, rows, wings,
 // windows, timber frame, door and chimneys keep their rules (urbanHouseGeometry, houseFacadePlan,
 // houseDoorInfo, chimneySpecs); walls and timber members become solids with thickness, and the
@@ -15,7 +15,8 @@
   // L1 cottages: low daub walls in the procedural houses' browns, timber frame, thatch.
   const DAUB=['#654936','#4e392d'];
   // L2 houses are drawn like L3 ones (stone ground floor, jettied timber floor) on a single body.
-  const LEVELS=new Set([1,2,3]);
+  // L4 add the corner turret (turretPart) and roof dormers on the same townhouse body.
+  const LEVELS=new Set([1,2,3,4]);
   function handles(s){
     return !!s&&s.type==='house'&&LEVELS.has(houseLevel(s))&&!!DATA()&&!!window.ConquerMesh3D&&
       !(typeof underConstruction==='function'&&underConstruction(s));
@@ -128,10 +129,61 @@
     }
     roofPiece(m,house,part,pal,'roofThatch',1);
   }
+  // A kit window at a world point on a wall with outward normal n, sized to the plan's half width
+  // and height (turret and dormer windows are smaller than the kit's nominal casement).
+  function windowAt(m,pal,p,z,n,hw,hh,push=0){
+    const tk={x:n.y,y:-n.x};   // turns +x into +y = n
+    piece(m,'windowUpper',{x:p.x+n.x*push,y:p.y+n.y*push,z},tk,n,{sx:hw/HOUSE_WINDOW_HALF_W,sz:hh/HOUSE_WINDOW_HALF_H},pal);
+  }
+  // A timber member between two world points {p,z} on a wall with outward normal n.
+  function memberWorld(g,a,b,n,ground,push){
+    const dx=b.p.x-a.p.x,dy=b.p.y-a.p.y,dz=b.z-a.z;
+    // In-plane perpendicular: d x n (n horizontal), HOUSE_TIMBER_W wide.
+    let qx=dy*0-dz*n.y,qy=dz*n.x-dx*0,qz=dx*n.y-dy*n.x;const ql=Math.hypot(qx,qy,qz)||1,w=HOUSE_TIMBER_W/2;qx*=w/ql;qy*=w/ql;qz*=w/ql;
+    g.m.stats.members=(g.m.stats.members||0)+1;
+    const P=(q,s,d)=>[q.p.x+n.x*(push+d)+qx*s,q.p.y+n.y*(push+d)+qy*s,ground+q.z+qz*s];
+    const A=[P(a,1,0),P(b,1,0),P(b,-1,0),P(a,-1,0)],B=[P(a,1,TIMBER_OUT),P(b,1,TIMBER_OUT),P(b,-1,TIMBER_OUT),P(a,-1,TIMBER_OUT)];
+    poly(g,B,tint(TIMBER));
+    for(let i=0;i<4;i++){const j=(i+1)%4;poly(g,[A[i],A[j],B[j],B[i]],tint(SOFFIT))}
+  }
+  // L4 corner turret: stone below the floor break, timbered plaster above (houseTurretFacade frame
+  // and windows), the kit's conical or pyramidal roof with its finial.
+  function turretPart(m,house,part,pal){
+    const ground=terrainElevation(part.center),P=part.points,round=part.type==='round';
+    for(const edge of edgesOf(P)){
+      // A round turret in one tone (the light shades its facets); the square one alternates.
+      const a=edge.a,b=edge.b,k=round?0:edge.index%2,g=group(m);
+      poly(g,[[a.x,a.y,ground],[b.x,b.y,ground],[b.x,b.y,ground+part.floorZ],[a.x,a.y,ground+part.floorZ]],tint(STONE[k]));
+      poly(g,[[a.x,a.y,ground+part.floorZ],[b.x,b.y,ground+part.floorZ],[b.x,b.y,ground+part.bodyH],[a.x,a.y,ground+part.bodyH]],tint(PLASTER[k]));
+      close(g);
+    }
+    const plan=houseTurretFacade(part),g=group(m,0,'beam');
+    for(const b of plan.beams)memberWorld(g,b.a,b.b,b.normal,ground,.004);
+    close(g);
+    for(const w of plan.windows)windowAt(m,pal,w.p,ground+w.z,w.normal,w.hw,w.hh,.006);
+    const a=part.angle||0,t={x:Math.cos(a),y:Math.sin(a)},n={x:-t.y,y:t.x};
+    // As drawHouseTurretRoof: the eaves overhang the turret by a fifth (round) or 18% (square).
+    const s=round?part.r*1.2:part.size/2*1.18;
+    piece(m,round?'turretRoofRound':'turretRoofSquare',{x:part.center.x,y:part.center.y,z:ground+part.bodyH},t,n,
+      {sx:s,sy:s,sz:part.roofH-part.bodyH,tag:'roof'},pal);
+  }
+  // L4 dormers (urbanHouseDormers): cream front and cheeks, slate gable roof, a kit casement.
+  function dormers(m,entry,pal){
+    const P=k=>pal[DATA().paletteKeys.indexOf(k)];
+    const col={front:tint(PLASTER[0]),cheek:tint(PLASTER[1]),gable:tint(GABLE),roofA:P('roofSlate'),roofB:P('roofSlateDark')};
+    for(const d of entry.dormers||[]){
+      const ground=terrainElevation(d.partCenter),g=group(m,0,'roof');
+      for(const f of d.faces)poly(g,f.pts.map(v=>[v.p.x,v.p.y,ground+v.z]),col[f.kind]);
+      close(g);
+      m.stats.dormer=(m.stats.dormer||0)+1;
+      windowAt(m,pal,d.window.p,ground+d.window.z,d.window.normal,d.window.hw,d.window.hh,.004);
+    }
+  }
   // ---------- one house
   function build(house,entry){
     const m=meshOut(),pal=kitPalette(),jetty=houseJetty(house),cottage=houseLevel(house)===1;
     for(const part of entry.parts){
+      if(part.kind==='turret'){turretPart(m,house,part,pal);continue}
       if(part.kind!=='body')continue;
       if(cottage){cottagePart(m,house,part,pal);continue}
       const ground=terrainElevation(part.center),bodyH=part.bodyH,fb=houseFloorBreak(bodyH),top=ground+bodyH;
@@ -183,6 +235,7 @@
     const dp={x:d.surface.x-d.normal.x*jetty,y:d.surface.y-d.normal.y*jetty,z:terrainElevation(d.surface)};
     const dt=d.tangent.x*d.normal.y-d.tangent.y*d.normal.x>0?d.tangent:{x:-d.tangent.x,y:-d.tangent.y};
     piece(m,cottage?'doorCottage':'door',dp,dt,d.normal,{sx:hw/DOOR_HW},pal);
+    dormers(m,entry,pal);
     // Chimneys where chimneySpecs puts them.
     for(const c of chimneySpecs(house)){
       const g=terrainElevation(c.center),a=c.angle||0;

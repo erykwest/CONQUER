@@ -39,18 +39,21 @@ vm.runInContext([constant(core,'HOUSE_ROOF_PITCH'),constant(core,'HOUSE_FLOOR_BR
   ...['houseLevel','houseDimensionScale','houseFootprintDimensions','housePlanType','houseTurretType','houseLocalToWorld',
     'houseFloorBreak','houseJetty','houseTurretInfo','houseStreetSide','houseCornerSide','houseFootprintParts',
     'houseBodyHeight','houseRoofSpan','housePartRidge','housePartRidges'].map(n=>fnSource(core,n)),
-  ...['urbanHouseFaces','houseFacadePlan','houseFacadeDoorCut','houseFacadeTurretCut'].map(n=>fnSource(urban,n)),
+  ...['urbanHouseFaces','houseFacadePlan','houseFacadeDoorCut','houseFacadeTurretCut','houseTurretFacade',
+    'urbanHouseDormers','urbanDormerSlots','urbanDormer'].map(n=>fnSource(urban,n)),
   ...['houseDoorInfo','inferHouseDoorSide','closestPointOnSegment'].map(n=>fnSource(buildings,n)),
   // urbanHouseGeometry for detached houses: the footprint parts with their wall and ridge heights.
   `function urbanHouseGeometry(){return State.structures.filter(s=>s.type==='house').map(house=>{
      const parts=houseFootprintParts(house),ridges=housePartRidges(house,parts);
-     return{house,parts:parts.map((p,i)=>({...p,bodyH:p.kind==='turret'?p.bodyH:houseBodyHeight(house),roofH:ridges[i]})),dormers:[]}})}`
+     const full=parts.map((p,i)=>({...p,bodyH:p.kind==='turret'?p.bodyH:houseBodyHeight(house),roofH:ridges[i]}));
+     return{house,parts:full,dormers:urbanHouseDormers(house,full)}})}`
 ].join('\n'),sandbox);
 for(const f of ['src/assets/house-models.js','src/settlement-mesh3d.js','src/settlement-house3d.js'])vm.runInContext(src(f),sandbox,{filename:f});
 const K=window.ConquerHouseModels,H=window.ConquerHouse3D;
 
-// 1. The kit: six L3 pieces and three L1 cottage pieces, indexed triangles, palette colours.
-assert.deepEqual(Object.keys(K.models).sort(),['chimney','door','doorCottage','joist','roof','roofThatch','windowCottage','windowGround','windowUpper']);
+// 1. The kit: six L3 pieces, three L1 cottage pieces, two L4 turret roofs; indexed triangles, palette colours.
+assert.deepEqual(Object.keys(K.models).sort(),['chimney','door','doorCottage','joist','roof','roofThatch','turretRoofRound','turretRoofSquare',
+  'windowCottage','windowGround','windowUpper']);
 for(const [name,model] of Object.entries(K.models))for(const [pn,p] of Object.entries(model.parts)){
   assert.equal(p.i.length,p.c.length*3,name+'.'+pn+': three indices per triangle');
   assert.ok(p.i.every(i=>i>=0&&i*3<p.p.length),name+'.'+pn+': indices in range');
@@ -68,11 +71,11 @@ assert.deepEqual([K.palette[K.paletteKeys.indexOf('roofSlate')],K.palette[K.pale
 assert.deepEqual([K.palette[K.paletteKeys.indexOf('roofThatch')],K.palette[K.paletteKeys.indexOf('roofThatchDark')]],['#b39250','#c4a25d'],'thatch = HOUSE_THATCH');
 console.log('PASS kit: '+Object.keys(K.models).length+' pieces');
 
-// 2. L1, L2 and L3 houses, built and finished.
-for(const level of [1,2,3])assert.equal(H.handles({type:'house',houseLevel:level}),true,'L'+level+' uses the kit');
-for(const s of [{type:'house',houseLevel:4},{type:'house',houseLevel:3,building:true},{type:'house',houseLevel:1,building:true},{type:'tower'}])
+// 2. L1 to L4 houses, built and finished.
+for(const level of [1,2,3,4])assert.equal(H.handles({type:'house',houseLevel:level}),true,'L'+level+' uses the kit');
+for(const s of [{type:'house',houseLevel:4,building:true},{type:'house',houseLevel:3,building:true},{type:'house',houseLevel:1,building:true},{type:'tower'}])
   assert.equal(H.handles(s),false,JSON.stringify(s)+' keeps the procedural drawing');
-console.log('PASS scope: L1, L2 and L3');
+console.log('PASS scope: L1 to L4');
 
 // 3. Every wall, every body: windows and members as the facade plan, one roof per body.
 let houses=0;
@@ -159,6 +162,51 @@ for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Mat
  assert.ok(!winter.has(K.palette[K.paletteKeys.indexOf('roofThatch')])&&winter.has('#e7ece8'),'winter thatch is white');}
 console.log('PASS '+cottages+' L1 cottages: framed daub walls, cottage windows on every wall, plank door, thatch');
 
+// 3c. L4 houses: the townhouse bodies plus the corner turret (stone and timbered plaster walls,
+// its frame and windows from houseTurretFacade, a kit conical or pyramidal roof) and the dormers
+// (faces of urbanHouseDormers with a kit casement each).
+// A corner plot: the house front on one street, a side street across it (houseCornerSide).
+const corner=(s,angle,doorSide)=>{
+  const t={x:Math.cos(angle),y:Math.sin(angle)},n={x:-t.y*doorSide,y:t.x*doorSide},at=(u,v)=>({x:s.x+t.x*u+n.x*v,y:s.y+t.y*u+n.y*v});
+  sandbox.roadList=()=>[{a:at(-8,1.6),b:at(8,1.6)},{a:at(2.4,-8),b:at(2.4,8)}];
+};
+let l4=0;const turretTypes=new Set();
+for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Math.PI/2,2.5])for(const v of [0,1]){
+  const s={id:'l4-'+w+doorSide+angle+'-'+v,type:'house',houseLevel:4,auto:true,x:50,y:40,w,h:1,doorSide,angle};
+  corner(s,angle,doorSide);
+  State.structures=[s];H.clear();
+  const m=H.geometry(s),entry=sandbox.urbanHouseGeometry()[0],label='L4 '+s.id;
+  const bodies=entry.parts.filter(p=>p.kind==='body'),turrets=entry.parts.filter(p=>p.kind==='turret');
+  let windows=0,members=0;
+  for(const part of bodies)part.points.forEach((a,i)=>{const p=sandbox.houseFacadePlan(s,part,{a,b:part.points[(i+1)%part.points.length]});windows+=p.windows.length;members+=p.beams.length});
+  for(const t of turrets){const p=sandbox.houseTurretFacade(t);windows+=p.windows.length;members+=p.beams.length;turretTypes.add(t.type)}
+  windows+=entry.dormers.length;
+  assert.equal((m.stats.windowUpper||0)+(m.stats.windowGround||0),windows,label+': a window piece for every body, turret and dormer window');
+  assert.equal(m.stats.members,members,label+': a timber member for every body and turret beam');
+  assert.equal((m.stats.turretRoofRound||0)+(m.stats.turretRoofSquare||0),turrets.length,label+': one kit roof per turret');
+  assert.equal(m.stats.roof,bodies.length,label+': one slate roof per body');
+  assert.equal(m.stats.dormer||0,entry.dormers.length,label+': every dormer');
+  assert.ok(entry.dormers.length>=2,label+': dormers on the roof');
+  assert.equal(turrets.length,1,label+': a turret on the corner plot');
+  // Turret roofs reach the turret ridge, never above it (finial aside).
+  for(const t of turrets){
+    let top=0;for(let i=0;i<m.pos.length;i+=3)if(Math.hypot(m.pos[i]-t.center.x,m.pos[i+1]-t.center.y)<.05)top=Math.max(top,m.pos[i+2]);
+    assert.ok(top>=t.roofH-.02&&top<=t.roofH+.4,label+': turret roof up to its apex ('+top.toFixed(2)+' / '+t.roofH.toFixed(2)+')');
+  }
+  assert.deepEqual([...new Set(m.tag)].sort(),['beam','body','gable','roof'],label+': construction tags');
+  l4++;
+}
+assert.ok(turretTypes.size===2,'round and square turrets both covered');
+{const P=k=>K.palette[K.paletteKeys.indexOf(k)];
+ const s={id:'l4-clay',type:'house',houseLevel:4,auto:true,x:0,y:0,w:1.5,h:1,doorSide:1,angle:0};corner(s,0,1);
+ State.structures=[s];H.clear();const stone=new Set(H.geometry(s).col);
+ s.masonryMaterial='brick';H.clear();const clay=new Set(H.geometry(s).col);delete s.masonryMaterial;
+ assert.ok(stone.has(P('roofTurret'))&&!clay.has(P('roofTurret'))&&!clay.has(P('roofTurretDark')),'clay: turret slate turns to tile');
+ State.season='winter';H.clear();const winter=new Set(H.geometry(s).col);State.season='summer';H.clear();
+ assert.ok(!winter.has(P('roofTurret'))&&!winter.has(P('roofSlate')),'winter: turret and dormer roofs are white');
+ sandbox.roadList=()=>[];}
+console.log('PASS '+l4+' L4 houses: turrets (round and square) framed and roofed, dormers with casements; clay and winter');
+
 // 4. Brick masonry recolours the kit stone like the procedural walls; winter whitens the roofs.
 {const s={id:'kit-brick',type:'house',houseLevel:3,auto:true,x:0,y:0,w:1.5,h:1,doorSide:1,angle:0};State.structures=[s];
  H.clear();const stone=new Set(H.geometry(s).col);
@@ -188,6 +236,8 @@ const kitBranch=world.slice(world.indexOf('ConquerHouse3D?.addToBuilder(m,house)
 assert.match(kitBranch,/window\.ConquerShopCutaway\?\.addFront\(m,house\)/,'kit houses keep the workshop street front');
 assert.match(world,/const kit=!!window\.ConquerHouse3D\?\.handles\(s\);/,'decals: kit houses keep only the night lights');
 assert.match(world,/if\(!kit\)for\(const \[p0,p1\] of plan\.beams\)strip/,'no timber decals on kit houses');
+assert.match(world,/if\(!kit\)for\(const b of plan\.beams\)beam\(/,'no turret timber decals on kit houses');
+assert.match(world,/if\(!kit\)quad\(a,b,ground\+w\.z-w\.hh/,'no turret or dormer glass decals on kit houses');
 assert.doesNotMatch(buildings,/ConquerHouse3D/,'2.5D fallback unchanged');
 const assembly=src('src/settlement-construction-assembly.js');
 assert.match(assembly,/castleSource\(s\)\|\|civicSource\(s\)\|\|kitHouseSource\(s\)\|\|houseSource\(s\)/,'construction sites build the kit house in World 3D');
