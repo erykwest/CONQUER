@@ -26,6 +26,7 @@ COLORS.update({
     'heraldA': '#7f2323', 'heraldB': '#243f79', 'gold': '#d1aa4c', 'goldDark': '#9c7a2c',
     'cloth': '#d9cfb8', 'clothDark': '#a89c84', 'straw': '#d6b551', 'ember': '#e0702a', 'flame': '#ffd27a',
     'soot': '#2b2622', 'stoneWarm': '#a39a8c', 'linen': '#ece4d2', 'candle': '#efe6cf',
+    'herb': '#6f8a4a', 'herbDry': '#a39a5c',
 })
 COLL_NAME = 'CONQUER_Furniture'
 
@@ -124,6 +125,37 @@ def f_pallet(p):
     p.box((0, 0, .06), (.8, 1.9, .12), 'straw'); p.box((0, .75, .14), (.55, .25, .06), 'linen'); p.box((.02, -.3, .13), (.76, .9, .03), 'clothDark')
 def f_wash_basin(p):
     table(p, .45, .45, .7, 'wood'); p.cylinder(.2, 0, 'ironLight', n=10, axis='z', center=(0, 0, .7), radii=[.12, .2], along=[0, .1], cap_key='iron')
+def f_infirmary_bed(p):
+    """Narrow ward cot set head-to-wall (long axis along +X, headboard on the back face):
+    wooden frame on short legs, straw tick, linen sheet, pillow, wool blanket over the foot.
+    Built as three stacked lengths (head, middle, foot), each layer centred on its own length:
+    the 2.5D painter sorts faces by mean depth, so a layer never hides the one above it."""
+    legs(p, .78, 1.96, .29, t=.07, inset=.06)
+    p.box((-.95, 0, .55), (.06, .78, .5), 'woodDark')                                 # headboard against the wall
+    for x0, x1, cover in ((-.92, -.5, 'linen'), (-.5, .24, 'linen'), (.24, .98, 'clothDark')):
+        c, L = (x0 + x1) / 2, x1 - x0
+        p.box((c, 0, .32), (L, .78, .07), 'wood')                                    # frame
+        p.box((c, 0, .395), (L - .02, .7, .08), 'straw')                             # straw tick
+        p.box((c, 0, .4475), (L - .02, .74, .025 if cover == 'linen' else .05), cover)
+    p.box((-.71, 0, .49), (.3, .5, .06), 'linen')                                     # pillow on the head length
+def f_herb_shelf(p):
+    """Apothecary wall shelf: jars and a mortar on the boards, herb bundles drying from a rail."""
+    for y in (-.55, .55):
+        p.box((-.15, y, .95), (.3, .05, 1.9), 'woodDark')
+    for z in (.45, 1.0):
+        p.box((-.15, 0, z), (.3, 1.15, .04), 'wood')
+        for i, y in enumerate((-.38, -.13, .13, .38)):
+            p.cylinder(.055, 0, 'stoneLight' if i % 2 else 'candle', n=6, axis='z', center=(-.15, y, z + .02), radii=[.05, .06, .035], along=[0, .14, .18])
+    p.cylinder(.09, 0, 'stone', n=8, axis='z', center=(-.12, .25, 1.02), radii=[.06, .09], along=[0, .1], cap_key='stoneDark')     # mortar
+    p.beam((-.2, -.08, 1.04), (-.08, .32, 1.2), .02, .02, 'woodLight')                                                           # pestle
+    p.beam((.02, -.55, 1.78), (.02, .55, 1.78), .03, .03, 'woodDark')
+    for i, y in enumerate((-.4, -.2, 0, .2, .4)):
+        p.beam((.02, y, 1.76), (.02, y, 1.62), .008, .008, 'twine')
+        p.taper((.02, y, 1.62), (.02, y, 1.36), .1, .08, .03, .03, 'herb' if i % 2 else 'herbDry')
+def f_latrine_seat(p):
+    # Garderobe seat: a stone bench against the wall with a plank top and the drop hole.
+    p.box((0, 0, .22), (.5, 1.0, .44), 'stoneWarm'); p.box((.01, 0, .455), (.48, .96, .03), 'wood')
+    p.cylinder(.11, 0, 'soot', n=8, axis='z', center=(.04, 0, .47), radii=[.11, .11], along=[0, .006])
 def f_grain_bin(p):
     p.box((0, 0, .5), (1.0, 1.6, 1.0), 'wood')
     for y in (-.79, .79):
@@ -291,11 +323,44 @@ def f_stocks(p):
     for y in (-.3, 0, .3):
         p.box((.055, y, .45), (.01, .12, .12), 'soot')
 
+def pigeon(p, x, y, z, turn=0):
+    ca, sa = math.cos(turn), math.sin(turn)
+    at = lambda fx, fy, fz: (x + fx * ca - fy * sa, y + fx * sa + fy * ca, z + fz)
+    p.cylinder(.08, 0, 'stoneLight', n=7, axis='x', center=at(-.02, 0, .09), radii=[.02, .07, .08, .05], along=[-.12, -.06, .02, .08], squash=.85)
+    p.cylinder(.04, 0, 'stoneDark', n=6, axis='z', center=at(.07, 0, .13), radii=[.04, .035, 0], along=[0, .06, .1])
+    p.taper(at(-.1, 0, .1), at(-.18, 0, .08), .06, .02, .08, .01, 'stoneDark')
+# Dovecote room (Colombaia): a timber wall of nesting holes, a perch rack and the birds.
+def f_nest_wall(p):
+    rows, cols, w, h = 4, 3, 1.15, 2.0                                        # fits a medium (T2) tower room
+    p.box((-.17, 0, h / 2), (.06, w, h), 'woodDark')                          # back boards
+    for y in (-w / 2, w / 2):
+        p.box((0, y, h / 2), (.34, .05, h), 'wood')
+    for r in range(rows + 1):
+        p.box((0, 0, .15 + r * .45), (.34, w, .04), 'wood')                   # shelves
+    for r in range(rows):
+        for c in range(cols):
+            y = -w / 2 + (c + .5) * w / cols
+            p.box((-.13, y, .37 + r * .45), (.02, .2, .26), 'soot')            # dark nest hole
+            if c < cols - 1:
+                p.box((0, y + w / cols / 2, .37 + r * .45), (.3, .03, .41), 'wood')
+            if (r * cols + c) % 3 == 1:
+                p.box((-.03, y, .2 + r * .45), (.2, .2, .03), 'straw')       # nesting straw
+    for r, c in ((0, 1), (1, 2), (2, 0), (3, 1)):
+        pigeon(p, .1, -w / 2 + (c + .5) * w / cols, .17 + r * .45)
+def f_perch(p):
+    for y in (-.45, .45):
+        p.box((0, y, .7), (.06, .06, 1.4), 'woodDark')
+    p.box((0, 0, .04), (.4, 1.0, .08), 'woodDark')
+    for z in (.6, 1.0, 1.35):
+        p.beam((0, -.5, z), (0, .5, z), .035, .035, 'woodLight')
+    pigeon(p, 0, -.2, 1.37, .8); pigeon(p, 0, .25, 1.02, -.6)
+    p.cylinder(.16, 0, 'wood', n=8, axis='z', center=(.1, .2, .08), radii=[.14, .16], along=[0, .1], cap_key='hay')   # grain bowl
+
 PIECES = (
     ('bench', f_bench), ('tableLong', f_table_long), ('tableSmall', f_table_small), ('stool', f_stool), ('chair', f_chair),
     ('chest', f_chest), ('brazier', f_brazier), ('banner', f_banner),
     ('spearRack', f_spear_rack), ('swordRack', f_sword_rack), ('armorStand', f_armor_stand), ('shieldWall', f_shield_wall), ('arrowCrate', f_arrow_crate),
-    ('bunkBed', f_bunk_bed), ('pallet', f_pallet), ('washBasin', f_wash_basin),
+    ('bunkBed', f_bunk_bed), ('pallet', f_pallet), ('washBasin', f_wash_basin), ('latrineSeat', f_latrine_seat),
     ('grainBin', f_grain_bin), ('scales', f_scales),
     ('hearth', f_hearth), ('shelf', f_shelf), ('breadOven', f_bread_oven), ('hamRack', f_ham_rack),
     ('stall', f_stall), ('manger', f_manger), ('saddleStand', f_saddle_stand),
@@ -304,6 +369,8 @@ PIECES = (
     ('altar', f_altar), ('pew', f_pew), ('kneeler', f_kneeler), ('lectern', f_lectern), ('candleStand', f_candle_stand), ('torchWall', f_torch_wall),
     ('throne', f_throne), ('strongChest', f_strong_chest), ('coinSacks', f_coin_sacks), ('goldChest', f_gold_chest), ('ingotRack', f_ingot_rack),
     ('cellBars', f_cell_bars), ('wallChains', f_wall_chains), ('straw', f_straw), ('stocks', f_stocks),
+    ('nestWall', f_nest_wall), ('perch', f_perch),
+    ('infirmaryBed', f_infirmary_bed), ('herbShelf', f_herb_shelf),
 )
 # Light sources (local metres): torch and candle flames glow in the night cutaway.
 LIGHTS = {'torchWall': [(.17, 0, 2.1, 'torch')], 'brazier': [(0, 0, 1.0, 'fire')], 'hearth': [(.05, 0, .45, 'fire')],

@@ -272,8 +272,12 @@
         if(s.type==='gate')addGate(m,s);
         // Tower / gate hoarding: the Blender bay (hoarding-models.js) swept round the outline; sides a shade darker.
         for(const t of pointHoardingTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
+        // Dovecote lantern on the roof apex (dovecote-models.js).
+        for(const t of dovecoteTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         if(s.type==='built')addBuilt(m,s);
         m.tag='body';
+        // Room exterior elements (settlement-room-exterior.js), as the hoarding: sides a shade darker.
+        for(const t of window.ConquerRoomExterior?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         for(const b of wideHallButtresses(s))addButtress(m,b);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);

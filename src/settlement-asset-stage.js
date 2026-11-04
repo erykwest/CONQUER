@@ -31,6 +31,11 @@
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
       ['Mura',['Sezione costruita T2',{type:'built',tier:2,level:1}]],
       ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],
+      // Infirmary wards (W1 section on both floors, W2 hall): the cutaway shows the furnished rooms.
+      ['Mura',['Infermeria · sezione L2',{type:'built',tier:2,level:2,functions:['infirmary','infirmary']}]],
+      ['Mura',['Infermeria · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['infirmary']}]],
+      // Room exterior element (settlement-room-exterior.js): the garderobe of an upper-floor latrine.
+      ['Mura',['Sezione costruita L2 + latrina',{type:'built',tier:2,level:2,functions:[null,'latrine']}]],
       // Military stables (settlement-siege.js stableUnits): stall rows down the long room.
       ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],
       ['Mura',['Scuderia militare · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['stables']}]],...G.gates.map(r=>['Porte',r])]

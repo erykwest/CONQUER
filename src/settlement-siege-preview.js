@@ -164,6 +164,10 @@
       ['Grande rotonda L3 tetto + ballatoio',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',hoarding:'on'}],
       ['Torre a D grande L3 tetto + ballatoio',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',hoarding:'on'}],
       ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
+      // Dovecote (Colombaia): the top room under the pitched roof, its lantern on the apex.
+      ['Pietra quadrata L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',functions:[null,'dovecote']}],
+      ['Grande rotonda L3 tetto + colombaia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
+      ['Torre a D grande L3 tetto + colombaia',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
       ['Grande quadrata L3 garitte merlate',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',bartizan:'battlement'}],
       ['Grande rotonda L3 garitte a guglia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',bartizan:'pitched'}],
       ['Grande quadrata L3 tetto 2 falde',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'gable'}],
@@ -240,6 +244,11 @@
     if(spec.type==='gate')out.push(['portone incrinato',s=>doorTo(s,.5)],['portone sfondato',s=>doorTo(s,0)]);
     // Only towers and gatehouses fail a storey at a time (settlement-siege.js storeyCollapse).
     if(!wood&&['tower','gate'].includes(spec.type))for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
+    // A trebuchet hit next to a room's exterior element (the garderobe) brings down the box alone.
+    if(spec.functions?.some(fn=>window.ConquerRoomExterior?.spec(fn)))out.push(['elemento esterno crollato',s=>{
+      for(const e of window.ConquerRoomExterior.elements(s))
+        window.ConquerSiege.attackStructure(s.id,'trebuchet',100,{x:e.anchor.x+e.normal.x*.15,y:e.anchor.y+e.normal.y*.15});
+    }]);
     out.push(['distrutta',s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,0)}]);
     return out;
   }

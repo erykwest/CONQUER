@@ -50,7 +50,7 @@ check('archer posts match the drawn arrow slits',()=>{
   assert.ok(!slit(tower,east.face,2)&&slit(tower,east.face,3),'wall junction covers only the floors it reaches');
 });
 
-const ROLES=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison'];
+const ROLES=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','infirmary'];
 function rooms(id,roles){
   run("(()=>{const s=State.structures.find(x=>x.id==='"+id+"');s.functions="+JSON.stringify(roles)+";normalizeFunctions(s);window.ConquerCutawayFurniture.clear()})()");
   const s=run("State.structures.find(x=>x.id==='"+id+"')");
@@ -65,6 +65,11 @@ check('every role is furnished in normal and large rooms, larger rooms get more'
   }
   const bunks=r=>r.items.filter(i=>i.name==='bunkBed').length;
   assert.ok(bunks(rooms('t3',['barracks'])[0])>bunks(rooms('t2',['barracks'])[0]),'a large barracks has more bunks');
+  // Infirmary: ward cots, the herb shelf and the wash basin; a large ward has more cots.
+  const cots=r=>r.items.filter(i=>i.name==='infirmaryBed').length;
+  for(const id of ['t2','t3']){const ward=rooms(id,['infirmary'])[0],names=ward.items.map(i=>i.name);
+    assert.ok(cots(ward)>=1&&names.includes('herbShelf')&&names.includes('washBasin'),id+' infirmary: '+names)}
+  assert.ok(cots(rooms('t3',['infirmary'])[0])>cots(rooms('t2',['infirmary'])[0]),'a large ward has more cots');
 });
 
 check('pieces stay in the room, apart, off the ladder corner and the archer posts',()=>{
