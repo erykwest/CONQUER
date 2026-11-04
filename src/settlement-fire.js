@@ -167,7 +167,13 @@
   const WOMEN=[['#b4a58a','#8f8b82'],['#9c9078','#7d7a72'],['#c8bda6','#9c9078'],['#a39e93','#7d7a72']];   // L1 grey/beige
   function brigadeOn(){return store().brigadeOn!==false}
   function setBrigade(on){store().brigadeOn=!!on;if(!on)store().carriers=[]}
-  function wells(){return State.structures.filter(s=>s.type==='well'&&!(typeof underConstruction==='function'&&underConstruction(s)))}
+  // Water points: the wells that can still be reached (siege), and the cisterns, always full,
+  // drawn from at the ground door of their tower.
+  function wells(){
+    const S=window.ConquerSiege;
+    return State.structures.filter(s=>s.type==='well'&&!(typeof underConstruction==='function'&&underConstruction(s))&&(!S?.wellReachable||S.wellReachable(s)))
+      .concat(S?.cisternTaps?.()||[]);
+  }
   // What can be fought: burning parts of standing structures and burning rubble.
   function blazes(){
     const x=store(),out=[];
@@ -202,6 +208,7 @@
     c.path=p;return true;
   }
   function wellStand(w,angle=0){
+    if(w.tap)return{...w.tap};
     let p;
     for(let k=0;k<16;k++){
       const a=angle+k*Math.PI/8;p={x:w.x+Math.cos(a)*.9,y:w.y+Math.sin(a)*.9};

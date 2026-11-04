@@ -132,7 +132,7 @@ export const T = {
     guard: 'Corpo di guardia', barracks: 'Caserma', armory: 'Armeria', storage: 'Magazzino materiali', granary: 'Granaio',
     kitchen: 'Cucina', stables: 'Scuderie', quarters: 'Alloggi', nobleRoom: 'Stanze nobili', workshop: 'Officina d\'armi',
     chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione', latrine: 'Latrina',
-    infirmary: 'Infermeria', dovecote: 'Colombaia', council: 'Sala del consiglio', tribunal: 'Tribunale'
+    infirmary: 'Infermeria', dovecote: 'Colombaia', cistern: 'Cisterna', council: 'Sala del consiglio', tribunal: 'Tribunale'
   },
   manage: {
     sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', game: 'Partita' },
@@ -164,6 +164,8 @@ export const T = {
     stores: { food: 'Cibo', materials: 'Materiali', equipment: 'Armi', horses: 'Cavalli', gold: 'Oro' },
     autonomy: 'Autonomia', days: n => n == null ? '∞' : n + ' giorni', dailyNeed: 'Consumo giornaliero',
     capacity: 'Cucina · caserme · cavalieri', shortfall: d => 'Scorte insufficienti da ' + d.toFixed(1).replace('.', ',') + ' giorni',
+    water: 'Acqua', waterSource: { wells: 'Pozzi', cistern: 'Cisterne', none: 'Nessuna' },
+    thirst: d => 'Acqua insufficiente da ' + d.toFixed(1).replace('.', ',') + ' giorni',
     storeHelp: 'Ogni clic sposta fino a 50 unità dalle risorse del villaggio. La capienza dipende dalle stanze.',
     caravans: n => 'Carovane (' + n + ')',
     store: 'Deposita', seed: 'Seme della mappa', biome: 'Bioma', save: 'Salva sul cloud',
@@ -219,6 +221,7 @@ export const T = {
     store: 'Sposta fino a 50 unità dalle risorse del villaggio. La capienza dipende dalle stanze.',
     autonomy: 'Giorni di cibo per la guarnigione con le scorte attuali.',
     capacity: 'Pasti al giorno, posti in caserma e cavalieri, dalle stanze del castello.',
+    water: 'Fonte d\'acqua attuale · persone servite dalle cisterne. Con i nemici in campo i pozzi fuori dalle mura o in un settore invaso sono irraggiungibili: si beve dalle cisterne (sempre piene, 60 persone per stanza, 120 nelle torri grandi).',
     caravans: 'Carovane verso le province vicine: nascono accettando le richieste del messaggero a cavallo. Carico, scorta e partenza si pianificano qui.',
     save: 'Il salvataggio locale è automatico. Il cloud si attiva con un account.'
   },

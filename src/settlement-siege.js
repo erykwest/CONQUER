@@ -5,6 +5,8 @@
   const CAPACITY=Object.freeze({granary:{food:240},storage:{materials:240},armory:{equipment:80},
     stables:{horses:5},treasury:{gold:1200},kitchen:{meals:80},barracks:{soldiers:16},
     nobleRoom:{knights:1},quarters:{soldiers:16},
+    // Cistern: always full; water is the number of people it keeps drinking when the wells are cut off.
+    cistern:{water:60},
     // Public order (crime skeleton): five prisoners per cell (a large room has two cells, the town
     // hall's prison floor one per cell, ConquerCivic3D.prisonCellCount); a guard post 4 watchmen.
     prison:{prisoners:5},guard:{watchmen:4}});
@@ -43,7 +45,7 @@
   const ROOM_EXTERIOR_REPAIR=Object.freeze({stone:6,gold:2});
   const within=(v,a,b)=>Math.max(a,Math.min(b,v));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
-    lastDay:State.clock.day,starvationDays:0,hygiene:100,ruins:[],earthworks:[],
+    lastDay:State.clock.day,starvationDays:0,thirstDays:0,hygiene:100,ruins:[],earthworks:[],
     circle:{captures:[],capturedRoomIds:[]}}}
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
@@ -57,6 +59,7 @@
     if(!Array.isArray(x.circle.capturedRoomIds))x.circle.capturedRoomIds=[];
     if(!Number.isFinite(x.lastDay))x.lastDay=State.clock.day;
     if(!Number.isFinite(x.starvationDays))x.starvationDays=0;
+    if(!Number.isFinite(x.thirstDays))x.thirstDays=0;
     x.hygiene=Number.isFinite(x.hygiene)?within(x.hygiene,0,100):100;
     return x;
   }
@@ -66,7 +69,7 @@
     started.clear();heapCache.clear();rubbleCache.clear();stumpCache.clear();crownCache.clear();
     State.siege=raw&&typeof raw==='object'?{
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
-      starvationDays:Number(raw.starvationDays)||0,hygiene:Number.isFinite(Number(raw.hygiene))?Number(raw.hygiene):100,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
+      starvationDays:Number(raw.starvationDays)||0,thirstDays:Number(raw.thirstDays)||0,hygiene:Number.isFinite(Number(raw.hygiene))?Number(raw.hygiene):100,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
       earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[],
       circle:{
         // Never discard an ACTIVE conquest when loading a long campaign.
@@ -96,6 +99,8 @@
     if(fn==='prison')return l===1&&s.type!=='gate';
     // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
     if(fn==='kitchen')return l===1&&s.type==='built';
+    // Cistern: ground floor of medium or large (W2/W3) stone towers.
+    if(fn==='cistern')return l===1&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
     if(fn==='dovecote')return l===top&&towerDovecoteAllowed(s);
     // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
     if(fn==='infirmary')return l<=2&&s.type==='built';
@@ -270,7 +275,7 @@
   }
   function capacity(){
     const unavailable=capturedRoomIds();
-    const out={food:0,materials:0,equipment:0,horses:0,gold:0,meals:0,soldiers:0,knights:0,prisoners:0,watchmen:0};
+    const out={food:0,materials:0,equipment:0,horses:0,gold:0,meals:0,soldiers:0,knights:0,water:0,prisoners:0,watchmen:0};
     for(const s of State.structures){
       if(!(eligibleRoom(s)||s.type==='townhall'&&!underConstruction(s))||s.destroyed)continue;
       normalizeFunctions(s);
@@ -306,6 +311,39 @@
     // Barracks and noble rooms represent stationed forces until unit accounting is linked.
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
+  // ---------- water: wells while they can be reached, then the cisterns
+  function hostilesInField(){
+    return (window.ConquerCombat?.enemy?.()||[]).some(e=>e&&e.kind!=='wolf'&&!e.defeated&&!(e.hp<=0));
+  }
+  // With enemies about, a well outside the walls, or in a sector that is no longer safe, is cut off.
+  function wellReachable(w){
+    if(!hostilesInField())return true;
+    const C=window.ConquerCircle;
+    if(!C?.getSnapshot?.()?.compartments?.length)return true;   // no enclosure: nothing to be cut off from
+    const id=C.sectorAt({x:w.x,y:w.y});
+    return !!id&&C.controlState?.(id)?.safe!==false;
+  }
+  function water(){
+    const cap=capacity(),people=civilians()+cap.soldiers+cap.knights;
+    const wells=State.structures.filter(s=>s.type==='well'&&!underConstruction(s));
+    if(!hostilesInField()||wells.some(wellReachable))return{people,source:'wells',served:people,short:0};
+    const served=Math.min(people,cap.water);
+    return{people,source:served>0?'cistern':'none',served,short:people>0?(people-served)/people:0};
+  }
+  // Where the bucket brigade draws water from a cistern: just outside its tower's ground door.
+  function cisternTaps(){
+    const out=[],lost=capturedRoomIds();
+    for(const s of State.structures){
+      if(s.type!=='tower'||s.destroyed||!eligibleRoom(s)||!Array.isArray(s.functions))continue;
+      if(!s.functions.some((fn,i)=>fn==='cistern'&&allowed(s,i,fn)&&!lost.has(s.id+':'+i)))continue;
+      const door=(typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[]).find(d=>d.baseZ<.2);
+      const r=s.shape==='round'?(Number(s.r)||.75):(Number(s.size)||1.5)/2,a=Number(s.angle)||0;
+      const at=door?{x:door.contact.x+door.outward.x*.35,y:door.contact.y+door.outward.y*.35}
+        :{x:s.x+Math.cos(a)*(r+.35),y:s.y+Math.sin(a)*(r+.35)};
+      out.push({id:s.id,type:'cistern',x:at.x,y:at.y,tap:at});
+    }
+    return out;
+  }
   function garrison(){
     const c=capacity();
     return c.soldiers+c.knights+State.structures.reduce((t,s)=>t+(s.type==='tower'&&!underConstruction(s)?stationedArchers(s):0),0);
@@ -334,6 +372,9 @@
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
     if(elapsed)window.ConquerInfirmary?.tick(after-elapsed,after);
     if(!elapsed)return;
+    const w=water();
+    if(w.short>0)x.thirstDays+=elapsed*w.short;
+    else x.thirstDays=Math.max(0,x.thirstDays-elapsed*.5);
     // Hygiene drifts towards what the latrines can serve: slowly down, faster back up.
     const target=hygieneTarget(),was=sickShare();
     x.hygiene=within(x.hygiene+within(target-x.hygiene,-2*elapsed,5*elapsed),0,100);
@@ -1174,7 +1215,9 @@
       '<br>Materials '+fmt(material)+'/'+fmt(c.materials)+' · Arms '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
       '<br>Horses '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · Gold '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
       '<br>Kitchen '+fmt(c.meals)+' meals/d · Barracks '+fmt(c.soldiers)+' · Knights '+fmt(c.knights)+
+      '<br>Cisterns '+fmt(c.water)+' people'+
       (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+
+      (x.thirstDays>0?'<br>⚠ Water shortfall '+x.thirstDays.toFixed(1)+' d':'')+
       '<br>Hygiene '+fmt(x.hygiene)+' · Latrines serve '+fmt(SANITATION_FREE+latrineCapacity())+' / garrison '+fmt(garrison())+
       (sickShare()>0?' · ⚠ '+Math.round(sickShare()*100)+'% archers sick':'')+'</div>'+
       '<div class="grid3">'+buttons+'</div><div class="legend">Transfer up to 50 from settlement resources per click. Supply capacity depends on rooms.</div></div>';
@@ -1224,7 +1267,7 @@
     });
   }
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
-    capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
+    capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
     releaseCircleSector,
