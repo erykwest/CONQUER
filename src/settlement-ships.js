@@ -92,24 +92,30 @@
       for(const off of [EMBLEM_OFF,-EMBLEM_OFF])for(let r=0;r<e.rows;r++)for(let c=0;c<e.cols;c++)
         quad(P(c,r,off),P(c+1,r,off),P(c+1,r+1,off),P(c,r+1,off),g[r][c]);
     });
-    if(heraldry.flag)addFlags(m,heraldry.flag,heraldry.t||0,quad);
+    if(heraldry.flag)addFlags(m,heraldry.flag,heraldry.t||0,quad,heraldry.fly??windHeading()-(pose.heading||0));
     return{pos,col};
   }
   // Flags fly aft from the top of their staff, waving with the time.
-  function addFlags(m,h,t,quad){
+  // One wind for the whole map (from the map seed): every flag streams the same way, downwind,
+  // whatever the ship's heading. Angle in world space, radians.
+  const windHeading=()=>{const s=(typeof State!=='undefined'&&Number(State.seed))||1;return((Math.imul(s^0x9e3779b9,2654435761)>>>0)%6283)/1000};
+  // fly: the flags' direction in the ship's own frame (the wind minus the heading).
+  function addFlags(m,h,t,quad,fly=Math.PI){
     const fg=sample(h,FLAG_COLS,FLAG_ROWS);if(!fg)return;
+    const cx=Math.cos(fly),cy=Math.sin(fly);
     for(const fl of m.flags){
       const [ax,ay,az]=fl.at;
-      const P=(c,r)=>{const u=c/FLAG_COLS,v=r/FLAG_ROWS,wave=Math.sin(u*5-t*4+v*.6)*fl.h*.16*u;
-        return[ax-u*fl.w,ay+wave,az-v*fl.h-u*u*fl.h*.08]};
+      const P=(c,r)=>{const u=c/FLAG_COLS,v=r/FLAG_ROWS,wave=t==null?0:Math.sin(u*5-t*4+v*.6)*fl.h*.16*u,d=u*fl.w;
+        return[ax+cx*d-cy*wave,ay+cy*d+cx*wave,az-v*fl.h-u*u*fl.h*.08]};
       for(let r=0;r<FLAG_ROWS;r++)for(let c=0;c<FLAG_COLS;c++)quad(P(c,r),P(c+1,r),P(c+1,r+1),P(c,r+1),fg[r][c]);
     }
   }
   // The flags alone, as a world mesh: cheap enough to wave every frame over a cached ship.
+  // They stream downwind (windHeading), not along the hull.
   function flagMesh(key,pose,h,t=0){
     const m=model(key);if(!m||!h)return null;
     const pos=[],col=[],place=placer(pose),put=(x,y,zz)=>place(x,y,zz,pos);
-    addFlags(m,h,t,(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)});
+    addFlags(m,h,t,(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)},windHeading()-(pose.heading||0));
     return{pos,col};
   }
   // Sail state of one ship: {furl, target}. step() moves furl towards target at SAIL_TIME,
@@ -140,6 +146,6 @@
   }
   // Rowing boats (M.boats): hull, oars and crew marks only, no sails.
   for(const [k,m] of Object.entries(M.boats||{}))M.lab[k]={parts:{hull:{p:m.p,i:m.i,c:m.c}}};
-  window.ConquerShips=Object.freeze({keys,model,mesh,livery,PAINTS,WOODS,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
+  window.ConquerShips=Object.freeze({keys,model,mesh,windHeading,livery,PAINTS,WOODS,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
     small:keys.filter(k=>M.ships[k].size==='small'),large:keys.filter(k=>M.ships[k].size==='large')});
 })();

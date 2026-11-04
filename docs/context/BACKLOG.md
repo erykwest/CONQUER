@@ -555,3 +555,4 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - Navi mercantili: carovane mercantili L4 via mare quando i viaggi L4 diventeranno fisici.
 - DEV: togliere il blocco `Fai arrivare qui` dal pannello del molo (`ConquerFleet.devPierHtml`) quando non serve più.
 - Navigazione: evitamento laterale (oggi chi sta dietro aspetta e basta); rotte ricalcolate se un molo viene costruito mentre una nave è in viaggio.
+- Navi militari: più battaglie navali insieme (oggi una sola alla volta), scorta dei convogli, comandi dal pannello (torna al porto, segui).

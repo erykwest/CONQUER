@@ -253,6 +253,8 @@ F.clear();State.structures.length=0;
  const rest=window.ConquerShips.mesh('barchetta',row.pose,1,null,null,null).pos,stroke=window.ConquerShips.mesh('barchetta',row.pose,1,null,null,1.2).pos;
  assert.ok(rest.length===stroke.length&&rest.some((v,i)=>Math.abs(v-stroke[i])>1e-3),'the oars swing when rowing');F.clear()}
 for(const [k,m] of Object.entries({...M2.ships,...(M2.boats||{})}))assert.ok(m.deck-m.B/2*Math.sin(.12)>.03,k+': its deck or floor stays above the water as it rolls');
+{const H=window.ConquerHeraldryShapes?.DEFAULT||{pattern:'plain',c1:'#a00',c2:'#fff'};const dir=h=>{const f=window.ConquerShips.flagMesh('cocca',{x:0,y:0,heading:h,z:0},H,0);if(!f)return null;const P=f.pos,n=Math.min(P.length/3,360);let ax=0,ay=0;for(let i=0;i<n;i++){ax+=P[i*3];ay+=P[i*3+1]}const m=window.ConquerShips.model('cocca').flags[0].at,base=window.ConquerShips.toWorld({x:0,y:0,heading:h,z:0},m);return Math.atan2(ay/n-base.y,ax/n-base.x)};
+ const a=dir(0),b=dir(2.1);if(a!=null)assert.ok(Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<.35,'flags stream the same way whatever the heading')}
 console.log('PASS fleet: moored at berths with sails furled, anchored off the coast, orders, clear');
 
 // Fishermen: the L1 houses nearest a pier fish, one per berth; each gets a fishing boat at a
@@ -287,6 +289,32 @@ assert.ok(!F.ships.some(b=>b.fisher==='h1'),'the boat goes with its fisherman');
 assert.ok(read('src/settlement-economy.js').includes("put(e,'food',FISH_FOOD_PER_DAY,'private',w.houseId+':fish')"),'the catch is private food');
 F.clear();State.structures.length=0;
 console.log('PASS fishers: nearest L1 houses, one boat per berth, out at midday, home at night, weekend, catch');
+// Unit commands for the player's warships: a click selects a warship (not a merchant), a click
+// on the sea sends it there along a route, a foreign ship is attacked (it sails up to it), a
+// pier sends it to tie up at a free berth; ships left at anchor are saved where they lie.
+F.clear();State.structures=[s];State.village={founded:true};F.restore();
+const war=F.spawn({key:'caravella',allegiance:'player',realm:'player'}),trader=F.spawn({key:'cargo',allegiance:'merchant'});
+assert.ok(F.selectAt(war.pose)&&F.selectedShips().length===1,'a click on a warship selects it');
+F.clearSelection();assert.ok(!F.selectAt(trader.pose),'merchants take no orders');
+F.selectAt(war.pose);
+const dest={x:s.x+14,y:s.y+20};
+assert.match(F.orderAt(dest),/salpa/,'a click on the sea gives a sailing order');
+assert.ok(!war.berth&&war.cmd.kind==='move','it casts off');
+for(let k=0;k<900&&war.cmd;k++)F.commandStep(.1);
+assert.ok(!war.cmd&&Math.hypot(war.pose.x-dest.x,war.pose.y-dest.y)<.6,'it reaches the point and rides at anchor there');
+assert.ok(State.village.fleet.some(r=>r.key==='caravella'&&r.at&&Math.abs(r.at.x-war.pose.x)<.01),'saved where it lies');
+assert.equal(F.orderAt({x:s.x,y:s.y-20}),'Le navi vanno solo per mare','no orders over land');
+const foe=F.spawn({key:'cocca',allegiance:'foreign',realm:'azure',anchor:true});foe.pose={x:s.x-25,y:s.y+30,heading:0,z:0};
+assert.match(F.orderAt(foe.pose),/attacca/,'a click on a foreign ship is an attack order');
+const d0=Math.hypot(foe.pose.x-war.pose.x,foe.pose.y-war.pose.y);
+for(let k=0;k<200;k++)F.commandStep(.1);
+assert.ok(Math.hypot(foe.pose.x-war.pose.x,foe.pose.y-war.pose.y)<d0-5,'it closes on the enemy');
+war.cmd=null;F.selectAt(war.pose);
+assert.match(F.orderAt(window.ConquerPier.moorings(s)[0].edge),/ormeggiare/,'a click on the pier sends it to a berth');
+for(let k=0;k<1500&&war.cmd;k++)F.commandStep(.1);
+assert.ok(war.berth?.pierId===s.id&&!war.away,'tied up at the pier');
+F.clear();F.clearSelection();
+console.log('PASS warship commands: select, sail, anchor saved, attack, moor');
 
 // Shipyard: a pier with yard 1|2 and a slipway, no berths; L1 builds the small craft only,
 // one ship at a time; shipwrights move it on working days through the phases, and when it is

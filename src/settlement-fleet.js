@@ -75,7 +75,8 @@
   function persist(){
     if(typeof State==='undefined'||!State.village||restoredFor!==State.village)return;
     State.village.fleet=ships.filter(s=>!s.fisher&&!s.convoy).map(s=>({key:s.key,allegiance:s.allegiance,realm:s.realm,livery:s.livery||null,
-      pier:s.berth?.pierId||null,quay:s.berth?.quayId||null,anchor:!s.berth}));
+      pier:s.berth?.pierId||null,quay:s.berth?.quayId||null,anchor:!s.berth,
+      at:s.berth?null:{x:+s.pose.x.toFixed(2),y:+s.pose.y.toFixed(2),heading:+(s.pose.heading||0).toFixed(3)}}));
     State.dirty=true;
   }
   // A new or reloaded village brings its own fleet back.
@@ -83,7 +84,9 @@
     if(typeof State==='undefined'||!State.village||restoredFor===State.village)return;
     ships.length=0;restoredFor=State.village;
     for(const r of Array.isArray(State.village.fleet)?State.village.fleet:[])
-      spawn({key:r.key,allegiance:r.allegiance,realm:r.realm,livery:r.livery,pier:r.pier,quay:r.quay,anchor:!!r.anchor});
+      {const s=spawn({key:r.key,allegiance:r.allegiance,realm:r.realm,livery:r.livery,pier:r.pier,quay:r.quay,anchor:!!r.anchor});
+       // Ships left at anchor where they were sent come back to the same spot.
+       if(s&&r.at&&!s.berth)s.pose={...s.pose,...r.at,z:0}}
     persist();
   }
   // Battle demo: a foreign ship of the same kind at anchor, and the chosen warship coming up
@@ -125,6 +128,92 @@
     const ph=(h%628)/100;
     return{...s.pose,roll:(s.pose.roll||0)+Math.sin(t*1.1+ph)*r*k,pitch:(s.pose.pitch||0)+Math.sin(t*.8+ph*1.7)*p*k};
   }
+  // ---------- unit commands for the player's warships (hooked into settlement-combat.js orders):
+  // select with a click or a box, then click the sea to sail there (in line when several are
+  // selected), a foreign ship to attack it (naval battle), or a pier to tie up at a free berth.
+  const selected=new Set();
+  const military=s=>s.allegiance==='player'&&!s.fisher&&!s.convoy&&!s.sunk;
+  const selectedShips=()=>ships.filter(s=>selected.has(s.id)&&military(s));
+  function pick(p){
+    return ships.filter(s=>overlap(hull(s.key,s.pose,.25),[{x:p.x-.05,y:p.y-.05},{x:p.x+.05,y:p.y-.05},{x:p.x+.05,y:p.y+.05},{x:p.x-.05,y:p.y+.05}]))
+      .sort((a,b)=>Math.hypot(a.pose.x-p.x,a.pose.y-p.y)-Math.hypot(b.pose.x-p.x,b.pose.y-p.y))[0]||null;
+  }
+  // A click on a warship selects it; returns true when it was one.
+  function selectAt(p,additive=false){
+    const s=pick(p);if(!s||!military(s))return false;
+    if(!additive)selected.clear();
+    if(additive&&selected.has(s.id))selected.delete(s.id);else selected.add(s.id);
+    requestDraw();return true;
+  }
+  function selectInBox(x0,y0,x1,y1,additive=false){
+    if(!additive)selected.clear();
+    let n=0;
+    for(const s of ships){if(!military(s))continue;const q=w2s(s.pose,.2);if(q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1){selected.add(s.id);n++}}
+    requestDraw();return n;
+  }
+  const clearSelection=()=>{selected.clear();requestDraw()};
+  const onSea=p=>(State.environment||[]).some(f=>f.type==='sea'&&environmentContains(f,p));
+  // Order the selection at point p: attack, tie up or sail. Returns a short status or null.
+  function orderAt(p){
+    const list=selectedShips();if(!list.length)return null;
+    const target=pick(p);
+    if(target&&target.allegiance==='foreign'){
+      for(const s of list)setCommand(s,{kind:'attack',target:target.id});
+      return list.length+(list.length>1?' navi attaccano ':' nave attacca ')+S().model(target.key).label;
+    }
+    const pier=(State.structures||[]).find(o=>o.type==='pier'&&!o.yard&&window.ConquerPier.footprint(o)&&pip(p,window.ConquerPier.footprint(o)));
+    if(pier){
+      let n=0;for(const s of list){const side=['left','right'].find(sd=>!ships.some(o=>o!==s&&o.berth?.pierId===pier.id&&o.berth.side===sd&&o.cmd?.kind!=='moor')&&!ships.some(o=>o!==s&&o.cmd?.kind==='moor'&&o.cmd.pier===pier.id&&o.cmd.side===sd));if(!side)break;setCommand(s,{kind:'moor',pier:pier.id,side});n++}
+      return n?n+(n>1?' navi vanno':' nave va')+' a ormeggiare al molo':'Attracchi del molo occupati';
+    }
+    if(!onSea(p))return'Le navi vanno solo per mare';
+    // In line abreast across the course, centred on the point clicked.
+    const c=list.reduce((a,s)=>({x:a.x+s.pose.x/list.length,y:a.y+s.pose.y/list.length}),{x:0,y:0});
+    const h=Math.atan2(p.y-c.y,p.x-c.x),nx=-Math.sin(h),ny=Math.cos(h);
+    list.forEach((s,i)=>{const k=(i-(list.length-1)/2)*(S().model(s.key).B+3);setCommand(s,{kind:'move',goal:{x:p.x+nx*k,y:p.y+ny*k}})});
+    return list.length+(list.length>1?' navi salpano':' nave salpa');
+  }
+  function setCommand(s,cmd){
+    s.cmd=cmd;s.nav=null;s.cmdPose={...s.pose};
+    // Casting off frees the berth; the ship is under way.
+    s.berth=null;s.away=true;persist();requestDraw();
+  }
+  const pip=(p,poly)=>{let k=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)k=!k}return k};
+  const ATTACK_RANGE=16;
+  function commands(dt){
+    const N=window.ConquerSeaNav,NB=window.ConquerNavalBattle;if(!N)return;
+    for(const s of ships){
+      const c=s.cmd;if(!c)continue;
+      if(s.cmdPose)s.pose=s.cmdPose;
+      let r='arrived';
+      if(c.kind==='move')r=N.drive(s,c.goal,dt,ships);
+      else if(c.kind==='moor'){
+        const pier=State.structures.find(o=>o.id===c.pier);
+        if(!pier){s.cmd=null;continue}
+        const goal=berthPose(pier,c.side,s.key);
+        r=N.drive(s,goal,dt,ships);
+        if(r==='arrived'){s.berth={pierId:pier.id,side:c.side};s.pose=goal;s.cmd=null;s.cmdPose=null;s.away=false;S().raise(s.crew.sail);persist();continue}
+      }else if(c.kind==='attack'){
+        const t=ships.find(o=>o.id===c.target);
+        if(!t||t.sunk){s.cmd=null;continue}
+        const d=Math.hypot(t.pose.x-s.pose.x,t.pose.y-s.pose.y);
+        if(d<=ATTACK_RANGE&&NB&&!NB.active()){s.cmd=null;s.cmdPose=null;NB.start(s,t);continue}
+        r=d<=ATTACK_RANGE?'waiting':N.drive(s,{x:t.pose.x,y:t.pose.y},dt,ships.filter(o=>o!==t));
+      }
+      if(r==='moving'||r==='waiting')S().lower(s.crew.sail);
+      if(r==='arrived'||r==='stuck'){if(c.kind==='move'){s.cmd=null;S().raise(s.crew.sail);persist()}}
+      s.cmdPose=s.pose;
+    }
+  }
+  // Selection rings under the selected warships (screen-space sprites of the fleet pass).
+  function selectionSprites(){
+    return selectedShips().map(s=>({x:s.pose.x,y:s.pose.y,z:0,draw:()=>{
+      const pts=hull(s.key,s.pose,.35).map(q=>w2sRaw(q,0));
+      ctx.save();ctx.strokeStyle='#f4d35e';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.closePath();ctx.stroke();
+      if(s.cmd?.goal){const g=w2sRaw(s.cmd.goal,0);ctx.setLineDash([]);ctx.beginPath();ctx.arc(g.x,g.y,5,0,Math.PI*2);ctx.stroke()}
+      ctx.restore();
+    }}));
+  }
   let frame3d=null;
   const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
@@ -140,6 +229,7 @@
     sync();
     window.ConquerFishers?.step(now);
     window.ConquerSeaConvoys?.step();   // merchant ships of the convoys (settlement-sea-convoys.js)
+    commands(dt);                        // the player's warships under orders
     const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle,gl=world3d();
     for(const s of ships)C().step(s.crew,dt);
     const fighting=!!NB?.active();
@@ -171,6 +261,7 @@
         }});
       }
     }
+    sprites.push(...selectionSprites());
     const flags=ships.map(s=>s.flags).filter(Boolean),plank=fighting&&NB.plankMesh();
     if(plank)flags.push(plank);
     if(gl){
@@ -235,5 +326,5 @@
       if(out)out.textContent=count();
     });
   }
-  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,persist,restore,battle,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose,devPierHtml,bindDevPier});
+  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,persist,restore,battle,selectAt,selectInBox,clearSelection,selectedShips,orderAt,setCommand,commandStep:commands,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose,devPierHtml,bindDevPier});
 })();
