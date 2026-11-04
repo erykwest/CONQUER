@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Scuderia militare (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/military-stables`:** capienza delle stalle per U nelle sezioni costruite W1 (mai nelle sale larghe W2), cavalli persi con la stalla catturata, macellazione dei cavalli di riserva quando manca il cibo, risposta dei corrieri su un cavallo fresco, arredo militare nel cutaway.
+- **NON FATTO (scelta dell'utente):** rimonta (riproduzione dei cavalli) e consumo di foraggio.
+- **APERTO:**
+  - Il reclutamento dei cavalieri (`ConquerCombat.recruitKnight`) legge la capienza delle stalle e non lo stock reale dei cavalli: un cavaliere si recluta anche senza cavalli in stalla.
+  - Elemento esterno (recinto o abbeveratoio) eventualmente via `ROOM_EXTERIOR`.
+
 ## Cisterna (04/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/cistern`:** stanza al piano terra delle torri in pietra W2–W3, sempre piena; acqua per 60/120 persone quando l'assedio taglia fuori i pozzi; punto d'acqua della catena dei secchi alla porta della torre; arredo nel cutaway.

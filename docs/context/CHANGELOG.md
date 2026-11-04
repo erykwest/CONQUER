@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-04 — Scuderia militare (branch `feature/military-stables`)
+
+- `stables` nelle sezioni costruite W1: 5 cavalli per U, poste in fila nel cutaway. Le sale larghe W2 non ammettono più la scuderia. Una stalla catturata perde i cavalli; senza cibo si macellano quelli di riserva. Le risposte ai messaggeri ripartono a cavallo, 1,5× più veloci.
+- Nuova `qa/military-stables-regression.cjs`; una variante nel Lab con la sua baseline.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è l'estensione di una stanza esistente nella direzione già decisa, senza nuovi contratti.
+
 ## 2026-11-04 — Cisterna (branch `feature/cistern`)
 
 - Nuova stanza Cisterna al piano terra delle torri in pietra W2–W3: sempre piena, disseta 60 persone (120 nelle torri grandi) quando i nemici tagliano fuori i pozzi; altrimenti cresce la sete (`thirstDays`). La catena dei secchi attinge alla porta della torre.

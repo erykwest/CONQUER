@@ -186,7 +186,19 @@
       if(r.large){r.near(-.4,.3,'s:sackPile');r.near(.45,-.35,'s:hayBales')}},
     kitchen(r){r.wall(r.A,-.3,'hearth');r.wall(r.B,.3,'shelf');r.near(.15,.15,r.large?'tableLong':'tableSmall',1);r.wall(r.B,-.7,'s:barrelGroup');
       if(r.large){r.wall(r.A,.6,'breadOven');r.near(-.4,-.3,'hamRack');r.near(.5,.5,'s:firewood')}else r.wall(r.A,.7,'s:firewood')},
-    stables(r){r.row(r.A,'stall',r.large?3:1);r.wall(r.B,0,'manger');r.near(.3,.3,'s:hayBales');r.near(-.3,.4,'s:buckets');if(r.large)r.near(.4,-.4,'saddleStand',1)},
+    stables(r){
+      // Military stables in a long built-section room: stalls down the long standing wall, as many
+      // as fit (5 horses per U, settlement-siege.js stableUnits); tack on the short wall, forage in between.
+      const F=r.F,len=side=>2*(SIDES[side][0]?F.hv:F.hu);
+      if(!F.round&&!F.dee&&Math.max(F.hu,F.hv)>1.6*Math.min(F.hu,F.hv)){
+        const walls=[r.A,r.B].sort((a,b)=>len(b)-len(a)),fit=side=>Math.max(1,Math.floor((len(side)-.1)/(size('stall').w+.04)));
+        r.row(walls[0],'stall',fit(walls[0]),{spill:false});
+        if(len(walls[1])>=len(walls[0])-1e-6)r.row(walls[1],'stall',fit(walls[1]),{spill:false});
+        else{r.wall(walls[1],-.4,'saddleStand');r.wall(walls[1],.4,'manger')}
+        r.near(.4,.1,'saddleStand',1);r.near(-.4,.1,'s:hayBales');r.near(0,-.1,'s:buckets');r.near(.7,-.1,'s:barrelGroup');
+        return;
+      }
+      r.row(r.A,'stall',r.large?3:1);r.wall(r.B,0,'manger');r.near(.3,.3,'s:hayBales');r.near(-.3,.4,'s:buckets');if(r.large)r.near(.4,-.4,'saddleStand',1)},
     nobleRoom(r){r.wall(r.A,-.2,'canopyBed');r.at(.1,.2,'rug',0,{deco:true});r.wall(r.B,.6,'tapestry',{deco:true});
       r.wall(r.B,-.5,r.large?'fireplace':'chest');r.near(.35,.35,'tableSmall');r.near(.6,.35,'chair',2);
       if(r.large){r.near(-.4,.45,'writingDesk',r.toward(r.A));r.near(.5,-.5,'chest');r.wall(r.A,.75,'candleStand')}},
