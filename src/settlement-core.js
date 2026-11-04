@@ -305,7 +305,9 @@ const STRUCTURE_VARIANTS=Object.freeze({
     bartizan:Object.freeze(['none','battlement','pitched']),
     roofShape:Object.freeze(['pyramid','gable','hip']),
     // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
-    hoarding:Object.freeze(['off','on'])
+    hoarding:Object.freeze(['off','on']),
+    // Alarm bell under a small belfry on the roof apex (rules: settlement-alarm-bells.js).
+    bell:Object.freeze(['none','bell'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -320,7 +322,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -357,10 +359,10 @@ const BIOMES=Object.freeze({
   mountains:{label:'Montagne',field:'#2b2620'},
   sea:{label:'Mare',field:'#2a2818'}
 });
-const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison'];
+const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern'];
 // Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores, guard post.
 const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage','guard']);
-const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',council:'Council chamber',tribunal:'Tribunal'};
+const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.
 // Civic catalogue, apart from the castle one: the tribunal sits there from L2.
@@ -420,6 +422,11 @@ function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeap
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
 function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
 function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
+// Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
+// on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
+// planned for the same place exclude it. Its lantern stands on the roof apex (dovecote-models.js).
+function towerDovecoteAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2&&structureLevel(s)>=2&&towerRoofStyle(s)==='pitched'}
+function towerDovecote(s){return towerDovecoteAllowed(s)&&!underConstruction(s)&&!s.destroyed&&s.functions?.[structureLevel(s)-1]==='dovecote'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';

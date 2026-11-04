@@ -706,7 +706,7 @@ function builtWindowCount(edge,density,fixed,assetWidth=.24){
 function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60,fixed=0){
   if(side!==linearFrontSide(s))return;
   const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,assetWidth),cell=edge.length/count,opacity=cutawayFacadeOpacity(s);
-  for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf,opacity)}
+  for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(window.ConquerRoomExterior?.takesWindow(s,side,z,off))continue;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf,opacity)}
 }
 // Facade rows shared by the 2.5D and 3D renderers: [side,z,density,key,width,height,lit,fixedCount].
 const HALL_LANCET_ASPECT=640/1566;   // hall_lancet.png: keep the Blender render undistorted

@@ -6,6 +6,53 @@
 - **IMPLEMENTATO SU BRANCH (04/11):** loggia vera in World 3D (piano terra arretrato, pilastri e archi, piano rialzato sopra), anche nel cutaway.
 - **IMPLEMENTATO SU BRANCH (04/11, sera):** una stanza arredata per campata, camminamento percorribile lungo i pilastri, visitatori fermi sotto il portico, «Portico» nel pannello.
 - **APERTO:** loggia anche nel 2.5D (oggi archi ritagliati nella facciata); figure di lavoro fisse nelle stanze (stalliere, armaiolo) come le guarnigioni del cutaway; cavalli nelle stalle; il box della stalla (0,54U) non entra nella profondità utile (0,56U meno margini) e viene saltato; arredi di notte in piena luce; loggia nell'audit del Lab (oggi cattura il 2.5D); bottega/mercato sotto portico se si vorrà il commercio.
+## Campana d'allarme (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/alarm-bell`:** allarme che si propaga dalle campane; upgrade `bell` delle torri T1–T2 a falde; campanile su `ROOM_EXTERIOR` (`mount:'roof'`).
+- **APERTO:**
+  - **Colombaia:** spostare la lanterna sul montaggio `roof` di `ROOM_EXTERIOR` dopo il merge di questa PR.
+  - **Falconiera:** nascerà sullo stesso montaggio ed è già esclusa dal tetto con campana (`APEX_ROOMS`).
+  - **Suono:** il rintocco udibile non è ancora collegato al motore audio.
+
+## Scuderia militare (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/military-stables`:** capienza delle stalle per U nelle sezioni costruite W1 (mai nelle sale larghe W2), cavalli persi con la stalla catturata, macellazione dei cavalli di riserva quando manca il cibo, risposta dei corrieri su un cavallo fresco, arredo militare nel cutaway.
+- **NON FATTO (scelta dell'utente):** rimonta (riproduzione dei cavalli) e consumo di foraggio.
+- **APERTO:**
+  - Il reclutamento dei cavalieri (`ConquerCombat.recruitKnight`) legge la capienza delle stalle e non lo stock reale dei cavalli: un cavaliere si recluta anche senza cavalli in stalla.
+  - Elemento esterno (recinto o abbeveratoio) eventualmente via `ROOM_EXTERIOR`.
+
+## Cisterna (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/cistern`:** stanza al piano terra delle torri in pietra W2–W3, sempre piena; acqua per 60/120 persone quando l'assedio taglia fuori i pozzi; punto d'acqua della catena dei secchi alla porta della torre; arredo nel cutaway.
+- **APERTO — esterno della torre (attende il meccanismo stanza→esterno del branch `feature/room-exterior-latrine`):** quando c'è una cisterna la torre dovrebbe mostrare: **gronda** lungo il bordo del tetto a falde (sui tetti merlati, doccioni nel parapetto); **pluviale** lungo la facciata fino al piede, in linea con l'imbocco già modellato sopra la vasca (`cisternTank`, angolo posteriore); **bocca di presa / piccola vera** in pietra accanto alla porta del piano terra, dove la catena dei secchi attinge (`cisternTaps`).
+- **APERTO:** effetto della sete sulla resa o sul morale nel ciclo d'assedio P2 (`siege.thirstDays`); torri senza porta al piano terra (mastio con porta rialzata, torri secondarie): oggi le donne attingono al piede della torre sul lato frontale.
+- **FUTURO, non in questo branch:** Presidio antincendio come upgrade di Pozzo e Cisterna.
+
+## Colombaia (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/colombaia`:** stanza Colombaia all'ultimo piano delle torri in pietra T2/T3 L2–L3 a falde; lettere per piccione 4× più veloci e risposta senza corriere di ritorno; lanterna sul tetto, arredo cutaway, voci nell'Asset Lab.
+- **APERTO:** avvisi rapidi tra avamposti e castelli (aspetta Avamposto / Corpo di Guardia, usare `ConquerDovecote`); migrare la lanterna sul contratto `ROOM_EXTERIOR` quando entra in `main`; Falconiera e Campana d'allarme sullo stesso slot sotto il tetto; spostare la colombaia al nuovo ultimo piano quando la torre sale di livello invece di toglierla; piccione in volo come modello 3D nel World 3D.
+
+## Infermeria nelle sezioni costruite (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/infirmary`:** stanza Infermeria (W1 piani 1–2, W2). Ha letti, personale pagato, ricovero dei caduti nella zona gialla con il 60% di sopravvivenza, guarigione dei feriti al 25% al giorno e +1 settimanale di felicità L1/L2 quando la copertura è di un letto ogni 40 abitanti.
+- **APERTO:**
+  - Epidemie: non esiste ancora un modello dati. Quando arriverà, l'infermeria dovrà ridurne il rischio e la durata tramite `ConquerInfirmary.status().free`.
+  - Figure di cerusico e inservienti nel cutaway (oggi il personale è solo economico).
+  - Barelle animate che portano i caduti in infermeria.
+  - Avviso al giocatore quando una truppa è persa o dimessa.
+  - Giardino dei semplici come annesso: fuori scope.
+
+## Elementi esterni delle stanze e Latrina (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/room-exterior-latrine`:** il meccanismo `ROOM_EXTERIOR` (D-ROOM-EXT-01) e la latrina a sbalzo al piano 2 delle sezioni W1, con igiene della guarnigione come bisogno secondario.
+- **APERTO, per altri owner:**
+  - **Colombaia:** montaggio `roof`.
+  - **Cisterna:** montaggio `eave`, gronda o pluviale.
+  - **Combattimento:** infiltrazione dal condotto della latrina in assedio (precedente storico: Château Gaillard, 1204).
+  - **Ospedale:** cura dei malati letti da `ConquerSiege.sickShare()`.
+- **APERTO, da decidere:** latrine nelle torri (oggi escluse); un avviso quando un salvataggio perde una latrina che non entra più per una struttura costruita davanti.
 
 ## Cucine solo nelle sezioni costruite (03/11/2026)
 

@@ -995,7 +995,7 @@
         for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
-          for(let i=0;i<count;i++)onEdge(edge,z,Math.min(aw,cell*.82),ah,key,(i+.5)*cell-edge.length/2,ground,o);
+          for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o)}
         }
         // W1 portico: carved loggia in the castle body (builtLoggia). The W2 hall keeps the arcade decal.
         const arcade=!isBuiltPortico(s)&&builtArcadeLayout(s);
@@ -1298,6 +1298,8 @@
       }
       const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:'#8f857a';   // a frame's cut top is its head plate
       for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
+      // Room exterior elements stand outside the cut: whole, lit with the shell.
+      for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
       if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
@@ -1399,11 +1401,13 @@
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
       +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
+      // Room functions with an exterior element change the outside (and their broken state).
+      +(s.functions?.some(fn=>window.ConquerRoomExterior?.spec(fn))?JSON.stringify(s.functions)+JSON.stringify(s.roomExteriorHp||null):'')
       // Mills swap to their gutted model mid-fire.
       +(window.ConquerIndustries3D?.variant?.(s)||'');
   }

@@ -80,21 +80,21 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio'
+      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato',
-      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino'
+      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
       household: 'Capienza', residents: 'Uomini · donne · bambini', rooms: 'Stanze · capacità',
-      variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura', square: 'Piazza del pozzo'
+      variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura', square: 'Piazza del pozzo', bellRange: 'Campana · udito'
     },
     house: 'Livello sociale', houseDown: '− Riduci', houseUp: '+ Amplia',
     mastio: 'Mastio', mastioOn: 'Mastio attivo · rimuovi', mastioOff: 'Designa come mastio',
@@ -131,8 +131,8 @@ export const T = {
   functions: {
     guard: 'Corpo di guardia', barracks: 'Caserma', armory: 'Armeria', storage: 'Magazzino materiali', granary: 'Granaio',
     kitchen: 'Cucina', stables: 'Scuderie', quarters: 'Alloggi', nobleRoom: 'Stanze nobili', workshop: 'Officina d\'armi',
-    chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione',
-    council: 'Sala del consiglio', tribunal: 'Tribunale'
+    chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione', latrine: 'Latrina',
+    infirmary: 'Infermeria', dovecote: 'Colombaia', cistern: 'Cisterna', council: 'Sala del consiglio', tribunal: 'Tribunale'
   },
   manage: {
     sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', game: 'Partita' },
@@ -164,6 +164,8 @@ export const T = {
     stores: { food: 'Cibo', materials: 'Materiali', equipment: 'Armi', horses: 'Cavalli', gold: 'Oro' },
     autonomy: 'Autonomia', days: n => n == null ? '∞' : n + ' giorni', dailyNeed: 'Consumo giornaliero',
     capacity: 'Cucina · caserme · cavalieri', shortfall: d => 'Scorte insufficienti da ' + d.toFixed(1).replace('.', ',') + ' giorni',
+    water: 'Acqua', waterSource: { wells: 'Pozzi', cistern: 'Cisterne', none: 'Nessuna' },
+    thirst: d => 'Acqua insufficiente da ' + d.toFixed(1).replace('.', ',') + ' giorni',
     storeHelp: 'Ogni clic sposta fino a 50 unità dalle risorse del villaggio. La capienza dipende dalle stanze.',
     caravans: n => 'Carovane (' + n + ')',
     store: 'Deposita', seed: 'Seme della mappa', biome: 'Bioma', save: 'Salva sul cloud',
@@ -185,6 +187,7 @@ export const T = {
     roofShape: 'Solo estetica, stesso costo; con il tetto a falde. 2 falde: timpani in pietra. Colmo: 4 falde su un colmo lungo metà del tetto. Con il colmo, due bandiere.',
     bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
     hoarding: 'Galleria di legno montata in guerra attorno alla cima, sotto la gronda se c\'è il tetto; il tetto resta. Non con le caditoie né con le garitte.',
+    bell: 'Castello campanario sulla punta del tetto, solo torri T1-T2 con tetto a falde (anche di legno). Quando suona l\'allarme, chi è nel raggio lo sente subito e un\'altra campana nel raggio lo ripete; fuori dai raggi l\'allarme corre a voce, più lento. Raggio: H1 10U, H2 13U, H3 16U. Esclude colombaia e falconiera.',
     civicLevel: 'Tre stadi previsti; per ora senza effetti economici o di servizio.',
     plaza: 'Aspetto della piazza.',
     mastio: 'La prima torre completata diventa mastio da sola; il mastio tiene sempre una sala comune.',
@@ -219,6 +222,7 @@ export const T = {
     store: 'Sposta fino a 50 unità dalle risorse del villaggio. La capienza dipende dalle stanze.',
     autonomy: 'Giorni di cibo per la guarnigione con le scorte attuali.',
     capacity: 'Pasti al giorno, posti in caserma e cavalieri, dalle stanze del castello.',
+    water: 'Fonte d\'acqua attuale · persone servite dalle cisterne. Con i nemici in campo i pozzi fuori dalle mura o in un settore invaso sono irraggiungibili: si beve dalle cisterne (sempre piene, 60 persone per stanza, 120 nelle torri grandi).',
     caravans: 'Carovane verso le province vicine: nascono accettando le richieste del messaggero a cavallo. Carico, scorta e partenza si pianificano qui.',
     save: 'Il salvataggio locale è automatico. Il cloud si attiva con un account.'
   },
