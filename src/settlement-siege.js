@@ -36,6 +36,17 @@
     stables:'horses',treasury:'gold'
   });
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
+  // Military stables (extends `stables`, no new room type): a tower stable holds one stall block
+  // (5 horses); in a built section the stalls run its length, 5 horses per U of room, and a wide
+  // hall (two rows of stalls) holds twice as many. When the food runs out, the horses no knight
+  // rides are slaughtered: each one feeds HORSE_FOOD rations.
+  const HORSE_FOOD=20;
+  function stableUnits(s){
+    if(s?.type!=='built')return 1;
+    const length=Math.max(1,Math.floor(Number(s.length)||1));
+    return length*(typeof isWideBuilt==='function'&&isWideBuilt(s)?2:1);
+  }
+  const roomUnits=(s,fn,index)=>fn==='stables'?stableUnits(s,index):functionSlotUnits(s,index);
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
     lastDay:State.clock.day,starvationDays:0,ruins:[],earthworks:[],
     circle:{captures:[],capturedRoomIds:[]}}}
@@ -59,7 +70,7 @@
     started.clear();heapCache.clear();rubbleCache.clear();stumpCache.clear();crownCache.clear();
     State.siege=raw&&typeof raw==='object'?{
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
-      starvationDays:Number(raw.starvationDays)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
+      starvationDays:Number(raw.starvationDays)||0,horsesSlaughtered:Number(raw.horsesSlaughtered)||0,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
       earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[],
       circle:{
         // Never discard an ACTIVE conquest when loading a long campaign.
@@ -193,8 +204,7 @@
         if(!fn||!allowed(s,index,fn)||!CIRCLE_DEPOT_GROUP[fn])return;
         rooms.push({id:s.id+':'+index,structureId:s.id,index,kind:fn,
           sectorId,depth:sectorId?levelById.get(sectorId)||0:0,
-          capacity:CAPACITY[fn][CIRCLE_DEPOT_GROUP[fn]]*(
-            fn==='stables'?1:functionSlotUnits(s,index))
+          capacity:CAPACITY[fn][CIRCLE_DEPOT_GROUP[fn]]*roomUnits(s,fn,index)
         });
       });
     }
@@ -265,7 +275,7 @@
       s.functions.forEach((fn,i)=>{
         const spec=CAPACITY[fn];
         if(!spec||!allowed(s,i,fn)||unavailable.has(s.id+':'+i))return;
-        const units=(fn==='stables'||fn==='nobleRoom')?1:fn==='prison'&&s.type==='townhall'?window.ConquerCivic3D?.prisonCellCount?.(s)||1:functionSlotUnits(s,i);
+        const units=fn==='stables'?stableUnits(s,i):fn==='nobleRoom'?1:fn==='prison'&&s.type==='townhall'?window.ConquerCivic3D?.prisonCellCount?.(s)||1:functionSlotUnits(s,i);
         for(const [k,v] of Object.entries(spec))out[k]+=v*units;
       });
     }
@@ -294,6 +304,19 @@
     // Barracks and noble rooms represent stationed forces until unit accounting is linked.
     return +(civ*.12+cap.soldiers*.22+cap.knights*.35).toFixed(4);
   }
+  // Horses in the stables that no mounted knight needs.
+  function spareHorses(x=state()){
+    const knights=(window.ConquerCombat?.units?.()||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;
+    return Math.max(0,Math.floor(x.stock.horses)-knights);
+  }
+  // Out of food: slaughter just enough spare horses to cover the shortfall; their meat goes to the stock.
+  function slaughterHorses(x,shortfall){
+    const n=Math.min(spareHorses(x),Math.ceil(shortfall/HORSE_FOOD));
+    if(n<=0)return 0;
+    x.stock.horses-=n;x.stock.food+=n*HORSE_FOOD;
+    x.horsesSlaughtered=(Number(x.horsesSlaughtered)||0)+n;
+    return n;
+  }
   function tick(before,after){
     gateNightWatch();bridgeAlarm();window.ConquerKeepEntrance?.alarmTick?.();
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
@@ -302,6 +325,7 @@
     if(!elapsed)return;
     const demand=dailyFoodDemand()*elapsed;
     if(demand<=0)return;
+    if(x.stock.food<demand)slaughterHorses(x,demand-x.stock.food);
     const consumed=Math.min(x.stock.food,demand);
     x.stock.food=Math.max(0,x.stock.food-consumed);
     if(consumed<demand)x.starvationDays+=elapsed*(demand-consumed)/demand;
@@ -1104,7 +1128,8 @@
       '<br>Materials '+fmt(material)+'/'+fmt(c.materials)+' · Arms '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
       '<br>Horses '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · Gold '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
       '<br>Kitchen '+fmt(c.meals)+' meals/d · Barracks '+fmt(c.soldiers)+' · Knights '+fmt(c.knights)+
-      (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+'</div>'+
+      (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+
+      (x.horsesSlaughtered>0?'<br>⚠ Horses slaughtered for food '+fmt(x.horsesSlaughtered):'')+'</div>'+
       '<div class="grid3">'+buttons+'</div><div class="legend">Transfer up to 50 from settlement resources per click. Supply capacity depends on rooms.</div></div>';
   }
   function bindPanel(slots){
@@ -1140,7 +1165,7 @@
     });
   }
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
-    capacity,used,transfer,civilians,dailyFoodDemand,tick,integrity,effectiveness,attackStructure,
+    capacity,used,transfer,civilians,dailyFoodDemand,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
     releaseCircleSector,
