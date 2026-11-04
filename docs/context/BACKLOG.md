@@ -551,4 +551,6 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - Navi: salvare la livrea con la nave quando la flotta verrà persistita (oggi è solo runtime).
 - Pescatori: pesce come bene a parte e pescheria al mercato; percorso delle barche che evita moli e altre navi; il pescatore a piedi tra casa e molo.
 - Uscite via mare: navi mercantili che entrano ed escono dalle 3 uscite di mare; rimuovere nei salvataggi vecchi la strada già costruita verso il mare.
-- Cantiere navale: carpentieri visibili al lavoro sullo scalo; annullare un ordine; navi straniere e mercantili che usano le uscite via mare.
+- Cantiere navale: annullare un ordine; navi straniere e mercantili che usano le uscite via mare.
+- Navi mercantili: rotta che segue il mare invece della linea retta verso le uscite laterali; carovane mercantili L4 via mare quando i viaggi L4 diventeranno fisici.
+- DEV: togliere il blocco `Fai arrivare qui` dal pannello del molo (`ConquerFleet.devPierHtml`) quando non serve più.

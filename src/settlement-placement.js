@@ -116,6 +116,9 @@
     // Quays (and the walls and towers built against them) start in the whitezone by their own rules.
     const harbour=window.ConquerPier?.is(s)||window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null;
     if(!harbour&&!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
+    // Shore rocks take only a quay and what stands on it (settlement-coast.js).
+    const onQuay=window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null||(s.type==='pier'&&s.onQuay);
+    if(!onQuay&&window.ConquerCoast&&samples(polys).some(p=>window.ConquerCoast.rockAt(p)))return invalid('Scogli: qui si può costruire solo la banchina');
     const ignored=ignoreSet(options);
     if(s.type==='well'&&!options.ignoreFounding&&(
       State.village?.founded||State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))

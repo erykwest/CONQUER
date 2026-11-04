@@ -442,6 +442,9 @@ function draw(){
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
+  window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
+  if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
+  window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea
   window.ConquerFleet?.draw();   // ships at the piers or at anchor, with their crews (settlement-fleet.js)
   markPhase('population');
   drawTrainingSoldiers();
@@ -453,6 +456,7 @@ function draw(){
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
   window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
+  window.ConquerGulls?.draw(performance.now()/1000);   // seagulls over the coast, above the ships
   window.ConquerSiege?.drawOverlay();
   drawCastleFireFixtures();
 

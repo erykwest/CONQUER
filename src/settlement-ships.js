@@ -126,6 +126,8 @@
     M.lab[k]={parts:{hull,sails:{v:m.sails.v,c:m.sails.c}}};
     M.lab[k+'Furled']={parts:{hull,sails:{v:m.sails.f,c:m.sails.c}}};
   }
+  // Rowing boats (M.boats): hull, oars and crew marks only, no sails.
+  for(const [k,m] of Object.entries(M.boats||{}))M.lab[k]={parts:{hull:{p:m.p,i:m.i,c:m.c}}};
   window.ConquerShips=Object.freeze({keys,mesh,livery,PAINTS,WOODS,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
     small:keys.filter(k=>M.ships[k].size==='small'),large:keys.filter(k=>M.ships[k].size==='large')});
 })();

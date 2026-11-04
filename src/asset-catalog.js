@@ -18,7 +18,8 @@
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
     {global:'ConquerShipModels',collection:'lab',category:'Veicoli',family:'Navi'},
     {global:'ConquerFishingModels',collection:'models',category:'Produzione',family:'Pescatori'},
-    {global:'ConquerShipyardModels',collection:'models',category:'Produzione',family:'Cantiere navale'}
+    {global:'ConquerShipyardModels',collection:'models',category:'Produzione',family:'Cantiere navale'},
+    {global:'ConquerWatersideModels',collection:'models',category:'Territorio',family:'Riva e approdi'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -55,7 +56,8 @@
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
     palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
     netRack:'Rete stesa ad asciugare',fishRack:'Rastrelliera del pesce',fishBaskets:'Ceste del pescato',
-    slipwayL1:'Scalo di varo L1',slipwayL2:'Scalo di varo L2',shed:'Tettoia del cantiere navale',frames:'Ossatura di scafo'};
+    slipwayL1:'Scalo di varo L1',slipwayL2:'Scalo di varo L2',shed:'Tettoia del cantiere navale',frames:'Ossatura di scafo',
+    barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
@@ -98,9 +100,9 @@
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',
-            ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js'}[source.global]),
+            ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js',ConquerWatersideModels:'waterside-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
-          :source.global==='ConquerShipModels'?'ship:'+key.replace(/Furled$/,''):null});
+          :source.global==='ConquerShipModels'&&window.ConquerShipModels.ships?.[key.replace(/Furled$/,'')]?'ship:'+key.replace(/Furled$/,''):null});
     }
   }
   const animals=window.ConquerAnimalModels||{};

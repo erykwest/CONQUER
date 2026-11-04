@@ -958,7 +958,13 @@ function makeEnvWater(rnd,type){
     const off=clamp(base+a1*Math.sin(t*Math.PI*2*f1+p1)+a2*Math.sin(t*Math.PI*2*f2+p2)+noise,8,WORLD-8);
     pts.push(horizontal?{x:t*WORLD,y:off}:{x:off,y:t*WORLD});
   }
-  return{id:'env-'+type,type,points:pts,width:river?3.2:1.25,fill:river?'#3a7684':'#4f8d95',edge:river?'#88b4b8':'#9cc6c6'};
+  return{id:'env-'+type,type,points:pts,width:river?WATER_WIDTH.river:WATER_WIDTH.stream,fill:river?'#3a7684':'#4f8d95',edge:river?'#88b4b8':'#9cc6c6'};
+}
+// Watercourse widths (U). Saved landscapes from before the widening are brought up to them
+// on load (widenWatercourses), so old maps get the wider rivers and streams too.
+const WATER_WIDTH=Object.freeze({river:4.4,stream:1.8});
+function widenWatercourses(env=State.environment){
+  for(const f of env||[])if(WATER_WIDTH[f.type]&&!(Number(f.width)>=WATER_WIDTH[f.type]))f.width=WATER_WIDTH[f.type];
 }
 // The sea covers at most 30% of the map: its mean coast depth is held at or under 60U,
 // so the coast reaches into the buildable zone (50U) and leaves room for harbours.
@@ -1698,6 +1704,8 @@ function environmentBlocksPoint(p,mode='settlement'){
   // bands, including gentle hill slopes (not just cliff/steep bands).
   if(mode==='road'&&slope)return true;
   if(mode==='settlement'&&slope)return true;
+  // Shore rocks: no roads, no auto houses (settlement-coast.js).
+  if((mode==='road'||mode==='settlement')&&window.ConquerCoast?.rockAt(p))return true;
   for(const f of State.environment){
     if(primary&&f.type==='forest'&&f.continuous)continue;
     if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45))return true;

@@ -51,7 +51,7 @@
   }
   // pier / quay: moor there only; anchor: true rides at anchor even with berths free.
   // Pier berths are filled first, then the slots along the quays.
-  function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null,noAnchor=false,fisher=null}={}){
+  function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null,noAnchor=false,fisher=null,convoy=null}={}){
     if(!M()?.ships?.[key])return null;
     let berth=null,pose=null;
     if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&!s.yard&&(!pier||s.id===pier)))
@@ -62,8 +62,8 @@
     pose||=anchorPose(key,ships.length);
     if(!pose)return null;
     // In port the sails are furled up to the yards; at anchor off the coast they stay set.
-    const id='ship-'+(++seq),ship={id,key,allegiance,realm,berth,pose,livery:livery||S().livery?.(),fisher,crew:C().crewState(key,id,S().sailState(!!berth)),cache:null};
-    ships.push(ship);if(!fisher)persist();requestDraw();
+    const id='ship-'+(++seq),ship={id,key,allegiance,realm,berth,pose,livery:livery||S().livery?.(),fisher,convoy,crew:C().crewState(key,id,S().sailState(!!berth)),cache:null};
+    ships.push(ship);if(!fisher&&!convoy)persist();requestDraw();
     return ship;
   }
   function order(what,id=null){for(const s of ships)if(!id||s.id===id)C().order(s.crew,what);requestDraw()}
@@ -74,7 +74,7 @@
   let restoredFor=null;
   function persist(){
     if(typeof State==='undefined'||!State.village||restoredFor!==State.village)return;
-    State.village.fleet=ships.filter(s=>!s.fisher).map(s=>({key:s.key,allegiance:s.allegiance,realm:s.realm,livery:s.livery||null,
+    State.village.fleet=ships.filter(s=>!s.fisher&&!s.convoy).map(s=>({key:s.key,allegiance:s.allegiance,realm:s.realm,livery:s.livery||null,
       pier:s.berth?.pierId||null,quay:s.berth?.quayId||null,anchor:!s.berth}));
     State.dirty=true;
   }
@@ -122,6 +122,7 @@
     frame3d=null;
     restore();
     window.ConquerFishers?.syncBoats();
+    window.ConquerSeaConvoys?.step();
     const now=(typeof performance!=='undefined'?performance.now():Date.now())/1000;
     // Ships on the slipways of the shipyards (settlement-shipyard.js), and their launch.
     const yards=window.ConquerShipyard?.dynamicMeshes(now)||[];
@@ -129,6 +130,7 @@
     const dt=last?Math.min(.1,now-last):0;last=now;
     sync();
     window.ConquerFishers?.step(now);
+    window.ConquerSeaConvoys?.step();   // merchant ships of the convoys (settlement-sea-convoys.js)
     const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle,gl=world3d();
     for(const s of ships)C().step(s.crew,dt);
     const fighting=!!NB?.active();
@@ -200,5 +202,28 @@
     };
   }
   if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindDev);else bindDev()}
-  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,persist,restore,battle,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose});
+  // DEV only (to be removed): in the panel of a selected pier, bring a ship to that pier.
+  const KINDS=[['barca','Barca da pesca'],['cargo','Barca da carico'],['caravella','Caravella'],['cocca','Cocca'],['nave','Nave latina']];
+  const FLAGS=[['merchant|player','Mercantile · nostro regno'],['player|player','Regno del giocatore'],['foreign|azure','Regno d’Azzurro'],['foreign|vert','Regno di Verde'],['foreign|sable','Regno di Nero']];
+  function devPierHtml(p){
+    const here=ships.filter(s=>s.berth?.pierId===p.id).length;
+    return'<div class="slot"><div class="slot-label">DEV · Navi a questo molo</div>'+
+      '<select data-dev-pier-kind>'+KINDS.map(([k,l])=>'<option value="'+k+'"'+(k==='cocca'?' selected':'')+'>'+l+'</option>').join('')+'</select>'+
+      '<select data-dev-pier-flag>'+FLAGS.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('')+'</select>'+
+      '<button data-dev-pier-spawn>⚓ Fai arrivare qui</button><button data-dev-pier-clear>Togli da questo molo</button>'+
+      '<div class="legend" data-dev-pier-readout>'+here+' / 2 attracchi occupati</div></div>';
+  }
+  function bindDevPier(root,p){
+    const out=root.querySelector('[data-dev-pier-readout]'),count=()=>ships.filter(s=>s.berth?.pierId===p.id).length+' / 2 attracchi occupati';
+    root.querySelector('[data-dev-pier-spawn]')?.addEventListener('click',()=>{
+      const [allegiance,realm]=root.querySelector('[data-dev-pier-flag]').value.split('|');
+      const s=spawn({key:root.querySelector('[data-dev-pier-kind]').value,allegiance,realm,pier:p.id,noAnchor:true});
+      if(out)out.textContent=s?count():'Attracchi del molo occupati';
+    });
+    root.querySelector('[data-dev-pier-clear]')?.addEventListener('click',()=>{
+      for(const s of ships.slice())if(s.berth?.pierId===p.id&&!s.fisher)remove(s.id);
+      if(out)out.textContent=count();
+    });
+  }
+  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,persist,restore,battle,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose,devPierHtml,bindDevPier});
 })();

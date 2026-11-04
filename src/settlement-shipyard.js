@@ -137,7 +137,8 @@
   function daily(staffing={}){
     for(const s of State.structures||[]){
       const o=s.shipOrder;if(!is(s)||!o||o.launchAt!=null)continue;
-      o.worked=Math.min(SHIPS[o.key].days,o.worked+(staffing[s.id]||0)/WORKERS);
+      o.staff=staffing[s.id]||0;
+      o.worked=Math.min(SHIPS[o.key].days,o.worked+o.staff/WORKERS);
       if(o.worked>=SHIPS[o.key].days)launch(s);
     }
   }
@@ -181,6 +182,31 @@
       }
     });
   }
-  window.ConquerShipyard=Object.freeze({LEVELS,SHIPS,WORKERS,LAUNCH_TIME,is,level,make,canBuild,footprint,landing,slipMeta,shipPose,hullMesh,
+  // Shipwrights at work along the hull on the ways (visual only, the building-site animations of
+  // settlement-work-anim.js): hammers on the frames and planking, an axe dressing timber, by day
+  // on working days. As many as the economy put on the slip (o.staff), up to WORKERS.
+  function drawShipwrights(){
+    const W=window.ConquerWorkAnim;if(!W||(window.ConquerCombat?.alarmMode?.()||'off')!=='off'||State.view.scale<.3)return;
+    const day=+State.clock?.day||0,frac=day-Math.floor(day);
+    if(frac<.24||frac>.74||((Math.floor(day)%7)+7)%7>=5)return;
+    const t=W.now();
+    for(const s of State.structures||[]){
+      const o=s.shipOrder;if(!is(s)||!o||o.launchAt!=null||underConstruction(s))continue;
+      const n=Math.min(WORKERS,o.staff??WORKERS);if(!n)continue;
+      const m=SM()?.ships?.[o.key];if(!m)continue;
+      const g=Number.isFinite(s.groundZ)?s.groundZ:0,pose=shipPose(s,o.key,g,0);
+      // Along the hull at stern, midships and bow, on the camera side of the slip.
+      const a=(s.angle||0),cs=Math.cos(a),sn=Math.sin(a),off=m.B/2+.45;
+      const sides=[1,-1].map(k=>({k,p:{x:pose.x-sn*off*k,y:pose.y+cs*off*k}}));
+      const near=typeof viewDepthPoint==='function'?sides.sort((u,v)=>viewDepthPoint(v.p)-viewDepthPoint(u.p))[0].k:1;
+      const spots=[-.32,.05,.34].map(u=>{const x=pose.x+cs*m.L*u,y=pose.y+sn*m.L*u;return{x:x-sn*off*near,y:y+cs*off*near,to:{x,y}}});
+      const tools=progress(s)<.25?['hammer','axe','hammer']:['hammer','hammer','axe'];
+      for(let i=0;i<n;i++){
+        const sp=spots[i];if(typeof worldPointVisible==='function'&&!worldPointVisible(sp,0,40))continue;
+        W.drawWorker(W.anonymous(s.id+':shipwright'+i,sp),tools[i],t,W.facingOf(sp,sp.to.x-sp.x,sp.to.y-sp.y));
+      }
+    }
+  }
+  window.ConquerShipyard=Object.freeze({drawShipwrights,LEVELS,SHIPS,WORKERS,LAUNCH_TIME,is,level,make,canBuild,footprint,landing,slipMeta,shipPose,hullMesh,
     meshes,dynamicMeshes,progress,order,daily,launch,finishLaunch,demand,label,cost,buildDays,panelHtml,bindPanel});
 })();

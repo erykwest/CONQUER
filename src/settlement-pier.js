@@ -193,9 +193,12 @@
   const buildDays=s=>yard(s)?Y().buildDays(s):SIZES[reachOf(s)].days;
   function panelHtml(s){
     if(yard(s))return Y().panelHtml(s);
+    return pierPanelHtml(s)+(window.ConquerFleet?.devPierHtml?.(s)||'');
+  }
+  function pierPanelHtml(s){
     return'<div class="slot"><div class="slot-label">Attracchi</div>'+moorings(s).map(m=>
       '<div class="kv"><span>'+(m.side==='left'?'Sinistra':'Destra')+'</span><b>'+m.x.toFixed(1)+', '+m.y.toFixed(1)+'</b></div>').join('')+
       '</div><div class="legend">Molo in legno su pali, lungo '+reachOf(s)+'U verso il mare'+(s.onQuay?', agganciato alla banchina':'')+'. Va costruito sulla costa o su una banchina, con l\'approdo dentro la whitezone.</div>';
   }
-  window.ConquerPier=Object.freeze({SPEC,SIZES,LAND,HALF,TOP,is,make,reachOf,footprint,landing,coastHit,rootHit,snapToCoast,groundLevel,validate,moorings,meshes,draw,addToBuilder,label,cost,buildDays,panelHtml,bindPanel:(root,s)=>yard(s)&&Y().bindPanel(root,s)});
+  window.ConquerPier=Object.freeze({SPEC,SIZES,LAND,HALF,TOP,is,make,reachOf,footprint,landing,coastHit,rootHit,snapToCoast,groundLevel,validate,moorings,meshes,draw,addToBuilder,label,cost,buildDays,panelHtml,bindPanel:(root,s)=>yard(s)?Y().bindPanel(root,s):window.ConquerFleet?.bindDevPier?.(root,s)});
 })();

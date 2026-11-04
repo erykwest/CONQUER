@@ -604,6 +604,8 @@
         for(let i=0;i<=count;i++){const t=i/count,p={x:e.a.x+dx*t,y:e.a.y+dy*t};m.prism(rectWorldPoints(p.x,p.y,.05,.05,ang),g+.02,g+.38,'#806442','#6b5338','#806442')}
       }
     }
+    // Shore boulders on the rocky stretches of the coast (settlement-coast.js).
+    window.ConquerCoast?.addToBuilder(m);
     for(const s of State.structures){
       if(underConstruction(s))continue;
       // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
@@ -1364,7 +1366,7 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),civicCut,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
