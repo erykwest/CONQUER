@@ -63,6 +63,19 @@ C.setFacility(harsh, 'gallows', true);
 C.advance(mild, 15); C.advance(harsh, 15);
 assert.ok(harsh.metrics.crime < mild.metrics.crime, 'punitive structures deter some crime');
 assert.ok(harsh.metrics.tension > mild.metrics.tension, 'repression creates social backlash');
+// The scaffold is its own structure, harsher than the gallows on both counts.
+const gal = C.initial(), sca = C.initial();
+assert.equal(C.setFacility(gal, 'gallows', true), true);
+assert.equal(C.setFacility(sca, 'scaffold', true), true);
+C.advance(gal, 10); C.advance(sca, 10);
+assert.ok(sca.metrics.crime < gal.metrics.crime && sca.metrics.tension > gal.metrics.tension, 'scaffold: more deterrence, more backlash');
+{
+  // A save from before the split loads with the scaffold off.
+  const old = C.initial(); delete old.facilities.scaffold;
+  const st = new Map([[C.KEY, JSON.stringify(old)]]);
+  const back = C.load({getItem: k => st.get(k)});
+  assert.equal(back.facilities.scaffold, false); assert.equal(back.day, old.day);
+}
 
 const prison = C.initial();
 C.advance(prison, 10);
