@@ -506,7 +506,8 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
  // one click builds. data-pier gives the reach (4 or 12).
  for(const b of document.querySelectorAll('[data-pier]'))b.onclick=()=>{
    const P=window.ConquerPier;if(!P)return;
-   const spec=P.make(Number(b.dataset.pier)||12);
+   // data-yard: a shipyard (settlement-shipyard.js), a pier variant with a slipway.
+   const spec=b.dataset.yard&&window.ConquerShipyard?window.ConquerShipyard.make(Number(b.dataset.yard)||1):P.make(Number(b.dataset.pier)||12);
    setTool({kind:'pier',placementSpec:spec,label:P.label(spec)+' · '+P.buildDays(spec)+'d · '+costText(P.cost(spec)),el:b});
  };
  // Stone quay (settlement-quay.js): two clicks, along the shore or out in the water.

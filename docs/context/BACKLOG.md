@@ -551,4 +551,4 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - Navi: salvare la livrea con la nave quando la flotta verrà persistita (oggi è solo runtime).
 - Pescatori: pesce come bene a parte e pescheria al mercato; percorso delle barche che evita moli e altre navi; il pescatore a piedi tra casa e molo.
 - Uscite via mare: navi mercantili che entrano ed escono dalle 3 uscite di mare; rimuovere nei salvataggi vecchi la strada già costruita verso il mare.
-- Cantiere navale (scalo di varo in Blender, costruzione e varo delle navi).
+- Cantiere navale: carpentieri visibili al lavoro sullo scalo; annullare un ordine; navi straniere e mercantili che usano le uscite via mare.

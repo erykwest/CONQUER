@@ -279,3 +279,35 @@ assert.ok(!F.ships.some(b=>b.fisher==='h1'),'the boat goes with its fisherman');
 assert.ok(read('src/settlement-economy.js').includes("put(e,'food',FISH_FOOD_PER_DAY,'private',w.houseId+':fish')"),'the catch is private food');
 F.clear();State.structures.length=0;
 console.log('PASS fishers: nearest L1 houses, one boat per berth, out at midday, home at night, weekend, catch');
+
+// Shipyard: a pier with yard 1|2 and a slipway, no berths; L1 builds the small craft only,
+// one ship at a time; shipwrights move it on working days through the phases, and when it is
+// done it is launched and joins the fleet, which is saved with the village and restored.
+for(const f of ['assets/shipyard-models.js','settlement-shipyard.js'])vm.runInContext(read('src/'+f),ctx);
+const Y=window.ConquerShipyard;
+const yardAt=(lv,x)=>{const y={id:'y'+lv,...Y.make(lv),x,y:150};P.snapToCoast(y);return y};
+const y1=yardAt(1,70),y2=yardAt(2,120);
+assert.ok(P.validate(y1).ok&&P.validate(y2).ok,'both shipyards snap to the coast and validate');
+assert.equal(P.moorings(y1).length,0,'a shipyard has no berths');
+assert.ok(P.footprint(y2).length===4&&P.reachOf(y2)===10&&Y.level(y2).land===12,'L2: 10U into the sea, 12U of yard on land');
+State.structures=[y1,y2];
+assert.ok(!Y.order(y1,'cocca'),'L1 cannot build a large ship');
+assert.ok(Y.order(y1,'caravella','merchant'),'L1 builds a caravel');
+assert.ok(!Y.order(y1,'barca'),'one ship at a time on a slipway');
+assert.ok(Y.order(y2,'nave'),'L2 builds the nave');
+assert.equal(Y.demand().length,2,'both slipways want shipwrights');
+const c0=Y.hullMesh('nave',Y.shipPose(y2,'nave',0),.1).col.length,c1=Y.hullMesh('nave',Y.shipPose(y2,'nave',0),.6).col.length,c2=Y.hullMesh('nave',Y.shipPose(y2,'nave',0),.97).col.length;
+assert.ok(c0>0&&c1>0&&c2>c1,'frames first, then the hull rising, the rig last');
+for(let d=0;d<29;d++)Y.daily({y2:3});
+assert.ok(Y.progress(y2)<1&&y2.shipOrder.launchAt==null,'not done before its working days');
+Y.daily({y2:3});
+assert.ok(y2.shipOrder.launchAt!=null,'done: launched down the ways');
+State.village={founded:true};F.restore();
+const launched=Y.finishLaunch(y2);
+assert.ok(launched&&launched.key==='nave'&&y2.shipOrder===null,'the launched ship joins the fleet and the slipway is free');
+assert.equal(State.village.fleet.length,1,'the fleet is saved with the village');
+assert.equal(State.village.fleet[0].key,'nave');
+const saved=JSON.parse(JSON.stringify(State.village));State.village=saved;F.restore();
+assert.ok(F.ships.length===1&&F.ships[0].key==='nave'&&JSON.stringify(F.ships[0].livery)===JSON.stringify(launched.livery),'a reloaded village brings its fleet back, same livery');
+F.clear();State.structures.length=0;
+console.log('PASS shipyard: L1/L2, no berths, one order, phases, shipwrights, launch, fleet saved and restored');

@@ -85,7 +85,9 @@
       ['[data-crossing="stone"]','Ponte di pietra','bridge'],
       ['[data-pier="4"]','Molo piccolo L4 · 4U sul mare · 2 attracchi','bridge'],
       ['[data-pier="12"]','Molo grande L12 · 12U sul mare · 2 attracchi','bridge'],
-      ['[data-quay]','Banchina in pietra · 2U · due clic lungo la riva o in acqua','wall']]}
+      ['[data-quay]','Banchina in pietra · 2U · due clic lungo la riva o in acqua','wall'],
+      ['[data-yard="1"]','Cantiere navale L1 · scalo 7U · barche e caravelle','bridge'],
+      ['[data-yard="2"]','Cantiere navale L2 · scalo 10U · piazzale 12U · tutte le navi','bridge']]}
   ];
   // The combat module inserts live controls into #builder before this UX loads.
   // Replacing children without retaining them detached Combat and crashed every

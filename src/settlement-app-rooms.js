@@ -42,6 +42,7 @@ function renderFunctionPanel(){
     info.innerHTML='<div class="kv"><span>Porto</span><b>'+P.label(s)+'</b></div><div class="cost-line">'+costText(s.buildCost||P.cost(s))+'</div>'+
       (underConstruction(s)?'<div class="legend">In costruzione · '+remainingDays(s).toFixed(1)+'d</div>':'');
     slots.innerHTML=P.panelHtml(s);
+    P.bindPanel(slots,s);
     return;
   }
   if(window.ConquerQuay?.is(s)){

@@ -12,7 +12,9 @@
     8:{days:6,cost:Object.freeze({gold:55,wood:110})},       // legacy saves
     12:{days:8,cost:Object.freeze({gold:80,wood:160})}
   });
-  const reachOf=s=>SIZES[Number(s?.reach)]?Number(s.reach):8;
+  const Y=()=>window.ConquerShipyard,yard=s=>!!Y()?.is(s);
+  const reachOf=s=>yard(s)?Y().level(s).reach:SIZES[Number(s?.reach)]?Number(s.reach):8;
+  const halfOf=s=>yard(s)?Y().level(s).half:HALF;
   const moorAt=s=>reachOf(s)-1.6;                            // berth: along the head, off the deck edge
   const SPEC=Object.freeze({label:'Molo',name:'Pier',h:HALF*2,sizes:SIZES});
   const WOOD='#8a6239',WOOD2='#9b7044',DARK='#5b3b22',PILE='#4a3322',WET='#2f3a33',STONE='#8f8a7e';
@@ -23,8 +25,8 @@
   // On a quay the landing is only a lip over the coping, so piers can face each other from
   // the two sides of a mole without their landings meeting.
   const landOf=s=>s?.onQuay?.3:LAND;
-  const footprint=s=>rect(s,-landOf(s),reachOf(s),-HALF,HALF);
-  const landing=s=>rect(s,-landOf(s),0,-HALF,HALF);
+  const footprint=s=>yard(s)?Y().footprint(s):rect(s,-landOf(s),reachOf(s),-HALF,HALF);
+  const landing=s=>yard(s)?Y().landing(s):rect(s,-landOf(s),0,-HALF,HALF);
   const seaOf=()=>(State.environment||[]).find(f=>f.type==='sea'&&f.coastline?.length>1)||null;
 
   // Nearest coastline point and the normal pointing out to sea.
@@ -44,7 +46,7 @@
   // on the shore runs right by the coastline, so it must win within its reach), else the coast.
   const QUAY_REACH=2.5,QUAY_SHORE=4,QUAY_SPACING=5;   // U: snap reach, clear of the shore, between piers
   function rootHit(p){
-    const coast=coastHit(p),quay=window.ConquerQuay?.edgeHit(p);
+    const coast=coastHit(p),quay=yard(p)?null:window.ConquerQuay?.edgeHit(p);
     if(quay&&(quay.distance<=QUAY_REACH||!coast||quay.distance<=coast.distance))return{...quay,sea:coast?.sea||seaOf(),onQuay:quay.quay.id};
     return coast&&{...coast,onQuay:null};
   }
@@ -57,12 +59,12 @@
   }
   // Deck level: above the highest ground under the landing (never below the waterline);
   // on a quay the deck is flush with the quay top.
-  const groundLevel=s=>s.onQuay?0:Math.max(0,...[-LAND+.1,-LAND/2,-.2].flatMap(x=>[-HALF,0,HALF].map(y=>terrainElevation(toWorld(s,x,y)))));
+  const groundLevel=s=>s.onQuay?0:Math.max(0,...(yard(s)?[-Y().level(s).land+.2,-Y().level(s).land/2,-.2]:[-LAND+.1,-LAND/2,-.2]).flatMap(x=>[-halfOf(s),0,halfOf(s)].map(y=>terrainElevation(toWorld(s,x,y)))));
 
   function validate(s){
     if(!is(s))return{ok:false,reason:'Not a pier'};
     const hit=rootHit(s);
-    if(!hit)return{ok:false,reason:'A pier needs a sea coast'};
+    if(!hit)return{ok:false,reason:yard(s)?'A shipyard needs a sea coast':'A pier needs a sea coast'};
     if(hit.distance>.3)return{ok:false,reason:'A pier must start on the coastline or a quay'};
     // Only the landing must be in the whitezone: the deck reaches out over the sea.
     // No buildable-terrain rules: slopes, woods and uneven shore are fine.
@@ -84,13 +86,14 @@
       }
     }
     const R=reachOf(s),sea=hit.sea;
-    for(const x of [Math.min(2,R*.5),R/2,R-.1])for(const y of [-HALF,HALF])
+    for(const x of [Math.min(2,R*.5),R/2,R-.1])for(const y of [-halfOf(s),halfOf(s)])
       if(!sea||!environmentContains(sea,toWorld(s,x,y)))return{ok:false,reason:'The pier must reach out over open sea'};
     return{ok:true,ground:groundLevel({...s,onQuay:hit.onQuay}),onQuay:hit.onQuay||null};
   }
 
   // Berths: where a ship lies alongside, one each side of the head, bow towards the sea.
   function moorings(s){
+    if(yard(s))return[];
     const a=s.angle||0,at=moorAt(s);
     return[['left',1],['right',-1]].map(([side,k])=>{
       const p=toWorld(s,at,k*(HALF+MOOR_OUT)),post=toWorld(s,at,k*(HALF-.13));
@@ -102,6 +105,7 @@
   const cache=new Map();
   function meshes(s,ground){
     const g=Number.isFinite(ground)?ground:Number.isFinite(s.groundZ)?s.groundZ:groundLevel(s);
+    if(yard(s))return Y().meshes(s,g);
     const REACH=reachOf(s),MOOR_AT=moorAt(s),key=[s.x,s.y,s.angle,g,REACH,s.onQuay||''].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit.list;
     const top=g+TOP,pos=[],col=[];
@@ -184,13 +188,14 @@
     }
     return true;
   }
-  const label=s=>SPEC.label+' L'+reachOf(s)+' · '+reachOf(s)+'U · 2 attracchi';
-  const cost=s=>({...SIZES[reachOf(s)].cost});
-  const buildDays=s=>SIZES[reachOf(s)].days;
+  const label=s=>yard(s)?Y().label(s):SPEC.label+' L'+reachOf(s)+' · '+reachOf(s)+'U · 2 attracchi';
+  const cost=s=>yard(s)?Y().cost(s):({...SIZES[reachOf(s)].cost});
+  const buildDays=s=>yard(s)?Y().buildDays(s):SIZES[reachOf(s)].days;
   function panelHtml(s){
+    if(yard(s))return Y().panelHtml(s);
     return'<div class="slot"><div class="slot-label">Attracchi</div>'+moorings(s).map(m=>
       '<div class="kv"><span>'+(m.side==='left'?'Sinistra':'Destra')+'</span><b>'+m.x.toFixed(1)+', '+m.y.toFixed(1)+'</b></div>').join('')+
       '</div><div class="legend">Molo in legno su pali, lungo '+reachOf(s)+'U verso il mare'+(s.onQuay?', agganciato alla banchina':'')+'. Va costruito sulla costa o su una banchina, con l\'approdo dentro la whitezone.</div>';
   }
-  window.ConquerPier=Object.freeze({SPEC,SIZES,LAND,HALF,TOP,is,make,reachOf,footprint,landing,coastHit,rootHit,snapToCoast,groundLevel,validate,moorings,meshes,draw,addToBuilder,label,cost,buildDays,panelHtml});
+  window.ConquerPier=Object.freeze({SPEC,SIZES,LAND,HALF,TOP,is,make,reachOf,footprint,landing,coastHit,rootHit,snapToCoast,groundLevel,validate,moorings,meshes,draw,addToBuilder,label,cost,buildDays,panelHtml,bindPanel:(root,s)=>yard(s)&&Y().bindPanel(root,s)});
 })();

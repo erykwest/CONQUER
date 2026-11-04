@@ -54,7 +54,7 @@
   function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null,noAnchor=false,fisher=null}={}){
     if(!M()?.ships?.[key])return null;
     let berth=null,pose=null;
-    if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&(!pier||s.id===pier)))
+    if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&!s.yard&&(!pier||s.id===pier)))
       for(const side of ['left','right'])if(!berth&&!occupied(p.id,side)){berth={pierId:p.id,side};pose=berthPose(p,side,key)}
     if(!berth&&!anchor&&!pier)for(const q of (State.structures||[]).filter(s=>s.type==='quay'&&(!quay||s.id===quay)))
       for(const b of window.ConquerQuay?.berths(q)||[])if(!berth&&quayFree(b,key)){berth={quayId:q.id,side:b.side,along:b.along,key:b.key};pose=quayBerthPose(b,key)}
@@ -63,12 +63,29 @@
     if(!pose)return null;
     // In port the sails are furled up to the yards; at anchor off the coast they stay set.
     const id='ship-'+(++seq),ship={id,key,allegiance,realm,berth,pose,livery:livery||S().livery?.(),fisher,crew:C().crewState(key,id,S().sailState(!!berth)),cache:null};
-    ships.push(ship);requestDraw();
+    ships.push(ship);if(!fisher)persist();requestDraw();
     return ship;
   }
   function order(what,id=null){for(const s of ships)if(!id||s.id===id)C().order(s.crew,what);requestDraw()}
-  function clear(){ships.length=0;window.ConquerNavalBattle?.end();requestDraw()}
-  function remove(id){const i=ships.findIndex(s=>s.id===id);if(i>=0)ships.splice(i,1);requestDraw()}
+  function clear(){ships.length=0;window.ConquerNavalBattle?.end();persist();requestDraw()}
+  function remove(id){const i=ships.findIndex(s=>s.id===id);if(i>=0)ships.splice(i,1);persist();requestDraw()}
+  // Saved with the village (State.village.fleet): kind, flag, livery and berth of each ship.
+  // Fishing boats are not saved: they follow their households (settlement-fishers.js).
+  let restoredFor=null;
+  function persist(){
+    if(typeof State==='undefined'||!State.village||restoredFor!==State.village)return;
+    State.village.fleet=ships.filter(s=>!s.fisher).map(s=>({key:s.key,allegiance:s.allegiance,realm:s.realm,livery:s.livery||null,
+      pier:s.berth?.pierId||null,quay:s.berth?.quayId||null,anchor:!s.berth}));
+    State.dirty=true;
+  }
+  // A new or reloaded village brings its own fleet back.
+  function restore(){
+    if(typeof State==='undefined'||!State.village||restoredFor===State.village)return;
+    ships.length=0;restoredFor=State.village;
+    for(const r of Array.isArray(State.village.fleet)?State.village.fleet:[])
+      spawn({key:r.key,allegiance:r.allegiance,realm:r.realm,livery:r.livery,pier:r.pier,quay:r.quay,anchor:!!r.anchor});
+    persist();
+  }
   // Battle demo: a foreign ship of the same kind at anchor, and the chosen warship coming up
   // from astern, off its quarter, to grapple and board it (settlement-naval-battle.js).
   function battle({key='cocca',allegiance='player',realm='player'}={}){
@@ -88,11 +105,11 @@
       const s=ships[i];if(!s.berth)continue;
       if(s.berth.quayId){
         const q=State.structures.find(o=>o.id===s.berth.quayId),b=q&&window.ConquerQuay?.berths(q).find(x=>x.key===s.berth.key);
-        if(!b){ships.splice(i,1);continue}
+        if(!b){ships.splice(i,1);persist();continue}
         s.pose=quayBerthPose(b,s.key);continue;
       }
       const pier=State.structures.find(p=>p.id===s.berth.pierId);
-      if(!pier){ships.splice(i,1);continue}
+      if(!pier){ships.splice(i,1);persist();continue}
       s.pose=berthPose(pier,s.berth.side,s.key);
     }
   }
@@ -103,9 +120,13 @@
   const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
     frame3d=null;
+    restore();
     window.ConquerFishers?.syncBoats();
-    if(!ships.length||!window.ConquerMesh3D)return;
-    const now=(typeof performance!=='undefined'?performance.now():Date.now())/1000,dt=last?Math.min(.1,now-last):0;last=now;
+    const now=(typeof performance!=='undefined'?performance.now():Date.now())/1000;
+    // Ships on the slipways of the shipyards (settlement-shipyard.js), and their launch.
+    const yards=window.ConquerShipyard?.dynamicMeshes(now)||[];
+    if((!ships.length&&!yards.length)||!window.ConquerMesh3D)return;
+    const dt=last?Math.min(.1,now-last):0;last=now;
     sync();
     window.ConquerFishers?.step(now);
     const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle,gl=world3d();
@@ -114,13 +135,13 @@
     if(fighting)NB.step(dt);
     // 2.5D only: with every sail at rest the ships (and their piers) are painted once into a
     // cached bitmap and only the flags and sailors are drawn live.
-    const still=!gl&&!fighting&&!ships.some(s=>s.crew.sail.t!==s.crew.sail.target);
+    const still=!gl&&!fighting&&!yards.length&&ships.length&&!ships.some(s=>s.crew.sail.t!==s.crew.sail.target);
     // 2.5D only: ships are painted over the scene, so the piers they lie at are painted again
     // in the same depth sort and a pier in front of a hull still covers it.
     if(!gl)for(const id of new Set(ships.filter(s=>s.berth).map(s=>s.berth.pierId))){
       const pier=State.structures.find(p=>p.id===id);if(pier)meshes.push(...window.ConquerPier.meshes(pier));
     }
-    meshes.push(...(window.ConquerFishers?.lotMeshes()||[]));
+    meshes.push(...(window.ConquerFishers?.lotMeshes()||[]),...yards);
     for(const s of ships){
       const arms=S().arms(s),key=[s.pose.x,s.pose.y,s.pose.heading,s.pose.z||0,s.pose.roll||0,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
       if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,s.pose,s.crew.sail.furl,{sail:arms.sail,flag:null},s.livery)};
@@ -179,5 +200,5 @@
     };
   }
   if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindDev);else bindDev()}
-  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,battle,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose});
+  window.ConquerFleet=Object.freeze({ships,spawn,hull,overlap,order,clear,remove,persist,restore,battle,draw:drawAll,dynamicMeshes,drawFigures,berthPose,anchorPose});
 })();

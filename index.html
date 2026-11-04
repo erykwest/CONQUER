@@ -69,7 +69,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
     <div class="legend">Round / Square applies to hills and walled terraces. Union is automatic for Sloped and Walled terrace. The second overlapping shape inherits the shared height. Flat H0 subtracts existing terrain/terraces in the selected Round or Square footprint. Heights below H0 are never allowed. R defines radius or square half-side; point height rounds up to an integer.</div>
 <h3>Fossati</h3><div class="grid"><button data-crossing="dry">⛏ Asciutto</button><button data-crossing="water">💧 Allagato H0</button></div>
 <h3>Ponti</h3><div class="grid"><button data-crossing="wood">🪵 Legno</button><button data-crossing="stone">🪨 Pietra</button></div>
-<h3>Porto</h3><div class="grid"><button data-pier="4">⚓ Molo L4<br><span class="small">4U sul mare · 2 attracchi</span></button><button data-pier="12">⚓ Molo L12<br><span class="small">12U sul mare · 2 attracchi</span></button><button data-quay>🪨 Banchina<br><span class="small">2U · 2 clic · riva o acqua</span></button></div>
+<h3>Porto</h3><div class="grid"><button data-pier="4">⚓ Molo L4<br><span class="small">4U sul mare · 2 attracchi</span></button><button data-pier="12">⚓ Molo L12<br><span class="small">12U sul mare · 2 attracchi</span></button><button data-quay>🪨 Banchina<br><span class="small">2U · 2 clic · riva o acqua</span></button><button data-pier data-yard="1">🛠 Cantiere navale L1<br><span class="small">scalo 7U · navi piccole</span></button><button data-pier data-yard="2">🛠 Cantiere navale L2<br><span class="small">scalo 10U · piazzale 12U · tutte le navi</span></button></div>
 <div class="slot-label">Larghezza fossati e ponti</div><div class="grid3"><button data-crossing-width="1">1U</button><button data-crossing-width="2" class="active">2U</button><button data-crossing-width="3">3U</button></div>
 <div class="legend">Fossati: magneti alle estremità, tracciamento concatenato automatico. Click sul punto di partenza per interrompere la catena oppure Esc per uscire. Ponti: due estremità alla stessa quota. Levatoio dal menu Gate.</div>
     <h3>Settlement buildings</h3>
@@ -349,14 +349,16 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/assets/event-models.js?v=events3d-1"></script>
 <script src="./src/settlement-events3d.js?v=events3d-1"></script>
 <script src="./src/settlement-quay.js?v=quay-berth-1"></script>
-<script src="./src/settlement-pier.js?v=quay-c-3"></script>
+<script src="./src/settlement-pier.js?v=yard2"></script>
+<script src="./src/assets/shipyard-models.js?v=yard5"></script>
+<script src="./src/settlement-shipyard.js?v=yard8"></script>
 <script src="./src/assets/ship-models.js?v=ships-1"></script>
 <script src="./src/settlement-ships.js?v=livery1"></script>
 <script src="./src/settlement-ship-crew.js?v=crew-1"></script>
 <script src="./src/settlement-naval-battle.js?v=battle-1"></script>
-<script src="./src/settlement-fleet.js?v=fishers2"></script>
+<script src="./src/settlement-fleet.js?v=yard1"></script>
 <script src="./src/assets/fishing-models.js?v=fishers1"></script>
-<script src="./src/settlement-fishers.js?v=fishers2"></script>
+<script src="./src/settlement-fishers.js?v=yard1"></script>
 <script src="./src/settlement-events-people.js?v=people-1"></script>
 <script src="./src/settlement-events-joust.js?v=joust-2"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
@@ -417,7 +419,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-world3d.js?v=wood3d-7"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
-<script src="./src/settlement-economy.js?v=fishers1"></script>
+<script src="./src/settlement-economy.js?v=yard1"></script>
 <script src="./src/settlement-urban-economy.js?v=economy-commerce-1"></script>
 <script src="./src/settlement-market-economy.js?v=economy-commerce-1"></script>
 <script src="./src/settlement-commerce.js?v=economy-commerce-1"></script>
@@ -426,9 +428,9 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-vehicles.js?v=economy-vehicles-1"></script>
 <script src="./src/settlement-road-sign-tests.js?v=economy-vehicles-1"></script>
 <script src="./src/settlement-app.js?v=quay-face-1"></script>
-<script src="./src/settlement-app-rooms.js?v=economy-convoys-1"></script>
+<script src="./src/settlement-app-rooms.js?v=yard1"></script>
 <script src="./src/settlement-structure-commands.js?v=quay-face-1"></script>
-<script src="./src/settlement-app-input.js?v=quay-face-1"></script>
+<script src="./src/settlement-app-input.js?v=yard1"></script>
 <script src="./src/settlement-app-persistence.js?v=quay-face-1"></script>
 <script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1"></script>
 <script src="./src/settlement-app-simulation.js?v=economy-convoys-1"></script>
