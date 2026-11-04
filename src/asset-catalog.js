@@ -19,7 +19,9 @@
     {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
     {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
     {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
-    {global:'ConquerDovecoteModels',collection:'models',category:'Fortificazioni',family:'Colombaia (lanterna sul tetto)'},
+    // Blender parts listed under Edifici, as the house kit: Fortificazioni holds only engine meshes and
+    // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
+    {global:'ConquerDovecoteModels',collection:'models',category:'Edifici',family:'Colombaia (lanterna sul tetto)'},
     {global:'ConquerFurnitureModel',collection:'pieces',category:'Interni',family:'Arredi del cutaway'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
