@@ -35,7 +35,10 @@ function fixture({enemies=[],walled=null}={}){
     towerDoorSpecs:s=>[{kind:'front',contact:{x:s.x+span(s)/2,y:s.y},outward:{x:1,y:0},baseZ:.035}],
     weatherGroundWet:()=>false,invalidateUrbanGeometry:()=>{},scheduleLocalSave:()=>{},
     underConstruction:()=>false,invalidateStructureScene:()=>{},invalidateSceneCache:()=>{},invalidateNavigation:()=>{},
-    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0
+    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0,
+    // Garrison hygiene (latrines) counts the archers stationed in towers: no slits in this fixture.
+    placementGroundZ:()=>0,towerBartizans:()=>[],towerWindowRows:()=>[],cutawayWallThickness:()=>.1,towerFaceDirections:()=>[],
+    isWideBuilt:()=>false
   });
   vm.runInContext(src,ctx);
   return{State,F:ctx.window.ConquerFire,S:ctx.window.ConquerSiege};
