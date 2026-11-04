@@ -25,6 +25,65 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 
 **Avvertenza:** nessuna esecuzione è visualizzata o simulata, e le strutture punitive non applicano sentenze ai singoli PNG. I coefficienti non sono ancora tarati, né derivati da serie dati reali.
 
+## Edifici e stanze nel Builder (C-02 / C-03)
+
+**Stato (03/11/2026):** implementati sul branch `feature/crime-buildings` come **strutture reali del Builder**. Il laboratorio `/crime/` resta isolato: non legge ancora il salvataggio e i suoi flag restano di fixture.
+
+| Struttura | Dove si costruisce | Dati | Note |
+| --- | --- | --- | --- |
+| Corpo di guardia (`guard`) | Stanza di torre T2/T3, porta o sezione costruita (già esistente); **stanza del Municipio** (un piano) | `s.functions[i]='guard'` | Capienza 4 sentinelle per unità di stanza (`ConquerSiege.capacity().watchmen`) |
+| Prigione (`prison`) | **Solo al piano terra (P0)**: torri e sezioni costruite (non le porte, dove il piano terra è il passaggio), stanza 0 del Municipio | `s.functions[i]='prison'` | **5 detenuti per cella**: una cella per stanza normale, due per stanza grande, 2–3 nel Municipio (`ConquerCivic3D.prisonCellCount`). Le prigioni salvate ai piani alti vengono svuotate al caricamento (`capacity().prisoners`) |
+| Sala del consiglio (`council`) | Solo Municipio | `s.functions[i]='council'` | Arredo storico del cutaway; un Municipio salvato prima delle stanze la riceve al piano terra |
+| Tribunale (`tribunal`) | Solo Municipio **L2+**, a qualsiasi piano | `s.functions[i]='tribunal'` | Al ritorno a L1 la stanza decade |
+| Ospizio (`almshouse`) | Annesso della Chiesa **L2**, max 1, 4,5 × 2,4 U | `{type:'civicAnnex', annexType:'almshouse'}` | Modello Blender `almshouse` nello **stile delle case**: casa lunga a due piani (12,6 m, due camini), piano terra in pietra, P1 a graticcio su intonaco ocra con sporto sul retro, tetto in ardesia a 60°, **ballatoio** di legno al P1 sul fronte con tettoia e scala esterna, piccola croce sul frontone. Colori presi dal renderer delle case (`houseStone`, `housePlaster`, `houseTimber`, `roofHouse`…, in coda alla palette civica). Come gli altri annessi: niente costo o effetti economici |
+| Gogna (`pillory`) | Piazza, 1 × 1 U | `{type:'eventVenue', venue:'pillory'}` | 8 legno + 2 metallo, ½ giorno. Modello `justicePillory` |
+| Forca (`gallows`) | Piazza o margine, 2 × 1,5 U | `{type:'eventVenue', venue:'gallows'}` | 24 legno + 2 metallo, 1 giorno. Modello `justiceGallows`, sobrio e **vuoto** (senza figura né cappio) |
+| Patibolo (`scaffold`) | Piazza maggiore, 2,5 × 2 U | `{type:'eventVenue', venue:'scaffold'}` | 40 legno + 10 pietra + 2 metallo, 2 giorni. Modello `justiceScaffold`: palco su pali con drappo scuro, parapetto, panca dei magistrati, ceppo al centro, scala laterale; **vuoto** (senza figura né lama). In `/crime/` è un flag a sé, più severo della forca su deterrenza e tensione |
+
+**Stanze del Municipio: una per piano.** La stanza *i* è il piano *i* (`s.functions[i]`), e ce ne sono tante quanti i livelli civici: L1 = 1 (piano terra; il P1 del modello resta senza funzione), L2 = 2, L3 = 3. Il catalogo civico è `TOWNHALL_FUNCTION_CATALOG = council, tribunal, guard, prison`. Le funzioni del castello restano nel castello: consiglio e tribunale non si assegnano alle torri.
+
+Il **cutaway per piani** (D-CUT-01, branch `feature/cutaway-floors`, unito qui) mostra un piano per volta con ▲ ▼ sopra l'edificio e nell'ispettore. Ogni stanza è arredata sull'intero piano:
+
+- **Consiglio:** il salone storico al piano terra; ai piani alti, tavolo con panno, sgabelli, pedana del podestà, cassoni e stendardi.
+- **Tribunale:** banco dei giudici su gradino con tre seggi, scrivania del cancelliere, sbarra a balaustri, file di panche per il pubblico, stendardi.
+- **Guardia:** due tavoli con sgabelli, rastrelliera d'armi, scudi, brande, cassone.
+- **Prigione:** celle lungo la parete di fondo dietro l'inferriata, con paglia, secchio e catene, e il tavolo del carceriere vicino alla porta.
+
+**Tribunale in seduta** (`src/settlement-court-people.js`, `ConquerCourtPeople`). Quando il Municipio selezionato mostra il piano del tribunale nel cutaway, la sala si riempie. Succede dal lunedì al venerdì, dalle 9 alle 17, se la campana d'allarme è ferma.
+
+- **Chi c'è:**
+  - tre giudici in toga rossa con collo d'ermellino e berretto, seduti al banco; quello che presiede alza la mano di tanto in tanto;
+  - il cancelliere in nero che scrive alla sua scrivania;
+  - il prigioniero alla sbarra, in camicia grezza con le mani legate, tra due guardie con la lancia;
+  - il pubblico sulle panche, rado: un'estrazione fissa per edificio.
+- **Posti:** vengono da `ConquerCivic3D.roomSlots`, che usa lo stesso `tribunalLayout` dell'arredo.
+- **Disegno:** le persone sono disegnate a ogni fotogramma con le figure dei popolani, come l'artigiano delle botteghe e le persone degli eventi. Non entrano nella mesh del cutaway.
+- **Natura:** sono decorative e provvisorie, senza residenti né sentenze. Un futuro runtime CRIME può sostituirle con `setOccupancySource`.
+- **Costumi di ruolo:** stanno in `ConquerWardrobe.ROLE_PIECES` e sono `judgeRobe`, `judgeCap`, `clerkGown`, `clerkCap`, `prisonerShirt` e `executionerHood` (quest'ultimo già pronto per il boia). Il guardaroba stagionale non li assegna mai. Nel Lab si trovano sotto *Popolazione · Costumi di ruolo*.
+
+**Prigioni occupate** (a ogni ora, stesso modulo):
+
+- **Municipio:** la prigione sta al piano terra, con **da 1 a 5 detenuti per cella**. Il primo della prima cella sta in piedi alle sbarre, gli altri seduti sulla paglia; il carceriere sonnecchia al tavolo vicino alla porta.
+  - Celle e carceriere seguono `prisonLayout`, lo stesso dell'arredo.
+  - Quando la camera guarda le celle attraverso l'inferriata, le sbarre (`ConquerCivic3D.prisonBars`) vengono ridisegnate sopra i detenuti.
+- **Torri e sezioni:** nelle prigioni del castello (solo al piano terra) ci sono **da 1 a 5 detenuti per cella**, e una stanza grande ha due celle. Li disegna `drawCutawayOccupants` accanto a soldati e nobili.
+
+**Gogna, forca e patibolo in uso** (stesso modulo, `justiceSlots` / `justiceScene`). Le scene sono sobrie: nessun condannato sulla forca o sul patibolo, nessuna esecuzione; la scena si ferma all'attesa.
+
+- **Gogna:** dal lunedì al sabato, dalle 8 alle 17. Un condannato a mani legate sta sulla pedana e un capannello davanti lo schernisce col pugno alzato.
+- **Forca e patibolo:** il «giorno di giustizia», il venerdì dalle 10 a mezzogiorno.
+  - Sul palco aspetta il boia, incappucciato e a braccia conserte.
+  - Sul patibolo c'è anche un magistrato che legge la sentenza dalla panca.
+  - Due guardie stanno ai piedi della scala e una folla a semicerchio davanti.
+- **Sospensione:** l'allarme svuota la piazza.
+- **Disegno:** chi sta dietro alla struttura viene ritagliato lungo la sagoma della parte piena (base, pedana, drappo, parapetto). Pali e trave restano trasparenti.
+
+Test: `qa/court-people-regression.cjs`.
+
+Gogna, forca e patibolo riusano il contratto delle `eventVenue` (posa a due clic, cantiere, costo, modello nel catalogo eventi). Nel nuovo Builder compaiono nello strumento **Giustizia**; nel vecchio, tra gli edifici civili. Nel Lab sono nella categoria *Edifici · Giustizia*.
+
+Test: `qa/crime-buildings-regression.cjs`.
+
 ## Contratto futuro (non implementato)
 
 | Sistema autorevole | Ingresso futuro per CRIME | Uscita futura / responsabilità |
@@ -36,7 +95,7 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 | `ConquerGame` persistenza | `State` canonico e calendario unico | Stato sociale persistente **solo dopo** definizione del contratto e migrazione |
 | Centro di controllo | KPI sociali **solo quando veri** | Avvisi su disordini, detenuti, servizi e welfare |
 
-Il **Palazzo cittadino** e i suoi eventuali slot vanno verificati prima di assegnare il Tribunale; non introdurre stanze civiche presunte. La gogna e il patibolo sono piccole strutture collocabili previste, **non presenti** nel Builder con questa iterazione. L'ospizio è proposto come annesso religioso, senza introdurre una nuova categoria di risorse.
+Il Tribunale è una stanza (un piano) del Municipio L2+ (decisioni del 03/11/2026). Gogna, forca, ospizio, corpo di guardia e prigione esistono ora nel Builder (sezione precedente). Restano da fare l'adapter `/crime/` ← `State`, il personale e le routine.
 
 ## Non-obiettivi V0
 

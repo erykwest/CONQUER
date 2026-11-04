@@ -1,5 +1,17 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ROOM-EXT-01 — Una stanza può cambiare l'esterno del suo edificio (04/11/2026)
+
+- **DECISO (contratto):** una funzione di stanza dichiara il suo elemento esterno in `ROOM_EXTERIOR[fn]` (`src/settlement-room-exterior.js`): `{model, source, mount, breakable?}`. `model` è un modello Blender in `src/assets/*-models.js` (registro `window[source].models[model]`: `parts` con `p/i/c`, `width`, `projection`, `bottom`, `chuteTop`), assi U con +x lungo la faccia (centrato), +y verso l'esterno, +z dal pavimento della stanza.
+- **Un'unica geometria:** `roomExteriorPlacement(s, index, fn)` decide dove va l'elemento o restituisce `null`; `roomExteriorElements(s)` elenca gli elementi piazzati; `roomExteriorTriangles(s)` li trasforma in triangoli del mondo `{pts:[{p,z}], hex, key, part}`, lo stesso formato di `pointHoardingTriangles`. Tutti i renderer leggono quei triangoli: 2.5D (`drawAll` dopo i tetti del corpo del castello; `draw(s)` nel cutaway), castle 3D, World 3D e mesh dell'Asset Lab (`bodyMesh` in `settlement-castle3d.js`), cutaway del World 3D (guscio esterno). **Cantiere:** nessun elemento, perché le stanze si assegnano solo a edificio finito. **Crollo:** `collapseParts(e)` → `startCollapse`, quando cade l'edificio o quando cade l'elemento da solo.
+- **Montaggio `face` (unico implementato):** facciata esterna di una sezione costruita (`wallExteriorSide`, il comando "Exterior side / windows"), centrato su una cella di feritoia del piano della stanza (la più vicina al centro), ad almeno 0,3 U dagli estremi. Viene scartato se nel suo ingombro c'è un'altra struttura più alta del suo fondo, una bertesca o un ballatoio di torre o porta (sporgenza 0,5 U) o la galleria o le caditoie di un muro. Le feritoie della sua cella, dal suo tetto in giù, cedono il posto (`takesWindow`). Le regole della stanza (`allowed()`) chiedono `placement`: se l'elemento non entra, la stanza non si assegna e i salvataggi la perdono con `sanitizeRooms`.
+- **Rottura (`breakable`):** un colpo d'artiglieria entro 0,45 U dall'elemento lo colpisce (`attackStructure` con un punto d'impatto). Gli HP stanno in `s.roomExteriorHp[index]`; a 0 l'elemento crolla, la stanza tiene la funzione ma non serve finché non viene ricostruita (`ConquerSiege.repairRoomExterior`, 6 pietra + 2 oro).
+- **Riservati, non implementati:** `mount:'roof'` (Colombaia, sul tetto della torre) e `mount:'eave'` (Cisterna, gronda o pluviale). Chi li aggiunge estende `roomExteriorPlacement` con un nuovo ramo e una voce nella tabella. Non deve aggiungere un renderer: basta che i triangoli restino nello stesso formato.
+- **Prima applicazione, Latrina / Garderobe:** solo al piano 2 di una sezione W1 (non nelle sale W2, non nelle torri). È una scatola di pietra a sbalzo di 0,36 U, larga 0,46 U, su 4 mensole, con lo scarico che macchia il muro fino a terra.
+  - **Igiene della guarnigione:** è un bisogno secondario. Il cortile serve 24 soldati, ogni latrina ne serve altri 16 (32 in una stanza grande). L'igiene non scende sotto 40 e cala di 2 al giorno, risale di 5. Sotto 50 si ammala fino al 10% degli arcieri, che lasciano libere le postazioni.
+  - **Motivo:** l'utente non vuole che la latrina diventi un sistema obbligatorio; i castelli piccoli non ne risentono.
+  - **Prova:** `qa/room-exterior-latrine-regression.cjs`.
+
 ## D-COMBAT-RENDER — Confine tecnico del combat (03/11/2026)
 
 ConquerCombatRenderer gestisce soltanto stato di presentazione e disegno. Ordini, visibilità/LOS, percorsi, HP, tempo e code di effetti restano nel dominio combat/regole. Le regole non dipendono da Canvas o dal renderer ed espongono visualEffects() come vista temporanea da non mutare. Il renderer non avanza la simulazione. Il wrapper precedente di draw e lo scheduler condiviso restano unici. Nessuna modifica a D-046 o alle meccaniche; parità verificata su trace e pixel del canvas. Specifica in [COMBAT-RENDERING](../COMBAT-RENDERING.md).
@@ -26,7 +38,12 @@ Decisione esplicita dell'utente: P0 bridge, circle, jobmanager e knights; P2 mes
 
 - **DECISO per il laboratorio `/crime/`:** separare criminalità, ordine pubblico e tensione sociale. La severità, gogna e patibolo possono aumentare la deterrenza **ma anche il risentimento**; assistenza/ospizio e presidio agiscono su leve diverse. La sommossa è una fase di escalation, non un generico malus; la rivolta non viene risolta da un secondo sistema di combattimento.
 - **CONTRATTO DI SVILUPPO:** solo fixture locali e deterministiche, salvataggio dedicato, nessuna mutazione del `State` canonico o duplicazione di popolazione/risorse. La gestione effettiva riuserà popolazione, economia, stanze e Combat quando sarà integrata.
-- **ANCORA PROPOSTO/DA VERIFICARE:** posizionamento reale di gogna e forca; ospizio come annesso Chiesa L2; corpo di guardia e prigione come stanze W2/W3; tribunale nel Palazzo cittadino **solo dopo verifica degli slot**; soglie numeriche, eventi e durate. La loro presenza nel catalogo di fixture non è implementazione nel Builder.
+- **DECISO (03/11/2026):**
+  - **Tribunale:** è una stanza del Municipio, che ha una stanza per piano (tante quante i livelli civici, D-CUT-01) con un catalogo civico separato da quello del castello. Il tribunale richiede L2.
+  - **Ospizio:** annesso della Chiesa L2.
+  - **Guardia e prigione:** sono le funzioni di stanza esistenti (torri T2/T3, porte, sezioni costruite) e anche stanze (piani) del Municipio. La **prigione** sta solo al piano terra (P0), mai nelle porte, e ha **al massimo 5 detenuti per cella** (03/11/2026).
+  - **Gogna, forca e patibolo:** tre strutture di piazza distinte e collocabili, sul contratto `eventVenue`, rappresentate vuote e sobrie. Anche in `/crime/` il patibolo è un flag separato dalla forca (prima «Forca / patibolo»); i salvataggi vecchi lo caricano spento.
+- **ANCORA PROPOSTO/DA VERIFICARE:** soglie numeriche, eventi e durate; personale delle guardie; lettura delle strutture reali da parte di `/crime/`.
 - [Specifica del prototipo](../crime.md). La roadmap strategica attuale resta invariata.
 
 

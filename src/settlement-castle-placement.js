@@ -626,12 +626,14 @@ function functionCapacity(s){
   if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
   if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
   if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
+  if(s.type==='townhall')return civicLevel(s);
   return 0;
 }
 function functionCapacityUnits(s){
   let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
 function normalizeFunctions(s){
+  if(s.type==='townhall')return normalizeTownhallRooms(s);
   const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];
   // Migrate once: prior saves placed a functional room on the traversable gate floor.
   if(s.type==='gate'&&!s.gateGroundIsPassage){
@@ -639,6 +641,16 @@ function normalizeFunctions(s){
     s.gateGroundIsPassage=true;
   }
   s.functions=s.functions.slice(0,cap).map(fn=>fn==='quarters'?'barracks':fn);
+  while(s.functions.length<cap)s.functions.push(null);
+  return s;
+}
+// Town hall rooms: room i is floor i. Town halls saved before their rooms keep the council hall
+// they always showed on the ground floor.
+function normalizeTownhallRooms(s){
+  const cap=functionCapacity(s);
+  if(!Array.isArray(s.functions)||!s.townhallRooms){s.functions=['council'];s.townhallRooms=1}
+  // The prison only on the ground floor (room 0).
+  s.functions=s.functions.slice(0,cap).map((fn,i)=>TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||cap>=2)&&(fn!=='prison'||i===0)?fn:null);
   while(s.functions.length<cap)s.functions.push(null);
   return s;
 }
