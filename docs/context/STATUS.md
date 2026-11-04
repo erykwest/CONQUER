@@ -1,5 +1,17 @@
 # Livello 2 — Stato tecnico e prove
 
+## Infermeria nelle sezioni costruite (branch `feature/infirmary`, da `main` 89dd465, 04/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:** nuova stanza `infirmary` (Infermeria) in `FUNCTION_CATALOG`. `ConquerSiege.allowed` la permette solo nelle sezioni costruite: piano terra o primo piano della W1, sala larga W2. Mai in torri o porte.
+- **Simulazione (`src/settlement-infirmary.js`, chiamato dal tick giornaliero dell'assedio):** 6 letti per stanza normale e 12 per stanza grande. Una truppa occupa 5 letti, una pattuglia 2, un cavaliere o un capitano 1. Il personale per unità di stanza è 1 cerusico L3 più 2 inservienti L1, pagati ogni giorno dall'oro del castello: 0,25 oro al giorno per stanza normale con i salari base, versati ai portafogli L3 e L1. Senza paga non c'è cura e i giorni di ricovero restano fermi.
+  - Le truppe alleate cadute dentro la zona gialla vengono ricoverate entro 1 giorno, se ci sono letti liberi. Sopravvive il 60%, con un tiro deterministico per id. Dopo 3 giorni tornano in servizio con metà dei punti vita, il morale pieno e la posizione alla porta dell'infermeria. Chi cade fuori dalla zona gialla, resta senza letto oltre il giorno di triage o perde la propria infermeria è perso (`lost`).
+  - I feriti vivi non impegnati in combattimento recuperano il 25% dei punti vita massimi al giorno, prima i più gravi, nei letti liberi.
+  - I letti liberi con personale pagato curano la popolazione. Se coprono 1 abitante ogni 40, L1 e L2 guadagnano +1 di felicità a ogni mercato settimanale, fino a 75.
+- **Pannello stanza:** riga con letti occupati, personale, paga giornaliera e stato pagato o non pagato. Etichetta italiana «Infermeria».
+- **Cutaway e modelli:** nuovi pezzi Blender `infirmaryBed` e `herbShelf` in `build_furniture.py`; gli altri 51 pezzi sono rigenerati identici. La ricetta della stanza prevede letti in fila, scaffale delle erbe, bacile, tavolino e sgabello; nella stanza grande ci sono più letti, un candeliere e secchi.
+- **Asset Lab:** il registro `ConquerFurnitureModel`, finora assente, entra nel catalogo come Interni · Arredi del cutaway. Nel palco del motore ci sono due varianti: «Infermeria · sezione L2» e «Infermeria · sala larga», con lo stato cutaway.
+- **QA:** nuova `qa/infirmary-regression.cjs` PASS (9 controlli, con il vero `allowed()` e il modulo reale), aggiunta alla CI `combat-regression.yml`. `cutaway-furniture-regression.cjs` PASS con il ruolo `infirmary`. Economia, campo, assedio, cucina e catalogo PASS in locale. Audit del Lab locale: categoria Interni con 0 errori; baseline aggiornata dopo la revisione dei render. **Non verificato:** partita reale nel browser con un assedio vero.
+
 ## Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`, da `main` a372f1c, 03/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** `ConquerSiege.allowed` permette la cucina solo al piano terra delle sezioni costruite: W1 (sezione, L1 o L2, lunga almeno 2U) e W2 (sala larga). Non più in torri (mastio compreso), porte o piani superiori. Granaio, magazzino e sala comune mantengono la regola precedente.

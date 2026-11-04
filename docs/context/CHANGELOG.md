@@ -1,5 +1,14 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-04 — Infermeria nelle sezioni costruite (branch `feature/infirmary`)
+
+- Nuova stanza Infermeria, solo nelle sezioni costruite (piano terra e primo piano della W1, sala larga W2).
+  - Ogni giorno, con il personale pagato, ricovera i caduti nella zona gialla (60% di sopravvivenza, ritorno dopo 3 giorni a metà vita) e cura i feriti.
+  - I letti liberi danno +1 di felicità settimanale a L1 e L2.
+- Nuovi arredi Blender: letto d'infermeria e scaffale delle erbe. Gli arredi del cutaway entrano nell'Asset Lab, che ora ha anche due varianti di infermeria nel palco del motore.
+- Nuova `qa/infirmary-regression.cjs`; `cutaway-furniture-regression.cjs` copre il nuovo ruolo.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la stanza segue la direzione già concordata (ampliare gli edifici con stanze, con effetti reali sulla simulazione) e non cambia contratti.
+
 ## 2026-11-03 — Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`)
 
 - La cucina si assegna solo al piano terra delle sezioni costruite (W1 sezione, W2 sala larga), non più in torri o porte; i salvataggi esistenti perdono le cucine fuori regola al caricamento.

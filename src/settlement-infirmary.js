@@ -82,10 +82,11 @@
       // Unpaid staff: nobody is admitted, healed or discharged; ward days do not count.
       for(const u of roster)if(u.ward)u.ward.until+=days;
     }else{
+      const left=new Set();
       for(const u of roster){
         if(!u.ward||u.ward.until>after)continue;
         used.set(u.ward.room,used.get(u.ward.room)-bedsFor(u));
-        discharge(u,byId.get(u.ward.room));out.discharged++;
+        discharge(u,byId.get(u.ward.room));left.add(u);out.discharged++;
       }
       const bedFor=need=>list.find(r=>r.beds-used.get(r.id)>=need);
       for(const u of roster){
@@ -96,7 +97,7 @@
         used.set(room.id,used.get(room.id)+bedsFor(u));out.admitted++;
       }
       // Wounded living troops off the line, worst first, heal in the beds still free.
-      const wounded=roster.filter(u=>ALLIED.has(u.kind)&&!u.defeated&&!u.engaged&&u.stats&&u.stats.hp>0&&u.stats.hp<u.stats.maxHp)
+      const wounded=roster.filter(u=>ALLIED.has(u.kind)&&!left.has(u)&&!u.defeated&&!u.engaged&&u.stats&&u.stats.hp>0&&u.stats.hp<u.stats.maxHp)
         .sort((a,b)=>a.stats.hp/a.stats.maxHp-b.stats.hp/b.stats.maxHp);
       for(const u of wounded){
         const room=bedFor(bedsFor(u));if(!room)continue;
