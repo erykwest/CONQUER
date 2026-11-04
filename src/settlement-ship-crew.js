@@ -28,14 +28,14 @@
 
   // A crew for one ship. sail: a ConquerShips.sailState (shared with the mesh).
   function crewState(key,id='ship',sail=S.sailState()){
-    const c=M.ships[key].crew,r=rng(hash(id+':'+key)),sailors=[];
+    const c=(M.models||M.ships)[key].crew,r=rng(hash(id+':'+key)),sailors=[];
     // Topmen fill the working spots aloft mast by mast; at least one hand stays on deck.
     const spots=[];c.masts.forEach((m,mi)=>m.aloft.forEach((_,si)=>spots.push([mi,si])));
     spots.sort((a,b)=>a[1]-b[1]||a[0]-b[0]);
     const top=Math.min(spots.length,Math.max(1,c.n-1));
     for(let i=0;i<c.n;i++){
       const aloft=i<top?spots[i]:null;
-      sailors.push({id:id+':'+key+':'+i,role:aloft?'top':'deck',mast:aloft?.[0]??i%c.masts.length,slot:aloft?.[1]??0,
+      sailors.push({id:id+':'+key+':'+i,role:aloft?'top':'deck',mast:aloft?.[0]??(c.masts.length?i%c.masts.length:0),slot:aloft?.[1]??0,
         mode:'walk',s:r(),y:(r()-.5)*2*c.half,goal:r(),goalY:(r()-.5)*2*c.half,timer:1+r()*3,climb:0,dir:[1,0,0],
         p:null,rng:rng(hash(id+':'+i))});
     }
@@ -69,7 +69,8 @@
   function step(cs,dt){
     cs.t+=dt;const c=cs.c,tops=cs.sailors.filter(s=>s.role==='top');
     for(const s of cs.sailors){
-      const m=c.masts[s.mast],foot=m.climb[0],h=length(climbPath(c,s))||1;
+      // Rowing boats have no masts: their hands only work on deck.
+      const m=c.masts[s.mast],foot=m?.climb[0],h=m?length(climbPath(c,s))||1:1;
       if(s.mode==='toMast'){
         if(walkTo(cs,s,deckParam(c,foot[0]),foot[1],dt)){s.mode='climb';s.climb=0}
       }else if(s.mode==='climb'){
@@ -79,7 +80,7 @@
       }else if(s.mode==='descend'){
         s.climb=Math.max(0,s.climb-CLIMB*1.3*dt/h);
         if(s.climb<=0){s.mode='walk';s.s=deckParam(c,foot[0]);s.y=foot[1];s.goal=s.rng();s.goalY=(s.rng()-.5)*2*c.half}
-      }else if(manoeuvring(cs)&&s.role==='deck'){
+      }else if(manoeuvring(cs)&&s.role==='deck'&&m){
         // Deck hands man the halyard at the foot of their mast and haul.
         const g=deckParam(c,m.x+.12*(1+s.slot)),gy=-.12-(cs.sailors.indexOf(s)%3)*.1;
         if(walkTo(cs,s,g,gy,dt))s.mode='haul';else s.mode='walk';

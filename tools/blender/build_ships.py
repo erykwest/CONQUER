@@ -455,8 +455,10 @@ def build_ship(part, sails, key, s, furl):
             for sgn in (1, -1):
                 g = h.point(x / (h.L / 2), 0, sgn)
                 part.box((x, sgn * g.y * .98, g.z + .08), (.06, .06, .16), 'woodDark')
-                part.beam((x - .15, sgn * g.y * .35, z + .25), (x + .35, sgn * (g.y + 1.55), -.05), .07, .07, 'wood')
-                part.box((x + .38, sgn * (g.y + 1.6), -.03), (.42, .2, .04), 'wood')
+                # The oars are separate parts swung by the game about their thole pin (rowing).
+                h.marks.setdefault('oars', []).append({'pin': (x, sgn * g.y * .98, g.z + .16), 'sgn': sgn,
+                    'loom': ((x - .15, sgn * g.y * .35, z + .25), (x + .35, sgn * (g.y + 1.55), -.05)),
+                    'blade': (x + .38, sgn * (g.y + 1.6), -.03)})
         cargo(part, h, [('crate', -.62, .25), ('sack', .55, -.2)])
         part.cylinder(.32, 0, 'net', n=8, axis='z', center=(-1.45, -.3, h.deck_z(-.55)), radii=[.34, .3, .16], along=[0, .14, .22])
         ensign(part, h, h.top(-1), 1.2, .8, .5)
@@ -513,6 +515,13 @@ def build(root):
         h = build_ship(p, sails, key, s, 0)
         build_ship(NullPart(), furled, key, s, 1)
         furled.offset.z += 30                                                    # shown apart in the scene
+        oars = []
+        for k, o in enumerate(h.marks.get('oars', [])):
+            op = Part(root, key + 'Oar' + str(k), COLORS, (0, off, 0))
+            op.beam(*o['loom'], .07, .07, 'wood')
+            op.box(o['blade'], (.42, .2, .04), 'wood')
+            oars.append((op.finish(), o))
+        h.oar_parts = oars
         parts[key] = (p.finish(), sails.finish(recalc=False), furled.finish(recalc=False), h)
         off += s['B'] + 8
     return parts
@@ -533,6 +542,9 @@ def export(parts, out_path):
         d['flags'] = [{'at': U(f['at']), 'w': U([f['w']])[0], 'h': U([f['h']])[0]} for f in h.marks['flags']]
         d['emblems'] = [{'cols': e['cols'], 'rows': e['rows'], 'axis': e['axis'], 'v': U(e['v']), 'f': U(e['f'])}
                         for e in h.marks['emblems']]
+        # Oars (rowing boats): each with its thole pin, swung about it by the game.
+        if getattr(h, 'oar_parts', None):
+            d['oars'] = [{**export_part_indexed(op, keys), 'pin': U(o['pin']), 'side': o['sgn']} for op, o in h.oar_parts]
         cm = crew_marks(h, key)
         d['crew'] = {'n': cm['n'], 'half': U([cm['half']])[0], 'deck': [U(p) for p in cm['deck']],
                      'masts': [{'x': U([m['x']])[0], 'climb': [U(p) for p in m['climb']], 'aloft': [U(p) for p in m['aloft']]}

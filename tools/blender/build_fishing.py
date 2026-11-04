@@ -2,6 +2,7 @@
   netRack     two forked poles and a ridge pole with a fishing net hung out to dry, floats
   fishRack    drying frame with rows of split fish hanging from the rails
   fishBaskets wicker baskets with the catch, an oar pair and a coiled line
+  castNet     a net paid out on the water: floats on a ring, the mesh sagging under it
 
 Free-standing, centred on their footprint. Placed on the lots of fishermen's households
 (src/settlement-fishers.js).
@@ -126,8 +127,30 @@ def fish_baskets(m):
     m.done('goods', p)
 
 
-MODELS = [('netRack', net_rack), ('fishRack', fish_rack), ('fishBaskets', fish_baskets)]
-LAYOUT = {'netRack': (0, 0), 'fishRack': (5, 0), 'fishBaskets': (9, 0)}
+def cast_net(m):
+    """A net paid out on the water: a ring of cork floats (r = 3 m) on the head rope and the
+    mesh sagging just under the surface towards the middle. The game scales it as it spreads
+    out and is hauled in; origin at the centre on the waterline."""
+    n, R = 16, 3.0
+    p = m.part('net')
+    rim = [(math.cos(2 * math.pi * i / n) * R, math.sin(2 * math.pi * i / n) * R, .02) for i in range(n)]
+    mid = [(x * .55, y * .55, -.05) for x, y, _ in rim]
+    vs = rim + mid + [(0, 0, -.09)]
+    for i in range(n):
+        j = (i + 1) % n
+        p.quads(vs, [(i, j, n + j, n + i)], 'net' if i % 2 else 'netDark')
+        p.quads(vs, [(n + i, n + j, 2 * n)], 'netDark' if i % 2 else 'net')
+    for i in range(n):
+        x, y, z = rim[i]
+        p.box((x, y, .06), (.22, .16, .12), 'float')
+    for i in range(n):
+        a, b = rim[i], rim[(i + 1) % n]
+        p.beam((a[0], a[1], .05), (b[0], b[1], .05), .04, .04, 'rope')
+    m.done('net', p)
+
+
+MODELS = [('netRack', net_rack), ('fishRack', fish_rack), ('fishBaskets', fish_baskets), ('castNet', cast_net)]
+LAYOUT = {'netRack': (0, 0), 'fishRack': (5, 0), 'fishBaskets': (9, 0), 'castNet': (15, 0)}
 
 
 def main(out_path):

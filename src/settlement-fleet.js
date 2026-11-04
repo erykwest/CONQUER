@@ -11,7 +11,7 @@
   const occupied=(pierId,side)=>ships.some(s=>s.berth?.pierId===pierId&&s.berth.side===side);
   // Pose alongside a berth: the hull touches the deck edge, amidships at the berth.
   function berthPose(pier,side,key){
-    const b=window.ConquerPier.moorings(pier).find(m=>m.side===side),m=M().ships[key];
+    const b=window.ConquerPier.moorings(pier).find(m=>m.side===side),m=S().model(key);
     const off=m.B/2+.12;
     return{x:b.edge.x+b.out.x*off,y:b.edge.y+b.out.y*off,heading:pier.angle||0,z:0};
   }
@@ -19,18 +19,18 @@
   function anchorPose(key,n){
     const sea=(State.environment||[]).find(f=>f.type==='sea'&&f.coastline?.length>1);if(!sea)return null;
     const mid={x:100,y:100},hit=window.ConquerPier.coastHit(mid);if(!hit)return null;
-    const t={x:-hit.normal.y,y:hit.normal.x},d=7+M().ships[key].B,along=(n%5-2)*9;
+    const t={x:-hit.normal.y,y:hit.normal.x},d=7+S().model(key).B,along=(n%5-2)*9;
     return{x:hit.point.x+hit.normal.x*d+t.x*along,y:hit.point.y+hit.normal.y*d+t.y*along,heading:Math.atan2(t.y,t.x),z:0};
   }
   // Along a quay (settlement-quay.js berths): alongside the face, bow along the quay.
   function quayBerthPose(b,key){
-    const off=M().ships[key].B/2+.12;
+    const off=S().model(key).B/2+.12;
     return{x:b.edge.x+b.out.x*off,y:b.edge.y+b.out.y*off,heading:b.angle,z:0};
   }
   // A quay slot is free for a ship when its hull clears every quay (a slot by a corner would
   // put a long hull against the other arm), every pier and every other ship.
   function hull(key,pose,pad=.08){
-    const m=M().ships[key],c=Math.cos(pose.heading),sn=Math.sin(pose.heading),hl=m.L/2+pad,hb=m.B/2+pad;
+    const m=S().model(key),c=Math.cos(pose.heading),sn=Math.sin(pose.heading),hl=m.L/2+pad,hb=m.B/2+pad;
     return[[hl,hb],[-hl,hb],[-hl,-hb],[hl,-hb]].map(([x,y])=>({x:pose.x+x*c-y*sn,y:pose.y+x*sn+y*c}));
   }
   function overlap(A,B){
@@ -52,7 +52,7 @@
   // pier / quay: moor there only; anchor: true rides at anchor even with berths free.
   // Pier berths are filled first, then the slots along the quays.
   function spawn({key='cocca',allegiance='merchant',realm='player',pier=null,quay=null,anchor=false,livery=null,noAnchor=false,fisher=null,convoy=null}={}){
-    if(!M()?.ships?.[key])return null;
+    if(!S()?.model?.(key))return null;
     let berth=null,pose=null;
     if(!anchor&&!quay)for(const p of (State.structures||[]).filter(s=>s.type==='pier'&&!s.yard&&(!pier||s.id===pier)))
       for(const side of ['left','right'])if(!berth&&!occupied(p.id,side)){berth={pierId:p.id,side};pose=berthPose(p,side,key)}
@@ -116,6 +116,15 @@
   // With the 3D renderer the hulls, sails, flags and plank are WebGL meshes of the frame's
   // front pass (depth-tested against piers, quays and the sea surface); the figures, flames
   // and arrows are painted after that pass so the hulls do not cover them.
+  // Roll and pitch on the swell: small boats more than large ships, more under way than moored;
+  // stepped 12 times a second so a ship's mesh is not rebuilt on every frame.
+  const SWELL={boat:[.07,.035],small:[.045,.025],large:[.025,.014]};
+  function seaMotion(s,now){
+    const m=S().model(s.key),[r,p]=SWELL[m?.size]||SWELL.small,k=s.away?1.6:1,t=Math.floor(now*12)/12;
+    let h=0;for(const c of String(s.id))h=(h*31+c.charCodeAt(0))>>>0;
+    const ph=(h%628)/100;
+    return{...s.pose,roll:(s.pose.roll||0)+Math.sin(t*1.1+ph)*r*k,pitch:(s.pose.pitch||0)+Math.sin(t*.8+ph*1.7)*p*k};
+  }
   let frame3d=null;
   const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
@@ -143,17 +152,18 @@
     if(!gl)for(const id of new Set(ships.filter(s=>s.berth).map(s=>s.berth.pierId))){
       const pier=State.structures.find(p=>p.id===id);if(pier)meshes.push(...window.ConquerPier.meshes(pier));
     }
-    meshes.push(...(window.ConquerFishers?.lotMeshes()||[]),...yards);
+    meshes.push(...(window.ConquerFishers?.lotMeshes()||[]),...(window.ConquerFishers?.netMeshes(now)||[]),...yards);
     for(const s of ships){
-      const arms=S().arms(s),key=[s.pose.x,s.pose.y,s.pose.heading,s.pose.z||0,s.pose.roll||0,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
-      if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,s.pose,s.crew.sail.furl,{sail:arms.sail,flag:null},s.livery)};
+      const view=seaMotion(s,now),row=s.row==null?null:+s.row.toFixed(2);
+      const arms=S().arms(s),key=[view.x,view.y,view.heading,view.z||0,view.roll||0,view.pitch||0,row,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
+      if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,view,s.crew.sail.furl,{sail:arms.sail,flag:null},s.livery,row)};
       // A battle chars, burns and sinks the hull (settlement-naval-battle.js).
       meshes.push(fighting?NB.dress(s,s.cache.mesh):s.cache.mesh);
-      s.flags=S().flagMesh(s.key,s.pose,arms.flag,now);
+      s.flags=S().flagMesh(s.key,view,arms.flag,now);
       if(State.view.scale<.3)continue;
       if(fighting)sprites.push(...NB.sprites(s,now));
       for(const sl of C().sailors(s.crew)){
-        const w=C().toWorld(s.pose,sl.local),a=C().toWorld(s.pose,sl.local.map((v,i)=>v+(sl.dir[i]||0)));
+        const w=C().toWorld(view,sl.local),a=C().toWorld(view,sl.local.map((v,i)=>v+(sl.dir[i]||0)));
         if(w.z<-.05)continue;
         sprites.push({...w,draw:()=>{
           const p=w2sRaw(w,w.z),q=w2sRaw(a,a.z);
@@ -188,7 +198,7 @@
   // DEV panel (index.html #devShips).
   function bindDev(){
     const $=id=>document.getElementById(id);if(!$('devShipSpawn'))return;
-    const readout=msg=>{$('devShipReadout').textContent=msg||(ships.length?ships.length+' navi · '+ships.map(s=>M().ships[s.key].label+(s.berth?' (ormeggiata)':' (alla fonda)')).join(', '):'Nessuna nave')};
+    const readout=msg=>{$('devShipReadout').textContent=msg||(ships.length?ships.length+' navi · '+ships.map(s=>S().model(s.key).label+(s.berth?' (ormeggiata)':' (alla fonda)')).join(', '):'Nessuna nave')};
     $('devShipSpawn').onclick=()=>{
       const [allegiance,realm]=$('devShipFlag').value.split('|'),s=spawn({key:$('devShipKind').value,allegiance,realm});
       readout(s?null:'Nessun mare su questa mappa: scegli il bioma Mare');
@@ -198,7 +208,7 @@
     $('devShipLower').onclick=()=>{order('lower');readout()};
     $('devShipBattle').onclick=()=>{
       const [allegiance,realm]=$('devShipFlag').value.split('|'),b=battle({key:$('devShipKind').value,allegiance,realm});
-      readout(b?'Battaglia: '+M().ships[b.A.key].label+' attacca una nave straniera dello stesso tipo, alla fonda':'Nessun mare su questa mappa: scegli il bioma Mare');
+      readout(b?'Battaglia: '+S().model(b.A.key).label+' attacca una nave straniera dello stesso tipo, alla fonda':'Nessun mare su questa mappa: scegli il bioma Mare');
     };
   }
   if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindDev);else bindDev()}

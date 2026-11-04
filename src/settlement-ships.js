@@ -8,6 +8,9 @@
 (() => {
   const M=window.ConquerShipModels;if(!M?.ships)return;
   const keys=Object.keys(M.ships);
+  // Sailing ships and rowing boats (M.boats) by key, for the fleet and the crews.
+  M.models={...M.ships,...(M.boats||{})};
+  const model=key=>M.models[key]||null;
   const SAIL_TIME=3;                       // seconds to raise or lower the sails
   const smooth=t=>t*t*(3-2*t);
   // Heraldry. A ship belongs to the player's realm, to a foreign realm, or is a merchant:
@@ -56,8 +59,9 @@
   }
   // World-space mesh {pos,col} for a ship at {x,y,heading,z}; furl 0 = set, 1 = furled.
   // With heraldry {flag, sail, t} it adds the flags (waving at time t) and the arms on the sails.
-  function mesh(key,pose,furl=0,heraldry=null,liv=null){
-    const m=M.ships[key];if(!m)return null;
+  // row: rowing phase (radians) of a boat with oars; null leaves them at rest.
+  function mesh(key,pose,furl=0,heraldry=null,liv=null,row=null){
+    const m=model(key);if(!m)return null;
     const P=palette(liv);
     const pos=[],col=[],place=placer(pose),put=(x,y,zz)=>place(x,y,zz,pos);
     const quad=(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)};
@@ -65,14 +69,22 @@
       for(let k=0;k<3;k++){const j=m.i[t*3+k]*3;put(m.p[j],m.p[j+1],m.p[j+2])}
       col.push(P[m.c[t]]);
     }
-    const s=m.sails,f=Math.max(0,Math.min(1,furl));
+    // Oars swung about their thole pins: the blade sweeps aft in the water, lifts and comes
+    // forward again (feathered just clear of the surface).
+    for(const o of m.oars||[]){
+      const sweep=row==null?0:Math.sin(row)*.42,lift=row==null?0:Math.max(0,Math.cos(row))*.22,k=o.side||1;
+      const cz=Math.cos(sweep*k),sz=Math.sin(sweep*k),cl=Math.cos(lift*k),sl=Math.sin(lift*k),[px,py,pz]=o.pin;
+      const at=j=>{let x=o.p[j]-px,y=o.p[j+1]-py,z=o.p[j+2]-pz;const y1=y*cl-z*sl,z1=y*sl+z*cl;y=y1;z=z1;const x1=x*cz-y*sz,y2=x*sz+y*cz;return[px+x1,py+y2,pz+z]};
+      for(let t=0;t<o.c.length;t++){for(let q=0;q<3;q++){const v=at(o.i[t*3+q]*3);put(v[0],v[1],v[2])}col.push(P[o.c[t]])}
+    }
+    const s=m.sails||{c:[],v:[],f:[]},f=Math.max(0,Math.min(1,furl));
     for(let t=0;t<s.c.length;t++){
       for(let k=0;k<3;k++){const j=t*9+k*3;put(s.v[j]+(s.f[j]-s.v[j])*f,s.v[j+1]+(s.f[j+1]-s.v[j+1])*f,s.v[j+2]+(s.f[j+2]-s.v[j+2])*f)}
       col.push(P[s.c[t]]);
     }
     if(!heraldry)return{pos,col};
     // Arms on the sails: each patch follows its cloth (set / furled) just off both faces.
-    const sailGrid=heraldry.sail&&m.emblems.length?m.emblems.map(e=>sample(heraldry.sail,e.cols,e.rows)):null;
+    const sailGrid=heraldry.sail&&m.emblems?.length?m.emblems.map(e=>sample(heraldry.sail,e.cols,e.rows)):null;
     if(sailGrid)m.emblems.forEach((e,n)=>{
       const g=sailGrid[n];if(!g)return;
       const W=e.cols+1,ax=e.axis==='x'?0:1;
@@ -95,7 +107,7 @@
   }
   // The flags alone, as a world mesh: cheap enough to wave every frame over a cached ship.
   function flagMesh(key,pose,h,t=0){
-    const m=M.ships[key];if(!m||!h)return null;
+    const m=model(key);if(!m||!h)return null;
     const pos=[],col=[],place=placer(pose),put=(x,y,zz)=>place(x,y,zz,pos);
     addFlags(m,h,t,(a,b,c,d,colour)=>{for(const q of [a,b,c,a,c,d])put(q[0],q[1],q[2]);col.push(colour,colour)});
     return{pos,col};
@@ -128,6 +140,6 @@
   }
   // Rowing boats (M.boats): hull, oars and crew marks only, no sails.
   for(const [k,m] of Object.entries(M.boats||{}))M.lab[k]={parts:{hull:{p:m.p,i:m.i,c:m.c}}};
-  window.ConquerShips=Object.freeze({keys,mesh,livery,PAINTS,WOODS,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
+  window.ConquerShips=Object.freeze({keys,model,mesh,livery,PAINTS,WOODS,flagMesh,toWorld,sailState,step,raise,lower,cycle,SAIL_TIME,FOREIGN,arms,
     small:keys.filter(k=>M.ships[k].size==='small'),large:keys.filter(k=>M.ships[k].size==='large')});
 })();

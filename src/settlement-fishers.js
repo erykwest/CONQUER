@@ -9,8 +9,8 @@
 (() => {
   const REACH=14,FOOD_PER_DAY=1.2;
   // Visual day (0..1): leave, reach the ground, haul in, back at the berth.
-  const DEPART=.24,GROUND_AT=.32,RETURN=.60,HOME_AT=.68;
-  const GROUND_OUT=24,CLEAR=5;
+  const DEPART=.24,RETURN=.62;
+  const GROUND_OUT=24;
   const hash=s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0};
   const harbour=()=>(State.structures||[]).filter(s=>(s.type==='pier'||s.type==='quay')&&!underConstruction(s));
   const workCentre=s=>s.type==='quay'?{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2}:{x:s.x,y:s.y};
@@ -36,64 +36,98 @@
   }
   const isFisher=h=>!!h&&fisherIds().has(h.id);
   const fishers=()=>(State.structures||[]).filter(isFisher);
-  // One boat per fisherman: moored at a free berth, never at anchor; boats of houses that no
-  // longer fish are taken away.
+  // One boat per fisherman, moored at a free berth (never at anchor): half the households row a
+  // barchetta, the others sail a barca; boats of houses that no longer fish are taken away.
+  const boatKey=id=>hash('boat|'+id)%2?'barchetta':'barca';
   function syncBoats(){
     const F=window.ConquerFleet;if(!F)return;
     const ids=fisherIds();
     for(const s of F.ships.slice())if(s.fisher&&!ids.has(s.fisher))F.remove(s.id);
     for(const id of ids)if(!F.ships.some(s=>s.fisher===id)){
-      const boat=F.spawn({key:'barca',allegiance:'merchant',realm:'player',noAnchor:true,fisher:id});
+      const boat=F.spawn({key:boatKey(id),allegiance:'merchant',realm:'player',noAnchor:true,fisher:id});
       if(!boat)break;
     }
   }
-  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
   const working=()=>{
     const day=Math.floor(State.clock?.day||0);
     return((day%7)+7)%7<5&&(window.ConquerCombat?.alarmMode?.()||'off')==='off';
   };
-  // Offshore point for a boat: along the coast normal at the berth, inside the sea.
+  // Fishing ground for a boat: off the coast from its berth, in open water its hull fits.
   function ground(boat,home){
     const hit=window.ConquerPier?.coastHit(home);if(!hit)return null;
-    const n=hit.normal,t={x:-n.y,y:n.x},r=(hash(boat.fisher)%1000)/1000;
-    const sea=(State.environment||[]).find(f=>f.type==='sea');
-    for(let k=GROUND_OUT;k>=8;k-=4){
-      const p={x:home.x+n.x*k+t.x*(r-.5)*16,y:home.y+n.y*k+t.y*(r-.5)*16};
-      if(!sea||environmentContains(sea,p,-2))return{p,n};
+    const n=hit.normal,t={x:-n.y,y:n.x},r=(hash(boat.fisher)%1000)/1000,N=window.ConquerSeaNav;
+    const B=window.ConquerShips?.model(boat.key)?.B||1;
+    // Each boat keeps 10U from the grounds the other boats are fishing or heading to.
+    const taken=(window.ConquerFleet?.ships||[]).filter(o=>o!==boat&&o.fish?.ground&&o.fish.phase!=='moored').map(o=>o.fish.ground.p);
+    for(let k=GROUND_OUT;k>=8;k-=4)for(const lat of [0,1,-1,2,-2,3,-3]){
+      const p={x:home.x+n.x*k+t.x*((r-.5)*8+lat*9),y:home.y+n.y*k+t.y*((r-.5)*8+lat*9)};
+      if(taken.some(q=>Math.hypot(q.x-p.x,q.y-p.y)<10))continue;
+      if(N?N.clearAt(p)>=N.need(B)+1.5:true)return{p,n};
     }
     return null;
   }
-  // The boat's pose and whether it is away from its berth at this moment of the day.
-  function pose(boat,home,now){
-    const frac=typeof visualCycleFrac==='function'?visualCycleFrac():.5;
-    if(!working()||frac<DEPART||frac>HOME_AT)return null;
-    const g=ground(boat,home);if(!g)return null;
-    const clear={x:home.x+g.n.x*CLEAR,y:home.y+g.n.y*CLEAR};
-    // Off the berth, then out to the ground (or the way back, reversed).
-    const leg=(u,out)=>{
-      const a=u<.3?home:clear,b=u<.3?clear:g.p,k=u<.3?u/.3:(u-.3)/.7,s=smooth(k);
-      const p={x:a.x+(b.x-a.x)*s,y:a.y+(b.y-a.y)*s},dx=(b.x-a.x)*(out?1:-1),dy=(b.y-a.y)*(out?1:-1);
-      return{x:p.x,y:p.y,heading:Math.atan2(dy,dx),z:0};
-    };
-    if(frac<GROUND_AT)return leg((frac-DEPART)/(GROUND_AT-DEPART),true);
-    if(frac>RETURN){const p=leg(1-(frac-RETURN)/(HOME_AT-RETURN),false);return p}
-    // On the ground: a slow circle with the nets out (real time, so it moves with the day held).
-    const w=now*.06+(hash(boat.fisher)%628)/100,R=3.5;
-    return{x:g.p.x+Math.cos(w)*R,y:g.p.y+Math.sin(w)*R,heading:w+Math.PI/2,z:0};
+  // The net: paid out abeam (cast), left to fish (soak), hauled back aboard (haul), a pause.
+  const NET=Object.freeze({cast:6,soak:20,haul:6,rest:4});
+  function netScale(t){
+    const T=NET.cast+NET.soak+NET.haul+NET.rest,u=((t%T)+T)%T;
+    if(u<NET.cast)return .15+.85*(u/NET.cast);
+    if(u<NET.cast+NET.soak)return 1;
+    if(u<NET.cast+NET.soak+NET.haul)return 1-.85*((u-NET.cast-NET.soak)/NET.haul);
+    return 0;
   }
-  // Called by ConquerFleet each frame after the berths are synced.
+  // The day of a fishing boat: moored -> out (along a sea route) -> fishing (nets) -> home.
+  let lastNow=null;
   function step(now){
     syncBoats();
-    for(const s of window.ConquerFleet?.ships||[]){
+    const F=window.ConquerFleet,N=window.ConquerSeaNav,S=window.ConquerShips;if(!F)return;
+    const dt=lastNow==null?0:Math.max(0,Math.min(.25,now-lastNow));lastNow=now;
+    const frac=typeof visualCycleFrac==='function'?visualCycleFrac():.5,want=working()&&frac>=DEPART&&frac<RETURN;
+    for(const s of F.ships){
       if(!s.fisher)continue;
-      const home=s.pose,p=s.berth?pose(s,s.home||home,now):null;
-      s.home=home;
-      const S=window.ConquerShips;
-      if(p){s.pose=p;s.away=true;S.lower(s.crew.sail)}
-      else{s.away=false;S.raise(s.crew.sail)}
+      const f=s.fish||(s.fish={phase:'moored'});
+      if(f.phase==='moored'){
+        f.home={...s.pose};s.row=null;
+        if(want&&s.berth&&N){const g=ground(s,f.home);if(g){f.ground=g;f.phase='out';f.pose={...s.pose}}}
+      }else s.pose=f.pose;           // the berth sync put it back alongside: it is out at sea
+      let moving=false;
+      if(f.phase==='out'){
+        const r=N.drive(s,f.ground.p,dt,F.ships);moving=r==='moving';
+        if(r==='arrived'){f.phase='fishing';f.t0=now;s.nav=null}
+        if(r==='stuck'){f.phase='moored';s.nav=null}
+      }else if(f.phase==='fishing'){
+        // Drifting slowly, bow turning to the wind, while the net is out.
+        s.pose.heading+=dt*.04;
+        if(!want&&netScale(now-f.t0)===0){f.phase='home'}
+      }
+      if(f.phase==='home'){
+        const r=N.drive(s,f.home,dt,F.ships);moving=r==='moving';
+        if(r==='arrived'||r==='stuck'){f.phase='moored';s.nav=null;s.pose={...f.home}}
+      }
+      if(f.phase!=='moored')f.pose=s.pose;
+      s.away=f.phase!=='moored';
+      // Sails set on the way, furled in port and while fishing; the barchetta rows.
+      if(moving)S.lower(s.crew.sail);else S.raise(s.crew.sail);
+      s.row=moving&&s.key==='barchetta'?((s.row||0)+dt*3.6)%(Math.PI*2):null;
     }
   }
-  // The fisherman's lot (tools/blender/build_fishing.py): a net hung out to dry and a fish
+  // Nets of the boats on their fishing grounds (fishing-models castNet), scaled as they are
+  // cast and hauled, lying abeam on the water.
+  function netMeshes(now){
+    const K=window.ConquerFishingModels?.models?.castNet,P=window.ConquerFishingModels?.palette;if(!K)return[];
+    const out=[];
+    for(const s of window.ConquerFleet?.ships||[]){
+      if(s.fish?.phase!=='fishing')continue;
+      const k=netScale(now-s.fish.t0);if(k<=0)continue;
+      const m=window.ConquerShips.model(s.key),h=s.pose.heading,R=.95*k,side=(m?.B||1)/2+R+.25;
+      const o={x:s.pose.x-Math.sin(h)*side,y:s.pose.y+Math.cos(h)*side},pos=[],col=[],sc=1.1*k;
+      for(const part of Object.values(K.parts))for(let t=0;t<part.c.length;t++){
+        for(let q=0;q<3;q++){const j=part.i[t*3+q]*3;pos.push(o.x+part.p[j]*sc,o.y+part.p[j+1]*sc,part.p[j+2])}
+        col.push(P[part.c[t]]);
+      }
+      out.push({pos,col});
+    }
+    return out;
+  }  // The fisherman's lot (tools/blender/build_fishing.py): a net hung out to dry and a fish
   // rack on the seaward side of the house, the baskets with the catch by the door.
   let lotCache={key:null,meshes:[]};
   function lotMeshes(){
@@ -119,5 +153,5 @@
     }
     lotCache={key,meshes};return meshes;
   }
-  window.ConquerFishers=Object.freeze({REACH,FOOD_PER_DAY,isFisher,fishers,fisherIds,syncBoats,step,pose,working,lotMeshes});
+  window.ConquerFishers=Object.freeze({REACH,FOOD_PER_DAY,isFisher,fishers,fisherIds,syncBoats,step,working,ground,netScale,netMeshes,lotMeshes,boatKey});
 })();
