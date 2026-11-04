@@ -101,6 +101,7 @@
     if(fn==='kitchen')return l===1&&s.type==='built';
     // Cistern: ground floor of medium or large (W2/W3) stone towers.
     if(fn==='cistern')return l===1&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
+    if(fn==='dovecote')return l===top&&towerDovecoteAllowed(s);
     // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
     if(fn==='infirmary')return l<=2&&s.type==='built';
     // Latrine: upper floor of a W1 built section, where its garderobe fits on the exterior face.
