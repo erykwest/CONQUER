@@ -49,6 +49,37 @@ Il **cutaway per piani** (D-CUT-01, branch `feature/cutaway-floors`, unito qui) 
 - **Guardia:** due tavoli con sgabelli, rastrelliera d'armi, scudi, brande, cassone.
 - **Prigione:** celle lungo la parete di fondo dietro l'inferriata, con paglia, secchio e catene, e il tavolo del carceriere vicino alla porta.
 
+**Tribunale in seduta** (`src/settlement-court-people.js`, `ConquerCourtPeople`). Quando il Municipio selezionato mostra il piano del tribunale nel cutaway, la sala si riempie. Succede dal lunedì al venerdì, dalle 9 alle 17, se la campana d'allarme è ferma.
+
+- **Chi c'è:**
+  - tre giudici in toga rossa con collo d'ermellino e berretto, seduti al banco; quello che presiede alza la mano di tanto in tanto;
+  - il cancelliere in nero che scrive alla sua scrivania;
+  - il prigioniero alla sbarra, in camicia grezza con le mani legate, tra due guardie con la lancia;
+  - il pubblico sulle panche, rado: un'estrazione fissa per edificio.
+- **Posti:** vengono da `ConquerCivic3D.roomSlots`, che usa lo stesso `tribunalLayout` dell'arredo.
+- **Disegno:** le persone sono disegnate a ogni fotogramma con le figure dei popolani, come l'artigiano delle botteghe e le persone degli eventi. Non entrano nella mesh del cutaway.
+- **Natura:** sono decorative e provvisorie, senza residenti né sentenze. Un futuro runtime CRIME può sostituirle con `setOccupancySource`.
+- **Costumi di ruolo:** stanno in `ConquerWardrobe.ROLE_PIECES` e sono `judgeRobe`, `judgeCap`, `clerkGown`, `clerkCap`, `prisonerShirt` e `executionerHood` (quest'ultimo già pronto per il boia). Il guardaroba stagionale non li assegna mai. Nel Lab si trovano sotto *Popolazione · Costumi di ruolo*.
+
+**Prigioni occupate** (a ogni ora, stesso modulo):
+
+- **Municipio:** la prigione sta al piano terra, con **da 1 a 5 detenuti per cella**. Il primo della prima cella sta in piedi alle sbarre, gli altri seduti sulla paglia; il carceriere sonnecchia al tavolo vicino alla porta.
+  - Celle e carceriere seguono `prisonLayout`, lo stesso dell'arredo.
+  - Quando la camera guarda le celle attraverso l'inferriata, le sbarre (`ConquerCivic3D.prisonBars`) vengono ridisegnate sopra i detenuti.
+- **Torri e sezioni:** nelle prigioni del castello (solo al piano terra) ci sono **da 1 a 5 detenuti per cella**, e una stanza grande ha due celle. Li disegna `drawCutawayOccupants` accanto a soldati e nobili.
+
+**Gogna, forca e patibolo in uso** (stesso modulo, `justiceSlots` / `justiceScene`). Le scene sono sobrie: nessun condannato sulla forca o sul patibolo, nessuna esecuzione; la scena si ferma all'attesa.
+
+- **Gogna:** dal lunedì al sabato, dalle 8 alle 17. Un condannato a mani legate sta sulla pedana e un capannello davanti lo schernisce col pugno alzato.
+- **Forca e patibolo:** il «giorno di giustizia», il venerdì dalle 10 a mezzogiorno.
+  - Sul palco aspetta il boia, incappucciato e a braccia conserte.
+  - Sul patibolo c'è anche un magistrato che legge la sentenza dalla panca.
+  - Due guardie stanno ai piedi della scala e una folla a semicerchio davanti.
+- **Sospensione:** l'allarme svuota la piazza.
+- **Disegno:** chi sta dietro alla struttura viene ritagliato lungo la sagoma della parte piena (base, pedana, drappo, parapetto). Pali e trave restano trasparenti.
+
+Test: `qa/court-people-regression.cjs`.
+
 Gogna, forca e patibolo riusano il contratto delle `eventVenue` (posa a due clic, cantiere, costo, modello nel catalogo eventi). Nel nuovo Builder compaiono nello strumento **Giustizia**; nel vecchio, tra gli edifici civili. Nel Lab sono nella categoria *Edifici · Giustizia*.
 
 Test: `qa/crime-buildings-regression.cjs`.

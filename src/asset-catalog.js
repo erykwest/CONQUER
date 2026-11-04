@@ -120,6 +120,12 @@
     items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
       kind:'wardrobe',key,format:'Overlay',note:'Si attiva: '+wardrobe[key].when+'.',source:'src/settlement-wardrobe.js'});
   }
+  // Costumes of office (crime): whole outfits by role, as the tribunal scene dresses them.
+  for(const [key,title,pieces] of [['judge','Giudice',['judgeRobe','judgeCap']],['clerk','Cancelliere',['clerkGown','clerkCap']],
+    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']]])
+    if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
+      items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
+        format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -426,7 +432,7 @@
       [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
         const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
         drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
-          outfit:W.compose([item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+          outfit:W.compose(item.pieces||[item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
       });
     }catch(error){
       console.warn('Asset Lab wardrobe thumbnail could not render',item.key,error);

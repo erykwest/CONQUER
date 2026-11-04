@@ -1,5 +1,16 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Tribunale in seduta (branch `feature/crime-tribunal-scene`, su `feature/crime-buildings`)
+
+- **Scena:** quando il Municipio selezionato mostra il piano del tribunale, nei giorni feriali dalle 9 alle 17 e senza allarme, la sala si riempie di persone.
+  - **Chi:** giudici in toga e berretto rossi (quello che presiede alza la mano), cancelliere che scrive, prigioniero a mani legate tra due guardie, pubblico sulle panche.
+  - **Come:** nuovo modulo `src/settlement-court-people.js`; i posti vengono da `ConquerCivic3D.roomSlots`, che condivide il layout con l'arredo.
+- **Prigioni occupate:** al piano terra, da 1 a 5 detenuti per cella (alle sbarre o seduti sulla paglia, sbarre ridisegnate davanti) e carceriere al tavolo nel Municipio; lo stesso nelle prigioni del castello. A ogni ora.
+- **Gogna, forca e patibolo in uso:** gogna occupata (lun–sab, 8–17) con capannello che schernisce; «giorno di giustizia» (venerdì 10–12) con boia incappucciato sul palco, magistrato che legge sul patibolo, guardie alla scala e folla. Scene sobrie, senza condannato sul palco né esecuzione.
+- **Costumi di ruolo:** catalogo separato `ConquerWardrobe.ROLE_PIECES` (giudice, cancelliere, prigioniero, boia), mai assegnato per stagione. Nel Lab sotto *Costumi di ruolo*.
+- **Prove:** nuova `qa/court-people-regression.cjs`, anche nel workflow CRIME. Specifica in [crime.md](../crime.md).
+- **Piramide:** STATUS, BACKLOG (C-04 avviato). ROADMAP e DECISIONS invariate: è la prima scena visiva di C-04 e non cambia contratti.
+
 ## 2026-11-03 — Edifici e stanze di CRIME nel Builder (branch `feature/crime-buildings`)
 
 - **Municipio:** una stanza per piano (tante quante i livelli) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate sull'intero piano e viste un piano per volta col cutaway per piani (unito da `feature/cutaway-floors`).
@@ -8,6 +19,11 @@
 - **Gogna, forca e patibolo:** tre strutture di piazza collocabili, con modelli Blender, nel Lab e nel Builder; in `/crime/` il patibolo è separato dalla forca.
 - **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
 - **Piramide:** STATUS, BACKLOG (C-02 e C-03 su branch), DECISIONS (tribunale nel Municipio). ROADMAP invariata.
+
+## 2026-11-04 — Case L4 in 3D con il kit Blender (branch `feature/houses-blender-l4`)
+
+- Le case L4 in World 3D usano il kit: torrette d'angolo tonde e quadrate (muri in pietra e graticcio, finestre del kit, tetto conico o a piramide con pinnacolo, nuovi pezzi Blender) e abbaini con finestra del kit. Kit a 11 pezzi; 2 voci nuove nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
 
 ## 2026-11-03 — Case L1 e L2 in 3D con il kit Blender (branch `feature/houses-blender-l1`)
 
@@ -55,6 +71,7 @@
 - Confrontati i tre branch selezionati con main 49831855: nessun residuo utile da integrare; assedio coperto da #61, eventi da #78/#110, cavalieri/messaggeri 2D da #96 e convogli da #105.
 - 18/18 regressioni pertinenti superate. Il codice 3D del vecchio branch cavalieri resta escluso (D-046); nessuna regressione al vecchio inventario o al vecchio modello danni.
 - Workflow di pulizia limitato ai tre commit verificati, con protezione dei ref aggiornati e delle PR aperte. Nessuna nuova PR o modifica al runtime.
+
 
 ## 2026-11-02 — Ballatoi di torri e porte (branch `feature/tower-hoardings`)
 
