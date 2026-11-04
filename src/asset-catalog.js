@@ -20,7 +20,9 @@
     {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
     {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
     // Elements a room adds to the outside of its building (ROOM_EXTERIOR, settlement-room-exterior.js).
-    {global:'ConquerGarderobeModels',collection:'models',category:'Fortificazioni',family:'Elementi esterni delle stanze'}
+    // Blender parts listed under Edifici, as the house kit: Fortificazioni holds only engine meshes and
+    // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
+    {global:'ConquerGarderobeModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
