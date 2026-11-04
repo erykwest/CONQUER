@@ -96,6 +96,7 @@
     if(fn==='prison')return l===1&&s.type!=='gate';
     // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
     if(fn==='kitchen')return l===1&&s.type==='built';
+    if(fn==='dovecote')return l===top&&towerDovecoteAllowed(s);
     // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
     if(fn==='infirmary')return l<=2&&s.type==='built';
     // Latrine: upper floor of a W1 built section, where its garderobe fits on the exterior face.

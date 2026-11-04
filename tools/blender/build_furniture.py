@@ -323,6 +323,39 @@ def f_stocks(p):
     for y in (-.3, 0, .3):
         p.box((.055, y, .45), (.01, .12, .12), 'soot')
 
+def pigeon(p, x, y, z, turn=0):
+    ca, sa = math.cos(turn), math.sin(turn)
+    at = lambda fx, fy, fz: (x + fx * ca - fy * sa, y + fx * sa + fy * ca, z + fz)
+    p.cylinder(.08, 0, 'stoneLight', n=7, axis='x', center=at(-.02, 0, .09), radii=[.02, .07, .08, .05], along=[-.12, -.06, .02, .08], squash=.85)
+    p.cylinder(.04, 0, 'stoneDark', n=6, axis='z', center=at(.07, 0, .13), radii=[.04, .035, 0], along=[0, .06, .1])
+    p.taper(at(-.1, 0, .1), at(-.18, 0, .08), .06, .02, .08, .01, 'stoneDark')
+# Dovecote room (Colombaia): a timber wall of nesting holes, a perch rack and the birds.
+def f_nest_wall(p):
+    rows, cols, w, h = 4, 3, 1.15, 2.0                                        # fits a medium (T2) tower room
+    p.box((-.17, 0, h / 2), (.06, w, h), 'woodDark')                          # back boards
+    for y in (-w / 2, w / 2):
+        p.box((0, y, h / 2), (.34, .05, h), 'wood')
+    for r in range(rows + 1):
+        p.box((0, 0, .15 + r * .45), (.34, w, .04), 'wood')                   # shelves
+    for r in range(rows):
+        for c in range(cols):
+            y = -w / 2 + (c + .5) * w / cols
+            p.box((-.13, y, .37 + r * .45), (.02, .2, .26), 'soot')            # dark nest hole
+            if c < cols - 1:
+                p.box((0, y + w / cols / 2, .37 + r * .45), (.3, .03, .41), 'wood')
+            if (r * cols + c) % 3 == 1:
+                p.box((-.03, y, .2 + r * .45), (.2, .2, .03), 'straw')       # nesting straw
+    for r, c in ((0, 1), (1, 2), (2, 0), (3, 1)):
+        pigeon(p, .1, -w / 2 + (c + .5) * w / cols, .17 + r * .45)
+def f_perch(p):
+    for y in (-.45, .45):
+        p.box((0, y, .7), (.06, .06, 1.4), 'woodDark')
+    p.box((0, 0, .04), (.4, 1.0, .08), 'woodDark')
+    for z in (.6, 1.0, 1.35):
+        p.beam((0, -.5, z), (0, .5, z), .035, .035, 'woodLight')
+    pigeon(p, 0, -.2, 1.37, .8); pigeon(p, 0, .25, 1.02, -.6)
+    p.cylinder(.16, 0, 'wood', n=8, axis='z', center=(.1, .2, .08), radii=[.14, .16], along=[0, .1], cap_key='hay')   # grain bowl
+
 PIECES = (
     ('bench', f_bench), ('tableLong', f_table_long), ('tableSmall', f_table_small), ('stool', f_stool), ('chair', f_chair),
     ('chest', f_chest), ('brazier', f_brazier), ('banner', f_banner),
@@ -336,6 +369,7 @@ PIECES = (
     ('altar', f_altar), ('pew', f_pew), ('kneeler', f_kneeler), ('lectern', f_lectern), ('candleStand', f_candle_stand), ('torchWall', f_torch_wall),
     ('throne', f_throne), ('strongChest', f_strong_chest), ('coinSacks', f_coin_sacks), ('goldChest', f_gold_chest), ('ingotRack', f_ingot_rack),
     ('cellBars', f_cell_bars), ('wallChains', f_wall_chains), ('straw', f_straw), ('stocks', f_stocks),
+    ('nestWall', f_nest_wall), ('perch', f_perch),
     ('infirmaryBed', f_infirmary_bed), ('herbShelf', f_herb_shelf),
 )
 # Light sources (local metres): torch and candle flames glow in the night cutaway.
