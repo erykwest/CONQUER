@@ -144,6 +144,15 @@ const StructureCommands=(()=>{
     status('Bartizans: '+({none:'none',battlement:'crenellated',pitched:'spire'}[target.bartizan])+(towerBartizanAllowed(target)?'':' (needs a large T3 square or round stone tower)'));
     return true;
   }
+  // Alarm bell on the roof apex of a T1-T2 tower with a pitched roof (settlement-alarm-bells.js).
+  function setTowerBell(id,value){
+    const target=find(id),bells=window.ConquerAlarmBells;if(!target||target.type!=='tower'||!bells)return false;
+    if(value==='bell'&&!bells.towerBellAllowed(target)){status('Alarm bell: needs a T1-T2 tower with a pitched roof and no dovecote or mews under it');return false}
+    if(!setStructureVariant(target,'bell',value))return false;
+    refresh(target,false);
+    status(value==='bell'?'Alarm bell: heard '+bells.hearingRadius(target)+'U around the tower':'Alarm bell removed');
+    return true;
+  }
   function setCivicLevel(id,level){
     const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
     if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
@@ -279,6 +288,12 @@ const StructureCommands=(()=>{
     if(s.type==='tower'||s.type==='gate')
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360});
     if(s.type==='tower'){
+      const bells=window.ConquerAlarmBells;
+      if(bells&&s.shape!=='half'&&towerTier(s)<=2){
+        const off=!bells.towerBellAllowed(s);
+        d.controls.push(choice('bell','setTowerBell',[{value:'none',word:'none'},{value:'bell',word:'bell',disabled:off}],structureVariant(s,'bell')));
+        if(bells.towerBell(s))d.facts.push({key:'bellRange',value:bells.hearingRadius(s)+'U'});
+      }
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
@@ -306,6 +321,8 @@ const StructureCommands=(()=>{
     }
     if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
       d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
+    if((s.type==='church'||s.type==='townhall')&&window.ConquerAlarmBells)
+      d.facts.push({key:'bellRange',value:window.ConquerAlarmBells.hearingRadius(s)+'U'});
     if(typeof isPlazaLike==='function'&&isPlazaLike(s))
       d.controls.push(choice('plaza','setPlazaVariant',PLAZA_VARIANTS.map(v=>({value:v,word:v})),plazaVariant(s)));
     if(s.type==='gate'&&!building&&window.ConquerSiege?.doorStage){
@@ -342,6 +359,6 @@ const StructureCommands=(()=>{
   }
 
   return{setTier,setHeight,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();

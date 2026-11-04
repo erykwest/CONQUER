@@ -305,7 +305,9 @@ const STRUCTURE_VARIANTS=Object.freeze({
     bartizan:Object.freeze(['none','battlement','pitched']),
     roofShape:Object.freeze(['pyramid','gable','hip']),
     // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
-    hoarding:Object.freeze(['off','on'])
+    hoarding:Object.freeze(['off','on']),
+    // Alarm bell under a small belfry on the roof apex (rules: settlement-alarm-bells.js).
+    bell:Object.freeze(['none','bell'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -320,7 +322,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
