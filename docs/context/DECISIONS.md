@@ -26,7 +26,12 @@ Decisione esplicita dell'utente: P0 bridge, circle, jobmanager e knights; P2 mes
 
 - **DECISO per il laboratorio `/crime/`:** separare criminalità, ordine pubblico e tensione sociale. La severità, gogna e patibolo possono aumentare la deterrenza **ma anche il risentimento**; assistenza/ospizio e presidio agiscono su leve diverse. La sommossa è una fase di escalation, non un generico malus; la rivolta non viene risolta da un secondo sistema di combattimento.
 - **CONTRATTO DI SVILUPPO:** solo fixture locali e deterministiche, salvataggio dedicato, nessuna mutazione del `State` canonico o duplicazione di popolazione/risorse. La gestione effettiva riuserà popolazione, economia, stanze e Combat quando sarà integrata.
-- **ANCORA PROPOSTO/DA VERIFICARE:** posizionamento reale di gogna e forca; ospizio come annesso Chiesa L2; corpo di guardia e prigione come stanze W2/W3; tribunale nel Palazzo cittadino **solo dopo verifica degli slot**; soglie numeriche, eventi e durate. La loro presenza nel catalogo di fixture non è implementazione nel Builder.
+- **DECISO (03/11/2026):**
+  - **Tribunale:** è una stanza del Municipio, che ha una stanza per piano (tante quante i livelli civici, D-CUT-01) con un catalogo civico separato da quello del castello. Il tribunale richiede L2.
+  - **Ospizio:** annesso della Chiesa L2.
+  - **Guardia e prigione:** sono le funzioni di stanza esistenti (torri T2/T3, porte, sezioni costruite) e anche stanze (piani) del Municipio. La **prigione** sta solo al piano terra (P0), mai nelle porte, e ha **al massimo 5 detenuti per cella** (03/11/2026).
+  - **Gogna, forca e patibolo:** tre strutture di piazza distinte e collocabili, sul contratto `eventVenue`, rappresentate vuote e sobrie. Anche in `/crime/` il patibolo è un flag separato dalla forca (prima «Forca / patibolo»); i salvataggi vecchi lo caricano spento.
+- **ANCORA PROPOSTO/DA VERIFICARE:** soglie numeriche, eventi e durate; personale delle guardie; lettura delle strutture reali da parte di `/crime/`.
 - [Specifica del prototipo](../crime.md). La roadmap strategica attuale resta invariata.
 
 
