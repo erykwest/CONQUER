@@ -26,6 +26,7 @@ COLORS.update({
     'heraldA': '#7f2323', 'heraldB': '#243f79', 'gold': '#d1aa4c', 'goldDark': '#9c7a2c',
     'cloth': '#d9cfb8', 'clothDark': '#a89c84', 'straw': '#d6b551', 'ember': '#e0702a', 'flame': '#ffd27a',
     'soot': '#2b2622', 'stoneWarm': '#a39a8c', 'linen': '#ece4d2', 'candle': '#efe6cf',
+    'herb': '#6f8a4a', 'herbDry': '#a39a5c',
 })
 COLL_NAME = 'CONQUER_Furniture'
 
@@ -124,6 +125,26 @@ def f_pallet(p):
     p.box((0, 0, .06), (.8, 1.9, .12), 'straw'); p.box((0, .75, .14), (.55, .25, .06), 'linen'); p.box((.02, -.3, .13), (.76, .9, .03), 'clothDark')
 def f_wash_basin(p):
     table(p, .45, .45, .7, 'wood'); p.cylinder(.2, 0, 'ironLight', n=10, axis='z', center=(0, 0, .7), radii=[.12, .2], along=[0, .1], cap_key='iron')
+def f_infirmary_bed(p):
+    """Low ward cot: wooden frame on short legs, straw tick, linen sheet, folded wool blanket, headboard."""
+    p.box((0, 0, .32), (.86, 1.96, .07), 'wood'); legs(p, 1.96, .86, .29, t=.07, inset=.06)
+    p.box((0, .97, .55), (.86, .06, .5), 'woodDark')                                  # headboard
+    p.box((0, 0, .41), (.78, 1.86, .11), 'straw'); p.box((0, -.05, .47), (.8, 1.7, .025), 'linen')
+    p.box((0, .74, .5), (.56, .26, .08), 'linen'); p.box((.01, -.55, .49), (.82, .62, .05), 'clothDark')
+def f_herb_shelf(p):
+    """Apothecary wall shelf: jars and a mortar on the boards, herb bundles drying from a rail."""
+    for y in (-.55, .55):
+        p.box((-.15, y, .95), (.3, .05, 1.9), 'woodDark')
+    for z in (.45, 1.0):
+        p.box((-.15, 0, z), (.3, 1.15, .04), 'wood')
+        for i, y in enumerate((-.38, -.13, .13, .38)):
+            p.cylinder(.055, 0, 'stoneLight' if i % 2 else 'candle', n=6, axis='z', center=(-.15, y, z + .02), radii=[.05, .06, .035], along=[0, .14, .18])
+    p.cylinder(.09, 0, 'stone', n=8, axis='z', center=(-.12, .25, 1.02), radii=[.06, .09], along=[0, .1], cap_key='stoneDark')     # mortar
+    p.beam((-.2, -.08, 1.04), (-.08, .32, 1.2), .02, .02, 'woodLight')                                                           # pestle
+    p.beam((.02, -.55, 1.78), (.02, .55, 1.78), .03, .03, 'woodDark')
+    for i, y in enumerate((-.4, -.2, 0, .2, .4)):
+        p.beam((.02, y, 1.76), (.02, y, 1.62), .008, .008, 'twine')
+        p.taper((.02, y, 1.62), (.02, y, 1.36), .1, .08, .03, .03, 'herb' if i % 2 else 'herbDry')
 def f_grain_bin(p):
     p.box((0, 0, .5), (1.0, 1.6, 1.0), 'wood')
     for y in (-.79, .79):
@@ -304,6 +325,7 @@ PIECES = (
     ('altar', f_altar), ('pew', f_pew), ('kneeler', f_kneeler), ('lectern', f_lectern), ('candleStand', f_candle_stand), ('torchWall', f_torch_wall),
     ('throne', f_throne), ('strongChest', f_strong_chest), ('coinSacks', f_coin_sacks), ('goldChest', f_gold_chest), ('ingotRack', f_ingot_rack),
     ('cellBars', f_cell_bars), ('wallChains', f_wall_chains), ('straw', f_straw), ('stocks', f_stocks),
+    ('infirmaryBed', f_infirmary_bed), ('herbShelf', f_herb_shelf),
 )
 # Light sources (local metres): torch and candle flames glow in the night cutaway.
 LIGHTS = {'torchWall': [(.17, 0, 2.1, 'torch')], 'brazier': [(0, 0, 1.0, 'fire')], 'hearth': [(.05, 0, .45, 'fire')],

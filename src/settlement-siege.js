@@ -80,6 +80,8 @@
     if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
     // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
     if(fn==='kitchen')return l===1&&s.type==='built';
+    // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
+    if(fn==='infirmary')return l<=2&&s.type==='built';
     if(['granary','storage','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
     return true;
@@ -290,6 +292,7 @@
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
+    if(elapsed)window.ConquerInfirmary?.tick(after-elapsed,after);
     if(!elapsed)return;
     const demand=dailyFoodDemand()*elapsed;
     if(demand<=0)return;
