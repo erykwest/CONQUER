@@ -37,14 +37,13 @@
   });
   const fmt=n=>Math.max(0,Math.round(Number(n)||0));
   // Military stables (extends `stables`, no new room type): a tower stable holds one stall block
-  // (5 horses); in a built section the stalls run its length, 5 horses per U of room, and a wide
-  // hall (two rows of stalls) holds twice as many. When the food runs out, the horses no knight
-  // rides are slaughtered: each one feeds HORSE_FOOD rations.
+  // (5 horses); in a W1 built section the stalls run its length, 5 horses per U of room. Never in a
+  // W2 wide hall (user decision, 04/11/2026). When the food runs out, the horses no knight rides
+  // are slaughtered: each one feeds HORSE_FOOD rations.
   const HORSE_FOOD=20;
   function stableUnits(s){
     if(s?.type!=='built')return 1;
-    const length=Math.max(1,Math.floor(Number(s.length)||1));
-    return length*(typeof isWideBuilt==='function'&&isWideBuilt(s)?2:1);
+    return Math.max(1,Math.floor(Number(s.length)||1));
   }
   const roomUnits=(s,fn,index)=>fn==='stables'?stableUnits(s,index):functionSlotUnits(s,index);
   // Garrison hygiene: the courtyard and chamber pots serve a small garrison; each latrine serves
@@ -102,7 +101,9 @@
     if(fn==='council'||fn==='tribunal')return false;   // civic rooms, town hall only
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
-    if(['stables','workshop'].includes(fn))return l===1&&s.type!=='gate'&&!s.parentTowerId;
+    // Stables: ground floor of a tower or of a W1 built section, never a W2 wide hall.
+    if(fn==='stables')return l===1&&s.type!=='gate'&&!s.parentTowerId&&!(s.type==='built'&&isWideBuilt(s));
+    if(fn==='workshop')return l===1&&s.type!=='gate'&&!s.parentTowerId;
     // Prisons on the ground floor only (a gate's ground floor is its passage).
     if(fn==='prison')return l===1&&s.type!=='gate';
     // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.

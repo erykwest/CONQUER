@@ -1,6 +1,6 @@
 'use strict';
-// Military stables (extends `stables`): in a built section the stalls run the room's length, 5 horses
-// per U (twice as many in a wide hall); a tower stable keeps one stall block of 5. The circle depots
+// Military stables (extends `stables`): in a W1 built section the stalls run the room's length, 5 horses
+// per U; never in a W2 wide hall; a tower stable keeps one stall block of 5. The circle depots
 // hold the same number, so a captured stable loses the horses it holds. When the food runs out, the
 // horses no knight rides are slaughtered, just enough to cover the shortfall.
 const assert=require('node:assert/strict');
@@ -41,7 +41,9 @@ const tower=(id,o={})=>({id,type:'tower',shape:'square',size:1.5,level:2,x:0,y:0
   State.structures.push(built('b4',{length:4}));
   assert.equal(S.capacity().horses,5+10+20,'a 4U section: 20 (length, not the large-slot doubling)');
   State.structures.push(built('w',{length:2,span:'wide'}));
-  assert.equal(S.capacity().horses,5+10+20+20,'a 2U wide hall: two rows of stalls, 20');
+  assert.equal(S.capacity().horses,5+10+20,'a W2 wide hall holds no stable');
+  assert.ok(!S.allowed(built('w2',{span:'wide'}),0,'stables'),'never in a W2 wide hall');
+  assert.ok(S.allowed(built('w1'),0,'stables'),'a W1 section, ground floor');
   assert.ok(!S.allowed(built('up',{level:2}),1,'stables'),'still ground floor only');
   console.log('PASS stable capacity grows with the built-section room');
 }

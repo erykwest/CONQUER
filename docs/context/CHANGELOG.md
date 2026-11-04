@@ -2,8 +2,8 @@
 
 ## 2026-11-04 — Scuderia militare (branch `feature/military-stables`)
 
-- `stables` nelle sezioni costruite: 5 cavalli per U (doppio nella sala larga), poste in fila nel cutaway. Una stalla catturata perde i cavalli; senza cibo si macellano quelli di riserva. Le risposte ai messaggeri ripartono a cavallo, 1,5× più veloci.
-- Nuova `qa/military-stables-regression.cjs`; due varianti nel Lab con la loro baseline.
+- `stables` nelle sezioni costruite W1: 5 cavalli per U, poste in fila nel cutaway. Le sale larghe W2 non ammettono più la scuderia. Una stalla catturata perde i cavalli; senza cibo si macellano quelli di riserva. Le risposte ai messaggeri ripartono a cavallo, 1,5× più veloci.
+- Nuova `qa/military-stables-regression.cjs`; una variante nel Lab con la sua baseline.
 - Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è l'estensione di una stanza esistente nella direzione già decisa, senza nuovi contratti.
 
 ## 2026-11-04 — Colombaia nelle torri a falde (branch `feature/colombaia`)

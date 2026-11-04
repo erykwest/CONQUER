@@ -37,8 +37,7 @@
       // Room exterior element (settlement-room-exterior.js): the garderobe of an upper-floor latrine.
       ['Mura',['Sezione costruita L2 + latrina',{type:'built',tier:2,level:2,functions:[null,'latrine']}]],
       // Military stables (settlement-siege.js stableUnits): stall rows down the long room.
-      ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],
-      ['Mura',['Scuderia militare · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['stables']}]],...G.gates.map(r=>['Porte',r])]
+      ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}
