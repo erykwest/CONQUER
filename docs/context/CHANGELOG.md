@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+04/11/2026 — `fix/prepare-architecture-textures`: ridotte le texture architettoniche al formato già usato dal renderer e rimossa la preparazione Canvas all’avvio.
+
 04/11/2026 — `fix/remove-fossil-industry-svg`: rimossi 50 SVG obsoleti di cava e campo taglialegna. Manifest, baseline e regressione del Lab aggiornati alle anteprime 3D.
 
 ## 2026-11-03 — Mastio W4 · 3U, più stanze per piano (branch `feature/keep-w4`)
