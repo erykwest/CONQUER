@@ -150,6 +150,7 @@ const StructureCommands=(()=>{
       status('Remove annexes requiring a higher level before downgrading');return false;
     }
     target.civicLevel=level;normalizeCivicDevelopment(target);
+    if(target.type==='townhall')normalizeFunctions(target);
     refresh(target);status(structureLabel(target)+' · skeleton stage only');return true;
   }
   function setPlazaVariant(id,variant){
@@ -322,12 +323,14 @@ const StructureCommands=(()=>{
     // Floor in view of an open cutaway (castle toggle or selected civic building), stepped with ▲ ▼.
     if(!building&&(structureCutaway(s)||civicFloorCutaway(s))&&cutawayFloorCount(s)>1)
       d.cutawayFloor={index:cutawayVisibleFloor(s),count:cutawayFloorCount(s)};
-    if(!house&&!simpleCivic){
+    if(!house&&(!simpleCivic||s.type==='townhall')){
+      if(simpleCivic)normalizeFunctions(s);
       const cap=functionCapacity(s);
       d.facts.push({key:'rooms',value:cap+' · '+functionCapacityUnits(s)});
-      d.rooms={pending:building,slots:building?[]:Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>({
+      // One room per floor, the highest listed first (the town hall too: room i is floor i).
+      d.rooms={pending:building,slots:building?[]:Array.from({length:cap},(_,n)=>['tower','built','townhall'].includes(s.type)?cap-1-n:n).map(i=>({
         index:i,size:functionSlotSize(s,i),units:functionSlotUnits(s,i),value:s.functions[i]||'',
-        options:FUNCTION_CATALOG.map(k=>({value:k,allowed:!!window.ConquerSiege?.allowed(s,i,k)}))}))};
+        options:functionCatalog(s).map(k=>({value:k,allowed:!!window.ConquerSiege?.allowed(s,i,k)}))}))};
     }
     if(['tower','gate','built'].includes(s.type)){
       const hp=window.ConquerSiege?.integrity(s);

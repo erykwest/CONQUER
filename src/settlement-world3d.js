@@ -1026,13 +1026,13 @@
         };
         const pane=(w,ground,push)=>{
           const t=w.tangent,a={x:w.p.x-t.x*w.hw,y:w.p.y-t.y*w.hw},b={x:w.p.x+t.x*w.hw,y:w.p.y+t.y*w.hw};
-          quad(a,b,ground+w.z-w.hh,ground+w.z+w.hh,'__white',w.normal,WIN,push);
+          if(!kit)quad(a,b,ground+w.z-w.hh,ground+w.z+w.hh,'__white',w.normal,WIN,push);
           lightWindow({a:{x:w.p.x-t.x*.5,y:w.p.y-t.y*.5},b:{x:w.p.x+t.x*.5,y:w.p.y+t.y*.5}},w.z,w.hw*2,w.hh*2,0,ground,w.normal);
         };
         for(const part of entry?.parts||[]){
           if(part.kind==='turret'){
             const ground=terrainElevation(part.center),plan=houseTurretFacade(part);
-            for(const b of plan.beams)beam(b.a,b.b,b.normal,ground,.015);
+            if(!kit)for(const b of plan.beams)beam(b.a,b.b,b.normal,ground,.015);
             for(const w of plan.windows)pane(w,ground,.022);
             continue;
           }

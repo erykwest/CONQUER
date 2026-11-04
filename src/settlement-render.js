@@ -442,6 +442,7 @@ function draw(){
   drawPeasants();
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
+  window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
   markPhase('population');
