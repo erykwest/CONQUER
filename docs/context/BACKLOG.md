@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Elementi esterni delle stanze e Latrina (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/room-exterior-latrine`:** il meccanismo `ROOM_EXTERIOR` (D-ROOM-EXT-01) e la latrina a sbalzo al piano 2 delle sezioni W1, con igiene della guarnigione come bisogno secondario.
+- **APERTO, per altri owner:**
+  - **Colombaia:** montaggio `roof`.
+  - **Cisterna:** montaggio `eave`, gronda o pluviale.
+  - **Combattimento:** infiltrazione dal condotto della latrina in assedio (precedente storico: Château Gaillard, 1204).
+  - **Ospedale:** cura dei malati letti da `ConquerSiege.sickShare()`.
+- **APERTO, da decidere:** latrine nelle torri (oggi escluse); un avviso quando un salvataggio perde una latrina che non entra più per una struttura costruita davanti.
+
 ## Cucine solo nelle sezioni costruite (03/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/kitchen-built-only`:** cucina solo al piano terra di sezioni W1 e sale larghe W2; niente torri né porte. I salvataggi perdono al caricamento le cucine in torri e porte.

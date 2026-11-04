@@ -1,5 +1,26 @@
 # Livello 2 — Stato tecnico e prove
 
+## Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`, da `main` a692ce5, 04/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:**
+  - **Meccanismo `ROOM_EXTERIOR`:** il contratto è D-ROOM-EXT-01, il codice è in `src/settlement-room-exterior.js` (`ConquerRoomExterior`). Una funzione di stanza aggiunge un elemento all'esterno dell'edificio.
+  - **Latrina:** prima applicazione, funzione `latrine` aggiunta a `FUNCTION_CATALOG`. Si assegna solo al piano 2 delle sezioni W1, e solo dove la scatola entra.
+  - **Modello:** `tools/blender/build_garderobe.py` genera `src/assets/garderobe-models.js` (254 triangoli). Il nuovo pezzo d'arredo `latrineSeat` è aggiunto a `build_furniture.py`; degli altri 51 pezzi rigenerati nessuno è cambiato.
+- **Renderer:**
+  - **2.5D:** la latrina si disegna nel corpo del castello e nel cutaway.
+  - **Castle 3D e World 3D:** la mesh contiene esattamente i +254 triangoli del modello, controllato con `assetMesh` nel Lab. Il cutaway del World 3D è nel guscio esterno.
+  - **Feritoie:** quelle della cella occupata non si disegnano né in 2.5D né in 3D.
+  - **Cantiere:** nessun elemento.
+  - **Crollo:** l'elemento cade con la sezione oppure da solo.
+- **Simulazione (`settlement-siege.js`):**
+  - **Igiene:** `hygiene` (0–100) nello stato dell'assedio, aggiornata nel tick giornaliero. Il valore obiettivo è `100·(24+capienza latrine)/guarnigione`, con un minimo di 40.
+  - **Malati:** `sickShare` toglie fino al 10% delle postazioni occupate (`occupiedArcherSlots`).
+  - **Riepilogo:** il riepilogo logistico mostra igiene, posti serviti, guarnigione e percentuale di malati.
+  - **Latrina crollata:** il pannello della struttura offre "Rebuild".
+- **Asset Lab:** variante `Sezione costruita L2 + latrina` con la fase di danno "elemento esterno crollato", e voce modello `ConquerGarderobeModels:garderobe` nella famiglia "Elementi esterni delle stanze". Ispezione: intatta, cutaway, crollata e cantiere al 50% sono tutte visibili e senza errori.
+- **QA:** la nuova `qa/room-exterior-latrine-regression.cjs` passa. Tutte le `qa/*-regression.cjs` passano in locale.
+- **Non verificato:** il World 3D cutaway e il pannello stanze non sono stati visti a schermo (verificati solo da codice e test); la CI della PR non è ancora girata.
+
 ## Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`, da `main` a372f1c, 03/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** `ConquerSiege.allowed` permette la cucina solo al piano terra delle sezioni costruite: W1 (sezione, L1 o L2, lunga almeno 2U) e W2 (sala larga). Non più in torri (mastio compreso), porte o piani superiori. Granaio, magazzino e sala comune mantengono la regola precedente.

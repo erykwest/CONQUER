@@ -61,7 +61,7 @@ assert.ok(tris.every(t=>t.pts.every(q=>q.p.y>=.5-.05)),'all outside the masonry 
 const chuteZ=tris.filter(t=>t.part==='chute').flatMap(t=>t.pts.map(q=>q.z));
 assert.ok(Math.abs(Math.min(...chuteZ))<1e-9,'the stain reaches the ground');
 assert.ok(Math.max(...tris.map(t=>Math.max(...t.pts.map(q=>q.z))))<2.8,'under the eaves');
-assert.ok(RE.takesWindow(s,1,2.22,e.off)&&!RE.takesWindow(s,1,.86,e.off)&&!RE.takesWindow(s,-1,2.22,e.off),'only the upper exterior slit it covers gives way');
+assert.ok(RE.takesWindow(s,1,2.22,e.off)&&RE.takesWindow(s,1,.86,e.off)&&!RE.takesWindow(s,-1,2.22,e.off)&&!RE.takesWindow(s,1,2.22,e.off+1.4),'the exterior slits of its cell give way, from the roof down');
 console.log('PASS triangles, chute and the slit it replaces');
 
 // Breakable: an impact near the box finds it; broken it is no longer drawn; restored it is.

@@ -28,7 +28,7 @@ from cq_blender import Part, fresh_collection, export_part_indexed
 
 S = 3.5
 COLORS = {
-    'stone': '#8f847a', 'stoneDark': '#635951', 'stoneLight': '#a59a8e', 'corbel': '#7a7067',
+    'stone': '#6e645b', 'stoneDark': '#4f4842', 'stoneLight': '#8a7f74', 'corbel': '#5d554e',   # castleSideShade tones
     'dark': '#1d1a17', 'stain': '#3d3a2c',
     'roofSlab': '#5b5550', 'roofSlabDark': '#47423e', 'roofUnder': '#2f2b28',
 }

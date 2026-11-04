@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-04 — Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`)
+
+- Nuovo contratto `ROOM_EXTERIOR`: una stanza può aggiungere un elemento all'esterno dell'edificio, disegnato da tutti i renderer con un'unica geometria e incluso nel crollo.
+- Prima applicazione: la latrina (garderobe) a sbalzo su mensole al piano 2 delle sezioni W1, con lo scarico verso terra. Effetto in gioco: igiene della guarnigione, con fino al 10% degli arcieri malati quando mancano latrine per una guarnigione grande. La latrina è rompibile dall'artiglieria e si può ricostruire.
+- Nuovi `src/settlement-room-exterior.js`, `tools/blender/build_garderobe.py`, `src/assets/garderobe-models.js`, il pezzo d'arredo `latrineSeat` e `qa/room-exterior-latrine-regression.cjs`. Nel Lab: la variante e il modello.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01). ROADMAP invariata: la latrina era già approvata nel catalogo delle stanze, quindi non cambia milestone.
+
 ## 2026-11-03 — Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`)
 
 - La cucina si assegna solo al piano terra delle sezioni costruite (W1 sezione, W2 sala larga), non più in torri o porte; i salvataggi esistenti perdono le cucine fuori regola al caricamento.

@@ -146,10 +146,11 @@ function drawRoomExteriors(){
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s));
 }
-// Facade rows ask this before drawing a window: the element takes the cell it is centred on.
+// Facade rows ask this before drawing a window: the element takes the cell it is centred on, from its
+// roof down (the chute runs over the slits below it).
 function roomExteriorTakesWindow(s,side,z,off){
   if(!s?.functions?.some(roomExteriorSpec))return false;
-  return roomExteriorElements(s,{broken:true}).some(e=>e.side===side&&Math.abs(e.off-off)<e.width/2+.05&&z>e.z-.2&&z<e.z+1.1);
+  return roomExteriorElements(s,{broken:true}).some(e=>e.side===side&&Math.abs(e.off-off)<e.width/2+.05&&z<e.z+1.1);
 }
 // Element hit by an impact point (artillery), within reach of its box.
 function roomExteriorAt(s,p,reach=.45){
