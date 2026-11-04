@@ -533,11 +533,13 @@ function builtArcadeLayout(s){
   return{side,edge,h,centerZ:.04+h/2,count,cell,key,arches:key==='arcade2'?2:3,
     bays:Array.from({length:count},(_,i)=>({off:(i+.5)*cell-edge.length/2,w:cell*.96}))};
 }
-// Real loggia of a W1 portico (World 3D, like the carved gate passage): the ground floor steps
-// back ~.42U from the interior face, a row of piers carries round arches along that face and the
-// raised floor rests on them. Faces are world-space polygons [{p,z}] tagged by part:
-// 'upper' (block over the loggia), 'ground' (rooms behind it), 'backwall' (their face under the
-// arches), 'arcade' (end walls, piers, arches), 'ceiling' and 'paving'. The 2.5D renderer keeps the arches cut into the facade.
+// Real loggia of a W1 portico (World 3D, like the carved gate passage): the whole ground floor is
+// an open hall behind a row of piers with round arches; only the exterior wall stays closed and
+// the raised floor rests on the arches. Faces are world-space polygons [{p,z}] tagged by part:
+// 'upper' (block over the loggia), 'ground' (exterior wall), 'backwall' (its face under the
+// arches), 'arcade' (end walls, piers, arches), 'ceiling' and 'paving'. The 2.5D renderer keeps
+// the arches cut into the facade. Also returned: the ground-floor room under the arches (`room`,
+// a cutaway floor basis) and the walkway along the piers (`walk`), kept clear of furniture.
 function builtLoggia(s){
   const a=builtArcadeLayout(s);if(!a||isWideBuilt(s))return null;
   const fp=unionFootprintPoints(s),L=Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y)||1;
@@ -545,7 +547,7 @@ function builtLoggia(s){
   const loc=p=>({al:(p.x-s.a.x)*u.x+(p.y-s.a.y)*u.y,ac:(p.x-s.a.x)*n.x+(p.y-s.a.y)*n.y});
   const P=(al,ac)=>({x:s.a.x+u.x*al+n.x*ac,y:s.a.y+u.y*al+n.y*ac});
   const lp=fp.map(loc),C0=Math.min(...lp.map(q=>q.ac)),C1=Math.max(...lp.map(q=>q.ac));
-  const side=a.side,front=side>0?C1:C0,depth=Math.min(.42,(C1-C0)*.45),band=.15;
+  const side=a.side,front=side>0?C1:C0,depth=(C1-C0)-clamp((C1-C0)*.14,.11,.17),band=.12;
   const back=front-side*depth,inner=front-side*band,cap=a.centerZ+a.h/2,H=structureHeight(s);
   // Footprint clipped to {al,ac} half-planes: keeps snapped, slanted ends exactly as the body has them.
   const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],fp0=f(loc(p)),fq=f(loc(q));
@@ -577,12 +579,52 @@ function builtLoggia(s){
     }
     for(let j=0;j<8;j++)face('arcade',[{p:P(arc[j].al,front),z:arc[j].z},{p:P(arc[j+1].al,front),z:arc[j+1].z},{p:P(arc[j+1].al,inner),z:arc[j+1].z},{p:P(arc[j].al,inner),z:arc[j].z}]);
   }
+  // Rooms: one per bay of arches, split by partitions from the back wall to the walkway.
+  const WALK=.18,PART=.06,bayLen=cell*a.arches,walkEdge=inner-side*WALK;
+  for(let k=1;k<a.count;k++){const x=e0+k*bayLen;prism('arcade',clip(clip(strip(back,walkEdge),q=>q.al-(x-PART/2)),q=>x+PART/2-q.al),0,cap)}
   // The rooms' wall under the arches stands in the loggia's shadow.
   for(const f of faces)if(f.part==='ground'&&f.pts.every(q=>Math.abs(loc(q.p).ac-back)<1e-6))f.part='backwall';
   const walk=clip(clip(strip(back,front),q=>q.al-e0),q=>e1-q.al);
   face('ceiling',walk.map(p=>({p,z:cap-.002})));
   face('paving',walk.map(p=>({p,z:.006})));
-  return{side,cap,front,back,inner,faces};
+  // Room frame (cutawayFloorBasis shape) between the end walls, the back wall and the piers; v
+  // points from the back wall towards the arches. The walkway is the WALK strip along the piers.
+  const r0=e0+pw/2,r1=e1-pw/2,mid=(back+inner)/2,c=P((r0+r1)/2,mid),angle=Math.atan2(u.y,u.x),h=Math.abs(inner-back);
+  // `room` v axis is n: the arches lie at v = side*h/2, the back wall at -side*h/2.
+  const room={center:c,angle,w:r1-r0,h};
+  // Each bay's room: from end wall or partition to the next one.
+  const rooms=Array.from({length:a.count},(_,k)=>{
+    const x0=k?e0+k*bayLen+PART/2:r0,x1=k<a.count-1?e0+(k+1)*bayLen-PART/2:r1;
+    return{center:P((x0+x1)/2,mid),angle,w:x1-x0,h};
+  });
+  const walkV=[side>0?room.h/2-WALK:-room.h/2,side>0?room.h/2:-room.h/2+WALK];
+  // Piers along the front band, for navigation: along positions and half width.
+  const piers=Array.from({length:N-1},(_,k)=>e0+(k+1)*cell);
+  return{side,cap,front,back,inner,faces,room,rooms,walk:{v0:walkV[0],v1:walkV[1],width:WALK},
+    local:{u,n,a:s.a,loc,P},span:[r0,r1],piers,pierHalf:pw/2};
+}
+// Navigation asks per sample point: one loggia per section until its shape changes.
+const builtLoggiaMemo=new WeakMap();
+function builtLoggiaCached(s){
+  const key=[s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.width,s.level,s.skin,s.flip,s.aSnap,s.bSnap,!!underConstruction(s)].join('|');
+  const hit=builtLoggiaMemo.get(s);if(hit&&hit.key===key)return hit.g;
+  const g=isBuiltPortico(s)?builtLoggia(s):null;builtLoggiaMemo.set(s,{key,g});return g;
+}
+// Walkers under a W1 portico: true when p (with a clearance) stands in the open loggia, from the
+// arches to the inner edge of the walkway, clear of the piers. Furniture keeps the rest.
+function builtLoggiaWalkable(s,p,pad=0){
+  const g=builtLoggiaCached(s);if(!g)return false;
+  const q=g.local.loc(p),r=g.room,c=g.local.loc(r.center),v=(q.ac-c.ac)*g.side;   // v: 0 mid-room, +h/2 at the arches
+  if(q.al<g.span[0]+pad||q.al>g.span[1]-pad)return false;
+  if(v<r.h/2-g.walk.width+pad)return false;                                        // furniture zone
+  if(v>r.h/2&&g.piers.some(x=>Math.abs(q.al-x)<g.pierHalf+pad))return false;      // a pier
+  return true;                                                                     // walkway, arch openings and beyond
+}
+// Where a visitor to a W1 portico stands: on the walkway, spread along it.
+function builtLoggiaStandPoint(s,t){
+  const g=builtLoggiaCached(s);if(!g)return null;
+  const r=g.room,c=g.local.loc(r.center),al=g.span[0]+.2+(g.span[1]-g.span[0]-.4)*Math.max(0,Math.min(1,t));
+  return g.local.P(al,c.ac+g.side*(r.h/2-g.walk.width/2));
 }
 function drawBuiltArcade(s){
   const a=builtArcadeLayout(s);if(!a||a.side!==linearFrontSide(s))return;

@@ -5,6 +5,7 @@
 - Porticato W1 corretto: stessa geometria in 2.5D, World 3D e cutaway, archi sotto il piano sopraelevato, portico visibile nel cutaway 3D.
 - In World 3D il portico W1 è una loggia vera: piano terra arretrato, pilastri e archi, piano rialzato sopra (anche nel cutaway).
 - Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia.
+- Il portico ha una stanza arredata per campata, sempre visibile in 3D, e un camminamento lungo i pilastri percorso dalle figure.
 - Nuova `qa/built-portico-regression.cjs`; variante «Sezione porticata L2» nel Lab e in baseline.
 - Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: correzione di resa e regola sulle stanze, non cambia milestone né contratti.
 

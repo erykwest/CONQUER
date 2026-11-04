@@ -1215,7 +1215,15 @@
       }
     };
     for(const s of State.structures){
-      if(!structureCutaway(s)||underConstruction(s))continue;
+      if(underConstruction(s))continue;
+      if(!structureCutaway(s)){
+        // Closed W1 portico: only the furniture under its arches.
+        if(isBuiltPortico(s))for(const f of FU?.loggiaFaces?.(s)||[]){
+          const pts=f.pts.map(p=>({x:p[0],y:p[1],z:terrainElevation({x:p[0],y:p[1]})+p[2]}));
+          m.face(pts,shadeHex(f.hex,W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1));if(f.emissive)em.face(pts,f.hex);
+        }
+        continue;
+      }
       // Timber tower: the Blender model minus the sides facing this quarter-turn, then its room.
       if(window.ConquerWood3D?.addCutawayToBuilder?.(sh,s)){addFurniture(s);continue}
       // Floor-by-floor cutaway: H is the cut (the ceiling of the floor in view), HF the full height.
@@ -1549,9 +1557,10 @@
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
-    const cut=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s));
+    // W1 porticos join even when closed: their loggia furniture shows through the arches.
+    const cut=State.structures.filter(s=>(structureCutaway(s)||isBuiltPortico(s))&&!underConstruction(s));
     const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,S.sig.decals,
-      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),cutawayCeilingZ(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
+      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),structureCutaway(s)?1:0,s.skin,cutawayCeilingZ(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
     if(S.cutContent!==cutContent){
       for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b);gl.deleteBuffer(v.dec.b)}
       S.cutContent=cutContent;S.cutVariants=new Map();

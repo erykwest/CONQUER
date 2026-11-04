@@ -24,11 +24,13 @@ const ctx=vm.createContext({
   // A section along +x from a to b, 1U wide; the interior (portico) side is -y.
   linearFacadeEdge:(s,side)=>({a:{x:s.a.x+.04,y:.504*side},b:{x:s.b.x-.04,y:.504*side},length:s.length-.08}),
   unionFootprintPoints:s=>[{x:s.a.x,y:.5},{x:s.b.x,y:.5},{x:s.b.x,y:-.5},{x:s.a.x,y:-.5}],
+  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),WeakMap,
 });
 vm.runInContext([core.match(/const PORTICO_FUNCTIONS=[^\n]+/)[0],pick(core,'isWideBuilt'),pick(core,'builtInteriorFloors'),pick(core,'isBuiltPortico'),
   pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed'),pick(arch,'builtArcadeLayout'),pick(arch,'builtLoggia'),
-  'this.out={allowed,builtArcadeLayout,builtLoggia,PORTICO_FUNCTIONS};'].join('\n'),ctx);
-const {allowed,builtArcadeLayout,builtLoggia,PORTICO_FUNCTIONS}=ctx.out;
+  pick(arch,'builtLoggiaCached'),pick(arch,'builtLoggiaWalkable'),pick(arch,'builtLoggiaStandPoint'),
+  'this.out={allowed,builtArcadeLayout,builtLoggia,builtLoggiaWalkable,builtLoggiaStandPoint,PORTICO_FUNCTIONS};'].join('\n'),ctx);
+const {allowed,builtArcadeLayout,builtLoggia,builtLoggiaWalkable,builtLoggiaStandPoint,PORTICO_FUNCTIONS}=ctx.out;
 const section=(extra)=>({type:'built',a:{x:0,y:0},b:{x:7.5,y:0},length:7.5,level:2,skin:'arcade',...extra});
 
 const portico={type:'built',length:3,level:2,skin:'arcade'},porticoL1={...portico,level:1},plain={type:'built',length:3,level:2};
@@ -59,7 +61,7 @@ for(const extra of [{},{level:1},{b:{x:2.2,y:0},length:2.2}]){
   const s=section(extra),g=builtLoggia(s),parts=new Set(g.faces.map(f=>f.part)),label=JSON.stringify(extra);
   for(const p of ['upper','ground','backwall','arcade','ceiling','paving'])assert.ok(parts.has(p),p+' '+label);
   const zs=f=>f.pts.map(q=>q.z),ys=f=>f.pts.map(q=>q.p.y);
-  assert.equal(g.side,-1);assert.ok(Math.abs(g.front+.5)<1e-9&&Math.abs(g.back+.08)<1e-9,'loggia .42U deep on the interior side '+label);
+  assert.equal(g.side,-1);assert.ok(Math.abs(g.front+.5)<1e-9&&Math.abs(g.back-.36)<1e-9,'open ground floor up to the exterior wall '+label);
   for(const f of g.faces.filter(f=>f.part==='arcade'||f.part==='backwall'))assert.ok(Math.max(...zs(f))<=g.cap+1e-9,'arcade under the raised floor '+label);
   for(const f of g.faces.filter(f=>f.part==='ground'))assert.ok(Math.max(...ys(f))<=.5+1e-9&&Math.min(...ys(f))>=g.back-1e-9,'rooms behind the loggia '+label);
   assert.ok(g.faces.filter(f=>f.part==='upper').every(f=>Math.min(...zs(f))>=g.cap-1e-9),'upper block on top of the loggia '+label);
@@ -69,6 +71,39 @@ assert.ok(piers.length>=8,'pier tops along a 7.5U section');
 assert.equal(builtLoggia(section({span:'wide'})),null,'the W2 hall keeps its decal arcade');
 assert.equal(builtLoggia(section({skin:'standard'})),null,'no loggia without the skin');
 console.log('PASS W1 loggia: recessed ground floor, piers and arches under the raised floor');
+
+// Rooms: one per bay of arches, side by side between partitions, all as deep as the loggia.
+{
+  const g=builtLoggia(section());
+  assert.equal(g.rooms.length,3);
+  for(let k=1;k<3;k++)assert.ok(g.rooms[k].center.x-g.rooms[k].w/2>g.rooms[k-1].center.x+g.rooms[k-1].w/2,'partition between rooms '+k);
+  assert.ok(g.rooms.every(r=>Math.abs(r.h-g.room.h)<1e-9&&r.w>2),'bay rooms');
+  assert.equal(builtLoggia(section({b:{x:2.2,y:0},length:2.2})).rooms.length,1,'a short section is one room');
+  assert.ok(Math.abs(g.walk.width-.18)<1e-9&&g.walk.v0<g.walk.v1);
+}
+console.log('PASS portico rooms: one per bay, partitions, walkway along the piers');
+
+// Walkway: open to walkers from the arches to its inner edge; piers, furniture zone and walls stay solid.
+{
+  const s=section({id:'w'}),g=builtLoggia(s),gap=(g.piers[3]+g.piers[4])/2;
+  assert.ok(builtLoggiaWalkable(s,{x:gap,y:-.28}),'walkway');
+  assert.ok(builtLoggiaWalkable(s,{x:gap,y:-.47}),'arch opening');
+  assert.ok(!builtLoggiaWalkable(s,{x:g.piers[3],y:-.47}),'pier');
+  assert.ok(!builtLoggiaWalkable(s,{x:gap,y:.05}),'furniture zone');
+  assert.ok(!builtLoggiaWalkable(s,{x:.02,y:-.28}),'end wall');
+  assert.ok(!builtLoggiaWalkable(section({skin:'standard'}),{x:gap,y:-.28}),'no walkway without the portico');
+  const p=builtLoggiaStandPoint(s,.5);assert.ok(builtLoggiaWalkable(s,p),'visitors stand on the walkway');
+}
+assert.match(src('settlement-population-navigation.js'),/if\(s\.type==='built'&&builtLoggiaWalkable\(s,p,\.04\)\)continue;/);
+assert.match(src('settlement-population-routines.js'),/builtLoggiaStandPoint\(target,/);
+console.log('PASS walkway under the arches for walkers and visitors');
+
+// Furniture: one furnished room per bay, outside the cutaway too in World 3D.
+const fu=src('settlement-cutaway-furniture.js');
+assert.match(fu,/L\.rooms\.map\(\(room,k\)=>/);assert.match(fu,/function loggiaFaces\(s\)/);
+assert.match(w3d0(),/FU\?\.loggiaFaces\?\.\(s\)/);
+console.log('PASS loggia furniture per room, visible through the arches');
+function w3d0(){return src('settlement-world3d.js')}
 
 // World 3D carves it (like the gate passage); 2.5D keeps the arches cut into the facade.
 const c3d=src('settlement-castle3d.js'),w3d=src('settlement-world3d.js');
