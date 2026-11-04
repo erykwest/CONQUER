@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Colombaia (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/colombaia`:** stanza Colombaia all'ultimo piano delle torri in pietra T2/T3 L2–L3 a falde; lettere per piccione 4× più veloci e risposta senza corriere di ritorno; lanterna sul tetto, arredo cutaway, voci nell'Asset Lab.
+- **APERTO:** avvisi rapidi tra avamposti e castelli (aspetta Avamposto / Corpo di Guardia, usare `ConquerDovecote`); migrare la lanterna sul contratto `ROOM_EXTERIOR` quando entra in `main`; Falconiera e Campana d'allarme sullo stesso slot sotto il tetto; spostare la colombaia al nuovo ultimo piano quando la torre sale di livello invece di toglierla; piccione in volo come modello 3D nel World 3D.
+
 ## Cucine solo nelle sezioni costruite (03/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/kitchen-built-only`:** cucina solo al piano terra di sezioni W1 e sale larghe W2; niente torri né porte. I salvataggi perdono al caricamento le cucine in torri e porte.

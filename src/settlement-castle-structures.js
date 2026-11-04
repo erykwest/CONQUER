@@ -573,6 +573,11 @@ function dovecoteTriangles(s){
   }
   return out;
 }
+// The apex flag flies from the lantern's finial when there is one.
+function towerApexFlagZ(s){
+  const h=typeof towerDovecote==='function'&&towerDovecote(s)?window.ConquerDovecoteModels?.height||0:0;
+  return towerVisualTopHeight(s)+h;
+}
 // 2.5D: painted far to near after the roof, back faces skipped (as the hoarding).
 function drawDovecote(s){
   const tris=dovecoteTriangles(s);if(!tris.length)return;
@@ -1151,7 +1156,7 @@ function drawQuarteredTowerFlag(tower){
     // A roof with a ridge flies a flag at each end of it, a pyramid one on its apex.
     const g=towerRoofShape(tower)!=='pyramid'&&squareTowerRoofGeometry(tower);
     if(g){drawQuarteredFlagAt(g.ridgeA,g.ridgeH,tower.id+'-flag');drawQuarteredFlagAt(g.ridgeB,g.ridgeH,tower.id+'-flag-2')}
-    else drawQuarteredFlagAt({x:tower.x,y:tower.y},towerVisualTopHeight(tower),tower.id+'-flag');
+    else drawQuarteredFlagAt({x:tower.x,y:tower.y},towerApexFlagZ(tower),tower.id+'-flag');
   }
   // A smaller pennant on the spire of every pitched bartizan.
   towerBartizans(tower).forEach((b,i)=>{if(b.style==='pitched')drawQuarteredFlagAt(b.center,b.apexZ,tower.id+'-bartizan-'+i,.7)});

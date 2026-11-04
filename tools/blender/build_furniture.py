@@ -299,7 +299,7 @@ def pigeon(p, x, y, z, turn=0):
     p.taper(at(-.1, 0, .1), at(-.18, 0, .08), .06, .02, .08, .01, 'stoneDark')
 # Dovecote room (Colombaia): a timber wall of nesting holes, a perch rack and the birds.
 def f_nest_wall(p):
-    rows, cols, w, h = 4, 5, 1.7, 2.0
+    rows, cols, w, h = 4, 3, 1.15, 2.0                                        # fits a medium (T2) tower room
     p.box((-.17, 0, h / 2), (.06, w, h), 'woodDark')                          # back boards
     for y in (-w / 2, w / 2):
         p.box((0, y, h / 2), (.34, .05, h), 'wood')
@@ -313,7 +313,7 @@ def f_nest_wall(p):
                 p.box((0, y + w / cols / 2, .37 + r * .45), (.3, .03, .41), 'wood')
             if (r * cols + c) % 3 == 1:
                 p.box((-.03, y, .2 + r * .45), (.2, .2, .03), 'straw')       # nesting straw
-    for r, c in ((0, 1), (1, 3), (2, 0), (3, 2)):
+    for r, c in ((0, 1), (1, 2), (2, 0), (3, 1)):
         pigeon(p, .1, -w / 2 + (c + .5) * w / cols, .17 + r * .45)
 def f_perch(p):
     for y in (-.45, .45):

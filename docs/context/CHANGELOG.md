@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-04 — Colombaia nelle torri a falde (branch `feature/colombaia`)
+
+- Nuova stanza `dovecote` (Colombaia): ultimo piano di torri in pietra T2/T3 L2–L3 con tetto a falde. Lettere per colombo viaggiatore 4× più veloci verso la torre-colombaia, risposta immediata senza corriere di ritorno.
+- Lanterna Blender sull'apice del tetto (3D e 2.5D), parete dei nidi e posatoio nel cutaway, registri lanterna e arredi nell'Asset Lab, tre varianti di galleria; baseline dell'audit aggiornata.
+- Nuova `qa/dovecote-regression.cjs` nel workflow delle varianti di torre.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la Colombaia era già approvata come idea nel catalogo delle stanze e torri; la regola «una sola funzione sotto il tetto» è annotata in STATUS.
+
 ## 2026-11-03 — Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`)
 
 - La cucina si assegna solo al piano terra delle sezioni costruite (W1 sezione, W2 sala larga), non più in torri o porte; i salvataggi esistenti perdono le cucine fuori regola al caricamento.
