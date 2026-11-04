@@ -221,6 +221,12 @@ function renderFunctionPanel(){
     const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':s.type==='palisade'?'Defines which side is exterior; walkway and earthwork are generated inward.':isWideBuilt(s)?'Exterior: arrow slits. Interior: tall hall windows (clerestory with portico).':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
     html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
   }
+  if(s.type==='townhall'&&!building){
+    normalizeFunctions(s);
+    // One room per floor, the highest listed first.
+    html+=s.functions.map((value,i)=>({value,i})).reverse().map(({value,i})=>`<div class="slot"><div class="slot-label">Room ${i+1} · ${i?'Floor '+i:'Ground floor'}</div><select data-function-slot="${i}"><option value="">— Empty —</option>${TOWNHALL_FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select></div>`).join('')
+      +'<div class="legend">One room per floor, as many as the civic level; the tribunal needs L2.</div>';
+  }
   if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
