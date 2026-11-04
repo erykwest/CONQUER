@@ -175,7 +175,14 @@
       ['Torre a D grande L3 tetto',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',baseStyle:'buttress'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
-      ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}]
+      ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}],
+      // Alarm bell: the belfry on the roof of T1-T2 towers, stone and timber (settlement-alarm-bells.js).
+      ['Pietra quadrata piccola L1 tetto + campana',{type:'tower',shape:'square',material:'stone',level:1,tier:1,size:sq(1),roofStyle:'pitched',bell:'bell'}],
+      ['Pietra rotonda L2 tetto + campana',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'pitched',bell:'bell'}],
+      ['Pietra quadrata L3 2 falde + campana',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'pitched',roofShape:'gable',bell:'bell'}],
+      ['Torre a D media L2 tetto + campana',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',bell:'bell'}],
+      ['Legno vedetta + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1,bell:'bell'}],
+      ['Legno media tetto + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5,bell:'bell'}]
     ],
     walls:[
       ['Muro sottile T1 H1',{type:'wall',tier:1,level:1,skin:'standard'}],

@@ -272,6 +272,8 @@
         if(s.type==='gate')addGate(m,s);
         // Tower / gate hoarding: the Blender bay (hoarding-models.js) swept round the outline; sides a shade darker.
         for(const t of pointHoardingTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
+        // Alarm-bell belfry on the roof (belfry-models.js); timber towers add it in settlement-wood3d.js.
+        if(!isWoodTower(s))for(const t of belfryTriangles(s))m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         if(s.type==='built')addBuilt(m,s);
         m.tag='body';
         for(const b of wideHallButtresses(s))addButtress(m,b);
