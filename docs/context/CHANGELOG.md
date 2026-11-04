@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-03 — Mastio W4 · 3U, più stanze per piano (branch `feature/keep-w4`)
+
+- Nuovo tier W4 (3×3U) per il mastio: piante per piano con 1–4 stanze, tramezzi e porte nel cutaway, stanze assegnate per piano. Lab: 5 righe nella galleria fortificazioni e 16 voci nel catalogo.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è un prototipo da provare, non cambia milestone né contratti.
+
+
 ## 2026-11-03 — Portico delle sezioni W1 (branch `feature/built-portico`)
 
 - Porticato W1 corretto: stessa geometria in 2.5D, World 3D e cutaway, archi sotto il piano sopraelevato, portico visibile nel cutaway 3D.

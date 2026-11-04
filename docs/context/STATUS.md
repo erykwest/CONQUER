@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## Mastio W4 · 3U con più stanze per piano (branch `feature/keep-w4`, da `main` a372f1c, 03/11/2026, NON MAIN)
+
+- **Regole:** `towerTier` = 4 per una torre quadrata in pietra da 3U (`isKeepW4`); solo una per insediamento (`keepW4Available`), mai sottotorre; a fine cantiere diventa il Mastio e prende la sala comune (`syncAutoMastio`). Costo 240 oro / 330 pietra / 75 legno, 18 giorni; garitte ammesse (T3+); 7 merli per lato.
+- **Stanze:** `s.keepPlans` per piano, da `KEEP_FLOOR_PLANS` (`hall` 1, `halves` 2, `three` 1+2, `quad` 4; di default 1+2 / 4 / sala). `functionSlotLayout` mette in fila le stanze piano per piano; metà e sale sono LARGE, quarti NORMAL. `setKeepFloorPlan`, `setHeight` e `setTier` riportano i ruoli sullo stesso piano (`functionsByFloor` / `restoreFunctionsByFloor`); le regole di piano dell'assedio (scuderie a PT, ecc.) usano `functionSlotFloor`.
+- **Cutaway:** ogni stanza ha la sua base (`keepRoomBasis`), così l'arredo per ruolo funziona senza modifiche; tramezzi bassi (0,62U) in pietra con una porta per ogni tratto tra due incroci (`keepPartitionSegments`, disegnati come facce dell'arredo: valgono per 2.5D e World 3D e seguono il cutaway per piani); una scala per piano, nella prima stanza.
+- **UI:** pulsante «Mastio W4 · 3U» tra le torri quadrate, opzione W4 nel tier, righe «Pianta · piano N» nell'ispettore v2 e nel pannello legacy; le stanze indicano piano e lettera (P2a, P2b…).
+- **QA locale:** nuova `qa/keep-w4-regression.cjs` PASS; 119/119 `qa/*.cjs` non di performance PASS. In gioco (World 3D): W4 L3 con 3 sottotorri T1 agli angoli e una T2, cutaway PT e P1 dai due lati, cambi di pianta, altezza e tier, nessun errore in console. Audit del Lab nel browser sulle 5 righe W4: 49 render, 0 falliti, 8 avvisi (cantiere 25/50/75 uguale, come per la T3; danno poco visibile). **Non verificato:** `node qa/asset-audit.mjs` (Playwright non installato qui), baseline non aggiornata, CI della PR.
+
+
 ## Portico delle sezioni W1 (branch `feature/built-portico`, da `main` 69ff1ea, 03/11/2026, NON MAIN)
 
 - **Bug corretti:** il porticato aveva tre geometrie diverse: 2.5D (`settlement-facade-polish.js`) un solo sprite da 3 archi stirato su tutta la sezione (alto 1,18), World 3D e `settlement-architecture.js` campate da 2–3 archi alte fino a 1,46, quindi sulla W1 L2 gli archi superavano il solaio del piano sopraelevato (1,40); nel cutaway 3D il portico spariva del tutto.

@@ -230,10 +230,21 @@ function normalizeStructureRotation(s){
 }
 const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4},builtWide:{width:2,min:2,max:6},road:{width:.62,min:1,max:160}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
-const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
+// W4 (3U) is the Mastio only: square stone, one per settlement, several rooms per floor.
+const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2,4:3});
 const ROUND_TOWER_TIERS=Object.freeze({1:.5,2:.75,3:1});
+const KEEP_W4_TIER=4;
+// Floor plans of the W4 keep: room rectangles as fractions of the floor [u0,v0,u1,v1] (u along
+// the tower angle, v across). Halves and the hall are LARGE rooms, quarters NORMAL.
+const KEEP_FLOOR_PLANS=Object.freeze({
+  hall:Object.freeze([[0,0,1,1]]),
+  halves:Object.freeze([[0,0,.5,1],[.5,0,1,1]]),
+  three:Object.freeze([[0,0,.5,1],[.5,0,1,.5],[.5,.5,1,1]]),
+  quad:Object.freeze([[0,0,.5,.5],[.5,0,1,.5],[0,.5,.5,1],[.5,.5,1,1]])
+});
+const KEEP_FLOOR_PLAN_DEFAULTS=Object.freeze(['three','quad','hall']);
 const COSTS={
-  tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
+  tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32},{gold:240,stone:330,wood:75}],
   woodTower:[{gold:18,wood:42},{gold:32,wood:78}],
   wallPerU:{gold:6,stone:18,wood:2},
   palisadePerU:{gold:3,wood:12},
@@ -252,7 +263,7 @@ const COSTS={
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -420,7 +431,7 @@ function hoardingMounted(s){return s?.type==='gate'?gateHoardingMounted(s):tower
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 // Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
-function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
 function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
 // on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
@@ -490,7 +501,15 @@ function towerFacadePoints(s){
   if(!isOrientedTower(s))return footprintPoints(s);
   const {w,h}=orientedTowerDims(s);return rectWorldPoints(s.x,s.y,w,h,s.angle||0);
 }
-function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
+function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=2.99&&s.shape!=='round'?KEEP_W4_TIER:span>=1.99?3:span>=1.49?2:1}
+function isKeepW4(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square'&&towerTier(s)===KEEP_W4_TIER}
+// The W4 keep can be planned while no other one stands (or is being built).
+function keepW4Available(except=null){return !State.structures.some(o=>o!==except&&o.id!==except?.id&&isKeepW4(o)&&!o.destroyed)}
+function keepFloorPlan(s,floor){
+  const plan=Array.isArray(s?.keepPlans)?s.keepPlans[floor]:null;
+  return KEEP_FLOOR_PLANS[plan]?plan:KEEP_FLOOR_PLAN_DEFAULTS[Math.min(floor,KEEP_FLOOR_PLAN_DEFAULTS.length-1)];
+}
+function keepFloorRooms(s,floor){return KEEP_FLOOR_PLANS[keepFloorPlan(s,floor)]}
 function wallTier(s){
   const explicit=Math.round(Number(s?.tier));
   if(explicit>=1&&explicit<=3)return explicit;
@@ -498,9 +517,10 @@ function wallTier(s){
   return w>=.75?3:w>=.35?2:1;
 }
 function wallWidthForTier(t){return WALL_TIERS[clamp(Math.round(Number(t)||2),1,3)]}
-function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,3);return shape==='round'?ROUND_TOWER_TIERS[t]:SQUARE_TOWER_TIERS[t]}
+function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,shape==='square'?KEEP_W4_TIER:3);return shape==='round'?ROUND_TOWER_TIERS[t]:SQUARE_TOWER_TIERS[t]}
 function applyStructureTier(s,tier){
-  tier=clamp(Math.round(Number(tier)||1),1,3);
+  const w4=s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square';
+  tier=clamp(Math.round(Number(tier)||1),1,w4?KEEP_W4_TIER:3);
   s.tier=tier;
   if(['wall','palisade'].includes(s.type)){
     s.width=wallWidthForTier(tier);

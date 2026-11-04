@@ -75,7 +75,7 @@ const CATALOG = [
         opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
         opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
         opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower')] }];
-      if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2'].map(n =>
+      if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2', '3'].map(n =>
         opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
         opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
@@ -393,10 +393,13 @@ function Inspector({ snap, cmd }) {
     ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits, d.archers.bartizan) + '.'}>
       <${Seg} options=${[{ label: '−', disabled: d.archers.disabled || d.archers.count === 0, v: -1 }, { label: '+', disabled: d.archers.disabled || d.archers.count >= d.archers.max, v: 1 }]}
         onPick=${o => run('changeArchers', o.v)} /></${Row}>`}
+    ${d.keepPlans && d.keepPlans.floors.map(f => html`<${Row} label=${I.keepPlan(f.floor)} tip=${TIP.keepPlan}>
+      <${Seg} options=${d.keepPlans.plans.map(p => ({ label: I.keepPlans[p.value] || p.value, active: p.value === f.plan, v: p.value, tip: I.keepPlanRooms(p.rooms) }))}
+        onPick=${o => run('setKeepFloorPlan', f.floor, o.v)} /></${Row}>`)}
     ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>
       ${d.rooms.pending ? html`<p class="u2-hint">${I.roomsPending}</p>` : d.rooms.slots.length === 0 ? html`<p class="u2-hint">${I.roomsNone}</p>` :
-        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${'Piano ' + (r.index + 1)} data-tip-body=${I.room(r.index + 1, r.size, r.units)}>
-          <span>P${r.index + 1}${r.size === 'large' ? '+' : ''}</span>
+        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${'Piano ' + ((d.keepPlans ? r.floor : r.index) + 1)} data-tip-body=${I.room((d.keepPlans ? r.floor : r.index) + 1, r.size, r.units)}>
+          <span>P${(d.keepPlans ? r.floor : r.index) + 1}${d.keepPlans ? String.fromCharCode(97 + r.room) : ''}${r.size === 'large' ? '+' : ''}</span>
           <select value=${r.value} onChange=${e => run('setRoom', r.index, e.currentTarget.value)}>
             <option value="">${I.roomEmpty}</option>
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}
