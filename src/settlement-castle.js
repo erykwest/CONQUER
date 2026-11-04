@@ -229,7 +229,7 @@ function structureHeight(s){
   if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
-  if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
+  if(s.type==='built')return isLonghouse(s)?(isWideBuilt(s)?2.07:1.77):[1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
   if(s.type==='bridge')return .12;
   if(s.type==='moat')return 0;
@@ -1056,6 +1056,7 @@ function drawCutawayStructure(s){
   // Timber tower: its model, minus the camera-facing sides, is drawn with the structures
   // (ConquerWood3D.draw); only the room's furnishings belong here.
   if(isWoodTower(s)){withStructureGroundPlane(s,()=>window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s)));return}
+  if(isLonghouse(s)){window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s));return}
   const render=()=>{
     // Walls stop at the ceiling of the floor in view (cutawayCeilingZ); the crest and the roof
     // deck only when every floor is in view.
@@ -1094,7 +1095,7 @@ function drawCutawayStructures(){
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b))
     .forEach(s=>withStructureVisualMaterial(s,()=>drawCutawayStructure(s)));
 }
-function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isRaisedPlacementCastlePoint(s)}
+function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isLonghouse(s)&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
 function unionFootprintPoints(s){
   if(!['wall','built'].includes(s.type))return footprintPoints(s);

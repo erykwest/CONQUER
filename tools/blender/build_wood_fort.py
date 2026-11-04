@@ -416,10 +416,110 @@ def wood_gate(mdl):
     drapes(mdl, half_x + .045, (-.62, .62), body_top - .05)
 
 
+# Timber longhouse: a ground-floor-only built section (W1 1 U wide, W2 2 U wide) of any length.
+LONGHOUSE = {'longhouse_w1': (1.0, .62, 1.45), 'longhouse_w2': (2.0, .72, 1.75)}   # width, wall top, ridge (U)
+
+
+def slab(p, quad, t, key, under='beam'):
+    """Thin roof slab: top face through four points (U), extruded t down; edges and underside 'under'."""
+    top = [m(*q) for q in quad]
+    bot = [(x, y, z - t * S) for x, y, z in top]
+    vs = top + bot
+    p.quads(vs, [(0, 1, 2, 3)], key)
+    p.quads(vs, [(7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)], under)
+
+
+def longhouse(mdl, width, wall_h, ridge):
+    """Longhouse in structure-local space: a repeatable 1 U bay (x 0..1) the game lays along a->b,
+    and two gable ends at x = 0 (end_a faces -x and holds the door, end_b faces +x and is moved
+    to b). Vertical plank walls on a sill, raking outer props, a steep shingle roof with an eave
+    overhang, crossed carved boards over each gable. Parts per side (wall_yn / wall_yp,
+    roof_yn / roof_yp, end_a / end_b) let the cutaway leave out the ones facing the camera;
+    'floor' only shows in cutaway."""
+    hw = width / 2 - .06                                 # wall line
+    slope = (ridge - wall_h) / hw
+    over = .1                                            # eave overhang beyond the wall
+    eave_y, eave_z = hw + over, wall_h - over * slope
+    roof_z = lambda y: wall_h + slope * (hw - abs(y))   # underside of the roof over the wall line
+    planks = 9
+    for sgn, name in ((-1, 'wall_yn'), (1, 'wall_yp')):
+        w = mdl.part(name)
+        y = sgn * hw
+        box(w, .5, y, 0, 1.0, .09, .08, 'beam')                       # sill
+        for i in range(planks):
+            x = (i + .5) / planks
+            box(w, x, y, .06, 1 / planks - .008, .05, wall_h - .1, 'plank' if i % 2 else 'plankDark')
+        box(w, .5, y, wall_h - .06, 1.0, .09, .07, 'beam', 'beam')     # wall plate
+        log(w, 0, y, .05, 0, wall_h, top=None)                         # bay post
+        beam(w, (.5, y + sgn * .12, 0), (.5, y + sgn * .03, wall_h * .78), .055, .055, 'log')   # raking prop
+        mdl.done(name, w)
+    for sgn, name in ((-1, 'roof_yn'), (1, 'roof_yp')):
+        r = mdl.part(name)
+        courses = 4
+        for k in range(courses):
+            t0, t1 = k / courses, (k + 1) / courses
+            y0, y1 = sgn * (eave_y - eave_y * t0), sgn * (eave_y - eave_y * t1)
+            z0, z1 = eave_z + (ridge - eave_z) * t0, eave_z + (ridge - eave_z) * t1
+            lip = .025 if k else 0                                     # each course laps over the one below
+            q = [(0, y0 + sgn * lip * .3, z0 + .03 - lip), (1, y0 + sgn * lip * .3, z0 + .03 - lip), (1, y1, z1 + .03), (0, y1, z1 + .03)]
+            slab(r, q if sgn > 0 else q[::-1], .03, 'roofShingle' if k % 2 else 'roofShingleDark')
+        beam(r, (0, sgn * eave_y, eave_z - .015), (1, sgn * eave_y, eave_z - .015), .04, .05, 'beam')   # eave board
+        mdl.done(name, r)
+    rd = mdl.part('ridge')
+    beam(rd, (0, 0, ridge + .05), (1, 0, ridge + .05), .1, .07, 'roofRidge')
+    mdl.done('ridge', rd)
+    fl = mdl.part('floor')
+    box(fl, .5, 0, 0, 1.0, hw * 2 - .06, .03, 'plankDark', 'plank')
+    for i in range(1, 6):
+        box(fl, .5, -hw + hw * 2 * i / 6, .03, 1.0, .008, .003, 'plankDark')
+    mdl.done('floor', fl)
+    for out, name in ((-1, 'end_a'), (1, 'end_b')):
+        e = mdl.part(name)
+        x = out * .025
+        n = max(5, round(hw * 2 / .11))
+        for i in range(n):                                             # gable planks up to the roof
+            ya, yb = -hw + hw * 2 * i / n + .004, -hw + hw * 2 * (i + 1) / n - .004
+            top = [(ya, roof_z(ya)), (yb, roof_z(yb))]
+            if ya < 0 < yb:
+                top.insert(1, (0, ridge))
+            pts = [(ya, .06)] + top + [(yb, .06)]
+            vs = [(x * S - .025 * S, py * S, pz * S) for py, pz in pts] + [(x * S + .025 * S, py * S, pz * S) for py, pz in pts]
+            k = len(pts)
+            e.quads(vs, [tuple(range(k))[::-1], tuple(range(k, 2 * k))], 'plank' if i % 2 else 'plankDark')
+            e.quads(vs, [(j, (j + 1) % k, k + (j + 1) % k, k + j) for j in range(k)], 'plankDark')
+        box(e, 0, 0, 0, .09, hw * 2 + .09, .08, 'beam')                # sill
+        for y in (-hw, hw):
+            log(e, 0, y, .065, 0, wall_h, top=None)                    # corner posts
+        box(e, 0, 0, wall_h - .06, .09, hw * 2 + .09, .07, 'beam', 'beam')   # tie beam
+        # roof overhang beyond the gable and the barge boards along its edge
+        ox = out * .16
+        for sgn in (-1, 1):
+            q = [(0, sgn * eave_y, eave_z + .03), (ox, sgn * eave_y, eave_z + .03), (ox, 0, ridge + .03), (0, 0, ridge + .03)]
+            slab(e, q if (sgn > 0) == (out > 0) else q[::-1], .03, 'roofShingleDark')
+            beam(e, (ox, sgn * eave_y, eave_z), (ox, 0, ridge + .02), .03, .07, 'beam')
+            # crossed carved boards over the ridge (the barge boards running on past each other)
+            beam(e, (ox + out * .01, sgn * hw * .55, roof_z(hw * .45) + .06), (ox + out * .01, -sgn * .2, ridge + .2 + .16 * slope * .2), .03, .06, 'beam')
+            box(e, ox + out * .01, -sgn * .23, ridge + .23, .035, .07, .09, 'cut')   # carved head
+        beam(e, (0, 0, ridge + .05), (ox, 0, ridge + .05), .1, .07, 'roofRidge')
+        if out < 0:                                                    # door, lintel and a step stone
+            dw = min(.42, hw * .7)
+            box(e, x - .03, 0, .08, .012, dw, .5, 'dark')
+            box(e, x - .045, dw * .22, .08, .03, dw * .5, .48, 'door')
+            box(e, x - .04, 0, .58, .07, dw + .16, .07, 'beam')
+            for y in (-dw / 2 - .03, dw / 2 + .03):
+                box(e, x - .035, y, .08, .05, .05, .5, 'beam')
+            box(e, x - .12, 0, -.02, .16, dw + .1, .05, 'logEnd')
+        else:                                                          # shuttered gable window
+            box(e, x + .03, 0, wall_h + .1, .012, .2, .16, 'dark')
+            box(e, x + .04, -.15, wall_h + .1, .02, .09, .16, 'door')
+        mdl.done(name, e)
+
+
 BUILD = [('stake', stake), ('watchtower', watchtower),
          ('palisadeTower_open', lambda m_: palisade_tower(m_, False)),
          ('palisadeTower_roofed', lambda m_: palisade_tower(m_, True)),
-         ('woodGate', wood_gate)]
+         ('woodGate', wood_gate)] + \
+        [(k, (lambda v: lambda m_: longhouse(m_, *v))(v)) for k, v in LONGHOUSE.items()]
 
 
 def main(out_path):

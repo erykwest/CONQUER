@@ -42,6 +42,7 @@ function drawStructure(s,preview=false){
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
     else if(s.type==='palisade')drawPalisade(s,preview);
+    else if(isLonghouse(s)&&window.ConquerWood3D?.draw(s,preview)){}   // timber longhouse: Blender model
     else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
     ctx.restore();
   };

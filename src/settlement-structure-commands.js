@@ -359,7 +359,7 @@ const StructureCommands=(()=>{
       const stage=window.ConquerSiege.doorStage(s),closed=!!s.closed&&stage!=='broken';
       d.gate={stage,closed,broken:stage==='broken',nightClose:s.nightClose!==false};
     }
-    if(s.type==='built')d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
+    if(s.type==='built'&&!isLonghouse(s))d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
       d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'machicolation',word:'machicolation',disabled:narrow},{value:'hoarding',word:'hoarding'}],wallSkin(s)));

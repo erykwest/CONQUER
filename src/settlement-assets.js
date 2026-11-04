@@ -185,6 +185,9 @@ function structureAssetFamilyCatalog(){
     'built-wide-l'+level+'-'+skin+'-'+length,'Wide hall L'+level+' '+skin+' '+length+'U',
     assetLinearBase('built',length,{span:'wide',level,skin,width:TYPES.builtWide.width,functions:[]})
   );
+  // Timber longhouse: the W1 / W2 spans in wood, ground floor only.
+  for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('longhouse-w1-'+length,'Longhouse W1 '+length+'U',assetLinearBase('built',length,{material:'wood',level:1,width:1,functions:[]}));
+  for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add('longhouse-w2-'+length,'Longhouse W2 '+length+'U',assetLinearBase('built',length,{material:'wood',span:'wide',level:1,width:TYPES.builtWide.width,functions:[]}));
   for(const type of CIVIC_TYPES){
     if(CIVIC_LEVEL_TYPES.includes(type))for(let level=1;level<=3;level++){
       if(type==='plaza')for(const variant of PLAZA_VARIANTS)add('civic-plaza-l'+level+'-'+variant,'Piazza L'+level+' '+variant,assetPointBase(type,{civicLevel:level,plazaVariant:variant}));

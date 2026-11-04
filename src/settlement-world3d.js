@@ -991,7 +991,7 @@
             else for(const off of gateSlitOffsets(edge))onEdge(edge,z,.24,.62,'arrowSlit',off,ground,o);
           }
         }
-      }else if(s.type==='built'){
+      }else if(s.type==='built'&&!isLonghouse(s)){
         for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
@@ -1811,7 +1811,7 @@
   function residual2D(){
     // Palisades, wood towers and wood gates are 3D (settlement-wood3d.js); without their models
     // they keep the 2.5D drawing (per frame).
-    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!window.ConquerWood3D?.handles(s))
+    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s))&&!window.ConquerWood3D?.handles(s))
       .sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of items)drawStructure(s);
   }

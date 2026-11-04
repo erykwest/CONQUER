@@ -38,7 +38,12 @@
       // Room exterior element (settlement-room-exterior.js): the garderobe of an upper-floor latrine.
       ['Mura',['Sezione costruita L2 + latrina',{type:'built',tier:2,level:2,functions:[null,'latrine']}]],
       // Military stables (settlement-siege.js stableUnits): stall rows down the long room.
-      ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],...G.gates.map(r=>['Porte',r])]
+      ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],
+      // Timber longhouse (settlement-wood3d.js): W1 / W2 span, ground floor only, the stone section's rooms.
+      ['Mura',['Long house W1',{type:'built',material:'wood',level:1}]],
+      ['Mura',['Long house W2',{type:'built',material:'wood',span:'wide',level:1,flip:true}]],
+      ['Mura',['Long house W1 · scuderia',{type:'built',material:'wood',level:1,functions:['stables']}]],
+      ['Mura',['Long house W2 · sala comune',{type:'built',material:'wood',span:'wide',level:1,flip:true,functions:['commonHall']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}

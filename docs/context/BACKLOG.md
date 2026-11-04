@@ -4,6 +4,15 @@ Prestazioni avvio: texture architettoniche preparate offline sul branch `fix/pre
 
 Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 24 pose industriali e le due viste base obsolete. Il catalogo conserva le anteprime 3D rotabili.
 
+## Long house in legno W1 / W2 (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/wood-longhouse`:** sezione costruita in legno larga W1 o W2, solo P0, con le stanze del piano terra in pietra; modello Blender modulare; costruttore, cantiere, cutaway e Lab.
+- **APERTO:**
+  - Bilanciamento di costi e giorni (proposta 6 oro / 28 legno per U×larghezza, 1,2 + 0,8 giorni).
+  - Lato della porta: oggi sempre sul frontone in A; scelta del lato o porta laterale.
+  - Fumo dal foro nel colmo per il focolare (oggi nessun comignolo né fumo).
+  - Puntoni esterni che sporgono 0,1U oltre la sezione: verificare gli attacchi a mura e torri.
+  - Lab: lo stage delle sezioni larghe (anche la sala larga in pietra) mostra quasi vuoto il cantiere al 25/50/75% (difetto preesistente).
 ## Mastio W4 · 3U con più stanze per piano (03/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/keep-w4` (NON MAIN, prototipo da provare):** tier W4 solo per torre quadrata in pietra, uno per insediamento, mastio automatico a fine cantiere; pianta per piano (Sala / 2 metà / 1+2 / 4 quarti), tramezzi bassi con porte nel cutaway, una scala per piano; stanze che restano sul loro piano quando cambia la pianta.

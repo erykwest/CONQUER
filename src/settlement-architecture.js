@@ -807,7 +807,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
     if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
     if(s.type==='house'){
       if(includeHouses)drawHouseFacadeWindows(s,lit,nf);
-    }else if(s.type==='built')drawBuiltWindows(s,lit,nf);
+    }else if(s.type==='built'&&!isLonghouse(s))drawBuiltWindows(s,lit,nf);
     else if(s.type==='gate'){
       if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf));
     }else if(s.type==='tower'){
