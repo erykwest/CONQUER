@@ -65,14 +65,6 @@ jobs:
         run: node qa/asset-catalog-browser.mjs
       - name: Visual audit (every asset, every fortification state)
         run: node qa/asset-audit.mjs
-      - name: Capture the eight CRIME asset thumbnails for review
-        run: |
-          node qa/asset-audit.mjs --ids=model:ConquerCivicModels:almshouse,model:ConquerEventModels:justicePillory,model:ConquerEventModels:justiceGallows,model:ConquerEventModels:justiceScaffold,wardrobe:role:judge,wardrobe:role:clerk,wardrobe:role:prisoner,wardrobe:role:executioner --out=artifacts/crime-review
-          for sheet in artifacts/crime-review/sheets/*.png; do
-            printf 'CRIME_SHEET %s ' "$(basename "$sheet")"
-            base64 -w0 "$sheet"
-            printf '\n'
-          done
       - name: Audit summary
         if: always()
         run: test -f artifacts/asset-audit/report.md && cat artifacts/asset-audit/report.md >> "$GITHUB_STEP_SUMMARY" || true

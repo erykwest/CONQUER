@@ -77,7 +77,7 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
   - **APERTO:** personale e routine delle guardie, lettura dal salvataggio in `/crime/` (adapter, vedi C-01).
 - **C-03 — IMPLEMENTATO SU BRANCH `feature/crime-buildings`:**
   - Gogna (1 × 1 U), forca (2 × 1,5 U) e patibolo (2,5 × 2 U) collocabili come `eventVenue`, con cantiere, costo e modelli Blender `justicePillory` / `justiceGallows` / `justiceScaffold` nel Lab (*Edifici · Giustizia*). In `/crime/` il patibolo è un flag separato dalla forca.
-  - **APERTO:** audit del Lab con aggiornamento della baseline.
+  - **QA (#139):** audit del Lab completato e baseline aggiornata per i nuovi asset CRIME.
 - **C-04 — AVVIATO NELLA PR #139:** tribunale in seduta nel cutaway del Municipio (giudici, cancelliere, prigioniero tra due guardie, pubblico) con costumi di ruolo; persone decorative e provvisorie, sostituibili con `ConquerCourtPeople.setOccupancySource`.
   - Gogna occupata e «giorno di giustizia» su forca e patibolo con boia, magistrato, guardie e folla (sobri).
   - Prigioni occupate nel Municipio e nel castello.
