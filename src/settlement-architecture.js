@@ -1,8 +1,7 @@
 // Architecture sprite loading, facades, towers and window/door details. Runtime semantics preserved from the monolith.
 'use strict';
 // CONQUER settlement render module — classic-script shared runtime.
- // PNG architectural facade assets. Source art stays detailed; images are
- // downsampled and white-keyed once at load time so facade drawing remains cheap.
+// Facade textures are resized and keyed to transparency before publication.
 const ARCHITECTURE_ASSET_PATHS=Object.freeze({
   gatePortal:'./src/assets/architecture/gate_portal.png',
   towerDoor:'./src/assets/architecture/tower_door.png',
@@ -16,25 +15,12 @@ const ARCHITECTURE_ASSET_PATHS=Object.freeze({
   hallLancet:'./src/assets/architecture/hall_lancet.png'
 });
 const architectureSprites={};
-function prepareArchitectureSprite(img){
-  const maxDim=256,scale=Math.min(1,maxDim/Math.max(img.naturalWidth||1,img.naturalHeight||1));
-  const w=Math.max(1,Math.round((img.naturalWidth||1)*scale)),h=Math.max(1,Math.round((img.naturalHeight||1)*scale));
-  const c=document.createElement('canvas');c.width=w;c.height=h;
-  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,w,h);
-  const data=g.getImageData(0,0,w,h),p=data.data;
-  for(let i=0;i<p.length;i+=4){
-    const r=p[i],gg=p[i+1],b=p[i+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);
-    if(r>247&&gg>247&&b>247)p[i+3]=0;
-    else if(r>238&&gg>238&&b>238&&mx-mn<8)p[i+3]=Math.min(p[i+3],Math.max(0,Math.min(255,(247-mx)*28)));
-  }
-  g.putImageData(data,0,0);return c;
-}
 async function loadArchitectureSprites(){
   const jobs=Object.entries(ARCHITECTURE_ASSET_PATHS).map(([key,path])=>new Promise(resolve=>{
     const img=new Image();
-    img.onload=()=>{try{architectureSprites[key]=prepareArchitectureSprite(img)}catch(err){console.warn('Architecture PNG prep failed',path,err);architectureSprites[key]=img}resolve(true)};
+    img.onload=()=>{architectureSprites[key]=img;resolve(true)};
     img.onerror=()=>{console.warn('Architecture PNG load failed',path);resolve(false)};
-    img.src=path;
+    img.src=path+'?v=prepared-1';
   }));
   await Promise.all(jobs);
   if(typeof invalidateSceneCache==='function')invalidateSceneCache();

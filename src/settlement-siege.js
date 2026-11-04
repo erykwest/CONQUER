@@ -976,7 +976,7 @@
     status('The gate is broken in');
   }
   // 2.5D portals follow the door's state. architecture's drawGatePortals is wrapped once
-  // every script has run (its module is kept byte-identical by the refactor invariant).
+  // every script has run.
   const DOOR_ASSETS={gatePortalDamaged:'./src/assets/architecture/gate_portal_damaged.png',
     gatePortalBroken:'./src/assets/architecture/gate_portal_broken.png'};
   function doorAsset(g){const st=doorStage(g);return st==='broken'?'gatePortalBroken':st==='damaged'?'gatePortalDamaged':'gatePortal'}
@@ -985,10 +985,10 @@
     for(const [key,path] of Object.entries(DOOR_ASSETS)){
       const img=new Image();
       img.onload=()=>{
-        try{architectureSprites[key]=typeof prepareArchitectureSprite==='function'?prepareArchitectureSprite(img):img}catch{architectureSprites[key]=img}
+        architectureSprites[key]=img;
         invalidateSceneCache();redraw();
       };
-      img.src=path;
+      img.src=path+'?v=prepared-1';
     }
   }
   window.addEventListener?.('DOMContentLoaded',()=>{

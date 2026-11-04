@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+Prestazioni avvio: texture architettoniche preparate offline sul branch `fix/prepare-architecture-textures`. La regressione visiva nel Lab verifica il rendering dei componenti e delle fortificazioni.
+
 Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 24 pose industriali e le due viste base obsolete. Il catalogo conserva le anteprime 3D rotabili.
 
 ## Mastio W4 · 3U con più stanze per piano (03/11/2026)

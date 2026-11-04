@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+Sul branch `fix/prepare-architecture-textures` le 11 texture di facciata e danno sono preparate offline a 256 px con trasparenza. Peso PNG da 12,18 MB a 578 kB. Regressioni locali: catalogo, brecce e confini dei moduli passate.
+
 Sul branch `fix/remove-fossil-industry-svg` l’Asset Lab usa le voci 3D esistenti per cava e campo taglialegna. Rimossi i relativi SVG storici, le anteprime autonome e i generatori delle rotazioni.
 
 ## Mastio W4 · 3U con più stanze per piano (branch `feature/keep-w4`, da `main` a372f1c, 03/11/2026, NON MAIN)
