@@ -87,6 +87,21 @@ check('pieces stay in the room, apart, off the ladder corner and the archer post
   }
 });
 
+check('cistern: tank, hatch and buckets on the tower ground floor, a second tank in large rooms',()=>{
+  for(const id of ['t2','t3']){
+    const room=rooms(id,['cistern'])[0],solid=room.items.filter(i=>!i.deco),hu=room.F.hu,hv=room.F.hv;
+    const n=name=>room.items.filter(i=>i.name===name).length;
+    assert.ok(n('cisternTank')>=1&&n('cisternHatch')===1&&n('s:buckets')===1,id+': '+room.items.map(i=>i.name));
+    if(id==='t3')assert.equal(n('cisternTank'),2,'the large cistern has two tanks');
+    for(const i of room.items)assert.ok(i.r[0]>=-hu-1e-6&&i.r[2]<=hu+1e-6&&i.r[1]>=-hv-1e-6&&i.r[3]<=hv+1e-6,id+': '+i.name+' inside');
+    for(let a=0;a<solid.length;a++)for(let b=a+1;b<solid.length;b++){
+      const p=solid[a].r,q=solid[b].r;
+      assert.ok(!(p[0]<q[2]-1e-6&&p[2]>q[0]+1e-6&&p[1]<q[3]-1e-6&&p[3]>q[1]+1e-6),id+': '+solid[a].name+' overlaps '+solid[b].name);
+    }
+    if(room.ladder)for(const i of solid)assert.ok(!(Math.abs(i.u-room.ladder.u)<.12&&Math.abs(i.v-room.ladder.v)<.12),id+': '+i.name+' on the ladder');
+  }
+});
+
 check('gates: no room on the passage floor, furnished rooms above',()=>{
   const g=run("State.structures.find(x=>x.id==='g1')");
   assert.equal(run('functionCapacity')(g),1,'a level-2 gate has one room slot (its upper floor)');

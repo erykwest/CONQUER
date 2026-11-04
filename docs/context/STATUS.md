@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+## Cisterna, stanza al piano terra delle torri W2–W3 (branch `feature/cistern`, da `main` 89dd465, 04/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:** nuova funzione `cistern` in `FUNCTION_CATALOG`. `ConquerSiege.allowed` la permette solo al piano terra delle torri in pietra W2/W3 (`towerTier>=2`), mai in torri di legno, porte o sezioni costruite.
+- **Simulazione (scelta dell'utente: sempre piena, senza riempimento):** `CAPACITY.cistern={water:60}`; `capacity().water` vale 60 persone per stanza normale e 120 per stanza grande (W3). `ConquerSiege.water()`: senza nemici in campo (lupi esclusi) bevono tutti ai pozzi. Con i nemici, un pozzo fuori dalle mura (`ConquerCircle.sectorAt` nullo) o in un settore non più `safe` è irraggiungibile; se nessun pozzo si raggiunge, le cisterne servono fino alla loro capienza e il resto ha sete: `siege.thirstDays` cresce come `starvationDays` e cala di 0,5 al giorno quando l'acqua basta. Pannello Scorte del castello: «Acqua» (fonte · persone servite dalle cisterne) e avviso «Acqua insufficiente». In P0 la sete non porta ancora alla resa: è un contatore pronto per il ciclo d'assedio P2.
+- **Incendi:** `settlement-fire.js` `wells()` tiene solo i pozzi raggiungibili e aggiunge i punti d'acqua delle cisterne (`ConquerSiege.cisternTaps`), davanti alla porta del piano terra della torre: la catena dei secchi lavora anche senza pozzi o con i pozzi tagliati fuori dall'assedio.
+- **Arredo:** due pezzi Blender nuovi in `build_furniture.py` (`cisternTank`, vasca in muratura colma con l'imbocco del pluviale; `cisternHatch`, botola aperta con argano, corda e secchio); ricetta `cistern` in `settlement-cutaway-furniture.js` (vasca, botola, secchi; nelle stanze grandi una seconda vasca e i barili). Il modello rigenerato aggiunge solo i due pezzi: gli altri 51 sono identici byte per byte.
+- **Asset Lab:** righe `Pietra quadrata L1 cisterna` e `Grande rotonda L2 cisterna` nella galleria delle fortificazioni; cutaway ispezionato nel Lab (controlli `visibile` e `cutaway-attivo` OK).
+- **QA:** nuova `qa/cistern-regression.cjs` (regola delle stanze, capienza, acqua d'assedio, catena dei secchi dalla cisterna) PASS; `qa/cutaway-furniture-regression.cjs` con il controllo della stanza cisterna PASS; `qa/multi-wells-regression.cjs` adattata alla nuova forma di `wells()` PASS; tutte le `qa/*-regression.cjs` PASS in locale.
+- **Non fatto (di proposito):** elementi esterni (vedi BACKLOG); Presidio antincendio.
+
 ## Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`, da `main` a372f1c, 03/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:** `ConquerSiege.allowed` permette la cucina solo al piano terra delle sezioni costruite: W1 (sezione, L1 o L2, lunga almeno 2U) e W2 (sala larga). Non più in torri (mastio compreso), porte o piani superiori. Granaio, magazzino e sala comune mantengono la regola precedente.

@@ -173,6 +173,9 @@
       ['Torre a D media L2 merli',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Torre a D grande L3 caditoie',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'splayed'}],
       ['Torre a D grande L3 tetto',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',baseStyle:'buttress'}],
+      // Cistern: the ground-floor room of W2/W3 stone towers (tank, hatch, buckets in the cutaway).
+      ['Pietra quadrata L1 cisterna',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement',functions:['cistern']}],
+      ['Grande rotonda L2 cisterna',{type:'tower',shape:'round',material:'stone',level:2,tier:3,r:rd(3),roofStyle:'battlement',functions:['cistern',null]}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}]

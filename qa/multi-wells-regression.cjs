@@ -116,7 +116,7 @@ test('demolishing a later well keeps the village; demolishing the founding well 
 });
 test('fire brigades, labels, diplomacy and inspector cover every well',()=>{
  const src=n=>fs.readFileSync(__dirname+'/../src/'+n,'utf8');
- assert.match(src('settlement-fire.js'),/function wells\\(\\)\\{return State\\.structures\\.filter\\(s=>s\\.type==='well'/);
+ assert.match(src('settlement-fire.js'),/function wells\\(\\)\\{[^}]*return State\\.structures\\.filter\\(s=>s\\.type==='well'/);
  assert.match(src('settlement-buildings.js'),/wellDisplayName\\(s\\)/);
  assert.match(src('settlement-world3d.js'),/wellDisplayName\\(s\\)/);
  assert.match(src('settlement-diplomacy.js'),/villageCenterWell\\(\\)/);

@@ -26,6 +26,7 @@ COLORS.update({
     'heraldA': '#7f2323', 'heraldB': '#243f79', 'gold': '#d1aa4c', 'goldDark': '#9c7a2c',
     'cloth': '#d9cfb8', 'clothDark': '#a89c84', 'straw': '#d6b551', 'ember': '#e0702a', 'flame': '#ffd27a',
     'soot': '#2b2622', 'stoneWarm': '#a39a8c', 'linen': '#ece4d2', 'candle': '#efe6cf',
+    'water': '#3f6f86',
 })
 COLL_NAME = 'CONQUER_Furniture'
 
@@ -290,6 +291,31 @@ def f_stocks(p):
     p.box((0, 0, .45), (.1, 1.3, .22), 'wood')
     for y in (-.3, 0, .3):
         p.box((.055, y, .45), (.01, .12, .12), 'soot')
+def f_cistern_tank(p):
+    """Masonry tank against the wall, brim-full; the rain pipe from the eaves spills into it."""
+    p.box((0, 0, .3), (.7, 1.4, .6), 'stoneDark'); p.box((0, 0, .66), (.7, 1.4, .04), 'water')
+    for x in (-.4, .4):
+        p.box((x, 0, .42), (.1, 1.6, .84), 'stone')
+    for y in (-.75, .75):
+        p.box((0, y, .42), (.7, .1, .84), 'stone')
+    p.box((.4, 0, .86), (.14, 1.64, .05), 'stoneLight')
+    p.beam((-.43, .45, 1.9), (-.43, .45, 1.0), .1, .1, 'iron'); p.beam((-.43, .45, 1.0), (-.25, .45, .9), .08, .08, 'iron')
+def f_cistern_hatch(p):
+    """Trapdoor open over the water, with the windlass, its rope and a bucket."""
+    p.box((0, 0, .01), (.7, .7, .02), 'water')
+    for s in (-1, 1):
+        p.box((s * .4, 0, .04), (.1, .9, .08), 'woodDark'); p.box((0, s * .4, .04), (.9, .1, .08), 'woodDark')
+    tilt = Matrix.Rotation(-.22, 3, 'Y')
+    p.box((-.55, 0, .4), (.05, .8, .8), 'wood', rot=tilt)
+    for z in (.18, .62):
+        p.box((-.52, 0, z), (.06, .82, .06), 'iron', rot=tilt)
+    for y in (-.5, .5):
+        p.box((0, y, .75), (.08, .08, 1.5), 'woodDark')
+    p.beam((0, -.55, 1.32), (0, .55, 1.32), .1, .1, 'wood')
+    p.beam((0, .55, 1.32), (0, .68, 1.32), .03, .03, 'iron'); p.beam((0, .68, 1.32), (.18, .68, 1.32), .025, .025, 'iron')
+    p.beam((0, 0, 1.27), (0, 0, .62), .015, .015, 'rope')
+    p.cylinder(.13, 0, 'wood', n=10, axis='z', center=(0, 0, .36), radii=[.11, .13], along=[0, .26], cap_key='water')
+    p.beam((0, -.13, .62), (0, .13, .62), .012, .012, 'iron')
 
 PIECES = (
     ('bench', f_bench), ('tableLong', f_table_long), ('tableSmall', f_table_small), ('stool', f_stool), ('chair', f_chair),
@@ -304,6 +330,7 @@ PIECES = (
     ('altar', f_altar), ('pew', f_pew), ('kneeler', f_kneeler), ('lectern', f_lectern), ('candleStand', f_candle_stand), ('torchWall', f_torch_wall),
     ('throne', f_throne), ('strongChest', f_strong_chest), ('coinSacks', f_coin_sacks), ('goldChest', f_gold_chest), ('ingotRack', f_ingot_rack),
     ('cellBars', f_cell_bars), ('wallChains', f_wall_chains), ('straw', f_straw), ('stocks', f_stocks),
+    ('cisternTank', f_cistern_tank), ('cisternHatch', f_cistern_hatch),
 )
 # Light sources (local metres): torch and candle flames glow in the night cutaway.
 LIGHTS = {'torchWall': [(.17, 0, 2.1, 'torch')], 'brazier': [(0, 0, 1.0, 'fire')], 'hearth': [(.05, 0, .45, 'fire')],
