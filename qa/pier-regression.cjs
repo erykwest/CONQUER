@@ -252,6 +252,7 @@ F.clear();State.structures.length=0;
 {const row=F.spawn({key:'barchetta',allegiance:'merchant'});assert.ok(row&&window.ConquerShipCrew.step(row.crew,.5)!==undefined||row,'a rowing boat spawns and its crew works without masts');window.ConquerShipCrew.step(row.crew,.5);window.ConquerShips.raise(row.crew.sail);for(let k=0;k<10;k++)window.ConquerShipCrew.step(row.crew,.5);
  const rest=window.ConquerShips.mesh('barchetta',row.pose,1,null,null,null).pos,stroke=window.ConquerShips.mesh('barchetta',row.pose,1,null,null,1.2).pos;
  assert.ok(rest.length===stroke.length&&rest.some((v,i)=>Math.abs(v-stroke[i])>1e-3),'the oars swing when rowing');F.clear()}
+for(const [k,m] of Object.entries({...M2.ships,...(M2.boats||{})}))assert.ok(m.deck-m.B/2*Math.sin(.12)>.03,k+': its deck or floor stays above the water as it rolls');
 console.log('PASS fleet: moored at berths with sails furled, anchored off the coast, orders, clear');
 
 // Fishermen: the L1 houses nearest a pier fish, one per berth; each gets a fishing boat at a

@@ -35,11 +35,11 @@ COLL_NAME = 'CONQUER_Ships'
 
 SPECS = {
     'barchetta': dict(label='Barchetta a remi', size='boat', L=5.0, B=1.7, H=.7, D=.4, rise=.35, posts=.35,
-                      hull=('oakLight', 'oak', 'oakDark'), open=True, floor=.42, stern=.15, bow=0.0),
+                      hull=('oakLight', 'oak', 'oakDark'), open=True, floor=.28, stern=.15, bow=0.0),
     'barca':     dict(label='Barca da pesca', size='small', L=9.0,  B=3.0, H=1.0, D=.75, rise=.45, posts=.7,
-                      hull=('oak', 'oakLight', 'oakDark'), open=True, stern=0.0, bow=0.0),
+                      hull=('oak', 'oakLight', 'oakDark'), open=True, floor=.5, stern=0.0, bow=0.0),
     'cargo':     dict(label='Barca da carico', size='small', L=12.0, B=3.9, H=1.15, D=.9, rise=1.0, posts=1.3,
-                      hull=('oak', 'oakLight', 'oakDark'), open=True, stern=0.0, bow=0.0),
+                      hull=('oak', 'oakLight', 'oakDark'), open=True, floor=.6, stern=0.0, bow=0.0),
     'caravella': dict(label='Caravella', size='small', L=14.0, B=4.2, H=1.5, D=1.05, rise=.6, posts=.35,
                       hull=('tar', 'tarLight', 'tarDark'), stern=.38, bow=0.0),
     'cocca':     dict(label='Cocca', size='large', L=23.0, B=7.6, H=2.5, D=1.8, rise=.8, posts=.4,
@@ -80,6 +80,8 @@ class Hull:
 
     def deck_z(self, t):
         """Deck under the bulwark; open boats have a lower floor boards level instead."""
+        # The floor boards stay ~0.35 m above the waterline amidships (more fore and aft, where the
+        # sheer rises), so the boat never shows the sea through its bottom as it rolls.
         if self.s.get('open'):
             return self.top(t) - self.s.get('floor', 1.0) - .25 * (1 - t * t) * self.s.get('floor', 1.0)
         return self.top(t) - (.85 if self.s['size'] == 'small' else 1.1)
