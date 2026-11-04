@@ -20,6 +20,17 @@
     rainCape:{label:'Mantella antipioggia',slot:'body',when:'Pioggia e temporale',dye:.72,palette:['#5f5b48','#6a6450','#4f5550']},
     shawl:{label:'Scialle di lana',slot:'neck',when:'Mezze stagioni con vento o nebbia',dye:1,palette:['#8b3a2e','#6d6a3a','#7a6a8c','#a07040']}
   };
+  // Costumes of office (crime: docs/crime.md), worn by role, never by season or weather:
+  // a separate catalogue, so outfitFor() never deals them out and the seasonal list stays as it is.
+  const ROLE_PIECES={
+    judgeRobe:{label:'Toga del giudice',slot:'body',role:'Giudice',palette:['#8e2a26'],trim:'#efe9dc',robe:true},
+    judgeCap:{label:'Berretto del giudice',slot:'head',role:'Giudice',palette:['#8e2a26']},
+    clerkGown:{label:'Veste del cancelliere',slot:'body',role:'Cancelliere',palette:['#2f2b2c'],trim:'#d8cfb8',robe:true},
+    clerkCap:{label:'Berretto del cancelliere',slot:'head',role:'Cancelliere',palette:['#2f2b2c']},
+    prisonerShirt:{label:'Camicia del prigioniero',slot:'body',role:'Prigioniero',palette:['#b9ad8f'],ragged:true},
+    executionerHood:{label:'Cappuccio del boia',slot:'head',role:'Boia',palette:['#1f1b1c']}
+  };
+  const pieceOf=id=>PIECES[id]||ROLE_PIECES[id];
   // Calendar month (0 = January) -> share of residents dressed for the cold / the sun.
   // Shoulder months dress only part of the town, so a season never flips everyone at once.
   const WINTER_BY_MONTH=[1,1,.45,0,0,0,0,0,0,0,.45,1];
@@ -37,7 +48,7 @@
   }
   // Dyed cloth avoids the tunic's own colour, so the open front still reads.
   function pick(piece,id,kind,tunic){
-    const P=PIECES[piece],dyed=P.dye&&classPalette(kind),p=dyed||P.palette,h=hash(String(id)+':'+piece);
+    const P=pieceOf(piece),dyed=P.dye&&classPalette(kind),p=dyed||P.palette,h=hash(String(id)+':'+piece);
     let c=p[h%p.length];
     if(dyed&&c===tunic&&p.length>1)c=p[(h+1)%p.length];
     return dyed?darken(c,P.dye):c;
@@ -71,7 +82,7 @@
   function compose(pieces,id='catalogue',kind='peasant',tunic=null){
     const o={head:null,body:null,neck:null,colors:{},sleeve:null};
     for(const piece of pieces){
-      const P=PIECES[piece];if(!P)continue;
+      const P=pieceOf(piece);if(!P)continue;
       o[P.slot]=piece;o.colors[P.slot]=pick(piece,id,kind,tunic);
     }
     o.sleeve=o.body?o.colors.body:null;
@@ -97,7 +108,26 @@
     if(!o)return;
     const top=bodyY-h/2,lw=Math.max(.6,w*.1),fine=w>=2.6;
     ctx.save();
-    if(o.body){
+    const R=o.body&&ROLE_PIECES[o.body];
+    if(R?.robe){
+      // Robe of office: closed, down to the feet, a pale collar (the judge's ermine is spotted).
+      const hem=bodyY+h*.52;
+      ctx.beginPath();
+      ctx.moveTo(x-w*.22,top-h*.02);ctx.lineTo(x-w*.52,top+h*.2);ctx.lineTo(x-w*.62,hem);
+      ctx.quadraticCurveTo(x,hem+h*.06,x+w*.62,hem);ctx.lineTo(x+w*.52,top+h*.2);ctx.lineTo(x+w*.22,top-h*.02);ctx.closePath();
+      ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+      if(fine){
+        ctx.fillStyle=R.trim;ctx.beginPath();ctx.ellipse(x,top+h*.05,w*.38,h*.1,0,0,Math.PI*2);ctx.fill();outline(lw*.6);
+        if(o.body==='judgeRobe'){ctx.fillStyle='#1d1a19';for(const k of [-.2,0,.2])ctx.fillRect(x+w*k-w*.025,top+h*.04,w*.05,h*.03)}
+      }
+    }else if(R?.ragged){
+      // Rough undyed shirt over the tunic, torn at the hem.
+      const hem=bodyY+h*.22,n=5;
+      ctx.beginPath();ctx.moveTo(x-w*.26,top);ctx.lineTo(x-w*.5,top+h*.2);ctx.lineTo(x-w*.54,hem);
+      for(let k=1;k<=n;k++)ctx.lineTo(x-w*.54+w*1.08*k/n,hem+(k%2?h*.07:0));
+      ctx.lineTo(x+w*.5,top+h*.2);ctx.lineTo(x+w*.26,top);ctx.closePath();
+      ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+    }else if(o.body){
       const cape=o.body==='rainCape',hem=bodyY+h*(cape?.14:.30);
       ctx.beginPath();
       ctx.moveTo(x-w*.20,top-h*.02);ctx.lineTo(x-w*.50,top+h*.18);ctx.lineTo(x-w*.60,hem);
@@ -128,9 +158,23 @@
   // Over the head: x/headY its centre, r its radius; the hood also drapes the shoulders.
   function drawHead(o,x,headY,r){
     if(!o||!o.head)return;
-    const lw=Math.max(.6,r*.2),c=o.colors.head,P=PIECES[o.head];
+    const lw=Math.max(.6,r*.2),c=o.colors.head,P=pieceOf(o.head);
     ctx.save();
-    if(o.head==='strawHat'){
+    if(o.head==='judgeCap'||o.head==='clerkCap'){
+      // Round cap of office (the judge's taller, a biretta), sitting low on the brow.
+      const tall=o.head==='judgeCap'?.95:.62;
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*1.02,headY-r*.25);ctx.lineTo(x-r*.86,headY-r*(.25+tall));
+      ctx.quadraticCurveTo(x,headY-r*(.45+tall),x+r*.86,headY-r*(.25+tall));ctx.lineTo(x+r*1.02,headY-r*.25);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(o.head==='judgeCap'&&r>=1.2){ctx.fillStyle='#d8b14a';ctx.beginPath();ctx.arc(x,headY-r*(.45+tall),r*.18,0,Math.PI*2);ctx.fill()}
+    }else if(o.head==='executionerHood'){
+      // Full hood over the face and shoulders, two eye holes.
+      ctx.fillStyle=c;
+      ctx.beginPath();ctx.moveTo(x-r*1.05,headY+r*.5);ctx.lineTo(x-r*1.55,headY+r*1.6);
+      ctx.quadraticCurveTo(x,headY+r*2.05,x+r*1.55,headY+r*1.6);ctx.lineTo(x+r*1.05,headY+r*.5);ctx.closePath();ctx.fill();outline(lw*.8);
+      ctx.beginPath();ctx.moveTo(x-r*1.15,headY+r*.6);ctx.quadraticCurveTo(x-r*1.3,headY-r*1.5,x,headY-r*1.75);
+      ctx.quadraticCurveTo(x+r*1.3,headY-r*1.5,x+r*1.15,headY+r*.6);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(r>=1.1){ctx.fillStyle='#d9c3a5';for(const s of [-1,1]){ctx.beginPath();ctx.ellipse(x+s*r*.38,headY-r*.08,r*.2,r*.12,0,0,Math.PI*2);ctx.fill()}}
+    }else if(o.head==='strawHat'){
       ctx.fillStyle=c;
       ctx.beginPath();ctx.ellipse(x,headY-r*.42,r*1.85,r*.42,0,0,Math.PI*2);ctx.fill();outline(lw*.8);
       ctx.beginPath();ctx.ellipse(x,headY-r*.55,r*.88,r*.72,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.8);
@@ -151,6 +195,6 @@
     }
     ctx.restore();
   }
-  const api={PIECES,WINTER_BY_MONTH,SUMMER_BY_MONTH,preview:null,conditions,fromKind,levels,classPalette,compose,outfitFor,drawBody,drawHead};
+  const api={PIECES,ROLE_PIECES,WINTER_BY_MONTH,SUMMER_BY_MONTH,preview:null,conditions,fromKind,levels,classPalette,compose,outfitFor,drawBody,drawHead};
   window.ConquerWardrobe=api;
 })();
