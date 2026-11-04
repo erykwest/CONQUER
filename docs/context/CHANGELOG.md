@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+04/11/2026 — `fix/remove-fossil-industry-svg`: rimossi 50 SVG obsoleti di cava e campo taglialegna. Manifest, baseline e regressione del Lab aggiornati alle anteprime 3D.
+
 ## 2026-11-03 — Mastio W4 · 3U, più stanze per piano (branch `feature/keep-w4`)
 
 - Nuovo tier W4 (3×3U) per il mastio: piante per piano con 1–4 stanze, tramezzi e porte nel cutaway, stanze assegnate per piano. Lab: 5 righe nella galleria fortificazioni e 16 voci nel catalogo.
