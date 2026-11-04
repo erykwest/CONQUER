@@ -141,6 +141,7 @@ function linearRouteStructures(route,endSnapId,spec){
       flip:false,functions:[],masonryMaterial:State.buildMasonryMaterial
     };
     if(State.tool.span==='wide')s.span='wide';
+    if(State.tool.material==='wood'&&s.type==='built'){s.material='wood';s.level=1;delete s.masonryMaterial}
     if(i===0&&State.draft?.aSnap)s.aSnap=State.draft.aSnap;
     if(i===route.segments.length-1&&endSnapId)s.bSnap=endSnapId;
     if(groupId)s.routeGroupId=groupId;

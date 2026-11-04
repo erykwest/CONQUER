@@ -311,7 +311,7 @@ function builtRoofGeometry(s){
 // Wide-hall buttresses on the lancet facade, one on every bay line (n lancets -> n+1),
 // with the stepped profile of steppedButtressPieces (shared with buttressed towers).
 function wideHallButtresses(s){
-  if(!isWideBuilt(s))return[];
+  if(!isWideBuilt(s)||isLonghouse(s))return[];
   const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side);
   const lancet=builtWindowRows(s).find(r=>r[3]==='hallLancet');
   const n=builtWindowCount(edge,0,4,lancet?lancet[4]:.86),cell=edge.length/n;
@@ -1429,6 +1429,8 @@ function chimneySpecs(s){
     return specs;
   }
 
+  // The timber longhouse has no masonry stack (its Blender model is the whole building).
+  if(s.type==='built'&&isLonghouse(s))return[];
   if(s.type==='built'){
     const g=builtRoofGeometry(s);if(!g)return[];
     const dx=g.ridgeB.x-g.ridgeA.x,dy=g.ridgeB.y-g.ridgeA.y;

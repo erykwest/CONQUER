@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-04 — Long house in legno W1 / W2 (branch `feature/wood-longhouse`)
+
+- Nuova long house lignea: una sezione costruita (`built`) con `material:'wood'`, larga come la W1 (1U) o la W2 (2U), solo piano terra (P0) con le stesse stanze della sezione in pietra al piano terra.
+- Modello Blender in `tools/blender/build_wood_fort.py` (campata da 1U ripetuta lungo a→b, testata con porta e testata cieca, tetto a scandole, assi incrociate sui frontoni) → `src/assets/wood-fort-models.js`; i modelli lignei esistenti sono rigenerati identici.
+- Asset Lab: 4 varianti nella famiglia Mura e 7 voci nel catalogo strutture; baseline dell'audit estesa con i 32 render nuovi.
+- Cutaway corretto: in World 3D ora si apre dal comando, nel 2.5D la stanza non passa più dai compositi del castello in pietra, e il tetto si toglie tutto.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nuova variante di un tipo esistente, non cambia milestone né contratti.
 04/11/2026 — `fix/prepare-architecture-textures`: ridotte le texture architettoniche al formato già usato dal renderer e rimossa la preparazione Canvas all’avvio.
 
 04/11/2026 — `fix/remove-fossil-industry-svg`: rimossi 50 SVG obsoleti di cava e campo taglialegna. Manifest, baseline e regressione del Lab aggiornati alle anteprime 3D.
