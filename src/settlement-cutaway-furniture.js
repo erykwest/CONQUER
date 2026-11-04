@@ -162,6 +162,15 @@
     if(alongV){r.near(fu-o,fv,'bench',turn);r.near(fu+o,fv,'bench',turn)}else{r.near(fu,fv-o,'bench',turn);r.near(fu,fv+o,'bench',turn)}
     return true;
   }
+  // Up to n ward cots against one wall, spread along it with an aisle between beds (at least a
+  // hand apart when the wall is short, at most two bed widths of aisle); returns how many stand.
+  function wardRow(r,side,n){
+    const s=size('infirmaryBed'),half=(side[0]==='u'?r.F.hv:r.F.hu),along=half-s.w/2-.02,tight=s.w+.03;
+    const fit=Math.min(n,Math.max(0,Math.floor((2*along+s.w)/tight)));
+    const pitch=fit>1?Math.max(tight,Math.min(3*s.w,1.8*along/(fit-1))):tight;let placed=0;
+    for(let k=0;k<fit;k++){const pos=(k-(fit-1)/2)*pitch;if(r.wall(side,along>0?pos/along:0,'infirmaryBed',{exact:true}))placed++}
+    return placed;
+  }
   const ROOMS={
     guard(r){r.row(r.A,'spearRack',1,{t:-.4});r.wall(r.B,.2,'bench');r.near(.15,.1,'tableSmall');r.near(.15,-.45,'stool');r.near(-.3,.15,'stool');
       r.wall(r.A,.6,'brazier',{off:.1});if(r.large){r.wall(r.B,-.7,'s:barrelGroup');r.wall(r.A,.1,'bench')}},
@@ -177,7 +186,19 @@
       if(r.large){r.near(-.4,.3,'s:sackPile');r.near(.45,-.35,'s:hayBales')}},
     kitchen(r){r.wall(r.A,-.3,'hearth');r.wall(r.B,.3,'shelf');r.near(.15,.15,r.large?'tableLong':'tableSmall',1);r.wall(r.B,-.7,'s:barrelGroup');
       if(r.large){r.wall(r.A,.6,'breadOven');r.near(-.4,-.3,'hamRack');r.near(.5,.5,'s:firewood')}else r.wall(r.A,.7,'s:firewood')},
-    stables(r){r.row(r.A,'stall',r.large?3:1);r.wall(r.B,0,'manger');r.near(.3,.3,'s:hayBales');r.near(-.3,.4,'s:buckets');if(r.large)r.near(.4,-.4,'saddleStand',1)},
+    stables(r){
+      // Military stables in a long built-section room: stalls down the long standing wall, as many
+      // as fit (5 horses per U, settlement-siege.js stableUnits); tack on the short wall, forage in between.
+      const F=r.F,len=side=>2*(SIDES[side][0]?F.hv:F.hu);
+      if(!F.round&&!F.dee&&Math.max(F.hu,F.hv)>1.6*Math.min(F.hu,F.hv)){
+        const walls=[r.A,r.B].sort((a,b)=>len(b)-len(a)),fit=side=>Math.max(1,Math.floor((len(side)-.1)/(size('stall').w+.04)));
+        r.row(walls[0],'stall',fit(walls[0]),{spill:false});
+        if(len(walls[1])>=len(walls[0])-1e-6)r.row(walls[1],'stall',fit(walls[1]),{spill:false});
+        else{r.wall(walls[1],-.4,'saddleStand');r.wall(walls[1],.4,'manger')}
+        r.near(.4,.1,'saddleStand',1);r.near(-.4,.1,'s:hayBales');r.near(0,-.1,'s:buckets');r.near(.7,-.1,'s:barrelGroup');
+        return;
+      }
+      r.row(r.A,'stall',r.large?3:1);r.wall(r.B,0,'manger');r.near(.3,.3,'s:hayBales');r.near(-.3,.4,'s:buckets');if(r.large)r.near(.4,-.4,'saddleStand',1)},
     nobleRoom(r){r.wall(r.A,-.2,'canopyBed');r.at(.1,.2,'rug',0,{deco:true});r.wall(r.B,.6,'tapestry',{deco:true});
       r.wall(r.B,-.5,r.large?'fireplace':'chest');r.near(.35,.35,'tableSmall');r.near(.6,.35,'chair',2);
       if(r.large){r.near(-.4,.45,'writingDesk',r.toward(r.A));r.near(.5,-.5,'chest');r.wall(r.A,.75,'candleStand')}},
@@ -196,8 +217,23 @@
       r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large){r.near(.4,.45,'tableLong');r.wall(r.B,-.7,'candleStand')}},
     treasury(r){r.row(r.A,'strongChest',r.large?3:2);r.wall(r.B,-.5,'goldChest');r.near(.2,.2,'coinSacks');
       if(r.large){r.wall(r.B,.4,'ingotRack');r.near(-.4,.4,'writingDesk');r.near(.5,-.3,'coinSacks')}},
+    // Ward: one cot per bed of the simulation (6 normal, 12 large), heads to the wall. A room deep
+    // enough for two cots and an aisle (the W2 hall) gets two facing rows on its long walls; else
+    // one row on the main wall, the rest on the other wall between the herb shelf and the basin.
+    infirmary(r){const beds=r.large?12:6;r.wall(r.B,.85,'herbShelf')||r.wall(r.A,.85,'herbShelf');r.wall(r.B,-.85,'washBasin');
+      const depth=2*(r.A[0]==='u'?r.F.hu:r.F.hv),facing=(r.A[1]==='+'?'-':'+'),opposite=r.A[0]+facing;
+      const two=depth>=2*size('infirmaryBed').d+.25,first=two?Math.ceil(beds/2):beds;
+      let left=beds-wardRow(r,r.A,first);if(two&&left>0)left-=wardRow(r,opposite,left);if(left>0)wardRow(r,r.B,left);
+      r.near(.3,.35,'stool');if(r.large)r.wall(r.A,-.95,'candleStand')},
+    latrine(r){r.wall(r.A,0,'latrineSeat');r.wall(r.B,.5,'washBasin');r.near(-.4,.35,'s:buckets');if(r.large)r.wall(r.A,.75,'latrineSeat')},
     prison(r){r.wall(r.A,0,'cellBars',{off:.35});r.wall(r.A,-.4,'wallChains',{deco:true});r.wall(r.A,.4,'straw',{deco:true});
-      r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')}
+      r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')},
+    // Cistern (tower ground floor): the tank fed by the rain pipe, the hatch over the water, buckets by the door.
+    cistern(r){r.wall(r.A,-.2,'cisternTank');r.near(.1,.15,'cisternHatch',r.toward(r.A));r.near(.45,.45,'s:buckets');
+      if(r.large){r.wall(r.B,.4,'cisternTank');r.near(-.4,.45,'s:barrelGroup')}},
+    // Colombaia: walls of nesting holes, a perch rack, grain sacks and the keeper's stool.
+    dovecote(r){r.row(r.A,'nestWall',r.large?2:1);r.wall(r.B,-.3,'nestWall');r.near(.25,.25,'perch',r.toward(r.A));
+      r.near(-.35,.4,'s:sackPile');r.near(.5,-.4,'stool');if(r.large)r.near(-.5,-.45,'s:buckets')}
   };
 
   // ---------- rooms of a structure

@@ -5,6 +5,88 @@
 - Nuovo tier W4 (3×3U) per il mastio: piante per piano con 1–4 stanze, tramezzi e porte nel cutaway, stanze assegnate per piano. Lab: 5 righe nella galleria fortificazioni e 16 voci nel catalogo.
 - Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è un prototipo da provare, non cambia milestone né contratti.
 
+## 2026-11-04 — Campana d'allarme (branch `feature/alarm-bell`)
+
+- L'allarme del villaggio si propaga dalle campane (chiesa, Municipio, torri T1–T2 a falde con l'upgrade `bell`): raggio d'ascolto, catena di campane, passaparola oltre i raggi. Le case lontane lo sentono più tardi.
+- Campanile Blender sul tetto, montato con `ROOM_EXTERIOR`, esteso agli upgrade di struttura e al montaggio `roof`. Il tetto è esclusivo con Colombaia e Falconiera.
+- Asset Lab: 6 varianti di torre e il modello; baseline dell'audit aggiornata. Nuova `qa/alarm-bell-regression.cjs`.
+- Piramide: STATUS, BACKLOG, DECISIONS (estensione di D-ROOM-EXT-01). ROADMAP invariata: la Campana era già approvata nel catalogo delle stanze.
+
+## 2026-11-04 — Scuderia militare (branch `feature/military-stables`)
+
+- `stables` nelle sezioni costruite W1: 5 cavalli per U, poste in fila nel cutaway. Le sale larghe W2 non ammettono più la scuderia. Una stalla catturata perde i cavalli; senza cibo si macellano quelli di riserva. Le risposte ai messaggeri ripartono a cavallo, 1,5× più veloci.
+- Nuova `qa/military-stables-regression.cjs`; una variante nel Lab con la sua baseline.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è l'estensione di una stanza esistente nella direzione già decisa, senza nuovi contratti.
+
+## 2026-11-04 — Cisterna (branch `feature/cistern`)
+
+- Nuova stanza Cisterna al piano terra delle torri in pietra W2–W3: sempre piena, disseta 60 persone (120 nelle torri grandi) quando i nemici tagliano fuori i pozzi; altrimenti cresce la sete (`thirstDays`). La catena dei secchi attinge alla porta della torre.
+- Arredo cutaway (vasca, botola con argano, secchi) da due nuovi pezzi Blender; due righe nella galleria dell'Asset Lab; baseline dell'audit aggiornata.
+- Nuova `qa/cistern-regression.cjs`; estese `qa/cutaway-furniture-regression.cjs` e `qa/multi-wells-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una stanza della direzione già decisa (stanze e annessi al posto di edifici nuovi), senza nuovi contratti.
+
+## 2026-11-04 — Colombaia nelle torri a falde (branch `feature/colombaia`)
+
+- Nuova stanza `dovecote` (Colombaia): ultimo piano di torri in pietra T2/T3 L2–L3 con tetto a falde. Lettere per colombo viaggiatore 4× più veloci verso la torre-colombaia, risposta immediata senza corriere di ritorno.
+- Lanterna Blender sull'apice del tetto (3D e 2.5D), parete dei nidi e posatoio nel cutaway, registri lanterna e arredi nell'Asset Lab, tre varianti di galleria; baseline dell'audit aggiornata.
+- Nuova `qa/dovecote-regression.cjs` nel workflow delle varianti di torre.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la Colombaia era già approvata come idea nel catalogo delle stanze e torri; la regola «una sola funzione sotto il tetto» è annotata in STATUS.
+
+## 2026-11-04 — Infermeria nelle sezioni costruite (branch `feature/infirmary`)
+
+- Nuova stanza Infermeria, solo nelle sezioni costruite (piano terra e primo piano della W1, sala larga W2).
+  - Ogni giorno, con il personale pagato, ricovera i caduti nella zona gialla (60% di sopravvivenza, ritorno dopo 3 giorni a metà vita) e cura i feriti.
+  - I letti liberi danno +1 di felicità settimanale a L1 e L2.
+- Nuovi arredi Blender: letto d'infermeria (testiera al muro, letti perpendicolari, 6 per stanza normale e 12 per la grande) e scaffale delle erbe. Gli arredi del cutaway entrano nell'Asset Lab, che ora ha anche due varianti di infermeria nel palco del motore.
+- Nuova `qa/infirmary-regression.cjs`; `cutaway-furniture-regression.cjs` copre il nuovo ruolo.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: la stanza segue la direzione già concordata (ampliare gli edifici con stanze, con effetti reali sulla simulazione) e non cambia contratti.
+
+## 2026-11-04 — Elementi esterni delle stanze e Latrina (branch `feature/room-exterior-latrine`)
+
+- Nuovo contratto `ROOM_EXTERIOR`: una stanza può aggiungere un elemento all'esterno dell'edificio, disegnato da tutti i renderer con un'unica geometria e incluso nel crollo.
+- Prima applicazione: la latrina (garderobe) a sbalzo su mensole al piano 2 delle sezioni W1, con lo scarico verso terra. Effetto in gioco: igiene della guarnigione, con fino al 10% degli arcieri malati quando mancano latrine per una guarnigione grande. La latrina è rompibile dall'artiglieria e si può ricostruire.
+- Nuovi `src/settlement-room-exterior.js`, `tools/blender/build_garderobe.py`, `src/assets/garderobe-models.js`, il pezzo d'arredo `latrineSeat` e `qa/room-exterior-latrine-regression.cjs`. Nel Lab: la variante e il modello.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01). ROADMAP invariata: la latrina era già approvata nel catalogo delle stanze, quindi non cambia milestone.
+- CI: il modello della garderobe è nel Lab sotto «Edifici», come il kit case, perché «Fortificazioni» contiene solo mesh del motore. Il job browser di `main-fixes-regression.yml` è fissato su `ubuntu-24.04` come gli altri job browser: Playwright 1.56 non ha Chromium per `ubuntu-latest` (26.04).
+
+## 2026-11-03 — Tribunale in seduta (branch `feature/crime-tribunal-scene`, su `feature/crime-buildings`)
+
+- **Scena:** quando il Municipio selezionato mostra il piano del tribunale, nei giorni feriali dalle 9 alle 17 e senza allarme, la sala si riempie di persone.
+  - **Chi:** giudici in toga e berretto rossi (quello che presiede alza la mano), cancelliere che scrive, prigioniero a mani legate tra due guardie, pubblico sulle panche.
+  - **Come:** nuovo modulo `src/settlement-court-people.js`; i posti vengono da `ConquerCivic3D.roomSlots`, che condivide il layout con l'arredo.
+- **Prigioni occupate:** al piano terra, da 1 a 5 detenuti per cella (alle sbarre o seduti sulla paglia, sbarre ridisegnate davanti) e carceriere al tavolo nel Municipio; lo stesso nelle prigioni del castello. A ogni ora.
+- **Gogna, forca e patibolo in uso:** gogna occupata (lun–sab, 8–17) con capannello che schernisce; «giorno di giustizia» (venerdì 10–12) con boia incappucciato sul palco, magistrato che legge sul patibolo, guardie alla scala e folla. Scene sobrie, senza condannato sul palco né esecuzione.
+- **Costumi di ruolo:** catalogo separato `ConquerWardrobe.ROLE_PIECES` (giudice, cancelliere, prigioniero, boia), mai assegnato per stagione. Nel Lab sotto *Costumi di ruolo*.
+- **Prove:** nuova `qa/court-people-regression.cjs`, anche nel workflow CRIME. Specifica in [crime.md](../crime.md).
+- **Piramide:** STATUS, BACKLOG (C-04 avviato). ROADMAP e DECISIONS invariate: è la prima scena visiva di C-04 e non cambia contratti.
+
+## 2026-11-03 — Edifici e stanze di CRIME nel Builder (branch `feature/crime-buildings`)
+
+- **Municipio:** una stanza per piano (tante quante i livelli) con consiglio, tribunale (L2+), corpo di guardia e prigione, arredate sull'intero piano e viste un piano per volta col cutaway per piani (unito da `feature/cutaway-floors`).
+- **Capienze:** detenuti (5 per cella) e sentinelle in `ConquerSiege.capacity()`; prigioni solo al piano terra (P0), nel castello e nel Municipio.
+- **Ospizio:** annesso della Chiesa L2, casa lunga a due piani (4,5 × 2,4 U) nello stile delle case con ballatoio al P1.
+- **Gogna, forca e patibolo:** tre strutture di piazza collocabili, con modelli Blender, nel Lab e nel Builder; in `/crime/` il patibolo è separato dalla forca.
+- **Prove:** nuova regressione `qa/crime-buildings-regression.cjs`, anche in CI. Specifica in [crime.md](../crime.md).
+- **Piramide:** STATUS, BACKLOG (C-02 e C-03 su branch), DECISIONS (tribunale nel Municipio). ROADMAP invariata.
+
+## 2026-11-04 — Case L4 in 3D con il kit Blender (branch `feature/houses-blender-l4`)
+
+- Le case L4 in World 3D usano il kit: torrette d'angolo tonde e quadrate (muri in pietra e graticcio, finestre del kit, tetto conico o a piramide con pinnacolo, nuovi pezzi Blender) e abbaini con finestra del kit. Kit a 11 pezzi; 2 voci nuove nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
+
+## 2026-11-03 — Case L1 e L2 in 3D con il kit Blender (branch `feature/houses-blender-l1`)
+
+- Anche le case L2 in World 3D usano il kit (gli stessi pezzi delle L3, su un corpo solo, come nel disegno procedurale).
+- Tetti corretti: le falde del kit mostravano il sottotetto bruno sopra l'ardesia e la paglia (falde avvolte al contrario nel builder Blender); ora ardesia grigia su L2/L3 e paglia sulle L1. Verificata l'argilla: mattoni, coppi e dettagli del kit coerenti, senza pietra o ardesia grigie.
+
+- Le casette L1 in World 3D sono costruite col kit: tetto di paglia, finestre rustiche con anta, porta a tavole, telaio di pali e travi, comignoli. Kit a 9 pezzi; corrette le chiavi della baseline dell'audit per il kit (prima non venivano mai riconosciute).
+- Piramide: STATUS, BACKLOG. DECISIONS invariata (applica D-057: pilota L3, poi gli altri livelli); ROADMAP invariata.
+## 2026-11-03 — Cucine solo nelle sezioni costruite (branch `feature/kitchen-built-only`)
+
+- La cucina si assegna solo al piano terra delle sezioni costruite (W1 sezione, W2 sala larga), non più in torri o porte; i salvataggi esistenti perdono le cucine fuori regola al caricamento.
+- Nuova `qa/kitchen-rooms-regression.cjs`.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è una regola di gioco sulle stanze, non cambia milestone né contratti.
+
 ## 2026-11-02 — Case L3 in 3D con kit Blender, pilota (branch `feature/houses-blender`)
 
 - Le case L3 in World 3D sono costruite con un kit Blender (finestre, porta, tetto a 60°, comignolo, travi dello sporto) montato sulle piante procedurali del gioco: graticcio e finestre su tutti i lati. Il fallback 2.5D resta invariato.

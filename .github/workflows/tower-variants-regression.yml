@@ -13,6 +13,11 @@ on:
       - 'src/settlement-structure-commands.js'
       - 'qa/bartizan-regression.cjs'
       - 'qa/tower-roof-shape-regression.cjs'
+      - 'qa/dovecote-regression.cjs'
+      - 'src/settlement-diplomacy.js'
+      - 'src/settlement-cutaway-furniture.js'
+      - 'src/assets/dovecote-models.js'
+      - 'src/assets/furniture-model.js'
       - '.github/workflows/tower-variants-regression.yml'
   workflow_dispatch:
 
@@ -40,3 +45,5 @@ jobs:
           node qa/battlement-parapet-regression.cjs
           node qa/subtower-junctions-regression.cjs
           node qa/tower-weapons-regression.cjs
+      - name: Dovecote (top room under the pitched roof, pigeon post, roof lantern)
+        run: node qa/dovecote-regression.cjs

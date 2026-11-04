@@ -18,7 +18,14 @@
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
     {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
     {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
-    {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'}
+    {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
+    {global:'ConquerFurnitureModel',collection:'pieces',category:'Interni',family:'Arredi del cutaway'},
+    // Elements a room adds to the outside of its building (ROOM_EXTERIOR, settlement-room-exterior.js).
+    // Blender parts listed under Edifici, as the house kit: Fortificazioni holds only engine meshes and
+    // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
+    {global:'ConquerGarderobeModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
+    {global:'ConquerDovecoteModels',collection:'models',category:'Edifici',family:'Colombaia (lanterna sul tetto)'},
+    {global:'ConquerBelfryModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -53,7 +60,11 @@
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno'};
+    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',garderobe:'Latrina a sbalzo (garderobe)',
+    infirmaryBed:'Letto d’infermeria',herbShelf:'Scaffale delle erbe',washBasin:'Bacile',
+    lantern:'Colombaia · lanterna sul tetto',nestWall:'Colombaia · parete dei nidi',perch:'Colombaia · posatoio',
+    belfry:'Castello campanario · campana d’allarme',
+    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
@@ -86,15 +97,17 @@
       const isCivicNature=isCivicProp&&/^prop_(tree|cypress|flowerBush)/.test(key);
       const isCivicFurniture=isCivicProp&&/^prop_table/.test(key);
       // A civic shop/stable/warehouse is a building, not an interior furnishing.
-      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':source.category;
-      const family=source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
+      // Pillory and gallows are piazza works of public justice, placed like the event venues.
+      const isJustice=source.global==='ConquerEventModels'&&key.startsWith('justice');
+      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':isJustice?'Edifici':source.category;
+      const family=isJustice?'Giustizia':source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
         :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali':source.family;
       items.push({id:'model:'+source.global+':'+key,title:titleFor(key),category,family,
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
-            ConquerHouseModels:'house-models.js'}[source.global]),
+            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key:null});
     }
   }
@@ -117,6 +130,12 @@
     items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
       kind:'wardrobe',key,format:'Overlay',note:'Si attiva: '+wardrobe[key].when+'.',source:'src/settlement-wardrobe.js'});
   }
+  // Costumes of office (crime): whole outfits by role, as the tribunal scene dresses them.
+  for(const [key,title,pieces] of [['judge','Giudice',['judgeRobe','judgeCap']],['clerk','Cancelliere',['clerkGown','clerkCap']],
+    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']]])
+    if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
+      items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
+        format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -423,7 +442,7 @@
       [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
         const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
         drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
-          outfit:W.compose([item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+          outfit:W.compose(item.pieces||[item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
       });
     }catch(error){
       console.warn('Asset Lab wardrobe thumbnail could not render',item.key,error);

@@ -303,7 +303,7 @@
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
     for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);
   }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,orderedBoundaryPoints,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,dropStone,STONE_DAMAGE,
+  window.ConquerCombatRules={PROFILES,MAX_E,MAX_B,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,orderedBoundaryPoints,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,dropStone,STONE_DAMAGE,
     // Borrowed read-only effect state; presentation never advances these queues.
     visualEffects:()=>({shots,stones,meleeFlashes,elapsed}),
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;stones.length=0;elapsed=0;combatClock=0;window.ConquerCombatAnim?.reset()}};

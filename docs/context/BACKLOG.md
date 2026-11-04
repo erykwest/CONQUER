@@ -5,6 +5,59 @@
 - **IMPLEMENTATO SU BRANCH `feature/keep-w4` (NON MAIN, prototipo da provare):** tier W4 solo per torre quadrata in pietra, uno per insediamento, mastio automatico a fine cantiere; pianta per piano (Sala / 2 metà / 1+2 / 4 quarti), tramezzi bassi con porte nel cutaway, una scala per piano; stanze che restano sul loro piano quando cambia la pianta.
 - **APERTO:** bilanciamento di costi e giorni (proposta 240 oro / 330 pietra / 75 legno, 18 giorni); scale tra piani più adatte di una scala a pioli; un ingresso rialzato in scala con la facciata 3U; occupanti e IA che attraversano le porte dei tramezzi; garitte a guglia che nel Lab mostrano solo le bandiere (anche sulla T3, difetto preesistente); baseline dell'audit da aggiornare con Playwright.
 
+## Campana d'allarme (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/alarm-bell`:** allarme che si propaga dalle campane; upgrade `bell` delle torri T1–T2 a falde; campanile su `ROOM_EXTERIOR` (`mount:'roof'`).
+- **APERTO:**
+  - **Colombaia:** spostare la lanterna sul montaggio `roof` di `ROOM_EXTERIOR` dopo il merge di questa PR.
+  - **Falconiera:** nascerà sullo stesso montaggio ed è già esclusa dal tetto con campana (`APEX_ROOMS`).
+  - **Suono:** il rintocco udibile non è ancora collegato al motore audio.
+
+## Scuderia militare (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/military-stables`:** capienza delle stalle per U nelle sezioni costruite W1 (mai nelle sale larghe W2), cavalli persi con la stalla catturata, macellazione dei cavalli di riserva quando manca il cibo, risposta dei corrieri su un cavallo fresco, arredo militare nel cutaway.
+- **NON FATTO (scelta dell'utente):** rimonta (riproduzione dei cavalli) e consumo di foraggio.
+- **APERTO:**
+  - Il reclutamento dei cavalieri (`ConquerCombat.recruitKnight`) legge la capienza delle stalle e non lo stock reale dei cavalli: un cavaliere si recluta anche senza cavalli in stalla.
+  - Elemento esterno (recinto o abbeveratoio) eventualmente via `ROOM_EXTERIOR`.
+
+## Cisterna (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/cistern`:** stanza al piano terra delle torri in pietra W2–W3, sempre piena; acqua per 60/120 persone quando l'assedio taglia fuori i pozzi; punto d'acqua della catena dei secchi alla porta della torre; arredo nel cutaway.
+- **APERTO — esterno della torre (attende il meccanismo stanza→esterno del branch `feature/room-exterior-latrine`):** quando c'è una cisterna la torre dovrebbe mostrare: **gronda** lungo il bordo del tetto a falde (sui tetti merlati, doccioni nel parapetto); **pluviale** lungo la facciata fino al piede, in linea con l'imbocco già modellato sopra la vasca (`cisternTank`, angolo posteriore); **bocca di presa / piccola vera** in pietra accanto alla porta del piano terra, dove la catena dei secchi attinge (`cisternTaps`).
+- **APERTO:** effetto della sete sulla resa o sul morale nel ciclo d'assedio P2 (`siege.thirstDays`); torri senza porta al piano terra (mastio con porta rialzata, torri secondarie): oggi le donne attingono al piede della torre sul lato frontale.
+- **FUTURO, non in questo branch:** Presidio antincendio come upgrade di Pozzo e Cisterna.
+
+## Colombaia (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/colombaia`:** stanza Colombaia all'ultimo piano delle torri in pietra T2/T3 L2–L3 a falde; lettere per piccione 4× più veloci e risposta senza corriere di ritorno; lanterna sul tetto, arredo cutaway, voci nell'Asset Lab.
+- **APERTO:** avvisi rapidi tra avamposti e castelli (aspetta Avamposto / Corpo di Guardia, usare `ConquerDovecote`); migrare la lanterna sul contratto `ROOM_EXTERIOR` quando entra in `main`; Falconiera e Campana d'allarme sullo stesso slot sotto il tetto; spostare la colombaia al nuovo ultimo piano quando la torre sale di livello invece di toglierla; piccione in volo come modello 3D nel World 3D.
+
+## Infermeria nelle sezioni costruite (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/infirmary`:** stanza Infermeria (W1 piani 1–2, W2). Ha letti, personale pagato, ricovero dei caduti nella zona gialla con il 60% di sopravvivenza, guarigione dei feriti al 25% al giorno e +1 settimanale di felicità L1/L2 quando la copertura è di un letto ogni 40 abitanti.
+- **APERTO:**
+  - Epidemie: non esiste ancora un modello dati. Quando arriverà, l'infermeria dovrà ridurne il rischio e la durata tramite `ConquerInfirmary.status().free`.
+  - Figure di cerusico e inservienti nel cutaway (oggi il personale è solo economico).
+  - Barelle animate che portano i caduti in infermeria.
+  - Avviso al giocatore quando una truppa è persa o dimessa.
+  - Giardino dei semplici come annesso: fuori scope.
+
+## Elementi esterni delle stanze e Latrina (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/room-exterior-latrine`:** il meccanismo `ROOM_EXTERIOR` (D-ROOM-EXT-01) e la latrina a sbalzo al piano 2 delle sezioni W1, con igiene della guarnigione come bisogno secondario.
+- **APERTO, per altri owner:**
+  - **Colombaia:** montaggio `roof`.
+  - **Cisterna:** montaggio `eave`, gronda o pluviale.
+  - **Combattimento:** infiltrazione dal condotto della latrina in assedio (precedente storico: Château Gaillard, 1204).
+  - **Ospedale:** cura dei malati letti da `ConquerSiege.sickShare()`.
+- **APERTO, da decidere:** latrine nelle torri (oggi escluse); un avviso quando un salvataggio perde una latrina che non entra più per una struttura costruita davanti.
+
+## Cucine solo nelle sezioni costruite (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/kitchen-built-only`:** cucina solo al piano terra di sezioni W1 e sale larghe W2; niente torri né porte. I salvataggi perdono al caricamento le cucine in torri e porte.
+- **APERTO:** avviso al giocatore quando un salvataggio perde una cucina; eventuale bilanciamento dei pasti per sezione.
+
 ## 2026-11-03 — Combat: separazione presentazione completata
 
 - **Implementato su combat e verificato localmente:** canvas tattico, fog/zone, figure/HUD ed effetti in settlement-combat-render.js; regole prive di Canvas. Il precedente residuo di separazione dell'overlay non richiede più di conservare la branch dopo la promozione.
@@ -70,9 +123,18 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 
 - **C-00 — IMPLEMENTATO SU BRANCH `feature/crime-skeleton` (solo sandbox):** `/crime/`, motore deterministico disaccoppiato, metriche criminalità / ordine / tensione, progressione e recupero in cinque fasi, politiche sociali e repressive, flag stanza/annesso per guardia, prigione e ospizio, fixture gogna/forca/tribunale, cronaca, storico e salvataggio isolato, test `qa/crime-regression.cjs`.
 - **C-01 — APERTO:** sorgente unica per popolazione, felicità, tassazione, razioni e assistenza, senza ledger CRIME alternativo (`ConquerGame` + `ConquerEconomy`).
-- **C-02 — APERTO:** assegnazioni vere di guardia e prigione alle torri W2/W3, ospizio alla Chiesa L2, compatibilità degli slot, capacità e personale; verificare il Palazzo cittadino prima di attribuirgli un tribunale.
-- **C-03 — APERTO:** gogna e forca/patibolo come scatter/strutture civiche collocabili, con audit del Lab e QA visiva obbligatori nel loro futuro intervento.
-- **C-04 — APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
+- **C-02 — IMPLEMENTATO SU BRANCH `feature/crime-buildings` (Builder):**
+  - Municipio con una sala per piano, fino al livello civico (consiglio, tribunale da L2, guardia, prigione), arredate nel cutaway.
+  - Capienze: prigioni solo al piano terra, 5 detenuti per cella, guardia 4 per unità di stanza.
+  - Ospizio come annesso della Chiesa L2, con modello Blender.
+  - **APERTO:** personale e routine delle guardie, lettura dal salvataggio in `/crime/` (adapter, vedi C-01).
+- **C-03 — IMPLEMENTATO SU BRANCH `feature/crime-buildings`:**
+  - Gogna (1 × 1 U), forca (2 × 1,5 U) e patibolo (2,5 × 2 U) collocabili come `eventVenue`, con cantiere, costo e modelli Blender `justicePillory` / `justiceGallows` / `justiceScaffold` nel Lab (*Edifici · Giustizia*). In `/crime/` il patibolo è un flag separato dalla forca.
+  - **QA (#139):** audit del Lab completato e baseline aggiornata per i nuovi asset CRIME.
+- **C-04 — AVVIATO NELLA PR #139:** tribunale in seduta nel cutaway del Municipio (giudici, cancelliere, prigioniero tra due guardie, pubblico) con costumi di ruolo; persone decorative e provvisorie, sostituibili con `ConquerCourtPeople.setOccupancySource`.
+  - Gogna occupata e «giorno di giustizia» su forca e patibolo con boia, magistrato, guardie e folla (sobri).
+  - Prigioni occupate nel Municipio e nel castello.
+  - **APERTO:** eventi fisici di proteste, arresti e detenzione nelle routine dei popolani; sommossa e rivolta risolte con pattuglie e `ConquerCombat`, senza secondo motore di battaglia.
 - **C-05 — APERTO:** bilanciamento, logiche punitive individuali, effetti del giudizio/giustizia, persistenza unica, serie storiche e indicatori nel Centro di controllo, regressioni browser/end-to-end.
 - **DIPENDENZE:** M0 economia e popolazione vere → contratti funzioni civiche e guardie → routine e ordine pubblico → esiti militari. Sandbox C-00 non anticipa lo stato implementativo di C-01–C-05. [Design, confini e QA](../crime.md).
 
@@ -261,7 +323,7 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 - **APERTO:** il fallback Canvas 2D del gioco usa ancora il painter e taglia telai e finestre; valutare una correzione del painter o sprite pre-renderizzati.
 - **FATTO (26/10):** occupazione forzata nel Lab. Il pulsante «Occupazione» passa tra tre modi: no, occlusione corretta (figure provate contro il depth buffer) e come nel gioco (figure disegnate sopra). I popolani sono su una griglia di 0,6 U su terreno, pavimenti e portici con spazio libero; l'export PNG 512 rispetta il modo scelto. Non usa ancora gli slot CANS o degli eventi (non su `main`).
 - **APERTO:** nel gioco le figure sono uno strato 2D sopra gli edifici: il modo «come nel gioco» mostra popolani sui tetti e davanti ai muri che dovrebbero coprirli.
-- **Case in 3D, kit Blender (D-057), branch `feature/houses-blender`, NON MERGE:** pilota L3 fatto in World 3D, integrato con le botteghe di #135 (sezione e fronte). **Da fare:** estendere il kit a L1 (paglia, muri bassi), L2, L4 (torrette, abbaini); voce «casa intera» del kit nel Lab (oggi ci sono i soli pezzi). Cantiere col kit fatto (World 3D).
+- **Case in 3D, kit Blender (D-057), branch `feature/houses-blender`, NON MERGE:** pilota L3 fatto in World 3D, integrato con le botteghe di #135 (sezione e fronte). **L1 e L2 su main con #141** (L1: paglia, finestre rustiche, porta a tavole, telaio; L2: i pezzi delle L3 su un corpo). **L4 su branch `feature/houses-blender-l4`, NON MERGE** (torretta tonda e quadrata con telaio, finestre e tetto del kit; abbaini con finestra del kit). **Da fare:** torrette L4 in cantiere non provate (servono incroci stradali); comignolo più rustico per le L1; voce «casa intera» del kit nel Lab (oggi ci sono i soli pezzi). Cantiere col kit fatto (World 3D).
 - **APERTO (incendio, già su `main`, emerso nella riverifica del 02/11):** un incendio consuma il combustibile della casa in ~55 s e la lascia al 2% di integrità, in piedi e senza segni di bruciatura; serve una seconda accensione per abbatterla. Decidere se una casa bruciata deve crollare o mostrare uno stato «bruciata».
 - **APERTO (colore dei cantieri in World 3D):** il cantiere è dipinto dal Canvas, la casa finita da WebGL con la luce calda: al completamento le falde passano da grigio a bruno.
 - **Residui dell'audit:** gli schemi (case, pozzo, campi, strade, fiumi, foresta, rilievo) restano non-gioco (`render-del-gioco`); ponti, levatoi, fossati, terrapieni non ancora nella sandbox.

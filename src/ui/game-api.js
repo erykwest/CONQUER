@@ -71,6 +71,7 @@
       civic: t.placementSpec?.type && t.kind === 'civic' ? t.placementSpec.type : null,
       industry: t.industry || null,
       extraction: t.placementSpec?.extractionMode || null,
+      venue: t.kind === 'event' ? t.venue || null : null,
       mode: t.mode || null,
       radius: t.radius ?? null,
       delta: t.delta ?? null,
@@ -242,6 +243,7 @@
         ],
         autonomy: daily > 0 ? Math.floor(x.stock.food / daily) : null, daily,
         meals: cap.meals, soldiers: cap.soldiers, knights: cap.knights, shortfall: x.starvationDays || 0,
+        water: { ...siege.water(), cisterns: cap.water }, thirst: x.thirstDays || 0,
         transfers: ['food', 'wood', 'stone', 'metal', 'equipment', 'gold', 'horses'].map(key => {
           const group = MATERIALS.includes(key) ? 'materials' : key;
           return { id: key, enabled: (cap[group] || 0) > siege.used(group) && (State.resources[key] || 0) > 0 };
