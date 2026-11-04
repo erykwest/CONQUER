@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Infermeria nelle sezioni costruite (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/infirmary`:** stanza Infermeria (W1 piani 1–2, W2). Ha letti, personale pagato, ricovero dei caduti nella zona gialla con il 60% di sopravvivenza, guarigione dei feriti al 25% al giorno e +1 settimanale di felicità L1/L2 quando la copertura è di un letto ogni 40 abitanti.
+- **APERTO:**
+  - Epidemie: non esiste ancora un modello dati. Quando arriverà, l'infermeria dovrà ridurne il rischio e la durata tramite `ConquerInfirmary.status().free`.
+  - Figure di cerusico e inservienti nel cutaway (oggi il personale è solo economico).
+  - Barelle animate che portano i caduti in infermeria.
+  - Avviso al giocatore quando una truppa è persa o dimessa.
+  - Giardino dei semplici come annesso: fuori scope.
+
 ## Elementi esterni delle stanze e Latrina (04/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/room-exterior-latrine`:** il meccanismo `ROOM_EXTERIOR` (D-ROOM-EXT-01) e la latrina a sbalzo al piano 2 delle sezioni W1, con igiene della guarnigione come bisogno secondario.

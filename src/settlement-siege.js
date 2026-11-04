@@ -96,6 +96,8 @@
     if(fn==='prison')return l===1&&s.type!=='gate';
     // Kitchens: ground floor of built sections only (W1 section or W2 wide hall), never towers or gates.
     if(fn==='kitchen')return l===1&&s.type==='built';
+    // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
+    if(fn==='infirmary')return l<=2&&s.type==='built';
     // Latrine: upper floor of a W1 built section, where its garderobe fits on the exterior face.
     if(fn==='latrine')return l===2&&s.type==='built'&&!isWideBuilt(s)&&!!window.ConquerRoomExterior?.placement(s,index,fn);
     if(['granary','storage','commonHall'].includes(fn))
@@ -329,6 +331,7 @@
     const x=state(),elapsed=Math.max(0,Number(after)-Math.max(Number(before)||0,x.lastDay));
     x.lastDay=after;
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
+    if(elapsed)window.ConquerInfirmary?.tick(after-elapsed,after);
     if(!elapsed)return;
     // Hygiene drifts towards what the latrines can serve: slowly down, faster back up.
     const target=hygieneTarget(),was=sickShare();

@@ -132,7 +132,7 @@ export const T = {
     guard: 'Corpo di guardia', barracks: 'Caserma', armory: 'Armeria', storage: 'Magazzino materiali', granary: 'Granaio',
     kitchen: 'Cucina', stables: 'Scuderie', quarters: 'Alloggi', nobleRoom: 'Stanze nobili', workshop: 'Officina d\'armi',
     chapel: 'Cappella', commonHall: 'Sala comune', throneHall: 'Sala del trono', treasury: 'Tesoro', prison: 'Prigione', latrine: 'Latrina',
-    council: 'Sala del consiglio', tribunal: 'Tribunale'
+    infirmary: 'Infermeria', council: 'Sala del consiglio', tribunal: 'Tribunale'
   },
   manage: {
     sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', game: 'Partita' },

@@ -162,6 +162,15 @@
     if(alongV){r.near(fu-o,fv,'bench',turn);r.near(fu+o,fv,'bench',turn)}else{r.near(fu,fv-o,'bench',turn);r.near(fu,fv+o,'bench',turn)}
     return true;
   }
+  // Up to n ward cots against one wall, spread along it with an aisle between beds (at least a
+  // hand apart when the wall is short, at most two bed widths of aisle); returns how many stand.
+  function wardRow(r,side,n){
+    const s=size('infirmaryBed'),half=(side[0]==='u'?r.F.hv:r.F.hu),along=half-s.w/2-.02,tight=s.w+.03;
+    const fit=Math.min(n,Math.max(0,Math.floor((2*along+s.w)/tight)));
+    const pitch=fit>1?Math.max(tight,Math.min(3*s.w,1.8*along/(fit-1))):tight;let placed=0;
+    for(let k=0;k<fit;k++){const pos=(k-(fit-1)/2)*pitch;if(r.wall(side,along>0?pos/along:0,'infirmaryBed',{exact:true}))placed++}
+    return placed;
+  }
   const ROOMS={
     guard(r){r.row(r.A,'spearRack',1,{t:-.4});r.wall(r.B,.2,'bench');r.near(.15,.1,'tableSmall');r.near(.15,-.45,'stool');r.near(-.3,.15,'stool');
       r.wall(r.A,.6,'brazier',{off:.1});if(r.large){r.wall(r.B,-.7,'s:barrelGroup');r.wall(r.A,.1,'bench')}},
@@ -196,6 +205,14 @@
       r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large){r.near(.4,.45,'tableLong');r.wall(r.B,-.7,'candleStand')}},
     treasury(r){r.row(r.A,'strongChest',r.large?3:2);r.wall(r.B,-.5,'goldChest');r.near(.2,.2,'coinSacks');
       if(r.large){r.wall(r.B,.4,'ingotRack');r.near(-.4,.4,'writingDesk');r.near(.5,-.3,'coinSacks')}},
+    // Ward: one cot per bed of the simulation (6 normal, 12 large), heads to the wall. A room deep
+    // enough for two cots and an aisle (the W2 hall) gets two facing rows on its long walls; else
+    // one row on the main wall, the rest on the other wall between the herb shelf and the basin.
+    infirmary(r){const beds=r.large?12:6;r.wall(r.B,.85,'herbShelf')||r.wall(r.A,.85,'herbShelf');r.wall(r.B,-.85,'washBasin');
+      const depth=2*(r.A[0]==='u'?r.F.hu:r.F.hv),facing=(r.A[1]==='+'?'-':'+'),opposite=r.A[0]+facing;
+      const two=depth>=2*size('infirmaryBed').d+.25,first=two?Math.ceil(beds/2):beds;
+      let left=beds-wardRow(r,r.A,first);if(two&&left>0)left-=wardRow(r,opposite,left);if(left>0)wardRow(r,r.B,left);
+      r.near(.3,.35,'stool');if(r.large)r.wall(r.A,-.95,'candleStand')},
     latrine(r){r.wall(r.A,0,'latrineSeat');r.wall(r.B,.5,'washBasin');r.near(-.4,.35,'s:buckets');if(r.large)r.wall(r.A,.75,'latrineSeat')},
     prison(r){r.wall(r.A,0,'cellBars',{off:.35});r.wall(r.A,-.4,'wallChains',{deco:true});r.wall(r.A,.4,'straw',{deco:true});
       r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')}
