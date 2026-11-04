@@ -5,6 +5,13 @@
 - **IMPLEMENTATO SU BRANCH `feature/keep-w4` (NON MAIN, prototipo da provare):** tier W4 solo per torre quadrata in pietra, uno per insediamento, mastio automatico a fine cantiere; pianta per piano (Sala / 2 metà / 1+2 / 4 quarti), tramezzi bassi con porte nel cutaway, una scala per piano; stanze che restano sul loro piano quando cambia la pianta.
 - **APERTO:** bilanciamento di costi e giorni (proposta 240 oro / 330 pietra / 75 legno, 18 giorni); scale tra piani più adatte di una scala a pioli; un ingresso rialzato in scala con la facciata 3U; occupanti e IA che attraversano le porte dei tramezzi; garitte a guglia che nel Lab mostrano solo le bandiere (anche sulla T3, difetto preesistente); baseline dell'audit da aggiornare con Playwright.
 
+
+## Portico delle sezioni W1 (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/built-portico`:** un solo layout del porticato per 2.5D, World 3D e cutaway; archi sotto il solaio del piano sopraelevato; portico visibile nel cutaway 3D. Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia (proposta: l'utente ha indicato stalle e armaioli, le altre due sono da confermare).
+- **IMPLEMENTATO SU BRANCH (04/11):** loggia vera in World 3D (piano terra arretrato, pilastri e archi, piano rialzato sopra), anche nel cutaway.
+- **IMPLEMENTATO SU BRANCH (04/11, sera):** una stanza arredata per campata, camminamento percorribile lungo i pilastri, visitatori fermi sotto il portico, «Portico» nel pannello.
+- **APERTO:** loggia anche nel 2.5D (oggi archi ritagliati nella facciata); figure di lavoro fisse nelle stanze (stalliere, armaiolo) come le guarnigioni del cutaway; cavalli nelle stalle; il box della stalla (0,54U) non entra nella profondità utile (0,56U meno margini) e viene saltato; arredi di notte in piena luce; loggia nell'audit del Lab (oggi cattura il 2.5D); bottega/mercato sotto portico se si vorrà il commercio.
 ## Campana d'allarme (04/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/alarm-bell`:** allarme che si propaga dalle campane; upgrade `bell` delle torri T1–T2 a falde; campanile su `ROOM_EXTERIOR` (`mount:'roof'`).

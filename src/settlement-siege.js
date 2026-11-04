@@ -105,6 +105,8 @@
     if(fn==='council'||fn==='tribunal')return false;   // civic rooms, town hall only
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
+    // The portico of a W1 section is an open ground floor: only what lives under arches fits there.
+    if(l===1&&s.type==='built'&&typeof isBuiltPortico==='function'&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
     // Stables: ground floor of a tower or of a W1 built section, never a W2 wide hall.
     if(fn==='stables')return l===1&&s.type!=='gate'&&!s.parentTowerId&&!(s.type==='built'&&isWideBuilt(s));
     if(fn==='workshop')return l===1&&s.type!=='gate'&&!s.parentTowerId;

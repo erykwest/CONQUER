@@ -22,6 +22,7 @@ function fixture(){
     isWoodTower:s=>s.type==='tower'&&s.material==='wood',
     woodTowerStyle:s=>s.woodStyle||'palisadeTower',
     underConstruction:s=>Number(s.construction?.completeDay)>State.clock.day,
+    isBuiltPortico:()=>false,PORTICO_FUNCTIONS:[],
     markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{}
   });
   vm.runInContext(capacitySrc+'\n'+normaliseSrc+'\n'+siege,ctx);
