@@ -94,11 +94,14 @@
     let changed=false;
     for(const forest of [...(State.environment||[])]){
       if(forest.type!=='forest'||!forest.points?.length)continue;
-      // A pre-existing woodland already cut by another job yields no duplicate wood.
-      const hits=forest.points.some(p=>contains(job.center,job.radius,job.shape,p))||
-        (typeof environmentContains==='function'&&environmentContains(forest,job.center));
-      const affected=hits||job.coveredArea>0&&
-        shapePoints(job.center,job.radius,job.shape).some(p=>environmentContains(forest,p));
+      // Sample the actual standing woodland. An extremely narrow strip may
+      // intersect the clearing without containing its centre or vertices.
+      let affected=false;
+      for(let x=job.center.x-job.radius+STEP/2;x<job.center.x+job.radius&&!affected;x+=STEP)
+        for(let y=job.center.y-job.radius+STEP/2;y<job.center.y+job.radius;y+=STEP)
+          if(contains(job.center,job.radius,job.shape,{x,y})&&environmentContains(forest,{x,y})){
+            affected=true;break;
+          }
       if(!affected)continue;
       if(!forest.continuous&&forest.points.every(p=>
         contains(job.center,job.radius,job.shape,p))){
