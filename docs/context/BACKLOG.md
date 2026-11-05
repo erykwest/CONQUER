@@ -3,7 +3,7 @@
 ## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `fix/latrine-towers`:** la latrina passa dalle sezioni costruite W1 alle torri W1 in pietra (piano 2, sbalzo sulla faccia esterna libera). Le torri W1 accettano Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria, con la scala a chiocciola che resta.
-- **APERTO:** arredo delle stanze W1 nel cutaway (oggi la scala a chiocciola occupa il vano, quindi niente mobili); un avviso quando un salvataggio perde una latrina da una sezione costruita.
+- **APERTO:** nella torre rotonda W1 entrano meno sedili dei tre previsti (stanza di 0,73 U); un'apertura nel muro tra stanza e sbalzo; un avviso quando un salvataggio perde una latrina da una sezione costruita.
 
 ## Campana d'allarme (04/11/2026)
 

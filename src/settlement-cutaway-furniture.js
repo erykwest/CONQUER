@@ -228,7 +228,8 @@
     // The whole room is the latrine: the seat against the wall the garderobe hangs from, basin and buckets around.
     // In a small tower room the seat is always there, against that wall even over the reserved spots.
     latrine(r){const S=r.exteriorSide||r.A,O=S===r.A?r.B:r.A;
-      r.wall(S,0,'latrineSeat',{exact:true})||r.wall(S,0,'latrineSeat')||r.wall(r.A,0,'latrineSeat')||r.wall(S,0,'latrineSeat',{exact:true,deco:true});
+      // Communal latrine: three seats side by side along that wall, over the three drop holes.
+      if(r.row(S,'latrineSeat',3,{spill:false})<3)for(const t of [-.8,0,.8])r.wall(S,t,'latrineSeat',{exact:true,deco:true});
       // Basin and a rag shelf on the other standing wall, a stool and a light: the small tower room fills up.
       r.wall(O,.5,'washBasin');r.wall(O,-.45,'shelf',{deco:true});r.near(.35,.35,'stool');r.wall(S,.85,'candleStand');
       r.near(-.4,.35,'s:buckets');if(r.large){r.wall(O,-.5,'s:barrelGroup');r.wall(r.A,.75,'latrineSeat')}},

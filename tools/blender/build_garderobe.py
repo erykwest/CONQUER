@@ -35,13 +35,15 @@ COLORS = {
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Garderobe'
 
-W, PROJ = .46, .22            # width along the face, projection out of it (shallower, user 05/11/2026)
+# Communal garderobe, three seats side by side (user 05/11/2026): wide and shallow.
+W, PROJ = .76, .22            # width along the face, projection out of it
+HOLES = (-.25, 0, .25)        # drop holes, one per seat
 SLAB0, SLAB1 = -.06, 0.0      # floor slab, flush with the room floor
 WALL_T = .05
 TOP = .56                     # box walls
 ROOF_IN, ROOF_OUT = -.03, PROJ + .05
 ROOF_HI, ROOF_LO, ROOF_T = .70, .58, .04
-CORBELS = (-.19, -.1, .1, .19)   # clear of the drop hole in the middle
+CORBELS = (-.36, -.125, .125, .36)   # between the drop holes
 
 
 def prism(p, pts, z0, z1, key, top=None, bottom=None):
@@ -72,7 +74,8 @@ def garderobe(root):
     box(b, -h, -h + WALL_T, 0, PROJ, SLAB1, TOP, 'stone', 'stoneLight')                             # side walls
     box(b, h - WALL_T, h, 0, PROJ, SLAB1, TOP, 'stone', 'stoneLight')
     box(b, -h + WALL_T, h - WALL_T, PROJ - WALL_T, PROJ, SLAB1, TOP, 'stone', 'stoneLight')        # front
-    box(b, -.025, .025, PROJ, PROJ + .004, .26, .44, 'dark')                                        # vent slit
+    for x in HOLES:
+        box(b, x - .02, x + .02, PROJ, PROJ + .004, .28, .44, 'dark')                               # one vent slit per seat
     box(b, -h - .01, h + .01, PROJ - .01, PROJ + .015, TOP - .04, TOP, 'stoneDark')                 # string course
     parts['box'] = b.finish()
 
@@ -84,15 +87,20 @@ def garderobe(root):
     parts['corbels'] = c.finish()
 
     r = Part(root, 'roof', COLORS)
-    slab(r, -h - .03, h + .03, ROOF_IN, ROOF_HI, ROOF_OUT, ROOF_LO, ROOF_T, 'roofSlab', 'roofUnder')
+    # Lean-to roof in three stepped courses (boxes: their faces keep the right winding in 2.5D).
+    for k in range(3):
+        y0, y1 = ROOF_IN + (ROOF_OUT - ROOF_IN) * k / 3, ROOF_OUT
+        z = ROOF_HI - (ROOF_HI - ROOF_LO) * k / 2
+        box(r, -h - .03, h + .03, y0, y1, z - ROOF_T, z, 'roofSlabDark', 'roofSlab', 'roofUnder')
     box(r, -h - .03, h + .03, ROOF_IN - .02, ROOF_IN + .03, ROOF_HI - ROOF_T, ROOF_HI + .02, 'roofSlabDark')   # flashing on the wall
     parts['roof'] = r.finish()
 
     # Unit-height chute: z 0 at the slab underside (chuteTop), -1 at the ground (stretched by the game).
     ch = Part(root, 'chute', COLORS)
-    box(ch, -.06, .06, .02, .14, -.004, 0, 'dark')                                                  # drop hole
-    vs = [(x * S, .003 * S, z * S) for x, z in ((-.05, 0), (.05, 0), (.08, -1), (-.08, -1))]       # stain on the wall
-    ch.quads(vs, [(0, 1, 2, 3)], 'stain')
+    for x in HOLES:
+        box(ch, x - .05, x + .05, .03, .13, -.004, 0, 'dark')                                       # drop hole
+        vs = [((x + dx) * S, .003 * S, z * S) for dx, z in ((-.04, 0), (.04, 0), (.06, -1), (-.06, -1))]   # stain on the wall
+        ch.quads(vs, [(0, 1, 2, 3)], 'stain')
     parts['chute'] = ch.finish()
     return parts
 

@@ -58,12 +58,13 @@ assert.equal(RE.placement(s,1,'latrine'),null,'every outer face taken by a wall:
 ctx.State.structures=[s];
 const r=tower({id:'t2',shape:'round',r:.5,size:undefined});ctx.State.structures=[r];
 const er=RE.placement(r,1,'latrine');
-assert.ok(er&&er.normal.x>.999&&er.anchor.x<.5&&er.anchor.x>.42,'round tower: outward, sunk by the sagitta into the curved wall');
+const GW=ctx.window.ConquerGarderobeModels.models.garderobe.width;
+assert.ok(er&&er.normal.x>.999&&Math.abs(er.anchor.x-Math.sqrt(.25-GW*GW/4))<1e-9,'round tower: outward, sunk by the sagitta into the curved wall');
 ctx.State.structures=[s];
 console.log('PASS the garderobe sits on a free outer tower face at the floor of its room');
 
 // Something already outside the face: another building, a road (ground level) does not count.
-ctx.State.structures=[s,{id:'h',type:'house',pts:[{x:.4,y:-2},{x:2,y:-2},{x:2,y:2},{x:.4,y:2}]}];
+ctx.State.structures=[s,{id:'h',type:'house',pts:[{x:.55,y:-2},{x:2,y:-2},{x:2,y:2},{x:.55,y:2}]}];
 assert.equal(RE.placement(s,1,'latrine').face===1,false,'not where a building stands in front');
 ctx.State.structures=[s,{id:'r',type:'road',pts:[{x:.4,y:-2},{x:2,y:-2},{x:2,y:2},{x:.4,y:2}]}];
 assert.equal(RE.placement(s,1,'latrine').face,1,'a road does not block it');
@@ -117,7 +118,9 @@ assert.ok(spiral(tower({functions:[null,null]})),'W1 tower without rooms: spiral
 assert.ok(!spiral(tower()),'a room assigned: the stair goes');
 assert.ok(!spiral(tower({tier:2,functions:[]})),'never in W2 towers');
 assert.ok(RE.ROOM_EXTERIOR.latrine&&ctx.window.ConquerGarderobeModels.models.garderobe.projection<=.22,'a shallow garderobe');
+assert.equal(tris.filter(t=>t.key==='stain').length,3*2,'communal: three drop holes, three stains');
 const furn=src('settlement-cutaway-furniture.js');
+assert.match(furn,/r\.row\(S,'latrineSeat',3/,'three seats along the garderobe wall');
 assert.match(furn,/latrine\(r\)\{const S=r\.exteriorSide\|\|r\.A/,'the seat goes against the wall of the garderobe');
 assert.match(furn,/r\.exteriorSide=Math\.abs\(u\)>=Math\.abs\(v\)/);
 console.log('PASS W1 stair only in empty towers; shallow garderobe; latrine furnishes its room');
