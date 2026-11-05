@@ -13,6 +13,21 @@ on:
       - 'src/ui/**'
       - 'qa/labor*.cjs'
       - 'qa/economy*.cjs'
+      - 'qa/forestry-regression.cjs'
+      - 'qa/storage-yard-regression.cjs'
+      - 'src/settlement-storage-yard.js'
+      - 'src/settlement-castle.js'
+      - 'src/settlement-castle-placement.js'
+      - 'src/settlement-app-rooms.js'
+      - 'src/settlement-structure-commands.js'
+      - 'src/settlement-app-persistence.js'
+      - 'src/settlement-world3d.js'
+      - 'src/settlement-forestry.js'
+      - 'src/settlement-industries.js'
+      - 'src/settlement-app-input.js'
+      - 'src/settlement-app-simulation.js'
+      - 'src/settlement-render.js'
+      - 'src/settlement-builder-ux.js'
       - 'qa/construction*.cjs'
       - 'src/settlement-core.js'
       - 'src/settlement-population-*.js'
@@ -47,6 +62,10 @@ jobs:
           node qa/economy-panel-history-regression.cjs
           node qa/economy-regression.cjs
           node qa/economy-industries-regression.cjs
+          node --check src/settlement-forestry.js
+          node qa/forestry-regression.cjs
+          node --check src/settlement-storage-yard.js
+          node qa/storage-yard-regression.cjs
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
           node qa/construction-workers-regression.cjs

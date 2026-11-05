@@ -36,7 +36,8 @@ function drawStructure(s,preview=false){
     if(assembled&&window.ConquerAssembly.draw(s))return;
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
-    if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.draw(s,preview);
+    else if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
     else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
     else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
@@ -430,6 +431,7 @@ function draw(){
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.
   drawBuildArea();
+  window.ConquerForestry?.drawJobs();
   for(const field of completedSettlement('field'))drawFieldWork(field);
 
   // Construction sites remain dynamic at ground/building depth.
@@ -482,7 +484,8 @@ function draw(){
   drawChimneysAndSmoke();
 
   if(State.draft?.mode==='terraform'){
-    window.ConquerTerraforming?.drawGhost(State.draft.preview);
+    if(State.tool?.mode==='forest')window.ConquerForestry?.drawGhost(State.draft.preview);
+    else window.ConquerTerraforming?.drawGhost(State.draft.preview);
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
