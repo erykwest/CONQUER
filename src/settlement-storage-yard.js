@@ -20,7 +20,7 @@
   function free(){return Math.max(0,capacity()-used())}
   function make(x=0,y=0,options={}){
     const n=SIZES.includes(Number(options.size))?Number(options.size):2;
-    return{id:options.id||null,type:TYPE,shape:'square',x,y,w:n,h:n,yardSize:n,
+    return{...(options.id?{id:options.id}:{}),type:TYPE,shape:'square',x,y,w:n,h:n,yardSize:n,
       angle:0,economicOwner:'lord',...(options.founding?{foundingStockyard:true,foundingWellId:options.wellId||null,buildCost:{}}:{})};
   }
   // Candidate areas are validated by the same terrain, canopy, whitezone and
