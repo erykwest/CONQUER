@@ -94,6 +94,22 @@ test('logging camp produces stored wood on workdays even when charter stock exce
   assert.equal(h.yard.capacity(),600);
   assert.equal(h.State.structures.filter(s=>s.id===yard.id).length,1);
 });
+test('one logger remains staffed when all four founding L1 would otherwise build',()=>{
+  const h=harness(),e=h.economy;
+  h.State.structures=[
+    {id:'well',type:'well',x:100,y:100},
+    {id:'logger',type:'loggingCamp',economicOwner:'lord'},
+    {id:'site-1',type:'tower',construction:{version:2,startedDay:0,workRequired:100,workDone:0}},
+    {id:'site-2',type:'tower',construction:{version:2,startedDay:0,workRequired:100,workDone:0}}
+  ];
+  e.foundingCharter('well');h.yard.ensureForWell();
+  const assigned=e.laborAllocation(0);
+  assert.ok(assigned.allocated.logger>=1,'stockyard reserves a logger before builder-only demand exhausts L1');
+  assert.ok(assigned.spareL1.length<=3,'the logger is not also eligible for construction');
+  const wood=e.state().castle.wood;
+  e.tick(-1,0);
+  assert.ok(e.state().castle.wood>wood,'work is real production into the stockyard');
+});
 test('warehouse expansion checks space, pays materials and increases capacity, without minting goods',()=>{
   const h=harness();h.State.structures=[{id:'well',type:'well',x:100,y:100}];
   h.economy.foundingCharter('well');
