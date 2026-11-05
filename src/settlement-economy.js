@@ -324,7 +324,10 @@
     l1Available.push(...herdPool);
     remaining.L1=Math.min(remaining.L1,l1Available.length);
     const logging=[],woodLow=woodStock(e)<Math.min(20,finite(e.target?.wood,20));
-    let woodReserve=woodLow?2:0;
+    // A settlement with an actual stockyard must keep at least one lumber
+    // producer working even while several construction sites compete for all
+    // founding L1. Without a stockyard, keep the older construction-first rule.
+    let woodReserve=woodLow?2:((window.ConquerStorageYard?.capacity?.()||0)>0?1:0);
     // Industry positions are staffed before assigning only spare L1 to manual
     // construction. An out-of-season field does not reserve a worker forever.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
