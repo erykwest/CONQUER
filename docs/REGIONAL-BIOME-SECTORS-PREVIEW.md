@@ -35,3 +35,9 @@ QA: 16 percorsi verificati per ripetibilità, continuità dei campioni, estremi 
 ## Correzione vincolante: anse interne
 
 Supera il precedente requisito di assenza di attraversamento: il fiume deve entrare nella buildable zone per almeno 25 px sulla tavola di riferimento. Ampiezza 24 U rispetto alla direttrice esterna di 12 U: picchi interni di 12 U, equivalenti a 36 px sul canvas 600 px. La misura in pixel riguarda il canvas di riferimento; il ridimensionamento CSS scala la vista. La dorsale resta esterna e invariata. Tutti gli otto percorsi fluviali raggiungono la penetrazione, con entrambi i versi delle deviazioni. L'interno non è più garantito libero dall'acqua; collisioni e costruibilità effettiva da integrare nel Builder.
+
+## Fiume nel Builder
+
+Il generatore reale makeEnvWater delega i fiumi a makeBoundaryRiver. Quattro anse Bezier ampie e continue seguono un lato buildable selezionato deterministicamente dal seed (assenza di confini regionali collegati). La direttrice è 12 U fuori dal bordo, le anse entrano per 12 U. Il risultato conserva il formato ambiente river, width 4.4 U: collisioni, navigation, sponde e renderer esistenti consumano la stessa geometria. I ruscelli mantengono la ricetta attuale. Nessuna migrazione distruttiva delle mappe salvate: serve una mappa nuova o rigenerata nel bioma Fiume. Lo schema a otto biomi e le dorsali restano nel laboratorio separato.
+
+QA runtime: 42 mappe biomi, 64 generazioni di fiume con centro libero e acqua interna che impedisce costruzione, 36 verifiche urban. Test boundary-river-regression.cjs raccolto automaticamente dalla CI qa/*-regression.cjs.

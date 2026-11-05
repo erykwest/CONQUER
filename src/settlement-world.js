@@ -1056,6 +1056,7 @@ function makeEnvEllipse(type,x,y,rx,ry,angle,fill,edge){return{id:'env-'+type+'-
 // Meandering watercourse across the map: two sine bends (long meanders plus tighter
 // wiggles) and a little smoothed noise, sampled every 2.5U.
 function makeEnvWater(rnd,type){
+  if(type==='river')return makeBoundaryRiver(rnd);
   const horizontal=rnd()>.30,river=type==='river',pts=[],step=2.5,n=Math.round(WORLD/step);
   const base=70+rnd()*60;
   const a1=river?biomeRand(rnd,14,22):biomeRand(rnd,9,15),f1=river?biomeRand(rnd,1.5,2.5):biomeRand(rnd,2,3.5);
@@ -1068,6 +1069,31 @@ function makeEnvWater(rnd,type){
     pts.push(horizontal?{x:t*WORLD,y:off}:{x:off,y:t*WORLD});
   }
   return{id:'env-'+type,type,points:pts,width:river?WATER_WIDTH.river:WATER_WIDTH.stream,fill:river?'#3a7684':'#4f8d95',edge:river?'#88b4b8':'#9cc6c6'};
+}
+// Real terrain water, shared by collision, navigation, banks and both renderers.
+// Keep existing saved landscapes intact: this policy applies when generating a river.
+function makeBoundaryRiver(rnd){
+  const sides=['west','north','east','south'],side=sides[Math.floor(rnd()*4)];
+  const phase=rnd()<.5?-1:1,points=[],baseline=BUILD_MIN-12,amplitude=24;
+  const point=(along,across)=>side==='east'?{x:WORLD-across,y:along}:
+    side==='north'?{x:along,y:across}:side==='south'?{x:along,y:WORLD-across}:{x:across,y:along};
+  const cubic=(a,b,c,d)=>{
+    for(let i=points.length?1:0;i<=20;i++){
+      const t=i/20,u=1-t;
+      points.push(point(u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,
+        u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y));
+    }
+  };
+  // Four broad alternating bends guarantee an inward peak within the 100U buildable span
+  // for either phase. Peak depth is 12U = 36px on the 600px reference map (minimum 25px).
+  const step=WORLD/4,p=(x,y)=>({x,y});
+  for(let i=0;i<4;i++){
+    const a=i*step,d=a+step,offset=amplitude*(i%2?-phase:phase),peak=baseline+offset;
+    cubic(p(a,baseline),p(a+step/6,baseline),p(a+step/3,peak),p(a+step/2,peak));
+    cubic(p(a+step/2,peak),p(a+step*2/3,peak),p(d-step/6,baseline),p(d,baseline));
+  }
+  return{id:'env-river',type:'river',points,width:WATER_WIDTH.river,fill:'#3a7684',edge:'#88b4b8',
+    boundaryPolicy:1,boundarySide:side};
 }
 // Watercourse widths (U). Saved landscapes from before the widening are brought up to them
 // on load (widenWatercourses), so old maps get the wider rivers and streams too.

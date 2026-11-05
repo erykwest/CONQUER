@@ -1,5 +1,7 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+05/11/2026 — REG-BIOME-RIVER ingame su `experiment/regional-biome-sectors` (NON MAIN): `makeEnvWater` genera i nuovi fiumi sul perimetro buildable con quattro ampie anse alternate, penetrazione interna 12 U (36 px riferimento 600 px). Acqua reale nei renderer e nei vincoli di costruzione. QA 42 mappe biomi, 64 mappe fiume con collisioni/determinismo, 36 urban checks PASS. Mappe salvate preservate; applicazione alle mappe rigenerate. Gli otto biomi e le dorsali della fixture non sono ancora integrati nel Builder.
+
 05/11/2026 — Esperimento REG-BIOME-PREVIEW: [prova cartografica](REGIONAL-BIOME-SECTORS-PREVIEW.md) su `experiment/regional-biome-sectors`, NON MAIN. Quattro lati e corner di blending. Integrazione con i confinanti Voronoi reali e generatore Builder ancora aperta.
 
 ## Stato corrente su main — 30 ottobre 2026
