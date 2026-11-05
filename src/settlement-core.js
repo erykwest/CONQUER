@@ -1029,7 +1029,7 @@ function pointRadius(s){
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
   if(s.type==='well')return .75;
   if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
-  if(s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(s.type==='field'||s.type==='storageYard'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
   if(s.type==='pier')return 1;
   if(isCivicAnnex(s))return Math.hypot(s.w||1,s.h||1)/2;
   if(isCivic(s))return civicRadius(s);
