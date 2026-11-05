@@ -453,6 +453,7 @@ function draw(){
 
   drawTowerFlags();
   drawCastleSoldiers();
+  window.ConquerTrebuchets?.draw();   // enemy trebuchets: crews (and the 2.5D outline)
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
   window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
