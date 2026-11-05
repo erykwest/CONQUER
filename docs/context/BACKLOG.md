@@ -2,6 +2,20 @@
 
 BC-251105-03 e BC-251105-10 (edifici addossati alle mura e loro tetto a falda unica) implementati su `feature/wall-buildings`, PR in revisione. **APERTO:** comportamento dell'addossato quando il muro cade in breccia o viene demolito.
 
+## 2026-11-05 — P0: Piazzale deposito e Logging Camp (branch `feature/founding-storage-yard-20261105`)
+
+- **P0-05 · PRODUZIONE LEGNO — FIX IN BRANCH:** con un piazzale e camp attivo almeno un L1 è assegnato prima dei cantieri, evitando produzione zero durante costruzioni simultanee; accantonamento nel magazzino iniziale della quota non venduta, superando il vecchio limite target 70 con scorte iniziali 200; eccedenza al mercato senza duplicazioni. L'output si vede nel pannello del taglialegna e dell'economia. Logistica dei popolani/carrettieri ancora fuori scope.
+- **P0-03 / P0-05 · PIAZZALE — IN BRANCH:** spawn garantito solo quando esiste una collocazione edificabile entro 7U dal pozzo; 2×2U, inventario fondativo nel ledger unico, espansione fino a 6×6U, comando nell'ispettore, altra costruzione tramite paletta Produzione, compatibilità salvataggi vecchi.
+- **QA in PR:** `qa/storage-yard-regression.cjs`; rischio residuo da collaudare a vista: terreno complesso/biomi e disegno World3D.
+
+
+## 2026-11-05 — Fix forestry L1 (branch `fix/forestry-l1-clearing-cost-20261105`)
+
+- **P0-02 · FORESTE — IN IMPLEMENTAZIONE SU BRANCH:** nuova azione «Rimuovi foresta» nel Terraforming, lavoro L1 pagato, durata proporzionale alla superficie realmente alberata, apertura di una radura persistente e riconoscimento di legname nel ledger economico al completamento. Non equivale a tree depletion automatica da parte dei Logging Camp; quest'ultima rimane aperta.
+- **P0-05 · LOGGING CAMP — FIX SU BRANCH:** costo di costruzione 5 legname e 35 oro, non 25 legname. Lavoratori e produzione ordinaria del Logging Camp non sono cambiati.
+- **QA dedicata:** `qa/forestry-regression.cjs` (ghost e coda non istantanei, prevenzione doppio impiego, sabato/domenica, salari, legname una sola volta, persistenza). Esecuzione CI da verificare dopo PR.
+
+
 Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neutro sulle celle vuote (branch `fix/audit-sheet-grid`). **APERTO:** il simbolo «Her 2» dell'araldica è quasi invisibile nel foglio (difetto preesistente, non toccato).
 
 ## 2026-11-05 — ARTE: opere commissionabili e decorazione delle stanze

@@ -232,6 +232,7 @@ function structureHeight(s){
   if(isLeanTo(s))return window.ConquerLeanTo?.EAVES??1.40;
   if(s.type==='built')return isLonghouse(s)?(isWideBuilt(s)?2.07:1.77):[1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
+  if(s.type==='storageYard')return .55;
   if(s.type==='bridge')return .12;
   if(s.type==='moat')return 0;
   if(s.type==='ruin')return Number(s.ruinHeight)||.8;     // the stump a fallen tower or gate leaves
@@ -262,6 +263,7 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   if(s.type==='field')return fieldPoints(s);
+  if(s.type==='storageYard')return rectWorldPoints(s.x,s.y,s.w||2,s.h||2,s.angle||0);
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.footprint(s);   // event venues (settlement-events3d.js)
   if(window.ConquerPier?.is(s))return window.ConquerPier.footprint(s);
   if(isCivicAnnex(s))return civicAnnexFootprint(s);
