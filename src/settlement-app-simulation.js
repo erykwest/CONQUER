@@ -200,6 +200,7 @@ function simulationFrame(now){
       window.ConquerConvoys?.tick?.(previousDay,State.clock.day); // lord convoys and diplomatic caravans
       // Player-build projects progress only when available L1 staff actually
       // complete shift work; procedural road/house generation retains V1 clocks.
+      window.ConquerForestry?.tick(simLogicDay,State.clock.day);
       const laborCompletions=tickConstructionWork(simLogicDay,State.clock.day);
       completed=[...constructionCompletionsCrossed(simLogicDay,State.clock.day),...laborCompletions];
       simLogicDay=State.clock.day;
