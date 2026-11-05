@@ -49,3 +49,7 @@ Riferimento richiesto: https://divisbyzero.com/2009/11/26/the-geometry-of-meande
 Nel Builder il modello integra x'=cos(theta), y'=sin(theta) a passi di lunghezza; theta varia dolcemente lungo ogni semimeandro. Ciascuna ansa ha raggio 2–3w, apertura 1–1.5 radianti e lunghezza derivata dal raggio. Il seed modifica questi parametri e il tratto iniziale, non solo lato e specchiatura. Nessun ridimensionamento o clipping deforma le curve per adattarle alla mappa: vengono selezionati candidati validi e traslati rispetto al bordo buildable. La penetrazione garantita resta almeno 25 px sul canvas di riferimento; il picco selezionato entra per 9–12 U, con massimo globale di 20 U. Modello geometrico statico, non simulazione di erosione o soluzione idraulica.
 
 QA: test negativo sul vecchio generatore (solo due sagome distinte normalizzate), poi PASS su 64 mappe reali con almeno 60 forme distinte e 2.000 curve con limiti e penetrazione. Rapporto r/w verificato. Regresioni biome-recipes e save-safety PASS.
+
+## Traslazione interna 15 U (policy 3)
+
+Il corso accettato dal modello precedente viene traslato rigidamente di 15 U verso il centro: +x dal lato ovest, -x da est, +y da nord, -y da sud. Nessuna modifica alle anse o ai candidati del seed. Picchi trasversali selezionati a 24–27 U dentro il bordo; massimo globale 35 U. Il centro (100,100) resta libero. Applicazione alle nuove generazioni, senza migrazione automatica delle mappe salvate.

@@ -10,13 +10,14 @@ for(let seed=0;seed<64;seed++){
   const river=JSON.parse(first);sides.add(river.boundarySide);
   const canonical=river.points.map(p=>river.boundarySide==='west'?{x:p.y,y:p.x}:river.boundarySide==='east'?{x:p.y,y:200-p.x}:river.boundarySide==='north'?p:{x:p.x,y:200-p.y});
   shapes.add(canonical.slice(1,40).map((p,i)=>(p.y-canonical[i].y).toFixed(4)).join(','));
-  assert.equal(river.boundaryPolicy,2);
+  assert.equal(river.boundaryPolicy,3);
+  assert.equal(river.inwardOffset,15);
   assert.equal(river.meanderModel,'arc-length-heading');
   assert.ok(river.meanderBends.every(b=>b.radius/river.width>=2&&b.radius/river.width<=3.01),'width-scaled bend radii');
   assert.ok(river.points.every(p=>p.x>=0&&p.x<=200&&p.y>=0&&p.y<=200));
   const penetration=Math.max(...river.points.map(p=>Math.min(p.x-50,150-p.x,p.y-50,150-p.y)));
   assert.ok(penetration*3>=25,'inward bend reaches at least 25 reference pixels: seed '+seed);
-  assert.ok(river.points.every(p=>Math.min(p.x-50,150-p.x,p.y-50,150-p.y)<=20.01));
+  assert.ok(river.points.every(p=>Math.min(p.x-50,150-p.x,p.y-50,150-p.y)<=35.01));
   for(const p of [river.points[0],river.points.at(-1)])assert.ok(p.x===0||p.x===200||p.y===0||p.y===200);
   assert.equal(run('environmentBlocksPoint({x:100,y:100},"settlement")'),false,'hub stays clear');
   const peak=river.points.find(p=>p.x>50&&p.x<150&&p.y>50&&p.y<150);

@@ -1099,7 +1099,8 @@ function makeBoundaryRiver(rnd){
     const depth=9+rnd()*3,shift=BUILD_MIN+depth-Math.max(...interior.map(p=>p.y));
     const low=Math.min(...path.map(p=>p.y))+shift,high=Math.max(...path.map(p=>p.y))+shift;
     if(low<width+1||high>BUILD_MIN+20)continue;
-    chosen={path:path.map(p=>({x:p.x,y:p.y+shift})),bends};
+    // Translate the accepted course inward, preserving the seeded bend geometry.
+    chosen={path:path.map(p=>({x:p.x,y:p.y+shift+15})),bends};
   }
   // A valid candidate must exist for the seeded bounded-angle family; surface a
   // failure instead of silently reverting to a repeated artificial wave.
@@ -1107,7 +1108,7 @@ function makeBoundaryRiver(rnd){
   const points=chosen.path.map(p=>side==='west'?{x:p.y,y:p.x}:side==='east'?{x:WORLD-p.y,y:p.x}:
     side==='south'?{x:p.x,y:WORLD-p.y}:p);
   return{id:'env-river',type:'river',points,width,fill:'#3a7684',edge:'#88b4b8',
-    boundaryPolicy:2,boundarySide:side,meanderModel:'arc-length-heading',meanderBends:chosen.bends};
+    boundaryPolicy:3,boundarySide:side,inwardOffset:15,meanderModel:'arc-length-heading',meanderBends:chosen.bends};
 }
 // Watercourse widths (U). Saved landscapes from before the widening are brought up to them
 // on load (widenWatercourses), so old maps get the wider rivers and streams too.
