@@ -1,5 +1,18 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Catalogo strutture: voci da confermare (05/11/2026)
+
+Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatibilità, priorità). Nessuna è approvata.
+
+- **Presidio antincendio:** upgrade di Pozzo/Cisterna; secchi e uomini pronti che spengono prima gli incendi nel raggio (sistema fuoco esistente).
+- **Avamposto:** torre isolata che evolve Corpo di guardia e Stazione di posta; avvistamento lontano, staffette per i messaggi.
+- **Municipio:** funzioni amministrative.
+- **Gilda:** assorbe la Casa delle Corporazioni.
+- **Scriptorium (Chiesa L2):** servono effetti simulati.
+- **Annessi civici:** Bagni pubblici L1–L3, Lavatoio (civico L1 o upgrade del Pozzo), Approdo fluviale, Cortile domestico (upgrade delle case), Giardino dei semplici (annesso di Chiesa L2 / Ospedale), Carbonaia (annesso del Taglialegna), Palazzo del Balivo.
+- **Seguiti aperti:** Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; suono della campana; cosa legge il Prestigio.
+- **Scartati, da non riproporre:** Ghiacciaia, Dogana, Stazione di posta (→ Avamposto), Scuola autonoma, Casa delle Corporazioni autonoma, Torre campanaria (→ Campana).
+
 ## Falconiera e Prestigio (05/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/falconry`:** stanza Falconiera (caccia: cibo), voliera sul tetto via `ROOM_EXTERIOR`, valore Prestigio del castello.
