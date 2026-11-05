@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+05/11/2026 — REG-BIOME-PREVIEW: otto ingressi direzionali configurabili, corner esterni 25×25 U al 100% del bioma diagonale; blending a prodotto nelle fasce da 25 U, centro 100×100 U preservato. I diagonali possono essere mare o terra indipendentemente dai lati. Campionamento Voronoi reale ancora aperto; fixture separata dal Builder.
+
 05/11/2026 — Aggiornamento REG-BIOME-PREVIEW su `experiment/regional-biome-sectors`: fasce fisse 25/25/100/25/25 U, blending smoothstep e corner continui con centro + due vicini; centro invariato, collegamento regionale ancora aperto. Verificati pesi, estremi delle fasce e continuità ai corner. Prova separata dal Builder.
 
 05/11/2026 — REG-BIOME-PREVIEW: prova cartografica disponibile su `experiment/regional-biome-sectors`, da valutare visivamente. APERTO: ereditare tutti i confinanti Voronoi (numero variabile), ripartirli lungo i lati, raccordare acqua/quote e integrare il generatore. [Specifica della prova](../REGIONAL-BIOME-SECTORS-PREVIEW.md).

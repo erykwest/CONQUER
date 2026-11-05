@@ -13,9 +13,11 @@ const RegionalBiomePreview=(()=>{
     const h=ease(Math.max(min-x,x-max,0)),v=ease(Math.max(min-y,y-max,0)),out={};
     const add=(biome,w)=>{if(w>0)out[biome]=(out[biome]||0)+w};
     add(config.center,(1-h)*(1-v));
-    // Symmetric corner blend: three influences near the centre, two outside.
-    add(config[x<min?'west':'east'],h*(1-v/2));
-    add(config[y<min?'north':'south'],v*(1-h/2));
+    const horizontal=x<min?'west':'east',vertical=y<min?'north':'south';
+    // Tensor-product blend: the outer 25x25 corner belongs to its diagonal neighbour.
+    add(config[horizontal],h*(1-v));
+    add(config[vertical],v*(1-h));
+    add(config[vertical+horizontal[0].toUpperCase()+horizontal.slice(1)],h*v);
     return out;
   }
   function color(b,x,y,seed){
@@ -47,14 +49,15 @@ const RegionalBiomePreview=(()=>{
     const s=w/size;ctx.save();ctx.scale(s,s);ctx.strokeStyle='rgba(255,245,209,.8)';ctx.lineWidth=.5;ctx.setLineDash([2,2]);ctx.beginPath();
     for(const v of [25,min,max,175]){ctx.moveTo(v,0);ctx.lineTo(v,size);ctx.moveTo(0,v);ctx.lineTo(size,v)}ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=.8;ctx.strokeRect(min,min,max-min,max-min);
     ctx.font='4px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-    const labels=[['center',100,100],['north',100,22],['east',178,100],['south',100,178],['west',22,100]];
-    for(const [side,x,y] of labels){const label=(side==='center'?'BUILDABLE ZONE · ':({north:'N · ',east:'E · ',south:'S · ',west:'O · '})[side])+biomes[config[side]][0];const width=ctx.measureText(label).width+6;ctx.fillStyle='rgba(15,24,20,.78)';ctx.fillRect(x-width/2,y-4,width,8);ctx.fillStyle='#f6f0df';ctx.fillText(label,x,y)}ctx.restore();
+    const labels=[['center',100,100],['north',100,12.5],['east',187.5,100],['south',100,187.5],['west',12.5,100],['northWest',12.5,12.5],['northEast',187.5,12.5],['southWest',12.5,187.5],['southEast',187.5,187.5]];
+    const directions={north:'N',east:'E',south:'S',west:'O',northWest:'NO',northEast:'NE',southWest:'SO',southEast:'SE'};
+    for(const [side,x,y] of labels){const label=(side==='center'?'BUILDABLE ZONE · ':directions[side]+' · ')+biomes[config[side]][0];ctx.font=(side==='center'?'4':'2.8')+'px system-ui';const width=ctx.measureText(label).width+2;ctx.fillStyle='rgba(15,24,20,.78)';ctx.fillRect(x-width/2,y-4,width,8);ctx.fillStyle='#f6f0df';ctx.fillText(label,x,y)}ctx.restore();
   }
   return{biomes,sector,weights,render};
 })();
 if(typeof module!=='undefined')module.exports=RegionalBiomePreview;
 if(typeof document!=='undefined'){
-  const $=id=>document.getElementById(id),defaults={center:'plains',north:'mountains',east:'forest',south:'sea',west:'hills'};
+  const $=id=>document.getElementById(id),defaults={center:'plains',north:'mountains',east:'forest',south:'sea',west:'hills',northWest:'hills',northEast:'forest',southWest:'sea',southEast:'sea'};
   for(const [side,value] of Object.entries(defaults)){for(const [key,[name]] of Object.entries(RegionalBiomePreview.biomes))$(side).add(new Option(name,key));$(side).value=value}
   function update(){
     if(!$('controls').reportValidity())return;

@@ -11,14 +11,14 @@ Possiamo rendere più ricca la mappa locale ereditando il paesaggio circostante 
 - Mappa 200×200 U, buildable zone centrale 100×100 U, coerenti con le costanti correnti del Builder.
 - Il centro mantiene il bioma della zona selezionata. È un limite di costruzione, non un muro.
 - Quattro fasce laterali N/E/S/O ereditano i vicini, configurabili nella fixture.
-- Quattro quadrati 50×50 U agli angoli mescolano i biomi dei due lati adiacenti. In entrambe le viste il peso centrale è (1-h)(1-v), i due vicini pesano h(1-v/2) e v(1-h/2). h e v crescono con smoothstep da 0 a 1 nei primi 25 U fuori dal centro. Nessuna discontinuità passando dai lati ai corner.
+- Quattro quadrati 50×50 U agli angoli mescolano i biomi dei due lati adiacenti. Aggiornamento: quattro vicini diagonali configurabili occupano i corner esterni 25×25 U. In entrambe le viste il peso centrale è (1-h)(1-v), i due vicini laterali pesano h(1-v) e v(1-h), il diagonale pesa hv. h e v crescono con smoothstep da 0 a 1 nei primi 25 U fuori dal centro. Nessuna discontinuità passando dai lati ai corner.
 - Sequenza fissa lungo ciascun asse: 25 U di bioma limitrofo, 25 U blending, 100 U centro, 25 U blending, 25 U limitrofo. Seed ripetibile; nessuna scrittura di salvataggi o stato di gioco.
 
 ## Vincolo regionale verificato
 
 `CONQUER_WORLD_LAB.html` costruisce celle Voronoi in `buildVoronoi`, poi le aggrega. `conquerNeighbors` ricava i confinanti distinti dagli archi condivisi, senza fissarne il numero a quattro. `conquerMacroAdjacency` filtra inoltre le adiacenze terrestri per le aggregazioni politiche. Il semplice contatto a un vertice non vale come arco condiviso.
 
-Quattro ingressi cardinali sono una semplificazione della fixture, non il contratto della mappa regionale. Prima di integrare: trasmettere tutti i confinanti reali con direzione e tratto di confine, consentire più influenze per lato e preservare connessioni idrologiche e orografiche. Non scegliere quattro vicini arbitrariamente.
+Otto ingressi direzionali (quattro laterali e quattro diagonali) sono campioni configurabili della fixture, non otto confinanti garantiti dalla mappa regionale. Prima di integrare: trasmettere tutti i confinanti reali con direzione e tratto di confine, consentire più influenze per lato e preservare connessioni idrologiche e orografiche. Non scegliere quattro vicini arbitrariamente.
 
 ## Esito e limiti
 
