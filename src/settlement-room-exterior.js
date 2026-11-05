@@ -11,7 +11,8 @@
 //   World 3D cutaway   the exterior shell of settlement-world3d.js
 //   construction site  nothing: rooms are only assigned once the building is finished
 //   collapse    roomExteriorCollapseParts(): the element falls with its building, or alone when broken
-// Mounts: 'face' (corbelled out of the exterior face of a built section, at the floor of its room)
+// Mounts: 'face' (corbelled out of an exterior face at the floor of its room: a tower's free outer
+// face, or the exterior face of a built section)
 // and 'roof' (on the apex or the middle of the ridge of a tower's pitched roof); 'eave' is reserved
 // for the cistern.
 // Two kinds of entry: a room function (key = the function, one element per room that has it) and a
@@ -120,9 +121,38 @@ function roomExteriorUpgradePlacement(s,key,spec){
   return{fn:key,index:'v:'+key,spec,side:0,off:0,z:base.z,width:ext.width,projection:ext.depth,height:ext.height,
     tangent:{x:ca,y:sa},normal:{x:-sa,y:ca},anchor:base.p};
 }
+// 'face' on a tower: the outer face of the room's floor that is free (not the interior face, not a face
+// a wall, built section or subtower runs into), the one looking farthest from the castle first. On a
+// round tower the box sits on the tangent plane, sunk by the sagitta so its back corners stay in the wall.
+const ROOM_EXTERIOR_TOWER_FACE_CLEAR=.08;   // U kept free at each corner of a square tower face
+function roomExteriorTowerPlacement(s,index,fn,spec,m){
+  const floor=index+functionFloorOffset(s)+1,z=towerFloorZ(s,floor);if(!Number.isFinite(z))return null;
+  const W=m.model.width,P=m.model.projection,iv=structureInteriorVector(s);
+  const fp=s.shape==='round'?null:towerFacadePoints(s);
+  const faces=towerFaceDirections(s).filter(d=>!d.interior&&!towerFaceBlocked(s,d,floor))
+    .sort((a,b)=>(a.nx*iv.x+a.ny*iv.y)-(b.nx*iv.x+b.ny*iv.y)||a.face-b.face);
+  const obstacles=roomExteriorObstacles(s,z+m.model.bottom);
+  for(const d of faces){
+    let anchor;
+    if(!fp){
+      const r=Number(s.r)||.5,sink=r-Math.sqrt(Math.max(0,r*r-W*W/4));
+      anchor={x:s.x+d.nx*(r-sink),y:s.y+d.ny*(r-sink)};
+    }else if(d.at)anchor={x:d.at.x+d.nx*.004,y:d.at.y+d.ny*.004};
+    else{
+      const a=fp[d.face],b=fp[(d.face+1)%fp.length];
+      if(Math.hypot(b.x-a.x,b.y-a.y)<W+2*ROOM_EXTERIOR_TOWER_FACE_CLEAR)continue;
+      anchor={x:(a.x+b.x)/2+d.nx*.004,y:(a.y+b.y)/2+d.ny*.004};
+    }
+    const n={x:d.nx,y:d.ny},t={x:n.y,y:-n.x};               // right-handed: model +x along, +y out, +z up
+    const e={fn,index,spec,side:'tower',face:d.face,floor,off:0,z,width:W,projection:P,tangent:t,normal:n,anchor};
+    if(roomExteriorClear(e,obstacles))return e;
+  }
+  return null;
+}
 function roomExteriorPlacement(s,index,fn){
   const spec=roomExteriorSpec(fn),m=roomExteriorModel(spec);
   if(!spec||!m||!s||underConstruction(s))return null;
+  if(spec.mount==='face'&&s.type==='tower')return roomExteriorTowerPlacement(s,index,fn,spec,m);
   if(spec.mount!=='face'||s.type!=='built')return null;
   const z=roomExteriorFloorZ(s,index);if(!Number.isFinite(z))return null;
   const side=wallExteriorSide(s),edge=linearFacadeEdge(s,side),L=edge.length;
@@ -210,6 +240,11 @@ function roomExteriorTakesWindow(s,side,z,off){
   if(!s?.functions?.some(roomExteriorSpec))return false;
   return roomExteriorElements(s,{broken:true}).some(e=>e.side===side&&Math.abs(e.off-off)<e.width/2+.05&&z<e.z+1.1);
 }
+// Tower slits ask this: the face of a tower garderobe has no slit on its floor nor below (the chute).
+function roomExteriorTakesTowerFace(s,face,floor){
+  if(s?.type!=='tower'||!s.functions?.some(roomExteriorSpec))return false;
+  return roomExteriorElements(s,{broken:true}).some(e=>e.side==='tower'&&e.face===face&&floor<=e.floor);
+}
 // Element hit by an impact point (artillery), within reach of its box.
 function roomExteriorAt(s,p,reach=.45){
   let best=null,bd=Infinity;
@@ -242,5 +277,5 @@ function restoreRoomExterior(s,index){
 }
 window.ConquerRoomExterior={ROOM_EXTERIOR,spec:roomExteriorSpec,upgrades:roomExteriorUpgrades,has:hasRoomExterior,roofBase:roomExteriorRoofBase,
   placement:roomExteriorPlacement,elements:roomExteriorElements,
-  triangles:roomExteriorTriangles,draw:drawRoomExterior,drawAll:drawRoomExteriors,takesWindow:roomExteriorTakesWindow,
+  triangles:roomExteriorTriangles,draw:drawRoomExterior,drawAll:drawRoomExteriors,takesWindow:roomExteriorTakesWindow,takesTowerFace:roomExteriorTakesTowerFace,
   at:roomExteriorAt,hp:roomExteriorHp,broken:roomExteriorBroken,collapseParts:roomExteriorCollapseParts,repair:restoreRoomExterior};

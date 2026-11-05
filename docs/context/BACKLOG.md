@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `fix/latrine-towers`:** la latrina passa dalle sezioni costruite W1 alle torri W1 in pietra (piano 2, sbalzo sulla faccia esterna libera). Le torri W1 accettano Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria, con la scala a chiocciola che resta.
+- **APERTO:** arredo delle stanze W1 nel cutaway (oggi la scala a chiocciola occupa il vano, quindi niente mobili); un avviso quando un salvataggio perde una latrina da una sezione costruita.
+
 ## Campana d'allarme (04/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/alarm-bell`:** allarme che si propaga dalle campane; upgrade `bell` delle torri T1–T2 a falde; campanile su `ROOM_EXTERIOR` (`mount:'roof'`).
@@ -46,7 +51,7 @@
   - **Cisterna:** montaggio `eave`, gronda o pluviale.
   - **Combattimento:** infiltrazione dal condotto della latrina in assedio (precedente storico: Château Gaillard, 1204).
   - **Ospedale:** cura dei malati letti da `ConquerSiege.sickShare()`.
-- **APERTO, da decidere:** latrine nelle torri (oggi escluse); un avviso quando un salvataggio perde una latrina che non entra più per una struttura costruita davanti.
+- **APERTO, da decidere:** ~~latrine nelle torri~~ (fatto il 05/11: solo torri W1, vedi sopra); un avviso quando un salvataggio perde una latrina che non entra più per una struttura costruita davanti.
 
 ## Cucine solo nelle sezioni costruite (03/11/2026)
 

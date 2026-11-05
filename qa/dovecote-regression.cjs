@@ -37,7 +37,10 @@ assert.ok(allowed(tower({size:2,level:3}),2,'dovecote'),'T3 L3 top floor');
 assert.ok(!allowed(tower(),0,'dovecote'),'not on the ground floor');
 assert.ok(!allowed(tower({level:3}),1,'dovecote'),'not on a floor below the top');
 assert.ok(!allowed(tower({level:1}),0,'dovecote'),'not on an L1 tower');
-assert.ok(!allowed(tower({size:1}),1,'dovecote'),'not on small (T1) towers');
+// W1 towers (user, 04/11/2026): the dovecote fits on the top floor, as in larger towers.
+assert.ok(allowed(tower({size:1}),1,'dovecote')&&!allowed(tower({size:1}),0,'dovecote'),'W1 L2 tower: top floor only');
+assert.ok(!allowed(tower({size:1}),1,'guard')&&!allowed(tower({size:1}),0,'granary'),'W1 towers keep only their five rooms');
+assert.ok(allowed(tower({size:1,isMastio:true}),0,'granary'),'the T1 keep is not restricted');
 for(const roofStyle of ['battlement','machicolation'])
   assert.ok(!allowed(tower({roofStyle}),1,'dovecote'),'only under a pitched roof, not '+roofStyle);
 assert.ok(!allowed(tower({brokenTop:true}),1,'dovecote'),'not on a broken crown');
@@ -47,7 +50,7 @@ assert.ok(!allowed({type:'gate',level:3,roofStyle:'pitched'},1,'dovecote'),'not 
 assert.ok(!allowed({type:'built',length:3,level:2},1,'dovecote'),'not in built sections');
 // The other rooms keep their rules: the dovecote only adds one line to allowed().
 assert.ok(allowed(tower(),1,'guard')&&allowed(tower(),0,'granary')&&!allowed(tower(),0,'kitchen'));
-console.log('PASS dovecote only on the top floor of T2/T3 stone towers L2+ with a pitched roof');
+console.log('PASS dovecote only on the top floor of stone towers L2+ with a pitched roof (W1 too)');
 
 assert.ok(towerDovecote(tower({functions:[null,'dovecote']})),'an assigned top room is an active dovecote');
 assert.ok(!towerDovecote(tower({functions:['dovecote',null]})),'not counted from a lower floor');

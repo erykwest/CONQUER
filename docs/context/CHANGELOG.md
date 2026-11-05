@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)
+
+- Correzione dell'utente: la latrina va al piano 2 delle torri W1 in pietra, con lo sbalzo sulla faccia esterna libera; non va più nelle sezioni costruite.
+- Le torri W1 ricevono una stanza per piano, ma con la scala a chiocciola accettano solo Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria.
+- `ROOM_EXTERIOR` monta l'elemento `face` anche sulle torri; le feritoie della faccia gli lasciano il posto. Asset Lab: tre varianti di torre W1 nuove, la variante della sezione con latrina rimossa; baseline aggiornata.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01, prima applicazione). ROADMAP invariata.
+
 ## 2026-11-04 — Campana d'allarme (branch `feature/alarm-bell`)
 
 - L'allarme del villaggio si propaga dalle campane (chiesa, Municipio, torri T1–T2 a falde con l'upgrade `bell`): raggio d'ascolto, catena di campane, passaparola oltre i raggi. Le case lontane lo sentono più tardi.

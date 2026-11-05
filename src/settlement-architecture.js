@@ -471,7 +471,8 @@ function towerWindowGivesWayToDoor(s,edgeOrDir,floor){
 }
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);
-  return !!dir&&!dir.interior&&floor>=2&&!towerFaceBlocked(s,dir,floor);
+  return !!dir&&!dir.interior&&floor>=2&&!towerFaceBlocked(s,dir,floor)
+    &&!window.ConquerRoomExterior?.takesTowerFace?.(s,face,floor);
 }
 function towerWindowRows(s){
   const l=structureLevel(s),rows=[];

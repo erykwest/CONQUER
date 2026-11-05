@@ -624,7 +624,9 @@ function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
-  if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
+  // One room per floor. W1 towers keep their spiral stair and take only dovecote, latrine, prison,
+  // treasury and armory (settlement-siege.js allowed), except the first T1 keep (its Common Hall).
+  if(s.type==='tower')return structureLevel(s);
   if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
   if(s.type==='townhall')return civicLevel(s);
   return 0;
