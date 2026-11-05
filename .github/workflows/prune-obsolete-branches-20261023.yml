@@ -30,7 +30,7 @@ jobs:
             [[ -z "$branch" ]] && continue
             if [[ "$expected" == '@this-commit' ]]; then expected="$GITHUB_SHA"; fi
             if [[ "$branch" == 'fix/fields-l2-only' && "$expected" == '@pr-head' ]]; then
-              expected="$(gh api \"repos/$GH_REPO/pulls/160\" --jq '.head.sha')"
+              expected="$(gh api "repos/$GH_REPO/pulls/160" --jq '.head.sha')"
             fi
             examined=$((examined+1))
             echo "Candidate $examined: $branch"
