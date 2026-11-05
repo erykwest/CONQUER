@@ -1745,8 +1745,8 @@
   // Civilians (villagers, workers, sailors, shipwrights) share the same path through figure():
   // each look and animation phase is painted once into a tile, then every figure is a 6-vertex
   // depth-tested card, so a hull, a sail or a wall in front of it hides it.
-  const SOLDIER_TILE=96,SOLDIER_SR=6,SOLDIER_FEET=.75;           // sprite px, sprite view scale, feet row
-  const FIG_ATLAS=2048,FIG_COLS=Math.floor(FIG_ATLAS/SOLDIER_TILE);     // 21x21 = 441 tiles
+  const SOLDIER_TILE=64,SOLDIER_SR=4,SOLDIER_FEET=.75;           // sprite px, sprite view scale, feet row
+  const FIG_ATLAS=2048,FIG_COLS=Math.floor(FIG_ATLAS/SOLDIER_TILE);     // 32x32 = 1024 tiles
   const SOLDIER_SIZE_U=SOLDIER_TILE/(U*SOLDIER_SR);               // 1.333U card
   const CAPSULE={r:.12,below:.11,above:.38};                       // figure body + head around the feet point
   // map: key -> {uv,slot,used}. Slots of tiles unused for a while are reused when the FIG_ATLAS is full;
@@ -1766,9 +1766,9 @@
   }
   function atlasTile(key,paint){
     const hit=soldierAtlas.map.get(key);if(hit){hit.used=soldierAtlas.frame;return hit.uv}
-    if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=FIG_ATLAS}
+    if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=FIG_ATLAS;soldierAtlas.g=soldierAtlas.canvas.getContext('2d',{willReadFrequently:true})}
     const i=takeSlot(),x=(i%FIG_COLS)*SOLDIER_TILE,y=Math.floor(i/FIG_COLS)*SOLDIER_TILE;
-    const g=soldierAtlas.canvas.getContext('2d');g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);
+    const g=soldierAtlas.g;g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);   // CPU canvas: tile readback is cheap
     const keepView=State.view,keepW2s=w2s;
     State.view={...keepView,scale:SOLDIER_SR};
     w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // figure painters project only the feet
@@ -1784,7 +1784,7 @@
     const A=soldierAtlas;if(!A.dirty)return;
     if(A.full||!S.tex.soldierAtlas||A.tiles.length>60)uploadTexture(gl,'soldierAtlas',A.canvas);
     else{
-      const g=A.canvas.getContext('2d');
+      const g=A.g;
       gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
       for(const [x,y] of A.tiles){const d=g.getImageData(x,y,SOLDIER_TILE,SOLDIER_TILE);gl.texSubImage2D(gl.TEXTURE_2D,0,x,y,SOLDIER_TILE,SOLDIER_TILE,gl.RGBA,gl.UNSIGNED_BYTE,d.data)}
       gl.generateMipmap(gl.TEXTURE_2D);

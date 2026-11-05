@@ -135,7 +135,8 @@
   // Every pose a sailor can show (all modes and phases), as {key,paint} for figure prewarming.
   function sailorPoses(d){
     const out=[],look=typeof villagerLookKey==='function'?villagerLookKey(d):d.colors.join(','),ph=(hash(d.id)%1000)/1000*6.28;
-    for(const mode of ['idle','walk','haul','coil','climb','aloft']){
+    // Only the poses a crew shows most (standing, walking): preparing every mode filled the atlas.
+    for(const mode of ['idle','walk']){
       const r=RATE[mode];
       for(let b=0;b<(r?PHASES:1);b++){const t=r?((b+.5)/PHASES*Math.PI*2-ph)/r:0;out.push({key:'s|'+mode+'|'+b+'|'+look,paint:()=>drawSailor({...d,p:{x:0,y:0}},mode,t,1)})}
     }
