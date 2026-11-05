@@ -15,7 +15,11 @@
   const goodCargo=cargo=>Array.isArray(cargo)&&
     new Set(cargo.map(line=>line?.good)).size===cargo.length&&cargo.every(line=>
     line&&GOODS().includes(line.good)&&Number.isSafeInteger(line.qty)&&line.qty>0);
-  const UNITS_PER_DAY=22,PROVINCE_DISTANCE=40,PROVISIONS_PER_PERSON_DAY=.35;
+  const UNITS_PER_DAY=22,SEA_UNITS_PER_DAY=40,PROVINCE_DISTANCE=40,PROVISIONS_PER_PERSON_DAY=.35;
+  const shipVehicle=v=>!!commerce()?.VEHICLES?.[v]?.ship;
+  // A merchant ship needs a sea exit and a berth to load at: a pier or a quay.
+  const seaExits=()=>availableExits().filter(e=>e.mode==='sea');
+  const harbour=()=>(State.structures||[]).some(s=>(s.type==='pier'&&!s.yard||s.type==='quay')&&!(typeof underConstruction==='function'&&underConstruction(s)));
   const ACTIVE=Object.freeze(['draft','planned','blocked','ready','outbound','returning']);
   const localId=()=>State.village?.founded?String(State.village.wellId||''):'';
   const keep=()=>window.ConquerSiege?.mastio?.()||null;
@@ -61,8 +65,9 @@
       goldPerDay:money(all.reduce((n,q)=>n+q.goldPerDay,0))};
   }
   function travel(j){
-    const outward=Math.max(1,Math.ceil((Math.max(0,+j.routeDistance||0)+PROVINCE_DISTANCE)/UNITS_PER_DAY));
-    // Escort plus two drivers, there and back.
+    const speed=shipVehicle(j.transport?.mode)?SEA_UNITS_PER_DAY:UNITS_PER_DAY;
+    const outward=Math.max(1,Math.ceil((Math.max(0,+j.routeDistance||0)+PROVINCE_DISTANCE)/speed));
+    // Escort plus two drivers (or the crew), there and back.
     const food=Math.ceil(((j.escorts?.requested||0)+2)*outward*2*PROVISIONS_PER_PERSON_DAY);
     return{outward,food,arrival:(+j.departDay||0)+outward,returnDay:(+j.departDay||0)+2*outward};
   }
@@ -93,6 +98,8 @@
       !goodCargo(cargo)||(!cargo.length&&coinGold<=0)||
       !Number.isSafeInteger(guards)||guards<0||guards>availableGuardSlots())return false;
     if(!validGold(minGold)||coinGold<minGold)return false;
+    if(shipVehicle(vehicle)&&(!harbour()||!seaExits().length))return false;
+    if(shipVehicle(vehicle)&&!seaExits().some(e=>e.edge===edge))edge=seaExits()[0].edge;
     const transport=quoteLord(cargo,coinGold,vehicle);
     if(!transport||!transport.wagons)return false;
     c.lordConvoys[id]={
@@ -258,7 +265,8 @@
   function availableExits(){
     const plan=Array.isArray(State.village?.roadPlan)?State.village.roadPlan:[];
     const entries=Array.isArray(State.village?.borderEntries)?State.village.borderEntries:[];
-    return ['north','east','south','west'].map(edge=>{
+    const sea=State.environment?.find(f=>f.type==='sea')?.side;
+    const land=['north','east','south','west'].filter(edge=>edge!==sea).map(edge=>{
       const route=plan.find(r=>r.edge===edge);
       const entry=entries.find(e=>e.edge===edge);
       return{edge,routeId:route?.id||null,entryId:entry?.id||null,
@@ -267,6 +275,9 @@
         // navigation must verify full continuity before moving or charging.
         reportedConnected:!!route?.connected};
     });
+    // Sea exits (sea edge + the sea stubs of the adjacent edges) for ships, no road.
+    const seaExits=((typeof seaBorderEntries==='function'?seaBorderEntries():State.village?.seaEntries)||[]).map(e=>({edge:e.edge,mode:'sea',routeId:null,entryId:e.id,point:{x:e.x,y:e.y},reportedConnected:true}));
+    return[...land.map(x=>({...x,mode:'land'})),...seaExits];
   }
   // Small lord-owned draft controls; never offers a fictitious launch button.
   function panelHtml(tower){
@@ -278,7 +289,7 @@
       ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const items=rows.slice(-8).map(j=>{
       const ref=encodeURIComponent(j.id),label=j.kind==='tribute'?'Tributo':'Dono';
-      const goodsText=j.cargo.length?j.cargo[0].qty+' '+j.cargo[0].good:'solo monete';
+      const goodsText=(j.cargo.length?j.cargo[0].qty+' '+j.cargo[0].good:'solo monete')+(shipVehicle(j.transport?.mode)?' · '+j.transport.wagons+' '+(j.transport.mode==='shipLarge'?'navi grandi':'navi piccole')+' via mare ('+j.edge+')':'');
       const guardEdit=j.status==='draft'?
         '<label>Guardie richieste <input data-convoy-guard-input="'+ref+
         '" type="number" min="0" max="'+availableGuardSlots(j.id)+
@@ -301,6 +312,8 @@
       '</select></label>'+
       '<label>Quantità <input data-convoy-qty type="number" min="0" step="1" value="0"></label>'+
       '<label>Monete nel forziere <input data-convoy-gold type="number" min="0" step="0.001" value="0"></label>'+
+      (harbour()&&seaExits().length?'<label>Trasporto <select data-convoy-vehicle><option value="wagon">Carri (100 a carro)</option><option value="shipSmall">Nave piccola (3 carri)</option><option value="shipLarge">Nave grande (9 carri)</option></select></label>'+
+        '<label>Uscita via mare <select data-convoy-sea-edge>'+seaExits().map(e=>'<option value="'+e.edge+'">'+e.edge+'</option>').join('')+'</select></label>':'')+
       '<label>Scorta caserme (posti prenotabili '+availableGuardSlots()+')'+
       '<input data-convoy-guard-count type="number" min="0" max="'+availableGuardSlots()+
       '" step="1" value="0"></label>'+
@@ -325,7 +338,8 @@
       }
       let serial=1,id='lord-convoy-'+serial;
       while(c.lordConvoys[id])id='lord-convoy-'+(++serial);
-      if(!planLordConvoy({id,kind,destinationId,
+      const vehicle=q('[data-convoy-vehicle]')?.value||'wagon',edge=q('[data-convoy-sea-edge]')?.value||null;
+      if(!planLordConvoy({id,kind,destinationId,vehicle,edge:shipVehicle(vehicle)?edge:null,
         cargo:good?[{good,qty}]:[],coinGold:gold,guards})){
         notice('Bozza non valida: Mastio, feudo, risorse o posti di scorta da verificare');
         return;

@@ -20,6 +20,7 @@ function makePlacementPreview(q,angle=0){
   if(spec){
     const candidate={...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
     if(candidate.type==='watermill')window.ConquerIndustries?.orientToWater(candidate);
+    if(candidate.type==='pier')window.ConquerPier?.snapToCoast(candidate);
     return candidate;
   }
   return null;
@@ -57,9 +58,13 @@ function commitOrientedPlacement(center,angle){
     subtowerSocket:State.draft?.subtowerSocket||null,
     subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
   }:{};
-  const finalAngle=snapStructureAngle(Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle);
+  const quaySnap=spec.type==='tower'?State.draft?.quaySnap||null:null;
+  const locked=Number.isFinite(State.draft?.lockedAngle)?State.draft.lockedAngle:angle;
+  const finalAngle=quaySnap?locked:snapStructureAngle(locked);   // a quay tower keeps the quay's angle
   const s={id:uid(),...spec,x:center.x,y:center.y,angle:finalAngle,rotationStep:structureRotationStep(finalAngle),functions:Array.isArray(spec.functions)?[...spec.functions]:[]};
+  if(quaySnap)s.quaySnap=quaySnap;
   if(s.type==='watermill')window.ConquerIndustries?.orientToWater(s);
+  if(s.type==='pier')window.ConquerPier?.snapToCoast(s);
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
   if(ok){
     State.draft=null;
@@ -128,6 +133,10 @@ function snapAnchor(p){
   const terrace=State.tool?.kind==='linear'&&State.tool.linear==='wall'
     ?window.ConquerTerraforming?.snapWallAnchor(p,currentLinearSpec().width):null;
   let best=terrace?{id:terrace.structureId}:null,bestPoint=terrace?.point||null,bestScore=terrace?.score??Infinity;
+  // Quay magnet: walls, palisades and built sections along either side of a stone quay.
+  const quay=State.tool?.kind==='linear'&&['wall','palisade','built'].includes(State.tool.linear)
+    ?window.ConquerQuay?.snapWallAnchor(p,currentLinearSpec().width):null;
+  if(quay&&quay.score<bestScore){best={id:quay.structureId};bestPoint=quay.point;bestScore=quay.score}
   for(const s of State.structures){
     if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;
     // Oriented towers take walls on their two flank seats, on the line of the curtain.
@@ -347,7 +356,11 @@ function towerPlacementSnap(p){
     const w=State.structures.find(s=>s.id===wall.wallId);
     if(w)return{...wall,...orientedTowerWallSnap(State.tool.shape,Number(State.tool.size),w,wall.wallEnd,p)};
   }
-  return wall||{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
+  if(wall)return wall;
+  // Against a stone quay, its inner side (the door) turned to the quay (settlement-quay.js).
+  const quay=window.ConquerQuay?.snapTower(p,towerToolPrototype());
+  if(quay)return{point:quay.point,wallId:null,parentTowerId:null,angle:quay.angle,quayId:quay.quayId};
+  return{point:{x:snapGrid(p.x),y:snapGrid(p.y)},wallId:null,parentTowerId:null,angle:0};
 }
 function towerHalfSpanAlongWall(tower,wall){
   if(tower.shape==='round')return Number(tower.r)||.5;
@@ -686,4 +699,4 @@ function normalizeTownhallRooms(s){
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(typeof isWellCivic==='function'&&isWellCivic(s))return wellCivicLabel(s);if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isLonghouse(s)?(isWideBuilt(s)?'Longhouse W2':'Longhouse W1'):isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
+function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(window.ConquerPier?.is(s))return window.ConquerPier.label(s);if(window.ConquerQuay?.is(s))return window.ConquerQuay.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(typeof isWellCivic==='function'&&isWellCivic(s))return wellCivicLabel(s);if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isLonghouse(s)?(isWideBuilt(s)?'Longhouse W2':'Longhouse W1'):isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}

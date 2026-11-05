@@ -1,0 +1,357 @@
+'use strict';
+// Molo: the Builder button and hooks exist; on a synthetic south coast the pier snaps
+// square to the coastline, its landing stays on the shore inside the whitezone while
+// the deck reaches 8U out to sea, it is refused inland, and it offers two berths
+// (left / right of the head) off the deck edge. Its mesh has piles below the waterline
+// and goods from the scatter model on the boards.
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const root=path.resolve(__dirname,'..');
+const read=f=>fs.readFileSync(path.join(root,f),'utf8');
+for(const r of [4,12]){
+  assert.match(read('index.html'),new RegExp('<button data-pier="'+r+'">'),'Builder button L'+r);
+  assert.ok(read('src/settlement-builder-ux.js').includes("['[data-pier=\""+r+"\"]'"),'L'+r+' listed in the palette');
+}
+assert.match(read('index.html'),/<button data-quay>/,'quay button');
+assert.ok(read('src/settlement-builder-ux.js').includes("['[data-quay]'"),'quay listed in the palette');
+assert.match(read('index.html'),/settlement-quay\.js[\s\S]*settlement-pier\.js/,'scripts loaded, quay first');
+assert.match(read('src/settlement-app-input.js'),/State\.tool\.kind==='quay'/,'two-click quay tool');
+assert.match(read('src/settlement-placement.js'),/ConquerQuay\.validate\(s\)/,'quay placement preflight');
+assert.match(read('src/settlement-app-input.js'),/State\.tool\.kind==='pier'/,'one-click pier tool');
+assert.match(read('src/settlement-placement.js'),/ConquerPier\.validate\(s\)/,'placement preflight hook');
+assert.match(read('src/settlement-castle.js'),/ConquerPier\?\.is\(s\)\)return window\.ConquerPier\.footprint\(s\)/,'footprint hook');
+const core=read('src/settlement-core.js');
+assert.match(core,/ConquerPier\?\.is\(s\)\)return window\.ConquerPier\.cost\(s\)/,'cost hook');
+assert.match(core,/ConquerPier\?\.is\(s\)\)return window\.ConquerPier\.buildDays\(s\)/,'duration hook');
+assert.match(read('src/settlement-world3d.js'),/ConquerPier\.addToBuilder\(m,s\)/,'WebGL hook');
+console.log('PASS Builder: pier button, script, palette, tool and hooks');
+
+// A sea along the south edge, coast at y=150 (whitezone 50..150).
+const coast=[{x:0,y:150},{x:200,y:150}];
+const sea={type:'sea',side:'south',coastline:coast,points:[{x:0,y:150},{x:200,y:150},{x:200,y:200},{x:0,y:200}]};
+const pointInPolygon=(p,poly)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)c=!c}return c};
+const window={},State={seed:7,structures:[],environment:[sea]};
+const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,JSON,
+  BUILD_MIN:50,BUILD_MAX:150,
+  dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
+  closestPointOnSegment:(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L2));return{x:a.x+t*dx,y:a.y+t*dy}},
+  environmentContains:(f,p)=>f.type==='sea'&&pointInPolygon(p,f.points),
+  pointSegmentDistance:(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t)},
+  terrainElevation:()=>0,terrainSlopeKind:()=>'steep',structureRotationStep:a=>Math.round(a/(Math.PI/12)),
+  seedRand:s=>{let t=s>>>0;return()=>{t=(t*1664525+1013904223)>>>0;return t/4294967296}}});
+for(const f of ['assets/scatter-model.js','settlement-quay.js','settlement-pier.js'])vm.runInContext(read('src/'+f),ctx);
+const P=window.ConquerPier,Q=window.ConquerQuay;
+const s={...P.make(12),id:'p1',x:100.4,y:148.6};
+P.snapToCoast(s);
+assert.ok(Math.abs(s.y-150)<1e-9&&Math.abs(s.x-100.4)<1e-9,'the pier root lands on the coastline');
+assert.ok(Math.abs(s.angle-Math.PI/2)<1e-9,'and points straight out to sea');
+// No buildable-terrain rules: the stub reports steep ground everywhere and the pier is still fine.
+assert.equal(P.validate(s).ok,true,'a coast pier is valid, whatever the shore');
+assert.equal(P.validate(s).ground,0,'deck level from the shore');
+const reachY=p=>Math.max(...P.footprint(p).map(q=>q.y))-150;
+assert.ok(Math.abs(reachY(s)-12)<1e-9,'L12 reaches 12U over the sea');
+const small={...P.make(4),id:'p4',x:120,y:149};P.snapToCoast(small);
+assert.ok(Math.abs(reachY(small)-4)<1e-9&&P.validate(small).ok,'L4 reaches 4U and is valid');
+assert.ok(P.cost(small).wood<P.cost(s).wood&&P.buildDays(small)<P.buildDays(s),'the small pier is cheaper and quicker');
+assert.equal(P.reachOf({type:'pier',x:0,y:0}),8,'piers saved before the sizes keep 8U');
+assert.ok(P.landing(s).every(p=>p.y<=150+1e-9&&p.y>=50),'the landing stays on the shore, in the whitezone');
+assert.equal(P.validate({...s,y:140}).ok,false,'refused away from the coastline');
+assert.equal(P.validate({...s,x:30}).ok,false,'refused with its landing outside the whitezone');
+const berths=P.moorings(s);
+assert.equal(berths.map(b=>b.side).join(),'left,right','two berths, left and right');
+for(const b of berths){
+  assert.ok(b.y>150+5,b.side+' berth is out at the head of the pier');
+  assert.ok(Math.abs(Math.abs(b.x-s.x)-(.75+.9))<1e-9,b.side+' berth lies off the deck edge');
+  assert.ok(sea&&pointInPolygon(b,sea.points),b.side+' berth is on open water');
+}
+assert.ok(berths[0].x<s.x!==berths[1].x<s.x,'one berth each side');
+const [deck,props]=P.meshes(s,0);
+const zs=[];for(let i=2;i<deck.pos.length;i+=3)zs.push(deck.pos[i]);
+assert.ok(Math.min(...zs)<-.5,'piles are driven below the waterline');
+assert.ok(props&&props.col.length>0,'scatter goods stand on the deck');
+const pz=[];for(let i=2;i<props.pos.length;i+=3)pz.push(props.pos[i]);
+assert.ok(Math.min(...pz)>=.6-.05,'goods sit on the boards, not in the water');
+console.log('PASS runtime: coast snap, L4/L12 reach, no terrain rules, landing in the whitezone, two berths, piles and deck goods');
+
+// Stone quay: two clicks along the shore or out in the water, piers branch off its sea edge.
+const quay={id:'q1',...Q.make({x:80,y:149},{x:96,y:149})};
+assert.equal(Q.validate(quay).ok,true,'a quay along the shore is valid');
+assert.equal(Q.validate(quay).side,1,'its sea face is the side towards the water');
+assert.equal(Q.validate({...quay,...Q.make({x:80,y:120},{x:96,y:120})}).ok,false,'refused inland');
+assert.equal(Q.validate({...quay,...Q.make({x:30,y:149},{x:46,y:149})}).ok,false,'refused outside the whitezone');
+assert.ok(Q.cost(quay).stone>0&&Q.buildDays(quay)>0,'a stone work with a building site');
+State.structures.push({...quay,seaSide:1});
+const branch={...P.make(4),id:'pb',x:88,y:150.1};P.snapToCoast(branch);
+assert.equal(branch.onQuay,'q1','a pier near a quay branches off it');
+assert.ok(Math.abs(branch.y-150)<1e-9&&Math.abs(branch.angle-Math.PI/2)<1e-9,'from the quay sea edge, square to it');
+const site=P.validate(branch);
+assert.ok(site.ok&&site.onQuay==='q1'&&site.ground===0,'valid on the quay, deck flush with its top');
+// A quay built just off the shore: its sea edge is farther from the cursor than the coastline,
+// yet a pier placed on it must still branch off the quay.
+State.structures.push({id:'q2',...Q.make({x:120,y:150.3},{x:136,y:150.3}),seaSide:1});
+const offshore={...P.make(4),id:'pc',x:128,y:150.3};P.snapToCoast(offshore);
+assert.equal(offshore.onQuay,'q2','a pier on a quay just off the shore still branches off the quay');
+assert.ok(Math.abs(offshore.y-151.3)<1e-9,'from its sea edge');
+// A mole: a quay run out square to the shore has water on both sides; piers branch off
+// either side (not off its dry end on the shore), and two piers facing each other across
+// the mole keep clear of each other: on a quay the landing is only a lip.
+State.structures.length=0;
+const mole={id:'m1',...Q.make({x:60,y:148},{x:60,y:164})};
+State.structures.push(mole);
+assert.equal(Q.wetSides(mole).length,2,'a mole has water on both sides');
+const westPier={...P.make(4),id:'pw',x:58.8,y:154};P.snapToCoast(westPier);
+const eastPier={...P.make(4),id:'pe',x:61.2,y:154};P.snapToCoast(eastPier);
+assert.ok(westPier.onQuay==='m1'&&eastPier.onQuay==='m1','piers branch off both sides of the mole');
+assert.ok(Math.cos(westPier.angle)<-.99&&Math.cos(eastPier.angle)>.99,'each square to its side, out to the water');
+const xsW=P.footprint(westPier).map(p=>p.x),xsE=P.footprint(eastPier).map(p=>p.x);
+assert.ok(Math.max(...xsW)<Math.min(...xsE),'facing piers do not overlap across the mole');
+const dry={...P.make(4),id:'pd',x:58.8,y:148.6};P.snapToCoast(dry);
+assert.notEqual(dry.onQuay,'m1','no pier off the dry end of the mole on the shore');
+// Rules off a quay: at least 4U from the shore, at least 5U from the next pier on the same side.
+// (The stub's water starts at the whitezone edge: widen the zone for these placements.)
+ctx.BUILD_MAX=170;
+const nearShore={...P.make(4),id:'pn',x:58.8,y:152};P.snapToCoast(nearShore);
+assert.equal(nearShore.onQuay,'m1','a pier near the shore still snaps to the mole');
+assert.match(P.validate(nearShore).reason||'',/4U from the shore/,'refused closer than 4U to the shore');
+assert.ok(P.validate(westPier).ok,'4U from the shore is fine');
+State.structures.push(westPier,eastPier);
+const tooClose={...P.make(4),id:'pt',x:58.8,y:158};P.snapToCoast(tooClose);
+assert.match(P.validate(tooClose).reason||'',/5U apart/,'refused 4U from the previous pier on the same side');
+const spaced={...P.make(4),id:'ps',x:58.8,y:159};P.snapToCoast(spaced);
+assert.ok(P.validate(spaced).ok,'5U from the previous pier is fine');
+assert.ok(P.validate(eastPier).ok,'facing piers on the two sides of the mole are fine: each side is spaced on its own');
+// Berths along the quay: a slot every 5U on each wet face, off within 4U of a pier, off where a
+// wall stands against that face.
+{
+  const slots=Q.berths(mole),ys=k=>slots.filter(b=>b.side===k).map(b=>b.edge.y).sort((a,b)=>a-b);
+  assert.deepEqual([...ys(1)],[160.5],'west face: only the slot 6.5U from the pier is open (150.5 and 155.5 are within 4U)');
+  assert.deepEqual([...ys(-1)],[160.5],'east face too');
+  assert.ok(slots.every(b=>Math.abs(Math.abs(b.angle)-Math.PI/2)<1e-9),'ships lie along the quay');
+  const wallWest={id:'ww',type:'wall',a:{x:58.75,y:158},b:{x:58.75,y:163},aSnap:'quay:m1',bSnap:'quay:m1'};
+  State.structures.push(wallWest);
+  assert.equal(Q.berths(mole).map(b=>b.side).join(),'-1','a wall on the west face closes its slot');
+  State.structures.pop();
+}
+ctx.BUILD_MAX=150;
+// Wall magnet on a quay: either long side (the wall against the outer face, set out by half
+// its width), the ends too; a wall with both ends on the same quay follows the face straight
+// at any angle and rises from the waterline; a wall that leaves the quay keeps the terrain rules.
+{
+  const near=Q.snapWallAnchor({x:58.6,y:156},.5),far=Q.snapWallAnchor({x:58.6,y:160},.5);
+  assert.equal(near.structureId,'quay:m1','a wall end snaps to the quay side');
+  assert.ok(Math.abs(near.point.x-(60-1-.25))<1e-9,'on the axis of a wall outside the quay face');
+  assert.equal(Q.snapWallAnchor({x:61.4,y:156},.5).point.x,60+1+.25,'the other side of the quay too');
+  assert.equal(Q.snapWallAnchor({x:56,y:156},.5),null,'no magnet away from the quay');
+  const route=Q.wallRoute(near.point,far.point,near.structureId,far.structureId,{max:8});
+  assert.ok(route&&route.segments.length===1&&Math.abs(route.length-4)<1e-9,'one straight wall along the edge');
+  const tilted=Q.wallRoute({x:0,y:0},{x:3,y:1},'quay:m1','quay:m1',{max:8});
+  assert.ok(Math.abs(tilted.segments[0].angle-Math.atan2(1,3))<1e-9,'at the quay angle, off the 15° lattice');
+  assert.equal(Q.wallRoute(near.point,far.point,near.structureId,null,{max:8}),null,'only with both ends on the quay');
+  assert.ok(Math.abs(Q.wallRoute({x:0,y:0},{x:12,y:0},'quay:m1','quay:m1',{max:8}).length-8)<1e-9,'clamped to the wall maximum');
+  const wall={type:'wall',aSnap:'quay:m1',bSnap:'quay:m1'};
+  assert.equal(Q.wallGroundZ(wall),Q.TOP,'its 0 is the quay top, on a plinth from the sea bed');
+  assert.equal(Q.wallGroundZ({...wall,bSnap:null}),null,'a wall leaving the quay keeps the terrain rules');
+  assert.ok(Q.isWallOn(wall,mole)&&!Q.isWallOn({type:'wall'},mole),'walls on the quay do not collide with it');
+  // Towers: against a face or on a corner, inner side (front, +angle) to the quay, at its top.
+  const face=Q.snapTower({x:58.2,y:156},{shape:'square',size:1.5});
+  assert.ok(face&&face.quayId==='m1'&&Math.abs(face.point.x-(60-1-.75))<1e-9,'a tower stands against the face');
+  assert.ok(Math.abs(Math.cos(face.angle)-1)<1e-9,'its inner side faces the quay');
+  const corner=Q.snapTower({x:58.2,y:164.8},{shape:'square',size:1.5});
+  assert.ok(corner&&Math.abs(corner.point.y-(164+.75))<1e-9&&Math.abs(corner.point.x-(60-1-.75))<1e-9,'or on a corner, set out diagonally');
+  assert.ok(Math.abs(Math.sin(corner.angle)+1)<1e-9,'facing along the quay towards its middle');
+  const cap=Q.snapTower({x:60,y:164.9},{shape:'square',size:1.5});
+  assert.ok(cap&&Math.abs(cap.point.x-60)<1e-9&&Math.abs(cap.point.y-164.75)<1e-9&&Math.abs(Math.sin(cap.angle)+1)<1e-9,
+    'or capping the end of the quay, door along the quay');
+  const tower={type:'tower',id:'t1',quaySnap:'m1',x:58.25,y:156,size:1.5};State.structures.push(tower);
+  ctx.footprintPoints=s=>{const h=(s.size||1)/2;return[{x:s.x-h,y:s.y-h},{x:s.x+h,y:s.y-h},{x:s.x+h,y:s.y+h},{x:s.x-h,y:s.y+h}]};
+  assert.equal(Q.wallGroundZ(tower),Q.TOP,'a quay tower stands at the quay top');
+  assert.equal(Q.wallGroundZ({type:'wall',aSnap:'t1',bSnap:'quay:m1'}),Q.TOP,'a wall from a quay tower to the quay stays on it');
+  assert.ok(Q.wallRoute({x:0,y:0},{x:3,y:1},'t1','quay:m1',{max:8}),'and follows the quay face straight');
+  const meshes=Q.meshes(mole);
+  assert.ok(meshes[0].col.length>Q.meshes({...mole,id:'m1-alone'})[0].col.length,'the quay builds a plinth under its tower');
+  State.structures.pop();
+}
+// Quays joined to quays: the end of one (carry it on) or a face (a T), without colliding.
+{
+  const end=Q.snapQuay({x:60.3,y:164.4});
+  assert.ok(end&&end.quayId==='m1'&&end.end==='b'&&end.point.y===164,'a new quay snaps to another quay end');
+  const tee=Q.snapQuay({x:61.4,y:156});
+  assert.ok(tee&&tee.quayId==='m1'&&Math.abs(tee.point.x-61)<1e-9&&tee.point.y===156,'or to a point on its face');
+  assert.equal(Q.snapQuay({x:70,y:156}),null,'no magnet away from quays');
+  const spur={id:'m2',...Q.make({x:61,y:156},{x:66,y:156}),aSnap:'m1'};
+  assert.ok(Q.joined(spur,mole)&&!Q.joined(spur,{...mole,id:'other'}),'joined quays are exempt from colliding');
+  // End to end at a right angle: both quays are carried on by half the width, closing the
+  // outer corner; the outer walls of the corner meet at its point.
+  const elbow={id:'m3',...Q.make({x:60,y:164},{x:66,y:164}),aSnap:'m1'};
+  State.structures.push(elbow);
+  const ys=Q.footprint(mole).map(p=>p.y),xs=Q.footprint(elbow).map(p=>p.x);
+  assert.ok(Math.abs(Math.max(...ys)-165)<1e-9,'the mole runs on to the far side of the corner');
+  assert.ok(Math.abs(Math.min(...xs)-59)<1e-9,'and the elbow starts at its far side: the corner is closed');
+  const faceJoin={id:'m4',...Q.make({x:61,y:156},{x:66,y:156}),aSnap:'m1'};
+  assert.ok(Math.abs(Math.min(...Q.footprint(faceJoin).map(p=>p.x))-61)<1e-9,'a T off a face is not carried on');
+  const wa=Q.snapWallAnchor({x:58.75,y:165.6},.5),wb=Q.snapWallAnchor({x:58.4,y:165.25},.5);
+  assert.ok(wa&&Math.abs(wa.point.x-58.75)<1e-9&&Math.abs(wa.point.y-165.5)<1e-9,'the outer wall of the mole runs on to the elbow wall outer face');
+  assert.ok(wb&&Math.abs(wb.point.x-58.5)<1e-9&&Math.abs(wb.point.y-165.25)<1e-9,'and the elbow wall to the mole wall outer face: the corner is solid');
+  // Rule: walls against a quay show their exterior to the water, whichever way they were drawn.
+  for(const [a,b,label] of [[wa.point,{x:58.75,y:160}],[{x:58.75,y:160},wa.point]].map((p,i)=>[...p,i?'drawn towards the sea':'drawn towards the shore'])){
+    const w={type:'wall',a,b,aSnap:'quay:m1',bSnap:'quay:m1',flip:false};
+    assert.ok(Q.faceWallOut(w),'a quay wall gets its side set ('+label+')');
+    const dx=w.b.x-w.a.x,dy=w.b.y-w.a.y,side=w.flip?-1:1,nx=-dy*side;
+    assert.ok(nx<0,'its exterior faces away from the mole, to the water ('+label+')');
+  }
+  const corner={type:'wall',a:{x:60,y:165.25},b:{x:64,y:165.25},aSnap:'quay:m1',bSnap:'quay:m3'};
+  Q.faceWallOut(corner);
+  assert.ok((corner.flip?-1:1)*(corner.b.x-corner.a.x)>0,'a wall turning the corner faces out too');
+  assert.ok(Q.isQuayWall(corner)&&!Q.isQuayWall({type:'wall',a:{x:0,y:0},b:{x:1,y:0}}),'quay walls refuse the manual flip');
+  State.structures.pop();
+  // Out of the whitezone: a quay must start inside it or from a quay, then may run on.
+  const outward={id:'m5',...Q.make({x:120,y:149},{x:120,y:160})};
+  assert.ok(Q.validate(outward).ok,'a quay from the whitezone out over the water is fine');
+  assert.equal(Q.validate({...outward,...Q.make({x:120,y:152},{x:120,y:160})}).ok,false,'one starting outside it is not');
+  assert.ok(Q.validate({...Q.make({x:60,y:164},{x:60,y:170}),id:'m6',aSnap:'m1'}).ok,'unless it starts from another quay');
+}
+// Harbour dressing on the quay: the construction kit's crane and hoists, scatter goods.
+vm.runInContext(read('src/assets/construction-models.js'),ctx);
+const dressed=Q.meshes({...mole,id:'m1-dressed'});
+assert.equal(dressed.length,2,'the quay carries a dressing mesh');
+const quayTop=Q.TOP,dz=[];for(let i=2;i<dressed[1].pos.length;i+=3)dz.push(dressed[1].pos[i]);
+assert.ok(Math.min(...dz)>=quayTop-.05&&Math.max(...dz)>quayTop+1,'crane, hoists and goods stand on the coping, the crane rises above it');
+console.log('PASS quay: shore or water, whitezone, sea face, piers branch off it, moles take piers on both sides, 4U from the shore, 5U apart');
+
+// Test fleet: ships moor at the free berths of a pier with their sails furled, one each side,
+// alongside the deck; with no berth left they ride at anchor off the coast, sails set.
+for(const f of ['heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js','settlement-fleet.js'])vm.runInContext(read('src/'+f),ctx);
+const F=window.ConquerFleet,M2=window.ConquerShipModels;
+State.structures.length=0;State.structures.push(s);
+const one=F.spawn({key:'cocca',allegiance:'merchant'}),two=F.spawn({key:'barca',allegiance:'foreign'}),three=F.spawn({key:'nave',allegiance:'foreign',realm:'azure'});
+assert.equal(one.berth.side,'left','first ship at the left berth');
+assert.equal(two.berth.side,'right','second at the right berth');
+assert.equal(three.berth,null,'third at anchor: no berth left');
+assert.ok(one.crew.sail.furl===1&&two.crew.sail.furl===1,'in port the sails are furled');
+assert.equal(three.crew.sail.furl,0,'at anchor the sails stay set');
+assert.ok(Math.abs(one.pose.heading-s.angle)<1e-9,'moored bow to the sea');
+const B=window.ConquerShipModels.ships.cocca.B,edge=Math.abs(one.pose.x-s.x);
+assert.ok(edge>.75+B/2-.01&&edge<.75+B/2+.3,'alongside the deck edge, not on it');
+assert.ok(pointInPolygon(three.pose,sea.points),'the anchored ship floats on the sea');
+F.order('lower');assert.ok(one.crew.pending==='lower','orders reach the crews');
+F.clear();assert.equal(F.ships.length,0,'cleared');
+// Quay berths: after the piers, ships lie along a quay face, never within 4U of a pier, and a
+// slot whose hull would touch another quay, pier or ship is skipped.
+State.structures.length=0;
+const harbourMole={id:'hm',...Q.make({x:150,y:151},{x:150,y:171})};State.structures.push(harbourMole);
+const alongside=F.spawn({key:'cargo',allegiance:'merchant'});
+assert.ok(alongside.berth?.quayId==='hm','with no pier, a ship moors along the quay');
+assert.ok(Math.abs(Math.abs(alongside.pose.heading)-Math.PI/2)<1e-9,'lying along it');
+assert.ok(Math.abs(Math.abs(alongside.pose.x-150)-(1+M2.ships.cargo.B/2+.12))<1e-9,'alongside its face');
+F.clear();
+State.structures.push({id:'hp',type:'pier',reach:4,x:149,y:156.5,angle:Math.PI,onQuay:'hm'});
+assert.ok(Q.berths(harbourMole).every(b=>Math.hypot(b.edge.x-149,b.edge.y-156.5)>=4),'no quay slot within 4U of the pier');
+F.clear();State.structures.length=0;
+{const row=F.spawn({key:'barchetta',allegiance:'merchant'});assert.ok(row&&window.ConquerShipCrew.step(row.crew,.5)!==undefined||row,'a rowing boat spawns and its crew works without masts');window.ConquerShipCrew.step(row.crew,.5);window.ConquerShips.raise(row.crew.sail);for(let k=0;k<10;k++)window.ConquerShipCrew.step(row.crew,.5);
+ const rest=window.ConquerShips.mesh('barchetta',row.pose,1,null,null,null).pos,stroke=window.ConquerShips.mesh('barchetta',row.pose,1,null,null,1.2).pos;
+ assert.ok(rest.length===stroke.length&&rest.some((v,i)=>Math.abs(v-stroke[i])>1e-3),'the oars swing when rowing');F.clear()}
+for(const [k,m] of Object.entries({...M2.ships,...(M2.boats||{})}))assert.ok(m.deck-m.B/2*Math.sin(.12)>.03,k+': its deck or floor stays above the water as it rolls');
+{const H=window.ConquerHeraldryShapes?.DEFAULT||{pattern:'plain',c1:'#a00',c2:'#fff'};const dir=h=>{const f=window.ConquerShips.flagMesh('cocca',{x:0,y:0,heading:h,z:0},H,0);if(!f)return null;const P=f.pos,n=Math.min(P.length/3,360);let ax=0,ay=0;for(let i=0;i<n;i++){ax+=P[i*3];ay+=P[i*3+1]}const m=window.ConquerShips.model('cocca').flags[0].at,base=window.ConquerShips.toWorld({x:0,y:0,heading:h,z:0},m);return Math.atan2(ay/n-base.y,ax/n-base.x)};
+ const a=dir(0),b=dir(2.1);if(a!=null)assert.ok(Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<.35,'flags stream the same way whatever the heading')}
+console.log('PASS fleet: moored at berths with sails furled, anchored off the coast, orders, clear');
+
+// Fishermen: the L1 houses nearest a pier fish, one per berth; each gets a fishing boat at a
+// berth (never at anchor); on a working day the boat is at sea at midday with its sails set
+// and moored at night, and a house that is no longer a fisherman loses its boat.
+Object.assign(ctx,{underConstruction:()=>false,houseLevel:h=>h.houseLevel||1,visualCycleFrac:()=>ctx.__frac});
+State.village={founded:true};State.clock={day:0};
+vm.runInContext(read('src/settlement-sea-nav.js'),ctx);vm.runInContext(read('src/settlement-fishers.js'),ctx);
+const Fi=window.ConquerFishers;
+State.structures.push(s);
+const house=(id,x,y,lvl=1)=>({id,type:'house',houseLevel:lvl,x,y});
+State.structures.push(house('h1',s.x+2,s.y-6),house('h2',s.x-3,s.y-8),house('h3',s.x+1,s.y-10),house('far',s.x,s.y-40),house('l2',s.x,s.y-5,2));
+assert.equal([...Fi.fisherIds()].sort().join(),'h1,h2','the two nearest L1 houses fish: two berths, none for far or L2 houses');
+Fi.syncBoats();
+assert.equal(F.ships.filter(b=>b.fisher).length,2,'one boat per fisherman');
+assert.ok(F.ships.every(b=>['barca','barchetta'].includes(b.key)&&b.berth?.pierId===s.id),'fishing boats (sail or oars) moor at the pier');
+ctx.__frac=.45;
+const boat=F.ships[0];let now=0,sawSail=false,route=null;
+for(let k=0;k<900&&boat.fish?.phase!=='fishing';k++){Fi.step(now+=.1);if(boat.fish?.phase==='out'){sawSail||=boat.key==='barchetta'?boat.row!=null:boat.crew.sail.target===0;route||=boat.nav?.path}}
+assert.equal(boat.fish.phase,'fishing','the boat sails out along a sea route and reaches its fishing ground');
+assert.ok(route&&route.length>=2&&route.every(p=>pointInPolygon(p,sea.points)||Math.hypot(p.x-route[0].x,p.y-route[0].y)<1e-9),'its route runs over the sea');
+assert.ok(sawSail,'under sail (or rowing) on the way');
+assert.ok(boat.away&&pointInPolygon(boat.pose,sea.points)&&boat.pose.y>s.y+8,'out on the sea, well off the pier');
+assert.equal(boat.crew.sail.target,1,'sails furled while the net is out');
+assert.ok(Fi.netScale(1)>0&&Fi.netScale(10)===1&&Fi.netScale(34)===0,'net cast, left to fish, hauled');
+ctx.__frac=.9;
+for(let k=0;k<1500&&boat.fish.phase!=='moored';k++)Fi.step(now+=.1);
+assert.ok(!boat.away&&boat.crew.sail.target===1,'in the evening it is back at its berth, sails furled');
+State.clock.day=5;ctx.__frac=.45;for(let k=0;k<20;k++)Fi.step(now+=.1);
+assert.ok(!boat.away,'no fishing on the weekend');State.structures=State.structures.filter(o=>o.id!=='h1');Fi.syncBoats();
+assert.ok(!F.ships.some(b=>b.fisher==='h1'),'the boat goes with its fisherman');
+assert.ok(read('src/settlement-economy.js').includes("put(e,'food',FISH_FOOD_PER_DAY,'private',w.houseId+':fish')"),'the catch is private food');
+F.clear();State.structures.length=0;
+console.log('PASS fishers: nearest L1 houses, one boat per berth, out at midday, home at night, weekend, catch');
+// Unit commands for the player's warships: a click selects a warship (not a merchant), a click
+// on the sea sends it there along a route, a foreign ship is attacked (it sails up to it), a
+// pier sends it to tie up at a free berth; ships left at anchor are saved where they lie.
+F.clear();State.structures=[s];State.village={founded:true};F.restore();
+const war=F.spawn({key:'caravella',allegiance:'player',realm:'player'}),trader=F.spawn({key:'cargo',allegiance:'merchant'});
+assert.ok(F.selectAt(war.pose)&&F.selectedShips().length===1,'a click on a warship selects it');
+F.clearSelection();assert.ok(!F.selectAt(trader.pose),'merchants take no orders');
+F.selectAt(war.pose);
+const dest={x:s.x+14,y:s.y+20};
+assert.match(F.orderAt(dest),/salpa/,'a click on the sea gives a sailing order');
+assert.ok(!war.berth&&war.cmd.kind==='move','it casts off');
+for(let k=0;k<900&&war.cmd;k++)F.commandStep(.1);
+assert.ok(!war.cmd&&Math.hypot(war.pose.x-dest.x,war.pose.y-dest.y)<.6,'it reaches the point and rides at anchor there');
+assert.ok(State.village.fleet.some(r=>r.key==='caravella'&&r.at&&Math.abs(r.at.x-war.pose.x)<.01),'saved where it lies');
+assert.equal(F.orderAt({x:s.x,y:s.y-20}),'Le navi vanno solo per mare','no orders over land');
+const foe=F.spawn({key:'cocca',allegiance:'foreign',realm:'azure',anchor:true});foe.pose={x:s.x-25,y:s.y+30,heading:0,z:0};
+assert.match(F.orderAt(foe.pose),/attacca/,'a click on a foreign ship is an attack order');
+const d0=Math.hypot(foe.pose.x-war.pose.x,foe.pose.y-war.pose.y);
+for(let k=0;k<200;k++)F.commandStep(.1);
+assert.ok(Math.hypot(foe.pose.x-war.pose.x,foe.pose.y-war.pose.y)<d0-5,'it closes on the enemy');
+war.cmd=null;F.selectAt(war.pose);
+assert.match(F.orderAt(window.ConquerPier.moorings(s)[0].edge),/commerciale/,'warships do not tie up at a commercial pier');
+assert.match(F.moorSelected(),/Nessun molo militare/,'Attracca needs a military pier');
+s.use='military';
+assert.match(F.orderAt(window.ConquerPier.moorings(s)[0].edge),/ormeggiare/,'a click on a military pier sends it to a berth');
+war.cmd=null;
+assert.match(F.moorSelected(),/attraccare/,'Attracca sends it to the nearest free military berth');
+for(let k=0;k<1500&&war.cmd;k++)F.commandStep(.1);
+assert.ok(war.berth?.pierId===s.id&&!war.away,'tied up at the pier');
+F.clear();F.clearSelection();
+{const w2=F.spawn({key:'caravella',allegiance:'player',realm:'player'}),m2=F.spawn({key:'cargo',allegiance:'merchant'});
+assert.ok(w2.berth?.pierId===s.id&&!m2.berth,'a military pier takes warships, merchants ride at anchor');}
+delete s.use;F.clear();
+console.log('PASS warship commands: select, sail, anchor saved, attack, moor');
+
+// Shipyard: a pier with yard 1|2 and a slipway, no berths; L1 builds the small craft only,
+// one ship at a time; shipwrights move it on working days through the phases, and when it is
+// done it is launched and joins the fleet, which is saved with the village and restored.
+for(const f of ['assets/shipyard-models.js','settlement-shipyard.js'])vm.runInContext(read('src/'+f),ctx);
+const Y=window.ConquerShipyard;
+const yardAt=(lv,x)=>{const y={id:'y'+lv,...Y.make(lv),x,y:150};P.snapToCoast(y);return y};
+const y1=yardAt(1,70),y2=yardAt(2,120);
+assert.ok(P.validate(y1).ok&&P.validate(y2).ok,'both shipyards snap to the coast and validate');
+assert.equal(P.moorings(y1).length,0,'a shipyard has no berths');
+assert.ok(P.footprint(y2).length===4&&P.reachOf(y2)===10&&Y.level(y2).land===12,'L2: 10U into the sea, 12U of yard on land');
+State.structures=[y1,y2];
+assert.ok(!Y.order(y1,'cocca'),'L1 cannot build a large ship');
+assert.ok(Y.order(y1,'caravella','merchant'),'L1 builds a caravel');
+assert.ok(!Y.order(y1,'barca'),'one ship at a time on a slipway');
+assert.ok(Y.order(y2,'nave'),'L2 builds the nave');
+assert.equal(Y.demand().length,2,'both slipways want shipwrights');
+const c0=Y.hullMesh('nave',Y.shipPose(y2,'nave',0),.1).col.length,c1=Y.hullMesh('nave',Y.shipPose(y2,'nave',0),.6).col.length,c2=Y.hullMesh('nave',Y.shipPose(y2,'nave',0),.97).col.length;
+assert.ok(c0>0&&c1>0&&c2>c1,'frames first, then the hull rising, the rig last');
+for(let d=0;d<29;d++)Y.daily({y2:3});
+assert.ok(Y.progress(y2)<1&&y2.shipOrder.launchAt==null,'not done before its working days');
+Y.daily({y2:3});
+assert.ok(y2.shipOrder.launchAt!=null,'done: launched down the ways');
+State.village={founded:true};F.restore();
+const launched=Y.finishLaunch(y2);
+assert.ok(launched&&launched.key==='nave'&&y2.shipOrder===null,'the launched ship joins the fleet and the slipway is free');
+assert.equal(State.village.fleet.length,1,'the fleet is saved with the village');
+assert.equal(State.village.fleet[0].key,'nave');
+const saved=JSON.parse(JSON.stringify(State.village));State.village=saved;F.restore();
+assert.ok(F.ships.length===1&&F.ships[0].key==='nave'&&JSON.stringify(F.ships[0].livery)===JSON.stringify(launched.livery),'a reloaded village brings its fleet back, same livery');
+F.clear();State.structures.length=0;
+console.log('PASS shipyard: L1/L2, no berths, one order, phases, shipwrights, launch, fleet saved and restored');

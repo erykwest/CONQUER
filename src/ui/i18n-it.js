@@ -52,7 +52,7 @@ export const T = {
     small: 'Piccola', medium: 'Media', large: 'Grande',
     wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga', longhouse: 'Long house', longhouseWide: 'Long house larga',
     stone: 'Pietra', wood: 'Legno',
-    dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra',
+    dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra', pier: 'Molo', quay: 'Banchina',
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     pillory: 'Gogna', gallows: 'Forca', scaffold: 'Patibolo',

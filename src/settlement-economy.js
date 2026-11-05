@@ -24,6 +24,8 @@
   const HAPPINESS_GROUPS = Object.freeze(['L1','L2','L3','L4']);
   // Supervised grazing: food per herding L1 per working day.
   const HERD_FOOD_PER_DAY = .9;
+  // A fisherman's catch per working day (settlement-fishers.js).
+  const FISH_FOOD_PER_DAY = 1.2;
   const KIND = Object.freeze({
     field:{good:'food',classId:1,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
@@ -285,8 +287,10 @@
     const herdHouse=h=>['goat','shepherd'].includes(window.ConquerLivestock?.lotKindForHouse?.(h));
     const worker=h=>({id:String(h.id)+':m:0',houseId:h.id});
     const herdPool=houses.filter(herdHouse).map(worker);
+    // Fishermen go out with their boat every working day: never in the L1 job pool.
+    const fishHouse=h=>!!window.ConquerFishers?.isFisher(h),fishers=houses.filter(fishHouse).map(worker);
     const l1Available=[
-      ...houses.filter(h=>!herdHouse(h)).map(worker),
+      ...houses.filter(h=>!herdHouse(h)&&!fishHouse(h)).map(worker),
       ...Array.from({length:foundingWorkers()},(_,i)=>({
         id:'founder:'+wellId+':'+i,founderIndex:i
       }))
@@ -326,6 +330,12 @@
       }
       allocated[s.id]=count;
     }
+    // Shipwrights: up to three L1 at each shipyard with a ship on its slipway.
+    const shipwrights={};
+    for(const s of window.ConquerShipyard?.demand?.()||[]){
+      const n=Math.min(window.ConquerShipyard.WORKERS,l1Available.length,remaining.L1);
+      assignedL1[s.id]=l1Available.splice(0,n);allocated[s.id]=n;shipwrights[s.id]=n;remaining.L1-=n;
+    }
     const builders=l1Available.splice(0,Math.min(l1Available.length,constructionDemand(day)));
     for(const s of logging){
       const free=Math.min(KIND.loggingCamp.workers-allocated[s.id],l1Available.length);
@@ -338,7 +348,7 @@
     for(const w of l1Available)(herdIds.has(w.houseId)?herders:idle).push(w);
     remaining.L1=Math.max(0,Math.min(remaining.L1,builders.length+idle.length));
     return{allocated,remaining,limits,assignedL1,spareL1:[...builders,...idle],
-      herders,herdReserve,idle,foodWeekly:round(foodWeekly)};
+      herders,herdReserve,fishers,shipwrights,idle,foodWeekly:round(foodWeekly)};
   }
   // Food the households can actually reach: market lots, plus castle stores
   // only while the lord orders full or half rations.
@@ -378,6 +388,10 @@
     // Supervised grazing is L1 husbandry: each herder's flock yields private food.
     if((window.ConquerCombat?.alarmMode?.()||'off')==='off')
       for(const w of labor.herders)put(e,'food',HERD_FOOD_PER_DAY,'private',w.houseId+':herd');
+    window.ConquerShipyard?.daily?.(labor.shipwrights);
+    // The catch: private food for each fisherman's household.
+    if((window.ConquerCombat?.alarmMode?.()||'off')==='off')
+      for(const w of labor.fishers)put(e,'food',FISH_FOOD_PER_DAY,'private',w.houseId+':fish');
     const active=activeStructures(),hasMill=active.some(s=>
       ['windmill','watermill'].includes(s.type)&&
       !s.economyDisabled&&!s.destroyed&&!s.abandoned&&!s.burnt);

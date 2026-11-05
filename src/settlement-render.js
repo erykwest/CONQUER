@@ -38,6 +38,8 @@ function drawStructure(s,preview=false){
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
     else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
+    else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
+    else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
@@ -449,6 +451,10 @@ function draw(){
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
+  window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
+  if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
+  window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea
+  window.ConquerFleet?.draw();   // ships at the piers or at anchor, with their crews (settlement-fleet.js)
   markPhase('population');
   drawTrainingSoldiers();
   if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');
@@ -458,6 +464,8 @@ function draw(){
   drawCastleSoldiers();
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
+  window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
+  window.ConquerGulls?.draw(performance.now()/1000);   // seagulls over the coast, above the ships
   window.ConquerSiege?.drawOverlay();
   if(typeof drawRaisedVillagers==='function')drawRaisedVillagers();   // on the Mastio's outer stair
   drawCastleFireFixtures();

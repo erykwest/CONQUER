@@ -95,7 +95,12 @@
       ['[data-crossing="dry"]','Fossato asciutto','moat'],
       ['[data-crossing="water"]','Fossato allagato · quota 0','moat'],
       ['[data-crossing="wood"]','Ponte di legno','bridge'],
-      ['[data-crossing="stone"]','Ponte di pietra','bridge']]}
+      ['[data-crossing="stone"]','Ponte di pietra','bridge'],
+      ['[data-pier="4"]','Molo piccolo L4 · 4U sul mare · 2 attracchi','bridge'],
+      ['[data-pier="12"]','Molo grande L12 · 12U sul mare · 2 attracchi','bridge'],
+      ['[data-quay]','Banchina in pietra · 2U · due clic lungo la riva o in acqua','wall'],
+      ['[data-yard="1"]','Cantiere navale L1 · scalo 7U · barche e caravelle','bridge'],
+      ['[data-yard="2"]','Cantiere navale L2 · scalo 10U · piazzale 12U · tutte le navi','bridge']]}
   ];
   // The combat module inserts live controls into #builder before this UX loads.
   // Replacing children without retaining them detached Combat and crashed every
@@ -206,7 +211,7 @@
   // Clicking an actual build tool chooses it without closing the palette; this
   // keeps level/tier presets accessible while the ghost is being previewed.
   for(const b of originalButtons)b.addEventListener('click',()=>{
-    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-terraform')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')||b.hasAttribute('data-industry')||b.hasAttribute('data-event-venue')){
+    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-terraform')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')||b.hasAttribute('data-industry')||b.hasAttribute('data-event-venue')||b.hasAttribute('data-pier')||b.hasAttribute('data-quay')){
       requestAnimationFrame(()=>{if(b.classList.contains('ux-icon-btn'))document.querySelectorAll('.ux-catalog .ux-icon-btn').forEach(x=>x.classList.toggle('active',x===b))});
     }
   });

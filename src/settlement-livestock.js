@@ -18,6 +18,8 @@
     if(!house)return null;
     const level=houseLevel(house);
     if(level===1){
+      // Near a pier or quay with a free berth: a fisherman's household (settlement-fishers.js).
+      if(window.ConquerFishers?.isFisher(house))return 'fisher';
       const value=hash(State.seed+'|livestock-l1|'+house.id)/4294967296;
       return value<.5?'garden':value<.8?'goat':'shepherd';
     }
@@ -439,7 +441,7 @@
       if(!house||underConstruction(house))continue;
       const level=houseLevel(house),kind=kindForHouse(house);
       if(level===1){
-        counts[kind]++;
+        counts[kind]=(counts[kind]||0)+1;
         const data=plan(house,lot);
         if(kind==='goat')counts.goats+=data.count;
         if(kind==='shepherd')counts.sheep+=data.count;

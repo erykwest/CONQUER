@@ -291,8 +291,12 @@ function peasantObstacleSnapshot(){
   parts.circles=State.structures.filter(s=>s.type==='well'||(['tower','ruin'].includes(s.type)&&s.shape==='round'));
   return parts;
 }
+// A quay built over the rocks is walkable.
+function quayAt(p){return(State.structures||[]).some(s=>s.type==='quay'&&window.ConquerQuay&&pointInPolygonSimple(p,window.ConquerQuay.footprint(s)))}
+function pointInPolygonSimple(p,poly){let k=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)k=!k}return k}
 function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
   if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;
+  if(window.ConquerCoast?.rockAt(p)&&!quayAt(p))return true;            // shore rocks (settlement-coast.js)
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
   if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
   for(const s of State.structures){

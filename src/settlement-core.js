@@ -215,6 +215,8 @@ function structureAngleFromStep(step){
 }
 function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
 function structureUsesDiscreteAngle(s){
+  // A tower against a stone quay keeps the quay's exact angle (settlement-quay.js).
+  if(s?.type==='tower'&&s.quaySnap)return false;
   return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
@@ -809,6 +811,8 @@ function baseConstructionCost(s){
   if(s.type==='well')return {...COSTS.well};
   if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.definition(s).cost};
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.cost(s);
+  if(window.ConquerPier?.is(s))return window.ConquerPier.cost(s);
+  if(window.ConquerQuay?.is(s))return window.ConquerQuay.cost(s);
   if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -853,6 +857,8 @@ function buildDuration(s){
   if(s.type==='well')return BUILD_DAYS.well;
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.definition(s).days;
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.buildDays(s);
+  if(window.ConquerPier?.is(s))return window.ConquerPier.buildDays(s);
+  if(window.ConquerQuay?.is(s))return window.ConquerQuay.buildDays(s);
   if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
@@ -1022,6 +1028,7 @@ function pointRadius(s){
   if(s.type==='well')return .75;
   if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
   if(s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(s.type==='pier')return 1;
   if(isCivicAnnex(s))return Math.hypot(s.w||1,s.h||1)/2;
   if(isCivic(s))return civicRadius(s);
   return .5;

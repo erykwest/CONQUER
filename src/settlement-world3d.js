@@ -604,11 +604,15 @@
         for(let i=0;i<=count;i++){const t=i/count,p={x:e.a.x+dx*t,y:e.a.y+dy*t};m.prism(rectWorldPoints(p.x,p.y,.05,.05,ang),g+.02,g+.38,'#806442','#6b5338','#806442')}
       }
     }
+    // Shore boulders on the rocky stretches of the coast (settlement-coast.js).
+    window.ConquerCoast?.addToBuilder(m);
     for(const s of State.structures){
       if(underConstruction(s))continue;
       // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
       if(window.ConquerWood3D?.addToBuilder(m,s))continue;
       if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
+      else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
+      else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
       else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
@@ -1422,7 +1426,7 @@
   }
   const SIG_CATEGORIES=[
     {name:'ground',test:s=>s.type==='road'||s.type==='field'||s.type==='house'||s.type==='moat'||s.type==='bridge'||s.type==='palisade'},
-    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
+    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||s.type==='pier'||s.type==='quay'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
       ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s)},
     {name:'castle',test:s=>!s.auto&&['tower','gate','wall','built'].includes(s.type)},
     {name:'hedges',test:s=>s.type==='house'||s.type==='field'},
@@ -1497,7 +1501,7 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
@@ -1948,6 +1952,8 @@
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
     try{for(const m of window.ConquerEvents3D?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
+    // Ships afloat: hulls, morphing sails, flags and boarding planks (settlement-fleet.js).
+    try{for(const m of window.ConquerFleet?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);
     uploadSettledMeshes(S.gl,settled);
     const dyn=buildDynamic(moving);dynamicQueue=[];
