@@ -89,7 +89,8 @@
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
-      ['[data-terraform="flat"]','Flat · sottrai e riporta a H0','level']]},
+      ['[data-terraform="flat"]','Flat · sottrai e riporta a H0','level'],
+      ['[data-terraform="forest"]','Rimuovi foresta · job L1 · legname','work']]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
       ['[data-main-road]','Strada principale','route'],
       ['[data-crossing="dry"]','Fossato asciutto','moat'],
