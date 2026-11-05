@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CODEX-01 — Catalogo consultabile sopra i provider del gioco (05/11/2026)
+
+- **Implementazione fase 2 sul branch `feature/codex-normalized-catalog`**, su richiesta di procedere al catalogo normalizzato: sette categorie, ID semantici indipendenti da salvataggi/asset/etichette, metadati e relazioni strutturate. [Contratto v1](../CODEX-CATALOG.md).
+- Un core senza DOM e un adapter read-only al gameplay. Costi/tempi leggono i provider reali; nessun secondo listino. Lettura live in gioco, snapshot JSON esplicitamente datato dal processo che lo pubblica per il sito.
+- Valori noti distinti da unmapped/context-required/incompatible. La membership nello schema di una variante non certifica l'installabilità. Nessuna meccanica viene abilitata dal Codex.
+- Requisiti fisici, funzionali e conoscenze separati. Conoscenze non mappate; nessun albero tecnologico, nessun vincolo inventato.
+- Alternativa evitata: duplicare costi e regole nei contenuti Wiki. La UI Wiki e l'export automatico del sito restano fase successiva; milestone sistemiche M0–M5 invariate.
+
 ## D-ROOM-EXT-01 — Una stanza può cambiare l'esterno del suo edificio (04/11/2026)
 
 - **DECISO (contratto):** una funzione di stanza dichiara il suo elemento esterno in `ROOM_EXTERIOR[fn]` (`src/settlement-room-exterior.js`): `{model, source, mount, breakable?}`. `model` è un modello Blender in `src/assets/*-models.js` (registro `window[source].models[model]`: `parts` con `p/i/c`, `width`, `projection`, `bottom`, `chuteTop`), assi U con +x lungo la faccia (centrato), +y verso l'esterno, +z dal pavimento della stanza.
