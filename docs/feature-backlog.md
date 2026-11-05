@@ -10,6 +10,21 @@
 
 05/11/2026 — Esperimento REG-BIOME-PREVIEW: [prova cartografica](REGIONAL-BIOME-SECTORS-PREVIEW.md) su `experiment/regional-biome-sectors`, NON MAIN. Quattro lati e corner di blending. Integrazione con i confinanti Voronoi reali e generatore Builder ancora aperta.
 
+## 2026-11-05 — Piazzale di stoccaggio al villaggio (branch `feature/founding-storage-yard-20261105`)
+
+- **P0-03 / P0-05 · SU BRANCH (non MAIN fino al merge):** alla fondazione del villaggio un Piazzale 2×2U è cercato entro 7U dal pozzo in un'area con terreno valido, non alberata e senza conflitti; è inoltre piazzabile dal Builder. Può crescere a 4×4U e 6×6U pagando materiali e oro, con capacità 600/2400/5400 unità aggregata.
+- **Stock iniziali:** rappresentati fisicamente nel piazzale e mostrati nell'ispettore, conservati esclusivamente in `ConquerEconomy.state().castle`; non aggiungere una seconda economia locale al magazzino.
+- **Bug taglialegna:** con piazzale attivo un L1 ha priorità sul cantiere, per scongiurare la produzione zero con quattro fondatori impegnati in opere; con charter a 200 legname e target 70, la produzione trattenuta non incrementava il deposito e andava tutta al mercato. Dal branch, la quota non destinata alla vendita cresce nel castello fino a capienza del piazzale; il resto viene offerto al mercato. I tempi e la manodopera L1 non sono cambiati.
+- **Da collaudare:** casi di fondazione con vincoli forestali senza spazio entro 7U, scene e animazioni carico/scarico reali, eventuali esigenze di capacity tuning; test `qa/storage-yard-regression.cjs` e GitHub Actions.
+
+
+## 2026-11-05 — Forestry L1, tool del Terraforming (fix urgente su branch `fix/forestry-l1-clearing-cost-20261105`)
+
+- **P0-02 · IMPLEMENTATO SUL BRANCH, NON VALIDATO COME CORE COMPLETO:** nuovo tool «Rimuovi foresta», non istantaneo; assegna lavori L1 finanziati con fino a 3 popolani per job, lascia gli alberi finché il lavoro non termina, apre radure persistenti e accredita il legname al magazzino del castello. Resa iniziale 2,5 legname/U²; 0,7 giornate operaio/U². Restano fuori rigenerazione e abbattimento periodico automatico dalle industrie.
+- **P0-05 · FIX SUL BRANCH:** edificio taglialegna 5 legname, 35 oro (precedente 25 legname); palette, preview e spesa reali usano il costo unico in `settlement-industries.js`.
+- **Verifiche:** `qa/forestry-regression.cjs` e workflow Economy flows aggiornato; esito da confermare dalla PR.
+
+
 ## Stato corrente su main — 30 ottobre 2026
 
 > **Audit sostitutivo della fotografia del 22–23/10:** [AUDIT-2026-10-30](context/AUDIT-2026-10-30.md), ref `main` `cf5699922`. **15 nuclei CORE MAIN, 8 voci PARZIALI** su 23 ID Builder; questo non certifica la QA browser completa. Il precedente conteggio 13/10 più sotto resta esclusivamente **storico**.
@@ -23,6 +38,60 @@
 
 **PR ancora OPEN (non su main):** [#109](https://github.com/erykwest/CONQUER/pull/109) test CI economia, [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacchi/campi fortificabili, [#111](https://github.com/erykwest/CONQUER/pull/111) multi-pozzo e centri di quartiere. Gli screenshot demo dei pannelli non sono prove di produzione reale.
 
+
+## 2026-11-05 — ARTE · commissioni, esposizione e circolazione delle opere
+
+> **NUOVO SOTTOSISTEMA · BACKLOG APERTO, NON IMPLEMENTATO.** Le priorità A-P0/A-P1/A-P2 sono relative al solo filone ARTE e non anticipano la roadmap generale. Proprietà e opere devono restare dati di gioco, non semplici scatter/furniture grafici.
+
+### A-P0 — Percorso completo dalla stanza all'opera posseduta
+- [ ] **ART-251105-01 — Catalogo abbellimenti.** Quadri, arazzi e sculture, con varianti di stile/dimensioni e compatibilità con le stanze. Distinguere **archetipo grafico** (asset riutilizzabile) da **opera individuale** (oggetto con ID univoco).
+- [ ] **ART-251105-02 — Slot decorativi delle stanze.** Catalogo consultabile partendo da una stanza del castello; ancoraggi di parete (quadri/arazzi), pavimento/piedistallo (sculture) e, in futuro, superfici d'arredo. Verificare disponibilità, ingombro e persistenza. Riutilizzare Built Sections, cutaway, furniture e Asset Lab: non creare un secondo Builder.
+- [ ] **ART-251105-03 — «Commissiona opera d'arte».** Dalla stanza selezionata: scelta della tipologia/variante e della destinazione prevista; costo in oro, tempo di realizzazione e stato della commessa. A completamento l'opera entra nell'inventario del castello e, se lo slot è ancora valido/libero, viene esposta nella stanza richiesta. Se la destinazione è indisponibile, resta nell'inventario senza sparire.
+- [ ] **ART-251105-04 — Inventario persistente delle opere.** Ogni esemplare ha ID, archetipo, proprietà, collocazione o deposito, stato della commissione e dati essenziali; evitare duplicazione di opere dopo salvataggio/caricamento, demolizione, spostamento o completamento di commesse.
+- [ ] **ART-251105-05 — Rimozione e ricollocazione.** Rimuovere un'opera dalla stanza senza distruggerla, conservarla nell'inventario e ricollocarla in qualsiasi slot compatibile e disponibile, anche in un'altra stanza. Un'opera può essere esposta **in un solo luogo alla volta**.
+
+**Accettazione del vertical slice ARTE:** seleziono una stanza → scelgo un quadro/arazzo/scultura → commissiono pagando una volta → il tempo avanza → l'opera viene prodotta e mostrata nel cutaway → la rimuovo e la ricolloco → il salvataggio/caricamento conserva proprietà e posizione. Collaudo in 3D e fallback 2.5D, Asset Lab per nuovi asset, QA dei vincoli di slot e della contabilità.
+
+### A-P1 — Funzioni culturali e valore storico
+- [ ] **ART-251105-06 — Galleria d'arte / Atelier [DA VALUTARE].** Nuove *funzioni di stanza*, non edifici autonomi. La galleria espone collezioni; l'Atelier può ospitare artisti e commissioni continuative. **Non rendere l'Atelier obbligatorio** per commissionare a un artista esterno.
+- [ ] **ART-251105-07 — Scheda dell'opera.** Titolo, autore (anche esterno), qualità, provenienza, proprietari precedenti e valore, nei limiti dei sistemi di personaggi speciali effettivamente disponibili. Possibile effetto su prestigio/attrattività, con formula e bilanciamento **da decidere**; evitare bonus automatici per ogni oggetto decorativo.
+
+### A-P2 — Economia e diplomazia
+- [ ] **ART-251105-08 — Vendita.** Dall'inventario/esposizione alla cessione dell'oggetto: rimuovere la proprietà e la collocazione locale una sola volta, accreditando l'oro nel ledger economico canonico; prezzo/mercato e acquirente da definire.
+- [ ] **ART-251105-09 — Donazione estera.** Trasferire un'opera identificata a un altro feudo/regno come dono diplomatico, con perdita effettiva della proprietà locale e beneficio relazionale **da definire**. Dipende da identità dei regni e diplomazia condivisa; non creare stati fittizi o un secondo sistema commerciale.
+
+**Dipendenze e confini:** Built Sections e funzioni di stanza, cutaway/furniture e renderer, inventario/salvataggi, ledger oro, futuri artisti/ospiti, diplomazia/mercato interregno. Le opere sono beni mobili unici, non nuove risorse aggregate. Commercio e doni restano differiti finché non esistono i rispettivi contratti condivisi.
+
+## 2026-11-05 — Builder / Castello: upgrade architettonici richiesti
+
+> **NUOVE RICHIESTE · BACKLOG APERTO, NON IMPLEMENTATO IN QUESTA MODIFICA.** Task raccolti il 05/11/2026. Non confondere questi requisiti con le varianti già documentate su branch o con feature verificate in `main`. La priorità tra i task non è ancora assegnata.
+
+### Mura e camminamenti
+- [ ] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità.
+- [ ] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura.
+- [ ] **BC-251105-03 — Edifici addossati alle mura.** Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
+- [ ] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia da definire geometricamente; **non equivale** allo stile del merlo «a doppia falda» già annotato in `feat/crenel-styles`.
+
+### Torri
+- [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
+- [ ] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello.
+- [ ] **BC-251105-07 — Torri W2 × H4? [DA VALUTARE].** Verificare fattibilità e coerenza geometrica, funzionale e di gameplay dell'altezza H4 per larghezza W2; **non** trattare H4 come già approvato.
+
+### Coperture
+- [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
+- [ ] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare.
+- [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
+
+### Ambiente
+- [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.
+
+### Terreno e percorsi su dislivelli
+- [ ] **BC-251105-12 — Rampe per superare i dislivelli.** Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
+- [ ] **BC-251105-13 — Scalinate per pendii e colline.** Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
+
+**Accettazione BC-12/13:** la geometria segue le quote reali del terreno; entrambe le estremità si connettono a superfici percorribili; il pathfinding delle unità riconosce i collegamenti, senza attraversare pendii non accessibili; costruzione, collisioni, salvataggio e visualizzazione 3D/2.5D sono verificati.
+
+**Dipendenze/QA da affrontare in implementazione, non eseguite ora:** coordinare BC-01/02/03/04 con geometrie dei camminamenti; BC-08/09/10 con coperture già esistenti; BC-05/06/07 con livelli, cutaway e modelli delle torri. Al rilascio verificare Asset Lab, visualizzazione 3D e 2.5D, collisioni, persistenza e regressioni pertinenti. Il riferimento inter-sistemi è [BACKLOG](context/BACKLOG.md).
 
 ## 2026-10-29 — Storici gestionali e anteprime visive · note storiche dalla branch `panels` (merged #103 il 30/10)
 
