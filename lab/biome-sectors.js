@@ -47,7 +47,9 @@ const RegionalBiomePreview=(()=>{
       for(let i=0;i<count;i++){
         const a=start+i*step,d=a+step,offset=amplitude*(i%2?-phase:phase);
         const p=(along,across)=>axis==='y'?{x:across,y:along}:{x:along,y:across};
-        cubic(p(a,fixed),p(a+step/3,fixed+offset),p(d-step/3,fixed+offset),p(d,fixed));
+        // Zero transverse slope at each end also makes corner joins tangent-continuous.
+        cubic(p(a,fixed),p(a+step/6,fixed),p(a+step/3,fixed+offset),p(a+step/2,fixed+offset),30);
+        cubic(p(a+step/2,fixed+offset),p(a+step*2/3,fixed+offset),p(d-step/6,fixed),p(d,fixed),30);
       }
     };
     if(route.includes('-')){
