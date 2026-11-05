@@ -14,6 +14,29 @@
 **PR ancora OPEN (non su main):** [#109](https://github.com/erykwest/CONQUER/pull/109) test CI economia, [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacchi/campi fortificabili, [#111](https://github.com/erykwest/CONQUER/pull/111) multi-pozzo e centri di quartiere. Gli screenshot demo dei pannelli non sono prove di produzione reale.
 
 
+## 2026-11-05 — ARTE · commissioni, esposizione e circolazione delle opere
+
+> **NUOVO SOTTOSISTEMA · BACKLOG APERTO, NON IMPLEMENTATO.** Le priorità A-P0/A-P1/A-P2 sono relative al solo filone ARTE e non anticipano la roadmap generale. Proprietà e opere devono restare dati di gioco, non semplici scatter/furniture grafici.
+
+### A-P0 — Percorso completo dalla stanza all'opera posseduta
+- [ ] **ART-251105-01 — Catalogo abbellimenti.** Quadri, arazzi e sculture, con varianti di stile/dimensioni e compatibilità con le stanze. Distinguere **archetipo grafico** (asset riutilizzabile) da **opera individuale** (oggetto con ID univoco).
+- [ ] **ART-251105-02 — Slot decorativi delle stanze.** Catalogo consultabile partendo da una stanza del castello; ancoraggi di parete (quadri/arazzi), pavimento/piedistallo (sculture) e, in futuro, superfici d'arredo. Verificare disponibilità, ingombro e persistenza. Riutilizzare Built Sections, cutaway, furniture e Asset Lab: non creare un secondo Builder.
+- [ ] **ART-251105-03 — «Commissiona opera d'arte».** Dalla stanza selezionata: scelta della tipologia/variante e della destinazione prevista; costo in oro, tempo di realizzazione e stato della commessa. A completamento l'opera entra nell'inventario del castello e, se lo slot è ancora valido/libero, viene esposta nella stanza richiesta. Se la destinazione è indisponibile, resta nell'inventario senza sparire.
+- [ ] **ART-251105-04 — Inventario persistente delle opere.** Ogni esemplare ha ID, archetipo, proprietà, collocazione o deposito, stato della commissione e dati essenziali; evitare duplicazione di opere dopo salvataggio/caricamento, demolizione, spostamento o completamento di commesse.
+- [ ] **ART-251105-05 — Rimozione e ricollocazione.** Rimuovere un'opera dalla stanza senza distruggerla, conservarla nell'inventario e ricollocarla in qualsiasi slot compatibile e disponibile, anche in un'altra stanza. Un'opera può essere esposta **in un solo luogo alla volta**.
+
+**Accettazione del vertical slice ARTE:** seleziono una stanza → scelgo un quadro/arazzo/scultura → commissiono pagando una volta → il tempo avanza → l'opera viene prodotta e mostrata nel cutaway → la rimuovo e la ricolloco → il salvataggio/caricamento conserva proprietà e posizione. Collaudo in 3D e fallback 2.5D, Asset Lab per nuovi asset, QA dei vincoli di slot e della contabilità.
+
+### A-P1 — Funzioni culturali e valore storico
+- [ ] **ART-251105-06 — Galleria d'arte / Atelier [DA VALUTARE].** Nuove *funzioni di stanza*, non edifici autonomi. La galleria espone collezioni; l'Atelier può ospitare artisti e commissioni continuative. **Non rendere l'Atelier obbligatorio** per commissionare a un artista esterno.
+- [ ] **ART-251105-07 — Scheda dell'opera.** Titolo, autore (anche esterno), qualità, provenienza, proprietari precedenti e valore, nei limiti dei sistemi di personaggi speciali effettivamente disponibili. Possibile effetto su prestigio/attrattività, con formula e bilanciamento **da decidere**; evitare bonus automatici per ogni oggetto decorativo.
+
+### A-P2 — Economia e diplomazia
+- [ ] **ART-251105-08 — Vendita.** Dall'inventario/esposizione alla cessione dell'oggetto: rimuovere la proprietà e la collocazione locale una sola volta, accreditando l'oro nel ledger economico canonico; prezzo/mercato e acquirente da definire.
+- [ ] **ART-251105-09 — Donazione estera.** Trasferire un'opera identificata a un altro feudo/regno come dono diplomatico, con perdita effettiva della proprietà locale e beneficio relazionale **da definire**. Dipende da identità dei regni e diplomazia condivisa; non creare stati fittizi o un secondo sistema commerciale.
+
+**Dipendenze e confini:** Built Sections e funzioni di stanza, cutaway/furniture e renderer, inventario/salvataggi, ledger oro, futuri artisti/ospiti, diplomazia/mercato interregno. Le opere sono beni mobili unici, non nuove risorse aggregate. Commercio e doni restano differiti finché non esistono i rispettivi contratti condivisi.
+
 ## 2026-11-05 — Builder / Castello: upgrade architettonici richiesti
 
 > **NUOVE RICHIESTE · BACKLOG APERTO, NON IMPLEMENTATO IN QUESTA MODIFICA.** Task raccolti il 05/11/2026. Non confondere questi requisiti con le varianti già documentate su branch o con feature verificate in `main`. La priorità tra i task non è ancora assegnata.
