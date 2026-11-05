@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-CENTRAL-BIOME — Prima la cella centrale (05/11/2026)
+
+Scelta esplicita: correggere prima il bioma centrale, rinviando gli otto vicini. Il terreno della cella determina la ricetta locale; i fiumi restano elementi aggiuntivi di confine. Contesto mancante: errore visibile, mai Pianura implicita. Specifica: docs/REGIONAL-BIOME-SECTORS-PREVIEW.md.
+
 ## REG-BIOME-RIVER2 — Morfologia dei meandri (05/11/2026, branch sperimentale)
 
 Richiesto: eliminare il pattern ripetuto e usare il riferimento geometrico [Division by Zero](https://divisbyzero.com/2009/11/26/the-geometry-of-meandering-rivers/). Implementazione nel branch: integrazione per lunghezza del corso, raggi proporzionati alla larghezza (2–3w), parametri delle anse variabili per seed; mantenere ingresso nella buildable zone di almeno 25 px sul riferimento 600 px. Riferimento empirico, non simulazione idraulica. I salvataggi conservano la geometria precedente. [Specifica](../REGIONAL-BIOME-SECTORS-PREVIEW.md).

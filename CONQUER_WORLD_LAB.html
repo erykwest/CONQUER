@@ -862,7 +862,7 @@
             <button type="button" class="terrain-button icon-action" data-terrain="sea" title="Mare" aria-label="Mare">●</button>
             <button type="button" class="terrain-button icon-action" data-terrain="plain" title="Pianure" aria-label="Pianure">▰</button>
             <button type="button" class="terrain-button icon-action" data-terrain="forest" title="Foresta" aria-label="Foresta">♣</button>
-            <button type="button" class="terrain-button icon-action" data-terrain="hills" title="Colline" aria-label="Colline">▲</button>
+            <button type="button" class="terrain-button icon-action" data-terrain="hills" title="Montagne" aria-label="Montagne">▲</button>
           </div>
           <div class="cell-menu-actions structure-actions">
             <button id="addCity2" class="icon-action" type="button" title="Città livello II" aria-label="Città livello II" hidden>Ⅱ</button>
@@ -940,6 +940,7 @@
     </div>
   </main>
 
+  <script src="src/regional-biome-rules.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
@@ -3845,18 +3846,27 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         if(!state||selectedMacros.size!==1||selectedMacro===null)return;
         const macro=state.macros[selectedMacro],ids=conquerNeighbors(selectedMacro);
         const riverEdges=new Set(state.generatedRiverEdges||[]);
-        const hasRiver=state.edges.some(edge=>{
+        const touchingRivers=state.edges.filter(edge=>{
           const touching=[...new Set(edge.cells.map(cell=>cell.macroId))];
           return touching.includes(selectedMacro)&&(riverEdges.has(edgeGeometryKey(edge))||state.rivers.includes(borderKey(touching)));
         });
-        const terrain=state.terrain[selectedMacro],biome=terrain==='sea'?'sea':hasRiver?'river':({plain:'plains',forest:'forest',hills:'hills',swamp:'river'})[terrain]||'plains';
+        const hasRiver=touchingRivers.length>0;
+        const riverSides=[...new Set(touchingRivers.map(edge=>{
+          const dx=(edge.start.x+edge.end.x)/2-macro.centroid.x,dy=(edge.start.y+edge.end.y)/2-macro.centroid.y;
+          return Math.abs(dx)>Math.abs(dy)?dx>0?'east':'west':dy>0?'south':'north';
+        }))];
+        const terrain=state.terrain[selectedMacro],biome=window.ConquerRegionalBiomeRules.biomeForTerrain(terrain);
+        if(!biome){message.textContent='Bioma regionale non riconosciuto: '+terrain;message.classList.add('error');return;}
         let seed=2166136261;for(const ch of String(state.seed)+'|'+macro.id)seed=Math.imul(seed^ch.charCodeAt(0),16777619);
         seed=(seed>>>0)%2147483647;
         const key=state.seed+'-'+macro.id;
-        const payload={version:1,seed,biome,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
-          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),hasRiver};
-        try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));location.href='index.html?regionalDemo='+encodeURIComponent(key)}
+        const payload={version:1,seed,biome,terrain,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
+          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),hasRiver,riverSides};
+        // Carry the small territory context in the URL too: opening another tab must
+        // not lose its biome just because sessionStorage is scoped to the old tab.
+        try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));}
         catch(error){message.textContent='Impossibile aprire la demo: archivio temporaneo del browser non disponibile.';message.classList.add('error')}
+        location.href='index.html?regionalDemo='+encodeURIComponent(key)+'&regionalData='+encodeURIComponent(JSON.stringify(payload));
       });
 
       function selectedPairKey() {

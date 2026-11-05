@@ -4,7 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CONQUER — Settlement Builder</title>
-<script src="./src/regional-demo.js"></script>
+<script src="./src/regional-biome-rules.js"></script>
+<script src="./src/regional-demo.js?v=central-biomes-2"></script>
 <script>
 // ?assetlab=1: geometry sandbox for the Asset Lab (figures-lab.html) — no saves, no cloud, no telemetry.
 window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1';
@@ -131,6 +132,8 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
       <option value="forest">Foresta</option>
       <option value="mountains">Montagne</option>
       <option value="sea">Mare</option>
+      <option value="swamp">Palude</option>
+      <option value="lake">Lago</option>
     </select>
     <div class="kv"><span>Build area</span><b>100×100U</b></div>
     <div class="kv"><span>World buffer</span><b>200×200U</b></div>

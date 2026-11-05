@@ -73,3 +73,11 @@ QA: sintassi degli script inline e browser regione → territorio → demo → r
 La prima rimozione riguardava solo le fusioni di territori, ma lasciava dettaglio 4 e pesi per bioma 1/2/4/6: il raggruppamento visibile era ancora presente. Ora dettaglio 1 fisso e peso 1 per tutti i terreni; anche le isole modificano singoli territori senza fonderli. Guard finale dopo generazione di acqua e isole: ogni territorio contiene esattamente una cella. Default 30×21: 630 celle, 630 territori, 630 etichette. Verificato nel browser su quattro seed. Topologia precedente incompatibile: i vecchi JSON aggregati sono rigenerati con avviso, senza applicare nomi o interventi ai nuovi ID sbagliati; il file originale non viene modificato.
 
 Recuperati Mountain 1.svg–Mountain 8.svg dalla cartella ARQE indicata dall'utente, copie byte per byte in ICON/ del repository. Otto risposte HTTP 200 e SVG validi; risolto il precedente limite degli asset montagna mancanti.
+
+## Correzione del bioma centrale
+
+Scope scelto: prima la cella centrale. Il modulo condiviso regional-biome-rules.js definisce plain→plains, forest→forest, hills→mountains (categoria montuosa della legenda regionale), sea→sea, swamp→swamp, lake→lake. Palude e Lago hanno ricette esplicite: piccole zone boscate, pozze e ruscello per Palude; bacino centrale per Lago. Valori iniziali per la successiva revisione quantitativa.
+
+Il confine fluviale aggiunge un fiume alla ricetta terrestre anziché sostituire il bioma. La normale degli archi regionali determina i lati candidati. Il link include il contesto della cella, quindi funziona senza sessionStorage della scheda di origine. Dati mancanti/non validi bloccano la vista locale con errore esplicito, senza caricare partita o aprire una finta Pianura.
+
+QA: sei mapping e URL senza archivio di sessione; Foresta con fiume resta Foresta e ha acqua reale sul lato richiesto; Palude con pozze, Lago con acqua centrale, Montagne con cime reali. Browser: selezione di Foresta e Montagne dalla regionale e ricaricamento dopo rimozione del contesto temporaneo. Otto influenze, fasce e corner restano fuori scope.

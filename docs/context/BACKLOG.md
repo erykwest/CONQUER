@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+05/11/2026 — REG-CENTRAL-BIOME: corretto il bioma centrale in apertura dal territorio. Regole condivise: plain→Pianura, forest→Foresta, hills regionale→Montagne, sea→Mare, swamp→Palude, lake→Lago. Fiume di confine aggiuntivo, non sostitutivo del bioma. Contesto portabile nel link, session storage opzionale; dati mancanti mostrano errore, mai Pianura implicita. Scope scelto: prima il bioma centrale, otto influenze rinviate. QA mapping, ricette e trasferimento tra schede PASS.
+
 05/11/2026 — REG-SINGLE-CELL: correzione della rimozione incompleta dei raggruppamenti. Una cella Voronoi = un territorio: dettaglio fisso 1, pesi territoriali tutti 1; isole ricavate cambiando terreno della singola cella, senza fusioni o territori vuoti. Validazione finale dopo isole/laghi. QA browser su seed 1943/42/229/4242: 630 celle = 630 territori = 630 etichette. Recuperati otto SVG Mountain 1–8 da ARQE nel percorso ICON del repository; tutte le risposte HTTP 200. Vecchie mappe aggregate rigenerate con messaggio esplicito; modifiche associate alla vecchia topologia non riapplicate a ID diversi.
 
 05/11/2026 — REG-NOSUPER: rimossi i raggruppamenti geografici di supercelle dal World Lab: comandi unione/separazione, aggregazioni automatiche dei laghi, nomi/contorni aggregati ed export superCells. Ogni territorio resta indipendente. Import JSON e ritorno dalle demo ignorano i vecchi gruppi, preservando i territori. Selezione multipla per modifica e domini politici restano separati da questo raggruppamento geografico.

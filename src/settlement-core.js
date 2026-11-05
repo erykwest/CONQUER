@@ -382,7 +382,9 @@ const BIOMES=Object.freeze({
   river:{label:'Fiume',field:'#24271c'},
   forest:{label:'Foresta',field:'#1f2516'},
   mountains:{label:'Montagne',field:'#2b2620'},
-  sea:{label:'Mare',field:'#2a2818'}
+  sea:{label:'Mare',field:'#2a2818'},
+  swamp:{label:'Palude',field:'#313d29'},
+  lake:{label:'Lago',field:'#263a35'}
 });
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern'];
 // Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores, guard post.

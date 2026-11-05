@@ -1,27 +1,34 @@
 'use strict';
 // Disposable local-map previews. Loaded before core so no player save is read or written.
 (()=>{
-  const params=new URLSearchParams(location.search),allowed=['plains','hills','valley','river','forest','mountains','sea'];
+  const params=new URLSearchParams(location.search),allowed=['plains','hills','valley','river','forest','mountains','sea','swamp','lake'];
   let demo=null;
   if(params.has('regionalDemo')){
-    try{demo=JSON.parse(sessionStorage.getItem('conquer.regional-demo.'+params.get('regionalDemo'))||'null')}catch{}
+    try{demo=JSON.parse(params.get('regionalData')||sessionStorage.getItem('conquer.regional-demo.'+params.get('regionalDemo'))||'null')}catch{}
+    if(demo?.terrain){const biome=window.ConquerRegionalBiomeRules?.biomeForTerrain(demo.terrain);if(biome)demo.biome=biome;else demo=null}
   }else if(allowed.includes(params.get('demo'))){
     demo={version:1,biome:params.get('demo'),seed:Number(params.get('seed')||4242),name:'Demo '+params.get('demo'),neighbors:[]};
   }
   if((params.has('regionalDemo')||params.has('demo'))&&!(demo?.version===1&&allowed.includes(demo.biome)&&Number.isInteger(demo.seed)&&demo.seed>=0&&demo.seed<=2147483647)){
-    demo={version:1,seed:4242,biome:'plains',name:'Dati regionali non disponibili · demo Pianura',neighbors:[]};
+    demo={version:1,seed:4242,biome:'test',error:'Dati del territorio mancanti o non validi. Riapri la cella dalla mappa regionale.',neighbors:[]};
   }
-  if(demo?.version===1&&allowed.includes(demo.biome)&&Number.isInteger(demo.seed)&&demo.seed>=0&&demo.seed<=2147483647){
+  if(demo?.error||demo?.version===1&&allowed.includes(demo.biome)&&Number.isInteger(demo.seed)&&demo.seed>=0&&demo.seed<=2147483647){
     window.__CONQUER_REGIONAL_DEMO__=demo;
   }
   window.addEventListener('load',()=>{
     if(!window.__CONQUER_REGIONAL_DEMO__)return;
     const info=window.__CONQUER_REGIONAL_DEMO__;
+    if(info.error){
+      document.getElementById('wrap').hidden=true;
+      document.getElementById('wrap').style.display='none';
+      const alert=document.createElement('p');alert.id='demoLaunchError';alert.setAttribute('role','alert');alert.style.cssText='padding:40px;color:#efd1a6;font:18px system-ui';alert.textContent=info.error;
+      const back=document.createElement('a');back.href='CONQUER_WORLD_LAB.html';back.textContent=' Torna alla mappa regionale';alert.append(back);document.body.append(alert);return;
+    }
     State.daylightOverride='day';State.clock.speed=0;invalidateSceneCache();draw();
     const panel=document.createElement('details');panel.open=true;panel.id='naturalDemoPanel';
     panel.style.cssText='position:fixed;top:140px;left:76px;z-index:70;width:270px;max-height:60vh;overflow:auto;background:#201b15ee;color:#eadcc5;border:1px solid #8c7049;border-radius:8px;padding:12px;font:13px system-ui';
     const summary=document.createElement('summary');summary.textContent='DEMO · '+info.name;panel.append(summary);
-    const intro=document.createElement('p');intro.textContent='Seed '+State.seed+' · Ricetta '+BIOMES[State.biome].label+'. Prova temporanea: nessun salvataggio della partita.';panel.append(intro);
+    const intro=document.createElement('p');intro.textContent='Seed '+State.seed+' · Bioma centrale: '+BIOMES[State.biome].label+(info.hasRiver?' · Fiume di confine aggiuntivo.':'.')+' Prova temporanea: nessun salvataggio della partita.';panel.append(intro);
     const controls=document.createElement('div');
     const select=document.createElement('select');select.setAttribute('aria-label','Scenario demo');
     for(const biome of allowed)select.add(new Option(BIOMES[biome].label,biome));select.value=State.biome;

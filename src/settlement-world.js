@@ -1073,7 +1073,10 @@ function makeEnvWater(rnd,type){
 // Real terrain water, shared by collision, navigation, banks and both renderers.
 // Keep existing saved landscapes intact: this policy applies when generating a river.
 function makeBoundaryRiver(rnd){
-  const sides=['west','north','east','south'],side=sides[Math.floor(rnd()*4)],width=WATER_WIDTH.river;
+  const requested=window.__CONQUER_REGIONAL_DEMO__?.riverSides;
+  const accepted=Array.isArray(requested)?requested.filter(s=>['west','north','east','south'].includes(s)):[];
+  const sides=accepted.length?accepted:['west','north','east','south'];
+  const side=sides[Math.floor(rnd()*sides.length)],width=WATER_WIDTH.river;
   // Integrate heading over arc length, rather than prescribing y = sin(x).
   // Leopold/Wolman: meander wavelength ~11 widths, bend radius ~2.3 widths.
   // Each half-meander gets its own radius and turning angle, giving rounded,
@@ -1299,7 +1302,9 @@ const BIOME_RECIPES=Object.freeze({
   forest:{stream:1,continuousForest:.20,ponds:[0,1]},
   mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4],hillCoverage:.30},
   village:{forests:[1,2],hills:[0,1],hillHeight:[1,2]},
-  sea:{sea:true,forests:[0,1]}
+  sea:{sea:true,forests:[0,1]},
+  swamp:{stream:1,forests:[1,2],smallForests:true,ponds:[2,3]},
+  lake:{lake:true,forests:[0,1]}
 });
 function biomeRecipe(){return BIOME_RECIPES[State.biome]||BIOME_RECIPES.plains}
 function biomeRange(rnd,[lo,hi]=[0,0]){return lo+Math.floor(rnd()*(hi-lo+1))}
@@ -1371,7 +1376,8 @@ const MOUNTAIN_STEEPNESS=[.95,1.15],MOUNTAIN_SLOPE_DEG=[40,60];
 // makeWatercourseAvoiding: the stream/river must stay clear of the mountain chain.
 function biomeWater(mountains){
   const recipe=biomeRecipe(),rnd=biomeStream(0x3a7684c1);
-  const type=recipe.river?'river':recipe.stream&&rnd()<recipe.stream?'stream':null;
+  const borderRiver=window.__CONQUER_REGIONAL_DEMO__?.hasRiver;
+  const type=recipe.river||borderRiver&&!recipe.lake&&!recipe.sea?'river':recipe.stream&&rnd()<recipe.stream?'stream':null;
   if(!type)return null;
   let best=null,bestClear=-Infinity;
   for(let attempt=0;attempt<40;attempt++){
@@ -1732,6 +1738,7 @@ function makeContinuousForest(env,rnd,ratio){
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[],recipe=biomeRecipe();
   const sea=biomeSea();if(sea)env.push(sea);
+  if(recipe.lake)env.push(makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07));
   const mountains=biomeMountains();env.push(...mountains);
   const water=biomeWater(mountains);if(water)env.push(water);
   const ponds=biomeRange(rnd,recipe.ponds);
