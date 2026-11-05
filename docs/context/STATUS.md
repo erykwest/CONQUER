@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — CODEX Wiki (branch `feature/codex-wiki`, NON MAIN)
+
+[Wiki condivisa](../CODEX-WIKI.md) con 136 schede, 7 famiglie e 8 sovracategorie; keywords nel testo collegate a pagine reali, breadcrumb, relazioni e rimandi inversi. Route pubblica `/wiki/`, ricerca/filtri e URL condivisibili. Lettore in-game con link Builder/inspector, provider live e compatibilità contestuale; catalogo pubblico generato dalle sorgenti con controllo di freschezza.
+
+QA locale PASS: catalogo, Wiki/export, Builder menu e module boundaries; Playwright: link, Back, ricerca/filtri, reload, mobile, errori/riprova, escaping, lettore live e nessuna modifica a risorse/strutture/selezione. Desktop/mobile revisionati. Workflow browser dedicato aggiunto; CI da verificare sulla PR. Base iniziale main `15070d2`, incorpora #159 e #161; nessun nuovo vincolo tecnologico o merge implicito.
+
 ## 2026-11-05 — CODEX fase 2 (branch, NON MAIN)
 
 Su `feature/codex-normalized-catalog`, base `main` `9a4310d`: [catalogo normalizzato v1](../CODEX-CATALOG.md), 136 record in sette categorie. API read-only `ConquerGameCodex` in index, core portabile e snapshot JSON per consumatori web; prezzi/tempi delegati al gameplay. Nessuna UI Wiki né tecnologia applicata. Incorpora l'audit della PR #159 ancora aperta all'avvio.

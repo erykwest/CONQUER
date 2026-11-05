@@ -70,3 +70,5 @@ L'inventario segue i registri effettivi della base, non certifica tutte le inten
 Verifica aggiuntiva: `qa/refactor-app-population-regression.cjs` FALLISCE sul conteggio del siege hook `rubbleBlocks`, sia sul branch sia su checkout pulito della base `9a4310d` (stesso errore 1 !== 2). Difetto preesistente, sorgenti popolazione e relativa suite non modificati dal Codex. `qa/refactor-module-boundaries-regression.cjs` e `qa/context-guard-regression.cjs` PASS.
 
 Riallineamento finale: integrata nel solo branch di sviluppo la main `0711760` con #158 (fogli audit); nessuna modifica ai provider Codex. Audit fase 1 resta ancorato alla propria base storica.
+
+Fase Wiki: [implementazione sul branch feature/codex-wiki](CODEX-WIKI.md). Lo snapshot pubblico è ora un artefatto generato con controllo CI di freschezza, secondo D-CODEX-02.

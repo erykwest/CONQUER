@@ -1,5 +1,7 @@
 # CONQUER — Piramide di contesto
 
+**Codex Wiki (05/11/2026, branch feature):** [consultazione ipertestuale web/in-game](../CODEX-WIKI.md), con keywords di sovracategoria collegate a pagine e catalogo pubblico generato.
+
 **CODEX fase 2 (05/11/2026, branch feature):** [contratto catalogo normalizzato v1](../CODEX-CATALOG.md); API read-only, quote dai provider gameplay e snapshot portabile. UI Wiki ancora da implementare.
 
 **CONQUER CODEX (05/11/2026):** [censimento iniziale dei cataloghi](../CODEX-CATALOG-AUDIT.md), base `main` `bcf3cd7`; audit documentale, catalogo unificato ancora da implementare.

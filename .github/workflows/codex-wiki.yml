@@ -1,0 +1,51 @@
+name: Codex Wiki browser
+on:
+  pull_request:
+    paths:
+      - 'wiki/**'
+      - 'src/codex-*.js'
+      - 'src/codex-*.css'
+      - 'src/settlement-codex.js'
+      - 'src/ui/shell.js'
+      - 'index.html'
+      - 'tools/codex-runtime.cjs'
+      - 'tools/export-codex.cjs'
+      - 'qa/codex-wiki*'
+      - '.github/workflows/codex-wiki.yml'
+permissions:
+  contents: read
+jobs:
+  wiki-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify generated data and internal links
+        run: |
+          node qa/codex-catalog-regression.cjs
+          node qa/codex-wiki-regression.cjs
+          node tools/export-codex.cjs --check
+      - name: Start local site
+        run: |
+          python3 -m http.server 4181 --bind 127.0.0.1 >/tmp/conquer-codex-http.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4181/wiki/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/conquer-codex-http.log
+          exit 1
+      - name: Install browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install chromium
+      - name: Verify Wiki and Builder reader
+        run: node qa/codex-wiki-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codex-wiki-screenshots
+          path: output/playwright/*.png
+          retention-days: 14

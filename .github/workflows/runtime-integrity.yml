@@ -34,3 +34,8 @@ jobs:
 
       - name: Codex catalog and live gameplay providers
         run: node qa/codex-catalog-regression.cjs
+
+      - name: Wiki links and fresh generated catalog
+        run: |
+          node qa/codex-wiki-regression.cjs
+          node tools/export-codex.cjs --check
