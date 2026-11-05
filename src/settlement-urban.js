@@ -908,7 +908,7 @@ function houseFacadePlan(house,part,edge){
   const pts=part.points,i=pts.indexOf(edge.a),other=i>=0?dist(pts[(i+1)%pts.length],pts[(i+2)%pts.length]):0;
   const long=level>=2&&L>=1&&L>=other-1e-6;
   const offs=long?[-L/4,L/4]:[0];
-  const windows=houseFacadeDoorCut(house,edge,rows.flatMap(z=>offs.map(off=>({off,z}))));
+  const windows=houseFacadeChimneyCut(house,edge,houseFacadeDoorCut(house,edge,rows.flatMap(z=>offs.map(off=>({off,z})))));
   const beams=[];
   if(level<2)return{windows,beams};
   const fb=houseFloorBreak(wallH),top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
@@ -957,6 +957,15 @@ function houseFacadeDoorCut(house,edge,windows){
   const halfDoor=Math.min(.08,(Number(house.w)||1.5)*.0533);
   return windows.filter(w=>w.z-HOUSE_WINDOW_HALF_H>HOUSE_DOOR_TOP+HOUSE_DOOR_CLEARANCE||
     Math.abs(w.off-off)>=HOUSE_WINDOW_HALF_W+halfDoor+HOUSE_DOOR_CLEARANCE);
+}
+// The L1 gable-end chimney (houseSideChimney) takes the place of the window on its wall.
+function houseFacadeChimneyCut(house,edge,windows){
+  const c=typeof houseSideChimney==='function'?houseSideChimney(house):null;if(!c)return windows;
+  const L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+  const dx=c.wall.x-(edge.a.x+edge.b.x)/2,dy=c.wall.y-(edge.a.y+edge.b.y)/2;
+  if(Math.abs(-dx*uy+dy*ux)>.05||Math.abs(dx*ux+dy*uy)>L/2)return windows;
+  const off=dx*ux+dy*uy;
+  return windows.filter(w=>Math.abs(w.off-off)>=HOUSE_WINDOW_HALF_W+L1_CHIMNEY_HALF_W+.04);
 }
 // The L4 corner turret stands in front of part of its own facade: that stretch keeps no window
 // or beam (horizontal plates are split around it).
