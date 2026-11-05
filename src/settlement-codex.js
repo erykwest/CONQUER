@@ -75,7 +75,7 @@
       const id='upgrade:'+type+'.'+variant+'.'+value;
       const relations=[link(buildingId(type),'applies-to')];
       if(variant==='topWeapon'&&value!=='none')relations.push(link('siege-engine:'+(value==='mangonel'?'catapult':value),'uses'));
-      
+
       add({id,key:value,label:type+' · '+variant+' · '+value,category:'upgrade',status:'present',
         source:source('settlement-core','STRUCTURE_VARIANTS.'+type+'.'+variant),
         properties:{variant,value,default:STRUCTURE_VARIANT_DEFAULTS[type][variant]===value,kind:'configuration'},
