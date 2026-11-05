@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-STOCKYARD-251105 — Il piazzale fondativo è lo stoccaggio del castello (05/11/2026)
+
+- **DECISO, IN CODICE SU BRANCH `feature/founding-storage-yard-20261105`:** il villaggio nasce con un Piazzale 2×2U entro 7U dal primo pozzo, se un lotto edificabile è disponibile. Il capanno taglialegna versa la quota di produzione trattenuta nelle scorte del castello fino alla capienza dei piazzali; la parte non trattenuta e la quota in eccesso raggiungono il mercato.
+- **UNICO INVENTARIO:** `ConquerEconomy.state().castle` rimane fonte di verità: il magazzino non duplica le merci, il vecchio charter resta idempotente, la persistenza è quella di `State.structures` e `State.economy`.
+- **BILANCIAMENTO INIZIALE:** capienza 600/2400/5400 unità per 2×2, 4×4, 6×6U; costi di ampliamento 20 oro + 10 legname e poi 40 oro + 20 legname, pagati subito. Aree di ampliamento soggette a blocchi e collisioni normali. Nuovi piazzali 2×2U costruibili con 20 oro + 10 legname e normale cantiere L1; quello iniziale è gratuito.
+- **FUORI SCOPE:** carrettieri e trasferimento individuale del materiale, consumo e assegnazione delle room magazzino, redistribuzione tra depositi su distanze diverse.
+
+
 ## D-FORESTRY-L1-251105 — Pulizia boschi come job di terraforming (05/11/2026)
 
 - **DECISO, IMPLEMENTATO SU BRANCH `fix/forestry-l1-clearing-cost-20261105` (pre-merge):** «Rimuovi foresta» è un lavoro civile L1 e non un click immediato. Richiede un insediamento fondato, si accoda nella stessa persistenza del paesaggio (`State.relief`), usa lavoratori L1 non impegnati nelle costruzioni e il payroll ordinario. Solo a completamento crea una radura, invalida paesaggio/navigation e attribuisce al signore un raccolto di legname sostanziale, una sola volta. Resa/tempo iniziali: 2,5 legname e 0,7 giornate operaio per U² di copertura forestale.
