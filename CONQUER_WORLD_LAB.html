@@ -864,10 +864,6 @@
             <button type="button" class="terrain-button icon-action" data-terrain="forest" title="Foresta" aria-label="Foresta">♣</button>
             <button type="button" class="terrain-button icon-action" data-terrain="hills" title="Colline" aria-label="Colline">▲</button>
           </div>
-          <div class="cell-menu-actions">
-            <button id="mergeCells" class="icon-action" type="button" title="Unisci selezione" aria-label="Unisci selezione">⊕</button>
-            <button id="splitCells" class="icon-action" type="button" title="Separa super-cella" aria-label="Separa super-cella">⊖</button>
-          </div>
           <div class="cell-menu-actions structure-actions">
             <button id="addCity2" class="icon-action" type="button" title="Città livello II" aria-label="Città livello II" hidden>Ⅱ</button>
             <button id="addCity3" class="icon-action" type="button" title="Città livello III" aria-label="Città livello III" hidden>Ⅲ</button>
@@ -1028,8 +1024,6 @@
       const territoryNameInput = document.getElementById('territoryName');
       const renameTerritoryButton = document.getElementById('renameTerritory');
       const cellMenuNote = document.getElementById('cellMenuNote');
-      const mergeCellsButton = document.getElementById('mergeCells');
-      const splitCellsButton = document.getElementById('splitCells');
       const addCity2Button = document.getElementById('addCity2');
       const addCity3Button = document.getElementById('addCity3');
       const addResourceButton = document.getElementById('addResource');
@@ -2439,42 +2433,14 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
         return terrain === 'sea' || terrain === 'lake';
       }
 
-      function groupForMacro(macroId) {
-        return state.superGroups.find((group) => group.macros.includes(macroId)) || null;
-      }
+      function visualGroupId(macroId) { return `macro-${macroId}`; }
 
-      function visualGroupId(macroId) {
-        return groupForMacro(macroId)?.id || `macro-${macroId}`;
-      }
-
-      function territoryName(macro) {
-        return state.customNames[macro.id] || macro.code;
-      }
-
-      function superGroupName(group) {
-        return state.superNames[group.id] || 'XXX';
-      }
+      function territoryName(macro) { return state.customNames[macro.id] || macro.code; }
 
       function visualGroups() {
-        const grouped = state.superGroups.map((group) => ({ ...group }));
-        const merged = new Set(state.superGroups.flatMap((group) => group.macros));
-        for (const macro of state.macros) {
-          if (!merged.has(macro.id)) grouped.push({ id: `macro-${macro.id}`, macros: [macro.id] });
-        }
-        return grouped.map((group) => {
-          const macros = group.macros.map((id) => state.macros[id]);
-          const points = macros.flatMap((macro) => macro.cells.map((cell) => polygonCentroid(cell.polygon)));
-          return {
-            ...group,
-            code: state.superGroups.some((item) => item.id === group.id) ? superGroupName(group) : territoryName(macros[0]),
-            centroid: {
-              x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
-              y: points.reduce((sum, point) => sum + point.y, 0) / points.length
-            }
-          };
-        });
+        return state.macros.map(macro=>({id:visualGroupId(macro.id),macros:[macro.id],
+          code:territoryName(macro),centroid:macro.centroid}));
       }
-
       function pointsAttribute(points) {
         return points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
       }
@@ -2655,9 +2621,6 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
         for (const macroId of targetState.lakes || []) {
           if (targetState.terrain[macroId] === 'lake') targetState.terrain[macroId] = 'plain';
         }
-        const previousGroups = new Set(targetState.autoLakeGroupIds || []);
-        targetState.superGroups = targetState.superGroups.filter((group) => !previousGroups.has(group.id));
-        for (const groupId of previousGroups) delete targetState.superNames[groupId];
 
         const requested = Math.max(0, Math.min(12, Math.trunc(Number(lakeCountInput.value) || 0)));
         lakeCountInput.value = requested;
@@ -2694,34 +2657,6 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
         targetState.lakes = selectedLakes;
         for (const macroId of targetState.lakes) targetState.terrain[macroId] = 'lake';
 
-        const lakeSet = new Set(targetState.lakes);
-        const adjacency = new Map(targetState.lakes.map((macroId) => [macroId, new Set()]));
-        for (const edge of targetState.edges) {
-          const macroIds = [...new Set(edge.cells.map((cell) => cell.macroId))];
-          if (macroIds.length === 2 && macroIds.every((macroId) => lakeSet.has(macroId))) {
-            adjacency.get(macroIds[0]).add(macroIds[1]);
-            adjacency.get(macroIds[1]).add(macroIds[0]);
-          }
-        }
-        const remaining = new Set(targetState.lakes);
-        targetState.autoLakeGroupIds = [];
-        let groupIndex = 1;
-        while (remaining.size) {
-          const start = remaining.values().next().value;
-          const component = [];
-          const pending = [start];
-          remaining.delete(start);
-          while (pending.length) {
-            const macroId = pending.pop();
-            component.push(macroId);
-            for (const neighbor of adjacency.get(macroId) || []) if (remaining.delete(neighbor)) pending.push(neighbor);
-          }
-          if (component.length < 2) continue;
-          const id = `lake-auto-${groupIndex++}`;
-          targetState.superGroups.push({ id, macros: component });
-          targetState.superNames[id] = 'Lago';
-          targetState.autoLakeGroupIds.push(id);
-        }
         splitLakeCoastalForests(targetState);
       }
 
@@ -3816,9 +3751,6 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         targetState.macros = rebuilt.macros;
         targetState.terrain = rebuilt.terrain;
         targetState.lakes = remapIds(targetState.lakes || []);
-        targetState.superGroups = targetState.superGroups
-          .map((group) => ({ ...group, macros: remapIds(group.macros) }))
-          .filter((group) => group.macros.length > 1);
         targetState.neutralTerritories = new Set(remapIds([...(targetState.neutralTerritories || [])]));
         targetState.automaticMountainEdges = automaticMountainEdges(targetState.edges, targetState.terrain);
         return rebuilt.splitCount;
@@ -3928,12 +3860,11 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const baseCodes = macro.cells
           .map((cell) => `#${cell.localIndex + 1}`)
           .join(' · ');
-        const group = groupForMacro(macroId);
         const count = selectedMacros.size;
-        const displayName = group ? superGroupName(group) : territoryName(macro);
-        selection.innerHTML = `<strong>${group ? 'Super-cella' : 'Territorio'} ${displayName}</strong><span>${count > 1 ? `${count} territori selezionati · ` : ''}peso ${macro.weight || 1} · ${macro.cells.length} celle: ${baseCodes}</span>`;
+        const displayName = territoryName(macro);
+        selection.innerHTML = `<strong>Territorio ${displayName}</strong><span>${count > 1 ? `${count} territori selezionati · ` : ''}peso ${macro.weight || 1} · ${macro.cells.length} celle: ${baseCodes}</span>`;
         setMenuVisible(true);
-        cellMenuTitle.textContent = `${group ? 'Super-cella' : 'Territorio'} ${displayName}`;
+        cellMenuTitle.textContent = `Territorio ${displayName}`;
         territoryNameInput.value = displayName;
         territoryNameInput.disabled = false;
         renameTerritoryButton.disabled = false;
@@ -3941,10 +3872,8 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
           button.classList.toggle('active', button.dataset.terrain === state.terrain[macroId]);
         });
         updateActionStates();
-        mergeCellsButton.disabled = count < 2;
-        splitCellsButton.disabled = !group;
         cellMenuNote.textContent = count > 1
-          ? `${count} territori selezionati. Uniscili in una super-cella.`
+          ? `${count} territori selezionati per modifica multipla.`
           : 'Shift+clic per selezionare piu territori contigui.';
         syncConquerPanel(macroId);
       }
@@ -4022,46 +3951,6 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         if (cellMenuTitle.hasPointerCapture(event.pointerId)) cellMenuTitle.releasePointerCapture(event.pointerId);
         menuDrag = null;
         cellMenu.classList.remove('dragging');
-      }
-
-      function selectedAreContiguous() {
-        if (selectedMacros.size < 2) return false;
-        const wanted = new Set(selectedMacros);
-        const adjacent = new Map([...wanted].map((id) => [id, new Set()]));
-        for (const edge of state.edges) {          const ids = [...new Set(edge.cells.map((cell) => cell.macroId))].filter((id) => wanted.has(id));
-          if (ids.length === 2) { adjacent.get(ids[0]).add(ids[1]); adjacent.get(ids[1]).add(ids[0]); }
-        }
-        const seen = new Set([selectedMacros.values().next().value]);
-        const queue = [...seen];
-        while (queue.length) for (const next of adjacent.get(queue.shift())) if (!seen.has(next)) { seen.add(next); queue.push(next); }
-        return seen.size === wanted.size;
-      }
-
-      function mergeSelected() {
-        if (!selectedAreContiguous()) { message.textContent = 'Per creare una super-cella seleziona territori contigui con Shift+clic.'; message.classList.add('error'); return; }
-        const selected = [...selectedMacros];
-        const touchingGroups = state.superGroups.filter((group) => group.macros.some((id) => selectedMacros.has(id)));
-        const all = [...new Set([...selected, ...touchingGroups.flatMap((group) => group.macros)])];
-        for (const group of touchingGroups) delete state.superNames[group.id];
-        state.superGroups = state.superGroups.filter((group) => !touchingGroups.includes(group));
-        const superId = `super-${state.nextSuperId++}`;
-        state.superGroups.push({ id: superId, macros: all });
-        state.superNames[superId] = 'XXX';
-        message.classList.remove('error');
-        message.textContent = `Super-cella creata da ${all.length} territori.`;
-        render();
-        selectMacro(selectedMacro);
-      }
-
-      function splitSelected() {
-        const group = groupForMacro(selectedMacro);
-        if (!group) return;
-        delete state.superNames[group.id];
-        state.superGroups = state.superGroups.filter((item) => item !== group);
-        selectedMacros = new Set([selectedMacro]);
-        message.textContent = 'Super-cella separata in territori individuali.';
-        render();
-        selectMacro(selectedMacro);
       }
 
     function setTerrain(terrain) {
@@ -4483,18 +4372,12 @@ const currentOwner = ownerByName.get(key);
 
       function renameTerritory() {
         if (selectedMacro === null) return;
-        const group = groupForMacro(selectedMacro);
         const name = territoryNameInput.value.trim().replace(/\s+/g, ' ');
-        if (group) {
-          if (!name) delete state.superNames[group.id];
-          else state.superNames[group.id] = name;
-        } else if (!name) delete state.customNames[selectedMacro];
+        if (!name) delete state.customNames[selectedMacro];
         else state.customNames[selectedMacro] = name;
-        render();
-        selectMacro(selectedMacro);
-        message.textContent = name ? `${group ? 'Super-cella' : 'Territorio'} rinominato in “${name}”.` : `Nome ${group ? 'della super-cella' : 'del territorio'} ripristinato.`;
+        render();selectMacro(selectedMacro);
+        message.textContent = name ? `Territorio rinominato in “${name}”.` : 'Nome del territorio ripristinato.';
       }
-
       function addRailway() {
         const existing = state.railways.filter((rail) => rail.macroIds.length === selectedMacros.size && rail.macroIds.every((id) => selectedMacros.has(id)));
         if (existing.length) {
@@ -4543,8 +4426,8 @@ const currentOwner = ownerByName.get(key);
           state = {
             seed, deformation, configuration, cells, macros, edges,
             terrain,
-            superGroups: [], superNames: {}, nextSuperId: 1,
-            customNames: {}, neutralTerritories: new Set(), attackerGroups: [], nextAttackerId: 1, cities: {}, villages: [], capitalIds: [], campaigns: [], lakes: [], autoLakeGroupIds: [], islands: [], landmarks: [], sites: [], ports: [], resources: {}, passages: {}, anchors: [], rivers: [], riverBridges: [], generatedRiverEdges: [], riverSources: [], riverSourceCandidates: [], availableRiverSources: 0, riverGeneration: 0, mountainRanges: [], automaticMountainEdges: automaticMountainEdges(edges, terrain), countryBorders: [], railways: [], automaticRoads: [], automaticRoadBridges: [], nextRailId: 1, nextAnchorId: 1
+
+            customNames: {}, neutralTerritories: new Set(), attackerGroups: [], nextAttackerId: 1, cities: {}, villages: [], capitalIds: [], campaigns: [], lakes: [],  islands: [], landmarks: [], sites: [], ports: [], resources: {}, passages: {}, anchors: [], rivers: [], riverBridges: [], generatedRiverEdges: [], riverSources: [], riverSourceCandidates: [], availableRiverSources: 0, riverGeneration: 0, mountainRanges: [], automaticMountainEdges: automaticMountainEdges(edges, terrain), countryBorders: [], railways: [], automaticRoads: [], automaticRoadBridges: [], nextRailId: 1, nextAnchorId: 1
           };
           automaticRivers(state, Number(riverCountInput.value));
           automaticLakes(state);
@@ -4635,7 +4518,6 @@ const currentOwner = ownerByName.get(key);
                sites: Number(siteCountInput.value)
              },
             realWorldArea: state.realWorldArea ? { bounds: state.realWorldArea.bounds, terrainClassification: 'sea-or-plain' } : null,
-            superCells: state.superGroups.map((group) => ({ id: group.id, name: state.superNames[group.id] || undefined, territories: group.macros.map((id) => state.macros[id].code) })),
              cities: Object.entries(state.cities).map(([macroId, level]) => ({ territory: state.macros[Number(macroId)].code, level })),
              villages: (state.villages || []).map((macroId) => state.macros[macroId].code),
             resources: Object.entries(state.resources).map(([macroId, cellId]) => ({ territory: state.macros[Number(macroId)].code, subCell: cellId })),
@@ -4942,11 +4824,8 @@ const currentOwner = ownerByName.get(key);
           if (saved.name && saved.name !== saved.code) state.customNames[macroId] = saved.name;
         }
         const ids = (codes) => codes.map(macroIdFromCode).filter((id) => id !== undefined);
-        state.superGroups = (config.superCells || []).map((group, index) => ({ id: group.id || `super-${index + 1}`, macros: ids(group.territories) })).filter((group) => group.macros.length > 1);
-        state.superNames = Object.fromEntries((config.superCells || []).map((group, index) => [group.id || `super-${index + 1}`, group.name]).filter(([, name]) => typeof name === 'string' && name.trim()));
         state.lakes = state.macros.filter((macro) => state.terrain[macro.id] === 'lake').map((macro) => macro.id);
         state.campaigns = []; // CONQUER: legacy ARCANA 'campaign/fields' normalized to plain.
-        state.autoLakeGroupIds = state.superGroups.filter((group) => group.id.startsWith('lake-auto-')).map((group) => group.id);
         state.cities = Object.fromEntries((config.cities || []).map((item) => [macroIdFromCode(item.territory), item.level]).filter(([id]) => id !== undefined));
         state.villages = ids(config.villages || []);
         state.resources = Object.fromEntries((config.resources || []).map((item) => [macroIdFromCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
@@ -4976,8 +4855,6 @@ const currentOwner = ownerByName.get(key);
           state.automaticRoadBridges = [];
           state.railways = [];
         }
-
-        state.nextSuperId = state.superGroups.length + 1;
         state.nextAnchorId = state.anchors.length + 1;
         state.nextRailId = state.railways.length + 1;
         state.nextAttackerId = state.attackerGroups.length + 1;
@@ -5094,8 +4971,6 @@ const currentOwner = ownerByName.get(key);
       cellMenuTitle.addEventListener('pointermove', moveMenu);
       cellMenuTitle.addEventListener('pointerup', endMenuDrag);
       cellMenuTitle.addEventListener('pointercancel', endMenuDrag);
-      mergeCellsButton.addEventListener('click', mergeSelected);
-      splitCellsButton.addEventListener('click', splitSelected);
       addCity2Button.addEventListener('click', () => addCity(2));
       addCity3Button.addEventListener('click', () => addCity(3));
       addResourceButton.addEventListener('click', addResource);

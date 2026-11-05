@@ -61,3 +61,9 @@ Dal link Mappa regionale del Builder si apre il World Lab. Selezionare un territ
 Scenari rapidi: Pianura, Colline, Foresta, Fiume, Montagne e Costa, tutti con seed 4242. Nessuna modifica ai quantitativi: valori attuali per la prima valutazione dell'utente. Pannello con conteggi di boschi, rilievi terrazzati, cime principali, fiumi e ruscelli; coperture stimate per boschi, acqua, montagne e terrazze sia sull'intera mappa che nel buildable 100×100, griglia 40×40 per area. Coperture non additive. Aggiorna misure dopo cambi alla mappa. Metriche per le prossime scelte quantitative, non un bilanciamento approvato.
 
 QA: navigazione browser territorio → demo → ritorno con stessa selezione; seed e confinanti trasmessi; player save preservato e cloud assente. Regressione regional-demo per validazione e isolamento, save-safety, biome-recipes e boundary-river. Limite preesistente World Lab: mancano gli otto SVG ICON/Mountain, richieste 404; i territori e i confini restano navigabili.
+
+## Territori senza supercelle
+
+Richiesta 05/11/2026: eliminare i raggruppamenti geografici di supercella. Rimossi unione/separazione, creazione di gruppi per laghi contigui, render di etichette e confini aggregati e serializzazione dei gruppi. Gli import legacy ignorano superCells; i singoli territori e i terreni restano intatti. La selezione multipla è ancora disponibile per modifiche collettive, senza fusione. I layer politici/feudali mantengono i propri domini, distinti dalle supercelle geografiche.
+
+QA: sintassi degli script inline e browser regione → territorio → demo → ritorno. Verifica con JSON legacy contenente due territori raggruppati: stesso numero di territori/etichette, nessun gruppo riattivato e comandi di fusione/separazione assenti.
