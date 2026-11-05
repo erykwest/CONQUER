@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-FORESTRY-L1-251105 — Pulizia boschi come job di terraforming (05/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `fix/forestry-l1-clearing-cost-20261105` (pre-merge):** «Rimuovi foresta» è un lavoro civile L1 e non un click immediato. Richiede un insediamento fondato, si accoda nella stessa persistenza del paesaggio (`State.relief`), usa lavoratori L1 non impegnati nelle costruzioni e il payroll ordinario. Solo a completamento crea una radura, invalida paesaggio/navigation e attribuisce al signore un raccolto di legname sostanziale, una sola volta. Resa/tempo iniziali: 2,5 legname e 0,7 giornate operaio per U² di copertura forestale.
+- **Bilanciamento:** capanno del taglialegna massimo 5 legname (35 oro invariati). La rimozione manuale non sostituisce la produzione continuativa dei Logging Camp.
+- **Non deciso / fuori scope:** ricrescita forestale e depletion industriale periodica.
+
+
 ## D-ROOM-EXT-01 — Una stanza può cambiare l'esterno del suo edificio (04/11/2026)
 
 - **DECISO (contratto):** una funzione di stanza dichiara il suo elemento esterno in `ROOM_EXTERIOR[fn]` (`src/settlement-room-exterior.js`): `{model, source, mount, breakable?}`. `model` è un modello Blender in `src/assets/*-models.js` (registro `window[source].models[model]`: `parts` con `p/i/c`, `width`, `projection`, `bottom`, `chuteTop`), assi U con +x lungo la faccia (centrato), +y verso l'esterno, +z dal pavimento della stanza.
