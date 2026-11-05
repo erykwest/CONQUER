@@ -297,6 +297,17 @@ const CRENEL_STYLE_COST=Object.freeze({
   gabled:Object.freeze({gold:1,stone:2}),
   swallowtail:Object.freeze({gold:2,stone:3})
 });
+// Feudal roof pitch: one slope for every pitched tower and gate roof (degrees), stored in
+// State.policies like the crenel style. Re-roofing is paid per roof at the target pitch's rate;
+// steeper roofs take more timber. 45° is the default, the closest to the historical ~40° roofs.
+const ROOF_PITCHES=Object.freeze([30,45,60]);
+const ROOF_PITCH_COST=Object.freeze({
+  30:Object.freeze({wood:3}),
+  45:Object.freeze({gold:1,wood:4}),
+  60:Object.freeze({gold:2,wood:6})
+});
+function roofPitch(){const v=Number(State.policies?.roofPitch);return ROOF_PITCHES.includes(v)?v:45}
+function roofPitchTan(){return Math.tan(roofPitch()*Math.PI/180)}
 function crenelStyle(){const v=State.policies?.crenelStyle;return CRENEL_STYLES.includes(v)?v:'flat'}
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;

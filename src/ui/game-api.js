@@ -157,6 +157,8 @@
     },
     crenelQuote: style => crenelRestyleQuote(style),
     setCrenelStyle: style => { const out = applyCrenelStyle(style); emit(); return out; },
+    roofPitchQuote: pitch => roofPitchQuote(Number(pitch)),
+    setRoofPitch: pitch => { const out = applyRoofPitch(pitch); emit(); return out; },
     setSaleShare:(good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },
     setReserve: (good, qty) => { const ok = window.ConquerEconomy?.setTarget(good, qty); scheduleLocalSave(200); emit(); return ok; },
     transferActivity: (id, owner) => {

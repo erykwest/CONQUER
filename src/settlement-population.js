@@ -54,10 +54,11 @@ function towerRoofRise(s){
   // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
   if(s?.type==='tower'&&towerRoofStyle(s)==='battlement'&&towerHoardingMounted(s))return .69;
   if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
-  const span=s.shape==='round'?Number(s.r||.5)*2:Number(s.size||1);
-  return s.shape==='round'
-    ?clamp(span*.53,.54,1.04)
-    :clamp(span*.45,.48,.92);
+  // Feudal roof pitch (roofPitch()): the slope rises from the eave over the roof's half span, the
+  // radius on round towers, the shorter half side on square ones.
+  const overhang=.07,d=s.shape==='round'?null:rectDims(s);
+  const half=s.shape==='round'?Number(s.r||.5)+overhang:Math.min(d.w,d.h)/2+overhang;
+  return roofPitchTan()*half;
 }
 function towerVisualTopHeight(s){
   if(!s||s.type!=='tower')return structureHeight(s);
@@ -93,7 +94,10 @@ function squareTowerRoofGeometry(s){
 function gateRoofRise(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return 0;
   if(gateTimberUpper(s))return GATE_TIMBER_RIDGE-structureHeight(s);
-  return .66*rectDims(s).h/1.5;   // same pitch on the small gate
+  // Feudal roof pitch over the half span: across the passage on the large gate, along it on the
+  // small one (whose ridge turns, see gateRoofGeometry).
+  const d=rectDims(s),overhang=.08;
+  return roofPitchTan()*((isSmallGate(s)?d.w:d.h)/2+overhang);
 }
 function gateRoofGeometry(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return null;

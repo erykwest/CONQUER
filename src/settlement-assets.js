@@ -233,7 +233,7 @@ function instantiateStructureAsset(def,step=0){
 function structureAssetSignature(def,step){
   return [
     STRUCTURE_ASSET_PIPELINE_VERSION,def.key,'r'+String(step).padStart(2,'0'),
-    State.season||'summer'
+    State.season||'summer',crenelStyle(),'p'+roofPitch()
   ].join('|');
 }
 function withStructureAssetSandbox(s,canvas,drawFn){
