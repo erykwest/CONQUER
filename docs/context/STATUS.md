@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## Camino laterale delle case L1 (branch `fix/l1-chimney`, da `main` 4ef297b, 05/11/2026, NON MAIN)
+
+- **Difetto su main:** `chimneySpecs` metteva un camino ogni `CHIMNEY_SPACING` (1,5 U) di colmo anche sulle L1, quindi le casette da 2 U ne avevano due sul tetto di paglia.
+- **Correzione:** nuova `houseSideChimney` (`settlement-core.js`): una L1 ha **un solo camino**, addossato all'esterno di una testata (estremità scelta per id), da terra fino a 0,31 U sopra il colmo. `chimneySpecs` lo restituisce con `side`, `wall` e `normal`; il fumo esce dalla cima. `houseFacadeChimneyCut` (`settlement-urban.js`) toglie la finestra della testata dietro il camino (2.5D e kit). Le L2–L4 non cambiano.
+- **Kit:** nuovo pezzo Blender `chimneySide` (petto del focolare in pietra fino alla gronda, raccordi inclinati, canna più stretta oltre la paglia, cappello in pietra e comignolo). Kit: 12 pezzi, 1106 triangoli, 26 KB. In World 3D il camino sale con i muri nel cantiere (tag `body`). In argilla la pietra diventa mattone.
+- **QA locale:** `qa/house3d-regression.cjs` usa ora il vero `chimneySpecs`: 16 casette con un solo camino laterale, in testata, nessuna finestra dietro, nessun camino sul colmo. Aggiornate `qa/urban-regression.cjs` (testata cieca) e `qa/houses3d-regression.cjs`. 129/129 `qa/*.cjs` non di performance PASS. Audit del Lab «Kit case»: 12 render, 0 falliti, `chimneySide` rivisto e aggiunto alla baseline. Catture World 3D (pietra e argilla, quattro rotazioni) e 2.5D nel browser (il camino dietro la casa resta coperto) riviste. **Non verificato:** villaggio generato, CI della PR.
+
 Sul branch `fix/prepare-architecture-textures` le 11 texture di facciata e danno sono preparate offline a 256 px con trasparenza. Peso PNG da 12,18 MB a 578 kB. Regressioni locali: catalogo, brecce e confini dei moduli passate.
 
 Sul branch `fix/remove-fossil-industry-svg` l’Asset Lab usa le voci 3D esistenti per cava e campo taglialegna. Rimossi i relativi SVG storici, le anteprime autonome e i generatori delle rotazioni.

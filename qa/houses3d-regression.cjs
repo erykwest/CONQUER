@@ -42,7 +42,7 @@ vm.runInContext([constant(core,'HOUSE_ROOF_PITCH'),constant(core,'HOUSE_FLOOR_BR
   ...['houseLevel','houseDimensionScale','houseFootprintDimensions','housePlanType','houseTurretType','houseLocalToWorld',
     'houseFloorBreak','houseJetty','houseTurretInfo','houseStreetSide','houseCornerSide','houseFootprintParts',
     'houseBodyHeight','houseRoofSpan','housePartRidge'].map(n=>fnSource(core,n)),
-  ...['urbanHouseFaces','houseFacadePlan','houseFacadeDoorCut','houseFacadeTurretCut','houseTurretFacade',
+  ...['urbanHouseFaces','houseFacadePlan','houseFacadeDoorCut','houseFacadeChimneyCut','houseFacadeTurretCut','houseTurretFacade',
     'urbanHouseDormers','urbanDormerSlots','urbanDormer'].map(n=>fnSource(urban,n)),
   fnSource(world,'addOutbuilding')].join('\n'),sandbox);
 

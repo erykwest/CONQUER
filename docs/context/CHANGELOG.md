@@ -6,6 +6,10 @@
 - Cambio a pagamento dal Centro di controllo › Cantieri, scheda «Pendenza dei tetti»: costo per tetto (`ROOF_PITCH_COST`: 3 legno / 4 legno + 1 oro / 6 legno + 2 oro), cantieri esclusi; le nuove costruzioni seguono la pendenza. Comandi `ConquerGame.commands.roofPitchQuote/setRoofPitch`.
 - Correzione cache: la firma del bitmap del corpo castello e quella degli sprite struttura includono ora stile delle merlature e pendenza, così il cambio si vede senza ricaricare.
 - QA: Lab con le tre pendenze su torre quadrata, rotonda, due falde, porta grande e piccola; regressioni Node PASS tranne `asset-catalog-regression`, che fallisce identica su main. Asset audit 1081 render, 0 falliti, baseline aggiornata. CI non ancora eseguita.
+## 2026-11-05 — Camino laterale delle case L1 (branch `fix/l1-chimney`)
+
+- Le casette L1 hanno un solo camino, in pietra, addossato a una testata, da terra oltre la paglia (prima due camini sul colmo sulle casette da 2 U). La finestra della testata lascia il posto al camino. Nuovo pezzo `chimneySide` nel kit Blender e nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS e ROADMAP invariate (correzione visiva dentro D-057).
 
 ## 2026-11-04 — Long house in legno W1 / W2 (branch `feature/wood-longhouse`)
 

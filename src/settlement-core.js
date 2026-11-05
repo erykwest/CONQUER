@@ -719,6 +719,20 @@ function houseRidgeHeight(s){
   if(houseLevel(s)===1)return 1.45;
   return housePartRidge(s,houseFootprintParts(s)[0]);
 }
+// L1 cottage chimney: one stack built against the outside of a gable end (the hearth wall, end
+// picked per id), from the ground up past the thatch. center: the stack's middle, as chimneySpecs;
+// wall/normal: where it meets the wall (kit piece, and the gable window it replaces). Ignores the
+// construction state, so the facade plan of a site matches the finished cottage.
+const L1_CHIMNEY_DEPTH=.22,L1_CHIMNEY_HALF_W=.2;
+function houseSideChimney(s){
+  if(!s||s.type!=='house'||houseLevel(s)!==1)return null;
+  const body=houseFootprintParts(s).find(p=>p.kind==='body');if(!body)return null;
+  const a=s.angle||0,end=(peasantHash((s.id||'house')+'-chimney')&1)?1:-1;
+  const normal={x:Math.cos(a)*end,y:Math.sin(a)*end};
+  const wall={x:body.center.x+normal.x*body.w/2,y:body.center.y+normal.y*body.w/2};
+  return{center:{x:wall.x+normal.x*L1_CHIMNEY_DEPTH/2,y:wall.y+normal.y*L1_CHIMNEY_DEPTH/2},angle:a,
+    z0:0,z1:houseRidgeHeight(s)+.31,index:0,side:true,wall,normal};
+}
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
 const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild']);
 const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild']);
