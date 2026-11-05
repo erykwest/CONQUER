@@ -429,6 +429,7 @@ function draw(){
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.
   drawBuildArea();
+  window.ConquerForestry?.drawJobs();
   for(const field of completedSettlement('field'))drawFieldWork(field);
 
   // Construction sites remain dynamic at ground/building depth.
@@ -481,7 +482,8 @@ function draw(){
   drawChimneysAndSmoke();
 
   if(State.draft?.mode==='terraform'){
-    window.ConquerTerraforming?.drawGhost(State.draft.preview);
+    if(State.tool?.mode==='forest')window.ConquerForestry?.drawGhost(State.draft.preview);
+    else window.ConquerTerraforming?.drawGhost(State.draft.preview);
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
