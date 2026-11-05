@@ -2,6 +2,15 @@
 
 Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neutro sulle celle vuote (branch `fix/audit-sheet-grid`). **APERTO:** il simbolo «Her 2» dell'araldica è quasi invisibile nel foglio (difetto preesistente, non toccato).
 
+## 2026-11-05 — ARTE: opere commissionabili e decorazione delle stanze
+
+**APERTO · SOLO BACKLOG (nessuna implementazione o QA attestata).** Sottosistema separato da personaggi speciali e ricerca scientifica. Dettaglio canonico: [ARTE nel backlog Builder/Manager](../feature-backlog.md#2026-11-05--arte--commissioni-esposizione-e-circolazione-delle-opere).
+
+- **A-P0 (ART-251105-01…05):** catalogo quadri/arazzi/sculture; slot compatibili nelle stanze; azione «Commissiona opera d'arte» con oro e tempo; inventario individuale persistente; rimozione e ricollocazione.
+- **A-P1 (ART-251105-06…07):** valutazione Galleria/Atelier come funzioni delle Built Sections, non edifici autonomi; autori, qualità, provenienza e prestigio (formula da decidere).
+- **A-P2 (ART-251105-08…09):** vendita e donazione a feudi/regni stranieri con effettivo trasferimento di proprietà; dipendenze da ledger economico, commercio e diplomazia condivisi.
+- **Vincolo:** gli asset decorativi riutilizzano cutaway/furniture/Asset Lab, mentre ogni opera commissionata è un bene univoco, persistente e collocabile in un solo slot. La commissione non richiede obbligatoriamente un Atelier.
+
 ## 2026-11-05 — Builder / Castello: upgrade architettonici richiesti
 
 **Richieste aperte al 05/11/2026 — non implementate da questo aggiornamento.** Il dettaglio canonico dei task e degli ID è in [feature-backlog.md](../feature-backlog.md#2026-11-05--builder--castello-upgrade-architettonici-richiesti).
