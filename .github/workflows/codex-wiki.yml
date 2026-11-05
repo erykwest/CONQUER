@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - 'wiki/**'
+      - 'content/codex/**'
+      - 'tools/export-codex-content.cjs'
+      - 'qa/codex-obsidian-regression.cjs'
+      - 'qa/codex-vault-import-regression.cjs'
+      - 'tools/import-codex-vault.cjs'
       - 'src/codex-*.js'
       - 'src/codex-*.css'
       - 'src/settlement-codex.js'
@@ -28,6 +33,9 @@ jobs:
           node qa/codex-catalog-regression.cjs
           node qa/codex-wiki-regression.cjs
           node tools/export-codex.cjs --check
+          node qa/codex-obsidian-regression.cjs
+          node qa/codex-vault-import-regression.cjs
+          node tools/export-codex-content.cjs --check
       - name: Start local site
         run: |
           python3 -m http.server 4181 --bind 127.0.0.1 >/tmp/conquer-codex-http.log 2>&1 &

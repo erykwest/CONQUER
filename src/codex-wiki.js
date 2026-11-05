@@ -3,7 +3,7 @@
   const main=document.getElementById('reading'),form=document.getElementById('search-form');
   const q=document.getElementById('query'),family=document.getElementById('family'),status=document.getElementById('completion');
   const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const href=id=>'#'+encodeURIComponent(id),num=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:2});
+  const href=(id,section)=>'#'+encodeURIComponent(id)+(section?'?section='+encodeURIComponent(section):''),num=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:2});
   const stateLabels={present:'Nel catalogo',partial:'Parziale',planned:'Previsto'};
   const goods={gold:'Oro',stone:'Pietra',clay:'Argilla',wood:'Legno',metal:'Metallo',food:'Cibo',equipment:'Equipaggiamento',luxury:'Beni di lusso'};
   const fold=s=>s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase('it');
@@ -15,8 +15,15 @@
     document.body.classList.toggle('embedded',embedded);
     if(embedded){const exit=document.getElementById('return-game');exit.textContent='Apri pagina pubblica';exit.target='_blank';exit.rel='noopener';}
     for(const [key,labels] of Object.entries(ConquerWikiContent.categories)){const option=document.createElement('option');option.value=key;option.textContent=labels[0];family.append(option)}
-    const anchor=(id,label,cls='')=>'<a '+(cls?'class="'+e(cls)+'" ':'')+'href="'+href(id)+'">'+e(label||content.title(id))+'</a>';
+    const anchor=(id,label,cls='',section)=>'<a '+(cls?'class="'+e(cls)+'" ':'')+'href="'+href(id,section)+'">'+e(label||content.title(id))+'</a>';
     const prose=(text,self)=>content.tokenize(text,self).map(t=>t.id?anchor(t.id,t.text):e(t.text)).join('');
+    const formatted=text=>e(text).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>');
+    const editorialInline=(tokens,self)=>content.inline(tokens,self).map(t=>t.id?anchor(t.id,t.text,'',t.anchor):formatted(t.text)).join('');
+    function renderBlocks(page){return page.blocks.map((block,index)=>{
+      if(block.type==='heading')return '<h'+block.level+' id="'+e(block.anchor)+'" tabindex="-1">'+editorialInline(block.tokens,page.id)+'</h'+block.level+'>';
+      if(block.type==='list')return '<ul>'+block.items.map(tokens=>'<li>'+editorialInline(tokens,page.id)+'</li>').join('')+'</ul>';
+      return '<p'+(index===0?' class="lead"':'')+'>'+editorialInline(block.tokens,page.id)+'</p>';
+    }).join('')}
     const navigation=document.getElementById('navigation');
     navigation.innerHTML='<h2>Le sette famiglie</h2>'+[...pages.values()].filter(p=>p.kind==='category').map(p=>anchor(p.id,p.title)).join('')+'<h2>Percorsi trasversali</h2>'+[...pages.values()].filter(p=>p.kind==='topic').map(p=>anchor(p.id,p.title)).join('');
     function list(ids,search=false){
@@ -57,9 +64,9 @@
       return'<aside class="facts" aria-label="Dati della voce"><h2>Dati di gioco</h2><div><h3>Costo</h3>'+quoteText(quote.cost,'cost')+'<h3>Tempo</h3><p>'+quoteText(quote.time,'time')+'</p>'+(selectedMatches?'<p>Preventivo della struttura selezionata.</p>':example?'<p>Configurazione di riferimento:<br>'+e(exampleLabel(example.structure))+'. Il costo può cambiare con le opzioni.</p>':'')+'</div><div><dl>'+stats.map(([k,v])=>'<dt>'+e(k)+'</dt><dd>'+e(v)+'</dd>').join('')+'</dl>'+(r.assets.length?'<p><a href="../figures-lab.html" target="_blank" rel="noopener">Apri Asset Lab</a> per esplorare i modelli disponibili.</p>':'')+'</div>'+compatibility+'</aside>';
     }
     function entry(page){
-      const r=page.record,related=r.relations.map(l=>l.id).filter((id,i,a)=>a.indexOf(id)===i);
+      const r=page.record,related=[...new Set([...r.relations.map(l=>l.id),...page.related.filter(id=>!page.parents.includes(id))])];
       const requirements=r.requirements.functional.map(f=>f.kind==='parent'?'<li>'+anchor(f.id)+' · livello minimo '+num(f.minimumLevel)+' · massimo '+num(f.maximum)+'</li>':f.kind==='shipyard'?'<li>'+anchor('topic:navigation','Cantiere navale')+' · livelli '+f.levels.map(n=>'L'+n).join(', ')+'</li>':'').join('');
-      main.innerHTML=breadcrumbs(page)+'<span class="eyebrow">'+e(pages.get(page.category).title)+'</span><h1>'+e(page.title)+'</h1><span class="status">'+e(stateLabels[r.status])+'</span><div class="article-grid"><article class="article-prose">'+page.text.map(t=>'<p class="lead">'+prose(t,page.id)+'</p>').join('')+(r.status==='partial'?'<p class="notice">Questa voce comprende parti ancora da completare. La presenza nel catalogo non certifica tutte le funzioni di gioco.</p>':'')+'<h2>Requisiti e compatibilità</h2>'+(requirements?'<ul>'+requirements+'</ul>':'')+'<p>'+prose(r.category==='room'?'La compatibilità delle stanze dipende dall’edificio, dal piano e dagli spazi disponibili.':'Il piazzamento e l’utilizzo seguono le condizioni fisiche e funzionali del gioco.',page.id)+'</p><p>'+prose('Le conoscenze richieste non sono ancora mappate. Consulta la pagina sulle tecnologie per distinguere questi requisiti dalle condizioni costruttive.',page.id)+'</p>'+(related.length?'<h2>Elementi collegati</h2><div class="section-links">'+related.map(id=>anchor(id)).join('')+'</div>':'')+'<h2>Esplora la sovracategoria</h2><div class="section-links">'+page.parents.map(id=>anchor(id)).join('')+'</div>'+backlinks(page.id)+'</article>'+facts(page)+'</div>';
+      main.innerHTML=breadcrumbs(page)+'<span class="eyebrow">'+e(pages.get(page.category).title)+'</span><h1>'+e(page.title)+'</h1><span class="status">'+e(stateLabels[r.status])+'</span><div class="article-grid"><article class="article-prose">'+renderBlocks(page)+(r.status==='partial'?'<p class="notice">Questa voce comprende parti ancora da completare. La presenza nel catalogo non certifica tutte le funzioni di gioco.</p>':'')+'<h2>Requisiti e compatibilità</h2>'+(requirements?'<ul>'+requirements+'</ul>':'')+'<p>'+prose(r.category==='room'?'La compatibilità delle stanze dipende dall’edificio, dal piano e dagli spazi disponibili.':'Il piazzamento e l’utilizzo seguono le condizioni fisiche e funzionali del gioco.',page.id)+'</p><p>'+prose('Le conoscenze richieste non sono ancora mappate. Consulta la pagina sulle tecnologie per distinguere questi requisiti dalle condizioni costruttive.',page.id)+'</p>'+(related.length?'<h2>Elementi collegati</h2><div class="section-links">'+related.map(id=>anchor(id)).join('')+'</div>':'')+'<h2>Esplora la sovracategoria</h2><div class="section-links">'+page.parents.map(id=>anchor(id)).join('')+'</div>'+backlinks(page.id)+'</article>'+facts(page)+'</div>';
       const roomSelect=document.getElementById('room-slot');
       if(roomSelect){const update=()=>{const result=api.compatible(page.id,{structure:host.context().structure,slot:Number(roomSelect.value)});document.getElementById('compatibility-result').textContent=result.status==='known'?(result.value?'Assegnabile a questo spazio':'Non assegnabile a questo spazio'):'Compatibilità da verificare nel gioco'};roomSelect.addEventListener('change',update);update()}
     }
@@ -82,10 +89,12 @@
       }else{
         const page=pages.get(id);
         if(!page){document.title='Pagina non trovata — CONQUER Codex';main.innerHTML=breadcrumbs()+'<h1>Pagina non trovata</h1><p>Il collegamento non corrisponde a una pagina del Codex.</p><p>'+anchor('home','Torna all’indice')+'</p>'}
-        else{document.title=page.title+' — CONQUER Codex';if(page.kind==='entry')entry(page);else main.innerHTML=breadcrumbs(page)+'<span class="eyebrow">'+(page.kind==='category'?'Famiglia del catalogo':'Percorso di lettura')+'</span><h1>'+e(page.title)+'</h1>'+page.text.map(t=>'<p class="lead">'+prose(t,page.id)+'</p>').join('')+(page.members.length?'<h2>Voci in questa pagina</h2><p class="result-count">'+page.members.length+' voci</p>'+list(page.members):'<p class="notice">Le associazioni alle singole voci saranno definite in una fase successiva.</p>')+backlinks(page.id)}
+        else{document.title=page.title+' — CONQUER Codex';if(page.kind==='entry')entry(page);else main.innerHTML=breadcrumbs(page)+'<span class="eyebrow">'+(page.kind==='category'?'Famiglia del catalogo':'Percorso di lettura')+'</span><h1>'+e(page.title)+'</h1>'+renderBlocks(page)+(page.members.length?'<h2>Voci in questa pagina</h2><p class="result-count">'+page.members.length+' voci</p>'+list(page.members):'<p class="notice">Le associazioni alle singole voci saranno definite in una fase successiva.</p>')+backlinks(page.id)}
       }
       if(embedded)document.getElementById('return-game').href='./'+location.hash;
-      main.focus({preventScroll:true});window.scrollTo(0,0);
+      main.focus({preventScroll:true});
+      const section=params.get('section');const target=section&&document.getElementById(section);
+      if(target&&main.contains(target)){target.scrollIntoView();target.focus({preventScroll:true})}else window.scrollTo(0,0);
     }
     document.querySelector('.skip').addEventListener('click',event=>{event.preventDefault();main.focus();main.scrollIntoView()});
     form.addEventListener('submit',event=>{event.preventDefault();const p=new URLSearchParams();if(q.value.trim())p.set('q',q.value.trim());if(family.value)p.set('category',family.value);if(status.value)p.set('status',status.value);const hash='#search?'+p.toString();if(location.hash===hash)route();else location.hash=hash});

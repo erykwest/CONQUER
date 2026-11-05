@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-05 — Wiki da contenuti Obsidian (branch feature)
+
+Migrati titoli, alias e testi di 151 pagine in note Markdown; aggiunti indice, guida e modello. Il vault personale è l'ambiente di scrittura e la copia Git è importata con baseline/conflitti e validazione preventiva. Generato artefatto editoriale per sito e gioco, preservando costi/regole dai provider. Supportati link a sezioni, paragrafi/titoli/liste/formattazione sicura. Ampliate cinque note di contenuto; test editoriali/import e browser PASS locali. D-CODEX-03 e documentazione aggiornati, nessun merge/deploy implicito.
+
 ## 2026-11-05 — Wiki Codex navigabile (branch feature)
 
 Aggiunti `/wiki/`, vista condivisa, contenuti editoriali con autolink di keywords verso sovracategorie e schede, ricerca e filtri con URL, backlink, dati/quote dal catalogo. Lettore modale in-game e accessi Builder/UI2; export pubblico deterministico da sorgenti e CI contro dati obsoleti. Test locali e browser PASS, screenshot desktop/mobile revisionati. D-CODEX-02 documenta i link e il ciclo di pubblicazione generato. Nessun nuovo asset, tecnologia o dato personale pubblicato.

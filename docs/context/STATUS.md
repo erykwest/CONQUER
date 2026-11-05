@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — Obsidian come sorgente editoriale Wiki (branch, NON MAIN)
+
+Su `feature/codex-obsidian`: [note Markdown e pipeline editoriale](../CODEX-OBSIDIAN.md). Vault personale CONQUER già aperto nella cartella scelta dall'utente, 154 note; copia Git di pubblicazione `content/codex`, import a senso unico con baseline e controllo conflitti. 151 pagine approvate compilate in un artefatto condiviso web/in-game; niente prezzi duplicati nelle note.
+
+Approfondite Torre, Fortificazioni, Costruzioni, Logistica e Navigazione/porti. Test locali PASS per catalogo/Wiki, parser/editoria, import (conflitti/rinomine/salvataggi concorrenti) e Playwright (anche link a sezioni, Back, mobile e partita invariata). CI da verificare nella PR. Incorpora le fasi #159/#161/#163 ancora aperte all'avvio; nessun merge implicito.
+
 ## 2026-11-05 — CODEX Wiki (branch `feature/codex-wiki`, NON MAIN)
 
 [Wiki condivisa](../CODEX-WIKI.md) con 136 schede, 7 famiglie e 8 sovracategorie; keywords nel testo collegate a pagine reali, breadcrumb, relazioni e rimandi inversi. Route pubblica `/wiki/`, ricerca/filtri e URL condivisibili. Lettore in-game con link Builder/inspector, provider live e compatibilità contestuale; catalogo pubblico generato dalle sorgenti con controllo di freschezza.

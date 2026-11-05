@@ -2,7 +2,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.join(__dirname,'..'),{generate}=require('../tools/export-codex.cjs');
 const sandbox=vm.createContext({});
-for(const file of ['codex-catalog.js','codex-wiki-content.js'])vm.runInContext(fs.readFileSync(path.join(root,'src',file),'utf8'),sandbox);
+for(const file of ['codex-catalog.js','codex-wiki-editorial.js','codex-wiki-content.js'])vm.runInContext(fs.readFileSync(path.join(root,'src',file),'utf8'),sandbox);
 const data=generate(),api=sandbox.ConquerCodex.fromSnapshot(data.catalog),wiki=sandbox.ConquerWikiContent.create(api);
 assert.equal(wiki.pages.size,136+7+8);
 for(const p of wiki.pages.values()){

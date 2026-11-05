@@ -1,5 +1,7 @@
 # CONQUER — Piramide di contesto
 
+**Codex Obsidian (branch feature):** [contenuti Markdown dal vault personale alla Wiki](../CODEX-OBSIDIAN.md), import con validazione e controllo conflitti, prezzi/regole dai provider.
+
 **Codex Wiki (05/11/2026, branch feature):** [consultazione ipertestuale web/in-game](../CODEX-WIKI.md), con keywords di sovracategoria collegate a pagine e catalogo pubblico generato.
 
 **CODEX fase 2 (05/11/2026, branch feature):** [contratto catalogo normalizzato v1](../CODEX-CATALOG.md); API read-only, quote dai provider gameplay e snapshot portabile. UI Wiki ancora da implementare.

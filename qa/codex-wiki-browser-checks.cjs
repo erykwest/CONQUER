@@ -9,6 +9,12 @@ module.exports=async page=>{
   await page.getByRole('heading',{level:1,name:'Torre',exact:true}).waitFor();
   await page.locator('article .lead').getByRole('link',{name:'fortificazioni',exact:true}).click();
   await page.getByRole('heading',{level:1,name:'Fortificazioni',exact:true}).waitFor();
+  await page.locator('#reading').getByRole('link',{name:'stanze della torre',exact:true}).click();
+  await page.getByRole('heading',{level:1,name:'Torre',exact:true}).waitFor();
+  if(!page.url().includes('section=section-spazi-interni'))fail('Obsidian heading permalink');
+  if(await page.evaluate(()=>document.activeElement?.id)!=='section-spazi-interni')fail('heading link focus');
+  await page.goBack();
+  await page.getByRole('heading',{level:1,name:'Fortificazioni',exact:true}).waitFor();
   await page.goBack();
   await page.getByRole('heading',{level:1,name:'Torre',exact:true}).waitFor();
   await page.locator('article .lead').getByRole('link',{name:'stanze',exact:true}).click();
@@ -70,5 +76,5 @@ module.exports=async page=>{
   await page.getByRole('button',{name:'Chiudi Codex'}).click();
   // Only known deliberately simulated fetch failure may log a console error; no page exception.
   if(errors.length)fail(errors.join('\n'));
-  console.log('PASS Wiki browser: inline links, Back, search/filter/permalinks, mobile, error recovery, in-game live reader, context link, Escape and unchanged gameplay');
+  console.log('PASS Wiki browser: inline links, Obsidian heading links, Back, search/filter/permalinks, mobile, error recovery, in-game live reader, context link, Escape and unchanged gameplay');
 };

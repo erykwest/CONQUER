@@ -1,5 +1,7 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+**Contenuti Codex in Obsidian (branch):** [pipeline editoriale e cinque note approfondite](CODEX-OBSIDIAN.md). UI, link e testi dalla copia validata del vault; requisiti e bilanciamento del Builder invariati.
+
 **Codex Wiki (branch `feature/codex-wiki`):** [UI condivisa e link contestuali Builder](CODEX-WIKI.md), keyword verso sovracategorie, ricerca e relazioni. Nessuna modifica ai requisiti di costruzione.
 
 **CODEX, 05/11/2026:** [catalogo normalizzato v1](CODEX-CATALOG.md) implementato su `feature/codex-normalized-catalog`, non ancora main. Riusa le definizioni Builder; nessun nuovo edificio o requisito tecnologico. Link e pagine Wiki rimangono fase 3.

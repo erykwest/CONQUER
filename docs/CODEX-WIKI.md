@@ -46,3 +46,5 @@ Screenshot locali/CI: `output/playwright/wiki-desktop.png`, `wiki-mobile.png`. R
 Lo stato «Nel catalogo/Parziale/Previsto» riguarda la voce, non il possesso da parte del giocatore. Non si inventano stati conosciuto/sbloccato finché non esiste una mappatura delle conoscenze: viene indicato che le tecnologie devono ancora essere definite. La compatibilità contestuale è mostrata dove il gioco espone il predicato. Professioni individuali e ulteriori testi specialistici possono ampliare le schede in seguito.
 
 Il sito è pronto nel repository sotto `/wiki/`; la disponibilità sul dominio pubblico segue il normale merge autorizzato in main e il suo deploy. Nessun deploy o merge è richiesto da questi test.
+
+Evoluzione editoriale: [note Obsidian e import dal vault personale](CODEX-OBSIDIAN.md), D-CODEX-03. I testi delle schede non sono più mantenuti direttamente in codex-wiki-content.js.

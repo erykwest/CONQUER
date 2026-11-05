@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CODEX-03 — Vault personale e pubblicazione editoriale (05/11/2026)
+
+- **Richiesta dell'utente:** usare la skill Obsidian per edifici e meccaniche, con vault dedicato nella propria cartella CONQUER. Il vault personale è la fonte di scrittura; il repository conserva una copia di pubblicazione versionata, non un secondo vault da modificare indipendentemente.
+- Import a senso unico: non riscrive il vault, controlla la base locale e si ferma su conflitti, salvataggi concorrenti, link o destinazioni non valide. Percorso personale e manifest di sincronizzazione restano locali/ignorati da Git.
+- Solo contenuti approved sono compilati. Titolo, alias e corpo si modificano nelle note, mentre costi, tempi e compatibilità restano nel gameplay. ID stabili distinti da nome file e titolo; link di sezione preservati.
+- Nessuna pubblicazione automatica dal salvataggio di una nota. Copia Git e artefatto passano da PR/CI e merge autorizzato. [Contratto completo](../CODEX-OBSIDIAN.md). Milestone M0–M5 invariate.
+
 ## D-CODEX-02 — Wiki ipertestuale e artefatto pubblico generato (05/11/2026)
 
 - **Richiesta dell'utente:** alcune keywords di sovracategoria nel testo devono rimandare a una pagina. Implementati link HTML reali con destinazioni stabili, match per parole intere e precedenza dei termini specifici; testi e destinazioni verificati dalle QA. Breadcrumb, relazioni e backlink completano la navigazione.

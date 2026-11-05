@@ -39,3 +39,9 @@ jobs:
         run: |
           node qa/codex-wiki-regression.cjs
           node tools/export-codex.cjs --check
+
+      - name: Obsidian editorial approval and fresh export
+        run: |
+          node qa/codex-obsidian-regression.cjs
+          node qa/codex-vault-import-regression.cjs
+          node tools/export-codex-content.cjs --check

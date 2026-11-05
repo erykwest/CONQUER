@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## CODEX — Obsidian e testi, 05/11/2026
+
+- **Implementato nel branch `feature/codex-obsidian`:** [vault personale → copia Git → Wiki](../CODEX-OBSIDIAN.md), approvazione delle note, wikilink/alias/sezioni, import sicuro e controllo di freschezza. Le note sono modificabili in Obsidian senza intervenire sui testi JavaScript.
+- **Contenuti ampliati:** Torre, Fortificazioni, Costruzioni, Logistica e Navigazione/porti. Restano da approfondire le altre singole voci e gli adapter di professioni/ruoli.
+- **Invariato:** tecnologie e stato conosciuto/sbloccato non vengono inventati; pubblicazione segue PR/CI/merge autorizzato, non il semplice salvataggio in Obsidian.
+
 ## CODEX — Wiki, 05/11/2026
 
 - **Implementato nel branch `feature/codex-wiki`:** [Wiki pubblica e lettore in-game](../CODEX-WIKI.md), ricerca/filtri, pagine di famiglia/sovracategoria, hyperlink editoriali, relazioni e backlink; link contestuali dal Builder, snapshot pubblico generato e verificato contro il gameplay.
