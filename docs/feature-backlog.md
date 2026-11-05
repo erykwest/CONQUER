@@ -14,6 +14,31 @@
 **PR ancora OPEN (non su main):** [#109](https://github.com/erykwest/CONQUER/pull/109) test CI economia, [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacchi/campi fortificabili, [#111](https://github.com/erykwest/CONQUER/pull/111) multi-pozzo e centri di quartiere. Gli screenshot demo dei pannelli non sono prove di produzione reale.
 
 
+## 2026-11-05 — Builder / Castello: upgrade architettonici richiesti
+
+> **NUOVE RICHIESTE · BACKLOG APERTO, NON IMPLEMENTATO IN QUESTA MODIFICA.** Task raccolti il 05/11/2026. Non confondere questi requisiti con le varianti già documentate su branch o con feature verificate in `main`. La priorità tra i task non è ancora assegnata.
+
+### Mura e camminamenti
+- [ ] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità.
+- [ ] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura.
+- [ ] **BC-251105-03 — Edifici addossati alle mura.** Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
+- [ ] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia da definire geometricamente; **non equivale** allo stile del merlo «a doppia falda» già annotato in `feat/crenel-styles`.
+
+### Torri
+- [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
+- [ ] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello.
+- [ ] **BC-251105-07 — Torri W2 × H4? [DA VALUTARE].** Verificare fattibilità e coerenza geometrica, funzionale e di gameplay dell'altezza H4 per larghezza W2; **non** trattare H4 come già approvato.
+
+### Coperture
+- [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
+- [ ] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare.
+- [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
+
+### Ambiente
+- [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.
+
+**Dipendenze/QA da affrontare in implementazione, non eseguite ora:** coordinare BC-01/02/03/04 con geometrie dei camminamenti; BC-08/09/10 con coperture già esistenti; BC-05/06/07 con livelli, cutaway e modelli delle torri. Al rilascio verificare Asset Lab, visualizzazione 3D e 2.5D, collisioni, persistenza e regressioni pertinenti. Il riferimento inter-sistemi è [BACKLOG](context/BACKLOG.md).
+
 ## 2026-10-29 — Storici gestionali e anteprime visive · note storiche dalla branch `panels` (merged #103 il 30/10)
 
 - Campionamento a ogni mercato settimanale nel ledger economico: fino a 26 rilevazioni persistite di popolazione, felicità media e per classe, prezzi, occupazioni L1 e quantità prodotte per attività con proprietà dell'epoca; nessuna retrodatazione per salvataggi precedenti.
