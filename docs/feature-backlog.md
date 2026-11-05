@@ -1,5 +1,7 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+**CODEX, 05/11/2026:** [catalogo normalizzato v1](CODEX-CATALOG.md) implementato su `feature/codex-normalized-catalog`, non ancora main. Riusa le definizioni Builder; nessun nuovo edificio o requisito tecnologico. Link e pagine Wiki rimangono fase 3.
+
 ## Stato corrente su main — 30 ottobre 2026
 
 > **Audit sostitutivo della fotografia del 22–23/10:** [AUDIT-2026-10-30](context/AUDIT-2026-10-30.md), ref `main` `cf5699922`. **15 nuclei CORE MAIN, 8 voci PARZIALI** su 23 ID Builder; questo non certifica la QA browser completa. Il precedente conteggio 13/10 più sotto resta esclusivamente **storico**.

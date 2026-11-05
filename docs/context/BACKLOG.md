@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## CODEX — fase 2, 05/11/2026
+
+- **Implementato nel branch** `feature/codex-normalized-catalog`: core normalizzato e adapter dei registri per sette categorie, ID semantici, relazioni, snapshot portabile; [contratto e limiti](../CODEX-CATALOG.md). Test locale Codex PASS; non dichiarare integrato in main prima del merge.
+- **Residui catalogo:** professioni/job individuali, descrizioni strutturate delle regole ancora procedurali, dati non formalizzati di reclutamento/macchine/annessi. Gli stati unmapped/context-required non vanno riempiti con valori arbitrari.
+- **Prossima fase:** Wiki condivisa e ricerca/filtri, pagine dettagliate, Builder→Codex, pipeline export sito, contesto conosciuto/disponibile/sbloccato. Tecnologie ancora non mappate.
+
 ## CODEX — 05/11/2026
 
 - **Censimento iniziale documentato sul branch** `docs/codex-catalog-audit-20261105`: [audit e inventario per sette famiglie](../CODEX-CATALOG-AUDIT.md), base `main` `bcf3cd7`.

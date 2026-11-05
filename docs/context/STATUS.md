@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — CODEX fase 2 (branch, NON MAIN)
+
+Su `feature/codex-normalized-catalog`, base `main` `9a4310d`: [catalogo normalizzato v1](../CODEX-CATALOG.md), 136 record in sette categorie. API read-only `ConquerGameCodex` in index, core portabile e snapshot JSON per consumatori web; prezzi/tempi delegati al gameplay. Nessuna UI Wiki né tecnologia applicata. Incorpora l'audit della PR #159 ancora aperta all'avvio.
+
+QA locale PASS: codex-catalog (dati gameplay reali, quote, relazioni, asset, isolamento e JSON), builder-menu, economy-builder-integration, save-safety e 5 test runtime-integrity. Browser locale verificato con fixture Asset Lab/Canvas: API, preventivi e round-trip; nessun asset modificato. Restano adapter professioni, coperture parziali dichiarate e fase 3 Wiki.
+
+
+Verifica aggiuntiva: `qa/refactor-app-population-regression.cjs` FALLISCE sul conteggio del siege hook `rubbleBlocks`, sia sul branch sia su checkout pulito della base `9a4310d` (stesso errore 1 !== 2). Difetto preesistente, sorgenti popolazione e relativa suite non modificati dal Codex. `qa/refactor-module-boundaries-regression.cjs` e `qa/context-guard-regression.cjs` PASS.
+
 ## 2026-11-05 — CODEX: audit iniziale (branch documentale, NON MAIN)
 
 Base verificata `main` `bcf3cd788f18560221862fe1908edef4edb5f2d3`. [Censimento delle sette famiglie](../CODEX-CATALOG-AUDIT.md): registri gameplay, cataloghi visivi, fonti di costo/tempo/compatibilità e coperture parziali. Solo documentazione su `docs/codex-catalog-audit-20261105`; nessun Codex runtime o albero tecnologico implementato. QA gameplay/browser non eseguita. PR #155 e #158 ancora aperte al controllo: non incluse nella base.

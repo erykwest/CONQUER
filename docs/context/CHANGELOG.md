@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-05 — CODEX normalizzato v1 (branch feature)
+
+Aggiunti `src/codex-catalog.js` (contratto portabile, copie congelate, ID/relazioni, quote e snapshot) e `src/settlement-codex.js` (adapter read-only, 136 record) in index. Preventivi dalle funzioni del Builder e dai registri, compatibilità da predicati esistenti o esplicitamente non mappata. Nessuna modifica a salvataggi, economia, asset o tecnologie. Test Codex e regressioni Builder/economia/save/runtime PASS in locale; API verificata nel browser. Suite aggiunta a Runtime integrity. Audit #159 incorporato; documentato D-CODEX-01. Nessun merge/deploy implicito.
+
 ## 2026-11-05 — Censimento iniziale CONQUER CODEX
 
 Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. Aggiunto `docs/CODEX-CATALOG-AUDIT.md` con registri, chiavi, proprietari e limiti delle sette famiglie; distinto Asset Lab da catalogo gameplay e stato delle PR aperte. Aggiornati STATUS/BACKLOG e indice README. Nessuna modifica runtime/asset/bilanciamento; suite gameplay e browser non eseguite. ROADMAP e DECISIONS invariate: questa fase documenta fonti e prossimi passi senza cambiare milestone né introdurre contratti runtime.
