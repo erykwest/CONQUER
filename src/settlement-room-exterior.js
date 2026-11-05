@@ -214,8 +214,17 @@ function roomExteriorTriangles(s,elements=roomExteriorElements(s)){
   return out;
 }
 // 2.5D: the same triangles, painted far to near, back faces skipped (as drawPointHoarding).
-function drawRoomExterior(s){
-  const elements=roomExteriorElements(s);if(!elements.length)return;
+// Which side of the view a face element hangs from: 'far' (behind its structure, outward normal
+// pointing away from the camera) or 'near'; roof elements are 'roof'.
+function roomExteriorViewSide(e){
+  if(e.spec?.mount==='roof')return'roof';
+  const out={x:e.anchor.x+e.normal.x*.1,y:e.anchor.y+e.normal.y*.1};
+  return viewDepthPoint(out)<viewDepthPoint(e.anchor)?'far':'near';
+}
+// only: 'roof' | 'far' | 'near' limits the elements drawn (a tower in cutaway draws its face
+// elements around its own cutaway: far ones before the shell, near ones after it).
+function drawRoomExterior(s,{only=null}={}){
+  const elements=roomExteriorElements(s).filter(e=>!only||roomExteriorViewSide(e)===only);if(!elements.length)return;
   const tris=roomExteriorTriangles(s,elements),top=Math.max(...elements.map(e=>e.z+(e.height||.75)));
   const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
   withStructureDetailOcclusion(s,top,()=>{
@@ -232,7 +241,7 @@ function drawRoomExteriors(){
   // cutaway draws its own inside drawCutawayStructure, a tower in cutaway keeps its roof and roof element.
   const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!(structureCutaway(s)&&s.type==='built')&&!isWoodTower(s)&&hasRoomExterior(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s));
+  for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s,{only:structureCutaway(s)&&s.type==='tower'?'roof':null}));
 }
 // Facade rows ask this before drawing a window: the element takes the cell it is centred on, from its
 // roof down (the chute runs over the slits below it).

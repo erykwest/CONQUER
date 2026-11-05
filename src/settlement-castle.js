@@ -627,7 +627,9 @@ function cutawayEligible(s){
 }
 // Small (T1) stone towers are a stair shaft: no wooden floors, one stone newel stair from
 // the ground to the top (settlement-cutaway-furniture.js builds the steps).
-function cutawaySpiralStair(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===1}
+// Small (W1) stone towers: a spiral stair fills the shaft, until a room is assigned; then the
+// stair goes and the floors open like any tower (user, 05/11/2026).
+function cutawaySpiralStair(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===1&&!(s.functions||[]).some(Boolean)}
 // A subtower follows its parent tower/gate: one switch on the parent opens the attached
 // subtowers too.
 function structureCutaway(s){
@@ -1046,7 +1048,13 @@ function drawCutawayStructure(s){
       ctx.save();ctx.globalAlpha*=.28;drawStoneTowerBase(s,false);ctx.restore();
     }
   };
-  if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,render);else render();
+  if(s.type==='tower'){
+    // A tower's face elements (the garderobe): the one behind the standing wall goes first, so the
+    // wall and the room hide it; the one on the cut side stays whole in front.
+    window.ConquerRoomExterior?.draw(s,{only:'far'});
+    withStructureGroundPlane(s,render);
+    window.ConquerRoomExterior?.draw(s,{only:'near'});
+  }else if(s.type==='gate')withStructureGroundPlane(s,render);else render();
 }
 function drawCutawayStructures(){
   State.structures

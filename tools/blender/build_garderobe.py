@@ -35,7 +35,7 @@ COLORS = {
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Garderobe'
 
-W, PROJ = .46, .36            # width along the face, projection out of it
+W, PROJ = .46, .22            # width along the face, projection out of it (shallower, user 05/11/2026)
 SLAB0, SLAB1 = -.06, 0.0      # floor slab, flush with the room floor
 WALL_T = .05
 TOP = .56                     # box walls

@@ -109,6 +109,19 @@ ctx.State.structures=[s];
 assert.ok(JSON.parse(src('settlement-core.js').match(/const FUNCTION_CATALOG=(\[[^\n]+\]);/)[1].replace(/'/g,'"')).includes('latrine'));
 console.log('PASS latrine rooms only on the first upper floor of W1 stone towers, where the element fits');
 
+// ---- W1 towers: the spiral stair only while no room is assigned; the latrine furnishes the whole room
+const sc=vm.createContext({isWoodTower:s=>s.material==='wood',towerTier:s=>s.tier||1});
+vm.runInContext(pick(src('settlement-castle.js'),'cutawaySpiralStair'),sc);
+const spiral=vm.runInContext('cutawaySpiralStair',sc);
+assert.ok(spiral(tower({functions:[null,null]})),'W1 tower without rooms: spiral stair');
+assert.ok(!spiral(tower()),'a room assigned: the stair goes');
+assert.ok(!spiral(tower({tier:2,functions:[]})),'never in W2 towers');
+assert.ok(RE.ROOM_EXTERIOR.latrine&&ctx.window.ConquerGarderobeModels.models.garderobe.projection<=.22,'a shallow garderobe');
+const furn=src('settlement-cutaway-furniture.js');
+assert.match(furn,/latrine\(r\)\{const S=r\.exteriorSide\|\|r\.A/,'the seat goes against the wall of the garderobe');
+assert.match(furn,/r\.exteriorSide=Math\.abs\(u\)>=Math\.abs\(v\)/);
+console.log('PASS W1 stair only in empty towers; shallow garderobe; latrine furnishes its room');
+
 // ---- hygiene: secondary, floored, scaled on the garrison
 const consts=siege.match(/const SANITATION_FREE=[^\n]+/)[0]+'\n'+siege.match(/const within=[^\n]+/)[0];
 const hc=vm.createContext({clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),Math,g:0,lat:0,h:100});
