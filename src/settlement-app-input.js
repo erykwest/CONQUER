@@ -518,6 +518,11 @@ for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   const type=b.dataset.civic,spec={type,shape:'civic'};
   setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(constructionCost({...spec,masonryMaterial:State.buildMasonryMaterial})),el:b});
 };
+for(const b of document.querySelectorAll('[data-storage-yard]'))b.onclick=()=>{
+  if(!State.village.founded){status('Fonda prima un villaggio con un pozzo');return}
+  const candidate=window.ConquerStorageYard.make();
+  setTool({kind:'civic',placementSpec:candidate,label:'Piazzale magazzino · 2×2U · '+costText(constructionCost(candidate)),el:b});
+};
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,extractionMode=b.dataset.extractionMode==='clay'?'clay':'stone';
    const candidate=window.ConquerIndustries.make(type,{x:0,y:0},extractionMode);
@@ -553,7 +558,9 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const borderEntries=ensureBorderEntrySelection();
   State.village={...State.village,name,wellId:well.id,founded:true,foundingWorkers:4,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   window.ConquerEconomy?.foundingCharter?.(well.id);
+  const yard=window.ConquerStorageYard?.ensureForWell?.(well);
   closeVillageModal();
+  if(!yard)status('Attenzione: impossibile collocare il piazzale entro 7U dal pozzo');
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
     renderUI();
@@ -569,6 +576,6 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
-document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
+document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto&&!x.foundingStockyard);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerForestry?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
 ['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
