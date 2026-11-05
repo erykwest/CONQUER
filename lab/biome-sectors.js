@@ -38,12 +38,14 @@ const RegionalBiomePreview=(()=>{
     if(!route||route==='none')return[];
     // Cubic Bezier segments in U; canonical west side, or north-to-east corner.
     // Broad river bends (wavelength ~80U); restrained, longer ridge deviations.
-    const amplitude=kind==='river'?9:2,phase=hash(0,0,seed+(kind==='river'?0:83))>.5?1:-1;
+    // River peaks reach 12U inside the buildable zone: 36px on the 600px reference canvas.
+    // Ridges keep their restrained external course; river entry is intentional.
+    const amplitude=kind==='river'?24:2,phase=hash(0,0,seed+(kind==='river'?0:83))>.5?1:-1;
     const points=[],cubic=(a,b,c,d,steps=60)=>{
       for(let i=points.length?1:0;i<=steps;i++){const t=i/steps,u=1-t;points.push({x:u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,y:u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y})}
     };
     const bend=(start,end,axis,fixed)=>{
-      const count=kind==='river'?3:2,step=(end-start)/count;
+      const count=kind==='river'?4:2,step=(end-start)/count;
       for(let i=0;i<count;i++){
         const a=start+i*step,d=a+step,offset=amplitude*(i%2?-phase:phase);
         const p=(along,across)=>axis==='y'?{x:across,y:along}:{x:along,y:across};
