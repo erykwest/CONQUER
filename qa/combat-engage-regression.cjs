@@ -73,5 +73,31 @@ test('with the gate broken in, the way is open',()=>{
   tick(250);
   assert.ok(U('sq').y>91,'through the gate passage, inside the walls: y='+U('sq').y.toFixed(2));
 });
+// Unit scale (D-056): small HP, the natural 6, the knight's double blow, old saves rescaled.
+const R=context.window.ConquerCombatRules;
+test('unit profiles on the game scale',()=>{
+  const hp=k=>R.ensure({kind:k,combatKind:k},k).maxHp;
+  assert.deepEqual(['infantry','spearman','patrol','archer','knight','captain'].map(k=>hp(k==='spearman'?'squad':k)),[8,12,10,6,20,16]);
+});
+test('a natural 6 lands on a knight; the knight strikes for 2',()=>{
+  // roll() reads D12[floor(random*12)]: index 11 is a 6, index 7 a 4.
+  run('globalThis.qaRandom=Math.random;globalThis.qaI=0;globalThis.qaSeq=[11,7];Math.random=()=>qaSeq[(qaI++)%qaSeq.length]/12+.001');
+  try{
+    const inf={id:'i',kind:'infantry',combatKind:'infantry'},kn={id:'k',kind:'knight',combatKind:'knight'};
+    R.ensure(inf,'infantry');R.ensure(kn,'knight');
+    // Infantry 6+2=8 against knight 4+3=7: margin 1, not above armour 3; the natural 6 lands it.
+    R.meleePair(inf,kn,1);
+    assert.equal(kn.stats.hp,19,'the 6 got through the knight armour for 1');
+    // Knight 6+3=9 against infantry 4+2=6: margin 3 > armour 1, a charge blow for 2.
+    run('qaI=0');R.meleePair(kn,inf,1);
+    assert.equal(inf.stats.hp,6,'the knight strikes for 2');
+  }finally{run('Math.random=qaRandom')}
+});
+test('old saves keep their share of health on the new scale',()=>{
+  const u={kind:'infantry',combatKind:'infantry',stats:{hp:50,maxHp:100,energy:150,brain:150,combat:2,armor:1,aim:null,shock:0}};
+  R.ensure(u,'infantry');
+  assert.equal(u.stats.maxHp,8);assert.equal(u.stats.hp,4);
+  const dead={kind:'knight',combatKind:'knight',stats:{hp:0,maxHp:30}};R.ensure(dead,'knight');assert.equal(dead.stats.hp,0);
+});
 console.log(passed+' combat engage checks passed; '+failed+' failed.');if(failed)process.exitCode=1;
 `)(require,__dirname);

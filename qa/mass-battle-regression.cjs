@@ -21,7 +21,7 @@ test('distant pairs do not invoke terrain/footprint contact checks',()=>{
 test('an individual archer keeps its profile without a redundant combatKind',()=>{
  R.reset();const archer={kind:'archer',x:90,y:90},knight={kind:'knight',x:110,y:110};
  R.update(.1,[archer],[knight],[],()=>true);
- assert.equal(archer.stats.armor,0);assert.equal(archer.stats.combat,1);assert.equal(knight.stats.armor,3);assert.equal(knight.stats.maxHp,30);
+ assert.equal(archer.stats.armor,0);assert.equal(archer.stats.combat,1);assert.equal(knight.stats.armor,3);assert.equal(knight.stats.maxHp,20);
  run("window.ConquerCombat.restore({version:2,units:[],enemy:[{id:'bow-save',kind:'archer',x:90,y:90}]})");
  assert.equal(run("State.combat.enemy[0].combatKind"),'archer');
 });
@@ -35,7 +35,7 @@ test('attacking archers use real arrows and damage the defenders',()=>{
  try{
   const target={id:'target',kind:'infantry',combatKind:'infantry',x:90,y:90,h:0},archer={id:'bow',kind:'archer',combatKind:'archer',x:95,y:90,h:0,visualZ:.6,terrainAt:()=>0};
   for(let i=0;i<100;i++)R.update(.1,[target],[archer],[],()=>true,()=>false,[archer],()=>true);
-  assert.ok(target.stats.hp<100);assert.ok(archer.damageDealt>0);
+  assert.ok(target.stats.hp<target.stats.maxHp);assert.ok(archer.damageDealt>0);
  }finally{run('Math.random=qaRandom')}
 });
 test('a dead mobile archer cannot fire through its cached shooter',()=>{
@@ -43,14 +43,14 @@ test('a dead mobile archer cannot fire through its cached shooter',()=>{
  try{
   const target={id:'target',kind:'infantry',combatKind:'infantry',x:90,y:90,h:0},owner={id:'bow',kind:'archer',combatKind:'archer',defeated:true,stats:{hp:0}},shooter={id:'bow',owner,x:95,y:90,h:0,visualZ:.6,clock:1.99,terrainAt:()=>0};
   R.update(.1,[target],[owner],[],()=>true,()=>false,[shooter],()=>true);
-  assert.equal(target.stats.hp,100);
+  assert.equal(target.stats.hp,target.stats.maxHp);
  }finally{run('Math.random=qaRandom')}
 });
 test('native combat tick fires mobile bows on both sides and preserves knight profiles',()=>{
  run("State.environment=[];State.relief=null;State.clock={day:20,speed:0};State.daylightOverride='day';State.village={founded:true,wellId:'well'};State.structures=[{id:'well',type:'well',x:130,y:130}];window.ConquerCombat.restore({version:2,units:[{id:'D-bow',kind:'archer',combatKind:'archer',x:95,y:100}],enemy:[{id:'A-bow',kind:'archer',combatKind:'archer',x:103,y:100}]});globalThis.qaRandom=Math.random;Math.random=()=>.999;for(let i=0;i<100;i++)window.ConquerCombat.tick(.1)");
  try{
   assert.ok(run('State.combat.units[0].damageDealt>0&&State.combat.enemy[0].damageDealt>0'));
-  assert.ok(run('State.combat.units[0].stats.hp<100&&State.combat.enemy[0].stats.hp<100'));
+  assert.ok(run('State.combat.units[0].stats.hp<State.combat.units[0].stats.maxHp&&State.combat.enemy[0].stats.hp<State.combat.enemy[0].stats.maxHp'));
  }finally{run('Math.random=qaRandom')}
 });
 console.log(passed+' mass battle checks passed; '+failed+' failed.');if(failed)process.exitCode=1;

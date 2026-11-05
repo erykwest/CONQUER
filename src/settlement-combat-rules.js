@@ -4,14 +4,17 @@
 (function(){
   const D12=[1,2,2,3,3,3,4,4,4,5,5,6];
   const MAX_E=150,MAX_B=150;
+  // Unit scale of the game (D-056, 05/11/2026): small HP so a duel lasts about half a minute and
+  // fire from the walls matters. Dice, combat, armour and frontage are the Coffee Battles ones;
+  // dmg is the hp taken by one landed blow (the knight's charge counts double).
   const PROFILES=Object.freeze({
-    spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
-    patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
-    wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
-    infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
-    knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
-    captain:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
-    archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
+    spearman:Object.freeze({hp:12,combat:2,armor:2,aim:null,front:3,dmg:1}),
+    patrol:Object.freeze({hp:10,combat:2,armor:2,aim:null,front:2,dmg:1}),
+    wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1,dmg:1}),
+    infantry:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
+    knight:Object.freeze({hp:20,combat:3,armor:3,aim:null,front:1,dmg:2}),
+    captain:Object.freeze({hp:16,combat:3,armor:3,aim:null,front:1,dmg:1}),
+    archer:Object.freeze({hp:6,combat:1,armor:0,aim:2,front:1,range:15,dmg:1})
   });
   // Faction IDs are data, not a render-side "enemy = black" conditional.
   // A PVP team can supply its own palette / emblems later.
@@ -152,9 +155,14 @@
   }
   const shouldRebuildBoundary=(painting,hasCache,signatureChanged)=>signatureChanged&&(!painting||!hasCache);
   function ensure(entity,kind){
+    // The unit's own profile wins over the kind a caller passes (a shot passes combatKind only).
+    const own=profileKind(entity),p=(entity.kind||entity.combatKind)&&PROFILES[own]?PROFILES[own]:PROFILES[kind]||PROFILES.infantry;
     if(!entity.stats){
-      const p=PROFILES[kind]||PROFILES.infantry;
       entity.stats={hp:p.hp,maxHp:p.hp,energy:MAX_E,brain:MAX_B,combat:p.combat,armor:p.armor,aim:p.aim,shock:0};
+    }else if(entity.stats.maxHp!==p.hp&&Number(entity.stats.maxHp)>0){
+      // Saved on another scale (the old 30-100 HP): keep the same share of health.
+      const s=entity.stats,share=Math.max(0,Math.min(1,(Number(s.hp)||0)/Number(s.maxHp)));
+      s.hp=s.hp<=0?0:Math.max(1,Math.round(p.hp*share));s.maxHp=p.hp;
     }
     if(!Number.isFinite(entity.meleeClock))entity.meleeClock=0;
     return entity.stats;
@@ -184,11 +192,13 @@
     let hitA=0,hitB=0;
     const ca=effectiveCombat(a),cb=effectiveCombat(b);
     for(let i=0;i<count;i++){
-      const sa=roll()+ca,sb=roll()+cb;
-      if(sa>sb&&ca>0&&sa-sb>b.stats.armor)hitB++;
-      else if(sb>sa&&cb>0&&sb-sa>a.stats.armor)hitA++;
+      // A natural 6 always lands when its total wins: armour 3 is strong, not immunity.
+      const ra=roll(),rb=roll(),sa=ra+ca,sb=rb+cb;
+      if(sa>sb&&ca>0&&(sa-sb>b.stats.armor||ra===6))hitB++;
+      else if(sb>sa&&cb>0&&(sb-sa>a.stats.armor||rb===6))hitA++;
     }
-    applyDamage(a,hitA,b);applyDamage(b,hitB,a);
+    const dmgOf=u=>PROFILES[profileKind(u)]?.dmg||1;
+    applyDamage(a,hitA*dmgOf(b),b);applyDamage(b,hitB*dmgOf(a),a);
     a.stats.energy=Math.max(0,a.stats.energy-count);
     b.stats.energy=Math.max(0,b.stats.energy-count);
     return {hitA,hitB};
