@@ -290,6 +290,21 @@ function peasantObstacleSnapshot(){
   const parts=new Map();
   for(const s of State.structures)if(s.type==='house'||isCivic(s))parts.set(s,s.type==='house'?urbanHouseDisplayParts(s):civicParts(s));
   parts.circles=State.structures.filter(s=>s.type==='well'||(['tower','ruin'].includes(s.type)&&s.shape==='round'));
+  // Spatial index: a search samples tens of thousands of points, and each one used to test every
+  // structure of the map. Cells of 4U list the structures whose (generous) bounds reach them.
+  const CELL=4,grid=new Map(),pad=PEASANT_CLEARANCE+.6;
+  const add=(s,x0,y0,x1,y1)=>{for(let cx=Math.floor((x0-pad)/CELL);cx<=Math.floor((x1+pad)/CELL);cx++)for(let cy=Math.floor((y0-pad)/CELL);cy<=Math.floor((y1+pad)/CELL);cy++){const k=cx*4096+cy;let l=grid.get(k);if(!l)grid.set(k,l=[]);l.push(s)}};
+  for(const s of State.structures){
+    if(s.a&&s.b){const w=(Number(s.width)||1)/2;add(s,Math.min(s.a.x,s.b.x)-w,Math.min(s.a.y,s.b.y)-w,Math.max(s.a.x,s.b.x)+w,Math.max(s.a.y,s.b.y)+w);continue}
+    const poly=parts.get(s);
+    if(poly?.length){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const part of poly)for(const q of part.points){x0=Math.min(x0,q.x);y0=Math.min(y0,q.y);x1=Math.max(x1,q.x);y1=Math.max(y1,q.y)}if(Number.isFinite(x0)){add(s,x0,y0,x1,y1);continue}}
+    if(!Number.isFinite(s.x)||!Number.isFinite(s.y)){parts.unindexed=(parts.unindexed||[]).concat(s);continue}
+    let R=1;try{const d=rectDims(s);R=Math.hypot(d.w||0,d.h||0)/2}catch{}
+    R=Math.max(R,Number(s.r)||0,(Number(s.size)||0)*.75,Number(s.w)||0,Number(s.h)||0)+(s.type==='gate'?5:1);   // a gate's drawbridge reaches out
+    add(s,s.x-R,s.y-R,s.x+R,s.y+R);
+  }
+  const EMPTY=[],extra=parts.unindexed||EMPTY;
+  parts.near=p=>{const l=grid.get(Math.floor(p.x/CELL)*4096+Math.floor(p.y/CELL))||EMPTY;return extra.length?l.concat(extra):l};
   return parts;
 }
 // A quay built over the rocks is walkable.
@@ -301,7 +316,7 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
   if(window.ConquerSlopeways?.blocksPoint(p))return true;     // raised sides of a ramp/stairway
   if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
-  for(const s of State.structures){
+  for(const s of (obstacleParts?.near?obstacleParts.near(p):State.structures)){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
     if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training','plaza','civicAnnex','ruin'].includes(s.type))continue;
     if(isCivicAnnex(s)&&['garden','yard'].includes(civicAnnexDefinition(s)?.kind))continue;

@@ -2032,7 +2032,7 @@
     // Mill sails and wheels turn every frame (industries).
     // Gate door leaves, portcullis and torch brackets (gate fittings).
     // The Mastio's raised entrance: stair and drawbridge leaf (keep entrance).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance]){
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance,window.ConquerTrebuchets]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
