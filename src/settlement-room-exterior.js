@@ -228,7 +228,9 @@ function drawRoomExterior(s,{only=null}={}){
   const tris=roomExteriorTriangles(s,elements),top=Math.max(...elements.map(e=>e.z+(e.height||.75)));
   const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
   withStructureDetailOcclusion(s,top,()=>{
-    for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>a.d-b.d)){
+    // The roof caps its element: painted last, so no wall top under it wins the depth sort.
+    const cap=t=>t.part==='roof'&&t.pts.every(q=>q.z>=elements[0].z)?1:0;
+    for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>cap(a.t)-cap(b.t)||a.d-b.d)){
       const [a,b,c]=t.pts.map(q=>w2s(q.p,q.z));
       // The stain is a flat decal on the wall: drawn whatever its winding.
       if(t.part!=='chute'&&(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)continue;

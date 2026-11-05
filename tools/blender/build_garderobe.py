@@ -42,7 +42,7 @@ SLAB0, SLAB1 = -.06, 0.0      # floor slab, flush with the room floor
 WALL_T = .05
 TOP = .56                     # box walls
 ROOF_IN, ROOF_OUT = -.03, PROJ + .05
-ROOF_HI, ROOF_LO, ROOF_T = .70, .58, .04
+ROOF_HI, ROOF_LO, ROOF_T = .74, .62, .04   # underside clear of the wall tops (TOP): no coplanar fight in 2.5D
 CORBELS = (-.36, -.125, .125, .36)   # between the drop holes
 
 
@@ -60,9 +60,10 @@ def box(p, x0, x1, y0, y1, z0, z1, key, top=None, bottom=None):
 
 def slab(p, x0, x1, y0, z0, y1, z1, t, key, under):
     vs = [(x * S, y * S, (z + dz) * S) for dz in (0, -t) for x, y, z in ((x0, y0, z0), (x1, y0, z0), (x1, y1, z1), (x0, y1, z1))]
-    p.quads(vs, [(0, 1, 2, 3)], key)
-    p.quads(vs, [(7, 6, 5, 4)], under)
-    p.quads(vs, [(4, 5, 1, 0), (6, 7, 3, 2), (0, 3, 7, 4), (1, 5, 6, 2)], under)
+    # Same winding as prism(): the top looks up, every face looks out (2.5D culls the back faces).
+    p.quads(vs, [(3, 2, 1, 0)], key)
+    p.quads(vs, [(4, 5, 6, 7)], under)
+    p.quads(vs, [(0, 1, 5, 4), (2, 3, 7, 6), (4, 7, 3, 0), (2, 6, 5, 1)], under)
 
 
 def garderobe(root):
@@ -87,12 +88,8 @@ def garderobe(root):
     parts['corbels'] = c.finish()
 
     r = Part(root, 'roof', COLORS)
-    # Lean-to roof in three stepped courses (boxes: their faces keep the right winding in 2.5D).
-    for k in range(3):
-        y0, y1 = ROOF_IN + (ROOF_OUT - ROOF_IN) * k / 3, ROOF_OUT
-        z = ROOF_HI - (ROOF_HI - ROOF_LO) * k / 2
-        box(r, -h - .03, h + .03, y0, y1, z - ROOF_T, z, 'roofSlabDark', 'roofSlab', 'roofUnder')
-    box(r, -h - .03, h + .03, ROOF_IN - .02, ROOF_IN + .03, ROOF_HI - ROOF_T, ROOF_HI + .02, 'roofSlabDark')   # flashing on the wall
+    # Lean-to roof: one sloped slab (a single convex solid sorts cleanly in 2.5D).
+    slab(r, -h - .03, h + .03, ROOF_IN, ROOF_HI, ROOF_OUT, ROOF_LO, ROOF_T, 'roofSlab', 'roofSlabDark')
     parts['roof'] = r.finish()
 
     # Unit-height chute: z 0 at the slab underside (chuteTop), -1 at the ground (stretched by the game).
