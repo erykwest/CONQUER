@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-05 — Pulsante CODEX / WIKI nel Profilo
+
+Richiesta dell'utente: accesso visibile dentro Profilo. Aggiunto pulsante di apertura del lettore esistente e collegamento nel bridge; barra Profilo con wrap e versioni cache aggiornate. Regressione browser estesa a entrambe le UI, chiusura/Escape, ritorno focus e mobile. Nessuna modifica a gameplay o salvataggi; ROADMAP/DECISIONS invariate, accesso UI sul contratto Wiki esistente.
+
 ## 2026-11-05 — Wiki da contenuti Obsidian (branch feature)
 
 Migrati titoli, alias e testi di 151 pagine in note Markdown; aggiunti indice, guida e modello. Il vault personale è l'ambiente di scrittura e la copia Git è importata con baseline/conflitti e validazione preventiva. Generato artefatto editoriale per sito e gioco, preservando costi/regole dai provider. Supportati link a sezioni, paragrafi/titoli/liste/formattazione sicura. Ampliate cinque note di contenuto; test editoriali/import e browser PASS locali. D-CODEX-03 e documentazione aggiornati, nessun merge/deploy implicito.

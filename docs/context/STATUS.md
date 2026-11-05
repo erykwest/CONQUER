@@ -1,5 +1,9 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — Accesso Wiki dal Profilo (branch `feature/codex-obsidian`)
+
+Aggiunto il pulsante **CODEX / WIKI** nella barra del Profilo, accanto a Generale, Araldica e Centro di controllo. Apre il lettore interno in entrambe le UI; chiusura/Escape riporta al Profilo e al pulsante, senza modificare partita o scheda attiva. Barra a capo sugli schermi stretti; cache version aggiornata. Verifica browser estesa a ingresso dal Profilo, focus e mobile. La modifica è nella PR #165, non ancora main.
+
 ## 2026-11-05 — Obsidian come sorgente editoriale Wiki (branch, NON MAIN)
 
 Su `feature/codex-obsidian`: [note Markdown e pipeline editoriale](../CODEX-OBSIDIAN.md). Vault personale CONQUER già aperto nella cartella scelta dall'utente, 154 note; copia Git di pubblicazione `content/codex`, import a senso unico con baseline e controllo conflitti. 151 pagine approvate compilate in un artefatto condiviso web/in-game; niente prezzi duplicati nelle note.

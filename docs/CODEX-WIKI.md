@@ -5,7 +5,7 @@ Implementazione su `feature/codex-wiki`, creata da main `15070d2` e comprendente
 ## Consultazione
 
 - Pubblica: `/wiki/`, senza caricare partita, servizi cloud o dati personali.
-- In-game: pulsante **Codex** nel menu (UI classica e UI2), lettore modale con chiusura, Escape e ritorno del focus. Link **Voce nel Codex** dal Builder e dall'inspector UI2.
+- In-game: **Profilo → CODEX / WIKI**, oltre al pulsante **Codex** nel menu (UI classica e UI2), lettore modale con chiusura, Escape e ritorno del focus. Link **Voce nel Codex** dal Builder e dall'inspector UI2.
 - 136 schede, sette pagine di famiglia e otto percorsi trasversali: Fortificazioni, Produzione, Logistica, Popolazione, Combattimento e assedio, Navigazione e porti, Costruzioni, Conoscenze e tecnologie.
 - Ricerca per testo e filtri famiglia/stato della voce. Ricerca, filtri e pagine sono nell'URL; reload, link condivisi e Indietro funzionano senza un router server.
 
@@ -48,3 +48,5 @@ Lo stato «Nel catalogo/Parziale/Previsto» riguarda la voce, non il possesso da
 Il sito è pronto nel repository sotto `/wiki/`; la disponibilità sul dominio pubblico segue il normale merge autorizzato in main e il suo deploy. Nessun deploy o merge è richiesto da questi test.
 
 Evoluzione editoriale: [note Obsidian e import dal vault personale](CODEX-OBSIDIAN.md), D-CODEX-03. I testi delle schede non sono più mantenuti direttamente in codex-wiki-content.js.
+
+Accesso dal Profilo: CODEX / WIKI è un pulsante di apertura del lettore, non cambia la scheda del Profilo. Chiudendo la Wiki si torna al Profilo con focus sul pulsante; la barra va a capo sugli schermi stretti.

@@ -49,6 +49,7 @@
   function currentId(){return idForStructure(typeof selectedStructure==='function'?selectedStructure():null)||toolId()||'home'}
   window.ConquerWikiHost=Object.freeze({open,close,context,idForStructure,openSelection:()=>open(currentId()),openTool:()=>open(toolId()||'home'),href:()=> './wiki/#'+encodeURIComponent(currentId())});
   document.getElementById('codexBtn')?.addEventListener('click',()=>open());
+  document.getElementById('profileCodexBtn')?.addEventListener('click',()=>open());
   const legacy=document.createElement('a');legacy.className='codex-legacy-link';legacy.textContent='Voce nel Codex';legacy.href='./wiki/';
   document.querySelector('#builder h2')?.after(legacy);
   legacy.addEventListener('click',event=>{if(event.button||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();open(currentId())});
