@@ -20,6 +20,8 @@
 const ROOM_EXTERIOR=Object.freeze({
   // Garderobe: a stone box on corbels, the chute down the wall. One per room, upper floor only.
   latrine:Object.freeze({model:'garderobe',source:'ConquerGarderobeModels',mount:'face',breakable:Object.freeze({hp:40,material:'stone'})}),
+  // Falconry mews: a slatted timber cage on the roof of the tower whose top room is the falconry.
+  mews:Object.freeze({model:'mews',source:'ConquerMewsModels',mount:'roof',active:s=>typeof towerMews==='function'&&towerMews(s)}),
   // Alarm-bell belfry: the `bell` upgrade of a T1-T2 pitched-roof tower (rules in settlement-alarm-bells.js).
   bell:Object.freeze({upgrade:Object.freeze({variant:'bell',value:'bell'}),model:'belfry',source:'ConquerBelfryModels',mount:'roof',
     active:s=>!!window.ConquerAlarmBells?.towerBell(s)})
@@ -123,6 +125,14 @@ function roomExteriorUpgradePlacement(s,key,spec){
 function roomExteriorPlacement(s,index,fn){
   const spec=roomExteriorSpec(fn),m=roomExteriorModel(spec);
   if(!spec||!m||!s||underConstruction(s))return null;
+  // A room whose element sits on the roof (the falconry mews): the roof mount of the upgrades,
+  // tied to the room slot and to its own active rule.
+  if(spec.mount==='roof'){
+    if(spec.active&&!spec.active(s))return null;
+    const e=roomExteriorUpgradePlacement(s,fn,spec);
+    if(e)e.index=index;
+    return e;
+  }
   if(spec.mount!=='face'||s.type!=='built')return null;
   const z=roomExteriorFloorZ(s,index);if(!Number.isFinite(z))return null;
   const side=wallExteriorSide(s),edge=linearFacadeEdge(s,side),L=edge.length;

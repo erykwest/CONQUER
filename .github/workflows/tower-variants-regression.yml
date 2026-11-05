@@ -14,6 +14,7 @@ on:
       - 'qa/bartizan-regression.cjs'
       - 'qa/tower-roof-shape-regression.cjs'
       - 'qa/dovecote-regression.cjs'
+      - 'qa/falconry-regression.cjs'
       - 'src/settlement-diplomacy.js'
       - 'src/settlement-cutaway-furniture.js'
       - 'src/assets/dovecote-models.js'
@@ -47,3 +48,5 @@ jobs:
           node qa/tower-weapons-regression.cjs
       - name: Dovecote (top room under the pitched roof, pigeon post, roof lantern)
         run: node qa/dovecote-regression.cjs
+      - name: Falconry (top room under the pitched roof, hunting, prestige, mews on the roof)
+        run: node qa/falconry-regression.cjs

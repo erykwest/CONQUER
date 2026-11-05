@@ -1,5 +1,17 @@
 # Livello 2 — Stato tecnico e prove
 
+## Falconiera e Prestigio (branch `feature/falconry`, da `main` 05f8170, 05/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:**
+  - **Stanza `mews` (Falconiera):** ultimo piano delle torri in pietra W2–W3, L2 o più, con tetto a falde (`towerMewsAllowed`, stessa regola della Colombaia). Un tetto, un elemento in cima: prende il posto della Campana (`APEX_ROOMS`) e della Colombaia (stessa stanza).
+  - **Caccia:** ogni falconiera attiva (non catturata, tetto in piedi) porta 4 razioni di selvaggina al giorno nella scorta, anche in assedio, mai oltre la capienza dei granai (`MEWS_FOOD`, `mewsCount`).
+  - **Prestigio del castello (scelta dell'utente):** nuovo valore `ConquerSiege.prestige()`. Somma punti per stanza di corte attiva: Falconiera 3, Sala del trono 4, Stanze nobili 1, Cappella 1, Tesoro 1 (`PRESTIGE`). Mostrato nel riepilogo logistico con la resa della caccia. Per ora non è letto da altri sistemi.
+  - **Voliera sul tetto:** nuovo modello Blender `tools/blender/build_mews.py` → `src/assets/mews-models.js` (458 triangoli): sella in ardesia, gabbia di listelli, posatoio con falco incappucciato, cappello di scandole. Montato da `ROOM_EXTERIOR` (`mews`, `mount:'roof'`), esteso alle stanze con montaggio sul tetto legato allo slot. La bandiera sale sopra la voliera (`towerApexFlagZ`).
+  - **Arredo cutaway:** posatoi sulla parete principale, scaffale, tavolino del falconiere, sgabello, baule.
+- **Asset Lab:** varianti «Pietra quadrata L2 tetto + falconiera», «Grande rotonda L3 tetto + falconiera», «Grande quadrata L3 2 falde + falconiera» e il modello in «Edifici · Elementi esterni delle stanze». Audit: 33 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); tavola rivista; baseline aggiornata per queste voci.
+- **QA:** nuova `qa/falconry-regression.cjs` (regola, caccia, prestigio, voliera, Lab), aggiunta a `tower-variants-regression.yml`. 137 `qa/*.cjs` non di performance: 136 PASS, `founding-regression.cjs` fallisce solo dentro la suite completa (test di tempi di risposta) e passa da solo.
+- **Non verificato:** la caccia in una partita vera; il prestigio non ha ancora effetti.
+
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)

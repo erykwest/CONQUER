@@ -52,6 +52,9 @@
   // 16 more (32 in a large room). An unserved garrison loses hygiene down to a floor of 40; below
   // 50 up to a tenth of the archers fall sick and leave their posts. A secondary need, not a gate.
   const SANITATION_FREE=24,LATRINE_SOLDIERS=16,HYGIENE_FLOOR=40,SICK_BELOW=50,SICK_MAX=.1;
+  // Falconry hunting: game brought in every day, siege or not, up to the granaries' room.
+  const MEWS_FOOD=4;
+  const PRESTIGE=Object.freeze({mews:3,throneHall:4,nobleRoom:1,chapel:1,treasury:1});
   const ROOM_EXTERIOR_REPAIR=Object.freeze({stone:6,gold:2});
   const within=(v,a,b)=>Math.max(a,Math.min(b,v));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
@@ -117,6 +120,9 @@
     // Cistern: ground floor of medium or large (W2/W3) stone towers.
     if(fn==='cistern')return l===1&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2;
     if(fn==='dovecote')return l===top&&towerDovecoteAllowed(s);
+    // Falconry: the same top room under a pitched roof. One roof, one apex element: it takes the place
+    // of a bell (APEX_ROOMS in settlement-alarm-bells.js) and of a dovecote (same room).
+    if(fn==='mews')return l===top&&towerMewsAllowed(s);
     // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
     if(fn==='infirmary')return l<=2&&s.type==='built';
     // Latrine: upper floor of a W1 built section, where its garderobe fits on the exterior face.
@@ -397,6 +403,29 @@
     }
     return total;
   }
+  // Working falconries: an allowed room, not captured, its tower standing.
+  function mewsCount(){
+    const unavailable=capturedRoomIds();let n=0;
+    for(const s of State.structures){
+      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
+      s.functions.forEach((fn,i)=>{if(fn==='mews'&&allowed(s,i,fn)&&!unavailable.has(s.id+':'+i))n++});
+    }
+    return n;
+  }
+  // Castle prestige (user, 05/11/2026): what the lord's household shows off. Points per working room;
+  // the falconry is its first source, the others are the rooms of the court. Read by the panel now,
+  // by other systems later.
+  function prestige(){
+    const unavailable=capturedRoomIds(),by={};let total=0;
+    for(const s of State.structures){
+      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
+      s.functions.forEach((fn,i)=>{
+        const p=PRESTIGE[fn];if(!p||!allowed(s,i,fn)||unavailable.has(s.id+':'+i))return;
+        by[fn]=(by[fn]||0)+p;total+=p;
+      });
+    }
+    return{total,by};
+  }
   function hygieneTarget(){
     const g=garrison();
     return g<=0?100:within(100*(SANITATION_FREE+latrineCapacity())/g,HYGIENE_FLOOR,100);
@@ -416,6 +445,9 @@
     const target=hygieneTarget(),was=sickShare();
     x.hygiene=within(x.hygiene+within(target-x.hygiene,-2*elapsed,5*elapsed),0,100);
     if(sickShare()!==was)window.ConquerCombat?.invalidateArchers?.();
+    // The falcons hunt: game into the store, never beyond what the granaries hold.
+    const hunt=mewsCount()*MEWS_FOOD*elapsed;
+    if(hunt>0)x.stock.food=Math.max(x.stock.food,Math.min(capacity().food,x.stock.food+hunt));
     const demand=dailyFoodDemand()*elapsed;
     if(demand<=0)return;
     if(x.stock.food<demand)slaughterHorses(x,demand-x.stock.food);
@@ -1254,6 +1286,7 @@
       '<br>Horses '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · Gold '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
       '<br>Kitchen '+fmt(c.meals)+' meals/d · Barracks '+fmt(c.soldiers)+' · Knights '+fmt(c.knights)+
       '<br>Cisterns '+fmt(c.water)+' people'+
+      (()=>{const p=prestige(),m=mewsCount();return'<br>Prestige '+fmt(p.total)+(m?' · Falconry hunts '+fmt(m*MEWS_FOOD)+' food/d':'')})()+
       (x.starvationDays>0?'<br>⚠ Supply shortfall '+x.starvationDays.toFixed(1)+' d':'')+
       (x.thirstDays>0?'<br>⚠ Water shortfall '+x.thirstDays.toFixed(1)+' d':'')+
       '<br>Hygiene '+fmt(x.hygiene)+' · Latrines serve '+fmt(SANITATION_FREE+latrineCapacity())+' / garrison '+fmt(garrison())+
@@ -1306,7 +1339,7 @@
     });
   }
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
-    capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,integrity,effectiveness,attackStructure,
+    capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,mewsCount,prestige,PRESTIGE,MEWS_FOOD,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
     releaseCircleSector,

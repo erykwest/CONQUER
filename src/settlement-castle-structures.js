@@ -577,6 +577,7 @@ function dovecoteTriangles(s){
 // (one roof, one upgrade: settlement-alarm-bells.js APEX_ROOMS).
 function towerApexFlagZ(s){
   const h=typeof towerDovecote==='function'&&towerDovecote(s)?window.ConquerDovecoteModels?.height||0
+    :typeof towerMews==='function'&&towerMews(s)?window.ConquerMewsModels?.height||0
     :window.ConquerAlarmBells?.towerBell(s)?window.ConquerBelfryModels?.height||0:0;
   return towerVisualTopHeight(s)+h;
 }
