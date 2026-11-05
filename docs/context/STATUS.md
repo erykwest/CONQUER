@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — Rimozione foresta L1 e costo taglialegna (branch `fix/forestry-l1-clearing-cost-20261105`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA SU MAIN:** il capanno del taglialegna richiede 5 legname anziché 25 (35 oro invariati); UI e spesa effettiva condividono `ConquerIndustries.definition().cost`.
+- **Terraforming:** comando «Rimuovi foresta» con forme quadrata/rotonda e raggio 2/4/6; il clic mette in coda un job persistente `State.relief.forestryJobs` senza mutare gli alberi. Fino a 3 lavoratori L1 finanziati per job, esclusi quelli assegnati ai cantieri; il bosco si libera e il legname va al magazzino del signore solo al completamento. Resa iniziale 2,5 unità di legname per U² di foresta, lavoro 0,7 giornate operaio per U². Test dedicato `qa/forestry-regression.cjs` e job nella CI Economy flows; risultati della CI da leggere dal run della PR, non presunti.
+- **LIMITI:** nessuna rigenerazione forestale, nessuna animazione dedicata di abbattimento; il job apre una radura con poligono e aggiorna rendering e navigazione. Nessuna modifica al terraforming standard immediato.
+
+
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
