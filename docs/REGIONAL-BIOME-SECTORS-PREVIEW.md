@@ -67,3 +67,9 @@ QA: navigazione browser territorio → demo → ritorno con stessa selezione; se
 Richiesta 05/11/2026: eliminare i raggruppamenti geografici di supercella. Rimossi unione/separazione, creazione di gruppi per laghi contigui, render di etichette e confini aggregati e serializzazione dei gruppi. Gli import legacy ignorano superCells; i singoli territori e i terreni restano intatti. La selezione multipla è ancora disponibile per modifiche collettive, senza fusione. I layer politici/feudali mantengono i propri domini, distinti dalle supercelle geografiche.
 
 QA: sintassi degli script inline e browser regione → territorio → demo → ritorno. Verifica con JSON legacy contenente due territori raggruppati: stesso numero di territori/etichette, nessun gruppo riattivato e comandi di fusione/separazione assenti.
+
+## Correzione: nessuna aggregazione di celle Voronoi
+
+La prima rimozione riguardava solo le fusioni di territori, ma lasciava dettaglio 4 e pesi per bioma 1/2/4/6: il raggruppamento visibile era ancora presente. Ora dettaglio 1 fisso e peso 1 per tutti i terreni; anche le isole modificano singoli territori senza fonderli. Guard finale dopo generazione di acqua e isole: ogni territorio contiene esattamente una cella. Default 30×21: 630 celle, 630 territori, 630 etichette. Verificato nel browser su quattro seed. Topologia precedente incompatibile: i vecchi JSON aggregati sono rigenerati con avviso, senza applicare nomi o interventi ai nuovi ID sbagliati; il file originale non viene modificato.
+
+Recuperati Mountain 1.svg–Mountain 8.svg dalla cartella ARQE indicata dall'utente, copie byte per byte in ICON/ del repository. Otto risposte HTTP 200 e SVG validi; risolto il precedente limite degli asset montagna mancanti.
