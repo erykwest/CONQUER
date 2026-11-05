@@ -113,6 +113,34 @@
       hair:typeof villagerHair==='function'?villagerHair(String(id)):'brown'};
   }
   const darken=(hex,k)=>{const h=hex.replace('#','');return'#'+[0,2,4].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('')};
+  // WebGL figures (settlement-world3d.js figure()): each mode's motion is a cycle of rate RATE;
+  // it is cut into PHASES poses and the time moved to the middle of the sailor's current one.
+  const RATE={walk:7,haul:3.2,climb:5,aloft:2.4,coil:4},PHASES=8;
+  function phaseTime(d,mode,t){
+    const r=RATE[mode];if(!r)return{b:0,t:0};
+    const ph=(hash(d.id)%1000)/1000*6.28,c=((t*r+ph)/(Math.PI*2)),b=Math.floor((c-Math.floor(c))*PHASES);
+    return{b,t:((b+.5)/PHASES*Math.PI*2-ph)/r};
+  }
+  // A sailor at world point w (feet height w.z): a depth-tested card in WebGL, so the hull, the
+  // sails and the bulwarks in front hide it; false outside a 3D frame.
+  function sailorFigure(d,mode,t,facing,z){
+    const W=window.ConquerWorld3D;if(!W?.figure)return false;
+    const q=phaseTime(d,mode,t),f=facing<0?-1:1,look=typeof villagerLookKey==='function'?villagerLookKey(d):d.colors.join(',');
+    let ok=false;
+    // Painted facing right; a sailor facing left is the same card flipped.
+    const run=()=>{ok=W.figure(d.p,.10,'s|'+mode+'|'+q.b+'|'+look,()=>drawSailor({...d,p:{x:0,y:0}},mode,q.t,1),d.id,f<0)};
+    if(typeof withProjectionGroundZ==='function')withProjectionGroundZ(z-.1,run);else run();
+    return ok;
+  }
+  // Every pose a sailor can show (all modes and phases), as {key,paint} for figure prewarming.
+  function sailorPoses(d){
+    const out=[],look=typeof villagerLookKey==='function'?villagerLookKey(d):d.colors.join(','),ph=(hash(d.id)%1000)/1000*6.28;
+    for(const mode of ['idle','walk','haul','coil','climb','aloft']){
+      const r=RATE[mode];
+      for(let b=0;b<(r?PHASES:1);b++){const t=r?((b+.5)/PHASES*Math.PI*2-ph)/r:0;out.push({key:'s|'+mode+'|'+b+'|'+look,paint:()=>drawSailor({...d,p:{x:0,y:0}},mode,t,1)})}
+    }
+    return out;
+  }
   // mode: walk | idle | coil | haul | climb | aloft. facing: 1 right, -1 left (screen).
   function drawSailor(d,mode,t,facing=1){
     const base=w2s(d.p,.10),scale=State.view.scale*.5,f=facing<0?-1:1;
@@ -156,5 +184,5 @@
     }
     ctx.restore();
   }
-  window.ConquerShipCrew=Object.freeze({crewState,order,step,sailors,toWorld,dot,drawSailor,manoeuvring,WALK,CLIMB});
+  window.ConquerShipCrew=Object.freeze({crewState,order,step,sailors,toWorld,dot,drawSailor,sailorFigure,sailorPoses,phaseTime,manoeuvring,WALK,CLIMB});
 })();
