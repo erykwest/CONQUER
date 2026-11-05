@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
+
 Sul branch `fix/prepare-architecture-textures` le 11 texture di facciata e danno sono preparate offline a 256 px con trasparenza. Peso PNG da 12,18 MB a 578 kB. Regressioni locali: catalogo, brecce e confini dei moduli passate.
 
 Sul branch `fix/remove-fossil-industry-svg` l’Asset Lab usa le voci 3D esistenti per cava e campo taglialegna. Rimossi i relativi SVG storici, le anteprime autonome e i generatori delle rotazioni.

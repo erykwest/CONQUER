@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neutro sulle celle vuote (branch `fix/audit-sheet-grid`). **APERTO:** il simbolo «Her 2» dell'araldica è quasi invisibile nel foglio (difetto preesistente, non toccato).
+
 Prestazioni avvio: texture architettoniche preparate offline sul branch `fix/prepare-architecture-textures`. La regressione visiva nel Lab verifica il rendering dei componenti e delle fortificazioni.
 
 Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 24 pose industriali e le due viste base obsolete. Il catalogo conserva le anteprime 3D rotabili.
