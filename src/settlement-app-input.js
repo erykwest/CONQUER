@@ -560,17 +560,17 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   window.ConquerEconomy?.foundingCharter?.(well.id);
   const yard=window.ConquerStorageYard?.ensureForWell?.(well);
   closeVillageModal();
-  if(!yard)status('Attenzione: impossibile collocare il piazzale entro 7U dal pozzo');
+  // Report a failed placement in the persistent founding status below.
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
     renderUI();
     const connected=ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length;
-    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
+    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}${yard?' · Piazzale 2×2U':' · ⚠ PIAZZALE NON POSIZIONATO (7U occupate)'}`);
     processVillageGrowth();draw();
   });
   markDirty(true,['ground','base']);
   renderUI();
-  status(`${name} founded — connecting border main roads…`);
+  status(`${name} founded — connecting border main roads…${yard?' · Piazzale 2×2U':' · ⚠ nessun lotto magazzino libero entro 7U'}`);
   draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
