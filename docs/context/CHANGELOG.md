@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+05/11/2026 — Aggiornamento REG-BIOME-PREVIEW su `experiment/regional-biome-sectors`: fasce fisse 25/25/100/25/25 U, blending smoothstep e corner continui con centro + due vicini; centro invariato, collegamento regionale ancora aperto. Verificati pesi, estremi delle fasce e continuità ai corner. Prova separata dal Builder.
+
 05/11/2026 — `experiment/regional-biome-sectors`: laboratorio separato con bioma centrale, quattro fasce cardinali, quattro corner quadrati di blending, seed e confronto schema/paesaggio. Fixture, non integrazione regionale o Builder. QA sintassi, pesi e browser; roadmap invariata, proposta regionale documentata senza modificare contratti approvati.
 
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.

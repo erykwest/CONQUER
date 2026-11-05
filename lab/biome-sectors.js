@@ -7,24 +7,15 @@ const RegionalBiomePreview=(()=>{
   function hash(x,y,seed){let n=Math.imul(x,374761393)^Math.imul(y,668265263)^seed;n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967295}
   function noise(x,y,seed){const ix=Math.floor(x),iy=Math.floor(y),sx=x-ix,sy=y-iy,u=sx*sx*(3-2*sx),v=sy*sy*(3-2*sy);const a=hash(ix,iy,seed),b=hash(ix+1,iy,seed),c=hash(ix,iy+1,seed),d=hash(ix+1,iy+1,seed);return(a+(b-a)*u)*(1-v)+(c+(d-c)*u)*v}
   function sector(x,y){if(x>=min&&x<=max&&y>=min&&y<=max)return'center';const vertical=y<min?'north':y>max?'south':'',horizontal=x<min?'west':x>max?'east':'';return vertical&&horizontal?vertical+'-'+horizontal:vertical||horizontal}
-  function weights(x,y,config,natural=true){
-    const own=sector(x,y);
-    if(own==='center')return{[config.center]:1};
-    const sides=own.split('-'),out={};
-    if(sides.length===1)out[config[own]]=1;
-    else{
-      const vertical=Math.max(min-y,y-max,0),horizontal=Math.max(min-x,x-max,0);
-      const warp=(noise(x/23,y/23,config.seed)-.5)*config.blend*.4*Math.min(vertical,horizontal)/(vertical+horizontal);
-      // Corner squares inherit only their two adjoining sides. Ease to each side strip.
-      const w=natural?Math.max(0,Math.min(1,(vertical+warp)/(vertical+horizontal))):.5;
-      out[config[sides[0]]]=w;out[config[sides[1]]]=(out[config[sides[1]]]||0)+1-w;
-    }
-    if(!natural||!config.blend)return out;
-    // Ease back to the selected centre biome on approach to the inner square.
-    const distance=Math.max(min-x,0,x-max,min-y,y-max);
-    const t=Math.min(1,distance/config.blend),a=t*t*(3-2*t);
-    for(const key of Object.keys(out))out[key]*=a;
-    out[config.center]=(out[config.center]||0)+1-a;
+  function weights(x,y,config){
+    // 25U pure neighbour + 25U transition on either side of the 100U centre.
+    const ease=d=>{const t=Math.min(1,Math.max(0,d/25));return t*t*(3-2*t)};
+    const h=ease(Math.max(min-x,x-max,0)),v=ease(Math.max(min-y,y-max,0)),out={};
+    const add=(biome,w)=>{if(w>0)out[biome]=(out[biome]||0)+w};
+    add(config.center,(1-h)*(1-v));
+    // Symmetric corner blend: three influences near the centre, two outside.
+    add(config[x<min?'west':'east'],h*(1-v/2));
+    add(config[y<min?'north':'south'],v*(1-h/2));
     return out;
   }
   function color(b,x,y,seed){
@@ -54,7 +45,7 @@ const RegionalBiomePreview=(()=>{
     ctx.putImageData(image,0,0);
     if(!config.guides)return;
     const s=w/size;ctx.save();ctx.scale(s,s);ctx.strokeStyle='rgba(255,245,209,.8)';ctx.lineWidth=.5;ctx.setLineDash([2,2]);ctx.beginPath();
-    for(const v of [min,max]){ctx.moveTo(v,0);ctx.lineTo(v,size);ctx.moveTo(0,v);ctx.lineTo(size,v)}ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=.8;ctx.strokeRect(min,min,max-min,max-min);
+    for(const v of [25,min,max,175]){ctx.moveTo(v,0);ctx.lineTo(v,size);ctx.moveTo(0,v);ctx.lineTo(size,v)}ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=.8;ctx.strokeRect(min,min,max-min,max-min);
     ctx.font='4px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
     const labels=[['center',100,100],['north',100,22],['east',178,100],['south',100,178],['west',22,100]];
     for(const [side,x,y] of labels){const label=(side==='center'?'BUILDABLE ZONE · ':({north:'N · ',east:'E · ',south:'S · ',west:'O · '})[side])+biomes[config[side]][0];const width=ctx.measureText(label).width+6;ctx.fillStyle='rgba(15,24,20,.78)';ctx.fillRect(x-width/2,y-4,width,8);ctx.fillStyle='#f6f0df';ctx.fillText(label,x,y)}ctx.restore();
@@ -67,10 +58,10 @@ if(typeof document!=='undefined'){
   for(const [side,value] of Object.entries(defaults)){for(const [key,[name]] of Object.entries(RegionalBiomePreview.biomes))$(side).add(new Option(name,key));$(side).value=value}
   function update(){
     if(!$('controls').reportValidity())return;
-    const config={seed:Number($('seed').value)>>>0,blend:Number($('blend').value),guides:$('guides').checked};for(const side of Object.keys(defaults))config[side]=$(side).value;
+    const config={seed:Number($('seed').value)>>>0,guides:$('guides').checked};for(const side of Object.keys(defaults))config[side]=$(side).value;
     RegionalBiomePreview.render($('scheme'),config,false);RegionalBiomePreview.render($('terrain'),config,true);
     $('legend').replaceChildren();for(const b of new Set(Object.keys(defaults).map(side=>config[side]))){const [label,color]=RegionalBiomePreview.biomes[b],key=document.createElement('span'),swatch=document.createElement('i');key.className='key';swatch.style.background=`rgb(${color.join(',')})`;key.append(swatch,document.createTextNode(label));$('legend').append(key)}
-    $('status').textContent=`Seed ${config.seed} · Centro: ${RegionalBiomePreview.biomes[config.center][0]} · Raccordo ${config.blend} U · Vicini simulati, nessuna mappa regionale collegata.`;
+    $('status').textContent=`Seed ${config.seed} · 25 U limitrofo / 25 U blending / 100 U centro / 25 U blending / 25 U limitrofo · Vicini simulati.`;
   }
   $('controls').addEventListener('submit',e=>{e.preventDefault();update()});$('guides').addEventListener('change',update);$('next').addEventListener('click',()=>{$('seed').value=(Number($('seed').value)+1)>>>0;update()});update();
 }

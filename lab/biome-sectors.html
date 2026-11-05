@@ -10,7 +10,7 @@
 <main>
 <span class="eyebrow">CONQUER / LABORATORIO GEOGRAFICO</span>
 <h1>Un centro, quattro paesaggi confinanti</h1>
-<p>Il quadrato interno è la <strong>buildable zone 100 × 100 U</strong>, nella mappa locale 200 × 200 U. I quattro settori esterni ereditano i biomi delle celle regionali confinanti. Qui i vicini sono configurabili: è una prova cartografica, ancora separata dal generatore di gioco.</p>
+<p>Il quadrato interno è la <strong>buildable zone 100 × 100 U</strong>, nella mappa locale 200 × 200 U. I quattro settori esterni ereditano i biomi delle celle regionali confinanti. Lungo ogni asse: <strong>25 U limitrofo → 25 U blending → 100 U centro → 25 U blending → 25 U limitrofo</strong>. Qui i vicini sono configurabili: è una prova cartografica, ancora separata dal generatore di gioco.</p>
 <form id="controls">
 <label>Centro<select id="center" aria-label="Bioma centrale"></select></label>
 <label>Nord<select id="north" aria-label="Bioma nord"></select></label>
@@ -18,13 +18,13 @@
 <label>Sud<select id="south" aria-label="Bioma sud"></select></label>
 <label>Ovest<select id="west" aria-label="Bioma ovest"></select></label>
 <label>Seed<input id="seed" type="number" min="0" max="4294967295" value="42" required></label>
-<label>Raccordo (U)<input id="blend" type="number" min="0" max="20" value="10" required></label>
+
 <button type="submit">Applica</button><button id="next" type="button">Altro seed</button>
 <label style="align-self:end;display:flex;align-items:center;min-height:40px"><input id="guides" type="checkbox" checked style="width:auto"> Mostra schema</label>
 </form>
 <div class="maps">
-<figure><h2>01 / Lo schema</h2><canvas id="scheme" width="600" height="600" aria-label="Quattro lati e quattro quadrati di blending attorno alla buildable zone"></canvas><figcaption>Nord in alto. Quattro fasce laterali e quattro quadrati agli angoli: ogni corner mescola i due biomi adiacenti.</figcaption></figure>
-<figure><h2>02 / Una possibile resa naturale</h2><canvas id="terrain" width="600" height="600" aria-label="Anteprima cartografica con transizioni dei biomi"></canvas><figcaption>Raccordi irregolari tra i settori; il centro mantiene il proprio bioma. Rilievi, boschi e coste sono illustrativi, senza collisioni o idrologia di gioco.</figcaption></figure>
+<figure><h2>01 / Lo schema</h2><canvas id="scheme" width="600" height="600" aria-label="Quattro lati e quattro quadrati di blending attorno alla buildable zone"></canvas><figcaption>Nord in alto. Quattro fasce laterali e quattro quadrati agli angoli: ogni corner raccorda centro e due biomi adiacenti. Le guide segnano le fasce da 25 U.</figcaption></figure>
+<figure><h2>02 / Una possibile resa naturale</h2><canvas id="terrain" width="600" height="600" aria-label="Anteprima cartografica con transizioni dei biomi"></canvas><figcaption>Raccordi graduali nelle fasce da 25 U; il centro mantiene il proprio bioma. Rilievi, boschi e coste sono illustrativi, senza collisioni o idrologia di gioco.</figcaption></figure>
 </div>
 <div id="legend" class="legend"></div><p id="status" aria-live="polite"></p>
 <p>Non servono quattro biomi diversi: due celle adiacenti con lo stesso bioma formano un paesaggio continuo. La linea interna delimita la costruzione, non rappresenta un muro. Fiumi attraversanti, quote e coste continue richiederanno una generazione geografica condivisa prima dell'integrazione nel Builder.</p>

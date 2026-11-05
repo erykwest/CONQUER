@@ -11,8 +11,8 @@ Possiamo rendere più ricca la mappa locale ereditando il paesaggio circostante 
 - Mappa 200×200 U, buildable zone centrale 100×100 U, coerenti con le costanti correnti del Builder.
 - Il centro mantiene il bioma della zona selezionata. È un limite di costruzione, non un muro.
 - Quattro fasce laterali N/E/S/O ereditano i vicini, configurabili nella fixture.
-- Quattro quadrati 50×50 U agli angoli mescolano i biomi dei due lati adiacenti. La vista schematica mostra una miscela 50/50; quella naturale pesa la vicinanza ai lati.
-- Seed ripetibile e raccordo 0–20 U verso il centro; nessuna scrittura di salvataggi o stato di gioco.
+- Quattro quadrati 50×50 U agli angoli mescolano i biomi dei due lati adiacenti. In entrambe le viste il peso centrale è (1-h)(1-v), i due vicini pesano h(1-v/2) e v(1-h/2). h e v crescono con smoothstep da 0 a 1 nei primi 25 U fuori dal centro. Nessuna discontinuità passando dai lati ai corner.
+- Sequenza fissa lungo ciascun asse: 25 U di bioma limitrofo, 25 U blending, 100 U centro, 25 U blending, 25 U limitrofo. Seed ripetibile; nessuna scrittura di salvataggi o stato di gioco.
 
 ## Vincolo regionale verificato
 

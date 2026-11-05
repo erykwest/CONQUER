@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+05/11/2026 — Aggiornamento REG-BIOME-PREVIEW su `experiment/regional-biome-sectors`: fasce fisse 25/25/100/25/25 U, blending smoothstep e corner continui con centro + due vicini; centro invariato, collegamento regionale ancora aperto. Verificati pesi, estremi delle fasce e continuità ai corner. Prova separata dal Builder.
+
 05/11/2026 — `experiment/regional-biome-sectors` (NON MAIN): fixture cartografica in `lab/biome-sectors.html`, centro buildable zone, quattro fasce e corner quadrati di blending. Vicini configurabili, non collegati alla regione. QA sintassi/pesi e browser desktop/mobile; nessuna modifica al generatore Builder. Dettagli: [prova](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
 
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
