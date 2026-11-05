@@ -254,6 +254,10 @@ function renderFunctionPanel(){
       }
       html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       if(s.shape!=='half')html+=hoardingSlot(s);
+      if(s.shape!=='half'){
+        const ir=towerInnerRoofMounted(s),irOk=towerInnerRoofAllowed(s);
+        html+=`<div class="slot"><div class="slot-label">Tetto interno</div><div class="grid"><button data-tower-inner-roof="off" class="${ir?'':'active'}">Nessuno</button><button data-tower-inner-roof="on" ${irOk?'':'disabled'} class="${ir?'active':''}">Dentro i merli</button></div><div class="legend">${irOk||ir?'Tetto arretrato dentro i merli su un cordolo: il cammino di ronda resta libero. Solo estetica, nessuna stanza sotto.':'Solo torri in pietra T2+ con merli o caditoie e senza arma in cima.'}</div></div>`;
+      }
       html+=`<div class="slot"><div class="slot-label">Stone base</div><div class="grid3"><button data-tower-base="standard" class="${base==='standard'?'active':''}">Standard</button><button data-tower-base="buttress" class="${base==='buttress'?'active':''}">Contrafforti H1</button><button data-tower-base="splayed" class="${base==='splayed'?'active':''}">Svasato 10°</button></div><div class="legend">Svasato: H0.5. Contrafforti: da quota 0 a H1. Le fondamenta sotto quota 0 seguono automaticamente la sua impronta a terra.</div></div>`;
       const weapon=structureVariant(s,'topWeapon'),armed=towerTopWeaponAllowed(s),wb=(k,l)=>`<button data-tower-weapon="${k}" ${armed||k==='none'?'':'disabled'} class="${weapon===k?'active':''}">${l}</button>`;
       if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
@@ -382,6 +386,7 @@ function renderFunctionPanel(){
   on('[data-plaza-variant]',(id,el)=>StructureCommands.setPlazaVariant(id,el.dataset.plazaVariant));
   on('[data-tower-weapon]',(id,el)=>StructureCommands.setTowerWeapon(id,el.dataset.towerWeapon));
   on('[data-tower-roof-shape]',(id,el)=>StructureCommands.setTowerRoofShape(id,el.dataset.towerRoofShape));
+  on('[data-tower-inner-roof]',(id,el)=>StructureCommands.setTowerInnerRoof(id,el.dataset.towerInnerRoof));
   on('[data-tower-bartizan]',(id,el)=>StructureCommands.setTowerBartizan(id,el.dataset.towerBartizan));
 }
 let pan=null;

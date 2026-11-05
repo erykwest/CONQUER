@@ -193,6 +193,13 @@
       // Cistern: the ground-floor room of W2/W3 stone towers (tank, hatch, buckets in the cutaway).
       ['Pietra quadrata L1 cisterna',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement',functions:['cistern']}],
       ['Grande rotonda L2 cisterna',{type:'tower',shape:'round',material:'stone',level:2,tier:3,r:rd(3),roofStyle:'battlement',functions:['cistern',null]}],
+      // Inner roof inside the merlons (BC-251105-05): square, round and D, crenellated or machicolated.
+      ['Pietra quadrata L2 merli + tetto interno',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',innerRoof:'on'}],
+      ['Grande quadrata L3 caditoie + tetto interno',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',innerRoof:'on'}],
+      ['Pietra rotonda L2 merli + tetto interno',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'battlement',innerRoof:'on'}],
+      ['Grande rotonda L3 merli + tetto interno + garitte',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',innerRoof:'on',bartizan:'battlement'}],
+      ['Torre a D grande L3 merli + tetto interno',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on'}],
+      ['Grande quadrata L3 merli + tetto interno + ballatoio',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on',hoarding:'on'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}],

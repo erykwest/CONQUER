@@ -354,7 +354,9 @@ const STRUCTURE_VARIANTS=Object.freeze({
     // Alarm bell under a small belfry on the roof apex (rules: settlement-alarm-bells.js).
     bell:Object.freeze(['none','bell']),
     // Signal fire: a great pyre on a flat crenellated deck (rules: settlement-soldiers.js).
-    signalFire:Object.freeze(['none','pyre'])
+    signalFire:Object.freeze(['none','pyre']),
+    // Inner roof: a pyramid/cone set back inside the merlons of a crenellated top (BC-251105-05).
+    innerRoof:Object.freeze(['off','on'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -369,7 +371,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -455,7 +457,17 @@ function towerRoofStyle(s){
 }
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
-function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)}
+// The inner roof takes the deck, so a tower carries one or the other.
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)&&structureVariant(s,'innerRoof')!=='on'}
+// Inner roof (BC-251105-05): on a medium or large (T2+) stone tower with a crenellated or
+// machicolated top, a roof set back inside the merlons on a low kerb, the wall-walk left free
+// between them. Geometry: towerInnerRoofGeometry (settlement-population.js). It is not a pitched
+// roof: no room under it, so the Dovecote, the mews and the alarm bell keep asking for 'pitched'.
+function towerInnerRoofAllowed(s){
+  return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&towerTier(s)>=2&&['battlement','machicolation'].includes(towerRoofStyle(s))
+    &&structureVariant(s,'topWeapon')==='none'&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
+}
+function towerInnerRoofMounted(s){return towerInnerRoofAllowed(s)&&structureVariant(s,'innerRoof')==='on'}
 // Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
 // Nor with bartizans: their corbelled corners take the perimeter the gallery runs round.
 function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}

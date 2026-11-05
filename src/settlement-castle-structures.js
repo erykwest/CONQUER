@@ -410,6 +410,8 @@ function structureScreenSilhouette(s){
       const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
       if(g)cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
     }
+    const inner=s.type==='tower'&&towerInnerRoofGeometry(s);
+    if(inner)cloud.push(w2s(inner.apex,inner.apexZ));
     if(hasPointHoarding(s)){
       const z=pointHoardingBaseZ(s);
       for(const b of pointHoardingBays(s)){
@@ -762,6 +764,7 @@ function drawBattlementPiece(piece,frame){
       drawWoodPost(piece.center,piece.r,piece.z0,piece.tipZ,piece.angle||0);
       return;
     }
+    if(piece.kind==='innerRoof'){drawTowerInnerRoof(piece.geo);return}
     if(piece.kind==='machicolationCorbel'){
       extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:winterSnowColor('#887d72'),sideA:'#403b36',sideB:'#554d46',stroke:'#9f9183'});
       return;
@@ -1442,12 +1445,36 @@ function woodTowerFrontPieces(s){
   }
   return pieces;
 }
+// Inner roof (BC-251105-05) in 2.5D: one piece sorted among the merlons by the tower centre, so the
+// far merlons are painted before it and the near ones over its eave. The 3D builders mesh it with
+// the tower body instead (addTower in settlement-castle3d.js).
+function towerInnerRoofPiece(s){
+  const g=!underConstruction(s)&&towerInnerRoofGeometry(s);if(!g)return null;
+  const piece=battlementPolygonPiece('innerRoof',g.ring,g.h,g.apexZ,s);
+  const rp=rotateViewPoint({x:s.x,y:s.y});piece.depth=rp.x+rp.y;piece.geo=g;
+  return piece;
+}
+function drawTowerInnerRoof(g){
+  if(!g)return;
+  const winter=State.season==='winter';
+  extrudePolygonAt(g.ring,g.h,g.eaveZ,{top:'#6f665d',sideA:'#514a44',sideB:'#635951',stroke:'#8f8276'});
+  const apex=w2s(g.apex,g.apexZ),n=g.ring.length,round=n>8,faces=[];
+  for(let i=0;i<n;i++){
+    const a=w2s(g.ring[i],g.eaveZ),b=w2s(g.ring[(i+1)%n],g.eaveZ);
+    const fill=round?(winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP][i%3]:['#303236','#3a3d42','#44474c'][i%3])
+      :winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a');
+    faces.push({poly:[a,b,apex],depth:(a.y+b.y)/2,fill});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.poly,f.fill,round?null:winter?WINTER_SNOW_STROKE:'#5d6066',1);
+}
 function drawCastleBattlements(){
   const pieces=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
     if(s.type==='tower'){
       pieces.push(...towerBattlementPieces(s));
+      const inner=towerInnerRoofPiece(s);if(inner)pieces.push(inner);
       if(isWoodTower(s))pieces.push(...woodTowerFrontPieces(s));
     }else if(s.type==='gate')pieces.push(...gateBattlementPieces(s));
     else if(s.type==='wall')pieces.push(...wallBattlementPieces(s));
