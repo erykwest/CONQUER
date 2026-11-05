@@ -1073,27 +1073,41 @@ function makeEnvWater(rnd,type){
 // Real terrain water, shared by collision, navigation, banks and both renderers.
 // Keep existing saved landscapes intact: this policy applies when generating a river.
 function makeBoundaryRiver(rnd){
-  const sides=['west','north','east','south'],side=sides[Math.floor(rnd()*4)];
-  const phase=rnd()<.5?-1:1,points=[],baseline=BUILD_MIN-12,amplitude=24;
-  const point=(along,across)=>side==='east'?{x:WORLD-across,y:along}:
-    side==='north'?{x:along,y:across}:side==='south'?{x:along,y:WORLD-across}:{x:across,y:along};
-  const cubic=(a,b,c,d)=>{
-    for(let i=points.length?1:0;i<=20;i++){
-      const t=i/20,u=1-t;
-      points.push(point(u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,
-        u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y));
+  const sides=['west','north','east','south'],side=sides[Math.floor(rnd()*4)],width=WATER_WIDTH.river;
+  // Integrate heading over arc length, rather than prescribing y = sin(x).
+  // Leopold/Wolman: meander wavelength ~11 widths, bend radius ~2.3 widths.
+  // Each half-meander gets its own radius and turning angle, giving rounded,
+  // asymmetric bends without repeating one template or scaling it after placement.
+  let chosen=null;
+  for(let attempt=0;attempt<80&&!chosen;attempt++){
+    const path=[{x:0,y:0}],bends=[];let x=0,y=0,sign=rnd()<.5?-1:1;
+    const initialPhase=rnd()*.7;
+    for(let bend=0;x<WORLD&&bend<30;bend++){
+      const radius=width*(2+rnd()),angle=1+rnd()*.5;
+      const length=Math.PI*radius*angle,steps=Math.ceil(length/.65),ds=length/steps;
+      const start=bend===0?initialPhase:0;
+      bends.push({radius,angle,length});
+      for(let i=Math.floor(start*steps);i<steps&&x<WORLD;i++){
+        const theta=sign*angle*Math.sin(Math.PI*(i+.5)/steps);
+        const dx=ds*Math.cos(theta),dy=ds*Math.sin(theta),t=Math.min(1,(WORLD-x)/dx);
+        x+=dx*t;y+=dy*t;path.push({x,y});
+      }
+      sign=-sign;
     }
-  };
-  // Four broad alternating bends guarantee an inward peak within the 100U buildable span
-  // for either phase. Peak depth is 12U = 36px on the 600px reference map (minimum 25px).
-  const step=WORLD/4,p=(x,y)=>({x,y});
-  for(let i=0;i<4;i++){
-    const a=i*step,d=a+step,offset=amplitude*(i%2?-phase:phase),peak=baseline+offset;
-    cubic(p(a,baseline),p(a+step/6,baseline),p(a+step/3,peak),p(a+step/2,peak));
-    cubic(p(a+step/2,peak),p(a+step*2/3,peak),p(d-step/6,baseline),p(d,baseline));
+    const interior=path.filter(p=>p.x>=BUILD_MIN+12&&p.x<=BUILD_MAX-12);
+    if(x<WORLD||!interior.length)continue;
+    const depth=9+rnd()*3,shift=BUILD_MIN+depth-Math.max(...interior.map(p=>p.y));
+    const low=Math.min(...path.map(p=>p.y))+shift,high=Math.max(...path.map(p=>p.y))+shift;
+    if(low<width+1||high>BUILD_MIN+20)continue;
+    chosen={path:path.map(p=>({x:p.x,y:p.y+shift})),bends};
   }
-  return{id:'env-river',type:'river',points,width:WATER_WIDTH.river,fill:'#3a7684',edge:'#88b4b8',
-    boundaryPolicy:1,boundarySide:side};
+  // A valid candidate must exist for the seeded bounded-angle family; surface a
+  // failure instead of silently reverting to a repeated artificial wave.
+  if(!chosen)throw new Error('Boundary river placement failed');
+  const points=chosen.path.map(p=>side==='west'?{x:p.y,y:p.x}:side==='east'?{x:WORLD-p.y,y:p.x}:
+    side==='south'?{x:p.x,y:WORLD-p.y}:p);
+  return{id:'env-river',type:'river',points,width,fill:'#3a7684',edge:'#88b4b8',
+    boundaryPolicy:2,boundarySide:side,meanderModel:'arc-length-heading',meanderBends:chosen.bends};
 }
 // Watercourse widths (U). Saved landscapes from before the widening are brought up to them
 // on load (widenWatercourses), so old maps get the wider rivers and streams too.

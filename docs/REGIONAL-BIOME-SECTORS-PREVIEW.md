@@ -41,3 +41,11 @@ Supera il precedente requisito di assenza di attraversamento: il fiume deve entr
 Il generatore reale makeEnvWater delega i fiumi a makeBoundaryRiver. Quattro anse Bezier ampie e continue seguono un lato buildable selezionato deterministicamente dal seed (assenza di confini regionali collegati). La direttrice è 12 U fuori dal bordo, le anse entrano per 12 U. Il risultato conserva il formato ambiente river, width 4.4 U: collisioni, navigation, sponde e renderer esistenti consumano la stessa geometria. I ruscelli mantengono la ricetta attuale. Nessuna migrazione distruttiva delle mappe salvate: serve una mappa nuova o rigenerata nel bioma Fiume. Lo schema a otto biomi e le dorsali restano nel laboratorio separato.
 
 QA runtime: 42 mappe biomi, 64 generazioni di fiume con centro libero e acqua interna che impedisce costruzione, 36 verifiche urban. Test boundary-river-regression.cjs raccolto automaticamente dalla CI qa/*-regression.cjs.
+
+## Meandri proporzionati alla larghezza (supera il pattern Bezier)
+
+Riferimento richiesto: https://divisbyzero.com/2009/11/26/the-geometry-of-meandering-rivers/ ; fonte primaria: https://www.usgs.gov/publications/river-meanders-0 . Le relazioni empiriche lambda circa 11w e r circa 2.3w sono riferimenti morfologici, non leggi esatte per ogni ansa.
+
+Nel Builder il modello integra x'=cos(theta), y'=sin(theta) a passi di lunghezza; theta varia dolcemente lungo ogni semimeandro. Ciascuna ansa ha raggio 2–3w, apertura 1–1.5 radianti e lunghezza derivata dal raggio. Il seed modifica questi parametri e il tratto iniziale, non solo lato e specchiatura. Nessun ridimensionamento o clipping deforma le curve per adattarle alla mappa: vengono selezionati candidati validi e traslati rispetto al bordo buildable. La penetrazione garantita resta almeno 25 px sul canvas di riferimento; il picco selezionato entra per 9–12 U, con massimo globale di 20 U. Modello geometrico statico, non simulazione di erosione o soluzione idraulica.
+
+QA: test negativo sul vecchio generatore (solo due sagome distinte normalizzate), poi PASS su 64 mappe reali con almeno 60 forme distinte e 2.000 curve con limiti e penetrazione. Rapporto r/w verificato. Regresioni biome-recipes e save-safety PASS.

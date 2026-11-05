@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-BIOME-RIVER2 — Morfologia dei meandri (05/11/2026, branch sperimentale)
+
+Richiesto: eliminare il pattern ripetuto e usare il riferimento geometrico [Division by Zero](https://divisbyzero.com/2009/11/26/the-geometry-of-meandering-rivers/). Implementazione nel branch: integrazione per lunghezza del corso, raggi proporzionati alla larghezza (2–3w), parametri delle anse variabili per seed; mantenere ingresso nella buildable zone di almeno 25 px sul riferimento 600 px. Riferimento empirico, non simulazione idraulica. I salvataggi conservano la geometria precedente. [Specifica](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
+
 ## D-ROOM-EXT-01 — Una stanza può cambiare l'esterno del suo edificio (04/11/2026)
 
 - **DECISO (contratto):** una funzione di stanza dichiara il suo elemento esterno in `ROOM_EXTERIOR[fn]` (`src/settlement-room-exterior.js`): `{model, source, mount, breakable?}`. `model` è un modello Blender in `src/assets/*-models.js` (registro `window[source].models[model]`: `parts` con `p/i/c`, `width`, `projection`, `bottom`, `chuteTop`), assi U con +x lungo la faccia (centrato), +y verso l'esterno, +z dal pavimento della stanza.
