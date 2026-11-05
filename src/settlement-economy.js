@@ -701,6 +701,7 @@
       if(today.month!==tomorrow.month||today.year!==tomorrow.year)monthly(day);
       if(today.year!==tomorrow.year)annual(day);
     }
+    window.ConquerStorageYard?.refreshVisual?.();
   }
   function setRations(mode){
     if(!Object.hasOwn(RATIONS,mode))return false;
