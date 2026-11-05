@@ -68,3 +68,5 @@ Eseguite anche regressioni Builder menu, economia/Builder, save-safety e i cinqu
 L'inventario segue i registri effettivi della base, non certifica tutte le intenzioni nei backlog. Professioni e incarichi individuali richiedono ulteriori adapter; le quattro coorti e i profili combattimento sono già distinti. Il vigneto è esplicitamente una definizione economica parziale. Gli annessi restano parziali, senza inventare servizi o prezzi. Le regole latrina della PR #155 non vengono anticipate.
 
 Verifica aggiuntiva: `qa/refactor-app-population-regression.cjs` FALLISCE sul conteggio del siege hook `rubbleBlocks`, sia sul branch sia su checkout pulito della base `9a4310d` (stesso errore 1 !== 2). Difetto preesistente, sorgenti popolazione e relativa suite non modificati dal Codex. `qa/refactor-module-boundaries-regression.cjs` e `qa/context-guard-regression.cjs` PASS.
+
+Riallineamento finale: integrata nel solo branch di sviluppo la main `0711760` con #158 (fogli audit); nessuna modifica ai provider Codex. Audit fase 1 resta ancorato alla propria base storica.
