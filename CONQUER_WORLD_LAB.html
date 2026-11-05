@@ -682,6 +682,18 @@
       </div>
     </header>
 
+    <nav aria-label="Demo mappe locali" style="padding:12px;display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+      <a href="index.html">← Builder</a>
+      <button type="button" id="openLocalDemo" disabled>Apri mappa locale del territorio</button>
+      <span>Demo con quantitativi attuali:</span>
+      <a href="index.html?demo=plains&amp;seed=4242">Pianura</a>
+      <a href="index.html?demo=hills&amp;seed=4242">Colline</a>
+      <a href="index.html?demo=forest&amp;seed=4242">Foresta</a>
+      <a href="index.html?demo=river&amp;seed=4242">Fiume</a>
+      <a href="index.html?demo=mountains&amp;seed=4242">Montagne</a>
+      <a href="index.html?demo=sea&amp;seed=4242">Costa</a>
+      <span>Prove temporanee, separate dai salvataggi. Le ricette locali non compongono ancora gli otto biomi.</span>
+    </nav>
     <section class="toolbar" aria-label="Controlli di generazione">
       <div class="field">
         <span class="field-label">Griglia di unità</span>
@@ -870,6 +882,7 @@
             <button id="makeNeutral" class="icon-action" type="button" title="Overlay neutrale" aria-label="Overlay neutrale">◌</button>
             <button id="addAttackerOutline" class="icon-action" type="button" title="Contorno attaccante" aria-label="Contorno attaccante">⚔</button>
           </div>
+          <button id="openSelectedLocalDemo" type="button" disabled>Apri questa mappa locale</button>
           <span id="cellMenuNote" class="cell-menu-note">Shift+clic per selezionare più territori contigui.</span>
         </aside>
       </div>
@@ -3892,6 +3905,8 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
           selectedMacros = new Set([macroId]);
         }
         selectedMacro = macroId;
+        document.getElementById('openLocalDemo').disabled=selectedMacros.size!==1;
+        document.getElementById('openSelectedLocalDemo').disabled=selectedMacros.size!==1;
         const macro = state.macros[macroId];
         const selectedLayer = document.getElementById('selectedLayer');
         selectedLayer.replaceChildren();
@@ -3933,6 +3948,25 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
           : 'Shift+clic per selezionare piu territori contigui.';
         syncConquerPanel(macroId);
       }
+
+      document.getElementById('openSelectedLocalDemo').addEventListener('click',()=>document.getElementById('openLocalDemo').click());
+      document.getElementById('openLocalDemo').addEventListener('click',()=>{
+        if(!state||selectedMacros.size!==1||selectedMacro===null)return;
+        const macro=state.macros[selectedMacro],ids=conquerNeighbors(selectedMacro);
+        const riverEdges=new Set(state.generatedRiverEdges||[]);
+        const hasRiver=state.edges.some(edge=>{
+          const touching=[...new Set(edge.cells.map(cell=>cell.macroId))];
+          return touching.includes(selectedMacro)&&(riverEdges.has(edgeGeometryKey(edge))||state.rivers.includes(borderKey(touching)));
+        });
+        const terrain=state.terrain[selectedMacro],biome=terrain==='sea'?'sea':hasRiver?'river':({plain:'plains',forest:'forest',hills:'hills',swamp:'river'})[terrain]||'plains';
+        let seed=2166136261;for(const ch of String(state.seed)+'|'+macro.id)seed=Math.imul(seed^ch.charCodeAt(0),16777619);
+        seed=(seed>>>0)%2147483647;
+        const key=state.seed+'-'+macro.id;
+        const payload={version:1,seed,biome,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
+          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),hasRiver};
+        try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));location.href='index.html?regionalDemo='+encodeURIComponent(key)}
+        catch(error){message.textContent='Impossibile aprire la demo: archivio temporaneo del browser non disponibile.';message.classList.add('error')}
+      });
 
       function selectedPairKey() {
         return selectedMacros.size === 2 ? borderKey(selectedMacros) : null;
@@ -5188,7 +5222,10 @@ const currentOwner = ownerByName.get(key);
       });
 
       updateTerrainControls();
-      generate();
+      if(new URLSearchParams(location.search).has('returnDemo')){
+        try{const saved=JSON.parse(sessionStorage.getItem('conquer.regional-demo.world')||'null');if(saved?.map){loadMapData(saved.map);if(state.macros[saved.selected])selectMacro(saved.selected)}else generate()}
+        catch(error){generate();message.textContent='Demo regionale precedente non disponibile: generata una nuova mappa.'}
+      }else generate();
     })();
   </script>
 </body>

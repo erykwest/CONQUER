@@ -4,11 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CONQUER — Settlement Builder</title>
+<script src="./src/regional-demo.js"></script>
 <script>
 // ?assetlab=1: geometry sandbox for the Asset Lab (figures-lab.html) — no saves, no cloud, no telemetry.
 window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1';
 (() => {
-  if (!window.__CONQUER_ASSET_LAB__) import('https://esm.sh/@supabase/supabase-js@2.117.1')
+  if (!window.__CONQUER_ASSET_LAB__&&!window.__CONQUER_REGIONAL_DEMO__) import('https://esm.sh/@supabase/supabase-js@2.117.1')
     .then(mod => { window.__createSupabaseClient = mod.createClient; })
     .catch(err => console.warn('Supabase unavailable; local persistence remains active.', err));
 
@@ -31,7 +32,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <link rel="stylesheet" href="./src/settlement-panels.css?v=panels-3">
 </head>
 <body>
-<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
+<header><div class="brand">CONQUER</div><div class="sub">Settlement Builder / Castle Lab V0.43</div><div id="resources"></div><a href="./CONQUER_WORLD_LAB.html" style="color:#efc78d;white-space:nowrap;margin-right:12px">Mappa regionale</a><button id="profileBtn" type="button">PROFILE</button></header>
 <div id="wrap">
   <canvas id="gpuCanvas" aria-hidden="true"></canvas>
   <canvas id="c"></canvas>

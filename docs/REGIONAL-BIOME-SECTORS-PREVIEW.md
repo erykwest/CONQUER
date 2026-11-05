@@ -53,3 +53,11 @@ QA: test negativo sul vecchio generatore (solo due sagome distinte normalizzate)
 ## Traslazione interna 15 U (policy 3)
 
 Il corso accettato dal modello precedente viene traslato rigidamente di 15 U verso il centro: +x dal lato ovest, -x da est, +y da nord, -y da sud. Nessuna modifica alle anse o ai candidati del seed. Picchi trasversali selezionati a 24–27 U dentro il bordo; massimo globale 35 U. Il centro (100,100) resta libero. Applicazione alle nuove generazioni, senza migrazione automatica delle mappe salvate.
+
+## Navigazione e situazioni demo per il bilanciamento
+
+Dal link Mappa regionale del Builder si apre il World Lab. Selezionare un territorio singolo, poi Apri mappa locale del territorio. La demo usa la ricetta del terreno centrale, oppure Fiume se un confine regionale fluviale tocca il territorio; i vicini reali sono mostrati come contesto, senza dichiarare integrata la composizione a otto biomi. Il seed deriva stabilmente da seed regionale e ID territorio. Nessun salvataggio della partita viene caricato o sovrascritto; cloud disconnesso. Session storage trasporta il contesto e conserva una copia esportata della regione per il ritorno con selezione. Dati demo mancanti aprono una demo Pianura isolata, mai la partita reale.
+
+Scenari rapidi: Pianura, Colline, Foresta, Fiume, Montagne e Costa, tutti con seed 4242. Nessuna modifica ai quantitativi: valori attuali per la prima valutazione dell'utente. Pannello con conteggi di boschi, rilievi terrazzati, cime principali, fiumi e ruscelli; coperture stimate per boschi, acqua, montagne e terrazze sia sull'intera mappa che nel buildable 100×100, griglia 40×40 per area. Coperture non additive. Aggiorna misure dopo cambi alla mappa. Metriche per le prossime scelte quantitative, non un bilanciamento approvato.
+
+QA: navigazione browser territorio → demo → ritorno con stessa selezione; seed e confinanti trasmessi; player save preservato e cloud assente. Regressione regional-demo per validazione e isolamento, save-safety, biome-recipes e boundary-river. Limite preesistente World Lab: mancano gli otto SVG ICON/Mountain, richieste 404; i territori e i confini restano navigabili.
