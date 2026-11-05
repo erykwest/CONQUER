@@ -11,6 +11,12 @@ Sul branch `fix/prepare-architecture-textures` le 11 texture di facciata e danno
 
 Sul branch `fix/remove-fossil-industry-svg` l’Asset Lab usa le voci 3D esistenti per cava e campo taglialegna. Rimossi i relativi SVG storici, le anteprime autonome e i generatori delle rotazioni.
 
+## Pendenza dei tetti di torri e porte (branch `feat/roof-pitch`, 05/11/2026, NON MAIN)
+
+- Implementato: pendenza globale 30°/45°/60° (default 45°) per i tetti a falde in pietra di torri e porte, cambio pagato per tetto dal Centro di controllo › Cantieri; firme di cache aggiornate.
+- Provato: Lab (rotazioni 0–1, tutte le forme di tetto torre, porta grande e piccola), regressioni Node, asset audit 0 falliti.
+- Non provato: CI, partita fondata con il pannello aperto, modalità world3d. Esclusi: case, sezioni costruite, torri in legno, garitte e piano in legno della porta piccola.
+
 ## Long house in legno W1 / W2 (branch `feature/wood-longhouse`, da `main` b5bb639, 04/11/2026, NON MAIN)
 
 - **Regole:** `isLonghouse(s)` (`settlement-core.js`) = sezione `built` con `material:'wood'`. Stessa larghezza della W1 (1U) o della sala larga W2 (`span:'wide'`, 2U), stesse lunghezze (1–4U / 2–6U). `structureLevel` e `maxStructureLevel` valgono sempre 1: solo P0. Le stanze sono quelle del piano terra della sezione in pietra: `functionCapacity` (1 stanza da 2U) e `ConquerSiege.allowed` non cambiano, quindi scuderia solo nella W1, cucina, sala comune, infermeria, prigione ecc. come al P0 in pietra. Niente portico (`builtSkin` = `standard`), niente selettore di altezza né di muratura. Costo per U×larghezza 6 oro / 28 legno; giorni 1,2 + 0,8 per U×larghezza (proposta da bilanciare). Altezza (`structureHeight`) 1,77 W1 / 2,07 W2, cioè la cima delle assi incrociate.

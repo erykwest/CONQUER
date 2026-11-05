@@ -4,6 +4,11 @@ Prestazioni avvio: texture architettoniche preparate offline sul branch `fix/pre
 
 Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 24 pose industriali e le due viste base obsolete. Il catalogo conserva le anteprime 3D rotabili.
 
+## Pendenza dei tetti di torri e porte (05/11/2026)
+
+- **IN CORSO su branch, NON MERGE:** pendenza globale 30/45/60° con cambio a pagamento. Dettagli in [STATUS](STATUS.md).
+- Aperti: estendere a case, sezioni costruite e garitte se richiesto; regressione Node dedicata a `roofPitchQuote`.
+
 ## Long house in legno W1 / W2 (04/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/wood-longhouse`:** sezione costruita in legno larga W1 o W2, solo P0, con le stanze del piano terra in pietra; modello Blender modulare; costruttore, cantiere, cutaway e Lab.
