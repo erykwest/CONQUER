@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — Piazza di stoccaggio iniziale e recupero produzione legname (branch `feature/founding-storage-yard-20261105`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA MAIN:** nuovo edificio `storageYard` («Piazzale · Magazzino»), terreno aperto 2×2U, spawn alla fondazione entro **7U dal primo pozzo** tramite stesso controllo terreno/vegetazione/ingombri del Builder; altra costruzione piazzale disponibile in paletta Produzione. Espansioni 2→4→6U, con costo reale e controllo collisioni.
+- **SCORTE:** il piazzale non contiene un duplicato persistente delle risorse: espone `ConquerEconomy.state().castle` (scorte iniziali e raccolti). Capienza base 600 unità astratte; espansioni 2400/5400. L'ultimo piazzale con beni non è eliminabile. Ricaricamento di vecchi salvataggi con villaggio fondato genera il piazzale mancante dopo il caricamento del terreno; non ripete la carta fondativa.
+- **LOGGING:** con piazzale attivo viene riservato almeno un L1 al taglialegna anche con cantieri che altrimenti esaurirebbero tutti i lavoratori; senza piazzale resta valida la vecchia priorità costruzioni. La carta iniziale assegna 200 legname ma l'obiettivo di riserva era solo 70; la metà trattenuta della produzione del Logging Camp finiva nel mercato e il deposito del castello non cresceva. Ora la quota non venduta viene accumulata nel piazzale fino a capienza, con eccedenza instradata a mercato; nessuna creazione di stock per il solo spawn. I lavoratori L1 e le giornate lavorative restano quelli dell'economia esistente.
+- **VISUAL:** base e cataste in Canvas 2D e World3D, pannello di selezione con inventario e comando di ampliamento. Stesse tre mesh procedurali 2×2/4×4/6×6 pubblicate nell'Asset Lab (categoria Produzione) e verificabili con il QA dell'Asset Lab.
+- **QA:** aggiunta `qa/storage-yard-regression.cjs` e collegata a `Economy flows regression`; esiti reali da verificare su Actions. Limitazione: niente trasporto individuale fisico delle merci, deposito visualmente aggregato.
+
+
 ## 2026-11-05 — Rimozione foresta L1 e costo taglialegna (branch `fix/forestry-l1-clearing-cost-20261105`, pre-merge)
 
 - **CODICE SU BRANCH, NON ANCORA SU MAIN:** il capanno del taglialegna richiede 5 legname anziché 25 (35 oro invariati); UI e spesa effettiva condividono `ConquerIndustries.definition().cost`.

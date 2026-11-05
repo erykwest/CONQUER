@@ -73,6 +73,7 @@
       ['[data-gate][data-gate-size="1"]','Porta piccola · 1×1U · L1–L2','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
+      ['[data-storage-yard]','Piazzale / magazzino · 2×2U espandibile','work'],
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
       ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','work'],
       ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','work'],

@@ -1,5 +1,13 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-05 — Piazzale di stoccaggio al villaggio (branch `feature/founding-storage-yard-20261105`)
+
+- **P0-03 / P0-05 · SU BRANCH (non MAIN fino al merge):** alla fondazione del villaggio un Piazzale 2×2U è cercato entro 7U dal pozzo in un'area con terreno valido, non alberata e senza conflitti; è inoltre piazzabile dal Builder. Può crescere a 4×4U e 6×6U pagando materiali e oro, con capacità 600/2400/5400 unità aggregata.
+- **Stock iniziali:** rappresentati fisicamente nel piazzale e mostrati nell'ispettore, conservati esclusivamente in `ConquerEconomy.state().castle`; non aggiungere una seconda economia locale al magazzino.
+- **Bug taglialegna:** con piazzale attivo un L1 ha priorità sul cantiere, per scongiurare la produzione zero con quattro fondatori impegnati in opere; con charter a 200 legname e target 70, la produzione trattenuta non incrementava il deposito e andava tutta al mercato. Dal branch, la quota non destinata alla vendita cresce nel castello fino a capienza del piazzale; il resto viene offerto al mercato. I tempi e la manodopera L1 non sono cambiati.
+- **Da collaudare:** casi di fondazione con vincoli forestali senza spazio entro 7U, scene e animazioni carico/scarico reali, eventuali esigenze di capacity tuning; test `qa/storage-yard-regression.cjs` e GitHub Actions.
+
+
 ## 2026-11-05 — Forestry L1, tool del Terraforming (fix urgente su branch `fix/forestry-l1-clearing-cost-20261105`)
 
 - **P0-02 · IMPLEMENTATO SUL BRANCH, NON VALIDATO COME CORE COMPLETO:** nuovo tool «Rimuovi foresta», non istantaneo; assegna lavori L1 finanziati con fino a 3 popolani per job, lascia gli alberi finché il lavoro non termina, apre radure persistenti e accredita il legname al magazzino del castello. Resa iniziale 2,5 legname/U²; 0,7 giornate operaio/U². Restano fuori rigenerazione e abbattimento periodico automatico dalle industrie.

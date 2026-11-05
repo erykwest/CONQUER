@@ -4,7 +4,7 @@ function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
-  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','plaza','townhall','guild','civicAnnex','loggingCamp','quarry','mine','windmill','watermill'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','plaza','townhall','guild','civicAnnex','storageYard','loggingCamp','quarry','mine','windmill','watermill'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
   const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId||s.type==='bridge'&&s.primaryBridgeFor)&&['wall','palisade','built','road','moat','bridge'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
@@ -18,7 +18,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-event-venue],[data-pier],[data-quay],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-storage-yard],[data-event-venue],[data-pier],[data-quay],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   if(hardNavigation){
@@ -184,6 +184,9 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(window.ConquerStorageYard?.is(target)&&!window.ConquerStorageYard.canRemove(target)){
+    status('Sposta le scorte in un altro piazzale prima di eliminare l’unico magazzino');return;
+  }
 
   if(target.type==='road'&&target.routeId){
     const deleted=new Set(State.village.deletedMainRoutes||[]);deleted.add(target.routeId);
@@ -200,7 +203,7 @@ function deleteStructure(id){
     const borderEntries=ensureBorderEntrySelection();
     // The village goes with its founding well, later wells included (refunded).
     for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(w.buildCost);
-    State.structures=State.structures.filter(s=>!s.auto&&s.id!==id&&s.type!=='well');
+    State.structures=State.structures.filter(s=>!s.auto&&!s.foundingStockyard&&s.id!==id&&s.type!=='well');
     window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   }else{
