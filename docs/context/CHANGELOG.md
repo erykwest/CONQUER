@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+05/11/2026 — `fix/forestry-l1-clearing-cost-20261105` (pre-merge): capanno del taglialegna ridotto da 25 a 5 legname (35 oro invariati); nuovo tool Terraforming «Rimuovi foresta», che crea un job L1 persistente e pagato. La rimozione del bosco e l'accredito della resa in legname nel castello avvengono solo alla fine del lavoro. Aggiunti regressione dedicata e hook CI Economy flows. ROADMAP invariata; aggiornati STATUS/BACKLOG/DECISIONS e backlog Builder. CI e merge da verificare su GitHub.
+
+
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)

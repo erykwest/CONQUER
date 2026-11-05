@@ -200,6 +200,17 @@
     const days=Math.max(0,finite(workdays));
     return{laborDays:round(days),laborGold:round(days*constructionWagePerWorkday())};
   }
+  // Felling produces a one-time lord-owned haul, not a recurring market activity.
+  function creditForestryWood(amount,id){
+    const quantity=round(Math.max(0,finite(amount)));
+    if(!State.village?.founded||!quantity)return false;
+    const e=ensureFlows(state());
+    e.castle.wood=round(finite(e.castle.wood)+quantity);
+    e.weekProduced.wood=round(finite(e.weekProduced.wood)+quantity);
+    note(e,'Forest clearance '+id+': +'+quantity+' wood');
+    syncBuilderResources();
+    return true;
+  }
   function refundBuild(cost){
     const e=ensureFlows(state());
     for(const [good,value] of Object.entries(cost||{})){
@@ -811,7 +822,7 @@
   }
   window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,
     weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
-    foundingCharter,foundingWorkers,syncBuilderResources,applyDevFloor,canBuild,spendBuild,refundBuild,
+    foundingCharter,foundingWorkers,syncBuilderResources,applyDevFloor,canBuild,spendBuild,creditForestryWood,refundBuild,
     constructionWagePerWorkday,payConstructionWork,spontaneousSpawnQuote,
     availableBuilders,availableBuilderIds,laborAllocation,jobSummary,RATIONS,HERD_FOOD_PER_DAY,rationMode,setRations,
     setShare,setTarget,setExternalDemand,transfer,assetValue,snapshot,population});
