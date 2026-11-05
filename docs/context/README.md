@@ -1,5 +1,7 @@
 # CONQUER — Piramide di contesto
 
+**CONQUER CODEX (05/11/2026):** [censimento iniziale dei cataloghi](../CODEX-CATALOG-AUDIT.md), base `main` `bcf3cd7`; audit documentale, catalogo unificato ancora da implementare.
+
 **Nuovo laboratorio CRIME (02/11/2026):** [specifica criminalità, ordine pubblico, sommosse e strutture repressive](../crime.md). Skeleton sperimentale su branch `feature/crime-skeleton` con route `/crime/`: indicatori e fasi simulate su fixture, non collegati ai popolani, agli edifici o ai salvataggi del Builder.
 
 

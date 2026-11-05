@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## CODEX — 05/11/2026
+
+- **Censimento iniziale documentato sul branch** `docs/codex-catalog-audit-20261105`: [audit e inventario per sette famiglie](../CODEX-CATALOG-AUDIT.md), base `main` `bcf3cd7`.
+- **Aperto:** adapter normalizzati sui dati effettivi, ID stabili, relazioni e classificazione per elemento; completare verifica comportamentale delle coperture parziali. Nessun duplicato di costi o regole.
+- **Successivo:** Wiki condivisa web/in-game, ricerca e collegamenti Builder/Lab. Conoscenze predisposte separatamente da requisiti fisici/funzionali; mappatura tecnologica rinviata alla completezza del catalogo.
+- Attenzione a #155: regole latrina/torri ancora fuori dalla base auditata.
+
 ## MARE — Porti e molo (branch `mare`, 02/11/2026)
 
 - **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.

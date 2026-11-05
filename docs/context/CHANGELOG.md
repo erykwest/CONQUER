@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-05 — Censimento iniziale CONQUER CODEX
+
+Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. Aggiunto `docs/CODEX-CATALOG-AUDIT.md` con registri, chiavi, proprietari e limiti delle sette famiglie; distinto Asset Lab da catalogo gameplay e stato delle PR aperte. Aggiornati STATUS/BACKLOG e indice README. Nessuna modifica runtime/asset/bilanciamento; suite gameplay e browser non eseguite. ROADMAP e DECISIONS invariate: questa fase documenta fonti e prossimi passi senza cambiare milestone né introdurre contratti runtime.
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
