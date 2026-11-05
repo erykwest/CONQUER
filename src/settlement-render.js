@@ -194,6 +194,7 @@ function renderCastleBodyContent(){
   drawTowerRoofs();
   drawGateRoofs();
   window.ConquerRoomExterior?.drawAll();
+  window.ConquerWallStairs?.drawAll();
 }
 function castleBodyRenderableStructures(){
   return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));

@@ -42,8 +42,8 @@
 > **NUOVE RICHIESTE · BACKLOG APERTO, NON IMPLEMENTATO IN QUESTA MODIFICA.** Task raccolti il 05/11/2026. Non confondere questi requisiti con le varianti già documentate su branch o con feature verificate in `main`. La priorità tra i task non è ancora assegnata.
 
 ### Mura e camminamenti
-- [ ] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità.
-- [ ] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura.
+- [x] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità. **Su `feature/bc-scale` (non in main):** rampa lungo la faccia interna di un muro in pietra T2/T3, ~60°, larga 0,30U, ultimo gradino a filo del camminamento; posizione Inizio/Centro/Fine; accesso della rete wall-walk.
+- [x] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura. **Su `feature/bc-scale` (non in main):** rampa piena ~45°, larga 0,36U, con cordolo sul lato aperto e pilastrino di sbarco alla quota del camminamento; upgrade dalla lignea.
 - [ ] **BC-251105-03 — Edifici addossati alle mura.** Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
 - [ ] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia da definire geometricamente; **non equivale** allo stile del merlo «a doppia falda» già annotato in `feat/crenel-styles`.
 

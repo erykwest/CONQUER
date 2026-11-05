@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+05/11/2026 — `feature/bc-scale`: BC-251105-01 scala lignea e BC-251105-02 scala lapidea ai camminamenti (upgrade del muro dall'ispettore, modelli Blender, accesso della rete wall-walk per le truppe, crollo in breccia, Asset Lab). Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuovo upgrade dentro il contratto esistente dei camminamenti.
+
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
