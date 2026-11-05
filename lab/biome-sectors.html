@@ -22,6 +22,12 @@
 <label>Sud-ovest<select id="southWest" aria-label="Bioma sud-ovest"></select></label>
 <label>Sud-est<select id="southEast" aria-label="Bioma sud-est"></select></label>
 <label>Seed<input id="seed" type="number" min="0" max="4294967295" value="42" required></label>
+<label>Fiume · meandri ampi<select id="riverRoute" aria-label="Percorso fiume">
+<option value="none">Assente</option><option value="west" selected>Lato ovest</option><option value="north">Lato nord</option><option value="east">Lato est</option><option value="south">Lato sud</option><option value="north-east">Nord → est</option><option value="east-south">Est → sud</option><option value="south-west">Sud → ovest</option><option value="west-north">Ovest → nord</option>
+</select></label>
+<label>Dorsale · più lineare<select id="ridgeRoute" aria-label="Percorso dorsale">
+<option value="none" selected>Assente</option><option value="west">Lato ovest</option><option value="north">Lato nord</option><option value="east">Lato est</option><option value="south">Lato sud</option><option value="north-east">Nord → est</option><option value="east-south">Est → sud</option><option value="south-west">Sud → ovest</option><option value="west-north">Ovest → nord</option>
+</select></label>
 
 <button type="submit">Applica</button><button id="next" type="button">Altro seed</button>
 <label style="align-self:end;display:flex;align-items:center;min-height:40px"><input id="guides" type="checkbox" checked style="width:auto"> Mostra schema</label>
@@ -31,6 +37,7 @@
 <figure><h2>02 / Una possibile resa naturale</h2><canvas id="terrain" width="600" height="600" aria-label="Anteprima cartografica con transizioni dei biomi"></canvas><figcaption>Raccordi graduali nelle fasce da 25 U; il centro mantiene il proprio bioma. Rilievi, boschi e coste sono illustrativi, senza collisioni o idrologia di gioco.</figcaption></figure>
 </div>
 <div id="legend" class="legend"></div><p id="status" aria-live="polite"></p>
+<p><strong>Elementi lineari di confine:</strong> il fiume segue spline con meandri ampi; la dorsale è più lineare. Entrambi seguono il perimetro della buildable zone nella fascia esterna di blending. I percorsi che raccordano due lati girano attorno al corner. Il bioma “Fiume” colora la piana fluviale: non impone più un corso d'acqua centrale. Le spline sono illustrative: quote, foce, attraversamenti e continuità con le mappe adiacenti restano da collegare ai dati regionali.</p>
 <p>Non servono quattro biomi diversi: due celle adiacenti con lo stesso bioma formano un paesaggio continuo. La linea interna delimita la costruzione, non rappresenta un muro. Fiumi attraversanti, quote e coste continue richiederanno una generazione geografica condivisa prima dell'integrazione nel Builder.</p>
 </main>
 <script src="biome-sectors.js"></script>

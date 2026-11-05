@@ -31,11 +31,48 @@ const RegionalBiomePreview=(()=>{
       if(Math.floor(h*14)!==Math.floor((h+.012)*14))shade-=12;
     }
     if(b==='sea'){shade+=(n-.5)*18;if(noise(x/15,y/4,seed+2)>.76)shade+=13}
-    if(b==='river'){
-      const channel=Math.abs(x-(100+Math.sin(y/22+seed)*14+(noise(y/25,0,seed)-.5)*18));
-      c=channel<3?[51,108,132]:channel<4?[166,162,113]:[110,148,94];
-    }
+    if(b==='river')c=[110,148,94]; // Floodplain surface; the channel is a separate border spline.
     return c.map(v=>Math.max(0,Math.min(255,v+shade)));
+  }
+  function borderSpline(route,kind,seed=0){
+    if(!route||route==='none')return[];
+    // Cubic Bezier segments in U; canonical west side, or north-to-east corner.
+    // Broad river bends (wavelength ~80U); restrained, longer ridge deviations.
+    const amplitude=kind==='river'?9:2,phase=hash(0,0,seed+(kind==='river'?0:83))>.5?1:-1;
+    const points=[],cubic=(a,b,c,d,steps=60)=>{
+      for(let i=points.length?1:0;i<=steps;i++){const t=i/steps,u=1-t;points.push({x:u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,y:u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y})}
+    };
+    const bend=(start,end,axis,fixed)=>{
+      const count=kind==='river'?3:2,step=(end-start)/count;
+      for(let i=0;i<count;i++){
+        const a=start+i*step,d=a+step,offset=amplitude*(i%2?-phase:phase);
+        const p=(along,across)=>axis==='y'?{x:across,y:along}:{x:along,y:across};
+        cubic(p(a,fixed),p(a+step/3,fixed+offset),p(d-step/3,fixed+offset),p(d,fixed));
+      }
+    };
+    if(route.includes('-')){
+      // Outside rounded NE corner: top y=38, east x=162, radius 12U.
+      bend(0,150,'x',38);
+      cubic({x:150,y:38},{x:156.6274,y:38},{x:162,y:43.3726},{x:162,y:50},30);
+      bend(50,200,'y',162);
+      const turns={'north-east':0,'east-south':1,'south-west':2,'west-north':3}[route];
+      return points.map(p=>{for(let i=0;i<turns;i++)p={x:size-p.y,y:p.x};return p});
+    }
+    bend(0,200,'y',38);
+    return points.map(p=>route==='east'?{x:size-p.x,y:p.y}:route==='north'?{x:p.y,y:p.x}:route==='south'?{x:p.y,y:size-p.x}:p);
+  }
+  function drawBorders(ctx,config,natural,scale){
+    ctx.save();ctx.scale(scale,scale);ctx.lineCap='round';ctx.lineJoin='round';
+    for(const kind of ['ridge','river']){
+      const points=borderSpline(config[kind],kind,config.seed);if(!points.length)continue;
+      const stroke=(color,width)=>{ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke()};
+      if(kind==='river'){stroke('#a4a581',5.5);stroke('#335d70',3.8);stroke('#74b2c0',1.4)}
+      else{
+        stroke(natural?'#5c5c4c':'#665e50',8);stroke('#a6a18b',4);stroke('#ded6b9',.7);
+        if(natural)for(let i=12;i<points.length-5;i+=16){const p=points[i],q=points[i+1],length=Math.hypot(q.x-p.x,q.y-p.y)||1,nx=-(q.y-p.y)/length,ny=(q.x-p.x)/length;ctx.beginPath();ctx.moveTo(p.x+nx*4,p.y+ny*4);ctx.lineTo(p.x,p.y);ctx.lineTo(p.x-nx*3,p.y-ny*3);ctx.strokeStyle='#d0c8ac';ctx.lineWidth=.5;ctx.stroke()}
+      }
+    }
+    ctx.restore();
   }
   function render(canvas,config,natural){
     const ctx=canvas.getContext('2d'),image=ctx.createImageData(canvas.width,canvas.height),w=canvas.width,h=canvas.height;
@@ -45,6 +82,7 @@ const RegionalBiomePreview=(()=>{
       const i=(py*w+px)*4;for(let k=0;k<3;k++)image.data[i+k]=rgb[k];image.data[i+3]=255;
     }
     ctx.putImageData(image,0,0);
+    drawBorders(ctx,config,natural,w/size);
     if(!config.guides)return;
     const s=w/size;ctx.save();ctx.scale(s,s);ctx.strokeStyle='rgba(255,245,209,.8)';ctx.lineWidth=.5;ctx.setLineDash([2,2]);ctx.beginPath();
     for(const v of [25,min,max,175]){ctx.moveTo(v,0);ctx.lineTo(v,size);ctx.moveTo(0,v);ctx.lineTo(size,v)}ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=.8;ctx.strokeRect(min,min,max-min,max-min);
@@ -53,7 +91,7 @@ const RegionalBiomePreview=(()=>{
     const directions={north:'N',east:'E',south:'S',west:'O',northWest:'NO',northEast:'NE',southWest:'SO',southEast:'SE'};
     for(const [side,x,y] of labels){const label=(side==='center'?'BUILDABLE ZONE · ':directions[side]+' · ')+biomes[config[side]][0];ctx.font=(side==='center'?'4':'2.8')+'px system-ui';const width=ctx.measureText(label).width+2;ctx.fillStyle='rgba(15,24,20,.78)';ctx.fillRect(x-width/2,y-4,width,8);ctx.fillStyle='#f6f0df';ctx.fillText(label,x,y)}ctx.restore();
   }
-  return{biomes,sector,weights,render};
+  return{biomes,sector,weights,borderSpline,render};
 })();
 if(typeof module!=='undefined')module.exports=RegionalBiomePreview;
 if(typeof document!=='undefined'){
@@ -61,10 +99,10 @@ if(typeof document!=='undefined'){
   for(const [side,value] of Object.entries(defaults)){for(const [key,[name]] of Object.entries(RegionalBiomePreview.biomes))$(side).add(new Option(name,key));$(side).value=value}
   function update(){
     if(!$('controls').reportValidity())return;
-    const config={seed:Number($('seed').value)>>>0,guides:$('guides').checked};for(const side of Object.keys(defaults))config[side]=$(side).value;
+    const config={seed:Number($('seed').value)>>>0,guides:$('guides').checked,river:$('riverRoute').value,ridge:$('ridgeRoute').value};for(const side of Object.keys(defaults))config[side]=$(side).value;
     RegionalBiomePreview.render($('scheme'),config,false);RegionalBiomePreview.render($('terrain'),config,true);
     $('legend').replaceChildren();for(const b of new Set(Object.keys(defaults).map(side=>config[side]))){const [label,color]=RegionalBiomePreview.biomes[b],key=document.createElement('span'),swatch=document.createElement('i');key.className='key';swatch.style.background=`rgb(${color.join(',')})`;key.append(swatch,document.createTextNode(label));$('legend').append(key)}
-    $('status').textContent=`Seed ${config.seed} · 25 U limitrofo / 25 U blending / 100 U centro / 25 U blending / 25 U limitrofo · Vicini simulati.`;
+    $('status').textContent=`Seed ${config.seed} · Fiume: ${$('riverRoute').selectedOptions[0].text} · Dorsale: ${$('ridgeRoute').selectedOptions[0].text} · Percorsi simulati, non confini regionali reali.`;
   }
   $('controls').addEventListener('submit',e=>{e.preventDefault();update()});$('guides').addEventListener('change',update);$('next').addEventListener('click',()=>{$('seed').value=(Number($('seed').value)+1)>>>0;update()});update();
 }

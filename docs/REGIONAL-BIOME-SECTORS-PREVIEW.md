@@ -25,3 +25,9 @@ Otto ingressi direzionali (quattro laterali e quattro diagonali) sono campioni c
 La prova rende confrontabili schema e paesaggio. L'accettazione visiva resta all'utente. Non genera mesh, collisioni, coste percorribili o fiumi connessi; non usa i vicini di una partita. Il rendering è illustrativo e non sostituisce le ricette esistenti. Nessuna modifica agli asset o ai renderer del gioco: l'audit Asset Lab non è pertinente a questa fixture cartografica.
 
 Verifiche: sintassi JS, classificazione e pesi su tutta la mappa, conservazione del centro; browser desktop/mobile, variazione seed e ripetibilità del disegno. Nessuna certificazione del generatore Builder o dell'integrazione regionale.
+
+## Spline di confine (05/11/2026)
+
+Fiume e dorsale sono livelli lineari distinti dalla superficie. Il bioma Fiume rappresenta la piana fluviale senza canale centrale. Per ciascun elemento sono configurabili quattro lati, quattro raccordi ad angolo e assenza. Curve Bezier cubiche nella fascia esterna di blending: direttrice a 12 U dal limite buildable, escursione dei controlli 9 U per meandri ampi del fiume, 2 U per la dorsale più lineare. Corner raccordati con archi cubici di raggio 12 U. Gli estremi sul bordo esterno sono stabili al cambiare del seed; le curve non entrano nel centro. Il seed determina il verso delle deviazioni.
+
+QA: 16 percorsi verificati per ripetibilità, continuità dei campioni, estremi sul bordo e assenza di attraversamento del centro. Ampiezza del fiume superiore alla dorsale. Resa browser delle due spline verificata. Quote e pendenze idrauliche, foce, erosione, conflitti tra fiume/dorsale, valichi e confini regionali condivisi non implementati. I colori della superficie montuosa restano illustrativi: la dorsale lineare si configura separatamente.
