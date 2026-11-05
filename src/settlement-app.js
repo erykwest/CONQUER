@@ -203,7 +203,7 @@ function deleteStructure(id){
     const borderEntries=ensureBorderEntrySelection();
     // The village goes with its founding well, later wells included (refunded).
     for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(w.buildCost);
-    State.structures=State.structures.filter(s=>!s.auto&&s.id!==id&&s.type!=='well');
+    State.structures=State.structures.filter(s=>!s.auto&&!s.foundingStockyard&&s.id!==id&&s.type!=='well');
     window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   }else{
