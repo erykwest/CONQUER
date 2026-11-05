@@ -97,6 +97,14 @@
     }));
   }
   function visualSignature(){return active().map(s=>s.id+':'+size(s)).join(',')+'|'+piles().map(p=>p.good+':'+p.tiers).join(',')}
+  let lastVisualSignature=null;
+  function refreshVisual(){
+    const signature=visualSignature();
+    if(signature===lastVisualSignature)return false;
+    lastVisualSignature=signature;
+    if(typeof invalidateSceneCache==='function')invalidateSceneCache('base');
+    return true;
+  }
   function spots(s){
     const stock=piles(s.labStocks||null);
     const n=Math.min(size(s)===2?4:9,stock.length);
@@ -156,5 +164,5 @@
   }
   const models={stockyard2:labModel(2),stockyard4:labModel(4),stockyard6:labModel(6)};
   window.ConquerStorageYard=Object.freeze({models,TYPE,SIZES,START_RADIUS,is,list,active,size,stocks,used,free,capacity,capacityOf,make,
-    findNear,ensureForWell,expansionCost,grow,canRemove,piles,visualSignature,addToBuilder,draw});
+    findNear,ensureForWell,expansionCost,grow,canRemove,piles,visualSignature,refreshVisual,addToBuilder,draw});
 })();
