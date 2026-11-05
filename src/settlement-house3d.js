@@ -11,7 +11,7 @@
   const DATA=()=>window.ConquerHouseModels;
   const WINTER=['#e7ece8','#dce3de'];
   const STONE=['#625e59','#4f4b47'],PLASTER=['#e0ca91','#c8ae70'],SOFFIT='#4a3626',TIMBER='#3b2a1e',GABLE='#d9c184';
-  const DOOR_HW=.08,CHIMNEY_H=.48,TIMBER_OUT=.018,JOIST_STEP=.2,JOIST_H=.07;
+  const DOOR_HW=.08,CHIMNEY_H=.48,CHIMNEY_SIDE_H=1.76,TIMBER_OUT=.018,JOIST_STEP=.2,JOIST_H=.07;
   // L1 cottages: low daub walls in the procedural houses' browns, timber frame, thatch.
   const DAUB=['#654936','#4e392d'];
   // L2 houses are drawn like L3 ones (stone ground floor, jettied timber floor) on a single body.
@@ -236,9 +236,15 @@
     const dt=d.tangent.x*d.normal.y-d.tangent.y*d.normal.x>0?d.tangent:{x:-d.tangent.x,y:-d.tangent.y};
     piece(m,cottage?'doorCottage':'door',dp,dt,d.normal,{sx:hw/DOOR_HW},pal);
     dormers(m,entry,pal);
-    // Chimneys where chimneySpecs puts them.
+    // Chimneys where chimneySpecs puts them; the L1 stack stands against its gable wall, rising
+    // with the walls on a construction site.
     for(const c of chimneySpecs(house)){
       const g=terrainElevation(c.center),a=c.angle||0;
+      if(c.side){
+        const n=c.normal;
+        piece(m,'chimneySide',{x:c.wall.x,y:c.wall.y,z:g+c.z0},{x:n.y,y:-n.x},n,{sz:(c.z1-c.z0)/CHIMNEY_SIDE_H},pal);
+        continue;
+      }
       piece(m,'chimney',{x:c.center.x,y:c.center.y,z:g+c.z0},{x:Math.cos(a),y:Math.sin(a)},{x:-Math.sin(a),y:Math.cos(a)},{sz:(c.z1-c.z0)/CHIMNEY_H,tag:'roof'},pal);
     }
     return m;
