@@ -1,5 +1,7 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+05/11/2026 — Esperimento REG-BIOME-PREVIEW: [prova cartografica](REGIONAL-BIOME-SECTORS-PREVIEW.md) su `experiment/regional-biome-sectors`, NON MAIN. Quattro lati e corner di blending. Integrazione con i confinanti Voronoi reali e generatore Builder ancora aperta.
+
 ## Stato corrente su main — 30 ottobre 2026
 
 > **Audit sostitutivo della fotografia del 22–23/10:** [AUDIT-2026-10-30](context/AUDIT-2026-10-30.md), ref `main` `cf5699922`. **15 nuclei CORE MAIN, 8 voci PARZIALI** su 23 ID Builder; questo non certifica la QA browser completa. Il precedente conteggio 13/10 più sotto resta esclusivamente **storico**.
