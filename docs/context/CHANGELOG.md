@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
@@ -41,6 +43,7 @@
 - Cambio a pagamento dal Centro di controllo › Cantieri, scheda «Pendenza dei tetti»: costo per tetto (`ROOF_PITCH_COST`: 3 legno / 4 legno + 1 oro / 6 legno + 2 oro), cantieri esclusi; le nuove costruzioni seguono la pendenza. Comandi `ConquerGame.commands.roofPitchQuote/setRoofPitch`.
 - Correzione cache: la firma del bitmap del corpo castello e quella degli sprite struttura includono ora stile delle merlature e pendenza, così il cambio si vede senza ricaricare.
 - QA: Lab con le tre pendenze su torre quadrata, rotonda, due falde, porta grande e piccola; regressioni Node PASS tranne `asset-catalog-regression`, che fallisce identica su main. Asset audit 1081 render, 0 falliti, baseline aggiornata. CI non ancora eseguita.
+
 ## 2026-11-05 — Camino laterale delle case L1 (branch `fix/l1-chimney`)
 
 - Le casette L1 hanno un solo camino, in pietra, addossato a una testata, da terra oltre la paglia (prima due camini sul colmo sulle casette da 2 U). La finestra della testata lascia il posto al camino. Nuovo pezzo `chimneySide` nel kit Blender e nel Lab.

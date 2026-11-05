@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
 
 - **Aggiornamento porto**: moli L4 e L12 (`reach`, i moli salvati prima restano L8); piazzamento solo costa + approdo nella whitezone, senza regole di terreno edificabile (pendenze, bosco, terreno irregolare ammessi; impalcato sopra il terreno più alto dell'approdo). Nuova **banchina in pietra** (`src/settlement-quay.js`, `type:'quay'`): 2U, due clic lungo la riva o in acqua, solo whitezone + contatto con il mare, lato mare fissato al piazzamento, bitte sul bordo; i moli si agganciano al bordo verso il mare (`onQuay`, impalcato a filo della banchina).
