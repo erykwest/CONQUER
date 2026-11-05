@@ -224,7 +224,7 @@ function castleBodyVisualSignature(){
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
     1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
-    !!window.__polygonClipping,items
+    !!window.__polygonClipping,crenelStyle(),roofPitch(),items
   ]);
 }
 function drawCastleBodyBitmap(){
