@@ -256,7 +256,14 @@
     }
     if(owner==='lord'){
       const keep=quantity*(100-(e.saleShare[good]||0))/100;
-      const received=Math.min(keep,Math.max(0,(e.target[good]||0)-(e.castle[good]||0)));
+      // With a stockyard, logging output has a tangible local reserve.
+      // The charter starts at 200 wood while the old target is only 70:
+      // otherwise the castle's visible stock never grows despite production.
+      const lumberYard=good==='wood'&&e.activities?.[id]?.type==='loggingCamp'&&
+        (window.ConquerStorageYard?.capacity?.()||0)>0;
+      const headroom=lumberYard?window.ConquerStorageYard.free():
+        Math.max(0,(e.target[good]||0)-(e.castle[good]||0));
+      const received=Math.min(keep,headroom);
       e.castle[good]=round(e.castle[good]+received);
       quantity-=received;
     }
@@ -754,6 +761,12 @@
       welfare:e.welfare,happiness:{...e.happiness},rationMode:rationMode(),
       castleFoodIssued:round(Object.values(e.lastTrade?.castleRations||{}).reduce((a,b)=>a+finite(b),0)),
       activities:Object.keys(e.activities).length,
+      stockyard:window.ConquerStorageYard?{
+        capacity:window.ConquerStorageYard.capacity(),
+        used:window.ConquerStorageYard.used(),
+        free:window.ConquerStorageYard.free(),
+        count:window.ConquerStorageYard.active().length
+      }:null,
       balance:e.lastBalance||null,investmentCapacity:round(finite(e.investmentCapacity)),
       commerce:window.ConquerCommerce?.snapshot?.()||null,
       weeks:e.weeks,months:e.months,years:e.years,panelHistory:e.panelHistory?.slice(-26)||[]};
@@ -775,6 +788,7 @@
       '<div class="kv"><span>Food policy · castle food issued</span><b>'+({market:'Market only',full:'Full rations',half:'Half rations'}[s.rationMode])+' · '+fmt(s.castleFoodIssued)+'</b></div>'+
       '<div class="kv"><span>L1 builders / herders / loggers / idle</span><b>'+jobs.building+' / '+jobs.herding+' / '+jobs.logging+' / '+jobs.idle+'</b></div>'+
       (jobs.foodRisk?'<div class="legend">⚠ Food supply at risk · protected herders: '+jobs.protectedHerders+'</div>':'')+
+      (s.stockyard?'<div class="kv"><span>Piazzale · magazzino (scorte del castello)</span><b>'+fmt(s.stockyard.used)+' / '+fmt(s.stockyard.capacity)+' · '+s.stockyard.count+' piazzali</b></div>':'')+
       '<div class="kv"><span>Castle economic gold</span><b>'+fmt(s.castleGold)+'</b></div>'+
       '<div class="kv"><span>L1 builders paid by lord</span><b>'+fmt(s.constructionPayroll)+' gold</b></div>'+
       '<div class="kv"><span>Spontaneous spawn labor (embedded estimate)</span><b>'+fmt(s.spontaneousSpawnLabor)+' gold</b></div>'+
