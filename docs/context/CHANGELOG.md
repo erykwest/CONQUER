@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+05/11/2026 — `feature/roof-pitch-75` (BC-251105-08): pendenza dei tetti a 75° aggiunta al set 30/45/60° (`ROOF_PITCHES`, `ROOF_PITCH_COST[75]` = 9 legno · 3 oro · 1 pietra per tetto), opzione nella scheda «Pendenza dei tetti». Asset Lab: torri e porte a falde in pietra hanno gli stati «Tetto 30°/60°/75°» (gruppo `pendenza`, cattura con `State.policies.roofPitch` temporaneo). Nuova `qa/roof-pitch-regression.cjs` (in CI `tower-variants-regression`). Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: estende un contratto già esistente.
+
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)

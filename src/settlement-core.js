@@ -300,11 +300,13 @@ const CRENEL_STYLE_COST=Object.freeze({
 // Feudal roof pitch: one slope for every pitched tower and gate roof (degrees), stored in
 // State.policies like the crenel style. Re-roofing is paid per roof at the target pitch's rate;
 // steeper roofs take more timber. 45° is the default, the closest to the historical ~40° roofs.
-const ROOF_PITCHES=Object.freeze([30,45,60]);
+// 75° is the steep spire (rise ≈ 3.7 × half span): the dearest, with stone for the taller gables.
+const ROOF_PITCHES=Object.freeze([30,45,60,75]);
 const ROOF_PITCH_COST=Object.freeze({
   30:Object.freeze({wood:3}),
   45:Object.freeze({gold:1,wood:4}),
-  60:Object.freeze({gold:2,wood:6})
+  60:Object.freeze({gold:2,wood:6}),
+  75:Object.freeze({gold:3,stone:1,wood:9})
 });
 function roofPitch(){const v=Number(State.policies?.roofPitch);return ROOF_PITCHES.includes(v)?v:45}
 function roofPitchTan(){return Math.tan(roofPitch()*Math.PI/180)}

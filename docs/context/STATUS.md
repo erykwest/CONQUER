@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+Sul branch `feature/roof-pitch-75` (da `main` b1a2307, NON MAIN) la pendenza dei tetti a 75° (BC-251105-08) è selezionabile nella scheda «Pendenza dei tetti» al costo di 9 legno + 3 oro + 1 pietra per tetto. `node qa/roof-pitch-regression.cjs`: 3 check passati in locale. Audit Asset Lab locale (`--category=Fortificazioni`, Windows): 790 render, 0 falliti, 60 nuovi (gli stati «Tetto 30°/60°/75°»), rivisti nel foglio `fortificazioni-torri`; aggiunti alla baseline solo i 60 nuovi. I 391 «changed» su danni/cutaway/intatti sono deriva della macchina locale rispetto alla baseline e non sono stati accettati. CI del branch da verificare.
+
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)

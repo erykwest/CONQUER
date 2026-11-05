@@ -283,7 +283,7 @@
       roofPitchCard()
     ]);
   }
-  const PITCHES = [[30,'30°','Tetti bassi, il più economico.'],[45,'45°','Pendenza di base.'],[60,'60°','Tetti ripidi a guglia: più legname.']];
+  const PITCHES = [[30,'30°','Tetti bassi, il più economico.'],[45,'45°','Pendenza di base.'],[60,'60°','Tetti ripidi a guglia: più legname.'],[75,'75°','Guglie slanciate: il più costoso, serve anche pietra.']];
   function roofPitchCard() {
     const cmd = window.ConquerGame?.commands;
     if(!cmd?.roofPitchQuote)return '';

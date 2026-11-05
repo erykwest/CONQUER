@@ -56,6 +56,10 @@
     for(const p of BUILD_STEPS)out.push({id:'build-'+Math.round(p*100),label:'Cantiere '+Math.round(p*100)+'%',group:'costruzione',progress:p});
     for(const [phase] of SP().galleryPhases(spec).slice(1))out.push({id:'damage-'+slug(phase),label:phase,group:'danno',phase});
     if(cutawayEligible(s))out.push({id:'cutaway',label:'Cutaway',group:'cutaway'});
+    // Pitched stone roofs: one state per non-default feudal pitch (ROOF_PITCHES, 45° is "intact").
+    const pitched=s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='pitched'||
+      s.type==='gate'&&gateRoofStyle(s)==='pitched'&&!gateTimberUpper(s);
+    if(pitched)for(const p of ROOF_PITCHES)if(p!==45)out.push({id:'pitch-'+p,label:'Tetto '+p+'°',group:'pendenza',pitch:p});
     return out;
   }
   // Fixed light, weather and clock: two captures of the same state are comparable.
@@ -132,6 +136,9 @@
     // Breaches split a wall into new segments with uid() (crypto.randomUUID): counted ids keep their
     // rubble seeds stable too.
     let serial=0;crypto.randomUUID=()=>'assetlab-'+id+'-'+(serial++);
+    // Pitch states set the feudal roof pitch for this capture only (roofPitch() reads State.policies).
+    const policies=State.policies||(State.policies={}),keepPitch=policies.roofPitch;
+    policies.roofPitch=state.pitch??45;
     try{
       const t=[realNow()],lap=()=>t.push(realNow());
       clear();steady(rotation,scale);lap();
@@ -177,6 +184,7 @@
       return{...result,dataUrl,width:w,height:h,origin:[x0,y0],ms:{clear:ms[0],empty:ms[1],stage:ms[2],full:ms[3],mask:ms[4],encode:ms[5]}};
     }finally{
       delete performance.now;delete crypto.randomUUID;
+      if(keepPitch===undefined)delete policies.roofPitch;else policies.roofPitch=keepPitch;
       State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache(STRUCTURE_LAYERS);
       if(v.spec.type==='house')invalidateUrbanGeometry();
     }

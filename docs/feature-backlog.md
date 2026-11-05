@@ -53,7 +53,7 @@
 - [ ] **BC-251105-07 — Torri W2 × H4? [DA VALUTARE].** Verificare fattibilità e coerenza geometrica, funzionale e di gameplay dell'altezza H4 per larghezza W2; **non** trattare H4 come già approvato.
 
 ### Coperture
-- [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
+- [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60°, mergiato in main con PR #157). **Implementato su `feature/roof-pitch-75` (NON MERGE):** `ROOF_PITCHES` 30/45/60/75, costo 75° = 9 legno + 3 oro + 1 pietra per tetto, scheda «Pendenza dei tetti», stati «Tetto 30°/60°/75°» nell'Asset Lab, `qa/roof-pitch-regression.cjs`.
 - [ ] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare.
 - [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
 

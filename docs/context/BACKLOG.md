@@ -17,7 +17,7 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 
 - **Mura/camminamenti:** BC-251105-01 scala lignea; 02 scala lapidea; 03 edifici addossati; 04 merlature doppie (distinte dallo stile a doppia falda esistente).
 - **Torri:** BC-251105-05 inner roof; 06 torre lignea H2 con frame; 07 torre W2 × H4 **solo da valutare**.
-- **Coperture:** BC-251105-08 75° (estensione da valutare al set 30°/45°/60° su branch); 09 tetti Longhouse; 10 tetti edifici addossati.
+- **Coperture:** BC-251105-08 75° (in PR su `feature/roof-pitch-75`, il set 30°/45°/60° è in main); 09 tetti Longhouse; 10 tetti edifici addossati.
 - **Ambiente:** BC-251105-11 giardino (tipo e funzione da definire).
 - **Terreno/percorsi:** BC-251105-12 rampe per collegare quote e superare pendii ripidi; 13 scalinate pedonali sui dislivelli delle colline, con raccordi a terreno e terrazzamenti. Requisiti di navigabilità/pathfinding e QA; **distinte** dalle scale per i camminamenti delle mura (01/02). Stato: **APERTO**, non implementato.
 - **Dipendenze:** `feat/roof-pitch`, `feature/wood-longhouse`, camminamenti e cutaway; nessun completamento o QA attestato da questo inserimento.
@@ -40,7 +40,8 @@ Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 
 ## Pendenza dei tetti di torri e porte (05/11/2026)
 
 - **IN CORSO su branch, NON MERGE:** pendenza globale 30/45/60° con cambio a pagamento. Dettagli in [STATUS](STATUS.md).
-- Aperti: estendere a case, sezioni costruite e garitte se richiesto; regressione Node dedicata a `roofPitchQuote`.
+- 30/45/60° in main (PR #157). **75° (BC-251105-08) su branch `feature/roof-pitch-75`, NON MERGE**, con regressione `qa/roof-pitch-regression.cjs` su `roofPitchQuote`.
+- Aperti: estendere a case, sezioni costruite e garitte se richiesto.
 
 ## Long house in legno W1 / W2 (04/11/2026)
 
