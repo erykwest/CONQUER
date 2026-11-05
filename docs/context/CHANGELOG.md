@@ -779,3 +779,8 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 
 ### 2026-10-29 — CIRCLE QA GitHub Actions
 - Creato workflow `.github/workflows/circle-regression.yml` per test Node.js 22 e syntax checks ad ogni push rilevante su `circle`. [Run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993) su codice `68533977`: **PASS 65/65 test**. Restano da eseguire smoke test browser/UI e profiling dinamico.
+
+
+## Campi L2 — 05/11/2026
+
+Branch fix/fields-l2-only — scelta utente campi solo L2, sincronizzazione ledger e figure, regressioni su esclusione L1 e prenotazioni L2. Chiusura residuo jobmanager e pulizia dopo merge.

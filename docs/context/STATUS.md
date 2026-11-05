@@ -978,3 +978,8 @@ Aggiornare questo livello dopo ogni PR che modifica una milestone, non dopo ogni
 ### CIRCLE — CI eseguita su GitHub Actions (2026-10-29)
 - **SUPERATA:** workflow [CIRCLE regression, run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993), commit codice `68533977ff48b200061828141f9eafbee9b0570f`. Test eseguiti con Node.js 22 su GitHub: **65 test, 65 PASS, 0 FAIL, 0 SKIP**; controllo sintassi JS PASS. Questo *sostituisce* la precedente nota "Node CLI non eseguito".
 - **Non ancora verificati:** esecuzione browser WebGL2/Canvas, assedio manuale in partita con molti compartimenti, profiling sul numero di strutture e popolani. `main` resta intatto.  
+
+
+## Campi L2 — 05/11/2026
+
+Nel branch fix/fields-l2-only i campi richiedono esclusivamente L2 sia nel ledger sia nelle assegnazioni fisiche. Gli L1 restano disponibili per gli altri lavori. Colture salvate conservate, assegnazioni ricalcolate. Nessun raccolto lavorato da L1 in assenza di L2. D-051 risolta per scelta dell’utente. QA locale campi, lavoro, economia, razioni, industrie e cantieri eseguita prima della PR. Pulizia jobmanager prevista dopo il merge, archivio archive/jobmanager conservato.
