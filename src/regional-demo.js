@@ -5,7 +5,8 @@
   let demo=null;
   if(params.has('regionalDemo')){
     try{demo=JSON.parse(params.get('regionalData')||sessionStorage.getItem('conquer.regional-demo.'+params.get('regionalDemo'))||'null')}catch{}
-    if(demo?.terrain){const biome=window.ConquerRegionalBiomeRules?.biomeForTerrain(demo.terrain);if(biome)demo.biome=biome;else demo=null}
+    const biome=window.ConquerRegionalBiomeRules?.biomeForTerrain(demo?.terrain);
+    if(biome)demo.biome=biome;else demo=null;
   }else if(allowed.includes(params.get('demo'))){
     demo={version:1,biome:params.get('demo'),seed:Number(params.get('seed')||4242),name:'Demo '+params.get('demo'),neighbors:[]};
   }

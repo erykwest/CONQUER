@@ -12,7 +12,7 @@ assert.equal(launch('?demo=river&seed=4242').seed,4242);
 assert.ok(launch('?regionalDemo=missing').error,'missing context shows an error, never fake plains');
 assert.ok(launch('?demo=unknown').error,'malformed demo never opens player save');
 assert.equal(launch('?demo=river&seed=bad').seed,4242);
-assert.equal(launch('?regionalDemo=abc',{version:1,biome:'forest',seed:123,name:'A1'}).seed,123);
+assert.ok(launch('?regionalDemo=abc',{version:1,biome:'plains',seed:123,name:'A1'}).error,'old payload without authoritative terrain cannot masquerade as plains');
 for(const [terrain,biome] of Object.entries({plain:'plains',forest:'forest',hills:'mountains',sea:'sea',swamp:'swamp',lake:'lake'})){
   const payload={version:1,biome:'plains',terrain,seed:123,name:'Foresta è'};
   const demo=launch('?regionalDemo=abc&regionalData='+encodeURIComponent(JSON.stringify(payload)));
