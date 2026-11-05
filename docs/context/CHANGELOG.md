@@ -140,6 +140,7 @@ Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. A
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
+- DEV **Carica layout**: layout di prova salvati in `layouts/<nome>.json` (stesso formato del salvataggio locale) e richiamabili dal menu DEV. Primo layout `TEST`: Portoreale, villaggio medio con castello a 4 torri in cutaway con stanze e arcieri, mura T3 pattugliate, porta con guardie, campo d'addestramento, molo militare e commerciale, 6 navi, pattuglie di picchieri.
 - Personaggi con profondità in WebGL: contadini, lavoratori con attrezzo, carpentieri e marinai passano dal meccanismo dei soldati (carta con test di profondità). Ogni posa si dipinge una volta in un atlante 2048 (riquadri 96 px, 441 posti, sfratto dei meno usati), le animazioni sono divise in 8 fasi, la direzione è la stessa carta ribaltata, alla GPU va solo la casella nuova. Le pose degli equipaggi si preparano nei tempi morti. Ora uno scafo, una vela o un molo davanti nascondono il personaggio.
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
 - Magnete delle mura sui lati della banchina: muro dritto all'esterno, addossato alla faccia, alla quota della banchina su zoccolo.
