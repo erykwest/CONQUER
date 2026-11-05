@@ -16,6 +16,10 @@
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
+    {global:'ConquerShipModels',collection:'lab',category:'Veicoli',family:'Navi'},
+    {global:'ConquerFishingModels',collection:'models',category:'Produzione',family:'Pescatori'},
+    {global:'ConquerShipyardModels',collection:'models',category:'Produzione',family:'Cantiere navale'},
+    {global:'ConquerWatersideModels',collection:'models',category:'Territorio',family:'Riva e approdi'},
     {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
     {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
     {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
@@ -60,13 +64,18 @@
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',garderobe:'Latrina a sbalzo (garderobe)',
+    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
+    netRack:'Rete stesa ad asciugare',fishRack:'Rastrelliera del pesce',fishBaskets:'Ceste del pescato',
+    slipwayL1:'Scalo di varo L1',slipwayL2:'Scalo di varo L2',shed:'Tettoia del cantiere navale',frames:'Ossatura di scafo',
+    barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare',garderobe:'Latrina a sbalzo (garderobe)',
     infirmaryBed:'Letto d’infermeria',herbShelf:'Scaffale delle erbe',washBasin:'Bacile',
     lantern:'Colombaia · lanterna sul tetto',nestWall:'Colombaia · parete dei nidi',perch:'Colombaia · posatoio',
     belfry:'Castello campanario · campana d’allarme',
     justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
+    const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
+    if(ship)return ship.label+(ship.size==='large'?' · grande':' · piccola')+(furled?' · vele alzate':' · vele spiegate');
     const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
     return m?(nameOverrides[m[1]]||prettify(m[1]))+' · livello '+m[2]:prettify(key);
   }
@@ -107,8 +116,10 @@
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
-            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js'}[source.global]),
-        format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key:null});
+            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',
+            ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js',ConquerWatersideModels:'waterside-models.js'}[source.global]),
+        format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
+          :source.global==='ConquerShipModels'&&window.ConquerShipModels.ships?.[key.replace(/Furled$/,'')]?'ship:'+key.replace(/Furled$/,''):null});
     }
   }
   const animals=window.ConquerAnimalModels||{};

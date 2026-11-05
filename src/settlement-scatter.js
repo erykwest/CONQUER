@@ -11,7 +11,8 @@
   const MAX_PROPS=240,EDGE=1,GAP=.08;
   // Real scale reads well for vehicles; small props are enlarged a little to stay legible
   // at play zoom (same spirit as the figures).
-  const FAMILY_SCALE={carts:1,signs:1.15,goods:1.3,wheels:1.3,materials:1.3,farm:1.3,work:1.3};
+  const FAMILY_SCALE={carts:1,signs:1.15,goods:1.3,wheels:1.3,materials:1.3,farm:1.3,work:1.3,riverbank:1.7};
+  const MAX_RIVER=600;
   const scaleOf=asset=>FAMILY_SCALE[M().assets[asset]?.family]||1;
   // Context -> weighted asset choices. Seasonal entries are filtered in pick().
   const RULES={
@@ -49,9 +50,10 @@
     for(const s of State.structures){
       if(s.type==='road'){if(s.a&&s.b)roads.push({a:s.a,b:s.b,half:(Number(s.width)||.5)*.36+.12});continue}
       if(s.type==='field'){polys.push(fieldPoints(s));continue}
-      if(['wall','palisade','built','moat','bridge'].includes(s.type)&&s.a&&s.b){roads.push({a:s.a,b:s.b,half:(Number(s.width)||.6)/2+.15});continue}
+      if(['wall','palisade','built','moat','bridge','quay'].includes(s.type)&&s.a&&s.b){roads.push({a:s.a,b:s.b,half:(Number(s.width)||.6)/2+.15});continue}
       let list=[];
       try{list=urbanBuildingPolygons(s)}catch{}
+      if(!list.length&&window.ConquerPier?.is(s))list=[window.ConquerPier.footprint(s)];
       if(!list.length&&window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];list=[rectWorldPoints(s.x,s.y,t.w,t.h,s.angle||0)]}
       if(!list.length&&Number.isFinite(s.x))list=[rectWorldPoints(s.x,s.y,pointRadius(s)*2,pointRadius(s)*2,0)];
       for(const pts of list)if(pts?.length>2)polys.push(pts);
@@ -200,6 +202,42 @@
       const a=pick(rnd,'roadside',{});if(a)tryPlace(out,obs,a,[{x:m.x-uy*off*side,y:m.y+ux*off*side}],Math.atan2(uy,ux),'roadside',r.id);
     }
   }
+  // ---------- riverbanks: reeds at the water's edge, stones in the shallows, bushes up the bank,
+  // walked along each river and stream on both sides (seeded per watercourse). Kept off roads,
+  // bridges, buildings, the sea and the other props; they are allowed right by the water.
+  const BANK=[
+    // asset, weight, offset from the water's edge (U, negative = in the water)
+    ['reedBed',4,-.15],['reedClump',4,.05],['riverStones',2,-.1],['bankBush',3,.75],['bushSmall',3,.5],['riverBoulder',1,.35]
+  ];
+  function bankFree(p,r,obs,placed){
+    if(p.x<EDGE+r||p.y<EDGE+r||p.x>WORLD-EDGE-r||p.y>WORLD-EDGE-r)return false;
+    for(const f of State.environment||[])if(['sea','pond','mountain'].includes(f.type)&&environmentContains(f,p,r))return false;
+    if(terrainSlopeKind(p)==='steep')return false;
+    for(const rd of obs.roads)if(pointSegmentDistance(p,rd.a,rd.b)<rd.half+r)return false;
+    for(const pts of obs.polys)if(pointInPolygon(p,pts)||distToPoly(p,pts)<r+GAP)return false;
+    for(const q of placed)if(Math.hypot(q.x-p.x,q.y-p.y)<q.r+r+GAP)return false;
+    return true;
+  }
+  function riverProps(out,obs,placed){
+    const total=BANK.reduce((s,[a,w])=>s+(M().assets[a]?w:0),0);if(!total)return;
+    for(const f of State.environment||[]){
+      if(!['river','stream'].includes(f.type)||!(f.points?.length>1))continue;
+      const rnd=rngFor('bank:'+f.id),half=(Number(f.width)||1)/2,step=f.type==='river'?.85:1.1;
+      for(let i=0;i<f.points.length-1;i++){
+        const a=f.points[i],b=f.points[i+1],L=Math.hypot(b.x-a.x,b.y-a.y);if(!L)continue;
+        const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;
+        for(let d=rnd()*step;d<L;d+=step*(.7+rnd()*.6))for(const side of [1,-1]){
+          if(out.length>=MAX_RIVER)return;
+          if(rnd()<.2)continue;
+          let r=rnd()*total,pick=BANK[0];for(const e of BANK){if(!M().assets[e[0]])continue;if((r-=e[1])<0){pick=e;break}}
+          const [asset,,edge]=pick,A=M().assets[asset],s=scaleOf(asset),rad=A.r*s;
+          const off=half+edge+(rnd()-.5)*.3,p={x:a.x+ux*d-uy*off*side,y:a.y+uy*d+ux*off*side};
+          if(!bankFree(p,rad*.8,obs,placed.concat(out)))continue;
+          out.push({asset,x:p.x,y:p.y,r:rad*.8,s,heading:rnd()*Math.PI*2,ctx:'riverbank',owner:f.id});
+        }
+      }
+    }
+  }
   function layout(){
     if(!M()||!Array.isArray(State.structures))return[];
     // Civic lot props (churchyard, inn tables) are placed first and kept clear of.
@@ -218,7 +256,9 @@
     roadProps(out,obs);
     houseProps(out,obs,fields);
     fieldProps(out,obs,fields);
-    return out.slice(pre.length,pre.length+MAX_PROPS);
+    const props=out.slice(pre.length,pre.length+MAX_PROPS),bank=[];
+    riverProps(bank,obs,out);
+    return props.concat(bank);
   }
   // Everything layout() reads, as a cheap string (callers cache layouts by it).
   function signature(){
@@ -251,5 +291,5 @@
     }
     return out;
   }
-  window.ConquerScatter={layout,signature,worldMesh,RULES,COUNTS,__qa:{buildObstacles,free,blockedByTerrain}};
+  window.ConquerScatter={layout,signature,worldMesh,RULES,COUNTS,BANK,__qa:{buildObstacles,free,blockedByTerrain,bankFree}};
 })();

@@ -71,6 +71,7 @@
       civic: t.placementSpec?.type && t.kind === 'civic' ? t.placementSpec.type : null,
       industry: t.industry || null,
       extraction: t.placementSpec?.extractionMode || null,
+      reach: t.placementSpec?.reach || null,
       venue: t.kind === 'event' ? t.venue || null : null,
       mode: t.mode || null,
       radius: t.radius ?? null,

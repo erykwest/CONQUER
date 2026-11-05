@@ -129,14 +129,19 @@ const CATALOG = [
       return rows;
     } },
   { id: 'roads', hint: T.hints.linear, press: '[data-main-road]', is: s => s.tool.kind === 'linear' && s.tool.linear === 'road' },
-  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => s.tool.kind === 'crossing',
-    rows: s => [
-      { label: O.type, options: [
+  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => ['crossing', 'pier', 'quay'].includes(s.tool.kind),
+    rows: s => {
+      const rows = [{ label: O.type, wrap: true, options: [
         opt(V.dry, '[data-crossing="dry"]', s.tool.crossing === 'dry'),
         opt(V.water, '[data-crossing="water"]', s.tool.crossing === 'water'),
         opt(V.woodBridge, '[data-crossing="wood"]', s.tool.crossing === 'wood'),
-        opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone')] },
-      { label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) }] },
+        opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone'),
+        opt(V.pier + ' L4', '[data-pier="4"]', s.tool.kind === 'pier' && s.tool.reach === 4),
+        opt(V.pier + ' L12', '[data-pier="12"]', s.tool.kind === 'pier' && s.tool.reach === 12),
+        opt(V.quay, '[data-quay]', s.tool.kind === 'quay')] }];
+      if (s.tool.kind === 'crossing') rows.push({ label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) });
+      return rows;
+    } },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
     rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild'].map(k =>
       opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },

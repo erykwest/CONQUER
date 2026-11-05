@@ -1,7 +1,7 @@
 'use strict';
 // Biomes follow the COFFEE BATTLES MapEngine recipes (counts per biome, sizes scaled from its
 // 90U battlefield to the 200U world): terraced hills, mountain chains, water, woods and ponds.
-// Foresta is one woodland over the map with ~20% clearings; the sea covers at most 20%;
+// Foresta is one woodland over the map with ~20% clearings; the sea covers at most 30%;
 // watercourses meander; mountain chains have steep main peaks plus ~2x secondary summits.
 // Real runtime harness shared with the urban regression suite.
 const fs=require('node:fs');
@@ -51,7 +51,7 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   if(r.water)assert.ok(r.sinuosity>=1.12,tag+'watercourse too straight: '+r.sinuosity.toFixed(3));
   assert.ok(r.ponds<=(e.ponds||0),tag+'ponds '+r.ponds);
   assert.equal(r.sea,!!e.sea,tag+'sea');
-  assert.ok(r.seaShare<=.20+1e-9,tag+'sea covers '+(100*r.seaShare).toFixed(1)+'%');
+  assert.ok(r.seaShare<=.30+1e-9,tag+'sea covers '+(100*r.seaShare).toFixed(1)+'%');
   assert.equal(r.continuous,!!e.continuous,tag+'continuous woodland');
   if(e.continuous)assert.ok(r.open>=.18&&r.open<=.40,tag+'open ground '+(100*r.open).toFixed(1)+'%');
   assert.ok(r.maxHeight<=4,tag+'hill height '+r.maxHeight);

@@ -235,6 +235,7 @@ function structureHeight(s){
   if(s.type==='moat')return 0;
   if(s.type==='ruin')return Number(s.ruinHeight)||.8;     // the stump a fallen tower or gate leaves
   if(window.ConquerIndustries?.is(s))return .35;
+  if(s.type==='pier'||s.type==='quay')return .6;
   if(s.type==='house')return houseStructureHeight(s);
   if(isCivicAnnex(s)){const spec=civicAnnexDefinition(s);return !spec?0:spec.kind==='garden'||spec.kind==='yard'?.18:spec.kind==='stall'?.95:1.55;}
   if(s.type==='market')return .78;
@@ -252,7 +253,7 @@ function footprintPoints(s){
   if(isOrientedTower(s))return orientedTowerOutline(s);
   if(['tower','gate','ruin'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
-  if(['wall','palisade','built','moat','bridge'].includes(s.type))return linePoly(s);
+  if(['wall','palisade','built','moat','bridge','quay'].includes(s.type))return linePoly(s);
   if(s.type==='house'){
     const parts=houseFootprintParts(s),pts=parts.flatMap(p=>p.points);
     if(parts.length===1)return pts;
@@ -261,6 +262,7 @@ function footprintPoints(s){
   }
   if(s.type==='field')return fieldPoints(s);
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.footprint(s);   // event venues (settlement-events3d.js)
+  if(window.ConquerPier?.is(s))return window.ConquerPier.footprint(s);
   if(isCivicAnnex(s))return civicAnnexFootprint(s);
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){
@@ -359,7 +361,8 @@ function unionGroundContactRings(polys){
 }
 const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild']);
 function isPlacementFoundationBuilding(s){
-  return !!s&&!s.auto&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
+  // A tower against a quay stands on the quay's plinth instead (settlement-quay.js).
+  return !!s&&!s.auto&&!s.quaySnap&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
 }
 function placementFoundationProfile(s){
   if(!isPlacementFoundationBuilding(s))return null;
@@ -467,6 +470,8 @@ function structureTerrainSamples(s){
 function buildableTerrainElevationForStructure(s){
   const terraceZ=window.ConquerTerraforming?.wallGroundZ(s);
   if(terraceZ!=null)return terraceZ;
+  const quayZ=window.ConquerQuay?.wallGroundZ(s);   // a wall built along a quay stands on its coping
+  if(quayZ!=null)return quayZ;
   const samples=structureTerrainSamples(s);if(!samples.length)return 0;
   let level=null;
   for(const p of samples){

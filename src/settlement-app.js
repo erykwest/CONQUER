@@ -18,7 +18,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-event-venue],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-event-venue],[data-pier],[data-quay],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   if(hardNavigation){
@@ -77,6 +77,7 @@ function addStructure(s){
   // Town hall and guild hall are bound to the well whose square they stand on.
   if(typeof isWellCivic==='function'&&isWellCivic(s))s.wellId=wellCivicPlacementCheck(s).well?.id||null;
   normalizeStructureRotation(s);
+  window.ConquerQuay?.faceWallOut(s);
   normalizeCivicDevelopment(s);
   normalizeStructureVariants(s);
   if(['tower','gate','built'].includes(s.type))normalizeFunctions(s);
@@ -92,6 +93,14 @@ function addStructure(s){
       // Industries were already surveyed by their own resource-specific preflight.
       // Quarry and mine intentionally occupy rocky slopes, not flat terraces.
       s.groundZ=window.ConquerIndustries.validate(s).ground;
+    }else if(window.ConquerPier?.is(s)){
+      // The landing is on the shore, the rest of the deck stands over the sea.
+      const site=window.ConquerPier.validate(s);
+      s.groundZ=site.ground;s.onQuay=site.onQuay||null;
+    }else if(window.ConquerQuay?.is(s)){
+      // Quay top at the deck level, its sea face fixed once at placement.
+      const site=window.ConquerQuay.validate(s);
+      s.groundZ=0;s.seaSide=site.side;s.length=dist(s.a,s.b);
     }else{
       const groundZ=linearBuildGroundZ(s);
       if(groundZ==null){status(s.type==='wall'?wallTerrainVerdict(s).reason:'Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
@@ -147,6 +156,7 @@ function linearRouteStructures(route,endSnapId,spec){
     if(groupId)s.routeGroupId=groupId;
     if(jointId&&i===0)s.bJoint=jointId;
     if(jointId&&i===route.segments.length-1)s.aJoint=jointId;
+    window.ConquerQuay?.faceWallOut(s);   // rule: quay walls show their exterior to the water
     return s;
   });
 }

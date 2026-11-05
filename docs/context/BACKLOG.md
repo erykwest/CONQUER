@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MARE — Porti e molo (branch `mare`, 02/11/2026)
+
+- **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
+- **Navi**: 5 modelli Blender pronti (3 piccole, 2 grandi), solo nell'Asset Lab.
+- **Navi in gioco**: flotta di test nel menu DEV (non salvata). **DA FARE**: salvataggio, arrivo/partenza in navigazione, selezione della nave nel gioco, ordine con il renderer WebGL invece del livello sovrapposto, picchi di disegno isolati.
+- **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
+- **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
+- **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.
+- **Battaglia navale**: dimostrazione nel menu DEV fatta. **DA FARE**: battaglie decise dal gioco (ordini, flotte, regni), vincitore che cattura invece di bruciare, uomini in acqua/scialuppe, legame con Combat/Siege ed economia (perdite, bottino).
+- **Equipaggi**: civili e militari fatti (marinai, gabbieri, arcieri, armigeri); **DA FARE** marinai visibili in gioco (dipende dalle navi in gioco), legame con popolazione/economia.
+- **DA FARE**: regni stranieri con araldica propria dalla mappa del mondo (oggi 3 segnaposto in `ConquerShips.FOREIGN`); navi ormeggiate agli attracchi e in navigazione; audit Asset Lab + baseline delle navi; ruolo economico del porto (commercio via mare, pesca); interazione con assedio/incendio/demolizione del molo; scatter in contesto porto anche sulla riva; audit Asset Lab del modello.
 Prestazioni avvio: texture architettoniche preparate offline sul branch `fix/prepare-architecture-textures`. La regressione visiva nel Lab verifica il rendering dei componenti e delle fortificazioni.
 
 Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 24 pose industriali e le due viste base obsolete. Il catalogo conserva le anteprime 3D rotabili.
@@ -742,6 +753,14 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Rilevazione lag:** rendere evidenti cali improvvisi di FPS e picchi di frame time; privilegiare una traccia dei tempi per frame (ms) oppure affiancarla agli FPS per distinguere meglio gli spike.
 - **Impatto minimo:** campionamento e rendering dell'overlay leggeri, buffer temporale limitato a 30 secondi e nessun costo significativo quando disattivato.
 - **QA:** verificare accuratezza, comportamento in pausa e a differenti frame rate, corretto reset della finestra temporale e funzionamento su renderer supportati.
+- Navi: salvare la livrea con la nave quando la flotta verrà persistita (oggi è solo runtime).
+- Pescatori: pesce come bene a parte e pescheria al mercato; percorso delle barche che evita moli e altre navi; il pescatore a piedi tra casa e molo.
+- Uscite via mare: navi mercantili che entrano ed escono dalle 3 uscite di mare; rimuovere nei salvataggi vecchi la strada già costruita verso il mare.
+- Cantiere navale: annullare un ordine; navi straniere e mercantili che usano le uscite via mare.
+- Navi mercantili: carovane mercantili L4 via mare quando i viaggi L4 diventeranno fisici.
+- DEV: togliere il blocco `Fai arrivare qui` dal pannello del molo (`ConquerFleet.devPierHtml`) quando non serve più.
+- Navigazione: evitamento laterale (oggi chi sta dietro aspetta e basta); rotte ricalcolate se un molo viene costruito mentre una nave è in viaggio.
+- Navi militari: più battaglie navali insieme (oggi una sola alla volta), scorta dei convogli, comandi dal pannello (segui; Attracca fatto).
 
 
 ### CIRCLE — 2026-10-28

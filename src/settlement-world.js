@@ -1067,15 +1067,22 @@ function makeEnvWater(rnd,type){
     const off=clamp(base+a1*Math.sin(t*Math.PI*2*f1+p1)+a2*Math.sin(t*Math.PI*2*f2+p2)+noise,8,WORLD-8);
     pts.push(horizontal?{x:t*WORLD,y:off}:{x:off,y:t*WORLD});
   }
-  return{id:'env-'+type,type,points:pts,width:river?3.2:1.25,fill:river?'#3a7684':'#4f8d95',edge:river?'#88b4b8':'#9cc6c6'};
+  return{id:'env-'+type,type,points:pts,width:river?WATER_WIDTH.river:WATER_WIDTH.stream,fill:river?'#3a7684':'#4f8d95',edge:river?'#88b4b8':'#9cc6c6'};
 }
-// The sea covers at most 20% of the map: its mean coast depth is held at or under 40U.
-const SEA_MAX_COVERAGE=.20;
+// Watercourse widths (U). Saved landscapes from before the widening are brought up to them
+// on load (widenWatercourses), so old maps get the wider rivers and streams too.
+const WATER_WIDTH=Object.freeze({river:4.4,stream:1.8});
+function widenWatercourses(env=State.environment){
+  for(const f of env||[])if(WATER_WIDTH[f.type]&&!(Number(f.width)>=WATER_WIDTH[f.type]))f.width=WATER_WIDTH[f.type];
+}
+// The sea covers at most 30% of the map: its mean coast depth is held at or under 60U,
+// so the coast reaches into the buildable zone (50U) and leaves room for harbours.
+const SEA_MAX_COVERAGE=.30;
 function makeEnvSea(rnd){
   const sides=['north','east','south','west'],side=sides[Math.floor(rnd()*sides.length)],coast=[],n=14;
   const waves=Array.from({length:n+1},(_,i)=>Math.sin(i/n*Math.PI*2+rnd()*1.2)*5+(rnd()-.5)*5);
   const meanWave=waves.reduce((s,w)=>s+w,0)/waves.length;
-  const depth=Math.min(26+rnd()*12,WORLD*SEA_MAX_COVERAGE-Math.max(0,meanWave)-.5);
+  const depth=Math.min(46+rnd()*12,WORLD*SEA_MAX_COVERAGE-Math.max(0,meanWave)-.5);
   for(let i=0;i<=n;i++){
     const t=i/n,wave=waves[i];
     if(side==='north')coast.push({x:t*WORLD,y:depth+wave});
@@ -1806,6 +1813,8 @@ function environmentBlocksPoint(p,mode='settlement'){
   // bands, including gentle hill slopes (not just cliff/steep bands).
   if(mode==='road'&&slope)return true;
   if(mode==='settlement'&&slope)return true;
+  // Shore rocks: no roads, no auto houses (settlement-coast.js).
+  if((mode==='road'||mode==='settlement')&&window.ConquerCoast?.rockAt(p))return true;
   for(const f of State.environment){
     if(primary&&f.type==='forest'&&f.continuous)continue;
     if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45))return true;
@@ -1838,10 +1847,39 @@ function growthRng(step,salt=0){
 const BORDER_ENTRY_SIDES=['north','east','south','west'];
 const BORDER_ENTRY_FRACTIONS=[.25,.50,.75];
 const BORDER_ENTRY_BACKUP_FRACTIONS=Array.from({length:19},(_,i)=>(i+1)*.05);
-const ROAD_PLAN_VERSION=3;
+const ROAD_PLAN_VERSION=4;
+// With the sea on one side of the map no main road (nor its sign) leaves on that side: the
+// land exits are the other three edges. The sea has its own three exits instead: the middle
+// of the sea edge and the sea stubs of the two adjacent edges (sea to the west: west, and
+// the sea ends of north and south).
+function mapSeaSide(){return State.environment?.find(f=>f.type==='sea')?.side||null}
+function landBorderSides(){const sea=mapSeaSide();return BORDER_ENTRY_SIDES.filter(e=>e!==sea)}
+const edgeCorners=()=>({north:[{x:0,y:0},{x:WORLD,y:0}],south:[{x:0,y:WORLD},{x:WORLD,y:WORLD}],west:[{x:0,y:0},{x:0,y:WORLD}],east:[{x:WORLD,y:0},{x:WORLD,y:WORLD}]});
+function seaBorderEntries(){
+  const sea=State.environment?.find(f=>f.type==='sea');if(!sea?.coastline?.length)return[];
+  const mid=edgeSample(sea.side,.5),out=[{id:'sea-'+sea.side,edge:sea.side,kind:'sea',x:mid.x,y:mid.y}];
+  const onEdge=(p,edge)=>edge==='north'?p.y<=1e-6:edge==='south'?p.y>=WORLD-1e-6:edge==='west'?p.x<=1e-6:p.x>=WORLD-1e-6;
+  for(const edge of BORDER_ENTRY_SIDES){
+    if(edge===sea.side)continue;
+    const corner=edgeCorners()[edge].find(c=>onEdge(c,sea.side));if(!corner)continue;
+    // The coast meets this edge at its first or last point; the stub runs from the corner.
+    const ends=[sea.coastline[0],sea.coastline[sea.coastline.length-1]];
+    const end=ends.slice().sort((a,b)=>dist(a,corner)-dist(b,corner))[0];
+    const along=edge==='north'||edge==='south'?{x:end.x,y:corner.y}:{x:corner.x,y:end.y};
+    out.push({id:'sea-'+edge,edge,kind:'sea',x:(corner.x+along.x)/2,y:(corner.y+along.y)/2});
+  }
+  return out;
+}
+// A land exit on the sea stub of an edge next to the sea: the border point itself reads as
+// dry, so the test is a step inside the map, with a margin from the coast.
+function borderEntryOnSea(e){
+  const sea=State.environment?.find(f=>f.type==='sea');if(!sea)return false;
+  const p={x:Math.min(WORLD-1,Math.max(1,e.x)),y:Math.min(WORLD-1,Math.max(1,e.y))};
+  return environmentContains(sea,p,4);
+}
 function borderEntryCandidates(){
   const out=[];
-  for(const edge of BORDER_ENTRY_SIDES){
+  for(const edge of landBorderSides()){
     BORDER_ENTRY_FRACTIONS.forEach((t,index)=>{
       const p=edgeSample(edge,t);
       out.push({id:`border-${edge}-${index}`,edge,index,t,x:p.x,y:p.y});
@@ -1850,8 +1888,9 @@ function borderEntryCandidates(){
   return out;
 }
 function validBorderEntrySelection(entries){
-  return Array.isArray(entries)&&entries.length===4&&BORDER_ENTRY_SIDES.every(edge=>
-    entries.some(e=>e?.edge===edge&&(BORDER_ENTRY_FRACTIONS.includes(e.t)||BORDER_ENTRY_BACKUP_FRACTIONS.some(t=>Math.abs(t-e.t)<1e-6))&&
+  const sides=landBorderSides();
+  return Array.isArray(entries)&&entries.length===sides.length&&sides.every(edge=>
+    entries.some(e=>e?.edge===edge&&!borderEntryOnSea(e)&&(BORDER_ENTRY_FRACTIONS.includes(e.t)||BORDER_ENTRY_BACKUP_FRACTIONS.some(t=>Math.abs(t-e.t)<1e-6))&&
       dist(e,edgeSample(edge,e.t))<.001)
   );
 }
@@ -1859,18 +1898,18 @@ function ensureBorderEntrySelection(){
   if(validBorderEntrySelection(State.village.borderEntries))return State.village.borderEntries;
 
   const all=borderEntryCandidates(),rnd=seedRand((State.seed^0x6d2b79f5)>>>0),selected=[];
-  for(const edge of BORDER_ENTRY_SIDES){
+  for(const edge of landBorderSides()){
     const options=all.filter(e=>e.edge===edge);
     const start=Math.floor(rnd()*options.length);
     const ordered=options.map((_,i)=>options[(start+i)%options.length]);
     // Main roads open a cut through woods and get wooden bridges over water.
     // Target selection should reject slopes/sea, not forest or river banks.
-    let choice=ordered.find(e=>!primaryRoadTerrainBlocked(e));
+    let choice=ordered.find(e=>!primaryRoadTerrainBlocked(e)&&!borderEntryOnSea(e));
     if(!choice){
       const base=ordered[0]?.t||.5;
       choice=BORDER_ENTRY_BACKUP_FRACTIONS.slice().sort((a,b)=>Math.abs(a-base)-Math.abs(b-base))
         .map((t,i)=>({id:'border-'+edge+'-alternate-'+i,edge,index:-1,t,...edgeSample(edge,t)}))
-        .find(e=>!primaryRoadTerrainBlocked(e));
+        .find(e=>!primaryRoadTerrainBlocked(e)&&!borderEntryOnSea(e));
     }
     selected.push({...choice||ordered[0]});
   }
@@ -1884,7 +1923,8 @@ function ensureRoadPlan(){
   const well=State.structures.find(s=>s.id===State.village.wellId);if(!well)return[];
   const entries=ensureBorderEntrySelection();
 
-  if(State.village.roadPlanVersion===ROAD_PLAN_VERSION&&Array.isArray(State.village.roadPlan)&&State.village.roadPlan.length===4){
+  State.village.seaEntries=seaBorderEntries();
+  if(State.village.roadPlanVersion===ROAD_PLAN_VERSION&&Array.isArray(State.village.roadPlan)&&State.village.roadPlan.length===entries.length){
     return State.village.roadPlan;
   }
 
@@ -1903,7 +1943,7 @@ function connectSelectedBorderMainRoads(){
   // Synchronous helper for deterministic QA and explicit repair calls.
   // The real app uses connectBorderMainRoadsInFrames, including on reload.
   const well=State.structures.find(s=>s.id===State.village.wellId),plan=ensureRoadPlan();
-  if(!well||plan.length!==4)return 0;
+  if(!well||!plan.length)return 0;
   let changed=0;
   for(const route of plan){
     if(mainRoadRouteDeleted(route.id))continue;
@@ -1924,7 +1964,7 @@ let foundingRoadJob=null;
 function connectBorderMainRoadsInFrames(onDone=()=>{}){
   const village=State.village,well=State.structures.find(s=>s.id===village.wellId);
   const plan=ensureRoadPlan();
-  if(!well||plan.length!==4)return;
+  if(!well||!plan.length)return;
   const job={village};foundingRoadJob=job;
   const active=()=>foundingRoadJob===job&&State.village===village&&village.founded&&State.structures.includes(well);
   function* work(){

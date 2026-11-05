@@ -677,6 +677,8 @@ function drawEnvironment(){
         const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);
       }
       if(f.type==='sea'&&f.coastline){
+        // Beaches in the bays, rocks on the headlands (settlement-coast.js).
+        window.ConquerCoast?.drawGround(projectPath,(pts,c)=>pathPolygon(pts,c,null,0));
         const coast=projectPath(f.coastline);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
       }
     }else if(f.type==='mountain'){
