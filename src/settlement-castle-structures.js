@@ -1416,6 +1416,8 @@ function chimneySpecs(s){
       }
       return specs;
     }
+    // L1 cottage: a single stack on a gable end (houseSideChimney), whatever the ridge length.
+    const side=houseSideChimney(s);if(side)return[side];
     const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),ridgeH=houseRidgeHeight(s);
     const ridgeLength=Math.max(.5,Number(s.w)||1.5);
     const count=Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));

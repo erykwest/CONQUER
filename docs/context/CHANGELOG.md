@@ -35,6 +35,11 @@
 - Nuovo Molo (`settlement-pier.js`): legno su pali, 8U sul mare, merci sulle tavole, due attracchi sinistra/destra; agganciato a menu, anteprima, validazione, costi, render 2D/WebGL e inspector.
 - Cinque navi modellate in Blender (`build_ships.py`): barca, barca da carico, caravella (piccole); cocca, nave latina (grandi). Registrate nell'Asset Lab, regressione `qa/ships-regression.cjs`. Vele alzate per ogni nave e animazione di alzata/ammainata (morph tra i due stati Blender), con anteprima animata nel Lab. Araldica navale: bandiere e armi sulle vele per navi del giocatore e di regni stranieri, solo bandiera per le mercantili; partizioni araldiche spostate in `heraldry-shapes.js` (condivise con l'editor). Equipaggi civili: marinai che camminano sul ponte e gabbieri che salgono sugli alberi per manovrare le vele (`settlement-ship-crew.js`, dati da Blender, `qa/ship-crew-regression.cjs`). Cantiere del molo: materiali solo sull'approdo, nessun oggetto di cantiere in acqua, materiali in legno.
 - Nuova regressione `qa/pier-regression.cjs` e workflow `sea-regression.yml`. ROADMAP e DECISIONS invariati (nessun nuovo contratto oltre la struttura `pier`).
+## 2026-11-05 — Camino laterale delle case L1 (branch `fix/l1-chimney`)
+
+- Le casette L1 hanno un solo camino, in pietra, addossato a una testata, da terra oltre la paglia (prima due camini sul colmo sulle casette da 2 U). La finestra della testata lascia il posto al camino. Nuovo pezzo `chimneySide` nel kit Blender e nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS e ROADMAP invariate (correzione visiva dentro D-057).
+
 ## 2026-11-04 — Long house in legno W1 / W2 (branch `feature/wood-longhouse`)
 
 - Nuova long house lignea: una sezione costruita (`built`) con `material:'wood'`, larga come la W1 (1U) o la W2 (2U), solo piano terra (P0) con le stesse stanze della sezione in pietra al piano terra.
