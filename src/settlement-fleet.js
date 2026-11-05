@@ -232,7 +232,7 @@
       ctx.restore();
     }}));
   }
-  let frame3d=null;
+  let frame3d=null,prewarmedFor=null;
   const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
     frame3d=null;
@@ -273,11 +273,19 @@
       for(const sl of C().sailors(s.crew)){
         const w=C().toWorld(view,sl.local),a=C().toWorld(view,sl.local.map((v,i)=>v+(sl.dir[i]||0)));
         if(w.z<-.05)continue;
+        // WebGL: the sailor is a depth-tested card (hidden by the hull and sails in front of him).
+        const facing=w2sRaw(a,a.z).x>=w2sRaw(w,w.z).x?1:-1;
+        if(gl&&C().sailorFigure?.(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,facing,w.z))continue;
         sprites.push({...w,draw:()=>{
           const p=w2sRaw(w,w.z),q=w2sRaw(a,a.z);
           withProjectionGroundZ(w.z-.1,()=>C().drawSailor(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,q.x>=p.x?1:-1));
         }});
       }
+    }
+    // WebGL: once per crew, the poses of its sailors are painted ahead in idle time.
+    if(gl&&window.ConquerWorld3D?.prewarmFigures&&C().sailorPoses){
+      const crewKey=ships.map(s=>s.id).join();
+      if(crewKey!==prewarmedFor){prewarmedFor=crewKey;window.ConquerWorld3D.prewarmFigures(ships.flatMap(s=>C().sailors(s.crew).flatMap(sl=>C().sailorPoses(C().dot(sl.id,{x:0,y:0})))))}
     }
     sprites.push(...selectionSprites());
     const flags=ships.map(s=>s.flags).filter(Boolean),plank=fighting&&NB.plankMesh();

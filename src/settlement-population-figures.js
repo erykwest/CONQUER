@@ -49,7 +49,14 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
   ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   ctx.restore();
 }
+// Everything that changes how a villager looks (not where): the key of its 3D figure tile.
+function villagerLookKey(dot){
+  const outfit=window.ConquerWardrobe?.outfitFor(dot);
+  return [dot.kind,dot.age,dot.sex,dot.hair||villagerHair(dot.id),(dot.colors||[]).join(','),outfit?JSON.stringify(outfit):''].join('|');
+}
 function drawVillagerFigure(dot){
+  // WebGL: a depth-tested card (settlement-world3d.js figure()), so ships and walls in front hide it.
+  if(window.ConquerWorld3D?.figure?.(dot.p,.10,'v|'+villagerLookKey(dot),()=>drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}}),dot.id))return true;
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
 }
 function drawVillagerFigureUnmasked(dot){

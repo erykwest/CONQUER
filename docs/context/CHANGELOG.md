@@ -2,6 +2,7 @@
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
+- Personaggi con profondità in WebGL: contadini, lavoratori con attrezzo, carpentieri e marinai passano dal meccanismo dei soldati (carta con test di profondità). Ogni posa si dipinge una volta in un atlante 2048 (riquadri 96 px, 441 posti, sfratto dei meno usati), le animazioni sono divise in 8 fasi, la direzione è la stessa carta ribaltata, alla GPU va solo la casella nuova. Le pose degli equipaggi si preparano nei tempi morti. Ora uno scafo, una vela o un molo davanti nascondono il personaggio.
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
 - Magnete delle mura sui lati della banchina: muro dritto all'esterno, addossato alla faccia, alla quota della banchina su zoccolo.
 - Gabbiani (`src/settlement-gulls.js`, sprite 2D, solo grafica): stormi che girano sopra costa, moli e acqua vicina, con battiti d'ala, planate e ombra; altri posati su scogli, spiagge e teste dei moli. Di notte non volano, con la tempesta sono la metà.

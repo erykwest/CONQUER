@@ -5,6 +5,7 @@
 - **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
 - **Navi**: 5 modelli Blender pronti (3 piccole, 2 grandi), solo nell'Asset Lab.
 - **Navi in gioco**: flotta di test nel menu DEV (non salvata). **DA FARE**: salvataggio, arrivo/partenza in navigazione, selezione della nave nel gioco, ordine con il renderer WebGL invece del livello sovrapposto, picchi di disegno isolati.
+- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai. **DA FARE**: carrettieri sui veicoli e figure della battaglia navale ancora in 2D; i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
 - **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
 - **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
 - **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.
