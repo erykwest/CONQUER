@@ -2,6 +2,11 @@
 
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
+## 2026-11-05 — Camino laterale delle case L1 (branch `fix/l1-chimney`)
+
+- Le casette L1 hanno un solo camino, in pietra, addossato a una testata, da terra oltre la paglia (prima due camini sul colmo sulle casette da 2 U). La finestra della testata lascia il posto al camino. Nuovo pezzo `chimneySide` nel kit Blender e nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS e ROADMAP invariate (correzione visiva dentro D-057).
+
 ## 2026-11-04 — Long house in legno W1 / W2 (branch `feature/wood-longhouse`)
 
 - Nuova long house lignea: una sezione costruita (`built`) con `material:'wood'`, larga come la W1 (1U) o la W2 (2U), solo piano terra (P0) con le stesse stanze della sezione in pietra al piano terra.

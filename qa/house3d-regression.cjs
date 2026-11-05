@@ -26,15 +26,17 @@ const State={season:'summer',structures:[],visualPalette:'stone'};
 const sandbox={Math,Number,Object,Array,Map,Float32Array,JSON,String,window,State,peasantHash:hash,rectWorldPoints,
   circleWorldPoints:()=>[],terrainElevation:()=>0,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),
   roadList:()=>[],pointInPolygon,pointSegmentDistance,urbanDenseHouseDoorInfo:()=>null,underConstruction:s=>!!s.building,
-  // One chimney on the main ridge, as chimneySpecs does for a detached house.
-  chimneySpecs:s=>[{center:{x:s.x,y:s.y},angle:s.angle||0,z0:2.0,z1:2.48,index:0}],
+  urbanDenseParts:()=>[],
 };
 vm.createContext(sandbox);
 const constant=(text,name)=>text.match(new RegExp('const '+name+'=[^;]+;'))[0];
 // The game's own clay recolouring: brick masonry and the clay palette (settlement-core.js).
 vm.runInContext(core.slice(core.indexOf('const CLAY_VISUAL_SWATCHES='),core.indexOf('});',core.indexOf('const CLAY_VISUAL_SWATCHES='))+3)+
   '\nlet structureVisualMaterial=null;\n'+['masonryMaterial','withStructureVisualMaterial','visualPaletteColor'].map(n=>fnSource(core,n)).join('\n'),sandbox);
+const castle=src('src/settlement-castle-structures.js');
 vm.runInContext([constant(core,'HOUSE_ROOF_PITCH'),constant(core,'HOUSE_FLOOR_BREAK'),constant(urban,'HOUSE_WINDOW_HALF_W'),
+  constant(core,'CHIMNEY_SPACING'),constant(core,'L1_CHIMNEY_DEPTH'),fnSource(core,'houseSideChimney'),fnSource(core,'houseRidgeHeight'),
+  fnSource(castle,'chimneySpecs'),fnSource(urban,'houseFacadeChimneyCut'),'function isLonghouse(){return false}',
   constant(urban,'TURRET_WINDOW_HALF_W'),constant(urban,'HOUSE_DOOR_TOP'),
   ...['houseLevel','houseDimensionScale','houseFootprintDimensions','housePlanType','houseTurretType','houseLocalToWorld',
     'houseFloorBreak','houseJetty','houseTurretInfo','houseStreetSide','houseCornerSide','houseFootprintParts',
@@ -52,7 +54,7 @@ for(const f of ['src/assets/house-models.js','src/settlement-mesh3d.js','src/set
 const K=window.ConquerHouseModels,H=window.ConquerHouse3D;
 
 // 1. The kit: six L3 pieces, three L1 cottage pieces, two L4 turret roofs; indexed triangles, palette colours.
-assert.deepEqual(Object.keys(K.models).sort(),['chimney','door','doorCottage','joist','roof','roofThatch','turretRoofRound','turretRoofSquare',
+assert.deepEqual(Object.keys(K.models).sort(),['chimney','chimneySide','door','doorCottage','joist','roof','roofThatch','turretRoofRound','turretRoofSquare',
   'windowCottage','windowGround','windowUpper']);
 for(const [name,model] of Object.entries(K.models))for(const [pn,p] of Object.entries(model.parts)){
   assert.equal(p.i.length,p.c.length*3,name+'.'+pn+': three indices per triangle');
@@ -96,15 +98,15 @@ for(const plan of ['L','T'])for(const w of [1.5,2])for(const doorSide of [-1,1])
   const roofCol=new Set(['roofSlate','roofSlateDark','roofCourse','roofRidge','chimney','chimneyCap'].map(k=>K.palette[K.paletteKeys.indexOf(k)]));
   assert.ok(m.col.every((c,t)=>!roofCol.has(c)||m.tag[t]==='roof'),label+': roofs and chimneys are laid last');
   assert.equal(m.stats.door,1,label+': one door');
-  assert.equal(m.stats.chimney,1,label+': the chimneys of chimneySpecs');
+  assert.equal(m.stats.chimney,sandbox.chimneySpecs(s).length,label+': the chimneys of chimneySpecs');
   assert.ok(m.stats.joist>=4,label+': joists under the jetty');
   // Inside the plan (roof overhang, shutters, step and sill aside) and never below the ground.
   const all=bodies.flatMap(p=>p.points),minX=Math.min(...all.map(p=>p.x))-.2,maxX=Math.max(...all.map(p=>p.x))+.2,minY=Math.min(...all.map(p=>p.y))-.2,maxY=Math.max(...all.map(p=>p.y))+.2;
-  const top=Math.max(...entry.parts.map(p=>p.roofH))+.05;
+  const top=Math.max(...entry.parts.map(p=>p.roofH),...sandbox.chimneySpecs(s).map(c=>c.z1))+.05;
   for(let i=0;i<m.pos.length;i+=3){
     const x=m.pos[i],y=m.pos[i+1],z=m.pos[i+2];
     assert.ok(x>=minX&&x<=maxX&&y>=minY&&y<=maxY,label+': geometry stays on the plan');
-    assert.ok(z>=-.25&&z<=Math.max(top,2.48)+1e-6,label+': between the eaves overhang and the chimney top (z '+z.toFixed(2)+')');
+    assert.ok(z>=-.25&&z<=top+1e-6,label+': between the eaves overhang and the chimney top (z '+z.toFixed(2)+')');
   }
   // The door stands at houseDoorInfo, in the recessed ground floor.
   const d=sandbox.houseDoorInfo(s),stepColor=K.palette[K.paletteKeys.indexOf('step')];
@@ -143,7 +145,18 @@ for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Mat
   assert.equal(bodies.length,1,label+': one body');
   let windows=0;bodies[0].points.forEach((a,i)=>{windows+=sandbox.houseFacadePlan(s,bodies[0],{a,b:bodies[0].points[(i+1)%4]}).windows.length});
   assert.equal(m.stats.windowCottage,windows,label+': a cottage window for every planned window, on every wall');
-  assert.ok(windows>=3,label+': windows on several walls');
+  assert.ok(windows>=2,label+': windows on several walls');
+  // One stack, whatever the width (a 2 U cottage used to get two on the ridge), against a gable
+  // end that keeps no window behind it.
+  const specs=sandbox.chimneySpecs(s),c=specs[0];
+  assert.equal(specs.length,1,label+': one chimney');
+  assert.ok(c.side&&c.z0===0&&c.z1>1.45,label+': a gable-end stack from the ground past the ridge');
+  assert.equal(m.stats.chimneySide,1,label+': the kit gable-end stack');
+  assert.ok(!m.stats.chimney,label+': no ridge stack');
+  const gable=bodies[0].points.map((a,i)=>({a,b:bodies[0].points[(i+1)%4]})).find(e=>Math.hypot(c.wall.x-(e.a.x+e.b.x)/2,c.wall.y-(e.a.y+e.b.y)/2)<.01);
+  assert.ok(gable,label+': the stack stands on a wall midpoint');
+  assert.equal(sandbox.houseFacadePlan(s,bodies[0],gable).windows.length,0,label+': no window behind the stack');
+  assert.ok(Math.abs(c.normal.x*Math.sin(angle)-c.normal.y*Math.cos(angle))<1e-9,label+': on a gable end (along the ridge)');
   assert.equal(m.stats.members,4*4+2*windows,label+': corner posts, sill and wall plates on 4 walls, posts beside each window');
   assert.equal(m.stats.roofThatch,1,label+': one thatched roof');
   assert.equal(m.stats.doorCottage,1,label+': the plank door');
@@ -151,7 +164,7 @@ for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Mat
   const thatch=K.palette[K.paletteKeys.indexOf('roofThatch')];
   let ridge=0;for(let t=0;t<m.col.length;t++){if(m.tag[t]!=='roof')continue;for(let k=0;k<3;k++)ridge=Math.max(ridge,m.pos[t*9+k*3+2])}
   assert.ok(m.col.includes(thatch),label+': thatch colours');
-  assert.ok(ridge<2.48+1e-6&&ridge>1.4,label+': roof up to the ridge (and the chimney) ('+ridge.toFixed(2)+')');
+  assert.ok(ridge<1.45+.05&&ridge>1.4,label+': thatch up to the ridge ('+ridge.toFixed(2)+')');
   const minZ=Math.min(...Array.from({length:m.pos.length/3},(_,i)=>m.pos[i*3+2]));
   assert.ok(minZ>=-.1,label+': nothing below the ground');
   assert.deepEqual([...new Set(m.tag)].sort(),['beam','body','gable','roof'],label+': construction tags');
@@ -170,7 +183,7 @@ const corner=(s,angle,doorSide)=>{
   const t={x:Math.cos(angle),y:Math.sin(angle)},n={x:-t.y*doorSide,y:t.x*doorSide},at=(u,v)=>({x:s.x+t.x*u+n.x*v,y:s.y+t.y*u+n.y*v});
   sandbox.roadList=()=>[{a:at(-8,1.6),b:at(8,1.6)},{a:at(2.4,-8),b:at(2.4,8)}];
 };
-let l4=0;const turretTypes=new Set();
+let l4=0,dormerTotal=0;const turretTypes=new Set();
 for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Math.PI/2,2.5])for(const v of [0,1]){
   const s={id:'l4-'+w+doorSide+angle+'-'+v,type:'house',houseLevel:4,auto:true,x:50,y:40,w,h:1,doorSide,angle};
   corner(s,angle,doorSide);
@@ -186,7 +199,8 @@ for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Mat
   assert.equal((m.stats.turretRoofRound||0)+(m.stats.turretRoofSquare||0),turrets.length,label+': one kit roof per turret');
   assert.equal(m.stats.roof,bodies.length,label+': one slate roof per body');
   assert.equal(m.stats.dormer||0,entry.dormers.length,label+': every dormer');
-  assert.ok(entry.dormers.length>=2,label+': dormers on the roof');
+  // The ridge stacks (chimneySpecs) and the turret can take every slot of a short roof.
+  dormerTotal+=entry.dormers.length;
   assert.equal(turrets.length,1,label+': a turret on the corner plot');
   // Turret roofs reach the turret ridge, never above it (finial aside).
   for(const t of turrets){
@@ -197,6 +211,7 @@ for(const w of [1.5,2])for(const doorSide of [-1,1])for(const angle of [0,.6,Mat
   l4++;
 }
 assert.ok(turretTypes.size===2,'round and square turrets both covered');
+assert.ok(dormerTotal>=l4,'dormers on the L4 roofs ('+dormerTotal+' on '+l4+' houses)');
 {const P=k=>K.palette[K.paletteKeys.indexOf(k)];
  const s={id:'l4-clay',type:'house',houseLevel:4,auto:true,x:0,y:0,w:1.5,h:1,doorSide:1,angle:0};corner(s,0,1);
  State.structures=[s];H.clear();const stone=new Set(H.geometry(s).col);
