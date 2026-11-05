@@ -4,6 +4,7 @@
 
 - **DECISO, IN CODICE SU BRANCH `feature/founding-storage-yard-20261105`:** il villaggio nasce con un Piazzale 2×2U entro 7U dal primo pozzo, se un lotto edificabile è disponibile. Il capanno taglialegna versa la quota di produzione trattenuta nelle scorte del castello fino alla capienza dei piazzali; la parte non trattenuta e la quota in eccesso raggiungono il mercato.
 - **UNICO INVENTARIO:** `ConquerEconomy.state().castle` rimane fonte di verità: il magazzino non duplica le merci, il vecchio charter resta idempotente, la persistenza è quella di `State.structures` e `State.economy`.
+- **PRIORITÀ L1:** quando un piazzale è disponibile, un lavoratore L1 viene riservato al Logging Camp anche se sono aperti molti cantieri; le regole esistenti senza piazzale restano invariate.
 - **BILANCIAMENTO INIZIALE:** capienza 600/2400/5400 unità per 2×2, 4×4, 6×6U; costi di ampliamento 20 oro + 10 legname e poi 40 oro + 20 legname, pagati subito. Aree di ampliamento soggette a blocchi e collisioni normali. Nuovi piazzali 2×2U costruibili con 20 oro + 10 legname e normale cantiere L1; quello iniziale è gratuito.
 - **FUORI SCOPE:** carrettieri e trasferimento individuale del materiale, consumo e assegnazione delle room magazzino, redistribuzione tra depositi su distanze diverse.
 
