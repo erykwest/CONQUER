@@ -20,6 +20,7 @@ function invalidateNavigation(hard=true,{urban=true}={}){
   roadNavGraphCache.dirty=true;
   if(urban)invalidateUrbanGeometry();
   roadDestinationTreeCache.clear();
+  if(typeof wellAccessCache!=='undefined')wellAccessCache.clear();
   window.ConquerCombat?.invalidateRoutes?.();
   if(!hard)return;
   peasantPathSignature='';

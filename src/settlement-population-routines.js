@@ -93,6 +93,7 @@ function wellRoutineTravel(house,well,frac,t0,t1,reverse=false){
   const t=routineSmooth((frac-t0)/Math.max(.001,t1-t0));
   return pointAlongPath(path,reverse?1-t:t);
 }
+const wellAccessCache=new Map();
 function structureAccessPoint(target,from,visitorId=''){
   if(!target)return null;
   const h=peasantHash(String(visitorId)+'>'+target.id),jitter=(((h>>>5)%7)-3)*.12;
@@ -122,16 +123,21 @@ function structureAccessPoint(target,from,visitorId=''){
   }
   const center=structureCenter(target);
   if(target.type==='well'){
+    // The road route to the well is costly (connectors, detours): residents whose routine falls
+    // back on the well asked for it every frame. Cached until the navigation changes.
+    const key=target.id+'|'+visitorId+'|'+from.x.toFixed(2)+','+from.y.toFixed(2);
+    if(wellAccessCache.has(key))return wellAccessCache.get(key);
     const graphPath=roadNetworkPath(from,center,String(visitorId||'well-access'));
     if(graphPath?.length){
       const trimmed=trimPathBeforeCircle(graphPath,center,.62+PEASANT_CLEARANCE+.16);
-      if(trimmed?.length)return trimmed.at(-1);
+      if(trimmed?.length){const p=trimmed.at(-1);wellAccessCache.set(key,p);return p}
     }
     const angle=Math.atan2(from.y-center.y,from.x-center.x);
-    return{
+    const p={
       x:center.x+Math.cos(angle)*(.62+PEASANT_CLEARANCE+.18),
       y:center.y+Math.sin(angle)*(.62+PEASANT_CLEARANCE+.18)
     };
+    wellAccessCache.set(key,p);return p;
   }
   let radius=.9;
   if(isCivic(target))radius=civicRadius(target)+.5;
