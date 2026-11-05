@@ -995,6 +995,28 @@ function applyCrenelStyle(style){
   markDirty(null,true,true);draw();
   return{ok:true,quote};
 }
+// Re-roofing at a new feudal pitch: every standing pitched stone tower and gate roof (the timber
+// gate storey keeps its own fixed ridge) is rebuilt at the target pitch's rate (ROOF_PITCH_COST).
+function pitchedRoofOwners(){
+  return State.structures.filter(s=>!underConstruction(s)&&(
+    s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='pitched'||
+    s.type==='gate'&&gateRoofStyle(s)==='pitched'&&!gateTimberUpper(s)));
+}
+function roofPitchQuote(pitch){
+  const roofs=pitchedRoofOwners().length,cost={};
+  for(const [k,v] of Object.entries(ROOF_PITCH_COST[pitch]||{}))cost[k]=v*roofs;
+  return{pitch,roofs,cost};
+}
+function applyRoofPitch(pitch){
+  pitch=Number(pitch);
+  if(!ROOF_PITCHES.includes(pitch)||pitch===roofPitch())return{ok:false,reason:'unchanged'};
+  const quote=roofPitchQuote(pitch);
+  if(!canAfford(quote.cost)||!spendCost(quote.cost))return{ok:false,reason:'funds',quote};
+  State.policies.roofPitch=pitch;
+  for(const s of pitchedRoofOwners())invalidateCastleColliderGeometry?.(s);
+  markDirty(null,true,true);draw();
+  return{ok:true,quote};
+}
 // Parent/subtower pairs overlap: merlons of the lower one that fall inside the footprint of the
 // taller attached structure would stick out of its walls. Drop them (parent or subtower alike).
 function withoutBuriedBattlements(s,pieces){

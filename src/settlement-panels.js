@@ -279,8 +279,23 @@
     ])+grid([
       card('Lavoratori allocati',bars(work,max1(work.map(x=>x[1])))),
       card('Progresso lavori',tasks||empty('Nessun cantiere in corso.'),'Tempi e lavoro derivano dalla simulazione L1 già attiva.'),
-      crenelCard()
+      crenelCard(),
+      roofPitchCard()
     ]);
+  }
+  const PITCHES = [[30,'30°','Tetti bassi, il più economico.'],[45,'45°','Pendenza di base.'],[60,'60°','Tetti ripidi a guglia: più legname.']];
+  function roofPitchCard() {
+    const cmd = window.ConquerGame?.commands;
+    if(!cmd?.roofPitchQuote)return '';
+    const current = typeof roofPitch==='function' ? roofPitch() : 45;
+    const rows = PITCHES.map(([id,label,tip])=>{
+      const q = cmd.roofPitchQuote(id), on = id===current;
+      return '<div class="cp-line"><span>'+esc(label)+' <small>'+esc(tip)+'</small></span>'+
+        (on ? '<b>In uso</b>' : '<button type="button" class="cp-action" data-cp-pitch="'+id+'">Adotta · '+esc(costLine(q.cost))+'</button>')+'</div>';
+    }).join('');
+    const n = cmd.roofPitchQuote(current).roofs;
+    return card('Pendenza dei tetti',rows+(ui.pitchMsg?warn(ui.pitchMsg):''),
+      'Rifà i '+fmt(n)+' tetti a falde di torri e porte; il costo cresce con il numero di tetti. Le nuove costruzioni usano la pendenza scelta.',true);
   }
   const CRENELS = [['flat','Piatta','Blocco squadrato, lo stile di base.'],['gabled','Doppia falda','Sommità a due spioventi.'],['swallowtail','Coda di rondine','Corna a V e feritoia: la più costosa.']];
   const costLine = cost => Object.entries(cost||{}).filter(([,v])=>v>0).map(([k,v])=>fmt(v)+' '+good(k)).join(' · ') || 'gratis';
@@ -346,6 +361,12 @@
       if(tab){ui.tab = tab.dataset.cpTab; render(); return;}
       const trade = ev.target.closest('[data-cp-transfer]');
       if(trade){window.ConquerGame?.commands?.transferActivity?.(trade.dataset.cpTransfer,trade.dataset.cpOwner); render(); return;}
+      const pitch = ev.target.closest('[data-cp-pitch]');
+      if(pitch){
+        const out = window.ConquerGame?.commands?.setRoofPitch?.(pitch.dataset.cpPitch);
+        ui.pitchMsg = out?.ok ? '' : out?.reason==='funds' ? 'Risorse insufficienti per rifare i tetti.' : '';
+        render(); return;
+      }
       const crenel = ev.target.closest('[data-cp-crenel]');
       if(crenel){
         const out = window.ConquerGame?.commands?.setCrenelStyle?.(crenel.dataset.cpCrenel);

@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-05 — Pendenza dei tetti di torri e porte (branch `feat/roof-pitch`)
+
+- Nuova scelta globale `State.policies.roofPitch` (30°, 45° default, 60°; persistita locale e cloud) per tutti i tetti a falde in pietra di torri (piramide, due falde, padiglione, rotonde, a D) e porte (grande e piccola). La salita è `tan(pendenza) × semiluce` (raggio sulle rotonde, lato corto sulle quadrate); il piano in legno della porta piccola mantiene il suo colmo fisso.
+- Cambio a pagamento dal Centro di controllo › Cantieri, scheda «Pendenza dei tetti»: costo per tetto (`ROOF_PITCH_COST`: 3 legno / 4 legno + 1 oro / 6 legno + 2 oro), cantieri esclusi; le nuove costruzioni seguono la pendenza. Comandi `ConquerGame.commands.roofPitchQuote/setRoofPitch`.
+- Correzione cache: la firma del bitmap del corpo castello e quella degli sprite struttura includono ora stile delle merlature e pendenza, così il cambio si vede senza ricaricare.
+- QA: Lab con le tre pendenze su torre quadrata, rotonda, due falde, porta grande e piccola; regressioni Node PASS tranne `asset-catalog-regression`, che fallisce identica su main. Asset audit 1081 render, 0 falliti, baseline aggiornata. CI non ancora eseguita.
+
 ## 2026-11-04 — Long house in legno W1 / W2 (branch `feature/wood-longhouse`)
 
 - Nuova long house lignea: una sezione costruita (`built`) con `material:'wood'`, larga come la W1 (1U) o la W2 (2U), solo piano terra (P0) con le stesse stanze della sezione in pietra al piano terra.
