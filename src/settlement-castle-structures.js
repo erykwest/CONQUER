@@ -607,7 +607,7 @@ function drawMachicolationFloors(){
 // thickness; swallowtail raises two horns with a V notch and cuts an arrow slit in the face turned
 // towards the viewer (the 2.5D painter cannot hide a slit on the far face).
 function merlonStyleParts(center,angle,w,d,z,h,cornerEnd=0,style=crenelStyle()){
-  if(style==='flat')return null;
+  if(style==='flat'||style==='double')return null;
   const ux=Math.cos(angle),uy=Math.sin(angle),nx=-uy,ny=ux,top=z+h,parts=[];
   const at=(along,across)=>({x:center.x+ux*along+nx*across,y:center.y+uy*along+ny*across});
   const slab=(c,sw,sd,z0,z1,tone='stone')=>parts.push({pts:rectWorldPoints(c.x,c.y,sw,sd,angle),z0,z1,tone});
@@ -875,7 +875,21 @@ function wallBattlementPieces(s){
     pieces.push(piece);
     nodes.push(merlonNode(center,g.angle,.28,depth));
   }
-  const all=pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  let all=pieces.concat(parapetPieces(nodes,g.z,s,false,mach?null:g.crest));
+  // Double crenellation (crenelStyle 'double'): a second, lower row of flat merlons and breastwork
+  // on the inner edge of the wall walk, so the curtain is defended on both faces. Distinct from the
+  // 'gabled' crown, which only changes the top of each merlon.
+  // labCrenelStyle: Asset Lab variants show the style without touching the feudal policy.
+  if((s.labCrenelStyle||crenelStyle())==='double'){
+    const inner=[],innerNodes=[],io=Math.max(0,g.width/2-depth/2-.012),ih=.2;
+    for(let i=0;i<=intervals;i++){
+      const t=clamp((g.startPad+step*i)/g.L,0,1);
+      const c={x:s.a.x+g.dx*t-g.nx*io*g.side,y:s.a.y+g.dy*t-g.ny*io*g.side};
+      const p=battlementPiece(c,g.angle,g.z,.28,depth,ih,s);p.styleParts=null;p.innerRow=true;
+      inner.push(p);innerNodes.push(merlonNode(c,g.angle,.28,depth));
+    }
+    all=all.concat(inner,parapetPieces(innerNodes,g.z,s));
+  }
   // Wall on a slope (its top is a stair): every merlon and parapet block stands on the highest tread
   // under it and reaches down to the lowest, so the breastwork runs on along the stair without
   // gaps and always covers it; the single crest line used to clip far merlons in 2.5D is gone.
@@ -975,7 +989,9 @@ function towerBattlementPieces(s){
 // rate (CRENEL_STYLE_COST). Brick structures pay clay instead of stone, as in constructionCost.
 function crenelRestyleQuote(style){
   const cost={};let merlons=0;
-  for(const s of State.structures){
+  // Count merlons as built in the target style ('double' adds the inner wall row).
+  const prev=State.policies.crenelStyle;State.policies.crenelStyle=style;
+  try{for(const s of State.structures){
     const pieces=s.type==='tower'?towerBattlementPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
     const n=pieces.filter(p=>p.merlon).length;if(!n)continue;
     merlons+=n;
@@ -983,7 +999,7 @@ function crenelRestyleQuote(style){
       const key=k==='stone'&&s.masonryMaterial==='brick'?'clay':k;
       cost[key]=(cost[key]||0)+v*n;
     }
-  }
+  }}finally{State.policies.crenelStyle=prev}
   return{style,merlons,cost};
 }
 function applyCrenelStyle(style){

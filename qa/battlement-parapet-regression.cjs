@@ -58,5 +58,20 @@ check('crenel styles: crown parts per style, restyle priced per merlon',()=>{
   assert.ok(n>0&&q.cost.stone===3*n&&q.cost.clay===3*n&&q.cost.gold===4*n,'stone vs brick pricing: '+JSON.stringify(q));
   run('State').policies.crenelStyle='flat';
 });
+check('double crenellation: second inner row on walls, towers unchanged',()=>{
+  const [w,sq]=setup([{id:'w',type:'wall',material:'stone',level:1,width:.5,a:{x:100,y:100},b:{x:105,y:100}},tower('s',{x:120})]);
+  run('State').policies.crenelStyle='flat';
+  const flat=split(run('wallBattlementPieces')(w)),flatTower=split(run('towerBattlementPieces')(sq)).merlons.length;
+  run('State').policies.crenelStyle='double';
+  const dbl=split(run('wallBattlementPieces')(w)),inner=dbl.merlons.filter(p=>p.innerRow);
+  assert.equal(inner.length,flat.merlons.length,'one inner merlon per outer merlon');
+  assert.equal(dbl.parapets.length,2*flat.parapets.length,'breastwork on both faces');
+  assert.ok(inner.every(p=>!p.styleParts&&p.centerY!==null),'inner merlons are plain blocks');
+  const ys=m=>m.pts.reduce((a,q)=>a+q.y,0)/m.pts.length;
+  assert.ok(Math.sign(ys(inner[0])-100)!==Math.sign(ys(dbl.merlons.find(p=>!p.innerRow))-100),'rows on opposite faces');
+  assert.equal(split(run('towerBattlementPieces')(sq)).merlons.length,flatTower,'towers keep one ring');
+  assert.ok(run('crenelRestyleQuote')('double').merlons>run('crenelRestyleQuote')('flat').merlons,'quote counts both rows');
+  run('State').policies.crenelStyle='flat';
+});
 console.log('battlement parapet regression: '+passed+' checks');
 `);

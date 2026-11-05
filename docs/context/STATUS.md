@@ -2,6 +2,12 @@
 
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
+## Merlature doppie BC-251105-04 (branch `feature/double-crenel`, da `main` b1a2307, 05/11/2026, NON MAIN)
+
+- Implementato: quarto stile `double` in `CRENEL_STYLES` (Centro di controllo › Cantieri › «Stile delle merlature», costo 1 pietra + 1 oro per merlo). Sulle mura aggiunge una seconda fila di merli piatti (h .20) con parapetto sul bordo interno del cammino di ronda; torri e porte restano con un solo anello di merli piatti. Il preventivo conta i merli dello stile di arrivo (quindi entrambe le file). Lab: varianti «Muro medio T2 H1 / Muro spesso T3 H2 merlatura doppia» (override `labCrenelStyle` della variante, non della policy).
+- Provato: `qa/battlement-parapet-regression.cjs` 6/6 (nuovo controllo doppia fila). `node qa/asset-audit.mjs` locale: 1132 render, 0 falliti, 122 avvisi (i 2 nuovi sono il già noto «cantiere-progressivo» dei muri), 18 nuovi, 0 cambiati; foglio `fortificazioni-mura` rivisto, baseline aggiornata.
+- Non provato: partita reale con il cambio pagato; mura su pendio con doppia fila (il codice passa per lo stesso adattamento ai gradini, non verificato a vista); modalità world3d a pieno schermo.
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
 
 - **Aggiornamento porto**: moli L4 e L12 (`reach`, i moli salvati prima restano L8); piazzamento solo costa + approdo nella whitezone, senza regole di terreno edificabile (pendenze, bosco, terreno irregolare ammessi; impalcato sopra il terreno più alto dell'approdo). Nuova **banchina in pietra** (`src/settlement-quay.js`, `type:'quay'`): 2U, due clic lungo la riva o in acqua, solo whitezone + contatto con il mare, lato mare fissato al piazzamento, bitte sul bordo; i moli si agganciano al bordo verso il mare (`onQuay`, impalcato a filo della banchina).

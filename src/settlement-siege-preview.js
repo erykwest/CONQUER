@@ -202,6 +202,8 @@
       ['Muro spesso T3 H1',{type:'wall',tier:3,level:1,skin:'standard'}],
       ['Muro medio T2 H2',{type:'wall',tier:2,level:2,skin:'standard'}],
       ['Muro spesso T3 H2',{type:'wall',tier:3,level:2,skin:'standard'}],
+      ['Muro medio T2 H1 merlatura doppia',{type:'wall',tier:2,level:1,skin:'standard',labCrenelStyle:'double'}],
+      ['Muro spesso T3 H2 merlatura doppia',{type:'wall',tier:3,level:2,skin:'standard',labCrenelStyle:'double'}],
       ['T2 H2 caditoie',{type:'wall',tier:2,level:2,skin:'machicolation'}],
       ['T2 H2 hoardings',{type:'wall',tier:2,level:2,skin:'hoarding'}],
       ['T1 H1 hoardings',{type:'wall',tier:1,level:1,skin:'hoarding'}],

@@ -291,9 +291,12 @@ const BATTLEMENT_SPACING=.62;
 // Feudal crenellation style: one choice for every stone merlon of the settlement (towers, gates,
 // walls), stored in State.policies so new construction follows it. Restyling existing merlons is
 // paid per merlon at the target style's rate; flat is the default and the cheapest.
-const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail']);
+// 'double' adds an inner row of flat merlons on curtain walls (towers and gates keep flat merlons);
+// its quote counts both rows, so the rate is per merlon like the others.
+const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail','double']);
 const CRENEL_STYLE_COST=Object.freeze({
   flat:Object.freeze({stone:1}),
+  double:Object.freeze({gold:1,stone:1}),
   gabled:Object.freeze({gold:1,stone:2}),
   swallowtail:Object.freeze({gold:2,stone:3})
 });
