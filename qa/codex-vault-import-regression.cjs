@@ -21,6 +21,7 @@ try{
   assert.throws(()=>prepareImport(options),/publication copy changed/);
   assert.equal(fs.readFileSync(note,'utf8'),authorBefore,'authoring vault never overwritten by conflicts');
   fs.writeFileSync(published,authorBefore);
+  fs.unlinkSync(published);assert.throws(()=>prepareImport(options),/publication copy deleted/);fs.writeFileSync(published,authorBefore);
   fs.writeFileSync(note,authorBefore.replace('## Spazi Interni','[[Missing Target]]\n\n## Spazi Interni'));
   assert.throws(()=>prepareImport(options),/unresolved/);assert.equal(fs.readFileSync(published,'utf8'),authorBefore,'broken links produce no writes');
   fs.writeFileSync(note,authorBefore);

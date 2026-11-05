@@ -30,6 +30,7 @@ function prepareImport({source,destination,stateFile}){
     if(from?.hash===to?.hash)continue;
     // First import can only establish a baseline from equal existing files; it cannot overwrite.
     if(!state&&to){conflicts.push(file+' (initial contents differ)');continue}
+    if(state&&base&&!to&&from){conflicts.push(file+' (publication copy deleted)');continue}
     if(to&&to.hash!==base){conflicts.push(file+' (publication copy changed)');continue}
     if(!from&&!base){conflicts.push(file+' (publication-only note)');continue}
     changes.push({file,operation:from?'write':'remove'});
