@@ -35,6 +35,31 @@
 - Nuovo Molo (`settlement-pier.js`): legno su pali, 8U sul mare, merci sulle tavole, due attracchi sinistra/destra; agganciato a menu, anteprima, validazione, costi, render 2D/WebGL e inspector.
 - Cinque navi modellate in Blender (`build_ships.py`): barca, barca da carico, caravella (piccole); cocca, nave latina (grandi). Registrate nell'Asset Lab, regressione `qa/ships-regression.cjs`. Vele alzate per ogni nave e animazione di alzata/ammainata (morph tra i due stati Blender), con anteprima animata nel Lab. Araldica navale: bandiere e armi sulle vele per navi del giocatore e di regni stranieri, solo bandiera per le mercantili; partizioni araldiche spostate in `heraldry-shapes.js` (condivise con l'editor). Equipaggi civili: marinai che camminano sul ponte e gabbieri che salgono sugli alberi per manovrare le vele (`settlement-ship-crew.js`, dati da Blender, `qa/ship-crew-regression.cjs`). Cantiere del molo: materiali solo sull'approdo, nessun oggetto di cantiere in acqua, materiali in legno.
 - Nuova regressione `qa/pier-regression.cjs` e workflow `sea-regression.yml`. ROADMAP e DECISIONS invariati (nessun nuovo contratto oltre la struttura `pier`).
+## 2026-11-04 — Long house in legno W1 / W2 (branch `feature/wood-longhouse`)
+
+- Nuova long house lignea: una sezione costruita (`built`) con `material:'wood'`, larga come la W1 (1U) o la W2 (2U), solo piano terra (P0) con le stesse stanze della sezione in pietra al piano terra.
+- Modello Blender in `tools/blender/build_wood_fort.py` (campata da 1U ripetuta lungo a→b, testata con porta e testata cieca, tetto a scandole, assi incrociate sui frontoni) → `src/assets/wood-fort-models.js`; i modelli lignei esistenti sono rigenerati identici.
+- Asset Lab: 4 varianti nella famiglia Mura e 7 voci nel catalogo strutture; baseline dell'audit estesa con i 32 render nuovi.
+- Cutaway corretto: in World 3D ora si apre dal comando, nel 2.5D la stanza non passa più dai compositi del castello in pietra, e il tetto si toglie tutto.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nuova variante di un tipo esistente, non cambia milestone né contratti.
+04/11/2026 — `fix/prepare-architecture-textures`: ridotte le texture architettoniche al formato già usato dal renderer e rimossa la preparazione Canvas all’avvio.
+
+04/11/2026 — `fix/remove-fossil-industry-svg`: rimossi 50 SVG obsoleti di cava e campo taglialegna. Manifest, baseline e regressione del Lab aggiornati alle anteprime 3D.
+
+## 2026-11-03 — Mastio W4 · 3U, più stanze per piano (branch `feature/keep-w4`)
+
+- Nuovo tier W4 (3×3U) per il mastio: piante per piano con 1–4 stanze, tramezzi e porte nel cutaway, stanze assegnate per piano. Lab: 5 righe nella galleria fortificazioni e 16 voci nel catalogo.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è un prototipo da provare, non cambia milestone né contratti.
+
+
+## 2026-11-03 — Portico delle sezioni W1 (branch `feature/built-portico`)
+
+- Porticato W1 corretto: stessa geometria in 2.5D, World 3D e cutaway, archi sotto il piano sopraelevato, portico visibile nel cutaway 3D.
+- In World 3D il portico W1 è una loggia vera: piano terra arretrato, pilastri e archi, piano rialzato sopra (anche nel cutaway).
+- Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia.
+- Il portico ha una stanza arredata per campata, sempre visibile in 3D, e un camminamento lungo i pilastri percorso dalle figure.
+- Nuova `qa/built-portico-regression.cjs`; variante «Sezione porticata L2» nel Lab e in baseline.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: correzione di resa e regola sulle stanze, non cambia milestone né contratti.
 ## 2026-11-04 — Campana d'allarme (branch `feature/alarm-bell`)
 
 - L'allarme del villaggio si propaga dalle campane (chiesa, Municipio, torri T1–T2 a falde con l'upgrade `bell`): raggio d'ascolto, catena di campane, passaparola oltre i raggi. Le case lontane lo sentono più tardi.

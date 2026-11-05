@@ -272,7 +272,7 @@ function roadNetworkPath(start,goal,sourceHouseId){
 }
 function peasantObstacleSignature(){
   return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza','civicAnnex'].includes(s.type)).map(s=>{
-    if(['wall','palisade','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
+    if(['wall','palisade','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0,s.skin||'',s.flip?1:0,s.level||''].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
   }).join('|');
 }
@@ -317,6 +317,8 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
     }
 
     if(['wall','palisade','built'].includes(s.type)){
+      // A W1 portico: its walkway under the arches is open to walkers.
+      if(s.type==='built'&&builtLoggiaWalkable(s,p,.04))continue;
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
       continue;
     }

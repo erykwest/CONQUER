@@ -530,6 +530,7 @@ function breakWallForTower(wallId,tower){
 }
 function addTowerWithPlacement(tower,snap={}){
   if(isOrientedTower(tower)&&Number.isFinite(snap.wallSeat))tower.wallSeat=snap.wallSeat;
+  if(isKeepW4(tower)&&(snap.parentTowerId||!keepW4Available(tower))){status(snap.parentTowerId?'The W4 keep stands on its own':'Only one W4 keep per settlement');return false}
   if(snap.parentTowerId){
     const parent=State.structures.find(s=>s.id===snap.parentTowerId&&['tower','gate'].includes(s.type));
     if(!parent){status('Subtower parent is no longer available');return false}
@@ -625,8 +626,30 @@ function linePoly(s){
   const a=s.a,b=s.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
+// Function slots run floor by floor; the W4 keep has several rooms per floor (keepFloorRooms),
+// every other structure one. Slot i -> {floor, room, rect} (rect: fractions of the floor).
+function functionSlotLayout(s){
+  const cap=functionCapacity(s);
+  if(!isKeepW4(s))return Array.from({length:cap},(_,i)=>({floor:i+functionFloorOffset(s),room:0,rect:[0,0,1,1]}));
+  const out=[];
+  for(let floor=0;floor<structureLevel(s);floor++)keepFloorRooms(s,floor).forEach((rect,room)=>out.push({floor,room,rect}));
+  return out;
+}
+// Rooms keep their floor when the layout changes (floor plan, tier): the roles of each floor go
+// back on the same floor, empty rooms dropped first when it has fewer rooms.
+function functionsByFloor(s){
+  const out=[];functionSlotLayout(s).forEach((x,i)=>(out[x.floor]||(out[x.floor]=[])).push(s.functions?.[i]||null));return out;
+}
+function restoreFunctionsByFloor(s,byFloor){
+  const L=functionSlotLayout(s),want=[];L.forEach(x=>want[x.floor]=(want[x.floor]||0)+1);
+  const lists=want.map((n,f)=>{const list=(byFloor[f]||[]).slice();while(list.length>n&&list.includes(null))list.splice(list.lastIndexOf(null),1);return list});
+  s.functions=L.map(x=>lists[x.floor]?.length?lists[x.floor].shift():null);
+  normalizeFunctions(s);return s;
+}
+function functionSlotFloor(s,index){return isKeepW4(s)?functionSlotLayout(s)[index]?.floor??0:index+functionFloorOffset(s)}
 function functionSlotSize(s,index=0){
   if(!s)return'normal';
+  if(isKeepW4(s)){const r=functionSlotLayout(s)[index]?.rect;return r&&(r[2]-r[0])*(r[3]-r[1])<.4?'normal':'large'}
   if(s.type==='tower')return towerTier(s)>=3?'large':'normal';
   if(s.type==='built')return isWideBuilt(s)||Number(s.length)>=3?'large':'normal';
   return'normal';
@@ -637,6 +660,7 @@ function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
+  if(typeof isKeepW4==='function'&&isKeepW4(s)){let n=0;for(let f=0;f<structureLevel(s);f++)n+=keepFloorRooms(s,f).length;return n}
   if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
   if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
   if(s.type==='townhall')return civicLevel(s);
@@ -647,6 +671,9 @@ function functionCapacityUnits(s){
 }
 function normalizeFunctions(s){
   if(s.type==='townhall')return normalizeTownhallRooms(s);
+  const w4=typeof isKeepW4==='function'&&isKeepW4(s);
+  if(w4)s.keepPlans=Array.from({length:3},(_,f)=>keepFloorPlan(s,f));
+  else delete s.keepPlans;
   const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];
   // Migrate once: prior saves placed a functional room on the traversable gate floor.
   if(s.type==='gate'&&!s.gateGroundIsPassage){
@@ -672,4 +699,4 @@ function normalizeTownhallRooms(s){
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(window.ConquerPier?.is(s))return window.ConquerPier.label(s);if(window.ConquerQuay?.is(s))return window.ConquerQuay.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(typeof isWellCivic==='function'&&isWellCivic(s))return wellCivicLabel(s);if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
+function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(window.ConquerPier?.is(s))return window.ConquerPier.label(s);if(window.ConquerQuay?.is(s))return window.ConquerQuay.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(typeof isWellCivic==='function'&&isWellCivic(s))return wellCivicLabel(s);if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isLonghouse(s)?(isWideBuilt(s)?'Longhouse W2':'Longhouse W1'):isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}

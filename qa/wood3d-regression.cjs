@@ -96,10 +96,46 @@ assert.ok(her.has('#123456')&&her.has('#abcdef'),'flag in the heraldry colours')
 State.heraldry=null;
 console.log('PASS flags and drapes in the heraldry');
 
+// Timber longhouse: the W1 / W2 built section in wood, ground floor only. One 1 U bay per U
+// along a->b (stretched to the exact length), the door gable at a, the closed gable at b; as
+// wide as the section, under the height structureHeight gives it.
+assert.equal(W.modelKey({type:'built',material:'wood'}),'longhouse_w1');
+assert.equal(W.modelKey({type:'built',material:'wood',span:'wide'}),'longhouse_w2');
+assert.equal(W.modelKey({type:'built'}),null,'the stone section stays with ConquerCastle3D');
+for(const [key,width,h] of [['longhouse_w1',1,1.77],['longhouse_w2',2,2.07]]){
+  const b=bounds(key);
+  assert.ok(Math.abs(b.z1-h)<.05,key+' height '+b.z1.toFixed(2)+' ~ '+h);
+  assert.ok(b.z0>-.05,key+' sits on the ground');
+  assert.ok(Math.max(-b.y0,b.y1)<=width/2+.12,key+' keeps to the section width');
+  for(const part of ['wall_yn','wall_yp','roof_yn','roof_yp','ridge','floor','end_a','end_b'])assert.ok(M.models[key].parts[part],key+' has '+part);
+}
+const lh=(length,extra={})=>({id:'lh'+length+JSON.stringify(extra),type:'built',material:'wood',level:1,a:{x:10,y:5},b:{x:10+length,y:5},length,...extra});
+const along=t=>{let a=Infinity,b=-Infinity;for(let i=0;i<t.length;i+=6){a=Math.min(a,t[i]);b=Math.max(b,t[i])}return[a,b]};
+for(const length of [2,3.4]){
+  const [x0,x1]=along(W.worldTriangles([lh(length)]));
+  assert.ok(Math.abs(x0-10)<.3&&Math.abs(x1-(10+length))<.3,'longhouse '+length+'U runs from a to b');
+}
+const bayTris=['wall_yn','wall_yp','roof_yn','roof_yp','ridge'].reduce((n,p)=>n+M.models.longhouse_w1.parts[p].c.length,0);
+const endTris=M.models.longhouse_w1.parts.end_a.c.length+M.models.longhouse_w1.parts.end_b.c.length;
+assert.equal(W.geometry(lh(4)).mesh.col.length,4*bayTris+endTris,'one bay per U, floor only in cutaway');
+// Cutaway: no roof at all (the far slope would hide the back of the room), the near wall and the
+// near gable go, the floor shows. Camera looking from +y and +x: the -y wall and the gable at a
+// (smaller x) are the far ones.
+ctx.structureCutaway=s=>!!s.cutaway;ctx.viewDepthPoint=p=>p.y+p.x*.01;
+const P=k=>M.models.longhouse_w1.parts[k].c.length;
+const cut=W.geometry(lh(4,{cutaway:true})).mesh.col.length;
+assert.equal(cut,4*(P('wall_yn')+P('floor'))+P('end_a'),'cutaway keeps the far wall, the floor and the far gable only');
+delete ctx.structureCutaway;
+console.log('PASS timber longhouse W1 / W2: sizes, bays along a->b, cutaway');
+
 // World renderer wiring: timber leaves the per-frame 2.5D residue; construction sites are
 // assembled from the same models.
 const world=src('settlement-world3d.js'),assembly=src('settlement-construction-assembly.js');
 assert.match(world,/ConquerWood3D\?\.addToBuilder\(m,s\)/,'buildings pass adds the timber models');
 assert.match(world,/&&!window\.ConquerWood3D\?\.handles\(s\)\)/,'residual 2.5D skips timber drawn in 3D');
 assert.match(assembly,/woodSource\(s\)\|\|palisadeSource\(s\)/,'timber sites are assembled from the models');
+// The longhouse is not a castle part: World 3D rebuilds it with the timber buildings (a cutaway
+// toggle must reach it) and the 2.5D draws its room with its model, out of the castle composites.
+assert.match(world,/isWoodTower\(s\)\|\|isWoodGate\(s\)\|\|isLonghouse\(s\)\},/,'World 3D buildings signature covers the longhouse');
+assert.match(src('settlement-render.js'),/isLonghouse\(s\)&&window\.ConquerWood3D\?\.draw\(s,preview\)\)\{if\(!preview&&structureCutaway\(s\)\)window\.ConquerCutawayFurniture\?\.draw/,'2.5D longhouse room drawn with its model');
 console.log('PASS world3d wiring and timber construction sites');

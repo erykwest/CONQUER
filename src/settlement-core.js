@@ -232,14 +232,26 @@ function normalizeStructureRotation(s){
 }
 const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4},builtWide:{width:2,min:2,max:6},road:{width:.62,min:1,max:160}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
-const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
+// W4 (3U) is the Mastio only: square stone, one per settlement, several rooms per floor.
+const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2,4:3});
 const ROUND_TOWER_TIERS=Object.freeze({1:.5,2:.75,3:1});
+const KEEP_W4_TIER=4;
+// Floor plans of the W4 keep: room rectangles as fractions of the floor [u0,v0,u1,v1] (u along
+// the tower angle, v across). Halves and the hall are LARGE rooms, quarters NORMAL.
+const KEEP_FLOOR_PLANS=Object.freeze({
+  hall:Object.freeze([[0,0,1,1]]),
+  halves:Object.freeze([[0,0,.5,1],[.5,0,1,1]]),
+  three:Object.freeze([[0,0,.5,1],[.5,0,1,.5],[.5,.5,1,1]]),
+  quad:Object.freeze([[0,0,.5,.5],[.5,0,1,.5],[0,.5,.5,1],[.5,.5,1,1]])
+});
+const KEEP_FLOOR_PLAN_DEFAULTS=Object.freeze(['three','quad','hall']);
 const COSTS={
-  tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
+  tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32},{gold:240,stone:330,wood:75}],
   woodTower:[{gold:18,wood:42},{gold:32,wood:78}],
   wallPerU:{gold:6,stone:18,wood:2},
   palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
+  longhousePerU:{gold:6,wood:28},
   gate:{gold:95,stone:90,wood:38,metal:10},
   woodGate:{gold:35,wood:90,metal:4},
   well:{gold:50,stone:35,wood:10},
@@ -254,7 +266,7 @@ const COSTS={
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -362,6 +374,8 @@ const BIOMES=Object.freeze({
   sea:{label:'Mare',field:'#2a2818'}
 });
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern'];
+// Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores, guard post.
+const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage','guard']);
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.
@@ -420,7 +434,7 @@ function hoardingMounted(s){return s?.type==='gate'?gateHoardingMounted(s):tower
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 // Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
-function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
 function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
 // on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
@@ -450,12 +464,17 @@ function wallSkin(s){
   if(s?.type!=='wall')return undefined;
   return typeof wallSlopeSections==='function'&&wallSlopeSections(s)?'standard':structureVariant(s,'skin');
 }
-function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
+function builtSkin(s){return s?.type==='built'?(isLonghouse(s)?'standard':structureVariant(s,'skin')):undefined}
 // Wide built section (hall): same 'built' type, double width, one free-height
 // ground floor even at L2 — common halls, chapels, throne halls.
 function isWideBuilt(s){return s?.type==='built'&&s.span==='wide'}
 function builtWidth(s){return isWideBuilt(s)?TYPES.builtWide.width:TYPES.built.width}
 function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
+// Timber longhouse: a built section (W1 or W2 span) in wood, ground floor only, with the same
+// rooms as the stone section's ground floor (Blender model: build_wood_fort.py, settlement-wood3d.js).
+function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
+// W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
+function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.
 function hasMachicolation(s){
   if(!s)return false;
@@ -488,7 +507,15 @@ function towerFacadePoints(s){
   if(!isOrientedTower(s))return footprintPoints(s);
   const {w,h}=orientedTowerDims(s);return rectWorldPoints(s.x,s.y,w,h,s.angle||0);
 }
-function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
+function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=2.99&&s.shape!=='round'?KEEP_W4_TIER:span>=1.99?3:span>=1.49?2:1}
+function isKeepW4(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square'&&towerTier(s)===KEEP_W4_TIER}
+// The W4 keep can be planned while no other one stands (or is being built).
+function keepW4Available(except=null){return !State.structures.some(o=>o!==except&&o.id!==except?.id&&isKeepW4(o)&&!o.destroyed)}
+function keepFloorPlan(s,floor){
+  const plan=Array.isArray(s?.keepPlans)?s.keepPlans[floor]:null;
+  return KEEP_FLOOR_PLANS[plan]?plan:KEEP_FLOOR_PLAN_DEFAULTS[Math.min(floor,KEEP_FLOOR_PLAN_DEFAULTS.length-1)];
+}
+function keepFloorRooms(s,floor){return KEEP_FLOOR_PLANS[keepFloorPlan(s,floor)]}
 function wallTier(s){
   const explicit=Math.round(Number(s?.tier));
   if(explicit>=1&&explicit<=3)return explicit;
@@ -496,9 +523,10 @@ function wallTier(s){
   return w>=.75?3:w>=.35?2:1;
 }
 function wallWidthForTier(t){return WALL_TIERS[clamp(Math.round(Number(t)||2),1,3)]}
-function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,3);return shape==='round'?ROUND_TOWER_TIERS[t]:SQUARE_TOWER_TIERS[t]}
+function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,shape==='square'?KEEP_W4_TIER:3);return shape==='round'?ROUND_TOWER_TIERS[t]:SQUARE_TOWER_TIERS[t]}
 function applyStructureTier(s,tier){
-  tier=clamp(Math.round(Number(tier)||1),1,3);
+  const w4=s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square';
+  tier=clamp(Math.round(Number(tier)||1),1,w4?KEEP_W4_TIER:3);
   s.tier=tier;
   if(['wall','palisade'].includes(s.type)){
     s.width=wallWidthForTier(tier);
@@ -522,9 +550,9 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
-function maxStructureLevel(s){return isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
+function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
-  if(isWoodGate(s))return 1;
+  if(isWoodGate(s)||isLonghouse(s))return 1;
   return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
@@ -764,6 +792,7 @@ function baseConstructionCost(s){
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
+  if(isLonghouse(s))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),levelCostFactor(s));
   return{};
 }
@@ -809,6 +838,7 @@ function buildDuration(s){
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
+  if(isLonghouse(s))return BUILD_DAYS.longhouseBase+BUILD_DAYS.longhousePerU*s.length*builtWidth(s);
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length*builtWidth(s))*(.75+.25*structureLevel(s));
   if(s.type==='moat')return .8+(s.length||1)*(s.variant==='water'?.9:.65)*(s.width||1.5)/1.5;
   if(s.type==='bridge')return .8+(s.length||1)*(s.variant==='stone'?.8:.5)*(s.width||1.5)/1.5;

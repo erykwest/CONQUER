@@ -8,7 +8,7 @@ const state=vm.createContext({
   COSTS:{tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],woodTower:[{wood:42}],well:{gold:50,stone:35,wood:10},wallPerU:{gold:6,stone:18,wood:2},palisadePerU:{wood:12},builtPerU:{gold:12,stone:16,wood:18}},
   window:{ConquerIndustries:{is:()=>false}},State:{resources:{stone:100,clay:100}},
   isWoodTower:s=>s.material==='wood',towerTier:()=>1,levelCostFactor:()=>1,scaleCost:(x,f=1)=>Object.fromEntries(Object.entries(x).map(([k,v])=>[k,v*f])),
-  isWoodGate:s=>s.material==='wood',roundCost:c=>c,isCivicAnnex:()=>false,isCivic:()=>false,
+  isWoodGate:s=>s.material==='wood',isLonghouse:s=>s.type==='built'&&s.material==='wood',roundCost:c=>c,isCivicAnnex:()=>false,isCivic:()=>false,
   builtWidth:s=>s.span==='wide'?2:1
 });
 const shapeCost=core.match(/const TOWER_SHAPE_COST=[^\n]*/)?.[0];

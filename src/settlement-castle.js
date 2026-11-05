@@ -229,7 +229,7 @@ function structureHeight(s){
   if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
-  if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
+  if(s.type==='built')return isLonghouse(s)?(isWideBuilt(s)?2.07:1.77):[1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
   if(s.type==='bridge')return .12;
   if(s.type==='moat')return 0;
@@ -798,11 +798,51 @@ function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
   const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),off=functionFloorOffset(s),cap=Math.min(functionCapacity(s),floors.length-off);
   const roles=Array.isArray(s.functions)?s.functions:[];
   const out=[];
+  // W4 keep: each room is its own basis, a rectangle of the floor less half a partition wall.
+  if(isKeepW4(s)){
+    functionSlotLayout(s).forEach((L,i)=>{
+      if(!floors[L.floor])return;
+      out.push({index:i,floor:L.floor,room:L.room,role:roles[i]||null,size:functionSlotSize(s,i),
+        z:floors[L.floor].z,basis:keepRoomBasis(basis,L.rect),g});
+    });
+    return out;
+  }
   for(let i=0;i<cap;i++)out.push({
     index:i,floor:i+off,role:roles[i]||null,size:functionSlotSize(s,i),
     z:floors[i+off].z,basis,g
   });
   return out;
+}
+const KEEP_PARTITION=.10,KEEP_PARTITION_H=.62,KEEP_DOORWAY=.34;
+function keepRoomBasis(basis,[u0,v0,u1,v1]){
+  const t=KEEP_PARTITION/2,x0=-basis.w/2+u0*basis.w+(u0>0?t:0),x1=-basis.w/2+u1*basis.w-(u1<1?t:0);
+  const y0=-basis.h/2+v0*basis.h+(v0>0?t:0),y1=-basis.h/2+v1*basis.h-(v1<1?t:0);
+  const cu=(x0+x1)/2,cv=(y0+y1)/2,ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
+  return{center:{x:basis.center.x+cu*ca-cv*sa,y:basis.center.y+cu*sa+cv*ca},angle:basis.angle,w:x1-x0,h:y1-y0};
+}
+// Partition walls of a W4 floor: the inner room edges, in local (u,v) of the floor basis, as
+// {a:[u,v],b:[u,v],doors:[t]} with t in [0,1] along a->b. Every stretch between two junctions
+// keeps a doorway in its middle, so each room opens on its neighbours. They are cut low
+// (KEEP_PARTITION_H) like a dollhouse section, so the rooms behind stay readable.
+function keepPartitionSegments(s,floor,basis){
+  const rects=keepFloorRooms(s,floor),seen=new Set(),segs=[];
+  for(const [u0,v0,u1,v1] of rects)for(const g of [[u1,v0,u1,v1],[u0,v1,u1,v1]]){
+    if((g[0]===g[2]&&g[0]>=1)||(g[1]===g[3]&&g[1]>=1))continue;
+    const k=g.join(',');if(!seen.has(k)){seen.add(k);segs.push(g)}
+  }
+  const U=f=>-basis.w/2+f*basis.w,V=f=>-basis.h/2+f*basis.h;
+  return segs.map(g=>{
+    const vertical=g[0]===g[2],lo=vertical?g[1]:g[0],hi=vertical?g[3]:g[2];
+    // Junctions: the ends of the other walls that land inside this one.
+    const cuts=[lo,hi];
+    for(const o of segs)if(o!==g)for(const [pu,pv] of [[o[0],o[1]],[o[2],o[3]]]){
+      const on=vertical?pu===g[0]:pv===g[1],t=vertical?pv:pu;
+      if(on&&t>lo+1e-9&&t<hi-1e-9)cuts.push(t);
+    }
+    cuts.sort((p,q)=>p-q);
+    const doors=[];for(let i=0;i+1<cuts.length;i++)doors.push(((cuts[i]+cuts[i+1])/2-lo)/(hi-lo));
+    return{a:[U(g[0]),V(g[1])],b:[U(g[2]),V(g[3])],doors};
+  });
 }
 function cutawayRoomPoint(slot,nx=0,ny=0){
   const b=slot.basis,x=nx*b.w*.40,y=ny*b.h*.36,ca=Math.cos(b.angle),sa=Math.sin(b.angle);
@@ -1021,6 +1061,7 @@ function drawCutawayStructure(s){
   // Timber tower: its model, minus the camera-facing sides, is drawn with the structures
   // (ConquerWood3D.draw); only the room's furnishings belong here.
   if(isWoodTower(s)){withStructureGroundPlane(s,()=>window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s)));return}
+  if(isLonghouse(s))return;   // its room is drawn with its model (drawStructure)
   const render=()=>{
     // Walls stop at the ceiling of the floor in view (cutawayCeilingZ); the crest and the roof
     // deck only when every floor is in view.
@@ -1059,7 +1100,7 @@ function drawCutawayStructures(){
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b))
     .forEach(s=>withStructureVisualMaterial(s,()=>drawCutawayStructure(s)));
 }
-function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isRaisedPlacementCastlePoint(s)}
+function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isLonghouse(s)&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
 function unionFootprintPoints(s){
   if(!['wall','built'].includes(s.type))return footprintPoints(s);

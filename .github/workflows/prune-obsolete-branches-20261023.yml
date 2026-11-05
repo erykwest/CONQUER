@@ -1,6 +1,6 @@
-name: One-time safe cleanup of obsolete remote branches (2026-11-03)
+name: One-time safe cleanup of obsolete remote branches (2026-11-04)
 
-# PR #139 squashed both CRIME branches. The exact tribunal head is an ancestor of the reviewed PR head.
+# Retire eight feature branches with exact heads covered by merged PRs.
 # Runs only when this exact workflow changes on main.
 # Every candidate is pinned below; new work and open-PR heads/bases are preserved.
 on:
@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           removed=0; skipped=0; failures=0; examined=0
-          echo '## Branch cleanup — 2026-11-03' >> "$GITHUB_STEP_SUMMARY"
+          echo '## Branch cleanup — 2026-11-04' >> "$GITHUB_STEP_SUMMARY"
           while IFS='|' read -r branch expected evidence; do
             [[ -z "$branch" ]] && continue
             if [[ "$expected" == '@this-commit' ]]; then expected="$GITHUB_SHA"; fi
@@ -87,8 +87,14 @@ jobs:
               echo "FAILED $branch"; failures=$((failures+1))
             fi
           done <<'BRANCHES'
-          feature/crime-buildings|5b58fe55af6ea323791b89c169b7ddefed1b82f8|139
-          feature/crime-tribunal-scene|b75318b28c203dc3acc229c9a4e239c76659b07f|replacement:139
+          feature/alarm-bell|85bf0d7865d53be3381794e9182b6ef77f70f978|148
+          feature/built-portico|301593efde3432687f8a27e28517f1b56a203d85|147
+          feature/cistern|4ba6d86038989170333dc822433284bb228bcabd|144
+          feature/colombaia|9cc784930446a8fcd57f61515133cf80c1776252|142
+          feature/infirmary|30a6b74258de9a34d89dbce6f00b72f38abb2d1a|143
+          feature/keep-w4|46419cbd8861b4a710548c204442e18c87f1b5e2|151
+          feature/military-stables|0fbe2bb988c76b65945bfaaab632595abdd6d0c1|149
+          feature/room-exterior-latrine|1341a53d1749f335b12b904876b84c05b5f844b6|146
           BRANCHES
           echo "Result: $removed removed; $skipped skipped; $failures failed" | tee -a "$GITHUB_STEP_SUMMARY"
           ((failures == 0))

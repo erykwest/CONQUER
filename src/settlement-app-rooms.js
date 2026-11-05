@@ -92,7 +92,7 @@ function renderFunctionPanel(){
   }
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s),capUnits=(s.type==='house'||simpleCivic)?0:functionCapacityUnits(s);panel.classList.add('open');
-  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate,maxLevel=maxStructureLevel(s),canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
+  const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate&&!isLonghouse(s),maxLevel=maxStructureLevel(s),canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
   info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${masonryMaterial(s)?`<div class="kv"><span>Muratura</span><b>${masonryMaterial(s)==='brick'?'Mattoni / Argilla':'Pietra'}</b></div>`:''}${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label" data-construction-status="true">Under construction · ${s.construction?.version===2?constructionWorkStatus(s)+' · '+remainingDays(s).toFixed(1)+' worker-days left':remainingDays(s).toFixed(1)+' calendar days'}</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${isWideBuilt(s)?`<div class="legend" style="margin-top:7px">Wide hall: one LARGE ground-floor room with free double height (≥2U) — common hall, chapel, throne hall.</div>`:s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
   info.innerHTML+=siteLaborLine(s);
   // L3 commerce: autonomous workshop at home, or the service it operates.
@@ -165,9 +165,10 @@ function renderFunctionPanel(){
   }
   if(canTier){
     const current=['wall','palisade'].includes(s.type)?wallTier(s):towerTier(s);
-    const labels=['wall','palisade'].includes(s.type)?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U']);
+    const labels=['wall','palisade'].includes(s.type)?['T1 · .2U','T2 · .5U','T3 · 1U']:(s.shape==='round'?['T1 · R.5','T2 · R.75','T3 · R1']:['T1 · 1U','T2 · 1.5U','T3 · 2U',...(woodTower||s.parentTowerId?[]:['W4 · 3U'])]);
     const options=isOrientedTower(s)?orientedTowerTierOptions(s.shape):labels.map((label,i)=>({value:i+1,label}));
-    html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="${options.length===3?'grid3':'grid'}">${options.map(o=>`<button data-structure-tier="${o.value}" class="${current===o.value?'active':''}">${o.label}</button>`).join('')}</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Tier / footprint</div><div class="${options.length===3?'grid3':'grid'}">${options.map(o=>`<button data-structure-tier="${o.value}" ${o.value===KEEP_W4_TIER&&!keepW4Available(s)?'disabled':''} class="${current===o.value?'active':''}">${o.label}</button>`).join('')}</div></div>`;
+    if(isKeepW4(s))html+=Array.from({length:structureLevel(s)},(_,f)=>{const cur=keepFloorPlan(s,f);return `<div class="slot"><div class="slot-label">Pianta · ${f===0?'piano terra':'piano '+f}</div><div class="grid">${Object.keys(KEEP_FLOOR_PLANS).map(k=>`<button data-keep-plan="${f}:${k}" class="${cur===k?'active':''}">${{hall:'Sala',halves:'2 metà',three:'1+2',quad:'4 quarti'}[k]}</button>`).join('')}</div></div>`}).join('');
   }
   if(canHeight)html+=`<div class="slot"><div class="slot-label">Height levels</div><div class="${maxLevel===3?'grid3':'grid'}">${Array.from({length:maxLevel},(_,i)=>`<button data-height-level="${i+1}" class="${structureLevel(s)===i+1?'active':''}">${i+1}</button>`).join('')}</div></div>`;
   if(s.type==='tower'){
@@ -217,9 +218,9 @@ function renderFunctionPanel(){
     const label={intact:'integro',damaged:'danneggiato',broken:'sfondato'}[st];
     html+=`<div class="slot"><div class="slot-label">Portone · ${label}</div><div class="grid"><button data-gate-closed="0" class="${closed?'':'active'}">Aperto</button><button data-gate-closed="1" class="${closed?'active':''}" ${st==='broken'?'disabled':''}>Chiuso</button></div><div class="legend">Chiuso e integro blocca il passaggio a tutti; l'ariete lo sfonda e da sfondato resta aperto. Chiuso, le guardie rientrano.</div><div class="grid"><button data-gate-night="1" class="${s.nightClose!==false?'active':''}">Chiusura notturna ON</button><button data-gate-night="0" class="${s.nightClose===false?'active':''}">OFF</button></div><div class="legend">Si chiude da solo al tramonto e si riapre all'alba; aperto o chiuso a mano, resta così fino al mattino.</div></div>`;
   }
-  if(s.type==='built'){
+  if(s.type==='built'&&!isLonghouse(s)){
     const skin=builtSkin(s);
-    html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">Porticato affects only the interior ground floor.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">${isWideBuilt(s)?'Porticato affects only the interior ground floor.':'Porticato: the ground floor opens under the arches and the upper floor is raised over it. Under the portico: '+PORTICO_FUNCTIONS.map(k=>FUNCTION_LABELS[k]).join(', ')+'.'}</div></div>`;
   }
   if(s.type==='wall'){
     const skin=wallSkin(s),narrow=wallTier(s)===1;
@@ -247,7 +248,7 @@ function renderFunctionPanel(){
   if(s.type!=='house'&&!simpleCivic){
     if(building)html+='<div class="slot"><div class="legend">Functions can be assigned when construction is complete.</div></div>';
     else if(cap===0)html+='<div class="slot"><div class="legend">No function capacity at the current footprint/height.</div></div>';
-    else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">Room ${i+1} · Floor ${i+1+functionFloorOffset(s)} ·${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select>${value==='infirmary'?window.ConquerInfirmary?.slotLegend(s,i)||'':''}</div>`}).join('');
+    else html+=Array.from({length:cap},(_,n)=>['tower','built'].includes(s.type)?cap-1-n:n).map(i=>{const value=s.functions[i],size=functionSlotSize(s,i),units=functionSlotUnits(s,i);return `<div class="slot"><div class="slot-label">${i===0&&isBuiltPortico(s)?'Portico':'Room '+(i+1)} · Floor ${functionSlotFloor(s,i)+1} ·${size.toUpperCase()} · ${units}× capacity</div><select data-function-slot="${i}"><option value="">— Empty —</option>${FUNCTION_CATALOG.map(k=>`<option value="${k}" ${value===k?'selected':''} ${window.ConquerSiege?.allowed(s,i,k)?'':'disabled'}>${FUNCTION_LABELS[k]}</option>`).join('')}</select>${value==='infirmary'?window.ConquerInfirmary?.slotLegend(s,i)||'':''}</div>`}).join('');
   }
   if(['wall','palisade'].includes(s.type)&&!building){
     // Walls take damage bay by bay; a fallen bay opens a breach there.
@@ -305,6 +306,7 @@ function renderFunctionPanel(){
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));
   on('[data-cutaway-floor]',(id,el)=>StructureCommands.stepCutawayFloor(id,Number(el.dataset.cutawayFloor)));
   on('[data-linear-flip]',id=>StructureCommands.flipSide(id));
+  on('[data-keep-plan]',(id,el)=>{const [f,k]=el.dataset.keepPlan.split(':');StructureCommands.setKeepFloorPlan(id,Number(f),k)});
   on('[data-function-slot]',(id,el)=>StructureCommands.setRoom(id,Number(el.dataset.functionSlot),el.value),'onchange');
   window.ConquerGates?.bindPanel(slots);
   on('[data-civic-level]',(id,el)=>StructureCommands.setCivicLevel(id,Number(el.dataset.civicLevel)));

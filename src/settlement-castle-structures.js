@@ -311,7 +311,7 @@ function builtRoofGeometry(s){
 // Wide-hall buttresses on the lancet facade, one on every bay line (n lancets -> n+1),
 // with the stepped profile of steppedButtressPieces (shared with buttressed towers).
 function wideHallButtresses(s){
-  if(!isWideBuilt(s))return[];
+  if(!isWideBuilt(s)||isLonghouse(s))return[];
   const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side);
   const lancet=builtWindowRows(s).find(r=>r[3]==='hallLancet');
   const n=builtWindowCount(edge,0,4,lancet?lancet[4]:.86),cell=edge.length/n;
@@ -922,7 +922,7 @@ function lCornerMerlons(fp,corners,z,h,d,owner){
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s);
-  const perSide=[0,3,4,5][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[];
+  const perSide=[0,3,4,5,7][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[];
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1,mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
     if(mach){
@@ -1429,6 +1429,8 @@ function chimneySpecs(s){
     return specs;
   }
 
+  // The timber longhouse has no masonry stack (its Blender model is the whole building).
+  if(s.type==='built'&&isLonghouse(s))return[];
   if(s.type==='built'){
     const g=builtRoofGeometry(s);if(!g)return[];
     const dx=g.ridgeB.x-g.ridgeA.x,dy=g.ridgeB.y-g.ridgeA.y;
