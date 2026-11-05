@@ -484,6 +484,9 @@ function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
 // Timber longhouse: a built section (W1 or W2 span) in wood, ground floor only, with the same
 // rooms as the stone section's ground floor (Blender model: build_wood_fort.py, settlement-wood3d.js).
 function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
+// Lean-to (settlement-lean-to.js): a W1 section against the inner face of an H2 wall, one storey,
+// single-pitch roof under the wall walk.
+function isLeanTo(s){return s?.type==='built'&&s.leanTo===true&&!isLonghouse(s)&&!isWideBuilt(s)}
 // W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
 function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.
@@ -561,9 +564,9 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
-function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
+function maxStructureLevel(s){return isLonghouse(s)||isLeanTo(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
-  if(isWoodGate(s)||isLonghouse(s))return 1;
+  if(isWoodGate(s)||isLonghouse(s)||isLeanTo(s))return 1;
   return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}

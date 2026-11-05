@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+Sul branch `feature/wall-buildings` (BC-251105-03/10): **edificio addossato alle mura** (`src/settlement-lean-to.js`, pulsante Builder «Lean-to»). È una sezione `built` W1 (`leanTo:true`) agganciata con un clic alla faccia interna di un muro H2, lungo tutto il tratto (0,55U di rispetto verso torri/porte, minimo 2U), un solo piano con la stanza della sezione W1 al piano terra: le capacità simulate (scuderia, magazzino, caserma…) sono le stesse. Tetto a **falda unica**: gronda a 1,40U sul lato aperto, colmo sul muro a 0,12U sotto il camminamento, che resta libero. Rifiuta muri H1, muri in costruzione, muri già occupati e tratti troppo corti. Test: `qa/lean-to-regression.cjs` (in CI builder-menu). Asset Lab: 2 voci «Addossato alle mura W1» (+ scuderia); audit famiglia Mura 204 render, 0 falliti, 16 nuovi rivisti nei provini. **Aperto:** l'addossato non segue il muro se questo viene demolito o breccia (resta in piedi); baseline audit non aggiornata (nuovi render da approvare).
+
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)

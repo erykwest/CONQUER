@@ -44,7 +44,7 @@
 ### Mura e camminamenti
 - [ ] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità.
 - [ ] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura.
-- [ ] **BC-251105-03 — Edifici addossati alle mura.** Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
+- [x] **BC-251105-03 — Edifici addossati alle mura.** *(branch `feature/wall-buildings`: sezione W1 `leanTo` contro muri H2, stesse stanze della W1.)* Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
 - [ ] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia da definire geometricamente; **non equivale** allo stile del merlo «a doppia falda» già annotato in `feat/crenel-styles`.
 
 ### Torri
@@ -55,7 +55,7 @@
 ### Coperture
 - [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
 - [ ] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare.
-- [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
+- [x] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** *(branch `feature/wall-buildings`: falda unica, colmo 0,12U sotto il camminamento; pendenza propria, indipendente da `feat/roof-pitch`.)* Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
 
 ### Ambiente
 - [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.

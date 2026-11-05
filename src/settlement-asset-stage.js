@@ -43,6 +43,9 @@
       ['Mura',['Long house W1',{type:'built',material:'wood',level:1}]],
       ['Mura',['Long house W2',{type:'built',material:'wood',span:'wide',level:1,flip:true}]],
       ['Mura',['Long house W1 · scuderia',{type:'built',material:'wood',level:1,functions:['stables']}]],
+      // Lean-to against the inner face of an H2 wall (settlement-lean-to.js): single-pitch roof.
+      ['Mura',['Addossato alle mura W1',{type:'built',leanTo:true,leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Addossato alle mura W1 · scuderia',{type:'built',leanTo:true,leanSide:-1,level:1,functions:['stables']}]],
       ['Mura',['Long house W2 · sala comune',{type:'built',material:'wood',span:'wide',level:1,flip:true,functions:['commonHall']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }

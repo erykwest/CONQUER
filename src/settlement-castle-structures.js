@@ -303,7 +303,14 @@ function builtRoofFootprintPoints(s){
 }
 function builtRoofGeometry(s){
   const p=builtRoofFootprintPoints(s);if(!p||p.length<4)return null;
-  const h=structureHeight(s),rise=clamp((Number(s.width)||1)*.46,.32,isWideBuilt(s)?.92:.56);
+  const h=structureHeight(s);
+  // Lean-to: one pitch, its top edge on the wall (leanSide) a hand under the wall walk.
+  if(isLeanTo(s)){
+    const up=s.leanSide===-1?[p[3],p[2]]:[p[0],p[1]];
+    const top=Math.max(h+.2,window.ConquerLeanTo?.roofTop(s)??1.98);
+    return{p,h,rise:top-h,ridgeA:{...up[0]},ridgeB:{...up[1]},ridgeH:top,leanTo:true};
+  }
+  const rise=clamp((Number(s.width)||1)*.46,.32,isWideBuilt(s)?.92:.56);
   const ridgeA={x:(p[0].x+p[3].x)/2,y:(p[0].y+p[3].y)/2};
   const ridgeB={x:(p[1].x+p[2].x)/2,y:(p[1].y+p[2].y)/2};
   return{p,h,rise,ridgeA,ridgeB,ridgeH:h+rise};
@@ -1463,8 +1470,10 @@ function chimneySpecs(s){
     const count=isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
     for(let i=0;i<count;i++){
       const t=(i+1)/(count+1);
+      // Lean-to: the stack rises off the wall face, inside the roof.
+      const inn=g.leanTo?{x:-(s.leanSide===-1?-1:1)*(-dy/(ridgeLength||1))*.16,y:-(s.leanSide===-1?-1:1)*(dx/(ridgeLength||1))*.16}:{x:0,y:0};
       specs.push({
-        center:{x:g.ridgeA.x+dx*t,y:g.ridgeA.y+dy*t},
+        center:{x:g.ridgeA.x+dx*t+inn.x,y:g.ridgeA.y+dy*t+inn.y},
         angle:Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x),
         z0:g.ridgeH-.02,z1:g.ridgeH+.48,index:i
       });

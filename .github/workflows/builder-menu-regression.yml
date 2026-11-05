@@ -30,3 +30,4 @@ jobs:
         run: |
           node qa/mills3d-regression.cjs
           node qa/builder-placement-regression.cjs
+          node qa/lean-to-regression.cjs
