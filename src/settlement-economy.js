@@ -27,7 +27,7 @@
   // A fisherman's catch per working day (settlement-fishers.js).
   const FISH_FOOD_PER_DAY = 1.2;
   const KIND = Object.freeze({
-    field:{good:'food',classId:1,workers:1,build:20},
+    field:{good:'food',classId:2,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
     quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
     mine:{good:'stone',classId:2,workers:2,rate:2,build:95},
@@ -264,7 +264,7 @@
     if(s.type==='field'){
       let slots=1;
       if(typeof fieldLayout==='function')slots=Math.max(1,fieldLayout(s).cells.length);
-      return {tier:1,count:slots};
+      return {tier:spec.classId,count:slots};
     }
     return {tier:spec.classId,count:spec.workers};
   }
@@ -323,11 +323,6 @@
       remaining[group]-=count;
       if(s.type==='loggingCamp'){woodReserve-=count;logging.push(s)}
       if(group==='L1')assignedL1[s.id]=l1Available.splice(0,count);
-      if(s.type==='field'&&count<req.count){
-        // Idle L2 may tend the remaining field slots.
-        const extra=Math.min(req.count-count,remaining.L2);
-        count+=extra;remaining.L2-=extra;
-      }
       allocated[s.id]=count;
     }
     // Shipwrights: up to three L1 at each shipyard with a ship on its slipway.

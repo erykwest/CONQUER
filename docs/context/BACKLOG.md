@@ -133,7 +133,7 @@ La presenza del motore CANS non chiude i requisiti di popolazione in interni o d
 |---|---|---|
 | P0 | bridge | Già coperta da #73; preservare i miglioramenti successivi di main |
 | P0 | circle | Riconciliata su main corrente, QA locale 67/67; pubblicazione e CI prima della promozione |
-| P0 | jobmanager | Coperta da #98–99; non duplicare D-049. D-051 resta aperta |
+| P0 | jobmanager | Coperta da #98–99; non duplicare D-049. D-051 decisa: campi solo L2 |
 | P0 | knights | Renderer 2D già identico su main, #96; 3D escluso da D-046 |
 | P2 | messages | Integrare dopo riconciliazione del runtime e documentazione |
 | P3 | Tutte le altre branch senza PR | Verificare se i residui sono ancora pertinenti; niente recuperi automatici |
@@ -277,7 +277,7 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
-- **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
+- **DECISO 05/11/2026:** D-051, campi riservati agli L2.
 - **TAPPA 2 SU MAIN (#99, `cdb2af9`):** routine settimanali di uomini e donne.
 - **TAPPA 3 SU MAIN (#101, `e1fdb20`):** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
 - **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, incasso della locanda. Su branch `feature/l3-workshop-cutaway` (NON MERGE): interno in sezione (fase 1), vetrina a ante e insegna a bandiera con emblema del mestiere (fase 2); residui: luce notturna dell'insegna, mesh Blender per ante e insegna, insegna visibile in 2.5D anche con la facciata di spalle.
@@ -788,3 +788,8 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 ### CIRCLE — QA baseline 29 ottobre 2026
 - **Verificato:** Node 22 CI [run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993), 65/65 PASS; workflow automatico attivo su `circle`.
 - **QA aperta:** prova gameplay browser sulla branch `circle`, assedio contemporaneo di cerchie concentriche/radiali, salvataggi dopo molte campagne, prestazioni della topologia raster e controllo UI in pausa.
+
+
+## Campi L2 — 05/11/2026
+
+D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanager nel branch fix/fields-l2-only; chiusura dopo merge e rimozione della branch storica.

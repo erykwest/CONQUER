@@ -127,3 +127,6 @@ Questa traccia **non sostituisce** la milestone M1 dell'economia. Dall'export [E
 Ogni nuova idea viene messa in [BACKLOG.md](BACKLOG.md) con livello «IDEA» e dipendenza, non aggiunta automaticamente al lavoro attivo. Per promuoverla: descrivere quale problema già osservato risolve, criterio di accettazione, regressione e milestone impattata. Il numero di feature «IN CORSO» va mantenuto piccolo.
 
 Aggiornare sempre insieme [STATUS.md](STATUS.md), [DECISIONS.md](DECISIONS.md) e [CHANGELOG.md](CHANGELOG.md) quando cambia la sequenza.
+
+
+Aggiornamento 05/11/2026: D-051 decisa dall’utente, campi solo L2. Il recupero residuo di jobmanager si chiude con la relativa integrazione verificata.
