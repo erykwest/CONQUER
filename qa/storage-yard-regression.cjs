@@ -48,8 +48,18 @@ test('stockyard is wired into founding, legacy saves, two renderers and both pal
     ['src/settlement-app-persistence.js','ConquerStorageYard?.ensureForWell'],
     ['src/settlement-world3d.js','ConquerStorageYard.addToBuilder'],
     ['src/settlement-render.js','ConquerStorageYard.draw'],
-    ['src/settlement-app-rooms.js','data-stockyard-grow']
+    ['src/settlement-app-rooms.js','data-stockyard-grow'],
+    ['figures-lab.html','settlement-storage-yard.js'],
+    ['src/asset-catalog.js','ConquerStorageYard']
   ])assert.ok(read(file).includes(needle),file+' missing '+needle);
+});
+test('stockyard model registry exposes three truly meshed variants for Asset Lab',()=>{
+  const h=harness(),models=h.yard.models;
+  for(const key of ['stockyard2','stockyard4','stockyard6']){
+    const shape=models[key].parts.stockyard;
+    assert.ok(shape.p.length>100,'real mesh vertices, not a sketch');
+    assert.equal(shape.p.length/9,shape.c.length,'one colour per triangle');
+  }
 });
 test('foundation spawns exactly one storageYard within 7U and references real founding stock',()=>{
   const h=harness();h.State.structures=[{id:'well',type:'well',x:100,y:100}];
