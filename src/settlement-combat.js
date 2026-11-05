@@ -1660,11 +1660,142 @@
         :SE.triangles(s.level>1?'tower2':'tower',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{bridge:1});
     });
   }
+  // ---------- defenders and free attackers seek each other ----------
+  // Melee only happens within 1U (ConquerCombatRules.update), so without this nobody closed in:
+  // the garrison waited at its posts while the attackers walked past. Once a second each idle
+  // defender on the ground goes for the nearest hostile on the ground within its reach, and each
+  // attacker with no assault task (men-at-arms, knights, archers sent as a raiding party) goes
+  // for the nearest defender. A player order (a target without autoFoe) is never overridden.
+  // Reach: patrols guard their White Zone, the others answer what comes near the settlement.
+  const ENGAGE={patrol:12,squad:18,captain:18,knight:22,archer:16,infantry:18},RAID_R=40;
+  // Who can reach whom: a 1U grid blocked only by the circuit (walls, palisades, towers, closed
+  // gates), flood-filled into areas. A failed A* between a walled courtyard and the outside
+  // explores the whole box (seconds), so seeking is gated on being in the same area. Rebuilt only
+  // when the circuit changes (a gate opens or is broken, a wall falls).
+  // 0.5U cells: a wall band of 0.4U seals any diagonal, and a 2U gate passage stays open.
+  const AREA_RES=.5,AREA_N=Math.ceil(WORLD/AREA_RES);let areaCache={sig:null,comp:null};
+  function areaMap(){
+    const circuit=State.structures.filter(s=>['wall','palisade','tower','gate'].includes(s.type)&&!underConstruction(s));
+    const S=window.ConquerSiege;
+    const sig=circuit.map(s=>s.id+(s.destroyed?'x':'')+(s.type==='gate'?(S?.gateBreached?.(s)?'b':S?.gateClosed?.(s)?'c':'o'):'')).join('|');
+    if(areaCache.sig===sig)return areaCache.comp;
+    const R=AREA_RES,N=AREA_N,blocked=new Uint8Array(N*N),comp=new Int32Array(N*N).fill(-1);
+    // Mark every cell whose centre is within r of the shape (dist(px,py) < r).
+    const mark=(x0,y0,x1,y1,inside)=>{
+      for(let y=Math.max(0,Math.floor(y0/R));y<=Math.min(N-1,Math.ceil(y1/R));y++)
+        for(let x=Math.max(0,Math.floor(x0/R));x<=Math.min(N-1,Math.ceil(x1/R));x++)
+          if(inside((x+.5)*R,(y+.5)*R))blocked[y*N+x]=1;
+    };
+    for(const s of circuit){
+      if(s.destroyed)continue;
+      if(s.type==='gate'){
+        if(!S?.gateClosed?.(s)||S?.gateBreached?.(s))continue;     // an open or broken gate lets through
+        const d=rectDims(s),r=Math.max(d.w,d.h)/2+.2;
+        mark(s.x-r,s.y-r,s.x+r,s.y+r,(px,py)=>Math.hypot(px-s.x,py-s.y)<r);
+        continue;
+      }
+      if(s.type==='tower'){
+        const r=(s.shape==='round'?Number(s.r)||1:(Number(s.size)||2)/2)+.2;
+        mark(s.x-r,s.y-r,s.x+r,s.y+r,(px,py)=>Math.hypot(px-s.x,py-s.y)<r);
+        continue;
+      }
+      const a=s.a,b=s.b;if(!a||!b)continue;
+      const half=Math.max(.4,(Number(s.width)||.5)/2+.1),dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy||1;
+      mark(Math.min(a.x,b.x)-half,Math.min(a.y,b.y)-half,Math.max(a.x,b.x)+half,Math.max(a.y,b.y)+half,(px,py)=>{
+        const t=Math.max(0,Math.min(1,((px-a.x)*dx+(py-a.y)*dy)/L2));return Math.hypot(px-(a.x+dx*t),py-(a.y+dy*t))<half});
+    }
+    let n=0;const stack=[];
+    for(let i=0;i<blocked.length;i++){
+      if(blocked[i]||comp[i]>=0)continue;
+      comp[i]=n;stack.push(i);
+      while(stack.length){const j=stack.pop(),x=j%N,y=(j/N)|0;
+        if(x>0&&!blocked[j-1]&&comp[j-1]<0){comp[j-1]=n;stack.push(j-1)}
+        if(x<N-1&&!blocked[j+1]&&comp[j+1]<0){comp[j+1]=n;stack.push(j+1)}
+        if(y>0&&!blocked[j-N]&&comp[j-N]<0){comp[j-N]=n;stack.push(j-N)}
+        if(y<N-1&&!blocked[j+N]&&comp[j+N]<0){comp[j+N]=n;stack.push(j+N)}}
+      n++;
+    }
+    areaCache={sig,comp};return comp;
+  }
+  // Area of a point: its cell, or the nearest open cell around it (men stand close to walls).
+  function areaOf(p){
+    const comp=areaMap(),cx=Math.floor(p.x/AREA_RES),cy=Math.floor(p.y/AREA_RES);
+    for(let r=0;r<=3;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      const x=cx+dx,y=cy+dy;if(x<0||y<0||x>=AREA_N||y>=AREA_N)continue;
+      const c=comp[y*AREA_N+x];if(c>=0)return c;
+    }
+    return -1;
+  }
+  const sameArea=(a,b)=>{const ca=areaOf(a);return ca>=0&&ca===areaOf(b)};
+  // At most a few route searches per tick across all the men who seek.
+  let seekBudget=0;
+  // Same area but no grid route: the way runs through a gate passage, too narrow for the grid
+  // router (the ram crew goes in the same way). Legs: to the near mouth, through, then on.
+  function legsViaGate(u,goal){
+    if(typeof gatePassageInfo!=='function')return null;
+    const S=window.ConquerSiege;
+    const gates=State.structures.filter(g=>g.type==='gate'&&!underConstruction(g)&&(!S?.gateClosed?.(g)||S?.gateBreached?.(g)))
+      .sort((a,b)=>(dist(a,u)+dist(a,goal))-(dist(b,u)+dist(b,goal)));
+    for(const gate of gates.slice(0,2)){
+      const info=gatePassageInfo(gate,u),dx=info.far.x-info.center.x,dy=info.far.y-info.center.y,L=Math.hypot(dx,dy)||1;
+      const beyond={x:info.far.x+dx/L*.6,y:info.far.y+dy/L*.6};
+      if(Math.hypot(goal.x-beyond.x,goal.y-beyond.y)>Math.hypot(goal.x-info.near.x,goal.y-info.near.y))continue;   // the goal is not across it
+      const to=groundLeg(u,info.near,u),on=groundLeg(beyond,goal,u);
+      if(to.points.length<2&&Math.hypot(u.x-info.near.x,u.y-info.near.y)>1.5)continue;
+      return[to,{kind:'ground',points:[{...info.near,z:0},{...info.far,z:0},{...beyond,z:0}]},on];
+    }
+    return null;
+  }
+  const hostileFoes=()=>combat.enemy.filter(e=>livingUnit(e)&&!e.routing&&!e.neutral&&!unitWall(e)&&!e.climbing);
+  function defenderThink(u,now,foes){
+    if(!livingUnit(u)||u.routing||u.engaged||u.climbing||u.legs?.length||unitWall(u)||now<(u.nextAutoAt||0))return;
+    if(u.campState==='camped'||u.campState==='barracks')return;
+    // Marching on the player's order (a patrol's own loop target is not an order: it breaks off).
+    if(u.target&&!u.autoFoe&&u.kind!=='patrol')return;
+    const reach=ENGAGE[u.kind]??14;
+    const near=foes.filter(e=>Math.hypot(e.x-u.x,e.y-u.y)<=reach);
+    const foe=near.length?best(near.filter(e=>sameArea(u,e)&&(u.kind!=='patrol'||routeAllowed([u,e]))),e=>Math.hypot(e.x-u.x,e.y-u.y)):null;
+    if(!foe){u.nextAutoAt=now+THINK_S*1000;if(u.autoFoe){u.autoFoe=null;u.target=null;u.path=null}return}
+    const d=Math.hypot(foe.x-u.x,foe.y-u.y);
+    if(d<.8){u.nextAutoAt=now+THINK_S*1000;u.target=null;u.path=null;u.autoFoe=foe.id;return}   // in contact: the rules fight it out
+    const same=u.autoFoe===foe.id&&u.target&&Math.hypot(u.target.x-foe.x,u.target.y-foe.y)<1;
+    if(same){u.nextAutoAt=now+THINK_S*1000;return}
+    if(seekBudget<=0)return;                                          // no search left this tick: next tick
+    seekBudget--;u.nextAutoAt=now+THINK_S*1000;
+    const goal={x:foe.x,y:foe.y},route=u.kind==='patrol'?patrolRoute(u,goal,u.id):infantryRoute(u,goal,u.id,u.kind);
+    if(!route){
+      const legs=u.kind==='patrol'?null:legsViaGate(u,goal);
+      u.target=null;u.path=null;
+      if(legs){u.legs=legs;u.autoFoe=foe.id}else u.autoFoe=null;
+      return;
+    }
+    u.target=goal;u.path=route.map(p=>({x:p.x,y:p.y}));u.pathIndex=1;u.autoFoe=foe.id;
+  }
+  function raidThink(e,now){
+    if(e.engaged||e.climbing||unitWall(e)||now<(e.nextThink||0))return;
+    const foes=combat.units.filter(u=>livingUnit(u)&&!u.routing&&!unitWall(u)&&!u.climbing&&u.campState!=='barracks'&&Math.hypot(u.x-e.x,u.y-e.y)<=RAID_R);
+    const foe=foes.length?best(foes.filter(u=>sameArea(u,e)),u=>Math.hypot(u.x-e.x,u.y-e.y)):null;
+    if(!foe){e.nextThink=now+THINK_S*1000;return}
+    const d=Math.hypot(foe.x-e.x,foe.y-e.y),archer=(e.combatKind||e.kind)==='archer';
+    // Archers keep to bow range; the others close to contact.
+    const stand=archer?10:.6;
+    if(d<=stand+.3){e.nextThink=now+THINK_S*1000;e.legs=null;return}
+    if(e.legs?.length&&e.raidFoe===foe.id&&Math.hypot(e.raidAt.x-foe.x,e.raidAt.y-foe.y)<1){e.nextThink=now+THINK_S*1000;return}
+    if(seekBudget<=0)return;
+    seekBudget--;e.nextThink=now+THINK_S*1000;
+    const k=(d-stand)/d,to={x:e.x+(foe.x-e.x)*k,y:e.y+(foe.y-e.y)*k};
+    const leg=groundLeg(e,to,e);
+    const legs=leg.points.length>=2&&Math.hypot(leg.points.at(-1).x-to.x,leg.points.at(-1).y-to.y)<.5?[leg]:legsViaGate(e,to);
+    if(!legs)return;
+    e.legs=legs;e.raidFoe=foe.id;e.raidAt={x:foe.x,y:foe.y};
+  }
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);
     window.ConquerWolves?.tick(dt);
     window.ConquerCamp?.synchronize();
+    const thinkAt=performance.now();seekBudget=window.__conquerSeekOff?0:3;   // QA switch: compare with no seeking
+    if(combat.enemy.length&&!window.__conquerSeekOff){const foes=hostileFoes();if(foes.length)for(const u of combat.units)defenderThink(u,thinkAt,foes)}
     updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
@@ -1708,6 +1839,7 @@
       if(!livingUnit(e)||e.routing)continue;
       if(e.assault)assaultThink(e,nowMs);
       else if(e.torch)torchThink(e,nowMs);
+      else if(!e.digging&&e.kind!=='wolf'&&!e.neutral)raidThink(e,nowMs);
       if(e.legs?.length&&stepLegs(e,dt,e.kind==='knight'||e.combatKind==='knight'?1.5:.8))moved=true;
     }
     ramStep(dt);
@@ -1991,7 +2123,7 @@
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
   window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
-    dynamicMeshes,addStorm,addRamStorm,issueWallOrder,planLegs,
+    dynamicMeshes,addStorm,addRamStorm,issueWallOrder,planLegs,areaOf,
     units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
     recruitKnight,knightRecruitment:()=>{
       const cap=window.ConquerSiege?.capacity?.()||{},current=(combat?.units||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;
