@@ -37,6 +37,12 @@
 ### Ambiente
 - [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.
 
+### Terreno e percorsi su dislivelli
+- [ ] **BC-251105-12 — Rampe per superare i dislivelli.** Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
+- [ ] **BC-251105-13 — Scalinate per pendii e colline.** Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
+
+**Accettazione BC-12/13:** la geometria segue le quote reali del terreno; entrambe le estremità si connettono a superfici percorribili; il pathfinding delle unità riconosce i collegamenti, senza attraversare pendii non accessibili; costruzione, collisioni, salvataggio e visualizzazione 3D/2.5D sono verificati.
+
 **Dipendenze/QA da affrontare in implementazione, non eseguite ora:** coordinare BC-01/02/03/04 con geometrie dei camminamenti; BC-08/09/10 con coperture già esistenti; BC-05/06/07 con livelli, cutaway e modelli delle torri. Al rilascio verificare Asset Lab, visualizzazione 3D e 2.5D, collisioni, persistenza e regressioni pertinenti. Il riferimento inter-sistemi è [BACKLOG](context/BACKLOG.md).
 
 ## 2026-10-29 — Storici gestionali e anteprime visive · note storiche dalla branch `panels` (merged #103 il 30/10)
