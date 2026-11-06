@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-L1-CARTER-261106 — Carrettiere come mestiere L1, trasporto ancora visivo (06/11/2026)
+
+- **DECISO E IMPLEMENTATO SU BRANCH `feature/l1-carter-jobs-market-20261106`:** una rete logistica locale prende **veri lavoratori L1** dal roster `ConquerEconomy.laborAllocation`. Al massimo un carrettiere per piazzale attivo con una consegna raggiungibile (max 4); l'industria essenziale e i cantieri navali hanno precedenza, mentre i cantieri usano soltanto il residuo. Il carrettiere ha la stessa identità del popolano/fondatore: mai contarlo due volte o generare un lavoratore addizionale.
+- **SEPARAZIONE DELLE DESTINAZIONI:** la quota reale della produzione contabilizzata come scorta del signore è trasportata visivamente al deposito; le quote registrate come `market lots` e le merci del commercio L3 sono trasportate visivamente al Mercato costruito, senza appropriarsi del materiale privato. Origine operativa = piazzale; il carico avviene dal produttore.
+- **IL LEDGER NON CAMBIA:** il lavoro è reale in termini di occupazione L1, il trasporto è estetico. Nessun addebito, consegna ritardata, vendita o consumo aggiuntivo su partenza/arrivo; niente inventario per singolo carretto o magazzino. Su rete viaria interrotta, turno non attivo o carenza L1 si rinuncia all'animazione, non alla produzione. I carri ordinari rimangono non intercettabili; i convogli militari/strategici conservano le loro regole.
+- **TURNO:** lunedì-venerdì, fascia .10–.75 della giornata per nuove partenze (i viaggi già avviati completano il ritorno). Sabato mercato civile, domenica riposo; l'allarme non autorizza nuove corse.
+
+
 ## D-CODEX-03 — Vault personale e pubblicazione editoriale (05/11/2026)
 
 - **Richiesta dell'utente:** usare la skill Obsidian per edifici e meccaniche, con vault dedicato nella propria cartella CONQUER. Il vault personale è la fonte di scrittura; il repository conserva una copia di pubblicazione versionata, non un secondo vault da modificare indipendentemente.
