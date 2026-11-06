@@ -131,10 +131,11 @@ check('market shipments never use the stockyard as the final goods destination',
 });
 check('market goods require a real completed market and cannot spawn a fake sale',()=>{
   const w=world({quarry:true});
-  w.H.record({siteId:'quarry',good:'stone',qty:1,destination:'market'});
+  assert.equal(w.H.record({siteId:'quarry',good:'stone',qty:1,destination:'market'}),false);
   assert.equal(w.H.workerDemand(.25),0);
   cycle(w,2);assert.equal(w.H.snapshot().active,0);
   w.State.structures.push(w.marketPlace);
+  assert.equal(w.H.record({siteId:'quarry',good:'stone',qty:1,destination:'market'}),true);
   assert.equal(w.H.workerDemand(.25),1);
   cycle(w,2);assert.equal(w.H.snapshot().active,1);
 });
