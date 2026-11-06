@@ -1212,6 +1212,65 @@ def a_herbGarden(m):
     m.done('fence', p)
 
 
+def a_kitchenGarden(m):
+    """Orto di corte: 3x2 U kitchen garden of the town hall. Long raised rows of
+    cabbages, leeks, beans and squash inside a wattle fence, with a water butt
+    and a lean-to tool shed. The gate (front, -Y) faces the town hall."""
+    hx, hy = 1.5 * S, 1.0 * S
+    p = m.part('ground')
+    p.box((0, 0, .03), (2 * hx - .1, 2 * hy - .1, .06), 'dirt')
+    p.box((0, 0, .07), (1.2, 2 * hy - .4, .02), 'gravel')     # central walk from the gate
+    m.done('ground', p)
+    p = m.part('beds')
+    crops = [('produceGreen', .26, .3), ('herb', .16, .55), ('leafDark', .3, .45), ('produceOrange', .28, .22)]
+    rows = (-2.4, -1.6, -.8, 0, .8, 1.6)
+    for ri, y in enumerate(rows):
+        key, r, hgt = crops[ri % len(crops)]
+        for sx in (-1, 1):
+            x0, x1 = (-hx + .5, -.8) if sx < 0 else (.8, hx - .5)
+            cx, L_ = (x0 + x1) / 2, x1 - x0
+            p.box((cx, y, .1), (L_, .55, .2), 'soil')
+            n_ = int(L_ / .62)
+            for k in range(n_):
+                x = x0 + .31 + k * (L_ - .62) / max(1, n_ - 1)
+                if key == 'herb':   # leeks / beans: upright tufts on a cane row
+                    p.box((x, y, .2 + hgt / 2), (.08, .08, hgt), key)
+                    p.box((x, y, .2 + hgt), (.22, .22, .08), 'leaf')
+                else:
+                    bush(p, x, y, r, hgt, key)
+    for x in (-1.6, 1.6):   # bean poles over the back rows
+        for y in (.8, 1.6):
+            p.box((x, y, .8), (.05, .05, 1.6), 'woodLight')
+    m.done('beds', p)
+    p = m.part('fence')
+    pts = [(-hx + .1, -hy + .1), (hx - .1, -hy + .1), (hx - .1, hy - .1), (-hx + .1, hy - .1)]
+    for a, b in zip(pts, pts[1:] + pts[:1]):
+        L_ = math.hypot(b[0] - a[0], b[1] - a[1])
+        n_ = int(L_ / 1.2)
+        front = a[1] == b[1] and a[1] < 0
+        for k in range(n_ + 1):
+            t = k / n_
+            x, y = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+            if front and abs(x) < .6:
+                continue
+            p.box((x, y, .45), (.1, .1, .9), 'woodDark')
+        for z in (.3, .55, .75):   # woven wattle bands
+            if front:
+                for s in (-1, 1):
+                    p.beam((s * .6, a[1], z), (s * (hx - .1), a[1], z), .1, .06, 'wood')
+            else:
+                p.beam((a[0], a[1], z), (b[0], b[1], z), .1, .06, 'wood')
+    m.done('fence', p)
+    p = m.part('shed')
+    sx, sy = hx - 1.3, hy - 1.0
+    p.box((sx, sy, .9), (1.8, 1.2, 1.8), 'woodLight')
+    p.box((sx, sy - .61, .75), (.6, .02, 1.3), 'woodDark')                   # door
+    gable_roof(p, sx, sy, 2.1, 1.5, 1.8, 2.5, 'x', ('roofShingle', 'roofShingleDark'), over=.2, th=.12, gable_key='woodLight')
+    p.cylinder(0, 0, 'barrel', n=8, axis='z', center=(-hx + .7, hy - .7, 0), radii=[.34, .38, .34], along=[0, .45, .9])
+    p.cylinder(0, 0, 'water', n=8, axis='z', center=(-hx + .7, hy - .7, 0), radii=[.3, .3], along=[.86, .88])
+    m.done('shed', p)
+
+
 def a_scriptorium(m):
     w, d = 8.0, 6.2
     p = m.part('body')
@@ -1720,6 +1779,7 @@ def build_list():
         out += [('townhall%d' % L, lambda m, L=L: townhall(m, L)), ('guild%d' % L, lambda m, L=L: guild(m, L))]
     out += [('prop_' + k, fn) for k, fn in PROPS]
     out += [('almshouse', a_almshouse)]   # appended last, like the town hall and guild
+    out += [('kitchenGarden', a_kitchenGarden)]   # town hall annex (BC-251105-11), appended last
     return out
 
 

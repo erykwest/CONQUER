@@ -179,7 +179,10 @@ function renderFunctionPanel(){
           '<button data-civic-annex="'+key+'" '+(locked||full||building?'disabled':'')+'>'+
           (locked?'Requires L'+spec.level:full?'Limit reached':building?'Parent under construction':'Place '+spec.label)+' · '+spec.w+'×'+spec.h+'U</button>'+
           owned.map(child=>'<button data-civic-annex-child="'+child.id+'">↳ Select '+spec.label+'</button>').join('');
-      }).join('')+'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>';
+      }).join('')+(s.type==='townhall'
+        ?'<div class="legend">Open ground within '+TOWNHALL_ANNEX_RANGE+'U of the town hall. Each garden yields '+
+          (window.ConquerEconomy?.KITCHEN_GARDEN_FOOD_PER_DAY||2)+' food per working day to the lord, also under alarm and siege.</div></div>'
+        :'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>');
   }
   if(isPlazaLike(s)){
     html+=`<div class="slot"><div class="slot-label">Piazza variant</div><div class="grid3">${PLAZA_VARIANTS.map(variant=>`<button data-plaza-variant="${variant}" class="${plazaVariant(s)===variant?'active':''}">${variant==='paved'?'Paved':variant==='fountain'?'Fountain':'Garden'}</button>`).join('')}</div></div>`;
@@ -200,7 +203,7 @@ function renderFunctionPanel(){
     const deg=Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360;
     html+=`<div class="slot"><div class="slot-label">Tower orientation · ${deg}° · step ${structureRotationStep(s.angle)}/23</div><div class="grid3"><button data-tower-rotate="-1">↺ 15°</button><button data-tower-flip>⇄ 180°</button><button data-tower-rotate="1">↻ 15°</button></div><div class="legend">Structural rotation is quantized to 24 positions. Attached subtorri and wall sockets follow the same angle model.</div></div>`;
     if(isWoodTower(s)){
-      html+=`<div class="slot"><div class="legend">Wooden tower · fixed H1. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
+      html+=`<div class="slot"><div class="legend">Wooden tower · fixed H${structureLevel(s)}. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
       if(woodTowerStyle(s)==='palisadeTower'){
         const roof=woodTowerRoof(s);
         html+=`<div class="slot"><div class="slot-label">Wood roof</div><div class="grid"><button data-wood-roof="open" class="${roof==='open'?'active':''}">Open platform</button><button data-wood-roof="pitched" class="${roof==='pitched'?'active':''}">Pitched · 4 posts</button></div></div>`;

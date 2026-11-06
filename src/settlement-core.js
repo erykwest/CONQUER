@@ -28,7 +28,7 @@ function invalidateSettlementScene(includeCastle=true){
 }
 function structureSceneLayers(s){
   if(!s)return['ground','shadow','base','castleBody','castleFront'];
-  if(['road','moat','bridge'].includes(s.type))return['ground','base'];
+  if(['road','moat','bridge','ramp','stairway'].includes(s.type))return['ground','base'];
   if(s.auto&&s.type==='field')return['ground'];
   if(s.type==='house'||s.type==='storageYard')return['ground','shadow','base'];
   if(isCivicAnnex(s))return['ground','shadow','base'];
@@ -248,6 +248,7 @@ const KEEP_FLOOR_PLAN_DEFAULTS=Object.freeze(['three','quad','hall']);
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32},{gold:240,stone:330,wood:75}],
   woodTower:[{gold:18,wood:42},{gold:32,wood:78}],
+  frameTower:{gold:55,wood:130},
   wallPerU:{gold:6,stone:18,wood:2},
   palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
@@ -266,7 +267,7 @@ const COSTS={
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -291,9 +292,14 @@ const BATTLEMENT_SPACING=.62;
 // Feudal crenellation style: one choice for every stone merlon of the settlement (towers, gates,
 // walls), stored in State.policies so new construction follows it. Restyling existing merlons is
 // paid per merlon at the target style's rate; flat is the default and the cheapest.
-const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail']);
+// Curtain-wall styles (towers and gates keep flat merlons):
+// 'double' = double merlon, each merlon twice as long along the run (pattern 11011011, not 1010101);
+// 'tworow' = a second, inner row of flat merlons on the wall walk. Quotes count merlons as built.
+const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail','double','tworow']);
 const CRENEL_STYLE_COST=Object.freeze({
   flat:Object.freeze({stone:1}),
+  double:Object.freeze({gold:1,stone:2}),
+  tworow:Object.freeze({gold:1,stone:1}),
   gabled:Object.freeze({gold:1,stone:2}),
   swallowtail:Object.freeze({gold:2,stone:3})
 });
@@ -459,10 +465,15 @@ function towerBaseStyle(s){
   return structureVariant(s,'baseStyle')||'standard';
 }
 function isWoodTower(s){return !!s&&s.type==='tower'&&s.material==='wood'}
-function woodTowerStyle(s){return isWoodTower(s)?(s.woodStyle==='watchtower'?'watchtower':'palisadeTower'):undefined}
+// Timber tower styles: watchtower (1 U, H1), palisade tower (1.5 U, H1) and the two-storey
+// frame tower (1.5 U, H2, BC-251105-06: braced post-and-beam frame, always roofed).
+const WOOD_TOWER_STYLES=Object.freeze(['watchtower','palisadeTower','frameTower']);
+function woodTowerStyle(s){return isWoodTower(s)?(WOOD_TOWER_STYLES.includes(s.woodStyle)?s.woodStyle:'palisadeTower'):undefined}
+function woodTowerSize(style){return style==='watchtower'?1:1.5}
+function woodTowerLevel(style){return style==='frameTower'?2:1}
 function woodTowerRoof(s){
   if(!isWoodTower(s))return undefined;
-  if(woodTowerStyle(s)==='watchtower')return'pitched';
+  if(woodTowerStyle(s)!=='palisadeTower')return'pitched';
   return s.woodRoof==='pitched'?'pitched':'open';
 }
 function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
@@ -563,7 +574,11 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
-function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
+// BC-251105-07: only the free-standing square stone W2 tower may rise to a fourth storey (H4),
+// a slender watch tower; wider towers stop at H3 and the W4 keep stays the only great tower.
+const TOWER_H4_LEVEL=4;
+function towerH4Allowed(s){return s?.type==='tower'&&!isWoodTower(s)&&!isOrientedTower(s)&&(s.shape||'square')==='square'&&!s.parentTowerId&&towerTier(s)===2}
+function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:towerH4Allowed(s)?TOWER_H4_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
   if(isWoodGate(s)||isLonghouse(s))return 1;
   return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
@@ -787,13 +802,14 @@ function civicRadius(s){
 }
 function levelCostFactor(s){
   const l=structureLevel(s);
-  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3][l-1];
+  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3,3.35][l-1];
   return[1,1.8][l-1];
 }
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
 function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return {...COSTS.frameTower};
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
@@ -816,6 +832,7 @@ function baseConstructionCost(s){
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.cost(s);
   if(window.ConquerPier?.is(s))return window.ConquerPier.cost(s);
   if(window.ConquerQuay?.is(s))return window.ConquerQuay.cost(s);
+  if(window.ConquerSlopeways?.is(s))return window.ConquerSlopeways.cost(s);
   if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
@@ -853,6 +870,7 @@ function refundCost(cost){
 }
 function buildDuration(s){
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return BUILD_DAYS.frameTower;
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
     return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   }
@@ -863,6 +881,7 @@ function buildDuration(s){
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.buildDays(s);
   if(window.ConquerPier?.is(s))return window.ConquerPier.buildDays(s);
   if(window.ConquerQuay?.is(s))return window.ConquerQuay.buildDays(s);
+  if(window.ConquerSlopeways?.is(s))return window.ConquerSlopeways.buildDays(s);
   if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));

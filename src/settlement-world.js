@@ -38,7 +38,7 @@ function roadUsesGatePassage(road,gate){
 // A road that ends on a bridge end and leaves away from the deck joins the bridge
 // instead of overlapping it.
 function roadMeetsBridgeEnd(road,bridge){
-  if(!road?.a||!road?.b||bridge?.type!=='bridge'||!bridge.a||!bridge.b)return false;
+  if(!road?.a||!road?.b||!['bridge','ramp','stairway'].includes(bridge?.type)||!bridge.a||!bridge.b)return false;
   for(const [end,other] of [['a','b'],['b','a']]){
     const e=bridge[end],o=bridge[other];
     for(const [p,q] of [[road.a,road.b],[road.b,road.a]]){
@@ -66,7 +66,7 @@ function manualRoadConflict(road,manual){
   // The market is a paved public square; castle gates contain a real traversable passage.
   if(manual.type==='market')return false;
   if(manual.type==='gate'&&roadUsesGatePassage(road,manual))return false;
-  if(manual.type==='bridge'&&roadMeetsBridgeEnd(road,manual))return false;
+  if(['bridge','ramp','stairway'].includes(manual.type)&&roadMeetsBridgeEnd(road,manual))return false;
   if(['wall','palisade','built'].includes(manual.type)){
     return segmentsIntersect(road.a,road.b,manual.a,manual.b)||
       pointSegmentDistance(manual.a,road.a,road.b)<=manual.width/2+(road.width||.3)/2||
@@ -2049,7 +2049,7 @@ function manualRoadLegs(a,b,aPort=null,bPort=null){
 function bridgeRoadEnd(p){
   let best=null;
   for(const s of State.structures){
-    if(s.type!=='bridge'||!s.a||!s.b)continue;
+    if(!['bridge','ramp','stairway'].includes(s.type)||!s.a||!s.b)continue;
     const L=dist(s.a,s.b)||1,ux=(s.b.x-s.a.x)/L,uy=(s.b.y-s.a.y)/L;
     const along=(p.x-s.a.x)*ux+(p.y-s.a.y)*uy,across=Math.abs((p.x-s.a.x)*-uy+(p.y-s.a.y)*ux);
     const onDeck=along>=0&&along<=L&&across<=(Number(s.width)||1.2)/2;

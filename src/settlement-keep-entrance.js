@@ -20,6 +20,8 @@
   const GAP=.9,LAND=.62,LAND_HALF=.46,FLIGHT_W=.66,SLOPE=1,STEP_RISE=.17;
   const BLOCKERS_SKIP=new Set(['road','field','moat','bridge','ruin']);
   const STAIRS=['wood','stone'];
+  // P1 floor of the timber frame tower (FRAME_TOWER storey in tools/blender/build_wood_fort.py).
+  const WOOD_FRAME_P1=1.28;
   // Enemies this close to the stair foot or the landing make the guard raise the leaf; it
   // comes down once none is within the farther radius.
   const ALARM_NEAR=9,ALARM_CLEAR=13;
@@ -27,7 +29,8 @@
   const LEAF_HP=60;
 
   function eligible(t){
-    return !!t&&t.type==='tower'&&!underConstruction(t)&&!isWoodTower(t)&&!t.parentTowerId&&
+    // Masonry towers, and the two-storey timber frame tower (its P1 doorway is a model part).
+    return !!t&&t.type==='tower'&&!underConstruction(t)&&(!isWoodTower(t)||t.woodStyle==='frameTower')&&!t.parentTowerId&&
       !(typeof isOrientedTower==='function'&&isOrientedTower(t))&&structureLevel(t)>=2;
   }
   function entrance(t){return eligible(t)&&[...STAIRS,'burnt'].includes(t.keepEntrance?.stair)?t.keepEntrance:null}
@@ -72,13 +75,14 @@
   }
   // Floor of the first upper storey, above the tower's own ground.
   function sillFor(t){
+    if(isWoodTower(t))return WOOD_FRAME_P1;
     const floors=typeof cutawayFloorLevels==='function'?cutawayFloorLevels(t):[];
     const z=floors[1]?.z??structureHeight(t)/structureLevel(t);
     return Math.max(.6,Math.min(z,structureHeight(t)-1.1));
   }
   // Why a stair spec cannot stand in front of tower t, or null.
   function validate(t,spec){
-    if(!eligible(t))return'serve una torre in muratura indipendente di almeno 2 piani';
+    if(!eligible(t))return'serve una torre in muratura indipendente di almeno 2 piani o una torre lignea a telaio';
     const L=layout(t,{...spec,sill:sillFor(t)});if(!L)return'geometria non valida';
     if(L.rise<.5)return'il terreno davanti alla porta è troppo alto';
     if(L.zFoot>L.zTop-.3)return'il terreno davanti alla porta è troppo alto';
@@ -480,7 +484,7 @@
       intruders:e?.intruders||0,
       leafBurnt:!!e?.drawbridge?.burnt,unreachable:cut,ladder:cut?{down:!!e.ladder?.down}:null,auto:e?guardOn(e):true,
       costs:{wood:STAIR_COST,stone:STONE_COST,drawbridge:DRAWBRIDGE_COST},
-      reason:!eligible(t)?'Serve una torre in muratura di almeno 2 piani':!e&&!t.isMastio?'Solo sul mastio':null};
+      reason:!eligible(t)?'Serve una torre in muratura di almeno 2 piani o una torre lignea a telaio':!e&&!t.isMastio?'Solo sul mastio':null};
   }
   function panel(t){
     const D=describe(t);if(!D||(!D.stair&&!D.mastio))return'';

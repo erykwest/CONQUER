@@ -271,8 +271,8 @@ function roadNetworkPath(start,goal,sourceHouseId){
   return clear;
 }
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza','civicAnnex'].includes(s.type)).map(s=>{
-    if(['wall','palisade','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0,s.skin||'',s.flip?1:0,s.level||''].join(',');
+  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza','civicAnnex','ramp','stairway'].includes(s.type)).map(s=>{
+    if(['wall','palisade','built','road','ramp','stairway'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0,s.skin||'',s.flip?1:0,s.level||''].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
   }).join('|');
 }
@@ -298,6 +298,7 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
   if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;
   if(window.ConquerCoast?.rockAt(p)&&!quayAt(p))return true;            // shore rocks (settlement-coast.js)
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
+  if(window.ConquerSlopeways?.blocksPoint(p))return true;     // raised sides of a ramp/stairway
   if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
   for(const s of State.structures){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
