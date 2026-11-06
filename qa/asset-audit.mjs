@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
+import scope from './asset-audit-scope.cjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const arg=name=>{const a=process.argv.find(x=>x.startsWith('--'+name+'='));return a?a.slice(name.length+3):null};
@@ -18,6 +19,9 @@ const flag=name=>process.argv.includes('--'+name);
 const url=process.env.ASSET_LAB_URL||'http://127.0.0.1:4173/figures-lab.html';
 const out=path.resolve(arg('out')||'artifacts/asset-audit');
 const opts={category:arg('category')||undefined,family:arg('family')||undefined,ids:arg('ids')?.split(',')};
+const changedSources=arg('sources')?.split(',').filter(Boolean)||[];
+if(changedSources.length&&(flag('update-baseline')||opts.ids||opts.category||opts.family))
+  throw Error('Incremental audit cannot overwrite the baseline or combine with manual filters');
 fs.mkdirSync(path.join(out,'sheets'),{recursive:true});
 
 const browser=await chromium.launch({headless:true,executablePath:process.env.QA_CHROME||undefined,
@@ -28,6 +32,24 @@ try{
   page.on('pageerror',e=>errors.push(String(e.stack||e)));
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>window.ConquerAssetAudit&&window.ConquerAssetCatalog?.engineReady,{timeout:120000});
+  // Catalogue metadata is authoritative: source -> every affected entry (also across families).
+  // If any source cannot be mapped, or a registry entry disappeared from the reviewed
+  // baseline, run the complete audit rather than silently shrinking coverage.
+  let auditMode='full',auditReason=changedSources.length?'unresolved incremental sources':'explicit/weekly/full audit';
+  if(changedSources.length){
+    let baselineEntries=null;
+    try{
+      baselineEntries=JSON.parse(fs.readFileSync(path.join(root,'qa/asset-audit-baseline.json'),'utf8')).entries;
+    }catch(error){auditReason='baseline cannot be inspected: '+error.message}
+    if(baselineEntries){
+      const catalogue=await page.evaluate(()=>window.ConquerAssetAudit.catalog());
+      const choice=scope.resolveTargets(catalogue,changedSources,baselineEntries);
+      auditMode=choice.mode;auditReason=choice.reason;
+      if(choice.mode==='incremental')opts.ids=choice.ids;
+    }
+  }
+  console.log('Asset audit mode: '+auditMode+' | '+auditReason+
+    (opts.ids?' | '+opts.ids.length+' catalogue entries':' | whole catalogue'));
   const t0=Date.now();
   // Images stay in the page (the sheets reuse them); report.json gets everything else.
   const report=await page.evaluate(async o=>{
@@ -35,6 +57,7 @@ try{
     return{...r,results:r.results.map(({image,...rest})=>rest)};
   },opts);
   report.durationMs=Date.now()-t0;report.url=url;report.pageErrors=errors;
+  report.scope={mode:auditMode,reason:auditReason,sources:changedSources,selectedIds:opts.ids||null};
   fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,1));
 
   // Contact sheets: one per engine-staged family (all states: fortifications, L3 workshops), one per other category.
@@ -55,6 +78,7 @@ try{
 
   const s=report.summary;
   const md=['# Asset Lab — audit visivo','',`${report.generatedAt} · ${url} · ${(report.durationMs/1000).toFixed(1)} s`,'',
+    `**Ambito:** ${auditMode} · ${auditReason}`,...(changedSources.length?['','Sorgenti modificate: '+changedSources.join(', ')]:[]),'',
     `**${s.renders} render** di ${s.entries} asset · ok ${s.ok} · **errori ${s.fail}** · avvisi ${s.warn} · noti ${s.known} · nuovi ${s.new} · cambiati ${s.changed} · spariti ${s.missing}`,'',
     '## Problemi','',...(report.findings.some(f=>f.level!=='known')?['| livello | asset | stato | controllo | dettaglio |','|---|---|---|---|---|',
       ...report.findings.filter(f=>f.level!=='known').map(f=>`| ${f.level} | ${f.title} | ${f.state??''} | ${f.name} | ${f.detail.replace(/\|/g,'/')} |`)]:['Nessuno.']),'',
@@ -71,7 +95,7 @@ try{
     fs.writeFileSync(path.join(root,'qa/asset-audit-baseline.json'),JSON.stringify(base,null,1)+'\n');
     console.log('Baseline written: '+Object.keys(base.entries).length+' renders');
   }
-  console.log(`Asset audit: ${s.renders} renders, ${s.fail} failed, ${s.warn} warnings, ${s.new} new, ${s.changed} changed -> ${out}`);
+  console.log(`Asset audit (${auditMode}): ${s.renders} renders, ${s.fail} failed, ${s.warn} warnings, ${s.new} new, ${s.changed} changed -> ${out}`);
   const strictFail=flag('strict')&&(s.new||s.changed||s.missing);
   if(errors.length)console.error('Page errors:\n'+errors.join('\n'));
   if(s.fail||errors.length||strictFail)process.exitCode=1;

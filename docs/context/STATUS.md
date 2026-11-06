@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — CI P2.1: audit Asset Lab incrementale (branch `perf/assetlab-p2-incremental-20261106`, pre-merge)
+
+- **IN BRANCH:** il workflow Asset Lab seleziona `full`, `incremental` o `skip` dal diff PR verificato; modifiche isolate a SVG/PNG indipendenti e registri 3D approvati vengono verificate tramite ID e stati reali del catalogo.
+- **SICUREZZA:** variazioni trasversali, rinomine, aggiunte, eliminazioni e inventario incoerente richiedono il full. L'audit mirato confronta i registri con le voci della baseline per non perdere modelli rimossi. Full disponibile manualmente e domenica 04:47 UTC.
+- **QA IN PR:** `qa/asset-audit-scope-regression.cjs` e `qa/ci-p1-regression.cjs` aggiornati; nessun materiale grafico, test precedente o configurazione gameplay rimosso. Esito live Actions da validare prima dell'integrazione.
+
+
 ## 2026-11-06 — Carrettieri L1 + consegne al mercato (branch `feature/l1-carter-jobs-market-20261106`, da verificare prima del merge)
 
 - **IMPLEMENTATO SU BRANCH:** `ConquerHaulage` usa il Job Manager `ConquerEconomy.laborAllocation` per reclutare persone L1 esistenti come carrettieri, fino a un dipendente per piazzale operativo con almeno una consegna raggiungibile. Sono assegnati dopo i produttori e i carpentieri navali, prima dei cantieri; mai duplicati tra `assignedL1`, costruttori, inattivi e conducenti.

@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CI-P21-261106 — Selezione visuale incrementale, copertura completa periodica (06/11/2026)
+
+- **DECISO, CODICE SU BRANCH `perf/assetlab-p2-incremental-20261106`:** il catalogo runtime resta unica fonte di verità per gli ID da verificare; il planner sceglie solo sorgenti isolate con stato Git modificato. Il selettore non sostituisce e non altera le baseline degli asset.
+- **FAIL-SAFE:** incertezza, nuovo/rimosso file, cambi di scena o motore, texture architettoniche e modelli eliminati dalla baseline obbligano l'audit completo. Nessun rilassamento delle verifiche dei render/stati dell'Asset Lab.
+- **REGOLE CI:** gallery sempre integrale quando si avvia il browser; audit completo in esecuzione manuale o pianificata la domenica, oltre agli eventi ad alto rischio. Futuri allargamenti dell'allowlist richiedono test sulle dipendenze reali.
+- **MOTIVAZIONE:** ridurre rendering e screenshot inutilmente ripetuti su PR con modifiche locali, senza sacrificare la diagnosi di regressioni trasversali. ROADMAP di gioco invariata.
+
+
 ## D-L1-CARTER-261106 — Carrettiere come mestiere L1, trasporto ancora visivo (06/11/2026)
 
 - **DECISO E IMPLEMENTATO SU BRANCH `feature/l1-carter-jobs-market-20261106`:** una rete logistica locale prende **veri lavoratori L1** dal roster `ConquerEconomy.laborAllocation`. Al massimo un carrettiere per piazzale attivo con una consegna raggiungibile (max 4); l'industria essenziale e i cantieri navali hanno precedenza, mentre i cantieri usano soltanto il residuo. Il carrettiere ha la stessa identità del popolano/fondatore: mai contarlo due volte o generare un lavoratore addizionale.

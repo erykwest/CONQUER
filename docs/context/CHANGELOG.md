@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — `perf/assetlab-p2-incremental-20261106` (pre-merge): esteso Asset Lab con audit incrementale limitato ai file SVG/PNG indipendenti e registri 3D esplicitamente consentiti; risoluzione runtime via catalogo e controllo baseline con fallback a full per modelli spariti, file sconosciuti e mutazioni strutturali. Aggiunti full manuale/domenicale, pianificazione PR fail-safe, test `qa/asset-audit-scope-regression.cjs` e note `docs/CI.md`. Asset esistenti invariati; ROADMAP gameplay invariata.
+
+
 06/11/2026 — branch `feature/l1-carter-jobs-market-20261106` (pre-merge): promosso il traffico `ConquerHaulage` da sola animazione a professione **Carrettiere L1**, con assegnazioni del JobManager, sede operativa al Piazzale, un dipendente per deposito attivo, esclusione dalle altre mansioni e soppressione della figura doppia quando conduce. Rotte reali: partenza a vuoto dal deposito, carico dal sito produttivo, consegna al deposito signorile o al Mercato per le quote private/vendute, ritorno vuoto. Visualizza anche le produzioni delle botteghe L3 tramite eventi dopo l'accredito nei loro beni; nessuna duplicazione dei ledger. Pannelli aggiornati, QA dedicata `qa/l1-carter-market-regression.cjs` nel workflow Economy flows; STATUS/BACKLOG/DECISIONS/feature-backlog allineati. ROADMAP invariata.
 
 
