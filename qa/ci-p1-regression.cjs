@@ -21,7 +21,7 @@ for(const name of ['camp-regression.yml','gate-six-sockets-regression.yml','sea-
 }
 for(const name of ['cans-regression.yml','circle-regression.yml','combat-regression.yml','runtime-integrity.yml']){
   const workflow=f(name);
-  assert.match(workflow,/^  push:\\n    branches: \\[main\\]/m,name+' must retain main push only');
+  assert.match(workflow,/^  push:\n    branches: \[main\]/m,name+' must retain main push only');
   assert.match(workflow,/^  pull_request:/m,name+' lost PR validation');
 }
 const action=read('.github/actions/playwright-setup/action.yml');
