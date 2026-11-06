@@ -74,7 +74,8 @@ const CATALOG = [
         opt(V.half, '[data-tower="half"][data-size="1"]', stone && t.shape === 'half'),
         opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
         opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
-        opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower')] }];
+        opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower'),
+        opt(V.frameTower || 'Telaio H2', '[data-wood-tower="frameTower"]', t.woodStyle === 'frameTower')] }];
       if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2', '3'].map(n =>
         opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
@@ -131,7 +132,7 @@ const CATALOG = [
       return rows;
     } },
   { id: 'roads', hint: T.hints.linear, press: '[data-main-road]', is: s => s.tool.kind === 'linear' && s.tool.linear === 'road' },
-  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => ['crossing', 'pier', 'quay'].includes(s.tool.kind),
+  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => ['crossing', 'pier', 'quay', 'slopeway'].includes(s.tool.kind),
     rows: s => {
       const rows = [{ label: O.type, wrap: true, options: [
         opt(V.dry, '[data-crossing="dry"]', s.tool.crossing === 'dry'),
@@ -140,7 +141,9 @@ const CATALOG = [
         opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone'),
         opt(V.pier + ' L4', '[data-pier="4"]', s.tool.kind === 'pier' && s.tool.reach === 4),
         opt(V.pier + ' L12', '[data-pier="12"]', s.tool.kind === 'pier' && s.tool.reach === 12),
-        opt(V.quay, '[data-quay]', s.tool.kind === 'quay')] }];
+        opt(V.quay, '[data-quay]', s.tool.kind === 'quay'),
+        opt(V.ramp, '[data-slopeway="ramp"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'ramp'),
+        opt(V.stairway, '[data-slopeway="stairway"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'stairway')] }];
       if (s.tool.kind === 'crossing') rows.push({ label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) });
       return rows;
     } },
@@ -231,6 +234,7 @@ function ModeBar({ mode, setMode }) {
       ${['build', 'manage', 'defend'].map((m, i) => html`
         <button type="button" class=${mode === m ? 'on' : ''} aria-pressed=${mode === m}
           data-tip=${T.modes[m]} data-tip-body=${'Tasto ' + (i + 1)} onClick=${() => setMode(m)}>${T.modes[m]}</button>`)}
+      <button type="button" onClick=${() => window.ConquerWikiHost?.open()}>Codex</button>
     </nav>
   </div>`;
 }
@@ -274,6 +278,7 @@ function ToolCard({ snap, cmd }) {
         tip: VALUE_TIPS[o.label] || VALUE_SHORT[o.label] ? o.label : null, tipBody: VALUE_TIPS[o.label] }))}
         wrap=${row.wrap} onPick=${o => cmd.press(o.selector)} /></${Row}>`)}
     ${rows.length === 0 && html`<p class="u2-hint">${entry.hint}</p>`}
+    <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openTool(); } }}>Voce nel Codex</a>
   </${Card}>`;
 }
 
@@ -350,6 +355,7 @@ function Inspector({ snap, cmd }) {
   const hp = d.integrity;
   return html`<${Card} title=${structureTitle(d)} sub=${sub} onClose=${cmd.deselect}
     footer=${html`<${Cost} cost=${d.cost} />
+      <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openSelection(); } }}>Voce nel Codex</a>
       <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish} data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}><${Icon} name="delete" size=${18} /></button>`}>
     ${d.building && html`<${Bar} value=${d.building.progress} max=${1} />`}
     ${facts.length > 0 && html`<div class="u2-stats">${facts.map(([k, v]) => html`<${Stat} label=${k} value=${v} />`)}</div>`}

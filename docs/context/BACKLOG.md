@@ -1,6 +1,90 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+06/11/2026 — Integrazione #169 su main c0c720b: mantenuti H4 e funzioni attuali, fixture aggiornata, catalogo Wiki rigenerato. Audit locale Mura: 265 render, 0 errori; 32 nuove voci addossati (legno, scuderia, pietra, mattoni) riviste nei fogli e aggiunte alla baseline; 98 cambiati preesistenti non accettati. Limite conservato: perdita del muro non abbatte automaticamente l'addossato; nessuna nuova regola di crollo introdotta.
+
 BC-251105-03 e BC-251105-10 (edifici addossati alle mura e loro tetto a falda unica) implementati su `feature/wall-buildings`, PR in revisione. **APERTO:** comportamento dell'addossato quando il muro cade in breccia o viene demolito.
+
+06/11/2026 — Integrazione #165 su main 1247cca: aggiunte dal vault autore le schede Falconiera e Orto di corte (138 voci, 153 pagine, 156 note); export gameplay rigenerato. Nuovo workflow Wiki conforme a P1: concurrency PR e setup Chromium condiviso; inventario CI 26 workflow, 6 browser job. ROADMAP e contratti editoriali invariati.
+
+## CODEX — Accesso dal Profilo, 05/11/2026
+
+- **Implementato nel branch `feature/codex-obsidian` / PR #165:** Profilo → CODEX / WIKI, con lettore interno, ritorno al Profilo e barra responsive. Riusa catalogo e vista esistenti; nessun pannello o catalogo duplicato.
+
+## CODEX — Obsidian e testi, 05/11/2026
+
+- **Implementato nel branch `feature/codex-obsidian`:** [vault personale → copia Git → Wiki](../CODEX-OBSIDIAN.md), approvazione delle note, wikilink/alias/sezioni, import sicuro e controllo di freschezza. Le note sono modificabili in Obsidian senza intervenire sui testi JavaScript.
+- **Contenuti ampliati:** Torre, Fortificazioni, Costruzioni, Logistica e Navigazione/porti. Restano da approfondire le altre singole voci e gli adapter di professioni/ruoli.
+- **Invariato:** tecnologie e stato conosciuto/sbloccato non vengono inventati; pubblicazione segue PR/CI/merge autorizzato, non il semplice salvataggio in Obsidian.
+
+## CODEX — Wiki, 05/11/2026
+
+- **Implementato nel branch `feature/codex-wiki`:** [Wiki pubblica e lettore in-game](../CODEX-WIKI.md), ricerca/filtri, pagine di famiglia/sovracategoria, hyperlink editoriali, relazioni e backlink; link contestuali dal Builder, snapshot pubblico generato e verificato contro il gameplay.
+- **Aperto:** espandere testi specialistici e adapter professioni; conoscenze e sblocco effettivo dipendono dalla futura mappatura tecnologica. Non inventare stato del giocatore dai flag di completamento del catalogo.
+- **Integrazione:** branch comprende #159/#161 ancora aperte all'avvio; CI e merge da verificare, nessuna pubblicazione anticipata su main.
+
+## CODEX — fase 2, 05/11/2026
+
+- **Implementato nel branch** `feature/codex-normalized-catalog`: core normalizzato e adapter dei registri per sette categorie, ID semantici, relazioni, snapshot portabile; [contratto e limiti](../CODEX-CATALOG.md). Test locale Codex PASS; non dichiarare integrato in main prima del merge.
+- **Residui catalogo:** professioni/job individuali, descrizioni strutturate delle regole ancora procedurali, dati non formalizzati di reclutamento/macchine/annessi. Gli stati unmapped/context-required non vanno riempiti con valori arbitrari.
+- **Prossima fase:** Wiki condivisa e ricerca/filtri, pagine dettagliate, Builder→Codex, pipeline export sito, contesto conosciuto/disponibile/sbloccato. Tecnologie ancora non mappate.
+
+## CODEX — 05/11/2026
+
+- **Censimento iniziale documentato sul branch** `docs/codex-catalog-audit-20261105`: [audit e inventario per sette famiglie](../CODEX-CATALOG-AUDIT.md), base `main` `bcf3cd7`.
+- **Aperto:** adapter normalizzati sui dati effettivi, ID stabili, relazioni e classificazione per elemento; completare verifica comportamentale delle coperture parziali. Nessun duplicato di costi o regole.
+- **Successivo:** Wiki condivisa web/in-game, ricerca e collegamenti Builder/Lab. Conoscenze predisposte separatamente da requisiti fisici/funzionali; mappatura tecnologica rinviata alla completezza del catalogo.
+- Attenzione a #155: regole latrina/torri ancora fuori dalla base auditata.
+
+## Catalogo strutture: voci da confermare (05/11/2026)
+
+Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatibilità, priorità). Nessuna è approvata.
+
+- **Presidio antincendio:** upgrade di Pozzo/Cisterna; secchi e uomini pronti che spengono prima gli incendi nel raggio (sistema fuoco esistente).
+- **Avamposto:** torre isolata che evolve Corpo di guardia e Stazione di posta; avvistamento lontano, staffette per i messaggi.
+- **Municipio:** funzioni amministrative.
+- **Gilda:** assorbe la Casa delle Corporazioni.
+- **Scriptorium (Chiesa L2):** servono effetti simulati.
+- **Annessi civici:** Bagni pubblici L1–L3, Lavatoio (civico L1 o upgrade del Pozzo), Approdo fluviale, Cortile domestico (upgrade delle case), Giardino dei semplici (annesso di Chiesa L2 / Ospedale), Carbonaia (annesso del Taglialegna), Palazzo del Balivo.
+- **Seguiti aperti:** Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; suono della campana; cosa legge il Prestigio.
+- **Scartati, da non riproporre:** Ghiacciaia, Dogana, Stazione di posta (→ Avamposto), Scuola autonoma, Casa delle Corporazioni autonoma, Torre campanaria (→ Campana).
+
+## Falconiera e Prestigio (05/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/falconry`:** stanza Falconiera (caccia: cibo), voliera sul tetto via `ROOM_EXTERIOR`, valore Prestigio del castello.
+- **APERTO, da decidere:** cosa legge il Prestigio (diplomazia, cavalieri, popolazione); la Colombaia resta da spostare sul montaggio `roof` di `ROOM_EXTERIOR` come la voliera.
+
+## 2026-11-06 — CI P1 orchestrazione browser e riduzione duplicati
+
+- **P1 · IMPLEMENTATO SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** 25 concurrency group separate per workflow/PR; eliminati tre full deterministici ridondanti; Asset Lab unico proprietario dell'audit visuale, con scope per file; cinque installazioni Chromium unificate da composite + cache Playwright 1.56.1; WebGPU scope renderer + PR/manuale; rimosse copie del save-safety e guard contestuale.
+- **P1 · QA IN PR:** `qa/ci-p1-regression.cjs` e workflow GitHub da verificare; non cancellare i test QA, non ridurre runtime/economia/governance.
+- **P2 · APERTO:** misurare tempi e cache hit nel periodo successivo, valutare Playwright screenshot coverage end-to-end su navigazione multi-PR. Conservare esecuzione periodica P0 full.
+
+
+
+## 2026-11-06 — Logistica locale visuale sui piazzali (branch `feature/local-production-haulage-20261106`)
+
+- **IN BRANCH / DA VERIFICARE:** animazione automatica dei carretti dai luoghi di produzione con quantità realmente trattenuta dal signore (taglialegna/cava/miniera/mulini, ove l'economia rilascia scorte, e bonifica forestale) fino a un piazzale connesso da strade finite. Scelto il piazzale più prossimo sulla rete viabile; carico → viaggio → scarico → ritorno vuoto, scorte contabilizzate solo dal ledger originale.
+- **LIMITI DELLA PR:** nessuna spedizione per beni privati/solo mercato; se un sito o piazzale è isolato non vengono disegnati mezzi fittizi. Non è un sistema di trasporto materiale a latenza né richiede acquisto o staffing di un carrettiere. Migliorie eventuali: pedoni di carico/scarico, capienze per singolo deposito, visualizzazione dei trasferimenti del mercato, tabelle rotte e ETA per ogni sito.
+- **QA:** `qa/haulage-regression.cjs`; reimpiego di `ConquerVehicles` invece di un secondo pathfinder.
+
+
+## 2026-11-06 — P0 semplificazione GitHub Actions (branch `chore/ci-p0-consolidation-20261106`)
+
+- **P0 · SU BRANCH:** 11 YAML ritirati (10 branch-only per Civil/Clay/Urban/Events/Sound e un job monouso di cancellazione branch); test conservati, nessun ref GitHub eliminato.
+- **P0 · SU BRANCH:** rimpiazzato full suite per ogni PR con cinque smoke per modifiche isolate, full obbligatorio in CI quando sono modificati i moduli condivisi ad alto rischio, full manuale/settimanale. Copertura locale e QA dei singoli sottosistemi invariati.
+- **P0 · INVARIATI:** integrità runtime, salvataggi, economia e governance documentale.
+- **P1 · APERTO:** deduplicazione cross-workflow, Playwright/WebGPU/Asset Lab, cache e cancellazione dei job superseded. Verificare guardrail sui check per merge, dopo pubblicazione PR.
+
+
+06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
+
+## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `fix/latrine-towers`:** la latrina passa dalle sezioni costruite W1 alle torri W1 in pietra (piano 2, sbalzo sulla faccia esterna libera). Le torri W1 accettano Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria, con la scala a chiocciola che resta.
+- **APERTO:** nella torre rotonda W1 entrano meno sedili dei tre previsti (stanza di 0,73 U); un'apertura nel muro tra stanza e sbalzo; un avviso quando un salvataggio perde una latrina da una sezione costruita.
+
+
+06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
 
 ## 2026-11-05 — P0: Piazzale deposito e Logging Camp (branch `feature/founding-storage-yard-20261105`)
 
@@ -31,11 +115,11 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 
 **Richieste aperte al 05/11/2026 — non implementate da questo aggiornamento.** Il dettaglio canonico dei task e degli ID è in [feature-backlog.md](../feature-backlog.md#2026-11-05--builder--castello-upgrade-architettonici-richiesti).
 
-- **Mura/camminamenti:** BC-251105-01 scala lignea; 02 scala lapidea; 03 edifici addossati; 04 merlature doppie (distinte dallo stile a doppia falda esistente).
-- **Torri:** BC-251105-05 inner roof; 06 torre lignea H2 con frame; 07 torre W2 × H4 **solo da valutare**.
-- **Coperture:** BC-251105-08 75° (estensione da valutare al set 30°/45°/60° su branch); 09 tetti Longhouse; 10 tetti edifici addossati.
-- **Ambiente:** BC-251105-11 giardino (tipo e funzione da definire).
-- **Terreno/percorsi:** BC-251105-12 rampe per collegare quote e superare pendii ripidi; 13 scalinate pedonali sui dislivelli delle colline, con raccordi a terreno e terrazzamenti. Requisiti di navigabilità/pathfinding e QA; **distinte** dalle scale per i camminamenti delle mura (01/02). Stato: **APERTO**, non implementato.
+- **Mura/camminamenti:** BC-251105-01 scala lignea e 02 scala lapidea **implementate su `feature/bc-scale` (PR aperta, non in main)**: upgrade del muro T2/T3, accesso wall-walk per le truppe; seguiti aperti: variante per palizzate, salita animata gradino per gradino, uso da parte dei civili. 03 edifici addossati; 04 merlature doppie (distinte dallo stile a doppia falda esistente), su branch feature/double-crenel: merlo doppio (11011011) e doppia fila interna; estensione a porte e torri fuori scope.
+- **Torri:** BC-251105-05 inner roof; 06 torre lignea H2 con frame (PR #175, branch); 07 torre W2 × H4 **su branch `feature/tower-w2-h4`** (solo quadrata in pietra W2 indipendente; residui: bilanciamento assedio di scale, gittata e crollo dei piani a quota H4).
+- **Coperture:** BC-251105-08 75° (in PR su `feature/roof-pitch-75`, il set 30°/45°/60° è in main); 09 tetti Longhouse; 10 tetti edifici addossati.
+- **Ambiente:** BC-251105-11 giardino → deciso **orto di corte** (annesso del Municipio, +2 cibo/giorno lavorativo anche in assedio): implementato su `feature/orto-di-corte`, in attesa di merge. Seguiti possibili: lavoratori dedicati, stagionalità della resa.
+- **Terreno/percorsi:** BC-251105-12 rampe per collegare quote e superare pendii ripidi; 13 scalinate pedonali sui dislivelli delle colline, con raccordi a terreno e terrazzamenti. Requisiti di navigabilità/pathfinding e QA; **distinte** dalle scale per i camminamenti delle mura (01/02). Stato: **IMPLEMENTATO su branch `feature/ramps-stairs`** (06/11/2026, non in main): rampe 2U max 1:4 per pedoni e carri, scalinate 1U fino a 45° solo pedoni; vedi [STATUS](STATUS.md).
 - **Dipendenze:** `feat/roof-pitch`, `feature/wood-longhouse`, camminamenti e cutaway; nessun completamento o QA attestato da questo inserimento.
 
 ## MARE — Porti e molo (branch `mare`, 02/11/2026)
@@ -56,7 +140,8 @@ Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 
 ## Pendenza dei tetti di torri e porte (05/11/2026)
 
 - **IN CORSO su branch, NON MERGE:** pendenza globale 30/45/60° con cambio a pagamento. Dettagli in [STATUS](STATUS.md).
-- Aperti: estendere a case, sezioni costruite e garitte se richiesto; regressione Node dedicata a `roofPitchQuote`.
+- 30/45/60° in main (PR #157). **75° (BC-251105-08) su branch `feature/roof-pitch-75`, NON MERGE**, con regressione `qa/roof-pitch-regression.cjs` su `roofPitchQuote`.
+- Aperti: estendere a case, sezioni costruite e garitte se richiesto.
 
 ## Long house in legno W1 / W2 (04/11/2026)
 
@@ -125,7 +210,7 @@ Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 
   - **Cisterna:** montaggio `eave`, gronda o pluviale.
   - **Combattimento:** infiltrazione dal condotto della latrina in assedio (precedente storico: Château Gaillard, 1204).
   - **Ospedale:** cura dei malati letti da `ConquerSiege.sickShare()`.
-- **APERTO, da decidere:** latrine nelle torri (oggi escluse); un avviso quando un salvataggio perde una latrina che non entra più per una struttura costruita davanti.
+- **APERTO, da decidere:** ~~latrine nelle torri~~ (fatto il 05/11: solo torri W1, vedi sopra); un avviso quando un salvataggio perde una latrina che non entra più per una struttura costruita davanti.
 
 ## Cucine solo nelle sezioni costruite (03/11/2026)
 

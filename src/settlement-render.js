@@ -41,6 +41,7 @@ function drawStructure(s,preview=false){
     else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
     else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
+    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.draw(s,preview); // ramp / stairway (settlement-slopeways.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
@@ -195,6 +196,7 @@ function renderCastleBodyContent(){
   drawTowerRoofs();
   drawGateRoofs();
   window.ConquerRoomExterior?.drawAll();
+  window.ConquerWallStairs?.drawAll();
 }
 function castleBodyRenderableStructures(){
   return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));
@@ -448,6 +450,7 @@ function draw(){
   // preserving the existing occlusion behaviour.
   window.ConquerLivestock?.draw();
   drawPeasants();
+  window.ConquerHaulage?.draw?.(); // Loaded carts to stockyards, empty return on completed roads
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway

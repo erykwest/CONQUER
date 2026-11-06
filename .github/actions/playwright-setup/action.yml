@@ -1,0 +1,31 @@
+name: 'CONQUER cached Chromium'
+description: 'Use one Playwright version and a shared Chromium/npm cache on Ubuntu 24.04'
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore Playwright and Chromium downloads
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/ms-playwright
+          ~/.npm
+        key: conquer-chromium-${{ runner.os }}-${{ runner.arch }}-playwright-1.56.1-v1
+    - name: Install pinned Playwright
+      shell: bash
+      run: npm install --no-save --no-package-lock playwright@1.56.1
+    - name: Restore or install Chromium browser
+      shell: bash
+      run: npx playwright install chromium
+    - name: Probe Chromium and install missing system libraries only if needed
+      shell: bash
+      run: |
+        chromium_probe() {
+          node -e "const {chromium}=require('playwright'); chromium.launch({headless:true}).then(b=>b.close()).catch(e=>{console.error(e.message);process.exit(1)})"
+        }
+        if chromium_probe; then
+          echo 'Chromium runtime libraries already available; skipping apt installation'
+        else
+          echo 'Chromium cannot start; installing Playwright system dependencies'
+          npx playwright install-deps chromium
+          chromium_probe
+        fi

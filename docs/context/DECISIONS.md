@@ -1,5 +1,63 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CODEX-03 — Vault personale e pubblicazione editoriale (05/11/2026)
+
+- **Richiesta dell'utente:** usare la skill Obsidian per edifici e meccaniche, con vault dedicato nella propria cartella CONQUER. Il vault personale è la fonte di scrittura; il repository conserva una copia di pubblicazione versionata, non un secondo vault da modificare indipendentemente.
+- Import a senso unico: non riscrive il vault, controlla la base locale e si ferma su conflitti, salvataggi concorrenti, link o destinazioni non valide. Percorso personale e manifest di sincronizzazione restano locali/ignorati da Git.
+- Solo contenuti approved sono compilati. Titolo, alias e corpo si modificano nelle note, mentre costi, tempi e compatibilità restano nel gameplay. ID stabili distinti da nome file e titolo; link di sezione preservati.
+- Nessuna pubblicazione automatica dal salvataggio di una nota. Copia Git e artefatto passano da PR/CI e merge autorizzato. [Contratto completo](../CODEX-OBSIDIAN.md). Milestone M0–M5 invariate.
+
+## D-CODEX-02 — Wiki ipertestuale e artefatto pubblico generato (05/11/2026)
+
+- **Richiesta dell'utente:** alcune keywords di sovracategoria nel testo devono rimandare a una pagina. Implementati link HTML reali con destinazioni stabili, match per parole intere e precedenza dei termini specifici; testi e destinazioni verificati dalle QA. Breadcrumb, relazioni e backlink completano la navigazione.
+- Una vista per sito e in-game; in-game legge il catalogo live senza snapshot, il sito legge un artefatto JSON generato dalle stesse definizioni. Estensione di D-CODEX-01: l'artefatto viene committato per hosting statico, ma non mantenuto manualmente; CI confronta la rigenerazione e rifiuta dati obsoleti.
+- Preventivi pubblici riferiti a configurazioni esplicite, preventivi contestuali dal gioco. Le conoscenze non mappate non diventano sblocchi o stati di possesso fittizi.
+- Nessun cambiamento alle milestone M0–M5 né ai contratti di economia/salvataggi. [Implementazione e limiti](../CODEX-WIKI.md), branch `feature/codex-wiki`.
+
+## D-CODEX-01 — Catalogo consultabile sopra i provider del gioco (05/11/2026)
+
+- **Implementazione fase 2 sul branch `feature/codex-normalized-catalog`**, su richiesta di procedere al catalogo normalizzato: sette categorie, ID semantici indipendenti da salvataggi/asset/etichette, metadati e relazioni strutturate. [Contratto v1](../CODEX-CATALOG.md).
+- Un core senza DOM e un adapter read-only al gameplay. Costi/tempi leggono i provider reali; nessun secondo listino. Lettura live in gioco, snapshot JSON esplicitamente datato dal processo che lo pubblica per il sito.
+- Valori noti distinti da unmapped/context-required/incompatible. La membership nello schema di una variante non certifica l'installabilità. Nessuna meccanica viene abilitata dal Codex.
+- Requisiti fisici, funzionali e conoscenze separati. Conoscenze non mappate; nessun albero tecnologico, nessun vincolo inventato.
+- Alternativa evitata: duplicare costi e regole nei contenuti Wiki. La UI Wiki e l'export automatico del sito restano fase successiva; milestone sistemiche M0–M5 invariate.
+
+## D-PRESTIGE-01 — Prestigio del castello (05/11/2026)
+
+- **Decisione dell'utente:** la Falconiera dà «prestigio nobiliare» attraverso un valore nuovo del castello, non con un bonus ai cavalieri né alla diplomazia.
+- **Contratto:** `ConquerSiege.prestige()` → `{total, by}`, somma di `PRESTIGE[fn]` per ogni stanza ammessa e non catturata (Falconiera 3, Sala del trono 4, Stanze nobili 1, Cappella 1, Tesoro 1). Si mostra nel riepilogo logistico. Gli altri sistemi lo leggeranno in seguito: quali, è aperto in BACKLOG.
+- **Estensione di D-ROOM-EXT-01:** una stanza può avere il suo elemento esterno sul tetto (`mount:'roof'`): stessa posizione degli upgrade (campanile), indice = slot della stanza, regola `active` della voce. Prima applicazione: la voliera della Falconiera.
+- **Prova:** `qa/falconry-regression.cjs`.
+
+## D-CI-P1-261106 — Ottimizzare la CI senza diminuire la copertura (06/11/2026)
+
+- **DECISO, CODICE SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** un solo owner per la suite completa `qa/*-regression.cjs` (P0) e uno per l'audit visuale `qa/asset-audit.mjs` (Asset Lab). Workflow specifici fanno controlli mirati; full P0 si attiva sulle modifiche ai componenti condivisi, inclusi world3d/castle3d.
+- **BROWSER:** una composite action installa Playwright 1.56.1 e Chromium con cache condivisa su Ubuntu 24.04; Asset Lab salta il job visuale solo se la modifica non influenza asset o modelli; WebGPU esegue smoke su renderer e fallback solo quando pertinente, manualmente o su PR.
+- **CANCELLAZIONE RUN:** annullare soltanto i job superseded nella stessa PR e nello stesso workflow; mantenere run su main, manuali, schedulati.
+- **VINCOLI:** test QA esistenti tutti presenti, Runtime integrity, Economy flows e Context pyramid guard preservati. ROADMAP gameplay invariata.
+
+
+
+## D-HAULAGE-261106 — Carretti locali come visualizzazione della produzione, non secondo ledger (06/11/2026)
+
+- **DECISO SU BRANCH `feature/local-production-haulage-20261106`:** generare un viaggio locale soltanto dopo una produzione che il ledger ha effettivamente accreditato alle riserve del signore o dopo una bonifica forestale accreditata una sola volta. I carichi privati e le merci solo di mercato non producono un finto trasporto al magazzino.
+- **COERENZA D-007 e D-046:** la logistica locale ordinaria resta contabilmente astratta; nessuna risorsa passa fisicamente di proprietà all'arrivo o può essere accreditata due volte. Si utilizzano i carretti 2D, cavalli 2D, conducenti e lo stesso pathfinding stradale dei convogli esistenti. Non aggiungere bestie o figurine 3D per sostituirli.
+- **PERCORSO E LIMITI:** servono segmenti viari completati vicino al produttore e al piazzale; verso il magazzino raggiungibile con tragitto migliore, andata carica e ritorno vuoto. Se non c'è continuità il carico resta per poco in coda visiva, senza impattare le scorte già iscritte. Limite massimo 4 mezzi attivi e 32 richieste in attesa. Pausa del gioco ferma anche i carri. Nessun trasferimento materiali sito-per-sito fra piazzali in questa fase.
+
+
+## D-CI-P0-261106 — Separazione CI quotidiana e verifica integrale (06/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `chore/ci-p0-consolidation-20261106`:** mantenere i 163 script QA ma eliminare 11 workflow dei branch che non esistono più/cleanup monouso. Il full su tutte le PR è sostituito da controlli rapidi (per modifiche isolate) e suite completa nei PR con modifiche al motore comune, nelle esecuzioni manuali e settimanali. Il nome del job esistente viene preservato.
+- **VINCOLI:** runtime integrity, economy flows, context governance intatti; non indebolire controlli fondamentali. Non toccare gli altri workflow (Playwright, browser, WebGPU) in P0. Nessuna nuova risorsa runtime, costo di gioco o macro-priorità ROADMAP.
+- **RICOSTRUIBILITÀ:** `docs/CI.md` conserva la lista dei workflow rimossi; la storia Git contiene i contenuti e i test rimangono nei percorsi originali.
+
+
+## D-ORTO-251106 — Il giardino è l'orto di corte del Municipio (06/11/2026)
+
+- Scelta dell'utente tra orto di corte, giardino dei semplici e hortus conclusus: **orto di corte**.
+- È un annesso civico del Municipio (`kitchenGarden`), non un edificio autonomo: riusa catalogo, persistenza, cancellazione a cascata e preflight degli annessi. Poiché il Municipio non ha lotto Voronoi, vale la regola «terreno aperto entro 7U, mai su lotti di proprietà».
+- Effetto: 2 cibo del signore per giornata lavorativa per orto, senza lavoratori, anche in allarme/assedio (scorta interna che non dipende da pascoli e reti). Primo annesso con resa economica: gli altri annessi restano skeleton.
+
 ## D-STOCKYARD-251105 — Il piazzale fondativo è lo stoccaggio del castello (05/11/2026)
 
 - **DECISO, IN CODICE SU BRANCH `feature/founding-storage-yard-20261105`:** il villaggio nasce con un Piazzale 2×2U entro 7U dal primo pozzo, se un lotto edificabile è disponibile. Il capanno taglialegna versa la quota di produzione trattenuta nelle scorte del castello fino alla capienza dei piazzali; la parte non trattenuta e la quota in eccesso raggiungono il mercato.
@@ -28,7 +86,7 @@
   - **`mount:'roof'`:** sull'apice di un tetto a piramide o rotondo, a metà colmo di un tetto a due falde o a padiglione, in cima al tetto Blender di una torre di legno; ruota con la torre (il tetto rotondo resta ad angolo 0). L'ingombro in pianta e l'altezza vengono dal modello.
   - **Prima voce:** `bell`, il campanile della Campana d'allarme. La Colombaia dovrà usare lo stesso montaggio.
   - **Renderer:** le torri di legno disegnano i loro triangoli nella mesh di `settlement-wood3d.js` (il castle 3D e il 2.5D le saltano). Una torre in cutaway tiene il suo tetto, quindi anche l'elemento del tetto.
-- **Prima applicazione, Latrina / Garderobe:** solo al piano 2 di una sezione W1 (non nelle sale W2, non nelle torri). È una scatola di pietra a sbalzo di 0,36 U, larga 0,46 U, su 4 mensole, con lo scarico che macchia il muro fino a terra.
+- **Prima applicazione, Latrina / Garderobe:** solo al piano 2 di una **torre W1 in pietra**, sulla faccia esterna libera che guarda più lontano dal castello (correzione dell'utente del 04/11/2026: mai nelle sezioni costruite, né nelle torri W2–W3 o di legno). Le torri W1 tengono la scala a chiocciola e accettano solo Colombaia, Latrina, Prigione, Tesoro e Armeria. È una scatola di pietra a sbalzo di 0,36 U, larga 0,46 U, su 4 mensole, con lo scarico che macchia il muro fino a terra.
   - **Igiene della guarnigione:** è un bisogno secondario. Il cortile serve 24 soldati, ogni latrina ne serve altri 16 (32 in una stanza grande). L'igiene non scende sotto 40 e cala di 2 al giorno, risale di 5. Sotto 50 si ammala fino al 10% degli arcieri, che lasciano libere le postazioni.
   - **Motivo:** l'utente non vuole che la latrina diventi un sistema obbligatorio; i castelli piccoli non ne risentono.
   - **Prova:** `qa/room-exterior-latrine-regression.cjs`.

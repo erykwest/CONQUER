@@ -16,6 +16,8 @@ const src=[
   pick(core,/function isLeanTo\([^\n]*\n/,'isLeanTo'),
   pick(core,/function leanToMaterial\([^\n]*\n/,'leanToMaterial'),
   pick(core,/function isTimberLeanTo\([^\n]*\n/,'isTimberLeanTo'),
+  pick(core,/const TOWER_H4_LEVEL=[^\n]*\n/,'TOWER_H4_LEVEL'),
+  pick(core,/function towerH4Allowed\([^\n]*\n/,'towerH4Allowed'),
   pick(core,/function maxStructureLevel\([^\n]*\n/,'maxStructureLevel'),
   pick(core,/function structureLevel\([\s\S]*?\n\}/,'structureLevel'),
   pick(structures,/function builtRoofFootprintPoints\([\s\S]*?\n\}/,'builtRoofFootprintPoints'),
@@ -30,7 +32,7 @@ function fixture(structures){
   const ctx=vm.createContext({State,window:{},console,Math,Number,Object,Array,
     TYPES:{built:{width:1},builtWide:{width:2}},clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
     uid:()=>'lt'+(++id),underConstruction:s=>!!s.building,isWoodGate:()=>false,isSmallGate:()=>false,
-    isKeepW4:()=>false,civicLevel:()=>1,towerTier:()=>2,masonryMaterial:()=>'stone',hasCastleSnap:v=>!!v,
+    isWoodTower:s=>s.material==='wood',isOrientedTower:s=>s.shape==='dee',isKeepW4:()=>false,civicLevel:()=>1,towerTier:()=>2,masonryMaterial:()=>'stone',hasCastleSnap:v=>!!v,
     structureHeight:height,
     pointSegmentDistance:(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy)));return Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t)}});
   vm.runInContext(src+'\nthis.api={isTimberLeanTo,leanToMaterial,isLeanTo,structureLevel,builtRoofGeometry,functionCapacity};',ctx);

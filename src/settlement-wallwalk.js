@@ -35,7 +35,7 @@
   function signature(){
     let sig='';
     for(const s of State.structures){
-      if(s.type==='wall'||s.type==='palisade')sig+=s.id+(walkable(s)?'w':'x')+s.a?.x+','+s.a?.y+','+s.b?.x+','+s.b?.y+(s.level||1)+(s.tier||'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)+';';
+      if(s.type==='wall'||s.type==='palisade')sig+=s.id+(walkable(s)?'w':'x')+s.a?.x+','+s.a?.y+','+s.b?.x+','+s.b?.y+(s.level||1)+(s.tier||'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)+(s.wallStair?s.wallStair.kind+s.wallStair.pos:'')+';';
       else if(s.type==='tower'||s.type==='gate')sig+=s.id+(underConstruction(s)?'u':'c')+s.x+','+s.y+(s.angle||0)+(barred(s)?'b':'')+';';
     }
     return sig;
@@ -81,7 +81,14 @@
       while(stack.length){const m=stack.pop();for(const {to} of m.adj)if(to.comp===undefined){to.comp=comp;stack.push(to)}}
       comp++;
     }
+    // Wall-walk stairs (settlement-wall-stairs.js): a flight against the interior face of a wall,
+    // its top step on the walk at entry.t. Store the cache first: the layout reads edgeOf().
     cache={sig,nodes,edges,stairs:[...hubs.values()],at:now,list:State.structures,count:State.structures.length};
+    for(const e of edges){
+      const a=e.wall.wallStair&&window.ConquerWallStairs?.access(e.wall);
+      if(a)cache.stairs.push({...a,node:e.A});
+    }
+    cache={...cache,stairs:cache.stairs,at:now,list:State.structures,count:State.structures.length};
     return cache;
   }
   const edgeOf=id=>graph().edges.find(e=>e.wall.id===id)||null;

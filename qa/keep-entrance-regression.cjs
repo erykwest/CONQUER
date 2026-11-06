@@ -46,6 +46,16 @@ function fixture({gold=500}={}){
   console.log('PASS only a masonry mastio of 2+ storeys gets a raised entrance');
 }
 {
+  // BC-251105-06: the two-storey timber frame tower is the one wooden keep with a raised entrance.
+  const {K,State}=fixture();
+  const frame={id:'f',type:'tower',shape:'square',x:9,y:0,size:1.5,angle:0,level:2,woodStyle:'frameTower',isMastio:true};
+  State.structures.push(frame);
+  assert.ok(K.buildStair(frame),'stair to the frame tower');
+  assert.equal(K.sill(frame),1.28,'its door opens on the P1 floor of the Blender model');
+  assert.equal(K.layout(frame).zTop,1.28);
+  console.log('PASS the timber frame tower takes the raised entrance at its P1');
+}
+{
   const {K,State,keep}=fixture();
   assert.equal(K.access(keep),undefined,'without a stair the keep is entered as any tower');
   assert.ok(K.buildStair(keep),'wooden stair built');

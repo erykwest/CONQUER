@@ -26,6 +26,10 @@
   const HERD_FOOD_PER_DAY = .9;
   // A fisherman's catch per working day (settlement-fishers.js).
   const FISH_FOOD_PER_DAY = 1.2;
+  // Orto di corte (BC-251105-11): each town hall kitchen garden, tended by the
+  // court's household, yields lord's food per working day. Unlike herds and nets
+  // it lies by the town hall, so it keeps producing under alarm and siege.
+  const KITCHEN_GARDEN_FOOD_PER_DAY = 2;
   const KIND = Object.freeze({
     field:{good:'food',classId:2,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
@@ -105,7 +109,7 @@
     if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
     return e;
   }
-  function reset(){State.economy=makeState();render(true)}
+  function reset(){window.ConquerHaulage?.reset?.();State.economy=makeState();render(true)}
   // State.policies.rations holds the order; legacy numeric slider values mean 'market'.
   function rationMode(){
     const policies=State.policies||(State.policies={});
@@ -209,6 +213,8 @@
     e.weekProduced.wood=round(finite(e.weekProduced.wood)+quantity);
     note(e,'Forest clearance '+id+': +'+quantity+' wood');
     syncBuilderResources();
+    const origin=window.ConquerForestry?.jobs?.().find(j=>j.id===id)?.center;
+    if(origin)window.ConquerHaulage?.record?.({siteId:id,origin,good:'wood',qty:quantity,day:State.clock?.day});
     return true;
   }
   function refundBuild(cost){
@@ -265,6 +271,7 @@
         Math.max(0,(e.target[good]||0)-(e.castle[good]||0));
       const received=Math.min(keep,headroom);
       e.castle[good]=round(e.castle[good]+received);
+      if(received>0)window.ConquerHaulage?.record?.({siteId:id,good,qty:received,day:e.lastDay});
       quantity-=received;
     }
     if(quantity>0){
@@ -408,6 +415,8 @@
     // The catch: private food for each fisherman's household.
     if((window.ConquerCombat?.alarmMode?.()||'off')==='off')
       for(const w of labor.fishers)put(e,'food',FISH_FOOD_PER_DAY,'private',w.houseId+':fish');
+    if(typeof kitchenGardens==='function')
+      for(const g of kitchenGardens())put(e,'food',KITCHEN_GARDEN_FOOD_PER_DAY,'lord',g.id);
     const active=activeStructures(),hasMill=active.some(s=>
       ['windmill','watermill'].includes(s.type)&&
       !s.economyDisabled&&!s.destroyed&&!s.abandoned&&!s.burnt);
@@ -838,7 +847,7 @@
     });
     render(true);
   }
-  window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,
+  window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,KITCHEN_GARDEN_FOOD_PER_DAY,
     weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
     foundingCharter,foundingWorkers,syncBuilderResources,applyDevFloor,canBuild,spendBuild,creditForestryWood,refundBuild,
     constructionWagePerWorkday,payConstructionWork,spontaneousSpawnQuote,
