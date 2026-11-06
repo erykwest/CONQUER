@@ -152,6 +152,10 @@
     const V=window.ConquerVehicles,E=window.ConquerEconomy;
     if(!V||!E?.laborAllocation)return false;
     const day=dayOf(),roster=E.laborAllocation(day).carters||[];
+    if(roster.length&&onShift(day)){
+      const economy=E.state();
+      economy.weekCarterPeak=Math.max(finite(economy.weekCarterPeak),roster.length);
+    }
     const ids=new Set(roster.map(w=>w.id));
     const bases=dutyBases(day);
     const workerBaseById=new Map(roster.map((w,i)=>[w.id,bases[i]]));
