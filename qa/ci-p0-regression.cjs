@@ -15,7 +15,7 @@ for(const old of archived)assert.equal(fs.existsSync(path.join(root,'.github/wor
 for(const keep of ['runtime-integrity.yml','context-governance.yml','economy-flows-regression.yml']){
  assert.ok(fs.existsSync(path.join(root,'.github/workflows',keep)),keep+' must survive CI P0');
 }
-for(const s of ['pull_request:','workflow_dispatch:','schedule:','settlement-qa:','github.event.pull_request.base.sha','github.event.pull_request.head.sha','--diff-filter=ACMRT','GITHUB_OUTPUT','full=false','full=true','qa/*-regression.cjs','src/*.js']){
+for(const s of ['pull_request:','workflow_dispatch:','schedule:','settlement-qa:','github.event.pull_request.base.sha','github.event.pull_request.head.sha','--diff-filter=ACDMRT','GITHUB_OUTPUT','full=false','full=true','qa/*-regression.cjs','src/*.js']){
  assert.ok(workflow.includes(s),'missing CI protection '+s);
 }
 assert.match(workflow,/github\.event_name == 'pull_request' && steps\.tier\.outputs\.full == 'false'/);

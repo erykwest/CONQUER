@@ -43,7 +43,7 @@ jobs:
             echo 'Invalid PR SHAs, refusing to skip complete regression suite' >&2
             exit 1
           fi
-          git diff --name-only --diff-filter=ACMRT "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/ci-pr-changed.txt"
+          git diff --name-only --diff-filter=ACDMRT "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/ci-pr-changed.txt"
           echo 'Changed paths:'
           cat "$RUNNER_TEMP/ci-pr-changed.txt"
           # Shared application state, world generation, persistence, navigation,
