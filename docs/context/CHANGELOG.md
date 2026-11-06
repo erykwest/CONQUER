@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — P2.3 CI (`chore/ci-p23-stale-push-triggers-20261106`): rimossi 8 trigger push per 7 branch inesistenti da 7 workflow; invariati i trigger PR, push su main e workflow manuali. Aggiornato `qa/ci-p1-regression.cjs` come guardia anti-regressione. Nessun test/asset/branch eliminato.
+
+
 06/11/2026 — `perf/assetlab-p2-incremental-20261106` (pre-merge): esteso Asset Lab con audit incrementale limitato ai file SVG/PNG indipendenti e registri 3D esplicitamente consentiti; risoluzione runtime via catalogo e controllo baseline con fallback a full per modelli spariti, file sconosciuti e mutazioni strutturali. Aggiunti full manuale/domenicale, pianificazione PR fail-safe, test `qa/asset-audit-scope-regression.cjs` e note `docs/CI.md`. Asset esistenti invariati; ROADMAP gameplay invariata.
 
 

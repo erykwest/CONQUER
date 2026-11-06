@@ -12,6 +12,18 @@ for(const name of workflows){
   assert.ok(s.includes("github.event.pull_request.number || github.ref"),name+' must isolate PR refs');
   assert.ok(s.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"),name+' must not cancel completed/main/scheduled verification');
 }
+// P2.3: no push triggers pointing to deleted remote branches (verified 2026-11-06).
+// Preserve push validation on main, PR coverage on all seven specialist workflows.
+for(const name of ['camp-regression.yml','gate-six-sockets-regression.yml','sea-regression.yml']){
+  const workflow=f(name);
+  assert.doesNotMatch(workflow,/^  push:/m,name+' has an obsolete push-only branch');
+  assert.match(workflow,/^  pull_request:/m,name+' lost PR validation');
+}
+for(const name of ['cans-regression.yml','circle-regression.yml','combat-regression.yml','runtime-integrity.yml']){
+  const workflow=f(name);
+  assert.match(workflow,/^  push:\n    branches: \[main\]/m,name+' must retain main push only');
+  assert.match(workflow,/^  pull_request:/m,name+' lost PR validation');
+}
 const action=read('.github/actions/playwright-setup/action.yml');
 for(const item of ['playwright@1.56.1','actions/cache@v4','~/.cache/ms-playwright','~/.npm','npx playwright install chromium','npx playwright install-deps chromium','chromium.launch({headless:true})'])
  assert.ok(action.includes(item),'shared browser setup missing '+item);

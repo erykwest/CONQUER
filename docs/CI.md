@@ -48,3 +48,10 @@ Sono stati controllati i nomi delle branch di destinazione prima della rimozione
 - **Controllo esaustivo garantito:** `workflow_dispatch` e pianificazione domenicale alle **04:47 UTC** lanciano l'audit completo di **tutti** gli asset con tutti gli stati, indipendentemente dagli scope di PR. Il P0 completo resta domenica alle 03:17 UTC.
 - **Sicurezza:** `qa/asset-audit-scope-regression.cjs` verifica i fallback e il mapping; il guard P1 conserva il requisito di audit periodico/manuale; gli script e i materiali grafici esistenti restano intatti. La gallery browser QA resta integrale anche nelle PR con audit mirato.
 - **Misura:** `artifacts/asset-audit/report.json` include `scope.mode`, `scope.sources` e `scope.selectedIds`; `report.md` riporta la scelta. La riduzione dei tempi è attesa ma non dichiarata come misurata fino alle PR reali con asset isolati.
+
+## P2.3 — Pulizia trigger push di branch inesistenti (06/11/2026)
+
+- **Inventario GitHub verificato:** le branch remote `camp`, `cans`, `audit-hardening`, `circle`, `combat`, `mare` e `feature/cutaway-furniture-converge` non esistono più; la branch ancora esistente `combat-ai` è distinta da `combat`.
+- **Rimossi 8 riferimenti push obsoleti da 7 workflow:** `camp-regression.yml`, `gate-six-sockets-regression.yml`, `sea-regression.yml` non hanno più trigger `push` (in precedenza solo branch scomparse). `cans-regression.yml`, `circle-regression.yml`, `combat-regression.yml`, `runtime-integrity.yml` mantengono `push: main` senza riferimenti alle branch inesistenti.
+- **Invariati:** tutti i trigger `pull_request`, `paths`, `workflow_dispatch` presenti e i rispettivi job; nessuno script QA, asset o branch Git è stato eliminato. Sono invariati i workflow non coinvolti e i trigger `push` su `main`.
+- **Regressione:** il controllo già eseguito su ogni PR `qa/ci-p1-regression.cjs` ora verifica la rimozione dei soli trigger scaduti e la conservazione della verifica PR/main.

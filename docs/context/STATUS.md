@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — CI P2.3: rimozione trigger obsolete (branch `chore/ci-p23-stale-push-triggers-20261106`)
+
+- **MODIFICA PROPOSTA:** eliminati esclusivamente 8 riferimenti `push` a 7 branch remote inesistenti da 7 workflow, senza cancellare workflow, asset, script di test o branch Git. Confermati i trigger `pull_request` e quelli `push: main` ancora applicabili.
+- **REGRESSIONE:** `qa/ci-p1-regression.cjs` mantiene un controllo statico sulle branch ritirate e sui trigger PR/main; integrità, economia, WebGPU e audit periodici non modificati.
+
+
 ## 2026-11-06 — CI P2.1: audit Asset Lab incrementale (branch `perf/assetlab-p2-incremental-20261106`, pre-merge)
 
 - **IN BRANCH:** il workflow Asset Lab seleziona `full`, `incremental` o `skip` dal diff PR verificato; modifiche isolate a SVG/PNG indipendenti e registri 3D approvati vengono verificate tramite ID e stati reali del catalogo.

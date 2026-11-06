@@ -6,7 +6,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   push:
-    branches: [main, audit-hardening]
+    branches: [main]
     paths:
       - 'api/telemetry.js'
       - 'src/settlement-core.js'
