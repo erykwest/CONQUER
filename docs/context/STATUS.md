@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — CI P1: deduplicazione e browser (branch `chore/ci-p1-browser-dedup-20261106`, pre-merge)
+
+- **IN BRANCH:** tutti i 25 workflow adottano concurrency per PR (cancel-in-progress solo su pull_request). Rimossi full deterministici duplicati da Main fixes, Gate-six sockets e WebGPU: il full rimane al selettore P0 e alla verifica settimanale/manuale.
+- **IN BRANCH:** composite Action per tutti e cinque i browser job, Chromium Playwright 1.56.1 con cache condivisa. Asset Lab browser/audit eseguiti solo per modifiche visive, la relativa smoke JS resta su tutte le modifiche di dipendenze; WebGPU solo per renderer o manuale.
+- **IN BRANCH:** ridondanze save-safety (Combat ed Economy) e context guard (Main fixes) eliminate, ma sorgenti di verità Runtime integrity e Context pyramid guard intatte. Aggiunto `qa/ci-p1-regression.cjs` al controllo P0, la suite full resta su cambiamenti world3d/castle3d.
+- **QA:** esiti live GitHub Actions da verificare prima del merge; nessun test esistente cancellato, documentazione `docs/CI.md` aggiornata.
+
+
 ## 2026-11-06 — CI P0: workflow obsoleti e suite deterministica selettiva (branch `chore/ci-p0-consolidation-20261106`, pre-merge)
 
 - **CODICE SU BRANCH, NON MAIN:** rimossi 11 workflow YAML associati a branch remote inesistenti o a un vecchio cleanup monouso. Conservati tutti i 163 script QA e relativi asset; cronologia Git disponibile per restore.

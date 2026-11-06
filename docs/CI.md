@@ -25,3 +25,16 @@ Sono stati controllati i nomi delle branch di destinazione prima della rimozione
 - Per eseguire il full senza una nuova PR: GitHub → Actions → `Settlement routing and spawn regression` → **Run workflow**.
 - Per ripristinare un workflow archiviato: recuperare il relativo file dalla cronologia Git precedente al merge, verificarne la branch di destinazione e creare una PR.
 - Lo storico dei run rimane su GitHub; il cambio non accelera automaticamente i workflow di sottosistema né disabilita gli altri job browser. Non vengono variati i branch protection rules.
+
+## P1 — Consolidamento e browser ottimizzati (06/11/2026)
+
+- **Run superati:** tutti i 25 workflow usano una chiave di concorrenza distinta per numero di PR e nome workflow, annullando solo i run PR precedenti dello stesso workflow. I run su `main`, manuali e settimanali non vengono cancellati automaticamente.
+- **Una sola suite deterministica completa:** la proprietà di `qa/*-regression.cjs` rimane a `settlement-routing-spawn.yml` (P0, a rischio, domenicale/manuale). `Main fixes`, `Gate six-socket` e `WebGPU smoke` non la replicano più: mantengono test isolati pertinenti ai rispettivi moduli.
+- **Nessun audit visivo duplicato:** `node qa/asset-audit.mjs` rimane esclusivamente in `Asset Lab regression`; `Main fixes` mantiene i due collaudi browser di interfaccia/rendering e non ripete il catalogo. Asset Lab intercetta anche `settlement-world3d.js` e `settlement-storage-yard.js`.
+- **Asset Lab selettivo:** su modifiche direttamente visive, di modelli, scene del castello e Asset Lab, esegue browser gallery + audit di tutti gli asset; su modifiche a dipendenze non visive (per esempio `index.html`, persistenza, simulazione), esegue il solo controllo veloce manifest+contratti. Una differenza PR non verificabile richiede sempre il browser.
+- **Playwright unico:** i cinque workflow browser importano `.github/actions/playwright-setup/action.yml` (Playwright **1.56.1**, Chromium, cache locale npm e browser, `ubuntu-24.04`); non esistono installazioni separate con versioni diverse. Le dipendenze di sistema continuano a essere verificate per garantire affidabilità sui runner puliti.
+- **WebGPU mirato:** la verifica parte per modifiche al renderer/browser invece che su ogni push `main`; supporta anche pull request su `main` e lancio manuale. Mantiene sonde browser su WebGPU, rendering ibrido, fallback Canvas e test UI/Combat, senza ripetere tutte le regressioni di gioco.
+- **Copertura preservata:** `Runtime integrity` rimane sempre attivo sulle PR per `save-safety`; le copie dello stesso test in Combat ed Economy e quella del guard contestuale in Main fixes sono rimosse. `Economy flows` e il guard della documentazione rimangono separati e obbligatori nei rispettivi workflow.
+- **Controllo strutturale:** `qa/ci-p1-regression.cjs` è eseguito su ogni PR dal workflow P0, mentre la modifica al workflow P0 o alla verifica P1 provoca il full. **Nessun file test QA viene rimosso**.
+
+**Nota:** la cancellazione dei run precedenti riduce il consumo e il rumore su PR con commit ravvicinati. Cache e filtri modificano il carico ma i risparmi effettivi vanno confrontati sui run GitHub; non sono garantiti valori di velocità precisi. In caso di errore di rendering, il browser Asset Lab può essere rieseguito modificando un file visivo o attivando l'audit attraverso la CI dedicata.

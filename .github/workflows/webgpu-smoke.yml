@@ -15,6 +15,7 @@ on:
       - 'src/settlement-mesh3d.js'
       - 'qa/ui-combat-regression.mjs'
       - '.github/workflows/webgpu-smoke.yml'
+      - '.github/actions/playwright-setup/action.yml'
   pull_request:
     branches: [main]
     paths:
@@ -24,6 +25,7 @@ on:
       - 'src/settlement-mesh3d.js'
       - 'qa/ui-combat-regression.mjs'
       - '.github/workflows/webgpu-smoke.yml'
+      - '.github/actions/playwright-setup/action.yml'
   workflow_dispatch:
 
 jobs:
