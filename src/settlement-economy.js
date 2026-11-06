@@ -271,13 +271,17 @@
         Math.max(0,(e.target[good]||0)-(e.castle[good]||0));
       const received=Math.min(keep,headroom);
       e.castle[good]=round(e.castle[good]+received);
-      if(received>0)window.ConquerHaulage?.record?.({siteId:id,good,qty:received,day:e.lastDay});
+      if(received>0)window.ConquerHaulage?.record?.({siteId:id,good,qty:received,day:e.lastDay,destination:'yard'});
       quantity-=received;
     }
     if(quantity>0){
       const existing=e.lots[good].find(l=>l.id===id&&l.owner===owner);
       if(existing)existing.qty=round(existing.qty+quantity);
       else e.lots[good].push({id,owner,qty:round(quantity)});
+      // The lot now exists in the sole market ledger. A private product or
+      // the lord's sale share is delivered visually to the market, not the yard.
+      if(e.activities?.[id])window.ConquerHaulage?.record?.({siteId:id,good,qty:quantity,
+        day:e.lastDay,destination:'market'});
     }
   }
   function book(e,id,field,value){
@@ -359,6 +363,12 @@
       const n=Math.min(window.ConquerShipyard.WORKERS,l1Available.length,remaining.L1);
       assignedL1[s.id]=l1Available.splice(0,n);allocated[s.id]=n;shipwrights[s.id]=n;remaining.L1-=n;
     }
+    // L1 cart drivers: one named employee per active stockyard, only if an
+    // actual road-connected delivery is pending/running. Industry and ships
+    // retain precedence; builders use the remaining L1 without double counting.
+    const carterDemand=window.ConquerHaulage?.workerDemand?.(day)||0;
+    const carters=l1Available.splice(0,Math.min(carterDemand,remaining.L1,l1Available.length));
+    remaining.L1-=carters.length;
     const builders=l1Available.splice(0,Math.min(l1Available.length,constructionDemand(day)));
     for(const s of logging){
       const free=Math.min(KIND.loggingCamp.workers-allocated[s.id],l1Available.length);
@@ -371,7 +381,7 @@
     for(const w of l1Available)(herdIds.has(w.houseId)?herders:idle).push(w);
     remaining.L1=Math.max(0,Math.min(remaining.L1,builders.length+idle.length));
     return{allocated,remaining,limits,assignedL1,spareL1:[...builders,...idle],
-      herders,herdReserve,fishers,shipwrights,idle,foodWeekly:round(foodWeekly)};
+      herders,herdReserve,fishers,shipwrights,carters,idle,foodWeekly:round(foodWeekly)};
   }
   // Food the households can actually reach: market lots, plus castle stores
   // only while the lord orders full or half rations.
@@ -652,7 +662,7 @@
       day,population:{...pop},welfare:round(e.welfare),happiness:{...e.happiness},
       prices:{...e.prices},jobs:{
         herding:worker.herding,logging:worker.logging,industry:worker.industry,
-        building:worker.building,idle:worker.idle
+        building:worker.building,carter:worker.carter,idle:worker.idle
       },
       production:siteOutput
     });
@@ -730,7 +740,7 @@
     const industry=Object.values(labor.assignedL1).reduce((n,list)=>n+list.length,0)-loggers;
     const builders=labor.spareL1.length-labor.idle.length;
     return{herding:labor.herders.length,protectedHerders:labor.herdReserve,logging:loggers,industry,
-      building:builders,idle:labor.idle.length,foodWeekly:labor.foodWeekly,
+      building:builders,carter:labor.carters.length,idle:labor.idle.length,foodWeekly:labor.foodWeekly,
       foodStock:round(accessibleFood(state())),
       foodRisk:accessibleFood(state())+labor.herders.length*HERD_FOOD_PER_DAY*10<labor.foodWeekly*2};
   }
@@ -799,7 +809,7 @@
     target.innerHTML='<div class="kv"><span>Average happiness / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
       '<div class="kv"><span>Happiness L1 · L2 · L3 · L4</span><b>'+HAPPINESS_GROUPS.map(g=>fmt(s.happiness[g])).join(' · ')+'</b></div>'+
       '<div class="kv"><span>Food policy · castle food issued</span><b>'+({market:'Market only',full:'Full rations',half:'Half rations'}[s.rationMode])+' · '+fmt(s.castleFoodIssued)+'</b></div>'+
-      '<div class="kv"><span>L1 builders / herders / loggers / idle</span><b>'+jobs.building+' / '+jobs.herding+' / '+jobs.logging+' / '+jobs.idle+'</b></div>'+
+      '<div class="kv"><span>L1 costruttori / pastori / boscaioli / carrettieri / inattivi</span><b>'+jobs.building+' / '+jobs.herding+' / '+jobs.logging+' / '+jobs.carter+' / '+jobs.idle+'</b></div>'+
       (jobs.foodRisk?'<div class="legend">⚠ Food supply at risk · protected herders: '+jobs.protectedHerders+'</div>':'')+
       (s.stockyard?'<div class="kv"><span>Piazzale · magazzino (scorte del castello)</span><b>'+fmt(s.stockyard.used)+' / '+fmt(s.stockyard.capacity)+' · '+s.stockyard.count+' piazzali</b></div>':'')+
       '<div class="kv"><span>Castle economic gold</span><b>'+fmt(s.castleGold)+'</b></div>'+
