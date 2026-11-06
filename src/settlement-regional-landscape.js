@@ -3,7 +3,9 @@
 (()=>{
   const rules=window.ConquerRegionalBiomeRules;
   const neighbors=()=>window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;
-  const active=()=>!!rules&&Object.keys(rules.directions).every(k=>BIOMES[neighbors()?.[k]])&&Object.values(neighbors()).some(b=>b!==State.biome);
+  // Uniform mountains still need explicit placement in every surrounding sector.
+  // The legacy recipe only occupies a short perimeter arc of the whole map.
+  const active=()=>!!rules&&Object.keys(rules.directions).every(k=>BIOMES[neighbors()?.[k]])&&(State.biome==='mountains'||Object.values(neighbors()).some(b=>b!==State.biome));
   const field=p=>rules.weights(p,'@center',neighbors());
   const weights=p=>rules.weights(p,State.biome,neighbors());
   const hash=(x,y,s)=>{let h=Math.imul(x,374761393)^Math.imul(y,668265263)^s;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295};

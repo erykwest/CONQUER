@@ -18,6 +18,7 @@ on:
       - 'qa/pier-regression.cjs'
       - 'qa/biome-recipes-regression.cjs'
       - 'qa/mountain-density-regression.cjs'
+      - 'qa/regional-mountain-placement-regression.cjs'
       - 'src/settlement-regional-landscape.js'
       - 'src/regional-biome-rules.js'
       - 'qa/regional-surroundings-regression.cjs'
@@ -39,6 +40,7 @@ jobs:
         run: |
           node qa/biome-recipes-regression.cjs
           node qa/mountain-density-regression.cjs
+          node qa/regional-mountain-placement-regression.cjs
           node qa/regional-surroundings-regression.cjs
           node qa/regional-demo-regression.cjs
           node qa/pier-regression.cjs

@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-MOUNTAIN-UNIFORM — Posizionamento anche con biomi uguali (06/11/2026)
+
+L’uguaglianza dei biomi non permette di saltare la composizione montana: la ricetta legacy non equivale alla distribuzione esplicita di otto settori montuosi. La composizione va attivata con contesto montano completo anche se centro e vicini sono tutti Montagne. Caso di regressione T297, seed 1555837107.
+
 ## REG-MOUNTAIN-VARIATION — Catena irregolare (06/11/2026)
 
 Correzione richiesta: mantenere il raddoppio ma rimuovere l’effetto coppia. Distribuzione continua lungo i settori scelti con posizioni e dimensioni variabili; nei limitrofi sagome indipendenti e distanza variabile, fianchi ancora intersecati. Pendenze 37–63 gradi (prima 40–60), maggiore escursione dei raggi e quindi delle altezze, senza cambiare il taglio al confine.
