@@ -178,6 +178,11 @@ function simulationFrame(now){
         }
       }
     }
+    // Sector occupation follows real combat positions (settlement-circle.js, from main).
+    try{
+      window.ConquerCircle?.updateControl?.();
+      window.ConquerCircle?.tickOccupation?.(State.clock.day);
+    }catch(err){console.warn('CONQUER_CIRCLE_TICK_ERROR',err)}
     if(syncSeasonToCalendar())scheduleLocalSave(100);
 
     // Time itself remains frame-continuous, but expensive simulation decisions
@@ -199,6 +204,7 @@ function simulationFrame(now){
 
     // Maintenance follows actual topology events, NOT render frames.
     if(completed.length){
+      window.ConquerCircle?.invalidate?.('construction completed');
       runSettlementMaintenance('completion',completed);
       if(completed.some(s=>s.type==='tower'))window.ConquerSiege?.syncAutoMastio?.();
       simMaintenanceAt=now;

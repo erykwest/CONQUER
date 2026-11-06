@@ -1679,6 +1679,8 @@
     const S=window.ConquerSiege;
     const sig=circuit.map(s=>s.id+(s.destroyed?'x':'')+(s.type==='gate'?(S?.gateBreached?.(s)?'b':S?.gateClosed?.(s)?'c':'o'):'')).join('|');
     if(areaCache.sig===sig)return areaCache.comp;
+    // The circuit changed (a gate opened or broke, a wall fell): the sector topology follows.
+    if(areaCache.sig!==null)window.ConquerCircle?.invalidate?.('circuit changed');
     const R=AREA_RES,N=AREA_N,blocked=new Uint8Array(N*N),comp=new Int32Array(N*N).fill(-1);
     // Mark every cell whose centre is within r of the shape (dist(px,py) < r).
     const mark=(x0,y0,x1,y1,inside)=>{
@@ -1748,6 +1750,10 @@
   }
   const hostileFoes=()=>combat.enemy.filter(e=>livingUnit(e)&&!e.routing&&!e.neutral&&!unitWall(e)&&!e.climbing);
   function defenderThink(u,now,foes){
+    // Concentric defence: falling back to the inner sector comes before any fight.
+    const rings=circleData();
+    if(rings&&livingUnit(u)&&!u.routing&&!u.climbing&&!unitWall(u)&&u.campState!=='camped'&&u.campState!=='barracks'&&
+      !(u.target&&!u.autoFoe&&!u.retreatTo&&u.kind!=='patrol')&&fallbackThink(u,now,rings))return;
     if(!livingUnit(u)||u.routing||u.engaged||u.climbing||u.legs?.length||unitWall(u)||now<(u.nextAutoAt||0))return;
     if(u.campState==='camped'||u.campState==='barracks')return;
     // Marching on the player's order (a patrol's own loop target is not an order: it breaks off).
@@ -1788,6 +1794,122 @@
     const legs=leg.points.length>=2&&Math.hypot(leg.points.at(-1).x-to.x,leg.points.at(-1).y-to.y)<.5?[leg]:legsViaGate(e,to);
     if(!legs)return;
     e.legs=legs;e.raidFoe=foe.id;e.raidAt={x:foe.x,y:foe.y};
+  }
+  // ---------- a siege by concentric sectors (settlement-circle.js) ----------
+  // Symmetric: the attackers want the keep and cross the sectors one by one (outside → outer
+  // ring → … → the keep's sector), the defenders hold the outermost sector they can and fall back
+  // inwards when it falls. Sectors, their depth and the gates between them (portals) come from
+  // ConquerCircle; with no closed circuit both sides keep the plain seeking above.
+  const FALLEN=new Set(['invaded','compromised','captured']);
+  function circleData(){const d=window.ConquerCircle?.getSnapshot?.();return d?.compartments?.length&&d.portals?d:null}
+  const sectorById=(d,id)=>d.compartments.find(c=>c.id===id)||null;
+  const keepOf=d=>d.compartments.find(c=>c.mastio)||d.compartments.slice().sort((a,b)=>b.depth-a.depth)[0];
+  const gateById=id=>State.structures.find(s=>s.id===id&&s.type==='gate')||null;
+  const gateOpen=g=>!!g&&(!window.ConquerSiege?.gateClosed?.(g)||!!window.ConquerSiege?.gateBreached?.(g));
+  // Next sector towards the keep from sector id `here` (null: outside), and the gate between.
+  function hopToKeep(d,here){
+    const keep=keepOf(d);if(!keep)return null;
+    if(here===keep.id)return{keep,hop:null};
+    const key=x=>x??'outside',prev=new Map([[key(here),null]]),queue=[here];
+    for(let i=0;i<queue.length;i++){
+      const at=queue[i];
+      for(const p of d.portals){
+        if(key(p.from)!==key(at)&&key(p.to)!==key(at))continue;
+        const next=key(p.from)===key(at)?p.to:p.from;
+        if(prev.has(key(next)))continue;
+        prev.set(key(next),{from:at,portal:p});queue.push(next);
+        if(next===keep.id){
+          let step=next,link=prev.get(key(step));
+          while(link&&link.from!==here){step=link.from;link=prev.get(key(step))}
+          return{keep,hop:{sector:step,portal:link.portal}};
+        }
+      }
+    }
+    return{keep,hop:null,unreachable:true};
+  }
+  // Legs through one given gate, from wherever u is to `beyond` the far mouth (then optional goal).
+  function legsThrough(u,gate,goal=null){
+    if(typeof gatePassageInfo!=='function')return null;
+    const info=gatePassageInfo(gate,u),dx=info.far.x-info.center.x,dy=info.far.y-info.center.y,L=Math.hypot(dx,dy)||1;
+    const beyond={x:info.far.x+dx/L*.8,y:info.far.y+dy/L*.8};
+    const legs=[groundLeg(u,info.near,u),{kind:'ground',points:[{...info.near,z:0},{...info.far,z:0},{...beyond,z:0}]}];
+    if(goal)legs.push(groundLeg(beyond,goal,u));
+    return legs;
+  }
+  // A ram for a closed gate on the way: the nearest free men-at-arms crew it; the storm grabs
+  // every hostile outside, so the others keep their own task.
+  function rigRam(gate,near){
+    if((combat.storms||[]).some(s=>s.kind==='ram'&&s.gateId===gate.id&&!s.done))return;
+    const keep=new Map(combat.enemy.map(e=>[e,{assault:e.assault,legs:e.legs,cameDown:e.cameDown}]));
+    const storm=addRamStorm(gate);if(!storm)return;
+    const crew=new Set(combat.enemy.filter(e=>livingUnit(e)&&!e.routing&&(e.combatKind||e.kind)==='infantry'&&!keep.get(e).assault&&!unitWall(e))
+      .sort((a,b)=>dist(a,near)-dist(b,near)).slice(0,6));
+    for(const e of combat.enemy){const k=keep.get(e);if(k&&!crew.has(e)){e.assault=k.assault;e.legs=k.legs;e.cameDown=k.cameDown}}
+  }
+  function campaignThink(e,now,d){
+    if(e.engaged||e.climbing||unitWall(e)||now<(e.nextThink||0))return;
+    if(e.legs?.length&&e.campaignLegs)return;                          // on the way through a gate
+    // Defenders within reach in the same area: fight them first.
+    const foe=best(combat.units.filter(u=>livingUnit(u)&&!u.routing&&!unitWall(u)&&!u.climbing&&u.campState!=='barracks'&&Math.hypot(u.x-e.x,u.y-e.y)<=18&&sameArea(u,e)),u=>Math.hypot(u.x-e.x,u.y-e.y));
+    if(foe){e.campaignLegs=false;return raidThink(e,now)}
+    e.nextThink=now+THINK_S*1000;
+    const here=d.sectorAt(e),route=hopToKeep(d,here);if(!route)return;
+    const archer=(e.combatKind||e.kind)==='archer';
+    if(!route.hop){
+      // In the keep's sector (or nowhere to go): stand at its heart.
+      e.atKeep=here===route.keep.id;
+      const at=route.keep.anchors?.[2]||route.keep.centroid;
+      if(at&&Math.hypot(at.x-e.x,at.y-e.y)>2&&seekBudget>0){seekBudget--;const leg=groundLeg(e,at,e);if(leg.points.length>=2){e.legs=[leg];e.campaignLegs=true}}
+      return;
+    }
+    const gate=gateById(route.hop.portal.id);if(!gate)return;
+    if(gateOpen(gate)){
+      if(seekBudget<=0){e.nextThink=0;return}
+      seekBudget--;e.legs=legsThrough(e,gate);e.campaignLegs=true;return;
+    }
+    // Closed: the ram for it, and the others wait out of reach of the door.
+    const info=gatePassageInfo(gate,e);
+    if(!archer)rigRam(gate,info.near);
+    if(e.assault)return;
+    const back=archer?10:4,dx=info.near.x-info.center.x,dy=info.near.y-info.center.y,L=Math.hypot(dx,dy)||1;
+    // Spread along the wall, each man in his own place (from his id).
+    const slot=([...String(e.id)].reduce((a,c)=>a+c.charCodeAt(0),0)%9)-4;
+    const wait={x:info.near.x+dx/L*back+slot*.6*info.vx,y:info.near.y+dy/L*back+slot*.6*info.vy};
+    if(Math.hypot(wait.x-e.x,wait.y-e.y)<1.2||seekBudget<=0)return;
+    seekBudget--;const leg=groundLeg(e,wait,e);if(leg.points.length>=2){e.legs=[leg];e.campaignLegs=false}
+  }
+  // Defenders: fall back to the next sector inwards when theirs falls or is overrun (two
+  // hostiles for each defender); open the inner gate to pass and close it behind the last one.
+  // A man falling back does not stop to fight.
+  function fallbackThink(u,now,d){
+    if(u.retreatTo){
+      if(u.legs?.length)return true;
+      const here=d.sectorAt(u);
+      if(here===u.retreatTo){
+        const gate=gateById(u.retreatGate),old=u.retreatFrom;u.retreatTo=u.retreatGate=u.retreatFrom=null;
+        // The last one through shuts the gate (unless it is broken in).
+        const behind=combat.units.some(o=>livingUnit(o)&&o!==u&&(o.retreatGate===gate?.id||d.sectorAt(o)===old));
+        if(gate&&!behind&&!window.ConquerSiege?.gateBreached?.(gate)){window.ConquerSiege?.setGateClosed?.(gate.id,true);window.ConquerCircle?.invalidate?.('gate closed behind the retreat')}
+        return false;
+      }
+      const gate=gateById(u.retreatGate);
+      if(gate&&seekBudget>0){seekBudget--;u.legs=legsThrough(u,gate,sectorById(d,u.retreatTo)?.anchors?.[2]||null);u.target=null;u.path=null}
+      return true;
+    }
+    const here=d.sectorAt(u);if(!here)return false;
+    const sector=sectorById(d,here);if(!sector||sector.mastio&&!sector.adjacentIds?.length)return false;
+    const hostiles=combat.enemy.filter(e=>livingUnit(e)&&!e.neutral&&d.sectorAt(e)===here).length;
+    const friends=combat.units.filter(o=>livingUnit(o)&&!o.routing&&d.sectorAt(o)===here).length;
+    if(!FALLEN.has(sector.state)&&!(hostiles>=3&&hostiles>=friends*2))return false;
+    // Deeper sector next door: through an open gate, or one the defenders open themselves.
+    const inner=d.portals.filter(p=>p.from===here||p.to===here).map(p=>({p,next:p.from===here?p.to:p.from}))
+      .map(o=>({...o,sector:sectorById(d,o.next)})).filter(o=>o.sector&&o.sector.depth>sector.depth&&!FALLEN.has(o.sector.state))
+      .sort((a,b)=>b.sector.depth-a.sector.depth)[0];
+    if(!inner)return false;                                             // last stand
+    const gate=gateById(inner.p.id);if(!gate)return false;
+    if(window.ConquerSiege?.gateClosed?.(gate)){window.ConquerSiege?.setGateClosed?.(gate.id,false);window.ConquerCircle?.invalidate?.('gate opened for the retreat')}
+    u.retreatTo=inner.next;u.retreatGate=gate.id;u.retreatFrom=here;u.autoFoe=null;u.target=null;u.path=null;
+    return true;
   }
   function tick(dt){
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
@@ -1839,7 +1961,7 @@
       if(!livingUnit(e)||e.routing)continue;
       if(e.assault)assaultThink(e,nowMs);
       else if(e.torch)torchThink(e,nowMs);
-      else if(!e.digging&&e.kind!=='wolf'&&!e.neutral)raidThink(e,nowMs);
+      else if(!e.digging&&e.kind!=='wolf'&&!e.neutral){const d=circleData();if(d)campaignThink(e,nowMs,d);else raidThink(e,nowMs)}
       if(e.legs?.length&&stepLegs(e,dt,e.kind==='knight'||e.combatKind==='knight'?1.5:.8))moved=true;
     }
     ramStep(dt);
