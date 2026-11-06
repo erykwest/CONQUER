@@ -1,30 +1,43 @@
 'use strict';
-// Local stockyard haulage — purely visual trips driven by booked production.
-// ConquerEconomy is the one ledger; arrival and departure NEVER change stock.
-// Reuses ConquerVehicles road routing and the existing 2D wagon/horse artwork.
+// Carrettieri L1: existing Job Manager owns one named worker per active stockyard.
+// Production is credited exclusively by the original ledgers; the journey is visual.
+// Driver + horses + wagon + road routing are ConquerVehicles/ConquerWagons 2D.
 (() => {
   const MAX_ACTIVE=4,MAX_PENDING=32,MAX_WAIT_DAYS=10;
-  const ROAD_REACH_SOURCE=3.5,ROAD_REACH_YARD=4.0;
+  const ROAD_REACH_SOURCE=3.5,ROAD_REACH_YARD=4.0,ROAD_REACH_MARKET=4.0;
   const LOAD_SECONDS=.45,UNLOAD_SECONDS=.8;
-  const pending=new Map(),trips=[],dispatched=new Map();
+  const pending=new Map(),trips=[];
   let sequence=0,scan=0,completed=0;
   const finite=n=>Number.isFinite(Number(n))?Number(n):0;
-  const goodTypes=new Set(['wood','stone','clay','food','metal','equipment','luxury']);
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const source=id=>(State.structures||[]).find(s=>s.id===id);
   function isActive(s){
-    return !!s&&!s.destroyed&&!s.abandoned&&!s.burnt&&
+    return !!s&&!s.destroyed&&!s.abandoned&&!s.burnt&&!s.economyDisabled&&
       !(typeof underConstruction==='function'&&underConstruction(s));
   }
-  function yards(){return (window.ConquerStorageYard?.active?.()||[]).filter(isActive)}
-  function reset(){pending.clear();trips.length=0;dispatched.clear();scan=0;completed=0}
-  // Called only AFTER ConquerEconomy credits castle stock, for its ACTUAL
-  // retained amount. No visual delivery of private output or unsold market lots.
-  function record({siteId,origin=null,good,qty,day=State.clock?.day}={}){
+  const yards=()=> (window.ConquerStorageYard?.active?.()||[]).filter(isActive)
+    .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  const markets=()=> (State.structures||[]).filter(s=>s.type==='market'&&isActive(s))
+    .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  const getGood=good=>typeof good==='string'&&
+    ((window.ConquerEconomy?.GOODS||[]).includes(good)||
+      Object.hasOwn(window.ConquerMarketEconomy?.COMMODITIES||{},good));
+  const dayOf=()=>finite(State.clock?.day);
+  const weekday=day=>window.ConquerEconomy?.weekday?.(day)??((Math.floor(day)%7+7)%7);
+  function onShift(day=dayOf()){
+    const frac=day-Math.floor(day);
+    return weekday(day)<5&&frac>=.10&&frac<.75&&
+      (window.ConquerCombat?.alarmMode?.()||'off')==='off';
+  }
+  function reset(){pending.clear();trips.length=0;scan=0;completed=0;sequence=0}
+  // The source ID is a REAL economic/commerce producer (or a completed forest
+  // clearance with a real centre). Event aggregation does not invent supply.
+  function record({siteId,origin=null,good,qty,day=dayOf(),destination='yard'}={}){
     const amount=finite(qty),at=finite(day);
-    if(!State.village?.founded||!siteId||!goodTypes.has(good)||amount<=0||!yards().length)return false;
+    if(!State.village?.founded||!siteId||!getGood(good)||amount<=0||!yards().length||
+      !['yard','market'].includes(destination))return false;
     if(!origin&&!isActive(source(siteId)))return false;
-    const key=String(siteId)+'|'+good;
+    const key=String(siteId)+'|'+good+'|'+destination;
     const current=pending.get(key);
     if(current){
       current.qty=Math.min(1000,current.qty+amount);
@@ -33,7 +46,7 @@
     }
     if(pending.size>=MAX_PENDING)pending.delete(pending.keys().next().value);
     pending.set(key,{key,siteId,origin:origin?{x:origin.x,y:origin.y}:null,
-      good,qty:amount,day:at,lastDay:at});
+      good,destination,qty:amount,day:at,lastDay:at});
     return true;
   }
   function nearestRoadDistance(p,g){
@@ -52,66 +65,140 @@
     if(!from||!Number.isFinite(from.x)||!Number.isFinite(from.y))return null;
     const graph=V.graph();
     if(!graph?.segs?.length||nearestRoadDistance(from,graph)>ROAD_REACH_SOURCE)return null;
+    const bases=yards(),drops=job.destination==='market'?markets():bases;
+    // Avoid running Dijkstra on every labor panel repaint. Graph identity
+    // changes when completed roads change; physical site list is fingerprinted.
+    const sig=bases.concat(drops).map(s=>s.id+':'+s.x+':'+s.y).join('|');
+    const cache=job._plan;
+    if(cache?.graph===graph&&cache.sig===sig&&cache.fromX===from.x&&cache.fromY===from.y)
+      return cache.value;
     let best=null;
-    for(const yard of yards()){
-      if(yard.id===job.siteId||nearestRoadDistance(yard,graph)>ROAD_REACH_YARD)continue;
-      const raw=V.route(from,yard);
-      if(!raw||raw.length<2)continue;
-      const length=V.makePath(raw).total;
-      if(length<.3||!Number.isFinite(length))continue;
-      const score=length+.25*(distance(from,raw[0])+distance(yard,raw[raw.length-1]));
-      if(!best||score<best.score)
-        best={yardId:yard.id,points:V.smooth(raw),score};
+    for(const base of bases){
+      if(nearestRoadDistance(base,graph)>ROAD_REACH_YARD)continue;
+      const first=V.route(base,from);
+      if(!first||first.length<2||V.makePath(first).total<.25)continue;
+      for(const drop of drops){
+        const reach=job.destination==='market'?ROAD_REACH_MARKET:ROAD_REACH_YARD;
+        if(nearestRoadDistance(drop,graph)>reach)continue;
+        const delivery=V.route(from,drop),home=V.route(drop,base);
+        if(!delivery||!home||delivery.length<2||home.length<2)continue;
+        const length=V.makePath(delivery).total;
+        if(length<.25)continue;
+        const score=V.makePath(first).total+length+V.makePath(home).total+
+          .2*(distance(base,first[0])+distance(from,first.at(-1))+
+          distance(from,delivery[0])+distance(drop,delivery.at(-1)));
+        if(!best||score<best.score)best={
+          baseId:base.id,destinationId:drop.id,
+          legs:[V.smooth(first),V.smooth(delivery),V.smooth(home)],score};
+      }
     }
+    job._plan={graph,sig,fromX:from.x,fromY:from.y,value:best};
     return best;
   }
-  function dispatch(job,day){
-    const last=dispatched.get(job.key);
-    if(last!=null&&day-last<.5)return false;
-    if(trips.some(t=>t.key===job.key))return false;
+  // Queried by ConquerEconomy.laborAllocation AFTER productive L1 industry and
+  // BEFORE construction. No parallel workforce and no fictitious workers.
+  function workerDemand(day=dayOf()){
+    if(!State.village?.founded||!yards().length||!window.ConquerVehicles)return 0;
+    const active=trips.length;
+    if(!onShift(day))return active;
+    let waiting=0;
+    for(const j of pending.values()){
+      if(day-j.lastDay<=MAX_WAIT_DAYS&&plan(j))waiting++;
+      if(waiting>=MAX_ACTIVE)break;
+    }
+    return Math.min(MAX_ACTIVE,yards().length,active+waiting);
+  }
+  function workerStation(worker,roster=[]){
+    if(trips.some(t=>t.workerId===worker.id))return null; // carter is drawn on the wagon
+    const base=yards()[Math.max(0,roster.findIndex(w=>w.id===worker.id))%Math.max(1,yards().length)];
+    return base?{x:base.x+.18,y:base.y+.18}:null;
+  }
+  function dispatch(job,worker,day){
     const route=plan(job);if(!route)return false;
-    const trip={id:'local-haul-'+(++sequence),key:job.key,siteId:job.siteId,yardId:route.yardId,
-      good:job.good,qty:job.qty,vehicle:job.good==='wood'||job.qty>45?'wagon':'cart',
-      vehicles:1,guards:0,seed:sequence%4,points:route.points,
-      distance:0,speed:0,phase:'loading',remain:LOAD_SECONDS,emptyReturn:false,virtualSource:!!job.origin};
-    trips.push(trip);pending.delete(job.key);dispatched.set(job.key,day);
+    const trip={id:'local-haul-'+(++sequence),key:job.key,siteId:job.siteId,
+      baseId:route.baseId,destinationId:route.destinationId,destination:job.destination,
+      workerId:worker.id,good:job.good,qty:job.qty,
+      vehicle:job.good==='wood'||job.qty>45?'wagon':'cart',vehicles:1,guards:0,seed:sequence%4,
+      legs:route.legs,points:route.legs[0],distance:0,speed:0,phase:'departing',
+      remain:0,emptyReturn:true,virtualSource:!!job.origin};
+    trips.push(trip);pending.delete(job.key);
     return true;
+  }
+  function abandon(t,day){
+    // Employment or topology may change during a journey. Requeue only the
+    // visual receipt: inventory was booked already and will not be booked again.
+    const site=source(t.siteId);
+    if(t.virtualSource||isActive(site)){
+      const original=pending.get(t.key);
+      if(original){original.qty=Math.min(1000,original.qty+t.qty);original.lastDay=day}
+      else pending.set(t.key,{key:t.key,siteId:t.siteId,
+        origin:t.virtualSource?t.origin:null,good:t.good,destination:t.destination,
+        qty:t.qty,day,lastDay:day});
+    }
   }
   function tick(dt){
     if(!State.village?.founded){if(pending.size||trips.length)reset();return false}
     if(!(State.clock?.speed>0)||!Number.isFinite(dt)||dt<=0)return false;
-    const V=window.ConquerVehicles;
-    if(!V)return false;
+    const V=window.ConquerVehicles,E=window.ConquerEconomy;
+    if(!V||!E?.laborAllocation)return false;
+    const day=dayOf(),roster=E.laborAllocation(day).carters||[];
+    const ids=new Set(roster.map(w=>w.id));
     const elapsed=Math.min(dt,.25)*Math.min(4,Math.sqrt(Math.max(1,State.clock.speed)));
+    const available=roster.slice();
     for(let i=trips.length-1;i>=0;i--){
       const t=trips[i];
       if((!t.virtualSource&&!isActive(source(t.siteId)))||
-          !yards().some(y=>y.id===t.yardId)){trips.splice(i,1);continue}
+        !isActive(source(t.baseId))||!isActive(source(t.destinationId))){
+        trips.splice(i,1);continue;
+      }
+      // A carter displaced by a productive job is replaced only by another
+      // worker in today's L1 roster. With zero carters the trip is suspended
+      // and its visual load requeued, never credited a second time.
+      if(!ids.has(t.workerId)){
+        const substitute=available.find(w=>!trips.some(x=>x!==t&&x.workerId===w.id));
+        if(substitute)t.workerId=substitute.id;
+        else{abandon(t,day);trips.splice(i,1);continue}
+      }
+      const slot=available.findIndex(w=>w.id===t.workerId);
+      if(slot>=0)available.splice(slot,1);
       if(t.phase==='loading'||t.phase==='unloading'){
         t.remain-=elapsed;
         if(t.remain>0)continue;
-        if(t.phase==='loading'){t.phase='outbound';t.speed=0}
-        else{t.phase='returning';t.emptyReturn=true;t.points=t.points.slice().reverse();t.distance=0;t.speed=0}
+        if(t.phase==='loading'){t.phase='outbound';t.emptyReturn=false;t.speed=0}
+        else{
+          t.phase='returning';t.emptyReturn=true;
+          t.points=t.legs[2];t.distance=0;t.speed=0;
+        }
         continue;
       }
       if(V.advance(t,t.points,elapsed)){
-        if(t.phase==='outbound'){t.phase='unloading';t.remain=UNLOAD_SECONDS;t.speed=0}
-        else{trips.splice(i,1);completed++}
+        if(t.phase==='departing'){
+          t.phase='loading';t.remain=LOAD_SECONDS;
+          t.points=t.legs[1];t.distance=0;t.speed=0;
+        }else if(t.phase==='outbound'){
+          t.phase='unloading';t.remain=UNLOAD_SECONDS;t.speed=0;
+        }else{
+          trips.splice(i,1);completed++;
+        }
       }
     }
     scan+=dt;
-    if(scan>=.55&&trips.length<MAX_ACTIVE&&pending.size){
-      scan=0;const day=finite(State.clock.day);
+    if(scan>=.55){
+      scan=0;
       for(const job of pending.values()){
-        if(day-job.lastDay>MAX_WAIT_DAYS||
-          (!job.origin&&!isActive(source(job.siteId)))){pending.delete(job.key);continue}
-        if(dispatch(job,day)&&trips.length>=MAX_ACTIVE)break;
+        if(day-job.lastDay>MAX_WAIT_DAYS||(!job.origin&&!isActive(source(job.siteId))))
+          pending.delete(job.key);
+      }
+      if(onShift(day)&&available.length&&trips.length<MAX_ACTIVE){
+        for(const job of pending.values()){
+          if(!available.length||trips.length>=MAX_ACTIVE)break;
+          const worker=available[0];
+          if(dispatch(job,worker,day))available.shift();
+        }
       }
     }
     return trips.length>0;
   }
-  // Stock is booked immediately by ConquerEconomy. The outbound wagon is a
-  // visual representation of that booking, NOT an unbooked in-transit ledger.
   function draw(){
     const V=window.ConquerVehicles;if(!V?.draw)return 0;
     let count=0;
@@ -122,11 +209,20 @@
     }
     return count;
   }
-  function snapshot(){return{active:trips.length,pending:pending.size,completed,
-    outbound:trips.filter(t=>t.phase==='loading'||t.phase==='outbound').length,
-    returning:trips.filter(t=>t.phase==='returning').length,
-    unloading:trips.filter(t=>t.phase==='unloading').length,
-    trips:trips.map(t=>({id:t.id,siteId:t.siteId,yardId:t.yardId,good:t.good,qty:t.qty,phase:t.phase,emptyReturn:t.emptyReturn}))}}
-  window.ConquerHaulage=Object.freeze({record,tick,draw,reset,snapshot,plan,
-    MAX_ACTIVE,MAX_PENDING,ROAD_REACH_SOURCE,ROAD_REACH_YARD});
+  function snapshot(){
+    const roster=window.ConquerEconomy?.laborAllocation?.(dayOf())?.carters||[];
+    return{active:trips.length,pending:pending.size,completed,
+      assigned:roster.length,workers:roster.map(w=>w.id),
+      toYard:trips.filter(t=>t.destination==='yard').length,
+      toMarket:trips.filter(t=>t.destination==='market').length,
+      outbound:trips.filter(t=>t.phase==='outbound'||t.phase==='departing'||t.phase==='loading').length,
+      returning:trips.filter(t=>t.phase==='returning').length,
+      unloading:trips.filter(t=>t.phase==='unloading').length,
+      trips:trips.map(t=>({id:t.id,siteId:t.siteId,baseId:t.baseId,destinationId:t.destinationId,
+        destination:t.destination,workerId:t.workerId,good:t.good,qty:t.qty,phase:t.phase,emptyReturn:t.emptyReturn}))};
+  }
+  window.ConquerHaulage=Object.freeze({
+    record,tick,draw,reset,snapshot,plan,workerDemand,workerStation,onShift,
+    MAX_ACTIVE,MAX_PENDING,ROAD_REACH_SOURCE,ROAD_REACH_YARD,ROAD_REACH_MARKET
+  });
 })();
