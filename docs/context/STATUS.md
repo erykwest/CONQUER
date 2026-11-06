@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — Orto di corte, BC-251105-11 (branch `feature/orto-di-corte`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA MAIN:** `CIVIC_ANNEX_CATALOG.townhall.kitchenGarden` («Kitchen garden», 3×2U, L1, max 2, `kind:'garden'`, attraversabile). Il Municipio non ha lotto Voronoi: l'orto si posa su terreno aperto entro `TOWNHALL_ANNEX_RANGE` = 7U e non può occupare lotti di proprietà; restano i controlli condivisi di `ConquerPlacement`. Pulsante nel pannello Annessi del Municipio con la resa indicata.
+- **EFFETTO SIMULATO:** `kitchenGardens()` elenca gli orti completi, non distrutti/bruciati, di Municipi completi e in piedi; `ConquerEconomy.daily` aggiunge `KITCHEN_GARDEN_FOOD_PER_DAY` = 2 cibo per orto per giornata lavorativa al ledger del signore (quota trattenuta al castello, resto al mercato secondo `saleShare`). A differenza di pastori e pescatori produce anche in allarme/assedio. Nessun lavoratore richiesto (cura della corte).
+- **VISUAL:** modello Blender `kitchenGarden` (`tools/blender/build_civic.py`, accodato senza cambiare gli altri 52 modelli): filari di ortaggi, pali dei fagioli, recinto di vimini con cancello, botte e capanno. Canvas usa la sagoma `garden` esistente. Asset Lab «Orto di corte (annesso del municipio)»; `node qa/asset-audit.mjs` locale: 0 errori; baseline aggiornata per la sola nuova voce (i «cambiati» locali delle fortificazioni sono deriva di rasterizzazione, non toccati).
+- **QA:** `qa/civic-annex-regression.cjs` (raggio, lotti, tetto 2, orti distrutti) e `qa/labor-jobs-regression.cjs` (resa in allarme) verdi in locale; CI da leggere sulla PR.
+
 ## 2026-11-05 — Scale ai camminamenti BC-251105-01/02 (branch `feature/bc-scale`, NON MAIN)
 
 - **Scala lignea e scala lapidea** (`src/settlement-wall-stairs.js`, modelli Blender `tools/blender/build_wall_stairs.py` → `src/assets/wall-stair-models.js`): upgrade di un muro in pietra finito T2/T3 dall'ispettore (Scala al camminamento: Nessuna / Lignea 4 oro + 14 legno / Lapidea 8 oro + 22 pietra; lignea → lapidea è un upgrade, non il contrario; posizione Inizio/Centro/Fine). Rampa addossata alla faccia interna, ultimo gradino a filo del cammino di ronda; modello normalizzato a 1U di alzata e scalato su altezza reale (legno ~60°, pietra ~45°). Muro troppo corto → rifiutata. Stato salvato sul muro (`wallStair`).

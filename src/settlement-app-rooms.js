@@ -179,7 +179,10 @@ function renderFunctionPanel(){
           '<button data-civic-annex="'+key+'" '+(locked||full||building?'disabled':'')+'>'+
           (locked?'Requires L'+spec.level:full?'Limit reached':building?'Parent under construction':'Place '+spec.label)+' · '+spec.w+'×'+spec.h+'U</button>'+
           owned.map(child=>'<button data-civic-annex-child="'+child.id+'">↳ Select '+spec.label+'</button>').join('');
-      }).join('')+'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>';
+      }).join('')+(s.type==='townhall'
+        ?'<div class="legend">Open ground within '+TOWNHALL_ANNEX_RANGE+'U of the town hall. Each garden yields '+
+          (window.ConquerEconomy?.KITCHEN_GARDEN_FOOD_PER_DAY||2)+' food per working day to the lord, also under alarm and siege.</div></div>'
+        :'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>');
   }
   if(isPlazaLike(s)){
     html+=`<div class="slot"><div class="slot-label">Piazza variant</div><div class="grid3">${PLAZA_VARIANTS.map(variant=>`<button data-plaza-variant="${variant}" class="${plazaVariant(s)===variant?'active':''}">${variant==='paved'?'Paved':variant==='fountain'?'Fountain':'Garden'}</button>`).join('')}</div></div>`;
