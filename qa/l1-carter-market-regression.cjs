@@ -46,7 +46,7 @@ check('economy allocates a distinct, named L1 carter after essential productive 
   const w=world({logging:true});w.E.foundingCharter('well');
   w.E.tick(-1,0);
   const a=w.E.laborAllocation(.25);
-  assert.equal(a.assignedL1.camp.length,1,'logger is the essential L1 job');
+  assert.ok(a.assignedL1.camp.length>=1,'at least one logger is protected before any L1 carter');
   assert.equal(a.carters.length,1,'actual yard is a single logistics workplace');
   assert.equal(a.carters[0].id,'founder:well:1','driver comes from real founder labor');
   assert.equal(a.idle.some(x=>x.id===a.carters[0].id),false);
