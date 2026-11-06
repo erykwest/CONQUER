@@ -24,7 +24,8 @@
   // ---------- road graph and routing
   const key=p=>Math.round(p.x*20)+','+Math.round(p.y*20);
   function roads(){
-    return(State.structures||[]).filter(s=>s.type==='road'&&s.a&&s.b&&!s.destroyed&&
+    // Finished ramps are links of the network; stairways never are (settlement-slopeways.js).
+    return(State.structures||[]).filter(s=>(s.type==='road'||s.type==='ramp')&&s.a&&s.b&&!s.destroyed&&
       !(typeof underConstruction==='function'&&underConstruction(s)));
   }
   let graphCache=null;

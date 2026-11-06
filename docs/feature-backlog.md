@@ -64,8 +64,8 @@
 
 ### Torri
 - [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
-- [ ] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello.
-- [ ] **BC-251105-07 — Torri W2 × H4? [DA VALUTARE].** Verificare fattibilità e coerenza geometrica, funzionale e di gameplay dell'altezza H4 per larghezza W2; **non** trattare H4 come già approvato.
+- [x] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello. **Implementata su `feature/wood-tower-h2` (PR, non ancora in main):** `woodStyle:'frameTower'`, 1,5×1,5U, H2 fisso, sempre coperta; piano terra chiuso in tronchi, telaio controventato a vista solo al P1; modello Blender `frameTower` in `build_wood_fort.py`, cantiere, cutaway (lati verso la camera, solaio e scale interne) e Lab (`castle:legno-telaio-h2`, `castle:legno-telaio-h2-mastio-rialzato`). Compatibile con l'**ingresso rialzato del mastio**: unica torre lignea ammessa da `settlement-keep-entrance.js`; soglia al P1 (1,28), porta del P1 sul fronte (+x) al posto del montante centrale, nessuna porta a terra.
+- [x] **BC-251105-07 — Torre W2 × H4.** **[SU BRANCH `feature/tower-w2-h4`, non main]** Valutata e approvata dall'utente (06/11): quarto piano solo per la torre quadrata in pietra W2 (1,5U) indipendente; niente legno, tonde, D/semitorri, sottotorri, porte; W1/W3/W4 restano a H3 al massimo. Altezza 5,95+0,12 U (≈4,1:1 sulla base), costo ×3,35 rispetto a L1 (+45% su H3), una stanza NORMAL per piano come le altre W2. **Residui:** assedio (scale d'assalto contro quota H4, gittata/visuale dalla cima, crollo dei piani) non ribilanciato; il pulsante «4 levels» su torri non W2 viene ridotto a H3 senza avviso.
 
 ### Coperture
 - [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
@@ -76,8 +76,8 @@
 - [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.
 
 ### Terreno e percorsi su dislivelli
-- [ ] **BC-251105-12 — Rampe per superare i dislivelli.** Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
-- [ ] **BC-251105-13 — Scalinate per pendii e colline.** Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
+- [x] **BC-251105-12 — Rampe per superare i dislivelli.** *(Branch `feature/ramps-stairs`, 06/11: rampa 2U, pendenza max 1:4, sviluppo 2–16U, rilevato contro il pendio; pedoni, mezzi pesanti e carri via grafo stradale; non in main.)* Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
+- [x] **BC-251105-13 — Scalinate per pendii e colline.** *(Branch `feature/ramps-stairs`, 06/11: scalinata 1U, pendenza 1:4–1:1, gradini sul terreno reale, solo pedoni; non in main.)* Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
 
 **Accettazione BC-12/13:** la geometria segue le quote reali del terreno; entrambe le estremità si connettono a superfici percorribili; il pathfinding delle unità riconosce i collegamenti, senza attraversare pendii non accessibili; costruzione, collisioni, salvataggio e visualizzazione 3D/2.5D sono verificati.
 

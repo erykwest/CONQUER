@@ -133,7 +133,9 @@ function terrainBaseElevation(p){
 }
 function terrainElevation(p){
   const base=terrainBaseElevation(p);
-  return window.ConquerTerraforming?.elevationAt(p,base)??base;
+  const z=window.ConquerTerraforming?.elevationAt(p,base)??base;
+  // Finished ramps and stairways (settlement-slopeways.js): walkers stand on their deck.
+  return window.ConquerSlopeways?window.ConquerSlopeways.lift(p,z):z;
 }
 function terrainPlateauElevation(p){
   if(terrainSlopeKind(p))return null;
@@ -222,8 +224,8 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){
-    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:(woodTowerRoof(s)==='pitched'?2.95:2.32);
-    const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:(woodTowerRoof(s)==='pitched'?2.95:2.32);
+    const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75,5.95][l-1]+(t-1)*.12
   }
   // The small gate stands just above the curtain (H2 walls are 2.10): L1 passage only, L2 one room over it.
   if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
@@ -237,6 +239,7 @@ function structureHeight(s){
   if(s.type==='ruin')return Number(s.ruinHeight)||.8;     // the stump a fallen tower or gate leaves
   if(window.ConquerIndustries?.is(s))return .35;
   if(s.type==='pier'||s.type==='quay')return .6;
+  if(s.type==='ramp'||s.type==='stairway')return .3;
   if(s.type==='house')return houseStructureHeight(s);
   if(isCivicAnnex(s)){const spec=civicAnnexDefinition(s);return !spec?0:spec.kind==='garden'||spec.kind==='yard'?.18:spec.kind==='stall'?.95:1.55;}
   if(s.type==='market')return .78;
@@ -254,7 +257,7 @@ function footprintPoints(s){
   if(isOrientedTower(s))return orientedTowerOutline(s);
   if(['tower','gate','ruin'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
-  if(['wall','palisade','built','moat','bridge','quay'].includes(s.type))return linePoly(s);
+  if(['wall','palisade','built','moat','bridge','quay','ramp','stairway'].includes(s.type))return linePoly(s);
   if(s.type==='house'){
     const parts=houseFootprintParts(s),pts=parts.flatMap(p=>p.points);
     if(parts.length===1)return pts;
@@ -627,7 +630,7 @@ function cutawayEligible(s){
   if(s.type==='gate')return !isWoodGate(s);
   // The timber palisade tower opens its Blender model (settlement-wood3d.js); the watchtower
   // has no walls to open.
-  if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
+  if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)!=='watchtower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
   // Semitowers are open already (their gorge shows the floors and ladders).
   return s.type==='tower'&&s.shape!=='half';
