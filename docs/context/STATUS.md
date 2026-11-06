@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — Verifica e completamento circle su combat-ai (NON MAIN)
+
+- Continuazione di `18b2a54`, `b299df1` e `aff223d`. Port selettivo di scorte/cattura/riconquista e persistenza circle da main; invalidazione dalla navigazione e registrazione delle brecce. Nessun merge generale di main.
+- Gli assalitori riprendono l'obiettivo per settori dopo ariete, scala o torre e scendono dalle mura anche senza un difensore a terra. I settori storici compromessi da una breccia si collegano alla zona aperta della topologia corrente. La pianificazione rispetta il portale bloccato e rifiuta un avvicinamento alla porta non raggiungibile.
+- I difensori possono sganciarsi dalla mischia e scendere dalle scale per ripiegare; l'ultimo richiude la porta del rifugio interno. Ordini espliciti del giocatore conservati.
+- QA locale: 67 test circle (tutti e 7 i file, inclusi i 2 di integrazione mancanti), 9 controlli campagna, 9 ingaggio, mass battle, patrol, selection, siege damage, assault ed engines PASS. La precedente regressione di movimento aveva un tiratore implicito sulle porte: fixture resa priva di tiro, senza modificare il gioco.
+- Runner ripetibile `qa/siege-scenario-performance.cjs`: `SIEGE_SECONDS=60`, `SIEGE_CONCENTRIC=1` per due cinte e mastio nella cinta interna, create solo in memoria sul villaggio TEST. La cinta originale di `layouts/TEST.json` rimane aperta per circle; non è una prova di avanzata concentrica. Prova browser conclusiva in corso; numeri da registrare nel report dedicato.
+- CI circle estesa a `combat-ai` e alle regressioni della campagna. Roadmap e contratti decisionali invariati; nessun merge/deploy su main.
+
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
 
 - **Aggiornamento porto**: moli L4 e L12 (`reach`, i moli salvati prima restano L8); piazzamento solo costa + approdo nella whitezone, senza regole di terreno edificabile (pendenze, bosco, terreno irregolare ammessi; impalcato sopra il terreno più alto dell'approdo). Nuova **banchina in pietra** (`src/settlement-quay.js`, `type:'quay'`): 2U, due clic lungo la riva o in acqua, solo whitezone + contatto con il mare, lato mare fissato al piazzamento, bitte sul bordo; i moli si agganciano al bordo verso il mare (`onQuay`, impalcato a filo della banchina).

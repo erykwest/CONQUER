@@ -22,6 +22,7 @@ function invalidateNavigation(hard=true,{urban=true}={}){
   roadDestinationTreeCache.clear();
   if(typeof wellAccessCache!=='undefined')wellAccessCache.clear();
   window.ConquerCombat?.invalidateRoutes?.();
+  window.ConquerCircle?.invalidate?.('navigation changed');
   if(!hard)return;
   peasantPathSignature='';
   peasantPathCache.clear();

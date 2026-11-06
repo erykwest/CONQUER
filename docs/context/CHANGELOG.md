@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-06 — combat-ai: completamento del port circle e regressioni
+
+- Port selettivo dell'integrazione Siege/circle da main: scorte fisiche per settore, cattura, riconquista, persistenza, brecce e invalidazione della navigazione. Ripristinati i 2 test d'integrazione esclusi nel primo port.
+- Corretti il mancato ritorno alla campagna dopo gli assalti, il collegamento dei settori compromessi ai portali interni e il ripiegamento da mura/mischia. La regressione di attraversamento ora non dipende da frecce casuali delle porte.
+- 67 test circle e regressioni pertinenti PASS; runner browser TEST/variante concentrica di 60 s con perdite e settori, CI sul branch. Numeri browser conclusivi ancora da registrare. Branch non integrato in main.
+
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
 - Assedio per settori concentrici (logica simmetrica su /circle). Portati da `main` solo `src/settlement-circle.js`, `src/circle/*.mjs`, 5 test `qa/circle-*.test.mjs` e il workflow (senza merge: 18 conflitti); agganci in `settlement-app-simulation.js` (`updateControl`, `tickOccupation`, `invalidate` a costruzione completata) e invalidazione dal combattimento quando la cinta cambia. **Assalitori** (`campaignThink`): vogliono il mastio e attraversano i settori uno alla volta lungo i portali di circle; combattono i difensori dello stesso settore, passano dalle porte aperte o sfondate, per una porta chiusa armano un ariete con gli armigeri più vicini mentre gli altri aspettano fuori (arcieri a 10U). **Difensori** (`fallbackThink`): tengono il settore più esterno; se cade (invaso, compromesso, preso) o sono due contro uno ripiegano nel settore interno, aprono la porta interna se serve e la richiudono dopo l'ultimo; in ritirata non ingaggiano; il mastio è l'ultimo baluardo.

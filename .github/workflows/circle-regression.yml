@@ -2,7 +2,7 @@ name: CIRCLE regression
 
 on:
   push:
-    branches: [main, circle]
+    branches: [main, circle, combat-ai]
     paths:
       - 'src/circle/**'
       - 'src/settlement-circle.js'
@@ -15,6 +15,9 @@ on:
       - 'src/settlement-population-navigation.js'
       - 'index.html'
       - 'qa/circle-*.test.mjs'
+      - 'qa/combat-sectors-regression.cjs'
+      - 'qa/combat-engage-regression.cjs'
+      - 'src/settlement-combat-rules.js'
       - '.github/workflows/circle-regression.yml'
   pull_request:
     paths:
@@ -27,6 +30,9 @@ on:
       - 'src/settlement-combat.js'
       - 'src/settlement-app-simulation.js'
       - 'qa/circle-*.test.mjs'
+      - 'qa/combat-sectors-regression.cjs'
+      - 'qa/combat-engage-regression.cjs'
+      - 'src/settlement-combat-rules.js'
 
 permissions:
   contents: read
@@ -51,3 +57,10 @@ jobs:
           node --check src/circle/defensive-topology.mjs
       - name: Run CIRCLE unit and integration regressions
         run: node --test qa/circle-*.test.mjs
+      - name: Run sector campaign and combat regressions
+        run: |
+          node qa/combat-sectors-regression.cjs
+          node qa/combat-engage-regression.cjs
+          node qa/mass-battle-regression.cjs
+          node qa/patrol-regression.cjs
+          node qa/siege-damage-converge-regression.cjs

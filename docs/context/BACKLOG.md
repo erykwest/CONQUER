@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-06 — Campagna per settori, branch combat-ai
+
+- **IMPLEMENTATO E TESTATO LOCALMENTE:** integrazione circle con il ledger Siege, cattura/riconquista e salvataggio; agganci di breccia e navigazione; ripresa della campagna dopo ariete/scale/torri; collegamento delle brecce alla porta interna; ripiegamento dalle mura e dalla mischia.
+- **QA BROWSER:** variante TEST con due cinte e mastio interno, 43 assalitori / 5 difensori, prova 60 s in corso. Il layout originale non chiude una cinta per il raster: trattare distintamente i due scenari.
+- **RESIDUI:** piazzamento autonomo di scale/torri (oggi il piano arma l'ariete; scale e torri già assegnate sono usate), profilazione dei picchi delle ricerche di percorso, riconciliazione generale con main separata. Nessuna chiusura delle milestone strategiche o dell'assedio completo.
+
+
 ## MARE — Porti e molo (branch `mare`, 02/11/2026)
 
 - **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
