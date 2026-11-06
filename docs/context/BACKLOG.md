@@ -2,7 +2,7 @@
 
 ## 2026-11-06 — Verifica estesa
 
-- Prova da 300 s sulla variante concentrica TEST richiesta dall’utente: in corso, con screenshot ogni 60 s e checkpoint persistenti. La prova precedente da 60 s resta una misura separata. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot.
+- Prova da 300 s sulla variante concentrica TEST richiesta dall’utente: conclusa con 6 screenshot: 17 assalitori e 3 difensori caduti, 0 conquiste. **KO da correggere:** assalitori fermi nei varchi, pattuglie bloccate in ritirata, ricerche di percorso molto lente. [Report](../qa/combat-ai-circle-300s-2026-11-06.md). La prova precedente da 60 s resta una misura separata. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot.
 
 
 ## 2026-11-06 — Campagna per settori, branch combat-ai

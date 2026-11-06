@@ -1,8 +1,8 @@
 # Livello 2 — Stato tecnico e prove
 
-## 2026-11-06 — Prova estesa di 5 minuti (in corso)
+## 2026-11-06 — Prova estesa di 5 minuti: FALLITA
 
-Su richiesta utente, avviata la variante concentrica TEST per 300 s simulati, con screenshot in gioco a 0/60/120/180/240/300 s. Il runner mette in pausa solo per acquisire gli screenshot e salva checkpoint con perdite, porte, settori e posizioni; nessun cambiamento al codice di combattimento. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot. Esito da registrare a conclusione.
+Su richiesta utente, avviata la variante concentrica TEST per 300 s simulati, con screenshot in gioco a 0/60/120/180/240/300 s. Il runner mette in pausa solo per acquisire gli screenshot e salva checkpoint con perdite, porte, settori e posizioni; nessun cambiamento al codice di combattimento. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot. Completati 300,2 s: assalitori 43→26, difensori mobili 5→2, 0 conquiste. Dal minuto 2 tutti i superstiti restano fermi nei varchi; 2 pattuglie non completano la ritirata. Tick mediano 2,53 s, massimo 21,34 s; 0 eccezioni JS. [Report e sei screenshot](../qa/combat-ai-circle-300s-2026-11-06.md). Esito funzionale KO, indipendente dalla CI tecnica PASS.
 
 
 ## 2026-11-06 — Verifica e completamento circle su combat-ai (NON MAIN)
