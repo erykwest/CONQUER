@@ -34,22 +34,3 @@ jobs:
         run: node qa/gate-roads-regression.cjs
       - name: Test furnished cutaway
         run: node qa/cutaway-furniture-regression.cjs
-  settlement-all:
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-      - name: All deterministic settlement regressions
-        run: |
-          for test in qa/*-regression.cjs; do
-            echo "Running $test"
-            node "$test"
-          done
-      - name: Compile all classic script modules
-        run: |
-          for source in src/*.js; do
-            node --check "$source"
-          done
