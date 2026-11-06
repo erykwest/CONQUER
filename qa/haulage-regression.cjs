@@ -42,7 +42,7 @@ test('runtime ordering, accounting events, simulation, renderer, and workshop UI
   assert.match(render,/ConquerHaulage\?\.draw/);
   assert.match(read('src/settlement-app-rooms.js'),/Carretti locali/);
   assert.match(read('src/settlement-app-persistence.js'),/ConquerHaulage\?\.reset/);
-  assert.match(read('src/settlement-vehicles.js'),/c\.emptyReturn\?\[\]:\['crate'\]/);
+  assert.match(read('src/settlement-vehicles.js'),/c\.emptyReturn\|\|c\.vehicle/);
 });
 test('a real logging production receipt queues one cart but does not duplicate the ledger',()=>{
   const h=world();
