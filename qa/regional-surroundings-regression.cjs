@@ -25,6 +25,7 @@ assert.ok(run('State.environment.some(f=>f.type==="mountain"&&f.regional!==false
 assert.ok(run('State.environment.some(f=>f.type==="forest")'),'neighbour forest has real tree polygons');
 assert.equal(run('State.environment.some(f=>["forest","sea","pond"].includes(f.type)&&environmentContains(f,{x:100,y:100}))'),false,'central plains hub preserved');
 const first=run('JSON.stringify(State.environment)');generate(neighbors);assert.equal(run('JSON.stringify(State.environment)'),first,'composition is deterministic');
+assert.ok(run('seaBorderEntries().length>0&&seaBorderEntries().every(e=>Number.isFinite(e.x)&&Number.isFinite(e.y))'),'regional sea exits have valid positions');
 generate({...neighbors,east:'sea'});
 assert.equal(run('State.environment.some(f=>f.type==="sea"&&environmentContains(f,{x:190,y:190}))'),false,'dry diagonal between two sea sides');
 

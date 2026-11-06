@@ -100,6 +100,10 @@
       }
       const length=r=>r.reduce((s,p,i)=>i?s+Math.hypot(p.x-r[i-1].x,p.y-r[i-1].y):s,0);
       sea.coastline=runs.sort((a,b)=>length(b)-length(a))[0]||[];
+      sea.side=['north','east','south','west'].sort((a,b)=>{
+        const score=side=>Array.from({length:20},(_,i)=>edgeSample(side,(i+.5)/20)).filter(p=>environmentContains(sea,{x:Math.max(1,Math.min(199,p.x)),y:Math.max(1,Math.min(199,p.y))})).length;
+        return score(b)-score(a);
+      })[0];
     }
     const blocked=p=>waters.some(f=>environmentContains(f,p))||lines.some(f=>environmentContains(f,p,1.5));
     // Real peaks in the neighbouring mountain sectors. They never intrude into the central biome.

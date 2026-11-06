@@ -1905,6 +1905,18 @@ function mapSeaSide(){return State.environment?.find(f=>f.type==='sea')?.side||n
 function landBorderSides(){const sea=mapSeaSide();return BORDER_ENTRY_SIDES.filter(e=>e!==sea)}
 const edgeCorners=()=>({north:[{x:0,y:0},{x:WORLD,y:0}],south:[{x:0,y:WORLD},{x:WORLD,y:WORLD}],west:[{x:0,y:0},{x:0,y:WORLD}],east:[{x:WORLD,y:0},{x:WORLD,y:WORLD}]});
 function seaBorderEntries(){
+  if(State.environment?.some(f=>f.type==='sea'&&f.regional)){
+    const seas=State.environment.filter(f=>f.type==='sea'),out=[];
+    for(const edge of BORDER_ENTRY_SIDES){
+      let start=null;
+      for(let i=0;i<=100;i++){
+        const p=edgeSample(edge,(i+.5)/100),wet=i<100&&seas.some(f=>environmentContains(f,{x:Math.max(1,Math.min(199,p.x)),y:Math.max(1,Math.min(199,p.y))}));
+        if(wet&&start===null)start=i;
+        if(!wet&&start!==null){const q=edgeSample(edge,(start+i)/200);out.push({id:'sea-'+edge+'-'+start,edge,kind:'sea',x:q.x,y:q.y});start=null;}
+      }
+    }
+    return out;
+  }
   const sea=State.environment?.find(f=>f.type==='sea');if(!sea?.coastline?.length)return[];
   const mid=edgeSample(sea.side,.5),out=[{id:'sea-'+sea.side,edge:sea.side,kind:'sea',x:mid.x,y:mid.y}];
   const onEdge=(p,edge)=>edge==='north'?p.y<=1e-6:edge==='south'?p.y>=WORLD-1e-6:edge==='west'?p.x<=1e-6:p.x>=WORLD-1e-6;
@@ -1922,6 +1934,7 @@ function seaBorderEntries(){
 // A land exit on the sea stub of an edge next to the sea: the border point itself reads as
 // dry, so the test is a step inside the map, with a margin from the coast.
 function borderEntryOnSea(e){
+  if(State.environment?.some(f=>f.type==='sea'&&f.regional))return State.environment.some(f=>f.type==='sea'&&environmentContains(f,{x:Math.min(WORLD-1,Math.max(1,e.x)),y:Math.min(WORLD-1,Math.max(1,e.y))},4));
   const sea=State.environment?.find(f=>f.type==='sea');if(!sea)return false;
   const p={x:Math.min(WORLD-1,Math.max(1,e.x)),y:Math.min(WORLD-1,Math.max(1,e.y))};
   return environmentContains(sea,p,4);
