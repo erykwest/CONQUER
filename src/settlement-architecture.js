@@ -393,7 +393,7 @@ function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1
 }
 function towerLevelHeight(s,level){
   const t=towerTier(s);
-  return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
+  return [2.35,3.55,4.75,5.95][clamp(level,1,maxStructureLevel(s))-1]+(t-1)*.12;
 }
 // One source of truth for tower floors, windows, arrow slits and archer slots:
 // the cutaway floor of each level, and openings at standing eye height above it.

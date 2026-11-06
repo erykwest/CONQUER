@@ -561,7 +561,11 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
-function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
+// BC-251105-07: only the free-standing square stone W2 tower may rise to a fourth storey (H4),
+// a slender watch tower; wider towers stop at H3 and the W4 keep stays the only great tower.
+const TOWER_H4_LEVEL=4;
+function towerH4Allowed(s){return s?.type==='tower'&&!isWoodTower(s)&&!isOrientedTower(s)&&(s.shape||'square')==='square'&&!s.parentTowerId&&towerTier(s)===2}
+function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:towerH4Allowed(s)?TOWER_H4_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
   if(isWoodGate(s)||isLonghouse(s))return 1;
   return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
@@ -785,7 +789,7 @@ function civicRadius(s){
 }
 function levelCostFactor(s){
   const l=structureLevel(s);
-  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3][l-1];
+  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3,3.35][l-1];
   return[1,1.8][l-1];
 }
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}

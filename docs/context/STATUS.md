@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — Torre W2 × H4 (branch `feature/tower-w2-h4`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA MAIN (BC-251105-07):** `towerH4Allowed` in `settlement-core.js`: solo torre quadrata in pietra W2 (1,5U), indipendente (niente sottotorri), non lignea, non tonda né D/semitorre. Per queste `maxStructureLevel` = 4; tutte le altre torri e porte restano a H3. `structureHeight`/`towerLevelHeight`: quarto piano a 5,95 U (+0,12 del tier), circa 4,1:1 sulla base. `levelCostFactor` L4 = 3,35 (+45% su H3). Solai del cutaway, finestre, feritoie e stanze per piano usano già il numero di livelli: nessun caso speciale. Pulsante «4 levels (W2)» nel menu torri (`index.html`, `camp/index.html`); su torri non W2 il livello viene ridotto a H3 da `structureLevel`.
+- **QA:** nuova `qa/tower-h4-regression.cjs` PASS (W2 sì; W1/W3/W4, tonda, D, legno, sottotorre e porta no; +1,2 U; costo). PASS anche `keep-w4`, `gate-tower-entrance`, `oriented-towers`, `subtower-junctions`, `tower-roof-shape`, `tower-weapons`. Audit del Lab (`node qa/asset-audit.mjs`): 1139 render, 0 falliti; le 22 render nuove delle due varianti «Pietra quadrata W2 H4 merli/tetto» riviste (4 file di finestre, cutaway con 3 solai, crolli 1–3 piani) e aggiunte da sole alla baseline. I 412 «cambiati» riguardano asset non toccati (sezioni costruite, infermeria, palizzata; distanze ≤0,04): deriva preesistente, baseline non rigenerata per loro. Avviso cantiere 25/50/75 identico come per tutte le torri in pietra.
+- **Non verificato:** assedio a quota H4 (scale d'assalto, gittata e visuale dalla cima, crollo dei piani in battaglia), posa in partita col mouse, World 3D in gioco, CI della PR.
+
 ## 2026-11-05 — Piazza di stoccaggio iniziale e recupero produzione legname (branch `feature/founding-storage-yard-20261105`, pre-merge)
 
 - **CODICE SU BRANCH, NON ANCORA MAIN:** nuovo edificio `storageYard` («Piazzale · Magazzino»), terreno aperto 2×2U, spawn alla fondazione entro **7U dal primo pozzo** tramite stesso controllo terreno/vegetazione/ingombri del Builder; altra costruzione piazzale disponibile in paletta Produzione. Espansioni 2→4→6U, con costo reale e controllo collisioni.

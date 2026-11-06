@@ -65,7 +65,7 @@
 ### Torri
 - [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
 - [ ] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello.
-- [ ] **BC-251105-07 — Torri W2 × H4? [DA VALUTARE].** Verificare fattibilità e coerenza geometrica, funzionale e di gameplay dell'altezza H4 per larghezza W2; **non** trattare H4 come già approvato.
+- [x] **BC-251105-07 — Torre W2 × H4.** **[SU BRANCH `feature/tower-w2-h4`, non main]** Valutata e approvata dall'utente (06/11): quarto piano solo per la torre quadrata in pietra W2 (1,5U) indipendente; niente legno, tonde, D/semitorri, sottotorri, porte; W1/W3/W4 restano a H3 al massimo. Altezza 5,95+0,12 U (≈4,1:1 sulla base), costo ×3,35 rispetto a L1 (+45% su H3), una stanza NORMAL per piano come le altre W2. **Residui:** assedio (scale d'assalto contro quota H4, gittata/visuale dalla cima, crollo dei piani) non ribilanciato; il pulsante «4 levels» su torri non W2 viene ridotto a H3 senza avviso.
 
 ### Coperture
 - [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
