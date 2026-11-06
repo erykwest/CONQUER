@@ -117,7 +117,7 @@
     const route=plan(job);if(!route)return false;
     const trip={id:'local-haul-'+(++sequence),key:job.key,siteId:job.siteId,
       baseId:route.baseId,destinationId:route.destinationId,destination:job.destination,
-      workerId:worker.id,good:job.good,qty:job.qty,
+      workerId:worker.id,good:job.good,qty:job.qty,origin:job.origin,
       vehicle:job.good==='wood'||job.qty>45?'wagon':'cart',vehicles:1,guards:0,seed:sequence%4,
       legs:route.legs,points:route.legs[0],distance:0,speed:0,phase:'departing',
       remain:0,emptyReturn:true,virtualSource:!!job.origin};
