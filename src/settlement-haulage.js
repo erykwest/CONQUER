@@ -26,7 +26,7 @@
   const weekday=day=>window.ConquerEconomy?.weekday?.(day)??((Math.floor(day)%7+7)%7);
   function onShift(day=dayOf()){
     const frac=day-Math.floor(day);
-    return weekday(day)<5&&frac>=.10&&frac<.75&&
+    return weekday(day)<5&&frac>=.25&&frac<.75&&
       (window.ConquerCombat?.alarmMode?.()||'off')==='off';
   }
   function reset(){pending.clear();trips.length=0;scan=0;completed=0;sequence=0}
