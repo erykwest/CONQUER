@@ -69,7 +69,7 @@
       happiness:{L1:50,L2:50,L3:50,L4:50},
       wage:{L1:1,L2:2,L3:3},activities:{},cropStock:{lord:0,private:0},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
-      constructionPayroll:{total:0,bySite:{}},
+      constructionPayroll:{total:0,bySite:{}},weekCarterPeak:0,
       weeks:0,months:0,years:0,
       weekProduced:empty(),weekConsumed:empty(),weekBuildDemand:empty(),
       weekRecovered:empty(),balanceHistory:[],panelHistory:[],weekProducedSites:{},lastBalance:null,foundingCharterId:null
@@ -95,6 +95,7 @@
     for(const group of HAPPINESS_GROUPS)
       e.happiness[group]=clamp(finite(e.happiness[group],finite(e.welfare,50)),0,100);
     if(!Array.isArray(e.panelHistory))e.panelHistory=[];
+    if(!Number.isFinite(e.weekCarterPeak))e.weekCarterPeak=0;
     if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
     return e;
   }
@@ -662,12 +663,13 @@
       day,population:{...pop},welfare:round(e.welfare),happiness:{...e.happiness},
       prices:{...e.prices},jobs:{
         herding:worker.herding,logging:worker.logging,industry:worker.industry,
-        building:worker.building,carter:worker.carter,idle:worker.idle
+        building:worker.building,carter:Math.max(worker.carter,finite(e.weekCarterPeak)),idle:worker.idle
       },
       production:siteOutput
     });
     if(e.panelHistory.length>26)e.panelHistory.splice(0,e.panelHistory.length-26);
     e.weekProducedSites={};
+    e.weekCarterPeak=0; // count weekday job occupancy, not Saturday's off-duty roster
   }
   function monthly(day){
     const e=sync(),staff=activeCapacity(),grouped={L1:0,L2:0},pop=population();
