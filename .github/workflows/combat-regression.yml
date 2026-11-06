@@ -6,7 +6,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   push:
-    branches: [main, combat]
+    branches: [main]
     paths:
       - 'src/settlement-combat*.js'
       - 'src/settlement-camp.js'

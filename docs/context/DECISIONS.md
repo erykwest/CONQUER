@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CI-P23-261106 — CI senza trigger push su branch inesistenti (06/11/2026)
+
+- **DECISO:** eliminare soltanto i push indirizzati a branch GitHub non più presenti; mantenere i test specialistici su PR e i push su `main` quando configurati.
+- **LIMITI:** non cancellare né rinominare workflow e check, non cambiare le condizioni `paths`, non rimuovere script QA e non eliminare branch reali. Progettazione P2.2 (protezione `main`) differita su esplicita richiesta; nessuna regola GitHub amministrativa modificata.
+- **QA:** proteggere i trigger superstiti con `qa/ci-p1-regression.cjs`; verificare Actions prima dell'integrazione.
+
+
 ## D-CI-P21-261106 — Selezione visuale incrementale, copertura completa periodica (06/11/2026)
 
 - **DECISO, CODICE SU BRANCH `perf/assetlab-p2-incremental-20261106`:** il catalogo runtime resta unica fonte di verità per gli ID da verificare; il planner sceglie solo sorgenti isolate con stato Git modificato. Il selettore non sostituisce e non altera le baseline degli asset.

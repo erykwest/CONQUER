@@ -7,7 +7,7 @@ concurrency:
 
 on:
   push:
-    branches: [main, circle]
+    branches: [main]
     paths:
       - 'src/circle/**'
       - 'src/settlement-circle.js'

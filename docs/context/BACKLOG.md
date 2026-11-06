@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-06 — CI P2.3: trigger per branch inesistenti
+
+- **INTERVENTO SU BRANCH `chore/ci-p23-stale-push-triggers-20261106`:** pulizia di 8 occorrenze obsolete (camp, cans, audit-hardening, circle, combat, mare, feature/cutaway-furniture-converge) in 7 workflow. Nessuna branch Git eliminata; PR/main/manuali preservati.
+- **VERIFICA:** confermare `qa/ci-p1-regression.cjs` e CI prima del merge; nessuna modifica al gameplay o ai test specialistici.
+
+
 ## 2026-11-06 — P2.1 Asset Lab CI incrementale
 
 - **P2.1 · IMPLEMENTATO SU BRANCH:** gestione PR fail-safe `full/incremental/skip`, selezione ID da `ConquerAssetAudit.catalog()` per un massimo di quattro sorgenti isolate, controllo baseline dei registri e full su modifiche di moduli condivisi o inventario; full manuale/domenicale. Nessun asset eliminato.
