@@ -168,6 +168,11 @@
       ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
       // Dovecote (Colombaia): the top room under the pitched roof, its lantern on the apex.
       ['Pietra quadrata L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',functions:[null,'dovecote']}],
+      // Falconry (Falconiera): the top room under the pitched roof, the mews cage on the roof.
+      ['Pietra quadrata L2 tetto + falconiera',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',functions:[null,'mews']}],
+      ['Grande rotonda L3 tetto + falconiera',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',functions:[null,null,'mews']}],
+      ['Grande quadrata L3 2 falde + falconiera',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'gable',functions:[null,null,'mews']}],
+
       ['Pietra quadrata piccola L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'pitched',functions:[null,'dovecote']}],
       ['Grande rotonda L3 tetto + colombaia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
       ['Torre a D grande L3 tetto + colombaia',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],

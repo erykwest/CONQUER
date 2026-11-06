@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-PRESTIGE-01 — Prestigio del castello (05/11/2026)
+
+- **Decisione dell'utente:** la Falconiera dà «prestigio nobiliare» attraverso un valore nuovo del castello, non con un bonus ai cavalieri né alla diplomazia.
+- **Contratto:** `ConquerSiege.prestige()` → `{total, by}`, somma di `PRESTIGE[fn]` per ogni stanza ammessa e non catturata (Falconiera 3, Sala del trono 4, Stanze nobili 1, Cappella 1, Tesoro 1). Si mostra nel riepilogo logistico. Gli altri sistemi lo leggeranno in seguito: quali, è aperto in BACKLOG.
+- **Estensione di D-ROOM-EXT-01:** una stanza può avere il suo elemento esterno sul tetto (`mount:'roof'`): stessa posizione degli upgrade (campanile), indice = slot della stanza, regola `active` della voce. Prima applicazione: la voliera della Falconiera.
+- **Prova:** `qa/falconry-regression.cjs`.
+
 ## D-CI-P1-261106 — Ottimizzare la CI senza diminuire la copertura (06/11/2026)
 
 - **DECISO, CODICE SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** un solo owner per la suite completa `qa/*-regression.cjs` (P0) e uno per l'audit visuale `qa/asset-audit.mjs` (Asset Lab). Workflow specifici fanno controlli mirati; full P0 si attiva sulle modifiche ai componenti condivisi, inclusi world3d/castle3d.

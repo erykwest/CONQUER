@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+05/11/2026 — `feature/falconry`: nuova stanza Falconiera (torri in pietra W2–W3 a falde, ultimo piano) con caccia di 4 razioni al giorno e voliera Blender sul tetto montata da `ROOM_EXTERIOR` (montaggio `roof` per le stanze); nuovo valore Prestigio del castello dalle stanze di corte. Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01 esteso alle stanze sul tetto; D-PRESTIGE-01). ROADMAP invariata: la Falconiera era già approvata nel catalogo.
+
 06/11/2026 — `chore/ci-p1-browser-dedup-20261106` (pre-merge): introdotta concurrency per tutti i 25 workflow (cancel run superati solo PR), eliminati full suite duplicati in Main fixes/Gate/WebGPU, unificato Playwright 1.56.1/Chromium con cache in composite action, concentrato audit visivo in Asset Lab (browser condizionale ai file visivi), limitato WebGPU a modifiche renderer e lancio manuale, preservate integrità/economia/guard documentale e ampliato P0 full a world3d/castle3d. Test di regressione `qa/ci-p1-regression.cjs` e documentazione `docs/CI.md` aggiornati. ROADMAP invariata.
 
 
