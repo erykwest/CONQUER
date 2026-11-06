@@ -1,5 +1,20 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-05 — Piazzale di stoccaggio al villaggio (branch `feature/founding-storage-yard-20261105`)
+
+- **P0-03 / P0-05 · SU BRANCH (non MAIN fino al merge):** alla fondazione del villaggio un Piazzale 2×2U è cercato entro 7U dal pozzo in un'area con terreno valido, non alberata e senza conflitti; è inoltre piazzabile dal Builder. Può crescere a 4×4U e 6×6U pagando materiali e oro, con capacità 600/2400/5400 unità aggregata.
+- **Stock iniziali:** rappresentati fisicamente nel piazzale e mostrati nell'ispettore, conservati esclusivamente in `ConquerEconomy.state().castle`; non aggiungere una seconda economia locale al magazzino.
+- **Bug taglialegna:** con piazzale attivo un L1 ha priorità sul cantiere, per scongiurare la produzione zero con quattro fondatori impegnati in opere; con charter a 200 legname e target 70, la produzione trattenuta non incrementava il deposito e andava tutta al mercato. Dal branch, la quota non destinata alla vendita cresce nel castello fino a capienza del piazzale; il resto viene offerto al mercato. I tempi e la manodopera L1 non sono cambiati.
+- **Da collaudare:** casi di fondazione con vincoli forestali senza spazio entro 7U, scene e animazioni carico/scarico reali, eventuali esigenze di capacity tuning; test `qa/storage-yard-regression.cjs` e GitHub Actions.
+
+
+## 2026-11-05 — Forestry L1, tool del Terraforming (fix urgente su branch `fix/forestry-l1-clearing-cost-20261105`)
+
+- **P0-02 · IMPLEMENTATO SUL BRANCH, NON VALIDATO COME CORE COMPLETO:** nuovo tool «Rimuovi foresta», non istantaneo; assegna lavori L1 finanziati con fino a 3 popolani per job, lascia gli alberi finché il lavoro non termina, apre radure persistenti e accredita il legname al magazzino del castello. Resa iniziale 2,5 legname/U²; 0,7 giornate operaio/U². Restano fuori rigenerazione e abbattimento periodico automatico dalle industrie.
+- **P0-05 · FIX SUL BRANCH:** edificio taglialegna 5 legname, 35 oro (precedente 25 legname); palette, preview e spesa reali usano il costo unico in `settlement-industries.js`.
+- **Verifiche:** `qa/forestry-regression.cjs` e workflow Economy flows aggiornato; esito da confermare dalla PR.
+
+
 ## Stato corrente su main — 30 ottobre 2026
 
 > **Audit sostitutivo della fotografia del 22–23/10:** [AUDIT-2026-10-30](context/AUDIT-2026-10-30.md), ref `main` `cf5699922`. **15 nuclei CORE MAIN, 8 voci PARZIALI** su 23 ID Builder; questo non certifica la QA browser completa. Il precedente conteggio 13/10 più sotto resta esclusivamente **storico**.
