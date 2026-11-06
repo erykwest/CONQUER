@@ -625,7 +625,7 @@
   function cliffClearForFootprint(p,kind){
     return militaryOffsets(kind).every(([ox,oy])=>{
       const q={x:p.x+ox,y:p.y+oy};
-      return !pointBlockedForPeasant(q)&&!terrainSegmentCrossesCliff(q,q);
+      return !pointBlockedForPeasant(q)&&(!terrainSegmentCrossesCliff(q,q)||!!window.ConquerCrossings?.segmentCanCrossCliff(q,q));
     });
   }
   function safeMilitarySegment(a,b,id,kind){

@@ -172,6 +172,9 @@
   }
   function onOpenBridge(p,forHeavy=false){
     const requirement=heavyWidth(forHeavy);
+    // Ramps carry everyone across a cliff; stairways only walkers (settlement-slopeways.js).
+    const slopeway=window.ConquerSlopeways?.at(p,!!forHeavy);
+    if(slopeway&&(Number(slopeway.width)||0)+1e-5>=requirement)return slopeway;
     for(const s of State.structures){
       if(s.type==='bridge'&&!underConstruction(s)&&s.width+1e-5>=requirement
         &&onStrip(s,p,requirement?-.03:0))return s;
@@ -194,6 +197,8 @@
     return rubble<=0?0:rubble*crossingMultiplier(p,heavy);
   }
   function crossingMultiplier(p,heavy=false){
+    const climb=window.ConquerSlopeways?.speed(p,heavy);
+    if(climb!=null)return climb;          // climbing a ramp or a flight of steps is slower
     if(onOpenBridge(p,heavy))return 1;
     const found=moatAt(p);
     if(!found||filled(found.moat,found.location,heavyWidth(heavy)))return 1;
