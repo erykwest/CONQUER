@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
+
 ## Latrina nelle torri W1 e stanze delle torri piccole (branch `fix/latrine-towers`, da `main` dab8224, 05/11/2026, NON MAIN)
 
 - **Correzione dell'utente (04/11):** la latrina va nelle **torri W1**, non nelle sezioni costruite. Il merge #146 l'aveva messa al piano 2 delle sezioni W1: corretto qui.

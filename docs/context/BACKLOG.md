@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
+
 ## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `fix/latrine-towers`:** la latrina passa dalle sezioni costruite W1 alle torri W1 in pietra (piano 2, sbalzo sulla faccia esterna libera). Le torri W1 accettano Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria, con la scala a chiocciola che resta.
