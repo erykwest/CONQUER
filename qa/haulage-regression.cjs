@@ -63,18 +63,18 @@ test('a real logging production receipt queues one cart but does not duplicate t
 test('cart carries logs out, unloads, and returns visibly empty without changing resources',()=>{
   const h=world();h.E.foundingCharter('well');h.E.tick(-1,0);
   const book=JSON.stringify(h.E.state().castle);
-  let outbound=false,returning=false,emptyCargo=false;
+  let outbound=false,departing=false,emptyCargo=false;
   for(let i=0;i<130;i++){
     h.H.tick(.25);
     const trip=h.H.snapshot().trips[0];
     if(trip?.phase==='outbound'){
       outbound=true;h.H.draw();assert.ok(h.artwork.some(v=>v.cargo.includes('logs')),'outgoing wagon has timber');
     }
-    if(trip?.phase==='returning'){
-      returning=true;h.H.draw();if(h.artwork.some(v=>v.cargo.length===0))emptyCargo=true;
+    if(trip?.phase==='departing'){
+      departing=true;h.H.draw();if(h.artwork.some(v=>v.cargo.length===0))emptyCargo=true;
     }
   }
-  assert.equal(outbound,true);assert.equal(returning,true);assert.equal(emptyCargo,true);
+  assert.equal(outbound,true);assert.equal(departing,true);assert.equal(emptyCargo,true);
   assert.equal(h.H.snapshot().active,0);assert.equal(h.H.snapshot().completed,1);
   assert.equal(JSON.stringify(h.E.state().castle),book);
 });
