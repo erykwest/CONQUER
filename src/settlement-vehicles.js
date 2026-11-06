@@ -173,7 +173,8 @@
     const p={x:v.x+Math.cos(v.heading)*ahead-Math.sin(v.heading)*side,
       y:v.y+Math.sin(v.heading)*ahead+Math.cos(v.heading)*side};
     const lift=cart?(v.moving?Math.abs(Math.sin(v.s*5.2))*.035:0):.22;
-    const dot={...(c.vehicle==='coach'?COACHMAN:DRIVER),id:(cart?'carter-':'driver-')+c.id+'-'+v.i,p};
+    const dot={...(c.vehicle==='coach'?COACHMAN:DRIVER),
+      id:c.workerId||((cart?'carter-':'driver-')+c.id+'-'+v.i),p};
     if(typeof withProjectionGroundZ==='function')withProjectionGroundZ(v.z+lift,()=>drawVillagerFigureUnmasked(dot));
     else drawVillagerFigureUnmasked(dot);
   }

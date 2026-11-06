@@ -7,6 +7,14 @@
 - **P2.1 · MISURA SUCCESSIVA:** confrontare durata e numero di render su PR di un singolo SVG o registro, prima di ampliare l'allowlist. La prova full resta obbligatoria sulle variazioni di scena/castello.
 
 
+## 2026-11-06 — Professione Carrettiere L1 + mercato (branch `feature/l1-carter-jobs-market-20261106`)
+
+- **REALIZZATO SU BRANCH / QA IN CORSO:** il carrettiere è assegnato dal roster L1 reale (uno per piazzale attivo con merci raggiungibili, max 4), dopo personale produttivo essenziale, prima dei cantieri. I membri dell'equipaggio sono i medesimi personaggi già presenti, esclusi dalla routine dei residenti quando sono al volante. Inattività se non c'è lavoro, giorno di riposo o allarme; si rispettano le strade completate.
+- **DOPPIA DESTINAZIONE:** la quota del signore realmente accreditata al castello viaggia al Piazzale; le quote private e destinate alla vendita accreditate al ledger `e.lots` e i beni L3 del commercio viaggiano al Mercato completato e connesso. Base → produttore → destinazione → base, carro vuoto durante gli spostamenti senza merce.
+- **SOLO ESTETICO:** il lavoratore occupa una posizione reale L1, ma i saldi economici vengono modificati solo da produzione/mercato originari, non da un arrivo animato. Niente lavoratori inventati, niente salario aggiuntivo o costi carburante, niente magazzini secondari con un proprio stock separato.
+- **POSSIBILI SVILUPPI:** shift più articolati, gestione di più tipi di destinazione e livelli di impiego, trasporto con tempi effettivi per stock per-piazzale, scambi con villaggi esterni; deliberatamente fuori da questa PR.
+
+
 06/11/2026 — Integrazione #169 su main c0c720b: mantenuti H4 e funzioni attuali, fixture aggiornata, catalogo Wiki rigenerato. Audit locale Mura: 265 render, 0 errori; 32 nuove voci addossati (legno, scuderia, pietra, mattoni) riviste nei fogli e aggiunte alla baseline; 98 cambiati preesistenti non accettati. Limite conservato: perdita del muro non abbatte automaticamente l'addossato; nessuna nuova regola di crollo introdotta.
 
 BC-251105-03 e BC-251105-10 (edifici addossati alle mura e loro tetto a falda unica) implementati su `feature/wall-buildings`, PR in revisione. **APERTO:** comportamento dell'addossato quando il muro cade in breccia o viene demolito.
