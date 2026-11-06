@@ -43,6 +43,21 @@ Sul branch `feature/wood-tower-h2` (BC-251105-06, **non in main**): torre lignea
 
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
+## Merlature doppie BC-251105-04 (branch `feature/double-crenel`, da `main` b1a2307, 05/11/2026, NON MAIN)
+
+- Implementato: due nuovi stili in `CRENEL_STYLES`, scelti dal Centro di controllo › Cantieri › «Stile delle merlature».
+  - `double` «Merlo doppio» (BC-251105-04): sulle mura ogni merlo è lungo il doppio (.56) e il vuoto è largo quanto un merlo semplice (.28). La sequenza è 11011011 invece di 1010101; nei vuoti resta il parapetto. I merli d'estremità sono accorciati per restare sul muro. Costo: 2 pietra + 1 oro per merlo.
+  - `tworow` «Doppia fila»: è la prima interpretazione, conservata su richiesta. Aggiunge una seconda fila di merli piatti (h .20) con parapetto sul bordo interno del cammino di ronda. Costo: 1 pietra + 1 oro per merlo.
+  - Torri e porte restano a merli piatti con entrambi gli stili. Il preventivo conta i merli come costruiti nello stile di arrivo.
+  - Lab: quattro varianti di muro «merlo doppio» / «doppia fila». Usano l'override `labCrenelStyle` della variante, non la policy.
+- Provato: `qa/battlement-parapet-regression.cjs` 7/7. Audit locale: 1150 render, 0 falliti, 124 avvisi (i nuovi sono il già noto «cantiere-progressivo» dei muri), 36 nuovi, 0 cambiati. Merlo doppio rivisto a vista nel Lab e baseline aggiornata.
+- Non provato:
+  - una partita reale con il cambio pagato;
+  - mura su pendio con questi stili (passano per lo stesso adattamento ai gradini, non verificato a vista);
+  - merlo doppio su torri e porte (non esteso);
+  - world3d a pieno schermo.
+
+
 ## 2026-11-06 — Rampe e scalinate sui dislivelli (branch `feature/ramps-stairs`, BC-251105-12/13, NON MAIN)
 
 - **Nuovo modulo** `src/settlement-slopeways.js` (`type:'ramp'` / `'stairway'`), menu Infrastrutture e gruppo «Fossati, ponti e rampe»: due clic, attacco sul pianoro basso e sul pianoro alto. **Rampa** 2U, pendenza max 1:4, sviluppo 2–16U, pedoni e carri. **Scalinata** 1U, pendenza 1:4–1:1 (45°), sviluppo 1–10U, solo pedoni. Le due quote sono rilevate sul terreno reale (`terrainPlateauElevation`, livelli delle colline e terrazzamenti), dislivello minimo 0,4U; il piano di calpestio va in linea retta tra le due quote e il terreno non può mai sovrastarlo (argine/rilevato addossato al pendio, niente trincee nascoste). Niente acqua né bosco; strade possono attestarsi alle estremità (`bridgeRoadEnd`/`roadMeetsBridgeEnd`).
