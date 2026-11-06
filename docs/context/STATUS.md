@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — CI P0: workflow obsoleti e suite deterministica selettiva (branch `chore/ci-p0-consolidation-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** rimossi 11 workflow YAML associati a branch remote inesistenti o a un vecchio cleanup monouso. Conservati tutti i 163 script QA e relativi asset; cronologia Git disponibile per restore.
+- **Orchestrazione:** `Settlement routing and spawn regression` preserva nome e job `settlement-qa`. Sulle PR isolate lancia 5 smoke mirati, mentre le PR che modificano bootstrap/stato/navigazione/persistenza/placement l'intera `qa/*-regression.cjs` con controllo sintassi. Suite completa anche su `workflow_dispatch` e ogni domenica UTC. Fallimento chiuso se base/head SHA non verificabili.
+- **Protezione:** `Runtime integrity`, `Economy flows regression`, `Context pyramid guard` invariati. Branch `main` non protetta (controllo GitHub, 06/11); status check obbligatori vuoti. WebGPU/Asset Lab/Playwright rimangono fuori scope P0.
+- **QA:** `qa/ci-p0-regression.cjs` protegge esistenza dei workflow cardine e modalità full/fast; CI e test run della PR da verificare prima del merge. Manuale completo: `docs/CI.md`.
+
+
 06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
 
 ## Latrina nelle torri W1 e stanze delle torri piccole (branch `fix/latrine-towers`, da `main` dab8224, 05/11/2026, NON MAIN)

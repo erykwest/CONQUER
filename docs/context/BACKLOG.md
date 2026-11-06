@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-06 — P0 semplificazione GitHub Actions (branch `chore/ci-p0-consolidation-20261106`)
+
+- **P0 · SU BRANCH:** 11 YAML ritirati (10 branch-only per Civil/Clay/Urban/Events/Sound e un job monouso di cancellazione branch); test conservati, nessun ref GitHub eliminato.
+- **P0 · SU BRANCH:** rimpiazzato full suite per ogni PR con cinque smoke per modifiche isolate, full obbligatorio in CI quando sono modificati i moduli condivisi ad alto rischio, full manuale/settimanale. Copertura locale e QA dei singoli sottosistemi invariati.
+- **P0 · INVARIATI:** integrità runtime, salvataggi, economia e governance documentale.
+- **P1 · APERTO:** deduplicazione cross-workflow, Playwright/WebGPU/Asset Lab, cache e cancellazione dei job superseded. Verificare guardrail sui check per merge, dopo pubblicazione PR.
+
+
 06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
 
 ## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)
