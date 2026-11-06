@@ -53,6 +53,8 @@ check('economy allocates a distinct, named L1 carter after essential productive 
   assert.equal(a.spareL1.some(x=>x.id===a.carters[0].id),false);
   assert.equal(w.E.availableBuilderIds(.25).some(x=>x.id===a.carters[0].id),false);
   assert.equal(w.E.jobSummary(.25).carter,1);
+  w.H.tick(.25);
+  assert.equal(w.E.state().weekCarterPeak,1,'weekday job should enter the weekly history');
   assert.equal(w.H.snapshot().workers[0],a.carters[0].id);
   assert.equal(w.H.snapshot().pending,1);
 });
@@ -219,7 +221,8 @@ check('source deletion cancels route; reset and load do not persist duplicate tr
 });
 check('weekly job graphs and panels expose the new profession without a second payroll',()=>{
   assert.match(read('src/settlement-panels.js'),/\['carter','Carrettieri'\]/);
-  assert.match(read('src/settlement-economy.js'),/carter:worker\.carter/);
+  assert.match(read('src/settlement-economy.js'),/carter:Math\.max\(worker\.carter,finite\(e\.weekCarterPeak\)\)/);
+  assert.match(read('src/settlement-haulage.js'),/economy\.weekCarterPeak=Math\.max/);
   assert.match(read('src/settlement-app-rooms.js'),/Carrettieri L1/);
   assert.match(read('src/settlement-economy.js'),/carters=l1Available\.splice/);
   assert.doesNotMatch(read('src/settlement-haulage.js'),/castle\[|\.lots\[/);
