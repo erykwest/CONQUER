@@ -1344,14 +1344,16 @@ function biomeMountains(){
       if(typeof clipTerrainPolygon==='function')m.points=clipTerrainPolygon(m.points).map(p=>({x:p.x,y:p.y}));
       return m;
     };
-    const peaks=chosen.flatMap(cell=>Array.from({length:2},(_,pair)=>{
-      const x=(cell.c+.5)*cw+(pair?cw*.22:-cw*.12),y=(cell.r+.5)*cw+(pair?-cw*.15:cw*.10);
-      const m=makeEnvBlob(rnd,'mountain',x,y,cw*biomeRand(rnd,.52,.60),cw*biomeRand(rnd,.54,.62),'#56493c','#968470',24,.11);
+    const peaks=Array.from({length:chosen.length*2},(_,i)=>{
+      const t=i*(chosen.length-1)/(chosen.length*2-1),j=Math.floor(t),u=t-j,cell=chosen[j],next=chosen[Math.min(j+1,chosen.length-1)];
+      const x=(cell.c+(next.c-cell.c)*u+.5)*cw+biomeRand(rnd,-.13,.13)*cw;
+      const y=(cell.r+(next.r-cell.r)*u+.5)*cw+biomeRand(rnd,-.13,.13)*cw;
+      const m=makeEnvBlob(rnd,'mountain',x,y,cw*biomeRand(rnd,.48,.64),cw*biomeRand(rnd,.49,.66),'#56493c','#968470',24,.11);
       // Steep peaks: apex height about the base radius. In this isometric view a cone below
       // ~0.6 height/radius keeps its apex inside the base outline and reads as flat.
       m.height=Math.sqrt(m.rx*m.ry)*biomeRand(rnd,MOUNTAIN_STEEPNESS[0],MOUNTAIN_STEEPNESS[1]);
       m.mapSector={row:cell.r,col:cell.c};return clip(m);
-    }));
+    });
     // Secondary summits: about twice as many as the main peaks, 50-75% of their height,
     // clustered on their flanks so the chain reads as a massif.
     const subCount=Math.max(peaks.length,peaks.length*2+Math.floor(rnd()*3)-1),subs=[];
@@ -1362,7 +1364,7 @@ function biomeMountains(){
       sub.height=main.height*biomeRand(rnd,.50,.75);sub.subPeak=true;sub.mainPeakId=main.id;
       subs.push(clip(sub));
     }
-    // Slope from 40deg (smallest summit) to 60deg (largest), interpolated by base radius; the
+    // Slope from 37deg (smallest summit) to 63deg (largest), interpolated by base radius; the
     // height follows from slope and radius, so the tallest summit is also the steepest.
     const all=[...peaks,...subs],rs=all.map(m=>Math.sqrt(m.rx*m.ry)),lo=Math.min(...rs),hi=Math.max(...rs);
     for(const m of all){
@@ -1373,7 +1375,7 @@ function biomeMountains(){
   }
   return[];
 }
-const MOUNTAIN_STEEPNESS=[.95,1.15],MOUNTAIN_SLOPE_DEG=[40,60];
+const MOUNTAIN_STEEPNESS=[.95,1.15],MOUNTAIN_SLOPE_DEG=[37,63];
 // makeWatercourseAvoiding: the stream/river must stay clear of the mountain chain.
 function biomeWater(mountains){
   const recipe=biomeRecipe(),rnd=biomeStream(0x3a7684c1);

@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-MOUNTAIN-VARIATION — Catena irregolare (06/11/2026)
+
+Correzione richiesta: mantenere il raddoppio ma rimuovere l’effetto coppia. Distribuzione continua lungo i settori scelti con posizioni e dimensioni variabili; nei limitrofi sagome indipendenti e distanza variabile, fianchi ancora intersecati. Pendenze 37–63 gradi (prima 40–60), maggiore escursione dei raggi e quindi delle altezze, senza cambiare il taglio al confine.
+
 ## REG-MOUNTAIN-DENSITY — Massicci e taglio al bordo (06/11/2026)
 
 Richiesta: raddoppiare le montagne, farle intersecare e tagliarle al confine come le colline. Coppie di cime per settore/massiccio, non rilievi isolati con distanza minima. Conservare il cono originale, ritagliare impronta e facce al quadrato del mondo interpolando Z; chiudere i tagli con sezioni verticali. Stesso dato geometrico per i due renderer. Salvataggi conservati; applicazione alla generazione delle nuove mappe.

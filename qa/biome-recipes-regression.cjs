@@ -43,8 +43,8 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   assert.ok(r.peaks>=e.mountains[0]&&r.peaks<=e.mountains[1],tag+'main peaks '+r.peaks);
   if(r.peaks){
     assert.ok(r.subs>=r.peaks*2-1&&r.subs<=r.peaks*2+1,tag+'secondary summits '+r.subs+' for '+r.peaks+' peaks');
-    assert.ok(r.slopes.every(d=>d>=40-1e-9&&d<=60+1e-9)&&r.slopeOk,tag+'mountain slopes within 40-60deg');
-    assert.ok(Math.abs(r.tallestSlope-60)<1e-6,tag+'tallest summit at 60deg');
+    assert.ok(r.slopes.every(d=>d>=37-1e-9&&d<=63+1e-9)&&r.slopeOk,tag+'mountain slopes within 37-63deg');
+    assert.ok(Math.abs(r.tallestSlope-63)<1e-6,tag+'tallest summit at 63deg');
     assert.ok(r.insideMap,tag+'mountains clipped to the map');
   }else assert.equal(r.subs,0,tag+'no secondary summits without a chain');
   assert.ok(e.water.includes(r.water),tag+'water '+r.water);

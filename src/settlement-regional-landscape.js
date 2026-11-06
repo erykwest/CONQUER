@@ -157,7 +157,7 @@
       peak.unclippedPoints=peak.points;
       peak.points=clipTerrainPolygon(peak.points).map(q=>({x:q.x,y:q.y}));
       if(peak.points.length<3||peak.points.some(q=>(weights(q).mountains||0)<.08||blocked(q)))continue;
-      peak.id='regional-peak-'+key+'-'+mountains.length;peak.slopeDeg=40+rnd()*20;peak.height=Math.sqrt(peak.rx*peak.ry)*Math.tan(peak.slopeDeg*Math.PI/180);mountains.push(peak);regionalPeaks.push(peak);
+      peak.id='regional-peak-'+key+'-'+mountains.length;peak.slopeDeg=37+rnd()*26;peak.height=Math.sqrt(peak.rx*peak.ry)*Math.tan(peak.slopeDeg*Math.PI/180);mountains.push(peak);regionalPeaks.push(peak);
     }
     for(const peak of regionalPeaks){
       const pairRnd=seedRand((State.seed^biomeHash(peak.id+':pair'))>>>0),a=pairRnd()*Math.PI*2;
@@ -165,19 +165,21 @@
       // water and the central biome clear. A nested footprint is the tight-space fallback.
       let twin=null;
       for(let j=0;j<8;j++){
-        const angle=a+j*Math.PI/4,dx=Math.cos(angle)*9,dy=Math.sin(angle)*9;
+        const angle=a+j*Math.PI/4,distance=6+pairRnd()*9,dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
         const p={x:peak.x+dx,y:peak.y+dy};
         if(p.x<0||p.x>200||p.y<0||p.y>200||p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||blocked(p)||(weights(p).mountains||0)<.5)continue;
-        const raw=peak.unclippedPoints.map(q=>({x:peak.x+(q.x-peak.x)*.98+dx,y:peak.y+(q.y-peak.y)*.98+dy}));
+        const size=.78+pairRnd()*.38;
+        const outline=makeEnvBlob(pairRnd,'mountain',p.x,p.y,peak.rx*size,peak.ry*(.8+pairRnd()*.35),'#56493c','#968470',18,.1);
+        const raw=outline.points;
         const points=clipTerrainPolygon(raw).map(q=>({x:q.x,y:q.y}));
-        if(points.length<3||points.some(q=>blocked(q)||(weights(q).mountains||0)<.08))continue;
-        twin={...peak,x:p.x,y:p.y,unclippedPoints:raw,points};break;
+        if(points.length<3||!polygonsOverlapSimple(points,peak.points)||points.some(q=>blocked(q)||(weights(q).mountains||0)<.08))continue;
+        twin={...peak,x:p.x,y:p.y,rx:outline.rx,ry:outline.ry,unclippedPoints:raw,points};break;
       }
       if(!twin){
         const raw=peak.unclippedPoints.map(p=>({x:peak.x+(p.x-peak.x)*.98,y:peak.y+(p.y-peak.y)*.98}));
         twin={...peak,x:clamp(peak.x+Math.cos(a)*4,.1,199.9),y:clamp(peak.y+Math.sin(a)*4,.1,199.9),unclippedPoints:raw,points:clipTerrainPolygon(raw).map(p=>({x:p.x,y:p.y}))};
       }
-      twin.id=peak.id+'-pair';twin.height=peak.height*(.9+pairRnd()*.2);
+      twin.id=peak.id+'-pair';twin.slopeDeg=37+pairRnd()*26;twin.height=Math.sqrt(twin.rx*twin.ry)*Math.tan(twin.slopeDeg*Math.PI/180);
       mountains.push(twin);
     }
     const dryMountains=mountains.filter(f=>!blocked({x:f.x,y:f.y})&&!f.points.some(blocked));
