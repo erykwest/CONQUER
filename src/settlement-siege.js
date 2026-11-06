@@ -108,6 +108,9 @@
     if(fn==='council'||fn==='tribunal')return false;   // civic rooms, town hall only
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
+    // Small (W1) towers: the spiral stair fills the shaft, only a few rooms fit (user, 04/11/2026).
+    if(s.type==='tower'&&towerTier(s)===1&&!s.isMastio&&!['dovecote','latrine','prison','treasury','armory'].includes(fn))return false;
+
     // The portico of a W1 section is an open ground floor: only what lives under arches fits there.
     if(l===1&&s.type==='built'&&typeof isBuiltPortico==='function'&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
     // Stables: ground floor of a tower or of a W1 built section, never a W2 wide hall.
@@ -125,8 +128,8 @@
     if(fn==='mews')return l===top&&towerMewsAllowed(s);
     // Infirmary: ground or first floor of built sections (stretchers do not climb towers).
     if(fn==='infirmary')return l<=2&&s.type==='built';
-    // Latrine: upper floor of a W1 built section, where its garderobe fits on the exterior face.
-    if(fn==='latrine')return l===2&&s.type==='built'&&!isWideBuilt(s)&&!!window.ConquerRoomExterior?.placement(s,index,fn);
+    // Latrine: first upper floor of a small (W1) stone tower, where its garderobe fits on a free outer face.
+    if(fn==='latrine')return l===2&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===1&&!!window.ConquerRoomExterior?.placement(s,index,fn);
     if(['granary','storage','commonHall'].includes(fn))
       return l===1||(l===2&&top>=3);
     return true;
@@ -645,6 +648,9 @@
     };
     const left=piece(s.a,p0,s.aSnap,null,list.slice(0,i),0),right=piece(p1,s.b,null,s.bSnap,list.slice(i+1),bay.to);
     const pieces=[left,right].filter(Boolean);
+    // A wall-walk stair stays on the stretch that still holds its whole flight, at the same place;
+    // one standing in the bay comes down with it (settlement-wall-stairs.js).
+    window.ConquerWallStairs?.splitOnBreach?.(s,bay.from,bay.to,left,right);
     // The bay comes down: its masonry (and merlons) falls into the gap.
     // A stepped wall comes down from the ground of the section the bay opens in.
     const stepped=typeof wallGroundAt==='function'?wallGroundAt(s,(bay.from+bay.to)/2/L):null;

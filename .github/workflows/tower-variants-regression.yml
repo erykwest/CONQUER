@@ -44,6 +44,7 @@ jobs:
       - name: Existing crown and tower weapon regressions
         run: |
           node qa/battlement-parapet-regression.cjs
+          node qa/roof-pitch-regression.cjs
           node qa/subtower-junctions-regression.cjs
           node qa/tower-weapons-regression.cjs
       - name: Dovecote (top room under the pitched roof, pigeon post, roof lantern)

@@ -26,6 +26,10 @@
   const HERD_FOOD_PER_DAY = .9;
   // A fisherman's catch per working day (settlement-fishers.js).
   const FISH_FOOD_PER_DAY = 1.2;
+  // Orto di corte (BC-251105-11): each town hall kitchen garden, tended by the
+  // court's household, yields lord's food per working day. Unlike herds and nets
+  // it lies by the town hall, so it keeps producing under alarm and siege.
+  const KITCHEN_GARDEN_FOOD_PER_DAY = 2;
   const KIND = Object.freeze({
     field:{good:'food',classId:2,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
@@ -200,6 +204,17 @@
     const days=Math.max(0,finite(workdays));
     return{laborDays:round(days),laborGold:round(days*constructionWagePerWorkday())};
   }
+  // Felling produces a one-time lord-owned haul, not a recurring market activity.
+  function creditForestryWood(amount,id){
+    const quantity=round(Math.max(0,finite(amount)));
+    if(!State.village?.founded||!quantity)return false;
+    const e=ensureFlows(state());
+    e.castle.wood=round(finite(e.castle.wood)+quantity);
+    e.weekProduced.wood=round(finite(e.weekProduced.wood)+quantity);
+    note(e,'Forest clearance '+id+': +'+quantity+' wood');
+    syncBuilderResources();
+    return true;
+  }
   function refundBuild(cost){
     const e=ensureFlows(state());
     for(const [good,value] of Object.entries(cost||{})){
@@ -245,7 +260,14 @@
     }
     if(owner==='lord'){
       const keep=quantity*(100-(e.saleShare[good]||0))/100;
-      const received=Math.min(keep,Math.max(0,(e.target[good]||0)-(e.castle[good]||0)));
+      // With a stockyard, logging output has a tangible local reserve.
+      // The charter starts at 200 wood while the old target is only 70:
+      // otherwise the castle's visible stock never grows despite production.
+      const lumberYard=good==='wood'&&e.activities?.[id]?.type==='loggingCamp'&&
+        (window.ConquerStorageYard?.capacity?.()||0)>0;
+      const headroom=lumberYard?window.ConquerStorageYard.free():
+        Math.max(0,(e.target[good]||0)-(e.castle[good]||0));
+      const received=Math.min(keep,headroom);
       e.castle[good]=round(e.castle[good]+received);
       quantity-=received;
     }
@@ -306,7 +328,10 @@
     l1Available.push(...herdPool);
     remaining.L1=Math.min(remaining.L1,l1Available.length);
     const logging=[],woodLow=woodStock(e)<Math.min(20,finite(e.target?.wood,20));
-    let woodReserve=woodLow?2:0;
+    // A settlement with an actual stockyard must keep at least one lumber
+    // producer working even while several construction sites compete for all
+    // founding L1. Without a stockyard, keep the older construction-first rule.
+    let woodReserve=woodLow?2:((window.ConquerStorageYard?.capacity?.()||0)>0?1:0);
     // Industry positions are staffed before assigning only spare L1 to manual
     // construction. An out-of-season field does not reserve a worker forever.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
@@ -387,6 +412,8 @@
     // The catch: private food for each fisherman's household.
     if((window.ConquerCombat?.alarmMode?.()||'off')==='off')
       for(const w of labor.fishers)put(e,'food',FISH_FOOD_PER_DAY,'private',w.houseId+':fish');
+    if(typeof kitchenGardens==='function')
+      for(const g of kitchenGardens())put(e,'food',KITCHEN_GARDEN_FOOD_PER_DAY,'lord',g.id);
     const active=activeStructures(),hasMill=active.some(s=>
       ['windmill','watermill'].includes(s.type)&&
       !s.economyDisabled&&!s.destroyed&&!s.abandoned&&!s.burnt);
@@ -680,6 +707,7 @@
       if(today.month!==tomorrow.month||today.year!==tomorrow.year)monthly(day);
       if(today.year!==tomorrow.year)annual(day);
     }
+    window.ConquerStorageYard?.refreshVisual?.();
   }
   function setRations(mode){
     if(!Object.hasOwn(RATIONS,mode))return false;
@@ -743,6 +771,12 @@
       welfare:e.welfare,happiness:{...e.happiness},rationMode:rationMode(),
       castleFoodIssued:round(Object.values(e.lastTrade?.castleRations||{}).reduce((a,b)=>a+finite(b),0)),
       activities:Object.keys(e.activities).length,
+      stockyard:window.ConquerStorageYard?{
+        capacity:window.ConquerStorageYard.capacity(),
+        used:window.ConquerStorageYard.used(),
+        free:window.ConquerStorageYard.free(),
+        count:window.ConquerStorageYard.active().length
+      }:null,
       balance:e.lastBalance||null,investmentCapacity:round(finite(e.investmentCapacity)),
       commerce:window.ConquerCommerce?.snapshot?.()||null,
       weeks:e.weeks,months:e.months,years:e.years,panelHistory:e.panelHistory?.slice(-26)||[]};
@@ -764,6 +798,7 @@
       '<div class="kv"><span>Food policy · castle food issued</span><b>'+({market:'Market only',full:'Full rations',half:'Half rations'}[s.rationMode])+' · '+fmt(s.castleFoodIssued)+'</b></div>'+
       '<div class="kv"><span>L1 builders / herders / loggers / idle</span><b>'+jobs.building+' / '+jobs.herding+' / '+jobs.logging+' / '+jobs.idle+'</b></div>'+
       (jobs.foodRisk?'<div class="legend">⚠ Food supply at risk · protected herders: '+jobs.protectedHerders+'</div>':'')+
+      (s.stockyard?'<div class="kv"><span>Piazzale · magazzino (scorte del castello)</span><b>'+fmt(s.stockyard.used)+' / '+fmt(s.stockyard.capacity)+' · '+s.stockyard.count+' piazzali</b></div>':'')+
       '<div class="kv"><span>Castle economic gold</span><b>'+fmt(s.castleGold)+'</b></div>'+
       '<div class="kv"><span>L1 builders paid by lord</span><b>'+fmt(s.constructionPayroll)+' gold</b></div>'+
       '<div class="kv"><span>Spontaneous spawn labor (embedded estimate)</span><b>'+fmt(s.spontaneousSpawnLabor)+' gold</b></div>'+
@@ -809,9 +844,9 @@
     });
     render(true);
   }
-  window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,
+  window.ConquerEconomy=Object.freeze({GOODS,KIND,HOUSEHOLD_NEEDS,FOUNDING_CHARTER,KITCHEN_GARDEN_FOOD_PER_DAY,
     weekday,state,reset,sync,tick,render,bind,staffing:activeCapacity,
-    foundingCharter,foundingWorkers,syncBuilderResources,applyDevFloor,canBuild,spendBuild,refundBuild,
+    foundingCharter,foundingWorkers,syncBuilderResources,applyDevFloor,canBuild,spendBuild,creditForestryWood,refundBuild,
     constructionWagePerWorkday,payConstructionWork,spontaneousSpawnQuote,
     availableBuilders,availableBuilderIds,laborAllocation,jobSummary,RATIONS,HERD_FOOD_PER_DAY,rationMode,setRations,
     setShare,setTarget,setExternalDemand,transfer,assetValue,snapshot,population});

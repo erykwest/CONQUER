@@ -7,6 +7,28 @@
 - **Estensione di D-ROOM-EXT-01:** una stanza può avere il suo elemento esterno sul tetto (`mount:'roof'`): stessa posizione degli upgrade (campanile), indice = slot della stanza, regola `active` della voce. Prima applicazione: la voliera della Falconiera.
 - **Prova:** `qa/falconry-regression.cjs`.
 
+## D-ORTO-251106 — Il giardino è l'orto di corte del Municipio (06/11/2026)
+
+- Scelta dell'utente tra orto di corte, giardino dei semplici e hortus conclusus: **orto di corte**.
+- È un annesso civico del Municipio (`kitchenGarden`), non un edificio autonomo: riusa catalogo, persistenza, cancellazione a cascata e preflight degli annessi. Poiché il Municipio non ha lotto Voronoi, vale la regola «terreno aperto entro 7U, mai su lotti di proprietà».
+- Effetto: 2 cibo del signore per giornata lavorativa per orto, senza lavoratori, anche in allarme/assedio (scorta interna che non dipende da pascoli e reti). Primo annesso con resa economica: gli altri annessi restano skeleton.
+
+## D-STOCKYARD-251105 — Il piazzale fondativo è lo stoccaggio del castello (05/11/2026)
+
+- **DECISO, IN CODICE SU BRANCH `feature/founding-storage-yard-20261105`:** il villaggio nasce con un Piazzale 2×2U entro 7U dal primo pozzo, se un lotto edificabile è disponibile. Il capanno taglialegna versa la quota di produzione trattenuta nelle scorte del castello fino alla capienza dei piazzali; la parte non trattenuta e la quota in eccesso raggiungono il mercato.
+- **UNICO INVENTARIO:** `ConquerEconomy.state().castle` rimane fonte di verità: il magazzino non duplica le merci, il vecchio charter resta idempotente, la persistenza è quella di `State.structures` e `State.economy`.
+- **PRIORITÀ L1:** quando un piazzale è disponibile, un lavoratore L1 viene riservato al Logging Camp anche se sono aperti molti cantieri; le regole esistenti senza piazzale restano invariate.
+- **BILANCIAMENTO INIZIALE:** capienza 600/2400/5400 unità per 2×2, 4×4, 6×6U; costi di ampliamento 20 oro + 10 legname e poi 40 oro + 20 legname, pagati subito. Aree di ampliamento soggette a blocchi e collisioni normali. Nuovi piazzali 2×2U costruibili con 20 oro + 10 legname e normale cantiere L1; quello iniziale è gratuito.
+- **FUORI SCOPE:** carrettieri e trasferimento individuale del materiale, consumo e assegnazione delle room magazzino, redistribuzione tra depositi su distanze diverse.
+
+
+## D-FORESTRY-L1-251105 — Pulizia boschi come job di terraforming (05/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `fix/forestry-l1-clearing-cost-20261105` (pre-merge):** «Rimuovi foresta» è un lavoro civile L1 e non un click immediato. Richiede un insediamento fondato, si accoda nella stessa persistenza del paesaggio (`State.relief`), usa lavoratori L1 non impegnati nelle costruzioni e il payroll ordinario. Solo a completamento crea una radura, invalida paesaggio/navigation e attribuisce al signore un raccolto di legname sostanziale, una sola volta. Resa/tempo iniziali: 2,5 legname e 0,7 giornate operaio per U² di copertura forestale.
+- **Bilanciamento:** capanno del taglialegna massimo 5 legname (35 oro invariati). La rimozione manuale non sostituisce la produzione continuativa dei Logging Camp.
+- **Non deciso / fuori scope:** ricrescita forestale e depletion industriale periodica.
+
+
 ## D-ROOM-EXT-01 — Una stanza può cambiare l'esterno del suo edificio (04/11/2026)
 
 - **DECISO (contratto):** una funzione di stanza dichiara il suo elemento esterno in `ROOM_EXTERIOR[fn]` (`src/settlement-room-exterior.js`): `{model, source, mount, breakable?}`. `model` è un modello Blender in `src/assets/*-models.js` (registro `window[source].models[model]`: `parts` con `p/i/c`, `width`, `projection`, `bottom`, `chuteTop`), assi U con +x lungo la faccia (centrato), +y verso l'esterno, +z dal pavimento della stanza.
@@ -19,7 +41,7 @@
   - **`mount:'roof'`:** sull'apice di un tetto a piramide o rotondo, a metà colmo di un tetto a due falde o a padiglione, in cima al tetto Blender di una torre di legno; ruota con la torre (il tetto rotondo resta ad angolo 0). L'ingombro in pianta e l'altezza vengono dal modello.
   - **Prima voce:** `bell`, il campanile della Campana d'allarme. La Colombaia dovrà usare lo stesso montaggio.
   - **Renderer:** le torri di legno disegnano i loro triangoli nella mesh di `settlement-wood3d.js` (il castle 3D e il 2.5D le saltano). Una torre in cutaway tiene il suo tetto, quindi anche l'elemento del tetto.
-- **Prima applicazione, Latrina / Garderobe:** solo al piano 2 di una sezione W1 (non nelle sale W2, non nelle torri). È una scatola di pietra a sbalzo di 0,36 U, larga 0,46 U, su 4 mensole, con lo scarico che macchia il muro fino a terra.
+- **Prima applicazione, Latrina / Garderobe:** solo al piano 2 di una **torre W1 in pietra**, sulla faccia esterna libera che guarda più lontano dal castello (correzione dell'utente del 04/11/2026: mai nelle sezioni costruite, né nelle torri W2–W3 o di legno). Le torri W1 tengono la scala a chiocciola e accettano solo Colombaia, Latrina, Prigione, Tesoro e Armeria. È una scatola di pietra a sbalzo di 0,36 U, larga 0,46 U, su 4 mensole, con lo scarico che macchia il muro fino a terra.
   - **Igiene della guarnigione:** è un bisogno secondario. Il cortile serve 24 soldati, ogni latrina ne serve altri 16 (32 in una stanza grande). L'igiene non scende sotto 40 e cala di 2 al giorno, risale di 5. Sotto 50 si ammala fino al 10% degli arcieri, che lasciano libere le postazioni.
   - **Motivo:** l'utente non vuole che la latrina diventi un sistema obbligatorio; i castelli piccoli non ne risentono.
   - **Prova:** `qa/room-exterior-latrine-regression.cjs`.
