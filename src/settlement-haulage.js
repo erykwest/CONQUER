@@ -35,7 +35,8 @@
   function record({siteId,origin=null,good,qty,day=dayOf(),destination='yard'}={}){
     const amount=finite(qty),at=finite(day);
     if(!State.village?.founded||!siteId||!getGood(good)||amount<=0||!yards().length||
-      !['yard','market'].includes(destination))return false;
+      !['yard','market'].includes(destination)||
+      (destination==='market'&&!markets().length))return false;
     if(!origin&&!isActive(source(siteId)))return false;
     const key=String(siteId)+'|'+good+'|'+destination;
     const current=pending.get(key);
