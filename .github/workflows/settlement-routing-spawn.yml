@@ -55,35 +55,7 @@ jobs:
           cat "$RUNNER_TEMP/ci-pr-changed.txt"
           # Shared application state, world generation, persistence, navigation,
           # terrain/placement or app entrypoint modifications are high risk.
-          if grep -Eq '^(index\.html|src/settlement-(core|app|app-simulation|app-persistence|world|world3d|castle3d|placement|castle-placement|population-navigation)\.js|\.github/workflows/settlement-routing-spawn\.yml|qa/ci-(p0|p1)-regression\.cjs) "$RUNNER_TEMP/ci-pr-changed.txt"; then
-            echo 'full=true' >> "$GITHUB_OUTPUT"
-            echo 'Shared-engine change: complete pre-merge regression suite'
-          else
-            echo 'full=false' >> "$GITHUB_OUTPUT"
-            echo 'Isolated change: targeted fast smoke; subsystem workflows remain active'
-          fi
-      - name: Fast settlement and routing checks
-        if: github.event_name == 'pull_request' && steps.tier.outputs.full == 'false'
-        run: |
-          node qa/ci-p0-regression.cjs
-          node qa/settlement-routing-spawn-regression.cjs
-          node qa/river-forest-detour-regression.cjs
-          node qa/main-road-finalization-regression.cjs
-          node qa/urban2-spawn-regression.cjs
-      - name: Complete deterministic regressions (risk/manual/weekly)
-        if: steps.tier.outputs.full == 'true'
-        run: |
-          for test in qa/*-regression.cjs; do
-            echo "Running $test"
-            node "$test"
-          done
-      - name: Syntax-check all source modules (risk/manual/weekly)
-        if: steps.tier.outputs.full == 'true'
-        run: |
-          for src in src/*.js; do
-            node --check "$src"
-          done
- "$RUNNER_TEMP/ci-pr-changed.txt"; then
+          if grep -Eq '^(index\.html|src/settlement-(core|app|app-simulation|app-persistence|world|world3d|castle3d|placement|castle-placement|population-navigation)\.js|\.github/workflows/settlement-routing-spawn\.yml|qa/ci-(p0|p1)-regression\.cjs)$' "$RUNNER_TEMP/ci-pr-changed.txt"; then
             echo 'full=true' >> "$GITHUB_OUTPUT"
             echo 'Shared-engine change: complete pre-merge regression suite'
           else
