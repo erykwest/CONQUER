@@ -243,6 +243,16 @@ const StructureCommands=(()=>{
     window.ConquerSiege?.changeArchers(target.id,delta);return true;
   }
 
+  function setYardSize(id,targetSize){
+    const target=find(id),Y=window.ConquerStorageYard;
+    if(!Y?.is(target))return false;
+    const result=Y.grow(target,Number(targetSize));
+    if(!result.ok){status('Piazzale: '+result.reason);return false}
+    renderFunctionPanel();draw();
+    status('Piazzale ampliato a '+result.size+'×'+result.size+'U · '+costText(result.cost));
+    return true;
+  }
+
   // ---------- inspector descriptor ----------
   const choice=(key,cmd,options,current,extra={})=>({key,cmd,options:options.map(o=>({...o,active:o.value===current})),...extra});
   function describeStructure(id){
@@ -256,6 +266,16 @@ const StructureCommands=(()=>{
     if(underConstruction(s))d.building={progress:constructionProgress(s),days:remainingDays(s)};
     const cost=s.buildCost||constructionCost(s);
     d.cost=cost;
+    if(window.ConquerStorageYard?.is(s)){
+      const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s);
+      d.facts.push({key:'size',value:n+'×'+n+'U'},
+        {key:'storageCapacity',value:Y.capacity()+' unità'},
+        {key:'storedGoods',value:Y.used()+' unità'},
+        ...Object.entries(stock).filter(([,v])=>v>0).map(([key,value])=>({key,value})));
+      if(n<6)d.controls.push(choice('yardSize','setYardSize',[2,4,6].filter(v=>v>=n).map(v=>({
+        value:v,label:v+'×'+v+'U'})),n));
+      return d;
+    }
     if(industry){
       const spec=window.ConquerIndustries.definition?.(s)||window.ConquerIndustries.TYPES[s.type],econ=window.ConquerEconomy;
       const details=econ?.state()?.activities?.[s.id];
@@ -392,6 +412,6 @@ const StructureCommands=(()=>{
   }
 
   return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
 })();

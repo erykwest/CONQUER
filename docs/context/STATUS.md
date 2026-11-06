@@ -1,5 +1,21 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — Piazza di stoccaggio iniziale e recupero produzione legname (branch `feature/founding-storage-yard-20261105`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA MAIN:** nuovo edificio `storageYard` («Piazzale · Magazzino»), terreno aperto 2×2U, spawn alla fondazione entro **7U dal primo pozzo** tramite stesso controllo terreno/vegetazione/ingombri del Builder; altra costruzione piazzale disponibile in paletta Produzione. Espansioni 2→4→6U, con costo reale e controllo collisioni.
+- **SCORTE:** il piazzale non contiene un duplicato persistente delle risorse: espone `ConquerEconomy.state().castle` (scorte iniziali e raccolti). Capienza base 600 unità astratte; espansioni 2400/5400. L'ultimo piazzale con beni non è eliminabile. Ricaricamento di vecchi salvataggi con villaggio fondato genera il piazzale mancante dopo il caricamento del terreno; non ripete la carta fondativa.
+- **LOGGING:** con piazzale attivo viene riservato almeno un L1 al taglialegna anche con cantieri che altrimenti esaurirebbero tutti i lavoratori; senza piazzale resta valida la vecchia priorità costruzioni. La carta iniziale assegna 200 legname ma l'obiettivo di riserva era solo 70; la metà trattenuta della produzione del Logging Camp finiva nel mercato e il deposito del castello non cresceva. Ora la quota non venduta viene accumulata nel piazzale fino a capienza, con eccedenza instradata a mercato; nessuna creazione di stock per il solo spawn. I lavoratori L1 e le giornate lavorative restano quelli dell'economia esistente.
+- **VISUAL:** base e cataste in Canvas 2D e World3D, pannello di selezione con inventario e comando di ampliamento. Stesse tre mesh procedurali 2×2/4×4/6×6 pubblicate nell'Asset Lab (categoria Produzione) e verificabili con il QA dell'Asset Lab.
+- **QA:** aggiunta `qa/storage-yard-regression.cjs` e collegata a `Economy flows regression`; esiti reali da verificare su Actions. Limitazione: niente trasporto individuale fisico delle merci, deposito visualmente aggregato.
+
+
+## 2026-11-05 — Rimozione foresta L1 e costo taglialegna (branch `fix/forestry-l1-clearing-cost-20261105`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA SU MAIN:** il capanno del taglialegna richiede 5 legname anziché 25 (35 oro invariati); UI e spesa effettiva condividono `ConquerIndustries.definition().cost`.
+- **Terraforming:** comando «Rimuovi foresta» con forme quadrata/rotonda e raggio 2/4/6; il clic mette in coda un job persistente `State.relief.forestryJobs` senza mutare gli alberi. Fino a 3 lavoratori L1 finanziati per job, esclusi quelli assegnati ai cantieri; il bosco si libera e il legname va al magazzino del signore solo al completamento. Resa iniziale 2,5 unità di legname per U² di foresta, lavoro 0,7 giornate operaio per U². Test dedicato `qa/forestry-regression.cjs` e job nella CI Economy flows; risultati della CI da leggere dal run della PR, non presunti.
+- **LIMITI:** nessuna rigenerazione forestale, nessuna animazione dedicata di abbattimento; il job apre una radura con poligono e aggiorna rendering e navigazione. Nessuna modifica al terraforming standard immediato.
+
+
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
 ## 2026-11-06 — Rampe e scalinate sui dislivelli (branch `feature/ramps-stairs`, BC-251105-12/13, NON MAIN)

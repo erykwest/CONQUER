@@ -13,6 +13,7 @@
   const MODEL_SOURCES=[
     {global:'ConquerCivicModels',collection:'models',category:'Edifici',family:'Edifici civili'},
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
+    {global:'ConquerStorageYard',collection:'models',category:'Produzione',family:'Piazzali e magazzini'},
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
@@ -61,7 +62,7 @@
   const fileFamily=path=>path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
   const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
-    loggingCamp:'Campo taglialegna',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
+    loggingCamp:'Campo taglialegna',stockyard2:'Piazzale · magazzino 2×2U',stockyard4:'Piazzale · magazzino 4×4U',stockyard6:'Piazzale · magazzino 6×6U',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
     sheep:'Pecora',goat:'Capra',cow:'Mucca',horse:'Cavallo',deer:'Cerva',stag:'Cervo',wolf:'Lupo',bear:'Orso',boar:'Cinghiale',
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
@@ -115,7 +116,7 @@
         :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali':source.family;
       items.push({id:'model:'+source.global+':'+key,title:titleFor(key),category,family,
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
-          ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
+          ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',ConquerStorageYard:'../settlement-storage-yard.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
             ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',ConquerSlopewayModels:'../settlement-slopeways.js',

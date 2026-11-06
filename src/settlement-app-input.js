@@ -45,6 +45,17 @@ canvas.addEventListener('pointerdown',e=>{
   }
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='terraform'){
+    if(State.tool.mode==='forest'){
+      const ghost=window.ConquerForestry?.preview(p,State.tool);
+      State.draft={mode:'terraform',preview:ghost};
+      if(!ghost?.ok){status('Rimozione foresta bloccata: '+(ghost?.reason||'terreno non valido'));draw();return}
+      const job=window.ConquerForestry?.start(ghost);
+      if(job?.ok){
+        State.draft=null;
+        status('Job L1 avviato · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro');
+      }else status('Rimozione foresta bloccata: '+(job?.reason||'job non disponibile'));
+      draw();return;
+    }
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     if(!ghost?.ok){status('Terraforming blocked: '+(ghost?.reason||'invalid terrain'));State.draft={mode:'terraform',preview:ghost};draw();return}
     if(window.ConquerTerraforming.commit(ghost)){
@@ -214,6 +225,13 @@ canvas.addEventListener('pointermove',e=>{
   // Four signposts behave like interactive wayfinding markers in select mode.
   if(canvas.style)canvas.style.cursor=State.tool.kind==='select'&&window.ConquerRoadSignTests?.hit?.(pointerScreen(e))?'pointer':'';
   if(State.tool.kind==='terraform'){
+    if(State.tool.mode==='forest'){
+      const ghost=window.ConquerForestry?.preview(p,State.tool);
+      State.draft={mode:'terraform',preview:ghost};
+      status(ghost?.ok?'Rimuovi foresta · job L1 · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro':
+        'Rimozione foresta bloccata: '+(ghost?.reason||'terreno non valido'));
+      draw();return;
+    }
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};
     status(!ghost?.ok?'Terraforming blocked: '+(ghost?.reason||'invalid terrain'):
@@ -439,9 +457,9 @@ document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',lin
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
   const radius=Number(document.querySelector('[data-terraform-radius].active')?.dataset.terraformRadius)||4;
   const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
-  const mode=b.dataset.terraform==='walled'?'walled':b.dataset.terraform==='flat'?'flat':'terrain';
+  const mode=b.dataset.terraform==='forest'?'forest':b.dataset.terraform==='walled'?'walled':b.dataset.terraform==='flat'?'flat':'terrain';
   const shape=document.querySelector('[data-terraform-shape].active')?.dataset.terraformShape==='square'?'square':'round';
-  setTool({kind:'terraform',mode,shape,radius,delta,label:(mode==='flat'?'Flat H0':mode==='walled'?'Walled terrace':'Sloped')+' · '+shape+(mode==='flat'?' · SUBTRACT':(delta<0?' · lower':' · raise')+' 1U')+' · R'+radius,el:b});
+  setTool({kind:'terraform',mode,shape,radius,delta,label:mode==='forest'?'Rimuovi foresta · job L1 · R'+radius:(mode==='flat'?'Flat H0':mode==='walled'?'Walled terrace':'Sloped')+' · '+shape+(mode==='flat'?' · SUBTRACT':(delta<0?' · lower':' · raise')+' 1U')+' · R'+radius,el:b});
 };
 for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=>{
   const shape=b.dataset.terraformShape==='square'?'square':'round';
@@ -519,6 +537,11 @@ for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   const type=b.dataset.civic,spec={type,shape:'civic'};
   setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(constructionCost({...spec,masonryMaterial:State.buildMasonryMaterial})),el:b});
 };
+for(const b of document.querySelectorAll('[data-storage-yard]'))b.onclick=()=>{
+  if(!State.village.founded){status('Fonda prima un villaggio con un pozzo');return}
+  const candidate=window.ConquerStorageYard.make();
+  setTool({kind:'civic',placementSpec:candidate,label:'Piazzale magazzino · 2×2U · '+costText(constructionCost(candidate)),el:b});
+};
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,extractionMode=b.dataset.extractionMode==='clay'?'clay':'stone';
    const candidate=window.ConquerIndustries.make(type,{x:0,y:0},extractionMode);
@@ -559,22 +582,24 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const borderEntries=ensureBorderEntrySelection();
   State.village={...State.village,name,wellId:well.id,founded:true,foundingWorkers:4,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   window.ConquerEconomy?.foundingCharter?.(well.id);
+  const yard=window.ConquerStorageYard?.ensureForWell?.(well);
   closeVillageModal();
+  // Report a failed placement in the persistent founding status below.
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
     renderUI();
     const connected=ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length;
-    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
+    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}${yard?' · Piazzale 2×2U':' · ⚠ PIAZZALE NON POSIZIONATO (7U occupate)'}`);
     processVillageGrowth();draw();
   });
   markDirty(true,['ground','base']);
   renderUI();
-  status(`${name} founded — connecting border main roads…`);
+  status(`${name} founded — connecting border main roads…${yard?' · Piazzale 2×2U':' · ⚠ nessun lotto magazzino libero entro 7U'}`);
   draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
-document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
+document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto&&!x.foundingStockyard);if(s)deleteStructure(s.id)};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerForestry?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
 ['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
